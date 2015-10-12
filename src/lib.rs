@@ -1,0 +1,25 @@
+// Copyright 2015 Deyan Ginev. See the LICENSE
+// file at the top-level directory of this distribution.
+//
+
+//! # The LaTeXML converter in Rust
+//! The original library can be found at https://github.com/brucemiller/LaTeXML
+
+#![feature(plugin)]
+#![plugin(regex_macros)]
+
+extern crate glob;
+extern crate rustlibxml;
+extern crate libc;
+extern crate regex;
+extern crate Archive;
+extern crate rustc_serialize;
+extern crate rand;
+extern crate tempfile;
+extern crate time;
+
+#[macro_use] pub mod rust_macros;
+pub mod common;
+pub mod state;
+pub mod converter;
+pub mod core;

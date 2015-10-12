@@ -1,0 +1,29 @@
+[package]
+name = "rustexml"
+version = "0.1.0"
+authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
+
+[lib]
+name = "rustexml"
+crate-type = ["rlib", "dylib", "staticlib"]
+plugin = true
+
+[dependencies.rustlibxml]
+git = "https://github.com/jfschaefer/rust-libxml.git"
+
+[dependencies.gnuplot]
+git = "https://github.com/SiegeLord/RustGnuplot.git"
+
+[dependencies.libarchive-sys]
+git = "https://github.com/dginev/libarchive-sys.git"
+
+
+[dependencies]
+libc = "~0.1"
+regex = "0.1.8"
+regex_macros = "0.1.8"
+rustc-serialize = "0.3"
+glob = "*"
+rand = "*"
+tempfile = "*"
+time = "*"
