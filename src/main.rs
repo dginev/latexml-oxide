@@ -26,6 +26,7 @@ fn main() {
     whatsout: DataSize::Document,
     preamble: None,
     postamble: None,
+    mode: None
   };
   let mut converter = Converter::from_config(opts.clone());
   converter.prepare_session(&opts);

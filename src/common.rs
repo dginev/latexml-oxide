@@ -23,24 +23,30 @@ pub enum Error {
   Unexpected,
   Expected
 }
-
+#[derive(Clone)]
+pub enum DigestionMode {
+  TeX,
+  LaTeX,
+  AmSTeX,
+  BibTeX
+}
+impl DigestionMode {
+  pub fn extension(&self) -> String {
+    match *self {
+      DigestionMode::TeX => "tex",
+      DigestionMode::LaTeX => "tex",
+      DigestionMode::AmSTeX => "tex",
+      DigestionMode::BibTeX => "bib"
+    }.to_string()
+  }
+}
+#[derive(Clone)]
 pub struct Config {
   pub verbosity : usize,
   pub format : OutputFormat,
   pub whatsin : DataSize,
   pub whatsout : DataSize,
   pub preamble : Option<String>,
-  pub postamble : Option<String>
-}
-impl Clone for Config {
-  fn clone(&self) -> Self {
-    Config {
-      verbosity : self.verbosity.clone(),
-      format : self.format.clone(),
-      whatsin : self.whatsin.clone(),
-      whatsout : self.whatsout.clone(),
-      preamble : self.preamble.clone(),
-      postamble : self.postamble.clone()
-    }
-  }
+  pub postamble : Option<String>,
+  pub mode : Option<DigestionMode>,
 }

@@ -141,7 +141,7 @@ impl Converter {
     // "Conversion timed out after " . $$opts{timeout} . " seconds!\n"); };
     // alarm($$opts{timeout});
     // my $mode = ($$opts{type} eq 'auto') ? 'TeX' : $$opts{type};
-    let digest_result = self.core.digest(source, current_preamble, current_postamble, "TeX".to_string(), true);
+    let digest_result = self.core.digest(source, current_preamble, current_postamble, self.opts.mode.clone(), true);
     let digested = match digest_result {
       Err(_) => {
         Digested {
@@ -281,7 +281,7 @@ impl Converter {
     // else { $serialized = $result; }                              // Compressed case
 
     // 5.2 Finalize logging and return a response containing the document result, log and status
-    println_stderr!("Status:conversion: {:?}", self.runtime.status_code);
+    println_stderr!("Status:conversion: {:?}", self.runtime.status_code.clone());
     let log = self.flush_log();
     // self->sanitize($log) if ($$runtime{status_code} == 3);
 
@@ -297,4 +297,5 @@ impl Converter {
   pub fn prepare_session<'preplifetime>(&'preplifetime mut self, opts: &'preplifetime Config) {
 
   }
+
 }
