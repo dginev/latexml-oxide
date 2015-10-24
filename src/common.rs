@@ -50,3 +50,16 @@ pub struct Config {
   pub postamble : Option<String>,
   pub mode : Option<DigestionMode>,
 }
+impl Config {
+  pub fn new() -> Config {
+  Config {
+    verbosity : 1,
+    format : OutputFormat::XML,
+    whatsin : DataSize::Document,
+    whatsout : DataSize::Document,
+    preamble : None,
+    postamble : None,
+    mode : Some(DigestionMode::LaTeX)
+  }
+  }
+}

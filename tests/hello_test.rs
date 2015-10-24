@@ -1,0 +1,20 @@
+extern crate rustexml;
+
+use rustexml::converter::Converter;
+use rustexml::common::{Config,OutputFormat};
+#[test]
+fn can_convert_hello() {
+  let hello_source = "tests/hello.tex";
+  let hello_dest = "tests/hello.html";
+  let mut html_config = Config {
+    format: OutputFormat::HTML5,
+    .. Config::new()
+  };
+  let converter = Converter::from_config(html_config);
+  let conversion_result = converter.convert(hello_source.to_string());
+  assert!(conversion_result.is_ok());
+  let response = conversion_result.unwrap();
+  assert!(response.result.is_some());
+  assert!(response.log.len() > 0);
+  assert!(response.status_code == 0);
+}
