@@ -5,7 +5,7 @@ use std::env;
 use std::process;
 use std::io::Write;
 use rustexml::converter::{Converter};
-use rustexml::common::{Config, OutputFormat, InputFormat, DataSize};
+use rustexml::common::{Config, OutputFormat, DataSize};
 
 fn main() {
   let mut argv = env::args();

@@ -42,7 +42,7 @@ impl DigestionMode {
 }
 #[derive(Clone)]
 pub struct Config {
-  pub verbosity : usize,
+  pub verbosity : i32,
   pub format : OutputFormat,
   pub whatsin : DataSize,
   pub whatsout : DataSize,

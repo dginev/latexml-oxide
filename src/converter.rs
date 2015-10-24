@@ -3,7 +3,6 @@ use core::{Core, Digested};
 use core::token;
 use std::io::Error;
 use std::io::Write;
-use std::collections::HashMap;
 
 const CONVERTER_IDENTITY : &'static str = "rustexml (v 0.1)";
 
@@ -145,7 +144,7 @@ impl Converter {
     let digested = match digest_result {
       Err(_) => {
         Digested {
-          stuff : String::new()
+          stuff : None
         }
       }, // TODO digestion failed, report
       Ok(d) => d
