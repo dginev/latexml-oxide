@@ -16,15 +16,15 @@ pub struct Runtime {
   pub status : String,
   pub status_code : usize
 }
-pub struct Converter {
+pub struct Converter<'converter> {
   runtime : Runtime,
   ready : bool,
   opts : Config,
-  core : Core
+  core : Core<'converter>
 }
 
-impl Converter {
-  pub fn from_config(opts : Config) -> Converter {
+impl<'converter> Converter<'converter> {
+  pub fn from_config(opts : Config) -> Converter<'converter> {
     Converter {
       runtime : Runtime{status: String::new(), status_code: 3},
       ready : true,
@@ -294,7 +294,9 @@ impl Converter {
 
 
   pub fn prepare_session<'preplifetime>(&'preplifetime mut self, opts: &'preplifetime Config) {
-
+    if !self.ready {
+      self.initialize_session()
+    }
   }
 
 }

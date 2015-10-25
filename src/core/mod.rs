@@ -12,8 +12,8 @@ use state::{State};
 use core::stomach::{Stomach};
 use core::package::*;
 
-pub struct Core {
-  pub state : State,
+pub struct Core<'core> {
+  pub state : State<'core>,
 }
 pub struct Digested {
   pub stuff : Option<Vec<String>>,
@@ -34,7 +34,7 @@ impl Digested {
   }
 }
 
-impl Default for Core {
+impl<'core> Default for Core<'core> {
   fn default() -> Self {
     Core {
       state : State {
@@ -47,7 +47,7 @@ impl Default for Core {
   }
 }
 
-impl Core {
+impl<'core> Core<'core> {
   pub fn digest(&mut self, request : String,
     preamble : Option<String>, postamble : Option<String>, mode : Option<DigestionMode>, no_init : bool) 
     -> Result<Digested, Error> {
@@ -112,7 +112,7 @@ impl Core {
   pub fn digest_internal(&mut self) -> Digested {
     let mut stuff = Vec::new();
     let stomach : &mut Stomach = self.state.get_stomach();
-    while stomach.get_gullet().get_mouth().has_more_input() {
+    while stomach.get_gullet().has_more_input() {
       stuff.push(stomach.digest_next_body());
     }
     stomach.get_gullet().flush();

@@ -5,8 +5,8 @@ use rustexml::common::{Config,OutputFormat};
 #[test]
 fn can_convert_hello() {
   let hello_source = "tests/hello.tex";
-  let hello_dest = "tests/hello.html";
-  let mut html_config = Config {
+  // let hello_expected = "tests/hello.html";
+  let html_config = Config {
     format: OutputFormat::HTML5,
     .. Config::new()
   };

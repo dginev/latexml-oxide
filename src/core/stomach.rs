@@ -1,11 +1,10 @@
-use core::{Digested};
 use core::gullet::{Gullet};
 
-pub struct Stomach {
-  pub gullet : Gullet
+pub struct Stomach<'stomach> {
+  pub gullet : Gullet<'stomach>
 }
 
-impl Default for Stomach {
+impl<'stomach> Default for Stomach<'stomach> {
   fn default() -> Self {
     Stomach {
       gullet : Gullet::default()
@@ -13,7 +12,7 @@ impl Default for Stomach {
   }
 }
 
-impl Stomach {
+impl<'stomach> Stomach<'stomach> {
   pub fn get_gullet(&self) -> &Gullet {
     &self.gullet
   }

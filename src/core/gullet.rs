@@ -1,23 +1,29 @@
 use core::mouth::{Mouth};
 
-pub struct Gullet {
-  pub mouth : Mouth
+pub struct Gullet<'gullet> {
+  pub mouths : Vec<Mouth<'gullet>>
 }
 
-impl Default for Gullet {
+impl<'gullet> Default for Gullet<'gullet> {
   fn default() -> Self {
     Gullet {
-      mouth : Mouth::default()
+      mouths : Vec::new()
     }
   }
 }
 
-impl Gullet {
-  pub fn get_mouth(&self) -> &Mouth {
-    &self.mouth
-  }
+impl<'gullet> Gullet<'gullet> {
 
   pub fn flush(&self) {
     // TODO
   }
+
+  pub fn has_more_input(&self) -> bool {
+    let current_mouth = self.mouths.last();
+    match current_mouth {
+      Some(m) => (*m).has_more_input(),
+      None => false
+    }
+  }
+  
 }
