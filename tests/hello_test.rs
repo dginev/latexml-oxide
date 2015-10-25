@@ -14,7 +14,9 @@ fn can_convert_hello() {
   let conversion_result = converter.convert(hello_source.to_string());
   assert!(conversion_result.is_ok());
   let response = conversion_result.unwrap();
-  assert!(response.result.is_some());
   assert!(response.log.len() > 0);
+  println!("Log: \n{:?}", response.log);
+  assert!(response.result.is_some());
+  println!("Result: \n{:?}", response.result);
   assert!(response.status_code == 0);
 }

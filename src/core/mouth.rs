@@ -24,11 +24,11 @@ pub struct Mouth<'mouth> {
   saved_at_cc : Option<Catcode>,
   saved_include_comments : Option<bool>,
   note_message : Option<&'mouth str>,
-  pub source : Option<&'mouth str>,
-  pub shortsource : Option<&'mouth str>,
+  pub source : &'mouth str,
+  pub shortsource : &'mouth str,
   handle : Option<File>,
   chars : Vec<char>,
-  buffer : Vec<char>
+  buffer : Vec<&'mouth str>
 }
 
 impl<'mouth> Default for Mouth<'mouth> {
@@ -41,8 +41,8 @@ impl<'mouth> Default for Mouth<'mouth> {
       colno : 0,
       chars : Vec::new(),
       nchars : 0,
-      source : None,
-      shortsource : None,
+      source : "Anonymous String",
+      shortsource : "String",
       handle : None,
       foodtype : FoodType::File,
       saved_at_cc : None,
@@ -53,7 +53,31 @@ impl<'mouth> Default for Mouth<'mouth> {
 }
 
 impl<'mouth> Mouth<'mouth> {
-  // fn create(source : String, content : Option<String>, fordefinitions: bool, notes: bool);
+  fn open(&mut self, content : &'mouth str, mut state : &mut State) {
+    match self.foodtype {
+      FoodType::File => self.open_file(content),
+      FoodType::Literal => self.open_literal(content),
+      FoodType::HTTP => self.open_http(content),
+      FoodType::HTTPS => self.open_https(content),
+      FoodType::Binding => self.open_file(content)
+    };
+    self.initialize(&mut state);
+  }
+    fn open_file(&mut self, pathname : &str) {
+    match self.foodtype {
+      FoodType::File => {
+        // TODO
+      }
+      _ => {}
+    }
+  }
+  fn open_literal(&mut self, content : &'mouth str) {
+    self.buffer = Mouth::split_lines(content);
+  }
+  fn open_http(&mut self, content : &'mouth str ) {}
+  fn open_https(&mut self, content : &'mouth str ) {}
+  fn open_binding(&mut self, content : &'mouth str ) {}
+
   
   fn initialize(&mut self, state : &mut State) {
     self.note_message = match self.notes {
@@ -163,24 +187,12 @@ impl<'mouth> Mouth<'mouth> {
     // TODO
     "mouth locator".to_string()
   }
-  fn get_source(&self) -> Option<String> {
-    match self.source {
-      None => None,
-      Some(s) => Some(s.to_string())
-    }
+  fn get_source(&self) -> String {
+    self.source.to_string()
   }
 
   fn handle_escape(&self) -> Token {
     T_CS("\\foo")
-  }
-
-  fn open_file(&self, pathname : String) {
-    match self.foodtype {
-      FoodType::File => {
-        // TODO  
-      }
-      _ => {}
-    }
   }
 
 }
