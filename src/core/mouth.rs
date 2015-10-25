@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::hash::Hash;
 use std::path::Path;
+use std::collections::VecDeque;
 
 use common::error::*;
 use state::{State};
@@ -28,8 +29,8 @@ pub struct Mouth<'mouth> {
   pub source : &'mouth str,
   pub shortsource : &'mouth str,
   handle : Option<File>,
-  chars : Vec<char>,
-  buffer : Vec<&'mouth str>
+  chars : VecDeque<char>,
+  buffer : VecDeque<&'mouth str>
 }
 
 impl<'mouth> Default for Mouth<'mouth> {
@@ -40,7 +41,7 @@ impl<'mouth> Default for Mouth<'mouth> {
       fordefinitions : false,
       lineno : 0,
       colno : 0,
-      chars : Vec::new(),
+      chars : VecDeque::new(),
       nchars : 0,
       source : "Anonymous String",
       shortsource : "String",
@@ -48,7 +49,7 @@ impl<'mouth> Default for Mouth<'mouth> {
       foodtype : FoodType::File,
       saved_at_cc : None,
       saved_include_comments : None,
-      buffer : Vec::new()
+      buffer : VecDeque::new()
     }
   }
 }
@@ -100,10 +101,10 @@ impl<'mouth> Mouth<'mouth> {
     return;
   }
   fn finish(&mut self, state : &mut State) {
-    self.buffer = Vec::new();
+    self.buffer = VecDeque::new();
     self.lineno = 0;
     self.colno = 0;
-    self.chars = Vec::new();
+    self.chars = VecDeque::new();
     self.nchars = 0;
     if self.fordefinitions {
       match self.saved_at_cc.clone() {
@@ -124,7 +125,7 @@ impl<'mouth> Mouth<'mouth> {
   /// This is (hopefully) a platform independent way of splitting a string
   /// into "lines" ending with CRLF, CR or LF (DOS, Mac or Unix).
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
-  fn split_lines(lines : &str) -> Vec<&str> {
+  fn split_lines(lines : &str) -> VecDeque<&str> {
     // regexes:
     let linebreak_regex = regex!(r"(?s:\015\012|\015|\012|\r)");
     linebreak_regex.split(lines).collect() // And split.
@@ -144,9 +145,18 @@ impl<'mouth> Mouth<'mouth> {
   //   // I am wondering if this is still needed or we can use a Rust iterator?
   // }
 
-  fn get_next_line(&self) -> Option<String> {
-    // TODO
-    None
+  fn get_next_line(&mut self) -> Option<String> {
+    match self.buffer.pop_front() {
+      Some(line) => {
+        // No CR on last line!
+        if self.buffer.is_empty() {
+          Some(line.to_string() + "\r")
+        } else {
+          Some(line.to_string())
+        }
+      },
+      None => None
+    }
   }
 
 
@@ -195,7 +205,7 @@ impl<'mouth> Mouth<'mouth> {
     }
   }
   pub fn has_more_input(&self) -> bool {
-    false
+    self.colno < self.nchars || !self.buffer.is_empty()
   }
   fn stringify(&self) -> String{
     // TODO
@@ -210,6 +220,7 @@ impl<'mouth> Mouth<'mouth> {
   }
 
   fn handle_escape(&self) -> Token {
+    // TODO
     T_CS("\\foo")
   }
 

@@ -1,4 +1,5 @@
 use std::hash::Hash;
+use common::model::{Model};
 use core::stomach::{Stomach};
 use core::token::{Catcode};
 
@@ -6,7 +7,20 @@ pub struct State<'state> {
   pub verbosity : i32,
   pub map : Vec<String>,
   pub status_code : usize,
-  pub stomach : Stomach<'state>
+  pub stomach : Stomach<'state>,
+  pub model : Model
+}
+
+impl<'state> Default for State<'state> {
+  fn default() -> Self {
+    State {
+      stomach : Stomach::default(),
+      verbosity : 0,
+      status_code: 0,
+      model : Model::default(),
+      map : Vec::new(),
+    }
+  }
 }
 
 impl<'state> State<'state> {

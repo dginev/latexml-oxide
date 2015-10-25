@@ -1,4 +1,5 @@
 pub mod error;
+pub mod model;
 
 #[derive(Clone)]
 pub enum InputFormat {

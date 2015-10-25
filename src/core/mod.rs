@@ -3,17 +3,22 @@ pub mod gullet;
 pub mod mouth;
 pub mod token;
 pub mod package;
+pub mod document;
 
 use std::path::Path;
 use common::{Error, DigestionMode};
+use common::model::{Model};
+use common::error::*;
 use util::pathname::*;
 // use core::token;
 use state::{State};
 use core::stomach::{Stomach};
+use core::document::{Document};
 use core::package::*;
 
 pub struct Core<'core> {
   pub state : State<'core>,
+  preload : Vec<&'core str>,
 }
 pub struct Digested {
   pub stuff : Option<Vec<String>>,
@@ -22,13 +27,13 @@ pub struct Digested {
 impl Digested {
   pub fn to_string(&self) -> String {
     match self.stuff.clone() {
-      Some(s) => "some".to_string(),
+      Some(s) => "Digested.to_string()".to_string(),
       None => String::new()
     }
   }
   pub fn stringify(&self) -> String {
     match self.stuff.clone() {
-      Some(s) => "some".to_string(),
+      Some(s) => "Digested.stringify()".to_string(),
       None => String::new()
     }
   }
@@ -37,12 +42,8 @@ impl Digested {
 impl<'core> Default for Core<'core> {
   fn default() -> Self {
     Core {
-      state : State {
-        stomach : Stomach::default(),
-        verbosity : 0,
-        status_code: 0,
-        map : Vec::new()
-      }
+      preload : Vec::new(),
+      state : State::default()
     }
   }
 }
@@ -106,7 +107,49 @@ impl<'core> Core<'core> {
   }
 
   pub fn convert_document(&self, digested : Digested) -> Result<String, Error> {
-    Ok(digested.to_string())
+    let model = &self.state.model; // The document model.
+    let document = Document {
+      model : model
+    };
+    note_begin("Building");
+    model.load_schema(); // If needed?
+    let paths_opt : Option<Box<Vec<String>>> = self.state.lookup_value("SEARCHPATHS");
+    match paths_opt {
+      None => {},
+      Some(paths) => if !paths.is_empty() {
+        match self.state.lookup_value("INCLUDE_COMMENTS") {
+          Some(ico_flag) => if *ico_flag {
+            document.insert_pi("latexml", *paths); },
+          None => {} 
+        };
+      }
+    };
+    for preload in self.preload.iter() {
+      // TODO
+      // next if $preload =~ /\.pool$/;
+      // my $options = undef;                                 # Stupid perlcritic policy
+      // if ($preload =~ s/^\[([^\]]*)\]//) { $options = $1; }
+      // if ($preload =~ s/\.cls$//) {
+      //   $document->insertPI('latexml', class => $preload, ($options ? (options => $options) : ())); }
+      // else {
+      //   $preload =~ s/\.sty$//;
+      //   $document->insertPI('latexml', package => $preload, ($options ? (options => $options) : ())); } }
+    }
+    document.absorb(digested);
+    note_end("Building");
+
+    // if (my $rules = $state->lookupValue('DOCUMENT_REWRITE_RULES')) {
+    //   NoteBegin("Rewriting");
+    //   $document->markXMNodeVisibility;
+    //   foreach my $rule (@$rules) {
+    //     $rule->rewrite($document, $document->getDocument->documentElement); }
+    //   NoteEnd("Rewriting"); }
+
+    // LaTeXML::MathParser->new()->parseMath($document) unless $$self{nomathparse};
+    note_begin("Finalizing");
+    let xmldoc = document.finalize();
+    note_end("Finalizing");
+    return Ok(xmldoc)
   }
 
   pub fn digest_internal(&mut self) -> Digested {
