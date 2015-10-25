@@ -1,6 +1,6 @@
 use core::Digested;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Catcode {
   ESCAPE,
   BEGIN,

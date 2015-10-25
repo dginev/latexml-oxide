@@ -2,6 +2,7 @@ use std::fs::File;
 use std::hash::Hash;
 use std::path::Path;
 
+use common::error::*;
 use state::{State};
 use core::token::*;
 
@@ -98,8 +99,25 @@ impl<'mouth> Mouth<'mouth> {
     }
     return;
   }
-  fn finish(&self) {
-    // TODO
+  fn finish(&mut self, state : &mut State) {
+    self.buffer = Vec::new();
+    self.lineno = 0;
+    self.colno = 0;
+    self.chars = Vec::new();
+    self.nchars = 0;
+    if self.fordefinitions {
+      match self.saved_at_cc.clone() {
+        Some(cc) => state.assign_catcode(&'@', cc),
+        None => {}
+      };
+      match self.saved_include_comments {
+        Some(sic) => state.assign_value("include_comments", Box::new(sic)),
+        None => {}
+      };
+    }
+    if self.notes && self.note_message.is_some() {
+      note_end(&self.note_message.unwrap());
+    }
   }
   // Auxiliaries
 

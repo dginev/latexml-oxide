@@ -1,3 +1,5 @@
+pub mod error;
+
 #[derive(Clone)]
 pub enum InputFormat {
   TeX,
