@@ -27,12 +27,12 @@ impl<'state> State<'state> {
   pub fn get_stomach(&mut self) -> &'state mut Stomach {
     &mut self.stomach
   }
-  pub fn lookup_catcode(&self, c: &char) -> Option<Catcode> {
+  pub fn lookup_catcode(&mut self, c: &char) -> Option<Catcode> {
     Some(Catcode::LETTER)
   }
-  pub fn lookup_value<T: Hash>(&self, key: &str) -> Option<Box<T>> {
+  pub fn lookup_value<T: Hash>(&mut self, key: &str) -> Option<Box<T>> {
     None
   }
-  pub fn assign_value<T: Hash>(&self, key: &str, value: Box<T>) {}
-  pub fn assign_catcode(&self, c: &char, cc : Catcode) {}
+  pub fn assign_value<T: Hash>(&mut self, key: &str, value: Box<T>) {}
+  pub fn assign_catcode(&mut self, c: &char, cc : Catcode) {}
 }

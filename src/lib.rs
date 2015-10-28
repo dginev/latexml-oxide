@@ -9,7 +9,7 @@
 #![plugin(regex_macros)]
 
 extern crate glob;
-extern crate rustlibxml;
+extern crate libxml;
 extern crate libc;
 extern crate regex;
 extern crate Archive;

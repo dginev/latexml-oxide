@@ -106,14 +106,13 @@ impl<'core> Core<'core> {
     Ok(list)
   }
 
-  pub fn convert_document(&self, digested : Digested) -> Result<String, Error> {
-    let model = &self.state.model; // The document model.
-    let document = Document {
-      model : model
-    };
+  pub fn convert_document<'convert>(&'convert mut self, digested : Digested) -> Result<Document, Error> {
     note_begin("Building");
-    model.load_schema(); // If needed?
-    let paths_opt : Option<Box<Vec<String>>> = self.state.lookup_value("SEARCHPATHS");
+    {
+      self.state.model.load_schema(); // If needed?
+    }
+    let mut document = {Document::new(&mut self.state.model)};
+    let paths_opt : Option<Box<Vec<String>>> = {self.state.lookup_value("SEARCHPATHS")};
     match paths_opt {
       None => {},
       Some(paths) => if !paths.is_empty() {
@@ -147,14 +146,15 @@ impl<'core> Core<'core> {
 
     // LaTeXML::MathParser->new()->parseMath($document) unless $$self{nomathparse};
     note_begin("Finalizing");
-    let xmldoc = document.finalize();
+    document.finalize(&mut self.state);
     note_end("Finalizing");
-    return Ok(xmldoc)
+    return Ok(document)
   }
 
-  pub fn digest_internal(&mut self) -> Digested {
+  pub fn digest_internal<'digest>(&'digest mut self) -> Digested {
     let mut stuff = Vec::new();
-    let stomach : &mut Stomach = self.state.get_stomach();
+    let state = self.state;
+    let stomach : &'digest mut Stomach = state.get_stomach();
     while stomach.get_gullet().has_more_input() {
       stuff.push(stomach.digest_next_body());
     }

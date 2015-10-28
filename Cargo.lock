@@ -3,14 +3,13 @@ name = "rustexml"
 version = "0.1.0"
 dependencies = [
  "glob 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "gnuplot 0.0.18 (git+https://github.com/SiegeLord/RustGnuplot.git)",
  "libarchive-sys 0.0.1 (git+https://github.com/dginev/libarchive-sys.git)",
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libxml 0.0.1 (git+https://github.com/dginev/rust-libxml.git)",
  "rand 0.3.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.41 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex_macros 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustlibxml 0.0.1 (git+https://github.com/jfschaefer/rust-libxml.git)",
  "tempfile 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -38,11 +37,6 @@ version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "gnuplot"
-version = "0.0.18"
-source = "git+https://github.com/SiegeLord/RustGnuplot.git#a6332b9166c6cc3a3492d07c56a51320be8e8942"
-
-[[package]]
 name = "kernel32-sys"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -64,6 +58,14 @@ dependencies = [
 name = "libc"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "libxml"
+version = "0.0.1"
+source = "git+https://github.com/dginev/rust-libxml.git#f7bf48109e5b711f165fe83367a594da928b3235"
+dependencies = [
+ "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "memchr"
@@ -115,14 +117,6 @@ dependencies = [
 name = "rustc-serialize"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "rustlibxml"
-version = "0.0.1"
-source = "git+https://github.com/jfschaefer/rust-libxml.git#2ccba58f6bb4b4a33dab3fab11ff2146b2a1869f"
-dependencies = [
- "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [[package]]
 name = "tempfile"

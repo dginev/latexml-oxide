@@ -11,5 +11,5 @@ impl Default for Model {
 }
 
 impl Model {
-  pub fn load_schema(&self) {}
+  pub fn load_schema(&mut self) {}
 }

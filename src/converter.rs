@@ -1,7 +1,7 @@
-use common::{Config, DataSize, OutputFormat};
+use common::{Config, DataSize, OutputFormat, Error};
 use core::{Core, Digested};
+use core::document::Document;
 use core::token;
-use std::io::Error;
 use std::io::Write;
 
 const CONVERTER_IDENTITY : &'static str = "rustexml (v 0.1)";
@@ -150,27 +150,21 @@ impl<'converter> Converter<'converter> {
       Ok(d) => d
     };
     // 2.1 Now, convert to DOM and output, if desired.
-    let mut dom_result = Ok("default".to_string());
-    let simple_serialized = match self.opts.format {
-      OutputFormat::TeX => Some(token::untex(digested)),
+    let dom_result : Result<Document,Error>;
+    let serialized = match self.opts.format {
+      OutputFormat::TeX => token::untex(digested),
       OutputFormat::Box => {
         if self.opts.verbosity > 0 {
-          Some(digested.stringify())
+          digested.stringify()
         } else {
-          Some(digested.to_string())
+          digested.to_string()
         }
       },
       _ => {
         dom_result = self.core.convert_document(digested);
-        None
-      }
-    };
-    let serialized = match simple_serialized {
-      Some(s) => s,
-      None => {         
         match dom_result {
           Ok(dom) => {
-            dom
+            dom.to_string()
           },
           Err(e) => {
             println_stderr!("convert document failed: {:?}", e);
@@ -179,6 +173,7 @@ impl<'converter> Converter<'converter> {
         }
       }
     };
+
     self.runtime.status_code = self.core.state.status_code;
     // alarm(0)
 

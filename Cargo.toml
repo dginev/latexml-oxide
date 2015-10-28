@@ -8,11 +8,8 @@ name = "rustexml"
 crate-type = ["rlib", "dylib", "staticlib"]
 plugin = true
 
-[dependencies.rustlibxml]
-git = "https://github.com/jfschaefer/rust-libxml.git"
-
-[dependencies.gnuplot]
-git = "https://github.com/SiegeLord/RustGnuplot.git"
+[dependencies.libxml]
+git = "https://github.com/dginev/rust-libxml.git"
 
 [dependencies.libarchive-sys]
 git = "https://github.com/dginev/libarchive-sys.git"
