@@ -1,6 +1,6 @@
 extern crate libxml;
 
-use common::model::Model;
+// use common::model::Model;
 use state::State;
 use core::Digested;
 use libxml::tree::Document as XmlDoc;
@@ -13,8 +13,12 @@ pub struct Document {
 
 impl Document {
   pub fn new() -> Self {
+    let mut doc_scaffold = XmlDoc::new().unwrap();
+    let mut latexml_node = Node::new("latexml", None, &doc_scaffold).unwrap();
+    doc_scaffold.set_root_element(&mut latexml_node);
+    println!("-- Fresh scaffold doc is ready.");
     Document {
-      document : XmlDoc::new().unwrap()
+      document : doc_scaffold
     }
   }
   //**********************************************************************
@@ -41,7 +45,7 @@ impl Document {
     // TODO
   }
   pub fn to_string(&self) -> String {
-    "fake document to_string".to_string()
+    self.document.to_string()
   }
 
   // Internals
