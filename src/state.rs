@@ -3,15 +3,15 @@ use common::model::{Model};
 use core::stomach::{Stomach};
 use core::token::{Catcode};
 
-pub struct State<'state> {
+pub struct State {
   pub verbosity : i32,
   pub map : Vec<String>,
   pub status_code : usize,
-  pub stomach : Stomach<'state>,
+  pub stomach : Stomach,
   pub model : Model
 }
 
-impl<'state> Default for State<'state> {
+impl Default for State {
   fn default() -> Self {
     State {
       stomach : Stomach::default(),
@@ -23,16 +23,16 @@ impl<'state> Default for State<'state> {
   }
 }
 
-impl<'state> State<'state> {
-  pub fn get_stomach(&mut self) -> &'state mut Stomach {
+impl State {
+  pub fn get_stomach<'gs>(&'gs mut self) -> &'gs mut Stomach {
     &mut self.stomach
   }
-  pub fn lookup_catcode(&mut self, c: &char) -> Option<Catcode> {
+  pub fn lookup_catcode<'lc>(&'lc mut self, c: &'lc char) -> Option<Catcode> {
     Some(Catcode::LETTER)
   }
-  pub fn lookup_value<T: Hash>(&mut self, key: &str) -> Option<Box<T>> {
+  pub fn lookup_value<'lv, T: Hash>(&'lv mut self, key: &'lv str) -> Option<Box<T>> {
     None
   }
-  pub fn assign_value<T: Hash>(&mut self, key: &str, value: Box<T>) {}
-  pub fn assign_catcode(&mut self, c: &char, cc : Catcode) {}
+  pub fn assign_value<'av, T: Hash>(&'av mut self, key: &'av str, value: Box<T>) {}
+  pub fn assign_catcode<'ac>(&'ac mut self, c: &'ac char, cc : Catcode) {}
 }

@@ -16,15 +16,15 @@ pub struct Runtime {
   pub status : String,
   pub status_code : usize
 }
-pub struct Converter<'converter> {
+pub struct Converter {
   runtime : Runtime,
   ready : bool,
   opts : Config,
-  core : Core<'converter>
+  core : Core
 }
 
-impl<'converter> Converter<'converter> {
-  pub fn from_config(opts : Config) -> Converter<'converter> {
+impl Converter {
+  pub fn from_config(opts : Config) -> Converter {
     Converter {
       runtime : Runtime{status: String::new(), status_code: 3},
       ready : true,
@@ -125,7 +125,7 @@ impl<'converter> Converter<'converter> {
     //   }
 
     // 1.5 Prepare a daemon frame
-    // core.pushDaemonFrame();
+    // self.core.pushDaemonFrame();
     //  withState(sub {
     //     my ($state) = @_;    // Sandbox state
     //     $state->pushDaemonFrame;
@@ -174,7 +174,8 @@ impl<'converter> Converter<'converter> {
       }
     };
 
-    self.runtime.status_code = self.core.state.status_code;
+    let status_code = self.core.state.status_code.clone();
+    self.runtime.status_code = status_code;
     // alarm(0)
 
     // 2.2 Bookkeeping in case fatal errors occurred

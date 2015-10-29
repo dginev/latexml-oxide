@@ -16,7 +16,7 @@ pub enum FoodType {
   Literal
 }
 
-pub struct Mouth<'mouth> {
+pub struct Mouth {
   pub fordefinitions : bool,
   pub notes : bool,
   pub nchars : usize,
@@ -25,15 +25,15 @@ pub struct Mouth<'mouth> {
   pub foodtype : FoodType,
   saved_at_cc : Option<Catcode>,
   saved_include_comments : Option<bool>,
-  note_message : Option<&'mouth str>,
-  pub source : &'mouth str,
-  pub shortsource : &'mouth str,
+  note_message : Option<String>,
+  pub source : String,
+  pub shortsource : String,
   handle : Option<File>,
   chars : VecDeque<char>,
-  buffer : VecDeque<&'mouth str>
+  buffer : VecDeque<String>
 }
 
-impl<'mouth> Default for Mouth<'mouth> {
+impl Default for Mouth {
   fn default() -> Self {
     Mouth {
       notes : false,
@@ -43,8 +43,8 @@ impl<'mouth> Default for Mouth<'mouth> {
       colno : 0,
       chars : VecDeque::new(),
       nchars : 0,
-      source : "Anonymous String",
-      shortsource : "String",
+      source : "Anonymous String".to_string(),
+      shortsource : "String".to_string(),
       handle : None,
       foodtype : FoodType::File,
       saved_at_cc : None,
@@ -54,8 +54,8 @@ impl<'mouth> Default for Mouth<'mouth> {
   }
 }
 
-impl<'mouth> Mouth<'mouth> {
-  fn open(&mut self, content : &'mouth str, mut state : &mut State) {
+impl Mouth {
+  fn open(&mut self, content : &str, mut state : &mut State) {
     match self.foodtype {
       FoodType::File => self.open_file(content),
       FoodType::Literal => self.open_literal(content),
@@ -73,19 +73,19 @@ impl<'mouth> Mouth<'mouth> {
       _ => {}
     }
   }
-  fn open_literal(&mut self, content : &'mouth str) {
+  fn open_literal(&mut self, content : &str) {
     self.buffer = Mouth::split_lines(content);
   }
-  fn open_http(&mut self, content : &'mouth str ) {}
-  fn open_https(&mut self, content : &'mouth str ) {}
-  fn open_binding(&mut self, content : &'mouth str ) {}
+  fn open_http(&mut self, content : &str ) {}
+  fn open_https(&mut self, content : &str ) {}
+  fn open_binding(&mut self, content : &str ) {}
 
   
   fn initialize(&mut self, state : &mut State) {
     self.note_message = match self.notes {
       true => match self.fordefinitions {
-        true => Some("Processing definitions"),
-        false => Some("Processing content")
+        true => Some("Processing definitions".to_string()),
+        false => Some("Processing content".to_string())
       },
       false => None
     };
@@ -117,7 +117,7 @@ impl<'mouth> Mouth<'mouth> {
       };
     }
     if self.notes && self.note_message.is_some() {
-      note_end(&self.note_message.unwrap());
+      note_end(self.note_message.clone().unwrap());
     }
   }
   // Auxiliaries
@@ -125,10 +125,10 @@ impl<'mouth> Mouth<'mouth> {
   /// This is (hopefully) a platform independent way of splitting a string
   /// into "lines" ending with CRLF, CR or LF (DOS, Mac or Unix).
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
-  fn split_lines(lines : &str) -> VecDeque<&str> {
+  fn split_lines(lines : &str) -> VecDeque<String> {
     // regexes:
     let linebreak_regex = regex!(r"(?s:\015\012|\015|\012|\r)");
-    linebreak_regex.split(lines).collect() // And split.
+    linebreak_regex.split(lines).map(|s| s.to_string()).collect() // And split.
   }
 
 /// Original LaTeXML:

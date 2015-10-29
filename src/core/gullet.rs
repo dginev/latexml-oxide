@@ -1,10 +1,10 @@
 use core::mouth::{Mouth};
 
-pub struct Gullet<'gullet> {
-  pub mouths : Vec<Mouth<'gullet>>
+pub struct Gullet {
+  pub mouths : Vec<Mouth>
 }
 
-impl<'gullet> Default for Gullet<'gullet> {
+impl Default for Gullet {
   fn default() -> Self {
     Gullet {
       mouths : Vec::new()
@@ -12,7 +12,7 @@ impl<'gullet> Default for Gullet<'gullet> {
   }
 }
 
-impl<'gullet> Gullet<'gullet> {
+impl Gullet {
 
   pub fn flush(&self) {
     // TODO

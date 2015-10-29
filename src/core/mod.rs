@@ -16,9 +16,9 @@ use core::stomach::{Stomach};
 use core::document::{Document};
 use core::package::*;
 
-pub struct Core<'core> {
-  pub state : State<'core>,
-  preload : Vec<&'core str>,
+pub struct Core {
+  pub state : State,
+  preload : Vec<String>,
 }
 pub struct Digested {
   pub stuff : Option<Vec<String>>,
@@ -39,7 +39,7 @@ impl Digested {
   }
 }
 
-impl<'core> Default for Core<'core> {
+impl Default for Core {
   fn default() -> Self {
     Core {
       preload : Vec::new(),
@@ -48,7 +48,7 @@ impl<'core> Default for Core<'core> {
   }
 }
 
-impl<'core> Core<'core> {
+impl Core {
   pub fn digest(&mut self, request : String,
     preamble : Option<String>, postamble : Option<String>, mode : Option<DigestionMode>, no_init : bool) 
     -> Result<Digested, Error> {
@@ -107,16 +107,15 @@ impl<'core> Core<'core> {
   }
 
   pub fn convert_document<'convert>(&'convert mut self, digested : Digested) -> Result<Document, Error> {
-    note_begin("Building");
-    {
-      self.state.model.load_schema(); // If needed?
-    }
-    let mut document = {Document::new(&mut self.state.model)};
-    let paths_opt : Option<Box<Vec<String>>> = {self.state.lookup_value("SEARCHPATHS")};
+    note_begin("Building".to_string());
+    let mut state = &mut self.state;
+    state.model.load_schema(); // If needed?
+    let mut document = Document::new();
+    let paths_opt : Option<Box<Vec<String>>> = state.lookup_value("SEARCHPATHS");
     match paths_opt {
       None => {},
       Some(paths) => if !paths.is_empty() {
-        match self.state.lookup_value("INCLUDE_COMMENTS") {
+        match state.lookup_value("INCLUDE_COMMENTS") {
           Some(ico_flag) => if *ico_flag {
             document.insert_pi("latexml", *paths); },
           None => {} 
@@ -135,7 +134,7 @@ impl<'core> Core<'core> {
       //   $document->insertPI('latexml', package => $preload, ($options ? (options => $options) : ())); } }
     }
     document.absorb(digested);
-    note_end("Building");
+    note_end("Building".to_string());
 
     // if (my $rules = $state->lookupValue('DOCUMENT_REWRITE_RULES')) {
     //   NoteBegin("Rewriting");
@@ -145,16 +144,16 @@ impl<'core> Core<'core> {
     //   NoteEnd("Rewriting"); }
 
     // LaTeXML::MathParser->new()->parseMath($document) unless $$self{nomathparse};
-    note_begin("Finalizing");
-    document.finalize(&mut self.state);
-    note_end("Finalizing");
+    note_begin("Finalizing".to_string());
+    document.finalize(&mut state);
+    note_end("Finalizing".to_string());
     return Ok(document)
   }
 
-  pub fn digest_internal<'digest>(&'digest mut self) -> Digested {
+  pub fn digest_internal(&mut self) -> Digested {
     let mut stuff = Vec::new();
-    let state = self.state;
-    let stomach : &'digest mut Stomach = state.get_stomach();
+    let mut state = &mut self.state;
+    let stomach : &Stomach = state.get_stomach();
     while stomach.get_gullet().has_more_input() {
       stuff.push(stomach.digest_next_body());
     }
