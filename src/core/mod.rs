@@ -153,7 +153,7 @@ impl Core {
   pub fn digest_internal(&mut self) -> Digested {
     let mut stuff = Vec::new();
     let mut state = &mut self.state;
-    let stomach : &Stomach = state.get_stomach();
+    let stomach : &mut Stomach = state.get_stomach();
     while stomach.get_gullet().has_more_input() {
       stuff.push(stomach.digest_next_body());
     }

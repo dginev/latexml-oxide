@@ -13,8 +13,8 @@ impl Default for Stomach {
 }
 
 impl Stomach {
-  pub fn get_gullet(&self) -> &Gullet {
-    &self.gullet
+  pub fn get_gullet(&mut self) -> &mut Gullet {
+    &mut self.gullet
   }
 
   pub fn digest_next_body(&self) -> String {

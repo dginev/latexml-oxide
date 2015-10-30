@@ -7,7 +7,7 @@ use common::error::*;
 use state::{State};
 use core::token::*;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum FoodType {
   File,
   Binding,
@@ -16,6 +16,7 @@ pub enum FoodType {
   Literal
 }
 
+#[derive(Clone)]
 pub struct Mouth {
   pub fordefinitions : bool,
   pub notes : bool,
@@ -23,14 +24,14 @@ pub struct Mouth {
   pub colno : usize,
   pub lineno : usize,
   pub foodtype : FoodType,
-  saved_at_cc : Option<Catcode>,
-  saved_include_comments : Option<bool>,
-  note_message : Option<String>,
+  pub saved_at_cc : Option<Catcode>,
+  pub saved_include_comments : Option<bool>,
+  pub note_message : Option<String>,
   pub source : String,
   pub shortsource : String,
-  handle : Option<File>,
-  chars : VecDeque<char>,
-  buffer : VecDeque<String>
+  // pub handle : Option<File>,
+  pub chars : VecDeque<char>,
+  pub buffer : VecDeque<String>
 }
 
 impl Default for Mouth {
@@ -45,7 +46,7 @@ impl Default for Mouth {
       nchars : 0,
       source : "Anonymous String".to_string(),
       shortsource : "String".to_string(),
-      handle : None,
+      // handle : None,
       foodtype : FoodType::File,
       saved_at_cc : None,
       saved_include_comments : None,
@@ -221,7 +222,7 @@ impl Mouth {
 
   fn handle_escape(&self) -> Token {
     // TODO
-    T_CS("\\foo")
+    T_CS("\\foo".to_string())
   }
 
 }
