@@ -23,7 +23,7 @@ impl Default for State {
   }
 }
 
-impl State {
+impl State {// TODO for all
   pub fn lookup_catcode<'lc>(&'lc mut self, c: &'lc char) -> Option<Catcode> {
     Some(Catcode::LETTER)
   }

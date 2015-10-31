@@ -4,6 +4,7 @@ pub mod mouth;
 pub mod token;
 pub mod definition;
 pub mod package;
+pub mod tbox;
 pub mod document;
 
 use std::path::Path;
@@ -15,6 +16,7 @@ use util::pathname::*;
 use state::{State};
 use core::stomach::{Stomach};
 use core::document::{Document};
+use core::tbox::TBox;
 use core::package::*;
 
 pub struct Core {
@@ -23,21 +25,15 @@ pub struct Core {
   preload : Vec<String>,
 }
 pub struct Digested {
-  pub stuff : Option<Vec<String>>,
+  pub stuff : Vec<TBox>,
 }
 
 impl Digested {
   pub fn to_string(&self) -> String {
-    match self.stuff.clone() {
-      Some(s) => "Digested.to_string()".to_string(),
-      None => String::new()
-    }
+    "Vec<TBox> for now ".to_string()
   }
   pub fn stringify(&self) -> String {
-    match self.stuff.clone() {
-      Some(s) => "Digested.stringify()".to_string(),
-      None => String::new()
-    }
+    "Vec<TBox> for now ".to_string()
   }
 }
 
@@ -160,12 +156,12 @@ impl Core {
     let mut stuff = Vec::new();
     let mut state = &mut self.state;
     while self.stomach.get_gullet().has_more_input() {
-      stuff.push(self.stomach.digest_next_body(false, state));
+      for body in self.stomach.digest_next_body(false, state) {
+        stuff.push(body);  
+      }
     }
     self.stomach.get_gullet().flush();
-    return Digested {
-      stuff : Some(stuff)
-    }
+    return Digested { stuff : stuff };
   }
 
   // Internal helpers:
