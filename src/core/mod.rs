@@ -8,7 +8,7 @@ pub mod document;
 
 use std::path::Path;
 use common::{Error, DigestionMode};
-use common::model::{Model};
+// use common::model::{Model};
 use common::error::*;
 use util::pathname::*;
 // use core::token;
@@ -95,7 +95,10 @@ impl Core {
       //     Tokens(Explode($name))));
       // # Reverse order, since last opened is first read!
       // $self->loadPostamble($options{postamble}) if $options{postamble};
-      package::input_content(self,request.clone());
+      match package::input_content(self, request.clone()) {
+        Ok(_) => {},
+        Err(e) => println!("Failed to input content: {:?}", e)
+      };
       // $self->loadPreamble($options{preamble}) if $options{preamble};
 
       // # Now for the Hacky part for BibTeX!!!

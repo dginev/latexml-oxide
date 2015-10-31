@@ -86,7 +86,7 @@ impl Gullet {
 
           read_token = match runtime.pushback.is_empty() {
             false => runtime.pushback.pop_front(),
-            true => runtime.mouth.read_token()
+            true => runtime.mouth.read_token(state)
           };
           match read_token {
             None => {

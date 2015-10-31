@@ -225,8 +225,68 @@ impl Mouth {
     T_CS("\\foo".to_string())
   }
 
-  pub fn read_token(&mut self) -> Option<Token> {
-    // TODO
-    None
+  /// Read the next token, or undef if exhausted.
+  /// Note that this also returns COMMENT tokens containing source comments,
+  /// and also locator comments (file, line# info).
+  /// LaTeXML::Core::Gullet intercepts them and passes them on at appropriate times.
+  pub fn read_token(&mut self, state : &mut State) -> Option<Token> {
+    let sanitize_line_regex = regex!(r"/((\\ )*)\s*$/s");
+    loop { // Iterate till we find a token, or run out. (use return)
+         // ===== Get next line, if we need to.
+    if self.colno >= self.nchars {
+      self.lineno += 1;
+      self.colno = 0;
+      match self.get_next_line() {
+        None => {//Exhausted the input.
+          self.chars  = VecDeque::new();
+          self.nchars = 0;
+          return None;
+        },
+        Some(line) => {
+          // Remove trailing space, but NOT a control space!  End with CR (not \n) since this gets tokenized!
+          let sanitized_line = sanitize_line_regex.replace_all(&line,"$1\r");
+          self.chars  = sanitized_line.chars().collect();
+          self.nchars = self.chars.len();
+          while self.colno < self.nchars {
+            let cc_next = match self.chars.get(self.colno) {
+              None => Catcode::OTHER,
+              Some(c) => match state.lookup_catcode(c) {
+                Some(cc) => cc,
+                None => Catcode::OTHER
+              }
+            };
+            if cc_next == Catcode::SPACE {
+              self.colno += 1;
+            } else {
+              break;
+            }
+          }
+
+          // Sneak a comment out, every so often.
+          if (self.lineno % 25) == 0 {
+            let include_comments : Option<Box<bool>> = state.lookup_value("INCLUDE_COMMENTS");
+            match include_comments {
+              None => {},
+              Some(_) => {
+                return Some(T_COMMENT("**** ".to_string()+&self.shortsource+" Line "+&self.lineno.to_string() +" ****"));
+              }
+            }            
+          }
+        }
+      };
+    }
+    // ==== Extract next token from line.
+    match self.get_next_char(state) {
+      None => {},
+      Some((ch, cc)) => {
+
+      }
+    }
+    // Else, repeat till we get something or run out.
+
+
+
+    return None; 
+    }
   }
 }

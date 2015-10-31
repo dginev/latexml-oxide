@@ -57,11 +57,49 @@ pub fn T_CR() -> Token {
   Token { text: "\n".to_string(), code: Catcode::SPACE }
 }
 pub fn T_LETTER(text : String) -> Token {
-  Token { text : text.to_string(), code: Catcode::LETTER }
+  Token { text : text, code: Catcode::LETTER }
+}
+pub fn T_OTHER(text : String) -> Token {
+  Token { text : text, code: Catcode::OTHER }
+}
+pub fn T_ACTIVE(text : String) -> Token {
+  Token { text : text, code: Catcode::ACTIVE }
+}
+pub fn T_COMMENT(text : String) -> Token {
+  Token { text : "%".to_string(), code: Catcode::ACTIVE }
 }
 pub fn T_CS(text : String) -> Token {
   Token { text : text.to_string(), code: Catcode::CS}
 }
+pub fn T_MARKER(text : String) -> Token {
+  Token { text : text.to_string(), code: Catcode::MARKER}
+}
+
+pub fn Token (text : String, cc_opt : Option<Catcode>) -> Token {
+  let cc = match cc_opt {
+    Some(cc) => cc,
+    None => Catcode::OTHER
+  };
+  Token { text : text,  code: cc }
+}
+// Explode a string into a list of tokens, all w/catcode OTHER (except space).
+pub fn Explode(text : String) -> Vec<Token> {
+  text.chars().map(|c| 
+    if c==' ' { T_SPACE() }
+    else { T_OTHER(c.to_string()) }
+  ).collect()
+}
+
+// Similar to Explode, but convert letters to catcode LETTER and others to OTHER
+// Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
+pub fn ExplodeText(text : String) -> Vec<Token> {
+  text.chars().map(|c| 
+    if c==' ' { T_SPACE() }
+    else if c.is_alphabetic() { T_LETTER(c.to_string()) }
+    else { T_OTHER(c.to_string()) }
+  ).collect::<Vec<Token>>()
+}
+
 pub fn untex(digested : Digested) -> String {
   digested.to_string()
 }
