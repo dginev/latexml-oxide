@@ -1,10 +1,10 @@
-use state::{State};
+use core::{Core};
 use core::mouth::Mouth;
 // use common::{Error};
 
-pub fn input_content(state : &mut State, request : String) -> Result<(),()> {
+pub fn input_content(core : &mut Core, request : String) -> Result<(),()> {
   match find_file(request, false) { // TODO: type => $options{type}, noltxml => 1
-    Some(path) => Ok(load_tex_content(state, path)),
+    Some(path) => Ok(load_tex_content(core, path)),
     None => Err(())
       // TODO:
       // Error("missing_file", request, state.get_stomach().get_gullet(),
@@ -12,8 +12,9 @@ pub fn input_content(state : &mut State, request : String) -> Result<(),()> {
   }
 }
 
-pub fn load_tex_content(state: &mut State, path : String) {
-  let gullet = state.get_stomach().get_gullet();
+pub fn load_tex_content(core: &mut Core, path : String) {
+  let mut mouth = Mouth{notes: true, ..Mouth::default()};
+  mouth.open(&path, &mut core.state);
   // TODO: 
   // If there is a file-specific declaration file (name.latexml), load it first!
   // let file = path;
@@ -26,7 +27,8 @@ pub fn load_tex_content(state: &mut State, path : String) {
   // content => LookupValue($pathname . '_contents')
 
   // Open a mouth for that TeX content
-  gullet.open_mouth(Mouth{notes: true, ..Mouth::default()}, true);
+  let gullet = core.stomach.get_gullet();
+  gullet.open_mouth(mouth, true);
 
 }
 

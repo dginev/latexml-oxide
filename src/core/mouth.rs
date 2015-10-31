@@ -56,7 +56,7 @@ impl Default for Mouth {
 }
 
 impl Mouth {
-  fn open(&mut self, content : &str, mut state : &mut State) {
+  pub fn open<'open>(&'open mut self, content : &str, mut state : &mut State) {
     match self.foodtype {
       FoodType::File => self.open_file(content),
       FoodType::Literal => self.open_literal(content),
@@ -225,4 +225,8 @@ impl Mouth {
     T_CS("\\foo".to_string())
   }
 
+  pub fn read_token(&mut self) -> Option<Token> {
+    // TODO
+    None
+  }
 }

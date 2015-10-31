@@ -1,6 +1,6 @@
 use core::Digested;
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Copy, Hash)]
 pub enum Catcode {
   ESCAPE,
   BEGIN,
@@ -23,10 +23,10 @@ pub enum Catcode {
   MARKER
 }
 
-#[derive(Clone)]
+#[derive(Clone, Hash)]
 pub struct Token{
-  text : String,
-  code : Catcode
+ pub text : String,
+ pub code : Catcode
 }
 
 pub fn T_BEGIN() -> Token {

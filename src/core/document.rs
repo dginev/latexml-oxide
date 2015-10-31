@@ -16,7 +16,7 @@ impl Document {
     let mut doc_scaffold = XmlDoc::new().unwrap();
     let mut latexml_node = Node::new("latexml", None, &doc_scaffold).unwrap();
     doc_scaffold.set_root_element(&mut latexml_node);
-    println!("-- Fresh scaffold doc is ready.");
+
     Document {
       document : doc_scaffold
     }

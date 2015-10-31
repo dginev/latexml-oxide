@@ -2,6 +2,7 @@ pub mod stomach;
 pub mod gullet;
 pub mod mouth;
 pub mod token;
+pub mod definition;
 pub mod package;
 pub mod document;
 
@@ -18,6 +19,7 @@ use core::package::*;
 
 pub struct Core {
   pub state : State,
+  pub stomach : Stomach,
   preload : Vec<String>,
 }
 pub struct Digested {
@@ -43,6 +45,7 @@ impl Default for Core {
   fn default() -> Self {
     Core {
       preload : Vec::new(),
+      stomach : Stomach::default(),
       state : State::default()
     }
   }
@@ -70,7 +73,7 @@ impl Core {
       };
       dir = path.parent();
       match path.file_stem() {
-        None => None,
+        None => Some("missing_name".to_string()),
         Some(pf) => Some(pf.to_str().unwrap().to_string())
       }
     };
@@ -78,7 +81,7 @@ impl Core {
     //   $self->withState(sub {
     //       Fatal('missing_file', $request, undef, "Can't find $mode file $request"); }); } }
     // };
-    // NoteBegin("Digesting $mode $name");
+    note_begin("Digesting ".to_string() +&name.clone().unwrap());
       // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless $options{noinitialize};
       // $state->assignValue(SOURCEFILE      => $request) if (!pathname_is_literaldata($request));
       // $state->assignValue(SOURCEDIRECTORY => $dir)     if defined $dir;
@@ -92,16 +95,16 @@ impl Core {
       //     Tokens(Explode($name))));
       // # Reverse order, since last opened is first read!
       // $self->loadPostamble($options{postamble}) if $options{postamble};
-      package::input_content(&mut self.state,request.clone());
+      package::input_content(self,request.clone());
       // $self->loadPreamble($options{preamble}) if $options{preamble};
 
       // # Now for the Hacky part for BibTeX!!!
       // if ($mode eq 'BibTeX') {
       //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
       //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX); }
-      // my $list = $self->finishDigestion;
+            
       let list = self.digest_internal();
-      // NoteEnd("Digesting $mode $name");
+      note_end("Digesting ".to_string()+ &name.clone().unwrap());
       // return $list; }); 
     Ok(list)
   }
@@ -153,11 +156,10 @@ impl Core {
   pub fn digest_internal(&mut self) -> Digested {
     let mut stuff = Vec::new();
     let mut state = &mut self.state;
-    let stomach : &mut Stomach = state.get_stomach();
-    while stomach.get_gullet().has_more_input() {
-      stuff.push(stomach.digest_next_body());
+    while self.stomach.get_gullet().has_more_input() {
+      stuff.push(self.stomach.digest_next_body(false, state));
     }
-    stomach.get_gullet().flush();
+    self.stomach.get_gullet().flush();
     return Digested {
       stuff : Some(stuff)
     }
