@@ -1,6 +1,7 @@
 use core::Digested;
+use std::fmt;
 
-#[derive(PartialEq, Clone, Copy, Hash)]
+#[derive(PartialEq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
   ESCAPE,
   BEGIN,
@@ -23,7 +24,7 @@ pub enum Catcode {
   MARKER
 }
 
-#[derive(Clone, Hash)]
+#[derive(Clone, Hash, Debug)]
 pub struct Token{
  pub text : String,
  pub code : Catcode

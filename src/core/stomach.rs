@@ -33,10 +33,14 @@ impl Stomach {
     let token_list : Vec<Token> = Vec::new();
     let mut gullet = self.get_gullet();
 
-    while { read_token = gullet.read_x_token(true, true, state); 
-            read_token.is_some() } {
-
-
+    loop {
+      read_token = gullet.read_x_token(true, true, state); 
+      match read_token {
+        None => break,
+        Some(token) => {
+          println!("Read in token: {:?}", token);
+        }
+      };
     }
     "next body?".to_string()
   }

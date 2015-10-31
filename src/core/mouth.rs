@@ -220,11 +220,6 @@ impl Mouth {
     self.source.to_string()
   }
 
-  fn handle_escape(&self) -> Token {
-    // TODO
-    T_CS("\\foo".to_string())
-  }
-
   /// Read the next token, or undef if exhausted.
   /// Note that this also returns COMMENT tokens containing source comments,
   /// and also locator comments (file, line# info).
@@ -279,14 +274,54 @@ impl Mouth {
     match self.get_next_char(state) {
       None => {},
       Some((ch, cc)) => {
-
+        match Mouth::dispatch_char(ch, cc) { 
+          Some(token) => {
+            return Some(token);
+          },
+          None => {},// Else, repeat till we get something or run out.
+        };
       }
+    } 
+  }
+  return None;
+  }
+
+  fn dispatch_char(ch: char, cc : Catcode) -> Option<Token> {
+    // Possibly want to think about caching (common) letters, etc to keep from
+    // creating tokens like crazy... or making them more compact... or ???
+    use core::token::Catcode::*;
+    match cc {
+      ESCAPE => Mouth::handle_escape(ch), // T_ESCAPE
+      BEGIN => if ch == '{' { Some(T_BEGIN()) } else { Some(Token { text : ch.to_string(), code : BEGIN}) },    // T_BEGIN
+      END => if ch == '}' { Some(T_END()) } else { Some(Token { text : ch.to_string(), code : END}) },      // T_END
+      MATH => if ch == '$' { Some(T_MATH()) } else { Some(Token { text : ch.to_string(), code : MATH}) },     // T_MATH
+      ALIGN => if ch == '&' { Some(T_ALIGN()) } else { Some(Token { text : ch.to_string(), code : ALIGN}) },    // T_ALIGN
+      EOL => Mouth::handle_EOL(ch),                                                 // T_EOL
+      PARAM => if ch == '#' { Some(T_PARAM()) } else { Some(Token { text : ch.to_string(), code : PARAM}) },    // T_PARAM
+      SUPER => if ch == '^' { Some(T_SUPER()) } else { Some(Token { text : ch.to_string(), code : SUPER}) },    // T_SUPER
+      SUB => if ch == '_' { Some(T_SUB()) } else { Some(Token { text : ch.to_string(), code : SUB}) },      // T_SUB
+      IGNORE => None,
+      SPACE => Mouth::handle_space(ch),
+      LETTER => Some(T_LETTER(ch.to_string())),
+      OTHER => Some(T_OTHER(ch.to_string())),
+      ACTIVE => Some(T_ACTIVE(ch.to_string())),
+      COMMENT => Mouth::handle_comment(ch),
+      INVALID => Some(T_OTHER(ch.to_string())), // T_INVALID (we could get unicode!)
+      _ => None
     }
-    // Else, repeat till we get something or run out.
+  }
 
-
-
-    return None; 
-    }
+  fn handle_EOL(c : char) -> Option<Token> {
+    None
+  }
+  fn handle_space(c : char) -> Option<Token> {
+    None
+  }
+  fn handle_comment(c : char) -> Option<Token> {
+    None
+  }
+  fn handle_escape(c : char) -> Option<Token> {
+    // TODO
+    Some(T_CS("\\foo".to_string()))
   }
 }
