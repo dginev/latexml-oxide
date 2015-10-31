@@ -274,7 +274,7 @@ impl Mouth {
     match self.get_next_char(state) {
       None => {},
       Some((ch, cc)) => {
-        match Mouth::dispatch_char(ch, cc) { 
+        match Mouth::dispatch_char(self, ch, cc, state) { 
           Some(token) => {
             return Some(token);
           },
@@ -286,41 +286,70 @@ impl Mouth {
   return None;
   }
 
-  fn dispatch_char(ch: char, cc : Catcode) -> Option<Token> {
+  fn dispatch_char(&mut self, ch: char, cc : Catcode, state : &mut State) -> Option<Token> {
     // Possibly want to think about caching (common) letters, etc to keep from
     // creating tokens like crazy... or making them more compact... or ???
     use core::token::Catcode::*;
     match cc {
-      ESCAPE => Mouth::handle_escape(ch), // T_ESCAPE
+      ESCAPE => self.handle_escape(ch, state), // T_ESCAPE
       BEGIN => if ch == '{' { Some(T_BEGIN()) } else { Some(Token { text : ch.to_string(), code : BEGIN}) },    // T_BEGIN
       END => if ch == '}' { Some(T_END()) } else { Some(Token { text : ch.to_string(), code : END}) },      // T_END
       MATH => if ch == '$' { Some(T_MATH()) } else { Some(Token { text : ch.to_string(), code : MATH}) },     // T_MATH
       ALIGN => if ch == '&' { Some(T_ALIGN()) } else { Some(Token { text : ch.to_string(), code : ALIGN}) },    // T_ALIGN
-      EOL => Mouth::handle_EOL(ch),                                                 // T_EOL
+      EOL => self.handle_EOL(ch, state),                                                 // T_EOL
       PARAM => if ch == '#' { Some(T_PARAM()) } else { Some(Token { text : ch.to_string(), code : PARAM}) },    // T_PARAM
       SUPER => if ch == '^' { Some(T_SUPER()) } else { Some(Token { text : ch.to_string(), code : SUPER}) },    // T_SUPER
       SUB => if ch == '_' { Some(T_SUB()) } else { Some(Token { text : ch.to_string(), code : SUB}) },      // T_SUB
       IGNORE => None,
-      SPACE => Mouth::handle_space(ch),
+      SPACE => self.handle_space(ch, state),
       LETTER => Some(T_LETTER(ch.to_string())),
       OTHER => Some(T_OTHER(ch.to_string())),
       ACTIVE => Some(T_ACTIVE(ch.to_string())),
-      COMMENT => Mouth::handle_comment(ch),
+      COMMENT => self.handle_comment(ch, state),
       INVALID => Some(T_OTHER(ch.to_string())), // T_INVALID (we could get unicode!)
       _ => None
     }
   }
 
-  fn handle_EOL(c : char) -> Option<Token> {
+  fn handle_EOL(&mut self, c : char, state : &mut State) -> Option<Token> {
+    // Note that newines should be converted to space (with " " for content)
+    // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
+    let token = if self.colno == 1 {
+      T_CS("\\par".to_string())
+    } else {
+      let preserve_newlines : Option<Box<bool>> = state.lookup_value("PRESERVE_NEWLINES");
+      if preserve_newlines.is_some() {
+        Token("\n".to_string(), Some(Catcode::SPACE))
+      } else {
+        T_SPACE()
+      }
+    };
+    self.colno = self.nchars; // Ignore any remaining characters after EOL
+    return Some(token)
+  }
+
+  fn handle_space(&mut self, c : char, state : &mut State) -> Option<Token> {
+    // Skip any following spaces!
+    loop {
+      match self.get_next_char(state) {
+        None => break,
+        Some((ch, cc)) => {
+          if (cc != Catcode::SPACE) && (cc != Catcode::EOL) {
+            break;
+          }
+        }
+      }
+    }
+    if self.colno < self.nchars {
+      self.colno -= 1;
+    }
+    return Some(T_SPACE())
+  }
+
+  fn handle_comment(&mut self, c : char, state : &mut State) -> Option<Token> {
     None
   }
-  fn handle_space(c : char) -> Option<Token> {
-    None
-  }
-  fn handle_comment(c : char) -> Option<Token> {
-    None
-  }
-  fn handle_escape(c : char) -> Option<Token> {
+  fn handle_escape(&mut self, c : char, state : &mut State) -> Option<Token> {
     // TODO
     Some(T_CS("\\foo".to_string()))
   }

@@ -58,10 +58,62 @@ impl Gullet {
 
   }
 
+  ///**********************************************************************
+  /// Low-level readers: read token, read expanded token
+  ///**********************************************************************
+  /// Note that every char (token) comes through here (maybe even twice, through args parsing),
+  /// So, be Fast & Clean!  This method only reads from the current input stream (Mouth).
   pub fn read_token(&mut self, state : &mut State) -> Option<Token> {
-    None
+    let mut next_token : Option<Token> = None;
+    // Check in pushback first....
+    match self.mouth {
+      None => None,
+      Some(ref mut runtime) => {
+    loop {
+      match runtime.pushback.pop_front() {
+        None => break,
+        Some(pushback_token) => {
+          match pushback_token.code {
+            Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
+            Catcode::MARKER => {
+            // TODO:
+            // LaTeXML::Core::Definition::stopProfiling($token, 'expand'); } }
+            },
+            _ => {
+              next_token = Some(pushback_token);
+              break
+            }
+          };
+        }
+      }
+    }
+    match next_token {
+      Some(token) => {return Some(token)},
+      None => {}
+    };
+    
+    loop {
+      match runtime.mouth.read_token(state) {
+        None => break,
+        Some(token) => {
+          match token.code {
+            Catcode::COMMENT => self.pending_comments.push_back(token),
+            Catcode::MARKER => {
+            // TODO:
+            // LaTeXML::Core::Definition::stopProfiling($token, 'expand'); } }
+            },
+            _ => {
+              next_token = Some(token);
+              break;
+            } 
+          };
+        }
+      }
+    }
+    return next_token;
+    }}
   }
-
+  
   // Read the next non-expandable token (expanding tokens until there's a non-expandable one).
   // Note that most tokens pass through here, so be Fast & Clean! readToken is folded in.
   // `Toplevel' processing, (if $toplevel is true), used at the toplevel processing by Stomach,
@@ -74,8 +126,8 @@ impl Gullet {
     }
 
     loop {
-      let mut read_token : Option<Token>;
-      let mut cc : Catcode;
+      let read_token : Option<Token>;
+      let cc : Catcode;
       let mut defn_next : Option<Definition> = None;
       let mut needs_close = false;
       let mut return_next = false;
