@@ -1,3 +1,4 @@
+use std::io::prelude::*;
 use std::fs::File;
 use std::hash::Hash;
 use std::path::Path;
@@ -66,10 +67,23 @@ impl Mouth {
     };
     self.initialize(&mut state);
   }
-    fn open_file(&mut self, pathname : &str) {
+  fn open_file(&mut self, pathname : &str) {
     match self.foodtype {
       FoodType::File => {
-        // TODO
+      // TODO: Handle errors
+      //   Fatal('I/O', $pathname, $self, "File $pathname is not readable."); }
+      // elsif ((!-z $pathname) && (-B $pathname)) {
+      //   Fatal('I/O', $pathname, $self, "Input file $pathname appears to be binary."); }
+      // open($IN, '<', $pathname)
+      //   || Fatal('I/O', $pathname, $self, "Can't open $pathname for reading", $!);
+        
+
+        let mut f = File::open(pathname).unwrap();
+        let mut content = String::new();
+        match f.read_to_string(&mut content) {
+          _ => {}
+        };
+        self.open_literal(&content);
       }
       _ => {}
     }
@@ -101,7 +115,7 @@ impl Mouth {
     }
     return;
   }
-  fn finish(&mut self, state : &mut State) {
+  pub fn finish(&mut self, state : &mut State) {
     self.buffer = VecDeque::new();
     self.lineno = 0;
     self.colno = 0;
@@ -350,7 +364,63 @@ impl Mouth {
     None
   }
   fn handle_escape(&mut self, c : char, state : &mut State) -> Option<Token> {
-    // TODO
-    Some(T_CS("\\foo".to_string()))
+    // NOTE: We're using control sequences WITH the \ prepended!!!
+    let mut cs = "\\".to_string();  // I need this standardized to be able to lookup tokens (A better way???)
+    match self.get_next_char(state) {
+      None => {},
+      Some((ch, cc)) => {
+        // Knuth, p.46 says that Newlines are converted to spaces,
+        // Bit I believe that he does NOT mean within control sequences
+        cs.push_str(&ch.to_string());
+        match cc {
+        Catcode::LETTER => {    // For letter, read more letters for csname.
+          loop {
+            match self.get_next_char(state) {
+              None => break,
+              Some((ch, cc)) => {
+                if cc == Catcode::LETTER {
+                  cs.push_str(&ch.to_string());
+                } else {
+                  break;
+                }
+              }
+            };
+          }
+          self.colno -= 1;
+        },
+        
+        Catcode::SPACE => { // We'll skip whitespace here.
+          loop {
+            match self.get_next_char(state) {
+              None => break,
+              Some((ch, cc)) => {
+                if cc != Catcode::SPACE {
+                  break
+                }
+              }
+            };
+          }
+          if self.colno < self.nchars {
+            self.colno -= 1;
+          }
+        },
+
+        Catcode::EOL => {       // If we've got an EOL
+                                 // if in \read mode, leave the EOL to be turned into a T_SPACE
+          // TODO: preserve_newlines NYI
+          let preserve_newlines : Option<Box<bool>>= state.lookup_value("PRESERVE_NEWLINES");
+          if preserve_newlines.is_some() { }
+          else {                   // else skip it.
+            self.get_next_char(state);
+            if self.colno < self.nchars {
+              self.colno -= 1;
+            }
+          }
+        },
+        _ => {},
+        };
+      }
+    };
+    Some(T_CS(cs))
   }
 }

@@ -42,7 +42,7 @@ impl Default for Core {
     Core {
       preload : Vec::new(),
       stomach : Stomach::default(),
-      state : State::default()
+      state : State::new()
     }
   }
 }
@@ -155,6 +155,7 @@ impl Core {
   pub fn digest_internal(&mut self) -> Digested {
     let mut stuff = Vec::new();
     let mut state = &mut self.state;
+
     while self.stomach.get_gullet().has_more_input() {
       for body in self.stomach.digest_next_body(false, state) {
         stuff.push(body);  

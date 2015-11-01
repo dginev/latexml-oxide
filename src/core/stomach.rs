@@ -2,6 +2,7 @@ use core::gullet::{Gullet};
 use core::token::{Token};
 use core::tbox::*;
 use state::State;
+use common::error::*;
 
 pub struct Stomach {
   pub gullet : Gullet,
@@ -48,6 +49,7 @@ impl Stomach {
         }
       };
     }
+
     // Warn('expected', $terminal, $self, "body should have ended with '" . ToString($terminal) . "'",
     // "current body started at " . ToString($startloc))
     // if $terminal && !Equals($token, $terminal);

@@ -54,8 +54,25 @@ impl Gullet {
     });
   }
 
-  pub fn close_mouth<'close>(&'close mut self) {
-
+  pub fn close_mouth<'close>(&'close mut self, forced : bool, state : &mut State) -> Result<(),()> {
+    let mut shift_from_mouthstack = false;
+    match self.mouth {
+      None => {}
+      Some(ref mut runtime) => {
+        if !forced && (!runtime.pushback.is_empty()) || runtime.mouth.has_more_input() {
+          // TODO:
+          // let next = Stringify(self.read_token());
+          //Error('unexpected', $next, $self, "Closing mouth with input remaining '$next'");
+        }
+        runtime.mouth.finish(state);
+        // I think I can refactor from the original state into this simple assignment, because of the Option type
+        shift_from_mouthstack = true;
+      }
+    }
+    if shift_from_mouthstack {
+      self.mouth = self.mouthstack.pop_front();
+    }
+    return Ok(()); 
   }
 
   ///**********************************************************************
@@ -191,7 +208,10 @@ impl Gullet {
         }
       };
       if needs_close {
-        self.close_mouth(); // Next input stream.
+        match self.close_mouth(false, state) { // Next input stream.
+          Ok(_) => {},
+          Err(_) => {}// TODO: Handle error
+        }
       } else if return_next {
         return self.read_token(state);    // Just return the next token.
       } else if expand_next {
