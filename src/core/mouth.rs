@@ -361,8 +361,26 @@ impl Mouth {
   }
 
   fn handle_comment(&mut self, c : char, state : &mut State) -> Option<Token> {
-    None
+    let n = self.colno;
+    self.colno = self.nchars;
+    let mut comment = String::new();
+    // TODO: Probably too slow to do so many .get()s, ideally we want an iterator on a slice.
+    for c in n .. (self.nchars - 1) {
+      match self.chars.get(c) {
+        None => {},
+        Some(c) => comment.push_str(&c.to_string())
+      };
+    }
+    comment.trim();
+    // TODO: Handle properly
+    let include_comments : Option<Box<bool>> = state.lookup_value("INCLUDE_COMMENTS");
+    if !comment.is_empty() && include_comments.is_some() {
+      Some(T_COMMENT(comment))
+    } else {
+      None
+    }
   }
+
   fn handle_escape(&mut self, c : char, state : &mut State) -> Option<Token> {
     // NOTE: We're using control sequences WITH the \ prepended!!!
     let mut cs = "\\".to_string();  // I need this standardized to be able to lookup tokens (A better way???)
