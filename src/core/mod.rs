@@ -3,6 +3,7 @@ pub mod gullet;
 pub mod mouth;
 pub mod token;
 pub mod definition;
+pub mod parameter;
 pub mod package;
 pub mod tbox;
 pub mod document;

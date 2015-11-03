@@ -1,6 +1,7 @@
 use core::token::Token;
 
 /// Box is a Rust keyword, so we use "TBox" instead, as in "TeX Box"
+#[derive(Debug)]
 pub struct TBox {//TODO
    pub text : String,
    pub font : String,

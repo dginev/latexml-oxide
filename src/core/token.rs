@@ -23,6 +23,61 @@ pub enum Catcode {
   NOTEXPANDED,
   MARKER
 }
+impl Catcode {
+  pub fn is_primitive(&self) -> bool {
+    use core::token::Catcode::*;
+    match *self {
+      // Primitives
+      ESCAPE => true,
+      BEGIN => true,
+      END => true,
+      MATH => true,
+      ALIGN => true,
+      EOL => true,
+      PARAM => true,
+      SUPER => true,
+      SUB => true,
+      SPACE => true,
+      NOTEXPANDED => true,
+      // Non-primitive
+      IGNORE => false,
+      LETTER => false,
+      OTHER => false,
+      ACTIVE => false,
+      COMMENT => false,
+      INVALID => false,
+      CS => false,
+      MARKER => false, 
+    }
+  }
+
+  pub fn name(&self) -> String {
+    use core::token::Catcode::*;
+    match *self {
+      // Primitive
+      ESCAPE => "Escape",
+      BEGIN => "Begin",
+      END => "End",
+      MATH => "Math",
+      ALIGN => "Align",
+      EOL => "EOL",
+      PARAM => "Parameter",
+      SUPER => "Superscript",
+      SUB => "Subscript",
+      SPACE => "Space",
+      NOTEXPANDED => "NotExpanded",
+      // Non-primitive
+      IGNORE => "Ignore",
+      LETTER => "Letter",
+      OTHER => "Other",
+      ACTIVE => "Active",
+      COMMENT => "Comment",
+      INVALID => "Invalid",
+      CS => "ControlSequence",
+      MARKER => "Marker"
+    }.to_string()
+  }
+}
 
 #[derive(Clone, Hash, Debug)]
 pub struct Token{
@@ -103,4 +158,23 @@ pub fn ExplodeText(text : String) -> Vec<Token> {
 
 pub fn untex(digested : Digested) -> String {
   digested.to_string()
+}
+
+
+// TODO: Skipped ...
+
+///======================================================================
+/// Accessors.
+impl Token {
+  pub fn isa_token(&self) -> bool { true }
+
+  /// Get the CS Name of the token. This is the name that definitions will be
+  /// stored under; It's the same for various `different' BEGIN tokens, eg.
+  pub fn get_cs_name(&self) -> String {
+    if self.code.is_primitive() {
+      self.code.name()
+    } else {
+      self.text.clone()
+    }
+  }
 }

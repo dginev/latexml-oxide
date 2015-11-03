@@ -75,6 +75,10 @@ impl State {// TODO for all
   pub fn lookup_definition<'def>(&'def mut self, key: &'def Token) -> Option<Box<Definition>> {
     None
   }
+  pub fn lookup_digestable_definition<'def>(&'def mut self, key: &'def Token) -> Option<Box<Definition>> {
+    None 
+  }
   pub fn assign_value<'av, T: Hash>(&'av mut self, key: &'av str, value: Box<T>) {}
   pub fn assign_catcode<'ac>(&'ac mut self, c: &'ac char, cc : Catcode) {}
+  pub fn clear_prefixes<'ac>(&'ac mut self) {}
 }
