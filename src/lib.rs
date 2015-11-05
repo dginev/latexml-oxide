@@ -19,8 +19,8 @@ extern crate tempfile;
 extern crate time;
 
 #[macro_use] pub mod rust_macros;
+#[macro_use] pub mod core;
 pub mod common;
 pub mod state;
 pub mod converter;
-pub mod core;
 pub mod util;

@@ -1,9 +1,10 @@
 use core::gullet::Gullet;
 use core::stomach::Stomach;
-use core::token::Token;
+use core::token::*;
 use core::tbox::TBox;
 use core::parameter::Parameter;
 use common::object::Object;
+use state::State;
 
 #[derive(Clone)]
 pub struct Definition {
@@ -84,5 +85,30 @@ impl Definition {
 
   pub fn get_parameters(&self) -> Vec<Token> {
     Vec::new() // ??? How do we handle these
+  }
+}
+
+pub type ExpansionClosure = Box<FnMut(&mut State) -> Vec<Token>>;
+pub struct Expandable {
+  pub is_expandable : bool,
+  pub is_protected : bool,
+  pub alias : Option<String>,
+  pub locator : String,
+  pub cs : Token,
+  pub paramlist : Vec<Parameter>,
+  pub expansion : ExpansionClosure
+}
+impl Object for Expandable {}
+impl Default for Expandable {
+  fn default() -> Self {
+    Expandable {
+      is_expandable : true,
+      is_protected : false,
+      alias : None,
+      locator : String::new(),
+      cs : T_CS("Expandable".to_string()),
+      paramlist : Vec::new(),
+      expansion : Box::new(|state| {Vec::new()})
+    }
   }
 }

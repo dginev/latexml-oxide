@@ -4,8 +4,12 @@ use std::collections::HashMap;
 use common::model::{Model};
 // use core::stomach::{Stomach};
 use core::token::{Catcode, Token};
-use core::definition::Definition;
+use core::definition::{Definition, Expandable};
 
+pub enum Scope {
+  Global,
+  Local
+}
 
 pub struct State {
   pub verbosity : i32,
@@ -81,4 +85,8 @@ impl State {// TODO for all
   pub fn assign_value<'av, T: Hash>(&'av mut self, key: &'av str, value: Box<T>) {}
   pub fn assign_catcode<'ac>(&'ac mut self, c: &'ac char, cc : Catcode) {}
   pub fn clear_prefixes<'ac>(&'ac mut self) {}
+
+  pub fn install_definition<'id>(&'id mut self, def: Expandable, scope: Option<Scope>) {
+
+  }
 }
