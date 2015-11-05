@@ -51,7 +51,7 @@ macro_rules! DefMacroI(
       {
         use $crate::core::definition::Expandable;
         use $crate::core::package;
-        $state.install_definition(Expandable { cs: package::coerce_cs( $cs ), paramlist: $paramlist, expansion: $expansion, ..Expandable::default()}, None);
+        $state.install_definition(Expandable { cs: package::coerce_cs( $cs ), paramlist: $paramlist, expansion: $expansion, ..Expandable::default()}, &None);
       }
     )
   );

@@ -27,7 +27,7 @@ pub trait Object {
   // be careful to avoid recursive errors
 
   // Just how deep of an equality test should this be?
-  fn equals<T>(&self, other : T) -> bool {
+  fn equals<T>(&self, other : T) -> bool where Self: Sized {
     unimplemented!()
   }
 
@@ -42,13 +42,13 @@ pub trait Object {
     unimplemented!()
   }
 
-  fn notequals<T>(&self, other : &T) -> bool {
+  fn notequals<T>(&self, other : &T) -> bool  where Self: Sized {
     !self.equals(other)
   }
 
   fn isa_token(&self) -> bool { false }
   fn isa_box(&self) -> bool { false }
-  fn isa_definition(&self) -> bool { false }
+  fn is_definition(&self) -> bool { false }
 
   // These should really only make sense for Data objects within the
   // processing stream.
@@ -61,7 +61,7 @@ pub trait Object {
     unimplemented!() 
   }
 
-  fn unlist<T>(&self) -> Vec<T> {
+  fn unlist<T>(&self) -> Vec<T>  where Self: Sized {
     unimplemented!()
   }
 

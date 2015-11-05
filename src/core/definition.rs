@@ -6,46 +6,26 @@ use core::parameter::Parameter;
 use common::object::Object;
 use state::State;
 
-#[derive(Clone)]
-pub struct Definition {
-  pub is_expandable : bool,
-  pub is_protected : bool,
-  pub alias : Option<String>,
-  pub locator : String,
-  pub cs : Token,
-}
 
-impl Object for Definition {}
-impl Definition {
-  pub fn invoke(&mut self, gullet : &mut Gullet) -> Vec<Token> {
+pub trait Definition : Object {
+  fn invoke(&mut self, gullet : &mut Gullet) -> Vec<Token> {
     Vec::new()
   }
-  pub fn invoke_primitive(&mut self, gullet : &mut Stomach) -> Vec<TBox> {
+  fn invoke_primitive(&mut self, gullet : &mut Stomach) -> Vec<TBox> {
     Vec::new()
   }
 
-  pub fn  isa_definition(&self) -> bool { true }
+  fn get_cs(&self) -> Token;
+  fn get_cs_name(&self) -> String;
 
-  pub fn get_cs(&self) -> Token {
-    self.cs.clone()
-  }
+  fn is_expandable(&self) -> bool { false }
+  fn is_protected(&self) -> bool { false }
+  fn is_register(&self) -> bool { false }
+  fn is_prefix(&self) -> bool { false }
 
-  pub fn get_cs_name(&self) -> String {
-    match &self.alias {
-      &Some(ref alias) => alias.clone(),
-      &None => self.cs.get_cs_name()
-    }
-  }
+  fn get_locator(&self) -> String;
 
-  pub fn is_expandable(&self) -> bool { false }
-  pub fn is_register(&self) -> bool { false }
-  pub fn is_prefix(&self) -> bool { false }
-
-  pub fn get_locator(&self) -> String {
-    self.locator.clone()
-  }
-
-  pub fn read_arguments(&self, gullet : &mut Gullet) -> Vec<Token> {
+  fn read_arguments(&self, gullet : &mut Gullet) -> Vec<Token> {
     // my ($self, $gullet) = @_;
     // my $params = $self->getParameters;
     // return ($params ? $params->readArguments($gullet, $self) : ()); 
@@ -63,19 +43,19 @@ impl Definition {
 
   //======================================================================
   // Overriding methods
-  pub fn stringify(&self) -> String {
+  fn stringify(&self) -> String {
     unimplemented!()
   }
 
-  pub fn to_string(&self) -> String {
+  fn to_string(&self) -> String {
     unimplemented!()
   }
 
   // Return the Tokens that would invoke the given definition with arguments.
-  pub fn invocation(&mut self, args : Vec<Token>) -> Vec<Token> {
+  fn invocation(&mut self, args : Vec<Token>) -> Vec<Token> {
     
     let mut invocation_result = Vec::new();
-    invocation_result.push(self.cs.clone());
+    invocation_result.push(self.get_cs());
 
     for rev_param in self.get_parameters().into_iter() {
       invocation_result.push(rev_param)
@@ -83,14 +63,13 @@ impl Definition {
     invocation_result
   }
 
-  pub fn get_parameters(&self) -> Vec<Token> {
+  fn get_parameters(&self) -> Vec<Token> {
     Vec::new() // ??? How do we handle these
   }
 }
 
 pub type ExpansionClosure = Box<FnMut(&mut State) -> Vec<Token>>;
 pub struct Expandable {
-  pub is_expandable : bool,
   pub is_protected : bool,
   pub alias : Option<String>,
   pub locator : String,
@@ -98,11 +77,9 @@ pub struct Expandable {
   pub paramlist : Vec<Parameter>,
   pub expansion : ExpansionClosure
 }
-impl Object for Expandable {}
 impl Default for Expandable {
   fn default() -> Self {
     Expandable {
-      is_expandable : true,
       is_protected : false,
       alias : None,
       locator : String::new(),
@@ -110,5 +87,26 @@ impl Default for Expandable {
       paramlist : Vec::new(),
       expansion : Box::new(|state| {Vec::new()})
     }
+  }
+}
+impl Object for Expandable {
+  fn is_definition(&self) -> bool { true }
+}
+impl Definition for Expandable {
+  fn is_expandable(&self) -> bool { true }
+  fn is_protected(&self) -> bool { self.is_protected }
+  fn get_cs(&self) -> Token {
+    self.cs.clone()
+  }
+
+  fn get_cs_name(&self) -> String {
+    match &self.alias {
+      &Some(ref alias) => alias.clone(),
+      &None => self.cs.get_cs_name()
+    }
+  }
+
+  fn get_locator(&self) -> String {
+    self.locator.clone()
   }
 }

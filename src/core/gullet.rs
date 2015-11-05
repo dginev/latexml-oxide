@@ -1,5 +1,6 @@
 use core::mouth::{Mouth};
 use core::token::{Token, Catcode};
+use common::object::Object;
 use core::definition::{Definition};
 use state::State;
 use std::collections::VecDeque;
@@ -145,7 +146,7 @@ impl Gullet {
     loop {
       let read_token : Option<Token>;
       let cc : Catcode;
-      let mut defn_next : Option<Definition> = None;
+      let mut defn_next : Option<Box<Definition>> = None;
       let mut needs_close = false;
       let mut return_next = false;
       let mut expand_next = false;
@@ -186,12 +187,13 @@ impl Gullet {
                 //   LaTeXML::Core::Definition::stopProfiling($token, 'expand'); }        
                 // }
                 _ => {
-                  match state.lookup_definition(&token) {
+                  let looked_up_definition : Option<Box<Definition>> = state.lookup_definition(&token);
+                  match looked_up_definition {
                     Some(defn) => {
-                      if defn.is_expandable && (toplevel || !defn.is_protected) {
+                      if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
                         // is this the right logic here? don't expand unless digesting?
                         state.assign_value("current_token", Box::new(token));
-                        defn_next = Some((*defn).clone()); 
+                        defn_next = Some(defn);
                         expand_next = true;
                       } else {
                         return Some(token)

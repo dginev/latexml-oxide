@@ -1,7 +1,7 @@
 use core::gullet::{Gullet};
 use core::token::{Token};
 use common::object::Object;
-use core::definition::Definition;
+use core::definition::{Definition,Expandable};
 use core::tbox::*;
 use state::State;
 use common::error::*;
@@ -96,13 +96,14 @@ impl Stomach {
       }
       state.assign_value("CURRENT_TOKEN", Box::new(token.clone()));
       result = Vec::new();
-      match state.lookup_digestable_definition(&token) {
+      let looked_up_definition : Option<Box<Definition>> = state.lookup_digestable_definition(&token);
+      match looked_up_definition {
         None => {// Supposedly executable token, but no definition!
          result = self.invoke_token_undefined(token, state); 
         },
         Some(mut meaning) => {
           if meaning.isa_token() { // Common case
-            result = self.invoke_token_simple(token, *meaning, state);
+            result = self.invoke_token_simple(token, meaning, state);
           } else if meaning.is_expandable() {
             // A math-active character will (typically) be a macro,
             // but it isn't expanded in the gullet, but later when digesting, in math mode (? I think)        
@@ -112,7 +113,7 @@ impl Stomach {
             maybe_token = self.gullet.read_x_token(true, false, state); // replace the token by it's expansion!!!
             self.token_stack.pop();
             continue;
-          } else if meaning.isa_definition() { // Otherwise, a normal primitive or constructor
+          } else if meaning.is_definition() { // Otherwise, a normal primitive or constructor
             result = meaning.invoke_primitive(self);
             if !meaning.is_prefix() {
               state.clear_prefixes(); // Clear prefixes unless we just set one.
@@ -143,7 +144,7 @@ impl Stomach {
   fn invoke_token_undefined(&mut self, mut token : Token, state : &mut State) -> Vec<TBox> {
     Vec::new()
   }
-  fn invoke_token_simple(&mut self, mut token : Token, meaning : Definition, state : &mut State) -> Vec<TBox> {
+  fn invoke_token_simple(&mut self, mut token : Token, meaning : Box<Definition>, state : &mut State) -> Vec<TBox> {
     Vec::new()
   }
 

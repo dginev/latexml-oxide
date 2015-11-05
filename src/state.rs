@@ -2,6 +2,7 @@ use std::hash::Hash;
 use std::collections::HashMap;
 
 use common::model::{Model};
+use common::object::Object;
 // use core::stomach::{Stomach};
 use core::token::{Catcode, Token};
 use core::definition::{Definition, Expandable};
@@ -73,7 +74,7 @@ impl State {// TODO for all
       Some(&c) => Some(c.clone())
     }
   }
-  pub fn lookup_value<'lv, T: Hash>(&'lv mut self, key: &'lv str) -> Option<Box<T>> {
+  pub fn lookup_value<'lv, T: Hash>(&'lv mut self, key: &'lv str) -> Option<Box<T>>{
     None
   }
   pub fn lookup_definition<'def>(&'def mut self, key: &'def Token) -> Option<Box<Definition>> {
@@ -84,9 +85,37 @@ impl State {// TODO for all
   }
   pub fn assign_value<'av, T: Hash>(&'av mut self, key: &'av str, value: Box<T>) {}
   pub fn assign_catcode<'ac>(&'ac mut self, c: &'ac char, cc : Catcode) {}
-  pub fn clear_prefixes<'ac>(&'ac mut self) {}
+  pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, key: &'def Token, definition : Box<T>) { }
+  pub fn assign_internal<'ai>(&'ai mut self, table : &'ai str, key : &'ai str, definition : Expandable, scope : &'ai Option<Scope>) {}
+  pub fn clear_prefixes<'cp>(&'cp mut self) {}
 
-  pub fn install_definition<'id>(&'id mut self, def: Expandable, scope: Option<Scope>) {
-
+  /// And a shorthand for installing definitions
+  pub fn install_definition<'id>(&'id mut self, definition: Expandable, scope: &'id Option<Scope>) {
+    // Locked definitions!!! (or should this test be in assignMeaning?)
+    // Ignore attempts to (re)define $cs from tex sources
+    //  my $cs = $definition->getCS->getCSName;
+    let token = definition.get_cs();
+    let cs = token.get_cs_name();
+    let cs_locked = cs.clone() + ":locked";
+    // TODO, .is_none() should be a real false check
+    let is_cs_locked : Option<Box<bool>> = self.lookup_value(&cs_locked);
+    let is_state_unlocked : Option<Box<bool>> = self.lookup_value("UNLOCKED");
+    if is_cs_locked.is_some() && is_state_unlocked.is_none() {
+      match self.lookup_value("SOURCEFILE") {
+        Some(s) => {
+          let tex_or_bib_ext_regex = regex!(r"/\.(tex|bib)$/");
+          let code_tex_ext_regex = regex!(r"/\.code\.tex$/");
+          // report if the redefinition seems to come from document source
+          if ((*s == "Anonymous String") || tex_or_bib_ext_regex.is_match(*s)) && (! code_tex_ext_regex.is_match(*s)) {
+            // TODO:
+            //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
+          }
+          return;
+        },
+        None => {}
+      };
+    }
+    self.assign_internal("meaning", &cs, definition, scope);
+    return;
   }
 }
