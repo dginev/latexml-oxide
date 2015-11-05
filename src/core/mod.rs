@@ -14,7 +14,7 @@ use common::{Error, DigestionMode};
 use common::error::*;
 use util::pathname::*;
 // use core::token;
-use state::{State};
+use state::{State, Scope};
 use core::stomach::{Stomach};
 use core::document::{Document};
 use core::tbox::TBox;
@@ -49,6 +49,20 @@ impl Default for Core {
 }
 
 impl Core {
+  pub fn initialize_state(&mut self, preloads: Vec<String>) {
+    self.stomach.initialize(); // The current Stomach;
+    // let paths = state.lookup_value("SEARCHPATHS");
+    self.state.assign_value("InitialPreloads", Box::new(true), &Scope::Global);
+    for preload in preloads.into_iter() {
+      // TODO
+      match package::input_definitions(self, preload) {
+        Ok(_) => {},
+        Err(_) => {}, // TODO
+      }
+    }
+    self.state.assign_value("InitialPreloads", Box::new(false), &Scope::Global);
+  }
+
   pub fn digest(&mut self, request : String,
     preamble : Option<String>, postamble : Option<String>, mode : Option<DigestionMode>, no_init : bool) 
     -> Result<Digested, Error> {

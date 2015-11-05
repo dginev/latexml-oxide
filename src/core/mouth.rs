@@ -5,7 +5,7 @@ use std::path::Path;
 use std::collections::VecDeque;
 
 use common::error::*;
-use state::{State};
+use state::{State, Scope};
 use core::token::*;
 
 #[derive(PartialEq, Clone)]
@@ -111,7 +111,7 @@ impl Mouth {
         Some(x) => *x
       };
       state.assign_catcode(&'@', Catcode::LETTER);
-      state.assign_value("include_comments",Box::new(0)); 
+      state.assign_value("include_comments",Box::new(0), &Scope::Local); 
     }
     return;
   }
@@ -127,7 +127,7 @@ impl Mouth {
         None => {}
       };
       match self.saved_include_comments {
-        Some(sic) => state.assign_value("include_comments", Box::new(sic)),
+        Some(sic) => state.assign_value("include_comments", Box::new(sic), &Scope::Local),
         None => {}
       };
     }

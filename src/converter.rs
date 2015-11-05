@@ -27,13 +27,15 @@ impl Converter {
   pub fn from_config(opts : Config) -> Converter {
     Converter {
       runtime : Runtime{status: String::new(), status_code: 3},
-      ready : true,
+      ready : false,
       opts : opts,
       core : Core::default()
     }
   }
   pub fn initialize_session<'initlifetime>(&'initlifetime mut self) {
-    // TODO
+    // Prepare LaTeXML object
+    self.core.initialize_state(vec!["TeX.pool".to_string()]);
+    self.ready = true;
   }
   pub fn bind_log<'bind>(&'bind mut self) {
     // TODO

@@ -2,7 +2,6 @@ use std::hash::Hash;
 use std::collections::HashMap;
 
 use common::model::{Model};
-use common::object::Object;
 // use core::stomach::{Stomach};
 use core::token::{Catcode, Token};
 use core::definition::{Definition, Expandable};
@@ -11,11 +10,21 @@ pub enum Scope {
   Global,
   Local
 }
+pub enum Table {
+  Meaning,
+  Value,
+  SFCode,
+  UCCode,
+  DelCode,
+  Stash,
+  StashActive,
+}
 
 pub struct State {
   pub verbosity : i32,
   pub map : Vec<String>,
   pub catcode : HashMap<char, Catcode>,
+  pub meaning : HashMap<String, Box<Definition>>,
   pub status_code : usize,
   pub model : Model
 }
@@ -28,7 +37,8 @@ impl Default for State {
       status_code: 0,
       model : Model::default(),
       map : Vec::new(),
-      catcode : HashMap::new()
+      catcode : HashMap::new(),
+      meaning : HashMap::new()
     }
   }
 }
@@ -83,10 +93,18 @@ impl State {// TODO for all
   pub fn lookup_digestable_definition<'def>(&'def mut self, key: &'def Token) -> Option<Box<Definition>> {
     None 
   }
-  pub fn assign_value<'av, T: Hash>(&'av mut self, key: &'av str, value: Box<T>) {}
+  pub fn assign_value<'av, T: Hash>(&'av mut self, key: &'av str, value: Box<T>, scope: &'av Scope) {}
   pub fn assign_catcode<'ac>(&'ac mut self, c: &'ac char, cc : Catcode) {}
   pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, key: &'def Token, definition : Box<T>) { }
-  pub fn assign_internal<'ai>(&'ai mut self, table : &'ai str, key : &'ai str, definition : Expandable, scope : &'ai Option<Scope>) {}
+  pub fn assign_internal<'ai>(&'ai mut self, table : Table, key : &'ai str, definition : Expandable, 
+                              scope : &'ai Option<Scope>) {
+    let mut fallback_store = HashMap::new();
+    let mut store = match table {
+      Table::Meaning => &mut self.meaning,
+      _ => &mut fallback_store
+    };
+    store.insert(key.to_string(), Box::new(definition));
+  }
   pub fn clear_prefixes<'cp>(&'cp mut self) {}
 
   /// And a shorthand for installing definitions
@@ -96,6 +114,7 @@ impl State {// TODO for all
     //  my $cs = $definition->getCS->getCSName;
     let token = definition.get_cs();
     let cs = token.get_cs_name();
+
     let cs_locked = cs.clone() + ":locked";
     // TODO, .is_none() should be a real false check
     let is_cs_locked : Option<Box<bool>> = self.lookup_value(&cs_locked);
@@ -115,7 +134,7 @@ impl State {// TODO for all
         None => {}
       };
     }
-    self.assign_internal("meaning", &cs, definition, scope);
+    self.assign_internal(Table::Meaning, &cs, definition, scope);
     return;
   }
 }

@@ -3,7 +3,7 @@ use core::token::{Token};
 use common::object::Object;
 use core::definition::{Definition,Expandable};
 use core::tbox::*;
-use state::State;
+use state::{Scope,State};
 use common::error::*;
 
 static MAXSTACK : usize = 200;    /// [CONSTANT]
@@ -25,6 +25,7 @@ impl Default for Stomach {
 }
 
 impl Stomach {
+  pub fn initialize(&mut self) {}
   pub fn get_gullet(&mut self) -> &mut Gullet {
     &mut self.gullet
   }
@@ -94,7 +95,7 @@ impl Stomach {
         //   "Excessive recursion(?): ",
         //   "Tokens on stack: " . join(', ', map { ToString($_) } @{ $$self{token_stack} })); }
       }
-      state.assign_value("CURRENT_TOKEN", Box::new(token.clone()));
+      state.assign_value("CURRENT_TOKEN", Box::new(token.clone()), &Scope::Global);
       result = Vec::new();
       let looked_up_definition : Option<Box<Definition>> = state.lookup_digestable_definition(&token);
       match looked_up_definition {

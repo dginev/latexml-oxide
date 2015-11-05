@@ -2,7 +2,7 @@ use core::mouth::{Mouth};
 use core::token::{Token, Catcode};
 use common::object::Object;
 use core::definition::{Definition};
-use state::State;
+use state::{State, Scope};
 use std::collections::VecDeque;
 
 #[derive(Clone)]
@@ -192,7 +192,7 @@ impl Gullet {
                     Some(defn) => {
                       if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
                         // is this the right logic here? don't expand unless digesting?
-                        state.assign_value("current_token", Box::new(token));
+                        state.assign_value("current_token", Box::new(token), &Scope::Global);
                         defn_next = Some(defn);
                         expand_next = true;
                       } else {

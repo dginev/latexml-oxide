@@ -3,6 +3,14 @@ use core::token::*;
 use core::mouth::Mouth;
 // use common::{Error};
 
+pub fn input_definitions(core: &mut Core, file : String) -> Result<(),()> {
+  match file.as_ref() { // TODO?
+    "TeX.pool" => pool::tex::load_definitions(&mut core.state),
+    _ => {}
+  };
+  Ok(())
+}
+
 pub fn input_content(core : &mut Core, request : String) -> Result<(),()> {
   match find_file(request, false) { // TODO: type => $options{type}, noltxml => 1
     Some(path) => Ok(load_tex_content(core, path)),
