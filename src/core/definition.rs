@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use core::gullet::Gullet;
 use core::stomach::Stomach;
 use core::token::*;
@@ -8,10 +9,10 @@ use state::State;
 
 
 pub trait Definition : Object {
-  fn invoke(&mut self, gullet : &mut Gullet) -> Vec<Token> {
+  fn invoke(&self, gullet : &mut Gullet) -> Vec<Token> {
     Vec::new()
   }
-  fn invoke_primitive(&mut self, gullet : &mut Stomach) -> Vec<TBox> {
+  fn invoke_primitive(&self, gullet : &mut Stomach) -> Vec<TBox> {
     Vec::new()
   }
 
@@ -29,7 +30,7 @@ pub trait Definition : Object {
     // my ($self, $gullet) = @_;
     // my $params = $self->getParameters;
     // return ($params ? $params->readArguments($gullet, $self) : ()); 
-    unimplemented!()
+    Vec::new()
   }
 
   // pub fn get_parameters(&self) ->  {
@@ -68,24 +69,27 @@ pub trait Definition : Object {
   }
 }
 
-pub type ExpansionClosure = Box<FnMut(&mut State) -> Vec<Token>>;
+pub type ExpansionClosure = Arc<Box<FnMut(&mut State) -> Vec<Token>>>;
+#[derive(Clone)]
 pub struct Expandable {
   pub is_protected : bool,
   pub alias : Option<String>,
   pub locator : String,
   pub cs : Token,
   pub paramlist : Vec<Parameter>,
-  pub expansion : ExpansionClosure
+  pub expansion : ExpansionClosure,
+  pub trivial_expansion : Option<Vec<Token>>,
 }
 impl Default for Expandable {
   fn default() -> Self {
     Expandable {
       is_protected : false,
+      trivial_expansion : None,
       alias : None,
       locator : String::new(),
       cs : T_CS("Expandable".to_string()),
       paramlist : Vec::new(),
-      expansion : Box::new(|state| {Vec::new()})
+      expansion : Arc::new(Box::new(|state| {Vec::new()}))
     }
   }
 }
@@ -95,6 +99,7 @@ impl Object for Expandable {
 impl Definition for Expandable {
   fn is_expandable(&self) -> bool { true }
   fn is_protected(&self) -> bool { self.is_protected }
+  
   fn get_cs(&self) -> Token {
     self.cs.clone()
   }
@@ -108,5 +113,25 @@ impl Definition for Expandable {
 
   fn get_locator(&self) -> String {
     self.locator.clone()
+  }
+
+  fn invoke(&self, gullet : &mut Gullet) -> Vec<Token> {
+    // Expand the expandable control sequence. This should be carried out by the Gullet.
+    if self.trivial_expansion.is_some() {
+      match &self.trivial_expansion { 
+        &Some(ref expansion) => expansion.clone(),
+        &None => Vec::new()
+      }
+    } else {
+      let args = self.read_arguments(gullet);
+      self.do_invocation(gullet, args)
+    }
+  }
+}
+
+impl Expandable {
+  fn do_invocation(&self, gullet : &mut Gullet, args : Vec<Token>) -> Vec<Token> {
+    println!("---- Invoking !");
+    Vec::new()
   }
 }

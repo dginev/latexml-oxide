@@ -1,9 +1,11 @@
+use std::sync::Arc;
+use std::collections::VecDeque;
+use state::{State, Scope};
 use core::mouth::{Mouth};
 use core::token::{Token, Catcode};
-use common::object::Object;
 use core::definition::{Definition};
-use state::{State, Scope};
-use std::collections::VecDeque;
+
+
 
 #[derive(Clone)]
 pub struct MouthRuntime {
@@ -146,7 +148,7 @@ impl Gullet {
     loop {
       let read_token : Option<Token>;
       let cc : Catcode;
-      let mut defn_next : Option<Box<Definition>> = None;
+      let mut defn_next : Option<Arc<Box<Definition>>> = None;
       let mut needs_close = false;
       let mut return_next = false;
       let mut expand_next = false;
@@ -187,13 +189,13 @@ impl Gullet {
                 //   LaTeXML::Core::Definition::stopProfiling($token, 'expand'); }        
                 // }
                 _ => {
-                  let looked_up_definition : Option<Box<Definition>> = state.lookup_definition(&token);
+                  let looked_up_definition : Option<Arc<Box<Definition>>> = state.lookup_definition(&token);
                   match looked_up_definition {
                     Some(defn) => {
                       if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
                         // is this the right logic here? don't expand unless digesting?
                         state.assign_value("current_token", Box::new(token), &Scope::Global);
-                        defn_next = Some(defn);
+                        defn_next = Some(defn.clone());
                         expand_next = true;
                       } else {
                         return Some(token)
@@ -219,7 +221,7 @@ impl Gullet {
       } else if expand_next {
         // Do the check here, to be more forgiving and more informative
         let expansion = match defn_next {
-          Some(mut defn) => defn.invoke(self),
+          Some(defn) => defn.invoke(self),
           None => Vec::new()
         };
         // _ => Error("misdefined", token, undef,
@@ -240,6 +242,6 @@ impl Gullet {
   }
 
   pub fn unread(&mut self, tokens : Vec<Token>) {
-    
+    println!("--- unred {:?} tokens.", tokens.len());
   }
 }

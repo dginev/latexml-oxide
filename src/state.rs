@@ -1,8 +1,10 @@
 use std::hash::Hash;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use common::model::{Model};
 // use core::stomach::{Stomach};
+
 use core::token::{Catcode, Token};
 use core::definition::{Definition, Expandable};
 
@@ -24,7 +26,7 @@ pub struct State {
   pub verbosity : i32,
   pub map : Vec<String>,
   pub catcode : HashMap<char, Catcode>,
-  pub meaning : HashMap<String, Box<Definition>>,
+  pub meaning : HashMap<String, Arc<Box<Definition>>>,
   pub status_code : usize,
   pub model : Model
 }
@@ -87,11 +89,38 @@ impl State {// TODO for all
   pub fn lookup_value<'lv, T: Hash>(&'lv mut self, key: &'lv str) -> Option<Box<T>>{
     None
   }
-  pub fn lookup_definition<'def>(&'def mut self, key: &'def Token) -> Option<Box<Definition>> {
+  pub fn lookup_definition<'def>(&'def mut self, key: &'def Token) -> Option<Arc<Box<Definition>>> {
     None
   }
-  pub fn lookup_digestable_definition<'def>(&'def mut self, key: &'def Token) -> Option<Box<Definition>> {
-    None 
+  pub fn lookup_mathcode<'mc>(&'mc mut self, key: &'mc str) -> Option<Box<i32>> {
+    None
+  }
+
+  pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<Arc<Box<Definition>>> {
+    let cc = &token.code;
+    let name = &token.text;
+    let lookupname = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) || 
+      ((cc == &Catcode::LETTER) || (cc == &Catcode::OTHER)) {//&& 
+      //self.lookup_value("IN_MATH").is_some() && ((self.lookup_mathcode(&name).is_some() || 0) == 0x8000)) {
+
+      name.clone()
+    } else {
+      cc.name()
+    };
+
+    let entry = self.meaning.get(&lookupname);
+    
+    if !lookupname.is_empty() && entry.is_some() {
+      let defn = entry.unwrap();
+      // If a cs has been let to an executable token, lookup ITS defn.
+      // if defn->isa('LaTeXML::Core::Token')
+      // && ($lookupname = $LaTeXML::Core::Token::PRIMITIVE_NAME[$$defn[1]])
+      // && ($entry      = $$self{meaning}{$lookupname})) {
+      // $defn = $$entry[0]; }
+      return Some(defn.clone())
+    }
+    return None
+    // return Some(token)
   }
   pub fn assign_value<'av, T: Hash>(&'av mut self, key: &'av str, value: Box<T>, scope: &'av Scope) {}
   pub fn assign_catcode<'ac>(&'ac mut self, c: &'ac char, cc : Catcode) {}
@@ -103,7 +132,7 @@ impl State {// TODO for all
       Table::Meaning => &mut self.meaning,
       _ => &mut fallback_store
     };
-    store.insert(key.to_string(), Box::new(definition));
+    store.insert(key.to_string(), Arc::new(Box::new(definition)));
   }
   pub fn clear_prefixes<'cp>(&'cp mut self) {}
 

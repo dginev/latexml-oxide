@@ -1,10 +1,11 @@
-use core::gullet::{Gullet};
-use core::token::{Token};
-use common::object::Object;
-use core::definition::{Definition,Expandable};
-use core::tbox::*;
+use std::sync::Arc;
 use state::{Scope,State};
 use common::error::*;
+use common::object::Object;
+use core::gullet::{Gullet};
+use core::token::{Token};
+use core::definition::{Definition,Expandable};
+use core::tbox::*;
 
 static MAXSTACK : usize = 200;    /// [CONSTANT]
 
@@ -97,7 +98,7 @@ impl Stomach {
       }
       state.assign_value("CURRENT_TOKEN", Box::new(token.clone()), &Scope::Global);
       result = Vec::new();
-      let looked_up_definition : Option<Box<Definition>> = state.lookup_digestable_definition(&token);
+      let looked_up_definition : Option<Arc<Box<Definition>>> = state.lookup_digestable_definition(&token);
       match looked_up_definition {
         None => {// Supposedly executable token, but no definition!
          result = self.invoke_token_undefined(token, state); 
@@ -145,7 +146,7 @@ impl Stomach {
   fn invoke_token_undefined(&mut self, mut token : Token, state : &mut State) -> Vec<TBox> {
     Vec::new()
   }
-  fn invoke_token_simple(&mut self, mut token : Token, meaning : Box<Definition>, state : &mut State) -> Vec<TBox> {
+  fn invoke_token_simple(&mut self, mut token : Token, meaning : Arc<Box<Definition>>, state : &mut State) -> Vec<TBox> {
     Vec::new()
   }
 

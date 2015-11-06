@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use state::State;
 use core::token::*;
 use core::definition::ExpansionClosure;
@@ -13,7 +14,8 @@ pub fn load_definitions(state : &mut State) {
     "makeatletter", "\\makeatother", "\\typeout", "\\begin", "\\listfiles"].into_iter().map(|s| s.to_string()) {
     
     let trigger_saved = ltxtrigger.clone();
-    let load_pool_closure : ExpansionClosure = Box::new( move |state| { latex::load_definitions(state); vec![T_CS(ltxtrigger.clone())] } );
+    let load_pool_closure : ExpansionClosure = Arc::new(Box::new( move |state| {
+      latex::load_definitions(state); vec![T_CS(ltxtrigger.clone())] } ));
     let expansion = Vec::new();
     
     DefMacroI!(trigger_saved, expansion, load_pool_closure, state);
