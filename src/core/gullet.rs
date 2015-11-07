@@ -221,7 +221,7 @@ impl Gullet {
       } else if expand_next {
         // Do the check here, to be more forgiving and more informative
         let expansion = match defn_next {
-          Some(defn) => defn.invoke(self),
+          Some(defn) => defn.invoke(self, state),
           None => Vec::new()
         };
         // _ => Error("misdefined", token, undef,
@@ -242,6 +242,10 @@ impl Gullet {
   }
 
   pub fn unread(&mut self, tokens : Vec<Token>) {
-    println!("--- unred {:?} tokens.", tokens.len());
+    println!("--- unread {:?} tokens.", tokens.len());
+    for token in tokens {
+      println!("Tok: {:?}", token);
+    }
+    
   }
 }

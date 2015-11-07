@@ -110,7 +110,7 @@ impl Stomach {
             // A math-active character will (typically) be a macro,
             // but it isn't expanded in the gullet, but later when digesting, in math mode (? I think)        
 
-            let invoked_meaning = meaning.invoke(&mut self.gullet);
+            let invoked_meaning = meaning.invoke(&mut self.gullet, state);
             self.gullet.unread(invoked_meaning);
             maybe_token = self.gullet.read_x_token(true, false, state); // replace the token by it's expansion!!!
             self.token_stack.pop();

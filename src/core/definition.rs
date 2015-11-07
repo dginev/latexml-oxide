@@ -9,7 +9,7 @@ use state::State;
 
 
 pub trait Definition : Object {
-  fn invoke(&self, gullet : &mut Gullet) -> Vec<Token> {
+  fn invoke(&self, gullet : &mut Gullet, state : &mut State) -> Vec<Token> {
     Vec::new()
   }
   fn invoke_primitive(&self, gullet : &mut Stomach) -> Vec<TBox> {
@@ -69,7 +69,7 @@ pub trait Definition : Object {
   }
 }
 
-pub type ExpansionClosure = Arc<Box<FnMut(&mut State) -> Vec<Token>>>;
+pub type ExpansionClosure = Arc<Box<Fn(&mut State) -> Vec<Token>>>;
 #[derive(Clone)]
 pub struct Expandable {
   pub is_protected : bool,
@@ -115,7 +115,7 @@ impl Definition for Expandable {
     self.locator.clone()
   }
 
-  fn invoke(&self, gullet : &mut Gullet) -> Vec<Token> {
+  fn invoke(&self, gullet : &mut Gullet, state : &mut State) -> Vec<Token> {
     // Expand the expandable control sequence. This should be carried out by the Gullet.
     if self.trivial_expansion.is_some() {
       match &self.trivial_expansion { 
@@ -124,14 +124,14 @@ impl Definition for Expandable {
       }
     } else {
       let args = self.read_arguments(gullet);
-      self.do_invocation(gullet, args)
+      self.do_invocation(gullet, args, state)
     }
   }
 }
 
 impl Expandable {
-  fn do_invocation(&self, gullet : &mut Gullet, args : Vec<Token>) -> Vec<Token> {
-    println!("---- Invoking !");
-    Vec::new()
+  fn do_invocation(&self, gullet : &mut Gullet, args : Vec<Token>, state : &mut State) -> Vec<Token> {
+    let mut closure : &ExpansionClosure = &self.expansion;
+    closure(state)
   }
 }
