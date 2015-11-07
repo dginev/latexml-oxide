@@ -1,10 +1,10 @@
 use std::sync::Arc;
 use state::{Scope,State};
-use common::error::*;
+// use common::error::*;
 use common::object::Object;
 use core::gullet::{Gullet};
 use core::token::{Token};
-use core::definition::{Definition,Expandable};
+use core::definition::{Definition};
 use core::tbox::*;
 
 static MAXSTACK : usize = 200;    /// [CONSTANT]
@@ -103,7 +103,7 @@ impl Stomach {
         None => {// Supposedly executable token, but no definition!
          result = self.invoke_token_undefined(token, state); 
         },
-        Some(mut meaning) => {
+        Some(meaning) => {
           if meaning.isa_token() { // Common case
             result = self.invoke_token_simple(token, meaning, state);
           } else if meaning.is_expandable() {
@@ -116,7 +116,7 @@ impl Stomach {
             self.token_stack.pop();
             continue;
           } else if meaning.is_definition() { // Otherwise, a normal primitive or constructor
-            result = meaning.invoke_primitive(self);
+            result = meaning.invoke_primitive(self, state);
             if !meaning.is_prefix() {
               state.clear_prefixes(); // Clear prefixes unless we just set one.
             }
@@ -143,10 +143,10 @@ impl Stomach {
     return result
   }
 
-  fn invoke_token_undefined(&mut self, mut token : Token, state : &mut State) -> Vec<TBox> {
+  fn invoke_token_undefined(&mut self, token : Token, state : &mut State) -> Vec<TBox> {
     Vec::new()
   }
-  fn invoke_token_simple(&mut self, mut token : Token, meaning : Arc<Box<Definition>>, state : &mut State) -> Vec<TBox> {
+  fn invoke_token_simple(&mut self, token : Token, meaning : Arc<Box<Definition>>, state : &mut State) -> Vec<TBox> {
     Vec::new()
   }
 

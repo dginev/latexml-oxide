@@ -9,12 +9,8 @@ use state::State;
 
 
 pub trait Definition : Object {
-  fn invoke(&self, gullet : &mut Gullet, state : &mut State) -> Vec<Token> {
-    Vec::new()
-  }
-  fn invoke_primitive(&self, gullet : &mut Stomach) -> Vec<TBox> {
-    Vec::new()
-  }
+  fn invoke(&self, gullet : &mut Gullet, state : &mut State) -> Vec<Token>;
+  fn invoke_primitive(&self, gullet : &mut Stomach, state : &mut State) -> Vec<TBox>;
 
   fn get_cs(&self) -> Token;
   fn get_cs_name(&self) -> String;
@@ -126,6 +122,10 @@ impl Definition for Expandable {
       let args = self.read_arguments(gullet);
       self.do_invocation(gullet, args, state)
     }
+  }
+
+  fn invoke_primitive(&self, gullet : &mut Stomach, state : &mut State) -> Vec<TBox> {
+    Vec::new()
   }
 }
 
