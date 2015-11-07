@@ -1,4 +1,6 @@
-use std::sync::Arc;
+pub mod expandable;
+pub mod constructor;
+
 use core::gullet::Gullet;
 use core::stomach::Stomach;
 use core::token::*;
@@ -65,73 +67,3 @@ pub trait Definition : Object {
   }
 }
 
-pub type ExpansionClosure = Arc<Box<Fn(&mut State) -> Vec<Token>>>;
-#[derive(Clone)]
-pub struct Expandable {
-  pub is_protected : bool,
-  pub alias : Option<String>,
-  pub locator : String,
-  pub cs : Token,
-  pub paramlist : Vec<Parameter>,
-  pub expansion : ExpansionClosure,
-  pub trivial_expansion : Option<Vec<Token>>,
-}
-impl Default for Expandable {
-  fn default() -> Self {
-    Expandable {
-      is_protected : false,
-      trivial_expansion : None,
-      alias : None,
-      locator : String::new(),
-      cs : T_CS("Expandable".to_string()),
-      paramlist : Vec::new(),
-      expansion : Arc::new(Box::new(|state| {Vec::new()}))
-    }
-  }
-}
-impl Object for Expandable {
-  fn is_definition(&self) -> bool { true }
-}
-impl Definition for Expandable {
-  fn is_expandable(&self) -> bool { true }
-  fn is_protected(&self) -> bool { self.is_protected }
-  
-  fn get_cs(&self) -> Token {
-    self.cs.clone()
-  }
-
-  fn get_cs_name(&self) -> String {
-    match &self.alias {
-      &Some(ref alias) => alias.clone(),
-      &None => self.cs.get_cs_name()
-    }
-  }
-
-  fn get_locator(&self) -> String {
-    self.locator.clone()
-  }
-
-  fn invoke(&self, gullet : &mut Gullet, state : &mut State) -> Vec<Token> {
-    // Expand the expandable control sequence. This should be carried out by the Gullet.
-    if self.trivial_expansion.is_some() {
-      match &self.trivial_expansion { 
-        &Some(ref expansion) => expansion.clone(),
-        &None => Vec::new()
-      }
-    } else {
-      let args = self.read_arguments(gullet);
-      self.do_invocation(gullet, args, state)
-    }
-  }
-
-  fn invoke_primitive(&self, gullet : &mut Stomach, state : &mut State) -> Vec<TBox> {
-    Vec::new()
-  }
-}
-
-impl Expandable {
-  fn do_invocation(&self, gullet : &mut Gullet, args : Vec<Token>, state : &mut State) -> Vec<Token> {
-    let mut closure : &ExpansionClosure = &self.expansion;
-    closure(state)
-  }
-}

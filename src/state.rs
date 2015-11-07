@@ -6,7 +6,8 @@ use common::model::{Model};
 // use core::stomach::{Stomach};
 
 use core::token::{Catcode, Token};
-use core::definition::{Definition, Expandable};
+use core::definition::{Definition};
+use core::definition::expandable::Expandable;
 
 pub enum Scope {
   Global,

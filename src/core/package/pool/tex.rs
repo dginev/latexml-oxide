@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use state::State;
 use core::token::*;
-use core::definition::ExpansionClosure;
+use core::definition::expandable::ExpansionClosure;
 use core::package::pool::latex;
 
 pub fn load_definitions(state : &mut State) {

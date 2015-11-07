@@ -7,6 +7,7 @@ pub mod parameter;
 pub mod package;
 pub mod tbox;
 pub mod document;
+pub mod whatsit;
 
 use std::path::Path;
 use common::{Error, DigestionMode};
