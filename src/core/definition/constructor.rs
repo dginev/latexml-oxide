@@ -14,10 +14,10 @@ use core::document::Document;
 
 
 pub struct ConstructorOptions {
-  bounded : bool,
-  mode : String, // TODO
-  beforeDigest : Option<ExpansionClosure>,
-  afterDigest : Option<DigestionClosure>,
+  pub bounded : bool,
+  pub mode : String, // TODO
+  pub beforeDigest : Option<ExpansionClosure>,
+  pub afterDigest : Option<DigestionClosure>,
 }
 impl Default for ConstructorOptions {
   fn default() -> Self { 
@@ -35,15 +35,15 @@ pub type DigestionClosure = Arc<Box<Fn(&mut Stomach, &mut Whatsit, &mut State)>>
 #[derive(Clone)]
 pub struct Constructor {
   pub cs : Token,
-  pub paramlist : Vec<Parameter>,
-  pub expansion : ConstructionClosure,
+  pub paramlist : String,
+  pub replacement : String
 }
 impl Default for Constructor {
   fn default() -> Self {
     Constructor {
       cs : T_CS("Constructor".to_string()),
-      paramlist : Vec::new(),
-      expansion : Arc::new(Box::new(|doc,state| {}))
+      paramlist : String::new(),
+      replacement : String::new()
     }
   }
 }

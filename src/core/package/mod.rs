@@ -42,8 +42,8 @@ pub fn load_tex_content(core: &mut Core, path : String) {
 
 }
 
-pub fn load_class(state: &mut State, name : String) {
-  
+pub fn load_class(state: &mut State, name : String, options : Vec<String>, after : Vec<Token>) {
+
 }
 
 pub fn find_file(request : String, forbid_ltxml : bool) -> Option<String> {
@@ -61,13 +61,12 @@ pub fn tokenize_internal(some : String) -> Vec<Token> {
 }
 
 pub fn parse_prototype(proto : String) -> ((Token, String)) {
-  let csname_macro_regex = regex!(r"/^\\csname\s+(.*)\\endcsname/");
-  let cs_regex = regex!(r"/^(\\[a-zA-Z@]+)/");
-  let single_char_regex = regex!(r"/^(\\.)/");
-  let active_char_regex = regex!(r"/^(.)/");
-  let mut final_proto = proto;
-  let mut cs;
-
+  let csname_macro_regex = regex!(r"^\\csname\s+(.*)\\endcsname");
+  let cs_regex = regex!(r"^(\\[a-zA-Z@]+)");
+  let single_char_regex = regex!(r"^(\\.)");
+  let active_char_regex = regex!(r"^(.)");
+  let mut final_proto = proto.clone();
+  let mut cs = T_CS("\\".to_string()); // Should never happen
   if csname_macro_regex.is_match(&proto) {
     let captures = csname_macro_regex.captures(&proto).unwrap();
     cs = T_CS("\\".to_string() + captures.at(0).unwrap()); 
@@ -75,7 +74,8 @@ pub fn parse_prototype(proto : String) -> ((Token, String)) {
     final_proto = csname_macro_regex.replace(&proto,"");
   } else if cs_regex.is_match(&proto) { // Match a cs
     let captures = cs_regex.captures(&proto).unwrap();
-    cs = T_CS(captures.at(0).unwrap().to_string()); 
+    let csname = captures.at(0).unwrap().to_string();
+    cs = T_CS(csname); 
     // also replace in proto
     final_proto = cs_regex.replace(&proto,"");
   } else if single_char_regex.is_match(&proto) { // Match a single char cs, env name,...
@@ -85,7 +85,7 @@ pub fn parse_prototype(proto : String) -> ((Token, String)) {
     final_proto = single_char_regex.replace(&proto,"");
   } else if active_char_regex.is_match(&proto) { // Match an active char
     let captures = active_char_regex.captures(&proto).unwrap();
-    cs = *tokenize_internal(captures.at(0).unwrap().to_string()).first().unwrap();
+    cs = tokenize_internal(captures.at(0).unwrap().to_string()).first().unwrap().clone();
     // also replace in proto
     final_proto = active_char_regex.replace(&proto,"");
   } else {
@@ -93,7 +93,6 @@ pub fn parse_prototype(proto : String) -> ((Token, String)) {
     //   "Definition prototype doesn't have proper control sequence: \"$proto\""); }
   }
   final_proto = final_proto.trim_left().to_string();
-
   return (cs, final_proto); }
 
 /// Macros and pool come at the end, so that they load seamlessly
@@ -104,7 +103,7 @@ macro_rules! DefMacroI(
   {
     use $crate::core::definition::expandable::Expandable;
     use $crate::core::package;
-    $state.install_definition(Expandable { cs: package::coerce_cs( $cs ), paramlist: $paramlist, expansion: $expansion, ..Expandable::default()}, &None);
+    $state.install_definition(Box::new(Expandable { cs: package::coerce_cs( $cs ), paramlist: $paramlist, expansion: $expansion, ..Expandable::default()}), &None);
   }
   )
 );
@@ -132,8 +131,8 @@ macro_rules! DefConstructorI(
     use $crate::core::package;
     let mode    = $options.mode;
     let bounded = $options.bounded;
-    $state.install_definition(Constructor { cs: package::coerce_cs( $cs ),
-      paramlist: $paramlist, replacement: $replacement, ..Constructor::default()}, &None);
+    $state.install_definition(Box::new(Constructor { cs: $cs,
+      paramlist: $paramlist, replacement: $replacement, ..Constructor::default()}), &None);
 
     //   beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
     //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),
@@ -165,6 +164,7 @@ macro_rules! DefConstructorI(
 pub fn DefConstructor(proto : String, replacement : String, options : ConstructorOptions, state: &mut State) {
   // check_options("DefConstructor ($proto)", $constructor_options, %options);
   let (cs, paramlist) = parse_prototype(proto);
+  println!("DefConstructorI for cs: {:?}", cs);
   DefConstructorI!(cs, paramlist, replacement, options, state);
   return; 
 }

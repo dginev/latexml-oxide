@@ -239,7 +239,7 @@ impl Mouth {
   /// and also locator comments (file, line# info).
   /// LaTeXML::Core::Gullet intercepts them and passes them on at appropriate times.
   pub fn read_token(&mut self, state : &mut State) -> Option<Token> {
-    let sanitize_line_regex = regex!(r"/((\\ )*)\s*$/s");
+    let sanitize_line_regex = regex!(r"((\\ )*)\s*$");
     loop { // Iterate till we find a token, or run out. (use return)
          // ===== Get next line, if we need to.
     if self.colno >= self.nchars {

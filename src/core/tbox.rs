@@ -17,3 +17,9 @@ pub fn TBox() -> TBox {
     tokens : Vec::new()
   }
 }
+
+impl TBox {
+  pub fn to_string(&self) -> String {
+    self.text.clone()
+  }
+}

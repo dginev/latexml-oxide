@@ -109,6 +109,7 @@ impl State {// TODO for all
       cc.name()
     };
 
+    println!("Looking up digestable {:?}", lookupname);
     let entry = self.meaning.get(&lookupname);
     
     if !lookupname.is_empty() && entry.is_some() {
@@ -126,19 +127,20 @@ impl State {// TODO for all
   pub fn assign_value<'av, T: Hash>(&'av mut self, key: &'av str, value: Box<T>, scope: &'av Scope) {}
   pub fn assign_catcode<'ac>(&'ac mut self, c: &'ac char, cc : Catcode) {}
   pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, key: &'def Token, definition : Box<T>) { }
-  pub fn assign_internal<'ai>(&'ai mut self, table : Table, key : &'ai str, definition : Expandable, 
+  pub fn assign_internal<'ai>(&'ai mut self, table : Table, key : &'ai str, definition : Box<Definition>, 
                               scope : &'ai Option<Scope>) {
     let mut fallback_store = HashMap::new();
     let mut store = match table {
       Table::Meaning => &mut self.meaning,
       _ => &mut fallback_store
     };
-    store.insert(key.to_string(), Arc::new(Box::new(definition)));
+
+    store.insert(key.to_string(), Arc::new(definition));
   }
   pub fn clear_prefixes<'cp>(&'cp mut self) {}
 
   /// And a shorthand for installing definitions
-  pub fn install_definition<'id>(&'id mut self, definition: Expandable, scope: &'id Option<Scope>) {
+  pub fn install_definition<'id>(&'id mut self, definition: Box<Definition>, scope: &'id Option<Scope>) {
     // Locked definitions!!! (or should this test be in assignMeaning?)
     // Ignore attempts to (re)define $cs from tex sources
     //  my $cs = $definition->getCS->getCSName;
@@ -152,8 +154,8 @@ impl State {// TODO for all
     if is_cs_locked.is_some() && is_state_unlocked.is_none() {
       match self.lookup_value("SOURCEFILE") {
         Some(s) => {
-          let tex_or_bib_ext_regex = regex!(r"/\.(tex|bib)$/");
-          let code_tex_ext_regex = regex!(r"/\.code\.tex$/");
+          let tex_or_bib_ext_regex = regex!(r"\.(tex|bib)$");
+          let code_tex_ext_regex = regex!(r"\.code\.tex$");
           // report if the redefinition seems to come from document source
           if ((*s == "Anonymous String") || tex_or_bib_ext_regex.is_match(*s)) && (! code_tex_ext_regex.is_match(*s)) {
             // TODO:
