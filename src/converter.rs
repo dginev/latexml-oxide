@@ -146,7 +146,7 @@ impl Converter {
     let digested = match digest_result {
       Err(_) => {
         Digested {
-          stuff : Vec::new()
+          boxes : Vec::new()
         }
       }, // TODO digestion failed, report
       Ok(d) => d

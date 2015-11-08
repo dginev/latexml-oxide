@@ -164,7 +164,6 @@ macro_rules! DefConstructorI(
 pub fn DefConstructor(proto : String, replacement : String, options : ConstructorOptions, state: &mut State) {
   // check_options("DefConstructor ($proto)", $constructor_options, %options);
   let (cs, paramlist) = parse_prototype(proto);
-  println!("DefConstructorI for cs: {:?}", cs);
   DefConstructorI!(cs, paramlist, replacement, options, state);
   return; 
 }

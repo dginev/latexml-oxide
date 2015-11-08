@@ -177,4 +177,8 @@ impl Token {
       self.text.clone()
     }
   }
+
+  pub fn to_string(&self) -> String {
+    self.text.clone()
+  }
 }

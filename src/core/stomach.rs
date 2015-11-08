@@ -1,9 +1,7 @@
-use std::sync::Arc;
-use state::{Scope,State};
+use state::{Scope,State, ObjectStore};
 // use common::error::*;
-use common::object::Object;
 use core::gullet::{Gullet};
-use core::token::{Token};
+use core::token::{Token, Catcode};
 use core::definition::{Definition};
 use core::tbox::*;
 
@@ -79,7 +77,7 @@ impl Stomach {
   /// Returns a list of boxes/whatsits. 
   fn invoke_token(&mut self, input_token : Token, state : &mut State) -> Vec<TBox> {
     let mut maybe_token = Some(input_token);
-    println!("Invoking: {:?}", maybe_token);
+    // println!("Invoking: {:?}", maybe_token);
 
     // Overly complex, but want to avoid recursion/stack
     let mut result : Vec<TBox> = Vec::new();
@@ -98,33 +96,37 @@ impl Stomach {
       }
       state.assign_value("CURRENT_TOKEN", Box::new(token.clone()), &Scope::Global);
       result = Vec::new();
-      let looked_up_definition : Option<Arc<Box<Definition>>> = state.lookup_digestable_definition(&token);
+      let looked_up_definition : Option<ObjectStore> = state.lookup_digestable_definition(&token);
       match looked_up_definition {
         None => {// Supposedly executable token, but no definition!
          result = self.invoke_token_undefined(token, state); 
         },
-        Some(meaning) => {
-          if meaning.isa_token() { // Common case
-            result = self.invoke_token_simple(token, meaning, state);
-          } else if meaning.is_expandable() {
-            // A math-active character will (typically) be a macro,
-            // but it isn't expanded in the gullet, but later when digesting, in math mode (? I think)        
+        Some(store) => { match store {
+        ObjectStore::TokenStore(meaning) => {
+          // Common case
+          result = self.invoke_token_simple(token, meaning, state);
+        },
+        ObjectStore::ExpandableStore(meaning) => {
+          // A math-active character will (typically) be a macro,
+          // but it isn't expanded in the gullet, but later when digesting, in math mode (? I think)        
 
-            let invoked_meaning = meaning.invoke(&mut self.gullet, state);
-            self.gullet.unread(invoked_meaning);
-            maybe_token = self.gullet.read_x_token(true, false, state); // replace the token by it's expansion!!!
-            self.token_stack.pop();
-            continue;
-          } else if meaning.is_definition() { // Otherwise, a normal primitive or constructor
-            result = meaning.invoke_primitive(self, state);
-            if !meaning.is_prefix() {
-              state.clear_prefixes(); // Clear prefixes unless we just set one.
-            }
-          } else {
+          let invoked_meaning = meaning.invoke(&mut self.gullet, state);
+          self.gullet.unread(invoked_meaning);
+          maybe_token = self.gullet.read_x_token(true, false, state); // replace the token by it's expansion!!!
+          self.token_stack.pop();
+          continue;
+        },
+        ObjectStore::ConstructorStore(meaning) => { // Otherwise, a normal primitive or constructor
+          result = meaning.invoke_primitive(self, state);
+          if !meaning.is_prefix() {
+            state.clear_prefixes(); // Clear prefixes unless we just set one.
+          }
+        },
+        _ => {
             // TODO:
             // Fatal('misdefined', $meaning, $self, "The object " . Stringify($meaning) . " should never reach Stomach!");
-          }
         }
+        };}
       };
       break;
     }
@@ -138,16 +140,53 @@ impl Stomach {
     // }
     
     self.token_stack.pop();
-    println!("Got Box: {:?}", result);
+    // println!("Got Box: {:?}", result);
     // TBox()
     return result
   }
 
   fn invoke_token_undefined(&mut self, token : Token, state : &mut State) -> Vec<TBox> {
-    Vec::new()
+    // TODO: Rework this carefully
+    Vec::new()  
   }
-  fn invoke_token_simple(&mut self, token : Token, meaning : Arc<Box<Definition>>, state : &mut State) -> Vec<TBox> {
-    Vec::new()
+  fn invoke_token_simple(&mut self, token : Token, meaning : Token, state : &mut State) -> Vec<TBox> {
+    // println!("Simple token invocation: {:?}", token);
+    // let font = state.lookup_value("font");
+    state.clear_prefixes();    // prefixes shouldn't apply here.
+
+    if meaning.code == Catcode::SPACE {
+      let in_math : Option<Box<bool>> = state.lookup_value("IN_MATH");
+      let in_preamble : Option<Box<bool>> = state.lookup_value("inPreamble");
+      if in_math.is_some() || in_preamble.is_some() {
+        Vec::new()
+      } else {
+        vec![TBox { 
+          text : meaning.to_string(),
+          font: String::new(),
+          locator: self.gullet.get_locator(),
+          tokens: vec![meaning]
+        }]
+      } 
+    }
+    else if meaning.code == Catcode::COMMENT {    // Note: Comments need char decoding as well!
+    //  let comment = LaTeXML::Package::FontDecodeString($meaning->getString, undef, 1);
+    // // However, spaces normally would have be digested away as positioning...
+    // my $badspace = pack('U', 0xA0) . "\x{0335}";    // This is at space's pos in OT1
+    // $comment =~ s/\Q$badspace\E/ /g;
+    // return LaTeXML::Core::Comment->new($comment); }
+      Vec::new()
+    }
+    // TODO
+    // else if ($forbidden_cc[meaning.code]) {
+    // Fatal('misdefined', $token, $self,
+    //   "The token " . Stringify($token) . " should never reach Stomach!");
+    // return; }
+    else {
+      vec![TBox { text: meaning.to_string(), 
+             font: String::new(),
+             locator: String::new(),
+             tokens: vec![meaning] }]
+    }
   }
 
 }

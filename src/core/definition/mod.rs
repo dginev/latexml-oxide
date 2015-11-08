@@ -9,7 +9,6 @@ use core::parameter::Parameter;
 use common::object::Object;
 use state::State;
 
-
 pub trait Definition : Object {
   fn invoke(&self, gullet : &mut Gullet, state : &mut State) -> Vec<Token>;
   fn invoke_primitive(&self, gullet : &mut Stomach, state : &mut State) -> Vec<TBox>;
@@ -17,7 +16,6 @@ pub trait Definition : Object {
   fn get_cs(&self) -> Token;
   fn get_cs_name(&self) -> String;
 
-  fn is_expandable(&self) -> bool { false }
   fn is_protected(&self) -> bool { false }
   fn is_register(&self) -> bool { false }
   fn is_prefix(&self) -> bool { false }

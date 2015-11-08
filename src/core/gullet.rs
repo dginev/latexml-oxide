@@ -78,6 +78,10 @@ impl Gullet {
     return Ok(()); 
   }
 
+  pub fn get_locator(&self) -> String  {
+    String::new()
+  }
+
   ///**********************************************************************
   /// Low-level readers: read token, read expanded token
   ///**********************************************************************

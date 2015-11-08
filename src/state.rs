@@ -6,8 +6,10 @@ use common::model::{Model};
 // use core::stomach::{Stomach};
 
 use core::token::{Catcode, Token};
+use common::object::Object;
 use core::definition::{Definition};
 use core::definition::expandable::Expandable;
+use core::definition::constructor::Constructor;
 
 pub enum Scope {
   Global,
@@ -21,6 +23,13 @@ pub enum Table {
   DelCode,
   Stash,
   StashActive,
+}
+
+pub enum ObjectStore {
+  TokenStore (Token),
+  DefinitionStore (Arc<Box<Definition>>),
+  ExpandableStore (Expandable),
+  ConstructorStore (Constructor)
 }
 
 pub struct State {
@@ -97,9 +106,12 @@ impl State {// TODO for all
     None
   }
 
-  pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<Arc<Box<Definition>>> {
+  pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<ObjectStore> {
     let cc = &token.code;
     let name = &token.text;
+    if name.is_empty() {
+      return None;
+    }
     let lookupname = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) || 
       ((cc == &Catcode::LETTER) || (cc == &Catcode::OTHER)) {//&& 
       //self.lookup_value("IN_MATH").is_some() && ((self.lookup_mathcode(&name).is_some() || 0) == 0x8000)) {
@@ -109,7 +121,7 @@ impl State {// TODO for all
       cc.name()
     };
 
-    println!("Looking up digestable {:?}", lookupname);
+    // println!("Looking up digestable {:?}", lookupname);
     let entry = self.meaning.get(&lookupname);
     
     if !lookupname.is_empty() && entry.is_some() {
@@ -119,9 +131,9 @@ impl State {// TODO for all
       // && ($lookupname = $LaTeXML::Core::Token::PRIMITIVE_NAME[$$defn[1]])
       // && ($entry      = $$self{meaning}{$lookupname})) {
       // $defn = $$entry[0]; }
-      return Some(defn.clone())
+      return Some(ObjectStore::DefinitionStore(defn.clone()));
     }
-    return None
+    return Some(ObjectStore::TokenStore(token.clone()));
     // return Some(token)
   }
   pub fn assign_value<'av, T: Hash>(&'av mut self, key: &'av str, value: Box<T>, scope: &'av Scope) {}

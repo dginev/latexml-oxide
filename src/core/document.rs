@@ -8,7 +8,8 @@ use libxml::tree::Node;
 
 pub struct Document {
   // pub model : &'doc Model,
-  pub document : XmlDoc
+  pub document : XmlDoc,
+  pub root : Node
 }
 
 impl Document {
@@ -18,7 +19,8 @@ impl Document {
     doc_scaffold.set_root_element(&mut latexml_node);
 
     Document {
-      document : doc_scaffold
+      document : doc_scaffold,
+      root : latexml_node
     }
   }
   //**********************************************************************
@@ -37,11 +39,17 @@ impl Document {
   }
 
 
-  pub fn absorb(&self, digested : Digested) -> String {
-    "absorbed".to_string()
+  pub fn absorb(&mut self, digested : Digested) -> String {
+    // TODO: Just a stub for now
+    println!("Will absorb: {:?}", digested.boxes);
+    for tbox in digested.boxes.iter() {
+      let mut box_node = self.root.add_child(None, "box").unwrap();
+      box_node.set_content(&tbox.text);
+    }
+    String::new()
   }
 
-  pub fn insert_pi(&self, which : &str, paths : Vec<String>) {
+  pub fn insert_pi(&mut self, which : &str, paths : Vec<String>) {
     // TODO
   }
   pub fn to_string(&self) -> String {

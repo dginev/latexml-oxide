@@ -34,9 +34,9 @@ impl Default for Expandable {
 }
 impl Object for Expandable {
   fn is_definition(&self) -> bool { true }
+  fn is_expandable(&self) -> bool { true }
 }
 impl Definition for Expandable {
-  fn is_expandable(&self) -> bool { true }
   fn is_protected(&self) -> bool { self.is_protected }
   
   fn get_cs(&self) -> Token {

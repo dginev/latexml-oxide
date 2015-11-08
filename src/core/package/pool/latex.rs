@@ -70,16 +70,18 @@ pub fn load_definitions(state : &mut State) {
         //   $STATE->installDefinition(LaTeXML::Core::Definition::Constructor->new($token, undef,
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
         // (T_CS("\begingroup"), Invocation(T_CS("\lx@setcurrenvir"), $env), $token); } });
+
     Vec::new()
   })),state);
 
-  DefMacroI!("\\end".to_string(), Vec::new(), Arc::new(Box::new(|state, gullet, args| {
+  DefMacroI!("\\end".to_string(), Vec::new(), Arc::new(Box::new(|gullet, args, state| {
       // let env = args.get_arg(1);
       // my $name = $env && ToString($env);
       // my $t;
       // if (IsDefined($t = T_CS("\\end{$name}"))) { $t; }                         // Magic CS!
       // elsif (IsDefined($t = T_CS("\\end$name"))) { ($t, T_CS("\endgroup")); }
       // else { (T_CS("\endgroup")); } });
+
     Vec::new()
   })), state);
 }

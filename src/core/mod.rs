@@ -27,7 +27,7 @@ pub struct Core {
   preload : Vec<String>,
 }
 pub struct Digested {
-  pub stuff : Vec<TBox>,
+  pub boxes : Vec<TBox>,
 }
 
 impl Digested {
@@ -169,16 +169,16 @@ impl Core {
   }
 
   pub fn digest_internal(&mut self) -> Digested {
-    let mut stuff = Vec::new();
+    let mut boxes = Vec::new();
     let mut state = &mut self.state;
 
     while self.stomach.get_gullet().has_more_input() {
       for body in self.stomach.digest_next_body(false, state) {
-        stuff.push(body);  
+        boxes.push(body);  
       }
     }
     self.stomach.get_gullet().flush();
-    return Digested { stuff : stuff };
+    return Digested { boxes : boxes };
   }
 
   // Internal helpers:
