@@ -125,16 +125,18 @@ impl State {// TODO for all
     let entry = self.meaning.get(&lookupname);
     
     if !lookupname.is_empty() && entry.is_some() {
+      // println_stderr!("-- Found definition for: {:?}", token);
       let defn = entry.unwrap();
       // If a cs has been let to an executable token, lookup ITS defn.
       // if defn->isa('LaTeXML::Core::Token')
       // && ($lookupname = $LaTeXML::Core::Token::PRIMITIVE_NAME[$$defn[1]])
       // && ($entry      = $$self{meaning}{$lookupname})) {
       // $defn = $$entry[0]; }
-      return Some(ObjectStore::DefinitionStore(defn.clone()));
+      Some(ObjectStore::DefinitionStore(defn.clone()))
+    } else {
+      // println_stderr!("-- No definition for: {:?}", token);
+      Some(ObjectStore::TokenStore(token.clone()))
     }
-    return Some(ObjectStore::TokenStore(token.clone()));
-    // return Some(token)
   }
   pub fn assign_value<'av, T: Hash>(&'av mut self, key: &'av str, value: Box<T>, scope: &'av Scope) {}
   pub fn assign_catcode<'ac>(&'ac mut self, c: &'ac char, cc : Catcode) {}
