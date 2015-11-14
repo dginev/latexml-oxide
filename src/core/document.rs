@@ -41,7 +41,7 @@ impl Document {
 
   pub fn absorb(&mut self, digested : Digested) -> String {
     // TODO: Just a stub for now
-    println!("Will absorb: {:?}", digested.boxes);
+    println_stderr!("Will absorb: {:?}", digested.boxes);
     for tbox in digested.boxes.iter() {
       let mut box_node = self.root.add_child(None, "box").unwrap();
       box_node.set_content(&tbox.text);

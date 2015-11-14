@@ -1,7 +1,7 @@
 pub fn note_end(note : String) {
-  println!("--|End:  | {:?}", note);
+  println_stderr!("--|End:  | {:?}", note);
 }
 
 pub fn note_begin(note : String) {
-  println!("--|Begin:| {:?}", note);
+  println_stderr!("--|Begin:| {:?}", note);
 }

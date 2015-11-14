@@ -99,6 +99,9 @@ pub fn parse_prototype(proto : String) -> ((Token, Option<Parameters>)) {
 }
 
 pub fn parse_parameters(prototype : String, cs : &Token) -> Option<Parameters> {
+  println_stderr!("Token {:?}", cs);
+  println_stderr!("Prototype: {:?}", prototype);
+  println_stderr!("---");
   None
 }
 
@@ -170,6 +173,7 @@ macro_rules! DefConstructorI(
 
 pub fn DefConstructor(proto : String, replacement : String, options : ConstructorOptions, state: &mut State) {
   // check_options("DefConstructor ($proto)", $constructor_options, %options);
+  println!("-- Registering DefConstructor");
   let (cs, paramlist) = parse_prototype(proto);
   DefConstructorI!(cs, paramlist, replacement, options, state);
   return; 

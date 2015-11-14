@@ -109,7 +109,7 @@ impl Core {
       // $self->loadPostamble($options{postamble}) if $options{postamble};
       match package::input_content(self, request.clone()) {
         Ok(_) => {},
-        Err(e) => println!("Failed to input content: {:?}", e)
+        Err(e) => println_stderr!("Failed to input content: {:?}", e)
       };
       // $self->loadPreamble($options{preamble}) if $options{preamble};
 

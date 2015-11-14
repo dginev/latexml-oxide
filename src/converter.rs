@@ -2,7 +2,6 @@ use common::{Config, DataSize, OutputFormat, Error};
 use core::{Core, Digested};
 use core::document::Document;
 use core::token;
-use std::io::Write;
 
 const CONVERTER_IDENTITY : &'static str = "rustexml (v 0.1)";
 
