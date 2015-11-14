@@ -63,5 +63,6 @@ pub trait Definition : Object {
   fn get_parameters(&self) -> Vec<Token> {
     Vec::new() // ??? How do we handle these
   }
+  fn get_num_args(&mut self) -> usize { 0 }
 }
 

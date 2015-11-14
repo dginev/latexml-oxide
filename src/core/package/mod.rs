@@ -1,6 +1,7 @@
 use core::{Core};
 use state::State;
 use core::token::*;
+use core::parameter::Parameters;
 use core::mouth::Mouth;
 // use common::{Error};
 
@@ -60,7 +61,7 @@ pub fn tokenize_internal(some : String) -> Vec<Token> {
   vec![T_CS(some)]
 }
 
-pub fn parse_prototype(proto : String) -> ((Token, String)) {
+pub fn parse_prototype(proto : String) -> ((Token, Option<Parameters>)) {
   let csname_macro_regex = regex!(r"^\\csname\s+(.*)\\endcsname");
   let cs_regex = regex!(r"^(\\[a-zA-Z@]+)");
   let single_char_regex = regex!(r"^(\\.)");
@@ -93,7 +94,13 @@ pub fn parse_prototype(proto : String) -> ((Token, String)) {
     //   "Definition prototype doesn't have proper control sequence: \"$proto\""); }
   }
   final_proto = final_proto.trim_left().to_string();
-  return (cs, final_proto); }
+  let paramlist = parse_parameters(final_proto, &cs);
+  return (cs, paramlist)
+}
+
+pub fn parse_parameters(prototype : String, cs : &Token) -> Option<Parameters> {
+  None
+}
 
 /// Macros and pool come at the end, so that they load seamlessly
 use core::definition::expandable::Expandable;

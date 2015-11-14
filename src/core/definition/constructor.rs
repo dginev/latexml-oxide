@@ -7,7 +7,7 @@ use core::tbox::TBox;
 use core::gullet::Gullet;
 use core::stomach::Stomach;
 use core::whatsit::Whatsit;
-use core::parameter::Parameter;
+use core::parameter::Parameters;
 use core::definition::Definition;
 use core::definition::expandable::ExpansionClosure;
 use core::document::Document;
@@ -35,14 +35,16 @@ pub type DigestionClosure = Arc<Box<Fn(&mut Stomach, &mut Whatsit, &mut State)>>
 #[derive(Clone)]
 pub struct Constructor {
   pub cs : Token,
-  pub paramlist : String,
+  pub paramlist : Option<Parameters>,
+  pub nargs : Option<usize>,
   pub replacement : String
 }
 impl Default for Constructor {
   fn default() -> Self {
     Constructor {
       cs : T_CS("Constructor".to_string()),
-      paramlist : String::new(),
+      paramlist : None,
+      nargs : None,
       replacement : String::new()
     }
   }
@@ -66,5 +68,19 @@ impl Definition for Constructor {
   fn get_locator(&self) -> String {
     unimplemented!()
   }
+  fn get_num_args(&mut self) -> usize {
+    let nargs = match self.nargs {
+      Some(n) => n,
+      None => {
+        match &self.paramlist {
+          &Some(ref params) => params.get_num_args(),
+          &None => 0
+        }
+      }
+    };
+    self.nargs = Some(nargs);
+    nargs
+  }
+
 
 }
