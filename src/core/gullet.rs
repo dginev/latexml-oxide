@@ -1,11 +1,9 @@
-use std::sync::Arc;
 use std::collections::VecDeque;
-use state::{State, Scope};
+use state::{State, Scope, ObjectStore};
+use common::object::Object;
+use core::definition::Definition;
 use core::mouth::{Mouth};
 use core::token::{Token, Catcode};
-use core::definition::{Definition};
-
-
 
 #[derive(Clone)]
 pub struct MouthRuntime {
@@ -152,7 +150,7 @@ impl Gullet {
     loop {
       let read_token : Option<Token>;
       let cc : Catcode;
-      let mut defn_next : Option<Arc<Box<Definition>>> = None;
+      let mut defn_next : Option<Box<Definition>> = None;
       let mut needs_close = false;
       let mut return_next = false;
       let mut expand_next = false;
@@ -193,21 +191,21 @@ impl Gullet {
                 //   LaTeXML::Core::Definition::stopProfiling($token, 'expand'); }        
                 // }
                 _ => {
-                  let looked_up_definition : Option<Arc<Box<Definition>>> = state.lookup_definition(&token);
+                  let looked_up_definition : Option<ObjectStore> = state.lookup_definition(&token);
                   match looked_up_definition {
-                    Some(defn) => {
-                      if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
-                        // is this the right logic here? don't expand unless digesting?
-                        state.assign_value("current_token", Box::new(token), &Scope::Global);
-                        defn_next = Some(defn.clone());
-                        expand_next = true;
-                      } else {
-                        return Some(token)
-                      }
-                    },
-                    None => {
-                      return Some(token)
-                    }
+                    Some(defn_store) => { match defn_store {
+                      ObjectStore::ExpandableStore(defn) => {
+                        if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
+                          // is this the right logic here? don't expand unless digesting?
+                          state.assign_value("current_token", Box::new(token), &Scope::Global);
+                          defn_next = Some((*defn).clone());
+                          expand_next = true;
+                        } else {
+                          return Some(token)
+                        }},
+                      _ => return Some(token)
+                    }},
+                    None => return Some(token)
                   };
                 }
               };

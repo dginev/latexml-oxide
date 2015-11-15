@@ -10,18 +10,19 @@ use core::whatsit::Whatsit;
 use core::parameter::Parameters;
 use core::definition::Definition;
 use core::definition::expandable::ExpansionClosure;
+use core::definition::constructor::DigestionClosure;
 use core::document::Document;
 
 
-pub struct ConstructorOptions {
+pub struct PrimitiveOptions {
   pub bounded : bool,
   pub mode : String, // TODO
   pub beforeDigest : Option<ExpansionClosure>,
   pub afterDigest : Option<DigestionClosure>,
 }
-impl Default for ConstructorOptions {
+impl Default for PrimitiveOptions {
   fn default() -> Self { 
-    ConstructorOptions {
+    PrimitiveOptions {
       bounded : false,
       beforeDigest : None,
       afterDigest : None,
@@ -30,19 +31,18 @@ impl Default for ConstructorOptions {
   }
 }
 
-pub type ConstructionClosure = Arc<Box<Fn(&mut Document, &mut State)>>;
-pub type DigestionClosure = Arc<Box<Fn(&mut Stomach, &mut Whatsit, &mut State)>>;
+pub type PrimitiveClosure = Arc<Box<Fn(&mut Document, &mut State)>>;
 #[derive(Clone)]
-pub struct Constructor {
+pub struct Primitive {
   pub cs : Token,
   pub paramlist : Option<Parameters>,
   pub nargs : Option<usize>,
   pub replacement : String
 }
-impl Default for Constructor {
+impl Default for Primitive {
   fn default() -> Self {
-    Constructor {
-      cs : T_CS("Constructor".to_string()),
+    Primitive {
+      cs : T_CS("Primitive".to_string()),
       paramlist : None,
       nargs : None,
       replacement : String::new()
@@ -50,14 +50,12 @@ impl Default for Constructor {
   }
 }
 
-impl Object for Constructor {}
-impl Definition for Constructor {
+impl Object for Primitive {}
+impl Definition for Primitive {
   fn invoke(&self, gullet : &mut Gullet, state : &mut State) -> Vec<Token> {
-    println!("-- constructor invoke for {:?}", self.get_cs());
     Vec::new()
   }
   fn invoke_primitive(&self, gullet : &mut Stomach, state : &mut State) -> Vec<TBox> {
-    println!("-- constructor/primitive invoke for {:?}", self.get_cs());
     Vec::new()
   }
 

@@ -52,7 +52,7 @@ pub fn load_definitions(state : &mut State) {
   // Let("\@currenvline", "\@empty");
 
   // TODO:
-  DefMacroI!("\\begin".to_string(), Vec::new(), Arc::new(Box::new(|gullet, args,state| {
+  DefMacro("\\begin{}".to_string(), Arc::new(Box::new(|gullet, args,state| {
       // let env = args.get_arg(1);
       // let name = match env {
       //   Some(e) => e.to_string(),
@@ -74,7 +74,7 @@ pub fn load_definitions(state : &mut State) {
     Vec::new()
   })),state);
 
-  DefMacroI!("\\end".to_string(), Vec::new(), Arc::new(Box::new(|gullet, args, state| {
+  DefMacro("\\end{}".to_string(), Arc::new(Box::new(|gullet, args, state| {
       // let env = args.get_arg(1);
       // my $name = $env && ToString($env);
       // my $t;

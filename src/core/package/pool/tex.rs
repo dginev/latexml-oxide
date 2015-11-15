@@ -19,8 +19,8 @@ pub fn load_definitions(state : &mut State) {
         latex::load_definitions(state);
         return vec![T_CS(ltxtrigger.clone())];
       }));
-    let expansion = Vec::new();
+    let expansion = None;
     
-    DefMacroI!(trigger_saved, expansion, load_pool_closure, state);
+    DefMacroI!(T_CS(trigger_saved.to_string()), expansion, load_pool_closure, state);
   }
 }

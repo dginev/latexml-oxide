@@ -4,7 +4,7 @@ use core::token::*;
 use core::tbox::TBox;
 use core::gullet::Gullet;
 use core::stomach::Stomach;
-use core::parameter::Parameter;
+use core::parameter::Parameters;
 use common::object::Object;
 use core::definition::Definition;
 
@@ -15,7 +15,7 @@ pub struct Expandable {
   pub alias : Option<String>,
   pub locator : String,
   pub cs : Token,
-  pub paramlist : Vec<Parameter>,
+  pub paramlist : Option<Parameters>,
   pub expansion : ExpansionClosure,
   pub trivial_expansion : Option<Vec<Token>>,
 }
@@ -27,7 +27,7 @@ impl Default for Expandable {
       alias : None,
       locator : String::new(),
       cs : T_CS("Expandable".to_string()),
-      paramlist : Vec::new(),
+      paramlist : None,
       expansion : Arc::new(Box::new(|gullet, args, state| {Vec::new()}))
     }
   }
@@ -38,7 +38,7 @@ impl Object for Expandable {
 }
 impl Definition for Expandable {
   fn is_protected(&self) -> bool { self.is_protected }
-  
+  fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
   fn get_cs(&self) -> Token {
     self.cs.clone()
   }
@@ -56,6 +56,7 @@ impl Definition for Expandable {
 
   fn invoke(&self, gullet : &mut Gullet, state : &mut State) -> Vec<Token> {
     // Expand the expandable control sequence. This should be carried out by the Gullet.
+    println!("-- expandable invoke for {:?}", self.get_cs());
     if self.trivial_expansion.is_some() {
       match &self.trivial_expansion { 
         &Some(ref expansion) => expansion.clone(),

@@ -1,11 +1,12 @@
 pub mod expandable;
 pub mod constructor;
+pub mod primitive;
 
 use core::gullet::Gullet;
 use core::stomach::Stomach;
 use core::token::*;
 use core::tbox::TBox;
-use core::parameter::Parameter;
+use core::parameter::Parameters;
 use common::object::Object;
 use state::State;
 
@@ -28,15 +29,7 @@ pub trait Definition : Object {
     // return ($params ? $params->readArguments($gullet, $self) : ()); 
     Vec::new()
   }
-
-  // pub fn get_parameters(&self) ->  {
-  //   my ($self) = @_;
-  //   // Allow defering these until the Definition is actually used.
-  //   if ((defined $$self{parameters}) && !ref $$self{parameters}) {
-  //     require LaTeXML::Package;
-  //     $$self{parameters} = LaTeXML::Package::parseParameters($$self{parameters}, $$self{cs}); }
-  //   return $$self{parameters}; 
-  // }
+  fn get_parameters(&self) -> &Option<Parameters>;
 
   //======================================================================
   // Overriding methods
@@ -54,15 +47,17 @@ pub trait Definition : Object {
     let mut invocation_result = Vec::new();
     invocation_result.push(self.get_cs());
 
-    for rev_param in self.get_parameters().into_iter() {
-      invocation_result.push(rev_param)
+    match self.get_parameters() {
+      &None => {},
+      &Some(ref params) => {
+        for result_token in params.revert_arguments(args) {
+          invocation_result.push(result_token);
+        }
+      }
     }
     invocation_result
   }
 
-  fn get_parameters(&self) -> Vec<Token> {
-    Vec::new() // ??? How do we handle these
-  }
   fn get_num_args(&mut self) -> usize { 0 }
 }
 

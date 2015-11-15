@@ -1,7 +1,9 @@
+use std::sync::Arc;
+use common::object::Object;
 use core::{Core};
-use state::State;
+use state::{State, ObjectStore};
 use core::token::*;
-use core::parameter::Parameters;
+use core::parameter::{Parameter,Parameters};
 use core::mouth::Mouth;
 // use common::{Error};
 
@@ -90,33 +92,100 @@ pub fn parse_prototype(proto : String) -> ((Token, Option<Parameters>)) {
     // also replace in proto
     final_proto = active_char_regex.replace(&proto,"");
   } else {
-    // Fatal('misdefined', $proto, $STATE->getStomach,
-    //   "Definition prototype doesn't have proper control sequence: \"$proto\""); }
+    // Fatal('misdefined', prototype, $STATE->getStomach,
+    //   "Definition prototype doesn't have proper control sequence: \"prototype\""); }
   }
   final_proto = final_proto.trim_left().to_string();
   let paramlist = parse_parameters(final_proto, &cs);
   return (cs, paramlist)
 }
 
-pub fn parse_parameters(prototype : String, cs : &Token) -> Option<Parameters> {
-  println_stderr!("Token {:?}", cs);
-  println_stderr!("Prototype: {:?}", prototype);
-  println_stderr!("---");
-  None
+pub fn parse_parameters(mut prototype : String, cs : &Token) -> Option<Parameters> {
+  let mut parameters = Vec::new();
+  let nested_check = regex!(r"^(\{([^\}]*)\})\s*");
+  let optional_check = regex!(r"^(\[([^\]]*)\])\s*");
+  let default_check = regex!(r"^Default:(.*)$");
+  let paramspec_check = regex!(r"^((\w*)(:([^\s\{\[]*))?)\s*");
+
+  while !prototype.is_empty() {
+    let mut next_proto = String::new();
+    // Handle possibly nested cases, such as {Number}
+    if nested_check.is_match(&prototype) {
+      let captures = nested_check.captures(&prototype).unwrap();
+      next_proto = nested_check.replace(&prototype,"");
+      let spec = captures.at(1).unwrap(); 
+      let inner_spec = captures.at(2).unwrap();
+      let inner : Option<Parameters> = if inner_spec.is_empty() { None } else { parse_parameters(inner_spec.to_string(), cs)};
+      parameters.push(Parameter { name: "Plain".to_string(), spec: spec.to_string(), extra: vec![inner]});
+
+    }
+    else if optional_check.is_match(&prototype) { // Ditto for Optional
+      let captures = optional_check.captures(&prototype).unwrap();
+      next_proto = optional_check.replace(&prototype,"");
+      let spec = captures.at(1).unwrap(); 
+      let inner_spec = captures.at(2).unwrap();
+
+      if default_check.is_match(inner_spec) {
+        let default_captures = default_check.captures(&inner_spec).unwrap();
+        parameters.push(Parameter{name: "Optional".to_string(), spec: spec.to_string(),
+          // extra: vec![TokenizeInternal(default_captures.at(0).unwrap()), None]});
+          extra: Vec::new()});
+      } else if !inner_spec.is_empty() {
+        parameters.push(Parameter{name: "Optional".to_string(), spec: spec.to_string(),
+          extra: vec![None, parse_parameters(inner_spec.to_string(), cs)]}); }
+      else {
+        parameters.push(Parameter{name: "Optional".to_string(), spec: spec.to_string(), extra: Vec::new()});
+      }
+    }
+
+    else if paramspec_check.is_match(&prototype) {
+      let captures = paramspec_check.captures(&prototype).unwrap();
+      next_proto = paramspec_check.replace(&prototype,"");
+      let spec = captures.at(1).unwrap(); 
+      let spec_type = captures.at(2).unwrap();
+      let extra = match captures.at(4) {
+        None => Vec::new(),
+        Some(extra_string) => {
+          // TODO: Ask Bruce about the "extra" functionality and its types
+          // extra_string.split("|").map(|t| tokenize_internal(t.to_string())).collect::<Vec<Token>>();
+          Vec::new()
+        }
+      };
+      parameters.push(Parameter{ name: spec_type.to_string(), spec: spec.to_string(), extra: extra});
+
+    }
+    // else {
+    //   Fatal('misdefined', cs, undef, "Unrecognized parameter specification at \"prototype\""); } }
+    prototype = next_proto;
+  }
+  if parameters.len() == 0 {
+    None
+  } else {
+    Some(Parameters { params : parameters })
+  }
 }
 
 /// Macros and pool come at the end, so that they load seamlessly
-use core::definition::expandable::Expandable;
+use core::definition::expandable::{ExpansionClosure, Expandable};
+// TODO: package::coerce_cs on $cs
 #[macro_export]
 macro_rules! DefMacroI(
   ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (
   {
     use $crate::core::definition::expandable::Expandable;
     use $crate::core::package;
-    $state.install_definition(Box::new(Expandable { cs: package::coerce_cs( $cs ), paramlist: $paramlist, expansion: $expansion, ..Expandable::default()}), &None);
+    $state.install_definition(::state::ObjectStore::ExpandableStore(Arc::new(Box::new(
+      Expandable { cs: $cs, paramlist: $paramlist, expansion: $expansion, ..Expandable::default()}))),&None);
   }
   )
 );
+
+pub fn DefMacro(proto : String, expansion : ExpansionClosure, state: &mut State) {
+  // check_options("DefMacro (prototype)", $constructor_options, %options);
+  let (cs, paramlist) = parse_prototype(proto);
+  DefMacroI!(cs, paramlist, expansion, state);
+  return; 
+}
 
 // macro_rules! DefMacroI(
 //     ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (
@@ -141,8 +210,8 @@ macro_rules! DefConstructorI(
     use $crate::core::package;
     let mode    = $options.mode;
     let bounded = $options.bounded;
-    $state.install_definition(Box::new(Constructor { cs: $cs,
-      paramlist: $paramlist, replacement: $replacement, ..Constructor::default()}), &None);
+    $state.install_definition(::state::ObjectStore::ConstructorStore(Arc::new(Box::new(
+      Constructor { cs: $cs, paramlist: $paramlist, replacement: $replacement, ..Constructor::default()}))), &None);
 
     //   beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
     //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),
@@ -172,8 +241,7 @@ macro_rules! DefConstructorI(
 );
 
 pub fn DefConstructor(proto : String, replacement : String, options : ConstructorOptions, state: &mut State) {
-  // check_options("DefConstructor ($proto)", $constructor_options, %options);
-  println!("-- Registering DefConstructor");
+  // check_options("DefConstructor (prototype)", $constructor_options, %options);
   let (cs, paramlist) = parse_prototype(proto);
   DefConstructorI!(cs, paramlist, replacement, options, state);
   return; 

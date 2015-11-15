@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use state::{Scope,State, ObjectStore};
 // use common::error::*;
 use core::gullet::{Gullet};
@@ -77,7 +78,6 @@ impl Stomach {
   /// Returns a list of boxes/whatsits. 
   fn invoke_token(&mut self, input_token : Token, state : &mut State) -> Vec<TBox> {
     let mut maybe_token = Some(input_token);
-    // println!("Invoking: {:?}", maybe_token);
 
     // Overly complex, but want to avoid recursion/stack
     let mut result : Vec<TBox> = Vec::new();
@@ -108,8 +108,7 @@ impl Stomach {
         },
         ObjectStore::ExpandableStore(meaning) => {
           // A math-active character will (typically) be a macro,
-          // but it isn't expanded in the gullet, but later when digesting, in math mode (? I think)        
-
+          // but it isn't expanded in the gullet, but later when digesting, in math mode (? I think)
           let invoked_meaning = meaning.invoke(&mut self.gullet, state);
           self.gullet.unread(invoked_meaning);
           maybe_token = self.gullet.read_x_token(true, false, state); // replace the token by it's expansion!!!
@@ -146,11 +145,12 @@ impl Stomach {
   }
 
   fn invoke_token_undefined(&mut self, token : Token, state : &mut State) -> Vec<TBox> {
+    // println_stderr!("-- Undefined invoke {:?}", token);
     // TODO: Rework this carefully
     Vec::new()  
   }
   fn invoke_token_simple(&mut self, token : Token, meaning : Token, state : &mut State) -> Vec<TBox> {
-    // println!("Simple token invocation: {:?}", token);
+    // println_stderr!("-- Simple invoke {:?}", token);
     // let font = state.lookup_value("font");
     state.clear_prefixes();    // prefixes shouldn't apply here.
 

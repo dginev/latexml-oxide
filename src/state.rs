@@ -10,6 +10,7 @@ use common::object::Object;
 use core::definition::{Definition};
 use core::definition::expandable::Expandable;
 use core::definition::constructor::Constructor;
+use core::definition::primitive::Primitive;
 
 pub enum Scope {
   Global,
@@ -25,18 +26,19 @@ pub enum Table {
   StashActive,
 }
 
+#[derive(Clone)]
 pub enum ObjectStore {
   TokenStore (Token),
-  DefinitionStore (Arc<Box<Definition>>),
-  ExpandableStore (Expandable),
-  ConstructorStore (Constructor)
+  ExpandableStore (Arc<Box<Expandable>>),
+  PrimitiveStore (Arc<Box<Primitive>>),
+  ConstructorStore (Arc<Box<Constructor>>)
 }
 
 pub struct State {
   pub verbosity : i32,
   pub map : Vec<String>,
   pub catcode : HashMap<char, Catcode>,
-  pub meaning : HashMap<String, Arc<Box<Definition>>>,
+  pub meaning : HashMap<String, ObjectStore>,
   pub status_code : usize,
   pub model : Model
 }
@@ -99,8 +101,28 @@ impl State {// TODO for all
   pub fn lookup_value<'lv, T: Hash>(&'lv mut self, key: &'lv str) -> Option<Box<T>>{
     None
   }
-  pub fn lookup_definition<'def>(&'def mut self, key: &'def Token) -> Option<Arc<Box<Definition>>> {
-    None
+  /// used for expansion & various queries
+  /// Since we're not doing digestion here, we don't need to handle mathactive,
+  /// nor cs let to executable tokens
+  /// This returns a definition object, or undef
+  pub fn lookup_definition<'def>(&'def mut self, key: &'def Token) -> Option<ObjectStore> {
+    let cc = &key.code;
+    let name = &key.text;
+    let lookupname : String = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) {
+      name.clone()
+    } else {
+      cc.name()
+    };
+    
+    match lookupname.is_empty() {
+      true => None,
+      false => {
+        match self.meaning.get(&lookupname) {
+          None => None,
+          Some(entry) => Some(entry.clone())
+        }
+      }
+    }
   }
   pub fn lookup_mathcode<'mc>(&'mc mut self, key: &'mc str) -> Option<Box<i32>> {
     None
@@ -132,7 +154,7 @@ impl State {// TODO for all
       // && ($lookupname = $LaTeXML::Core::Token::PRIMITIVE_NAME[$$defn[1]])
       // && ($entry      = $$self{meaning}{$lookupname})) {
       // $defn = $$entry[0]; }
-      Some(ObjectStore::DefinitionStore(defn.clone()))
+      Some(defn.clone())
     } else {
       // println_stderr!("-- No definition for: {:?}", token);
       Some(ObjectStore::TokenStore(token.clone()))
@@ -141,7 +163,7 @@ impl State {// TODO for all
   pub fn assign_value<'av, T: Hash>(&'av mut self, key: &'av str, value: Box<T>, scope: &'av Scope) {}
   pub fn assign_catcode<'ac>(&'ac mut self, c: &'ac char, cc : Catcode) {}
   pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, key: &'def Token, definition : Box<T>) { }
-  pub fn assign_internal<'ai>(&'ai mut self, table : Table, key : &'ai str, definition : Box<Definition>, 
+  pub fn assign_internal<'ai>(&'ai mut self, table : Table, key : &'ai str, definition : ObjectStore, 
                               scope : &'ai Option<Scope>) {
     let mut fallback_store = HashMap::new();
     let mut store = match table {
@@ -149,16 +171,21 @@ impl State {// TODO for all
       _ => &mut fallback_store
     };
 
-    store.insert(key.to_string(), Arc::new(definition));
+    store.insert(key.to_string(), definition);
   }
   pub fn clear_prefixes<'cp>(&'cp mut self) {}
 
   /// And a shorthand for installing definitions
-  pub fn install_definition<'id>(&'id mut self, definition: Box<Definition>, scope: &'id Option<Scope>) {
+  pub fn install_definition<'id>(&'id mut self, definition: ObjectStore, scope: &'id Option<Scope>) {
     // Locked definitions!!! (or should this test be in assignMeaning?)
     // Ignore attempts to (re)define $cs from tex sources
     //  my $cs = $definition->getCS->getCSName;
-    let token = definition.get_cs();
+    let token = match &definition {
+      &ObjectStore::ExpandableStore(ref defn) => {defn.get_cs()},
+      &ObjectStore::ConstructorStore(ref defn) => {defn.get_cs()},
+      &ObjectStore::PrimitiveStore(ref defn) => {defn.get_cs()},
+      &ObjectStore::TokenStore(ref token) => {token.clone()},
+    };
     let cs = token.get_cs_name();
 
     let cs_locked = cs.clone() + ":locked";
