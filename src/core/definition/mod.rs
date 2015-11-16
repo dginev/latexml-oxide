@@ -58,6 +58,6 @@ pub trait Definition : Object {
     invocation_result
   }
 
-  fn get_num_args(&mut self) -> usize { 0 }
+  fn get_num_args(&self) -> usize { 0 }
 }
 

@@ -12,7 +12,7 @@ pub fn load_definitions(state : &mut State) {
 
   DefConstructor("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []".to_string(),
     "<?latexml class='#2' ?#1(options='#1')?>".to_string(), ConstructorOptions{
-      afterDigest: Some(Arc::new(Box::new(
+      after_digest: Some(Arc::new(Box::new(
         |stomach : &mut Stomach, whatsit : &mut Whatsit, state : &mut State| {
           let options : Option<&TBox> = whatsit.get_arg(1);
           let opts_regex = regex!(r",\s*");

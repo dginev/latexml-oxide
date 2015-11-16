@@ -7,6 +7,7 @@ use common::model::{Model};
 
 use core::token::{Catcode, Token};
 use common::object::Object;
+use core::parameter::Parameter;
 use core::definition::{Definition};
 use core::definition::expandable::Expandable;
 use core::definition::constructor::Constructor;
@@ -127,6 +128,9 @@ impl State {// TODO for all
   pub fn lookup_mathcode<'mc>(&'mc mut self, key: &'mc str) -> Option<Box<i32>> {
     None
   }
+  pub fn lookup_mapping<'mc>(&'mc mut self, map: &'mc str, key: &'mc str) -> Option<Parameter> {
+    None
+  }
 
   pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<ObjectStore> {
     let cc = &token.code;
@@ -210,4 +214,7 @@ impl State {// TODO for all
     self.assign_internal(Table::Meaning, &cs, definition, scope);
     return;
   }
+
+  pub fn begin_semiverbatim(&self) {}
+  pub fn end_semiverbatim(&self) {}
 }

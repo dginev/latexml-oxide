@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use state::{Scope,State, ObjectStore};
 // use common::error::*;
 use core::gullet::{Gullet};
@@ -96,7 +95,7 @@ impl Stomach {
       }
       state.assign_value("CURRENT_TOKEN", Box::new(token.clone()), &Scope::Global);
       result = Vec::new();
-      let looked_up_definition : Option<ObjectStore> = state.lookup_digestable_definition(&token);
+      let mut looked_up_definition : Option<ObjectStore> = state.lookup_digestable_definition(&token);
       match looked_up_definition {
         None => {// Supposedly executable token, but no definition!
          result = self.invoke_token_undefined(token, state); 

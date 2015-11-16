@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use common::object::Object;
 use core::{Core};
-use state::{State, ObjectStore};
+use state::{State};
 use core::token::*;
 use core::parameter::{Parameter,Parameters};
 use core::mouth::Mouth;
@@ -45,11 +45,11 @@ pub fn load_tex_content(core: &mut Core, path : String) {
 
 }
 
-pub fn load_class(state: &mut State, name : String, options : Vec<String>, after : Vec<Token>) {
-
+pub fn load_class(_state: &mut State, _name : String, _options : Vec<String>, _after : Vec<Token>) {
+ // TODO
 }
 
-pub fn find_file(request : String, forbid_ltxml : bool) -> Option<String> {
+pub fn find_file(request : String, _forbid_ltxml : bool) -> Option<String> {
   // TODO: Actually find it!
   Some(request)
 
@@ -63,7 +63,7 @@ pub fn tokenize_internal(some : String) -> Vec<Token> {
   vec![T_CS(some)]
 }
 
-pub fn parse_prototype(proto : String) -> ((Token, Option<Parameters>)) {
+pub fn parse_prototype(proto : String, state: &mut State) -> ((Token, Option<Parameters>)) {
   let csname_macro_regex = regex!(r"^\\csname\s+(.*)\\endcsname");
   let cs_regex = regex!(r"^(\\[a-zA-Z@]+)");
   let single_char_regex = regex!(r"^(\\.)");
@@ -96,11 +96,11 @@ pub fn parse_prototype(proto : String) -> ((Token, Option<Parameters>)) {
     //   "Definition prototype doesn't have proper control sequence: \"prototype\""); }
   }
   final_proto = final_proto.trim_left().to_string();
-  let paramlist = parse_parameters(final_proto, &cs);
+  let paramlist = parse_parameters(final_proto, &cs, state);
   return (cs, paramlist)
 }
 
-pub fn parse_parameters(mut prototype : String, cs : &Token) -> Option<Parameters> {
+pub fn parse_parameters(mut prototype : String, cs : &Token, state : &mut State) -> Option<Parameters> {
   let mut parameters = Vec::new();
   let nested_check = regex!(r"^(\{([^\}]*)\})\s*");
   let optional_check = regex!(r"^(\[([^\]]*)\])\s*");
@@ -115,8 +115,8 @@ pub fn parse_parameters(mut prototype : String, cs : &Token) -> Option<Parameter
       next_proto = nested_check.replace(&prototype,"");
       let spec = captures.at(1).unwrap(); 
       let inner_spec = captures.at(2).unwrap();
-      let inner : Option<Parameters> = if inner_spec.is_empty() { None } else { parse_parameters(inner_spec.to_string(), cs)};
-      parameters.push(Parameter { name: "Plain".to_string(), spec: spec.to_string(), extra: vec![inner]});
+      let inner : Option<Parameters> = if inner_spec.is_empty() { None } else { parse_parameters(inner_spec.to_string(), cs, state)};
+      parameters.push(Parameter { name: "Plain".to_string(), spec: spec.to_string(), extra: vec![inner], ..Parameter::default()}.init(state));
 
     }
     else if optional_check.is_match(&prototype) { // Ditto for Optional
@@ -129,12 +129,12 @@ pub fn parse_parameters(mut prototype : String, cs : &Token) -> Option<Parameter
         let default_captures = default_check.captures(&inner_spec).unwrap();
         parameters.push(Parameter{name: "Optional".to_string(), spec: spec.to_string(),
           // extra: vec![TokenizeInternal(default_captures.at(0).unwrap()), None]});
-          extra: Vec::new()});
+          extra: Vec::new(), ..Parameter::default()}.init(state));
       } else if !inner_spec.is_empty() {
         parameters.push(Parameter{name: "Optional".to_string(), spec: spec.to_string(),
-          extra: vec![None, parse_parameters(inner_spec.to_string(), cs)]}); }
+          extra: vec![None, parse_parameters(inner_spec.to_string(), cs, state)], ..Parameter::default()}.init(state)); }
       else {
-        parameters.push(Parameter{name: "Optional".to_string(), spec: spec.to_string(), extra: Vec::new()});
+        parameters.push(Parameter{name: "Optional".to_string(), spec: spec.to_string(), extra: Vec::new(), ..Parameter::default()}.init(state));
       }
     }
 
@@ -145,13 +145,13 @@ pub fn parse_parameters(mut prototype : String, cs : &Token) -> Option<Parameter
       let spec_type = captures.at(2).unwrap();
       let extra = match captures.at(4) {
         None => Vec::new(),
-        Some(extra_string) => {
+        Some(_extra_string) => {
           // TODO: Ask Bruce about the "extra" functionality and its types
           // extra_string.split("|").map(|t| tokenize_internal(t.to_string())).collect::<Vec<Token>>();
           Vec::new()
         }
       };
-      parameters.push(Parameter{ name: spec_type.to_string(), spec: spec.to_string(), extra: extra});
+      parameters.push(Parameter{ name: spec_type.to_string(), spec: spec.to_string(), extra: extra, ..Parameter::default()}.init(state));
 
     }
     // else {
@@ -166,7 +166,7 @@ pub fn parse_parameters(mut prototype : String, cs : &Token) -> Option<Parameter
 }
 
 /// Macros and pool come at the end, so that they load seamlessly
-use core::definition::expandable::{ExpansionClosure, Expandable};
+use core::definition::expandable::{ExpansionClosure};
 // TODO: package::coerce_cs on $cs
 #[macro_export]
 macro_rules! DefMacroI(
@@ -182,7 +182,7 @@ macro_rules! DefMacroI(
 
 pub fn DefMacro(proto : String, expansion : ExpansionClosure, state: &mut State) {
   // check_options("DefMacro (prototype)", $constructor_options, %options);
-  let (cs, paramlist) = parse_prototype(proto);
+  let (cs, paramlist) = parse_prototype(proto, state);
   DefMacroI!(cs, paramlist, expansion, state);
   return; 
 }
@@ -208,18 +208,18 @@ macro_rules! DefConstructorI(
   {
     use $crate::core::definition::constructor::Constructor;
     use $crate::core::package;
-    let mode    = $options.mode;
-    let bounded = $options.bounded;
+    // let mode    = $options.mode;
+    // let bounded = $options.bounded;
     $state.install_definition(::state::ObjectStore::ConstructorStore(Arc::new(Box::new(
       Constructor { cs: $cs, paramlist: $paramlist, replacement: $replacement, ..Constructor::default()}))), &None);
 
-    //   beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
+    //   before_digest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
     //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),
     //     ($mode ? (sub { $_[0]->beginMode($mode); })
     //       : ($bounded ? (sub { $_[0]->bgroup; }) : ())),
     //     ($options{font} ? (sub { MergeFont(%{ $options{font} }); }) : ()),
-    //     $options{beforeDigest}),
-    //   afterDigest => flatten($options{afterDigest},
+    //     $options{before_digest}),
+    //   after_digest => flatten($options{after_digest},
     //     ($mode ? (sub { $_[0]->endMode($mode) })
     //       : ($bounded ? (sub { $_[0]->egroup; }) : ()))),
     //   beforeConstruct => flatten($options{beforeConstruct}),
@@ -242,9 +242,8 @@ macro_rules! DefConstructorI(
 
 pub fn DefConstructor(proto : String, replacement : String, options : ConstructorOptions, state: &mut State) {
   // check_options("DefConstructor (prototype)", $constructor_options, %options);
-  let (cs, paramlist) = parse_prototype(proto);
+  let (cs, paramlist) = parse_prototype(proto, state);
   DefConstructorI!(cs, paramlist, replacement, options, state);
-  return; 
 }
 
 pub mod pool;
