@@ -42,7 +42,7 @@ pub trait Definition : Object {
   }
 
   // Return the Tokens that would invoke the given definition with arguments.
-  fn invocation(&mut self, args : Vec<Token>) -> Vec<Token> {
+  fn invocation(&mut self, args : Vec<Token>, state : &mut State) -> Vec<Token> {
     
     let mut invocation_result = Vec::new();
     invocation_result.push(self.get_cs());
@@ -50,7 +50,7 @@ pub trait Definition : Object {
     match self.get_parameters() {
       &None => {},
       &Some(ref params) => {
-        for result_token in params.revert_arguments(args) {
+        for result_token in params.revert_arguments(args, state) {
           invocation_result.push(result_token);
         }
       }

@@ -246,4 +246,15 @@ pub fn DefConstructor(proto : String, replacement : String, options : Constructo
   DefConstructorI!(cs, paramlist, replacement, options, state);
 }
 
+pub fn DefParameterType(param_type: String, options: Parameter, state : &mut State) {
+  // CheckOptions("DefParameterType param_type", $parameter_options, %options);
+  state.assign_mapping("PARAMETER_TYPES", &param_type, options);
+  return; 
+}
+
+pub fn Revert(arg: Vec<Token>) -> Vec<Token> {
+  Vec::new()
+}
+
+
 pub mod pool;

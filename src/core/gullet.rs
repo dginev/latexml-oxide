@@ -259,4 +259,8 @@ impl Gullet {
     };
     return;
   }
+
+  pub fn read_arg(&mut self, state: &mut State) -> Vec<Token> {
+    Vec::new()
+  }
 }

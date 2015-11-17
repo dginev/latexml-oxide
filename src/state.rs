@@ -177,6 +177,9 @@ impl State {// TODO for all
 
     store.insert(key.to_string(), definition);
   }
+  pub fn assign_mapping<'mc>(&'mc mut self, map: &'mc str, key: &'mc str, value: Parameter) {
+    
+  }
   pub fn clear_prefixes<'cp>(&'cp mut self) {}
 
   /// And a shorthand for installing definitions

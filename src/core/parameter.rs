@@ -7,6 +7,7 @@ use core::definition::constructor::Constructor;
 use state::State;
 
 pub type ReaderClosure = Arc<Box<Fn(&mut Gullet, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>>;
+pub type ReversionClosure = Arc<Box<Fn(&mut Gullet, Vec<Token>, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>>;
 #[derive(Clone)]
 pub struct Parameter {
   pub novalue : bool,
@@ -14,7 +15,8 @@ pub struct Parameter {
   pub name : String,
   pub spec : String,
   pub extra : Vec<Option<Parameters>>,
-  pub reader : ReaderClosure
+  pub reader : ReaderClosure,
+  pub reversion : Option<ReversionClosure>
 }
 impl Default for Parameter {
   fn default() -> Self {
@@ -24,7 +26,8 @@ impl Default for Parameter {
       name : "parameter_default".to_string(),
       spec : String::new(),
       extra : Vec::new(),
-      reader : Arc::new(Box::new(|_gullet, _args, _state| {Vec::new()}))
+      reader : Arc::new(Box::new(|_gullet, _args, _state| {Vec::new()})),
+      reversion : None
     }
   }
 }
@@ -152,7 +155,7 @@ impl Parameters {
     self.params.len()
   }
 
-  pub fn revert_arguments(&self, args : Vec<Token>) -> Vec<Token> {
+  pub fn revert_arguments(&self, args : Vec<Token>, state : &mut State) -> Vec<Token> {
     Vec::new()
   }
 
@@ -169,4 +172,9 @@ impl Parameters {
     }
     return args
   }
+
+  pub fn reparse_argument(&self, gullet : &mut Gullet, value : Vec<Token>, state: &mut State) -> Vec<Token>{
+    Vec::new()
+  }
+
 }
