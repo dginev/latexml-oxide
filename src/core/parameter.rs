@@ -165,7 +165,6 @@ impl Parameters {
   }
 
   pub fn read_arguments(&self, gullet : &mut Gullet, fordefn : &Definition, state : &mut State) -> Vec<Token> {
-    println_stderr!("welcome to Parameter::read_arguments !!!");
     let mut args = Vec::new();
     for parameter in self.params.iter() {
       let values = parameter.read(gullet, fordefn, state);
