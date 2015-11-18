@@ -3,7 +3,7 @@ use state::{State, Scope, ObjectStore};
 use common::object::Object;
 use core::definition::Definition;
 use core::mouth::{Mouth};
-use core::token::{Token, Catcode};
+use core::token::{Token, T_OTHER, Catcode};
 
 #[derive(Clone)]
 pub struct MouthRuntime {
@@ -260,7 +260,109 @@ impl Gullet {
     return;
   }
 
-  pub fn read_arg(&mut self, state: &mut State) -> Vec<Token> {
+  ///**********************************************************************
+  /// Mid-level readers: checking and matching tokens, strings etc.
+  ///**********************************************************************
+  /// The following higher-level parsing methods are built upon readToken & unread.
+  pub fn read_non_space(&mut self, state : &mut State) -> Option<Token> {
+    loop {
+      match self.read_token(state) {
+        None => {return None},
+        Some(t) => {
+          if t.code != Catcode::SPACE {
+            return Some(t)
+          }
+        }
+      }
+    }
+  }
+
+  /// Read a sequence of tokens balanced in {}
+  /// assuming the { has already been read.
+  /// Returns a Tokens list of the balanced sequence, omitting the closing }
+  pub fn read_balanced(&mut self, state : &mut State) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    let mut level = 1;
+    while level > 0 {
+      match self.read_token(state) {
+        None => break,
+        Some(t) => {
+          match t.code { // Inline ->getCatcode!
+            Catcode::BEGIN => { level += 1 },
+            Catcode::END => { level -= 1 }
+            _ => {}
+          };
+          if level > 0 {
+            tokens.push(t);
+          }
+        }
+      };
+    }
+    tokens
+  }
+
+  /// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
+  /// In list context, also returns the found delimiter.
+  pub fn read_until(&mut self, delims: Vec<Token>, state: &mut State) -> Vec<Token> {
+    // my ($n, $found, @tokens) = (0);
+    // while (!defined($found = $self->readMatch(@delims))) {
+    //   my $token = $self->readToken();    # Copy next token to args
+    //   return unless defined $token;
+    //   push(@tokens, $token);
+    //   $n++;
+    //   if ($$token[1] == CC_BEGIN) {      # And if it's a BEGIN, copy till balanced END
+    //     push(@tokens, $self->readBalanced->unlist, T_END); } }
+    // # Notice that IFF the arg looks like {balanced}, the outer braces are stripped
+    // # so that delimited arguments behave more similarly to simple, undelimited arguments.
+    // if (($n == 1) && ($tokens[0][1] == CC_BEGIN)) {
+    //   shift(@tokens); pop(@tokens); }
+    // return (wantarray ? (Tokens(@tokens), $found) : Tokens(@tokens)); }
     Vec::new()
   }
+
+  ///**********************************************************************
+  /// Higher-level readers: Read various types of things from the input:
+  ///  tokens, non-expandable tokens, args, Numbers, ...
+  ///**********************************************************************
+  pub fn read_arg(&mut self, state: &mut State) -> Vec<Token> {
+    match self.read_non_space(state) {
+      None => Vec::new(),
+      Some(token) => {
+        match token.code {
+          Catcode::BEGIN => { // Inline ->getCatcode!
+            self.read_balanced(state)
+          }
+          _ => {
+            vec![token]
+          }
+        }
+      }
+    }
+  }
+  // Note that this returns an empty array if [] is present,
+  // otherwise $default or undef.
+  pub fn read_optional(&mut self, state: &mut State) -> Vec<Token> {
+    // TODO: default
+    match self.read_non_space(state) {
+      None => Vec::new(),
+      Some(t) => {
+        if t.code == Catcode::OTHER && t.text == "[" {
+          self.read_until(vec![T_OTHER("]".to_string())], state)
+        } else {
+          self.unread(vec![t]);
+          Vec::new() // TODO: default
+        }
+      }
+    }
+  }
+
+  pub fn skip_spaces(&mut self, state : &mut State) {
+    match self.read_non_space(state) {
+      None => {},
+      Some(t) => {
+        self.unread(vec![t]);
+      }
+    }
+  }
+
 }

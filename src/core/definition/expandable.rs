@@ -28,7 +28,7 @@ impl Default for Expandable {
       locator : String::new(),
       cs : T_CS("Expandable".to_string()),
       paramlist : None,
-      expansion : Arc::new(Box::new(|gullet, args, state| {Vec::new()}))
+      expansion : Arc::new(Box::new(|_gullet, _args, _state| {Vec::new()}))
     }
   }
 }
@@ -63,19 +63,19 @@ impl Definition for Expandable {
         &None => Vec::new()
       }
     } else {
-      let args = self.read_arguments(gullet);
+      let args = self.read_arguments(gullet, state);
       self.do_invocation(gullet, args, state)
     }
   }
 
-  fn invoke_primitive(&self, gullet : &mut Stomach, state : &mut State) -> Vec<TBox> {
+  fn invoke_primitive(&self, _gullet : &mut Stomach, _state : &mut State) -> Vec<TBox> {
     Vec::new()
   }
 }
 
 impl Expandable {
   fn do_invocation(&self, gullet : &mut Gullet, args : Vec<Token>, state : &mut State) -> Vec<Token> {
-    let mut closure : &ExpansionClosure = &self.expansion;
+    let closure : &ExpansionClosure = &self.expansion;
     closure(gullet, args, state)
   }
 }

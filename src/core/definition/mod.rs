@@ -23,11 +23,11 @@ pub trait Definition : Object {
 
   fn get_locator(&self) -> String;
 
-  fn read_arguments(&self, gullet : &mut Gullet) -> Vec<Token> {
-    // my ($self, $gullet) = @_;
-    // my $params = $self->getParameters;
-    // return ($params ? $params->readArguments($gullet, $self) : ()); 
-    Vec::new()
+  fn read_arguments(&self, gullet : &mut Gullet, state : &mut State) -> Vec<Token> where Self: Sized {
+    match self.get_parameters() {
+      &None => Vec::new(),
+      &Some(ref params) => params.read_arguments(gullet, self, state)
+    }
   }
   fn get_parameters(&self) -> &Option<Parameters>;
 

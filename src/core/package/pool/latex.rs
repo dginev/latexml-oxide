@@ -13,7 +13,7 @@ pub fn load_definitions(state : &mut State) {
   DefConstructor("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []".to_string(),
     "<?latexml class='#2' ?#1(options='#1')?>".to_string(), ConstructorOptions{
       after_digest: Some(Arc::new(Box::new(
-        |stomach : &mut Stomach, whatsit : &mut Whatsit, state : &mut State| {
+        |_stomach : &mut Stomach, whatsit : &mut Whatsit, state : &mut State| {
           let options : Option<&TBox> = whatsit.get_arg(1);
           let opts_regex = regex!(r",\s*");
           let class_opts = match options {
@@ -52,7 +52,7 @@ pub fn load_definitions(state : &mut State) {
   // Let("\@currenvline", "\@empty");
 
   // TODO:
-  DefMacro("\\begin{}".to_string(), Arc::new(Box::new(|gullet, args,state| {
+  DefMacro("\\begin{}".to_string(), Arc::new(Box::new(|_gullet, _args, _state| {
       // let env = args.get_arg(1);
       // let name = match env {
       //   Some(e) => e.to_string(),
@@ -74,7 +74,7 @@ pub fn load_definitions(state : &mut State) {
     Vec::new()
   })),state);
 
-  DefMacro("\\end{}".to_string(), Arc::new(Box::new(|gullet, args, state| {
+  DefMacro("\\end{}".to_string(), Arc::new(Box::new(|_gullet, _args, _state| {
       // let env = args.get_arg(1);
       // my $name = $env && ToString($env);
       // my $t;

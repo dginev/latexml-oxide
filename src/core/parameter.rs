@@ -3,6 +3,7 @@ use core::token::Token;
 use core::tbox::TBox;
 use core::gullet::Gullet;
 use core::stomach::Stomach;
+use core::definition::Definition;
 use core::definition::constructor::Constructor;
 use state::State;
 
@@ -12,6 +13,7 @@ pub type ReversionClosure = Arc<Box<Fn(&mut Gullet, Vec<Token>, Vec<Option<Param
 pub struct Parameter {
   pub novalue : bool,
   pub semiverbatim : bool,
+  pub optional : bool,
   pub name : String,
   pub spec : String,
   pub extra : Vec<Option<Parameters>>,
@@ -23,25 +25,29 @@ impl Default for Parameter {
     Parameter {
       novalue : false,
       semiverbatim : false,
+      optional : false,
       name : "parameter_default".to_string(),
       spec : String::new(),
       extra : Vec::new(),
-      reader : Arc::new(Box::new(|_gullet, _args, _state| {Vec::new()})),
+      reader : Arc::new(Box::new(|_gullet, _args, _state| {
+        println_stderr!("-- Warning: please define a real reader, this is a mock fallback!");
+        Vec::new()})),
       reversion : None
     }
   }
 }
 
 impl Parameter {
-  pub fn init(self,state : &mut State) -> Self {
+  pub fn init(mut self, state : &mut State) -> Self {
     // Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
     let optional_regex = regex!(r"^Optional(.+)$");
     let skip_regex = regex!(r"^Skip(.+)$");
 
-    let descriptor = match state.lookup_mapping("PARAMETER_TYPES", &self.name) {
-      Some(descriptor) => Some(descriptor),
+    let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
+    let descriptor = match looked_up_mapping {
+      Some(ref descriptor) => Some(descriptor.clone()),
       None => {
       if optional_regex.is_match(&self.name) {
         let captures = optional_regex.captures(&self.name).unwrap();
@@ -90,6 +96,7 @@ impl Parameter {
     match descriptor {
       Some(descriptor) => {
         // descriptor needs to get integrated into Self
+        self.reader = descriptor.reader.clone(); // What else?
       },
       None => {
         // Fatal('misdefined', $type, undef, "Unrecognized parameter type in \"$spec\"") unless $descriptor;
@@ -107,8 +114,7 @@ impl Parameter {
     None
   }
 
-  pub fn read(&self, gullet: &mut Gullet, fordefn : &Constructor, state: &mut State) -> Vec<Token> {
-    println!("-- Parameter read !");
+  pub fn read(&self, gullet: &mut Gullet, fordefn : &Definition, state: &mut State) -> Vec<Token> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
@@ -140,7 +146,6 @@ impl Parameter {
     return value;
   }
  pub fn digest(&self, stomach: &mut Stomach, value: Vec<Token>, fordefn : &Constructor, state: &mut State) -> Option<TBox> {
-    println!("-- Parameter digest !");
     None
   }
 }
@@ -159,10 +164,24 @@ impl Parameters {
     Vec::new()
   }
 
+  pub fn read_arguments(&self, gullet : &mut Gullet, fordefn : &Definition, state : &mut State) -> Vec<Token> {
+    println_stderr!("welcome to Parameter::read_arguments !!!");
+    let mut args = Vec::new();
+    for parameter in self.params.iter() {
+      let values = parameter.read(gullet, fordefn, state);
+      if !parameter.novalue {
+        for value in values {
+          args.push(value);
+        }
+      }
+    }
+    args
+  }
+
   pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn : &Constructor, state: &mut State) -> Vec<TBox> {
     let mut args = Vec::new();
     for parameter in self.params.iter() {
-      let mut value = parameter.read(stomach.get_gullet(), fordefn, state);
+      let mut value = parameter.read(&mut stomach.gullet, fordefn, state);
       if ! parameter.novalue {
         match parameter.digest(stomach, value, fordefn, state) {
           None => {},

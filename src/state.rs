@@ -40,6 +40,7 @@ pub struct State {
   pub map : Vec<String>,
   pub catcode : HashMap<char, Catcode>,
   pub meaning : HashMap<String, ObjectStore>,
+  pub parameters : HashMap<String, Parameter>,
   pub status_code : usize,
   pub model : Model
 }
@@ -53,7 +54,8 @@ impl Default for State {
       model : Model::default(),
       map : Vec::new(),
       catcode : HashMap::new(),
-      meaning : HashMap::new()
+      meaning : HashMap::new(),
+      parameters : HashMap::new()
     }
   }
 }
@@ -128,8 +130,8 @@ impl State {// TODO for all
   pub fn lookup_mathcode<'mc>(&'mc mut self, key: &'mc str) -> Option<Box<i32>> {
     None
   }
-  pub fn lookup_mapping<'mc>(&'mc mut self, map: &'mc str, key: &'mc str) -> Option<Parameter> {
-    None
+  pub fn lookup_mapping(&self, map: &str, key: &str) -> Option<&Parameter> {
+    self.parameters.get(key)
   }
 
   pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<ObjectStore> {
@@ -178,7 +180,7 @@ impl State {// TODO for all
     store.insert(key.to_string(), definition);
   }
   pub fn assign_mapping<'mc>(&'mc mut self, map: &'mc str, key: &'mc str, value: Parameter) {
-    
+    self.parameters.insert(key.to_string(), value);
   }
   pub fn clear_prefixes<'cp>(&'cp mut self) {}
 
