@@ -1,6 +1,7 @@
 use std::hash::Hash;
 use std::collections::HashMap;
 use std::sync::Arc;
+use regex::Regex;
 
 use common::model::{Model};
 // use core::stomach::{Stomach};
@@ -204,8 +205,8 @@ impl State {// TODO for all
     if is_cs_locked.is_some() && is_state_unlocked.is_none() {
       match self.lookup_value("SOURCEFILE") {
         Some(s) => {
-          let tex_or_bib_ext_regex = regex!(r"\.(tex|bib)$");
-          let code_tex_ext_regex = regex!(r"\.code\.tex$");
+          let tex_or_bib_ext_regex = Regex::new(r"\.(tex|bib)$").unwrap();
+          let code_tex_ext_regex = Regex::new(r"\.code\.tex$").unwrap();
           // report if the redefinition seems to come from document source
           if ((*s == "Anonymous String") || tex_or_bib_ext_regex.is_match(*s)) && (! code_tex_ext_regex.is_match(*s)) {
             // TODO:

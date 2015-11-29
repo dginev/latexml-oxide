@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use regex::Regex;
 use common::object::Object;
 use core::{Core};
 use state::{State};
@@ -64,10 +65,10 @@ pub fn tokenize_internal(some : String) -> Vec<Token> {
 }
 
 pub fn parse_prototype(proto : String, state: &mut State) -> ((Token, Option<Parameters>)) {
-  let csname_macro_regex = regex!(r"^\\csname\s+(.*)\\endcsname");
-  let cs_regex = regex!(r"^(\\[a-zA-Z@]+)");
-  let single_char_regex = regex!(r"^(\\.)");
-  let active_char_regex = regex!(r"^(.)");
+  let csname_macro_regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
+  let cs_regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
+  let single_char_regex = Regex::new(r"^(\\.)").unwrap();
+  let active_char_regex = Regex::new(r"^(.)").unwrap();
   let mut final_proto = proto.clone();
   let mut cs = T_CS("\\".to_string()); // Should never happen
   if csname_macro_regex.is_match(&proto) {
@@ -102,10 +103,10 @@ pub fn parse_prototype(proto : String, state: &mut State) -> ((Token, Option<Par
 
 pub fn parse_parameters(mut prototype : String, cs : &Token, state : &mut State) -> Option<Parameters> {
   let mut parameters = Vec::new();
-  let nested_check = regex!(r"^(\{([^\}]*)\})\s*");
-  let optional_check = regex!(r"^(\[([^\]]*)\])\s*");
-  let default_check = regex!(r"^Default:(.*)$");
-  let paramspec_check = regex!(r"^((\w*)(:([^\s\{\[]*))?)\s*");
+  let nested_check = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
+  let optional_check = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
+  let default_check = Regex::new(r"^Default:(.*)$").unwrap();
+  let paramspec_check = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
 
   while !prototype.is_empty() {
     let mut next_proto = String::new();

@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use regex::Regex;
 use core::token::Token;
 use core::tbox::TBox;
 use core::gullet::Gullet;
@@ -42,8 +43,8 @@ impl Parameter {
     // Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
-    let optional_regex = regex!(r"^Optional(.+)$");
-    let skip_regex = regex!(r"^Skip(.+)$");
+    let optional_regex = Regex::new(r"^Optional(.+)$").unwrap();
+    let skip_regex = Regex::new(r"^Skip(.+)$").unwrap();
 
     let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
     let descriptor = match looked_up_mapping {

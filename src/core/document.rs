@@ -49,8 +49,24 @@ impl Document {
     String::new()
   }
 
-  pub fn insert_pi(&mut self, which : &str, paths : Vec<String>) {
-    // TODO
+  /// Insert a ProcessingInstruction of the form <?op attr=value ...?>
+  /// Does NOT move the current insertion point to the PI,
+  /// but may move up past a text node.
+  pub fn insert_pi(&mut self, op : &str, paths : Vec<String>) {
+    // We'll just put these on the document itself.
+    // Put these in an attractive order, main "operator" first
+    // my @keys = ((map { ($attrib{$_} ? ($_) : ()) } qw(class package options)),
+    //   (grep { $_ !~ /^(?:class|package|options)$/ } sort keys %attrib));
+    // my $data = join(' ', map { $_ . "=\"" . ToString($attrib{$_}) . "\"" } @keys);
+    let data = "data";
+    let pi = self.document.create_processing_instruction(op, data);
+    assert!(pi.is_ok());
+    // self.close_text_internal();  // Close any open text node
+    // if ($$self{node}->nodeType == XML_DOCUMENT_NODE) {
+    //   push(@{ $$self{pending} }, $pi); }
+    // else {
+    //   $$self{document}->insertBefore($pi, $$self{document}->documentElement); }
+    return;
   }
   pub fn to_string(&self) -> String {
     self.document.to_string()
