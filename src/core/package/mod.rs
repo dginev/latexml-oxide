@@ -167,26 +167,31 @@ pub fn parse_parameters(mut prototype : String, cs : &Token, state : &mut State)
 }
 
 /// Macros and pool come at the end, so that they load seamlessly
-use core::definition::expandable::{ExpansionClosure};
 // TODO: package::coerce_cs on $cs
 #[macro_export]
 macro_rules! DefMacroI(
   ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (
   {
-    use $crate::core::definition::expandable::Expandable;
-    use $crate::core::package;
+    use $crate::core::definition::expandable::{Expandable,ExpansionClosure};
     $state.install_definition(::state::ObjectStore::ExpandableStore(Arc::new(Box::new(
-      Expandable { cs: $cs, paramlist: $paramlist, expansion: $expansion, ..Expandable::default()}))),&None);
+      Expandable { cs: $cs, paramlist: $paramlist, expansion: Arc::new(Box::new($expansion)),
+       ..Expandable::default()}))),
+      &None);
   }
   )
 );
 
-pub fn DefMacro(proto : String, expansion : ExpansionClosure, state: &mut State) {
-  // check_options("DefMacro (prototype)", $constructor_options, %options);
-  let (cs, paramlist) = parse_prototype(proto, state);
-  DefMacroI!(cs, paramlist, expansion, state);
-  return; 
-}
+#[macro_export]
+macro_rules! DefMacro(
+  ($proto:expr, $expansion:expr, $state:expr) => (
+  {
+    // check_options("DefMacro (prototype)", $constructor_options, %options);
+    let (cs, paramlist) = parse_prototype($proto, $state);
+    DefMacroI!(cs, paramlist, $expansion, $state);
+    return;
+  }
+  )
+);
 
 // macro_rules! DefMacroI(
 //     ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (

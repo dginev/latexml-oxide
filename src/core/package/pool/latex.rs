@@ -53,7 +53,7 @@ pub fn load_definitions(state : &mut State) {
   // Let("\@currenvline", "\@empty");
 
   // TODO:
-  DefMacro("\\begin{}".to_string(), Arc::new(Box::new(|_gullet, _args, _state| {
+  DefMacro!("\\begin{}".to_string(), |_gullet, _args, _state| {
       // let env = args.get_arg(1);
       // let name = match env {
       //   Some(e) => e.to_string(),
@@ -73,9 +73,9 @@ pub fn load_definitions(state : &mut State) {
         // (T_CS!("\begingroup"), Invocation(T_CS!("\lx@setcurrenvir"), $env), $token); } });
 
     Vec::new()
-  })),state);
+  } ,state);
 
-  DefMacro("\\end{}".to_string(), Arc::new(Box::new(|_gullet, _args, _state| {
+  DefMacro!("\\end{}".to_string(), |_gullet, _args, _state| {
       // let env = args.get_arg(1);
       // my $name = $env && ToString($env);
       // my $t;
@@ -84,5 +84,5 @@ pub fn load_definitions(state : &mut State) {
       // else { (T_CS!("\endgroup")); } });
 
     Vec::new()
-  })), state);
+  }, state);
 }

@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use state::State;
 use core::token::*;
-use core::definition::expandable::ExpansionClosure;
 use core::parameter::{Parameter, Parameters};
 use core::gullet::Gullet;
 use core::package::*;
@@ -17,14 +16,12 @@ pub fn load_definitions(state : &mut State) {
     "makeatletter", "\\makeatother", "\\typeout", "\\begin", "\\listfiles"].into_iter().map(|s| s.to_string()) {
     
     let trigger_saved = ltxtrigger.clone();
-    let load_pool_closure : ExpansionClosure = Arc::new(Box::new( move 
-      |_gullet, _args, state| {
+   
+    DefMacroI!(T_CS!(trigger_saved), None, 
+      move |_gullet, _args, state| {
         latex::load_definitions(state);
         return vec![T_CS!(ltxtrigger.clone())];
-      }));
-    let expansion = None;
-    
-    DefMacroI!(T_CS!(trigger_saved.to_string()), expansion, load_pool_closure, state);
+      }, state);
   }
 
   //======================================================================
