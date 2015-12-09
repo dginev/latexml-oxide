@@ -172,7 +172,7 @@ pub fn parse_parameters(mut prototype : String, cs : &Token, state : &mut State)
 macro_rules! DefMacroI(
   ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (
   {
-    use $crate::core::definition::expandable::{Expandable,ExpansionClosure};
+    use $crate::core::definition::expandable::{Expandable};
     $state.install_definition(::state::ObjectStore::ExpandableStore(Arc::new(Box::new(
       Expandable { cs: $cs, paramlist: $paramlist, expansion: Arc::new(Box::new($expansion)),
        ..Expandable::default()}))),
@@ -207,7 +207,7 @@ macro_rules! DefMacro(
 //     )
 //   );
 
-use core::definition::constructor::{Constructor, ConstructorOptions};
+use core::definition::constructor::{ConstructorOptions};
 #[macro_export]
 macro_rules! DefConstructorI(
   ($cs:expr, $paramlist:expr, $replacement:expr, $options: expr, $state:expr) => (
