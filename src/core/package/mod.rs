@@ -186,7 +186,7 @@ macro_rules! DefMacro(
   ($proto:expr, $expansion:expr, $state:expr) => (
   {
     // check_options("DefMacro (prototype)", $constructor_options, %options);
-    let (cs, paramlist) = parse_prototype($proto, $state);
+    let (cs, paramlist) = parse_prototype($proto.to_string(), $state);
     DefMacroI!(cs, paramlist, $expansion, $state);
     return;
   }
