@@ -26,7 +26,7 @@ impl Default for Expandable {
       trivial_expansion : None,
       alias : None,
       locator : String::new(),
-      cs : T_CS("Expandable".to_string()),
+      cs : T_CS!("Expandable".to_string()),
       paramlist : None,
       expansion : Arc::new(Box::new(|_gullet, _args, _state| {Vec::new()}))
     }

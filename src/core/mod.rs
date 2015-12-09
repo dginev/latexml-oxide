@@ -1,7 +1,7 @@
+#[macro_use] pub mod token;
 pub mod stomach;
 pub mod gullet;
 pub mod mouth;
-pub mod token;
 pub mod definition;
 pub mod parameter;
 pub mod package;
@@ -103,7 +103,7 @@ impl Core {
 
       //   if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
 
-      // $state->installDefinition(LaTeXML::Core::Definition::Expandable->new(T_CS('\jobname'), undef,
+      // $state->installDefinition(LaTeXML::Core::Definition::Expandable->new(T_CS!('\jobname'), undef,
       //     Tokens(Explode($name))));
       // # Reverse order, since last opened is first read!
       // $self->loadPostamble($options{postamble}) if $options{postamble};

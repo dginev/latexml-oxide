@@ -7,7 +7,7 @@ use regex::Regex;
 
 use common::error::*;
 use state::{State, Scope};
-use core::token::*;
+#[macro_use] use core::token::*;
 
 #[derive(PartialEq, Clone)]
 pub enum FoodType {
@@ -278,7 +278,7 @@ impl Mouth {
             match include_comments {
               None => {},
               Some(_) => {
-                return Some(T_COMMENT("**** ".to_string()+&self.shortsource+" Line "+&self.lineno.to_string() +" ****"));
+                return Some(T_COMMENT!("**** ".to_string()+&self.shortsource+" Line "+&self.lineno.to_string() +" ****"));
               }
             }            
           }
@@ -307,21 +307,21 @@ impl Mouth {
     use core::token::Catcode::*;
     match cc {
       ESCAPE => self.handle_escape(ch, state), // T_ESCAPE
-      BEGIN => if ch == '{' { Some(T_BEGIN()) } else { Some(Token { text : ch.to_string(), code : BEGIN}) },    // T_BEGIN
-      END => if ch == '}' { Some(T_END()) } else { Some(Token { text : ch.to_string(), code : END}) },      // T_END
-      MATH => if ch == '$' { Some(T_MATH()) } else { Some(Token { text : ch.to_string(), code : MATH}) },     // T_MATH
-      ALIGN => if ch == '&' { Some(T_ALIGN()) } else { Some(Token { text : ch.to_string(), code : ALIGN}) },    // T_ALIGN
+      BEGIN => if ch == '{' { Some(T_BEGIN!()) } else { Some(Token { text : ch.to_string(), code : BEGIN}) },    // T_BEGIN
+      END => if ch == '}' { Some(T_END!()) } else { Some(Token { text : ch.to_string(), code : END}) },      // T_END
+      MATH => if ch == '$' { Some(T_MATH!()) } else { Some(Token { text : ch.to_string(), code : MATH}) },     // T_MATH
+      ALIGN => if ch == '&' { Some(T_ALIGN!()) } else { Some(Token { text : ch.to_string(), code : ALIGN}) },    // T_ALIGN
       EOL => self.handle_EOL(ch, state),                                                 // T_EOL
-      PARAM => if ch == '#' { Some(T_PARAM()) } else { Some(Token { text : ch.to_string(), code : PARAM}) },    // T_PARAM
-      SUPER => if ch == '^' { Some(T_SUPER()) } else { Some(Token { text : ch.to_string(), code : SUPER}) },    // T_SUPER
-      SUB => if ch == '_' { Some(T_SUB()) } else { Some(Token { text : ch.to_string(), code : SUB}) },      // T_SUB
+      PARAM => if ch == '#' { Some(T_PARAM!()) } else { Some(Token { text : ch.to_string(), code : PARAM}) },    // T_PARAM
+      SUPER => if ch == '^' { Some(T_SUPER!()) } else { Some(Token { text : ch.to_string(), code : SUPER}) },    // T_SUPER
+      SUB => if ch == '_' { Some(T_SUB!()) } else { Some(Token { text : ch.to_string(), code : SUB}) },      // T_SUB
       IGNORE => None,
       SPACE => self.handle_space(ch, state),
-      LETTER => Some(T_LETTER(ch.to_string())),
-      OTHER => Some(T_OTHER(ch.to_string())),
-      ACTIVE => Some(T_ACTIVE(ch.to_string())),
+      LETTER => Some(T_LETTER!(ch.to_string())),
+      OTHER => Some(T_OTHER!(ch.to_string())),
+      ACTIVE => Some(T_ACTIVE!(ch.to_string())),
       COMMENT => self.handle_comment(ch, state),
-      INVALID => Some(T_OTHER(ch.to_string())), // T_INVALID (we could get unicode!)
+      INVALID => Some(T_OTHER!(ch.to_string())), // T_INVALID (we could get unicode!)
       _ => None
     }
   }
@@ -330,13 +330,13 @@ impl Mouth {
     // Note that newines should be converted to space (with " " for content)
     // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
     let token = if self.colno == 1 {
-      T_CS("\\par".to_string())
+      T_CS!("\\par".to_string())
     } else {
       let preserve_newlines : Option<Box<bool>> = state.lookup_value("PRESERVE_NEWLINES");
       if preserve_newlines.is_some() {
         Token("\n".to_string(), Some(Catcode::SPACE))
       } else {
-        T_SPACE()
+        T_SPACE!()
       }
     };
     self.colno = self.nchars; // Ignore any remaining characters after EOL
@@ -358,7 +358,7 @@ impl Mouth {
     if self.colno < self.nchars {
       self.colno -= 1;
     }
-    return Some(T_SPACE())
+    return Some(T_SPACE!())
   }
 
   fn handle_comment(&mut self, c : char, state : &mut State) -> Option<Token> {
@@ -376,7 +376,7 @@ impl Mouth {
     // TODO: Handle properly
     let include_comments : Option<Box<bool>> = state.lookup_value("INCLUDE_COMMENTS");
     if !comment.is_empty() && include_comments.is_some() {
-      Some(T_COMMENT(comment))
+      Some(T_COMMENT!(comment))
     } else {
       None
     }
@@ -440,6 +440,6 @@ impl Mouth {
         };
       }
     };
-    Some(T_CS(cs))
+    Some(T_CS!(cs))
   }
 }

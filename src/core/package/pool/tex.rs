@@ -20,11 +20,11 @@ pub fn load_definitions(state : &mut State) {
     let load_pool_closure : ExpansionClosure = Arc::new(Box::new( move 
       |_gullet, _args, state| {
         latex::load_definitions(state);
-        return vec![T_CS(ltxtrigger.clone())];
+        return vec![T_CS!(ltxtrigger.clone())];
       }));
     let expansion = None;
     
-    DefMacroI!(T_CS(trigger_saved.to_string()), expansion, load_pool_closure, state);
+    DefMacroI!(T_CS!(trigger_saved.to_string()), expansion, load_pool_closure, state);
   }
 
   //======================================================================
@@ -44,7 +44,7 @@ pub fn load_definitions(state : &mut State) {
     })),
     reversion: Some(Arc::new(Box::new(|_gullet : &mut Gullet, _arg : Vec<Token>, _inner : Vec<Option<Parameters>>, _state : &mut State| -> Vec<Token> {
       // let mut reverted_inner;
-      let mut read_tokens : Vec<Token> = vec![T_BEGIN()];
+      let mut read_tokens : Vec<Token> = vec![T_BEGIN!()];
       // for inner_opt in inner.into_iter() {
       //   reverted_inner = match inner_opt {
       //     Some(inner_p) => inner_p.revert_arguments(arg, state),
@@ -52,7 +52,7 @@ pub fn load_definitions(state : &mut State) {
       //   };
       // }
       // TODO : push reverted_inner to the read_tokens
-      read_tokens.push(T_END());
+      read_tokens.push(T_END!());
       read_tokens
     }))),
     ..Parameter::default()}, state);
@@ -71,9 +71,9 @@ pub fn load_definitions(state : &mut State) {
     reversion: Some(Arc::new(Box::new(|_gullet : &mut Gullet, arg : Vec<Token>, _inner : Vec<Option<Parameters>>, _state : &mut State| -> Vec<Token> {
       // TODO : default!
       if arg.len() > 0 {
-        let mut read_tokens : Vec<Token> = vec![T_OTHER("[".to_string())];
+        let mut read_tokens : Vec<Token> = vec![T_OTHER!("[".to_string())];
         // TODO: ($inner ? $inner->revertArguments($arg) : Revert($arg)),
-        read_tokens.push(T_OTHER("]".to_string()));
+        read_tokens.push(T_OTHER!("]".to_string()));
         read_tokens
       }
       else { Vec::new() }
@@ -89,7 +89,7 @@ pub fn load_definitions(state : &mut State) {
     })),
     reversion: Some(Arc::new(Box::new(|_gullet : &mut Gullet, _arg : Vec<Token>, _inner : Vec<Option<Parameters>>, _state : &mut State| -> Vec<Token> {
       // let mut reverted_inner;
-      let mut read_tokens : Vec<Token> = vec![T_BEGIN()];
+      let mut read_tokens : Vec<Token> = vec![T_BEGIN!()];
       // for inner_opt in inner.into_iter() {
       //   reverted_inner = match inner_opt {
       //     Some(inner_p) => inner_p.revert_arguments(arg, state),
@@ -97,7 +97,7 @@ pub fn load_definitions(state : &mut State) {
       //   };
       // }
       // TODO : push reverted_inner to the read_tokens
-      read_tokens.push(T_END());
+      read_tokens.push(T_END!());
       read_tokens
     }))),
     semiverbatim: true,
@@ -112,9 +112,9 @@ pub fn load_definitions(state : &mut State) {
     optional : true,
     reversion : Some(Arc::new(Box::new(|_gullet : &mut Gullet, arg : Vec<Token>, _inner : Vec<Option<Parameters>>, _state : &mut State| -> Vec<Token> {
       if arg.len() > 0 {
-        let mut read_tokens = vec![T_OTHER("[".to_string())];
+        let mut read_tokens = vec![T_OTHER!("[".to_string())];
         // TODO: add these: Revert($_[0])
-        read_tokens.push(T_OTHER("]".to_string()));
+        read_tokens.push(T_OTHER!("]".to_string()));
         read_tokens
       } else {
         Vec::new()

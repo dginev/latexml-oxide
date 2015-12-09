@@ -42,7 +42,7 @@ pub struct Primitive {
 impl Default for Primitive {
   fn default() -> Self {
     Primitive {
-      cs : T_CS("Primitive".to_string()),
+      cs : T_CS!("Primitive".to_string()),
       paramlist : None,
       nargs : None,
       replacement : String::new()

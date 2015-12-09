@@ -42,7 +42,7 @@ pub struct Constructor {
 impl Default for Constructor {
   fn default() -> Self {
     Constructor {
-      cs : T_CS("Constructor".to_string()),
+      cs : T_CS!("Constructor".to_string()),
       paramlist : None,
       nargs : None,
       replacement : String::new()

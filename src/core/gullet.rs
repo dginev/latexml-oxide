@@ -3,7 +3,7 @@ use state::{State, Scope, ObjectStore};
 use common::object::Object;
 use core::definition::Definition;
 use core::mouth::{Mouth};
-use core::token::{Token, T_OTHER, Catcode};
+use core::token::{Token, Catcode};
 
 #[derive(Clone)]
 pub struct MouthRuntime {
@@ -347,7 +347,7 @@ impl Gullet {
       None => Vec::new(),
       Some(t) => {
         if t.code == Catcode::OTHER && t.text == "[" {
-          self.read_until(vec![T_OTHER("]".to_string())], state)
+          self.read_until(vec![T_OTHER!("]".to_string())], state)
         } else {
           self.unread(vec![t]);
           Vec::new() // TODO: default

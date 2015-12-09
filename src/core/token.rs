@@ -1,5 +1,4 @@
 use core::Digested;
-use std::fmt;
 
 #[derive(PartialEq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
@@ -85,51 +84,76 @@ pub struct Token{
  pub code : Catcode
 }
 
-pub fn T_BEGIN() -> Token {
+#[macro_export]
+macro_rules! T_BEGIN(() => ({
+  use $crate::core::token::Token;
   Token { text: "{".to_string(), code: Catcode::BEGIN }  
-}
-pub fn T_END() -> Token {
+}));
+
+#[macro_export]
+macro_rules! T_END(() => ({
+  use $crate::core::token::Token;
   Token { text: "}".to_string(), code: Catcode::END }
-}
-pub fn T_MATH() -> Token {
+}));
+#[macro_export]
+macro_rules! T_MATH(() => ({
+  use $crate::core::token::Token;
   Token { text: "$".to_string(), code: Catcode::MATH }
-}
-pub fn T_ALIGN() -> Token {
+}));
+#[macro_export]
+macro_rules! T_ALIGN(() => ({
+  use $crate::core::token::Token;
   Token { text: "&".to_string(), code: Catcode::ALIGN }
-}
-pub fn T_PARAM() -> Token {
+}));
+#[macro_export]
+macro_rules! T_PARAM(() => ({
+  use $crate::core::token::Token;
   Token { text: "#".to_string(), code: Catcode::PARAM }  
-}
-pub fn T_SUPER() -> Token {
+}));
+#[macro_export]
+macro_rules! T_SUPER(() => ({
+  use $crate::core::token::Token;
  Token { text: "^".to_string(), code: Catcode::SUPER }
-}
-pub fn T_SUB() -> Token {
+}));
+#[macro_export]
+macro_rules! T_SUB(() => ({
+  use $crate::core::token::Token;
   Token { text: "_".to_string(), code: Catcode::SUB }
-}
-pub fn T_SPACE() -> Token {
+}));
+#[macro_export]
+macro_rules! T_SPACE(() => ({
+  use $crate::core::token::Token;
   Token { text: " ".to_string(), code: Catcode::SPACE }
-}
-pub fn T_CR() -> Token {
+}));
+#[macro_export]
+macro_rules! T_CR(() => ({
+  use $crate::core::token::Token;
   Token { text: "\n".to_string(), code: Catcode::SPACE }
-}
-pub fn T_LETTER(text : String) -> Token {
-  Token { text : text, code: Catcode::LETTER }
-}
-pub fn T_OTHER(text : String) -> Token {
-  Token { text : text, code: Catcode::OTHER }
-}
-pub fn T_ACTIVE(text : String) -> Token {
-  Token { text : text, code: Catcode::ACTIVE }
-}
-pub fn T_COMMENT(text : String) -> Token {
-  Token { text : "%".to_string(), code: Catcode::ACTIVE }
-}
-pub fn T_CS(text : String) -> Token {
-  Token { text : text.to_string(), code: Catcode::CS}
-}
-pub fn T_MARKER(text : String) -> Token {
-  Token { text : text.to_string(), code: Catcode::MARKER}
-}
+}));
+#[macro_export]
+macro_rules! T_LETTER(($text:expr) => ({
+  Token { text : $text, code: Catcode::LETTER }
+}));
+#[macro_export]
+macro_rules! T_OTHER(($text:expr) => ({
+  Token { text : $text, code: Catcode::OTHER }
+}));
+#[macro_export]
+macro_rules! T_ACTIVE(($text:expr) => ({
+  Token { text : $text, code: Catcode::ACTIVE }
+}));
+#[macro_export]
+macro_rules! T_COMMENT(($text:expr) => ({
+  Token { text : $text, code: Catcode::COMMENT }
+}));
+#[macro_export]
+macro_rules! T_CS(($text:expr) => ({
+  Token { text : $text.to_string(), code: Catcode::CS}
+}));
+#[macro_export]
+macro_rules! T_MARKER(($text:expr) => ({
+  Token { text : $text.to_string(), code: Catcode::MARKER}
+}));
 
 pub fn Token (text : String, cc_opt : Option<Catcode>) -> Token {
   let cc = match cc_opt {
@@ -141,8 +165,8 @@ pub fn Token (text : String, cc_opt : Option<Catcode>) -> Token {
 // Explode a string into a list of tokens, all w/catcode OTHER (except space).
 pub fn Explode(text : String) -> Vec<Token> {
   text.chars().map(|c| 
-    if c==' ' { T_SPACE() }
-    else { T_OTHER(c.to_string()) }
+    if c==' ' { T_SPACE!() }
+    else { T_OTHER!(c.to_string()) }
   ).collect()
 }
 
@@ -150,9 +174,9 @@ pub fn Explode(text : String) -> Vec<Token> {
 // Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
 pub fn ExplodeText(text : String) -> Vec<Token> {
   text.chars().map(|c| 
-    if c==' ' { T_SPACE() }
-    else if c.is_alphabetic() { T_LETTER(c.to_string()) }
-    else { T_OTHER(c.to_string()) }
+    if c==' ' { T_SPACE!() }
+    else if c.is_alphabetic() { T_LETTER!(c.to_string()) }
+    else { T_OTHER!(c.to_string()) }
   ).collect::<Vec<Token>>()
 }
 

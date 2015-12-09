@@ -23,7 +23,7 @@ pub fn load_definitions(state : &mut State) {
           };
           load_class(state, whatsit.get_arg(2).unwrap().to_string(),
             class_opts,
-            vec![T_CS("\\AtBeginDocument".to_string()), T_CS("\\warn@unusedclassoptions".to_string())]);
+            vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())]);
           return; 
         }))),
       ..ConstructorOptions::default() }, state );
@@ -61,16 +61,16 @@ pub fn load_definitions(state : &mut State) {
       // };
 
       // if (IsDefined("\\begin{$name}")) {
-      //   T_CS("\\begin{$name}"); }    // Magic cs!
+      //   T_CS!("\\begin{$name}"); }    // Magic cs!
       // else {
-        // let token = T_CS("\\".to_string() + name);
+        // let token = T_CS!("\\".to_string() + name);
         // if (!IsDefined($token)) {
         //   my $undef = "{" . $name . "}";
         //   $STATE->noteStatus(undefined => $undef);
         //   Error("undefined", $undef, $gullet, "The environment " . $undef . " is not defined.");
         //   $STATE->installDefinition(LaTeXML::Core::Definition::Constructor->new($token, undef,
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
-        // (T_CS("\begingroup"), Invocation(T_CS("\lx@setcurrenvir"), $env), $token); } });
+        // (T_CS!("\begingroup"), Invocation(T_CS!("\lx@setcurrenvir"), $env), $token); } });
 
     Vec::new()
   })),state);
@@ -79,9 +79,9 @@ pub fn load_definitions(state : &mut State) {
       // let env = args.get_arg(1);
       // my $name = $env && ToString($env);
       // my $t;
-      // if (IsDefined($t = T_CS("\\end{$name}"))) { $t; }                         // Magic CS!
-      // elsif (IsDefined($t = T_CS("\\end$name"))) { ($t, T_CS("\endgroup")); }
-      // else { (T_CS("\endgroup")); } });
+      // if (IsDefined($t = T_CS!("\\end{$name}"))) { $t; }                         // Magic CS!
+      // elsif (IsDefined($t = T_CS!("\\end$name"))) { ($t, T_CS!("\endgroup")); }
+      // else { (T_CS!("\endgroup")); } });
 
     Vec::new()
   })), state);

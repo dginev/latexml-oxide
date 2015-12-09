@@ -57,11 +57,11 @@ pub fn find_file(request : String, _forbid_ltxml : bool) -> Option<String> {
 }
 
 pub fn coerce_cs(t : String) -> Token {
-  T_CS(t)
+  T_CS!(t)
 }
 
 pub fn tokenize_internal(some : String) -> Vec<Token> {
-  vec![T_CS(some)]
+  vec![T_CS!(some)]
 }
 
 pub fn parse_prototype(proto : String, state: &mut State) -> ((Token, Option<Parameters>)) {
@@ -70,21 +70,21 @@ pub fn parse_prototype(proto : String, state: &mut State) -> ((Token, Option<Par
   let single_char_regex = Regex::new(r"^(\\.)").unwrap();
   let active_char_regex = Regex::new(r"^(.)").unwrap();
   let mut final_proto = proto.clone();
-  let mut cs = T_CS("\\".to_string()); // Should never happen
+  let mut cs = T_CS!("\\".to_string()); // Should never happen
   if csname_macro_regex.is_match(&proto) {
     let captures = csname_macro_regex.captures(&proto).unwrap();
-    cs = T_CS("\\".to_string() + captures.at(0).unwrap()); 
+    cs = T_CS!("\\".to_string() + captures.at(0).unwrap()); 
     // also replace in proto
     final_proto = csname_macro_regex.replace(&proto,"");
   } else if cs_regex.is_match(&proto) { // Match a cs
     let captures = cs_regex.captures(&proto).unwrap();
     let csname = captures.at(0).unwrap().to_string();
-    cs = T_CS(csname); 
+    cs = T_CS!(csname); 
     // also replace in proto
     final_proto = cs_regex.replace(&proto,"");
   } else if single_char_regex.is_match(&proto) { // Match a single char cs, env name,...
     let captures = single_char_regex.captures(&proto).unwrap();
-    cs = T_CS(captures.at(0).unwrap().to_string()); 
+    cs = T_CS!(captures.at(0).unwrap().to_string()); 
     // also replace in proto
     final_proto = single_char_regex.replace(&proto,"");
   } else if active_char_regex.is_match(&proto) { // Match an active char
