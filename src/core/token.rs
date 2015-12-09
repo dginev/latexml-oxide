@@ -155,30 +155,33 @@ macro_rules! T_MARKER(($text:expr) => ({
   Token { text : $text.to_string(), code: Catcode::MARKER}
 }));
 
-pub fn Token (text : String, cc_opt : Option<Catcode>) -> Token {
-  let cc = match cc_opt {
+#[macro_export]
+macro_rules! Token(($text:expr, $cc_opt:expr) => ({
+  Token { text : $text,  code: match $cc_opt {
     Some(cc) => cc,
     None => Catcode::OTHER
-  };
-  Token { text : text,  code: cc }
-}
+  }}
+}));
+
 // Explode a string into a list of tokens, all w/catcode OTHER (except space).
-pub fn Explode(text : String) -> Vec<Token> {
-  text.chars().map(|c| 
+#[macro_export]
+macro_rules! Explode(($text:expr) => ({
+  $text.chars().map(|c| 
     if c==' ' { T_SPACE!() }
     else { T_OTHER!(c.to_string()) }
   ).collect()
-}
+}));
 
 // Similar to Explode, but convert letters to catcode LETTER and others to OTHER
 // Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
-pub fn ExplodeText(text : String) -> Vec<Token> {
-  text.chars().map(|c| 
+#[macro_export]
+macro_rules! ExplodeText(($text:expr) => ({
+  $text.chars().map(|c| 
     if c==' ' { T_SPACE!() }
     else if c.is_alphabetic() { T_LETTER!(c.to_string()) }
     else { T_OTHER!(c.to_string()) }
   ).collect::<Vec<Token>>()
-}
+}));
 
 pub fn untex(digested : Digested) -> String {
   digested.to_string()

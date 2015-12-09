@@ -334,7 +334,7 @@ impl Mouth {
     } else {
       let preserve_newlines : Option<Box<bool>> = state.lookup_value("PRESERVE_NEWLINES");
       if preserve_newlines.is_some() {
-        Token("\n".to_string(), Some(Catcode::SPACE))
+        Token!("\n".to_string(), Some(Catcode::SPACE))
       } else {
         T_SPACE!()
       }
