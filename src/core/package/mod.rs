@@ -46,8 +46,25 @@ pub fn load_tex_content(core: &mut Core, path : String) {
 
 }
 
-pub fn load_class(_state: &mut State, _name : String, _options : Vec<String>, _after : Vec<Token>) {
- // TODO
+pub fn load_class(_state: &mut State, class : String, _options : Vec<String>, _after : Vec<Token>) {
+  // CheckOptions("LoadClass ($class)", $loadclass_options, %options);
+  // PushValue(class_options => ($options{options} ? @{ $options{options} } : ()));
+  // Note that we'll handle errors specifically for this case.
+  // if (my $success = InputDefinitions($class, type => 'cls', notex => 1, handleoptions => 1, noerror => 1,
+  //     %options)) {
+  //   return $success; }
+  // else {
+  //   $STATE->noteStatus(missing => $class . '.cls');
+  //   my $alternate = 'OmniBus';    # was 'article'
+  //   Warn('missing_file', $class, $STATE->getStomach->getGullet,
+  //     "Can't find binding for class $class (using $alternate)",
+  //     maybeReportSearchPaths());
+  //   if (my $success = InputDefinitions($alternate, type => 'cls', noerror => 1, handleoptions => 1, %options)) {
+  //     return $success; }
+  //   else {
+  //     Fatal('missing_file', $alternate . '.cls.ltxml', $STATE->getStomach->getGullet,
+  //       "Can't find binding for class $alternate (installation error)");
+  //     return; } } }
 }
 
 pub fn find_file(request : String, _forbid_ltxml : bool) -> Option<String> {
