@@ -14,13 +14,11 @@ pub fn load_definitions(state : &mut State) {
   for ltxtrigger in ["\\documentclass", "\\newcommand", "\\renewcommand", "\\newenvironment", "\\renewenvironment",
     "NeedsTeXFormat", "\\ProvidesPackage", "\\RequirePackage", "\\ProvidesFile",
     "makeatletter", "\\makeatother", "\\typeout", "\\begin", "\\listfiles"].into_iter().map(|s| s.to_string()) {
-    
-    let trigger_saved = ltxtrigger.clone();
-   
-    DefMacroI!(T_CS!(trigger_saved), None, 
+      
+    DefMacroI!(T_CS!(ltxtrigger), None, 
       move |_gullet, _args, state| {
         latex::load_definitions(state);
-        return vec![T_CS!(ltxtrigger.clone())];
+        return vec![T_CS!(ltxtrigger)];
       }, state);
   }
 

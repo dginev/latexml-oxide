@@ -1,6 +1,8 @@
 pub mod object;
 pub mod error;
 pub mod model;
+pub mod xml;
+pub mod font;
 
 #[derive(Clone)]
 pub enum InputFormat {
