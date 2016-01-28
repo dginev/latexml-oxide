@@ -6,5 +6,7 @@ use rustexml::util::test::*;
 
 #[test]
 fn can_tokenize() {
-  rustexml_tests("tests/tokenize");
+  let requires = None;
+  
+  rustexml_tests("tests/tokenize", requires);
 }
