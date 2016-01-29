@@ -6,10 +6,8 @@ use rustexml::util::test::*;
 use std::collections::HashMap;
 
 #[test]
-fn can_expand() {
+fn can_theorem() {
   let mut requires = HashMap::new();
-  requires.insert("meaning", "t1enc.def");
-  requires.insert("ifthen", "ifthen.sty");
-
-  rustexml_tests("tests/expansion", Some(requires));
+  requires.insert("ntheorem", "ntheorem.std");
+  rustexml_tests("tests/theorem", Some(requires));
 }

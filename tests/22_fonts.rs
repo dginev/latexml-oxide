@@ -3,13 +3,8 @@
 ///**********************************************************************
 extern crate rustexml;
 use rustexml::util::test::*;
-use std::collections::HashMap;
 
 #[test]
-fn can_expand() {
-  let mut requires = HashMap::new();
-  requires.insert("meaning", "t1enc.def");
-  requires.insert("ifthen", "ifthen.sty");
-
-  rustexml_tests("tests/expansion", Some(requires));
+fn can_group() {
+  rustexml_tests("tests/fonts", None);
 }
