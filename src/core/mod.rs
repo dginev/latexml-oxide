@@ -24,7 +24,7 @@ use core::package::*;
 pub struct Core {
   pub state : State,
   pub stomach : Stomach,
-  preload : Vec<String>,
+  pub preload : Vec<String>,
 }
 pub struct Digested {
   pub boxes : Vec<TBox>,
@@ -122,6 +122,13 @@ impl Core {
       note_end("Digesting ".to_string()+ &name.clone().unwrap());
       // return $list; }); 
     Ok(list)
+  }
+
+  pub fn convert_file<'convert>(&'convert mut self, filepath : String) -> Result<Document, Error> {
+    match self.digest(filepath, None, None, None, false) {
+      Err(e) => Err(e),
+      Ok(digested) => self.convert_document(digested)
+    }
   }
 
   pub fn convert_document<'convert>(&'convert mut self, digested : Digested) -> Result<Document, Error> {
