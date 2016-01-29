@@ -39,6 +39,7 @@ fn rustexml_ok(tex_path : String, xml_path: String, name: String) {
   if !tex_strings.is_empty() {
     let xml_strings = process_xmlfile(&xml_path, &name);
     if !xml_strings.is_empty() {
+    println!("[test] xml diff for {:?}", name);
       for (tex_line, xml_line) in tex_strings.iter().zip(xml_strings.iter()) {
         assert_eq!(tex_line, xml_line); 
       }
