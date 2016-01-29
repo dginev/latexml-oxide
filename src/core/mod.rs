@@ -9,6 +9,7 @@ pub mod tbox;
 pub mod document;
 pub mod whatsit;
 
+use regex::{Regex, Captures};
 use std::path::Path;
 use common::{Error, DigestionMode};
 // use common::model::{Model};
@@ -133,6 +134,7 @@ impl Core {
 
   pub fn convert_document<'convert>(&'convert mut self, digested : Digested) -> Result<Document, Error> {
     note_begin("Building".to_string());
+
     let mut state = &mut self.state;
     state.model.load_schema(); // If needed?
     let mut document = Document::new();
@@ -142,21 +144,32 @@ impl Core {
       Some(paths) => if !paths.is_empty() {
         match state.lookup_value("INCLUDE_COMMENTS") {
           Some(ico_flag) => if *ico_flag {
-            document.insert_pi("latexml", *paths); },
+            let paths_string = paths.join(",");
+            document.insert_pi("latexml", "paths", &paths_string, None); },
           None => {} 
         };
       }
     };
+    let pool_ext_regex = Regex::new(r"\.pool$").unwrap();
+    let cls_ext_regex = Regex::new(r"\.cls$").unwrap();
+    let sty_ext_regex = Regex::new(r"\.sty$").unwrap();
+    let latex_option_regex = Regex::new(r"^\[([^\]]*)\]").unwrap();
     for preload in self.preload.iter() {
-      // TODO
-      // next if $preload =~ /\.pool$/;
-      // my $options = undef;                                 # Stupid perlcritic policy
-      // if ($preload =~ s/^\[([^\]]*)\]//) { $options = $1; }
-      // if ($preload =~ s/\.cls$//) {
-      //   $document->insertPI('latexml', class => $preload, ($options ? (options => $options) : ())); }
-      // else {
-      //   $preload =~ s/\.sty$//;
-      //   $document->insertPI('latexml', package => $preload, ($options ? (options => $options) : ())); } }
+      if pool_ext_regex.is_match(preload) {
+        continue;
+      }
+      let mut options : Option<String> = None;
+      latex_option_regex.replace_all(preload, |refs: &Captures| -> String {
+         options = Some(refs.at(1).unwrap_or("").to_string());
+         String::new()
+      });
+      if cls_ext_regex.is_match(preload) {
+        cls_ext_regex.replace_all(preload, "");
+        document.insert_pi("latexml", "class", preload, options);
+      } else {
+        sty_ext_regex.replace_all(preload, "");
+        document.insert_pi("latexml", "package", preload, options);
+      }
     }
     document.absorb(digested);
     note_end("Building".to_string());

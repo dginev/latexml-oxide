@@ -15,7 +15,7 @@ pub struct Document {
 impl Document {
   pub fn new() -> Self {
     let mut doc_scaffold = XmlDoc::new().unwrap();
-    let mut latexml_node = Node::new("latexml", None, &doc_scaffold).unwrap();
+    let mut latexml_node = Node::new("document", None, &doc_scaffold).unwrap();
     doc_scaffold.set_root_element(&mut latexml_node);
 
     Document {
@@ -52,20 +52,28 @@ impl Document {
   /// Insert a ProcessingInstruction of the form <?op attr=value ...?>
   /// Does NOT move the current insertion point to the PI,
   /// but may move up past a text node.
-  pub fn insert_pi(&mut self, op : &str, paths : Vec<String>) {
+  pub fn insert_pi(&mut self, op: &str, kind: &str, content: &str, options : Option<String>) {
     // We'll just put these on the document itself.
     // Put these in an attractive order, main "operator" first
     // my @keys = ((map { ($attrib{$_} ? ($_) : ()) } qw(class package options)),
     //   (grep { $_ !~ /^(?:class|package|options)$/ } sort keys %attrib));
     // my $data = join(' ', map { $_ . "=\"" . ToString($attrib{$_}) . "\"" } @keys);
-    let data = "data";
-    let pi = self.document.create_processing_instruction(op, data);
-    assert!(pi.is_ok());
+    let options_string = match options {
+      Some(payload) => " options=".to_string() + &payload,
+      None => String::new()
+    };
+    let mut data = kind.to_string() + "=" + content + &options_string;
+    let pi = self.document.create_processing_instruction(op, &data).unwrap();
+    
     // self.close_text_internal();  // Close any open text node
     // if ($$self{node}->nodeType == XML_DOCUMENT_NODE) {
     //   push(@{ $$self{pending} }, $pi); }
     // else {
-    //   $$self{document}->insertBefore($pi, $$self{document}->documentElement); }
+    println_stderr!("Trying to insert PI: {:?}", self.document.node_to_string(&pi));
+    println_stderr!("Into doc: {:?}", self.document.to_string());
+    
+    self.root.add_prev_sibling(pi);
+
     return;
   }
   pub fn to_string(&self) -> String {
