@@ -1,9 +1,10 @@
 use core::Core;
-use core::document::Document;
 use core::stomach::Stomach;
 use state::State;
 use glob::glob;
 use std::collections::HashMap;
+use libxml::parser::Parser;
+use libxml::tree::Document;
 
 pub fn rustexml_tests(dirpath : &str, requires : Option<HashMap<&str, &str>>) {
   if !validate_requirements(dirpath, requires) {
@@ -34,22 +35,27 @@ fn validate_requirements(_dirpath : &str, _requires : Option<HashMap<&str, &str>
 }
 
 fn rustexml_ok(tex_path : String, xml_path: String, name: String) {
-  println!("----");
-  println!("tex {:?}", tex_path);
-  println!("xml {:?}", xml_path);
-  println!("name {:?}", name);
   let tex_strings = process_texfile(tex_path, &name);
   if !tex_strings.is_empty() {
     let xml_strings = process_xmlfile(&xml_path, &name);
     if !xml_strings.is_empty() {
-      assert_eq!(tex_strings, xml_strings); 
+      for (tex_line, xml_line) in tex_strings.iter().zip(xml_strings.iter()) {
+        assert_eq!(tex_line, xml_line); 
+      }
+      match tex_strings.len() - xml_strings.len() {
+        0 => {},//As expected,
+        diff => match diff > 0 {
+          true => panic!("Conversion of {:?} had more content than expected", name),
+          false => panic!("Conversion of {:?} had less content than expected", name)
+        }
+      };
     }
   }
 }
 
 /// Returns the list-of-strings form of whatever was requested, if successful,
 /// otherwise empty; and they will have reported the failure
-fn process_texfile<'a>(tex_path: String, name: &'a str) -> Vec<&'a str> {
+fn process_texfile<'a>(tex_path: String, name: &'a str) -> Vec<String> {
   let mut test_state = State::new();
   test_state.verbosity = -2;
   let mut latexml = Core {
@@ -59,13 +65,17 @@ fn process_texfile<'a>(tex_path: String, name: &'a str) -> Vec<&'a str> {
   };
   match latexml.convert_file(tex_path.clone()) {
     Err(e) => panic!("{:?}: Couldn't convert {:?}; {:?}",name, tex_path, e),
-    Ok(dom) => process_dom(dom, name)
+    Ok(doc) => process_dom(doc.document, name)
   }
 }
 
-fn process_xmlfile<'a>(_xml_path: &'a str, _name: &'a str) -> Vec<&'a str> {
-  Vec::new()
+fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
+  let parser = Parser::default();
+  match parser.parse_file(xml_path) {
+    Err(e) => panic!("Faield to parse XML file for {:?}: {:?}", name, e),
+    Ok(dom) => process_dom(dom, name)
+  }
 }
-fn process_dom(_dom: Document, _name: &str) -> Vec<&str> {
-  Vec::new()
+fn process_dom<'a>(dom: Document, _name: &'a str) -> Vec<String> {
+  dom.to_string().split("\n").map(|line| line.to_string()).collect()
 }
