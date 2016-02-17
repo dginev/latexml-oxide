@@ -17,9 +17,10 @@ git = "https://github.com/dginev/libarchive-sys.git"
 
 [dependencies]
 libc = "~0.1"
-regex = "*"
+regex = "0.1.48"
 rustc-serialize = "0.3"
 glob = "*"
 rand = "*"
 tempfile = "*"
 time = "*"
+lazy_static = "0.1.*"

@@ -80,6 +80,10 @@ impl Document {
     self.document.to_string()
   }
 
+  pub fn set_node(&self, node: Node) {
+    
+  }
+
   // Internals
   fn set_RDFa_prefixes<'prefixes>(&'prefixes mut self, prefixes : Option<String>) {
 

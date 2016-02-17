@@ -11,7 +11,7 @@ use core::definition::constructor::ConstructorOptions;
 pub fn load_definitions(state : &mut State) {
   println!("If you are seeing this, someone invoked latex::load_definitions !!! ");
 
-  DefConstructor("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []".to_string(),
+  DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []".to_string(),
     "<?latexml class='#2' ?#1(options='#1')?>".to_string(), ConstructorOptions{
       after_digest: Some(Arc::new(Box::new(
         |_stomach : &mut Stomach, whatsit : &mut Whatsit, state : &mut State| {

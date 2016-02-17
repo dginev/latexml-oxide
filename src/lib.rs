@@ -5,6 +5,9 @@
 //! # The LaTeXML converter in Rust
 //! The original library can be found at https://github.com/brucemiller/LaTeXML
 
+#[macro_use]
+extern crate lazy_static;
+
 extern crate glob;
 extern crate libxml;
 extern crate libc;

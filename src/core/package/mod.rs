@@ -190,6 +190,14 @@ macro_rules! DefMacroI(
   ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (
   {
     use $crate::core::definition::expandable::{Expandable};
+    //       // Optimization: Defer till macro actually used
+    //       // if !$cs.is_empty() { // && $options{mathactive}
+    //         // $state.assign_mathcode($cs, 0x8000, $options{scope}); }
+    //       $state.install_definition(Expandable{ cs: coerce_cs( $cs ), paramlist: $paramlist, expansion: $expansion});//, %options), $options{scope});
+    //       // if $options{locked} {
+    //       //   $state.assign_value(ToString($cs)+":locked", true, "global")
+    //       // }
+
     $state.install_definition(::state::ObjectStore::ExpandableStore(Arc::new(Box::new(
       Expandable { cs: $cs, paramlist: $paramlist, expansion: Arc::new(Box::new($expansion)),
        ..Expandable::default()}))),
@@ -205,24 +213,9 @@ macro_rules! DefMacro(
     // check_options("DefMacro (prototype)", $constructor_options, %options);
     let (cs, paramlist) = parse_prototype($proto.to_string(), $state);
     DefMacroI!(cs, paramlist, $expansion, $state);
-    return;
   }
   )
 );
-
-// macro_rules! DefMacroI(
-//     ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (
-//       {//, $options:tt
-//       // Optimization: Defer till macro actually used
-//       // if !$cs.is_empty() { // && $options{mathactive}
-//         // $state.assign_mathcode($cs, 0x8000, $options{scope}); }
-//       $state.install_definition(Expandable{ cs: coerce_cs( $cs ), paramlist: $paramlist, expansion: $expansion});//, %options), $options{scope});
-//       // if $options{locked} {
-//       //   $state.assign_value(ToString($cs)+":locked", true, "global")
-//       // }
-//       }
-//     )
-//   );
 
 use core::definition::constructor::{ConstructorOptions};
 #[macro_export]
@@ -258,16 +251,21 @@ macro_rules! DefConstructorI(
     // if options.locked {
     //   $state.assign_value(ToString($cs) + ":locked", Box::new(true))
     // }
-    return; 
+    // return; 
   }
   );
 );
 
-pub fn DefConstructor(proto : String, replacement : String, options : ConstructorOptions, state: &mut State) {
-  // check_options("DefConstructor (prototype)", $constructor_options, %options);
-  let (cs, paramlist) = parse_prototype(proto, state);
-  DefConstructorI!(cs, paramlist, replacement, options, state);
-}
+#[macro_export]
+macro_rules! DefConstructor(
+  ($proto:expr, $replacement:expr, $options:expr, $state:expr) => (
+  {
+    // check_options("DefConstructor (prototype)", $constructor_options, %options);
+    let (cs, paramlist) = parse_prototype($proto, $state);
+    DefConstructorI!(cs, paramlist, $replacement, $options, $state);
+  }
+  )
+);
 
 pub fn DefParameterType(param_type: String, options: Parameter, state : &mut State) {
   // CheckOptions("DefParameterType param_type", $parameter_options, %options);

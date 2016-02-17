@@ -30,7 +30,7 @@ impl Default for ConstructorOptions {
   }
 }
 
-pub type ConstructionClosure = Arc<Box<Fn(&mut Document, &mut State)>>;
+pub type ConstructionClosure = Arc<Box<Fn(&mut Document, &mut Whatsit, &mut State)>>;
 pub type DigestionClosure = Arc<Box<Fn(&mut Stomach, &mut Whatsit, &mut State)>>;
 #[derive(Clone)]
 pub struct Constructor {
@@ -137,5 +137,5 @@ impl Definition for Constructor {
 impl Constructor {
   fn execute_before_digest(&self, _stomach: &mut Stomach, _state: &mut State) {}
   fn execute_after_digest(&self,_stomach: &mut Stomach, _state: &mut State) {}
-
+  
 }
