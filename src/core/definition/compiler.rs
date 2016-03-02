@@ -3,7 +3,7 @@ use std::sync::Arc;
 use core::definition::Definition;
 use libxml::tree::Node;
 
-use core::definition::constructor::{Constructor, ConstructionClosure};
+use core::definition::constructor::{Constructor, ReplacementClosure};
 
 lazy_static! {
   static ref VALUE_RE : Regex = Regex::new(r"(\\#|\\&[\\w\\:]*\\()").unwrap();
@@ -19,14 +19,14 @@ lazy_static! {
 macro_rules! TranslateConstructor(
   ($replacement:expr, $floats:expr) => (
   {
-    
+
   }
 ));
 
 impl Constructor {
-  pub fn compile_constructor(&self) -> ConstructionClosure {
+  pub fn compile_replacement(&self) -> Option<ReplacementClosure> {
     if self.replacement.is_empty() {
-      return Arc::new(Box::new(|_,_,_|{}))
+      return None
     }
     let cs = self.get_cs();
     let name = NONW_RE.replace_all(&self.get_cs_name(), "");
@@ -41,14 +41,16 @@ impl Constructor {
       String::new()
     });
 
-    Arc::new(Box::new(|document, whatsit, state| {
+    println_stderr!("-- Preparing translation closure for: \n{:?}\n", replacement);
+    Some(Arc::new(Box::new(|document, args, props, state| {
       let mut savenode : Option<Node> = None;
+      println_stderr!("-- Translating constructor.\n");
       TranslateConstructor!(replacement, floats);
       match savenode {
         None => {},
         Some(savenode) => document.set_node(savenode)
       };
       return;
-    }))
+    })))
   }
 }

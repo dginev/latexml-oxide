@@ -8,6 +8,8 @@ use core::stomach::Stomach;
 use core::token::*;
 use core::tbox::TBox;
 use core::parameter::Parameters;
+use core::document::Document;
+use core::whatsit::Whatsit;
 use common::object::Object;
 use state::State;
 
@@ -44,7 +46,7 @@ pub trait Definition : Object {
 
   // Return the Tokens that would invoke the given definition with arguments.
   fn invocation(&mut self, args : Vec<Token>, state : &mut State) -> Vec<Token> {
-    
+
     let mut invocation_result = Vec::new();
     invocation_result.push(self.get_cs());
 
@@ -60,5 +62,7 @@ pub trait Definition : Object {
   }
 
   fn get_num_args(&self) -> usize { 0 }
+
+  fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) {}
 }
 

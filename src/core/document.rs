@@ -39,9 +39,26 @@ impl Document {
   }
 
 
+  ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  /// Document construction at the Current Insertion Point.
+  ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ///
+  ///**********************************************************************
+  /// absorb the given $box into the DOM (called from constructors).
+  /// This will return a list of whatever nodes were created.
+  /// Note that this may include nodes that are children of other nodes in the list
+  /// or nodes that are no longer in the document.
+  /// Also, note that when a text nodes is appended to, the complete text node is in the list,
+  /// not just the portion that was added.
+  /// [Note that recording the nodes being constructed isn't all that costly,
+  /// but filtering them for parent/child relations IS, particularly since it usually isn't needed]
+  ///
+  /// A $box that is a Box, or List, or Whatsit, is responsible for carrying out
+  /// its own insertion, but it should ultimately call methods of Document
+  /// that will record the nodes that were created.
+  /// $box can also be a plain string which will be inserted according to whatever
+  /// font, mode, etc, are in %props.
   pub fn absorb(&mut self, digested : Digested) -> String {
-    // TODO: Just a stub for now
-    // println_stderr!("Will absorb: {:?}", digested.boxes);
     for tbox in digested.boxes.iter() {
       let mut box_node = self.root.add_child(None, "box").unwrap();
       box_node.set_content(&tbox.text);
@@ -64,14 +81,14 @@ impl Document {
     };
     let mut data = kind.to_string() + "=" + content + &options_string;
     let pi = self.document.create_processing_instruction(op, &data).unwrap();
-    
+
     // self.close_text_internal();  // Close any open text node
     // if ($$self{node}->nodeType == XML_DOCUMENT_NODE) {
     //   push(@{ $$self{pending} }, $pi); }
     // else {
     println_stderr!("Trying to insert PI: {:?}", self.document.node_to_string(&pi));
     println_stderr!("Into doc: {:?}", self.document.to_string());
-    
+
     self.root.add_prev_sibling(pi);
 
     return;
@@ -81,7 +98,7 @@ impl Document {
   }
 
   pub fn set_node(&self, node: Node) {
-    
+
   }
 
   // Internals

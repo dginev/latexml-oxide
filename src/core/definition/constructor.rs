@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::collections::HashMap;
 use state::State;
 use common::object::Object;
 
@@ -10,34 +11,43 @@ use core::whatsit::Whatsit;
 use core::parameter::Parameters;
 use core::definition::Definition;
 use core::definition::expandable::ExpansionClosure;
+use core::definition::compiler::*;
 use core::document::Document;
 
-
+#[derive(Clone)]
 pub struct ConstructorOptions {
   pub bounded : bool,
   pub mode : String, // TODO
-  pub before_digest : Option<ExpansionClosure>,
-  pub after_digest : Option<DigestionClosure>,
+  pub before_digest : Vec<ExpansionClosure>,
+  pub after_digest : Vec<DigestionClosure>,
+  pub before_construct : Vec<ConstructionClosure>,
+  pub after_construct : Vec<ConstructionClosure>,
 }
 impl Default for ConstructorOptions {
-  fn default() -> Self { 
+  fn default() -> Self {
     ConstructorOptions {
       bounded : false,
-      before_digest : None,
-      after_digest : None,
+      before_digest : vec![],
+      after_digest : vec![],
+      before_construct : vec![],
+      after_construct : vec![],
       mode : String::new()
     }
   }
 }
 
-pub type ConstructionClosure = Arc<Box<Fn(&mut Document, &mut Whatsit, &mut State)>>;
-pub type DigestionClosure = Arc<Box<Fn(&mut Stomach, &mut Whatsit, &mut State)>>;
+pub type DigestionClosure = Arc<Box<Fn(&mut Stomach, &Whatsit, &mut State)>>;
+pub type ReplacementClosure = Arc<Box<Fn(&mut Document, &Vec<TBox>, &HashMap<String, String>, &mut State)>>;
+pub type ConstructionClosure = Arc<Box<Fn(&mut Document, &Whatsit, &mut State)>>;
+
 #[derive(Clone)]
 pub struct Constructor {
   pub cs : Token,
   pub paramlist : Option<Parameters>,
   pub nargs : Option<usize>,
-  pub replacement : String
+  pub replacement : String,
+  pub replacement_closure : Option<ReplacementClosure>,
+  pub options : ConstructorOptions
 }
 impl Default for Constructor {
   fn default() -> Self {
@@ -45,7 +55,9 @@ impl Default for Constructor {
       cs : T_CS!("Constructor".to_string()),
       paramlist : None,
       nargs : None,
-      replacement : String::new()
+      replacement : String::new(),
+      replacement_closure : None,
+      options : ConstructorOptions::default()
     }
   }
 }
@@ -53,22 +65,22 @@ impl Default for Constructor {
 impl Object for Constructor {}
 impl Definition for Constructor {
   fn invoke(&self, _gullet : &mut Gullet, _state : &mut State) -> Vec<Token> {
-    println!("-- constructor invoke for {:?}", self.get_cs());
+    println_stderr!("-- constructor invoke for {:?}", self.get_cs());
     Vec::new()
   }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
   fn invoke_primitive(&self, stomach : &mut Stomach, state : &mut State) -> Vec<TBox> {
-    println!("-- constructor/primitive invoke for {:?}", self.get_cs());
+    println_stderr!("-- constructor/primitive invoke for {:?}", self.get_cs());
     // Call any `Before' code.
-    // TODO: profiling / tracing 
+    // TODO: profiling / tracing
       // let profiled = state.lookup_value("PROFILING") && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
       // let tracing = state.lookup_value("TRACINGCOMMANDS");
       // LaTeXML::Core::Definition::startProfiling($profiled, "digest") if $profiled;
 
     let pre = self.execute_before_digest(stomach, state);
 
-    // println_stderr!("{" + $self->tracingCSName . "}\n" if $tracing;
+    // println_stderr_stderr!("{" + $self->tracingCSName . "}\n" if $tracing;
   // Get some info before we process arguments...
   // let font   = state.lookup_value("font");
   // let ismath = state.lookup_value("IN_MATH");
@@ -77,7 +89,7 @@ impl Definition for Constructor {
     &None => Vec::new(),
     &Some(ref params) => params.read_arguments_and_digest(stomach, &self, state)
   };
-  // println_stderr!($self->tracingArgs(@args) . "\n" if $tracing && @args;
+  // println_stderr_stderr!($self->tracingArgs(@args) . "\n" if $tracing && @args;
   let nargs = self.get_num_args();
   args.truncate(nargs);
 
@@ -132,10 +144,26 @@ impl Definition for Constructor {
     // self.nargs = Some(nargs);
     nargs
   }
+
+  fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) {
+
+    for pre_closure in &self.options.before_construct {
+      pre_closure(document, whatsit, state);
+    }
+
+    match &self.replacement_closure {
+      &None => {},
+      &Some(ref main_closure) => main_closure(document, whatsit.get_args(), whatsit.get_properties(), state)
+    };
+
+    for post_closure in &self.options.after_construct {
+     post_closure(document, whatsit, state);
+    }
+    return;
+  }
 }
 
 impl Constructor {
   fn execute_before_digest(&self, _stomach: &mut Stomach, _state: &mut State) {}
   fn execute_after_digest(&self,_stomach: &mut Stomach, _state: &mut State) {}
-  
 }

@@ -66,9 +66,9 @@ impl Core {
   }
 
   pub fn digest(&mut self, request : String,
-    preamble : Option<String>, postamble : Option<String>, mode : Option<DigestionMode>, no_init : bool) 
+    preamble : Option<String>, postamble : Option<String>, mode : Option<DigestionMode>, no_init : bool)
     -> Result<Digested, Error> {
-     
+
     let mut ext = match mode {
       Some(m) => Some(m.extension()),
       None => Some(DigestionMode::TeX.extension())
@@ -118,10 +118,10 @@ impl Core {
       // if ($mode eq 'BibTeX') {
       //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
       //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX); }
-            
+
       let list = self.digest_internal();
       note_end("Digesting ".to_string()+ &name.clone().unwrap());
-      // return $list; }); 
+      // return $list; });
     Ok(list)
   }
 
@@ -146,7 +146,7 @@ impl Core {
           Some(ico_flag) => if *ico_flag {
             let paths_string = paths.join(",");
             document.insert_pi("latexml", "paths", &paths_string, None); },
-          None => {} 
+          None => {}
         };
       }
     };
@@ -194,7 +194,7 @@ impl Core {
 
     while self.stomach.get_gullet().has_more_input() {
       for body in self.stomach.digest_next_body(false, state) {
-        boxes.push(body);  
+        boxes.push(body);
       }
     }
     self.stomach.get_gullet().flush();

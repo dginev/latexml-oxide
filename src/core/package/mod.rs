@@ -29,7 +29,7 @@ pub fn input_content(core : &mut Core, request : String) -> Result<(),()> {
 pub fn load_tex_content(core: &mut Core, path : String) {
   let mut mouth = Mouth{notes: true, ..Mouth::default()};
   mouth.open(&path, &mut core.state);
-  // TODO: 
+  // TODO:
   // If there is a file-specific declaration file (name.latexml), load it first!
   // let file = path;
   // file =~ s/\.tex//;
@@ -90,18 +90,18 @@ pub fn parse_prototype(proto : String, state: &mut State) -> ((Token, Option<Par
   let mut cs = T_CS!("\\".to_string()); // Should never happen
   if csname_macro_regex.is_match(&proto) {
     let captures = csname_macro_regex.captures(&proto).unwrap();
-    cs = T_CS!("\\".to_string() + captures.at(0).unwrap()); 
+    cs = T_CS!("\\".to_string() + captures.at(0).unwrap());
     // also replace in proto
     final_proto = csname_macro_regex.replace(&proto,"");
   } else if cs_regex.is_match(&proto) { // Match a cs
     let captures = cs_regex.captures(&proto).unwrap();
     let csname = captures.at(0).unwrap().to_string();
-    cs = T_CS!(csname); 
+    cs = T_CS!(csname);
     // also replace in proto
     final_proto = cs_regex.replace(&proto,"");
   } else if single_char_regex.is_match(&proto) { // Match a single char cs, env name,...
     let captures = single_char_regex.captures(&proto).unwrap();
-    cs = T_CS!(captures.at(0).unwrap().to_string()); 
+    cs = T_CS!(captures.at(0).unwrap().to_string());
     // also replace in proto
     final_proto = single_char_regex.replace(&proto,"");
   } else if active_char_regex.is_match(&proto) { // Match an active char
@@ -131,7 +131,7 @@ pub fn parse_parameters(mut prototype : String, cs : &Token, state : &mut State)
     if nested_check.is_match(&prototype) {
       let captures = nested_check.captures(&prototype).unwrap();
       next_proto = nested_check.replace(&prototype,"");
-      let spec = captures.at(1).unwrap(); 
+      let spec = captures.at(1).unwrap();
       let inner_spec = captures.at(2).unwrap();
       let inner : Option<Parameters> = if inner_spec.is_empty() { None } else { parse_parameters(inner_spec.to_string(), cs, state)};
       parameters.push(Parameter { name: "Plain".to_string(), spec: spec.to_string(), extra: vec![inner], ..Parameter::default()}.init(state));
@@ -140,7 +140,7 @@ pub fn parse_parameters(mut prototype : String, cs : &Token, state : &mut State)
     else if optional_check.is_match(&prototype) { // Ditto for Optional
       let captures = optional_check.captures(&prototype).unwrap();
       next_proto = optional_check.replace(&prototype,"");
-      let spec = captures.at(1).unwrap(); 
+      let spec = captures.at(1).unwrap();
       let inner_spec = captures.at(2).unwrap();
 
       if default_check.is_match(inner_spec) {
@@ -159,7 +159,7 @@ pub fn parse_parameters(mut prototype : String, cs : &Token, state : &mut State)
     else if paramspec_check.is_match(&prototype) {
       let captures = paramspec_check.captures(&prototype).unwrap();
       next_proto = paramspec_check.replace(&prototype,"");
-      let spec = captures.at(1).unwrap(); 
+      let spec = captures.at(1).unwrap();
       let spec_type = captures.at(2).unwrap();
       let extra = match captures.at(4) {
         None => Vec::new(),
@@ -217,7 +217,6 @@ macro_rules! DefMacro(
   )
 );
 
-use core::definition::constructor::{ConstructorOptions};
 #[macro_export]
 macro_rules! DefConstructorI(
   ($cs:expr, $paramlist:expr, $replacement:expr, $options: expr, $state:expr) => (
@@ -247,11 +246,11 @@ macro_rules! DefConstructorI(
     //   captureBody     => $options{captureBody},
     //   properties      => $options{properties} || {}),
     // $options{scope});
-    
+
     // if options.locked {
     //   $state.assign_value(ToString($cs) + ":locked", Box::new(true))
     // }
-    // return; 
+    // return;
   }
   );
 );
@@ -270,7 +269,7 @@ macro_rules! DefConstructor(
 pub fn DefParameterType(param_type: String, options: Parameter, state : &mut State) {
   // CheckOptions("DefParameterType param_type", $parameter_options, %options);
   state.assign_mapping("PARAMETER_TYPES", &param_type, options);
-  return; 
+  return;
 }
 
 pub fn Revert(arg: Vec<Token>) -> Vec<Token> {
