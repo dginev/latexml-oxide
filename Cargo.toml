@@ -9,7 +9,7 @@ crate-type = ["rlib", "dylib", "staticlib"]
 plugin = true
 
 [dependencies.libxml]
-git = "https://github.com/dginev/rust-libxml.git"
+git = "https://github.com/KWARC/rust-libxml.git"
 
 [dependencies.libarchive-sys]
 git = "https://github.com/dginev/libarchive-sys.git"
