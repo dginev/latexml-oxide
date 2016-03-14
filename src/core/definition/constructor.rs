@@ -166,4 +166,7 @@ impl Definition for Constructor {
 impl Constructor {
   fn execute_before_digest(&self, _stomach: &mut Stomach, _state: &mut State) {}
   fn execute_after_digest(&self,_stomach: &mut Stomach, _state: &mut State) {}
+  pub fn compile(&mut self) {
+    self.replacement_closure = self.compile_replacement();
+  }
 }

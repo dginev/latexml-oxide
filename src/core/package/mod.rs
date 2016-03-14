@@ -225,8 +225,9 @@ macro_rules! DefConstructorI(
     use $crate::core::package;
     // let mode    = $options.mode;
     // let bounded = $options.bounded;
-    $state.install_definition(::state::ObjectStore::ConstructorStore(Arc::new(Box::new(
-      Constructor { cs: $cs, paramlist: $paramlist, replacement: $replacement, ..Constructor::default()}))), &None);
+    let mut constructor = Constructor { cs: $cs, paramlist: $paramlist, replacement: $replacement, ..Constructor::default()};
+    constructor.compile();
+    $state.install_definition(::state::ObjectStore::ConstructorStore(Arc::new(Box::new(constructor))), &None);
 
     //   before_digest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
     //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),

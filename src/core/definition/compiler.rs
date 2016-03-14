@@ -44,7 +44,6 @@ impl Constructor {
     println_stderr!("-- Preparing translation closure for: \n{:?}\n", replacement);
     Some(Arc::new(Box::new(|document, args, props, state| {
       let mut savenode : Option<Node> = None;
-      println_stderr!("-- Translating constructor.\n");
       TranslateConstructor!(replacement, floats);
       match savenode {
         None => {},
