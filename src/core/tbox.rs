@@ -1,4 +1,5 @@
 use core::token::Token;
+use core::Digested;
 
 /// Box is a Rust keyword, so we use "TBox" instead, as in "TeX Box"
 #[derive(Debug)]
@@ -18,8 +19,11 @@ pub fn TBox() -> TBox {
   }
 }
 
-impl TBox {
-  pub fn to_string(&self) -> String {
+impl Digested for TBox {
+  fn to_string(&self) -> String {
     self.text.clone()
+  }
+  fn unlist(&self) -> Vec<&TBox> {
+    vec![self]
   }
 }

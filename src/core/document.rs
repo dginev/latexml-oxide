@@ -58,8 +58,8 @@ impl Document {
   /// that will record the nodes that were created.
   /// $box can also be a plain string which will be inserted according to whatever
   /// font, mode, etc, are in %props.
-  pub fn absorb(&mut self, digested : Digested) -> String {
-    for tbox in digested.boxes.iter() {
+  pub fn absorb(&mut self, object : Box<Digested>) -> String {
+    for tbox in object.unlist().iter() {
       let mut box_node = self.root.add_child(None, "box").unwrap();
       box_node.set_content(&tbox.text);
     }

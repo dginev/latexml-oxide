@@ -46,7 +46,7 @@ impl Catcode {
       COMMENT => false,
       INVALID => false,
       CS => false,
-      MARKER => false, 
+      MARKER => false,
     }
   }
 
@@ -87,7 +87,7 @@ pub struct Token{
 #[macro_export]
 macro_rules! T_BEGIN(() => ({
   use $crate::core::token::Token;
-  Token { text: "{".to_string(), code: Catcode::BEGIN }  
+  Token { text: "{".to_string(), code: Catcode::BEGIN }
 }));
 
 #[macro_export]
@@ -108,7 +108,7 @@ macro_rules! T_ALIGN(() => ({
 #[macro_export]
 macro_rules! T_PARAM(() => ({
   use $crate::core::token::Token;
-  Token { text: "#".to_string(), code: Catcode::PARAM }  
+  Token { text: "#".to_string(), code: Catcode::PARAM }
 }));
 #[macro_export]
 macro_rules! T_SUPER(() => ({
@@ -166,7 +166,7 @@ macro_rules! Token(($text:expr, $cc_opt:expr) => ({
 // Explode a string into a list of tokens, all w/catcode OTHER (except space).
 #[macro_export]
 macro_rules! Explode(($text:expr) => ({
-  $text.chars().map(|c| 
+  $text.chars().map(|c|
     if c==' ' { T_SPACE!() }
     else { T_OTHER!(c.to_string()) }
   ).collect()
@@ -176,14 +176,14 @@ macro_rules! Explode(($text:expr) => ({
 // Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
 #[macro_export]
 macro_rules! ExplodeText(($text:expr) => ({
-  $text.chars().map(|c| 
+  $text.chars().map(|c|
     if c==' ' { T_SPACE!() }
     else if c.is_alphabetic() { T_LETTER!(c.to_string()) }
     else { T_OTHER!(c.to_string()) }
   ).collect::<Vec<Token>>()
 }));
 
-pub fn untex(digested : Digested) -> String {
+pub fn untex(digested : Box<Digested>) -> String {
   digested.to_string()
 }
 

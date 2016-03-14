@@ -6,6 +6,7 @@ pub mod definition;
 pub mod parameter;
 pub mod package;
 pub mod tbox;
+pub mod list;
 pub mod document;
 pub mod whatsit;
 
@@ -20,6 +21,7 @@ use state::{State, Scope};
 use core::stomach::{Stomach};
 use core::document::{Document};
 use core::tbox::TBox;
+use core::list::List;
 use core::package::*;
 
 pub struct Core {
@@ -27,15 +29,12 @@ pub struct Core {
   pub stomach : Stomach,
   pub preload : Vec<String>,
 }
-pub struct Digested {
-  pub boxes : Vec<TBox>,
-}
-
-impl Digested {
-  pub fn to_string(&self) -> String {
+pub trait Digested {
+  fn unlist(&self) -> Vec<&TBox>;
+  fn to_string(&self) -> String {
     "Vec<TBox> for now ".to_string()
   }
-  pub fn stringify(&self) -> String {
+  fn stringify(&self) -> String {
     "Vec<TBox> for now ".to_string()
   }
 }
@@ -67,7 +66,7 @@ impl Core {
 
   pub fn digest(&mut self, request : String,
     preamble : Option<String>, postamble : Option<String>, mode : Option<DigestionMode>, no_init : bool)
-    -> Result<Digested, Error> {
+    -> Result<Box<Digested>, Error> {
 
     let mut ext = match mode {
       Some(m) => Some(m.extension()),
@@ -132,7 +131,7 @@ impl Core {
     }
   }
 
-  pub fn convert_document<'convert>(&'convert mut self, digested : Digested) -> Result<Document, Error> {
+  pub fn convert_document<'convert>(&'convert mut self, digested : Box<Digested>) -> Result<Document, Error> {
     note_begin("Building".to_string());
 
     let mut state = &mut self.state;
@@ -188,7 +187,7 @@ impl Core {
     return Ok(document)
   }
 
-  pub fn digest_internal(&mut self) -> Digested {
+  pub fn digest_internal(&mut self) -> Box<Digested> {
     let mut boxes = Vec::new();
     let mut state = &mut self.state;
 
@@ -198,7 +197,7 @@ impl Core {
       }
     }
     self.stomach.get_gullet().flush();
-    return Digested { boxes : boxes };
+    Box::new(List { boxes : boxes })
   }
 
   // Internal helpers:

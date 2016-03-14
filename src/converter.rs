@@ -1,5 +1,6 @@
 use common::{Config, DataSize, OutputFormat, Error};
 use core::{Core, Digested};
+use core::list::List;
 use core::document::Document;
 use core::token;
 
@@ -87,7 +88,7 @@ impl Converter {
       },
       _ => None
     };
-    // TODO:  
+    // TODO:
     // 1.3.3 Archives need to get unpacked in a sandbox (with sufficient bookkeeping)
     //   elsif ($$opts{whatsin} =~ /^archive/) {
     //     // Sandbox the input
@@ -144,9 +145,9 @@ impl Converter {
     let digest_result = self.core.digest(source, current_preamble, current_postamble, self.opts.mode.clone(), true);
     let digested = match digest_result {
       Err(_) => {
-        Digested {
+        Box::new(List {
           boxes : Vec::new()
-        }
+        })
       }, // TODO digestion failed, report
       Ok(d) => d
     };
