@@ -64,6 +64,8 @@ fn process_texfile<'a>(tex_path: String, name: &'a str) -> Vec<String> {
     stomach : Stomach::default(),
     state : test_state
   };
+  latexml.initialize_state(vec!["TeX.pool".to_string()]);
+
   match latexml.convert_file(tex_path.clone()) {
     Err(e) => panic!("{:?}: Couldn't convert {:?}; {:?}",name, tex_path, e),
     Ok(doc) => process_dom(doc.document, name)
