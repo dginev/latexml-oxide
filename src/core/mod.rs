@@ -93,7 +93,8 @@ impl Core {
     //   $self->withState(sub {
     //       Fatal('missing_file', $request, undef, "Can't find $mode file $request"); }); } }
     // };
-    note_begin("Digesting ".to_string() +&name.clone().unwrap());
+    let digestion_note = "Digesting ".to_string() +&name.clone().unwrap();
+    note_begin(&digestion_note);
       // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless $options{noinitialize};
       // $state->assignValue(SOURCEFILE      => $request) if (!pathname_is_literaldata($request));
       // $state->assignValue(SOURCEDIRECTORY => $dir)     if defined $dir;
@@ -119,7 +120,7 @@ impl Core {
       //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX); }
 
       let list = self.digest_internal();
-      note_end("Digesting ".to_string()+ &name.clone().unwrap());
+      note_end(&digestion_note);
       // return $list; });
     Ok(list)
   }
@@ -132,7 +133,7 @@ impl Core {
   }
 
   pub fn convert_document<'convert>(&'convert mut self, digested : Box<Digested>) -> Result<Document, Error> {
-    note_begin("Building".to_string());
+    note_begin("Building");
 
     let mut state = &mut self.state;
     state.model.load_schema(); // If needed?
@@ -171,7 +172,7 @@ impl Core {
       }
     }
     document.absorb(digested);
-    note_end("Building".to_string());
+    note_end("Building");
 
     // if (my $rules = $state->lookupValue('DOCUMENT_REWRITE_RULES')) {
     //   NoteBegin("Rewriting");
@@ -181,9 +182,9 @@ impl Core {
     //   NoteEnd("Rewriting"); }
 
     // LaTeXML::MathParser->new()->parseMath($document) unless $$self{nomathparse};
-    note_begin("Finalizing".to_string());
+    note_begin("Finalizing");
     document.finalize(&mut state);
-    note_end("Finalizing".to_string());
+    note_end("Finalizing");
     return Ok(document)
   }
 

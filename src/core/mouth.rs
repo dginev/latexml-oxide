@@ -77,7 +77,7 @@ impl Mouth {
       //   Fatal('I/O', $pathname, $self, "Input file $pathname appears to be binary."); }
       // open($IN, '<', $pathname)
       //   || Fatal('I/O', $pathname, $self, "Can't open $pathname for reading", $!);
-        
+
 
         let mut f = File::open(pathname).unwrap();
         let mut content = String::new();
@@ -96,7 +96,7 @@ impl Mouth {
   fn open_https(&mut self, content : &str ) {}
   fn open_binding(&mut self, content : &str ) {}
 
-  
+
   fn initialize(&mut self, state : &mut State) {
     self.note_message = match self.notes {
       true => match self.fordefinitions {
@@ -112,7 +112,7 @@ impl Mouth {
         Some(x) => *x
       };
       state.assign_catcode(&'@', Catcode::LETTER);
-      state.assign_value("include_comments",Box::new(0), &Scope::Local); 
+      state.assign_value("include_comments",Box::new(0), &Scope::Local);
     }
     return;
   }
@@ -132,8 +132,11 @@ impl Mouth {
         None => {}
       };
     }
-    if self.notes && self.note_message.is_some() {
-      note_end(self.note_message.clone().unwrap());
+    if self.notes {
+      match self.note_message {
+        Some(ref msg) => note_end(msg),
+        _ => {}
+      };
     }
   }
   // Auxiliaries
@@ -201,7 +204,7 @@ impl Mouth {
             // TODO
             // ch = chr(hex($c1 . $c2));
             // splice(@{ self.chars }, self.colno - 1, 4, $ch);
-            // self.nchars -= 3; 
+            // self.nchars -= 3;
           }
           else {// OR ^^ followed by a SINGLE Control char type code???
             // TODO:
@@ -209,9 +212,9 @@ impl Mouth {
             // let mut cn = ord($c);
             // $ch = chr($cn + ($cn > 64 ? -64 : 64));
             // splice(@{ self.chars }, self.colno - 1, 3, $ch);
-            // self.nchars -= 2; 
+            // self.nchars -= 2;
           }
-          cc = state.lookup_catcode(ch); 
+          cc = state.lookup_catcode(ch);
         }
         if cc.is_none() {
           cc = Some(Catcode::OTHER);
@@ -280,7 +283,7 @@ impl Mouth {
               Some(_) => {
                 return Some(T_COMMENT!("**** ".to_string()+&self.shortsource+" Line "+&self.lineno.to_string() +" ****"));
               }
-            }            
+            }
           }
         }
       };
@@ -289,14 +292,14 @@ impl Mouth {
     match self.get_next_char(state) {
       None => {},
       Some((ch, cc)) => {
-        match Mouth::dispatch_char(self, ch, cc, state) { 
+        match Mouth::dispatch_char(self, ch, cc, state) {
           Some(token) => {
             return Some(token);
           },
           None => {},// Else, repeat till we get something or run out.
         };
       }
-    } 
+    }
   }
   return None;
   }
@@ -407,7 +410,7 @@ impl Mouth {
           }
           self.colno -= 1;
         },
-        
+
         Catcode::SPACE => { // We'll skip whitespace here.
           loop {
             match self.get_next_char(state) {
