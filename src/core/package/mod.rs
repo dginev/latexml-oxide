@@ -81,38 +81,40 @@ pub fn tokenize_internal(some : String) -> Vec<Token> {
   vec![T_CS!(some)]
 }
 
-pub fn parse_prototype(proto : String, state: &mut State) -> ((Token, Option<Parameters>)) {
+pub fn parse_prototype(proto : &str, state: &mut State) -> ((Token, Option<Parameters>)) {
   let csname_macro_regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
   let cs_regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
   let single_char_regex = Regex::new(r"^(\\.)").unwrap();
   let active_char_regex = Regex::new(r"^(.)").unwrap();
-  let mut final_proto = proto.clone();
+
   let mut cs = T_CS!("\\".to_string()); // Should never happen
-  if csname_macro_regex.is_match(&proto) {
-    let captures = csname_macro_regex.captures(&proto).unwrap();
-    cs = T_CS!("\\".to_string() + captures.at(0).unwrap());
-    // also replace in proto
-    final_proto = csname_macro_regex.replace(&proto,"");
-  } else if cs_regex.is_match(&proto) { // Match a cs
-    let captures = cs_regex.captures(&proto).unwrap();
-    let csname = captures.at(0).unwrap().to_string();
-    cs = T_CS!(csname);
-    // also replace in proto
-    final_proto = cs_regex.replace(&proto,"");
-  } else if single_char_regex.is_match(&proto) { // Match a single char cs, env name,...
-    let captures = single_char_regex.captures(&proto).unwrap();
-    cs = T_CS!(captures.at(0).unwrap().to_string());
-    // also replace in proto
-    final_proto = single_char_regex.replace(&proto,"");
-  } else if active_char_regex.is_match(&proto) { // Match an active char
-    let captures = active_char_regex.captures(&proto).unwrap();
-    cs = tokenize_internal(captures.at(0).unwrap().to_string()).first().unwrap().clone();
-    // also replace in proto
-    final_proto = active_char_regex.replace(&proto,"");
-  } else {
-    // Fatal('misdefined', prototype, $STATE->getStomach,
-    //   "Definition prototype doesn't have proper control sequence: \"prototype\""); }
-  }
+  let mut final_proto =
+    if csname_macro_regex.is_match(proto) {
+      let captures = csname_macro_regex.captures(proto).unwrap();
+      cs = T_CS!("\\".to_string() + captures.at(0).unwrap());
+      // also replace in proto
+      csname_macro_regex.replace(proto,"")
+    } else if cs_regex.is_match(proto) { // Match a cs
+      let captures = cs_regex.captures(proto).unwrap();
+      let csname = captures.at(0).unwrap().to_string();
+      cs = T_CS!(csname);
+      // also replace in proto
+      cs_regex.replace(proto,"")
+    } else if single_char_regex.is_match(proto) { // Match a single char cs, env name,...
+      let captures = single_char_regex.captures(proto).unwrap();
+      cs = T_CS!(captures.at(0).unwrap().to_string());
+      // also replace in proto
+      single_char_regex.replace(proto,"")
+    } else if active_char_regex.is_match(proto) { // Match an active char
+      let captures = active_char_regex.captures(proto).unwrap();
+      cs = tokenize_internal(captures.at(0).unwrap().to_string()).first().unwrap().clone();
+      // also replace in proto
+      active_char_regex.replace(proto,"")
+    } else {
+      // Fatal('misdefined', prototype, $STATE->getStomach,
+      //   "Definition prototype doesn't have proper control sequence: \"prototype\""); }
+      proto.to_string()
+    };
   final_proto = final_proto.trim_left().to_string();
   let paramlist = parse_parameters(final_proto, &cs, state);
   return (cs, paramlist)
@@ -211,7 +213,7 @@ macro_rules! DefMacro(
   ($proto:expr, $expansion:expr, $state:expr) => (
   {
     // check_options("DefMacro (prototype)", $constructor_options, %options);
-    let (cs, paramlist) = parse_prototype($proto.to_string(), $state);
+    let (cs, paramlist) = parse_prototype($proto, $state);
     DefMacroI!(cs, paramlist, $expansion, $state);
   }
   )
@@ -225,7 +227,7 @@ macro_rules! DefConstructorI(
     use $crate::core::package;
     // let mode    = $options.mode;
     // let bounded = $options.bounded;
-    let mut constructor = Constructor { cs: $cs, paramlist: $paramlist, replacement: $replacement, ..Constructor::default()};
+    let mut constructor = Constructor { cs: $cs, paramlist: $paramlist, replacement: $replacement.to_string(), ..Constructor::default()};
     constructor.compile();
     $state.install_definition(::state::ObjectStore::ConstructorStore(Arc::new(Box::new(constructor))), &None);
 

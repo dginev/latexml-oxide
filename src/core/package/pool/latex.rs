@@ -11,8 +11,8 @@ use core::definition::constructor::ConstructorOptions;
 pub fn load_definitions(state : &mut State) {
   println!("If you are seeing this, someone invoked latex::load_definitions !!! ");
 
-  DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []".to_string(),
-    "<?latexml class='#2' ?#1(options='#1')?>".to_string(), ConstructorOptions{
+  DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
+    "<?latexml class='#2' ?#1(options='#1')?>", ConstructorOptions{
       after_digest: Some(Arc::new(Box::new(
         |_stomach : &mut Stomach, whatsit : &mut Whatsit, state : &mut State| {
           let options : Option<&TBox> = whatsit.get_arg(1);
@@ -24,7 +24,7 @@ pub fn load_definitions(state : &mut State) {
           load_class(state, whatsit.get_arg(2).unwrap().to_string(),
             class_opts,
             vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())]);
-          return; 
+          return;
         }))),
       ..ConstructorOptions::default() }, state );
 
@@ -85,4 +85,38 @@ pub fn load_definitions(state : &mut State) {
 
     Vec::new()
   }, state);
+
+
+  //======================================================================
+  // C.5.2 Packages
+  //======================================================================
+  // We'll prefer to load package.pm, but will try package.sty or
+  // package.tex (the latter being unlikely to work, but....)
+  // See Stomach.pm for details
+  // Ignorable packages ??
+  // pre-defined packages??
+
+  // DefMacroI('\@clsextension', undef, 'cls');
+  // DefMacroI('\@pkgextension', undef, 'sty');
+  // Let('\@currext',  '\@empty');
+  // Let('\@currname', '\@empty');
+
+  DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
+    "<?latexml package='#2' ?#1(options='#1')?>", ConstructorOptions{
+      before_digest : Some(Arc::new(Box::new(
+        |_stomach : &mut Stomach, whatsit : &mut Whatsit, state : &mut State| {
+          //  onlyPreamble('\usepackage');
+      }))),
+      after_digest: Some(Arc::new(Box::new(
+        |_stomach : &mut Stomach, whatsit : &mut Whatsit, state : &mut State| {
+          let options : Option<&TBox> = whatsit.get_arg(1);
+          let packages : Option<&TBox> = whatsit.get_arg(2);
+          // my @pkgs     = grep { $_ } grep { !/^\s*%/ } split(/,\s*/, ToString($packages));
+          // $options = [($options ? split(/,\s*/, (ToString($options))) : ())];
+          // map { RequirePackage($_, options => $options) } @pkgs;
+          return;
+        }))),
+      ..ConstructorOptions::default() }, state );
+
+
 }
