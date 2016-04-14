@@ -1,15 +1,15 @@
 extern crate libxml;
 
 // use common::model::Model;
-use state::State;
+use state::{ObjectStore, State};
 use core::Digested;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::Node;
 
 pub struct Document {
   // pub model : &'doc Model,
-  pub document : XmlDoc,
-  pub root : Node
+  pub document: XmlDoc,
+  pub root: Node,
 }
 
 impl Document {
@@ -19,22 +19,22 @@ impl Document {
     doc_scaffold.set_root_element(&mut latexml_node);
 
     Document {
-      document : doc_scaffold,
-      root : latexml_node
+      document: doc_scaffold,
+      root: latexml_node,
     }
   }
-  //**********************************************************************
+  // **********************************************************************
   // This should be called before returning the final XML::LibXML::Document to the
   // outside world.  It resolves the fonts for each node relative to it's ancestors.
   // It removes the `helper' attributes that store fonts, source box, etc.
-  pub fn finalize<'finalize>(&'finalize mut self, state : &'finalize mut State) {
+  pub fn finalize<'finalize>(&'finalize mut self, state: &'finalize mut State) {
     self.prune_XMDuals();
     let root = self.document.get_root_element().unwrap();
     // local $LaTeXML::FONT = LaTeXML::Common::Font->textDefault;
     self.finalize_rec(root);
     match state.lookup_value("RDFa_prefixes") {
-      None => {},
-      Some(prefixes) => self.set_RDFa_prefixes(*prefixes)
+      Some(&ObjectStore::StringStore(ref prefixes)) => self.set_RDFa_prefixes(Some(prefixes.clone())),
+      _ => {}
     };
   }
 
@@ -58,7 +58,7 @@ impl Document {
   /// that will record the nodes that were created.
   /// $box can also be a plain string which will be inserted according to whatever
   /// font, mode, etc, are in %props.
-  pub fn absorb(&mut self, object : Box<Digested>) -> String {
+  pub fn absorb(&mut self, object: Box<Digested>) -> String {
     for tbox in object.unlist().iter() {
       let mut box_node = self.root.add_child(None, "box").unwrap();
       box_node.set_content(&tbox.text);
@@ -69,7 +69,7 @@ impl Document {
   /// Insert a ProcessingInstruction of the form <?op attr=value ...?>
   /// Does NOT move the current insertion point to the PI,
   /// but may move up past a text node.
-  pub fn insert_pi(&mut self, op: &str, kind: &str, content: &str, options : Option<String>) {
+  pub fn insert_pi(&mut self, op: &str, kind: &str, content: &str, options: Option<String>) {
     // We'll just put these on the document itself.
     // Put these in an attractive order, main "operator" first
     // my @keys = ((map { ($attrib{$_} ? ($_) : ()) } qw(class package options)),
@@ -77,7 +77,7 @@ impl Document {
     // my $data = join(' ', map { $_ . "=\"" . ToString($attrib{$_}) . "\"" } @keys);
     let options_string = match options {
       Some(payload) => " options=".to_string() + &payload,
-      None => String::new()
+      None => String::new(),
     };
     let mut data = kind.to_string() + "=" + content + &options_string;
     let pi = self.document.create_processing_instruction(op, &data).unwrap();
@@ -86,7 +86,8 @@ impl Document {
     // if ($$self{node}->nodeType == XML_DOCUMENT_NODE) {
     //   push(@{ $$self{pending} }, $pi); }
     // else {
-    println_stderr!("Trying to insert PI: {:?}", self.document.node_to_string(&pi));
+    println_stderr!("Trying to insert PI: {:?}",
+                    self.document.node_to_string(&pi));
     println_stderr!("Into doc: {:?}", self.document.to_string());
 
     self.root.add_prev_sibling(pi);
@@ -97,18 +98,12 @@ impl Document {
     self.document.to_string()
   }
 
-  pub fn set_node(&self, node: Node) {
-
-  }
+  pub fn set_node(&self, node: Node) {}
 
   // Internals
-  fn set_RDFa_prefixes<'prefixes>(&'prefixes mut self, prefixes : Option<String>) {
-
-  }
+  fn set_RDFa_prefixes<'prefixes>(&'prefixes mut self, prefixes: Option<String>) {}
 
   fn prune_XMDuals(&self) {}
 
-  fn finalize_rec(&self,element : Node) {}
-
-
+  fn finalize_rec(&self, element: Node) {}
 }

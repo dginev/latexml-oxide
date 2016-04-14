@@ -1,22 +1,23 @@
 use std::hash::Hash;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::fmt;
 use regex::Regex;
 
-use common::model::{Model};
+use common::model::Model;
 // use core::stomach::{Stomach};
 
 use core::token::{Catcode, Token};
 use common::object::Object;
 use core::parameter::Parameter;
-use core::definition::{Definition};
+use core::definition::Definition;
 use core::definition::expandable::Expandable;
 use core::definition::constructor::Constructor;
 use core::definition::primitive::Primitive;
 
 pub enum Scope {
   Global,
-  Local
+  Local,
 }
 pub enum Table {
   Meaning,
@@ -30,44 +31,65 @@ pub enum Table {
 
 #[derive(Clone)]
 pub enum ObjectStore {
-  TokenStore (Token),
-  ExpandableStore (Arc<Box<Expandable>>),
-  PrimitiveStore (Arc<Box<Primitive>>),
-  ConstructorStore (Arc<Box<Constructor>>)
+  StringStore(String),
+  VecStringStore(Vec<String>),
+  BoolStore(bool),
+  TokenStore(Token),
+  ExpandableStore(Arc<Box<Expandable>>),
+  PrimitiveStore(Arc<Box<Primitive>>),
+  ConstructorStore(Arc<Box<Constructor>>),
+}
+
+impl fmt::Debug for ObjectStore {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    use state::ObjectStore::*;
+    match self {
+      &StringStore(ref s) => write!(f, "{}", s),
+      &VecStringStore(ref vs) => write!(f, "vec of strings"),
+      &BoolStore(ref b) => write!(f, "{}", b),
+      &TokenStore(ref t) => write!(f, "token"),
+      &ExpandableStore(ref expandable) => write!(f, "<closure for expandable definition>"),
+      &PrimitiveStore(ref primitive) => write!(f, "<closure for primitive definition>"),
+      &ConstructorStore(ref constructor) => write!(f, "<closure for constructor definition>"),
+    }
+  }
 }
 
 pub struct State {
-  pub verbosity : i32,
-  pub map : Vec<String>,
-  pub catcode : HashMap<char, Catcode>,
-  pub meaning : HashMap<String, ObjectStore>,
-  pub parameters : HashMap<String, Parameter>,
-  pub status_code : usize,
-  pub model : Model
+  pub verbosity: i32,
+  pub map: Vec<String>,
+  pub catcode: HashMap<char, Catcode>,
+  pub meaning: HashMap<String, ObjectStore>,
+  pub value: HashMap<String, ObjectStore>,
+  pub parameters: HashMap<String, Parameter>,
+  pub status_code: usize,
+  pub model: Model,
 }
 
 impl Default for State {
   fn default() -> Self {
     State {
       // stomach : Stomach::default(),
-      verbosity : 0,
+      verbosity: 0,
       status_code: 0,
-      model : Model::default(),
-      map : Vec::new(),
-      catcode : HashMap::new(),
-      meaning : HashMap::new(),
-      parameters : HashMap::new()
+      model: Model::default(),
+      map: Vec::new(),
+      catcode: HashMap::new(),
+      meaning: HashMap::new(),
+      value: HashMap::new(),
+      parameters: HashMap::new(),
     }
   }
 }
 
-impl State {// TODO for all
+impl State {
+  // TODO for all
   pub fn new() -> Self {
     use core::token::Catcode::*;
     // TODO: Only standard catcodes for now.
-    
+
     // Setup default catcodes.
-    let mut std_catcodes : HashMap<char,Catcode> = HashMap::new();
+    let mut std_catcodes: HashMap<char, Catcode> = HashMap::new();
     std_catcodes.insert('\\', ESCAPE);
     std_catcodes.insert('{', BEGIN);
     std_catcodes.insert('}', END);
@@ -86,10 +108,7 @@ impl State {// TODO for all
       std_catcodes.insert(c, LETTER);
     }
 
-    State {
-      catcode : std_catcodes,
-      ..State::default()   
-    }
+    State { catcode: std_catcodes, ..State::default() }
   }
   // $$self{value}{SPECIALS} = [['^', '_', '@', '~', '&', '$', '#', '%', "'"]];
   // if ($options{catcodes} eq 'style') {
@@ -99,11 +118,11 @@ impl State {// TODO for all
   pub fn lookup_catcode<'lc>(&'lc mut self, c: &'lc char) -> Option<Catcode> {
     match self.catcode.get(c) {
       None => None,
-      Some(&c) => Some(c.clone())
+      Some(&c) => Some(c.clone()),
     }
   }
-  pub fn lookup_value<'lv, T: Hash>(&'lv mut self, key: &'lv str) -> Option<Box<T>>{
-    None
+  pub fn lookup_value<'lv>(&'lv self, key: &'lv str) -> Option<&ObjectStore> {
+    self.value.get(key)
   }
   /// used for expansion & various queries
   /// Since we're not doing digestion here, we don't need to handle mathactive,
@@ -112,18 +131,18 @@ impl State {// TODO for all
   pub fn lookup_definition<'def>(&'def mut self, key: &'def Token) -> Option<ObjectStore> {
     let cc = &key.code;
     let name = &key.text;
-    let lookupname : String = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) {
+    let lookupname: String = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) {
       name.clone()
     } else {
       cc.name()
     };
-    
+
     match lookupname.is_empty() {
       true => None,
       false => {
         match self.meaning.get(&lookupname) {
           None => None,
-          Some(entry) => Some(entry.clone())
+          Some(entry) => Some(entry.clone()),
         }
       }
     }
@@ -141,9 +160,9 @@ impl State {// TODO for all
     if name.is_empty() {
       return None;
     }
-    let lookupname = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) || 
-      ((cc == &Catcode::LETTER) || (cc == &Catcode::OTHER)) {//&& 
-      //self.lookup_value("IN_MATH").is_some() && ((self.lookup_mathcode(&name).is_some() || 0) == 0x8000)) {
+    let lookupname = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) || ((cc == &Catcode::LETTER) || (cc == &Catcode::OTHER)) {
+      // &&
+      // self.lookup_value("IN_MATH").is_some() && ((self.lookup_mathcode(&name).is_some() || 0) == 0x8000)) {
 
       name.clone()
     } else {
@@ -152,7 +171,7 @@ impl State {// TODO for all
 
     // println!("Looking up digestable {:?}", lookupname);
     let entry = self.meaning.get(&lookupname);
-    
+
     if !lookupname.is_empty() && entry.is_some() {
       // println_stderr!("-- Found definition for: {:?}", token);
       let defn = entry.unwrap();
@@ -167,15 +186,18 @@ impl State {// TODO for all
       Some(ObjectStore::TokenStore(token.clone()))
     }
   }
-  pub fn assign_value<'av, T: Hash>(&'av mut self, key: &'av str, value: Box<T>, scope: &'av Scope) {}
-  pub fn assign_catcode<'ac>(&'ac mut self, c: &'ac char, cc : Catcode) {}
-  pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, key: &'def Token, definition : Box<T>) { }
-  pub fn assign_internal<'ai>(&'ai mut self, table : Table, key : &'ai str, definition : ObjectStore, 
-                              scope : &'ai Option<Scope>) {
+  pub fn assign_value<'av>(&'av mut self, key: &'av str, value: ObjectStore, scope: &'av Option<Scope>) {
+    self.assign_internal(Table::Value, key, value, scope);
+    return;
+  }
+  pub fn assign_catcode<'ac>(&'ac mut self, c: &'ac char, cc: Catcode) {}
+  pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, key: &'def Token, definition: Box<T>) {}
+  pub fn assign_internal<'ai>(&'ai mut self, table: Table, key: &'ai str, definition: ObjectStore, scope: &'ai Option<Scope>) {
     let mut fallback_store = HashMap::new();
     let mut store = match table {
       Table::Meaning => &mut self.meaning,
-      _ => &mut fallback_store
+      Table::Value => &mut self.value,
+      _ => &mut fallback_store,
     };
 
     store.insert(key.to_string(), definition);
@@ -191,30 +213,37 @@ impl State {// TODO for all
     // Ignore attempts to (re)define $cs from tex sources
     //  my $cs = $definition->getCS->getCSName;
     let token = match &definition {
-      &ObjectStore::ExpandableStore(ref defn) => {defn.get_cs()},
-      &ObjectStore::ConstructorStore(ref defn) => {defn.get_cs()},
-      &ObjectStore::PrimitiveStore(ref defn) => {defn.get_cs()},
-      &ObjectStore::TokenStore(ref token) => {token.clone()},
+      &ObjectStore::ExpandableStore(ref defn) => defn.get_cs(),
+      &ObjectStore::ConstructorStore(ref defn) => defn.get_cs(),
+      &ObjectStore::PrimitiveStore(ref defn) => defn.get_cs(),
+      &ObjectStore::TokenStore(ref token) => token.clone(),
+      _ => T_LETTER!("_wrong_argument_for_install_definition".to_string()),
     };
     let cs = token.get_cs_name();
 
     let cs_locked = cs.clone() + ":locked";
     // TODO, .is_none() should be a real false check
-    let is_cs_locked : Option<Box<bool>> = self.lookup_value(&cs_locked);
-    let is_state_unlocked : Option<Box<bool>> = self.lookup_value("UNLOCKED");
-    if is_cs_locked.is_some() && is_state_unlocked.is_none() {
+    let is_cs_locked = match self.lookup_value(&cs_locked) {
+      Some(&ObjectStore::BoolStore(ref x)) => *x,
+      _ => false,
+    };
+    let is_state_unlocked: bool = match self.lookup_value("UNLOCKED") {
+      Some(&ObjectStore::BoolStore(ref x)) => *x,
+      _ => false,
+    };
+    if is_cs_locked && !is_state_unlocked {
       match self.lookup_value("SOURCEFILE") {
-        Some(s) => {
+        Some(&ObjectStore::StringStore(ref s)) => {
           let tex_or_bib_ext_regex = Regex::new(r"\.(tex|bib)$").unwrap();
           let code_tex_ext_regex = Regex::new(r"\.code\.tex$").unwrap();
           // report if the redefinition seems to come from document source
-          if ((*s == "Anonymous String") || tex_or_bib_ext_regex.is_match(*s)) && (! code_tex_ext_regex.is_match(*s)) {
+          if ((s == "Anonymous String") || tex_or_bib_ext_regex.is_match(&s)) && (!code_tex_ext_regex.is_match(&s)) {
             // TODO:
             //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
           }
           return;
-        },
-        None => {}
+        }
+        _ => {}
       };
     }
     self.assign_internal(Table::Meaning, &cs, definition, scope);

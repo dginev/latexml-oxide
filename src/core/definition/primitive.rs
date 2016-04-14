@@ -15,18 +15,18 @@ use core::document::Document;
 
 
 pub struct PrimitiveOptions {
-  pub bounded : bool,
-  pub mode : String, // TODO
-  pub before_digest : Option<ExpansionClosure>,
-  pub after_digest : Option<DigestionClosure>,
+  pub bounded: bool,
+  pub mode: String, // TODO
+  pub before_digest: Option<ExpansionClosure>,
+  pub after_digest: Option<DigestionClosure>,
 }
 impl Default for PrimitiveOptions {
-  fn default() -> Self { 
+  fn default() -> Self {
     PrimitiveOptions {
-      bounded : false,
-      before_digest : None,
-      after_digest : None,
-      mode : String::new()
+      bounded: false,
+      before_digest: None,
+      after_digest: None,
+      mode: String::new(),
     }
   }
 }
@@ -34,28 +34,28 @@ impl Default for PrimitiveOptions {
 pub type PrimitiveClosure = Arc<Box<Fn(&mut Document, &mut State)>>;
 #[derive(Clone)]
 pub struct Primitive {
-  pub cs : Token,
-  pub paramlist : Option<Parameters>,
-  pub nargs : Option<usize>,
-  pub replacement : String
+  pub cs: Token,
+  pub paramlist: Option<Parameters>,
+  pub nargs: Option<usize>,
+  pub replacement: String,
 }
 impl Default for Primitive {
   fn default() -> Self {
     Primitive {
-      cs : T_CS!("Primitive".to_string()),
-      paramlist : None,
-      nargs : None,
-      replacement : String::new()
+      cs: T_CS!("Primitive".to_string()),
+      paramlist: None,
+      nargs: None,
+      replacement: String::new(),
     }
   }
 }
 
 impl Object for Primitive {}
 impl Definition for Primitive {
-  fn invoke(&self, gullet : &mut Gullet, state : &mut State) -> Vec<Token> {
+  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Vec<Token> {
     Vec::new()
   }
-  fn invoke_primitive(&self, gullet : &mut Stomach, state : &mut State) -> Vec<TBox> {
+  fn invoke_primitive(&self, gullet: &mut Stomach, state: &mut State) -> Vec<TBox> {
     Vec::new()
   }
 
@@ -68,14 +68,16 @@ impl Definition for Primitive {
   fn get_locator(&self) -> String {
     unimplemented!()
   }
-  fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
+  fn get_parameters(&self) -> &Option<Parameters> {
+    &self.paramlist
+  }
   fn get_num_args(&self) -> usize {
     let nargs = match self.nargs {
       Some(n) => n,
       None => {
         match &self.paramlist {
           &Some(ref params) => params.get_num_args(),
-          &None => 0
+          &None => 0,
         }
       }
     };
@@ -83,6 +85,4 @@ impl Definition for Primitive {
     // self.nargs = Some(nargs);
     nargs
   }
-
-
 }

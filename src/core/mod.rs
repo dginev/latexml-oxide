@@ -1,4 +1,5 @@
-#[macro_use] pub mod token;
+#[macro_use]
+pub mod token;
 pub mod stomach;
 pub mod gullet;
 pub mod mouth;
@@ -17,17 +18,17 @@ use common::{Error, DigestionMode};
 use common::error::*;
 use util::pathname::*;
 // use core::token;
-use state::{State, Scope};
-use core::stomach::{Stomach};
-use core::document::{Document};
+use state::{State, Scope, ObjectStore};
+use core::stomach::Stomach;
+use core::document::Document;
 use core::tbox::TBox;
 use core::list::List;
 use core::package::*;
 
 pub struct Core {
-  pub state : State,
-  pub stomach : Stomach,
-  pub preload : Vec<String>,
+  pub state: State,
+  pub stomach: Stomach,
+  pub preload: Vec<String>,
 }
 pub trait Digested {
   fn unlist(&self) -> Vec<&TBox>;
@@ -42,9 +43,9 @@ pub trait Digested {
 impl Default for Core {
   fn default() -> Self {
     Core {
-      preload : Vec::new(),
-      stomach : Stomach::default(),
-      state : State::new()
+      preload: Vec::new(),
+      stomach: Stomach::default(),
+      state: State::new(),
     }
   }
 }
@@ -53,24 +54,26 @@ impl Core {
   pub fn initialize_state(&mut self, preloads: Vec<String>) {
     self.stomach.initialize(); // The current Stomach;
     // let paths = state.lookup_value("SEARCHPATHS");
-    self.state.assign_value("InitialPreloads", Box::new(true), &Scope::Global);
+    self.state.assign_value("InitialPreloads",
+                            ObjectStore::BoolStore(true),
+                            &Some(Scope::Global));
     for preload in preloads.into_iter() {
       // TODO
       match package::input_definitions(self, preload) {
-        Ok(_) => {},
-        Err(_) => {}, // TODO
+        Ok(_) => {}
+        Err(_) => {} // TODO
       }
     }
-    self.state.assign_value("InitialPreloads", Box::new(false), &Scope::Global);
+    self.state.assign_value("InitialPreloads",
+                            ObjectStore::BoolStore(false),
+                            &Some(Scope::Global));
   }
 
-  pub fn digest(&mut self, request : String,
-    preamble : Option<String>, postamble : Option<String>, mode : Option<DigestionMode>, no_init : bool)
-    -> Result<Box<Digested>, Error> {
+  pub fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Box<Digested>, Error> {
 
     let mut ext = match mode {
       Some(m) => Some(m.extension()),
-      None => Some(DigestionMode::TeX.extension())
+      None => Some(DigestionMode::TeX.extension()),
     };
     let mut dir = None;
     let name = if pathname_is_literaldata(&request) {
@@ -81,73 +84,81 @@ impl Core {
       let path = Path::new(&request);
       ext = match path.extension() {
         Some(pe) => Some(pe.to_str().unwrap().to_string()),
-        None => None
+        None => None,
       };
       dir = path.parent();
       match path.file_stem() {
         None => Some("missing_name".to_string()),
-        Some(pf) => Some(pf.to_str().unwrap().to_string())
+        Some(pf) => Some(pf.to_str().unwrap().to_string()),
       }
     };
     // else {
     //   $self->withState(sub {
     //       Fatal('missing_file', $request, undef, "Can't find $mode file $request"); }); } }
     // };
-    let digestion_note = "Digesting ".to_string() +&name.clone().unwrap();
+    let digestion_note = "Digesting ".to_string() + &name.clone().unwrap();
     note_begin(&digestion_note);
-      // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless $options{noinitialize};
-      // $state->assignValue(SOURCEFILE      => $request) if (!pathname_is_literaldata($request));
-      // $state->assignValue(SOURCEDIRECTORY => $dir)     if defined $dir;
-      // $state->unshiftValue(SEARCHPATHS => $dir)
-      //   if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('SEARCHPATHS') };
-      // $state->unshiftValue(GRAPHICSPATHS => $dir)
+    // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless $options{noinitialize};
+    // $state->assignValue(SOURCEFILE      => $request) if (!pathname_is_literaldata($request));
+    // $state->assignValue(SOURCEDIRECTORY => $dir)     if defined $dir;
+    // $state->unshiftValue(SEARCHPATHS => $dir)
+    //   if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('SEARCHPATHS') };
+    // $state->unshiftValue(GRAPHICSPATHS => $dir)
 
-      //   if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
+    // if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
 
-      // $state->installDefinition(LaTeXML::Core::Definition::Expandable->new(T_CS!('\jobname'), undef,
-      //     Tokens(Explode($name))));
-      // # Reverse order, since last opened is first read!
-      // $self->loadPostamble($options{postamble}) if $options{postamble};
-      match package::input_content(self, request.clone()) {
-        Ok(_) => {},
-        Err(e) => println_stderr!("Failed to input content: {:?}", e)
-      };
-      // $self->loadPreamble($options{preamble}) if $options{preamble};
+    // $state->installDefinition(LaTeXML::Core::Definition::Expandable->new(T_CS!('\jobname'), undef,
+    //     Tokens(Explode($name))));
+    // # Reverse order, since last opened is first read!
+    // $self->loadPostamble($options{postamble}) if $options{postamble};
+    match package::input_content(self, request.clone()) {
+      Ok(_) => {}
+      Err(e) => println_stderr!("Failed to input content: {:?}", e),
+    };
+    // $self->loadPreamble($options{preamble}) if $options{preamble};
 
-      // # Now for the Hacky part for BibTeX!!!
-      // if ($mode eq 'BibTeX') {
-      //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
-      //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX); }
+    // # Now for the Hacky part for BibTeX!!!
+    // if ($mode eq 'BibTeX') {
+    //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
+    //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX); }
 
-      let list = self.digest_internal();
-      note_end(&digestion_note);
-      // return $list; });
+    let list = self.digest_internal();
+    note_end(&digestion_note);
+    // return $list; });
     Ok(list)
   }
 
-  pub fn convert_file<'convert>(&'convert mut self, filepath : String) -> Result<Document, Error> {
+  pub fn convert_file<'convert>(&'convert mut self, filepath: String) -> Result<Document, Error> {
     match self.digest(filepath, None, None, None, false) {
       Err(e) => Err(e),
-      Ok(digested) => self.convert_document(digested)
+      Ok(digested) => self.convert_document(digested),
     }
   }
 
-  pub fn convert_document<'convert>(&'convert mut self, digested : Box<Digested>) -> Result<Document, Error> {
+  pub fn convert_document<'convert>(&'convert mut self, digested: Box<Digested>) -> Result<Document, Error> {
     note_begin("Building");
 
     let mut state = &mut self.state;
     state.model.load_schema(); // If needed?
     let mut document = Document::new();
-    let paths_opt : Option<Box<Vec<String>>> = state.lookup_value("SEARCHPATHS");
-    match paths_opt {
-      None => {},
-      Some(paths) => if !paths.is_empty() {
-        match state.lookup_value("INCLUDE_COMMENTS") {
-          Some(ico_flag) => if *ico_flag {
-            let paths_string = paths.join(",");
-            document.insert_pi("latexml", "paths", &paths_string, None); },
-          None => {}
-        };
+    {
+      match state.lookup_value("SEARCHPATHS") {
+        Some(&ObjectStore::VecStringStore(ref paths)) => {
+          if !paths.is_empty() {
+            {
+              match state.lookup_value("INCLUDE_COMMENTS") {
+                Some(&ObjectStore::BoolStore(ico_flag)) => {
+                  if ico_flag {
+                    let paths_string = paths.join(",");
+                    document.insert_pi("latexml", "paths", &paths_string, None);
+                  }
+                }
+                _ => {}
+              };
+            }
+          }
+        }
+        _ => {}
       }
     };
     let pool_ext_regex = Regex::new(r"\.pool$").unwrap();
@@ -158,10 +169,10 @@ impl Core {
       if pool_ext_regex.is_match(preload) {
         continue;
       }
-      let mut options : Option<String> = None;
+      let mut options: Option<String> = None;
       latex_option_regex.replace_all(preload, |refs: &Captures| -> String {
-         options = Some(refs.at(1).unwrap_or("").to_string());
-         String::new()
+        options = Some(refs.at(1).unwrap_or("").to_string());
+        String::new()
       });
       if cls_ext_regex.is_match(preload) {
         cls_ext_regex.replace_all(preload, "");
@@ -185,7 +196,7 @@ impl Core {
     note_begin("Finalizing");
     document.finalize(&mut state);
     note_end("Finalizing");
-    return Ok(document)
+    return Ok(document);
   }
 
   pub fn digest_internal(&mut self) -> Box<Digested> {
@@ -198,9 +209,8 @@ impl Core {
       }
     }
     self.stomach.get_gullet().flush();
-    Box::new(List { boxes : boxes })
+    Box::new(List { boxes: boxes })
   }
 
   // Internal helpers:
-
 }

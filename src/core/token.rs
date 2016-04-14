@@ -20,7 +20,7 @@ pub enum Catcode {
   INVALID,
   CS,
   NOTEXPANDED,
-  MARKER
+  MARKER,
 }
 impl Catcode {
   pub fn is_primitive(&self) -> bool {
@@ -73,15 +73,16 @@ impl Catcode {
       COMMENT => "Comment",
       INVALID => "Invalid",
       CS => "ControlSequence",
-      MARKER => "Marker"
-    }.to_string()
+      MARKER => "Marker",
+    }
+    .to_string()
   }
 }
 
 #[derive(Clone, Hash, Debug)]
-pub struct Token{
- pub text : String,
- pub code : Catcode
+pub struct Token {
+  pub text: String,
+  pub code: Catcode,
 }
 
 #[macro_export]
@@ -183,7 +184,7 @@ macro_rules! ExplodeText(($text:expr) => ({
   ).collect::<Vec<Token>>()
 }));
 
-pub fn untex(digested : Box<Digested>) -> String {
+pub fn untex(digested: Box<Digested>) -> String {
   digested.to_string()
 }
 
@@ -193,7 +194,9 @@ pub fn untex(digested : Box<Digested>) -> String {
 ///======================================================================
 /// Accessors.
 impl Token {
-  pub fn isa_token(&self) -> bool { true }
+  pub fn isa_token(&self) -> bool {
+    true
+  }
 
   /// Get the CS Name of the token. This is the name that definitions will be
   /// stored under; It's the same for various `different' BEGIN tokens, eg.

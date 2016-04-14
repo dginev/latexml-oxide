@@ -5,13 +5,13 @@ use core::definition::Definition;
 use core::document::Document;
 
 pub struct Whatsit {
-  args : Vec<TBox>,
-  properties : HashMap<String, String>, // TODO: This will be an issue, LaTeXML traditionally takes advantage of the fully untyped nature of Perl hashes
-  definition : Box<Definition>
+  args: Vec<TBox>,
+  properties: HashMap<String, String>, // TODO: This will be an issue, LaTeXML traditionally takes advantage of the fully untyped nature of Perl hashes
+  definition: Box<Definition>,
 }
 
 impl Whatsit {
-  pub fn get_arg(&self, n : usize) -> Option<&TBox> {
+  pub fn get_arg(&self, n: usize) -> Option<&TBox> {
     self.args.get(n - 1)
   }
 
@@ -23,7 +23,7 @@ impl Whatsit {
     &self.properties
   }
 
-  pub fn be_absorbed(&mut self, document : &mut Document, state : &mut State) {
+  pub fn be_absorbed(&mut self, document: &mut Document, state: &mut State) {
     // Significant time is consumed here, and associated with a specific CS,
     // so we should be profiling as well!
     // Hopefully the csname is the same that was charged in the digestioned phase!
@@ -32,7 +32,6 @@ impl Whatsit {
     // LaTeXML::Core::Definition::startProfiling($profiled, 'absorb') if $profiled;
     let result = self.definition.do_absorbtion(document, self, state);
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'absorb') if $profiled;
-    return result
+    return result;
   }
-
 }
