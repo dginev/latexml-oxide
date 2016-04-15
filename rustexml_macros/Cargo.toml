@@ -8,4 +8,4 @@ name = "rustexml_macros"
 plugin = true
 
 [dependencies]
-regex = "0.1.48"
+regex = "0.1.66"
