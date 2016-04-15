@@ -14,13 +14,15 @@ git = "https://github.com/KWARC/rust-libxml.git"
 [dependencies.libarchive-sys]
 git = "https://github.com/dginev/libarchive-sys.git"
 
+[dependencies.rustexml_macros]
+path = "rustexml_macros"
 
 [dependencies]
 libc = "~0.1"
-regex = "0.1.48"
 rustc-serialize = "0.3"
 glob = "*"
 rand = "*"
 tempfile = "*"
 time = "*"
 lazy_static = "0.1.*"
+regex = "0.1.48"

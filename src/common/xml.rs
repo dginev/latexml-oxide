@@ -1,11 +1,9 @@
 pub struct XPath {
-  foo: bool
+  foo: bool,
 }
 impl Default for XPath {
   fn default() -> Self {
-    XPath {
-      foo: true
-    }
+    XPath { foo: true }
   }
 }
 
@@ -13,7 +11,5 @@ impl Default for XPath {
 impl XPath {
   // Any subroutine??? maybe not yet...
   // pub register_function(name : String, f : |Font,Font| -> bool
-  pub fn register_ns(&mut self, codeprefix : String, namespace: String) {
-
-  }
+  pub fn register_ns(&mut self, codeprefix: String, namespace: String) {}
 }

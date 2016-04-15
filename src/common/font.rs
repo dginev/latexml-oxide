@@ -1,3 +1,3 @@
 struct Font {
-  todo : bool
+  todo: bool,
 }

@@ -4,32 +4,35 @@ use core::list::List;
 use core::document::Document;
 use core::token;
 
-const CONVERTER_IDENTITY : &'static str = "rustexml (v 0.1)";
+const CONVERTER_IDENTITY: &'static str = "rustexml (v 0.1)";
 
 pub struct ConversionResponse {
-  pub result : Option<String>,
-  pub log : String,
-  pub status : String,
-  pub status_code : usize
+  pub result: Option<String>,
+  pub log: String,
+  pub status: String,
+  pub status_code: usize,
 }
 pub struct Runtime {
-  pub status : String,
-  pub status_code : usize
+  pub status: String,
+  pub status_code: usize,
 }
 pub struct Converter {
-  runtime : Runtime,
-  ready : bool,
-  opts : Config,
-  core : Core
+  runtime: Runtime,
+  ready: bool,
+  opts: Config,
+  core: Core,
 }
 
 impl Converter {
-  pub fn from_config(opts : Config) -> Converter {
+  pub fn from_config(opts: Config) -> Converter {
     Converter {
-      runtime : Runtime{status: String::new(), status_code: 3},
-      ready : false,
-      opts : opts,
-      core : Core::default()
+      runtime: Runtime {
+        status: String::new(),
+        status_code: 3,
+      },
+      ready: false,
+      opts: opts,
+      core: Core::default(),
     }
   }
   pub fn initialize_session<'initlifetime>(&'initlifetime mut self) {
@@ -45,25 +48,26 @@ impl Converter {
     "mock flush log".to_string()
   }
 
-  pub fn convert(mut self, source : String) -> Result<ConversionResponse, Error> {
+  pub fn convert(mut self, source: String) -> Result<ConversionResponse, Error> {
     // 1 Prepare for conversion
     // 1.1 Initialize session if needed:
     if !self.ready {
       self.initialize_session()
     }
-    if !self.ready { // We can't initialize, return error:
+    if !self.ready {
+      // We can't initialize, return error:
       return Ok(ConversionResponse {
         result: None,
-        log : self.flush_log(),
-        status : "Initialization failed.".to_string(),
-        status_code : 3
+        log: self.flush_log(),
+        status: "Initialization failed.".to_string(),
+        status_code: 3,
       });
     }
 
     self.bind_log();
     // 1.2 Inform of identity, increase conversion counter
     if self.opts.verbosity >= 0 {
-      println_stderr!("{:?}",CONVERTER_IDENTITY);
+      println_stderr!("{:?}", CONVERTER_IDENTITY);
       // println_stderr!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} >= 1;
       // println_stderr!("processing started " . localtime() . "\n"; )
     }
@@ -74,19 +78,23 @@ impl Converter {
     // - Fragments need to have a default pre- and postamble, if none provided
     let current_preamble = match self.opts.whatsin {
       DataSize::Math => Some("literal:\\begin{document}\\ensuremathfollows".to_string()),
-      DataSize::Fragment => match self.opts.preamble.clone() {
-        Some(p) => Some(p.clone()),
-        None => Some("standard_preamble.tex".to_string())
-      },
-      _ => None
+      DataSize::Fragment => {
+        match self.opts.preamble.clone() {
+          Some(p) => Some(p.clone()),
+          None => Some("standard_preamble.tex".to_string()),
+        }
+      }
+      _ => None,
     };
     let current_postamble = match self.opts.whatsout {
       DataSize::Math => Some("literal:\\ensuremathpreceeds\\end{document}".to_string()),
-      DataSize::Fragment => match self.opts.postamble.clone() {
-        Some(p) => Some(p),
-        None => Some("standard_postamble.tex".to_string())
-      },
-      _ => None
+      DataSize::Fragment => {
+        match self.opts.postamble.clone() {
+          Some(p) => Some(p),
+          None => Some("standard_postamble.tex".to_string()),
+        }
+      }
+      _ => None,
     };
     // TODO:
     // 1.3.3 Archives need to get unpacked in a sandbox (with sufficient bookkeeping)
@@ -138,21 +146,21 @@ impl Converter {
     // 2 Beginning Core conversion - digest the source:
     // my ($digested, $dom, $serialized) = (undef, undef, undef);
     // Should be this, but is overridden by withState.
-    //local $SIG{'ALRM'} = sub { LaTeXML::Common::Error::Fatal('conversion','timeout',
+    // local $SIG{'ALRM'} = sub { LaTeXML::Common::Error::Fatal('conversion','timeout',
     // "Conversion timed out after " . $$opts{timeout} . " seconds!\n"); };
     // alarm($$opts{timeout});
     // my $mode = ($$opts{type} eq 'auto') ? 'TeX' : $$opts{type};
-    let digest_result = self.core.digest(source, current_preamble, current_postamble, self.opts.mode.clone(), true);
+    let digest_result = self.core.digest(source,
+                                         current_preamble,
+                                         current_postamble,
+                                         self.opts.mode.clone(),
+                                         true);
     let digested = match digest_result {
-      Err(_) => {
-        Box::new(List {
-          boxes : Vec::new()
-        })
-      }, // TODO digestion failed, report
-      Ok(d) => d
+      Err(_) => Box::new(List { boxes: Vec::new() }), // TODO digestion failed, report
+      Ok(d) => d,
     };
     // 2.1 Now, convert to DOM and output, if desired.
-    let dom_result : Result<Document,Error>;
+    let dom_result: Result<Document, Error>;
     let serialized = match self.opts.format {
       OutputFormat::TeX => token::untex(digested),
       OutputFormat::Box => {
@@ -161,13 +169,11 @@ impl Converter {
         } else {
           digested.to_string()
         }
-      },
+      }
       _ => {
         dom_result = self.core.convert_document(digested);
         match dom_result {
-          Ok(dom) => {
-            dom.to_string()
-          },
+          Ok(dom) => dom.to_string(),
           Err(e) => {
             println_stderr!("convert document failed: {:?}", e);
             "Fatal: convert document failed".to_string()
@@ -205,12 +211,12 @@ impl Converter {
     //     rmtree($$opts{sourcedirectory});
     //     $$opts{sourcedirectory} = $$opts{archive_sourcedirectory}; }
 
-      // Close and restore STDERR to original condition.
-      // let log = self.flush_log();
-      // $serialized = $dom->to_string if ($dom && (!defined $serialized));
-      // $self->sanitize($log);
+    // Close and restore STDERR to original condition.
+    // let log = self.flush_log();
+    // $serialized = $dom->to_string if ($dom && (!defined $serialized));
+    // $self->sanitize($log);
 
-      // return { result => $serialized, log => $log, status => $$runtime{status}, status_code => $$runtime{status_code} }; }
+    // return { result => $serialized, log => $log, status => $$runtime{status}, status_code => $$runtime{status_code} }; }
     // else {
     // Standard report, if we're not in a Fatal case
     // println_stderr!("\nConversion complete: " . $$runtime{status} . ".\n"; );
@@ -284,9 +290,9 @@ impl Converter {
 
     Ok(ConversionResponse {
       result: Some(serialized),
-      log : log,
-      status : self.runtime.status.clone(),
-      status_code : self.runtime.status_code.clone()
+      log: log,
+      status: self.runtime.status.clone(),
+      status_code: self.runtime.status_code.clone(),
     })
   }
 
@@ -296,5 +302,4 @@ impl Converter {
       self.initialize_session()
     }
   }
-
 }

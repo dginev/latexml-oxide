@@ -1,0 +1,11 @@
+[package]
+name = "rustexml_macros"
+version = "0.1.0"
+authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
+
+[lib]
+name = "rustexml_macros"
+plugin = true
+
+[dependencies]
+regex = "0.1.48"

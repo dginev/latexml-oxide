@@ -5,18 +5,18 @@
 use core::tbox::TBox;
 use core::document::Document;
 
-//======================================================================
+// ======================================================================
 // LaTeXML Object
 //  Base object for all LaTeXML Objects;
 // Defines basic default methods for comparison, printing
 // Tried to use overloading, but the Magic methods lead to hard-to-find
 // (and occasionally quite serious) performance issues -- at least, if you
 // try to have stringify do too much.
-//======================================================================
+// ======================================================================
 pub trait Object {
 
   fn stringify(&self) -> String {
-    unimplemented!()  
+    unimplemented!()
   }
 
   fn to_string(&self) -> String {
@@ -27,7 +27,9 @@ pub trait Object {
   // be careful to avoid recursive errors
 
   // Just how deep of an equality test should this be?
-  fn equals<T>(&self, other : T) -> bool where Self: Sized {
+  fn equals<T>(&self, other: T) -> bool
+    where Self: Sized
+  {
     unimplemented!()
   }
 
@@ -42,14 +44,24 @@ pub trait Object {
     unimplemented!()
   }
 
-  fn notequals<T>(&self, other : &T) -> bool  where Self: Sized {
+  fn notequals<T>(&self, other: &T) -> bool
+    where Self: Sized
+  {
     !self.equals(other)
   }
 
-  fn isa_token(&self) -> bool { false }
-  fn isa_box(&self) -> bool { false }
-  fn is_expandable(&self) -> bool { false }
-  fn is_definition(&self) -> bool { false }
+  fn isa_token(&self) -> bool {
+    false
+  }
+  fn isa_box(&self) -> bool {
+    false
+  }
+  fn is_expandable(&self) -> bool {
+    false
+  }
+  fn is_definition(&self) -> bool {
+    false
+  }
 
   // These should really only make sense for Data objects within the
   // processing stream.
@@ -58,11 +70,13 @@ pub trait Object {
     TBox()
   }
 
-  fn be_Absorbed(&self, document : Document) {
-    unimplemented!() 
+  fn be_Absorbed(&self, document: Document) {
+    unimplemented!()
   }
 
-  fn unlist<T>(&self) -> Vec<T>  where Self: Sized {
+  fn unlist<T>(&self) -> Vec<T>
+    where Self: Sized
+  {
     unimplemented!()
   }
 

@@ -15,26 +15,26 @@ pub enum OutputFormat {
   Box,
   XML,
   HTML5,
-  XHTML
+  XHTML,
 }
 #[derive(Clone)]
 pub enum DataSize {
   Math,
   Fragment,
   Document,
-  Archive
+  Archive,
 }
 #[derive(Clone, Debug)]
 pub enum Error {
   Unexpected,
-  Expected
+  Expected,
 }
 #[derive(Clone)]
 pub enum DigestionMode {
   TeX,
   LaTeX,
   AmSTeX,
-  BibTeX
+  BibTeX,
 }
 impl DigestionMode {
   pub fn extension(&self) -> String {
@@ -42,30 +42,31 @@ impl DigestionMode {
       DigestionMode::TeX => "tex",
       DigestionMode::LaTeX => "tex",
       DigestionMode::AmSTeX => "tex",
-      DigestionMode::BibTeX => "bib"
-    }.to_string()
+      DigestionMode::BibTeX => "bib",
+    }
+    .to_string()
   }
 }
 #[derive(Clone)]
 pub struct Config {
-  pub verbosity : i32,
-  pub format : OutputFormat,
-  pub whatsin : DataSize,
-  pub whatsout : DataSize,
-  pub preamble : Option<String>,
-  pub postamble : Option<String>,
-  pub mode : Option<DigestionMode>,
+  pub verbosity: i32,
+  pub format: OutputFormat,
+  pub whatsin: DataSize,
+  pub whatsout: DataSize,
+  pub preamble: Option<String>,
+  pub postamble: Option<String>,
+  pub mode: Option<DigestionMode>,
 }
 impl Config {
   pub fn new() -> Config {
-  Config {
-    verbosity : 1,
-    format : OutputFormat::XML,
-    whatsin : DataSize::Document,
-    whatsout : DataSize::Document,
-    preamble : None,
-    postamble : None,
-    mode : Some(DigestionMode::LaTeX)
-  }
+    Config {
+      verbosity: 1,
+      format: OutputFormat::XML,
+      whatsin: DataSize::Document,
+      whatsout: DataSize::Document,
+      preamble: None,
+      postamble: None,
+      mode: Some(DigestionMode::LaTeX),
+    }
   }
 }

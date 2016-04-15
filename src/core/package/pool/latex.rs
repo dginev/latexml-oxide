@@ -10,6 +10,7 @@ use core::definition::constructor::ConstructorOptions;
 
 pub fn load_definitions(state: &mut State) {
   {
+    // Only load definitions once
     let latex_loaded: Option<&ObjectStore> = state.lookup_value("latex_pool_loaded");
     match latex_loaded {
       Some(&ObjectStore::BoolStore(flag)) => {
