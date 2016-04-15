@@ -82,10 +82,12 @@ pub fn tokenize_internal(some: String) -> Vec<Token> {
 }
 
 pub fn parse_prototype(proto: &str, state: &mut State) -> ((Token, Option<Parameters>)) {
-  let csname_macro_regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
-  let cs_regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
-  let single_char_regex = Regex::new(r"^(\\.)").unwrap();
-  let active_char_regex = Regex::new(r"^(.)").unwrap();
+  lazy_static! {
+    static ref csname_macro_regex : Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
+    static ref cs_regex : Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
+    static ref single_char_regex : Regex = Regex::new(r"^(\\.)").unwrap();
+    static ref active_char_regex : Regex = Regex::new(r"^(.)").unwrap();
+  }
 
   let mut cs = T_CS!("\\".to_string()); // Should never happen
   let mut final_proto = if csname_macro_regex.is_match(proto) {
@@ -123,12 +125,13 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> ((Token, Option<Parame
 }
 
 pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) -> Option<Parameters> {
+  lazy_static! {
+    static ref nested_check : Regex = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
+    static ref optional_check : Regex = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
+    static ref default_check : Regex = Regex::new(r"^Default:(.*)$").unwrap();
+    static ref paramspec_check : Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
+  }
   let mut parameters = Vec::new();
-  let nested_check = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
-  let optional_check = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
-  let default_check = Regex::new(r"^Default:(.*)$").unwrap();
-  let paramspec_check = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
-
   while !prototype.is_empty() {
     let mut next_proto = String::new();
     // Handle possibly nested cases, such as {Number}

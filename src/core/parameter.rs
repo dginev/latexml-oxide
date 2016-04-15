@@ -44,9 +44,10 @@ impl Parameter {
     // Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
-    let optional_regex = Regex::new(r"^Optional(.+)$").unwrap();
-    let skip_regex = Regex::new(r"^Skip(.+)$").unwrap();
-
+    lazy_static!{
+      static ref optional_regex : Regex = Regex::new(r"^Optional(.+)$").unwrap();
+      static ref skip_regex : Regex = Regex::new(r"^Skip(.+)$").unwrap();
+    }
     let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
     let descriptor = match looked_up_mapping {
       Some(ref descriptor) => Some(descriptor.clone()),

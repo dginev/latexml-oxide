@@ -155,7 +155,9 @@ impl Mouth {
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
   fn split_lines(lines: &str) -> VecDeque<String> {
     // regexes:
-    let linebreak_regex = Regex::new(r"(?s:\015\012|\015|\012|\r)").unwrap();
+    lazy_static! {
+      static ref linebreak_regex : Regex = Regex::new(r"(?s:\015\012|\015|\012|\r)").unwrap();
+    }
     linebreak_regex.split(lines).map(|s| s.to_string()).collect() // And split.
   }
 
@@ -205,7 +207,9 @@ impl Mouth {
         let next_ch = self.chars.get(self.colno);
         if cc == Some(Catcode::SUPER) && // Possible convert ^^x
           next_ch.is_some() && (ch == next_ch.unwrap()) {
-          let lowerhex_regex = Regex::new(r"^[0-9a-f]$").unwrap();
+          lazy_static! {
+            static ref lowerhex_regex : Regex = Regex::new(r"^[0-9a-f]$").unwrap();
+          }
           let c1: Option<&char> = self.chars.get(self.colno + 1);
           let c2: Option<&char> = self.chars.get(self.colno + 2);
           if (self.colno + 2 < self.nchars) &&   // ^^ followed by TWO LOWERCASE Hex digits???
@@ -252,7 +256,10 @@ impl Mouth {
   /// and also locator comments (file, line# info).
   /// LaTeXML::Core::Gullet intercepts them and passes them on at appropriate times.
   pub fn read_token(&mut self, state: &mut State) -> Option<Token> {
-    let sanitize_line_regex = Regex::new(r"((\\ )*)\s*$").unwrap();
+    lazy_static! {
+      static ref sanitize_line_regex: Regex = Regex::new(r"((\\ )*)\s*$").unwrap();
+    }
+
     loop {
       // Iterate till we find a token, or run out. (use return)
       // ===== Get next line, if we need to.

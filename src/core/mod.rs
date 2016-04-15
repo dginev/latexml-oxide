@@ -161,10 +161,12 @@ impl Core {
         _ => {}
       }
     };
-    let pool_ext_regex = Regex::new(r"\.pool$").unwrap();
-    let cls_ext_regex = Regex::new(r"\.cls$").unwrap();
-    let sty_ext_regex = Regex::new(r"\.sty$").unwrap();
-    let latex_option_regex = Regex::new(r"^\[([^\]]*)\]").unwrap();
+    lazy_static! {
+      static ref pool_ext_regex : Regex = Regex::new(r"\.pool$").unwrap();
+      static ref cls_ext_regex : Regex = Regex::new(r"\.cls$").unwrap();
+      static ref sty_ext_regex : Regex = Regex::new(r"\.sty$").unwrap();
+      static ref latex_option_regex : Regex = Regex::new(r"^\[([^\]]*)\]").unwrap();
+    }
     for preload in self.preload.iter() {
       if pool_ext_regex.is_match(preload) {
         continue;

@@ -234,8 +234,10 @@ impl State {
     if is_cs_locked && !is_state_unlocked {
       match self.lookup_value("SOURCEFILE") {
         Some(&ObjectStore::StringStore(ref s)) => {
-          let tex_or_bib_ext_regex = Regex::new(r"\.(tex|bib)$").unwrap();
-          let code_tex_ext_regex = Regex::new(r"\.code\.tex$").unwrap();
+          lazy_static! {
+            static ref tex_or_bib_ext_regex : Regex = Regex::new(r"\.(tex|bib)$").unwrap();
+            static ref code_tex_ext_regex : Regex = Regex::new(r"\.code\.tex$").unwrap();
+          }
           // report if the redefinition seems to come from document source
           if ((s == "Anonymous String") || tex_or_bib_ext_regex.is_match(&s)) && (!code_tex_ext_regex.is_match(&s)) {
             // TODO:

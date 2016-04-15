@@ -31,7 +31,9 @@ pub fn load_definitions(state: &mut State) {
                   ConstructorOptions {
                     after_digest: Some(Arc::new(Box::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| {
                       let options: Option<&TBox> = whatsit.get_arg(1);
-                      let opts_regex = Regex::new(r",\s*").unwrap();
+                      lazy_static!{
+                        static ref opts_regex : Regex = Regex::new(r",\s*").unwrap();
+                      }
                       let class_opts = match options {
                         Some(opts) => opts_regex.split(&opts.to_string()).map(|s| s.to_string()).collect(),
                         None => Vec::new(),
