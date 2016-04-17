@@ -9,3 +9,5 @@ plugin = true
 
 [dependencies]
 regex = "0.1.66"
+libxml = "*"
+lazy_static = "0.1.*"

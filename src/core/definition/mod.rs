@@ -1,7 +1,6 @@
 pub mod expandable;
 pub mod constructor;
 pub mod primitive;
-pub mod compiler;
 
 use core::gullet::Gullet;
 use core::stomach::Stomach;

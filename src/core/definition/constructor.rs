@@ -11,7 +11,6 @@ use core::whatsit::Whatsit;
 use core::parameter::Parameters;
 use core::definition::Definition;
 use core::definition::expandable::ExpansionClosure;
-use core::definition::compiler::*;
 use core::document::Document;
 
 #[derive(Clone)]
@@ -50,8 +49,7 @@ pub struct Constructor {
   pub cs: Token,
   pub paramlist: Option<Parameters>,
   pub nargs: Option<usize>,
-  pub replacement: String,
-  pub replacement_closure: Option<ReplacementClosure>,
+  pub replacement: Option<ReplacementClosure>,
   pub options: ConstructorOptions,
 }
 impl Default for Constructor {
@@ -60,8 +58,7 @@ impl Default for Constructor {
       cs: T_CS!("Constructor".to_string()),
       paramlist: None,
       nargs: None,
-      replacement: String::new(),
-      replacement_closure: None,
+      replacement: None,
       options: ConstructorOptions::default(),
     }
   }
@@ -158,7 +155,7 @@ impl Definition for Constructor {
       pre_closure(document, whatsit, state);
     }
 
-    match &self.replacement_closure {
+    match &self.replacement {
       &None => {}
       &Some(ref main_closure) => {
         main_closure(document,
@@ -178,7 +175,4 @@ impl Definition for Constructor {
 impl Constructor {
   fn execute_before_digest(&self, _stomach: &mut Stomach, _state: &mut State) {}
   fn execute_after_digest(&self, _stomach: &mut Stomach, _state: &mut State) {}
-  pub fn compile(&mut self) {
-    self.replacement_closure = self.compile_replacement();
-  }
 }
