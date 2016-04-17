@@ -4,7 +4,7 @@ A Rust port of LaTeXML. Why?
 The two main reasons:
 
   * LaTeXML is **too slow** for large-scale production use.
-  * Perl has **no street cred** anymore.
+  * Perl 5 has **no street cred** anymore.
 
 Design goals:
 
