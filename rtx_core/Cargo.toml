@@ -1,10 +1,10 @@
 [package]
-name = "rustexml_core"
+name = "rtx_core"
 version = "0.1.0"
 authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
 
 [lib]
-name = "rustexml_core"
+name = "rtx_core"
 crate-type = ["rlib", "dylib", "staticlib"]
 
 [dependencies.libxml]

@@ -1,11 +1,11 @@
-use rustexml_core::common::{Config, DataSize, OutputFormat, Error};
-use rustexml_core::list::List;
-use rustexml_core::document::Document;
-use rustexml_core::token;
-use rustexml_core::Core;
+use rtx_core::common::{Config, DataSize, OutputFormat, Error};
+use rtx_core::list::List;
+use rtx_core::document::Document;
+use rtx_core::token;
+use rtx_core::Core;
 use core::DigestionAPI;
 
-const CONVERTER_IDENTITY: &'static str = "rustexml (v 0.1)";
+const CONVERTER_IDENTITY: &'static str = "rtx (v 0.1)";
 
 pub struct ConversionResponse {
   pub result: Option<String>,

@@ -1,4 +1,4 @@
-# rustexml
+# rtx
 A Rust port of LaTeXML. Why?
 
 The two main reasons:

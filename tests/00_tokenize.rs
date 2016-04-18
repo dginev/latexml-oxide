@@ -1,12 +1,12 @@
 ///**********************************************************************
-/// Test cases for RusteXML
+/// Test cases for rtx
 ///**********************************************************************
-extern crate rustexml;
-use rustexml::util::test::*;
+extern crate rtx;
+use rtx::util::test::*;
 
 #[test]
 fn can_tokenize() {
   let requires = None;
-  
-  rustexml_tests("tests/tokenize", requires);
+
+  rtx_tests("tests/tokenize", requires);
 }

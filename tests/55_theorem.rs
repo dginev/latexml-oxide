@@ -1,13 +1,13 @@
 ///**********************************************************************
-/// Test cases for RusteXML
+/// Test cases for rtx
 ///**********************************************************************
-extern crate rustexml;
-use rustexml::util::test::*;
+extern crate rtx;
+use rtx::util::test::*;
 use std::collections::HashMap;
 
 #[test]
 fn can_theorem() {
   let mut requires = HashMap::new();
   requires.insert("ntheorem", "ntheorem.std");
-  rustexml_tests("tests/theorem", Some(requires));
+  rtx_tests("tests/theorem", Some(requires));
 }

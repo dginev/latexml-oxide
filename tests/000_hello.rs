@@ -1,8 +1,8 @@
-extern crate rustexml_core;
-extern crate rustexml;
+extern crate rtx_core;
+extern crate rtx;
 
-use rustexml::converter::Converter;
-use rustexml_core::common::{Config, OutputFormat};
+use rtx::converter::Converter;
+use rtx_core::common::{Config, OutputFormat};
 #[test]
 fn can_convert_hello() {
   let hello_source = "tests/hello/hello.tex";

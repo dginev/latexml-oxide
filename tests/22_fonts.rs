@@ -1,10 +1,10 @@
 ///**********************************************************************
-/// Test cases for RusteXML
+/// Test cases for rtx
 ///**********************************************************************
-extern crate rustexml;
-use rustexml::util::test::*;
+extern crate rtx;
+use rtx::util::test::*;
 
 #[test]
 fn can_group() {
-  rustexml_tests("tests/fonts", None);
+  rtx_tests("tests/fonts", None);
 }

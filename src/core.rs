@@ -1,15 +1,15 @@
 use regex::{Regex, Captures};
 use std::path::Path;
-use rustexml_core::common::{Error, DigestionMode};
+use rtx_core::common::{Error, DigestionMode};
 // use common::model::{Model};
-use rustexml_core::{Core, Digested};
-use rustexml_core::common::error::*;
-use rustexml_core::util::pathname::*;
-use rustexml_core::state::{State, Scope, ObjectStore};
-use rustexml_core::stomach::Stomach;
-use rustexml_core::document::Document;
-use rustexml_core::tbox::TBox;
-use rustexml_core::list::List;
+use rtx_core::{Core, Digested};
+use rtx_core::common::error::*;
+use rtx_core::util::pathname::*;
+use rtx_core::state::{State, Scope, ObjectStore};
+use rtx_core::stomach::Stomach;
+use rtx_core::document::Document;
+use rtx_core::tbox::TBox;
+use rtx_core::list::List;
 use package::*;
 
 

@@ -1,12 +1,12 @@
 #[macro_use(println_stderr)]
-extern crate rustexml_core;
-extern crate rustexml;
+extern crate rtx_core;
+extern crate rtx;
 
 use std::env;
 use std::process;
 use std::io::Write;
-use rustexml_core::common::{Config, OutputFormat, DataSize};
-use rustexml::converter::Converter;
+use rtx_core::common::{Config, OutputFormat, DataSize};
+use rtx::converter::Converter;
 
 fn main() {
   let mut argv = env::args();

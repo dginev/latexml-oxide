@@ -1,10 +1,10 @@
 [package]
-name = "rustexml"
+name = "rtx"
 version = "0.1.0"
 authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
 
 [lib]
-name = "rustexml"
+name = "rtx"
 crate-type = ["rlib", "dylib", "staticlib"]
 
 [dependencies.libxml]
@@ -13,11 +13,11 @@ git = "https://github.com/KWARC/rust-libxml.git"
 [dependencies.libarchive-sys]
 git = "https://github.com/dginev/libarchive-sys.git"
 
-[dependencies.rustexml_macros]
-path = "rustexml_macros"
+[dependencies.rtx_macros]
+path = "rtx_macros"
 
-[dependencies.rustexml_core]
-path = "rustexml_core"
+[dependencies.rtx_core]
+path = "rtx_core"
 
 [dependencies]
 libc = "~0.1"

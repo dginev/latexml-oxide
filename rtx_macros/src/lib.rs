@@ -1,4 +1,4 @@
-#![crate_name = "rustexml_macros"]
+#![crate_name = "rtx_macros"]
 #![crate_type="dylib"]
 #![feature(quote, plugin_registrar, rustc_private)]
 
@@ -9,7 +9,8 @@ extern crate regex;
 extern crate libxml;
 #[macro_use]
 extern crate lazy_static;
-extern crate rustexml_core;
+#[macro_use]
+extern crate rtx_core;
 
 use syntax::codemap::Span;
 use syntax::parse::token;
@@ -23,9 +24,9 @@ use syntax::fold::Folder;
 use rustc_plugin::Registry;
 
 use regex::{Captures, Regex};
-use rustexml_core::document::Document as Doc;
-use rustexml_core::state::State;
-use rustexml_core::tbox::TBox;
+use rtx_core::document::Document as Doc;
+use rtx_core::state::State;
+use rtx_core::tbox::TBox;
 use std::collections::HashMap;
 // use libxml::tree::Node;
 
@@ -91,37 +92,37 @@ fn build_replacement(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacR
 
   let mut replacement = &*replacement;
   let input_replacement = replacement;
-  println!("replacement IN : {}", input_replacement);
+  println_stderr!("replacement IN : {}", input_replacement);
   let mut consumed;
   while !replacement.is_empty() {
     // Processing instruction: <?name a=v ...?>
     if replacement.starts_with("<?") {
-      println!("-- PI");
+      println_stderr!("-- PI");
       consumed = "<?";
     }
     // Close tag: </name>
     else if replacement.starts_with("</") {
-      println!("-- close tag");
+      println_stderr!("-- close tag");
       consumed = "</";
     }
     // Open tag: <name a=v ...> or .../> (for empty element)
     else if replacement.starts_with("<") {
-      println!("-- open tag");
+      println_stderr!("-- open tag");
       consumed = "<";
     }
     // Substitutable value: argument, property...
     else if replacement.starts_with("#") {
-      println!("-- argument hole");
+      println_stderr!("-- argument hole");
       consumed = "#";
     }
     // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
     else if replacement.find("=").is_some() {
-      println!("-- Attribute");
+      println_stderr!("-- Attribute");
       consumed = &replacement[0..1 + replacement.find("=").unwrap()];
     }
     // Else random text
     else {
-      println!("-- random text");
+      println_stderr!("-- random text");
       consumed = &replacement[0..1];
     }
 
@@ -131,7 +132,7 @@ fn build_replacement(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacR
   // Stub for now, just return a string
   // MacEager::expr(cx.expr_str(sp, InternedString::new("stub")))
   let mock = quote_expr!(cx,
-                         |doc: &mut Doc, args: &Vec<TBox>, props: &HashMap<String, String>, state: &mut State| println!("-- replacement mock executed."));
+                         |doc: &mut Doc, args: &Vec<TBox>, props: &HashMap<String, String>, state: &mut State| println_stderr!("-- replacement mock executed."));
   MacEager::expr(cx.expr_some(sp, mock))
 }
 

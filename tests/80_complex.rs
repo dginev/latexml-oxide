@@ -1,10 +1,10 @@
 ///**********************************************************************
-/// Test cases for RusteXML
+/// Test cases for rtx
 ///**********************************************************************
-extern crate rustexml;
-use rustexml::util::test::*;
+extern crate rtx;
+use rtx::util::test::*;
 
 #[test]
 fn can_complex() {
-  rustexml_tests("tests/complex", None);
+  rtx_tests("tests/complex", None);
 }

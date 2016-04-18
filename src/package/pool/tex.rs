@@ -1,8 +1,8 @@
 use std::sync::Arc;
-use rustexml_core::state::State;
-use rustexml_core::token::*;
-use rustexml_core::parameter::{Parameter, Parameters};
-use rustexml_core::gullet::Gullet;
+use rtx_core::state::State;
+use rtx_core::token::*;
+use rtx_core::parameter::{Parameter, Parameters};
+use rtx_core::gullet::Gullet;
 use package::*;
 use package::pool::latex;
 

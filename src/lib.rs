@@ -6,7 +6,7 @@
 //! The original library can be found at https://github.com/brucemiller/LaTeXML
 
 #![feature(plugin)]
-#![plugin(rustexml_macros)]
+#![plugin(rtx_macros)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -22,7 +22,7 @@ extern crate tempfile;
 extern crate time;
 
 #[macro_use]
-extern crate rustexml_core;
+extern crate rtx_core;
 
 pub mod util;
 pub mod core;

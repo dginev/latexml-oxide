@@ -1,8 +1,8 @@
 ///**********************************************************************
-/// Test cases for RusteXML
+/// Test cases for rtx
 ///**********************************************************************
-extern crate rustexml;
-use rustexml::util::test::*;
+extern crate rtx;
+use rtx::util::test::*;
 use std::collections::HashMap;
 
 #[test]
@@ -10,5 +10,5 @@ fn can_graphics() {
   let mut requires = HashMap::new();
   requires.insert("colors", "dvipsnam.def");
   requires.insert("xcolors", "dvipsnam.def");
-  rustexml_tests("tests/graphics", Some(requires));
+  rtx_tests("tests/graphics", Some(requires));
 }

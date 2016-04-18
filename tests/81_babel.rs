@@ -1,8 +1,8 @@
 ///**********************************************************************
-/// Test cases for RusteXML
+/// Test cases for rtx
 ///**********************************************************************
-extern crate rustexml;
-use rustexml::util::test::*;
+extern crate rtx;
+use rtx::util::test::*;
 use std::collections::HashMap;
 
 #[test]
@@ -15,5 +15,5 @@ fn can_babel() {
   requires.insert("french", "frenchb.ldf");
   requires.insert("page545", "germanb.ldf");
 
-  rustexml_tests("tests/babel", Some(requires));
+  rtx_tests("tests/babel", Some(requires));
 }

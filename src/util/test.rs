@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use libxml::parser::Parser;
 use libxml::tree::Document;
 
-use rustexml_core::Core;
-use rustexml_core::stomach::Stomach;
-use rustexml_core::state::State;
+use rtx_core::Core;
+use rtx_core::stomach::Stomach;
+use rtx_core::state::State;
 
 use core::DigestionAPI;
 
-pub fn rustexml_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) {
+pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) {
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
   }
@@ -22,7 +22,7 @@ pub fn rustexml_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) {
         let tex_file_string = tex_file.to_str().unwrap().to_string();
         let xml_file_string = xml_file.to_str().unwrap().to_string();
         if xml_file.exists() {
-          rustexml_ok(tex_file_string, xml_file_string, name);
+          rtx_ok(tex_file_string, xml_file_string, name);
         } else {
           // Skip, these could be tex fragment files.
         }
@@ -37,7 +37,7 @@ fn validate_requirements(_dirpath: &str, _requires: Option<HashMap<&str, &str>>)
   true
 }
 
-fn rustexml_ok(tex_path: String, xml_path: String, name: String) {
+fn rtx_ok(tex_path: String, xml_path: String, name: String) {
   let tex_strings = process_texfile(tex_path, &name);
   if !tex_strings.is_empty() {
     let xml_strings = process_xmlfile(&xml_path, &name);
