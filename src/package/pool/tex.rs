@@ -1,10 +1,10 @@
 use std::sync::Arc;
-use state::State;
-use core::token::*;
-use core::parameter::{Parameter, Parameters};
-use core::gullet::Gullet;
-use core::package::*;
-use core::package::pool::latex;
+use rustexml_core::state::State;
+use rustexml_core::token::*;
+use rustexml_core::parameter::{Parameter, Parameters};
+use rustexml_core::gullet::Gullet;
+use package::*;
+use package::pool::latex;
 
 pub fn load_definitions(state: &mut State) {
   // No, \documentclass isn't really a primitive -- It's not even TeX!

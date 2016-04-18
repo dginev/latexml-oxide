@@ -1,12 +1,12 @@
 use std::sync::Arc;
 use state::State;
-use core::token::*;
-use core::tbox::TBox;
-use core::gullet::Gullet;
-use core::stomach::Stomach;
-use core::parameter::Parameters;
+use token::*;
+use tbox::TBox;
+use gullet::Gullet;
+use stomach::Stomach;
+use parameter::Parameters;
 use common::object::Object;
-use core::definition::Definition;
+use definition::Definition;
 
 pub type ExpansionClosure = Arc<Box<Fn(&mut Gullet, Vec<Token>, &mut State) -> Vec<Token>>>;
 #[derive(Clone)]
@@ -66,7 +66,7 @@ impl Definition for Expandable {
     // Expand the expandable control sequence. This should be carried out by the Gullet.
     println!("-- expandable invoke for {:?}", self.get_cs());
     if self.trivial_expansion.is_some() {
-      match &self.trivial_expansion { 
+      match &self.trivial_expansion {
         &Some(ref expansion) => expansion.clone(),
         &None => Vec::new(),
       }

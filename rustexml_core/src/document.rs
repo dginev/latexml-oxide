@@ -2,7 +2,7 @@ extern crate libxml;
 
 // use common::model::Model;
 use state::{ObjectStore, State};
-use core::Digested;
+use Digested;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::Node;
 

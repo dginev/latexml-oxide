@@ -1,12 +1,12 @@
 use std::sync::Arc;
 use regex::Regex;
-use state::{Scope, State, ObjectStore};
-use core::package::*;
-use core::token::*;
-use core::tbox::TBox;
-use core::stomach::Stomach;
-use core::whatsit::Whatsit;
-use core::definition::constructor::ConstructorOptions;
+use rustexml_core::state::{Scope, State, ObjectStore};
+use rustexml_core::token::*;
+use rustexml_core::tbox::TBox;
+use rustexml_core::stomach::Stomach;
+use rustexml_core::whatsit::Whatsit;
+use rustexml_core::definition::constructor::ConstructorOptions;
+use package::*;
 
 pub fn load_definitions(state: &mut State) {
   {

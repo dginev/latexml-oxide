@@ -5,15 +5,15 @@ use std::fmt;
 use regex::Regex;
 
 use common::model::Model;
-// use core::stomach::{Stomach};
+// use stomach::{Stomach};
 
-use core::token::{Catcode, Token};
+use token::{Catcode, Token};
 use common::object::Object;
-use core::parameter::Parameter;
-use core::definition::Definition;
-use core::definition::expandable::Expandable;
-use core::definition::constructor::Constructor;
-use core::definition::primitive::Primitive;
+use parameter::Parameter;
+use definition::Definition;
+use definition::expandable::Expandable;
+use definition::constructor::Constructor;
+use definition::primitive::Primitive;
 
 pub enum Scope {
   Global,
@@ -85,7 +85,7 @@ impl Default for State {
 impl State {
   // TODO for all
   pub fn new() -> Self {
-    use core::token::Catcode::*;
+    use token::Catcode::*;
     // TODO: Only standard catcodes for now.
 
     // Setup default catcodes.
@@ -176,8 +176,8 @@ impl State {
       // println_stderr!("-- Found definition for: {:?}", token);
       let defn = entry.unwrap();
       // If a cs has been let to an executable token, lookup ITS defn.
-      // if defn->isa('LaTeXML::Core::Token')
-      // && ($lookupname = $LaTeXML::Core::Token::PRIMITIVE_NAME[$$defn[1]])
+      // if defn->isa('LaTeXML::Token')
+      // && ($lookupname = $LaTeXML::Token::PRIMITIVE_NAME[$$defn[1]])
       // && ($entry      = $$self{meaning}{$lookupname})) {
       // $defn = $$entry[0]; }
       Some(defn.clone())

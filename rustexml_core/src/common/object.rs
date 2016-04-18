@@ -2,8 +2,8 @@
 /// Exported generic functions for dealing with LaTeXML's objects
 ///======================================================================
 
-use core::tbox::TBox;
-use core::document::Document;
+use tbox::TBox;
+use document::Document;
 
 // ======================================================================
 // LaTeXML Object

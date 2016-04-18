@@ -2,16 +2,16 @@ use std::sync::Arc;
 use state::State;
 use common::object::Object;
 
-use core::token::*;
-use core::tbox::TBox;
-use core::gullet::Gullet;
-use core::stomach::Stomach;
-// use core::whatsit::Whatsit;
-use core::parameter::Parameters;
-use core::definition::Definition;
-use core::definition::expandable::ExpansionClosure;
-use core::definition::constructor::DigestionClosure;
-use core::document::Document;
+use token::*;
+use tbox::TBox;
+use gullet::Gullet;
+use stomach::Stomach;
+// use whatsit::Whatsit;
+use parameter::Parameters;
+use definition::Definition;
+use definition::expandable::ExpansionClosure;
+use definition::constructor::DigestionClosure;
+use document::Document;
 
 
 pub struct PrimitiveOptions {

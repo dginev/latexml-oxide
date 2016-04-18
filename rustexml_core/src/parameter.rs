@@ -1,11 +1,11 @@
 use std::sync::Arc;
 use regex::Regex;
-use core::token::Token;
-use core::tbox::TBox;
-use core::gullet::Gullet;
-use core::stomach::Stomach;
-use core::definition::Definition;
-use core::definition::constructor::Constructor;
+use token::Token;
+use tbox::TBox;
+use gullet::Gullet;
+use stomach::Stomach;
+use definition::Definition;
+use definition::constructor::Constructor;
 use state::State;
 
 pub type ReaderClosure = Arc<Box<Fn(&mut Gullet, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>>;

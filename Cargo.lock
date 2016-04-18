@@ -10,6 +10,7 @@ dependencies = [
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.66 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustexml_core 0.1.0",
  "rustexml_macros 0.1.0",
  "tempfile 2.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -136,12 +137,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustexml_core"
+version = "0.1.0"
+dependencies = [
+ "glob 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libarchive-sys 0.0.1 (git+https://github.com/dginev/libarchive-sys.git)",
+ "libc 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libxml 0.0.3 (git+https://github.com/KWARC/rust-libxml.git)",
+ "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 0.1.66 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tempfile 2.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "rustexml_macros"
 version = "0.1.0"
 dependencies = [
  "lazy_static 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "libxml 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.66 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustexml_core 0.1.0",
 ]
 
 [[package]]

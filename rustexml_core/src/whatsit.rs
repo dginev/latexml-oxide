@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use state::State;
-use core::tbox::TBox;
-use core::definition::Definition;
-use core::document::Document;
+use tbox::TBox;
+use definition::Definition;
+use document::Document;
 
 pub struct Whatsit {
   args: Vec<TBox>,
@@ -29,9 +29,9 @@ impl Whatsit {
     // Hopefully the csname is the same that was charged in the digestioned phase!
 
     // my $profiled = $STATE->lookupValue('PROFILING') && $defn->getCS;
-    // LaTeXML::Core::Definition::startProfiling($profiled, 'absorb') if $profiled;
+    // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
     let result = self.definition.do_absorbtion(document, self, state);
-    // LaTeXML::Core::Definition::stopProfiling($profiled, 'absorb') if $profiled;
+    // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
     return result;
   }
 }

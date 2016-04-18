@@ -1,5 +1,5 @@
-use core::token::Token;
-use core::Digested;
+use Digested;
+use token::Token;
 
 /// Box is a Rust keyword, so we use "TBox" instead, as in "TeX Box"
 #[derive(Debug)]

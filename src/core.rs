@@ -1,57 +1,28 @@
-#[macro_use]
-pub mod token;
-pub mod stomach;
-pub mod gullet;
-pub mod mouth;
-pub mod definition;
-pub mod parameter;
-pub mod package;
-pub mod tbox;
-pub mod list;
-pub mod document;
-pub mod whatsit;
-
 use regex::{Regex, Captures};
 use std::path::Path;
-use common::{Error, DigestionMode};
+use rustexml_core::common::{Error, DigestionMode};
 // use common::model::{Model};
-use common::error::*;
-use util::pathname::*;
-// use core::token;
-use state::{State, Scope, ObjectStore};
-use core::stomach::Stomach;
-use core::document::Document;
-use core::tbox::TBox;
-use core::list::List;
-use core::package::*;
+use rustexml_core::{Core, Digested};
+use rustexml_core::common::error::*;
+use rustexml_core::util::pathname::*;
+use rustexml_core::state::{State, Scope, ObjectStore};
+use rustexml_core::stomach::Stomach;
+use rustexml_core::document::Document;
+use rustexml_core::tbox::TBox;
+use rustexml_core::list::List;
+use package::*;
 
-pub struct Core {
-  pub state: State,
-  pub stomach: Stomach,
-  pub preload: Vec<String>,
-}
-pub trait Digested {
-  fn unlist(&self) -> Vec<&TBox>;
-  fn to_string(&self) -> String {
-    "Vec<TBox> for now ".to_string()
-  }
-  fn stringify(&self) -> String {
-    "Vec<TBox> for now ".to_string()
-  }
+
+pub trait DigestionAPI {
+  fn initialize_state(&mut self, preloads: Vec<String>);
+  fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Box<Digested>, Error>;
+  fn convert_file<'convert>(&'convert mut self, filepath: String) -> Result<Document, Error>;
+  fn convert_document<'convert>(&'convert mut self, digested: Box<Digested>) -> Result<Document, Error>;
+  fn digest_internal(&mut self) -> Box<Digested>;
 }
 
-impl Default for Core {
-  fn default() -> Self {
-    Core {
-      preload: Vec::new(),
-      stomach: Stomach::default(),
-      state: State::new(),
-    }
-  }
-}
-
-impl Core {
-  pub fn initialize_state(&mut self, preloads: Vec<String>) {
+impl DigestionAPI for Core {
+  fn initialize_state(&mut self, preloads: Vec<String>) {
     self.stomach.initialize(); // The current Stomach;
     // let paths = state.lookup_value("SEARCHPATHS");
     self.state.assign_value("InitialPreloads",
@@ -59,7 +30,7 @@ impl Core {
                             &Some(Scope::Global));
     for preload in preloads.into_iter() {
       // TODO
-      match package::input_definitions(self, preload) {
+      match input_definitions(self, preload) {
         Ok(_) => {}
         Err(_) => {} // TODO
       }
@@ -69,7 +40,7 @@ impl Core {
                             &Some(Scope::Global));
   }
 
-  pub fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Box<Digested>, Error> {
+  fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Box<Digested>, Error> {
 
     let mut ext = match mode {
       Some(m) => Some(m.extension()),
@@ -107,11 +78,11 @@ impl Core {
 
     // if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
 
-    // $state->installDefinition(LaTeXML::Core::Definition::Expandable->new(T_CS!('\jobname'), undef,
+    // $state->installDefinition(LaTeXML::Definition::Expandable->new(T_CS!('\jobname'), undef,
     //     Tokens(Explode($name))));
     // # Reverse order, since last opened is first read!
     // $self->loadPostamble($options{postamble}) if $options{postamble};
-    match package::input_content(self, request.clone()) {
+    match input_content(self, request.clone()) {
       Ok(_) => {}
       Err(e) => println_stderr!("Failed to input content: {:?}", e),
     };
@@ -128,14 +99,14 @@ impl Core {
     Ok(list)
   }
 
-  pub fn convert_file<'convert>(&'convert mut self, filepath: String) -> Result<Document, Error> {
+  fn convert_file<'convert>(&'convert mut self, filepath: String) -> Result<Document, Error> {
     match self.digest(filepath, None, None, None, false) {
       Err(e) => Err(e),
       Ok(digested) => self.convert_document(digested),
     }
   }
 
-  pub fn convert_document<'convert>(&'convert mut self, digested: Box<Digested>) -> Result<Document, Error> {
+  fn convert_document<'convert>(&'convert mut self, digested: Box<Digested>) -> Result<Document, Error> {
     note_begin("Building");
 
     let mut state = &mut self.state;
@@ -201,7 +172,7 @@ impl Core {
     return Ok(document);
   }
 
-  pub fn digest_internal(&mut self) -> Box<Digested> {
+  fn digest_internal(&mut self) -> Box<Digested> {
     let mut boxes = Vec::new();
     let mut state = &mut self.state;
 

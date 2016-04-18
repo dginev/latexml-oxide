@@ -1,10 +1,13 @@
-use core::Core;
-use core::stomach::Stomach;
-use state::State;
 use glob::glob;
 use std::collections::HashMap;
 use libxml::parser::Parser;
 use libxml::tree::Document;
+
+use rustexml_core::Core;
+use rustexml_core::stomach::Stomach;
+use rustexml_core::state::State;
+
+use core::DigestionAPI;
 
 pub fn rustexml_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) {
   if !validate_requirements(dirpath, requires) {

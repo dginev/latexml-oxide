@@ -1,9 +1,9 @@
 use state::{Scope, State, ObjectStore};
 // use common::error::*;
-use core::gullet::Gullet;
-use core::token::{Token, Catcode};
-use core::definition::Definition;
-use core::tbox::*;
+use gullet::Gullet;
+use token::{Token, Catcode};
+use definition::Definition;
+use tbox::*;
 
 static MAXSTACK: usize = 200;
 /// [CONSTANT]
@@ -188,7 +188,7 @@ impl Stomach {
       // // However, spaces normally would have be digested away as positioning...
       // my $badspace = pack('U', 0xA0) . "\x{0335}";    // This is at space's pos in OT1
       // $comment =~ s/\Q$badspace\E/ /g;
-      // return LaTeXML::Core::Comment->new($comment); }
+      // return LaTeXML::Comment->new($comment); }
       Vec::new()
     }
     // TODO

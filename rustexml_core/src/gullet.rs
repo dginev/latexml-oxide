@@ -1,9 +1,9 @@
 use std::collections::VecDeque;
 use state::{State, Scope, ObjectStore};
 use common::object::Object;
-use core::definition::Definition;
-use core::mouth::Mouth;
-use core::token::{Token, Catcode};
+use definition::Definition;
+use mouth::Mouth;
+use token::{Token, Catcode};
 
 #[derive(Clone)]
 pub struct MouthRuntime {
@@ -98,7 +98,7 @@ impl Gullet {
                 Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
                 Catcode::MARKER => {
                   // TODO:
-                  // LaTeXML::Core::Definition::stopProfiling($token, 'expand'); } }
+                  // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
                 }
                 _ => {
                   next_token = Some(pushback_token);
@@ -121,7 +121,7 @@ impl Gullet {
                 Catcode::COMMENT => self.pending_comments.push_back(token),
                 Catcode::MARKER => {
                   // TODO:
-                  // LaTeXML::Core::Definition::stopProfiling($token, 'expand'); } }
+                  // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
                 }
                 _ => {
                   next_token = Some(token);
@@ -191,7 +191,7 @@ impl Gullet {
                   }
                 }
                 // Catcode::MARKER => {
-                //   LaTeXML::Core::Definition::stopProfiling($token, 'expand'); }
+                //   LaTeXML::Definition::stopProfiling($token, 'expand'); }
                 // }
                 _ => {
                   let looked_up_definition: Option<ObjectStore> = state.lookup_definition(&token);

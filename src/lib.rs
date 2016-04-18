@@ -21,9 +21,10 @@ extern crate rand;
 extern crate tempfile;
 extern crate time;
 
-#[macro_use]pub mod aux_macros;
-#[macro_use]pub mod core;
-pub mod common;
-pub mod state;
-pub mod converter;
+#[macro_use]
+extern crate rustexml_core;
+
 pub mod util;
+pub mod core;
+pub mod converter;
+pub mod package;

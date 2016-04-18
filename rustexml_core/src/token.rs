@@ -1,5 +1,4 @@
-use core::Digested;
-
+use Digested;
 #[derive(PartialEq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
   ESCAPE,
@@ -24,7 +23,7 @@ pub enum Catcode {
 }
 impl Catcode {
   pub fn is_primitive(&self) -> bool {
-    use core::token::Catcode::*;
+    use token::Catcode::*;
     match *self {
       // Primitives
       ESCAPE => true,
@@ -51,7 +50,7 @@ impl Catcode {
   }
 
   pub fn name(&self) -> String {
-    use core::token::Catcode::*;
+    use token::Catcode::*;
     match *self {
       // Primitive
       ESCAPE => "Escape",
@@ -87,48 +86,48 @@ pub struct Token {
 
 #[macro_export]
 macro_rules! T_BEGIN(() => ({
-  use $crate::core::token::Token;
+  use $crate::token::Token;
   Token { text: "{".to_string(), code: Catcode::BEGIN }
 }));
 
 #[macro_export]
 macro_rules! T_END(() => ({
-  use $crate::core::token::Token;
+  use $crate::token::Token;
   Token { text: "}".to_string(), code: Catcode::END }
 }));
 #[macro_export]
 macro_rules! T_MATH(() => ({
-  use $crate::core::token::Token;
+  use $crate::token::Token;
   Token { text: "$".to_string(), code: Catcode::MATH }
 }));
 #[macro_export]
 macro_rules! T_ALIGN(() => ({
-  use $crate::core::token::Token;
+  use $crate::token::Token;
   Token { text: "&".to_string(), code: Catcode::ALIGN }
 }));
 #[macro_export]
 macro_rules! T_PARAM(() => ({
-  use $crate::core::token::Token;
+  use $crate::token::Token;
   Token { text: "#".to_string(), code: Catcode::PARAM }
 }));
 #[macro_export]
 macro_rules! T_SUPER(() => ({
-  use $crate::core::token::Token;
+  use $crate::token::Token;
  Token { text: "^".to_string(), code: Catcode::SUPER }
 }));
 #[macro_export]
 macro_rules! T_SUB(() => ({
-  use $crate::core::token::Token;
+  use $crate::token::Token;
   Token { text: "_".to_string(), code: Catcode::SUB }
 }));
 #[macro_export]
 macro_rules! T_SPACE(() => ({
-  use $crate::core::token::Token;
+  use $crate::token::Token;
   Token { text: " ".to_string(), code: Catcode::SPACE }
 }));
 #[macro_export]
 macro_rules! T_CR(() => ({
-  use $crate::core::token::Token;
+  use $crate::token::Token;
   Token { text: "\n".to_string(), code: Catcode::SPACE }
 }));
 #[macro_export]

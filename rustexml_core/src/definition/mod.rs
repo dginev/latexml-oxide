@@ -2,13 +2,13 @@ pub mod expandable;
 pub mod constructor;
 pub mod primitive;
 
-use core::gullet::Gullet;
-use core::stomach::Stomach;
-use core::token::*;
-use core::tbox::TBox;
-use core::parameter::Parameters;
-use core::document::Document;
-use core::whatsit::Whatsit;
+use gullet::Gullet;
+use stomach::Stomach;
+use token::*;
+use tbox::TBox;
+use parameter::Parameters;
+use document::Document;
+use whatsit::Whatsit;
 use common::object::Object;
 use state::State;
 

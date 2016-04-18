@@ -7,6 +7,9 @@ authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
 name = "rustexml_macros"
 plugin = true
 
+[dependencies.rustexml_core]
+path = "../rustexml_core"
+
 [dependencies]
 regex = "0.1.66"
 libxml = "*"

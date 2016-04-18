@@ -1,5 +1,5 @@
-use core::tbox::TBox;
-use core::Digested;
+use Digested;
+use tbox::TBox;
 
 /// Box is a Rust keyword, so we use "TBox" instead, as in "TeX Box"
 #[derive(Debug)]

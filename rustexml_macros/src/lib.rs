@@ -9,12 +9,12 @@ extern crate regex;
 extern crate libxml;
 #[macro_use]
 extern crate lazy_static;
+extern crate rustexml_core;
 
 use syntax::codemap::Span;
 use syntax::parse::token;
 use syntax::ast;
 use syntax::ast::TokenTree;
-use syntax::parse::token::InternedString;
 use syntax::ext::base::{ExtCtxt, MacResult, DummyResult, MacEager};
 use syntax::ext::build::AstBuilder;  // trait for expr_usize
 use syntax::print::pprust;
@@ -23,8 +23,11 @@ use syntax::fold::Folder;
 use rustc_plugin::Registry;
 
 use regex::{Captures, Regex};
-use std::sync::Arc;
-use libxml::tree::Node;
+use rustexml_core::document::Document as Doc;
+use rustexml_core::state::State;
+use rustexml_core::tbox::TBox;
+use std::collections::HashMap;
+// use libxml::tree::Node;
 
 // impl Constructor {
 //   pub fn compile_replacement(&self) -> Option<ReplacementClosure> {
@@ -127,7 +130,9 @@ fn build_replacement(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacR
 
   // Stub for now, just return a string
   // MacEager::expr(cx.expr_str(sp, InternedString::new("stub")))
-  MacEager::expr(cx.expr_none(sp))
+  let mock = quote_expr!(cx,
+                         |doc: &mut Doc, args: &Vec<TBox>, props: &HashMap<String, String>, state: &mut State| println!("-- replacement mock executed."));
+  MacEager::expr(cx.expr_some(sp, mock))
 }
 
 

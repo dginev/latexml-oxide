@@ -1,32 +1,34 @@
 #[macro_use(println_stderr)]
+extern crate rustexml_core;
 extern crate rustexml;
 
 use std::env;
 use std::process;
 use std::io::Write;
-use rustexml::converter::{Converter};
-use rustexml::common::{Config, OutputFormat, DataSize};
+use rustexml_core::common::{Config, OutputFormat, DataSize};
+use rustexml::converter::Converter;
 
 fn main() {
   let mut argv = env::args();
-  println!("Welcome to {:?} -- a Rust implementation for LaTeXML", argv.next().unwrap());
-  
+  println!("Welcome to {:?} -- a Rust implementation for LaTeXML",
+           argv.next().unwrap());
+
   let source = match argv.next() {
     Some(s) => s,
     None => {
-     println!("Please provide a source document! Exiting...");
-     process::exit(1);
-   }
+      println!("Please provide a source document! Exiting...");
+      process::exit(1);
+    }
   };
   // Prepare to convert:
   let opts = Config {
-    verbosity : 0,
+    verbosity: 0,
     format: OutputFormat::HTML5,
     whatsin: DataSize::Document,
     whatsout: DataSize::Document,
     preamble: None,
     postamble: None,
-    mode: None
+    mode: None,
   };
   let mut converter = Converter::from_config(opts.clone());
   converter.prepare_session(&opts);
@@ -36,9 +38,10 @@ fn main() {
     Ok(r) => {
       println_stderr!("{:?}", r.log);
       println!("{:?}
-        ", r.result);
-    },
-    Err(e) => println_stderr!("Conversion error: {:?}", e)
+        ",
+               r.result);
+    }
+    Err(e) => println_stderr!("Conversion error: {:?}", e),
   };
 
 

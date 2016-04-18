@@ -3,15 +3,15 @@ use std::collections::HashMap;
 use state::State;
 use common::object::Object;
 
-use core::token::*;
-use core::tbox::TBox;
-use core::gullet::Gullet;
-use core::stomach::Stomach;
-use core::whatsit::Whatsit;
-use core::parameter::Parameters;
-use core::definition::Definition;
-use core::definition::expandable::ExpansionClosure;
-use core::document::Document;
+use token::*;
+use tbox::TBox;
+use gullet::Gullet;
+use stomach::Stomach;
+use whatsit::Whatsit;
+use parameter::Parameters;
+use definition::Definition;
+use definition::expandable::ExpansionClosure;
+use document::Document;
 
 #[derive(Clone)]
 pub struct ConstructorOptions {
@@ -78,7 +78,7 @@ impl Definition for Constructor {
     // TODO: profiling / tracing
     // let profiled = state.lookup_value("PROFILING") && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // let tracing = state.lookup_value("TRACINGCOMMANDS");
-    // LaTeXML::Core::Definition::startProfiling($profiled, "digest") if $profiled;
+    // LaTeXML::Definition::startProfiling($profiled, "digest") if $profiled;
 
     let pre = self.execute_before_digest(stomach, state);
 
@@ -118,7 +118,7 @@ impl Definition for Constructor {
     //   $whatsit->setBody(@post, $stomach->digestNextBody((ref $cap ? $cap : undef))); @post = (); }
 
     // my @postpost = $self->executeAfterDigestBody($stomach, $whatsit);
-    // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
+    // LaTeXML::Definition::stopProfiling($profiled, 'digest') if $profiled;
     // return (@pre, $whatsit, @post, @postpost);
     Vec::new()
   }

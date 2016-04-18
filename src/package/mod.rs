@@ -1,11 +1,12 @@
 use std::sync::Arc;
 use regex::Regex;
-use common::object::Object;
-use core::Core;
-use state::State;
-use core::token::*;
-use core::parameter::{Parameter, Parameters};
-use core::mouth::Mouth;
+use rustexml_core::Core;
+use rustexml_core::common::object::Object;
+use rustexml_core::state::{State, ObjectStore};
+use rustexml_core::token::*;
+use rustexml_core::parameter::{Parameter, Parameters};
+use rustexml_core::mouth::Mouth;
+
 // use common::{Error};
 
 pub fn input_definitions(core: &mut Core, file: String) -> Result<(), ()> {
@@ -226,7 +227,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
 macro_rules! DefMacroI(
   ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (
   {
-    use $crate::core::definition::expandable::{Expandable};
+    use rustexml_core::definition::expandable::{Expandable};
 //       // Optimization: Defer till macro actually used
 //       // if !$cs.is_empty() { // && $options{mathactive}
 //         // $state.assign_mathcode($cs, 0x8000, $options{scope}); }
@@ -235,7 +236,7 @@ macro_rules! DefMacroI(
 //       //   $state.assign_value(ToString($cs)+":locked", true, "global")
 //       // }
 
-    $state.install_definition(::state::ObjectStore::ExpandableStore(Arc::new(Box::new(
+    $state.install_definition(::rustexml_core::state::ObjectStore::ExpandableStore(Arc::new(Box::new(
       Expandable { cs: $cs, paramlist: $paramlist, expansion: Arc::new(Box::new($expansion)),
        ..Expandable::default()}))),
       &None);
@@ -254,17 +255,32 @@ macro_rules! DefMacro(
   )
 );
 
+macro_rules! compile_replacement(
+  ($replacement:expr) => (
+  {
+// For the replacement builders
+    use rustexml_core::document::Document as Doc;
+    use rustexml_core::tbox::TBox;
+    use std::collections::HashMap;
+    match build_replacement!($replacement) {
+      None => None,
+      Some(f) => Some(Arc::new(Box::new(f)))
+    }
+  }
+  )
+);
+
 #[macro_export]
 macro_rules! DefConstructorI(
   ($cs:expr, $paramlist:expr, $replacement:expr, $options: expr, $state:expr) => (
   {
-    use $crate::core::definition::constructor::Constructor;
-    use $crate::core::package;
+    use rustexml_core::definition::constructor::Constructor;
+    use $crate::package;
 // let mode    = $options.mode;
 // let bounded = $options.bounded;
-    let mut constructor = Constructor { cs: $cs, paramlist: $paramlist, replacement: build_replacement!($replacement), ..Constructor::default()};
+    let mut constructor = Constructor { cs: $cs, paramlist: $paramlist, replacement: compile_replacement!($replacement), ..Constructor::default()};
 
-    $state.install_definition(::state::ObjectStore::ConstructorStore(Arc::new(Box::new(constructor))), &None);
+    $state.install_definition(::rustexml_core::state::ObjectStore::ConstructorStore(Arc::new(Box::new(constructor))), &None);
 
 //   before_digest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
 //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),

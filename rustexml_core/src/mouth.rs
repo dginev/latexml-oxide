@@ -8,7 +8,7 @@ use regex::Regex;
 use common::error::*;
 use state::{State, Scope, ObjectStore};
 #[macro_use]
-use core::token::*;
+use token::*;
 
 #[derive(PartialEq, Clone)]
 pub enum FoodType {
@@ -329,7 +329,7 @@ impl Mouth {
   fn dispatch_char(&mut self, ch: char, cc: Catcode, state: &mut State) -> Option<Token> {
     // Possibly want to think about caching (common) letters, etc to keep from
     // creating tokens like crazy... or making them more compact... or ???
-    use core::token::Catcode::*;
+    use token::Catcode::*;
     match cc {
       ESCAPE => self.handle_escape(ch, state), // T_ESCAPE
       BEGIN => {

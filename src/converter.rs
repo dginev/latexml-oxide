@@ -1,8 +1,9 @@
-use common::{Config, DataSize, OutputFormat, Error};
-use core::{Core, Digested};
-use core::list::List;
-use core::document::Document;
-use core::token;
+use rustexml_core::common::{Config, DataSize, OutputFormat, Error};
+use rustexml_core::list::List;
+use rustexml_core::document::Document;
+use rustexml_core::token;
+use rustexml_core::Core;
+use core::DigestionAPI;
 
 const CONVERTER_IDENTITY: &'static str = "rustexml (v 0.1)";
 
