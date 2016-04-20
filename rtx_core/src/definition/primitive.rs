@@ -31,7 +31,7 @@ impl Default for PrimitiveOptions {
   }
 }
 
-pub type PrimitiveClosure = Arc<Box<Fn(&mut Document, &mut State)>>;
+pub type PrimitiveClosure = Arc<Fn(&mut Document, &mut State)>;
 #[derive(Clone)]
 pub struct Primitive {
   pub cs: Token,

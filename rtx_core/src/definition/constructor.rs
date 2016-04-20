@@ -35,14 +35,13 @@ impl Default for ConstructorOptions {
   }
 }
 
-pub type DigestionClosure = Arc<Box<Fn(&mut Stomach, &Whatsit, &mut State)>>;
-pub type InnerReplacementClosure = Box<Fn(&mut Document,
-                                          &Vec<TBox>,
-                                          &HashMap<String, String>,
-                                          &mut State)
-                                         >;
-pub type ReplacementClosure = Arc<InnerReplacementClosure>;
-pub type ConstructionClosure = Arc<Box<Fn(&mut Document, &Whatsit, &mut State)>>;
+pub type DigestionClosure = Arc<Fn(&mut Stomach, &Whatsit, &mut State)>;
+pub type ReplacementClosure = Arc<Fn(&mut Document,
+                                     &Vec<TBox>,
+                                     &HashMap<String, String>,
+                                     &mut State)
+                                    >;
+pub type ConstructionClosure = Arc<Fn(&mut Document, &Whatsit, &mut State)>;
 
 #[derive(Clone)]
 pub struct Constructor {

@@ -36,8 +36,8 @@ pub enum ObjectStore {
   BoolStore(bool),
   TokenStore(Token),
   ExpandableStore(Arc<Box<Expandable>>),
-  PrimitiveStore(Arc<Box<Primitive>>),
-  ConstructorStore(Arc<Box<Constructor>>),
+  PrimitiveStore(Arc<Primitive>),
+  ConstructorStore(Arc<Constructor>),
 }
 
 impl fmt::Debug for ObjectStore {

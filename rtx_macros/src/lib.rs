@@ -51,7 +51,7 @@ use std::collections::HashMap;
 
 //     // println_stderr!("-- Preparing translation closure for: \n{:?}\n",
 //     //                 replacement);
-//     Some(Arc::new(Box::new(|document, args, props, state| {
+//     Some(Arc::new(|document, args, props, state| {
 //       let mut savenode: Option<Node> = None;
 //       TranslateConstructor!(replacement, floats, savenode);
 //       match savenode {
@@ -59,7 +59,7 @@ use std::collections::HashMap;
 //         Some(savenode) => document.set_node(savenode),
 //       };
 //       return;
-//     })))
+//     }))
 //   }
 // }
 

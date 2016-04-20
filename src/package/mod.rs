@@ -236,8 +236,8 @@ macro_rules! DefMacroI(
 //       //   $state.assign_value(ToString($cs)+":locked", true, "global")
 //       // }
 
-    $state.install_definition(::rtx_core::state::ObjectStore::ExpandableStore(Arc::new(Box::new(
-      Expandable { cs: $cs, paramlist: $paramlist, expansion: Arc::new(Box::new($expansion)),
+    $state.install_definition(::rtx_core::state::ObjectStore::ExpandableStore(Arc::new(
+      Box::new(Expandable { cs: $cs, paramlist: $paramlist, expansion: Arc::new($expansion),
        ..Expandable::default()}))),
       &None);
   }
@@ -264,7 +264,7 @@ macro_rules! compile_replacement(
     use std::collections::HashMap;
     match build_replacement!($replacement) {
       None => None,
-      Some(f) => Some(Arc::new(Box::new(f)))
+      Some(f) => Some(Arc::new(f))
     }
   }
   )
@@ -280,7 +280,7 @@ macro_rules! DefConstructorI(
 // let bounded = $options.bounded;
     let mut constructor = Constructor { cs: $cs, paramlist: $paramlist, replacement: compile_replacement!($replacement), ..Constructor::default()};
 
-    $state.install_definition(::rtx_core::state::ObjectStore::ConstructorStore(Arc::new(Box::new(constructor))), &None);
+    $state.install_definition(::rtx_core::state::ObjectStore::ConstructorStore(Arc::new(constructor)), &None);
 
 //   before_digest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
 //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),

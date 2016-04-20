@@ -8,8 +8,8 @@ use definition::Definition;
 use definition::constructor::Constructor;
 use state::State;
 
-pub type ReaderClosure = Arc<Box<Fn(&mut Gullet, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>>;
-pub type ReversionClosure = Arc<Box<Fn(&mut Gullet, Vec<Token>, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>>;
+pub type ReaderClosure = Arc<Fn(&mut Gullet, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>;
+pub type ReversionClosure = Arc<Fn(&mut Gullet, Vec<Token>, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>;
 #[derive(Clone)]
 pub struct Parameter {
   pub novalue: bool,
@@ -30,10 +30,10 @@ impl Default for Parameter {
       name: "parameter_default".to_string(),
       spec: String::new(),
       extra: Vec::new(),
-      reader: Arc::new(Box::new(|_gullet, _args, _state| {
+      reader: Arc::new(|_gullet, _args, _state| {
         println_stderr!("-- Warning: please define a real reader, this is a mock fallback!");
         Vec::new()
-      })),
+      }),
       reversion: None,
     }
   }

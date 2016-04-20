@@ -8,7 +8,7 @@ use parameter::Parameters;
 use common::object::Object;
 use definition::Definition;
 
-pub type ExpansionClosure = Arc<Box<Fn(&mut Gullet, Vec<Token>, &mut State) -> Vec<Token>>>;
+pub type ExpansionClosure = Arc<Fn(&mut Gullet, Vec<Token>, &mut State) -> Vec<Token>>;
 #[derive(Clone)]
 pub struct Expandable {
   pub is_protected: bool,
@@ -28,7 +28,7 @@ impl Default for Expandable {
       locator: String::new(),
       cs: T_CS!("Expandable".to_string()),
       paramlist: None,
-      expansion: Arc::new(Box::new(|_gullet, _args, _state| Vec::new())),
+      expansion: Arc::new(|_gullet, _args, _state| Vec::new()),
     }
   }
 }

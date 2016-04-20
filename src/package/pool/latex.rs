@@ -29,7 +29,7 @@ pub fn load_definitions(state: &mut State) {
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
                   ConstructorOptions {
-                    after_digest: Some(Arc::new(Box::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| {
+                    after_digest: Some(Arc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| {
                       let options: Option<&TBox> = whatsit.get_arg(1);
                       lazy_static!{
                         static ref opts_regex : Regex = Regex::new(r",\s*").unwrap();
@@ -43,7 +43,7 @@ pub fn load_definitions(state: &mut State) {
                                  class_opts,
                                  vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())]);
                       return;
-                    }))),
+                    })),
                     ..ConstructorOptions::default()
                   },
                   state);
@@ -66,7 +66,7 @@ pub fn load_definitions(state: &mut State) {
 
   // TODO:
   // state.assign_value(current_environment, String::new(), Scope::Global);
-  // DefMacroI!("\@currenvir", "", Arc::new(Box::new( move |state| {})), state);
+  // DefMacroI!("\@currenvir", "", Arc::new(move |state| {}), state);
   // DefPrimitive("\lx@setcurrenvir{}", sub {
   //     DefMacro("\@currenvir", $_[1]);
   //     state.assign_value(current_environment => ToString($_[1])); });
@@ -128,17 +128,17 @@ pub fn load_definitions(state: &mut State) {
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
                   ConstructorOptions {
-                    before_digest: Some(Arc::new(Box::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| {
+                    before_digest: Some(Arc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| {
                       // onlyPreamble('\usepackage');
-                    }))),
-                    after_digest: Some(Arc::new(Box::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| {
+                    })),
+                    after_digest: Some(Arc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| {
                       let options: Option<&TBox> = whatsit.get_arg(1);
                       let packages: Option<&TBox> = whatsit.get_arg(2);
                       // my @pkgs     = grep { $_ } grep { !/^\s*%/ } split(/,\s*/, ToString($packages));
                       // $options = [($options ? split(/,\s*/, (ToString($options))) : ())];
                       // map { RequirePackage($_, options => $options) } @pkgs;
                       return;
-                    }))),
+                    })),
                     ..ConstructorOptions::default()
                   },
                   state);
