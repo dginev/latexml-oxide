@@ -93,6 +93,12 @@ fn build_replacement(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacR
   let mut replacement = &*replacement;
   let input_replacement = replacement;
   println_stderr!("replacement IN : {}", input_replacement);
+  let mut floats: Option<String> = None;
+  FLOAT_RE.replace_all(replacement, |refs: &Captures| -> String {
+    floats = Some(refs.at(1).unwrap_or("").to_string());
+    String::new()
+  });
+
   let mut consumed;
   while !replacement.is_empty() {
     // Processing instruction: <?name a=v ...?>
