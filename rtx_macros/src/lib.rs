@@ -2,6 +2,8 @@
 #![crate_type="dylib"]
 #![feature(quote, plugin_registrar, rustc_private)]
 
+extern crate aster;
+
 extern crate syntax;
 extern crate rustc;
 extern crate rustc_plugin;
@@ -93,9 +95,11 @@ fn build_replacement(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacR
   let mut replacement = &*replacement;
   let input_replacement = replacement;
   println_stderr!("replacement IN : {}", input_replacement);
-  let mut floats: Option<String> = None;
+  let mut floats: String = String::new();
+  let mut has_floats: bool = false;
   FLOAT_RE.replace_all(replacement, |refs: &Captures| -> String {
-    floats = Some(refs.at(1).unwrap_or("").to_string());
+    floats = refs.at(1).unwrap_or("").to_owned();
+    has_floats = true;
     String::new()
   });
 
@@ -136,10 +140,17 @@ fn build_replacement(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacR
   }
 
   // Stub for now, just return a string
-  // MacEager::expr(cx.expr_str(sp, InternedString::new("stub")))
   let mock = quote_expr!(cx,
-                         |doc: &mut Doc, args: &Vec<TBox>, props: &HashMap<String, String>, state: &mut State| println_stderr!("-- replacement mock executed."));
+    |doc: &mut Doc, args: &Vec<TBox>, props: &HashMap<String, String>, state: &mut State| {
+      println_stderr!("-- replacement mock executed.");
+      if $has_floats {
+        println_stderr!("-- has floats.") }
+      else {
+        println_stderr!("-- no floats.")
+      }
+    });
   MacEager::expr(cx.expr_some(sp, mock))
+
 }
 
 

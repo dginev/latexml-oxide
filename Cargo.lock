@@ -25,6 +25,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "aster"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "gcc"
 version = "0.3.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -143,6 +148,7 @@ dependencies = [
 name = "rtx_macros"
 version = "0.1.0"
 dependencies = [
+ "aster 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "libxml 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.66 (registry+https://github.com/rust-lang/crates.io-index)",
