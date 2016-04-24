@@ -1,8 +1,9 @@
 extern crate libxml;
 
+use std::collections::VecDeque;
 // use common::model::Model;
 use state::{ObjectStore, State};
-use Digested;
+use {Digested, BoxOps};
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::Node;
 
@@ -58,12 +59,52 @@ impl Document {
   /// that will record the nodes that were created.
   /// $box can also be a plain string which will be inserted according to whatever
   /// font, mode, etc, are in %props.
-  pub fn absorb(&mut self, object: Box<Digested>) -> String {
-    for tbox in object.unlist().iter() {
-      let mut box_node = self.root.add_child(None, "box").unwrap();
-      box_node.set_content(&tbox.text);
+  pub fn absorb(&mut self, object: Digested, state: &mut State) -> Vec<Node> {
+    let mut results = Vec::new();
+    let mut boxes = VecDeque::new();
+    boxes.push_front(object);
+
+    while !boxes.is_empty() {
+      match boxes.pop_front().unwrap() {
+        // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
+        Digested::ListObj(list) => {
+          for tbox in list.unlist().into_iter().rev() {
+            boxes.push_front(tbox);
+          }
+        }
+        // A Proper Box or Whatsit? It will handle it.
+        Digested::BoxObj(mut tbox) => tbox.be_absorbed(self, state),
+        Digested::WhatsitObj(mut whatsit) => whatsit.be_absorbed(self, state),
+      };
+      //   // [ATTEMPT to] only record if we're running in NON-VOID context.
+      //   // [but wantarray seems defined MUCH more than I would have expected!?]
+      //   // if ($LaTeXML::RECORDING_CONSTRUCTION || defined wantarray) {
+      //   //   my @n = ();
+      //   //   { local $LaTeXML::RECORDING_CONSTRUCTION = 1;
+      //   //     local @LaTeXML::CONSTRUCTED_NODES = ();
+      //       $box->beAbsorbed($self);
+      //       @n = @LaTeXML::CONSTRUCTED_NODES; }    // These were created just now
+      //     map { $self->recordConstructedNode($_) } @n;    // record these for OUTER caller!
+      //     push(@results, @n); }                           // but return only the most recent set.
+      //   else {
+      //     push(@results, $box->beAbsorbed($self)); } }
+      // // Else, plain string in text mode.
+      // elsif (!$props{isMath}) {
+      //   push(@results, $self->openText($box, $props{font} || ($LaTeXML::BOX && $LaTeXML::BOX->getFont))); }
+      // // Or plain string in math mode.
+      // // Note text nodes can ONLY appear in <XMTok> or <text>!!!
+      // // Have we already opened an XMTok? Then insert into it.
+      // elsif ($$self{model}->getNodeQName($$self{node}) eq $MATH_TOKEN_NAME) {
+      //   push(@results, $self->openMathText_internal($box)); }
+      // // Else create the XMTok now.
+      // else {
+      //   // Odd case: constructors that work in math & text can insert raw strings in Math mode.
+      //   push(@results, $self->insertMathToken($box, font => $props{font})); } }
+
+      //   let mut box_node = self.root.add_child(None, "box").unwrap();
+      //   box_node.set_content(&tbox.text);
     }
-    String::new()
+    results
   }
 
   /// Insert a ProcessingInstruction of the form <?op attr=value ...?>
@@ -106,4 +147,7 @@ impl Document {
   fn prune_XMDuals(&self) {}
 
   fn finalize_rec(&self, element: Node) {}
+
+  pub fn insert_math_token(&self, text: String) {}
+  pub fn open_text(&self, text: String) {}
 }

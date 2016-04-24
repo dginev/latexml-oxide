@@ -1,16 +1,17 @@
-use Digested;
-use tbox::TBox;
+use {Digested, BoxOps};
+use state::State;
+use document::Document;
 
-/// Box is a Rust keyword, so we use "TBox" instead, as in "TeX Box"
+/// Lists can contain any Digested items, such as boxes, whatsits or other lists
 #[derive(Debug)]
 pub struct List {
   // TODO
-  pub boxes: Vec<TBox>,
+  pub boxes: Vec<Digested>,
 }
 
-impl Digested for List {
-  fn unlist(&self) -> Vec<&TBox> {
-    self.boxes.iter().collect::<Vec<_>>()
+impl BoxOps for List {
+  fn unlist(self) -> Vec<Digested> {
+    self.boxes.into_iter().collect::<Vec<_>>()
   }
 
   fn to_string(&self) -> String {
@@ -18,4 +19,6 @@ impl Digested for List {
         .iter()
         .fold(String::new(), |joined, x| joined + &x.to_string())
   }
+
+  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) {}
 }

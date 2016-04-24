@@ -1,5 +1,7 @@
+use std::collections::HashMap;
 use state::{Scope, State, ObjectStore};
 // use common::error::*;
+use Digested;
 use gullet::Gullet;
 use token::{Token, Catcode};
 use definition::Definition;
@@ -35,11 +37,11 @@ impl Stomach {
   // **********************************************************************
   // NOTE: Worry about whether the $autoflush thing is right?
   // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
-  pub fn digest_next_body(&mut self, terminal: bool, state: &mut State) -> Vec<TBox> {
+  pub fn digest_next_body(&mut self, terminal: bool, state: &mut State) -> Vec<Digested> {
     let start_location = self.get_locator();
     let init_depth = self.boxing.len();
     let mut read_token: Option<Token>;
-    let mut box_list: Vec<TBox> = Vec::new();
+    let mut box_list: Vec<Digested> = Vec::new();
 
     loop {
       read_token = self.get_gullet().read_x_token(true, true, state);
@@ -48,7 +50,7 @@ impl Stomach {
         Some(token) => {
           // println_stderr!("Read in token: {:?}", token);
           for tbox in self.invoke_token(token, state) {
-            box_list.push(tbox);
+            box_list.push(Digested::BoxObj(tbox));
           }
           // TODO:
           // if terminal.is_some() && Equals(token, terminal.unwrap())
@@ -63,7 +65,7 @@ impl Stomach {
     // "current body started at " . ToString($startloc))
     // if $terminal && !Equals($token, $terminal);
     if box_list.is_empty() {
-      box_list.push(TBox()); // Dummy `trailer' if none explicit.
+      box_list.push(Digested::BoxObj(TBox())); // Dummy `trailer' if none explicit.
     }
     return box_list;
   }
@@ -180,6 +182,7 @@ impl Stomach {
                font: String::new(),
                locator: self.gullet.get_locator(),
                tokens: vec![meaning],
+               properties: HashMap::new(),
              }]
       }
     } else if meaning.code == Catcode::COMMENT {
@@ -202,6 +205,7 @@ impl Stomach {
              font: String::new(),
              locator: String::new(),
              tokens: vec![meaning],
+             properties: HashMap::new(),
            }]
     }
   }

@@ -1,4 +1,4 @@
-use Digested;
+use {Digested, BoxOps};
 #[derive(PartialEq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
   ESCAPE,
@@ -183,7 +183,7 @@ macro_rules! ExplodeText(($text:expr) => ({
   ).collect::<Vec<Token>>()
 }));
 
-pub fn untex(digested: Box<Digested>) -> String {
+pub fn untex(digested: Digested) -> String {
   digested.to_string()
 }
 

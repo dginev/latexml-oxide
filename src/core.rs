@@ -15,10 +15,10 @@ use package::*;
 
 pub trait DigestionAPI {
   fn initialize_state(&mut self, preloads: Vec<String>);
-  fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Box<Digested>, Error>;
+  fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Digested, Error>;
   fn convert_file<'convert>(&'convert mut self, filepath: String) -> Result<Document, Error>;
-  fn convert_document<'convert>(&'convert mut self, digested: Box<Digested>) -> Result<Document, Error>;
-  fn digest_internal(&mut self) -> Box<Digested>;
+  fn convert_document<'convert>(&'convert mut self, digested: Digested) -> Result<Document, Error>;
+  fn digest_internal(&mut self) -> Digested;
 }
 
 impl DigestionAPI for Core {
@@ -40,7 +40,7 @@ impl DigestionAPI for Core {
                             &Some(Scope::Global));
   }
 
-  fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Box<Digested>, Error> {
+  fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Digested, Error> {
 
     let mut ext = match mode {
       Some(m) => Some(m.extension()),
@@ -106,7 +106,7 @@ impl DigestionAPI for Core {
     }
   }
 
-  fn convert_document<'convert>(&'convert mut self, digested: Box<Digested>) -> Result<Document, Error> {
+  fn convert_document<'convert>(&'convert mut self, digested: Digested) -> Result<Document, Error> {
     note_begin("Building");
 
     let mut state = &mut self.state;
@@ -155,7 +155,7 @@ impl DigestionAPI for Core {
         document.insert_pi("latexml", "package", preload, options);
       }
     }
-    document.absorb(digested);
+    document.absorb(digested, state);
     note_end("Building");
 
     // if (my $rules = $state->lookupValue('DOCUMENT_REWRITE_RULES')) {
@@ -172,7 +172,7 @@ impl DigestionAPI for Core {
     return Ok(document);
   }
 
-  fn digest_internal(&mut self) -> Box<Digested> {
+  fn digest_internal(&mut self) -> Digested {
     let mut boxes = Vec::new();
     let mut state = &mut self.state;
 
@@ -182,7 +182,7 @@ impl DigestionAPI for Core {
       }
     }
     self.stomach.get_gullet().flush();
-    Box::new(List { boxes: boxes })
+    Digested::ListObj(List { boxes: boxes })
   }
 
   // Internal helpers:

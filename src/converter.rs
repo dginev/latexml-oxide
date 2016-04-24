@@ -2,7 +2,7 @@ use rtx_core::common::{Config, DataSize, OutputFormat, Error};
 use rtx_core::list::List;
 use rtx_core::document::Document;
 use rtx_core::token;
-use rtx_core::Core;
+use rtx_core::{Core, Digested, BoxOps};
 use core::DigestionAPI;
 
 const CONVERTER_IDENTITY: &'static str = "rtx (v 0.1)";
@@ -157,7 +157,7 @@ impl Converter {
                                          self.opts.mode.clone(),
                                          true);
     let digested = match digest_result {
-      Err(_) => Box::new(List { boxes: Vec::new() }), // TODO digestion failed, report
+      Err(_) => Digested::ListObj(List { boxes: Vec::new() }), // TODO digestion failed, report
       Ok(d) => d,
     };
     // 2.1 Now, convert to DOM and output, if desired.
