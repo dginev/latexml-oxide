@@ -278,7 +278,7 @@ macro_rules! DefConstructorI(
     use $crate::package;
 // let mode    = $options.mode;
 // let bounded = $options.bounded;
-    let mut constructor = Constructor { cs: $cs, paramlist: $paramlist, replacement: compile_replacement!($replacement), ..Constructor::default()};
+    let constructor = Constructor { cs: $cs, paramlist: $paramlist, replacement: compile_replacement!($replacement), ..Constructor::default()};
 
     $state.install_definition(::rtx_core::state::ObjectStore::ConstructorStore(Arc::new(constructor)), &None);
 

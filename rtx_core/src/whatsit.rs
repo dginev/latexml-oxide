@@ -24,18 +24,6 @@ impl Whatsit {
   pub fn get_properties(&self) -> &HashMap<String, String> {
     &self.properties
   }
-
-  pub fn be_absorbed(&mut self, document: &mut Document, state: &mut State) {
-    // Significant time is consumed here, and associated with a specific CS,
-    // so we should be profiling as well!
-    // Hopefully the csname is the same that was charged in the digestioned phase!
-
-    // my $profiled = $STATE->lookupValue('PROFILING') && $defn->getCS;
-    // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
-    let result = self.definition.do_absorbtion(document, self, state);
-    // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
-    return result;
-  }
 }
 
 impl fmt::Debug for Whatsit {
@@ -52,5 +40,15 @@ impl BoxOps for Whatsit {
     Vec::new()
   }
 
-  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) {}
+  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) {
+    // Significant time is consumed here, and associated with a specific CS,
+    // so we should be profiling as well!
+    // Hopefully the csname is the same that was charged in the digestioned phase!
+
+    // my $profiled = $STATE->lookupValue('PROFILING') && $defn->getCS;
+    // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
+    let result = self.definition.do_absorbtion(document, self, state);
+    // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
+    return result;
+  }
 }
