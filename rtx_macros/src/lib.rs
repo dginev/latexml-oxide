@@ -8,7 +8,7 @@ extern crate syntax;
 extern crate rustc;
 extern crate rustc_plugin;
 extern crate regex;
-extern crate libxml;
+// extern crate libxml;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]

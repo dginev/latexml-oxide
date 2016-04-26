@@ -1,3 +1,4 @@
+extern crate regex;
 extern crate libxml;
 
 use std::collections::VecDeque;
@@ -5,12 +6,14 @@ use std::collections::VecDeque;
 use state::{ObjectStore, State};
 use {Digested, BoxOps};
 use libxml::tree::Document as XmlDoc;
-use libxml::tree::Node;
+use libxml::tree::{Node, NodeType};
+use regex::Regex;
 
 pub struct Document {
   // pub model : &'doc Model,
   pub document: XmlDoc,
-  pub root: Node,
+  pub node: Node,
+  pub debug: bool,
 }
 
 impl Document {
@@ -21,7 +24,8 @@ impl Document {
 
     Document {
       document: doc_scaffold,
-      root: latexml_node,
+      node: latexml_node,
+      debug: false,
     }
   }
   // **********************************************************************
@@ -101,7 +105,7 @@ impl Document {
       //   // Odd case: constructors that work in math & text can insert raw strings in Math mode.
       //   push(@results, $self->insertMathToken($box, font => $props{font})); } }
 
-      //   let mut box_node = self.root.add_child(None, "box").unwrap();
+      //   let mut box_node = self.node.add_child(None, "box").unwrap();
       //   box_node.set_content(&tbox.text);
     }
     results
@@ -124,14 +128,14 @@ impl Document {
     let pi = self.document.create_processing_instruction(op, &data).unwrap();
 
     // self.close_text_internal();  // Close any open text node
-    // if ($$self{node}->nodeType == XML_DOCUMENT_NODE) {
+    // if ($$self{node}->nodeType == NodeType::DocumentNode) {
     //   push(@{ $$self{pending} }, $pi); }
     // else {
     println_stderr!("Trying to insert PI: {:?}",
                     self.document.node_to_string(&pi));
     println_stderr!("Into doc: {:?}", self.document.to_string());
 
-    self.root.add_prev_sibling(pi);
+    self.node.add_prev_sibling(pi);
 
     return;
   }
@@ -148,6 +152,110 @@ impl Document {
 
   fn finalize_rec(&self, element: Node) {}
 
-  pub fn insert_math_token(&self, text: String) {}
-  pub fn open_text(&self, text: String) {}
+  pub fn insert_math_token(&self, text: &str) {}
+
+  ///**********************************************************************
+  /// Middle level, mostly public, API.
+  /// Handlers for various construction operations.
+  /// General naming: 'open' opens a node at current pos and sets it to current,
+  /// 'close' closes current node(s), inserts opens & closes, ie. w/o moving current
+
+  /// Tricky: Insert some text in a particular font.
+  /// We need to find the current effective -- being the closest  _declared_ font,
+  /// (ie. it will appear in the elements attributes).  We may also want
+  /// to open/close some elements in such a way as to minimize the font switchiness.
+  /// I guess we should only open/close "text" elements, though.
+  /// [Actually, we'd like the user to _declare_ what element to use....
+  ///  I don't like having "text" built in here!
+  ///  AND, we've assumed that "font" names the relevant attribute!!!]
+
+  pub fn open_text(&mut self, text: &str) -> Option<&Node> {
+    // TODO: font arg
+    lazy_static! {
+      static ref leading_space_regex : Regex = Regex::new(r"^\s+$").unwrap();
+    }
+    let node_type = self.node.get_type();
+    {
+      // Ignore initial whitespace
+      if leading_space_regex.is_match(text) && (node_type == Some(NodeType::DocumentNode) || (node_type == Some(NodeType::ElementNode) && self.can_contain(&self.node, "#PCDATA"))) {
+        return None;
+      }
+    }
+    // if font.get_family() == "nullfont" {
+    //   return;
+    // }
+    // print STDERR "Insert text \"$text\" /" . Stringify($font) . " at " . Stringify($node) . "\n"
+    //   if $LaTeXML::Core::Document::DEBUG;
+
+    if node_type != Some(NodeType::DocumentNode) // If not at document begin
+    && !((node_type == Some(NodeType::TextNode)) //&&    // And not appending text in same font.
+      // ($font->distance($self->getNodeFont($node->parentNode)) == 0))
+    ) {
+      // then we'll need to do some open/close to get fonts matched.
+      // node =
+      self.close_text_internal();    // Close text node, if any.
+      // let mut bestdiff = 99999;
+      // let mut closeto = node;
+      // let mut n = node;
+      // while n.get_type() != NodeType::DocumentNode {
+      // let d = $font->distance($self->getNodeFont($n));
+
+      // if ($d < $bestdiff) {
+      //   $bestdiff = $d;
+      //   $closeto  = $n;
+      //   last if ($d == 0); }
+      // last if ($$self{model}->getNodeQName($n) ne $FONT_ELEMENT_NAME) || $n->getAttribute('_noautoclose');
+      // $n = $n->parentNode; }
+
+      // Move to best starting point for this text.
+      // if closeto != node {
+      //   self.close_to_node(closeto);
+      // }
+      // self.open_element($FONT_ELEMENT_NAME, font => $font, _fontswitch => 1) if $bestdiff > 0; // Open if needed.
+    }
+    // Finally, insert the darned text.
+    self.open_text_internal(text);
+    self.record_constructed_node(&self.node);
+    return Some(&self.node);
+  }
+
+
+  pub fn can_contain(&self, node: &Node, spec: &str) -> bool {
+    true
+  }
+  pub fn close_text_internal(&mut self) -> &mut Node {
+    &mut self.node
+  }
+  pub fn close_to_node(&self, node: &Node) {}
+
+  pub fn open_text_internal(&mut self, text: &str) {
+    lazy_static! {
+      static ref has_nonspace : Regex = Regex::new(r"\S").unwrap();
+    }
+    if self.node.get_type() == Some(NodeType::TextNode) {
+      // current node already is a text node.
+      if self.debug {
+        println_stderr!("Appending text \"{:?}\" to {:?}",
+                        text,
+                        self.document.node_to_string(&self.node));
+      }
+      self.node.append_text(text);
+    } else if has_nonspace.is_match(text) || self.can_contain(&self.node, "//PCDATA") {
+      // or text allowed here
+      let mut point = self.find_insertion_point("//PCDATA");
+      let mut node = Node::new_text(text, &self.document).unwrap();
+      if self.debug {
+        println_stderr!("Inserting text node for \"{:?}\" into {:?}",
+                        text,
+                        self.document.node_to_string(&point));
+      }
+      let added_node = point.add_child(node).unwrap();
+      self.set_node(added_node);
+    }
+  }
+
+  pub fn record_constructed_node(&self, node: &Node) {}
+  pub fn find_insertion_point(&self, target: &str) -> Node {
+    self.node.clone()
+  }
 }
