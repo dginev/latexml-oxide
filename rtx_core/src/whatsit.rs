@@ -42,7 +42,6 @@ impl BoxOps for Whatsit {
   }
 
   fn be_absorbed(&mut self, document: &mut Document, state: &mut State) {
-    println_stderr!("Whatsit be_absorbed for {:?}", self.args);
     // Significant time is consumed here, and associated with a specific CS,
     // so we should be profiling as well!
     // Hopefully the csname is the same that was charged in the digestioned phase!
