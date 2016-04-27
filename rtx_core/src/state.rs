@@ -35,7 +35,7 @@ pub enum ObjectStore {
   VecStringStore(Vec<String>),
   BoolStore(bool),
   TokenStore(Token),
-  ExpandableStore(Arc<Box<Expandable>>),
+  ExpandableStore(Arc<Expandable>),
   PrimitiveStore(Arc<Primitive>),
   ConstructorStore(Arc<Constructor>),
 }

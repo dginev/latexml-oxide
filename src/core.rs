@@ -15,10 +15,10 @@ use package::*;
 
 pub trait DigestionAPI {
   fn initialize_state(&mut self, preloads: Vec<String>);
-  fn digest<'d>(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Digested<'d>, Error>;
+  fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Digested, Error>;
   fn convert_file<'convert>(&'convert mut self, filepath: String) -> Result<Document, Error>;
-  fn convert_document<'convert>(&'convert mut self, digested: Digested<'convert>) -> Result<Document, Error>;
-  fn digest_internal<'d>(&mut self) -> Digested<'d>;
+  fn convert_document<'convert>(&'convert mut self, digested: Digested) -> Result<Document, Error>;
+  fn digest_internal(&mut self) -> Digested;
 }
 
 impl DigestionAPI for Core {
@@ -40,7 +40,7 @@ impl DigestionAPI for Core {
                             &Some(Scope::Global));
   }
 
-  fn digest<'d>(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Digested<'d>, Error> {
+  fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Digested, Error> {
 
     let mut ext = match mode {
       Some(m) => Some(m.extension()),
@@ -106,7 +106,7 @@ impl DigestionAPI for Core {
     }
   }
 
-  fn convert_document<'convert>(&'convert mut self, digested: Digested<'convert>) -> Result<Document, Error> {
+  fn convert_document<'convert>(&'convert mut self, digested: Digested) -> Result<Document, Error> {
     note_begin("Building");
 
     let mut state = &mut self.state;
@@ -172,20 +172,14 @@ impl DigestionAPI for Core {
     return Ok(document);
   }
 
-  fn digest_internal<'d>(&mut self) -> Digested<'d> {
+  fn digest_internal(&mut self) -> Digested {
     let mut boxes = Vec::new();
     let mut state = &mut self.state;
 
     while self.stomach.get_gullet().has_more_input() {
-      loop {
-        let next_bodies: Vec<Digested<'d>> = self.stomach.digest_next_body(false, state);
-        if next_bodies.is_empty() {
-          break;
-        } else {
-          for body in next_bodies.into_iter() {
-            boxes.push(body);
-          }
-        }
+      let next_bodies: Vec<Digested> = self.stomach.digest_next_body(false, state);
+      for body in next_bodies.into_iter() {
+        boxes.push(body);
       }
     }
     self.stomach.get_gullet().flush();

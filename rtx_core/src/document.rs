@@ -63,7 +63,7 @@ impl Document {
   /// that will record the nodes that were created.
   /// $box can also be a plain string which will be inserted according to whatever
   /// font, mode, etc, are in %props.
-  pub fn absorb<'a>(&mut self, object: Digested<'a>, state: &mut State) -> Vec<Node> {
+  pub fn absorb(&mut self, object: Digested, state: &mut State) -> Vec<Node> {
     let mut results = Vec::new();
     let mut boxes = VecDeque::new();
     boxes.push_front(object);

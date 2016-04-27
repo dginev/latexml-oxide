@@ -2,6 +2,8 @@ pub mod expandable;
 pub mod constructor;
 pub mod primitive;
 
+use std::sync::Arc;
+use Digested;
 use gullet::Gullet;
 use stomach::Stomach;
 use token::*;
@@ -14,7 +16,7 @@ use state::State;
 
 pub trait Definition {
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Vec<Token>;
-  fn invoke_primitive(&self, gullet: &mut Stomach, state: &mut State) -> Vec<TBox>;
+  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Arc<Definition>, state: &mut State) -> Vec<Digested>;
 
   fn get_cs(&self) -> Token;
   fn get_cs_name(&self) -> String;

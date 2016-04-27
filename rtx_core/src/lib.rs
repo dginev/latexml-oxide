@@ -40,8 +40,8 @@ pub struct Core {
   pub preload: Vec<String>,
 }
 
-pub trait BoxOps<'d> {
-  fn unlist(self) -> Vec<Digested<'d>>;
+pub trait BoxOps {
+  fn unlist(self) -> Vec<Digested>;
   fn be_absorbed(&mut self, document: &mut Document, state: &mut State);
   fn to_string(&self) -> String {
     "Vec<TBox> for now ".to_string()
@@ -52,14 +52,14 @@ pub trait BoxOps<'d> {
 }
 
 #[derive(Debug)]
-pub enum Digested<'d> {
+pub enum Digested {
   BoxObj(TBox),
-  ListObj(List<'d>),
-  WhatsitObj(Whatsit<'d>),
+  ListObj(List),
+  WhatsitObj(Whatsit),
 }
 
-impl<'d> BoxOps<'d> for Digested<'d> {
-  fn unlist(self) -> Vec<Digested<'d>> {
+impl BoxOps for Digested {
+  fn unlist(self) -> Vec<Digested> {
     match self {
       Digested::BoxObj(b) => b.unlist(),
       Digested::ListObj(l) => l.unlist(),

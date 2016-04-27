@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use state::State;
 use common::object::Object;
-
+use Digested;
 use token::*;
 use tbox::TBox;
 use gullet::Gullet;
@@ -55,7 +55,7 @@ impl Definition for Primitive {
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Vec<Token> {
     Vec::new()
   }
-  fn invoke_primitive(&self, gullet: &mut Stomach, state: &mut State) -> Vec<TBox> {
+  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Arc<Definition>, state: &mut State) -> Vec<Digested> {
     Vec::new()
   }
 

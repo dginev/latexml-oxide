@@ -1,18 +1,19 @@
+use std::fmt;
 use std::collections::HashMap;
+use std::sync::Arc;
 use state::State;
 use tbox::TBox;
-use std::fmt;
 use {Digested, BoxOps};
 use definition::Definition;
 use document::Document;
 
-pub struct Whatsit<'w> {
+pub struct Whatsit {
   pub args: Vec<TBox>,
   pub properties: HashMap<String, String>, // TODO: This will be an issue, LaTeXML traditionally takes advantage of the fully untyped nature of Perl hashes
-  pub definition: &'w Definition,
+  pub definition: Arc<Definition>,
 }
 
-impl<'w> Whatsit<'w> {
+impl Whatsit {
   pub fn get_arg(&self, n: usize) -> Option<&TBox> {
     self.args.get(n - 1)
   }
@@ -26,7 +27,7 @@ impl<'w> Whatsit<'w> {
   }
 }
 
-impl<'w> fmt::Debug for Whatsit<'w> {
+impl fmt::Debug for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f,
            "Whatsit {{ args: {:?}, properties: {:?} }}",
@@ -35,12 +36,13 @@ impl<'w> fmt::Debug for Whatsit<'w> {
   }
 }
 
-impl<'w> BoxOps<'w> for Whatsit<'w> {
-  fn unlist(self) -> Vec<Digested<'w>> {
+impl BoxOps for Whatsit {
+  fn unlist(self) -> Vec<Digested> {
     Vec::new()
   }
 
   fn be_absorbed(&mut self, document: &mut Document, state: &mut State) {
+    println_stderr!("Whatsit be_absorbed for {:?}", self.args);
     // Significant time is consumed here, and associated with a specific CS,
     // so we should be profiling as well!
     // Hopefully the csname is the same that was charged in the digestioned phase!

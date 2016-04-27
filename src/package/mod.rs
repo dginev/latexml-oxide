@@ -237,8 +237,8 @@ macro_rules! DefMacroI(
 //       // }
 
     $state.install_definition(::rtx_core::state::ObjectStore::ExpandableStore(Arc::new(
-      Box::new(Expandable { cs: $cs, paramlist: $paramlist, expansion: Arc::new($expansion),
-       ..Expandable::default()}))),
+      Expandable { cs: $cs, paramlist: $paramlist, expansion: Arc::new($expansion),
+       ..Expandable::default()})),
       &None);
   }
   )

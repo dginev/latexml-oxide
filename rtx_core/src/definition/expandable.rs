@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use state::State;
+use Digested;
 use token::*;
 use tbox::TBox;
 use gullet::Gullet;
@@ -76,7 +77,7 @@ impl Definition for Expandable {
     }
   }
 
-  fn invoke_primitive(&self, _gullet: &mut Stomach, _state: &mut State) -> Vec<TBox> {
+  fn invoke_primitive(&self, _gullet: &mut Stomach, caller: Arc<Definition>, _state: &mut State) -> Vec<Digested> {
     Vec::new()
   }
 }

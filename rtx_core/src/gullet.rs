@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::sync::Arc;
 use state::{State, Scope, ObjectStore};
 use common::object::Object;
 use definition::Definition;
@@ -150,7 +151,7 @@ impl Gullet {
     loop {
       let read_token: Option<Token>;
       let cc: Catcode;
-      let mut defn_next: Option<Box<Definition>> = None;
+      let mut defn_next: Option<Arc<Definition>> = None;
       let mut needs_close = false;
       let mut return_next = false;
       let mut expand_next = false;
@@ -204,7 +205,7 @@ impl Gullet {
                             state.assign_value("current_token",
                                                ObjectStore::TokenStore(token),
                                                &Some(Scope::Global));
-                            defn_next = Some((*defn).clone());
+                            defn_next = Some(defn.clone());
                             expand_next = true;
                           } else {
                             return Some(token);

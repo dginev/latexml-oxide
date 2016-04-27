@@ -40,7 +40,7 @@ impl Stomach {
   // **********************************************************************
   // NOTE: Worry about whether the $autoflush thing is right?
   // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
-  pub fn digest_next_body<'d>(&mut self, terminal: bool, state: &mut State) -> Vec<Digested<'d>> {
+  pub fn digest_next_body(&mut self, terminal: bool, state: &mut State) -> Vec<Digested> {
     let start_location = self.get_locator();
     let init_depth = self.boxing.len();
     let mut read_token: Option<Token>;
@@ -52,8 +52,8 @@ impl Stomach {
         None => break,
         Some(token) => {
           // println_stderr!("Read in token: {:?}", token);
-          for tbox in self.invoke_token(token, state) {
-            box_list.push(Digested::BoxObj(tbox));
+          for digested in self.invoke_token(token, state) {
+            box_list.push(digested);
           }
           // TODO:
           // if terminal.is_some() && Equals(token, terminal.unwrap())
@@ -67,6 +67,10 @@ impl Stomach {
     // Warn('expected', $terminal, $self, "body should have ended with '" . ToString($terminal) . "'",
     // "current body started at " . ToString($startloc))
     // if $terminal && !Equals($token, $terminal);
+
+    if box_list.is_empty() {
+      box_list.push(Digested::BoxObj(TBox())); // Dummy `trailer' if none explicit.
+    }
     return box_list;
   }
 
@@ -79,11 +83,11 @@ impl Stomach {
   /// possibly arguments will be parsed from the Gullet.
   /// Otherwise, the token is simply digested: turned into an appropriate box.
   /// Returns a list of boxes/whatsits.
-  fn invoke_token(&mut self, input_token: Token, state: &mut State) -> Vec<TBox> {
+  fn invoke_token(&mut self, input_token: Token, state: &mut State) -> Vec<Digested> {
     let mut maybe_token = Some(input_token);
 
     // Overly complex, but want to avoid recursion/stack
-    let mut result: Vec<TBox> = Vec::new();
+    let mut result: Vec<Digested> = Vec::new();
     // INVOKE:
     loop {
       if maybe_token.is_none() {
@@ -124,7 +128,7 @@ impl Stomach {
             }
             ObjectStore::ConstructorStore(meaning) => {
               // Otherwise, a normal primitive or constructor
-              result = meaning.invoke_primitive(self, state);
+              result = meaning.invoke_primitive(self, meaning.clone(), state);
               if !meaning.is_prefix() {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
@@ -153,12 +157,12 @@ impl Stomach {
     return result;
   }
 
-  fn invoke_token_undefined(&mut self, token: Token, state: &mut State) -> Vec<TBox> {
+  fn invoke_token_undefined(&mut self, token: Token, state: &mut State) -> Vec<Digested> {
     // println_stderr!("-- Undefined invoke {:?}", token);
     // TODO: Rework this carefully
     Vec::new()
   }
-  fn invoke_token_simple(&mut self, token: Token, meaning: Token, state: &mut State) -> Vec<TBox> {
+  fn invoke_token_simple(&mut self, token: Token, meaning: Token, state: &mut State) -> Vec<Digested> {
     // println_stderr!("-- Simple invoke {:?}", token);
     // let font = state.lookup_value("font");
     state.clear_prefixes();    // prefixes shouldn't apply here.
@@ -177,13 +181,13 @@ impl Stomach {
       if in_math || in_preamble {
         Vec::new()
       } else {
-        vec![TBox {
+        vec![Digested::BoxObj(TBox {
                text: meaning.to_string(),
                font: String::new(),
                locator: self.gullet.get_locator(),
                tokens: vec![meaning],
                properties: HashMap::new(),
-             }]
+             })]
       }
     } else if meaning.code == Catcode::COMMENT {
       // Note: Comments need char decoding as well!
@@ -200,13 +204,13 @@ impl Stomach {
     //   "The token " . Stringify($token) . " should never reach Stomach!");
     // return; }
     else {
-      vec![TBox {
+      vec![Digested::BoxObj(TBox {
              text: meaning.to_string(),
              font: String::new(),
              locator: String::new(),
              tokens: vec![meaning],
              properties: HashMap::new(),
-           }]
+           })]
     }
   }
 }

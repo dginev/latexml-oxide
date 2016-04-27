@@ -4,6 +4,7 @@ use state::State;
 use common::object::Object;
 
 use token::*;
+use Digested;
 use tbox::TBox;
 use gullet::Gullet;
 use stomach::Stomach;
@@ -71,7 +72,7 @@ impl Definition for Constructor {
   }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
-  fn invoke_primitive(&self, stomach: &mut Stomach, state: &mut State) -> Vec<TBox> {
+  fn invoke_primitive(&self, stomach: &mut Stomach, caller: Arc<Definition>, state: &mut State) -> Vec<Digested> {
     println_stderr!("-- constructor/primitive invoke for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing
@@ -111,7 +112,7 @@ impl Definition for Constructor {
 
     // Now create the Whatsit, itself.
     let whatsit = Whatsit {
-      definition: self,
+      definition: caller,
       args: args,
       properties: props,
     };
@@ -124,7 +125,7 @@ impl Definition for Constructor {
     // my @postpost = $self->executeAfterDigestBody($stomach, $whatsit);
     // LaTeXML::Definition::stopProfiling($profiled, 'digest') if $profiled;
     // return (@pre, $whatsit, @post, @postpost);
-    Vec::new()
+    return vec![Digested::WhatsitObj(whatsit)];
   }
 
   fn get_cs(&self) -> Token {
