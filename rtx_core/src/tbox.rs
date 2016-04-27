@@ -25,11 +25,11 @@ pub fn TBox() -> TBox {
   }
 }
 
-impl BoxOps for TBox {
+impl<'a> BoxOps<'a> for TBox {
   fn to_string(&self) -> String {
     self.text.clone()
   }
-  fn unlist(self) -> Vec<Digested> {
+  fn unlist(self) -> Vec<Digested<'a>> {
     Vec::new()
   }
 

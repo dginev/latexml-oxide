@@ -12,7 +12,7 @@ use whatsit::Whatsit;
 use common::object::Object;
 use state::State;
 
-pub trait Definition : Object {
+pub trait Definition {
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Vec<Token>;
   fn invoke_primitive(&self, gullet: &mut Stomach, state: &mut State) -> Vec<TBox>;
 

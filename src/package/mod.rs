@@ -42,7 +42,7 @@ pub fn load_tex_content(core: &mut Core, path: String) {
   // content => LookupValue($pathname . '_contents')
 
   // Open a mouth for that TeX content
-  let gullet = core.stomach.get_gullet();
+  let gullet = core.stomach.get_gullet_mut();
   gullet.open_mouth(mouth, true);
 
 }

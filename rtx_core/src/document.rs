@@ -63,7 +63,7 @@ impl Document {
   /// that will record the nodes that were created.
   /// $box can also be a plain string which will be inserted according to whatever
   /// font, mode, etc, are in %props.
-  pub fn absorb(&mut self, object: Digested, state: &mut State) -> Vec<Node> {
+  pub fn absorb<'a>(&mut self, object: Digested<'a>, state: &mut State) -> Vec<Node> {
     let mut results = Vec::new();
     let mut boxes = VecDeque::new();
     boxes.push_front(object);
@@ -221,12 +221,14 @@ impl Document {
 
 
   pub fn can_contain(&self, node: &Node, spec: &str) -> bool {
+    // TODO: Mock only
     true
   }
   pub fn close_text_internal(&mut self) -> &mut Node {
+    // TODO: Mock only
     &mut self.node
   }
-  pub fn close_to_node(&self, node: &Node) {}
+  pub fn close_to_node(&self, node: &Node) {} // TODO: Mock only
 
   pub fn open_text_internal(&mut self, text: &str) {
     lazy_static! {
@@ -254,8 +256,9 @@ impl Document {
     }
   }
 
-  pub fn record_constructed_node(&self, node: &Node) {}
+  pub fn record_constructed_node(&self, node: &Node) {} // TODO: Mock only
   pub fn find_insertion_point(&self, target: &str) -> Node {
+    // TODO: Mock only
     self.node.clone()
   }
 }

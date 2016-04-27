@@ -28,8 +28,11 @@ impl Default for Stomach {
 
 impl Stomach {
   pub fn initialize(&mut self) {}
-  pub fn get_gullet(&mut self) -> &mut Gullet {
+  pub fn get_gullet_mut(&mut self) -> &mut Gullet {
     &mut self.gullet
+  }
+  pub fn get_gullet(&self) -> &Gullet {
+    &self.gullet
   }
 
   // **********************************************************************
@@ -37,14 +40,14 @@ impl Stomach {
   // **********************************************************************
   // NOTE: Worry about whether the $autoflush thing is right?
   // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
-  pub fn digest_next_body(&mut self, terminal: bool, state: &mut State) -> Vec<Digested> {
+  pub fn digest_next_body<'d>(&mut self, terminal: bool, state: &mut State) -> Vec<Digested<'d>> {
     let start_location = self.get_locator();
     let init_depth = self.boxing.len();
     let mut read_token: Option<Token>;
     let mut box_list: Vec<Digested> = Vec::new();
 
     loop {
-      read_token = self.get_gullet().read_x_token(true, true, state);
+      read_token = self.get_gullet_mut().read_x_token(true, true, state);
       match read_token {
         None => break,
         Some(token) => {
@@ -64,9 +67,6 @@ impl Stomach {
     // Warn('expected', $terminal, $self, "body should have ended with '" . ToString($terminal) . "'",
     // "current body started at " . ToString($startloc))
     // if $terminal && !Equals($token, $terminal);
-    if box_list.is_empty() {
-      box_list.push(Digested::BoxObj(TBox())); // Dummy `trailer' if none explicit.
-    }
     return box_list;
   }
 

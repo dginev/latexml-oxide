@@ -4,13 +4,13 @@ use document::Document;
 
 /// Lists can contain any Digested items, such as boxes, whatsits or other lists
 #[derive(Debug)]
-pub struct List {
+pub struct List<'l> {
   // TODO
-  pub boxes: Vec<Digested>,
+  pub boxes: Vec<Digested<'l>>,
 }
 
-impl BoxOps for List {
-  fn unlist(self) -> Vec<Digested> {
+impl<'l> BoxOps<'l> for List<'l> {
+  fn unlist(self) -> Vec<Digested<'l>> {
     self.boxes.into_iter().collect::<Vec<_>>()
   }
 

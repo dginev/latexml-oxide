@@ -95,6 +95,7 @@ impl Definition for Constructor {
     args.truncate(nargs);
 
     // Compute any extra Whatsit properties (many end up as element attributes)
+    let props = HashMap::new();
     // let properties = $$self{properties};
     // my %props = (!defined $properties ? ()
     //   : (ref $properties eq "CODE" ? &$properties($stomach, @args)
@@ -109,10 +110,14 @@ impl Definition for Constructor {
     // $props{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.
-    // let whatsit = Whatsit { self, args, props};
+    let whatsit = Whatsit {
+      definition: self,
+      args: args,
+      properties: props,
+    };
 
     // Call any 'After' code.
-    // let post = self.execute_after_digest(stomach, whatsit, state);
+    let post = self.execute_after_digest(stomach, &whatsit, state);
     // if (let cap = $$self{captureBody}) {
     //   $whatsit->setBody(@post, $stomach->digestNextBody((ref $cap ? $cap : undef))); @post = (); }
 
@@ -173,5 +178,5 @@ impl Definition for Constructor {
 
 impl Constructor {
   fn execute_before_digest(&self, _stomach: &mut Stomach, _state: &mut State) {}
-  fn execute_after_digest(&self, _stomach: &mut Stomach, _state: &mut State) {}
+  fn execute_after_digest(&self, _stomach: &mut Stomach, _whatsit: &Whatsit, _state: &mut State) {}
 }

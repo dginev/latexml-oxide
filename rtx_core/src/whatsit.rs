@@ -6,13 +6,13 @@ use {Digested, BoxOps};
 use definition::Definition;
 use document::Document;
 
-pub struct Whatsit {
-  args: Vec<TBox>,
-  properties: HashMap<String, String>, // TODO: This will be an issue, LaTeXML traditionally takes advantage of the fully untyped nature of Perl hashes
-  definition: Box<Definition>,
+pub struct Whatsit<'w> {
+  pub args: Vec<TBox>,
+  pub properties: HashMap<String, String>, // TODO: This will be an issue, LaTeXML traditionally takes advantage of the fully untyped nature of Perl hashes
+  pub definition: &'w Definition,
 }
 
-impl Whatsit {
+impl<'w> Whatsit<'w> {
   pub fn get_arg(&self, n: usize) -> Option<&TBox> {
     self.args.get(n - 1)
   }
@@ -26,7 +26,7 @@ impl Whatsit {
   }
 }
 
-impl fmt::Debug for Whatsit {
+impl<'w> fmt::Debug for Whatsit<'w> {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f,
            "Whatsit {{ args: {:?}, properties: {:?} }}",
@@ -35,8 +35,8 @@ impl fmt::Debug for Whatsit {
   }
 }
 
-impl BoxOps for Whatsit {
-  fn unlist(self) -> Vec<Digested> {
+impl<'w> BoxOps<'w> for Whatsit<'w> {
+  fn unlist(self) -> Vec<Digested<'w>> {
     Vec::new()
   }
 
