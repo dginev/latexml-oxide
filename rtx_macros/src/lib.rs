@@ -2,8 +2,6 @@
 #![crate_type="dylib"]
 #![feature(quote, plugin_registrar, rustc_private)]
 
-extern crate aster;
-
 extern crate syntax;
 extern crate rustc;
 extern crate rustc_plugin;
@@ -65,15 +63,25 @@ use std::collections::HashMap;
 //   }
 // }
 
+#[macro_export]
+macro_rules! QNAME_STR(
+  () => (r"((?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:)(?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:|\p{M}|\p{Lm}|\p{Nd}|\.|-)*)")
+);
+
+#[macro_export]
+macro_rules! PI_STR(
+  () => (concat!(r"^\s*<\?",QNAME_STR!()))
+);
 
 lazy_static! {
-  static ref VALUE_RE : Regex = Regex::new(r"(\\#|\\&[\\w\\:]*\\()").unwrap();
-  static ref COND_RE : Regex = Regex::new(r"\\?(\\#|\\&[\\w\\:]*\\()").unwrap();
+  static ref VALUE_RE : Regex = Regex::new(r"(\#|\&[\w\:]*\()").unwrap();
+  static ref COND_RE : Regex = Regex::new(r"\?(\#|\&[\w\:]*\()").unwrap();
 // Attempt to follow XML Spec, Appendix B
-  static ref QNAME_RE : Regex = Regex::new(r"((?:\\p{Ll}|\\p{Lu}|\\p{Lo}|\\p{Lt}|\\p{Nl}|_|:)(?:\\p{Ll}|\\p{Lu}|\\p{Lo}|\\p{Lt}|\\p{Nl}|_|:|\\p{M}|\\p{Lm}|\\p{Nd}|\\.|\\-)*)").unwrap();
-  static ref TEXT_RE : Regex = Regex::new(r"(.[^\\#<\\?\\)\\&\\,]*)").unwrap();
+  static ref QNAME_RE : Regex = Regex::new(QNAME_STR!()).unwrap();
+  static ref TEXT_RE : Regex = Regex::new(r"(.[^\#<\?\)\&\,]*)").unwrap();
   static ref NONW_RE : Regex = Regex::new(r"\W").unwrap();
   static ref FLOAT_RE : Regex = Regex::new(r"^(\^+)\s*").unwrap();
+  static ref PI_RE : Regex = Regex::new(PI_STR!()).unwrap();
 }
 
 
@@ -103,30 +111,35 @@ fn build_replacement(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacR
     String::new()
   });
 
-  let mut consumed;
+  let mut consumed = "";
   while !replacement.is_empty() {
+    let mut is_match = false;
     // Processing instruction: <?name a=v ...?>
-    if replacement.starts_with("<?") {
-      println_stderr!("-- PI");
-      consumed = "<?";
-    }
+    PI_RE.replace(replacement, |refs: &Captures| -> String {
+      let node_def = refs.at(1).unwrap_or("").to_owned();
+      let (match_start, match_end) = refs.pos(1).unwrap();
+      println_stderr!("-- PI between {:?} and {:?}", match_start, match_end);
+      consumed = &replacement[0..match_end];
+      String::new()
+    });
+
     // Close tag: </name>
-    else if replacement.starts_with("</") {
+    if !is_match && replacement.starts_with("</") {
       println_stderr!("-- close tag");
       consumed = "</";
     }
     // Open tag: <name a=v ...> or .../> (for empty element)
-    else if replacement.starts_with("<") {
+    if !is_match && replacement.starts_with("<") {
       println_stderr!("-- open tag");
       consumed = "<";
     }
     // Substitutable value: argument, property...
-    else if replacement.starts_with("#") {
+    if !is_match && replacement.starts_with("#") {
       println_stderr!("-- argument hole");
       consumed = "#";
     }
     // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
-    else if replacement.find("=").is_some() {
+    if !is_match && replacement.find("=").is_some() {
       println_stderr!("-- Attribute");
       consumed = &replacement[0..1 + replacement.find("=").unwrap()];
     }
@@ -153,6 +166,33 @@ fn build_replacement(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacR
 
 }
 
+fn translate_avpairs(text: &str) {
+  // # Parse a set of attribute value pairs from a constructor pattern,
+  // # substituting argument and property values from the whatsit.
+  // sub translate_avpairs {
+  //   my @avs = ();
+  //   s|^\s*||;
+  //   while ($_) {
+  //     if (/^$COND_RE/o) {
+  //       my ($bool, $if, $else) = parse_conditional();
+  //       my $code = "($bool ? (";
+  //       { local $_ = $if; $code .= translate_avpairs(); }
+  //       $code .= ") : (";
+  //       { local $_ = $else; $code .= translate_avpairs() if $else; }
+  //       $code .= "))";
+  //       push(@avs, $code); }
+  //     elsif (/^%$VALUE_RE/) {    # Hash?  Assume the value can be turned into a hash!
+  //       s/^%//;                  # Eat the "%"
+  //       push(@avs, '%{' . translate_value() . '}'); }
+  //     elsif (s|^$QNAME_RE\s*=\s*||o) {
+  //       my ($key, $value) = ($1, translate_string());
+  //       push(@avs, "'$key'=>$value"); }    # if defined $value; }
+  //     else { last; }
+  //     s|^\s*||; }
+  //   return join(', ', @avs); }
+  println_stderr!("AV pairs: {:?}", text);
+  return;
+}
 
 /// DG: Stolen from regex_macros, as I need a way to obtain a string literal
 /// Looks for a single string literal and returns it.
