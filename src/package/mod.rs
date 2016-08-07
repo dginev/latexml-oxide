@@ -262,10 +262,11 @@ macro_rules! compile_replacement(
     use rtx_core::document::Document as Doc;
     use rtx_core::tbox::TBox;
     use std::collections::HashMap;
-    match build_replacement!($replacement) {
-      None => None,
-      Some(f) => Some(Arc::new(f))
-    }
+// match build_replacement!($replacement) {
+//   None => None,
+//   Some(f) => Some(Arc::new(f))
+// }
+    None
   }
   )
 );
