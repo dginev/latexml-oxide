@@ -1,8 +1,8 @@
-use std::sync::Arc;
+// use std::sync::Arc;
 use regex::Regex;
 use rtx_core::Core;
-use rtx_core::common::object::Object;
-use rtx_core::state::{State, ObjectStore};
+// use rtx_core::common::object::Object;
+use rtx_core::state::{State}; //ObjectStore
 use rtx_core::token::*;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::mouth::Mouth;
@@ -12,7 +12,7 @@ use rtx_core::mouth::Mouth;
 pub fn input_definitions(core: &mut Core, file: String) -> Result<(), ()> {
   match file.as_ref() { // TODO?
     "TeX.pool" => pool::tex::load_definitions(&mut core.state),
-    _ => {}
+    other => { println!("TODO: load {:?}", other);}
   };
   Ok(())
 }
@@ -47,7 +47,7 @@ pub fn load_tex_content(core: &mut Core, path: String) {
 
 }
 
-pub fn load_class(_state: &mut State, class: String, _options: Vec<String>, _after: Vec<Token>) {
+pub fn load_class(_state: &mut State, _class: String, _options: Vec<String>, _after: Vec<Token>) {
   // CheckOptions("LoadClass ($class)", $loadclass_options, %options);
   // PushValue(class_options => ($options{options} ? @{ $options{options} } : ()));
   // Note that we'll handle errors specifically for this case.
@@ -84,37 +84,37 @@ pub fn tokenize_internal(some: String) -> Vec<Token> {
 
 pub fn parse_prototype(proto: &str, state: &mut State) -> ((Token, Option<Parameters>)) {
   lazy_static! {
-    static ref csname_macro_regex : Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
-    static ref cs_regex : Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
-    static ref single_char_regex : Regex = Regex::new(r"^(\\.)").unwrap();
-    static ref active_char_regex : Regex = Regex::new(r"^(.)").unwrap();
+    static ref CSNAME_MACRO_REGEX : Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
+    static ref CS_REGEX : Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
+    static ref SINGLE_CHAR_REGEX : Regex = Regex::new(r"^(\\.)").unwrap();
+    static ref ACTIVE_CHAR_REGEX : Regex = Regex::new(r"^(.)").unwrap();
   }
 
   let mut cs = T_CS!("\\".to_string()); // Should never happen
-  let mut final_proto = if csname_macro_regex.is_match(proto) {
-    let captures = csname_macro_regex.captures(proto).unwrap();
+  let mut final_proto = if CSNAME_MACRO_REGEX.is_match(proto) {
+    let captures = CSNAME_MACRO_REGEX.captures(proto).unwrap();
     cs = T_CS!("\\".to_string() + captures.at(0).unwrap());
     // also replace in proto
-    csname_macro_regex.replace(proto, "")
-  } else if cs_regex.is_match(proto) {
+    CSNAME_MACRO_REGEX.replace(proto, "")
+  } else if CS_REGEX.is_match(proto) {
     // Match a cs
-    let captures = cs_regex.captures(proto).unwrap();
+    let captures = CS_REGEX.captures(proto).unwrap();
     let csname = captures.at(0).unwrap().to_string();
     cs = T_CS!(csname);
     // also replace in proto
-    cs_regex.replace(proto, "")
-  } else if single_char_regex.is_match(proto) {
+    CS_REGEX.replace(proto, "")
+  } else if SINGLE_CHAR_REGEX.is_match(proto) {
     // Match a single char cs, env name,...
-    let captures = single_char_regex.captures(proto).unwrap();
+    let captures = SINGLE_CHAR_REGEX.captures(proto).unwrap();
     cs = T_CS!(captures.at(0).unwrap().to_string());
     // also replace in proto
-    single_char_regex.replace(proto, "")
-  } else if active_char_regex.is_match(proto) {
+    SINGLE_CHAR_REGEX.replace(proto, "")
+  } else if ACTIVE_CHAR_REGEX.is_match(proto) {
     // Match an active char
-    let captures = active_char_regex.captures(proto).unwrap();
+    let captures = ACTIVE_CHAR_REGEX.captures(proto).unwrap();
     cs = tokenize_internal(captures.at(0).unwrap().to_string()).first().unwrap().clone();
     // also replace in proto
-    active_char_regex.replace(proto, "")
+    ACTIVE_CHAR_REGEX.replace(proto, "")
   } else {
     // Fatal('misdefined', prototype, $STATE->getStomach,
     //   "Definition prototype doesn't have proper control sequence: \"prototype\""); }
@@ -122,23 +122,23 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> ((Token, Option<Parame
   };
   final_proto = final_proto.trim_left().to_string();
   let paramlist = parse_parameters(final_proto, &cs, state);
-  return (cs, paramlist);
+  (cs, paramlist)
 }
 
 pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) -> Option<Parameters> {
   lazy_static! {
-    static ref nested_check : Regex = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
-    static ref optional_check : Regex = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
-    static ref default_check : Regex = Regex::new(r"^Default:(.*)$").unwrap();
-    static ref paramspec_check : Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
+    static ref NESTED_CHECK : Regex = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
+    static ref OPTIONAL_CHECK : Regex = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
+    static ref DEFAULT_CHECK : Regex = Regex::new(r"^Default:(.*)$").unwrap();
+    static ref PARAMSPECT_CHECK : Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
   }
   let mut parameters = Vec::new();
   while !prototype.is_empty() {
     let mut next_proto = String::new();
     // Handle possibly nested cases, such as {Number}
-    if nested_check.is_match(&prototype) {
-      let captures = nested_check.captures(&prototype).unwrap();
-      next_proto = nested_check.replace(&prototype, "");
+    if NESTED_CHECK.is_match(&prototype) {
+      let captures = NESTED_CHECK.captures(&prototype).unwrap();
+      next_proto = NESTED_CHECK.replace(&prototype, "");
       let spec = captures.at(1).unwrap();
       let inner_spec = captures.at(2).unwrap();
       let inner: Option<Parameters> = if inner_spec.is_empty() {
@@ -154,15 +154,15 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
                       }
                       .init(state));
 
-    } else if optional_check.is_match(&prototype) {
+    } else if OPTIONAL_CHECK.is_match(&prototype) {
       // Ditto for Optional
-      let captures = optional_check.captures(&prototype).unwrap();
-      next_proto = optional_check.replace(&prototype, "");
+      let captures = OPTIONAL_CHECK.captures(&prototype).unwrap();
+      next_proto = OPTIONAL_CHECK.replace(&prototype, "");
       let spec = captures.at(1).unwrap();
       let inner_spec = captures.at(2).unwrap();
 
-      if default_check.is_match(inner_spec) {
-        let default_captures = default_check.captures(&inner_spec).unwrap();
+      if DEFAULT_CHECK.is_match(inner_spec) {
+        // let default_captures = DEFAULT_CHECK.captures(&inner_spec).unwrap();
         parameters.push(Parameter {
                           name: "Optional".to_string(),
                           spec: spec.to_string(),
@@ -188,9 +188,9 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
                         }
                         .init(state));
       }
-    } else if paramspec_check.is_match(&prototype) {
-      let captures = paramspec_check.captures(&prototype).unwrap();
-      next_proto = paramspec_check.replace(&prototype, "");
+    } else if PARAMSPECT_CHECK.is_match(&prototype) {
+      let captures = PARAMSPECT_CHECK.captures(&prototype).unwrap();
+      next_proto = PARAMSPECT_CHECK.replace(&prototype, "");
       let spec = captures.at(1).unwrap();
       let spec_type = captures.at(2).unwrap();
       let extra = match captures.at(4) {
@@ -214,7 +214,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
     //   Fatal('misdefined', cs, undef, "Unrecognized parameter specification at \"prototype\""); } }
     prototype = next_proto;
   }
-  if parameters.len() == 0 {
+  if parameters.is_empty() {
     None
   } else {
     Some(Parameters { params: parameters })
@@ -259,9 +259,9 @@ macro_rules! compile_replacement(
   ($replacement:expr) => (
   {
 // For the replacement builders
-    use rtx_core::document::Document as Doc;
-    use rtx_core::tbox::TBox;
-    use std::collections::HashMap;
+    // use rtx_core::document::Document as Doc;
+    // use rtx_core::tbox::TBox;
+    // use std::collections::HashMap;
 // match build_replacement!($replacement) {
 //   None => None,
 //   Some(f) => Some(Arc::new(f))
@@ -276,7 +276,7 @@ macro_rules! DefConstructorI(
   ($cs:expr, $paramlist:expr, $replacement:expr, $options: expr, $state:expr) => (
   {
     use rtx_core::definition::constructor::Constructor;
-    use $crate::package;
+    // use $crate::package;
 // let mode    = $options.mode;
 // let bounded = $options.bounded;
     let constructor = Constructor { cs: $cs, paramlist: $paramlist, replacement: compile_replacement!($replacement), ..Constructor::default()};
@@ -330,13 +330,16 @@ macro_rules! arg(
   )
 );
 
-pub fn DefParameterType(param_type: String, options: Parameter, state: &mut State) {
-  // CheckOptions("DefParameterType param_type", $parameter_options, %options);
-  state.assign_mapping("PARAMETER_TYPES", &param_type, options);
-  return;
-}
+#[macro_export]
+macro_rules! DefParameterType(
+  ($param_type:expr, $options:expr, $state:expr) => (
+  {
+    // CheckOptions("DefParameterType param_type", $parameter_options, %options);
+    $state.assign_mapping("PARAMETER_TYPES", &$param_type, $options);
+  }
+));
 
-pub fn Revert(arg: Vec<Token>) -> Vec<Token> {
+pub fn revert(_arg: Vec<Token>) -> Vec<Token> {
   Vec::new()
 }
 

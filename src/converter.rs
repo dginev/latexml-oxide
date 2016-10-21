@@ -36,15 +36,15 @@ impl Converter {
       core: Core::default(),
     }
   }
-  pub fn initialize_session<'initlifetime>(&'initlifetime mut self) {
+  pub fn initialize_session(&mut self) {
     // Prepare LaTeXML object
     self.core.initialize_state(vec!["TeX.pool".to_string()]);
     self.ready = true;
   }
-  pub fn bind_log<'bind>(&'bind mut self) {
+  pub fn bind_log(&mut self) {
     // TODO
   }
-  pub fn flush_log<'flush>(&'flush mut self) -> String {
+  pub fn flush_log(&mut self) -> String {
     // TODO
     "mock flush log".to_string()
   }
@@ -183,7 +183,7 @@ impl Converter {
       }
     };
 
-    let status_code = self.core.state.status_code.clone();
+    let status_code = self.core.state.status_code;
     self.runtime.status_code = status_code;
     // alarm(0)
 
@@ -293,12 +293,12 @@ impl Converter {
       result: Some(serialized),
       log: log,
       status: self.runtime.status.clone(),
-      status_code: self.runtime.status_code.clone(),
+      status_code: self.runtime.status_code,
     })
   }
 
 
-  pub fn prepare_session<'preplifetime>(&'preplifetime mut self, opts: &'preplifetime Config) {
+  pub fn prepare_session<'preplifetime>(&'preplifetime mut self, _opts: &'preplifetime Config) {
     if !self.ready {
       self.initialize_session()
     }

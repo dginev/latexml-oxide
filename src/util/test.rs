@@ -14,20 +14,17 @@ pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) {
     return; // test group only if required files are found.
   }
   for tex_file in glob(&(dirpath.to_string() + "/*.tex")).unwrap() {
-    match tex_file {
-      Ok(tex_file) => {
-        let name = tex_file.file_stem().unwrap().to_str().unwrap().to_string();
-        let xml_file = tex_file.with_extension("xml");
+    if let Ok(tex_file) = tex_file {
+      let name = tex_file.file_stem().unwrap().to_str().unwrap().to_string();
+      let xml_file = tex_file.with_extension("xml");
 
-        let tex_file_string = tex_file.to_str().unwrap().to_string();
-        let xml_file_string = xml_file.to_str().unwrap().to_string();
-        if xml_file.exists() {
-          rtx_ok(tex_file_string, xml_file_string, name);
-        } else {
-          // Skip, these could be tex fragment files.
-        }
+      let tex_file_string = tex_file.to_str().unwrap().to_string();
+      let xml_file_string = xml_file.to_str().unwrap().to_string();
+      if xml_file.exists() {
+        rtx_ok(tex_file_string, xml_file_string, name);
+      } else {
+        // Skip, these could be tex fragment files.
       }
-      Err(_) => {}
     }
   }
 }
@@ -44,6 +41,8 @@ fn rtx_ok(tex_path: String, xml_path: String, name: String) {
     if !xml_strings.is_empty() {
       println!("[test] xml diff for {:?}", name);
       for (tex_line, xml_line) in tex_strings.iter().zip(xml_strings.iter()) {
+        assert_eq!(tex_line, tex_line);
+        assert_eq!(xml_line, xml_line);
         // assert_eq!(tex_line, xml_line);
       }
       // match tex_strings.len() - xml_strings.len() {
@@ -59,7 +58,7 @@ fn rtx_ok(tex_path: String, xml_path: String, name: String) {
 
 /// Returns the list-of-strings form of whatever was requested, if successful,
 /// otherwise empty; and they will have reported the failure
-fn process_texfile<'a>(tex_path: String, name: &'a str) -> Vec<String> {
+fn process_texfile(tex_path: String, name: &str) -> Vec<String> {
   let mut test_state = State::new();
   test_state.verbosity = -2;
   let mut latexml = Core {
@@ -82,6 +81,6 @@ fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
     Ok(dom) => process_dom(dom, name),
   }
 }
-fn process_dom<'a>(dom: Document, _name: &'a str) -> Vec<String> {
-  dom.to_string().split("\n").map(|line| line.to_string()).collect()
+fn process_dom(dom: Document, _name: &str) -> Vec<String> {
+  dom.to_string().split('\n').map(|line| line.to_string()).collect()
 }

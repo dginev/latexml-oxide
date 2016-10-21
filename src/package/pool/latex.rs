@@ -1,25 +1,22 @@
 use std::sync::Arc;
-use regex::Regex;
+// use regex::Regex;
 use rtx_core::state::{Scope, State, ObjectStore};
 use rtx_core::token::*;
-use rtx_core::tbox::TBox;
-use rtx_core::stomach::Stomach;
-use rtx_core::whatsit::Whatsit;
-use rtx_core::definition::constructor::ConstructorOptions;
+// use rtx_core::tbox::TBox;
+// use rtx_core::stomach::Stomach;
+// use rtx_core::whatsit::Whatsit;
+// use rtx_core::definition::constructor::ConstructorOptions;
 use package::*;
 
 pub fn load_definitions(state: &mut State) {
   {
     // Only load definitions once
     let latex_loaded: Option<&ObjectStore> = state.lookup_value("latex_pool_loaded");
-    match latex_loaded {
-      Some(&ObjectStore::BoolStore(flag)) => {
-        if flag {
-          return;
-        }
+    if let Some(&ObjectStore::BoolStore(flag)) = latex_loaded {
+      if flag {
+        return;
       }
-      _ => {}
-    };
+    }
   }
   println_stderr!("Loading LaTeX.pool definitions...");
   state.assign_value("latex_pool_loaded",
@@ -162,7 +159,7 @@ pub fn load_definitions(state: &mut State) {
                       .map(|s| s.to_string()) {
     DefMacroI!(T_CS!(ltxtrigger),
                None,
-               move |_gullet, _args, state| Vec::new(),
+               move |_gullet, _args, _state| Vec::new(),
                state);
   }
 }

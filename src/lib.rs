@@ -2,8 +2,7 @@
 // file at the top-level directory of this distribution.
 //
 
-//! # The LaTeXML converter in Rust
-//! The original library can be found at https://github.com/brucemiller/LaTeXML
+//! # The `LaTeXML` converter, reimplemented in Rust
 
 #![feature(plugin)]
 #![plugin(rtx_macros)]

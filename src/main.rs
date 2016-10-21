@@ -4,14 +4,14 @@ extern crate rtx;
 
 use std::env;
 use std::process;
-use std::io::Write;
+// use std::io::Write;
 use rtx_core::common::{Config, OutputFormat, DataSize};
 use rtx::converter::Converter;
 
 fn main() {
   let mut argv = env::args();
-  println!("Welcome to {:?} -- a Rust implementation for LaTeXML",
-           argv.next().unwrap());
+  argv.next();
+  println!("Welcome to rtx -- a Rust implementation for LaTeXML");
 
   let source = match argv.next() {
     Some(s) => s,

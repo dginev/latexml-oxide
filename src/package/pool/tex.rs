@@ -3,7 +3,7 @@ use rtx_core::state::State;
 use rtx_core::token::*;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::gullet::Gullet;
-use package::*;
+// use package::*;
 use package::pool::latex;
 
 pub fn load_definitions(state: &mut State) {
@@ -39,47 +39,45 @@ pub fn load_definitions(state: &mut State) {
 
   // ======================================================================
   // Define parsers for standard parameter types.
-  DefParameterType("Plain".to_string(),
-                   Parameter {
-                     reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, state: &mut State| {
-                       let mut value: Vec<Token> = gullet.read_arg(state);
-                       for inner_opt in inner.into_iter() {
-                         match inner_opt {
-                           Some(inner_p) => {
-                             value = inner_p.reparse_argument(gullet, value, state);
-                           }
-                           _ => {}
-                         };
-                       }
-                       value
-                     }),
-                     reversion: Some(Arc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
-                       // let mut reverted_inner;
-                       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
-                       // for inner_opt in inner.into_iter() {
-                       //   reverted_inner = match inner_opt {
-                       //     Some(inner_p) => inner_p.revert_arguments(arg, state),
-                       //     None => Revert(arg)
-                       //   };
-                       // }
-                       // TODO : push reverted_inner to the read_tokens
-                       read_tokens.push(T_END!());
-                       read_tokens
-                     })),
-                     ..Parameter::default()
-                   },
-                   state);
+  DefParameterType!("Plain".to_string(),
+    Parameter {
+      reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, state: &mut State| {
+        let mut value: Vec<Token> = gullet.read_arg(state);
+        for inner_opt in inner {
+          if let Some(inner_p) = inner_opt {
+            value = inner_p.reparse_argument(gullet, value, state);
+          }
+        }
+        value
+      }),
+      reversion: Some(Arc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
+       // let mut reverted_inner;
+       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+       // for inner_opt in inner.into_iter() {
+       //   reverted_inner = match inner_opt {
+       //     Some(inner_p) => inner_p.revert_arguments(arg, state),
+       //     None => Revert(arg)
+       //   };
+       // }
+       // TODO : push reverted_inner to the read_tokens
+       read_tokens.push(T_END!());
+       read_tokens
+      })),
+      ..Parameter::default()
+   }, state);
 
-  DefParameterType("Optional".to_string(),
+  DefParameterType!("Optional".to_string(),
                    Parameter {
                      reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, state: &mut State| {
                        // TODO: default !!!
-                       let value = gullet.read_optional(state);
+                       // let value = gullet.read_optional(state);
                        // if (!$value && $default) {
                        //   $value = $default; }
                        // elsif ($inner) {
                        //   ($value) = $inner->reparseArgument($gullet, $value); }
-                       value
+                       // value
+
+                       gullet.read_optional(state)
                      }),
 
                      optional: true,
@@ -101,7 +99,7 @@ pub fn load_definitions(state: &mut State) {
 
 
   // Read a Semiverbatim argument; ie w/ most catcodes neutralized.
-  DefParameterType("Semiverbatim".to_string(),
+  DefParameterType!("Semiverbatim".to_string(),
                    Parameter {
                      reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, state: &mut State| gullet.read_arg(state)),
                      reversion: Some(Arc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
@@ -123,7 +121,7 @@ pub fn load_definitions(state: &mut State) {
                    state);
 
   // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
-  DefParameterType("OptionalSemiverbatim".to_string(),
+  DefParameterType!("OptionalSemiverbatim".to_string(),
                    Parameter {
                      reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, state: &mut State| gullet.read_optional(state)),
                      semiverbatim: true,
@@ -143,7 +141,7 @@ pub fn load_definitions(state: &mut State) {
                    state);
 
   // Skip any spaces, but don't contribute an argument.
-  DefParameterType("SkipSpaces".to_string(),
+  DefParameterType!("SkipSpaces".to_string(),
                    Parameter {
                      reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, state: &mut State| {
                        gullet.skip_spaces(state);
