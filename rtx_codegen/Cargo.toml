@@ -1,0 +1,23 @@
+[package]
+name = "rtx_codegen"
+version = "0.1.0"
+authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
+description = "Syntax extension plugins for LaTeXML's binding language & more"
+license = "CC0"
+homepage = "https://github.com/dginev/rtx"
+repository = "https://github.com/dginev/rtx"
+readme = "README.md"
+
+[lib]
+name = "rtx_codegen"
+proc-macro = true
+
+[dependencies.rtx_core]
+path = "../rtx_core"
+
+[dependencies]
+syn = "0.8.5"
+quote = "0.2.1"
+lazy_static = "0.1"
+regex = "0.1.66"
+libxml = "0.0.62"

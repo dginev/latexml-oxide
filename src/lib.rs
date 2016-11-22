@@ -3,12 +3,10 @@
 //
 
 //! # The `LaTeXML` converter, reimplemented in Rust
-
-#![feature(plugin)]
-#![plugin(rtx_macros)]
-
-#[macro_use]
-extern crate lazy_static;
+#![feature(proc_macro, custom_attribute)]
+#[macro_use] extern crate lazy_static;
+#[macro_use] extern crate rtx_core;
+#[macro_use] extern crate rtx_codegen;
 
 extern crate glob;
 extern crate libxml;
@@ -19,9 +17,7 @@ extern crate rand;
 extern crate tempfile;
 extern crate time;
 
-#[macro_use]
-extern crate rtx_core;
-
+#[macro_use] mod macros;
 pub mod util;
 pub mod core;
 pub mod converter;

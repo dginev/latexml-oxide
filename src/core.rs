@@ -22,19 +22,18 @@ pub trait DigestionAPI {
 }
 
 impl DigestionAPI for Core {
-  fn initialize_state(&mut self, _preloads: Vec<String>) {
+  fn initialize_state(&mut self, preloads: Vec<String>) {
     self.stomach.initialize(); // The current Stomach;
     // let paths = state.lookup_value("SEARCHPATHS");
     self.state.assign_value("InitialPreloads",
                             ObjectStore::BoolStore(true),
                             &Some(Scope::Global));
-    // for preload in preloads {
-    //   // TODO
-    //   match input_definitions(self, preload) {
-    //     Ok(_) => {}
-    //     Err(_) => {} // TODO
-    //   }
-    // }
+    for preload in preloads {
+      match input_definitions(self, preload) {
+        Ok(_) => {}
+        Err(_) => {} // TODO
+      }
+    }
     self.state.assign_value("InitialPreloads",
                             ObjectStore::BoolStore(false),
                             &Some(Scope::Global));

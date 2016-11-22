@@ -220,6 +220,7 @@ impl State {
       _ => T_LETTER!("_wrong_argument_for_install_definition".to_string()),
     };
     let cs = token.get_cs_name();
+    // println_stderr!("-- installing definition for: {:?}", token);
 
     let cs_locked = cs.clone() + ":locked";
     // TODO, .is_none() should be a real false check

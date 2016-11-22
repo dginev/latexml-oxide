@@ -41,8 +41,7 @@ fn rtx_ok(tex_path: String, xml_path: String, name: String) {
     if !xml_strings.is_empty() {
       println!("[test] xml diff for {:?}", name);
       for (tex_line, xml_line) in tex_strings.iter().zip(xml_strings.iter()) {
-        assert_eq!(tex_line, tex_line);
-        assert_eq!(xml_line, xml_line);
+        assert_eq!(tex_line, xml_line);
         // assert_eq!(tex_line, xml_line);
       }
       // match tex_strings.len() - xml_strings.len() {

@@ -3,28 +3,22 @@ name = "rtx"
 version = "0.1.0"
 authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
 
-[lib]
-name = "rtx"
-crate-type = ["rlib", "dylib", "staticlib"]
-
-[dependencies.libxml]
-git = "https://github.com/KWARC/rust-libxml.git"
-
 [dependencies.libarchive-sys]
 git = "https://github.com/dginev/libarchive-sys.git"
 
-[dependencies.rtx_macros]
-path = "rtx_macros"
+[dependencies.rtx_codegen]
+path = "rtx_codegen"
 
 [dependencies.rtx_core]
 path = "rtx_core"
 
 [dependencies]
-libc = "~0.1"
+libc = "0.2"
 rustc-serialize = "0.3"
-glob = "*"
-rand = "*"
-tempfile = "*"
-time = "*"
-lazy_static = "0.1.*"
+glob = "0.2"
+rand = "0.3"
+tempfile = "2.1"
+time = "0.1"
+lazy_static = "0.1"
 regex = "0.1.66"
+libxml = "0.0.62"

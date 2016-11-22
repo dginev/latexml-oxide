@@ -105,7 +105,7 @@ impl Stomach {
                          ObjectStore::TokenStore(token.clone()),
                          &Some(Scope::Global));
       result = Vec::new();
-      let mut looked_up_definition: Option<ObjectStore> = state.lookup_digestable_definition(&token);
+      let looked_up_definition: Option<ObjectStore> = state.lookup_digestable_definition(&token);
       match looked_up_definition {
         None => {
           // Supposedly executable token, but no definition!
@@ -157,7 +157,7 @@ impl Stomach {
     return result;
   }
 
-  fn invoke_token_undefined(&mut self, token: Token, state: &mut State) -> Vec<Digested> {
+  fn invoke_token_undefined(&mut self, _token: Token, _state: &mut State) -> Vec<Digested> {
     // println_stderr!("-- Undefined invoke {:?}", token);
     // TODO: Rework this carefully
     Vec::new()

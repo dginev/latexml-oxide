@@ -1,3 +1,5 @@
+extern crate rtx_codegen;
+
 // use std::sync::Arc;
 use regex::Regex;
 use rtx_core::Core;
@@ -7,11 +9,10 @@ use rtx_core::token::*;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::mouth::Mouth;
 
-// use common::{Error};
-
 pub fn input_definitions(core: &mut Core, file: String) -> Result<(), ()> {
   match file.as_ref() { // TODO?
     "TeX.pool" => pool::tex::load_definitions(&mut core.state),
+    "LaTeX.pool" => pool::latex::load_definitions(&mut core.state),
     other => { println!("TODO: load {:?}", other);}
   };
   Ok(())
@@ -255,31 +256,26 @@ macro_rules! DefMacro(
   )
 );
 
-macro_rules! compile_replacement(
-  ($replacement:expr) => (
-  {
-// For the replacement builders
-    // use rtx_core::document::Document as Doc;
-    // use rtx_core::tbox::TBox;
-    // use std::collections::HashMap;
-// match build_replacement!($replacement) {
-//   None => None,
-//   Some(f) => Some(Arc::new(f))
-// }
-    None
-  }
-  )
-);
-
 #[macro_export]
 macro_rules! DefConstructorI(
   ($cs:expr, $paramlist:expr, $replacement:expr, $options: expr, $state:expr) => (
   {
     use rtx_core::definition::constructor::Constructor;
-    // use $crate::package;
+    use rtx_core::document::Document;
+    use rtx_core::tbox::TBox;
+    use std::collections::HashMap;
+    // use libxml::tree::Node;
+    use rtx_core::definition::constructor::ReplacementClosure;
+
 // let mode    = $options.mode;
 // let bounded = $options.bounded;
-    let constructor = Constructor { cs: $cs, paramlist: $paramlist, replacement: compile_replacement!($replacement), ..Constructor::default()};
+    let compiled_replacement;
+    compile_replacement!(compiled_replacement, $replacement);
+    let constructor = Constructor {
+      cs: $cs,
+      paramlist: $paramlist,
+      replacement: compiled_replacement,
+      ..Constructor::default()};
 
     $state.install_definition(::rtx_core::state::ObjectStore::ConstructorStore(Arc::new(constructor)), &None);
 
