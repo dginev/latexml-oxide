@@ -21,6 +21,11 @@ impl Tokens {
     self.tokens
   }
 
+  /// Checks if there are tokens present
+  pub fn is_empty(&self) -> bool {
+    self.tokens.is_empty()
+  }
+
   /// Return a shallow copy of the Tokens
   pub fn clone(&self) -> Self {
     Tokens { tokens: self.tokens.clone() }

@@ -261,11 +261,8 @@ macro_rules! DefConstructorI(
   ($cs:expr, $paramlist:expr, $replacement:expr, $options: expr, $state:expr) => (
   {
     use rtx_core::definition::constructor::Constructor;
-    use rtx_core::document::Document;
-    use rtx_core::tbox::TBox;
     use std::collections::HashMap;
     // use libxml::tree::Node;
-    use rtx_core::definition::constructor::ReplacementClosure;
 
 // let mode    = $options.mode;
 // let bounded = $options.bounded;

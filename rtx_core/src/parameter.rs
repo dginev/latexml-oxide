@@ -164,8 +164,8 @@ impl Parameter {
     let mut value_to_digest = value.clone();
     if self.semiverbatim {
       state.begin_semiverbatim();
-      stomach.get_gullet().reading_from_mouth(Mouth::default(), state, Box::new(move |igullet : &mut Gullet, state : &mut State| {
-        igullet.unread(value.unlist());
+      stomach.get_gullet_mut().reading_from_mouth(Mouth::default(), state, Box::new(move |igullet : &mut Gullet, state : &mut State| {
+        igullet.unread(value.clone().unlist());
         let mut tokens = Vec::new();
         while let Some(token) = igullet.read_x_token(true, true, state) {
           tokens.push(token);
@@ -180,7 +180,7 @@ impl Parameter {
     }
 
     let mut digested_value = None;
-    if !value_to_digest.unlist().is_empty() && !self.undigested {
+    if !value_to_digest.is_empty() && !self.undigested {
       digested_value = Some(value_to_digest.be_digested(stomach));
     }
     if let Some(ref post) = self.after_digest { // Done for effect only.

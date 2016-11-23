@@ -3,6 +3,7 @@ use std::fs::File;
 use std::hash::Hash;
 use std::path::Path;
 use std::collections::VecDeque;
+use std::sync::Mutex;
 use regex::Regex;
 
 use common::error::*;
@@ -19,7 +20,11 @@ pub enum FoodType {
   Literal,
 }
 
-#[derive(Clone, PartialEq)]
+lazy_static! {
+  static ref LASTID : Mutex<u32> = Mutex::new(0);
+}
+
+#[derive(Clone)]
 pub struct Mouth {
   pub fordefinitions: bool,
   pub notes: bool,
@@ -37,6 +42,13 @@ pub struct Mouth {
   pub buffer: VecDeque<String>,
 }
 
+impl PartialEq for Mouth {
+  fn eq(&self, other: &Mouth) -> bool {
+    self.source == other.source
+  }
+}
+
+
 impl Default for Mouth {
   fn default() -> Self {
     Mouth {
@@ -47,7 +59,7 @@ impl Default for Mouth {
       colno: 0,
       chars: VecDeque::new(),
       nchars: 0,
-      source: "Anonymous String".to_string(),
+      source: "Anonymous String".to_string() + &Mouth::gid(),
       shortsource: "String".to_string(),
       // handle : None,
       foodtype: FoodType::File,
@@ -540,4 +552,11 @@ impl Mouth {
     };
     Some(T_CS!(cs))
   }
+
+  fn gid() -> String {
+    let mut lastid = LASTID.lock().unwrap();
+    *lastid = *lastid + 1;
+    lastid.to_string()
+  }
+
 }
