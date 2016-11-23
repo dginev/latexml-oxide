@@ -1,4 +1,4 @@
-use {Digested, BoxOps};
+use {Digested, TexMode, BoxOps};
 use state::State;
 use document::Document;
 
@@ -7,6 +7,7 @@ use document::Document;
 pub struct List {
   // TODO
   pub boxes: Vec<Digested>,
+  pub mode: TexMode
 }
 
 impl BoxOps for List {

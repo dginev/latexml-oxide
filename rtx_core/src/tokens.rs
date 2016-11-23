@@ -66,8 +66,8 @@ impl Tokens {
     + "]"
   }
 
-  pub fn be_digested(self, stomach : &mut Stomach) -> Digested {
-    stomach.digest(self)
+  pub fn be_digested(self, stomach : &mut Stomach, state: &mut State) -> Digested {
+    stomach.digest(self, state)
   }
 
   pub fn neutralize(self, extraspecials: &Vec<Token>, state: &State) -> Tokens {

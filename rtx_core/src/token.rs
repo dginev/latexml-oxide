@@ -363,7 +363,7 @@ impl Token {
   }
 
 
-  pub fn be_digested(self, stomach : &mut Stomach) -> Digested {
-    stomach.digest(Tokens{tokens: vec![self]})
+  pub fn be_digested(self, stomach : &mut Stomach, state: &mut State) -> Digested {
+    stomach.digest(Tokens{tokens: vec![self]}, state)
   }
 }

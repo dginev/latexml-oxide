@@ -52,6 +52,12 @@ pub trait BoxOps {
 }
 
 #[derive(Debug)]
+pub enum TexMode {
+  Math,
+  Text
+}
+
+#[derive(Debug)]
 pub enum Digested {
   BoxObj(TBox),
   ListObj(List),

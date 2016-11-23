@@ -2,7 +2,7 @@ use regex::{Regex, Captures};
 use std::path::Path;
 use rtx_core::common::{Error, DigestionMode};
 // use common::model::{Model};
-use rtx_core::{Core, Digested};
+use rtx_core::{Core, Digested, TexMode};
 use rtx_core::common::error::*;
 use rtx_core::util::pathname::*;
 use rtx_core::state::{Scope, ObjectStore}; // State
@@ -176,7 +176,7 @@ impl DigestionAPI for Core {
       }
     }
     self.stomach.get_gullet().flush();
-    Digested::ListObj(List { boxes: boxes })
+    Digested::ListObj(List { boxes: boxes, mode: TexMode::Text })
   }
 
   // Internal helpers:
