@@ -4,6 +4,8 @@
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_replacement {
     ($var: ident, $replacement: expr) => {
+        use rtx_core::BoxOps;
+
         #[allow(unused_attributes)]
         #[derive(CompileReplacement)]
         #[options(replacement=$replacement)]

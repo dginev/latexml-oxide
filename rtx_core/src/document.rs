@@ -114,28 +114,27 @@ impl Document {
   /// Insert a ProcessingInstruction of the form <?op attr=value ...?>
   /// Does NOT move the current insertion point to the PI,
   /// but may move up past a text node.
-  pub fn insert_pi(&mut self, op: &str, kind: &str, content: &str, options: Option<String>) {
-    // We'll just put these on the document itself.
-    // Put these in an attractive order, main "operator" first
-    // my @keys = ((map { ($attrib{$_} ? ($_) : ()) } qw(class package options)),
-    //   (grep { $_ !~ /^(?:class|package|options)$/ } sort keys %attrib));
-    // my $data = join(' ', map { $_ . "=\"" . ToString($attrib{$_}) . "\"" } @keys);
-    let options_string = match options {
-      Some(payload) => " options=".to_string() + &payload,
-      None => String::new(),
-    };
-    let mut data = kind.to_string() + "=" + content + &options_string;
-    let pi = self.document.create_processing_instruction(op, &data).unwrap();
-
+  //  Rust note: attrib would have been best as Vec<(String,String)> but currently quote!() doesn't work out of the box on them
+  pub fn insert_pi(&mut self, op: &str, attrib : Vec<&str>) {
+    let pi_node = self.document.create_processing_instruction(op,"").unwrap();
+    let mut key = "";
+    for a in attrib {
+      if key.is_empty() {
+        key = a;
+      } else {
+        pi_node.set_attribute(&key, &a);
+        key = "";
+      }
+    }
     // self.close_text_internal();  // Close any open text node
     // if ($$self{node}->nodeType == NodeType::DocumentNode) {
     //   push(@{ $$self{pending} }, $pi); }
     // else {
     println_stderr!("Trying to insert PI: {:?}",
-                    self.document.node_to_string(&pi));
+                    self.document.node_to_string(&pi_node));
     println_stderr!("Into doc: {:?}", self.document.to_string());
 
-    self.node.add_prev_sibling(pi);
+    self.node.add_prev_sibling(pi_node);
 
     return;
   }

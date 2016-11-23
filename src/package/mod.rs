@@ -269,6 +269,9 @@ macro_rules! DefConstructorI(
 
 // let mode    = $options.mode;
 // let bounded = $options.bounded;
+
+    // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
+    //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
     let constructor = Constructor {

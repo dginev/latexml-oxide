@@ -19,7 +19,7 @@ pub enum FoodType {
   Literal,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Mouth {
   pub fordefinitions: bool,
   pub notes: bool,

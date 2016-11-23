@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use common::xml::XPath;
-use common::font::*;
+// use common::font::*;
 
 const LTX_NAMESPACE: &'static str = "http://dlmf.nist.gov/LaTeXML";
 

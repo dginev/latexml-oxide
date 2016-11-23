@@ -32,6 +32,7 @@ pub enum Table {
 #[derive(Clone)]
 pub enum ObjectStore {
   StringStore(String),
+  VecCharStore(Vec<char>),
   VecStringStore(Vec<String>),
   BoolStore(bool),
   TokenStore(Token),
@@ -45,6 +46,7 @@ impl fmt::Debug for ObjectStore {
     use state::ObjectStore::*;
     match self {
       &StringStore(ref s) => write!(f, "{}", s),
+      &VecCharStore(ref vs) => write!(f, "vec of chars"),
       &VecStringStore(ref vs) => write!(f, "vec of strings"),
       &BoolStore(ref b) => write!(f, "{}", b),
       &TokenStore(ref t) => write!(f, "token"),

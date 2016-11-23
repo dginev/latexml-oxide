@@ -6,7 +6,7 @@ use definition::Definition;
 use mouth::Mouth;
 use token::{Token, Catcode};
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub struct MouthRuntime {
   pub autoclose: bool,
   pub mouth: Mouth,
@@ -74,6 +74,44 @@ impl Gullet {
       self.mouth = self.mouthstack.pop_front();
     }
     return Ok(());
+  }
+
+  // Do something, while reading stuff from a specific Mouth.
+  // This reads ONLY from that mouth (or any mouth openned by code in that source),
+  // and the mouth should end up empty afterwards, and only be closed here.
+  pub fn reading_from_mouth(&mut self, mouth: Mouth, state: &mut State,
+                            reader: Box<Fn(&mut Gullet, &mut State) -> Vec<Token>>) -> Vec<Token> {
+    self.open_mouth(mouth, false);  // only allow mouth to be explicitly closed here.
+    let results : Vec<Token> = reader(self, state);
+    // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
+    loop {
+      if let Some(ref mut runtime) = self.mouth {
+        if runtime.mouth == mouth {
+          self.close_mouth(true, state);
+          break;
+        } else if self.mouthstack.is_empty() {
+          println_stderr!("TODO: Error unexpected:<closed> Mouth is unexpectedly already closed");
+          // Error('unexpected', '<closed>', $self, "Mouth is unexpectedly already closed",
+          //   "Reading from " . Stringify($mouth) . ", but it has already been closed.");
+          break;
+        }
+        else if !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input() {
+          let next = self.read_token(state); // stringify( ?
+          println_stderr!("TODO: Error unexpected:next unexpected input remaining");
+          // Error('unexpected', $next, $self, "Unexpected input remaining: '$next'",
+          //   "Finished reading from " . Stringify($mouth) . ", but it still has input.");
+          runtime.mouth.finish(state);
+          self.close_mouth(true, state);
+        } // ?? if we continue?
+        else {
+          self.close_mouth(false, state);
+        }
+      } else {
+        println_stderr!("TODO: Error unexpected:runtime - gullet had no active runtime");
+        break;
+      }
+    }
+    results
   }
 
   pub fn get_locator(&self) -> String {

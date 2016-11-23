@@ -1,4 +1,8 @@
+use state::{State, ObjectStore};
 use {Digested, BoxOps};
+use stomach::Stomach;
+use tokens::Tokens;
+
 #[derive(PartialEq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
   ESCAPE,
@@ -22,33 +26,6 @@ pub enum Catcode {
   MARKER,
 }
 impl Catcode {
-  pub fn is_primitive(&self) -> bool {
-    use token::Catcode::*;
-    match *self {
-      // Primitives
-      ESCAPE => true,
-      BEGIN => true,
-      END => true,
-      MATH => true,
-      ALIGN => true,
-      EOL => true,
-      PARAM => true,
-      SUPER => true,
-      SUB => true,
-      SPACE => true,
-      NOTEXPANDED => true,
-      // Non-primitive
-      IGNORE => false,
-      LETTER => false,
-      OTHER => false,
-      ACTIVE => false,
-      COMMENT => false,
-      INVALID => false,
-      CS => false,
-      MARKER => false,
-    }
-  }
-
   pub fn name(&self) -> String {
     use token::Catcode::*;
     match *self {
@@ -76,9 +53,93 @@ impl Catcode {
     }
     .to_string()
   }
-}
 
-#[derive(Clone, Hash, Debug)]
+  // ======================================================================
+  // Categories of Category codes.
+  // For Tokens with these catcodes, only the catcode is relevant for comparison.
+  // (if they even make it to a stage where they get compared)
+  pub fn is_primitive(&self) -> bool {
+    use token::Catcode::*;
+    match *self {
+      // Primitives
+      ESCAPE => true,
+      BEGIN => true,
+      END => true,
+      MATH => true,
+      ALIGN => true,
+      EOL => true,
+      PARAM => true,
+      SUPER => true,
+      SUB => true,
+      SPACE => true,
+      NOTEXPANDED => true,
+      // Non-primitive
+      IGNORE => false,
+      LETTER => false,
+      OTHER => false,
+      ACTIVE => false,
+      COMMENT => false,
+      INVALID => false,
+      CS => false,
+      MARKER => false,
+    }
+  }
+
+  pub fn is_executable(&self) -> bool {
+    use token::Catcode::*;
+    match *self {
+      // Executable
+      BEGIN => true,
+      END => true,
+      MATH => true,
+      ALIGN => true,
+      SUPER => true,
+      SUB => true,
+      ACTIVE => true,
+      CS => true,
+      // Non-executable
+      EOL => false,
+      ESCAPE => false,
+      PARAM => false,
+      SPACE => false,
+      IGNORE => false,
+      LETTER => false,
+      OTHER => false,
+      COMMENT => false,
+      INVALID => false,
+      NOTEXPANDED => false,
+      MARKER => false,
+    }
+  }
+
+  pub fn is_neutralizable(&self) -> bool {
+    use token::Catcode::*;
+    match *self {
+      // Neutralizable
+      MATH => true,
+      ALIGN => true,
+      PARAM => true,
+      SUPER => true,
+      SUB => true,
+      ACTIVE => true,
+      // Non-neutralizable
+      ESCAPE => false,
+      BEGIN => false,
+      END => false,
+      EOL => false,
+      IGNORE => false,
+      SPACE => false,
+      LETTER => false,
+      OTHER => false,
+      COMMENT => false,
+      INVALID => false,
+      CS => false,
+      NOTEXPANDED => false,
+      MARKER => false,
+    }
+  }
+}
+#[derive(Clone, Hash, Debug, PartialEq)]
 pub struct Token {
   pub text: String,
   pub code: Catcode,
@@ -207,7 +268,102 @@ impl Token {
     }
   }
 
+  /// Get the CS name only if the catcode is executable!
+  pub fn get_executable_name(&self) -> String {
+    let cc = self.code;
+    if cc.is_executable() {
+      if cc.is_primitive() {
+        cc.name()
+      } else {
+        self.text.clone()
+      }
+    } else {
+      String::new()
+    }
+  }
+
+  /// Return the string or character part of the token
+  pub fn get_string(&self) -> &str {
+    &self.text
+  }
+
+  /// Return the character code of  character part of the token, or 256 if it is a control sequence
+  pub fn get_charcode(&self) -> u8 {
+    if self.code == Catcode::CS {
+      256
+    }
+    else if let Some(c) = self.text.chars().next() {
+      c as u8
+    } else {
+      0
+    }
+  }
+
+  /// Return the catcode of the token.
+  pub fn get_catcode(&self) -> Catcode {
+    self.code
+  }
+
+  pub fn is_executable(&self) -> bool {
+    self.code.is_executable()
+  }
+
+  /// Defined so a Token or Tokens can be used interchangeably.
+  pub fn unlist(&self) -> Vec<Token> {
+    vec![self.clone()]
+  }
+
+  /// neutralize really should only retroactively imitate what Semiverbatim would have done.
+  /// So, it needs to neutralize those in SPECIALS
+  /// NOTE that although '%' gets it's catcode changed in Semiverbatim,
+  /// I'm pretty sure we do NOT want to neutralize comments (turn them into CC_OTHER)
+  /// here, since if comments do get into the Tokens, that will introduce weird crap into the stream.
+  pub fn neutralize(self, extraspecials : &Vec<Token>, state: &State) -> Token {
+    let ch = self.text.chars().next().unwrap();
+    let cc = self.code;
+    if cc.is_neutralizable() {
+      let mut is_special = false;
+      if let Some(specials_store) = state.lookup_value("SPECIALS") {
+        let evec = Vec::new();
+        let specials_list : &Vec<char> = match specials_store {
+          &ObjectStore::VecCharStore(ref list) => list,
+          _ => &evec
+        };
+        for special in specials_list.iter() {
+          if *special == ch {
+            is_special = true;
+            break;
+          }
+        }
+      }
+      if is_special || !extraspecials.is_empty() {
+        T_OTHER!(self.text)
+      } else {
+        self
+      }
+    } else {
+      self
+    }
+  }
+
+  ///======================================================================
+  /// Note that this converts the string to a more `user readable' form using `standard' chars for catcodes.
+  /// We'll need to be careful about using string instead of reverting for internal purposes where the
+  /// actual character is needed.
+
+  /// Should revert do something with this???
+  ///  ($standardchar[$$self[1]] || $$self[0]); }
+
+  pub fn revert(&self) -> Token {
+    self.clone()
+  }
+
   pub fn to_string(&self) -> String {
     self.text.clone()
+  }
+
+
+  pub fn be_digested(self, stomach : &mut Stomach) -> Digested {
+    stomach.digest(Tokens{tokens: vec![self]})
   }
 }

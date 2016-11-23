@@ -118,7 +118,7 @@ impl DigestionAPI for Core {
             if let Some(&ObjectStore::BoolStore(ico_flag)) = state.lookup_value("INCLUDE_COMMENTS") {
               if ico_flag {
                 let paths_string = paths.join(",");
-                document.insert_pi("latexml", "paths", &paths_string, None);
+                document.insert_pi("latexml", vec!["paths", &paths_string]);
               }
             }
           }
@@ -142,10 +142,10 @@ impl DigestionAPI for Core {
       });
       if CLS_EXT_REGEX.is_match(preload) {
         CLS_EXT_REGEX.replace_all(preload, "");
-        document.insert_pi("latexml", "class", preload, options);
+        document.insert_pi("latexml", vec!["class", preload]);
       } else {
         STY_EXT_REGEX.replace_all(preload, "");
-        document.insert_pi("latexml", "package", preload, options);
+        document.insert_pi("latexml", vec!["package", preload]);
       }
     }
     document.absorb(digested, state);

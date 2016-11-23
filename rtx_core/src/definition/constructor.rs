@@ -36,9 +36,9 @@ impl Default for ConstructorOptions {
   }
 }
 
-pub type DigestionClosure = Arc<Fn(&mut Stomach, &Whatsit, &mut State)>;
+pub type DigestionClosure = Arc<Fn(&mut Stomach, Option<&Whatsit>, &mut State)>;
 pub type ReplacementClosure = Arc<Fn(&mut Document,
-                                     &Vec<TBox>,
+                                     &Vec<Digested>,
                                      &HashMap<String, String>,
                                      &mut State)
                                     >;
@@ -87,7 +87,7 @@ impl Definition for Constructor {
     // let font   = state.lookup_value("font");
     // let ismath = state.lookup_value("IN_MATH");
     // Parse AND digest the arguments to the Constructor
-    let mut args: Vec<TBox> = match self.get_parameters() {
+    let mut args: Vec<Digested> = match self.get_parameters() {
       &None => Vec::new(),
       &Some(ref params) => params.read_arguments_and_digest(stomach, &self, state),
     };

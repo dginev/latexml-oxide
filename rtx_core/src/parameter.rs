@@ -1,12 +1,16 @@
 use std::sync::Arc;
 use regex::Regex;
 use token::Token;
+use tokens::Tokens;
 use tbox::TBox;
 use gullet::Gullet;
 use stomach::Stomach;
 use definition::Definition;
-use definition::constructor::Constructor;
+use definition::constructor::{Constructor, DigestionClosure};
+use definition::expandable::ExpansionClosure;
 use state::State;
+use mouth::Mouth;
+use Digested;
 
 pub type ReaderClosure = Arc<Fn(&mut Gullet, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>;
 pub type ReversionClosure = Arc<Fn(&mut Gullet, Vec<Token>, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>;
@@ -15,11 +19,14 @@ pub struct Parameter {
   pub novalue: bool,
   pub semiverbatim: bool,
   pub optional: bool,
+  pub undigested : bool,
   pub name: String,
   pub spec: String,
   pub extra: Vec<Option<Parameters>>,
   pub reader: ReaderClosure,
   pub reversion: Option<ReversionClosure>,
+  pub before_digest : Option<DigestionClosure>,
+  pub after_digest : Option<DigestionClosure>,
 }
 impl Default for Parameter {
   fn default() -> Self {
@@ -27,6 +34,7 @@ impl Default for Parameter {
       novalue: false,
       semiverbatim: false,
       optional: false,
+      undigested : false,
       name: "parameter_default".to_string(),
       spec: String::new(),
       extra: Vec::new(),
@@ -35,6 +43,8 @@ impl Default for Parameter {
         Vec::new()
       }),
       reversion: None,
+      before_digest : None,
+      after_digest : None,
     }
   }
 }
@@ -145,10 +155,42 @@ impl Parameter {
     //     "Missing argument " . Stringify($self) . " for " . Stringify($fordefn),
     //     $gullet->showUnexpected);
     //   $value = T_OTHER('missing'); }
-    return value;
+
+    value
   }
-  pub fn digest(&self, stomach: &mut Stomach, value: Vec<Token>, fordefn: &Constructor, state: &mut State) -> Option<TBox> {
-    None
+
+  pub fn digest(&self, stomach: &mut Stomach, value: Tokens, fordefn: &Constructor, state: &mut State) -> Option<Digested> {
+    // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
+    let mut value_to_digest = value.clone();
+    if self.semiverbatim {
+      state.begin_semiverbatim();
+      stomach.get_gullet().reading_from_mouth(Mouth::default(), state, Box::new(move |igullet : &mut Gullet, state : &mut State| {
+        igullet.unread(value.unlist());
+        let mut tokens = Vec::new();
+        while let Some(token) = igullet.read_x_token(true, true, state) {
+          tokens.push(token);
+        }
+        let evec = Vec::new();
+        Tokens{tokens: tokens}.neutralize(&evec, state).unlist()
+      }));
+    }
+
+    if let Some(ref pre) = self.before_digest { // Done for effect only.
+      pre(stomach, None, state); // maybe pass extras?
+    }
+
+    let mut digested_value = None;
+    if !value_to_digest.unlist().is_empty() && !self.undigested {
+      digested_value = Some(value_to_digest.be_digested(stomach));
+    }
+    if let Some(ref post) = self.after_digest { // Done for effect only.
+      post(stomach, None, state); // maybe pass extras?
+    }
+    if self.semiverbatim {
+      state.end_semiverbatim() // Corner case?
+    }
+
+    digested_value
   }
 }
 
@@ -162,7 +204,7 @@ impl Parameters {
     self.params.len()
   }
 
-  pub fn revert_arguments(&self, args: Vec<Token>, state: &mut State) -> Vec<Token> {
+  pub fn revert_arguments(&self, _args: Vec<Token>, _state: &mut State) -> Vec<Token> {
     Vec::new()
   }
 
@@ -179,12 +221,12 @@ impl Parameters {
     args
   }
 
-  pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Vec<TBox> {
+  pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Vec<Digested> {
     let mut args = Vec::new();
     for parameter in self.params.iter() {
-      let mut value = parameter.read(&mut stomach.gullet, fordefn, state);
+      let value = parameter.read(&mut stomach.gullet, fordefn, state);
       if !parameter.novalue {
-        match parameter.digest(stomach, value, fordefn, state) {
+        match parameter.digest(stomach, Tokens{tokens: value}, fordefn, state) {
           None => {}
           Some(v) => args.push(v),
         }
@@ -193,7 +235,7 @@ impl Parameters {
     return args;
   }
 
-  pub fn reparse_argument(&self, gullet: &mut Gullet, value: Vec<Token>, state: &mut State) -> Vec<Token> {
+  pub fn reparse_argument(&self, _gullet: &mut Gullet, _value: Vec<Token>, _state: &mut State) -> Vec<Token> {
     Vec::new()
   }
 }
