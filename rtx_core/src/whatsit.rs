@@ -2,23 +2,26 @@ use std::fmt;
 use std::collections::HashMap;
 use std::sync::Arc;
 use state::State;
-use tbox::TBox;
 use {Digested, BoxOps};
 use definition::Definition;
 use document::Document;
 
 pub struct Whatsit {
-  pub args: Vec<Digested>,
+  pub args: Vec<Option<Digested>>,
   pub properties: HashMap<String, String>, // TODO: This will be an issue, LaTeXML traditionally takes advantage of the fully untyped nature of Perl hashes
   pub definition: Arc<Definition>,
 }
 
 impl Whatsit {
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
-    self.args.get(n - 1)
+    match self.args.get(n - 1) {
+      None => None,
+      Some(&None) => None,
+      Some(&Some(ref opt)) => Some(&opt)
+    }
   }
 
-  pub fn get_args(&self) -> &Vec<Digested> {
+  pub fn get_args(&self) -> &Vec<Option<Digested>> {
     &self.args
   }
 

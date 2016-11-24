@@ -49,69 +49,80 @@ impl Default for Parameter {
   }
 }
 
+lazy_static!{
+  static ref OPTIONAL_REGEX : Regex = Regex::new(r"^Optional(.+)$").unwrap();
+  static ref SKIP_REGEX : Regex = Regex::new(r"^Skip(.+)$").unwrap();
+}
+
 impl Parameter {
   pub fn init(mut self, state: &mut State) -> Self {
     // Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
-    lazy_static!{
-      static ref optional_regex : Regex = Regex::new(r"^Optional(.+)$").unwrap();
-      static ref skip_regex : Regex = Regex::new(r"^Skip(.+)$").unwrap();
-    }
     let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
-    let descriptor = match looked_up_mapping {
-      Some(ref descriptor) => Some(descriptor.clone()),
+    let mut descriptor : Option<Parameter>;
+    match looked_up_mapping {
+      Some(ref d_lookup) => {
+        descriptor = Some((*d_lookup).clone());
+      },
       None => {
-        if optional_regex.is_match(&self.name) {
-          let captures = optional_regex.captures(&self.name).unwrap();
+        if OPTIONAL_REGEX.is_match(&self.name) {
+          let captures = OPTIONAL_REGEX.captures(&self.name).unwrap();
           let basetype = captures.at(1).unwrap();
-          let descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-            Some(descriptor) => Some(descriptor),
+          descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
+            Some(d_lookup) => Some(d_lookup.clone()),
             None => {
-              let mut reader = Parameter::check_reader_function("Read".to_string() + &self.name);
-              if reader.is_none() {
-                reader = Parameter::check_reader_function("Read".to_string() + basetype);
+              match Parameter::check_reader_function("Read".to_string() + &self.name) {
+                Some(reader) => Some(Parameter{reader: reader, ..Parameter::default()}),
+                None => match Parameter::check_reader_function("Read".to_string() + basetype) {
+                  Some(reader) => Some(Parameter{reader: reader, ..Parameter::default()}),
+                  None => None
+                }
               }
-              // descriptor = {reader: reader} // ???
-              None
             }
           };
-          // descriptor.optional = true // ???
-          descriptor
-        } else if skip_regex.is_match(&self.name) {
-          let captures = skip_regex.captures(&self.name).unwrap();
+          descriptor.as_mut().unwrap().optional = true;
+        } else if SKIP_REGEX.is_match(&self.name) {
+          let captures = SKIP_REGEX.captures(&self.name).unwrap();
           let basetype = captures.at(1).unwrap();
-
-          let descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-            Some(descriptor) => Some(descriptor),
+          println_stderr!("param basetype: {:?}", basetype);
+          descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
+            Some(d_lookup) => Some(d_lookup.clone()),
             None => {
-              let mut reader = Parameter::check_reader_function(self.name.clone());
-              if reader.is_none() {
-                reader = Parameter::check_reader_function("Read".to_string() + basetype)
+              match Parameter::check_reader_function(self.name.clone()) {
+                Some(reader) => Some(Parameter{reader: reader, ..Parameter::default()}),
+                None => match Parameter::check_reader_function("Read".to_string() + basetype) {
+                  Some(reader) => Some(Parameter{reader: reader, ..Parameter::default()}),
+                  None => None
+                }
               }
-              // descriptor = { reader => $reader };
-              None
             }
           };
-          // $descriptor = { %$descriptor, novalue => 1, optional => 1 } if $descriptor; }
-          descriptor
+          descriptor.as_mut().unwrap().novalue = true;
+          descriptor.as_mut().unwrap().optional = true;
         } else {
-          let reader = Parameter::check_reader_function("Read".to_string() + &self.name);
-          if reader.is_some() {
-            // descriptor = { reader => $reader } if $reader;
-          }
-          // descriptor
-          None
+          descriptor = match Parameter::check_reader_function("Read".to_string() + &self.name) {
+            Some(reader) => Some(Parameter{reader: reader, ..Parameter::default()}),
+            None => None
+          };
         }
       }
     };
     match descriptor {
       Some(descriptor) => {
         // descriptor needs to get integrated into Self
-        self.reader = descriptor.reader.clone(); // What else?
+        self.reader = descriptor.reader; // What else?
+        self.novalue = descriptor.novalue;
+        self.semiverbatim = descriptor.semiverbatim;
+        self.optional = descriptor.optional;
+        self.undigested = descriptor.undigested;
+        self.name = descriptor.name;
+        self.reversion = descriptor.reversion;
+        self.before_digest = descriptor.before_digest;
+        self.after_digest = descriptor.after_digest;
       }
       None => {
-        // Fatal('misdefined', $type, undef, "Unrecognized parameter type in \"$spec\"") unless $descriptor;
+        panic!("Unrecognized parameter type in {:?}", self.spec)
       }
     }
     return self;
@@ -222,15 +233,13 @@ impl Parameters {
     args
   }
 
-  pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Vec<Digested> {
+  pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Vec<Option<Digested>> {
     let mut args = Vec::new();
     for parameter in self.params.iter() {
       let value = parameter.read(&mut stomach.gullet, fordefn, state);
       if !parameter.novalue {
-        match parameter.digest(stomach, Tokens{tokens: value}, fordefn, state) {
-          None => {}
-          Some(v) => args.push(v),
-        }
+        let digested_value = parameter.digest(stomach, Tokens{tokens: value}, fordefn, state);
+        args.push(digested_value);
       }
     }
     return args;

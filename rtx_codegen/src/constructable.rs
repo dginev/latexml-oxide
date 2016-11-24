@@ -48,39 +48,50 @@ macro_rules! KEY_RE_STR (
 );
 
 macro_rules! VALUE_RE_STR (
-    () => (r"(\#|&[\w:]*\()")
+    () => (r"(#[\w]+|&[\w:]*\()")
+);
+macro_rules! LEAD_VALUE_RE_STR (
+    () => (concat!(r"^",VALUE_RE_STR!()))
 );
 
-macro_rules! LEAD_VALUE_RE_STR (
-    () => (concat!("^",VALUE_RE_STR!()))
+macro_rules! COND_RE_STR (
+    () => (concat!(r"[?]", VALUE_RE_STR!()))
 );
+macro_rules! LEAD_COND_RE_STR (
+    () => (concat!(r"^",COND_RE_STR!()))
+);
+
+
 macro_rules! SPECIALS (
-     () => ("#?&\\")
+     () => (r"\#\?&\\")
 );
 // Quoted special characters (or semi-special)
 macro_rules! QUOTED_SPECIALS (
-    () => (concat!("\\\\\\#|\\\\\\?|\\\\\\(|\\\\\\)|\\\\\\&|\\\\\\,|\\\\\\<|\\\\\\>|\\\\\\\\|\\\\\\%",
+    () => (concat!(r"\\\\\\[",SPECIALS!(),
                    // or special cases: doubled #, &amp;
-                   "|\\#\\#|\\&amp;"))
+                   r"]|\\#\\#|\\&amp;"))
 );
 
 lazy_static! {
   static ref NARGS : i32 = 0;
   static ref VALUE_RE : Regex = Regex::new(VALUE_RE_STR!()).unwrap();
   static ref LEAD_VALUE_RE : Regex = Regex::new(LEAD_VALUE_RE_STR!()).unwrap();
-//   static ref COND_RE : Regex = Regex::new(r"\?(\#|\&[\w\:]*\()").unwrap();
+  static ref COND_RE : Regex = Regex::new(COND_RE_STR!()).unwrap();
+  static ref LEAD_COND_RE : Regex = Regex::new(LEAD_COND_RE_STR!()).unwrap();
+  static ref LEAD_QMARK : Regex = Regex::new(r"^[?]").unwrap();
 // // Attempt to follow XML Spec, Appendix B
 //   static ref QNAME_RE : Regex = Regex::new(QNAME_STR!()).unwrap();
 //   static ref TEXT_RE : Regex = Regex::new(r"(.[^\#<\?\)\&\,]*)").unwrap();
 //   static ref NONW_RE : Regex = Regex::new(r"\W").unwrap();
   static ref FLOAT_RE : Regex = Regex::new(r"^(\^+)\s*").unwrap();
   static ref PI_RE : Regex = Regex::new(PI_RE_STR!()).unwrap();
+  static ref PI_CLOSE_RE : Regex = Regex::new(r"^\s*\?>").unwrap();
   static ref KEY_RE : Regex = Regex::new(KEY_RE_STR!()).unwrap();
   static ref FN_RE : Regex = Regex::new(r"^&([\w:]*)\(").unwrap();
   static ref LEAD_CPAREN_RE : Regex = Regex::new(r"^\s*\)").unwrap();
   static ref LEAD_KV_SEP : Regex = Regex::new(r"^\s*\,\s*").unwrap();
   static ref ARG_HOLE_RE : Regex = Regex::new(r"^#(\d+)").unwrap();
-  static ref ESCAPED_OP : Regex = Regex::new(r"\\(\#|\?|\(|\)|\&|\,|\<|\>|\\|%)").unwrap();
+  static ref ESCAPED_OP : Regex = Regex::new(r"\\[#\?(&,<>\\%]").unwrap();
 }
 
 pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
@@ -93,85 +104,26 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
   let compiled_replacement_closure = match replacement_opt {
     None => quote!(None),
     Some(replacement) => {
-      let mut operations = vec![quote!(println_stderr!("-- replacement mock executed. \n args: {:?}", args);)];
-
       // Following the original LaTeXML Compiler, we'll mutate this string in place, cloning for safety.
       // since this is all happening in Rust's compilation step, the clone causes no major overhead.
       // If we refactor away the mutable borrows we do for in-place modification, we can avoid a lot of the
       // cloning, and stay conservative in memory. For now it shouldn't matter.
-      println!("Compiling: {:?}", &replacement);
-      let mut replacement = replacement.to_owned();
-      let mut floats: String = String::new();
-      let mut has_floats: bool = false;
-      replacement = FLOAT_RE.replace_all(&replacement, |refs: &Captures| -> String {
-        floats = refs.at(1).unwrap_or("").to_owned();
-        has_floats = true;
-        String::new()
-      });
+      println!("Compiling: \n{:?}", &replacement);
+      let mut operations = vec![quote!(println_stderr!("-- replacement mock executed. \n args: {:?}", args);)];
 
-      while !replacement.is_empty() {
-        let mut consumed = String::new();
-        // TODO: Is there a better way to write code conditional on triggered .replace?
-        let mut is_match = false;
-        let mut pi_tag = String::new();
+      operations.extend(compile_replacement_tokens(replacement.to_owned()));
 
-        // Processing instruction: <?name a=v ...?>
-        replacement = PI_RE.replace(&replacement, |refs: &Captures| -> String {
-          pi_tag = refs.at(1).unwrap_or("").to_owned();
-          let (_, match_end) = refs.pos(1).unwrap();
-          consumed = replacement[0..match_end].to_owned();
-          is_match = true;
-          String::new()
-        });
-        if is_match {
-          // println_stderr!("-- matched a PI ");
-          // this is annoying since we want translate_avpairs to mutate the replacement string in place,
-          // but also want it to run after the replacement... makes `pi_tag` in particular look very misplaced
-          let av = translate_avpairs(&mut replacement);
-          operations.push(quote!(doc.insert_pi(#pi_tag,vec![#(av),*]); ));
-        }
-
-        // Close tag: </name>
-        if !is_match && replacement.starts_with("</") {
-          // println_stderr!("-- close tag");
-          // consumed = "</".to_owned();
-        }
-        // Open tag: <name a=v ...> or .../> (for empty element)
-        if !is_match && replacement.starts_with("<") {
-          // println_stderr!("-- open tag");
-          // consumed = "<".to_owned();
-        }
-        // Substitutable value: argument, property...
-        if !is_match && replacement.starts_with("#") {
-          // println_stderr!("-- argument hole");
-          // consumed = "#".to_owned();
-        }
-        // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
-        if !is_match && replacement.find("=").is_some() {
-          // println_stderr!("-- Attribute");
-          consumed = replacement[0..1 + replacement.find("=").unwrap()].to_owned();
-        }
-        // Else random text
-        else {
-          // println_stderr!("-- random text");
-          consumed = replacement[0..1].to_owned();
-        }
-        // println!("consumed: {:?}", consumed);
-        replacement = replacement[consumed.len()..].to_owned();
-      }
-      println!("Body operations: \n{:?}",
+      println!("Into: \n{}",
         operations.iter().map(|x| x.to_string()).collect::<Vec<_>>().join("\n"));
 
       quote!(
         Some(Arc::new(
-        |doc: &mut Document, args: &Vec<Digested>, _props: &HashMap<String, String>, _state: &mut State| {
+        |doc: &mut Document, args: &Vec<Option<Digested>>, _props: &HashMap<String, String>, _state: &mut State| {
           #(operations)*
         }))
       )
     }
   };
-
-
   // We have to jump an extra hoop, since we are forcing the struct-derive mechanism. Once the new procedural macro scheme lands, this begs to be refactored.
   quote!(
     impl _Dummy {
@@ -179,6 +131,105 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
         #compiled_replacement_closure
       }
     })
+}
+
+
+fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
+  let mut floats: String = String::new();
+  let mut has_floats: bool = false;
+  replacement = FLOAT_RE.replace_all(&replacement, |refs: &Captures| -> String {
+    floats = refs.at(1).unwrap_or("").to_owned();
+    has_floats = true;
+    String::new()
+  });
+  let mut operations = Vec::new();
+
+  while !replacement.is_empty() {
+    let mut consumed = String::new();
+    // TODO: Is there a better way to write code conditional on triggered .replace?
+    let mut is_match = false;
+    let mut pi_tag = String::new();
+
+    // ?test(ifclause)(elseclause)
+    if LEAD_COND_RE.is_match(&replacement) {
+      is_match = true;
+      println!("Leading conditional at: {:?}", replacement);
+      let (bool_branch, if_branch, else_branch) = parse_conditional(&mut replacement);
+      let if_branch_compiled = compile_replacement_tokens(if_branch);
+      let else_branch_compiled = compile_replacement_tokens(else_branch);
+
+      operations.push(quote!(
+        if #bool_branch.is_some() {
+          #(if_branch_compiled)*
+        } else {
+          #(else_branch_compiled)*
+        }
+      ));
+    }
+
+    // Processing instruction: <?name a=v ...?>
+    if !is_match {
+      replacement = PI_RE.replace(&replacement, |refs: &Captures| -> String {
+        pi_tag = refs.at(1).unwrap_or("").to_owned();
+        is_match = true;
+        String::new()
+      });
+    }
+    if is_match {
+      // println_stderr!("-- matched a PI ");
+      // this is annoying since we want translate_avpairs to mutate the replacement string in place,
+      // but also want it to run after the replacement... makes `pi_tag` in particular look very misplaced
+      let av = translate_avpairs(&mut replacement);
+      operations.push(quote!(
+        let mut keys : Vec<String> = Vec::new();
+        let mut values : Vec<String> = Vec::new();
+        #(av)*
+        doc.insert_pi(#pi_tag, keys, values);
+      ));
+
+      let mut pi_closed = false;
+      replacement = PI_CLOSE_RE.replace(&replacement, |_: &Captures| -> String {
+        pi_closed = true;
+        String::new()
+      });
+
+      if !pi_closed {
+        panic!("Missing '?>' at '{:?}'\n", replacement);
+      }
+    } else {
+      // Close tag: </name>
+      if replacement.starts_with("</") {
+        println_stderr!("-- close tag");
+        // consumed = "</".to_owned();
+        consumed = replacement[0..2].to_owned();
+      }
+      // Open tag: <name a=v ...> or .../> (for empty element)
+      else if replacement.starts_with("<") {
+        println_stderr!("-- open tag");
+        consumed = replacement[0..1].to_owned();
+        // consumed = "<".to_owned();
+      }
+      // Substitutable value: argument, property...
+      else if replacement.starts_with("#") {
+        println_stderr!("-- argument hole");
+        consumed = replacement[0..1].to_owned();
+      }
+      // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
+      else if replacement.find("=").is_some() {
+        println_stderr!("-- Attribute");
+        consumed = replacement[0..1 + replacement.find("=").unwrap()].to_owned();
+      }
+      // Else random text
+      else {
+        consumed = replacement[0..1].to_owned();
+        println_stderr!("text: {:?}", consumed);
+      }
+    }
+    // println!("consumed: {:?}", consumed);
+    replacement = replacement[consumed.len()..].to_owned();
+  }
+
+  operations
 }
 
 
@@ -190,33 +241,45 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
 // The DOM holds the font objects, rather than strings,
 // to resolve relative fonts on output.
 fn translate_string(mut text : &mut String) -> quote::Tokens {
+  // println_stderr!("-- ts before: {:?}", text);
   let mut values : Vec<quote::Tokens> = Vec::new();
   *text = text.trim_left().to_owned();
   if text.starts_with('\'') || text.starts_with('"') {
     let quote = text.remove(0);
     while !text.is_empty() && !text.starts_with(quote) {
-      // if (/^$COND_RE/o) {    # inline conditional; branches should be values
-      //   my ($bool, $if, $else) = parse_conditional();
-      //   my $code = "($bool ?";
-      //   { local $_ = $if; $code .= translate_value(); }
-      //   $code .= ":";
-      //   if ($else) { local $_ = $else; $code .= translate_value(); }
-      //   else       { $code .= "''"; }
-      //   $code .= ")";
-      //   push(@values, $code); }
-      if LEAD_VALUE_RE.is_match(text) {
+      if LEAD_COND_RE.is_match(&text) {//inline conditional; branches should be values
+        let (bool_branch, mut if_branch, mut else_branch) = parse_conditional(&mut text);
+        let if_branch_translated = translate_value("", &mut if_branch);
+        let else_branch_translated = translate_value("", &mut else_branch);
+        let op = quote!(
+          if #bool_branch.is_some() {
+            #if_branch_translated
+          } else {
+            #else_branch_translated
+          }
+        );
+        values.push(op);
+      } else if LEAD_VALUE_RE.is_match(text) {
         values.push(translate_value(&quote.to_string(), &mut text));
       }
-      // else if (s/^((?:$QUOTED_SPECIALS|[^\Q$SPECIALS$quote\E])+)//s) {
+      // else if (s/^((?:$QUOTED_SPECIALS|[^$SPECIALS$quote])+)//s) {
       //   push(@values, "'" . slashify!(unquote!($1)) . "'"); }
       else {
         panic!("Unrecognized at '{:?}'\n", text);
       }
     }
   }
+  // drop last quote
+  if !text.is_empty() {
+    text.remove(0);
+  }
+  // println_stderr!("-- ts after: {:?}", text);
 
-  let token_values = values.iter().map(|v| if v.to_string().starts_with('\'') {quote!(#v)} else {quote!(&#v.to_string())})
-    .collect::<Vec<_>>();
+  let token_values = values.iter().map(|v| if v.to_string().starts_with('\'') {
+      quote!(#v.to_string())
+    } else {
+      quote!(#v.as_ref().unwrap().to_string())
+    }).collect::<Vec<_>>();
   quote!(#(token_values)+*)
 }
 
@@ -227,20 +290,25 @@ fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
   let mut avs : Vec<quote::Tokens> = Vec::new();
   *text = text.trim_left().to_owned();
   while !text.is_empty() {
-    *text = text.trim_left().to_owned();
     let mut is_match = false;
     let mut key = String::new();
-  //     if (/^$COND_RE/o) {
-  //       my ($bool, $if, $else) = parse_conditional();
-  //       my $code = "($bool ? (";
-  //       { local $_ = $if; $code .= translate_avpairs(); }
-  //       $code .= ") : (";
-  //       { local $_ = $else; $code .= translate_avpairs() if $else; }
-  //       $code .= "))";
-  //       push(@avs, $code); }
+    if LEAD_COND_RE.is_match(&text) {
+      is_match = true;
+      let (bool_branch, mut if_branch, mut else_branch) = parse_conditional(&mut text);
+      let if_branch_translated = translate_avpairs(&mut if_branch);
+      let else_branch_translated = translate_avpairs(&mut else_branch);
+      let op = quote!(
+        if #bool_branch.is_some() {
+          #(if_branch_translated)*
+        } else {
+          #(else_branch_translated)*
+        }
+      );
+      avs.push(op);
   //     elsif (/^%$VALUE_RE/) {    # Hash?  Assume the value can be turned into a hash!
   //       s/^%//;                  # Eat the "%"
   //       push(@avs, '%{' . translate_value() . '}'); }
+    }
     if !is_match {
       *text = KEY_RE.replace(text, |refs: &Captures| -> String {
         key = refs.at(1).unwrap_or("").to_owned();
@@ -249,13 +317,14 @@ fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
       });
       if is_match {
         let val = translate_string(&mut text);
-        avs.push(quote!(#key));
-        avs.push(val);
+        avs.push(quote!(keys.push(#key.to_string());));
+        avs.push(quote!(values.push(#val);));
       }
     }
     if !is_match {
       break
     }
+    *text = text.trim_left().to_owned();
   }
   avs
 }
@@ -301,6 +370,7 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
     } else {
       panic!("Missing ')' in &$fcn(...) at '{:?}'\n",text);
     }
+    // println!("text after translate_value: {:?}", text);
     val = quote!(#fcn( #(args),* ));
   }
 
@@ -323,8 +393,8 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
   // elsif (s/^\#([\w\-_]+)//) { $value = "\$prop{'$1'}"; }    # Recognize #prop for whatsit properties
   if !is_match {
     // Build the exclusion regex
-    let mut exclusion_str : String = concat!(r"^((?:",QUOTED_SPECIALS!(),r"|[^\Q", SPECIALS!()).to_owned();
-    exclusion_str = exclusion_str + exclude_chars + r"\E])+)";
+    let mut exclusion_str : String = concat!(r"^((?:",QUOTED_SPECIALS!(),r"|[^", SPECIALS!()).to_owned();
+    exclusion_str = exclusion_str + exclude_chars + r"])+)";
     let exclusion_re : Regex = Regex::new(&exclusion_str).unwrap();
 
     exclusion_re.replace(text, |quoted_refs: &Captures| {
@@ -341,6 +411,25 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
   val
 }
 
+fn parse_conditional(mut text : &mut String) -> (quote::Tokens, String, String) {
+  // Remove leading "?"
+  // println_stderr!("-- cond before: {:?}", text);
+  *text = LEAD_QMARK.replace(text, |_: &Captures| {
+    String::new()
+  });
+  let translated_bool = translate_value("(", text);
+  let bool_branch = quote!(  #translated_bool );
+  let if_branch = extract_bracketed(text);
+  if !if_branch.is_empty() {
+    let else_branch = extract_bracketed(text);
+    // println_stderr!("-- cond after: {:?}", text);
+    (bool_branch, if_branch, else_branch)
+  }
+  else {
+    panic!("Missing if clause at '{:?}'\n", text);
+  }
+}
+
 fn slashify(text: &str) -> String {
   text.replace("\\", "\\\\")
 }
@@ -349,4 +438,39 @@ fn unquote(text: &str) -> String {
     escaped_refs.at(1).unwrap_or("").to_owned()
   }).replace("##","#")
     .replace("&amp;","&")
+}
+
+fn extract_bracketed(mut text: &mut String) -> String {
+  // println_stderr!("-- eb before: {:?}", text);
+  let mut extracted = String::new();
+  let mut level = 0;
+  while !text.is_empty() {
+    let c = text.remove(0);
+
+    // termination clause goes first
+    if c == ')' {
+      level -= 1;
+      if level < 1 {
+        break;
+      }
+    }
+    // if we are inside the parens, record the char
+    if level > 0 {
+      extracted.push(c)
+    }
+
+    if c.is_whitespace() { // whitespaces are neutral
+      continue
+    } else if c == '(' { // level up on open paren
+      level += 1;
+    } else {
+      // regular chars out of () body should terminate the expression
+      if level < 1 {
+        *text = c.to_string() + text;
+        break;
+      }
+    }
+  }
+  // println_stderr!("-- eb after: {:?}", text);
+  extracted
 }

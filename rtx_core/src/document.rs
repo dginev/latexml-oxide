@@ -33,12 +33,12 @@ impl Document {
   // outside world.  It resolves the fonts for each node relative to it's ancestors.
   // It removes the `helper' attributes that store fonts, source box, etc.
   pub fn finalize<'finalize>(&'finalize mut self, state: &'finalize mut State) {
-    self.prune_XMDuals();
+    self.prune_xmduals();
     let root = self.document.get_root_element().unwrap();
     // local $LaTeXML::FONT = LaTeXML::Common::Font->textDefault;
     self.finalize_rec(root);
     match state.lookup_value("RDFa_prefixes") {
-      Some(&ObjectStore::StringStore(ref prefixes)) => self.set_RDFa_prefixes(Some(prefixes.clone())),
+      Some(&ObjectStore::StringStore(ref prefixes)) => self.set_rdfa_prefixes(Some(prefixes.clone())),
       _ => {}
     };
   }
@@ -115,43 +115,40 @@ impl Document {
   /// Does NOT move the current insertion point to the PI,
   /// but may move up past a text node.
   //  Rust note: attrib would have been best as Vec<(String,String)> but currently quote!() doesn't work out of the box on them
-  pub fn insert_pi(&mut self, op: &str, attrib : Vec<&str>) {
-    let pi_node = self.document.create_processing_instruction(op,"").unwrap();
-    let mut key = "";
-    for a in attrib {
-      if key.is_empty() {
-        key = a;
-      } else {
-        pi_node.set_attribute(&key, &a);
-        key = "";
-      }
+  pub fn insert_pi(&mut self, op: &str, keys : Vec<String>, values: Vec<String>) {
+    let mut attr_data = String::new();
+    for it in keys.iter().zip(values.iter()) {
+      let (key, value) = it;
+      attr_data.push_str(key);
+      attr_data.push_str("=\"");
+      attr_data.push_str(value);
+      attr_data.push('"');
     }
     // self.close_text_internal();  // Close any open text node
     // if ($$self{node}->nodeType == NodeType::DocumentNode) {
     //   push(@{ $$self{pending} }, $pi); }
     // else {
+    let pi_node = self.document.create_processing_instruction(op,&attr_data).unwrap();
     println_stderr!("Trying to insert PI: {:?}",
                     self.document.node_to_string(&pi_node));
     println_stderr!("Into doc: {:?}", self.document.to_string());
-
     self.node.add_prev_sibling(pi_node);
-
     return;
   }
   pub fn to_string(&self) -> String {
     self.document.to_string()
   }
 
-  pub fn set_node(&self, node: Node) {}
+  pub fn set_node(&self, _node: Node) {}
 
   // Internals
-  fn set_RDFa_prefixes<'prefixes>(&'prefixes mut self, prefixes: Option<String>) {}
+  fn set_rdfa_prefixes<'prefixes>(&'prefixes mut self, _prefixes: Option<String>) {}
 
-  fn prune_XMDuals(&self) {}
+  fn prune_xmduals(&self) {}
 
-  fn finalize_rec(&self, element: Node) {}
+  fn finalize_rec(&self, _element: Node) {}
 
-  pub fn insert_math_token(&self, text: &str) {}
+  pub fn insert_math_token(&self, _text: &str) {}
 
   ///**********************************************************************
   /// Middle level, mostly public, API.

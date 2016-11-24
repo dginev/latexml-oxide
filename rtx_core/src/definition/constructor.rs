@@ -38,7 +38,7 @@ impl Default for ConstructorOptions {
 
 pub type DigestionClosure = Arc<Fn(&mut Stomach, Option<&Whatsit>, &mut State)>;
 pub type ReplacementClosure = Arc<Fn(&mut Document,
-                                     &Vec<Digested>,
+                                     &Vec<Option<Digested>>,
                                      &HashMap<String, String>,
                                      &mut State)
                                     >;
@@ -80,14 +80,14 @@ impl Definition for Constructor {
     // let tracing = state.lookup_value("TRACINGCOMMANDS");
     // LaTeXML::Definition::startProfiling($profiled, "digest") if $profiled;
 
-    let pre = self.execute_before_digest(stomach, state);
+    let _pre = self.execute_before_digest(stomach, state);
 
     // println_stderr_stderr!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
     // let font   = state.lookup_value("font");
     // let ismath = state.lookup_value("IN_MATH");
     // Parse AND digest the arguments to the Constructor
-    let mut args: Vec<Digested> = match self.get_parameters() {
+    let mut args: Vec<Option<Digested>> = match self.get_parameters() {
       &None => Vec::new(),
       &Some(ref params) => params.read_arguments_and_digest(stomach, &self, state),
     };
@@ -118,7 +118,7 @@ impl Definition for Constructor {
     };
 
     // Call any 'After' code.
-    let post = self.execute_after_digest(stomach, &whatsit, state);
+    let _post = self.execute_after_digest(stomach, &whatsit, state);
     // if (let cap = $$self{captureBody}) {
     //   $whatsit->setBody(@post, $stomach->digestNextBody((ref $cap ? $cap : undef))); @post = (); }
 

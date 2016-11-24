@@ -133,6 +133,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
     static ref DEFAULT_CHECK : Regex = Regex::new(r"^Default:(.*)$").unwrap();
     static ref PARAMSPECT_CHECK : Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
   }
+  println!("Parsing parameters from prototype: {:?}", prototype);
   let mut parameters = Vec::new();
   while !prototype.is_empty() {
     let mut next_proto = String::new();
@@ -218,6 +219,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
   if parameters.is_empty() {
     None
   } else {
+    println!("Recording {:?} parameters", parameters.len());
     Some(Parameters { params: parameters })
   }
 }
