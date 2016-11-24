@@ -109,7 +109,7 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
       // If we refactor away the mutable borrows we do for in-place modification, we can avoid a lot of the
       // cloning, and stay conservative in memory. For now it shouldn't matter.
       println!("Compiling: \n{:?}", &replacement);
-      let mut operations = vec![quote!(println_stderr!("-- replacement mock executed. \n args: {:?}", args);)];
+      let mut operations = Vec::new();
 
       operations.extend(compile_replacement_tokens(replacement.to_owned()));
 
