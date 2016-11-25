@@ -129,9 +129,6 @@ impl Document {
     //   push(@{ $$self{pending} }, $pi); }
     // else {
     let pi_node = self.document.create_processing_instruction(op,&attr_data).unwrap();
-    println_stderr!("Trying to insert PI: {:?}",
-                    self.document.node_to_string(&pi_node));
-    println_stderr!("Into doc: {:?}", self.document.to_string());
     self.node.add_prev_sibling(pi_node);
     return;
   }

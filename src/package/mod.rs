@@ -9,14 +9,23 @@ use rtx_core::token::*;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::mouth::Mouth;
 
-pub fn input_definitions(core: &mut Core, file: String) -> Result<(), ()> {
+pub fn input_definitions(file: String, mut state: &mut State) -> Result<(), ()> {
   match file.as_ref() { // TODO?
-    "TeX.pool" => pool::tex::load_definitions(&mut core.state),
-    "LaTeX.pool" => pool::latex::load_definitions(&mut core.state),
-    other => { println!("TODO: load {:?}", other);}
+    "TeX.pool" => pool::tex::load_definitions(&mut state),
+    "LaTeX.pool" => pool::latex::load_definitions(&mut state),
+    other => { panic!("TODO: unknown binding {:?}, can't load", other);}
   };
   Ok(())
 }
+
+#[macro_export]
+macro_rules! LoadPool(
+  ($name: expr, $state: expr) => (
+  {
+    input_definitions($name.to_string()+".pool", $state);
+  }
+));
+
 
 pub fn input_content(core: &mut Core, request: String) -> Result<(), ()> {
   match find_file(request, false) { // TODO: type => $options{type}, noltxml => 1
@@ -314,15 +323,6 @@ macro_rules! DefConstructor(
 // check_options("DefConstructor (prototype)", $constructor_options, %options);
     let (cs, paramlist) = parse_prototype($proto, $state);
     DefConstructorI!(cs, paramlist, $replacement, $options, $state);
-  }
-  )
-);
-
-#[macro_export]
-macro_rules! arg(
-  ($num:expr) => (
-  {
-
   }
   )
 );

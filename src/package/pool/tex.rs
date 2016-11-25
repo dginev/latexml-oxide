@@ -4,7 +4,6 @@ use rtx_core::token::*;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::gullet::Gullet;
 
-// use package::*;
 use package::pool::latex;
 
 pub fn load_definitions(state: &mut State) {
