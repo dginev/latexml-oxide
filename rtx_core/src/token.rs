@@ -138,6 +138,16 @@ impl Catcode {
       MARKER => false,
     }
   }
+
+  pub fn is_active_or_cs(&self) -> bool {
+    use token::Catcode::*;
+    match *self {
+      ACTIVE => true,
+      CS => true,
+      _ => false
+    }
+  }
+
 }
 #[derive(Clone, Hash, Debug, PartialEq)]
 pub struct Token {

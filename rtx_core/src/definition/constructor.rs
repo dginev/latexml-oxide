@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::collections::HashMap;
-use state::State;
+use state::{State, Scope};
 use common::object::Object;
 
 use token::*;
@@ -15,22 +15,49 @@ use document::Document;
 
 #[derive(Clone)]
 pub struct ConstructorOptions {
+  pub nargs: Option<usize>,
   pub bounded: bool,
   pub mode: String, // TODO
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
   pub before_construct: Vec<ConstructionClosure>,
   pub after_construct: Vec<ConstructionClosure>,
+
+  // environment-specific
+  pub requireMath: bool,
+  pub forbidMath: bool,
+  pub properties: HashMap<String, String>,
+  pub capture_body: bool,
+  //font: 1,
+
+  pub after_digest_begin: Vec<DigestionClosure>,
+  pub before_digest_end : Vec<DigestionClosure>,
+  pub after_digest_body : Vec<DigestionClosure>,
+  // reversion       : 1,
+  // sizer           : 1,
+  pub scope : Option<Scope>,
+  pub locked: bool
 }
 impl Default for ConstructorOptions {
   fn default() -> Self {
     ConstructorOptions {
+      nargs: None,
       bounded: false,
       before_digest: vec![],
       after_digest: vec![],
       before_construct: vec![],
       after_construct: vec![],
       mode: String::new(),
+      // environment-specific
+      requireMath: false,
+      forbidMath: false,
+      properties: HashMap::new(),
+      capture_body: false,
+      after_digest_begin: vec![],
+      before_digest_end : vec![],
+      after_digest_body : vec![],
+      scope: None,
+      locked: false
     }
   }
 }
@@ -39,7 +66,6 @@ impl Default for ConstructorOptions {
 pub struct Constructor {
   pub cs: Token,
   pub paramlist: Option<Parameters>,
-  pub nargs: Option<usize>,
   pub replacement: Option<ReplacementClosure>,
   pub options: ConstructorOptions,
 }
@@ -48,7 +74,6 @@ impl Default for Constructor {
     Constructor {
       cs: T_CS!("Constructor".to_string()),
       paramlist: None,
-      nargs: None,
       replacement: None,
       options: ConstructorOptions::default(),
     }
@@ -142,7 +167,7 @@ impl Definition for Constructor {
     &self.paramlist
   }
   fn get_num_args(&self) -> usize {
-    let nargs = match self.nargs {
+    let nargs = match self.options.nargs {
       Some(n) => n,
       None => {
         match &self.paramlist {

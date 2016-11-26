@@ -7,6 +7,131 @@ use rtx_core::state::{State, ObjectStore, Scope};
 use rtx_core::token::*;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::mouth::Mouth;
+use rtx_core::definition::Definition;
+
+//**********************************************************************
+//   Initially, I thought LaTeXML Packages should try to be like perl modules:
+// once loaded, you didn't need to re-load them, only `initialize' them to
+// install their definitions into the current stomach.  I tried to achieve
+// that through various package tricks.
+//    But ultimately, most of a package _is_ installing defns in the stomach,
+// and it's probably better to allow a more TeX-like evaluation of definitions
+// in order, so \let and such work as expected.
+//    So, it got simpler!
+// Still, it would be nice if there were `compiled' forms of .ltxml files!
+//**********************************************************************
+
+
+//======================================================================
+// Convenience macros for writing definitions.
+//======================================================================
+#[macro_export]
+macro_rules! LookupValue {
+  ($name:expr, $state:expr) => ($state.lookup_value($name))
+}
+
+#[macro_export]
+macro_rules! AssignValue {
+  ($name:expr, $value:expr, $scope:expr, $state:expr) => ($state.assign_value($name, $value, $scope))
+}
+
+#[macro_export]
+macro_rules! PushValue {
+  ($name:expr, $values:expr, $state:expr) => ($state.pushValue($name, $values))
+}
+
+#[macro_export]
+macro_rules! PopValue {
+  ($name:expr, $state:expr) => ($state.pop_value($name))
+}
+
+#[macro_export]
+macro_rules! UnshiftValue {
+  ($name:expr, $values:expr, $state:expr) => ($state.unshift_value($name, $values))
+}
+
+#[macro_export]
+macro_rules! ShiftValue {
+  ($name:expr, $state:expr) => ($state.shift_value($name))
+}
+
+#[macro_export]
+macro_rules! LookupMapping {
+  ($map:expr, $key:expr, $state:expr) => ($state.lookup_mapping($map, $key))
+}
+
+#[macro_export]
+macro_rules! AssignMapping {
+  ($map:expr, $key:expr, $value:expr, $state:expr) => ($state.assign_mapping($map, $key, $value))
+}
+
+#[macro_export]
+macro_rules! LookupMappingKeys {
+  ($map:expr, $state:expr) => ($state.lookup_mapping_keys($map))
+}
+
+#[macro_export]
+macro_rules! LookupCatcode {
+  ($char:expr, $state:expr) => ($state.lookup_catcode($char))
+}
+
+#[macro_export]
+macro_rules! AssignCatcode {
+  ($char:expr, $catcode:expr, $scope:expr, $state:expr) => ($state.assign_catcode($char, $catcode, $scope))
+}
+
+#[macro_export]
+macro_rules! LookupMeaning {
+  ($name:expr, $state:expr) => ($state.lookup_meaning($name))
+}
+
+#[macro_export]
+macro_rules! LookupDefinition {
+  ($name:expr, $state:expr) => ($state.lookup_definition($name))
+}
+
+#[macro_export]
+macro_rules! InstallDefinition {
+  ($name:expr, $definition:expr, $scope:expr, $state:expr) => (state.install_definition($name, $definition, $scope))
+}
+
+// #[macro_export]
+// macro_rules! XEquals {
+//   ($token1:expr, $token2) => (
+//   my $def1 = LookupMeaning($token1);    # token, definition object or undef
+//   my $def2 = LookupMeaning($token2);    # ditto
+//   if (defined $def1 != defined $def2) { # False, if only one has 'meaning'
+//     return; }
+//   elsif (!defined $def1 && !defined $def2) {    # true if both undefined
+//     return 1; }
+//   elsif ($def1->equals($def2)) {                # If both have defns, must be same defn!
+//     return 1; }
+//   return; }
+
+// Is defined in the LaTeX-y sense of also not being let to \relax.
+pub fn is_defined(name: &str, state: &mut State) -> bool {
+  let cs = T_CS!(name);
+  is_defined_token(&cs, state)
+}
+pub fn is_defined_token(cs: &Token, state: &mut State) -> bool {
+  match state.lookup_meaning(cs) {
+    Some(store) => match store {
+      & ObjectStore::Token(ref m) => true,
+      & ObjectStore::Expandable(ref m) => m.get_cs_name() != "\relax",
+      & ObjectStore::Primitive(ref m) => m.get_cs_name() != "\relax",
+      & ObjectStore::Constructor(ref m) => m.get_cs_name() != "\relax",
+      _ => false
+    },
+  _ => false }
+}
+
+#[macro_export]
+macro_rules! IsDefined {
+  ($name:expr, $state:expr) => (is_defined($name, $state))
+}
+macro_rules! IsDefinedToken {
+  ($name:expr, $state:expr) => (is_defined_token($name, $state))
+}
 
 pub struct InputDefinitionOptions {
   pub extension: Option<&'static str>,
@@ -414,6 +539,132 @@ macro_rules! DefParameterType(
 pub fn revert(_arg: Vec<Token>) -> Vec<Token> {
   Vec::new()
 }
+
+
+//=====================================================================
+// Define a LaTeX environment
+// Note that the body of the environment is treated is the 'body' parameter in the constructor.
+
+#[macro_export]
+macro_rules! DefEnvironment (
+  ($proto_raw:expr, $replacement:expr, $options:expr, $state:expr) => ({
+  use rtx_core::util::text::*;
+  let mut proto = $proto_raw.to_string().trim_left().to_string();
+  let mut name = extract_bracketed(&mut proto, Some(Delimiter::Brace));
+  // TODO: What do we do with param lists?
+  //let paramlist_str = proto.trim_left().to_string();
+  DefEnvironmentI!(name, None, $replacement, $options, $state);
+}));
+
+#[macro_export]
+macro_rules! DefEnvironmentI (
+  ($name_raw:expr, $paramlist:expr, $replacement:expr, $options:expr, $state:expr) => ({
+  use rtx_core::definition::constructor::Constructor;
+  let mode = $options.mode;
+  let mut name = $name_raw.to_string();
+  // This is for the common case where the environment is opened by \begin{env}
+  // let sizer = inferSizer($options.sizer, $options.reversion);
+  let begin_name_constructor = Arc::new(Constructor {
+      cs: T_CS!("\\begin{".to_string()+&name+"}"),
+      paramlist: $paramlist,
+      replacement: Some(Arc::new($replacement)),
+      options: ConstructorOptions {
+        nargs: $options.nargs,
+        // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
+        //   ($options{forbidMath} ? (sub { forbidMath($name); }) : ()),
+        //   ($mode ? (sub { $_[0]->beginMode($mode); })
+        //     : (sub { $_[0]->bgroup; })),
+        //   sub { AssignValue(current_environment => $name);
+        //     DefMacroI('\@currenvir', undef, $name); },
+        //   ($options{font} ? (sub { MergeFont(%{ $options{font} }); }) : ()),
+        //   $options{beforeDigest}),
+        // afterDigest     => flatten($options{afterDigestBegin}),
+        // afterDigestBody => flatten($options{afterDigestBody}),
+        // beforeConstruct => flatten(sub { $STATE->pushFrame; }, $options{beforeConstruct}),
+        // // Curiously, it's the \begin whose afterConstruct gets called.
+        // afterConstruct => flatten($options{afterConstruct}, sub { $STATE->popFrame; }),
+        capture_body: true,
+        properties: $options.properties,
+        // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
+        // (defined $sizer ? (sizer => $sizer) : ()),
+        // ), $options{scope});
+        ..ConstructorOptions::default()
+      }});
+  $state.install_definition(ObjectStore::Constructor(begin_name_constructor), $options.scope);
+
+  let end_envname_constructor = Arc::new(Constructor {
+    cs: T_CS!("\\end{".to_string()+&name+"}"),
+    replacement: None,
+    paramlist: None,
+    // beforeDigest => flatten($options{beforeDigestEnd}),
+    // afterDigest  => flatten($options{afterDigest},
+    //   sub { my $env = LookupValue('current_environment');
+    //     Error('unexpected', "\\end{$name}", $_[0],
+    //       "Can't close environment $name",
+    //       "Current are "
+    //         . join(', ', $STATE->lookupStackedValues('current_environment')))
+    //       unless $env && $name eq $env;
+    //     return; },
+    //   ($mode ? (sub { $_[0]->endMode($mode); })
+    //     : (sub { $_[0]->egroup; }))),
+    // ), $options{scope});
+    options: ConstructorOptions::default()
+  });
+  $state.install_definition(ObjectStore::Constructor(end_envname_constructor), $options.scope);
+
+  // For the uncommon case opened by \csname env\endcsname
+  let name_constructor = Arc::new(Constructor{
+    cs: T_CS!("\\".to_string() +&name),
+    paramlist: $paramlist,
+    replacement: Some(Arc::new($replacement)),
+    // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
+    //   ($options{forbidMath} ? (sub { forbidMath($name); })              : ()),
+    //   ($mode                ? (sub { $_[0]->beginMode($mode); })        : ()),
+    //   ($options{font}       ? (sub { MergeFont(%{ $options{font} }); }) : ()),
+    //   $options{beforeDigest}),
+    // afterDigest     => flatten($options{afterDigestBegin}),
+    // afterDigestBody => flatten($options{afterDigestBody}),
+    // beforeConstruct => flatten(sub { $STATE->pushFrame; }, $options{beforeConstruct}),
+    // Curiously, it's the \begin whose afterConstruct gets called.
+    // afterConstruct => flatten($options{afterConstruct}, sub { $STATE->popFrame; }),
+    options: ConstructorOptions {
+      nargs: $options.nargs,
+      // captureBody: T_CS("\\end$name"),          // Required to capture!!
+      properties: $options.properties,
+      // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
+      // (defined $sizer ? (sizer => $sizer) : ()),
+      // ), $options{scope});
+      ..ConstructorOptions::default()
+    }
+  });
+  $state.install_definition(ObjectStore::Constructor(name_constructor), $options.scope);
+
+  let end_name_constructor = Arc::new(Constructor {
+    cs: T_CS!("\\end".to_string() + &name),
+    paramlist: None,
+    replacement: Some(Arc::new(|document, whatsit, properties, state|{
+      let env = LookupValue!("current_environment", state);
+      // Error('unexpected', "\\end{$name}", $_[0],
+      //   "Can't close environment $name",
+      //   "Current are "
+      //     . join(', ', $STATE->lookupStackedValues('current_environment')))
+      //   unless $env && $name eq $env;
+      return; })),
+    // beforeDigest => flatten($options{beforeDigestEnd}),
+    // afterDigest  => flatten($options{afterDigest},
+    //   ($mode ? (sub { $_[0]->endMode($mode); }) : ())),
+    // ), $options{scope});
+    options: ConstructorOptions::default()
+  });
+  $state.install_definition(ObjectStore::Constructor(end_name_constructor), $options.scope);
+
+  if ($options.locked) {
+    AssignValue!(&("\\begin{".to_string() + &name+"}:locked"), ObjectStore::Bool(true), None, $state);
+    AssignValue!(&("\\end{".to_string()+&name+"}:locked")  , ObjectStore::Bool(true), None, $state);
+    AssignValue!(&("\\".to_string()+&name+":locked")       , ObjectStore::Bool(true), None, $state);
+    AssignValue!(&("\\end".to_string()+&name+":locked")    , ObjectStore::Bool(true), None, $state);
+  }
+}));
 
 //======================================================================
 // Declaring and Adjusting the Document Model.

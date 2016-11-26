@@ -14,10 +14,13 @@ use definition::expandable::Expandable;
 use definition::constructor::Constructor;
 use definition::primitive::Primitive;
 
+#[derive(Clone)]
 pub enum Scope {
   Global,
   Local,
 }
+
+#[derive(Clone)]
 pub enum Table {
   Meaning,
   Value,
@@ -127,6 +130,20 @@ impl State {
   pub fn lookup_value<'lv>(&'lv self, key: &'lv str) -> Option<&ObjectStore> {
     self.value.get(key)
   }
+
+  /// Get the `Meaning' of a token.  For active control sequence's
+  /// this may give the definition object (if defined) or another token (if \let) or undef
+  /// Any other token is returned as is.
+  pub fn lookup_meaning<'t, 'm>(&'m mut self, token: &'t Token) -> Option<&ObjectStore>{
+    if token.code.is_active_or_cs() && !token.text.is_empty() {
+
+    } else {
+      self.meaning.insert(token.text.clone(), ObjectStore::Token(token.clone()));
+    }
+    self.meaning.get(&token.text)
+  }
+
+
   /// used for expansion & various queries
   /// Since we're not doing digestion here, we don't need to handle mathactive,
   /// nor cs let to executable tokens

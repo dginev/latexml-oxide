@@ -10,6 +10,7 @@
 ///**********************************************************************
 
 use std::sync::Arc;
+use std::collections::HashMap;
 use regex::Regex;
 use rtx_core::state::{Scope, State, ObjectStore};
 use rtx_core::token::*;
@@ -78,49 +79,103 @@ pub fn load_definitions(state: &mut State) {
   // it can be processed specially, if needed.  These are the magic
   // "\begin{env}", "\end{env}" control sequences created by DefEnvironment.
 
-  // TODO:
-  // state.assign_value(current_environment, String::new(), Scope::Global);
+  state.assign_value("current_environment", ObjectStore::String(String::new()), Some(Scope::Global));
   // DefMacroI!("\@currenvir", "", Arc::new(move |state| {}), state);
   // DefPrimitive("\lx@setcurrenvir{}", sub {
   //     DefMacro("\@currenvir", $_[1]);
   //     state.assign_value(current_environment => ToString($_[1])); });
   // Let("\@currenvline", "\@empty");
 
-  // TODO:
   DefMacro!("\\begin{}",
     |gullet, args, state| {
-    let ref env = args[0];
-    let name = env.to_string();
-
-    // if (IsDefined("\\begin{$name}")) {
-    //   T_CS!("\\begin{$name}"); }    // Magic cs!
-    // else {
-    // let token = T_CS!("\\".to_string() + name);
-    // if (!IsDefined($token)) {
-    //   my $undef = "{" . $name . "}";
-    //   $STATE->noteStatus(undefined => $undef);
-    //   Error("undefined", $undef, $gullet, "The environment " . $undef . " is not defined.");
-    //   $STATE->installDefinition(LaTeXML::Core::Definition::Constructor->new($token, undef,
-    //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
-    // (T_CS!("\begingroup"), Invocation(T_CS!("\lx@setcurrenvir"), $env), $token); } });
-
-    Vec::new()
+    let ref name = args[0].to_string();
+    let begin_name = "\\begin{".to_string()+&name+"}";
+    if IsDefined!(&begin_name, state) {
+      vec![T_CS!(begin_name)] // Magic cs!
+    }
+    else {
+      let token = T_CS!("\\".to_string() + name);
+      if !IsDefinedToken!(&token, state) {
+        let undef = "{".to_string() + &name + "}";
+        println_stderr!("Error:undefined:{:?}: The environment is not defined.",undef);
+        // state.note_status("undefined", undef);
+        //   Error("undefined", $undef, $gullet, "The environment " . $undef . " is not defined.");
+        // state.install_definition(LaTeXML::Core::Definition::Constructor->new($token, undef,
+        //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
+        //(T_CS!("\begingroup"), Invocation(T_CS!("\lx@setcurrenvir"), $env), $token); } });
+      }
+      Vec::new()
+    }
   },
   state);
 
   DefMacro!("\\end{}",
-            |_gullet, _args, _state| {
-              // let env = args.get_arg(1);
-              // my $name = $env && ToString($env);
-              // my $t;
-              // if (IsDefined($t = T_CS!("\\end{$name}"))) { $t; }                         // Magic CS!
-              // elsif (IsDefined($t = T_CS!("\\end$name"))) { ($t, T_CS!("\endgroup")); }
-              // else { (T_CS!("\endgroup")); } });
+  |gullet, args, state| {
+  let name = args[0].to_string();
+  let mut t = T_CS!("\\end{$name}");
+  if IsDefinedToken!(&t, state) {// Magic CS!
+    vec![t]
+  } else {
+    t = T_CS!("\\end$name");
+    if IsDefinedToken!(&t, state) {
+      vec![t, T_CS!("\\endgroup")]
+    } else {
+      vec![T_CS!("\\endgroup")]
+    }
+  }}, state);
 
-              Vec::new()
-            },
-            state);
 
+  //**********************************************************************
+  // C.2. The Structure of the Document
+  //**********************************************************************
+  //   prepended files (using filecontents environment)
+  //   preamble (starting with \documentclass)
+  //   \begin{document}
+  //    text
+  //   \end{document}
+
+  // DefMacro('\AtBeginDocument{}', sub {
+  //     AssignValue('@at@begin@document', []) unless LookupValue('@at@begin@document');
+  //     PushValue('@at@begin@document', $_[1]->unlist); });
+  // DefMacro('\AtEndDocument{}', sub {
+  //     AssignValue('@at@end@document', []) unless LookupValue('@at@end@document');
+  //     PushValue('@at@end@document', $_[1]->unlist); });
+
+  DefEnvironment!("{document}", |document, whatsit, props, state| {
+      //       "<ltx:document xml:id='#id'>#body</ltx:document>",
+      // let id   = props.get("id").unwrap_or("").to_string();
+      // let body = props.get("body").unwrap_or(Digested::default());
+      // if let Some(docel) = document.findnode("/ltx:document") { // Already (auto) created?
+      //   if !id.is_empty() {
+      //     document.set_attribute(docel, "xml:id", id);
+      //   }
+        // document.absorb(body, state);
+      // } else {
+      //   document.insert_element("ltx:document", body, vec!["xml:id"], vec![id]);
+      // }
+    },
+    ConstructorOptions {
+    // before_digest: |stomach, state| { AssignValue!("inPreamble", ObjectStore::Bool(false), state); },
+    // after_digest_begin => |stomach, whatsit, state| {
+    //   whatsit.set_property("id", Expand!(T_CS!("\thedocument@ID"), state));
+    //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
+    //     let boxes = Digest!(Tokens!(ops));
+    //     whatsit.set_font(LookupValue!("font")); // Start w/ whatever font was selected.
+    //     return boxes
+    //   } else {
+    //     return Vec::new()
+    //   }
+    // },
+    // before_digest_end => |stomach, whatsit, state| {
+    //   stomach.get_gullet().flush();
+    //   if let Some(ops) = LookupValue!("@at@end@document", state) {
+    //     return Digest!(Tokens!(ops));
+    //   } else {
+    //     return Vec::new();
+    //   }
+    // },
+    mode: "text".to_string(),
+    ..ConstructorOptions::default()}, state);
 
   // ======================================================================
   // C.5.2 Packages
