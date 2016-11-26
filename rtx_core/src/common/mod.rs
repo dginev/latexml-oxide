@@ -3,6 +3,7 @@ pub mod error;
 pub mod model;
 pub mod xml;
 pub mod font;
+pub mod relaxng;
 
 #[derive(Clone)]
 pub enum InputFormat {

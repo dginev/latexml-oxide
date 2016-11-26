@@ -127,7 +127,17 @@ impl Model {
   ///   This mapping may also use a prefix of "#default" which is for
   ///   the unprefixed form of elements (not used for attributes!)
   pub fn register_namespace(&mut self, codeprefix: String, namespace_opt: Option<String>) {
-    match namespace_opt {
+    let namespace_opt_checked = match namespace_opt { // double-check empty strings are None
+      None => None,
+      Some(val) => {
+        if val.is_empty() {
+          None
+        } else {
+          Some(val)
+        }
+      }
+    };
+    match namespace_opt_checked {
       Some(namespace) => {
         self.code_namespace_prefixes.insert(namespace.clone(), codeprefix.clone());
         self.code_namespaces.insert(codeprefix.clone(), namespace.clone());

@@ -4,8 +4,7 @@ use rtx_core::token::*;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::gullet::Gullet;
 
-use package::pool::latex;
-
+use package::*;
 pub fn load_definitions(state: &mut State) {
   // No, \documentclass isn't really a primitive -- It's not even TeX!
   // But we define a number of stubs here that will automatically load
@@ -31,7 +30,7 @@ pub fn load_definitions(state: &mut State) {
     DefMacroI!(T_CS!(ltxtrigger),
                None,
                move |_gullet, _args, state| {
-                 latex::load_definitions(state);
+                 LoadPool!("LaTeX", state);
                  return vec![T_CS!(ltxtrigger)];
                },
                state);

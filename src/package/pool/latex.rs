@@ -1,3 +1,14 @@
+///**********************************************************************
+/// Organized following
+///  "LaTeX: A Document Preparation System"
+///   by Leslie Lamport
+///   2nd edition
+/// Addison Wesley, 1994
+/// Appendix C. Reference Manual
+///**********************************************************************
+/// NOTE: This will be loaded after TeX.pool, so it inherits.
+///**********************************************************************
+
 use std::sync::Arc;
 // use regex::Regex;
 use rtx_core::state::{Scope, State, ObjectStore};
@@ -9,19 +20,7 @@ use rtx_core::token::*;
 use package::*;
 
 pub fn load_definitions(state: &mut State) {
-  {
-    // Only load definitions once
-    let latex_loaded: Option<&ObjectStore> = state.lookup_value("latex_pool_loaded");
-    if let Some(&ObjectStore::BoolStore(flag)) = latex_loaded {
-      if flag {
-        return;
-      }
-    }
-  }
-  println_stderr!("Loading LaTeX.pool definitions...");
-  state.assign_value("latex_pool_loaded",
-                     ObjectStore::BoolStore(true),
-                     &Some(Scope::Global));
+  LoadPool!("TeX", state);
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",

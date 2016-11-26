@@ -1,15 +1,31 @@
 extern crate rtx_codegen;
 
-// use std::sync::Arc;
+use std::collections::HashMap;
 use regex::Regex;
 use rtx_core::Core;
-// use rtx_core::common::object::Object;
-use rtx_core::state::{State}; //ObjectStore
+use rtx_core::state::{State, ObjectStore, Scope};
 use rtx_core::token::*;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::mouth::Mouth;
 
 pub fn input_definitions(file: String, mut state: &mut State) -> Result<(), ()> {
+  let loaded_flag = file.clone()+"_loaded";
+  {
+    // Only load definitions once
+    if let Some(&ObjectStore::BoolStore(flag)) = state.lookup_value(&loaded_flag) {
+      if flag {
+        // do nothing if we've loaded before
+        return Ok(());
+      }
+    }
+  }
+
+  // Mark as loaded, then process the definitions
+  println_stderr!("Loading {:?} definitions...", file);
+  state.assign_value(&loaded_flag,
+                     ObjectStore::BoolStore(true),
+                     &Some(Scope::Global));
+
   match file.as_ref() { // TODO?
     "TeX.pool" => pool::tex::load_definitions(&mut state),
     "LaTeX.pool" => pool::latex::load_definitions(&mut state),
@@ -20,11 +36,8 @@ pub fn input_definitions(file: String, mut state: &mut State) -> Result<(), ()> 
 
 #[macro_export]
 macro_rules! LoadPool(
-  ($name: expr, $state: expr) => (
-  {
-    input_definitions($name.to_string()+".pool", $state);
-  }
-));
+  ($name: expr, $state: expr) => (input_definitions($name.to_string()+".pool", $state))
+);
 
 
 pub fn input_content(core: &mut Core, request: String) -> Result<(), ()> {
@@ -338,6 +351,70 @@ macro_rules! DefParameterType(
 
 pub fn revert(_arg: Vec<Token>) -> Vec<Token> {
   Vec::new()
+}
+
+//======================================================================
+// Declaring and Adjusting the Document Model.
+//======================================================================
+
+// // Specify the properties of a Node tag.
+// my $tag_options = {    // [CONSTANT]
+//   autoOpen => 1, autoClose => 1, afterOpen => 1, afterClose => 1,
+//   'afterOpen:early' => 1, 'afterClose:early' => 1,
+//   'afterOpen:late'  => 1, 'afterClose:late'  => 1 };
+// my $tag_prepend_options = {    // [CONSTANT]
+//   'afterOpen:early' => 1, 'afterClose:early' => 1 };
+// my $tag_append_options = {     // [CONSTANT]
+//   'afterOpen'      => 1, 'afterClose'      => 1,
+//   'afterOpen:late' => 1, 'afterClose:late' => 1 };
+
+// sub Tag {
+//   my ($tag, %properties) = @_;
+//   CheckOptions("Tag ($tag)", $tag_options, %properties);
+//   my $model = $STATE->getModel;
+//   AssignMapping('TAG_PROPERTIES', $tag => {}) unless LookupMapping('TAG_PROPERTIES', $tag);
+//   my $props = LookupMapping('TAG_PROPERTIES', $tag);
+//   foreach my $key (keys %properties) {
+//     my $new = $properties{$key};
+//     my $old = $$props{$key};
+//     // These keys accumulate information which should not carry over daemon frames.
+//     if ($$tag_prepend_options{$key}) {
+//       $new = flatten($new, $old); }
+//     elsif ($$tag_append_options{$key}) {
+//       $new = flatten($old, $new); }
+//     $$props{$key} = $new; }
+//   return; }
+
+// sub DocType {
+//   my ($rootelement, $pubid, $sysid, %namespaces) = @_;
+//   my $model = $STATE->getModel;
+//   $model->setDocType($rootelement, $pubid, $sysid);
+//   foreach my $prefix (keys %namespaces) {
+//     $model->registerDocumentNamespace($prefix => $namespaces{$prefix}); }
+//   return; }
+
+// Selects the RelaxNG schema defining the XML output language
+pub fn select_relaxng_schema(schema : String, namespaces : Option<HashMap<String,String>>, state: &mut State) {
+  // What verb here? Set, Choose,...
+  let model = &mut state.model;
+  model.set_relaxng_schema(schema);
+  if let Some(namespaces) = namespaces {
+    for (prefix, value) in namespaces.into_iter() {
+      model.register_document_namespace(prefix, Some(value)); }
+  }
+  return; }
+#[macro_export]
+macro_rules! RelaxNGSchema(
+  ($name: expr, $state: expr) => (select_relaxng_schema($name.to_string(), None, $state))
+);
+
+
+fn register_namespace(prefix: String, namespace: String, state: &mut State) {
+  state.model.register_namespace(prefix, Some(namespace));
+}
+
+fn register_document_namespace(prefix: String, namespace: String, state: &mut State) {
+  state.model.register_document_namespace(prefix, Some(namespace));
 }
 
 

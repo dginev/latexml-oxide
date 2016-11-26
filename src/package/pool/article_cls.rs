@@ -24,7 +24,7 @@ for option in ["10pt", "11pt", "12pt", "letterpaper", "legalpaper", "executivepa
 
 //**********************************************************************
 // Document structure.
-// RelaxNGSchema!("LaTeXML");
+RelaxNGSchema!("LaTeXML", state);
 // RequireResource!("ltx-article.css");
 
 }
