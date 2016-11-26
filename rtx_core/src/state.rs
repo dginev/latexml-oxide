@@ -8,7 +8,6 @@ use common::model::Model;
 // use stomach::{Stomach};
 
 use token::{Catcode, Token};
-use common::object::Object;
 use parameter::Parameter;
 use definition::Definition;
 use definition::expandable::Expandable;
@@ -31,28 +30,28 @@ pub enum Table {
 
 #[derive(Clone)]
 pub enum ObjectStore {
-  StringStore(String),
-  VecCharStore(Vec<char>),
-  VecStringStore(Vec<String>),
-  BoolStore(bool),
-  TokenStore(Token),
-  ExpandableStore(Arc<Expandable>),
-  PrimitiveStore(Arc<Primitive>),
-  ConstructorStore(Arc<Constructor>),
+  String(String),
+  VecChar(Vec<char>),
+  VecString(Vec<String>),
+  Bool(bool),
+  Token(Token),
+  Expandable(Arc<Expandable>),
+  Primitive(Arc<Primitive>),
+  Constructor(Arc<Constructor>),
 }
 
 impl fmt::Debug for ObjectStore {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     use state::ObjectStore::*;
     match self {
-      &StringStore(ref s) => write!(f, "{}", s),
-      &VecCharStore(ref vs) => write!(f, "vec of chars"),
-      &VecStringStore(ref vs) => write!(f, "vec of strings"),
-      &BoolStore(ref b) => write!(f, "{}", b),
-      &TokenStore(ref t) => write!(f, "token"),
-      &ExpandableStore(ref expandable) => write!(f, "<closure for expandable definition>"),
-      &PrimitiveStore(ref primitive) => write!(f, "<closure for primitive definition>"),
-      &ConstructorStore(ref constructor) => write!(f, "<closure for constructor definition>"),
+      &String(ref s) => write!(f, "{}", s),
+      &VecChar(ref vs) => write!(f, "vec of chars"),
+      &VecString(ref vs) => write!(f, "vec of strings"),
+      &Bool(ref b) => write!(f, "{}", b),
+      &Token(ref t) => write!(f, "token"),
+      &Expandable(ref expandable) => write!(f, "<closure for expandable definition>"),
+      &Primitive(ref primitive) => write!(f, "<closure for primitive definition>"),
+      &Constructor(ref constructor) => write!(f, "<closure for constructor definition>"),
     }
   }
 }
@@ -187,16 +186,16 @@ impl State {
       Some(defn.clone())
     } else {
       // println_stderr!("-- No definition for: {:?}", token);
-      Some(ObjectStore::TokenStore(token.clone()))
+      Some(ObjectStore::Token(token.clone()))
     }
   }
-  pub fn assign_value<'av>(&'av mut self, key: &'av str, value: ObjectStore, scope: &'av Option<Scope>) {
+  pub fn assign_value<'av>(&'av mut self, key: &'av str, value: ObjectStore, scope: Option<Scope>) {
     self.assign_internal(Table::Value, key, value, scope);
     return;
   }
-  pub fn assign_catcode<'ac>(&'ac mut self, c: &'ac char, cc: Catcode) {}
-  pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, key: &'def Token, definition: Box<T>) {}
-  pub fn assign_internal<'ai>(&'ai mut self, table: Table, key: &'ai str, definition: ObjectStore, scope: &'ai Option<Scope>) {
+  pub fn assign_catcode<'ac>(&'ac mut self, _c: &'ac char, cc: Catcode) {}
+  pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, _key: &'def Token, definition: Box<T>) {}
+  pub fn assign_internal<'ai>(&'ai mut self, table: Table, key: &'ai str, definition: ObjectStore, _scope: Option<Scope>) {
     let mut fallback_store = HashMap::new();
     let mut store = match table {
       Table::Meaning => &mut self.meaning,
@@ -212,15 +211,15 @@ impl State {
   pub fn clear_prefixes<'cp>(&'cp mut self) {}
 
   /// And a shorthand for installing definitions
-  pub fn install_definition<'id>(&'id mut self, definition: ObjectStore, scope: &'id Option<Scope>) {
+  pub fn install_definition<'id>(&'id mut self, definition: ObjectStore, scope: Option<Scope>) {
     // Locked definitions!!! (or should this test be in assignMeaning?)
     // Ignore attempts to (re)define $cs from tex sources
     //  my $cs = $definition->getCS->getCSName;
     let token = match &definition {
-      &ObjectStore::ExpandableStore(ref defn) => defn.get_cs(),
-      &ObjectStore::ConstructorStore(ref defn) => defn.get_cs(),
-      &ObjectStore::PrimitiveStore(ref defn) => defn.get_cs(),
-      &ObjectStore::TokenStore(ref token) => token.clone(),
+      &ObjectStore::Expandable(ref defn) => defn.get_cs(),
+      &ObjectStore::Constructor(ref defn) => defn.get_cs(),
+      &ObjectStore::Primitive(ref defn) => defn.get_cs(),
+      &ObjectStore::Token(ref token) => token.clone(),
       _ => T_LETTER!("_wrong_argument_for_install_definition".to_string()),
     };
     let cs = token.get_cs_name();
@@ -229,16 +228,16 @@ impl State {
     let cs_locked = cs.clone() + ":locked";
     // TODO, .is_none() should be a real false check
     let is_cs_locked = match self.lookup_value(&cs_locked) {
-      Some(&ObjectStore::BoolStore(ref x)) => *x,
+      Some(&ObjectStore::Bool(ref x)) => *x,
       _ => false,
     };
     let is_state_unlocked: bool = match self.lookup_value("UNLOCKED") {
-      Some(&ObjectStore::BoolStore(ref x)) => *x,
+      Some(&ObjectStore::Bool(ref x)) => *x,
       _ => false,
     };
     if is_cs_locked && !is_state_unlocked {
       match self.lookup_value("SOURCEFILE") {
-        Some(&ObjectStore::StringStore(ref s)) => {
+        Some(&ObjectStore::String(ref s)) => {
           lazy_static! {
             static ref tex_or_bib_ext_regex : Regex = Regex::new(r"\.(tex|bib)$").unwrap();
             static ref code_tex_ext_regex : Regex = Regex::new(r"\.code\.tex$").unwrap();

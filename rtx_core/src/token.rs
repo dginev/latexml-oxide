@@ -326,7 +326,7 @@ impl Token {
       if let Some(specials_store) = state.lookup_value("SPECIALS") {
         let evec = Vec::new();
         let specials_list : &Vec<char> = match specials_store {
-          &ObjectStore::VecCharStore(ref list) => list,
+          &ObjectStore::VecChar(ref list) => list,
           _ => &evec
         };
         for special in specials_list.iter() {

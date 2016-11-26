@@ -26,8 +26,8 @@ impl DigestionAPI for Core {
     self.stomach.initialize(); // The current Stomach;
     // let paths = state.lookup_value("SEARCHPATHS");
     self.state.assign_value("InitialPreloads",
-                            ObjectStore::BoolStore(true),
-                            &Some(Scope::Global));
+                            ObjectStore::Bool(true),
+                            Some(Scope::Global));
     for preload in preloads {
       match input_definitions(preload, InputDefinitionOptions::default(), &mut self.state) {
         Ok(_) => {}
@@ -35,8 +35,8 @@ impl DigestionAPI for Core {
       }
     }
     self.state.assign_value("InitialPreloads",
-                            ObjectStore::BoolStore(false),
-                            &Some(Scope::Global));
+                            ObjectStore::Bool(false),
+                            Some(Scope::Global));
   }
 
   fn digest(&mut self, request: String, _preamble: Option<String>, _postamble: Option<String>, _mode: Option<DigestionMode>, _no_init: bool) -> Result<Digested, Error> {
@@ -112,10 +112,10 @@ impl DigestionAPI for Core {
     state.model.load_schema(); // If needed?
     let mut document = Document::new();
     {
-      if let Some(&ObjectStore::VecStringStore(ref paths)) = state.lookup_value("SEARCHPATHS") {
+      if let Some(&ObjectStore::VecString(ref paths)) = state.lookup_value("SEARCHPATHS") {
         if !paths.is_empty() {
           {
-            if let Some(&ObjectStore::BoolStore(ico_flag)) = state.lookup_value("INCLUDE_COMMENTS") {
+            if let Some(&ObjectStore::Bool(ico_flag)) = state.lookup_value("INCLUDE_COMMENTS") {
               if ico_flag {
                 let paths_string = paths.join(",");
                 document.insert_pi("latexml", vec!["paths".to_string()], vec![paths_string]);

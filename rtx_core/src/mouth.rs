@@ -123,13 +123,13 @@ impl Mouth {
     if self.fordefinitions {
       self.saved_at_cc = state.lookup_catcode(&'@');
       self.saved_include_comments = match state.lookup_value("INCLUDE_COMMENTS") {
-        Some(&ObjectStore::BoolStore(ref x)) => Some(*x),
+        Some(&ObjectStore::Bool(ref x)) => Some(*x),
         _ => None,
       };
       state.assign_catcode(&'@', Catcode::LETTER);
       state.assign_value("INCLUDE_COMMENTS",
-                         ObjectStore::BoolStore(false),
-                         &Some(Scope::Local));
+                         ObjectStore::Bool(false),
+                         Some(Scope::Local));
     }
     return;
   }
@@ -147,8 +147,8 @@ impl Mouth {
       match self.saved_include_comments {
         Some(sic) => {
           state.assign_value("INCLUDE_COMMENTS",
-                             ObjectStore::BoolStore(sic),
-                             &Some(Scope::Local))
+                             ObjectStore::Bool(sic),
+                             Some(Scope::Local))
         }
         None => {}
       };
@@ -311,7 +311,7 @@ impl Mouth {
             if (self.lineno % 25) == 0 {
               let include_comments: Option<&ObjectStore> = state.lookup_value("INCLUDE_COMMENTS");
               match include_comments {
-                Some(&ObjectStore::BoolStore(ref x)) => {
+                Some(&ObjectStore::Bool(ref x)) => {
                   if *x {
                     return Some(T_COMMENT!("**** ".to_string() + &self.shortsource + " Line " + &self.lineno.to_string() + " ****"));
                   }
@@ -433,7 +433,7 @@ impl Mouth {
       T_CS!("\\par".to_string())
     } else {
       match state.lookup_value("PRESERVE_NEWLINES") {
-        Some(&ObjectStore::BoolStore(ref x)) => {
+        Some(&ObjectStore::Bool(ref x)) => {
           if *x {
             Token!("\n".to_string(), Some(Catcode::SPACE))
           } else {
@@ -479,7 +479,7 @@ impl Mouth {
     comment.trim();
     // TODO: Handle properly
     let include_comments: bool = match state.lookup_value("INCLUDE_COMMENTS") {
-      Some(&ObjectStore::BoolStore(x)) => x,
+      Some(&ObjectStore::Bool(x)) => x,
       _ => false,
     };
     if !comment.is_empty() && include_comments {

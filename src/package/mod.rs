@@ -55,7 +55,7 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
   let loaded_flag = file.clone()+"_loaded";
   {
     // Only load definitions once
-    if let Some(&ObjectStore::BoolStore(flag)) = state.lookup_value(&loaded_flag) {
+    if let Some(&ObjectStore::Bool(flag)) = state.lookup_value(&loaded_flag) {
       if flag {
         // do nothing if we've loaded before
         return Ok(());
@@ -66,8 +66,8 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
   // Mark as loaded, then process the definitions
   println_stderr!("Loading {:?} definitions...", file);
   state.assign_value(&loaded_flag,
-                     ObjectStore::BoolStore(true),
-                     &Some(Scope::Global));
+                     ObjectStore::Bool(true),
+                     Some(Scope::Global));
 
   match file.as_ref() {
     "TeX.pool" => pool::tex::load_definitions(&mut state),
@@ -321,10 +321,10 @@ macro_rules! DefMacroI(
 //       //   $state.assign_value(ToString($cs)+":locked", true, "global")
 //       // }
 
-    $state.install_definition(::rtx_core::state::ObjectStore::ExpandableStore(Arc::new(
+    $state.install_definition(::rtx_core::state::ObjectStore::Expandable(Arc::new(
       Expandable { cs: $cs, paramlist: $paramlist, expansion: Arc::new($expansion),
        ..Expandable::default()})),
-      &None);
+      None);
   }
   )
 );
@@ -362,7 +362,7 @@ macro_rules! DefConstructorI(
       options: $options,
       ..Constructor::default()};
 
-    $state.install_definition(::rtx_core::state::ObjectStore::ConstructorStore(Arc::new(constructor)), &None);
+    $state.install_definition(::rtx_core::state::ObjectStore::Constructor(Arc::new(constructor)), None);
 
 //   before_digest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
 //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),

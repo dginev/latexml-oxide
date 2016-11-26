@@ -19,19 +19,37 @@ use rtx_core::whatsit::Whatsit;
 use rtx_core::definition::constructor::ConstructorOptions;
 use package::*;
 
+lazy_static!{
+  static ref OPTS_REGEX : Regex = Regex::new(r",\s*").unwrap();
+}
+
 pub fn load_definitions(state: &mut State) {
   LoadPool!("TeX", state);
+
+  // Apparently LaTeX does NOT define \magnification,
+  // and babel uses that to determine whether we're runing LaTeX!!!
+  // Let('\magnification', '\@undefined');
+  //**********************************************************************
+  // Basic \documentclass & \documentstyle
+
+  //AssignValue('2.09_COMPATIBILITY'=>0);
+  // DefConditionalI('\if@compatibility', undef, sub { LookupValue('2.09_COMPATIBILITY'); });
+  // DefMacro('\@compatibilitytrue',  '');
+  // DefMacro('\@compatibilityfalse', '');
+
+  // Let('\@currentlabel', '\@empty');
+
+  // Let's try just starting with this set (since we've loaded LaTeX)
+  state.assign_value("inPreamble", ObjectStore::Bool(true), None);    // \begin{document} will clear this.
+
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
     ConstructorOptions {
       after_digest: vec![Arc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
         let options: Option<&Digested> = whatsit.get_arg(1);
-        lazy_static!{
-          static ref opts_regex : Regex = Regex::new(r",\s*").unwrap();
-        }
         let class_opts = match options {
-          Some(opts) => opts_regex.split(&opts.to_string()).map(|s| s.to_string()).collect(),
+          Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
           None => Vec::new(),
         };
         LoadClass!(whatsit.get_arg(2).unwrap().to_string(),
@@ -70,28 +88,25 @@ pub fn load_definitions(state: &mut State) {
 
   // TODO:
   DefMacro!("\\begin{}",
-            |_gullet, _args, _state| {
-              // let env = args.get_arg(1);
-              // let name = match env {
-              //   Some(e) => e.to_string(),
-              //   None => String::new()
-              // };
+    |gullet, args, state| {
+    let ref env = args[0];
+    let name = env.to_string();
 
-              // if (IsDefined("\\begin{$name}")) {
-              //   T_CS!("\\begin{$name}"); }    // Magic cs!
-              // else {
-              // let token = T_CS!("\\".to_string() + name);
-              // if (!IsDefined($token)) {
-              //   my $undef = "{" . $name . "}";
-              //   $STATE->noteStatus(undefined => $undef);
-              //   Error("undefined", $undef, $gullet, "The environment " . $undef . " is not defined.");
-              //   $STATE->installDefinition(LaTeXML::Core::Definition::Constructor->new($token, undef,
-              //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
-              // (T_CS!("\begingroup"), Invocation(T_CS!("\lx@setcurrenvir"), $env), $token); } });
+    // if (IsDefined("\\begin{$name}")) {
+    //   T_CS!("\\begin{$name}"); }    // Magic cs!
+    // else {
+    // let token = T_CS!("\\".to_string() + name);
+    // if (!IsDefined($token)) {
+    //   my $undef = "{" . $name . "}";
+    //   $STATE->noteStatus(undefined => $undef);
+    //   Error("undefined", $undef, $gullet, "The environment " . $undef . " is not defined.");
+    //   $STATE->installDefinition(LaTeXML::Core::Definition::Constructor->new($token, undef,
+    //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
+    // (T_CS!("\begingroup"), Invocation(T_CS!("\lx@setcurrenvir"), $env), $token); } });
 
-              Vec::new()
-            },
-            state);
+    Vec::new()
+  },
+  state);
 
   DefMacro!("\\end{}",
             |_gullet, _args, _state| {

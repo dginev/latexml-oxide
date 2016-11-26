@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 use common::xml::XPath;
+use common::relaxng::Relaxng;
 // use common::font::*;
 
 const LTX_NAMESPACE: &'static str = "http://dlmf.nist.gov/LaTeXML";
 
 pub struct Model {
-  schema: Option<String>,
+  schema: Option<Relaxng>,
   schema_data: Option<Vec<String>>,
   xpath: XPath,
   code_namespace_prefixes: HashMap<String, String>,
@@ -58,7 +59,7 @@ impl Model {
     return;
   }
 
-  pub fn load_schema(&mut self) -> &Option<String> {
+  pub fn load_schema(&mut self) -> &Option<Relaxng> {
     // Only load once
     if self.schema.is_some() {
       return &self.schema;
@@ -93,7 +94,7 @@ impl Model {
           }
           "RelaxNG" => {
             name = data[1].to_string();
-            self.schema = RelaxNG::new(&self, name);
+            self.schema = Some(Relaxng{ name: name, ..Relaxng::default()});
           }
           _ => {}
         };

@@ -88,7 +88,7 @@ impl Stomach {
       {
         let ismath = state.lookup_value("IN_MATH");
         mode = match ismath {
-           Some(&ObjectStore::BoolStore(true)) => TexMode::Math,
+           Some(&ObjectStore::Bool(true)) => TexMode::Math,
           _ => TexMode::Text
         };
       }
@@ -154,8 +154,8 @@ impl Stomach {
         //   "Tokens on stack: " . join(', ', map { ToString($_) } @{ $$self{token_stack} })); }
       }
       state.assign_value("CURRENT_TOKEN",
-                         ObjectStore::TokenStore(token.clone()),
-                         &Some(Scope::Global));
+                         ObjectStore::Token(token.clone()),
+                         Some(Scope::Global));
       result = Vec::new();
       let looked_up_definition: Option<ObjectStore> = state.lookup_digestable_definition(&token);
       match looked_up_definition {
@@ -165,11 +165,11 @@ impl Stomach {
         }
         Some(store) => {
           match store {
-            ObjectStore::TokenStore(meaning) => {
+            ObjectStore::Token(meaning) => {
               // Common case
               result = self.invoke_token_simple(token, meaning, state);
             }
-            ObjectStore::ExpandableStore(meaning) => {
+            ObjectStore::Expandable(meaning) => {
               // A math-active character will (typically) be a macro,
               // but it isn't expanded in the gullet, but later when digesting, in math mode (? I think)
               let invoked_meaning = meaning.invoke(&mut self.gullet, state);
@@ -178,7 +178,7 @@ impl Stomach {
               self.token_stack.pop();
               continue;
             }
-            ObjectStore::ConstructorStore(meaning) => {
+            ObjectStore::Constructor(meaning) => {
               // Otherwise, a normal primitive or constructor
               result = meaning.invoke_primitive(self, meaning.clone(), state);
               if !meaning.is_prefix() {
@@ -222,12 +222,12 @@ impl Stomach {
     if meaning.code == Catcode::SPACE {
       let in_math_lookup: Option<&ObjectStore> = state.lookup_value("IN_MATH");
       let in_math = match in_math_lookup {
-        Some(&ObjectStore::BoolStore(x)) => x,
+        Some(&ObjectStore::Bool(x)) => x,
         _ => false,
       };
       let in_preamble_lookup: Option<&ObjectStore> = state.lookup_value("inPreamble");
       let in_preamble = match in_preamble_lookup {
-        Some(&ObjectStore::BoolStore(x)) => x,
+        Some(&ObjectStore::Bool(x)) => x,
         _ => false,
       };
       if in_math || in_preamble {

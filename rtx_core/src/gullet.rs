@@ -200,12 +200,12 @@ impl Gullet {
                   match looked_up_definition {
                     Some(defn_store) => {
                       match defn_store {
-                        ObjectStore::ExpandableStore(defn) => {
+                        ObjectStore::Expandable(defn) => {
                           if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
                             // is this the right logic here? don't expand unless digesting?
                             state.assign_value("current_token",
-                                               ObjectStore::TokenStore(token),
-                                               &Some(Scope::Global));
+                                               ObjectStore::Token(token),
+                                               Some(Scope::Global));
                             defn_next = Some(defn.clone());
                             expand_next = true;
                           } else {

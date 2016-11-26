@@ -1,11 +1,9 @@
 use std::collections::HashMap;
-use common::model::Model;
 use document::Document;
 
 
-pub struct Relaxng<'a> {
+pub struct Relaxng {
   pub name: String,
-  pub model: Option<&'a Model>,
   pub modules: Vec<String>,
   pub elementdefs: HashMap<String, String>,
   pub defs: HashMap<String, String>,
@@ -13,11 +11,10 @@ pub struct Relaxng<'a> {
   pub internal_grammars: u8,
 }
 
-impl<'a> Default for Relaxng<'a> {
+impl Default for Relaxng {
   fn default() -> Self {
     Relaxng {
       name: "LaTeXML".to_string(),
-      model: None,
       modules: Vec::new(),
       elementdefs: HashMap::new(),
       defs: HashMap::new(),
@@ -26,7 +23,7 @@ impl<'a> Default for Relaxng<'a> {
     }
   }
 }
-impl<'a> Relaxng<'a> {
+impl Relaxng {
   pub fn add_schema_declaration(&self, document: &mut Document) {
     document.insert_pi("latexml", vec!["RelaxNGSchema".to_string()], vec![self.name.clone()]);
   }

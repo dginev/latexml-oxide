@@ -38,7 +38,7 @@ impl Document {
     // local $LaTeXML::FONT = LaTeXML::Common::Font->textDefault;
     self.finalize_rec(root);
     match state.lookup_value("RDFa_prefixes") {
-      Some(&ObjectStore::StringStore(ref prefixes)) => self.set_rdfa_prefixes(Some(prefixes.clone())),
+      Some(&ObjectStore::String(ref prefixes)) => self.set_rdfa_prefixes(Some(prefixes.clone())),
       _ => {}
     };
   }
