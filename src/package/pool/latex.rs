@@ -143,7 +143,10 @@ pub fn load_definitions(state: &mut State) {
 
   DefEnvironment!("{document}", |document, whatsit, props, state| {
       //       "<ltx:document xml:id='#id'>#body</ltx:document>",
-      // let id   = props.get("id").unwrap_or("").to_string();
+      let id   = match props.get("id") {
+        Some(& ObjectStore::String(ref id)) => id,
+        _ => ""
+      };
       // let body = props.get("body").unwrap_or(Digested::default());
       // if let Some(docel) = document.findnode("/ltx:document") { // Already (auto) created?
       //   if !id.is_empty() {

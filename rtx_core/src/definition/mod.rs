@@ -14,14 +14,14 @@ use parameter::Parameters;
 use document::Document;
 use whatsit::Whatsit;
 use common::object::Object;
-use state::State;
+use state::{State, ObjectStore};
 
 pub type ExpansionClosure = Arc<Fn(&mut Gullet, Vec<Token>, &mut State) -> Vec<Token>>;
 pub type BeforeDigestClosure = Arc<Fn(&mut Stomach, &mut State) -> Vec<Digested>>;
 pub type DigestionClosure = Arc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Vec<Digested>>;
 pub type ReplacementClosure = Arc<Fn(&mut Document,
                                      &Vec<Option<Digested>>,
-                                     &HashMap<String, String>,
+                                     &HashMap<String, ObjectStore>,
                                      &mut State)
                                     >;
 pub type ConstructionClosure = Arc<Fn(&mut Document, &Whatsit, &mut State)>;

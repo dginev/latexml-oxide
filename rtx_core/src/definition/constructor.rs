@@ -1,11 +1,10 @@
 use std::sync::Arc;
 use std::collections::HashMap;
-use state::{State, Scope};
+use state::{State, Scope, ObjectStore};
 use common::object::Object;
 
 use token::*;
 use Digested;
-use tbox::TBox;
 use gullet::Gullet;
 use stomach::Stomach;
 use whatsit::Whatsit;
@@ -24,9 +23,9 @@ pub struct ConstructorOptions {
   pub after_construct: Vec<ConstructionClosure>,
 
   // environment-specific
-  pub requireMath: bool,
-  pub forbidMath: bool,
-  pub properties: HashMap<String, String>,
+  pub require_math: bool,
+  pub forbid_math: bool,
+  pub properties: HashMap<String, ObjectStore>,
   pub capture_body: bool,
   //font: 1,
 
@@ -49,8 +48,8 @@ impl Default for ConstructorOptions {
       after_construct: vec![],
       mode: String::new(),
       // environment-specific
-      requireMath: false,
-      forbidMath: false,
+      require_math: false,
+      forbid_math: false,
       properties: HashMap::new(),
       capture_body: false,
       after_digest_begin: vec![],
