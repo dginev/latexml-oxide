@@ -29,7 +29,7 @@ impl DigestionAPI for Core {
                             ObjectStore::BoolStore(true),
                             &Some(Scope::Global));
     for preload in preloads {
-      match input_definitions(preload, &mut self.state) {
+      match input_definitions(preload, InputDefinitionOptions::default(), &mut self.state) {
         Ok(_) => {}
         Err(_) => {} // TODO
       }

@@ -3,6 +3,8 @@ pub mod constructor;
 pub mod primitive;
 
 use std::sync::Arc;
+use std::collections::HashMap;
+
 use Digested;
 use gullet::Gullet;
 use stomach::Stomach;
@@ -13,6 +15,16 @@ use document::Document;
 use whatsit::Whatsit;
 use common::object::Object;
 use state::State;
+
+pub type ExpansionClosure = Arc<Fn(&mut Gullet, Vec<Token>, &mut State) -> Vec<Token>>;
+pub type BeforeDigestClosure = Arc<Fn(&mut Stomach, &mut State) -> Vec<Digested>>;
+pub type DigestionClosure = Arc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Vec<Digested>>;
+pub type ReplacementClosure = Arc<Fn(&mut Document,
+                                     &Vec<Option<Digested>>,
+                                     &HashMap<String, String>,
+                                     &mut State)
+                                    >;
+pub type ConstructionClosure = Arc<Fn(&mut Document, &Whatsit, &mut State)>;
 
 pub trait Definition {
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Vec<Token>;
@@ -74,5 +86,31 @@ pub trait Definition {
     0
   }
 
-  fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) {}
+  fn do_absorbtion(&self, _document: &mut Document, whatsit: &Whatsit, state: &mut State) {}
+
+  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>>;
+  fn after_digest(&self) -> Option<&Vec<DigestionClosure>>;
+  fn execute_before_digest(&self, stomach: &mut Stomach, state: &mut State) -> Vec<Digested> {
+    state.unlocked = true;
+    let mut before_digested = Vec::new();
+    if let Some(pre_list) = self.before_digest() {
+      for pre in pre_list.iter() {
+        let before_digest_result = pre(stomach, state);
+        before_digested.extend(before_digest_result);
+      }
+    }
+    before_digested
+  }
+  fn execute_after_digest(&self, stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Vec<Digested> {
+    state.unlocked = true;
+    let mut after_digested = Vec::new();
+    if let Some(pre_list) = self.after_digest() {
+      for pre in pre_list.iter() {
+        let after_digest_result = pre(stomach, whatsit, state);
+        after_digested.extend(after_digest_result);
+      }
+    }
+    after_digested
+  }
+
 }

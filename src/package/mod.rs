@@ -8,7 +8,50 @@ use rtx_core::token::*;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::mouth::Mouth;
 
-pub fn input_definitions(file: String, mut state: &mut State) -> Result<(), ()> {
+pub struct InputDefinitionOptions {
+  pub extension: Option<&'static str>,
+  pub options: Vec<String>,
+  pub after: Vec<Token>,
+  pub notex: bool,
+  pub noerror: bool,
+  pub noltxml: bool,
+  pub withoptions: bool,
+  pub handleoptions: bool,
+  pub as_class: bool,
+}
+impl Default for InputDefinitionOptions {
+  fn default() -> Self {
+    InputDefinitionOptions {
+      extension: None,
+      options: Vec::new(),
+      after: Vec::new(),
+      notex: false,
+      noerror: false,
+      noltxml: false,
+      withoptions: false,
+      handleoptions: false,
+      as_class: false
+    }
+  }
+}
+
+/// TODO: Flesh out with the full infrastructure, incremental functionality for now.
+pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut state: &mut State) -> Result<(), ()> {
+  let mut file : String = raw_file.to_string().trim().to_string();
+
+  // let prevname = if options.handleoptions {
+  //   match state.lookup_definition(T_CS!("\@currname")) {
+  //     Some(ObjectStore::Expandable(name)) => Digest!(T_CS!("\@currname")).to_string()
+  // }
+  // let prevext = options.handleoptions && $STATE->lookupDefinition(T_CS('\@currext')) && ToString(Digest(T_CS('\@currext')));
+
+
+  // Compute the exact name based on the type
+  file = match options.extension {
+    None => file,
+    Some(ext) => file + "." + ext
+  };
+
   let loaded_flag = file.clone()+"_loaded";
   {
     // Only load definitions once
@@ -26,9 +69,10 @@ pub fn input_definitions(file: String, mut state: &mut State) -> Result<(), ()> 
                      ObjectStore::BoolStore(true),
                      &Some(Scope::Global));
 
-  match file.as_ref() { // TODO?
+  match file.as_ref() {
     "TeX.pool" => pool::tex::load_definitions(&mut state),
     "LaTeX.pool" => pool::latex::load_definitions(&mut state),
+    "article.cls" => pool::article_cls::load_definitions(&mut state),
     other => { panic!("TODO: unknown binding {:?}, can't load", other);}
   };
   Ok(())
@@ -36,7 +80,11 @@ pub fn input_definitions(file: String, mut state: &mut State) -> Result<(), ()> 
 
 #[macro_export]
 macro_rules! LoadPool(
-  ($name: expr, $state: expr) => (input_definitions($name.to_string()+".pool", $state))
+  ($name: expr, $state: expr) => (input_definitions($name.to_string(),
+    InputDefinitionOptions {
+      extension: Some("pool"),
+      ..InputDefinitionOptions::default()
+    }, $state))
 );
 
 
@@ -70,10 +118,15 @@ pub fn load_tex_content(core: &mut Core, path: String) {
 
 }
 
-pub fn load_class(_state: &mut State, _class: String, _options: Vec<String>, _after: Vec<Token>) {
-  // CheckOptions("LoadClass ($class)", $loadclass_options, %options);
-  // PushValue(class_options => ($options{options} ? @{ $options{options} } : ()));
-  // Note that we'll handle errors specifically for this case.
+pub fn load_class(name: String, options: Vec<String>, after: Vec<Token>, state: &mut State) {
+  input_definitions(name, InputDefinitionOptions {
+    extension: Some("cls"),
+    after: after,
+    notex: true,
+    handleoptions: true,
+    noerror: true,
+    ..InputDefinitionOptions::default()
+  }, state);
   // if (my $success = InputDefinitions($class, type => 'cls', notex => 1, handleoptions => 1, noerror => 1,
   //     %options)) {
   //   return $success; }
@@ -90,6 +143,14 @@ pub fn load_class(_state: &mut State, _class: String, _options: Vec<String>, _af
   //       "Can't find binding for class $alternate (installation error)");
   //     return; } } }
 }
+
+#[macro_export]
+macro_rules! LoadClass(
+  ($class:expr, $options:expr, $after:expr, $state:expr) => (
+  {
+    load_class($class, $options, $after , $state);
+  }
+));
 
 pub fn find_file(request: String, _forbid_ltxml: bool) -> Option<String> {
   // TODO: Actually find it!
@@ -298,6 +359,7 @@ macro_rules! DefConstructorI(
       cs: $cs,
       paramlist: $paramlist,
       replacement: compiled_replacement,
+      options: $options,
       ..Constructor::default()};
 
     $state.install_definition(::rtx_core::state::ObjectStore::ConstructorStore(Arc::new(constructor)), &None);

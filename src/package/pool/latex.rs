@@ -10,13 +10,13 @@
 ///**********************************************************************
 
 use std::sync::Arc;
-// use regex::Regex;
+use regex::Regex;
 use rtx_core::state::{Scope, State, ObjectStore};
 use rtx_core::token::*;
-// use rtx_core::tbox::TBox;
-// use rtx_core::stomach::Stomach;
-// use rtx_core::whatsit::Whatsit;
-// use rtx_core::definition::constructor::ConstructorOptions;
+use rtx_core::tbox::TBox;
+use rtx_core::stomach::Stomach;
+use rtx_core::whatsit::Whatsit;
+use rtx_core::definition::constructor::ConstructorOptions;
 use package::*;
 
 pub fn load_definitions(state: &mut State) {
@@ -24,25 +24,25 @@ pub fn load_definitions(state: &mut State) {
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
-                  ConstructorOptions {
-                    after_digest: Some(Arc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| {
-                      let options: Option<&TBox> = whatsit.get_arg(1);
-                      lazy_static!{
-                        static ref opts_regex : Regex = Regex::new(r",\s*").unwrap();
-                      }
-                      let class_opts = match options {
-                        Some(opts) => opts_regex.split(&opts.to_string()).map(|s| s.to_string()).collect(),
-                        None => Vec::new(),
-                      };
-                      load_class(state,
-                                 whatsit.get_arg(2).unwrap().to_string(),
-                                 class_opts,
-                                 vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())]);
-                      return;
-                    })),
-                    ..ConstructorOptions::default()
-                  },
-                  state);
+    ConstructorOptions {
+      after_digest: vec![Arc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
+        let options: Option<&Digested> = whatsit.get_arg(1);
+        lazy_static!{
+          static ref opts_regex : Regex = Regex::new(r",\s*").unwrap();
+        }
+        let class_opts = match options {
+          Some(opts) => opts_regex.split(&opts.to_string()).map(|s| s.to_string()).collect(),
+          None => Vec::new(),
+        };
+        LoadClass!(whatsit.get_arg(2).unwrap().to_string(),
+                   class_opts,
+                   vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())],
+                   state);
+        Vec::new()
+      })],
+      ..ConstructorOptions::default()
+    },
+    state);
 
 
   // ======================================================================
@@ -124,17 +124,18 @@ pub fn load_definitions(state: &mut State) {
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
                   ConstructorOptions {
-                    before_digest: Some(Arc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| {
+                    before_digest: vec![Arc::new(|_stomach: &mut Stomach, state: &mut State| -> Vec<Digested> {
                       // onlyPreamble('\usepackage');
-                    })),
-                    after_digest: Some(Arc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| {
-                      let options: Option<&TBox> = whatsit.get_arg(1);
-                      let packages: Option<&TBox> = whatsit.get_arg(2);
+                      Vec::new()
+                    })],
+                    after_digest: vec![Arc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
+                      let options: Option<&Digested> = whatsit.get_arg(1);
+                      let packages: Option<&Digested> = whatsit.get_arg(2);
                       // my @pkgs     = grep { $_ } grep { !/^\s*%/ } split(/,\s*/, ToString($packages));
                       // $options = [($options ? split(/,\s*/, (ToString($options))) : ())];
                       // map { RequirePackage($_, options => $options) } @pkgs;
-                      return;
-                    })),
+                      Vec::new()
+                    })],
                     ..ConstructorOptions::default()
                   },
                   state);

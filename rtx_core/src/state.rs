@@ -65,6 +65,7 @@ pub struct State {
   pub value: HashMap<String, ObjectStore>,
   pub parameters: HashMap<String, Parameter>,
   pub status_code: usize,
+  pub unlocked: bool,
   pub model: Model,
 }
 
@@ -74,6 +75,7 @@ impl Default for State {
       // stomach : Stomach::default(),
       verbosity: 0,
       status_code: 0,
+      unlocked: true,
       model: Model::default(),
       map: Vec::new(),
       catcode: HashMap::new(),

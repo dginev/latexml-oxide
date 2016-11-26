@@ -10,15 +10,14 @@ use gullet::Gullet;
 use stomach::Stomach;
 use whatsit::Whatsit;
 use parameter::Parameters;
-use definition::Definition;
-use definition::expandable::ExpansionClosure;
+use definition::{Definition,BeforeDigestClosure, DigestionClosure, ConstructionClosure, ReplacementClosure};
 use document::Document;
 
 #[derive(Clone)]
 pub struct ConstructorOptions {
   pub bounded: bool,
   pub mode: String, // TODO
-  pub before_digest: Vec<ExpansionClosure>,
+  pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
   pub before_construct: Vec<ConstructionClosure>,
   pub after_construct: Vec<ConstructionClosure>,
@@ -35,14 +34,6 @@ impl Default for ConstructorOptions {
     }
   }
 }
-
-pub type DigestionClosure = Arc<Fn(&mut Stomach, Option<&Whatsit>, &mut State)>;
-pub type ReplacementClosure = Arc<Fn(&mut Document,
-                                     &Vec<Option<Digested>>,
-                                     &HashMap<String, String>,
-                                     &mut State)
-                                    >;
-pub type ConstructionClosure = Arc<Fn(&mut Document, &Whatsit, &mut State)>;
 
 #[derive(Clone)]
 pub struct Constructor {
@@ -66,6 +57,12 @@ impl Default for Constructor {
 
 impl Object for Constructor {}
 impl Definition for Constructor {
+  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> {
+    Some(&self.options.before_digest)
+  }
+  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {
+    Some(&self.options.after_digest)
+  }
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Vec<Token> {
     println_stderr!("-- constructor invoke for {:?}", self.get_cs());
     Vec::new()
@@ -80,7 +77,7 @@ impl Definition for Constructor {
     // let tracing = state.lookup_value("TRACINGCOMMANDS");
     // LaTeXML::Definition::startProfiling($profiled, "digest") if $profiled;
 
-    let _pre = self.execute_before_digest(stomach, state);
+    let mut result = self.execute_before_digest(stomach, state);
 
     // println_stderr_stderr!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
@@ -111,21 +108,25 @@ impl Definition for Constructor {
     // $props{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.
-    let whatsit = Whatsit {
+    let mut whatsit = Whatsit {
       definition: caller,
       args: args,
       properties: props,
     };
 
     // Call any 'After' code.
-    let _post = self.execute_after_digest(stomach, &whatsit, state);
+    let post = self.execute_after_digest(stomach, &mut whatsit, state);
+
+    // Package the result boxes
+    result.push(Digested::WhatsitObj(whatsit));
+    result.extend(post);
     // if (let cap = $$self{captureBody}) {
     //   $whatsit->setBody(@post, $stomach->digestNextBody((ref $cap ? $cap : undef))); @post = (); }
 
     // my @postpost = $self->executeAfterDigestBody($stomach, $whatsit);
     // LaTeXML::Definition::stopProfiling($profiled, 'digest') if $profiled;
     // return (@pre, $whatsit, @post, @postpost);
-    return vec![Digested::WhatsitObj(whatsit)];
+    return result;
   }
 
   fn get_cs(&self) -> Token {
@@ -175,9 +176,4 @@ impl Definition for Constructor {
     }
     return;
   }
-}
-
-impl Constructor {
-  fn execute_before_digest(&self, _stomach: &mut Stomach, _state: &mut State) {}
-  fn execute_after_digest(&self, _stomach: &mut Stomach, _whatsit: &Whatsit, _state: &mut State) {}
 }

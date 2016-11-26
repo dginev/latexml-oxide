@@ -3,29 +3,25 @@ use state::State;
 use common::object::Object;
 use Digested;
 use token::*;
-use tbox::TBox;
 use gullet::Gullet;
 use stomach::Stomach;
-// use whatsit::Whatsit;
 use parameter::Parameters;
-use definition::Definition;
-use definition::expandable::ExpansionClosure;
-use definition::constructor::DigestionClosure;
+use definition::{Definition, BeforeDigestClosure, DigestionClosure};
 use document::Document;
 
-
+#[derive(Clone)]
 pub struct PrimitiveOptions {
   pub bounded: bool,
   pub mode: String, // TODO
-  pub before_digest: Option<ExpansionClosure>,
-  pub after_digest: Option<DigestionClosure>,
+  pub before_digest: Vec<BeforeDigestClosure>,
+  pub after_digest: Vec<DigestionClosure>,
 }
 impl Default for PrimitiveOptions {
   fn default() -> Self {
     PrimitiveOptions {
       bounded: false,
-      before_digest: None,
-      after_digest: None,
+      before_digest: Vec::new(),
+      after_digest: Vec::new(),
       mode: String::new(),
     }
   }
@@ -38,6 +34,7 @@ pub struct Primitive {
   pub paramlist: Option<Parameters>,
   pub nargs: Option<usize>,
   pub replacement: String,
+  pub options: PrimitiveOptions,
 }
 impl Default for Primitive {
   fn default() -> Self {
@@ -46,16 +43,24 @@ impl Default for Primitive {
       paramlist: None,
       nargs: None,
       replacement: String::new(),
+      options: PrimitiveOptions::default(),
     }
   }
 }
 
 impl Object for Primitive {}
 impl Definition for Primitive {
-  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Vec<Token> {
+  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> {
+    Some(&self.options.before_digest)
+  }
+  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {
+    Some(&self.options.after_digest)
+  }
+
+  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Vec<Token> {
     Vec::new()
   }
-  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Arc<Definition>, state: &mut State) -> Vec<Digested> {
+  fn invoke_primitive(&self, _gullet: &mut Stomach, _caller: Arc<Definition>, _state: &mut State) -> Vec<Digested> {
     Vec::new()
   }
 

@@ -5,9 +5,9 @@ use tokens::Tokens;
 use tbox::TBox;
 use gullet::Gullet;
 use stomach::Stomach;
-use definition::Definition;
-use definition::constructor::{Constructor, DigestionClosure};
-use definition::expandable::ExpansionClosure;
+use definition::{Definition,ExpansionClosure,BeforeDigestClosure,DigestionClosure};
+use definition::constructor::{Constructor};
+use whatsit::Whatsit;
 use state::State;
 use mouth::Mouth;
 use Digested;
@@ -25,7 +25,7 @@ pub struct Parameter {
   pub extra: Vec<Option<Parameters>>,
   pub reader: ReaderClosure,
   pub reversion: Option<ReversionClosure>,
-  pub before_digest : Option<DigestionClosure>,
+  pub before_digest : Option<BeforeDigestClosure>,
   pub after_digest : Option<DigestionClosure>,
 }
 impl Default for Parameter {
@@ -188,7 +188,7 @@ impl Parameter {
     }
 
     if let Some(ref pre) = self.before_digest { // Done for effect only.
-      pre(stomach, None, state); // maybe pass extras?
+      pre(stomach, state); // maybe pass extras?
     }
 
     let mut digested_value = None;
@@ -196,7 +196,8 @@ impl Parameter {
       digested_value = Some(value_to_digest.be_digested(stomach, state));
     }
     if let Some(ref post) = self.after_digest { // Done for effect only.
-      post(stomach, None, state); // maybe pass extras?
+      let mut w = Whatsit::default();
+      post(stomach, &mut w, state); // maybe pass extras?
     }
     if self.semiverbatim {
       state.end_semiverbatim() // Corner case?

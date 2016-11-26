@@ -7,9 +7,8 @@ use gullet::Gullet;
 use stomach::Stomach;
 use parameter::Parameters;
 use common::object::Object;
-use definition::Definition;
+use definition::{Definition, ExpansionClosure, BeforeDigestClosure, DigestionClosure};
 
-pub type ExpansionClosure = Arc<Fn(&mut Gullet, Vec<Token>, &mut State) -> Vec<Token>>;
 #[derive(Clone)]
 pub struct Expandable {
   pub is_protected: bool,
@@ -79,6 +78,14 @@ impl Definition for Expandable {
 
   fn invoke_primitive(&self, _gullet: &mut Stomach, caller: Arc<Definition>, _state: &mut State) -> Vec<Digested> {
     Vec::new()
+  }
+
+  // Not implemented for expandable
+  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> {
+    None
+  }
+  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {
+    None
   }
 }
 

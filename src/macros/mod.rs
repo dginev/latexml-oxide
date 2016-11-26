@@ -7,7 +7,7 @@ macro_rules! compile_replacement {
     use rtx_core::BoxOps;
     use rtx_core::Digested;
     use rtx_core::document::Document;
-    use rtx_core::definition::constructor::ReplacementClosure;
+    use rtx_core::definition::ReplacementClosure;
 
 
     #[allow(unused_attributes)]

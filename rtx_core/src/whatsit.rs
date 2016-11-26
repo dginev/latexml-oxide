@@ -2,6 +2,7 @@ use std::fmt;
 use std::collections::HashMap;
 use std::sync::Arc;
 use state::State;
+use definition::expandable::Expandable;
 use {Digested, BoxOps};
 use definition::Definition;
 use document::Document;
@@ -10,6 +11,16 @@ pub struct Whatsit {
   pub args: Vec<Option<Digested>>,
   pub properties: HashMap<String, String>, // TODO: This will be an issue, LaTeXML traditionally takes advantage of the fully untyped nature of Perl hashes
   pub definition: Arc<Definition>,
+}
+
+impl Default for Whatsit {
+  fn default() -> Self {
+    Whatsit {
+      args: Vec::new(),
+      properties: HashMap::new(),
+      definition: Arc::new(Expandable::default())
+    }
+  }
 }
 
 impl Whatsit {
