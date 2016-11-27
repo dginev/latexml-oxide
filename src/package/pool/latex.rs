@@ -90,7 +90,6 @@ pub fn load_definitions(state: &mut State) {
   DefMacro!("\\begin{}",
     |gullet, args, state| {
     let ref name = args[0].to_string();
-    println_stderr!("-- Begin env: {:?}", name);
     let begin_name = "\\begin{".to_string()+&name+"}";
     if IsDefined!(&begin_name, state) {
       vec![T_CS!(begin_name)] // Magic cs!
@@ -157,7 +156,7 @@ pub fn load_definitions(state: &mut State) {
         Some(& ObjectStore::Digested(ref arc)) => (**arc).clone(),
         _ => wd
       };
-      if let Some(docel) = document.findnode("/ltx:document", None) { // Already (auto) created?
+      if let Some(docel) = document.findnode("/document", None) { // Already (auto) created?
         if !id.is_empty() {
           document.set_attribute(&docel, "xml:id", id);
         }
@@ -165,7 +164,7 @@ pub fn load_definitions(state: &mut State) {
       } else {
         let mut attrib : HashMap<String, String> = HashMap::new();
         attrib.insert("xml:id".to_string(), id.to_string());
-        document.insert_element("ltx:document", vec![body], Some(attrib), state);
+        document.insert_element("document", vec![body], Some(attrib), state);
       }
     },
     ConstructorOptions {

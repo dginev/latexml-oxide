@@ -11,19 +11,19 @@ use regex::Regex;
 
 pub struct Document {
   pub document: XmlDoc,
+  pub pending: Vec<Node>,
   pub node: Node,
   pub debug: bool,
 }
 
 impl Document {
   pub fn new() -> Self {
-    let mut doc_scaffold = XmlDoc::new().unwrap();
-    let mut latexml_node = Node::new("document", None, &doc_scaffold).unwrap();
-    doc_scaffold.set_root_element(&mut latexml_node);
-
+    let doc_scaffold = XmlDoc::new().unwrap();
+    let root = doc_scaffold.get_root_element();
     Document {
       document: doc_scaffold,
-      node: latexml_node,
+      node: root,
+      pending: Vec::new(),
       debug: false,
     }
   }
@@ -33,7 +33,7 @@ impl Document {
   pub fn findnodes(&self, xpath: &str, node: Option<Node>) -> Vec<Node> {
     let root = match node {
       Some(n) => n,
-      None => self.document.get_root_element().unwrap()
+      None => self.document.get_root_element()
     };
     let context = XPath::new(&self.document, HashMap::new());
     context.findnodes(xpath, root)
@@ -43,7 +43,7 @@ impl Document {
   pub fn findnode(&self, xpath: &str, node: Option<Node>) -> Option<Node> {
     let root = match node {
       Some(n) => n,
-      None => self.document.get_root_element().unwrap()
+      None => self.document.get_root_element()
     };
     let context = XPath::new(&self.document, HashMap::new());
     let nodes = context.findnodes(xpath, root);
@@ -69,7 +69,7 @@ impl Document {
   // It removes the `helper' attributes that store fonts, source box, etc.
   pub fn finalize<'finalize>(&'finalize mut self, state: &'finalize mut State) {
     self.prune_xmduals();
-    let root = self.document.get_root_element().unwrap();
+    let root = self.document.get_root_element();
     // local $LaTeXML::FONT = LaTeXML::Common::Font->textDefault;
     self.finalize_rec(root);
     match state.lookup_value("RDFa_prefixes") {
@@ -99,7 +99,7 @@ impl Document {
   /// $box can also be a plain string which will be inserted according to whatever
   /// font, mode, etc, are in %props.
   pub fn absorb(&mut self, object: Digested, state: &mut State) -> Vec<Node> {
-    let mut results = Vec::new();
+    // let mut results = Vec::new();
     let mut boxes = VecDeque::new();
     boxes.push_front(object);
 
@@ -143,7 +143,8 @@ impl Document {
       //   let mut box_node = self.node.add_child(None, "box").unwrap();
       //   box_node.set_content(&tbox.text);
     }
-    results
+    // results
+    vec![]
   }
 
 
@@ -179,11 +180,12 @@ impl Document {
       attr_data.push('"');
     }
     // self.close_text_internal();  // Close any open text node
-    // if ($$self{node}->nodeType == NodeType::DocumentNode) {
-    //   push(@{ $$self{pending} }, $pi); }
-    // else {
     let pi_node = self.document.create_processing_instruction(op,&attr_data).unwrap();
-    self.node.add_prev_sibling(pi_node);
+    if self.node.get_type() == Some(NodeType::DocumentNode) {
+      self.pending.push(pi_node);
+    } else {
+      self.node.add_prev_sibling(pi_node);
+    }
     return;
   }
 
@@ -288,7 +290,7 @@ impl Document {
     // TODO: Mock only
     &mut self.node
   }
-  pub fn close_to_node(&self, node: &Node) {} // TODO: Mock only
+  pub fn close_to_node(&self, _node: &Node) {} // TODO: Mock only
 
   pub fn open_text_internal(&mut self, text: &str) {
     lazy_static! {
@@ -301,11 +303,11 @@ impl Document {
                         text,
                         self.document.node_to_string(&self.node));
       }
-      self.node.append_text(text);
+      self.node.append_text(text).unwrap();
     } else if has_nonspace.is_match(text) || self.can_contain(&self.node, "//PCDATA") {
       // or text allowed here
       let mut point = self.find_insertion_point("//PCDATA");
-      let mut node = Node::new_text(text, &self.document).unwrap();
+      let node = Node::new_text(text, &self.document).unwrap();
       if self.debug {
         println_stderr!("Inserting text node for \"{:?}\" into {:?}",
                         text,
@@ -316,8 +318,8 @@ impl Document {
     }
   }
 
-  pub fn record_constructed_node(&self, node: &Node) {} // TODO: Mock only
-  pub fn find_insertion_point(&self, target: &str) -> Node {
+  pub fn record_constructed_node(&self, _node: &Node) {} // TODO: Mock only
+  pub fn find_insertion_point(&self, _target: &str) -> Node {
     // TODO: Mock only
     self.node.clone()
   }
@@ -403,10 +405,12 @@ pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Opti
   // If this will be the document root node, things are slightly more involved.
   if point.get_type() == Some(NodeType::DocumentNode) {    // First node! (?)
     // self.model.add_schema_declaration(self, tag);
-    // self.pending.map(|node| self.document.append_child(node));    // Add saved comments, PI's
     newnode = Node::new(tag, decoded_ns, &self.document).unwrap();
     // self.record_constructed_node(newnode);
     self.document.set_root_element(&mut newnode);
+    for node in self.pending.iter() {
+      newnode.add_prev_sibling(node.clone()); // Add saved comments, PI's
+    }
     // if let Some(ns) = None {
       // Here, we're creating the initial, document element, which will hold ALL of the namespace declarations.
       // If there is a default namespace (no prefix), that will also be declared, and applied here.
@@ -446,7 +450,7 @@ pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Opti
   return newnode;
 }
 
-fn open_element_internal (&mut self, point: &mut Node, ns: Option<String>, tag: &str) -> Node {
+fn open_element_internal (&mut self, point: &mut Node, _ns: Option<String>, tag: &str) -> Node {
   let newnode;
   // if !ns.is_empty() {
   //   if (!defined $point->lookupNamespacePrefix($ns)) {    # namespace not already declared?
