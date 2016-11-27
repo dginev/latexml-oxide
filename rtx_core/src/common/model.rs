@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use common::xml::XPath;
 use common::relaxng::Relaxng;
 // use common::font::*;
 
@@ -8,15 +7,14 @@ const LTX_NAMESPACE: &'static str = "http://dlmf.nist.gov/LaTeXML";
 pub struct Model {
   schema: Option<Relaxng>,
   schema_data: Option<Vec<String>>,
-  xpath: XPath,
   code_namespace_prefixes: HashMap<String, String>,
   code_namespaces: HashMap<String, String>,
   document_namespace_prefixes: HashMap<String, String>,
   document_namespaces: HashMap<String, String>,
-  doctype_namespaces: HashMap<String, String>,
-  namespace_errors: usize,
+  // doctype_namespaces: HashMap<String, String>,
+  // namespace_errors: usize,
   permissive: bool,
-  no_compiled: bool,
+  // no_compiled: bool,
   debug_mode: bool,
 }
 impl Default for Model {
@@ -24,15 +22,14 @@ impl Default for Model {
     Model {
       schema: None,
       schema_data: None,
-      xpath: XPath::default(),
       code_namespace_prefixes: HashMap::new(),
       code_namespaces: HashMap::new(),
       document_namespace_prefixes: HashMap::new(),
       document_namespaces: HashMap::new(),
-      doctype_namespaces: HashMap::new(),
-      namespace_errors: 0,
+      // doctype_namespaces: HashMap::new(),
+      // namespace_errors: 0,
       permissive: true,
-      no_compiled: true,
+      // no_compiled: true,
       debug_mode: false,
     }
   }
@@ -142,7 +139,7 @@ impl Model {
       Some(namespace) => {
         self.code_namespace_prefixes.insert(namespace.clone(), codeprefix.clone());
         self.code_namespaces.insert(codeprefix.clone(), namespace.clone());
-        self.xpath.register_ns(codeprefix, namespace);
+        // self.xpath.register_ns(codeprefix, namespace);
       }
       None => {
         match self.code_namespaces.get(&codeprefix) {

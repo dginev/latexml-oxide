@@ -7,6 +7,7 @@ use {Digested, BoxOps};
 use definition::Definition;
 use document::Document;
 
+#[derive(Clone)]
 pub struct Whatsit {
   pub args: Vec<Option<Digested>>,
   pub properties: HashMap<String, ObjectStore>,

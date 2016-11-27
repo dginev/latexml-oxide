@@ -3,7 +3,7 @@ use state::State;
 use document::Document;
 
 /// Lists can contain any Digested items, such as boxes, whatsits or other lists
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct List {
   // TODO
   pub boxes: Vec<Digested>,

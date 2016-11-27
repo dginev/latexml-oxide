@@ -12,6 +12,7 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use regex::Regex;
+use rtx_core::Digested;
 use rtx_core::state::{Scope, State, ObjectStore};
 use rtx_core::token::*;
 use rtx_core::tbox::TBox;
@@ -89,6 +90,7 @@ pub fn load_definitions(state: &mut State) {
   DefMacro!("\\begin{}",
     |gullet, args, state| {
     let ref name = args[0].to_string();
+    println_stderr!("-- Begin env: {:?}", name);
     let begin_name = "\\begin{".to_string()+&name+"}";
     if IsDefined!(&begin_name, state) {
       vec![T_CS!(begin_name)] // Magic cs!
@@ -143,19 +145,28 @@ pub fn load_definitions(state: &mut State) {
 
   DefEnvironment!("{document}", |document, whatsit, props, state| {
       //       "<ltx:document xml:id='#id'>#body</ltx:document>",
-      let id   = match props.get("id") {
+      let id = match props.get("id") {
         Some(& ObjectStore::String(ref id)) => id,
         _ => ""
       };
-      // let body = props.get("body").unwrap_or(Digested::default());
-      // if let Some(docel) = document.findnode("/ltx:document") { // Already (auto) created?
-      //   if !id.is_empty() {
-      //     document.set_attribute(docel, "xml:id", id);
-      //   }
+      // TODO: there has to be a better way of doing this property acrobatics...
+      // TODO: THIS IS WRONG AND SLOW. Cloning each whatsit is **MASSIVE** overhead,
+      //       and while in this example we only clone the document body, following this path in general is horrible.
+      let wd = Digested::WhatsitObj(Whatsit::default());
+      let body = match props.get("body") {
+        Some(& ObjectStore::Digested(ref arc)) => (**arc).clone(),
+        _ => wd
+      };
+      if let Some(docel) = document.findnode("/ltx:document", None) { // Already (auto) created?
+        if !id.is_empty() {
+          document.set_attribute(&docel, "xml:id", id);
+        }
         // document.absorb(body, state);
-      // } else {
-      //   document.insert_element("ltx:document", body, vec!["xml:id"], vec![id]);
-      // }
+      } else {
+        let mut attrib : HashMap<String, String> = HashMap::new();
+        attrib.insert("xml:id".to_string(), id.to_string());
+        document.insert_element("ltx:document", vec![body], Some(attrib), state);
+      }
     },
     ConstructorOptions {
     // before_digest: |stomach, state| { AssignValue!("inPreamble", ObjectStore::Bool(false), state); },

@@ -41,20 +41,22 @@ pub enum ObjectStore {
   Expandable(Arc<Expandable>),
   Primitive(Arc<Primitive>),
   Constructor(Arc<Constructor>),
+  Digested(Arc<::Digested>)
 }
 
 impl fmt::Debug for ObjectStore {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     use state::ObjectStore::*;
     match self {
-      &String(ref s) => write!(f, "{}", s),
-      &VecChar(ref vs) => write!(f, "vec of chars"),
-      &VecString(ref vs) => write!(f, "vec of strings"),
-      &Bool(ref b) => write!(f, "{}", b),
-      &Token(ref t) => write!(f, "token"),
-      &Expandable(ref expandable) => write!(f, "<closure for expandable definition>"),
-      &Primitive(ref primitive) => write!(f, "<closure for primitive definition>"),
-      &Constructor(ref constructor) => write!(f, "<closure for constructor definition>"),
+      &String(ref s) => write!(f, "{:?}", s),
+      &VecChar(ref vs) => write!(f, "{:?}",vs),
+      &VecString(ref vs) => write!(f, "{:?}", vs),
+      &Bool(ref b) => write!(f, "{:?}", b),
+      &Token(ref t) => write!(f, "{:?}", t),
+      &Expandable(ref _expandable) => write!(f, "<closure for expandable definition>"),
+      &Primitive(ref _primitive) => write!(f, "<closure for primitive definition>"),
+      &Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
+      &Digested(ref digested) => write!(f, "{:?}", digested),
     }
   }
 }
