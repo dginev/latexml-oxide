@@ -152,7 +152,7 @@ impl Document {
 
   /// Shorthand for open,absorb,close, but returns the new node.
   pub fn insert_element(&mut self, qname: &str, content: Vec<Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Node {
-    let node = self.open_element(qname, attrib);
+    let node = self.open_element(qname, attrib, state);
     for digested in content.into_iter() {
       self.absorb(digested, state);
     }
@@ -189,14 +189,14 @@ impl Document {
     return;
   }
 
-  pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>) -> Node {
+  pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Node {
     // NoteProgress('.') if ($$self{progress}++ % 25) == 0;
     println_stderr!("Open element {:?} at {:?}", qname, self.node.get_name());// if $LaTeXML::Core::Document::DEBUG;
     let point = self.find_insertion_point(qname);
     // attributes.entry("_box").or_insert(state.locals.box);
     let newnode = self.open_element_at(point, qname,
       // _font => $attributes{font} || $attributes{_box}->getFont,
-      attributes);
+      attributes, state);
     self.set_node(newnode.clone());
     newnode
   }
@@ -394,7 +394,7 @@ impl Document {
 /// This opens a new element at the _specified_ point, rather than the current insertion point.
 /// This is useful during document rearrangement or augmentation that may be needed later
 /// in the process.
-pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>) -> Node {
+pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Node {
   // let (decoded_ns, tag) = self.model.decode_qname(qname);
   let decoded_ns = None;
   let tag = qname;
@@ -404,10 +404,11 @@ pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Opti
   // box = self.node_boxes.get(box);    // may already be the string key
   // If this will be the document root node, things are slightly more involved.
   if point.get_type() == Some(NodeType::DocumentNode) {    // First node! (?)
-    // self.model.add_schema_declaration(self, tag);
+    state.model.add_schema_declaration(self);
     newnode = Node::new(tag, decoded_ns, &self.document).unwrap();
     // self.record_constructed_node(newnode);
     self.document.set_root_element(&mut newnode);
+
     for node in self.pending.iter() {
       newnode.add_prev_sibling(node.clone()); // Add saved comments, PI's
     }

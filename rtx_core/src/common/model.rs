@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use common::relaxng::Relaxng;
+use document::Document;
 // use common::font::*;
 
 const LTX_NAMESPACE: &'static str = "http://dlmf.nist.gov/LaTeXML";
@@ -54,6 +55,11 @@ impl Model {
   pub fn set_relaxng_schema(&mut self, schema: String) {
     self.schema_data = Some(vec!["RelaxNG".to_string(), schema]);
     return;
+  }
+  pub fn add_schema_declaration(&self, document: &mut Document) {
+    if let &Some(ref schema) = &self.schema {
+      schema.add_schema_declaration(document);
+    }
   }
 
   pub fn load_schema(&mut self) -> &Option<Relaxng> {
@@ -177,19 +183,5 @@ impl Model {
       }
     };
     return;
-  }
-}
-
-
-
-struct RelaxNG {
-  todo: bool,
-}
-impl RelaxNG {
-  pub fn new(model: &Model, name: String) -> Option<String> {
-    // RelaxNG {
-    //   todo : true
-    // }
-    Some("todo".to_string())
   }
 }
