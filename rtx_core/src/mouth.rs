@@ -1,7 +1,5 @@
 use std::io::prelude::*;
 use std::fs::File;
-use std::hash::Hash;
-use std::path::Path;
 use std::collections::VecDeque;
 use std::sync::Mutex;
 use regex::Regex;
@@ -22,6 +20,9 @@ pub enum FoodType {
 
 lazy_static! {
   static ref LASTID : Mutex<u32> = Mutex::new(0);
+  static ref LINEBREAK_REGEX : Regex = Regex::new(r"(?s:\015\012|\015|\012|\r)").unwrap();
+  static ref LOWERHEX_REGEX : Regex = Regex::new(r"^[0-9a-f]$").unwrap();
+  static ref SANITIZE_LINE_REGEX: Regex = Regex::new(r"((\\ )*)\s*$").unwrap();
 }
 
 #[derive(Clone)]
@@ -166,11 +167,7 @@ impl Mouth {
   /// into "lines" ending with CRLF, CR or LF (DOS, Mac or Unix).
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
   fn split_lines(lines: &str) -> VecDeque<String> {
-    // regexes:
-    lazy_static! {
-      static ref linebreak_regex : Regex = Regex::new(r"(?s:\015\012|\015|\012|\r)").unwrap();
-    }
-    linebreak_regex.split(lines).map(|s| s.to_string()).collect() // And split.
+    LINEBREAK_REGEX.split(lines).map(|s| s.to_string()).collect() // And split.
   }
 
   /// Original LaTeXML:
@@ -219,13 +216,10 @@ impl Mouth {
         let next_ch = self.chars.get(self.colno);
         if cc == Some(Catcode::SUPER) && // Possible convert ^^x
           next_ch.is_some() && (ch == next_ch.unwrap()) {
-          lazy_static! {
-            static ref lowerhex_regex : Regex = Regex::new(r"^[0-9a-f]$").unwrap();
-          }
           let c1: Option<&char> = self.chars.get(self.colno + 1);
           let c2: Option<&char> = self.chars.get(self.colno + 2);
           if (self.colno + 2 < self.nchars) &&   // ^^ followed by TWO LOWERCASE Hex digits???
-            c1.is_some() && c2.is_some() && lowerhex_regex.is_match(&c1.unwrap().to_string()) && lowerhex_regex.is_match(&c2.unwrap().to_string()) {
+            c1.is_some() && c2.is_some() && LOWERHEX_REGEX.is_match(&c1.unwrap().to_string()) && LOWERHEX_REGEX.is_match(&c2.unwrap().to_string()) {
             // TODO
             // ch = chr(hex($c1 . $c2));
             // splice(@{ self.chars }, self.colno - 1, 4, $ch);
@@ -268,10 +262,6 @@ impl Mouth {
   /// and also locator comments (file, line# info).
   /// LaTeXML::Core::Gullet intercepts them and passes them on at appropriate times.
   pub fn read_token(&mut self, state: &mut State) -> Option<Token> {
-    lazy_static! {
-      static ref sanitize_line_regex: Regex = Regex::new(r"((\\ )*)\s*$").unwrap();
-    }
-
     loop {
       // Iterate till we find a token, or run out. (use return)
       // ===== Get next line, if we need to.
@@ -287,7 +277,7 @@ impl Mouth {
           }
           Some(line) => {
             // Remove trailing space, but NOT a control space!  End with CR (not \n) since this gets tokenized!
-            let sanitized_line = sanitize_line_regex.replace_all(&line, "$1\r");
+            let sanitized_line = SANITIZE_LINE_REGEX.replace_all(&line, "$1\r");
             self.chars = sanitized_line.chars().collect();
             self.nchars = self.chars.len();
             while self.colno < self.nchars {

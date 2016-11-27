@@ -2,6 +2,7 @@ use std::sync::Arc;
 use state::State;
 use Digested;
 use token::*;
+use tokens::Tokens;
 use tbox::TBox;
 use gullet::Gullet;
 use stomach::Stomach;
@@ -90,7 +91,7 @@ impl Definition for Expandable {
 }
 
 impl Expandable {
-  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Token>, state: &mut State) -> Vec<Token> {
+  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Vec<Token> {
     let closure: &ExpansionClosure = &self.expansion;
     closure(gullet, args, state)
   }

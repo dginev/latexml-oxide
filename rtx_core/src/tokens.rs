@@ -7,6 +7,7 @@ use Digested;
 // Form a Tokens list of Token's
 // Flatten the arguments Token's and Tokens's into plain Token's
 // .... Efficiently! since this seems to be called MANY times.
+#[derive(Debug, Clone)]
 pub struct Tokens {
   pub tokens: Vec<Token>
 }

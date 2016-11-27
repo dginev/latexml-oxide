@@ -133,6 +133,16 @@ macro_rules! IsDefinedToken {
   ($name:expr, $state:expr) => (is_defined_token($name, $state))
 }
 
+//======================================================================
+// Defining new Control-sequence Parameter types.
+//======================================================================
+
+#[macro_export]
+macro_rules! DefParameterType (
+  ($name:expr, $param:expr, $state:expr) => ($state.assign_mapping("PARAMETER_TYPES", $name, $param))
+);
+
+
 pub struct InputDefinitionOptions {
   pub extension: Option<&'static str>,
   pub options: Vec<String>,
@@ -291,14 +301,13 @@ pub fn tokenize_internal(some: String) -> Vec<Token> {
   vec![T_CS!(some)]
 }
 
+lazy_static! {
+  static ref CSNAME_MACRO_REGEX : Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
+  static ref CS_REGEX : Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
+  static ref SINGLE_CHAR_REGEX : Regex = Regex::new(r"^(\\.)").unwrap();
+  static ref ACTIVE_CHAR_REGEX : Regex = Regex::new(r"^(.)").unwrap();
+}
 pub fn parse_prototype(proto: &str, state: &mut State) -> ((Token, Option<Parameters>)) {
-  lazy_static! {
-    static ref CSNAME_MACRO_REGEX : Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
-    static ref CS_REGEX : Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
-    static ref SINGLE_CHAR_REGEX : Regex = Regex::new(r"^(\\.)").unwrap();
-    static ref ACTIVE_CHAR_REGEX : Regex = Regex::new(r"^(.)").unwrap();
-  }
-
   let mut cs = T_CS!("\\".to_string()); // Should never happen
   let mut final_proto = if CSNAME_MACRO_REGEX.is_match(proto) {
     let captures = CSNAME_MACRO_REGEX.captures(proto).unwrap();
@@ -334,14 +343,13 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> ((Token, Option<Parame
   (cs, paramlist)
 }
 
+lazy_static! {
+  static ref NESTED_CHECK : Regex = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
+  static ref OPTIONAL_CHECK : Regex = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
+  static ref DEFAULT_CHECK : Regex = Regex::new(r"^Default:(.*)$").unwrap();
+  static ref PARAMSPECT_CHECK : Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
+}
 pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) -> Option<Parameters> {
-  lazy_static! {
-    static ref NESTED_CHECK : Regex = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
-    static ref OPTIONAL_CHECK : Regex = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
-    static ref DEFAULT_CHECK : Regex = Regex::new(r"^Default:(.*)$").unwrap();
-    static ref PARAMSPECT_CHECK : Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
-  }
-
   let mut parameters = Vec::new();
   while !prototype.is_empty() {
     let mut next_proto = String::new();
@@ -527,15 +535,6 @@ macro_rules! DefConstructor(
   )
 );
 
-#[macro_export]
-macro_rules! DefParameterType(
-  ($param_type:expr, $options:expr, $state:expr) => (
-  {
-    // CheckOptions("DefParameterType param_type", $parameter_options, %options);
-    $state.assign_mapping("PARAMETER_TYPES", &$param_type, $options);
-  }
-));
-
 pub fn revert(_arg: Vec<Token>) -> Vec<Token> {
   Vec::new()
 }
@@ -550,7 +549,7 @@ macro_rules! DefEnvironment (
   ($proto_raw:expr, $replacement:expr, $options:expr, $state:expr) => ({
   use rtx_core::util::text::*;
   let mut proto = $proto_raw.to_string().trim_left().to_string();
-  let mut name = extract_bracketed(&mut proto, Some(Delimiter::Brace));
+  let name = extract_bracketed(&mut proto, Some(Delimiter::Brace));
   // TODO: What do we do with param lists?
   //let paramlist_str = proto.trim_left().to_string();
   DefEnvironmentI!(name, None, $replacement, $options, $state);
@@ -561,7 +560,7 @@ macro_rules! DefEnvironmentI (
   ($name_raw:expr, $paramlist:expr, $replacement:expr, $options:expr, $state:expr) => ({
   use rtx_core::definition::constructor::Constructor;
   let mode = $options.mode;
-  let mut name = $name_raw.to_string();
+  let name = $name_raw.to_string();
   // This is for the common case where the environment is opened by \begin{env}
   // let sizer = inferSizer($options.sizer, $options.reversion);
   let begin_name_constructor = Arc::new(Constructor {

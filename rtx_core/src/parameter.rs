@@ -2,17 +2,16 @@ use std::sync::Arc;
 use regex::Regex;
 use token::Token;
 use tokens::Tokens;
-use tbox::TBox;
 use gullet::Gullet;
 use stomach::Stomach;
-use definition::{Definition,ExpansionClosure,BeforeDigestClosure,DigestionClosure};
+use definition::{Definition,BeforeDigestClosure,DigestionClosure};
 use definition::constructor::{Constructor};
 use whatsit::Whatsit;
 use state::State;
 use mouth::Mouth;
 use Digested;
 
-pub type ReaderClosure = Arc<Fn(&mut Gullet, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>;
+pub type ReaderClosure = Arc<Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<Token>, &mut State) -> Vec<Token>>;
 pub type ReversionClosure = Arc<Fn(&mut Gullet, Vec<Token>, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>;
 #[derive(Clone)]
 pub struct Parameter {
@@ -38,7 +37,7 @@ impl Default for Parameter {
       name: "parameter_default".to_string(),
       spec: String::new(),
       extra: Vec::new(),
-      reader: Arc::new(|_gullet, _args, _state| {
+      reader: Arc::new(|_gullet, _args, _extra, _state| {
         println_stderr!("-- Warning: please define a real reader, this is a mock fallback!");
         Vec::new()
       }),
@@ -128,6 +127,7 @@ impl Parameter {
     return self;
   }
 
+  // TODO: This meta-programming approach won't fly in Rust, need an alternative.
   /// Check whether a reader function is accessible within LaTeXML::Package::Pool
   pub fn check_reader_function(function: String) -> Option<ReaderClosure> {
     // if (defined $LaTeXML::Package::Pool::{$function}) {
@@ -137,7 +137,8 @@ impl Parameter {
     None
   }
 
-  pub fn read(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Vec<Token> {
+
+  pub fn read(&self, gullet: &mut Gullet, _fordefn: &Definition, state: &mut State) -> Vec<Token> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
@@ -153,7 +154,7 @@ impl Parameter {
       state.begin_semiverbatim();
     }
     let closure: &ReaderClosure = &self.reader;
-    let value = closure(gullet, self.extra.clone(), state);
+    let value = closure(gullet, self.extra.clone(), Vec::new(), state);
     // TODO:
     // $value = $value->neutralize if $$self{semiverbatim} && (ref $value)
     //   && $value->can('neutralize');
@@ -170,7 +171,7 @@ impl Parameter {
     value
   }
 
-  pub fn digest(&self, stomach: &mut Stomach, value: Tokens, fordefn: &Constructor, state: &mut State) -> Option<Digested> {
+  pub fn digest(&self, stomach: &mut Stomach, value: Tokens, _fordefn: &Constructor, state: &mut State) -> Option<Digested> {
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     let mut value_to_digest = value.clone();
     if self.semiverbatim {
@@ -221,14 +222,12 @@ impl Parameters {
     Vec::new()
   }
 
-  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Vec<Token> {
+  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Vec<Tokens> {
     let mut args = Vec::new();
     for parameter in self.params.iter() {
       let values = parameter.read(gullet, fordefn, state);
       if !parameter.novalue {
-        for value in values {
-          args.push(value);
-        }
+        args.push(Tokens{tokens: values});
       }
     }
     args

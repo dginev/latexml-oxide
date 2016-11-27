@@ -8,7 +8,8 @@ use std::collections::HashMap;
 use Digested;
 use gullet::Gullet;
 use stomach::Stomach;
-use token::*;
+use token::Token;
+use tokens::Tokens;
 use tbox::TBox;
 use parameter::Parameters;
 use document::Document;
@@ -16,7 +17,7 @@ use whatsit::Whatsit;
 use common::object::Object;
 use state::{State, ObjectStore};
 
-pub type ExpansionClosure = Arc<Fn(&mut Gullet, Vec<Token>, &mut State) -> Vec<Token>>;
+pub type ExpansionClosure = Arc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Vec<Token>>;
 pub type BeforeDigestClosure = Arc<Fn(&mut Stomach, &mut State) -> Vec<Digested>>;
 pub type DigestionClosure = Arc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Vec<Digested>>;
 pub type ReplacementClosure = Arc<Fn(&mut Document,
@@ -45,7 +46,7 @@ pub trait Definition {
 
   fn get_locator(&self) -> String;
 
-  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Vec<Token>
+  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Vec<Tokens>
     where Self: Sized
   {
     match self.get_parameters() {

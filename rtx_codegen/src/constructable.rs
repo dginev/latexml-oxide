@@ -119,7 +119,7 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
 
       quote!(
         Some(Arc::new(
-        |doc: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
+        |doc: &mut Document, args: &Vec<Option<Digested>>, _props: &HashMap<String, ObjectStore>, state: &mut State| {
           #(operations)*
         }))
       )
