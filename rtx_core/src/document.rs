@@ -108,14 +108,14 @@ impl Document {
     while !boxes.is_empty() {
       match boxes.pop_front().unwrap() {
         // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
-        Digested::ListObj(list) => {
+        Digested::List(list) => {
           for tbox in list.unlist().into_iter().rev() {
             boxes.push_front(tbox);
           }
         }
         // A Proper Box or Whatsit? It will handle it.
-        Digested::BoxObj(mut tbox) => tbox.be_absorbed(self, state),
-        Digested::WhatsitObj(mut whatsit) => whatsit.be_absorbed(self, state),
+        Digested::Box(mut tbox) => tbox.be_absorbed(self, state),
+        Digested::Whatsit(mut whatsit) => whatsit.be_absorbed(self, state),
       };
       //   // [ATTEMPT to] only record if we're running in NON-VOID context.
       //   // [but wantarray seems defined MUCH more than I would have expected!?]
@@ -281,7 +281,7 @@ impl Document {
   }
 
 
-  pub fn can_contain(&self, node: &Node, spec: &str) -> bool {
+  pub fn can_contain(&self, _node: &Node, _spec: &str) -> bool {
     // TODO: Mock only
     true
   }
@@ -392,7 +392,6 @@ impl Document {
   /// in the process.
   pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Node {
     let (decoded_ns, tag) = state.model.decode_qname(qname);
-    println!("Decoded ns for {:?}: {:?}", tag, decoded_ns);
     let mut newnode;
     // let font = $attributes{_font} || $attributes{font};
     // let mut box = $attributes{_box};

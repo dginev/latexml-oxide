@@ -1,5 +1,3 @@
-extern crate rtx_codegen;
-
 use std::collections::HashMap;
 use regex::Regex;
 use rtx_core::Core;
@@ -7,7 +5,8 @@ use rtx_core::state::{State, ObjectStore, Scope};
 use rtx_core::token::*;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::mouth::Mouth;
-use rtx_core::definition::Definition;
+use rtx_core::definition::{Definition, BeforeDigestClosure, ConstructionClosure};
+use rtx_core::document::Document;
 
 //**********************************************************************
 //   Initially, I thought LaTeXML Packages should try to be like perl modules:
@@ -563,12 +562,30 @@ macro_rules! DefEnvironmentI (
   let name = $name_raw.to_string();
   // This is for the common case where the environment is opened by \begin{env}
   // let sizer = inferSizer($options.sizer, $options.reversion);
+  let bgroup_closure = Arc::new(|stomach: &mut Stomach, state: &mut State| {stomach.bgroup(state); Vec::new()});
+  let mut before_digest_with_group : Vec<BeforeDigestClosure> = vec![bgroup_closure];
+  before_digest_with_group.extend($options.before_digest);
+
+  let push_frame_closure = Arc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
+    state.push_frame();
+  });
+  let mut before_construct_with_frame : Vec<ConstructionClosure> = vec![push_frame_closure];
+  before_construct_with_frame.extend($options.before_construct);
+
+  let mut after_construct_with_frame : Vec<ConstructionClosure> = $options.after_construct;
+
+  let pop_frame_closure = Arc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
+    state.pop_frame();
+  });
+  after_construct_with_frame.push(pop_frame_closure);
+
   let begin_name_constructor = Arc::new(Constructor {
       cs: T_CS!("\\begin{".to_string()+&name+"}"),
       paramlist: $paramlist,
       replacement: Some(Arc::new($replacement)),
       options: ConstructorOptions {
         nargs: $options.nargs,
+        before_digest: before_digest_with_group,
         // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
         //   ($options{forbidMath} ? (sub { forbidMath($name); }) : ()),
         //   ($mode ? (sub { $_[0]->beginMode($mode); })
@@ -577,11 +594,11 @@ macro_rules! DefEnvironmentI (
         //     DefMacroI('\@currenvir', undef, $name); },
         //   ($options{font} ? (sub { MergeFont(%{ $options{font} }); }) : ()),
         //   $options{beforeDigest}),
-        // afterDigest     => flatten($options{afterDigestBegin}),
-        // afterDigestBody => flatten($options{afterDigestBody}),
-        // beforeConstruct => flatten(sub { $STATE->pushFrame; }, $options{beforeConstruct}),
-        // // Curiously, it's the \begin whose afterConstruct gets called.
-        // afterConstruct => flatten($options{afterConstruct}, sub { $STATE->popFrame; }),
+        after_digest: $options.after_digest_begin,
+        after_digest_body: $options.after_digest_body,
+        before_construct: before_construct_with_frame,
+        // Curiously, it's the \begin whose afterConstruct gets called.
+        after_construct: after_construct_with_frame,
         capture_body: true,
         properties: $options.properties,
         // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
@@ -628,7 +645,7 @@ macro_rules! DefEnvironmentI (
     // afterConstruct => flatten($options{afterConstruct}, sub { $STATE->popFrame; }),
     options: ConstructorOptions {
       nargs: $options.nargs,
-      // captureBody: T_CS("\\end$name"),          // Required to capture!!
+      capture_body: true,
       properties: $options.properties,
       // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
       // (defined $sizer ? (sizer => $sizer) : ()),

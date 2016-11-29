@@ -2,8 +2,9 @@ use std::fmt;
 use std::collections::HashMap;
 use std::sync::Arc;
 use state::{State, ObjectStore};
+use list::List;
 use definition::expandable::Expandable;
-use {Digested, BoxOps};
+use {Digested, BoxOps, TexMode};
 use definition::Definition;
 use document::Document;
 
@@ -33,12 +34,55 @@ impl Whatsit {
     }
   }
 
+  pub fn is_math(&self) -> bool {
+    match self.properties.get("isMath") {
+      Some(& ObjectStore::Bool(v)) => v,
+      _ => false
+    }
+  }
+
   pub fn get_args(&self) -> &Vec<Option<Digested>> {
     &self.args
   }
 
   pub fn get_properties(&self) -> &HashMap<String, ObjectStore> {
     &self.properties
+  }
+
+  pub fn set_args(&mut self, args: Vec<Option<Digested>>) {
+    self.args = args;
+  }
+
+  pub fn get_body(&self) -> Option<&Digested> {
+    match self.properties.get("body") {
+      Some(& ObjectStore::Digested(ref body)) => Some(body),
+      _ => None
+    }
+  }
+
+  pub fn set_body(&mut self, mut body: Vec<Digested>) {
+    let trailer_opt = body.pop();
+    let mode = if self.is_math() {
+      TexMode::Math
+    } else {
+      TexMode::Text
+    };
+    if !body.is_empty() {
+      let list = List{ boxes: body, mode: mode };
+      self.properties.insert("body".to_string(), ObjectStore::Digested(Arc::new(Digested::List(list))));
+    }
+    if let Some(trailer) = trailer_opt {
+      self.properties.insert("trailer".to_string(), ObjectStore::Digested(Arc::new(trailer.clone())));
+      // And copy any otherwise undefined properties from the trailer
+      let trailer_whatsit = match trailer {
+        Digested::Whatsit(w) => w,
+        _ => Whatsit::default()
+      };
+      let trailer_props = trailer_whatsit.get_properties();
+      for (prop, value) in trailer_props {
+        self.properties.entry(prop.to_string()).or_insert(value.clone());
+      }
+    }
   }
 }
 
@@ -56,14 +100,15 @@ impl BoxOps for Whatsit {
     Vec::new()
   }
 
-  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) {
+  fn be_absorbed(mut self, document: &mut Document, state: &mut State) {
     // Significant time is consumed here, and associated with a specific CS,
     // so we should be profiling as well!
     // Hopefully the csname is the same that was charged in the digestioned phase!
 
     // my $profiled = $STATE->lookupValue('PROFILING') && $defn->getCS;
     // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
-    let result = self.definition.do_absorbtion(document, self, state);
+    let self_mut = &mut self;
+    let result = self_mut.definition.do_absorbtion(document, self_mut, state);
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
     return result;
   }

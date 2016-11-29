@@ -89,8 +89,11 @@ pub trait Definition {
 
   fn do_absorbtion(&self, _document: &mut Document, whatsit: &Whatsit, state: &mut State) {}
 
-  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>>;
-  fn after_digest(&self) -> Option<&Vec<DigestionClosure>>;
+  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> {None}
+  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {None}
+  fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> {None}
+  fn capture_body(&self) -> bool;
+
   fn execute_before_digest(&self, stomach: &mut Stomach, state: &mut State) -> Vec<Digested> {
     state.unlocked = true;
     let mut before_digested = Vec::new();
@@ -105,13 +108,25 @@ pub trait Definition {
   fn execute_after_digest(&self, stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Vec<Digested> {
     state.unlocked = true;
     let mut after_digested = Vec::new();
-    if let Some(pre_list) = self.after_digest() {
-      for pre in pre_list.iter() {
-        let after_digest_result = pre(stomach, whatsit, state);
+    if let Some(post_list) = self.after_digest() {
+      for post in post_list.iter() {
+        let after_digest_result = post(stomach, whatsit, state);
         after_digested.extend(after_digest_result);
       }
     }
     after_digested
   }
 
+  fn execute_after_digest_body(&self, stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Vec<Digested> {
+    state.unlocked = true;
+    let mut after_body_digested = Vec::new();
+    if let Some(post_list) = self.after_digest_body() {
+      println_stderr!("Found {:?} after_digest_body closures, capture_body was: {:?}", post_list.len(), self.capture_body());
+      for post in post_list {
+        let after_body_digest_result = post(stomach, whatsit, state);
+        after_body_digested.extend(after_body_digest_result);
+      }
+    }
+    after_body_digested
+  }
 }

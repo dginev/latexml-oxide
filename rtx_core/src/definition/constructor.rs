@@ -87,6 +87,10 @@ impl Definition for Constructor {
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {
     Some(&self.options.after_digest)
   }
+  fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> {
+    Some(&self.options.after_digest_body)
+  }
+  fn capture_body(&self) -> bool {self.options.capture_body}
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Vec<Token> {
     println_stderr!("-- constructor invoke for {:?}", self.get_cs());
     Vec::new()
@@ -106,7 +110,10 @@ impl Definition for Constructor {
     // println_stderr_stderr!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
     // let font   = state.lookup_value("font");
-    // let ismath = state.lookup_value("IN_MATH");
+    let _ismath = match state.lookup_value("IN_MATH") {
+        Some(& ObjectStore::Bool(v)) => v,
+        _ => false
+      };
     // Parse AND digest the arguments to the Constructor
     let mut args: Vec<Option<Digested>> = match self.get_parameters() {
       &None => Vec::new(),
@@ -118,6 +125,7 @@ impl Definition for Constructor {
 
     // Compute any extra Whatsit properties (many end up as element attributes)
     let props = HashMap::new();
+    // let props = self.options.properties;
     // let properties = $$self{properties};
     // my %props = (!defined $properties ? ()
     //   : (ref $properties eq "CODE" ? &$properties($stomach, @args)
@@ -139,17 +147,20 @@ impl Definition for Constructor {
     };
 
     // Call any 'After' code.
-    let post = self.execute_after_digest(stomach, &mut whatsit, state);
+    let mut post = self.execute_after_digest(stomach, &mut whatsit, state);
+
+    if self.options.capture_body {
+      whatsit.set_body(post);
+      post = vec![];
+    }
+    let post_post = self.execute_after_digest_body(stomach, &mut whatsit, state);
+    // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
+
 
     // Package the result boxes
-    result.push(Digested::WhatsitObj(whatsit));
+    result.push(Digested::Whatsit(whatsit));
     result.extend(post);
-    // if (let cap = $$self{captureBody}) {
-    //   $whatsit->setBody(@post, $stomach->digestNextBody((ref $cap ? $cap : undef))); @post = (); }
-
-    // my @postpost = $self->executeAfterDigestBody($stomach, $whatsit);
-    // LaTeXML::Definition::stopProfiling($profiled, 'digest') if $profiled;
-    // return (@pre, $whatsit, @post, @postpost);
+    result.extend(post_post);
     return result;
   }
 

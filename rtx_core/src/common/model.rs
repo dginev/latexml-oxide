@@ -132,7 +132,7 @@ impl Model {
   pub fn get_xpath<'o>(&'o self, document: &'o XmlDoc) -> XPath {
     let mut context = XPath::new(document, HashMap::new());
     for (prefix, ns) in self.code_namespaces.iter() {
-      println_stderr!("-- XPath: registering p:n pair: {:?}:{:?}", prefix, ns);
+      // TODO: Is this too slow? We may need to store an active context in the State as an alternative
       context.register_namespace(prefix, ns);
     }
     context

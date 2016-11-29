@@ -42,7 +42,7 @@ pub struct Core {
 
 pub trait BoxOps {
   fn unlist(self) -> Vec<Digested>;
-  fn be_absorbed(&mut self, document: &mut Document, state: &mut State);
+  fn be_absorbed(self, document: &mut Document, state: &mut State);
   fn to_string(&self) -> String {
     "Vec<TBox> for now ".to_string()
   }
@@ -59,41 +59,41 @@ pub enum TexMode {
 
 #[derive(Debug, Clone)]
 pub enum Digested {
-  BoxObj(TBox),
-  ListObj(List),
-  WhatsitObj(Whatsit),
+  Box(TBox),
+  List(List),
+  Whatsit(Whatsit),
 }
 
 impl BoxOps for Digested {
   fn unlist(self) -> Vec<Digested> {
     match self {
-      Digested::BoxObj(b) => b.unlist(),
-      Digested::ListObj(l) => l.unlist(),
-      Digested::WhatsitObj(w) => w.unlist(),
+      Digested::Box(b) => b.unlist(),
+      Digested::List(l) => l.unlist(),
+      Digested::Whatsit(w) => w.unlist(),
     }
   }
 
-  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) {
+  fn be_absorbed(self, document: &mut Document, state: &mut State) {
     match self {
-      &mut Digested::BoxObj(ref mut b) => b.be_absorbed(document, state),
-      &mut Digested::ListObj(ref mut l) => l.be_absorbed(document, state),
-      &mut Digested::WhatsitObj(ref mut w) => w.be_absorbed(document, state),
+      Digested::Box(b) => b.be_absorbed(document, state),
+      Digested::List(l) => l.be_absorbed(document, state),
+      Digested::Whatsit(w) => w.be_absorbed(document, state),
     }
   }
 
   fn to_string(&self) -> String {
     match self {
-      &Digested::BoxObj(ref b) => b.to_string(),
-      &Digested::ListObj(ref l) => l.to_string(),
-      &Digested::WhatsitObj(ref w) => w.to_string(),
+      &Digested::Box(ref b) => b.to_string(),
+      &Digested::List(ref l) => l.to_string(),
+      &Digested::Whatsit(ref w) => w.to_string(),
     }
   }
 
   fn stringify(&self) -> String {
     match self {
-      &Digested::BoxObj(ref b) => b.stringify(),
-      &Digested::ListObj(ref l) => l.stringify(),
-      &Digested::WhatsitObj(ref w) => w.stringify(),
+      &Digested::Box(ref b) => b.stringify(),
+      &Digested::List(ref l) => l.stringify(),
+      &Digested::Whatsit(ref w) => w.stringify(),
     }
   }
 }

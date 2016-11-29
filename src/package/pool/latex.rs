@@ -151,16 +151,15 @@ pub fn load_definitions(state: &mut State) {
       // TODO: there has to be a better way of doing this property acrobatics...
       // TODO: THIS IS WRONG AND SLOW. Cloning each whatsit is **MASSIVE** overhead,
       //       and while in this example we only clone the document body, following this path in general is horrible.
-      let wd = Digested::WhatsitObj(Whatsit::default());
       let body = match props.get("body") {
         Some(& ObjectStore::Digested(ref arc)) => (**arc).clone(),
-        _ => wd
+        _ => Digested::Whatsit(Whatsit::default())
       };
       if let Some(docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
         if !id.is_empty() {
           document.set_attribute(&docel, "xml:id", id);
         }
-        // document.absorb(body, state);
+        document.absorb(body, state);
       } else {
         let mut attrib : HashMap<String, String> = HashMap::new();
         attrib.insert("xml:id".to_string(), id.to_string());

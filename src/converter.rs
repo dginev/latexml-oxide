@@ -157,7 +157,7 @@ impl Converter {
                                          self.opts.mode.clone(),
                                          true);
     let digested = match digest_result {
-      Err(_) => Digested::ListObj(List { boxes: Vec::new(), mode: TexMode::Text }), // TODO digestion failed, report
+      Err(_) => Digested::List(List { boxes: Vec::new(), mode: TexMode::Text }), // TODO digestion failed, report
       Ok(d) => d,
     };
     // 2.1 Now, convert to DOM and output, if desired.

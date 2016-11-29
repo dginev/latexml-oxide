@@ -24,9 +24,7 @@ impl<'xp> XPath<'xp> {
 
   // TODO: top-level findnodes so far, add rust-libxml support for per-node xpaths
   pub fn findnodes(&self, xpath: &str, _node: Node) -> Vec<Node> {
-    println!("-- expression : {:?}", xpath);
     let results = self.context.evaluate(xpath).unwrap().get_nodes_as_vec();
-    println!("-- found {:?} nodes", results.len());
     results
   }
 

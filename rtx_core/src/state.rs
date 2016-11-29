@@ -33,15 +33,21 @@ pub enum Table {
 
 #[derive(Clone)]
 pub enum ObjectStore {
-  String(String),
-  VecChar(Vec<char>),
-  VecString(Vec<String>),
+  // Primitives
   Bool(bool),
+  String(String),
+  // LaTeXML objects
   Token(Token),
   Expandable(Arc<Expandable>),
   Primitive(Arc<Primitive>),
   Constructor(Arc<Constructor>),
-  Digested(Arc<::Digested>)
+  Digested(Arc<::Digested>),
+
+  // Collections
+  VecChar(Vec<char>),
+  VecString(Vec<String>),
+  VecToken(Vec<Token>),
+  VecDigested(Vec<::Digested>)
 }
 
 impl fmt::Debug for ObjectStore {
@@ -57,6 +63,8 @@ impl fmt::Debug for ObjectStore {
       &Primitive(ref _primitive) => write!(f, "<closure for primitive definition>"),
       &Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
       &Digested(ref digested) => write!(f, "{:?}", digested),
+      &VecToken(ref token_vec) => write!(f, "{:?}", token_vec),
+      &VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
     }
   }
 }
@@ -68,6 +76,7 @@ pub struct State {
   pub meaning: HashMap<String, ObjectStore>,
   pub value: HashMap<String, ObjectStore>,
   pub parameters: HashMap<String, Parameter>,
+  pub undo: Vec<HashMap<String, ObjectStore>>,
   pub status_code: usize,
   pub unlocked: bool,
   pub model: Model,
@@ -75,6 +84,8 @@ pub struct State {
 
 impl Default for State {
   fn default() -> Self {
+    let mut locked_frame_hash = HashMap::new();
+    locked_frame_hash.insert("_FRAME_LOCK_".to_string(), ObjectStore::Bool(true));
     State {
       // stomach : Stomach::default(),
       verbosity: 0,
@@ -86,6 +97,7 @@ impl Default for State {
       meaning: HashMap::new(),
       value: HashMap::new(),
       parameters: HashMap::new(),
+      undo: vec![locked_frame_hash]
     }
   }
 }
@@ -136,6 +148,10 @@ impl State {
   }
   pub fn lookup_value<'lv>(&'lv self, key: &'lv str) -> Option<&ObjectStore> {
     self.value.get(key)
+  }
+
+  pub fn remove_value<'lv>(&'lv mut self, key: &'lv str) -> Option<ObjectStore> {
+    self.value.remove(key)
   }
 
   /// Get the `Meaning' of a token.  For active control sequence's
@@ -274,6 +290,48 @@ impl State {
     self.assign_internal(Table::Meaning, &cs, definition, scope);
     return;
   }
+
+  // NOTE: Common usage patterns seem to be to lookup
+  //   expandable definitions
+  //   register values
+  //   conditionals
+  //   digestibles
+  // or just variants on testing defined-ness
+  // May be will introduce more clarity (possibly efficiency)
+  // to collect those more uniformly and implement here, or in Package
+
+  //======================================================================
+
+  pub fn push_frame(&mut self) {
+    // Easy: just push a new undo hash.
+    self.undo.push(HashMap::new());
+  }
+
+  pub fn pop_frame(&mut self) {
+    if self.undo.last().as_ref().unwrap().get("_FRAME_LOCK_").is_some() {
+      panic!("Fatal:unexpected:<endgroup> attempt to pop last locked stack frame");
+      // Fatal('unexpected', '<endgroup>', $self->getStomach,
+        // "Attempt to pop last locked stack frame"); }
+    } else {
+      // let undo = self.undo.pop();
+      // for (table, undotable) in undo.into_iter() {
+      //   for (name, val) in undotable.into_iter() {
+      //     // Typically only 1 value to shift off the table, unless scopes have been activated.
+      //     let mut pop_count = val;
+      //     while pop_count > 0 {
+      //       pop_count -= 1;
+      //       match table {
+      //         "value" =>
+      //         "meaning" =>
+      //         "catcode" =>
+      //       }
+      //     }
+      //     map { shift(@{ $$self{$table}{$name} }) } 1 .. $$undotable{$name};
+        // }
+      // }
+    }
+  }
+
 
   pub fn begin_semiverbatim(&self) {}
   pub fn end_semiverbatim(&self) {}

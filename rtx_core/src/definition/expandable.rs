@@ -88,6 +88,7 @@ impl Definition for Expandable {
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {
     None
   }
+  fn capture_body(&self) -> bool {false}
 }
 
 impl Expandable {

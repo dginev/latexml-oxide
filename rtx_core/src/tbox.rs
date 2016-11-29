@@ -33,7 +33,7 @@ impl BoxOps for TBox {
     Vec::new()
   }
 
-  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) {
+  fn be_absorbed(self, document: &mut Document, state: &mut State) {
     let text = &self.text;
     let mode = match self.properties.get("mode") {
       Some(s) => s.to_owned(),

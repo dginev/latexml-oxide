@@ -21,5 +21,8 @@ impl BoxOps for List {
         .fold(String::new(), |joined, x| joined + &x.to_string())
   }
 
-  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) {}
+  /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
+  fn be_absorbed(self, document: &mut Document, state: &mut State) {
+    self.unlist().into_iter().map(|digested| document.absorb(digested, state));
+  }
 }
