@@ -90,6 +90,11 @@ impl Default for State {
   }
 }
 
+lazy_static! {
+  static ref TEX_OR_BIB_EXT_RE : Regex = Regex::new(r"\.(tex|bib)$").unwrap();
+  static ref CODE_TEX_EXT_RE : Regex = Regex::new(r"\.code\.tex$").unwrap();
+}
+
 impl State {
   // TODO for all
   pub fn new() -> Self {
@@ -257,14 +262,9 @@ impl State {
     if is_cs_locked && !is_state_unlocked {
       match self.lookup_value("SOURCEFILE") {
         Some(&ObjectStore::String(ref s)) => {
-          lazy_static! {
-            static ref tex_or_bib_ext_regex : Regex = Regex::new(r"\.(tex|bib)$").unwrap();
-            static ref code_tex_ext_regex : Regex = Regex::new(r"\.code\.tex$").unwrap();
-          }
           // report if the redefinition seems to come from document source
-          if ((s == "Anonymous String") || tex_or_bib_ext_regex.is_match(&s)) && (!code_tex_ext_regex.is_match(&s)) {
-            // TODO:
-            //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
+          if ((s == "Anonymous String") || TEX_OR_BIB_EXT_RE.is_match(&s)) && (!CODE_TEX_EXT_RE.is_match(&s)) {
+                        //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
           }
           return;
         }

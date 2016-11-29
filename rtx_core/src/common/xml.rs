@@ -15,7 +15,12 @@ impl<'xp> XPath<'xp> {
     }
   }
 
-  pub fn register_ns(&mut self, _codeprefix: String, _namespace: String) {}
+  pub fn register_namespace(&mut self, codeprefix: &str, namespace: &str) {
+    match self.context.register_namespace(codeprefix, namespace) {
+      Ok(()) => {},
+      Err(_) => println_stderr!("Error:expected:XPath Failed to register an XPath namespace: prefix {:?} and href {:?}", codeprefix, namespace)
+    };
+  }
 
   // TODO: top-level findnodes so far, add rust-libxml support for per-node xpaths
   pub fn findnodes(&self, xpath: &str, _node: Node) -> Vec<Node> {

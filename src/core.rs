@@ -12,6 +12,12 @@ use rtx_core::document::Document;
 use rtx_core::list::List;
 use package::*;
 
+lazy_static! {
+  static ref POOL_EXT_REGEX : Regex = Regex::new(r"\.pool$").unwrap();
+  static ref CLS_EXT_REGEX : Regex = Regex::new(r"\.cls$").unwrap();
+  static ref STY_EXT_REGEX : Regex = Regex::new(r"\.sty$").unwrap();
+  static ref LATEX_OPTION_REGEX : Regex = Regex::new(r"^\[([^\]]*)\]").unwrap();
+}
 
 pub trait DigestionAPI {
   fn initialize_state(&mut self, preloads: Vec<String>);
@@ -125,12 +131,7 @@ impl DigestionAPI for Core {
         }
       }
     };
-    lazy_static! {
-      static ref POOL_EXT_REGEX : Regex = Regex::new(r"\.pool$").unwrap();
-      static ref CLS_EXT_REGEX : Regex = Regex::new(r"\.cls$").unwrap();
-      static ref STY_EXT_REGEX : Regex = Regex::new(r"\.sty$").unwrap();
-      static ref LATEX_OPTION_REGEX : Regex = Regex::new(r"^\[([^\]]*)\]").unwrap();
-    }
+
     for preload in &self.preload {
       if POOL_EXT_REGEX.is_match(preload) {
         continue;

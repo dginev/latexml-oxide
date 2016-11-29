@@ -7,7 +7,6 @@ extern crate syn;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate rtx_core;
 extern crate regex;
-extern crate libxml;
 
 use proc_macro::TokenStream;
 use syn::parse_macro_input;

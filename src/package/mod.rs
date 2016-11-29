@@ -712,7 +712,7 @@ pub fn select_relaxng_schema(schema : String, namespaces : Option<HashMap<String
   model.set_relaxng_schema(schema);
   if let Some(namespaces) = namespaces {
     for (prefix, value) in namespaces.into_iter() {
-      model.register_document_namespace(prefix, Some(value)); }
+      model.register_document_namespace(&prefix, Some(value)); }
   }
   return; }
 #[macro_export]
@@ -721,11 +721,11 @@ macro_rules! RelaxNGSchema(
 );
 
 
-fn register_namespace(prefix: String, namespace: String, state: &mut State) {
+fn register_namespace(prefix: &str, namespace: String, state: &mut State) {
   state.model.register_namespace(prefix, Some(namespace));
 }
 
-fn register_document_namespace(prefix: String, namespace: String, state: &mut State) {
+fn register_document_namespace(prefix: &str, namespace: String, state: &mut State) {
   state.model.register_document_namespace(prefix, Some(namespace));
 }
 

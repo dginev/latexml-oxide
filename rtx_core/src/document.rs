@@ -2,12 +2,16 @@ extern crate regex;
 extern crate libxml;
 
 use std::collections::{VecDeque, HashMap};
-use common::xml::XPath;
 use state::{ObjectStore, State};
 use {Digested, BoxOps};
 use libxml::tree::Document as XmlDoc;
-use libxml::tree::{Node, NodeType};
+use libxml::tree::{Node, NodeType, Namespace};
 use regex::Regex;
+
+lazy_static! {
+  static ref HAS_NONSPACE_RE : Regex = Regex::new(r"\S").unwrap();
+  static ref LEADING_SPACE_RE : Regex = Regex::new(r"^\s+$").unwrap();
+}
 
 pub struct Document {
   pub document: XmlDoc,
@@ -30,23 +34,21 @@ impl Document {
 
   /// Find the nodes according to the given $xpath expression,
   /// the xpath is relative to $node (if given), otherwise to the document node.
-  pub fn findnodes(&self, xpath: &str, node: Option<Node>) -> Vec<Node> {
+  pub fn findnodes(&self, xpath: &str, node: Option<Node>, state: &mut State) -> Vec<Node> {
     let root = match node {
       Some(n) => n,
       None => self.document.get_root_element()
     };
-    let context = XPath::new(&self.document, HashMap::new());
-    context.findnodes(xpath, root)
+    state.model.get_xpath(&self.document).findnodes(xpath, root)
   }
 
   /// Like findnodes, but only returns the first matched node
-  pub fn findnode(&self, xpath: &str, node: Option<Node>) -> Option<Node> {
+  pub fn findnode(&self, xpath: &str, node: Option<Node>, state: &mut State) -> Option<Node> {
     let root = match node {
       Some(n) => n,
       None => self.document.get_root_element()
     };
-    let context = XPath::new(&self.document, HashMap::new());
-    let nodes = context.findnodes(xpath, root);
+    let nodes = state.model.get_xpath(&self.document).findnodes(xpath, root);
     if nodes.is_empty() {
       None
     } else {
@@ -58,9 +60,9 @@ impl Document {
   /// Ie. using the registered prefix for that namespace.
   /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
   /// NOTE: Should Deprecate! (use model)
-  // pub fn get_node_qname(&self, node: Node) -> String {
-  //   self.model.get_node_qname(node)
-  // }
+  pub fn get_node_qname(&self, node: Node, state: &mut State) -> String {
+    state.model.get_node_qname(node)
+  }
 
 
   // **********************************************************************
@@ -233,13 +235,10 @@ impl Document {
 
   pub fn open_text(&mut self, text: &str) -> Option<&Node> {
     // TODO: font arg
-    lazy_static! {
-      static ref leading_space_regex : Regex = Regex::new(r"^\s+$").unwrap();
-    }
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
-      if leading_space_regex.is_match(text) && (node_type == Some(NodeType::DocumentNode) || (node_type == Some(NodeType::ElementNode) && self.can_contain(&self.node, "#PCDATA"))) {
+      if LEADING_SPACE_RE.is_match(text) && (node_type == Some(NodeType::DocumentNode) || (node_type == Some(NodeType::ElementNode) && self.can_contain(&self.node, "#PCDATA"))) {
         return None;
       }
     }
@@ -293,9 +292,6 @@ impl Document {
   pub fn close_to_node(&self, _node: &Node) {} // TODO: Mock only
 
   pub fn open_text_internal(&mut self, text: &str) {
-    lazy_static! {
-      static ref has_nonspace : Regex = Regex::new(r"\S").unwrap();
-    }
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
       if self.debug {
@@ -304,7 +300,7 @@ impl Document {
                         self.document.node_to_string(&self.node));
       }
       self.node.append_text(text).unwrap();
-    } else if has_nonspace.is_match(text) || self.can_contain(&self.node, "//PCDATA") {
+    } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "//PCDATA") {
       // or text allowed here
       let mut point = self.find_insertion_point("//PCDATA");
       let node = Node::new_text(text, &self.document).unwrap();
@@ -370,97 +366,105 @@ impl Document {
   }
 
 
-//**********************************************************************
-// Inserting new nodes at random points into the document,
-// typically, later in the process or during some kind of rearrangement.
+  //**********************************************************************
+  // Inserting new nodes at random points into the document,
+  // typically, later in the process or during some kind of rearrangement.
 
-// This is a somewhat strange situation; There are commands and environments
-// that do some interesting thing to their contents. This include things like
-// center, flushleft, or rotate, or ...
-// Naively one is tempted to create a containing block with appropriate type & attributes.
-// However, since these things can be allowed in so many places by LaTeX, that
-// one has a difficult time creating a sensible document model.
-// The purpose of transformingBlock is to set the contents (possibly creating a
-// consistent <p> around them, if called for), and returning the list of newly
-// created nodes. These nodes can then have appropriate attributes added as needed
-// for each specific case.
+  // This is a somewhat strange situation; There are commands and environments
+  // that do some interesting thing to their contents. This include things like
+  // center, flushleft, or rotate, or ...
+  // Naively one is tempted to create a containing block with appropriate type & attributes.
+  // However, since these things can be allowed in so many places by LaTeX, that
+  // one has a difficult time creating a sensible document model.
+  // The purpose of transformingBlock is to set the contents (possibly creating a
+  // consistent <p> around them, if called for), and returning the list of newly
+  // created nodes. These nodes can then have appropriate attributes added as needed
+  // for each specific case.
 
-// Since this situation can occur in both LaTeX and AmSTeX type documents,
-// we'll put it in the TeX pool so it can be reused.
+  // Since this situation can occur in both LaTeX and AmSTeX type documents,
+  // we'll put it in the TeX pool so it can be reused.
 
-// Tricky bit for creating nodes late in the game,
+  // Tricky bit for creating nodes late in the game,
 
-////// See createElementAt
-/// This opens a new element at the _specified_ point, rather than the current insertion point.
-/// This is useful during document rearrangement or augmentation that may be needed later
-/// in the process.
-pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Node {
-  // let (decoded_ns, tag) = self.model.decode_qname(qname);
-  let decoded_ns = None;
-  let tag = qname;
-  let mut newnode;
-  // let font = $attributes{_font} || $attributes{font};
-  // let mut box = $attributes{_box};
-  // box = self.node_boxes.get(box);    // may already be the string key
-  // If this will be the document root node, things are slightly more involved.
-  if point.get_type() == Some(NodeType::DocumentNode) {    // First node! (?)
-    state.model.add_schema_declaration(self);
-    newnode = Node::new(tag, decoded_ns, &self.document).unwrap();
-    // self.record_constructed_node(newnode);
-    self.document.set_root_element(&mut newnode);
+  ////// See createElementAt
+  /// This opens a new element at the _specified_ point, rather than the current insertion point.
+  /// This is useful during document rearrangement or augmentation that may be needed later
+  /// in the process.
+  pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Node {
+    let (decoded_ns, tag) = state.model.decode_qname(qname);
+    println!("Decoded ns for {:?}: {:?}", tag, decoded_ns);
+    let mut newnode;
+    // let font = $attributes{_font} || $attributes{font};
+    // let mut box = $attributes{_box};
+    // box = self.node_boxes.get(box);    // may already be the string key
 
-    for node in self.pending.iter() {
-      newnode.add_prev_sibling(node.clone()); // Add saved comments, PI's
-    }
-    // if let Some(ns) = None {
-      // Here, we're creating the initial, document element, which will hold ALL of the namespace declarations.
-      // If there is a default namespace (no prefix), that will also be declared, and applied here.
-      // However, if there is ALSO a prefix associated with that namespace, we have to declare it FIRST
-      // due to the (apparently) buggy way that XML::LibXML works with namespaces in setAttributeNS.
-      // let prefix = self.model.get_document_namespace_prefix(ns);
-      // let attprefix = self.model.get_document_namespace_prefix(ns, true, true);
-      // if prefix.is_empty() && !attprefix.is_empty() {
-        // newnode.set_namespace(ns, attprefix, false);
-      // }
-      // newnode.set_namespace(ns, prefix, true);
-    // }
-  }
-  else {
-    // font = self.get_node_font(ppoint);// unless $font
-    // box  = self.get_node_box(point); // unless $box
-    newnode = self.open_element_internal(&mut point, None, tag);
-  }
+    // If this will be the document root node, things are slightly more involved.
+    if point.get_type() == Some(NodeType::DocumentNode) {    // First node! (?)
+      state.model.add_schema_declaration(self);
+      newnode = Node::new(&tag, None, &self.document).unwrap();
+      // self.record_constructed_node(newnode);
+      self.document.set_root_element(&mut newnode);
 
-  if let Some(attrs) = attributes {
-    let mut sorted_keys = attrs.keys().map(|k| k.to_string()).collect::<Vec<_>>();
-    sorted_keys.sort();
-    for key in sorted_keys.iter() {
-      if key == "font" || key == "locator" {
-        continue;
+      for node in self.pending.iter() {
+        newnode.add_prev_sibling(node.clone()); // Add saved comments, PI's
       }
-      self.set_attribute(&newnode, key, &attrs.get(key).unwrap());
+      match decoded_ns {
+        Some(ns) => {
+          // Here, we're creating the initial, document element, which will hold ALL of the namespace declarations.
+          // If there is a default namespace (no prefix), that will also be declared, and applied here.
+          // However, if there is ALSO a prefix associated with that namespace, we have to declare it FIRST
+          // due to the (apparently) buggy way that XML::LibXML works with namespaces in setAttributeNS.
+          let prefix = state.model.get_document_namespace_prefix(&ns, false, false);
+          let attprefix = state.model.get_document_namespace_prefix(&ns, true, true);
+          if prefix.is_none() && attprefix.is_some() {
+            let attr_ns_node = Namespace::new(&attprefix.unwrap(), &ns, newnode.clone()).unwrap();
+            newnode.set_namespace(attr_ns_node);
+          }
+          // TODO: Figure out a better way to achieve the "activate" effect in XML:LibXML::Element
+          // it seems just creating the namespace without setting it is equivalent ??
+          let _ns_node = Namespace::new("", &ns, newnode.clone()).unwrap();
+          // newnode.set_namespace(ns_node);
+        },
+        None => {},// TODO
+      }
     }
+    else {
+      // font = self.get_node_font(ppoint);// unless $font
+      // box  = self.get_node_box(point); // unless $box
+      newnode = self.open_element_internal(&mut point, None, &tag);
+    }
+
+    if let Some(attrs) = attributes {
+      let mut sorted_keys = attrs.keys().map(|k| k.to_string()).collect::<Vec<_>>();
+      sorted_keys.sort();
+      for key in sorted_keys.iter() {
+        if key == "font" || key == "locator" {
+          continue;
+        }
+        self.set_attribute(&newnode, key, &attrs.get(key).unwrap());
+      }
+    }
+    // $self->setNodeFont($newnode, $font) if $font;
+    // $self->setNodeBox($newnode, $box) if $box;
+    println_stderr!("Inserting {:?} into {:?}",newnode.get_name(), point.get_name());// if $LaTeXML::Core::Document::DEBUG;
+
+    // Run afterOpen operations
+    // self.after_open(newnode);
+
+    return newnode;
   }
-  // $self->setNodeFont($newnode, $font) if $font;
-  // $self->setNodeBox($newnode, $box) if $box;
-  println_stderr!("Inserting {:?} into {:?}",newnode.get_name(), point.get_name());// if $LaTeXML::Core::Document::DEBUG;
 
-  // Run afterOpen operations
-  // self.after_open(newnode);
-
-  return newnode;
-}
-
-fn open_element_internal (&mut self, point: &mut Node, _ns: Option<String>, tag: &str) -> Node {
-  let newnode;
-  // if !ns.is_empty() {
-  //   if (!defined $point->lookupNamespacePrefix($ns)) {    # namespace not already declared?
-  //     $self->getDocument->documentElement
-  //       ->setNamespace($ns, $$self{model}->getDocumentNamespacePrefix($ns), 0); }
-  //   $newnode = $point->addNewChild($ns, $tag); }
-  // else {
-    newnode = point.add_child(Node::new(&tag, None, &self.document).unwrap()).unwrap();
-  // }
-  // $self->recordConstructedNode($newnode);
-  return newnode; }
+  fn open_element_internal(&mut self, point: &mut Node, _ns: Option<String>, tag: &str) -> Node {
+    let newnode;
+    // if !ns.is_empty() {
+    //   if (!defined $point->lookupNamespacePrefix($ns)) {    # namespace not already declared?
+    //     $self->getDocument->documentElement
+    //       ->setNamespace($ns, $$self{model}->getDocumentNamespacePrefix($ns), 0); }
+    //   $newnode = $point->addNewChild($ns, $tag); }
+    // else {
+      newnode = point.add_child(Node::new(&tag, None, &self.document).unwrap()).unwrap();
+    // }
+    // $self->recordConstructedNode($newnode);
+    return newnode;
+  }
 }
