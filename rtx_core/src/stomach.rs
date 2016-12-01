@@ -42,8 +42,8 @@ impl Stomach {
   // **********************************************************************
   // NOTE: Worry about whether the $autoflush thing is right?
   // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
-  pub fn digest_next_body(&mut self, terminal: bool, state: &mut State) -> Vec<Digested> {
-    let start_location = self.get_locator();
+  pub fn digest_next_body(&mut self, _terminal: bool, state: &mut State) -> Vec<Digested> {
+    let _start_location = self.get_locator();
     let init_depth = self.boxing.len();
     let mut read_token: Option<Token>;
     let mut box_list: Vec<Digested> = Vec::new();

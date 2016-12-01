@@ -10,11 +10,11 @@ use gullet::Gullet;
 use stomach::Stomach;
 use token::Token;
 use tokens::Tokens;
-use tbox::TBox;
+// use tbox::TBox;
 use parameter::Parameters;
 use document::Document;
 use whatsit::Whatsit;
-use common::object::Object;
+// use common::object::Object;
 use state::{State, ObjectStore};
 
 pub type ExpansionClosure = Arc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Vec<Token>>;
@@ -87,8 +87,7 @@ pub trait Definition {
     0
   }
 
-  fn do_absorbtion(&self, _document: &mut Document, whatsit: &Whatsit, state: &mut State) {}
-
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) {}
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> {None}
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {None}
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> {None}

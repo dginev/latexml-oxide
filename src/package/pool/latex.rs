@@ -167,7 +167,7 @@ pub fn load_definitions(state: &mut State) {
       }
     },
     ConstructorOptions {
-    // before_digest: |stomach, state| { AssignValue!("inPreamble", ObjectStore::Bool(false), state); },
+      before_digest: vec![Arc::new(|stomach, state| { AssignValue!("inPreamble", ObjectStore::Bool(false), None, state); Vec::new() })],
     // after_digest_begin => |stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {

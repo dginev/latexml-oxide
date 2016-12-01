@@ -150,6 +150,7 @@ impl Definition for Constructor {
     let mut post = self.execute_after_digest(stomach, &mut whatsit, state);
 
     if self.options.capture_body {
+      post.extend(stomach.digest_next_body(false, state));
       whatsit.set_body(post);
       post = vec![];
     }
@@ -191,13 +192,12 @@ impl Definition for Constructor {
   }
 
   fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) {
-
     for pre_closure in &self.options.before_construct {
       pre_closure(document, whatsit, state);
     }
 
     match &self.replacement {
-      &None => {}
+      &None => {},
       &Some(ref main_closure) => {
         main_closure(document,
                      whatsit.get_args(),

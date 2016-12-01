@@ -43,7 +43,7 @@ impl BoxOps for TBox {
       if mode == "math" {
         document.insert_math_token(text);//, font => $$self[1], %{ $$self[4] })
       } else {
-        document.open_text(text);//, $$self[1]))
+        document.open_text(text, state);//, $$self[1]))
       }
     }
   }

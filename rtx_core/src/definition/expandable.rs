@@ -77,11 +77,10 @@ impl Definition for Expandable {
     }
   }
 
-  fn invoke_primitive(&self, _gullet: &mut Stomach, caller: Arc<Definition>, _state: &mut State) -> Vec<Digested> {
+  // Not implemented for expandable
+  fn invoke_primitive(&self, _gullet: &mut Stomach, _caller: Arc<Definition>, _state: &mut State) -> Vec<Digested> {
     Vec::new()
   }
-
-  // Not implemented for expandable
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> {
     None
   }

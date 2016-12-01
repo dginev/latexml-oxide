@@ -336,7 +336,7 @@ impl Model {
   /// Get the node's qualified name in standard form
   /// Ie. using the registered (code) prefix for that namespace.
   /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
-  pub fn get_node_qname(&self, node: Node) -> String {
+  pub fn get_node_qname(&self, node: &Node) -> String {
     use libxml::tree::NodeType::*;
     let node_type = node.get_type();
     if node_type.is_none() {
