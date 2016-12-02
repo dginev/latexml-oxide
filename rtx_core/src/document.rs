@@ -586,11 +586,11 @@ impl Document {
     if point.get_type() == Some(NodeType::DocumentNode) {    // First node! (?)
       state.model.add_schema_declaration(self);
       newnode = Node::new(&tag, None, &self.document).unwrap();
+      self.document.set_root_element(&mut newnode);
       for node in self.pending.iter() {
         newnode.add_prev_sibling(node.clone()); // Add saved comments, PI's
       }
       self.record_constructed_node(&newnode);
-      self.document.set_root_element(&mut newnode);
 
       match decoded_ns {
         Some(ns) => {

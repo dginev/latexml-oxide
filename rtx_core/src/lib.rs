@@ -27,6 +27,7 @@ pub mod common;
 pub mod state;
 pub mod util;
 
+use std::fmt;
 use state::State;
 use stomach::Stomach;
 use tbox::TBox;
@@ -57,11 +58,20 @@ pub enum TexMode {
   Text
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Digested {
   Box(TBox),
   List(List),
   Whatsit(Whatsit),
+}
+impl fmt::Debug for Digested {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match self {
+      &Digested::Box(ref v) => write!(f, "{:?}", v),
+      &Digested::List(ref v) => write!(f, "{:?}", v),
+      &Digested::Whatsit(ref v) => write!(f, "{:?}", v),
+    }
+  }
 }
 
 impl BoxOps for Digested {
