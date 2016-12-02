@@ -29,7 +29,7 @@ impl Document {
       document: doc_scaffold,
       node: root,
       pending: Vec::new(),
-      debug: false,
+      debug: true,
       constructed_nodes : Vec::new(),
     }
   }

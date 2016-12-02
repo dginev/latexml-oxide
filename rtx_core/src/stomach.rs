@@ -152,9 +152,7 @@ impl Stomach {
         //   "Excessive recursion(?): ",
         //   "Tokens on stack: " . join(', ', map { ToString($_) } @{ $self{token_stack} })); }
       }
-      state.assign_value("CURRENT_TOKEN",
-                         ObjectStore::Token(token.clone()),
-                         Some(Scope::Global));
+      state.current_token = Some(token.clone());
       result = Vec::new();
       let looked_up_definition: Option<ObjectStore> = state.lookup_digestable_definition(&token);
       match looked_up_definition {
@@ -338,8 +336,8 @@ impl Stomach {
   // Note that lookups happen more often than bgroup/egroup (which open/close frames).
 
   pub fn push_stack_frame(&mut self, nobox: bool, state: &mut State) {
-    let current_token = match state.lookup_value("CURRENT_TOKEN") {
-      Some(& ObjectStore::Token(ref t)) => t.clone(),
+    let current_token = match &state.current_token {
+      &Some(ref t) => t.clone(),
       _ => T_OTHER!(String::new())
     };
 

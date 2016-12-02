@@ -80,6 +80,7 @@ pub struct State {
   pub status_code: usize,
   pub unlocked: bool,
   pub model: Model,
+  pub current_token: Option<Token>,
 }
 
 impl Default for State {
@@ -97,7 +98,8 @@ impl Default for State {
       meaning: HashMap::new(),
       value: HashMap::new(),
       parameters: HashMap::new(),
-      undo: vec![locked_frame_hash]
+      undo: vec![locked_frame_hash],
+      current_token: None
     }
   }
 }

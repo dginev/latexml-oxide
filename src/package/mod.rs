@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use regex::Regex;
 use rtx_core::Core;
 use rtx_core::state::{State, ObjectStore, Scope};
@@ -481,7 +482,6 @@ macro_rules! DefConstructorI(
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options: expr, $state:expr) => (
   {
     use rtx_core::definition::constructor::Constructor;
-    use std::collections::HashMap;
     // use libxml::tree::Node;
 
 // let mode    = $options.mode;
