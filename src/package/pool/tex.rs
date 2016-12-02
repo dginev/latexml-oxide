@@ -3,6 +3,7 @@ use rtx_core::state::State;
 use rtx_core::token::*;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::gullet::Gullet;
+use rtx_core::definition::constructor::ConstructorOptions;
 
 use package::*;
 pub fn load_definitions(state: &mut State) {
@@ -219,5 +220,80 @@ pub fn load_definitions(state: &mut State) {
                },
                state);
   }
+
+  //----------------------------------------------------------------------
+  // These determine whether the _next_ paragraph gets indented!
+  // thus it needs \par to check whether such indentation has been set.
+  // DefPrimitiveI!("\indent",   None, |state| AssignValue(next_para_class => 'ltx_indent'); });
+  // DefPrimitiveI!("\noindent", None, || AssignValue(next_para_class => 'ltx_noindent'); });
+
+  // <ltx:para> represents a Logical Paragraph, whereas <ltx:p> is a `physical paragraph'.
+  // A para can contain both p and displayed equations and such.
+
+  // Remember; \par _closes_, not opens, paragraphs!
+  // Here, we want to close both an open p and para (if either are open).
+  let mut skippable_props = HashMap::new();
+  skippable_props.insert("alignmentSkippable".to_string(), ObjectStore::Bool(true));
+
+  DefConstructorI!(T_CS!("\\par"), None, Some(Arc::new(
+    |document: &mut Document, args: &Vec<_>, props:&HashMap<String, ObjectStore>, state: &mut State| {
+      let in_preamble = match props.get("inPreamble") {
+        Some(& ObjectStore::Bool(v)) => v,
+        _ => false
+      };
+      if !in_preamble {
+        // document.maybe_close_element("ltx:p");
+        if let Some(c) = props.get("class") {
+          let element = document.get_element();
+          if let Some(node) = element {
+            if document.get_node_qname(&node, state) == "ltx:para" {  // Only set on the para about to close!
+              let class_str = match c {
+                & ObjectStore::String(ref v) => v.to_string(),
+                _ => String::new()
+              };
+              document.set_attribute(&node, "class", &class_str);
+            }
+          }
+        }
+        // document.maybe_close_element("ltx:para");
+     }
+    })),
+    ConstructorOptions {
+    after_digest: vec![Arc::new(|stomach, whatsit, state| {
+      let in_preamble = match LookupValue!("inPreamble", state) {
+        Some(& ObjectStore::Bool(v)) => v,
+        _ => false
+      };
+      if in_preamble {
+        whatsit.set_property("inPreamble", ObjectStore::Bool(true));
+      } else {
+        if let Some(c) = RemoveValue!("next_para_class", state) {
+          whatsit.set_property("class", c);
+        }
+        // Digest!(Tokens!(
+        //     T_CS("\\LTX@vadjust@afterpar"),
+        //     T_CS("\\LTX@clear@vadjust@afterpar")
+        // ));
+      }
+      Vec::new()
+    })],
+    properties: skippable_props,
+    alias: Some("\\par\n".to_string()),
+    ..ConstructorOptions::default()
+  }, state);
+
+  // OTOH, sometimes \par is just a minimalistic "start a new line"
+  // This should be closer for those cases.
+  DefConstructorI!(T_CS!("\\inner@par"), None, Some(Arc::new(|document, args, props, state| {
+      // if document.maybe_close_element("ltx:p") { }
+      // else if document.canContain(document.get_node(), "ltx:break") {
+      //   document.insertElement("ltx:break");
+      // }
+    })),
+    ConstructorOptions::default(), state
+  );
+
+// Tag("ltx:para", autoClose => 1, autoOpen => 1);
+
 
 }

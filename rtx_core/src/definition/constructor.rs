@@ -35,7 +35,8 @@ pub struct ConstructorOptions {
   // reversion       : 1,
   // sizer           : 1,
   pub scope : Option<Scope>,
-  pub locked: bool
+  pub locked: bool,
+  pub alias: Option<String>
 }
 impl Default for ConstructorOptions {
   fn default() -> Self {
@@ -56,7 +57,8 @@ impl Default for ConstructorOptions {
       before_digest_end : vec![],
       after_digest_body : vec![],
       scope: None,
-      locked: false
+      locked: false,
+      alias: None
     }
   }
 }

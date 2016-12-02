@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use regex::Regex;
 use rtx_core::Core;
 use rtx_core::state::{State, ObjectStore, Scope};
@@ -32,6 +31,11 @@ macro_rules! LookupValue {
 #[macro_export]
 macro_rules! AssignValue {
   ($name:expr, $value:expr, $scope:expr, $state:expr) => ($state.assign_value($name, $value, $scope))
+}
+
+#[macro_export]
+macro_rules! RemoveValue {
+  ($name:expr, $state:expr) => ($state.remove_value($name))
 }
 
 #[macro_export]
@@ -474,7 +478,7 @@ macro_rules! DefMacro(
 
 #[macro_export]
 macro_rules! DefConstructorI(
-  ($cs:expr, $paramlist:expr, $replacement:expr, $options: expr, $state:expr) => (
+  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options: expr, $state:expr) => (
   {
     use rtx_core::definition::constructor::Constructor;
     use std::collections::HashMap;
@@ -485,12 +489,10 @@ macro_rules! DefConstructorI(
 
     // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
     //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
-    let compiled_replacement;
-    compile_replacement!(compiled_replacement, $replacement);
     let constructor = Constructor {
       cs: $cs,
       paramlist: $paramlist,
-      replacement: compiled_replacement,
+      replacement: $compiled_replacement,
       options: $options,
       ..Constructor::default()};
 
@@ -529,7 +531,10 @@ macro_rules! DefConstructor(
   {
 // check_options("DefConstructor (prototype)", $constructor_options, %options);
     let (cs, paramlist) = parse_prototype($proto, $state);
-    DefConstructorI!(cs, paramlist, $replacement, $options, $state);
+    let compiled_replacement;
+    compile_replacement!(compiled_replacement, $replacement);
+
+    DefConstructorI!(cs, paramlist, compiled_replacement, $options, $state);
   }
   )
 );

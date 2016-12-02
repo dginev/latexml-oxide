@@ -34,6 +34,19 @@ impl Document {
     }
   }
 
+  /// Get the element at (or containing) the current insertion point.
+  pub fn get_element(&self) -> Option<Node> {
+    let mut node = self.node.clone();
+    if node.get_type() == Some(NodeType::TextNode) {
+      node = node.get_parent().unwrap();
+    }
+    if node.get_type() == Some(NodeType::DocumentNode) {
+      None
+    } else {
+      Some(node.clone())
+    }
+  }
+
   /// Find the nodes according to the given $xpath expression,
   /// the xpath is relative to $node (if given), otherwise to the document node.
   pub fn findnodes(&self, xpath: &str, node: Option<Node>, state: &mut State) -> Vec<Node> {
@@ -62,8 +75,8 @@ impl Document {
   /// Ie. using the registered prefix for that namespace.
   /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
   /// NOTE: Should Deprecate! (use model)
-  pub fn get_node_qname(&self, node: Node, state: &mut State) -> String {
-    state.model.get_node_qname(&node)
+  pub fn get_node_qname(&self, node: &Node, state: &mut State) -> String {
+    state.model.get_node_qname(node)
   }
 
 

@@ -26,6 +26,31 @@ impl Default for Whatsit {
 }
 
 impl Whatsit {
+  pub fn is_math(&self) -> bool {
+    match self.properties.get("isMath") {
+      Some(& ObjectStore::Bool(v)) => v,
+      _ => false
+    }
+  }
+
+  pub fn get_property(&self, key: &str) -> Option<&ObjectStore> {
+    self.properties.get(key)
+  }
+
+  pub fn get_properties(&self) -> &HashMap<String, ObjectStore> {
+    &self.properties
+  }
+
+  pub fn set_property(&mut self, key: &str, value: ObjectStore) {
+    self.properties.insert(key.to_string(), value);
+  }
+
+  pub fn set_properties(&mut self, props: HashMap<String, ObjectStore>) {
+    for (key, value) in props.into_iter() {
+      self.properties.insert(key, value);
+    }
+  }
+
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
     match self.args.get(n - 1) {
       None => None,
@@ -34,19 +59,8 @@ impl Whatsit {
     }
   }
 
-  pub fn is_math(&self) -> bool {
-    match self.properties.get("isMath") {
-      Some(& ObjectStore::Bool(v)) => v,
-      _ => false
-    }
-  }
-
   pub fn get_args(&self) -> &Vec<Option<Digested>> {
     &self.args
-  }
-
-  pub fn get_properties(&self) -> &HashMap<String, ObjectStore> {
-    &self.properties
   }
 
   pub fn set_args(&mut self, args: Vec<Option<Digested>>) {
