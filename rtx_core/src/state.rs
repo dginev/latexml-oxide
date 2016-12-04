@@ -81,6 +81,7 @@ pub struct State {
   pub unlocked: bool,
   pub model: Model,
   pub current_token: Option<Token>,
+  pub noexpand_the: bool
 }
 
 impl Default for State {
@@ -99,7 +100,8 @@ impl Default for State {
       value: HashMap::new(),
       parameters: HashMap::new(),
       undo: vec![locked_frame_hash],
-      current_token: None
+      current_token: None,
+      noexpand_the: false
     }
   }
 }

@@ -330,6 +330,19 @@ impl Gullet {
     Vec::new()
   }
 
+  pub fn read_until_brace(&mut self, state: &mut State) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    while let Some(token) = self.read_token(state) {
+      if token.code == Catcode::BEGIN {    // INLINE Catcode
+        self.mouth.as_mut().unwrap().pushback.push_front(token);    // Unread
+        break;
+      }
+      tokens.push(token);
+    }
+    tokens
+  }
+
+
   ///**********************************************************************
   /// Higher-level readers: Read various types of things from the input:
   ///  tokens, non-expandable tokens, args, Numbers, ...

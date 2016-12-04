@@ -35,10 +35,7 @@ impl DigestionAPI for Core {
                             ObjectStore::Bool(true),
                             Some(Scope::Global));
     for preload in preloads {
-      match input_definitions(preload, InputDefinitionOptions::default(), &mut self.state) {
-        Ok(_) => {}
-        Err(_) => {} // TODO
-      }
+      input_definitions(preload, InputDefinitionOptions::default(), &mut self.state);
     }
     self.state.assign_value("InitialPreloads",
                             ObjectStore::Bool(false),

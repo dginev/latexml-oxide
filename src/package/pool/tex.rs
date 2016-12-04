@@ -1,8 +1,14 @@
 use std::sync::Arc;
+use std::collections::VecDeque;
+use rtx_core::Digested;
 use rtx_core::state::State;
-use rtx_core::token::*;
+use rtx_core::token::Token;
+use rtx_core::tokens::Tokens;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::gullet::Gullet;
+use rtx_core::stomach::Stomach;
+use rtx_core::definition::expandable::Expandable;
+use rtx_core::definition::primitive::{Primitive,PrimitiveOptions};
 use rtx_core::definition::constructor::ConstructorOptions;
 
 use package::*;
@@ -142,13 +148,13 @@ pub fn load_definitions(state: &mut State) {
   //   ..Parameter::default()
   // }, state);
 
-  // DefParameterType!("Until",Parameter{
-  //   reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, until: Vec<Token>, state: &mut State| {
-  //     gullet.read_until(until)
-  //   }),
-  //   // reversion: |arg, until| { vec![Revert!(arg), Revert!(until)] },
-  //   ..Parameter::default()
-  // }, state);
+  DefParameterType!("Until",Parameter{
+    reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, until: Vec<Token>, state: &mut State| {
+      gullet.read_until(until, state)
+    }),
+    // reversion: |arg, until| { vec![Revert!(arg), Revert!(until)] },
+    ..Parameter::default()
+  }, state);
 
   // DefParameterType!("Skip1Space",Parameter{
   //   reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
@@ -159,13 +165,17 @@ pub fn load_definitions(state: &mut State) {
   //   ..Parameter::default()
   // }, state);
 
-  // // Read the next token
-  // DefParameterType!("Token",Parameter{
-  //   reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
-  //     gullet.read_token()
-  //   }),
-  //   ..Parameter::default()
-  // }, state);
+  // Read the next token
+  DefParameterType!("Token",Parameter{
+    reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+      if let Some(t) = gullet.read_token(state) {
+        vec![t]
+      } else {
+        Vec::new()
+      }
+    }),
+    ..Parameter::default()
+  }, state);
 
   // // Read the next token, after expanding any expandable ones.
   // DefParameterType!("XToken",Parameter{
@@ -190,6 +200,16 @@ pub fn load_definitions(state: &mut State) {
   //   }),
   //   ..Parameter::default()
   // }, state);
+
+  // Read until the next (balanced) open brace {
+  // used for the last TeX-style delimited argument
+  DefParameterType!("UntilBrace", Parameter{
+    reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+      gullet.read_until_brace(state)
+    }),
+    ..Parameter::default()
+  }, state);
+
 
   // No, \documentclass isn't really a primitive -- It's not even TeX!
   // But we define a number of stubs here that will automatically load
@@ -295,5 +315,65 @@ pub fn load_definitions(state: &mut State) {
 
 // Tag("ltx:para", autoClose => 1, autoOpen => 1);
 
+  fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach,  args: Vec<Tokens>, state: &mut State) -> Vec<Digested> {
+    // params = parseDefParameters(cs, params);
+    if expanded {
+      state.noexpand_the = true;
+      // body = Expand!(body);
+    }
+
+    let scope = if globally {
+      Some(Scope::Global)
+    } else {
+      None
+    };
+    // switch args from a Vec<Tokens> into a Vec<Token>
+    let mut token_args : VecDeque<Token> = VecDeque::new();
+    for arg in args.into_iter() {
+      token_args.extend(arg.unlist().into_iter());
+    }
+    let cs = token_args.pop_front().unwrap();
+    let def_body = token_args.into_iter().rev().collect::<Vec<Token>>();
+    let params = None;
+    let body = Arc::new(move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State| def_body.clone());
+    println_stderr!("Installing definition for cs: {:?}", cs);
+    state.install_definition(ObjectStore::Expandable(Arc::new(
+      Expandable{cs: cs, paramlist: params, expansion: body,
+        ..Expandable::default()
+      })),
+      scope);
+    // AfterAssignment!(state);
+    Vec::new()
+  }
+
+
+  DefPrimitiveI!("\\def SkipSpaces Token UntilBrace {}", |stomach, args, state| {
+      do_def(false, false, stomach, args, state)
+    },
+    PrimitiveOptions {
+      locked: true,
+      ..PrimitiveOptions::default()
+    }, state);
+  DefPrimitiveI!("\\gdef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
+      do_def(true, false, stomach, args, state)
+    },
+    PrimitiveOptions {
+      locked: true,
+      ..PrimitiveOptions::default()
+    }, state);
+  DefPrimitiveI!("\\edef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
+      do_def(false, true, stomach, args, state)
+    },
+    PrimitiveOptions {
+      locked: true,
+      ..PrimitiveOptions::default()
+    }, state);
+  DefPrimitiveI!("\\xdef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
+      do_def(true, true, stomach, args, state)
+    },
+    PrimitiveOptions {
+      locked: true,
+      ..PrimitiveOptions::default()
+    }, state);
 
 }

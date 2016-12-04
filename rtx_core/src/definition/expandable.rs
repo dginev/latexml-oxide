@@ -3,7 +3,6 @@ use state::State;
 use Digested;
 use token::*;
 use tokens::Tokens;
-use tbox::TBox;
 use gullet::Gullet;
 use stomach::Stomach;
 use parameter::Parameters;

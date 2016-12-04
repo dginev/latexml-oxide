@@ -102,8 +102,8 @@ macro_rules! InstallDefinition {
 // #[macro_export]
 // macro_rules! XEquals {
 //   ($token1:expr, $token2) => (
-//   my $def1 = LookupMeaning($token1);    # token, definition object or undef
-//   my $def2 = LookupMeaning($token2);    # ditto
+//   let def1 = LookupMeaning($token1);    # token, definition object or undef
+//   let def2 = LookupMeaning($token2);    # ditto
 //   if (defined $def1 != defined $def2) { # False, if only one has 'meaning'
 //     return; }
 //   elsif (!defined $def1 && !defined $def2) {    # true if both undefined
@@ -175,7 +175,7 @@ impl Default for InputDefinitionOptions {
 }
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
-pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut state: &mut State) -> Result<(), ()> {
+pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut state: &mut State) {
   let mut file : String = raw_file.to_string().trim().to_string();
 
   // let prevname = if options.handleoptions {
@@ -197,7 +197,7 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
     if let Some(&ObjectStore::Bool(flag)) = state.lookup_value(&loaded_flag) {
       if flag {
         // do nothing if we've loaded before
-        return Ok(());
+        return;
       }
     }
   }
@@ -214,7 +214,6 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
     "article.cls" => pool::article_cls::load_definitions(&mut state),
     other => { panic!("TODO: unknown binding {:?}, can't load", other);}
   };
-  Ok(())
 }
 
 #[macro_export]
@@ -244,7 +243,7 @@ pub fn load_tex_content(core: &mut Core, path: String) {
   // If there is a file-specific declaration file (name.latexml), load it first!
   // let file = path;
   // file =~ s/\.tex//;
-  // if (my $conf = !pathname_is_literaldata($pathname)
+  // if (let conf = !pathname_is_literaldata($pathname)
   //   && pathname_find("$file.latexml", paths => LookupValue('SEARCHPATHS'))) {
   //   loadLTXML($conf, $conf); }
 
@@ -266,16 +265,16 @@ pub fn load_class(name: String, options: Vec<String>, after: Vec<Token>, state: 
     noerror: true,
     ..InputDefinitionOptions::default()
   }, state);
-  // if (my $success = InputDefinitions($class, type => 'cls', notex => 1, handleoptions => 1, noerror => 1,
+  // if (let success = InputDefinitions($class, type => 'cls', notex => 1, handleoptions => 1, noerror => 1,
   //     %options)) {
   //   return $success; }
   // else {
   //   $STATE->noteStatus(missing => $class . '.cls');
-  //   my $alternate = 'OmniBus';    # was 'article'
+  //   let alternate = 'OmniBus';    # was 'article'
   //   Warn('missing_file', $class, $STATE->getStomach->getGullet,
   //     "Can't find binding for class $class (using $alternate)",
   //     maybeReportSearchPaths());
-  //   if (my $success = InputDefinitions($alternate, type => 'cls', noerror => 1, handleoptions => 1, %options)) {
+  //   if (let success = InputDefinitions($alternate, type => 'cls', noerror => 1, handleoptions => 1, %options)) {
   //     return $success; }
   //   else {
   //     Fatal('missing_file', $alternate . '.cls.ltxml', $STATE->getStomach->getGullet,
@@ -470,12 +469,71 @@ macro_rules! DefMacroI(
 macro_rules! DefMacro(
   ($proto:expr, $expansion:expr, $state:expr) => (
   {
-// check_options("DefMacro (prototype)", $constructor_options, %options);
     let (cs, paramlist) = parse_prototype($proto, $state);
     DefMacroI!(cs, paramlist, $expansion, $state);
   }
   )
 );
+
+
+///======================================================================
+/// Define a primitive control sequence.
+///======================================================================
+/// Primitives are executed in the Stomach.
+/// The $replacement should be a sub which returns nothing, or a list of Box's or Whatsit's.
+/// The options are:
+///    isPrefix  : 1 for things like \global, \long, etc.
+///    registerType : for parameters (but needs to be worked into DefParameter, below).
+
+#[macro_export]
+macro_rules! DefPrimitive(
+  ($proto:expr, $replacement:expr, $options:expr, $state:expr) => ({
+    // TODO:
+    // let compiled_replacement = || TBox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
+    let compiled_replacement = $replacement;
+
+    DefPrimitiveI!($proto, compiled_replacement, $options, $state);
+  })
+);
+
+#[macro_export]
+macro_rules! DefPrimitiveI(
+  ($proto:expr, $compiled_replacement:expr, $options:expr, $state:expr) => ({
+    let (cs, paramlist) = parse_prototype($proto, $state);
+    // let compiled_replacement = || TBox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
+    DefPrimitiveII!(cs, paramlist, $compiled_replacement, $options, $state);
+  })
+);
+
+#[macro_export]
+macro_rules! DefPrimitiveII(
+  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state:expr) => ({
+
+  let mode    = $options.mode;
+  let bounded = $options.bounded;
+  $state.install_definition(ObjectStore::Primitive(Arc::new(Primitive{
+      cs: $cs.clone(),
+      paramlist: $paramlist,
+      replacement: Some(Arc::new($compiled_replacement)),
+      // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
+      //   ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),
+      //   ($mode ? (sub { $_[0]->beginMode($mode); })
+      //     : ($bounded ? (sub { $_[0]->bgroup; }) : ())),
+      //   ($options{font} ? (sub { MergeFont(%{ $options{font} }); }) : ()),
+      //   $options{beforeDigest}),
+      // afterDigest => flatten($options{afterDigest},
+      //   ($mode ? (sub { $_[0]->endMode($mode) })
+      //     : ($bounded ? (sub { $_[0]->egroup; }) : ()))),
+      options: $options,
+      ..Primitive::default()
+    })),
+    $options.scope);
+  if $options.locked {
+    AssignValue!(&($cs.to_string()+":locked"), ObjectStore::Bool(true), None, $state);
+  }
+}));
+
+
 
 #[macro_export]
 macro_rules! DefConstructorI(
@@ -619,7 +677,7 @@ macro_rules! DefEnvironmentI (
     paramlist: None,
     // beforeDigest => flatten($options{beforeDigestEnd}),
     // afterDigest  => flatten($options{afterDigest},
-    //   sub { my $env = LookupValue('current_environment');
+    //   sub { let env = LookupValue('current_environment');
     //     Error('unexpected', "\\end{$name}", $_[0],
     //       "Can't close environment $name",
     //       "Current are "
@@ -692,25 +750,25 @@ macro_rules! DefEnvironmentI (
 //======================================================================
 
 // // Specify the properties of a Node tag.
-// my $tag_options = {    // [CONSTANT]
+// let tag_options = {    // [CONSTANT]
 //   autoOpen => 1, autoClose => 1, afterOpen => 1, afterClose => 1,
 //   'afterOpen:early' => 1, 'afterClose:early' => 1,
 //   'afterOpen:late'  => 1, 'afterClose:late'  => 1 };
-// my $tag_prepend_options = {    // [CONSTANT]
+// let tag_prepend_options = {    // [CONSTANT]
 //   'afterOpen:early' => 1, 'afterClose:early' => 1 };
-// my $tag_append_options = {     // [CONSTANT]
+// let tag_append_options = {     // [CONSTANT]
 //   'afterOpen'      => 1, 'afterClose'      => 1,
 //   'afterOpen:late' => 1, 'afterClose:late' => 1 };
 
 // sub Tag {
 //   my ($tag, %properties) = @_;
 //   CheckOptions("Tag ($tag)", $tag_options, %properties);
-//   my $model = $STATE->getModel;
+//   let model = $STATE->getModel;
 //   AssignMapping('TAG_PROPERTIES', $tag => {}) unless LookupMapping('TAG_PROPERTIES', $tag);
-//   my $props = LookupMapping('TAG_PROPERTIES', $tag);
-//   foreach my $key (keys %properties) {
-//     my $new = $properties{$key};
-//     my $old = $$props{$key};
+//   let props = LookupMapping('TAG_PROPERTIES', $tag);
+//   foreach let key (keys %properties) {
+//     let new = $properties{$key};
+//     let old = $$props{$key};
 //     // These keys accumulate information which should not carry over daemon frames.
 //     if ($$tag_prepend_options{$key}) {
 //       $new = flatten($new, $old); }
@@ -721,9 +779,9 @@ macro_rules! DefEnvironmentI (
 
 // sub DocType {
 //   my ($rootelement, $pubid, $sysid, %namespaces) = @_;
-//   my $model = $STATE->getModel;
+//   let model = $STATE->getModel;
 //   $model->setDocType($rootelement, $pubid, $sysid);
-//   foreach my $prefix (keys %namespaces) {
+//   foreach let prefix (keys %namespaces) {
 //     $model->registerDocumentNamespace($prefix => $namespaces{$prefix}); }
 //   return; }
 

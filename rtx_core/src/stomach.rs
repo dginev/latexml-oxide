@@ -181,6 +181,13 @@ impl Stomach {
               if !meaning.is_prefix() {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
+            },
+            ObjectStore::Primitive(meaning) => {
+              // Otherwise, a normal primitive or constructor
+              result = meaning.invoke_primitive(self, meaning.clone(), state);
+              if !meaning.is_prefix() {
+                state.clear_prefixes(); // Clear prefixes unless we just set one.
+              }
             }
             _ => {
               // TODO:

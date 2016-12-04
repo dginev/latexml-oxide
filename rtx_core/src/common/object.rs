@@ -70,7 +70,7 @@ pub trait Object {
     TBox()
   }
 
-  fn be_Absorbed(&self, document: Document) {
+  fn be_absorbed(&self, _document: Document) {
     unimplemented!()
   }
 

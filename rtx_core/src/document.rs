@@ -29,7 +29,7 @@ impl Document {
       document: doc_scaffold,
       node: root,
       pending: Vec::new(),
-      debug: true,
+      debug: false,
       constructed_nodes : Vec::new(),
     }
   }
@@ -167,7 +167,9 @@ impl Document {
   pub fn insert_element(&mut self, qname: &str, content: Vec<Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Node {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone() calls removed
     let node = self.open_element(qname, attrib, state);
-    println!("Inserting element {:?} with body: {:?}", qname, content);
+    if self.debug {
+      println!("Inserting element {:?} with body: {:?}", qname, content);
+    }
     for digested in content.into_iter() {
       self.absorb(digested, state);
     }
@@ -278,7 +280,7 @@ impl Document {
   pub fn can_auto_close(&self, _node: &Node) -> bool {true}
 
   pub fn to_string(&self) -> String {
-    self.document.to_string()
+    self.document.to_string(true)
   }
 
   pub fn set_node(&mut self, node: Node) {

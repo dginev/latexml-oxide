@@ -1,13 +1,13 @@
 use std::sync::Arc;
-use state::State;
-use common::object::Object;
+use state::{State, Scope};
 use Digested;
+use common::object::Object;
 use token::*;
 use gullet::Gullet;
 use stomach::Stomach;
+use whatsit::Whatsit;
 use parameter::Parameters;
-use definition::{Definition, BeforeDigestClosure, DigestionClosure};
-use document::Document;
+use definition::{Definition, PrimitiveClosure, BeforeDigestClosure, DigestionClosure};
 
 #[derive(Clone)]
 pub struct PrimitiveOptions {
@@ -15,6 +15,13 @@ pub struct PrimitiveOptions {
   pub mode: String, // TODO
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
+  pub is_prefix: bool,
+  pub scope: Option<Scope>,
+  // font : TODO
+  pub require_math: bool,
+  pub forbid_math: bool,
+  pub locked: bool,
+  pub alias: Option<String>,
 }
 impl Default for PrimitiveOptions {
   fn default() -> Self {
@@ -23,17 +30,22 @@ impl Default for PrimitiveOptions {
       before_digest: Vec::new(),
       after_digest: Vec::new(),
       mode: String::new(),
+      is_prefix: false,
+      scope: None,
+      require_math: false,
+      forbid_math: false,
+      locked: false,
+      alias: None,
     }
   }
 }
 
-pub type PrimitiveClosure = Arc<Fn(&mut Document, &mut State)>;
 #[derive(Clone)]
 pub struct Primitive {
   pub cs: Token,
   pub paramlist: Option<Parameters>,
   pub nargs: Option<usize>,
-  pub replacement: String,
+  pub replacement: Option<PrimitiveClosure>,
   pub options: PrimitiveOptions,
 }
 impl Default for Primitive {
@@ -42,7 +54,7 @@ impl Default for Primitive {
       cs: T_CS!("Primitive".to_string()),
       paramlist: None,
       nargs: None,
-      replacement: String::new(),
+      replacement: None,
       options: PrimitiveOptions::default(),
     }
   }
@@ -61,8 +73,26 @@ impl Definition for Primitive {
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Vec<Token> {
     Vec::new()
   }
-  fn invoke_primitive(&self, _gullet: &mut Stomach, _caller: Arc<Definition>, _state: &mut State) -> Vec<Digested> {
-    Vec::new()
+  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Arc<Definition>, state: &mut State) -> Vec<Digested> {
+    println_stderr!("-- primitive invoke for {:?}", self.cs);
+    // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
+    // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
+    // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
+    // print STDERR '{' . $self->tracingCSName . "}\n" if $tracing;
+    let mut result : Vec<Digested> = self.execute_before_digest(stomach, state);
+    let args   = self.read_arguments(stomach.get_gullet_mut(), state);
+    // print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
+    let replacement_result = match &self.replacement {
+      &None => Vec::new(),
+      &Some(ref closure) => closure(stomach, args, state)
+    };
+    result.extend(replacement_result);
+    let mut w = Whatsit::default();
+    let after_result = self.execute_after_digest(stomach, &mut w, state);
+    result.extend(after_result);
+
+    // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
+    result
   }
 
   fn get_cs(&self) -> Token {

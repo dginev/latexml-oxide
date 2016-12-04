@@ -81,5 +81,5 @@ fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
   }
 }
 fn process_dom(dom: Document, _name: &str) -> Vec<String> {
-  dom.to_string().split('\n').map(|line| line.to_string()).collect()
+  dom.to_string(true).split('\n').map(|line| line.to_string()).collect()
 }
