@@ -36,10 +36,10 @@ fn main() {
   let response = converter.convert(source);
   match response {
     Ok(r) => {
-      println_stderr!("{:?}", r.log);
-      println!("{:?}
-        ",
-               r.result);
+      println_stderr!("{:?}\n\n", r.log);
+      if let Some(xml) = r.result {
+        println!("{}", xml);
+      }
     }
     Err(e) => println_stderr!("Conversion error: {:?}", e),
   };
