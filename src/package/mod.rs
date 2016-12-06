@@ -96,7 +96,7 @@ macro_rules! LookupDefinition {
 
 #[macro_export]
 macro_rules! InstallDefinition {
-  ($name:expr, $definition:expr, $scope:expr, $state:expr) => (state.install_definition($name, $definition, $scope))
+  ($name:expr, $definition:expr, $scope:expr, $state:expr) => ($state.install_definition($name, $definition, $scope))
 }
 
 // #[macro_export]
@@ -112,7 +112,7 @@ macro_rules! InstallDefinition {
 //     return 1; }
 //   return; }
 
-// Is defined in the LaTeX-y sense of also not being let to \relax.
+/// Is defined in the LaTeX-y sense of also not being let to \relax.
 pub fn is_defined(name: &str, state: &mut State) -> bool {
   let cs = T_CS!(name);
   is_defined_token(&cs, state)
@@ -136,6 +136,21 @@ macro_rules! IsDefined {
 macro_rules! IsDefinedToken {
   ($name:expr, $state:expr) => (is_defined_token($name, $state))
 }
+
+#[macro_export]
+macro_rules! Let {
+  ($token1:expr, $token2:expr, $scope:expr, $state:expr) => ({
+    // If strings are given, assume CS tokens (most common case)
+    // let meaning = match $state.lookup_meaning($token2) {
+    //   Some(m) => *m,
+    //   None => ObjectStore::Token(T_CS!($token2))
+    // };
+    // $state.assign_meaning(&$token1, meaning, $scope);
+    //AfterAssignment!();
+  })
+}
+
+
 
 //======================================================================
 // Defining new Control-sequence Parameter types.
@@ -212,6 +227,7 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
     "TeX.pool" => pool::tex::load_definitions(&mut state),
     "LaTeX.pool" => pool::latex::load_definitions(&mut state),
     "article.cls" => pool::article_cls::load_definitions(&mut state),
+    "alltt.sty" => pool::alltt_sty::load_definitions(&mut state),
     other => { panic!("TODO: unknown binding {:?}, can't load", other);}
   };
 }
@@ -591,7 +607,6 @@ macro_rules! DefConstructor(
     let (cs, paramlist) = parse_prototype($proto, $state);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
-
     DefConstructorI!(cs, paramlist, compiled_replacement, $options, $state);
   }
   )
@@ -612,14 +627,31 @@ macro_rules! DefEnvironment (
   use rtx_core::util::text::*;
   let mut proto = $proto_raw.to_string().trim_left().to_string();
   let name = extract_bracketed(&mut proto, Some(Delimiter::Brace));
+
+  let compiled_replacement;
+  compile_replacement!(compiled_replacement, $replacement);
+  let cc_copy;
+  compile_replacement!(cc_copy, $replacement);
+
+  DefEnvironmentI!(name, None, compiled_replacement, cc_copy, $options, $state);
+}));
+
+#[macro_export]
+macro_rules! DefEnvironmentC (
+  ($proto_raw:expr, $compiled_replacement:expr, $options:expr, $state:expr) => ({
+  use rtx_core::util::text::*;
+  let mut proto = $proto_raw.to_string().trim_left().to_string();
+  let name = extract_bracketed(&mut proto, Some(Delimiter::Brace));
   // TODO: What do we do with param lists?
   //let paramlist_str = proto.trim_left().to_string();
-  DefEnvironmentI!(name, None, $replacement, $options, $state);
+  DefEnvironmentI!(name, None, $compiled_replacement, $compiled_replacement, $options, $state);
 }));
 
 #[macro_export]
 macro_rules! DefEnvironmentI (
-  ($name_raw:expr, $paramlist:expr, $replacement:expr, $options:expr, $state:expr) => ({
+  ($name_raw:expr, $paramlist:expr, $compiled_replacement:expr, $cc_copy:expr, $options:expr, $state:expr) => ({
+  use rtx_core::stomach::Stomach;
+  use rtx_core::whatsit::Whatsit;
   use rtx_core::definition::constructor::Constructor;
   let mode = $options.mode;
   let name = $name_raw.to_string();
@@ -645,7 +677,7 @@ macro_rules! DefEnvironmentI (
   let begin_name_constructor = Arc::new(Constructor {
       cs: T_CS!("\\begin{".to_string()+&name+"}"),
       paramlist: $paramlist,
-      replacement: Some(Arc::new($replacement)),
+      replacement: $compiled_replacement,
       options: ConstructorOptions {
         nargs: $options.nargs,
         before_digest: before_digest_with_group,
@@ -695,7 +727,7 @@ macro_rules! DefEnvironmentI (
   let name_constructor = Arc::new(Constructor{
     cs: T_CS!("\\".to_string() +&name),
     paramlist: $paramlist,
-    replacement: Some(Arc::new($replacement)),
+    replacement: $cc_copy,
     // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
     //   ($options{forbidMath} ? (sub { forbidMath($name); })              : ()),
     //   ($mode                ? (sub { $_[0]->beginMode($mode); })        : ()),

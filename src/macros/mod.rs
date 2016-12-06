@@ -3,7 +3,7 @@
 /// that execute the needed ops in libxml.
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_replacement {
-  ($var: ident, $replacement: expr) => {
+  ($var: ident, $replacement: expr) => ({
     use rtx_core::BoxOps;
     use rtx_core::Digested;
     use rtx_core::document::Document;
@@ -16,5 +16,5 @@ macro_rules! compile_replacement {
     struct _Dummy;
 
     $var = _Dummy::replacement();
-  }
+  })
 }

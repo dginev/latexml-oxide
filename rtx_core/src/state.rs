@@ -24,6 +24,7 @@ pub enum Scope {
 pub enum Table {
   Meaning,
   Value,
+  Catcode,
   SFCode,
   UCCode,
   DelCode,
@@ -37,6 +38,7 @@ pub enum ObjectStore {
   Bool(bool),
   String(String),
   // LaTeXML objects
+  Catcode(Catcode),
   Token(Token),
   Expandable(Arc<Expandable>),
   Primitive(Arc<Primitive>),
@@ -59,6 +61,7 @@ impl fmt::Debug for ObjectStore {
       &VecString(ref vs) => write!(f, "{:?}", vs),
       &Bool(ref b) => write!(f, "{:?}", b),
       &Token(ref t) => write!(f, "{:?}", t),
+      &Catcode(ref cc) => write!(f, "{:?}", cc),
       &Expandable(ref _expandable) => write!(f, "<closure for expandable definition>"),
       &Primitive(ref _primitive) => write!(f, "<closure for primitive definition>"),
       &Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
@@ -170,6 +173,11 @@ impl State {
     self.meaning.get(&token.text)
   }
 
+  /// $meaning should be a definition (for defining active control sequences)
+  /// or another token, for \let
+  pub fn assign_meaning<'t, 'm>(&'m mut self, token: &'t Token, meaning: ObjectStore, scope: Option<Scope>) {
+    self.assign_internal(Table::Meaning, &token.get_cs_name(), meaning, scope);
+  }
 
   /// used for expansion & various queries
   /// Since we're not doing digestion here, we don't need to handle mathactive,
@@ -237,21 +245,29 @@ impl State {
     self.assign_internal(Table::Value, key, value, scope);
     return;
   }
-  pub fn assign_catcode<'ac>(&'ac mut self, _c: &'ac char, cc: Catcode) {}
+  pub fn assign_catcode<'ac>(&'ac mut self, key:char, value: Catcode, scope: Option<Scope>) {
+    self.assign_internal(Table::Catcode, &key.to_string(), ObjectStore::Catcode(value), scope);
+  }
+
+
   pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, _key: &'def Token, definition: Box<T>) {}
+
+  /// TODO: Handle scopes and undo table
   pub fn assign_internal<'ai>(&'ai mut self, table: Table, key: &'ai str, definition: ObjectStore, _scope: Option<Scope>) {
     let mut fallback_store = HashMap::new();
-    let mut store = match table {
-      Table::Meaning => &mut self.meaning,
-      Table::Value => &mut self.value,
-      _ => &mut fallback_store,
+    match table {
+      Table::Meaning => {self.meaning.insert(key.to_string(), definition);},
+      Table::Value => {self.value.insert(key.to_string(), definition);},
+      Table::Catcode => if let ObjectStore::Catcode(cc) = definition {
+        self.catcode.insert(key.chars().next().unwrap(), cc);
+      },
+      _ => {fallback_store.insert(key.to_string(), definition);},
     };
-
-    store.insert(key.to_string(), definition);
   }
   pub fn assign_mapping<'mc>(&'mc mut self, map: &'mc str, key: &'mc str, value: Parameter) {
     self.parameters.insert(key.to_string(), value);
   }
+
   pub fn clear_prefixes<'cp>(&'cp mut self) {}
 
   /// And a shorthand for installing definitions

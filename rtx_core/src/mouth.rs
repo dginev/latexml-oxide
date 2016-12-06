@@ -127,7 +127,7 @@ impl Mouth {
         Some(&ObjectStore::Bool(ref x)) => Some(*x),
         _ => None,
       };
-      state.assign_catcode(&'@', Catcode::LETTER);
+      state.assign_catcode('@', Catcode::LETTER, None);
       state.assign_value("INCLUDE_COMMENTS",
                          ObjectStore::Bool(false),
                          Some(Scope::Local));
@@ -142,7 +142,7 @@ impl Mouth {
     self.nchars = 0;
     if self.fordefinitions {
       match self.saved_at_cc.clone() {
-        Some(cc) => state.assign_catcode(&'@', cc),
+        Some(cc) => state.assign_catcode('@', cc, None),
         None => {}
       };
       match self.saved_include_comments {

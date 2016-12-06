@@ -12,7 +12,7 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use regex::Regex;
-use rtx_core::Digested;
+use rtx_core::{Digested, BoxOps};
 use rtx_core::state::{Scope, State, ObjectStore};
 use rtx_core::token::*;
 use rtx_core::tbox::TBox;
@@ -142,7 +142,8 @@ pub fn load_definitions(state: &mut State) {
   //     AssignValue('@at@end@document', []) unless LookupValue('@at@end@document');
   //     PushValue('@at@end@document', $_[1]->unlist); });
 
-  DefEnvironment!("{document}", |document, whatsit, props, state| {
+  DefEnvironmentC!("{document}",
+      Some(Arc::new(|document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
       //       "<ltx:document xml:id='#id'>#body</ltx:document>",
       let id = match props.get("id") {
         Some(& ObjectStore::String(ref id)) => id,
@@ -165,7 +166,7 @@ pub fn load_definitions(state: &mut State) {
         attrib.insert("xml:id".to_string(), id.to_string());
         document.insert_element("ltx:document", vec![body], Some(attrib), state);
       }
-    },
+    })),
     ConstructorOptions {
       before_digest: vec![Arc::new(|_stomach, state| { AssignValue!("inPreamble", ObjectStore::Bool(false), None, state); Vec::new() })],
     // after_digest_begin => |stomach, whatsit, state| {
@@ -187,7 +188,8 @@ pub fn load_definitions(state: &mut State) {
     //   }
     // },
     mode: "text".to_string(),
-    ..ConstructorOptions::default()}, state);
+    ..ConstructorOptions::default()
+  }, state);
 
   // ======================================================================
   // C.5.2 Packages

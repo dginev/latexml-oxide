@@ -203,19 +203,19 @@ macro_rules! T_CR(() => ({
 }));
 #[macro_export]
 macro_rules! T_LETTER(($text:expr) => ({
-  Token { text : $text, code: Catcode::LETTER }
+  Token { text : $text.to_string(), code: Catcode::LETTER }
 }));
 #[macro_export]
 macro_rules! T_OTHER(($text:expr) => ({
-  Token { text : $text, code: Catcode::OTHER }
+  Token { text : $text.to_string(), code: Catcode::OTHER }
 }));
 #[macro_export]
 macro_rules! T_ACTIVE(($text:expr) => ({
-  Token { text : $text, code: Catcode::ACTIVE }
+  Token { text : $text.to_string(), code: Catcode::ACTIVE }
 }));
 #[macro_export]
 macro_rules! T_COMMENT(($text:expr) => ({
-  Token { text : $text, code: Catcode::COMMENT }
+  Token { text : $text.to_string(), code: Catcode::COMMENT }
 }));
 #[macro_export]
 macro_rules! T_CS(($text:expr) => ({
@@ -228,7 +228,7 @@ macro_rules! T_MARKER(($text:expr) => ({
 
 #[macro_export]
 macro_rules! Token(($text:expr, $cc_opt:expr) => ({
-  Token { text : $text,  code: match $cc_opt {
+  Token { text : $text.to_string(),  code: match $cc_opt {
     Some(cc) => cc,
     None => Catcode::OTHER
   }}
