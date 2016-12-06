@@ -204,20 +204,39 @@ pub fn load_definitions(state: &mut State) {
   // DefMacroI('\@pkgextension', undef, 'sty');
   // Let('\@currext',  '\@empty');
   // Let('\@currname', '\@empty');
+  fn only_preamble(cs: &str, state: &mut State) {
+    if ! LookupBool!("inPreamble", state) {
+      // Error('unexpected', $cs, $STATE->getStomach,
+      // "The current command '" . ToString($cs) . "' can only appear in the preamble")
+      println_stderr!("Error:unexpected:{:?} The current command can only appear in the preamble", cs);
+    }
+  }
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
                   ConstructorOptions {
                     before_digest: vec![Arc::new(|_stomach: &mut Stomach, state: &mut State| -> Vec<Digested> {
-                      // onlyPreamble('\usepackage');
+                      only_preamble("\\usepackage", state);
                       Vec::new()
                     })],
                     after_digest: vec![Arc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
                       let options: Option<&Digested> = whatsit.get_arg(1);
                       let packages: Option<&Digested> = whatsit.get_arg(2);
-                      // my @pkgs     = grep { $_ } grep { !/^\s*%/ } split(/,\s*/, ToString($packages));
-                      // $options = [($options ? split(/,\s*/, (ToString($options))) : ())];
-                      // map { RequirePackage($_, options => $options) } @pkgs;
+                      let package_list = match packages {
+                        Some(value) => OPTS_REGEX.split(&value.to_string()).map(|s| s.to_string()).filter(|s| !s.starts_with("%")).collect(),
+                        None => Vec::new(),
+                      };
+                      let options_list = match options {
+                        Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
+                        None => Vec::new(),
+                      };
+
+                      for package in package_list {
+                        RequirePackage!(package, RequireOptions {
+                          options: options_list.clone(),
+                          ..RequireOptions::default()
+                        }, state)
+                      }
                       Vec::new()
                     })],
                     ..ConstructorOptions::default()

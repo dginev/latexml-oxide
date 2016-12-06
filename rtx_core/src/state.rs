@@ -153,6 +153,16 @@ impl State {
       Some(&c) => Some(c.clone()),
     }
   }
+
+  /// A bit of Perl "truth as existence" semantics mixed in with proper boolean lookup
+  pub fn lookup_bool(&self, key: &str) -> bool {
+    match self.lookup_value(key) {
+      Some(& ObjectStore::Bool(ref v)) => *v,
+      Some(_) => true,
+      None => false
+    }
+  }
+
   pub fn lookup_value<'lv>(&'lv self, key: &'lv str) -> Option<&ObjectStore> {
     self.value.get(key)
   }

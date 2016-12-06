@@ -24,9 +24,15 @@ use rtx_core::document::Document;
 //======================================================================
 // Convenience macros for writing definitions.
 //======================================================================
+
 #[macro_export]
 macro_rules! LookupValue {
   ($name:expr, $state:expr) => ($state.lookup_value($name))
+}
+
+#[macro_export]
+macro_rules! LookupBool {
+  ($name:expr, $state:expr) => ($state.lookup_bool($name))
 }
 
 #[macro_export]
@@ -169,7 +175,7 @@ pub struct InputDefinitionOptions {
   pub notex: bool,
   pub noerror: bool,
   pub noltxml: bool,
-  pub withoptions: bool,
+  pub withoptions: Vec<String>,
   pub handleoptions: bool,
   pub as_class: bool,
 }
@@ -182,7 +188,7 @@ impl Default for InputDefinitionOptions {
       notex: false,
       noerror: false,
       noltxml: false,
-      withoptions: false,
+      withoptions: Vec::new(),
       handleoptions: false,
       as_class: false
     }
@@ -271,6 +277,66 @@ pub fn load_tex_content(core: &mut Core, path: String) {
   gullet.open_mouth(mouth, true);
 
 }
+
+pub struct RequireOptions {
+  pub options: Vec<String>,
+  pub withoptions: bool,
+  pub extension: Option<&'static str>,
+  pub as_class: bool,
+  pub noltxml: bool,
+  pub notex: bool,
+  pub raw: bool,
+  pub after: bool
+}
+impl Default for RequireOptions {
+  fn default() -> Self {
+    RequireOptions {
+      options: Vec::new(),
+      withoptions: false,
+      extension: None,
+      as_class: false,
+      noltxml: false,
+      notex: true,
+      raw: false,
+      after: false
+    }
+  }
+}
+
+/// This (& FindFile) needs to evolve a bit to support reading raw .sty (.def, etc) files from
+/// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of pathname_find ???)
+/// Another potentially useful option might be that if we are reading a raw file,
+/// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
+pub fn require_package(name: String, mut options: RequireOptions, state: &mut State) {
+  if options.raw {
+    options.raw = false;
+    // Warn('deprecated', 'raw', $STATE->getStomach->getGullet,
+    //   "RequirePackage option raw is obsolete; it is not needed");
+  }
+
+  // We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
+  // $options{notex} = 1
+  //   if !defined $options{notex} && !LookupValue('INCLUDE_STYLES') && !$options{noltxml};
+  if options.extension.is_none() {
+    options.extension = Some("sty");
+  }
+  // TODO: Ideally we want to use the same struct for the RequirePackage options as for the InputDefinitions options
+  input_definitions(name, InputDefinitionOptions {
+    extension: options.extension,
+    handleoptions: true,
+    // Pass classes options if we have NONE!
+    withoptions: options.options,
+    ..InputDefinitionOptions::default()
+  }, state);
+}
+
+#[macro_export]
+macro_rules! RequirePackage(
+  ($package:expr, $options:expr, $state:expr) => (
+  {
+    require_package($package, $options, $state);
+  }
+));
 
 pub fn load_class(name: String, options: Vec<String>, after: Vec<Token>, state: &mut State) {
   input_definitions(name, InputDefinitionOptions {

@@ -27,7 +27,7 @@ pub trait Object {
   // be careful to avoid recursive errors
 
   // Just how deep of an equality test should this be?
-  fn equals<T>(&self, other: T) -> bool
+  fn equals<T>(&self, _other: T) -> bool
     where Self: Sized
   {
     unimplemented!()
