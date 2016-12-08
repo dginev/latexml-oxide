@@ -71,6 +71,11 @@ impl fmt::Debug for ObjectStore {
     }
   }
 }
+impl fmt::Display for ObjectStore {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{:?}", self)
+  }
+}
 
 pub struct State {
   pub verbosity: i32,

@@ -25,6 +25,8 @@ impl Default for Relaxng {
 }
 impl Relaxng {
   pub fn add_schema_declaration(&self, document: &mut Document) {
-    document.insert_pi("latexml", vec!["RelaxNGSchema".to_string()], vec![self.name.clone()]);
+    let mut attributes = HashMap::new();
+    attributes.insert("RelaxNGSchema".to_string(), self.name.clone());
+    document.insert_pi("latexml", Some(attributes));
   }
 }

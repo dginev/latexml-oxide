@@ -15,7 +15,6 @@ use regex::Regex;
 use rtx_core::{Digested, BoxOps};
 use rtx_core::state::{Scope, State, ObjectStore};
 use rtx_core::token::*;
-use rtx_core::tbox::TBox;
 use rtx_core::stomach::Stomach;
 use rtx_core::whatsit::Whatsit;
 use rtx_core::definition::constructor::ConstructorOptions;

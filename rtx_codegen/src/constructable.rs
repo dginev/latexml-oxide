@@ -3,87 +3,47 @@ use quote;
 use regex::{Captures, Regex};
 use rtx_core::util::text::*;
 use util::{get_options_from_input, get_option};
-// impl Constructor {
-//   pub fn compile_replacement(&self) -> Option<ReplacementClosure> {
-//     if self.replacement.is_empty() {
-//       return None;
-//     }
 
-//     let cs = self.get_cs();
-//     let name = NONW_RE.replace_all(&self.get_cs_name(), "");
-//     let nargs = self.get_num_args();
-
-//     let mut floats: Option<String> = None;
-//     let replacement = FLOAT_RE.replace(&self.replacement, |caps: &Captures| {
-//       floats = match caps.at(1) { // Grab float marker.
-//         None => None,
-//         Some(subs) => Some(subs.to_owned()),
-//       };
-//       String::new()
-//     });
-
-//     // println_stderr!("-- Preparing translation closure for: \n{:?}\n",
-//     //                 replacement);
-//     Some(Arc::new(|document, args, props, state| {
-//       let mut savenode: Option<Node> = None;
-//       TranslateConstructor!(replacement, floats, savenode);
-//       match savenode {
-//         None => {}
-//         Some(savenode) => document.set_node(savenode),
-//       };
-//       return;
-//     }))
-//   }
-// }
-
-macro_rules! QNAME_RE_STR(
-  () => (r"((?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:)(?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:|\p{M}|\p{Lm}|\p{Nd}|\.|-)*)")
-);
-
-macro_rules! PI_RE_STR(
-  () => (concat!(r"^\s*<\?",QNAME_RE_STR!()))
-);
-
-macro_rules! KEY_RE_STR (
-    () => (concat!(r"^",QNAME_RE_STR!(),r"\s*=\s*"))
-);
-
-macro_rules! VALUE_RE_STR (
-    () => (r"(#[\w]+|&[\w:]*\()")
-);
-macro_rules! LEAD_VALUE_RE_STR (
-    () => (concat!(r"^",VALUE_RE_STR!()))
-);
-
-macro_rules! COND_RE_STR (
-    () => (concat!(r"[?]", VALUE_RE_STR!()))
-);
-macro_rules! LEAD_COND_RE_STR (
-    () => (concat!(r"^",COND_RE_STR!()))
-);
+// We recognize several special operators:
+//  #      #number|name      accesses an argument to or property of the whatsit
+//  ? ( )  ?test(if)(else)   a conditional, test
+//  & ,    &func(arg,...)    replaces by result of function call
+//  < >    <qname attr...>   generates xml tag
+//  ^      ^ pattern         floats to where pattern would be allowed
+// Each of these can be used literally, if DOUBLED (ie. ## )
+// (except ^ ??? ^^ means something special!)
+macro_rules! QNAME_RE_STR(() => (r"((?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:)(?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:|\p{M}|\p{Lm}|\p{Nd}|\.|-)*)"));
+macro_rules! PI_RE_STR(() => (concat!(r"^\s*<\?",QNAME_RE_STR!())));
+macro_rules! KEY_RE_STR (() => (concat!(r"^",QNAME_RE_STR!(),r"\s*=\s*")));
+macro_rules! VALUE_RE_STR (() => (r"(#[\w]+|&[\w:]*\()"));
+macro_rules! LEAD_VALUE_RE_STR (() => (concat!(r"^",VALUE_RE_STR!())));
+macro_rules! COND_RE_STR (() => (concat!(r"[?]", VALUE_RE_STR!())));
+macro_rules! LEAD_COND_RE_STR (() => (concat!(r"^",COND_RE_STR!())));
+macro_rules! OPEN_TAG_RE_STR (() => (concat!(r"\s*<", QNAME_RE_STR!())));
+macro_rules! CLOSE_TAG_RE_STR (() => (concat!(r"</", QNAME_RE_STR!(),r"\s*>")));
+macro_rules! LEAD_OPEN_TAG_RE_STR (() => (concat!(r"^", OPEN_TAG_RE_STR!())));
+macro_rules! LEAD_CLOSE_TAG_RE_STR (() => (concat!(r"^", CLOSE_TAG_RE_STR!())));
 
 
-macro_rules! SPECIALS (
-     () => (r"\#\?&\\")
-);
+macro_rules! SPECIALS (() => (r"\#\?&\\"));
 // Quoted special characters (or semi-special)
 macro_rules! QUOTED_SPECIALS (
     () => (concat!(r"\\\\\\[",SPECIALS!(),
-                   // or special cases: doubled #, &amp;
-                   r"]|\\#\\#|\\&amp;"))
-);
+                   r"]|\\#\\#|\\&amp;"))); // or special cases: doubled #, &amp;
 
 lazy_static! {
   static ref NARGS : i32 = 0;
-  static ref VALUE_RE : Regex = Regex::new(VALUE_RE_STR!()).unwrap();
+
+  // These recognize the beginnings of value expressions, conditionals, ..
+  // Attempt to follow XML Spec, Appendix B
   static ref LEAD_VALUE_RE : Regex = Regex::new(LEAD_VALUE_RE_STR!()).unwrap();
-  static ref COND_RE : Regex = Regex::new(COND_RE_STR!()).unwrap();
   static ref LEAD_COND_RE : Regex = Regex::new(LEAD_COND_RE_STR!()).unwrap();
+
   static ref LEAD_QMARK : Regex = Regex::new(r"^[?]").unwrap();
-// // Attempt to follow XML Spec, Appendix B
-//   static ref QNAME_RE : Regex = Regex::new(QNAME_STR!()).unwrap();
-//   static ref TEXT_RE : Regex = Regex::new(r"(.[^\#<\?\)\&\,]*)").unwrap();
-//   static ref NONW_RE : Regex = Regex::new(r"\W").unwrap();
+  static ref LEAD_OPEN_TAG_RE : Regex = Regex::new(LEAD_OPEN_TAG_RE_STR!()).unwrap();
+  static ref LEAD_CLOSE_TAG_RE : Regex = Regex::new(LEAD_CLOSE_TAG_RE_STR!()).unwrap();
+
+  // QName (element tags, attribute names);  Could this also allow expressions?
   static ref FLOAT_RE : Regex = Regex::new(r"^(\^+)\s*").unwrap();
   static ref PI_RE : Regex = Regex::new(PI_RE_STR!()).unwrap();
   static ref PI_CLOSE_RE : Regex = Regex::new(r"^\s*\?>").unwrap();
@@ -92,6 +52,7 @@ lazy_static! {
   static ref LEAD_CPAREN_RE : Regex = Regex::new(r"^\s*\)").unwrap();
   static ref LEAD_KV_SEP : Regex = Regex::new(r"^\s*\,\s*").unwrap();
   static ref ARG_HOLE_RE : Regex = Regex::new(r"^#(\d+)").unwrap();
+  static ref PROP_HOLE_RE : Regex = Regex::new(r"^\#([\w_-]+)").unwrap();
   static ref ESCAPED_OP : Regex = Regex::new(r"\\[#\?(&,<>\\%]").unwrap();
 }
 
@@ -119,8 +80,10 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
 
       quote!(
         Some(Arc::new(
-        |doc: &mut Document, args: &Vec<Option<Digested>>, _props: &HashMap<String, ObjectStore>, _state: &mut State| {
+        |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
+          let mut savenode : Option<Node> = None;
           #(operations)*
+          return;
         }))
       )
     }
@@ -146,15 +109,14 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
   let mut operations = Vec::new();
 
   while !replacement.is_empty() {
-    let mut consumed = String::new();
     // TODO: Is there a better way to write code conditional on triggered .replace?
     let mut is_match = false;
-    let mut pi_tag = String::new();
+    let mut current_tag = String::new();
 
     // ?test(ifclause)(elseclause)
     if LEAD_COND_RE.is_match(&replacement) {
       is_match = true;
-      println!("Leading conditional at: {:?}", replacement);
+      // println!("Leading conditional at: {:?}", replacement);
       let (bool_branch, if_branch, else_branch) = parse_conditional(&mut replacement);
       let if_branch_compiled = compile_replacement_tokens(if_branch);
       let else_branch_compiled = compile_replacement_tokens(else_branch);
@@ -171,52 +133,106 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
     // Processing instruction: <?name a=v ...?>
     if !is_match {
       replacement = PI_RE.replace(&replacement, |refs: &Captures| -> String {
-        pi_tag = refs.at(1).unwrap_or("").to_owned();
+        current_tag = refs.at(1).unwrap_or("").to_owned();
         is_match = true;
         String::new()
       });
-    }
-    if is_match {
-      // println_stderr!("-- matched a PI ");
-      // this is annoying since we want translate_avpairs to mutate the replacement string in place,
-      // but also want it to run after the replacement... makes `pi_tag` in particular look very misplaced
-      let av = translate_avpairs(&mut replacement);
-      operations.push(quote!(
-        let mut keys : Vec<String> = Vec::new();
-        let mut values : Vec<String> = Vec::new();
-        #(av)*
-        doc.insert_pi(#pi_tag, keys, values);
-      ));
 
-      let mut pi_closed = false;
-      replacement = PI_CLOSE_RE.replace(&replacement, |_: &Captures| -> String {
-        pi_closed = true;
+      if is_match {
+        // println_stderr!("-- matched a PI ");
+        // this is annoying since we want translate_avpairs to mutate the replacement string in place,
+        // but also want it to run after the replacement... makes `current_tag` in particular look very misplaced
+        let av = translate_avpairs(&mut replacement);
+        operations.push(quote!(
+          let mut av_props : HashMap<String, String> = HashMap::new();
+          #(av)*
+          document.insert_pi(#current_tag, Some(av_props));
+        ));
+
+        let mut pi_closed = false;
+        replacement = PI_CLOSE_RE.replace(&replacement, |_: &Captures| -> String {
+          pi_closed = true;
+          String::new()
+        });
+
+        if !pi_closed {
+          panic!("Missing '?>' at '{:?}'\n", replacement);
+        }
+      }
+    }
+
+    // Open tag: <name a=v ...> or .../> (for empty element)
+    if !is_match {
+      replacement = LEAD_OPEN_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
+        is_match = true;
+        current_tag = refs.at(1).unwrap_or("").to_owned();
+        println_stderr!("-- open tag {:?}", current_tag);
         String::new()
       });
 
-      if !pi_closed {
-        panic!("Missing '?>' at '{:?}'\n", replacement);
+      // handle open tag
+      if is_match {
+        let av = translate_avpairs(&mut replacement);
+        if has_floats {
+          let float_type = floats.len();
+          if float_type == 1 {
+            operations.push(quote!(savenode = Some(document.float_to_element(#current_tag, false));));
+          } else if float_type == 2 {
+            operations.push(quote!(savenode = Some(document.float_to_element(#current_tag, true));));
+          }
+          has_floats = false;
+          floats = String::new();
+        }
+        operations.push(quote!(
+          let mut av_props : HashMap<String, String> = HashMap::new();
+          #(av)*
+          document.open_element(#current_tag, Some(av_props), state);
+        ));
+        // Empty element?
+        if replacement.starts_with("/") {
+          operations.push(quote!(document.close_element(#current_tag, state);));
+          replacement = replacement[1..].to_owned();
+        }
+        if replacement.starts_with(">") {
+          replacement = replacement[1..].to_owned();
+        } else {
+          panic!("Missing '>' at '{:?}'", replacement);
+        }
       }
-    } else {
-      // Close tag: </name>
-      if replacement.starts_with("</") {
-        println_stderr!("-- close tag");
-        // consumed = "</".to_owned();
-        consumed = replacement[0..2].to_owned();
+    }
+
+    // Close tag: </name>
+    if !is_match {
+      replacement = LEAD_CLOSE_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
+        is_match = true;
+        current_tag = refs.at(1).unwrap_or("").to_owned();
+        println_stderr!("-- close tag {:?}", current_tag);
+        String::new()
+      });
+      // handle close tag
+      if is_match {
+        operations.push(quote!(document.close_element(#current_tag, state);));
       }
-      // Open tag: <name a=v ...> or .../> (for empty element)
-      else if replacement.starts_with("<") {
-        println_stderr!("-- open tag");
-        consumed = replacement[0..1].to_owned();
-        // consumed = "<".to_owned();
+    }
+
+    // Substitutable value: argument, property...
+    if !is_match {
+      if LEAD_VALUE_RE.is_match(&replacement) {
+        is_match = true;
+        let to_absorb = translate_value("", &mut replacement);
+        operations.push(quote!(
+          if let Some(& ObjectStore::Digested(ref digested)) = #to_absorb {
+            document.absorb((**digested).clone(), state);
+          }
+        ));
       }
-      // Substitutable value: argument, property...
-      else if replacement.starts_with("#") {
-        println_stderr!("-- argument hole");
-        consumed = replacement[0..1].to_owned();
-      }
+    }
+
+    // TODO: Still to be implemented cases:
+    if !is_match {
+      let consumed;
       // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
-      else if replacement.find("=").is_some() {
+      if replacement.find("=").is_some() {
         println_stderr!("-- Attribute");
         consumed = replacement[0..1 + replacement.find("=").unwrap()].to_owned();
       }
@@ -225,9 +241,8 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         consumed = replacement[0..1].to_owned();
         println_stderr!("text: {:?}", consumed);
       }
+      replacement = replacement[consumed.len()..].to_owned();
     }
-    // println!("consumed: {:?}", consumed);
-    replacement = replacement[consumed.len()..].to_owned();
   }
 
   operations
@@ -276,10 +291,15 @@ fn translate_string(mut text : &mut String) -> quote::Tokens {
   }
   // println_stderr!("-- ts after: {:?}", text);
 
-  let token_values = values.iter().map(|v| if v.to_string().starts_with('\'') {
+  let token_values = values.iter().map(|v| {
+    let v_str = v.to_string();
+    if v_str.starts_with('\'') {
       quote!(#v.to_string())
+    } else if v_str.ends_with(". to_string ( ) ") {
+      quote!(#v)
     } else {
       quote!(#v.as_ref().unwrap().to_string())
+    }
     }).collect::<Vec<_>>();
   quote!(#(token_values)+*)
 }
@@ -318,8 +338,7 @@ fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
       });
       if is_match {
         let val = translate_string(&mut text);
-        avs.push(quote!(keys.push(#key.to_string());));
-        avs.push(quote!(values.push(#val);));
+        avs.push(quote!(av_props.insert(#key.to_string(), #val);));
       }
     }
     if !is_match {
@@ -390,8 +409,17 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
       String::new()
     });
   }
-  // TODO:
-  // elsif (s/^\#([\w\-_]+)//) { $value = "\$prop{'$1'}"; }    # Recognize #prop for whatsit properties
+  if !is_match {
+    *text = PROP_HOLE_RE.replace(text, |prop_refs: &Captures| {
+      let prop_name = prop_refs.at(1).unwrap_or("").to_owned();
+      is_match = true;
+      // Recognize #prop for whatsit properties
+      // val = if prop_name == "body" {
+      // body is Digested, TODO: What strategy do we need to unwrap any ObjectStore meaningfully ?
+      val = quote!(props.get(#prop_name));
+      String::new()
+    });
+  }
   if !is_match {
     // Build the exclusion regex
     let mut exclusion_str : String = concat!(r"^((?:",QUOTED_SPECIALS!(),r"|[^", SPECIALS!()).to_owned();

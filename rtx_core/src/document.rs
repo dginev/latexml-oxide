@@ -197,10 +197,9 @@ impl Document {
   /// Does NOT move the current insertion point to the PI,
   /// but may move up past a text node.
   //  Rust note: attrib would have been best as Vec<(String,String)> but currently quote!() doesn't work out of the box on them
-  pub fn insert_pi(&mut self, op: &str, keys : Vec<String>, values: Vec<String>) {
+  pub fn insert_pi(&mut self, op: &str, attributes: Option<HashMap<String, String>>) {
     let mut attr_data = String::new();
-    for it in keys.iter().zip(values.iter()) {
-      let (key, value) = it;
+    for (key, value) in attributes.unwrap_or(HashMap::new()).iter() {
       attr_data.push_str(key);
       attr_data.push_str("=\"");
       attr_data.push_str(value);
