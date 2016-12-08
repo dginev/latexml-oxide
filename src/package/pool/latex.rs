@@ -112,11 +112,11 @@ pub fn load_definitions(state: &mut State) {
   DefMacro!("\\end{}",
   |gullet, args, state| {
   let name = args[0].to_string();
-  let mut t = T_CS!("\\end{$name}");
+  let mut t = T_CS!("\\end{".to_string()+&name+"}");
   if IsDefinedToken!(&t, state) {// Magic CS!
     vec![t]
   } else {
-    t = T_CS!("\\end$name");
+    t = T_CS!("\\end".to_string()+&name);
     if IsDefinedToken!(&t, state) {
       vec![t, T_CS!("\\endgroup")]
     } else {

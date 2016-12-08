@@ -120,7 +120,7 @@ pub trait Definition {
     state.unlocked = true;
     let mut after_body_digested = Vec::new();
     if let Some(post_list) = self.after_digest_body() {
-      println_stderr!("Found {:?} after_digest_body closures, capture_body was: {:?}", post_list.len(), self.capture_body());
+      // println_stderr!("Found {:?} after_digest_body closures, capture_body was: {:?}", post_list.len(), self.capture_body());
       for post in post_list {
         let after_body_digest_result = post(stomach, whatsit, state);
         after_body_digested.extend(after_body_digest_result);
