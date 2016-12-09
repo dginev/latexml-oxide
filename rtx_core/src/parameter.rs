@@ -75,7 +75,7 @@ impl Parameter {
                 Some(reader) => Some(Parameter{reader: reader, ..Parameter::default()}),
                 None => match Parameter::check_reader_function("Read".to_string() + basetype) {
                   Some(reader) => Some(Parameter{reader: reader, ..Parameter::default()}),
-                  None => None
+                  None => panic!("Fatal:parameter:init Can't initialize parameter {:?}, unknown?", self.name)
                 }
               }
             }

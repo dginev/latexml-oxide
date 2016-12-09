@@ -512,9 +512,10 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
                       }
                       .init(state));
 
+    } else {
+      // Fatal('misdefined', cs, undef, "Unrecognized parameter specification at \"prototype\""); }
+      panic!("Fatal:misdefined:{:?} Unrecognized parameter specification at \"prototype\"", cs);
     }
-    // else {
-    //   Fatal('misdefined', cs, undef, "Unrecognized parameter specification at \"prototype\""); } }
     prototype = next_proto;
   }
   if parameters.is_empty() {

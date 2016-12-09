@@ -76,48 +76,6 @@ pub fn load_definitions(state: &mut State) {
    },
    state);
 
-  // Read a Semiverbatim argument; ie w/ most catcodes neutralized.
-  DefParameterType!("Semiverbatim",
-   Parameter {
-     reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_arg(state)),
-     reversion: Some(Arc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
-       // let mut reverted_inner;
-       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
-       // for inner_opt in inner.into_iter() {
-       //   reverted_inner = match inner_opt {
-       //     Some(inner_p) => inner_p.revert_arguments(arg, state),
-       //     None => Revert(arg)
-       //   };
-       // }
-       // TODO : push reverted_inner to the read_tokens
-       read_tokens.push(T_END!());
-       read_tokens
-     })),
-     semiverbatim: true,
-     ..Parameter::default()
-   },
-   state);
-
-  // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
-  DefParameterType!("OptionalSemiverbatim",
-   Parameter {
-     reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_optional(state)),
-     semiverbatim: true,
-     optional: true,
-     reversion: Some(Arc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
-       if arg.len() > 0 {
-         let mut read_tokens = vec![T_OTHER!("[".to_string())];
-         // TODO: add these: Revert($_[0])
-         read_tokens.push(T_OTHER!("]".to_string()));
-         read_tokens
-       } else {
-         Vec::new()
-       }
-     })),
-     ..Parameter::default()
-   },
-   state);
-
   // Skip any spaces, but don't contribute an argument.
   DefParameterType!("SkipSpaces",
    Parameter {
@@ -165,6 +123,102 @@ pub fn load_definitions(state: &mut State) {
   //   ..Parameter::default()
   // }, state);
 
+  // Read a matching keyword, eg. Match:=
+  DefParameterType!("Match",
+    Parameter {
+      reader: Arc::new(|gullet: &mut Gullet, _inner, extra, state:&mut State| {
+        gullet.read_match(extra, state)
+      }), ..Parameter::default()
+    }, state);
+
+  // Read a keyword; eg. Keyword:to
+  // (like Match, but ignores catcodes)
+  // DefParameterType!("Keyword",
+  //   Parameter {
+  //     reader: Arc::new(|gullet: &mut Gullet, _inner, _extra, state:&mut State| {
+  //       gullet.read_keyword(state);
+  //     }), ..Parameter::default()
+  //   }, state);
+
+  // Read balanced material (?)
+  DefParameterType!("Balanced",
+    Parameter {
+      reader: Arc::new(|gullet: &mut Gullet, _inner, _extra, state:&mut State| {
+        gullet.read_balanced(state)
+      }), ..Parameter::default()
+    }, state);
+
+
+  // Read a Semiverbatim argument; ie w/ most catcodes neutralized.
+  DefParameterType!("Semiverbatim",
+   Parameter {
+     reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_arg(state)),
+     reversion: Some(Arc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
+       // let mut reverted_inner;
+       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+       // for inner_opt in inner.into_iter() {
+       //   reverted_inner = match inner_opt {
+       //     Some(inner_p) => inner_p.revert_arguments(arg, state),
+       //     None => Revert(arg)
+       //   };
+       // }
+       // TODO : push reverted_inner to the read_tokens
+       read_tokens.push(T_END!());
+       read_tokens
+     })),
+     semiverbatim: true,
+     ..Parameter::default()
+   },
+   state);
+
+  // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
+  DefParameterType!("OptionalSemiverbatim",
+   Parameter {
+     reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_optional(state)),
+     semiverbatim: true,
+     optional: true,
+     reversion: Some(Arc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
+       if arg.len() > 0 {
+         let mut read_tokens = vec![T_OTHER!("[".to_string())];
+         // TODO: add these: Revert($_[0])
+         read_tokens.push(T_OTHER!("]".to_string()));
+         read_tokens
+       } else {
+         Vec::new()
+       }
+     })),
+     ..Parameter::default()
+   },
+   state);
+
+  // Read a token as used when defining it, ie. it may be enclosed in braces.
+  DefParameterType!("DefToken",
+    Parameter {
+      reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+        let mut token = gullet.read_token(state);
+        let begin_token = Some(T_BEGIN!());
+        let space_token = T_SPACE!();
+
+        while token == begin_token {
+          let mut toks : Vec<Token> = gullet.read_balanced(state).into_iter().filter(|t| *t != space_token).collect();
+          let mut new_tokens = toks.split_off(1);
+          gullet.unread(toks);
+
+          token = if new_tokens.is_empty() {
+            None
+          } else {
+            new_tokens.pop()
+          };
+        }
+        match token {
+          Some(t) => vec![t],
+          None => Vec::new()
+        }
+      }),
+      undigested: true,
+      .. Parameter::default()
+    }, state);
+
   // Read the next token
   DefParameterType!("Token",Parameter{
     reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
@@ -177,21 +231,25 @@ pub fn load_definitions(state: &mut State) {
     ..Parameter::default()
   }, state);
 
-  // // Read the next token, after expanding any expandable ones.
-  // DefParameterType!("XToken",Parameter{
-  //   reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
-  //     gullet.read_x_token()
-  //   }),
-  //   ..Parameter::default()
-  // }, state);
+  // Read the next token, after expanding any expandable ones.
+  DefParameterType!("XToken",Parameter{
+    reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+      if let Some(t) = gullet.read_x_token(false, false, state) {
+        vec![t]
+      } else {
+        Vec::new()
+      }
+    }),
+    ..Parameter::default()
+  }, state);
 
-  // // Read a number
-  // DefParameterType!("Number",Parameter{
-  //   reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
-  //     gullet.read_number()
-  //   }),
-  //   ..Parameter::default()
-  // }, state);
+  // Read a number
+  DefParameterType!("Number",Parameter{
+    reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+      gullet.read_number(state)
+    }),
+    ..Parameter::default()
+  }, state);
 
   // // Read a floating point number
   // DefParameterType!("Float",Parameter{
@@ -333,9 +391,8 @@ pub fn load_definitions(state: &mut State) {
       token_args.extend(arg.unlist().into_iter());
     }
     let cs = token_args.pop_front().unwrap();
-    let def_body = token_args.into_iter().rev().collect::<Vec<Token>>();
     let params = None;
-    let body = Arc::new(move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State| def_body.clone());
+    let body = Arc::new(move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State| token_args.clone());
     println_stderr!("Installing definition for cs: {:?}", cs);
     state.install_definition(ObjectStore::Expandable(Arc::new(
       Expandable{cs: cs, paramlist: params, expansion: body,

@@ -92,6 +92,8 @@ impl Definition for Expandable {
 impl Expandable {
   fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Vec<Token> {
     let closure: &ExpansionClosure = &self.expansion;
-    closure(gullet, args, state)
+    let result_invocation = closure(gullet, args, state);
+    println!("Expandable invoke result: {:?}", result_invocation);
+    result_invocation
   }
 }

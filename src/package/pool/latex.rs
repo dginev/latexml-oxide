@@ -15,9 +15,12 @@ use regex::Regex;
 use rtx_core::{Digested, BoxOps};
 use rtx_core::state::{Scope, State, ObjectStore};
 use rtx_core::token::*;
+use rtx_core::tokens::Tokens;
+use rtx_core::gullet::Gullet;
 use rtx_core::stomach::Stomach;
 use rtx_core::whatsit::Whatsit;
 use rtx_core::definition::constructor::ConstructorOptions;
+use rtx_core::definition::primitive::{Primitive,PrimitiveOptions};
 use package::*;
 
 lazy_static!{
@@ -245,8 +248,7 @@ pub fn load_definitions(state: &mut State) {
 
 
   // STUBS:
-  for ltxtrigger in ["\\newcommand",
-                     "\\renewcommand",
+  for ltxtrigger in ["\\renewcommand",
                      "\\newenvironment",
                      "\\renewenvironment",
                      "\\NeedsTeXFormat",
@@ -264,4 +266,37 @@ pub fn load_definitions(state: &mut State) {
                move |_gullet, _args, _state| Vec::new(),
                state);
   }
+
+  //**********************************************************************
+  // C.8 Definitions, Numbering and Programming
+  //**********************************************************************
+
+  //======================================================================
+  // C.8.1 Defining Commands
+  //======================================================================
+
+  // DefMacro('\@tabacckludge {}', '\csname\string#1\endcsname');
+
+  DefPrimitiveI!("\\newcommand OptionalMatch:* DefToken [Number][]{}", |stomach, args, state| {
+      // my ($stomach, $star, $cs, $nargs, $opt, $body) = @_;
+      let ref star = args[0];
+      let ref cs = args[1].tokens[0];
+      let ref nargs = args[2];
+      let ref opt = args[3];
+      let body = args[4].clone().unlist();
+
+      // if (!isDefinable(cs)) {
+      //   Info('ignore', $cs, $stomach,
+      //     "Ignoring redefinition (\\newcommand) of '" . Stringify($cs) . "'")
+      //     unless LookupValue(ToString($cs) . ':locked');
+      //   return; }
+
+      // TODO: convertLaTeXArgs($nargs, $opt)
+      let body_closure = move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State|{ body.clone() };
+      DefMacroI!(cs.clone(), None, body_closure, state);
+      Vec::new()
+  },
+  PrimitiveOptions::default(),
+  state);
+
 }

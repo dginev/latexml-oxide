@@ -378,6 +378,82 @@ impl Gullet {
     }
   }
 
+  pub fn if_next(&mut self, token: Token, state: &mut State) -> bool {
+    let mut is_next = false;
+    if let Some(tok) = self.read_token(state) {
+      is_next = tok == token;
+      self.mouth.as_mut().unwrap().pushback.push_front(tok);    // Unread
+    }
+    is_next
+  }
+
+  /// Match the input against one of the Token or Tokens in @choices; return the matching one or undef.
+  pub fn read_match(&mut self, choices: Vec<Token>, state: &mut State) -> Vec<Token> {
+    for choice in choices.into_iter() {
+      let mut to_match : Vec<Token> = choice.unlist().into_iter().rev().collect();
+      let mut matched = Vec::new();
+      while !to_match.is_empty() {
+        let token_opt = self.read_token(state);
+        if token_opt.is_none() {
+          break;
+        }
+        let token = token_opt.unwrap();
+        matched.push(token.clone());
+        if Some(&token) == to_match.last() {
+          to_match.pop();
+        } else {
+          break;
+        }
+
+        if token.code == Catcode::SPACE { // If this was space, SKIP any following!!!
+          while let Some(space_token) = self.read_token(state) {
+            if space_token.code != Catcode::SPACE {
+              break;
+            } else {
+              matched.push(space_token);
+            }
+          }
+
+          self.mouth.as_mut().unwrap().pushback.push_front(token) // Unread
+        }
+      }
+      if to_match.is_empty() {
+        return vec![choice]; // All matched!!!
+      } else {
+        for matched_token in matched.into_iter().rev() {
+          self.mouth.as_mut().unwrap().pushback.push_front(matched_token);  // Put 'em back and try next!
+        }
+      }
+    }
+    Vec::new()
+  }
+
+
+
+  ///======================================================================
+  /// Integer, Number
+  ///======================================================================
+  /// <number> = <optional signs><unsigned number>
+  /// <unsigned number> = <normal integer> | <coerced integer>
+  /// <coerced integer> = <internal dimen> | <internal glue>
+  pub fn read_number(&mut self, _state: &mut State) -> Vec<Token> {
+    // let s = $self->readOptionalSigns;
+    // if (defined(my $n = $self->readNormalInteger)) { return ($s < 0 ? $n->negate : $n); }
+    // elsif (defined($n = $self->readInternalDimension)) { return Number($s * $n->valueOf); }
+    // elsif (defined($n = $self->readInternalGlue))      { return Number($s * $n->valueOf); }
+    // else {
+    //   my $next = $self->readToken();
+    //   unshift(@{ $$self{pushback} }, $next);    # Unread
+    //   Warn('expected', '<number>', $self, "Missing number, treated as zero",
+    //     "while processing " . ToString($LaTeXML::CURRENT_TOKEN),
+    //     "next token is " . ToString($next));
+    //   return Number(0); } }
+
+    // TODO
+    Vec::new()
+  }
+
+
   pub fn skip_spaces(&mut self, state: &mut State) {
     match self.read_non_space(state) {
       None => {}

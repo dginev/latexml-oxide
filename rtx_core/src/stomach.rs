@@ -53,10 +53,7 @@ impl Stomach {
       match read_token {
         None => break,
         Some(token) => {
-          // println_stderr!("Read in token: {:?}", token);
-          for digested in self.invoke_token(token, state) {
-            box_list.push(digested);
-          }
+          box_list.extend(self.invoke_token(token, state));
           // TODO:
           // if terminal.is_some() && Equals(token, terminal.unwrap())
           if init_depth > self.boxing.len() {
