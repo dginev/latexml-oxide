@@ -391,8 +391,10 @@ pub fn load_definitions(state: &mut State) {
       token_args.extend(arg.unlist().into_iter());
     }
     let cs = token_args.pop_front().unwrap();
+    // is there a more idiomatic way to downgrade a VecDeque into a Vec?
+    let def_body = token_args.into_iter().collect::<Vec<Token>>();
     let params = None;
-    let body = Arc::new(move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State| token_args.clone());
+    let body = Arc::new(move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State| def_body.clone());
     println_stderr!("Installing definition for cs: {:?}", cs);
     state.install_definition(ObjectStore::Expandable(Arc::new(
       Expandable{cs: cs, paramlist: params, expansion: body,

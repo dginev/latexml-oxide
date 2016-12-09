@@ -161,7 +161,7 @@ impl Stomach {
           match store {
             ObjectStore::Token(meaning) => {
               // Common case
-              result = self.invoke_token_simple(token, meaning, state);
+              result = self.invoke_token_simple(token.clone(), meaning, state);
             }
             ObjectStore::Expandable(meaning) => {
               // A math-active character will (typically) be a macro,
@@ -205,8 +205,6 @@ impl Stomach {
     // }
 
     self.token_stack.pop();
-    // println!("Got Box: {:?}", result);
-    // TBox()
     return result;
   }
 

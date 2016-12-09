@@ -244,7 +244,7 @@ impl Gullet {
             return None;
           }
           Some(ref mut runtime) => {
-            for expansion_token in expansion.into_iter() {
+            for expansion_token in expansion.into_iter().rev() {
               runtime.pushback.push_front(expansion_token);
             }
           }
@@ -255,19 +255,13 @@ impl Gullet {
 
   pub fn unread(&mut self, tokens: Vec<Token>) {
     match &mut self.mouth {
-      &mut None => {}
       &mut Some(ref mut runtime) => {
-        let mut reversed = VecDeque::new();
-        // Careful, we want to unshift the entire vector, so we need to push_front in reverse
-        for token in tokens.into_iter() {
-          reversed.push_front(token);
-        }
-        for token in reversed.into_iter() {
+        for token in tokens.into_iter().rev() {
           runtime.pushback.push_front(token);
         }
-      }
+      },
+      _ => {}
     };
-    return;
   }
 
   ///**********************************************************************
