@@ -286,7 +286,7 @@ impl Document {
     let mut set_node = node.clone();
     if node.get_type() == Some(NodeType::DocumentNode) {  // Whoops
       if let Some(first_child) = node.get_first_child() {
-        if let Some(second_child) = first_child.get_next_sibling() {
+        if let Some(_) = first_child.get_next_sibling() {
           println_stderr!("Error:unexpected:multiple-nodes TODO");
           // Error('unexpected', 'multiple-nodes', $self,
           //   "Cannot set insertion point to a DOCUMENT_FRAG_NODE", Stringify($node)); }
@@ -472,7 +472,7 @@ impl Document {
   /// Find the node where an element with qualified name $qname can be inserted.
   /// This will move up the tree (closing auto-closable elements),
   /// or down (inserting auto-openable elements), as needed.
-  pub fn find_insertion_point(&mut self, qname: &str, state: &mut State) -> Node {
+  pub fn find_insertion_point(&mut self, _qname: &str, _state: &mut State) -> Node {
     self.close_text_internal();    // Close any current text node.
     // let cur_qname = state.model.get_node_qname(&self.node);
     // let inter;

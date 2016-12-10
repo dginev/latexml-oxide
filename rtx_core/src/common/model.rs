@@ -10,7 +10,7 @@ use common::xml::XPath;
 const LTX_NAMESPACE: &'static str = "http://dlmf.nist.gov/LaTeXML";
 
 lazy_static! {
-  static ref OPTIONAL_RE : Regex = Regex::new(r"^Optional(.+)$").unwrap();
+  // static ref OPTIONAL_RE : Regex = Regex::new(r"^Optional(.+)$").unwrap();
   static ref PREFIXED_LOCALNAME_RE : Regex = Regex::new(r"^([^:]+):(.+)$").unwrap();
   static ref LEAD_DEFAULT_RE : Regex = Regex::new(r"^DEFAULT#").unwrap();
 }

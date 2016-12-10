@@ -30,7 +30,7 @@ pub mod util;
 use std::fmt;
 use state::State;
 use stomach::Stomach;
-use tbox::TBox;
+use tbox::Tbox;
 use list::List;
 use whatsit::Whatsit;
 use document::Document;
@@ -45,10 +45,10 @@ pub trait BoxOps {
   fn unlist(self) -> Vec<Digested>;
   fn be_absorbed(self, document: &mut Document, state: &mut State);
   fn to_string(&self) -> String {
-    "Vec<TBox> for now ".to_string()
+    "Vec<Tbox> for now ".to_string()
   }
   fn stringify(&self) -> String {
-    "Vec<TBox> for now ".to_string()
+    "Vec<Tbox> for now ".to_string()
   }
 }
 
@@ -60,7 +60,7 @@ pub enum TexMode {
 
 #[derive(Clone)]
 pub enum Digested {
-  Box(TBox),
+  Box(Tbox),
   List(List),
   Whatsit(Whatsit),
 }

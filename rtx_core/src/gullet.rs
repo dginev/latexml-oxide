@@ -1,11 +1,11 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
-use state::{State, Scope, ObjectStore};
+use state::{State, ObjectStore};
 use common::object::Object;
 use definition::Definition;
 use mouth::Mouth;
 use token::{Token, Catcode};
-use stomach::Stomach;
+// use stomach::Stomach;
 
 #[derive(PartialEq, Clone)]
 pub struct MouthRuntime {
@@ -56,7 +56,7 @@ impl Gullet {
     });
   }
 
-  pub fn close_mouth<'close>(&'close mut self, forced: bool, state: &mut State) -> Result<(), ()> {
+  pub fn close_mouth<'close>(&'close mut self, forced: bool, state: &mut State) {
     let mut shift_from_mouthstack = false;
     match self.mouth {
       None => {}
@@ -74,7 +74,7 @@ impl Gullet {
     if shift_from_mouthstack {
       self.mouth = self.mouthstack.pop_front();
     }
-    return Ok(());
+    return;
   }
 
   pub fn get_locator(&self) -> String {
@@ -222,10 +222,7 @@ impl Gullet {
         }
       };
       if needs_close {
-        match self.close_mouth(false, state) { // Next input stream.
-          Ok(_) => {}
-          Err(_) => {}// TODO: Handle error
-        }
+        self.close_mouth(false, state); // Next input stream.
       } else if return_next {
         return self.read_token(state);    // Just return the next token.
       } else if expand_next {
@@ -307,7 +304,7 @@ impl Gullet {
 
   /// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
   /// In list context, also returns the found delimiter.
-  pub fn read_until(&mut self, delims: Vec<Token>, state: &mut State) -> Vec<Token> {
+  pub fn read_until(&mut self, _delims: Vec<Token>, _state: &mut State) -> Vec<Token> {
     // my ($n, $found, @tokens) = (0);
     // while (!defined($found = $self->readMatch(@delims))) {
     //   my $token = $self->readToken();    # Copy next token to args

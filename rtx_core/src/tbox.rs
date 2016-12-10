@@ -4,9 +4,9 @@ use document::Document;
 use state::State;
 use std::collections::HashMap;
 
-/// Box is a Rust keyword, so we use "TBox" instead, as in "TeX Box"
+/// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
 #[derive(Debug, Clone)]
-pub struct TBox {
+pub struct Tbox {
   // TODO
   pub text: String,
   pub font: String,
@@ -15,17 +15,19 @@ pub struct TBox {
   pub tokens: Vec<Token>,
 }
 
-pub fn TBox() -> TBox {
-  TBox {
-    text: String::new(),
-    font: String::new(),
-    locator: String::new(),
-    properties: HashMap::new(),
-    tokens: Vec::new(),
+impl Default for Tbox {
+  fn default() -> Self {
+    Tbox {
+      text: String::new(),
+      font: String::new(),
+      locator: String::new(),
+      properties: HashMap::new(),
+      tokens: Vec::new(),
+    }
   }
 }
 
-impl BoxOps for TBox {
+impl BoxOps for Tbox {
   fn to_string(&self) -> String {
     self.text.clone()
   }

@@ -437,7 +437,7 @@ lazy_static! {
 pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) -> Option<Parameters> {
   let mut parameters = Vec::new();
   while !prototype.is_empty() {
-    let mut next_proto = String::new();
+    let mut next_proto;
     // Handle possibly nested cases, such as {Number}
     if NESTED_CHECK.is_match(&prototype) {
       let captures = NESTED_CHECK.captures(&prototype).unwrap();
@@ -572,7 +572,7 @@ macro_rules! DefMacro(
 macro_rules! DefPrimitive(
   ($proto:expr, $replacement:expr, $options:expr, $state:expr) => ({
     // TODO:
-    // let compiled_replacement = || TBox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
+    // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
     let compiled_replacement = $replacement;
 
     DefPrimitiveI!($proto, compiled_replacement, $options, $state);
@@ -583,7 +583,7 @@ macro_rules! DefPrimitive(
 macro_rules! DefPrimitiveI(
   ($proto:expr, $compiled_replacement:expr, $options:expr, $state:expr) => ({
     let (cs, paramlist) = parse_prototype($proto, $state);
-    // let compiled_replacement = || TBox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
+    // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
     DefPrimitiveII!(cs, paramlist, $compiled_replacement, $options, $state);
   })
 );
@@ -900,13 +900,13 @@ macro_rules! RelaxNGSchema(
 );
 
 
-fn register_namespace(prefix: &str, namespace: String, state: &mut State) {
-  state.model.register_namespace(prefix, Some(namespace));
-}
+// fn register_namespace(prefix: &str, namespace: String, state: &mut State) {
+//   state.model.register_namespace(prefix, Some(namespace));
+// }
 
-fn register_document_namespace(prefix: &str, namespace: String, state: &mut State) {
-  state.model.register_document_namespace(prefix, Some(namespace));
-}
+// fn register_document_namespace(prefix: &str, namespace: String, state: &mut State) {
+//   state.model.register_document_namespace(prefix, Some(namespace));
+// }
 
 
 pub mod pool;

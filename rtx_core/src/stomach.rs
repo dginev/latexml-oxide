@@ -68,7 +68,7 @@ impl Stomach {
     // if $terminal && !Equals($token, $terminal);
 
     if box_list.is_empty() {
-      box_list.push(Digested::Box(TBox())); // Dummy `trailer' if none explicit.
+      box_list.push(Digested::Box(Tbox::default())); // Dummy `trailer' if none explicit.
     }
     return box_list;
   }
@@ -89,7 +89,7 @@ impl Stomach {
         };
       }
       let initdepth = stomach.boxing.len();
-      let mut depth     = initdepth;
+      let depth     = initdepth;
       // {
       //   let list = STOMACH_LIST.lock().unwrap();
       //   *list = Arc::new(Vec::new());
@@ -213,7 +213,7 @@ impl Stomach {
     // TODO: Rework this carefully
     Vec::new()
   }
-  fn invoke_token_simple(&mut self, token: Token, meaning: Token, state: &mut State) -> Vec<Digested> {
+  fn invoke_token_simple(&mut self, _token: Token, meaning: Token, state: &mut State) -> Vec<Digested> {
     // println_stderr!("-- Simple invoke {:?}", token);
     // let font = state.lookup_value("font");
     state.clear_prefixes();    // prefixes shouldn't apply here.
@@ -232,7 +232,7 @@ impl Stomach {
       if in_math || in_preamble {
         Vec::new()
       } else {
-        vec![Digested::Box(TBox {
+        vec![Digested::Box(Tbox {
                text: meaning.to_string(),
                font: String::new(),
                locator: self.gullet.get_locator(),
@@ -255,7 +255,7 @@ impl Stomach {
     //   "The token " . Stringify($token) . " should never reach Stomach!");
     // return; }
     else {
-      vec![Digested::Box(TBox {
+      vec![Digested::Box(Tbox {
              text: meaning.to_string(),
              font: String::new(),
              locator: String::new(),
@@ -308,7 +308,7 @@ impl Stomach {
           }
         }
         if ready_to_read {
-          let next = gullet.read_token(state); // stringify( ?
+          let _next = gullet.read_token(state); // stringify( ?
           println_stderr!("TODO: Error unexpected:next unexpected input remaining");
           // Error('unexpected', $next, $gullet, "Unexpected input remaining: '$next'",
           //   "Finished reading from " . Stringify($mouth) . ", but it still has input.");
@@ -358,7 +358,7 @@ impl Stomach {
   pub fn pop_stack_frame(&mut self, nobox: bool, state: &mut State) {
     if let Some(ObjectStore::VecToken(beforeafter)) = state.remove_value("beforeAfterGroup") {
       if !beforeafter.is_empty() {
-        let result = beforeafter.into_iter().map(|t| t.be_digested(self, state)).collect::<Vec<_>>();
+        let _result = beforeafter.into_iter().map(|t| t.be_digested(self, state)).collect::<Vec<_>>();
         // if (my ($x) = grep { !$_->isaBox } @result) {
         //   Fatal('misdefined', $x, $self, "Expected a Box|List|Whatsit, but got '" . Stringify($x) . "'"); }
         // push(@LaTeXML::LIST, @result); }

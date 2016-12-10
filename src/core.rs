@@ -8,7 +8,7 @@ use rtx_core::util::pathname::*;
 use rtx_core::state::{Scope, ObjectStore}; // State
 // use rtx_core::stomach::Stomach;
 use rtx_core::document::Document;
-// use rtx_core::tbox::TBox;
+// use rtx_core::tbox::Tbox;
 use rtx_core::list::List;
 use package::*;
 

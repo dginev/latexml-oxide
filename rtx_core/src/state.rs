@@ -81,6 +81,7 @@ pub struct State {
   pub verbosity: i32,
   pub map: Vec<String>,
   pub catcode: HashMap<char, Catcode>,
+  pub mathcode: HashMap<char, Catcode>,
   pub meaning: HashMap<String, ObjectStore>,
   pub value: HashMap<String, ObjectStore>,
   pub parameters: HashMap<String, Parameter>,
@@ -104,6 +105,7 @@ impl Default for State {
       model: Model::default(),
       map: Vec::new(),
       catcode: HashMap::new(),
+      mathcode: HashMap::new(),
       meaning: HashMap::new(),
       value: HashMap::new(),
       parameters: HashMap::new(),
@@ -217,10 +219,26 @@ impl State {
       }
     }
   }
-  pub fn lookup_mathcode<'mc>(&'mc mut self, key: &'mc str) -> Option<Box<i32>> {
-    None
+  pub fn lookup_mathcode<'mc>(&'mc mut self, key: &char) -> Option<Catcode> {
+    match self.mathcode.get(key) {
+      None => None,
+      Some(&c) => Some(c.clone()),
+    }
   }
-  pub fn lookup_mapping(&self, map: &str, key: &str) -> Option<&Parameter> {
+
+  pub fn lookup_mapping(&self, _map: &str, key: &str) -> Option<&Parameter> {
+    // TODO:
+    // let vtable = self.value;
+    // if let Some(&ObjectStore::VecDigested(ref mapping)) = vtable.get(map) {
+    //   if mapping.is_empty() {
+    //     None
+    //   } else {
+    //     let first_mapping = mapping[0];
+    //     first_mapping.get(key)
+    //   }
+    // } else {
+    //   None
+    // }
     self.parameters.get(key)
   }
 
@@ -265,7 +283,7 @@ impl State {
   }
 
 
-  pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, _key: &'def Token, definition: Box<T>) {}
+  pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, _key: &'def Token, _definition: Box<T>) {}
 
   /// TODO: Handle scopes and undo table
   pub fn assign_internal<'ai>(&'ai mut self, table: Table, key: &'ai str, definition: ObjectStore, _scope: Option<Scope>) {
@@ -279,7 +297,7 @@ impl State {
       _ => {fallback_store.insert(key.to_string(), definition);},
     };
   }
-  pub fn assign_mapping<'mc>(&'mc mut self, map: &'mc str, key: &'mc str, value: Parameter) {
+  pub fn assign_mapping<'mc>(&'mc mut self, _map: &'mc str, key: &'mc str, value: Parameter) {
     self.parameters.insert(key.to_string(), value);
   }
 

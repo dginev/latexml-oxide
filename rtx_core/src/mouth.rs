@@ -6,7 +6,6 @@ use regex::Regex;
 
 use common::error::*;
 use state::{State, Scope, ObjectStore};
-#[macro_use]
 use token::*;
 
 #[derive(PartialEq, Clone)]
@@ -106,10 +105,9 @@ impl Mouth {
   fn open_literal(&mut self, content: &str) {
     self.buffer = Mouth::split_lines(content);
   }
-  fn open_http(&mut self, content: &str) {}
-  fn open_https(&mut self, content: &str) {}
-  fn open_binding(&mut self, content: &str) {}
-
+  fn open_http(&mut self, _content: &str) {}
+  fn open_https(&mut self, _content: &str) {}
+  // fn open_binding(&mut self, _content: &str) {}
 
   fn initialize(&mut self, state: &mut State) {
     self.note_message = match self.notes {
@@ -207,7 +205,7 @@ impl Mouth {
     if self.colno >= self.nchars {
       return None;
     };
-    let mut ch_opt = self.chars.get(self.colno);
+    let ch_opt = self.chars.get(self.colno);
     self.colno += 1;
     match ch_opt {
       None => None,
@@ -245,17 +243,17 @@ impl Mouth {
   pub fn has_more_input(&self) -> bool {
     self.colno < self.nchars || !self.buffer.is_empty()
   }
-  fn stringify(&self) -> String {
-    // TODO
-    "mouth stringify".to_string()
-  } // This should be an implementation of Debug?
-  fn get_locator(&self, length: usize) -> String {
-    // TODO
-    "mouth locator".to_string()
-  }
-  fn get_source(&self) -> String {
-    self.source.to_string()
-  }
+  // fn stringify(&self) -> String {
+  //   // TODO
+  //   "mouth stringify".to_string()
+  // } // This should be an implementation of Debug?
+  // fn get_locator(&self, length: usize) -> String {
+  //   // TODO
+  //   "mouth locator".to_string()
+  // }
+  // fn get_source(&self) -> String {
+  //   self.source.to_string()
+  // }
 
   /// Read the next token, or undef if exhausted.
   /// Note that this also returns COMMENT tokens containing source comments,
@@ -325,7 +323,6 @@ impl Mouth {
         }
       }
     }
-    return None;
   }
 
   fn dispatch_char(&mut self, ch: char, cc: Catcode, state: &mut State) -> Option<Token> {
@@ -374,7 +371,7 @@ impl Mouth {
           })
         }
       }    // T_ALIGN
-      EOL => self.handle_EOL(ch, state),                                                 // T_EOL
+      EOL => self.handle_end_of_line(ch, state),                                                 // T_EOL
       PARAM => {
         if ch == '#' {
           Some(T_PARAM!())
@@ -416,7 +413,7 @@ impl Mouth {
     }
   }
 
-  fn handle_EOL(&mut self, c: char, state: &mut State) -> Option<Token> {
+  fn handle_end_of_line(&mut self, _c: char, state: &mut State) -> Option<Token> {
     // Note that newines should be converted to space (with " " for content)
     // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
     let token = if self.colno == 1 {
@@ -437,12 +434,12 @@ impl Mouth {
     return Some(token);
   }
 
-  fn handle_space(&mut self, c: char, state: &mut State) -> Option<Token> {
+  fn handle_space(&mut self, _c: char, state: &mut State) -> Option<Token> {
     // Skip any following spaces!
     loop {
       match self.get_next_char(state) {
         None => break,
-        Some((ch, cc)) => {
+        Some((_ch, cc)) => {
           if (cc != Catcode::SPACE) && (cc != Catcode::EOL) {
             break;
           }
@@ -455,7 +452,7 @@ impl Mouth {
     return Some(T_SPACE!());
   }
 
-  fn handle_comment(&mut self, c: char, state: &mut State) -> Option<Token> {
+  fn handle_comment(&mut self, _c: char, state: &mut State) -> Option<Token> {
     let n = self.colno;
     self.colno = self.nchars;
     let mut comment = String::new();
@@ -479,7 +476,7 @@ impl Mouth {
     }
   }
 
-  fn handle_escape(&mut self, c: char, state: &mut State) -> Option<Token> {
+  fn handle_escape(&mut self, _c: char, state: &mut State) -> Option<Token> {
     // NOTE: We're using control sequences WITH the \ prepended!!!
     let mut cs = "\\".to_string();  // I need this standardized to be able to lookup tokens (A better way???)
     match self.get_next_char(state) {
@@ -511,7 +508,7 @@ impl Mouth {
             loop {
               match self.get_next_char(state) {
                 None => break,
-                Some((ch, cc)) => {
+                Some((_ch, cc)) => {
                   if cc != Catcode::SPACE {
                     break;
                   }

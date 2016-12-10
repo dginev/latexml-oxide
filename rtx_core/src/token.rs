@@ -298,12 +298,12 @@ impl Token {
   }
 
   /// Return the character code of  character part of the token, or 256 if it is a control sequence
-  pub fn get_charcode(&self) -> u8 {
+  pub fn get_charcode(&self) -> u32 {
     if self.code == Catcode::CS {
       256
     }
     else if let Some(c) = self.text.chars().next() {
-      c as u8
+      c as u32
     } else {
       0
     }

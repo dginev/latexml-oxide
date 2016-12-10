@@ -32,7 +32,7 @@ macro_rules! QUOTED_SPECIALS (
                    r"]|\\#\\#|\\&amp;"))); // or special cases: doubled #, &amp;
 
 lazy_static! {
-  static ref NARGS : i32 = 0;
+  // static ref NARGS : i32 = 0;
 
   // These recognize the beginnings of value expressions, conditionals, ..
   // Attempt to follow XML Spec, Appendix B
@@ -70,13 +70,14 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
       // since this is all happening in Rust's compilation step, the clone causes no major overhead.
       // If we refactor away the mutable borrows we do for in-place modification, we can avoid a lot of the
       // cloning, and stay conservative in memory. For now it shouldn't matter.
-      println!("Compiling: \n{:?}", &replacement);
+
+      // println_stderr!("Compiling: \n{:?}", &replacement);
       let mut operations = Vec::new();
 
       operations.extend(compile_replacement_tokens(replacement.to_owned()));
 
-      println!("Into: \n{}",
-        operations.iter().map(|x| x.to_string()).collect::<Vec<_>>().join("\n"));
+      // println_stderr!("Into: \n{}",
+      //   operations.iter().map(|x| x.to_string()).collect::<Vec<_>>().join("\n"));
 
       quote!(
         Some(Arc::new(
@@ -166,7 +167,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       replacement = LEAD_OPEN_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
         is_match = true;
         current_tag = refs.at(1).unwrap_or("").to_owned();
-        println_stderr!("-- open tag {:?}", current_tag);
+        // println_stderr!("-- open tag {:?}", current_tag);
         String::new()
       });
 
@@ -206,7 +207,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       replacement = LEAD_CLOSE_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
         is_match = true;
         current_tag = refs.at(1).unwrap_or("").to_owned();
-        println_stderr!("-- close tag {:?}", current_tag);
+        // println_stderr!("-- close tag {:?}", current_tag);
         String::new()
       });
       // handle close tag

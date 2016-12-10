@@ -153,6 +153,7 @@ impl Definition for Constructor {
 
     if self.options.capture_body {
       post.extend(stomach.digest_next_body(false, state));
+      // println_stderr!(" -- Captured body: {:?}", post);
       whatsit.set_body(post);
       post = vec![];
     }

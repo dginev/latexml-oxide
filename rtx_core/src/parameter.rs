@@ -129,7 +129,7 @@ impl Parameter {
 
   // TODO: This meta-programming approach won't fly in Rust, need an alternative.
   /// Check whether a reader function is accessible within LaTeXML::Package::Pool
-  pub fn check_reader_function(function: String) -> Option<ReaderClosure> {
+  pub fn check_reader_function(_function: String) -> Option<ReaderClosure> {
     // if (defined $LaTeXML::Package::Pool::{$function}) {
     //   local *reader = $LaTeXML::Package::Pool::{$function};
     //   if (defined &reader) {
@@ -173,7 +173,7 @@ impl Parameter {
 
   pub fn digest(&self, stomach: &mut Stomach, value: Tokens, _fordefn: &Constructor, state: &mut State) -> Option<Digested> {
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
-    let mut value_to_digest = value.clone();
+    let value_to_digest = value.clone();
     if self.semiverbatim {
       state.begin_semiverbatim();
       stomach.reading_from_mouth(Mouth::default(), state, Box::new(move |stomach: &mut Stomach, state : &mut State| {

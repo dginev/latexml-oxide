@@ -12,9 +12,9 @@ pub struct List {
 
 impl fmt::Debug for List {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "\nList[");
+    try!(write!(f, "\nList["));
     for tbox in self.boxes.iter() {
-      write!(f,"  {:?}\n", tbox);
+      try!(write!(f,"  {:?}\n", tbox));
     }
     write!(f,"]({:?})\n", self.mode)
   }

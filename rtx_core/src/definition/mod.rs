@@ -10,7 +10,7 @@ use gullet::Gullet;
 use stomach::Stomach;
 use token::Token;
 use tokens::Tokens;
-// use tbox::TBox;
+// use tbox::Tbox;
 use parameter::Parameters;
 use document::Document;
 use whatsit::Whatsit;
