@@ -176,7 +176,7 @@ impl DigestionAPI for Core {
         boxes.push(body);
       }
     }
-    self.stomach.get_gullet().flush();
+    self.stomach.get_gullet_mut().flush(state);
     Digested::List(List { boxes: boxes, mode: TexMode::Text })
   }
 

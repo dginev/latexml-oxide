@@ -257,7 +257,7 @@ impl Document {
     }
 
     if node.get_type() == Some(NodeType::DocumentNode) {    // Didn't find $qname at all!!
-      println!("Error:malformed:TODO ... {:?}", qname);
+      println!("Error:malformed:TODO {:?} in doc: {:?}", qname, self.document.to_string(true));
       // Error('malformed', $qname, $self,
       //   "Attempt to close " . ($qname eq '#PCDATA' ? $qname : '</' . $qname . '>') . ", which isn't open",
       //   "Currently in " . self.getInsertionContext());

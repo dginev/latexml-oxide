@@ -31,8 +31,24 @@ impl Default for Gullet {
 }
 
 impl Gullet {
-  pub fn flush(&self) {
-    // TODO
+
+  /// Obscure, but the only way I can think of to End!! (see \bye or \end{document})
+  /// Flush all sources (close all pending mouth's)
+  pub fn flush(&mut self, state: &mut State) {
+    if let Some(ref mut runtime) = self.mouth {
+      runtime.mouth.finish(state);
+    }
+    while !self.mouthstack.is_empty() {
+      if let Some(mut entry) = self.mouthstack.pop_front() {
+        entry.mouth.finish(state);
+      }
+    }
+    self.mouth = Some(MouthRuntime {
+      mouth: Mouth::default(),
+      pushback: VecDeque::new(),
+      autoclose: true,
+    });
+    self.mouthstack = VecDeque::new();
   }
 
   pub fn has_more_input(&self) -> bool {

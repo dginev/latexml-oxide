@@ -151,7 +151,7 @@ impl Parameter {
         None => {}
         Some(token) => gullet.unread(vec![token]),
       };
-      state.begin_semiverbatim();
+      state.begin_semiverbatim(None);
     }
     let closure: &ReaderClosure = &self.reader;
     let value = closure(gullet, self.extra.clone(), Vec::new(), state);
@@ -175,7 +175,7 @@ impl Parameter {
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     let value_to_digest = value.clone();
     if self.semiverbatim {
-      state.begin_semiverbatim();
+      state.begin_semiverbatim(None);
       stomach.reading_from_mouth(Mouth::default(), state, Box::new(move |stomach: &mut Stomach, state : &mut State| {
         let gullet = stomach.get_gullet_mut();
         gullet.unread(value.clone().unlist());

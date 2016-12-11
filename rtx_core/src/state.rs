@@ -366,7 +366,8 @@ impl State {
       // Fatal('unexpected', '<endgroup>', $self->getStomach,
         // "Attempt to pop last locked stack frame"); }
     } else {
-      // let undo = self.undo.pop();
+      // TODO:
+      let _undo = self.undo.pop();
       // for (table, undotable) in undo.into_iter() {
       //   for (name, val) in undotable.into_iter() {
       //     // Typically only 1 value to shift off the table, unless scopes have been activated.
@@ -386,6 +387,35 @@ impl State {
   }
 
 
-  pub fn begin_semiverbatim(&self) {}
-  pub fn end_semiverbatim(&self) {}
+  pub fn begin_semiverbatim(&mut self, extraspecials: Option<Vec<Token>>) {
+    // Is this a good/safe enough shorthand, or should we really be doing beginMode?
+    self.push_frame();
+    self.assign_value("MODE", ObjectStore::String("text".to_string()), None);
+    self.assign_value("IN_MATH", ObjectStore::Bool(false), None);
+    let mut all_specials : Vec<char> = Vec::new();
+    if let Some(extra) = extraspecials {
+      for special in extra {
+        let special_char = special.text.chars().next().unwrap();
+        all_specials.push(special_char);
+      }
+    }
+    if let Some(&ObjectStore::VecChar(ref specials_store)) = self.lookup_value("SPECIALS") {
+      for special_char in specials_store {
+        all_specials.push(special_char.clone());
+      }
+    }
+
+    for special_char in all_specials {
+      self.assign_catcode(special_char, Catcode::OTHER, Some(Scope::Local));
+    }
+    // TODO:
+    // self.assign_mathcode('\'' => 0x8000, Some(Scope::Local));
+    // // try to stay as ASCII as possible
+    // self.assign_value("font" => $self->lookupValue('font')->merge(encoding => 'ASCII'), 'local');
+  }
+
+  pub fn end_semiverbatim(&mut self) {
+    self.pop_frame();
+  }
+
 }
