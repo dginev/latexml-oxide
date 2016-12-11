@@ -29,6 +29,7 @@ pub mod util;
 
 use std::fmt;
 use state::State;
+use common::model::Model;
 use stomach::Stomach;
 use tbox::Tbox;
 use list::List;
@@ -113,7 +114,7 @@ impl Default for Core {
     Core {
       preload: Vec::new(),
       stomach: Stomach::default(),
-      state: State::new(),
+      state: State::new(Model::default(), None),
     }
   }
 }

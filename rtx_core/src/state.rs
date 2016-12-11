@@ -5,8 +5,6 @@ use std::fmt;
 use regex::Regex;
 
 use common::model::Model;
-// use stomach::{Stomach};
-
 use token::{Catcode, Token};
 use parameter::Parameter;
 use definition::Definition;
@@ -77,6 +75,70 @@ impl fmt::Display for ObjectStore {
   }
 }
 
+/// High-level catcode profiles
+#[derive(Clone, Debug, PartialEq)]
+pub enum Catcodes {
+  Standard,
+  Style,
+  None
+}
+
+/// The State efficiently maintain the bindings in a TeX-like fashion.
+/// bindings associate data with keys (eg definitions with macro names)
+/// and respect TeX grouping; that is, an assignment is only in effect
+/// until the current group (opened by \bgroup) is closed (by \egroup).
+///----------------------------------------------------------------------
+/// The objective is to make the following, most-common, operations FAST:
+///   begin & end a group (ie. push/pop a stack frame)
+///   lookup & assignment of values
+/// With the more obvious approach, a "stack of frames", either lookup would involve
+/// checking a sequence of frames until the current value is found;
+/// or, starting a new frame would involve copying bindings for all values
+/// I never quite studied how Knuth does it;
+/// The following structures allow these to be constant operations (usually),
+/// except for endgroup (which is linear in # of changed values in that frame).
+///
+/// There are 2 main structures used here.
+/// For each of several $table's (being "value", "meaning", "catcode" or other space of names),
+/// each table maintains the bound values, and "undo" defines the stack frames:
+///    $$self{$table}{$key} = [$current_value, $previous_value, ...]
+///    $$self{undo}[$frame]{$table}{$key} = (undef | $n)
+/// such that the "current value" associated with $key is the 0th element of the table array;
+/// the $previous_value's (if any) are values that had been assigned within previous groups.
+/// The undo list indicates how many values have been assigned for $key in
+/// the $frame'th frame (usually 0 is the one of interest).
+/// [Would be simpler to store boolean in undo, but see deactivateScope]
+/// [All keys fo $$self{undo}[$frame} are table names, EXCEPT "_FRAME_LOCK_"!!]
+///
+/// So, in handwaving form, the algorithms are as follows:
+/// push-frame == bgroup == begingroup:
+///    push an empty hash {} onto the undo stack;
+/// pop-frame == egroup == endgroup:
+///   for the $n associated with every key in the topmost hash in the undo stack
+///     pop $n values from the table
+///   then remove the hash from the undo stack.
+/// Lookup value:
+///   we simply fetch the 0th element from the table
+/// Assign a value:
+///   local scope (the normal way):
+///     we push a new value into the table described above,
+///     and also increment the associated value in the undo stack
+///   global scope:
+///     remove any locally scoped values, and undo entries for the key
+///     then set the 0th (only remaining) value to the given one.
+///   named-scope $scope:
+///      push an entry [$table,$key,$value] globally to the 'stash' table's value.
+///      And assign locally, if the $scope is active (has non-zero value in stash_active table),
+///
+/// There are tables for
+///  catcode: keys are char;
+///     Also, "math:$char" =1 when $char is active in math.
+///  mathcode, sfcode, lccode, uccode, delcode : are similar to catcode but store
+///    additional kinds codes per char (see TeX)
+///  value: keys are anything (typically a string, though) and value is the value associated with it
+///  meaning: The definition assocated with $key, usually a control-sequence.
+///  stash & stash_active: support named scopes
+///      (see also activateScope & deactivateScope)
 pub struct State {
   pub verbosity: i32,
   pub map: Vec<String>,
@@ -98,7 +160,6 @@ impl Default for State {
     let mut locked_frame_hash = HashMap::new();
     locked_frame_hash.insert("_FRAME_LOCK_".to_string(), ObjectStore::Bool(true));
     State {
-      // stomach : Stomach::default(),
       verbosity: 0,
       status_code: 0,
       unlocked: true,
@@ -122,32 +183,43 @@ lazy_static! {
 }
 
 impl State {
-  // TODO for all
-  pub fn new() -> Self {
+  pub fn new(model: Model, catcodes_opt: Option<Catcodes>) -> Self {
     use token::Catcode::*;
-    // TODO: Only standard catcodes for now.
 
     // Setup default catcodes.
-    let mut std_catcodes: HashMap<char, Catcode> = HashMap::new();
-    std_catcodes.insert('\\', ESCAPE);
-    std_catcodes.insert('{', BEGIN);
-    std_catcodes.insert('}', END);
-    std_catcodes.insert('$', MATH);
-    std_catcodes.insert('&', ALIGN);
-    std_catcodes.insert('\r', EOL);
-    std_catcodes.insert('#', PARAM);
-    std_catcodes.insert('^', SUPER);
-    std_catcodes.insert('_', SUB);
-    std_catcodes.insert(' ', SPACE);
-    std_catcodes.insert('\t', SPACE);
-    std_catcodes.insert('%', COMMENT);
-    std_catcodes.insert('~', ACTIVE);
-    std_catcodes.insert('\0', IGNORE);
-    for c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".chars() {
-      std_catcodes.insert(c, LETTER);
+    let catcode_profile = match catcodes_opt {
+      None => Catcodes::Standard,
+      Some(cp) => cp
+    };
+
+    let mut catcodes : HashMap<char, Catcode> = HashMap::new();
+    match catcode_profile {
+      Catcodes::Standard | Catcodes::Style => {
+        catcodes.insert('\\', ESCAPE);
+        catcodes.insert('{', BEGIN);
+        catcodes.insert('}', END);
+        catcodes.insert('$', MATH);
+        catcodes.insert('&', ALIGN);
+        catcodes.insert('\r', EOL);
+        catcodes.insert('#', PARAM);
+        catcodes.insert('^', SUPER);
+        catcodes.insert('_', SUB);
+        catcodes.insert(' ', SPACE);
+        catcodes.insert('\t', SPACE);
+        catcodes.insert('%', COMMENT);
+        catcodes.insert('~', ACTIVE);
+        catcodes.insert('\0', IGNORE);
+        for c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".chars() {
+          catcodes.insert(c, LETTER);
+        }
+      },
+      Catcodes::None => {}
+    }
+    if catcode_profile == Catcodes::Style {
+      catcodes.insert('@', LETTER);
     }
 
-    State { catcode: std_catcodes, ..State::default() }
+    State { catcode: catcodes, model: model, ..State::default() }
   }
   // $$self{value}{SPECIALS} = [['^', '_', '@', '~', '&', '$', '#', '%', "'"]];
   // if ($options{catcodes} eq 'style') {

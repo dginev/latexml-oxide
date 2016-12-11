@@ -334,6 +334,8 @@ impl Gullet {
     // if (($n == 1) && ($tokens[0][1] == CC_BEGIN)) {
     //   shift(@tokens); pop(@tokens); }
     // return (wantarray ? (Tokens(@tokens), $found) : Tokens(@tokens)); }
+
+    // TODO
     Vec::new()
   }
 

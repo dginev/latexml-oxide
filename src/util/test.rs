@@ -5,6 +5,7 @@ use libxml::tree::Document;
 
 use rtx_core::Core;
 use rtx_core::stomach::Stomach;
+use rtx_core::common::model::Model;
 use rtx_core::state::State;
 
 use core::DigestionAPI;
@@ -58,7 +59,7 @@ fn rtx_ok(tex_path: String, xml_path: String, name: String) {
 /// Returns the list-of-strings form of whatever was requested, if successful,
 /// otherwise empty; and they will have reported the failure
 fn process_texfile(tex_path: String, name: &str) -> Vec<String> {
-  let mut test_state = State::new();
+  let mut test_state = State::new(Model::default(), None);
   test_state.verbosity = -2;
   let mut latexml = Core {
     preload: Vec::new(),
