@@ -164,7 +164,7 @@ macro_rules! Let {
 
 #[macro_export]
 macro_rules! DefParameterType (
-  ($name:expr, $param:expr, $state:expr) => ($state.assign_mapping("PARAMETER_TYPES", $name, $param))
+  ($name:expr, $param:expr, $state:expr) => ($state.assign_mapping("PARAMETER_TYPES", $name, Some(ObjectStore::Parameter($param))))
 );
 
 

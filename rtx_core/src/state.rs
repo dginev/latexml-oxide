@@ -1,5 +1,5 @@
 use std::hash::Hash;
-use std::collections::HashMap;
+use std::collections::{VecDeque, HashMap};
 use std::sync::Arc;
 use std::fmt;
 use regex::Regex;
@@ -12,14 +12,19 @@ use definition::expandable::Expandable;
 use definition::constructor::Constructor;
 use definition::primitive::Primitive;
 
-#[derive(Clone)]
+lazy_static! {
+  static ref TEX_OR_BIB_EXT_RE : Regex = Regex::new(r"\.(tex|bib)$").unwrap();
+  static ref CODE_TEX_EXT_RE : Regex = Regex::new(r"\.code\.tex$").unwrap();
+}
+
+#[derive(Clone, PartialEq)]
 pub enum Scope {
   Global,
   Local,
 }
 
 #[derive(Clone)]
-pub enum Table {
+pub enum TableName {
   Meaning,
   Value,
   Catcode,
@@ -42,12 +47,14 @@ pub enum ObjectStore {
   Primitive(Arc<Primitive>),
   Constructor(Arc<Constructor>),
   Digested(Arc<::Digested>),
-
+  Parameter(Parameter),
   // Collections
   VecChar(Vec<char>),
   VecString(Vec<String>),
   VecToken(Vec<Token>),
-  VecDigested(Vec<::Digested>)
+  VecDigested(Vec<::Digested>),
+  VecOS(Vec<ObjectStore>),
+  HashOS(HashMap<String, ObjectStore>)
 }
 
 impl fmt::Debug for ObjectStore {
@@ -64,8 +71,11 @@ impl fmt::Debug for ObjectStore {
       &Primitive(ref _primitive) => write!(f, "<closure for primitive definition>"),
       &Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
       &Digested(ref digested) => write!(f, "{:?}", digested),
+      &Parameter(ref parameter) => write!(f, "{:?}", parameter),
       &VecToken(ref token_vec) => write!(f, "{:?}", token_vec),
       &VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
+      &VecOS(ref vec) => write!(f, "VecOS({:?})", vec),
+      &HashOS(ref hos) => write!(f, "HashOS({:?})", hos),
     }
   }
 }
@@ -81,6 +91,68 @@ pub enum Catcodes {
   Standard,
   Style,
   None
+}
+
+/// Ledger for stacked assignments
+pub type AssignmentCount = HashMap<String, usize>;
+pub struct UndoFrame {
+  locked: bool,
+  meaning: AssignmentCount,
+  value: AssignmentCount,
+  catcode: AssignmentCount,
+  mathcode: AssignmentCount,
+  sfcode: AssignmentCount,
+  lccode: AssignmentCount,
+  uccode: AssignmentCount,
+  delcode: AssignmentCount,
+  stash: AssignmentCount,
+  stash_active: AssignmentCount,
+}
+
+impl Default for UndoFrame {
+  fn default() -> Self {
+    UndoFrame {
+      locked: false,
+      meaning: HashMap::new(),
+      value: HashMap::new(),
+      catcode: HashMap::new(),
+      mathcode: HashMap::new(),
+      sfcode: HashMap::new(),
+      lccode: HashMap::new(),
+      uccode: HashMap::new(),
+      delcode: HashMap::new(),
+      stash: HashMap::new(),
+      stash_active: HashMap::new(),
+    }
+  }
+}
+impl UndoFrame {
+  pub fn table(&self, name: &TableName) -> &AssignmentCount {
+    use self::TableName::*;
+    match *name {
+      Meaning => &self.meaning,
+      Value => &self.value,
+      Catcode => &self.catcode,
+      SFCode => &self.sfcode,
+      UCCode => &self.uccode,
+      DelCode => &self.delcode,
+      Stash => &self.stash,
+      StashActive => &self.stash_active
+    }
+  }
+  pub fn table_mut(&mut self, name: &TableName) -> &mut AssignmentCount {
+    use self::TableName::*;
+    match *name {
+      Meaning => &mut self.meaning,
+      Value => &mut self.value,
+      Catcode => &mut self.catcode,
+      SFCode => &mut self.sfcode,
+      UCCode => &mut self.uccode,
+      DelCode => &mut self.delcode,
+      Stash => &mut self.stash,
+      StashActive => &mut self.stash_active
+    }
+  }
 }
 
 /// The State efficiently maintain the bindings in a TeX-like fashion.
@@ -99,89 +171,108 @@ pub enum Catcodes {
 /// except for endgroup (which is linear in # of changed values in that frame).
 ///
 /// There are 2 main structures used here.
-/// For each of several $table's (being "value", "meaning", "catcode" or other space of names),
+/// For each of several `Table`s (being "value", "meaning", "catcode" or other space of names),
 /// each table maintains the bound values, and "undo" defines the stack frames:
-///    $$self{$table}{$key} = [$current_value, $previous_value, ...]
-///    $$self{undo}[$frame]{$table}{$key} = (undef | $n)
-/// such that the "current value" associated with $key is the 0th element of the table array;
-/// the $previous_value's (if any) are values that had been assigned within previous groups.
-/// The undo list indicates how many values have been assigned for $key in
-/// the $frame'th frame (usually 0 is the one of interest).
+///    self.table[key] = [current_value, previous_value, ...]
+///    self.undo[frame].table[key] = (None | n)
+/// such that the "current value" associated with `key` is the 0th element of the table array;
+/// the `previous_value`s (if any) are values that had been assigned within previous groups.
+/// The undo list indicates how many values have been assigned for `key` in
+/// the `frame`'th frame (usually the last is the one of interest).
 /// [Would be simpler to store boolean in undo, but see deactivateScope]
-/// [All keys fo $$self{undo}[$frame} are table names, EXCEPT "_FRAME_LOCK_"!!]
+/// [An UndoFrame contains fields for each State table, and a lock attribute]
 ///
 /// So, in handwaving form, the algorithms are as follows:
 /// push-frame == bgroup == begingroup:
 ///    push an empty hash {} onto the undo stack;
 /// pop-frame == egroup == endgroup:
-///   for the $n associated with every key in the topmost hash in the undo stack
-///     pop $n values from the table
+///   for the `n` associated with every key in the topmost hash in the undo stack
+///     pop `n` values from the table
 ///   then remove the hash from the undo stack.
 /// Lookup value:
-///   we simply fetch the 0th element from the table
+///   we simply fetch the last element from the table
 /// Assign a value:
 ///   local scope (the normal way):
 ///     we push a new value into the table described above,
 ///     and also increment the associated value in the undo stack
 ///   global scope:
 ///     remove any locally scoped values, and undo entries for the key
-///     then set the 0th (only remaining) value to the given one.
-///   named-scope $scope:
-///      push an entry [$table,$key,$value] globally to the 'stash' table's value.
-///      And assign locally, if the $scope is active (has non-zero value in stash_active table),
+///     then set the only remaining value to the given one.
+///   named-scope `scope`:
+///      push an entry `[table,key,value]` globally to the `stash` table's value.
+///      And assign locally, if the `scope` is active (has non-zero value in `stash_active` table),
 ///
 /// There are tables for
 ///  catcode: keys are char;
-///     Also, "math:$char" =1 when $char is active in math.
+///     Also, `math:char` =1 when `char` is active in math.
 ///  mathcode, sfcode, lccode, uccode, delcode : are similar to catcode but store
 ///    additional kinds codes per char (see TeX)
 ///  value: keys are anything (typically a string, though) and value is the value associated with it
-///  meaning: The definition assocated with $key, usually a control-sequence.
+///  meaning: The definition assocated with `key`, usually a control-sequence.
 ///  stash & stash_active: support named scopes
 ///      (see also activateScope & deactivateScope)
+pub type Table = HashMap<String, VecDeque<ObjectStore>>;
 pub struct State {
+  /// Tables
+  pub value: Table,
+  pub meaning: Table,
+  pub stash: Table,
+  pub stash_active: Table,
+  pub catcode: Table,
+  pub mathcode: Table,
+  pub sfcode: Table,
+  pub lccode: Table,
+  pub uccode: Table,
+  pub delcode: Table,
+  /// Table bookkeeping
+  pub undo: VecDeque<UndoFrame>,
+  /// Stateful runtime - data structures
+  pub model: Model,
+  pub prefixes: HashMap<String, bool>, // ?
+  pub status: HashMap<String, bool>, // ?
+  pub map: Vec<String>, // ?
+  /// Stateful runtime - simple fields
   pub verbosity: i32,
-  pub map: Vec<String>,
-  pub catcode: HashMap<char, Catcode>,
-  pub mathcode: HashMap<char, Catcode>,
-  pub meaning: HashMap<String, ObjectStore>,
-  pub value: HashMap<String, ObjectStore>,
-  pub parameters: HashMap<String, Parameter>,
-  pub undo: Vec<HashMap<String, ObjectStore>>,
   pub status_code: usize,
   pub unlocked: bool,
-  pub model: Model,
   pub current_token: Option<Token>,
   pub noexpand_the: bool
 }
 
 impl Default for State {
   fn default() -> Self {
-    let mut locked_frame_hash = HashMap::new();
-    locked_frame_hash.insert("_FRAME_LOCK_".to_string(), ObjectStore::Bool(true));
+    let top_frame = UndoFrame{locked: true, ..UndoFrame::default()};
+    let mut undo_vdq = VecDeque::new();
+    undo_vdq.push_front(top_frame);
+
     State {
+      // Tables
+      value: HashMap::new(),
+      meaning: HashMap::new(),
+      stash : HashMap::new(),
+      stash_active : HashMap::new(),
+      catcode: HashMap::new(),
+      mathcode: HashMap::new(),
+      sfcode: HashMap::new(),
+      lccode: HashMap::new(),
+      uccode: HashMap::new(),
+      delcode: HashMap::new(),
+      // Table bookkeeping
+      undo: undo_vdq,
+      // Stateful runtime - data structures
+      model: Model::default(),
+      prefixes: HashMap::new(),
+      status: HashMap::new(),
+      map: Vec::new(),
+      // Stateful runtime - simple fields
       verbosity: 0,
       status_code: 0,
       unlocked: true,
-      model: Model::default(),
-      map: Vec::new(),
-      catcode: HashMap::new(),
-      mathcode: HashMap::new(),
-      meaning: HashMap::new(),
-      value: HashMap::new(),
-      parameters: HashMap::new(),
-      undo: vec![locked_frame_hash],
       current_token: None,
       noexpand_the: false
     }
   }
 }
-
-lazy_static! {
-  static ref TEX_OR_BIB_EXT_RE : Regex = Regex::new(r"\.(tex|bib)$").unwrap();
-  static ref CODE_TEX_EXT_RE : Regex = Regex::new(r"\.code\.tex$").unwrap();
-}
-
 impl State {
   pub fn new(model: Model, catcodes_opt: Option<Catcodes>) -> Self {
     use token::Catcode::*;
@@ -219,17 +310,243 @@ impl State {
       catcodes.insert('@', LETTER);
     }
 
-    State { catcode: catcodes, model: model, ..State::default() }
+    let mut value_table = HashMap::new();
+    let mut specials_vdq = VecDeque::new();
+    specials_vdq.push_front(ObjectStore::VecChar(vec!['^', '_', '@', '~', '&', '$', '#', '%', '\'']));
+    value_table.insert("SPECIALS".to_string(), specials_vdq);
+    let mut catcodes_typed : Table = HashMap::new();
+    for (k,v) in catcodes {
+      let mut vdq = VecDeque::new();
+      vdq.push_front(ObjectStore::Catcode(v));
+      catcodes_typed.insert(k.to_string(), vdq);
+    }
+
+    State { catcode: catcodes_typed, model: model, value: value_table, ..State::default() }
   }
-  // $$self{value}{SPECIALS} = [['^', '_', '@', '~', '&', '$', '#', '%', "'"]];
-  // if ($options{catcodes} eq 'style') {
-  //   $$self{catcode}{'@'} = [LETTER]; }
-  // }
+
+  pub fn table(&self, name: &TableName) -> &Table {
+      use self::TableName::*;
+      match *name {
+        Meaning => &self.meaning,
+        Value => &self.value,
+        Catcode => &self.catcode,
+        SFCode => &self.sfcode,
+        UCCode => &self.uccode,
+        DelCode => &self.delcode,
+        Stash => &self.stash,
+        StashActive => &self.stash_active
+      }
+    }
+  pub fn table_mut(&mut self, name: &TableName) -> &mut Table {
+    use self::TableName::*;
+    match *name {
+      Meaning => &mut self.meaning,
+      Value => &mut self.value,
+      Catcode => &mut self.catcode,
+      SFCode => &mut self.sfcode,
+      UCCode => &mut self.uccode,
+      DelCode => &mut self.delcode,
+      Stash => &mut self.stash,
+      StashActive => &mut self.stash_active
+    }
+  }
+
+  pub fn assign_internal(&mut self, table_name: TableName, key: &str, value: ObjectStore, scope_opt: Option<Scope>) {
+    let scope = match scope_opt {
+      Some(s) => s,
+      None => if let Some(&true) = self.prefixes.get("global") {
+        Scope::Global
+      } else {
+        Scope::Local
+      }
+    };
+
+    if scope == Scope::Global {
+      // We are going to change the model, where we first count the total number of definitions to pop, and then pop them,
+      // in order to never mutably morrow more than once at a time.
+      let mut undo_count = 0;
+      { // Remove bindings made in all frames down-to & including the next lower locked frame
+        let mut frame_table : &mut AssignmentCount = &mut HashMap::new();
+
+        for frame in self.undo.iter_mut() {
+          let is_locked = frame.locked;
+          frame_table = frame.table_mut(&table_name);
+          if let Some(n) = frame_table.get(key) {
+            undo_count += *n;
+          }
+
+          frame_table.remove(key);
+          if is_locked {
+            break;
+          }
+        }
+        // whatever is left -- if anything -- should be bindings below the locked frame.
+        frame_table.insert(key.to_string(), 1); // Note that there's only one value in the stack, now
+      }
+      { // Undo the bindings, if `key` was bound in this frame
+        let state_table = self.table_mut(&table_name);
+        if let Some(defs) = state_table.get_mut(key) {
+          for _ in 1..undo_count {
+            defs.pop_front();
+          }
+        }
+
+        let table_entry = state_table.entry(key.to_string()).or_insert(VecDeque::new());
+        table_entry.push_front(value);
+      }
+    } else if scope == Scope::Local {
+      // Again, split the logic as 1) bookkeeping in undo, then 2) operations in state tables
+      let mut is_replace = false;
+      { // 1. Undo mutable logic
+        if let Some(current_frame) = self.undo.front_mut() {
+          let current_frame_table = current_frame.table_mut(&table_name);
+
+          // If the value was previously assigned in this frame
+          if current_frame_table.get(key).is_some() {
+            is_replace = true;
+          } else {
+            // Otherwise, push new value & set 1 to be undone
+            current_frame_table.insert(key.to_string(), 1);
+            //  And push new binding.
+            is_replace = false;
+          }
+        }
+      }
+      { // 2. State table mutable logic
+        let state_table = self.table_mut(&table_name);
+        let defs = state_table.entry(key.to_string()).or_insert(VecDeque::new());
+        if is_replace {
+          // Replace the value
+          defs.pop_front();
+        }
+        defs.push_front(value)
+      }
+    }
+    // TODO: stash cases
+  }
+
+  //======================================================================
+
+  pub fn lookup_value<'lv>(&'lv self, key: &'lv str) -> Option<&ObjectStore> {
+    match self.value.get(key) {
+      None => None,
+      Some(vvec) => vvec.front()
+    }
+  }
+
+  pub fn remove_value<'lv>(&'lv mut self, key: &'lv str) -> Option<ObjectStore> {
+    match self.value.get_mut(key) {
+      None => None,
+      Some(vvec) => vvec.pop_front()
+    }
+  }
+
+  pub fn assign_value<'av>(&'av mut self, key: &'av str, value: ObjectStore, scope: Option<Scope>) {
+    self.assign_internal(TableName::Value, key, value, scope);
+  }
+
+  // manage a (global) list of values
+  pub fn push_value(&mut self, key: &str, value: ObjectStore) {
+    if self.value.get(key).is_none() {
+      self.assign_internal(TableName::Value, key, ObjectStore::VecOS(Vec::new()), Some(Scope::Global));
+    }
+    self.value.get_mut(key).unwrap().push_back(value);
+  }
+
+  pub fn pop_value(&mut self, key: &str) -> Option<ObjectStore> {
+    if self.value.get(key).is_none() {
+      self.assign_internal(TableName::Value, key, ObjectStore::VecOS(Vec::new()), Some(Scope::Global));
+    }
+    self.value.get_mut(key).unwrap().pop_back()
+  }
+
+  // pub fn unshift_value(&mut self, ) {
+  //   my ($self, $key, @values) = @_;
+  //   my $vtable = $$self{value};
+  //   assign_internal($self, 'value', $key, [], 'global') unless $$vtable{$key}[0];
+  //   unshift(@{ $$vtable{$key}[0] }, @values);
+  //   return; }
+
+  // pub fn shift_value(&mut self) {
+  //   my ($self, $key) = @_;
+  //   my $vtable = $$self{value};
+  //   assign_internal($self, 'value', $key, [], 'global') unless $$vtable{$key}[0];
+  //   return shift(@{ $$vtable{$key}[0] }); }
+
+  /// manage a (global) hash of values
+  pub fn lookup_mapping(&self, map: &str, key: &str) -> Option<&ObjectStore> {
+    match self.value.get(map) {
+      None => None,
+      Some(map_vec) => match map_vec.front() {
+        Some(&ObjectStore::HashOS(ref h)) => h.get(key),
+        _ => None
+      }
+    }
+  }
+
+  pub fn assign_mapping(&mut self, map: &str, key: &str, value: Option<ObjectStore>) {
+    if self.value.get(map).is_none() || self.value.get(map).unwrap().is_empty() {
+      self.assign_internal(TableName::Value, map, ObjectStore::HashOS(HashMap::new()), Some(Scope::Global));
+    }
+    let map_store = self.value.get_mut(map).unwrap();
+    let mut stub_hash = HashMap::new(); // TODO: What is the right abstraction here? this is hacky
+    let mapping = match map_store.front_mut().unwrap() {
+      &mut ObjectStore::HashOS(ref mut mapping) => mapping,
+      _ => &mut stub_hash
+    };
+
+    match value {
+      None => mapping.remove(key),
+      Some(v) => mapping.insert(key.to_string(), v)
+    };
+  }
+
+  // sub lookupMappingKeys {
+  //   my ($self, $map) = @_;
+  //   my $vtable  = $$self{value};
+  //   my $mapping = $$vtable{$map}[0];
+  //   return ($mapping ? sort keys %$mapping : ()); }
+
+  // sub lookupStackedValues {
+  //   my ($self, $key) = @_;
+  //   my $stack = $$self{value}{$key};
+  //   return ($stack ? @$stack : ()); }
+
+
+  //======================================================================
+  /// Was `name` bound?  If  `frame` is given, check only whether it is bound in
+  /// that frame (0 is the topmost).
+  pub fn is_value_bound(&self, key: &str, frame_opt: Option<usize>) -> bool {
+    match frame_opt {
+      Some(frame) => self.undo.get(frame).as_ref().unwrap().table(&TableName::Value).get(key).is_some(),
+      None => self.value.get(key).unwrap_or(&VecDeque::new()).front().is_some()
+    }
+  }
+
+  pub fn value_in_frame(&self, key: &str, frame_opt : Option<usize>) -> Option<&ObjectStore> {
+    let frame = match frame_opt {
+      None => 0,
+      Some(n) => n
+    };
+    let mut p = 0;
+    for f in 0..frame {
+      let val_opt = self.undo.get(f).as_ref().unwrap().table(&TableName::Value).get(key);
+      let value = match val_opt {
+        Some(v) => *v,
+        _ => 0
+      };
+      p += value;
+    }
+    self.value.get(key).unwrap().get(p)
+  }
 
   pub fn lookup_catcode<'lc>(&'lc mut self, c: &'lc char) -> Option<Catcode> {
-    match self.catcode.get(c) {
+    match self.catcode.get(&c.to_string()) {
       None => None,
-      Some(&c) => Some(c.clone()),
+      Some(ref cvec) => match cvec.front() {
+        Some(&ObjectStore::Catcode(ref cc)) => Some(cc.clone()),
+        _ => None
+      }
     }
   }
 
@@ -242,13 +559,6 @@ impl State {
     }
   }
 
-  pub fn lookup_value<'lv>(&'lv self, key: &'lv str) -> Option<&ObjectStore> {
-    self.value.get(key)
-  }
-
-  pub fn remove_value<'lv>(&'lv mut self, key: &'lv str) -> Option<ObjectStore> {
-    self.value.remove(key)
-  }
 
   /// Get the `Meaning' of a token.  For active control sequence's
   /// this may give the definition object (if defined) or another token (if \let) or undef
@@ -257,15 +567,20 @@ impl State {
     if token.code.is_active_or_cs() && !token.text.is_empty() {
 
     } else {
-      self.meaning.insert(token.text.clone(), ObjectStore::Token(token.clone()));
+      let mut token_defs = VecDeque::new();
+      token_defs.push_front(ObjectStore::Token(token.clone()));
+      self.meaning.insert(token.text.clone(), token_defs);
     }
-    self.meaning.get(&token.text)
+    match self.meaning.get(&token.text) {
+      None => None,
+      Some(m) => m.front()
+    }
   }
 
   /// $meaning should be a definition (for defining active control sequences)
   /// or another token, for \let
   pub fn assign_meaning<'t, 'm>(&'m mut self, token: &'t Token, meaning: ObjectStore, scope: Option<Scope>) {
-    self.assign_internal(Table::Meaning, &token.get_cs_name(), meaning, scope);
+    self.assign_internal(TableName::Meaning, &token.get_cs_name(), meaning, scope);
   }
 
   /// used for expansion & various queries
@@ -286,32 +601,19 @@ impl State {
       false => {
         match self.meaning.get(&lookupname) {
           None => None,
-          Some(entry) => Some(entry.clone()),
+          Some(entry) => Some(entry.front().unwrap().clone()),
         }
       }
     }
   }
   pub fn lookup_mathcode<'mc>(&'mc mut self, key: &char) -> Option<Catcode> {
-    match self.mathcode.get(key) {
+    match self.mathcode.get(&key.to_string()) {
       None => None,
-      Some(&c) => Some(c.clone()),
+      Some(ref c) => match c.front() {
+        Some(& ObjectStore::Catcode(ref cc)) => Some(cc.clone()),
+        _ => None
+      }
     }
-  }
-
-  pub fn lookup_mapping(&self, _map: &str, key: &str) -> Option<&Parameter> {
-    // TODO:
-    // let vtable = self.value;
-    // if let Some(&ObjectStore::VecDigested(ref mapping)) = vtable.get(map) {
-    //   if mapping.is_empty() {
-    //     None
-    //   } else {
-    //     let first_mapping = mapping[0];
-    //     first_mapping.get(key)
-    //   }
-    // } else {
-    //   None
-    // }
-    self.parameters.get(key)
   }
 
   pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<ObjectStore> {
@@ -340,38 +642,18 @@ impl State {
       // && ($lookupname = $LaTeXML::Token::PRIMITIVE_NAME[$$defn[1]])
       // && ($entry      = $$self{meaning}{$lookupname})) {
       // $defn = $$entry[0]; }
-      Some(defn.clone())
+      Some(defn.front().unwrap().clone())
     } else {
       // println_stderr!("-- No definition for: {:?}", token);
       Some(ObjectStore::Token(token.clone()))
     }
   }
-  pub fn assign_value<'av>(&'av mut self, key: &'av str, value: ObjectStore, scope: Option<Scope>) {
-    self.assign_internal(Table::Value, key, value, scope);
-    return;
-  }
-  pub fn assign_catcode<'ac>(&'ac mut self, key:char, value: Catcode, scope: Option<Scope>) {
-    self.assign_internal(Table::Catcode, &key.to_string(), ObjectStore::Catcode(value), scope);
-  }
 
+  pub fn assign_catcode<'ac>(&'ac mut self, key:char, value: Catcode, scope: Option<Scope>) {
+    self.assign_internal(TableName::Catcode, &key.to_string(), ObjectStore::Catcode(value), scope);
+  }
 
   pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, _key: &'def Token, _definition: Box<T>) {}
-
-  /// TODO: Handle scopes and undo table
-  pub fn assign_internal<'ai>(&'ai mut self, table: Table, key: &'ai str, definition: ObjectStore, _scope: Option<Scope>) {
-    let mut fallback_store = HashMap::new();
-    match table {
-      Table::Meaning => {self.meaning.insert(key.to_string(), definition);},
-      Table::Value => {self.value.insert(key.to_string(), definition);},
-      Table::Catcode => if let ObjectStore::Catcode(cc) = definition {
-        self.catcode.insert(key.chars().next().unwrap(), cc);
-      },
-      _ => {fallback_store.insert(key.to_string(), definition);},
-    };
-  }
-  pub fn assign_mapping<'mc>(&'mc mut self, _map: &'mc str, key: &'mc str, value: Parameter) {
-    self.parameters.insert(key.to_string(), value);
-  }
 
   pub fn clear_prefixes<'cp>(&'cp mut self) {}
 
@@ -412,7 +694,7 @@ impl State {
         _ => {}
       };
     }
-    self.assign_internal(Table::Meaning, &cs, definition, scope);
+    self.assign_internal(TableName::Meaning, &cs, definition, scope);
     return;
   }
 
@@ -428,18 +710,18 @@ impl State {
   //======================================================================
 
   pub fn push_frame(&mut self) {
-    // Easy: just push a new undo hash.
-    self.undo.push(HashMap::new());
+    // Easy: just push a new undo frame.
+    self.undo.push_front(UndoFrame::default());
   }
 
   pub fn pop_frame(&mut self) {
-    if self.undo.last().as_ref().unwrap().get("_FRAME_LOCK_").is_some() {
+    if self.undo.front().as_ref().unwrap().locked {
       panic!("Fatal:unexpected:<endgroup> attempt to pop last locked stack frame");
       // Fatal('unexpected', '<endgroup>', $self->getStomach,
         // "Attempt to pop last locked stack frame"); }
     } else {
       // TODO:
-      let _undo = self.undo.pop();
+      let _undo = self.undo.pop_front();
       // for (table, undotable) in undo.into_iter() {
       //   for (name, val) in undotable.into_iter() {
       //     // Typically only 1 value to shift off the table, unless scopes have been activated.

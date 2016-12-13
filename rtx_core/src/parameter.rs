@@ -1,3 +1,4 @@
+use fmt;
 use std::sync::Arc;
 use regex::Regex;
 use token::Token;
@@ -7,7 +8,7 @@ use stomach::Stomach;
 use definition::{Definition,BeforeDigestClosure,DigestionClosure};
 use definition::constructor::{Constructor};
 use whatsit::Whatsit;
-use state::State;
+use state::{State, ObjectStore};
 use mouth::Mouth;
 use Digested;
 
@@ -47,6 +48,11 @@ impl Default for Parameter {
     }
   }
 }
+impl fmt::Debug for Parameter {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "Parameter(name: {:?})", self.name)
+  }
+}
 
 lazy_static!{
   static ref OPTIONAL_REGEX : Regex = Regex::new(r"^Optional(.+)$").unwrap();
@@ -61,16 +67,16 @@ impl Parameter {
     let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
     let mut descriptor : Option<Parameter>;
     match looked_up_mapping {
-      Some(ref d_lookup) => {
+      Some(& ObjectStore::Parameter(ref d_lookup)) => {
         descriptor = Some((*d_lookup).clone());
       },
-      None => {
+      _ => {
         if OPTIONAL_REGEX.is_match(&self.name) {
           let captures = OPTIONAL_REGEX.captures(&self.name).unwrap();
           let basetype = captures.at(1).unwrap();
           descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-            Some(d_lookup) => Some(d_lookup.clone()),
-            None => {
+            Some(& ObjectStore::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
+            _ => {
               match Parameter::check_reader_function("Read".to_string() + &self.name) {
                 Some(reader) => Some(Parameter{reader: reader, ..Parameter::default()}),
                 None => match Parameter::check_reader_function("Read".to_string() + basetype) {
@@ -86,8 +92,8 @@ impl Parameter {
           let basetype = captures.at(1).unwrap();
           println_stderr!("param basetype: {:?}", basetype);
           descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-            Some(d_lookup) => Some(d_lookup.clone()),
-            None => {
+            Some(& ObjectStore::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
+            _ => {
               match Parameter::check_reader_function(self.name.clone()) {
                 Some(reader) => Some(Parameter{reader: reader, ..Parameter::default()}),
                 None => match Parameter::check_reader_function("Read".to_string() + basetype) {
@@ -208,7 +214,7 @@ impl Parameter {
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Parameters {
   pub params: Vec<Parameter>,
 }
