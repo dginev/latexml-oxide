@@ -29,10 +29,17 @@ pub enum TableName {
   Value,
   Catcode,
   SFCode,
+  LCCode,
   UCCode,
   DelCode,
   Stash,
   StashActive,
+}
+impl TableName {
+  pub fn variants() -> Vec<TableName> {
+    use self::TableName::*;
+    vec![Meaning, Value, Catcode, SFCode, LCCode, UCCode, DelCode, Stash, StashActive]
+  }
 }
 
 #[derive(Clone)]
@@ -134,6 +141,7 @@ impl UndoFrame {
       Value => &self.value,
       Catcode => &self.catcode,
       SFCode => &self.sfcode,
+      LCCode => &self.lccode,
       UCCode => &self.uccode,
       DelCode => &self.delcode,
       Stash => &self.stash,
@@ -147,6 +155,7 @@ impl UndoFrame {
       Value => &mut self.value,
       Catcode => &mut self.catcode,
       SFCode => &mut self.sfcode,
+      LCCode => &mut self.lccode,
       UCCode => &mut self.uccode,
       DelCode => &mut self.delcode,
       Stash => &mut self.stash,
@@ -331,6 +340,7 @@ impl State {
         Value => &self.value,
         Catcode => &self.catcode,
         SFCode => &self.sfcode,
+        LCCode => &self.lccode,
         UCCode => &self.uccode,
         DelCode => &self.delcode,
         Stash => &self.stash,
@@ -344,6 +354,7 @@ impl State {
       Value => &mut self.value,
       Catcode => &mut self.catcode,
       SFCode => &mut self.sfcode,
+      LCCode => &mut self.lccode,
       UCCode => &mut self.uccode,
       DelCode => &mut self.delcode,
       Stash => &mut self.stash,
@@ -720,23 +731,17 @@ impl State {
       // Fatal('unexpected', '<endgroup>', $self->getStomach,
         // "Attempt to pop last locked stack frame"); }
     } else {
-      // TODO:
-      let _undo = self.undo.pop_front();
-      // for (table, undotable) in undo.into_iter() {
-      //   for (name, val) in undotable.into_iter() {
-      //     // Typically only 1 value to shift off the table, unless scopes have been activated.
-      //     let mut pop_count = val;
-      //     while pop_count > 0 {
-      //       pop_count -= 1;
-      //       match table {
-      //         "value" =>
-      //         "meaning" =>
-      //         "catcode" =>
-      //       }
-      //     }
-      //     map { shift(@{ $$self{$table}{$name} }) } 1 .. $$undotable{$name};
-        // }
-      // }
+      let popped_frame = self.undo.pop_front().unwrap();
+      for table_name in TableName::variants().iter() {
+        let undo_table = popped_frame.table(table_name);
+        for (key, undo_count) in undo_table.iter() {
+          // Typically only 1 value to shift off the table, unless scopes have been activated.
+          let name_table = self.table_mut(table_name).get_mut(key).unwrap();
+          for _ in 1 .. *undo_count {
+            name_table.pop_front();
+          }
+        }
+      }
     }
   }
 
