@@ -1,3 +1,7 @@
+use std::fs::File;
+use std::io::BufReader;
+use std::io::BufRead;
+
 use regex::Regex;
 use std::collections::HashMap;
 use libxml::tree::{Node};
@@ -6,6 +10,8 @@ use common::relaxng::Relaxng;
 use document::Document;
 use common::xml::XPath;
 use util::pathname;
+use common::error::*;
+
 // use common::font::*;
 
 const LTX_NAMESPACE: &'static str = "http://dlmf.nist.gov/LaTeXML";
@@ -15,6 +21,9 @@ lazy_static! {
   static ref PREFIXED_LOCALNAME_RE : Regex = Regex::new(r"^([^:]+):(.+)$").unwrap();
   static ref LEAD_DEFAULT_RE : Regex = Regex::new(r"^DEFAULT#").unwrap();
   static ref CAPTURE_TAG_RE : Regex = Regex::new(r"(.*?:)?_Capture_$").unwrap();
+  static ref TAG_MODEL_LINE : Regex = Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap();
+  static ref CLASS_MODEL_LINE : Regex = Regex::new(r"^([^:=]+):=(.*?)$").unwrap();
+  static ref NAMESPACE_MODEL_LINE : Regex = Regex::new(r"^([^=]+)=(.*?)$").unwrap();
 }
 
 pub struct Model {
@@ -126,7 +135,7 @@ impl Model {
       let pathname_opt = pathname::find(&name, pathname::FindOptions{
         paths: search_paths,
         types: Some(vec!["model".to_string()]),
-        installation_subdir: Some("resources/".to_string()+&schema_type)
+        installation_subdir: Some(format!("resources/{}", schema_type))
       });
 
       match pathname_opt {
@@ -445,8 +454,48 @@ impl Model {
     true // TODO: Just a mock
   }
 
+  /// TODO: This is another component that would fit perfectly as a compiler plugin,
+  ///       which generates a rust objects from all available schemas and has them directly available at runtime
+  ///       For now, simply reimplementing the runtime loading of LaTeXML.model as-is from Model.pm
   pub fn load_compiled_schema(&mut self, path: &str) {
-    println_stderr!("-- loading compiled schema from {:?}", path);
+    note_begin(&(format!("Loading compiled schema {}", path)));
+    let compiled_fh = File::open(path).unwrap();
+    let compiled_reader = BufReader::new(&compiled_fh);
+    for line_result in compiled_reader.lines() {
+      if let Ok(line) = line_result {
+        if let Some(caps) = TAG_MODEL_LINE.captures(&line) {
+          let tag = caps.at(1).unwrap();
+          let attr = caps.at(2).unwrap();
+          let children = caps.at(3).unwrap();
+          self.add_tag_attribute(tag, attr.split(",").collect());
+          self.add_tag_content(tag, children.split(",").collect());
+
+        } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
+          let classname = caps.at(1).unwrap();
+          let elements = caps.at(2).unwrap();
+          self.set_schema_class(classname, elements.split(",").collect());
+
+        } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
+          let prefix = caps.at(1).unwrap();
+          let namespace = caps.at(2).unwrap();
+          self.register_document_namespace(prefix, Some(namespace.to_owned()));
+        } else {
+          panic!("Fatal:internal:{:?} Compiled model '{:?}' is malformatted at \"{:?}\"", path, path, line);
+        }
+      }
+    }
+
+    note_end(&(format!("Loading compiled schema {}", path)));
+    return;
+  }
+
+  pub fn add_tag_attribute(&mut self, _tag: &str, _attributes: Vec<&str>) {
+
+  }
+  pub fn add_tag_content(&mut self, _tag: &str, _children: Vec<&str>) {
+
+  }
+  pub fn set_schema_class(&mut self, _classname: &str, _elements: Vec<&str>) {
 
   }
 }
