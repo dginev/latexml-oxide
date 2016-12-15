@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use document::Document;
 
-
 pub struct Relaxng {
   pub name: String,
   pub modules: Vec<String>,
@@ -28,5 +27,9 @@ impl Relaxng {
     let mut attributes = HashMap::new();
     attributes.insert("RelaxNGSchema".to_string(), self.name.clone());
     document.insert_pi("latexml", Some(attributes));
+  }
+
+  pub fn load_schema(&self) {
+
   }
 }

@@ -299,7 +299,10 @@ fn translate_string(mut text : &mut String) -> quote::Tokens {
     } else if v_str.ends_with(". to_string ( ) ") {
       quote!(#v)
     } else {
-      quote!(#v.as_ref().unwrap().to_string())
+      quote!(match #v {
+        Some(ref val) => val.to_string(),
+        None => String::new()
+      })
     }
     }).collect::<Vec<_>>();
   quote!(#(token_values)+*)

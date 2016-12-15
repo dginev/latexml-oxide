@@ -770,23 +770,38 @@ macro_rules! DefEnvironmentI (
       }});
   $state.install_definition(ObjectStore::Constructor(begin_name_constructor), $options.scope);
 
-  let end_envname_constructor = Arc::new(Constructor {
-    cs: T_CS!("\\end{".to_string()+&name+"}"),
-    replacement: None,
-    paramlist: None,
-    // beforeDigest => flatten($options{beforeDigestEnd}),
-    // afterDigest  => flatten($options{afterDigest},
-    //   sub { let env = LookupValue('current_environment');
+
+  let mut after_digest_with_egroup = $options.after_digest;
+  let unexpected_end_closure = Arc::new(|_stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+    let env = LookupValue!("current_environment", state);
     //     Error('unexpected', "\\end{$name}", $_[0],
     //       "Can't close environment $name",
     //       "Current are "
     //         . join(', ', $STATE->lookupStackedValues('current_environment')))
     //       unless $env && $name eq $env;
     //     return; },
-    //   ($mode ? (sub { $_[0]->endMode($mode); })
-    //     : (sub { $_[0]->egroup; }))),
-    // ), $options{scope});
-    options: ConstructorOptions::default()
+    Vec::new()
+  });
+  let egroup_closure = Arc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+    if mode.is_some() {
+      // TODO:
+      // stomach.end_mode(mode.unwrap(), state);
+    } else {
+      stomach.egroup(state);
+    }
+    Vec::new()
+  });
+  after_digest_with_egroup.push(unexpected_end_closure);
+  after_digest_with_egroup.push(egroup_closure);
+  let end_envname_constructor = Arc::new(Constructor {
+    cs: T_CS!("\\end{".to_string()+&name+"}"),
+    replacement: None,
+    paramlist: None,
+    options: ConstructorOptions {
+      before_digest: $options.before_digest_end,
+      after_digest: after_digest_with_egroup,
+      ..ConstructorOptions::default()
+    }
   });
   $state.install_definition(ObjectStore::Constructor(end_envname_constructor), $options.scope);
 

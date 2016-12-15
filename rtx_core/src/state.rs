@@ -28,17 +28,18 @@ pub enum TableName {
   Meaning,
   Value,
   Catcode,
-  SFCode,
-  LCCode,
-  UCCode,
-  DelCode,
+  Mathcode,
+  Sfcode,
+  Lccode,
+  Uccode,
+  Delcode,
   Stash,
   StashActive,
 }
 impl TableName {
   pub fn variants() -> Vec<TableName> {
     use self::TableName::*;
-    vec![Meaning, Value, Catcode, SFCode, LCCode, UCCode, DelCode, Stash, StashActive]
+    vec![Meaning, Value, Catcode, Sfcode, Lccode, Uccode, Delcode, Stash, StashActive]
   }
 }
 
@@ -140,10 +141,11 @@ impl UndoFrame {
       Meaning => &self.meaning,
       Value => &self.value,
       Catcode => &self.catcode,
-      SFCode => &self.sfcode,
-      LCCode => &self.lccode,
-      UCCode => &self.uccode,
-      DelCode => &self.delcode,
+      Mathcode => &self.mathcode,
+      Sfcode => &self.sfcode,
+      Lccode => &self.lccode,
+      Uccode => &self.uccode,
+      Delcode => &self.delcode,
       Stash => &self.stash,
       StashActive => &self.stash_active
     }
@@ -154,10 +156,11 @@ impl UndoFrame {
       Meaning => &mut self.meaning,
       Value => &mut self.value,
       Catcode => &mut self.catcode,
-      SFCode => &mut self.sfcode,
-      LCCode => &mut self.lccode,
-      UCCode => &mut self.uccode,
-      DelCode => &mut self.delcode,
+      Mathcode => &mut self.mathcode,
+      Sfcode => &mut self.sfcode,
+      Lccode => &mut self.lccode,
+      Uccode => &mut self.uccode,
+      Delcode => &mut self.delcode,
       Stash => &mut self.stash,
       StashActive => &mut self.stash_active
     }
@@ -339,10 +342,11 @@ impl State {
         Meaning => &self.meaning,
         Value => &self.value,
         Catcode => &self.catcode,
-        SFCode => &self.sfcode,
-        LCCode => &self.lccode,
-        UCCode => &self.uccode,
-        DelCode => &self.delcode,
+        Mathcode => &self.mathcode,
+        Sfcode => &self.sfcode,
+        Lccode => &self.lccode,
+        Uccode => &self.uccode,
+        Delcode => &self.delcode,
         Stash => &self.stash,
         StashActive => &self.stash_active
       }
@@ -353,10 +357,11 @@ impl State {
       Meaning => &mut self.meaning,
       Value => &mut self.value,
       Catcode => &mut self.catcode,
-      SFCode => &mut self.sfcode,
-      LCCode => &mut self.lccode,
-      UCCode => &mut self.uccode,
-      DelCode => &mut self.delcode,
+      Mathcode => &mut self.mathcode,
+      Sfcode => &mut self.sfcode,
+      Lccode => &mut self.lccode,
+      Uccode => &mut self.uccode,
+      Delcode => &mut self.delcode,
       Stash => &mut self.stash,
       StashActive => &mut self.stash_active
     }
@@ -471,6 +476,15 @@ impl State {
     self.value.get_mut(key).unwrap().pop_back()
   }
 
+  /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
+  pub fn lookup_bool(&self, key: &str) -> bool {
+    match self.lookup_value(key) {
+      Some(& ObjectStore::Bool(ref v)) => *v,
+      Some(_) => true,
+      None => false
+    }
+  }
+
   // pub fn unshift_value(&mut self, ) {
   //   my ($self, $key, @values) = @_;
   //   my $vtable = $$self{value};
@@ -551,6 +565,8 @@ impl State {
     self.value.get(key).unwrap().get(p)
   }
 
+  //======================================================================
+  /// Lookup & assign a character's Catcode
   pub fn lookup_catcode<'lc>(&'lc mut self, c: &'lc char) -> Option<Catcode> {
     match self.catcode.get(&c.to_string()) {
       None => None,
@@ -561,15 +577,23 @@ impl State {
     }
   }
 
-  /// A bit of Perl "truth as existence" semantics mixed in with proper boolean lookup
-  pub fn lookup_bool(&self, key: &str) -> bool {
-    match self.lookup_value(key) {
-      Some(& ObjectStore::Bool(ref v)) => *v,
-      Some(_) => true,
-      None => false
+  pub fn assign_catcode(&mut self, key:char, value: Catcode, scope: Option<Scope>) {
+    self.assign_internal(TableName::Catcode, &key.to_string(), ObjectStore::Catcode(value), scope);
+  }
+
+  pub fn lookup_mathcode(&mut self, key: &char) -> Option<Catcode> {
+    match self.mathcode.get(&key.to_string()) {
+      Some(ref c) => match c.front() {
+        Some(& ObjectStore::Catcode(ref cc)) => Some(cc.clone()),
+        _ => None
+      },
+      None => None,
     }
   }
 
+  pub fn assign_mathcode(&mut self, key:char, value: Catcode, scope: Option<Scope>) {
+    self.assign_internal(TableName::Mathcode, &key.to_string(), ObjectStore::Catcode(value), scope);
+  }
 
   /// Get the `Meaning' of a token.  For active control sequence's
   /// this may give the definition object (if defined) or another token (if \let) or undef
@@ -583,8 +607,8 @@ impl State {
       self.meaning.insert(token.text.clone(), token_defs);
     }
     match self.meaning.get(&token.text) {
+      Some(m) => m.front(),
       None => None,
-      Some(m) => m.front()
     }
   }
 
@@ -611,18 +635,12 @@ impl State {
       true => None,
       false => {
         match self.meaning.get(&lookupname) {
-          None => None,
-          Some(entry) => Some(entry.front().unwrap().clone()),
+          Some(defs) => match defs.front() {
+            Some(entry) => Some(entry.clone()),
+            None => None,
+          },
+          _ => None,
         }
-      }
-    }
-  }
-  pub fn lookup_mathcode<'mc>(&'mc mut self, key: &char) -> Option<Catcode> {
-    match self.mathcode.get(&key.to_string()) {
-      None => None,
-      Some(ref c) => match c.front() {
-        Some(& ObjectStore::Catcode(ref cc)) => Some(cc.clone()),
-        _ => None
       }
     }
   }
@@ -658,10 +676,6 @@ impl State {
       // println_stderr!("-- No definition for: {:?}", token);
       Some(ObjectStore::Token(token.clone()))
     }
-  }
-
-  pub fn assign_catcode<'ac>(&'ac mut self, key:char, value: Catcode, scope: Option<Scope>) {
-    self.assign_internal(TableName::Catcode, &key.to_string(), ObjectStore::Catcode(value), scope);
   }
 
   pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, _key: &'def Token, _definition: Box<T>) {}
@@ -776,5 +790,4 @@ impl State {
   pub fn end_semiverbatim(&mut self) {
     self.pop_frame();
   }
-
 }

@@ -5,6 +5,7 @@ use libxml::tree::Document as XmlDoc;
 use common::relaxng::Relaxng;
 use document::Document;
 use common::xml::XPath;
+use util::pathname;
 // use common::font::*;
 
 const LTX_NAMESPACE: &'static str = "http://dlmf.nist.gov/LaTeXML";
@@ -13,6 +14,7 @@ lazy_static! {
   // static ref OPTIONAL_RE : Regex = Regex::new(r"^Optional(.+)$").unwrap();
   static ref PREFIXED_LOCALNAME_RE : Regex = Regex::new(r"^([^:]+):(.+)$").unwrap();
   static ref LEAD_DEFAULT_RE : Regex = Regex::new(r"^DEFAULT#").unwrap();
+  static ref CAPTURE_TAG_RE : Regex = Regex::new(r"(.*?:)?_Capture_$").unwrap();
 }
 
 pub struct Model {
@@ -25,9 +27,10 @@ pub struct Model {
   // doctype_namespaces: HashMap<String, String>,
   // namespace_errors: usize,
   permissive: bool,
-  // no_compiled: bool,
+  no_compiled: bool,
   debug_mode: bool,
   namespace_errors: u8,
+  tagprop: HashMap<String, HashMap<String, bool>>
 }
 impl Default for Model {
   fn default() -> Self {
@@ -41,8 +44,9 @@ impl Default for Model {
       // doctype_namespaces: HashMap::new(),
       namespace_errors: 0,
       permissive: true,
-      // no_compiled: true,
+      no_compiled: false,
       debug_mode: false,
+      tagprop: HashMap::new()
     }
   }
 }
@@ -60,12 +64,10 @@ impl Model {
 
   pub fn set_doc_type(&mut self, roottag: String, publicid: String, systemid: String) {
     self.schema_data = Some(vec!["DTD".to_string(), roottag, publicid, systemid]);
-    return;
   }
 
   pub fn set_relaxng_schema(&mut self, schema: String) {
     self.schema_data = Some(vec!["RelaxNG".to_string(), schema]);
-    return;
   }
   pub fn add_schema_declaration(&self, document: &mut Document) {
     if let &Some(ref schema) = &self.schema {
@@ -73,16 +75,18 @@ impl Model {
     }
   }
 
-  pub fn load_schema(&mut self) -> &Option<Relaxng> {
+  pub fn load_schema(&mut self, search_paths: Option<Vec<String>>) -> &Option<Relaxng> {
     // Only load once
-    // if self.schema.is_some() {
-    //   return &self.schema;
-    // }
-    let name;
-    // if self.schema_data.is_none() {
+    if self.schema.is_some() {
+      return &self.schema;
+    }
+    let mut name = String::new();
+    if self.schema_data.is_none() {
+      // TODO: Return this code path to normal once we properly load schemas
+      println_stderr!("Warn:expected:<model> TODO");
       // Warn('expected', '<model>', undef, "No Schema Model has been declared; assuming LaTeXML");
       // // article ??? or what ? undef gives problems!
-      // TODO: Return this code path to normal once we properly load schemas
+
       self.register_document_namespace("ltx", Some(LTX_NAMESPACE.to_string()));
       self.set_relaxng_schema("LaTeXML".to_string());
       self.register_namespace("ltx", Some(LTX_NAMESPACE.to_string()));
@@ -95,13 +99,15 @@ impl Model {
       self.register_namespace("xhtml",
                               Some("http://www.w3.org/1999/xhtml".to_string()));
       self.permissive = true;
-    // } // Actually, they could have declared all sorts of Tags....
+    } // Actually, they could have declared all sorts of Tags....
+    let mut schema_type = String::new();
     match self.schema_data {
-      None => {}
+      None => {},
       Some(ref data) => {
-        let schema_type = &data[0];
+        schema_type = data[0].clone();
         match schema_type.as_ref() {
           "DTD" => {
+            println_stderr!("Error:TODO:DTD not yet supported");
             // my ($roottag, $publicid, $systemid) = @data;
             // require LaTeXML::Common::Model::DTD;
             // $name = $systemid;
@@ -109,19 +115,26 @@ impl Model {
           }
           "RelaxNG" => {
             name = data[1].to_string();
-            self.schema = Some(Relaxng{ name: name, ..Relaxng::default()});
+            self.schema = Some(Relaxng{ name: name.clone(), ..Relaxng::default()});
           }
           _ => {}
         };
       }
     };
 
-    // if (let compiled = ! self.no_compiled)
-    //   && pathname_find($name, paths => $STATE->lookupValue('SEARCHPATHS'),
-    //   types => ['model'], installation_subdir => "resources/$type")) {
-    // $self->loadCompiledSchema($compiled); }
-    // else {
-    //   $$self{schema}->loadSchema; }
+    if !self.no_compiled {
+      let pathname_opt = pathname::find(&name, pathname::FindOptions{
+        paths: search_paths,
+        types: Some(vec!["model".to_string()]),
+        installation_subdir: Some("resources/".to_string()+&schema_type)
+      });
+
+      match pathname_opt {
+        Some(compiled_path) =>self.load_compiled_schema(&compiled_path),
+        None => self.schema.as_mut().unwrap().load_schema()
+      };
+    }
+
     if self.debug_mode {
       self.describe_model()
     }
@@ -392,5 +405,48 @@ impl Model {
       },
       None => (None, codetag.to_string())
     }
+  }
+
+
+  //**********************************************************************
+  // Document Structure Queries
+  //**********************************************************************
+  // NOTE: These are public, but perhaps should be passed
+  // to submodel, in case it can evolve to more precision?
+  // However, it would need more context to do that.
+
+  /// Can an element with (qualified name) $tag contain a $childtag element?
+  pub fn can_contain(&mut self, tag: &str, child: &str) -> bool {
+    // Handle obvious cases explicitly.
+    match tag {
+      "#PCDATA" => return false,
+      "#Comment" => return false,
+      "_WildCard_" => return true,
+      _ => {}
+    };
+    if CAPTURE_TAG_RE.is_match(tag) || CAPTURE_TAG_RE.is_match(child) { // with or without namespace prefix
+      return true;
+    }
+
+    match child {
+      "_WildCard_" => return true,
+      "#Comment" => return true,
+      "#ProcessingInstruction" => return true,
+      "#DTD" => return true,
+      _ => {}
+    };
+    if self.permissive && tag == "#Document" && child != "#PCDATA" {
+      return true; // No DTD? Punt!
+    }
+
+    // Else query tag properties.
+    // let model = self.tagprop.get(tag).unwrap().get("model");
+    // return model.get("ANY").is_some() || model.get(child).is_some();
+    true // TODO: Just a mock
+  }
+
+  pub fn load_compiled_schema(&mut self, path: &str) {
+    println_stderr!("-- loading compiled schema from {:?}", path);
+
   }
 }

@@ -8,6 +8,8 @@ use stomach::Stomach;
 use parameter::Parameters;
 use common::object::Object;
 use definition::{Definition, ExpansionClosure, BeforeDigestClosure, DigestionClosure};
+use whatsit::Whatsit;
+use document::Document;
 
 #[derive(Clone)]
 pub struct Expandable {
@@ -87,6 +89,9 @@ impl Definition for Expandable {
     None
   }
   fn capture_body(&self) -> bool {false}
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) {
+    panic!("do_absorbtion on Primitive should never be called!");
+  }
 }
 
 impl Expandable {

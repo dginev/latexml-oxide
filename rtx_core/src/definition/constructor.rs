@@ -16,7 +16,7 @@ use document::Document;
 pub struct ConstructorOptions {
   pub nargs: Option<usize>,
   pub bounded: bool,
-  pub mode: String, // TODO
+  pub mode: Option<String>,
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
   pub before_construct: Vec<ConstructionClosure>,
@@ -30,7 +30,7 @@ pub struct ConstructorOptions {
   //font: 1,
 
   pub after_digest_begin: Vec<DigestionClosure>,
-  pub before_digest_end : Vec<DigestionClosure>,
+  pub before_digest_end : Vec<BeforeDigestClosure>,
   pub after_digest_body : Vec<DigestionClosure>,
   // reversion       : 1,
   // sizer           : 1,
@@ -47,7 +47,7 @@ impl Default for ConstructorOptions {
       after_digest: vec![],
       before_construct: vec![],
       after_construct: vec![],
-      mode: String::new(),
+      mode: None,
       // environment-specific
       require_math: false,
       forbid_math: false,
@@ -153,7 +153,7 @@ impl Definition for Constructor {
 
     if self.options.capture_body {
       post.extend(stomach.digest_next_body(false, state));
-      println_stderr!(" -- Captured body: {:?}", post);
+      // println_stderr!(" -- Captured body: {:?}", post);
       whatsit.set_body(post);
       post = vec![];
     }

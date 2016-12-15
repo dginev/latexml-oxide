@@ -122,8 +122,7 @@ impl BoxOps for Whatsit {
     // my $profiled = $STATE->lookupValue('PROFILING') && $defn->getCS;
     // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
     let self_mut = &mut self;
-    let result = self_mut.definition.do_absorbtion(document, self_mut, state);
+    self_mut.definition.do_absorbtion(document, self_mut, state);
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
-    return result;
   }
 }

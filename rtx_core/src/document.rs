@@ -29,7 +29,7 @@ impl Document {
       document: doc_scaffold,
       node: root,
       pending: Vec::new(),
-      debug: false,
+      debug: true,
       constructed_nodes : Vec::new(),
     }
   }
@@ -332,7 +332,7 @@ impl Document {
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
-      if LEADING_SPACE_RE.is_match(text) && (node_type == Some(NodeType::DocumentNode) || (node_type == Some(NodeType::ElementNode) && self.can_contain(&self.node, "#PCDATA"))) {
+      if LEADING_SPACE_RE.is_match(text) && (node_type == Some(NodeType::DocumentNode) || (node_type == Some(NodeType::ElementNode) && self.can_contain(&self.node, "#PCDATA", state))) {
         return None;
       }
     }
@@ -344,13 +344,13 @@ impl Document {
       //   if $LaTeXML::Core::Document::DEBUG;
     }
 
-    if node_type != Some(NodeType::DocumentNode) // If not at document begin
-    && !((node_type == Some(NodeType::TextNode)) //&&    // And not appending text in same font.
+    // if node_type != Some(NodeType::DocumentNode) // If not at document begin
+      //&& !((node_type == Some(NodeType::TextNode)) //&&    // And not appending text in same font.
       // ($font->distance(self.getNodeFont(node.parentNode)) == 0))
-    ) {
+    // {
       // then we'll need to do some open/close to get fonts matched.
       // node =
-      self.close_text_internal();    // Close text node, if any.
+      // self.close_text_internal();    // Close text node, if any.
       // let mut bestdiff = 99999;
       // let mut closeto = node;
       // let mut n = node;
@@ -369,7 +369,8 @@ impl Document {
       //   self.close_to_node(closeto);
       // }
       // self.open_element($FONT_ELEMENT_NAME, font => $font, _fontswitch => 1) if $bestdiff > 0; // Open if needed.
-    }
+    // }
+
     // Finally, insert the darned text.
     let tnode = self.open_text_internal(text, state);
     self.record_constructed_node(&tnode);
@@ -377,28 +378,35 @@ impl Document {
   }
 
 
-  pub fn can_contain(&self, _node: &Node, _spec: &str) -> bool {
-    // TODO: Mock only
-    true
+  pub fn can_contain(&self, node: &Node, child: &str, state: &mut State) -> bool {
+    let tag = state.model.get_node_qname(node);
+    state.model.can_contain(&tag, child)
   }
+
+  pub fn can_contain_qname(&self, tag: &str, child: &str, state: &mut State) -> bool {
+    // $tag   = $model->getNodeQName($tag)   if ref $tag;      # In case tag is a node.
+    // $child = $model->getNodeQName($child) if ref $child;    # In case child is a node.
+    state.model.can_contain(tag, child)
+  }
+
   // pub fn close_to_node(&self, _node: &Node) {} // TODO: Mock only
 
 
   pub fn close_text_internal(&mut self) -> Node {
     if self.node.get_type() == Some(NodeType::TextNode) { // Current node is text?
-      let parent  = self.node.get_parent().unwrap();
-      // let font    = self.get_node_font(parent);
-      // let data  = node.data();
-      // let odata = data;
-      // let fonttest;
-      // if let Some(ligatures) = state.lookup_value("TEXT_LIGATURES") {
-      //   for ligature in ligatures.iter() {
-      //     let fonttest = ligature.get("fontTest");
-      //     if fonttest.is_some() && ! fonttest(font);
-      //     $data = &{ $$ligature{code} }($data); } }
-      // node.setData(data) unless $data eq $odata;
-      self.set_node(parent.clone());                 // Now, effectively Closed
-      parent
+      let parent = self.node.get_parent().unwrap();
+        // let font    = self.get_node_font(parent);
+        // let data  = node.data();
+        // let odata = data;
+        // let fonttest;
+        // if let Some(ligatures) = state.lookup_value("TEXT_LIGATURES") {
+        //   for ligature in ligatures.iter() {
+        //     let fonttest = ligature.get("fontTest");
+        //     if fonttest.is_some() && ! fonttest(font);
+        //     $data = &{ $$ligature{code} }($data); } }
+        // node.setData(data) unless $data eq $odata;
+        self.set_node(parent.clone());                 // Now, effectively Closed
+        parent
     } else {
       self.node.clone()
     }
@@ -432,7 +440,7 @@ impl Document {
                         self.document.node_to_string(&self.node));
       }
       self.node.append_text(text).unwrap();
-    } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "//PCDATA") {
+    } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "//PCDATA", state) {
       // or text allowed here
       let mut point = self.find_insertion_point("//PCDATA", state);
       let node = Node::new_text(text, &self.document).unwrap();
@@ -472,14 +480,14 @@ impl Document {
   /// Find the node where an element with qualified name $qname can be inserted.
   /// This will move up the tree (closing auto-closable elements),
   /// or down (inserting auto-openable elements), as needed.
-  pub fn find_insertion_point(&mut self, _qname: &str, _state: &mut State) -> Node {
+  pub fn find_insertion_point(&mut self, qname: &str, state: &mut State) -> Node {
     self.close_text_internal();    // Close any current text node.
-    // let cur_qname = state.model.get_node_qname(&self.node);
+    let cur_qname = state.model.get_node_qname(&self.node);
     // let inter;
-    // // If `qname` is allowed at the current point, we're done.
-    // if self.can_contain(cur_qname, qname) {
-    //   self.node.clone()
-    // }
+    // If `qname` is allowed at the current point, we're done.
+    if self.can_contain_qname(&cur_qname, qname, state) {
+      // self.node.clone()
+    }
     // Else, if we can create an intermediate node that accepts $qname, we'll do that.
     // elsif (($inter = self.canContainIndirect($cur_qname, $qname))
     //   && ($inter ne $qname) && ($inter ne $cur_qname)) {

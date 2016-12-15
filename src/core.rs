@@ -4,7 +4,7 @@ use rtx_core::common::{Error, DigestionMode};
 // use common::model::{Model};
 use rtx_core::{Core, Digested, TexMode};
 use rtx_core::common::error::*;
-use rtx_core::util::pathname::*;
+use rtx_core::util::pathname;
 use rtx_core::state::{Scope, ObjectStore}; // State
 // use rtx_core::stomach::Stomach;
 use rtx_core::document::Document;
@@ -49,9 +49,9 @@ impl DigestionAPI for Core {
     //   None => Some(DigestionMode::TeX.extension()),
     // };
     // let mut dir = None;
-    let name = if pathname_is_literaldata(&request) {
+    let name = if pathname::is_literaldata(&request) {
       Some("Anonymous String".to_string())
-    } else if pathname_is_url(&request) {
+    } else if pathname::is_url(&request) {
       Some(request.clone())
     } else {
       let path = Path::new(&request);
@@ -72,7 +72,7 @@ impl DigestionAPI for Core {
     let digestion_note = "Digesting ".to_string() + &name.clone().unwrap();
     note_begin(&digestion_note);
     // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless $options{noinitialize};
-    // $state->assignValue(SOURCEFILE      => $request) if (!pathname_is_literaldata($request));
+    // $state->assignValue(SOURCEFILE      => $request) if (!pathname::is_literaldata($request));
     // $state->assignValue(SOURCEDIRECTORY => $dir)     if defined $dir;
     // $state->unshiftValue(SEARCHPATHS => $dir)
     //   if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('SEARCHPATHS') };
@@ -112,23 +112,24 @@ impl DigestionAPI for Core {
     note_begin("Building");
 
     let mut state = &mut self.state;
-    state.model.load_schema(); // If needed?
+    let search_paths = match state.lookup_value("SEARCHPATHS") {
+      Some(&ObjectStore::VecString(ref paths)) => Some(paths.clone()),
+      _ => None
+    };
+    state.model.load_schema(search_paths.clone()); // If needed?
+
     let mut document = Document::new();
-    {
-      if let Some(&ObjectStore::VecString(ref paths)) = state.lookup_value("SEARCHPATHS") {
-        if !paths.is_empty() {
-          {
-            if let Some(&ObjectStore::Bool(ico_flag)) = state.lookup_value("INCLUDE_COMMENTS") {
-              if ico_flag {
-                let paths_string = paths.join(",");
-                let attributes = map!{"paths".to_string() => paths_string};
-                document.insert_pi("latexml", Some(attributes));
-              }
-            }
+    if search_paths.is_none() || !search_paths.as_ref().unwrap().is_empty() {
+      {
+        if let Some(&ObjectStore::Bool(ico_flag)) = state.lookup_value("INCLUDE_COMMENTS") {
+          if ico_flag {
+            let paths_string = search_paths.as_ref().unwrap().join(",");
+            let attributes = map!{"paths".to_string() => paths_string};
+            document.insert_pi("latexml", Some(attributes));
           }
         }
       }
-    };
+    }
 
     for preload in &self.preload {
       if POOL_EXT_REGEX.is_match(preload) {

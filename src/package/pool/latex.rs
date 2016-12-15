@@ -189,7 +189,7 @@ pub fn load_definitions(state: &mut State) {
     //     return Vec::new();
     //   }
     // },
-    mode: "text".to_string(),
+    mode: Some("text".to_string()),
     ..ConstructorOptions::default()
   }, state);
 

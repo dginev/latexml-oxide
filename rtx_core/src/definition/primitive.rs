@@ -7,6 +7,7 @@ use gullet::Gullet;
 use stomach::Stomach;
 use whatsit::Whatsit;
 use parameter::Parameters;
+use document::Document;
 use definition::{Definition, PrimitiveClosure, BeforeDigestClosure, DigestionClosure};
 
 #[derive(Clone)]
@@ -93,6 +94,10 @@ impl Definition for Primitive {
 
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
     result
+  }
+
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) {
+    panic!("do_absorbtion on Primitive should never be called!");
   }
 
   fn get_cs(&self) -> Token {
