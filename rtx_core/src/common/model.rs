@@ -1,9 +1,9 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufRead;
-
+use std::collections::{HashMap, HashSet};
 use regex::Regex;
-use std::collections::HashMap;
+
 use libxml::tree::{Node};
 use libxml::tree::Document as XmlDoc;
 use common::relaxng::Relaxng;
@@ -26,9 +26,23 @@ lazy_static! {
   static ref NAMESPACE_MODEL_LINE : Regex = Regex::new(r"^([^=]+)=(.*?)$").unwrap();
 }
 
+pub struct TagFrame {
+  model: HashSet<String>,
+  attributes: HashSet<String>,
+}
+impl Default for TagFrame {
+  fn default() -> Self {
+    TagFrame {
+      model: HashSet::new(),
+      attributes: HashSet::new(),
+    }
+  }
+}
+
 pub struct Model {
   schema: Option<Relaxng>,
   schema_data: Option<Vec<String>>,
+  schema_class: HashMap<String, String>,
   code_namespace_prefixes: HashMap<String, String>,
   code_namespaces: HashMap<String, String>,
   document_namespace_prefixes: HashMap<String, String>,
@@ -39,13 +53,14 @@ pub struct Model {
   no_compiled: bool,
   debug_mode: bool,
   namespace_errors: u8,
-  tagprop: HashMap<String, HashMap<String, bool>>
+  tagprop: HashMap<String, TagFrame>
 }
 impl Default for Model {
   fn default() -> Self {
     Model {
       schema: None,
       schema_data: None,
+      schema_class: HashMap::new(),
       code_namespace_prefixes: HashMap::new(),
       code_namespaces: HashMap::new(),
       document_namespace_prefixes: HashMap::new(),
@@ -473,7 +488,7 @@ impl Model {
         } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
           let classname = caps.at(1).unwrap();
           let elements = caps.at(2).unwrap();
-          self.set_schema_class(classname, elements.split(",").collect());
+          self.set_schema_class(classname, elements.split(",").collect::<Vec<&str>>().first().unwrap());
 
         } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
           let prefix = caps.at(1).unwrap();
@@ -489,13 +504,56 @@ impl Model {
     return;
   }
 
-  pub fn add_tag_attribute(&mut self, _tag: &str, _attributes: Vec<&str>) {
 
+  //**********************************************************************
+  // Accessors
+  //**********************************************************************
+
+  pub fn get_tags(&self) -> Vec<&str> {
+    let mut keys : Vec<&str> = self.tagprop.keys().map(|k| k.as_str()).collect();
+    keys.sort();
+    keys
   }
-  pub fn add_tag_content(&mut self, _tag: &str, _children: Vec<&str>) {
 
+  pub fn get_tag_contents(&self, tag :&str) -> Vec<&str> {
+    match self.tagprop.get(tag) {
+      Some(h) => {
+        let mut keys : Vec<&str> = h.model.iter().map(|k| k.as_str()).collect();
+        keys.sort();
+        keys
+      },
+      None => Vec::new()
+    }
   }
-  pub fn set_schema_class(&mut self, _classname: &str, _elements: Vec<&str>) {
 
+  pub fn add_tag_content(&mut self, tag: &str, elements: Vec<&str>) {
+    let frame = self.tagprop.entry(tag.to_owned()).or_insert(TagFrame::default());
+
+    for element in elements {
+      frame.model.insert(element.to_owned());
+    }
+  }
+
+  pub fn get_tag_attributes(&self, tag :&str) -> Vec<&str> {
+    match self.tagprop.get(tag) {
+      Some(h) => {
+        let mut keys : Vec<&str> = h.attributes.iter().map(|k| k.as_str()).collect();
+        keys.sort();
+        keys
+      },
+      None => Vec::new()
+    }
+  }
+
+  pub fn add_tag_attribute(&mut self, tag: &str, attributes: Vec<&str>) {
+    let frame = self.tagprop.entry(tag.to_owned()).or_insert(TagFrame::default());
+
+    for attribute in attributes {
+      frame.attributes.insert(attribute.to_owned());
+    }
+  }
+
+  pub fn set_schema_class(&mut self, classname: &str, content: &str) {
+    self.schema_class.insert(classname.to_owned(), content.to_owned());
   }
 }
