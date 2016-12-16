@@ -7,6 +7,7 @@ use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::mouth::Mouth;
 use rtx_core::definition::{Definition, BeforeDigestClosure, ConstructionClosure};
 use rtx_core::document::Document;
+use rtx_core::document::tag::{TagOptions, TagOptionName};
 
 //**********************************************************************
 //   Initially, I thought LaTeXML Packages should try to be like perl modules:
@@ -863,33 +864,26 @@ macro_rules! DefEnvironmentI (
 // Declaring and Adjusting the Document Model.
 //======================================================================
 
-// // Specify the properties of a Node tag.
-// let tag_options = {    // [CONSTANT]
-//   autoOpen => 1, autoClose => 1, afterOpen => 1, afterClose => 1,
-//   'afterOpen:early' => 1, 'afterClose:early' => 1,
-//   'afterOpen:late'  => 1, 'afterClose:late'  => 1 };
-// let tag_prepend_options = {    // [CONSTANT]
-//   'afterOpen:early' => 1, 'afterClose:early' => 1 };
-// let tag_append_options = {     // [CONSTANT]
-//   'afterOpen'      => 1, 'afterClose'      => 1,
-//   'afterOpen:late' => 1, 'afterClose:late' => 1 };
+pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
+  let mut options = state.tag_properties.entry(tag.to_string()).or_insert(TagOptions::default());
+  options.auto_open = properties.auto_open;
+  options.auto_close = properties.auto_close;
 
-// sub Tag {
-//   my ($tag, %properties) = @_;
-//   CheckOptions("Tag ($tag)", $tag_options, %properties);
-//   let model = $STATE->getModel;
-//   AssignMapping('TAG_PROPERTIES', $tag => {}) unless LookupMapping('TAG_PROPERTIES', $tag);
-//   let props = LookupMapping('TAG_PROPERTIES', $tag);
-//   foreach let key (keys %properties) {
-//     let new = $properties{$key};
-//     let old = $$props{$key};
-//     // These keys accumulate information which should not carry over daemon frames.
-//     if ($$tag_prepend_options{$key}) {
-//       $new = flatten($new, $old); }
-//     elsif ($$tag_append_options{$key}) {
-//       $new = flatten($old, $new); }
-//     $$props{$key} = $new; }
-//   return; }
+  for name in TagOptionName::all().iter() {
+    if name.is_prepend() {
+      options.prepend(name, properties.remove(name));
+    } else if name.is_append() {
+      options.append(name, properties.remove(name));
+    } else {
+      // we'll handle the regular ones out of the loop
+    }
+  }
+}
+
+#[macro_export]
+macro_rules! Tag (
+  ($tag:expr, $properties:expr, $state:expr) => (install_tag($tag, $properties, $state);)
+);
 
 // sub DocType {
 //   my ($rootelement, $pubid, $sysid, %namespaces) = @_;
@@ -911,17 +905,16 @@ pub fn select_relaxng_schema(schema : String, namespaces : Option<HashMap<String
   return; }
 #[macro_export]
 macro_rules! RelaxNGSchema(
-  ($name: expr, $state: expr) => (select_relaxng_schema($name.to_string(), None, $state))
+  ($name:expr, $state:expr) => (select_relaxng_schema($name.to_string(), None, $state))
 );
 
+#[macro_export]
+macro_rules! RegisterNamespace(
+  ($prefix:expr, $namespace:expr, $state:expr) => ($state.model.register_namespace($prefix, Some($namespace.to_string()));)
+);
 
-// fn register_namespace(prefix: &str, namespace: String, state: &mut State) {
-//   state.model.register_namespace(prefix, Some(namespace));
-// }
-
-// fn register_document_namespace(prefix: &str, namespace: String, state: &mut State) {
-//   state.model.register_document_namespace(prefix, Some(namespace));
-// }
-
+macro_rules! RegisterDocumentNamespace(
+  ($prefix:expr, $namespace:expr, $state:expr) => ($state.model.register_document_namespace($prefix, Some($namespace.to_string()));)
+);
 
 pub mod pool;

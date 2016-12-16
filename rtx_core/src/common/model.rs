@@ -189,7 +189,8 @@ impl Model {
   ///   This mapping may also use a prefix of "#default" which is for
   ///   the unprefixed form of elements (not used for attributes!)
   pub fn register_namespace(&mut self, codeprefix: &str, namespace_opt: Option<String>) {
-    let namespace_opt_checked = match namespace_opt { // double-check empty strings are None
+    // double-check empty strings are None
+    let namespace_opt_checked = match namespace_opt {
       None => None,
       Some(val) => {
         if val.is_empty() {
@@ -199,11 +200,11 @@ impl Model {
         }
       }
     };
+
     match namespace_opt_checked {
       Some(namespace) => {
         self.code_namespace_prefixes.insert(namespace.clone(), codeprefix.to_string());
         self.code_namespaces.insert(codeprefix.to_string(), namespace.clone());
-        // self.xpath.register_ns(codeprefix, namespace);
       }
       None => {
         match self.code_namespaces.get(codeprefix) {
@@ -234,9 +235,8 @@ impl Model {
         self.document_namespaces.insert(docprefix.to_string(), namespace);
       }
       None => {
-        match self.document_namespaces.get(docprefix) {
-          Some(prev) => self.document_namespace_prefixes.remove(prev),
-          None => None,
+        if let Some(prev) = self.document_namespaces.get(docprefix) {
+          self.document_namespace_prefixes.remove(prev);
         };
         self.document_namespaces.remove(docprefix);
       }
@@ -247,6 +247,7 @@ impl Model {
   pub fn get_document_namespace_prefix(&mut self, namespace: &str, forattribute: bool, probe: bool) -> Option<String> {
    // Get the prefix associated with the namespace url, noting that for elements, it might by "#default",
    // but for attributes would never be.
+    // println_stderr!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
     let mut docprefix = if !forattribute {
       match self.document_namespace_prefixes.get(&("DEFAULT#".to_string() + &namespace)) {
         Some(prefix) => Some(prefix.to_string()),
@@ -439,7 +440,7 @@ impl Model {
   // to submodel, in case it can evolve to more precision?
   // However, it would need more context to do that.
 
-  /// Can an element with (qualified name) $tag contain a $childtag element?
+  /// Can an element with (qualified name) `tag` contain a `child` element?
   pub fn can_contain(&mut self, tag: &str, child: &str) -> bool {
     // Handle obvious cases explicitly.
     match tag {
@@ -464,9 +465,9 @@ impl Model {
     }
 
     // Else query tag properties.
-    // let model = self.tagprop.get(tag).unwrap().get("model");
-    // return model.get("ANY").is_some() || model.get(child).is_some();
-    true // TODO: Just a mock
+    let ref mut model = self.tagprop.entry(tag.to_owned()).or_insert(TagFrame::default()).model;
+
+    model.contains("ANY") || model.contains(child)
   }
 
   /// TODO: This is another component that would fit perfectly as a compiler plugin,

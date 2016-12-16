@@ -1,5 +1,7 @@
 use std::sync::Arc;
 use std::collections::VecDeque;
+use libxml::tree::Node;
+
 use rtx_core::Digested;
 use rtx_core::state::State;
 use rtx_core::token::Token;
@@ -10,9 +12,19 @@ use rtx_core::stomach::Stomach;
 use rtx_core::definition::expandable::Expandable;
 use rtx_core::definition::primitive::{Primitive,PrimitiveOptions};
 use rtx_core::definition::constructor::ConstructorOptions;
+use rtx_core::document::Document;
+use rtx_core::document::tag::TagOptions;
 
 use package::*;
 pub fn load_definitions(state: &mut State) {
+
+  RegisterNamespace!("ltx"  , "http://dlmf.nist.gov/LaTeXML", state);
+  RegisterNamespace!("svg"  , "http://www.w3.org/2000/svg", state);
+  RegisterNamespace!("xlink", "http://www.w3.org/1999/xlink", state);   // Needed for SVG
+  // Not directly used, but let's stake out the ground
+  RegisterNamespace!("m"    , "http://www.w3.org/1998/Math/MathML", state);
+  RegisterNamespace!("xhtml", "http://www.w3.org/1999/xhtml", state);
+
   //**********************************************************************
   // CORE TeX; Built-in commands.
   //**********************************************************************
@@ -434,5 +446,12 @@ pub fn load_definitions(state: &mut State) {
       locked: true,
       ..PrimitiveOptions::default()
     }, state);
+
+    Tag!("ltx:para", TagOptions{auto_close: true, auto_open: true, ..TagOptions::default()}, state);
+
+    let trim_node_whitespace_closure = Arc::new(|document: &mut Document, node: Node, state: &mut State| {
+      document.trim_node_whitespace(node, state);
+    });
+    Tag!("ltx:p", TagOptions{auto_close: true, auto_open: true, after_close: vec![trim_node_whitespace_closure], ..TagOptions::default()}, state);
 
 }

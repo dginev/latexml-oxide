@@ -11,6 +11,7 @@ use definition::Definition;
 use definition::expandable::Expandable;
 use definition::constructor::Constructor;
 use definition::primitive::Primitive;
+use document::tag::TagOptions;
 
 lazy_static! {
   static ref TEX_OR_BIB_EXT_RE : Regex = Regex::new(r"\.(tex|bib)$").unwrap();
@@ -243,6 +244,7 @@ pub struct State {
   pub prefixes: HashMap<String, bool>, // ?
   pub status: HashMap<String, bool>, // ?
   pub map: Vec<String>, // ?
+  pub tag_properties: HashMap<String, TagOptions>,
   /// Stateful runtime - simple fields
   pub verbosity: i32,
   pub status_code: usize,
@@ -276,6 +278,7 @@ impl Default for State {
       prefixes: HashMap::new(),
       status: HashMap::new(),
       map: Vec::new(),
+      tag_properties: HashMap::new(),
       // Stateful runtime - simple fields
       verbosity: 0,
       status_code: 0,

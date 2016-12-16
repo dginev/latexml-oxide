@@ -1,3 +1,5 @@
+pub mod tag;
+
 extern crate regex;
 extern crate libxml;
 
@@ -234,27 +236,27 @@ impl Document {
   /// Since this is an "explicit request", we're currently skipping over those nodes,
   /// ie. we're automatically closing them, even if they're the same type as we're asking to close!!!
   /// This is kinda risky! Maybe we should try to request closing of specific nodes.
-  pub fn close_element(&mut self, qname: &str, state: &mut State) -> Option<Node> {
+  pub fn close_element(&mut self, qname: &str, _state: &mut State) -> Option<Node> {
     if self.debug {
       println_stderr!("Close element {:?} at {:?}", qname, self.node.get_name());
     }
     self.close_text_internal();
-    let mut node = self.node.clone();
-    let mut cant_close = Vec::new();
-    while node.get_type() != Some(NodeType::DocumentNode) {
-      let _t = state.model.get_node_qname(&node);
+    let node = self.node.clone();
+    // let mut cant_close = Vec::new();
+    // while node.get_type() != Some(NodeType::DocumentNode) {
+      // let t = state.model.get_node_qname(&node);
       // autoclose until node of same name BUT also close nodes opened' for font switches!
       // if (t == qname) && !(t == FONT_ELEMENT_NAME) && node.get_attribute("_fontswitch").is_some() {
       //   break;
       // }
-      if !self.can_auto_close(&node) {
-        cant_close.push(node.clone());
-      }
-      match node.get_parent() {
-        Some(p) => node = p,
-        None => break
-      };
-    }
+    //   if !self.can_auto_close(&node) {
+    //     cant_close.push(node.clone());
+    //   }
+    //   match node.get_parent() {
+    //     Some(p) => node = p,
+    //     None => break
+    //   };
+    // }
 
     if node.get_type() == Some(NodeType::DocumentNode) {    // Didn't find $qname at all!!
       println!("Error:malformed:TODO {:?} in doc: {:?}", qname, self.document.to_string(true));
@@ -692,5 +694,41 @@ impl Document {
     // self.set_node(savenode);
     node
   }
+
+  // TODO: Mock here
+  pub fn trim_node_whitespace(&mut self, _node: Node, _state: &mut State) {}
+  //   my ($document, $node) = @_;
+  //   trimNodeLeftWhitespace($document, $node);
+  //   trimNodeRightWhitespace($document, $node);
+  //   return; }
+
+  // sub trimNodeLeftWhitespace {
+  //   my ($document, $node) = @_;
+  //   if (my (@children) = $node->childNodes) {
+  //     my $child = $children[0];
+  //     my $type  = $child->nodeType;
+  //     if ($type == XML_TEXT_NODE) {
+  //       my $string = $child->data;
+  //       #      if($string =~ s/^\s+//){
+  //       #      with some trepidation, I don't think we want to trim nbsp!
+  //       if ($string =~ s/^ +//) {
+  //         $child->setData($string); } }
+  //     elsif ($type == XML_ELEMENT_NODE) {
+  //       trimNodeLeftWhitespace($document, $child); } }
+  //   return; }
+
+  // sub trimNodeRightWhitespace {
+  //   my ($document, $node) = @_;
+  //   if (my (@children) = $node->childNodes) {
+  //     my $child = $children[-1];
+  //     my $type  = $child->nodeType;
+  //     if ($type == XML_TEXT_NODE) {
+  //       my $string = $child->data;
+  //       if ($string =~ s/\s+$//) {
+  //         $child->setData($string); } }
+  //     elsif ($type == XML_ELEMENT_NODE) {
+  //       trimNodeRightWhitespace($document, $child); } }
+  //   return; }
+
 
 }
