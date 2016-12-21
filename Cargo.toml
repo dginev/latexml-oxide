@@ -3,9 +3,6 @@ name = "rtx"
 version = "0.1.0"
 authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
 
-[dependencies.libarchive-sys]
-git = "https://github.com/dginev/libarchive-sys.git"
-
 [dependencies.rtx_codegen]
 path = "rtx_codegen"
 

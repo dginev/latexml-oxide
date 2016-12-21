@@ -3,12 +3,14 @@ pub mod tag;
 extern crate regex;
 extern crate libxml;
 
-use std::collections::{VecDeque, HashMap};
-use state::{ObjectStore, State};
-use {Digested, BoxOps};
+use std::collections::{VecDeque, HashMap, HashSet};
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, NodeType, Namespace};
 use regex::Regex;
+
+use state::{ObjectStore, State};
+use common::model::IndirectModel;
+use {Digested, BoxOps};
 
 lazy_static! {
   static ref HAS_NONSPACE_RE : Regex = Regex::new(r"\S").unwrap();
@@ -391,8 +393,81 @@ impl Document {
     state.model.can_contain(tag, child)
   }
 
-  // pub fn close_to_node(&self, _node: &Node) {} // TODO: Mock only
+  /// Can an element with (qualified name) $tag contain a $childtag element indirectly?
+  /// That is, by openning some number of autoOpen'able tags?
+  /// And if so, return the tag to open.
+  pub fn can_contain_indirect(&mut self, tag: &str, child: &str, state: &mut State) -> bool {
+    // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a node.
+    // $child = $model->getNodeQName($child) if ref $child;    // In case child is a node.
 
+    if state.indirect_model.is_none() {
+      let new_im = self.compute_indirect_model(state);
+      state.indirect_model = Some(new_im);
+    }
+
+    let imodel = state.indirect_model.as_ref().unwrap();
+
+    match imodel.get(tag) {
+      Some(sub_m) => match sub_m.get(child) {
+        Some(_) => true,
+        None => false,
+      },
+      None => false,
+    }
+  }
+
+
+  /// The indirect model includes all elements allowed as direct children,
+  /// and all descendents of a node that can be inserted after autoOpen'ing intermediate elements.
+  /// This model therefor includes information from the Schema, as well as
+  /// autoOpen information that may be introduced in binding files.
+  /// [Thus it should NOT be modifying the Model object, which may cover several documents in Daemon]
+  /// $imodel{$tag}{$child} => $open means if in $tag, to open $child, we must first open $open
+  pub fn compute_indirect_model(&mut self, state: &mut State) -> IndirectModel {
+    let mut imodel : IndirectModel = HashMap::new();
+    // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
+    let mut openable : HashSet<String> = HashSet::new();
+    for tag in state.model.get_tags() {
+      if let Some(x) = state.tag_properties.get(&tag) {
+        if x.auto_open {
+          openable.insert(tag.to_owned().to_owned());
+        }
+      }
+    }
+
+    let mut desc : HashMap<String, HashMap<String, usize>> = HashMap::new();
+    for tag in state.model.get_tags() {
+      {
+        compute_indirect_model_aux(&tag, None, 1, &mut openable, &mut desc, state);
+      }
+
+      let mut desc_keys : Vec<String> = desc.keys().map(|k| k.to_string()).collect();
+      desc_keys.sort();
+      for kid in desc_keys {
+        let mut best = 0;    // Find best path to $kid.
+        let mut desc_kid_keys : Vec<String> = desc.entry(kid.to_owned()).or_insert(HashMap::new()).keys().map(|k| k.to_string()).collect();
+        desc_kid_keys.sort();
+        for start in desc_kid_keys {
+          let start_entry = {
+            let kid_entry = desc.entry(kid.to_owned()).or_insert(HashMap::new());
+            kid_entry.entry(start.to_owned()).or_insert(0).clone()
+          };
+          if start_entry > best {
+            imodel.entry(tag.to_owned()).or_insert(HashMap::new()).insert(kid.to_owned(), start.to_owned());
+            {
+              best = desc.get(&kid).unwrap().get(&start).unwrap().clone();
+            }
+          }
+        }
+      }
+    }
+    // PATCHUP
+    if state.model.permissive {    // !!! Alarm!!!
+      imodel.entry("#Document".to_string()).or_insert(HashMap::new()).insert("#PCDATA".to_owned(),"ltx:p".to_owned());
+    }
+
+    imodel
+  }
 
   pub fn close_text_internal(&mut self) -> Node {
     if self.node.get_type() == Some(NodeType::TextNode) { // Current node is text?
@@ -705,10 +780,10 @@ impl Document {
   // sub trimNodeLeftWhitespace {
   //   my ($document, $node) = @_;
   //   if (my (@children) = $node->childNodes) {
-  //     my $child = $children[0];
-  //     my $type  = $child->nodeType;
+  //     let child = $children[0];
+  //     let type  = $child->nodeType;
   //     if ($type == XML_TEXT_NODE) {
-  //       my $string = $child->data;
+  //       let string = $child->data;
   //       #      if($string =~ s/^\s+//){
   //       #      with some trepidation, I don't think we want to trim nbsp!
   //       if ($string =~ s/^ +//) {
@@ -720,10 +795,10 @@ impl Document {
   // sub trimNodeRightWhitespace {
   //   my ($document, $node) = @_;
   //   if (my (@children) = $node->childNodes) {
-  //     my $child = $children[-1];
-  //     my $type  = $child->nodeType;
+  //     let child = $children[-1];
+  //     let type  = $child->nodeType;
   //     if ($type == XML_TEXT_NODE) {
-  //       my $string = $child->data;
+  //       let string = $child->data;
   //       if ($string =~ s/\s+$//) {
   //         $child->setData($string); } }
   //     elsif ($type == XML_ELEMENT_NODE) {
@@ -731,4 +806,33 @@ impl Document {
   //   return; }
 
 
+}
+
+// Auxiliary
+fn compute_indirect_model_aux(tag: &str, start_opt: Option<String>, desirability: usize,
+                                  openable: &mut HashSet<String>, desc: &mut HashMap<String, HashMap<String, usize>>,
+                                  state: &mut State) {
+
+  // TODO: This needs to be carefully re-examined, and cleaned up
+  if let Some(start) = start_opt {
+    let mut recurse_tags = Vec::new();
+    for kid in state.model.get_tag_contents(tag) {
+      if desc.get(kid).unwrap().get(&start).is_some() { continue;  }
+      {   // Already solved
+        desc.entry(kid.to_owned()).or_insert(HashMap::new()).insert(start.clone(), desirability);
+      }
+      if kid != "#PCDATA" {
+        let is_openable = openable.get(kid).is_some();
+        if is_openable {
+          recurse_tags.push(kid.to_owned());
+
+        }
+      }
+    }
+
+    for kid in recurse_tags {
+      compute_indirect_model_aux(&kid, Some(start.clone()), desirability,
+        openable, desc, state);
+    }
+  }
 }

@@ -15,6 +15,7 @@ use common::error::*;
 // use common::font::*;
 
 const LTX_NAMESPACE: &'static str = "http://dlmf.nist.gov/LaTeXML";
+pub type IndirectModel = HashMap<String, HashMap<String, String>>;
 
 lazy_static! {
   // static ref OPTIONAL_RE : Regex = Regex::new(r"^Optional(.+)$").unwrap();
@@ -49,7 +50,7 @@ pub struct Model {
   document_namespaces: HashMap<String, String>,
   // doctype_namespaces: HashMap<String, String>,
   // namespace_errors: usize,
-  permissive: bool,
+  pub permissive: bool,
   no_compiled: bool,
   debug_mode: bool,
   namespace_errors: u8,
@@ -505,13 +506,12 @@ impl Model {
     return;
   }
 
-
   //**********************************************************************
   // Accessors
   //**********************************************************************
 
-  pub fn get_tags(&self) -> Vec<&str> {
-    let mut keys : Vec<&str> = self.tagprop.keys().map(|k| k.as_str()).collect();
+  pub fn get_tags(&self) -> Vec<String> {
+    let mut keys : Vec<String> = self.tagprop.keys().map(|k| k.as_str().to_owned()).collect();
     keys.sort();
     keys
   }

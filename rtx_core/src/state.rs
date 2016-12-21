@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::fmt;
 use regex::Regex;
 
-use common::model::Model;
+use common::model::{Model, IndirectModel};
 use token::{Catcode, Token};
 use parameter::Parameter;
 use definition::Definition;
@@ -245,6 +245,7 @@ pub struct State {
   pub status: HashMap<String, bool>, // ?
   pub map: Vec<String>, // ?
   pub tag_properties: HashMap<String, TagOptions>,
+  pub indirect_model: Option<IndirectModel>,
   /// Stateful runtime - simple fields
   pub verbosity: i32,
   pub status_code: usize,
@@ -279,6 +280,7 @@ impl Default for State {
       status: HashMap::new(),
       map: Vec::new(),
       tag_properties: HashMap::new(),
+      indirect_model: None,
       // Stateful runtime - simple fields
       verbosity: 0,
       status_code: 0,

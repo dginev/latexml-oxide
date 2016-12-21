@@ -7,9 +7,6 @@ authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
 name = "rtx_core"
 crate-type = ["rlib", "dylib", "staticlib"]
 
-[dependencies.libarchive-sys]
-git = "https://github.com/dginev/libarchive-sys.git"
-
 [dependencies.libxml]
 path = "../../rust-libxml"
 
