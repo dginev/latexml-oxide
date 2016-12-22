@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 use state::{State, Scope};
 use Digested;
 use common::object::Object;
@@ -74,7 +74,7 @@ impl Definition for Primitive {
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Vec<Token> {
     Vec::new()
   }
-  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Arc<Definition>, state: &mut State) -> Vec<Digested> {
+  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Vec<Digested> {
     println_stderr!("-- primitive invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');

@@ -9,7 +9,7 @@
 /// NOTE: This will be loaded after TeX.pool, so it inherits.
 ///**********************************************************************
 
-use std::sync::Arc;
+use std::rc::Rc;
 use std::collections::HashMap;
 use regex::Regex;
 use rtx_core::{Digested, BoxOps};
@@ -50,7 +50,7 @@ pub fn load_definitions(state: &mut State) {
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
     ConstructorOptions {
-      after_digest: vec![Arc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
+      after_digest: vec![Rc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
         let options: Option<&Digested> = whatsit.get_arg(1);
         let class_opts = match options {
           Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
@@ -83,7 +83,7 @@ pub fn load_definitions(state: &mut State) {
   // "\begin{env}", "\end{env}" control sequences created by DefEnvironment.
 
   state.assign_value("current_environment", ObjectStore::String(String::new()), Some(Scope::Global));
-  // DefMacroI!("\@currenvir", "", Arc::new(move |state| {}), state);
+  // DefMacroI!("\@currenvir", "", Rc::new(move |state| {}), state);
   // DefPrimitive("\lx@setcurrenvir{}", sub {
   //     DefMacro("\@currenvir", $_[1]);
   //     state.assign_value(current_environment => ToString($_[1])); });
@@ -145,7 +145,7 @@ pub fn load_definitions(state: &mut State) {
   //     PushValue('@at@end@document', $_[1]->unlist); });
 
   DefEnvironmentC!("{document}",
-      Some(Arc::new(|document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
+      Some(Rc::new(|document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
       //       "<ltx:document xml:id='#id'>#body</ltx:document>",
       let id = match props.get("id") {
         Some(& ObjectStore::String(ref id)) => id,
@@ -155,7 +155,7 @@ pub fn load_definitions(state: &mut State) {
       // TODO: THIS IS WRONG AND SLOW. Cloning each whatsit is **MASSIVE** overhead,
       //       and while in this example we only clone the document body, following this path in general is horrible.
       let body = match props.get("body") {
-        Some(& ObjectStore::Digested(ref arc)) => (**arc).clone(),
+        Some(& ObjectStore::Digested(ref rc)) => (**rc).clone(),
         _ => Digested::Whatsit(Whatsit::default())
       };
       if let Some(docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
@@ -170,7 +170,7 @@ pub fn load_definitions(state: &mut State) {
       }
     })),
     ConstructorOptions {
-      before_digest: vec![Arc::new(|_stomach, state| { AssignValue!("inPreamble", ObjectStore::Bool(false), None, state); Vec::new() })],
+      before_digest: vec![Rc::new(|_stomach, state| { AssignValue!("inPreamble", ObjectStore::Bool(false), None, state); Vec::new() })],
     // after_digest_begin => |stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
@@ -217,11 +217,11 @@ pub fn load_definitions(state: &mut State) {
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
                   ConstructorOptions {
-                    before_digest: vec![Arc::new(|_stomach: &mut Stomach, state: &mut State| -> Vec<Digested> {
+                    before_digest: vec![Rc::new(|_stomach: &mut Stomach, state: &mut State| -> Vec<Digested> {
                       only_preamble("\\usepackage", state);
                       Vec::new()
                     })],
-                    after_digest: vec![Arc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
+                    after_digest: vec![Rc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
                       let options: Option<&Digested> = whatsit.get_arg(1);
                       let packages: Option<&Digested> = whatsit.get_arg(2);
                       let package_list = match packages {

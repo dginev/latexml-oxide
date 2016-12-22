@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 use std::collections::VecDeque;
 use libxml::tree::Node;
 
@@ -33,7 +33,7 @@ pub fn load_definitions(state: &mut State) {
   // Define parsers for standard parameter types.
   DefParameterType!("Plain",
     Parameter {
-      reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+      reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
         let mut value: Vec<Token> = gullet.read_arg(state);
         for inner_opt in inner {
           if let Some(inner_p) = inner_opt {
@@ -42,7 +42,7 @@ pub fn load_definitions(state: &mut State) {
         }
         value
       }),
-      reversion: Some(Arc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
+      reversion: Some(Rc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
        // let mut reverted_inner;
        let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
        // for inner_opt in inner.into_iter() {
@@ -60,7 +60,7 @@ pub fn load_definitions(state: &mut State) {
 
   DefParameterType!("Optional",
    Parameter {
-     reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+     reader: Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
        // TODO: default !!!
        // let value = gullet.read_optional(state);
        // if (!$value && $default) {
@@ -73,7 +73,7 @@ pub fn load_definitions(state: &mut State) {
      }),
 
      optional: true,
-     reversion: Some(Arc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
+     reversion: Some(Rc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
        // TODO : default!
        if arg.len() > 0 {
          let mut read_tokens: Vec<Token> = vec![T_OTHER!("[".to_string())];
@@ -91,7 +91,7 @@ pub fn load_definitions(state: &mut State) {
   // Skip any spaces, but don't contribute an argument.
   DefParameterType!("SkipSpaces",
    Parameter {
-     reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+     reader: Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
        gullet.skip_spaces(state);
        Vec::new()
      }),
@@ -105,7 +105,7 @@ pub fn load_definitions(state: &mut State) {
   // // however, <filler> does get expanded while searching for the initial {
   // // which IS required in contrast to a general argument; ie a single token is not correct.
   // DefParameterType!("GeneralText",Parameter{
-  //   reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+  //   reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
   //     let open = gullet.read_x_token();
   //     if open.equals(T_BEGIN!()) {
   //       gullet.read_balanced()
@@ -119,7 +119,7 @@ pub fn load_definitions(state: &mut State) {
   // }, state);
 
   DefParameterType!("Until",Parameter{
-    reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, until: Vec<Token>, state: &mut State| {
+    reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, until: Vec<Token>, state: &mut State| {
       gullet.read_until(until, state)
     }),
     // reversion: |arg, until| { vec![Revert!(arg), Revert!(until)] },
@@ -127,7 +127,7 @@ pub fn load_definitions(state: &mut State) {
   }, state);
 
   // DefParameterType!("Skip1Space",Parameter{
-  //   reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+  //   reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
   //     gullet.skip_one_space();
   //     vec![]
   //   }),
@@ -138,7 +138,7 @@ pub fn load_definitions(state: &mut State) {
   // Read a matching keyword, eg. Match:=
   DefParameterType!("Match",
     Parameter {
-      reader: Arc::new(|gullet: &mut Gullet, _inner, extra, state:&mut State| {
+      reader: Rc::new(|gullet: &mut Gullet, _inner, extra, state:&mut State| {
         gullet.read_match(extra, state)
       }), ..Parameter::default()
     }, state);
@@ -147,7 +147,7 @@ pub fn load_definitions(state: &mut State) {
   // (like Match, but ignores catcodes)
   // DefParameterType!("Keyword",
   //   Parameter {
-  //     reader: Arc::new(|gullet: &mut Gullet, _inner, _extra, state:&mut State| {
+  //     reader: Rc::new(|gullet: &mut Gullet, _inner, _extra, state:&mut State| {
   //       gullet.read_keyword(state);
   //     }), ..Parameter::default()
   //   }, state);
@@ -155,7 +155,7 @@ pub fn load_definitions(state: &mut State) {
   // Read balanced material (?)
   DefParameterType!("Balanced",
     Parameter {
-      reader: Arc::new(|gullet: &mut Gullet, _inner, _extra, state:&mut State| {
+      reader: Rc::new(|gullet: &mut Gullet, _inner, _extra, state:&mut State| {
         gullet.read_balanced(state)
       }), ..Parameter::default()
     }, state);
@@ -164,8 +164,8 @@ pub fn load_definitions(state: &mut State) {
   // Read a Semiverbatim argument; ie w/ most catcodes neutralized.
   DefParameterType!("Semiverbatim",
    Parameter {
-     reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_arg(state)),
-     reversion: Some(Arc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
+     reader: Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_arg(state)),
+     reversion: Some(Rc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
        // let mut reverted_inner;
        let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
        // for inner_opt in inner.into_iter() {
@@ -186,10 +186,10 @@ pub fn load_definitions(state: &mut State) {
   // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
   DefParameterType!("OptionalSemiverbatim",
    Parameter {
-     reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_optional(state)),
+     reader: Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_optional(state)),
      semiverbatim: true,
      optional: true,
-     reversion: Some(Arc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
+     reversion: Some(Rc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
        if arg.len() > 0 {
          let mut read_tokens = vec![T_OTHER!("[".to_string())];
          // TODO: add these: Revert($_[0])
@@ -206,7 +206,7 @@ pub fn load_definitions(state: &mut State) {
   // Read a token as used when defining it, ie. it may be enclosed in braces.
   DefParameterType!("DefToken",
     Parameter {
-      reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+      reader: Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
         let mut token = gullet.read_token(state);
         let begin_token = Some(T_BEGIN!());
         let space_token = T_SPACE!();
@@ -233,7 +233,7 @@ pub fn load_definitions(state: &mut State) {
 
   // Read the next token
   DefParameterType!("Token",Parameter{
-    reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+    reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       if let Some(t) = gullet.read_token(state) {
         vec![t]
       } else {
@@ -245,7 +245,7 @@ pub fn load_definitions(state: &mut State) {
 
   // Read the next token, after expanding any expandable ones.
   DefParameterType!("XToken",Parameter{
-    reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+    reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       if let Some(t) = gullet.read_x_token(false, false, state) {
         vec![t]
       } else {
@@ -257,7 +257,7 @@ pub fn load_definitions(state: &mut State) {
 
   // Read a number
   DefParameterType!("Number",Parameter{
-    reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+    reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       gullet.read_number(state)
     }),
     ..Parameter::default()
@@ -265,7 +265,7 @@ pub fn load_definitions(state: &mut State) {
 
   // // Read a floating point number
   // DefParameterType!("Float",Parameter{
-  //   reader: Arc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+  //   reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
   //     gullet.read_float()
   //   }),
   //   ..Parameter::default()
@@ -274,7 +274,7 @@ pub fn load_definitions(state: &mut State) {
   // Read until the next (balanced) open brace {
   // used for the last TeX-style delimited argument
   DefParameterType!("UntilBrace", Parameter{
-    reader: Arc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+    reader: Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       gullet.read_until_brace(state)
     }),
     ..Parameter::default()
@@ -325,7 +325,7 @@ pub fn load_definitions(state: &mut State) {
   let mut skippable_props = HashMap::new();
   skippable_props.insert("alignmentSkippable".to_string(), ObjectStore::Bool(true));
 
-  DefConstructorI!(T_CS!("\\par"), None, Some(Arc::new(
+  DefConstructorI!(T_CS!("\\par"), None, Some(Rc::new(
     |document: &mut Document, args: &Vec<_>, props:&HashMap<String, ObjectStore>, state: &mut State| {
       let in_preamble = match props.get("inPreamble") {
         Some(& ObjectStore::Bool(v)) => v,
@@ -349,7 +349,7 @@ pub fn load_definitions(state: &mut State) {
      }
     })),
     ConstructorOptions {
-    after_digest: vec![Arc::new(|stomach, whatsit, state| {
+    after_digest: vec![Rc::new(|stomach, whatsit, state| {
       let in_preamble = match LookupValue!("inPreamble", state) {
         Some(& ObjectStore::Bool(v)) => v,
         _ => false
@@ -374,7 +374,7 @@ pub fn load_definitions(state: &mut State) {
 
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
-  DefConstructorI!(T_CS!("\\inner@par"), None, Some(Arc::new(|document, args, props, state| {
+  DefConstructorI!(T_CS!("\\inner@par"), None, Some(Rc::new(|document, args, props, state| {
       // if document.maybe_close_element("ltx:p") { }
       // else if document.canContain(document.get_node(), "ltx:break") {
       //   document.insertElement("ltx:break");
@@ -406,9 +406,9 @@ pub fn load_definitions(state: &mut State) {
     // is there a more idiomatic way to downgrade a VecDeque into a Vec?
     let def_body = token_args.into_iter().collect::<Vec<Token>>();
     let params = None;
-    let body = Arc::new(move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State| def_body.clone());
+    let body = Rc::new(move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State| def_body.clone());
     println_stderr!("Installing definition for cs: {:?}", cs);
-    state.install_definition(ObjectStore::Expandable(Arc::new(
+    state.install_definition(ObjectStore::Expandable(Rc::new(
       Expandable{cs: cs, paramlist: params, expansion: body,
         ..Expandable::default()
       })),
@@ -449,7 +449,7 @@ pub fn load_definitions(state: &mut State) {
 
     Tag!("ltx:para", TagOptions{auto_close: true, auto_open: true, ..TagOptions::default()}, state);
 
-    let trim_node_whitespace_closure = Arc::new(|document: &mut Document, node: Node, state: &mut State| {
+    let trim_node_whitespace_closure = Rc::new(|document: &mut Document, node: Node, state: &mut State| {
       document.trim_node_whitespace(node, state);
     });
     Tag!("ltx:p", TagOptions{auto_close: true, auto_open: true, after_close: vec![trim_node_whitespace_closure], ..TagOptions::default()}, state);

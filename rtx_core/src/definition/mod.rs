@@ -2,7 +2,7 @@ pub mod expandable;
 pub mod constructor;
 pub mod primitive;
 
-use std::sync::Arc;
+use std::rc::Rc;
 use std::collections::HashMap;
 
 use Digested;
@@ -16,20 +16,20 @@ use document::Document;
 use whatsit::Whatsit;
 use state::{State, ObjectStore};
 
-pub type ExpansionClosure = Arc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Vec<Token>>;
-pub type PrimitiveClosure = Arc<Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Vec<Digested>>;
-pub type BeforeDigestClosure = Arc<Fn(&mut Stomach, &mut State) -> Vec<Digested>>;
-pub type DigestionClosure = Arc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Vec<Digested>>;
-pub type ReplacementClosure = Arc<Fn(&mut Document,
+pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Vec<Token>>;
+pub type PrimitiveClosure = Rc<Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Vec<Digested>>;
+pub type BeforeDigestClosure = Rc<Fn(&mut Stomach, &mut State) -> Vec<Digested>>;
+pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Vec<Digested>>;
+pub type ReplacementClosure = Rc<Fn(&mut Document,
                                      &Vec<Option<Digested>>,
                                      &HashMap<String, ObjectStore>,
                                      &mut State)
                                     >;
-pub type ConstructionClosure = Arc<Fn(&mut Document, &Whatsit, &mut State)>;
+pub type ConstructionClosure = Rc<Fn(&mut Document, &Whatsit, &mut State)>;
 
 pub trait Definition {
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Vec<Token>;
-  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Arc<Definition>, state: &mut State) -> Vec<Digested>;
+  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Vec<Digested>;
 
   fn get_cs(&self) -> Token;
   fn get_cs_name(&self) -> String;

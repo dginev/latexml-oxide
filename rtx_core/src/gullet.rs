@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::sync::Arc;
+use std::rc::Rc;
 use state::{State, ObjectStore};
 use common::object::Object;
 use definition::Definition;
@@ -168,7 +168,7 @@ impl Gullet {
     loop {
       let read_token: Option<Token>;
       let cc: Catcode;
-      let mut defn_next: Option<Arc<Definition>> = None;
+      let mut defn_next: Option<Rc<Definition>> = None;
       let mut needs_close = false;
       let mut return_next = false;
       let mut expand_next = false;

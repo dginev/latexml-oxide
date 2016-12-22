@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 use std::collections::HashMap;
 use state::{State, Scope, ObjectStore};
 use common::object::Object;
@@ -99,7 +99,7 @@ impl Definition for Constructor {
   }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
-  fn invoke_primitive(&self, stomach: &mut Stomach, caller: Arc<Definition>, state: &mut State) -> Vec<Digested> {
+  fn invoke_primitive(&self, stomach: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Vec<Digested> {
     println_stderr!("-- constructor invoke for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing

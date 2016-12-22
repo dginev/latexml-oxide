@@ -457,10 +457,10 @@ impl Mouth {
     self.colno = self.nchars;
     let mut comment = String::new();
     // TODO: Probably too slow to do so many .get()s, ideally we want an iterator on a slice.
-    for c in n..(self.nchars - 1) {
+    for c in n..self.nchars { // warning: .. range is half-open in rust
       match self.chars.get(c) {
         None => {}
-        Some(c) => comment.push_str(&c.to_string()),
+        Some(c) => comment.push(*c),
       };
     }
     comment.trim();

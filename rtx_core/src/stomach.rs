@@ -92,7 +92,7 @@ impl Stomach {
       let depth     = initdepth;
       // {
       //   let list = STOMACH_LIST.lock().unwrap();
-      //   *list = Arc::new(Vec::new());
+      //   *list = Rc::new(Vec::new());
       // }
       let mut list = Vec::new();
       while let Some(token) = stomach.get_gullet_mut().read_x_token(true, true, state) { // Done if we run out of tokens

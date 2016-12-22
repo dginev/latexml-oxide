@@ -80,7 +80,7 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
       //   operations.iter().map(|x| x.to_string()).collect::<Vec<_>>().join("\n"));
 
       quote!(
-        Some(Arc::new(
+        Some(Rc::new(
         |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
           let mut savenode : Option<Node> = None;
           #(operations)*

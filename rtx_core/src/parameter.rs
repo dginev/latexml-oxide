@@ -1,5 +1,5 @@
 use fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 use regex::Regex;
 use token::Token;
 use tokens::Tokens;
@@ -12,8 +12,8 @@ use state::{State, ObjectStore};
 use mouth::Mouth;
 use Digested;
 
-pub type ReaderClosure = Arc<Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<Token>, &mut State) -> Vec<Token>>;
-pub type ReversionClosure = Arc<Fn(&mut Gullet, Vec<Token>, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>;
+pub type ReaderClosure = Rc<Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<Token>, &mut State) -> Vec<Token>>;
+pub type ReversionClosure = Rc<Fn(&mut Gullet, Vec<Token>, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>;
 #[derive(Clone)]
 pub struct Parameter {
   pub novalue: bool,
@@ -38,7 +38,7 @@ impl Default for Parameter {
       name: "parameter_default".to_string(),
       spec: String::new(),
       extra: Vec::new(),
-      reader: Arc::new(|_gullet, _args, _extra, _state| {
+      reader: Rc::new(|_gullet, _args, _extra, _state| {
         println_stderr!("-- Warning: please define a real reader, this is a mock fallback!");
         Vec::new()
       }),

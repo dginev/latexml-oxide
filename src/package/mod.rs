@@ -541,8 +541,8 @@ macro_rules! DefMacroI(
 //       //   $state.assign_value(ToString($cs)+":locked", true, "global")
 //       // }
 
-    $state.install_definition(::rtx_core::state::ObjectStore::Expandable(Arc::new(
-      Expandable { cs: $cs, paramlist: $paramlist, expansion: Arc::new($expansion),
+    $state.install_definition(::rtx_core::state::ObjectStore::Expandable(Rc::new(
+      Expandable { cs: $cs, paramlist: $paramlist, expansion: Rc::new($expansion),
        ..Expandable::default()})),
       None);
   }
@@ -595,10 +595,10 @@ macro_rules! DefPrimitiveII(
 
   let mode    = $options.mode;
   let bounded = $options.bounded;
-  $state.install_definition(ObjectStore::Primitive(Arc::new(Primitive{
+  $state.install_definition(ObjectStore::Primitive(Rc::new(Primitive{
       cs: $cs.clone(),
       paramlist: $paramlist,
-      replacement: Some(Arc::new($compiled_replacement)),
+      replacement: Some(Rc::new($compiled_replacement)),
       // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
       //   ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),
       //   ($mode ? (sub { $_[0]->beginMode($mode); })
@@ -638,7 +638,7 @@ macro_rules! DefConstructorI(
       options: $options,
       ..Constructor::default()};
 
-    $state.install_definition(::rtx_core::state::ObjectStore::Constructor(Arc::new(constructor)), None);
+    $state.install_definition(::rtx_core::state::ObjectStore::Constructor(Rc::new(constructor)), None);
 
 //   before_digest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
 //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),
@@ -725,11 +725,11 @@ macro_rules! DefEnvironmentI (
   let name = $name_raw.to_string();
   // This is for the common case where the environment is opened by \begin{env}
   // let sizer = inferSizer($options.sizer, $options.reversion);
-  let bgroup_closure = Arc::new(|stomach: &mut Stomach, state: &mut State| {stomach.bgroup(state); Vec::new()});
+  let bgroup_closure = Rc::new(|stomach: &mut Stomach, state: &mut State| {stomach.bgroup(state); Vec::new()});
   let mut before_digest_with_group : Vec<BeforeDigestClosure> = vec![bgroup_closure];
   before_digest_with_group.extend($options.before_digest);
 
-  let push_frame_closure = Arc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
+  let push_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
     state.push_frame();
   });
   let mut before_construct_with_frame : Vec<ConstructionClosure> = vec![push_frame_closure];
@@ -737,12 +737,12 @@ macro_rules! DefEnvironmentI (
 
   let mut after_construct_with_frame : Vec<ConstructionClosure> = $options.after_construct;
 
-  let pop_frame_closure = Arc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
+  let pop_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
     state.pop_frame();
   });
   after_construct_with_frame.push(pop_frame_closure);
 
-  let begin_name_constructor = Arc::new(Constructor {
+  let begin_name_constructor = Rc::new(Constructor {
       cs: T_CS!("\\begin{".to_string()+&name+"}"),
       paramlist: $paramlist,
       replacement: $compiled_replacement,
@@ -773,7 +773,7 @@ macro_rules! DefEnvironmentI (
 
 
   let mut after_digest_with_egroup = $options.after_digest;
-  let unexpected_end_closure = Arc::new(|_stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+  let unexpected_end_closure = Rc::new(|_stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
     let env = LookupValue!("current_environment", state);
     //     Error('unexpected', "\\end{$name}", $_[0],
     //       "Can't close environment $name",
@@ -783,7 +783,7 @@ macro_rules! DefEnvironmentI (
     //     return; },
     Vec::new()
   });
-  let egroup_closure = Arc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+  let egroup_closure = Rc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
     if mode.is_some() {
       // TODO:
       // stomach.end_mode(mode.unwrap(), state);
@@ -794,7 +794,7 @@ macro_rules! DefEnvironmentI (
   });
   after_digest_with_egroup.push(unexpected_end_closure);
   after_digest_with_egroup.push(egroup_closure);
-  let end_envname_constructor = Arc::new(Constructor {
+  let end_envname_constructor = Rc::new(Constructor {
     cs: T_CS!("\\end{".to_string()+&name+"}"),
     replacement: None,
     paramlist: None,
@@ -807,7 +807,7 @@ macro_rules! DefEnvironmentI (
   $state.install_definition(ObjectStore::Constructor(end_envname_constructor), $options.scope);
 
   // For the uncommon case opened by \csname env\endcsname
-  let name_constructor = Arc::new(Constructor{
+  let name_constructor = Rc::new(Constructor{
     cs: T_CS!("\\".to_string() +&name),
     paramlist: $paramlist,
     replacement: $cc_copy,
@@ -833,10 +833,10 @@ macro_rules! DefEnvironmentI (
   });
   $state.install_definition(ObjectStore::Constructor(name_constructor), $options.scope);
 
-  let end_name_constructor = Arc::new(Constructor {
+  let end_name_constructor = Rc::new(Constructor {
     cs: T_CS!("\\end".to_string() + &name),
     paramlist: None,
-    replacement: Some(Arc::new(|document, whatsit, properties, state|{
+    replacement: Some(Rc::new(|document, whatsit, properties, state|{
       let env = LookupValue!("current_environment", state);
       // Error('unexpected', "\\end{$name}", $_[0],
       //   "Can't close environment $name",

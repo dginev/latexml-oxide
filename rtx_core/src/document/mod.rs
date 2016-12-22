@@ -33,7 +33,7 @@ impl Document {
       document: doc_scaffold,
       node: root,
       pending: Vec::new(),
-      debug: true,
+      debug: false,
       constructed_nodes : Vec::new(),
     }
   }
@@ -172,7 +172,7 @@ impl Document {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone() calls removed
     let node = self.open_element(qname, attrib, state);
     if self.debug {
-      println!("Inserting element {:?} with body: {:?}", qname, content);
+      println_stderr!("Inserting element {:?} with body: {:?}", qname, content);
     }
     for digested in content.into_iter() {
       self.absorb(digested, state);
@@ -261,14 +261,14 @@ impl Document {
     // }
 
     if node.get_type() == Some(NodeType::DocumentNode) {    // Didn't find $qname at all!!
-      println!("Error:malformed:TODO {:?} in doc: {:?}", qname, self.document.to_string(true));
+      println_stderr!("Error:malformed:TODO {:?} in doc: {:?}", qname, self.document.to_string(true));
       // Error('malformed', $qname, $self,
       //   "Attempt to close " . ($qname eq '#PCDATA' ? $qname : '</' . $qname . '>') . ", which isn't open",
       //   "Currently in " . self.getInsertionContext());
       return None;
     } else {                                         // Found node.
                                                    // Intervening non-auto-closeable nodes!!
-      println!("Error:malformed:TODO {:?}", qname);
+      println_stderr!("Error:malformed:TODO {:?}", qname);
       // Error('malformed', $qname, $self,
       //   "Closing " . ($qname eq '#PCDATA' ? $qname : '</' . $qname . '>')
       //     . " whose open descendents do not auto-close",

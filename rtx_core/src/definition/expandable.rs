@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 use state::State;
 use Digested;
 use token::*;
@@ -30,7 +30,7 @@ impl Default for Expandable {
       locator: String::new(),
       cs: T_CS!("Expandable".to_string()),
       paramlist: None,
-      expansion: Arc::new(|_gullet, _args, _state| Vec::new()),
+      expansion: Rc::new(|_gullet, _args, _state| Vec::new()),
     }
   }
 }
@@ -79,7 +79,7 @@ impl Definition for Expandable {
   }
 
   // Not implemented for expandable
-  fn invoke_primitive(&self, _gullet: &mut Stomach, _caller: Arc<Definition>, _state: &mut State) -> Vec<Digested> {
+  fn invoke_primitive(&self, _gullet: &mut Stomach, _caller: Rc<Definition>, _state: &mut State) -> Vec<Digested> {
     Vec::new()
   }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> {

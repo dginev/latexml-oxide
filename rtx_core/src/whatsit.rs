@@ -1,6 +1,6 @@
 use std::fmt;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::rc::Rc;
 use state::{State, ObjectStore};
 use list::List;
 use definition::expandable::Expandable;
@@ -12,7 +12,7 @@ use document::Document;
 pub struct Whatsit {
   pub args: Vec<Option<Digested>>,
   pub properties: HashMap<String, ObjectStore>,
-  pub definition: Arc<Definition>,
+  pub definition: Rc<Definition>,
 }
 
 impl Default for Whatsit {
@@ -20,7 +20,7 @@ impl Default for Whatsit {
     Whatsit {
       args: Vec::new(),
       properties: HashMap::new(),
-      definition: Arc::new(Expandable::default())
+      definition: Rc::new(Expandable::default())
     }
   }
 }
@@ -83,10 +83,10 @@ impl Whatsit {
     };
     if !body.is_empty() {
       let list = List{ boxes: body, mode: mode };
-      self.properties.insert("body".to_string(), ObjectStore::Digested(Arc::new(Digested::List(list))));
+      self.properties.insert("body".to_string(), ObjectStore::Digested(Rc::new(Digested::List(list))));
     }
     if let Some(trailer) = trailer_opt {
-      self.properties.insert("trailer".to_string(), ObjectStore::Digested(Arc::new(trailer.clone())));
+      self.properties.insert("trailer".to_string(), ObjectStore::Digested(Rc::new(trailer.clone())));
       // And copy any otherwise undefined properties from the trailer
       let trailer_whatsit = match trailer {
         Digested::Whatsit(w) => w,

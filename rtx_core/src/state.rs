@@ -1,6 +1,6 @@
 use std::hash::Hash;
 use std::collections::{VecDeque, HashMap};
-use std::sync::Arc;
+use std::rc::Rc;
 use std::fmt;
 use regex::Regex;
 
@@ -52,10 +52,10 @@ pub enum ObjectStore {
   // LaTeXML objects
   Catcode(Catcode),
   Token(Token),
-  Expandable(Arc<Expandable>),
-  Primitive(Arc<Primitive>),
-  Constructor(Arc<Constructor>),
-  Digested(Arc<::Digested>),
+  Expandable(Rc<Expandable>),
+  Primitive(Rc<Primitive>),
+  Constructor(Rc<Constructor>),
+  Digested(Rc<::Digested>),
   Parameter(Parameter),
   // Collections
   VecChar(Vec<char>),
@@ -104,6 +104,7 @@ pub enum Catcodes {
 
 /// Ledger for stacked assignments
 pub type AssignmentCount = HashMap<String, usize>;
+#[derive(Debug, Clone)]
 pub struct UndoFrame {
   locked: bool,
   meaning: AssignmentCount,
@@ -331,6 +332,8 @@ impl State {
     let mut specials_vdq = VecDeque::new();
     specials_vdq.push_front(ObjectStore::VecChar(vec!['^', '_', '@', '~', '&', '$', '#', '%', '\'']));
     value_table.insert("SPECIALS".to_string(), specials_vdq);
+
+
     let mut catcodes_typed : Table = HashMap::new();
     for (k,v) in catcodes {
       let mut vdq = VecDeque::new();
@@ -392,11 +395,10 @@ impl State {
         for frame in self.undo.iter_mut() {
           let is_locked = frame.locked;
           frame_table = frame.table_mut(&table_name);
-          if let Some(n) = frame_table.get(key) {
-            undo_count += *n;
+          if let Some(n) = frame_table.remove(key) {
+            undo_count += n;
           }
 
-          frame_table.remove(key);
           if is_locked {
             break;
           }
@@ -407,7 +409,7 @@ impl State {
       { // Undo the bindings, if `key` was bound in this frame
         let state_table = self.table_mut(&table_name);
         if let Some(defs) = state_table.get_mut(key) {
-          for _ in 1..undo_count {
+          for _ in 1..undo_count+1 {
             defs.pop_front();
           }
         }
@@ -490,7 +492,7 @@ impl State {
     }
   }
 
-  // pub fn unshift_value(&mut self, ) {
+  // pub fn unshift_value(&mut self, key,) {
   //   my ($self, $key, @values) = @_;
   //   my $vtable = $$self{value};
   //   assign_internal($self, 'value', $key, [], 'global') unless $$vtable{$key}[0];
@@ -559,7 +561,7 @@ impl State {
       Some(n) => n
     };
     let mut p = 0;
-    for f in 0..frame {
+    for f in 0..frame+1 {
       let val_opt = self.undo.get(f).as_ref().unwrap().table(&TableName::Value).get(key);
       let value = match val_opt {
         Some(v) => *v,
@@ -572,7 +574,7 @@ impl State {
 
   //======================================================================
   /// Lookup & assign a character's Catcode
-  pub fn lookup_catcode<'lc>(&'lc mut self, c: &'lc char) -> Option<Catcode> {
+  pub fn lookup_catcode(&self, c: &char) -> Option<Catcode> {
     match self.catcode.get(&c.to_string()) {
       None => None,
       Some(ref cvec) => match cvec.front() {
@@ -756,7 +758,7 @@ impl State {
         for (key, undo_count) in undo_table.iter() {
           // Typically only 1 value to shift off the table, unless scopes have been activated.
           let name_table = self.table_mut(table_name).get_mut(key).unwrap();
-          for _ in 1 .. *undo_count {
+          for _ in 1 .. *undo_count+1 {
             name_table.pop_front();
           }
         }
@@ -789,7 +791,7 @@ impl State {
     // TODO:
     // self.assign_mathcode('\'' => 0x8000, Some(Scope::Local));
     // // try to stay as ASCII as possible
-    // self.assign_value("font" => $self->lookupValue('font')->merge(encoding => 'ASCII'), 'local');
+    // self.assign_value("font" => $self->lookupValue('font')->merge(encoding => 'ASCII'), Some(Scope::Local));
   }
 
   pub fn end_semiverbatim(&mut self) {

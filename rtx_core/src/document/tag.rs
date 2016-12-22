@@ -1,9 +1,9 @@
-use std::sync::Arc;
+use std::rc::Rc;
 use libxml::tree::Node;
 use state::State;
 use document::Document;
 
-pub type TagConstructionClosure = Arc<Fn(&mut Document, Node, &mut State)>;
+pub type TagConstructionClosure = Rc<Fn(&mut Document, Node, &mut State)>;
 
 // Specify the properties of a Node tag.
 pub enum TagOptionName {
