@@ -7,7 +7,9 @@ use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::mouth::Mouth;
 use rtx_core::definition::{Definition, BeforeDigestClosure, ConstructionClosure};
 use rtx_core::document::Document;
+use rtx_core::document::resource::*;
 use rtx_core::document::tag::{TagOptions, TagOptionName};
+use rtx_core::util::pathname;
 
 //**********************************************************************
 //   Initially, I thought LaTeXML Packages should try to be like perl modules:
@@ -903,6 +905,7 @@ pub fn select_relaxng_schema(schema : String, namespaces : Option<HashMap<String
       model.register_document_namespace(&prefix, Some(value)); }
   }
   return; }
+
 #[macro_export]
 macro_rules! RelaxNGSchema(
   ($name:expr, $state:expr) => (select_relaxng_schema($name.to_string(), None, $state))
@@ -913,8 +916,55 @@ macro_rules! RegisterNamespace(
   ($prefix:expr, $namespace:expr, $state:expr) => ($state.model.register_namespace($prefix, Some($namespace.to_string()));)
 );
 
+#[macro_export]
 macro_rules! RegisterDocumentNamespace(
   ($prefix:expr, $namespace:expr, $state:expr) => ($state.model.register_document_namespace($prefix, Some($namespace.to_string()));)
 );
+
+
+pub fn require_resource(mut resource: Resource, state: &mut State) {
+  if resource.name.is_empty() && resource.content.is_empty() {
+    println_stderr!("Warn:expected:resource: Resource must have a resource pathname or content; skipping");
+    return;
+  }
+  if resource.mimetype.is_empty() && !resource.name.is_empty() {
+    let ext = pathname::ptype(&resource.name);
+    resource.mimetype = resource_type(&ext);
+  }
+  if resource.mimetype.is_empty() {
+    println_stderr!("Warning:expected:mime-type Resource must have a mime-type; skipping");
+    return;
+  }
+
+  // If we've got a document, go ahead & put the resource in.
+  // if (state.document.is_some()) {
+  //   state.document.as_mut().unwrap().add_resource(resource, resource);
+  // } else {
+  state.pending_resources.push(resource);
+  // }
+
+}
+
+#[macro_export]
+macro_rules! RequireResource(
+  ($resource:expr, $state:expr) => (require_resource(Resource{name: $resource.to_string(), ..Resource::default()}, $state))
+);
+
+
+// // No checking...
+// pub fn add_resource {
+//   my (document, resource, %options) = @_;
+//   let savenode = document->floatToElement('ltx:resource');
+//   document->insertElement('ltx:resource', options{content},
+//     src => resource, type => options{type}, media => options{media});
+//   document->setNode(savenode) if savenode;
+//   return; }
+
+// pub fn process_pending_resources(document: Document) {
+//   if (let req = LookupValue('PENDING_RESOURCES')) {
+//     map { addResource(document, @_) } @req;
+//     AssignValue(PENDING_RESOURCES => [], 'global'); }
+//   return; }
+
 
 pub mod pool;

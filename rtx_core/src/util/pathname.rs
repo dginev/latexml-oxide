@@ -208,3 +208,7 @@ pub fn find(pathname: &str, options: FindOptions) -> Option<String> {
   }
   None
 }
+
+pub fn ptype(pathname:& str) -> String {
+  "mock".to_string()
+}

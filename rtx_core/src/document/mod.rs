@@ -1,3 +1,4 @@
+pub mod resource;
 pub mod tag;
 
 extern crate regex;

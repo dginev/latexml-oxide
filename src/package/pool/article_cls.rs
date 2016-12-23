@@ -25,6 +25,6 @@ pub fn load_definitions(state: &mut State) {
   //**********************************************************************
   // Document structure.
   RelaxNGSchema!("LaTeXML", state);
-  // RequireResource!("ltx-article.css");
+  RequireResource!("ltx-article.css", state);
 
 }

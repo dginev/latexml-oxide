@@ -11,7 +11,9 @@ use definition::Definition;
 use definition::expandable::Expandable;
 use definition::constructor::Constructor;
 use definition::primitive::Primitive;
+use document::Document;
 use document::tag::TagOptions;
+use document::resource::Resource;
 
 lazy_static! {
   static ref TEX_OR_BIB_EXT_RE : Regex = Regex::new(r"\.(tex|bib)$").unwrap();
@@ -242,11 +244,13 @@ pub struct State {
   pub undo: VecDeque<UndoFrame>,
   /// Stateful runtime - data structures
   pub model: Model,
+  pub document: Option<Document>,
   pub prefixes: HashMap<String, bool>, // ?
   pub status: HashMap<String, bool>, // ?
   pub map: Vec<String>, // ?
   pub tag_properties: HashMap<String, TagOptions>,
   pub indirect_model: Option<IndirectModel>,
+  pub pending_resources: Vec<Resource>,
   /// Stateful runtime - simple fields
   pub verbosity: i32,
   pub status_code: usize,
@@ -277,11 +281,13 @@ impl Default for State {
       undo: undo_vdq,
       // Stateful runtime - data structures
       model: Model::default(),
+      document: None,
       prefixes: HashMap::new(),
       status: HashMap::new(),
       map: Vec::new(),
       tag_properties: HashMap::new(),
       indirect_model: None,
+      pending_resources: Vec::new(),
       // Stateful runtime - simple fields
       verbosity: 0,
       status_code: 0,
