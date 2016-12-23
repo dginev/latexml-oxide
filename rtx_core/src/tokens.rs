@@ -11,6 +11,13 @@ use Digested;
 pub struct Tokens {
   pub tokens: Vec<Token>
 }
+impl Default for Tokens {
+  fn default() -> Self {
+    Tokens {
+      tokens: Vec::new()
+    }
+  }
+}
 
 impl Tokens {
   pub fn new(tokens : Vec<Token>) -> Self {

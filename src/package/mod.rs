@@ -950,21 +950,4 @@ macro_rules! RequireResource(
   ($resource:expr, $state:expr) => (require_resource(Resource{name: $resource.to_string(), ..Resource::default()}, $state))
 );
 
-
-// // No checking...
-// pub fn add_resource {
-//   my (document, resource, %options) = @_;
-//   let savenode = document->floatToElement('ltx:resource');
-//   document->insertElement('ltx:resource', options{content},
-//     src => resource, type => options{type}, media => options{media});
-//   document->setNode(savenode) if savenode;
-//   return; }
-
-// pub fn process_pending_resources(document: Document) {
-//   if (let req = LookupValue('PENDING_RESOURCES')) {
-//     map { addResource(document, @_) } @req;
-//     AssignValue(PENDING_RESOURCES => [], 'global'); }
-//   return; }
-
-
 pub mod pool;

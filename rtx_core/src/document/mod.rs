@@ -12,6 +12,8 @@ use regex::Regex;
 use state::{ObjectStore, State};
 use common::model::IndirectModel;
 use {Digested, BoxOps};
+use Tbox;
+use document::resource::Resource;
 
 lazy_static! {
   static ref HAS_NONSPACE_RE : Regex = Regex::new(r"\S").unwrap();
@@ -807,6 +809,27 @@ impl Document {
   //   return; }
 
 
+  pub fn add_resource(&mut self, resource: Resource, state: &mut State) {
+    // let savenode_opt = self.float_to_element("ltx:resource");
+    let savenode_opt = None;
+    let mut attrib : HashMap<String, String> = HashMap::new();
+    attrib.insert("src".to_owned(), resource.name);
+    attrib.insert("type".to_owned(), resource.mimetype);
+    attrib.insert("media".to_owned(), resource.media);
+    let content_box = Digested::Box(Tbox{text: resource.content, ..Tbox::default()});
+    self.insert_element("ltx:resource", vec![content_box], Some(attrib), state);
+    if let Some(savenode) = savenode_opt {
+      self.set_node(savenode);
+    }
+  }
+
+  pub fn process_pending_resources(&mut self, state: &mut State) {
+    let resources : Vec<Resource> = state.pending_resources.drain(..).collect();
+    for resource in resources {
+      self.add_resource(resource, state);
+    }
+    state.pending_resources = Vec::new();
+  }
 }
 
 // Auxiliary
