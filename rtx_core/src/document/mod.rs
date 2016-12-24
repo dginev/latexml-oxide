@@ -14,6 +14,7 @@ use common::model::IndirectModel;
 use {Digested, BoxOps};
 use Tbox;
 use document::resource::Resource;
+use document::tag::TagConstructionClosure;
 
 lazy_static! {
   static ref HAS_NONSPACE_RE : Regex = Regex::new(r"\S").unwrap();
@@ -24,6 +25,7 @@ pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
   pub node: Node,
+  pub node_boxes: HashMap<usize, Tbox>,
   pub debug: bool,
   pub constructed_nodes: Vec<Node>
 }
@@ -35,6 +37,7 @@ impl Document {
     Document {
       document: doc_scaffold,
       node: root,
+      node_boxes: HashMap::new(),
       pending: Vec::new(),
       debug: false,
       constructed_nodes : Vec::new(),
@@ -241,7 +244,7 @@ impl Document {
   /// Since this is an "explicit request", we're currently skipping over those nodes,
   /// ie. we're automatically closing them, even if they're the same type as we're asking to close!!!
   /// This is kinda risky! Maybe we should try to request closing of specific nodes.
-  pub fn close_element(&mut self, qname: &str, _state: &mut State) -> Option<Node> {
+  pub fn close_element(&mut self, qname: &str, state: &mut State) -> Option<Node> {
     if self.debug {
       println_stderr!("Close element {:?} at {:?}", qname, self.node.get_name());
     }
@@ -278,12 +281,38 @@ impl Document {
       //   "Descendents are " . join(', ', map { Stringify($_) } @cant_close))
       //   if @cant_close;
       // So, now close up to the desired node.
-      self.close_node_internal(node.clone());
+      self.close_node_internal(node.clone(), state);
       return Some(node)
     }
   }
 
   pub fn can_auto_close(&self, _node: &Node) -> bool {true}
+
+  /// get the actions that should be performed on afterOpen or afterClose
+  pub fn get_tag_action_list(&self, tag: &str, when: &str) -> Vec<TagConstructionClosure> {
+    // my ($p, $n) = (undef, $tag);
+    // if ($tag =~ /^([^:]+):(.+)$/) {
+    //   ($p, $n) = ($1, $2); }
+    // my $when0   = $when . ':early';
+    // my $when1   = $when . ':late';
+    // my $taghash = $STATE->lookupMapping('TAG_PROPERTIES', $tag) || {};
+    // my $nshash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p . ':*')) || {};
+    // my $allhash = $STATE->lookupMapping('TAG_PROPERTIES', '*') || {};
+    // my $v;
+    // return (
+    //   (($v = $$taghash{$when0}) ? @$v : ()),
+    //   (($v = $$nshash{$when0})  ? @$v : ()),
+    //   (($v = $$allhash{$when0}) ? @$v : ()),
+    //   (($v = $$taghash{$when})  ? @$v : ()),
+    //   (($v = $$nshash{$when})   ? @$v : ()),
+    //   (($v = $$allhash{$when})  ? @$v : ()),
+    //   (($v = $$taghash{$when1}) ? @$v : ()),
+    //   (($v = $$nshash{$when1})  ? @$v : ()),
+    //   (($v = $$allhash{$when1}) ? @$v : ()),
+    //   );
+    Vec::new()
+  }
+
 
   pub fn to_string(&self) -> String {
     self.document.to_string(true)
@@ -495,11 +524,11 @@ impl Document {
   /// Close `node`, and any current nodes below it.
   /// No checking! Use this when you've already verified that `node` can be closed.
   /// and, of course, `node` must be current or some ancestor of it!!!
-  pub fn close_node_internal(&mut self, node: Node) {
+  pub fn close_node_internal(&mut self, node: Node, state: &mut State) {
     let closeto = node.get_parent().unwrap(); // Grab now in case afterClose screws the structure.
     let mut n       = self.close_text_internal();    // Close any open text node.
     while n.get_type() == Some(NodeType::ElementNode) {
-      self.close_element_at(n.clone());
+      self.close_element_at(n.clone(), state);
       // self.auto_collapse_children(n);
       if node == n {
         break;
@@ -641,6 +670,23 @@ impl Document {
 
 
   //**********************************************************************
+  /// Record the Box that created this node.
+  pub fn set_node_box(&mut self, node: &Node, tbox: Tbox) {
+    let nodeid = node.to_hashable();
+    self.node_boxes.insert(nodeid, tbox);
+  }
+
+  pub fn get_node_box(&mut self, node: &Node) -> Option<Tbox> {
+    if node.get_type() == Some(NodeType::ElementNode) {
+      self.node_boxes.remove(&node.to_hashable())
+    } else {
+      None
+    }
+  }
+
+
+
+  //**********************************************************************
   // Inserting new nodes at random points into the document,
   // typically, later in the process or during some kind of rearrangement.
 
@@ -746,8 +792,8 @@ impl Document {
   /// Whenever a node has been created using openElementAt,
   /// closeElementAt ought to be used to close it, when you're finished inserting into $node.
   /// Basically, this just runs any afterClose operations.
-  pub fn close_element_at(&mut self, node: Node) -> Node {
-    self.after_close(node)
+  pub fn close_element_at(&mut self, node: Node, state: &mut State) -> Node {
+    self.after_close(node, state)
   }
 
   pub fn after_open(&mut self, node: Node) -> Node {
@@ -762,14 +808,15 @@ impl Document {
     node
   }
 
-  pub fn after_close(&mut self, node: Node) -> Node {
+  pub fn after_close(&mut self, node: Node, state: &mut State) -> Node {
     // Should we set point to this node? (or to last child, or something ??
-    // let savenode = self.node;
-    // let box      = self.get_node_box(node);
-    // for action in self.get_tag_action_list(node, "afterClose") {
-    //   action(self, node, box)
-    // }
-    // self.set_node(savenode);
+    let savenode = self.node.clone();
+    let tbox = self.get_node_box(&node);
+    let node_qname = self.get_node_qname(&node, state);
+    for action in self.get_tag_action_list(&node_qname, "afterClose") {
+      action(self, node.clone(), tbox.clone(), state);
+    }
+    self.set_node(savenode);
     node
   }
 

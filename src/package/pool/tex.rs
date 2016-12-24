@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use libxml::tree::Node;
 
 use rtx_core::Digested;
+use rtx_core::tbox::Tbox;
 use rtx_core::state::State;
 use rtx_core::token::Token;
 use rtx_core::tokens::Tokens;
@@ -63,7 +64,7 @@ pub fn load_definitions(state: &mut State) {
 
   //======================================================================
 
-  Tag!("ltx:document", TagOptions{after_close: vec![Rc::new(|document, node, state| {
+  Tag!("ltx:document", TagOptions{after_close: vec![Rc::new(|document, node, box_opt, state| {
     document.process_pending_resources(state);
   })], ..TagOptions::default()}, state);
   RequireResource!("LaTeXML.css", state);
@@ -493,7 +494,7 @@ pub fn load_definitions(state: &mut State) {
 
     Tag!("ltx:para", TagOptions{auto_close: true, auto_open: true, ..TagOptions::default()}, state);
 
-    let trim_node_whitespace_closure = Rc::new(|document: &mut Document, node: Node, state: &mut State| {
+    let trim_node_whitespace_closure = Rc::new(|document: &mut Document, node: Node, box_opt: Option<Tbox>, state: &mut State| {
       document.trim_node_whitespace(node, state);
     });
     Tag!("ltx:p", TagOptions{auto_close: true, auto_open: true, after_close: vec![trim_node_whitespace_closure], ..TagOptions::default()}, state);
