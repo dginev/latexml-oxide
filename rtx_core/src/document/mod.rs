@@ -14,7 +14,7 @@ use common::model::IndirectModel;
 use {Digested, BoxOps};
 use Tbox;
 use document::resource::Resource;
-use document::tag::TagConstructionClosure;
+use document::tag::{TagOptions, TagOptionName, TagConstructionClosure};
 
 lazy_static! {
   static ref HAS_NONSPACE_RE : Regex = Regex::new(r"\S").unwrap();
@@ -25,9 +25,10 @@ pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
   pub node: Node,
-  pub node_boxes: HashMap<usize, Tbox>,
+  pub node_boxes: HashMap<usize, Digested>,
   pub debug: bool,
-  pub constructed_nodes: Vec<Node>
+  pub constructed_nodes: Vec<Node>,
+  pub box_to_absorb: Option<Digested>,
 }
 
 impl Document {
@@ -41,6 +42,7 @@ impl Document {
       pending: Vec::new(),
       debug: false,
       constructed_nodes : Vec::new(),
+      box_to_absorb: None
     }
   }
 
@@ -130,9 +132,11 @@ impl Document {
     let mut boxes = VecDeque::new();
     boxes.push_front(object);
 
-    while !boxes.is_empty() {
+    while let Some(front_box) = boxes.pop_front() {
       self.constructed_nodes = Vec::new();
-      match boxes.pop_front().unwrap() {
+      self.box_to_absorb = Some(front_box.clone());
+
+      match front_box {
         // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
         Digested::List(list) => {
           for tbox in list.unlist().into_iter().rev() {
@@ -289,16 +293,40 @@ impl Document {
   pub fn can_auto_close(&self, _node: &Node) -> bool {true}
 
   /// get the actions that should be performed on afterOpen or afterClose
-  pub fn get_tag_action_list(&self, tag: &str, when: &str) -> Vec<TagConstructionClosure> {
+  pub fn get_tag_action_list(&self, tag: &str, when: TagOptionName, state: &mut State) -> Vec<TagConstructionClosure> {
+    use self::tag::TagOptionName::*;
     // my ($p, $n) = (undef, $tag);
     // if ($tag =~ /^([^:]+):(.+)$/) {
     //   ($p, $n) = ($1, $2); }
-    // my $when0   = $when . ':early';
-    // my $when1   = $when . ':late';
-    // my $taghash = $STATE->lookupMapping('TAG_PROPERTIES', $tag) || {};
+    let mut when_early = None;
+    let mut when_late = None;
+
+    match when {
+      AfterOpen => {
+        when_early = Some(AfterOpenEarly);
+        when_late = Some(AfterOpenLate);
+      },
+      AfterClose => {
+        when_early = Some(AfterCloseEarly);
+        when_late = Some(AfterCloseLate);
+      }
+      _ => {}
+    };
+
+    let tag_hash = state.tag_properties.entry(tag.to_string()).or_insert(TagOptions::default());
     // my $nshash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p . ':*')) || {};
     // my $allhash = $STATE->lookupMapping('TAG_PROPERTIES', '*') || {};
-    // my $v;
+    let mut actions = Vec::new();
+    // we have Rc<> around the closures, so cloning them is cheap - just another pointer with a bumped up reference counter
+    if let Some(when0) = when_early {
+      actions.extend(tag_hash.get(&when0).clone());
+    }
+
+    actions.extend(tag_hash.get(&when).clone());
+
+    if let Some(when1) = when_late {
+      actions.extend(tag_hash.get(&when1).clone());
+    }
     // return (
     //   (($v = $$taghash{$when0}) ? @$v : ()),
     //   (($v = $$nshash{$when0})  ? @$v : ()),
@@ -310,7 +338,7 @@ impl Document {
     //   (($v = $$nshash{$when1})  ? @$v : ()),
     //   (($v = $$allhash{$when1}) ? @$v : ()),
     //   );
-    Vec::new()
+    actions
   }
 
 
@@ -671,12 +699,12 @@ impl Document {
 
   //**********************************************************************
   /// Record the Box that created this node.
-  pub fn set_node_box(&mut self, node: &Node, tbox: Tbox) {
+  pub fn set_node_box(&mut self, node: &Node, digested: Digested) {
     let nodeid = node.to_hashable();
-    self.node_boxes.insert(nodeid, tbox);
+    self.node_boxes.insert(nodeid, digested);
   }
 
-  pub fn get_node_box(&mut self, node: &Node) -> Option<Tbox> {
+  pub fn get_node_box(&mut self, node: &Node) -> Option<Digested> {
     if node.get_type() == Some(NodeType::ElementNode) {
       self.node_boxes.remove(&node.to_hashable())
     } else {
@@ -714,7 +742,6 @@ impl Document {
     let (decoded_ns, tag) = state.model.decode_qname(qname);
     let mut newnode;
     // let font = $attributes{_font} || $attributes{font};
-    // let mut box = $attributes{_box};
     // box = self.node_boxes.get(box);    // may already be the string key
 
     // If this will be the document root node, things are slightly more involved.
@@ -764,13 +791,20 @@ impl Document {
       }
     }
     // self.set_nodeFont($newnode, $font) if $font;
-    // self.set_nodeBox($newnode, $box) if $box;
+
+    // The .clone on boxes is potentially *VERY SLOW* and a code smell.
+    // It can be eventually avoided by using a "memory arena" for all intermediate objects - tokens, boxes, etc.
+    // and a well-designed referncing scheme into the driver structs, such as Gullet, Stomach and Document
+    if let Some(digested) = self.box_to_absorb.clone() {
+      self.set_node_box(&newnode, digested);
+    }
+
     if self.debug {
       println_stderr!("Inserting {:?} into {:?}",newnode.get_name(), point.get_name());// if $LaTeXML::Core::Document::DEBUG;
     }
 
     // Run afterOpen operations
-    self.after_open(newnode.clone());
+    self.after_open(newnode.clone(), state);
 
     return newnode;
   }
@@ -796,25 +830,26 @@ impl Document {
     self.after_close(node, state)
   }
 
-  pub fn after_open(&mut self, node: Node) -> Node {
-    // // Set current point to this node, just in case the afterOpen's use it.
-    // let savenode = self.node;
-    // self.set_node($node);
-    // let box = self.get_node_box(node);
-    // for action in self.get_tag_action_list(node, "afterOpen") {
-    //   action(self, node, box)
-    // }
-    // self.set_node(savenode);
+  pub fn after_open(&mut self, node: Node, state: &mut State) -> Node {
+    // Set current point to this node, just in case the afterOpen's use it.
+    let savenode = self.node.clone();
+    let digested = self.get_node_box(&node);
+    self.set_node(node.clone());
+    let node_qname = self.get_node_qname(&node, state);
+    for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterOpen, state) {
+      action(self, node.clone(), digested.clone(), state);
+    }
+    self.set_node(savenode);
     node
   }
 
   pub fn after_close(&mut self, node: Node, state: &mut State) -> Node {
     // Should we set point to this node? (or to last child, or something ??
     let savenode = self.node.clone();
-    let tbox = self.get_node_box(&node);
+    let digested = self.get_node_box(&node);
     let node_qname = self.get_node_qname(&node, state);
-    for action in self.get_tag_action_list(&node_qname, "afterClose") {
-      action(self, node.clone(), tbox.clone(), state);
+    for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterClose, state) {
+      action(self, node.clone(), digested.clone(), state);
     }
     self.set_node(savenode);
     node

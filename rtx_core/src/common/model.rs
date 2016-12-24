@@ -405,8 +405,9 @@ impl Model {
         //   },
         //   None => node.get_name()
         // }
-        node.get_name()
-      }
+        // TODO: Mock for now, add namespace_uri capability to rust-libxml next
+        format!("ltx:{}",node.get_name())
+      },
       // Need others?
       t =>  panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {:?}", t)
         // Fatal('misdefined', '<caller>', undef,

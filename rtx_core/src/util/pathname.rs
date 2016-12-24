@@ -209,6 +209,11 @@ pub fn find(pathname: &str, options: FindOptions) -> Option<String> {
   None
 }
 
-pub fn ptype(pathname:& str) -> String {
-  "mock".to_string()
+pub fn extension(pathname:& str) -> String {
+  let canonical_pathname = canonical(pathname);
+  let canonical_path = Path::new(&canonical_pathname);
+  match canonical_path.extension() {
+    Some(e) => e.to_string_lossy().to_string(),
+    None => String::new()
+  }.to_lowercase()
 }

@@ -1,5 +1,6 @@
 //======================================================================
 // Support for requiring "Resources", ie CSS, Javascript, whatever
+#[derive(Debug, Clone)]
 pub struct Resource {
   pub name: String,
   pub media: String,

@@ -928,7 +928,7 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
     return;
   }
   if resource.mimetype.is_empty() && !resource.name.is_empty() {
-    let ext = pathname::ptype(&resource.name);
+    let ext = pathname::extension(&resource.name);
     resource.mimetype = resource_type(&ext);
   }
   if resource.mimetype.is_empty() {
