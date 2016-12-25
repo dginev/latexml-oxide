@@ -415,6 +415,40 @@ impl Model {
     }
   }
 
+  /// Same as get_node_qname, but using the Document namespace prefixes
+  pub fn get_node_document_qname(&self, node: &Node) -> String {
+    use libxml::tree::NodeType::*;
+    let node_type = node.get_type();
+    if node_type.is_none() {
+      return "#BrokenNode".to_string()
+    }
+
+    match node_type.unwrap() {
+      TextNode => "#PCDATA".to_string(),
+      DocumentNode => "#Document".to_string(),
+      CommentNode => "#Comment".to_string(),
+      PiNode => "#ProcessingInstruction".to_string(),
+      DTDNode => "#DTD".to_string(),
+
+      // TODO
+      // elsif ($type == XML_NAMESPACE_DECL) {
+      //   my $ns = $node->declaredURI;
+      //   my $prefix = $ns && $self->getDocumentNamespacePrefix($ns, 0, 1);
+      //   return ($prefix ? 'xmlns:' . $prefix : 'xmlns'); }
+      NamespaceDecl => "xmlns".to_string(),
+
+      ElementNode | AttributeNode => {
+        // TODO
+        // my $ns = $node->namespaceURI;
+        // my $prefix = $ns && $self->getDocumentNamespacePrefix($ns, 0, 1);
+        // return ($prefix ? $prefix . ":" . $node->localname : $node->localname); } }
+        format!("ltx:{}",node.get_name())
+      },
+      // Need others?
+      t =>  panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {:?}", t)
+    }
+  }
+
   /// Given a Qualified name, possibly prefixed with a namespace prefix,
   /// as defined by the code namespace mapping,
   /// return the NamespaceURI and localname.

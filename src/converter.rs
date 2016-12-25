@@ -1,3 +1,4 @@
+use rtx_core::state::State;
 use rtx_core::common::{Config, DataSize, OutputFormat, Error};
 use rtx_core::list::List;
 use rtx_core::document::Document;
@@ -40,6 +41,9 @@ impl Converter {
     // Prepare LaTeXML object
     self.core.initialize_state(vec!["TeX.pool".to_string()]);
     self.ready = true;
+  }
+  pub fn state_mut(&mut self) -> &mut State {
+    self.core.state_mut()
   }
   pub fn bind_log(&mut self) {
     // TODO
@@ -174,7 +178,7 @@ impl Converter {
       _ => {
         dom_result = self.core.convert_document(digested);
         match dom_result {
-          Ok(dom) => dom.to_string(),
+          Ok(dom) => dom.to_string(self.state_mut()),
           Err(e) => {
             println_stderr!("convert document failed: {:?}", e);
             "Fatal: convert document failed".to_string()

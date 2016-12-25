@@ -5,6 +5,7 @@ extern crate regex;
 extern crate libxml;
 
 use std::collections::{VecDeque, HashMap, HashSet};
+use std::iter;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, NodeType, Namespace};
 use regex::Regex;
@@ -314,8 +315,8 @@ impl Document {
     };
 
     let tag_hash = state.tag_properties.entry(tag.to_string()).or_insert(TagOptions::default());
-    // my $nshash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p . ':*')) || {};
-    // my $allhash = $STATE->lookupMapping('TAG_PROPERTIES', '*') || {};
+    // let nshash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p . ':*')) || {};
+    // let allhash = $STATE->lookupMapping('TAG_PROPERTIES', '*') || {};
     let mut actions = Vec::new();
     // we have Rc<> around the closures, so cloning them is cheap - just another pointer with a bumped up reference counter
     if let Some(when0) = when_early {
@@ -342,8 +343,118 @@ impl Document {
   }
 
 
-  pub fn to_string(&self) -> String {
-    self.document.to_string(true)
+  pub fn to_string(&self, state: &mut State) -> String {
+    // This line is to use libxml2's built-in serializer w/indentation heuristic.
+    // Apparently, libxml2 is giving us "binary" or byte strings which we'd prefer to have as text.
+    //  return decode('UTF-8',$self->getDocument->toString($format)); }
+    // This uses our own serializer emulating libxml2's heuristic indentation.
+    //  return $self->serialize_aux($self->getDocument, 0, 0, 1); }
+    // This uses our own serializer w/ correct indentation rules.
+    self.serialize_aux(&self.document.as_node(), 0, false, false, state)
+  }
+
+  /// We ought to try for something close to C14N (http://www.w3.org/TR/xml-c14n),
+  /// but keep XML declaration, comments and don't convert empty elements.
+  pub fn serialize_aux(&self, node: &Node, depth: usize, noindent: bool, heuristic: bool, state: &mut State) -> String {
+    let indent = iter::repeat("  ").take(depth).collect::<String>();
+    let mut serialized = String::new();
+
+    match node.get_type() {
+      Some(NodeType::DocumentNode) => {
+        serialized.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        if let Some(child) = node.get_first_child() {
+          let child_serialized = self.serialize_aux(&child, depth, noindent, heuristic, state);
+          serialized.push_str(&child_serialized);
+          let mut current_child = child;
+          while let Some(sibling) = current_child.get_next_sibling() {
+            let sibling_serialized = self.serialize_aux(&sibling, depth, noindent, heuristic, state);
+            serialized.push_str(&sibling_serialized);
+            current_child = sibling;
+          }
+        }
+      },
+      Some(NodeType::ElementNode) => {
+        // TODO: handle properly
+        // let tag = state.model.get_node_document_qname(&node);
+        let tag = node.get_name();
+        let children = node.get_child_nodes();
+        let mut open_tag = format!("<{}", tag);
+
+        let nsnodes = node.get_namespaces(&self.document);
+        for ns in nsnodes {
+          let prefix = ns.get_prefix();
+          let prefix_declaration = if prefix.is_empty() {
+            "xmlns".to_string()
+          } else {
+            format!("xmlns:{}", prefix)
+          };
+          let url = ns.get_url();
+          open_tag.push_str(&format!(" {}=\"{}\"", prefix_declaration, url));
+        }
+
+        let anodes = node.get_attributes();
+        let mut anodes_keys : Vec<&String> = anodes.keys().collect();
+        anodes_keys.sort();
+        for key in anodes_keys {
+          let val_serialized = serialize_attr(&node.get_property(key).unwrap_or(String::new()));
+          open_tag.push_str(&format!(" {}=\"{}\"", key, val_serialized));
+        }
+
+        let noindent_children : bool = if heuristic {
+          // This emulates libxml2"s heuristic
+          noindent ||
+            !children.iter().filter(|e| e.get_type() == Some(NodeType::TextNode)).collect::<Vec<&Node>>().is_empty()
+        } else {
+          // This is the "Correct" way to determine whether to add indentation
+          let node_qname = self.get_node_qname(node, state);
+          state.model.can_contain(&node_qname, "#PCDATA")
+        };
+
+        if !noindent_children {
+          serialized.push_str(&indent)
+        }
+        serialized.push_str(&open_tag);
+        if !children.is_empty() { // with contents.
+          serialized.push('>');
+          if !noindent_children {
+            serialized.push_str("\n");
+          }
+          for child in children {
+            serialized.push_str(&self.serialize_aux(&child, depth + 1, noindent_children, heuristic, state));
+          }
+          if !noindent_children {
+            serialized.push_str(&indent)
+          }
+          serialized.push_str(&format!("</{}>",tag));
+          if !noindent_children {
+            serialized.push('\n');
+          }
+        } else {    // empty element.
+          serialized.push_str("/>");
+          if !noindent {
+            serialized.push_str("\n");
+          }
+        }
+      },
+      Some(NodeType::TextNode) => {
+        return serialize_string(&node.get_content());
+      },
+      Some(NodeType::PiNode) => {
+        // should code this by hand, as well...
+        if !noindent {
+          serialized.push_str(&indent);
+        }
+        serialized.push_str(&self.document.node_to_string(&node));
+        if !noindent {
+          serialized.push_str("\n");
+        }
+      },
+      Some(NodeType::CommentNode) => {
+        serialized.push_str(&format!("<!-- {}-->", serialize_string(&node.get_content())));
+      }
+      _ => {}
+    }
+    serialized
   }
 
   pub fn set_node(&mut self, node: Node) {
@@ -633,7 +744,7 @@ impl Document {
     // else {                                             // Now we're getting more desparate...
     //       // Check if we can auto close some nodes, and _then_ insert the $qname.
     //   my ($node, $closeto) = (self.node});
-    //   while (($node->nodeType != XML_DOCUMENT_NODE) && self.canAutoClose($node)) {
+    //   while (($node->nodeType != NodeType::DocumentNode) && self.canAutoClose($node)) {
     //     let parent = $node->parentNode;
     //     if (self.canContainSomehow($parent, $qname)) {
     //       $closeto = $node; last; }
@@ -763,12 +874,12 @@ impl Document {
           let prefix = state.model.get_document_namespace_prefix(&ns, false, false);
           let attprefix = state.model.get_document_namespace_prefix(&ns, true, true);
           if prefix.is_none() && attprefix.is_some() {
-            let attr_ns_node = Namespace::new(&attprefix.unwrap(), &ns, newnode.clone()).unwrap();
+            let attr_ns_node = Namespace::new(&attprefix.unwrap(), &ns, &newnode).unwrap();
             newnode.set_namespace(attr_ns_node);
           }
           // TODO: Figure out a better way to achieve the "activate" effect in XML:LibXML::Element
           // it seems just creating the namespace without setting it is equivalent ??
-          let _ns_node = Namespace::new("", &ns, newnode.clone()).unwrap();
+          let _ns_node = Namespace::new("", &ns, &newnode).unwrap();
           // newnode.set_namespace(ns_node);
         },
         None => {},// TODO
@@ -867,13 +978,13 @@ impl Document {
   //   if (my (@children) = $node->childNodes) {
   //     let child = $children[0];
   //     let type  = $child->nodeType;
-  //     if ($type == XML_TEXT_NODE) {
+  //     if (node_type == XML_TEXT_NODE) {
   //       let string = $child->data;
   //       #      if($string =~ s/^\s+//){
   //       #      with some trepidation, I don't think we want to trim nbsp!
   //       if ($string =~ s/^ +//) {
   //         $child->setData($string); } }
-  //     elsif ($type == XML_ELEMENT_NODE) {
+  //     elsif (node_type == XML_ELEMENT_NODE) {
   //       trimNodeLeftWhitespace($document, $child); } }
   //   return; }
 
@@ -882,11 +993,11 @@ impl Document {
   //   if (my (@children) = $node->childNodes) {
   //     let child = $children[-1];
   //     let type  = $child->nodeType;
-  //     if ($type == XML_TEXT_NODE) {
+  //     if (node_type == XML_TEXT_NODE) {
   //       let string = $child->data;
   //       if ($string =~ s/\s+$//) {
   //         $child->setData($string); } }
-  //     elsif ($type == XML_ELEMENT_NODE) {
+  //     elsif (node_type == XML_ELEMENT_NODE) {
   //       trimNodeRightWhitespace($document, $child); } }
   //   return; }
 
@@ -941,4 +1052,26 @@ fn compute_indirect_model_aux(tag: &str, start_opt: Option<String>, desirability
         openable, desc, state);
     }
   }
+}
+
+fn serialize_string(string: &str) -> String {
+  // Basic entities
+  let mut serialized = string.replace("&","&amp;");
+  serialized = serialized.replace(">","&gt;");
+  serialized = serialized.replace("<","&lt;");
+  // Remove dis-allowed code-points.
+  //  $string =~ s/(?:\x{00}-\x{08}|\x{0B}|\x{0C}|\x{0D}-\x{19}|\x{D800}-\x{DFFF}|\x{FFFE}-\x{FFFF})//g;
+  // Hmm... the upper ranges gives warning in some Perls...
+  // TODO:
+  // $string =~ s/(?:\x{00}-\x{08}|\x{0B}|\x{0C}|\x{0D}-\x{19})//g;
+  serialized
+}
+
+fn serialize_attr(string: &str) -> String {
+  let mut serialized = serialize_string(string);
+  // And escape any remaining special code points
+  serialized = serialized.replace("\"","&quot;");
+  serialized = serialized.replace("\n","&#10;");
+  serialized = serialized.replace("\t", "&#9;");
+  serialized
 }

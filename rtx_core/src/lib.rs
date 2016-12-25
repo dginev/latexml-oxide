@@ -40,6 +40,20 @@ pub struct Core {
   pub stomach: Stomach,
   pub preload: Vec<String>,
 }
+impl Default for Core {
+  fn default() -> Self {
+    Core {
+      preload: Vec::new(),
+      stomach: Stomach::default(),
+      state: State::new(Model::default(), None),
+    }
+  }
+}
+impl Core {
+  pub fn state_mut(&mut self) -> &mut State {
+    &mut self.state
+  }
+}
 
 pub trait BoxOps {
   fn unlist(self) -> Vec<Digested>;
@@ -104,16 +118,6 @@ impl BoxOps for Digested {
       &Digested::Box(ref b) => b.stringify(),
       &Digested::List(ref l) => l.stringify(),
       &Digested::Whatsit(ref w) => w.stringify(),
-    }
-  }
-}
-
-impl Default for Core {
-  fn default() -> Self {
-    Core {
-      preload: Vec::new(),
-      stomach: Stomach::default(),
-      state: State::new(Model::default(), None),
     }
   }
 }

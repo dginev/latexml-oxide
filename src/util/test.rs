@@ -1,12 +1,13 @@
 use glob::glob;
 use std::collections::HashMap;
 use libxml::parser::Parser;
-use libxml::tree::Document;
 
 use rtx_core::Core;
 use rtx_core::stomach::Stomach;
 use rtx_core::common::model::Model;
 use rtx_core::state::State;
+use rtx_core::document::Document;
+use libxml::tree::Document as XmlDoc;
 
 use core::DigestionAPI;
 
@@ -70,7 +71,7 @@ fn process_texfile(tex_path: String, name: &str) -> Vec<String> {
 
   match latexml.convert_file(tex_path.clone()) {
     Err(e) => panic!("{:?}: Couldn't convert {:?}; {:?}", name, tex_path, e),
-    Ok(doc) => process_dom(doc.document, name),
+    Ok(doc) => process_ltx_doc(doc, name, latexml.state_mut()),
   }
 }
 
@@ -81,6 +82,9 @@ fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
     Ok(dom) => process_dom(dom, name),
   }
 }
-fn process_dom(dom: Document, _name: &str) -> Vec<String> {
+fn process_ltx_doc(doc: Document, _name: &str, state: &mut State) -> Vec<String> {
+  doc.to_string(state).split('\n').map(|line| line.to_string()).collect()
+}
+fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {
   dom.to_string(true).split('\n').map(|line| line.to_string()).collect()
 }
