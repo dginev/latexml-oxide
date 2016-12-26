@@ -41,7 +41,7 @@ impl Document {
       node: root,
       node_boxes: HashMap::new(),
       pending: Vec::new(),
-      debug: false,
+      debug: true,
       constructed_nodes : Vec::new(),
       box_to_absorb: None
     }
@@ -518,7 +518,6 @@ impl Document {
     // }
     if self.debug {
       println_stderr!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
-      //   if $LaTeXML::Core::Document::DEBUG;
     }
 
     // if node_type != Some(NodeType::DocumentNode) // If not at document begin
@@ -569,7 +568,7 @@ impl Document {
   /// Can an element with (qualified name) $tag contain a $childtag element indirectly?
   /// That is, by openning some number of autoOpen'able tags?
   /// And if so, return the tag to open.
-  pub fn can_contain_indirect(&mut self, tag: &str, child: &str, state: &mut State) -> bool {
+  pub fn can_contain_indirect(&mut self, tag: &str, child: &str, state: &mut State) -> Option<String> {
     // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a node.
     // $child = $model->getNodeQName($child) if ref $child;    // In case child is a node.
 
@@ -577,16 +576,24 @@ impl Document {
       let new_im = self.compute_indirect_model(state);
       state.indirect_model = Some(new_im);
     }
+    println_stderr!("Indirect model: {:?}", state.indirect_model);
 
     let imodel = state.indirect_model.as_ref().unwrap();
 
-    match imodel.get(tag) {
+    let inner_node = match imodel.get(tag) {
       Some(sub_m) => match sub_m.get(child) {
-        Some(_) => true,
-        None => false,
+        Some(node) => Some(node.to_string()),
+        None => None,
       },
-      None => false,
-    }
+      None => None,
+    };
+
+    println_stderr!("Check for indirect contain on {} and {} decided on: {:?}", tag, child, inner_node);
+    inner_node
+  }
+
+  pub fn can_contain_somehow(&mut self, tag: &str, child: &str, state: &mut State) -> bool {
+    state.model.can_contain(tag, child) || self.can_contain_indirect(tag, child, state).is_some()
   }
 
 
@@ -690,9 +697,9 @@ impl Document {
                         self.document.node_to_string(&self.node));
       }
       self.node.append_text(text).unwrap();
-    } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "//PCDATA", state) {
+    } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
       // or text allowed here
-      let mut point = self.find_insertion_point("//PCDATA", state);
+      let mut point = self.find_insertion_point("#PCDATA", state);
       let node = Node::new_text(text, &self.document).unwrap();
       if self.debug {
         println_stderr!("Inserting text node for {:?} into {:?}",
@@ -736,32 +743,46 @@ impl Document {
     // let inter;
     // If `qname` is allowed at the current point, we're done.
     if self.can_contain_qname(&cur_qname, qname, state) {
-      // self.node.clone()
-    }
+      return self.node.clone()
     // Else, if we can create an intermediate node that accepts $qname, we'll do that.
-    // elsif (($inter = self.canContainIndirect($cur_qname, $qname))
-    //   && ($inter ne $qname) && ($inter ne $cur_qname)) {
-    //   self.openElement($inter, font => self.getNodeFont(self.node}));
-    //   return self.find_insertion_point($qname); }    // And retry insertion (should work now).
-    // else {                                             // Now we're getting more desparate...
-    //       // Check if we can auto close some nodes, and _then_ insert the $qname.
-    //   my ($node, $closeto) = (self.node});
-    //   while (($node->nodeType != NodeType::DocumentNode) && self.canAutoClose($node)) {
-    //     let parent = $node->parentNode;
-    //     if (self.canContainSomehow($parent, $qname)) {
-    //       $closeto = $node; last; }
-    //     $node = $parent; }
-    //   if ($closeto) {
-    //     self.closeNode_internal($closeto);             // Close the auto closeable nodes.
-    //     return self.find_insertion_point($qname); }    // Then retry, possibly w/auto open's
-    //   else {                                             // Didn't find a legit place.
-    //     Error('malformed', $qname, $self,
-    //       ($qname eq '//PCDATA' ? $qname : '<' . $qname . '>') . " isn't allowed in <$cur_qname>",
-    //       "Currently in " . self.getInsertionContext());
-    //     return self.node}; } } }                       // But we'll do it anyway, unless Error => Fatal.
-    // else {
-      self.node.clone()
-    // }
+    } else if let Some(inter) = self.can_contain_indirect(&cur_qname, qname, state) {
+      if (inter != qname) && (inter != cur_qname) {
+        println_stderr!("can insert into indirect node named: {}", inter);
+        self.open_element(&inter, None, state);//font => self.getNodeFont(self.node}));
+        return self.find_insertion_point(qname, state); // And retry insertion (should work now).
+      }
+    } else { // Now we're getting more desparate...
+      // Check if we can auto close some nodes, and _then_ insert the `qname`.
+      let mut node = self.node.clone();
+      let mut close_to = None;
+      while (node.get_type() != Some(NodeType::DocumentNode)) && self.can_auto_close(&node) {
+        let parent_opt = node.get_parent();
+        let parent = match &parent_opt {
+          &None => String::new(),
+          &Some(ref p) => state.model.get_node_qname(p)
+        };
+        if self.can_contain_somehow(&parent, qname, state) {
+          close_to = Some(node);
+          break;
+        }
+        node = match parent_opt {
+          Some(p) => p,
+          None => break
+        };
+      }
+      if let Some(close_to_node) = close_to {
+        self.close_node_internal(close_to_node, state);             // Close the auto closeable nodes.
+        return self.find_insertion_point(qname, state);             // Then retry, possibly w/auto open's
+
+      } else {                                             // Didn't find a legit place.
+        println_stderr!("Error:malformed:{} TODO", qname);
+        //       ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed in <$cur_qname>",
+        //       "Currently in " . self.getInsertionContext());
+        //     return self.node}; } } }                       // But we'll do it anyway, unless Error => Fatal.
+        return self.node.clone()
+      }
+    }
+    self.node.clone()
   }
 
 
