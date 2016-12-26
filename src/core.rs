@@ -1,11 +1,15 @@
 use regex::{Regex, Captures};
 use std::path::Path;
+use std::rc::Rc;
+
 use rtx_core::common::{Error, DigestionMode};
 // use common::model::{Model};
 use rtx_core::{Core, Digested, TexMode};
 use rtx_core::common::error::*;
 use rtx_core::util::pathname;
+use rtx_core::util::pathname::FindOptions;
 use rtx_core::state::{Scope, ObjectStore}; // State
+use rtx_core::definition::expandable::Expandable;
 // use rtx_core::stomach::Stomach;
 use rtx_core::document::Document;
 // use rtx_core::tbox::Tbox;
@@ -19,12 +23,24 @@ lazy_static! {
   static ref LATEX_OPTION_REGEX : Regex = Regex::new(r"^\[([^\]]*)\]").unwrap();
 }
 
+#[derive(Default)]
+pub struct DigestionOptions {
+  pub mode: Option<DigestionMode>,
+  pub noinitialize: Option<bool>,
+  pub preamble: Option<String>,
+  pub postamble: Option<String>,
+}
+
 pub trait DigestionAPI {
   fn initialize_state(&mut self, preloads: Vec<String>);
   fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Digested, Error>;
+  fn digest_file(&mut self, request: String, options: DigestionOptions) -> Result<Digested, Error>;
+  fn digest_internal(&mut self) -> Digested; // used to be "finishDigestion"
   fn convert_file(&mut self, filepath: String) -> Result<Document, Error>;
   fn convert_document(&mut self, digested: Digested) -> Result<Document, Error>;
-  fn digest_internal(&mut self) -> Digested;
+  // Mocks
+  fn load_preamble(&mut self, preamble: String) {}
+  fn load_postamble(&mut self, preamble: String) {}
 }
 
 impl DigestionAPI for Core {
@@ -42,7 +58,8 @@ impl DigestionAPI for Core {
                             Some(Scope::Global));
   }
 
-  fn digest(&mut self, request: String, _preamble: Option<String>, _postamble: Option<String>, _mode: Option<DigestionMode>, _no_init: bool) -> Result<Digested, Error> {
+  fn digest(&mut self, request: String, _preamble: Option<String>, _postamble: Option<String>,
+    _mode: Option<DigestionMode>, _no_init: bool) -> Result<Digested, Error> {
 
     // let mut ext = match mode {
     //   Some(m) => Some(m.extension()),
@@ -82,15 +99,15 @@ impl DigestionAPI for Core {
 
     // $state->installDefinition(LaTeXML::Definition::Expandable->new(T_CS!('\jobname'), undef,
     //     Tokens(Explode($name))));
-    // # Reverse order, since last opened is first read!
+    // // Reverse order, since last opened is first read!
     // $self->loadPostamble($options{postamble}) if $options{postamble};
-    match input_content(self, request.clone()) {
+    match input_content(self, &request) {
       Ok(_) => {}
       Err(e) => println_stderr!("Failed to input content: {:?}", e),
     };
     // $self->loadPreamble($options{preamble}) if $options{preamble};
 
-    // # Now for the Hacky part for BibTeX!!!
+    // // Now for the Hacky part for BibTeX!!!
     // if ($mode eq 'BibTeX') {
     //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
     //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX); }
@@ -102,7 +119,7 @@ impl DigestionAPI for Core {
   }
 
   fn convert_file(&mut self, filepath: String) -> Result<Document, Error> {
-    match self.digest(filepath, None, None, None, false) {
+    match self.digest_file(filepath, DigestionOptions::default()) {
       Err(e) => Err(e),
       Ok(digested) => self.convert_document(digested),
     }
@@ -181,5 +198,95 @@ impl DigestionAPI for Core {
     Digested::List(List { boxes: boxes, mode: TexMode::Text })
   }
 
-  // Internal helpers:
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Mid-level API.
+
+  // options are currently being evolved to accomodate the Daemon:
+  //    mode  : the processing mode, ie the pool to preload: TeX or BibTeX
+  //    noinitialize : if defined, it does not initialize State.
+  //    preamble = names a tex file (or standard_preamble.tex)
+  //    postamble = names a tex file (or standard_postamble.tex)
+
+  fn digest_file(&mut self, mut request: String, options: DigestionOptions) -> Result<Digested, Error> {
+    let mut dir = String::new();
+    let mut name = String::new();
+    // let mut ext = String::new();
+    let mode = match options.mode {
+      None => DigestionMode::TeX,
+      Some(m) => m,
+    };
+
+    if pathname::is_literaldata(&request) {
+      // ext = mode.extension();
+      name = "Anonymous String".to_string();
+    } else if pathname::is_url(&request) {
+      // ext = mode.extension();
+      name = request.clone();
+    } else {
+      let ext_str = format!(".{}",mode.extension());
+      let request_base = if request.ends_with(&ext_str) {
+        request[0 .. request.len()-ext_str.len()].to_string()
+      } else {
+        request.to_string()
+      };
+
+      if let Some(pathname) = pathname::find(&request_base, FindOptions {
+        types: Some(vec![mode.extension(), String::new()]), ..FindOptions::default()
+      }) {
+        request = pathname;
+        dir = pathname::directory(&request);
+        name = pathname::file_name(&request);
+        // ext = pathname::extension(&request);
+      } else {
+        println_stderr!("Fatal:missing_file:{} Can't find {} file {} ", request_base, mode, request);
+      }
+    }
+
+    note_begin(&format!("Digesting {} {}", mode, name));
+    let main_pool = format!("{}.pool", mode);
+    let noinitialize = options.noinitialize.unwrap_or(false);
+    if !noinitialize {
+      let mut preloads = vec![main_pool];
+      preloads.extend(self.preload.clone());
+      self.initialize_state(preloads);
+    }
+
+    if !pathname::is_literaldata(&request) {
+      self.state.assign_value("SOURCEFILE", ObjectStore::String(request.clone()), None);
+    }
+    if !dir.is_empty() {
+      self.state.assign_value("SOURCEDIRECTORY", ObjectStore::String(dir.clone()), None);
+    }
+    self.state.search_paths.push_front(dir.clone());
+    self.state.graphics_paths.push_front(dir.clone());
+
+    let name_copy = name.clone();
+    self.state.install_definition(ObjectStore::Expandable(Rc::new(Expandable{
+      cs: T_CS!("\\jobname"),
+      paramlist: None,
+      expansion: Rc::new(move |_gullet, _args, _state| Explode!(name_copy)),
+      ..Expandable::default()
+    })), None);
+
+    // Reverse order, since last opened is first read!
+    if let Some(postamble) = options.postamble {
+      self.load_postamble(postamble);
+    }
+
+    try!(input_content(self, &request));
+
+    if let Some(preamble) = options.preamble {
+      self.load_preamble(preamble);
+    }
+
+    // Now for the Hacky part for BibTeX!!!
+    // if mode == DigestionMode::BibTeX {
+    //   let bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
+    //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX);
+    // }
+
+    let list = self.digest_internal();
+    note_end(&format!("Digesting {} {}", mode, name));
+    Ok(list)
+  }
 }

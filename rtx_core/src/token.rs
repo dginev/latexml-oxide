@@ -158,76 +158,99 @@ pub struct Token {
 #[macro_export]
 macro_rules! T_BEGIN(() => ({
   use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text: "{".to_string(), code: Catcode::BEGIN }
 }));
 
 #[macro_export]
 macro_rules! T_END(() => ({
   use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text: "}".to_string(), code: Catcode::END }
 }));
 #[macro_export]
 macro_rules! T_MATH(() => ({
   use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text: "$".to_string(), code: Catcode::MATH }
 }));
 #[macro_export]
 macro_rules! T_ALIGN(() => ({
   use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text: "&".to_string(), code: Catcode::ALIGN }
 }));
 #[macro_export]
 macro_rules! T_PARAM(() => ({
   use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text: "#".to_string(), code: Catcode::PARAM }
 }));
 #[macro_export]
 macro_rules! T_SUPER(() => ({
   use $crate::token::Token;
+  use $crate::token::Catcode;
  Token { text: "^".to_string(), code: Catcode::SUPER }
 }));
 #[macro_export]
 macro_rules! T_SUB(() => ({
   use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text: "_".to_string(), code: Catcode::SUB }
 }));
 #[macro_export]
 macro_rules! T_SPACE(() => ({
   use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text: " ".to_string(), code: Catcode::SPACE }
 }));
 #[macro_export]
 macro_rules! T_CR(() => ({
   use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text: "\n".to_string(), code: Catcode::SPACE }
 }));
 #[macro_export]
 macro_rules! T_LETTER(($text:expr) => ({
+  use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text : $text.to_string(), code: Catcode::LETTER }
 }));
 #[macro_export]
 macro_rules! T_OTHER(($text:expr) => ({
+  use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text : $text.to_string(), code: Catcode::OTHER }
 }));
 #[macro_export]
 macro_rules! T_ACTIVE(($text:expr) => ({
+  use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text : $text.to_string(), code: Catcode::ACTIVE }
 }));
 #[macro_export]
 macro_rules! T_COMMENT(($text:expr) => ({
+  use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text : $text.to_string(), code: Catcode::COMMENT }
 }));
 #[macro_export]
 macro_rules! T_CS(($text:expr) => ({
+  use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text : $text.to_string(), code: Catcode::CS}
 }));
 #[macro_export]
 macro_rules! T_MARKER(($text:expr) => ({
+  use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text : $text.to_string(), code: Catcode::MARKER}
 }));
 
 #[macro_export]
 macro_rules! Token(($text:expr, $cc_opt:expr) => ({
+  use $crate::token::Token;
+  use $crate::token::Catcode;
   Token { text : $text.to_string(),  code: match $cc_opt {
     Some(cc) => cc,
     None => Catcode::OTHER

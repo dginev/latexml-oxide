@@ -4,6 +4,7 @@ use std::rc::Rc;
 use std::fmt;
 use regex::Regex;
 
+use util::pathname;
 use common::model::{Model, IndirectModel};
 use token::{Catcode, Token};
 use parameter::Parameter;
@@ -256,7 +257,15 @@ pub struct State {
   pub status_code: usize,
   pub unlocked: bool,
   pub current_token: Option<Token>,
-  pub noexpand_the: bool
+  pub noexpand_the: bool,
+  pub input_encoding: Option<String>,
+  pub strict: bool,
+  pub include_comments: bool,
+  pub documentid: String,
+  pub search_paths: VecDeque<String>,
+  pub graphics_paths: VecDeque<String>,
+  pub include_styles: bool,
+  pub nomathparse: bool,
 }
 
 impl Default for State {
@@ -293,16 +302,57 @@ impl Default for State {
       status_code: 0,
       unlocked: true,
       current_token: None,
-      noexpand_the: false
+      noexpand_the: false,
+      input_encoding: None,
+      strict: false,
+      include_comments: true,
+      documentid: String::new(),
+      search_paths: VecDeque::new(),
+      graphics_paths: VecDeque::new(),
+      include_styles: false,
+      nomathparse: false,
     }
   }
 }
+/// State fields allowed for customization during construction
+pub struct StateOptions {
+  pub model: Option<Model>,
+  pub verbosity: Option<i32>,
+  pub strict: Option<bool>,
+  pub include_comments: Option<bool>,
+  pub include_styles: Option<bool>,
+  pub nomathparse: Option<bool>,
+  pub documentid: Option<String>,
+  pub search_paths: Option<Vec<String>>,
+  pub graphics_paths: Option<Vec<String>>,
+  pub catcodes: Option<Catcodes>,
+  pub input_encoding: Option<String>,
+}
+impl Default for StateOptions {
+  fn default() -> Self {
+    StateOptions {
+      model: None,
+      verbosity: None,
+      strict: None,
+      include_comments: None,
+      include_styles: None,
+      nomathparse: None,
+      documentid: None,
+      search_paths: None,
+      graphics_paths: None,
+      catcodes: None,
+      input_encoding: None
+    }
+  }
+}
+
+
 impl State {
-  pub fn new(model: Model, catcodes_opt: Option<Catcodes>) -> Self {
+  pub fn new(options: StateOptions) -> Self {
     use token::Catcode::*;
 
     // Setup default catcodes.
-    let catcode_profile = match catcodes_opt {
+    let catcode_profile = match options.catcodes {
       None => Catcodes::Standard,
       Some(cp) => cp
     };
@@ -347,7 +397,59 @@ impl State {
       catcodes_typed.insert(k.to_string(), vdq);
     }
 
-    State { catcode: catcodes_typed, model: model, value: value_table, ..State::default() }
+    // Basic defaults
+    let model = match options.model {
+      None => Model::default(),
+      Some(m) => m,
+    };
+    let verbosity = match options.verbosity {
+      None => 0,
+      Some(v) => v
+    };
+    let strict = match options.strict {
+      None => false,
+      Some(s) => s
+    };
+    let include_comments = match options.include_comments {
+      None => true,
+      Some(ic) => ic
+    };
+    let include_styles = match options.include_styles {
+      None => false,
+      Some(is) => is
+    };
+    let nomathparse = match options.nomathparse {
+      None => false,
+      Some(is) => is
+    };
+
+    let documentid = match options.documentid {
+      None => String::new(),
+      Some(id) => id
+    };
+    let search_paths = match options.search_paths {
+      None => VecDeque::new(),
+      Some(paths) => paths.iter().map(|p| pathname::absolute(&pathname::canonical(p))).collect()
+    };
+    let graphics_paths = match options.graphics_paths {
+      None => VecDeque::new(),
+      Some(paths) => paths.iter().map(|p| pathname::absolute(&pathname::canonical(p))).collect()
+    };
+
+    State {
+      value: value_table,
+      catcode: catcodes_typed,
+      model: model,
+      verbosity: verbosity,
+      strict: strict,
+      include_comments: include_comments,
+      documentid: documentid,
+      search_paths: search_paths,
+      graphics_paths: graphics_paths,
+      include_styles: include_styles,
+      input_encoding: options.input_encoding,
+      nomathparse: nomathparse,
+      ..State::default() }
   }
 
   pub fn table(&self, name: &TableName) -> &Table {

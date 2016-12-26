@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use regex::Regex;
 use rtx_core::Core;
 use rtx_core::state::{State, ObjectStore, Scope};
+use rtx_core::common::{Error};
 use rtx_core::token::*;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::mouth::Mouth;
@@ -251,10 +252,10 @@ macro_rules! LoadPool(
 );
 
 
-pub fn input_content(core: &mut Core, request: String) -> Result<(), ()> {
+pub fn input_content(core: &mut Core, request: &str) -> Result<(), Error> {
   match find_file(request, false) { // TODO: type => $options{type}, noltxml => 1
     Some(path) => Ok(load_tex_content(core, path)),
-    None => Err(()),
+    None => Err(Error::MissingFile),
     // TODO:
     // Error("missing_file", request, state.get_stomach().get_gullet(),
     // "Can't find TeX file "+request, maybeReportSearchPaths(state)))
@@ -375,9 +376,9 @@ macro_rules! LoadClass(
   }
 ));
 
-pub fn find_file(request: String, _forbid_ltxml: bool) -> Option<String> {
+pub fn find_file(request: &str, _forbid_ltxml: bool) -> Option<String> {
   // TODO: Actually find it!
-  Some(request)
+  Some(request.to_string())
 
 }
 

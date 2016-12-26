@@ -5,12 +5,14 @@ pub mod xml;
 pub mod font;
 pub mod relaxng;
 
-#[derive(Clone)]
+use fmt;
+
+#[derive(Clone, Debug)]
 pub enum InputFormat {
   TeX,
   Bib,
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum OutputFormat {
   TeX,
   Box,
@@ -18,7 +20,7 @@ pub enum OutputFormat {
   HTML5,
   XHTML,
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum DataSize {
   Math,
   Fragment,
@@ -29,14 +31,29 @@ pub enum DataSize {
 pub enum Error {
   Unexpected,
   Expected,
+  MissingFile,
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum DigestionMode {
   TeX,
   LaTeX,
   AmSTeX,
   BibTeX,
 }
+impl fmt::Display for DigestionMode {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    use self::DigestionMode::*;
+    let formatted = match *self {
+      TeX => "TeX",
+      LaTeX => "LaTeX",
+      AmSTeX => "AmSTeX",
+      BibTeX => "BibTeX"
+    };
+    write!(f, "{}", formatted)
+  }
+}
+
+
 impl DigestionMode {
   pub fn extension(&self) -> String {
     match *self {

@@ -57,6 +57,11 @@ pub fn is_absolute(path: &str) -> bool {
   Path::new(&canonical(path)).is_absolute()
 }
 
+pub fn absolute(path: &str) -> String {
+  // TODO, just a mock now
+  path.to_string()
+}
+
 /// This likely needs portability work!!! (particularly regarding urls, separators, ...)
 /// AND, care about symbolic links and collapsing ../ !!!
 pub fn canonical(pathname: &str) -> String {
@@ -209,6 +214,34 @@ pub fn find(pathname: &str, options: FindOptions) -> Option<String> {
     }
   }
   None
+}
+
+
+pub fn file_name(pathname:& str) -> String {
+  let canonical_pathname = canonical(pathname);
+  let canonical_path = Path::new(&canonical_pathname);
+  match canonical_path.file_name() {
+    Some(e) => e.to_string_lossy().to_string(),
+    None => String::new()
+  }.to_lowercase()
+}
+
+pub fn file_stem(pathname:& str) -> String {
+  let canonical_pathname = canonical(pathname);
+  let canonical_path = Path::new(&canonical_pathname);
+  match canonical_path.file_stem() {
+    Some(e) => e.to_string_lossy().to_string(),
+    None => String::new()
+  }.to_lowercase()
+}
+
+pub fn directory(pathname:& str) -> String {
+  let canonical_pathname = canonical(pathname);
+  let canonical_path = Path::new(&canonical_pathname);
+  match canonical_path.parent() {
+    Some(e) => e.to_string_lossy().to_string(),
+    None => String::new()
+  }.to_lowercase()
 }
 
 pub fn extension(pathname:& str) -> String {

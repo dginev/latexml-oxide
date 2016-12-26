@@ -2,9 +2,7 @@ use glob::glob;
 use std::collections::HashMap;
 use libxml::parser::Parser;
 
-use rtx_core::Core;
-use rtx_core::stomach::Stomach;
-use rtx_core::common::model::Model;
+use rtx_core::{Core, CoreOptions};
 use rtx_core::state::State;
 use rtx_core::document::Document;
 use libxml::tree::Document as XmlDoc;
@@ -59,14 +57,14 @@ fn rtx_ok(tex_path: String, xml_path: String, name: String) {
 /// Returns the list-of-strings form of whatever was requested, if successful,
 /// otherwise empty; and they will have reported the failure
 fn process_texfile(tex_path: String, name: &str) -> Vec<String> {
-  let mut test_state = State::new(Model::default(), None);
-  test_state.verbosity = -2;
-  let mut latexml = Core {
-    preload: Vec::new(),
-    stomach: Stomach::default(),
-    state: test_state,
-  };
-  latexml.initialize_state(vec!["TeX.pool".to_string()]);
+  // TODO: continue here...
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    search_paths: None,
+    preload: None,
+    include_comments: Some(false),
+    .. CoreOptions::default()
+  });
 
   match latexml.convert_file(tex_path.clone()) {
     Err(e) => panic!("{:?}: Couldn't convert {:?}; {:?}", name, tex_path, e),
@@ -82,7 +80,6 @@ fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
   }
 }
 fn process_ltx_doc(doc: Document, _name: &str, state: &mut State) -> Vec<String> {
-  println_stderr!("--- exp doc: {}", doc.to_string(state));
   doc.to_string(state).split('\n').map(|line| line.to_string()).collect()
 }
 fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {

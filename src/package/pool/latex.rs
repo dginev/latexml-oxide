@@ -14,7 +14,6 @@ use std::collections::HashMap;
 use regex::Regex;
 use rtx_core::{Digested, BoxOps};
 use rtx_core::state::{Scope, State, ObjectStore};
-use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::gullet::Gullet;
 use rtx_core::stomach::Stomach;

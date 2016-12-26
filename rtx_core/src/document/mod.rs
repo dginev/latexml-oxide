@@ -171,7 +171,9 @@ impl Document {
       //   let mut box_node = self.node.add_child(None, "box").unwrap();
       //   box_node.set_content(&tbox.text);
     }
-    println_stderr!("Document absorbed {:?} nodes", results.len());
+    if self.debug {
+      println_stderr!("Document absorbed {:?} nodes", results.len());
+    }
     results
   }
 
@@ -410,7 +412,7 @@ impl Document {
           state.model.can_contain(&node_qname, "#PCDATA")
         };
 
-        if !noindent_children {
+        if !noindent {
           serialized.push_str(&indent)
         }
         serialized.push_str(&open_tag);
@@ -426,7 +428,7 @@ impl Document {
             serialized.push_str(&indent)
           }
           serialized.push_str(&format!("</{}>",tag));
-          if !noindent_children {
+          if !noindent {
             serialized.push('\n');
           }
         } else {    // empty element.

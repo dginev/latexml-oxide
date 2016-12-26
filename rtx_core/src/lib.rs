@@ -27,7 +27,7 @@ pub mod state;
 pub mod util;
 
 use std::fmt;
-use state::State;
+use state::{State, StateOptions};
 use common::model::Model;
 use stomach::Stomach;
 use tbox::Tbox;
@@ -40,16 +40,79 @@ pub struct Core {
   pub stomach: Stomach,
   pub preload: Vec<String>,
 }
+pub struct CoreOptions {
+  // First, state-related options:
+  pub model: Option<Model>,
+  pub verbosity: Option<i32>,
+  pub strict: Option<bool>,
+  pub include_comments: Option<bool>,
+  pub include_styles: Option<bool>,
+  pub nomathparse: Option<bool>,
+  pub documentid: Option<String>,
+  pub search_paths: Option<Vec<String>>,
+  pub graphics_paths: Option<Vec<String>>,
+  pub input_encoding: Option<String>,
+  // The core-related
+  pub preload: Option<Vec<String>>
+}
+impl Default for CoreOptions {
+  fn default() -> Self {
+    CoreOptions {
+      model: None,
+      verbosity: None,
+      strict: None,
+      include_comments: None,
+      include_styles: None,
+      nomathparse: None,
+      documentid: None,
+      search_paths: None,
+      graphics_paths: None,
+      input_encoding: None,
+      preload: None,
+    }
+  }
+}
+
 impl Default for Core {
   fn default() -> Self {
     Core {
       preload: Vec::new(),
       stomach: Stomach::default(),
-      state: State::new(Model::default(), None),
+      state: State::new(StateOptions::default()),
     }
   }
 }
 impl Core {
+  pub fn new(options: CoreOptions) -> Self {
+    let preload = match options.preload {
+      None => Vec::new(),
+      Some(p) => p
+    };
+
+    // pass on the state options, defaults are handled in State::new
+    let state_options = StateOptions {
+      model: options.model,
+      verbosity: options.verbosity,
+      strict: options.strict,
+      include_comments: options.include_comments,
+      documentid: options.documentid,
+      search_paths: options.search_paths,
+      graphics_paths: options.graphics_paths,
+      include_styles: options.include_styles,
+      input_encoding: options.input_encoding,
+      nomathparse: options.nomathparse,
+      ..StateOptions::default()
+    };
+
+    let state = State::new(state_options);
+
+    Core{
+      state: state,
+      preload: preload,
+      .. Core::default()
+    }
+  }
+
   pub fn state_mut(&mut self) -> &mut State {
     &mut self.state
   }

@@ -68,7 +68,7 @@ impl Default for Model {
       document_namespaces: HashMap::new(),
       // doctype_namespaces: HashMap::new(),
       namespace_errors: 0,
-      permissive: true,
+      permissive: false,
       no_compiled: false,
       debug_mode: false,
       tagprop: HashMap::new()
