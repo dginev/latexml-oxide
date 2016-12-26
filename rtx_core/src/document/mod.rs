@@ -380,7 +380,7 @@ impl Document {
         let children = node.get_child_nodes();
         let mut open_tag = format!("<{}", tag);
 
-        let nsnodes = node.get_namespaces(&self.document);
+        let nsnodes = node.get_namespace_declarations();
         for ns in nsnodes {
           let prefix = ns.get_prefix();
           let prefix_declaration = if prefix.is_empty() {

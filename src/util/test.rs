@@ -44,7 +44,6 @@ fn rtx_ok(tex_path: String, xml_path: String, name: String) {
       println!("[test] xml diff for {:?}", name);
       for (tex_line, xml_line) in tex_strings.iter().zip(xml_strings.iter()) {
         assert_eq!(tex_line, xml_line);
-        // assert_eq!(tex_line, xml_line);
       }
       // match tex_strings.len() - xml_strings.len() {
       //   0 => {},//As expected,
@@ -83,6 +82,7 @@ fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
   }
 }
 fn process_ltx_doc(doc: Document, _name: &str, state: &mut State) -> Vec<String> {
+  println_stderr!("--- exp doc: {}", doc.to_string(state));
   doc.to_string(state).split('\n').map(|line| line.to_string()).collect()
 }
 fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {

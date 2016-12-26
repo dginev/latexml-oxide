@@ -29,7 +29,9 @@ lazy_static! {
   static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
       Ok(exe_path) => {
         match exe_path.as_path().parent() {
-          Some(p) => vec![p.to_string_lossy().to_string() + "/../../.."], // TODO: HACK, see note on INSTALLDIRS further down
+          Some(p) => vec![p.to_string_lossy().to_string() + "/../../..",
+                          p.to_string_lossy().to_string() + "/../..",
+                          p.to_string_lossy().to_string() + "/../../../.."], // TODO: HACK, see note on INSTALLDIRS further down
           None => Vec::new()
         }
       },
