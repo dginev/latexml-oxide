@@ -2,25 +2,24 @@ extern crate rtx_core;
 
 use std::collections::HashMap;
 use rtx_core::token::{Catcode};
-use rtx_core::common::model::Model;
 use rtx_core::state::*;
 
 #[test]
 fn basic_state_init() {
-  let state = State::new(Model::default(), None);
+  let state = State::new(StateOptions::default());
   assert_eq!(state.lookup_catcode(&'@'), None); // OTHER
 
-  let state_standard = State::new(Model::default(), Some(Catcodes::Standard));
+  let state_standard = State::new(StateOptions{catcodes: Some(Catcodes::Standard), ..StateOptions::default()});
   assert_eq!(state_standard.lookup_catcode(&'@'), None); // OTHER
   assert_eq!(state_standard.lookup_catcode(&'\\'), Some(Catcode::ESCAPE));
 
-  let state_style = State::new(Model::default(), Some(Catcodes::Style));
+  let state_style = State::new(StateOptions{catcodes: Some(Catcodes::Style), ..StateOptions::default()});
   assert_eq!(state_style.lookup_catcode(&'@'), Some(Catcode::LETTER));
 }
 
 #[test]
 fn assign_lookup_value() {
-  let mut state = State::new(Model::default(), None);
+  let mut state = State::new(StateOptions::default());
   // initially missing
   assert!(state.lookup_value("STRICT").is_none());
 
@@ -62,7 +61,7 @@ fn assign_lookup_value() {
 fn scoped_assign_lookup_value() {
   // Let us try some scoped assignments:
   // First, can we push/pop frames?
-  let mut state = State::new(Model::default(), None);
+  let mut state = State::new(StateOptions::default());
   assert!(state.lookup_value("foo").is_none());
   state.assign_value("foo", ObjectStore::String("bar".to_string()), Some(Scope::Global));
   match state.lookup_value("foo") {
@@ -99,7 +98,7 @@ fn scoped_assign_lookup_value() {
 
 #[test]
 fn assign_lookup_arrays() {
-  let mut state = State::new(Model::default(), None);
+  let mut state = State::new(StateOptions::default());
   let mock_vec = ["a","b","c"].iter().map(|x| x.to_string()).collect::<Vec<String>>();
   state.assign_value("SEARCHPATHS", ObjectStore::VecString(mock_vec.clone()), None);
   match state.lookup_value("SEARCHPATHS") {
@@ -256,7 +255,7 @@ fn texy_ops() {
 
 #[test]
 fn semiverbatim() {
-  let mut state = State::new(Model::default(), None);
+  let mut state = State::new(StateOptions::default());
 
   state.begin_semiverbatim(None);
   state.end_semiverbatim();
