@@ -149,17 +149,42 @@ macro_rules! IsDefinedToken {
 
 #[macro_export]
 macro_rules! Let {
+  ($token1:expr, $token2:expr, $state:expr) => ({
+    LetI!(T_CS!($token1), T_CS!($token2), $state)
+  });
   ($token1:expr, $token2:expr, $scope:expr, $state:expr) => ({
-    // If strings are given, assume CS tokens (most common case)
-    // let meaning = match $state.lookup_meaning($token2) {
-    //   Some(m) => *m,
-    //   None => ObjectStore::Token(T_CS!($token2))
-    // };
-    // $state.assign_meaning(&$token1, meaning, $scope);
-    //AfterAssignment!();
-  })
+    LetI!(T_CS!($token1), T_CS!($token2), $scope, $state)
+  });
 }
 
+#[macro_export]
+macro_rules! LetI {
+  ($token1:expr, $token2:expr, $state:expr) => ({
+    // If strings are given, assume CS tokens (most common case)
+    let meaning = match $state.lookup_meaning(&$token2) {
+      Some(m) => m.clone(),
+      None => ObjectStore::Token($token2)
+    };
+    $state.assign_meaning(&$token1, meaning, None);
+    AfterAssignment!();
+  });
+  ($token1:expr, $token2:expr, $scope:expr, $state:expr) => ({
+    // If strings are given, assume CS tokens (most common case)
+    let meaning = match $state.lookup_meaning(&$token2) {
+      Some(m) => m.clone(),
+      None => ObjectStore::Token($token2)
+    };
+    $state.assign_meaning(&$token1, meaning, $scope);
+    AfterAssignment!();
+  });
+}
+
+#[macro_export]
+macro_rules! AfterAssignment {
+  () => ({
+    // TODO
+  })
+}
 
 
 //======================================================================
@@ -551,6 +576,13 @@ macro_rules! DefMacroI(
   }
   )
 );
+
+#[macro_export]
+macro_rules! DefMacroT {
+    ($cs:expr, $paramlist:expr, $body:expr, $state:expr) => ({
+      DefMacroI!($cs, $paramlist, move |_gullet, _args, state| {$body}, $state)
+    })
+}
 
 #[macro_export]
 macro_rules! DefMacro(

@@ -25,11 +25,7 @@ pub fn load_definitions(state: &mut State) {
   RegisterNamespace!("m"    , "http://www.w3.org/1998/Math/MathML", state);
   RegisterNamespace!("xhtml", "http://www.w3.org/1999/xhtml", state);
 
-  DefMacroI!(T_CS!("\\@empty"), None,
-   |_gullet, _args, state| {
-     Vec::new()
-   },
-   state);
+  DefMacroT!(T_CS!("\\@empty"), None, Vec::new(), state);
 
 
   //======================================================================
@@ -37,12 +33,14 @@ pub fn load_definitions(state: &mut State) {
   //======================================================================
   // DOCUMENTID is the ID of the document
   // AND prefixes IDs on all other elements.
-  // if let Some(& ObjectStore::String(ref docid)) = LookupValue!("DOCUMENTID", state) {
-  //   // Wrap in T_OTHER so funny chars don't screw up (no space!)
-  //   DefMacroI!("\thedocument@ID", None, T_OTHER!(docid.to_string()), state);
-  // } else {
-  //   Let!("\thedocument@ID", "\@empty", state);
-  // }
+  if !state.documentid.is_empty() {
+    let docid = state.documentid.clone();
+    // Wrap in T_OTHER so funny chars don't screw up (no space!)
+    DefMacroT!(T_CS!("\\thedocument@ID"), None, vec![T_OTHER!(docid)], state);
+  } else {
+    Let!("\\thedocument@ID", "\\@empty", state);
+  }
+  // TODO:
   // NewCounter!("@XMARG", "document", idprefix: "XM");
 
   // Optionally, add ID's to ALL nodes.
@@ -50,16 +48,17 @@ pub fn load_definitions(state: &mut State) {
   // Set to 1 (or \usepackage[ids]{latexml}) to enable.
   // Set to 0 (or \usepackage[noids]{latexml}) to disable.
 
-  // Tag!("ltx:*", after_open: |document, node, state| {
-  //   // If GENERATE_IDS is true, we'll assign an ID to EVERY element,
-  //   // EXCEPT ltx:document which only gets an id from an EXPLICIT \thedocument@id.
-  //   let tag = document.get_node_qname(node);
-  //   if tag != "ltx:document")
-  //     && (tag != "ltx:XMWrap")    // No auto-generated id on wrap???
-  //     && BoolValue!("GENERATE_IDS") {
-  //       GenerateID!(document, node, state);
-  //   }
-  // }, state);
+  Tag!("ltx:*", TagOptions{after_open: vec![Rc::new(|document, node, box_opt, state| {
+    // If GENERATE_IDS is true, we'll assign an ID to EVERY element,
+    // EXCEPT ltx:document which only gets an id from an EXPLICIT \thedocument@id.
+    let tag = document.get_node_qname(&node, state);
+    if tag != "ltx:document"
+      && tag != "ltx:XMWrap"    // No auto-generated id on wrap???
+      && LookupBool!("GENERATE_IDS", state) {
+        // TODO:
+        // GenerateID!(document, node, state);
+    }
+  })], ..TagOptions::default()}, state);
 
   //======================================================================
   Tag!("ltx:document", TagOptions{

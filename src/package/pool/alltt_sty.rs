@@ -12,7 +12,7 @@ pub fn load_definitions(state: &mut State) {
          AssignCatcode!(*verb_c, Catcode::OTHER, None, state);
         }
         AssignCatcode!(' ', Catcode::ACTIVE, None, state);
-        Let!(T_ACTIVE!(" "), T_CS!("\\space"), None, state);
+        LetI!(T_ACTIVE!(" "), T_CS!("\\space"), None, state);
         AssignValue!("PRESERVE_NEWLINES", ObjectStore::Bool(true), None, state);
         Vec::new()
       })],

@@ -48,6 +48,7 @@ impl TagOptionName {
   }
 }
 
+#[derive(Clone)]
 pub struct TagOptions {
   pub auto_open: bool,
   pub auto_close: bool,

@@ -381,19 +381,26 @@ impl Document {
       _ => {}
     };
 
-    let tag_hash = state.tag_properties.entry(tag.to_string()).or_insert(TagOptions::default());
-    // let nshash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p . ':*')) || {};
-    // let allhash = $STATE->lookupMapping('TAG_PROPERTIES', '*') || {};
+    let tag_hash = state.tag_properties.entry(tag.to_string()).or_insert(TagOptions::default()).clone();
+    // let ns_hash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p . ':*')) || {};
+    let all_hash = state.tag_properties.entry("ltx:*".to_string()).or_insert(TagOptions::default()).clone();
+
     let mut actions = Vec::new();
     // we have Rc<> around the closures, so cloning them is cheap - just another pointer with a bumped up reference counter
     if let Some(when0) = when_early {
       actions.extend(tag_hash.get(&when0).clone());
+      // ns_hash TODO
+      actions.extend(all_hash.get(&when0).clone());
     }
 
     actions.extend(tag_hash.get(&when).clone());
+    // ns_hash TODO
+    actions.extend(all_hash.get(&when).clone());
 
     if let Some(when1) = when_late {
       actions.extend(tag_hash.get(&when1).clone());
+      // ns_hash TODO
+      actions.extend(all_hash.get(&when1).clone());
     }
     // return (
     //   (($v = $$taghash{$when0}) ? @$v : ()),
