@@ -579,9 +579,12 @@ macro_rules! DefMacroI(
 
 #[macro_export]
 macro_rules! DefMacroT {
+    ($cs:expr, $paramlist:expr, None, $state:expr) => ({
+      DefMacroI!($cs, $paramlist, move |_gullet, _args, state| {vec![]}, $state)
+    });
     ($cs:expr, $paramlist:expr, $body:expr, $state:expr) => ({
-      DefMacroI!($cs, $paramlist, move |_gullet, _args, state| {$body}, $state)
-    })
+      DefMacroI!($cs, $paramlist, move |_gullet, _args, state| {vec![$body]}, $state)
+    });
 }
 
 #[macro_export]

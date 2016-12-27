@@ -25,7 +25,7 @@ pub fn load_definitions(state: &mut State) {
   RegisterNamespace!("m"    , "http://www.w3.org/1998/Math/MathML", state);
   RegisterNamespace!("xhtml", "http://www.w3.org/1999/xhtml", state);
 
-  DefMacroT!(T_CS!("\\@empty"), None, Vec::new(), state);
+  DefMacroT!(T_CS!("\\@empty"), None, None, state);
 
 
   //======================================================================
@@ -36,7 +36,7 @@ pub fn load_definitions(state: &mut State) {
   if !state.documentid.is_empty() {
     let docid = state.documentid.clone();
     // Wrap in T_OTHER so funny chars don't screw up (no space!)
-    DefMacroT!(T_CS!("\\thedocument@ID"), None, vec![T_OTHER!(docid)], state);
+    DefMacroT!(T_CS!("\\thedocument@ID"), None, T_OTHER!(docid), state);
   } else {
     Let!("\\thedocument@ID", "\\@empty", state);
   }
@@ -503,4 +503,7 @@ pub fn load_definitions(state: &mut State) {
     });
     Tag!("ltx:p", TagOptions{auto_close: true, auto_open: true, after_close: vec![trim_node_whitespace_closure], ..TagOptions::default()}, state);
 
+
+    // TODO: Move to the right place in the pool definitions (maybe split out individual sub-pools by chapter?)
+    DefMacroT!(T_CS!("\\space"), None, T_SPACE!(), state);
 }
