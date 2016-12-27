@@ -41,7 +41,7 @@ impl Document {
       node: root,
       node_boxes: HashMap::new(),
       pending: Vec::new(),
-      debug: true,
+      debug: false,
       constructed_nodes : Vec::new(),
       box_to_absorb: None
     }
@@ -290,6 +290,71 @@ impl Document {
       // So, now close up to the desired node.
       self.close_node_internal(node.clone(), state);
       return Some(node)
+    }
+  }
+
+  // Check whether it is possible to open $qname at this point,
+  // possibly by autoOpen'ing & autoClosing other tags.
+  pub fn is_openable(&mut self, qname: &str, state: &mut State) -> bool {
+    let mut node_opt = Some(self.node.clone());
+    while let Some(node) = node_opt {
+      let node_qname = self.get_node_qname(&node, state);
+      if self.can_contain_somehow(&node_qname, qname, state) {
+        return true
+      } else if !self.can_auto_close(&node) {
+        return false    // could close, then check if parent can contain
+      } else {
+        node_opt = node.get_parent();
+      }
+    }
+    false
+  }
+
+  // Check whether it is possible to close each element in @tags,
+  // any intervening nodes must be autocloseable.
+  // returning the last node that would be closed if it is possible,
+  // otherwise undef.
+  pub fn is_closeable(&mut self, mut tags: VecDeque<String>, state: &mut State) -> Option<Node> {
+    let mut node_opt = if self.node.get_type() == Some(NodeType::TextNode) {
+      self.node.get_parent()
+    } else {
+      Some(self.node.clone())
+    };
+    while let Some(qname) = tags.pop_front() {
+      loop {
+        if node_opt.is_none() { break; }
+        let node = node_opt.as_ref().unwrap().clone();
+
+        if node.get_type() == Some(NodeType::DocumentNode) || node.get_type() == None {
+          return None
+        }
+        let this_qname = state.model.get_node_qname(&node);
+        if this_qname == qname {
+          break;
+        }
+        if !self.can_auto_close(&node) {
+          return None;
+        }
+        node_opt = node.get_parent();
+      }
+      if !tags.is_empty() {
+        if let Some(node) = node_opt {
+          node_opt = node.get_parent();
+        }
+      }
+    }
+    return node_opt;
+  }
+
+  // Close $qname, if it is closeable.
+  pub fn maybe_close_element(&mut self, qname: &str, state: &mut State) -> Option<Node> {
+    let mut qname_vdq = VecDeque::new();
+    qname_vdq.push_front(qname.to_string());
+    if let Some(node) = self.is_closeable(qname_vdq, state) {
+      self.close_node_internal(node.clone(), state);
+      Some(node)
+    } else {
+      None
     }
   }
 

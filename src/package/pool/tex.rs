@@ -382,7 +382,7 @@ pub fn load_definitions(state: &mut State) {
         _ => false
       };
       if !in_preamble {
-        // document.maybe_close_element("ltx:p");
+        document.maybe_close_element("ltx:p", state);
         if let Some(c) = props.get("class") {
           let element = document.get_element();
           if let Some(node) = element {
@@ -395,7 +395,7 @@ pub fn load_definitions(state: &mut State) {
             }
           }
         }
-        // document.maybe_close_element("ltx:para");
+        document.maybe_close_element("ltx:para", state);
      }
     })),
     ConstructorOptions {
