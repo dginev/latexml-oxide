@@ -576,7 +576,6 @@ impl Document {
       let new_im = self.compute_indirect_model(state);
       state.indirect_model = Some(new_im);
     }
-    println_stderr!("Indirect model: {:?}", state.indirect_model);
 
     let imodel = state.indirect_model.as_ref().unwrap();
 
@@ -588,7 +587,6 @@ impl Document {
       None => None,
     };
 
-    println_stderr!("Check for indirect contain on {} and {} decided on: {:?}", tag, child, inner_node);
     inner_node
   }
 
@@ -610,13 +608,13 @@ impl Document {
     for tag in state.model.get_tags() {
       if let Some(x) = state.tag_properties.get(&tag) {
         if x.auto_open {
-          openable.insert(tag.to_owned().to_owned());
+          openable.insert(tag.to_owned());
         }
       }
     }
 
-    let mut desc : HashMap<String, HashMap<String, usize>> = HashMap::new();
     for tag in state.model.get_tags() {
+      let mut desc : HashMap<String, HashMap<String, usize>> = HashMap::new();
       {
         compute_indirect_model_aux(&tag, None, 1, &mut openable, &mut desc, state);
       }
@@ -747,7 +745,6 @@ impl Document {
     // Else, if we can create an intermediate node that accepts $qname, we'll do that.
     } else if let Some(inter) = self.can_contain_indirect(&cur_qname, qname, state) {
       if (inter != qname) && (inter != cur_qname) {
-        println_stderr!("can insert into indirect node named: {}", inter);
         self.open_element(&inter, None, state);//font => self.getNodeFont(self.node}));
         return self.find_insertion_point(qname, state); // And retry insertion (should work now).
       }
@@ -1052,26 +1049,31 @@ impl Document {
 fn compute_indirect_model_aux(tag: &str, start_opt: Option<String>, desirability: usize,
                                   openable: &mut HashSet<String>, desc: &mut HashMap<String, HashMap<String, usize>>,
                                   state: &mut State) {
+  let start = match start_opt {
+    Some(s) => s,
+    None => String::new()
+  };
 
-  // TODO: This needs to be carefully re-examined, and cleaned up
-  if let Some(start) = start_opt {
-    let mut recurse_tags = Vec::new();
-    for kid in state.model.get_tag_contents(tag) {
-      if desc.get(kid).unwrap().get(&start).is_some() { continue;  }
-      {   // Already solved
-        desc.entry(kid.to_owned()).or_insert(HashMap::new()).insert(start.clone(), desirability);
-      }
-      if kid != "#PCDATA" {
-        let is_openable = openable.get(kid).is_some();
-        if is_openable {
-          recurse_tags.push(kid.to_owned());
+  // A bit tricky here, we need to release the state.model borrow immediately, which is why we
+  // move ownership of the tag strings into the tag_contents vector.
+  // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
+  let tag_contents : Vec<String> = state.model.get_tag_contents(tag).iter().map(|t| t.to_string()).collect();
 
-        }
-      }
+  for kid in tag_contents {
+    if desc.entry(kid.clone()).or_insert(HashMap::new()).get(&start).is_some() { continue;  } // Already solved
+
+    if !start.is_empty() {
+      desc.entry(kid.clone()).or_insert(HashMap::new()).insert(start.clone(), desirability);
     }
 
-    for kid in recurse_tags {
-      compute_indirect_model_aux(&kid, Some(start.clone()), desirability,
+    if kid != "#PCDATA" && openable.contains(&kid) {
+      let inner = if !start.is_empty() {
+        start.clone()
+      } else {
+        kid.to_string()
+      };
+
+      compute_indirect_model_aux(&kid, Some(inner), desirability,
         openable, desc, state);
     }
   }
