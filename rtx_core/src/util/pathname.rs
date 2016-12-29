@@ -26,17 +26,22 @@ lazy_static! {
   static ref LITERAL_RE : Regex  = Regex::new(r"^literal:").unwrap();
   // static ref PROTOCOL_RE : Regex = Regex::new(r"(https|http|ftp):").unwrap();
   static ref LEAD_HOME_RE : Regex = Regex::new(r"^~").unwrap();
-  static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
-      Ok(exe_path) => {
-        match exe_path.as_path().parent() {
-          Some(p) => vec![p.to_string_lossy().to_string() + "/../../..",
-                          p.to_string_lossy().to_string() + "/../..",
-                          p.to_string_lossy().to_string() + "/../../../.."], // TODO: HACK, see note on INSTALLDIRS further down
-          None => Vec::new()
-        }
-      },
-      _ => Vec::new()
-    };
+  // static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
+  //     Ok(exe_path) => {
+  //       match exe_path.as_path().parent() {
+  //         Some(_) => Vec::new(),
+  //         // Some(p) => vec![
+  //         //                 p.to_string_lossy().to_string() + ".",
+  //         //                 p.to_string_lossy().to_string() + "./..",
+  //         //                 p.to_string_lossy().to_string() + "./../..",
+  //         //                 p.to_string_lossy().to_string() + "./../../..",
+  //         //                 p.to_string_lossy().to_string() + "./../../../.."], // TODO: HACK, see note on INSTALLDIRS further down
+  //         None => Vec::new()
+  //       }
+  //     },
+  //     _ => Vec::new()
+  //   };
+
   // TODO:
   // grep { (-f "$_.pm") && (-d $_) }
   // map { pathname_canonical($_ . $SEP . 'LaTeXML') } @INC;    # [CONSTANT]
@@ -156,7 +161,8 @@ pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> 
 
   // And, if installation dir specified, append it.
   if let Some(subdir) = options.installation_subdir {
-    dirs.extend((*INSTALLDIRS).iter().map(|dir| concat(dir, &subdir)));
+    // dirs.extend((*INSTALLDIRS).iter().map(|dir| concat(dir, &subdir)));
+    dirs.push(concat(&cwd, &subdir));
   }
   // extract the desired extensions.
   let mut exts = Vec::new();

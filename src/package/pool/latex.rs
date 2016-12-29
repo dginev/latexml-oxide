@@ -9,17 +9,6 @@
 /// NOTE: This will be loaded after TeX.pool, so it inherits.
 ///**********************************************************************
 
-use std::rc::Rc;
-use std::collections::HashMap;
-use regex::Regex;
-use rtx_core::{Digested, BoxOps};
-use rtx_core::state::{Scope, State, ObjectStore};
-use rtx_core::tokens::Tokens;
-use rtx_core::gullet::Gullet;
-use rtx_core::stomach::Stomach;
-use rtx_core::whatsit::Whatsit;
-use rtx_core::definition::constructor::ConstructorOptions;
-use rtx_core::definition::primitive::{Primitive,PrimitiveOptions};
 use package::*;
 
 lazy_static!{

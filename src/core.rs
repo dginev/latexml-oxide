@@ -131,7 +131,10 @@ impl DigestionAPI for Core {
       Some(&ObjectStore::VecString(ref paths)) => Some(paths.clone()),
       _ => None
     };
-    state.model.load_schema(search_paths.clone()); // If needed?
+    // Compile-time load of model AND indirect model
+    load_model!(&mut state, "LaTeXML");
+    // Was:
+    // state.model.load_schema(search_paths.clone()); // If needed?
 
     let mut document = Document::new();
     if search_paths.is_none() || !search_paths.as_ref().unwrap().is_empty() {

@@ -1,5 +1,5 @@
 use std::hash::Hash;
-use std::collections::{VecDeque, HashMap};
+use std::collections::{VecDeque, HashMap, HashSet};
 use std::rc::Rc;
 use std::fmt;
 use regex::Regex;
@@ -904,5 +904,91 @@ impl State {
 
   pub fn end_semiverbatim(&mut self) {
     self.pop_frame();
+  }
+
+
+  /// The indirect model includes all elements allowed as direct children,
+  /// and all descendents of a node that can be inserted after autoOpen'ing intermediate elements.
+  /// This model therefor includes information from the Schema, as well as
+  /// autoOpen information that may be introduced in binding files.
+  /// [Thus it should NOT be modifying the Model object, which may cover several documents in Daemon]
+  /// $imodel{$tag}{$child} => $open means if in $tag, to open $child, we must first open $open
+  pub fn compute_indirect_model(&mut self) -> IndirectModel {
+    let mut imodel : IndirectModel = HashMap::new();
+    // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
+    let mut openable : HashSet<String> = HashSet::new();
+    for tag in self.model.get_tags() {
+      if let Some(x) = self.tag_properties.get(&tag) {
+        if x.auto_open {
+          openable.insert(tag.to_owned());
+        }
+      }
+    }
+
+    for tag in self.model.get_tags() {
+      let mut desc : HashMap<String, HashMap<String, usize>> = HashMap::new();
+      {
+        self.compute_indirect_model_aux(&tag, None, 1, &mut openable, &mut desc);
+      }
+
+      let mut desc_keys : Vec<String> = desc.keys().map(|k| k.to_string()).collect();
+      desc_keys.sort();
+      for kid in desc_keys {
+        let mut best = 0;    // Find best path to $kid.
+        let mut desc_kid_keys : Vec<String> = desc.entry(kid.to_owned()).or_insert(HashMap::new()).keys().map(|k| k.to_string()).collect();
+        desc_kid_keys.sort();
+        for start in desc_kid_keys {
+          let start_entry = {
+            let kid_entry = desc.entry(kid.to_owned()).or_insert(HashMap::new());
+            kid_entry.entry(start.to_owned()).or_insert(0).clone()
+          };
+          if start_entry > best {
+            imodel.entry(tag.to_owned()).or_insert(HashMap::new()).insert(kid.to_owned(), start.to_owned());
+            {
+              best = desc.get(&kid).unwrap().get(&start).unwrap().clone();
+            }
+          }
+        }
+      }
+    }
+    // PATCHUP
+    if self.model.permissive {    // !!! Alarm!!!
+      imodel.entry("#Document".to_string()).or_insert(HashMap::new()).insert("#PCDATA".to_owned(),"ltx:p".to_owned());
+    }
+
+    imodel
+  }
+
+  fn compute_indirect_model_aux(&mut self, tag: &str, start_opt: Option<String>, desirability: usize,
+                                    openable: &mut HashSet<String>, desc: &mut HashMap<String, HashMap<String, usize>>,
+                                ) {
+    let start = match start_opt {
+      Some(s) => s,
+      None => String::new()
+    };
+
+    // A bit tricky here, we need to release the state.model borrow immediately, which is why we
+    // move ownership of the tag strings into the tag_contents vector.
+    // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
+    let tag_contents : Vec<String> = self.model.get_tag_contents(tag).iter().map(|t| t.to_string()).collect();
+
+    for kid in tag_contents {
+      if desc.entry(kid.clone()).or_insert(HashMap::new()).get(&start).is_some() { continue;  } // Already solved
+
+      if !start.is_empty() {
+        desc.entry(kid.clone()).or_insert(HashMap::new()).insert(start.clone(), desirability);
+      }
+
+      if kid != "#PCDATA" && openable.contains(&kid) {
+        let inner = if !start.is_empty() {
+          start.clone()
+        } else {
+          kid.to_string()
+        };
+
+        self.compute_indirect_model_aux(&kid, Some(inner), desirability,
+          openable, desc);
+      }
+    }
   }
 }

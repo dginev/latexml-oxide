@@ -1,20 +1,3 @@
-use std::rc::Rc;
-use std::collections::VecDeque;
-use libxml::tree::Node;
-
-use rtx_core::Digested;
-use rtx_core::state::State;
-use rtx_core::token::Token;
-use rtx_core::tokens::Tokens;
-use rtx_core::parameter::{Parameter, Parameters};
-use rtx_core::gullet::Gullet;
-use rtx_core::stomach::Stomach;
-use rtx_core::definition::expandable::Expandable;
-use rtx_core::definition::primitive::{Primitive,PrimitiveOptions};
-use rtx_core::definition::constructor::ConstructorOptions;
-use rtx_core::document::Document;
-use rtx_core::document::tag::TagOptions;
-
 use package::*;
 pub fn load_definitions(state: &mut State) {
 

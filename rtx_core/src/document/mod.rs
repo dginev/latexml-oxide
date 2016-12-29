@@ -4,14 +4,13 @@ pub mod tag;
 extern crate regex;
 extern crate libxml;
 
-use std::collections::{VecDeque, HashMap, HashSet};
+use std::collections::{VecDeque, HashMap};
 use std::iter;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, NodeType, Namespace};
 use regex::Regex;
 
 use state::{ObjectStore, State};
-use common::model::IndirectModel;
 use {Digested, BoxOps};
 use Tbox;
 use document::resource::Resource;
@@ -648,7 +647,7 @@ impl Document {
     // $child = $model->getNodeQName($child) if ref $child;    // In case child is a node.
 
     if state.indirect_model.is_none() {
-      let new_im = self.compute_indirect_model(state);
+      let new_im = state.compute_indirect_model();
       state.indirect_model = Some(new_im);
     }
 
@@ -667,59 +666,6 @@ impl Document {
 
   pub fn can_contain_somehow(&mut self, tag: &str, child: &str, state: &mut State) -> bool {
     state.model.can_contain(tag, child) || self.can_contain_indirect(tag, child, state).is_some()
-  }
-
-
-  /// The indirect model includes all elements allowed as direct children,
-  /// and all descendents of a node that can be inserted after autoOpen'ing intermediate elements.
-  /// This model therefor includes information from the Schema, as well as
-  /// autoOpen information that may be introduced in binding files.
-  /// [Thus it should NOT be modifying the Model object, which may cover several documents in Daemon]
-  /// $imodel{$tag}{$child} => $open means if in $tag, to open $child, we must first open $open
-  pub fn compute_indirect_model(&mut self, state: &mut State) -> IndirectModel {
-    let mut imodel : IndirectModel = HashMap::new();
-    // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
-    let mut openable : HashSet<String> = HashSet::new();
-    for tag in state.model.get_tags() {
-      if let Some(x) = state.tag_properties.get(&tag) {
-        if x.auto_open {
-          openable.insert(tag.to_owned());
-        }
-      }
-    }
-
-    for tag in state.model.get_tags() {
-      let mut desc : HashMap<String, HashMap<String, usize>> = HashMap::new();
-      {
-        compute_indirect_model_aux(&tag, None, 1, &mut openable, &mut desc, state);
-      }
-
-      let mut desc_keys : Vec<String> = desc.keys().map(|k| k.to_string()).collect();
-      desc_keys.sort();
-      for kid in desc_keys {
-        let mut best = 0;    // Find best path to $kid.
-        let mut desc_kid_keys : Vec<String> = desc.entry(kid.to_owned()).or_insert(HashMap::new()).keys().map(|k| k.to_string()).collect();
-        desc_kid_keys.sort();
-        for start in desc_kid_keys {
-          let start_entry = {
-            let kid_entry = desc.entry(kid.to_owned()).or_insert(HashMap::new());
-            kid_entry.entry(start.to_owned()).or_insert(0).clone()
-          };
-          if start_entry > best {
-            imodel.entry(tag.to_owned()).or_insert(HashMap::new()).insert(kid.to_owned(), start.to_owned());
-            {
-              best = desc.get(&kid).unwrap().get(&start).unwrap().clone();
-            }
-          }
-        }
-      }
-    }
-    // PATCHUP
-    if state.model.permissive {    // !!! Alarm!!!
-      imodel.entry("#Document".to_string()).or_insert(HashMap::new()).insert("#PCDATA".to_owned(),"ltx:p".to_owned());
-    }
-
-    imodel
   }
 
   pub fn close_text_internal(&mut self) -> Node {
@@ -1121,38 +1067,6 @@ impl Document {
 }
 
 // Auxiliary
-fn compute_indirect_model_aux(tag: &str, start_opt: Option<String>, desirability: usize,
-                                  openable: &mut HashSet<String>, desc: &mut HashMap<String, HashMap<String, usize>>,
-                                  state: &mut State) {
-  let start = match start_opt {
-    Some(s) => s,
-    None => String::new()
-  };
-
-  // A bit tricky here, we need to release the state.model borrow immediately, which is why we
-  // move ownership of the tag strings into the tag_contents vector.
-  // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-  let tag_contents : Vec<String> = state.model.get_tag_contents(tag).iter().map(|t| t.to_string()).collect();
-
-  for kid in tag_contents {
-    if desc.entry(kid.clone()).or_insert(HashMap::new()).get(&start).is_some() { continue;  } // Already solved
-
-    if !start.is_empty() {
-      desc.entry(kid.clone()).or_insert(HashMap::new()).insert(start.clone(), desirability);
-    }
-
-    if kid != "#PCDATA" && openable.contains(&kid) {
-      let inner = if !start.is_empty() {
-        start.clone()
-      } else {
-        kid.to_string()
-      };
-
-      compute_indirect_model_aux(&kid, Some(inner), desirability,
-        openable, desc, state);
-    }
-  }
-}
 
 fn serialize_string(string: &str) -> String {
   // Basic entities

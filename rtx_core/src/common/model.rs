@@ -41,20 +41,20 @@ impl Default for TagFrame {
 }
 
 pub struct Model {
-  schema: Option<Relaxng>,
-  schema_data: Option<Vec<String>>,
-  schema_class: HashMap<String, String>,
-  code_namespace_prefixes: HashMap<String, String>,
-  code_namespaces: HashMap<String, String>,
-  document_namespace_prefixes: HashMap<String, String>,
-  document_namespaces: HashMap<String, String>,
+  pub schema: Option<Relaxng>,
+  pub schema_data: Option<Vec<String>>,
+  pub schema_class: HashMap<String, HashSet<String>>,
+  pub code_namespace_prefixes: HashMap<String, String>,
+  pub code_namespaces: HashMap<String, String>,
+  pub document_namespace_prefixes: HashMap<String, String>,
+  pub document_namespaces: HashMap<String, String>,
   // doctype_namespaces: HashMap<String, String>,
   // namespace_errors: usize,
   pub permissive: bool,
-  no_compiled: bool,
-  debug_mode: bool,
-  namespace_errors: u8,
-  tagprop: HashMap<String, TagFrame>
+  pub no_compiled: bool,
+  pub debug_mode: bool,
+  pub namespace_errors: u8,
+  pub tagprop: HashMap<String, TagFrame>
 }
 impl Default for Model {
   fn default() -> Self {
@@ -525,7 +525,11 @@ impl Model {
         } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
           let classname = caps.at(1).unwrap();
           let elements = caps.at(2).unwrap();
-          self.set_schema_class(classname, elements.split(",").collect::<Vec<&str>>().first().unwrap());
+          let mut class_set = HashSet::new();
+          for set_element in elements.split(",").collect::<Vec<&str>>() {
+            class_set.insert(set_element.to_owned());
+          }
+          self.set_schema_class(classname, class_set);
 
         } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
           let prefix = caps.at(1).unwrap();
@@ -589,7 +593,7 @@ impl Model {
     }
   }
 
-  pub fn set_schema_class(&mut self, classname: &str, content: &str) {
-    self.schema_class.insert(classname.to_owned(), content.to_owned());
+  pub fn set_schema_class(&mut self, classname: &str, content: HashSet<String>) {
+    self.schema_class.insert(classname.to_owned(), content);
   }
 }

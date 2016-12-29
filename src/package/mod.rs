@@ -1,16 +1,28 @@
-use std::collections::HashMap;
-use regex::Regex;
-use rtx_core::Core;
-use rtx_core::state::{State, ObjectStore, Scope};
-use rtx_core::common::{Error};
-use rtx_core::token::*;
-use rtx_core::parameter::{Parameter, Parameters};
-use rtx_core::mouth::Mouth;
-use rtx_core::definition::{Definition, BeforeDigestClosure, ConstructionClosure};
-use rtx_core::document::Document;
-use rtx_core::document::resource::*;
-use rtx_core::document::tag::{TagOptions, TagOptionName};
-use rtx_core::util::pathname;
+pub use std::collections::HashMap;
+pub use regex::Regex;
+pub use std::rc::Rc;
+pub use std::collections::VecDeque;
+pub use libxml::tree::Node;
+
+pub use rtx_core::{Core, Digested, BoxOps};
+pub use rtx_core::state::{State, ObjectStore, Scope};
+pub use rtx_core::common::{Error};
+pub use rtx_core::token::*;
+pub use rtx_core::parameter::{Parameter, Parameters};
+pub use rtx_core::mouth::Mouth;
+pub use rtx_core::definition::{Definition, BeforeDigestClosure, ConstructionClosure};
+pub use rtx_core::document::Document;
+pub use rtx_core::document::resource::*;
+pub use rtx_core::document::tag::{TagOptions, TagOptionName};
+pub use rtx_core::util::pathname;
+pub use rtx_core::token::Token;
+pub use rtx_core::tokens::Tokens;
+pub use rtx_core::gullet::Gullet;
+pub use rtx_core::stomach::Stomach;
+pub use rtx_core::whatsit::Whatsit;
+pub use rtx_core::definition::expandable::Expandable;
+pub use rtx_core::definition::primitive::{Primitive,PrimitiveOptions};
+pub use rtx_core::definition::constructor::{ConstructorOptions};
 
 //**********************************************************************
 //   Initially, I thought LaTeXML Packages should try to be like perl modules:
