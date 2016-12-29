@@ -134,18 +134,18 @@ macro_rules! InstallDefinition {
 //     return 1; }
 //   return; }
 
-/// Is defined in the LaTeX-y sense of also not being let to \relax.
+/// Is defined in the `LaTeX`-y sense of also not being let to \relax.
 pub fn is_defined(name: &str, state: &mut State) -> bool {
   let cs = T_CS!(name);
   is_defined_token(&cs, state)
 }
 pub fn is_defined_token(cs: &Token, state: &mut State) -> bool {
   match state.lookup_meaning(cs) {
-    Some(store) => match store {
-      & ObjectStore::Token(ref m) => true,
-      & ObjectStore::Expandable(ref m) => m.get_cs_name() != "\relax",
-      & ObjectStore::Primitive(ref m) => m.get_cs_name() != "\relax",
-      & ObjectStore::Constructor(ref m) => m.get_cs_name() != "\relax",
+    Some(store) => match *store {
+      ObjectStore::Token(ref m) => true,
+      ObjectStore::Expandable(ref m) => m.get_cs_name() != "\relax",
+      ObjectStore::Primitive(ref m) => m.get_cs_name() != "\relax",
+      ObjectStore::Constructor(ref m) => m.get_cs_name() != "\relax",
       _ => false
     },
   _ => false }
@@ -344,8 +344,8 @@ impl Default for RequireOptions {
   }
 }
 
-/// This (& FindFile) needs to evolve a bit to support reading raw .sty (.def, etc) files from
-/// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of pathname_find ???)
+/// This (and `FindFile`) needs to evolve a bit to support reading raw .sty (.def, etc) files from
+/// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of `pathname_find` ???)
 /// Another potentially useful option might be that if we are reading a raw file,
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
 pub fn require_package(name: String, mut options: RequireOptions, state: &mut State) {
@@ -685,8 +685,7 @@ macro_rules! DefConstructorI(
       cs: $cs,
       paramlist: $paramlist,
       replacement: $compiled_replacement,
-      options: $options,
-      ..Constructor::default()};
+      options: $options};
 
     $state.install_definition(::rtx_core::state::ObjectStore::Constructor(Rc::new(constructor)), None);
 
@@ -915,11 +914,11 @@ macro_rules! DefEnvironmentI (
 //======================================================================
 
 pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
-  let mut options = state.tag_properties.entry(tag.to_string()).or_insert(TagOptions::default());
+  let mut options = state.tag_properties.entry(tag.to_string()).or_insert_with(TagOptions::default);
   options.auto_open = properties.auto_open;
   options.auto_close = properties.auto_close;
 
-  for name in TagOptionName::all().iter() {
+  for name in &TagOptionName::all() {
     if name.is_prepend() {
       options.prepend(name, properties.remove(name));
     } else if name.is_append() {
@@ -949,7 +948,7 @@ pub fn select_relaxng_schema(schema : String, namespaces : Option<HashMap<String
   let model = &mut state.model;
   model.set_relaxng_schema(schema);
   if let Some(namespaces) = namespaces {
-    for (prefix, value) in namespaces.into_iter() {
+    for (prefix, value) in namespaces {
       model.register_document_namespace(&prefix, Some(value)); }
   }
   return; }

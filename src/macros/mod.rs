@@ -23,7 +23,7 @@ macro_rules! compile_replacement {
 #[macro_export]
 macro_rules! load_model {
   ($var: expr, $name: expr) => ({
-    use std::collections::{HashMap, HashSet};
+    use std::collections::{HashSet};
     use std::iter::FromIterator;
     use rtx_core::common::model::Model;
     use rtx_core::common::relaxng::Relaxng;

@@ -382,9 +382,9 @@ impl Document {
       _ => {}
     };
 
-    let tag_hash = state.tag_properties.entry(tag.to_string()).or_insert(TagOptions::default()).clone();
+    let tag_hash = state.tag_properties.entry(tag.to_string()).or_insert_with(TagOptions::default).clone();
     // let ns_hash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p . ':*')) || {};
-    let all_hash = state.tag_properties.entry("ltx:*".to_string()).or_insert(TagOptions::default()).clone();
+    let all_hash = state.tag_properties.entry("ltx:*".to_string()).or_insert_with(TagOptions::default).clone();
 
     let mut actions = Vec::new();
     // we have Rc<> around the closures, so cloning them is cheap - just another pointer with a bumped up reference counter

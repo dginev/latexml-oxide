@@ -501,7 +501,7 @@ impl Model {
     }
 
     // Else query tag properties.
-    let ref mut model = self.tagprop.entry(tag.to_owned()).or_insert(TagFrame::default()).model;
+    let ref mut model = self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default).model;
 
     model.contains("ANY") || model.contains(child)
   }
@@ -567,7 +567,7 @@ impl Model {
   }
 
   pub fn add_tag_content(&mut self, tag: &str, elements: Vec<&str>) {
-    let frame = self.tagprop.entry(tag.to_owned()).or_insert(TagFrame::default());
+    let frame = self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default);
 
     for element in elements {
       frame.model.insert(element.to_owned());
@@ -586,7 +586,7 @@ impl Model {
   }
 
   pub fn add_tag_attribute(&mut self, tag: &str, attributes: Vec<&str>) {
-    let frame = self.tagprop.entry(tag.to_owned()).or_insert(TagFrame::default());
+    let frame = self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default);
 
     for attribute in attributes {
       frame.attributes.insert(attribute.to_owned());

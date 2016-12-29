@@ -17,7 +17,6 @@ use rtx_core::list::List;
 use package::*;
 
 lazy_static! {
-  static ref POOL_EXT_REGEX : Regex = Regex::new(r"\.pool$").unwrap();
   static ref CLS_EXT_REGEX : Regex = Regex::new(r"\.cls$").unwrap();
   static ref STY_EXT_REGEX : Regex = Regex::new(r"\.sty$").unwrap();
   static ref LATEX_OPTION_REGEX : Regex = Regex::new(r"^\[([^\]]*)\]").unwrap();
@@ -150,7 +149,7 @@ impl DigestionAPI for Core {
     }
 
     for preload in &self.preload {
-      if POOL_EXT_REGEX.is_match(preload) {
+      if preload.ends_with(".pool") {
         continue;
       }
       let mut options: Option<String> = None;
@@ -158,7 +157,7 @@ impl DigestionAPI for Core {
         options = Some(refs.at(1).unwrap_or("").to_string());
         String::new()
       });
-      if CLS_EXT_REGEX.is_match(preload) {
+      if preload.ends_with(".cls") {
         CLS_EXT_REGEX.replace_all(preload, "");
         let attributes = map!{"class".to_string() => preload.to_string()};
         document.insert_pi("latexml", Some(attributes));

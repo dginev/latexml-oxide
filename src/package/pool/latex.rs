@@ -1,12 +1,12 @@
 ///**********************************************************************
 /// Organized following
-///  "LaTeX: A Document Preparation System"
+///  "`LaTeX`: A Document Preparation System"
 ///   by Leslie Lamport
 ///   2nd edition
 /// Addison Wesley, 1994
 /// Appendix C. Reference Manual
 ///**********************************************************************
-/// NOTE: This will be loaded after TeX.pool, so it inherits.
+/// NOTE: This will be loaded after `TeX.pool`, so it inherits.
 ///**********************************************************************
 
 use package::*;
@@ -79,7 +79,7 @@ pub fn load_definitions(state: &mut State) {
 
   DefMacro!("\\begin{}",
     |gullet, args, state| {
-    let ref name = args[0].to_string();
+    let name = &args[0].to_string();
     let begin_name = "\\begin{".to_string()+&name+"}";
     if IsDefined!(&begin_name, state) {
       vec![T_CS!(begin_name)] // Magic cs!
@@ -269,8 +269,7 @@ pub fn load_definitions(state: &mut State) {
     ConstructorOptions {
       // mode: Some("inline_math".to_string()),
       .. ConstructorOptions::default()
-    },
-    state);
+    },  state);
   // My first inclination is to Lock {math}, but it is surprisingly common to redefine it in silly ways... So...?
 
 
@@ -286,10 +285,10 @@ pub fn load_definitions(state: &mut State) {
 
   DefPrimitiveI!("\\newcommand OptionalMatch:* DefToken [Number][]{}", |stomach, args, state| {
       // my ($stomach, $star, $cs, $nargs, $opt, $body) = @_;
-      let ref star = args[0];
-      let ref cs = args[1].tokens[0];
-      let ref nargs = args[2];
-      let ref opt = args[3];
+      let star = &args[0];
+      let cs = &args[1].tokens[0];
+      let nargs = &args[2];
+      let opt = &args[3];
       let body = args[4].clone().unlist();
 
       // if (!isDefinable(cs)) {

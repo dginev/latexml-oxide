@@ -522,7 +522,7 @@ impl State {
           }
         }
 
-        let table_entry = state_table.entry(key.to_string()).or_insert(VecDeque::new());
+        let table_entry = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
         table_entry.push_front(value);
       }
     } else if scope == Scope::Local {
@@ -545,7 +545,7 @@ impl State {
       }
       { // 2. State table mutable logic
         let state_table = self.table_mut(&table_name);
-        let defs = state_table.entry(key.to_string()).or_insert(VecDeque::new());
+        let defs = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
         if is_replace {
           // Replace the value
           defs.pop_front();
@@ -935,15 +935,15 @@ impl State {
       desc_keys.sort();
       for kid in desc_keys {
         let mut best = 0;    // Find best path to $kid.
-        let mut desc_kid_keys : Vec<String> = desc.entry(kid.to_owned()).or_insert(HashMap::new()).keys().map(|k| k.to_string()).collect();
+        let mut desc_kid_keys : Vec<String> = desc.entry(kid.to_owned()).or_insert_with(HashMap::new).keys().map(|k| k.to_string()).collect();
         desc_kid_keys.sort();
         for start in desc_kid_keys {
           let start_entry = {
-            let kid_entry = desc.entry(kid.to_owned()).or_insert(HashMap::new());
+            let kid_entry = desc.entry(kid.to_owned()).or_insert_with(HashMap::new);
             kid_entry.entry(start.to_owned()).or_insert(0).clone()
           };
           if start_entry > best {
-            imodel.entry(tag.to_owned()).or_insert(HashMap::new()).insert(kid.to_owned(), start.to_owned());
+            imodel.entry(tag.to_owned()).or_insert_with(HashMap::new).insert(kid.to_owned(), start.to_owned());
             {
               best = desc.get(&kid).unwrap().get(&start).unwrap().clone();
             }
@@ -953,7 +953,7 @@ impl State {
     }
     // PATCHUP
     if self.model.permissive {    // !!! Alarm!!!
-      imodel.entry("#Document".to_string()).or_insert(HashMap::new()).insert("#PCDATA".to_owned(),"ltx:p".to_owned());
+      imodel.entry("#Document".to_string()).or_insert_with(HashMap::new).insert("#PCDATA".to_owned(),"ltx:p".to_owned());
     }
 
     imodel
@@ -973,10 +973,10 @@ impl State {
     let tag_contents : Vec<String> = self.model.get_tag_contents(tag).iter().map(|t| t.to_string()).collect();
 
     for kid in tag_contents {
-      if desc.entry(kid.clone()).or_insert(HashMap::new()).get(&start).is_some() { continue;  } // Already solved
+      if desc.entry(kid.clone()).or_insert_with(HashMap::new).get(&start).is_some() { continue;  } // Already solved
 
       if !start.is_empty() {
-        desc.entry(kid.clone()).or_insert(HashMap::new()).insert(start.clone(), desirability);
+        desc.entry(kid.clone()).or_insert_with(HashMap::new).insert(start.clone(), desirability);
       }
 
       if kid != "#PCDATA" && openable.contains(&kid) {

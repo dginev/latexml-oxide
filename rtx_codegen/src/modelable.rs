@@ -6,7 +6,7 @@ use util::{get_options_from_input, get_option};
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufRead;
-use rtx_core::common::error::*;
+// use rtx_core::common::error::*;
 use rtx_core::util::pathname;
 use rtx_core::state::State;
 
@@ -45,7 +45,7 @@ pub fn load_model(input: syn::MacroInput) -> quote::Tokens {
     model.schema = Some(Relaxng{ name: #name.to_owned(), ..Relaxng::default()});
   ));
 
-  note_begin(&(format!("Compiling .model file: {}", path)));
+  // note_begin(&(format!("Compiling .model file: {}", path)));
   let compiled_fh = File::open(path.clone()).unwrap();
   let compiled_reader = BufReader::new(&compiled_fh);
   for line_result in compiled_reader.lines() {
@@ -84,7 +84,7 @@ pub fn load_model(input: syn::MacroInput) -> quote::Tokens {
   }
 
   operations.push(quote!(return;));
-  note_end(&(format!("Compiling .model file: {}", path)));
+  // note_end(&(format!("Compiling .model file: {}", path)));
 
   quote!(
     impl _ModelLoader {
@@ -114,14 +114,12 @@ pub fn load_indirect_model(input: syn::MacroInput) -> quote::Tokens {
   state.model.load_schema(None);
 
   let indirect_model = state.compute_indirect_model();
-  println_stderr!("IM: ");
-  println_stderr!("{:?}", indirect_model);
 
   let mut operations = Vec::new();
   operations.push(quote!(let mut im : IndirectModel = HashMap::new();));
   for (key, sub_model) in indirect_model {
     for (sub_key, value) in sub_model {
-      operations.push(quote!(im.entry(#key).or_insert(HashMap::new()).entry(#sub_key).or_insert(#value)));
+      operations.push(quote!(im.entry(#key).or_insert_with(HashMap::new).entry(#sub_key).or_insert(#value)));
     }
   }
   operations.push(quote!(return im));

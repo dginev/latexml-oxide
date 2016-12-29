@@ -369,8 +369,8 @@ pub fn load_definitions(state: &mut State) {
           let element = document.get_element();
           if let Some(node) = element {
             if document.get_node_qname(&node, state) == "ltx:para" {  // Only set on the para about to close!
-              let class_str = match c {
-                & ObjectStore::String(ref v) => v.to_string(),
+              let class_str = match *c {
+                ObjectStore::String(ref v) => v.to_string(),
                 _ => String::new()
               };
               document.set_attribute(&node, "class", &class_str);
@@ -431,7 +431,7 @@ pub fn load_definitions(state: &mut State) {
     };
     // switch args from a Vec<Tokens> into a Vec<Token>
     let mut token_args : VecDeque<Token> = VecDeque::new();
-    for arg in args.into_iter() {
+    for arg in args {
       token_args.extend(arg.unlist().into_iter());
     }
     let cs = token_args.pop_front().unwrap();

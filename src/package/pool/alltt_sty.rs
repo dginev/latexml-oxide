@@ -5,7 +5,7 @@ pub fn load_definitions(state: &mut State) {
     ConstructorOptions {
       // font => { family => 'typewriter', series => 'medium', shape => 'upright' },
       before_digest: vec![Rc::new(|stomach, state| {
-        for verb_c in ['$', '&', '#', '^', '_', '%', '~'].into_iter() {
+        for verb_c in &['$', '&', '#', '^', '_', '%', '~'] {
          AssignCatcode!(*verb_c, Catcode::OTHER, None, state);
         }
         AssignCatcode!(' ', Catcode::ACTIVE, None, state);
