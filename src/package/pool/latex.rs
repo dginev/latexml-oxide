@@ -267,6 +267,25 @@ pub fn load_definitions(state: &mut State) {
   }
 
   //**********************************************************************
+  // C.7 Mathematical Formulas
+  //**********************************************************************
+
+  //======================================================================
+  // C.7.1 Math Mode Environments
+  //======================================================================
+
+  // TODO: Implement environment modes properly, some work still to go
+  DefEnvironment!("{math}", "$ #body $",
+   // "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
+    ConstructorOptions {
+      // mode: Some("inline_math".to_string()),
+      .. ConstructorOptions::default()
+    },
+    state);
+  // My first inclination is to Lock {math}, but it is surprisingly common to redefine it in silly ways... So...?
+
+
+  //**********************************************************************
   // C.8 Definitions, Numbering and Programming
   //**********************************************************************
 

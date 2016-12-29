@@ -812,7 +812,7 @@ macro_rules! DefEnvironmentI (
 
   let mut after_digest_with_egroup = $options.after_digest;
   let unexpected_end_closure = Rc::new(|_stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-    let env = LookupValue!("current_environment", state);
+    // let env = LookupValue!("current_environment", state);
     //     Error('unexpected', "\\end{$name}", $_[0],
     //       "Can't close environment $name",
     //       "Current are "

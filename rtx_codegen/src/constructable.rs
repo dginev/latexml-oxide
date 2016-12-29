@@ -24,12 +24,13 @@ macro_rules! CLOSE_TAG_RE_STR (() => (concat!(r"</", QNAME_RE_STR!(),r"\s*>")));
 macro_rules! LEAD_OPEN_TAG_RE_STR (() => (concat!(r"^", OPEN_TAG_RE_STR!())));
 macro_rules! LEAD_CLOSE_TAG_RE_STR (() => (concat!(r"^", CLOSE_TAG_RE_STR!())));
 
-
 macro_rules! SPECIALS (() => (r"\#\?&\\"));
 // Quoted special characters (or semi-special)
 macro_rules! QUOTED_SPECIALS (
     () => (concat!(r"\\\\\\[",SPECIALS!(),
                    r"]|\\#\\#|\\&amp;"))); // or special cases: doubled #, &amp;
+macro_rules! LEAD_QUOTED_RE_STR (() => (concat!(r"^((",QUOTED_SPECIALS!(),r"|[^",SPECIALS!(),"'\"])+)")));
+macro_rules! LEAD_RANDOM_TEXT_RE_STR (() => (concat!(r"^((",QUOTED_SPECIALS!(),r"|[^",SPECIALS!(),r"<])+)")));
 
 lazy_static! {
   // static ref NARGS : i32 = 0;
@@ -42,7 +43,8 @@ lazy_static! {
   static ref LEAD_QMARK : Regex = Regex::new(r"^[?]").unwrap();
   static ref LEAD_OPEN_TAG_RE : Regex = Regex::new(LEAD_OPEN_TAG_RE_STR!()).unwrap();
   static ref LEAD_CLOSE_TAG_RE : Regex = Regex::new(LEAD_CLOSE_TAG_RE_STR!()).unwrap();
-
+  static ref LEAD_QUOTED_RE : Regex = Regex::new(LEAD_QUOTED_RE_STR!()).unwrap();
+  static ref LEAD_RANDOM_TEXT_RE : Regex = Regex::new(LEAD_RANDOM_TEXT_RE_STR!()).unwrap();
   // QName (element tags, attribute names);  Could this also allow expressions?
   static ref FLOAT_RE : Regex = Regex::new(r"^(\^+)\s*").unwrap();
   static ref PI_RE : Regex = Regex::new(PI_RE_STR!()).unwrap();
@@ -231,18 +233,27 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
 
     // TODO: Still to be implemented cases:
     if !is_match {
-      let consumed;
       // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
       if replacement.find("=").is_some() {
+        is_match = true;
         println_stderr!("-- Attribute");
-        consumed = replacement[0..1 + replacement.find("=").unwrap()].to_owned();
+        let consumed = replacement[0..1 + replacement.find("=").unwrap()].to_owned();
+        replacement = replacement[consumed.len()..].to_owned();
       }
-      // Else random text
-      else {
-        consumed = replacement[0..1].to_owned();
-        println_stderr!("text: {:?}", consumed);
-      }
-      replacement = replacement[consumed.len()..].to_owned();
+    }
+
+    // Else random text
+    if !is_match {
+      replacement = LEAD_RANDOM_TEXT_RE.replace(&replacement, |refs: &Captures| -> String {
+        let text_match = refs.at(1).unwrap();
+        let escaped_match = &slashify(&unquote(text_match));
+        operations.push(quote!(
+          let content_box = Digested::Box(Tbox{text: #escaped_match.to_string(), ..Tbox::default()});
+          document.absorb(content_box, state);
+        ));
+        is_match = true;
+        String::new()
+      });
     }
   }
 
@@ -278,11 +289,20 @@ fn translate_string(mut text : &mut String) -> quote::Tokens {
         values.push(op);
       } else if LEAD_VALUE_RE.is_match(text) {
         values.push(translate_value(&quote.to_string(), &mut text));
-      }
-      // else if (s/^((?:$QUOTED_SPECIALS|[^$SPECIALS$quote])+)//s) {
-      //   push(@values, "'" . slashify!(unquote!($1)) . "'"); }
-      else {
-        panic!("Unrecognized at '{:?}'\n", text);
+      } else {
+        let mut is_quoted_match = false;
+        let mut quoted_match = String::new();
+        *text = LEAD_QUOTED_RE.replace(text, |refs: &Captures| -> String {
+          quoted_match = refs.at(1).unwrap().to_string();
+          is_quoted_match = true;
+          String::new()
+        });
+        if is_quoted_match {
+          let escaped_match = &slashify(&unquote(&quoted_match));
+          values.push(quote!(#escaped_match));
+        } else {
+          panic!("Unrecognized at '{:?}'\n", text);
+        }
       }
     }
   }
@@ -294,7 +314,7 @@ fn translate_string(mut text : &mut String) -> quote::Tokens {
 
   let token_values = values.iter().map(|v| {
     let v_str = v.to_string();
-    if v_str.starts_with('\'') {
+    if v_str.starts_with('\'') || v_str.starts_with('"') {
       quote!(#v.to_string())
     } else if v_str.ends_with(". to_string ( ) ") {
       quote!(#v)

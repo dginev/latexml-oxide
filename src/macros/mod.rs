@@ -9,6 +9,8 @@ macro_rules! compile_replacement {
     use rtx_core::Digested;
     use rtx_core::document::Document;
     use rtx_core::definition::ReplacementClosure;
+    #[allow(unused_imports)]
+    use rtx_core::tbox::Tbox;
     use libxml::tree::Node;
     #[allow(unused_attributes)]
     #[derive(CompileReplacement)]

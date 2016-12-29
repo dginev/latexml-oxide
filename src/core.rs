@@ -100,11 +100,9 @@ impl DigestionAPI for Core {
     // $state->installDefinition(LaTeXML::Definition::Expandable->new(T_CS!('\jobname'), undef,
     //     Tokens(Explode($name))));
     // // Reverse order, since last opened is first read!
+
     // $self->loadPostamble($options{postamble}) if $options{postamble};
-    match input_content(self, &request) {
-      Ok(_) => {}
-      Err(e) => println_stderr!("Failed to input content: {:?}", e),
-    };
+    try!(input_content(self, &request));
     // $self->loadPreamble($options{preamble}) if $options{preamble};
 
     // // Now for the Hacky part for BibTeX!!!
@@ -114,7 +112,7 @@ impl DigestionAPI for Core {
 
     let list = self.digest_internal();
     note_end(&digestion_note);
-    // return $list; });
+
     Ok(list)
   }
 
