@@ -264,12 +264,9 @@ pub fn load_definitions(state: &mut State) {
   //======================================================================
 
   // TODO: Implement environment modes properly, some work still to go
-  DefEnvironment!("{math}", "$ #body $",
+  DefEnvironment!("{math}", "$ #body $", state);
    // "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
-    ConstructorOptions {
-      // mode: Some("inline_math".to_string()),
-      .. ConstructorOptions::default()
-    },  state);
+    // mode: Some("inline_math".to_string()),
   // My first inclination is to Lock {math}, but it is surprisingly common to redefine it in silly ways... So...?
 
 

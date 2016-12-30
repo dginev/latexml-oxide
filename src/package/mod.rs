@@ -205,7 +205,12 @@ macro_rules! AfterAssignment {
 
 #[macro_export]
 macro_rules! DefParameterType (
-  ($name:expr, $param:expr, $state:expr) => ($state.assign_mapping("PARAMETER_TYPES", $name, Some(ObjectStore::Parameter($param))))
+  ($name:expr, $state:ident, $($key:ident => $value:expr),*) => ($state.assign_mapping("PARAMETER_TYPES", $name,
+    Some(ObjectStore::Parameter(Parameter {
+      $($key: $value,)*
+      ..Parameter::default()
+    }
+  ))))
 );
 
 
@@ -740,7 +745,7 @@ pub fn revert(_arg: Vec<Token>) -> Vec<Token> {
 
 #[macro_export]
 macro_rules! DefEnvironment (
-  ($proto_raw:expr, $replacement:expr, $options:expr, $state:expr) => ({
+  ($proto_raw:expr, $replacement:expr, $state:expr) => ({
   use rtx_core::util::text::*;
   let mut proto = $proto_raw.to_string().trim_left().to_string();
   let name = extract_bracketed(&mut proto, Some(Delimiter::Brace));
@@ -750,7 +755,27 @@ macro_rules! DefEnvironment (
   let cc_copy;
   compile_replacement!(cc_copy, $replacement);
 
-  DefEnvironmentI!(name, None, compiled_replacement, cc_copy, $options, $state);
+  DefEnvironmentI!(name, None, compiled_replacement, cc_copy, ConstructorOptions::default(), $state);
+  });
+
+  ($proto_raw:expr, $replacement:expr, $state:ident, $($key:ident => $value:expr),*) => ({
+  use rtx_core::util::text::*;
+  let mut proto = $proto_raw.to_string().trim_left().to_string();
+  let name = extract_bracketed(&mut proto, Some(Delimiter::Brace));
+
+  let compiled_replacement;
+  compile_replacement!(compiled_replacement, $replacement);
+  let cc_copy;
+  compile_replacement!(cc_copy, $replacement);
+
+  let options = ConstructorOptions {
+    $(
+      $key: $value,
+    )*
+    ..ConstructorOptions::default()
+  };
+
+  DefEnvironmentI!(name, None, compiled_replacement, cc_copy, options, $state);
 }));
 
 #[macro_export]
@@ -812,13 +837,13 @@ macro_rules! DefEnvironmentI (
         // Curiously, it's the \begin whose afterConstruct gets called.
         after_construct: after_construct_with_frame,
         capture_body: true,
-        properties: $options.properties,
+        properties: $options.properties.clone(),
         // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
         // (defined $sizer ? (sizer => $sizer) : ()),
         // ), $options{scope});
         ..ConstructorOptions::default()
       }});
-  $state.install_definition(ObjectStore::Constructor(begin_name_constructor), $options.scope);
+  $state.install_definition(ObjectStore::Constructor(begin_name_constructor), $options.scope.clone());
 
 
   let mut after_digest_with_egroup = $options.after_digest;
@@ -853,7 +878,7 @@ macro_rules! DefEnvironmentI (
       ..ConstructorOptions::default()
     }
   });
-  $state.install_definition(ObjectStore::Constructor(end_envname_constructor), $options.scope);
+  $state.install_definition(ObjectStore::Constructor(end_envname_constructor), $options.scope.clone());
 
   // For the uncommon case opened by \csname env\endcsname
   let name_constructor = Rc::new(Constructor{
@@ -873,14 +898,14 @@ macro_rules! DefEnvironmentI (
     options: ConstructorOptions {
       nargs: $options.nargs,
       capture_body: true,
-      properties: $options.properties,
+      properties: $options.properties.clone(),
       // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
       // (defined $sizer ? (sizer => $sizer) : ()),
       // ), $options{scope});
       ..ConstructorOptions::default()
     }
   });
-  $state.install_definition(ObjectStore::Constructor(name_constructor), $options.scope);
+  $state.install_definition(ObjectStore::Constructor(name_constructor), $options.scope.clone());
 
   let end_name_constructor = Rc::new(Constructor {
     cs: T_CS!("\\end".to_string() + &name),
@@ -901,7 +926,7 @@ macro_rules! DefEnvironmentI (
   });
   $state.install_definition(ObjectStore::Constructor(end_name_constructor), $options.scope);
 
-  if ($options.locked) {
+  if $options.locked {
     AssignValue!(&("\\begin{".to_string() + &name+"}:locked"), ObjectStore::Bool(true), None, $state);
     AssignValue!(&("\\end{".to_string()+&name+"}:locked")  , ObjectStore::Bool(true), None, $state);
     AssignValue!(&("\\".to_string()+&name+":locked")       , ObjectStore::Bool(true), None, $state);
