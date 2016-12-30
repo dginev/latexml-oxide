@@ -1,14 +1,15 @@
 use package::*;
 pub fn load_definitions(state: &mut State) {
+  SetupBindingMacros!(state);
 
-  RegisterNamespace!("ltx"  , "http://dlmf.nist.gov/LaTeXML", state);
-  RegisterNamespace!("svg"  , "http://www.w3.org/2000/svg", state);
-  RegisterNamespace!("xlink", "http://www.w3.org/1999/xlink", state);   // Needed for SVG
+  RegisterNamespace!("ltx"  , "http://dlmf.nist.gov/LaTeXML");
+  RegisterNamespace!("svg"  , "http://www.w3.org/2000/svg");
+  RegisterNamespace!("xlink", "http://www.w3.org/1999/xlink");   // Needed for SVG
   // Not directly used, but let's stake out the ground
-  RegisterNamespace!("m"    , "http://www.w3.org/1998/Math/MathML", state);
-  RegisterNamespace!("xhtml", "http://www.w3.org/1999/xhtml", state);
+  RegisterNamespace!("m"    , "http://www.w3.org/1998/Math/MathML");
+  RegisterNamespace!("xhtml", "http://www.w3.org/1999/xhtml");
 
-  DefMacroT!(T_CS!("\\@empty"), None, None, state);
+  DefMacroT!(T_CS!("\\@empty"), None, None);
 
 
   //======================================================================
@@ -19,9 +20,9 @@ pub fn load_definitions(state: &mut State) {
   if !state.documentid.is_empty() {
     let docid = state.documentid.clone();
     // Wrap in T_OTHER so funny chars don't screw up (no space!)
-    DefMacroT!(T_CS!("\\thedocument@ID"), None, T_OTHER!(docid), state);
+    DefMacroT!(T_CS!("\\thedocument@ID"), None, T_OTHER!(docid));
   } else {
-    Let!("\\thedocument@ID", "\\@empty", state);
+    Let!("\\thedocument@ID", "\\@empty");
   }
   // TODO:
   // NewCounter!("@XMARG", "document", idprefix: "XM");
@@ -37,11 +38,11 @@ pub fn load_definitions(state: &mut State) {
     let tag = document.get_node_qname(&node, state);
     if tag != "ltx:document"
       && tag != "ltx:XMWrap"    // No auto-generated id on wrap???
-      && LookupBool!("GENERATE_IDS", state) {
+      && state.lookup_bool("GENERATE_IDS") {
         // TODO:
         // GenerateID!(document, node, state);
     }
-  })], ..TagOptions::default()}, state);
+  })], ..TagOptions::default()});
 
   //======================================================================
   Tag!("ltx:document", TagOptions{
@@ -52,9 +53,9 @@ pub fn load_definitions(state: &mut State) {
       document.process_pending_resources(state);
     })],
     ..TagOptions::default()
-  }, state);
+  });
 
-  RequireResource!("LaTeXML.css", state);
+  RequireResource!("LaTeXML.css");
 
 
   //**********************************************************************
@@ -63,7 +64,7 @@ pub fn load_definitions(state: &mut State) {
 
   // ======================================================================
   // Define parsers for standard parameter types.
-  DefParameterType!("Plain", state,
+  DefParameterType!("Plain",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       let mut value: Vec<Token> = gullet.read_arg(state);
       for inner_opt in inner {
@@ -88,7 +89,7 @@ pub fn load_definitions(state: &mut State) {
     }))
   );
 
-  DefParameterType!("Optional", state,
+  DefParameterType!("Optional",
     reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       // TODO: default !!!
       // let value = gullet.read_optional(state);
@@ -114,7 +115,7 @@ pub fn load_definitions(state: &mut State) {
   );
 
   // Skip any spaces, but don't contribute an argument.
-  DefParameterType!("SkipSpaces", state,
+  DefParameterType!("SkipSpaces",
     reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       gullet.skip_spaces(state);
       Vec::new()
@@ -140,7 +141,7 @@ pub fn load_definitions(state: &mut State) {
   //   ..Parameter::default()
   // }, state);
 
-  DefParameterType!("Until", state,
+  DefParameterType!("Until",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, until: Vec<Token>, state: &mut State| {
       gullet.read_until(until, state)
     })
@@ -157,7 +158,7 @@ pub fn load_definitions(state: &mut State) {
   // }, state);
 
   // Read a matching keyword, eg. Match:=
-  DefParameterType!("Match", state,
+  DefParameterType!("Match",
     reader => Rc::new(|gullet: &mut Gullet, _inner, extra, state:&mut State| {
       gullet.read_match(extra, state)
     })
@@ -173,7 +174,7 @@ pub fn load_definitions(state: &mut State) {
   //   }, state);
 
   // Read balanced material (?)
-  DefParameterType!("Balanced", state,
+  DefParameterType!("Balanced",
     reader => Rc::new(|gullet: &mut Gullet, _inner, _extra, state:&mut State| {
       gullet.read_balanced(state)
     })
@@ -181,7 +182,7 @@ pub fn load_definitions(state: &mut State) {
 
 
   // Read a Semiverbatim argument; ie w/ most catcodes neutralized.
-  DefParameterType!("Semiverbatim", state,
+  DefParameterType!("Semiverbatim",
     reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_arg(state)),
     reversion => Some(Rc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
       // let mut reverted_inner;
@@ -199,7 +200,7 @@ pub fn load_definitions(state: &mut State) {
     semiverbatim => true);
 
   // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
-  DefParameterType!("OptionalSemiverbatim", state,
+  DefParameterType!("OptionalSemiverbatim",
     reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_optional(state)),
     semiverbatim => true,
     optional => true,
@@ -216,7 +217,7 @@ pub fn load_definitions(state: &mut State) {
   );
 
   // Read a token as used when defining it, ie. it may be enclosed in braces.
-  DefParameterType!("DefToken", state,
+  DefParameterType!("DefToken",
     reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       let mut token = gullet.read_token(state);
       let begin_token = Some(T_BEGIN!());
@@ -242,7 +243,7 @@ pub fn load_definitions(state: &mut State) {
   );
 
   // Read the next token
-  DefParameterType!("Token", state,
+  DefParameterType!("Token",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       if let Some(t) = gullet.read_token(state) {
         vec![t]
@@ -253,7 +254,7 @@ pub fn load_definitions(state: &mut State) {
   );
 
   // Read the next token, after expanding any expandable ones.
-  DefParameterType!("XToken", state,
+  DefParameterType!("XToken",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       if let Some(t) = gullet.read_x_token(false, false, state) {
         vec![t]
@@ -264,7 +265,7 @@ pub fn load_definitions(state: &mut State) {
   );
 
   // Read a number
-  DefParameterType!("Number", state,
+  DefParameterType!("Number",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       gullet.read_number(state)
     })
@@ -280,7 +281,7 @@ pub fn load_definitions(state: &mut State) {
 
   // Read until the next (balanced) open brace {
   // used for the last TeX-style delimited argument
-  DefParameterType!("UntilBrace", state,
+  DefParameterType!("UntilBrace",
     reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       gullet.read_until_brace(state)
     })
@@ -311,10 +312,13 @@ pub fn load_definitions(state: &mut State) {
     DefMacroI!(T_CS!(ltxtrigger),
                None,
                move |_gullet, _args, state| {
-                 LoadPool!("LaTeX", state);
+                 input_definitions("LaTeX".to_string(),
+                  InputDefinitionOptions {
+                    extension: Some("pool"),
+                    ..InputDefinitionOptions::default()
+                  }, state);
                  return vec![T_CS!(ltxtrigger)];
-               },
-               state);
+               });
   }
 
   //----------------------------------------------------------------------
@@ -356,14 +360,14 @@ pub fn load_definitions(state: &mut State) {
     })),
     ConstructorOptions {
     after_digest: vec![Rc::new(|stomach, whatsit, state| {
-      let in_preamble = match LookupValue!("inPreamble", state) {
+      let in_preamble = match state.lookup_value("inPreamble") {
         Some(& ObjectStore::Bool(v)) => v,
         _ => false
       };
       if in_preamble {
         whatsit.set_property("inPreamble", ObjectStore::Bool(true));
       } else {
-        if let Some(c) = RemoveValue!("next_para_class", state) {
+        if let Some(c) = state.remove_value("next_para_class") {
           whatsit.set_property("class", c);
         }
         // Digest!(Tokens!(
@@ -376,7 +380,7 @@ pub fn load_definitions(state: &mut State) {
     properties: skippable_props,
     alias: Some("\\par\n".to_string()),
     ..ConstructorOptions::default()
-  }, state);
+  });
 
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
@@ -386,7 +390,7 @@ pub fn load_definitions(state: &mut State) {
       //   document.insertElement("ltx:break");
       // }
     })),
-    ConstructorOptions::default(), state
+    ConstructorOptions::default()
   );
 
 // Tag("ltx:para", autoClose => 1, autoOpen => 1);
@@ -430,37 +434,37 @@ pub fn load_definitions(state: &mut State) {
     PrimitiveOptions {
       locked: true,
       ..PrimitiveOptions::default()
-    }, state);
+    });
   DefPrimitiveI!("\\gdef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
       do_def(true, false, stomach, args, state)
     },
     PrimitiveOptions {
       locked: true,
       ..PrimitiveOptions::default()
-    }, state);
+    });
   DefPrimitiveI!("\\edef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
       do_def(false, true, stomach, args, state)
     },
     PrimitiveOptions {
       locked: true,
       ..PrimitiveOptions::default()
-    }, state);
+    });
   DefPrimitiveI!("\\xdef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
       do_def(true, true, stomach, args, state)
     },
     PrimitiveOptions {
       locked: true,
       ..PrimitiveOptions::default()
-    }, state);
+    });
 
-    Tag!("ltx:para", TagOptions{auto_close: true, auto_open: true, ..TagOptions::default()}, state);
+    Tag!("ltx:para", TagOptions{auto_close: true, auto_open: true, ..TagOptions::default()});
 
     let trim_node_whitespace_closure = Rc::new(|document: &mut Document, node: Node, box_opt: Option<Digested>, state: &mut State| {
       document.trim_node_whitespace(node, state);
     });
-    Tag!("ltx:p", TagOptions{auto_close: true, auto_open: true, after_close: vec![trim_node_whitespace_closure], ..TagOptions::default()}, state);
+    Tag!("ltx:p", TagOptions{auto_close: true, auto_open: true, after_close: vec![trim_node_whitespace_closure], ..TagOptions::default()});
 
 
     // TODO: Move to the right place in the pool definitions (maybe split out individual sub-pools by chapter?)
-    DefMacroT!(T_CS!("\\space"), None, T_SPACE!(), state);
+    DefMacroT!(T_CS!("\\space"), None, T_SPACE!());
 }

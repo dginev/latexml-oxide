@@ -16,7 +16,8 @@ lazy_static!{
 }
 
 pub fn load_definitions(state: &mut State) {
-  LoadPool!("TeX", state);
+  SetupBindingMacros!(state);
+  LoadPool!("TeX");
 
   // Apparently LaTeX does NOT define \magnification,
   // and babel uses that to determine whether we're runing LaTeX!!!
@@ -44,15 +45,14 @@ pub fn load_definitions(state: &mut State) {
           Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
           None => Vec::new(),
         };
-        LoadClass!(whatsit.get_arg(2).unwrap().to_string(),
-                   class_opts,
-                   vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())],
-                   state);
+        load_class(whatsit.get_arg(2).unwrap().to_string(),
+                  class_opts,
+                  vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())],
+                  state);
         Vec::new()
       })],
       ..ConstructorOptions::default()
-    },
-    state);
+    });
 
 
   // ======================================================================
@@ -81,12 +81,12 @@ pub fn load_definitions(state: &mut State) {
     |gullet, args, state| {
     let name = &args[0].to_string();
     let begin_name = "\\begin{".to_string()+&name+"}";
-    if IsDefined!(&begin_name, state) {
+    if is_defined(&begin_name, state) {
       vec![T_CS!(begin_name)] // Magic cs!
     }
     else {
-      let token = T_CS!("\\".to_string() + name);
-      if !IsDefinedToken!(&token, state) {
+      let token = T_CS!("\\".to_string() + &name);
+      if !is_defined_token(&token, state) {
         let undef = "{".to_string() + &name + "}";
         println_stderr!("Error:undefined:{:?}: The environment is not defined.",undef);
         // state.note_status("undefined", undef);
@@ -97,23 +97,21 @@ pub fn load_definitions(state: &mut State) {
       }
       Vec::new()
     }
-  },
-  state);
+  });
 
-  DefMacro!("\\end{}",
-  |gullet, args, state| {
-  let name = args[0].to_string();
-  let mut t = T_CS!("\\end{".to_string()+&name+"}");
-  if IsDefinedToken!(&t, state) {// Magic CS!
+  DefMacro!("\\end{}", |gullet, args, state| {
+    let name = args[0].to_string();
+    let mut t = T_CS!("\\end{".to_string()+&name+"}");
+    if is_defined_token(&t, state) {// Magic CS!
     vec![t]
   } else {
     t = T_CS!("\\end".to_string()+&name);
-    if IsDefinedToken!(&t, state) {
+    if is_defined_token(&t, state) {
       vec![t, T_CS!("\\endgroup")]
     } else {
       vec![T_CS!("\\endgroup")]
     }
-  }}, state);
+  }});
 
 
   //**********************************************************************
@@ -158,7 +156,7 @@ pub fn load_definitions(state: &mut State) {
       }
     })),
     ConstructorOptions {
-      before_digest: vec![Rc::new(|_stomach, state| { AssignValue!("inPreamble", ObjectStore::Bool(false), None, state); Vec::new() })],
+      before_digest: vec![Rc::new(|_stomach, state| { state.assign_value("inPreamble", ObjectStore::Bool(false), None); Vec::new() })],
     // after_digest_begin => |stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
@@ -179,7 +177,7 @@ pub fn load_definitions(state: &mut State) {
     // },
     mode: Some("text".to_string()),
     ..ConstructorOptions::default()
-  }, state);
+  });
 
   // ======================================================================
   // C.5.2 Packages
@@ -195,7 +193,7 @@ pub fn load_definitions(state: &mut State) {
   // Let('\@currext',  '\@empty');
   // Let('\@currname', '\@empty');
   fn only_preamble(cs: &str, state: &mut State) {
-    if ! LookupBool!("inPreamble", state) {
+    if state.lookup_bool("inPreamble") {
       // Error('unexpected', $cs, $STATE->getStomach,
       // "The current command '" . ToString($cs) . "' can only appear in the preamble")
       println_stderr!("Error:unexpected:{:?} The current command can only appear in the preamble", cs);
@@ -222,7 +220,7 @@ pub fn load_definitions(state: &mut State) {
                       };
 
                       for package in package_list {
-                        RequirePackage!(package, RequireOptions {
+                        require_package(package, RequireOptions {
                           options: options_list.clone(),
                           ..RequireOptions::default()
                         }, state)
@@ -230,8 +228,7 @@ pub fn load_definitions(state: &mut State) {
                       Vec::new()
                     })],
                     ..ConstructorOptions::default()
-                  },
-                  state);
+                  });
 
 
 
@@ -249,10 +246,10 @@ pub fn load_definitions(state: &mut State) {
                      "\\listfiles"]
                       .into_iter()
                       .map(|s| s.to_string()) {
-    DefMacroI!(T_CS!(ltxtrigger),
-               None,
-               move |_gullet, _args, _state| Vec::new(),
-               state);
+    def_macro_i(T_CS!(ltxtrigger), None,
+      Rc::new(move |_gullet, _args, _state| Vec::new()),
+      state
+    );
   }
 
   //**********************************************************************
@@ -264,7 +261,7 @@ pub fn load_definitions(state: &mut State) {
   //======================================================================
 
   // TODO: Implement environment modes properly, some work still to go
-  DefEnvironment!("{math}", "$ #body $", state);
+  DefEnvironment!("{math}", "$ #body $");
    // "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
     // mode: Some("inline_math".to_string()),
   // My first inclination is to Lock {math}, but it is surprisingly common to redefine it in silly ways... So...?
@@ -296,10 +293,9 @@ pub fn load_definitions(state: &mut State) {
 
       // TODO: convertLaTeXArgs($nargs, $opt)
       let body_closure = move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State|{ body.clone() };
-      DefMacroI!(cs.clone(), None, body_closure, state);
+      def_macro_i(cs.clone(), None, Rc::new(body_closure), state);
       Vec::new()
   },
-  PrimitiveOptions::default(),
-  state);
+  PrimitiveOptions::default());
 
 }

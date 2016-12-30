@@ -1,8 +1,8 @@
 use rtx_core::state::{State};
 use package::*;
 pub fn load_definitions(state: &mut State) {
-
-  LoadPool!("LaTeX", state);
+  SetupBindingMacros!(state);
+  LoadPool!("LaTeX");
   //**********************************************************************
   // Option handling
   for _option in ["10pt", "11pt", "12pt", "letterpaper", "legalpaper", "executivepaper", "a4paper",
@@ -24,7 +24,7 @@ pub fn load_definitions(state: &mut State) {
 
   //**********************************************************************
   // Document structure.
-  RelaxNGSchema!("LaTeXML", state);
-  RequireResource!("ltx-article.css", state);
+  RelaxNGSchema!("LaTeXML");
+  RequireResource!("ltx-article.css");
 
 }
