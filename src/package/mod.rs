@@ -481,6 +481,11 @@ macro_rules! NewDefault {
 }
 
 #[macro_export]
+macro_rules! sub {
+  ($body:expr) => (vec![Rc::new($body)])
+}
+
+#[macro_export]
 macro_rules! SetupBindingMacros {($state:ident) => (
   //======================================================================
   // Convenience macros for writing definitions.

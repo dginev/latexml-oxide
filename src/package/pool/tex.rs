@@ -32,7 +32,7 @@ pub fn load_definitions(state: &mut State) {
   // Set to 1 (or \usepackage[ids]{latexml}) to enable.
   // Set to 0 (or \usepackage[noids]{latexml}) to disable.
 
-  Tag!("ltx:*", after_open => vec![Rc::new(|document, node, box_opt, state| {
+  Tag!("ltx:*", after_open => sub!(|document, node, box_opt, state| {
     // If GENERATE_IDS is true, we'll assign an ID to EVERY element,
     // EXCEPT ltx:document which only gets an id from an EXPLICIT \thedocument@id.
     let tag = document.get_node_qname(&node, state);
@@ -42,16 +42,16 @@ pub fn load_definitions(state: &mut State) {
         // TODO:
         // GenerateID!(document, node, state);
     }
-  })]);
+  }));
 
   //======================================================================
   Tag!("ltx:document",
-    after_open => vec![Rc::new(|document, node, box_opt, state| {
+    after_open => sub!(|document, node, box_opt, state| {
       document.process_pending_resources(state);
-    })],
-    after_close => vec![Rc::new(|document, node, box_opt, state| {
+    }),
+    after_close => sub!(|document, node, box_opt, state| {
       document.process_pending_resources(state);
-    })]
+    })
   );
 
   RequireResource!("LaTeXML.css");
@@ -357,7 +357,7 @@ pub fn load_definitions(state: &mut State) {
         document.maybe_close_element("ltx:para", state);
      }
     },
-    after_digest => vec![Rc::new(|stomach, whatsit, state| {
+    after_digest => sub!(|stomach, whatsit, state| {
       let in_preamble = match state.lookup_value("inPreamble") {
         Some(& ObjectStore::Bool(v)) => v,
         _ => false
@@ -374,7 +374,7 @@ pub fn load_definitions(state: &mut State) {
         // ));
       }
       Vec::new()
-    })],
+    }),
     properties => skippable_props,
     alias => Some("\\par\n".to_string())
   );

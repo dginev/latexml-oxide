@@ -38,7 +38,7 @@ pub fn load_definitions(state: &mut State) {
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
-    after_digest => vec![Rc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
+    after_digest => sub!(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
         Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
@@ -49,7 +49,7 @@ pub fn load_definitions(state: &mut State) {
                 vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())],
                 state);
       Vec::new()
-    })]
+    })
   );
 
 
@@ -153,7 +153,7 @@ pub fn load_definitions(state: &mut State) {
         document.insert_element("ltx:document", vec![body], Some(attrib), state);
       }
     })),
-    before_digest => vec![Rc::new(|_stomach, state| { state.assign_value("inPreamble", ObjectStore::Bool(false), None); Vec::new() })],
+    before_digest => sub!(|_stomach, state| { state.assign_value("inPreamble", ObjectStore::Bool(false), None); Vec::new() }),
     // after_digest_begin => |stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
@@ -198,11 +198,11 @@ pub fn load_definitions(state: &mut State) {
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
-      before_digest => vec![Rc::new(|_stomach: &mut Stomach, state: &mut State| -> Vec<Digested> {
+      before_digest => sub!(|_stomach: &mut Stomach, state: &mut State| -> Vec<Digested> {
         only_preamble("\\usepackage", state);
         Vec::new()
-      })],
-      after_digest => vec![Rc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
+      }),
+      after_digest => sub!(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
         let options: Option<&Digested> = whatsit.get_arg(1);
         let packages: Option<&Digested> = whatsit.get_arg(2);
         let package_list = match packages {
@@ -221,7 +221,7 @@ pub fn load_definitions(state: &mut State) {
           }, state)
         }
         Vec::new()
-      })]
+      })
   );
 
 
