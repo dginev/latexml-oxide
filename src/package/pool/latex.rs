@@ -38,21 +38,19 @@ pub fn load_definitions(state: &mut State) {
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
-    ConstructorOptions {
-      after_digest: vec![Rc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
-        let options: Option<&Digested> = whatsit.get_arg(1);
-        let class_opts = match options {
-          Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
-          None => Vec::new(),
-        };
-        load_class(whatsit.get_arg(2).unwrap().to_string(),
-                  class_opts,
-                  vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())],
-                  state);
-        Vec::new()
-      })],
-      ..ConstructorOptions::default()
-    });
+    after_digest => vec![Rc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
+      let options: Option<&Digested> = whatsit.get_arg(1);
+      let class_opts = match options {
+        Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
+        None => Vec::new(),
+      };
+      load_class(whatsit.get_arg(2).unwrap().to_string(),
+                class_opts,
+                vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())],
+                state);
+      Vec::new()
+    })]
+  );
 
 
   // ======================================================================
@@ -70,7 +68,7 @@ pub fn load_definitions(state: &mut State) {
   // it can be processed specially, if needed.  These are the magic
   // "\begin{env}", "\end{env}" control sequences created by DefEnvironment.
 
-  state.assign_value("current_environment", ObjectStore::String(String::new()), Some(Scope::Global));
+  AssignValue!("current_environment", ObjectStore::String(String::new()), Some(Scope::Global));
   // DefMacroI!("\@currenvir", "", Rc::new(move |state| {}), state);
   // DefPrimitive("\lx@setcurrenvir{}", sub {
   //     DefMacro("\@currenvir", $_[1]);
@@ -131,7 +129,7 @@ pub fn load_definitions(state: &mut State) {
   //     PushValue('@at@end@document', $_[1]->unlist); });
 
   DefEnvironmentC!("{document}",
-      Some(Rc::new(|document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
+    Some(Rc::new(|document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
       //       "<ltx:document xml:id='#id'>#body</ltx:document>",
       let id = match props.get("id") {
         Some(& ObjectStore::String(ref id)) => id,
@@ -155,8 +153,7 @@ pub fn load_definitions(state: &mut State) {
         document.insert_element("ltx:document", vec![body], Some(attrib), state);
       }
     })),
-    ConstructorOptions {
-      before_digest: vec![Rc::new(|_stomach, state| { state.assign_value("inPreamble", ObjectStore::Bool(false), None); Vec::new() })],
+    before_digest => vec![Rc::new(|_stomach, state| { state.assign_value("inPreamble", ObjectStore::Bool(false), None); Vec::new() })],
     // after_digest_begin => |stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
@@ -175,9 +172,8 @@ pub fn load_definitions(state: &mut State) {
     //     return Vec::new();
     //   }
     // },
-    mode: Some("text".to_string()),
-    ..ConstructorOptions::default()
-  });
+    mode => Some("text".to_string())
+  );
 
   // ======================================================================
   // C.5.2 Packages
@@ -202,33 +198,31 @@ pub fn load_definitions(state: &mut State) {
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
-                  ConstructorOptions {
-                    before_digest: vec![Rc::new(|_stomach: &mut Stomach, state: &mut State| -> Vec<Digested> {
-                      only_preamble("\\usepackage", state);
-                      Vec::new()
-                    })],
-                    after_digest: vec![Rc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
-                      let options: Option<&Digested> = whatsit.get_arg(1);
-                      let packages: Option<&Digested> = whatsit.get_arg(2);
-                      let package_list = match packages {
-                        Some(value) => OPTS_REGEX.split(&value.to_string()).map(|s| s.to_string()).filter(|s| !s.starts_with("%")).collect(),
-                        None => Vec::new(),
-                      };
-                      let options_list = match options {
-                        Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
-                        None => Vec::new(),
-                      };
+      before_digest => vec![Rc::new(|_stomach: &mut Stomach, state: &mut State| -> Vec<Digested> {
+        only_preamble("\\usepackage", state);
+        Vec::new()
+      })],
+      after_digest => vec![Rc::new(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
+        let options: Option<&Digested> = whatsit.get_arg(1);
+        let packages: Option<&Digested> = whatsit.get_arg(2);
+        let package_list = match packages {
+          Some(value) => OPTS_REGEX.split(&value.to_string()).map(|s| s.to_string()).filter(|s| !s.starts_with("%")).collect(),
+          None => Vec::new(),
+        };
+        let options_list = match options {
+          Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
+          None => Vec::new(),
+        };
 
-                      for package in package_list {
-                        require_package(package, RequireOptions {
-                          options: options_list.clone(),
-                          ..RequireOptions::default()
-                        }, state)
-                      }
-                      Vec::new()
-                    })],
-                    ..ConstructorOptions::default()
-                  });
+        for package in package_list {
+          require_package(package, RequireOptions {
+            options: options_list.clone(),
+            ..RequireOptions::default()
+          }, state)
+        }
+        Vec::new()
+      })]
+  );
 
 
 
@@ -295,7 +289,6 @@ pub fn load_definitions(state: &mut State) {
       let body_closure = move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State|{ body.clone() };
       def_macro_i(cs.clone(), None, Rc::new(body_closure), state);
       Vec::new()
-  },
-  PrimitiveOptions::default());
+  });
 
 }

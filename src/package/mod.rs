@@ -473,18 +473,10 @@ pub fn def_macro_i(cs: Token, paramlist: Option<Parameters>, expansion: Expansio
 // Details at: https://github.com/rust-lang/rust/issues/35853
 
 #[macro_export]
-macro_rules! NewParameter {
-  ($($key:ident => $value:expr),*) => (Parameter {
+macro_rules! NewDefault {
+  ($name:ident, $($key:ident => $value:expr),*) => ($name {
     $($key: $value,)*
-    ..Parameter::default()
-  })
-}
-
-#[macro_export]
-macro_rules! NewConstructorOptions {
-  ($($key:ident => $value:expr),*) => (ConstructorOptions {
-    $($key: $value,)*
-    ..ConstructorOptions::default()
+    ..$name::default()
   })
 }
 
@@ -608,17 +600,17 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   //======================================================================
 
   macro_rules! DefParameterType (
-    ($name:expr) => (DefParameterTypeWithOpts!($name, Parameter::default()));
+    ($name:expr) => (DefParameterTypeWO!($name, Parameter::default()));
 
     ($name:expr,
      $key1:ident => $val1:expr
-    ) => (DefParameterTypeWithOpts!($name, NewParameter!(
+    ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
      $key1 => $val1)));
 
     ($name:expr,
      $key1:ident => $val1:expr,
      $key2:ident => $val2:expr
-    ) => (DefParameterTypeWithOpts!($name, NewParameter!(
+    ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
      $key1 => $val1,
      $key2 => $val2
     )));
@@ -627,7 +619,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key1:ident => $val1:expr,
      $key2:ident => $val2:expr,
      $key3:ident => $val3:expr
-    ) => (DefParameterTypeWithOpts!($name, NewParameter!(
+    ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3
@@ -638,7 +630,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key2:ident => $val2:expr,
      $key3:ident => $val3:expr,
      $key4:ident => $val4:expr
-    ) => (DefParameterTypeWithOpts!($name, NewParameter!(
+    ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3,
@@ -651,7 +643,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key3:ident => $val3:expr,
      $key4:ident => $val4:expr,
      $key5:ident => $val5:expr
-    ) => (DefParameterTypeWithOpts!($name, NewParameter!(
+    ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3,
@@ -665,7 +657,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key3:ident => $val3:expr,
      $key4:ident => $val4:expr,
      $key6:ident => $val6:expr
-    ) => (DefParameterTypeWithOpts!($name, NewParameter!(
+    ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3,
@@ -674,7 +666,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key6 => $val6
     )));
   );
-  macro_rules! DefParameterTypeWithOpts {
+  macro_rules! DefParameterTypeWO {
     ($name:expr, $param:expr) => ($state.assign_mapping("PARAMETER_TYPES", $name, Some(ObjectStore::Parameter($param))))
   }
 
@@ -704,7 +696,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   /// Macros and pool come at the end, so that they load seamlessly
   // TODO: package::coerce_cs on $cs
   macro_rules! DefMacroI(
-    ($cs:expr, $paramlist:expr, $expansion:expr) => (def_macro_i($cs, $paramlist, Rc::new($expansion), $state))
+    ($cs:expr, $paramlist:expr, $expansion:expr) => (def_macro_i($cs, $paramlist, Rc::new($expansion), $state));
+    ($cs:expr, $paramlist:expr, $expansion:expr, $inner_state:expr) => (def_macro_i($cs, $paramlist, Rc::new($expansion), $inner_state))
   );
 
   macro_rules! DefMacroT {
@@ -741,11 +734,68 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
       let compiled_replacement = $replacement;
 
-      DefPrimitiveI!($proto, compiled_replacement, $options, $state);
+      DefPrimitiveIWO!($proto, compiled_replacement, $options, $state);
     })
   );
 
+
   macro_rules! DefPrimitiveI(
+    ($proto:expr, $compiled_replacement:expr) => (DefPrimitiveIWO!($proto,$compiled_replacement, PrimitiveOptions::default()));
+
+    ($proto:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr
+    ) => (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
+      $key1 => $val1
+    )));
+
+    ($proto:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr
+    ) => (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
+      $key1 => $key2,
+      $key2 => $val2
+    )));
+
+    ($proto:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr
+    ) => (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
+      $key1 => $key2,
+      $key2 => $val2,
+      $key3 => $val3
+    )));
+
+    ($proto:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr
+    ) => (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
+      $key1 => $key2,
+      $key2 => $val2,
+      $key3 => $val3,
+      $key4 => $val4
+    )));
+
+    ($proto:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr,
+      $key5:ident=>$val5:expr
+    ) => (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
+      $key1 => $val1,
+      $key2 => $val2,
+      $key3 => $val3,
+      $key4 => $val4,
+      $key5 => $val5
+    )));
+
+  );
+
+
+  macro_rules! DefPrimitiveIWO(
     ($proto:expr, $compiled_replacement:expr, $options:expr) => ({
       let (cs, paramlist) = parse_prototype($proto, $state);
       // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
@@ -780,10 +830,60 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     }
   }));
 
+  macro_rules! DefConstructorI {
+    ($cs:expr, $paramlist:expr, $compiled_replacement:expr) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new($compiled_replacement)), ConstructorOptions::default()));
+    ($cs:expr, $paramlist:expr, $compiled_replacement:expr,
+      $key1:ident => $val1:expr
+    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new($compiled_replacement)), NewDefault!(ConstructorOptions,
+      $key1 => $val1
+    )));
 
+    ($cs:expr, $paramlist:expr, $compiled_replacement:expr,
+      $key1:ident => $val1:expr,
+      $key2:ident => $val2:expr
+    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new($compiled_replacement)), NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2
+    )));
 
-  macro_rules! DefConstructorI(
-    ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options: expr) => (
+    ($cs:expr, $paramlist:expr, $compiled_replacement:expr,
+      $key1:ident => $val1:expr,
+      $key2:ident => $val2:expr,
+      $key3:ident => $val3:expr
+    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new($compiled_replacement)), NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2,
+      $key3 => $val3
+    )));
+
+    ($cs:expr, $paramlist:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr
+    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new($compiled_replacement)), NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2,
+      $key3 => $val3,
+      $key4 => $val4
+    )));
+
+    ($cs:expr, $paramlist:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr,
+      $key5:ident=>$val5:expr
+    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new($compiled_replacement)), NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2,
+      $key3 => $val3,
+      $key4 => $val4,
+      $key5 => $val5
+    )));
+  }
+  macro_rules! DefConstructorIWO(
+    ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => (
     {
       use rtx_core::definition::constructor::Constructor;
       // use libxml::tree::Node;
@@ -828,14 +928,67 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     );
   );
 
-  macro_rules! DefConstructor(
+  macro_rules! DefConstructor {
+    ($cs:expr, $replacement:expr) => (DefConstructorWO!($cs, $replacement, ConstructorOptions::default()));
+    ($cs:expr, $replacement:expr,
+      $key1:ident=>$val1:expr
+    ) => (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions,
+      $key1 => $val1
+    )));
+
+    ($cs:expr, $replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr
+    ) => (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2
+    )));
+
+    ($cs:expr, $replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr
+    ) => (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2,
+      $key3 => $val3
+    )));
+
+    ($cs:expr, $replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr
+    ) => (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2,
+      $key3 => $val3,
+      $key4 => $val4
+    )));
+
+    ($cs:expr, $replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr,
+      $key5:ident=>$val5:expr
+    ) => (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2,
+      $key3 => $val3,
+      $key4 => $val4,
+      $key5 => $val5
+    )));
+  }
+
+  macro_rules! DefConstructorWO(
     ($proto:expr, $replacement:expr, $options:expr) => (
     {
   // check_options("DefConstructor (prototype)", $constructor_options, %options);
       let (cs, paramlist) = parse_prototype($proto, $state);
       let compiled_replacement;
       compile_replacement!(compiled_replacement, $replacement);
-      DefConstructorI!(cs, paramlist, compiled_replacement, $options);
+      DefConstructorIWO!(cs, paramlist, compiled_replacement, $options);
     }
     )
   );
@@ -844,17 +997,17 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   // Define a LaTeX environment
   // Note that the body of the environment is treated is the 'body' parameter in the constructor.
   macro_rules! DefEnvironment ( // repetition isn't allowed here, so we have to do silly hackish signature magic
-    ($proto_raw:expr, $replacement:expr) => (DefEnvironmentWithOpts!($proto_raw, $replacement, ConstructorOptions::default()));
+    ($proto_raw:expr, $replacement:expr) => (DefEnvironmentWO!($proto_raw, $replacement, ConstructorOptions::default()));
 
     ($proto_raw:expr, $replacement:expr,
      $key1:ident => $val1:expr
-    ) => (DefEnvironmentWithOpts!($proto_raw, $replacement, NewConstructorOptions!(
+    ) => (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions,
      $key1 => $val1)));
 
     ($proto_raw:expr, $replacement:expr,
      $key1:ident => $val1:expr,
      $key2:ident => $val2:expr
-    ) => (DefEnvironmentWithOpts!($proto_raw, $replacement, NewConstructorOptions!(
+    ) => (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions,
      $key1 => $val1,
      $key2 => $val2
     )));
@@ -863,7 +1016,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key1:ident => $val1:expr,
      $key2:ident => $val2:expr,
      $key3:ident => $val3:expr
-    ) => (DefEnvironmentWithOpts!($proto_raw, $replacement, NewConstructorOptions!(
+    ) => (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions,
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3
@@ -874,7 +1027,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key2:ident => $val2:expr,
      $key3:ident => $val3:expr,
      $key4:ident => $val4:expr
-    ) => (DefEnvironmentWithOpts!($proto_raw, $replacement, NewConstructorOptions!(
+    ) => (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions,
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3,
@@ -887,7 +1040,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key3:ident => $val3:expr,
      $key4:ident => $val4:expr,
      $key5:ident => $val5:expr,
-    ) => (DefEnvironmentWithOpts!($proto_raw, $replacement, NewConstructorOptions!(
+    ) => (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions,
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3,
@@ -895,7 +1048,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key5 => $val5
     )));
   );
-  macro_rules! DefEnvironmentWithOpts (
+  macro_rules! DefEnvironmentWO (
     ($proto_raw:expr, $replacement:expr, $options:expr) => ({
     use rtx_core::util::text::*;
     let mut proto = $proto_raw.to_string().trim_left().to_string();
@@ -911,7 +1064,60 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     DefEnvironmentI!(name, None, compiled_replacement, cc_copy, options);
   }));
 
-  macro_rules! DefEnvironmentC (
+  macro_rules! DefEnvironmentC {
+    ($proto_raw:expr, $compiled_replacement:expr) => (DefEnvironmentCWO!($proto_raw, $paramlist, $compiled_replacement, ConstructorOptions::default()));
+    ($proto_raw:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr
+    ) => (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions,
+      $key1 => $val1
+    )));
+
+    ($proto_raw:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr
+    ) => (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2
+    )));
+
+    ($proto_raw:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr
+    ) => (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2,
+      $key3 => $val3
+    )));
+
+    ($proto_raw:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr
+    ) => (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2,
+      $key3 => $val3,
+      $key4 => $val4
+    )));
+
+    ($proto_raw:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr,
+      $key5:ident=>$val5:expr
+    ) => (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2,
+      $key3 => $val3,
+      $key4 => $val4,
+      $key5 => $val5
+    )));
+  }
+
+  macro_rules! DefEnvironmentCWO (
     ($proto_raw:expr, $compiled_replacement:expr, $options:expr) => ({
     use rtx_core::util::text::*;
     let mut proto = $proto_raw.to_string().trim_left().to_string();
@@ -1066,8 +1272,58 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }));
 
   macro_rules! Tag (
-    ($tag:expr, $properties:expr) => (install_tag($tag, $properties, $state))
+    ($tag:expr,
+     $key1:ident => $val1:expr
+    ) => (TagWO!($tag, NewDefault!(TagOptions,
+     $key1 => $val1)));
+
+    ($tag:expr,
+     $key1:ident => $val1:expr,
+     $key2:ident => $val2:expr
+    ) => (TagWO!($tag, NewDefault!(TagOptions,
+     $key1 => $val1,
+     $key2 => $val2
+    )));
+
+    ($tag:expr,
+     $key1:ident => $val1:expr,
+     $key2:ident => $val2:expr,
+     $key3:ident => $val3:expr
+    ) => (TagWO!($tag, NewDefault!(TagOptions,
+     $key1 => $val1,
+     $key2 => $val2,
+     $key3 => $val3
+    )));
+
+    ($tag:expr,
+     $key1:ident => $val1:expr,
+     $key2:ident => $val2:expr,
+     $key3:ident => $val3:expr,
+     $key4:ident => $val4:expr
+    ) => (TagWO!($tag, NewDefault!(TagOptions,
+     $key1 => $val1,
+     $key2 => $val2,
+     $key3 => $val3,
+     $key4 => $val4
+    )));
+
+    ($tag:expr,
+     $key1:ident => $val1:expr,
+     $key2:ident => $val2:expr,
+     $key3:ident => $val3:expr,
+     $key4:ident => $val4:expr,
+     $key5:ident => $val5:expr,
+    ) => (TagWO!($tag, NewDefault!(TagOptions,
+     $key1 => $val1,
+     $key2 => $val2,
+     $key3 => $val3,
+     $key4 => $val4,
+     $key5 => $val5
+    )));
   );
+  macro_rules! TagWO {
+    ($tag:expr, $properties:expr) => (install_tag($tag, $properties, $state))
+  }
 
   // sub DocType {
   //   my ($rootelement, $pubid, $sysid, %namespaces) = @_;

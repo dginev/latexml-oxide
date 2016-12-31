@@ -32,7 +32,7 @@ pub fn load_definitions(state: &mut State) {
   // Set to 1 (or \usepackage[ids]{latexml}) to enable.
   // Set to 0 (or \usepackage[noids]{latexml}) to disable.
 
-  Tag!("ltx:*", TagOptions{after_open: vec![Rc::new(|document, node, box_opt, state| {
+  Tag!("ltx:*", after_open => vec![Rc::new(|document, node, box_opt, state| {
     // If GENERATE_IDS is true, we'll assign an ID to EVERY element,
     // EXCEPT ltx:document which only gets an id from an EXPLICIT \thedocument@id.
     let tag = document.get_node_qname(&node, state);
@@ -42,18 +42,17 @@ pub fn load_definitions(state: &mut State) {
         // TODO:
         // GenerateID!(document, node, state);
     }
-  })], ..TagOptions::default()});
+  })]);
 
   //======================================================================
-  Tag!("ltx:document", TagOptions{
-    after_open: vec![Rc::new(|document, node, box_opt, state| {
+  Tag!("ltx:document",
+    after_open => vec![Rc::new(|document, node, box_opt, state| {
       document.process_pending_resources(state);
     })],
-    after_close: vec![Rc::new(|document, node, box_opt, state| {
+    after_close => vec![Rc::new(|document, node, box_opt, state| {
       document.process_pending_resources(state);
-    })],
-    ..TagOptions::default()
-  });
+    })]
+  );
 
   RequireResource!("LaTeXML.css");
 
@@ -335,7 +334,7 @@ pub fn load_definitions(state: &mut State) {
   let mut skippable_props = HashMap::new();
   skippable_props.insert("alignmentSkippable".to_string(), ObjectStore::Bool(true));
 
-  DefConstructorI!(T_CS!("\\par"), None, Some(Rc::new(
+  DefConstructorI!(T_CS!("\\par"), None,
     |document: &mut Document, args: &Vec<_>, props:&HashMap<String, ObjectStore>, state: &mut State| {
       let in_preamble = match props.get("inPreamble") {
         Some(& ObjectStore::Bool(v)) => v,
@@ -357,9 +356,8 @@ pub fn load_definitions(state: &mut State) {
         }
         document.maybe_close_element("ltx:para", state);
      }
-    })),
-    ConstructorOptions {
-    after_digest: vec![Rc::new(|stomach, whatsit, state| {
+    },
+    after_digest => vec![Rc::new(|stomach, whatsit, state| {
       let in_preamble = match state.lookup_value("inPreamble") {
         Some(& ObjectStore::Bool(v)) => v,
         _ => false
@@ -377,23 +375,20 @@ pub fn load_definitions(state: &mut State) {
       }
       Vec::new()
     })],
-    properties: skippable_props,
-    alias: Some("\\par\n".to_string()),
-    ..ConstructorOptions::default()
-  });
+    properties => skippable_props,
+    alias => Some("\\par\n".to_string())
+  );
 
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
-  DefConstructorI!(T_CS!("\\inner@par"), None, Some(Rc::new(|document, args, props, state| {
+  DefConstructorI!(T_CS!("\\inner@par"), None, |document, args, props, state| {
       // if document.maybe_close_element("ltx:p") { }
       // else if document.canContain(document.get_node(), "ltx:break") {
       //   document.insertElement("ltx:break");
       // }
-    })),
-    ConstructorOptions::default()
-  );
+  });
 
-// Tag("ltx:para", autoClose => 1, autoOpen => 1);
+  // Tag("ltx:para", autoClose => 1, autoOpen => 1);
 
   fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach,  args: Vec<Tokens>, state: &mut State) -> Vec<Digested> {
     // params = parseDefParameters(cs, params);
@@ -431,40 +426,31 @@ pub fn load_definitions(state: &mut State) {
   DefPrimitiveI!("\\def SkipSpaces Token UntilBrace {}", |stomach, args, state| {
       do_def(false, false, stomach, args, state)
     },
-    PrimitiveOptions {
-      locked: true,
-      ..PrimitiveOptions::default()
-    });
+    locked => true
+  );
   DefPrimitiveI!("\\gdef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
       do_def(true, false, stomach, args, state)
     },
-    PrimitiveOptions {
-      locked: true,
-      ..PrimitiveOptions::default()
-    });
+    locked => true
+  );
   DefPrimitiveI!("\\edef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
       do_def(false, true, stomach, args, state)
     },
-    PrimitiveOptions {
-      locked: true,
-      ..PrimitiveOptions::default()
-    });
+      locked => true
+  );
   DefPrimitiveI!("\\xdef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
       do_def(true, true, stomach, args, state)
     },
-    PrimitiveOptions {
-      locked: true,
-      ..PrimitiveOptions::default()
-    });
+    locked => true
+  );
 
-    Tag!("ltx:para", TagOptions{auto_close: true, auto_open: true, ..TagOptions::default()});
+  Tag!("ltx:para", auto_close => true, auto_open => true);
 
-    let trim_node_whitespace_closure = Rc::new(|document: &mut Document, node: Node, box_opt: Option<Digested>, state: &mut State| {
-      document.trim_node_whitespace(node, state);
-    });
-    Tag!("ltx:p", TagOptions{auto_close: true, auto_open: true, after_close: vec![trim_node_whitespace_closure], ..TagOptions::default()});
+  let trim_node_whitespace_closure = Rc::new(|document: &mut Document, node: Node, box_opt: Option<Digested>, state: &mut State| {
+    document.trim_node_whitespace(node, state);
+  });
+  Tag!("ltx:p", auto_close => true, auto_open => true, after_close => vec![trim_node_whitespace_closure]);
 
-
-    // TODO: Move to the right place in the pool definitions (maybe split out individual sub-pools by chapter?)
-    DefMacroT!(T_CS!("\\space"), None, T_SPACE!());
+  // TODO: Move to the right place in the pool definitions (maybe split out individual sub-pools by chapter?)
+  DefMacroT!(T_CS!("\\space"), None, T_SPACE!());
 }
