@@ -240,9 +240,8 @@ pub fn load_definitions(state: &mut State) {
                      "\\listfiles"]
                       .into_iter()
                       .map(|s| s.to_string()) {
-    def_macro_i(T_CS!(ltxtrigger), None,
-      Rc::new(move |_gullet, _args, _state| Vec::new()),
-      state
+    DefMacroI!(T_CS!(ltxtrigger), None,
+      move |_gullet, _args, _state| Vec::new()
     );
   }
 
@@ -287,7 +286,7 @@ pub fn load_definitions(state: &mut State) {
 
       // TODO: convertLaTeXArgs($nargs, $opt)
       let body_closure = move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State|{ body.clone() };
-      def_macro_i(cs.clone(), None, Rc::new(body_closure), state);
+      DefMacroI!(cs.clone(), None, body_closure, state);
       Vec::new()
   });
 
