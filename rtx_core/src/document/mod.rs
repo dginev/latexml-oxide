@@ -477,8 +477,9 @@ impl Document {
         let mut anodes_keys : Vec<&String> = anodes.keys().collect();
         anodes_keys.sort();
         for key in anodes_keys {
+          let key_serialized = state.model.get_node_document_qname(&node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or(String::new()));
-          open_tag.push_str(&format!(" {}=\"{}\"", key, val_serialized));
+          open_tag.push_str(&format!(" {}=\"{}\"", key_serialized, val_serialized));
         }
 
         let noindent_children : bool = if heuristic {
@@ -508,7 +509,7 @@ impl Document {
           }
           serialized.push_str(&format!("</{}>",tag));
           if !noindent {
-            serialized.push('\n');
+            serialized.push_str("\n");
           }
         } else {    // empty element.
           serialized.push_str("/>");

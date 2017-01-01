@@ -44,7 +44,7 @@ pub trait DigestionAPI {
 
 impl DigestionAPI for Core {
   fn initialize_state(&mut self, preloads: Vec<String>) {
-    self.stomach.initialize(); // The current Stomach;
+    self.state.initialize_stomach();
     // let paths = state.lookup_value("SEARCHPATHS");
     self.state.assign_value("InitialPreloads",
                             ObjectStore::Bool(true),

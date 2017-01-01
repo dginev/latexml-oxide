@@ -2,7 +2,7 @@ pub use std::collections::HashMap;
 pub use regex::Regex;
 pub use std::rc::Rc;
 pub use std::collections::VecDeque;
-pub use libxml::tree::Node;
+pub use libxml::tree::{Node, Namespace};
 
 pub use rtx_core::{Core, Digested, BoxOps};
 pub use rtx_core::state::{State, ObjectStore, Scope};
@@ -493,7 +493,7 @@ pub fn generate_id(document: &mut Document, mut node: Node, mut prefix: &str, st
     // or ancestor IS the root element (but without an id);
     // If we also have no prefix, we'll end up with an illegal id (just digits)!!!
     // We'll use "id" for an id prefix; this will work whether or not we have an ancestor.
-    if prefix.is_empty() || ancestor_id.is_none() {
+    if !(prefix.is_empty() || ancestor_id.is_none()) {
       prefix = "id";
     }
 
@@ -510,6 +510,7 @@ pub fn generate_id(document: &mut Document, mut node: Node, mut prefix: &str, st
     } + prefix + &ctr;
 
     ancestor.set_attribute(&ctrkey, &ctr);
+    // TODO: the lack of xml:id in output is likely due to the .to_string method in Document
     node.set_attribute("xml:id", &id);
   }
 }

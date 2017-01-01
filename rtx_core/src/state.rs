@@ -991,4 +991,17 @@ impl State {
       }
     }
   }
+
+  /// Initialize various stomach parameters, preload, etc.
+  pub fn initialize_stomach(&mut self) {
+    self.assign_value("MODE", ObjectStore::String("text".to_string()), Some(Scope::Global));
+    self.assign_value("IN_MATH", ObjectStore::Bool(false), Some(Scope::Global));
+    self.assign_value("PRESERVE_NEWLINES", ObjectStore::Bool(true), Some(Scope::Global));
+    // $STATE->assignValue(afterGroup        => [],               'global');
+    // $STATE->assignValue(afterAssignment   => undef,            'global');
+    // $STATE->assignValue(groupInitiator    => 'Initialization', 'global');
+    // # Setup default fonts.
+    // $STATE->assignValue(font     => LaTeXML::Common::Font->textDefault(), 'global');
+    // $STATE->assignValue(mathfont => LaTeXML::Common::Font->mathDefault(), 'global');
+  }
 }

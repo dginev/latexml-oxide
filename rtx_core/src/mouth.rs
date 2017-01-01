@@ -524,14 +524,13 @@ impl Mouth {
             // If we've got an EOL
             // if in \read mode, leave the EOL to be turned into a T_SPACE
             // TODO: preserve_newlines NYI
-            let preserve_newlines: bool = state.lookup_value("PRESERVE_NEWLINES").is_some();
-            if !preserve_newlines {
+            // if state.lookup_value("PRESERVE_NEWLINES") > 1 {
               // else skip it.
               self.get_next_char(state);
               if self.colno < self.nchars {
                 self.colno -= 1;
               }
-            }
+            // }
           }
           _ => {}
         };

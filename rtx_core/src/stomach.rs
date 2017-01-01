@@ -29,7 +29,6 @@ impl Default for Stomach {
 }
 
 impl Stomach {
-  pub fn initialize(&mut self) {}
   pub fn get_gullet_mut(&mut self) -> &mut Gullet {
     &mut self.gullet
   }

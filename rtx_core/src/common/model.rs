@@ -416,7 +416,7 @@ impl Model {
   }
 
   /// Same as get_node_qname, but using the Document namespace prefixes
-  pub fn get_node_document_qname(&self, node: &Node) -> String {
+  pub fn get_node_document_qname(&mut self, node: &Node) -> String {
     use libxml::tree::NodeType::*;
     let node_type = node.get_type();
     if node_type.is_none() {
@@ -438,11 +438,18 @@ impl Model {
       NamespaceDecl => "xmlns".to_string(),
 
       ElementNode | AttributeNode => {
-        // TODO
-        // my $ns = $node->namespaceURI;
-        // my $prefix = $ns && $self->getDocumentNamespacePrefix($ns, 0, 1);
-        // return ($prefix ? $prefix . ":" . $node->localname : $node->localname); } }
-        format!("ltx:{}",node.get_name())
+        let mut prefix = String::new();
+        if let Some(ns) = node.get_namespace() {
+          let href = ns.get_url();
+          if !href.is_empty() {
+            prefix = self.get_document_namespace_prefix(&href, false, true).unwrap_or(String::new());
+          }
+        }
+        if prefix.is_empty() {
+          node.get_name()
+        } else {
+          format!("{}:{}",prefix, node.get_name())
+        }
       },
       // Need others?
       t =>  panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {:?}", t)
