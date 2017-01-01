@@ -344,13 +344,13 @@ pub fn load_definitions(state: &mut State) {
         document.maybe_close_element("ltx:p", state);
         if let Some(c) = props.get("class") {
           let element = document.get_element();
-          if let Some(node) = element {
+          if let Some(mut node) = element {
             if document.get_node_qname(&node, state) == "ltx:para" {  // Only set on the para about to close!
               let class_str = match *c {
                 ObjectStore::String(ref v) => v.to_string(),
                 _ => String::new()
               };
-              document.set_attribute(&node, "class", &class_str);
+              document.set_attribute(&mut node, "class", &class_str);
             }
           }
         }
@@ -382,13 +382,11 @@ pub fn load_definitions(state: &mut State) {
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
   DefConstructorI!(T_CS!("\\inner@par"), None, |document, args, props, state| {
-      // if document.maybe_close_element("ltx:p") { }
-      // else if document.canContain(document.get_node(), "ltx:break") {
-      //   document.insertElement("ltx:break");
-      // }
+      if document.maybe_close_element("ltx:p", state).is_some() { }
+      else if document.can_contain(document.get_node(), "ltx:break", state) {
+        document.insert_element("ltx:break", Vec::new(), None, state);
+      }
   });
-
-  // Tag("ltx:para", autoClose => 1, autoOpen => 1);
 
   fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach,  args: Vec<Tokens>, state: &mut State) -> Vec<Digested> {
     // params = parseDefParameters(cs, params);

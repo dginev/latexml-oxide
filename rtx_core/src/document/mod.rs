@@ -91,16 +91,22 @@ impl Document {
     state.model.get_node_qname(node)
   }
 
+  pub fn get_node(&self) -> &Node {
+    &self.node
+  }
+  pub fn get_document(&self) -> &XmlDoc {
+    &self.document
+  }
 
   // **********************************************************************
   // This should be called before returning the final XML::LibXML::Document to the
   // outside world.  It resolves the fonts for each node relative to it's ancestors.
   // It removes the `helper' attributes that store fonts, source box, etc.
-  pub fn finalize<'finalize>(&'finalize mut self, state: &'finalize mut State) {
+  pub fn finalize(&mut self, state: &mut State) {
     self.prune_xmduals();
     let root = self.document.get_root_element();
     // local $LaTeXML::FONT = LaTeXML::Common::Font->textDefault;
-    self.finalize_rec(root);
+    self.finalize_rec(root, state);
     match state.lookup_value("RDFa_prefixes") {
       Some(&ObjectStore::String(ref prefixes)) => self.set_rdfa_prefixes(Some(prefixes.clone())),
       _ => {}
@@ -559,7 +565,77 @@ impl Document {
 
   fn prune_xmduals(&self) {}
 
-  fn finalize_rec(&self, _element: Node) {}
+  fn finalize_rec(&mut self, mut node: Node, state: &mut State) {
+    let _qname = state.model.get_node_qname(&node);
+    // my $declared_font       = $LaTeXML::FONT;
+    // my $desired_font        = $LaTeXML::FONT;
+    // let mut pending_declaration = HashMap::new();
+    if let Some(_comment) = node.get_attribute("_pre_comment") {
+      if let Some(_parent) = node.get_parent() {
+        // parent.insert_before(XML::LibXML::Comment.new(comment), node);
+      }
+    }
+    if let Some(_comment) = node.get_attribute("_comment") {
+      if let Some(_parent) = node.get_parent() {
+        // parent.insert_after(XML::LibXML::Comment.new(comment), node);
+      }
+    }
+
+    // if (my font_attr = node.getAttribute("_font")) {
+    //   desired_font        = self{node_fonts}{font_attr};
+    //   %pending_declaration = desired_font.relativeTo(declared_font);
+    //   if ((node.hasChildNodes || node.getAttribute("_force_font"))
+    //     && scalar(keys %pending_declaration)) {
+    //     foreach my attr (keys %pending_declaration) {
+    //       if (model.canHaveAttribute(qname, attr)) {
+    //         self.setAttribute(node, attr => pending_declaration{attr}{value});
+    //         # Merge to set the font currently in effect
+    //         declared_font = declared_font.merge(%{ pending_declaration{attr}{properties} });
+    //         delete pending_declaration{attr}; } }
+    //   } }
+    // local LaTeXML::FONT = declared_font;
+    for child in node.get_child_nodes() {
+      let child_type = child.get_type();
+      if child_type == Some(NodeType::ElementNode) {
+        let _was_forcefont = child.get_attribute("_force_font");
+        self.finalize_rec(child, state);
+        // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
+        // AND providing node can contain that child's content, we'll collapse it.
+        // if (state.model.get_node_qname(child) == FONT_ELEMENT_NAME)
+        //   && !was_forcefont && !child.hasAttributes) {
+        //   my @grandchildren = child.childNodes;
+        //   if (!grep { !self.canContain(qname, _) } @grandchildren) {
+        //     self.replaceNode(child, @grandchildren); } }
+      }
+      // On the other hand, if the font declaration has NOT been effected,
+      // We'll need to put an extra wrapper around the text!
+      // else if child_type == Some(NodeType::TextNode) {
+      //   // Remove any pending declarations that can't be on FONT_ELEMENT_NAME
+      //   for key in pending_declaration.keys().iter() {
+      //     if !self.can_have_attribute(FONT_ELEMENT_NAME, key) {
+      //       pending_declaration.remove(key);
+      //     }
+      //   }
+
+        // if (self.can_contain(qname, FONT_ELEMENT_NAME)
+        //   && scalar(keys %pending_declaration)) {
+        //   // Too late to do wrapNodes?
+        //   my text = self.wrapNodes(FONT_ELEMENT_NAME, child);
+        //   foreach my attr (keys %pending_declaration) {
+        //     self.setAttribute(text, attr => pending_declaration{attr}{value}); }
+        //   self.finalize_rec(text, state);    // Now have to clean up the new node!
+        // }
+      // }
+    }
+
+    // Attributes that begin with (the semi-legal) "_" are for Bookkeeping.
+    // Remove them now.
+    for (name, _) in node.get_attributes() {
+      if name.starts_with("_") {
+        node.remove_attribute(&name);
+      }
+    }
+  }
 
   pub fn insert_math_token(&self, _text: &str) {}
 
@@ -667,6 +743,11 @@ impl Document {
   pub fn can_contain_somehow(&mut self, tag: &str, child: &str, state: &mut State) -> bool {
     state.model.can_contain(tag, child) || self.can_contain_indirect(tag, child, state).is_some()
   }
+
+  pub fn can_have_attribute(&mut self, tag: &str, attrib: &str, state: &mut State) -> bool {
+    state.model.can_have_attribute(tag, attrib)
+  }
+
 
   pub fn close_text_internal(&mut self) -> Node {
     if self.node.get_type() == Some(NodeType::TextNode) { // Current node is text?
@@ -814,15 +895,15 @@ impl Document {
   // Set any allowed attribute on a node, decoding the prefix, if any.
   // Also records, and checks, any id attributes.
   // [xml:id and namespaced attributes are always allowed]
-  pub fn set_attribute(&mut self, node: &Node, key: &str, value: &str) {
+  pub fn set_attribute(&mut self, node: &mut Node, key: &str, value: &str) {
     if value.is_empty() {
       return; // skip if empty
     }
     if key == "xml:id" {                    // If it's an ID attribute
       // value = self.record_id(value, node);    // Do id book keeping
       // node.set_attribute_ns(XML_NS, "id", value); }    // and bypass all ns stuff
-      node.set_attribute("id", value); }
-    else if !key.contains(":") {    // No colon; no namespace (the common case!)
+      node.set_attribute("id", value);
+    } else if !key.contains(":") {    // No colon; no namespace (the common case!)
                              // Ignore attributes not allowed by the model,
                              // but accept "internal" attributes.
       // let model = self.model;
@@ -939,7 +1020,7 @@ impl Document {
         if key == "font" || key == "locator" {
           continue;
         }
-        self.set_attribute(&newnode, key, &attrs.get(key).unwrap());
+        self.set_attribute(&mut newnode, key, &attrs.get(key).unwrap());
       }
     }
     // self.set_nodeFont($newnode, $font) if $font;

@@ -506,6 +506,33 @@ impl Model {
     model.contains("ANY") || model.contains(child)
   }
 
+  pub fn can_have_attribute(&mut self, tag: &str, attrib: &str) -> bool {
+    // Handle obvious cases explicitly.
+    match tag {
+      "#PCDATA" => return false,
+      "#Comment" => return false,
+      "#Document" => return false,
+      "#ProcessingInstruction" => return false,
+      "#DTD" => return false,
+      "_WildCard_" => return true,
+      _ => {}
+    };
+
+    if CAPTURE_TAG_RE.is_match(tag) {
+      return true;
+    }
+
+    if self.permissive {
+      return true;
+    }
+
+    // Else query tag properties.
+    let ref mut attributes = self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default).attributes;
+
+    attributes.contains(attrib)
+  }
+
+
   /// TODO: This is another component that would fit perfectly as a compiler plugin,
   ///       which generates a rust objects from all available schemas and has them directly available at runtime
   ///       For now, simply reimplementing the runtime loading of LaTeXML.model as-is from Model.pm

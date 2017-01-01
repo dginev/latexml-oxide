@@ -469,6 +469,52 @@ pub fn def_macro_i(cs: Token, paramlist: Option<Parameters>, expansion: Expansio
     None);
 }
 
+
+//**********************************************************************
+/// This function computes an xml:id for a node, if it hasn't already got one.
+/// It is suitable for use in Tag afterOpen as
+///  Tag('ltx:para',afterOpen=>sub { GenerateID(@_,'p'); });
+/// It generates an id of the form <parentid>.<prefix><number>
+/// The parent node (the one with ID=<parentid>) also maintains a counter
+/// stored in an attribute _ID_counter_<prefix> recording the last used
+/// <number> for <prefix> amongst its descendents.
+pub fn generate_id(document: &mut Document, mut node: Node, mut prefix: &str, state: &mut State) {
+  // If node doesn't already have an id, and can
+  let node_qname = document.get_node_qname(&node, state);
+  if node.get_attribute("xml:id").is_none() && document.can_have_attribute(&node_qname, "xml:id", state)
+    // but isn't a _Capture_ node (which ultimately should disappear)
+    && (node_qname != "ltx:_Capture_") {
+
+    let mut ancestor = document.findnode("ancestor::*[@xml:id][1]", Some(node.clone()), state).unwrap_or(document.get_document().get_root_element());
+    //// Old versions don't like ancestor.getAttribute('xml:id');
+    let ancestor_id = ancestor.get_attribute_ns("http://www.w3.org/XML/1998/namespace", "id");
+
+    // If we've got no ancestor_id, then we've got no ancestor (no document yet!),
+    // or ancestor IS the root element (but without an id);
+    // If we also have no prefix, we'll end up with an illegal id (just digits)!!!
+    // We'll use "id" for an id prefix; this will work whether or not we have an ancestor.
+    if prefix.is_empty() || ancestor_id.is_none() {
+      prefix = "id";
+    }
+
+
+    let ctrkey = "_ID_counter_".to_string() + prefix + "_";
+    let a_ctr = ancestor.get_attribute(&ctrkey).unwrap_or("0".to_string());
+
+    let ctr_int = 1 + a_ctr.parse::<u32>().unwrap_or(0);
+    let ctr = ctr_int.to_string();
+
+    let id = match ancestor_id {
+      Some(aid) => aid + ".",
+      None => String::new()
+    } + prefix + &ctr;
+
+    ancestor.set_attribute(&ctrkey, &ctr);
+    node.set_attribute("xml:id", &id);
+  }
+}
+
+
 // Macros requiring repetitions need to be handled outside of the main setup macro, as nested macros currently don't support repetition
 // Details at: https://github.com/rust-lang/rust/issues/35853
 

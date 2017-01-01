@@ -142,9 +142,9 @@ pub fn load_definitions(state: &mut State) {
         Some(& ObjectStore::Digested(ref rc)) => (**rc).clone(),
         _ => Digested::Whatsit(Whatsit::default())
       };
-      if let Some(docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
+      if let Some(mut docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
         if !id.is_empty() {
-          document.set_attribute(&docel, "xml:id", id);
+          document.set_attribute(&mut docel, "xml:id", id);
         }
         document.absorb(body, state);
       } else {
@@ -289,5 +289,17 @@ pub fn load_definitions(state: &mut State) {
       DefMacroI!(cs.clone(), None, body_closure, state);
       Vec::new()
   });
+
+  //======================================================================
+  // C.8.4 Numbering
+  //======================================================================
+  // For LaTeX documents, We want id's on para, as well as sectional units.
+  // However, para get created implicitly on Document construction, rather than
+  // explicitly during digestion (via a whatsit), we can't use the usual LaTeX counter mechanism.
+  Tag!("ltx:para", after_open => sub!(|document, node, box_opt, state| {
+    generate_id(document, node, "p", state);
+  }));
+
+
 
 }
