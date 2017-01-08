@@ -85,7 +85,12 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
         Some(Rc::new(
         |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
           let mut savenode : Option<Node> = None;
+
           #(operations)*
+
+          if let Some(snode) = savenode {
+            document.set_node(snode);
+          }
           return;
         }))
       )

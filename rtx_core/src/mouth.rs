@@ -419,15 +419,10 @@ impl Mouth {
     let token = if self.colno == 1 {
       T_CS!("\\par".to_string())
     } else {
-      match state.lookup_value("PRESERVE_NEWLINES") {
-        Some(&ObjectStore::Bool(ref x)) => {
-          if *x {
-            Token!("\n".to_string(), Some(Catcode::SPACE))
-          } else {
-            T_SPACE!()
-          }
-        }
-        _ => T_SPACE!(),
+      if state.lookup_bool("PRESERVE_NEWLINES") {
+        Token!("\n".to_string(), Some(Catcode::SPACE))
+      } else {
+        T_SPACE!()
       }
     };
     self.colno = self.nchars; // Ignore any remaining characters after EOL

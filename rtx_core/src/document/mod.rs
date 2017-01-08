@@ -18,7 +18,7 @@ use document::tag::{TagOptions, TagOptionName, TagConstructionClosure};
 
 lazy_static! {
   static ref HAS_NONSPACE_RE : Regex = Regex::new(r"\S").unwrap();
-  static ref LEADING_SPACE_RE : Regex = Regex::new(r"^\s+$").unwrap();
+  static ref ONLY_SPACE_RE : Regex = Regex::new(r"^\s+$").unwrap();
 }
 
 pub struct Document {
@@ -40,7 +40,7 @@ impl Document {
       node: root,
       node_boxes: HashMap::new(),
       pending: Vec::new(),
-      debug: false,
+      debug: true,
       constructed_nodes : Vec::new(),
       box_to_absorb: None
     }
@@ -660,7 +660,8 @@ impl Document {
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
-      if LEADING_SPACE_RE.is_match(text) && (node_type == Some(NodeType::DocumentNode) || (node_type == Some(NodeType::ElementNode) && self.can_contain(&self.node, "#PCDATA", state))) {
+      if ONLY_SPACE_RE.is_match(text) && (node_type == Some(NodeType::DocumentNode) ||
+      (node_type == Some(NodeType::ElementNode) && !self.can_contain(&self.node, "#PCDATA", state))) {
         return None;
       }
     }
