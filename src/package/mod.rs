@@ -7,6 +7,7 @@ pub use libxml::tree::{Node, Namespace};
 pub use rtx_core::{Core, Digested, BoxOps};
 pub use rtx_core::state::{State, ObjectStore, Scope};
 pub use rtx_core::common::{Error};
+pub use rtx_core::common::font::Font;
 pub use rtx_core::token::*;
 pub use rtx_core::parameter::{Parameter, Parameters};
 pub use rtx_core::mouth::Mouth;
@@ -515,6 +516,16 @@ pub fn generate_id(document: &mut Document, mut node: Node, mut prefix: &str, st
   }
 }
 
+pub fn merge_font(font_hash: HashMap<String, String>, state: &mut State) {
+  let mut font = match state.remove_value("font") {
+    Some(ObjectStore::Font(f)) => f,
+    _ => Font::default(),
+  };
+  font.merge(font_hash);
+  state.assign_value("font", ObjectStore::Font(font), Some(Scope::Local));
+  return;
+}
+
 
 // Macros requiring repetitions need to be handled outside of the main setup macro, as nested macros currently don't support repetition
 // Details at: https://github.com/rust-lang/rust/issues/35853
@@ -644,6 +655,11 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     () => ({
       // TODO
     })
+  }
+
+  // Merge the current font with the style specifications
+  macro_rules! MergeFont {
+    (kv:expr) => (merge_font(kv, $state))
   }
 
 
@@ -1219,6 +1235,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
           //   sub { AssignValue(current_environment => $name);
           //     DefMacroI('\@currenvir', undef, $name); },
           //   ($options{font} ? (sub { MergeFont(%{ $options{font} }); }) : ()),
+          font: $options.font.clone(), // TODO
           //   $options{beforeDigest}),
           after_digest: $options.after_digest_begin,
           after_digest_body: $options.after_digest_body,
@@ -1288,6 +1305,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         nargs: $options.nargs,
         capture_body: true,
         properties: $options.properties.clone(),
+        font: $options.font, // TODO
         // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
         // (defined $sizer ? (sizer => $sizer) : ()),
         // ), $options{scope});

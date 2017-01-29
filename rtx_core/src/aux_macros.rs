@@ -10,14 +10,19 @@ macro_rules! println_stderr(
 );
 
 #[macro_export]
-macro_rules! map(
-    { $($key:expr => $value:expr),+ } => {
-        {
-            let mut m = ::std::collections::HashMap::new();
-            $(
-                m.insert($key, $value);
-            )+
-            m
-        }
-     };
-);
+macro_rules! map {
+  ($( $key:expr => $val:expr ),*) => {{
+    let mut map = ::std::collections::HashMap::new();
+    $( map.insert($key, $val); )*
+    map
+  }}
+}
+
+#[macro_export]
+macro_rules! string_map {
+  ($( $key:expr => $val:expr ),*) => {{
+    let mut map = ::std::collections::HashMap::new();
+    $( map.insert($key.to_string(), $val.to_string()); )*
+    map
+  }}
+}

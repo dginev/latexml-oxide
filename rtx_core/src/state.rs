@@ -6,6 +6,7 @@ use regex::Regex;
 
 use util::pathname;
 use common::model::{Model, IndirectModel};
+use common::font::Font;
 use token::{Catcode, Token};
 use parameter::Parameter;
 use definition::Definition;
@@ -60,6 +61,7 @@ pub enum ObjectStore {
   Constructor(Rc<Constructor>),
   Digested(Rc<::Digested>),
   Parameter(Parameter),
+  Font(Font),
   // Collections
   VecChar(Vec<char>),
   VecString(Vec<String>),
@@ -84,6 +86,7 @@ impl fmt::Debug for ObjectStore {
       &Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
       &Digested(ref digested) => write!(f, "{:?}", digested),
       &Parameter(ref parameter) => write!(f, "{:?}", parameter),
+      &Font(ref font) => write!(f, "{:?}", font),
       &VecToken(ref token_vec) => write!(f, "{:?}", token_vec),
       &VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
       &VecOS(ref vec) => write!(f, "VecOS({:?})", vec),

@@ -27,7 +27,8 @@ pub struct ConstructorOptions {
   pub forbid_math: bool,
   pub properties: HashMap<String, ObjectStore>,
   pub capture_body: bool,
-  //font: 1,
+  // pub font: HashMap<String, String>,
+  pub font: String,
 
   pub after_digest_begin: Vec<DigestionClosure>,
   pub before_digest_end : Vec<BeforeDigestClosure>,
@@ -53,6 +54,7 @@ impl Default for ConstructorOptions {
       forbid_math: false,
       properties: HashMap::new(),
       capture_body: false,
+      font: String::new(),
       after_digest_begin: vec![],
       before_digest_end : vec![],
       after_digest_body : vec![],
