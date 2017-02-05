@@ -14,7 +14,7 @@ macro_rules! compile_replacement {
     use libxml::tree::Node;
     #[allow(unused_attributes)]
     #[derive(CompileReplacement)]
-    #[options(replacement=$replacement)]
+    #[compile_replacement_options(replacement=$replacement)]
     struct _Dummy;
     $var = _Dummy::replacement();
   })
@@ -30,7 +30,7 @@ macro_rules! load_model {
     // use rtx_core::common::model::IndirectModel;
     #[allow(unused_attributes)]
     #[derive(LoadModel)]
-    #[options(name=$name)]
+    #[load_model_options(name=$name)]
     struct _ModelLoader;
     { // compute the model
       _ModelLoader::model(&mut $var.model);

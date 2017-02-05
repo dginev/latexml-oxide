@@ -15,19 +15,19 @@ mod util;
 mod constructable;
 mod modelable;
 
-#[proc_macro_derive(CompileReplacement)]
+#[proc_macro_derive(CompileReplacement,attributes(compile_replacement_options))]
 pub fn derive_compile_replacement(input: TokenStream) -> TokenStream {
   let item = parse_macro_input(&input.to_string()).unwrap();
   constructable::compile_replacement(item).to_string().parse().unwrap()
 }
 
-#[proc_macro_derive(LoadModel)]
+#[proc_macro_derive(LoadModel,attributes(load_model_options))]
 pub fn derive_load_model(input: TokenStream) -> TokenStream {
   let item = parse_macro_input(&input.to_string()).unwrap();
   modelable::load_model(item).to_string().parse().unwrap()
 }
 
-#[proc_macro_derive(LoadIndirectModel)]
+#[proc_macro_derive(LoadIndirectModel,attributes(load_indirect_model_options))]
 pub fn derive_load_indirect_model(input: TokenStream) -> TokenStream {
   let item = parse_macro_input(&input.to_string()).unwrap();
   modelable::load_indirect_model(item).to_string().parse().unwrap()

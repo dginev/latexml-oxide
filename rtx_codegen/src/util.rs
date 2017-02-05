@@ -10,12 +10,12 @@ pub fn str_value_of_meta_item<'a>(item: &'a MetaItem, name: &str) -> &'a str {
 }
 
 
-pub fn get_options_from_input(attrs: &[Attribute], on_bug: fn() -> !)
-    -> Option<&[MetaItem]>
+pub fn get_options_from_input(name: &str, attrs: &[Attribute], on_bug: fn() -> !)
+    -> Option<Vec<MetaItem>>
 {
-    let options = attrs.iter().find(|a| a.name() == "options").map(|a| &a.value);
+    let options = attrs.iter().find(|a| a.name() == name).map(|a| &a.value);
     match options {
-        Some(&MetaItem::List(_, ref options)) => Some(options),
+        Some(&MetaItem::List(_, ref options)) => Some(options.clone()),
         Some(_) => on_bug(),
         None => None,
     }

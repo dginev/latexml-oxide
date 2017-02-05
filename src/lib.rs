@@ -3,7 +3,6 @@
 //
 
 //! # The `LaTeXML` converter, reimplemented in Rust
-#![feature(custom_attribute)]
 #![allow(unused_variables, unused_mut)]
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate rtx_core;

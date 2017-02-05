@@ -21,8 +21,8 @@ pub fn load_model(input: syn::MacroInput) -> quote::Tokens {
       panic!("This is a bug. Please open a Github issue \
              with your load_model invocation");
   }
-  let options = get_options_from_input(&input.attrs, bug);
-  let name_opt = options.map(|o| get_option(&o, "name", bug));
+  let options = get_options_from_input("load_model_options", &input.attrs, bug);
+  let name_opt = options.as_ref().map(|o| get_option(&o, "name", bug));
   let name = match name_opt {
     Some(n) => n,
     None => panic!("Model name is required to load a compiled model!")
@@ -102,8 +102,8 @@ pub fn load_indirect_model(input: syn::MacroInput) -> quote::Tokens {
       panic!("This is a bug. Please open a Github issue \
              with your load_model invocation");
   }
-  let options = get_options_from_input(&input.attrs, bug);
-  let name_opt = options.map(|o| get_option(&o, "name", bug));
+  let options = get_options_from_input("load_indirect_model_options", &input.attrs, bug);
+  let name_opt = options.as_ref().map(|o| get_option(&o, "name", bug));
   let name = match name_opt {
     Some(n) => n,
     None => panic!("Model name is required to load a compiled model!")

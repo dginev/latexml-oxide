@@ -63,8 +63,8 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
       panic!("This is a bug. Please open a Github issue \
              with your DefConstructor invocation");
   }
-  let options = get_options_from_input(&input.attrs, bug);
-  let replacement_opt = options.map(|o| get_option(&o, "replacement", bug));
+  let options = get_options_from_input("compile_replacement_options",&input.attrs, bug);
+  let replacement_opt = options.as_ref().map(|o| get_option(&o, "replacement", bug));
   let compiled_replacement_closure = match replacement_opt {
     None => quote!(None),
     Some(replacement) => {
