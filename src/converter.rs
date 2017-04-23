@@ -72,9 +72,9 @@ impl Converter {
     self.bind_log();
     // 1.2 Inform of identity, increase conversion counter
     if self.opts.verbosity >= 0 {
-      println_stderr!("{:?}", CONVERTER_IDENTITY);
-      // println_stderr!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} >= 1;
-      // println_stderr!("processing started " . localtime() . "\n"; )
+      info!("{:?}", CONVERTER_IDENTITY);
+      // info!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} >= 1;
+      // info!("processing started " . localtime() . "\n"; )
     }
 
     // 1.3 Prepare for What's IN:
@@ -180,7 +180,7 @@ impl Converter {
         match dom_result {
           Ok(dom) => dom.to_string(self.state_mut()),
           Err(e) => {
-            println_stderr!("convert document failed: {:?}", e);
+            error!("convert document failed: {:?}", e);
             "Fatal: convert document failed".to_string()
           }
         }
@@ -208,9 +208,9 @@ impl Converter {
     // if ($eval_report || ($$runtime{status_code} == 3)) {
     //   // Terminate immediately on Fatal errors
     //   $$runtime{status_code} = 3;
-    //   println_stderr!($eval_report . "\n" if $eval_report);
-    //   println_stderr!("\nConversion complete: " . $$runtime{status} . ".\n");
-    //   println_stderr!("Status:conversion:" . ($$runtime{status_code} || '0') . "\n");
+    //   log!($eval_report . "\n" if $eval_report);
+    //   log!("\nConversion complete: " . $$runtime{status} . ".\n");
+    //   log!("Status:conversion:" . ($$runtime{status_code} || '0') . "\n");
     //   // If we just processed an archive, clean up sandbox directory.
     //   if ($$opts{whatsin} =~ /^archive/) {
     //     rmtree($$opts{sourcedirectory});
@@ -224,7 +224,7 @@ impl Converter {
     // return { result => $serialized, log => $log, status => $$runtime{status}, status_code => $$runtime{status_code} }; }
     // else {
     // Standard report, if we're not in a Fatal case
-    // println_stderr!("\nConversion complete: " . $$runtime{status} . ".\n"; );
+    // log!("\nConversion complete: " . $$runtime{status} . ".\n"; );
 
     // 2.3 Clean up and exit if we only wanted the serialization of the core conversion
     // if ($serialized) {
@@ -254,7 +254,7 @@ impl Converter {
     //   if ($@) {    //Fatal occured!
     //     $$runtime{status_code} = 3;
     //     $@ = 'Fatal:conversion:unknown '.$@ unless $@ =~ /^Fatal:/;
-    //     println_stderr!($@);
+    //     error!($@);
     //     //Since this is postprocessing, we don't need to do anything
     //     //   just avoid crashing...
     //     $result = undef; } }
@@ -289,7 +289,7 @@ impl Converter {
     // else { $serialized = $result; }                              // Compressed case
 
     // 5.2 Finalize logging and return a response containing the document result, log and status
-    println_stderr!("Status:conversion: {:?}", self.runtime.status_code.clone());
+    info!("Status:conversion: {:?}", self.runtime.status_code);
     let log = self.flush_log();
     // self->sanitize($log) if ($$runtime{status_code} == 3);
 

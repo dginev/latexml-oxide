@@ -32,7 +32,7 @@ pub fn extract_bracketed(mut text: &mut String, delimiter: Option<Delimiter>) ->
     Some(ref d) => d.close()
   };
 
-  // println_stderr!("-- eb before: {:?}", text);
+  // info!("-- eb before: {:?}", text);
   let mut extracted = String::new();
   let mut level = 0;
   while !text.is_empty() {
@@ -62,6 +62,6 @@ pub fn extract_bracketed(mut text: &mut String, delimiter: Option<Delimiter>) ->
       }
     }
   }
-  // println_stderr!("-- eb after: {:?}", text);
+  // info!("-- eb after: {:?}", text);
   extracted
 }

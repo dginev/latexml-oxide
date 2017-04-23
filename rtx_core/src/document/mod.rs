@@ -177,7 +177,7 @@ impl Document {
       //   box_node.set_content(&tbox.text);
     }
     if self.debug {
-      println_stderr!("Document absorbed {:?} nodes", results.len());
+      info!("Document absorbed {:?} nodes", results.len());
     }
     results
   }
@@ -190,7 +190,7 @@ impl Document {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone() calls removed
     let node = self.open_element(qname, attrib, state);
     if self.debug {
-      println_stderr!("Inserting element {:?} with body: {:?}", qname, content);
+      info!("Inserting element {:?} with body: {:?}", qname, content);
     }
     for digested in content.into_iter() {
       self.absorb(digested, state);
@@ -240,7 +240,7 @@ impl Document {
   pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Node {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
     if self.debug {
-      println_stderr!("Open element {:?} at {:?}", qname, self.node.get_name());
+      info!("Open element {:?} at {:?}", qname, self.node.get_name());
     }
     let point = self.find_insertion_point(qname, state);
     // attributes.entry("_box").or_insert(state.locals.box);
@@ -258,7 +258,7 @@ impl Document {
   /// This is kinda risky! Maybe we should try to request closing of specific nodes.
   pub fn close_element(&mut self, qname: &str, state: &mut State) -> Option<Node> {
     if self.debug {
-      println_stderr!("Close element {:?} at {:?}", qname, self.node.get_name());
+      info!("Close element {:?} at {:?}", qname, self.node.get_name());
     }
     self.close_text_internal();
     let mut node = self.node.clone();
@@ -279,7 +279,7 @@ impl Document {
     }
 
     if node.get_type() == Some(NodeType::DocumentNode) {    // Didn't find $qname at all!!
-      println_stderr!("Error:malformed:TODO {:?} in doc: {:?}", qname, self.document.to_string(true));
+      error!("Error:malformed:TODO {:?} in doc: {:?}", qname, self.document.to_string(true));
       // Error('malformed', $qname, $self,
       //   "Attempt to close " . ($qname eq '#PCDATA' ? $qname : '</' . $qname . '>') . ", which isn't open",
       //   "Currently in " . self.getInsertionContext());
@@ -287,7 +287,7 @@ impl Document {
     } else {                                         // Found node.
       if !cant_close.is_empty() {
                                                    // Intervening non-auto-closeable nodes!!
-        println_stderr!("Error:malformed:{:?} Closing tag whose open descendents do not auto-close", qname);
+        error!("Error:malformed:{:?} Closing tag whose open descendents do not auto-close", qname);
         // Error('malformed', $qname, $self,
         //   "Closing " . ($qname eq '#PCDATA' ? $qname : '</' . $qname . '>')
         //     . " whose open descendents do not auto-close",
@@ -546,14 +546,14 @@ impl Document {
     // if node.get_type() == Some(NodeType::DocumentNode) {  // Whoops
     //   if let Some(first_child) = node.get_first_child() {
     //     if let Some(_) = first_child.get_next_sibling() {
-    //       println_stderr!("Error:unexpected:multiple-nodes TODO");
+    //       error!("Error:unexpected:multiple-nodes TODO");
     //       // Error('unexpected', 'multiple-nodes', $self,
     //       //   "Cannot set insertion point to a DOCUMENT_FRAG_NODE", Stringify($node)); }
     //     } else {
     //       set_node = first_child;
     //     }
     //   } else {
-    //       println_stderr!("Error:unexpected:empty-nodes TODO");
+    //       error!("Error:unexpected:empty-nodes TODO");
     //       // Error('unexpected', 'empty-nodes', $self,
     //       //   "Cannot set insertion point to an empty DOCUMENT_FRAG_NODE"); }
 
@@ -669,7 +669,7 @@ impl Document {
     //   return;
     // }
     // if self.debug {
-    //   println_stderr!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
+    //   info!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
     // }
 
     // if node_type != Some(NodeType::DocumentNode) // If not at document begin
@@ -794,7 +794,7 @@ impl Document {
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
       // if self.debug {
-      //   println_stderr!("Appending text \"{:?}\" to {:?}",
+      //   info!("Appending text \"{:?}\" to {:?}",
       //                   text,
       //                   self.document.node_to_string(&self.node));
       // }
@@ -804,7 +804,7 @@ impl Document {
       let mut point = self.find_insertion_point("#PCDATA", state);
       let node = Node::new_text(text, &self.document).unwrap();
       if self.debug {
-        println_stderr!("Inserting text node for {:?} into {:?}",
+        info!("Inserting text node for {:?} into {:?}",
                         text,
                         self.document.node_to_string(&point));
       }
@@ -876,7 +876,7 @@ impl Document {
         return self.find_insertion_point(qname, state);             // Then retry, possibly w/auto open's
 
       } else {                                             // Didn't find a legit place.
-        println_stderr!("Error:malformed:{} TODO", qname);
+        error!("Error:malformed:{} TODO", qname);
         //       ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed in <$cur_qname>",
         //       "Currently in " . self.getInsertionContext());
         //     return self.node}; } } }                       // But we'll do it anyway, unless Error => Fatal.
@@ -1035,7 +1035,7 @@ impl Document {
     }
 
     if self.debug {
-      println_stderr!("Inserting {:?} into {:?}",newnode.get_name(), point.get_name());// if $LaTeXML::Core::Document::DEBUG;
+      info!("Inserting {:?} into {:?}",newnode.get_name(), point.get_name());// if $LaTeXML::Core::Document::DEBUG;
     }
 
     // Run afterOpen operations

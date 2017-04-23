@@ -73,12 +73,12 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
       // If we refactor away the mutable borrows we do for in-place modification, we can avoid a lot of the
       // cloning, and stay conservative in memory. For now it shouldn't matter.
 
-      // println_stderr!("Compiling: \n{:?}", &replacement);
+      // info!("Compiling: \n{:?}", &replacement);
       let mut operations = Vec::new();
 
       operations.extend(compile_replacement_tokens(replacement.to_owned()));
 
-      // println_stderr!("Into: \n{}",
+      // info!("Into: \n{}",
       //   operations.iter().map(|x| x.to_string()).collect::<Vec<_>>().join("\n"));
 
       quote!(
@@ -124,7 +124,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
     // ?test(ifclause)(elseclause)
     if LEAD_COND_RE.is_match(&replacement) {
       is_match = true;
-      // println!("Leading conditional at: {:?}", replacement);
+      // info!("Leading conditional at: {:?}", replacement);
       let (bool_branch, if_branch, else_branch) = parse_conditional(&mut replacement);
       let if_branch_compiled = compile_replacement_tokens(if_branch);
       let else_branch_compiled = compile_replacement_tokens(else_branch);
@@ -147,7 +147,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       });
 
       if is_match {
-        // println_stderr!("-- matched a PI ");
+        // info!("-- matched a PI ");
         // this is annoying since we want translate_avpairs to mutate the replacement string in place,
         // but also want it to run after the replacement... makes `current_tag` in particular look very misplaced
         let av = translate_avpairs(&mut replacement);
@@ -174,7 +174,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       replacement = LEAD_OPEN_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
         is_match = true;
         current_tag = refs.at(1).unwrap_or("").to_owned();
-        // println_stderr!("-- open tag {:?}", current_tag);
+        // info!("-- open tag {:?}", current_tag);
         String::new()
       });
 
@@ -214,7 +214,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       replacement = LEAD_CLOSE_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
         is_match = true;
         current_tag = refs.at(1).unwrap_or("").to_owned();
-        // println_stderr!("-- close tag {:?}", current_tag);
+        // info!("-- close tag {:?}", current_tag);
         String::new()
       });
       // handle close tag
@@ -241,7 +241,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
       if replacement.find("=").is_some() {
         is_match = true;
-        println_stderr!("-- Attribute");
+        info!("-- Attribute");
         let consumed = replacement[0..1 + replacement.find("=").unwrap()].to_owned();
         replacement = replacement[consumed.len()..].to_owned();
       }
@@ -274,7 +274,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
 // The DOM holds the font objects, rather than strings,
 // to resolve relative fonts on output.
 fn translate_string(mut text : &mut String) -> quote::Tokens {
-  // println_stderr!("-- ts before: {:?}", text);
+  // info!("-- ts before: {:?}", text);
   let mut values : Vec<quote::Tokens> = Vec::new();
   *text = text.trim_left().to_owned();
   if text.starts_with('\'') || text.starts_with('"') {
@@ -315,7 +315,7 @@ fn translate_string(mut text : &mut String) -> quote::Tokens {
   if !text.is_empty() {
     text.remove(0);
   }
-  // println_stderr!("-- ts after: {:?}", text);
+  // info!("-- ts after: {:?}", text);
 
   let token_values = values.iter().map(|v| {
     let v_str = v.to_string();
@@ -419,7 +419,7 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
     } else {
       panic!("Missing ')' in &$fcn(...) at '{:?}'\n",text);
     }
-    // println!("text after translate_value: {:?}", text);
+    // info!("text after translate_value: {:?}", text);
     val = quote!(#fcn( #(args),* ));
   }
 
@@ -471,7 +471,7 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
 
 fn parse_conditional(mut text : &mut String) -> (quote::Tokens, String, String) {
   // Remove leading "?"
-  // println_stderr!("-- cond before: {:?}", text);
+  // info!("-- cond before: {:?}", text);
   *text = LEAD_QMARK.replace(text, |_: &Captures| {
     String::new()
   });
@@ -480,7 +480,7 @@ fn parse_conditional(mut text : &mut String) -> (quote::Tokens, String, String) 
   let if_branch = extract_bracketed(text, Some(Delimiter::Parenthesis));
   if !if_branch.is_empty() {
     let else_branch = extract_bracketed(text, Some(Delimiter::Parenthesis));
-    // println_stderr!("-- cond after: {:?}", text);
+    // info!("-- cond after: {:?}", text);
     (bool_branch, if_branch, else_branch)
   }
   else {

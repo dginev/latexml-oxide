@@ -3,11 +3,14 @@ name = "rtx"
 version = "0.1.0"
 authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
 
-[dependencies.rtx_codegen]
-path = "rtx_codegen"
+[dependencies.rtx_logger]
+path = "rtx_logger"
 
 [dependencies.rtx_core]
 path = "rtx_core"
+
+[dependencies.rtx_codegen]
+path = "rtx_codegen"
 
 [dependencies]
 libc = "0.2"
@@ -19,3 +22,4 @@ time = "0.1"
 lazy_static = "0.1"
 regex = "0.1.66"
 libxml = "0.0.746"
+log = "0.3"

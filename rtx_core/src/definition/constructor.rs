@@ -96,13 +96,13 @@ impl Definition for Constructor {
   }
   fn capture_body(&self) -> bool {self.options.capture_body}
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Vec<Token> {
-    println_stderr!("-- constructor invoke for {:?}", self.get_cs());
+    info!("-- constructor invoke for {:?}", self.get_cs());
     Vec::new()
   }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
   fn invoke_primitive(&self, stomach: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Vec<Digested> {
-    println_stderr!("-- constructor invoke for {:?}", self.get_cs());
+    info!("-- constructor invoke for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing
     // let profiled = state.lookup_value("PROFILING") && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -111,7 +111,7 @@ impl Definition for Constructor {
 
     let mut result = self.execute_before_digest(stomach, state);
 
-    // println_stderr_stderr!("{" + $self->tracingCSName . "}\n" if $tracing;
+    // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
     // let font   = state.lookup_value("font");
     let _ismath = match state.lookup_value("IN_MATH") {
@@ -123,7 +123,7 @@ impl Definition for Constructor {
       &None => Vec::new(),
       &Some(ref params) => params.read_arguments_and_digest(stomach, &self, state),
     };
-    // println_stderr_stderr!($self->tracingArgs(@args) . "\n" if $tracing && @args;
+    // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;
     let nargs = self.get_num_args();
     args.truncate(nargs);
 
@@ -155,7 +155,7 @@ impl Definition for Constructor {
 
     if self.options.capture_body {
       post.extend(stomach.digest_next_body(false, state));
-      // println_stderr!(" -- Captured body: {:?}", post);
+      // info!(" -- Captured body: {:?}", post);
       whatsit.set_body(post);
       post = vec![];
     }

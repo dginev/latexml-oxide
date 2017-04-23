@@ -1,4 +1,5 @@
 #![recursion_limit="100"]
+#[macro_use] extern crate log;
 #[macro_use] extern crate quote;
 extern crate proc_macro;
 extern crate syn;

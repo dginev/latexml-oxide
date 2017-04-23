@@ -85,7 +85,7 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
   }
 
   // Mark as loaded, then process the definitions
-  println_stderr!("Loading {:?} definitions...", file);
+  info!("Loading {:?} definitions...", file);
   state.assign_value(&loaded_flag,
                      ObjectStore::Bool(true),
                      Some(Scope::Global));
@@ -183,7 +183,7 @@ pub fn require_package(name: String, mut options: RequireOptions, state: &mut St
 
 pub fn require_resource(mut resource: Resource, state: &mut State) {
   if resource.name.is_empty() && resource.content.is_empty() {
-    println_stderr!("Warn:expected:resource: Resource must have a resource pathname or content; skipping");
+    warn!("Warn:expected:resource: Resource must have a resource pathname or content; skipping");
     return;
   }
   if resource.mimetype.is_empty() && !resource.name.is_empty() {
@@ -191,7 +191,7 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
     resource.mimetype = resource_type(&ext);
   }
   if resource.mimetype.is_empty() {
-    println_stderr!("Warning:expected:mime-type Resource must have a mime-type; skipping");
+    warn!("Warning:expected:mime-type Resource must have a mime-type; skipping");
     return;
   }
 

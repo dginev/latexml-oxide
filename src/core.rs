@@ -238,7 +238,7 @@ impl DigestionAPI for Core {
         name = pathname::file_name(&request);
         // ext = pathname::extension(&request);
       } else {
-        println_stderr!("Fatal:missing_file:{} Can't find {} file {} ", request_base, mode, request);
+        error!("Fatal:missing_file:{} Can't find {} file {} ", request_base, mode, request);
       }
     }
 

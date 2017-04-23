@@ -1,3 +1,6 @@
+extern crate log;
+extern crate rtx_logger;
+
 use glob::glob;
 use std::collections::HashMap;
 use libxml::parser::Parser;
@@ -10,6 +13,8 @@ use libxml::tree::Document as XmlDoc;
 use core::DigestionAPI;
 
 pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) {
+  assert!(rtx_logger::init().is_ok());
+
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
   }
@@ -39,7 +44,7 @@ fn rtx_ok(tex_path: String, xml_path: String, name: String) {
   if !tex_strings.is_empty() {
     let xml_strings = process_xmlfile(&xml_path, &name);
     if !xml_strings.is_empty() {
-      println!("[test] xml diff for {:?}", name);
+      info!("[test] xml diff for {:?}", name);
       for (tex_line, xml_line) in tex_strings.iter().zip(xml_strings.iter()) {
         assert_eq!(tex_line, xml_line);
       }

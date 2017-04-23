@@ -86,7 +86,7 @@ pub fn load_definitions(state: &mut State) {
       let token = T_CS!("\\".to_string() + &name);
       if !is_defined_token(&token, state) {
         let undef = "{".to_string() + &name + "}";
-        println_stderr!("Error:undefined:{:?}: The environment is not defined.",undef);
+        error!("Error:undefined:{:?}: The environment is not defined.",undef);
         // state.note_status("undefined", undef);
         //   Error("undefined", $undef, $gullet, "The environment " . $undef . " is not defined.");
         // state.install_definition(LaTeXML::Core::Definition::Constructor->new($token, undef,
@@ -192,7 +192,7 @@ pub fn load_definitions(state: &mut State) {
     if state.lookup_bool("inPreamble") {
       // Error('unexpected', $cs, $STATE->getStomach,
       // "The current command '" . ToString($cs) . "' can only appear in the preamble")
-      println_stderr!("Error:unexpected:{:?} The current command can only appear in the preamble", cs);
+      error!("Error:unexpected:{:?} The current command can only appear in the preamble", cs);
     }
   }
 

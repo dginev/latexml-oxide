@@ -39,7 +39,7 @@ impl Default for Parameter {
       spec: String::new(),
       extra: Vec::new(),
       reader: Rc::new(|_gullet, _args, _extra, _state| {
-        println_stderr!("-- Warning: please define a real reader, this is a mock fallback!");
+        warn!("-- Warning: please define a real reader, this is a mock fallback!");
         Vec::new()
       }),
       reversion: None,
@@ -90,7 +90,7 @@ impl Parameter {
         } else if SKIP_REGEX.is_match(&self.name) {
           let captures = SKIP_REGEX.captures(&self.name).unwrap();
           let basetype = captures.at(1).unwrap();
-          println_stderr!("param basetype: {:?}", basetype);
+          info!("param basetype: {:?}", basetype);
           descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
             Some(& ObjectStore::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
             _ => {

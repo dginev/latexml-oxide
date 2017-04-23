@@ -66,7 +66,7 @@ impl Definition for Expandable {
 
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Vec<Token> {
     // Expand the expandable control sequence. This should be carried out by the Gullet.
-    // println!("-- expandable invoke for {:?}", self.get_cs());
+    // log!("-- expandable invoke for {:?}", self.get_cs());
     if self.trivial_expansion.is_some() {
       match &self.trivial_expansion {
         &Some(ref expansion) => expansion.clone(),

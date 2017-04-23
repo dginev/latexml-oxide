@@ -105,7 +105,7 @@ impl Stomach {
         }
         if initdepth < depth {
           // TODO
-          println_stderr!("Fatal:internal:<EOF> We've fallen off the end, somehow !?!?!?");
+          error!("Fatal:internal:<EOF> We've fallen off the end, somehow !?!?!?");
           //     Fatal('internal', '<EOF>', self,
           //       "We've fallen off the end, somehow!?!?!",
           //       "Last token " . ToString($LaTeXML::CURRENT_TOKEN)
@@ -208,12 +208,12 @@ impl Stomach {
   }
 
   fn invoke_token_undefined(&mut self, _token: Token, _state: &mut State) -> Vec<Digested> {
-    // println_stderr!("-- Undefined invoke {:?}", token);
+    // log!("-- Undefined invoke {:?}", token);
     // TODO: Rework this carefully
     Vec::new()
   }
   fn invoke_token_simple(&mut self, _token: Token, meaning: Token, state: &mut State) -> Vec<Digested> {
-    // println_stderr!("-- Simple invoke {:?}", token);
+    // log!("-- Simple invoke {:?}", token);
     // let font = state.lookup_value("font");
     state.clear_prefixes();    // prefixes shouldn't apply here.
 
@@ -285,7 +285,7 @@ impl Stomach {
             is_mouth = true;
           }
         } else {
-          println_stderr!("TODO: Error unexpected:runtime - gullet had no active runtime");
+          error!("TODO: Error unexpected:runtime - gullet had no active runtime");
           break;
         }
       }
@@ -293,7 +293,7 @@ impl Stomach {
         gullet.close_mouth(true, state);
         break;
       } else if gullet.mouthstack.is_empty() {
-        println_stderr!("TODO: Error unexpected:<closed> Mouth is unexpectedly already closed");
+        error!("TODO: Error unexpected:<closed> Mouth is unexpectedly already closed");
         // Error('unexpected', '<closed>', $gullet, "Mouth is unexpectedly already closed",
         //   "Reading from " . Stringify($mouth) . ", but it has already been closed.");
         break;
@@ -308,7 +308,7 @@ impl Stomach {
         }
         if ready_to_read {
           let _next = gullet.read_token(state); // stringify( ?
-          println_stderr!("TODO: Error unexpected:next unexpected input remaining");
+          error!("TODO: Error unexpected:next unexpected input remaining");
           // Error('unexpected', $next, $gullet, "Unexpected input remaining: '$next'",
           //   "Finished reading from " . Stringify($mouth) . ", but it still has input.");
           { if let Some(ref mut runtime) = gullet.mouth {
@@ -399,7 +399,7 @@ impl Stomach {
   pub fn egroup(&mut self, state: &mut State) {
     // if state.is_value_bound("MODE", false)   // Last stack frame was a mode switch!?!?!
     //   || state.lookup_value("groupNonBoxing") {    // or group was opened with \begingroup
-    //     println_stderr!("Error:unexpected:{:?}: Attempt to close boxing group", state.lookup_value("CURRENT_TOKEN"));
+    //     error!("Error:unexpected:{:?}: Attempt to close boxing group", state.lookup_value("CURRENT_TOKEN"));
     //   // Error('unexpected', $LaTeXML::CURRENT_TOKEN, self, "Attempt to close boxing group",
     //   //   self.currentFrameMessage); }
     // }
@@ -415,7 +415,7 @@ impl Stomach {
   pub fn endgroup(&mut self, state: &mut State) {
     // if state.is_value_bound("MODE", false)    // Last stack frame was a mode switch!?!?!
     //   || state.lookup_value("groupNonBoxing").is_none() {    // or group was opened with \bgroup
-    //     println_stderr!("Error:unexpected:{:?}: Attempt to close non-boxing group", state.lookup_value("CURRENT_TOKEN"));
+    //     error!("Error:unexpected:{:?}: Attempt to close non-boxing group", state.lookup_value("CURRENT_TOKEN"));
     //     // Error('unexpected', $LaTeXML::CURRENT_TOKEN, self, "Attempt to close non-boxing group",
     //     // self.currentFrameMessage); }
     // }

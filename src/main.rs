@@ -1,4 +1,6 @@
-#[macro_use(println_stderr)]
+#[macro_use]
+extern crate log;
+extern crate rtx_logger;
 extern crate rtx_core;
 extern crate rtx;
 
@@ -9,14 +11,15 @@ use rtx_core::common::{Config, OutputFormat, DataSize};
 use rtx::converter::Converter;
 
 fn main() {
+  rtx_logger::init().unwrap_or(error!("Failed to load logger, aborting early. Please check rtx_logger installed correctly."));
   let mut argv = env::args();
   argv.next();
-  println!("Welcome to rtx -- a Rust implementation for LaTeXML");
+  info!("Welcome to rtx -- a Rust implementation for LaTeXML");
 
   let source = match argv.next() {
     Some(s) => s,
     None => {
-      println!("Please provide a source document! Exiting...");
+      error!("Please provide a source document! Exiting...");
       process::exit(1);
     }
   };
@@ -36,12 +39,12 @@ fn main() {
   let response = converter.convert(source);
   match response {
     Ok(r) => {
-      println_stderr!("{:?}\n\n", r.log);
+      info!("{:?}\n\n", r.log);
       if let Some(xml) = r.result {
-        println!("{}", xml);
+        info!("{}", xml);
       }
     }
-    Err(e) => println_stderr!("Conversion error: {:?}", e),
+    Err(e) => error!("Conversion error: {:?}", e),
   };
 
 

@@ -4,6 +4,7 @@
 
 //! # The `LaTeXML` converter, reimplemented in Rust
 #![allow(unused_variables, unused_mut)]
+#[macro_use] extern crate log;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate rtx_core;
 #[macro_use] extern crate rtx_codegen;

@@ -778,11 +778,11 @@ impl State {
       cc.name()
     };
 
-    // println!("Looking up digestable {:?}", lookupname);
+    // info!("Looking up digestable {:?}", lookupname);
     let entry = self.meaning.get(&lookupname);
 
     if !lookupname.is_empty() && entry.is_some() {
-      // println_stderr!("-- Found definition for: {:?}", token);
+      // info!("-- Found definition for: {:?}", token);
       let defn = entry.unwrap();
       // If a cs has been let to an executable token, lookup ITS defn.
       // if defn->isa('LaTeXML::Token')
@@ -791,7 +791,7 @@ impl State {
       // $defn = $$entry[0]; }
       Some(defn.front().unwrap().clone())
     } else {
-      // println_stderr!("-- No definition for: {:?}", token);
+      // info!("-- No definition for: {:?}", token);
       Some(ObjectStore::Token(token.clone()))
     }
   }
@@ -813,7 +813,7 @@ impl State {
       _ => T_LETTER!("_wrong_argument_for_install_definition".to_string()),
     };
     let cs = token.get_cs_name();
-    // println_stderr!("-- installing definition for: {:?}", token);
+    // info!("-- installing definition for: {:?}", token);
 
     let cs_locked = cs.clone() + ":locked";
     // TODO, .is_none() should be a real false check

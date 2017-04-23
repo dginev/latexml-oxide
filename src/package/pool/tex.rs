@@ -410,7 +410,7 @@ pub fn load_definitions(state: &mut State) {
     let def_body = token_args.into_iter().collect::<Vec<Token>>();
     let params = None;
     let body = Rc::new(move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State| def_body.clone());
-    println_stderr!("Installing definition for cs: {:?}", cs);
+    info!("Installing definition for cs: {:?}", cs);
     state.install_definition(ObjectStore::Expandable(Rc::new(
       Expandable{cs: cs, paramlist: params, expansion: body,
         ..Expandable::default()
