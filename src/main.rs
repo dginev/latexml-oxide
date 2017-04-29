@@ -5,7 +5,6 @@ extern crate rtx;
 
 use std::env;
 use std::process;
-// use std::io::Write;
 use rtx_core::common::{Config, OutputFormat, DataSize};
 use rtx::converter::Converter;
 
@@ -38,12 +37,14 @@ fn main() {
   let response = converter.convert(source);
   match response {
     Ok(r) => {
-      info!("{:?}\n\n", r.log);
+      // TODO: Should never have to handle the response log for print?
+      //       the right arguments can be passed in so that the response is either captured - and passed, or printed internally by the logger
+      // info!("{:?}\n\n", r.log);
       if let Some(xml) = r.result {
         info!("{}", xml);
       }
     }
-    Err(e) => error!("Conversion error: {:?}", e),
+    Err(e) => error!(target: "converter:response", "{:?}", e),
   };
 
 
