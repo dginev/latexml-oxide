@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate log;
-extern crate rtx_logger;
 extern crate rtx_core;
 extern crate rtx;
 
@@ -11,7 +10,7 @@ use rtx_core::common::{Config, OutputFormat, DataSize};
 use rtx::converter::Converter;
 
 fn main() {
-  rtx_logger::init().unwrap_or(error!("Failed to load logger, aborting early. Please check rtx_logger installed correctly."));
+  rtx_core::util::logger::init(log::LogLevelFilter::Info).unwrap_or(error!("Failed to load logger, aborting early. Please check rtx_core::util::logger installed correctly."));
   let mut argv = env::args();
   argv.next();
   info!("Welcome to rtx -- a Rust implementation for LaTeXML");

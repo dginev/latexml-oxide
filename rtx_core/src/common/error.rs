@@ -92,7 +92,7 @@
 //     Fatal($category, $object, $where, $message, @details); }
 //   else {
 //     $state && $state->noteStatus('error');
-//     print STDERR generateMessage(colorizeString("Error:" . $category . ":" . ToString($object), 'error'),
+//     print STDERR generateMessage(colorizeString("" . $category . ":" . ToString($object), 'error'),
 //       $where, $message, 1, @details)
 //       if $verbosity >= -2; }
 //   if ($state && ($state->getStatus('error') || 0) > $MAXERRORS) {

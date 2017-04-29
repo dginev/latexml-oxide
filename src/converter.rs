@@ -180,7 +180,7 @@ impl Converter {
         match dom_result {
           Ok(dom) => dom.to_string(self.state_mut()),
           Err(e) => {
-            error!("convert document failed: {:?}", e);
+            error!(target: "document:convert", "{:?}", e);
             "Fatal: convert document failed".to_string()
           }
         }

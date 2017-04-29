@@ -5,7 +5,7 @@ extern crate proc_macro;
 extern crate syn;
 
 #[macro_use] extern crate lazy_static;
-#[macro_use] extern crate rtx_core;
+extern crate rtx_core;
 extern crate regex;
 
 use proc_macro::TokenStream;

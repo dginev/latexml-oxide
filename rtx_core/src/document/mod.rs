@@ -279,7 +279,7 @@ impl Document {
     }
 
     if node.get_type() == Some(NodeType::DocumentNode) {    // Didn't find $qname at all!!
-      error!("Error:malformed:TODO {:?} in doc: {:?}", qname, self.document.to_string(true));
+      error!(target: &format!("malformed:{:?}",qname), "TODO: in doc: {:?}", self.document.to_string(true));
       // Error('malformed', $qname, $self,
       //   "Attempt to close " . ($qname eq '#PCDATA' ? $qname : '</' . $qname . '>') . ", which isn't open",
       //   "Currently in " . self.getInsertionContext());
@@ -287,7 +287,7 @@ impl Document {
     } else {                                         // Found node.
       if !cant_close.is_empty() {
                                                    // Intervening non-auto-closeable nodes!!
-        error!("Error:malformed:{:?} Closing tag whose open descendents do not auto-close", qname);
+        error!(target: &format!("malformed:{:?}",qname), "Closing tag whose open descendents do not auto-close");
         // Error('malformed', $qname, $self,
         //   "Closing " . ($qname eq '#PCDATA' ? $qname : '</' . $qname . '>')
         //     . " whose open descendents do not auto-close",
@@ -546,14 +546,14 @@ impl Document {
     // if node.get_type() == Some(NodeType::DocumentNode) {  // Whoops
     //   if let Some(first_child) = node.get_first_child() {
     //     if let Some(_) = first_child.get_next_sibling() {
-    //       error!("Error:unexpected:multiple-nodes TODO");
+    //       error!("unexpected:multiple-nodes TODO");
     //       // Error('unexpected', 'multiple-nodes', $self,
     //       //   "Cannot set insertion point to a DOCUMENT_FRAG_NODE", Stringify($node)); }
     //     } else {
     //       set_node = first_child;
     //     }
     //   } else {
-    //       error!("Error:unexpected:empty-nodes TODO");
+    //       error!("unexpected:empty-nodes TODO");
     //       // Error('unexpected', 'empty-nodes', $self,
     //       //   "Cannot set insertion point to an empty DOCUMENT_FRAG_NODE"); }
 
@@ -876,7 +876,7 @@ impl Document {
         return self.find_insertion_point(qname, state);             // Then retry, possibly w/auto open's
 
       } else {                                             // Didn't find a legit place.
-        error!("Error:malformed:{} TODO", qname);
+        error!(target: &format!("malformed:{}", qname), "TODO");
         //       ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed in <$cur_qname>",
         //       "Currently in " . self.getInsertionContext());
         //     return self.node}; } } }                       // But we'll do it anyway, unless Error => Fatal.

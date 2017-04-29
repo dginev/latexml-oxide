@@ -108,7 +108,7 @@ impl Model {
     let mut name = String::new();
     if self.schema_data.is_none() {
       // TODO: Return this code path to normal once we properly load schemas
-      warn!("Warn:expected:<model> TODO");
+      warn!(target: "expected:<model>", "TODO");
       // Warn('expected', '<model>', undef, "No Schema Model has been declared; assuming LaTeXML");
       // // article ??? or what ? undef gives problems!
 
@@ -132,7 +132,7 @@ impl Model {
         schema_type = data[0].clone();
         match schema_type.as_ref() {
           "DTD" => {
-            error!("Error:TODO:DTD not yet supported");
+            error!(target: "DTD:unimplemented", "TODO: DTD not yet supported");
             // my ($roottag, $publicid, $systemid) = @data;
             // require LaTeXML::Common::Model::DTD;
             // $name = $systemid;
@@ -266,7 +266,7 @@ impl Model {
       self.namespace_errors += 1;
       docprefix = Some("namespace".to_string() + &self.namespace_errors.to_string());
       self.register_document_namespace(docprefix.as_ref().unwrap(), Some(namespace.to_string()));
-      warn!("Warn:malformed:{:?}: No prefix has been registered for namespace.", namespace );
+      warn!(target: &format!("malformed:{:?}",namespace), "No prefix has been registered for namespace.");
       // Warn('malformed', $namespace, undef,
         // "No prefix has been registered for namespace '$namespace' (in document)",
         // "Using '$docprefix' instead"); }
@@ -298,7 +298,7 @@ impl Model {
       self.namespace_errors += 1;
       let ns_error = "http://example.com/namespace".to_string() + &self.namespace_errors.to_string();
       self.register_document_namespace(&docprefix, Some(ns_error));
-      error!("Error:malformed:{:?}: No namespace has been registered for prefix.", docprefix);
+      error!(target: &format!("malformed:{:?}", docprefix), "No namespace has been registered for prefix.");
       // Error('malformed', $docprefix, undef,
       //   "No namespace has been registered for prefix '$docprefix' (in document)",
       //   "Using '$ns' instead"); }

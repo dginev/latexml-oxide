@@ -3,9 +3,6 @@ name = "rtx"
 version = "0.1.0"
 authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
 
-[dependencies.rtx_logger]
-path = "rtx_logger"
-
 [dependencies.rtx_core]
 path = "rtx_core"
 
