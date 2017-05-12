@@ -2,6 +2,7 @@ extern crate log;
 extern crate ansi_term;
 
 use ansi_term::ANSIByteString;
+use ansi_term::Style;
 use ansi_term::Colour::{Yellow, Red, Green, White};
 use log::{LogRecord, LogLevel, LogMetadata, SetLoggerError, LogLevelFilter};
 
@@ -44,7 +45,7 @@ impl log::Log for Log {
 
       let message = format!("{}:{} {}\n", severity, category_object, details);
       let painted_message : ANSIByteString = match record.level() {
-        LogLevel::Info => White.paint(message.as_bytes()),
+        LogLevel::Info => Style::default().paint(message.as_bytes()),
         LogLevel::Warn => Yellow.paint(message.as_bytes()),
         LogLevel::Error => Red.paint(message.as_bytes()),
         LogLevel::Debug => Green.paint(message.as_bytes()),
