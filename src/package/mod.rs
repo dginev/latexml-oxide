@@ -6,7 +6,7 @@ pub use libxml::tree::{Node, Namespace};
 
 pub use rtx_core::{Core, Digested, BoxOps};
 pub use rtx_core::state::{State, ObjectStore, Scope};
-pub use rtx_core::common::{Error};
+pub use rtx_core::common::error::*;
 pub use rtx_core::common::font::Font;
 pub use rtx_core::token::*;
 pub use rtx_core::parameter::{Parameter, Parameters};
@@ -99,10 +99,10 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
   };
 }
 
-pub fn input_content(core: &mut Core, request: &str) -> Result<(), Error> {
+pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
   match find_file(request, false) { // TODO: type => $options{type}, noltxml => 1
     Some(path) => Ok(load_tex_content(core, path)),
-    None => Err(Error::MissingFile),
+    None => Err(RtxError::MissingFile(request.to_owned())),
     // TODO:
     // Error("missing_file", request, state.get_stomach().get_gullet(),
     // "Can't find TeX file "+request, maybeReportSearchPaths(state)))

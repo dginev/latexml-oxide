@@ -1,9 +1,10 @@
 use rtx_core::state::State;
-use rtx_core::common::{Config, DataSize, OutputFormat, Error};
+use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_core::list::List;
 use rtx_core::document::Document;
 use rtx_core::token;
 use rtx_core::{Core, Digested, BoxOps, TexMode};
+use rtx_core::common::error::*;
 use core::DigestionAPI;
 
 const CONVERTER_IDENTITY: &'static str = "rtx (v 0.1)";
@@ -37,10 +38,11 @@ impl Converter {
       core: Core::default(),
     }
   }
-  pub fn initialize_session(&mut self) {
+  pub fn initialize_session(&mut self) -> Result<()> {
     // Prepare LaTeXML object
-    self.core.initialize_state(vec!["TeX.pool".to_string()]);
+    try!(self.core.initialize_state(vec!["TeX.pool".to_string()]));
     self.ready = true;
+    Ok(())
   }
   pub fn state_mut(&mut self) -> &mut State {
     self.core.state_mut()
@@ -53,11 +55,11 @@ impl Converter {
     "mock flush log".to_string()
   }
 
-  pub fn convert(mut self, source: String) -> Result<ConversionResponse, Error> {
+  pub fn convert(mut self, source: String) -> Result<ConversionResponse> {
     // 1 Prepare for conversion
     // 1.1 Initialize session if needed:
     if !self.ready {
-      self.initialize_session()
+      try!(self.initialize_session())
     }
     if !self.ready {
       // We can't initialize, return error:
@@ -165,7 +167,7 @@ impl Converter {
       Ok(d) => d,
     };
     // 2.1 Now, convert to DOM and output, if desired.
-    let dom_result: Result<Document, Error>;
+    let dom_result: Result<Document>;
     let serialized = match self.opts.format {
       OutputFormat::TeX => token::untex(digested),
       OutputFormat::Box => {
@@ -302,9 +304,10 @@ impl Converter {
   }
 
 
-  pub fn prepare_session<'preplifetime>(&'preplifetime mut self, _opts: &'preplifetime Config) {
+  pub fn prepare_session<'preplifetime>(&'preplifetime mut self, _opts: &'preplifetime Config) -> Result<()> {
     if !self.ready {
-      self.initialize_session()
+      try!(self.initialize_session())
     }
+    Ok(())
   }
 }

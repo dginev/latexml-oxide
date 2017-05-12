@@ -27,12 +27,7 @@ pub enum DataSize {
   Document,
   Archive,
 }
-#[derive(Clone, Debug)]
-pub enum Error {
-  Unexpected,
-  Expected,
-  MissingFile,
-}
+
 #[derive(Clone, Debug)]
 pub enum DigestionMode {
   TeX,

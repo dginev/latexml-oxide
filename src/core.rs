@@ -2,7 +2,7 @@ use regex::{Regex, Captures};
 use std::path::Path;
 use std::rc::Rc;
 
-use rtx_core::common::{Error, DigestionMode};
+use rtx_core::common::{DigestionMode};
 // use common::model::{Model};
 use rtx_core::{Core, Digested, TexMode};
 use rtx_core::common::error::*;
@@ -31,19 +31,19 @@ pub struct DigestionOptions {
 }
 
 pub trait DigestionAPI {
-  fn initialize_state(&mut self, preloads: Vec<String>);
-  fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Digested, Error>;
-  fn digest_file(&mut self, request: String, options: DigestionOptions) -> Result<Digested, Error>;
+  fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()>;
+  fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Digested>;
+  fn digest_file(&mut self, request: String, options: DigestionOptions) -> Result<Digested>;
   fn digest_internal(&mut self) -> Digested; // used to be "finishDigestion"
-  fn convert_file(&mut self, filepath: String) -> Result<Document, Error>;
-  fn convert_document(&mut self, digested: Digested) -> Result<Document, Error>;
+  fn convert_file(&mut self, filepath: String) -> Result<Document>;
+  fn convert_document(&mut self, digested: Digested) -> Result<Document>;
   // Mocks
   fn load_preamble(&mut self, preamble: String) {}
   fn load_postamble(&mut self, preamble: String) {}
 }
 
 impl DigestionAPI for Core {
-  fn initialize_state(&mut self, preloads: Vec<String>) {
+  fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()> {
     self.state.initialize_stomach();
     // let paths = state.lookup_value("SEARCHPATHS");
     self.state.assign_value("InitialPreloads",
@@ -55,10 +55,11 @@ impl DigestionAPI for Core {
     self.state.assign_value("InitialPreloads",
                             ObjectStore::Bool(false),
                             Some(Scope::Global));
+    Ok(())
   }
 
   fn digest(&mut self, request: String, _preamble: Option<String>, _postamble: Option<String>,
-    _mode: Option<DigestionMode>, _no_init: bool) -> Result<Digested, Error> {
+    _mode: Option<DigestionMode>, _no_init: bool) -> Result<Digested> {
 
     // let mut ext = match mode {
     //   Some(m) => Some(m.extension()),
@@ -115,14 +116,14 @@ impl DigestionAPI for Core {
     Ok(list)
   }
 
-  fn convert_file(&mut self, filepath: String) -> Result<Document, Error> {
+  fn convert_file(&mut self, filepath: String) -> Result<Document> {
     match self.digest_file(filepath, DigestionOptions::default()) {
       Err(e) => Err(e),
       Ok(digested) => self.convert_document(digested),
     }
   }
 
-  fn convert_document(&mut self, digested: Digested) -> Result<Document, Error> {
+  fn convert_document(&mut self, digested: Digested) -> Result<Document> {
     note_begin("Building");
 
     let mut state = &mut self.state;
@@ -207,7 +208,7 @@ impl DigestionAPI for Core {
   //    preamble = names a tex file (or standard_preamble.tex)
   //    postamble = names a tex file (or standard_postamble.tex)
 
-  fn digest_file(&mut self, mut request: String, options: DigestionOptions) -> Result<Digested, Error> {
+  fn digest_file(&mut self, mut request: String, options: DigestionOptions) -> Result<Digested> {
     let mut dir = String::new();
     let mut name = String::new();
     // let mut ext = String::new();
