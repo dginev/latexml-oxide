@@ -32,7 +32,9 @@ fn main() {
     mode: None,
   };
   let mut converter = Converter::from_config(opts.clone());
-  converter.prepare_session(&opts);
+  if let Err(e) = converter.prepare_session(&opts) {
+    panic!(format!("Could not prepare converter session! : {}", e));
+  }
   // Perform the conversion:
   let response = converter.convert(source);
   match response {

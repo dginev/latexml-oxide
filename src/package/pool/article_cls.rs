@@ -1,6 +1,6 @@
 use rtx_core::state::{State};
 use package::*;
-pub fn load_definitions(state: &mut State) {
+pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
   LoadPool!("LaTeX");
   //**********************************************************************
@@ -27,4 +27,5 @@ pub fn load_definitions(state: &mut State) {
   RelaxNGSchema!("LaTeXML");
   RequireResource!("ltx-article.css");
 
+  Ok(())
 }

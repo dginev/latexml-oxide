@@ -2,6 +2,7 @@
 /// Exported generic functions for dealing with LaTeXML's objects
 ///======================================================================
 
+use common::error::*;
 use tbox::Tbox;
 use document::Document;
 
@@ -66,8 +67,8 @@ pub trait Object {
   // These should really only make sense for Data objects within the
   // processing stream.
   // Defaults (probably poor)
-  fn be_digested(&self) -> Tbox {
-    Tbox::default()
+  fn be_digested(&self) -> Result<Tbox> {
+    Ok(Tbox::default())
   }
 
   fn be_absorbed(&self, _document: Document) {

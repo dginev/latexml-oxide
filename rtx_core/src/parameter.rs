@@ -1,6 +1,8 @@
 use fmt;
 use std::rc::Rc;
 use regex::Regex;
+
+use common::error::*;
 use token::Token;
 use tokens::Tokens;
 use gullet::Gullet;
@@ -12,8 +14,8 @@ use state::{State, ObjectStore};
 use mouth::Mouth;
 use Digested;
 
-pub type ReaderClosure = Rc<Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<Token>, &mut State) -> Vec<Token>>;
-pub type ReversionClosure = Rc<Fn(&mut Gullet, Vec<Token>, Vec<Option<Parameters>>, &mut State) -> Vec<Token>>;
+pub type ReaderClosure = Rc<Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<Token>, &mut State) -> Result<Vec<Token>>>;
+pub type ReversionClosure = Rc<Fn(&mut Gullet, Vec<Token>, Vec<Option<Parameters>>, &mut State) -> Result<Vec<Token>>>;
 #[derive(Clone)]
 pub struct Parameter {
   pub novalue: bool,
@@ -40,7 +42,7 @@ impl Default for Parameter {
       extra: Vec::new(),
       reader: Rc::new(|_gullet, _args, _extra, _state| {
         warn!("-- Warning: please define a real reader, this is a mock fallback!");
-        Vec::new()
+        Ok(Vec::new())
       }),
       reversion: None,
       before_digest : None,
@@ -60,7 +62,7 @@ lazy_static!{
 }
 
 impl Parameter {
-  pub fn init(mut self, state: &mut State) -> Self {
+  pub fn init(mut self, state: &mut State) -> Result<Self> {
     // Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
@@ -81,7 +83,7 @@ impl Parameter {
                 Some(reader) => Some(Parameter{reader: reader, ..Parameter::default()}),
                 None => match Parameter::check_reader_function("Read".to_string() + basetype) {
                   Some(reader) => Some(Parameter{reader: reader, ..Parameter::default()}),
-                  None => panic!("Fatal:parameter:init Can't initialize parameter {:?}, unknown?", self.name)
+                  None => fatal!(Parameter, Init, format!("Can't initialize parameter {:?}, unknown?", self.name))
                 }
               }
             }
@@ -130,7 +132,7 @@ impl Parameter {
         panic!("Unrecognized parameter type in {:?}", self.spec)
       }
     }
-    return self;
+    return Ok(self);
   }
 
   // TODO: This meta-programming approach won't fly in Rust, need an alternative.
@@ -144,7 +146,7 @@ impl Parameter {
   }
 
 
-  pub fn read(&self, gullet: &mut Gullet, _fordefn: &Definition, state: &mut State) -> Vec<Token> {
+  pub fn read(&self, gullet: &mut Gullet, _fordefn: &Definition, state: &mut State) -> Result<Vec<Token>> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
@@ -160,7 +162,7 @@ impl Parameter {
       state.begin_semiverbatim(None);
     }
     let closure: &ReaderClosure = &self.reader;
-    let value = closure(gullet, self.extra.clone(), Vec::new(), state);
+    let value = try!(closure(gullet, self.extra.clone(), Vec::new(), state));
     // TODO:
     // $value = $value->neutralize if $$self{semiverbatim} && (ref $value)
     //   && $value->can('neutralize');
@@ -174,43 +176,49 @@ impl Parameter {
     //     $gullet->showUnexpected);
     //   $value = T_OTHER('missing'); }
 
-    value
+    Ok(value)
   }
 
-  pub fn digest(&self, stomach: &mut Stomach, value: Tokens, _fordefn: &Constructor, state: &mut State) -> Option<Digested> {
+  pub fn digest(&self, stomach: &mut Stomach, value: Tokens, _fordefn: &Constructor, state: &mut State) -> Result<Option<Digested>> {
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     let value_to_digest = value.clone();
     if self.semiverbatim {
       state.begin_semiverbatim(None);
-      stomach.reading_from_mouth(Mouth::default(), state, Box::new(move |stomach: &mut Stomach, state : &mut State| {
+      try!(stomach.reading_from_mouth(Mouth::default(), state, Box::new(move |stomach: &mut Stomach, state : &mut State| {
         let gullet = stomach.get_gullet_mut();
         gullet.unread(value.clone().unlist());
         let mut tokens = Vec::new();
-        while let Some(token) = gullet.read_x_token(true, true, state) {
-          tokens.push(token);
+        loop {
+          match gullet.read_x_token(true, true, state) {
+            Ok(token_opt) => match token_opt {
+              Some(token) => tokens.push(token),
+              None => break
+            },
+            Err(x) => return Err(x)
+          }
         }
         let evec = Vec::new();
-        Tokens{tokens: tokens}.neutralize(&evec, state).unlist()
-      }));
+        Ok(Tokens{tokens: tokens}.neutralize(&evec, state).unlist())
+      })));
     }
 
     if let Some(ref pre) = self.before_digest { // Done for effect only.
-      pre(stomach, state); // maybe pass extras?
+      try!(pre(stomach, state)); // maybe pass extras?
     }
 
     let mut digested_value = None;
     if !value_to_digest.is_empty() && !self.undigested {
-      digested_value = Some(value_to_digest.be_digested(stomach, state));
+      digested_value = Some(try!(value_to_digest.be_digested(stomach, state)));
     }
     if let Some(ref post) = self.after_digest { // Done for effect only.
       let mut w = Whatsit::default();
-      post(stomach, &mut w, state); // maybe pass extras?
+      try!(post(stomach, &mut w, state)); // maybe pass extras?
     }
     if self.semiverbatim {
       state.end_semiverbatim() // Corner case?
     }
 
-    digested_value
+    Ok(digested_value)
   }
 }
 
@@ -228,27 +236,27 @@ impl Parameters {
     Vec::new()
   }
 
-  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Vec<Tokens> {
+  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Result<Vec<Tokens>> {
     let mut args = Vec::new();
     for parameter in self.params.iter() {
-      let values = parameter.read(gullet, fordefn, state);
+      let values = try!(parameter.read(gullet, fordefn, state));
       if !parameter.novalue {
         args.push(Tokens{tokens: values});
       }
     }
-    args
+    Ok(args)
   }
 
-  pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Vec<Option<Digested>> {
+  pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Result<Vec<Option<Digested>>> {
     let mut args = Vec::new();
     for parameter in self.params.iter() {
-      let value = parameter.read(&mut stomach.gullet, fordefn, state);
+      let value = try!(parameter.read(&mut stomach.gullet, fordefn, state));
       if !parameter.novalue {
-        let digested_value = parameter.digest(stomach, Tokens{tokens: value}, fordefn, state);
+        let digested_value = try!(parameter.digest(stomach, Tokens{tokens: value}, fordefn, state));
         args.push(digested_value);
       }
     }
-    return args;
+    return Ok(args)
   }
 
   pub fn reparse_argument(&self, _gullet: &mut Gullet, _value: Vec<Token>, _state: &mut State) -> Vec<Token> {

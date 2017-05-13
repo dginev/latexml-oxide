@@ -2,6 +2,7 @@ use std::rc::Rc;
 use state::{State, Scope};
 use Digested;
 use common::object::Object;
+use common::error::*;
 use token::*;
 use gullet::Gullet;
 use stomach::Stomach;
@@ -71,29 +72,29 @@ impl Definition for Primitive {
   }
   fn capture_body(&self) -> bool {false}
 
-  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Vec<Token> {
-    Vec::new()
+  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Vec<Token>> {
+    Ok(Vec::new())
   }
-  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Vec<Digested> {
+  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
     info!("-- primitive invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
     // print STDERR '{' . $self->tracingCSName . "}\n" if $tracing;
-    let mut result : Vec<Digested> = self.execute_before_digest(stomach, state);
-    let args   = self.read_arguments(stomach.get_gullet_mut(), state);
+    let mut result : Vec<Digested> = try!(self.execute_before_digest(stomach, state));
+    let args   = try!(self.read_arguments(stomach.get_gullet_mut(), state));
     // print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
     let replacement_result = match &self.replacement {
       &None => Vec::new(),
-      &Some(ref closure) => closure(stomach, args, state)
+      &Some(ref closure) => try!(closure(stomach, args, state))
     };
     result.extend(replacement_result);
     let mut w = Whatsit::default();
-    let after_result = self.execute_after_digest(stomach, &mut w, state);
+    let after_result = try!(self.execute_after_digest(stomach, &mut w, state));
     result.extend(after_result);
 
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
-    result
+    Ok(result)
   }
 
   fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) {

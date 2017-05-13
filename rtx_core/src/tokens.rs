@@ -1,4 +1,5 @@
 ///! Token List constructors.
+use common::error::*;
 use state::State;
 use token::*;
 use stomach::{Stomach};
@@ -74,7 +75,7 @@ impl Tokens {
     + "]"
   }
 
-  pub fn be_digested(self, stomach : &mut Stomach, state: &mut State) -> Digested {
+  pub fn be_digested(self, stomach : &mut Stomach, state: &mut State) -> Result<Digested> {
     stomach.digest(self, state)
   }
 

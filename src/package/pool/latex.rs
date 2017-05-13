@@ -15,7 +15,7 @@ lazy_static!{
   static ref OPTS_REGEX : Regex = Regex::new(r",\s*").unwrap();
 }
 
-pub fn load_definitions(state: &mut State) {
+pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
   LoadPool!("TeX");
 
@@ -38,17 +38,17 @@ pub fn load_definitions(state: &mut State) {
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
-    after_digest => sub!(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
+    after_digest => sub!(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
         Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
         None => Vec::new(),
       };
-      load_class(whatsit.get_arg(2).unwrap().to_string(),
+      try!(load_class(whatsit.get_arg(2).unwrap().to_string(),
                 class_opts,
                 vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())],
-                state);
-      Vec::new()
+                state));
+      Ok(Vec::new())
     })
   );
 
@@ -80,7 +80,7 @@ pub fn load_definitions(state: &mut State) {
     let name = &args[0].to_string();
     let begin_name = "\\begin{".to_string()+&name+"}";
     if is_defined(&begin_name, state) {
-      vec![T_CS!(begin_name)] // Magic cs!
+      Ok(vec![T_CS!(begin_name)]) // Magic cs!
     }
     else {
       let token = T_CS!("\\".to_string() + &name);
@@ -94,7 +94,7 @@ pub fn load_definitions(state: &mut State) {
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
         //(T_CS!("\begingroup"), Invocation(T_CS!("\lx@setcurrenvir"), $env), $token); } });
       }
-      Vec::new()
+      Ok(Vec::new())
     }
   });
 
@@ -102,13 +102,13 @@ pub fn load_definitions(state: &mut State) {
     let name = args[0].to_string();
     let mut t = T_CS!("\\end{".to_string()+&name+"}");
     if is_defined_token(&t, state) {// Magic CS!
-    vec![t]
+    Ok(vec![t])
   } else {
     t = T_CS!("\\end".to_string()+&name);
     if is_defined_token(&t, state) {
-      vec![t, T_CS!("\\endgroup")]
+      Ok(vec![t, T_CS!("\\endgroup")])
     } else {
-      vec![T_CS!("\\endgroup")]
+      Ok(vec![T_CS!("\\endgroup")])
     }
   }});
 
@@ -154,7 +154,7 @@ pub fn load_definitions(state: &mut State) {
         document.insert_element("ltx:document", vec![body], Some(attrib), state);
       }
     })),
-    before_digest => sub!(|_stomach, state| { state.assign_value("inPreamble", ObjectStore::Bool(false), None); Vec::new() }),
+    before_digest => sub!(|_stomach, state| { state.assign_value("inPreamble", ObjectStore::Bool(false), None); Ok(Vec::new()) }),
     // after_digest_begin => |stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
@@ -200,11 +200,11 @@ pub fn load_definitions(state: &mut State) {
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
-      before_digest => sub!(|_stomach: &mut Stomach, state: &mut State| -> Vec<Digested> {
+      before_digest => sub!(|_stomach: &mut Stomach, state: &mut State| -> Result<Vec<Digested>> {
         only_preamble("\\usepackage", state);
-        Vec::new()
+        Ok(Vec::new())
       }),
-      after_digest => sub!(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Vec<Digested> {
+      after_digest => sub!(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Result<Vec<Digested>> {
         let options: Option<&Digested> = whatsit.get_arg(1);
         let packages: Option<&Digested> = whatsit.get_arg(2);
         let package_list = match packages {
@@ -217,12 +217,12 @@ pub fn load_definitions(state: &mut State) {
         };
 
         for package in package_list {
-          require_package(package, RequireOptions {
+          try!(require_package(package, RequireOptions {
             options: options_list.clone(),
             ..RequireOptions::default()
-          }, state)
+          }, state))
         }
-        Vec::new()
+        Ok(Vec::new())
       })
   );
 
@@ -243,7 +243,7 @@ pub fn load_definitions(state: &mut State) {
                       .into_iter()
                       .map(|s| s.to_string()) {
     DefMacroI!(T_CS!(ltxtrigger), None,
-      move |_gullet, _args, _state| Vec::new()
+      move |_gullet, _args, _state| Ok(Vec::new())
     );
   }
 
@@ -287,9 +287,9 @@ pub fn load_definitions(state: &mut State) {
       //   return; }
 
       // TODO: convertLaTeXArgs($nargs, $opt)
-      let body_closure = move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State|{ body.clone() };
+      let body_closure = move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State|{ Ok(body.clone()) };
       DefMacroI!(cs.clone(), None, body_closure, state);
-      Vec::new()
+      Ok(Vec::new())
   });
 
   //======================================================================
@@ -302,6 +302,5 @@ pub fn load_definitions(state: &mut State) {
     generate_id(document, node, "p", state);
   }));
 
-
-
+  Ok(())
 }

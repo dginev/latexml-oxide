@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 use state::{State, ObjectStore};
 use common::object::Object;
+use common::error::*;
 use definition::Definition;
 use mouth::Mouth;
 use token::{Token, Catcode};
@@ -159,10 +160,10 @@ impl Gullet {
   // `Toplevel' processing, (if $toplevel is true), used at the toplevel processing by Stomach,
   //  will step to the next input stream (Mouth) if one is available,
   // If $commentsok is true, will also pass comments.
-  pub fn read_x_token(&mut self, toplevel: bool, commentsok: bool, state: &mut State) -> Option<Token> {
+  pub fn read_x_token(&mut self, toplevel: bool, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
     // toplevel should be true by default
     if commentsok && !self.pending_comments.is_empty() {
-      return self.pending_comments.pop_front();
+      return Ok(self.pending_comments.pop_front())
     }
 
     loop {
@@ -174,7 +175,7 @@ impl Gullet {
       let mut expand_next = false;
       match self.mouth {
         None => {
-          return None;
+          return Ok(None)
         }
         Some(ref mut runtime) => {
 
@@ -185,7 +186,7 @@ impl Gullet {
           match read_token {
             None => {
               if !(runtime.autoclose && toplevel && !self.mouthstack.is_empty()) {
-                return None;
+                return Ok(None)
               }
               needs_close = true; // Close mouth
             }
@@ -201,7 +202,7 @@ impl Gullet {
                 Catcode::COMMENT => {
                   match commentsok {
                     true => {
-                      return Some(token);
+                      return Ok(Some(token));
                     }
                     false => {
                       self.pending_comments.push_back(token);
@@ -223,13 +224,13 @@ impl Gullet {
                             defn_next = Some(defn.clone());
                             expand_next = true;
                           } else {
-                            return Some(token);
+                            return Ok(Some(token));
                           }
                         }
-                        _ => return Some(token),
+                        _ => return Ok(Some(token)),
                       }
                     }
-                    None => return Some(token),
+                    None => return Ok(Some(token)),
                   };
                 }
               };
@@ -240,11 +241,11 @@ impl Gullet {
       if needs_close {
         self.close_mouth(false, state); // Next input stream.
       } else if return_next {
-        return self.read_token(state);    // Just return the next token.
+        return Ok(self.read_token(state));    // Just return the next token.
       } else if expand_next {
         // Do the check here, to be more forgiving and more informative
         let expansion = match defn_next {
-          Some(defn) => defn.invoke(self, state),
+          Some(defn) => try!(defn.invoke(self, state)),
           None => Vec::new(),
         };
         // _ => Error("misdefined", token, undef,
@@ -254,7 +255,7 @@ impl Gullet {
         // already checked tokens, so just push to be re-read (like ->unread(@expansion); )
         match self.mouth {
           None => {
-            return None;
+            return Ok(None);
           }
           Some(ref mut runtime) => {
             for expansion_token in expansion.into_iter().rev() {
@@ -297,7 +298,7 @@ impl Gullet {
   /// Read a sequence of tokens balanced in {}
   /// assuming the { has already been read.
   /// Returns a Tokens list of the balanced sequence, omitting the closing }
-  pub fn read_balanced(&mut self, state: &mut State) -> Vec<Token> {
+  pub fn read_balanced(&mut self, state: &mut State) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     let mut level = 1;
     while level > 0 {
@@ -315,12 +316,12 @@ impl Gullet {
         }
       };
     }
-    tokens
+    Ok(tokens)
   }
 
   /// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
   /// In list context, also returns the found delimiter.
-  pub fn read_until(&mut self, _delims: Vec<Token>, _state: &mut State) -> Vec<Token> {
+  pub fn read_until(&mut self, _delims: Vec<Token>, _state: &mut State) -> Result<Vec<Token>> {
     // my ($n, $found, @tokens) = (0);
     // while (!defined($found = $self->readMatch(@delims))) {
     //   my $token = $self->readToken();    # Copy next token to args
@@ -336,10 +337,10 @@ impl Gullet {
     // return (wantarray ? (Tokens(@tokens), $found) : Tokens(@tokens)); }
 
     // TODO
-    Vec::new()
+    Ok(Vec::new())
   }
 
-  pub fn read_until_brace(&mut self, state: &mut State) -> Vec<Token> {
+  pub fn read_until_brace(&mut self, state: &mut State) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     while let Some(token) = self.read_token(state) {
       if token.code == Catcode::BEGIN {    // INLINE Catcode
@@ -348,7 +349,7 @@ impl Gullet {
       }
       tokens.push(token);
     }
-    tokens
+    Ok(tokens)
   }
 
 
@@ -356,32 +357,32 @@ impl Gullet {
   /// Higher-level readers: Read various types of things from the input:
   ///  tokens, non-expandable tokens, args, Numbers, ...
   ///**********************************************************************
-  pub fn read_arg(&mut self, state: &mut State) -> Vec<Token> {
+  pub fn read_arg(&mut self, state: &mut State) -> Result<Vec<Token>> {
     match self.read_non_space(state) {
-      None => Vec::new(),
+      None => Ok(Vec::new()),
       Some(token) => {
         match token.code {
           Catcode::BEGIN => {
             // Inline ->getCatcode!
             self.read_balanced(state)
           }
-          _ => vec![token],
+          _ => Ok(vec![token]),
         }
       }
     }
   }
   // Note that this returns an empty array if [] is present,
   // otherwise $default or undef.
-  pub fn read_optional(&mut self, state: &mut State) -> Vec<Token> {
+  pub fn read_optional(&mut self, state: &mut State) -> Result<Vec<Token>> {
     // TODO: default
     match self.read_non_space(state) {
-      None => Vec::new(),
+      None => Ok(Vec::new()),
       Some(t) => {
         if t.code == Catcode::OTHER && t.text == "[" {
           self.read_until(vec![T_OTHER!("]".to_string())], state)
         } else {
           self.unread(vec![t]);
-          Vec::new() // TODO: default
+          Ok(Vec::new()) // TODO: default
         }
       }
     }
@@ -397,7 +398,7 @@ impl Gullet {
   }
 
   /// Match the input against one of the Token or Tokens in @choices; return the matching one or undef.
-  pub fn read_match(&mut self, choices: Vec<Token>, state: &mut State) -> Vec<Token> {
+  pub fn read_match(&mut self, choices: Vec<Token>, state: &mut State) -> Result<Vec<Token>> {
     for choice in choices.into_iter() {
       let mut to_match : Vec<Token> = choice.unlist().into_iter().rev().collect();
       let mut matched = Vec::new();
@@ -427,14 +428,14 @@ impl Gullet {
         }
       }
       if to_match.is_empty() {
-        return vec![choice]; // All matched!!!
+        return Ok(vec![choice]); // All matched!!!
       } else {
         for matched_token in matched.into_iter().rev() {
           self.mouth.as_mut().unwrap().pushback.push_front(matched_token);  // Put 'em back and try next!
         }
       }
     }
-    Vec::new()
+    Ok(Vec::new())
   }
 
 
@@ -445,7 +446,7 @@ impl Gullet {
   /// <number> = <optional signs><unsigned number>
   /// <unsigned number> = <normal integer> | <coerced integer>
   /// <coerced integer> = <internal dimen> | <internal glue>
-  pub fn read_number(&mut self, _state: &mut State) -> Vec<Token> {
+  pub fn read_number(&mut self, _state: &mut State) -> Result<Vec<Token>> {
     // let s = $self->readOptionalSigns;
     // if (defined(my $n = $self->readNormalInteger)) { return ($s < 0 ? $n->negate : $n); }
     // elsif (defined($n = $self->readInternalDimension)) { return Number($s * $n->valueOf); }
@@ -459,7 +460,7 @@ impl Gullet {
     //   return Number(0); } }
 
     // TODO
-    Vec::new()
+    Ok(Vec::new())
   }
 
 

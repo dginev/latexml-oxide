@@ -2,6 +2,7 @@ use std::rc::Rc;
 use std::collections::HashMap;
 use state::{State, Scope, ObjectStore};
 use common::object::Object;
+use common::error::*;
 
 use token::*;
 use Digested;
@@ -95,13 +96,13 @@ impl Definition for Constructor {
     Some(&self.options.after_digest_body)
   }
   fn capture_body(&self) -> bool {self.options.capture_body}
-  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Vec<Token> {
+  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Vec<Token>> {
     info!("-- constructor invoke for {:?}", self.get_cs());
-    Vec::new()
+    Ok(Vec::new())
   }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
-  fn invoke_primitive(&self, stomach: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Vec<Digested> {
+  fn invoke_primitive(&self, stomach: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
     info!("-- constructor invoke for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing
@@ -109,7 +110,7 @@ impl Definition for Constructor {
     // let tracing = state.lookup_value("TRACINGCOMMANDS");
     // LaTeXML::Definition::startProfiling($profiled, "digest") if $profiled;
 
-    let mut result = self.execute_before_digest(stomach, state);
+    let mut result = try!(self.execute_before_digest(stomach, state));
 
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
@@ -121,7 +122,7 @@ impl Definition for Constructor {
     // Parse AND digest the arguments to the Constructor
     let mut args: Vec<Option<Digested>> = match self.get_parameters() {
       &None => Vec::new(),
-      &Some(ref params) => params.read_arguments_and_digest(stomach, &self, state),
+      &Some(ref params) => try!(params.read_arguments_and_digest(stomach, &self, state)),
     };
     // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;
     let nargs = self.get_num_args();
@@ -151,15 +152,15 @@ impl Definition for Constructor {
     };
 
     // Call any 'After' code.
-    let mut post = self.execute_after_digest(stomach, &mut whatsit, state);
+    let mut post = try!(self.execute_after_digest(stomach, &mut whatsit, state));
 
     if self.options.capture_body {
-      post.extend(stomach.digest_next_body(false, state));
+      post.extend(try!(stomach.digest_next_body(false, state)));
       // info!(" -- Captured body: {:?}", post);
       whatsit.set_body(post);
       post = vec![];
     }
-    let post_post = self.execute_after_digest_body(stomach, &mut whatsit, state);
+    let post_post = try!(self.execute_after_digest_body(stomach, &mut whatsit, state));
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 
 
@@ -167,7 +168,7 @@ impl Definition for Constructor {
     result.push(Digested::Whatsit(whatsit));
     result.extend(post);
     result.extend(post_post);
-    return result;
+    return Ok(result)
   }
 
   fn get_cs(&self) -> Token {

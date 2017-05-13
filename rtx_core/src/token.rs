@@ -1,3 +1,4 @@
+use common::error::*;
 use state::{State, ObjectStore};
 use {Digested, BoxOps};
 use stomach::Stomach;
@@ -396,7 +397,7 @@ impl Token {
   }
 
 
-  pub fn be_digested(self, stomach : &mut Stomach, state: &mut State) -> Digested {
+  pub fn be_digested(self, stomach : &mut Stomach, state: &mut State) -> Result<Digested> {
     stomach.digest(Tokens{tokens: vec![self]}, state)
   }
 }

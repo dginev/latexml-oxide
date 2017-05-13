@@ -1,5 +1,5 @@
 use package::*;
-pub fn load_definitions(state: &mut State) {
+pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
   RegisterNamespace!("ltx"  , "http://dlmf.nist.gov/LaTeXML");
@@ -65,15 +65,15 @@ pub fn load_definitions(state: &mut State) {
   // Define parsers for standard parameter types.
   DefParameterType!("Plain",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
-      let mut value: Vec<Token> = gullet.read_arg(state);
+      let mut value: Vec<Token> = try!(gullet.read_arg(state));
       for inner_opt in inner {
         if let Some(inner_p) = inner_opt {
           value = inner_p.reparse_argument(gullet, value, state);
         }
       }
-      value
+      Ok(value)
     }),
-    reversion => Some(Rc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
+    reversion => Some(Rc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
      // let mut reverted_inner;
      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
      // for inner_opt in inner.into_iter() {
@@ -84,7 +84,7 @@ pub fn load_definitions(state: &mut State) {
      // }
      // TODO : push reverted_inner to the read_tokens
      read_tokens.push(T_END!());
-     read_tokens
+     Ok(read_tokens)
     }))
   );
 
@@ -100,15 +100,15 @@ pub fn load_definitions(state: &mut State) {
       gullet.read_optional(state)
     }),
     optional => true,
-    reversion => Some(Rc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
+    reversion => Some(Rc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
       // TODO : default!
       if arg.len() > 0 {
         let mut read_tokens: Vec<Token> = vec![T_OTHER!("[".to_string())];
         // TODO: ($inner ? $inner->revertArguments($arg) : Revert($arg)),
         read_tokens.push(T_OTHER!("]".to_string()));
-        read_tokens
+        Ok(read_tokens)
       } else {
-        Vec::new()
+        Ok(Vec::new())
       }
     }))
   );
@@ -117,7 +117,7 @@ pub fn load_definitions(state: &mut State) {
   DefParameterType!("SkipSpaces",
     reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       gullet.skip_spaces(state);
-      Vec::new()
+      Ok(Vec::new())
     }),
     novalue => true
   );
@@ -183,7 +183,7 @@ pub fn load_definitions(state: &mut State) {
   // Read a Semiverbatim argument; ie w/ most catcodes neutralized.
   DefParameterType!("Semiverbatim",
     reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_arg(state)),
-    reversion => Some(Rc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
+    reversion => Some(Rc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
       // let mut reverted_inner;
       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
       // for inner_opt in inner.into_iter() {
@@ -194,7 +194,7 @@ pub fn load_definitions(state: &mut State) {
       // }
       // TODO : push reverted_inner to the read_tokens
       read_tokens.push(T_END!());
-      read_tokens
+      Ok(read_tokens)
     })),
     semiverbatim => true);
 
@@ -203,14 +203,14 @@ pub fn load_definitions(state: &mut State) {
     reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_optional(state)),
     semiverbatim => true,
     optional => true,
-    reversion => Some(Rc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| -> Vec<Token> {
+    reversion => Some(Rc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
      if arg.len() > 0 {
        let mut read_tokens = vec![T_OTHER!("[".to_string())];
        // TODO: add these: Revert($_[0])
        read_tokens.push(T_OTHER!("]".to_string()));
-       read_tokens
+       Ok(read_tokens)
      } else {
-       Vec::new()
+       Ok(Vec::new())
      }
     }))
   );
@@ -223,7 +223,7 @@ pub fn load_definitions(state: &mut State) {
       let space_token = T_SPACE!();
 
       while token == begin_token {
-        let mut toks : Vec<Token> = gullet.read_balanced(state).into_iter().filter(|t| *t != space_token).collect();
+        let mut toks : Vec<Token> = try!(gullet.read_balanced(state)).into_iter().filter(|t| *t != space_token).collect();
         let mut new_tokens = toks.split_off(1);
         gullet.unread(toks);
 
@@ -234,8 +234,8 @@ pub fn load_definitions(state: &mut State) {
         };
       }
       match token {
-        Some(t) => vec![t],
-        None => Vec::new()
+        Some(t) => Ok(vec![t]),
+        None => Ok(Vec::new())
       }
     }),
     undigested => true
@@ -245,9 +245,9 @@ pub fn load_definitions(state: &mut State) {
   DefParameterType!("Token",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       if let Some(t) = gullet.read_token(state) {
-        vec![t]
+        Ok(vec![t])
       } else {
-        Vec::new()
+        Ok(Vec::new())
       }
     })
   );
@@ -255,10 +255,10 @@ pub fn load_definitions(state: &mut State) {
   // Read the next token, after expanding any expandable ones.
   DefParameterType!("XToken",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
-      if let Some(t) = gullet.read_x_token(false, false, state) {
-        vec![t]
+      if let Some(t) = try!(gullet.read_x_token(false, false, state)) {
+        Ok(vec![t])
       } else {
-        Vec::new()
+        Ok(Vec::new())
       }
     })
   );
@@ -311,12 +311,12 @@ pub fn load_definitions(state: &mut State) {
     DefMacroI!(T_CS!(ltxtrigger),
                None,
                move |_gullet, _args, state| {
-                 input_definitions("LaTeX".to_string(),
+                 try!(input_definitions("LaTeX".to_string(),
                   InputDefinitionOptions {
                     extension: Some("pool"),
                     ..InputDefinitionOptions::default()
-                  }, state);
-                 return vec![T_CS!(ltxtrigger)];
+                  }, state));
+                 return Ok(vec![T_CS!(ltxtrigger)]);
                });
   }
 
@@ -373,7 +373,7 @@ pub fn load_definitions(state: &mut State) {
         //     T_CS("\\LTX@clear@vadjust@afterpar")
         // ));
       }
-      Vec::new()
+      Ok(Vec::new())
     }),
     properties => skippable_props,
     alias => Some("\\par\n".to_string())
@@ -388,7 +388,7 @@ pub fn load_definitions(state: &mut State) {
       }
   });
 
-  fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach,  args: Vec<Tokens>, state: &mut State) -> Vec<Digested> {
+  fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach,  args: Vec<Tokens>, state: &mut State) -> Result<Vec<Digested>> {
     // params = parseDefParameters(cs, params);
     if expanded {
       state.noexpand_the = true;
@@ -409,7 +409,7 @@ pub fn load_definitions(state: &mut State) {
     // is there a more idiomatic way to downgrade a VecDeque into a Vec?
     let def_body = token_args.into_iter().collect::<Vec<Token>>();
     let params = None;
-    let body = Rc::new(move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State| def_body.clone());
+    let body = Rc::new(move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State| Ok(def_body.clone()));
     info!("Installing definition for cs: {:?}", cs);
     state.install_definition(ObjectStore::Expandable(Rc::new(
       Expandable{cs: cs, paramlist: params, expansion: body,
@@ -417,7 +417,7 @@ pub fn load_definitions(state: &mut State) {
       })),
       scope);
     // AfterAssignment!(state);
-    Vec::new()
+    Ok(Vec::new())
   }
 
 
@@ -451,4 +451,6 @@ pub fn load_definitions(state: &mut State) {
 
   // TODO: Move to the right place in the pool definitions (maybe split out individual sub-pools by chapter?)
   DefMacroT!(T_CS!("\\space"), None, T_SPACE!());
+
+  Ok(())
 }

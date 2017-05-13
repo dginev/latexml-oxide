@@ -1,6 +1,6 @@
 use package::*;
 
-pub fn load_definitions(state: &mut State) {
+pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
   DefEnvironment!("{alltt}", "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
@@ -13,6 +13,8 @@ pub fn load_definitions(state: &mut State) {
       AssignCatcode!(' ', Catcode::ACTIVE, None, state);
       LetI!(T_ACTIVE!(" "), T_CS!("\\space"), None, state);
       AssignValue!("PRESERVE_NEWLINES", ObjectStore::Bool(true), None, state);
-      Vec::new()
+      Ok(Vec::new())
     }));
+
+  Ok(())
 }

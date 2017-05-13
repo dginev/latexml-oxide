@@ -57,7 +57,7 @@ pub fn is_defined_token(cs: &Token, state: &mut State) -> bool {
 }
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
-pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut state: &mut State) {
+pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut state: &mut State) -> Result<()> {
   let mut file : String = raw_file.to_string().trim().to_string();
 
   // let prevname = if options.handleoptions {
@@ -79,7 +79,7 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
     if let Some(&ObjectStore::Bool(flag)) = state.lookup_value(&loaded_flag) {
       if flag {
         // do nothing if we've loaded before
-        return;
+        return Ok(());
       }
     }
   }
@@ -91,18 +91,20 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
                      Some(Scope::Global));
 
   match file.as_ref() {
-    "TeX.pool" => pool::tex::load_definitions(&mut state),
-    "LaTeX.pool" => pool::latex::load_definitions(&mut state),
-    "article.cls" => pool::article_cls::load_definitions(&mut state),
-    "alltt.sty" => pool::alltt_sty::load_definitions(&mut state),
-    other => { panic!("TODO: unknown binding {:?}, can't load", other);}
+    "TeX.pool" => try!(pool::tex::load_definitions(&mut state)),
+    "LaTeX.pool" => try!(pool::latex::load_definitions(&mut state)),
+    "article.cls" => try!(pool::article_cls::load_definitions(&mut state)),
+    "alltt.sty" => try!(pool::alltt_sty::load_definitions(&mut state)),
+    other => { fatal!(Package, Unknown, format!("TODO: unknown binding {:?}, can't load", other)) }
   };
+
+  Ok(())
 }
 
 pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
   match find_file(request, false) { // TODO: type => $options{type}, noltxml => 1
     Some(path) => Ok(load_tex_content(core, path)),
-    None => Err(RtxError::MissingFile(request.to_owned())),
+    None => fatal!(Package, MissingFile, request.to_owned()),
     // TODO:
     // Error("missing_file", request, state.get_stomach().get_gullet(),
     // "Can't find TeX file "+request, maybeReportSearchPaths(state)))
@@ -158,7 +160,7 @@ impl Default for RequireOptions {
 /// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of `pathname_find` ???)
 /// Another potentially useful option might be that if we are reading a raw file,
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
-pub fn require_package(name: String, mut options: RequireOptions, state: &mut State) {
+pub fn require_package(name: String, mut options: RequireOptions, state: &mut State) -> Result<()> {
   if options.raw {
     options.raw = false;
     // Warn('deprecated', 'raw', $STATE->getStomach->getGullet,
@@ -178,7 +180,7 @@ pub fn require_package(name: String, mut options: RequireOptions, state: &mut St
     // Pass classes options if we have NONE!
     withoptions: options.options,
     ..InputDefinitionOptions::default()
-  }, state);
+  }, state)
 }
 
 pub fn require_resource(mut resource: Resource, state: &mut State) {
@@ -204,7 +206,7 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
 
 }
 
-pub fn load_class(name: String, options: Vec<String>, after: Vec<Token>, state: &mut State) {
+pub fn load_class(name: String, options: Vec<String>, after: Vec<Token>, state: &mut State) -> Result<()> {
   input_definitions(name, InputDefinitionOptions {
     extension: Some("cls"),
     after: after,
@@ -212,7 +214,7 @@ pub fn load_class(name: String, options: Vec<String>, after: Vec<Token>, state: 
     handleoptions: true,
     noerror: true,
     ..InputDefinitionOptions::default()
-  }, state);
+  }, state)
   // if (let success = InputDefinitions($class, type => 'cls', notex => 1, handleoptions => 1, noerror => 1,
   //     %options)) {
   //   return $success; }
@@ -250,7 +252,7 @@ lazy_static! {
   static ref SINGLE_CHAR_REGEX : Regex = Regex::new(r"^(\\.)").unwrap();
   static ref ACTIVE_CHAR_REGEX : Regex = Regex::new(r"^(.)").unwrap();
 }
-pub fn parse_prototype(proto: &str, state: &mut State) -> ((Token, Option<Parameters>)) {
+pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option<Parameters>))> {
   let mut cs = T_CS!("\\".to_string()); // Should never happen
   let mut final_proto = if CSNAME_MACRO_REGEX.is_match(proto) {
     let captures = CSNAME_MACRO_REGEX.captures(proto).unwrap();
@@ -282,8 +284,8 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> ((Token, Option<Parame
     proto.to_string()
   };
   final_proto = final_proto.trim_left().to_string();
-  let paramlist = parse_parameters(final_proto, &cs, state);
-  (cs, paramlist)
+  let paramlist = try!(parse_parameters(final_proto, &cs, state));
+  Ok((cs, paramlist)) 
 }
 
 lazy_static! {
@@ -292,7 +294,7 @@ lazy_static! {
   static ref DEFAULT_CHECK : Regex = Regex::new(r"^Default:(.*)$").unwrap();
   static ref PARAMSPECT_CHECK : Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
 }
-pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) -> Option<Parameters> {
+pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) -> Result<Option<Parameters>> {
   let mut parameters = Vec::new();
   while !prototype.is_empty() {
     let mut next_proto;
@@ -305,15 +307,15 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
       let inner: Option<Parameters> = if inner_spec.is_empty() {
         None
       } else {
-        parse_parameters(inner_spec.to_string(), cs, state)
+        try!(parse_parameters(inner_spec.to_string(), cs, state))
       };
-      parameters.push(Parameter {
+      parameters.push(try!(Parameter {
                         name: "Plain".to_string(),
                         spec: spec.to_string(),
                         extra: vec![inner],
                         ..Parameter::default()
                       }
-                      .init(state));
+                      .init(state)));
 
     } else if OPTIONAL_CHECK.is_match(&prototype) {
       // Ditto for Optional
@@ -324,30 +326,30 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
 
       if DEFAULT_CHECK.is_match(inner_spec) {
         // let default_captures = DEFAULT_CHECK.captures(&inner_spec).unwrap();
-        parameters.push(Parameter {
+        parameters.push(try!(Parameter {
                           name: "Optional".to_string(),
                           spec: spec.to_string(),
                           // extra: vec![TokenizeInternal(default_captures.at(0).unwrap()), None]});
                           extra: Vec::new(),
                           ..Parameter::default()
                         }
-                        .init(state));
+                        .init(state)));
       } else if !inner_spec.is_empty() {
-        parameters.push(Parameter {
+        parameters.push(try!(Parameter {
                           name: "Optional".to_string(),
                           spec: spec.to_string(),
-                          extra: vec![None, parse_parameters(inner_spec.to_string(), cs, state)],
+                          extra: vec![None, try!(parse_parameters(inner_spec.to_string(), cs, state))],
                           ..Parameter::default()
                         }
-                        .init(state));
+                        .init(state)));
       } else {
-        parameters.push(Parameter {
+        parameters.push(try!(Parameter {
                           name: "Optional".to_string(),
                           spec: spec.to_string(),
                           extra: Vec::new(),
                           ..Parameter::default()
                         }
-                        .init(state));
+                        .init(state)));
       }
     } else if PARAMSPECT_CHECK.is_match(&prototype) {
       let captures = PARAMSPECT_CHECK.captures(&prototype).unwrap();
@@ -362,13 +364,13 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
           Vec::new()
         }
       };
-      parameters.push(Parameter {
+      parameters.push(try!(Parameter {
                         name: spec_type.to_string(),
                         spec: spec.to_string(),
                         extra: extra,
                         ..Parameter::default()
                       }
-                      .init(state));
+                      .init(state)));
 
     } else {
       // Fatal('misdefined', cs, undef, "Unrecognized parameter specification at \"prototype\""); }
@@ -377,9 +379,9 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
     prototype = next_proto;
   }
   if parameters.is_empty() {
-    None
+    Ok(None)
   } else {
-    Some(Parameters { params: parameters })
+    Ok(Some(Parameters { params: parameters }))
   }
 }
 
@@ -739,11 +741,11 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! LoadPool(
-    ($name: expr) => (input_definitions($name.to_string(),
+    ($name: expr) => (try!(input_definitions($name.to_string(),
       InputDefinitionOptions {
         extension: Some("pool"),
         ..InputDefinitionOptions::default()
-      }, $state))
+      }, $state)))
   );
 
   macro_rules! RequirePackage(
@@ -770,17 +772,17 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   macro_rules! DefMacroT {
       ($cs:expr, $paramlist:expr, None) => ({
-        DefMacroI!($cs, $paramlist, move |_gullet, _args, state| {vec![]})
+        DefMacroI!($cs, $paramlist, move |_gullet, _args, state| {Ok(vec![])})
       });
       ($cs:expr, $paramlist:expr, $body:expr) => ({
-        DefMacroI!($cs, $paramlist, move |_gullet, _args, state| {vec![$body]})
+        DefMacroI!($cs, $paramlist, move |_gullet, _args, state| {Ok(vec![$body])})
       });
   }
 
   macro_rules! DefMacro(
     ($proto:expr, $expansion:expr) => (
     {
-      let (cs, paramlist) = parse_prototype($proto, $state);
+      let (cs, paramlist) = try!(parse_prototype($proto, $state));
       DefMacroI!(cs, paramlist, $expansion);
     }
     )
@@ -865,7 +867,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   macro_rules! DefPrimitiveIWO(
     ($proto:expr, $compiled_replacement:expr, $options:expr) => ({
-      let (cs, paramlist) = parse_prototype($proto, $state);
+      let (cs, paramlist) = try!(parse_prototype($proto, $state));
       // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
       DefPrimitiveII!(cs, paramlist, $compiled_replacement, $options);
     })
@@ -1053,7 +1055,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($proto:expr, $replacement:expr, $options:expr) => (
     {
   // check_options("DefConstructor (prototype)", $constructor_options, %options);
-      let (cs, paramlist) = parse_prototype($proto, $state);
+      let (cs, paramlist) = try!(parse_prototype($proto, $state));
       let compiled_replacement;
       compile_replacement!(compiled_replacement, $replacement);
       DefConstructorIWO!(cs, paramlist, compiled_replacement, $options);
@@ -1204,7 +1206,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     let name = $name_raw.to_string();
     // This is for the common case where the environment is opened by \begin{env}
     // let sizer = inferSizer($options.sizer, $options.reversion);
-    let bgroup_closure = Rc::new(|stomach: &mut Stomach, state: &mut State| {stomach.bgroup(state); Vec::new()});
+    let bgroup_closure = Rc::new(|stomach: &mut Stomach, state: &mut State| {stomach.bgroup(state); Ok(Vec::new())});
     let mut before_digest_with_group : Vec<BeforeDigestClosure> = vec![bgroup_closure];
     before_digest_with_group.extend($options.before_digest);
 
@@ -1261,16 +1263,16 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       //         . join(', ', state->lookupStackedValues('current_environment')))
       //       unless $env && $name eq $env;
       //     return; },
-      Vec::new()
+      Ok(Vec::new())
     });
     let egroup_closure = Rc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
       if mode.is_some() {
         // TODO:
         // stomach.end_mode(mode.unwrap(), $state);
       } else {
-        stomach.egroup(state);
+        try!(stomach.egroup(state))
       }
-      Vec::new()
+      Ok(Vec::new())
     });
     after_digest_with_egroup.push(unexpected_end_closure);
     after_digest_with_egroup.push(egroup_closure);

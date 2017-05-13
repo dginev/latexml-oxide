@@ -11,6 +11,7 @@ extern crate tempfile;
 extern crate time;
 
 #[macro_use]pub mod aux_macros;
+#[macro_use]pub mod common;
 #[macro_use]pub mod token;
 pub mod tokens;
 pub mod stomach;
@@ -22,7 +23,6 @@ pub mod tbox;
 pub mod list;
 pub mod document;
 pub mod whatsit;
-pub mod common;
 pub mod state;
 pub mod util;
 

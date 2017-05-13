@@ -1,5 +1,5 @@
+#[macro_use]pub mod error;
 pub mod object;
-pub mod error;
 pub mod model;
 pub mod xml;
 pub mod font;

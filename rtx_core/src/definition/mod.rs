@@ -5,6 +5,7 @@ pub mod primitive;
 use std::rc::Rc;
 use std::collections::HashMap;
 
+use common::error::*;
 use Digested;
 use gullet::Gullet;
 use stomach::Stomach;
@@ -16,20 +17,19 @@ use document::Document;
 use whatsit::Whatsit;
 use state::{State, ObjectStore};
 
-pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Vec<Token>>;
-pub type PrimitiveClosure = Rc<Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Vec<Digested>>;
-pub type BeforeDigestClosure = Rc<Fn(&mut Stomach, &mut State) -> Vec<Digested>>;
-pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Vec<Digested>>;
+pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Vec<Token>>>;
+pub type PrimitiveClosure = Rc<Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<Digested>>>;
+pub type BeforeDigestClosure = Rc<Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
+pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
 pub type ReplacementClosure = Rc<Fn(&mut Document,
                                      &Vec<Option<Digested>>,
                                      &HashMap<String, ObjectStore>,
-                                     &mut State)
-                                    >;
+                                     &mut State)>;
 pub type ConstructionClosure = Rc<Fn(&mut Document, &Whatsit, &mut State)>;
 
 pub trait Definition {
-  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Vec<Token>;
-  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Vec<Digested>;
+  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Token>>;
+  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>>;
 
   fn get_cs(&self) -> Token;
   fn get_cs_name(&self) -> String;
@@ -46,11 +46,11 @@ pub trait Definition {
 
   fn get_locator(&self) -> String;
 
-  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Vec<Tokens>
+  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Tokens>>
     where Self: Sized
   {
     match self.get_parameters() {
-      &None => Vec::new(),
+      &None => Ok(Vec::new()),
       &Some(ref params) => params.read_arguments(gullet, self, state),
     }
   }
@@ -93,39 +93,39 @@ pub trait Definition {
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> {None}
   fn capture_body(&self) -> bool;
 
-  fn execute_before_digest(&self, stomach: &mut Stomach, state: &mut State) -> Vec<Digested> {
+  fn execute_before_digest(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
     state.unlocked = true;
     let mut before_digested = Vec::new();
     if let Some(pre_list) = self.before_digest() {
       for pre in pre_list.iter() {
-        let before_digest_result = pre(stomach, state);
+        let before_digest_result = try!(pre(stomach, state));
         before_digested.extend(before_digest_result);
       }
     }
-    before_digested
+    Ok(before_digested)
   }
-  fn execute_after_digest(&self, stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Vec<Digested> {
+  fn execute_after_digest(&self, stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<Vec<Digested>> {
     state.unlocked = true;
     let mut after_digested = Vec::new();
     if let Some(post_list) = self.after_digest() {
       for post in post_list.iter() {
-        let after_digest_result = post(stomach, whatsit, state);
+        let after_digest_result = try!(post(stomach, whatsit, state));
         after_digested.extend(after_digest_result);
       }
     }
-    after_digested
+    Ok(after_digested)
   }
 
-  fn execute_after_digest_body(&self, stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Vec<Digested> {
+  fn execute_after_digest_body(&self, stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<Vec<Digested>> {
     state.unlocked = true;
     let mut after_body_digested = Vec::new();
     if let Some(post_list) = self.after_digest_body() {
       // info!("Found {:?} after_digest_body closures, capture_body was: {:?}", post_list.len(), self.capture_body());
       for post in post_list {
-        let after_body_digest_result = post(stomach, whatsit, state);
+        let after_body_digest_result = try!(post(stomach, whatsit, state));
         after_body_digested.extend(after_body_digest_result);
       }
     }
-    after_body_digested
+    Ok(after_body_digested)
   }
 }

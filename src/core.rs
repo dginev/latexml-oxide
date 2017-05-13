@@ -34,7 +34,7 @@ pub trait DigestionAPI {
   fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()>;
   fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Digested>;
   fn digest_file(&mut self, request: String, options: DigestionOptions) -> Result<Digested>;
-  fn digest_internal(&mut self) -> Digested; // used to be "finishDigestion"
+  fn digest_internal(&mut self) -> Result<Digested>; // used to be "finishDigestion"
   fn convert_file(&mut self, filepath: String) -> Result<Document>;
   fn convert_document(&mut self, digested: Digested) -> Result<Document>;
   // Mocks
@@ -50,7 +50,7 @@ impl DigestionAPI for Core {
                             ObjectStore::Bool(true),
                             Some(Scope::Global));
     for preload in preloads {
-      input_definitions(preload, InputDefinitionOptions::default(), &mut self.state);
+      try!(input_definitions(preload, InputDefinitionOptions::default(), &mut self.state));
     }
     self.state.assign_value("InitialPreloads",
                             ObjectStore::Bool(false),
@@ -110,7 +110,7 @@ impl DigestionAPI for Core {
     //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
     //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX); }
 
-    let list = self.digest_internal();
+    let list = try!(self.digest_internal());
     note_end(&digestion_note);
 
     Ok(list)
@@ -185,18 +185,18 @@ impl DigestionAPI for Core {
     Ok(document)
   }
 
-  fn digest_internal(&mut self) -> Digested {
+  fn digest_internal(&mut self) -> Result<Digested> {
     let mut boxes = Vec::new();
     let mut state = &mut self.state;
 
     while self.stomach.get_gullet().has_more_input() {
-      let next_bodies: Vec<Digested> = self.stomach.digest_next_body(false, state);
+      let next_bodies: Vec<Digested> = try!(self.stomach.digest_next_body(false, state));
       for body in next_bodies {
         boxes.push(body);
       }
     }
     self.stomach.get_gullet_mut().flush(state);
-    Digested::List(List { boxes: boxes, mode: TexMode::Text })
+    Ok(Digested::List(List { boxes: boxes, mode: TexMode::Text }))
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -249,7 +249,7 @@ impl DigestionAPI for Core {
     if !noinitialize {
       let mut preloads = vec![main_pool];
       preloads.extend(self.preload.clone());
-      self.initialize_state(preloads);
+      try!(self.initialize_state(preloads));
     }
 
     if !pathname::is_literaldata(&request) {
@@ -265,7 +265,7 @@ impl DigestionAPI for Core {
     self.state.install_definition(ObjectStore::Expandable(Rc::new(Expandable{
       cs: T_CS!("\\jobname"),
       paramlist: None,
-      expansion: Rc::new(move |_gullet, _args, _state| Explode!(name_copy)),
+      expansion: Rc::new(move |_gullet, _args, _state| Ok(Explode!(name_copy))),
       ..Expandable::default()
     })), None);
 
@@ -286,7 +286,7 @@ impl DigestionAPI for Core {
     //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX);
     // }
 
-    let list = self.digest_internal();
+    let list = try!(self.digest_internal());
     note_end(&format!("Digesting {} {}", mode, name));
     Ok(list)
   }

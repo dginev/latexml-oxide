@@ -1,46 +1,80 @@
 use std::io;
 use std::fmt;
-use std::error::Error;
+use std::error::Error as ErrorTrait;
 use std::result;
 
 #[derive(Debug)]
-pub enum RtxError {
+pub struct Error {
+  pub target: ErrorTarget,
+  pub category: ErrorCategory,
+  pub message: String
+}
+
+#[derive(Debug)]
+pub enum ErrorTarget {
+  Package,
+  Parameter,
+  Converster,
+}
+
+#[derive(Debug)]
+pub enum ErrorCategory {
+  Init,
   Io(io::Error),
   NotFound,
   // Unexpected,
   // Expected,
-  MissingFile(String),
+  Unknown,
+  MissingFile,
 }
 
-pub type Result<T> = result::Result<T, RtxError>;
+#[macro_export]
+macro_rules! fatal {
+  ($target:tt, $category:tt, $message:expr) => ({
+    use $crate::common::error::Error as RtxError;
+    use $crate::common::error::ErrorTarget::*;
+    use $crate::common::error::ErrorCategory::*;
+    return Err(RtxError{
+      target: $target, category: $category, message: $message
+    })
+  })
+}
 
-impl fmt::Display for RtxError {
+pub type Result<T> = result::Result<T, Error>;
+
+impl fmt::Display for Error {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    match *self {
-      RtxError::Io(ref err) => err.fmt(f),
-      RtxError::NotFound => write!(f, "No matching cities with a \
+    use self::ErrorCategory::*;
+    match self.category {
+      Init => write!(f, "Init"),
+      Io(ref err) => err.fmt(f),
+      NotFound => write!(f, "No matching cities with a \
                                        population were found."),
-      RtxError::MissingFile(ref name) => write!(f, "Missing file: {}", name)
+      MissingFile => write!(f, "missing file"),
+      Unknown => write!(f, "unknown")
     }
   }
 }
 
-impl Error for RtxError {
+impl ErrorTrait for Error {
   fn description(&self) -> &str {
-    match *self {
-      RtxError::Io(ref err) => err.description(),
-      RtxError::MissingFile(ref name) => "missing file",
-      RtxError::NotFound => "not found",
+    use self::ErrorCategory::*;
+    match self.category {
+      Init => "initialization failed",
+      Io(ref err) => err.description(),
+      MissingFile => "missing file",
+      NotFound => "not found",
+      Unknown => "unknown",
     }
   }
 
-  fn cause(&self) -> Option<&Error> {
-    match *self {
-      RtxError::Io(ref err) => Some(err),
+  fn cause(&self) -> Option<&ErrorTrait> {
+    use self::ErrorCategory::*;
+    match self.category {
+      Io(ref err) => Some(err),
       // Our custom error doesn't have an underlying cause,
       // but we could modify it so that it does.
-      RtxError::NotFound => None,
-      RtxError::MissingFile(_) => None,
+      _ => None,
     }
   }
 }

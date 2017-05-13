@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use state::{Scope, State, ObjectStore};
-// use common::error::*;
+use common::error::*;
 use {Digested, TexMode};
 use mouth::Mouth;
 use gullet::Gullet;
@@ -39,20 +39,20 @@ impl Stomach {
   // **********************************************************************
   // Digestion
   // **********************************************************************
-  // NOTE: Worry about whether the $autoflush thing is right?
+  // NOTE: Worry about whether the $autoflush thing is right? 
   // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
-  pub fn digest_next_body(&mut self, _terminal: bool, state: &mut State) -> Vec<Digested> {
+  pub fn digest_next_body(&mut self, _terminal: bool, state: &mut State) -> Result<Vec<Digested>> {
     let _start_location = self.get_locator();
     let init_depth = self.boxing.len();
     let mut read_token: Option<Token>;
     let mut box_list: Vec<Digested> = Vec::new();
 
     loop {
-      read_token = self.get_gullet_mut().read_x_token(true, true, state);
+      read_token = try!(self.get_gullet_mut().read_x_token(true, true, state));
       match read_token {
         None => break,
         Some(token) => {
-          box_list.extend(self.invoke_token(token, state));
+          box_list.extend(try!(self.invoke_token(token, state)));
           // TODO:
           // if terminal.is_some() && Equals(token, terminal.unwrap())
           if init_depth > self.boxing.len() {
@@ -69,13 +69,13 @@ impl Stomach {
     if box_list.is_empty() {
       box_list.push(Digested::Box(Tbox::default())); // Dummy `trailer' if none explicit.
     }
-    return box_list;
+    return Ok(box_list)
   }
 
   // Digest a list of tokens independent from any current Gullet.
   // Typically used to digest arguments to primitives or constructors.
   // Returns a List containing the digested material.
-  pub fn digest(&mut self, tokens : Tokens, state: &mut State) -> Digested {
+  pub fn digest(&mut self, tokens : Tokens, state: &mut State) -> Result<Digested> {
     self.reading_from_mouth(Mouth::default(), state, Box::new(move |stomach, state| {
       stomach.get_gullet_mut().unread(tokens.clone().unlist());
       state.clear_prefixes(); // prefixes shouldn't apply here.
@@ -94,10 +94,10 @@ impl Stomach {
       //   *list = Rc::new(Vec::new());
       // }
       let mut list = Vec::new();
-      while let Some(token) = stomach.get_gullet_mut().read_x_token(true, true, state) { // Done if we run out of tokens
+      while let Some(token) = try!(stomach.get_gullet_mut().read_x_token(true, true, state)) { // Done if we run out of tokens
         // {
         //   let list = STOMACH_LIST.lock().unwrap();
-        list.extend(stomach.invoke_token(token, state));
+        list.extend(try!(stomach.invoke_token(token, state)));
         // }
 
         if initdepth > stomach.boxing.len() { // if we've closed the initial mode.
@@ -117,7 +117,7 @@ impl Stomach {
 
       // let list = STOMACH_LIST.lock().unwrap();
       let final_list = list;
-      Digested::List(List{boxes: final_list, mode: mode})
+      Ok(Digested::List(List{boxes: final_list, mode: mode}))
     }))
   }
 
@@ -130,7 +130,7 @@ impl Stomach {
   /// possibly arguments will be parsed from the Gullet.
   /// Otherwise, the token is simply digested: turned into an appropriate box.
   /// Returns a list of boxes/whatsits.
-  pub fn invoke_token(&mut self, input_token: Token, state: &mut State) -> Vec<Digested> {
+  pub fn invoke_token(&mut self, input_token: Token, state: &mut State) -> Result<Vec<Digested>> {
     let mut maybe_token = Some(input_token);
 
     // Overly complex, but want to avoid recursion/stack
@@ -165,22 +165,22 @@ impl Stomach {
             ObjectStore::Expandable(meaning) => {
               // A math-active character will (typically) be a macro,
               // but it isn't expanded in the gullet, but later when digesting, in math mode (? I think)
-              let invoked_meaning = meaning.invoke(&mut self.gullet, state);
+              let invoked_meaning = try!(meaning.invoke(&mut self.gullet, state));
               self.gullet.unread(invoked_meaning);
-              maybe_token = self.gullet.read_x_token(true, false, state); // replace the token by it's expansion!!!
+              maybe_token = try!(self.gullet.read_x_token(true, false, state)); // replace the token by it's expansion!!!
               self.token_stack.pop();
               continue;
             }
             ObjectStore::Constructor(meaning) => {
               // Otherwise, a normal primitive or constructor
-              result = meaning.invoke_primitive(self, meaning.clone(), state);
+              result = try!(meaning.invoke_primitive(self, meaning.clone(), state));
               if !meaning.is_prefix() {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
             },
             ObjectStore::Primitive(meaning) => {
               // Otherwise, a normal primitive or constructor
-              result = meaning.invoke_primitive(self, meaning.clone(), state);
+              result = try!(meaning.invoke_primitive(self, meaning.clone(), state));
               if !meaning.is_prefix() {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
@@ -204,7 +204,7 @@ impl Stomach {
     // }
 
     self.token_stack.pop();
-    return result;
+    return Ok(result)
   }
 
   fn invoke_token_undefined(&mut self, _token: Token, _state: &mut State) -> Vec<Digested> {
@@ -354,7 +354,7 @@ impl Stomach {
     }
   }
 
-  pub fn pop_stack_frame(&mut self, nobox: bool, state: &mut State) {
+  pub fn pop_stack_frame(&mut self, nobox: bool, state: &mut State) -> Result<()> {
     if let Some(ObjectStore::VecToken(beforeafter)) = state.remove_value("beforeAfterGroup") {
       if !beforeafter.is_empty() {
         let _result = beforeafter.into_iter().map(|t| t.be_digested(self, state)).collect::<Vec<_>>();
@@ -373,6 +373,7 @@ impl Stomach {
         self.gullet.unread(after);
       }
     }
+    Ok(())
   }
 
   pub fn current_frame_message(&self) -> String {
@@ -396,7 +397,7 @@ impl Stomach {
     self.push_stack_frame(false, state);
   }
 
-  pub fn egroup(&mut self, state: &mut State) {
+  pub fn egroup(&mut self, state: &mut State) -> Result<()> {
     // if state.is_value_bound("MODE", false)   // Last stack frame was a mode switch!?!?!
     //   || state.lookup_value("groupNonBoxing") {    // or group was opened with \begingroup
     //     error!("unexpected:{:?}: Attempt to close boxing group", state.lookup_value("CURRENT_TOKEN"));
@@ -404,7 +405,7 @@ impl Stomach {
     //   //   self.currentFrameMessage); }
     // }
     // else {    // Don't pop if there's an error; maybe we'll recover?
-      self.pop_stack_frame(false, state);
+    self.pop_stack_frame(false, state)
     // }
   }
 
@@ -412,7 +413,7 @@ impl Stomach {
     self.push_stack_frame(true, state);
   }
 
-  pub fn endgroup(&mut self, state: &mut State) {
+  pub fn endgroup(&mut self, state: &mut State) -> Result<()> {
     // if state.is_value_bound("MODE", false)    // Last stack frame was a mode switch!?!?!
     //   || state.lookup_value("groupNonBoxing").is_none() {    // or group was opened with \bgroup
     //     error!("unexpected:{:?}: Attempt to close non-boxing group", state.lookup_value("CURRENT_TOKEN"));
@@ -420,7 +421,7 @@ impl Stomach {
     //     // self.currentFrameMessage); }
     // }
     // else {    // Don't pop if there's an error; maybe we'll recover?
-      self.pop_stack_frame(true, state);
+      self.pop_stack_frame(true, state)
     //}
   }
 }
