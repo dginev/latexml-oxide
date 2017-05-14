@@ -48,14 +48,12 @@ impl Document {
 
   /// Get the element at (or containing) the current insertion point.
   pub fn get_element(&self) -> Option<Node> {
-    let mut node = self.node.clone();
-    if node.get_type() == Some(NodeType::TextNode) {
-      node = node.get_parent().unwrap();
-    }
-    if node.get_type() == Some(NodeType::DocumentNode) {
-      None
-    } else {
-      Some(node.clone())
+    match self.node.get_type() {
+      Some(NodeType::TextNode) => {
+        self.node.get_parent()
+      },
+      Some(NodeType::DocumentNode) => None,
+      _ => Some(self.node.clone())
     }
   }
 
@@ -1091,41 +1089,42 @@ impl Document {
     node
   }
 
-  // TODO: Mock here
-  pub fn trim_node_whitespace(&mut self, _node: Node, _state: &mut State) {}
-  //   my ($document, $node) = @_;
-  //   trimNodeLeftWhitespace($document, $node);
-  //   trimNodeRightWhitespace($document, $node);
-  //   return; }
+  pub fn trim_node_whitespace(&mut self, mut node: Node) {
+    self.trim_node_left_whitespace(&mut node);
+    self.trim_node_right_whitespace(&mut node);
+  }
 
-  // sub trimNodeLeftWhitespace {
-  //   my ($document, $node) = @_;
-  //   if (my (@children) = $node->childNodes) {
-  //     let child = $children[0];
-  //     let type  = $child->nodeType;
-  //     if (node_type == XML_TEXT_NODE) {
-  //       let string = $child->data;
-  //       #      if($string =~ s/^\s+//){
-  //       #      with some trepidation, I don't think we want to trim nbsp!
-  //       if ($string =~ s/^ +//) {
-  //         $child->setData($string); } }
-  //     elsif (node_type == XML_ELEMENT_NODE) {
-  //       trimNodeLeftWhitespace($document, $child); } }
-  //   return; }
+  pub fn trim_node_left_whitespace(&mut self, node: &mut Node) {
+    if let Some(mut first_child) = node.get_first_child() {
+      match first_child.get_type() {
+        Some(NodeType::TextNode) => {
+          let content = first_child.get_content();
+          let trimmed_content = content.trim_left();
+          if !content.is_empty() && (trimmed_content != content) {
+            first_child.set_content(trimmed_content);
+          }
+        },
+        Some(NodeType::ElementNode) => self.trim_node_left_whitespace(&mut first_child),
+        _ => {}
+      };
+    }
+  }
 
-  // sub trimNodeRightWhitespace {
-  //   my ($document, $node) = @_;
-  //   if (my (@children) = $node->childNodes) {
-  //     let child = $children[-1];
-  //     let type  = $child->nodeType;
-  //     if (node_type == XML_TEXT_NODE) {
-  //       let string = $child->data;
-  //       if ($string =~ s/\s+$//) {
-  //         $child->setData($string); } }
-  //     elsif (node_type == XML_ELEMENT_NODE) {
-  //       trimNodeRightWhitespace($document, $child); } }
-  //   return; }
-
+  pub fn trim_node_right_whitespace(&mut self, node: &mut Node) {
+    if let Some(mut last_child) = node.get_last_child() {
+      match last_child.get_type() {
+        Some(NodeType::TextNode) => {
+          let content = last_child.get_content();
+          let trimmed_content = content.trim_right();
+          if !content.is_empty() && (trimmed_content != content) {
+            last_child.set_content(trimmed_content);
+          }
+        },
+        Some(NodeType::ElementNode) => self.trim_node_right_whitespace(&mut last_child),
+        _ => {}
+      };
+    }
+  }
 
   pub fn add_resource(&mut self, resource: Resource, state: &mut State) {
     // let savenode_opt = self.float_to_element("ltx:resource");
