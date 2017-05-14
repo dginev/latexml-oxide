@@ -24,6 +24,11 @@ impl Default for Whatsit {
     }
   }
 }
+impl PartialEq for Whatsit {
+  fn eq(&self, _other: &Whatsit) -> bool {
+    false // TODO ?
+  }
+}
 
 impl Whatsit {
   pub fn is_math(&self) -> bool {

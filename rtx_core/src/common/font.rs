@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Font {
   pub family : String,
   pub series : String,

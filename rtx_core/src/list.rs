@@ -4,7 +4,7 @@ use state::State;
 use document::Document;
 
 /// Lists can contain any Digested items, such as boxes, whatsits or other lists
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct List {
   pub boxes: Vec<Digested>,
   pub mode: TexMode

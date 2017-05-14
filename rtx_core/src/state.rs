@@ -48,7 +48,7 @@ impl TableName {
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum ObjectStore {
   // Primitives
   Bool(bool),
@@ -609,6 +609,13 @@ impl State {
       Some(& ObjectStore::Bool(ref v)) => *v,
       Some(_) => true,
       None => false
+    }
+  }
+
+  pub fn lookup_vecdeque<'lvdq>(&'lvdq self, key: &'lvdq str) -> Option<&VecDeque<ObjectStore>> {
+    match self.lookup_value(key) {
+      Some(& ObjectStore::VecDequeOS(ref v)) => Some(v),
+      _ => None
     }
   }
 

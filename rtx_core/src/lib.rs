@@ -129,13 +129,13 @@ pub trait BoxOps {
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TexMode {
   Math,
   Text
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Digested {
   Box(Tbox),
   List(List),

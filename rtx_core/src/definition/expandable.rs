@@ -35,6 +35,12 @@ impl Default for Expandable {
     }
   }
 }
+impl PartialEq for Expandable {
+  fn eq(&self, other: &Expandable) -> bool {
+    self.cs == other.cs
+  }
+}
+
 impl Object for Expandable {
   fn is_definition(&self) -> bool {
     true

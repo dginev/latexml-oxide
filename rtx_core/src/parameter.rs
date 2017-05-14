@@ -55,6 +55,11 @@ impl fmt::Debug for Parameter {
     write!(f, "Parameter(name: {:?})", self.name)
   }
 }
+impl PartialEq for Parameter {
+  fn eq(&self, other: &Parameter) -> bool {
+    self.name == other.name
+  }
+}
 
 lazy_static!{
   static ref OPTIONAL_REGEX : Regex = Regex::new(r"^Optional(.+)$").unwrap();

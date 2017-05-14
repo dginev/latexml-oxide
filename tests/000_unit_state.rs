@@ -1,6 +1,6 @@
 extern crate rtx_core;
 
-use std::collections::HashMap;
+use std::collections::{VecDeque, HashMap};
 use rtx_core::token::{Catcode};
 use rtx_core::state::*;
 
@@ -99,11 +99,11 @@ fn scoped_assign_lookup_value() {
 #[test]
 fn assign_lookup_arrays() {
   let mut state = State::new(StateOptions::default());
-  let mock_vec = ["a","b","c"].iter().map(|x| x.to_string()).collect::<Vec<String>>();
-  state.assign_value("SEARCHPATHS", ObjectStore::VecString(mock_vec.clone()), None);
+  let mock_vec = ["a","b","c"].iter().map(|x| ObjectStore::String(x.to_string())).collect::<VecDeque<ObjectStore>>();
+  state.assign_value("SEARCHPATHS", ObjectStore::VecDequeOS(mock_vec.clone()), None);
   match state.lookup_value("SEARCHPATHS") {
     None => panic!("Couldn't lookup SEARCHPATHS value after assignment"),
-    Some(& ObjectStore::VecString(ref received_value)) => assert_eq!(received_value, &mock_vec, "looked up array has correct value"),
+    Some(& ObjectStore::VecDequeOS(ref received_value)) => assert_eq!(received_value, &mock_vec, "looked up array has correct value"),
     Some(_) => panic!("Looked up value of SEARCHPATHS didn't match assignment value")
   };
 
@@ -115,8 +115,17 @@ fn assign_lookup_arrays() {
     panic!("state.shift_value returned wrong/no ObjectStore")
   }
 
-  // state.unshift_value("SEARCHPATHS","d");
-  // is_deeply(state.lookup_value("SEARCHPATHS"), ["d","a","b","c"], "shift/unshift existing key");
+  state.unshift_value("SEARCHPATHS",vec![ObjectStore::String("d".to_string())]);
+  if let Some(vdq) = state.lookup_vecdeque("SEARCHPATHS") {
+    let mut vdq_expected = VecDeque::new();
+    for entry in ["d","a","b","c"].into_iter() {
+      vdq_expected.push_back(ObjectStore::String(entry.to_string()));
+    }
+    assert_eq!(vdq, &vdq_expected, "shift/unshift existing key");
+  } else {
+    panic!("state.lookup_vecdeque returned None");
+  }
+  
   // is(state.shift_value("SEARCHPATHS"), "d", "shift searchpaths");
   // is(state.pop_value("SEARCHPATHS"), "c", "pop searchpaths");
   // is(state.shift_value("SEARCHPATHS"), "a", "shift searchpaths");

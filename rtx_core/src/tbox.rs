@@ -5,7 +5,7 @@ use state::State;
 use std::collections::HashMap;
 
 /// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Tbox {
   // TODO
   pub text: String,

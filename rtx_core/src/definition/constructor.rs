@@ -83,6 +83,12 @@ impl Default for Constructor {
     }
   }
 }
+impl PartialEq for Constructor {
+  fn eq(&self, other: &Constructor) -> bool {
+    self.cs == other.cs
+  }
+}
+
 
 impl Object for Constructor {}
 impl Definition for Constructor {

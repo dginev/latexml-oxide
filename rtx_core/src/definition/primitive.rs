@@ -61,6 +61,12 @@ impl Default for Primitive {
     }
   }
 }
+impl PartialEq for Primitive {
+  fn eq(&self, other: &Primitive) -> bool {
+    self.cs == other.cs
+  }
+}
+
 
 impl Object for Primitive {}
 impl Definition for Primitive {
