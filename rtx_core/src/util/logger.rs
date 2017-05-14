@@ -1,7 +1,6 @@
 extern crate log;
 extern crate ansi_term;
 
-use ansi_term::ANSIByteString;
 use ansi_term::Style;
 use ansi_term::Colour::{Yellow, Red, Green, White};
 use log::{LogRecord, LogLevel, LogMetadata, SetLoggerError, LogLevelFilter};
@@ -43,19 +42,16 @@ impl log::Log for Log {
       };
       let details = record.args();
 
-      let message = format!("{}:{} {}\n", severity, category_object, details);
-      let painted_message : ANSIByteString = match record.level() {
-        LogLevel::Info => Style::default().paint(message.as_bytes()),
-        LogLevel::Warn => Yellow.paint(message.as_bytes()),
-        LogLevel::Error => Red.paint(message.as_bytes()),
-        LogLevel::Debug => Green.paint(message.as_bytes()),
-        _ => White.paint(message.as_bytes())
-      };
+      let message = format!("{}:{} ", severity, category_object);
+      let painted_message = match record.level() {
+        LogLevel::Info => Style::default().paint(message),
+        LogLevel::Warn => Yellow.paint(message),
+        LogLevel::Error => Red.paint(message),
+        LogLevel::Debug => Green.paint(message),
+        _ => White.paint(message)
+      }.to_string() + &details.to_string();
 
-      match painted_message.write_to((&mut ::std::io::stderr())) {
-        Ok(_) => {},
-        Err(x) => panic!("Unable to write to stderr: {}", x),
-      };
+      println_stderr!("{}", painted_message);
     }
   }
 }
