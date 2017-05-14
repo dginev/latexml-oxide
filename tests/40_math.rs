@@ -4,7 +4,7 @@
 extern crate rtx;
 use rtx::util::test::*;
 
-#[test]
+#[test] #[ignore]
 fn can_math() {
   rtx_tests("tests/math", None);
 }

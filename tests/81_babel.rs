@@ -5,7 +5,7 @@ extern crate rtx;
 use rtx::util::test::*;
 use std::collections::HashMap;
 
-#[test]
+#[test] #[ignore]
 fn can_babel() {
   let mut requires = HashMap::new();
   requires.insert("*", "babel.sty");
