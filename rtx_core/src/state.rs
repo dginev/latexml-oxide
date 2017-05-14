@@ -67,7 +67,7 @@ pub enum ObjectStore {
   VecString(Vec<String>),
   VecToken(Vec<Token>),
   VecDigested(Vec<::Digested>),
-  VecOS(Vec<ObjectStore>),
+  VecDequeOS(VecDeque<ObjectStore>),
   HashOS(HashMap<String, ObjectStore>)
 }
 
@@ -89,7 +89,7 @@ impl fmt::Debug for ObjectStore {
       &Font(ref font) => write!(f, "{:?}", font),
       &VecToken(ref token_vec) => write!(f, "{:?}", token_vec),
       &VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
-      &VecOS(ref vec) => write!(f, "VecOS({:?})", vec),
+      &VecDequeOS(ref vec) => write!(f, "VecDequeOS({:?})", vec),
       &HashOS(ref hos) => write!(f, "HashOS({:?})", hos),
     }
   }
@@ -582,16 +582,25 @@ impl State {
   // manage a (global) list of values
   pub fn push_value(&mut self, key: &str, value: ObjectStore) {
     if self.value.get(key).is_none() {
-      self.assign_internal(TableName::Value, key, ObjectStore::VecOS(Vec::new()), Some(Scope::Global));
+      self.assign_internal(TableName::Value, key, ObjectStore::VecDequeOS(VecDeque::new()), Some(Scope::Global));
     }
-    self.value.get_mut(key).unwrap().push_back(value);
+    if let Some(&mut ObjectStore::VecDequeOS(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
+      front.push_back(value);
+    } else {
+      error!(target: "state:objectstore", "BUG: Tried to push_value into a non-vecdeque value key!");
+    }
   }
 
   pub fn pop_value(&mut self, key: &str) -> Option<ObjectStore> {
     if self.value.get(key).is_none() {
-      self.assign_internal(TableName::Value, key, ObjectStore::VecOS(Vec::new()), Some(Scope::Global));
+      self.assign_internal(TableName::Value, key, ObjectStore::VecDequeOS(VecDeque::new()), Some(Scope::Global));
     }
-    self.value.get_mut(key).unwrap().pop_back()
+    if let Some(&mut ObjectStore::VecDequeOS(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
+      front.pop_back()
+    } else {
+      error!(target: "state:objectstore", "BUG: Tried to pop_value from a non-vecdeque value key!");
+      None
+    }
   }
 
   /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
@@ -603,18 +612,28 @@ impl State {
     }
   }
 
-  // pub fn unshift_value(&mut self, key,) {
-  //   my ($self, $key, @values) = @_;
-  //   my $vtable = $$self{value};
-  //   assign_internal($self, 'value', $key, [], 'global') unless $$vtable{$key}[0];
-  //   unshift(@{ $$vtable{$key}[0] }, @values);
-  //   return; }
+  pub fn unshift_value(&mut self, key: &str, values: Vec<ObjectStore>) {
+    if self.value.get(key).is_none() {
+      self.assign_internal(TableName::Value, key, ObjectStore::VecDequeOS(VecDeque::new()), Some(Scope::Global))
+    }
+    if let Some(&mut ObjectStore::VecDequeOS(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
+      for value in values.into_iter().rev() { // preserving order unshift, as Perl's
+        front.push_front(value)
+      }
+    }
+  }
 
-  // pub fn shift_value(&mut self) {
-  //   my ($self, $key) = @_;
-  //   my $vtable = $$self{value};
-  //   assign_internal($self, 'value', $key, [], 'global') unless $$vtable{$key}[0];
-  //   return shift(@{ $$vtable{$key}[0] }); }
+  pub fn shift_value(&mut self, key: &str) -> Option<ObjectStore> {
+    if self.value.get(key).is_none() {
+      self.assign_internal(TableName::Value, key, ObjectStore::VecDequeOS(VecDeque::new()), Some(Scope::Global))
+    }
+    if let Some(&mut ObjectStore::VecDequeOS(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
+      front.pop_front()
+    } else {
+      error!(target: "state:objectstore", "BUG: Tried to shift_value from a non-vecdeque value key!");
+      None
+    }
+  }
 
   /// manage a (global) hash of values
   pub fn lookup_mapping(&self, map: &str, key: &str) -> Option<&ObjectStore> {

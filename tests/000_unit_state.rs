@@ -107,9 +107,13 @@ fn assign_lookup_arrays() {
     Some(_) => panic!("Looked up value of SEARCHPATHS didn't match assignment value")
   };
 
-  // TODO:
-  // state.unshift_value("empty_key",ObjectStore::String("mydir".to_string()));
-  // is(state.shift_value("empty_key"), "mydir", "shift/unshift new key");
+  state.unshift_value("empty_key", vec![ObjectStore::String("mydir".to_string())]);
+  let shifted = state.shift_value("empty_key");
+  if let Some(ObjectStore::String(shifted_str)) = shifted {
+    assert_eq!(shifted_str, "mydir", "shift/unshift new key");
+  } else {
+    panic!("state.shift_value returned wrong/no ObjectStore")
+  }
 
   // state.unshift_value("SEARCHPATHS","d");
   // is_deeply(state.lookup_value("SEARCHPATHS"), ["d","a","b","c"], "shift/unshift existing key");
