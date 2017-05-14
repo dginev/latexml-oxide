@@ -121,6 +121,7 @@ impl Definition for Constructor {
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
     // let font   = state.lookup_value("font");
+
     let _ismath = match state.lookup_value("IN_MATH") {
         Some(& ObjectStore::Bool(v)) => v,
         _ => false
@@ -135,16 +136,14 @@ impl Definition for Constructor {
     args.truncate(nargs);
 
     // Compute any extra Whatsit properties (many end up as element attributes)
-    let props = HashMap::new();
-    // let props = self.options.properties;
-    // let properties = $$self{properties};
-    // my %props = (!defined $properties ? ()
-    //   : (ref $properties eq "CODE" ? &$properties($stomach, @args)
-    //     : %$properties));
-    // foreach let key (keys %props) {
-    //   let value = $props{$key};
+
+    let mut props = self.options.properties.clone();
+    // for (key, value) in props.iter() {
     //   if (ref $value eq 'CODE') {
     //     $props{$key} = &$value($stomach, @args); } }
+    // TODO: Handle fonts correclty
+
+    props.insert("font".to_owned(), ObjectStore::String(self.options.font.clone()));
     // $props{font}    = $font                                     unless defined $props{font};
     // $props{locator} = $stomach->getGullet->getMouth->getLocator unless defined $props{locator};
     // $props{isMath}  = $ismath                                   unless defined $props{isMath};

@@ -358,10 +358,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
      }
     },
     after_digest => sub!(|stomach, whatsit, state| {
-      let in_preamble = match state.lookup_value("inPreamble") {
-        Some(& ObjectStore::Bool(v)) => v,
-        _ => false
-      };
+      let in_preamble = state.lookup_bool("inPreamble");
       if in_preamble {
         whatsit.set_property("inPreamble", ObjectStore::Bool(true));
       } else {

@@ -75,7 +75,7 @@ impl fmt::Debug for ObjectStore {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     use state::ObjectStore::*;
     match self {
-      &String(ref s) => write!(f, "{:?}", s),
+      &String(ref s) => write!(f, "{}", s),
       &VecChar(ref vs) => write!(f, "{:?}",vs),
       &VecString(ref vs) => write!(f, "{:?}", vs),
       &Bool(ref b) => write!(f, "{:?}", b),

@@ -381,7 +381,7 @@ impl Mouth {
           })
         }
       }    // T_ALIGN
-      EOL => self.handle_end_of_line(ch, state),                                                 // T_EOL
+      EOL => self.handle_end_of_line(ch, state), // T_EOL
       PARAM => {
         if ch == '#' {
           Some(T_PARAM!())
@@ -427,10 +427,10 @@ impl Mouth {
     // Note that newines should be converted to space (with " " for content)
     // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
     let token = if self.colno == 1 {
-      T_CS!("\\par".to_string())
+      T_CS!("\\par")
     } else {
       if state.lookup_bool("PRESERVE_NEWLINES") {
-        Token!("\n".to_string(), Some(Catcode::SPACE))
+        Token!("\n", Some(Catcode::SPACE))
       } else {
         T_SPACE!()
       }

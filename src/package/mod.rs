@@ -285,7 +285,7 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
   };
   final_proto = final_proto.trim_left().to_string();
   let paramlist = try!(parse_parameters(final_proto, &cs, state));
-  Ok((cs, paramlist)) 
+  Ok((cs, paramlist))
 }
 
 lazy_static! {

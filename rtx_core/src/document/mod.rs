@@ -1019,9 +1019,10 @@ impl Document {
       let mut sorted_keys = attrs.keys().map(|k| k.to_string()).collect::<Vec<_>>();
       sorted_keys.sort();
       for key in sorted_keys.iter() {
-        if key == "font" || key == "locator" {
-          continue;
-        }
+        // TODO: Revisit when font and locator are flushed out
+        // if key == "font" || key == "locator" {
+        //   continue;
+        // }
         self.set_attribute(&mut newnode, key, &attrs.get(key).unwrap());
       }
     }
