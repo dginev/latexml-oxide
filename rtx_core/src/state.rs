@@ -824,8 +824,6 @@ impl State {
 
   pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, _key: &'def Token, _definition: Box<T>) {}
 
-  pub fn clear_prefixes<'cp>(&'cp mut self) {}
-
   /// And a shorthand for installing definitions
   pub fn install_definition<'id>(&'id mut self, definition: ObjectStore, scope: Option<Scope>) {
     // Locked definitions!!! (or should this test be in assignMeaning?)
@@ -935,12 +933,210 @@ impl State {
     self.pop_frame();
   }
 
+//   #======================================================================
+
+// sub pushDaemonFrame {
+//   my ($self) = @_;
+//   my $frame = {};
+//   unshift(@{ $$self{undo} }, $frame);
+//   # Push copys of data for any data that is mutable;
+//   # Only the value & stash tables need to be to be checked.
+//   # NOTE ??? No...
+//   foreach my $table (qw(value stash)) {
+//     if (my $hash = $$self{$table}) {
+//       foreach my $key (keys %$hash) {
+//         my $value = $$hash{$key}[0];
+//         my $type  = ref $value;
+//         if (($type eq 'HASH') || ($type eq 'ARRAY')) {    # Only concerned with mutable perl data?
+//                                                           # Local assignment
+//           $$frame{$table}{$key} = 1;                      # Note new value in this frame.
+//           unshift(@{ $$hash{$key} }, daemon_copy($value)); } } } }    # And push new binding.
+//       # Record the contents of LaTeXML::Package::Pool as preloaded
+//   my $pool_preloaded_hash = { map { $_ => 1 } keys %LaTeXML::Package::Pool:: };
+//   $self->assignValue('_PRELOADED_POOL_', $pool_preloaded_hash, 'global');
+//   # Now mark the top frame as LOCKED!!!
+//   $$frame{_FRAME_LOCK_} = 1;
+//   return; }
+
+// sub daemon_copy {
+//   my ($ob) = @_;
+//   if (ref $ob eq 'HASH') {
+//     my %hash = map { ($_ => daemon_copy($$ob{$_})) } keys %$ob;
+//     return \%hash; }
+//   elsif (ref $ob eq 'ARRAY') {
+//     return [map { daemon_copy($_) } @$ob]; }
+//   else {
+//     return $ob; } }
+
+// sub popDaemonFrame {
+//   my ($self) = @_;
+//   while (!$$self{undo}[0]{_FRAME_LOCK_}) {
+//     $self->popFrame; }
+//   if (scalar(@{ $$self{undo} } > 1)) {
+//     delete $$self{undo}[0]{_FRAME_LOCK_};
+//     # Any non-preloaded Pool routines should be wiped away, as we
+//     # might want to reuse the Pool namespaces for the next run.
+//     my $pool_preloaded_hash = $self->lookupValue('_PRELOADED_POOL_');
+//     $self->assignValue('_PRELOADED_POOL_', undef, 'global');
+//     foreach my $subname (keys %LaTeXML::Package::Pool::) {
+//       unless (exists $$pool_preloaded_hash{$subname}) {
+//         undef $LaTeXML::Package::Pool::{$subname};
+//         delete $LaTeXML::Package::Pool::{$subname};
+//       } }
+//     # Finally, pop the frame
+//     $self->popFrame; }
+//   else {
+//     Fatal('unexpected', '<endgroup>', $self->getStomach,
+//       "Daemon Attempt to pop last stack frame"); }
+//   return; }
+
+  // ======================================================================
+  // Set one of the definition prefixes global, etc (only global matters!)
+  pub fn set_prefix(&mut self, prefix: String) {
+    self.prefixes.insert(prefix, true);
+  }
+
+  pub fn get_prefix(&self, prefix: &str) -> bool {
+    match self.prefixes.get(prefix) {
+      Some(b) => *b,
+      _ => false
+    }
+  }
+
+  pub fn clear_prefixes(&mut self) {
+    self.prefixes = HashMap::new();
+  }
+
+// #======================================================================
+
+// sub activateScope {
+//   my ($self, $scope) = @_;
+//   if (!$$self{stash_active}{$scope}[0]) {
+//     assign_internal($self, 'stash_active', $scope, 1, 'local');
+//     if (defined(my $defns = $$self{stash}{$scope}[0])) {
+//       # Now make local assignments for all those in the stash.
+//       my $frame = $$self{undo}[0];
+//       foreach my $entry (@$defns) {
+//         # Here we ALWAYS push the stashed values into the table
+//         # since they may be popped off by deactivateScope
+//         my ($table, $key, $value) = @$entry;
+//         $$frame{$table}{$key}++;    # Note that this many values must be undone
+//         unshift(@{ $$self{$table}{$key} }, $value); } } }    # And push new binding.
+//   return; }
+
+// # Probably, in most cases, the assignments made by activateScope
+// # will be undone by egroup or popping frames.
+// # But they can also be undone explicitly
+// sub deactivateScope {
+//   my ($self, $scope) = @_;
+//   if ($$self{stash_active}{$scope}[0]) {
+//     assign_internal($self, 'stash_active', $scope, 0, 'global');
+//     if (defined(my $defns = $$self{stash}{$scope}[0])) {
+//       my $frame = $$self{undo}[0];
+//       foreach my $entry (@$defns) {
+//         my ($table, $key, $value) = @$entry;
+//         if ($$self{$table}{$key}[0] eq $value) {
+//           # Here we're popping off the values pushed by activateScope
+//           # to (possibly) reveal a local assignment in the same frame, preceding activateScope.
+//           shift(@{ $$self{$table}{$key} });
+//           $$frame{$table}{$key}--; }
+//         else {
+//           Warn('internal', $key, $self->getStomach,
+//             "Unassigning wrong value for $key from table $table in deactivateScope",
+//             "value is $value but stack is " . join(', ', @{ $$self{$table}{$key} })); } } } }
+//   return; }
+
+// sub getKnownScopes {
+//   my ($self) = @_;
+//   my @scopes = sort keys %{ $$self{stash} };
+//   return @scopes; }
+
+// sub getActiveScopes {
+//   my ($self) = @_;
+//   my @scopes = sort keys %{ $$self{stash_active} };
+//   return @scopes; }
+
+// #======================================================================
+// # Units.
+// #   Put here since it could concievably evolve to depend on the current font.
+
+// # Conversion to scaled points
+// my %UNITS = (    # [CONSTANT]
+//   pt => 65536, pc => 12 * 65536, in => 72.27 * 65536, bp => 72.27 * 65536 / 72,
+//   cm => 72.27 * 65536 / 2.54, mm => 72.27 * 65536 / 2.54 / 10, dd => 1238 * 65536 / 1157,
+//   cc => 12 * 1238 * 65536 / 1157, sp => 1);
+
+// sub convertUnit {
+//   my ($self, $unit) = @_;
+//   $unit = lc($unit);
+//   # Eventually try to track font size?
+//   if    ($unit eq 'em') { return 10.0 * 65536; }
+//   elsif ($unit eq 'ex') { return 4.3 * 65536; }
+//   elsif ($unit eq 'mu') { return 10.0 * 65536 / 18; }
+//   else {
+//     my $sp = $UNITS{$unit};
+//     if (!$sp) {
+//       Warn('expected', '<unit>', undef, "Illegal unit of measure '$unit', assuming pt.");
+//       $sp = $UNITS{'pt'}; }
+//     return $sp; } }
+
+// #======================================================================
+
+// sub noteStatus {
+//   my ($self, $type, @data) = @_;
+//   if ($type eq 'undefined') {
+//     map { $$self{status}{undefined}{$_}++ } @data; }
+//   elsif ($type eq 'missing') {
+//     map { $$self{status}{missing}{$_}++ } @data; }
+//   else {
+//     $$self{status}{$type}++; }
+//   return; }
+
+// sub getStatus {
+//   my ($self, $type) = @_;
+//   return $$self{status}{$type}; }
+
+// sub getStatusMessage {
+//   my ($self) = @_;
+//   my $status = $$self{status};
+//   my @report = ();
+//   push(@report, colorizeString("$$status{warning} warning" . ($$status{warning} > 1 ? 's' : ''), 'warning'))
+//     if $$status{warning};
+//   push(@report, colorizeString("$$status{error} error" . ($$status{error} > 1 ? 's' : ''), 'error'))
+//     if $$status{error};
+//   push(@report, "$$status{fatal} fatal error" . ($$status{fatal} > 1 ? 's' : ''))
+
+//     if $$status{fatal};
+//   my @undef = ($$status{undefined} ? keys %{ $$status{undefined} } : ());
+//   push(@report, colorizeString(scalar(@undef) . " undefined macro" . (@undef > 1 ? 's' : '')
+//         . "[" . join(', ', @undef) . "]", 'details'))
+//     if @undef;
+//   my @miss = ($$status{missing} ? keys %{ $$status{missing} } : ());
+//   push(@report, colorizeString(scalar(@miss) . " missing file" . (@miss > 1 ? 's' : '')
+//         . "[" . join(', ', @miss) . "]", 'details'))
+//     if @miss;
+//   return join('; ', @report) || colorizeString('No obvious problems', 'success'); }
+
+// sub getStatusCode {
+//   my ($self) = @_;
+//   my $status = $$self{status};
+//   my $code;
+//   if ($$status{fatal} && $$status{fatal} > 0) {
+//     $code = 3; }
+//   elsif ($$status{error} && $$status{error} > 0) {
+//     $code = 2; }
+//   elsif ($$status{warning} && $$status{warning} > 0) {
+//     $code = 1; }
+//   else {
+//     $code = 0; }
+//   return $code; }
+// #======================================================================
 
   /// The indirect model includes all elements allowed as direct children,
   /// and all descendents of a node that can be inserted after autoOpen'ing intermediate elements.
   /// This model therefor includes information from the Schema, as well as
   /// autoOpen information that may be introduced in binding files.
-  /// [Thus it should NOT be modifying the Model object, which may cover several documents in Daemon]
+  /// [Thus it should NOT be modifying the Model object, which may cover several documents in `]
   /// $imodel{$tag}{$child} => $open means if in $tag, to open $child, we must first open $open
   pub fn compute_indirect_model(&mut self) -> IndirectModel {
     let mut imodel : IndirectModel = HashMap::new();
@@ -1033,4 +1229,6 @@ impl State {
     // $STATE->assignValue(font     => LaTeXML::Common::Font->textDefault(), 'global');
     // $STATE->assignValue(mathfont => LaTeXML::Common::Font->mathDefault(), 'global');
   }
+
+
 }

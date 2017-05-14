@@ -1,8 +1,12 @@
-extern crate rtx_core;
+#[macro_use] extern crate rtx_core;
 
 use std::collections::{VecDeque, HashMap};
+use std::rc::Rc;
 use rtx_core::token::{Catcode};
 use rtx_core::state::*;
+// use rtx_core::token::*;
+// use rtx_core::tokens::*;
+use rtx_core::definition::expandable::Expandable;
 
 #[test]
 fn basic_state_init() {
@@ -125,7 +129,7 @@ fn assign_lookup_arrays() {
   } else {
     panic!("state.lookup_vecdeque returned None");
   }
-  
+
   assert_eq!(state.shift_value("SEARCHPATHS"), Some(ObjectStore::String("d".to_owned())), "shift searchpaths");
   assert_eq!(state.pop_value("SEARCHPATHS"), Some(ObjectStore::String("c".to_owned())), "pop searchpaths");
   assert_eq!(state.shift_value("SEARCHPATHS"), Some(ObjectStore::String("a".to_owned())), "shift searchpaths");
@@ -153,16 +157,24 @@ fn assign_lookup_arrays() {
 #[test]
 fn install_definition() {
   // TODO:
-  // let mut state = State::new(Model::default(), None);
-  // state.stomach.initialize();
-  // let job_definition = bless { cs => T_CS('\jobname'), parameters => undef, expansion => Tokens(Explode("name")),
-  //   locator     => "from unit test, line 99",
-  //   isProtected => state.getPrefix('protected')}, "LaTeXML::Core::Definition::Expandable";
+  let mut state = State::new(StateOptions::default());
+  state.initialize_stomach();
+  let job_definition = Expandable {
+    cs: T_CS!("\\jobname"),
+    paramlist: None,
+    // TODO: Should we always use Tokens in Expandables as opposed to Vec<Token>?
+    //       expansion: SimpleExpansion!(Tokens!(Explode!("name"))),
+    expansion: SimpleExpansion!(Explode!("name")),
+    locator: "from unit test, line 99".to_owned(),
+    is_protected: state.get_prefix("protected"),
+    ..Expandable::default()};
 
-  // state.installDefinition(job_definition);
-  // assert_eq!(state.lookupDefinition(T_CS('\jobname')),job_definition,"Lookup definition");
-  // isa_ok(state.lookupDefinition(T_CS('\jobname')),"LaTeXML::Core::Definition::Expandable");
-
+  state.install_definition(ObjectStore::Expandable(Rc::new(job_definition)), None);
+  if let Some(ObjectStore::Expandable(stored_definition)) = state.lookup_definition(&T_CS!("\\jobname")) {
+    assert_eq!(stored_definition.cs, T_CS!("\\jobname"));
+  } else {
+    panic!("Failed to lookup installed definition!");
+  }
 }
 
 #[test]

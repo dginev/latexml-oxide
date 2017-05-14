@@ -49,6 +49,7 @@ impl Object for Expandable {
     true
   }
 }
+
 impl Definition for Expandable {
   fn is_protected(&self) -> bool {
     self.is_protected
@@ -107,3 +108,10 @@ impl Expandable {
     closure(gullet, args, state)
   }
 }
+
+#[macro_export]
+macro_rules! SimpleExpansion(($tokens:expr ) => ({
+  use std::rc::Rc;
+  Rc::new(move |_gullet, _args, _state| Ok($tokens))
+}));
+

@@ -1,4 +1,4 @@
-pub mod expandable;
+#[macro_use]pub mod expandable;
 pub mod constructor;
 pub mod primitive;
 

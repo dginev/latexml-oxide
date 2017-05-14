@@ -20,6 +20,12 @@ impl Default for Tokens {
   }
 }
 
+#[macro_export]
+macro_rules! Tokens(($( $tokens:expr ),*) => ({
+  use $crate::tokens::Tokens;
+  Tokens { tokens: vec![$($tokens)*] }
+}));
+
 impl Tokens {
   pub fn new(tokens : Vec<Token>) -> Self {
     Tokens { tokens: tokens }
