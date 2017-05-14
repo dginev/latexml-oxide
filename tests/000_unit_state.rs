@@ -126,24 +126,27 @@ fn assign_lookup_arrays() {
     panic!("state.lookup_vecdeque returned None");
   }
   
-  // is(state.shift_value("SEARCHPATHS"), "d", "shift searchpaths");
-  // is(state.pop_value("SEARCHPATHS"), "c", "pop searchpaths");
-  // is(state.shift_value("SEARCHPATHS"), "a", "shift searchpaths");
-  // is(state.pop_value("SEARCHPATHS"), "b", "pop searchpaths");
-  // is(state.shift_value("SEARCHPATHS"), undef, "shift searchpaths undef");
-  // is(state.pop_value("SEARCHPATHS"), undef, "pop searchpaths undef");
-  // is_deeply(state.lookup_value("SEARCHPATHS"), [], "lookup searchpaths []");
+  assert_eq!(state.shift_value("SEARCHPATHS"), Some(ObjectStore::String("d".to_owned())), "shift searchpaths");
+  assert_eq!(state.pop_value("SEARCHPATHS"), Some(ObjectStore::String("c".to_owned())), "pop searchpaths");
+  assert_eq!(state.shift_value("SEARCHPATHS"), Some(ObjectStore::String("a".to_owned())), "shift searchpaths");
+  assert_eq!(state.pop_value("SEARCHPATHS"), Some(ObjectStore::String("b".to_owned())), "pop searchpaths");
+  assert_eq!(state.shift_value("SEARCHPATHS"), None, "shift searchpaths None");
+  assert_eq!(state.pop_value("SEARCHPATHS"), None, "pop searchpaths None");
+  assert_eq!(state.lookup_value("SEARCHPATHS"), Some(& ObjectStore::VecDequeOS(VecDeque::new())), "lookup searchpaths []");
 
-  // state.assign_value("SEARCHPATHS", ["a","b","c"]);
-  // state.pushValue("SEARCHPATHS","d");
-  // is_deeply(state.lookup_value("SEARCHPATHS"), ["a","b","c","d"], "push/pop existing key");
-  // is(state.pop_value("SEARCHPATHS"), "d", "pop searchpaths");
-  // is(state.shift_value("SEARCHPATHS"), "a", "shift searchpaths");
-  // is(state.pop_value("SEARCHPATHS"), "c", "pop searchpaths");
-  // is(state.pop_value("SEARCHPATHS"), "b", "pop searchpaths");
-  // is(state.shift_value("SEARCHPATHS"), undef, "shift searchpaths undef");
-  // is(state.pop_value("SEARCHPATHS"), undef, "pop searchpaths undef");
-  // is_deeply(state.lookup_value("SEARCHPATHS"), [], "lookup searchpaths []");
+  let mut vdq = ["a","b","c"].iter().map(|x| ObjectStore::String(x.to_string())).collect::<VecDeque<ObjectStore>>();
+  state.assign_value("SEARCHPATHS", ObjectStore::VecDequeOS(vdq.clone()), None);
+  let new_d = ObjectStore::String("d".to_owned());
+  state.push_value("SEARCHPATHS",new_d.clone());
+  vdq.push_back(new_d.clone());
+  assert_eq!(state.lookup_value("SEARCHPATHS"), Some(&ObjectStore::VecDequeOS(vdq)), "push works as intended");
+  assert_eq!(state.pop_value("SEARCHPATHS"), Some(new_d), "pop searchpaths");
+  assert_eq!(state.shift_value("SEARCHPATHS"), Some(ObjectStore::String("a".to_owned())), "shift searchpaths");
+  assert_eq!(state.pop_value("SEARCHPATHS"), Some(ObjectStore::String("c".to_owned())), "pop searchpaths");
+  assert_eq!(state.pop_value("SEARCHPATHS"), Some(ObjectStore::String("b".to_owned())), "pop searchpaths");
+  assert_eq!(state.shift_value("SEARCHPATHS"), None, "shift searchpaths None");
+  assert_eq!(state.pop_value("SEARCHPATHS"), None, "pop searchpaths None");
+  assert_eq!(state.lookup_value("SEARCHPATHS"), Some(& ObjectStore::VecDequeOS(VecDeque::new())), "lookup searchpaths []");
 
 }
 
@@ -157,7 +160,7 @@ fn install_definition() {
   //   isProtected => state.getPrefix('protected')}, "LaTeXML::Core::Definition::Expandable";
 
   // state.installDefinition(job_definition);
-  // is(state.lookupDefinition(T_CS('\jobname')),job_definition,"Lookup definition");
+  // assert_eq!(state.lookupDefinition(T_CS('\jobname')),job_definition,"Lookup definition");
   // isa_ok(state.lookupDefinition(T_CS('\jobname')),"LaTeXML::Core::Definition::Expandable");
 
 }
@@ -166,10 +169,10 @@ fn install_definition() {
 fn assign_lookup_meaning() {
   // # 9. Assign a Meaning
   // state.assign_meaning(T_CS('\foobar'),$job_definition,"local");
-  // is(state.lookupMeaning(T_CS('\foobar')),$job_definition,"Lookup meaning");
+  // assert_eq!(state.lookupMeaning(T_CS('\foobar')),$job_definition,"Lookup meaning");
   // state.assign_meaning(T_CS('\foolet'),state.lookupMeaning(T_CS('\foobar')));
-  // is(state.lookup_meaning(T_CS('\foolet')), state.lookupMeaning(T_CS('\foobar')),"Meanings match");
-  // is(state.lookup_meaning(T_CS('\foolet')),$job_definition,"Lookup Let meaning");
+  // assert_eq!(state.lookup_meaning(T_CS('\foolet')), state.lookupMeaning(T_CS('\foobar')),"Meanings match");
+  // assert_eq!(state.lookup_meaning(T_CS('\foolet')),$job_definition,"Lookup Let meaning");
 }
 
 #[test]
@@ -180,12 +183,12 @@ fn assign_lookup_mapping() {
   // my $props = state.lookupMapping('TAG_PROPERTIES', "tag");
   // is_deeply($props,{},"Empty mapping hash roundtrip");
   // my $undef_val = $$props{"afterOpen"};
-  // is($undef_val,undef,"Surviving a lookup of a new key");
+  // assert_eq!($undef_val,undef,"Surviving a lookup of a new key");
 
   // my $wdr_url = "http://www.w3.org/2007/05/powder#";
   // state.assignMapping("RDFa_prefixes",
   //  "wdr"     => $wdr_url);
-  // is(state.lookupMapping("RDFa_prefixes","wdr"),$wdr_url,"asssign/lookupMapping roundtrip");
+  // assert_eq!(state.lookupMapping("RDFa_prefixes","wdr"),$wdr_url,"asssign/lookupMapping roundtrip");
   // my %rdf_prefixes = (
   //   "cc"      => "http://creativecommons.org/ns#",
   //   "ctag"    => "http://commontag.org/ns#",
@@ -252,9 +255,9 @@ fn texy_ops() {
   //     $mock1);
   // my @mocks = ($mock2,$mock3);
   // state.pushValue('DOCUMENT_REWRITE_RULES',@mocks);
-  // is(state.shift_value('DOCUMENT_REWRITE_RULES'),$mock1,"shift_value 1");
-  // is(state.shift_value('DOCUMENT_REWRITE_RULES'),$mock2,"shift_value 2");
-  // is(state.shift_value('DOCUMENT_REWRITE_RULES'),$mock3,"shift_value 3");
+  // assert_eq!(state.shift_value('DOCUMENT_REWRITE_RULES'),$mock1,"shift_value 1");
+  // assert_eq!(state.shift_value('DOCUMENT_REWRITE_RULES'),$mock2,"shift_value 2");
+  // assert_eq!(state.shift_value('DOCUMENT_REWRITE_RULES'),$mock3,"shift_value 3");
 
   // state.pushValue("PENDING_RESOURCES" => ["resource1", foo => 1, bar => 2]);
   // state.pushValue("PENDING_RESOURCES" => ["resource2", baz => 3, bam => 4]);
