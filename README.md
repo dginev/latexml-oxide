@@ -1,5 +1,9 @@
 # rtx
-A Rust port of LaTeXML. Why?
+A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
+
+[![Build Status](https://travis-ci.com/dginev/rtx.svg?token=JKuszfgzJQJUFzH9JaLd&branch=master)](https://travis-ci.com/dginev/rtx#)
+
+### Why?
 
 The two main reasons:
 
