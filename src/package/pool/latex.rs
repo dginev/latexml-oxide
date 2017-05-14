@@ -190,9 +190,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Let('\@currext',  '\@empty');
   // Let('\@currname', '\@empty');
   fn only_preamble(cs: &str, state: &mut State) {
-    if state.lookup_bool("inPreamble") {
-      // Error('unexpected', $cs, $STATE->getStomach,
-      // "The current command '" . ToString($cs) . "' can only appear in the preamble")
+    if !state.lookup_bool("inPreamble") {
       let category_object = format!("unexpected:{:?}", cs);
       error!(target: &category_object, "The current command can only appear in the preamble");
     }
