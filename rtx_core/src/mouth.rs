@@ -1,3 +1,4 @@
+use std::io;
 use std::io::prelude::*;
 use std::fs::File;
 use std::collections::VecDeque;
@@ -71,17 +72,18 @@ impl Default for Mouth {
 }
 
 impl Mouth {
-  pub fn open<'open>(&'open mut self, content: &str, mut state: &mut State) {
+  pub fn open<'open>(&'open mut self, content: &str, mut state: &mut State) -> Result<()> {
     match self.foodtype {
-      FoodType::File => self.open_file(content),
+      FoodType::File => try!(self.open_file(content)),
       FoodType::Literal => self.open_literal(content),
       FoodType::HTTP => self.open_http(content),
       FoodType::HTTPS => self.open_https(content),
-      FoodType::Binding => self.open_file(content),
+      FoodType::Binding => try!(self.open_file(content)),
     };
     self.initialize(&mut state);
+    Ok(())
   }
-  fn open_file(&mut self, pathname: &str) {
+  fn open_file(&mut self, pathname: &str) -> Result<()> {
     match self.foodtype {
       FoodType::File => {
         // TODO: Handle errors
@@ -92,15 +94,23 @@ impl Mouth {
         //   || Fatal('I/O', $pathname, $self, "Can't open $pathname for reading", $!);
 
 
-        let mut f = File::open(pathname).unwrap();
-        let mut content = String::new();
-        match f.read_to_string(&mut content) {
-          _ => {}
+        let mut f = match File::open(pathname) {
+          Ok(handle) => handle,
+          Err(e) => {
+            if e.kind() == io::ErrorKind::NotFound {
+              fatal!(Mouth, MissingFile, format!("Can't find file {}", pathname));
+            } else {
+              return Err(e.into())
+            }
+          }
         };
+        let mut content = String::new();
+        try!(f.read_to_string(&mut content));
         self.open_literal(&content);
       }
       _ => {}
     }
+    Ok(())
   }
   fn open_literal(&mut self, content: &str) {
     self.buffer = Mouth::split_lines(content);

@@ -103,7 +103,7 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
 
 pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
   match find_file(request, false) { // TODO: type => $options{type}, noltxml => 1
-    Some(path) => Ok(load_tex_content(core, path)),
+    Some(path) => load_tex_content(core, path),
     None => fatal!(Package, MissingFile, request.to_owned()),
     // TODO:
     // Error("missing_file", request, state.get_stomach().get_gullet(),
@@ -111,9 +111,9 @@ pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
   }
 }
 
-pub fn load_tex_content(core: &mut Core, path: String) {
+pub fn load_tex_content(core: &mut Core, path: String) -> Result<()> {
   let mut mouth = Mouth { notes: true, ..Mouth::default() };
-  mouth.open(&path, &mut core.state);
+  try!(mouth.open(&path, &mut core.state));
   // TODO:
   // If there is a file-specific declaration file (name.latexml), load it first!
   // let file = path;
@@ -128,7 +128,7 @@ pub fn load_tex_content(core: &mut Core, path: String) {
   // Open a mouth for that TeX content
   let gullet = core.stomach.get_gullet_mut();
   gullet.open_mouth(mouth, true);
-
+  Ok(())
 }
 
 pub struct RequireOptions {

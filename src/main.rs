@@ -39,18 +39,13 @@ fn main() {
   }
   // Perform the conversion:
   let response = converter.convert(source);
-  match response {
-    Ok(r) => {
-      // TODO: Should never have to handle the response log for print?
-      //       the right arguments can be passed in so that the response is either captured - and passed, or printed internally by the logger
-      // info!("{:?}\n\n", r.log);
-      if let Some(xml) = r.result {
-        info!("{}", xml);
-      }
-    }
-    Err(e) => error!(target: "converter:response", "{:?}", e),
-  };
-
+  
+  // TODO: Should never have to handle the response log for print?
+  //       the right arguments can be passed in so that the response is either captured - and passed, or printed internally by the logger
+  // info!("{:?}\n\n", r.log);
+  if let Some(xml) = response.result {
+    info!("{}", xml);
+  }
 
   // Normal exit
   process::exit(0);

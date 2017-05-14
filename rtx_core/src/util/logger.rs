@@ -26,23 +26,29 @@ impl log::Log for Log {
 
   fn log(&self, record: &LogRecord) {
     if self.enabled(record.metadata()) {
-      // Following the reporting syntax at: http://dlmf.nist.gov/LaTeXML/manual/errorcodes/
-      let severity = match record.level() {
-        LogLevel::Info => "Info",
-        LogLevel::Warn => "Warn",
-        LogLevel::Error => "Error",
-        LogLevel::Debug => "Debug",
-        _ => ""
-      };
       let record_target = record.target();
       let category_object = if record_target.is_empty() {
        "" // "unknown:unknown" ???
       } else {
         record_target
       };
+      // Following the reporting syntax at: http://dlmf.nist.gov/LaTeXML/manual/errorcodes/
+      let severity = if category_object.starts_with("Fatal:") {
+          ""
+        } else { match record.level() {
+          LogLevel::Info => "Info",
+          LogLevel::Warn => "Warn",
+          LogLevel::Error => "Error",
+          LogLevel::Debug => "Debug",
+          _ => ""
+        } };      
       let details = record.args();
 
-      let message = format!("{}:{} ", severity, category_object);
+      let message = if severity.is_empty() {
+        format!("{} ", category_object)
+      } else {
+        format!("{}:{} ", severity, category_object)
+      };
       let painted_message = match record.level() {
         LogLevel::Info => Style::default().paint(message),
         LogLevel::Warn => Yellow.paint(message),

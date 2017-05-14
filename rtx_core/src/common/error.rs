@@ -15,6 +15,7 @@ pub enum ErrorTarget {
   Package,
   Parameter,
   Converster,
+  Mouth,
 }
 
 #[derive(Debug)]
@@ -77,6 +78,19 @@ impl ErrorTrait for Error {
       _ => None,
     }
   }
+}
+
+impl Error {
+  pub fn log_fatal(&self) {
+    let target_str = format!("Fatal:{:?}:{:?} ",self.target, self.category);
+    error!(target: &target_str, "{}", self.message);
+  }
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Error {
+        Error{target: ErrorTarget::Mouth, category: ErrorCategory::Io(err), message: "IO error".to_owned()}
+    }
 }
 
 pub fn note_end(note: &str) {

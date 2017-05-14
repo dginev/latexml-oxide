@@ -10,8 +10,8 @@ fn can_convert_hello() {
   let html_config = Config { format: OutputFormat::HTML5, ..Config::new() };
   let converter = Converter::from_config(html_config);
   let conversion_result = converter.convert(hello_source.to_string());
-  assert!(conversion_result.is_ok());
-  let response = conversion_result.unwrap();
+  assert!(conversion_result.result.is_some());
+  let response = conversion_result;
   assert!(response.log.len() > 0);
   println!("Log: \n{:?}", response.log);
   assert!(response.result.is_some());

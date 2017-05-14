@@ -55,20 +55,22 @@ impl Converter {
     "mock flush log".to_string()
   }
 
-  pub fn convert(mut self, source: String) -> Result<ConversionResponse> {
+  pub fn convert(mut self, source: String) -> ConversionResponse {
     // 1 Prepare for conversion
     // 1.1 Initialize session if needed:
     if !self.ready {
-      try!(self.initialize_session())
-    }
-    if !self.ready {
-      // We can't initialize, return error:
-      return Ok(ConversionResponse {
-        result: None,
-        log: self.flush_log(),
-        status: "Initialization failed.".to_string(),
-        status_code: 3,
-      });
+      if let Err(e) = self.initialize_session() {
+        // We can't initialize, return error:
+        e.log_fatal();
+      }
+      if !self.ready {
+        return ConversionResponse {
+          result: None,
+          log: self.flush_log(),
+          status: "Initialization failed.".to_string(),
+          status_code: 3,
+        };
+      }
     }
 
     self.bind_log();
@@ -163,7 +165,11 @@ impl Converter {
                                          self.opts.mode.clone(),
                                          true);
     let digested = match digest_result {
-      Err(_) => Digested::List(List { boxes: Vec::new(), mode: TexMode::Text }), // TODO digestion failed, report
+      Err(e) => {
+        // TODO digestion failed, report
+        e.log_fatal();
+        Digested::List(List { boxes: Vec::new(), mode: TexMode::Text })
+      }
       Ok(d) => d,
     };
     // 2.1 Now, convert to DOM and output, if desired.
@@ -295,12 +301,12 @@ impl Converter {
     let log = self.flush_log();
     // self->sanitize($log) if ($$runtime{status_code} == 3);
 
-    Ok(ConversionResponse {
+    ConversionResponse {
       result: Some(serialized),
       log: log,
       status: self.runtime.status.clone(),
       status_code: self.runtime.status_code,
-    })
+    }
   }
 
 
