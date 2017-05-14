@@ -155,8 +155,7 @@ fn assign_lookup_arrays() {
 }
 
 #[test]
-fn install_definition() {
-  // TODO:
+fn install_definition_and_meaning() {
   let mut state = State::new(StateOptions::default());
   state.initialize_stomach();
   let job_definition = Expandable {
@@ -168,23 +167,28 @@ fn install_definition() {
     locator: "from unit test, line 99".to_owned(),
     is_protected: state.get_prefix("protected"),
     ..Expandable::default()};
-
-  state.install_definition(ObjectStore::Expandable(Rc::new(job_definition)), None);
+  let job_definition_os = ObjectStore::Expandable(Rc::new(job_definition));
+  // Install a Definition
+  state.install_definition(job_definition_os.clone(), None);
   if let Some(ObjectStore::Expandable(stored_definition)) = state.lookup_definition(&T_CS!("\\jobname")) {
     assert_eq!(stored_definition.cs, T_CS!("\\jobname"));
   } else {
     panic!("Failed to lookup installed definition!");
   }
-}
 
-#[test]
-fn assign_lookup_meaning() {
-  // # 9. Assign a Meaning
-  // state.assign_meaning(T_CS('\foobar'),$job_definition,"local");
-  // assert_eq!(state.lookupMeaning(T_CS('\foobar')),$job_definition,"Lookup meaning");
-  // state.assign_meaning(T_CS('\foolet'),state.lookupMeaning(T_CS('\foobar')));
-  // assert_eq!(state.lookup_meaning(T_CS('\foolet')), state.lookupMeaning(T_CS('\foobar')),"Meanings match");
-  // assert_eq!(state.lookup_meaning(T_CS('\foolet')),$job_definition,"Lookup Let meaning");
+  // Assign a Meaning
+  state.assign_meaning(&T_CS!("\\foobar"),job_definition_os, Some(Scope::Local));
+  if let Some(& ObjectStore::Expandable(ref stored_meaning)) = state.lookup_meaning(&T_CS!("\\foobar")) {
+    assert_eq!(stored_meaning.cs, T_CS!("\\jobname")); // Note: meaning for \foobar still has definition for CS \jobname
+  } else {
+    panic!("Failed to lookup installed meaning!");
+  }
+
+  let looked_up_meaning = { state.lookup_meaning(&T_CS!("\\foobar")).unwrap().clone() };
+  {
+    state.assign_meaning(&T_CS!("\\foolet"), looked_up_meaning.clone(), Some(Scope::Local));
+  }
+  assert_eq!(state.lookup_meaning(&T_CS!("\\foolet")), Some(&looked_up_meaning),"Meanings match");
 }
 
 #[test]
@@ -284,7 +288,9 @@ fn texy_ops() {
 #[test]
 fn semiverbatim() {
   let mut state = State::new(StateOptions::default());
+  // TODO: Test with char catcodes
 
   state.begin_semiverbatim(None);
+
   state.end_semiverbatim();
 }
