@@ -52,9 +52,7 @@ impl fmt::Display for DigestionMode {
 impl DigestionMode {
   pub fn extension(&self) -> String {
     match *self {
-      DigestionMode::TeX => "tex",
-      DigestionMode::LaTeX => "tex",
-      DigestionMode::AmSTeX => "tex",
+      DigestionMode::TeX | DigestionMode::LaTeX | DigestionMode::AmSTeX => "tex",
       DigestionMode::BibTeX => "bib",
     }
     .to_string()
@@ -70,8 +68,8 @@ pub struct Config {
   pub postamble: Option<String>,
   pub mode: Option<DigestionMode>,
 }
-impl Config {
-  pub fn new() -> Config {
+impl Default for Config {
+  fn default() -> Self {
     Config {
       verbosity: 1,
       format: OutputFormat::XML,

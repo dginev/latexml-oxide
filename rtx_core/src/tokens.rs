@@ -41,11 +41,6 @@ impl Tokens {
     self.tokens.is_empty()
   }
 
-  /// Return a shallow copy of the Tokens
-  pub fn clone(&self) -> Self {
-    Tokens { tokens: self.tokens.clone() }
-  }
-
   /// Return a string containing the TeX form of the Tokens
   pub fn revert(self) -> Vec<Token> {
     self.tokens
@@ -85,7 +80,7 @@ impl Tokens {
     stomach.digest(self, state)
   }
 
-  pub fn neutralize(self, extraspecials: &Vec<Token>, state: &State) -> Tokens {
+  pub fn neutralize(self, extraspecials: &[Token], state: &State) -> Tokens {
     Tokens {
       tokens: self.tokens.into_iter().map(|t| t.neutralize(extraspecials, state) ).collect::<Vec<_>>()
     }

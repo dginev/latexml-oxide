@@ -146,10 +146,10 @@ pub enum Digested {
 }
 impl fmt::Debug for Digested {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    match self {
-      &Digested::Box(ref v) => write!(f, "{:?}", v),
-      &Digested::List(ref v) => write!(f, "{:?}", v),
-      &Digested::Whatsit(ref v) => write!(f, "{:?}", v),
+    match *self {
+      Digested::Box(ref v) => write!(f, "{:?}", v),
+      Digested::List(ref v) => write!(f, "{:?}", v),
+      Digested::Whatsit(ref v) => write!(f, "{:?}", v),
     }
   }
 }
@@ -172,18 +172,18 @@ impl BoxOps for Digested {
   }
 
   fn to_string(&self) -> String {
-    match self {
-      &Digested::Box(ref b) => b.to_string(),
-      &Digested::List(ref l) => l.to_string(),
-      &Digested::Whatsit(ref w) => w.to_string(),
+    match *self {
+      Digested::Box(ref b) => b.to_string(),
+      Digested::List(ref l) => l.to_string(),
+      Digested::Whatsit(ref w) => w.to_string(),
     }
   }
 
   fn stringify(&self) -> String {
-    match self {
-      &Digested::Box(ref b) => b.stringify(),
-      &Digested::List(ref l) => l.stringify(),
-      &Digested::Whatsit(ref w) => w.stringify(),
+    match *self {
+      Digested::Box(ref b) => b.stringify(),
+      Digested::List(ref l) => l.stringify(),
+      Digested::Whatsit(ref w) => w.stringify(),
     }
   }
 }

@@ -74,41 +74,37 @@ impl Default for Mouth {
 impl Mouth {
   pub fn open<'open>(&'open mut self, content: &str, mut state: &mut State) -> Result<()> {
     match self.foodtype {
-      FoodType::File => try!(self.open_file(content)),
+      FoodType::File | FoodType::Binding => try!(self.open_file(content)),
       FoodType::Literal => self.open_literal(content),
       FoodType::HTTP => self.open_http(content),
       FoodType::HTTPS => self.open_https(content),
-      FoodType::Binding => try!(self.open_file(content)),
     };
     self.initialize(&mut state);
     Ok(())
   }
   fn open_file(&mut self, pathname: &str) -> Result<()> {
-    match self.foodtype {
-      FoodType::File => {
-        // TODO: Handle errors
-        //   Fatal('I/O', $pathname, $self, "File $pathname is not readable."); }
-        // elsif ((!-z $pathname) && (-B $pathname)) {
-        //   Fatal('I/O', $pathname, $self, "Input file $pathname appears to be binary."); }
-        // open($IN, '<', $pathname)
-        //   || Fatal('I/O', $pathname, $self, "Can't open $pathname for reading", $!);
+    if self.foodtype == FoodType::File {
+      // TODO: Handle errors
+      //   Fatal('I/O', $pathname, $self, "File $pathname is not readable."); }
+      // elsif ((!-z $pathname) && (-B $pathname)) {
+      //   Fatal('I/O', $pathname, $self, "Input file $pathname appears to be binary."); }
+      // open($IN, '<', $pathname)
+      //   || Fatal('I/O', $pathname, $self, "Can't open $pathname for reading", $!);
 
 
-        let mut f = match File::open(pathname) {
-          Ok(handle) => handle,
-          Err(e) => {
-            if e.kind() == io::ErrorKind::NotFound {
-              fatal!(Mouth, MissingFile, format!("Can't find file {}", pathname));
-            } else {
-              return Err(e.into())
-            }
+      let mut f = match File::open(pathname) {
+        Ok(handle) => handle,
+        Err(e) => {
+          if e.kind() == io::ErrorKind::NotFound {
+            fatal!(Mouth, MissingFile, format!("Can't find file {}", pathname));
+          } else {
+            return Err(e.into())
           }
-        };
-        let mut content = String::new();
-        try!(f.read_to_string(&mut content));
-        self.open_literal(&content);
-      }
-      _ => {}
+        }
+      };
+      let mut content = String::new();
+      try!(f.read_to_string(&mut content));
+      self.open_literal(&content);
     }
     Ok(())
   }
@@ -120,15 +116,13 @@ impl Mouth {
   // fn open_binding(&mut self, _content: &str) {}
 
   fn initialize(&mut self, state: &mut State) {
-    self.note_message = match self.notes {
-      true => {
-        match self.fordefinitions {
-          true => Some("Processing definitions".to_string()),
-          false => Some("Processing content".to_string()),
-        }
+    self.note_message = if self.notes {
+      if self.fordefinitions {
+        Some("Processing definitions".to_string())
+      } else {
+        Some("Processing content".to_string())
       }
-      false => None,
-    };
+    } else { None };
     if self.fordefinitions {
       self.saved_at_cc = state.lookup_catcode(&'@');
       self.saved_include_comments = match state.lookup_value("INCLUDE_COMMENTS") {
@@ -149,24 +143,19 @@ impl Mouth {
     self.chars = VecDeque::new();
     self.nchars = 0;
     if self.fordefinitions {
-      match self.saved_at_cc.clone() {
-        Some(cc) => state.assign_catcode('@', cc, None),
-        None => {}
-      };
-      match self.saved_include_comments {
-        Some(sic) => {
-          state.assign_value("INCLUDE_COMMENTS",
-                             ObjectStore::Bool(sic),
-                             Some(Scope::Local))
-        }
-        None => {}
-      };
+      if let Some(cc) = self.saved_at_cc {
+        state.assign_catcode('@', cc, None);
+      }
+      if let Some(sic) = self.saved_include_comments {
+        state.assign_value("INCLUDE_COMMENTS",
+                           ObjectStore::Bool(sic),
+                           Some(Scope::Local))
+      }
     }
     if self.notes {
-      match self.note_message {
-        Some(ref msg) => note_end(msg),
-        _ => {}
-      };
+      if let Some(ref msg) = self.note_message {
+        note_end(msg);
+      }
     }
   }
   // Auxiliaries
@@ -232,7 +221,7 @@ impl Mouth {
             // ch = chr(hex($c1 . $c2));
             // splice(@{ self.chars }, self.colno - 1, 4, $ch);
             // self.nchars -= 3;
-          } else {
+          } // else {
             // OR ^^ followed by a SINGLE Control char type code???
             // TODO:
             // let mut c  = self.chars.get(self.colno + 1);
@@ -240,7 +229,7 @@ impl Mouth {
             // $ch = chr($cn + ($cn > 64 ? -64 : 64));
             // splice(@{ self.chars }, self.colno - 1, 3, $ch);
             // self.nchars -= 2;
-          }
+          // }
           cc = state.lookup_catcode(ch);
         }
         if cc.is_none() {
@@ -308,13 +297,10 @@ impl Mouth {
             // Sneak a comment out, every so often.
             if (self.lineno % 25) == 0 {
               let include_comments: Option<&ObjectStore> = state.lookup_value("INCLUDE_COMMENTS");
-              match include_comments {
-                Some(&ObjectStore::Bool(ref x)) => {
-                  if *x {
-                    return Some(T_COMMENT!("**** ".to_string() + &self.shortsource + " Line " + &self.lineno.to_string() + " ****"));
-                  }
+              if let Some(&ObjectStore::Bool(ref x)) = include_comments {
+                if *x {
+                  return Some(T_COMMENT!("**** ".to_string() + &self.shortsource + " Line " + &self.lineno.to_string() + " ****"));
                 }
-                _ => {}
               }
             }
           }
@@ -322,14 +308,11 @@ impl Mouth {
       }
       // ==== Extract next token from line.
       match self.get_next_char(state) {
-        None => {}
+        None => {},
         Some((ch, cc)) => {
-          match Mouth::dispatch_char(self, ch, cc, state) {
-            Some(token) => {
-              return Some(token);
-            }
-            None => {}// Else, repeat till we get something or run out.
-          };
+          if let Some(token) = Mouth::dispatch_char(self, ch, cc, state) {
+            return Some(token);
+          } // Else, repeat till we get something or run out.
         }
       }
     }
@@ -412,14 +395,13 @@ impl Mouth {
           })
         }
       }      // T_SUB
-      IGNORE => None,
       SPACE => self.handle_space(ch, state),
       LETTER => Some(T_LETTER!(ch.to_string())),
       OTHER => Some(T_OTHER!(ch.to_string())),
       ACTIVE => Some(T_ACTIVE!(ch.to_string())),
       COMMENT => self.handle_comment(ch, state),
       INVALID => Some(T_OTHER!(ch.to_string())), // T_INVALID (we could get unicode!)
-      _ => None,
+      _ => None, // IGNORE, others
     }
   }
 
@@ -428,15 +410,13 @@ impl Mouth {
     // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
     let token = if self.colno == 1 {
       T_CS!("\\par")
+    } else if state.lookup_bool("PRESERVE_NEWLINES") {
+      Token!("\n", Some(Catcode::SPACE))
     } else {
-      if state.lookup_bool("PRESERVE_NEWLINES") {
-        Token!("\n", Some(Catcode::SPACE))
-      } else {
-        T_SPACE!()
-      }
+      T_SPACE!()
     };
     self.colno = self.nchars; // Ignore any remaining characters after EOL
-    return Some(token);
+    Some(token)
   }
 
   fn handle_space(&mut self, _c: char, state: &mut State) -> Option<Token> {
@@ -454,7 +434,7 @@ impl Mouth {
     if self.colno < self.nchars {
       self.colno -= 1;
     }
-    return Some(T_SPACE!());
+    Some(T_SPACE!())
   }
 
   fn handle_comment(&mut self, _c: char, state: &mut State) -> Option<Token> {
@@ -546,7 +526,7 @@ impl Mouth {
 
   fn gid() -> String {
     let mut lastid = LASTID.lock().unwrap();
-    *lastid = *lastid + 1;
+    *lastid += 1;
     lastid.to_string()
   }
 

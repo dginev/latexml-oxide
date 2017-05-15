@@ -69,7 +69,7 @@ impl Stomach {
     if box_list.is_empty() {
       box_list.push(Digested::Box(Tbox::default())); // Dummy `trailer' if none explicit.
     }
-    return Ok(box_list)
+    Ok(box_list)
   }
 
   // Digest a list of tokens independent from any current Gullet.
@@ -200,7 +200,7 @@ impl Stomach {
     // }
 
     self.token_stack.pop();
-    return Ok(result)
+    Ok(result)
   }
 
   fn invoke_token_undefined(&mut self, _token: Token, _state: &mut State) -> Vec<Digested> {
@@ -333,8 +333,8 @@ impl Stomach {
   // Note that lookups happen more often than bgroup/egroup (which open/close frames).
 
   pub fn push_stack_frame(&mut self, nobox: bool, state: &mut State) {
-    let current_token = match &state.current_token {
-      &Some(ref t) => t.clone(),
+    let current_token = match state.current_token {
+      Some(ref t) => t.clone(),
       _ => T_OTHER!(String::new())
     };
 

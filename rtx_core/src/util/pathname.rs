@@ -1,6 +1,6 @@
 use std::env;
 use std::path::{Path, PathBuf};
-use regex::Regex;
+// use regex::Regex;
 
 #[derive(Debug, Clone)]
 pub struct FindOptions {
@@ -18,14 +18,14 @@ impl Default for FindOptions {
   }
 }
 
+static LITERAL : &'static str  = "literal:";
+static HOME_TILDE : &'static str = "~";
 lazy_static! {
   static ref HOME_PATH : String = match env::home_dir() {
     Some(val) => val.to_string_lossy().to_string(),
     _ => "~".to_owned(),
   };
-  static ref LITERAL_RE : Regex  = Regex::new(r"^literal:").unwrap();
   // static ref PROTOCOL_RE : Regex = Regex::new(r"(https|http|ftp):").unwrap();
-  static ref LEAD_HOME_RE : Regex = Regex::new(r"^~").unwrap();
   // static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
   //     Ok(exe_path) => {
   //       match exe_path.as_path().parent() {
@@ -48,7 +48,7 @@ lazy_static! {
 
 }
 
-pub fn is_url<'isurl>(_path: &str) -> bool {
+pub fn is_url(_path: &str) -> bool {
   // TODO
   false
 }
@@ -70,14 +70,18 @@ pub fn absolute(path: &str) -> String {
 /// This likely needs portability work!!! (particularly regarding urls, separators, ...)
 /// AND, care about symbolic links and collapsing ../ !!!
 pub fn canonical(pathname: &str) -> String {
-  if LITERAL_RE.is_match(pathname) {
+  if pathname.starts_with(LITERAL) {
     return pathname.to_owned();
   }
   // Don't call is_absolute, etc, here, cause THEY call US!
   let home_path : &str = &*HOME_PATH;
-  let canonical_pathname = LEAD_HOME_RE.replace(pathname, home_path);
-  // TODO: Finish fleshing out, just a mock for now
 
+  // TODO: Finish fleshing out, just a mock for now
+  if pathname.starts_with(HOME_TILDE) {
+    pathname.replacen(HOME_TILDE, home_path, 1)
+  } else {
+    pathname.to_string()
+  }
   // We CAN canonicalize urls, but we need to be careful about the // before host!
   // OHHH, but we DON'T want \ for separator!
   // let urlprefix = None;
@@ -92,7 +96,7 @@ pub fn canonical(pathname: &str) -> String {
   // while ($pathname =~ s|/(?!\.\./)[^/]+/\.\.(/\|$)|$1|) { }
   // $pathname =~ s|^\./||;
   // return (defined $urlprefix ? $urlprefix . $pathname : $pathname); }
-  canonical_pathname
+
 }
 
 pub fn concat(dir: &str, file: &str) -> String {
@@ -137,16 +141,14 @@ pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> 
   // generate the set of search paths we'll use.
   if is_absolute(&canonical_pathname) {
       dirs.push(pathdir.clone());
-  } else {
-    if let Some(paths) = options.paths {
-      for p in paths {
-        // Complete the search paths by prepending current dir to relative paths,
-        let pp_base = if is_absolute(&p) { canonical(&p) } else { concat(&cwd, &p) };
-        let pp = concat(&pp_base, &pathdir);
-        // but only include each dir ONCE
-        if !dirs.contains(&pp) {
-          dirs.push(pp);
-        }
+  } else if let Some(paths) = options.paths {
+    for p in paths {
+      // Complete the search paths by prepending current dir to relative paths,
+      let pp_base = if is_absolute(&p) { canonical(&p) } else { concat(&cwd, &p) };
+      let pp = concat(&pp_base, &pathdir);
+      // but only include each dir ONCE
+      if !dirs.contains(&pp) {
+        dirs.push(pp);
       }
     }
   }
@@ -168,12 +170,10 @@ pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> 
   let mut exts = Vec::new();
   if let Some(ext_vec) = options.types {
     for ext in ext_vec {
-      if ext.is_empty() {
+      if ext.is_empty() || pathname_ext == ext.to_lowercase() {
         exts.push(String::new());
       } else if ext == "*" {
         exts.push(".*".to_string());
-        exts.push(String::new());
-      } else if pathname_ext == ext.to_lowercase() {
         exts.push(String::new());
       } else {
         exts.push('.'.to_string() + &ext);
@@ -186,24 +186,24 @@ pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> 
 
   let mut paths = Vec::new();
   // Now, combine; precedence to leading directories.
-  for dir in dirs.iter() {
-    for ext in exts.iter() {
+  for dir in &dirs {
+    for ext in &exts {
       if name == "*" {    // Unfortunately, we've got to test the file system NOW...
-        if ext == ".*" {    // everything
-  //         opendir(DIR, $dir) or next;
-  //         push(@paths, map { concat($dir, $_) } grep { !/^\./ } readdir(DIR));
-  //         closedir(DIR);
-        } else {
-  //         opendir(DIR, $dir) or next;    // ???
-  //         push(@paths, map { concat($dir, $_) } grep { /\Q$ext\E$/ } readdir(DIR));
-  //         closedir(DIR); } }
-        }
-      } else if ext == ".*" { // Unfortunately, we've got to test the file system NOW...
-  //       opendir(DIR, $dir) or next;      // ???
-  //       push(@paths, map { concat($dir, $_) } grep { /^\Q$name\E\.\w+$/ } readdir(DIR));
-  //       closedir(DIR);
+  //       if ext == ".*" {    // everything
+  // //         opendir(DIR, $dir) or next;
+  // //         push(@paths, map { concat($dir, $_) } grep { !/^\./ } readdir(DIR));
+  // //         closedir(DIR);
+  //       } else {
+  // //         opendir(DIR, $dir) or next;    // ???
+  // //         push(@paths, map { concat($dir, $_) } grep { /\Q$ext\E$/ } readdir(DIR));
+  // //         closedir(DIR); } }
+  //       }
+  //     } else if ext == ".*" { // Unfortunately, we've got to test the file system NOW...
+  // //       opendir(DIR, $dir) or next;      // ???
+  // //       push(@paths, map { concat($dir, $_) } grep { /^\Q$name\E\.\w+$/ } readdir(DIR));
+  // //       closedir(DIR);
       } else {
-        paths.push(concat(dir, &(name.clone() + &ext)));
+        paths.push(concat(dir, &(name.clone() + ext)));
       }
     }
   }

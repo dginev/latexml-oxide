@@ -60,11 +60,8 @@ impl Gullet {
   }
 
   pub fn open_mouth(&mut self, mouth: Mouth, autoclose: bool) {
-    match self.mouth {
-      Some(ref runtime) => {
-        self.mouthstack.push_front(runtime.clone());
-      }
-      None => {}
+    if let Some(ref runtime) = self.mouth {
+      self.mouthstack.push_front(runtime.clone());
     };
     self.mouth = Some(MouthRuntime {
       mouth: mouth,
@@ -127,9 +124,8 @@ impl Gullet {
             }
           }
         }
-        match next_token {
-          Some(token) => return Some(token),
-          None => {}
+        if next_token.is_some() {
+          return next_token
         };
 
         loop {
@@ -150,7 +146,8 @@ impl Gullet {
             }
           }
         }
-        return next_token;
+
+        next_token
       }
     }
   }
@@ -179,10 +176,11 @@ impl Gullet {
         }
         Some(ref mut runtime) => {
 
-          read_token = match runtime.pushback.is_empty() {
-            false => runtime.pushback.pop_front(),
-            true => runtime.mouth.read_token(state),
-          };
+          read_token = if runtime.pushback.is_empty() {
+            runtime.mouth.read_token(state)
+            } else {
+              runtime.pushback.pop_front()
+            };
           match read_token {
             None => {
               if !(runtime.autoclose && toplevel && !self.mouthstack.is_empty()) {
@@ -200,14 +198,11 @@ impl Gullet {
                   return_next = true; //just return next token
                 }
                 Catcode::COMMENT => {
-                  match commentsok {
-                    true => {
-                      return Ok(Some(token));
-                    }
-                    false => {
-                      self.pending_comments.push_back(token);
-                    }    // What to do with comments???
-                  }
+                  if commentsok {
+                    return Ok(Some(token))
+                  } else {
+                    self.pending_comments.push_back(token);
+                  }    // What to do with comments???
                 }
                 // Catcode::MARKER => {
                 //   LaTeXML::Definition::stopProfiling($token, 'expand'); }
@@ -268,13 +263,10 @@ impl Gullet {
   }
 
   pub fn unread(&mut self, tokens: Vec<Token>) {
-    match &mut self.mouth {
-      &mut Some(ref mut runtime) => {
-        for token in tokens.into_iter().rev() {
-          runtime.pushback.push_front(token);
-        }
-      },
-      _ => {}
+    if let Some(ref mut runtime) = self.mouth {
+      for token in tokens.into_iter().rev() {
+        runtime.pushback.push_front(token);
+      }
     };
   }
 
@@ -407,7 +399,7 @@ impl Gullet {
 
   /// Match the input against one of the Token or Tokens in @choices; return the matching one or undef.
   pub fn read_match(&mut self, choices: Vec<Token>, state: &mut State) -> Result<Vec<Token>> {
-    for choice in choices.into_iter() {
+    for choice in choices {
       let mut to_match : Vec<Token> = choice.unlist().into_iter().rev().collect();
       let mut matched = Vec::new();
       while !to_match.is_empty() {

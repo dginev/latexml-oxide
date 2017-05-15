@@ -20,7 +20,6 @@ pub type IndirectModel = HashMap<String, HashMap<String, String>>;
 lazy_static! {
   // static ref OPTIONAL_RE : Regex = Regex::new(r"^Optional(.+)$").unwrap();
   static ref PREFIXED_LOCALNAME_RE : Regex = Regex::new(r"^([^:]+):(.+)$").unwrap();
-  static ref LEAD_DEFAULT_RE : Regex = Regex::new(r"^DEFAULT#").unwrap();
   static ref CAPTURE_TAG_RE : Regex = Regex::new(r"(.*?:)?_Capture_$").unwrap();
   static ref TAG_MODEL_LINE : Regex = Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap();
   static ref CLASS_MODEL_LINE : Regex = Regex::new(r"^([^:=]+):=(.*?)$").unwrap();
@@ -95,7 +94,7 @@ impl Model {
     self.schema_data = Some(vec!["RelaxNG".to_string(), schema]);
   }
   pub fn add_schema_declaration(&self, document: &mut Document) {
-    if let &Some(ref schema) = &self.schema {
+    if let Some(ref schema) = self.schema {
       schema.add_schema_declaration(document);
     }
   }
@@ -163,13 +162,14 @@ impl Model {
     if self.debug_mode {
       self.describe_model()
     }
-    return &self.schema;
+
+    &self.schema
   }
   pub fn describe_model(&self) {}
 
   pub fn get_xpath<'o>(&'o self, document: &'o XmlDoc) -> XPath {
     let mut context = XPath::new(document, HashMap::new());
-    for (prefix, ns) in self.code_namespaces.iter() {
+    for (prefix, ns) in &self.code_namespaces {
       // TODO: Is this too slow? We may need to store an active context in the State as an alternative
       context.register_namespace(prefix, ns);
     }
@@ -250,7 +250,7 @@ impl Model {
    // but for attributes would never be.
     // log!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
     let mut docprefix = if !forattribute {
-      match self.document_namespace_prefixes.get(&("DEFAULT#".to_string() + &namespace)) {
+      match self.document_namespace_prefixes.get(&("DEFAULT#".to_string() + namespace)) {
         Some(prefix) => Some(prefix.to_string()),
         None => None
       }
@@ -290,14 +290,18 @@ impl Model {
     let ns_str = match self.document_namespaces.get(docprefix) {
       None => String::new(),
       Some(s) => {
-        LEAD_DEFAULT_RE.replace(s,"")
+        if s.starts_with("DEFAULT#") {
+          s.replacen("DEFAULT#", "", 1)
+        } else {
+          s.to_string()
+        }
       }
     };
 
     if docprefix != "#default" && ns_str.is_empty() && !probe {
       self.namespace_errors += 1;
       let ns_error = "http://example.com/namespace".to_string() + &self.namespace_errors.to_string();
-      self.register_document_namespace(&docprefix, Some(ns_error));
+      self.register_document_namespace(docprefix, Some(ns_error));
       error!(target: &format!("malformed:{:?}", docprefix), "No namespace has been registered for prefix.");
       // Error('malformed', $docprefix, undef,
       //   "No namespace has been registered for prefix '$docprefix' (in document)",
@@ -442,7 +446,7 @@ impl Model {
         if let Some(ns) = node.get_namespace() {
           let href = ns.get_url();
           if !href.is_empty() {
-            prefix = self.get_document_namespace_prefix(&href, false, true).unwrap_or(String::new());
+            prefix = self.get_document_namespace_prefix(&href, false, true).unwrap_or_default();
           }
         }
         if prefix.is_empty() {
@@ -487,8 +491,7 @@ impl Model {
   pub fn can_contain(&mut self, tag: &str, child: &str) -> bool {
     // Handle obvious cases explicitly.
     match tag {
-      "#PCDATA" => return false,
-      "#Comment" => return false,
+      "#PCDATA" | "#Comment" => return false,
       "_WildCard_" => return true,
       _ => {}
     };
@@ -497,10 +500,7 @@ impl Model {
     }
 
     match child {
-      "_WildCard_" => return true,
-      "#Comment" => return true,
-      "#ProcessingInstruction" => return true,
-      "#DTD" => return true,
+      "_WildCard_" | "#Comment" | "#ProcessingInstruction" | "#DTD" => return true,
       _ => {}
     };
     if self.permissive && tag == "#Document" && child != "#PCDATA" {
@@ -508,19 +508,14 @@ impl Model {
     }
 
     // Else query tag properties.
-    let ref mut model = self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default).model;
-
+    let model = &mut self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default).model;
     model.contains("ANY") || model.contains(child)
   }
 
   pub fn can_have_attribute(&mut self, tag: &str, attrib: &str) -> bool {
     // Handle obvious cases explicitly.
     match tag {
-      "#PCDATA" => return false,
-      "#Comment" => return false,
-      "#Document" => return false,
-      "#ProcessingInstruction" => return false,
-      "#DTD" => return false,
+      "#PCDATA" | "#Comment" | "#Document" | "#ProcessingInstruction" | "#DTD" => return false,
       "_WildCard_" => return true,
       _ => {}
     };
@@ -534,7 +529,7 @@ impl Model {
     }
 
     // Else query tag properties.
-    let ref mut attributes = self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default).attributes;
+    let attributes = &mut self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default).attributes;
 
     attributes.contains(attrib)
   }
@@ -553,14 +548,14 @@ impl Model {
           let tag = caps.at(1).unwrap();
           let attr = caps.at(2).unwrap();
           let children = caps.at(3).unwrap();
-          self.add_tag_attribute(tag, attr.split(",").collect());
-          self.add_tag_content(tag, children.split(",").collect());
+          self.add_tag_attribute(tag, attr.split(',').collect());
+          self.add_tag_content(tag, children.split(',').collect());
 
         } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
           let classname = caps.at(1).unwrap();
           let elements = caps.at(2).unwrap();
           let mut class_set = HashSet::new();
-          for set_element in elements.split(",").collect::<Vec<&str>>() {
+          for set_element in elements.split(',').collect::<Vec<&str>>() {
             class_set.insert(set_element.to_owned());
           }
           self.set_schema_class(classname, class_set);

@@ -22,14 +22,14 @@ impl Delimiter {
   }
 }
 
-pub fn extract_bracketed(mut text: &mut String, delimiter: Option<Delimiter>) -> String {
+pub fn extract_bracketed(mut text: &mut String, delimiter: Option<&Delimiter>) -> String {
   let open_delim = match delimiter {
     None => '(',
-    Some(ref d) => d.open()
+    Some(d) => d.open()
   };
   let close_delim = match delimiter {
     None => ')',
-    Some(ref d) => d.close()
+    Some(d) => d.close()
   };
 
   // info!("-- eb before: {:?}", text);
@@ -52,14 +52,14 @@ pub fn extract_bracketed(mut text: &mut String, delimiter: Option<Delimiter>) ->
 
     if c.is_whitespace() { // whitespaces are neutral
       continue
-    } else if c == open_delim { // level up on open paren
+    }
+
+    if c == open_delim { // level up on open paren
       level += 1;
-    } else {
+    } else if level < 1 {
       // regular chars out of () body should terminate the expression
-      if level < 1 {
-        *text = c.to_string() + text;
-        break;
-      }
+      *text = c.to_string() + text;
+      break;
     }
   }
   // info!("-- eb after: {:?}", text);

@@ -31,18 +31,14 @@ impl TagOptionName {
   pub fn is_prepend(&self) -> bool {
     use self::TagOptionName::*;
     match *self {
-      AfterOpenEarly => true,
-      AfterCloseEarly => true,
+      AfterOpenEarly | AfterCloseEarly => true,
       _ => false
     }
   }
   pub fn is_append(&self) -> bool {
     use self::TagOptionName::*;
     match *self {
-      AfterOpen => true,
-      AfterClose => true,
-      AfterOpenLate => true,
-      AfterCloseLate => true,
+      AfterOpen | AfterClose | AfterOpenLate | AfterCloseLate => true,
       _ => false
     }
   }

@@ -478,9 +478,9 @@ fn parse_conditional(mut text : &mut String) -> (quote::Tokens, String, String) 
   });
   let translated_bool = translate_value("(", text);
   let bool_branch = quote!(  #translated_bool );
-  let if_branch = extract_bracketed(text, Some(Delimiter::Parenthesis));
+  let if_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis));
   if !if_branch.is_empty() {
-    let else_branch = extract_bracketed(text, Some(Delimiter::Parenthesis));
+    let else_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis));
     // info!("-- cond after: {:?}", text);
     (bool_branch, if_branch, else_branch)
   }

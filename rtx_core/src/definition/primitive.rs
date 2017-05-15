@@ -90,9 +90,9 @@ impl Definition for Primitive {
     let mut result : Vec<Digested> = try!(self.execute_before_digest(stomach, state));
     let args   = try!(self.read_arguments(stomach.get_gullet_mut(), state));
     // print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
-    let replacement_result = match &self.replacement {
-      &None => Vec::new(),
-      &Some(ref closure) => try!(closure(stomach, args, state))
+    let replacement_result = match self.replacement {
+      None => Vec::new(),
+      Some(ref closure) => try!(closure(stomach, args, state))
     };
     result.extend(replacement_result);
     let mut w = Whatsit::default();
@@ -120,17 +120,17 @@ impl Definition for Primitive {
     &self.paramlist
   }
   fn get_num_args(&self) -> usize {
-    let nargs = match self.nargs {
+    match self.nargs {
       Some(n) => n,
       None => {
-        match &self.paramlist {
-          &Some(ref params) => params.get_num_args(),
-          &None => 0,
+        match self.paramlist {
+          Some(ref params) => params.get_num_args(),
+          None => 0,
         }
       }
-    };
+    }
     // TODO: Rethink the memoize in this immutable setting
     // self.nargs = Some(nargs);
-    nargs
+
   }
 }

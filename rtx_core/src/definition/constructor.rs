@@ -127,9 +127,9 @@ impl Definition for Constructor {
         _ => false
       };
     // Parse AND digest the arguments to the Constructor
-    let mut args: Vec<Option<Digested>> = match self.get_parameters() {
-      &None => Vec::new(),
-      &Some(ref params) => try!(params.read_arguments_and_digest(stomach, &self, state)),
+    let mut args: Vec<Option<Digested>> = match *self.get_parameters() {
+      None => Vec::new(),
+      Some(ref params) => try!(params.read_arguments_and_digest(stomach, self, state)),
     };
     // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;
     let nargs = self.get_num_args();
@@ -173,7 +173,7 @@ impl Definition for Constructor {
     result.push(Digested::Whatsit(whatsit));
     result.extend(post);
     result.extend(post_post);
-    return Ok(result)
+    Ok(result)
   }
 
   fn get_cs(&self) -> Token {
@@ -189,17 +189,16 @@ impl Definition for Constructor {
     &self.paramlist
   }
   fn get_num_args(&self) -> usize {
-    let nargs = match self.options.nargs {
+    match self.options.nargs {
       Some(n) => n,
       None => {
-        match &self.paramlist {
-          &Some(ref params) => params.get_num_args(),
-          &None => 0,
+        match self.paramlist {
+          Some(ref params) => params.get_num_args(),
+          None => 0,
         }
       }
-    };
+    }
     // self.nargs = Some(nargs);
-    nargs
   }
 
   fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) {
@@ -207,9 +206,9 @@ impl Definition for Constructor {
       pre_closure(document, whatsit, state);
     }
 
-    match &self.replacement {
-      &None => {},
-      &Some(ref main_closure) => {
+    match self.replacement {
+      None => {},
+      Some(ref main_closure) => {
         main_closure(document,
                      whatsit.get_args(),
                      whatsit.get_properties(),

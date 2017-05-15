@@ -62,9 +62,9 @@ impl Definition for Expandable {
   }
 
   fn get_cs_name(&self) -> String {
-    match &self.alias {
-      &Some(ref alias) => alias.clone(),
-      &None => self.cs.get_cs_name(),
+    match self.alias {
+      Some(ref alias) => alias.clone(),
+      None => self.cs.get_cs_name(),
     }
   }
 
@@ -76,9 +76,9 @@ impl Definition for Expandable {
     // Expand the expandable control sequence. This should be carried out by the Gullet.
     // log!("-- expandable invoke for {:?}", self.get_cs());
     if self.trivial_expansion.is_some() {
-      match &self.trivial_expansion {
-        &Some(ref expansion) => Ok(expansion.clone()),
-        &None => Ok(Vec::new()),
+      match self.trivial_expansion {
+        Some(ref expansion) => Ok(expansion.clone()),
+        None => Ok(Vec::new()),
       }
     } else {
       let args = try!(self.read_arguments(gullet, state));

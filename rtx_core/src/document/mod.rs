@@ -30,7 +30,11 @@ pub struct Document {
   pub constructed_nodes: Vec<Node>,
   pub box_to_absorb: Option<Digested>,
 }
-
+impl Default for Document {
+  fn default() -> Self {
+    Self::new()
+  }
+}
 impl Document {
   pub fn new() -> Self {
     let doc_scaffold = XmlDoc::new().unwrap();
@@ -105,10 +109,9 @@ impl Document {
     let root = self.document.get_root_element();
     // local $LaTeXML::FONT = LaTeXML::Common::Font->textDefault;
     self.finalize_rec(root, state);
-    match state.lookup_value("RDFa_prefixes") {
-      Some(&ObjectStore::String(ref prefixes)) => self.set_rdfa_prefixes(Some(prefixes.clone())),
-      _ => {}
-    };
+    if let Some(&ObjectStore::String(ref prefixes)) = state.lookup_value("RDFa_prefixes") {
+      self.set_rdfa_prefixes(Some(prefixes.clone()));
+    }
   }
 
 
@@ -153,8 +156,8 @@ impl Document {
     };
 
       let newly_created : Vec<Node> = self.constructed_nodes.drain(0..).collect();    // These were created just now
-      for node in newly_created.iter() {
-          self.record_constructed_node(&node);    // record these for OUTER caller!
+      for node in &newly_created {
+          self.record_constructed_node(node);    // record these for OUTER caller!
       }
       results.extend(newly_created); // but return only the most recent set.
 
@@ -190,7 +193,7 @@ impl Document {
     if self.debug {
       info!("Inserting element {:?} with body: {:?}", qname, content);
     }
-    for digested in content.into_iter() {
+    for digested in content {
       self.absorb(digested, state);
     }
     // In obscure situations, `node` may have already gotten closed?
@@ -219,7 +222,7 @@ impl Document {
   //  Rust note: attrib would have been best as Vec<(String,String)> but currently quote!() doesn't work out of the box on them
   pub fn insert_pi(&mut self, op: &str, attributes: Option<HashMap<String, String>>) {
     let mut attr_data = String::new();
-    for (key, value) in attributes.unwrap_or(HashMap::new()).iter() {
+    for (key, value) in &attributes.unwrap_or_default() {
       attr_data.push_str(key);
       attr_data.push_str("=\"");
       attr_data.push_str(value);
@@ -281,7 +284,7 @@ impl Document {
       // Error('malformed', $qname, $self,
       //   "Attempt to close " . ($qname eq '#PCDATA' ? $qname : '</' . $qname . '>') . ", which isn't open",
       //   "Currently in " . self.getInsertionContext());
-      return None;
+      None
     } else {                                         // Found node.
       if !cant_close.is_empty() {
                                                    // Intervening non-auto-closeable nodes!!
@@ -294,7 +297,7 @@ impl Document {
       }
       // So, now close up to the desired node.
       self.close_node_internal(&node, state);
-      return Some(node)
+      Some(node)
     }
   }
 
@@ -348,7 +351,7 @@ impl Document {
         }
       }
     }
-    return node_opt;
+    node_opt
   }
 
   // Close $qname, if it is closeable.
@@ -476,7 +479,7 @@ impl Document {
         anodes_keys.sort();
         for key in anodes_keys {
           let key_serialized = state.model.get_node_document_qname(&node.get_attribute_node(key).unwrap());
-          let val_serialized = serialize_attr(&node.get_property(key).unwrap_or(String::new()));
+          let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
           open_tag.push_str(&format!(" {}=\"{}\"", key_serialized, val_serialized));
         }
 
@@ -524,7 +527,7 @@ impl Document {
         if !noindent {
           serialized.push_str(&indent);
         }
-        serialized.push_str(&self.document.node_to_string(&node));
+        serialized.push_str(&self.document.node_to_string(node));
         if !noindent {
           serialized.push_str("\n");
         }
@@ -560,7 +563,7 @@ impl Document {
   }
 
   // Internals
-  fn set_rdfa_prefixes<'prefixes>(&'prefixes mut self, _prefixes: Option<String>) {}
+  fn set_rdfa_prefixes(&mut self, _prefixes: Option<String>) {}
 
   fn prune_xmduals(&self) {}
 
@@ -630,7 +633,7 @@ impl Document {
     // Attributes that begin with (the semi-legal) "_" are for Bookkeeping.
     // Remove them now.
     for (name, _) in node.get_attributes() {
-      if name.starts_with("_") {
+      if name.starts_with('_') {
         node.remove_attribute(&name);
       }
     }
@@ -700,7 +703,7 @@ impl Document {
     // Finally, insert the darned text.
     let tnode = self.open_text_internal(text, state);
     self.record_constructed_node(&tnode);
-    return Some(&self.node);
+    Some(&self.node)
   }
 
 
@@ -728,16 +731,14 @@ impl Document {
     }
 
     let imodel = state.indirect_model.as_ref().unwrap();
-
-    let inner_node = match imodel.get(tag) {
+    // returning inner_node
+    match imodel.get(tag) {
       Some(sub_m) => match sub_m.get(child) {
         Some(node) => Some(node.to_string()),
         None => None,
       },
       None => None,
-    };
-
-    inner_node
+    }
   }
 
   pub fn can_contain_somehow(&mut self, tag: &str, child: &str, state: &mut State) -> bool {
@@ -820,13 +821,7 @@ impl Document {
   // if ((defined $LaTeXML::RECORDING_CONSTRUCTION)    // If we're recording!
     let should_push = match self.constructed_nodes.last() { // and this node isn't already recorded
       None => true,
-      Some(last_node) => {
-        if last_node != node {
-          true
-        } else {
-          false
-        }
-      }
+      Some(last_node) => last_node != node
     };
 
     if should_push {
@@ -856,9 +851,9 @@ impl Document {
       let mut close_to = None;
       while (node.get_type() != Some(NodeType::DocumentNode)) && self.can_auto_close(&node) {
         let parent_opt = node.get_parent();
-        let parent = match &parent_opt {
-          &None => String::new(),
-          &Some(ref p) => state.model.get_node_qname(p)
+        let parent = match parent_opt {
+          None => String::new(),
+          Some(ref p) => state.model.get_node_qname(p)
         };
         if self.can_contain_somehow(&parent, qname, state) {
           close_to = Some(node);
@@ -903,7 +898,7 @@ impl Document {
       // value = self.record_id(value, node);    // Do id book keeping
       // node.set_attribute_ns(XML_NS, "id", value); }    // and bypass all ns stuff
       node.set_attribute("id", value);
-    } else if !key.contains(":") {    // No colon; no namespace (the common case!)
+    } else if !key.contains(':') {    // No colon; no namespace (the common case!)
                              // Ignore attributes not allowed by the model,
                              // but accept "internal" attributes.
       // let model = self.model;
@@ -981,31 +976,29 @@ impl Document {
     if point.get_type() == Some(NodeType::DocumentNode) {    // First node! (?)
       state.model.add_schema_declaration(self);
       newnode = Node::new(&tag, None, &self.document).unwrap();
-      self.document.set_root_element(&mut newnode);
-      for node in self.pending.iter() {
+      self.document.set_root_element(&newnode);
+      for node in &self.pending {
         newnode.add_prev_sibling(node.clone()); // Add saved comments, PI's
       }
       self.record_constructed_node(&newnode);
 
-      match decoded_ns {
-        Some(ns) => {
-          // Here, we're creating the initial, document element, which will hold ALL of the namespace declarations.
-          // If there is a default namespace (no prefix), that will also be declared, and applied here.
-          // However, if there is ALSO a prefix associated with that namespace, we have to declare it FIRST
-          // due to the (apparently) buggy way that XML::LibXML works with namespaces in setAttributeNS.
-          let prefix = state.model.get_document_namespace_prefix(&ns, false, false);
-          let attprefix = state.model.get_document_namespace_prefix(&ns, true, true);
-          if prefix.is_none() && attprefix.is_some() {
-            let attr_ns_node = Namespace::new(&attprefix.unwrap(), &ns, &newnode).unwrap();
-            newnode.set_namespace(attr_ns_node);
-          }
-          // TODO: Figure out a better way to achieve the "activate" effect in XML:LibXML::Element
-          // it seems just creating the namespace without setting it is equivalent ??
-          let _ns_node = Namespace::new("", &ns, &newnode).unwrap();
-          // newnode.set_namespace(ns_node);
-        },
-        None => {},// TODO
+      if let Some(ns) = decoded_ns {
+        // Here, we're creating the initial, document element, which will hold ALL of the namespace declarations.
+        // If there is a default namespace (no prefix), that will also be declared, and applied here.
+        // However, if there is ALSO a prefix associated with that namespace, we have to declare it FIRST
+        // due to the (apparently) buggy way that XML::LibXML works with namespaces in setAttributeNS.
+        let prefix = state.model.get_document_namespace_prefix(&ns, false, false);
+        let attprefix = state.model.get_document_namespace_prefix(&ns, true, true);
+        if prefix.is_none() && attprefix.is_some() {
+          let attr_ns_node = Namespace::new(&attprefix.unwrap(), &ns, &newnode).unwrap();
+          newnode.set_namespace(attr_ns_node);
+        }
+        // TODO: Figure out a better way to achieve the "activate" effect in XML:LibXML::Element
+        // it seems just creating the namespace without setting it is equivalent ??
+        let _ns_node = Namespace::new("", &ns, &newnode).unwrap();
+        // newnode.set_namespace(ns_node);
       }
+      // TODO: Else case
     }
     else {
       // font = self.get_node_font(ppoint);// unless $font
@@ -1016,12 +1009,12 @@ impl Document {
     if let Some(attrs) = attributes {
       let mut sorted_keys = attrs.keys().map(|k| k.to_string()).collect::<Vec<_>>();
       sorted_keys.sort();
-      for key in sorted_keys.iter() {
+      for key in &sorted_keys {
         // TODO: Revisit when font and locator are flushed out
         // if key == "font" || key == "locator" {
         //   continue;
         // }
-        self.set_attribute(&mut newnode, key, &attrs.get(key).unwrap());
+        self.set_attribute(&mut newnode, key, &attrs[key]);
       }
     }
     // self.set_nodeFont($newnode, $font) if $font;
@@ -1040,7 +1033,7 @@ impl Document {
     // Run afterOpen operations
     self.after_open(newnode.clone(), state);
 
-    return newnode;
+    newnode
   }
 
   fn open_element_internal(&mut self, point: &mut Node, _ns: Option<String>, tag: &str) -> Node {
@@ -1051,10 +1044,10 @@ impl Document {
     //       ->setNamespace($ns, self.model}->getDocumentNamespacePrefix($ns), 0); }
     //   $newnode = $point->addNewChild($ns, $tag); }
     // else {
-      newnode = point.add_child(Node::new(&tag, None, &self.document).unwrap()).unwrap();
+      newnode = point.add_child(Node::new(tag, None, &self.document).unwrap()).unwrap();
     // }
     self.record_constructed_node(&newnode);
-    return newnode;
+    newnode
   }
 
   /// Whenever a node has been created using openElementAt,

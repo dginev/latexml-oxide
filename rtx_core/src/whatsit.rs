@@ -51,16 +51,15 @@ impl Whatsit {
   }
 
   pub fn set_properties(&mut self, props: HashMap<String, ObjectStore>) {
-    for (key, value) in props.into_iter() {
+    for (key, value) in props {
       self.properties.insert(key, value);
     }
   }
 
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
     match self.args.get(n - 1) {
-      None => None,
-      Some(&None) => None,
-      Some(&Some(ref opt)) => Some(&opt)
+      Some(&Some(ref opt)) => Some(opt),
+      _ => None
     }
   }
 
@@ -99,7 +98,7 @@ impl Whatsit {
       };
       let trailer_props = trailer_whatsit.get_properties();
       for (prop, value) in trailer_props {
-        self.properties.entry(prop.to_string()).or_insert(value.clone());
+        self.properties.entry(prop.to_string()).or_insert_with(|| value.clone());
       }
     }
   }

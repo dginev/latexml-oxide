@@ -17,9 +17,10 @@ use document::Document;
 use document::tag::TagOptions;
 use document::resource::Resource;
 
+static CODE_TEX_EXT : &'static str = ".code.tex";
+
 lazy_static! {
   static ref TEX_OR_BIB_EXT_RE : Regex = Regex::new(r"\.(tex|bib)$").unwrap();
-  static ref CODE_TEX_EXT_RE : Regex = Regex::new(r"\.code\.tex$").unwrap();
 }
 
 #[derive(Clone, PartialEq)]
@@ -61,7 +62,7 @@ pub enum ObjectStore {
   Constructor(Rc<Constructor>),
   Digested(Rc<::Digested>),
   Parameter(Parameter),
-  Font(Font),
+  Font(Box<Font>),
   // Collections
   VecChar(Vec<char>),
   VecString(Vec<String>),
@@ -74,23 +75,23 @@ pub enum ObjectStore {
 impl fmt::Debug for ObjectStore {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     use state::ObjectStore::*;
-    match self {
-      &String(ref s) => write!(f, "{}", s),
-      &VecChar(ref vs) => write!(f, "{:?}",vs),
-      &VecString(ref vs) => write!(f, "{:?}", vs),
-      &Bool(ref b) => write!(f, "{:?}", b),
-      &Token(ref t) => write!(f, "{:?}", t),
-      &Catcode(ref cc) => write!(f, "{:?}", cc),
-      &Expandable(ref _expandable) => write!(f, "<closure for expandable definition>"),
-      &Primitive(ref _primitive) => write!(f, "<closure for primitive definition>"),
-      &Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
-      &Digested(ref digested) => write!(f, "{:?}", digested),
-      &Parameter(ref parameter) => write!(f, "{:?}", parameter),
-      &Font(ref font) => write!(f, "{:?}", font),
-      &VecToken(ref token_vec) => write!(f, "{:?}", token_vec),
-      &VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
-      &VecDequeOS(ref vec) => write!(f, "VecDequeOS({:?})", vec),
-      &HashOS(ref hos) => write!(f, "HashOS({:?})", hos),
+    match *self {
+      String(ref s) => write!(f, "{}", s),
+      VecChar(ref vs) => write!(f, "{:?}",vs),
+      VecString(ref vs) => write!(f, "{:?}", vs),
+      Bool(ref b) => write!(f, "{:?}", b),
+      Token(ref t) => write!(f, "{:?}", t),
+      Catcode(ref cc) => write!(f, "{:?}", cc),
+      Expandable(ref _expandable) => write!(f, "<closure for expandable definition>"),
+      Primitive(ref _primitive) => write!(f, "<closure for primitive definition>"),
+      Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
+      Digested(ref digested) => write!(f, "{:?}", digested),
+      Parameter(ref parameter) => write!(f, "{:?}", parameter),
+      Font(ref font) => write!(f, "{:?}", font),
+      VecToken(ref token_vec) => write!(f, "{:?}", token_vec),
+      VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
+      VecDequeOS(ref vec) => write!(f, "VecDequeOS({:?})", vec),
+      HashOS(ref hos) => write!(f, "HashOS({:?})", hos),
     }
   }
 }
@@ -193,7 +194,7 @@ impl UndoFrame {
 /// There are 2 main structures used here.
 /// For each of several `Table`s (being "value", "meaning", "catcode" or other space of names),
 /// each table maintains the bound values, and "undo" defines the stack frames:
-///    self.table[key] = [current_value, previous_value, ...]
+///    self.table[key] = [`current_value`, `previous_value`, ...]
 ///    self.undo[frame].table[key] = (None | n)
 /// such that the "current value" associated with `key` is the 0th element of the table array;
 /// the `previous_value`s (if any) are values that had been assigned within previous groups.
@@ -503,7 +504,7 @@ impl State {
       { // Remove bindings made in all frames down-to & including the next lower locked frame
         let mut frame_table : &mut AssignmentCount = &mut HashMap::new();
 
-        for frame in self.undo.iter_mut() {
+        for frame in &mut self.undo {
           let is_locked = frame.locked;
           frame_table = frame.table_mut(&table_name);
           if let Some(n) = frame_table.remove(key) {
@@ -654,13 +655,13 @@ impl State {
   }
 
   pub fn assign_mapping(&mut self, map: &str, key: &str, value: Option<ObjectStore>) {
-    if self.value.get(map).is_none() || self.value.get(map).unwrap().is_empty() {
+    if self.value.get(map).is_none() || self.value[map].is_empty() {
       self.assign_internal(TableName::Value, map, ObjectStore::HashOS(HashMap::new()), Some(Scope::Global));
     }
     let map_store = self.value.get_mut(map).unwrap();
     let mut stub_hash = HashMap::new(); // TODO: What is the right abstraction here? this is hacky
-    let mapping = match map_store.front_mut().unwrap() {
-      &mut ObjectStore::HashOS(ref mut mapping) => mapping,
+    let mapping = match *map_store.front_mut().unwrap() {
+      ObjectStore::HashOS(ref mut mapping) => mapping,
       _ => &mut stub_hash
     };
 
@@ -706,7 +707,7 @@ impl State {
       };
       p += value;
     }
-    self.value.get(key).unwrap().get(p)
+    self.value[key].get(p)
   }
 
   //======================================================================
@@ -714,8 +715,8 @@ impl State {
   pub fn lookup_catcode(&self, c: &char) -> Option<Catcode> {
     match self.catcode.get(&c.to_string()) {
       None => None,
-      Some(ref cvec) => match cvec.front() {
-        Some(&ObjectStore::Catcode(ref cc)) => Some(cc.clone()),
+      Some(cvec) => match cvec.front() {
+        Some(&ObjectStore::Catcode(ref cc)) => Some(*cc),
         _ => None
       }
     }
@@ -727,8 +728,8 @@ impl State {
 
   pub fn lookup_mathcode(&mut self, key: &char) -> Option<Catcode> {
     match self.mathcode.get(&key.to_string()) {
-      Some(ref c) => match c.front() {
-        Some(& ObjectStore::Catcode(ref cc)) => Some(cc.clone()),
+      Some(c) => match c.front() {
+        Some(& ObjectStore::Catcode(ref cc)) => Some(*cc),
         _ => None
       },
       None => None,
@@ -758,7 +759,7 @@ impl State {
 
   /// $meaning should be a definition (for defining active control sequences)
   /// or another token, for \let
-  pub fn assign_meaning<'t, 'm>(&'m mut self, token: &'t Token, meaning: ObjectStore, scope: Option<Scope>) {
+  pub fn assign_meaning(&mut self, token: &Token, meaning: ObjectStore, scope: Option<Scope>) {
     self.assign_internal(TableName::Meaning, &token.get_cs_name(), meaning, scope);
   }
 
@@ -775,16 +776,15 @@ impl State {
       cc.name()
     };
 
-    match lookupname.is_empty() {
-      true => None,
-      false => {
-        match self.meaning.get(&lookupname) {
-          Some(defs) => match defs.front() {
-            Some(entry) => Some(entry.clone()),
-            None => None,
-          },
-          _ => None,
-        }
+    if lookupname.is_empty() {
+      None
+    } else {
+      match self.meaning.get(&lookupname) {
+        Some(defs) => match defs.front() {
+          Some(entry) => Some(entry.clone()),
+          None => None,
+        },
+        _ => None,
       }
     }
   }
@@ -822,18 +822,18 @@ impl State {
     }
   }
 
-  pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, _key: &'def Token, _definition: Box<T>) {}
+  pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, _key: &'def Token, _definition: T) {}
 
   /// And a shorthand for installing definitions
-  pub fn install_definition<'id>(&'id mut self, definition: ObjectStore, scope: Option<Scope>) {
+  pub fn install_definition(&mut self, definition: ObjectStore, scope: Option<Scope>) {
     // Locked definitions!!! (or should this test be in assignMeaning?)
     // Ignore attempts to (re)define $cs from tex sources
     //  my $cs = $definition->getCS->getCSName;
-    let token = match &definition {
-      &ObjectStore::Expandable(ref defn) => defn.get_cs(),
-      &ObjectStore::Constructor(ref defn) => defn.get_cs(),
-      &ObjectStore::Primitive(ref defn) => defn.get_cs(),
-      &ObjectStore::Token(ref token) => token.clone(),
+    let token = match definition {
+      ObjectStore::Expandable(ref defn) => defn.get_cs(),
+      ObjectStore::Constructor(ref defn) => defn.get_cs(),
+      ObjectStore::Primitive(ref defn) => defn.get_cs(),
+      ObjectStore::Token(ref token) => token.clone(),
       _ => T_LETTER!("_wrong_argument_for_install_definition".to_string()),
     };
     let cs = token.get_cs_name();
@@ -850,16 +850,13 @@ impl State {
       _ => false,
     };
     if is_cs_locked && !is_state_unlocked {
-      match self.lookup_value("SOURCEFILE") {
-        Some(&ObjectStore::String(ref s)) => {
-          // report if the redefinition seems to come from document source
-          if ((s == "Anonymous String") || TEX_OR_BIB_EXT_RE.is_match(&s)) && (!CODE_TEX_EXT_RE.is_match(&s)) {
-                        //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
-          }
-          return;
+      if let Some(&ObjectStore::String(ref s)) = self.lookup_value("SOURCEFILE") {
+        // report if the redefinition seems to come from document source
+        if ((s == "Anonymous String") || TEX_OR_BIB_EXT_RE.is_match(s)) && (!s.ends_with(CODE_TEX_EXT)) {
+                      //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
         }
-        _ => {}
-      };
+        return;
+      }
     }
     self.assign_internal(TableName::Meaning, &cs, definition, scope);
     return;
@@ -888,7 +885,7 @@ impl State {
         // "Attempt to pop last locked stack frame"); }
     } else {
       let popped_frame = self.undo.pop_front().unwrap();
-      for table_name in TableName::variants().iter() {
+      for table_name in &TableName::variants() {
         let undo_table = popped_frame.table(table_name);
         for (key, undo_count) in undo_table.iter() {
           // Typically only 1 value to shift off the table, unless scopes have been activated.
@@ -916,7 +913,7 @@ impl State {
     }
     if let Some(&ObjectStore::VecChar(ref specials_store)) = self.lookup_value("SPECIALS") {
       for special_char in specials_store {
-        all_specials.push(special_char.clone());
+        all_specials.push(*special_char);
       }
     }
 
@@ -1165,12 +1162,12 @@ impl State {
         for start in desc_kid_keys {
           let start_entry = {
             let kid_entry = desc.entry(kid.to_owned()).or_insert_with(HashMap::new);
-            kid_entry.entry(start.to_owned()).or_insert(0).clone()
+            *kid_entry.entry(start.to_owned()).or_insert(0)
           };
           if start_entry > best {
             imodel.entry(tag.to_owned()).or_insert_with(HashMap::new).insert(kid.to_owned(), start.to_owned());
             {
-              best = desc.get(&kid).unwrap().get(&start).unwrap().clone();
+              best = desc[&kid][&start];
             }
           }
         }

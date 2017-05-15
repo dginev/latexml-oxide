@@ -58,7 +58,7 @@ pub fn is_defined_token(cs: &Token, state: &mut State) -> bool {
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
 pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut state: &mut State) -> Result<()> {
-  let mut file : String = raw_file.to_string().trim().to_string();
+  let mut file : String = raw_file.trim().to_string();
 
   // let prevname = if options.handleoptions {
   //   match state.lookup_definition(T_CS!("\@currname")) {
@@ -103,7 +103,7 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
 
 pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
   match find_file(request, false) { // TODO: type => $options{type}, noltxml => 1
-    Some(path) => load_tex_content(core, path),
+    Some(path) => load_tex_content(core, &path),
     None => fatal!(Package, MissingFile, request.to_owned()),
     // TODO:
     // Error("missing_file", request, state.get_stomach().get_gullet(),
@@ -111,9 +111,9 @@ pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
   }
 }
 
-pub fn load_tex_content(core: &mut Core, path: String) -> Result<()> {
+pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
   let mut mouth = Mouth { notes: true, ..Mouth::default() };
-  try!(mouth.open(&path, &mut core.state));
+  try!(mouth.open(path, &mut core.state));
   // TODO:
   // If there is a file-specific declaration file (name.latexml), load it first!
   // let file = path;
@@ -238,11 +238,11 @@ pub fn find_file(request: &str, _forbid_ltxml: bool) -> Option<String> {
 
 }
 
-pub fn coerce_cs(t: String) -> Token {
+pub fn coerce_cs(t: &str) -> Token {
   T_CS!(t)
 }
 
-pub fn tokenize_internal(some: String) -> Vec<Token> {
+pub fn tokenize_internal(some: &str) -> Vec<Token> {
   vec![T_CS!(some)]
 }
 
@@ -275,7 +275,7 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
   } else if ACTIVE_CHAR_REGEX.is_match(proto) {
     // Match an active char
     let captures = ACTIVE_CHAR_REGEX.captures(proto).unwrap();
-    cs = tokenize_internal(captures.at(0).unwrap().to_string()).first().unwrap().clone();
+    cs = tokenize_internal(captures.at(0).unwrap()).first().unwrap().clone();
     // also replace in proto
     ACTIVE_CHAR_REGEX.replace(proto, "")
   } else {
@@ -360,7 +360,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
         None => Vec::new(),
         Some(_extra_string) => {
           // TODO: Ask Bruce about the "extra" functionality and its types
-          // extra_string.split("|").map(|t| tokenize_internal(t.to_string())).collect::<Vec<Token>>();
+          // extra_string.split("|").map(|t| tokenize_internal(t)).collect::<Vec<Token>>();
           Vec::new()
         }
       };
@@ -476,10 +476,10 @@ pub fn def_macro_i(cs: Token, paramlist: Option<Parameters>, expansion: Expansio
 //**********************************************************************
 /// This function computes an xml:id for a node, if it hasn't already got one.
 /// It is suitable for use in Tag afterOpen as
-///  Tag('ltx:para',afterOpen=>sub { GenerateID(@_,'p'); });
+///  `Tag('ltx:para',afterOpen=>sub { GenerateID(@_,'p'); });`
 /// It generates an id of the form <parentid>.<prefix><number>
 /// The parent node (the one with ID=<parentid>) also maintains a counter
-/// stored in an attribute _ID_counter_<prefix> recording the last used
+/// stored in an attribute `_ID_counter_<prefix>` recording the last used
 /// <number> for <prefix> amongst its descendents.
 pub fn generate_id(document: &mut Document, mut node: Node, mut prefix: &str, state: &mut State) {
   // If node doesn't already have an id, and can
@@ -520,11 +520,11 @@ pub fn generate_id(document: &mut Document, mut node: Node, mut prefix: &str, st
 
 pub fn merge_font(font_hash: HashMap<String, String>, state: &mut State) {
   let mut font = match state.remove_value("font") {
-    Some(ObjectStore::Font(f)) => f,
+    Some(ObjectStore::Font(f)) => *f,
     _ => Font::default(),
   };
   font.merge(font_hash);
-  state.assign_value("font", ObjectStore::Font(font), Some(Scope::Local));
+  state.assign_value("font", ObjectStore::Font(Box::new(font)), Some(Scope::Local));
   return;
 }
 
@@ -1122,7 +1122,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($proto_raw:expr, $replacement:expr, $options:expr) => ({
     use rtx_core::util::text::*;
     let mut proto = $proto_raw.to_string().trim_left().to_string();
-    let name = extract_bracketed(&mut proto, Some(Delimiter::Brace));
+    let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace));
 
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
@@ -1191,7 +1191,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($proto_raw:expr, $compiled_replacement:expr, $options:expr) => ({
     use rtx_core::util::text::*;
     let mut proto = $proto_raw.to_string().trim_left().to_string();
-    let name = extract_bracketed(&mut proto, Some(Delimiter::Brace));
+    let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace));
     // TODO: What do we do with param lists?
     //let paramlist_str = proto.trim_left().to_string();
     DefEnvironmentI!(name, None, $compiled_replacement, $compiled_replacement, $options);

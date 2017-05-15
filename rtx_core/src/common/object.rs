@@ -1,5 +1,5 @@
 ///======================================================================
-/// Exported generic functions for dealing with LaTeXML's objects
+/// Exported generic functions for dealing with `LaTeXML`'s objects
 ///======================================================================
 
 use common::error::*;

@@ -49,9 +49,9 @@ pub trait Definition {
   fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Tokens>>
     where Self: Sized
   {
-    match self.get_parameters() {
-      &None => Ok(Vec::new()),
-      &Some(ref params) => params.read_arguments(gullet, self, state),
+    match *self.get_parameters() {
+      None => Ok(Vec::new()),
+      Some(ref params) => params.read_arguments(gullet, self, state),
     }
   }
   fn get_parameters(&self) -> &Option<Parameters>;
@@ -72,9 +72,9 @@ pub trait Definition {
     let mut invocation_result = Vec::new();
     invocation_result.push(self.get_cs());
 
-    match self.get_parameters() {
-      &None => {}
-      &Some(ref params) => {
+    match *self.get_parameters() {
+      None => {}
+      Some(ref params) => {
         for result_token in params.revert_arguments(args, state) {
           invocation_result.push(result_token);
         }

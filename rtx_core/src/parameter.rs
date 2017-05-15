@@ -137,7 +137,7 @@ impl Parameter {
         panic!("Unrecognized parameter type in {:?}", self.spec)
       }
     }
-    return Ok(self);
+    Ok(self)
   }
 
   // TODO: This meta-programming approach won't fly in Rust, need an alternative.
@@ -211,10 +211,11 @@ impl Parameter {
       try!(pre(stomach, state)); // maybe pass extras?
     }
 
-    let mut digested_value = None;
-    if !value_to_digest.is_empty() && !self.undigested {
-      digested_value = Some(try!(value_to_digest.be_digested(stomach, state)));
-    }
+    let digested_value = if !value_to_digest.is_empty() && !self.undigested {
+      Some(try!(value_to_digest.be_digested(stomach, state)))
+    } else {
+      None
+    };
     if let Some(ref post) = self.after_digest { // Done for effect only.
       let mut w = Whatsit::default();
       try!(post(stomach, &mut w, state)); // maybe pass extras?
@@ -243,7 +244,7 @@ impl Parameters {
 
   pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Result<Vec<Tokens>> {
     let mut args = Vec::new();
-    for parameter in self.params.iter() {
+    for parameter in &self.params {
       let values = try!(parameter.read(gullet, fordefn, state));
       if !parameter.novalue {
         args.push(Tokens{tokens: values});
@@ -254,14 +255,14 @@ impl Parameters {
 
   pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Result<Vec<Option<Digested>>> {
     let mut args = Vec::new();
-    for parameter in self.params.iter() {
+    for parameter in &self.params {
       let value = try!(parameter.read(&mut stomach.gullet, fordefn, state));
       if !parameter.novalue {
         let digested_value = try!(parameter.digest(stomach, Tokens{tokens: value}, fordefn, state));
         args.push(digested_value);
       }
     }
-    return Ok(args)
+    Ok(args)
   }
 
   pub fn reparse_argument(&self, _gullet: &mut Gullet, _value: Vec<Token>, _state: &mut State) -> Vec<Token> {

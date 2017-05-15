@@ -63,25 +63,25 @@ impl Catcode {
     use token::Catcode::*;
     match *self {
       // Primitives
-      ESCAPE => true,
-      BEGIN => true,
-      END => true,
-      MATH => true,
-      ALIGN => true,
-      EOL => true,
-      PARAM => true,
-      SUPER => true,
-      SUB => true,
-      SPACE => true,
+      ESCAPE |
+      BEGIN |
+      END |
+      MATH |
+      ALIGN |
+      EOL |
+      PARAM |
+      SUPER |
+      SUB |
+      SPACE |
       NOTEXPANDED => true,
       // Non-primitive
-      IGNORE => false,
-      LETTER => false,
-      OTHER => false,
-      ACTIVE => false,
-      COMMENT => false,
-      INVALID => false,
-      CS => false,
+      IGNORE |
+      LETTER |
+      OTHER |
+      ACTIVE |
+      COMMENT |
+      INVALID |
+      CS |
       MARKER => false,
     }
   }
@@ -90,25 +90,25 @@ impl Catcode {
     use token::Catcode::*;
     match *self {
       // Executable
-      BEGIN => true,
-      END => true,
-      MATH => true,
-      ALIGN => true,
-      SUPER => true,
-      SUB => true,
-      ACTIVE => true,
+      BEGIN |
+      END |
+      MATH |
+      ALIGN |
+      SUPER |
+      SUB |
+      ACTIVE |
       CS => true,
       // Non-executable
-      EOL => false,
-      ESCAPE => false,
-      PARAM => false,
-      SPACE => false,
-      IGNORE => false,
-      LETTER => false,
-      OTHER => false,
-      COMMENT => false,
-      INVALID => false,
-      NOTEXPANDED => false,
+      EOL |
+      ESCAPE |
+      PARAM |
+      SPACE |
+      IGNORE |
+      LETTER |
+      OTHER |
+      COMMENT |
+      INVALID |
+      NOTEXPANDED |
       MARKER => false,
     }
   }
@@ -117,25 +117,25 @@ impl Catcode {
     use token::Catcode::*;
     match *self {
       // Neutralizable
-      MATH => true,
-      ALIGN => true,
-      PARAM => true,
-      SUPER => true,
-      SUB => true,
+      MATH |
+      ALIGN |
+      PARAM |
+      SUPER |
+      SUB |
       ACTIVE => true,
       // Non-neutralizable
-      ESCAPE => false,
-      BEGIN => false,
-      END => false,
-      EOL => false,
-      IGNORE => false,
-      SPACE => false,
-      LETTER => false,
-      OTHER => false,
-      COMMENT => false,
-      INVALID => false,
-      CS => false,
-      NOTEXPANDED => false,
+      ESCAPE |
+      BEGIN |
+      END |
+      EOL |
+      IGNORE |
+      SPACE |
+      LETTER |
+      OTHER |
+      COMMENT |
+      INVALID |
+      CS |
+      NOTEXPANDED |
       MARKER => false,
     }
   }
@@ -143,8 +143,7 @@ impl Catcode {
   pub fn is_active_or_cs(&self) -> bool {
     use token::Catcode::*;
     match *self {
-      ACTIVE => true,
-      CS => true,
+      ACTIVE | CS => true,
       _ => false
     }
   }
@@ -278,7 +277,7 @@ macro_rules! ExplodeText(($text:expr) => ({
   ).collect::<Vec<Token>>()
 }));
 
-pub fn untex(digested: Digested) -> String {
+pub fn untex(digested: &Digested) -> String {
   digested.to_string()
 }
 
@@ -352,7 +351,7 @@ impl Token {
   /// NOTE that although '%' gets it's catcode changed in Semiverbatim,
   /// I'm pretty sure we do NOT want to neutralize comments (turn them into CC_OTHER)
   /// here, since if comments do get into the Tokens, that will introduce weird crap into the stream.
-  pub fn neutralize(self, extraspecials : &Vec<Token>, state: &State) -> Token {
+  pub fn neutralize(self, extraspecials : &[Token], state: &State) -> Token {
     let ch = match self.text.chars().next() {
       Some(ch) => ch,
       None => return self
@@ -362,8 +361,8 @@ impl Token {
       let mut is_special = false;
       if let Some(specials_store) = state.lookup_value("SPECIALS") {
         let evec = Vec::new();
-        let specials_list : &Vec<char> = match specials_store {
-          &ObjectStore::VecChar(ref list) => list,
+        let specials_list : &Vec<char> = match *specials_store {
+          ObjectStore::VecChar(ref list) => list,
           _ => &evec
         };
         for special in specials_list.iter() {

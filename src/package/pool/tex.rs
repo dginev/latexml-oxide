@@ -316,7 +316,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
                     extension: Some("pool"),
                     ..InputDefinitionOptions::default()
                   }, state));
-                 return Ok(vec![T_CS!(ltxtrigger)]);
+                 Ok(vec![T_CS!(ltxtrigger)])
                });
   }
 
@@ -361,10 +361,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       let in_preamble = state.lookup_bool("inPreamble");
       if in_preamble {
         whatsit.set_property("inPreamble", ObjectStore::Bool(true));
-      } else {
-        if let Some(c) = state.remove_value("next_para_class") {
+      } else if let Some(c) = state.remove_value("next_para_class") {
           whatsit.set_property("class", c);
-        }
         // Digest!(Tokens!(
         //     T_CS("\\LTX@vadjust@afterpar"),
         //     T_CS("\\LTX@clear@vadjust@afterpar")

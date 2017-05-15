@@ -175,7 +175,7 @@ impl Converter {
     // 2.1 Now, convert to DOM and output, if desired.
     let dom_result: Result<Document>;
     let serialized = match self.opts.format {
-      OutputFormat::TeX => token::untex(digested),
+      OutputFormat::TeX => token::untex(&digested),
       OutputFormat::Box => {
         if self.opts.verbosity > 0 {
           digested.stringify()
