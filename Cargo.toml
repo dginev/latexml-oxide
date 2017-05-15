@@ -20,3 +20,10 @@ lazy_static = "0.1"
 regex = "0.1.66"
 libxml = "0.0.746"
 log = "0.3"
+clippy = { optional = true, version = "=0.0.133" }
+
+[features]
+
+# To link with clippy, build with, the "clippy" features flag, e.g.:
+# rustup run nightly cargo test --features clippy
+lint = ["clippy"]

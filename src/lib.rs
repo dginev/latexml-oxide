@@ -4,6 +4,9 @@
 
 //! # The `LaTeXML` converter, reimplemented in Rust
 #![allow(unused_variables, unused_mut)]
+#![cfg_attr(feature="clippy", feature(plugin))]
+#![cfg_attr(feature="clippy", plugin(clippy))]
+
 #[macro_use] extern crate log;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate rtx_core;

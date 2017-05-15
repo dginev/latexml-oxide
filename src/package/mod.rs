@@ -385,7 +385,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
   }
 }
 
-pub fn revert(_arg: Vec<Token>) -> Vec<Token> {
+pub fn revert(_arg: &[Token]) -> Vec<Token> {
   Vec::new()
 }
 
@@ -447,13 +447,13 @@ pub fn select_relaxng_schema(schema : String, namespaces : Option<HashMap<String
   }
   return; }
 
-pub fn let_i(token1: Token, token2: Token, scope: Option<Scope>, state: &mut State) {
+pub fn let_i(token1: &Token, token2: Token, scope: Option<Scope>, state: &mut State) {
   // If strings are given, assume CS tokens (most common case)
   let meaning = match state.lookup_meaning(&token2) {
     Some(m) => m.clone(),
     None => ObjectStore::Token(token2)
   };
-  state.assign_meaning(&token1, meaning, scope);
+  state.assign_meaning(token1, meaning, scope);
   // AfterAssignment!();
 }
 
@@ -488,7 +488,7 @@ pub fn generate_id(document: &mut Document, mut node: Node, mut prefix: &str, st
     // but isn't a _Capture_ node (which ultimately should disappear)
     && (node_qname != "ltx:_Capture_") {
 
-    let mut ancestor = document.findnode("ancestor::*[@xml:id][1]", Some(node.clone()), state).unwrap_or(document.get_document().get_root_element());
+    let mut ancestor = document.findnode("ancestor::*[@xml:id][1]", Some(node.clone()), state).unwrap_or_else(|| document.get_document().get_root_element());
     //// Old versions don't like ancestor.getAttribute('xml:id');
     let ancestor_id = ancestor.get_attribute_ns("http://www.w3.org/XML/1998/namespace", "id");
 
@@ -502,7 +502,7 @@ pub fn generate_id(document: &mut Document, mut node: Node, mut prefix: &str, st
 
 
     let ctrkey = "_ID_counter_".to_string() + prefix + "_";
-    let a_ctr = ancestor.get_attribute(&ctrkey).unwrap_or("0".to_string());
+    let a_ctr = ancestor.get_attribute(&ctrkey).unwrap_or_else(|| "0".to_string());
 
     let ctr_int = 1 + a_ctr.parse::<u32>().unwrap_or(0);
     let ctr = ctr_int.to_string();
@@ -640,10 +640,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   macro_rules! Let {
     ($token1:expr, $token2:expr) => ({
-      LetI!(T_CS!($token1), T_CS!($token2))
+      LetI!(&T_CS!($token1), T_CS!($token2))
     });
     ($token1:expr, $token2:expr, $scope:expr) => ({
-      LetI!(T_CS!($token1), T_CS!($token2), $scope)
+      LetI!(&T_CS!($token1), T_CS!($token2), $scope)
     });
   }
 
@@ -793,10 +793,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   /// Define a primitive control sequence.
   ///======================================================================
   /// Primitives are executed in the Stomach.
-  /// The $replacement should be a sub which returns nothing, or a list of Box's or Whatsit's.
+  /// The $replacement should be a sub which returns nothing, or a list of `Box`'s or `Whatsit`'s.
   /// The options are:
   ///    isPrefix  : 1 for things like \global, \long, etc.
-  ///    registerType : for parameters (but needs to be worked into DefParameter, below).
+  ///    registerType : for parameters (but needs to be worked into `DefParameter`, below).
 
   macro_rules! DefPrimitive(
     ($proto:expr, $replacement:expr, $options:expr) => ({

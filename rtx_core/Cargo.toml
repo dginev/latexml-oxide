@@ -19,3 +19,7 @@ regex = "0.1.66"
 libxml = "0.0.746"
 log = "0.3"
 ansi_term = "0.9.0"
+clippy = { optional = true, version = "=0.0.133" }
+
+[features]
+lint = ["clippy"]

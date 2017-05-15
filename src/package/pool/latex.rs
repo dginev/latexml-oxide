@@ -78,14 +78,14 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefMacro!("\\begin{}",
     |gullet, args, state| {
     let name = &args[0].to_string();
-    let begin_name = "\\begin{".to_string()+&name+"}";
+    let begin_name = "\\begin{".to_string()+name+"}";
     if is_defined(&begin_name, state) {
       Ok(vec![T_CS!(begin_name)]) // Magic cs!
     }
     else {
-      let token = T_CS!("\\".to_string() + &name);
+      let token = T_CS!("\\".to_string() + name);
       if !is_defined_token(&token, state) {
-        let undef = "{".to_string() + &name + "}";
+        let undef = "{".to_string() + name + "}";
         let category_object = format!("undefined:{:?}", undef);
         error!(target: &category_object,"The environment is not defined.");
         // state.note_status("undefined", undef);
@@ -206,7 +206,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         let options: Option<&Digested> = whatsit.get_arg(1);
         let packages: Option<&Digested> = whatsit.get_arg(2);
         let package_list = match packages {
-          Some(value) => OPTS_REGEX.split(&value.to_string()).map(|s| s.to_string()).filter(|s| !s.starts_with("%")).collect(),
+          Some(value) => OPTS_REGEX.split(&value.to_string()).map(|s| s.to_string()).filter(|s| !s.starts_with('%')).collect(),
           None => Vec::new(),
         };
         let options_list = match options {

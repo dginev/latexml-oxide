@@ -11,7 +11,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
        AssignCatcode!(*c, Catcode::OTHER, None, state);
       }
       AssignCatcode!(' ', Catcode::ACTIVE, None, state);
-      LetI!(T_ACTIVE!(" "), T_CS!("\\space"), None, state);
+      LetI!(&T_ACTIVE!(" "), T_CS!("\\space"), None, state);
       AssignValue!("PRESERVE_NEWLINES", ObjectStore::Bool(true), None, state);
       Ok(Vec::new())
     }));

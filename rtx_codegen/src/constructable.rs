@@ -197,11 +197,11 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
           document.open_element(#current_tag, Some(av_props), state);
         ));
         // Empty element?
-        if replacement.starts_with("/") {
+        if replacement.starts_with('/') {
           operations.push(quote!(document.close_element(#current_tag, state);));
           replacement = replacement[1..].to_owned();
         }
-        if replacement.starts_with(">") {
+        if replacement.starts_with('>') {
           replacement = replacement[1..].to_owned();
         } else {
           panic!("Missing '>' at '{:?}'", replacement);
@@ -397,7 +397,7 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
     while ! LEAD_CPAREN_RE.is_match(text) {
       let quoted_follows;
       { let ttl = text.trim_left(); // need an immutable borrow of text, so wrapping in a block
-        quoted_follows = ttl.starts_with("\'") || ttl.starts_with("\"");
+        quoted_follows = ttl.starts_with('\'') || ttl.starts_with('\"');
       }
       let arg = if quoted_follows {
         translate_string(&mut text)
@@ -415,7 +415,7 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
       }
     }
     *text = text.trim_left().to_owned();
-    if text.starts_with(")") {
+    if text.starts_with(')') {
       text.remove(0);
     } else {
       panic!("Missing ')' in &$fcn(...) at '{:?}'\n",text);
