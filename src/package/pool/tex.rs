@@ -402,7 +402,10 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     for arg in args {
       token_args.extend(arg.unlist().into_iter());
     }
-    let cs = token_args.pop_front().unwrap();
+    let cs = match token_args.pop_front() {
+      Some(cs) => cs,
+      None => fatal!(Macro, Expected, "Bad definition macro - no arguments, when some were expected.".to_owned())
+    };
     // is there a more idiomatic way to downgrade a VecDeque into a Vec?
     let def_body = token_args.into_iter().collect::<Vec<Token>>();
     let params = None;

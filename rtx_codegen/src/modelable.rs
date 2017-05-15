@@ -6,7 +6,7 @@ use util::{get_options_from_input, get_option};
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufRead;
-// use rtx_core::common::error::*;
+use rtx_core::common::error::*;
 use rtx_core::util::pathname;
 use rtx_core::state::State;
 
@@ -16,7 +16,7 @@ lazy_static! {
   static ref NAMESPACE_MODEL_LINE : Regex = Regex::new(r"^([^=]+)=(.*?)$").unwrap();
 }
 
-pub fn load_model(input: syn::MacroInput) -> quote::Tokens {
+pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
   fn bug() -> ! {
       panic!("This is a bug. Please open a Github issue \
              with your load_model invocation");
@@ -46,7 +46,7 @@ pub fn load_model(input: syn::MacroInput) -> quote::Tokens {
   ));
 
   // note_begin(&(format!("Compiling .model file: {}", path)));
-  let compiled_fh = File::open(path.clone()).unwrap();
+  let compiled_fh = try!(File::open(path.clone()));
   let compiled_reader = BufReader::new(&compiled_fh);
   for line_result in compiled_reader.lines() {
     if let Ok(line) = line_result {
@@ -78,7 +78,7 @@ pub fn load_model(input: syn::MacroInput) -> quote::Tokens {
           model.register_document_namespace(#prefix, Some(#namespace.to_owned()));
         ));
       } else {
-        panic!("Fatal:internal:{:?} Loaded model '{:?}' is malformatted at \"{:?}\"", path, path, line);
+        fatal!(Codegen, Malformed, format!(" Loaded model '{:?}' is malformatted at \"{:?}\"", path, line));
       }
     }
   }
@@ -86,13 +86,13 @@ pub fn load_model(input: syn::MacroInput) -> quote::Tokens {
   operations.push(quote!(return;));
   // note_end(&(format!("Compiling .model file: {}", path)));
 
-  quote!(
+  Ok(quote!(
     impl _ModelLoader {
       fn model(model : &mut Model) {
         #(operations)*
       }
     }
-  )
+  ))
 }
 
 

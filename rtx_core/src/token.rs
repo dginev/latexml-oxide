@@ -353,7 +353,10 @@ impl Token {
   /// I'm pretty sure we do NOT want to neutralize comments (turn them into CC_OTHER)
   /// here, since if comments do get into the Tokens, that will introduce weird crap into the stream.
   pub fn neutralize(self, extraspecials : &Vec<Token>, state: &State) -> Token {
-    let ch = self.text.chars().next().unwrap();
+    let ch = match self.text.chars().next() {
+      Some(ch) => ch,
+      None => return self
+    };
     let cc = self.code;
     if cc.is_neutralizable() {
       let mut is_special = false;

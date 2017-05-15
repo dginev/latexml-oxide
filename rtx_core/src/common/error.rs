@@ -16,6 +16,8 @@ pub enum ErrorTarget {
   Parameter,
   Converster,
   Mouth,
+  Codegen,
+  Macro,
 }
 
 #[derive(Debug)]
@@ -24,9 +26,10 @@ pub enum ErrorCategory {
   Io(io::Error),
   NotFound,
   // Unexpected,
-  // Expected,
+  Expected,
   Unknown,
   MissingFile,
+  Malformed,
 }
 
 #[macro_export]
@@ -52,7 +55,9 @@ impl fmt::Display for Error {
       NotFound => write!(f, "No matching cities with a \
                                        population were found."),
       MissingFile => write!(f, "missing file"),
-      Unknown => write!(f, "unknown")
+      Unknown => write!(f, "unknown"),
+      Malformed => write!(f, "malformed"),
+      Expected => write!(f, "expected"),
     }
   }
 }
@@ -66,6 +71,8 @@ impl ErrorTrait for Error {
       MissingFile => "missing file",
       NotFound => "not found",
       Unknown => "unknown",
+      Malformed => "malformed",
+      Expected => "expected",
     }
   }
 

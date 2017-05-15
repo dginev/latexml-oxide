@@ -39,7 +39,7 @@ impl Stomach {
   // **********************************************************************
   // Digestion
   // **********************************************************************
-  // NOTE: Worry about whether the $autoflush thing is right? 
+  // NOTE: Worry about whether the $autoflush thing is right?
   // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
   pub fn digest_next_body(&mut self, _terminal: bool, state: &mut State) -> Result<Vec<Digested>> {
     let _start_location = self.get_locator();
@@ -54,7 +54,7 @@ impl Stomach {
         Some(token) => {
           box_list.extend(try!(self.invoke_token(token, state)));
           // TODO:
-          // if terminal.is_some() && Equals(token, terminal.unwrap())
+          // if terminal.is_some() && Equals(token, terminal)
           if init_depth > self.boxing.len() {
             break;
           }
@@ -90,13 +90,13 @@ impl Stomach {
       let initdepth = stomach.boxing.len();
       let depth     = initdepth;
       // {
-      //   let list = STOMACH_LIST.lock().unwrap();
+      //   let list = STOMACH_LIST.lock()
       //   *list = Rc::new(Vec::new());
       // }
       let mut list = Vec::new();
       while let Some(token) = try!(stomach.get_gullet_mut().read_x_token(true, true, state)) { // Done if we run out of tokens
         // {
-        //   let list = STOMACH_LIST.lock().unwrap();
+        //   let list = STOMACH_LIST.lock()
         list.extend(try!(stomach.invoke_token(token, state)));
         // }
 
@@ -115,7 +115,7 @@ impl Stomach {
         }
       }
 
-      // let list = STOMACH_LIST.lock().unwrap();
+      // let list = STOMACH_LIST.lock()
       let final_list = list;
       Ok(Digested::List(List{boxes: final_list, mode: mode}))
     }))
@@ -136,11 +136,7 @@ impl Stomach {
     // Overly complex, but want to avoid recursion/stack
     let mut result: Vec<Digested> = Vec::new();
     // INVOKE:
-    loop {
-      if maybe_token.is_none() {
-        break;
-      }
-      let token = maybe_token.unwrap();
+    while let Some(token) = maybe_token {
 
       self.token_stack.push(token.clone());
       if self.token_stack.len() > MAXSTACK {

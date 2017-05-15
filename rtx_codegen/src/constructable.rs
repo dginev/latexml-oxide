@@ -239,10 +239,10 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
     // TODO: Still to be implemented cases:
     if !is_match {
       // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
-      if replacement.find("=").is_some() {
+      if let Some(eq_index) = replacement.find("=") {
         is_match = true;
         info!("-- Attribute");
-        let consumed = replacement[0..1 + replacement.find("=").unwrap()].to_owned();
+        let consumed = replacement[0..1 + eq_index].to_owned();
         replacement = replacement[consumed.len()..].to_owned();
       }
     }
@@ -250,13 +250,14 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
     // Else random text
     if !is_match {
       replacement = LEAD_RANDOM_TEXT_RE.replace(&replacement, |refs: &Captures| -> String {
-        let text_match = refs.at(1).unwrap();
-        let escaped_match = &slashify(&unquote(text_match));
-        operations.push(quote!(
-          let content_box = Digested::Box(Tbox{text: #escaped_match.to_string(), ..Tbox::default()});
-          document.absorb(content_box, state);
-        ));
-        is_match = true;
+        if let Some(text_match) = refs.at(1) {
+          let escaped_match = &slashify(&unquote(text_match));
+          operations.push(quote!(
+            let content_box = Digested::Box(Tbox{text: #escaped_match.to_string(), ..Tbox::default()});
+            document.absorb(content_box, state);
+          ));
+          is_match = true;
+        }
         String::new()
       });
     }
@@ -298,7 +299,7 @@ fn translate_string(mut text : &mut String) -> quote::Tokens {
         let mut is_quoted_match = false;
         let mut quoted_match = String::new();
         *text = LEAD_QUOTED_RE.replace(text, |refs: &Captures| -> String {
-          quoted_match = refs.at(1).unwrap().to_string();
+          quoted_match = refs.at(1).unwrap_or("").to_string();
           is_quoted_match = true;
           String::new()
         });

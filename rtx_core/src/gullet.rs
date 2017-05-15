@@ -344,7 +344,11 @@ impl Gullet {
     let mut tokens = Vec::new();
     while let Some(token) = self.read_token(state) {
       if token.code == Catcode::BEGIN {    // INLINE Catcode
-        self.mouth.as_mut().unwrap().pushback.push_front(token);    // Unread
+        if let Some(mouth) = self.mouth.as_mut() {
+          mouth.pushback.push_front(token);    // Unread
+        } else {
+          fatal!(Mouth, NotFound, "No Mouth in Gullet.read_until_brace".to_owned())
+        }
         break;
       }
       tokens.push(token);
@@ -388,13 +392,17 @@ impl Gullet {
     }
   }
 
-  pub fn if_next(&mut self, token: Token, state: &mut State) -> bool {
+  pub fn if_next(&mut self, token: Token, state: &mut State) -> Result<bool> {
     let mut is_next = false;
     if let Some(tok) = self.read_token(state) {
       is_next = tok == token;
-      self.mouth.as_mut().unwrap().pushback.push_front(tok);    // Unread
+      if let Some(mouth) = self.mouth.as_mut() {
+        mouth.pushback.push_front(tok);  // Unread
+      } else {
+        fatal!(Mouth, NotFound, "No Mouth found in Gullet.if_next".to_owned())
+      }
     }
-    is_next
+    Ok(is_next)
   }
 
   /// Match the input against one of the Token or Tokens in @choices; return the matching one or undef.
@@ -403,35 +411,41 @@ impl Gullet {
       let mut to_match : Vec<Token> = choice.unlist().into_iter().rev().collect();
       let mut matched = Vec::new();
       while !to_match.is_empty() {
-        let token_opt = self.read_token(state);
-        if token_opt.is_none() {
-          break;
-        }
-        let token = token_opt.unwrap();
-        matched.push(token.clone());
-        if Some(&token) == to_match.last() {
-          to_match.pop();
-        } else {
-          break;
-        }
-
-        if token.code == Catcode::SPACE { // If this was space, SKIP any following!!!
-          while let Some(space_token) = self.read_token(state) {
-            if space_token.code != Catcode::SPACE {
-              break;
+        match self.read_token(state) {
+          None => break,
+          Some(token) => {
+            matched.push(token.clone());
+            if Some(&token) == to_match.last() {
+              to_match.pop();
             } else {
-              matched.push(space_token);
+              break;
+            }
+
+            if token.code == Catcode::SPACE { // If this was space, SKIP any following!!!
+              while let Some(space_token) = self.read_token(state) {
+                if space_token.code != Catcode::SPACE {
+                  break;
+                } else {
+                  matched.push(space_token);
+                }
+              }
+
+              match self.mouth.as_mut() {
+                Some(mouth) => mouth.pushback.push_front(token), // Unread
+                None => fatal!(Mouth, NotFound, "No Mouth in Gullet.read_match".to_owned())
+              }
             }
           }
-
-          self.mouth.as_mut().unwrap().pushback.push_front(token) // Unread
         }
       }
       if to_match.is_empty() {
         return Ok(vec![choice]); // All matched!!!
       } else {
         for matched_token in matched.into_iter().rev() {
-          self.mouth.as_mut().unwrap().pushback.push_front(matched_token);  // Put 'em back and try next!
+          match self.mouth.as_mut() {
+            Some(mouth) => mouth.pushback.push_front(matched_token),  // Put 'em back and try next!
+            None => fatal!(Mouth, NotFound, "No Mouth in Gullet.read_match".to_owned())
+          }
         }
       }
     }
