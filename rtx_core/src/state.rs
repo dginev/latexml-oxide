@@ -774,7 +774,7 @@ impl State {
   /// Since we're not doing digestion here, we don't need to handle mathactive,
   /// nor cs let to executable tokens
   /// This returns a definition object, or undef
-  pub fn lookup_definition<'def>(&'def mut self, key: &'def Token) -> Option<ObjectStore> {
+  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<ObjectStore> {
     let cc = &key.code;
     let name = &key.text;
     let lookupname: String = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) {
@@ -811,11 +811,11 @@ impl State {
       cc.name()
     };
 
-    // info!("Looking up digestable {:?}", lookupname);
+    debug!("Looking up digestable {:?}", lookupname);
     let entry = self.meaning.get(&lookupname);
 
     if !lookupname.is_empty() && entry.is_some() {
-      // info!("-- Found definition for: {:?}", token);
+      debug!("Found definition for: {:?}", lookupname);
       let defn = entry.unwrap();
       // If a cs has been let to an executable token, lookup ITS defn.
       // if defn->isa('LaTeXML::Token')
