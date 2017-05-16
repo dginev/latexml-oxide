@@ -344,7 +344,7 @@ impl Stomach {
     state.assign_value("afterAssignment"       , ObjectStore::VecDigested(Vec::new()), Some(Scope::Local));  // ALWAYS bind this!
     state.assign_value("groupNonBoxing"        , ObjectStore::Bool(nobox),             Some(Scope::Local));  // ALWAYS bind this!
     state.assign_value("groupInitiator"        , ObjectStore::Token(current_token.clone()), Some(Scope::Local));
-    // state.assign_value("groupInitiatorLocator" , $self->getLocator,       Scope::Local);
+    // state.assign_value("groupInitiatorLocator" , self.getLocator,       Scope::Local);
     if !nobox {
       self.boxing.push(current_token)  // For begingroup/endgroup
     }
@@ -394,7 +394,7 @@ impl Stomach {
   }
 
   pub fn egroup(&mut self, state: &mut State) -> Result<()> {
-    // if state.is_value_bound("MODE", false)   // Last stack frame was a mode switch!?!?!
+    // if state.is_value_bound("MODE", Some(0))   // Last stack frame was a mode switch!?!?!
     //   || state.lookup_value("groupNonBoxing") {    // or group was opened with \begingroup
     //     error!("unexpected:{:?}: Attempt to close boxing group", state.lookup_value("CURRENT_TOKEN"));
     //   // Error('unexpected', $LaTeXML::CURRENT_TOKEN, self, "Attempt to close boxing group",
@@ -410,7 +410,7 @@ impl Stomach {
   }
 
   pub fn endgroup(&mut self, state: &mut State) -> Result<()> {
-    // if state.is_value_bound("MODE", false)    // Last stack frame was a mode switch!?!?!
+    // if state.is_value_bound("MODE", Some(0))    // Last stack frame was a mode switch!?!?!
     //   || state.lookup_value("groupNonBoxing").is_none() {    // or group was opened with \bgroup
     //     error!("unexpected:{:?}: Attempt to close non-boxing group", state.lookup_value("CURRENT_TOKEN"));
     //     // Error('unexpected', $LaTeXML::CURRENT_TOKEN, self, "Attempt to close non-boxing group",
@@ -420,4 +420,51 @@ impl Stomach {
       self.pop_stack_frame(true, state)
     //}
   }
+
+  //======================================================================
+  // Mode (minimal so far; math vs text)
+  // Could (should?) be taken up by Stomach by building horizontal, vertical or math lists ?
+
+  pub fn begin_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
+    self.push_stack_frame(false, state);    // Effectively bgroup
+    // let prevmode = state.lookup_string("MODE");
+    let ismath   = mode.ends_with("math");
+    state.assign_value("MODE", ObjectStore::String(mode.to_string()), Some(Scope::Local));
+    state.assign_value("IN_MATH", ObjectStore::Bool(ismath), Some(Scope::Local));
+    // let curfont = state.lookup_value("font");
+    // if mode == prevmode { }
+    // else if ismath {
+      // When entering math mode, we set the font to the default math font,
+      // and save the text font for any embedded text.
+      // if let Some(cf) = curfont {
+      //   state.assign_value("savedfont", cf.clone(), Some(Scope::Local));
+      // }
+      // TODO:
+      // state.assign_value(font, state.lookup_value("mathfont").merge(
+      //     color => $curfont->getColor, background => $curfont->getBackground,
+      //     size => $curfont->getSize,
+      //     mathstyle => ($mode =~ /^display/ ? "display" : "text")), Some(Scope::Local));
+    // } else {
+      // When entering text mode, we should set the font to the text font in use before the math
+      // but inherit color and size
+      // TODO:
+      // state.assign_value("font", state.lookup_value("savedfont")->merge(
+      //     color => $curfont->getColor, background => $curfont->getBackground,
+      //     size => $curfont->getSize), Some(Scope::Local));
+    // }
+    Ok(())
+  }
+
+  pub fn end_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
+    if !state.is_value_bound("MODE", Some(0))    // Last stack frame was NOT a mode switch!?!?!
+      || (state.lookup_string("MODE") != mode) {    // Or was a mode switch to a different mode
+      error!(target: &format!("unexpected:{:?}",state.current_token), "Attempt to end mode")
+        // self.currentFrameMessage);
+    } else {    // Don"t pop if there"s an error; maybe we'll recover?
+      try!(self.pop_stack_frame(false ,state));
+    }    // Effectively egroup.
+    Ok(())
+  }
+
+  //**********************************************************************
 }

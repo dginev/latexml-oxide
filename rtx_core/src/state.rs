@@ -613,6 +613,13 @@ impl State {
     }
   }
 
+  pub fn lookup_string(&self, key: &str) -> String {
+    match self.lookup_value(key) {
+      Some(& ObjectStore::String(ref v)) => v.to_owned(),
+      _ => String::new()
+    }
+  }
+
   pub fn lookup_vecdeque<'lvdq>(&'lvdq self, key: &'lvdq str) -> Option<&VecDeque<ObjectStore>> {
     match self.lookup_value(key) {
       Some(& ObjectStore::VecDequeOS(ref v)) => Some(v),

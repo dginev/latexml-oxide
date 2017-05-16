@@ -555,9 +555,13 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($name:expr, $inner_state:ident) => ($inner_state.lookup_value($name));
     ($name:expr) => {$state.lookup_value($name)}
   }
-
   macro_rules! LookupBool {
+    ($name:expr, $inner_state:ident) => ($inner_state.lookup_bool($name));
     ($name:expr) => {$state.lookup_bool($name)}
+  }
+  macro_rules! LookupString {
+    ($name:expr, $inner_state:ident) => ($inner_state.lookup_string($name));
+    ($name:expr) => {$state.lookup_string($name)}
   }
 
   macro_rules! AssignValue {
