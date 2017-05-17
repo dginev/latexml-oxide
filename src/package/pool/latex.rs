@@ -256,7 +256,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // TODO: Implement environment modes properly, some work still to go
   // TODO: Re-add ltx: namespace when compiler can parse it
   DefEnvironment!("{math}",
-    "<Math mode=\"inline\"><XMath>#body</XMath></Math>",
+    "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
     mode => Some("inline_math".to_string())
   );
   // My first inclination is to Lock {math}, but it is surprisingly common to redefine it in silly ways... So...?
