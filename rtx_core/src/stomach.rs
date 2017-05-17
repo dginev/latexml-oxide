@@ -44,15 +44,14 @@ impl Stomach {
   pub fn digest_next_body(&mut self, _terminal: bool, state: &mut State) -> Result<Vec<Digested>> {
     let _start_location = self.get_locator();
     let init_depth = self.boxing.len();
-    let mut read_token: Option<Token>;
     let mut box_list: Vec<Digested> = Vec::new();
-    let mut read_token_was_none = false; // TODO: make idiomatic rust here
 
     loop {
-      read_token = try!(self.get_gullet_mut().read_x_token(true, true, state));
-      match read_token {
+      match try!(self.get_gullet_mut().read_x_token(true, true, state)) { // try reading a executable token
         None => {
-          read_token_was_none = true;
+          // Wer ran out, terminate,
+          // and add a Dummy `trailer' if none explicit.
+          box_list.push(Digested::Box(Tbox::default()));
           break;
         },
         Some(token) => {
@@ -70,9 +69,6 @@ impl Stomach {
     // "current body started at " . ToString($startloc))
     // if $terminal && !Equals($token, $terminal);
 
-    if read_token_was_none {
-      box_list.push(Digested::Box(Tbox::default())); // Dummy `trailer' if none explicit.
-    }
     Ok(box_list)
   }
 
