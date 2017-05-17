@@ -46,11 +46,15 @@ impl Stomach {
     let init_depth = self.boxing.len();
     let mut read_token: Option<Token>;
     let mut box_list: Vec<Digested> = Vec::new();
+    let mut read_token_was_none = false; // TODO: make idiomatic rust here
 
     loop {
       read_token = try!(self.get_gullet_mut().read_x_token(true, true, state));
       match read_token {
-        None => break,
+        None => {
+          read_token_was_none = true;
+          break;
+        },
         Some(token) => {
           box_list.extend(try!(self.invoke_token(token, state)));
           // TODO:
@@ -66,7 +70,7 @@ impl Stomach {
     // "current body started at " . ToString($startloc))
     // if $terminal && !Equals($token, $terminal);
 
-    if box_list.is_empty() {
+    if read_token_was_none {
       box_list.push(Digested::Box(Tbox::default())); // Dummy `trailer' if none explicit.
     }
     Ok(box_list)

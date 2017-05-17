@@ -153,11 +153,11 @@ impl Document {
         // A Proper Box or Whatsit? Absorb it.
         Digested::Box(digested) => digested.be_absorbed(self, state),
         Digested::Whatsit(digested) => digested.be_absorbed(self, state),
-    };
+      };
 
       let newly_created : Vec<Node> = self.constructed_nodes.drain(0..).collect();    // These were created just now
       for node in &newly_created {
-          self.record_constructed_node(node);    // record these for OUTER caller!
+        self.record_constructed_node(node);    // record these for OUTER caller!
       }
       results.extend(newly_created); // but return only the most recent set.
 
