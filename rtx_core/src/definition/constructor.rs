@@ -103,7 +103,7 @@ impl Definition for Constructor {
   }
   fn capture_body(&self) -> bool {self.options.capture_body}
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Vec<Token>> {
-    info!("-- constructor invoke for {:?}", self.get_cs());
+    info!("-- constructor capture_body for {:?}", self.get_cs());
     Ok(Vec::new())
   }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.

@@ -280,10 +280,11 @@ impl Document {
     }
 
     if node.get_type() == Some(NodeType::DocumentNode) {    // Didn't find $qname at all!!
-      error!(target: &format!("malformed:{:?}",qname), "TODO: in doc: {:?}", self.document.to_string(true));
-      // Error('malformed', $qname, $self,
-      //   "Attempt to close " . ($qname eq '#PCDATA' ? $qname : '</' . $qname . '>') . ", which isn't open",
-      //   "Currently in " . self.getInsertionContext());
+      let qname_msg : String = match qname {
+        "#PCDATA" => qname.to_owned(),
+        _ => format!("</{}>", qname)
+      };
+      error!(target: &format!("malformed:{:?}",qname), "Attempt to close {}, which isn't open. Currently in {}", qname_msg, self.get_insertion_context(None, state));
       None
     } else {                                         // Found node.
       if !cant_close.is_empty() {
@@ -827,6 +828,44 @@ impl Document {
     if should_push {
       self.constructed_nodes.push(node.clone());
     }
+  }
+
+
+//**********************************************************************
+// Low level internal interface
+
+/// Return a string indicating the path to the current insertion point in the document.
+/// if $levels is defined, show only that many levels
+  pub fn get_insertion_context(&self, levels_opt: Option<usize>, state: &State) -> String {
+    let mut levels = match levels_opt {
+      None => {   // Default depth is based on verbosity
+        if state.verbosity <= 1 {
+          Some(5)
+        } else {
+          None
+        }
+      },
+      Some(t) => Some(t)
+    };
+    let mut node = self.node.clone();
+    let node_type = node.get_type();
+    if node_type != Some(NodeType::TextNode) && node_type != Some(NodeType::ElementNode) && node_type != Some(NodeType::DocumentNode) {
+      error!(target: "internal:context", "Insertion point is not an element, document or text: {:?}", self.document.node_to_string(&node));
+      return String::new();
+    }
+    let mut path = "TODO".to_owned();//Stringify($node);
+    while let Some(parent_node) = node.get_parent() {
+      node = parent_node;
+      if let Some(levels_val) = levels {
+        levels = Some(levels_val - 1);
+        if levels_val <= 1 {
+          path = format!("...{}", path);
+          break;
+        }
+      }
+      // TODO: $path = Stringify($node) . $path; }
+    }
+    return path;
   }
 
   /// Find the node where an element with qualified name $qname can be inserted.

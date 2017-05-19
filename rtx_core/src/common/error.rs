@@ -44,6 +44,8 @@ macro_rules! fatal {
   })
 }
 
+
+
 pub type Result<T> = result::Result<T, Error>;
 
 impl fmt::Display for Error {
