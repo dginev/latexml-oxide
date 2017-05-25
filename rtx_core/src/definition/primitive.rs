@@ -14,7 +14,7 @@ use definition::{Definition, PrimitiveClosure, BeforeDigestClosure, DigestionClo
 #[derive(Clone)]
 pub struct PrimitiveOptions {
   pub bounded: bool,
-  pub mode: String, // TODO
+  pub mode: Option<String>,
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
   pub is_prefix: bool,
@@ -31,7 +31,7 @@ impl Default for PrimitiveOptions {
       bounded: false,
       before_digest: Vec::new(),
       after_digest: Vec::new(),
-      mode: String::new(),
+      mode: None,
       is_prefix: false,
       scope: None,
       require_math: false,
