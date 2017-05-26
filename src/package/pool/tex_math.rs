@@ -9,6 +9,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //======================================================================
   // Decide whether we're going into or out of math, inline or display.
   Tag!("ltx:XMText", auto_open => true, auto_close => true);
+  // Since the arXMLiv folks keep wanting ids on all math, let's try this!
+  Tag!("ltx:Math", after_open => sub!(|document, node, box_opt, state| {
+    generate_id(document, node, "m", state);
+  }));
+
   DefPrimitiveII!(T_MATH!(), None, |stomach : &mut Stomach, tokens: Vec<Tokens>, state: &mut State| {
     let mut op        = "\\@@BEGININLINEMATH";
   {
