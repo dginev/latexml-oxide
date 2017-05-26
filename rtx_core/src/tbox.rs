@@ -49,4 +49,9 @@ impl BoxOps for Tbox {
       }
     }
   }
+
+  fn revert(&self) -> Vec<Token> {
+    // TODO - mock for now
+    Vec::new()
+  }
 }

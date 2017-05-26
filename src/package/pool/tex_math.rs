@@ -1,4 +1,5 @@
 use package::*;
+use rtx_core::{Digested, BoxOps};
 pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
@@ -71,6 +72,55 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefConstructorI!(T_CS!("\\@@ENDINLINEMATH"), None, |doc,whatsit,props,state|{}, alias => Some("$".to_string()),
     before_digest => sub!(|stomach, state| { try!(stomach.end_mode("inline_math", state)); Ok(Vec::new()) }));
+
+  // Same as add_TeX, but add the code from the body of the object.
+  let add_body_tex_closure = Rc::new(|document: &mut Document, mut node: Node, box_opt: Option<Digested>, state: &mut State| {
+    if let Some(mut tbox) = box_opt {
+      if tbox.get_property("_added_body_tex").is_none() {
+        if let Some(body) = tbox.get_body() {
+          info!(" found some body: {:?}", body);
+          // local $LaTeXML::DUAL_BRANCH = 'presentation';
+          let tex = untex(body, state);
+          // $LaTeXML::DUAL_BRANCH = 'content';
+          // let ctex = untex(body, state);
+          document.set_attribute(&mut node, "tex", &tex);
+          // if ctex != tex {
+          //   document.set_attribute(node, "content-tex", ctex);
+          // }
+        } else {
+          info!(" found no body?");
+        }
+        tbox.set_property("_added_body_tex", ObjectStore::Bool(true));
+      }
+    }
+    return;
+  });
+
+  // Cleanup ltx:Math elements; particularly if they aren't "really" math.
+  // But record the oddity with class=ltx_markedasmath
+  // let cleanup_math_closure = Rc::new(|document: &mut Document, node: Node, box_opt: Option<Digested>, state: &mut State| {
+  //   // If the Math ONLY contains XMath/XMText, it apparently isn't math at all!?!
+  //   let mathy_nodes = document.findnodes("ltx:XMath/ltx:*[local-name() != 'XMText']", node)
+  //   if (!mathy_nodes.is_empty()) {
+  //     // So unwrap down to the contents of the XMText's.
+  //     let xmtexts = node.get_child_nodes().into_iter().flat_map(|child| child.get_child_nodes()).flat_map(|grandchild| grandchild.get_child_nodes());
+  //     let mut texts = vec![];
+  //     for text in xmtexts {
+  //       if text.get_type() != NodeType::Element {    // Make sure we've got an element
+  //         text = document.wrap_nodes("ltx:text", text);
+  //       }
+  //       document.add_class(text, "ltx_markedasmath");   // Now record that it originally was marked as math
+  //       texts.push(text);
+  //     }
+  //     document.replace_node(node, texts); // and replace the whole Math with the pieces
+  //   } else {                                                // Cleanup any remaining XMTexts
+  //     cleanup_XMText_outer($document, $node);
+  //   }
+  //   return;
+  // }
+
+  Tag!("ltx:Math", after_close => vec![add_body_tex_closure]);
+  // Tag!("ltx:Math", after_close => vec![cleanup_math_closure]);
 
   Ok(())
 }

@@ -25,3 +25,4 @@ pub mod util;
 pub mod core;
 pub mod converter;
 pub mod package;
+pub mod math_parser;

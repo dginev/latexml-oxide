@@ -1,3 +1,6 @@
+use std::iter::FromIterator;
+use std::collections::VecDeque;
+
 use common::error::*;
 use state::{State, ObjectStore};
 use {Digested, BoxOps};
@@ -277,8 +280,79 @@ macro_rules! ExplodeText(($text:expr) => ({
   ).collect::<Vec<Token>>()
 }));
 
-pub fn untex(digested: &Digested) -> String {
-  digested.to_string()
+static UNTEX_LINELENGTH : usize = 78; // [CONSTANT]
+pub fn untex(digested: &Digested, state: &State) -> String {
+  use token::Catcode::*;
+  let mut tokens = VecDeque::from_iter(digested.revert().into_iter());
+  let mut tex_string = String::new();
+  let mut length = 0;
+  let mut level : i32 = 0;
+  let mut prevs = String::new();
+  let mut prevcc = COMMENT;
+  while let Some(token) = tokens.pop_front() {
+    let cc = token.get_catcode();
+    if cc == COMMENT {
+      continue;
+    }
+    let mut token_string = token.get_string().to_owned();
+    let first_char = match token_string.chars().next() {
+      Some(c) => c,
+      None => '\n' // Note: only-used to fail alphanumeric test
+    };
+    if cc == LETTER {    // keep "words" together, just for aesthetics
+      while !tokens.is_empty() && tokens.get(0).unwrap().get_catcode() == LETTER {
+        token_string += tokens.pop_front().unwrap().get_string()
+      }
+    }
+    let l = token_string.len();
+    if cc == BEGIN { level += 1; }
+    // Seems a reasonable & safe time to line break, for readability, etc.
+    if (cc == SPACE) && (token_string == "\n") {    // preserve newlines already present
+      if length > 0 {
+        tex_string.push_str(&token_string);
+        length = 0;
+      }
+    }
+    // If this token is a letter (or otherwise starts with a letter or digit): space or linebreak
+    else if (cc == LETTER) || ((cc == OTHER) && first_char.is_alphanumeric())
+      && (prevcc == CS) && (!prevs.is_empty())
+      && (state.lookup_catcode(&prevs.chars().rev().next().unwrap()) == Some(LETTER)) {
+      // Insert a (virtual) space before a letter if previous token was a CS w/letters
+      // This is required for letters, but just aesthetic for digits (to me?)
+      // Of course, use a newline if we're already at end
+      let space = if (length > 0) && (length + l > UNTEX_LINELENGTH) {
+        '\n'
+      } else {
+        ' '
+      };
+      tex_string.push(space);
+      tex_string.push_str(&token_string);
+      length += 1 + l;
+    } else if (length > 0) && (length + l > UNTEX_LINELENGTH)    // linebreak before this token?
+      && (tokens.len() > 1) {                                 // and not at end! Or even within an arg!
+      tex_string.push_str("%\n");
+      tex_string.push_str(&token_string);
+      length = l;                                                // with %, so that it "disappears"
+    } else {
+      tex_string.push_str(&token_string);
+      length += l;
+    }
+    if cc == END { level -= 1; }
+
+    prevs = token_string;
+    prevcc = cc;
+  }
+  // Patch up nesting for valid TeX !!!
+  if level > 0 {
+    let close_brace_string = String::from_utf8(vec![b'}'; level.abs() as usize]).unwrap();
+    tex_string = tex_string + &close_brace_string;
+  }
+  else if level < 0 {
+    let open_brace_string = String::from_utf8(vec![b'{'; level.abs() as usize]).unwrap();
+    tex_string = open_brace_string + &tex_string;
+  }
+
+  tex_string
 }
 
 

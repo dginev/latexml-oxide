@@ -2,9 +2,10 @@ use std::fmt;
 use std::collections::HashMap;
 use std::rc::Rc;
 use state::{State, ObjectStore};
-use list::List;
-use definition::expandable::Expandable;
 use {Digested, BoxOps, TexMode};
+use list::List;
+use token::Token;
+use definition::expandable::Expandable;
 use definition::Definition;
 use document::Document;
 
@@ -38,16 +39,8 @@ impl Whatsit {
     }
   }
 
-  pub fn get_property(&self, key: &str) -> Option<&ObjectStore> {
-    self.properties.get(key)
-  }
-
   pub fn get_properties(&self) -> &HashMap<String, ObjectStore> {
     &self.properties
-  }
-
-  pub fn set_property(&mut self, key: &str, value: ObjectStore) {
-    self.properties.insert(key.to_string(), value);
   }
 
   pub fn set_properties(&mut self, props: HashMap<String, ObjectStore>) {
@@ -69,13 +62,6 @@ impl Whatsit {
 
   pub fn set_args(&mut self, args: Vec<Option<Digested>>) {
     self.args = args;
-  }
-
-  pub fn get_body(&self) -> Option<&Digested> {
-    match self.properties.get("body") {
-      Some(& ObjectStore::Digested(ref body)) => Some(body),
-      _ => None
-    }
   }
 
   pub fn set_body(&mut self, mut body: Vec<Digested>) {
@@ -127,5 +113,25 @@ impl BoxOps for Whatsit {
     let self_mut = &mut self;
     self_mut.definition.do_absorbtion(document, self_mut, state);
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
+  }
+
+  fn get_property(&self, key: &str) -> Option<&ObjectStore> {
+    self.properties.get(key)
+  }
+
+  fn set_property(&mut self, key: &str, value: ObjectStore) {
+    self.properties.insert(key.to_string(), value);
+  }
+
+  fn get_body(&self) -> Option<&Digested> {
+    match self.properties.get("body") {
+      Some(& ObjectStore::Digested(ref body)) => Some(body),
+      _ => None
+    }
+  }
+
+  fn revert(&self) -> Vec<Token> {
+    // TODO - mock for now
+    Vec::new()
   }
 }

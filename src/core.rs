@@ -15,6 +15,7 @@ use rtx_core::document::Document;
 // use rtx_core::tbox::Tbox;
 use rtx_core::list::List;
 use package::*;
+use math_parser::MathParser;
 
 lazy_static! {
   static ref CLS_EXT_REGEX : Regex = Regex::new(r"\.cls$").unwrap();
@@ -178,7 +179,10 @@ impl DigestionAPI for Core {
     //     $rule->rewrite($document, $document->getDocument->documentElement); }
     //   NoteEnd("Rewriting"); }
 
-    // LaTeXML::MathParser->new()->parseMath($document) unless $$self{nomathparse};
+    if !state.nomathparse {
+      let parser = MathParser::default();
+      parser.parse_math(&mut document);
+    }
     note_begin("Finalizing");
     document.finalize(&mut state);
     note_end("Finalizing");

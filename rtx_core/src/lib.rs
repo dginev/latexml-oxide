@@ -30,9 +30,10 @@ pub mod state;
 pub mod util;
 
 use std::fmt;
-use state::{State, StateOptions};
+use state::{State, StateOptions, ObjectStore};
 use common::model::Model;
 use stomach::Stomach;
+use token::Token;
 use tbox::Tbox;
 use list::List;
 use whatsit::Whatsit;
@@ -130,6 +131,16 @@ pub trait BoxOps {
   fn stringify(&self) -> String {
     "Vec<Tbox> for now ".to_string()
   }
+  fn set_property(&mut self, _key: &str, _value: ObjectStore) {}
+  fn get_property(&self, _key: &str) -> Option<&ObjectStore> {
+    error!(target: "boxops:get_property", "Generic BoxOps::get_property should never be called!");
+    None
+  }
+  fn get_body(&self) -> Option<&Digested> {
+    error!(target: "boxops:get_body", "Generic BoxOps::get_body should never be called!");
+    None
+  }
+  fn revert(&self) -> Vec<Token>;
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -184,6 +195,37 @@ impl BoxOps for Digested {
       Digested::Box(ref b) => b.stringify(),
       Digested::List(ref l) => l.stringify(),
       Digested::Whatsit(ref w) => w.stringify(),
+    }
+  }
+
+  fn set_property(&mut self, key: &str, value: ObjectStore) {
+    match *self {
+      Digested::Box(ref b) => error!(target: "digested:set_property", "Called set_property on Box: {:?}", b),
+      Digested::List(ref l) => error!(target: "digested:set_property", "Called set_property on List: {:?}", l),
+      Digested::Whatsit(ref mut w) => w.set_property(key, value)
+    }
+  }
+
+  fn get_property(&self, key: &str) -> Option<&ObjectStore> {
+    match *self {
+      Digested::Box(ref b) => {error!(target: "digested:get_property", "Called get_property on Box: {:?}", b); None}
+      Digested::List(ref l) => {error!(target: "digested:get_property", "Called get_property on List: {:?}", l); None}
+      Digested::Whatsit(ref w) => w.get_property(key)
+    }
+  }
+  fn get_body(&self) -> Option<&Digested> {
+    match *self {
+      Digested::Box(ref b) => {error!(target: "digested:get_body", "Called get_body on Box: {:?}", b); None}
+      Digested::List(ref l) => {error!(target: "digested:get_body", "Called get_body on List: {:?}", l); None}
+      Digested::Whatsit(ref w) => w.get_body()
+    }
+  }
+
+  fn revert(&self) -> Vec<Token> {
+    match *self {
+      Digested::Box(ref b) => b.revert(),
+      Digested::List(ref l) => l.revert(),
+      Digested::Whatsit(ref w) => w.revert()
     }
   }
 }

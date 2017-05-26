@@ -1,5 +1,6 @@
 use std::fmt;
 use {Digested, TexMode, BoxOps};
+use token::Token;
 use state::State;
 use document::Document;
 
@@ -36,5 +37,9 @@ impl BoxOps for List {
     for digested in self.unlist() {
       document.absorb(digested, state);
     }
+  }
+
+  fn revert(&self) -> Vec<Token> {
+    self.boxes.iter().flat_map(|tbox| tbox.revert()).collect::<Vec<Token>>()
   }
 }
