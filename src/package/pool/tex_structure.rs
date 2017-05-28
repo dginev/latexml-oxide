@@ -157,7 +157,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   Tag!("ltx:para", auto_close => true, auto_open => true);
 
-  let trim_node_whitespace_closure = Rc::new(|document: &mut Document, node: Node, box_opt: Option<Digested>, state: &mut State| {
+  let trim_node_whitespace_closure = Rc::new(|document: &mut Document, node: &mut Node, state: &mut State| {
     document.trim_node_whitespace(node);
   });
   Tag!("ltx:p", auto_close => true, auto_open => true, after_close => vec![trim_node_whitespace_closure]);

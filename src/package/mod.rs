@@ -481,14 +481,14 @@ pub fn def_macro_i(cs: Token, paramlist: Option<Parameters>, expansion: Expansio
 /// The parent node (the one with ID=<parentid>) also maintains a counter
 /// stored in an attribute `_ID_counter_<prefix>` recording the last used
 /// <number> for <prefix> amongst its descendents.
-pub fn generate_id(document: &mut Document, mut node: Node, mut prefix: &str, state: &mut State) {
+pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &str, state: &mut State) {
   // If node doesn't already have an id, and can
-  let node_qname = document.get_node_qname(&node, state);
+  let node_qname = document.get_node_qname(node, state);
   if node.get_attribute("xml:id").is_none() && document.can_have_attribute(&node_qname, "xml:id", state)
     // but isn't a _Capture_ node (which ultimately should disappear)
     && (node_qname != "ltx:_Capture_") {
 
-    let mut ancestor = document.findnode("ancestor::*[@xml:id][1]", Some(node.clone()), state).unwrap_or_else(|| document.get_document().get_root_element());
+    let mut ancestor = document.findnode("ancestor::*[@xml:id][1]", Some(node), state).unwrap_or_else(|| document.get_document().get_root_element());
     //// Old versions don't like ancestor.getAttribute('xml:id');
     let ancestor_id = ancestor.get_attribute_ns("http://www.w3.org/XML/1998/namespace", "id");
 

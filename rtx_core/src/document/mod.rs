@@ -63,21 +63,19 @@ impl Document {
 
   /// Find the nodes according to the given $xpath expression,
   /// the xpath is relative to $node (if given), otherwise to the document node.
-  pub fn findnodes(&self, xpath: &str, node: Option<Node>, state: &mut State) -> Vec<Node> {
-    let root = match node {
-      Some(n) => n,
-      None => self.document.get_root_element()
-    };
-    state.model.get_xpath(&self.document).findnodes(xpath, root)
+  pub fn findnodes(&self, xpath: &str, node: Option<&mut Node>, state: &mut State) -> Vec<Node> {
+    match node {
+      Some(n) => state.model.get_xpath(&self.document).findnodes(xpath, n),
+      None => state.model.get_xpath(&self.document).findnodes(xpath, &mut self.document.get_root_element())
+    }
   }
 
   /// Like findnodes, but only returns the first matched node
-  pub fn findnode(&self, xpath: &str, node: Option<Node>, state: &mut State) -> Option<Node> {
-    let root = match node {
-      Some(n) => n,
-      None => self.document.get_root_element()
+  pub fn findnode(&self, xpath: &str, node: Option<&mut Node>, state: &mut State) -> Option<Node> {
+    let nodes = match node {
+      Some(n) => state.model.get_xpath(&self.document).findnodes(xpath, n),
+      None => state.model.get_xpath(&self.document).findnodes(xpath, &mut self.document.get_root_element())
     };
-    let nodes = state.model.get_xpath(&self.document).findnodes(xpath, root);
     if nodes.is_empty() {
       None
     } else {
@@ -778,7 +776,7 @@ impl Document {
     let closeto = node.get_parent().unwrap(); // Grab now in case afterClose screws the structure.
     let mut n       = self.close_text_internal();    // Close any open text node.
     while n.get_type() == Some(NodeType::ElementNode) {
-      self.close_element_at(n.clone(), state);
+      self.close_element_at(&mut n, state);
       // self.auto_collapse_children(n);
       if *node == n {
         break;
@@ -971,15 +969,14 @@ impl Document {
     self.node_boxes.insert(nodeid, digested);
   }
 
-  pub fn get_node_box(&mut self, node: &Node) -> Option<Digested> {
+  pub fn get_node_box(&self, node: &Node) -> Option<&Digested> {
     if node.get_type() == Some(NodeType::ElementNode) {
-      self.node_boxes.remove(&node.to_hashable())
+      let nodeid = node.to_hashable();
+      self.node_boxes.get(&nodeid)
     } else {
       None
     }
   }
-
-
 
   //**********************************************************************
   // Inserting new nodes at random points into the document,
@@ -1070,7 +1067,7 @@ impl Document {
     }
 
     // Run afterOpen operations
-    self.after_open(newnode.clone(), state);
+    self.after_open(&mut newnode, state);
 
     newnode
   }
@@ -1092,38 +1089,34 @@ impl Document {
   /// Whenever a node has been created using openElementAt,
   /// closeElementAt ought to be used to close it, when you're finished inserting into $node.
   /// Basically, this just runs any afterClose operations.
-  pub fn close_element_at(&mut self, node: Node, state: &mut State) -> Node {
-    self.after_close(node, state)
+  pub fn close_element_at(&mut self, mut node: &mut Node, state: &mut State) {
+    self.after_close(&mut node, state);
   }
 
-  pub fn after_open(&mut self, node: Node, state: &mut State) -> Node {
+  pub fn after_open(&mut self, node: &mut Node, state: &mut State) {
     // Set current point to this node, just in case the afterOpen's use it.
     let savenode = self.node.clone();
-    let digested = self.get_node_box(&node);
     self.set_node(node.clone());
-    let node_qname = self.get_node_qname(&node, state);
+    let node_qname = self.get_node_qname(node, state);
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterOpen, state) {
-      action(self, node.clone(), digested.clone(), state);
+      action(self, node, state);
     }
     self.set_node(savenode);
-    node
   }
 
-  pub fn after_close(&mut self, node: Node, state: &mut State) -> Node {
+  pub fn after_close(&mut self, node: &mut Node, state: &mut State) {
     // Should we set point to this node? (or to last child, or something ??
     let savenode = self.node.clone();
-    let digested = self.get_node_box(&node);
-    let node_qname = self.get_node_qname(&node, state);
+    let node_qname = self.get_node_qname(node, state);
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterClose, state) {
-      action(self, node.clone(), digested.clone(), state);
+      action(self, node, state);
     }
     self.set_node(savenode);
-    node
   }
 
-  pub fn trim_node_whitespace(&mut self, mut node: Node) {
-    self.trim_node_left_whitespace(&mut node);
-    self.trim_node_right_whitespace(&mut node);
+  pub fn trim_node_whitespace(&mut self, mut node: &mut Node) {
+    self.trim_node_left_whitespace(node);
+    self.trim_node_right_whitespace(node);
   }
 
   pub fn trim_node_left_whitespace(&mut self, node: &mut Node) {

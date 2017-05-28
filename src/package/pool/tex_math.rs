@@ -1,5 +1,5 @@
 use package::*;
-use rtx_core::{Digested, BoxOps};
+use rtx_core::{BoxOps};
 pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
@@ -10,7 +10,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Decide whether we're going into or out of math, inline or display.
   Tag!("ltx:XMText", auto_open => true, auto_close => true);
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
-  Tag!("ltx:Math", after_open => sub!(|document, node, box_opt, state| {
+  Tag!("ltx:Math", after_open => sub!(|document, node, state| {
     generate_id(document, node, "m", state);
   }));
 
@@ -79,23 +79,28 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     before_digest => sub!(|stomach, state| { try!(stomach.end_mode("inline_math", state)); Ok(Vec::new()) }));
 
   // Same as add_TeX, but add the code from the body of the object.
-  let add_body_tex_closure = Rc::new(|document: &mut Document, mut node: Node, box_opt: Option<Digested>, state: &mut State| {
-    if let Some(mut tbox) = box_opt {
-      if tbox.get_property("_added_body_tex").is_none() {
+  let add_body_tex_closure = Rc::new(|document: &mut Document, mut node: &mut Node, state: &mut State| {
+    if node.get_attribute("tex").is_none() { // only do this once.
+      let tex_opt = if let Some(ref tbox) = document.get_node_box(&node) {
         if let Some(body) = tbox.get_body() {
-          info!(" found some body: {:?}", body);
+          Some(untex(body, state))
           // local $LaTeXML::DUAL_BRANCH = 'presentation';
-          let tex = untex(body, state);
+          // let tex = untex(body, state);
           // $LaTeXML::DUAL_BRANCH = 'content';
           // let ctex = untex(body, state);
-          document.set_attribute(&mut node, "tex", &tex);
+
           // if ctex != tex {
           //   document.set_attribute(node, "content-tex", ctex);
           // }
         } else {
-          info!(" found no body?");
+          None
         }
-        tbox.set_property("_added_body_tex", ObjectStore::Bool(true));
+      } else {
+        None
+      };
+      info!("Found tex: {:?}", tex_opt);
+      if let Some(tex_string) = tex_opt {
+        document.set_attribute(&mut node, "tex", &tex_string);
       }
     }
     return;

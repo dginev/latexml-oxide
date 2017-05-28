@@ -32,7 +32,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Set to 1 (or \usepackage[ids]{latexml}) to enable.
   // Set to 0 (or \usepackage[noids]{latexml}) to disable.
 
-  Tag!("ltx:*", after_open => sub!(|document, node, box_opt, state| {
+  Tag!("ltx:*", after_open => sub!(|document, node, state| {
     // If GENERATE_IDS is true, we'll assign an ID to EVERY element,
     // EXCEPT ltx:document which only gets an id from an EXPLICIT \thedocument@id.
     let tag = document.get_node_qname(&node, state);
@@ -46,10 +46,10 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   //======================================================================
   Tag!("ltx:document",
-    after_open => sub!(|document, node, box_opt, state| {
+    after_open => sub!(|document, node, state| {
       document.process_pending_resources(state);
     }),
-    after_close => sub!(|document, node, box_opt, state| {
+    after_close => sub!(|document, node, state| {
       document.process_pending_resources(state);
     })
   );

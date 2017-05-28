@@ -1,11 +1,9 @@
 use std::rc::Rc;
 use libxml::tree::Node;
-
-use Digested;
 use state::State;
 use document::Document;
 
-pub type TagConstructionClosure = Rc<Fn(&mut Document, Node, Option<Digested>, &mut State)>;
+pub type TagConstructionClosure = Rc<Fn(&mut Document, &mut Node, &mut State)>;
 
 // Specify the properties of a Node tag.
 pub enum TagOptionName {
