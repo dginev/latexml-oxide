@@ -477,9 +477,15 @@ impl Document {
         let mut anodes_keys : Vec<&String> = anodes.keys().collect();
         anodes_keys.sort();
         for key in anodes_keys {
+          if key == "id" {continue} // HACK for xml:id
           let key_serialized = state.model.get_node_document_qname(&node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
           open_tag.push_str(&format!(" {}=\"{}\"", key_serialized, val_serialized));
+        }
+        // HACK for xml:id for now, assuming last element
+        if anodes.get("id").is_some() {
+          let val_serialized = serialize_attr(&node.get_property("id").unwrap_or_default());
+          open_tag.push_str(&format!(" {}=\"{}\"", "xml:id", val_serialized));
         }
 
         let noindent_children : bool = if heuristic {
