@@ -180,8 +180,8 @@ impl DigestionAPI for Core {
     //   NoteEnd("Rewriting"); }
 
     if !state.nomathparse {
-      let parser = MathParser::default();
-      parser.parse_math(&mut document);
+      let mut parser = MathParser::default();
+      try!(parser.parse_math(&mut document, state));
     }
     note_begin("Finalizing");
     document.finalize(&mut state);

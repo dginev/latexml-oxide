@@ -102,10 +102,43 @@ impl From<io::Error> for Error {
     }
 }
 
-pub fn note_end(note: &str) {
-  info!("--|End:  | {:?}", note);
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// Progress Reporting
+//**********************************************************************
+// Progress reporting.
+
+pub fn note_progress(stuff: &str) {
+  // my $state = $STATE;
+  // my $verbosity = $state && $state->lookupValue('VERBOSITY') || 0;
+  // print STDERR @stuff if $verbosity >= 0;
+  info!(target: "note", "{}", stuff);
 }
 
-pub fn note_begin(note: &str) {
-  info!("--|Begin:| {:?}", note);
+pub fn note_progress_detailed(stuff: &str) {
+  // my $state = $STATE;
+  // my $verbosity = $state && $state->lookupValue('VERBOSITY') || 0;
+  // print STDERR @stuff if $verbosity >= 1;
+  info!(target: "note", "{}", stuff);
+}
+
+pub fn note_begin(stage: &str) {
+  // my ($stage) = @_;
+  // my $state = $STATE;
+  // my $verbosity = $state && $state->lookupValue('VERBOSITY') || 0;
+  // if ($state && ($verbosity >= 0)) {
+  // $state->assignMapping('NOTE_TIMERS', $stage, [Time::HiRes::gettimeofday]);
+  info!(target: "note", "\n({}...", stage);
+}
+
+
+pub fn note_end(_stage: &str) {
+  // my ($stage) = @_;
+  // my $state = $STATE;
+  // my $verbosity = $state && $state->lookupValue('VERBOSITY') || 0;
+  // if (my $start = $state && $state->lookupMapping('NOTE_TIMERS', $stage)) {
+  //   $state->assignMapping('NOTE_TIMERS', $stage, undef);
+    // if ($verbosity >= 0) {
+      // my $elapsed = Time::HiRes::tv_interval($start, [Time::HiRes::gettimeofday]);
+  // info!(target: "note", " %.2f sec)", elapsed);
+  info!(target: "note", " )");
 }

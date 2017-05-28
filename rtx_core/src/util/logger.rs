@@ -18,6 +18,17 @@ macro_rules! println_stderr(
     })
 );
 
+#[macro_export]
+macro_rules! print_stderr(
+    ($($arg:tt)*) => ({
+      use std::io::Write;
+      match write!(&mut ::std::io::stderr(), $($arg)* ) {
+        Ok(_) => {},
+        Err(x) => panic!("Unable to write to stderr: {}", x),
+      }
+    })
+);
+
 
 impl log::Log for Log {
   fn enabled(&self, metadata: &LogMetadata) -> bool {
@@ -27,6 +38,11 @@ impl log::Log for Log {
   fn log(&self, record: &LogRecord) {
     if self.enabled(record.metadata()) {
       let record_target = record.target();
+      let details = record.args();
+      if record_target == "note" { // simple print here
+        print_stderr!("{}",details.to_string());
+        return;
+      }
       let category_object = if record_target.is_empty() {
        "" // "unknown:unknown" ???
       } else {
@@ -41,8 +57,8 @@ impl log::Log for Log {
           LogLevel::Error => "Error",
           LogLevel::Debug => "Debug",
           _ => ""
-        } };      
-      let details = record.args();
+        } };
+
 
       let message = if severity.is_empty() {
         format!("{} ", category_object)
