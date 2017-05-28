@@ -284,6 +284,7 @@ static UNTEX_LINELENGTH : usize = 78; // [CONSTANT]
 pub fn untex(digested: &Digested, state: &State) -> String {
   use token::Catcode::*;
   let mut tokens = VecDeque::from_iter(digested.revert().into_iter());
+  info!("untex on tokens: {:?}", tokens);
   let mut tex_string = String::new();
   let mut length = 0;
   let mut level : i32 = 0;
@@ -291,9 +292,7 @@ pub fn untex(digested: &Digested, state: &State) -> String {
   let mut prevcc = COMMENT;
   while let Some(token) = tokens.pop_front() {
     let cc = token.get_catcode();
-    if cc == COMMENT {
-      continue;
-    }
+    if cc == COMMENT { continue; }
     let mut token_string = token.get_string().to_owned();
     let first_char = match token_string.chars().next() {
       Some(c) => c,
@@ -314,7 +313,7 @@ pub fn untex(digested: &Digested, state: &State) -> String {
       }
     }
     // If this token is a letter (or otherwise starts with a letter or digit): space or linebreak
-    else if (cc == LETTER) || ((cc == OTHER) && first_char.is_alphanumeric())
+    else if ((cc == LETTER) || ((cc == OTHER) && first_char.is_alphanumeric()))
       && (prevcc == CS) && (!prevs.is_empty())
       && (state.lookup_catcode(&prevs.chars().rev().next().unwrap()) == Some(LETTER)) {
       // Insert a (virtual) space before a letter if previous token was a CS w/letters
