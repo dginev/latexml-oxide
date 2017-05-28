@@ -1206,13 +1206,25 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     use rtx_core::stomach::Stomach;
     use rtx_core::whatsit::Whatsit;
     use rtx_core::definition::constructor::Constructor;
-    let mode = $options.mode;
     let name = $name_raw.to_string();
     // This is for the common case where the environment is opened by \begin{env}
     // let sizer = inferSizer($options.sizer, $options.reversion);
-    let bgroup_closure = Rc::new(|stomach: &mut Stomach, state: &mut State| {stomach.bgroup(state); Ok(Vec::new())});
-    let mut before_digest_with_group : Vec<BeforeDigestClosure> = vec![bgroup_closure];
-    before_digest_with_group.extend($options.before_digest);
+    let mut before_digest_env : Vec<BeforeDigestClosure> = Vec::new();
+    match &$options.mode {
+      &Some(ref mode) => {
+        let bmode = mode.clone();
+        let mode_closure = Rc::new(move |stomach: &mut Stomach, state: &mut State| {
+          try!(stomach.begin_mode(&bmode, state));
+          Ok(Vec::new())
+        });
+        before_digest_env.push(mode_closure);
+      },
+      &None => {
+        let bgroup_closure = Rc::new(|stomach: &mut Stomach, state: &mut State| {stomach.bgroup(state); Ok(Vec::new())});
+        before_digest_env.push(bgroup_closure);
+      }
+    };
+    before_digest_env.extend($options.before_digest);
 
     let push_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
       state.push_frame();
@@ -1233,11 +1245,9 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         replacement: $compiled_replacement,
         options: ConstructorOptions {
           nargs: $options.nargs,
-          before_digest: before_digest_with_group,
+          before_digest: before_digest_env,
           // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
           //   ($options{forbidMath} ? (sub { forbidMath($name); }) : ()),
-          //   ($mode ? (sub { $_[0]->beginMode($mode); })
-          //     : (sub { $_[0]->bgroup; })),
           //   sub { AssignValue(current_environment => $name);
           //     DefMacroI('\@currenvir', undef, $name); },
           //   ($options{font} ? (sub { MergeFont(%{ $options{font} }); }) : ()),
@@ -1258,7 +1268,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     $state.install_definition(ObjectStore::Constructor(begin_name_constructor), $options.scope.clone());
 
 
-    let mut after_digest_with_egroup = $options.after_digest;
+    let mut after_digest_env = $options.after_digest;
     let unexpected_end_closure = Rc::new(|_stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
       // let env = LookupValue!("current_environment", $state);
       //     Error('unexpected', "\\end{$name}", $_[0],
@@ -1269,24 +1279,33 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       //     return; },
       Ok(Vec::new())
     });
-    let egroup_closure = Rc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-      if mode.is_some() {
-        // TODO:
-        // stomach.end_mode(mode.unwrap(), $state);
-      } else {
-        try!(stomach.egroup(state))
+    after_digest_env.push(unexpected_end_closure);
+
+    match $options.mode {
+      Some(mode) => {
+        let emode = mode.clone();
+        let emode_closure = Rc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+          try!(stomach.end_mode(&emode, state));
+          Ok(Vec::new())
+        });
+        after_digest_env.push(emode_closure);
+      },
+      None => {
+        let egroup_closure = Rc::new(|stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+          try!(stomach.egroup(state));
+          Ok(Vec::new())
+        });
+        after_digest_env.push(egroup_closure);
       }
-      Ok(Vec::new())
-    });
-    after_digest_with_egroup.push(unexpected_end_closure);
-    after_digest_with_egroup.push(egroup_closure);
+    };
+
     let end_envname_constructor = Rc::new(Constructor {
       cs: T_CS!("\\end{".to_string()+&name+"}"),
       replacement: None,
       paramlist: None,
       options: ConstructorOptions {
         before_digest: $options.before_digest_end,
-        after_digest: after_digest_with_egroup,
+        after_digest: after_digest_env,
         ..ConstructorOptions::default()
       }
     });

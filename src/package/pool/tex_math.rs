@@ -19,6 +19,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   {
     let mut gullet = stomach.get_gullet_mut();
     let mode      = LookupString!("MODE", state);
+    info!("T_MATH primitive current mode: {:?}", mode);
     if mode == "display_math" {
       if try!(gullet.if_next(T_MATH!(), state)) {
         gullet.read_token(state);
@@ -76,7 +77,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     capture_body => true);
 
   DefConstructorI!(T_CS!("\\@@ENDINLINEMATH"), None, |doc,whatsit,props,state|{}, alias => Some("$".to_string()),
-    before_digest => sub!(|stomach, state| { try!(stomach.end_mode("inline_math", state)); Ok(Vec::new()) }));
+    before_digest => sub!(|stomach, state| { info!("\n\n\n end inline math \n\n\n"); try!(stomach.end_mode("inline_math", state)); Ok(Vec::new()) }));
 
   // Same as add_TeX, but add the code from the body of the object.
   let add_body_tex_closure = Rc::new(|document: &mut Document, mut node: &mut Node, state: &mut State| {
