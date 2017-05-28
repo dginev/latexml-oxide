@@ -18,6 +18,7 @@ pub enum ErrorTarget {
   Mouth,
   Codegen,
   Macro,
+  XMath,
 }
 
 #[derive(Debug)]

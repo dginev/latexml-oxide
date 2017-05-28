@@ -491,7 +491,6 @@ pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &st
     let mut ancestor = document.findnode("ancestor::*[@xml:id][1]", Some(node), state).unwrap_or_else(|| document.get_document().get_root_element());
     //// Old versions don't like ancestor.getAttribute('xml:id');
     let ancestor_id = ancestor.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace");
-    info!("ancestor id : {:?}", ancestor_id);
     // If we've got no ancestor_id, then we've got no ancestor (no document yet!),
     // or ancestor IS the root element (but without an id);
     // If we also have no prefix, we'll end up with an illegal id (just digits)!!!
@@ -499,7 +498,6 @@ pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &st
     if prefix.is_empty() && ancestor_id.is_none() {
       prefix = "id";
     }
-    info!("prefix: {:?}", prefix);
 
     let ctrkey = "_ID_counter_".to_string() + prefix + "_";
     let a_ctr = ancestor.get_attribute(&ctrkey).unwrap_or_else(|| "0".to_string());

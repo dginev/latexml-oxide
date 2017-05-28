@@ -24,7 +24,7 @@
 use rtx_core::common::error::*;
 use rtx_core::document::Document;
 use rtx_core::state::State;
-use libxml::tree::Node;
+use libxml::tree::{Node,NodeType};
 
 // our @EXPORT_OK = (qw(&Lookup &New &Absent &Apply &ApplyNary &recApply &CatSymbols
 //     &Annotate &InvisibleTimes &InvisibleComma
@@ -79,7 +79,7 @@ impl MathParser {
       note_begin("Math Parsing");
       note_progress(&format!("{:?} formulae ...", xmath_nodes.len()));
       for math in xmath_nodes.into_iter() {
-        self.parse(math, document, state);
+        try!(self.parse(math, document, state));
       }
 
       //     NoteProgress("\nMath parsing succeeded:"
@@ -257,122 +257,125 @@ impl MathParser {
 // Then, this information could be used when parsing the parent.
 // In fact, this could work the other way too; parsing the parent could tell
 // us something about what the child must be....
-fn parse(&mut self, xnode: Node, document: &mut Document, state: &mut State) {}
-// sub parse {
-//   my ($self, $xnode, $document) = @_;
-//   local $LaTeXML::MathParser::STRICT      = 1;
-//   local $LaTeXML::MathParser::WARNED      = 0;
-//   local $LaTeXML::MathParser::XNODE       = $xnode;
-//   local $LaTeXML::MathParser::PUNCTUATION = {};
-//   local $LaTeXML::MathParser::LOSTNODES   = {};
-//   local %LaTeXML::MathParser::IDREFS      = ();
-//   # This bit for debugging....
-//   foreach my $n ($document->findnodes("descendant-or-self::*[\@xml:id]", $xnode)) {
-//     my $id = $n->getAttribute('xml:id');
-//     $LaTeXML::MathParser::IDREFS{$id} = $n; }
-//   if (my $result = $self->parse_rec($xnode, 'Anything,', $document)) {
-//     # Add text representation to the containing Math element.
-//     my $p = $xnode->parentNode;
-//     # This is a VERY screwy situation? How can the parent be a document fragment??
-//     # This has got to be a LibXML bug???
-//     if ($p->nodeType == XML_DOCUMENT_FRAG_NODE) {
-//       my @n = $p->childNodes;
-//       if (scalar(@n) == 1) {
-//         $p = $n[0]; }
-//       else {
-//         Fatal('malformed', '<XMath>', $xnode, "XMath node has DOCUMENT_FRAGMENT for parent!"); } }
-//     # HACK: replace XMRef's to stray trailing punctution
-//     foreach my $id (keys %$LaTeXML::MathParser::PUNCTUATION) {
-//       my $r = $$LaTeXML::MathParser::PUNCTUATION{$id}->cloneNode;
-//       $r->removeAttribute('xml:id');
-//       foreach my $n ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
-//         $document->replaceTree($r, $n); } }
-//     foreach my $id (keys %$LaTeXML::MathParser::LOSTNODES) {
-//       my $repid = $$LaTeXML::MathParser::LOSTNODES{$id};
-//       # but the replacement my have been replaced as well!
-//       while (my $reprepid = $$LaTeXML::MathParser::LOSTNODES{$repid}) {
-//         $repid = $reprepid; }
-//       if ($document->findnodes("descendant-or-self::*[\@xml:id='$id']")
-//         && !$document->findnodes("descendant-or-self::*[\@xml:id='$repid']")) {
-//         # Do nothing if the node never actually got replaced (parse ultimately failed?)
-//       }
-//       else {
-//         foreach my $n ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
-//           $document->setAttribute($n, idref => $repid); } } }
-//     $p->setAttribute('text', text_form($result)); }
-//   return; }
+  fn parse(&mut self, mut xnode: Node, document: &mut Document, state: &mut State) -> Result<()> {
+  //   local $LaTeXML::MathParser::STRICT      = 1;
+  //   local $LaTeXML::MathParser::WARNED      = 0;
+  //   local $LaTeXML::MathParser::XNODE       = $xnode;
+  //   local $LaTeXML::MathParser::PUNCTUATION = {};
+  //   local $LaTeXML::MathParser::LOSTNODES   = {};
+  //   local %LaTeXML::MathParser::IDREFS      = ();
+  // This bit for debugging....
+  //   foreach my $n ($document->findnodes("descendant-or-self::*[\@xml:id]", $xnode)) {
+  //     my $id = $n->getAttribute('xml:id');
+  //     $LaTeXML::MathParser::IDREFS{$id} = $n; }
+    if let Some(result) = self.parse_rec(&mut xnode, "Anything,", document) {
+      // Add text representation to the containing Math element.
+      let mut p = xnode.get_parent().unwrap();
+      // This is a VERY screwy situation? How can the parent be a document fragment??
+      // This has got to be a LibXML bug???
+      if p.get_type() == Some(NodeType::DocumentFragNode) {
+        let child_nodes = p.get_child_nodes();
+        if child_nodes.len() == 1 {
+          p = child_nodes[0].clone();
+        } else {
+          fatal!(XMath, Malformed, "XMath node has DOCUMENT_FRAGMENT for parent!".to_owned()); // xnode,
+        }
+      }
+      // HACK: replace XMRef's to stray trailing punctution
+      //     foreach my $id (keys %$LaTeXML::MathParser::PUNCTUATION) {
+      //       my $r = $$LaTeXML::MathParser::PUNCTUATION{$id}->cloneNode;
+      //       $r->removeAttribute('xml:id');
+      //       foreach my $n ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
+      //         $document->replaceTree($r, $n); } }
+      //     foreach my $id (keys %$LaTeXML::MathParser::LOSTNODES) {
+      //       my $repid = $$LaTeXML::MathParser::LOSTNODES{$id};
+      //       # but the replacement my have been replaced as well!
+      //       while (my $reprepid = $$LaTeXML::MathParser::LOSTNODES{$repid}) {
+      //         $repid = $reprepid; }
+      //       if ($document->findnodes("descendant-or-self::*[\@xml:id='$id']")
+      //         && !$document->findnodes("descendant-or-self::*[\@xml:id='$repid']")) {
+      //         # Do nothing if the node never actually got replaced (parse ultimately failed?)
+      //       }
+      //       else {
+      //         foreach my $n ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
+      //           $document->setAttribute($n, idref => $repid); } } }
+      p.set_attribute("text", &self.text_form(&result));
+    }
+    Ok(())
+  }
 
 // my %TAG_FEEDBACK = ('ltx:XMArg' => 'a', 'ltx:XMWrap' => 'w');    # [CONSTANT]
 // Recursively parse a node with some internal structure
 // by first parsing any structured children, then it's content.
-// sub parse_rec {
-//   my ($self, $node, $rule, $document) = @_;
-//   $self->parse_children($node, $document);
-//   # This will only handle 1 layer nesting (successfully?)
-//   # Note that this would have been found by the top level xpath,
-//   # but we've got to worry about node identity: the parent is being rebuilt
-//   foreach my $nested ($document->findnodes('descendant::ltx:XMath', $node)) {
-//     $self->parse($nested, $document); }
-//   my $tag = getQName($node);
-//   if (my $requested_rule = $node->getAttribute('rule')) {
-//     $rule = $requested_rule; }
-//   if ($rule eq 'kludge') {
-//     $self->parse_kludge($node, $document);
-//     return; }
-//   elsif (my $result = $self->parse_single($node, $document, $rule)) {
-//     $$self{passed}{$tag}++;
-//     if ($tag eq 'ltx:XMath') {    # Replace the content of XMath with parsed result
-//       NoteProgress('[' . ++$$self{n_parsed} . ']');
-//       map { $document->unRecordNodeIDs($_) } element_nodes($node);
-//       # unbindNode followed by (append|replace)Tree (which removes ID's) should be safe
-//       map { $_->unbindNode() } $node->childNodes;
-//       $document->appendTree($node, $result);
-//       $result = [element_nodes($node)]->[0]; }
-//     else {                        # Replace the whole node for XMArg, XMWrap; preserve some attributes
-//       NoteProgressDetailed($TAG_FEEDBACK{$tag} || '.');
-//       # Copy all attributes
-//       my $resultid = p_getAttribute($result, 'xml:id');
-//       my %attr = map { (getQName($_) => $_->getValue) }
-//         grep { $_->nodeType == XML_ATTRIBUTE_NODE } $node->attributes;
-//       # add to result, even allowing modification of xml node, since we're committed.
-//       # [Annotate converts node to array which messes up clearing the id!]
-//       my $isarr = ref $result eq 'ARRAY';
-//       my $rtag = ($isarr ? $$result[0] : $document->getNodeQName($result));
-//       # Make sure font is "Appropriate", if we're creating a new token (yuck)
-//       if ($isarr && $attr{_font} && ($rtag eq 'ltx:XMTok')) {
-//         my $content = join('', @$result[2 .. $#$result]);
-//         if ((!defined $content) || ($content eq '')) {
-//           delete $attr{_font}; }    # No font needed
-//         elsif (my $font = $document->decodeFont($attr{_font})) {
-//           delete $attr{_font};
-//           $attr{font} = $font->specialize($content); } }
-//       else {
-//         delete $attr{_font}; }
-//       foreach my $key (keys %attr) {
-//         next unless ($key =~ /^_/) || $document->canHaveAttribute($rtag, $key);
-//         my $value = $attr{$key};
-//         if ($key eq 'xml:id') {     # Since we're moving the id...bookkeeping
-//           $document->unRecordID($value);
-//           $node->removeAttribute('xml:id'); }
-//         if ($isarr) { $$result[1]{$key} = $value; }
-//         else { $document->setAttribute($result, $key => $value); } }
-//       $result = $document->replaceTree($result, $node);
-//       my $newid = $attr{'xml:id'};
-//       # Danger: the above code replaced the id on the parsed result with the one from XMArg,..
-//       # If there are any references to $resultid, we need to point them to $newid!
-//       if ($resultid && $newid && ($resultid ne $newid)) {
-//         foreach my $ref ($document->findnodes("//*[\@idref='$resultid']")) {
-//           $ref->setAttribute(idref => $newid); } }
-//     }
-//     return $result; }
-//   else {
-//     $self->parse_kludge($node, $document);
-//     if ($tag eq 'ltx:XMath') {
-//       NoteProgress('[F' . ++$$self{n_parsed} . ']'); }
-//     elsif ($tag eq 'ltx:XMArg') {
-//       NoteProgressDetailed('-a'); }
-//     $$self{failed}{$tag}++;
-//     return; } }
+  fn parse_rec(&mut self, node : &mut Node, rule: &str, document: &mut Document) -> Option<Node> {
+  //   $self->parse_children($node, $document);
+  //   # This will only handle 1 layer nesting (successfully?)
+  //   # Note that this would have been found by the top level xpath,
+  //   # but we've got to worry about node identity: the parent is being rebuilt
+  //   foreach my $nested ($document->findnodes('descendant::ltx:XMath', $node)) {
+  //     $self->parse($nested, $document); }
+  //   my $tag = getQName($node);
+  //   if (my $requested_rule = $node->getAttribute('rule')) {
+  //     $rule = $requested_rule; }
+  //   if ($rule eq 'kludge') {
+  //     $self->parse_kludge($node, $document);
+  //     return; }
+  //   elsif (my $result = $self->parse_single($node, $document, $rule)) {
+  //     $$self{passed}{$tag}++;
+  //     if ($tag eq 'ltx:XMath') {    # Replace the content of XMath with parsed result
+  //       NoteProgress('[' . ++$$self{n_parsed} . ']');
+  //       map { $document->unRecordNodeIDs($_) } element_nodes($node);
+  //       # unbindNode followed by (append|replace)Tree (which removes ID's) should be safe
+  //       map { $_->unbindNode() } $node->childNodes;
+  //       $document->appendTree($node, $result);
+  //       $result = [element_nodes($node)]->[0]; }
+  //     else {                        # Replace the whole node for XMArg, XMWrap; preserve some attributes
+  //       NoteProgressDetailed($TAG_FEEDBACK{$tag} || '.');
+  //       # Copy all attributes
+  //       my $resultid = p_getAttribute($result, 'xml:id');
+  //       my %attr = map { (getQName($_) => $_->getValue) }
+  //         grep { $_->nodeType == XML_ATTRIBUTE_NODE } $node->attributes;
+  //       # add to result, even allowing modification of xml node, since we're committed.
+  //       # [Annotate converts node to array which messes up clearing the id!]
+  //       my $isarr = ref $result eq 'ARRAY';
+  //       my $rtag = ($isarr ? $$result[0] : $document->getNodeQName($result));
+  //       # Make sure font is "Appropriate", if we're creating a new token (yuck)
+  //       if ($isarr && $attr{_font} && ($rtag eq 'ltx:XMTok')) {
+  //         my $content = join('', @$result[2 .. $#$result]);
+  //         if ((!defined $content) || ($content eq '')) {
+  //           delete $attr{_font}; }    # No font needed
+  //         elsif (my $font = $document->decodeFont($attr{_font})) {
+  //           delete $attr{_font};
+  //           $attr{font} = $font->specialize($content); } }
+  //       else {
+  //         delete $attr{_font}; }
+  //       foreach my $key (keys %attr) {
+  //         next unless ($key =~ /^_/) || $document->canHaveAttribute($rtag, $key);
+  //         my $value = $attr{$key};
+  //         if ($key eq 'xml:id') {     # Since we're moving the id...bookkeeping
+  //           $document->unRecordID($value);
+  //           $node->removeAttribute('xml:id'); }
+  //         if ($isarr) { $$result[1]{$key} = $value; }
+  //         else { $document->setAttribute($result, $key => $value); } }
+  //       $result = $document->replaceTree($result, $node);
+  //       my $newid = $attr{'xml:id'};
+  //       # Danger: the above code replaced the id on the parsed result with the one from XMArg,..
+  //       # If there are any references to $resultid, we need to point them to $newid!
+  //       if ($resultid && $newid && ($resultid ne $newid)) {
+  //         foreach my $ref ($document->findnodes("//*[\@idref='$resultid']")) {
+  //           $ref->setAttribute(idref => $newid); } }
+  //     }
+  //     return $result; }
+  //   else {
+  //     $self->parse_kludge($node, $document);
+  //     if ($tag eq 'ltx:XMath') {
+  //       NoteProgress('[F' . ++$$self{n_parsed} . ']'); }
+  //     elsif ($tag eq 'ltx:XMArg') {
+  //       NoteProgressDetailed('-a'); }
+  //     $$self{failed}{$tag}++;
+  //     return; }
+    None
+  }
 
 // Depth first parsing of XMArg nodes.
 // sub parse_children {
@@ -807,15 +810,15 @@ fn parse(&mut self, xnode: Node, document: &mut Document, state: &mut State) {}
 // Mostly for debugging information?
 // Note that the nodes are true libXML nodes, already absorbed into the document
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-// sub text_form {
-//   my ($node) = @_;
-//   #  $self->textrec($node,0); }
-//   # Hmm, Something Weird is broken!!!!
-//   # With <, I get "unterminated entity reference" !?!?!?
-//   #  my $text= $self->textrec($node,0);
-//   my $text = textrec($node, undef);
-//   $text =~ s/</less/g;
-//   return $text; }
+  fn text_form(&self, node: &Node) -> String {
+    //  $self->textrec($node,0); }
+    // Hmm, Something Weird is broken!!!!
+    // With <, I get "unterminated entity reference" !?!?!?
+    //  my $text= $self->textrec($node,0);
+    let mut text = self.textrec(node, None);
+    text = text.replace("<","less");
+    text
+  }
 
 // my %PREFIX_ALIAS = (    # [CONSTANT]
 //   SUPERSCRIPTOP => '^', SUBSCRIPTOP => '_', times          => => '*',
@@ -829,38 +832,40 @@ fn parse(&mut self, xnode: Node, document: &mut Document, state: &mut State) {}
 //   ADDOP         => 10,   MULOP       => 100, FRACOP => 100,
 //   SUPERSCRIPTOP => 1000, SUBSCRIPTOP => 1000);
 
-// sub textrec {
-//   my ($node, $outer_bp, $outer_name) = @_;
-//   return '[missing]' unless defined $node;
-//   $node = realizeXMNode($node);
-//   my $tag = getQName($node);
-//   $outer_bp   = 0  unless defined $outer_bp;
-//   $outer_name = '' unless defined $outer_name;
-//   if ($tag eq 'ltx:XMApp') {
-//     my $app_role = $node->getAttribute('role');
-//     my ($op, @args) = element_nodes($node);
-//     $op = realizeXMNode($op);
-//     if ($app_role && $app_role =~ /^FLOAT(SUB|SUPER)SCRIPT$/) {
-//       return ($1 eq 'SUPER' ? '^' : '_') . textrec($op); }
-//     else {
-//       my $name = ((getQName($op) eq 'ltx:XMTok') && getTokenMeaning($op)) || 'unknown';
-//       my ($bp, $string) = textrec_apply($name, $op, @args);
-//       return (($bp < $outer_bp) || (($bp == $outer_bp) && ($name ne $outer_name))
-//         ? '(' . $string . ')' : $string); } }
-//   elsif ($tag eq 'ltx:XMDual') {
-//     my ($content, $presentation) = element_nodes($node);
-//     return textrec($content, $outer_bp, $outer_name); }    # Just send out the semantic form.
-//   elsif ($tag eq 'ltx:XMTok') {
-//     my $name = getTokenMeaning($node);
-//     $name = 'Unknown' unless defined $name;
-//     return $PREFIX_ALIAS{$name} || $name; }
-//   elsif (($tag eq 'ltx:XMWrap') || ($tag eq 'ltx:XMCell')) {
-//     # ??
-//     return join('@', map { textrec($_) } element_nodes($node)); }
-//   elsif ($tag eq 'ltx:XMArray') {
-//     return textrec_array($node); }
-//   else {
-//     return '[' . (p_getValue($node) || '') . ']'; } }
+  fn textrec(&self, node: &Node, outer_name: Option<&str>) -> String {
+    //   my ($node, $outer_bp, $outer_name) = @_;
+    //   return '[missing]' unless defined $node;
+    //   $node = realizeXMNode($node);
+    //   my $tag = getQName($node);
+    //   $outer_bp   = 0  unless defined $outer_bp;
+    //   $outer_name = '' unless defined $outer_name;
+    //   if ($tag eq 'ltx:XMApp') {
+    //     my $app_role = $node->getAttribute('role');
+    //     my ($op, @args) = element_nodes($node);
+    //     $op = realizeXMNode($op);
+    //     if ($app_role && $app_role =~ /^FLOAT(SUB|SUPER)SCRIPT$/) {
+    //       return ($1 eq 'SUPER' ? '^' : '_') . textrec($op); }
+    //     else {
+    //       my $name = ((getQName($op) eq 'ltx:XMTok') && getTokenMeaning($op)) || 'unknown';
+    //       my ($bp, $string) = textrec_apply($name, $op, @args);
+    //       return (($bp < $outer_bp) || (($bp == $outer_bp) && ($name ne $outer_name))
+    //         ? '(' . $string . ')' : $string); } }
+    //   elsif ($tag eq 'ltx:XMDual') {
+    //     my ($content, $presentation) = element_nodes($node);
+    //     return textrec($content, $outer_bp, $outer_name); }    # Just send out the semantic form.
+    //   elsif ($tag eq 'ltx:XMTok') {
+    //     my $name = getTokenMeaning($node);
+    //     $name = 'Unknown' unless defined $name;
+    //     return $PREFIX_ALIAS{$name} || $name; }
+    //   elsif (($tag eq 'ltx:XMWrap') || ($tag eq 'ltx:XMCell')) {
+    //     # ??
+    //     return join('@', map { textrec($_) } element_nodes($node)); }
+    //   elsif ($tag eq 'ltx:XMArray') {
+    //     return textrec_array($node); }
+    //   else {
+    //     return '[' . (p_getValue($node) || '') . ']'; } }
+    String::new()
+  }
 
 // sub textrec_apply {
 //   my ($name, $op, @args) = @_;
