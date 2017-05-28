@@ -22,13 +22,18 @@ impl<'xp> XPath<'xp> {
     };
   }
 
-  // TODO: top-level findnodes so far, add rust-libxml support for per-node xpaths
-  pub fn findnodes(&self, xpath: &str, _node: &Node) -> Vec<Node> {
-    self.context.evaluate(xpath).unwrap().get_nodes_as_vec()
+  pub fn findnodes(&mut self, xpath: &str, node: Option<&Node>) -> Vec<Node> {
+    match self.context.findnodes(xpath, node) {
+      Ok(nodes) => nodes,
+      _ => Vec::new()
+    }
   }
 
-  pub fn findvalue(&self, xpath: &str, _node: &Node) -> String {
-    self.context.evaluate(xpath).unwrap().to_string()
+  pub fn findvalue(&mut self, xpath: &str, node: Option<&Node>) -> String {
+    match self.context.findvalue(xpath, node) {
+      Ok(v) => v,
+      _ => String::new()
+    }
   }
 
 }

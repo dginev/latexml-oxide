@@ -63,19 +63,13 @@ impl Document {
 
   /// Find the nodes according to the given $xpath expression,
   /// the xpath is relative to $node (if given), otherwise to the document node.
-  pub fn findnodes(&self, xpath: &str, node: Option<&mut Node>, state: &mut State) -> Vec<Node> {
-    match node {
-      Some(n) => state.model.get_xpath(&self.document).findnodes(xpath, n),
-      None => state.model.get_xpath(&self.document).findnodes(xpath, &mut self.document.get_root_element())
-    }
+  pub fn findnodes(&self, xpath: &str, node: Option<&Node>, state: &mut State) -> Vec<Node> {
+    state.model.get_xpath(&self.document).findnodes(xpath, node)
   }
 
   /// Like findnodes, but only returns the first matched node
-  pub fn findnode(&self, xpath: &str, node: Option<&mut Node>, state: &mut State) -> Option<Node> {
-    let nodes = match node {
-      Some(n) => state.model.get_xpath(&self.document).findnodes(xpath, n),
-      None => state.model.get_xpath(&self.document).findnodes(xpath, &mut self.document.get_root_element())
-    };
+  pub fn findnode(&self, xpath: &str, node: Option<&Node>, state: &mut State) -> Option<Node> {
+    let nodes = state.model.get_xpath(&self.document).findnodes(xpath, node);
     if nodes.is_empty() {
       None
     } else {

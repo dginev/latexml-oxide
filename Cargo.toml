@@ -18,7 +18,7 @@ tempfile = "2.1"
 time = "0.1"
 lazy_static = "0.1"
 regex = "0.1.66"
-libxml = "0.0.746"
+libxml = "0.0.747"
 log = "0.3"
 clippy = { optional = true, version = "=0.0.133" }
 
