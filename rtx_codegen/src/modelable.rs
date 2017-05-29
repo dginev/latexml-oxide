@@ -41,7 +41,10 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
 
 
   let mut operations = Vec::new();
+  // NOTE: Do something automatic about this too!?!
+  // We'll need to generate namespace prefixes for all namespaces found in the doc!
   operations.push(quote!(
+    model.register_document_namespace("", Some("http://dlmf.nist.gov/LaTeXML".to_owned()));
     model.schema = Some(Relaxng{ name: #name.to_owned(), ..Relaxng::default()});
   ));
 

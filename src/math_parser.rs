@@ -22,6 +22,7 @@
 // use LaTeXML::Common::XML;
 // use List::Util qw(min max);
 use rtx_core::common::error::*;
+use rtx_core::common::xml;
 use rtx_core::document::Document;
 use rtx_core::state::State;
 use libxml::tree::{Node,NodeType};
@@ -70,11 +71,10 @@ impl Default for MathParser {
 
 impl MathParser {
   pub fn parse_math(&mut self, document: &mut Document, state: &mut State) -> Result<()> {
-    info!("parse_math has been called.");
     self.clear();
     self.cleanup_scripts(document);
+    let xmath_nodes = document.findnodes("descendant-or-self::ltx:XMath[not(ancestor::ltx:XMath)]", None, state); // descendant-or-self::ltx:XMath[not(ancestor::ltx:XMath)]
 
-    let xmath_nodes = document.findnodes("descendant-or-self::ltx:XMath[not(ancestor::ltx:XMath)]", None, state);
     if !xmath_nodes.is_empty() {
       note_begin("Math Parsing");
       note_progress(&format!("{:?} formulae ...", xmath_nodes.len()));
@@ -308,7 +308,7 @@ impl MathParser {
 // Recursively parse a node with some internal structure
 // by first parsing any structured children, then it's content.
   fn parse_rec(&mut self, node : &mut Node, rule: &str, document: &mut Document) -> Option<Node> {
-  //   $self->parse_children($node, $document);
+    self.parse_children(node, document);
   //   # This will only handle 1 layer nesting (successfully?)
   //   # Note that this would have been found by the top level xpath,
   //   # but we've got to worry about node identity: the parent is being rebuilt
@@ -377,41 +377,43 @@ impl MathParser {
     None
   }
 
-// Depth first parsing of XMArg nodes.
-// sub parse_children {
-//   my ($self, $node, $document) = @_;
-//   foreach my $child (element_nodes($node)) {
-//     my $tag = getQName($child);
-//     if ($tag eq 'ltx:XMArg') {
-//       $self->parse_rec($child, 'Anything', $document); }
-//     elsif ($tag eq 'ltx:XMWrap') {
-//       local $LaTeXML::MathParser::STRICT = 0;
-//       $self->parse_rec($child, 'Anything', $document); }
-//## A nice evolution would be to use the Kludge parser for
-//## the presentation form in XMDual
-//## This would avoid silly "parses" of non-semantic stuff; eg assuming times between tokens!
-//## However, it needs some experimentation to match DLMF's enhancements
-//###      $self->parse_children($child,$document);
-//###      $self->parse_kludge($child,$document); }
-//     elsif ($tag =~ /^ltx:(XMApp|XMArray|XMRow|XMCell)$/) {
-//       $self->parse_children($child, $document); }
-//     elsif ($tag eq 'ltx:XMDual') {
-//       $self->parse_children($child, $document); }
-//     ### Some day this may be needed? but not yet...
-//    #     elsif ($tag eq 'ltx:XMRef') {
-//    #       # We might be referencing something outside the current tree.
-//    #       # but we'd like it's contents to be parsed before we start using it at this level.
-//    #       # NOTE: Do we have to worry about things being parsed twice? (ie. when the other tree's done)
-//    #       # if so, we probably want to mark things as having already been parsed.
-//    #       my $refnode = realizeXMNode($child);
-//    #       if(getQName($refnode) ne 'ltx:XMTok'){ # Anything referenced with structure...
-//    #         print STDERR "PRE-PARSING Ref'd node: ".ToString($child)." == ".ToString($refnode). "\n";
-//    # ##        $self->parse_rec($refnode,'Anything',$document);
-//    #         $self->parse_children($refnode,$document);
-//    #         print STDERR "NOW REFERENCES: ".ToString(realizeXMNode($child))."\n";
-//    #  } }
-//   }
-//   return; }
+  // Depth first parsing of XMArg nodes.
+  fn parse_children(&mut self, node: &mut Node, document: &mut Document) {
+    for child in xml::element_nodes(node) {
+      info!("element node: {:?}", document.document.node_to_string(&child));
+    }
+    //     my $tag = getQName($child);
+    //     if ($tag eq 'ltx:XMArg') {
+    //       $self->parse_rec($child, 'Anything', $document); }
+    //     elsif ($tag eq 'ltx:XMWrap') {
+    //       local $LaTeXML::MathParser::STRICT = 0;
+    //       $self->parse_rec($child, 'Anything', $document); }
+    //## A nice evolution would be to use the Kludge parser for
+    //## the presentation form in XMDual
+    //## This would avoid silly "parses" of non-semantic stuff; eg assuming times between tokens!
+    //## However, it needs some experimentation to match DLMF's enhancements
+    //###      $self->parse_children($child,$document);
+    //###      $self->parse_kludge($child,$document); }
+    //     elsif ($tag =~ /^ltx:(XMApp|XMArray|XMRow|XMCell)$/) {
+    //       $self->parse_children($child, $document); }
+    //     elsif ($tag eq 'ltx:XMDual') {
+    //       $self->parse_children($child, $document); }
+    //     ### Some day this may be needed? but not yet...
+    //    #     elsif ($tag eq 'ltx:XMRef') {
+    //    #       # We might be referencing something outside the current tree.
+    //    #       # but we'd like it's contents to be parsed before we start using it at this level.
+    //    #       # NOTE: Do we have to worry about things being parsed twice? (ie. when the other tree's done)
+    //    #       # if so, we probably want to mark things as having already been parsed.
+    //    #       my $refnode = realizeXMNode($child);
+    //    #       if(getQName($refnode) ne 'ltx:XMTok'){ # Anything referenced with structure...
+    //    #         print STDERR "PRE-PARSING Ref'd node: ".ToString($child)." == ".ToString($refnode). "\n";
+    //    # ##        $self->parse_rec($refnode,'Anything',$document);
+    //    #         $self->parse_children($refnode,$document);
+    //    #         print STDERR "NOW REFERENCES: ".ToString(realizeXMNode($child))."\n";
+    //    #  } }
+    //   }
+    //   return;
+  }
 
 // my $HINT_PUNCT_THRESHOLD = 10.0;    # \quad or bigger becomes punctuation ? [CONSTANT]
 

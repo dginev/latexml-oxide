@@ -284,7 +284,6 @@ static UNTEX_LINELENGTH : usize = 78; // [CONSTANT]
 pub fn untex(digested: &Digested, state: &State) -> String {
   use token::Catcode::*;
   let mut tokens = VecDeque::from_iter(digested.revert().into_iter());
-  info!("untex on tokens: {:?}", tokens);
   let mut tex_string = String::new();
   let mut length = 0;
   let mut level : i32 = 0;

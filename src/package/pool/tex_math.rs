@@ -99,7 +99,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       } else {
         None
       };
-      info!("Found tex: {:?}", tex_opt);
       if let Some(tex_string) = tex_opt {
         document.set_attribute(&mut node, "tex", &tex_string);
       }

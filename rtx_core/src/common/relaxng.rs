@@ -30,6 +30,5 @@ impl Relaxng {
   }
 
   pub fn load_schema(&self) {
-
   }
 }

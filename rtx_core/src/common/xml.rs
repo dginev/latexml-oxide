@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use libxml::tree::{Document, Node};
+use libxml::tree::{Document, Node, NodeType};
 use libxml::xpath::Context;
 
 pub struct XPath<'xp> {
@@ -25,7 +25,7 @@ impl<'xp> XPath<'xp> {
   pub fn findnodes(&mut self, xpath: &str, node: Option<&Node>) -> Vec<Node> {
     match self.context.findnodes(xpath, node) {
       Ok(nodes) => nodes,
-      _ => Vec::new()
+      Err(e) => {error!(target: "xpath:findnodes", "{:?}", e); Vec::new()}
     }
   }
 
@@ -36,4 +36,11 @@ impl<'xp> XPath<'xp> {
     }
   }
 
+}
+
+//======================================================================
+// XML Utilities
+pub fn element_nodes(node: &Node) -> Vec<Node> {
+  node.get_child_nodes().into_iter()
+    .filter(|n| n.get_type() == Some(NodeType::ElementNode)).collect()
 }

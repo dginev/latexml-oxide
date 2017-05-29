@@ -14,7 +14,7 @@ use common::error::*;
 
 // use common::font::*;
 
-const LTX_NAMESPACE: &'static str = "http://dlmf.nist.gov/LaTeXML";
+pub const LTX_NAMESPACE: &'static str = "http://dlmf.nist.gov/LaTeXML";
 pub type IndirectModel = HashMap<String, HashMap<String, String>>;
 
 lazy_static! {
@@ -275,7 +275,7 @@ impl Model {
       None => None,
       Some(p) => {
         if p == "#default" {
-          None
+          Some(String::new())
         } else {
           Some(p)
         }
@@ -444,7 +444,7 @@ impl Model {
       ElementNode | AttributeNode => {
         let mut prefix = String::new();
         if let Some(ns) = node.get_namespace() {
-          let href = ns.get_url();
+          let href = ns.get_href();
           if !href.is_empty() {
             prefix = self.get_document_namespace_prefix(&href, false, true).unwrap_or_default();
           }

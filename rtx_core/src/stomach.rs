@@ -456,7 +456,6 @@ impl Stomach {
   }
 
   pub fn end_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
-    info!("end_mode on {:?}", mode);
     if !state.is_value_bound("MODE", Some(0))    // Last stack frame was NOT a mode switch!?!?!
       || (state.lookup_string("MODE") != mode) {    // Or was a mode switch to a different mode
       error!(target: &format!("unexpected:{:?}",state.current_token), "Attempt to end mode")

@@ -63,8 +63,11 @@ impl Document {
 
   /// Find the nodes according to the given $xpath expression,
   /// the xpath is relative to $node (if given), otherwise to the document node.
-  pub fn findnodes(&self, xpath: &str, node: Option<&Node>, state: &mut State) -> Vec<Node> {
-    state.model.get_xpath(&self.document).findnodes(xpath, node)
+  pub fn findnodes(&self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<Node> {
+    match node_opt {
+      Some(node) => state.model.get_xpath(&self.document).findnodes(xpath, Some(node)),
+      None => state.model.get_xpath(&self.document).findnodes(xpath, Some(&self.document.get_root_element()))
+    }
   }
 
   /// Like findnodes, but only returns the first matched node
@@ -463,8 +466,8 @@ impl Document {
           } else {
             format!("xmlns:{}", prefix)
           };
-          let url = ns.get_url();
-          open_tag.push_str(&format!(" {}=\"{}\"", prefix_declaration, url));
+          let href = ns.get_href();
+          open_tag.push_str(&format!(" {}=\"{}\"", prefix_declaration, href));
         }
 
         let anodes = node.get_attributes();
@@ -1031,15 +1034,15 @@ impl Document {
         }
         // TODO: Figure out a better way to achieve the "activate" effect in XML:LibXML::Element
         // it seems just creating the namespace without setting it is equivalent ??
-        let _ns_node = Namespace::new("", &ns, &newnode).unwrap();
-        // newnode.set_namespace(ns_node);
+        let ns_node = Namespace::new("", &ns, &newnode).unwrap();
+        newnode.set_namespace(ns_node);
       }
       // TODO: Else case
     }
     else {
       // font = self.get_node_font(ppoint);// unless $font
       // box  = self.get_node_box(point); // unless $box
-      newnode = self.open_element_internal(&mut point, None, &tag);
+      newnode = self.open_element_internal(&mut point, decoded_ns, &tag, state);
     }
 
     if let Some(attrs) = attributes {
@@ -1072,16 +1075,54 @@ impl Document {
     newnode
   }
 
-  fn open_element_internal(&mut self, point: &mut Node, _ns: Option<String>, tag: &str) -> Node {
-    let newnode;
-    // if !ns.is_empty() {
-    //   if (!defined $point->lookupNamespacePrefix($ns)) {    # namespace not already declared?
-    //     self.getDocument->documentElement
-    //       ->setNamespace($ns, self.model}->getDocumentNamespacePrefix($ns), 0); }
-    //   $newnode = $point->addNewChild($ns, $tag); }
-    // else {
-      newnode = point.add_child(Node::new(tag, None, &self.document).unwrap()).unwrap();
-    // }
+  fn open_element_internal(&mut self, point: &mut Node, ns_opt: Option<String>, tag: &str, state: &mut State) -> Node {
+    // TODO:
+    //
+    //       I am seriously irritated by the XML namespace and the confusion of the "default#" tricks and libxml2's custom decisions about namespace interactions
+    //
+    //       I have "hacked together" a working flow for now, but I expect to encounter bugs related to the shortcuts taken here. I would welcome a redesign
+    //       that simplifies the namespace logic dramatically.
+    let new_ns = match ns_opt {
+      Some(ns_uri) => {
+        match point.lookup_namespace_prefix(&ns_uri) { // namespace not already declared?
+          None => {
+            if let Some(prefix) = state.model.get_document_namespace_prefix(&ns_uri, false, false) {
+              if !prefix.is_empty() {
+                match Namespace::new(&prefix, &ns_uri, &self.document.get_root_element()) {
+                  Ok(ns) => Some(ns),
+                  Err(_) => {error!(target: "document:open_element_internal", "failed to create namespace: {:?}", prefix); None}
+                }
+              } else {
+                // default namespace?
+                None
+              }
+            } else {
+              error!(target: "document:open_element_internal", "no namespace prefix found for {:?}", ns_uri);
+              None
+            }
+          },
+          Some(prefix) => {
+            if !prefix.is_empty() {
+              match Namespace::new(&prefix, &ns_uri, &self.document.get_root_element()) {
+                Ok(ns) => Some(ns),
+                Err(_) => {error!(target: "document:open_element_internal", "failed to create namespace: {:?}", prefix); None}
+              }
+            } else {
+              // default namespace?
+              None
+            }
+          }
+        }
+      },
+      None => None
+    };
+
+    let no_ns = new_ns.is_none();
+    let mut newnode = point.add_child(Node::new(tag, new_ns, &self.document).unwrap()).unwrap();
+    if no_ns { // without this explicit set call, an XPath for things such as "ltx:XMath" fails ???
+      newnode.set_namespace(point.get_namespace().unwrap());
+    }
+
     self.record_constructed_node(&newnode);
     newnode
   }
