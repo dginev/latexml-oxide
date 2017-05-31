@@ -526,6 +526,107 @@ pub fn merge_font(font_hash: HashMap<String, String>, state: &mut State) {
   return;
 }
 
+// DefMath Define a Mathematical symbol or function.
+// There are two sets of cases:
+//  (1) If the presentation appears to be TeX code, we create an XMDual,
+// since the presentation may end up with structure, etc.
+//  (2) But if the presentation is a simple string, or unicode,
+// it is just the content of the symbol; even if the function takes arguments.
+// ALSO
+//  arrange that the operator token gets cs="$cs"
+// ALSO
+//  Possibly some trick with SUMOP/INTOP affecting limits ?
+//  Well, not exactly, but....
+// HMM.... Still fishy.
+// When to make a dual ?
+// If the $presentation seems to be TeX (ie. it involves #1... but not ONLY!)
+struct DefMathOptions {
+  name: Option<String>,
+  meaning: Option<String>,
+  omcd: Option<String>,
+  reversion: 1,
+  sizer: 1,
+  alias: Option<String>,
+  role: Option<String>,
+  operator_role: Option<String>,
+  reorder: bool,
+  dual: bool,
+  mathstyle: Option<String>,
+  font: Option<String>,
+  scriptpos: Option<usize>,
+  operator_scriptpos: Option<String>,
+  stretchy: bool,
+  operator_stretchy : bool,
+  before_digest: ,
+  after_digest: 1,
+  scope: 1,
+  nogroup: 1,
+  locked: 1,
+  hide_content_reversion: 1
+};
+my $simpletoken_options = {    # [CONSTANT]
+  name => 1,
+  meaning => 1,
+  omcd => 1,
+  role => 1,
+  mathstyle => 1,
+  font => 1,
+  scriptpos => 1,
+  scope => 1,
+  locked => 1 };
+
+sub DefMath {
+  my ($proto,
+    $presentation, %options) = @_;
+  CheckOptions("DefMath ($proto)", $math_options, %options);
+  DefMathI(parsePrototype($proto), $presentation, %options);
+  return; }
+
+sub DefMathI {
+  my ($cs, $paramlist, $presentation, %options) = @_;
+  $cs = coerceCS($cs);
+  # Can't defer parsing parameters since we need to know number of args!
+  $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
+  my $nargs   = ($paramlist ? scalar($paramlist->getParameters) : 0);
+  my $csname  = $cs->getString;
+  my $meaning = $options{meaning};
+  my $name    = $options{alias} || $csname;
+  $name =~ s/^\\//;
+  $name = $options{name} if defined $options{name};
+  $name = undef          if (defined $name)
+    && (($name eq $presentation) || ($name eq '')
+    || ((defined $meaning) && ($meaning eq $name)));
+  $options{name} = $name;
+  $options{role} = 'UNKNOWN'
+    if ($nargs == 0) && !defined $options{role};
+  $options{operator_role} = 'UNKNOWN'
+    if ($nargs > 0) && !defined $options{operator_role};
+  # Store some data for introspection
+  defmath_introspective($cs, $paramlist, $presentation, %options);
+
+  # If single character, handle with a rewrite rule
+  if (length($csname) == 1) {
+    defmath_rewrite($cs, %options); }
+
+  # If the presentation is complex, and involves arguments,
+  # we will create an XMDual to separate content & presentation.
+  elsif ((ref $presentation eq 'CODE')
+    || ((ref $presentation) && grep { $_->equals(T_PARAM) } $presentation->unlist)
+    || (!(ref $presentation) && ($presentation =~ /\#\d|\\./))
+    || ((ref $presentation) && (grep { $_->isExecutable } $presentation->unlist))) {
+    defmath_dual($cs, $paramlist, $presentation, %options); }
+
+  # EXPERIMENT: Introduce an intermediate case for simple symbols
+  # Define a primitive that will create a Box with the appropriate set of XMTok attributes.
+  elsif (($nargs == 0) && !grep { !$$simpletoken_options{$_} } keys %options) {
+    defmath_prim($cs, $paramlist, $presentation, %options); }
+
+  else {
+    defmath_cons($cs, $paramlist, $presentation, %options); }
+  AssignValue($csname . ":locked" => 1) if $options{locked};
+  return; }
+
+
 
 // Macros requiring repetitions need to be handled outside of the main setup macro, as nested macros currently don't support repetition
 // Details at: https://github.com/rust-lang/rust/issues/35853
