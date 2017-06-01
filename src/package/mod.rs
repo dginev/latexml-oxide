@@ -564,69 +564,16 @@ struct DefMathOptions {
   locked: 1,
   hide_content_reversion: 1
 };
-my $simpletoken_options = {    # [CONSTANT]
-  name => 1,
-  meaning => 1,
-  omcd => 1,
-  role => 1,
-  mathstyle => 1,
-  font => 1,
-  scriptpos => 1,
-  scope => 1,
-  locked => 1 };
-
-sub DefMath {
-  my ($proto,
-    $presentation, %options) = @_;
-  CheckOptions("DefMath ($proto)", $math_options, %options);
-  DefMathI(parsePrototype($proto), $presentation, %options);
-  return; }
-
-sub DefMathI {
-  my ($cs, $paramlist, $presentation, %options) = @_;
-  $cs = coerceCS($cs);
-  # Can't defer parsing parameters since we need to know number of args!
-  $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
-  my $nargs   = ($paramlist ? scalar($paramlist->getParameters) : 0);
-  my $csname  = $cs->getString;
-  my $meaning = $options{meaning};
-  my $name    = $options{alias} || $csname;
-  $name =~ s/^\\//;
-  $name = $options{name} if defined $options{name};
-  $name = undef          if (defined $name)
-    && (($name eq $presentation) || ($name eq '')
-    || ((defined $meaning) && ($meaning eq $name)));
-  $options{name} = $name;
-  $options{role} = 'UNKNOWN'
-    if ($nargs == 0) && !defined $options{role};
-  $options{operator_role} = 'UNKNOWN'
-    if ($nargs > 0) && !defined $options{operator_role};
-  # Store some data for introspection
-  defmath_introspective($cs, $paramlist, $presentation, %options);
-
-  # If single character, handle with a rewrite rule
-  if (length($csname) == 1) {
-    defmath_rewrite($cs, %options); }
-
-  # If the presentation is complex, and involves arguments,
-  # we will create an XMDual to separate content & presentation.
-  elsif ((ref $presentation eq 'CODE')
-    || ((ref $presentation) && grep { $_->equals(T_PARAM) } $presentation->unlist)
-    || (!(ref $presentation) && ($presentation =~ /\#\d|\\./))
-    || ((ref $presentation) && (grep { $_->isExecutable } $presentation->unlist))) {
-    defmath_dual($cs, $paramlist, $presentation, %options); }
-
-  # EXPERIMENT: Introduce an intermediate case for simple symbols
-  # Define a primitive that will create a Box with the appropriate set of XMTok attributes.
-  elsif (($nargs == 0) && !grep { !$$simpletoken_options{$_} } keys %options) {
-    defmath_prim($cs, $paramlist, $presentation, %options); }
-
-  else {
-    defmath_cons($cs, $paramlist, $presentation, %options); }
-  AssignValue($csname . ":locked" => 1) if $options{locked};
-  return; }
-
-
+// let simpletoken_options = {    # [CONSTANT]
+//   name => 1,
+//   meaning => 1,
+//   omcd => 1,
+//   role => 1,
+//   mathstyle => 1,
+//   font => 1,
+//   scriptpos => 1,
+//   scope => 1,
+//   locked => 1 };
 
 // Macros requiring repetitions need to be handled outside of the main setup macro, as nested macros currently don't support repetition
 // Details at: https://github.com/rust-lang/rust/issues/35853
@@ -1543,7 +1490,88 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($resource:expr) => (require_resource(Resource{name: $resource.to_string(), ..Resource::default()}, $state))
   );
 
-)}
+  // sub DefMath {
+  //   my ($proto,
+  //     $presentation, %options) = @_;
+  //   CheckOptions("DefMath ($proto)", $math_options, %options);
+  //   DefMathI(parsePrototype($proto), $presentation, %options);
+  //   return; }
+
+  macro_rules! DefMathII(
+    ($cs:expr, $paramlist:expr, $presentation:expr, $options:expr) => ({
+
+    // Can't defer parsing parameters since we need to know number of args!
+
+    // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
+    let nargs   = match $paramlist {
+      Some(plist) => plist.get_parameters().len(),
+      None => 0
+    };
+    let csname  = $cs.get_string();
+    let meaning = $options.meaning;
+    let mut name    = $options.alias.unwrap_or(csname);
+    name =~ s/^\\//;
+    name = $options{name} if defined $options{name};
+    name = undef          if (defined $name)
+      && (($name eq $presentation) || ($name eq '')
+      || ((defined $meaning) && ($meaning eq $name)));
+    $options.name = name;
+    $options.role = "UNKNOWN"
+      if ($nargs == 0) && !defined $options{role};
+    $options{operator_role} = "UNKNOWN"
+      if ($nargs > 0) && !defined $options{operator_role};
+    // Store some data for introspection
+    // defmath_introspective($cs, $paramlist, $presentation, %options);
+
+    // If single character, handle with a rewrite rule
+    // if (length($csname) == 1) {
+    //   defmath_rewrite($cs, %options); }
+    // TODO:
+    // // If the presentation is complex, and involves arguments,
+    // // we will create an XMDual to separate content & presentation.
+    // elsif ((ref $presentation eq "CODE")
+    //   || ((ref $presentation) && grep { $_->equals(T_PARAM) } $presentation->unlist)
+    //   || (!(ref $presentation) && ($presentation =~ /\//\d|\\./))
+    //   || ((ref $presentation) && (grep { $_->isExecutable } $presentation->unlist))) {
+    //   defmath_dual($cs, $paramlist, $presentation, %options); }
+
+    // EXPERIMENT: Introduce an intermediate case for simple symbols
+    // Define a primitive that will create a Box with the appropriate set of XMTok attributes.
+    if (nargs == 0) {// && !grep { !$$simpletoken_options{$_} } keys %options) {
+      defmath_prim($cs, $paramlist, $presentation, %options);
+    }
+
+    // else {
+    //   defmath_cons($cs, $paramlist, $presentation, %options); }
+    // AssignValue($csname . ":locked" => 1) if $options{locked};
+  });
+
+macro_rules! defmath_prim(
+  ($cs:expr, $paramlist:expr, $presentation:expr, $options:expr) => ({
+  let string = ToString($presentation);
+  let reqfont = $options{font} || {};
+  delete $options{locked};
+  delete $options{font};
+  $state.install_definition(ObjectStore::Primitive(Rc::new(Primitive{
+        cs: $cs.clone(),
+        paramlist: None,
+        replacement: Some(Rc::new(sub!(|stomach, args, state| {
+          // let locator    = $stomach->getGullet->getLocator;
+          // let properties = $options.clone();
+          // let font       = LookupValue('font')->merge(%$reqfont)->specialize($string);
+          // foreach my $key (keys %properties) {
+          //   my $value = $properties{$key};
+          //   if (ref $value eq 'CODE') {
+          //     $properties{$key} = &$value(); } }
+          TBox{ $string, $font, $locator, $cs, mode => 'math', %properties)
+        )),
+        options: $options,
+        ..Primitive::default()
+      })),
+      $options.scope);
+
+
+});
 
 
 pub mod pool;
