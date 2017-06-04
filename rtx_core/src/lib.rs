@@ -30,6 +30,7 @@ pub mod state;
 pub mod util;
 
 use std::fmt;
+use common::error::*;
 use state::{State, StateOptions, ObjectStore};
 use common::model::Model;
 use stomach::Stomach;
@@ -124,7 +125,7 @@ impl Core {
 
 pub trait BoxOps {
   fn unlist(self) -> Vec<Digested>;
-  fn be_absorbed(self, document: &mut Document, state: &mut State);
+  fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()>;
   fn to_string(&self) -> String {
     "Vec<Tbox> for now ".to_string()
   }
@@ -174,7 +175,7 @@ impl BoxOps for Digested {
     }
   }
 
-  fn be_absorbed(self, document: &mut Document, state: &mut State) {
+  fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()> {
     match self {
       Digested::Box(b) => b.be_absorbed(document, state),
       Digested::List(l) => l.be_absorbed(document, state),

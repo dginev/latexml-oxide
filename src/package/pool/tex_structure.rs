@@ -1,4 +1,6 @@
 use package::*;
+use rtx_core::document::tag::TagConstructionClosure;
+
 pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
@@ -49,8 +51,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   let mut skippable_props = HashMap::new();
   skippable_props.insert("alignmentSkippable".to_string(), ObjectStore::Bool(true));
 
-  DefConstructorI!(T_CS!("\\par"), None,
-    |document: &mut Document, args: &Vec<_>, props:&HashMap<String, ObjectStore>, state: &mut State| {
+  DefConstructorI!(T_CS!("\\par"), None, replacement!(document, args, props, state, {
       let in_preamble = match props.get("inPreamble") {
         Some(& ObjectStore::Bool(v)) => v,
         _ => false
@@ -71,7 +72,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         }
         document.maybe_close_element("ltx:para", state);
      }
-    },
+    }),
     after_digest => sub!(|stomach, whatsit, state| {
       let in_preamble = state.lookup_bool("inPreamble");
       if in_preamble {
@@ -91,12 +92,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
-  DefConstructorI!(T_CS!("\\inner@par"), None, |document, args, props, state| {
-      if document.maybe_close_element("ltx:p", state).is_some() { }
-      else if document.can_contain(document.get_node(), "ltx:break", state) {
-        document.insert_element("ltx:break", Vec::new(), None, state);
-      }
-  });
+  DefConstructorI!(T_CS!("\\inner@par"), None, replacement!(document, args, props, state, {
+    if document.maybe_close_element("ltx:p", state).is_some() { }
+    else if document.can_contain(document.get_node(), "ltx:break", state) {
+      try!(document.insert_element("ltx:break", Vec::new(), None, state));
+    }
+  }));
 
   fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach,  args: Vec<Tokens>, state: &mut State) -> Result<Vec<Digested>> {
     // params = parseDefParameters(cs, params);
@@ -157,10 +158,10 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   Tag!("ltx:para", auto_close => true, auto_open => true);
 
-  let trim_node_whitespace_closure = Rc::new(|document: &mut Document, node: &mut Node, state: &mut State| {
+  let trim_node_whitespace_closure  : Vec<TagConstructionClosure> = tagsub!(document, node, state, {
     document.trim_node_whitespace(node);
   });
-  Tag!("ltx:p", auto_close => true, auto_open => true, after_close => vec![trim_node_whitespace_closure]);
+  Tag!("ltx:p", auto_close => true, auto_open => true, after_close => trim_node_whitespace_closure);
 
   // TODO: Move to the right place in the pool definitions (maybe split out individual sub-pools by chapter?)
   DefMacroT!(T_CS!("\\space"), None, T_SPACE!());

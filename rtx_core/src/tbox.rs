@@ -1,3 +1,4 @@
+use common::error::*;
 use {Digested, BoxOps};
 use token::Token;
 use document::Document;
@@ -35,7 +36,7 @@ impl BoxOps for Tbox {
     Vec::new()
   }
 
-  fn be_absorbed(self, document: &mut Document, state: &mut State) {
+  fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()> {
     let text = &self.text;
     let mode = match self.properties.get("mode") {
       Some(s) => s.to_owned(),
@@ -43,11 +44,12 @@ impl BoxOps for Tbox {
     };
     if !text.is_empty() {
       if mode == "math" {
-        document.insert_math_token(text);//, font => $$self[1], %{ $$self[4] })
+        try!(document.insert_math_token(text, self.properties, state));//, font => $$self[1], %{ $$self[4] })
       } else {
-        document.open_text(text, state);//, $$self[1]))
+        try!(document.open_text(text, state));//, $$self[1]))
       }
     }
+    Ok(())
   }
 
   fn revert(&self) -> Vec<Token> {

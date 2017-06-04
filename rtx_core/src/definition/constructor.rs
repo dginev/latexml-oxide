@@ -201,7 +201,7 @@ impl Definition for Constructor {
     // self.nargs = Some(nargs);
   }
 
-  fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) {
+  fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) -> Result<()> {
     for pre_closure in &self.options.before_construct {
       pre_closure(document, whatsit, state);
     }
@@ -209,16 +209,16 @@ impl Definition for Constructor {
     match self.replacement {
       None => {},
       Some(ref main_closure) => {
-        main_closure(document,
+        try!(main_closure(document,
                      whatsit.get_args(),
                      whatsit.get_properties(),
-                     state)
+                     state))
       }
     };
 
     for post_closure in &self.options.after_construct {
       post_closure(document, whatsit, state);
     }
-    return;
+    Ok(())
   }
 }

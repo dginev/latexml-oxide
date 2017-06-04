@@ -10,6 +10,7 @@ use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, NodeType, Namespace};
 use regex::Regex;
 
+use common::error::*;
 use state::{ObjectStore, State};
 use {Digested, BoxOps};
 use Tbox;
@@ -20,6 +21,9 @@ lazy_static! {
   static ref HAS_NONSPACE_RE : Regex = Regex::new(r"\S").unwrap();
   static ref ONLY_SPACE_RE : Regex = Regex::new(r"^\s+$").unwrap();
 }
+
+static FONT_ELEMENT_NAME : &'static str = "ltx:text";
+static MATH_TOKEN_NAME : &'static str   = "ltx:XMTok";
 
 pub struct Document {
   pub document: XmlDoc,
@@ -129,7 +133,7 @@ impl Document {
   /// that will record the nodes that were created.
   /// $box can also be a plain string which will be inserted according to whatever
   /// font, mode, etc, are in %props.
-  pub fn absorb(&mut self, object: Digested, state: &mut State) -> Vec<Node> {
+  pub fn absorb(&mut self, object: Digested, state: &mut State) -> Result<Vec<Node>> {
     let mut results = Vec::new();
     let mut boxes = VecDeque::new();
     boxes.push_front(object);
@@ -146,8 +150,8 @@ impl Document {
           }
         }
         // A Proper Box or Whatsit? Absorb it.
-        Digested::Box(digested) => digested.be_absorbed(self, state),
-        Digested::Whatsit(digested) => digested.be_absorbed(self, state),
+        Digested::Box(digested) => try!(digested.be_absorbed(self, state)),
+        Digested::Whatsit(digested) => try!(digested.be_absorbed(self, state)),
       };
 
       let newly_created : Vec<Node> = self.constructed_nodes.drain(0..).collect();    // These were created just now
@@ -175,21 +179,21 @@ impl Document {
     if self.debug {
       info!("Document absorbed {:?} nodes", results.len());
     }
-    results
+    Ok(results)
   }
 
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   /// Shorthand for open,absorb,close, but returns the new node.
-  pub fn insert_element(&mut self, qname: &str, content: Vec<Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Node {
+  pub fn insert_element(&mut self, qname: &str, content: Vec<Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone() calls removed
     let node = self.open_element(qname, attrib, state);
     if self.debug {
       info!("Inserting element {:?} with body: {:?}", qname, content);
     }
     for digested in content {
-      self.absorb(digested, state);
+      try!(self.absorb(digested, state));
     }
     // In obscure situations, `node` may have already gotten closed?
     // close it if it is still open.
@@ -207,7 +211,7 @@ impl Document {
       self.close_element(qname, state);
     }
 
-    node.clone()
+    Ok(node.clone())
  }
 
 
@@ -641,7 +645,18 @@ impl Document {
     }
   }
 
-  pub fn insert_math_token(&self, _text: &str) {}
+  pub fn insert_math_token(&mut self, text: &str, mut attributes: HashMap<String, String>, state: &mut State) -> Result<Node> {
+    attributes.entry("role".to_string()).or_insert("UNKNOWN".to_string());
+    info!("insert math token with text: {}", text);
+    let node = self.open_element(MATH_TOKEN_NAME, Some(attributes), state);
+    // let tbox  = attributes.get("_box").or_insert( LateXML::Box ) // ???
+    // let font = $attributes{font} || $box->getFont;
+    // self.setNodeFont($node, $font);
+    // self.setNodeBox($node, $box);
+    try!(self.open_math_text_internal(text, state));
+    self.close_node_internal(&node, state);    // Should be safe.
+    Ok(self.node.clone())
+  }
 
   ///**********************************************************************
   /// Middle level, mostly public, API.
@@ -658,14 +673,14 @@ impl Document {
   ///  I don't like having "text" built in here!
   ///  AND, we've assumed that "font" names the relevant attribute!!!]
 
-  pub fn open_text(&mut self, text: &str, state: &mut State) -> Option<&Node> {
+  pub fn open_text(&mut self, text: &str, state: &mut State) -> Result<Option<&Node>> {
     // TODO: font arg
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
       if ONLY_SPACE_RE.is_match(text) && (node_type == Some(NodeType::DocumentNode) ||
       (node_type == Some(NodeType::ElementNode) && !self.can_contain(&self.node, "#PCDATA", state))) {
-        return None;
+        return Ok(None);
       }
     }
     // if font.get_family() == "nullfont" {
@@ -703,9 +718,9 @@ impl Document {
     // }
 
     // Finally, insert the darned text.
-    let tnode = self.open_text_internal(text, state);
+    let tnode = try!(self.open_text_internal(text, state));
     self.record_constructed_node(&tnode);
-    Some(&self.node)
+    Ok(Some(&self.node))
   }
 
 
@@ -791,7 +806,7 @@ impl Document {
   }
 
 
-  pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Node {
+  pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Result<Node> {
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
       // if self.debug {
@@ -799,7 +814,7 @@ impl Document {
       //                   text,
       //                   self.document.node_to_string(&self.node));
       // }
-      self.node.append_text(text).unwrap();
+      try!(self.node.append_text(text));
     } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", state);
@@ -813,7 +828,38 @@ impl Document {
       self.set_node(added_node);
     }
 
-    self.node.clone()
+    Ok(self.node.clone())
+  }
+
+  // Question: Why do I have math ligatures handled within openMathText_internal,
+  // but text ligatures handled within closeText_internal ???
+
+  fn open_math_text_internal(&mut self, text: &str, state: &mut State) -> Result<Node> {
+    // And if there's already text???
+    let mut node = self.node.clone();
+    // my $font = $self->getNodeFont($node);
+    try!(node.append_text(text));
+    //print STDERR "Trying Math Ligatures at \"$string\"\n";
+    if !state.nomathparse {
+      self.apply_math_ligatures(&node);
+    }
+    Ok(self.node.clone())
+  }
+
+  // New stategy (but inefficient): apply ligatures until one succeeds,
+  // then remove it, and repeat until ALL (remaining) fail.
+  fn apply_math_ligatures(&self, node: &Node) {
+    // my ($self, $node) = @_;
+    // if (my $ligatures = $STATE->lookupValue('MATH_LIGATURES')) {
+    //   my @ligatures = @$ligatures;
+    //   while (@ligatures) {
+    //     my $matched = 0;
+    //     foreach my $ligature (@ligatures) {
+    //       if ($self->applyMathLigature($node, $ligature)) {
+    //         @ligatures = grep { $_ ne $ligature } @ligatures;
+    //         $matched = 1;
+    //         last; } }
+    //     return unless $matched; } }
   }
 
   /// Note that a box has been absorbed creating $node;
@@ -1192,7 +1238,7 @@ impl Document {
     }
   }
 
-  pub fn add_resource(&mut self, resource: Resource, state: &mut State) {
+  pub fn add_resource(&mut self, resource: Resource, state: &mut State) -> Result<()> {
     // let savenode_opt = self.float_to_element("ltx:resource");
     let savenode_opt = None;
     let mut attrib : HashMap<String, String> = HashMap::new();
@@ -1200,18 +1246,20 @@ impl Document {
     attrib.insert("type".to_owned(), resource.mimetype);
     attrib.insert("media".to_owned(), resource.media);
     let content_box = Digested::Box(Tbox{text: resource.content, ..Tbox::default()});
-    self.insert_element("ltx:resource", vec![content_box], Some(attrib), state);
+    try!(self.insert_element("ltx:resource", vec![content_box], Some(attrib), state));
     if let Some(savenode) = savenode_opt {
       self.set_node(savenode);
     }
+    Ok(())
   }
 
-  pub fn process_pending_resources(&mut self, state: &mut State) {
+  pub fn process_pending_resources(&mut self, state: &mut State) -> Result<()> {
     let resources : Vec<Resource> = state.pending_resources.drain(..).collect();
     for resource in resources {
-      self.add_resource(resource, state);
+      try!(self.add_resource(resource, state));
     }
     state.pending_resources = Vec::new();
+    Ok(())
   }
 }
 

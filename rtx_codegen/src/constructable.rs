@@ -91,7 +91,7 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
           if let Some(snode) = savenode {
             document.set_node(snode);
           }
-          return;
+          Ok(())
         }))
       )
     }
@@ -230,7 +230,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         let to_absorb = translate_value("", &mut replacement);
         operations.push(quote!(
           if let Some(& ObjectStore::Digested(ref digested)) = #to_absorb {
-            document.absorb((**digested).clone(), state);
+            try!(document.absorb((**digested).clone(), state));
           }
         ));
       }
@@ -254,7 +254,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
           let escaped_match = &slashify(&unquote(text_match));
           operations.push(quote!(
             let content_box = Digested::Box(Tbox{text: #escaped_match.to_string(), ..Tbox::default()});
-            document.absorb(content_box, state);
+            try!(document.absorb(content_box, state));
           ));
           is_match = true;
         }

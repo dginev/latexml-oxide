@@ -147,12 +147,13 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         if !id.is_empty() {
           document.set_attribute(&mut docel, "xml:id", id);
         }
-        document.absorb(body, state);
+        try!(document.absorb(body, state));
       } else {
         let mut attrib : HashMap<String, String> = HashMap::new();
         attrib.insert("xml:id".to_string(), id.to_string());
-        document.insert_element("ltx:document", vec![body], Some(attrib), state);
+        try!(document.insert_element("ltx:document", vec![body], Some(attrib), state));
       }
+      Ok(())
     })),
     before_digest => sub!(|_stomach, state| { state.assign_value("inPreamble", ObjectStore::Bool(false), None); Ok(Vec::new()) }),
     // after_digest_begin => |stomach, whatsit, state| {
@@ -298,7 +299,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // For LaTeX documents, We want id's on para, as well as sectional units.
   // However, para get created implicitly on Document construction, rather than
   // explicitly during digestion (via a whatsit), we can't use the usual LaTeX counter mechanism.
-  Tag!("ltx:para", after_open => sub!(|document, node, state| {
+  Tag!("ltx:para", after_open => tagsub!(document, node, state, {
     generate_id(document, node, "p", state);
   }));
 

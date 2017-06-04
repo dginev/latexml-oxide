@@ -13,6 +13,7 @@ use definition::Definition;
 use definition::expandable::Expandable;
 use definition::constructor::Constructor;
 use definition::primitive::Primitive;
+use definition::math_primitive::MathPrimitive;
 use document::Document;
 use document::tag::TagOptions;
 use document::resource::Resource;
@@ -59,6 +60,7 @@ pub enum ObjectStore {
   Token(Token),
   Expandable(Rc<Expandable>),
   Primitive(Rc<Primitive>),
+  MathPrimitive(Rc<MathPrimitive>),
   Constructor(Rc<Constructor>),
   Digested(Rc<::Digested>),
   Parameter(Parameter),
@@ -84,6 +86,7 @@ impl fmt::Debug for ObjectStore {
       Catcode(ref cc) => write!(f, "{:?}", cc),
       Expandable(ref _expandable) => write!(f, "<closure for expandable definition>"),
       Primitive(ref _primitive) => write!(f, "<closure for primitive definition>"),
+      MathPrimitive(ref _primitive) => write!(f, "<closure for math primitive definition>"),
       Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
       Digested(ref digested) => write!(f, "{:?}", digested),
       Parameter(ref parameter) => write!(f, "{:?}", parameter),
@@ -840,6 +843,7 @@ impl State {
       ObjectStore::Expandable(ref defn) => defn.get_cs(),
       ObjectStore::Constructor(ref defn) => defn.get_cs(),
       ObjectStore::Primitive(ref defn) => defn.get_cs(),
+      ObjectStore::MathPrimitive(ref defn) => defn.get_cs(),
       ObjectStore::Token(ref token) => token.clone(),
       _ => T_LETTER!("_wrong_argument_for_install_definition".to_string()),
     };

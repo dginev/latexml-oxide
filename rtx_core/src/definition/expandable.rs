@@ -97,8 +97,8 @@ impl Definition for Expandable {
     None
   }
   fn capture_body(&self) -> bool {false}
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) {
-    panic!("do_absorbtion on Primitive should never be called!");
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
+    fatal!(Definition, Unexpected, "do_absorbtion on Primitive should never be called!".to_string());
   }
 }
 

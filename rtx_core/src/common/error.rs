@@ -14,11 +14,13 @@ pub struct Error {
 pub enum ErrorTarget {
   Package,
   Parameter,
-  Converster,
+  Converter,
   Mouth,
   Codegen,
   Macro,
   XMath,
+  Document,
+  Definition,
 }
 
 #[derive(Debug)]
@@ -26,11 +28,12 @@ pub enum ErrorCategory {
   Init,
   Io(io::Error),
   NotFound,
-  // Unexpected,
+  Unexpected,
   Expected,
   Unknown,
   MissingFile,
   Malformed,
+  Libxml,
 }
 
 #[macro_export]
@@ -61,6 +64,8 @@ impl fmt::Display for Error {
       Unknown => write!(f, "unknown"),
       Malformed => write!(f, "malformed"),
       Expected => write!(f, "expected"),
+      Unexpected => write!(f, "unexpected"),
+      Libxml => write!(f, "libxml error")
     }
   }
 }
@@ -76,6 +81,8 @@ impl ErrorTrait for Error {
       Unknown => "unknown",
       Malformed => "malformed",
       Expected => "expected",
+      Unexpected => "unexpected",
+      Libxml => "libxml error"
     }
   }
 
@@ -102,6 +109,13 @@ impl From<io::Error> for Error {
         Error{target: ErrorTarget::Mouth, category: ErrorCategory::Io(err), message: "IO error".to_owned()}
     }
 }
+
+impl From<()> for Error {
+    fn from(_e: ()) -> Error {
+        Error{target: ErrorTarget::Document, category: ErrorCategory::Libxml, message: "LibXML error".to_owned()}
+    }
+}
+
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Progress Reporting

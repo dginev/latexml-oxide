@@ -11,23 +11,68 @@ use parameter::Parameters;
 use document::Document;
 use definition::{Definition, PrimitiveClosure, BeforeDigestClosure, DigestionClosure};
 
+// DefMath Define a Mathematical symbol or function.
+// There are two sets of cases:
+//  (1) If the presentation appears to be TeX code, we create an XMDual,
+// since the presentation may end up with structure, etc.
+//  (2) But if the presentation is a simple string, or unicode,
+// it is just the content of the symbol; even if the function takes arguments.
+// ALSO
+//  arrange that the operator token gets cs="$cs"
+// ALSO
+//  Possibly some trick with SUMOP/INTOP affecting limits ?
+//  Well, not exactly, but....
+// HMM.... Still fishy.
+// When to make a dual ?
+// If the $presentation seems to be TeX (ie. it involves #1... but not ONLY!)
+
+// let simpletoken_options = {    # [CONSTANT]
+//   name => 1,
+//   meaning => 1,
+//   omcd => 1,
+//   role => 1,
+//   mathstyle => 1,
+//   font => 1,
+//   scriptpos => 1,
+//   scope => 1,
+//   locked => 1 };
+
+
 #[derive(Clone)]
-pub struct PrimitiveOptions {
+pub struct MathPrimitiveOptions {
   pub bounded: bool,
   pub mode: Option<String>,
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
   pub is_prefix: bool,
   pub scope: Option<Scope>,
-  // font : TODO
+  pub font : Option<String>, // TODO
   pub require_math: bool,
   pub forbid_math: bool,
   pub locked: bool,
   pub alias: Option<String>,
+
+  // Math specific
+  pub name: Option<String>,
+  pub meaning: Option<String>,
+  pub omcd: Option<String>,
+  pub reversion: bool,
+  pub sizer: bool,
+  pub role: Option<String>,
+  pub operator_role: Option<String>,
+  pub reorder: bool,
+  pub dual: bool,
+  pub mathstyle: Option<String>,
+  pub scriptpos: Option<usize>,
+  pub operator_scriptpos: Option<String>,
+  pub stretchy: bool,
+  pub operator_stretchy : bool,
+  pub nogroup: bool,
+  pub hide_content_reversion: bool
 }
-impl Default for PrimitiveOptions {
+impl Default for MathPrimitiveOptions {
   fn default() -> Self {
-    PrimitiveOptions {
+    MathPrimitiveOptions {
       bounded: false,
       before_digest: Vec::new(),
       after_digest: Vec::new(),
@@ -38,38 +83,57 @@ impl Default for PrimitiveOptions {
       forbid_math: false,
       locked: false,
       alias: None,
+      font: None,
+
+      // math-specific
+      name: None,
+      meaning: None,
+      omcd: None,
+      reversion: false,
+      sizer: false,
+      role: None,
+      operator_role: None,
+      reorder: false,
+      dual: false,
+      mathstyle: None,
+      scriptpos: None,
+      operator_scriptpos: None,
+      stretchy: false,
+      operator_stretchy : false,
+      nogroup: true,
+      hide_content_reversion: false
     }
   }
 }
 
 #[derive(Clone)]
-pub struct Primitive {
+pub struct MathPrimitive {
   pub cs: Token,
   pub paramlist: Option<Parameters>,
   pub nargs: Option<usize>,
   pub replacement: Option<PrimitiveClosure>,
-  pub options: PrimitiveOptions,
+  pub options: MathPrimitiveOptions,
 }
-impl Default for Primitive {
+impl Default for MathPrimitive {
   fn default() -> Self {
-    Primitive {
-      cs: T_CS!("Primitive".to_string()),
+    MathPrimitive {
+      cs: T_CS!("MathPrimitive".to_string()),
       paramlist: None,
       nargs: None,
       replacement: None,
-      options: PrimitiveOptions::default(),
+      options: MathPrimitiveOptions::default(),
     }
   }
 }
-impl PartialEq for Primitive {
-  fn eq(&self, other: &Primitive) -> bool {
+impl PartialEq for MathPrimitive {
+  fn eq(&self, other: &MathPrimitive) -> bool {
     self.cs == other.cs
   }
 }
 
 
-impl Object for Primitive {}
-impl Definition for Primitive {
+impl Object for MathPrimitive {}
+impl Definition for MathPrimitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> {
     Some(&self.options.before_digest)
   }
@@ -82,7 +146,7 @@ impl Definition for Primitive {
     Ok(Vec::new())
   }
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
-    info!("-- primitive invoke for {:?}", self.cs);
+    info!("-- Mathprimitive invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
@@ -104,7 +168,7 @@ impl Definition for Primitive {
   }
 
   fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
-    fatal!(Definition, Unexpected, "do_absorbtion on Primitive should never be called!".to_string());
+    fatal!(Definition, Unexpected, "do_absorbtion on MathPrimitive should never be called!".to_string());
   }
 
   fn get_cs(&self) -> Token {

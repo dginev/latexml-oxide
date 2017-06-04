@@ -5,6 +5,7 @@ pub use std::collections::VecDeque;
 pub use libxml::tree::{Node, Namespace};
 
 pub use rtx_core::{Core, Digested, BoxOps};
+pub use rtx_core::tbox::Tbox;
 pub use rtx_core::state::{State, ObjectStore, Scope};
 pub use rtx_core::common::error::*;
 pub use rtx_core::common::font::Font;
@@ -23,6 +24,7 @@ pub use rtx_core::stomach::Stomach;
 pub use rtx_core::whatsit::Whatsit;
 pub use rtx_core::definition::expandable::Expandable;
 pub use rtx_core::definition::primitive::{Primitive,PrimitiveOptions};
+pub use rtx_core::definition::math_primitive::{MathPrimitive,MathPrimitiveOptions};
 pub use rtx_core::definition::constructor::{ConstructorOptions};
 
 //**********************************************************************
@@ -526,55 +528,6 @@ pub fn merge_font(font_hash: HashMap<String, String>, state: &mut State) {
   return;
 }
 
-// DefMath Define a Mathematical symbol or function.
-// There are two sets of cases:
-//  (1) If the presentation appears to be TeX code, we create an XMDual,
-// since the presentation may end up with structure, etc.
-//  (2) But if the presentation is a simple string, or unicode,
-// it is just the content of the symbol; even if the function takes arguments.
-// ALSO
-//  arrange that the operator token gets cs="$cs"
-// ALSO
-//  Possibly some trick with SUMOP/INTOP affecting limits ?
-//  Well, not exactly, but....
-// HMM.... Still fishy.
-// When to make a dual ?
-// If the $presentation seems to be TeX (ie. it involves #1... but not ONLY!)
-struct DefMathOptions {
-  name: Option<String>,
-  meaning: Option<String>,
-  omcd: Option<String>,
-  reversion: 1,
-  sizer: 1,
-  alias: Option<String>,
-  role: Option<String>,
-  operator_role: Option<String>,
-  reorder: bool,
-  dual: bool,
-  mathstyle: Option<String>,
-  font: Option<String>,
-  scriptpos: Option<usize>,
-  operator_scriptpos: Option<String>,
-  stretchy: bool,
-  operator_stretchy : bool,
-  before_digest: ,
-  after_digest: 1,
-  scope: 1,
-  nogroup: 1,
-  locked: 1,
-  hide_content_reversion: 1
-};
-// let simpletoken_options = {    # [CONSTANT]
-//   name => 1,
-//   meaning => 1,
-//   omcd => 1,
-//   role => 1,
-//   mathstyle => 1,
-//   font => 1,
-//   scriptpos => 1,
-//   scope => 1,
-//   locked => 1 };
-
 // Macros requiring repetitions need to be handled outside of the main setup macro, as nested macros currently don't support repetition
 // Details at: https://github.com/rust-lang/rust/issues/35853
 
@@ -589,6 +542,43 @@ macro_rules! NewDefault {
 #[macro_export]
 macro_rules! sub {
   ($body:expr) => (vec![Rc::new($body)])
+}
+
+#[macro_export]
+macro_rules! tagsub {
+  ($document:ident, $node:ident, $state:ident, $body:expr) => (vec![Rc::new(
+    |$document:&mut Document, mut $node:&mut Node, $state:&mut State| -> Result<()>  {
+      $body;
+      Ok(())
+    })])
+}
+
+#[macro_export]
+macro_rules! noreplacement {
+  () => (|doc,whatsit,props,state|{Ok(())})
+}
+
+#[macro_export]
+macro_rules! replacement {
+  ($doc:ident, $args:ident, $props:ident, $state:ident, $body:expr) => (
+    |$doc:&mut Document,$args: &Vec<Option<Digested>>,$props: &HashMap<String, ObjectStore>, $state: &mut State| -> Result<()> {
+    $body
+    Ok(())
+  })
+}
+
+
+// Discussion: It is unclear what the best authoring syntax is for our family of latexml binding macros.
+// One idea is to keep them very close to the Rust internals, but we suffer from a variety of boilerplate, such as
+// needing to spell out `key => Some(value.to_string())`, rather than a direct `key => value`.
+//
+// For now I am making the decision to keep writing out the verbose form,
+// and will refactor at a later date, when the trade-offs become more clear. Smart use of the Cow struct is another idea.
+// I will use a helper though:
+
+#[macro_export]
+macro_rules! v {
+  ($val:expr) => (Some($val.to_string()))
 }
 
 #[macro_export]
@@ -1253,10 +1243,11 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     use rtx_core::whatsit::Whatsit;
     use rtx_core::definition::constructor::Constructor;
     let name = $name_raw.to_string();
+    let options = $options;
     // This is for the common case where the environment is opened by \begin{env}
     // let sizer = inferSizer($options.sizer, $options.reversion);
     let mut before_digest_env : Vec<BeforeDigestClosure> = Vec::new();
-    match &$options.mode {
+    match &options.mode {
       &Some(ref mode) => {
         let bmode = mode.clone();
         let mode_closure = Rc::new(move |stomach: &mut Stomach, state: &mut State| {
@@ -1270,15 +1261,15 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         before_digest_env.push(bgroup_closure);
       }
     };
-    before_digest_env.extend($options.before_digest);
+    before_digest_env.extend(options.before_digest);
 
     let push_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
       state.push_frame();
     });
     let mut before_construct_with_frame : Vec<ConstructionClosure> = vec![push_frame_closure];
-    before_construct_with_frame.extend($options.before_construct);
+    before_construct_with_frame.extend(options.before_construct);
 
-    let mut after_construct_with_frame : Vec<ConstructionClosure> = $options.after_construct;
+    let mut after_construct_with_frame : Vec<ConstructionClosure> = options.after_construct;
 
     let pop_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
       state.pop_frame();
@@ -1290,31 +1281,31 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         paramlist: $paramlist,
         replacement: $compiled_replacement,
         options: ConstructorOptions {
-          nargs: $options.nargs,
+          nargs: options.nargs,
           before_digest: before_digest_env,
           // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
           //   ($options{forbidMath} ? (sub { forbidMath($name); }) : ()),
           //   sub { AssignValue(current_environment => $name);
           //     DefMacroI('\@currenvir', undef, $name); },
           //   ($options{font} ? (sub { MergeFont(%{ $options{font} }); }) : ()),
-          font: $options.font.clone(), // TODO
+          font: options.font.clone(), // TODO
           //   $options{beforeDigest}),
-          after_digest: $options.after_digest_begin,
-          after_digest_body: $options.after_digest_body,
+          after_digest: options.after_digest_begin,
+          after_digest_body: options.after_digest_body,
           before_construct: before_construct_with_frame,
           // Curiously, it's the \begin whose afterConstruct gets called.
           after_construct: after_construct_with_frame,
           capture_body: true,
-          properties: $options.properties.clone(),
+          properties: options.properties.clone(),
           // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
           // (defined $sizer ? (sizer => $sizer) : ()),
           // ), $options{scope});
           ..ConstructorOptions::default()
         }});
-    $state.install_definition(ObjectStore::Constructor(begin_name_constructor), $options.scope.clone());
+    $state.install_definition(ObjectStore::Constructor(begin_name_constructor), options.scope.clone());
 
 
-    let mut after_digest_env = $options.after_digest;
+    let mut after_digest_env = options.after_digest;
     let unexpected_end_closure = Rc::new(|_stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
       // let env = LookupValue!("current_environment", $state);
       //     Error('unexpected', "\\end{$name}", $_[0],
@@ -1327,7 +1318,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     });
     after_digest_env.push(unexpected_end_closure);
 
-    match $options.mode {
+    match options.mode {
       Some(mode) => {
         let emode = mode.clone();
         let emode_closure = Rc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
@@ -1350,12 +1341,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       replacement: None,
       paramlist: None,
       options: ConstructorOptions {
-        before_digest: $options.before_digest_end,
+        before_digest: options.before_digest_end,
         after_digest: after_digest_env,
         ..ConstructorOptions::default()
       }
     });
-    $state.install_definition(ObjectStore::Constructor(end_envname_constructor), $options.scope.clone());
+    $state.install_definition(ObjectStore::Constructor(end_envname_constructor), options.scope.clone());
 
     // For the uncommon case opened by \csname env\endcsname
     let name_constructor = Rc::new(Constructor{
@@ -1373,17 +1364,17 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       // Curiously, it's the \begin whose afterConstruct gets called.
       // afterConstruct => flatten($options{afterConstruct}, sub { state->popFrame; }),
       options: ConstructorOptions {
-        nargs: $options.nargs,
+        nargs: options.nargs,
         capture_body: true,
-        properties: $options.properties.clone(),
-        font: $options.font, // TODO
+        properties: options.properties.clone(),
+        font: options.font, // TODO
         // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
         // (defined $sizer ? (sizer => $sizer) : ()),
         // ), $options{scope});
         ..ConstructorOptions::default()
       }
     });
-    $state.install_definition(ObjectStore::Constructor(name_constructor), $options.scope.clone());
+    $state.install_definition(ObjectStore::Constructor(name_constructor), options.scope.clone());
 
     let end_name_constructor = Rc::new(Constructor {
       cs: T_CS!("\\end".to_string() + &name),
@@ -1395,16 +1386,16 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         //   "Current are "
         //     . join(', ', state->lookupStackedValues('current_environment')))
         //   unless $env && $name eq $env;
-        return; })),
+        Ok(()) })),
       // beforeDigest => flatten($options{beforeDigestEnd}),
       // afterDigest  => flatten($options{afterDigest},
       //   ($mode ? (sub { $_[0]->endMode($mode); }) : ())),
       // ), $options{scope});
       options: ConstructorOptions::default()
     });
-    $state.install_definition(ObjectStore::Constructor(end_name_constructor), $options.scope);
+    $state.install_definition(ObjectStore::Constructor(end_name_constructor), options.scope);
 
-    if $options.locked {
+    if options.locked {
       AssignValue!(&("\\begin{".to_string() + &name+"}:locked"), ObjectStore::Bool(true), None);
       AssignValue!(&("\\end{".to_string()+&name+"}:locked")  , ObjectStore::Bool(true), None);
       AssignValue!(&("\\".to_string()+&name+":locked")       , ObjectStore::Bool(true), None);
@@ -1497,31 +1488,92 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   //   DefMathI(parsePrototype($proto), $presentation, %options);
   //   return; }
 
-  macro_rules! DefMathII(
-    ($cs:expr, $paramlist:expr, $presentation:expr, $options:expr) => ({
+  macro_rules! DefMathI {
+    ($text:expr,$paramlist:expr,$presentation:expr,
+     $key1:ident => $val1:expr
+    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefault!(MathPrimitiveOptions,
+     $key1 => $val1)));
 
+    ($text:expr,$paramlist:expr,$presentation:expr,
+     $key1:ident => $val1:expr,
+     $key2:ident => $val2:expr
+    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefault!(MathPrimitiveOptions,
+     $key1 => $val1,
+     $key2 => $val2
+    )));
+
+    ($text:expr,$paramlist:expr,$presentation:expr,
+     $key1:ident => $val1:expr,
+     $key2:ident => $val2:expr,
+     $key3:ident => $val3:expr
+    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefault!(MathPrimitiveOptions,
+     $key1 => $val1,
+     $key2 => $val2,
+     $key3 => $val3
+    )));
+
+    ($text:expr,$paramlist:expr,$presentation:expr,
+     $key1:ident => $val1:expr,
+     $key2:ident => $val2:expr,
+     $key3:ident => $val3:expr,
+     $key4:ident => $val4:expr
+    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefault!(MathPrimitiveOptions,
+     $key1 => $val1,
+     $key2 => $val2,
+     $key3 => $val3,
+     $key4 => $val4
+    )));
+
+    ($text:expr,$paramlist:expr,$presentation:expr,
+     $key1:ident => $val1:expr,
+     $key2:ident => $val2:expr,
+     $key3:ident => $val3:expr,
+     $key4:ident => $val4:expr,
+     $key5:ident => $val5:expr,
+    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefault!(MathPrimitiveOptions,
+     $key1 => $val1,
+     $key2 => $val2,
+     $key3 => $val3,
+     $key4 => $val4,
+     $key5 => $val5
+    )));
+  }
+
+  macro_rules! DefMathWO {
+    ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr) => ({
+    let mut options = $options;
+    let cs = T_CS!($cstext.to_string());
+    let presentation = $presentation.to_string();
     // Can't defer parsing parameters since we need to know number of args!
-
     // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
-    let nargs   = match $paramlist {
-      Some(plist) => plist.get_parameters().len(),
+    let paramlist : Option<Parameters> = $paramlist;
+    let nargs = match paramlist {
+      Some(plist) => plist.get_num_args(),
       None => 0
     };
-    let csname  = $cs.get_string();
-    let meaning = $options.meaning;
-    let mut name    = $options.alias.unwrap_or(csname);
-    name =~ s/^\\//;
-    name = $options{name} if defined $options{name};
-    name = undef          if (defined $name)
-      && (($name eq $presentation) || ($name eq '')
-      || ((defined $meaning) && ($meaning eq $name)));
-    $options.name = name;
-    $options.role = "UNKNOWN"
-      if ($nargs == 0) && !defined $options{role};
-    $options{operator_role} = "UNKNOWN"
-      if ($nargs > 0) && !defined $options{operator_role};
+
+    let mut name = options.alias.clone().unwrap_or(cs.get_string().to_string());
+    if name.starts_with('\\') {
+      name = name.replacen('\\', "", 1)
+    }
+    if let Some(options_name) = options.name {
+      name = options_name;
+    }
+    let name_opt = if (name == presentation) || (name.is_empty()) || (options.meaning == Some(name.clone())) {
+      None
+    } else {
+      Some(name)
+    };
+    options.name = name_opt;
+    if nargs == 0 && options.role.is_none() {
+      options.role = Some("UNKNOWN".to_string())
+    }
+    if nargs > 0 && options.operator_role.is_none() {
+      options.operator_role = Some("UNKNOWN".to_string())
+    }
+
     // Store some data for introspection
-    // defmath_introspective($cs, $paramlist, $presentation, %options);
+    // defmath_introspective(cs, $paramlist, presentation, %options);
 
     // If single character, handle with a rewrite rule
     // if (length($csname) == 1) {
@@ -1529,49 +1581,54 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     // TODO:
     // // If the presentation is complex, and involves arguments,
     // // we will create an XMDual to separate content & presentation.
-    // elsif ((ref $presentation eq "CODE")
-    //   || ((ref $presentation) && grep { $_->equals(T_PARAM) } $presentation->unlist)
-    //   || (!(ref $presentation) && ($presentation =~ /\//\d|\\./))
-    //   || ((ref $presentation) && (grep { $_->isExecutable } $presentation->unlist))) {
-    //   defmath_dual($cs, $paramlist, $presentation, %options); }
+    // elsif ((ref presentation eq "CODE")
+    //   || ((ref presentation) && grep { $_->equals(T_PARAM) } presentation->unlist)
+    //   || (!(ref presentation) && (presentation =~ /\//\d|\\./))
+    //   || ((ref presentation) && (grep { $_->isExecutable } presentation->unlist))) {
+    //   defmath_dual($cs, $paramlist, presentation, %options); }
 
     // EXPERIMENT: Introduce an intermediate case for simple symbols
     // Define a primitive that will create a Box with the appropriate set of XMTok attributes.
-    if (nargs == 0) {// && !grep { !$$simpletoken_options{$_} } keys %options) {
-      defmath_prim($cs, $paramlist, $presentation, %options);
+    if nargs == 0 {// && !grep { !$$simpletoken_options{$_} } keys %options) {
+      defmath_prim!(cs, paramlist, $presentation.clone(), options);
     }
 
     // else {
     //   defmath_cons($cs, $paramlist, $presentation, %options); }
     // AssignValue($csname . ":locked" => 1) if $options{locked};
-  });
+  })}
 
-macro_rules! defmath_prim(
-  ($cs:expr, $paramlist:expr, $presentation:expr, $options:expr) => ({
-  let string = ToString($presentation);
-  let reqfont = $options{font} || {};
-  delete $options{locked};
-  delete $options{font};
-  $state.install_definition(ObjectStore::Primitive(Rc::new(Primitive{
-        cs: $cs.clone(),
-        paramlist: None,
-        replacement: Some(Rc::new(sub!(|stomach, args, state| {
-          // let locator    = $stomach->getGullet->getLocator;
-          // let properties = $options.clone();
-          // let font       = LookupValue('font')->merge(%$reqfont)->specialize($string);
-          // foreach my $key (keys %properties) {
-          //   my $value = $properties{$key};
-          //   if (ref $value eq 'CODE') {
-          //     $properties{$key} = &$value(); } }
-          TBox{ $string, $font, $locator, $cs, mode => 'math', %properties)
-        )),
-        options: $options,
-        ..Primitive::default()
+  macro_rules! defmath_prim {
+    ($cs:expr, $_paramlist:expr, $presentation:expr, $options:expr) => ({
+    let mut prim_options = $options;
+    let reqfont = prim_options.font.clone();
+    prim_options.locked = false;
+    prim_options.font = None;
+    let scope = prim_options.scope.clone();
+
+    $state.install_definition(ObjectStore::MathPrimitive(Rc::new(MathPrimitive{
+      cs: $cs.clone(),
+      paramlist: None, // never any parameters, this is intentional
+      replacement: Some(Rc::new(move |stomach, args, state| {
+        // let locator    = $stomach->getGullet->getLocator;
+        let mut properties = HashMap::new(); // TODO: sync with perl master here
+        properties.insert("mode".to_owned(), "math".to_owned());
+        // let font       = LookupValue('font')->merge(%$reqfont)->specialize($string);
+        // foreach my $key (keys %properties) {
+        //   my $value = $properties{$key};
+        //   if (ref $value eq 'CODE') {
+        //     $properties{$key} = &$value(); } }
+        Ok(vec![Digested::Box( // TODO: Can we reduce boilerplate?
+          Tbox{ text: $presentation.to_string(), tokens: vec![$cs.clone()], properties: properties, ..Tbox::default()}
+        )])
       })),
-      $options.scope);
+      options: prim_options,
+      ..MathPrimitive::default()
+      })), scope);
+    })
+  }
 
-
-});
+)}
 
 
 pub mod pool;
