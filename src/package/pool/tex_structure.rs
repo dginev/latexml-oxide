@@ -93,7 +93,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
   DefConstructorI!(T_CS!("\\inner@par"), None, replacement!(document, args, props, state, {
-    if document.maybe_close_element("ltx:p", state).is_some() { }
+    if try!(document.maybe_close_element("ltx:p", state)).is_some() { }
     else if document.can_contain(document.get_node(), "ltx:break", state) {
       try!(document.insert_element("ltx:break", Vec::new(), None, state));
     }

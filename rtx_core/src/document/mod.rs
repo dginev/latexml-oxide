@@ -188,7 +188,7 @@ impl Document {
   /// Shorthand for open,absorb,close, but returns the new node.
   pub fn insert_element(&mut self, qname: &str, content: Vec<Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone() calls removed
-    let node = self.open_element(qname, attrib, state);
+    let node = try!(self.open_element(qname, attrib, state));
     if self.debug {
       info!("Inserting element {:?} with body: {:?}", qname, content);
     }
@@ -208,7 +208,7 @@ impl Document {
       };
     }
     if c == Some(node.clone()) {
-      self.close_element(qname, state);
+      try!(self.close_element(qname, state));
     }
 
     Ok(node.clone())
@@ -237,18 +237,18 @@ impl Document {
     return;
   }
 
-  pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Node {
+  pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
     if self.debug {
       info!("Open element {:?} at {:?}", qname, self.node.get_name());
     }
-    let point = self.find_insertion_point(qname, state);
+    let point = try!(self.find_insertion_point(qname, state));
     // attributes.entry("_box").or_insert(state.locals.box);
-    let newnode = self.open_element_at(point, qname,
+    let newnode = try!(self.open_element_at(point, qname,
       // _font => $attributes{font} || $attributes{_box}->getFont,
-      attributes, state);
+      attributes, state));
     self.set_node(newnode.clone());
-    newnode
+    Ok(newnode)
   }
 
   /// Note: This closes the deepest open node of a given type.
@@ -256,7 +256,7 @@ impl Document {
   /// Since this is an "explicit request", we're currently skipping over those nodes,
   /// ie. we're automatically closing them, even if they're the same type as we're asking to close!!!
   /// This is kinda risky! Maybe we should try to request closing of specific nodes.
-  pub fn close_element(&mut self, qname: &str, state: &mut State) -> Option<Node> {
+  pub fn close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
     if self.debug {
       info!("Close element {:?} at {:?}", qname, self.node.get_name());
     }
@@ -284,7 +284,7 @@ impl Document {
         _ => format!("</{}>", qname)
       };
       error!(target: &format!("malformed:{:?}",qname), "Attempt to close {}, which isn't open. Currently in {}", qname_msg, self.get_insertion_context(None, state));
-      None
+      Ok(None)
     } else {                                         // Found node.
       if !cant_close.is_empty() {
                                                    // Intervening non-auto-closeable nodes!!
@@ -296,8 +296,8 @@ impl Document {
         //   if @cant_close;
       }
       // So, now close up to the desired node.
-      self.close_node_internal(&node, state);
-      Some(node)
+      try!(self.close_node_internal(&node, state));
+      Ok(Some(node))
     }
   }
 
@@ -355,14 +355,14 @@ impl Document {
   }
 
   // Close $qname, if it is closeable.
-  pub fn maybe_close_element(&mut self, qname: &str, state: &mut State) -> Option<Node> {
+  pub fn maybe_close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
     let mut qname_vdq = VecDeque::new();
     qname_vdq.push_front(qname.to_string());
     if let Some(node) = self.is_closeable(qname_vdq, state) {
-      self.close_node_internal(&node, state);
-      Some(node)
+      try!(self.close_node_internal(&node, state));
+      Ok(Some(node))
     } else {
-      None
+      Ok(None)
     }
   }
 
@@ -648,13 +648,13 @@ impl Document {
   pub fn insert_math_token(&mut self, text: &str, mut attributes: HashMap<String, String>, state: &mut State) -> Result<Node> {
     attributes.entry("role".to_string()).or_insert("UNKNOWN".to_string());
     info!("insert math token with text: {}", text);
-    let node = self.open_element(MATH_TOKEN_NAME, Some(attributes), state);
+    let node = try!(self.open_element(MATH_TOKEN_NAME, Some(attributes), state));
     // let tbox  = attributes.get("_box").or_insert( LateXML::Box ) // ???
     // let font = $attributes{font} || $box->getFont;
     // self.setNodeFont($node, $font);
     // self.setNodeBox($node, $box);
     try!(self.open_math_text_internal(text, state));
-    self.close_node_internal(&node, state);    // Should be safe.
+    try!(self.close_node_internal(&node, state));    // Should be safe.
     Ok(self.node.clone())
   }
 
@@ -790,11 +790,11 @@ impl Document {
   /// Close `node`, and any current nodes below it.
   /// No checking! Use this when you've already verified that `node` can be closed.
   /// and, of course, `node` must be current or some ancestor of it!!!
-  pub fn close_node_internal(&mut self, node: &Node, state: &mut State) {
+  pub fn close_node_internal(&mut self, node: &Node, state: &mut State) -> Result<()> {
     let closeto = node.get_parent().unwrap(); // Grab now in case afterClose screws the structure.
     let mut n       = self.close_text_internal();    // Close any open text node.
     while n.get_type() == Some(NodeType::ElementNode) {
-      self.close_element_at(&mut n, state);
+      try!(self.close_element_at(&mut n, state));
       // self.auto_collapse_children(n);
       if *node == n {
         break;
@@ -803,6 +803,7 @@ impl Document {
     }
 
     self.set_node(closeto);
+    Ok(())
   }
 
 
@@ -817,7 +818,7 @@ impl Document {
       try!(self.node.append_text(text));
     } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
       // or text allowed here
-      let mut point = self.find_insertion_point("#PCDATA", state);
+      let mut point = try!(self.find_insertion_point("#PCDATA", state));
       let node = Node::new_text(text, &self.document).unwrap();
       if self.debug {
         info!("Inserting text node for {:?} into {:?}",
@@ -848,7 +849,7 @@ impl Document {
 
   // New stategy (but inefficient): apply ligatures until one succeeds,
   // then remove it, and repeat until ALL (remaining) fail.
-  fn apply_math_ligatures(&self, node: &Node) {
+  fn apply_math_ligatures(&self, _node: &Node) {
     // my ($self, $node) = @_;
     // if (my $ligatures = $STATE->lookupValue('MATH_LIGATURES')) {
     //   my @ligatures = @$ligatures;
@@ -918,17 +919,17 @@ impl Document {
   /// Find the node where an element with qualified name $qname can be inserted.
   /// This will move up the tree (closing auto-closable elements),
   /// or down (inserting auto-openable elements), as needed.
-  pub fn find_insertion_point(&mut self, qname: &str, state: &mut State) -> Node {
+  pub fn find_insertion_point(&mut self, qname: &str, state: &mut State) -> Result<Node> {
     self.close_text_internal();    // Close any current text node.
     let cur_qname = state.model.get_node_qname(&self.node);
     // let inter;
     // If `qname` is allowed at the current point, we're done.
     if self.can_contain_qname(&cur_qname, qname, state) {
-      return self.node.clone()
+      return Ok(self.node.clone())
     // Else, if we can create an intermediate node that accepts $qname, we'll do that.
     } else if let Some(inter) = self.can_contain_indirect(&cur_qname, qname, state) {
       if (inter != qname) && (inter != cur_qname) {
-        self.open_element(&inter, None, state);//font => self.getNodeFont(self.node}));
+        try!(self.open_element(&inter, None, state));//font => self.getNodeFont(self.node}));
         return self.find_insertion_point(qname, state); // And retry insertion (should work now).
       }
     } else { // Now we're getting more desparate...
@@ -951,7 +952,7 @@ impl Document {
         };
       }
       if let Some(close_to_node) = close_to {
-        self.close_node_internal(&close_to_node, state);             // Close the auto closeable nodes.
+        try!(self.close_node_internal(&close_to_node, state));             // Close the auto closeable nodes.
         return self.find_insertion_point(qname, state);             // Then retry, possibly w/auto open's
 
       } else {                                             // Didn't find a legit place.
@@ -959,10 +960,10 @@ impl Document {
         //       ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed in <$cur_qname>",
         //       "Currently in " . self.getInsertionContext());
         //     return self.node}; } } }                       // But we'll do it anyway, unless Error => Fatal.
-        return self.node.clone()
+        return Ok(self.node.clone())
       }
     }
-    self.node.clone()
+    Ok(self.node.clone())
   }
 
 
@@ -1051,7 +1052,7 @@ impl Document {
   /// This opens a new element at the _specified_ point, rather than the current insertion point.
   /// This is useful during document rearrangement or augmentation that may be needed later
   /// in the process.
-  pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Node {
+  pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
     let (decoded_ns, tag) = state.model.decode_qname(qname);
     let mut newnode;
     // let font = $attributes{_font} || $attributes{font};
@@ -1116,9 +1117,9 @@ impl Document {
     }
 
     // Run afterOpen operations
-    self.after_open(&mut newnode, state);
+    try!(self.after_open(&mut newnode, state));
 
-    newnode
+    Ok(newnode)
   }
 
   fn open_element_internal(&mut self, point: &mut Node, ns_opt: Option<String>, tag: &str, state: &mut State) -> Node {
@@ -1176,29 +1177,31 @@ impl Document {
   /// Whenever a node has been created using openElementAt,
   /// closeElementAt ought to be used to close it, when you're finished inserting into $node.
   /// Basically, this just runs any afterClose operations.
-  pub fn close_element_at(&mut self, mut node: &mut Node, state: &mut State) {
-    self.after_close(&mut node, state);
+  pub fn close_element_at(&mut self, mut node: &mut Node, state: &mut State) -> Result<()> {
+    self.after_close(&mut node, state)
   }
 
-  pub fn after_open(&mut self, node: &mut Node, state: &mut State) {
+  pub fn after_open(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Set current point to this node, just in case the afterOpen's use it.
     let savenode = self.node.clone();
     self.set_node(node.clone());
     let node_qname = self.get_node_qname(node, state);
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterOpen, state) {
-      action(self, node, state);
+      try!(action(self, node, state));
     }
     self.set_node(savenode);
+    Ok(())
   }
 
-  pub fn after_close(&mut self, node: &mut Node, state: &mut State) {
+  pub fn after_close(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Should we set point to this node? (or to last child, or something ??
     let savenode = self.node.clone();
     let node_qname = self.get_node_qname(node, state);
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterClose, state) {
-      action(self, node, state);
+      try!(action(self, node, state));
     }
     self.set_node(savenode);
+    Ok(())
   }
 
   pub fn trim_node_whitespace(&mut self, mut node: &mut Node) {
