@@ -1,5 +1,7 @@
 use package::*;
 use rtx_core::{BoxOps};
+use rtx_core::document::tag::TagConstructionClosure;
+
 pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
@@ -10,7 +12,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Decide whether we're going into or out of math, inline or display.
   Tag!("ltx:XMText", auto_open => true, auto_close => true);
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
-  Tag!("ltx:Math", after_open => sub!(|document, node, state| {
+  Tag!("ltx:Math", after_open => tagsub!(document, node, state, {
     generate_id(document, node, "m", state);
   }));
 
@@ -63,7 +65,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     capture_body  => true
   );
 
-  DefConstructorI!(T_CS!("\\@@ENDDISPLAYMATH"), None, |doc,whatsit,props,state|{}, alias => Some("$$".to_string()),
+  DefConstructorI!(T_CS!("\\@@ENDDISPLAYMATH"), None, noreplacement!(), alias => Some("$$".to_string()),
     before_digest => sub!(|stomach, state|{ try!(stomach.end_mode("display_math", state)); Ok(Vec::new()) }));
 
   DefConstructor!("\\@@BEGININLINEMATH",
@@ -76,11 +78,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     before_digest => sub!(|stomach, state| {try!(stomach.begin_mode("inline_math", state)); Ok(Vec::new())}),
     capture_body => true);
 
-  DefConstructorI!(T_CS!("\\@@ENDINLINEMATH"), None, |doc,whatsit,props,state|{}, alias => Some("$".to_string()),
+  DefConstructorI!(T_CS!("\\@@ENDINLINEMATH"), None, noreplacement!(), alias => Some("$".to_string()),
     before_digest => sub!(|stomach, state| { info!("\n\n\n end inline math \n\n\n"); try!(stomach.end_mode("inline_math", state)); Ok(Vec::new()) }));
 
   // Same as add_TeX, but add the code from the body of the object.
-  let add_body_tex_closure = Rc::new(|document: &mut Document, mut node: &mut Node, state: &mut State| {
+  let add_body_tex_closure : Vec<TagConstructionClosure> = tagsub!(document, node, state, {
     if node.get_attribute("tex").is_none() { // only do this once.
       let tex_opt = if let Some(ref tbox) = document.get_node_box(&node) {
         if let Some(body) = tbox.get_body() {
@@ -103,7 +105,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         document.set_attribute(&mut node, "tex", &tex_string);
       }
     }
-    return;
   });
 
   // Cleanup ltx:Math elements; particularly if they aren't "really" math.
@@ -129,7 +130,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //   return;
   // }
 
-  Tag!("ltx:Math", after_close => vec![add_body_tex_closure]);
+  Tag!("ltx:Math", after_close => add_body_tex_closure);
   // Tag!("ltx:Math", after_close => vec![cleanup_math_closure]);
 
   Ok(())

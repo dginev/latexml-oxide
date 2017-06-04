@@ -1,4 +1,5 @@
 use std::fmt;
+use common::error::*;
 use {Digested, TexMode, BoxOps};
 use token::Token;
 use state::State;
@@ -33,10 +34,11 @@ impl BoxOps for List {
   }
 
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
-  fn be_absorbed(self, document: &mut Document, state: &mut State) {
+  fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()> {
     for digested in self.unlist() {
-      document.absorb(digested, state);
+      try!(document.absorb(digested, state));
     }
+    Ok(())
   }
 
   fn revert(&self) -> Vec<Token> {

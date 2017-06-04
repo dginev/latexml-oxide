@@ -180,9 +180,17 @@ impl Stomach {
               if !meaning.is_prefix() {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
+            },
+            ObjectStore::MathPrimitive(meaning) => { // Copy of regular Primitive
+              // Otherwise, a normal primitive or constructor
+              result = try!(meaning.invoke_primitive(self, meaning.clone(), state));
+              if !meaning.is_prefix() {
+                state.clear_prefixes(); // Clear prefixes unless we just set one.
+              }
             }
-            _ => {
+            other => {
               // TODO:
+              info!("Other: {:?}", other);
               // Fatal('misdefined', $meaning, self, "The object " . Stringify($meaning) . " should never reach Stomach!");
             }
           };
@@ -214,26 +222,19 @@ impl Stomach {
     state.clear_prefixes();    // prefixes shouldn't apply here.
 
     if meaning.code == Catcode::SPACE {
-      let in_math_lookup: Option<&ObjectStore> = state.lookup_value("IN_MATH");
-      let in_math = match in_math_lookup {
-        Some(&ObjectStore::Bool(x)) => x,
-        _ => false,
-      };
-      let in_preamble_lookup: Option<&ObjectStore> = state.lookup_value("inPreamble");
-      let in_preamble = match in_preamble_lookup {
-        Some(&ObjectStore::Bool(x)) => x,
-        _ => false,
-      };
+      let in_math = state.lookup_bool("IN_MATH");
+      let in_preamble = state.lookup_bool("inPreamble");
       if in_math || in_preamble {
         Vec::new()
       } else {
-        vec![Digested::Box(Tbox {
-               text: meaning.to_string(),
-               font: String::new(),
-               locator: self.gullet.get_locator(),
-               tokens: vec![meaning],
-               properties: HashMap::new(),
-             })]
+        vec![Digested::Box(Tbox::new(
+               meaning.to_string(),//text
+               None, //font
+               Some(self.gullet.get_locator()),//locator
+               vec![meaning], // tokens
+               HashMap::new(), // properties
+               state,
+             ))]
       }
     } else if meaning.code == Catcode::COMMENT {
       // Note: Comments need char decoding as well!
@@ -250,13 +251,14 @@ impl Stomach {
     //   "The token " . Stringify($token) . " should never reach Stomach!");
     // return; }
     else {
-      vec![Digested::Box(Tbox {
-             text: meaning.to_string(),
-             font: String::new(),
-             locator: String::new(),
-             tokens: vec![meaning],
-             properties: HashMap::new(),
-           })]
+      vec![Digested::Box(Tbox::new(
+             meaning.to_string(),//text
+             None, // font
+             None, // locator
+             vec![meaning], // tokens
+             HashMap::new(), // properties
+             state,
+           ))]
     }
   }
 

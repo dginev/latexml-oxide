@@ -1,6 +1,8 @@
 use std::fmt;
 use std::collections::HashMap;
 use std::rc::Rc;
+
+use common::error::*;
 use state::{State, ObjectStore};
 use {Digested, BoxOps, TexMode};
 use list::List;
@@ -103,7 +105,7 @@ impl BoxOps for Whatsit {
     Vec::new()
   }
 
-  fn be_absorbed(mut self, document: &mut Document, state: &mut State) {
+  fn be_absorbed(mut self, document: &mut Document, state: &mut State) -> Result<()> {
     // Significant time is consumed here, and associated with a specific CS,
     // so we should be profiling as well!
     // Hopefully the csname is the same that was charged in the digestioned phase!
@@ -111,8 +113,9 @@ impl BoxOps for Whatsit {
     // my $profiled = $STATE->lookupValue('PROFILING') && $defn->getCS;
     // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
     let self_mut = &mut self;
-    self_mut.definition.do_absorbtion(document, self_mut, state);
+    try!(self_mut.definition.do_absorbtion(document, self_mut, state));
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
+    Ok(())
   }
 
   fn get_property(&self, key: &str) -> Option<&ObjectStore> {

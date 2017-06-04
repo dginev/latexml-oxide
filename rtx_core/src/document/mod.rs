@@ -10,6 +10,7 @@ use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, NodeType, Namespace};
 use regex::Regex;
 
+use common::error::*;
 use state::{ObjectStore, State};
 use {Digested, BoxOps};
 use Tbox;
@@ -20,6 +21,9 @@ lazy_static! {
   static ref HAS_NONSPACE_RE : Regex = Regex::new(r"\S").unwrap();
   static ref ONLY_SPACE_RE : Regex = Regex::new(r"^\s+$").unwrap();
 }
+
+static _FONT_ELEMENT_NAME : &'static str = "ltx:text";
+static MATH_TOKEN_NAME : &'static str   = "ltx:XMTok";
 
 pub struct Document {
   pub document: XmlDoc,
@@ -129,7 +133,7 @@ impl Document {
   /// that will record the nodes that were created.
   /// $box can also be a plain string which will be inserted according to whatever
   /// font, mode, etc, are in %props.
-  pub fn absorb(&mut self, object: Digested, state: &mut State) -> Vec<Node> {
+  pub fn absorb(&mut self, object: Digested, state: &mut State) -> Result<Vec<Node>> {
     let mut results = Vec::new();
     let mut boxes = VecDeque::new();
     boxes.push_front(object);
@@ -146,8 +150,8 @@ impl Document {
           }
         }
         // A Proper Box or Whatsit? Absorb it.
-        Digested::Box(digested) => digested.be_absorbed(self, state),
-        Digested::Whatsit(digested) => digested.be_absorbed(self, state),
+        Digested::Box(digested) => try!(digested.be_absorbed(self, state)),
+        Digested::Whatsit(digested) => try!(digested.be_absorbed(self, state)),
       };
 
       let newly_created : Vec<Node> = self.constructed_nodes.drain(0..).collect();    // These were created just now
@@ -175,21 +179,21 @@ impl Document {
     if self.debug {
       info!("Document absorbed {:?} nodes", results.len());
     }
-    results
+    Ok(results)
   }
 
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   /// Shorthand for open,absorb,close, but returns the new node.
-  pub fn insert_element(&mut self, qname: &str, content: Vec<Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Node {
+  pub fn insert_element(&mut self, qname: &str, content: Vec<Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone() calls removed
-    let node = self.open_element(qname, attrib, state);
+    let node = try!(self.open_element(qname, attrib, state));
     if self.debug {
       info!("Inserting element {:?} with body: {:?}", qname, content);
     }
     for digested in content {
-      self.absorb(digested, state);
+      try!(self.absorb(digested, state));
     }
     // In obscure situations, `node` may have already gotten closed?
     // close it if it is still open.
@@ -204,10 +208,10 @@ impl Document {
       };
     }
     if c == Some(node.clone()) {
-      self.close_element(qname, state);
+      try!(self.close_element(qname, state));
     }
 
-    node.clone()
+    Ok(node.clone())
  }
 
 
@@ -233,18 +237,18 @@ impl Document {
     return;
   }
 
-  pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Node {
+  pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
     if self.debug {
       info!("Open element {:?} at {:?}", qname, self.node.get_name());
     }
-    let point = self.find_insertion_point(qname, state);
+    let point = try!(self.find_insertion_point(qname, state));
     // attributes.entry("_box").or_insert(state.locals.box);
-    let newnode = self.open_element_at(point, qname,
+    let newnode = try!(self.open_element_at(point, qname,
       // _font => $attributes{font} || $attributes{_box}->getFont,
-      attributes, state);
+      attributes, state));
     self.set_node(newnode.clone());
-    newnode
+    Ok(newnode)
   }
 
   /// Note: This closes the deepest open node of a given type.
@@ -252,7 +256,7 @@ impl Document {
   /// Since this is an "explicit request", we're currently skipping over those nodes,
   /// ie. we're automatically closing them, even if they're the same type as we're asking to close!!!
   /// This is kinda risky! Maybe we should try to request closing of specific nodes.
-  pub fn close_element(&mut self, qname: &str, state: &mut State) -> Option<Node> {
+  pub fn close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
     if self.debug {
       info!("Close element {:?} at {:?}", qname, self.node.get_name());
     }
@@ -280,7 +284,7 @@ impl Document {
         _ => format!("</{}>", qname)
       };
       error!(target: &format!("malformed:{:?}",qname), "Attempt to close {}, which isn't open. Currently in {}", qname_msg, self.get_insertion_context(None, state));
-      None
+      Ok(None)
     } else {                                         // Found node.
       if !cant_close.is_empty() {
                                                    // Intervening non-auto-closeable nodes!!
@@ -292,8 +296,8 @@ impl Document {
         //   if @cant_close;
       }
       // So, now close up to the desired node.
-      self.close_node_internal(&node, state);
-      Some(node)
+      try!(self.close_node_internal(&node, state));
+      Ok(Some(node))
     }
   }
 
@@ -351,14 +355,14 @@ impl Document {
   }
 
   // Close $qname, if it is closeable.
-  pub fn maybe_close_element(&mut self, qname: &str, state: &mut State) -> Option<Node> {
+  pub fn maybe_close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
     let mut qname_vdq = VecDeque::new();
     qname_vdq.push_front(qname.to_string());
     if let Some(node) = self.is_closeable(qname_vdq, state) {
-      self.close_node_internal(&node, state);
-      Some(node)
+      try!(self.close_node_internal(&node, state));
+      Ok(Some(node))
     } else {
-      None
+      Ok(None)
     }
   }
 
@@ -641,7 +645,17 @@ impl Document {
     }
   }
 
-  pub fn insert_math_token(&self, _text: &str) {}
+  pub fn insert_math_token(&mut self, text: &str, mut attributes: HashMap<String, String>, state: &mut State) -> Result<Node> {
+    attributes.entry("role".to_string()).or_insert("UNKNOWN".to_string());
+    let node = try!(self.open_element(MATH_TOKEN_NAME, Some(attributes), state));
+    // let tbox  = attributes.get("_box").or_insert( LateXML::Box ) // ???
+    // let font = $attributes{font} || $box->getFont;
+    // self.setNodeFont($node, $font);
+    // self.setNodeBox($node, $box);
+    try!(self.open_math_text_internal(text, state));
+    try!(self.close_node_internal(&node, state));    // Should be safe.
+    Ok(self.node.clone())
+  }
 
   ///**********************************************************************
   /// Middle level, mostly public, API.
@@ -658,14 +672,14 @@ impl Document {
   ///  I don't like having "text" built in here!
   ///  AND, we've assumed that "font" names the relevant attribute!!!]
 
-  pub fn open_text(&mut self, text: &str, state: &mut State) -> Option<&Node> {
+  pub fn open_text(&mut self, text: &str, state: &mut State) -> Result<Option<&Node>> {
     // TODO: font arg
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
       if ONLY_SPACE_RE.is_match(text) && (node_type == Some(NodeType::DocumentNode) ||
       (node_type == Some(NodeType::ElementNode) && !self.can_contain(&self.node, "#PCDATA", state))) {
-        return None;
+        return Ok(None);
       }
     }
     // if font.get_family() == "nullfont" {
@@ -703,9 +717,9 @@ impl Document {
     // }
 
     // Finally, insert the darned text.
-    let tnode = self.open_text_internal(text, state);
+    let tnode = try!(self.open_text_internal(text, state));
     self.record_constructed_node(&tnode);
-    Some(&self.node)
+    Ok(Some(&self.node))
   }
 
 
@@ -775,11 +789,11 @@ impl Document {
   /// Close `node`, and any current nodes below it.
   /// No checking! Use this when you've already verified that `node` can be closed.
   /// and, of course, `node` must be current or some ancestor of it!!!
-  pub fn close_node_internal(&mut self, node: &Node, state: &mut State) {
+  pub fn close_node_internal(&mut self, node: &Node, state: &mut State) -> Result<()> {
     let closeto = node.get_parent().unwrap(); // Grab now in case afterClose screws the structure.
     let mut n       = self.close_text_internal();    // Close any open text node.
     while n.get_type() == Some(NodeType::ElementNode) {
-      self.close_element_at(&mut n, state);
+      try!(self.close_element_at(&mut n, state));
       // self.auto_collapse_children(n);
       if *node == n {
         break;
@@ -788,10 +802,11 @@ impl Document {
     }
 
     self.set_node(closeto);
+    Ok(())
   }
 
 
-  pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Node {
+  pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Result<Node> {
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
       // if self.debug {
@@ -799,10 +814,10 @@ impl Document {
       //                   text,
       //                   self.document.node_to_string(&self.node));
       // }
-      self.node.append_text(text).unwrap();
+      self.node.append_text(text);
     } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
       // or text allowed here
-      let mut point = self.find_insertion_point("#PCDATA", state);
+      let mut point = try!(self.find_insertion_point("#PCDATA", state));
       let node = Node::new_text(text, &self.document).unwrap();
       if self.debug {
         info!("Inserting text node for {:?} into {:?}",
@@ -813,7 +828,38 @@ impl Document {
       self.set_node(added_node);
     }
 
-    self.node.clone()
+    Ok(self.node.clone())
+  }
+
+  // Question: Why do I have math ligatures handled within openMathText_internal,
+  // but text ligatures handled within closeText_internal ???
+
+  fn open_math_text_internal(&mut self, text: &str, state: &mut State) -> Result<Node> {
+    // And if there's already text???
+    let mut node = self.node.clone();
+    // my $font = $self->getNodeFont($node);
+    node.append_text(text);
+    //print STDERR "Trying Math Ligatures at \"$string\"\n";
+    if !state.nomathparse {
+      self.apply_math_ligatures(&node);
+    }
+    Ok(self.node.clone())
+  }
+
+  // New stategy (but inefficient): apply ligatures until one succeeds,
+  // then remove it, and repeat until ALL (remaining) fail.
+  fn apply_math_ligatures(&self, _node: &Node) {
+    // my ($self, $node) = @_;
+    // if (my $ligatures = $STATE->lookupValue('MATH_LIGATURES')) {
+    //   my @ligatures = @$ligatures;
+    //   while (@ligatures) {
+    //     my $matched = 0;
+    //     foreach my $ligature (@ligatures) {
+    //       if ($self->applyMathLigature($node, $ligature)) {
+    //         @ligatures = grep { $_ ne $ligature } @ligatures;
+    //         $matched = 1;
+    //         last; } }
+    //     return unless $matched; } }
   }
 
   /// Note that a box has been absorbed creating $node;
@@ -872,17 +918,17 @@ impl Document {
   /// Find the node where an element with qualified name $qname can be inserted.
   /// This will move up the tree (closing auto-closable elements),
   /// or down (inserting auto-openable elements), as needed.
-  pub fn find_insertion_point(&mut self, qname: &str, state: &mut State) -> Node {
+  pub fn find_insertion_point(&mut self, qname: &str, state: &mut State) -> Result<Node> {
     self.close_text_internal();    // Close any current text node.
     let cur_qname = state.model.get_node_qname(&self.node);
     // let inter;
     // If `qname` is allowed at the current point, we're done.
     if self.can_contain_qname(&cur_qname, qname, state) {
-      return self.node.clone()
+      return Ok(self.node.clone())
     // Else, if we can create an intermediate node that accepts $qname, we'll do that.
     } else if let Some(inter) = self.can_contain_indirect(&cur_qname, qname, state) {
       if (inter != qname) && (inter != cur_qname) {
-        self.open_element(&inter, None, state);//font => self.getNodeFont(self.node}));
+        try!(self.open_element(&inter, None, state));//font => self.getNodeFont(self.node}));
         return self.find_insertion_point(qname, state); // And retry insertion (should work now).
       }
     } else { // Now we're getting more desparate...
@@ -905,7 +951,7 @@ impl Document {
         };
       }
       if let Some(close_to_node) = close_to {
-        self.close_node_internal(&close_to_node, state);             // Close the auto closeable nodes.
+        try!(self.close_node_internal(&close_to_node, state));             // Close the auto closeable nodes.
         return self.find_insertion_point(qname, state);             // Then retry, possibly w/auto open's
 
       } else {                                             // Didn't find a legit place.
@@ -913,10 +959,10 @@ impl Document {
         //       ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed in <$cur_qname>",
         //       "Currently in " . self.getInsertionContext());
         //     return self.node}; } } }                       // But we'll do it anyway, unless Error => Fatal.
-        return self.node.clone()
+        return Ok(self.node.clone())
       }
     }
-    self.node.clone()
+    Ok(self.node.clone())
   }
 
 
@@ -1005,7 +1051,7 @@ impl Document {
   /// This opens a new element at the _specified_ point, rather than the current insertion point.
   /// This is useful during document rearrangement or augmentation that may be needed later
   /// in the process.
-  pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Node {
+  pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
     let (decoded_ns, tag) = state.model.decode_qname(qname);
     let mut newnode;
     // let font = $attributes{_font} || $attributes{font};
@@ -1070,9 +1116,9 @@ impl Document {
     }
 
     // Run afterOpen operations
-    self.after_open(&mut newnode, state);
+    try!(self.after_open(&mut newnode, state));
 
-    newnode
+    Ok(newnode)
   }
 
   fn open_element_internal(&mut self, point: &mut Node, ns_opt: Option<String>, tag: &str, state: &mut State) -> Node {
@@ -1130,29 +1176,31 @@ impl Document {
   /// Whenever a node has been created using openElementAt,
   /// closeElementAt ought to be used to close it, when you're finished inserting into $node.
   /// Basically, this just runs any afterClose operations.
-  pub fn close_element_at(&mut self, mut node: &mut Node, state: &mut State) {
-    self.after_close(&mut node, state);
+  pub fn close_element_at(&mut self, mut node: &mut Node, state: &mut State) -> Result<()> {
+    self.after_close(&mut node, state)
   }
 
-  pub fn after_open(&mut self, node: &mut Node, state: &mut State) {
+  pub fn after_open(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Set current point to this node, just in case the afterOpen's use it.
     let savenode = self.node.clone();
     self.set_node(node.clone());
     let node_qname = self.get_node_qname(node, state);
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterOpen, state) {
-      action(self, node, state);
+      try!(action(self, node, state));
     }
     self.set_node(savenode);
+    Ok(())
   }
 
-  pub fn after_close(&mut self, node: &mut Node, state: &mut State) {
+  pub fn after_close(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Should we set point to this node? (or to last child, or something ??
     let savenode = self.node.clone();
     let node_qname = self.get_node_qname(node, state);
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterClose, state) {
-      action(self, node, state);
+      try!(action(self, node, state));
     }
     self.set_node(savenode);
+    Ok(())
   }
 
   pub fn trim_node_whitespace(&mut self, mut node: &mut Node) {
@@ -1192,7 +1240,7 @@ impl Document {
     }
   }
 
-  pub fn add_resource(&mut self, resource: Resource, state: &mut State) {
+  pub fn add_resource(&mut self, resource: Resource, state: &mut State) -> Result<()> {
     // let savenode_opt = self.float_to_element("ltx:resource");
     let savenode_opt = None;
     let mut attrib : HashMap<String, String> = HashMap::new();
@@ -1200,18 +1248,20 @@ impl Document {
     attrib.insert("type".to_owned(), resource.mimetype);
     attrib.insert("media".to_owned(), resource.media);
     let content_box = Digested::Box(Tbox{text: resource.content, ..Tbox::default()});
-    self.insert_element("ltx:resource", vec![content_box], Some(attrib), state);
+    try!(self.insert_element("ltx:resource", vec![content_box], Some(attrib), state));
     if let Some(savenode) = savenode_opt {
       self.set_node(savenode);
     }
+    Ok(())
   }
 
-  pub fn process_pending_resources(&mut self, state: &mut State) {
+  pub fn process_pending_resources(&mut self, state: &mut State) -> Result<()> {
     let resources : Vec<Resource> = state.pending_resources.drain(..).collect();
     for resource in resources {
-      self.add_resource(resource, state);
+      try!(self.add_resource(resource, state));
     }
     state.pending_resources = Vec::new();
+    Ok(())
   }
 }
 

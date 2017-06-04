@@ -169,7 +169,7 @@ impl DigestionAPI for Core {
         document.insert_pi("latexml", Some(attributes));
       }
     }
-    document.absorb(digested, state);
+    try!(document.absorb(digested, state));
     note_end("Building");
 
     // if (my $rules = $state->lookupValue('DOCUMENT_REWRITE_RULES')) {
