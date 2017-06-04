@@ -13,7 +13,7 @@ use definition::Definition;
 use definition::expandable::Expandable;
 use definition::constructor::Constructor;
 use definition::primitive::Primitive;
-use definition::math_primitive::MathPrimitive;
+use definition::math_primitive::{MathPrimitive};//MathPrimitiveOptions
 use document::Document;
 use document::tag::TagOptions;
 use document::resource::Resource;
@@ -55,12 +55,14 @@ pub enum ObjectStore {
   // Primitives
   Bool(bool),
   String(String),
+  Mathcode(usize),
   // LaTeXML objects
   Catcode(Catcode),
   Token(Token),
   Expandable(Rc<Expandable>),
   Primitive(Rc<Primitive>),
   MathPrimitive(Rc<MathPrimitive>),
+  // MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Rc<Constructor>),
   Digested(Rc<::Digested>),
   Parameter(Parameter),
@@ -70,8 +72,9 @@ pub enum ObjectStore {
   VecString(Vec<String>),
   VecToken(Vec<Token>),
   VecDigested(Vec<::Digested>),
+  HashStr(HashMap<String, String>),
   VecDequeOS(VecDeque<ObjectStore>),
-  HashOS(HashMap<String, ObjectStore>)
+  HashOS(HashMap<String, ObjectStore>),
 }
 
 impl fmt::Debug for ObjectStore {
@@ -84,9 +87,11 @@ impl fmt::Debug for ObjectStore {
       Bool(ref b) => write!(f, "{:?}", b),
       Token(ref t) => write!(f, "{:?}", t),
       Catcode(ref cc) => write!(f, "{:?}", cc),
+      Mathcode(ref cc) => write!(f, "{:?}", cc),
       Expandable(ref _expandable) => write!(f, "<closure for expandable definition>"),
       Primitive(ref _primitive) => write!(f, "<closure for primitive definition>"),
       MathPrimitive(ref _primitive) => write!(f, "<closure for math primitive definition>"),
+      // MathPrimitiveOptions(ref _primitive) => write!(f, "<math primitive options>"),
       Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
       Digested(ref digested) => write!(f, "{:?}", digested),
       Parameter(ref parameter) => write!(f, "{:?}", parameter),
@@ -95,6 +100,7 @@ impl fmt::Debug for ObjectStore {
       VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
       VecDequeOS(ref vec) => write!(f, "VecDequeOS({:?})", vec),
       HashOS(ref hos) => write!(f, "HashOS({:?})", hos),
+      HashStr(ref hstr) => write!(f, "HashStr({:?})", hstr),
     }
   }
 }
@@ -736,18 +742,18 @@ impl State {
     self.assign_internal(TableName::Catcode, &key.to_string(), ObjectStore::Catcode(value), scope);
   }
 
-  pub fn lookup_mathcode(&mut self, key: &char) -> Option<Catcode> {
+  pub fn lookup_mathcode(&mut self, key: &str) -> Option<usize> {
     match self.mathcode.get(&key.to_string()) {
       Some(c) => match c.front() {
-        Some(& ObjectStore::Catcode(ref cc)) => Some(*cc),
-        _ => None
+        Some(&ObjectStore::Mathcode(ref codeval)) => Some(*codeval),
+        _ => None,
       },
       None => None,
     }
   }
 
-  pub fn assign_mathcode(&mut self, key:char, value: Catcode, scope: Option<Scope>) {
-    self.assign_internal(TableName::Mathcode, &key.to_string(), ObjectStore::Catcode(value), scope);
+  pub fn assign_mathcode(&mut self, key:char, value: usize, scope: Option<Scope>) {
+    self.assign_internal(TableName::Mathcode, &key.to_string(), ObjectStore::Mathcode(value), scope);
   }
 
   /// Get the `Meaning' of a token.  For active control sequence's
@@ -805,9 +811,9 @@ impl State {
     if name.is_empty() {
       return None;
     }
-    let lookupname = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) || ((cc == &Catcode::LETTER) || (cc == &Catcode::OTHER)) {
-      // &&
-      // self.lookup_value("IN_MATH").is_some() && ((self.lookup_mathcode(&name).is_some() || 0) == 0x8000)) {
+    let lookupname = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) ||
+    ((cc == &Catcode::LETTER) || (cc == &Catcode::OTHER) &&
+      self.lookup_bool("IN_MATH") && ((self.lookup_mathcode(name).unwrap_or(0)) == 0x8000)) {
 
       name.clone()
     } else {
@@ -827,7 +833,6 @@ impl State {
       // $defn = $$entry[0]; }
       Some(defn.front().unwrap().clone())
     } else {
-      // info!("-- No definition for: {:?}", token);
       Some(ObjectStore::Token(token.clone()))
     }
   }

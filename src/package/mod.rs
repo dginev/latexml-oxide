@@ -540,6 +540,21 @@ macro_rules! NewDefault {
 }
 
 #[macro_export]
+macro_rules! transfer_default {
+  ($val:ident, $struct_source:ident, $hash_receiver:ident) => (
+    $hash_receiver.entry(stringify!($val).to_owned()).or_insert($struct_source.$val.clone().to_string());
+  )
+}
+#[macro_export]
+macro_rules! transfer_opt_default {
+  ($val:ident, $struct_source:ident, $hash_receiver:ident) => (
+    if let &Some(ref $val) = &$struct_source.$val {
+      $hash_receiver.entry(stringify!($val).to_owned()).or_insert($val.to_owned());
+    }
+  )
+}
+
+#[macro_export]
 macro_rules! sub {
   ($body:expr) => (vec![Rc::new($body)])
 }
@@ -1551,8 +1566,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       Some(plist) => plist.get_num_args(),
       None => 0
     };
-
-    let mut name = options.alias.clone().unwrap_or(cs.get_string().to_string());
+    let csname = cs.get_string().to_string();
+    let mut name = options.alias.clone().unwrap_or_else(|| csname.clone());
     if name.starts_with('\\') {
       name = name.replacen('\\', "", 1)
     }
@@ -1576,8 +1591,23 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     // defmath_introspective(cs, $paramlist, presentation, %options);
 
     // If single character, handle with a rewrite rule
-    // if (length($csname) == 1) {
-    //   defmath_rewrite($cs, %options); }
+    if csname.len() == 1 {
+      // WAS: defmath_rewrite!($cs, options);
+      // No, do NOT make mathactive; screws up things like babel french, or... ?
+      // EXPERIMENT: store XMTok attributes for if this char ends up a Math Token.
+      // But only some DefMath options make sense!
+      // let rw_options = { name => 1, meaning => 1, omcd => 1, role => 1, mathstyle => 1, stretchy => 1 }; # (well, mathstyle?)
+      // CheckOptions("DefMath reimplemented as DefRewrite ($csname)", $rw_options, %options);
+      let mut math_attr_hash : HashMap<String, String> = HashMap::new();
+      transfer_opt_default!(name, options, math_attr_hash);
+      transfer_opt_default!(meaning, options, math_attr_hash);
+      transfer_opt_default!(omcd, options, math_attr_hash);
+      transfer_opt_default!(role, options, math_attr_hash);
+      transfer_opt_default!(mathstyle, options, math_attr_hash);
+      transfer_default!(stretchy, options, math_attr_hash);
+
+      $state.assign_value(&format!("math_token_attributes_{}",csname), ObjectStore::HashStr(math_attr_hash), Some(Scope::Global));
+    }
     // TODO:
     // // If the presentation is complex, and involves arguments,
     // // we will create an XMDual to separate content & presentation.

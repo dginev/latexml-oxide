@@ -2,7 +2,7 @@ use common::error::*;
 use {Digested, BoxOps};
 use token::Token;
 use document::Document;
-use state::State;
+use state::{ObjectStore, State};
 use std::collections::HashMap;
 
 /// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
@@ -24,6 +24,49 @@ impl Default for Tbox {
       locator: String::new(),
       properties: HashMap::new(),
       tokens: Vec::new(),
+    }
+  }
+}
+
+//======================================================================
+// Exported constructors
+
+impl Tbox {
+  pub fn new(string: String, font_opt: Option<String>, locator_opt: Option<String>, tokens_opt: Vec<Token>, properties: HashMap<String, String>, state: &mut State) -> Self {
+
+    let _font = font_opt.unwrap_or_else(|| state.lookup_string("font"));
+    // let locator = $STATE->getStomach->getGullet->getLocator unless defined $locator;
+    let _locator = locator_opt;
+
+    let tokens =  if !string.is_empty() && tokens_opt.is_empty() {
+      vec![T_OTHER!(string)]
+    } else {
+      tokens_opt
+    };
+
+    if state.lookup_bool("IN_MATH") {
+      let mut box_props = properties;
+      box_props.insert("mode".to_string(),"math".to_string());
+      if !string.is_empty() {
+        match state.lookup_value(&format!("math_token_attributes_{}",string)) {
+          Some(&ObjectStore::HashStr(ref attr)) => {
+            for (key,value) in attr.iter() {
+              box_props.entry(key.to_string()).or_insert(value.to_string());
+            }
+          },
+          _ => {}
+        };
+      }
+
+      Tbox {text: string,  tokens: tokens,//$font->specialize($string), $locator,
+        properties: box_props,
+        ..Tbox::default()
+      }
+    } else {
+      Tbox {text: string, //$font, $locator,
+        tokens, properties: properties,
+        ..Tbox::default()
+      }
     }
   }
 }

@@ -235,11 +235,15 @@ pub fn realize_xmnode(&self, node: &Node, document: &Document) -> Node {
       Some(x)
     } else if let Some(x) = self.p_get_attribute(&node, "name") {
       Some(x)
-  //       : (($x = (ref $node eq 'ARRAY' ? '' : $node->textContent)) ne '' ? $x
-    } else if let Some(x) = self.p_get_attribute(&node, "role") {
-      Some(x)
     } else {
-      None
+      let text_content = node.get_content();
+      if !text_content.is_empty() {
+        Some(text_content)
+      } else if let Some(x) = self.p_get_attribute(&node, "role") {
+        Some(x)
+      } else {
+        None
+      }
     }
   }
 
@@ -636,7 +640,8 @@ pub fn realize_xmnode(&self, node: &Node, document: &Document) -> Node {
 // Convert to textual form for processing by MathGrammar
   fn parse_single(&self, mathnode: &mut Node, document: &mut Document, rule: String, state: &mut State) -> Result<Option<Node>> {
     //   my @nodes = $self->filter_hints($document, $mathnode->childNodes);
-
+    let nodes = mathnode.get_child_nodes();
+    let mut result = None;
     //   my ($punct, $result, $unparsed);
     //   my @punct = ();
     //   # Extract trailing punctuation, if rule allows it.
@@ -665,11 +670,15 @@ pub fn realize_xmnode(&self, node: &Node, document: &Document) -> Node {
     //       . "\n == " . ToString($mathnode)
     //       . "\n"; }
 
-    //   if (scalar(@nodes) < 2) {    # Too few nodes? What's to parse?
-    //     $result = $nodes[0] || Absent(); }
-    //   else {
-    //     # Now do the actual parse.
-    //     ($result, $unparsed) = $self->parse_internal($rule, @nodes); }
+    if nodes.len() < 2 {  // Too few nodes? What's to parse?
+      result = match nodes.first() { // TODO: Absent() constructor ?
+        Some(n) => Some(n.clone()),
+        None => None
+      };
+    } else { // Now do the actual parse.
+      let (result_internal, unparsed)  = self.parse_internal(&rule, nodes, document);
+      result = result_internal;
+    }
 
     //   # Failure? No result or uparsed lexemes remain.
     //   # NOTE: Should do script hack??
@@ -686,13 +695,11 @@ pub fn realize_xmnode(&self, node: &Node, document: &Document) -> Node {
     //       print STDERR "\n=>" . printNode($result) . "\n" . ('=' x 60) . "\n"; }
     //     return $result; } }
 
-    // Mock , return input as parsed
-    Ok(Some(mathnode.get_first_child().unwrap().clone()))
+    Ok(result)
   }
-// sub parse_internal {
-//   my ($self, $rule, @nodes) = @_;
-//   #------------
-//   # Generate a textual token for each node; The parser operates on this encoded string.
+
+fn parse_internal(&self, rule: &str, nodes: Vec<Node>, document: &mut Document) -> (Option<Node>,Option<Node>) {
+  // Generate a textual token for each node; The parser operates on this encoded string.
 //   local $LaTeXML::MathParser::LEXEMES = {};
 //   my $i       = 0;
 //   my $lexemes = '';
@@ -735,9 +742,25 @@ pub fn realize_xmnode(&self, node: &Node, document: &Document) -> Node {
 //     $unparsed = $lexemes;
 //     $result   = $$self{internalparser}->$rule(\$unparsed); }
 
-//   # If still failed, try other strategies?
 
-//   return ($result, $unparsed); }
+  let mut result = None;
+  // Mock: INFIX OP! FAKE NEWS. Clean this up
+  if nodes.len() == 3 {
+    let left_arg = nodes[0].clone();
+    let infix_op = nodes[1].clone();
+    let right_arg = nodes[2].clone();
+
+    let mut new_app_node = Node::new("XMApp", None, &mut document.document).unwrap();
+    new_app_node.set_namespace(left_arg.get_namespace().unwrap());
+    new_app_node.add_child(infix_op);
+    new_app_node.add_child(left_arg);
+    new_app_node.add_child(right_arg);
+    result = Some(new_app_node);
+  }
+  // If still failed, try other strategies?
+
+  return (result, None)
+}
 
 // sub getGrammaticalRole {
 //   my ($self, $node) = @_;
@@ -814,12 +837,25 @@ pub fn realize_xmnode(&self, node: &Node, document: &Document) -> Node {
     text
   }
 
-// my %PREFIX_ALIAS = (    # [CONSTANT]
-//   SUPERSCRIPTOP => '^', SUBSCRIPTOP => '_', times          => => '*',
-//   'equals'      => '=', 'less-than' => '<', 'greater-than' => '>',
-//   'less-than-or-equals' => '<=', 'greater-than-or-equals' => '>=',
-//   'much-less-than'      => '<<', 'much-greater-than'      => '>>',
-//   'plus'                => '+',  'minus'                  => '-', 'divide' => '/');
+  fn prefix_alias(&self, name: &str) -> String {
+    match name {
+      "SUPERSCRIPTOP" => "^",
+      "SUBSCRIPTOP"   => "_",
+      "times"         => "*",
+      "equals"        => "=",
+      "less-than"     => "<",
+      "greater-than"  => ">",
+      "less-than-or-equals"    => "<=",
+      "greater-than-or-equals" => ">=",
+      "much-less-than"         => "<<",
+      "much-greater-than"      => ">>",
+      "plus"                   => "+",
+      "minus"                  => "-",
+      "divide" => "/",
+      other => other
+    }.to_owned()
+  }
+
 // Put infix, along with `binding power'
 // my %IS_INFIX = (METARELOP => 1,    # [CONSTANT]
 //   RELOP         => 2,    ARROW       => 2,
@@ -840,14 +876,17 @@ pub fn realize_xmnode(&self, node: &Node, document: &Document) -> Node {
     match tag.as_str() {
       "ltx:XMApp" => {
         let app_role = node.get_attribute("role").unwrap_or("missing_role".to_owned());
-        let mut args = element_nodes(&node);
-        if args.is_empty() {
+        let mut all_args = element_nodes(&node);
+        info!("xmapp args : {:?}", all_args.len());
+        if all_args.is_empty() {
           String::new()
         } else {
-          let op = match args.split_off(1).first() {
+          let args = all_args.split_off(1);
+          let op = match all_args.first() {
             Some(op_node) => self.realize_xmnode(op_node, document),
             None => panic!("non empty array doesn't have a first element? Looks critical.")
           };
+          info!("remaining xmapp args: {:?}", args.len());
           //     if ($app_role && $app_role =~ /^FLOAT(SUB|SUPER)SCRIPT$/) {
           //       return ($1 eq 'SUPER' ? '^' : '_') . textrec($op); }
           //     else {
@@ -877,11 +916,7 @@ pub fn realize_xmnode(&self, node: &Node, document: &Document) -> Node {
           Some(meaning) => meaning,
           None => "Unknown".to_owned()
         };
-        // match PREFIX_ALIAS.get(name) {
-        //   Some(alias) => alias,
-        //   None => name
-        // }
-        name
+        self.prefix_alias(&name)
       },
       "ltx:XMWrap" | "ltx:XMCell" => {
         //     # ??

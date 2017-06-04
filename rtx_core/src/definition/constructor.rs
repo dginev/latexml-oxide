@@ -122,10 +122,8 @@ impl Definition for Constructor {
     // Get some info before we process arguments...
     // let font   = state.lookup_value("font");
 
-    let _ismath = match state.lookup_value("IN_MATH") {
-        Some(& ObjectStore::Bool(v)) => v,
-        _ => false
-      };
+    let ismath = state.lookup_bool("IN_MATH");
+
     // Parse AND digest the arguments to the Constructor
     let mut args: Vec<Option<Digested>> = match *self.get_parameters() {
       None => Vec::new(),
@@ -146,7 +144,7 @@ impl Definition for Constructor {
     props.insert("font".to_owned(), ObjectStore::String(self.options.font.clone()));
     // $props{font}    = $font                                     unless defined $props{font};
     // $props{locator} = $stomach->getGullet->getMouth->getLocator unless defined $props{locator};
-    // $props{isMath}  = $ismath                                   unless defined $props{isMath};
+    props.entry("isMath".to_owned()).or_insert(ObjectStore::Bool(ismath));
     // $props{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.

@@ -22,7 +22,7 @@ lazy_static! {
   static ref ONLY_SPACE_RE : Regex = Regex::new(r"^\s+$").unwrap();
 }
 
-static FONT_ELEMENT_NAME : &'static str = "ltx:text";
+static _FONT_ELEMENT_NAME : &'static str = "ltx:text";
 static MATH_TOKEN_NAME : &'static str   = "ltx:XMTok";
 
 pub struct Document {
@@ -647,7 +647,6 @@ impl Document {
 
   pub fn insert_math_token(&mut self, text: &str, mut attributes: HashMap<String, String>, state: &mut State) -> Result<Node> {
     attributes.entry("role".to_string()).or_insert("UNKNOWN".to_string());
-    info!("insert math token with text: {}", text);
     let node = try!(self.open_element(MATH_TOKEN_NAME, Some(attributes), state));
     // let tbox  = attributes.get("_box").or_insert( LateXML::Box ) // ???
     // let font = $attributes{font} || $box->getFont;
@@ -815,7 +814,7 @@ impl Document {
       //                   text,
       //                   self.document.node_to_string(&self.node));
       // }
-      try!(self.node.append_text(text));
+      self.node.append_text(text);
     } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
       // or text allowed here
       let mut point = try!(self.find_insertion_point("#PCDATA", state));
@@ -839,7 +838,7 @@ impl Document {
     // And if there's already text???
     let mut node = self.node.clone();
     // my $font = $self->getNodeFont($node);
-    try!(node.append_text(text));
+    node.append_text(text);
     //print STDERR "Trying Math Ligatures at \"$string\"\n";
     if !state.nomathparse {
       self.apply_math_ligatures(&node);

@@ -105,6 +105,13 @@ impl Default for MathPrimitiveOptions {
     }
   }
 }
+impl PartialEq for MathPrimitiveOptions {
+  fn eq(&self, other: &MathPrimitiveOptions) -> bool {
+    self.name == other.name &&
+    self.meaning == other.meaning &&
+    self.role == other.role
+  }
+}
 
 #[derive(Clone)]
 pub struct MathPrimitive {
