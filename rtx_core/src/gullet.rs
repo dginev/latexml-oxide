@@ -262,6 +262,26 @@ impl Gullet {
     }
   }
 
+  /// Read the next raw line (string);
+  /// primarily to read from the Mouth, but keep any unread input!
+  pub fn read_raw_line(&mut self) {
+    // // If we've got unread tokens, they presumably should come before the Mouth's raw data
+    // // but we'll convert them back to string.
+    // my @tokens = @{ $$self{pushback} };
+    // my @markers = grep { $_->getCatcode == CC_MARKER } @tokens;
+    // if (@markers) {    // Whoops, profiling markers!
+    //   @tokens = grep { $_->getCatcode != CC_MARKER } @tokens;    // Remove
+    //   map { LaTeXML::Core::Definition::stopProfiling($_, 'expand') } @markers; }
+    // $$self{pushback} = [];
+    // // If we still have peeked tokens, we ONLY want to combine it with the remainder
+    // // of the current line from the Mouth (NOT reading a new line)
+    // if (@tokens) {
+    //   return ToString(Tokens(@tokens)) . $$self{mouth}->readRawLine(1); }
+    // // Otherwise, read the next line from the Mouth.
+    // else {
+    //   return $$self{mouth}->readRawLine; } }
+  }
+
   pub fn unread(&mut self, tokens: Vec<Token>) {
     if let Some(ref mut runtime) = self.mouth {
       for token in tokens.into_iter().rev() {
@@ -468,7 +488,6 @@ impl Gullet {
     // TODO
     Ok(Vec::new())
   }
-
 
   pub fn skip_spaces(&mut self, state: &mut State) {
     match self.read_non_space(state) {
