@@ -647,7 +647,18 @@ impl Document {
 
   pub fn insert_math_token(&mut self, text: &str, mut attributes: HashMap<String, String>, state: &mut State) -> Result<Node> {
     attributes.entry("role".to_string()).or_insert("UNKNOWN".to_string());
+
+    // MOCK FOR NOW TODO Flesh out
+    let font_mock = match attributes.get("role").unwrap_or(&"UNKNOWN".to_string()).as_str() {
+      "UNKNOWN" => "serif italic",
+      "ADDOP" => "serif",
+      _ => "serif"
+    }.to_string();
+    attributes.insert("font".to_string(), font_mock);
+    attributes.remove("mode");
+    attributes.remove("stretchy");
     let node = try!(self.open_element(MATH_TOKEN_NAME, Some(attributes), state));
+
     // let tbox  = attributes.get("_box").or_insert( LateXML::Box ) // ???
     // let font = $attributes{font} || $box->getFont;
     // self.setNodeFont($node, $font);

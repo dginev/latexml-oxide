@@ -746,16 +746,24 @@ fn parse_internal(&self, rule: &str, nodes: Vec<Node>, document: &mut Document) 
   let mut result = None;
   // Mock: INFIX OP! FAKE NEWS. Clean this up
   if nodes.len() == 3 {
-    let left_arg = nodes[0].clone();
-    let infix_op = nodes[1].clone();
-    let right_arg = nodes[2].clone();
+    let mut left_arg = nodes[0].clone();
+    let mut infix_op = nodes[1].clone();
+    let mut right_arg = nodes[2].clone();
+
+    let mut parent = nodes[0].get_parent().unwrap();
+    left_arg.unbind_node();
+    infix_op.unbind_node();
+    right_arg.unbind_node();
 
     let mut new_app_node = Node::new("XMApp", None, &mut document.document).unwrap();
     new_app_node.set_namespace(left_arg.get_namespace().unwrap());
     new_app_node.add_child(infix_op);
     new_app_node.add_child(left_arg);
     new_app_node.add_child(right_arg);
-    result = Some(new_app_node);
+
+    let new_app_child = parent.add_child(new_app_node).unwrap();
+
+    result = Some(new_app_child);
   }
   // If still failed, try other strategies?
 
