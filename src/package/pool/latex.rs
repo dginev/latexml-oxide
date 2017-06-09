@@ -289,7 +289,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
       // TODO: convertLaTeXArgs($nargs, $opt)
       let body_closure = move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State|{ Ok(body.clone()) };
-      DefMacroI!(cs.clone(), None, body_closure, state);
+      DefMacroI_F!(cs.clone(), None, body_closure, state);
       Ok(Vec::new())
   });
 
