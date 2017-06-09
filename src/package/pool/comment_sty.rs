@@ -10,7 +10,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     let name = args[0].to_string();
     let endmark = format!("\\end{{{}}}", name);
     {
-      DefConstructorI!(T_CS!(format!("\\begin{{{}}}",name)), None, noreplacement!()
+      DefConstructorI_F!(T_CS!(format!("\\begin{{{}}}",name)), None, noreplacement!()
         // after_Digest => [sub {
         //     my ($istomach, $whatsit) = @_;
         //     let nlines = 0;
@@ -21,7 +21,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         //       $nlines++; }
         //     NoteProgress("[Skipped $name ($nlines lines)]");
         // }]
-      );
+      ,state);
     }
     Ok(Vec::new())
   });

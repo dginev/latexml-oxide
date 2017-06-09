@@ -838,12 +838,13 @@ macro_rules! DefMacroI_F(
 );
 
 macro_rules! DefMacroT_F {
-    ($cs:expr, $paramlist:expr, None, $state:ident) => ({
-      DefMacroI_F!($cs, $paramlist, move |_gullet, _args, state| {Ok(vec![])}, $state)
-    });
     ($cs:expr, $paramlist:expr, $body:expr, $state:ident) => ({
       DefMacroI_F!($cs, $paramlist, move |_gullet, _args, state| {Ok(vec![$body])}, $state)
     });
+    ($cs:expr, $paramlist:expr, $state:ident) => ({
+      DefMacroI_F!($cs, $paramlist, move |_gullet, _args, state| {Ok(vec![])}, $state)
+    });
+
 }
 
 macro_rules! DefMacro_F(
@@ -1072,12 +1073,8 @@ macro_rules! DefConstructorIWO_F(
 
 macro_rules! DefConstructor_F {
   ($cs:expr, $replacement:expr, $state:ident) => (DefConstructorWO_F!($cs, $replacement, ConstructorOptions::default(), $state));
-  ($cs:expr, $replacement:expr,
-    $key1:ident=>$val1:expr,
-  , $state:ident) => (DefConstructorWO_F!($cs, $replacement, NewDefault!(ConstructorOptions,
-    $key1 => $val1
-  ), $state));
-
+  ($cs:expr, $replacement:expr, $key1:ident=>$val1:expr, $state:ident) =>
+    (DefConstructorWO_F!($cs, $replacement, NewDefault!(ConstructorOptions, $key1 => $val1), $state));
   ($cs:expr, $replacement:expr,
     $key1:ident=>$val1:expr,
     $key2:ident=>$val2:expr, $state:ident
@@ -1710,7 +1707,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! AssignMapping {($map:expr, $key:expr, $value:expr) => (AssignMapping_F!($map, $key, $value, $state))}
   macro_rules! LookupMappingKeys {($map:expr) => (LookupMappingKeys_F!($map, $state))}
   macro_rules! LookupCatcode {($char:expr) => (LookupCatcode_F!($char, $state))}
-  macro_rules! AssignCatcode {($char:expr, $catcode:expr, $scope:expr) => (AssignCatcode_F!($char, $catcode, $scope, $state))};
+  macro_rules! AssignCatcode {($char:expr, $catcode:expr, $scope:expr) => (AssignCatcode_F!($char, $catcode, $scope, $state))}
   macro_rules! LookupMeaning {($name:expr) => (LookupMeaning_F!($name, $state))}
   macro_rules! LookupDefinition {($name:expr) => (LookupDefinition_F!($name, $state))}
   macro_rules! InstallDefinition {($name:expr, $definition:expr, $scope:expr) => (InstallDefinition_F!($name, $definition, $scope, $state))}
@@ -1750,7 +1747,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! RequirePackage(($package:expr, $options:expr) => (RequirePackage_F!($package, $options, $state)));
   macro_rules! LoadClass(($class:expr, $options:expr, $after:expr) => (LoadClass_F!($class, $options, $after, $state)));
   macro_rules! DefMacroI(($cs:expr, $paramlist:expr, $expansion:expr) => (DefMacroI_F!($cs, $paramlist, $expansion, $state)));
-  macro_rules! DefMacroT(($cs:expr, $paramlist:expr, $arg:expr) => (DefMacroT_F!($cs, $paramlist, $arg, $state)));
+  macro_rules! DefMacroT(
+    ($cs:expr, $paramlist:expr) => (DefMacroT_F!($cs, $paramlist, $state));
+    ($cs:expr, $paramlist:expr, $arg:expr) => (DefMacroT_F!($cs, $paramlist, $arg, $state));
+  );
   macro_rules! DefMacro(($proto:expr, $expansion:expr) => (DefMacro_F!($proto, $expansion, $state)));
   macro_rules! DefPrimitive(($proto:expr, $replacement:expr, $options:expr) => (DefPrimitive_F!($proto, $replacement, $options, $state)));
 
@@ -1830,8 +1830,52 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   );
 
 
-  macro_rules! DefEnvironment(($proto_raw:expr, $replacement:expr) => (DefEnvironment_F!($proto_raw, $replacement, $state)));
-  macro_rules! DefEnvironmentC(($proto_raw:expr, $compiled_replacement:expr) => (DefEnvironmentC_F!($proto_raw, $compiled_replacement, $state)));
+  macro_rules! DefEnvironment(
+    ($proto_raw:expr, $replacement:expr) => (DefEnvironment_F!($proto_raw, $replacement, $state));
+    ($proto_raw:expr, $replacement:expr,
+      $key1:ident=>$val1:expr) => (DefEnvironment_F!($proto_raw, $replacement, $key1=>$val1, $state));
+    ($proto_raw:expr, $replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr) => (DefEnvironment_F!($proto_raw, $replacement, $key1=>$val1, $key2=>$val2, $state));
+    ($proto_raw:expr, $replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr) => (DefEnvironment_F!($proto_raw, $replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
+    ($proto_raw:expr, $replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr) => (DefEnvironment_F!($proto_raw, $replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $state));
+    ($proto_raw:expr, $replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr,
+      $key5:ident=>$val5:expr) => (DefEnvironment_F!($proto_raw, $replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $state));
+  );
+  macro_rules! DefEnvironmentC(
+    ($proto_raw:expr, $compiled_replacement:expr) => (DefEnvironmentC_F!($proto_raw, $compiled_replacement, $state));
+    ($proto_raw:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr) => (DefEnvironmentC_F!($proto_raw, $compiled_replacement, $key1=>$val1, $state));
+    ($proto_raw:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr) => (DefEnvironmentC_F!($proto_raw, $compiled_replacement, $key1=>$val1, $key2=>$val2, $state));
+    ($proto_raw:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr) => (DefEnvironmentC_F!($proto_raw, $compiled_replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
+    ($proto_raw:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr) => (DefEnvironmentC_F!($proto_raw, $compiled_replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $state));
+    ($proto_raw:expr, $compiled_replacement:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr,
+      $key5:ident=>$val5:expr) => (DefEnvironmentC_F!($proto_raw, $compiled_replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $state));
+  );
   macro_rules! DefEnvironmentI(($name_raw:expr, $paramlist:expr, $compiled_replacement:expr, $cc_copy:expr, $options:expr) =>
     (DefEnvironmentI_F!($name_raw, $paramlist, $compiled_replacement, $cc_copy, $options, $state)));
   macro_rules! Tag(
