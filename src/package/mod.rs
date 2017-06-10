@@ -97,6 +97,7 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
     "LaTeX.pool" => try!(pool::latex::load_definitions(&mut state)),
     "article.cls" => try!(pool::article_cls::load_definitions(&mut state)),
     "alltt.sty" => try!(pool::alltt_sty::load_definitions(&mut state)),
+    "comment.sty" => try!(pool::comment_sty::load_definitions(&mut state)),
     other => { fatal!(Package, Unknown, format!("TODO: unknown binding {:?}, can't load", other)) }
   };
 

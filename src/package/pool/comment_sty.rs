@@ -75,7 +75,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefPrimitiveI!("\\includecomment{}",     define_included);
   DefPrimitiveI!("\\excludecomment{}",     define_excluded);
   DefPrimitiveI!("\\specialcomment{}{}{}", define_special_included);
-  //DefPrimitive("\processcomment{}{}{}{}",);
+  DefPrimitiveI!("\\processcomment{}{}{}{}", noprimitive!());
 
   Ok(())
 }

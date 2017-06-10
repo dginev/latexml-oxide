@@ -177,7 +177,7 @@ impl Document {
       //   box_node.set_content(&tbox.text);
     }
     if self.debug {
-      info!("Document absorbed {:?} nodes", results.len());
+      debug!("Document absorbed {:?} nodes", results.len());
     }
     Ok(results)
   }
@@ -258,7 +258,7 @@ impl Document {
   /// This is kinda risky! Maybe we should try to request closing of specific nodes.
   pub fn close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
     if self.debug {
-      info!("Close element {:?} at {:?}", qname, self.node.get_name());
+      debug!("Close element {:?} at {:?}", qname, self.node.get_name());
     }
     self.close_text_internal();
     let mut node = self.node.clone();
@@ -697,7 +697,7 @@ impl Document {
     //   return;
     // }
     // if self.debug {
-    //   info!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
+    //   debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
     // }
 
     // if node_type != Some(NodeType::DocumentNode) // If not at document begin
@@ -821,7 +821,7 @@ impl Document {
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
       // if self.debug {
-      //   info!("Appending text \"{:?}\" to {:?}",
+      //   debug!("Appending text \"{:?}\" to {:?}",
       //                   text,
       //                   self.document.node_to_string(&self.node));
       // }
@@ -831,7 +831,7 @@ impl Document {
       let mut point = try!(self.find_insertion_point("#PCDATA", state));
       let node = Node::new_text(text, &self.document).unwrap();
       if self.debug {
-        info!("Inserting text node for {:?} into {:?}",
+        debug!("Inserting text node for {:?} into {:?}",
                         text,
                         self.document.node_to_string(&point));
       }
@@ -1070,6 +1070,7 @@ impl Document {
 
     // If this will be the document root node, things are slightly more involved.
     if point.get_type() == Some(NodeType::DocumentNode) {    // First node! (?)
+      info!("adding schema declaration, new node will be : {}", tag);
       state.model.add_schema_declaration(self);
       newnode = Node::new(&tag, None, &self.document).unwrap();
       self.document.set_root_element(&newnode);
@@ -1123,7 +1124,7 @@ impl Document {
     }
 
     if self.debug {
-      info!("Inserting {:?} into {:?}",newnode.get_name(), point.get_name());// if $LaTeXML::Core::Document::DEBUG;
+      debug!("Inserting {:?} into {:?}",newnode.get_name(), point.get_name());// if $LaTeXML::Core::Document::DEBUG;
     }
 
     // Run afterOpen operations
