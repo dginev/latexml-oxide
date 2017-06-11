@@ -8,19 +8,23 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // until \endname or \end{name}, respectively
   let define_excluded = primitivesub!(stomach, args, state,{
     let name = args[0].to_string();
-    let endmark = format!("\\end{{{}}}", name);
+    let begin_mark = format!("\\begin{{{}}}",name);
+    let end_mark = format!("\\end{{{}}}", name);
     {
-      DefConstructorI_F!(T_CS!(format!("\\begin{{{}}}",name)), None, noreplacement!()
-        // after_Digest => [sub {
-        //     my ($istomach, $whatsit) = @_;
-        //     let nlines = 0;
-        //     my ($line);
-        //     let gullet = $istomach->getGullet;
-        //     $gullet->readRawLine;    // IGNORE 1st line (after the \begin{$name} !!!
-        //     while (defined($line = $gullet->readRawLine) && ($line ne $endmark)) {
-        //       $nlines++; }
-        //     NoteProgress("[Skipped $name ($nlines lines)]");
-        // }]
+      DefConstructorI_F!(T_CS!(begin_mark), None, noreplacement!(),
+        after_digest => sub!(move |stomach: &mut Stomach, whatsit: &mut Whatsit, _state: &mut State| {
+          let mut nlines = 0;
+          let gullet = &mut stomach.gullet;
+          gullet.read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
+          while let Some(line) = gullet.read_raw_line() {
+            if line == end_mark {
+              break;
+            }
+            nlines += 1;
+          }
+          note_progress(&format!("[Skipped {} ({} lines)]",name,nlines));
+          Ok(Vec::new())
+        })
       ,state);
     }
     Ok(Vec::new())

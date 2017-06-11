@@ -8,6 +8,7 @@ use regex::Regex;
 use common::error::*;
 use state::{State, Scope, ObjectStore};
 use token::*;
+use tokens::Tokens;
 
 #[derive(PartialEq, Clone)]
 pub enum FoodType {
@@ -317,6 +318,74 @@ impl Mouth {
       }
     }
   }
+
+  //**********************************************************************
+  /// Read all tokens until a token equal to $until (if given), or until exhausted.
+  /// Returns an empty Tokens list, if there is no input
+  pub fn read_tokens(&mut self, until: Option<Token>, state: &mut State) -> Tokens {
+    let mut tokens = Vec::new();
+    let has_until = until.is_some();
+    let until_string = if let Some(until_token) = until {
+      until_token.get_string().to_owned()
+    } else {
+      String::new()
+    };
+    while let Some(token) = self.read_token(state) {
+      if has_until && token.get_string() == until_string {
+        tokens.push(token);
+      }
+    }
+    while !tokens.is_empty() && tokens.last().unwrap().get_catcode() == Catcode::SPACE {    // Remove trailing space
+      tokens.pop();
+    }
+    Tokens{ tokens: tokens }
+  }
+
+  //**********************************************************************
+  // Read a raw lines; there are so many variants of how it should end,
+  // that the Mouth API is left as simple as possible.
+  // Alas: $noread true means NOT to read a new line, but only return
+  // the remainder of the current line, if any. This is useful when combining
+  // with previously peeked tokens from the Gullet.
+  pub fn read_raw_line(&mut self, noread: bool) -> Option<String> {
+    let mut line = String::new();
+    if self.colno < self.nchars {
+      // DG: Can't slice a VecDeque really? Oh well...
+      // Please refactor if you know a better way!
+      for (index, c) in self.chars.iter().enumerate() {
+        if self.colno <= index && index < self.nchars {
+          line.push(*c);
+        }
+      }
+      // End lines with \n, not CR, since the result will be treated as strings
+      self.colno = self.nchars;
+    } else if noread {
+      line = String::new();
+    } else {
+      match self.get_next_line() {
+        None => {
+          line = String::new();
+          self.chars = VecDeque::new();
+          self.nchars = 0;
+          self.colno = 0;
+        },
+        Some(next_line) => {
+          line = next_line;
+          self.lineno += 1;
+          self.chars  = line.chars().collect();
+          self.nchars = self.chars.len();
+          self.colno  = self.nchars;
+        }
+      }
+    }
+    line = line.trim_right().to_owned(); // Is this right?
+    if line.is_empty() {
+      None
+    } else {
+      Some(line)
+    }
+  }
+
 
   fn dispatch_char(&mut self, ch: char, cc: Catcode, state: &mut State) -> Option<Token> {
     // Possibly want to think about caching (common) letters, etc to keep from

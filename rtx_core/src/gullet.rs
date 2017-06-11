@@ -6,7 +6,7 @@ use common::error::*;
 use definition::Definition;
 use mouth::Mouth;
 use token::{Token, Catcode};
-// use stomach::Stomach;
+use tokens::Tokens;
 
 #[derive(PartialEq, Clone)]
 pub struct MouthRuntime {
@@ -264,22 +264,30 @@ impl Gullet {
 
   /// Read the next raw line (string);
   /// primarily to read from the Mouth, but keep any unread input!
-  pub fn read_raw_line(&mut self) {
-    // // If we've got unread tokens, they presumably should come before the Mouth's raw data
-    // // but we'll convert them back to string.
-    // my @tokens = @{ $$self{pushback} };
-    // my @markers = grep { $_->getCatcode == CC_MARKER } @tokens;
-    // if (@markers) {    // Whoops, profiling markers!
-    //   @tokens = grep { $_->getCatcode != CC_MARKER } @tokens;    // Remove
-    //   map { LaTeXML::Core::Definition::stopProfiling($_, 'expand') } @markers; }
-    // $$self{pushback} = [];
-    // // If we still have peeked tokens, we ONLY want to combine it with the remainder
-    // // of the current line from the Mouth (NOT reading a new line)
-    // if (@tokens) {
-    //   return ToString(Tokens(@tokens)) . $$self{mouth}->readRawLine(1); }
-    // // Otherwise, read the next line from the Mouth.
-    // else {
-    //   return $$self{mouth}->readRawLine; } }
+  pub fn read_raw_line(&mut self) -> Option<String> {
+    // If we've got unread tokens, they presumably should come before the Mouth's raw data
+    // but we'll convert them back to string.
+    if let Some(ref mut runtime) = self.mouth {
+      let tokens : Vec<Token> = runtime.pushback.drain(..).collect();
+
+      // TODO
+      // let markers : Vec<&Token> = tokens.iter().filter(|t:Token| t.get_catcode() == Catcode::MARKER).collect();
+      // if !markers.is_empty() {    // Whoops, profiling markers!
+
+        // @tokens = grep { $_->getCatcode != CC_MARKER } @tokens;    // Remove
+        // map { LaTeXML::Core::Definition::stopProfiling($_, 'expand') } @markers;
+      // }
+
+      // If we still have peeked tokens, we ONLY want to combine it with the remainder
+      // of the current line from the Mouth (NOT reading a new line)
+      if !tokens.is_empty() {
+        Some(Tokens{tokens: tokens}.to_string() + &runtime.mouth.read_raw_line(true).unwrap_or_default())
+      } else { // Otherwise, read the next line from the Mouth.
+        runtime.mouth.read_raw_line(false)
+      }
+    } else {
+      None
+    }
   }
 
   pub fn unread(&mut self, tokens: Vec<Token>) {
