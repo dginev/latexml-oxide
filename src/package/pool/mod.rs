@@ -3,6 +3,7 @@ pub mod tex_setup;
 pub mod tex_structure;
 pub mod tex_math;
 pub mod tex_appendix_b;
+pub mod tex_chapter_24;
 
 pub mod latex;
 // Supported package bindings

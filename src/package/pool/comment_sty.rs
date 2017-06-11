@@ -31,22 +31,34 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   });
 
   let define_included = primitivesub!(stomach, args, state,{
-    // let name = args[0].to_string();
-    // let before = args[1];
-    // let after = args[2];
-    // let mut before_tokens = before.unlist();
-    // before_tokens.push(T_CS!("\\ignorespaces"));
-    // let mut after_tokens = after.unlist();
-    // after_tokens.push(T_CS!("\\ignorespaces"));
+    args.reverse(); // we'll be poppint from the front
+    let name = if let Some(name_token) = args.pop() {
+      name_token.to_string()
+    } else {
+      String::new()
+    };
+    // TODO: All instances of `.clone` here look like Rust memory waste, consider improving
+    let mut before_tokens = if let Some(before) = args.pop() {
+      before.unlist()
+    } else {
+      Vec::new()
+    };
+    before_tokens.push(T_CS!("\\ignorespaces"));
+    let mut after_tokens = if let Some(after) = args.pop() {
+      after.unlist()
+    } else {
+      Vec::new()
+    };
+    after_tokens.push(T_CS!("\\ignorespaces"));
     // Note that we define the `magic' environment control sequences,
     // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
-    // DefMacroI!(T_CS!(format!("\\begin{{{}}}",name)), None, move |gullet, _args, _state| {
-    //     gullet.read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
-    //     Ok(before_tokens)
-    //   });
-    // DefMacroI!(T_CS!(format!("\\end{{{}}}",name)), None, move |_gullet, _args, _state| {
-    //   Ok(after_tokens)
-    // });
+    DefMacroI_F!(T_CS!(format!("\\begin{{{}}}",name)), None, move |gullet, _args, _state| {
+        gullet.read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
+        Ok(before_tokens.clone())
+      }, state);
+    DefMacroI_F!(T_CS!(format!("\\end{{{}}}",name)), None, move |_gullet, _args, _state| {
+      Ok(after_tokens.clone())
+    }, state);
 
     Ok(Vec::new())
   });

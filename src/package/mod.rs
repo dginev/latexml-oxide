@@ -591,7 +591,7 @@ macro_rules! noprimitive {
 #[macro_export]
 macro_rules! primitivesub {
   ($stomach:ident, $args:ident, $state:ident, $body:expr) => (
-    |$stomach:&mut Stomach, $args : Vec<Tokens>, $state:&mut State| {
+    |$stomach:&mut Stomach, mut $args : Vec<Tokens>, $state:&mut State| {
       $body
     }
   )
