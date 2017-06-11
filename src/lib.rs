@@ -3,7 +3,7 @@
 //
 
 //! # The `LaTeXML` converter, reimplemented in Rust
-#![allow(unused_variables, unused_macros, unused_mut)]
+#![allow(unused_variables, unused_mut)]
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 

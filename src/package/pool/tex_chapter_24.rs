@@ -1,6 +1,4 @@
 use package::*;
-use rtx_core::{BoxOps};
-use rtx_core::document::tag::TagConstructionClosure;
 
 pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
@@ -34,8 +32,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // DefConstructor('\@hidden@egroup', '', afterDigest => sub { $_[0]->egroup; },
   //   reversion => '');
 
-  // DefPrimitive('\begingroup', sub { $_[0]->begingroup; });
-  // DefPrimitive('\endgroup',   sub { $_[0]->endgroup; });
+  DefPrimitiveI!("\\begingroup", primitivesub!(stomach, _args, inner_state, {stomach.begingroup(inner_state);Ok((Vec::new()))}));
+  DefPrimitiveI!("\\endgroup",   primitivesub!(stomach, _args, inner_state, {stomach.endgroup(inner_state);Ok((Vec::new()))}));
 
   // // Debugging aids; Ignored!
   // DefPrimitive('\show Token',     undef);

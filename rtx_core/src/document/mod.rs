@@ -190,7 +190,7 @@ impl Document {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone() calls removed
     let node = try!(self.open_element(qname, attrib, state));
     if self.debug {
-      info!("Inserting element {:?} with body: {:?}", qname, content);
+      debug!("Inserting element {:?} with body: {:?}", qname, content);
     }
     for digested in content {
       try!(self.absorb(digested, state));
@@ -240,7 +240,7 @@ impl Document {
   pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
     if self.debug {
-      info!("Open element {:?} at {:?}", qname, self.node.get_name());
+      debug!("Open element {:?} at {:?}", qname, self.node.get_name());
     }
     let point = try!(self.find_insertion_point(qname, state));
     // attributes.entry("_box").or_insert(state.locals.box);

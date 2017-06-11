@@ -56,6 +56,7 @@ pub enum ObjectStore {
   Bool(bool),
   String(String),
   Mathcode(usize),
+  Int(i32),
   // LaTeXML objects
   Catcode(Catcode),
   Token(Token),
@@ -82,6 +83,7 @@ impl fmt::Debug for ObjectStore {
     use state::ObjectStore::*;
     match *self {
       String(ref s) => write!(f, "{}", s),
+      Int(ref num) => write!(f, "{}", num),
       VecChar(ref vs) => write!(f, "{:?}",vs),
       VecString(ref vs) => write!(f, "{:?}", vs),
       Bool(ref b) => write!(f, "{:?}", b),
