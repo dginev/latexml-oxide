@@ -32,6 +32,16 @@ impl Default for Gullet {
 }
 
 impl Gullet {
+  /// This flushes a mouth so that it will be automatically closed, next time it's read
+  /// Corresponds (I think) to TeX's \endinput
+  pub fn flush_mouth(&mut self, state: &mut State) {
+    if let Some(ref mut runtime) = self.mouth {
+      runtime.mouth.finish(state);  // but not close!
+      runtime.pushback.drain(..);    // And don't read anytyhing more from it.
+      runtime.autoclose = true;
+    }
+    return;
+  }
 
   /// Obscure, but the only way I can think of to End!! (see \bye or \end{document})
   /// Flush all sources (close all pending mouth's)
