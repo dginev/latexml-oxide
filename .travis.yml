@@ -1,7 +1,9 @@
 sudo: false
+dist: trusty
 language: rust
 rust:
 - stable
 addons:
   apt:
-    packages: libxml2-dev
+    packages:
+     - libxml2-dev
