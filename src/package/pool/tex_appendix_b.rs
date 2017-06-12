@@ -66,8 +66,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //   font => { family => 'serif', series => 'medium', shape => 'upright' });
   // DefPrimitiveI!("\\sf", undef, undef,
   //   font => { family => 'sansserif', series => 'medium', shape => 'upright' });
-  // DefPrimitiveI!("\\bf", undef, undef,
-  //   font => { series => 'bold', family => 'serif', shape => 'upright' });
+  DefPrimitiveI!("\\bf", noprimitive!(),
+    font => Font!(series => "bold", family => "serif", shape => "upright"));
   // DefPrimitiveI!("\\it", undef, undef,
   //   font => { shape => 'italic', family => 'serif', series => 'medium' });
   // DefPrimitiveI!("\\tt", undef, undef,

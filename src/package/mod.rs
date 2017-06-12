@@ -532,6 +532,11 @@ pub fn merge_font(font_hash: HashMap<String, String>, state: &mut State) {
 // Macros requiring repetitions need to be handled outside of the main setup macro, as nested macros currently don't support repetition
 // Details at: https://github.com/rust-lang/rust/issues/35853
 
+macro_rules! Font {
+  ($($key:ident => $value:expr),*) => (
+    Some(Font { $($key: $value.to_string(),)* .. Font::default() })
+)}
+
 #[macro_export]
 macro_rules! NewDefault {
   ($name:ident, $($key:ident => $value:expr),*) => ($name {
