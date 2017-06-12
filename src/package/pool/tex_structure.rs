@@ -57,7 +57,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         _ => false
       };
       if !in_preamble {
-        document.maybe_close_element("ltx:p", state);
+        try!(document.maybe_close_element("ltx:p", state));
         if let Some(c) = props.get("class") {
           let element = document.get_element();
           if let Some(mut node) = element {
@@ -70,7 +70,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
             }
           }
         }
-        document.maybe_close_element("ltx:para", state);
+        try!(document.maybe_close_element("ltx:para", state));
      }
     }),
     after_digest => sub!(|stomach, whatsit, state| {

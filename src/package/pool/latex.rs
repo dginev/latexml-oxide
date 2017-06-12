@@ -166,14 +166,16 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     //     return Vec::new()
     //   }
     // },
-    // before_digest_end => |stomach, whatsit, state| {
-    //   stomach.get_gullet().flush();
-    //   if let Some(ops) = LookupValue!("@at@end@document", state) {
-    //     return Digest!(Tokens!(ops));
-    //   } else {
-    //     return Vec::new();
-    //   }
-    // },
+    before_digest_end => sub!(|stomach, state| {
+      stomach.get_gullet_mut().flush(state);
+      if let Some(ops) = LookupValue_F!("@at@end@document", state) {
+        // TODO:
+        // Ok(Digest!(Tokens!(ops)))
+        Ok(Vec::new())
+      } else {
+        Ok(Vec::new())
+      }
+    }),
     mode => Some("text".to_string())
   );
 
@@ -289,7 +291,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
       // TODO: convertLaTeXArgs($nargs, $opt)
       let body_closure = move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State|{ Ok(body.clone()) };
-      DefMacroI!(cs.clone(), None, body_closure, state);
+      DefMacroI_F!(cs.clone(), None, body_closure, state);
       Ok(Vec::new())
   });
 

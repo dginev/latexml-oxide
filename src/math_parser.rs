@@ -641,7 +641,7 @@ pub fn realize_xmnode(&self, node: &Node, document: &Document) -> Node {
   fn parse_single(&self, mathnode: &mut Node, document: &mut Document, rule: String, state: &mut State) -> Result<Option<Node>> {
     //   my @nodes = $self->filter_hints($document, $mathnode->childNodes);
     let nodes = mathnode.get_child_nodes();
-    let mut result = None;
+    let mut result;
     //   my ($punct, $result, $unparsed);
     //   my @punct = ();
     //   # Extract trailing punctuation, if rule allows it.
@@ -676,7 +676,7 @@ pub fn realize_xmnode(&self, node: &Node, document: &Document) -> Node {
         None => None
       };
     } else { // Now do the actual parse.
-      let (result_internal, unparsed)  = self.parse_internal(&rule, nodes, document);
+      let (result_internal, unparsed)  = try!(self.parse_internal(&rule, nodes, document));
       result = result_internal;
     }
 
@@ -698,7 +698,7 @@ pub fn realize_xmnode(&self, node: &Node, document: &Document) -> Node {
     Ok(result)
   }
 
-fn parse_internal(&self, rule: &str, nodes: Vec<Node>, document: &mut Document) -> (Option<Node>,Option<Node>) {
+fn parse_internal(&self, rule: &str, nodes: Vec<Node>, document: &mut Document) -> Result<(Option<Node>,Option<Node>)> {
   // Generate a textual token for each node; The parser operates on this encoded string.
 //   local $LaTeXML::MathParser::LEXEMES = {};
 //   my $i       = 0;
@@ -757,9 +757,9 @@ fn parse_internal(&self, rule: &str, nodes: Vec<Node>, document: &mut Document) 
 
     let mut new_app_node = Node::new("XMApp", None, &mut document.document).unwrap();
     new_app_node.set_namespace(left_arg.get_namespace().unwrap());
-    new_app_node.add_child(infix_op);
-    new_app_node.add_child(left_arg);
-    new_app_node.add_child(right_arg);
+    try!(new_app_node.add_child(infix_op));
+    try!(new_app_node.add_child(left_arg));
+    try!(new_app_node.add_child(right_arg));
 
     let new_app_child = parent.add_child(new_app_node).unwrap();
 
@@ -767,7 +767,7 @@ fn parse_internal(&self, rule: &str, nodes: Vec<Node>, document: &mut Document) 
   }
   // If still failed, try other strategies?
 
-  return (result, None)
+  return Ok((result, None))
 }
 
 // sub getGrammaticalRole {

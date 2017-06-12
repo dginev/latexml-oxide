@@ -6,7 +6,7 @@ use common::error::*;
 use definition::Definition;
 use mouth::Mouth;
 use token::{Token, Catcode};
-// use stomach::Stomach;
+use tokens::Tokens;
 
 #[derive(PartialEq, Clone)]
 pub struct MouthRuntime {
@@ -32,6 +32,16 @@ impl Default for Gullet {
 }
 
 impl Gullet {
+  /// This flushes a mouth so that it will be automatically closed, next time it's read
+  /// Corresponds (I think) to TeX's \endinput
+  pub fn flush_mouth(&mut self, state: &mut State) {
+    if let Some(ref mut runtime) = self.mouth {
+      runtime.mouth.finish(state);  // but not close!
+      runtime.pushback.drain(..);    // And don't read anytyhing more from it.
+      runtime.autoclose = true;
+    }
+    return;
+  }
 
   /// Obscure, but the only way I can think of to End!! (see \bye or \end{document})
   /// Flush all sources (close all pending mouth's)
@@ -262,6 +272,34 @@ impl Gullet {
     }
   }
 
+  /// Read the next raw line (string);
+  /// primarily to read from the Mouth, but keep any unread input!
+  pub fn read_raw_line(&mut self) -> Option<String> {
+    // If we've got unread tokens, they presumably should come before the Mouth's raw data
+    // but we'll convert them back to string.
+    if let Some(ref mut runtime) = self.mouth {
+      let tokens : Vec<Token> = runtime.pushback.drain(..).collect();
+
+      // TODO
+      // let markers : Vec<&Token> = tokens.iter().filter(|t:Token| t.get_catcode() == Catcode::MARKER).collect();
+      // if !markers.is_empty() {    // Whoops, profiling markers!
+
+        // @tokens = grep { $_->getCatcode != CC_MARKER } @tokens;    // Remove
+        // map { LaTeXML::Core::Definition::stopProfiling($_, 'expand') } @markers;
+      // }
+
+      // If we still have peeked tokens, we ONLY want to combine it with the remainder
+      // of the current line from the Mouth (NOT reading a new line)
+      if !tokens.is_empty() {
+        Some(Tokens{tokens: tokens}.to_string() + &runtime.mouth.read_raw_line(true).unwrap_or_default())
+      } else { // Otherwise, read the next line from the Mouth.
+        runtime.mouth.read_raw_line(false)
+      }
+    } else {
+      None
+    }
+  }
+
   pub fn unread(&mut self, tokens: Vec<Token>) {
     if let Some(ref mut runtime) = self.mouth {
       for token in tokens.into_iter().rev() {
@@ -468,7 +506,6 @@ impl Gullet {
     // TODO
     Ok(Vec::new())
   }
-
 
   pub fn skip_spaces(&mut self, state: &mut State) {
     match self.read_non_space(state) {
