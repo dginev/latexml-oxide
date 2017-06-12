@@ -1,4 +1,5 @@
 use common::error::*;
+use common::font::Font;
 use {Digested, BoxOps};
 use token::Token;
 use document::Document;
@@ -10,7 +11,7 @@ use std::collections::HashMap;
 pub struct Tbox {
   // TODO
   pub text: String,
-  pub font: String,
+  pub font: Option<Font>,
   pub locator: String,
   pub properties: HashMap<String, String>,
   pub tokens: Vec<Token>,
@@ -20,7 +21,7 @@ impl Default for Tbox {
   fn default() -> Self {
     Tbox {
       text: String::new(),
-      font: String::new(),
+      font: None,
       locator: String::new(),
       properties: HashMap::new(),
       tokens: Vec::new(),
@@ -32,9 +33,15 @@ impl Default for Tbox {
 // Exported constructors
 
 impl Tbox {
-  pub fn new(string: String, font_opt: Option<String>, locator_opt: Option<String>, tokens_opt: Vec<Token>, properties: HashMap<String, String>, state: &mut State) -> Self {
+  pub fn new(string: String, font_opt: Option<Font>, locator_opt: Option<String>, tokens_opt: Vec<Token>, properties: HashMap<String, String>, state: &mut State) -> Self {
 
-    let _font = font_opt.unwrap_or_else(|| state.lookup_string("font"));
+    let font = match font_opt {
+      Some(f) => f,
+      None => match state.lookup_font() {
+        Some(state_font) => state_font,
+        None => Font::default() // should never happen
+      }
+    };
     // let locator = $STATE->getStomach->getGullet->getLocator unless defined $locator;
     let _locator = locator_opt;
 
@@ -57,13 +64,13 @@ impl Tbox {
           _ => {}
         };
       }
-
-      Tbox {text: string,  tokens: tokens,//$font->specialize($string), $locator,
+      let specialized_font = font.specialize(&string);
+      Tbox {text: string,  tokens: tokens, font: Some(specialized_font),// $locator,
         properties: box_props,
         ..Tbox::default()
       }
     } else {
-      Tbox {text: string, //$font, $locator,
+      Tbox {text: string, font: Some(font), // $locator,
         tokens, properties: properties,
         ..Tbox::default()
       }

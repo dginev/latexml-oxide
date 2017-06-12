@@ -218,7 +218,7 @@ impl Stomach {
   }
   fn invoke_token_simple(&mut self, _token: Token, meaning: Token, state: &mut State) -> Vec<Digested> {
     // log!("-- Simple invoke {:?}", token);
-    // let font = state.lookup_value("font");
+    let font = state.lookup_font();
     state.clear_prefixes();    // prefixes shouldn't apply here.
 
     if meaning.code == Catcode::SPACE {
@@ -253,7 +253,7 @@ impl Stomach {
     else {
       vec![Digested::Box(Tbox::new(
              meaning.to_string(),//text
-             None, // font
+             font,
              None, // locator
              vec![meaning], // tokens
              HashMap::new(), // properties

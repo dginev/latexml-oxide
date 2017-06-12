@@ -638,6 +638,13 @@ impl State {
     }
   }
 
+  pub fn lookup_font<'font>(&'font self) -> Option<Font> {
+    match self.lookup_value("font") {
+      Some(& ObjectStore::Font(ref f)) => Some(*f.clone()), // TODO: is this clone heavy/slow? We can refactor into refs
+      _ => None
+    }
+  }
+
   pub fn unshift_value(&mut self, key: &str, values: Vec<ObjectStore>) {
     if self.value.get(key).is_none() {
       self.assign_internal(TableName::Value, key, ObjectStore::VecDequeOS(VecDeque::new()), Some(Scope::Global))
@@ -940,8 +947,15 @@ impl State {
     }
     // TODO:
     // self.assign_mathcode('\'' => 0x8000, Some(Scope::Local));
-    // // try to stay as ASCII as possible
-    // self.assign_value("font" => $self->lookupValue('font')->merge(encoding => 'ASCII'), Some(Scope::Local));
+    // try to stay as ASCII as possible
+    let new_font = if let Some(& ObjectStore::Font(ref current_font)) = self.lookup_value("font") {
+      Some(current_font.merge(string_map!("encoding" => "ASCII")))
+    } else {
+      None
+    };
+    if let Some(local_font) = new_font {
+      self.assign_value("font", ObjectStore::Font(Box::new(local_font)), Some(Scope::Local));
+    }
   }
 
   pub fn end_semiverbatim(&mut self) {
@@ -1237,12 +1251,12 @@ impl State {
     self.assign_value("MODE", ObjectStore::String("text".to_string()), Some(Scope::Global));
     self.assign_value("IN_MATH", ObjectStore::Bool(false), Some(Scope::Global));
     self.assign_value("PRESERVE_NEWLINES", ObjectStore::Bool(true), Some(Scope::Global));
-    // $STATE->assignValue(afterGroup        => [],               'global');
-    // $STATE->assignValue(afterAssignment   => undef,            'global');
-    // $STATE->assignValue(groupInitiator    => 'Initialization', 'global');
-    // # Setup default fonts.
-    // $STATE->assignValue(font     => LaTeXML::Common::Font->textDefault(), 'global');
-    // $STATE->assignValue(mathfont => LaTeXML::Common::Font->mathDefault(), 'global');
+    self.assign_value("afterGroup"       , ObjectStore::VecDigested(Vec::new()), Some(Scope::Global));
+    self.assign_value("afterAssignment"  , ObjectStore::VecDigested(Vec::new()), Some(Scope::Global)); // undef ???
+    self.assign_value("groupInitiator"       , ObjectStore::String("Initialization".to_string()), Some(Scope::Global));
+    // Setup default fonts.
+    self.assign_value("font"  , ObjectStore::Font(Box::new(Font::text_default())), Some(Scope::Global));
+    self.assign_value("mathfont"  , ObjectStore::Font(Box::new(Font::math_default())), Some(Scope::Global));
   }
 
 
