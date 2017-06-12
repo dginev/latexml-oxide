@@ -149,7 +149,7 @@ impl Definition for Constructor {
 
     // TODO: Do this correctly:
     // props.insert("font".to_owned(), ObjectStore::Font(Box::new(this_font)));
-    props.insert("font".to_owned(), ObjectStore::String(this_font.family.clone()));
+    props.insert("font".to_owned(), ObjectStore::String(this_font.to_attribute()));
     // $props{locator} = $stomach->getGullet->getMouth->getLocator unless defined $props{locator};
     props.entry("isMath".to_owned()).or_insert(ObjectStore::Bool(ismath));
     // $props{level}   = $stomach->getBoxingLevel;

@@ -74,4 +74,15 @@ impl Font {
   pub fn specialize(&self, text: &str) -> Self {
     self.clone()
   }
+
+  pub fn to_attribute(&self) -> String {
+    let mut serialized = String::new();
+    if !self.family.is_empty() {
+      serialized = serialized + " " + &self.family;
+    }
+    if !self.series.is_empty() && self.series != "medium" {
+      serialized = serialized + " " + &self.series;
+    }
+    serialized.trim().to_string()
+  }
 }
