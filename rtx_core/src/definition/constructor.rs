@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use state::{State, Scope, ObjectStore};
 use common::object::Object;
 use common::error::*;
+use common::font::Font;
 
 use token::*;
 use Digested;
@@ -28,8 +29,7 @@ pub struct ConstructorOptions {
   pub forbid_math: bool,
   pub properties: HashMap<String, ObjectStore>,
   pub capture_body: bool,
-  // pub font: HashMap<String, String>,
-  pub font: String,
+  pub font: Option<Font>,
 
   pub after_digest_begin: Vec<DigestionClosure>,
   pub before_digest_end : Vec<BeforeDigestClosure>,
@@ -55,7 +55,7 @@ impl Default for ConstructorOptions {
       forbid_math: false,
       properties: HashMap::new(),
       capture_body: false,
-      font: String::new(),
+      font: None,
       after_digest_begin: vec![],
       before_digest_end : vec![],
       after_digest_body : vec![],
@@ -120,7 +120,6 @@ impl Definition for Constructor {
 
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
-    // let font   = state.lookup_value("font");
 
     let ismath = state.lookup_bool("IN_MATH");
 
@@ -139,10 +138,18 @@ impl Definition for Constructor {
     // for (key, value) in props.iter() {
     //   if (ref $value eq 'CODE') {
     //     $props{$key} = &$value($stomach, @args); } }
-    // TODO: Handle fonts correclty
 
-    props.insert("font".to_owned(), ObjectStore::String(self.options.font.clone()));
-    // $props{font}    = $font                                     unless defined $props{font};
+    let this_font = match self.options.font {
+      Some(ref f) => f.clone(),
+      None => match state.lookup_font() {
+        Some(f) => f,
+        None => Font::default() // should never happen?
+      }
+    };
+
+    // TODO: Do this correctly:
+    // props.insert("font".to_owned(), ObjectStore::Font(Box::new(this_font)));
+    props.insert("font".to_owned(), ObjectStore::String(this_font.family.clone()));
     // $props{locator} = $stomach->getGullet->getMouth->getLocator unless defined $props{locator};
     props.entry("isMath".to_owned()).or_insert(ObjectStore::Bool(ismath));
     // $props{level}   = $stomach->getBoxingLevel;

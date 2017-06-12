@@ -229,7 +229,7 @@ impl Stomach {
       } else {
         vec![Digested::Box(Tbox::new(
                meaning.to_string(),//text
-               None, //font
+               font,
                Some(self.gullet.get_locator()),//locator
                vec![meaning], // tokens
                HashMap::new(), // properties
@@ -433,7 +433,7 @@ impl Stomach {
     let ismath   = mode.ends_with("math");
     state.assign_value("MODE", ObjectStore::String(mode.to_string()), Some(Scope::Local));
     state.assign_value("IN_MATH", ObjectStore::Bool(ismath), Some(Scope::Local));
-    // let curfont = state.lookup_value("font");
+    // let curfont = state.lookup_font();
     // if mode == prevmode { }
     // else if ismath {
       // When entering math mode, we set the font to the default math font,

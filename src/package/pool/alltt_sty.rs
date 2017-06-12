@@ -4,8 +4,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
   DefEnvironment!("{alltt}", "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
-    // font => string_map!["family" => "typewriter", "series" => "medium", "shape" => "upright"],
-    font => "typewriter".to_string(), // TODO
+    font => Font!(family => "typewriter", series => "medium", shape => "upright"),
     before_digest => sub!(|stomach, state| {
       for c in &['$', '&', '#', '^', '_', '%', '~'] {
        AssignCatcode_F!(*c, Catcode::OTHER, None, state);

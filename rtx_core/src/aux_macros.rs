@@ -15,3 +15,4 @@ macro_rules! string_map {
     map
   }}
 }
+
