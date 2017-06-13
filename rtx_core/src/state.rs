@@ -949,7 +949,7 @@ impl State {
     // self.assign_mathcode('\'' => 0x8000, Some(Scope::Local));
     // try to stay as ASCII as possible
     let new_font = if let Some(& ObjectStore::Font(ref current_font)) = self.lookup_value("font") {
-      Some(current_font.merge(string_map!("encoding" => "ASCII")))
+      Some(current_font.merge(Font{encoding: Some("ASCII".to_string()), ..Font::default()}))
     } else {
       None
     };

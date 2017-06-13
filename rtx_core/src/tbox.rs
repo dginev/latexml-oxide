@@ -11,7 +11,7 @@ use std::collections::HashMap;
 pub struct Tbox {
   // TODO
   pub text: String,
-  pub font: Option<Font>,
+  pub font: Font,
   pub locator: String,
   pub properties: HashMap<String, String>,
   pub tokens: Vec<Token>,
@@ -21,7 +21,7 @@ impl Default for Tbox {
   fn default() -> Self {
     Tbox {
       text: String::new(),
-      font: None,
+      font: Font::default(),
       locator: String::new(),
       properties: HashMap::new(),
       tokens: Vec::new(),
@@ -65,12 +65,12 @@ impl Tbox {
         };
       }
       let specialized_font = font.specialize(&string);
-      Tbox {text: string,  tokens: tokens, font: Some(specialized_font),// $locator,
+      Tbox {text: string,  tokens: tokens, font: specialized_font,// $locator,
         properties: box_props,
         ..Tbox::default()
       }
     } else {
-      Tbox {text: string, font: Some(font), // $locator,
+      Tbox {text: string, font: font, // $locator,
         tokens, properties: properties,
         ..Tbox::default()
       }
@@ -88,6 +88,7 @@ impl BoxOps for Tbox {
 
   fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()> {
     let text = &self.text;
+    let font = &self.font;
     let mode = match self.properties.get("mode") {
       Some(s) => s.to_owned(),
       None => "text".to_string(),
@@ -96,7 +97,7 @@ impl BoxOps for Tbox {
       if mode == "math" {
         try!(document.insert_math_token(text, self.properties, state));//, font => $$self[1], %{ $$self[4] })
       } else {
-        try!(document.open_text(text, state));//, $$self[1]))
+        try!(document.open_text(text, font, state));
       }
     }
     Ok(())

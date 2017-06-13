@@ -519,13 +519,13 @@ pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &st
   }
 }
 
-pub fn merge_font(font_hash: HashMap<String, String>, state: &mut State) {
-  let mut font = match state.remove_value("font") {
+pub fn merge_font(font: Font, state: &mut State) {
+  let mut current_font = match state.remove_value("font") {
     Some(ObjectStore::Font(f)) => *f,
     _ => Font::default(),
   };
-  font.merge(font_hash);
-  state.assign_value("font", ObjectStore::Font(Box::new(font)), Some(Scope::Local));
+  let newfont = current_font.merge(font);
+  state.assign_value("font", ObjectStore::Font(Box::new(newfont)), Some(Scope::Local));
   return;
 }
 
@@ -534,7 +534,7 @@ pub fn merge_font(font_hash: HashMap<String, String>, state: &mut State) {
 
 macro_rules! Font {
   ($($key:ident => $value:expr),*) => (
-    Some(Font { $($key: $value.to_string(),)* .. Font::default() })
+    Some(Font { $($key: Some($value.to_string()),)* .. Font::default() })
 )}
 
 #[macro_export]
@@ -597,6 +597,33 @@ macro_rules! noprimitive {
 macro_rules! primitivesub {
   ($stomach:ident, $args:ident, $state:ident, $body:expr) => (
     |$stomach:&mut Stomach, mut $args : Vec<Tokens>, $state:&mut State| {
+      $body
+    }
+  )
+}
+
+#[macro_export]
+macro_rules! beforesub {
+  ($stomach:ident, $state:ident, $body:expr) => (
+    |$stomach:&mut Stomach, $state:&mut State| {
+      $body
+    }
+  )
+}
+#[macro_export]
+macro_rules! beforeproc { // just as beforesub! but with a default return value
+  ($stomach:ident, $state:ident, $body:expr) => (
+    move |$stomach:&mut Stomach, $state:&mut State| {
+      $body;
+      Ok(Vec::new())
+    }
+  )
+}
+
+#[macro_export]
+macro_rules! aftersub {
+  ($document:ident, $whatsit:ident, $state:ident, $body:expr) => (
+    |$document:&mut Document, $whatsit:&Whatsit, $state:&mut State| {
       $body
     }
   )
@@ -839,7 +866,7 @@ macro_rules! LoadClass_F(
 
 /// Macros and pool come at the end, so that they load seamlessly
 // TODO: package::coerce_cs on $cs
-macro_rules! DefMacroI_F(
+macro_rules! DefMacroI_F (
   ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (def_macro_i($cs, $paramlist, Rc::new($expansion), $state))
 );
 
@@ -1297,10 +1324,38 @@ macro_rules! DefEnvironmentI_F (
       before_digest_env.push(mode_closure);
     },
     &None => {
-      let bgroup_closure = Rc::new(|stomach: &mut Stomach, state: &mut State| {stomach.bgroup(state); Ok(Vec::new())});
+      let bgroup_closure = Rc::new(beforeproc!(stomach, state, {stomach.bgroup(state);}));
       before_digest_env.push(bgroup_closure);
     }
   };
+  // TODO
+  // if options.require_math {
+  //   let name_for_require = name.clone();
+  //   let require_math_closure = Rc::new(beforeproc!(stomach state, { requireMath!(state) }));
+  //   before_digest_env.push(require_math_closure);
+  // }
+
+  // TODO
+  // if options.forbid_math {
+  //   let name_for_forbid = name.clone();
+  //   let forbid_math_closure = Rc::new(beforeproc!(stomach state, { forbidMath!(state) }));
+  //   before_digest_env.push(forbid_math_closure);
+  // }
+
+  let env_name = name.clone();
+  let current_environment_closure = Rc::new(beforeproc!(stomach, state, {
+    AssignValue_F!("current_environment", ObjectStore::String(env_name.clone()), None, state);
+    let body = T_LETTER!(env_name.clone());
+    DefMacroT_F!(T_CS!("\\@currenvir"), None, body.clone(), state);
+  }));
+  before_digest_env.push(current_environment_closure);
+
+  if let Some(chosen_font) = options.font {
+    let merge_font_closure = Rc::new(beforeproc!(stomach, state, {
+      MergeFont_F!(chosen_font.clone(), state);
+    }));
+    before_digest_env.push(merge_font_closure);
+  }
   before_digest_env.extend(options.before_digest);
 
   let push_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
@@ -1323,13 +1378,6 @@ macro_rules! DefEnvironmentI_F (
       options: ConstructorOptions {
         nargs: options.nargs,
         before_digest: before_digest_env,
-        // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
-        //   ($options{forbidMath} ? (sub { forbidMath($name); }) : ()),
-        //   sub { AssignValue(current_environment => $name);
-        //     DefMacroI('\@currenvir', undef, $name); },
-        //   ($options{font} ? (sub { MergeFont(%{ $options{font} }); }) : ()),
-        font: options.font.clone(), // TODO
-        //   $options{beforeDigest}),
         after_digest: options.after_digest_begin,
         after_digest_body: options.after_digest_body,
         before_construct: before_construct_with_frame,
@@ -1407,7 +1455,6 @@ macro_rules! DefEnvironmentI_F (
       nargs: options.nargs,
       capture_body: true,
       properties: options.properties.clone(),
-      font: options.font, // TODO
       // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
       // (defined $sizer ? (sizer => $sizer) : ()),
       // ), $options{scope});

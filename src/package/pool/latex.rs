@@ -131,14 +131,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefEnvironmentC!("{document}",
     Some(Rc::new(|document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
-      //       "<ltx:document xml:id='#id'>#body</ltx:document>",
       let id = match props.get("id") {
         Some(& ObjectStore::String(ref id)) => id,
         _ => ""
       };
-      // TODO: there has to be a better way of doing this property acrobatics...
-      // TODO: THIS IS WRONG AND SLOW. Cloning each whatsit is **MASSIVE** overhead,
-      //       and while in this example we only clone the document body, following this path in general is horrible.
+      // TODO: Cloning here ought to be terribly inefficient and should be avoided. How?
       let body = match props.get("body") {
         Some(& ObjectStore::Digested(ref rc)) => (**rc).clone(),
         _ => Digested::Whatsit(Whatsit::default())
@@ -155,7 +152,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       }
       Ok(())
     })),
-    before_digest => sub!(|_stomach, state| { state.assign_value("inPreamble", ObjectStore::Bool(false), None); Ok(Vec::new()) }),
+    before_digest => sub!(beforeproc!(_stomach, state, { state.assign_value("inPreamble", ObjectStore::Bool(false), None); })),
     // after_digest_begin => |stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {

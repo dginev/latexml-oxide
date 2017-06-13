@@ -1,19 +1,22 @@
-use std::collections::HashMap;
 #[derive(Clone, Debug, PartialEq)]
+
+/// This struct is a little interesting, as we want to pass overrides that partially modify (via a merge) the current font,
+/// in each definitional binding. To accommodate that with this struct, every single field needs to be an Option,
+/// in order to unambiguously tell the "intend" of override (Some) vs no intent (None).
 pub struct Font {
-  pub family : String,
-  pub series : String,
-  pub shape : String,
-  pub size : String,
-  pub color : String,
-  pub bg : String,
-  pub opacity : String,
-  pub encoding : String,
-  pub language : String,
-  pub mathstyle : String,
-  pub forceseries: bool,
-  pub forcefamily: bool,
-  pub forceshape: bool,
+  pub family : Option<String>,
+  pub series : Option<String>,
+  pub shape : Option<String>,
+  pub size : Option<String>,
+  pub color : Option<String>,
+  pub bg : Option<String>,
+  pub opacity : Option<String>,
+  pub encoding : Option<String>,
+  pub language : Option<String>,
+  pub mathstyle : Option<String>,
+  pub forceseries: Option<bool>,
+  pub forcefamily: Option<bool>,
+  pub forceshape: Option<bool>,
 }
 
 // Note: forcefamily, forceseries, forceshape (& forcebold for compatibility)
@@ -21,19 +24,19 @@ pub struct Font {
 impl Default for Font {
   fn default() -> Self {
     Font {
-      family : String::new(),
-      series : String::new(),
-      shape : String::new(),
-      size : String::new(),
-      color : String::new(),
-      bg : String::new(),
-      opacity : String::new(),
-      encoding : String::new(),
-      language : String::new(),
-      mathstyle : String::new(),
-      forceseries: false,
-      forcefamily: false,
-      forceshape: false,
+      family : None,
+      series : None,
+      shape : None,
+      size : None,
+      color : None,
+      bg : None,
+      opacity : None,
+      encoding : None,
+      language : None,
+      mathstyle : None,
+      forceseries: None,
+      forcefamily: None,
+      forceshape: None,
     }
   }
 }
@@ -52,36 +55,63 @@ impl Font {
   //    family, series or shape
   // will, usually, automatically reset the others to thier defaults!
   // You must arrange this in the calls....
-  pub fn merge(&self, kv: HashMap<String, String>) -> Self {
+  pub fn merge(&self, other: Font) -> Self {
     let mut newfont = self.clone();
-    for (key, value) in kv {
-      match key.as_str() {
-        "family" => {newfont.family = value},
-        "series" => {newfont.series = value},
-        "shape" => {newfont.shape = value},
-        "size" => {newfont.size = value},
-        "color" => {newfont.color = value},
-        "bg" => {newfont.bg = value},
-        "encoding" => {newfont.encoding = value},
-        "language" => {newfont.language = value},
-        "mathstyle" => {newfont.mathstyle = value},
-        _ => {}
-      }
+    if let Some(value) = other.family {
+      newfont.family = Some(value);
+    }
+    if let Some(value) = other.series {
+      newfont.series = Some(value);
+    }
+    if let Some(value) = other.shape {
+      newfont.shape = Some(value);
+    }
+    if let Some(value) = other.size {
+      newfont.size = Some(value);
+    }
+    if let Some(value) = other.color {
+      newfont.color = Some(value);
+    }
+    if let Some(value) = other.bg {
+      newfont.bg = Some(value);
+    }
+    if let Some(value) = other.opacity {
+      newfont.opacity = Some(value);
+    }
+    if let Some(value) = other.encoding {
+      newfont.encoding = Some(value);
+    }
+    if let Some(value) = other.language {
+      newfont.language = Some(value);
+    }
+    if let Some(value) = other.mathstyle {
+      newfont.mathstyle = Some(value);
+    }
+    if let Some(value) = other.forceseries {
+      newfont.forceseries = Some(value);
+    }
+    if let Some(value) = other.forcefamily {
+      newfont.forcefamily = Some(value);
+    }
+    if let Some(value) = other.forceshape {
+      newfont.forceshape = Some(value);
     }
     newfont
   }
 
-  pub fn specialize(&self, text: &str) -> Self {
+  pub fn specialize(&self, _text: &str) -> Self {
     self.clone()
   }
 
   pub fn to_attribute(&self) -> String {
     let mut serialized = String::new();
-    if !self.family.is_empty() {
-      serialized = serialized + " " + &self.family;
+    if let Some(ref value) = self.family {
+      serialized = serialized + " " + value;
     }
-    if !self.series.is_empty() && self.series != "medium" {
-      serialized = serialized + " " + &self.series;
+    if let Some(ref value) = self.series {
+      if value != "medium" {// TODO: this is a Hack for alltt.tex, ensure this is generalized
+        serialized = serialized + " " + value;
+      }
     }
     serialized.trim().to_string()
   }

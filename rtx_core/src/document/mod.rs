@@ -11,7 +11,9 @@ use libxml::tree::{Node, NodeType, Namespace};
 use regex::Regex;
 
 use common::error::*;
+use common::font::Font;
 use state::{ObjectStore, State};
+
 use {Digested, BoxOps};
 use Tbox;
 use document::resource::Resource;
@@ -683,7 +685,7 @@ impl Document {
   ///  I don't like having "text" built in here!
   ///  AND, we've assumed that "font" names the relevant attribute!!!]
 
-  pub fn open_text(&mut self, text: &str, state: &mut State) -> Result<Option<&Node>> {
+  pub fn open_text(&mut self, text: &str, font: &Font, state: &mut State) -> Result<Option<&Node>> {
     // TODO: font arg
     let node_type = self.node.get_type();
     {
@@ -693,12 +695,12 @@ impl Document {
         return Ok(None);
       }
     }
-    // if font.get_family() == "nullfont" {
-    //   return;
-    // }
-    // if self.debug {
-    //   debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
-    // }
+    if font.family == Some("nullfont".to_owned()) {
+    return Ok(None);
+    }
+    if self.debug {
+      debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
+    }
 
     // if node_type != Some(NodeType::DocumentNode) // If not at document begin
       //&& !((node_type == Some(NodeType::TextNode)) //&&    // And not appending text in same font.
