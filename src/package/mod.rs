@@ -979,21 +979,47 @@ macro_rules! DefPrimitiveII_F(
   let scope = options.scope.clone();
   // let mode    = options.mode;
   // let bounded = options.bounded;
+  let mut before_digest_env : Vec<BeforeDigestClosure> = Vec::new();
+  // TODO
+  // if options.require_math {
+  //   let name_for_require = name.clone();
+  //   let require_math_closure = Rc::new(beforeproc!(stomach, state, { requireMath!(state) }));
+  //   before_digest_env.push(require_math_closure);
+  // }
+
+  // TODO
+  // if options.forbid_math {
+  //   let name_for_forbid = name.clone();
+  //   let forbid_math_closure = Rc::new(beforeproc!(stomach, state, { forbidMath!(state) }));
+  //   before_digest_env.push(forbid_math_closure);
+  // }
+  if let Some(mode) = options.mode {
+    let begin_mode_closure = Rc::new(beforeproc!(stomach, state, { stomach.begin_mode(&mode, state); }));
+    before_digest_env.push(begin_mode_closure);
+  }
+  if options.bounded {
+    let bgroup_closure = Rc::new(beforeproc!(stomach, state, { stomach.bgroup(state); }));
+    before_digest_env.push(bgroup_closure);
+  }
+  if let Some(chosen_font) = options.font {
+    let merge_font_closure = Rc::new(beforeproc!(stomach, state, {
+      MergeFont_F!(chosen_font.clone(), state);
+    }));
+    before_digest_env.push(merge_font_closure);
+  }
+  before_digest_env.extend(options.before_digest);
+
   $state.install_definition(ObjectStore::Primitive(Rc::new(Primitive{
       cs: $cs.clone(),
       paramlist: $paramlist,
       replacement: Some(Rc::new($compiled_replacement)),
-      // beforeDigest => flatten((options{requireMath} ? (sub { requireMath($cs); }) : ()),
-      //   (options{forbidMath} ? (sub { forbidMath($cs); }) : ()),
-      //   ($mode ? (sub { $_[0]->beginMode($mode); })
-      //     : ($bounded ? (sub { $_[0]->bgroup; }) : ())),
-      //   (options{font} ? (sub { MergeFont(%{ options{font} }); }) : ()),
-      //   options{beforeDigest}),
-      // afterDigest => flatten(options{afterDigest},
-      //   ($mode ? (sub { $_[0]->endMode($mode) })
-      //     : ($bounded ? (sub { $_[0]->egroup; }) : ()))),
-      options: options,
-      ..Primitive::default()
+      options: PrimitiveOptions {
+        before_digest: before_digest_env,
+        // afterDigest => flatten(options{afterDigest},
+        //   ($mode ? (sub { $_[0]->endMode($mode) })
+        //     : ($bounded ? (sub { $_[0]->egroup; }) : ()))),
+        ..PrimitiveOptions::default()
+      }
     })),
     scope);
   if options_locked {
@@ -1331,14 +1357,14 @@ macro_rules! DefEnvironmentI_F (
   // TODO
   // if options.require_math {
   //   let name_for_require = name.clone();
-  //   let require_math_closure = Rc::new(beforeproc!(stomach state, { requireMath!(state) }));
+  //   let require_math_closure = Rc::new(beforeproc!(stomach, state, { requireMath!(state) }));
   //   before_digest_env.push(require_math_closure);
   // }
 
   // TODO
   // if options.forbid_math {
   //   let name_for_forbid = name.clone();
-  //   let forbid_math_closure = Rc::new(beforeproc!(stomach state, { forbidMath!(state) }));
+  //   let forbid_math_closure = Rc::new(beforeproc!(stomach, state, { forbidMath!(state) }));
   //   before_digest_env.push(forbid_math_closure);
   // }
 

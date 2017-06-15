@@ -17,16 +17,17 @@ use definition::{Definition, PrimitiveClosure, BeforeDigestClosure, DigestionClo
 #[derive(Clone)]
 pub struct PrimitiveOptions {
   pub bounded: bool,
-  pub mode: Option<String>,
-  pub before_digest: Vec<BeforeDigestClosure>,
-  pub after_digest: Vec<DigestionClosure>,
   pub is_prefix: bool,
-  pub scope: Option<Scope>,
-  pub font: Option<Font>,
   pub require_math: bool,
   pub forbid_math: bool,
   pub locked: bool,
+  pub nargs: Option<usize>,
+  pub scope: Option<Scope>,
+  pub font: Option<Font>,
+  pub mode: Option<String>,
   pub alias: Option<String>,
+  pub before_digest: Vec<BeforeDigestClosure>,
+  pub after_digest: Vec<DigestionClosure>,
 }
 impl Default for PrimitiveOptions {
   fn default() -> Self {
@@ -42,6 +43,7 @@ impl Default for PrimitiveOptions {
       forbid_math: false,
       locked: false,
       alias: None,
+      nargs: None,
     }
   }
 }
@@ -50,7 +52,6 @@ impl Default for PrimitiveOptions {
 pub struct Primitive {
   pub cs: Token,
   pub paramlist: Option<Parameters>,
-  pub nargs: Option<usize>,
   pub replacement: Option<PrimitiveClosure>,
   pub options: PrimitiveOptions,
 }
@@ -59,7 +60,6 @@ impl Default for Primitive {
     Primitive {
       cs: T_CS!("Primitive".to_string()),
       paramlist: None,
-      nargs: None,
       replacement: None,
       options: PrimitiveOptions::default(),
     }
@@ -124,7 +124,7 @@ impl Definition for Primitive {
     &self.paramlist
   }
   fn get_num_args(&self) -> usize {
-    match self.nargs {
+    match self.options.nargs {
       Some(n) => n,
       None => {
         match self.paramlist {

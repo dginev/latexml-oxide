@@ -696,7 +696,7 @@ impl Document {
       }
     }
     if font.family == Some("nullfont".to_owned()) {
-    return Ok(None);
+      return Ok(None)
     }
     if self.debug {
       debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
