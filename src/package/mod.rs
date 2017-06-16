@@ -12,7 +12,7 @@ pub use rtx_core::common::font::Font;
 pub use rtx_core::token::*;
 pub use rtx_core::parameter::{Parameter, Parameters};
 pub use rtx_core::mouth::Mouth;
-pub use rtx_core::definition::{Definition, BeforeDigestClosure, ConstructionClosure, ExpansionClosure};
+pub use rtx_core::definition::{Definition, BeforeDigestClosure, DigestionClosure, ConstructionClosure, ExpansionClosure};
 pub use rtx_core::document::Document;
 pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptions, TagOptionName};
@@ -622,12 +622,22 @@ macro_rules! beforeproc { // just as beforesub! but with a default return value
 
 #[macro_export]
 macro_rules! aftersub {
-  ($document:ident, $whatsit:ident, $state:ident, $body:expr) => (
-    |$document:&mut Document, $whatsit:&Whatsit, $state:&mut State| {
+  ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => (
+    |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $state:&mut State| {
       $body
     }
   )
 }
+#[macro_export]
+macro_rules! afterproc {
+  ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => (
+    move |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $state:&mut State| {
+      $body
+      Ok(vec![])
+    }
+  )
+}
+
 
 // Discussion: It is unclear what the best authoring syntax is for our family of latexml binding macros.
 // One idea is to keep them very close to the Rust internals, but we suffer from a variety of boilerplate, such as
@@ -980,21 +990,21 @@ macro_rules! DefPrimitiveII_F(
   // let mode    = options.mode;
   // let bounded = options.bounded;
   let mut before_digest_env : Vec<BeforeDigestClosure> = Vec::new();
-  // TODO
-  // if options.require_math {
-  //   let name_for_require = name.clone();
-  //   let require_math_closure = Rc::new(beforeproc!(stomach, state, { requireMath!(state) }));
-  //   before_digest_env.push(require_math_closure);
-  // }
 
-  // TODO
-  // if options.forbid_math {
-  //   let name_for_forbid = name.clone();
-  //   let forbid_math_closure = Rc::new(beforeproc!(stomach, state, { forbidMath!(state) }));
-  //   before_digest_env.push(forbid_math_closure);
-  // }
-  if let Some(mode) = options.mode {
-    let begin_mode_closure = Rc::new(beforeproc!(stomach, state, { stomach.begin_mode(&mode, state); }));
+  if options.require_math {
+    let cs_name = $cs.get_cs_name();
+    let require_math_closure = Rc::new(beforeproc!(stomach, state, { requireMath_F!(cs_name, state) }));
+    before_digest_env.push(require_math_closure);
+  }
+
+  if options.forbid_math {
+    let cs_name = $cs.get_cs_name();
+    let forbid_math_closure = Rc::new(beforeproc!(stomach, state, { forbidMath_F!(cs_name, state) }));
+    before_digest_env.push(forbid_math_closure);
+  }
+  if let Some(ref mode) = options.mode {
+    let mode_clone = mode.clone();
+    let begin_mode_closure = Rc::new(beforeproc!(stomach, state, { stomach.begin_mode(&mode_clone, state); }));
     before_digest_env.push(begin_mode_closure);
   }
   if options.bounded {
@@ -1009,15 +1019,25 @@ macro_rules! DefPrimitiveII_F(
   }
   before_digest_env.extend(options.before_digest);
 
+  let mut after_digest_env : Vec<DigestionClosure> = Vec::new();
+  after_digest_env.extend(options.after_digest);
+  if let Some(ref mode) = options.mode {
+    let mode_clone = mode.clone();
+    let end_mode_closure = Rc::new(afterproc!(stomach, whatsit, state, { stomach.end_mode(&mode_clone, state); }));
+    after_digest_env.push(end_mode_closure);
+  }
+  if options.bounded {
+    let egroup_closure = Rc::new(afterproc!(stomach, whatsit,state, { stomach.egroup(state); }));
+    after_digest_env.push(egroup_closure);
+  }
+
   $state.install_definition(ObjectStore::Primitive(Rc::new(Primitive{
       cs: $cs.clone(),
       paramlist: $paramlist,
       replacement: Some(Rc::new($compiled_replacement)),
       options: PrimitiveOptions {
         before_digest: before_digest_env,
-        // afterDigest => flatten(options{afterDigest},
-        //   ($mode ? (sub { $_[0]->endMode($mode) })
-        //     : ($bounded ? (sub { $_[0]->egroup; }) : ()))),
+        after_digest: after_digest_env,
         ..PrimitiveOptions::default()
       }
     })),
@@ -1767,6 +1787,23 @@ macro_rules! defmath_prim {
   })
 }
 
+#[macro_export]
+macro_rules! requireMath_F {
+  ($cs_name:expr, $state:ident) => (
+    if !LookupBool_F!("IN_MATH", $state) {
+      warn!(target: "unexpected", "{} should only appear in math mode",$cs_name);
+    }
+  )
+}
+
+#[macro_export]
+macro_rules! forbidMath_F {
+  ($cs_name:expr, $state:ident) => (
+    if LookupBool_F!("IN_MATH", $state) {
+      warn!(target: "unexpected", "{} should not appear in math mode",$cs_name);
+    }
+  )
+}
 
 #[macro_export]
 macro_rules! SetupBindingMacros {($state:ident) => (
