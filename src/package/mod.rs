@@ -977,7 +977,6 @@ macro_rules! DefPrimitiveI_F(
 macro_rules! DefPrimitiveIWO_F(
   ($proto:expr, $compiled_replacement:expr, $options:expr, $state:ident) => ({
     let (cs, paramlist) = try!(parse_prototype($proto, $state));
-    // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
     DefPrimitiveII_F!(cs, paramlist, $compiled_replacement, $options, $state);
   })
 );
@@ -987,8 +986,6 @@ macro_rules! DefPrimitiveII_F(
   let options = $options;
   let options_locked = options.locked;
   let scope = options.scope.clone();
-  // let mode    = options.mode;
-  // let bounded = options.bounded;
   let mut before_digest_env : Vec<BeforeDigestClosure> = Vec::new();
 
   if options.require_math {
@@ -1357,6 +1354,8 @@ macro_rules! DefEnvironmentI_F (
   use rtx_core::definition::constructor::Constructor;
   let name = $name_raw.to_string();
   let options = $options;
+  let begin_name = "\\begin{".to_string()+&name+"}";
+  let end_name = "\\end{".to_string()+&name+"}";
   // This is for the common case where the environment is opened by \begin{env}
   // let sizer = inferSizer($options.sizer, $options.reversion);
   let mut before_digest_env : Vec<BeforeDigestClosure> = Vec::new();
@@ -1374,19 +1373,16 @@ macro_rules! DefEnvironmentI_F (
       before_digest_env.push(bgroup_closure);
     }
   };
-  // TODO
-  // if options.require_math {
-  //   let name_for_require = name.clone();
-  //   let require_math_closure = Rc::new(beforeproc!(stomach, state, { requireMath!(state) }));
-  //   before_digest_env.push(require_math_closure);
-  // }
-
-  // TODO
-  // if options.forbid_math {
-  //   let name_for_forbid = name.clone();
-  //   let forbid_math_closure = Rc::new(beforeproc!(stomach, state, { forbidMath!(state) }));
-  //   before_digest_env.push(forbid_math_closure);
-  // }
+  if options.require_math {
+    let require_name = begin_name.clone();
+    let require_math_closure = Rc::new(beforeproc!(stomach, state, { requireMath_F!(require_name, state) }));
+    before_digest_env.push(require_math_closure);
+  }
+  if options.forbid_math {
+    let forbid_name = begin_name.clone();
+    let forbid_math_closure = Rc::new(beforeproc!(stomach, state, { forbidMath_F!(forbid_name, state) }));
+    before_digest_env.push(forbid_math_closure);
+  }
 
   let env_name = name.clone();
   let current_environment_closure = Rc::new(beforeproc!(stomach, state, {
@@ -1418,7 +1414,7 @@ macro_rules! DefEnvironmentI_F (
   after_construct_with_frame.push(pop_frame_closure);
 
   let begin_name_constructor = Rc::new(Constructor {
-      cs: T_CS!("\\begin{".to_string()+&name+"}"),
+      cs: T_CS!(begin_name),
       paramlist: $paramlist,
       replacement: $compiled_replacement,
       options: ConstructorOptions {
@@ -1471,7 +1467,7 @@ macro_rules! DefEnvironmentI_F (
   };
 
   let end_envname_constructor = Rc::new(Constructor {
-    cs: T_CS!("\\end{".to_string()+&name+"}"),
+    cs: T_CS!(end_name),
     replacement: None,
     paramlist: None,
     options: ConstructorOptions {
