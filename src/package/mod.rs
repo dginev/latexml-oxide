@@ -601,6 +601,16 @@ macro_rules! primitivesub {
     }
   )
 }
+#[macro_export]
+macro_rules! primitiveproc {
+  ($stomach:ident, $args:ident, $state:ident, $body:expr) => (
+    |$stomach:&mut Stomach, mut $args : Vec<Tokens>, $state:&mut State| {
+      $body
+      Ok(Vec::new())
+    }
+  )
+}
+
 
 #[macro_export]
 macro_rules! beforesub {
@@ -1001,7 +1011,7 @@ macro_rules! DefPrimitiveII_F(
   }
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let begin_mode_closure = Rc::new(beforeproc!(stomach, state, { stomach.begin_mode(&mode_clone, state); }));
+    let begin_mode_closure = Rc::new(beforeproc!(stomach, state, { try!(stomach.begin_mode(&mode_clone, state)); }));
     before_digest_env.push(begin_mode_closure);
   }
   if options.bounded {
@@ -1020,11 +1030,11 @@ macro_rules! DefPrimitiveII_F(
   after_digest_env.extend(options.after_digest);
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let end_mode_closure = Rc::new(afterproc!(stomach, whatsit, state, { stomach.end_mode(&mode_clone, state); }));
+    let end_mode_closure = Rc::new(afterproc!(stomach, whatsit, state, { try!(stomach.end_mode(&mode_clone, state)); }));
     after_digest_env.push(end_mode_closure);
   }
   if options.bounded {
-    let egroup_closure = Rc::new(afterproc!(stomach, whatsit,state, { stomach.egroup(state); }));
+    let egroup_closure = Rc::new(afterproc!(stomach, whatsit,state, { try!(stomach.egroup(state)); }));
     after_digest_env.push(egroup_closure);
   }
 
@@ -1105,13 +1115,12 @@ macro_rules! DefConstructorIWO_F(
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state:ident) => (
   {
     use rtx_core::definition::constructor::Constructor;
-    // use libxml::tree::Node;
     let options = $options;
-// let mode    = $options.mode;
-// let bounded = $options.bounded;
-
     // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
     //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
+    if options.locked {
+      $state.assign_value(&format!("{}:locked",$cs.get_cs_name()), ObjectStore::Bool(true), None)
+    }
     let constructor = Constructor {
       cs: $cs,
       paramlist: $paramlist,
@@ -1119,7 +1128,6 @@ macro_rules! DefConstructorIWO_F(
       options: options};
 
     $state.install_definition(::rtx_core::state::ObjectStore::Constructor(Rc::new(constructor)), None);
-
 //   before_digest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
 //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),
 //     ($mode ? (sub { $_[0]->beginMode($mode); })
@@ -1138,13 +1146,7 @@ macro_rules! DefConstructorIWO_F(
 //   captureBody     => $options{captureBody},
 //   properties      => $options{properties} || {}),
 // $options{scope});
-
-// if options.locked {
-//   $state.assign_value(ToString($cs) + ":locked", Box::new(true))
-// }
-// return;
-  }
-  );
+ })
 );
 
 macro_rules! DefConstructor_F {

@@ -32,8 +32,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // DefConstructor('\@hidden@egroup', '', afterDigest => sub { $_[0]->egroup; },
   //   reversion => '');
 
-  DefPrimitiveI!("\\begingroup", primitivesub!(stomach, _args, inner_state, {stomach.begingroup(inner_state);Ok((Vec::new()))}));
-  DefPrimitiveI!("\\endgroup",   primitivesub!(stomach, _args, inner_state, {stomach.endgroup(inner_state);Ok((Vec::new()))}));
+  DefPrimitiveI!("\\begingroup", primitiveproc!(stomach, _args, inner_state, {stomach.begingroup(inner_state); }));
+  DefPrimitiveI!("\\endgroup",   primitiveproc!(stomach, _args, inner_state, {try!(stomach.endgroup(inner_state)); }));
 
   // // Debugging aids; Ignored!
   // DefPrimitive('\show Token',     undef);
