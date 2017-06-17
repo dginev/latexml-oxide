@@ -106,4 +106,8 @@ impl BoxOps for Tbox {
   fn revert(&self) -> Vec<Token> {
     self.tokens.clone()
   }
+
+  fn get_font(&self) -> Option<&Font> {
+    Some(&self.font)
+  }
 }

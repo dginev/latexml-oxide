@@ -200,7 +200,7 @@ impl DigestionAPI for Core {
       }
     }
     self.stomach.get_gullet_mut().flush(state);
-    Ok(Digested::List(List { boxes: boxes, mode: TexMode::Text }))
+    Ok(Digested::List(List::new(boxes)))
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

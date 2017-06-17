@@ -1,5 +1,6 @@
 use std::fmt;
 use common::error::*;
+use common::font::Font;
 use {Digested, TexMode, BoxOps};
 use token::Token;
 use state::State;
@@ -9,7 +10,8 @@ use document::Document;
 #[derive(Clone, PartialEq)]
 pub struct List {
   pub boxes: Vec<Digested>,
-  pub mode: TexMode
+  pub mode: Option<TexMode>,
+  pub font: Option<Font>,
 }
 
 impl fmt::Debug for List {
@@ -43,5 +45,33 @@ impl BoxOps for List {
 
   fn revert(&self) -> Vec<Token> {
     self.boxes.iter().flat_map(|tbox| tbox.revert()).collect::<Vec<Token>>()
+  }
+
+  fn get_font(&self) -> Option<&Font> {
+    match self.font {
+      Some(ref f) => Some(f),
+      None => None
+    }
+  }
+}
+
+impl List {
+  pub fn new(boxes: Vec<Digested>) -> Self {
+    // while (defined($bx = shift(@bxs)) && (!defined $locator)) {
+    //   $locator = $bx->getLocator unless defined $locator; }
+
+    // Maybe the most representative font for a List is the font of the LAST box (that _has_ a font!) ???
+    let mut font : Option<Font> = None;
+    for bx in boxes.iter().rev() {
+      if let Some(bx_font) = bx.get_font() {
+        font = Some(bx_font.clone());
+        break;
+      }
+    }
+    List {
+      boxes: boxes,
+      font: font,
+      mode: None,
+    }
   }
 }

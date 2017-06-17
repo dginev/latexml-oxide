@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use common::error::*;
+use common::font::Font;
 use state::{State, ObjectStore};
 use {Digested, BoxOps, TexMode};
 use list::List;
@@ -74,7 +75,10 @@ impl Whatsit {
       TexMode::Text
     };
 
-    let list = List{ boxes: body, mode: mode };
+    let mut list = List::new(body);
+    if self.is_math() {
+      list.mode = Some(mode);
+    }
     self.properties.insert("body".to_string(), ObjectStore::Digested(Rc::new(Digested::List(list))));
     if let Some(trailer) = trailer_opt {
       self.properties.insert("trailer".to_string(), ObjectStore::Digested(Rc::new(trailer.clone())));
@@ -136,5 +140,12 @@ impl BoxOps for Whatsit {
   fn revert(&self) -> Vec<Token> {
     // TODO - mock for now
     Vec::new()
+  }
+
+  fn get_font(&self) -> Option<&Font> {
+    match self.properties.get("font") {
+      Some(&ObjectStore::Font(ref font)) => Some(font),
+      _ => None
+    }
   }
 }

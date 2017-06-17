@@ -31,8 +31,9 @@ pub mod util;
 
 use std::fmt;
 use common::error::*;
-use state::{State, StateOptions, ObjectStore};
 use common::model::Model;
+use common::font::Font;
+use state::{State, StateOptions, ObjectStore};
 use stomach::Stomach;
 use token::Token;
 use tbox::Tbox;
@@ -141,6 +142,7 @@ pub trait BoxOps {
     error!(target: "boxops:get_body", "Generic BoxOps::get_body should never be called!");
     None
   }
+  fn get_font(&self) -> Option<&Font>;
   fn revert(&self) -> Vec<Token>;
 }
 
@@ -219,6 +221,14 @@ impl BoxOps for Digested {
       Digested::Box(ref b) => {error!(target: "digested:get_body", "Called get_body on Box: {:?}", b); None}
       Digested::List(ref l) => {error!(target: "digested:get_body", "Called get_body on List: {:?}", l); None}
       Digested::Whatsit(ref w) => w.get_body()
+    }
+  }
+
+  fn get_font(&self) -> Option<&Font> {
+    match *self {
+      Digested::Box(ref b) => b.get_font(),
+      Digested::List(ref l) => l.get_font(),
+      Digested::Whatsit(ref w) => w.get_font(),
     }
   }
 

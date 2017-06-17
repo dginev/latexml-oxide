@@ -168,7 +168,7 @@ impl Converter {
       Err(e) => {
         // TODO digestion failed, report
         e.log_fatal();
-        Digested::List(List { boxes: Vec::new(), mode: TexMode::Text })
+        Digested::List(List::new(Vec::new()))
       }
       Ok(d) => d,
     };

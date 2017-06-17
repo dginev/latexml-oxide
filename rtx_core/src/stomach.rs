@@ -116,8 +116,10 @@ impl Stomach {
       }
 
       // let list = STOMACH_LIST.lock()
-      let final_list = list;
-      Ok(Digested::List(List{boxes: final_list, mode: mode}))
+      let final_boxes = list;
+      let mut final_list = List::new(final_boxes);
+      final_list.mode = Some(mode);
+      Ok(Digested::List(final_list))
     }))
   }
 

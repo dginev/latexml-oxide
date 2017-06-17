@@ -31,7 +31,8 @@ pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
   pub node: Node,
-  pub node_boxes: HashMap<usize, Digested>,
+  pub node_boxes: HashMap<usize, Digested>, // used to be _box attribute
+  pub node_fonts: HashMap<usize, Font>, // used to be _font attribute
   pub debug: bool,
   pub constructed_nodes: Vec<Node>,
   pub box_to_absorb: Option<Digested>,
@@ -49,6 +50,7 @@ impl Document {
       document: doc_scaffold,
       node: root,
       node_boxes: HashMap::new(),
+      node_fonts: HashMap::new(),
       pending: Vec::new(),
       debug: true,
       constructed_nodes : Vec::new(),
@@ -108,8 +110,8 @@ impl Document {
   pub fn finalize(&mut self, state: &mut State) {
     self.prune_xmduals();
     let root = self.document.get_root_element();
-    // local $LaTeXML::FONT = LaTeXML::Common::Font->textDefault;
-    self.finalize_rec(root, state);
+    let init_font = Font::text_default();
+    self.finalize_rec(root, &init_font, state);
     if let Some(&ObjectStore::String(ref prefixes)) = state.lookup_value("RDFa_prefixes") {
       self.set_rdfa_prefixes(Some(prefixes.clone()));
     }
@@ -173,7 +175,7 @@ impl Document {
       // // Else create the XMTok now.
       // else {
       //   // Odd case: constructors that work in math & text can insert raw strings in Math mode.
-      //   push(@results, self.insertMathToken($box, font => $props{font})); } }
+      //   push(@results, self.insertMathToken($box, font => $props{fontzz})); } }
 
       //   let mut box_node = self.node.add_child(None, "box").unwrap();
       //   box_node.set_content(&tbox.text);
@@ -245,11 +247,25 @@ impl Document {
       debug!("Open element {:?} at {:?}", qname, self.node.get_name());
     }
     let point = try!(self.find_insertion_point(qname, state));
-    // attributes.entry("_box").or_insert(state.locals.box);
     let newnode = try!(self.open_element_at(point, qname,
-      // _font => $attributes{font} || $attributes{_box}->getFont,
       attributes, state));
     self.set_node(newnode.clone());
+    // Underscore attributes such as _box and _font from LaTeXML-proper are now bookkept in special substructs of Document
+    // Connected to the node hash. Ideally should be as quick to recompute natively as it would be to set/get attributes externally via libxml.
+    //
+    // TODO: also accept a _box argument eventually? Or store differently?
+    // attributes.entry("_box").or_insert(state.locals.box);
+    // "_font" => $attributes{font} || $attributes{_box}->getFont,
+    let mut font_opt = None;
+    if let Some(ref tbox) = self.box_to_absorb {
+      if let Some(box_font) = tbox.get_font() {
+        font_opt = Some(box_font.clone()); // needless clone, due to mutable+immutable borrow on same object
+      }
+    }
+    if let Some(font) = font_opt {
+      self.set_node_font(&newnode, &font);
+    }
+
     Ok(newnode)
   }
 
@@ -575,10 +591,10 @@ impl Document {
 
   fn prune_xmduals(&self) {}
 
-  fn finalize_rec(&mut self, mut node: Node, state: &mut State) {
+  fn finalize_rec(&mut self, mut node: Node, init_font: &Font, state: &mut State) {
     let _qname = state.model.get_node_qname(&node);
-    // my $declared_font       = $LaTeXML::FONT;
-    // my $desired_font        = $LaTeXML::FONT;
+    let declared_font = init_font.clone();
+    let desired_font  = init_font.clone();
     // let mut pending_declaration = HashMap::new();
     if let Some(_comment) = node.get_attribute("_pre_comment") {
       if let Some(_parent) = node.get_parent() {
@@ -591,7 +607,8 @@ impl Document {
       }
     }
 
-    // if (my font_attr = node.getAttribute("_font")) {
+    if let Some(font) = self.get_node_font(&node) {
+    // info!("Node {:?} had a set font {:?}", self.document.node_to_string(&node), font);
     //   desired_font        = self{node_fonts}{font_attr};
     //   %pending_declaration = desired_font.relativeTo(declared_font);
     //   if ((node.hasChildNodes || node.getAttribute("_force_font"))
@@ -602,13 +619,13 @@ impl Document {
     //         # Merge to set the font currently in effect
     //         declared_font = declared_font.merge(%{ pending_declaration{attr}{properties} });
     //         delete pending_declaration{attr}; } }
-    //   } }
-    // local LaTeXML::FONT = declared_font;
+    }
+    let new_init_font = &declared_font;
     for child in node.get_child_nodes() {
       let child_type = child.get_type();
       if child_type == Some(NodeType::ElementNode) {
         let _was_forcefont = child.get_attribute("_force_font");
-        self.finalize_rec(child, state);
+        self.finalize_rec(child, new_init_font, state);
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
         // if (state.model.get_node_qname(child) == FONT_ELEMENT_NAME)
@@ -702,10 +719,11 @@ impl Document {
       debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
     }
 
-    // if node_type != Some(NodeType::DocumentNode) // If not at document begin
-      //&& !((node_type == Some(NodeType::TextNode)) //&&    // And not appending text in same font.
-      // ($font->distance(self.getNodeFont(node.parentNode)) == 0))
-    // {
+    if node_type != Some(NodeType::DocumentNode) // If not at document begin
+      && !(node_type == Some(NodeType::TextNode)) // And not appending text in same font.
+      && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0)
+    {
+      info!("new rule for font distance?")
       // then we'll need to do some open/close to get fonts matched.
       // node =
       // self.close_text_internal();    // Close text node, if any.
@@ -727,7 +745,7 @@ impl Document {
       //   self.close_to_node(closeto);
       // }
       // self.open_element($FONT_ELEMENT_NAME, font => $font, _fontswitch => 1) if $bestdiff > 0; // Open if needed.
-    // }
+    }
 
     // Finally, insert the darned text.
     let tnode = try!(self.open_text_internal(text, state));
@@ -1039,6 +1057,23 @@ impl Document {
       None
     }
   }
+
+//**********************************************************************
+  /// Record the Font of a node
+  pub fn set_node_font(&mut self, node: &Node, font: &Font) {
+    let nodeid = node.to_hashable();
+    self.node_fonts.insert(nodeid, font.clone());
+  }
+
+  pub fn get_node_font(&self, node: &Node) -> Option<&Font> {
+    if node.get_type() == Some(NodeType::ElementNode) {
+      let nodeid = node.to_hashable();
+      self.node_fonts.get(&nodeid)
+    } else {
+      None
+    }
+  }
+
 
   //**********************************************************************
   // Inserting new nodes at random points into the document,
