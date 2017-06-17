@@ -941,7 +941,7 @@ macro_rules! DefPrimitiveI_F(
     $key1:ident=>$val1:expr,
     $key2:ident=>$val2:expr, $state:ident
   ) => (DefPrimitiveIWO_F!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
-    $key1 => $key2,
+    $key1 => $val1,
     $key2 => $val2
   ), $state));
 
@@ -950,7 +950,7 @@ macro_rules! DefPrimitiveI_F(
     $key2:ident=>$val2:expr,
     $key3:ident=>$val3:expr, $state:ident
   ) => (DefPrimitiveIWO_F!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
-    $key1 => $key2,
+    $key1 => $val1,
     $key2 => $val2,
     $key3 => $val3
   ), $state));
@@ -961,7 +961,7 @@ macro_rules! DefPrimitiveI_F(
     $key3:ident=>$val3:expr,
     $key4:ident=>$val4:expr, $state:ident
   ) => (DefPrimitiveIWO_F!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
-    $key1 => $key2,
+    $key1 => $val1,
     $key2 => $val2,
     $key3 => $val3,
     $key4 => $val4
@@ -1811,7 +1811,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! LookupValue {($name:expr) => (LookupValue!($name, $state))}
   macro_rules! LookupBool {($name:expr) => (LookupBool_F!($name, $state))}
   macro_rules! LookupString {($name:expr) => (LookupString_F!($name, $state))}
-  macro_rules! AssignValue {($name:expr, $value:expr, $scope:expr) => (AssignValue_F!($name, $value, $scope, $state))}
+  macro_rules! AssignValue {
+    ($name:expr, $value:expr, $scope:expr) => (AssignValue_F!($name, $value, $scope, $state));
+    ($name:expr, $value:expr) => ($state.assign_value($name, $value, None));
+  }
   macro_rules! RemoveValue {($name:expr) => (RemoveValue_F!($name, $state))}
   macro_rules! PushValue {($name:expr, $values:expr) => (PushValue_F!($name, $values, $state))}
   macro_rules! PopValue  {($name:expr) => (PopValue_F!($name, $state))}

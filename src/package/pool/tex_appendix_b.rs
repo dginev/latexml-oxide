@@ -60,59 +60,59 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // (some of these were defined on different pages? or even latex...)
   Tag!("ltx:text", auto_open => true, auto_close => true);
 
-  // // Note that these, unlike \rmfamily, should set the other attributes to the defaults!
-  // DefPrimitiveI!("\\rm", undef, undef,
-  //   font => { family => 'serif', series => 'medium', shape => 'upright' });
-  // DefPrimitiveI!("\\sf", undef, undef,
-  //   font => { family => 'sansserif', series => 'medium', shape => 'upright' });
+  // Note that these, unlike \rmfamily, should set the other attributes to the defaults!
+  DefPrimitiveI!("\\rm", noprimitive!(),
+    font => Font!(family => "serif", series => "medium", shape => "upright"));
+  DefPrimitiveI!("\\sf", noprimitive!(),
+    font => Font!(family => "sansserif", series => "medium", shape => "upright"));
   DefPrimitiveI!("\\bf", noprimitive!(),
     font => Font!(series => "bold", family => "serif", shape => "upright"));
-  // DefPrimitiveI!("\\it", undef, undef,
-  //   font => { shape => 'italic', family => 'serif', series => 'medium' });
-  // DefPrimitiveI!("\\tt", undef, undef,
-  //   font => { family => 'typewriter', series => 'medium', shape => 'upright' });
-  // // No effect in math for the following 2 ?
-  // DefPrimitiveI!("\\sl", undef, undef,
-  //   font => { shape => 'slanted', family => 'serif', series => 'medium' });
-  // DefPrimitiveI!("\\sc", undef, undef,
-  //   font => { shape => 'smallcaps', family => 'serif', series => 'medium' });
+  DefPrimitiveI!("\\it", noprimitive!(),
+    font => Font!(shape => "italic", family => "serif", series => "medium" ));
+  DefPrimitiveI!("\\tt", noprimitive!(),
+    font => Font!(family => "typewriter", series => "medium", shape => "upright" ));
+  // No effect in math for the following 2 ?
+  DefPrimitiveI!("\\sl", noprimitive!(),
+    font => Font!(shape => "slanted", family => "serif", series => "medium" ));
+  DefPrimitiveI!("\\sc", noprimitive!(),
+    font => Font!(shape => "smallcaps", family => "serif", series => "medium" ));
 
-  // // Ideally, we should set these sizes from class files
-  // AssignValue!("NOMINAL_FONT_SIZE", ObjectStore::Int(10));
-  // DefPrimitiveI!("\\tiny",         undef, undef, font => { size => 5 });
-  // DefPrimitiveI!("\\scriptsize",   undef, undef, font => { size => 7 });
-  // DefPrimitiveI!("\\footnotesize", undef, undef, font => { size => 8 });
-  // DefPrimitiveI!("\\small",        undef, undef, font => { size => 9 });
-  // DefPrimitiveI!("\\normalsize",   undef, undef, font => { size => 10 });
-  // DefPrimitiveI!("\\large",        undef, undef, font => { size => 12 });
-  // DefPrimitiveI!("\\Large",        undef, undef, font => { size => 14.4 });
-  // DefPrimitiveI!("\\LARGE",        undef, undef, font => { size => 17.28 });
-  // DefPrimitiveI!("\\huge",         undef, undef, font => { size => 20.74 });
-  // DefPrimitiveI!("\\Huge",         undef, undef, font => { size => 29.8 });
+  // Ideally, we should set these sizes from class files
+  AssignValue!("NOMINAL_FONT_SIZE", ObjectStore::Int(10));
+  DefPrimitiveI!("\\tiny",         noprimitive!(), font => Font!(size => 5 ));
+  DefPrimitiveI!("\\scriptsize",   noprimitive!(), font => Font!(size => 7 ));
+  DefPrimitiveI!("\\footnotesize", noprimitive!(), font => Font!(size => 8 ));
+  DefPrimitiveI!("\\small",        noprimitive!(), font => Font!(size => 9 ));
+  DefPrimitiveI!("\\normalsize",   noprimitive!(), font => Font!(size => 10 ));
+  DefPrimitiveI!("\\large",        noprimitive!(), font => Font!(size => 12 ));
+  DefPrimitiveI!("\\Large",        noprimitive!(), font => Font!(size => 14.4 ));
+  DefPrimitiveI!("\\LARGE",        noprimitive!(), font => Font!(size => 17.28 ));
+  DefPrimitiveI!("\\huge",         noprimitive!(), font => Font!(size => 20.74 ));
+  DefPrimitiveI!("\\Huge",         noprimitive!(), font => Font!(size => 29.8 ));
 
-  // DefPrimitiveI!("\\mit", undef, undef, requireMath => 1, font => { family => 'italic' });
+  DefPrimitiveI!("\\mit", noprimitive!(), require_math => true, font => Font!(family => "italic"));
 
-  // DefPrimitiveI!("\\frenchspacing",    undef, undef);
-  // DefPrimitiveI!("\\nonfrenchspacing", undef, undef);
+  DefPrimitiveI!("\\frenchspacing",    noprimitive!());
+  DefPrimitiveI!("\\nonfrenchspacing", noprimitive!());
   // DefMacroI!("\\normalbaselines", undef,
   //   '\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\normallineskiplimit');
-  // DefMacroI!("\\space", undef, Tokens(T_SPACE));
-  // DefMacroI!("\\lq",    undef, "`");
-  // DefMacroI!("\\rq",    undef, "'");
-  // Let!("\\empty", "\\@empty");
-  // DefMacroI!("\\null", undef, '\hbox{}');
-  // Let!("\\bgroup",  T_BEGIN!());
-  // Let!("\\egroup",  T_END!());
-  // Let!("\\endgraf", "\\par");
-  // Let!("\\endline", "\\cr");
+  DefMacroT!(T_CS!("\\space"), None, T_SPACE!());
+  DefMacroT!(T_CS!("\\lq"),    None, T_OTHER!("`"));
+  DefMacroT!(T_CS!("\\rq"),    None, T_OTHER!("'"));
+  Let!("\\empty", "\\@empty");
+  // DefMacroT!(T_CS!("\\null"), None, "\hbox{}");
+  Let!("\\bgroup",  T_BEGIN!());
+  Let!("\\egroup",  T_END!());
+  Let!("\\endgraf", "\\par");
+  Let!("\\endline", "\\cr");
 
-  // DefPrimitiveI!("\\endline", undef, undef);
+  DefPrimitiveI!("\\endline", noprimitive!());
 
-  // // Use \r for the newline from TeX!!!
-  // DefMacroI!("\\\r", undef, "\\ ");    // \<cr> == \<space> Interesting (see latex.ltx)
-  // Let!(T_ACTIVE("\r"), "\\par");       // (or is this just LaTeX?)
+  // Use \r for the newline from TeX!!!
+  DefMacroT!(T_CS!("\\\r"), None, T_CS!("\\ "));    // \<cr> == \<space> Interesting (see latex.ltx)
+  Let!(T_ACTIVE!("\r"), "\\par");       // (or is this just LaTeX?)
 
-  // Let!("\\\t", "\\\r");               // \<tab> == \<space>, also
+  Let!("\\\t", "\\\r");               // \<tab> == \<space>, also
 
   Ok(())
 }
