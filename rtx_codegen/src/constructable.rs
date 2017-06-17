@@ -194,7 +194,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         operations.push(quote!(
           let mut av_props : HashMap<String, String> = HashMap::new();
           #(av)*
-          document.open_element(#current_tag, Some(av_props), state);
+          document.open_element(#current_tag, Some(av_props), None, state);
         ));
         // Empty element?
         if replacement.starts_with('/') {

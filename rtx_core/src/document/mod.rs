@@ -24,7 +24,7 @@ lazy_static! {
   static ref ONLY_SPACE_RE : Regex = Regex::new(r"^\s+$").unwrap();
 }
 
-static _FONT_ELEMENT_NAME : &'static str = "ltx:text";
+static FONT_ELEMENT_NAME : &'static str = "ltx:text";
 static MATH_TOKEN_NAME : &'static str   = "ltx:XMTok";
 
 pub struct Document {
@@ -192,7 +192,7 @@ impl Document {
   /// Shorthand for open,absorb,close, but returns the new node.
   pub fn insert_element(&mut self, qname: &str, content: Vec<Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone() calls removed
-    let node = try!(self.open_element(qname, attrib, state));
+    let node = try!(self.open_element(qname, attrib, None, state));
     if self.debug {
       debug!("Inserting element {:?} with body: {:?}", qname, content);
     }
@@ -241,7 +241,7 @@ impl Document {
     return;
   }
 
-  pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
+  pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>, mut font_opt: Option<&Font>, state: &mut State) -> Result<Node> {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
     if self.debug {
       debug!("Open element {:?} at {:?}", qname, self.node.get_name());
@@ -255,15 +255,18 @@ impl Document {
     //
     // TODO: also accept a _box argument eventually? Or store differently?
     // attributes.entry("_box").or_insert(state.locals.box);
-    // "_font" => $attributes{font} || $attributes{_box}->getFont,
-    let mut font_opt = None;
-    if let Some(ref tbox) = self.box_to_absorb {
-      if let Some(box_font) = tbox.get_font() {
-        font_opt = Some(box_font.clone()); // needless clone, due to mutable+immutable borrow on same object
+    if let Some(box_font) = font_opt {
+      self.set_node_font(&newnode, &box_font);
+    } else {
+      let mut box_opt = None;
+      if let Some(ref tbox) = self.box_to_absorb {
+        if let Some(box_font) = tbox.get_font() {
+          box_opt = Some(box_font.clone());
+        }
       }
-    }
-    if let Some(font) = font_opt {
-      self.set_node_font(&newnode, &font);
+      if let Some(box_font) = box_opt {
+        self.set_node_font(&newnode, &box_font);
+      }
     }
 
     Ok(newnode)
@@ -383,6 +386,54 @@ impl Document {
       Ok(None)
     }
   }
+
+  /// Closes all nodes until $node becomes the current point.
+  pub fn close_to_node(&mut self, node: &Node, ifopen: bool) {
+    // my $model = $$self{model};
+    // my ($t, @cant_close) = ();
+    // my $n = $$self{node};
+    // my $lastopen;
+    // # go up the tree from current node, till we find $node
+    // while ((($t = $n->getType) != XML_DOCUMENT_NODE) && !$n->isSameNode($node)) {
+    //   push(@cant_close, $n) unless $self->canAutoClose($n);
+    //   $lastopen = $n;
+    //   $n        = $n->parentNode; }
+    // if ($t == XML_DOCUMENT_NODE) {    # Didn't find $node at all!!
+    //   Error('malformed', $model->getNodeQName($node), $self,
+    //     "Attempt to close " . Stringify($node) . ", which isn't open",
+    //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
+    //   return; }
+    // else {                            # Found node.
+    //   Error('malformed', $model->getNodeQName($node), $self,
+    //     "Closing " . Stringify($node) . " whose open descendents do not auto-close",
+    //     "Descendents are " . join(', ', map { Stringify($_) } @cant_close))
+    //     if @cant_close;               # But found has intervening non-auto-closeable nodes!!
+    //   $self->closeNode_internal($lastopen) if $lastopen; }
+    return;
+  }
+
+  // Closes all nodes until $node is closed.
+  pub fn close_node(&mut self, node: &Node) {
+    // my $model = $$self{model};
+    // my ($t, @cant_close) = ();
+    // my $n = $$self{node};
+    // while ((($t = $n->getType) != XML_DOCUMENT_NODE) && !$n->isSameNode($node)) {
+    //   push(@cant_close, $n) unless $self->canAutoClose($n);
+    //   $n = $n->parentNode; }
+    // if ($t == XML_DOCUMENT_NODE) {    # Didn't find $qname at all!!
+    //   Error('malformed', $model->getNodeQName($node), $self,
+    //     "Attempt to close " . Stringify($node) . ", which isn't open",
+    //     "Currently in " . $self->getInsertionContext()); }
+    // else {                            # Found node.
+    //                                   # Intervening non-auto-closeable nodes!!
+    //   Error('malformed', $model->getNodeQName($node), $self,
+    //     "Closing " . Stringify($node) . " whose open descendents do not auto-close",
+    //     "Descendents are " . join(', ', map { Stringify($_) } @cant_close))
+    //     if @cant_close;
+    //   $self->closeNode_internal($node); }
+    return;
+  }
+
 
   pub fn can_auto_close(&self, _node: &Node) -> bool {true}
 
@@ -676,7 +727,7 @@ impl Document {
     attributes.insert("font".to_string(), font_mock);
     attributes.remove("mode");
     attributes.remove("stretchy");
-    let node = try!(self.open_element(MATH_TOKEN_NAME, Some(attributes), state));
+    let node = try!(self.open_element(MATH_TOKEN_NAME, Some(attributes), None, state));
 
     // let tbox  = attributes.get("_box").or_insert( LateXML::Box ) // ???
     // let font = $attributes{font} || $box->getFont;
@@ -723,28 +774,39 @@ impl Document {
       && !(node_type == Some(NodeType::TextNode)) // And not appending text in same font.
       && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0)
     {
-      info!("new rule for font distance?")
       // then we'll need to do some open/close to get fonts matched.
-      // node =
-      // self.close_text_internal();    // Close text node, if any.
-      // let mut bestdiff = 99999;
-      // let mut closeto = node;
-      // let mut n = node;
-      // while n.get_type() != NodeType::DocumentNode {
-      // let d = $font->distance(self.getNodeFont($n));
-
-      // if ($d < $bestdiff) {
-      //   $bestdiff = $d;
-      //   $closeto  = $n;
-      //   last if ($d == 0); }
-      // last if (self.model}->getNodeQName($n) ne $FONT_ELEMENT_NAME) || $n->getAttribute('_noautoclose');
-      // $n = $n->parentNode; }
+      let node = self.close_text_internal();    // Close text node, if any.
+      let mut bestdiff = 99999;
+      let mut closeto : Node =  node.clone();
+      let mut n : Node = node.clone();
+      while n.get_type() != Some(NodeType::DocumentNode) {
+        let node_font = match self.get_node_font(&n) {
+          Some(f) => f.clone(),
+          None => Font::text_default()
+        };
+        let d = font.distance(Some(&node_font));
+        if d < bestdiff {
+          bestdiff = d;
+          closeto  = n.clone();
+          if d == 0 || state.model.get_node_qname(&n) != FONT_ELEMENT_NAME || n.get_attribute("_noautoclose").is_some() {
+            break;
+          }
+        }
+        match n.get_parent() {
+          Some(p) => {n = p}
+          None => break
+        }
+      }
 
       // Move to best starting point for this text.
-      // if closeto != node {
-      //   self.close_to_node(closeto);
-      // }
-      // self.open_element($FONT_ELEMENT_NAME, font => $font, _fontswitch => 1) if $bestdiff > 0; // Open if needed.
+      if closeto.to_hashable() != node.to_hashable() {
+        self.close_to_node(&closeto, false);
+      }
+      if bestdiff > 0 {
+        try!(
+          self.open_element(FONT_ELEMENT_NAME, Some(string_map!("_fontswitch" => "true")), Some(font), state) // Open if needed.
+        );
+      }
     }
 
     // Finally, insert the darned text.
@@ -959,7 +1021,7 @@ impl Document {
     // Else, if we can create an intermediate node that accepts $qname, we'll do that.
     } else if let Some(inter) = self.can_contain_indirect(&cur_qname, qname, state) {
       if (inter != qname) && (inter != cur_qname) {
-        try!(self.open_element(&inter, None, state));//font => self.getNodeFont(self.node}));
+        try!(self.open_element(&inter, None, None, state));//font => self.getNodeFont(self.node}));
         return self.find_insertion_point(qname, state); // And retry insertion (should work now).
       }
     } else { // Now we're getting more desparate...
