@@ -23,8 +23,8 @@ static FORCE_SERIES : i8 = 0x2;
 static FORCE_SHAPE : i8  = 0x4;
 
 lazy_static! {
-  static ref LATIN_LETTER_RE : Regex = Regex::new(r"^[\p{Latin}&&\pL]}$").unwrap();
-  static ref GREEK_LETTER_RE : Regex = Regex::new(r"^[\p{Greek}&&\pL]}$").unwrap();
+  static ref LATIN_LETTER_RE : Regex = Regex::new(r"^[\p{Latin}&&\pL]$").unwrap();
+  static ref GREEK_LETTER_RE : Regex = Regex::new(r"^[\p{Greek}&&\pL]$").unwrap();
   static ref UPPER_LETTER_RE : Regex = Regex::new(r"^[\p{Lu}]$").unwrap();
   static ref DIGIT_LETTER_RE : Regex = Regex::new(r"^[\p{N}]$").unwrap();
 }
@@ -216,7 +216,6 @@ impl Font {
   pub fn specialize(&self, text: &str) -> Self {
     let mut new = self.clone();
     if text.is_empty() {return new}    // ?
-    info!("Specializing on text {:?} with font {:?}", text, &self);
     let deffamily = if self.forcefamily.unwrap_or(false) { self.family.clone().unwrap_or(DEFFAMILY.to_string())} else {DEFFAMILY.to_string()};
     let defseries = if self.forceseries.unwrap_or(false) { self.series.clone().unwrap_or(DEFSERIES.to_string())} else {DEFSERIES.to_string()};
     let defshape  = if self.forceshape.unwrap_or(false) { self.shape.clone().unwrap_or(DEFSERIES.to_string())} else {DEFSHAPE.to_string()};
@@ -249,11 +248,11 @@ impl Font {
       if new.family.is_none() || (new.family == Some("math".to_string())) {
         new.family = Some(deffamily);
         new.shape  = Some(defshape); // defaults, always.
-      } else { // Other Symbol
-        new.family = Some(deffamily);
-        new.shape  = Some(defshape); // defaults, always.
-        if new.series.is_some() && (new.series != Some(DEFSERIES.to_string())) { new.series = Some(defseries); } // defaults, always.
       }
+    } else { // Other Symbol
+      new.family = Some(deffamily);
+      new.shape  = Some(defshape); // defaults, always.
+      if new.series.is_some() && (new.series != Some(DEFSERIES.to_string())) { new.series = Some(defseries); } // defaults, always.
     }
     return new
   }
