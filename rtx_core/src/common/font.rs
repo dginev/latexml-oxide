@@ -119,19 +119,19 @@ impl Font {
   pub fn distance(&self, other_opt: Option<&Font>) -> i8 {
     if let Some(other) = other_opt {
       let mut distance = 0;
-      if self.family == other.family { distance += 1; }
-      if self.series == other.series { distance += 1; }
-      if self.shape == other.shape { distance += 1; }
-      if self.size == other.size { distance += 1; }
-      if self.color == other.color { distance += 1; }
-      if self.bg == other.bg { distance += 1; }
-      if self.opacity == other.opacity { distance += 1; }
-      if self.encoding == other.encoding { distance += 1; }
-      if self.language == other.language { distance += 1; }
-      if self.mathstyle == other.mathstyle { distance += 1; }
-      if self.forceseries == other.forceseries { distance += 1; }
-      if self.forcefamily == other.forcefamily { distance += 1; }
-      if self.forceshape == other.forceshape { distance += 1; }
+      if self.family != other.family { distance += 1; }
+      if self.series != other.series { distance += 1; }
+      if self.shape != other.shape { distance += 1; }
+      if self.size != other.size { distance += 1; }
+      if self.color != other.color { distance += 1; }
+      if self.bg != other.bg { distance += 1; }
+      if self.opacity != other.opacity { distance += 1; }
+      if self.encoding != other.encoding { distance += 1; }
+      if self.language != other.language { distance += 1; }
+      if self.mathstyle != other.mathstyle { distance += 1; }
+      if self.forceseries != other.forceseries { distance += 1; }
+      if self.forcefamily != other.forcefamily { distance += 1; }
+      if self.forceshape != other.forceshape { distance += 1; }
       distance
     } else { 0 }
   }

@@ -241,7 +241,7 @@ impl Document {
     return;
   }
 
-  pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>, mut font_opt: Option<&Font>, state: &mut State) -> Result<Node> {
+  pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>, font_opt: Option<&Font>, state: &mut State) -> Result<Node> {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
     if self.debug {
       debug!("Open element {:?} at {:?}", qname, self.node.get_name());
@@ -388,32 +388,43 @@ impl Document {
   }
 
   /// Closes all nodes until $node becomes the current point.
-  pub fn close_to_node(&mut self, node: &Node, ifopen: bool) {
-    // my $model = $$self{model};
-    // my ($t, @cant_close) = ();
-    // my $n = $$self{node};
-    // my $lastopen;
-    // # go up the tree from current node, till we find $node
-    // while ((($t = $n->getType) != XML_DOCUMENT_NODE) && !$n->isSameNode($node)) {
-    //   push(@cant_close, $n) unless $self->canAutoClose($n);
-    //   $lastopen = $n;
-    //   $n        = $n->parentNode; }
-    // if ($t == XML_DOCUMENT_NODE) {    # Didn't find $node at all!!
-    //   Error('malformed', $model->getNodeQName($node), $self,
-    //     "Attempt to close " . Stringify($node) . ", which isn't open",
-    //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
-    //   return; }
-    // else {                            # Found node.
-    //   Error('malformed', $model->getNodeQName($node), $self,
-    //     "Closing " . Stringify($node) . " whose open descendents do not auto-close",
-    //     "Descendents are " . join(', ', map { Stringify($_) } @cant_close))
-    //     if @cant_close;               # But found has intervening non-auto-closeable nodes!!
-    //   $self->closeNode_internal($lastopen) if $lastopen; }
-    return;
+  pub fn close_to_node(&mut self, node: &Node, ifopen: bool, state: &mut State) -> Result<()> {
+    let mut cant_close = Vec::new();
+    let mut lastopen : Option<Node> = None;
+    let mut n = self.node.clone();
+    let mut n_type = n.get_type();
+    // go up the tree from current node, till we find `node`
+    while n_type != Some(NodeType::DocumentNode) && &n != node {
+      if !self.can_auto_close(&n) {
+        cant_close.push(n.clone());
+      }
+      lastopen = Some(n.clone());
+      if let Some(p) = n.get_parent() {
+        n = p;
+        n_type = n.get_type();
+      } else {
+        break;
+      }
+    }
+    if n_type == Some(NodeType::DocumentNode) {  // Didn't find $node at all!!
+      error!(target: &format!("malformed:{}", state.model.get_node_qname(node)),
+        "Attempt to close {:?}, which isn't open", node.get_name());
+      //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
+    } else { // Found node.
+      if !cant_close.is_empty() { // But found has intervening non-auto-closeable nodes!!
+        error!(target: &format!("malformed:{}", state.model.get_node_qname(node)), //$self,
+          "Closing {:?} whose open descendents do not auto-close", node.get_name());//,
+          //     "Descendents are " . join(', ', map { Stringify($_) } @cant_close))
+      }
+      if let Some(lastopen_node) = lastopen {
+        try!(self.close_node_internal(&lastopen_node, state));
+      }
+    }
+    Ok(())
   }
 
   // Closes all nodes until $node is closed.
-  pub fn close_node(&mut self, node: &Node) {
+  pub fn close_node(&mut self, node: &Node, state: &mut State) {
     // my $model = $$self{model};
     // my ($t, @cant_close) = ();
     // my $n = $$self{node};
@@ -776,7 +787,7 @@ impl Document {
     {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal();    // Close text node, if any.
-      let mut bestdiff = 99999;
+      let mut bestdiff = 99;
       let mut closeto : Node =  node.clone();
       let mut n : Node = node.clone();
       while n.get_type() != Some(NodeType::DocumentNode) {
@@ -799,8 +810,8 @@ impl Document {
       }
 
       // Move to best starting point for this text.
-      if closeto.to_hashable() != node.to_hashable() {
-        self.close_to_node(&closeto, false);
+      if closeto != node {
+        try!(self.close_to_node(&closeto, false, state));
       }
       if bestdiff > 0 {
         try!(

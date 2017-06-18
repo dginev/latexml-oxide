@@ -3,7 +3,7 @@ use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_core::list::List;
 use rtx_core::document::Document;
 use rtx_core::token;
-use rtx_core::{Core, Digested, BoxOps, TexMode};
+use rtx_core::{Core, Digested, BoxOps};
 use rtx_core::common::error::*;
 use core::DigestionAPI;
 

@@ -3,8 +3,7 @@ use std::path::Path;
 use std::rc::Rc;
 
 use rtx_core::common::{DigestionMode};
-// use common::model::{Model};
-use rtx_core::{Core, Digested, TexMode};
+use rtx_core::{Core, Digested};
 use rtx_core::common::error::*;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::FindOptions;
