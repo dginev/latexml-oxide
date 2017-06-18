@@ -1,8 +1,10 @@
 use std::rc::Rc;
 use state::{State, Scope};
-use Digested;
 use common::object::Object;
 use common::error::*;
+use common::font::Font;
+
+use Digested;
 use token::*;
 use gullet::Gullet;
 use stomach::Stomach;
@@ -46,7 +48,7 @@ pub struct MathPrimitiveOptions {
   pub after_digest: Vec<DigestionClosure>,
   pub is_prefix: bool,
   pub scope: Option<Scope>,
-  pub font : Option<String>, // TODO
+  pub font : Option<Font>,
   pub require_math: bool,
   pub forbid_math: bool,
   pub locked: bool,

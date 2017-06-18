@@ -21,7 +21,7 @@ impl Default for Tbox {
   fn default() -> Self {
     Tbox {
       text: String::new(),
-      font: Font::default(),
+      font: Font::text_default(),
       locator: String::new(),
       properties: HashMap::new(),
       tokens: Vec::new(),
@@ -39,7 +39,7 @@ impl Tbox {
       Some(f) => f,
       None => match state.lookup_font() {
         Some(state_font) => state_font,
-        None => Font::default() // should never happen
+        None => Font::text_default() // should never happen
       }
     };
     // let locator = $STATE->getStomach->getGullet->getLocator unless defined $locator;
@@ -95,7 +95,7 @@ impl BoxOps for Tbox {
     };
     if !text.is_empty() {
       if mode == "math" {
-        try!(document.insert_math_token(text, self.properties, state));//, font => $$self[1], %{ $$self[4] })
+        try!(document.insert_math_token(text, self.properties, Some(&self.font), state));
       } else {
         try!(document.open_text(text, font, state));
       }

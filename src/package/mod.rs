@@ -522,7 +522,7 @@ pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &st
 pub fn merge_font(font: Font, state: &mut State) {
   let mut current_font = match state.remove_value("font") {
     Some(ObjectStore::Font(f)) => *f,
-    _ => Font::default(),
+    _ => Font::text_default(),
   };
   let newfont = current_font.merge(font);
   state.assign_value("font", ObjectStore::Font(Box::new(newfont)), Some(Scope::Local));
@@ -1746,7 +1746,7 @@ macro_rules! DefMathWO_F {
   // EXPERIMENT: Introduce an intermediate case for simple symbols
   // Define a primitive that will create a Box with the appropriate set of XMTok attributes.
   if nargs == 0 {// && !grep { !$$simpletoken_options{$_} } keys %options) {
-    defmath_prim!(cs, paramlist, $presentation.clone(), options, $state);
+    defmath_prim!(cs, paramlist, $presentation.to_string(), options, $state);
   }
 
   // else {
@@ -1757,11 +1757,10 @@ macro_rules! DefMathWO_F {
 macro_rules! defmath_prim {
   ($cs:expr, $_paramlist:expr, $presentation:expr, $options:expr, $state:ident) => ({
   let mut prim_options = $options;
-  let reqfont = prim_options.font.clone();
   prim_options.locked = false;
   prim_options.font = None;
   let scope = prim_options.scope.clone();
-
+  let reqfont = prim_options.font.clone();
   $state.install_definition(ObjectStore::MathPrimitive(Rc::new(MathPrimitive{
     cs: $cs.clone(),
     paramlist: None, // never any parameters, this is intentional
@@ -1769,14 +1768,14 @@ macro_rules! defmath_prim {
       // let locator    = $stomach->getGullet->getLocator;
       let mut properties = HashMap::new(); // TODO: sync with perl master here
       properties.insert("mode".to_owned(), "math".to_owned());
-      // let font       = LookupValue('font')->merge(%$reqfont)->specialize($string);
+      let font       = state.lookup_font().unwrap().merge(reqfont.clone().unwrap()).specialize(&$presentation);
       // foreach my $key (keys %properties) {
       //   my $value = $properties{$key};
       //   if (ref $value eq 'CODE') {
       //     $properties{$key} = &$value(); } }
-      info!("defmath_prim: {}, tokens: {:?}", $presentation, $cs);
+      info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
       Ok(vec![Digested::Box( // TODO: Can we reduce boilerplate?
-        Tbox{ text: $presentation.to_string(), tokens: vec![$cs.clone()], properties: properties, ..Tbox::default()}
+        Tbox{ text: $presentation, tokens: vec![$cs.clone()], font: font, properties: properties, ..Tbox::default()}
       )])
     })),
     options: prim_options,

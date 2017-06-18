@@ -117,6 +117,91 @@ impl Document {
     }
   }
 
+  fn finalize_rec(&mut self, mut node: Node, init_font: &Font, state: &mut State) {
+    let qname = state.model.get_node_qname(&node);
+    let mut declared_font = init_font.clone();
+    let mut desired_font  = init_font.clone();
+    let mut pending_declaration = HashMap::new();
+    if let Some(_comment) = node.get_attribute("_pre_comment") {
+      if let Some(_parent) = node.get_parent() {
+        // parent.insert_before(XML::LibXML::Comment.new(comment), node);
+      }
+    }
+    if let Some(_comment) = node.get_attribute("_comment") {
+      if let Some(_parent) = node.get_parent() {
+        // parent.insert_after(XML::LibXML::Comment.new(comment), node);
+      }
+    }
+
+    let mut keys_to_remove : Vec<String> = Vec::new();
+    let mut attrs_to_set : Vec<(String,String)> = Vec::new();
+
+    {if let Some(font) = self.get_node_font(&node) {
+      desired_font        = font.clone();
+      pending_declaration = desired_font.relative_to(&declared_font);
+      if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some())
+          && !pending_declaration.is_empty() {
+        for (ref key, &(ref value, ref properties)) in &pending_declaration {
+          if state.model.can_have_attribute(&qname, key) {
+            attrs_to_set.push((key.to_string(),value.to_string()));
+            // Merge to set the font currently in effect
+            declared_font = declared_font.merge(properties.clone());
+            keys_to_remove.push(key.to_string());
+          }
+        }
+      }
+    }}
+    for (key, value) in attrs_to_set {
+      self.set_attribute(&mut node, &key, &value);
+    }
+    for key in keys_to_remove {
+      pending_declaration.remove(&key);
+    }
+
+    let new_init_font = &declared_font;
+    for child in node.get_child_nodes() {
+      let child_type = child.get_type();
+      if child_type == Some(NodeType::ElementNode) {
+        let _was_forcefont = child.get_attribute("_force_font");
+        self.finalize_rec(child, new_init_font, state);
+        // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
+        // AND providing node can contain that child's content, we'll collapse it.
+        // if (state.model.get_node_qname(child) == FONT_ELEMENT_NAME)
+        //   && !was_forcefont && !child.hasAttributes) {
+        //   my @grandchildren = child.childNodes;
+        //   if (!grep { !self.canContain(qname, _) } @grandchildren) {
+        //     self.replaceNode(child, @grandchildren); } }
+      }
+      // On the other hand, if the font declaration has NOT been effected,
+      // We'll need to put an extra wrapper around the text!
+      // else if child_type == Some(NodeType::TextNode) {
+      //   // Remove any pending declarations that can't be on FONT_ELEMENT_NAME
+      //   for key in pending_declaration.keys().iter() {
+      //     if !self.can_have_attribute(FONT_ELEMENT_NAME, key) {
+      //       pending_declaration.remove(key);
+      //     }
+      //   }
+
+        // if (self.can_contain(qname, FONT_ELEMENT_NAME)
+        //   && scalar(keys %pending_declaration)) {
+        //   // Too late to do wrapNodes?
+        //   my text = self.wrapNodes(FONT_ELEMENT_NAME, child);
+        //   foreach my attr (keys %pending_declaration) {
+        //     self.setAttribute(text, attr => pending_declaration{attr}{value}); }
+        //   self.finalize_rec(text, state);    // Now have to clean up the new node!
+        // }
+      // }
+    }
+
+    // Attributes that begin with (the semi-legal) "_" are for Bookkeeping.
+    // Remove them now.
+    for (name, _) in node.get_attributes() {
+      if name.starts_with('_') {
+        node.remove_attribute(&name);
+      }
+    }
+  }
+
 
   ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   /// Document construction at the Current Insertion Point.
@@ -164,7 +249,7 @@ impl Document {
       }
       results.extend(newly_created); // but return only the most recent set.
 
-      // // Else, plain string in text mode.
+      // Else, plain string in text mode.
       // elsif (!$props{isMath}) {
       //   push(@results, self.openText($box, $props{font} || ($LaTeXML::BOX && $LaTeXML::BOX->getFont))); }
       // // Or plain string in math mode.
@@ -248,7 +333,7 @@ impl Document {
     }
     let point = try!(self.find_insertion_point(qname, state));
     let newnode = try!(self.open_element_at(point, qname,
-      attributes, state));
+      attributes, font_opt, state));
     self.set_node(newnode.clone());
     // Underscore attributes such as _box and _font from LaTeXML-proper are now bookkept in special substructs of Document
     // Connected to the node hash. Ideally should be as quick to recompute natively as it would be to set/get attributes externally via libxml.
@@ -653,97 +738,28 @@ impl Document {
 
   fn prune_xmduals(&self) {}
 
-  fn finalize_rec(&mut self, mut node: Node, init_font: &Font, state: &mut State) {
-    let _qname = state.model.get_node_qname(&node);
-    let declared_font = init_font.clone();
-    let desired_font  = init_font.clone();
-    // let mut pending_declaration = HashMap::new();
-    if let Some(_comment) = node.get_attribute("_pre_comment") {
-      if let Some(_parent) = node.get_parent() {
-        // parent.insert_before(XML::LibXML::Comment.new(comment), node);
-      }
-    }
-    if let Some(_comment) = node.get_attribute("_comment") {
-      if let Some(_parent) = node.get_parent() {
-        // parent.insert_after(XML::LibXML::Comment.new(comment), node);
-      }
-    }
-
-    if let Some(font) = self.get_node_font(&node) {
-    // info!("Node {:?} had a set font {:?}", self.document.node_to_string(&node), font);
-    //   desired_font        = self{node_fonts}{font_attr};
-    //   %pending_declaration = desired_font.relativeTo(declared_font);
-    //   if ((node.hasChildNodes || node.getAttribute("_force_font"))
-    //     && scalar(keys %pending_declaration)) {
-    //     foreach my attr (keys %pending_declaration) {
-    //       if (model.canHaveAttribute(qname, attr)) {
-    //         self.setAttribute(node, attr => pending_declaration{attr}{value});
-    //         # Merge to set the font currently in effect
-    //         declared_font = declared_font.merge(%{ pending_declaration{attr}{properties} });
-    //         delete pending_declaration{attr}; } }
-    }
-    let new_init_font = &declared_font;
-    for child in node.get_child_nodes() {
-      let child_type = child.get_type();
-      if child_type == Some(NodeType::ElementNode) {
-        let _was_forcefont = child.get_attribute("_force_font");
-        self.finalize_rec(child, new_init_font, state);
-        // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
-        // AND providing node can contain that child's content, we'll collapse it.
-        // if (state.model.get_node_qname(child) == FONT_ELEMENT_NAME)
-        //   && !was_forcefont && !child.hasAttributes) {
-        //   my @grandchildren = child.childNodes;
-        //   if (!grep { !self.canContain(qname, _) } @grandchildren) {
-        //     self.replaceNode(child, @grandchildren); } }
-      }
-      // On the other hand, if the font declaration has NOT been effected,
-      // We'll need to put an extra wrapper around the text!
-      // else if child_type == Some(NodeType::TextNode) {
-      //   // Remove any pending declarations that can't be on FONT_ELEMENT_NAME
-      //   for key in pending_declaration.keys().iter() {
-      //     if !self.can_have_attribute(FONT_ELEMENT_NAME, key) {
-      //       pending_declaration.remove(key);
-      //     }
-      //   }
-
-        // if (self.can_contain(qname, FONT_ELEMENT_NAME)
-        //   && scalar(keys %pending_declaration)) {
-        //   // Too late to do wrapNodes?
-        //   my text = self.wrapNodes(FONT_ELEMENT_NAME, child);
-        //   foreach my attr (keys %pending_declaration) {
-        //     self.setAttribute(text, attr => pending_declaration{attr}{value}); }
-        //   self.finalize_rec(text, state);    // Now have to clean up the new node!
-        // }
-      // }
-    }
-
-    // Attributes that begin with (the semi-legal) "_" are for Bookkeeping.
-    // Remove them now.
-    for (name, _) in node.get_attributes() {
-      if name.starts_with('_') {
-        node.remove_attribute(&name);
-      }
-    }
-  }
-
-  pub fn insert_math_token(&mut self, text: &str, mut attributes: HashMap<String, String>, state: &mut State) -> Result<Node> {
+  pub fn insert_math_token(&mut self, text: &str, mut attributes: HashMap<String, String>, font_opt: Option<&Font>, state: &mut State) -> Result<Node> {
     attributes.entry("role".to_string()).or_insert("UNKNOWN".to_string());
 
-    // MOCK FOR NOW TODO Flesh out
-    let font_mock = match attributes.get("role").unwrap_or(&"UNKNOWN".to_string()).as_str() {
-      "UNKNOWN" => "serif italic",
-      "ADDOP" => "serif",
-      _ => "serif"
-    }.to_string();
-    attributes.insert("font".to_string(), font_mock);
+    let font = match font_opt {
+      Some(f) => f.clone(),
+      None => match &self.box_to_absorb {
+        &Some(ref tbox) => match tbox.get_font() {
+          Some(f) => f.clone(),
+          None => Font::math_default() // should never happen?
+        },
+        &None => Font::math_default() // should never happen?
+      }
+    };
     attributes.remove("mode");
     attributes.remove("stretchy");
     let node = try!(self.open_element(MATH_TOKEN_NAME, Some(attributes), None, state));
 
     // let tbox  = attributes.get("_box").or_insert( LateXML::Box ) // ???
-    // let font = $attributes{font} || $box->getFont;
-    // self.setNodeFont($node, $font);
-    // self.setNodeBox($node, $box);
+    self.set_node_font(&node, &font);
+    if let Some(digested) = self.box_to_absorb.clone() {
+      self.set_node_box(&node, digested);
+    }
     try!(self.open_math_text_internal(text, state));
     try!(self.close_node_internal(&node, state));    // Should be safe.
     Ok(self.node.clone())
@@ -765,7 +781,6 @@ impl Document {
   ///  AND, we've assumed that "font" names the relevant attribute!!!]
 
   pub fn open_text(&mut self, text: &str, font: &Font, state: &mut State) -> Result<Option<&Node>> {
-    // TODO: font arg
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
@@ -1172,10 +1187,14 @@ impl Document {
   /// This opens a new element at the _specified_ point, rather than the current insertion point.
   /// This is useful during document rearrangement or augmentation that may be needed later
   /// in the process.
-  pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
+  pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>,
+                         font_opt: Option<&Font>, state: &mut State) -> Result<Node> {
     let (decoded_ns, tag) = state.model.decode_qname(qname);
+    let mut font_opt_cloned : Option<Font> = match font_opt {// TODO: lifetime trouble forced me into cloning, there is a better way...
+      Some(f) => Some(f.clone()),
+      None => None
+    };
     let mut newnode;
-    // let font = $attributes{_font} || $attributes{font};
     // box = self.node_boxes.get(box);    // may already be the string key
 
     // If this will be the document root node, things are slightly more involved.
@@ -1208,7 +1227,12 @@ impl Document {
       // TODO: Else case
     }
     else {
-      // font = self.get_node_font(ppoint);// unless $font
+      if font_opt.is_none() {
+        font_opt_cloned = match self.get_node_font(&point) { // TODO: lifetime trouble here...
+          Some(f) => Some(f.clone()),
+          None => None
+        };
+      }
       // box  = self.get_node_box(point); // unless $box
       newnode = self.open_element_internal(&mut point, decoded_ns, &tag, state);
     }
@@ -1217,14 +1241,15 @@ impl Document {
       let mut sorted_keys = attrs.keys().map(|k| k.to_string()).collect::<Vec<_>>();
       sorted_keys.sort();
       for key in &sorted_keys {
-        // TODO: Revisit when font and locator are flushed out
-        // if key == "font" || key == "locator" {
-        //   continue;
-        // }
+        if key == "font" || key == "locator" {
+          continue;
+        }
         self.set_attribute(&mut newnode, key, &attrs[key]);
       }
     }
-    // self.set_nodeFont($newnode, $font) if $font;
+    if let Some(font) = font_opt_cloned {
+      self.set_node_font(&newnode, &font);
+    }
 
     // The .clone on boxes is potentially *VERY SLOW* and a code smell.
     // It can be eventually avoided by using a "memory arena" for all intermediate objects - tokens, boxes, etc.

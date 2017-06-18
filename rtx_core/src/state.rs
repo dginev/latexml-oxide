@@ -644,6 +644,12 @@ impl State {
       _ => None
     }
   }
+  pub fn lookup_mathfont<'font>(&'font self) -> Option<Font> {
+    match self.lookup_value("mathfont") {
+      Some(& ObjectStore::Font(ref f)) => Some(*f.clone()), // TODO: is this clone heavy/slow? We can refactor into refs
+      _ => None
+    }
+  }
 
   pub fn unshift_value(&mut self, key: &str, values: Vec<ObjectStore>) {
     if self.value.get(key).is_none() {

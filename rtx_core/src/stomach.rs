@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use state::{Scope, State, ObjectStore};
 use common::error::*;
+use common::font::Font;
 use {Digested, TexMode};
 use mouth::Mouth;
 use gullet::Gullet;
@@ -431,31 +432,40 @@ impl Stomach {
 
   pub fn begin_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
     self.push_stack_frame(false, state);    // Effectively bgroup
-    // let prevmode = state.lookup_string("MODE");
+    let prevmode = state.lookup_string("MODE");
     let ismath   = mode.ends_with("math");
+    let isdisplay = mode.starts_with("display");
     state.assign_value("MODE", ObjectStore::String(mode.to_string()), Some(Scope::Local));
     state.assign_value("IN_MATH", ObjectStore::Bool(ismath), Some(Scope::Local));
-    // let curfont = state.lookup_font();
-    // if mode == prevmode { }
-    // else if ismath {
+    let curfont = state.lookup_font();
+    if let Some(cf) = curfont {
+      if mode == prevmode { }
+      else if ismath {
       // When entering math mode, we set the font to the default math font,
       // and save the text font for any embedded text.
-      // if let Some(cf) = curfont {
-      //   state.assign_value("savedfont", cf.clone(), Some(Scope::Local));
-      // }
-      // TODO:
-      // state.assign_value(font, state.lookup_value("mathfont").merge(
-      //     color => $curfont->getColor, background => $curfont->getBackground,
-      //     size => $curfont->getSize,
-      //     mathstyle => ($mode =~ /^display/ ? "display" : "text")), Some(Scope::Local));
-    // } else {
-      // When entering text mode, we should set the font to the text font in use before the math
-      // but inherit color and size
-      // TODO:
-      // state.assign_value("font", state.lookup_value("savedfont")->merge(
-      //     color => $curfont->getColor, background => $curfont->getBackground,
-      //     size => $curfont->getSize), Some(Scope::Local));
-    // }
+        state.assign_value("savedfont", ObjectStore::Font(Box::new(cf.clone())), Some(Scope::Local));
+        let new_font = state.lookup_mathfont().unwrap().merge(Font{
+            color: cf.color.clone(),
+            bg: cf.bg.clone(),
+            size: cf.size.clone(),
+            mathstyle: if isdisplay {Some("display".to_string())} else {Some("text".to_string())},..Font::default()});
+        state.assign_value("font", ObjectStore::Font(Box::new(new_font)), Some(Scope::Local));
+      } else {
+        // When entering text mode, we should set the font to the text font in use before the math
+        // but inherit color and size
+        let new_font = if let Some(& ObjectStore::Font(ref saved_font)) = state.lookup_value("savedfont") {
+          Some(saved_font.merge(Font{
+            color: cf.color.clone(),
+            bg: cf.bg.clone(),
+            size: cf.size.clone(),
+            .. Font::default()
+          }))
+        } else { None };
+        if let Some(nf) = new_font {
+          state.assign_value("font", ObjectStore::Font(Box::new(nf)), Some(Scope::Local));
+        }
+      }
+    }
     Ok(())
   }
 
