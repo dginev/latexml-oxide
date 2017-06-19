@@ -18,9 +18,9 @@ static DEFENCODING : &'static str   = "OT1";
 static DEFLANGUAGE : &'static str   = "en";
 static DEFSIZE : i8   = 10; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
 
-static FORCE_FAMILY : i8 = 0x1;
-static FORCE_SERIES : i8 = 0x2;
-static FORCE_SHAPE : i8  = 0x4;
+// static FORCE_FAMILY : i8 = 0x1;
+// static FORCE_SERIES : i8 = 0x2;
+// static FORCE_SHAPE : i8  = 0x4;
 
 lazy_static! {
   static ref LATIN_LETTER_RE : Regex = Regex::new(r"^[\p{Latin}&&\pL]$").unwrap();

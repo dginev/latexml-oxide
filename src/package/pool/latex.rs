@@ -38,7 +38,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
-    after_digest => sub!(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| {
+    after_digest => vec!(afterproc!(_stomach, whatsit, state, {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
         Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
@@ -48,8 +48,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
                 class_opts,
                 vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())],
                 state));
-      Ok(Vec::new())
-    })
+    }))
   );
 
 
@@ -152,7 +151,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       }
       Ok(())
     })),
-    before_digest => sub!(beforeproc!(_stomach, state, { state.assign_value("inPreamble", ObjectStore::Bool(false), None); })),
+    before_digest => vec!(beforeproc!(_stomach, state, { state.assign_value("inPreamble", ObjectStore::Bool(false), None); })),
     // after_digest_begin => |stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
@@ -198,10 +197,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
-      before_digest => sub!(|_stomach: &mut Stomach, state: &mut State| -> Result<Vec<Digested>> {
-        only_preamble("\\usepackage", state);
-        Ok(Vec::new())
-      }),
+      before_digest => vec!(beforeproc!(_stomach, state, { only_preamble("\\usepackage", state); })),
       after_digest => sub!(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Result<Vec<Digested>> {
         let options: Option<&Digested> = whatsit.get_arg(1);
         let packages: Option<&Digested> = whatsit.get_arg(2);

@@ -623,11 +623,11 @@ macro_rules! beforesub {
 #[macro_export]
 macro_rules! beforeproc { // just as beforesub! but with a default return value
   ($stomach:ident, $state:ident, $body:expr) => (
-    move |$stomach:&mut Stomach, $state:&mut State| {
+    Rc::new(move |$stomach:&mut Stomach, $state:&mut State| {
       $body;
       Ok(Vec::new())
     }
-  )
+  ))
 }
 
 #[macro_export]
@@ -641,11 +641,11 @@ macro_rules! aftersub {
 #[macro_export]
 macro_rules! afterproc {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => (
-    move |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $state:&mut State| {
+    Rc::new(move |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $state:&mut State| {
       $body
       Ok(vec![])
     }
-  )
+  ))
 }
 
 
@@ -1000,28 +1000,28 @@ macro_rules! DefPrimitiveII_F(
 
   if options.require_math {
     let cs_name = $cs.get_cs_name();
-    let require_math_closure = Rc::new(beforeproc!(stomach, state, { requireMath_F!(cs_name, state) }));
+    let require_math_closure = beforeproc!(stomach, state, { requireMath_F!(cs_name, state) });
     before_digest_env.push(require_math_closure);
   }
 
   if options.forbid_math {
     let cs_name = $cs.get_cs_name();
-    let forbid_math_closure = Rc::new(beforeproc!(stomach, state, { forbidMath_F!(cs_name, state) }));
+    let forbid_math_closure = beforeproc!(stomach, state, { forbidMath_F!(cs_name, state) });
     before_digest_env.push(forbid_math_closure);
   }
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let begin_mode_closure = Rc::new(beforeproc!(stomach, state, { try!(stomach.begin_mode(&mode_clone, state)); }));
+    let begin_mode_closure = beforeproc!(stomach, state, { try!(stomach.begin_mode(&mode_clone, state)); });
     before_digest_env.push(begin_mode_closure);
   }
   if options.bounded {
-    let bgroup_closure = Rc::new(beforeproc!(stomach, state, { stomach.bgroup(state); }));
+    let bgroup_closure = beforeproc!(stomach, state, { stomach.bgroup(state); });
     before_digest_env.push(bgroup_closure);
   }
   if let Some(chosen_font) = options.font {
-    let merge_font_closure = Rc::new(beforeproc!(stomach, state, {
+    let merge_font_closure = beforeproc!(stomach, state, {
       MergeFont_F!(chosen_font.clone(), state);
-    }));
+    });
     before_digest_env.push(merge_font_closure);
   }
   before_digest_env.extend(options.before_digest);
@@ -1030,11 +1030,11 @@ macro_rules! DefPrimitiveII_F(
   after_digest_env.extend(options.after_digest);
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let end_mode_closure = Rc::new(afterproc!(stomach, whatsit, state, { try!(stomach.end_mode(&mode_clone, state)); }));
+    let end_mode_closure = afterproc!(stomach, whatsit, state, { try!(stomach.end_mode(&mode_clone, state)); });
     after_digest_env.push(end_mode_closure);
   }
   if options.bounded {
-    let egroup_closure = Rc::new(afterproc!(stomach, whatsit,state, { try!(stomach.egroup(state)); }));
+    let egroup_closure = afterproc!(stomach, whatsit,state, { try!(stomach.egroup(state)); });
     after_digest_env.push(egroup_closure);
   }
 
@@ -1371,33 +1371,33 @@ macro_rules! DefEnvironmentI_F (
       before_digest_env.push(mode_closure);
     },
     &None => {
-      let bgroup_closure = Rc::new(beforeproc!(stomach, state, {stomach.bgroup(state);}));
+      let bgroup_closure = beforeproc!(stomach, state, {stomach.bgroup(state);});
       before_digest_env.push(bgroup_closure);
     }
   };
   if options.require_math {
     let require_name = begin_name.clone();
-    let require_math_closure = Rc::new(beforeproc!(stomach, state, { requireMath_F!(require_name, state) }));
+    let require_math_closure = beforeproc!(stomach, state, { requireMath_F!(require_name, state) });
     before_digest_env.push(require_math_closure);
   }
   if options.forbid_math {
     let forbid_name = begin_name.clone();
-    let forbid_math_closure = Rc::new(beforeproc!(stomach, state, { forbidMath_F!(forbid_name, state) }));
+    let forbid_math_closure = beforeproc!(stomach, state, { forbidMath_F!(forbid_name, state) });
     before_digest_env.push(forbid_math_closure);
   }
 
   let env_name = name.clone();
-  let current_environment_closure = Rc::new(beforeproc!(stomach, state, {
+  let current_environment_closure = beforeproc!(stomach, state, {
     AssignValue_F!("current_environment", ObjectStore::String(env_name.clone()), None, state);
     let body = T_LETTER!(env_name.clone());
     DefMacroT_F!(T_CS!("\\@currenvir"), None, body.clone(), state);
-  }));
+  });
   before_digest_env.push(current_environment_closure);
 
   if let Some(chosen_font) = options.font {
-    let merge_font_closure = Rc::new(beforeproc!(stomach, state, {
+    let merge_font_closure = beforeproc!(stomach, state, {
       MergeFont_F!(chosen_font.clone(), state);
-    }));
+    });
     before_digest_env.push(merge_font_closure);
   }
   before_digest_env.extend(options.before_digest);
