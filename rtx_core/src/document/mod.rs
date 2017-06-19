@@ -109,16 +109,16 @@ impl Document {
   // It removes the `helper' attributes that store fonts, source box, etc.
   pub fn finalize(&mut self, state: &mut State) {
     self.prune_xmduals();
-    let root = self.document.get_root_element();
+    let mut root = self.document.get_root_element();
     let init_font = Font::text_default();
-    self.finalize_rec(root, &init_font, state);
+    self.finalize_rec(&mut root, &init_font, state);
     if let Some(&ObjectStore::String(ref prefixes)) = state.lookup_value("RDFa_prefixes") {
       self.set_rdfa_prefixes(Some(prefixes.clone()));
     }
   }
 
-  fn finalize_rec(&mut self, mut node: Node, init_font: &Font, state: &mut State) {
-    let qname = state.model.get_node_qname(&node);
+  fn finalize_rec(&mut self, node: &mut Node, init_font: &Font, state: &mut State) {
+    let qname = state.model.get_node_qname(node);
     let mut declared_font = init_font.clone();
     let mut desired_font  = init_font.clone();
     let mut pending_declaration = HashMap::new();
@@ -136,7 +136,7 @@ impl Document {
     let mut keys_to_remove : Vec<String> = Vec::new();
     let mut attrs_to_set : Vec<(String,String)> = Vec::new();
 
-    {if let Some(font) = self.get_node_font(&node) {
+    {if let Some(font) = self.get_node_font(node) {
       desired_font        = font.clone();
       pending_declaration = desired_font.relative_to(&declared_font);
       if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some())
@@ -152,45 +152,51 @@ impl Document {
       }
     }}
     for (key, value) in attrs_to_set {
-      self.set_attribute(&mut node, &key, &value);
+      self.set_attribute(node, &key, &value);
     }
     for key in keys_to_remove {
       pending_declaration.remove(&key);
     }
 
     let new_init_font = &declared_font;
-    for child in node.get_child_nodes() {
+    for mut child in node.get_child_nodes() {
       let child_type = child.get_type();
       if child_type == Some(NodeType::ElementNode) {
-        let _was_forcefont = child.get_attribute("_force_font");
-        self.finalize_rec(child, new_init_font, state);
+        let was_forcefont = child.get_attribute("_force_font").is_some();
+        self.finalize_rec(&mut child, new_init_font, state);
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
-        // if (state.model.get_node_qname(child) == FONT_ELEMENT_NAME)
-        //   && !was_forcefont && !child.hasAttributes) {
-        //   my @grandchildren = child.childNodes;
-        //   if (!grep { !self.canContain(qname, _) } @grandchildren) {
-        //     self.replaceNode(child, @grandchildren); } }
+        if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME)
+           && !was_forcefont && child.get_attributes().is_empty() {
+          let grandchildren = child.get_child_nodes();
+          if grandchildren.iter().filter(|gchild| !self.can_contain(node, &gchild.get_name(), state)).count() == 0 {
+            error!(target: "TODO", "replace_node");
+            // self.replace_node(child, grandchildren);
+          }
+        }
       }
       // On the other hand, if the font declaration has NOT been effected,
       // We'll need to put an extra wrapper around the text!
-      // else if child_type == Some(NodeType::TextNode) {
-      //   // Remove any pending declarations that can't be on FONT_ELEMENT_NAME
-      //   for key in pending_declaration.keys().iter() {
-      //     if !self.can_have_attribute(FONT_ELEMENT_NAME, key) {
-      //       pending_declaration.remove(key);
-      //     }
-      //   }
-
-        // if (self.can_contain(qname, FONT_ELEMENT_NAME)
-        //   && scalar(keys %pending_declaration)) {
-        //   // Too late to do wrapNodes?
+      else if child_type == Some(NodeType::TextNode) {
+        let mut keys_to_remove = Vec::new();
+        // Remove any pending declarations that can't be on FONT_ELEMENT_NAME
+        for key in pending_declaration.keys() {
+          if !self.can_have_attribute(FONT_ELEMENT_NAME, key, state) {
+            keys_to_remove.push(key.to_string());
+          }
+        }
+        for key in keys_to_remove {
+          pending_declaration.remove(&key);
+        }
+        if self.can_contain(node, FONT_ELEMENT_NAME, state) && !pending_declaration.is_empty() {
+          // Too late to do wrapNodes?
+          error!(target: "TODO", "too late to wrapNodes? {:?}", pending_declaration);
         //   my text = self.wrapNodes(FONT_ELEMENT_NAME, child);
         //   foreach my attr (keys %pending_declaration) {
         //     self.setAttribute(text, attr => pending_declaration{attr}{value}); }
         //   self.finalize_rec(text, state);    // Now have to clean up the new node!
-        // }
-      // }
+        }
+      }
     }
 
     // Attributes that begin with (the semi-legal) "_" are for Bookkeeping.
@@ -372,7 +378,7 @@ impl Document {
     while node.get_type() != Some(NodeType::DocumentNode) {
       let t = state.model.get_node_qname(&node);
       // autoclose until node of same name BUT also close nodes opened' for font switches!
-      if t == qname {//&& !(t == FONT_ELEMENT_NAME) && node.get_attribute("_fontswitch").is_some() {
+      if t == qname && !(t == FONT_ELEMENT_NAME && node.get_attribute("_fontswitch").is_some()) {
         break;
       }
       if !self.can_auto_close(&node) {
@@ -797,8 +803,8 @@ impl Document {
     }
 
     if node_type != Some(NodeType::DocumentNode) // If not at document begin
-      && !(node_type == Some(NodeType::TextNode)) // And not appending text in same font.
-      && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0)
+      && !(node_type == Some(NodeType::TextNode) // And not appending text in same font.
+      && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
     {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal();    // Close text node, if any.
@@ -923,7 +929,6 @@ impl Document {
     self.set_node(closeto);
     Ok(())
   }
-
 
   pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Result<Node> {
     if self.node.get_type() == Some(NodeType::TextNode) {

@@ -530,6 +530,11 @@ impl Mouth {
     }
   }
 
+  //**********************************************************************
+  // See The TeXBook, Chapter 8, The Characters You Type, pp.46--47.
+  //**********************************************************************
+
+  /// Read control sequence
   fn handle_escape(&mut self, _c: char, state: &mut State) -> Option<Token> {
     // NOTE: We're using control sequences WITH the \ prepended!!!
     let mut cs = "\\".to_string();  // I need this standardized to be able to lookup tokens (A better way???)
@@ -538,56 +543,56 @@ impl Mouth {
       Some((ch, cc)) => {
         // Knuth, p.46 says that Newlines are converted to spaces,
         // Bit I believe that he does NOT mean within control sequences
-        cs.push_str(&ch.to_string());
-        match cc {
-          Catcode::LETTER => {
-            // For letter, read more letters for csname.
-            loop {
-              match self.get_next_char(state) {
-                None => break,
-                Some((ch, cc)) => {
-                  if cc == Catcode::LETTER {
-                    cs.push_str(&ch.to_string());
-                  } else {
-                    break;
-                  }
+        cs.push(ch);
+        let mut cc_after_letter = None;
+        if cc == Catcode::LETTER {
+          // For letter, read more letters for csname.
+          loop {
+            match self.get_next_char(state) {
+              None => break,
+              Some((ch, cc)) => {
+                if cc == Catcode::LETTER {
+                  cs.push_str(&ch.to_string());
+                } else {
+                  cc_after_letter = Some(cc);
+                  break;
                 }
-              };
-            }
+              }
+            };
+          }
+          self.colno -= 1;
+        }
+
+        if cc_after_letter == Some(Catcode::SPACE) {
+          // We'll skip whitespace here.
+          loop {
+            match self.get_next_char(state) {
+              None => break,
+              Some((_ch, cc)) => {
+                if cc != Catcode::SPACE {
+                  cc_after_letter = Some(cc);
+                  break;
+                }
+              }
+            };
+          }
+          if self.colno < self.nchars {
             self.colno -= 1;
           }
+        }
 
-          Catcode::SPACE => {
-            // We'll skip whitespace here.
-            loop {
-              match self.get_next_char(state) {
-                None => break,
-                Some((_ch, cc)) => {
-                  if cc != Catcode::SPACE {
-                    break;
-                  }
-                }
-              };
-            }
+        if cc_after_letter == Some(Catcode::EOL) {
+          // If we've got an EOL
+          // if in \read mode, leave the EOL to be turned into a T_SPACE
+          // TODO: preserve_newlines NYI
+          // if state.lookup_value("PRESERVE_NEWLINES") > 1 {
+            // else skip it.
+            self.get_next_char(state);
             if self.colno < self.nchars {
               self.colno -= 1;
             }
-          }
-
-          Catcode::EOL => {
-            // If we've got an EOL
-            // if in \read mode, leave the EOL to be turned into a T_SPACE
-            // TODO: preserve_newlines NYI
-            // if state.lookup_value("PRESERVE_NEWLINES") > 1 {
-              // else skip it.
-              self.get_next_char(state);
-              if self.colno < self.nchars {
-                self.colno -= 1;
-              }
-            // }
-          }
-          _ => {}
-        };
+          // }
+        }
       }
     };
     Some(T_CS!(cs))
