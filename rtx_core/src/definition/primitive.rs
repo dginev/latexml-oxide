@@ -86,7 +86,7 @@ impl Definition for Primitive {
     Ok(Vec::new())
   }
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
-    info!("-- primitive invoke for {:?}", self.cs);
+    debug!(target:"primitive", "invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;

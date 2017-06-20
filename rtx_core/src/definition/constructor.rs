@@ -109,7 +109,7 @@ impl Definition for Constructor {
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
   fn invoke_primitive(&self, stomach: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
-    info!("-- constructor invoke for {:?}", self.get_cs());
+    debug!(target: "constructor", "invoke for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing
     // let profiled = state.lookup_value("PROFILING") && ($LaTeXML::CURRENT_TOKEN || $$self{cs});

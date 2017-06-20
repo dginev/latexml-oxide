@@ -120,7 +120,7 @@ impl Document {
   fn finalize_rec(&mut self, node: &mut Node, init_font: &Font, state: &mut State) {
     let qname = state.model.get_node_qname(node);
     let mut declared_font = init_font.clone();
-    let mut desired_font  = init_font.clone();
+    let mut desired_font;
     let mut pending_declaration = HashMap::new();
     if let Some(_comment) = node.get_attribute("_pre_comment") {
       if let Some(_parent) = node.get_parent() {

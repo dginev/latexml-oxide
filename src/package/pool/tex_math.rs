@@ -21,7 +21,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   {
     let mut gullet = stomach.get_gullet_mut();
     let mode      = LookupString_F!("MODE", state);
-    info!("T_MATH primitive current mode: {:?}", mode);
+    debug!("T_MATH primitive current mode: {:?}", mode);
     if mode == "display_math" {
       if try!(gullet.if_next(T_MATH!(), state)) {
         gullet.read_token(state);
