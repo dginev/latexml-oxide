@@ -97,7 +97,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   });
 
   DefMacro!("\\end{}", gullet, args, state, {
-    let name = args[0].to_string();
+    let name : String = args[0].to_string();
     let mut t = T_CS!("\\end{".to_string()+&name+"}");
     if is_defined_token(&t, state) {// Magic CS!
     Ok(vec![t])

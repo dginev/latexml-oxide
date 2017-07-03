@@ -115,19 +115,20 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
   let compiled_expansion_closure = match expansion_opt {
     None => quote!(None),
     Some(expansion) => {
-
       let mut operations :  Vec<quote::Tokens> = Vec::new();
+      if operations.is_empty() {
+        quote!(None)
+      } else {
+        quote!(
+          Some(Rc::new(
+          |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| -> Result<Vec<Token>> {
 
+            #(operations)*
 
-      quote!(
-        Some(Rc::new(
-        |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| -> Result<Vec<Token>>> {
-
-          // #(operations)*
-
-          Ok(())
-        }))
-      )
+            Ok(Vec::new())
+          }))
+        )
+      }
     }
   };
   // We have to jump an extra hoop, since we are forcing the struct-derive mechanism. Once the new procedural macro scheme lands, this begs to be refactored.

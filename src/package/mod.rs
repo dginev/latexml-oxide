@@ -460,7 +460,7 @@ pub fn let_i(token1: &Token, token2: Token, scope: Option<Scope>, state: &mut St
   // AfterAssignment!();
 }
 
-pub fn def_macro_i(cs: Token, paramlist: Option<Parameters>, expansion: ExpansionClosure, state: &mut State) {
+pub fn def_macro_i(cs: Token, paramlist: Option<Parameters>, expansion: Option<ExpansionClosure>, state: &mut State) {
 //       // Optimization: Defer till macro actually used
 //       // if !$cs.is_empty() { // && $options{mathactive}
 //         // $state.assign_mathcode($cs, 0x8000, $options{scope}); }
@@ -887,7 +887,8 @@ macro_rules! LoadClass_F(
 /// Macros and pool come at the end, so that they load seamlessly
 // TODO: package::coerce_cs on $cs
 macro_rules! DefMacroI_F (
-  ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (def_macro_i($cs, $paramlist, Rc::new($expansion), $state))
+  ($cs:expr, $paramlist:expr, None, $state:expr) => (def_macro_i($cs, $paramlist, None, $state));
+  ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (def_macro_i($cs, $paramlist, Some(Rc::new($expansion)), $state))
 );
 
 macro_rules! DefMacroT_F {
@@ -895,7 +896,7 @@ macro_rules! DefMacroT_F {
       DefMacroI_F!($cs, $paramlist, move |_gullet, _args, state| {Ok(vec![$body])}, $state)
     });
     ($cs:expr, $paramlist:expr, $state:ident) => ({
-      DefMacroI_F!($cs, $paramlist, move |_gullet, _args, state| {Ok(vec![])}, $state)
+      DefMacroI_F!($cs, $paramlist, None, $state)
     });
 
 }
@@ -909,7 +910,7 @@ macro_rules! DefMacro_F(
   });
   ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $state:ident) => ({
     let (cs, paramlist) = try!(parse_prototype($proto, $state));
-    def_macro_i(cs, paramlist, Rc::new(|$gullet, $args, $inner_state| {$block}), $state);
+    def_macro_i(cs, paramlist, Some(Rc::new(|$gullet, $args, $inner_state| {$block})), $state);
   })
 );
 

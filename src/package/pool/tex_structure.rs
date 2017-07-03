@@ -123,10 +123,9 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     // is there a more idiomatic way to downgrade a VecDeque into a Vec?
     let def_body = token_args.into_iter().collect::<Vec<Token>>();
     let params = None;
-    let body = Rc::new(move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State| Ok(def_body.clone()));
     info!("Installing definition for cs: {:?}", cs);
     state.install_definition(ObjectStore::Expandable(Rc::new(
-      Expandable{cs: cs, paramlist: params, expansion: body,
+      Expandable{cs: cs, paramlist: params, expansion: SimpleExpansion!(def_body.clone()),
         ..Expandable::default()
       })),
       scope);

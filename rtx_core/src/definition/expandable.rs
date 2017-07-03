@@ -19,7 +19,7 @@ pub struct Expandable {
   pub locator: String,
   pub cs: Token,
   pub paramlist: Option<Parameters>,
-  pub expansion: ExpansionClosure,
+  pub expansion: Option<ExpansionClosure>,
   pub trivial_expansion: Option<Vec<Token>>,
 }
 impl Default for Expandable {
@@ -31,7 +31,7 @@ impl Default for Expandable {
       locator: String::new(),
       cs: T_CS!("Expandable".to_string()),
       paramlist: None,
-      expansion: Rc::new(|_gullet, _args, _state| Ok(Vec::new())),
+      expansion: None,
     }
   }
 }
@@ -75,11 +75,8 @@ impl Definition for Expandable {
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Token>> {
     // Expand the expandable control sequence. This should be carried out by the Gullet.
     // log!("-- expandable invoke for {:?}", self.get_cs());
-    if self.trivial_expansion.is_some() {
-      match self.trivial_expansion {
-        Some(ref expansion) => Ok(expansion.clone()),
-        None => Ok(Vec::new()),
-      }
+    if let Some(ref trivial_expansion) = self.trivial_expansion {
+      Ok(trivial_expansion.clone())
     } else {
       let args = try!(self.read_arguments(gullet, state));
       self.do_invocation(gullet, args, state)
@@ -104,14 +101,17 @@ impl Definition for Expandable {
 
 impl Expandable {
   fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Result<Vec<Token>> {
-    let closure: &ExpansionClosure = &self.expansion;
-    closure(gullet, args, state)
+    if let Some(ref closure) = self.expansion {
+      closure(gullet, args, state)
+    } else { // empty if no expansion
+      Ok(Vec::new())
+    }
   }
 }
 
 #[macro_export]
 macro_rules! SimpleExpansion(($tokens:expr ) => ({
   use std::rc::Rc;
-  Rc::new(move |_gullet, _args, _state| Ok($tokens))
+  Some(Rc::new(move |_gullet, _args, _state| Ok($tokens)))
 }));
 
