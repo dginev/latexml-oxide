@@ -74,8 +74,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //     state.assign_value(current_environment => ToString($_[1])); });
   // Let("\@currenvline", "\@empty");
 
-  DefMacro!("\\begin{}",
-    |gullet, args, state| {
+  DefMacro!("\\begin{}", gullet, args, state, {
     let name = &args[0].to_string();
     let begin_name = "\\begin{".to_string()+name+"}";
     if is_defined(&begin_name, state) {
@@ -97,7 +96,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
   });
 
-  DefMacro!("\\end{}", |gullet, args, state| {
+  DefMacro!("\\end{}", gullet, args, state, {
     let name = args[0].to_string();
     let mut t = T_CS!("\\end{".to_string()+&name+"}");
     if is_defined_token(&t, state) {// Magic CS!

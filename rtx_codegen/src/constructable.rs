@@ -105,6 +105,40 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
     })
 }
 
+pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
+  fn bug() -> ! {
+      panic!("This is a bug. Please open a Github issue \
+             with your DefConstructor invocation");
+  }
+  let options = get_options_from_input("compile_expansion_options",&input.attrs, bug);
+  let expansion_opt = options.as_ref().map(|o| get_option(&o, "expansion", bug));
+  let compiled_expansion_closure = match expansion_opt {
+    None => quote!(None),
+    Some(expansion) => {
+
+      let mut operations :  Vec<quote::Tokens> = Vec::new();
+
+
+      quote!(
+        Some(Rc::new(
+        |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| -> Result<Vec<Token>>> {
+
+          // #(operations)*
+
+          Ok(())
+        }))
+      )
+    }
+  };
+  // We have to jump an extra hoop, since we are forcing the struct-derive mechanism. Once the new procedural macro scheme lands, this begs to be refactored.
+  quote!(
+    impl _DummyE {
+      fn expansion() -> Option<ExpansionClosure> {
+        #compiled_expansion_closure
+      }
+    })
+}
+
 
 fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
   let mut floats: String = String::new();

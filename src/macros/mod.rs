@@ -21,6 +21,25 @@ macro_rules! compile_replacement {
 }
 
 #[macro_export]
+/// Macro for compiling string macro expansions into closures
+/// Approach borrowed from diesel-codegen
+macro_rules! compile_expansion {
+  ($var: ident, $expansion: expr) => ({
+    #[allow(unused_imports)]
+    use rtx_core::definition::ExpansionClosure;
+    #[allow(unused_imports)]
+    use rtx_core::tbox::Tbox;
+    $var = Rc::new(|gullet: &mut Gullet, args: Vec<Tokens>, state:&mut State| { Ok(Vec::new()) }); //$expansion;
+    // #[allow(unused_attributes)]
+    // #[derive(CompileExpansion)]
+    // #[compile_expansion_options(expansion=$expansion)]
+    // struct _DummyE;
+    // $var = _DummyE::expansion();
+  })
+}
+
+
+#[macro_export]
 macro_rules! load_model {
   ($var: expr, $name: expr) => ({
     use std::collections::{HashSet};

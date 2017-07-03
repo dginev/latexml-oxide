@@ -30,6 +30,19 @@ pub fn derive_compile_replacement(input: TokenStream) -> TokenStream {
   }
 }
 
+#[proc_macro_derive(CompileExpansion,attributes(compile_expansion_options))]
+pub fn derive_compile_expansion(input: TokenStream) -> TokenStream {
+  println!("expansion kind: {:?}", input.to_string());
+  // match parse_macro_input(&input.to_string()) {
+  //   Ok(item) => match constructable::compile_expansion(item).to_string().parse() {
+  //     Ok(parsed) => parsed,
+  //     Err(e) => panic!("Failed to compile expansion: {:?}", e)
+  //   },
+  //   Err(e) => panic!("Failed to parse macro input: {:?}", e)
+  // }
+  "".parse().unwrap()
+}
+
 #[proc_macro_derive(LoadModel,attributes(load_model_options))]
 pub fn derive_load_model(input: TokenStream) -> TokenStream {
   match parse_macro_input(&input.to_string()) {

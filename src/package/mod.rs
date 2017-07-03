@@ -903,7 +903,13 @@ macro_rules! DefMacroT_F {
 macro_rules! DefMacro_F(
   ($proto:expr, $expansion:expr, $state:ident) => ({
     let (cs, paramlist) = try!(parse_prototype($proto, $state));
-    DefMacroI_F!(cs, paramlist, $expansion, $state);
+    let expansion;
+    compile_expansion!(expansion, $expansion);
+    def_macro_i(cs, paramlist, expansion, $state);
+  });
+  ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $state:ident) => ({
+    let (cs, paramlist) = try!(parse_prototype($proto, $state));
+    def_macro_i(cs, paramlist, Rc::new(|$gullet, $args, $inner_state| {$block}), $state);
   })
 );
 
@@ -1867,7 +1873,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($cs:expr, $paramlist:expr) => (DefMacroT_F!($cs, $paramlist, $state));
     ($cs:expr, $paramlist:expr, $arg:expr) => (DefMacroT_F!($cs, $paramlist, $arg, $state));
   );
-  macro_rules! DefMacro(($proto:expr, $expansion:expr) => (DefMacro_F!($proto, $expansion, $state)));
+  macro_rules! DefMacro(
+    ($proto:expr, $expansion:expr) => (DefMacro_F!($proto, $expansion, $state));
+    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr) => (DefMacro_F!($proto, $gullet, $args, $inner_state, $block, $state))
+  );
   macro_rules! DefPrimitive(($proto:expr, $replacement:expr, $options:expr) => (DefPrimitive_F!($proto, $replacement, $options, $state)));
 
   macro_rules! DefPrimitiveI(
