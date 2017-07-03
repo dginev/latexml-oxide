@@ -2051,4 +2051,17 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
 )}
 
+
+/// Tokenize($string); Tokenizes the string using the standard cattable, returning a LaTeXML::Core::Tokens
+macro_rules! Tokenize {
+  ($string:expr)=>(Mouth::tokenize($string, None));
+  ($string:expr, $state:ident)=>(Mouth::tokenize($string, Some($state)));
+}
+
+/// TokenizeInternal($string); Tokenizes the string using the internal cattable, returning a LaTeXML::Core::Tokens
+macro_rules! TokenizeInternal {
+  ($string:expr)=>(Mouth::tokenize_internal($string, None));
+  ($string:expr, $state:ident)=>(Mouth::tokenize_internal($string, Some($state)));
+}
+
 pub mod pool;

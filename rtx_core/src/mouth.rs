@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use regex::Regex;
 
 use common::error::*;
-use state::{State, Scope, ObjectStore};
+use state::{State, Scope, Catcodes, ObjectStore, StateOptions};
 use token::*;
 use tokens::Tokens;
 
@@ -73,6 +73,20 @@ impl Default for Mouth {
 }
 
 impl Mouth {
+  pub fn new(text: String, options?) -> Self {
+  my ($class, $string, %options) = @_;
+  $options{source}      = "Anonymous String" unless defined $options{source};
+  $options{shortsource} = "String"           unless defined $options{shortsource};
+  my $self = bless { source => $options{source},
+    shortsource    => $options{shortsource},
+    fordefinitions => ($options{fordefinitions} ? 1 : 0),
+    notes          => ($options{notes} ? 1 : 0),
+  }, $class;
+  $self->openString($string);
+  $self->initialize;
+  return $self; }
+  }
+
   pub fn open<'open>(&'open mut self, content: &str, mut state: &mut State) -> Result<()> {
     match self.foodtype {
       FoodType::File | FoodType::Binding => try!(self.open_file(content)),
@@ -604,4 +618,27 @@ impl Mouth {
     lastid.to_string()
   }
 
+}
+
+// WARNING: These two utilities bind $STATE to simple State objects with known fixed catcodes.
+// The State normally contains ALL the bindings, etc and links to other important objects.
+// We CAN do that here, since we are ONLY tokenizing from a new Mouth, bypassing stomach & gullet.
+// However, be careful with any changes.
+//
+// We also allow for explicitly passing the state in, so that one could memoize state creation
+// using lazy_static doesnt work here as State is too complex an object
+
+pub fn tokenize(text: String, state_opt: Option<State>) -> Tokens {
+  let state = match state_opt {
+    None => State::new(StateOptions{catcodes: Some(Catcodes::Standard), ..StateOptions::default()}),
+    Some(s) => s
+  };
+  Mouth::new(text).read_tokens(None, state)
+}
+pub fn tokenize_internal(text: String, state_opt: Option<State>) -> Tokens {
+  let state = match state_opt {
+    None => State::new(StateOptions{catcodes: Some(Catcodes::Style), ..StateOptions::default()}),
+    Some(s) => s
+  };
+  Mouth::new(text).read_tokens(None, state)
 }
