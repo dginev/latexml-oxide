@@ -2,6 +2,7 @@ use syn;
 use quote;
 use regex::{Captures, Regex};
 use rtx_core::util::text::*;
+use rtx_core::mouth;
 use util::{get_options_from_input, get_option};
 
 // We recognize several special operators:
@@ -73,12 +74,12 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
       // If we refactor away the mutable borrows we do for in-place modification, we can avoid a lot of the
       // cloning, and stay conservative in memory. For now it shouldn't matter.
 
-      // info!("Compiling: \n{:?}", &replacement);
+      // println!("Compiling: \n{:?}", &replacement);
       let mut operations = Vec::new();
 
       operations.extend(compile_replacement_tokens(replacement.to_owned()));
 
-      // info!("Into: \n{}",
+      // println!("Into: \n{}",
       //   operations.iter().map(|x| x.to_string()).collect::<Vec<_>>().join("\n"));
 
       quote!(
@@ -86,7 +87,7 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
         |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
           let mut savenode : Option<Node> = None;
 
-          #(operations)*
+          #(#operations)*
 
           if let Some(snode) = savenode {
             document.set_node(snode);
@@ -115,20 +116,17 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
   let compiled_expansion_closure = match expansion_opt {
     None => quote!(None),
     Some(expansion) => {
-      let mut operations :  Vec<quote::Tokens> = Vec::new();
-      if operations.is_empty() {
-        quote!(None)
-      } else {
-        quote!(
-          Some(Rc::new(
-          |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| -> Result<Vec<Token>> {
-
-            #(operations)*
-
-            Ok(Vec::new())
-          }))
-        )
-      }
+      let performed_expansion = mouth::tokenize_internal(expansion, None).unlist();
+      println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(), performed_expansion);
+      let precompiled_expansion = quote!(
+        Some(Rc::new(
+        |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| -> Result<Vec<Token>> {
+          // Ok(vec!#performed_expansion)
+          Ok(Vec::new())
+        }))
+      );
+      println!("\n\nPCE: {:?}", precompiled_expansion);
+      precompiled_expansion
     }
   };
   // We have to jump an extra hoop, since we are forcing the struct-derive mechanism. Once the new procedural macro scheme lands, this begs to be refactored.
@@ -159,16 +157,16 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
     // ?test(ifclause)(elseclause)
     if LEAD_COND_RE.is_match(&replacement) {
       is_match = true;
-      // info!("Leading conditional at: {:?}", replacement);
+      // println!("Leading conditional at: {:?}", replacement);
       let (bool_branch, if_branch, else_branch) = parse_conditional(&mut replacement);
       let if_branch_compiled = compile_replacement_tokens(if_branch);
       let else_branch_compiled = compile_replacement_tokens(else_branch);
 
       operations.push(quote!(
         if #bool_branch.is_some() {
-          #(if_branch_compiled)*
+          #(#if_branch_compiled)*
         } else {
-          #(else_branch_compiled)*
+          #(#else_branch_compiled)*
         }
       ));
     }
@@ -182,13 +180,13 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       });
 
       if is_match {
-        // info!("-- matched a PI ");
+        // println!("-- matched a PI ");
         // this is annoying since we want translate_avpairs to mutate the replacement string in place,
         // but also want it to run after the replacement... makes `current_tag` in particular look very misplaced
         let av = translate_avpairs(&mut replacement);
         operations.push(quote!(
           let mut av_props : HashMap<String, String> = HashMap::new();
-          #(av)*
+          #(#av)*
           document.insert_pi(#current_tag, Some(av_props));
         ));
 
@@ -209,7 +207,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       replacement = LEAD_OPEN_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
         is_match = true;
         current_tag = refs.at(1).unwrap_or("").to_owned();
-        // info!("-- open tag {:?}", current_tag);
+        // println!("-- open tag {:?}", current_tag);
         String::new()
       });
 
@@ -228,7 +226,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         }
         operations.push(quote!(
           let mut av_props : HashMap<String, String> = HashMap::new();
-          #(av)*
+          #(#av)*
           document.open_element(#current_tag, Some(av_props), None, state);
         ));
         // Empty element?
@@ -249,7 +247,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       replacement = LEAD_CLOSE_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
         is_match = true;
         current_tag = refs.at(1).unwrap_or("").to_owned();
-        // info!("-- close tag {:?}", current_tag);
+        // println!("-- close tag {:?}", current_tag);
         String::new()
       });
       // handle close tag
@@ -276,7 +274,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
       if let Some(eq_index) = replacement.find("=") {
         is_match = true;
-        info!("-- Attribute");
+        println!("-- Attribute");
         let consumed = replacement[0..1 + eq_index].to_owned();
         replacement = replacement[consumed.len()..].to_owned();
       }
@@ -310,7 +308,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
 // The DOM holds the font objects, rather than strings,
 // to resolve relative fonts on output.
 fn translate_string(mut text : &mut String) -> quote::Tokens {
-  // info!("-- ts before: {:?}", text);
+  // println!("-- ts before: {:?}", text);
   let mut values : Vec<quote::Tokens> = Vec::new();
   *text = text.trim_left().to_owned();
   if text.starts_with('\'') || text.starts_with('"') {
@@ -351,7 +349,6 @@ fn translate_string(mut text : &mut String) -> quote::Tokens {
   if !text.is_empty() {
     text.remove(0);
   }
-  // info!("-- ts after: {:?}", text);
 
   let token_values = values.iter().map(|v| {
     let v_str = v.to_string();
@@ -366,7 +363,7 @@ fn translate_string(mut text : &mut String) -> quote::Tokens {
       })
     }
     }).collect::<Vec<_>>();
-  quote!(#(token_values)+*)
+  quote!(#(#token_values)+*)
 }
 
 
@@ -385,9 +382,9 @@ fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
       let else_branch_translated = translate_avpairs(&mut else_branch);
       let op = quote!(
         if #bool_branch.is_some() {
-          #(if_branch_translated)*
+          #(#if_branch_translated)*
         } else {
-          #(else_branch_translated)*
+          #(#else_branch_translated)*
         }
       );
       avs.push(op);
@@ -455,8 +452,8 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
     } else {
       panic!("Missing ')' in &$fcn(...) at '{:?}'\n",text);
     }
-    // info!("text after translate_value: {:?}", text);
-    val = quote!(#fcn( #(args),* ));
+    // println!("text after translate_value: {:?}", text);
+    val = quote!(#fcn( #(#args),* ));
   }
 
   if !is_match {
@@ -507,7 +504,7 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
 
 fn parse_conditional(mut text : &mut String) -> (quote::Tokens, String, String) {
   // Remove leading "?"
-  // info!("-- cond before: {:?}", text);
+  // println!("-- cond before: {:?}", text);
   *text = LEAD_QMARK.replace(text, |_: &Captures| {
     String::new()
   });
@@ -516,7 +513,7 @@ fn parse_conditional(mut text : &mut String) -> (quote::Tokens, String, String) 
   let if_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis));
   if !if_branch.is_empty() {
     let else_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis));
-    // info!("-- cond after: {:?}", text);
+    // println!("-- cond after: {:?}", text);
     (bool_branch, if_branch, else_branch)
   }
   else {

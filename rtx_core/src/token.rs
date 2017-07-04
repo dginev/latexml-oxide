@@ -5,6 +5,7 @@ use common::error::*;
 use state::{State, ObjectStore};
 use {Digested, BoxOps};
 use stomach::Stomach;
+use quote;
 use tokens::Tokens;
 
 #[derive(PartialEq, Clone, Copy, Hash, Debug)]
@@ -28,6 +29,13 @@ pub enum Catcode {
   CS,
   NOTEXPANDED,
   MARKER,
+}
+impl quote::ToTokens for Catcode {
+  fn to_tokens(&self, tokens: &mut quote::Tokens) {
+    tokens.append("Catcode");
+    tokens.append("::");
+    self.name().to_tokens(tokens);
+  }
 }
 impl Catcode {
   pub fn name(&self) -> String {
@@ -156,6 +164,17 @@ impl Catcode {
 pub struct Token {
   pub text: String,
   pub code: Catcode,
+}
+impl quote::ToTokens for Token {
+  fn to_tokens(&self, tokens: &mut quote::Tokens) {
+    tokens.append("Token");
+    tokens.append("{");
+    tokens.append("text:");
+    self.text.to_tokens(tokens);
+    tokens.append(", code: ");
+    self.code.to_tokens(tokens);
+    tokens.append("}")
+  }
 }
 
 #[macro_export]

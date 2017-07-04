@@ -62,8 +62,8 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
         let child_vec : Vec<String> = children.split(",").map(|t| t.to_string()).collect();
 
         operations.push(quote!(
-          model.add_tag_attribute(#tag, vec![#(attr_vec),*]);
-          model.add_tag_content(#tag, vec![#(child_vec),*]);
+          model.add_tag_attribute(#tag, vec![#(#attr_vec),*]);
+          model.add_tag_content(#tag, vec![#(#child_vec),*]);
         ));
       } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
         let classname = caps.at(1).unwrap();
@@ -72,7 +72,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
 
         operations.push(quote!(
           model.set_schema_class(#classname,
-            HashSet::from_iter(vec![#(elements_vec),*].iter().map(|t| t.to_string())));
+            HashSet::from_iter(vec![#(#elements_vec),*].iter().map(|t| t.to_string())));
         ));
       } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
         let prefix = caps.at(1).unwrap();
@@ -92,7 +92,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
   Ok(quote!(
     impl _ModelLoader {
       fn model(model : &mut Model) {
-        #(operations)*
+        #(#operations)*
       }
     }
   ))
@@ -130,7 +130,7 @@ pub fn load_indirect_model(input: syn::MacroInput) -> quote::Tokens {
   quote!(
     impl _ModelLoader {
       fn indirect_model() -> IndirectModel {
-        #(operations)*
+        #(#operations)*
       }
     }
   )

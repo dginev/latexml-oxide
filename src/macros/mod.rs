@@ -25,7 +25,7 @@ macro_rules! compile_replacement {
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_expansion {
   ($var: ident, $expansion: expr) => ({
-    use rtx_core::definition::ReplacementClosure;
+    use rtx_core::definition::ExpansionClosure;
     #[derive(CompileExpansion)]
     #[compile_expansion_options(expansion=$expansion)]
     struct _DummyE;

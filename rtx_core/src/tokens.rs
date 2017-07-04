@@ -1,8 +1,10 @@
 ///! Token List constructors.
 use common::error::*;
 use state::State;
+use quote::ToTokens;
 use token::*;
 use stomach::{Stomach};
+use quote::Tokens as QTokens;
 use Digested;
 
 // Form a Tokens list of Token's
@@ -17,6 +19,13 @@ impl Default for Tokens {
     Tokens {
       tokens: Vec::new()
     }
+  }
+}
+impl ToTokens for Tokens {
+  fn to_tokens(&self, tokens: &mut QTokens) {
+    tokens.append("Tokens {tokens: vec!");
+    self.tokens.to_tokens(tokens);
+    tokens.append("}");
   }
 }
 

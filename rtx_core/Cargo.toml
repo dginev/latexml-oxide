@@ -20,6 +20,7 @@ libxml = "0.0.751"
 log = "0.3"
 ansi_term = "0.9.0"
 clippy = { optional = true, version = "=0.0.133" }
+quote = "0.3.15"
 
 [features]
 lint = ["clippy"]

@@ -12,6 +12,7 @@ extern crate regex;
 extern crate rand;
 extern crate tempfile;
 extern crate time;
+extern crate quote;
 
 #[macro_use]pub mod aux_macros;
 #[macro_use]pub mod common;

@@ -73,18 +73,11 @@ impl Default for Mouth {
 }
 
 impl Mouth {
-  pub fn new(text: String, options?) -> Self {
-  my ($class, $string, %options) = @_;
-  $options{source}      = "Anonymous String" unless defined $options{source};
-  $options{shortsource} = "String"           unless defined $options{shortsource};
-  my $self = bless { source => $options{source},
-    shortsource    => $options{shortsource},
-    fordefinitions => ($options{fordefinitions} ? 1 : 0),
-    notes          => ($options{notes} ? 1 : 0),
-  }, $class;
-  $self->openString($string);
-  $self->initialize;
-  return $self; }
+  pub fn new(text: &str, state: &mut State) -> Self {
+    let mut mouth = Mouth{ foodtype: FoodType::Literal, ..Mouth::default()};
+    mouth.open_literal(text);
+    mouth.initialize(state);
+    mouth
   }
 
   pub fn open<'open>(&'open mut self, content: &str, mut state: &mut State) -> Result<()> {
@@ -628,17 +621,21 @@ impl Mouth {
 // We also allow for explicitly passing the state in, so that one could memoize state creation
 // using lazy_static doesnt work here as State is too complex an object
 
-pub fn tokenize(text: String, state_opt: Option<State>) -> Tokens {
-  let state = match state_opt {
-    None => State::new(StateOptions{catcodes: Some(Catcodes::Standard), ..StateOptions::default()}),
-    Some(s) => s
-  };
-  Mouth::new(text).read_tokens(None, state)
+pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
+  match state_opt {
+    None => {
+      let mut std_state = State::new(StateOptions{catcodes: Some(Catcodes::Standard), ..StateOptions::default()});
+      Mouth::new(text, &mut std_state).read_tokens(None, &mut std_state)
+    },
+    Some(s) => Mouth::new(&text, s).read_tokens(None, s)
+  }
 }
-pub fn tokenize_internal(text: String, state_opt: Option<State>) -> Tokens {
-  let state = match state_opt {
-    None => State::new(StateOptions{catcodes: Some(Catcodes::Style), ..StateOptions::default()}),
-    Some(s) => s
-  };
-  Mouth::new(text).read_tokens(None, state)
+pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
+  match state_opt {
+    None => {
+      let mut sty_state = State::new(StateOptions{catcodes: Some(Catcodes::Style), ..StateOptions::default()});
+      Mouth::new(text, &mut sty_state).read_tokens(None, &mut sty_state)
+    },
+    Some(s) => Mouth::new(&text, s).read_tokens(None, s)
+  }
 }
