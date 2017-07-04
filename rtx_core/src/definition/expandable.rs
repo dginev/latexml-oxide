@@ -102,7 +102,13 @@ impl Definition for Expandable {
 impl Expandable {
   fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Result<Vec<Token>> {
     if let Some(ref closure) = self.expansion {
-      closure(gullet, args, state)
+      // TODO: This args.clone() here looks like a performance smell -- we may want to instead have a flag set for any
+      //       "classic" expansions, which will need the substitution,
+      //        vs the closure-only expansions, which never need a substitution
+      let result = try!(closure(gullet, args.clone(), state));
+      // if we ran a "real" expansion, substitute the parameters (#1) for the corect arguments
+      let substituted_result = Tokens{tokens: result}.substitute_parameters(args);
+      Ok(substituted_result)
     } else { // empty if no expansion
       Ok(Vec::new())
     }

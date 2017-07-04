@@ -106,4 +106,28 @@ impl Tokens {
     }
     level == 0
   }
+
+  // NOTE: Assumes each arg either undef or also Tokens
+  // Using inline accessors on those assumptions
+  pub fn substitute_parameters(self, args: Vec<Tokens>) -> Vec<Token> {
+    let mut result = Vec::new();
+    let mut in_tokens = self.tokens.into_iter();
+    while let Some(token) = in_tokens.next() {
+      if token.code != Catcode::PARAM {    // Non '#'; copy it
+        result.push(token);
+      } else {
+        if let Some(token2) = in_tokens.next() {
+          if token2.code != Catcode::PARAM {    // Not multiple '#'; read arg.
+            let arg_number = token2.text.parse::<usize>().unwrap();
+            let ref arg = args[arg_number - 1];
+            result.extend(arg.clone().unlist());
+          } else {    // Duplicated '#', copy 2nd '#'
+            result.push(token2);
+          }
+        }
+      }
+    }
+    result
+  }
+
 }

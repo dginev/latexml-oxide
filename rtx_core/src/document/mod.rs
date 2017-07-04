@@ -1204,7 +1204,7 @@ impl Document {
 
     // If this will be the document root node, things are slightly more involved.
     if point.get_type() == Some(NodeType::DocumentNode) {    // First node! (?)
-      info!("adding schema declaration, new node will be : {}", tag);
+      debug!("adding schema declaration, new node will be : {}", tag);
       state.model.add_schema_declaration(self);
       newnode = Node::new(&tag, None, &self.document).unwrap();
       self.document.set_root_element(&newnode);
