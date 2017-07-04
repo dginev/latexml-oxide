@@ -121,11 +121,9 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
       let precompiled_expansion = quote!(
         Some(Rc::new(
         |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| -> Result<Vec<Token>> {
-          // Ok(vec!#performed_expansion)
-          Ok(Vec::new())
+          Ok(vec!#performed_expansion)
         }))
       );
-      println!("\n\nPCE: {:?}", precompiled_expansion);
       precompiled_expansion
     }
   };

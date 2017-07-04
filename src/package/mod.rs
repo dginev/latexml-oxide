@@ -893,7 +893,7 @@ macro_rules! DefMacroI_F (
 
 macro_rules! DefMacroT_F {
     ($cs:expr, $paramlist:expr, $body:expr, $state:ident) => ({
-      DefMacroI_F!($cs, $paramlist, move |_gullet, _args, state| {Ok(vec![$body])}, $state)
+      DefMacroI_F!($cs, $paramlist, move |_gullet, _args, _state| {Ok(vec![$body])}, $state)
     });
     ($cs:expr, $paramlist:expr, $state:ident) => ({
       DefMacroI_F!($cs, $paramlist, None, $state)

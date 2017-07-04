@@ -339,8 +339,9 @@ impl Mouth {
     };
     while let Some(token) = self.read_token(state) {
       if has_until && token.get_string() == until_string {
-        tokens.push(token);
+        break;
       }
+      tokens.push(token);
     }
     while !tokens.is_empty() && tokens.last().unwrap().get_catcode() == Catcode::SPACE {    // Remove trailing space
       tokens.pop();

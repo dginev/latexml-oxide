@@ -32,9 +32,32 @@ pub enum Catcode {
 }
 impl quote::ToTokens for Catcode {
   fn to_tokens(&self, tokens: &mut quote::Tokens) {
+    use token::Catcode::*;
+    let verbatim = match *self {
+      ESCAPE => "ESCAPE",
+      BEGIN => "BEGIN",
+      END => "END",
+      MATH => "MATH",
+      ALIGN => "ALIGN",
+      EOL => "EOL",
+      PARAM => "PARAM",
+      SUPER => "SUPER",
+      SUB => "SUB",
+      SPACE => "SPACE",
+      NOTEXPANDED => "NOTEXPANDED",
+      // Non-primitive
+      IGNORE => "IGNORE",
+      LETTER => "LETTER",
+      OTHER => "OTHER",
+      ACTIVE => "ACTIVE",
+      COMMENT => "COMMENT",
+      INVALID => "INVALID",
+      CS => "CS",
+      MARKER => "MARKER",
+    };
     tokens.append("Catcode");
     tokens.append("::");
-    self.name().to_tokens(tokens);
+    tokens.append(verbatim);
   }
 }
 impl Catcode {
@@ -171,7 +194,7 @@ impl quote::ToTokens for Token {
     tokens.append("{");
     tokens.append("text:");
     self.text.to_tokens(tokens);
-    tokens.append(", code: ");
+    tokens.append(".to_string(), code: ");
     self.code.to_tokens(tokens);
     tokens.append("}")
   }
