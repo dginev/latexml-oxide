@@ -117,11 +117,15 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
     None => quote!(None),
     Some(expansion) => {
       let performed_expansion = mouth::tokenize_internal(expansion, None).unlist();
-      println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(), performed_expansion);
+      //println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(), performed_expansion);
+      // TODO: Should "substitute_parameters" be specially performed for runtime-read expansions (via RawTeX?), e.g. when reading external style files?
+      //       should that even be allowed? We can easily pre-compile all of texlive (or the ~200 supported sty and cls files in the ecosystem) once
+      //       and have all expansions handled by this code snippet.
       let precompiled_expansion = quote!(
         Some(Rc::new(
         |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| -> Result<Vec<Token>> {
-          Ok(vec!#performed_expansion)
+          let substituted_result = Tokens{tokens: vec!#performed_expansion}.substitute_parameters(args);
+          Ok(substituted_result)
         }))
       );
       precompiled_expansion
