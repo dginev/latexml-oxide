@@ -2,7 +2,7 @@ use package::*;
 use rtx_core::{BoxOps};
 use rtx_core::document::tag::TagConstructionClosure;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
+ pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
   //======================================================================

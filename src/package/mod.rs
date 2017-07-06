@@ -11,6 +11,7 @@ pub use rtx_core::common::error::*;
 pub use rtx_core::common::font::Font;
 pub use rtx_core::token::*;
 pub use rtx_core::parameter::{Parameter, Parameters};
+pub use rtx_core::mouth;
 pub use rtx_core::mouth::Mouth;
 pub use rtx_core::definition::{Definition, BeforeDigestClosure, DigestionClosure, ConstructionClosure, ExpansionClosure};
 pub use rtx_core::document::Document;
@@ -66,7 +67,7 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
   //   match state.lookup_definition(T_CS!("\@currname")) {
   //     Some(ObjectStore::Expandable(name)) => Digest!(T_CS!("\@currname")).to_string()
   // }
-  // let prevext = options.handleoptions && $STATE->lookupDefinition(T_CS('\@currext')) && ToString(Digest(T_CS('\@currext')));
+  // let prevext = options.handleoptions && $state->lookupDefinition(T_CS('\@currext')) && ToString(Digest(T_CS('\@currext')));
 
 
   // Compute the exact name based on the type
@@ -107,7 +108,7 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
 pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
   match find_file(request, false) { // TODO: type => $options{type}, noltxml => 1
     Some(path) => load_tex_content(core, &path),
-    None => fatal!(Package, MissingFile, request.to_owned()),
+    None => fatal!(Package, MissingFile, request),
     // TODO:
     // Error("missing_file", request, state.get_stomach().get_gullet(),
     // "Can't find TeX file "+request, maybeReportSearchPaths(state)))
@@ -158,6 +159,19 @@ impl Default for RequireOptions {
     }
   }
 }
+
+/// Tokenize($string); Tokenizes the string using the standard cattable, returning a LaTeXML::Core::Tokens
+macro_rules! Tokenize {
+  ($string:expr)=>(mouth::tokenize($string, None));
+  ($string:expr, $state:ident)=>(mouth::tokenize($string, Some($state)));
+}
+
+/// TokenizeInternal($string); Tokenizes the string using the internal cattable, returning a LaTeXML::Core::Tokens
+macro_rules! TokenizeInternal {
+  ($string:expr)=>(mouth::tokenize_internal($string, None));
+  ($string:expr, $state:ident)=>(mouth::tokenize_internal($string, Some($state)));
+}
+
 
 /// This (and `FindFile`) needs to evolve a bit to support reading raw .sty (.def, etc) files from
 /// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of `pathname_find` ???)
@@ -245,16 +259,13 @@ pub fn coerce_cs(t: &str) -> Token {
   T_CS!(t)
 }
 
-pub fn tokenize_internal(some: &str) -> Vec<Token> {
-  vec![T_CS!(some)]
-}
-
 lazy_static! {
   static ref CSNAME_MACRO_REGEX : Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
   static ref CS_REGEX : Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
   static ref SINGLE_CHAR_REGEX : Regex = Regex::new(r"^(\\.)").unwrap();
   static ref ACTIVE_CHAR_REGEX : Regex = Regex::new(r"^(.)").unwrap();
 }
+
 pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option<Parameters>))> {
   let mut cs = T_CS!("\\".to_string()); // Should never happen
   let mut final_proto = if CSNAME_MACRO_REGEX.is_match(proto) {
@@ -278,7 +289,7 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
   } else if ACTIVE_CHAR_REGEX.is_match(proto) {
     // Match an active char
     let captures = ACTIVE_CHAR_REGEX.captures(proto).unwrap();
-    cs = tokenize_internal(captures.at(0).unwrap()).first().unwrap().clone();
+    cs = TokenizeInternal!(captures.at(0).unwrap()).unlist().first().unwrap().clone();
     // also replace in proto
     ACTIVE_CHAR_REGEX.replace(proto, "")
   } else {
@@ -773,6 +784,11 @@ macro_rules! LetI_F {
   ($token1:expr, $token2:expr, $state:ident) => (let_i($token1, $token2, None, $state));
   ($token1:expr, $token2:expr, $scope:expr, $state:ident) => (let_i($token1, $token2, $scope, $state));
 }
+
+
+// macro_rules! Digest_F {
+//   ($tokens:expr, $core:ident) => ($core.stomach.digest($tokens, $core.state);)
+// }
 
 macro_rules! AfterAssignment_F {
   ($state:ident) => ({
@@ -1838,6 +1854,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! IsDefinedToken {($name:expr) => (IsDefinedToken_F!($name, $state))}
   macro_rules! Let {($token1:expr, $token2:expr) => (Let_F!($token1, $token2, $state))}
   macro_rules! LetI {($token1:expr, $token2:expr) => (LetI_F!($token1, $token2, $state))}
+  macro_rules! Digest {($tokens:expr) => (Digest_F!($tokens, $state))}
   macro_rules! AfterAssignment {() => (AfterAssignment_F!($state))}
   macro_rules! MergeFont {($kv:expr) => (MergeFont_F!($kv, $state))}
 
@@ -2050,18 +2067,5 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   );
 
 )}
-
-
-/// Tokenize($string); Tokenizes the string using the standard cattable, returning a LaTeXML::Core::Tokens
-macro_rules! Tokenize {
-  ($string:expr)=>(Mouth::tokenize($string, None));
-  ($string:expr, $state:ident)=>(Mouth::tokenize($string, Some($state)));
-}
-
-/// TokenizeInternal($string); Tokenizes the string using the internal cattable, returning a LaTeXML::Core::Tokens
-macro_rules! TokenizeInternal {
-  ($string:expr)=>(Mouth::tokenize_internal($string, None));
-  ($string:expr, $state:ident)=>(Mouth::tokenize_internal($string, Some($state)));
-}
 
 pub mod pool;

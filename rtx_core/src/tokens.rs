@@ -31,8 +31,7 @@ impl ToTokens for Tokens {
 
 #[macro_export]
 macro_rules! Tokens(($( $tokens:expr ),*) => ({
-  use $crate::tokens::Tokens;
-  Tokens { tokens: vec![$($tokens)*] }
+  Tokens { tokens: vec![$($tokens),*] }
 }));
 
 impl Tokens {

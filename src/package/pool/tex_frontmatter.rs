@@ -11,43 +11,60 @@
 // (ie. frontmatter for each sectional unit)
 
 use package::*;
-pub fn load_definitions(outer_state: &mut State) -> Result<()> {
-  SetupBindingMacros!(outer_state);
+pub fn load_definitions(state: &mut State) -> Result<()> {
+  SetupBindingMacros!(state);
 
-  AssignValue!("frontmatter", ObjectStore::HashOS(HashMap::new()),Some(Scope::Global));
+  AssignValue!("frontmatter", ObjectStore::HashTagData(HashMap::new()),Some(Scope::Global));
 
-  // // // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
-  // // // The content is the result of digesting $tokens.
-  // // // \@add@frontmatter[keys]{tag}[attributes]{content}
-  // // // keys can have
-  // // //   replace (to replace the current entry, if any)
-  // // //   ifnew   (only add if no previous entry)//
+  // // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
+  // // The content is the result of digesting $tokens.
+  // // \@add@frontmatter[keys]{tag}[attributes]{content}
+  // // keys can have
+  // //   replace (to replace the current entry, if any)
+  // //   ifnew   (only add if no previous entry)//
+
+  // TODO: Real signature when we have KeyVals
   // DefPrimitiveI!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
-  //   primitiveproc!(stomach, args, state, {
-  //   let ref keys = args[0];
-  //   let ref tag = args[1];
-  //   let ref attr = args[2];
-  //   let ref tokens = args[3];
-  //   // Digest this as if we're already in the document body!
-  //   let inpreamble  = state.lookup_bool("inPreamble");
-  //   state.assign_value("inPreamble", ObjectStore::Bool(false), None);
-  //   {
-  //     let frontmatter = state.lookup_value("frontmatter");
-  //   // Be careful since the contents may also want to add frontmatter
-  //   // (which should be inside or after this one!)
-  //   // So, we append this entry before digesting
-  // //   if ($keys && $keys->hasKey('replace') && $$frontmatter{$tag}) {    // if replace and previous entries
-  // //     $$frontmatter{$tag} = []; }                                      // Remove previous entries
-  // //   if ($keys && $keys->hasKey('ifnew') && $$frontmatter{$tag}) {      // if ifnew and previous entries
-  // //     return; }                                                        // Skip this one.
-  // //   my $entry = [$tag, undef, 'to-be-filled-in'];
-  // //   push(@{ $$frontmatter{$tag} }, $entry);
-  // //   if ($attr) {
-  // //     $$entry[1] = { $attr->beDigested($stomach)->getHash }; }
-  // //   $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
-  //   }
-  //    state.assign_value("inPreamble", ObjectStore::Bool(inpreamble), None);
-  // }));
+  DefPrimitiveI!("\\@add@frontmatter{}{}",
+    primitiveproc!(stomach, args, state, {
+    // TODO: Real args when we have KeyVals
+    // let ref keys = args[0];
+    // let ref tag = args[1];
+    // let ref attr = args[2];
+    // let ref tokens = args[3];
+
+    let ref tag = args[0];
+    let ref tokens = args[1];
+
+    // Digest this as if we're already in the document body!
+    let inpreamble  = state.lookup_bool("inPreamble");
+    state.assign_value("inPreamble", ObjectStore::Bool(false), None);
+    {
+      let frontmatter = match state.lookup_value("frontmatter") {
+        Some(&ObjectStore::HashTagData(ref frnt)) => frnt,
+        _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen")
+      };
+    // Be careful since the contents may also want to add frontmatter
+    // (which should be inside or after this one!)
+    // So, we append this entry before digesting
+  //   if ($keys && $keys->hasKey('replace') && $$frontmatter{$tag}) {    // if replace and previous entries
+  //     $$frontmatter{$tag} = []; }                                      // Remove previous entries
+  //   if ($keys && $keys->hasKey('ifnew') && $$frontmatter{$tag}) {      // if ifnew and previous entries
+  //     return; }                                                        // Skip this one.
+  //   if ($attr) {
+  //     $$entry[1] = { $attr->beDigested($stomach)->getHash }; }
+  //   $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
+      let mut wrapped_tokens = vec![T_BEGIN!()];
+      wrapped_tokens.extend(tokens.clone().unlist());
+      wrapped_tokens.push(T_END!());
+      // let digested_tokens = Digest_F!(Tokens{tokens: wrapped_tokens}, state);
+      // let entry = (tag.to_string(), None, digested_tokens);
+      // let f_entry = frontmatter.entry(tag.to_string()).or_insert(Vec::new());
+      // f_entry.push(entry);
+
+    }
+     state.assign_value("inPreamble", ObjectStore::Bool(inpreamble), None);
+  }));
 
   // // Append a piece of data to an existing frontmatter item that is contained in <$tag>
   // // If $label is given, look for an item which has label=>$label,

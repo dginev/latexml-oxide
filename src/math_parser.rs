@@ -289,7 +289,7 @@ pub fn realize_xmnode(&self, node: &Node, document: &Document) -> Node {
         if child_nodes.len() == 1 {
           p = child_nodes[0].clone();
         } else {
-          fatal!(XMath, Malformed, "XMath node has DOCUMENT_FRAGMENT for parent!".to_owned()); // xnode,
+          fatal!(XMath, Malformed, "XMath node has DOCUMENT_FRAGMENT for parent!"); // xnode,
         }
       }
       // HACK: replace XMRef's to stray trailing punctution

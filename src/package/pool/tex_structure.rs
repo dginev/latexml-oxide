@@ -1,7 +1,7 @@
 use package::*;
 use rtx_core::document::tag::TagConstructionClosure;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
+ pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
   // No, \documentclass isn't really a primitive -- It's not even TeX!
@@ -118,7 +118,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
     let cs = match token_args.pop_front() {
       Some(cs) => cs,
-      None => fatal!(Macro, Expected, "Bad definition macro - no arguments, when some were expected.".to_owned())
+      None => fatal!(Macro, Expected, "Bad definition macro - no arguments, when some were expected.")
     };
     // is there a more idiomatic way to downgrade a VecDeque into a Vec?
     let def_body = token_args.into_iter().collect::<Vec<Token>>();

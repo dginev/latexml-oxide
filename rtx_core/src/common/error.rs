@@ -21,6 +21,8 @@ pub enum ErrorTarget {
   XMath,
   Document,
   Definition,
+  TexPool,
+  Internal,
 }
 
 #[derive(Debug)]
@@ -34,6 +36,7 @@ pub enum ErrorCategory {
   MissingFile,
   Malformed,
   Libxml,
+  EoF
 }
 
 #[macro_export]
@@ -43,7 +46,7 @@ macro_rules! fatal {
     use $crate::common::error::ErrorTarget::*;
     use $crate::common::error::ErrorCategory::*;
     return Err(RtxError{
-      target: $target, category: $category, message: $message
+      target: $target, category: $category, message: $message.to_string()
     })
   })
 }
@@ -65,7 +68,8 @@ impl fmt::Display for Error {
       Malformed => write!(f, "malformed"),
       Expected => write!(f, "expected"),
       Unexpected => write!(f, "unexpected"),
-      Libxml => write!(f, "libxml error")
+      Libxml => write!(f, "libxml error"),
+      EoF => write!(f, "<EOF>"),
     }
   }
 }
@@ -82,7 +86,8 @@ impl ErrorTrait for Error {
       Malformed => "malformed",
       Expected => "expected",
       Unexpected => "unexpected",
-      Libxml => "libxml error"
+      Libxml => "libxml error",
+      EoF => "<EOF>",
     }
   }
 

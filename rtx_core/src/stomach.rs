@@ -106,7 +106,7 @@ impl Stomach {
         }
         if initdepth < depth {
           // TODO
-          error!(target: "Fatal:internal:<EOF>", "We've fallen off the end, somehow !?!?!?");
+          fatal!(Internal, EoF, "We've fallen off the end, somehow !?!?!?");
           //     Fatal('internal', '<EOF>', self,
           //       "We've fallen off the end, somehow!?!?!",
           //       "Last token " . ToString($LaTeXML::CURRENT_TOKEN)

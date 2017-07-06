@@ -15,7 +15,7 @@ lazy_static!{
   static ref OPTS_REGEX : Regex = Regex::new(r",\s*").unwrap();
 }
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
+ pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
   LoadPool!("TeX");
 

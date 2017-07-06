@@ -377,7 +377,7 @@ impl Gullet {
         if let Some(mouth) = self.mouth.as_mut() {
           mouth.pushback.push_front(token);    // Unread
         } else {
-          fatal!(Mouth, NotFound, "No Mouth in Gullet.read_until_brace".to_owned())
+          fatal!(Mouth, NotFound, "No Mouth in Gullet.read_until_brace")
         }
         break;
       }
@@ -429,7 +429,7 @@ impl Gullet {
       if let Some(mouth) = self.mouth.as_mut() {
         mouth.pushback.push_front(tok);  // Unread
       } else {
-        fatal!(Mouth, NotFound, "No Mouth found in Gullet.if_next".to_owned())
+        fatal!(Mouth, NotFound, "No Mouth found in Gullet.if_next")
       }
     }
     Ok(is_next)
@@ -462,7 +462,7 @@ impl Gullet {
 
               match self.mouth.as_mut() {
                 Some(mouth) => mouth.pushback.push_front(token), // Unread
-                None => fatal!(Mouth, NotFound, "No Mouth in Gullet.read_match".to_owned())
+                None => fatal!(Mouth, NotFound, "No Mouth in Gullet.read_match")
               }
             }
           }
@@ -474,7 +474,7 @@ impl Gullet {
         for matched_token in matched.into_iter().rev() {
           match self.mouth.as_mut() {
             Some(mouth) => mouth.pushback.push_front(matched_token),  // Put 'em back and try next!
-            None => fatal!(Mouth, NotFound, "No Mouth in Gullet.read_match".to_owned())
+            None => fatal!(Mouth, NotFound, "No Mouth in Gullet.read_match")
           }
         }
       }

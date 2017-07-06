@@ -15,7 +15,7 @@ use definition::constructor::Constructor;
 use definition::primitive::Primitive;
 use definition::math_primitive::{MathPrimitive};//MathPrimitiveOptions
 use document::Document;
-use document::tag::TagOptions;
+use document::tag::{TagData,TagOptions};
 use document::resource::Resource;
 
 static CODE_TEX_EXT : &'static str = ".code.tex";
@@ -76,6 +76,7 @@ pub enum ObjectStore {
   HashStr(HashMap<String, String>),
   VecDequeOS(VecDeque<ObjectStore>),
   HashOS(HashMap<String, ObjectStore>),
+  HashTagData(HashMap<String, Vec<TagData>>),
 }
 
 impl fmt::Debug for ObjectStore {
@@ -102,6 +103,7 @@ impl fmt::Debug for ObjectStore {
       VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
       VecDequeOS(ref vec) => write!(f, "VecDequeOS({:?})", vec),
       HashOS(ref hos) => write!(f, "HashOS({:?})", hos),
+      HashTagData(ref htd) => write!(f, "HashTagData({:?})", htd),
       HashStr(ref hstr) => write!(f, "HashStr({:?})", hstr),
     }
   }
