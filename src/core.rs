@@ -9,10 +9,9 @@ use rtx_core::util::pathname;
 use rtx_core::util::pathname::FindOptions;
 use rtx_core::state::{Scope, ObjectStore}; // State
 use rtx_core::definition::expandable::Expandable;
-// use rtx_core::stomach::Stomach;
 use rtx_core::document::Document;
-// use rtx_core::tbox::Tbox;
 use rtx_core::list::List;
+
 use package::*;
 use math_parser::MathParser;
 
