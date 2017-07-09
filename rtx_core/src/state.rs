@@ -582,6 +582,14 @@ impl State {
     }
   }
 
+  pub fn lookup_value_mut<'lv>(&'lv mut self, key: &'lv str) -> Option<&mut ObjectStore> {
+    match self.value.get_mut(key) {
+      None => None,
+      Some(vvec) => vvec.front_mut()
+    }
+  }
+
+
   pub fn remove_value<'lv>(&'lv mut self, key: &'lv str) -> Option<ObjectStore> {
     match self.value.get_mut(key) {
       None => None,

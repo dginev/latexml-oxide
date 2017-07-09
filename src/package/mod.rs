@@ -525,7 +525,6 @@ pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &st
     } + prefix + &ctr;
 
     ancestor.set_attribute(&ctrkey, &ctr);
-    // TODO: the lack of xml:id in output is likely due to the .to_string method in Document
     node.set_attribute("xml:id", &id);
   }
 }

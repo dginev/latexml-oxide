@@ -120,7 +120,7 @@ impl Document {
   fn finalize_rec(&mut self, node: &mut Node, init_font: &Font, state: &mut State) {
     let qname = state.model.get_node_qname(node);
     let mut declared_font = init_font.clone();
-    let mut desired_font;
+    let desired_font;
     let mut pending_declaration = HashMap::new();
     if let Some(_comment) = node.get_attribute("_pre_comment") {
       if let Some(_parent) = node.get_parent() {
@@ -479,7 +479,7 @@ impl Document {
   }
 
   /// Closes all nodes until $node becomes the current point.
-  pub fn close_to_node(&mut self, node: &Node, ifopen: bool, state: &mut State) -> Result<()> {
+  pub fn close_to_node(&mut self, node: &Node, _ifopen: bool, state: &mut State) -> Result<()> {
     let mut cant_close = Vec::new();
     let mut lastopen : Option<Node> = None;
     let mut n = self.node.clone();
@@ -515,7 +515,7 @@ impl Document {
   }
 
   // Closes all nodes until $node is closed.
-  pub fn close_node(&mut self, node: &Node, state: &mut State) {
+  pub fn close_node(&mut self, _node: &Node, _state: &mut State) {
     // my $model = $$self{model};
     // my ($t, @cant_close) = ();
     // my $n = $$self{node};

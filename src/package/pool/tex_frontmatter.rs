@@ -10,7 +10,9 @@
 // Note: could be circumstances where you'd want modular frontmatter?
 // (ie. frontmatter for each sectional unit)
 
+use std::collections::HashSet;
 use package::*;
+use rtx_core::document::tag::TagConstructionClosure;
 pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
@@ -40,10 +42,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     let inpreamble  = state.lookup_bool("inPreamble");
     state.assign_value("inPreamble", ObjectStore::Bool(false), None);
     {
-      let frontmatter = match state.lookup_value("frontmatter") {
-        Some(&ObjectStore::HashTagData(ref frnt)) => frnt,
-        _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen")
-      };
     // Be careful since the contents may also want to add frontmatter
     // (which should be inside or after this one!)
     // So, we append this entry before digesting
@@ -57,11 +55,14 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       let mut wrapped_tokens = vec![T_BEGIN!()];
       wrapped_tokens.extend(tokens.clone().unlist());
       wrapped_tokens.push(T_END!());
-      // let digested_tokens = Digest_F!(Tokens{tokens: wrapped_tokens}, state);
-      // let entry = (tag.to_string(), None, digested_tokens);
-      // let f_entry = frontmatter.entry(tag.to_string()).or_insert(Vec::new());
-      // f_entry.push(entry);
-
+      let digested_tokens = try!(stomach.digest(Tokens{tokens: wrapped_tokens}, state));
+      let entry = (tag.to_string(), None, digested_tokens);
+      let frontmatter = match state.lookup_value_mut("frontmatter") {
+        Some(&mut ObjectStore::HashTagData(ref mut frnt)) => frnt,
+        _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen")
+      };
+      let f_entry = frontmatter.entry(tag.to_string()).or_insert(Vec::new());
+      f_entry.push(entry);
     }
      state.assign_value("inPreamble", ObjectStore::Bool(inpreamble), None);
   }));
@@ -94,31 +95,38 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //     push(@{ $$frontmatter{$tag} }, [$tag, ($label ? { label => $label } : undef), $datum]);
   //     return; });
 
-  // // This is called by afterOpen (by default on <ltx:document>) to
-  // // output any frontmatter that was accumulated.
+  // This is called by afterOpen (by default on <ltx:document>) to
+  // output any frontmatter that was accumulated.
 
-  // my @frontmatter_elements = (qw(ltx:title ltx:toctitle ltx:subtitle
-  //     ltx:creator ltx:date
-  //     ltx:abstract ltx:keywords ltx:classification ltx:acknowledgements));
-  // my %frontmatter_elements = map { ($_ => 1) } @frontmatter_elements;
+  let insert_frontmatter : Vec<TagConstructionClosure> = tagsub!(document, node, state, {
+    let frontmatter_elements : HashSet<String> =
+      ["ltx:title", "ltx:toctitle", "ltx:subtitle", "ltx:creator", "ltx:date",
+      "ltx:abstract", "ltx:keywords", "ltx:classification", "ltx:acknowledgements"].iter().map(|s| s.to_string()).collect();
 
-  // sub insertFrontMatter {
-  //   my ($document) = @_;
-  //   my $frontmatter = LookupValue('frontmatter');
-  //   foreach my $key (@frontmatter_elements, grep { !$frontmatter_elements{$_} } keys %$frontmatter) {
-  //     if (my $list = $$frontmatter{$key}) {
-  //       // Dubious, but assures that frontmatter appears in text mode...
-  //       local $LaTeXML::BOX = Box('', $STATE->lookupValue('font'), '', T_SPACE);
-  //       foreach my $item (@$list) {
-  //         my ($tag, $attr, @stuff) = @$item;
-  //         $document->openElement($tag, ($attr ? %$attr : ()),
-  //           (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
+    let mut frontmatter = match state.remove_value("frontmatter") {
+      Some(ObjectStore::HashTagData(frnt)) => frnt,
+      _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen")
+    };
+    state.assign_value("frontmatter", ObjectStore::HashTagData(HashMap::new()),Some(Scope::Global));
+    let state_keys : HashSet<String> = frontmatter.keys().cloned().collect();
+    let mut all_keys : HashSet<String> = frontmatter_elements.union(&state_keys).cloned().collect();;
+    for key in all_keys.iter() {
+      if let Some(list) = frontmatter.remove(key) {
+        // Dubious, but assures that frontmatter appears in text mode...
+        // TODO:
+        //local $LaTeXML::BOX = Box('', $STATE->lookupValue('font'), '', T_SPACE);
+        for (tag, attr, stuff) in list {
+          try!(document.open_element(&tag, attr, None, state)); // TODO:  //           (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
   //             ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
-  //         map { $document->absorb($_) } @stuff;
-  //         $document->closeElement($tag); } } }
-  //   return; }
+          try!(document.absorb(stuff, state));
 
-  // Tag('ltx:document', 'afterOpen:late' => \&insertFrontMatter);
+          try!(document.close_element(&tag, state));
+        }
+      }
+    }
+  });
+
+  Tag!("ltx:document", after_open_late => insert_frontmatter);
 
   // // Maintain a list of classes that apply to the document root.
   // // This might involve global style options, like leqno.
