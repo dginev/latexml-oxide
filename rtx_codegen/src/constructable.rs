@@ -123,7 +123,7 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
       //       and have all expansions handled by this code snippet.
       let precompiled_expansion = quote!(
         Some(Rc::new(
-        |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| -> Result<Vec<Token>> {
+        |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| -> Result<Tokens> {
           let substituted_result = Tokens{tokens: vec!#performed_expansion}.substitute_parameters(args);
           Ok(substituted_result)
         }))

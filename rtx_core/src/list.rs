@@ -3,6 +3,7 @@ use common::error::*;
 use common::font::Font;
 use {Digested, TexMode, BoxOps};
 use token::Token;
+use tokens::Tokens;
 use state::State;
 use document::Document;
 
@@ -43,8 +44,9 @@ impl BoxOps for List {
     Ok(())
   }
 
-  fn revert(&self) -> Vec<Token> {
-    self.boxes.iter().flat_map(|tbox| tbox.revert()).collect::<Vec<Token>>()
+  fn revert(&self) -> Tokens {
+    let reverted = self.boxes.iter().flat_map(|tbox| tbox.revert().unlist()).collect::<Vec<Token>>();
+    Tokens::new(reverted)
   }
 
   fn get_font(&self) -> Option<&Font> {

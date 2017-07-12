@@ -8,6 +8,7 @@ use util::pathname;
 use common::model::{Model, IndirectModel};
 use common::font::Font;
 use token::{Catcode, Token};
+use tokens::Tokens;
 use parameter::Parameter;
 use definition::Definition;
 use definition::expandable::Expandable;
@@ -60,6 +61,7 @@ pub enum ObjectStore {
   // LaTeXML objects
   Catcode(Catcode),
   Token(Token),
+  Tokens(Tokens),
   Expandable(Rc<Expandable>),
   Primitive(Rc<Primitive>),
   MathPrimitive(Rc<MathPrimitive>),
@@ -89,6 +91,7 @@ impl fmt::Debug for ObjectStore {
       VecString(ref vs) => write!(f, "{:?}", vs),
       Bool(ref b) => write!(f, "{:?}", b),
       Token(ref t) => write!(f, "{:?}", t),
+      Tokens(ref t) => write!(f, "{:?}", t),
       Catcode(ref cc) => write!(f, "{:?}", cc),
       Mathcode(ref cc) => write!(f, "{:?}", cc),
       Expandable(ref _expandable) => write!(f, "<closure for expandable definition>"),

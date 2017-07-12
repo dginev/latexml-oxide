@@ -20,7 +20,7 @@ pub struct Expandable {
   pub cs: Token,
   pub paramlist: Option<Parameters>,
   pub expansion: Option<ExpansionClosure>,
-  pub trivial_expansion: Option<Vec<Token>>,
+  pub trivial_expansion: Option<Tokens>,
 }
 impl Default for Expandable {
   fn default() -> Self {
@@ -72,7 +72,7 @@ impl Definition for Expandable {
     self.locator.clone()
   }
 
-  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Token>> {
+  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     // Expand the expandable control sequence. This should be carried out by the Gullet.
     // log!("-- expandable invoke for {:?}", self.get_cs());
     if let Some(ref trivial_expansion) = self.trivial_expansion {
@@ -100,11 +100,11 @@ impl Definition for Expandable {
 }
 
 impl Expandable {
-  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Result<Vec<Token>> {
+  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Result<Tokens> {
     if let Some(ref closure) = self.expansion {
       closure(gullet, args.clone(), state)
     } else { // empty if no expansion
-      Ok(Vec::new())
+      Ok(Tokens!())
     }
   }
 }

@@ -18,7 +18,7 @@ use document::Document;
 use whatsit::Whatsit;
 use state::{State, ObjectStore};
 
-pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Vec<Token>>>;
+pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Tokens>>;
 pub type PrimitiveClosure = Rc<Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<Digested>>>;
 pub type BeforeDigestClosure = Rc<Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
 pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
@@ -29,7 +29,7 @@ pub type ReplacementClosure = Rc<Fn(&mut Document,
 pub type ConstructionClosure = Rc<Fn(&mut Document, &Whatsit, &mut State)>;
 
 pub trait Definition {
-  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Token>>;
+  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens>;
   fn invoke_primitive(&self, gullet: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>>;
 
   fn get_cs(&self) -> Token;
@@ -68,7 +68,7 @@ pub trait Definition {
   }
 
   // Return the Tokens that would invoke the given definition with arguments.
-  fn invocation(&mut self, args: Vec<Token>, state: &mut State) -> Vec<Token> {
+  fn invocation(&mut self, args: Vec<Token>, state: &mut State) -> Tokens {
 
     let mut invocation_result = Vec::new();
     invocation_result.push(self.get_cs());
@@ -76,12 +76,12 @@ pub trait Definition {
     match *self.get_parameters() {
       None => {}
       Some(ref params) => {
-        for result_token in params.revert_arguments(args, state) {
+        for result_token in params.revert_arguments(args, state).unlist() {
           invocation_result.push(result_token);
         }
       }
     }
-    invocation_result
+    Tokens::new(invocation_result)
   }
 
   fn get_num_args(&self) -> usize {

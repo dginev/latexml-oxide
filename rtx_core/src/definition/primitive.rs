@@ -7,6 +7,7 @@ use state::{State, Scope};
 
 use Digested;
 use token::*;
+use tokens::Tokens;
 use gullet::Gullet;
 use stomach::Stomach;
 use whatsit::Whatsit;
@@ -82,8 +83,8 @@ impl Definition for Primitive {
   }
   fn capture_body(&self) -> bool {false}
 
-  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Vec<Token>> {
-    Ok(Vec::new())
+  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> {
+    Ok(Tokens!())
   }
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
     debug!(target:"primitive", "invoke for {:?}", self.cs);

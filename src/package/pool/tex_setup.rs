@@ -64,8 +64,8 @@ use package::*;
   // ======================================================================
   // Define parsers for standard parameter types.
   DefParameterType!("Plain",
-    reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
-      let mut value: Vec<Token> = try!(gullet.read_arg(state));
+    reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Tokens, state: &mut State| {
+      let mut value: Tokens = try!(gullet.read_arg(state));
       for inner_opt in inner {
         if let Some(inner_p) = inner_opt {
           value = inner_p.reparse_argument(gullet, value, state);
@@ -73,9 +73,9 @@ use package::*;
       }
       Ok(value)
     }),
-    reversion => Some(Rc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
+    reversion => Some(Rc::new(|_gullet: &mut Gullet, _arg: Tokens, _inner: Vec<Option<Parameters>>, _state: &mut State| {
      // let mut reverted_inner;
-     let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+     let mut read_tokens: Tokens = Tokens!(T_BEGIN!());
      // for inner_opt in inner.into_iter() {
      //   reverted_inner = match inner_opt {
      //     Some(inner_p) => inner_p.revert_arguments(arg, state),

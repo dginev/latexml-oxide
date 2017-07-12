@@ -6,7 +6,7 @@ pub struct XPath<'xp> {
   context: Context<'xp>
 }
 
-// pub type XPathClosure = Rc<Fn(&mut Gullet, Vec<Token>, &mut State) -> bool>;
+// pub type XPathClosure = Rc<Fn(&mut Gullet, Tokens, &mut State) -> bool>;
 impl<'xp> XPath<'xp> {
   pub fn new(doc: &'xp Document, _mappings: HashMap<String, String>) -> Self {
     let context = Context::new(doc).unwrap();

@@ -37,6 +37,7 @@ use common::font::Font;
 use state::{State, StateOptions, ObjectStore};
 use stomach::Stomach;
 use token::Token;
+use tokens::Tokens;
 use tbox::Tbox;
 use list::List;
 use whatsit::Whatsit;
@@ -144,7 +145,7 @@ pub trait BoxOps {
     None
   }
   fn get_font(&self) -> Option<&Font>;
-  fn revert(&self) -> Vec<Token>;
+  fn revert(&self) -> Tokens;
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -233,7 +234,7 @@ impl BoxOps for Digested {
     }
   }
 
-  fn revert(&self) -> Vec<Token> {
+  fn revert(&self) -> Tokens {
     match *self {
       Digested::Box(ref b) => b.revert(),
       Digested::List(ref l) => l.revert(),

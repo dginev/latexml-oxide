@@ -8,6 +8,7 @@ use state::{State, ObjectStore};
 use {Digested, BoxOps, TexMode};
 use list::List;
 use token::Token;
+use tokens::Tokens;
 use definition::expandable::Expandable;
 use definition::Definition;
 use document::Document;
@@ -137,9 +138,9 @@ impl BoxOps for Whatsit {
     }
   }
 
-  fn revert(&self) -> Vec<Token> {
+  fn revert(&self) -> Tokens {
     // TODO - mock for now
-    Vec::new()
+    Tokens!()
   }
 
   fn get_font(&self) -> Option<&Font> {

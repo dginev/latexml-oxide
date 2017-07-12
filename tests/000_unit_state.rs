@@ -161,7 +161,6 @@ fn install_definition_and_meaning() {
   let job_definition = Expandable {
     cs: T_CS!("\\jobname"),
     paramlist: None,
-    // TODO: Should we always use Tokens in Expandables as opposed to Vec<Token>?
     //       expansion: SimpleExpansion!(Tokens!(Explode!("name"))),
     expansion: SimpleExpansion!(Explode!("name")),
     locator: "from unit test, line 99".to_owned(),

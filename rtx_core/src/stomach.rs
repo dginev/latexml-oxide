@@ -78,7 +78,7 @@ impl Stomach {
   // Returns a List containing the digested material.
   pub fn digest(&mut self, tokens : Tokens, state: &mut State) -> Result<Digested> {
     self.reading_from_mouth(Mouth::default(), state, Box::new(move |stomach, state| {
-      stomach.get_gullet_mut().unread(tokens.clone().unlist());
+      stomach.get_gullet_mut().unread(tokens);
       state.clear_prefixes(); // prefixes shouldn't apply here.
       let mode;
       {
@@ -234,7 +234,7 @@ impl Stomach {
                meaning.to_string(),//text
                font,
                Some(self.gullet.get_locator()),//locator
-               vec![meaning], // tokens
+               Tokens!(meaning), // tokens
                HashMap::new(), // properties
                state,
              ))]
@@ -258,7 +258,7 @@ impl Stomach {
              meaning.to_string(),//text
              font,
              None, // locator
-             vec![meaning], // tokens
+             Tokens!(meaning), // tokens
              HashMap::new(), // properties
              state,
            ))]
@@ -371,7 +371,7 @@ impl Stomach {
     }
     if let Some(ObjectStore::VecToken(after)) = after {
       if !after.is_empty() {
-        self.gullet.unread(after);
+        self.gullet.unread(Tokens::new(after));
       }
     }
     Ok(())

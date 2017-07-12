@@ -10,7 +10,7 @@ use Digested;
 // Form a Tokens list of Token's
 // Flatten the arguments Token's and Tokens's into plain Token's
 // .... Efficiently! since this seems to be called MANY times.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Tokens {
   pub tokens: Vec<Token>
 }
@@ -30,9 +30,9 @@ impl ToTokens for Tokens {
 }
 
 #[macro_export]
-macro_rules! Tokens(($( $tokens:expr ),*) => ({
-  Tokens { tokens: vec![$($tokens),*] }
-}));
+macro_rules! Tokens(
+  ($( $tokens:expr ),*) => ($crate::tokens::Tokens{ tokens: vec![$($tokens),*] });
+);
 
 impl Tokens {
   pub fn new(tokens : Vec<Token>) -> Self {

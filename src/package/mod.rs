@@ -223,7 +223,7 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
 
 }
 
-pub fn load_class(name: String, options: Vec<String>, after: Vec<Token>, state: &mut State) -> Result<()> {
+pub fn load_class(name: String, options: Vec<String>, after: Tokens, state: &mut State) -> Result<()> {
   input_definitions(name, InputDefinitionOptions {
     extension: Some("cls"),
     after: after,
@@ -399,8 +399,8 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
   }
 }
 
-pub fn revert(_arg: &[Token]) -> Vec<Token> {
-  Vec::new()
+pub fn revert(_arg: &[Token]) -> Tokens {
+  Tokens!()
 }
 
 //======================================================================
@@ -426,7 +426,7 @@ pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
 pub struct InputDefinitionOptions {
   pub extension: Option<&'static str>,
   pub options: Vec<String>,
-  pub after: Vec<Token>,
+  pub after: Tokens,
   pub notex: bool,
   pub noerror: bool,
   pub noltxml: bool,

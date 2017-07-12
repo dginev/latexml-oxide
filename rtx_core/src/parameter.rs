@@ -14,8 +14,8 @@ use state::{State, ObjectStore};
 use mouth::Mouth;
 use Digested;
 
-pub type ReaderClosure = Rc<Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<Token>, &mut State) -> Result<Vec<Token>>>;
-pub type ReversionClosure = Rc<Fn(&mut Gullet, Vec<Token>, Vec<Option<Parameters>>, &mut State) -> Result<Vec<Token>>>;
+pub type ReaderClosure = Rc<Fn(&mut Gullet, Vec<Option<Parameters>>, Tokens, &mut State) -> Result<Tokens>>;
+pub type ReversionClosure = Rc<Fn(&mut Gullet, Tokens, Vec<Option<Parameters>>, &mut State) -> Result<Tokens>>;
 #[derive(Clone)]
 pub struct Parameter {
   pub novalue: bool,
@@ -42,7 +42,7 @@ impl Default for Parameter {
       extra: Vec::new(),
       reader: Rc::new(|_gullet, _args, _extra, _state| {
         warn!("-- Warning: please define a real reader, this is a mock fallback!");
-        Ok(Vec::new())
+        Ok(Tokens!())
       }),
       reversion: None,
       before_digest : None,
@@ -151,7 +151,7 @@ impl Parameter {
   }
 
 
-  pub fn read(&self, gullet: &mut Gullet, _fordefn: &Definition, state: &mut State) -> Result<Vec<Token>> {
+  pub fn read(&self, gullet: &mut Gullet, _fordefn: &Definition, state: &mut State) -> Result<Tokens> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
@@ -162,12 +162,12 @@ impl Parameter {
       let peek = gullet.read_token(state);
       match peek {
         None => {}
-        Some(token) => gullet.unread(vec![token]),
+        Some(tokens) => gullet.unread(Tokens!(tokens)),
       };
       state.begin_semiverbatim(None);
     }
     let closure: &ReaderClosure = &self.reader;
-    let value = try!(closure(gullet, self.extra.clone(), Vec::new(), state));
+    let value = try!(closure(gullet, self.extra.clone(), Tokens!(), state));
     // TODO:
     // $value = $value->neutralize if $$self{semiverbatim} && (ref $value)
     //   && $value->can('neutralize');
@@ -191,7 +191,7 @@ impl Parameter {
       state.begin_semiverbatim(None);
       try!(stomach.reading_from_mouth(Mouth::default(), state, Box::new(move |stomach: &mut Stomach, state : &mut State| {
         let gullet = stomach.get_gullet_mut();
-        gullet.unread(value.clone().unlist());
+        gullet.unread(value);
         let mut tokens = Vec::new();
         loop {
           match gullet.read_x_token(true, true, state) {
@@ -238,8 +238,9 @@ impl Parameters {
     self.params.len()
   }
 
-  pub fn revert_arguments(&self, _args: Vec<Token>, _state: &mut State) -> Vec<Token> {
-    Vec::new()
+  pub fn revert_arguments(&self, _args: Vec<Token>, _state: &mut State) -> Tokens {
+    // TODO
+    Tokens!()
   }
 
   pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Result<Vec<Tokens>> {
@@ -247,7 +248,7 @@ impl Parameters {
     for parameter in &self.params {
       let values = try!(parameter.read(gullet, fordefn, state));
       if !parameter.novalue {
-        args.push(Tokens{tokens: values});
+        args.push(values);
       }
     }
     Ok(args)
@@ -258,14 +259,14 @@ impl Parameters {
     for parameter in &self.params {
       let value = try!(parameter.read(&mut stomach.gullet, fordefn, state));
       if !parameter.novalue {
-        let digested_value = try!(parameter.digest(stomach, Tokens{tokens: value}, fordefn, state));
+        let digested_value = try!(parameter.digest(stomach, value, fordefn, state));
         args.push(digested_value);
       }
     }
     Ok(args)
   }
 
-  pub fn reparse_argument(&self, _gullet: &mut Gullet, _value: Vec<Token>, _state: &mut State) -> Vec<Token> {
-    Vec::new()
+  pub fn reparse_argument(&self, _gullet: &mut Gullet, _value: Tokens, _state: &mut State) -> Tokens {
+    Tokens!()
   }
 }
