@@ -33,7 +33,8 @@ impl Default for Tbox {
 // Exported constructors
 
 impl Tbox {
-  pub fn new(string: String, font_opt: Option<Font>, locator_opt: Option<String>, tokens_opt: Vec<Token>, properties: HashMap<String, String>, state: &mut State) -> Self {
+  pub fn new(string: String, font_opt: Option<Font>, locator_opt: Option<String>, tokens_opt: Vec<Token>,
+             properties: HashMap<String, String>, state: &mut State) -> Self {
 
     let font = match font_opt {
       Some(f) => f,

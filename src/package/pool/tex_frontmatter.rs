@@ -115,6 +115,9 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         // Dubious, but assures that frontmatter appears in text mode...
         // TODO:
         //local $LaTeXML::BOX = Box('', $STATE->lookupValue('font'), '', T_SPACE);
+        document.box_to_absorb = Some(Digested::Box(
+          Tbox::new(String::new(), state.lookup_font(), None, vec![T_SPACE!()], HashMap::new(), state)
+        ));
         for (tag, attr, stuff) in list {
           try!(document.open_element(&tag, attr, None, state)); // TODO:  //           (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
   //             ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
