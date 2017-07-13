@@ -1,7 +1,10 @@
+use rtx_core::TexMode;
+use rtx_core::tbox::Tbox;
+use rtx_core::list::List;
 use package::*;
 
- pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
+ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
+  SetupBindingMacros!(outer_state);
 
   //======================================================================
   // Remaining Mode independent primitives in Ch.24, pp.279-280
@@ -13,15 +16,32 @@ use package::*;
 
   // These are actually TeX primitives, but we treat them as a Whatsit so they
   // remain in the constructed tree.
-  // DefPrimitive('{', sub {
-  //     my ($stomach) = @_;
-  //     $stomach->bgroup;
-  //     my $open   = Box(undef, undef, undef, T_BEGIN);
-  //     my $ismath = $STATE->lookupValue('IN_MATH');
-  //     my @body   = $stomach->digestNextBody();
-  //     List($open, @body, mode => ($ismath ? 'math' : 'text')); });
+  DefPrimitiveI!("{", primitivesub!(stomach, _args, state, {
+    stomach.bgroup(state);
+    let open   = Tbox::new(String::new(), None, None, Tokens!(T_BEGIN!()), HashMap::new(), state);
+    let ismath = state.lookup_bool("IN_MATH");
+    let mode = if ismath {
+      TexMode::Math
+    } else {
+      TexMode::Text
+    };
+    let body   = try!(stomach.digest_next_body(false, state));
+    let mut boxes = vec![Digested::Box(open)];
+    boxes.extend(body);
+    let return_list = List{
+      boxes: boxes,
+      mode: Some(mode),
+      font: None};
 
-  // DefPrimitive('}', sub { my $f = LookupValue('font'); $_[0]->egroup; Box(undef, $f, undef, T_END); });
+    Ok(vec![Digested::List(return_list)])
+  }));
+
+  DefPrimitiveI!("}", primitivesub!(stomach, _args, state, {
+    let f = state.lookup_font();
+    stomach.egroup(state);
+    let return_box = Tbox::new(String::new(), f, None, Tokens!(T_END!()), HashMap::new(), state);
+    Ok(vec![Digested::Box(return_box)])
+  }));
 
   // // These are for those screwy cases where you need to create a group like box,
   // // more than just bgroup, egroup,
@@ -31,8 +51,8 @@ use package::*;
   // DefConstructor('\@hidden@egroup', '', afterDigest => sub { $_[0]->egroup; },
   //   reversion => '');
 
-  DefPrimitiveI!("\\begingroup", primitiveproc!(stomach, _args, inner_state, {stomach.begingroup(inner_state); }));
-  DefPrimitiveI!("\\endgroup",   primitiveproc!(stomach, _args, inner_state, {try!(stomach.endgroup(inner_state)); }));
+  DefPrimitiveI!("\\begingroup", primitiveproc!(stomach, _args, state, {stomach.begingroup(state); }));
+  DefPrimitiveI!("\\endgroup",   primitiveproc!(stomach, _args, state, {try!(stomach.endgroup(state)); }));
 
   // // Debugging aids; Ignored!
   // DefPrimitive('\show Token',     undef);
