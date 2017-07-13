@@ -108,7 +108,7 @@ impl Tokens {
 
   // NOTE: Assumes each arg either undef or also Tokens
   // Using inline accessors on those assumptions
-  pub fn substitute_parameters(self, args: Vec<Tokens>) -> Vec<Token> {
+  pub fn substitute_parameters(self, args: Vec<Tokens>) -> Self {
     let mut result = Vec::new();
     let mut in_tokens = self.tokens.into_iter();
     while let Some(token) = in_tokens.next() {
@@ -126,7 +126,7 @@ impl Tokens {
         }
       }
     }
-    result
+    Tokens::new(result)
   }
 
 }

@@ -14,8 +14,8 @@ use state::{State, ObjectStore};
 use mouth::Mouth;
 use Digested;
 
-pub type ReaderClosure = Rc<Fn(&mut Gullet, Vec<Option<Parameters>>, Tokens, &mut State) -> Result<Tokens>>;
-pub type ReversionClosure = Rc<Fn(&mut Gullet, Tokens, Vec<Option<Parameters>>, &mut State) -> Result<Tokens>>;
+pub type ReaderClosure = Rc<Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<Token>, &mut State) -> Result<Tokens>>;
+pub type ReversionClosure = Rc<Fn(&mut Gullet, Vec<Token>, Vec<Option<Parameters>>, &mut State) -> Result<Tokens>>;
 #[derive(Clone)]
 pub struct Parameter {
   pub novalue: bool,
@@ -167,7 +167,7 @@ impl Parameter {
       state.begin_semiverbatim(None);
     }
     let closure: &ReaderClosure = &self.reader;
-    let value = try!(closure(gullet, self.extra.clone(), Tokens!(), state));
+    let value = try!(closure(gullet, self.extra.clone(), vec![], state));
     // TODO:
     // $value = $value->neutralize if $$self{semiverbatim} && (ref $value)
     //   && $value->can('neutralize');
@@ -191,7 +191,7 @@ impl Parameter {
       state.begin_semiverbatim(None);
       try!(stomach.reading_from_mouth(Mouth::default(), state, Box::new(move |stomach: &mut Stomach, state : &mut State| {
         let gullet = stomach.get_gullet_mut();
-        gullet.unread(value);
+        gullet.unread(value.clone());
         let mut tokens = Vec::new();
         loop {
           match gullet.read_x_token(true, true, state) {

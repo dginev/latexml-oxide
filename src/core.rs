@@ -267,7 +267,7 @@ impl DigestionAPI for Core {
     self.state.install_definition(ObjectStore::Expandable(Rc::new(Expandable{
       cs: T_CS!("\\jobname"),
       paramlist: None,
-      expansion: SimpleExpansion!(Explode!(name_copy)),
+      expansion: SimpleExpansion!(Tokens::new(Explode!(name_copy))),
       ..Expandable::default()
     })), None);
 

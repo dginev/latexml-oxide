@@ -36,7 +36,6 @@ use common::model::Model;
 use common::font::Font;
 use state::{State, StateOptions, ObjectStore};
 use stomach::Stomach;
-use token::Token;
 use tokens::Tokens;
 use tbox::Tbox;
 use list::List;

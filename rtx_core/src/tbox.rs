@@ -1,7 +1,6 @@
 use common::error::*;
 use common::font::Font;
 use {Digested, BoxOps};
-use token::Token;
 use tokens::Tokens;
 use document::Document;
 use state::{ObjectStore, State};

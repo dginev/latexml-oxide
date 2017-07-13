@@ -311,7 +311,7 @@ impl Gullet {
   ///**********************************************************************
   /// Mid-level readers: checking and matching tokens, strings etc.
   ///**********************************************************************
-  /// The following higher-level parsing methods are built upon readToken & unread.
+  /// The following higher-level parsing methods are built upon readToken & `.
   pub fn read_non_space(&mut self, state: &mut State) -> Option<Token> {
     loop {
       match self.read_token(state) {

@@ -439,7 +439,7 @@ impl Default for InputDefinitionOptions {
     InputDefinitionOptions {
       extension: None,
       options: Vec::new(),
-      after: Vec::new(),
+      after: Tokens!(),
       notex: false,
       noerror: false,
       noltxml: false,
@@ -653,7 +653,7 @@ macro_rules! afterproc {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => (
     Rc::new(move |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $state:&mut State| {
       $body
-      Ok(vec![])
+      Ok(Vec::new())
     }
   ))
 }
@@ -908,7 +908,7 @@ macro_rules! DefMacroI_F (
 
 macro_rules! DefMacroT_F {
     ($cs:expr, $paramlist:expr, $body:expr, $state:ident) => ({
-      DefMacroI_F!($cs, $paramlist, move |_gullet, _args, _state| {Ok(vec![$body])}, $state)
+      DefMacroI_F!($cs, $paramlist, move |_gullet, _args, _state| {Ok(Tokens!($body))}, $state)
     });
     ($cs:expr, $paramlist:expr, $state:ident) => ({
       DefMacroI_F!($cs, $paramlist, None, $state)
@@ -1797,7 +1797,7 @@ macro_rules! defmath_prim {
       //     $properties{$key} = &$value(); } }
       info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
       Ok(vec![Digested::Box( // TODO: Can we reduce boilerplate?
-        Tbox{ text: $presentation, tokens: vec![$cs.clone()], font: font, properties: properties, ..Tbox::default()}
+        Tbox{ text: $presentation, tokens: Tokens!($cs.clone()), font: font, properties: properties, ..Tbox::default()}
       )])
     })),
     options: prim_options,

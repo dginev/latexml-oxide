@@ -78,7 +78,7 @@ impl Stomach {
   // Returns a List containing the digested material.
   pub fn digest(&mut self, tokens : Tokens, state: &mut State) -> Result<Digested> {
     self.reading_from_mouth(Mouth::default(), state, Box::new(move |stomach, state| {
-      stomach.get_gullet_mut().unread(tokens);
+      stomach.get_gullet_mut().unread(tokens.clone());
       state.clear_prefixes(); // prefixes shouldn't apply here.
       let mode;
       {

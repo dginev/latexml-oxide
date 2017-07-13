@@ -7,7 +7,6 @@ use common::font::Font;
 use state::{State, ObjectStore};
 use {Digested, BoxOps, TexMode};
 use list::List;
-use token::Token;
 use tokens::Tokens;
 use definition::expandable::Expandable;
 use definition::Definition;

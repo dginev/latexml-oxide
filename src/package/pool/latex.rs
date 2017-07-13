@@ -46,7 +46,7 @@ lazy_static!{
       };
       try!(load_class(whatsit.get_arg(2).unwrap().to_string(),
                 class_opts,
-                vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())],
+                Tokens!(T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())),
                 state));
     }))
   );
@@ -78,7 +78,7 @@ lazy_static!{
     let name = &args[0].to_string();
     let begin_name = "\\begin{".to_string()+name+"}";
     if is_defined(&begin_name, state) {
-      Ok(vec![T_CS!(begin_name)]) // Magic cs!
+      Ok(Tokens!(T_CS!(begin_name))) // Magic cs!
     }
     else {
       let token = T_CS!("\\".to_string() + name);
@@ -92,7 +92,7 @@ lazy_static!{
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
         //(T_CS!("\begingroup"), Invocation(T_CS!("\lx@setcurrenvir"), $env), $token); } });
       }
-      Ok(Vec::new())
+      Ok(Tokens!())
     }
   });
 
@@ -100,13 +100,13 @@ lazy_static!{
     let name : String = args[0].to_string();
     let mut t = T_CS!("\\end{".to_string()+&name+"}");
     if is_defined_token(&t, state) {// Magic CS!
-    Ok(vec![t])
+    Ok(Tokens!(t))
   } else {
     t = T_CS!("\\end".to_string()+&name);
     if is_defined_token(&t, state) {
-      Ok(vec![t, T_CS!("\\endgroup")])
+      Ok(Tokens!(t, T_CS!("\\endgroup")))
     } else {
-      Ok(vec![T_CS!("\\endgroup")])
+      Ok(Tokens!(T_CS!("\\endgroup")))
     }
   }});
 
@@ -236,7 +236,7 @@ lazy_static!{
                       .into_iter()
                       .map(|s| s.to_string()) {
     DefMacroI!(T_CS!(ltxtrigger), None,
-      move |_gullet, _args, _state| Ok(Vec::new())
+      move |_gullet, _args, _state| Ok(Tokens!())
     );
   }
 
@@ -280,7 +280,7 @@ lazy_static!{
       let cs = &args[1].tokens[0];
       let nargs = &args[2];
       let opt = &args[3];
-      let body = args[4].clone().unlist();
+      let body = args[4].clone();
 
       // if (!isDefinable(cs)) {
       //   Info('ignore', $cs, $stomach,

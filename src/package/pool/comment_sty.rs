@@ -55,10 +55,10 @@ use package::*;
     // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
     DefMacroI_F!(T_CS!(format!("\\begin{{{}}}",name)), None, move |gullet, _args, _state| {
         gullet.read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
-        Ok(before_tokens.clone())
+        Ok(Tokens::new(before_tokens.clone()))
       }, state);
     DefMacroI_F!(T_CS!(format!("\\end{{{}}}",name)), None, move |_gullet, _args, _state| {
-      Ok(after_tokens.clone())
+      Ok(Tokens::new(after_tokens.clone()))
     }, state);
 
     Ok(Vec::new())

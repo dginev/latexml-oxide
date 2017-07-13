@@ -55,7 +55,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       let mut wrapped_tokens = vec![T_BEGIN!()];
       wrapped_tokens.extend(tokens.clone().unlist());
       wrapped_tokens.push(T_END!());
-      let digested_tokens = try!(stomach.digest(Tokens{tokens: wrapped_tokens}, state));
+      let digested_tokens = try!(stomach.digest(Tokens::new(wrapped_tokens), state));
       let entry = (tag.to_string(), None, digested_tokens);
       let frontmatter = match state.lookup_value_mut("frontmatter") {
         Some(&mut ObjectStore::HashTagData(ref mut frnt)) => frnt,
@@ -116,7 +116,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         // TODO:
         //local $LaTeXML::BOX = Box('', $STATE->lookupValue('font'), '', T_SPACE);
         document.box_to_absorb = Some(Digested::Box(
-          Tbox::new(String::new(), state.lookup_font(), None, vec![T_SPACE!()], HashMap::new(), state)
+          Tbox::new(String::new(), state.lookup_font(), None, Tokens!(T_SPACE!()), HashMap::new(), state)
         ));
         for (tag, attr, stuff) in list {
           try!(document.open_element(&tag, attr, None, state)); // TODO:  //           (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')

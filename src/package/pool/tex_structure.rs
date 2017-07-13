@@ -33,7 +33,7 @@ use rtx_core::document::tag::TagConstructionClosure;
                     extension: Some("pool"),
                     ..InputDefinitionOptions::default()
                   }, state));
-                 Ok(vec![T_CS!(ltxtrigger)])
+                 Ok(Tokens!(T_CS!(ltxtrigger)))
                });
   }
 
@@ -125,7 +125,7 @@ use rtx_core::document::tag::TagConstructionClosure;
     let params = None;
     info!("Installing definition for cs: {:?}", cs);
     state.install_definition(ObjectStore::Expandable(Rc::new(
-      Expandable{cs: cs, paramlist: params, expansion: SimpleExpansion!(def_body.clone()),
+      Expandable{cs: cs, paramlist: params, expansion: SimpleExpansion!(Tokens::new(def_body.clone())),
         ..Expandable::default()
       })),
       scope);

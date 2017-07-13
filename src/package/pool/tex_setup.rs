@@ -64,7 +64,7 @@ use package::*;
   // ======================================================================
   // Define parsers for standard parameter types.
   DefParameterType!("Plain",
-    reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Tokens, state: &mut State| {
+    reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       let mut value: Tokens = try!(gullet.read_arg(state));
       for inner_opt in inner {
         if let Some(inner_p) = inner_opt {
@@ -73,9 +73,9 @@ use package::*;
       }
       Ok(value)
     }),
-    reversion => Some(Rc::new(|_gullet: &mut Gullet, _arg: Tokens, _inner: Vec<Option<Parameters>>, _state: &mut State| {
+    reversion => Some(Rc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
      // let mut reverted_inner;
-     let mut read_tokens: Tokens = Tokens!(T_BEGIN!());
+     let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
      // for inner_opt in inner.into_iter() {
      //   reverted_inner = match inner_opt {
      //     Some(inner_p) => inner_p.revert_arguments(arg, state),
@@ -84,7 +84,7 @@ use package::*;
      // }
      // TODO : push reverted_inner to the read_tokens
      read_tokens.push(T_END!());
-     Ok(read_tokens)
+     Ok(Tokens::new(read_tokens))
     }))
   );
 
@@ -106,9 +106,9 @@ use package::*;
         let mut read_tokens: Vec<Token> = vec![T_OTHER!("[".to_string())];
         // TODO: ($inner ? $inner->revertArguments($arg) : Revert($arg)),
         read_tokens.push(T_OTHER!("]".to_string()));
-        Ok(read_tokens)
+        Ok(Tokens::new(read_tokens))
       } else {
-        Ok(Vec::new())
+        Ok(Tokens!())
       }
     }))
   );
@@ -117,7 +117,7 @@ use package::*;
   DefParameterType!("SkipSpaces",
     reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       gullet.skip_spaces(state);
-      Ok(Vec::new())
+      Ok(Tokens!())
     }),
     novalue => true
   );
@@ -194,7 +194,7 @@ use package::*;
       // }
       // TODO : push reverted_inner to the read_tokens
       read_tokens.push(T_END!());
-      Ok(read_tokens)
+      Ok(Tokens::new(read_tokens))
     })),
     semiverbatim => true);
 
@@ -208,9 +208,9 @@ use package::*;
        let mut read_tokens = vec![T_OTHER!("[".to_string())];
        // TODO: add these: Revert($_[0])
        read_tokens.push(T_OTHER!("]".to_string()));
-       Ok(read_tokens)
+       Ok(Tokens::new(read_tokens))
      } else {
-       Ok(Vec::new())
+       Ok(Tokens!())
      }
     }))
   );
@@ -223,9 +223,9 @@ use package::*;
       let space_token = T_SPACE!();
 
       while token == begin_token {
-        let mut toks : Vec<Token> = try!(gullet.read_balanced(state)).into_iter().filter(|t| *t != space_token).collect();
+        let mut toks : Vec<Token> = try!(gullet.read_balanced(state)).unlist().into_iter().filter(|t| *t != space_token).collect();
         let mut new_tokens = toks.split_off(1);
-        gullet.unread(toks);
+        gullet.unread(Tokens::new(toks));
 
         token = if new_tokens.is_empty() {
           None
@@ -234,8 +234,8 @@ use package::*;
         };
       }
       match token {
-        Some(t) => Ok(vec![t]),
-        None => Ok(Vec::new())
+        Some(t) => Ok(Tokens!(t)),
+        None => Ok(Tokens!())
       }
     }),
     undigested => true
@@ -245,9 +245,9 @@ use package::*;
   DefParameterType!("Token",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       if let Some(t) = gullet.read_token(state) {
-        Ok(vec![t])
+        Ok(Tokens!(t))
       } else {
-        Ok(Vec::new())
+        Ok(Tokens!())
       }
     })
   );
@@ -256,9 +256,9 @@ use package::*;
   DefParameterType!("XToken",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
       if let Some(t) = try!(gullet.read_x_token(false, false, state)) {
-        Ok(vec![t])
+        Ok(Tokens!(t))
       } else {
-        Ok(Vec::new())
+        Ok(Tokens!())
       }
     })
   );
