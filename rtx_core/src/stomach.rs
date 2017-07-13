@@ -94,11 +94,11 @@ impl Stomach {
       //   let list = STOMACH_LIST.lock()
       //   *list = Rc::new(Vec::new());
       // }
-      let mut list = Vec::new();
+      let mut digested_boxes = Vec::new();
       while let Some(token) = try!(stomach.get_gullet_mut().read_x_token(true, true, state)) { // Done if we run out of tokens
         // {
         //   let list = STOMACH_LIST.lock()
-        list.extend(try!(stomach.invoke_token(token, state)));
+        digested_boxes.extend(try!(stomach.invoke_token(token, state)));
         // }
 
         if initdepth > stomach.boxing.len() { // if we've closed the initial mode.
@@ -117,10 +117,9 @@ impl Stomach {
       }
 
       // let list = STOMACH_LIST.lock()
-      let final_boxes = list;
-      let mut final_list = List::new(final_boxes);
-      final_list.mode = Some(mode);
-      Ok(Digested::List(final_list))
+      let mut digested_list = List::new(digested_boxes);
+      digested_list.mode = Some(mode);
+      Ok(Digested::List(digested_list))
     }))
   }
 
@@ -191,24 +190,14 @@ impl Stomach {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
             }
-            other => {
-              // TODO:
-              info!("Other: {:?}", other);
-              // Fatal('misdefined', $meaning, self, "The object " . Stringify($meaning) . " should never reach Stomach!");
+            meaning => {
+              fatal!(Stomach, Misdefined, format!("The object {:?} should never reach Stomach!", meaning));
             }
           };
         }
       };
       break;
     }
-
-    // TODO:
-    // if grep { (!ref $_) || (!$_->isaBox) } @result {
-    //   Fatal('misdefined', $token, self,
-    //   "Execution yielded non boxes",
-    //   "Returned " . join(',', map { "'" . Stringify($_) . "'" }
-    //       grep { (!ref $_) || (!$_->isaBox) } @result))
-    // }
 
     self.token_stack.pop();
     Ok(result)

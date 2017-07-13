@@ -3,17 +3,16 @@ use package::*;
  pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
-  // //======================================================================
-  // // Remaining Mode independent primitives in Ch.24, pp.279-280
-  // // \relax was done as expandable (isn't that right?)
-  // // }
-  // // Note, we don't bother making sure begingroup is ended by endgroup.
+  //======================================================================
+  // Remaining Mode independent primitives in Ch.24, pp.279-280
+  // \relax was done as expandable (isn't that right?)
+  // }
+  // Note, we don't bother making sure begingroup is ended by endgroup.
 
-  // // These define the handler for { } (or anything of catcode BEGIN, END)
+  // These define the handler for { } (or anything of catcode BEGIN, END)
 
-  // // These are actually TeX primitives, but we treat them as a Whatsit so they
-  // // remain in the constructed tree.
-  // //DefConstructor('{','//body', beforeDigest=>sub{$_[0]->bgroup;}, captureBody=>1);
+  // These are actually TeX primitives, but we treat them as a Whatsit so they
+  // remain in the constructed tree.
   // DefPrimitive('{', sub {
   //     my ($stomach) = @_;
   //     $stomach->bgroup;
@@ -21,7 +20,7 @@ use package::*;
   //     my $ismath = $STATE->lookupValue('IN_MATH');
   //     my @body   = $stomach->digestNextBody();
   //     List($open, @body, mode => ($ismath ? 'math' : 'text')); });
-  // //DefConstructor('}',  '',    beforeDigest=>sub{$_[0]->egroup;});
+
   // DefPrimitive('}', sub { my $f = LookupValue('font'); $_[0]->egroup; Box(undef, $f, undef, T_END); });
 
   // // These are for those screwy cases where you need to create a group like box,
