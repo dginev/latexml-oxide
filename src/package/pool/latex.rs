@@ -174,6 +174,40 @@ lazy_static!{
     mode => Some("text".to_string())
   );
 
+
+  //**********************************************************************
+  // C.4 Sectioning and Table of Contents
+  //**********************************************************************
+
+  //======================================================================
+  // C.4.1 Sectioning Commands.
+  //======================================================================
+  // Note that LaTeX allows fairly arbitrary stuff in \the<ctr>, although
+  // it can get you in trouble.  However, in almost all cases, the result
+  // is plain text.  So, I'm putting refnum as an attribute, where I like it!
+  // You want something else? Redefine!
+
+  // Also, we're adding an id to each, that is parallel to the refnum, but
+  // valid as an ID.  You can tune the representation by defining, eg. \thesection@ID
+
+  // A little more messy than seems necessary:
+  //  We don't know whether to step the counter and update \@currentlabel until we see the '*',
+  // but we have to know it before we digest the title, since \label can be there!
+
+  // These are defined in terms of \@startsection so that
+  // casual user redefinitions work, too.
+  DefMacro!("\\chapter", "\\@startsection{chapter}{0}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!("\\part", "\\@startsection{part}{-1}{}{}{}{}"); // not locked since sometimes redefined as partition?
+  DefMacro!("\\section", "\\@startsection{section}{1}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!("\\subsection", "\\@startsection{subsection}{2}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!("\\subsubsection", "\\@startsection{subsubsection}{3}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!("\\paragraph", "\\@startsection{paragraph}{4}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!("\\subparagraph", "\\@startsection{subparagraph}{5}{}{}{}{}"); // TODO: locked => true);
+  for tag in ["part", "chapter", "section", "subsection", "subsubsection", "paragraph", "subparagraph"].iter() {
+    Tag!(&format!("ltx:{:?}",tag), auto_close => true);
+  }
+
+
   // ======================================================================
   // C.5.2 Packages
   // ======================================================================

@@ -903,7 +903,9 @@ macro_rules! LoadClass_F(
 // TODO: package::coerce_cs on $cs
 macro_rules! DefMacroI_F (
   ($cs:expr, $paramlist:expr, None, $state:expr) => (def_macro_i($cs, $paramlist, None, $state));
-  ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (def_macro_i($cs, $paramlist, Some(Rc::new($expansion)), $state))
+  ($cs:expr, $paramlist:expr, $expansion:expr, $state:expr) => (def_macro_i($cs, $paramlist, Some(Rc::new($expansion)), $state));
+  // TODO: Use the definitional options such as "locked"
+  ($cs:expr, $paramlist:expr, $expansion:expr, $key1:ident=>$val1:expr, $state:expr) => (def_macro_i($cs, $paramlist, Some(Rc::new($expansion)), $state));
 );
 
 macro_rules! DefMacroT_F {
@@ -1885,7 +1887,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! LoadPool{($name:expr) => (LoadPool_F!($name, $state))}
   macro_rules! RequirePackage(($package:expr, $options:expr) => (RequirePackage_F!($package, $options, $state)));
   macro_rules! LoadClass(($class:expr, $options:expr, $after:expr) => (LoadClass_F!($class, $options, $after, $state)));
-  macro_rules! DefMacroI(($cs:expr, $paramlist:expr, $expansion:expr) => (DefMacroI_F!($cs, $paramlist, $expansion, $state)));
+  macro_rules! DefMacroI(
+    ($cs:expr, $paramlist:expr, $expansion:expr) => (DefMacroI_F!($cs, $paramlist, $expansion, $state));
+    ($cs:expr, $paramlist:expr, $expansion:expr, $key1:ident=>$val1:expr) => (DefMacroI_F!($cs, $paramlist, $expansion, $key1=>$val1, $state));
+  );
   macro_rules! DefMacroT(
     ($cs:expr, $paramlist:expr) => (DefMacroT_F!($cs, $paramlist, $state));
     ($cs:expr, $paramlist:expr, $arg:expr) => (DefMacroT_F!($cs, $paramlist, $arg, $state));
