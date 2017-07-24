@@ -208,6 +208,41 @@ lazy_static!{
   }
 
 
+  DefMacro!("\\secdef {}{} OptionalMatch:*", gullet, args, state, {
+    if args.len() == 3 {
+      Ok(args[1])
+    } else {
+      Ok(args[2])
+    } // ($_[3] ? ($_[2]) : ($_[1])); });
+  });
+
+  DefMacroT!(T_CS!("\\@startsection@hook"), None, None);
+  // TODO:
+  // NewCounter!("secnumdepth");
+  // SetCounter!("secnumdepth", Number(3));
+  DefMacro!("\\@startsection{}{}{}{}{}{} OptionalMatch:*", gullet, args, state, {
+      let (stype_arg, level_arg, ignore3, ignore4, ignore5, ignore6, flag) = args;
+      let stype = stype_arg.to_string();
+      let ctr = state.lookup_value(format!("counter_for_{}", stype), None) || stype;
+      let level = level_arg.to_string();
+      // if flag || (!level.is_empty()) && (level > CounterValue!("secnumdepth").value_of) {
+      //   RefStepID!(ctr);
+      //   Tokens!(T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"), T_BEGIN!(), stype_arg.unlist(), T_END!());
+      // } else {
+      //  RefStepCounter!(ctr);
+        Tokens!(T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"), T_BEGIN!(), stype_arg.unlist(), T_END!());
+      // }
+  });
+
+  // Redefine these if you want to assemble the name (eg. \chaptername), refnum and titles differently
+  // \@@numbered@section{type}[toctitle]{title}
+  DefMacro!("\\@@numbered@section{}[]{}",
+    "\\@@section{#1}{\\@currentID}{\\@currentlabel}{\\lx@fnum@@{#1}}{\\format@toctitle@{#1}{\\ifx.#2.#3\\else#2\\fi}}{\\format@title@{#1}{#3}}"
+  );
+  // NOTE: Unclear here, whether the "formatted refnum" should be empty, or just the type abbreviation?
+  DefMacro!("\\@@unnumbered@section{}[]{}",
+    "\\@@section{#1}{\\@currentID}{}{}{#2}{#3}");
+
   // ======================================================================
   // C.5.2 Packages
   // ======================================================================
