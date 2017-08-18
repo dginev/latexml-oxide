@@ -210,29 +210,31 @@ lazy_static!{
 
   DefMacro!("\\secdef {}{} OptionalMatch:*", gullet, args, state, {
     if args.len() == 3 {
-      Ok(args[1])
+      Ok(args[1].clone()) // can't move out without clone, how to circumvent?
     } else {
-      Ok(args[2])
+      Ok(args[2].clone())
     } // ($_[3] ? ($_[2]) : ($_[1])); });
   });
 
-  DefMacroT!(T_CS!("\\@startsection@hook"), None, None);
+
   // TODO:
+  // DefMacroT!(T_CS!("\\@startsection@hook"), None, None);
+
   // NewCounter!("secnumdepth");
   // SetCounter!("secnumdepth", Number(3));
-  DefMacro!("\\@startsection{}{}{}{}{}{} OptionalMatch:*", gullet, args, state, {
-      let (stype_arg, level_arg, ignore3, ignore4, ignore5, ignore6, flag) = args;
-      let stype = stype_arg.to_string();
-      let ctr = state.lookup_value(format!("counter_for_{}", stype), None) || stype;
-      let level = level_arg.to_string();
-      // if flag || (!level.is_empty()) && (level > CounterValue!("secnumdepth").value_of) {
-      //   RefStepID!(ctr);
-      //   Tokens!(T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"), T_BEGIN!(), stype_arg.unlist(), T_END!());
-      // } else {
-      //  RefStepCounter!(ctr);
-        Tokens!(T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"), T_BEGIN!(), stype_arg.unlist(), T_END!());
-      // }
-  });
+  // DefMacro!("\\@startsection{}{}{}{}{}{} OptionalMatch:*", gullet, args, state, {
+  //     let (stype_arg, level_arg, ignore3, ignore4, ignore5, ignore6, flag) = args;
+  //     let stype = stype_arg.to_string();
+  //     let ctr = state.lookup_value(format!("counter_for_{}", stype), None) || stype;
+  //     let level = level_arg.to_string();
+  //     // if flag || (!level.is_empty()) && (level > CounterValue!("secnumdepth").value_of) {
+  //     //   RefStepID!(ctr);
+  //     //   Tokens!(T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"), T_BEGIN!(), stype_arg.unlist(), T_END!());
+  //     // } else {
+  //     //  RefStepCounter!(ctr);
+  //       Tokens!(T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"), T_BEGIN!(), stype_arg.unlist(), T_END!());
+  //     // }
+  // });
 
   // Redefine these if you want to assemble the name (eg. \chaptername), refnum and titles differently
   // \@@numbered@section{type}[toctitle]{title}
