@@ -345,7 +345,7 @@ lazy_static!{
 
   // DefMacro('\@tabacckludge {}', '\csname\string#1\endcsname');
 
-  DefPrimitiveI!("\\newcommand OptionalMatch:* DefToken [Number][]{}", |stomach, args, state| {
+  DefPrimitiveI!("\\newcommand OptionalMatch:* DefToken [Number][]{}", primitiveproc!(stomach, args, state, {
       // my ($stomach, $star, $cs, $nargs, $opt, $body) = @_;
       let star = &args[0];
       let cs = &args[1].tokens[0];
@@ -362,8 +362,7 @@ lazy_static!{
       // TODO: convertLaTeXArgs($nargs, $opt)
       let body_closure = move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State|{ Ok(body.clone()) };
       DefMacroI!(cs.clone(), None, body_closure, state);
-      Ok(Vec::new())
-  });
+  }));
 
   //======================================================================
   // C.8.4 Numbering
