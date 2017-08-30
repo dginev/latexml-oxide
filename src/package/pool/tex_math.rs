@@ -20,7 +20,7 @@ use rtx_core::document::tag::TagConstructionClosure;
     let mut op        = "\\@@BEGININLINEMATH";
   {
     let mut gullet = stomach.get_gullet_mut();
-    let mode      = LookupString_F!("MODE", state);
+    let mode      = LookupString!("MODE", state);
     debug!("T_MATH primitive current mode: {:?}", mode);
     if mode == "display_math" {
       if try!(gullet.if_next(T_MATH!(), state)) {

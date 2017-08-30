@@ -115,6 +115,7 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
   let expansion_opt = options.as_ref().map(|o| get_option(&o, "expansion", bug));
   let compiled_expansion_closure = match expansion_opt {
     None => quote!(None),
+    Some("") =>  quote!(None),
     Some(expansion) => {
       let performed_expansion = mouth::tokenize_internal(expansion, None).unlist();
       //println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(), performed_expansion);

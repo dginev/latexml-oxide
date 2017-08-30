@@ -163,7 +163,7 @@ lazy_static!{
     // },
     before_digest_end => sub!(|stomach, state| {
       stomach.get_gullet_mut().flush(state);
-      if let Some(ops) = LookupValue_F!("@at@end@document", state) {
+      if let Some(ops) = LookupValue!("@at@end@document", state) {
         // TODO:
         // Ok(Digest!(Tokens!(ops)))
         Ok(Vec::new())
@@ -361,7 +361,7 @@ lazy_static!{
 
       // TODO: convertLaTeXArgs($nargs, $opt)
       let body_closure = move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State|{ Ok(body.clone()) };
-      DefMacroI_F!(cs.clone(), None, body_closure, state);
+      DefMacroI!(cs.clone(), None, body_closure, state);
       Ok(Vec::new())
   });
 

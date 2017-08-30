@@ -7,11 +7,11 @@ use package::*;
     font => Font!(family => "typewriter", series => "medium", shape => "upright"),
     before_digest => sub!(|stomach, state| {
       for c in &['$', '&', '#', '^', '_', '%', '~'] {
-       AssignCatcode_F!(*c, Catcode::OTHER, None, state);
+       AssignCatcode!(*c, Catcode::OTHER, None, state);
       }
-      AssignCatcode_F!(' ', Catcode::ACTIVE, None, state);
-      LetI_F!(&T_ACTIVE!(" "), T_CS!("\\space"), None, state);
-      AssignValue_F!("PRESERVE_NEWLINES", ObjectStore::Bool(true), None, state);
+      AssignCatcode!(' ', Catcode::ACTIVE, None, state);
+      LetI!(&T_ACTIVE!(" "), T_CS!("\\space"), None, state);
+      AssignValue!("PRESERVE_NEWLINES", ObjectStore::Bool(true), None, state);
       Ok(Vec::new())
     }));
 

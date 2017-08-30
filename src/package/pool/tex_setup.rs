@@ -9,8 +9,7 @@ use package::*;
   RegisterNamespace!("m"    , "http://www.w3.org/1998/Math/MathML");
   RegisterNamespace!("xhtml", "http://www.w3.org/1999/xhtml");
 
-  DefMacroT!(T_CS!("\\@empty"), None);
-
+  DefMacro!("\\@empty", "");
 
   //======================================================================
   // Core ID functionality.
