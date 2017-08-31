@@ -1278,5 +1278,14 @@ impl State {
     self.assign_value("mathfont"  , ObjectStore::Font(Box::new(Font::math_default())), Some(Scope::Global));
   }
 
-
+  // Package helpers used in core need to be localized here -- as State methods
+  pub fn let_i(&mut self, token1: &Token, token2: Token, scope: Option<Scope>) {
+    // If strings are given, assume CS tokens (most common case)
+    let meaning = match self.lookup_meaning(&token2) {
+      Some(m) => m.clone(),
+      None => ObjectStore::Token(token2)
+    };
+    self.assign_meaning(token1, meaning, scope);
+    // TODO: AfterAssignment!();
+  }
 }

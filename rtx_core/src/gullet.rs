@@ -185,12 +185,11 @@ impl Gullet {
           return Ok(None)
         }
         Some(ref mut runtime) => {
-
           read_token = if runtime.pushback.is_empty() {
             runtime.mouth.read_token(state)
-            } else {
-              runtime.pushback.pop_front()
-            };
+          } else {
+            runtime.pushback.pop_front()
+          };
           match read_token {
             None => {
               if !(runtime.autoclose && toplevel && !self.mouthstack.is_empty()) {

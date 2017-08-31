@@ -182,7 +182,19 @@ impl Catcode {
     }
   }
 
+  pub fn is_absorbable(&self) -> bool {
+    use token::Catcode::*;
+    match *self {
+      // Absorbable
+      SPACE |
+      LETTER |
+      OTHER |
+      COMMENT => true,
+      _ => false
+    }
+  }
 }
+
 #[derive(Clone, Hash, Debug, PartialEq)]
 pub struct Token {
   pub text: String,

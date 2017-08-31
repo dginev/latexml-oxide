@@ -38,6 +38,7 @@ pub enum ErrorCategory {
   MissingFile,
   Malformed,
   Libxml,
+  Recursion,
   EoF
 }
 
@@ -72,6 +73,7 @@ impl fmt::Display for Error {
       Expected => write!(f, "expected"),
       Unexpected => write!(f, "unexpected"),
       Libxml => write!(f, "libxml error"),
+      Recursion => write!(f, "<recursion>"),
       EoF => write!(f, "<EOF>"),
     }
   }
@@ -91,6 +93,7 @@ impl ErrorTrait for Error {
       Expected => "expected",
       Unexpected => "unexpected",
       Libxml => "libxml error",
+      Recursion => "<recursion>",
       EoF => "<EOF>",
     }
   }

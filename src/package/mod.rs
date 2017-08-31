@@ -460,16 +460,6 @@ pub fn select_relaxng_schema(schema : String, namespaces : Option<HashMap<String
   }
   return; }
 
-pub fn let_i(token1: &Token, token2: Token, scope: Option<Scope>, state: &mut State) {
-  // If strings are given, assume CS tokens (most common case)
-  let meaning = match state.lookup_meaning(&token2) {
-    Some(m) => m.clone(),
-    None => ObjectStore::Token(token2)
-  };
-  state.assign_meaning(token1, meaning, scope);
-  // AfterAssignment!();
-}
-
 pub fn def_macro_i(cs: Token, paramlist: Option<Parameters>, expansion: Option<ExpansionClosure>, state: &mut State) {
 //       // Optimization: Defer till macro actually used
 //       // if !$cs.is_empty() { // && $options{mathactive}
@@ -779,8 +769,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
   macro_rules! LetI {
     ($token1:expr, $token2:expr) => (LetI!($token1, $token2, $state));
-    ($token1:expr, $token2:expr, $state_arg:ident) => (let_i($token1, $token2, None, $state_arg));
-    ($token1:expr, $token2:expr, $scope:expr, $state_arg:ident) => (let_i($token1, $token2, $scope, $state_arg));
+    ($token1:expr, $token2:expr, $state_arg:ident) => ($state_arg.let_i($token1, $token2, None));
+    ($token1:expr, $token2:expr, $scope:expr, $state_arg:ident) => ($state_arg.let_i($token1, $token2, $scope));
   }
   // macro_rules! Digest {
     // ($tokens:expr) => (Digest!($tokens, $state))

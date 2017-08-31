@@ -123,15 +123,14 @@ use rtx_core::document::tag::TagConstructionClosure;
     // is there a more idiomatic way to downgrade a VecDeque into a Vec?
     let def_body = token_args.into_iter().collect::<Vec<Token>>();
     let params = None;
-    info!("Installing definition for cs: {:?}", cs);
     state.install_definition(ObjectStore::Expandable(Rc::new(
       Expandable{cs: cs, paramlist: params, expansion: SimpleExpansion!(Tokens::new(def_body.clone())),
         ..Expandable::default()
       })),
       scope);
-    // AfterAssignment!(state);
+    //TODO: AfterAssignment!(state);
     Ok(Vec::new())
-  }
+}
 
 
   DefPrimitiveI!("\\def SkipSpaces Token UntilBrace {}", |stomach, args, state| {

@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::rc::Rc;
+
 use state::{Scope, State, ObjectStore};
 use common::error::*;
 use common::font::Font;
@@ -8,6 +10,8 @@ use gullet::Gullet;
 use tokens::Tokens;
 use token::{Token, Catcode};
 use definition::Definition;
+use definition::expandable::Expandable;
+use definition::constructor::{Constructor, ConstructorOptions};
 use tbox::*;
 use list::List;
 
@@ -142,23 +146,29 @@ impl Stomach {
 
       self.token_stack.push(token.clone());
       if self.token_stack.len() > MAXSTACK {
-        // Fatal('internal', '<recursion>', self,
-        //   "Excessive recursion(?): ",
-        //   "Tokens on stack: " . join(', ', map { ToString($_) } @{ $self{token_stack} })); }
+        fatal!(Stomach, Recursion, format!("Excessive recursion(?): Tokens on stack: {:?}", self.token_stack));
       }
       state.current_token = Some(token.clone());
       result = Vec::new();
+
       let looked_up_definition: Option<ObjectStore> = state.lookup_digestable_definition(&token);
       match looked_up_definition {
         None => {
           // Supposedly executable token, but no definition!
-          result = self.invoke_token_undefined(&token, state);
+          result = try!(self.invoke_token_undefined(&token, state));
         }
         Some(store) => {
           match store {
-            ObjectStore::Token(meaning) => {
-              // Common case
-              result = self.invoke_token_simple(meaning, state);
+            ObjectStore::Token(meaning) => { // Common case
+              let cc = meaning.get_catcode();
+              if cc == Catcode::CS {
+                result = try!(self.invoke_token_undefined(&token, state));
+              } else if cc.is_absorbable() {
+                result = self.invoke_token_simple(meaning, state);
+              } else {
+                error!(target: &format!("misdefined:{:?}",token), "The token {:?} should never reach Stomach!", token);
+                result = self.invoke_token_simple(meaning, state);
+              }
             }
             ObjectStore::Expandable(meaning) => {
               // A math-active character will (typically) be a macro,
@@ -203,11 +213,55 @@ impl Stomach {
     Ok(result)
   }
 
-  fn invoke_token_undefined(&mut self, _token: &Token, _state: &mut State) -> Vec<Digested> {
-    // log!("-- Undefined invoke {:?}", token);
-    // TODO: Rework this carefully
-    Vec::new()
+  fn invoke_token_undefined(&mut self, token: &Token, state: &mut State) -> Result<Vec<Digested>> {
+    let cs : String = token.get_cs_name();
+    // TODO: state.note_status("undefined", cs);
+
+    // To minimize chatter, go ahead and define it...
+    if cs.starts_with("\\if") {  // Apparently an \ifsomething ???
+      let name = cs.replace("\\if","");
+      error!(target: &format!("undefined:{}", cs), "The token {:?} is not defined. Defining it now as with \\newif",cs);
+      // install stub definitions for new conditional
+      let cs_clone = cs.clone();
+      state.install_definition(ObjectStore::Expandable(Rc::new(
+        Expandable { cs: T_CS!(format!("\\{}true", name)), paramlist: None,
+          expansion: Some(Rc::new(move |_gullet, _args, _state| {
+            Ok(Tokens!(T_CS!("\\let"),T_CS!(cs_clone),T_CS!("\\iftrue")))
+          })),
+          ..Expandable::default()})
+        ),
+      None);
+      state.install_definition(ObjectStore::Expandable(Rc::new(
+        Expandable { cs: T_CS!(format!("\\{}false", name)), paramlist: None,
+          expansion: Some(Rc::new(move |_gullet, _args, _state| {
+            Ok(Tokens!(T_CS!("\\let"),T_CS!(cs),T_CS!("\\iffalse")))
+          })),
+          ..Expandable::default()})
+        ),
+        None);
+
+      state.let_i(token, T_CS!("\\iffalse"), None);
+      self.get_gullet_mut().unread(Tokens!(token.clone()));    // Retry
+      return Ok(Vec::new());
+    }
+    else {
+      error!(target: &format!("undefined:{}", cs), "The token {:?} is not defined. Defining it now as <ltx:ERROR/>",cs);
+      state.install_definition(ObjectStore::Constructor(Rc::new(
+        Constructor {
+          cs: token.clone(),
+          paramlist: None,
+          replacement: Some(Rc::new(|_document, _args, _props, _state| {
+            info!("TODO: makeError");
+            // TODO: makeError($_[0], 'undefined', $cs); }),
+            Ok(())
+          })),
+          options: ConstructorOptions::default(),
+        })), Some(Scope::Global));
+      // and then invoke it.
+      return self.invoke_token(token.clone(), state);
+    }
   }
+
   fn invoke_token_simple(&mut self, meaning: Token, state: &mut State) -> Vec<Digested> {
     // log!("-- Simple invoke {:?}", token);
     let font = state.lookup_font();
