@@ -669,6 +669,7 @@ macro_rules! v {
 
 #[macro_export]
 macro_rules! SetupBindingMacros {($state:ident) => (
+  #[allow(unused_macros)]
   //============================================
   // Convenience macros for writing definitions.
   //============================================
