@@ -96,6 +96,8 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
   match file.as_ref() {
     "TeX.pool" => try!(pool::tex::load_definitions(&mut state)),
     "LaTeX.pool" => try!(pool::latex::load_definitions(&mut state)),
+    "eTeX.pool" => try!(pool::etex::load_definitions(&mut state)),
+    "pdfTeX.pool" => try!(pool::pdftex::load_definitions(&mut state)),
     "article.cls" => try!(pool::article_cls::load_definitions(&mut state)),
     "alltt.sty" => try!(pool::alltt_sty::load_definitions(&mut state)),
     "comment.sty" => try!(pool::comment_sty::load_definitions(&mut state)),
@@ -894,6 +896,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         ..InputDefinitionOptions::default()
       }, $state_arg)))
   }
+  /// Loader shorthand for pool dependencies
+  macro_rules! InnerPool {
+    ($name:ident) => (InnerPool!($name, $state));
+    ($name:ident, $state_arg:ident) => (try!(pool::$name::load_definitions(&mut $state_arg)))
+  }
+
   macro_rules! RequirePackage{
     ($package:expr, $options:expr) => (RequirePackage!($package, $options, $state));
     ($package:expr, $options:expr, $state_arg:ident) => (require_package($package, $options, $state_arg))
