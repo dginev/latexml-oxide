@@ -2,6 +2,7 @@
 pub mod constructor;
 pub mod primitive;
 pub mod math_primitive;
+pub mod conditional;
 
 use std::rc::Rc;
 use std::collections::HashMap;
@@ -19,6 +20,7 @@ use whatsit::Whatsit;
 use state::{State, ObjectStore};
 
 pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Tokens>>;
+pub type ConditionalClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<bool>>;
 pub type PrimitiveClosure = Rc<Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<Digested>>>;
 pub type BeforeDigestClosure = Rc<Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
 pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
@@ -92,7 +94,7 @@ pub trait Definition {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> {None}
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {None}
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> {None}
-  fn capture_body(&self) -> bool;
+  fn capture_body(&self) -> bool {false}
 
   fn execute_before_digest(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
     state.unlocked = true;

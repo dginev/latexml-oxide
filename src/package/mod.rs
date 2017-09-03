@@ -23,10 +23,12 @@ pub use rtx_core::tokens::Tokens;
 pub use rtx_core::gullet::Gullet;
 pub use rtx_core::stomach::Stomach;
 pub use rtx_core::whatsit::Whatsit;
+pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::expandable::Expandable;
 pub use rtx_core::definition::primitive::{Primitive,PrimitiveOptions};
 pub use rtx_core::definition::math_primitive::{MathPrimitive,MathPrimitiveOptions};
 pub use rtx_core::definition::constructor::{ConstructorOptions};
+pub use rtx_core::definition::conditional::Conditional;
 
 //**********************************************************************
 //   Initially, I thought LaTeXML Packages should try to be like perl modules:
@@ -739,21 +741,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($name:expr, $state_arg:ident) => ($state_arg.lookup_definition($name))
   }
 
-// // macro_rules! XEquals {
-//   ($token1:expr, $token2) => (
-//   let def1 = LookupMeaning($token1);    # token, definition object or undef
-//   let def2 = LookupMeaning($token2);    # ditto
-//   if (defined $def1 != defined $def2) { # False, if only one has 'meaning'
-//     return; }
-//   elsif (!defined $def1 && !defined $def2) {    # true if both undefined
-//     return 1; }
-//   elsif ($def1->equals($def2)) {                # If both have defns, must be same defn!
-//     return 1; }
-//   return; }
-
   macro_rules! InstallDefinition {
     ($name:expr, $definition:expr, $scope:expr) => (InstallDefinition!($name, $definition, $scope, $state));
     ($name:expr, $definition:expr, $scope:expr, $state_arg:ident) => ($state_arg.install_definition($name, $definition, $scope))
+  }
+
+  macro_rules! XEquals {
+    ($token1:expr, $token2:expr) => (XEquals!($token1, $token2, $state));
+    ($token1:expr, $token2:expr, $state_arg:ident) => ($state_arg.x_equals($token1, $token2))
   }
 
   macro_rules! IsDefined {
@@ -947,6 +942,110 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     })
   );
 
+
+//======================================================================
+// Defining Conditional Control Sequences.
+//======================================================================
+// Define a conditional control sequence. Its processing takes place in
+// the Gullet.  The test is applied to the arguments (if any),
+// which determines which branch is executed.
+// If the test is undefined, the conditional is a "user defined" one;
+// Two additional primitives are defined \footrue and \foofalse;
+// the test is then determined by the most recently called of those.
+//
+// If you supply a skipper instead of a test, it is also applied to the arguments
+// and should skip to the right place in the following \or, \else, \fi.
+
+// This is ONLY used for \ifcase.
+// my $conditional_options = {    # [CONSTANT]
+//   scope => 1, locked => 1, skipper => 1 };
+  macro_rules! DefConditional(
+    // test is always a rust closure
+    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr) => (DefConditional!($proto, $gullet, $args, $inner_state, $block, $state));
+    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $state_arg:ident) => ({
+      let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
+      DefConditionalI!(cs, paramlist, $gullet, $args, $inner_state, $block, $state_arg)
+    })
+  );
+
+  macro_rules! DefConditionalI(
+    // test is always a rust closure
+    ($cs:expr, $paramlist:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr) =>
+      (DefConditionalI!($cs, $paramlist, $gullet, $args, $inner_state, $block, $state));
+    ($cs:expr, $paramlist:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $state_arg:ident) => ({
+      let test : ConditionalClosure = Rc::new(|$gullet, $args, $inner_state| {$block});
+      $state_arg.install_definition(::rtx_core::state::ObjectStore::Conditional(Rc::new(
+        Conditional { cs: $cs, paramlist: $paramlist, test: Some(test),
+         ..Conditional::default()})),
+        None);
+    })
+  );
+
+// sub DefConditionalI {
+//   my ($cs, $paramlist, $test, %options) = @_;
+//   $cs = coerceCS($cs);
+//   my $csname = ToString($cs);
+//   # Special cases...
+//   if ($csname eq '\fi') {
+//     $STATE->installDefinition(LaTeXML::Core::Definition::Conditional->new(
+//         $cs, undef, undef, conditional_type => 'fi', %options),
+//       $options{scope}); }
+//   elsif ($csname eq '\else') {
+//     $STATE->installDefinition(LaTeXML::Core::Definition::Conditional->new(
+//         $cs, undef, undef, conditional_type => 'else', %options),
+//       $options{scope}); }
+//   elsif ($csname eq '\or') {
+//     $STATE->installDefinition(LaTeXML::Core::Definition::Conditional->new(
+//         $cs, undef, undef, conditional_type => 'or', %options),
+//       $options{scope}); }
+//   elsif ($csname =~ /^\\(?:if(.*)|unless)$/) {
+//     my $name = $1;
+//     if ((defined $name) && ($name ne 'case')
+//       && (!defined $test)) {    # user-defined conditional, like with \newif
+//       DefMacroI(T_CS('\\' . $name . 'true'),  undef, Tokens(T_CS('\let'), $cs, T_CS('\iftrue')));
+//       DefMacroI(T_CS('\\' . $name . 'false'), undef, Tokens(T_CS('\let'), $cs, T_CS('\iffalse')));
+//       Let($cs, T_CS('\iffalse')); }
+//     else {
+//       # For \ifcase, the parameter list better be a single Number !!
+//       $STATE->installDefinition(LaTeXML::Core::Definition::Conditional->new($cs, $paramlist, $test,
+//           conditional_type => 'if', %options),
+//         $options{scope}); }
+//   }
+//   else {
+//     Error('misdefined', $cs, $STATE->getStomach,
+//       "The conditional " . Stringify($cs) . " is being defined but doesn't start with \\if"); }
+//   AssignValue(ToString($cs) . ":locked" => 1) if $options{locked};
+//   return; }
+
+// sub IfCondition {
+//   my ($if, @args) = @_;
+//   my $gullet = $STATE->getStomach->getGullet;
+//   $if = coerceCS($if);
+//   my ($defn, $test);
+//   if (($defn = $STATE->lookupDefinition($if))
+//     && (($$defn{conditional_type} || '') eq 'if') && ($test = $defn->getTest)) {
+//     return &$test($gullet, @args); }
+//   elsif (XEquals($if, T_CS('\iftrue'))) {
+//     return 1; }
+//   elsif (XEquals($if, T_CS('\iffalse'))) {
+//     return 0; }
+//   else {
+//     Error('expected', 'conditional', $gullet,
+//       "Expected a conditional, got '" . ToString($if) . "'");
+//     return; } }
+
+// # Used only for regular \newif type conditions
+// sub SetCondition {
+//   my ($if, $value, $scope) = @_;
+//   my ($defn, $test);
+//   # We'll accept any conditional \ifxxx, providing it takes no arguments
+//   if (($defn = $STATE->lookupDefinition($if)) && (($$defn{conditional_type} || '') eq 'if')
+//     && !$defn->getParameters) {
+//     Let($if, ($value ? T_CS('\iftrue') : T_CS('\iffalse')), $scope) }
+//   else {
+//     Error('expected', 'conditional', $STATE->getStomach,
+//       "Expected a conditional defined by \\newif, got '" . ToString($if) . "'"); }
+//   return; }
 
   ///======================================================================
   /// Define a primitive control sequence.

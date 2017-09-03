@@ -93,9 +93,8 @@ impl Definition for Expandable {
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {
     None
   }
-  fn capture_body(&self) -> bool {false}
   fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
-    fatal!(Definition, Unexpected, "do_absorbtion on Primitive should never be called!");
+    fatal!(Definition, Unexpected, "do_absorbtion on Expandable should never be called!");
   }
 }
 

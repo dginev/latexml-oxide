@@ -150,7 +150,6 @@ impl Definition for MathPrimitive {
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {
     Some(&self.options.after_digest)
   }
-  fn capture_body(&self) -> bool {false}
 
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> {
     Ok(Tokens!())

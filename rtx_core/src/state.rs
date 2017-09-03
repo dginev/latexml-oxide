@@ -15,6 +15,7 @@ use definition::expandable::Expandable;
 use definition::constructor::Constructor;
 use definition::primitive::Primitive;
 use definition::math_primitive::{MathPrimitive};//MathPrimitiveOptions
+use definition::conditional::Conditional;
 use document::Document;
 use document::tag::{TagData,TagOptions};
 use document::resource::Resource;
@@ -63,6 +64,7 @@ pub enum ObjectStore {
   Token(Token),
   Tokens(Tokens),
   Expandable(Rc<Expandable>),
+  Conditional(Rc<Conditional>),
   Primitive(Rc<Primitive>),
   MathPrimitive(Rc<MathPrimitive>),
   // MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
@@ -95,6 +97,7 @@ impl fmt::Debug for ObjectStore {
       Catcode(ref cc) => write!(f, "{:?}", cc),
       Mathcode(ref cc) => write!(f, "{:?}", cc),
       Expandable(ref _expandable) => write!(f, "<closure for expandable definition>"),
+      Conditional(ref _conditional) => write!(f, "<closure for conditional definition>"),
       Primitive(ref _primitive) => write!(f, "<closure for primitive definition>"),
       MathPrimitive(ref _primitive) => write!(f, "<closure for math primitive definition>"),
       // MathPrimitiveOptions(ref _primitive) => write!(f, "<math primitive options>"),
@@ -874,6 +877,7 @@ impl State {
     //  my $cs = $definition->getCS->getCSName;
     let token = match definition {
       ObjectStore::Expandable(ref defn) => defn.get_cs(),
+      ObjectStore::Conditional(ref defn) => defn.get_cs(),
       ObjectStore::Constructor(ref defn) => defn.get_cs(),
       ObjectStore::Primitive(ref defn) => defn.get_cs(),
       ObjectStore::MathPrimitive(ref defn) => defn.get_cs(),
@@ -1279,6 +1283,7 @@ impl State {
   }
 
   // Package helpers used in core need to be localized here -- as State methods
+  /// `Let` macro setter
   pub fn let_i(&mut self, token1: &Token, token2: Token, scope: Option<Scope>) {
     // If strings are given, assume CS tokens (most common case)
     let meaning = match self.lookup_meaning(&token2) {
@@ -1287,5 +1292,28 @@ impl State {
     };
     self.assign_meaning(token1, meaning, scope);
     // TODO: AfterAssignment!();
+  }
+  /// `XEquals` check for two token arguments
+  pub fn x_equals(&mut self, token1: &Token, token2: &Token) -> bool {
+    let def1_opt : Option<ObjectStore>;
+    let def2_opt : Option<ObjectStore>;
+    { // mutability guard
+      def1_opt = match self.lookup_meaning(token1) { // token, definition object or undef
+        None => None,
+        Some(ref obj) => Some((*obj).clone()) // TODO: Can this code pattern be reworked without a clone? What is the idiomatic Rust for this?
+      };
+    }
+    let def2_opt = self.lookup_meaning(token2); // ditto
+    if def1_opt.is_none() && def2_opt.is_none() { // true if both undefined
+      true
+    } else if let Some(def1) = def1_opt {
+      if let Some(def2) = def2_opt {
+        def1 == *def2 // If both have defns, must be same defn!
+      } else { // False, if only one has 'meaning'
+        false
+      }
+    } else {
+      false // False, if only one has 'meaning'
+    }
   }
 }
