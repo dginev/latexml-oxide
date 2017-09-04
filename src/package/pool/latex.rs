@@ -216,9 +216,7 @@ lazy_static!{
     } // ($_[3] ? ($_[2]) : ($_[1])); });
   });
 
-
-  // TODO:
-  // DefMacroT!(T_CS!("\\@startsection@hook"), None, None);
+  DefMacro!("\\@startsection@hook","");
 
   // NewCounter!("secnumdepth");
   // SetCounter!("secnumdepth", Number(3));
