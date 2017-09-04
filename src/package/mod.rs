@@ -28,7 +28,7 @@ pub use rtx_core::definition::expandable::Expandable;
 pub use rtx_core::definition::primitive::{Primitive,PrimitiveOptions};
 pub use rtx_core::definition::math_primitive::{MathPrimitive,MathPrimitiveOptions};
 pub use rtx_core::definition::constructor::{ConstructorOptions};
-pub use rtx_core::definition::conditional::Conditional;
+pub use rtx_core::definition::conditional::{Conditional, ConditionalType};
 
 //**********************************************************************
 //   Initially, I thought LaTeXML Packages should try to be like perl modules:
@@ -473,7 +473,7 @@ pub fn def_macro_i(cs: Token, paramlist: Option<Parameters>, expansion: Option<E
 //       //   $state.assign_value(ToString($cs)+":locked", true, "global")
 //       // }
 
-  state.install_definition(::rtx_core::state::ObjectStore::Expandable(Rc::new(
+  state.install_definition(ObjectStore::Expandable(Rc::new(
     Expandable { cs: cs, paramlist: paramlist, expansion: expansion,
      ..Expandable::default()})),
     None);
@@ -974,18 +974,23 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       (DefConditionalI!($cs, $paramlist, $gullet, $args, $inner_state, $block, $state));
     ($cs:expr, $paramlist:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $state_arg:ident) => ({
       let test : ConditionalClosure = Rc::new(|$gullet, $args, $inner_state| {$block});
-      $state_arg.install_definition(::rtx_core::state::ObjectStore::Conditional(Rc::new(
+      // match $cs.get_cs_name() {
+      //   "\\fi" => $state_arg.install_definition(ObjectStore::Conditional(Rc::new(
+      //               Conditional { cs: $cs, paramlist: None, test: None, conditional_type: ConditionalType::Fi}
+      //               )))
+      //   "\\else" => ,
+      //   "\\or" => ,
+      //   csname => {
+      //     if
+
+      //   }
+      // }
+      $state_arg.install_definition(ObjectStore::Conditional(Rc::new(
         Conditional { cs: $cs, paramlist: $paramlist, test: Some(test),
          ..Conditional::default()})),
         None);
     })
   );
-
-// sub DefConditionalI {
-//   my ($cs, $paramlist, $test, %options) = @_;
-//   $cs = coerceCS($cs);
-//   my $csname = ToString($cs);
-//   # Special cases...
 //   if ($csname eq '\fi') {
 //     $STATE->installDefinition(LaTeXML::Core::Definition::Conditional->new(
 //         $cs, undef, undef, conditional_type => 'fi', %options),
@@ -1311,7 +1316,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         replacement: $compiled_replacement,
         options: options};
 
-      $state_arg.install_definition(::rtx_core::state::ObjectStore::Constructor(Rc::new(constructor)), None);
+      $state_arg.install_definition(ObjectStore::Constructor(Rc::new(constructor)), None);
   //   before_digest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
   //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),
   //     ($mode ? (sub { $_[0]->beginMode($mode); })
