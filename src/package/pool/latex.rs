@@ -220,19 +220,27 @@ lazy_static!{
 
   // NewCounter!("secnumdepth");
   // SetCounter!("secnumdepth", Number(3));
-  // DefMacro!("\\@startsection{}{}{}{}{}{} OptionalMatch:*", gullet, args, state, {
-  //     let (stype_arg, level_arg, ignore3, ignore4, ignore5, ignore6, flag) = args;
-  //     let stype = stype_arg.to_string();
-  //     let ctr = state.lookup_value(format!("counter_for_{}", stype), None) || stype;
-  //     let level = level_arg.to_string();
-  //     // if flag || (!level.is_empty()) && (level > CounterValue!("secnumdepth").value_of) {
-  //     //   RefStepID!(ctr);
-  //     //   Tokens!(T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"), T_BEGIN!(), stype_arg.unlist(), T_END!());
-  //     // } else {
-  //     //  RefStepCounter!(ctr);
-  //       Tokens!(T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"), T_BEGIN!(), stype_arg.unlist(), T_END!());
-  //     // }
-  // });
+  DefMacro!("\\@startsection{}{}{}{}{}{} OptionalMatch:*", gullet, args, state, {
+    let type_tokens = args[0].clone();
+    let stype = type_tokens.to_string();
+    let mut ctr = state.lookup_string(&format!("counter_for_{}", stype));
+    if ctr.is_empty() { ctr = stype};
+    let level = args[1].to_string();
+    let flag = args[6].to_string();
+    if !flag.is_empty() {//|| (!level.is_empty() && (level > CounterValue!("secnumdepth").value_of())) {
+      // RefStepID!(ctr);
+      let mut tokens : Vec<Token> = vec![T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"), T_BEGIN!()];
+      tokens.append(&mut type_tokens.unlist());
+      tokens.push(T_END!());
+      Ok(Tokens {tokens: tokens})
+    } else  {
+      // RefStepCounter!(ctr);
+      let mut tokens : Vec<Token> = vec![T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"), T_BEGIN!()];
+      tokens.append(&mut type_tokens.unlist());
+      tokens.push(T_END!());
+      Ok(Tokens {tokens: tokens})
+    }
+  });
 
   // Redefine these if you want to assemble the name (eg. \chaptername), refnum and titles differently
   // \@@numbered@section{type}[toctitle]{title}
