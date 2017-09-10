@@ -1393,7 +1393,7 @@ impl Document {
   }
 
   pub fn add_resource(&mut self, resource: Resource, state: &mut State) -> Result<()> {
-    // let savenode_opt = self.float_to_element("ltx:resource");
+    // let savenode_opt = self.float_to_element("ltx:resource", false);
     let savenode_opt = None;
     let mut attrib : HashMap<String, String> = HashMap::new();
     attrib.insert("src".to_owned(), resource.name);
@@ -1413,6 +1413,21 @@ impl Document {
       try!(self.add_resource(resource, state));
     }
     state.pending_resources = Vec::new();
+    Ok(())
+  }
+
+  pub fn make_error(&mut self, error_class: &str, content: &str, state: &mut State) -> Result<()> {
+    let savenode_opt = if !self.is_openable("ltx:ERROR", state) {
+      // self.float_to_element("ltx:ERROR", false);
+      None
+    } else {
+      None
+    };
+    try!(self.open_element("ltx:ERROR", Some(string_map!("class"=>error_class)), None, state));
+    try!(self.close_element("ltx:ERROR", state));
+    if let Some(savenode) = savenode_opt {
+      self.set_node(savenode);
+    }
     Ok(())
   }
 }

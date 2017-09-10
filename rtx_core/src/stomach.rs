@@ -158,6 +158,10 @@ impl Stomach {
           result = try!(self.invoke_token_undefined(&token, state));
         }
         Some(store) => {
+          // Rust notes: It would be ideal if we could unify the cases for (Primtive, Constructor, MathPrimitive),
+          //             as well as (Expandable, Conditional) since the API is identical.
+          //             However, as the types are different, Rust constrains us here, we need
+          //             separate match arms for each distinctly typed enum case.
           match store {
             ObjectStore::Token(meaning) => { // Common case
               let cc = meaning.get_catcode();
@@ -169,7 +173,7 @@ impl Stomach {
                 error!(target: &format!("misdefined:{:?}",token), "The token {:?} should never reach Stomach!", token);
                 result = self.invoke_token_simple(meaning, state);
               }
-            }
+            },
             ObjectStore::Expandable(meaning) => {
               // A math-active character will (typically) be a macro,
               // but it isn't expanded in the gullet, but later when digesting, in math mode (? I think)
@@ -178,7 +182,14 @@ impl Stomach {
               maybe_token = try!(self.gullet.read_x_token(true, false, state)); // replace the token by it's expansion!!!
               self.token_stack.pop();
               continue;
-            }
+            },
+            ObjectStore::Conditional(meaning) => {
+              // Conditionals are "expandable", use the regular invoke.
+              let invoked_meaning = try!(meaning.invoke(&mut self.gullet, state));
+              self.gullet.unread(invoked_meaning);
+              maybe_token = try!(self.gullet.read_x_token(true, false, state)); // replace the token by it's expansion!!!
+              self.token_stack.pop();
+            },
             ObjectStore::Constructor(meaning) => {
               // Otherwise, a normal primitive or constructor
               result = try!(meaning.invoke_primitive(self, meaning.clone(), state));
@@ -199,7 +210,7 @@ impl Stomach {
               if !meaning.is_prefix() {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
-            }
+            },
             meaning => {
               fatal!(Stomach, Misdefined, format!("The object {:?} should never reach Stomach!", meaning));
             }
@@ -246,14 +257,13 @@ impl Stomach {
     }
     else {
       error!(target: &format!("undefined:{}", cs), "The token {:?} is not defined. Defining it now as <ltx:ERROR/>",cs);
+      let closure_cs = cs.clone();
       state.install_definition(ObjectStore::Constructor(Rc::new(
         Constructor {
           cs: token.clone(),
           paramlist: None,
-          replacement: Some(Rc::new(|_document, _args, _props, _state| {
-            info!("TODO: makeError");
-            // TODO: makeError($_[0], 'undefined', $cs); }),
-            Ok(())
+          replacement: Some(Rc::new(move |document, args, _props, state| {
+            document.make_error("undefined", &closure_cs, state)
           })),
           options: ConstructorOptions::default(),
         })), Some(Scope::Global));
