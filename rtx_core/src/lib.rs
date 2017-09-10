@@ -128,9 +128,7 @@ impl Core {
 pub trait BoxOps {
   fn unlist(self) -> Vec<Digested>;
   fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()>;
-  fn to_string(&self) -> String {
-    "Vec<Tbox> for now ".to_string()
-  }
+  fn to_string(&self) -> String;
   fn stringify(&self) -> String {
     "Vec<Tbox> for now ".to_string()
   }

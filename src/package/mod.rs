@@ -13,7 +13,8 @@ pub use rtx_core::token::*;
 pub use rtx_core::parameter::{Parameter, Parameters};
 pub use rtx_core::mouth;
 pub use rtx_core::mouth::Mouth;
-pub use rtx_core::definition::{Definition, BeforeDigestClosure, DigestionClosure, ConstructionClosure, ExpansionClosure};
+pub use rtx_core::definition::{Definition, BeforeDigestClosure, DigestionClosure,
+  ConstructionClosure, ExpansionClosure, ReplacementClosure};
 pub use rtx_core::document::Document;
 pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptions, TagOptionName};
@@ -1339,6 +1340,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! DefConstructor(
+    // String replacement flavors
     ($cs:expr, $replacement:expr) => (DefConstructor!($cs, $replacement, $state));
     ($cs:expr, $replacement:expr,
       $key1:ident => $val1:expr)=>(DefConstructor!($cs, $replacement, $key1=>$val1, $state));
@@ -1408,20 +1410,112 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       $key4 => $val4,
       $key5 => $val5
     ), $state_arg));
+
+    // Closure replacement flavors:
+    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr)=>(
+        DefConstructor!($cs, $document, $args, $props, $inner_state, $body,
+                        $state));
+    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
+      $key1:ident => $val1:expr)=>(
+        DefConstructor!($cs, $document, $args, $props, $inner_state, $body,
+                        $key1=>$val1, $state));
+    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
+      $key1:ident => $val1:expr,
+      $key2:ident=>$val2:expr)=>(
+        DefConstructor!($cs, $document, $args, $props, $inner_state, $body,
+                        $key1=>$val1, $key2=>$val2, $state));
+    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
+      $key1:ident => $val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr)=>(
+        DefConstructor!($cs, $document, $args, $props, $inner_state, $body,
+                        $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
+    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
+      $key1:ident => $val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr)=>(
+        DefConstructor!($cs, $document, $args, $props, $inner_state, $body,
+                        $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $state));
+    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
+      $key1:ident => $val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr,
+      $key5:ident=>$val5:expr)=>(
+        DefConstructor!($cs, $document, $args, $props, $inner_state, $body,
+                        $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $state));
+    // Closure replacement, explicit state
+    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $state_arg:ident) => (
+      DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, ConstructorOptions::default(), $state_arg)
+    );
+    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $key1:ident=>$val1:expr, $state_arg:ident) => (
+      let replacement = replacement!($document, $args, $props, $body);
+      DefConstructorWO!($cs, replacement, NewDefault!(ConstructorOptions, $key1 => $val1), $state_arg)
+    );
+    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr, $state_arg:ident
+    ) => (
+      DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,
+        $key1 => $val1,
+        $key2 => $val2),
+      $state_arg));
+
+    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr, $state_arg:ident
+    ) => (
+      DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,
+        $key1 => $val1,
+        $key2 => $val2,
+        $key3 => $val3
+      ), $state_arg));
+
+    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr, $state_arg:ident
+    ) => (
+      DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2,
+      $key3 => $val3,
+      $key4 => $val4
+    ), $state_arg));
+
+    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
+      $key1:ident=>$val1:expr,
+      $key2:ident=>$val2:expr,
+      $key3:ident=>$val3:expr,
+      $key4:ident=>$val4:expr,
+      $key5:ident=>$val5:expr, $state_arg:ident
+    ) => (
+      DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,
+      $key1 => $val1,
+      $key2 => $val2,
+      $key3 => $val3,
+      $key4 => $val4,
+      $key5 => $val5
+    ), $state_arg));
   );
 
   macro_rules! DefConstructorWO(
-    ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => (
-    {
-  // check_options("DefConstructor (prototype)", $constructor_options, %options);
+    ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
+      // check_options("DefConstructor (prototype)", $constructor_options, %options);
       let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
       let compiled_replacement;
       compile_replacement!(compiled_replacement, $replacement);
       DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
-    }
-    )
+    });
+    ($proto:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $options:expr, $state_arg:ident) => ({
+      let compiled_replacement : Option<ReplacementClosure> = Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body)));
+      let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
+      DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
+    });
   );
-
   //=====================================================================
   // Define a LaTeX environment
   // Note that the body of the environment is treated is the 'body' parameter in the constructor.

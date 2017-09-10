@@ -105,6 +105,10 @@ impl fmt::Debug for Whatsit {
 }
 
 impl BoxOps for Whatsit {
+  fn to_string(&self) -> String {
+    self.revert().to_string() // What else??
+  }
+
   fn unlist(self) -> Vec<Digested> {
     Vec::new()
   }

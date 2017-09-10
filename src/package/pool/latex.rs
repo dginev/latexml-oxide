@@ -251,6 +251,66 @@ lazy_static!{
   DefMacro!("\\@@unnumbered@section{}[]{}",
     "\\@@section{#1}{\\@currentID}{}{}{#2}{#3}");
 
+  //----------------------------------------------------------------------
+  // The following macros provide a few layers of customization
+  // in particular for supporting localization for different languages.
+  //----------------------------------------------------------------------
+  // \format@title@{type}{title}
+  // Format a title (or caption) appropriately for type.
+  // This is usually somewhat verbose, but establishes the context that this is a Chapter, or Figure, or whatever
+  // invokes \format@title@type{title} if that macro is defined, else composes \lx@fnum@@{type} title.
+  // Define \format@title@type{title} if the default is not appropriate.
+
+  // TODO:
+  // DefMacro!("\\format@title@{}{}",
+  // "{\\@ifundefined{format@title@#1}{\\@@compose@title{\\lx@fnum@@{#1}}{#2}}{\\csname format@title@#1\\endcsname{#2}}}");
+
+  // \format@toctitle@{type}{toctitle}
+  // Format a toctitle (or toccaption) appropriately for type.
+  // This is usually somewhat concise, and the context implies that this is a Chapter, Figure or whatever
+  // invokes \format@toctitle@type{title} if that macro is defined, else composes \lx@fnum@toc@@{type} title
+  // Define \format@toctitle@type{title} if the default is not appropriate.
+
+  // TODO:
+  // DefMacro!("\\format@toctitle@{}{}",
+  // "{\\@ifundefined{format@toctitle@#1}{\\@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}{\\csname format@toctitle@#1\\endcsname{#2}}}");
+  // DefMacro!("\\@@compose@title{}{}", "\\@tag[][ ]{#1}#2");
+  // DefConstructor!("\\@tag[][]{}", "?#3(<ltx:tag open='#1' close='#2'>#3</ltx:tag>)()");
+
+  //// NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the type.
+  //// This would be useful for the titles in links; thus can be plain (unicode) text.
+  //// However, I hate setting up even more machinery & options and dragging yet another form around....
+  // \@@section{type}{id}{refnum}{formattedrefnum}{toctitle}{title}
+  DefConstructor!("\\@@section{}{}{}{}{}{}", document, args, props, inner_state, {
+    // TODO: This bizarre argument API interaction needs to be simplified down to Perl's intuitive level of:
+    //       let (x,y,z, ...) = @args;
+    let (stype, id, refnum, mut frefnum, toctitle, title) =
+      (args[0].clone().unwrap().to_string(), args[1].clone().unwrap().to_string(), args[2].clone().unwrap().to_string(), args[3].clone().unwrap().to_string(), args[4].clone().unwrap(), args[5].clone().unwrap());
+
+    if frefnum == refnum {
+      frefnum = String::new();
+    }
+
+    let clean_id = id;// TODO: CleanID($id);
+    let has_toctitle = !toctitle.to_string().is_empty() && (toctitle.to_string() != title.to_string());
+    document.open_element(&format!("ltx:{}",stype), Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)), None, inner_state);
+    document.insert_element("ltx:title", vec![title], None, inner_state);
+    if has_toctitle {
+      document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state);
+    }
+  });
+
+  // Not sure if this is best, but if no explicit \section'ing...
+  //### Tag('ltx:section',autoOpen=>1);
+
+  //======================================================================
+  // C.4.2 The Appendix
+  //======================================================================
+  // Handled in article,report or book.
+  DefMacro!("\\appendixname",   "Appendix");
+  DefMacro!("\\appendixesname", "Appendixes");
+
+
   // ======================================================================
   // C.5.2 Packages
   // ======================================================================
@@ -260,10 +320,11 @@ lazy_static!{
   // Ignorable packages ??
   // pre-defined packages??
 
-  // DefMacroI('\@clsextension', undef, 'cls');
-  // DefMacroI('\@pkgextension', undef, 'sty');
-  // Let('\@currext',  '\@empty');
-  // Let('\@currname', '\@empty');
+  DefMacro!("\\@clsextension", "cls");
+  DefMacro!("\\@pkgextension", "sty");
+  Let!("\\@currext",  "\\@empty");
+  Let!("\\@currname", "\\@empty");
+
   fn only_preamble(cs: &str, state: &mut State) {
     if !state.lookup_bool("inPreamble") {
       let category_object = format!("unexpected:{:?}", cs);
