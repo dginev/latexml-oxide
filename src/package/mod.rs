@@ -926,19 +926,43 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       DefMacroI!($cs, $paramlist, move |_gullet, _args, _state| {Ok(Tokens!($body))}, $state_arg)
     });
   );
-  macro_rules! DefMacro(
+
+  macro_rules! DefMacro {
+    // String form
+    ($proto:expr, $expansion:expr) => (DefMacroWO!($proto, $expansion, ExpandableOptions::default()));
+    ($proto:expr, $expansion:expr, $key1:ident=>$val1:expr) => (
+      DefMacroWO!($proto, $expansion, NewDefault!(ExpandableOptions, $key1=>$val1)));
+    // string; explicit state
+    ($proto:expr, $expansion:expr,$state_arg:ident) => (DefMacroWO!($proto, $expansion, ExpandableOptions::default(), $state_arg));
+    // Closure form
+    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr) => (
+      DefMacroWO!($proto, $gullet, $args, $inner_state, $block, None)
+    );
+    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $key1:ident=>$val1:expr) => (
+      DefMacroWO!($proto, $gullet, $args, $inner_state, $block, NewDefault!(ExpandableOptions, $key1=>$val1))
+    );
+    // closure; explicit state
+    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $state_arg:ident) => (
+      DefMacroWO!($proto, $gullet, $args, $inner_state, $block, None, $state_arg);
+    );
+  }
+
+  macro_rules! DefMacroWO(
     // String expansion forms
-    ($proto:expr, $expansion:expr) => (DefMacro!($proto, $expansion, $state));
-    ($proto:expr, $expansion:expr, $state_arg:ident) => ({
+    ($proto:expr, $expansion:expr, $options:expr) => (DefMacroWO!($proto, $expansion, $options, $state));
+    ($proto:expr, $expansion:expr, $options:expr, $state_arg:ident) => ({
       let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
       let expansion;
       compile_expansion!(expansion, $expansion);
+      // TODO: Also pass in options
       def_macro_i(cs, paramlist, expansion, $state_arg);
     });
     // Rust closure expansion form
-    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr) => (DefMacro!($proto, $gullet, $args, $inner_state, $block, $state));
-    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $state_arg:ident) => ({
+    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $options:expr) => (
+      DefMacroWO!($proto, $gullet, $args, $inner_state, $block, $options, $state));
+    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $options:expr, $state_arg:ident) => ({
       let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
+      // TODO: Also pass in options
       def_macro_i(cs, paramlist, Some(Rc::new(|$gullet, $args, $inner_state| {$block})), $state_arg);
     })
   );
@@ -2199,6 +2223,243 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     )
   }
 
+  //======================================================================
+  // Counters
+  //======================================================================
+  // This is modelled on LaTeX's counter mechanisms, but since it also
+  // provides support for ID's, even where there is no visible reference number,
+  // it is defined in genera.
+  // These id's should be both unique, and parallel the visible reference numbers
+  // (as much as possible).  Also, for consistency, we add id's to unnumbered
+  // document elements (eg from \section*); this requires an additional counter
+  // (eg. UNsection) and  mechanisms to track it.
+
+  // Defines a new counter named $ctr.
+  // If $within is defined, $ctr will be reset whenever $within is incremented.
+  // Keywords:
+  //  idprefix : specifies a prefix to be used in formatting ID's for document structure elements
+  //           counted by this counter.  Ie. subsection 3 in section 2 might get: id="S2.SS3"
+  //  idwithin : specifies that the ID is composed from $idwithin's ID,, even though
+  //           the counter isn't numbered within it.  (mainly to avoid duplicated ids)
+  //   nested : a list of counters that correspond to scopes which are "inside" this one.
+  //           Whenever any definitions scoped to this counter are deactivated,
+  //           the inner counter's scopes are also deactivated.
+  //           NOTE: I'm not sure this is even a sensible implementation,
+  //           or why inner should be different than the counters reset by incrementing this counter.
+
+  #[macro_export]
+  macro_rules! NewCounter {
+    ($ctr:ident) => (NewCounter!($ctr, "", None, $state));
+    ($ctr:ident, $within:expr) => (NewCounter!($ctr, $within, None, $state));
+    ($ctr:ident, $within:expr, $options:expr) => (NewCounter!($ctr, $within, $options, $state));
+    ($ctr:ident, $within:expr, $options:expr, $state_arg:ident) => (new_counter($ctr, $within, $options, $state_arg));
+  }
+
+//   #[macro_export]
+//   macro_rules! CounterValue {
+//   my ($ctr) = @_;
+//   $ctr = ToString($ctr) if ref $ctr;
+//   my $value = LookupValue('\c@' . $ctr);
+//   if (!$value) {
+//     Warn('undefined', $ctr, $STATE->getStomach,
+//       "Counter '$ctr' was not defined; assuming 0");
+//     $value = Number(0); }
+//   return $value; }
+
+//   #[macro_export]
+//   macro_rules! AfterAssignment {
+//   if (my $after = $STATE->lookupValue('afterAssignment')) {
+//     $STATE->assignValue(afterAssignment => undef, Some(Scope::Global));
+//     $STATE->getStomach->getGullet->unread($after); } // primitive returns boxes, so these need to be digested!
+//   return; }
+
+//   #[macro_export]
+//   macro_rules! SetCounter {
+//   my ($ctr, $value) = @_;
+//   $ctr = ToString($ctr) if ref $ctr;
+//   AssignValue('\c@' . $ctr => $value, Some(Scope::Global));
+//   AfterAssignment();
+//   DefMacroI(T_CS("\\\@$ctr\@ID"), undef, Tokens(Explode($value->valueOf)), scope => Some(Scope::Global));
+//   return; }
+
+//   #[macro_export]
+//   macro_rules! AddToCounter {
+//   my ($ctr, $value) = @_;
+//   $ctr = ToString($ctr) if ref $ctr;
+//   my $v = CounterValue($ctr)->add($value);
+//   AssignValue('\c@' . $ctr => $v, Some(Scope::Global));
+//   AfterAssignment();
+//   DefMacroI(T_CS("\\\@$ctr\@ID"), undef, Tokens(Explode($v->valueOf)), scope => Some(Scope::Global));
+//   return; }
+
+//   #[macro_export]
+//   macro_rules! StepCounter {
+//   my ($ctr, $noreset) = @_;
+//   my $value = CounterValue($ctr);
+//   AssignValue(format!("\\c@{}",$ctr) => $value->add(Number(1)), Some(Scope::Global));
+//   AfterAssignment();
+//   DefMacroI(T_CS("\\\@$ctr\@ID"), undef, Tokens(Explode(LookupValue('\c@' . $ctr)->valueOf)),
+//     scope => Some(Scope::Global));
+//   // and reset any within counters!
+//   if (!$noreset) {
+//     if (my $nested = LookupValue(format!("\\cl@{}",$ctr))) {
+//       foreach my $c ($nested->unlist) {
+//         ResetCounter(ToString($c)); } } }
+//   DigestIf(T_CS("\\the$ctr"));
+//   return; }
+
+// // HOW can we retract this?
+//   #[macro_export]
+//   macro_rules! RefStepCounter {
+//   my ($ctr, $noreset) = @_;
+//   StepCounter($ctr, $noreset);
+//   my $iddef = $STATE->lookupDefinition(T_CS("\\the$ctr\@ID"));
+//   my $has_id = $iddef && ((!defined $iddef->getParameters) || ($iddef->getParameters->getNumArgs == 0));
+
+//   DefMacroI(T_CS('\@currentlabel'), undef, T_CS("\\the$ctr"), scope => Some(Scope::Global));
+//   DefMacroI(T_CS('\@currentID'), undef, T_CS("\\the$ctr\@ID"), scope => Some(Scope::Global)) if $has_id;
+
+// //////  my $id      = $has_id && ToString(Digest($idtokens));
+//   //  my $id      = $has_id && ToString(DigestLiteral($idtokens));
+//   my $id = $has_id && ToString(DigestLiteral(T_CS("\\the$ctr\@ID")));
+
+//   //  my $refnum  = ToString(Digest(T_CS("\\the$ctr")));
+//   //  my $frefnum = ToString(Digest(Invocation(T_CS('\lx@fnum@@'),$ctr)));
+//   //  my $rrefnum  = ToString(Digest(Invocation(T_CS('\lx@refnum@@'),$ctr)));
+
+//   my $refnum    = DigestText(T_CS("\\the$ctr"));
+//   my $frefnum   = DigestText(Invocation(T_CS('\lx@fnum@@'), $ctr));
+//   my $rrefnum   = DigestText(Invocation(T_CS('\lx@refnum@@'), $ctr));
+//   my $s_refnum  = ToString($refnum);
+//   my $s_frefnum = ToString($frefnum);
+//   my $s_rrefnum = ToString($rrefnum);
+//   // Any scopes activated for previous value of this counter (& any nested counters) must be removed.
+//   // This may also include scopes activated for \label
+//   deactivateCounterScope($ctr);
+//   // And install the scope (if any) for this reference number.
+//   AssignValue(current_counter => $ctr, 'local');
+//   AssignValue('scopes_for_counter:' . $ctr => [$ctr . ':' . $s_refnum], 'local');
+//   $STATE->activateScope($ctr . ':' . $s_refnum);
+//   return (refnum => $refnum,
+//     ($frefnum && (!$refnum || ($s_frefnum ne $s_refnum)) ? (frefnum => $frefnum) : ()),
+//     ($rrefnum && ($frefnum ? ($s_rrefnum ne $s_frefnum) : (!$refnum || ($s_rrefnum ne $s_refnum)))
+//       ? (rrefnum => $rrefnum) : ()),
+//     ($has_id ? (id => $id) : ())); }
+
+// // TODO: Move up to package functions
+// // fn deactivate_counter_scope {
+// //   my ($ctr) = @_;
+// //   //  print STDERR "Unusing scopes for $ctr\n";
+// //   if (my $scopes = LookupValue('scopes_for_counter:' . $ctr)) {
+// //     map { $STATE->deactivateScope($_) } @$scopes; }
+// //   foreach my $inner_ctr (@{ LookupValue('nested_counters_' . $ctr) || [] }) {
+// //     deactivateCounterScope($inner_ctr); }
+// //   return; }
+
+//   // For UN-numbered units
+//   #[macro_export]
+//   macro_rules! RefStepID {
+//   my ($ctr) = @_;
+//   my $unctr = "UN$ctr";
+//   StepCounter($unctr);
+//   DefMacroI(T_CS("\\\@$ctr\@ID"), undef,
+//     Tokens(T_OTHER('x'), Explode(LookupValue('\c@' . $unctr)->valueOf)),
+//     scope => Some(Scope::Global));
+//   DefMacroI(T_CS('\@currentID'), undef, T_CS("\\the$ctr\@ID"));
+//   return (id => ToString(DigestLiteral(T_CS("\\the$ctr\@ID")))); }
+
+// sub ResetCounter {
+//   my ($ctr) = @_;
+//   AssignValue('\c@' . $ctr => Number(0), Some(Scope::Global));
+//   // and reset any within counters!
+//   if (my $nested = LookupValue(format!("\\cl@{}",$ctr))) {
+//     foreach my $c ($nested->unlist) {
+//       ResetCounter(ToString($c)); } }
+//   return; }
+
 )}
+
+pub fn new_counter(ctr: &str, within: &str, options: Option<HashMap<String, String>>, state: &mut State) {
+  SetupBindingMacros!(state);
+  let unctr   = format!("UN{}",ctr); // UNctr is counter for generating ID's for UN-numbered items.
+  let cctr    = format!("\\c@{}",ctr);
+  let clctr   = format!("\\cl@{}",ctr);
+  let cunctr  = format!("\\c@{}",unctr);
+  let clunctr = format!("\\cl@{}",unctr);
+
+  // DefRegisterI!(T_CS!(cctr), None, Number!(0));
+  // state.assign_value(cctr, Number!(0), Some(Scope::Global));
+  // // TODO:
+  // // AfterAssignment!();
+  // if !state.lookup_bool(&clctr) {
+  //   state.assign_value(clctr, Tokens!(), Some(Scope::Global));
+  // }
+  // // TODO:
+  // // DefRegisterI!(T_CS!(cunctr), None, Number!(0));
+  // state.assign_value(cunctr, Number!(0), Some(Scope::Global));
+  // if !state.lookup_bool(clunctr) {
+  //   state.assign_value(clunctr, Tokens!(), Some(Scope::Global));
+  // }
+
+  // if !within.is_empty() {
+  //   let clwithin = format!("\\cl@{}",within);
+  //   let clunwithin = format!("\\cl@UN{}",within);
+  //   let x = if let Some(ObjectStore::Tokens(cl)) = state.lookup_value(clwithin) {
+  //    cl.unlist()
+  //   } else {
+  //     Vec::new()
+  //   };
+  //   let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(unctr)];
+  //   clwithin_tokens.append(x);
+  //   state.assign_value(clwithin, ObjectStore::Tokens(Tokens{tokens: clwithin_tokens}), Some(Scope::Global));
+
+  //   let unx = if let Some(ObjectStore::Tokens(clun)) = state.lookup_value(clunwithin) {
+  //     clun.unlist()
+  //   } else {
+  //    Vec::new()
+  //   };
+  //   let mut clunwithin_tokens = T_CS!(unctr);
+  //   clunwithin_tokens.append(unx);
+
+  //   state.assign_value(clunwithin, ObjectStore::Tokens(Tokens{tokens: clunwithin_tokens}), Some(Scope::Global))
+  // }
+
+  // if let Some(nested_val) = options.get("nested") {
+  //   state.assign_value(format!("nested_counters_{}", ctr), ObjectStore::String(nested_val), Some(Scope::Global))
+  // }
+
+  // // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
+  // DefMacroI!(T_CS!(format!("\\the{}",ctr)), None, move |gullet, args, inner_state| {
+  //   let counter_value = CounterValue!(ctr, inner_state).value_of();
+  //   Ok(ExplodeText!(counter_value))
+  // },
+  // scope => Some(Scope::Global));
+
+  // let mut prefix = options.get("idprefix").unwrap_or(String::new());
+  // if !prefix.is_empty() {
+  //   state.assign_value(format!("@ID@prefix@{}",ctr), ObjectStore::String(prefix), Some(Scope::Global));
+  // } else {
+  //   prefix = state.lookup_string(format!("@ID@prefix@{}",ctr));
+  //   if prefix.is_empty() {
+  //     prefix = clean_id(ctr);
+  //   }
+  // }
+  // if !prefix.is_empty() {
+  //   let idwithin = options.get("idwithin").unwrap_or(within.clone());
+  //   if !idwithin.is_empty() {
+  //     DefMacro!(format!("\\the{}@ID",ctr),
+  //       concat!(format!("\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty",idwithin),
+  //               format!("\\else\\csname the{}@ID\\endcsname.\\fi",idwithin),
+  //               format!(" {}\\csname @{}@ID\\endcsname",prefix,ctr)),
+  //       scope => Some(Scope::Global));
+  //   }
+  //   else {
+  //     DefMacro!(format!("\\the{}@ID",ctr), format!("{}\\csname @{}@ID\\endcsname",prefix,ctr),
+  //       scope => Some(Scope::Global));
+  //   }
+  //   DefMacro!(format!("\\@{}@ID",ctr), "0", scope => Some(Scope::Global));
+  // }
+  return;
+}
 
 pub mod pool;
