@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use state::State;
+use state::{Scope, State};
 use Digested;
 use token::*;
 use tokens::Tokens;
@@ -13,6 +13,20 @@ use whatsit::Whatsit;
 use document::Document;
 
 #[derive(Clone)]
+pub struct ExpandableOptions {
+  pub locked: bool,
+  pub scope: Option<Scope>
+}
+impl Default for ExpandableOptions {
+  fn default() -> Self {
+    ExpandableOptions {
+      locked: false,
+      scope: None
+    }
+  }
+}
+
+#[derive(Clone)]
 pub struct Expandable {
   pub is_protected: bool,
   pub alias: Option<String>,
@@ -21,6 +35,7 @@ pub struct Expandable {
   pub paramlist: Option<Parameters>,
   pub expansion: Option<ExpansionClosure>,
   pub trivial_expansion: Option<Tokens>,
+  pub options: ExpandableOptions
 }
 impl Default for Expandable {
   fn default() -> Self {
@@ -32,6 +47,7 @@ impl Default for Expandable {
       cs: T_CS!("Expandable".to_string()),
       paramlist: None,
       expansion: None,
+      options: ExpandableOptions::default()
     }
   }
 }

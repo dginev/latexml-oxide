@@ -2,6 +2,11 @@ use std::io;
 use std::fmt;
 use std::error::Error as ErrorTrait;
 use std::result;
+use std::collections::HashMap;
+
+lazy_static! {
+  static ref NOTE_TIMERS : HashMap<String, String> = HashMap::new();
+}
 
 #[derive(Debug)]
 pub struct Error {
@@ -135,37 +140,25 @@ impl From<()> for Error {
 // Progress reporting.
 
 pub fn note_progress(stuff: &str) {
-  // my $state = $STATE;
-  // my $verbosity = $state && $state->lookupValue('VERBOSITY') || 0;
-  // print STDERR @stuff if $verbosity >= 0;
   info!(target: "note", "{}", stuff);
 }
 
+// TODO: Rethink this reporting
 pub fn note_progress_detailed(stuff: &str) {
-  // my $state = $STATE;
-  // my $verbosity = $state && $state->lookupValue('VERBOSITY') || 0;
-  // print STDERR @stuff if $verbosity >= 1;
-  info!(target: "note", "{}", stuff);
+  debug!(target: "note", "{}", stuff);
 }
 
 pub fn note_begin(stage: &str) {
-  // my ($stage) = @_;
-  // my $state = $STATE;
-  // my $verbosity = $state && $state->lookupValue('VERBOSITY') || 0;
-  // if ($state && ($verbosity >= 0)) {
   // $state->assignMapping('NOTE_TIMERS', $stage, [Time::HiRes::gettimeofday]);
   info!(target: "note", "\n({}...", stage);
 }
 
 
 pub fn note_end(_stage: &str) {
-  // my ($stage) = @_;
-  // my $state = $STATE;
-  // my $verbosity = $state && $state->lookupValue('VERBOSITY') || 0;
   // if (my $start = $state && $state->lookupMapping('NOTE_TIMERS', $stage)) {
   //   $state->assignMapping('NOTE_TIMERS', $stage, undef);
-    // if ($verbosity >= 0) {
-      // my $elapsed = Time::HiRes::tv_interval($start, [Time::HiRes::gettimeofday]);
+
+  // my $elapsed = Time::HiRes::tv_interval($start, [Time::HiRes::gettimeofday]);
   // info!(target: "note", " %.2f sec)", elapsed);
   info!(target: "note", " )");
 }

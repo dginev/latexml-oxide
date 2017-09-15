@@ -539,7 +539,7 @@ impl Model {
   ///       which generates a rust objects from all available schemas and has them directly available at runtime
   ///       For now, simply reimplementing the runtime loading of LaTeXML.model as-is from Model.pm
   pub fn load_compiled_schema(&mut self, path: &str) {
-    note_begin(&(format!("Loading compiled schema {}", path)));
+    note_begin(&format!("Loading compiled schema {}", path));
     let compiled_fh = File::open(path).unwrap();
     let compiled_reader = BufReader::new(&compiled_fh);
     for line_result in compiled_reader.lines() {
