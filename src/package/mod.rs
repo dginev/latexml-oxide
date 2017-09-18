@@ -9,6 +9,7 @@ pub use rtx_core::tbox::Tbox;
 pub use rtx_core::state::{State, ObjectStore, Scope};
 pub use rtx_core::common::error::*;
 pub use rtx_core::common::font::Font;
+pub use rtx_core::common::number;
 pub use rtx_core::token::*;
 pub use rtx_core::parameter::{Parameter, Parameters};
 pub use rtx_core::mouth;
@@ -1244,6 +1245,111 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     })
   );
 
+  // my %register_types = (      # [CONSTANT]
+  //   'LaTeXML::Common::Number'    => 'Number',
+  //   'LaTeXML::Common::Dimension' => 'Dimension',
+  //   'LaTeXML::Common::Glue'      => 'Glue',
+  //   'LaTeXML::Core::MuGlue'      => 'MuGlue',
+  //   'LaTeXML::Core::Tokens'      => 'Tokens',
+  //   'LaTeXML::Core::Token'       => 'Token',
+  // );
+
+  macro_rules! DefRegister {
+    ($proto:expr, $value:expr, $options:expr) => (DefRegister!($proto, $value, $options, $state));
+    ($proto:expr, $value:expr, $options:expr, $state_arg:ident) => ({
+      let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
+      DefRegisterI!(cs, paramlist, $value, $options, $state_arg);
+    });
+  }
+
+  macro_rules! DefRegisterI {
+    ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => (DefRegisterI!($cs, $paramlist, $value, $options, $state));
+    ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => ({
+  //   my $type   = $register_types{ ref $value };
+  //   my $name   = ToString($cs);
+  //   my $getter = $options{getter}
+  //     || sub { LookupValue(join('', $name, map { ToString($_) } @_)) || $value; };
+  //   my $setter = $options{setter}
+  //     || ($options{readonly}
+  //     ? sub { my ($v, @args) = @_;
+  //       Warn('unexpected', $name, $STATE->getStomach,
+  //         "Can't assign to register $name"); return; }
+  //     : sub { my ($v, @args) = @_;
+  //       AssignValue(join('', $name, map { ToString($_) } @args) => $v); });
+  //   # Not really right to set the value!
+  //   AssignValue(ToString($cs) => $value) if defined $value;
+  //   $STATE->installDefinition(LaTeXML::Core::Definition::Register->new($cs, $paramlist,
+  //       registerType => $type,
+  //       getter       => $getter, setter => $setter,
+  //       readonly     => $options{readonly}),
+  //     'global');
+    });
+  }
+
+  // sub LookupRegister {
+  //   my ($cs, @parameters) = @_;
+  //   my $defn;
+  //   $cs = T_CS($cs) unless ref $cs;
+  //   if (($defn = $STATE->lookupDefinition($cs)) && $defn->isRegister) {
+  //     return $defn->valueOf(@parameters); }
+  //   else {
+  //     Warn('expected', 'register', $STATE->getStomach,
+  //       "The control sequence " . ToString($cs) . " is not a register"); }
+  //   return; }
+
+  // sub LookupDimension {
+  //   my ($cs) = @_;
+  //   my $defn;
+  //   $cs = T_CS($cs) unless ref $cs;
+  //   if (my $defn = $STATE->lookupDefinition($cs)) {
+  //     if ($defn->isRegister) {    # Easy (and proper) case.
+  //       return $defn->valueOf; }
+  //     else {
+  //       $STATE->getStomach->getGullet->readingFromMouth(LaTeXML::Core::Mouth->new(), sub { # start with empty mouth
+  //           my ($gullet) = @_;
+  //           $gullet->unread($cs);    # but put back tokens to be read
+  //           return $gullet->readDimension; }); } }
+  //   else {
+  //     Warn('expected', 'register', $STATE->getStomach,
+  //       "The control sequence " . ToString($cs) . " is not a register"); }
+  //   return Dimension(0); }
+
+  // sub AssignRegister {
+  //   my ($cs, $value, @parameters) = @_;
+  //   my $defn;
+  //   $cs = T_CS($cs) unless ref $cs;
+  //   if (($defn = $STATE->lookupDefinition($cs)) && $defn->isRegister) {
+  //     return $defn->setValue($value, @parameters); }
+  //   else {
+  //     Warn('expected', 'register', $STATE->getStomach,
+  //       "The control sequence " . ToString($cs) . " is not a register");
+  //     return; } }
+
+  macro_rules! Number {
+    ($number:expr) => (::rtx_core::common::number::Number::new($number))
+  }
+
+  //======================================================================
+  // Define a constructor control sequence.
+  //======================================================================
+  // The arguments, if any, will be collected and processed in the Stomach, and
+  // a Whatsit will be constructed.
+  // It is the Whatsit that will be processed in the Document: It is responsible
+  // for constructing XML Nodes.  The $replacement should be a sub which inserts nodes,
+  // or a string specifying a constructor pattern (See somewhere).
+  //
+  // Options are:
+  //   bounded         : any side effects of before/after daemans are bounded; they are
+  //                     automatically enclosed by bgroup/egroup pair.
+  //   mode            : causes a switch into the given mode during the Whatsit building in the stomach.
+  //   reversion       : a string representing the preferred TeX form of the invocation.
+  //   beforeDigest    : code to be executed (in the stomach) before parsing & constructing the Whatsit.
+  //                     Can be used for changing modes, beginning groups, etc.
+  //   afterDigest     : code to be executed (in the stomach) after parsing & constructing the Whatsit.
+  //                     useful for setting Whatsit properties,
+  //   properties      : a hashref listing default values of properties to assign to the Whatsit.
+  //                     These properties can be used in the constructor.
+
   macro_rules! DefConstructorI {
     ($cs:expr, $paramlist:expr, $compiled_replacement:expr) => (DefConstructorI!($cs, $paramlist, $compiled_replacement, $state));
     ($cs:expr, $paramlist:expr, $compiled_replacement:expr,
@@ -2387,7 +2493,7 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<HashMap<String, Stri
   let cunctr  = format!("\\c@{}",unctr);
   let clunctr = format!("\\cl@{}",unctr);
 
-  // DefRegisterI!(T_CS!(cctr), None, Number!(0));
+  DefRegisterI!(T_CS!(cctr), None, Number!(0), None);
   // state.assign_value(cctr, Number!(0), Some(Scope::Global));
   // // TODO:
   // // AfterAssignment!();
