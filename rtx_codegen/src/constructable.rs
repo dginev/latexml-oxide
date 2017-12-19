@@ -3,7 +3,7 @@ use quote;
 use regex::{Captures, Regex};
 use rtx_core::util::text::*;
 use rtx_core::mouth;
-use util::{get_options_from_input, get_option};
+use util::{get_option, get_options_from_input};
 
 // We recognize several special operators:
 //  #      #number|name      accesses an argument to or property of the whatsit
@@ -61,17 +61,20 @@ lazy_static! {
 
 pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
   fn bug() -> ! {
-      panic!("This is a bug. Please open a Github issue \
-             with your DefConstructor invocation");
+    panic!(
+      "This is a bug. Please open a Github issue \
+       with your DefConstructor invocation"
+    );
   }
-  let options = get_options_from_input("compile_replacement_options",&input.attrs, bug);
+  let options = get_options_from_input("compile_replacement_options", &input.attrs, bug);
   let replacement_opt = options.as_ref().map(|o| get_option(&o, "replacement", bug));
   let compiled_replacement_closure = match replacement_opt {
     None => quote!(None),
     Some(replacement) => {
-      // Following the original LaTeXML Compiler, we'll mutate this string in place, cloning for safety.
-      // since this is all happening in Rust's compilation step, the clone causes no major overhead.
-      // If we refactor away the mutable borrows we do for in-place modification, we can avoid a lot of the
+      // Following the original LaTeXML Compiler, we'll mutate this string in place,
+      // cloning for safety. since this is all happening in Rust's compilation
+      // step, the clone causes no major overhead. If we refactor away the
+      // mutable borrows we do for in-place modification, we can avoid a lot of the
       // cloning, and stay conservative in memory. For now it shouldn't matter.
 
       // println!("Compiling: \n{:?}", &replacement);
@@ -95,9 +98,11 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
           Ok(())
         }))
       )
-    }
+    },
   };
-  // We have to jump an extra hoop, since we are forcing the struct-derive mechanism. Once the new procedural macro scheme lands, this begs to be refactored.
+  // We have to jump an extra hoop, since we are forcing the struct-derive
+  // mechanism. Once the new procedural macro scheme lands, this begs to be
+  // refactored.
   quote!(
     impl _Dummy {
       fn replacement() -> Option<ReplacementClosure> {
@@ -108,20 +113,25 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
 
 pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
   fn bug() -> ! {
-      panic!("This is a bug. Please open a Github issue \
-             with your DefConstructor invocation");
+    panic!(
+      "This is a bug. Please open a Github issue \
+       with your DefConstructor invocation"
+    );
   }
-  let options = get_options_from_input("compile_expansion_options",&input.attrs, bug);
+  let options = get_options_from_input("compile_expansion_options", &input.attrs, bug);
   let expansion_opt = options.as_ref().map(|o| get_option(&o, "expansion", bug));
   let compiled_expansion_closure = match expansion_opt {
     None => quote!(None),
-    Some("") =>  quote!(None),
+    Some("") => quote!(None),
     Some(expansion) => {
       let performed_expansion = mouth::tokenize_internal(expansion, None).unlist();
-      //println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(), performed_expansion);
-      // TODO: Should "substitute_parameters" be specially performed for runtime-read expansions (via RawTeX?), e.g. when reading external style files?
-      //       should that even be allowed? We can easily pre-compile all of texlive (or the ~200 supported sty and cls files in the ecosystem) once
-      //       and have all expansions handled by this code snippet.
+      // println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(),
+      // performed_expansion); TODO: Should "substitute_parameters" be
+      // specially performed for runtime-read expansions (via RawTeX?), e.g. when
+      // reading external style files? should that even be allowed? We
+      // can easily pre-compile all of texlive (or the ~200 supported sty and cls
+      // files in the ecosystem) once and have all expansions handled by
+      // this code snippet.
       let precompiled_expansion = quote!(
         Some(Rc::new(
         |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| -> Result<Tokens> {
@@ -130,9 +140,11 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
         }))
       );
       precompiled_expansion
-    }
+    },
   };
-  // We have to jump an extra hoop, since we are forcing the struct-derive mechanism. Once the new procedural macro scheme lands, this begs to be refactored.
+  // We have to jump an extra hoop, since we are forcing the struct-derive
+  // mechanism. Once the new procedural macro scheme lands, this begs to be
+  // refactored.
   quote!(
     impl _DummyE {
       fn expansion() -> Option<ExpansionClosure> {
@@ -140,7 +152,6 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
       }
     })
 }
-
 
 fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
   let mut floats: String = String::new();
@@ -184,8 +195,9 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
 
       if is_match {
         // println!("-- matched a PI ");
-        // this is annoying since we want translate_avpairs to mutate the replacement string in place,
-        // but also want it to run after the replacement... makes `current_tag` in particular look very misplaced
+        // this is annoying since we want translate_avpairs to mutate the replacement
+        // string in place, but also want it to run after the replacement...
+        // makes `current_tag` in particular look very misplaced
         let av = translate_avpairs(&mut replacement);
         operations.push(quote!(
           let mut av_props : HashMap<String, String> = HashMap::new();
@@ -274,7 +286,8 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
 
     // TODO: Still to be implemented cases:
     if !is_match {
-      // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
+      // Attribute: a=v; assigns in current node? [May conflict with random
+      // replacement!?!]
       if let Some(eq_index) = replacement.find("=") {
         is_match = true;
         println!("-- Attribute");
@@ -302,22 +315,22 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
   operations
 }
 
-
 // Parse a delimited string from the constructor (in $_),
-// for example, an attribute value.  Can contain substitutions (above), as if interpolated.
-// The result is a string, or undef if no quotes are found.
-// NOTE: UNLESS there is ONLY one substituted value, then return the value object.
-// This is (hopefully) temporary to handle font objects as attributes.
+// for example, an attribute value.  Can contain substitutions (above), as if
+// interpolated. The result is a string, or undef if no quotes are found.
+// NOTE: UNLESS there is ONLY one substituted value, then return the value
+// object. This is (hopefully) temporary to handle font objects as attributes.
 // The DOM holds the font objects, rather than strings,
 // to resolve relative fonts on output.
-fn translate_string(mut text : &mut String) -> quote::Tokens {
+fn translate_string(mut text: &mut String) -> quote::Tokens {
   // println!("-- ts before: {:?}", text);
-  let mut values : Vec<quote::Tokens> = Vec::new();
+  let mut values: Vec<quote::Tokens> = Vec::new();
   *text = text.trim_left().to_owned();
   if text.starts_with('\'') || text.starts_with('"') {
     let quote = text.remove(0);
     while !text.is_empty() && !text.starts_with(quote) {
-      if LEAD_COND_RE.is_match(&text) {//inline conditional; branches should be values
+      if LEAD_COND_RE.is_match(&text) {
+        // inline conditional; branches should be values
         let (bool_branch, mut if_branch, mut else_branch) = parse_conditional(&mut text);
         let if_branch_translated = translate_value("", &mut if_branch);
         let else_branch_translated = translate_value("", &mut else_branch);
@@ -353,27 +366,29 @@ fn translate_string(mut text : &mut String) -> quote::Tokens {
     text.remove(0);
   }
 
-  let token_values = values.iter().map(|v| {
-    let v_str = v.to_string();
-    if v_str.starts_with('\'') || v_str.starts_with('"') {
-      quote!(#v.to_string())
-    } else if v_str.ends_with(". to_string ( ) ") {
-      quote!(#v)
-    } else {
-      quote!(match #v {
+  let token_values = values
+    .iter()
+    .map(|v| {
+      let v_str = v.to_string();
+      if v_str.starts_with('\'') || v_str.starts_with('"') {
+        quote!(#v.to_string())
+      } else if v_str.ends_with(". to_string ( ) ") {
+        quote!(#v)
+      } else {
+        quote!(match #v {
         Some(ref val) => val.to_string(),
         None => String::new()
       })
-    }
-    }).collect::<Vec<_>>();
+      }
+    })
+    .collect::<Vec<_>>();
   quote!(#(#token_values)+*)
 }
-
 
 fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
   // Parse a set of attribute value pairs from a constructor pattern,
   // substituting argument and property values from the whatsit.
-  let mut avs : Vec<quote::Tokens> = Vec::new();
+  let mut avs: Vec<quote::Tokens> = Vec::new();
   *text = text.trim_left().to_owned();
   while !text.is_empty() {
     let mut is_match = false;
@@ -391,9 +406,9 @@ fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
         }
       );
       avs.push(op);
-  //     elsif (/^%$VALUE_RE/) {    # Hash?  Assume the value can be turned into a hash!
-  //       s/^%//;                  # Eat the "%"
-  //       push(@avs, '%{' . translate_value() . '}'); }
+      // elsif (/^%$VALUE_RE/) {    # Hash?  Assume the value can be turned into
+      // a hash!       s/^%//;                  # Eat the "%"
+      //       push(@avs, '%{' . translate_value() . '}'); }
     }
     if !is_match {
       *text = KEY_RE.replace(text, |refs: &Captures| -> String {
@@ -407,7 +422,7 @@ fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
       }
     }
     if !is_match {
-      break
+      break;
     }
     *text = text.trim_left().to_owned();
   }
@@ -417,21 +432,22 @@ fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
 /// Parse a substitutable value from the constructor (in $_)
 /// Recognizes the #1, #prop, and also &function(args,...)
 /// Note: signals an error if no recognizable value was found!
-fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Tokens {
+fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens {
   let mut val = quote!("");
   let mut is_match = false;
   let mut fcn = String::new();
   // Recognize a function call, w/args
   *text = FN_RE.replace(text, |refs: &Captures| -> String {
-    fcn  = refs.at(1).unwrap_or("").to_owned();
+    fcn = refs.at(1).unwrap_or("").to_owned();
     is_match = true;
     String::new()
   });
   if is_match {
     let mut args = Vec::new();
-    while ! LEAD_CPAREN_RE.is_match(text) {
+    while !LEAD_CPAREN_RE.is_match(text) {
       let quoted_follows;
-      { let ttl = text.trim_left(); // need an immutable borrow of text, so wrapping in a block
+      {
+        let ttl = text.trim_left(); // need an immutable borrow of text, so wrapping in a block
         quoted_follows = ttl.starts_with('\'') || ttl.starts_with('\"');
       }
       let arg = if quoted_follows {
@@ -453,7 +469,7 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
     if text.starts_with(')') {
       text.remove(0);
     } else {
-      panic!("Missing ')' in &$fcn(...) at '{:?}'\n",text);
+      panic!("Missing ')' in &$fcn(...) at '{:?}'\n", text);
     }
     // println!("text after translate_value: {:?}", text);
     val = quote!(#fcn( #(#args),* ));
@@ -465,10 +481,11 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
       is_match = true;
       let n = arg_refs.at(1).unwrap_or("").to_owned();
       let n_int = n.parse::<i32>().unwrap_or(-1);
-      if n_int < 1 {//|| (n_int > *NARGS) {
+      if n_int < 1 {
+        //|| (n_int > *NARGS) {
         panic!("Illegal argument number {:?} at '{:?}'\n", n_int, text);
       } else {
-        let n_usize : usize = (n_int - 1) as usize; // index starts at 0
+        let n_usize: usize = (n_int - 1) as usize; // index starts at 0
         val = quote!(args[#n_usize])
       }
       String::new()
@@ -480,23 +497,24 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
       is_match = true;
       // Recognize #prop for whatsit properties
       // val = if prop_name == "body" {
-      // body is Digested, TODO: What strategy do we need to unwrap any ObjectStore meaningfully ?
+      // body is Digested, TODO: What strategy do we need to unwrap any ObjectStore
+      // meaningfully ?
       val = quote!(props.get(#prop_name));
       String::new()
     });
   }
   if !is_match {
     // Build the exclusion regex
-    let mut exclusion_str : String = concat!(r"^((?:",QUOTED_SPECIALS!(),r"|[^", SPECIALS!()).to_owned();
+    let mut exclusion_str: String = concat!(r"^((?:", QUOTED_SPECIALS!(), r"|[^", SPECIALS!()).to_owned();
     exclusion_str = exclusion_str + exclude_chars + r"])+)";
-    let exclusion_re : Regex = Regex::new(&exclusion_str).unwrap();
+    let exclusion_re: Regex = Regex::new(&exclusion_str).unwrap();
 
     exclusion_re.replace(text, |quoted_refs: &Captures| {
       is_match = true;
       let quoted = quoted_refs.at(1).unwrap_or("").to_owned();
       let normalized_val = &slashify(&unquote(&quoted));
       val = quote!(#normalized_val);
-    String::new()
+      String::new()
     });
   }
   if !is_match {
@@ -505,12 +523,10 @@ fn translate_value(exclude_chars : &str, mut text : &mut String) -> quote::Token
   val
 }
 
-fn parse_conditional(mut text : &mut String) -> (quote::Tokens, String, String) {
+fn parse_conditional(text: &mut String) -> (quote::Tokens, String, String) {
   // Remove leading "?"
   // println!("-- cond before: {:?}", text);
-  *text = LEAD_QMARK.replace(text, |_: &Captures| {
-    String::new()
-  });
+  *text = LEAD_QMARK.replace(text, |_: &Captures| String::new());
   let translated_bool = translate_value("(", text);
   let bool_branch = quote!(  #translated_bool );
   let if_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis));
@@ -518,8 +534,7 @@ fn parse_conditional(mut text : &mut String) -> (quote::Tokens, String, String) 
     let else_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis));
     // println!("-- cond after: {:?}", text);
     (bool_branch, if_branch, else_branch)
-  }
-  else {
+  } else {
     panic!("Missing if clause at '{:?}'\n", text);
   }
 }
@@ -528,8 +543,10 @@ fn slashify(text: &str) -> String {
   text.replace("\\", "\\\\")
 }
 fn unquote(text: &str) -> String {
-  ESCAPED_OP.replace_all(text, |escaped_refs: &Captures| -> String {
-    escaped_refs.at(1).unwrap_or("").to_owned()
-  }).replace("##","#")
-    .replace("&amp;","&")
+  ESCAPED_OP
+    .replace_all(text, |escaped_refs: &Captures| -> String {
+      escaped_refs.at(1).unwrap_or("").to_owned()
+    })
+    .replace("##", "#")
+    .replace("&amp;", "&")
 }

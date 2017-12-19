@@ -1,38 +1,38 @@
 pub mod resource;
 pub mod tag;
 
-extern crate regex;
 extern crate libxml;
+extern crate regex;
 
-use std::collections::{VecDeque, HashMap};
+use std::collections::{HashMap, VecDeque};
 use std::iter;
 use libxml::tree::Document as XmlDoc;
-use libxml::tree::{Node, NodeType, Namespace};
+use libxml::tree::{Namespace, Node, NodeType};
 use regex::Regex;
 
 use common::error::*;
 use common::font::Font;
 use state::{ObjectStore, State};
 
-use {Digested, BoxOps};
+use {BoxOps, Digested};
 use Tbox;
 use document::resource::Resource;
-use document::tag::{TagOptions, TagOptionName, TagConstructionClosure};
+use document::tag::{TagConstructionClosure, TagOptionName, TagOptions};
 
 lazy_static! {
   static ref HAS_NONSPACE_RE : Regex = Regex::new(r"\S").unwrap();
   static ref ONLY_SPACE_RE : Regex = Regex::new(r"^\s+$").unwrap();
 }
 
-static FONT_ELEMENT_NAME : &'static str = "ltx:text";
-static MATH_TOKEN_NAME : &'static str   = "ltx:XMTok";
+static FONT_ELEMENT_NAME: &'static str = "ltx:text";
+static MATH_TOKEN_NAME: &'static str = "ltx:XMTok";
 
 pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
   pub node: Node,
   pub node_boxes: HashMap<usize, Digested>, // used to be _box attribute
-  pub node_fonts: HashMap<usize, Font>, // used to be _font attribute
+  pub node_fonts: HashMap<usize, Font>,     // used to be _font attribute
   pub debug: bool,
   pub constructed_nodes: Vec<Node>,
   pub box_to_absorb: Option<Digested>,
@@ -53,19 +53,17 @@ impl Document {
       node_fonts: HashMap::new(),
       pending: Vec::new(),
       debug: true,
-      constructed_nodes : Vec::new(),
-      box_to_absorb: None
+      constructed_nodes: Vec::new(),
+      box_to_absorb: None,
     }
   }
 
   /// Get the element at (or containing) the current insertion point.
   pub fn get_element(&self) -> Option<Node> {
     match self.node.get_type() {
-      Some(NodeType::TextNode) => {
-        self.node.get_parent()
-      },
+      Some(NodeType::TextNode) => self.node.get_parent(),
       Some(NodeType::DocumentNode) => None,
-      _ => Some(self.node.clone())
+      _ => Some(self.node.clone()),
     }
   }
 
@@ -73,8 +71,14 @@ impl Document {
   /// the xpath is relative to $node (if given), otherwise to the document node.
   pub fn findnodes(&self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<Node> {
     match node_opt {
-      Some(node) => state.model.get_xpath(&self.document).findnodes(xpath, Some(node)),
-      None => state.model.get_xpath(&self.document).findnodes(xpath, Some(&self.document.get_root_element()))
+      Some(node) => state
+        .model
+        .get_xpath(&self.document)
+        .findnodes(xpath, Some(node)),
+      None => state
+        .model
+        .get_xpath(&self.document)
+        .findnodes(xpath, Some(&self.document.get_root_element())),
     }
   }
 
@@ -105,8 +109,9 @@ impl Document {
 
   // **********************************************************************
   // This should be called before returning the final XML::LibXML::Document to the
-  // outside world.  It resolves the fonts for each node relative to it's ancestors.
-  // It removes the `helper' attributes that store fonts, source box, etc.
+  // outside world.  It resolves the fonts for each node relative to it's
+  // ancestors. It removes the `helper' attributes that store fonts, source
+  // box, etc.
   pub fn finalize(&mut self, state: &mut State) {
     self.prune_xmduals();
     let mut root = self.document.get_root_element();
@@ -133,24 +138,25 @@ impl Document {
       }
     }
 
-    let mut keys_to_remove : Vec<String> = Vec::new();
-    let mut attrs_to_set : Vec<(String,String)> = Vec::new();
+    let mut keys_to_remove: Vec<String> = Vec::new();
+    let mut attrs_to_set: Vec<(String, String)> = Vec::new();
 
-    {if let Some(font) = self.get_node_font(node) {
-      desired_font        = font.clone();
-      pending_declaration = desired_font.relative_to(&declared_font);
-      if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some())
-          && !pending_declaration.is_empty() {
-        for (ref key, &(ref value, ref properties)) in &pending_declaration {
-          if state.model.can_have_attribute(&qname, key) {
-            attrs_to_set.push((key.to_string(),value.to_string()));
-            // Merge to set the font currently in effect
-            declared_font = declared_font.merge(properties.clone());
-            keys_to_remove.push(key.to_string());
+    {
+      if let Some(font) = self.get_node_font(node) {
+        desired_font = font.clone();
+        pending_declaration = desired_font.relative_to(&declared_font);
+        if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some()) && !pending_declaration.is_empty() {
+          for (ref key, &(ref value, ref properties)) in &pending_declaration {
+            if state.model.can_have_attribute(&qname, key) {
+              attrs_to_set.push((key.to_string(), value.to_string()));
+              // Merge to set the font currently in effect
+              declared_font = declared_font.merge(properties.clone());
+              keys_to_remove.push(key.to_string());
+            }
           }
         }
       }
-    }}
+    }
     for (key, value) in attrs_to_set {
       self.set_attribute(node, &key, &value);
     }
@@ -166,10 +172,13 @@ impl Document {
         self.finalize_rec(&mut child, new_init_font, state);
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
-        if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME)
-           && !was_forcefont && child.get_attributes().is_empty() {
+        if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME) && !was_forcefont && child.get_attributes().is_empty() {
           let grandchildren = child.get_child_nodes();
-          if grandchildren.iter().filter(|gchild| !self.can_contain(node, &gchild.get_name(), state)).count() == 0 {
+          if grandchildren
+            .iter()
+            .filter(|gchild| !self.can_contain(node, &gchild.get_name(), state))
+            .count() == 0
+          {
             error!(target: "TODO", "replace_node");
             // self.replace_node(child, grandchildren);
           }
@@ -191,10 +200,10 @@ impl Document {
         if self.can_contain(node, FONT_ELEMENT_NAME, state) && !pending_declaration.is_empty() {
           // Too late to do wrapNodes?
           error!(target: "TODO", "too late to wrapNodes? {:?}", pending_declaration);
-        //   my text = self.wrapNodes(FONT_ELEMENT_NAME, child);
-        //   foreach my attr (keys %pending_declaration) {
-        //     self.setAttribute(text, attr => pending_declaration{attr}{value}); }
-        //   self.finalize_rec(text, state);    // Now have to clean up the new node!
+          //   my text = self.wrapNodes(FONT_ELEMENT_NAME, child);
+          //   foreach my attr (keys %pending_declaration) {
+          //     self.setAttribute(text, attr => pending_declaration{attr}{value}); }
+          //   self.finalize_rec(text, state);    // Now have to clean up the new node!
         }
       }
     }
@@ -208,12 +217,11 @@ impl Document {
     }
   }
 
-
-  ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  /// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   /// Document construction at the Current Insertion Point.
-  ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  /// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ///
-  ///**********************************************************************
+  /// **********************************************************************
   /// absorb the given $box into the DOM (called from constructors).
   /// This will return a list of whatever nodes were created.
   /// Note that this may include nodes that are children of other nodes in the list
@@ -239,34 +247,33 @@ impl Document {
 
       match front_box {
         // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
-        Digested::List(list) => {
-          for tbox in list.unlist().into_iter().rev() {
-            boxes.push_front(tbox);
-          }
-        }
+        Digested::List(list) => for tbox in list.unlist().into_iter().rev() {
+          boxes.push_front(tbox);
+        },
         // A Proper Box or Whatsit? Absorb it.
         Digested::Box(digested) => try!(digested.be_absorbed(self, state)),
         Digested::Whatsit(digested) => try!(digested.be_absorbed(self, state)),
       };
 
-      let newly_created : Vec<Node> = self.constructed_nodes.drain(0..).collect();    // These were created just now
+      let newly_created: Vec<Node> = self.constructed_nodes.drain(0..).collect(); // These were created just now
       for node in &newly_created {
-        self.record_constructed_node(node);    // record these for OUTER caller!
+        self.record_constructed_node(node); // record these for OUTER caller!
       }
       results.extend(newly_created); // but return only the most recent set.
 
       // Else, plain string in text mode.
       // elsif (!$props{isMath}) {
-      //   push(@results, self.openText($box, $props{font} || ($LaTeXML::BOX && $LaTeXML::BOX->getFont))); }
-      // // Or plain string in math mode.
+      // push(@results, self.openText($box, $props{font} || ($LaTeXML::BOX &&
+      // $LaTeXML::BOX->getFont))); } // Or plain string in math mode.
       // // Note text nodes can ONLY appear in <XMTok> or <text>!!!
       // // Have we already opened an XMTok? Then insert into it.
       // elsif (self.model}->getNodeQName(self.node}) eq $MATH_TOKEN_NAME) {
       //   push(@results, self.openMathText_internal($box)); }
       // // Else create the XMTok now.
       // else {
-      //   // Odd case: constructors that work in math & text can insert raw strings in Math mode.
-      //   push(@results, self.insertMathToken($box, font => $props{fontzz})); } }
+      // // Odd case: constructors that work in math & text can insert raw strings
+      // in Math mode. push(@results, self.insertMathToken($box, font =>
+      // $props{fontzz})); } }
 
       //   let mut box_node = self.node.add_child(None, "box").unwrap();
       //   box_node.set_content(&tbox.text);
@@ -277,12 +284,12 @@ impl Document {
     Ok(results)
   }
 
-
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   /// Shorthand for open,absorb,close, but returns the new node.
   pub fn insert_element(&mut self, qname: &str, content: Vec<Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
-    // TODO: Quickly hacked together, needs a careful refactor with all .clone() calls removed
+    // TODO: Quickly hacked together, needs a careful refactor with all .clone()
+    // calls removed
     let node = try!(self.open_element(qname, attrib, None, state));
     if self.debug {
       debug!("Inserting element {:?} with body: {:?}", qname, content);
@@ -299,7 +306,7 @@ impl Document {
       let parent = c.unwrap().get_parent();
       c = match parent {
         None => None,
-        Some(n) => Some(n)
+        Some(n) => Some(n),
       };
     }
     if c == Some(node.clone()) {
@@ -307,13 +314,13 @@ impl Document {
     }
 
     Ok(node.clone())
- }
-
+  }
 
   /// Insert a ProcessingInstruction of the form <?op attr=value ...?>
   /// Does NOT move the current insertion point to the PI,
   /// but may move up past a text node.
-  //  Rust note: attrib would have been best as Vec<(String,String)> but currently quote!() doesn't work out of the box on them
+  // Rust note: attrib would have been best as Vec<(String,String)> but
+  // currently quote!() doesn't work out of the box on them
   pub fn insert_pi(&mut self, op: &str, attributes: Option<HashMap<String, String>>) {
     let mut attr_data = String::new();
     for (key, value) in &attributes.unwrap_or_default() {
@@ -323,11 +330,14 @@ impl Document {
       attr_data.push('"');
     }
     // self.close_text_internal();  // Close any open text node
-    let pi_node = self.document.create_processing_instruction(op,&attr_data).unwrap();
+    let pi_node = self
+      .document
+      .create_processing_instruction(op, &attr_data)
+      .unwrap();
     if self.node.get_type() == Some(NodeType::DocumentNode) {
       self.pending.push(pi_node);
     } else {
-      self.node.add_prev_sibling(pi_node);
+      self.node.add_prev_sibling(&pi_node);
     }
     return;
   }
@@ -338,11 +348,12 @@ impl Document {
       debug!("Open element {:?} at {:?}", qname, self.node.get_name());
     }
     let point = try!(self.find_insertion_point(qname, state));
-    let newnode = try!(self.open_element_at(point, qname,
-      attributes, font_opt, state));
+    let newnode = try!(self.open_element_at(point, qname, attributes, font_opt, state));
     self.set_node(newnode.clone());
-    // Underscore attributes such as _box and _font from LaTeXML-proper are now bookkept in special substructs of Document
-    // Connected to the node hash. Ideally should be as quick to recompute natively as it would be to set/get attributes externally via libxml.
+    // Underscore attributes such as _box and _font from LaTeXML-proper are now
+    // bookkept in special substructs of Document Connected to the node hash.
+    // Ideally should be as quick to recompute natively as it would be to set/get
+    // attributes externally via libxml.
     //
     // TODO: also accept a _box argument eventually? Or store differently?
     // attributes.entry("_box").or_insert(state.locals.box);
@@ -377,7 +388,8 @@ impl Document {
     let mut cant_close = Vec::new();
     while node.get_type() != Some(NodeType::DocumentNode) {
       let t = state.model.get_node_qname(&node);
-      // autoclose until node of same name BUT also close nodes opened' for font switches!
+      // autoclose until node of same name BUT also close nodes opened' for font
+      // switches!
       if t == qname && !(t == FONT_ELEMENT_NAME && node.get_attribute("_fontswitch").is_some()) {
         break;
       }
@@ -385,22 +397,32 @@ impl Document {
         cant_close.push(node.clone());
       }
       match node.get_parent() {
-        Some(p) => {node = p},
-        None => break
+        Some(p) => node = p,
+        None => break,
       };
     }
 
-    if node.get_type() == Some(NodeType::DocumentNode) {    // Didn't find $qname at all!!
-      let qname_msg : String = match qname {
+    if node.get_type() == Some(NodeType::DocumentNode) {
+      // Didn't find $qname at all!!
+      let qname_msg: String = match qname {
         "#PCDATA" => qname.to_owned(),
-        _ => format!("</{}>", qname)
+        _ => format!("</{}>", qname),
       };
-      error!(target: &format!("malformed:{:?}",qname), "Attempt to close {}, which isn't open. Currently in {}", qname_msg, self.get_insertion_context(None, state));
+      error!(
+        target: &format!("malformed:{:?}", qname),
+        "Attempt to close {}, which isn't open. Currently in {}",
+        qname_msg,
+        self.get_insertion_context(None, state)
+      );
       Ok(None)
-    } else {                                         // Found node.
+    } else {
+      // Found node.
       if !cant_close.is_empty() {
-                                                   // Intervening non-auto-closeable nodes!!
-        error!(target: &format!("malformed:{:?}",qname), "Closing tag whose open descendents do not auto-close");
+        // Intervening non-auto-closeable nodes!!
+        error!(
+          target: &format!("malformed:{:?}", qname),
+          "Closing tag whose open descendents do not auto-close"
+        );
         // Error('malformed', $qname, $self,
         //   "Closing " . ($qname eq '#PCDATA' ? $qname : '</' . $qname . '>')
         //     . " whose open descendents do not auto-close",
@@ -420,9 +442,9 @@ impl Document {
     while let Some(node) = node_opt {
       let node_qname = self.get_node_qname(&node, state);
       if self.can_contain_somehow(&node_qname, qname, state) {
-        return true
+        return true;
       } else if !self.can_auto_close(&node) {
-        return false    // could close, then check if parent can contain
+        return false; // could close, then check if parent can contain
       } else {
         node_opt = node.get_parent();
       }
@@ -442,11 +464,13 @@ impl Document {
     };
     while let Some(qname) = tags.pop_front() {
       loop {
-        if node_opt.is_none() { break; }
+        if node_opt.is_none() {
+          break;
+        }
         let node = node_opt.as_ref().unwrap().clone();
 
         if node.get_type() == Some(NodeType::DocumentNode) || node.get_type() == None {
-          return None
+          return None;
         }
         let this_qname = state.model.get_node_qname(&node);
         if this_qname == qname {
@@ -481,7 +505,7 @@ impl Document {
   /// Closes all nodes until $node becomes the current point.
   pub fn close_to_node(&mut self, node: &Node, _ifopen: bool, state: &mut State) -> Result<()> {
     let mut cant_close = Vec::new();
-    let mut lastopen : Option<Node> = None;
+    let mut lastopen: Option<Node> = None;
     let mut n = self.node.clone();
     let mut n_type = n.get_type();
     // go up the tree from current node, till we find `node`
@@ -497,15 +521,24 @@ impl Document {
         break;
       }
     }
-    if n_type == Some(NodeType::DocumentNode) {  // Didn't find $node at all!!
-      error!(target: &format!("malformed:{}", state.model.get_node_qname(node)),
-        "Attempt to close {:?}, which isn't open", node.get_name());
-      //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
-    } else { // Found node.
-      if !cant_close.is_empty() { // But found has intervening non-auto-closeable nodes!!
-        error!(target: &format!("malformed:{}", state.model.get_node_qname(node)), //$self,
-          "Closing {:?} whose open descendents do not auto-close", node.get_name());//,
-          //     "Descendents are " . join(', ', map { Stringify($_) } @cant_close))
+    if n_type == Some(NodeType::DocumentNode) {
+      // Didn't find $node at all!!
+      error!(
+        target: &format!("malformed:{}", state.model.get_node_qname(node)),
+        "Attempt to close {:?}, which isn't open",
+        node.get_name()
+      );
+    //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
+    } else {
+      // Found node.
+      if !cant_close.is_empty() {
+        // But found has intervening non-auto-closeable nodes!!
+        error!(
+          target: &format!("malformed:{}", state.model.get_node_qname(node)), //$self,
+          "Closing {:?} whose open descendents do not auto-close",
+          node.get_name()
+        ); //,
+           //     "Descendents are " . join(', ', map { Stringify($_) } @cant_close))
       }
       if let Some(lastopen_node) = lastopen {
         try!(self.close_node_internal(&lastopen_node, state));
@@ -529,15 +562,16 @@ impl Document {
     // else {                            # Found node.
     //                                   # Intervening non-auto-closeable nodes!!
     //   Error('malformed', $model->getNodeQName($node), $self,
-    //     "Closing " . Stringify($node) . " whose open descendents do not auto-close",
-    //     "Descendents are " . join(', ', map { Stringify($_) } @cant_close))
-    //     if @cant_close;
+    // "Closing " . Stringify($node) . " whose open descendents do not
+    // auto-close", "Descendents are " . join(', ', map { Stringify($_) }
+    // @cant_close))     if @cant_close;
     //   $self->closeNode_internal($node); }
     return;
   }
 
-
-  pub fn can_auto_close(&self, _node: &Node) -> bool {true}
+  pub fn can_auto_close(&self, _node: &Node) -> bool {
+    true
+  }
 
   /// get the actions that should be performed on afterOpen or afterClose
   pub fn get_tag_action_list(&self, tag: &str, when: TagOptionName, state: &mut State) -> Vec<TagConstructionClosure> {
@@ -556,16 +590,26 @@ impl Document {
       AfterClose => {
         when_early = Some(AfterCloseEarly);
         when_late = Some(AfterCloseLate);
-      }
-      _ => {}
+      },
+      _ => {},
     };
 
-    let tag_hash = state.tag_properties.entry(tag.to_string()).or_insert_with(TagOptions::default).clone();
-    // let ns_hash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p . ':*')) || {};
-    let all_hash = state.tag_properties.entry("ltx:*".to_string()).or_insert_with(TagOptions::default).clone();
+    let tag_hash = state
+      .tag_properties
+      .entry(tag.to_string())
+      .or_insert_with(TagOptions::default)
+      .clone();
+    // let ns_hash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p .
+    // ':*')) || {};
+    let all_hash = state
+      .tag_properties
+      .entry("ltx:*".to_string())
+      .or_insert_with(TagOptions::default)
+      .clone();
 
     let mut actions = Vec::new();
-    // we have Rc<> around the closures, so cloning them is cheap - just another pointer with a bumped up reference counter
+    // we have Rc<> around the closures, so cloning them is cheap - just another
+    // pointer with a bumped up reference counter
     if let Some(when0) = when_early {
       actions.extend(tag_hash.get(&when0).clone());
       // ns_hash TODO
@@ -595,12 +639,12 @@ impl Document {
     actions
   }
 
-
   pub fn to_string(&self, state: &mut State) -> String {
     // This line is to use libxml2's built-in serializer w/indentation heuristic.
-    // Apparently, libxml2 is giving us "binary" or byte strings which we'd prefer to have as text.
-    //  return decode('UTF-8',$self->getDocument->toString($format)); }
-    // This uses our own serializer emulating libxml2's heuristic indentation.
+    // Apparently, libxml2 is giving us "binary" or byte strings which we'd prefer
+    // to have as text. return decode('UTF-8',
+    // $self->getDocument->toString($format)); } This uses our own serializer
+    // emulating libxml2's heuristic indentation.
     //  return $self->serialize_aux($self->getDocument, 0, 0, 1); }
     // This uses our own serializer w/ correct indentation rules.
     self.serialize_aux(&self.document.as_node(), 0, false, false, state)
@@ -646,11 +690,15 @@ impl Document {
         }
 
         let anodes = node.get_attributes();
-        let mut anodes_keys : Vec<&String> = anodes.keys().collect();
+        let mut anodes_keys: Vec<&String> = anodes.keys().collect();
         anodes_keys.sort();
         for key in anodes_keys {
-          if key == "id" {continue} // HACK for xml:id
-          let key_serialized = state.model.get_node_document_qname(&node.get_attribute_node(key).unwrap());
+          if key == "id" {
+            continue;
+          } // HACK for xml:id
+          let key_serialized = state
+            .model
+            .get_node_document_qname(&node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
           open_tag.push_str(&format!(" {}=\"{}\"", key_serialized, val_serialized));
         }
@@ -660,10 +708,14 @@ impl Document {
           open_tag.push_str(&format!(" {}=\"{}\"", "xml:id", val_serialized));
         }
 
-        let noindent_children : bool = if heuristic {
+        let noindent_children: bool = if heuristic {
           // This emulates libxml2"s heuristic
-          noindent ||
-            !children.iter().filter(|e| e.get_type() == Some(NodeType::TextNode)).collect::<Vec<&Node>>().is_empty()
+          noindent
+            || !children
+              .iter()
+              .filter(|e| e.get_type() == Some(NodeType::TextNode))
+              .collect::<Vec<&Node>>()
+              .is_empty()
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = self.get_node_qname(node, state);
@@ -674,7 +726,8 @@ impl Document {
           serialized.push_str(&indent)
         }
         serialized.push_str(&open_tag);
-        if !children.is_empty() { // with contents.
+        if !children.is_empty() {
+          // with contents.
           serialized.push('>');
           if !noindent_children {
             serialized.push_str("\n");
@@ -685,11 +738,12 @@ impl Document {
           if !noindent_children {
             serialized.push_str(&indent)
           }
-          serialized.push_str(&format!("</{}>",tag));
+          serialized.push_str(&format!("</{}>", tag));
           if !noindent {
             serialized.push_str("\n");
           }
-        } else {    // empty element.
+        } else {
+          // empty element.
           serialized.push_str("/>");
           if !noindent {
             serialized.push_str("\n");
@@ -710,15 +764,17 @@ impl Document {
         }
       },
       Some(NodeType::CommentNode) => {
-        serialized.push_str(&format!("<!-- {}-->", serialize_string(&node.get_content())));
-      }
-      _ => {}
+        serialized.push_str(&format!(
+          "<!-- {}-->",
+          serialize_string(&node.get_content())
+        ));
+      },
+      _ => {},
     }
     serialized
   }
 
   pub fn set_node(&mut self, node: Node) {
-
     // TODO: Does the frag_node check still make sense here?
 
     // if node.get_type() == Some(NodeType::DocumentNode) {  // Whoops
@@ -726,8 +782,8 @@ impl Document {
     //     if let Some(_) = first_child.get_next_sibling() {
     //       error!("unexpected:multiple-nodes TODO");
     //       // Error('unexpected', 'multiple-nodes', $self,
-    //       //   "Cannot set insertion point to a DOCUMENT_FRAG_NODE", Stringify($node)); }
-    //     } else {
+    // //   "Cannot set insertion point to a DOCUMENT_FRAG_NODE",
+    // Stringify($node)); }     } else {
     //       set_node = first_child;
     //     }
     //   } else {
@@ -745,17 +801,19 @@ impl Document {
   fn prune_xmduals(&self) {}
 
   pub fn insert_math_token(&mut self, text: &str, mut attributes: HashMap<String, String>, font_opt: Option<&Font>, state: &mut State) -> Result<Node> {
-    attributes.entry("role".to_string()).or_insert("UNKNOWN".to_string());
+    attributes
+      .entry("role".to_string())
+      .or_insert("UNKNOWN".to_string());
 
     let font = match font_opt {
       Some(f) => f.clone(),
       None => match &self.box_to_absorb {
         &Some(ref tbox) => match tbox.get_font() {
           Some(f) => f.clone(),
-          None => Font::math_default() // should never happen?
+          None => Font::math_default(), // should never happen?
         },
-        &None => Font::math_default() // should never happen?
-      }
+        &None => Font::math_default(), // should never happen?
+      },
     };
     attributes.remove("mode");
     attributes.remove("stretchy");
@@ -767,15 +825,16 @@ impl Document {
       self.set_node_box(&node, digested);
     }
     try!(self.open_math_text_internal(text, state));
-    try!(self.close_node_internal(&node, state));    // Should be safe.
+    try!(self.close_node_internal(&node, state)); // Should be safe.
     Ok(self.node.clone())
   }
 
-  ///**********************************************************************
+  /// **********************************************************************
   /// Middle level, mostly public, API.
   /// Handlers for various construction operations.
   /// General naming: 'open' opens a node at current pos and sets it to current,
-  /// 'close' closes current node(s), inserts opens & closes, ie. w/o moving current
+  /// 'close' closes current node(s), inserts opens & closes, ie. w/o moving
+  /// current
 
   /// Tricky: Insert some text in a particular font.
   /// We need to find the current effective -- being the closest  _declared_ font,
@@ -790,16 +849,19 @@ impl Document {
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
-      if ONLY_SPACE_RE.is_match(text) && (node_type == Some(NodeType::DocumentNode) ||
-      (node_type == Some(NodeType::ElementNode) && !self.can_contain(&self.node, "#PCDATA", state))) {
+      if ONLY_SPACE_RE.is_match(text) && (node_type == Some(NodeType::DocumentNode) || (node_type == Some(NodeType::ElementNode) && !self.can_contain(&self.node, "#PCDATA", state))) {
         return Ok(None);
       }
     }
     if font.family == Some("nullfont".to_owned()) {
-      return Ok(None)
+      return Ok(None);
     }
     if self.debug {
-      debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
+      debug!(
+        "Insert text {:?} at {:?}",
+        text,
+        self.document.node_to_string(&self.node)
+      );
     }
 
     if node_type != Some(NodeType::DocumentNode) // If not at document begin
@@ -807,26 +869,26 @@ impl Document {
       && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
     {
       // then we'll need to do some open/close to get fonts matched.
-      let node = self.close_text_internal();    // Close text node, if any.
+      let node = self.close_text_internal(); // Close text node, if any.
       let mut bestdiff = 99;
-      let mut closeto : Node =  node.clone();
-      let mut n : Node = node.clone();
+      let mut closeto: Node = node.clone();
+      let mut n: Node = node.clone();
       while n.get_type() != Some(NodeType::DocumentNode) {
         let node_font = match self.get_node_font(&n) {
           Some(f) => f.clone(),
-          None => Font::text_default()
+          None => Font::text_default(),
         };
         let d = font.distance(Some(&node_font));
         if d < bestdiff {
           bestdiff = d;
-          closeto  = n.clone();
+          closeto = n.clone();
           if d == 0 || state.model.get_node_qname(&n) != FONT_ELEMENT_NAME || n.get_attribute("_noautoclose").is_some() {
             break;
           }
         }
         match n.get_parent() {
-          Some(p) => {n = p}
-          None => break
+          Some(p) => n = p,
+          None => break,
         }
       }
 
@@ -836,7 +898,12 @@ impl Document {
       }
       if bestdiff > 0 {
         try!(
-          self.open_element(FONT_ELEMENT_NAME, Some(string_map!("_fontswitch" => "true")), Some(font), state) // Open if needed.
+          self.open_element(
+            FONT_ELEMENT_NAME,
+            Some(string_map!("_fontswitch" => "true")),
+            Some(font),
+            state
+          ) // Open if needed.
         );
       }
     }
@@ -847,15 +914,15 @@ impl Document {
     Ok(Some(&self.node))
   }
 
-
   pub fn can_contain(&self, node: &Node, child: &str, state: &mut State) -> bool {
     let tag = state.model.get_node_qname(node);
     state.model.can_contain(&tag, child)
   }
 
   pub fn can_contain_qname(&self, tag: &str, child: &str, state: &mut State) -> bool {
-    // $tag   = $model->getNodeQName($tag)   if ref $tag;      # In case tag is a node.
-    // $child = $model->getNodeQName($child) if ref $child;    # In case child is a node.
+    // $tag   = $model->getNodeQName($tag)   if ref $tag;      # In case tag is a
+    // node. $child = $model->getNodeQName($child) if ref $child;    # In case
+    // child is a node.
     state.model.can_contain(tag, child)
   }
 
@@ -863,8 +930,9 @@ impl Document {
   /// That is, by openning some number of autoOpen'able tags?
   /// And if so, return the tag to open.
   pub fn can_contain_indirect(&mut self, tag: &str, child: &str, state: &mut State) -> Option<String> {
-    // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a node.
-    // $child = $model->getNodeQName($child) if ref $child;    // In case child is a node.
+    // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
+    // node. $child = $model->getNodeQName($child) if ref $child;    // In case
+    // child is a node.
 
     if state.indirect_model.is_none() {
       let new_im = state.compute_indirect_model();
@@ -890,22 +958,22 @@ impl Document {
     state.model.can_have_attribute(tag, attrib)
   }
 
-
   pub fn close_text_internal(&mut self) -> Node {
-    if self.node.get_type() == Some(NodeType::TextNode) { // Current node is text?
+    if self.node.get_type() == Some(NodeType::TextNode) {
+      // Current node is text?
       let parent = self.node.get_parent().unwrap();
-        // let font    = self.get_node_font(parent);
-        // let data  = node.data();
-        // let odata = data;
-        // let fonttest;
-        // if let Some(ligatures) = state.lookup_value("TEXT_LIGATURES") {
-        //   for ligature in ligatures.iter() {
-        //     let fonttest = ligature.get("fontTest");
-        //     if fonttest.is_some() && ! fonttest(font);
-        //     $data = &{ $$ligature{code} }($data); } }
-        // node.setData(data) unless $data eq $odata;
-        self.set_node(parent.clone());                 // Now, effectively Closed
-        parent
+      // let font    = self.get_node_font(parent);
+      // let data  = node.data();
+      // let odata = data;
+      // let fonttest;
+      // if let Some(ligatures) = state.lookup_value("TEXT_LIGATURES") {
+      //   for ligature in ligatures.iter() {
+      //     let fonttest = ligature.get("fontTest");
+      //     if fonttest.is_some() && ! fonttest(font);
+      //     $data = &{ $$ligature{code} }($data); } }
+      // node.setData(data) unless $data eq $odata;
+      self.set_node(parent.clone()); // Now, effectively Closed
+      parent
     } else {
       self.node.clone()
     }
@@ -916,7 +984,7 @@ impl Document {
   /// and, of course, `node` must be current or some ancestor of it!!!
   pub fn close_node_internal(&mut self, node: &Node, state: &mut State) -> Result<()> {
     let closeto = node.get_parent().unwrap(); // Grab now in case afterClose screws the structure.
-    let mut n       = self.close_text_internal();    // Close any open text node.
+    let mut n = self.close_text_internal(); // Close any open text node.
     while n.get_type() == Some(NodeType::ElementNode) {
       try!(self.close_element_at(&mut n, state));
       // self.auto_collapse_children(n);
@@ -944,9 +1012,11 @@ impl Document {
       let mut point = try!(self.find_insertion_point("#PCDATA", state));
       let node = Node::new_text(text, &self.document).unwrap();
       if self.debug {
-        debug!("Inserting text node for {:?} into {:?}",
-                        text,
-                        self.document.node_to_string(&point));
+        debug!(
+          "Inserting text node for {:?} into {:?}",
+          text,
+          self.document.node_to_string(&point)
+        );
       }
       let added_node = point.add_child(node).unwrap();
       self.set_node(added_node);
@@ -963,7 +1033,7 @@ impl Document {
     let mut node = self.node.clone();
     // my $font = $self->getNodeFont($node);
     node.append_text(text);
-    //print STDERR "Trying Math Ligatures at \"$string\"\n";
+    // print STDERR "Trying Math Ligatures at \"$string\"\n";
     if !state.nomathparse {
       self.apply_math_ligatures(&node);
     }
@@ -990,10 +1060,11 @@ impl Document {
   /// This does book keeping so that we can return the sequence of nodes
   /// that were added by absorbing material.
   pub fn record_constructed_node(&mut self, node: &Node) {
-  // if ((defined $LaTeXML::RECORDING_CONSTRUCTION)    // If we're recording!
-    let should_push = match self.constructed_nodes.last() { // and this node isn't already recorded
+    // if ((defined $LaTeXML::RECORDING_CONSTRUCTION)    // If we're recording!
+    let should_push = match self.constructed_nodes.last() {
+      // and this node isn't already recorded
       None => true,
-      Some(last_node) => last_node != node
+      Some(last_node) => last_node != node,
     };
 
     if should_push {
@@ -1001,22 +1072,22 @@ impl Document {
     }
   }
 
+  //**********************************************************************
+  // Low level internal interface
 
-//**********************************************************************
-// Low level internal interface
-
-/// Return a string indicating the path to the current insertion point in the document.
-/// if $levels is defined, show only that many levels
+  /// Return a string indicating the path to the current insertion point in the document.
+  /// if $levels is defined, show only that many levels
   pub fn get_insertion_context(&self, levels_opt: Option<usize>, state: &State) -> String {
     let mut levels = match levels_opt {
-      None => {   // Default depth is based on verbosity
+      None => {
+        // Default depth is based on verbosity
         if state.verbosity <= 1 {
           Some(5)
         } else {
           None
         }
       },
-      Some(t) => Some(t)
+      Some(t) => Some(t),
     };
     let mut node = self.node.clone();
     let node_type = node.get_type();
@@ -1024,7 +1095,7 @@ impl Document {
       error!(target: "internal:context", "Insertion point is not an element, document or text: {:?}", self.document.node_to_string(&node));
       return String::new();
     }
-    let mut path = "TODO".to_owned();//Stringify($node);
+    let mut path = "TODO".to_owned(); // Stringify($node);
     while let Some(parent_node) = node.get_parent() {
       node = parent_node;
       if let Some(levels_val) = levels {
@@ -1043,19 +1114,21 @@ impl Document {
   /// This will move up the tree (closing auto-closable elements),
   /// or down (inserting auto-openable elements), as needed.
   pub fn find_insertion_point(&mut self, qname: &str, state: &mut State) -> Result<Node> {
-    self.close_text_internal();    // Close any current text node.
+    self.close_text_internal(); // Close any current text node.
     let cur_qname = state.model.get_node_qname(&self.node);
     // let inter;
     // If `qname` is allowed at the current point, we're done.
     if self.can_contain_qname(&cur_qname, qname, state) {
-      return Ok(self.node.clone())
-    // Else, if we can create an intermediate node that accepts $qname, we'll do that.
+      return Ok(self.node.clone());
+    // Else, if we can create an intermediate node that accepts $qname, we'll do
+    // that.
     } else if let Some(inter) = self.can_contain_indirect(&cur_qname, qname, state) {
       if (inter != qname) && (inter != cur_qname) {
-        try!(self.open_element(&inter, None, None, state));//font => self.getNodeFont(self.node}));
+        try!(self.open_element(&inter, None, None, state)); // font => self.getNodeFont(self.node}));
         return self.find_insertion_point(qname, state); // And retry insertion (should work now).
       }
-    } else { // Now we're getting more desparate...
+    } else {
+      // Now we're getting more desparate...
       // Check if we can auto close some nodes, and _then_ insert the `qname`.
       let mut node = self.node.clone();
       let mut close_to = None;
@@ -1063,7 +1136,7 @@ impl Document {
         let parent_opt = node.get_parent();
         let parent = match parent_opt {
           None => String::new(),
-          Some(ref p) => state.model.get_node_qname(p)
+          Some(ref p) => state.model.get_node_qname(p),
         };
         if self.can_contain_somehow(&parent, qname, state) {
           close_to = Some(node);
@@ -1071,28 +1144,28 @@ impl Document {
         }
         node = match parent_opt {
           Some(p) => p,
-          None => break
+          None => break,
         };
       }
       if let Some(close_to_node) = close_to {
-        try!(self.close_node_internal(&close_to_node, state));             // Close the auto closeable nodes.
-        return self.find_insertion_point(qname, state);             // Then retry, possibly w/auto open's
-
-      } else {                                             // Didn't find a legit place.
+        try!(self.close_node_internal(&close_to_node, state)); // Close the auto closeable nodes.
+        return self.find_insertion_point(qname, state); // Then retry, possibly w/auto open's
+      } else {
+        // Didn't find a legit place.
         error!(target: &format!("malformed:{}", qname), "TODO");
-        //       ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed in <$cur_qname>",
-        //       "Currently in " . self.getInsertionContext());
-        //     return self.node}; } } }                       // But we'll do it anyway, unless Error => Fatal.
-        return Ok(self.node.clone())
+        // ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed
+        // in <$cur_qname>", "Currently in " .
+        // self.getInsertionContext()); return self.node}; } } }
+        // // But we'll do it anyway, unless Error => Fatal.
+        return Ok(self.node.clone());
       }
     }
     Ok(self.node.clone())
   }
 
-
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Document surgery (?)
-  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // The following carry out DOM modification but NOT relative to any current
   // insertion point (eg self.node), but rather relative to nodes specified
   // in the arguments.
@@ -1104,36 +1177,37 @@ impl Document {
     if value.is_empty() {
       return; // skip if empty
     }
-    if key == "xml:id" {                    // If it's an ID attribute
+    if key == "xml:id" {
+      // If it's an ID attribute
       // value = self.record_id(value, node);    // Do id book keeping
       // node.set_attribute_ns(XML_NS, "id", value); }    // and bypass all ns stuff
       node.set_attribute("id", value);
-    } else if !key.contains(':') {    // No colon; no namespace (the common case!)
-                             // Ignore attributes not allowed by the model,
-                             // but accept "internal" attributes.
+    } else if !key.contains(':') {
+      // No colon; no namespace (the common case!)
+      // Ignore attributes not allowed by the model,
+      // but accept "internal" attributes.
       // let model = self.model;
       // let qname = model.get_node_qname(node);
       // if key.starts_with("_") || model.can_have_attribute(qname, key) {
-        node.set_attribute(key, value);
+      node.set_attribute(key, value);
       // }
     }
-      // else {                   // Accept any namespaced attributes
-      //   my ($ns, $name) = self.model}->decodeQName($key);
-      //   if ($ns) {             // If namespaced attribute (must have prefix!
-      //     let prefix = node.lookupNamespacePrefix($ns);    // namespace already declared?
-      //     if (!$prefix) {                                    // if namespace not already declared
-      //       $prefix = self.model}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
-      //       self.getDocument->documentElement->setNamespace($ns, $prefix, 0); }    // and declare it
-      //     if ($prefix eq '//default') {    // Probably shouldn't happen...?
-      //       node.setAttribute($name => $value); }
-      //     else {
-      //       node.setAttributeNS($ns, "$prefix:$name" => $value); } }
-      //   else {
-      //     node.setAttribute($name => $value); } } }    // redundant case...
+    // else {                   // Accept any namespaced attributes
+    //   my ($ns, $name) = self.model}->decodeQName($key);
+    //   if ($ns) {             // If namespaced attribute (must have prefix!
+    // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
+    // declared? if (!$prefix) {                                    // if
+    // namespace not already declared $prefix =
+    // self.model}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
+    // self.getDocument->documentElement->setNamespace($ns, $prefix, 0); }
+    // // and declare it if ($prefix eq '//default') {    // Probably
+    // shouldn't happen...?       node.setAttribute($name => $value); }
+    //     else {
+    //       node.setAttributeNS($ns, "$prefix:$name" => $value); } }
+    //   else {
+    //     node.setAttribute($name => $value); } } }    // redundant case...
     return;
-
   }
-
 
   //**********************************************************************
   /// Record the Box that created this node.
@@ -1151,7 +1225,7 @@ impl Document {
     }
   }
 
-//**********************************************************************
+  //**********************************************************************
   /// Record the Font of a node
   pub fn set_node_font(&mut self, node: &Node, font: &Font) {
     let nodeid = node.to_hashable();
@@ -1167,7 +1241,6 @@ impl Document {
     }
   }
 
-
   //**********************************************************************
   // Inserting new nodes at random points into the document,
   // typically, later in the process or during some kind of rearrangement.
@@ -1175,13 +1248,13 @@ impl Document {
   // This is a somewhat strange situation; There are commands and environments
   // that do some interesting thing to their contents. This include things like
   // center, flushleft, or rotate, or ...
-  // Naively one is tempted to create a containing block with appropriate type & attributes.
-  // However, since these things can be allowed in so many places by LaTeX, that
-  // one has a difficult time creating a sensible document model.
+  // Naively one is tempted to create a containing block with appropriate type &
+  // attributes. However, since these things can be allowed in so many places
+  // by LaTeX, that one has a difficult time creating a sensible document model.
   // The purpose of transformingBlock is to set the contents (possibly creating a
   // consistent <p> around them, if called for), and returning the list of newly
-  // created nodes. These nodes can then have appropriate attributes added as needed
-  // for each specific case.
+  // created nodes. These nodes can then have appropriate attributes added as
+  // needed for each specific case.
 
   // Since this situation can occur in both LaTeX and AmSTeX type documents,
   // we'll put it in the TeX pool so it can be reused.
@@ -1192,50 +1265,54 @@ impl Document {
   /// This opens a new element at the _specified_ point, rather than the current insertion point.
   /// This is useful during document rearrangement or augmentation that may be needed later
   /// in the process.
-  pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>,
-                         font_opt: Option<&Font>, state: &mut State) -> Result<Node> {
+  pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>, font_opt: Option<&Font>, state: &mut State) -> Result<Node> {
     let (decoded_ns, tag) = state.model.decode_qname(qname);
-    let mut font_opt_cloned : Option<Font> = match font_opt {// TODO: lifetime trouble forced me into cloning, there is a better way...
+    let mut font_opt_cloned: Option<Font> = match font_opt {
+      // TODO: lifetime trouble forced me into cloning, there is a better way...
       Some(f) => Some(f.clone()),
-      None => None
+      None => None,
     };
     let mut newnode;
     // box = self.node_boxes.get(box);    // may already be the string key
 
     // If this will be the document root node, things are slightly more involved.
-    if point.get_type() == Some(NodeType::DocumentNode) {    // First node! (?)
+    if point.get_type() == Some(NodeType::DocumentNode) {
+      // First node! (?)
       debug!("adding schema declaration, new node will be : {}", tag);
       state.model.add_schema_declaration(self);
       newnode = Node::new(&tag, None, &self.document).unwrap();
       self.document.set_root_element(&newnode);
       for node in &self.pending {
-        newnode.add_prev_sibling(node.clone()); // Add saved comments, PI's
+        newnode.add_prev_sibling(&node); // Add saved comments, PI's
       }
       self.record_constructed_node(&newnode);
 
       if let Some(ns) = decoded_ns {
-        // Here, we're creating the initial, document element, which will hold ALL of the namespace declarations.
-        // If there is a default namespace (no prefix), that will also be declared, and applied here.
-        // However, if there is ALSO a prefix associated with that namespace, we have to declare it FIRST
-        // due to the (apparently) buggy way that XML::LibXML works with namespaces in setAttributeNS.
+        // Here, we're creating the initial, document element, which will hold ALL of
+        // the namespace declarations. If there is a default namespace (no
+        // prefix), that will also be declared, and applied here. However, if
+        // there is ALSO a prefix associated with that namespace, we have to declare it
+        // FIRST due to the (apparently) buggy way that XML::LibXML works with
+        // namespaces in setAttributeNS.
         let prefix = state.model.get_document_namespace_prefix(&ns, false, false);
         let attprefix = state.model.get_document_namespace_prefix(&ns, true, true);
         if prefix.is_none() && attprefix.is_some() {
           let attr_ns_node = Namespace::new(&attprefix.unwrap(), &ns, &newnode).unwrap();
-          newnode.set_namespace(attr_ns_node);
+          newnode.set_namespace(&attr_ns_node);
         }
-        // TODO: Figure out a better way to achieve the "activate" effect in XML:LibXML::Element
-        // it seems just creating the namespace without setting it is equivalent ??
+        // TODO: Figure out a better way to achieve the "activate" effect in
+        // XML:LibXML::Element it seems just creating the namespace without
+        // setting it is equivalent ??
         let ns_node = Namespace::new("", &ns, &newnode).unwrap();
-        newnode.set_namespace(ns_node);
+        newnode.set_namespace(&ns_node);
       }
-      // TODO: Else case
-    }
-    else {
+    // TODO: Else case
+    } else {
       if font_opt.is_none() {
-        font_opt_cloned = match self.get_node_font(&point) { // TODO: lifetime trouble here...
+        font_opt_cloned = match self.get_node_font(&point) {
+          // TODO: lifetime trouble here...
           Some(f) => Some(f.clone()),
-          None => None
+          None => None,
         };
       }
       // box  = self.get_node_box(point); // unless $box
@@ -1257,14 +1334,19 @@ impl Document {
     }
 
     // The .clone on boxes is potentially *VERY SLOW* and a code smell.
-    // It can be eventually avoided by using a "memory arena" for all intermediate objects - tokens, boxes, etc.
-    // and a well-designed referncing scheme into the driver structs, such as Gullet, Stomach and Document
+    // It can be eventually avoided by using a "memory arena" for all intermediate
+    // objects - tokens, boxes, etc. and a well-designed referncing scheme into
+    // the driver structs, such as Gullet, Stomach and Document
     if let Some(digested) = self.box_to_absorb.clone() {
       self.set_node_box(&newnode, digested);
     }
 
     if self.debug {
-      debug!("Inserting {:?} into {:?}",newnode.get_name(), point.get_name());// if $LaTeXML::Core::Document::DEBUG;
+      debug!(
+        "Inserting {:?} into {:?}",
+        newnode.get_name(),
+        point.get_name()
+      ); // if $LaTeXML::Core::Document::DEBUG;
     }
 
     // Run afterOpen operations
@@ -1278,17 +1360,25 @@ impl Document {
     //
     //       I am seriously irritated by the XML namespace and the confusion of the "default#" tricks and libxml2's custom decisions about namespace interactions
     //
-    //       I have "hacked together" a working flow for now, but I expect to encounter bugs related to the shortcuts taken here. I would welcome a redesign
-    //       that simplifies the namespace logic dramatically.
+    // I have "hacked together" a working flow for now, but I expect to
+    // encounter bugs related to the shortcuts taken here. I would welcome a
+    // redesign       that simplifies the namespace logic dramatically.
     let new_ns = match ns_opt {
       Some(ns_uri) => {
-        match point.lookup_namespace_prefix(&ns_uri) { // namespace not already declared?
+        match point.lookup_namespace_prefix(&ns_uri) {
+          // namespace not already declared?
           None => {
-            if let Some(prefix) = state.model.get_document_namespace_prefix(&ns_uri, false, false) {
+            if let Some(prefix) = state
+              .model
+              .get_document_namespace_prefix(&ns_uri, false, false)
+            {
               if !prefix.is_empty() {
                 match Namespace::new(&prefix, &ns_uri, &self.document.get_root_element()) {
                   Ok(ns) => Some(ns),
-                  Err(_) => {error!(target: "document:open_element_internal", "failed to create namespace: {:?}", prefix); None}
+                  Err(_) => {
+                    error!(target: "document:open_element_internal", "failed to create namespace: {:?}", prefix);
+                    None
+                  },
                 }
               } else {
                 // default namespace?
@@ -1303,22 +1393,29 @@ impl Document {
             if !prefix.is_empty() {
               match Namespace::new(&prefix, &ns_uri, &self.document.get_root_element()) {
                 Ok(ns) => Some(ns),
-                Err(_) => {error!(target: "document:open_element_internal", "failed to create namespace: {:?}", prefix); None}
+                Err(_) => {
+                  error!(target: "document:open_element_internal", "failed to create namespace: {:?}", prefix);
+                  None
+                },
               }
             } else {
               // default namespace?
               None
             }
-          }
+          },
         }
       },
-      None => None
+      None => None,
     };
 
     let no_ns = new_ns.is_none();
-    let mut newnode = point.add_child(Node::new(tag, new_ns, &self.document).unwrap()).unwrap();
-    if no_ns { // without this explicit set call, an XPath for things such as "ltx:XMath" fails ???
-      newnode.set_namespace(point.get_namespace().unwrap());
+    let mut newnode = point
+      .add_child(Node::new(tag, new_ns, &self.document).unwrap())
+      .unwrap();
+    if no_ns {
+      // without this explicit set call, an XPath for things such as "ltx:XMath"
+      // fails ???
+      newnode.set_namespace(&point.get_namespace().unwrap());
     }
 
     self.record_constructed_node(&newnode);
@@ -1371,7 +1468,7 @@ impl Document {
           }
         },
         Some(NodeType::ElementNode) => self.trim_node_left_whitespace(&mut first_child),
-        _ => {}
+        _ => {},
       };
     }
   }
@@ -1387,7 +1484,7 @@ impl Document {
           }
         },
         Some(NodeType::ElementNode) => self.trim_node_right_whitespace(&mut last_child),
-        _ => {}
+        _ => {},
       };
     }
   }
@@ -1395,11 +1492,14 @@ impl Document {
   pub fn add_resource(&mut self, resource: Resource, state: &mut State) -> Result<()> {
     // let savenode_opt = self.float_to_element("ltx:resource", false);
     let savenode_opt = None;
-    let mut attrib : HashMap<String, String> = HashMap::new();
+    let mut attrib: HashMap<String, String> = HashMap::new();
     attrib.insert("src".to_owned(), resource.name);
     attrib.insert("type".to_owned(), resource.mimetype);
     attrib.insert("media".to_owned(), resource.media);
-    let content_box = Digested::Box(Tbox{text: resource.content, ..Tbox::default()});
+    let content_box = Digested::Box(Tbox {
+      text: resource.content,
+      ..Tbox::default()
+    });
     try!(self.insert_element("ltx:resource", vec![content_box], Some(attrib), state));
     if let Some(savenode) = savenode_opt {
       self.set_node(savenode);
@@ -1408,7 +1508,7 @@ impl Document {
   }
 
   pub fn process_pending_resources(&mut self, state: &mut State) -> Result<()> {
-    let resources : Vec<Resource> = state.pending_resources.drain(..).collect();
+    let resources: Vec<Resource> = state.pending_resources.drain(..).collect();
     for resource in resources {
       try!(self.add_resource(resource, state));
     }
@@ -1423,7 +1523,12 @@ impl Document {
     } else {
       None
     };
-    try!(self.open_element("ltx:ERROR", Some(string_map!("class"=>error_class)), None, state));
+    try!(self.open_element(
+      "ltx:ERROR",
+      Some(string_map!("class"=>error_class)),
+      None,
+      state
+    ));
     try!(self.close_element("ltx:ERROR", state));
     if let Some(savenode) = savenode_opt {
       self.set_node(savenode);
@@ -1436,12 +1541,13 @@ impl Document {
 
 fn serialize_string(string: &str) -> String {
   // Basic entities
-  let mut serialized = string.replace("&","&amp;");
-  serialized = serialized.replace(">","&gt;");
-  serialized = serialized.replace("<","&lt;");
+  let mut serialized = string.replace("&", "&amp;");
+  serialized = serialized.replace(">", "&gt;");
+  serialized = serialized.replace("<", "&lt;");
   // Remove dis-allowed code-points.
-  //  $string =~ s/(?:\x{00}-\x{08}|\x{0B}|\x{0C}|\x{0D}-\x{19}|\x{D800}-\x{DFFF}|\x{FFFE}-\x{FFFF})//g;
-  // Hmm... the upper ranges gives warning in some Perls...
+  // $string =~
+  // s/(?:\x{00}-\x{08}|\x{0B}|\x{0C}|\x{0D}-\x{19}|\x{D800}-\x{DFFF}|\x{FFFE}-\x{FFFF})//g;
+  //  Hmm... the upper ranges gives warning in some Perls...
   // TODO:
   // $string =~ s/(?:\x{00}-\x{08}|\x{0B}|\x{0C}|\x{0D}-\x{19})//g;
   serialized
@@ -1450,8 +1556,8 @@ fn serialize_string(string: &str) -> String {
 fn serialize_attr(string: &str) -> String {
   let mut serialized = serialize_string(string);
   // And escape any remaining special code points
-  serialized = serialized.replace("\"","&quot;");
-  serialized = serialized.replace("\n","&#10;");
+  serialized = serialized.replace("\"", "&quot;");
+  serialized = serialized.replace("\n", "&#10;");
   serialized = serialized.replace("\t", "&#9;");
   serialized
 }
