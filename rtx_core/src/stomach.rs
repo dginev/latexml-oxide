@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::rc::Rc;
+
 use state::{Scope, State, ObjectStore};
 use common::error::*;
 use common::font::Font;
@@ -8,6 +10,8 @@ use gullet::Gullet;
 use tokens::Tokens;
 use token::{Token, Catcode};
 use definition::Definition;
+use definition::expandable::Expandable;
+use definition::constructor::{Constructor, ConstructorOptions};
 use tbox::*;
 use list::List;
 
@@ -78,7 +82,7 @@ impl Stomach {
   // Returns a List containing the digested material.
   pub fn digest(&mut self, tokens : Tokens, state: &mut State) -> Result<Digested> {
     self.reading_from_mouth(Mouth::default(), state, Box::new(move |stomach, state| {
-      stomach.get_gullet_mut().unread(tokens.clone().unlist());
+      stomach.get_gullet_mut().unread(tokens.clone());
       state.clear_prefixes(); // prefixes shouldn't apply here.
       let mode;
       {
@@ -94,11 +98,11 @@ impl Stomach {
       //   let list = STOMACH_LIST.lock()
       //   *list = Rc::new(Vec::new());
       // }
-      let mut list = Vec::new();
+      let mut digested_boxes = Vec::new();
       while let Some(token) = try!(stomach.get_gullet_mut().read_x_token(true, true, state)) { // Done if we run out of tokens
         // {
         //   let list = STOMACH_LIST.lock()
-        list.extend(try!(stomach.invoke_token(token, state)));
+        digested_boxes.extend(try!(stomach.invoke_token(token, state)));
         // }
 
         if initdepth > stomach.boxing.len() { // if we've closed the initial mode.
@@ -106,7 +110,7 @@ impl Stomach {
         }
         if initdepth < depth {
           // TODO
-          error!(target: "Fatal:internal:<EOF>", "We've fallen off the end, somehow !?!?!?");
+          fatal!(Internal, EoF, "We've fallen off the end, somehow !?!?!?");
           //     Fatal('internal', '<EOF>', self,
           //       "We've fallen off the end, somehow!?!?!",
           //       "Last token " . ToString($LaTeXML::CURRENT_TOKEN)
@@ -117,10 +121,9 @@ impl Stomach {
       }
 
       // let list = STOMACH_LIST.lock()
-      let final_boxes = list;
-      let mut final_list = List::new(final_boxes);
-      final_list.mode = Some(mode);
-      Ok(Digested::List(final_list))
+      let mut digested_list = List::new(digested_boxes);
+      digested_list.mode = Some(mode);
+      Ok(Digested::List(digested_list))
     }))
   }
 
@@ -143,24 +146,34 @@ impl Stomach {
 
       self.token_stack.push(token.clone());
       if self.token_stack.len() > MAXSTACK {
-        // Fatal('internal', '<recursion>', self,
-        //   "Excessive recursion(?): ",
-        //   "Tokens on stack: " . join(', ', map { ToString($_) } @{ $self{token_stack} })); }
+        fatal!(Stomach, Recursion, format!("Excessive recursion(?): Tokens on stack: {:?}", self.token_stack));
       }
       state.current_token = Some(token.clone());
       result = Vec::new();
+
       let looked_up_definition: Option<ObjectStore> = state.lookup_digestable_definition(&token);
       match looked_up_definition {
         None => {
           // Supposedly executable token, but no definition!
-          result = self.invoke_token_undefined(token, state);
+          result = try!(self.invoke_token_undefined(&token, state));
         }
         Some(store) => {
+          // Rust notes: It would be ideal if we could unify the cases for (Primtive, Constructor, MathPrimitive),
+          //             as well as (Expandable, Conditional) since the API is identical.
+          //             However, as the types are different, Rust constrains us here, we need
+          //             separate match arms for each distinctly typed enum case.
           match store {
-            ObjectStore::Token(meaning) => {
-              // Common case
-              result = self.invoke_token_simple(token.clone(), meaning, state);
-            }
+            ObjectStore::Token(meaning) => { // Common case
+              let cc = meaning.get_catcode();
+              if cc == Catcode::CS {
+                result = try!(self.invoke_token_undefined(&token, state));
+              } else if cc.is_absorbable() {
+                result = self.invoke_token_simple(meaning, state);
+              } else {
+                error!(target: &format!("misdefined:{:?}",token), "The token {:?} should never reach Stomach!", token);
+                result = self.invoke_token_simple(meaning, state);
+              }
+            },
             ObjectStore::Expandable(meaning) => {
               // A math-active character will (typically) be a macro,
               // but it isn't expanded in the gullet, but later when digesting, in math mode (? I think)
@@ -169,7 +182,14 @@ impl Stomach {
               maybe_token = try!(self.gullet.read_x_token(true, false, state)); // replace the token by it's expansion!!!
               self.token_stack.pop();
               continue;
-            }
+            },
+            ObjectStore::Conditional(meaning) => {
+              // Conditionals are "expandable", use the regular invoke.
+              let invoked_meaning = try!(meaning.invoke(&mut self.gullet, state));
+              self.gullet.unread(invoked_meaning);
+              maybe_token = try!(self.gullet.read_x_token(true, false, state)); // replace the token by it's expansion!!!
+              self.token_stack.pop();
+            },
             ObjectStore::Constructor(meaning) => {
               // Otherwise, a normal primitive or constructor
               result = try!(meaning.invoke_primitive(self, meaning.clone(), state));
@@ -190,11 +210,9 @@ impl Stomach {
               if !meaning.is_prefix() {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
-            }
-            other => {
-              // TODO:
-              info!("Other: {:?}", other);
-              // Fatal('misdefined', $meaning, self, "The object " . Stringify($meaning) . " should never reach Stomach!");
+            },
+            meaning => {
+              fatal!(Stomach, Misdefined, format!("The object {:?} should never reach Stomach!", meaning));
             }
           };
         }
@@ -202,24 +220,59 @@ impl Stomach {
       break;
     }
 
-    // TODO:
-    // if grep { (!ref $_) || (!$_->isaBox) } @result {
-    //   Fatal('misdefined', $token, self,
-    //   "Execution yielded non boxes",
-    //   "Returned " . join(',', map { "'" . Stringify($_) . "'" }
-    //       grep { (!ref $_) || (!$_->isaBox) } @result))
-    // }
-
     self.token_stack.pop();
     Ok(result)
   }
 
-  fn invoke_token_undefined(&mut self, _token: Token, _state: &mut State) -> Vec<Digested> {
-    // log!("-- Undefined invoke {:?}", token);
-    // TODO: Rework this carefully
-    Vec::new()
+  fn invoke_token_undefined(&mut self, token: &Token, state: &mut State) -> Result<Vec<Digested>> {
+    let cs : String = token.get_cs_name();
+    // TODO: state.note_status("undefined", cs);
+
+    // To minimize chatter, go ahead and define it...
+    if cs.starts_with("\\if") {  // Apparently an \ifsomething ???
+      let name = cs.replace("\\if","");
+      error!(target: &format!("undefined:{}", cs), "The token {:?} is not defined. Defining it now as with \\newif",cs);
+      // install stub definitions for new conditional
+      let cs_clone = cs.clone();
+      state.install_definition(ObjectStore::Expandable(Rc::new(
+        Expandable { cs: T_CS!(format!("\\{}true", name)), paramlist: None,
+          expansion: Some(Rc::new(move |_gullet, _args, _state| {
+            Ok(Tokens!(T_CS!("\\let"),T_CS!(cs_clone),T_CS!("\\iftrue")))
+          })),
+          ..Expandable::default()})
+        ),
+      None);
+      state.install_definition(ObjectStore::Expandable(Rc::new(
+        Expandable { cs: T_CS!(format!("\\{}false", name)), paramlist: None,
+          expansion: Some(Rc::new(move |_gullet, _args, _state| {
+            Ok(Tokens!(T_CS!("\\let"),T_CS!(cs),T_CS!("\\iffalse")))
+          })),
+          ..Expandable::default()})
+        ),
+        None);
+
+      state.let_i(token, T_CS!("\\iffalse"), None);
+      self.get_gullet_mut().unread(Tokens!(token.clone()));    // Retry
+      return Ok(Vec::new());
+    }
+    else {
+      error!(target: &format!("undefined:{}", cs), "The token {:?} is not defined. Defining it now as <ltx:ERROR/>",cs);
+      let closure_cs = cs.clone();
+      state.install_definition(ObjectStore::Constructor(Rc::new(
+        Constructor {
+          cs: token.clone(),
+          paramlist: None,
+          replacement: Some(Rc::new(move |document, args, _props, state| {
+            document.make_error("undefined", &closure_cs, state)
+          })),
+          options: ConstructorOptions::default(),
+        })), Some(Scope::Global));
+      // and then invoke it.
+      return self.invoke_token(token.clone(), state);
+    }
   }
-  fn invoke_token_simple(&mut self, _token: Token, meaning: Token, state: &mut State) -> Vec<Digested> {
+
+  fn invoke_token_simple(&mut self, meaning: Token, state: &mut State) -> Vec<Digested> {
     // log!("-- Simple invoke {:?}", token);
     let font = state.lookup_font();
     state.clear_prefixes();    // prefixes shouldn't apply here.
@@ -234,7 +287,7 @@ impl Stomach {
                meaning.to_string(),//text
                font,
                Some(self.gullet.get_locator()),//locator
-               vec![meaning], // tokens
+               Tokens!(meaning), // tokens
                HashMap::new(), // properties
                state,
              ))]
@@ -258,7 +311,7 @@ impl Stomach {
              meaning.to_string(),//text
              font,
              None, // locator
-             vec![meaning], // tokens
+             Tokens!(meaning), // tokens
              HashMap::new(), // properties
              state,
            ))]
@@ -371,7 +424,7 @@ impl Stomach {
     }
     if let Some(ObjectStore::VecToken(after)) = after {
       if !after.is_empty() {
-        self.gullet.unread(after);
+        self.gullet.unread(Tokens::new(after));
       }
     }
     Ok(())

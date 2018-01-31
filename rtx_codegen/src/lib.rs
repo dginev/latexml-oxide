@@ -1,8 +1,5 @@
 #![recursion_limit="100"]
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
 
-#[macro_use] extern crate log;
 #[macro_use] extern crate quote;
 extern crate proc_macro;
 extern crate syn;
@@ -25,6 +22,17 @@ pub fn derive_compile_replacement(input: TokenStream) -> TokenStream {
     Ok(item) => match constructable::compile_replacement(item).to_string().parse() {
       Ok(parsed) => parsed,
       Err(e) => panic!("Failed to compile replacement: {:?}", e)
+    },
+    Err(e) => panic!("Failed to parse macro input: {:?}", e)
+  }
+}
+
+#[proc_macro_derive(CompileExpansion,attributes(compile_expansion_options))]
+pub fn derive_compile_expansion(input: TokenStream) -> TokenStream {
+  match parse_macro_input(&input.to_string()) {
+    Ok(item) => match constructable::compile_expansion(item).to_string().parse() {
+      Ok(parsed) => parsed,
+      Err(e) => panic!("Failed to compile expansion: {:?}", e)
     },
     Err(e) => panic!("Failed to parse macro input: {:?}", e)
   }

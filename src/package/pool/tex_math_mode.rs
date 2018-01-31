@@ -2,7 +2,7 @@ use package::*;
 use rtx_core::{BoxOps};
 use rtx_core::document::tag::TagConstructionClosure;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
+ pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
   //======================================================================
@@ -20,8 +20,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     let mut op        = "\\@@BEGININLINEMATH";
   {
     let mut gullet = stomach.get_gullet_mut();
-    let mode      = LookupString_F!("MODE", state);
-    info!("T_MATH primitive current mode: {:?}", mode);
+    let mode      = LookupString!("MODE", state);
+    debug!("T_MATH primitive current mode: {:?}", mode);
     if mode == "display_math" {
       if try!(gullet.if_next(T_MATH!(), state)) {
         gullet.read_token(state);

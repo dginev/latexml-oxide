@@ -1,14 +1,16 @@
 ///! Token List constructors.
 use common::error::*;
 use state::State;
+use quote::ToTokens;
 use token::*;
 use stomach::{Stomach};
+use quote::Tokens as QTokens;
 use Digested;
 
 // Form a Tokens list of Token's
 // Flatten the arguments Token's and Tokens's into plain Token's
 // .... Efficiently! since this seems to be called MANY times.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Tokens {
   pub tokens: Vec<Token>
 }
@@ -19,12 +21,18 @@ impl Default for Tokens {
     }
   }
 }
+impl ToTokens for Tokens {
+  fn to_tokens(&self, tokens: &mut QTokens) {
+    tokens.append("Tokens {tokens: vec!");
+    self.tokens.to_tokens(tokens);
+    tokens.append("}");
+  }
+}
 
 #[macro_export]
-macro_rules! Tokens(($( $tokens:expr ),*) => ({
-  use $crate::tokens::Tokens;
-  Tokens { tokens: vec![$($tokens)*] }
-}));
+macro_rules! Tokens(
+  ($( $tokens:expr ),*) => ($crate::tokens::Tokens{ tokens: vec![$($tokens),*] });
+);
 
 impl Tokens {
   pub fn new(tokens : Vec<Token>) -> Self {
@@ -97,4 +105,28 @@ impl Tokens {
     }
     level == 0
   }
+
+  // NOTE: Assumes each arg either undef or also Tokens
+  // Using inline accessors on those assumptions
+  pub fn substitute_parameters(self, args: Vec<Tokens>) -> Self {
+    let mut result = Vec::new();
+    let mut in_tokens = self.tokens.into_iter();
+    while let Some(token) = in_tokens.next() {
+      if token.code != Catcode::PARAM {    // Non '#'; copy it
+        result.push(token);
+      } else {
+        if let Some(token2) = in_tokens.next() {
+          if token2.code != Catcode::PARAM {    // Not multiple '#'; read arg.
+            let arg_number = token2.text.parse::<usize>().unwrap();
+            let ref arg = args[arg_number - 1];
+            result.extend(arg.clone().unlist());
+          } else {    // Duplicated '#', copy 2nd '#'
+            result.push(token2);
+          }
+        }
+      }
+    }
+    Tokens::new(result)
+  }
+
 }

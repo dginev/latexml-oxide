@@ -1,7 +1,7 @@
 use common::error::*;
 use common::font::Font;
 use {Digested, BoxOps};
-use token::Token;
+use tokens::Tokens;
 use document::Document;
 use state::{ObjectStore, State};
 use std::collections::HashMap;
@@ -14,7 +14,7 @@ pub struct Tbox {
   pub font: Font,
   pub locator: String,
   pub properties: HashMap<String, String>,
-  pub tokens: Vec<Token>,
+  pub tokens: Tokens,
 }
 
 impl Default for Tbox {
@@ -24,7 +24,7 @@ impl Default for Tbox {
       font: Font::text_default(),
       locator: String::new(),
       properties: HashMap::new(),
-      tokens: Vec::new(),
+      tokens: Tokens!(),
     }
   }
 }
@@ -33,7 +33,8 @@ impl Default for Tbox {
 // Exported constructors
 
 impl Tbox {
-  pub fn new(string: String, font_opt: Option<Font>, locator_opt: Option<String>, tokens_opt: Vec<Token>, properties: HashMap<String, String>, state: &mut State) -> Self {
+  pub fn new(string: String, font_opt: Option<Font>, locator_opt: Option<String>, tokens_opt: Tokens,
+             properties: HashMap<String, String>, state: &mut State) -> Self {
 
     let font = match font_opt {
       Some(f) => f,
@@ -46,7 +47,7 @@ impl Tbox {
     let _locator = locator_opt;
 
     let tokens =  if !string.is_empty() && tokens_opt.is_empty() {
-      vec![T_OTHER!(string)]
+      Tokens!(T_OTHER!(string))
     } else {
       tokens_opt
     };
@@ -103,7 +104,7 @@ impl BoxOps for Tbox {
     Ok(())
   }
 
-  fn revert(&self) -> Vec<Token> {
+  fn revert(&self) -> Tokens {
     self.tokens.clone()
   }
 

@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use regex::Regex;
 
 use common::error::*;
-use state::{State, Scope, ObjectStore};
+use state::{State, Scope, Catcodes, ObjectStore, StateOptions};
 use token::*;
 use tokens::Tokens;
 
@@ -73,6 +73,13 @@ impl Default for Mouth {
 }
 
 impl Mouth {
+  pub fn new(text: &str, state: &mut State) -> Self {
+    let mut mouth = Mouth{ foodtype: FoodType::Literal, ..Mouth::default()};
+    mouth.open_literal(text);
+    mouth.initialize(state);
+    mouth
+  }
+
   pub fn open<'open>(&'open mut self, content: &str, mut state: &mut State) -> Result<()> {
     match self.foodtype {
       FoodType::File | FoodType::Binding => try!(self.open_file(content)),
@@ -332,8 +339,9 @@ impl Mouth {
     };
     while let Some(token) = self.read_token(state) {
       if has_until && token.get_string() == until_string {
-        tokens.push(token);
+        break;
       }
+      tokens.push(token);
     }
     while !tokens.is_empty() && tokens.last().unwrap().get_catcode() == Catcode::SPACE {    // Remove trailing space
       tokens.pop();
@@ -604,4 +612,31 @@ impl Mouth {
     lastid.to_string()
   }
 
+}
+
+// WARNING: These two utilities bind $STATE to simple State objects with known fixed catcodes.
+// The State normally contains ALL the bindings, etc and links to other important objects.
+// We CAN do that here, since we are ONLY tokenizing from a new Mouth, bypassing stomach & gullet.
+// However, be careful with any changes.
+//
+// We also allow for explicitly passing the state in, so that one could memoize state creation
+// using lazy_static doesnt work here as State is too complex an object
+
+pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
+  match state_opt {
+    None => {
+      let mut std_state = State::new(StateOptions{catcodes: Some(Catcodes::Standard), ..StateOptions::default()});
+      Mouth::new(text, &mut std_state).read_tokens(None, &mut std_state)
+    },
+    Some(s) => Mouth::new(&text, s).read_tokens(None, s)
+  }
+}
+pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
+  match state_opt {
+    None => {
+      let mut sty_state = State::new(StateOptions{catcodes: Some(Catcodes::Style), ..StateOptions::default()});
+      Mouth::new(text, &mut sty_state).read_tokens(None, &mut sty_state)
+    },
+    Some(s) => Mouth::new(&text, s).read_tokens(None, s)
+  }
 }

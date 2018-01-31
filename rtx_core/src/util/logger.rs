@@ -3,9 +3,10 @@ extern crate ansi_term;
 
 use ansi_term::Style;
 use ansi_term::Colour::{Yellow, Red, Green, White};
-use log::{LogRecord, LogLevel, LogMetadata, SetLoggerError, LogLevelFilter};
+use log::{Record, Level, Metadata, SetLoggerError, LevelFilter};
 
-struct Log;
+struct RtxLogger;
+static LOGGER : RtxLogger = RtxLogger;
 
 #[macro_export]
 macro_rules! println_stderr(
@@ -30,12 +31,12 @@ macro_rules! print_stderr(
 );
 
 
-impl log::Log for Log {
-  fn enabled(&self, metadata: &LogMetadata) -> bool {
-    metadata.level() <= LogLevel::Info
+impl log::Log for RtxLogger {
+  fn enabled(&self, metadata: &Metadata) -> bool {
+    metadata.level() <= Level::Info
   }
 
-  fn log(&self, record: &LogRecord) {
+  fn log(&self, record: &Record) {
     if self.enabled(record.metadata()) {
       let record_target = record.target();
       let details = record.args();
@@ -52,10 +53,10 @@ impl log::Log for Log {
       let severity = if category_object.starts_with("Fatal:") {
           ""
         } else { match record.level() {
-          LogLevel::Info => "Info",
-          LogLevel::Warn => "Warn",
-          LogLevel::Error => "Error",
-          LogLevel::Debug => "Debug",
+          Level::Info => "Info",
+          Level::Warn => "Warn",
+          Level::Error => "Error",
+          Level::Debug => "Debug",
           _ => ""
         } };
 
@@ -66,21 +67,22 @@ impl log::Log for Log {
         format!("{}:{} ", severity, category_object)
       };
       let painted_message = match record.level() {
-        LogLevel::Info => Style::default().paint(message),
-        LogLevel::Warn => Yellow.paint(message),
-        LogLevel::Error => Red.paint(message),
-        LogLevel::Debug => Green.paint(message),
+        Level::Info => Style::default().paint(message),
+        Level::Warn => Yellow.paint(message),
+        Level::Error => Red.paint(message),
+        Level::Debug => Green.paint(message),
         _ => White.paint(message)
       }.to_string() + &details.to_string();
 
       println_stderr!("{}", painted_message);
     }
   }
+
+  fn flush(&self) {}
 }
 
-pub fn init(level : LogLevelFilter) -> Result<(), SetLoggerError> {
-  log::set_logger(|max_log_level| {
-    max_log_level.set(level);
-    Box::new(Log)
-  })
+pub fn init(level : LevelFilter) -> Result<(), SetLoggerError> {
+  let logger = log::set_logger(&LOGGER).unwrap();
+  log::set_max_level(level);
+  Ok(logger)
 }

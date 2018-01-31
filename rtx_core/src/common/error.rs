@@ -2,6 +2,11 @@ use std::io;
 use std::fmt;
 use std::error::Error as ErrorTrait;
 use std::result;
+use std::collections::HashMap;
+
+lazy_static! {
+  static ref NOTE_TIMERS : HashMap<String, String> = HashMap::new();
+}
 
 #[derive(Debug)]
 pub struct Error {
@@ -16,11 +21,14 @@ pub enum ErrorTarget {
   Parameter,
   Converter,
   Mouth,
+  Stomach,
   Codegen,
   Macro,
   XMath,
   Document,
   Definition,
+  TexPool,
+  Internal,
 }
 
 #[derive(Debug)]
@@ -30,10 +38,13 @@ pub enum ErrorCategory {
   NotFound,
   Unexpected,
   Expected,
+  Misdefined,
   Unknown,
   MissingFile,
   Malformed,
   Libxml,
+  Recursion,
+  EoF
 }
 
 #[macro_export]
@@ -43,7 +54,7 @@ macro_rules! fatal {
     use $crate::common::error::ErrorTarget::*;
     use $crate::common::error::ErrorCategory::*;
     return Err(RtxError{
-      target: $target, category: $category, message: $message
+      target: $target, category: $category, message: $message.to_string()
     })
   })
 }
@@ -61,11 +72,14 @@ impl fmt::Display for Error {
       NotFound => write!(f, "No matching cities with a \
                                        population were found."),
       MissingFile => write!(f, "missing file"),
+      Misdefined =>  write!(f, "misdefined"),
       Unknown => write!(f, "unknown"),
       Malformed => write!(f, "malformed"),
       Expected => write!(f, "expected"),
       Unexpected => write!(f, "unexpected"),
-      Libxml => write!(f, "libxml error")
+      Libxml => write!(f, "libxml error"),
+      Recursion => write!(f, "<recursion>"),
+      EoF => write!(f, "<EOF>"),
     }
   }
 }
@@ -78,11 +92,14 @@ impl ErrorTrait for Error {
       Io(ref err) => err.description(),
       MissingFile => "missing file",
       NotFound => "not found",
+      Misdefined => "misdefined",
       Unknown => "unknown",
       Malformed => "malformed",
       Expected => "expected",
       Unexpected => "unexpected",
-      Libxml => "libxml error"
+      Libxml => "libxml error",
+      Recursion => "<recursion>",
+      EoF => "<EOF>",
     }
   }
 
@@ -123,37 +140,25 @@ impl From<()> for Error {
 // Progress reporting.
 
 pub fn note_progress(stuff: &str) {
-  // my $state = $STATE;
-  // my $verbosity = $state && $state->lookupValue('VERBOSITY') || 0;
-  // print STDERR @stuff if $verbosity >= 0;
   info!(target: "note", "{}", stuff);
 }
 
+// TODO: Rethink this reporting
 pub fn note_progress_detailed(stuff: &str) {
-  // my $state = $STATE;
-  // my $verbosity = $state && $state->lookupValue('VERBOSITY') || 0;
-  // print STDERR @stuff if $verbosity >= 1;
-  info!(target: "note", "{}", stuff);
+  debug!(target: "note", "{}", stuff);
 }
 
 pub fn note_begin(stage: &str) {
-  // my ($stage) = @_;
-  // my $state = $STATE;
-  // my $verbosity = $state && $state->lookupValue('VERBOSITY') || 0;
-  // if ($state && ($verbosity >= 0)) {
   // $state->assignMapping('NOTE_TIMERS', $stage, [Time::HiRes::gettimeofday]);
   info!(target: "note", "\n({}...", stage);
 }
 
 
 pub fn note_end(_stage: &str) {
-  // my ($stage) = @_;
-  // my $state = $STATE;
-  // my $verbosity = $state && $state->lookupValue('VERBOSITY') || 0;
   // if (my $start = $state && $state->lookupMapping('NOTE_TIMERS', $stage)) {
   //   $state->assignMapping('NOTE_TIMERS', $stage, undef);
-    // if ($verbosity >= 0) {
-      // my $elapsed = Time::HiRes::tv_interval($start, [Time::HiRes::gettimeofday]);
+
+  // my $elapsed = Time::HiRes::tv_interval($start, [Time::HiRes::gettimeofday]);
   // info!(target: "note", " %.2f sec)", elapsed);
   info!(target: "note", " )");
 }

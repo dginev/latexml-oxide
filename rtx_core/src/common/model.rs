@@ -466,8 +466,8 @@ impl Model {
   pub fn decode_qname(&mut self, codetag: &str) -> (Option<String>, String) {
     match PREFIXED_LOCALNAME_RE.captures(codetag) {
       Some(captures) => {
-        let prefix = captures.at(1).unwrap();
-        let localname = captures.at(2).unwrap();
+        let prefix = captures.get(1).map_or("", |m| m.as_str());
+        let localname = captures.get(2).map_or("", |m| m.as_str());
 
         if prefix == "xml" {
           (None, codetag.to_string())
@@ -539,21 +539,21 @@ impl Model {
   ///       which generates a rust objects from all available schemas and has them directly available at runtime
   ///       For now, simply reimplementing the runtime loading of LaTeXML.model as-is from Model.pm
   pub fn load_compiled_schema(&mut self, path: &str) {
-    note_begin(&(format!("Loading compiled schema {}", path)));
+    note_begin(&format!("Loading compiled schema {}", path));
     let compiled_fh = File::open(path).unwrap();
     let compiled_reader = BufReader::new(&compiled_fh);
     for line_result in compiled_reader.lines() {
       if let Ok(line) = line_result {
         if let Some(caps) = TAG_MODEL_LINE.captures(&line) {
-          let tag = caps.at(1).unwrap();
-          let attr = caps.at(2).unwrap();
-          let children = caps.at(3).unwrap();
+          let tag = caps.get(1).map_or("", |m| m.as_str());
+          let attr = caps.get(2).map_or("", |m| m.as_str());
+          let children = caps.get(3).map_or("", |m| m.as_str());
           self.add_tag_attribute(tag, attr.split(',').collect());
           self.add_tag_content(tag, children.split(',').collect());
 
         } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
-          let classname = caps.at(1).unwrap();
-          let elements = caps.at(2).unwrap();
+          let classname = caps.get(1).map_or("", |m| m.as_str());
+          let elements = caps.get(2).map_or("", |m| m.as_str());
           let mut class_set = HashSet::new();
           for set_element in elements.split(',').collect::<Vec<&str>>() {
             class_set.insert(set_element.to_owned());
@@ -561,8 +561,8 @@ impl Model {
           self.set_schema_class(classname, class_set);
 
         } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
-          let prefix = caps.at(1).unwrap();
-          let namespace = caps.at(2).unwrap();
+          let prefix = caps.get(1).map_or("", |m| m.as_str());
+          let namespace = caps.get(2).map_or("", |m| m.as_str());
           self.register_document_namespace(prefix, Some(namespace.to_owned()));
         } else {
           panic!("Fatal:internal:{:?} Compiled model '{:?}' is malformatted at \"{:?}\"", path, path, line);

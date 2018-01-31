@@ -1,6 +1,3 @@
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
-
 #[macro_use] extern crate log;
 #[macro_use] extern crate lazy_static;
 
@@ -12,6 +9,7 @@ extern crate regex;
 extern crate rand;
 extern crate tempfile;
 extern crate time;
+extern crate quote;
 
 #[macro_use]pub mod aux_macros;
 #[macro_use]pub mod common;
@@ -35,7 +33,7 @@ use common::model::Model;
 use common::font::Font;
 use state::{State, StateOptions, ObjectStore};
 use stomach::Stomach;
-use token::Token;
+use tokens::Tokens;
 use tbox::Tbox;
 use list::List;
 use whatsit::Whatsit;
@@ -127,9 +125,7 @@ impl Core {
 pub trait BoxOps {
   fn unlist(self) -> Vec<Digested>;
   fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()>;
-  fn to_string(&self) -> String {
-    "Vec<Tbox> for now ".to_string()
-  }
+  fn to_string(&self) -> String;
   fn stringify(&self) -> String {
     "Vec<Tbox> for now ".to_string()
   }
@@ -143,7 +139,7 @@ pub trait BoxOps {
     None
   }
   fn get_font(&self) -> Option<&Font>;
-  fn revert(&self) -> Vec<Token>;
+  fn revert(&self) -> Tokens;
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -232,7 +228,7 @@ impl BoxOps for Digested {
     }
   }
 
-  fn revert(&self) -> Vec<Token> {
+  fn revert(&self) -> Tokens {
     match *self {
       Digested::Box(ref b) => b.revert(),
       Digested::List(ref l) => l.revert(),

@@ -1,6 +1,6 @@
 use package::*;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
+ pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
   //**********************************************************************
@@ -11,7 +11,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     let begin_mark = format!("\\begin{{{}}}",name);
     let end_mark = format!("\\end{{{}}}", name);
     {
-      DefConstructorI_F!(T_CS!(begin_mark), None, noreplacement!(),
+      DefConstructorI!(T_CS!(begin_mark), None, noreplacement!(),
         after_digest => sub!(move |stomach: &mut Stomach, whatsit: &mut Whatsit, _state: &mut State| {
           let mut nlines = 0;
           let gullet = &mut stomach.gullet;
@@ -53,12 +53,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     after_tokens.push(T_CS!("\\ignorespaces"));
     // Note that we define the `magic' environment control sequences,
     // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
-    DefMacroI_F!(T_CS!(format!("\\begin{{{}}}",name)), None, move |gullet, _args, _state| {
+    DefMacroI!(T_CS!(format!("\\begin{{{}}}",name)), None, move |gullet, _args, _state| {
         gullet.read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
-        Ok(before_tokens.clone())
+        Ok(Tokens::new(before_tokens.clone()))
       }, state);
-    DefMacroI_F!(T_CS!(format!("\\end{{{}}}",name)), None, move |_gullet, _args, _state| {
-      Ok(after_tokens.clone())
+    DefMacroI!(T_CS!(format!("\\end{{{}}}",name)), None, move |_gullet, _args, _state| {
+      Ok(Tokens::new(after_tokens.clone()))
     }, state);
 
     Ok(Vec::new())

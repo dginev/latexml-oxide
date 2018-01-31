@@ -9,10 +9,9 @@ use rtx_core::util::pathname;
 use rtx_core::util::pathname::FindOptions;
 use rtx_core::state::{Scope, ObjectStore}; // State
 use rtx_core::definition::expandable::Expandable;
-// use rtx_core::stomach::Stomach;
 use rtx_core::document::Document;
-// use rtx_core::tbox::Tbox;
 use rtx_core::list::List;
+
 use package::*;
 use math_parser::MathParser;
 
@@ -155,7 +154,7 @@ impl DigestionAPI for Core {
       }
       let mut options: Option<String> = None;
       LATEX_OPTION_REGEX.replace_all(preload, |refs: &Captures| -> String {
-        options = Some(refs.at(1).unwrap_or("").to_string());
+        options = Some(refs.get(1).map_or("", |m| m.as_str()).to_string());
         String::new()
       });
       if preload.ends_with(".cls") {
@@ -268,7 +267,7 @@ impl DigestionAPI for Core {
     self.state.install_definition(ObjectStore::Expandable(Rc::new(Expandable{
       cs: T_CS!("\\jobname"),
       paramlist: None,
-      expansion: Rc::new(move |_gullet, _args, _state| Ok(Explode!(name_copy))),
+      expansion: SimpleExpansion!(Tokens::new(Explode!(name_copy))),
       ..Expandable::default()
     })), None);
 

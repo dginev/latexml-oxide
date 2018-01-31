@@ -4,6 +4,7 @@ pub mod model;
 pub mod xml;
 pub mod font;
 pub mod relaxng;
+pub mod number;
 
 use fmt;
 

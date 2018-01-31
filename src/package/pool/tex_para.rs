@@ -4,39 +4,6 @@ use rtx_core::document::tag::TagConstructionClosure;
 pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
-  // No, \documentclass isn't really a primitive -- It's not even TeX!
-  // But we define a number of stubs here that will automatically load
-  // the LaTeX pool (or AmSTeX.pool) (which will presumably redefine them), and then
-  // stuff the token back to be reexecuted.
-  for ltxtrigger in ["\\documentclass",
-                     "\\newcommand",
-                     "\\renewcommand",
-                     "\\newenvironment",
-                     "\\renewenvironment",
-                     "\\NeedsTeXFormat",
-                     "\\ProvidesPackage",
-                     "\\RequirePackage",
-                     "\\ProvidesFile",
-                     "\\makeatletter",
-                     "\\makeatother",
-                     "\\typeout",
-                     "\\begin",
-                     "\\listfiles"]
-                      .into_iter()
-                      .map(|s| s.to_string()) {
-
-    DefMacroI!(T_CS!(ltxtrigger),
-               None,
-               move |_gullet, _args, state| {
-                 try!(input_definitions("LaTeX".to_string(),
-                  InputDefinitionOptions {
-                    extension: Some("pool"),
-                    ..InputDefinitionOptions::default()
-                  }, state));
-                 Ok(vec![T_CS!(ltxtrigger)])
-               });
-  }
-
   //----------------------------------------------------------------------
   // These determine whether the _next_ paragraph gets indented!
   // thus it needs \par to check whether such indentation has been set.
@@ -118,21 +85,19 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
     let cs = match token_args.pop_front() {
       Some(cs) => cs,
-      None => fatal!(Macro, Expected, "Bad definition macro - no arguments, when some were expected.".to_owned())
+      None => fatal!(Macro, Expected, "Bad definition macro - no arguments, when some were expected.")
     };
     // is there a more idiomatic way to downgrade a VecDeque into a Vec?
     let def_body = token_args.into_iter().collect::<Vec<Token>>();
     let params = None;
-    let body = Rc::new(move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State| Ok(def_body.clone()));
-    info!("Installing definition for cs: {:?}", cs);
     state.install_definition(ObjectStore::Expandable(Rc::new(
-      Expandable{cs: cs, paramlist: params, expansion: body,
+      Expandable{cs: cs, paramlist: params, expansion: SimpleExpansion!(Tokens::new(def_body.clone())),
         ..Expandable::default()
       })),
       scope);
-    // AfterAssignment!(state);
+    //TODO: AfterAssignment!(state);
     Ok(Vec::new())
-  }
+}
 
 
   DefPrimitiveI!("\\def SkipSpaces Token UntilBrace {}", |stomach, args, state| {

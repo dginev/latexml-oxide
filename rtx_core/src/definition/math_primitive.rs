@@ -6,6 +6,7 @@ use common::font::Font;
 
 use Digested;
 use token::*;
+use tokens::Tokens;
 use gullet::Gullet;
 use stomach::Stomach;
 use whatsit::Whatsit;
@@ -149,10 +150,9 @@ impl Definition for MathPrimitive {
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {
     Some(&self.options.after_digest)
   }
-  fn capture_body(&self) -> bool {false}
 
-  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Vec<Token>> {
-    Ok(Vec::new())
+  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> {
+    Ok(Tokens!())
   }
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
     info!("-- Mathprimitive invoke for {:?}", self.cs);
@@ -177,7 +177,7 @@ impl Definition for MathPrimitive {
   }
 
   fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
-    fatal!(Definition, Unexpected, "do_absorbtion on MathPrimitive should never be called!".to_string());
+    fatal!(Definition, Unexpected, "do_absorbtion on MathPrimitive should never be called!");
   }
 
   fn get_cs(&self) -> Token {

@@ -15,7 +15,7 @@ lazy_static!{
   static ref OPTS_REGEX : Regex = Regex::new(r",\s*").unwrap();
 }
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
+ pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
   LoadPool!("TeX");
 
@@ -46,7 +46,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       };
       try!(load_class(whatsit.get_arg(2).unwrap().to_string(),
                 class_opts,
-                vec![T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())],
+                Tokens!(T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())),
                 state));
     }))
   );
@@ -74,12 +74,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //     state.assign_value(current_environment => ToString($_[1])); });
   // Let("\@currenvline", "\@empty");
 
-  DefMacro!("\\begin{}",
-    |gullet, args, state| {
+  DefMacro!("\\begin{}", gullet, args, state, {
     let name = &args[0].to_string();
     let begin_name = "\\begin{".to_string()+name+"}";
     if is_defined(&begin_name, state) {
-      Ok(vec![T_CS!(begin_name)]) // Magic cs!
+      Ok(Tokens!(T_CS!(begin_name))) // Magic cs!
     }
     else {
       let token = T_CS!("\\".to_string() + name);
@@ -93,21 +92,21 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
         //(T_CS!("\begingroup"), Invocation(T_CS!("\lx@setcurrenvir"), $env), $token); } });
       }
-      Ok(Vec::new())
+      Ok(Tokens!())
     }
   });
 
-  DefMacro!("\\end{}", |gullet, args, state| {
-    let name = args[0].to_string();
+  DefMacro!("\\end{}", gullet, args, state, {
+    let name : String = args[0].to_string();
     let mut t = T_CS!("\\end{".to_string()+&name+"}");
     if is_defined_token(&t, state) {// Magic CS!
-    Ok(vec![t])
+    Ok(Tokens!(t))
   } else {
     t = T_CS!("\\end".to_string()+&name);
     if is_defined_token(&t, state) {
-      Ok(vec![t, T_CS!("\\endgroup")])
+      Ok(Tokens!(t, T_CS!("\\endgroup")))
     } else {
-      Ok(vec![T_CS!("\\endgroup")])
+      Ok(Tokens!(T_CS!("\\endgroup")))
     }
   }});
 
@@ -164,7 +163,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     // },
     before_digest_end => sub!(|stomach, state| {
       stomach.get_gullet_mut().flush(state);
-      if let Some(ops) = LookupValue_F!("@at@end@document", state) {
+      if let Some(ops) = LookupValue!("@at@end@document", state) {
         // TODO:
         // Ok(Digest!(Tokens!(ops)))
         Ok(Vec::new())
@@ -175,6 +174,143 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     mode => Some("text".to_string())
   );
 
+
+  //**********************************************************************
+  // C.4 Sectioning and Table of Contents
+  //**********************************************************************
+
+  //======================================================================
+  // C.4.1 Sectioning Commands.
+  //======================================================================
+  // Note that LaTeX allows fairly arbitrary stuff in \the<ctr>, although
+  // it can get you in trouble.  However, in almost all cases, the result
+  // is plain text.  So, I'm putting refnum as an attribute, where I like it!
+  // You want something else? Redefine!
+
+  // Also, we're adding an id to each, that is parallel to the refnum, but
+  // valid as an ID.  You can tune the representation by defining, eg. \thesection@ID
+
+  // A little more messy than seems necessary:
+  //  We don't know whether to step the counter and update \@currentlabel until we see the '*',
+  // but we have to know it before we digest the title, since \label can be there!
+
+  // These are defined in terms of \@startsection so that
+  // casual user redefinitions work, too.
+  DefMacro!("\\chapter", "\\@startsection{chapter}{0}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!("\\part", "\\@startsection{part}{-1}{}{}{}{}"); // not locked since sometimes redefined as partition?
+  DefMacro!("\\section", "\\@startsection{section}{1}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!("\\subsection", "\\@startsection{subsection}{2}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!("\\subsubsection", "\\@startsection{subsubsection}{3}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!("\\paragraph", "\\@startsection{paragraph}{4}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!("\\subparagraph", "\\@startsection{subparagraph}{5}{}{}{}{}"); // TODO: locked => true);
+  for tag in ["part", "chapter", "section", "subsection", "subsubsection", "paragraph", "subparagraph"].iter() {
+    Tag!(&format!("ltx:{:?}",tag), auto_close => true);
+  }
+
+
+  DefMacro!("\\secdef {}{} OptionalMatch:*", gullet, args, state, {
+    if args.len() == 3 {
+      Ok(args[1].clone()) // can't move out without clone, how to circumvent?
+    } else {
+      Ok(args[2].clone())
+    } // ($_[3] ? ($_[2]) : ($_[1])); });
+  });
+
+  DefMacro!("\\@startsection@hook","");
+
+  // NewCounter!("secnumdepth");
+  // SetCounter!("secnumdepth", Number(3));
+  DefMacro!("\\@startsection{}{}{}{}{}{} OptionalMatch:*", gullet, args, state, {
+    let type_tokens = args[0].clone();
+    let stype = type_tokens.to_string();
+    let mut ctr = state.lookup_string(&format!("counter_for_{}", stype));
+    if ctr.is_empty() { ctr = stype};
+    let level = args[1].to_string();
+    let flag = args[6].to_string();
+    if !flag.is_empty() {//|| (!level.is_empty() && (level > CounterValue!("secnumdepth").value_of())) {
+      // RefStepID!(ctr);
+      let mut tokens : Vec<Token> = vec![T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"), T_BEGIN!()];
+      tokens.append(&mut type_tokens.unlist());
+      tokens.push(T_END!());
+      Ok(Tokens {tokens: tokens})
+    } else  {
+      // RefStepCounter!(ctr);
+      let mut tokens : Vec<Token> = vec![T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"), T_BEGIN!()];
+      tokens.append(&mut type_tokens.unlist());
+      tokens.push(T_END!());
+      Ok(Tokens {tokens: tokens})
+    }
+  });
+
+  // Redefine these if you want to assemble the name (eg. \chaptername), refnum and titles differently
+  // \@@numbered@section{type}[toctitle]{title}
+  DefMacro!("\\@@numbered@section{}[]{}",
+    "\\@@section{#1}{\\@currentID}{\\@currentlabel}{\\lx@fnum@@{#1}}{\\format@toctitle@{#1}{\\ifx.#2.#3\\else#2\\fi}}{\\format@title@{#1}{#3}}"
+  );
+  // NOTE: Unclear here, whether the "formatted refnum" should be empty, or just the type abbreviation?
+  DefMacro!("\\@@unnumbered@section{}[]{}",
+    "\\@@section{#1}{\\@currentID}{}{}{#2}{#3}");
+
+  //----------------------------------------------------------------------
+  // The following macros provide a few layers of customization
+  // in particular for supporting localization for different languages.
+  //----------------------------------------------------------------------
+  // \format@title@{type}{title}
+  // Format a title (or caption) appropriately for type.
+  // This is usually somewhat verbose, but establishes the context that this is a Chapter, or Figure, or whatever
+  // invokes \format@title@type{title} if that macro is defined, else composes \lx@fnum@@{type} title.
+  // Define \format@title@type{title} if the default is not appropriate.
+
+  // TODO:
+  // DefMacro!("\\format@title@{}{}",
+  // "{\\@ifundefined{format@title@#1}{\\@@compose@title{\\lx@fnum@@{#1}}{#2}}{\\csname format@title@#1\\endcsname{#2}}}");
+
+  // \format@toctitle@{type}{toctitle}
+  // Format a toctitle (or toccaption) appropriately for type.
+  // This is usually somewhat concise, and the context implies that this is a Chapter, Figure or whatever
+  // invokes \format@toctitle@type{title} if that macro is defined, else composes \lx@fnum@toc@@{type} title
+  // Define \format@toctitle@type{title} if the default is not appropriate.
+
+  // TODO:
+  // DefMacro!("\\format@toctitle@{}{}",
+  // "{\\@ifundefined{format@toctitle@#1}{\\@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}{\\csname format@toctitle@#1\\endcsname{#2}}}");
+  // DefMacro!("\\@@compose@title{}{}", "\\@tag[][ ]{#1}#2");
+  // DefConstructor!("\\@tag[][]{}", "?#3(<ltx:tag open='#1' close='#2'>#3</ltx:tag>)()");
+
+  //// NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the type.
+  //// This would be useful for the titles in links; thus can be plain (unicode) text.
+  //// However, I hate setting up even more machinery & options and dragging yet another form around....
+  // \@@section{type}{id}{refnum}{formattedrefnum}{toctitle}{title}
+  DefConstructor!("\\@@section{}{}{}{}{}{}", document, args, props, inner_state, {
+    // TODO: This bizarre argument API interaction needs to be simplified down to Perl's intuitive level of:
+    //       let (x,y,z, ...) = @args;
+    let (stype, id, refnum, mut frefnum, toctitle, title) =
+      (args[0].clone().unwrap().to_string(), args[1].clone().unwrap().to_string(), args[2].clone().unwrap().to_string(), args[3].clone().unwrap().to_string(), args[4].clone().unwrap(), args[5].clone().unwrap());
+
+    if frefnum == refnum {
+      frefnum = String::new();
+    }
+
+    let clean_id = id;// TODO: CleanID($id);
+    let has_toctitle = !toctitle.to_string().is_empty() && (toctitle.to_string() != title.to_string());
+    document.open_element(&format!("ltx:{}",stype), Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)), None, inner_state);
+    document.insert_element("ltx:title", vec![title], None, inner_state);
+    if has_toctitle {
+      document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state);
+    }
+  });
+
+  // Not sure if this is best, but if no explicit \section'ing...
+  //### Tag('ltx:section',autoOpen=>1);
+
+  //======================================================================
+  // C.4.2 The Appendix
+  //======================================================================
+  // Handled in article,report or book.
+  DefMacro!("\\appendixname",   "Appendix");
+  DefMacro!("\\appendixesname", "Appendixes");
+
+
   // ======================================================================
   // C.5.2 Packages
   // ======================================================================
@@ -184,10 +320,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Ignorable packages ??
   // pre-defined packages??
 
-  // DefMacroI('\@clsextension', undef, 'cls');
-  // DefMacroI('\@pkgextension', undef, 'sty');
-  // Let('\@currext',  '\@empty');
-  // Let('\@currname', '\@empty');
+  DefMacro!("\\@clsextension", "cls");
+  DefMacro!("\\@pkgextension", "sty");
+  Let!("\\@currext",  "\\@empty");
+  Let!("\\@currname", "\\@empty");
+
   fn only_preamble(cs: &str, state: &mut State) {
     if !state.lookup_bool("inPreamble") {
       let category_object = format!("unexpected:{:?}", cs);
@@ -237,9 +374,16 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
                       .into_iter()
                       .map(|s| s.to_string()) {
     DefMacroI!(T_CS!(ltxtrigger), None,
-      move |_gullet, _args, _state| Ok(Vec::new())
+      move |_gullet, _args, _state| Ok(Tokens!())
     );
   }
+
+  //======================================================================
+  // C.5.4 The Title Page and Abstract
+  //======================================================================
+
+  // See frontmatter support in TeX.ltxml
+  DefMacro!("\\title{}", "\\@add@frontmatter{ltx:title}{#1}");
 
   //**********************************************************************
   // C.7 Mathematical Formulas
@@ -268,13 +412,13 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   // DefMacro('\@tabacckludge {}', '\csname\string#1\endcsname');
 
-  DefPrimitiveI!("\\newcommand OptionalMatch:* DefToken [Number][]{}", |stomach, args, state| {
+  DefPrimitiveI!("\\newcommand OptionalMatch:* DefToken [Number][]{}", primitiveproc!(stomach, args, state, {
       // my ($stomach, $star, $cs, $nargs, $opt, $body) = @_;
       let star = &args[0];
       let cs = &args[1].tokens[0];
       let nargs = &args[2];
       let opt = &args[3];
-      let body = args[4].clone().unlist();
+      let body = args[4].clone();
 
       // if (!isDefinable(cs)) {
       //   Info('ignore', $cs, $stomach,
@@ -284,9 +428,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
       // TODO: convertLaTeXArgs($nargs, $opt)
       let body_closure = move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State|{ Ok(body.clone()) };
-      DefMacroI_F!(cs.clone(), None, body_closure, state);
-      Ok(Vec::new())
-  });
+      DefMacroI!(cs.clone(), None, body_closure, state);
+  }));
 
   //======================================================================
   // C.8.4 Numbering

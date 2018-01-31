@@ -11,19 +11,13 @@ path = "rtx_codegen"
 
 [dependencies]
 libc = "0.2"
+gcc = "0.3.54"
 rustc-serialize = "0.3"
 glob = "0.2"
 rand = "0.3"
-tempfile = "2.1"
+tempfile = "2.2"
 time = "0.1"
 lazy_static = "0.1"
-regex = "0.1.66"
-libxml = "0.0.751"
-log = "0.3"
-clippy = { optional = true, version = "=0.0.133" }
-
-[features]
-
-# To link with clippy, build with, the "clippy" features flag, e.g.:
-# rustup run nightly cargo test --features clippy
-lint = ["clippy"]
+regex = "0.2.5"
+libxml = "0.1.2"
+log = "0.4"

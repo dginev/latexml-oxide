@@ -5,6 +5,7 @@ use common::error::*;
 use state::{State, ObjectStore};
 use {Digested, BoxOps};
 use stomach::Stomach;
+use quote;
 use tokens::Tokens;
 
 #[derive(PartialEq, Clone, Copy, Hash, Debug)]
@@ -28,6 +29,36 @@ pub enum Catcode {
   CS,
   NOTEXPANDED,
   MARKER,
+}
+impl quote::ToTokens for Catcode {
+  fn to_tokens(&self, tokens: &mut quote::Tokens) {
+    use token::Catcode::*;
+    let verbatim = match *self {
+      ESCAPE => "ESCAPE",
+      BEGIN => "BEGIN",
+      END => "END",
+      MATH => "MATH",
+      ALIGN => "ALIGN",
+      EOL => "EOL",
+      PARAM => "PARAM",
+      SUPER => "SUPER",
+      SUB => "SUB",
+      SPACE => "SPACE",
+      NOTEXPANDED => "NOTEXPANDED",
+      // Non-primitive
+      IGNORE => "IGNORE",
+      LETTER => "LETTER",
+      OTHER => "OTHER",
+      ACTIVE => "ACTIVE",
+      COMMENT => "COMMENT",
+      INVALID => "INVALID",
+      CS => "CS",
+      MARKER => "MARKER",
+    };
+    tokens.append("Catcode");
+    tokens.append("::");
+    tokens.append(verbatim);
+  }
 }
 impl Catcode {
   pub fn name(&self) -> String {
@@ -151,11 +182,34 @@ impl Catcode {
     }
   }
 
+  pub fn is_absorbable(&self) -> bool {
+    use token::Catcode::*;
+    match *self {
+      // Absorbable
+      SPACE |
+      LETTER |
+      OTHER |
+      COMMENT => true,
+      _ => false
+    }
+  }
 }
+
 #[derive(Clone, Hash, Debug, PartialEq)]
 pub struct Token {
   pub text: String,
   pub code: Catcode,
+}
+impl quote::ToTokens for Token {
+  fn to_tokens(&self, tokens: &mut quote::Tokens) {
+    tokens.append("Token");
+    tokens.append("{");
+    tokens.append("text:");
+    self.text.to_tokens(tokens);
+    tokens.append(".to_string(), code: ");
+    self.code.to_tokens(tokens);
+    tokens.append("}")
+  }
 }
 
 #[macro_export]
@@ -283,7 +337,7 @@ macro_rules! ExplodeText(($text:expr) => ({
 static UNTEX_LINELENGTH : usize = 78; // [CONSTANT]
 pub fn untex(digested: &Digested, state: &State) -> String {
   use token::Catcode::*;
-  let mut tokens = VecDeque::from_iter(digested.revert().into_iter());
+  let mut tokens = VecDeque::from_iter(digested.revert().unlist().into_iter());
   let mut tex_string = String::new();
   let mut length = 0;
   let mut level : i32 = 0;

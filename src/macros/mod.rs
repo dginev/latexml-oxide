@@ -4,21 +4,30 @@
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_replacement {
   ($var: ident, $replacement: expr) => ({
-    #[allow(unused_imports)]
-    use rtx_core::BoxOps;
     use rtx_core::Digested;
     use rtx_core::document::Document;
     use rtx_core::definition::ReplacementClosure;
-    #[allow(unused_imports)]
-    use rtx_core::tbox::Tbox;
     use libxml::tree::Node;
-    #[allow(unused_attributes)]
     #[derive(CompileReplacement)]
     #[compile_replacement_options(replacement=$replacement)]
     struct _Dummy;
     $var = _Dummy::replacement();
   })
 }
+
+#[macro_export]
+/// Macro for compiling string macro expansions into closures
+/// Approach borrowed from diesel-codegen
+macro_rules! compile_expansion {
+  ($var: ident, $expansion: expr) => ({
+    use rtx_core::definition::ExpansionClosure;
+    #[derive(CompileExpansion)]
+    #[compile_expansion_options(expansion=$expansion)]
+    struct _DummyE;
+    $var = _DummyE::expansion();
+  })
+}
+
 
 #[macro_export]
 macro_rules! load_model {

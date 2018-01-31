@@ -2,10 +2,9 @@
 
 use std::collections::{VecDeque, HashMap};
 use std::rc::Rc;
-use rtx_core::token::{Catcode};
 use rtx_core::state::*;
-// use rtx_core::token::*;
-// use rtx_core::tokens::*;
+use rtx_core::token::{Catcode};
+use rtx_core::tokens::Tokens;
 use rtx_core::definition::expandable::Expandable;
 
 #[test]
@@ -161,9 +160,8 @@ fn install_definition_and_meaning() {
   let job_definition = Expandable {
     cs: T_CS!("\\jobname"),
     paramlist: None,
-    // TODO: Should we always use Tokens in Expandables as opposed to Vec<Token>?
-    //       expansion: SimpleExpansion!(Tokens!(Explode!("name"))),
-    expansion: SimpleExpansion!(Explode!("name")),
+    //       expansion: SimpleExpansion!(Tokens::new(Explode!("name"))),
+    expansion: SimpleExpansion!(Tokens::new(Explode!("name"))),
     locator: "from unit test, line 99".to_owned(),
     is_protected: state.get_prefix("protected"),
     ..Expandable::default()};

@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use state::State;
+use state::{Scope, State};
 use Digested;
 use token::*;
 use tokens::Tokens;
@@ -13,14 +13,29 @@ use whatsit::Whatsit;
 use document::Document;
 
 #[derive(Clone)]
+pub struct ExpandableOptions {
+  pub locked: bool,
+  pub scope: Option<Scope>
+}
+impl Default for ExpandableOptions {
+  fn default() -> Self {
+    ExpandableOptions {
+      locked: false,
+      scope: None
+    }
+  }
+}
+
+#[derive(Clone)]
 pub struct Expandable {
   pub is_protected: bool,
   pub alias: Option<String>,
   pub locator: String,
   pub cs: Token,
   pub paramlist: Option<Parameters>,
-  pub expansion: ExpansionClosure,
-  pub trivial_expansion: Option<Vec<Token>>,
+  pub expansion: Option<ExpansionClosure>,
+  pub trivial_expansion: Option<Tokens>,
+  pub options: ExpandableOptions
 }
 impl Default for Expandable {
   fn default() -> Self {
@@ -31,7 +46,8 @@ impl Default for Expandable {
       locator: String::new(),
       cs: T_CS!("Expandable".to_string()),
       paramlist: None,
-      expansion: Rc::new(|_gullet, _args, _state| Ok(Vec::new())),
+      expansion: None,
+      options: ExpandableOptions::default()
     }
   }
 }
@@ -72,14 +88,11 @@ impl Definition for Expandable {
     self.locator.clone()
   }
 
-  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Token>> {
+  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     // Expand the expandable control sequence. This should be carried out by the Gullet.
     // log!("-- expandable invoke for {:?}", self.get_cs());
-    if self.trivial_expansion.is_some() {
-      match self.trivial_expansion {
-        Some(ref expansion) => Ok(expansion.clone()),
-        None => Ok(Vec::new()),
-      }
+    if let Some(ref trivial_expansion) = self.trivial_expansion {
+      Ok(trivial_expansion.clone())
     } else {
       let args = try!(self.read_arguments(gullet, state));
       self.do_invocation(gullet, args, state)
@@ -96,22 +109,24 @@ impl Definition for Expandable {
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {
     None
   }
-  fn capture_body(&self) -> bool {false}
   fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
-    fatal!(Definition, Unexpected, "do_absorbtion on Primitive should never be called!".to_string());
+    fatal!(Definition, Unexpected, "do_absorbtion on Expandable should never be called!");
   }
 }
 
 impl Expandable {
-  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Result<Vec<Token>> {
-    let closure: &ExpansionClosure = &self.expansion;
-    closure(gullet, args, state)
+  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Result<Tokens> {
+    if let Some(ref closure) = self.expansion {
+      closure(gullet, args.clone(), state)
+    } else { // empty if no expansion
+      Ok(Tokens!())
+    }
   }
 }
 
 #[macro_export]
 macro_rules! SimpleExpansion(($tokens:expr ) => ({
   use std::rc::Rc;
-  Rc::new(move |_gullet, _args, _state| Ok($tokens))
+  Some(Rc::new(move |_gullet, _args, _state| Ok($tokens)))
 }));
 

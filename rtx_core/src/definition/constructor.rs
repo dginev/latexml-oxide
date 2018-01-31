@@ -6,6 +6,7 @@ use common::error::*;
 use common::font::Font;
 
 use token::*;
+use tokens::Tokens;
 use Digested;
 use gullet::Gullet;
 use stomach::Stomach;
@@ -101,15 +102,16 @@ impl Definition for Constructor {
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> {
     Some(&self.options.after_digest_body)
   }
-  fn capture_body(&self) -> bool {self.options.capture_body}
-  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Vec<Token>> {
-    info!("-- constructor capture_body for {:?}", self.get_cs());
-    Ok(Vec::new())
+  fn capture_body(&self) -> bool {
+    self.options.capture_body
+  }
+  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> {
+    Ok(Tokens!())
   }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
   fn invoke_primitive(&self, stomach: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
-    info!("-- constructor invoke for {:?}", self.get_cs());
+    debug!(target: "constructor", "invoke for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing
     // let profiled = state.lookup_value("PROFILING") && ($LaTeXML::CURRENT_TOKEN || $$self{cs});

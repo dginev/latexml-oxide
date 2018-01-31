@@ -13,7 +13,7 @@ use libxml::tree::Document as XmlDoc;
 use core::DigestionAPI;
 
 pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) {
-  assert!(rtx_core::util::logger::init(log::LogLevelFilter::Info).is_ok());
+  assert!(rtx_core::util::logger::init(log::LevelFilter::Info).is_ok());
 
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
