@@ -275,28 +275,28 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
   let mut cs = T_CS!("\\".to_string()); // Should never happen
   let mut final_proto = if CSNAME_MACRO_REGEX.is_match(proto) {
     let captures = CSNAME_MACRO_REGEX.captures(proto).unwrap();
-    cs = T_CS!("\\".to_string() + captures.at(0).unwrap());
+    cs = T_CS!("\\".to_string() + captures.get(0).map_or("", |m| m.as_str()));
     // also replace in proto
-    CSNAME_MACRO_REGEX.replace(proto, "")
+    CSNAME_MACRO_REGEX.replace(proto, "").to_string()
   } else if CS_REGEX.is_match(proto) {
     // Match a cs
     let captures = CS_REGEX.captures(proto).unwrap();
-    let csname = captures.at(0).unwrap().to_string();
+    let csname = captures.get(0).map_or("", |m| m.as_str()).to_string();
     cs = T_CS!(csname);
     // also replace in proto
-    CS_REGEX.replace(proto, "")
+    CS_REGEX.replace(proto, "").to_string()
   } else if SINGLE_CHAR_REGEX.is_match(proto) {
     // Match a single char cs, env name,...
     let captures = SINGLE_CHAR_REGEX.captures(proto).unwrap();
-    cs = T_CS!(captures.at(0).unwrap().to_string());
+    cs = T_CS!(captures.get(0).map_or("", |m| m.as_str()).to_string());
     // also replace in proto
-    SINGLE_CHAR_REGEX.replace(proto, "")
+    SINGLE_CHAR_REGEX.replace(proto, "").to_string()
   } else if ACTIVE_CHAR_REGEX.is_match(proto) {
     // Match an active char
     let captures = ACTIVE_CHAR_REGEX.captures(proto).unwrap();
-    cs = TokenizeInternal!(captures.at(0).unwrap()).unlist().first().unwrap().clone();
+    cs = TokenizeInternal!(captures.get(0).map_or("", |m| m.as_str())).unlist().first().unwrap().clone();
     // also replace in proto
-    ACTIVE_CHAR_REGEX.replace(proto, "")
+    ACTIVE_CHAR_REGEX.replace(proto, "").to_string()
   } else {
     // Fatal('misdefined', prototype, $STATE->getStomach,
     //   "Definition prototype doesn't have proper control sequence: \"prototype\""); }
@@ -316,13 +316,13 @@ lazy_static! {
 pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) -> Result<Option<Parameters>> {
   let mut parameters = Vec::new();
   while !prototype.is_empty() {
-    let mut next_proto;
+    let mut next_proto : String;
     // Handle possibly nested cases, such as {Number}
     if NESTED_CHECK.is_match(&prototype) {
       let captures = NESTED_CHECK.captures(&prototype).unwrap();
-      next_proto = NESTED_CHECK.replace(&prototype, "");
-      let spec = captures.at(1).unwrap();
-      let inner_spec = captures.at(2).unwrap();
+      next_proto = NESTED_CHECK.replace(&prototype, "").to_string();
+      let spec = captures.get(1).map_or("", |m| m.as_str());
+      let inner_spec = captures.get(2).map_or("", |m| m.as_str());
       let inner: Option<Parameters> = if inner_spec.is_empty() {
         None
       } else {
@@ -339,16 +339,16 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
     } else if OPTIONAL_CHECK.is_match(&prototype) {
       // Ditto for Optional
       let captures = OPTIONAL_CHECK.captures(&prototype).unwrap();
-      next_proto = OPTIONAL_CHECK.replace(&prototype, "");
-      let spec = captures.at(1).unwrap();
-      let inner_spec = captures.at(2).unwrap();
+      next_proto = OPTIONAL_CHECK.replace(&prototype, "").to_string();
+      let spec = captures.get(1).map_or("", |m| m.as_str());
+      let inner_spec = captures.get(2).map_or("", |m| m.as_str());
 
       if DEFAULT_CHECK.is_match(inner_spec) {
         // let default_captures = DEFAULT_CHECK.captures(&inner_spec).unwrap();
         parameters.push(try!(Parameter {
                           name: "Optional".to_string(),
                           spec: spec.to_string(),
-                          // extra: vec![TokenizeInternal(default_captures.at(0).unwrap()), None]});
+                          // extra: vec![TokenizeInternal(default_captures.get(0).map_or("", |m| m.as_str())), None]});
                           extra: Vec::new(),
                           ..Parameter::default()
                         }
@@ -372,10 +372,10 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
       }
     } else if PARAMSPECT_CHECK.is_match(&prototype) {
       let captures = PARAMSPECT_CHECK.captures(&prototype).unwrap();
-      next_proto = PARAMSPECT_CHECK.replace(&prototype, "");
-      let spec = captures.at(1).unwrap();
-      let spec_type = captures.at(2).unwrap();
-      let extra = match captures.at(4) {
+      next_proto = PARAMSPECT_CHECK.replace(&prototype, "").to_string();
+      let spec = captures.get(1).map_or("", |m| m.as_str());
+      let spec_type = captures.get(2).map_or("", |m| m.as_str());
+      let extra = match captures.get(4) {
         None => Vec::new(),
         Some(_extra_string) => {
           // TODO: Ask Bruce about the "extra" functionality and its types
@@ -395,7 +395,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
       // Fatal('misdefined', cs, undef, "Unrecognized parameter specification at \"prototype\""); }
       panic!("Fatal:misdefined:{:?} Unrecognized parameter specification at \"prototype\"", cs);
     }
-    prototype = next_proto;
+    prototype = next_proto.to_string();
   }
   if parameters.is_empty() {
     Ok(None)

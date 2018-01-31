@@ -9,7 +9,7 @@ use rtx_core::common::{Config, OutputFormat, DataSize};
 use rtx::converter::Converter;
 
 fn main() {
-  if let Err(_) = rtx_core::util::logger::init(log::LogLevelFilter::Info) {
+  if let Err(_) = rtx_core::util::logger::init(log::LevelFilter::Info) {
     error!("Failed to load logger, aborting early. Please check rtx_core::util::logger installed correctly.")
   }
   let mut argv = env::args();

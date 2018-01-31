@@ -22,7 +22,7 @@ impl Delimiter {
   }
 }
 
-pub fn extract_bracketed(mut text: &mut String, delimiter: Option<&Delimiter>) -> String {
+pub fn extract_bracketed(text: &mut String, delimiter: Option<&Delimiter>) -> String {
   let open_delim = match delimiter {
     None => '(',
     Some(d) => d.open()

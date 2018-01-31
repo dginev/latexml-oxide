@@ -1452,7 +1452,7 @@ impl Document {
     Ok(())
   }
 
-  pub fn trim_node_whitespace(&mut self, mut node: &mut Node) {
+  pub fn trim_node_whitespace(&mut self, node: &mut Node) {
     self.trim_node_left_whitespace(node);
     self.trim_node_right_whitespace(node);
   }

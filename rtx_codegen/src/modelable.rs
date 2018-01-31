@@ -54,9 +54,9 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
   for line_result in compiled_reader.lines() {
     if let Ok(line) = line_result {
       if let Some(caps) = TAG_MODEL_LINE.captures(&line) {
-        let tag = caps.at(1).unwrap();
-        let attr = caps.at(2).unwrap();
-        let children = caps.at(3).unwrap();
+        let tag = caps.get(1).map_or("",|m| m.as_str()).to_string();
+        let attr = caps.get(2).map_or("",|m| m.as_str()).to_string();
+        let children = caps.get(3).map_or("",|m| m.as_str()).to_string();
 
         let attr_vec : Vec<String> = attr.split(",").map(|t| t.to_string()).collect();
         let child_vec : Vec<String> = children.split(",").map(|t| t.to_string()).collect();
@@ -66,8 +66,8 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
           model.add_tag_content(#tag, vec![#(#child_vec),*]);
         ));
       } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
-        let classname = caps.at(1).unwrap();
-        let elements = caps.at(2).unwrap();
+        let classname = caps.get(1).map_or("",|m| m.as_str()).to_string();
+        let elements = caps.get(2).map_or("",|m| m.as_str()).to_string();
         let elements_vec = elements.split(",").map(|t| t.to_string()).collect::<Vec<String>>();
 
         operations.push(quote!(
@@ -75,8 +75,8 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
             HashSet::from_iter(vec![#(#elements_vec),*].iter().map(|t| t.to_string())));
         ));
       } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
-        let prefix = caps.at(1).unwrap();
-        let namespace = caps.at(2).unwrap();
+        let prefix = caps.get(1).map_or("",|m| m.as_str()).to_string();
+        let namespace = caps.get(2).map_or("",|m| m.as_str()).to_string();
         operations.push(quote!(
           model.register_document_namespace(#prefix, Some(#namespace.to_owned()));
         ));

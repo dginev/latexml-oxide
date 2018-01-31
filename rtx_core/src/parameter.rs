@@ -80,7 +80,7 @@ impl Parameter {
       _ => {
         if OPTIONAL_REGEX.is_match(&self.name) {
           let captures = OPTIONAL_REGEX.captures(&self.name).unwrap();
-          let basetype = captures.at(1).unwrap();
+          let basetype = captures.get(1).map_or("",|m| m.as_str());
           descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
             Some(& ObjectStore::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
             _ => {
@@ -96,7 +96,7 @@ impl Parameter {
           descriptor.as_mut().unwrap().optional = true;
         } else if SKIP_REGEX.is_match(&self.name) {
           let captures = SKIP_REGEX.captures(&self.name).unwrap();
-          let basetype = captures.at(1).unwrap();
+          let basetype = captures.get(1).map_or("",|m| m.as_str());
           info!("param basetype: {:?}", basetype);
           descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
             Some(& ObjectStore::Parameter(ref d_lookup)) => Some(d_lookup.clone()),

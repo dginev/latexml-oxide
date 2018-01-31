@@ -154,7 +154,7 @@ impl DigestionAPI for Core {
       }
       let mut options: Option<String> = None;
       LATEX_OPTION_REGEX.replace_all(preload, |refs: &Captures| -> String {
-        options = Some(refs.at(1).unwrap_or("").to_string());
+        options = Some(refs.get(1).map_or("", |m| m.as_str()).to_string());
         String::new()
       });
       if preload.ends_with(".cls") {

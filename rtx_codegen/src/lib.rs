@@ -1,6 +1,4 @@
 #![recursion_limit="100"]
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
 
 #[macro_use] extern crate quote;
 extern crate proc_macro;
