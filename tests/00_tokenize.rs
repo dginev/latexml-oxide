@@ -4,7 +4,8 @@
 extern crate rtx;
 use rtx::util::test::*;
 
-#[test] #[ignore]
+#[test]
+#[ignore]
 fn can_tokenize() {
   let requires = None;
 

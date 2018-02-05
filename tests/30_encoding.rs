@@ -5,7 +5,8 @@ extern crate rtx;
 use rtx::util::test::*;
 use std::collections::HashMap;
 
-#[test] #[ignore]
+#[test]
+#[ignore]
 fn can_encode() {
   let mut requires = HashMap::new();
   requires.insert("ansinew", "ansinew.def");

@@ -3,7 +3,7 @@ use rtx_core::tbox::Tbox;
 use rtx_core::list::List;
 use package::*;
 
- pub fn load_definitions(outer_state: &mut State) -> Result<()> {
+pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   SetupBindingMacros!(outer_state);
 
   //======================================================================
@@ -16,43 +16,70 @@ use package::*;
 
   // These are actually TeX primitives, but we treat them as a Whatsit so they
   // remain in the constructed tree.
-  DefPrimitiveI!("{", primitivesub!(stomach, _args, state, {
-    stomach.bgroup(state);
-    let open   = Tbox::new(String::new(), None, None, Tokens!(T_BEGIN!()), HashMap::new(), state);
-    let ismath = state.lookup_bool("IN_MATH");
-    let mode = if ismath {
-      TexMode::Math
-    } else {
-      TexMode::Text
-    };
-    let body   = try!(stomach.digest_next_body(false, state));
-    let mut boxes = vec![Digested::Box(open)];
-    boxes.extend(body);
-    let return_list = List{
-      boxes: boxes,
-      mode: Some(mode),
-      font: None};
+  DefPrimitiveI!(
+    "{",
+    primitivesub!(stomach, _args, state, {
+      stomach.bgroup(state);
+      let open = Tbox::new(
+        String::new(),
+        None,
+        None,
+        Tokens!(T_BEGIN!()),
+        HashMap::new(),
+        state,
+      );
+      let ismath = state.lookup_bool("IN_MATH");
+      let mode = if ismath { TexMode::Math } else { TexMode::Text };
+      let body = try!(stomach.digest_next_body(false, state));
+      let mut boxes = vec![Digested::Box(open)];
+      boxes.extend(body);
+      let return_list = List {
+        boxes: boxes,
+        mode: Some(mode),
+        font: None,
+      };
 
-    Ok(vec![Digested::List(return_list)])
-  }));
+      Ok(vec![Digested::List(return_list)])
+    })
+  );
 
-  DefPrimitiveI!("}", primitivesub!(stomach, _args, state, {
-    let f = state.lookup_font();
-    stomach.egroup(state);
-    let return_box = Tbox::new(String::new(), f, None, Tokens!(T_END!()), HashMap::new(), state);
-    Ok(vec![Digested::Box(return_box)])
-  }));
+  DefPrimitiveI!(
+    "}",
+    primitivesub!(stomach, _args, state, {
+      let f = state.lookup_font();
+      stomach.egroup(state);
+      let return_box = Tbox::new(
+        String::new(),
+        f,
+        None,
+        Tokens!(T_END!()),
+        HashMap::new(),
+        state,
+      );
+      Ok(vec![Digested::Box(return_box)])
+    })
+  );
 
   // // These are for those screwy cases where you need to create a group like box,
   // // more than just bgroup, egroup,
   // // BUT you DON'T want extra {, } showing up in any untex-ing.
-  // DefConstructor('\@hidden@bgroup', '//body', beforeDigest => sub { $_[0]->bgroup; }, captureBody => 1,
-  //   reversion => sub { Revert($_[0]->getProperty('body')); });
+  // DefConstructor('\@hidden@bgroup', '//body', beforeDigest => sub { $_[0]->bgroup; },
+  // captureBody => 1,   reversion => sub { Revert($_[0]->getProperty('body')); });
   // DefConstructor('\@hidden@egroup', '', afterDigest => sub { $_[0]->egroup; },
   //   reversion => '');
 
-  DefPrimitiveI!("\\begingroup", primitiveproc!(stomach, _args, state, {stomach.begingroup(state); }));
-  DefPrimitiveI!("\\endgroup",   primitiveproc!(stomach, _args, state, {try!(stomach.endgroup(state)); }));
+  DefPrimitiveI!(
+    "\\begingroup",
+    primitiveproc!(stomach, _args, state, {
+      stomach.begingroup(state);
+    })
+  );
+  DefPrimitiveI!(
+    "\\endgroup",
+    primitiveproc!(stomach, _args, state, {
+      try!(stomach.endgroup(state));
+    })
+  );
 
   // // Debugging aids; Ignored!
   // DefPrimitive('\show Token',     undef);
@@ -64,9 +91,9 @@ use package::*;
   DefPrimitiveI!("\\ignorespaces SkipSpaces", noprimitive!());
 
   // // \afterassignment saves ONE token (globally!) to execute after the next assignment
-  // DefPrimitive('\afterassignment Token', sub { AssignValue(afterAssignment => $_[1], 'global'); });
-  // // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next egroup or }
-  // DefPrimitive('\aftergroup Token', sub { PushValue(afterGroup => $_[1]); });
+  // DefPrimitive('\afterassignment Token', sub { AssignValue(afterAssignment => $_[1], 'global');
+  // }); // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the
+  // next egroup or } DefPrimitive('\aftergroup Token', sub { PushValue(afterGroup => $_[1]); });
 
   // // \uppercase<general text>, \lowercase<general text>
   // sub ucToken {
@@ -95,8 +122,8 @@ use package::*;
   // DefRegister('\errhelp' => Tokens());
   // DefPrimitive('\errmessage{}', sub {
   //     my ($stomach, $stuff) = @_;
-  //     print STDERR ToString(Expand($stuff)) . ": " . ToString(Expand(Tokens(T_CS('\the'), T_CS('\errhelp')))) . "\n";
-  //     return; });
+  // print STDERR ToString(Expand($stuff)) . ": " . ToString(Expand(Tokens(T_CS('\the'),
+  // T_CS('\errhelp')))) . "\n";     return; });
 
   Ok(())
 }

@@ -2,11 +2,11 @@ pub use std::collections::HashMap;
 pub use regex::Regex;
 pub use std::rc::Rc;
 pub use std::collections::VecDeque;
-pub use libxml::tree::{Node, Namespace};
+pub use libxml::tree::{Namespace, Node};
 
-pub use rtx_core::{Core, Digested, BoxOps};
+pub use rtx_core::{BoxOps, Core, Digested};
 pub use rtx_core::tbox::Tbox;
-pub use rtx_core::state::{State, ObjectStore, Scope};
+pub use rtx_core::state::{ObjectStore, Scope, State};
 pub use rtx_core::common::error::*;
 pub use rtx_core::common::font::Font;
 pub use rtx_core::common::number;
@@ -14,11 +14,11 @@ pub use rtx_core::token::*;
 pub use rtx_core::parameter::{Parameter, Parameters};
 pub use rtx_core::mouth;
 pub use rtx_core::mouth::Mouth;
-pub use rtx_core::definition::{Definition, BeforeDigestClosure, DigestionClosure,
-  ConstructionClosure, ExpansionClosure, ReplacementClosure};
+pub use rtx_core::definition::{BeforeDigestClosure, ConstructionClosure, Definition,
+                               DigestionClosure, ExpansionClosure, ReplacementClosure};
 pub use rtx_core::document::Document;
 pub use rtx_core::document::resource::*;
-pub use rtx_core::document::tag::{TagOptions, TagOptionName};
+pub use rtx_core::document::tag::{TagOptionName, TagOptions};
 pub use rtx_core::util::pathname;
 pub use rtx_core::token::Token;
 pub use rtx_core::tokens::Tokens;
@@ -27,9 +27,9 @@ pub use rtx_core::stomach::Stomach;
 pub use rtx_core::whatsit::Whatsit;
 pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::expandable::Expandable;
-pub use rtx_core::definition::primitive::{Primitive,PrimitiveOptions};
-pub use rtx_core::definition::math_primitive::{MathPrimitive,MathPrimitiveOptions};
-pub use rtx_core::definition::constructor::{ConstructorOptions};
+pub use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
+pub use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
+pub use rtx_core::definition::constructor::ConstructorOptions;
 pub use rtx_core::definition::conditional::{Conditional, ConditionalType};
 
 //**********************************************************************
@@ -44,7 +44,6 @@ pub use rtx_core::definition::conditional::{Conditional, ConditionalType};
 // Still, it would be nice if there were `compiled' forms of .ltxml files!
 //**********************************************************************
 
-
 /// Is defined in the `LaTeX`-y sense of also not being let to \relax.
 pub fn is_defined(name: &str, state: &mut State) -> bool {
   let cs = T_CS!(name);
@@ -58,29 +57,35 @@ pub fn is_defined_token(cs: &Token, state: &mut State) -> bool {
       ObjectStore::Expandable(ref m) => m.get_cs_name() != "\relax",
       ObjectStore::Primitive(ref m) => m.get_cs_name() != "\relax",
       ObjectStore::Constructor(ref m) => m.get_cs_name() != "\relax",
-      _ => false
+      _ => false,
     },
-  _ => false }
+    _ => false,
+  }
 }
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
-pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut state: &mut State) -> Result<()> {
-  let mut file : String = raw_file.trim().to_string();
+pub fn input_definitions(
+  raw_file: String,
+  options: InputDefinitionOptions,
+  mut state: &mut State,
+) -> Result<()>
+{
+  let mut file: String = raw_file.trim().to_string();
 
   // let prevname = if options.handleoptions {
   //   match state.lookup_definition(T_CS!("\@currname")) {
   //     Some(ObjectStore::Expandable(name)) => Digest!(T_CS!("\@currname")).to_string()
   // }
-  // let prevext = options.handleoptions && $state->lookupDefinition(T_CS('\@currext')) && ToString(Digest(T_CS('\@currext')));
-
+  // let prevext = options.handleoptions && $state->lookupDefinition(T_CS('\@currext')) &&
+  // ToString(Digest(T_CS('\@currext')));
 
   // Compute the exact name based on the type
   file = match options.extension {
     None => file,
-    Some(ext) => file + "." + ext
+    Some(ext) => file + "." + ext,
   };
 
-  let loaded_flag = file.clone()+"_loaded";
+  let loaded_flag = file.clone() + "_loaded";
   {
     // Only load definitions once
     if let Some(&ObjectStore::Bool(flag)) = state.lookup_value(&loaded_flag) {
@@ -93,9 +98,7 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
 
   // Mark as loaded, then process the definitions
   info!("Loading {:?} definitions...", file);
-  state.assign_value(&loaded_flag,
-                     ObjectStore::Bool(true),
-                     Some(Scope::Global));
+  state.assign_value(&loaded_flag, ObjectStore::Bool(true), Some(Scope::Global));
 
   match file.as_ref() {
     "TeX.pool" => try!(pool::tex::load_definitions(&mut state)),
@@ -105,24 +108,32 @@ pub fn input_definitions(raw_file: String, options: InputDefinitionOptions, mut 
     "article.cls" => try!(pool::article_cls::load_definitions(&mut state)),
     "alltt.sty" => try!(pool::alltt_sty::load_definitions(&mut state)),
     "comment.sty" => try!(pool::comment_sty::load_definitions(&mut state)),
-    other => { fatal!(Package, Unknown, format!("TODO: unknown binding {:?}, can't load", other)) }
+    other => fatal!(
+      Package,
+      Unknown,
+      format!("TODO: unknown binding {:?}, can't load", other)
+    ),
   };
 
   Ok(())
 }
 
 pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
-  match find_file(request, false) { // TODO: type => $options{type}, noltxml => 1
+  match find_file(request, false) {
+    // TODO: type => $options{type}, noltxml => 1
     Some(path) => load_tex_content(core, &path),
     None => fatal!(Package, MissingFile, request),
-    // TODO:
-    // Error("missing_file", request, state.get_stomach().get_gullet(),
-    // "Can't find TeX file "+request, maybeReportSearchPaths(state)))
+    /* TODO:
+     * Error("missing_file", request, state.get_stomach().get_gullet(),
+     * "Can't find TeX file "+request, maybeReportSearchPaths(state))) */
   }
 }
 
 pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
-  let mut mouth = Mouth { notes: true, ..Mouth::default() };
+  let mut mouth = Mouth {
+    notes: true,
+    ..Mouth::default()
+  };
   try!(mouth.open(path, &mut core.state));
   // TODO:
   // If there is a file-specific declaration file (name.latexml), load it first!
@@ -149,7 +160,7 @@ pub struct RequireOptions {
   pub noltxml: bool,
   pub notex: bool,
   pub raw: bool,
-  pub after: bool
+  pub after: bool,
 }
 impl Default for RequireOptions {
   fn default() -> Self {
@@ -161,26 +172,28 @@ impl Default for RequireOptions {
       noltxml: false,
       notex: true,
       raw: false,
-      after: false
+      after: false,
     }
   }
 }
 
-/// Tokenize($string); Tokenizes the string using the standard cattable, returning a LaTeXML::Core::Tokens
+/// Tokenize($string); Tokenizes the string using the standard cattable, returning a
+/// LaTeXML::Core::Tokens
 macro_rules! Tokenize {
   ($string:expr)=>(mouth::tokenize($string, None));
   ($string:expr, $state:ident)=>(mouth::tokenize($string, Some($state)));
 }
 
-/// TokenizeInternal($string); Tokenizes the string using the internal cattable, returning a LaTeXML::Core::Tokens
+/// TokenizeInternal($string); Tokenizes the string using the internal cattable, returning a
+/// LaTeXML::Core::Tokens
 macro_rules! TokenizeInternal {
   ($string:expr)=>(mouth::tokenize_internal($string, None));
   ($string:expr, $state:ident)=>(mouth::tokenize_internal($string, Some($state)));
 }
 
 /// This (and `FindFile`) needs to evolve a bit to support reading raw .sty (.def, etc) files from
-/// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of `pathname_find` ???)
-/// Another potentially useful option might be that if we are reading a raw file,
+/// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of `pathname_find`
+/// ???) Another potentially useful option might be that if we are reading a raw file,
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
 pub fn require_package(name: String, mut options: RequireOptions, state: &mut State) -> Result<()> {
   if options.raw {
@@ -195,14 +208,19 @@ pub fn require_package(name: String, mut options: RequireOptions, state: &mut St
   if options.extension.is_none() {
     options.extension = Some("sty");
   }
-  // TODO: Ideally we want to use the same struct for the RequirePackage options as for the InputDefinitions options
-  input_definitions(name, InputDefinitionOptions {
-    extension: options.extension,
-    handleoptions: true,
-    // Pass classes options if we have NONE!
-    withoptions: options.options,
-    ..InputDefinitionOptions::default()
-  }, state)
+  // TODO: Ideally we want to use the same struct for the RequirePackage options as for the
+  // InputDefinitions options
+  input_definitions(
+    name,
+    InputDefinitionOptions {
+      extension: options.extension,
+      handleoptions: true,
+      // Pass classes options if we have NONE!
+      withoptions: options.options,
+      ..InputDefinitionOptions::default()
+    },
+    state,
+  )
 }
 
 pub fn require_resource(mut resource: Resource, state: &mut State) {
@@ -225,20 +243,29 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
   // } else {
   state.pending_resources.push(resource);
   // }
-
 }
 
-pub fn load_class(name: String, options: Vec<String>, after: Tokens, state: &mut State) -> Result<()> {
-  input_definitions(name, InputDefinitionOptions {
-    extension: Some("cls"),
-    after: after,
-    notex: true,
-    handleoptions: true,
-    noerror: true,
-    ..InputDefinitionOptions::default()
-  }, state)
-  // if (let success = InputDefinitions($class, type => 'cls', notex => 1, handleoptions => 1, noerror => 1,
-  //     %options)) {
+pub fn load_class(
+  name: String,
+  options: Vec<String>,
+  after: Tokens,
+  state: &mut State,
+) -> Result<()>
+{
+  input_definitions(
+    name,
+    InputDefinitionOptions {
+      extension: Some("cls"),
+      after: after,
+      notex: true,
+      handleoptions: true,
+      noerror: true,
+      ..InputDefinitionOptions::default()
+    },
+    state,
+  )
+  // if (let success = InputDefinitions($class, type => 'cls', notex => 1, handleoptions => 1,
+  // noerror => 1,     %options)) {
   //   return $success; }
   // else {
   //   $STATE->noteStatus(missing => $class . '.cls');
@@ -246,8 +273,8 @@ pub fn load_class(name: String, options: Vec<String>, after: Tokens, state: &mut
   //   Warn('missing_file', $class, $STATE->getStomach->getGullet,
   //     "Can't find binding for class $class (using $alternate)",
   //     maybeReportSearchPaths());
-  //   if (let success = InputDefinitions($alternate, type => 'cls', noerror => 1, handleoptions => 1, %options)) {
-  //     return $success; }
+  // if (let success = InputDefinitions($alternate, type => 'cls', noerror => 1, handleoptions =>
+  // 1, %options)) {     return $success; }
   //   else {
   //     Fatal('missing_file', $alternate . '.cls.ltxml', $STATE->getStomach->getGullet,
   //       "Can't find binding for class $alternate (installation error)");
@@ -257,12 +284,9 @@ pub fn load_class(name: String, options: Vec<String>, after: Tokens, state: &mut
 pub fn find_file(request: &str, _forbid_ltxml: bool) -> Option<String> {
   // TODO: Actually find it!
   Some(request.to_string())
-
 }
 
-pub fn coerce_cs(t: &str) -> Token {
-  T_CS!(t)
-}
+pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
 
 lazy_static! {
   static ref CSNAME_MACRO_REGEX : Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
@@ -294,7 +318,11 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
   } else if ACTIVE_CHAR_REGEX.is_match(proto) {
     // Match an active char
     let captures = ACTIVE_CHAR_REGEX.captures(proto).unwrap();
-    cs = TokenizeInternal!(captures.get(0).map_or("", |m| m.as_str())).unlist().first().unwrap().clone();
+    cs = TokenizeInternal!(captures.get(0).map_or("", |m| m.as_str()))
+      .unlist()
+      .first()
+      .unwrap()
+      .clone();
     // also replace in proto
     ACTIVE_CHAR_REGEX.replace(proto, "").to_string()
   } else {
@@ -313,10 +341,15 @@ lazy_static! {
   static ref DEFAULT_CHECK : Regex = Regex::new(r"^Default:(.*)$").unwrap();
   static ref PARAMSPECT_CHECK : Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
 }
-pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) -> Result<Option<Parameters>> {
+pub fn parse_parameters(
+  mut prototype: String,
+  cs: &Token,
+  state: &mut State,
+) -> Result<Option<Parameters>>
+{
   let mut parameters = Vec::new();
   while !prototype.is_empty() {
-    let mut next_proto : String;
+    let mut next_proto: String;
     // Handle possibly nested cases, such as {Number}
     if NESTED_CHECK.is_match(&prototype) {
       let captures = NESTED_CHECK.captures(&prototype).unwrap();
@@ -328,14 +361,14 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
       } else {
         try!(parse_parameters(inner_spec.to_string(), cs, state))
       };
-      parameters.push(try!(Parameter {
-                        name: "Plain".to_string(),
-                        spec: spec.to_string(),
-                        extra: vec![inner],
-                        ..Parameter::default()
-                      }
-                      .init(state)));
-
+      parameters.push(try!(
+        Parameter {
+          name: "Plain".to_string(),
+          spec: spec.to_string(),
+          extra: vec![inner],
+          ..Parameter::default()
+        }.init(state)
+      ));
     } else if OPTIONAL_CHECK.is_match(&prototype) {
       // Ditto for Optional
       let captures = OPTIONAL_CHECK.captures(&prototype).unwrap();
@@ -345,30 +378,37 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
 
       if DEFAULT_CHECK.is_match(inner_spec) {
         // let default_captures = DEFAULT_CHECK.captures(&inner_spec).unwrap();
-        parameters.push(try!(Parameter {
-                          name: "Optional".to_string(),
-                          spec: spec.to_string(),
-                          // extra: vec![TokenizeInternal(default_captures.get(0).map_or("", |m| m.as_str())), None]});
-                          extra: Vec::new(),
-                          ..Parameter::default()
-                        }
-                        .init(state)));
+        parameters.push(try!(
+          Parameter {
+            name: "Optional".to_string(),
+            spec: spec.to_string(),
+            // extra: vec![TokenizeInternal(default_captures.get(0).map_or("", |m| m.as_str())),
+            // None]});
+            extra: Vec::new(),
+            ..Parameter::default()
+          }.init(state)
+        ));
       } else if !inner_spec.is_empty() {
-        parameters.push(try!(Parameter {
-                          name: "Optional".to_string(),
-                          spec: spec.to_string(),
-                          extra: vec![None, try!(parse_parameters(inner_spec.to_string(), cs, state))],
-                          ..Parameter::default()
-                        }
-                        .init(state)));
+        parameters.push(try!(
+          Parameter {
+            name: "Optional".to_string(),
+            spec: spec.to_string(),
+            extra: vec![
+              None,
+              try!(parse_parameters(inner_spec.to_string(), cs, state)),
+            ],
+            ..Parameter::default()
+          }.init(state)
+        ));
       } else {
-        parameters.push(try!(Parameter {
-                          name: "Optional".to_string(),
-                          spec: spec.to_string(),
-                          extra: Vec::new(),
-                          ..Parameter::default()
-                        }
-                        .init(state)));
+        parameters.push(try!(
+          Parameter {
+            name: "Optional".to_string(),
+            spec: spec.to_string(),
+            extra: Vec::new(),
+            ..Parameter::default()
+          }.init(state)
+        ));
       }
     } else if PARAMSPECT_CHECK.is_match(&prototype) {
       let captures = PARAMSPECT_CHECK.captures(&prototype).unwrap();
@@ -381,19 +421,22 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
           // TODO: Ask Bruce about the "extra" functionality and its types
           // extra_string.split("|").map(|t| tokenize_internal(t)).collect::<Vec<Token>>();
           Vec::new()
-        }
+        },
       };
-      parameters.push(try!(Parameter {
-                        name: spec_type.to_string(),
-                        spec: spec.to_string(),
-                        extra: extra,
-                        ..Parameter::default()
-                      }
-                      .init(state)));
-
+      parameters.push(try!(
+        Parameter {
+          name: spec_type.to_string(),
+          spec: spec.to_string(),
+          extra: extra,
+          ..Parameter::default()
+        }.init(state)
+      ));
     } else {
       // Fatal('misdefined', cs, undef, "Unrecognized parameter specification at \"prototype\""); }
-      panic!("Fatal:misdefined:{:?} Unrecognized parameter specification at \"prototype\"", cs);
+      panic!(
+        "Fatal:misdefined:{:?} Unrecognized parameter specification at \"prototype\"",
+        cs
+      );
     }
     prototype = next_proto.to_string();
   }
@@ -404,16 +447,17 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
   }
 }
 
-pub fn revert(_arg: &[Token]) -> Tokens {
-  Tokens!()
-}
+pub fn revert(_arg: &[Token]) -> Tokens { Tokens!() }
 
 //======================================================================
 // Declaring and Adjusting the Document Model.
 //======================================================================
 
 pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
-  let mut options = state.tag_properties.entry(tag.to_string()).or_insert_with(TagOptions::default);
+  let mut options = state
+    .tag_properties
+    .entry(tag.to_string())
+    .or_insert_with(TagOptions::default);
   options.auto_open = properties.auto_open;
   options.auto_close = properties.auto_close;
 
@@ -450,37 +494,54 @@ impl Default for InputDefinitionOptions {
       noltxml: false,
       withoptions: Vec::new(),
       handleoptions: false,
-      as_class: false
+      as_class: false,
     }
   }
 }
 
 // Selects the RelaxNG schema defining the XML output language
-pub fn select_relaxng_schema(schema : String, namespaces : Option<HashMap<String,String>>, state: &mut State) {
+pub fn select_relaxng_schema(
+  schema: String,
+  namespaces: Option<HashMap<String, String>>,
+  state: &mut State,
+)
+{
   // What verb here? Set, Choose,...
   let model = &mut state.model;
   model.set_relaxng_schema(schema);
   if let Some(namespaces) = namespaces {
     for (prefix, value) in namespaces {
-      model.register_document_namespace(&prefix, Some(value)); }
+      model.register_document_namespace(&prefix, Some(value));
+    }
   }
-  return; }
-
-pub fn def_macro_i(cs: Token, paramlist: Option<Parameters>, expansion: Option<ExpansionClosure>, state: &mut State) {
-//       // Optimization: Defer till macro actually used
-//       // if !$cs.is_empty() { // && $options{mathactive}
-//         // $state.assign_mathcode($cs, 0x8000, $options{scope}); }
-//       $state.install_definition(Expandable{ cs: coerce_cs( $cs ), paramlist: $paramlist, expansion: $expansion});//, %options), $options{scope});
-//       // if $options{locked} {
-//       //   $state.assign_value(ToString($cs)+":locked", true, "global")
-//       // }
-
-  state.install_definition(ObjectStore::Expandable(Rc::new(
-    Expandable { cs: cs, paramlist: paramlist, expansion: expansion,
-     ..Expandable::default()})),
-    None);
+  return;
 }
 
+pub fn def_macro_i(
+  cs: Token,
+  paramlist: Option<Parameters>,
+  expansion: Option<ExpansionClosure>,
+  state: &mut State,
+)
+{
+  //       // Optimization: Defer till macro actually used
+  //       // if !$cs.is_empty() { // && $options{mathactive}
+  //         // $state.assign_mathcode($cs, 0x8000, $options{scope}); }
+  // $state.install_definition(Expandable{ cs: coerce_cs( $cs ), paramlist: $paramlist,
+  // expansion: $expansion});//, %options), $options{scope});       // if $options{locked} {
+  //       //   $state.assign_value(ToString($cs)+":locked", true, "global")
+  //       // }
+
+  state.install_definition(
+    ObjectStore::Expandable(Rc::new(Expandable {
+      cs: cs,
+      paramlist: paramlist,
+      expansion: expansion,
+      ..Expandable::default()
+    })),
+    None,
+  );
+}
 
 //**********************************************************************
 /// This function computes an xml:id for a node, if it hasn't already got one.
@@ -490,14 +551,22 @@ pub fn def_macro_i(cs: Token, paramlist: Option<Parameters>, expansion: Option<E
 /// The parent node (the one with ID=<parentid>) also maintains a counter
 /// stored in an attribute `_ID_counter_<prefix>` recording the last used
 /// <number> for <prefix> amongst its descendents.
-pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &str, state: &mut State) {
+pub fn generate_id(
+  document: &mut Document,
+  mut node: &mut Node,
+  mut prefix: &str,
+  state: &mut State,
+)
+{
   // If node doesn't already have an id, and can
   let node_qname = document.get_node_qname(node, state);
   if node.get_attribute("xml:id").is_none() && document.can_have_attribute(&node_qname, "xml:id", state)
     // but isn't a _Capture_ node (which ultimately should disappear)
-    && (node_qname != "ltx:_Capture_") {
-
-    let mut ancestor = document.findnode("ancestor::*[@xml:id][1]", Some(node), state).unwrap_or_else(|| document.get_document().get_root_element());
+    && (node_qname != "ltx:_Capture_")
+  {
+    let mut ancestor = document
+      .findnode("ancestor::*[@xml:id][1]", Some(node), state)
+      .unwrap_or_else(|| document.get_document().get_root_element());
     //// Old versions don't like ancestor.getAttribute('xml:id');
     let ancestor_id = ancestor.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace");
     // If we've got no ancestor_id, then we've got no ancestor (no document yet!),
@@ -509,14 +578,16 @@ pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &st
     }
 
     let ctrkey = "_ID_counter_".to_string() + prefix + "_";
-    let a_ctr = ancestor.get_attribute(&ctrkey).unwrap_or_else(|| "0".to_string());
+    let a_ctr = ancestor
+      .get_attribute(&ctrkey)
+      .unwrap_or_else(|| "0".to_string());
 
     let ctr_int = 1 + a_ctr.parse::<u32>().unwrap_or(0);
     let ctr = ctr_int.to_string();
 
     let id = match ancestor_id {
       Some(aid) => aid + ".",
-      None => String::new()
+      None => String::new(),
     } + prefix + &ctr;
 
     ancestor.set_attribute(&ctrkey, &ctr);
@@ -530,12 +601,16 @@ pub fn merge_font(font: Font, state: &mut State) {
     _ => Font::text_default(),
   };
   let newfont = current_font.merge(font);
-  state.assign_value("font", ObjectStore::Font(Box::new(newfont)), Some(Scope::Local));
+  state.assign_value(
+    "font",
+    ObjectStore::Font(Box::new(newfont)),
+    Some(Scope::Local),
+  );
   return;
 }
 
-// Macros requiring repetitions need to be handled outside of the main setup macro, as nested macros currently don't support repetition
-// Details at: https://github.com/rust-lang/rust/issues/35853
+// Macros requiring repetitions need to be handled outside of the main setup macro, as nested
+// macros currently don't support repetition Details at: https://github.com/rust-lang/rust/issues/35853
 
 macro_rules! Font {
   ($($key:ident => $value:expr),*) => (
@@ -616,7 +691,6 @@ macro_rules! primitiveproc {
   )
 }
 
-
 #[macro_export]
 macro_rules! beforesub {
   ($stomach:ident, $state:ident, $body:expr) => (
@@ -653,14 +727,14 @@ macro_rules! afterproc {
   ))
 }
 
-
-// Discussion: It is unclear what the best authoring syntax is for our family of latexml binding macros.
-// One idea is to keep them very close to the Rust internals, but we suffer from a variety of boilerplate, such as
-// needing to spell out `key => Some(value.to_string())`, rather than a direct `key => value`.
+// Discussion: It is unclear what the best authoring syntax is for our family of latexml binding
+// macros. One idea is to keep them very close to the Rust internals, but we suffer from a variety
+// of boilerplate, such as needing to spell out `key => Some(value.to_string())`, rather than a
+// direct `key => value`.
 //
 // For now I am making the decision to keep writing out the verbose form,
-// and will refactor at a later date, when the trade-offs become more clear. Smart use of the Cow struct is another idea.
-// I will use a helper though:
+// and will refactor at a later date, when the trade-offs become more clear. Smart use of the Cow
+// struct is another idea. I will use a helper though:
 
 #[macro_export]
 macro_rules! v {
@@ -668,8 +742,9 @@ macro_rules! v {
 }
 /// Macros and pool come at the end, so that they load seamlessly
 
-// We need to invoke constructors within constructors. This is only possible with locally passed State arguments,
-// IF we have a macro form that explicitly accepts state and has no pseudo-global $state in its initialization.
+// We need to invoke constructors within constructors. This is only possible with locally passed
+// State arguments, IF we have a macro form that explicitly accepts state and has no pseudo-global
+// $state in its initialization.
 
 #[macro_export]
 macro_rules! SetupBindingMacros {($state:ident) => (
@@ -2485,13 +2560,19 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
 )}
 
-pub fn new_counter(ctr: &str, within: &str, options: Option<HashMap<String, String>>, state: &mut State) {
+pub fn new_counter(
+  ctr: &str,
+  within: &str,
+  options: Option<HashMap<String, String>>,
+  state: &mut State,
+)
+{
   SetupBindingMacros!(state);
-  let unctr   = format!("UN{}",ctr); // UNctr is counter for generating ID's for UN-numbered items.
-  let cctr    = format!("\\c@{}",ctr);
-  let clctr   = format!("\\cl@{}",ctr);
-  let cunctr  = format!("\\c@{}",unctr);
-  let clunctr = format!("\\cl@{}",unctr);
+  let unctr = format!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
+  let cctr = format!("\\c@{}", ctr);
+  let clctr = format!("\\cl@{}", ctr);
+  let cunctr = format!("\\c@{}", unctr);
+  let clunctr = format!("\\cl@{}", unctr);
 
   DefRegisterI!(T_CS!(cctr), None, Number!(0), None);
   // state.assign_value(cctr, Number!(0), Some(Scope::Global));
@@ -2517,7 +2598,8 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<HashMap<String, Stri
   //   };
   //   let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(unctr)];
   //   clwithin_tokens.append(x);
-  //   state.assign_value(clwithin, ObjectStore::Tokens(Tokens{tokens: clwithin_tokens}), Some(Scope::Global));
+  // state.assign_value(clwithin, ObjectStore::Tokens(Tokens{tokens: clwithin_tokens}),
+  // Some(Scope::Global));
 
   //   let unx = if let Some(ObjectStore::Tokens(clun)) = state.lookup_value(clunwithin) {
   //     clun.unlist()
@@ -2527,12 +2609,12 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<HashMap<String, Stri
   //   let mut clunwithin_tokens = T_CS!(unctr);
   //   clunwithin_tokens.append(unx);
 
-  //   state.assign_value(clunwithin, ObjectStore::Tokens(Tokens{tokens: clunwithin_tokens}), Some(Scope::Global))
-  // }
+  // state.assign_value(clunwithin, ObjectStore::Tokens(Tokens{tokens: clunwithin_tokens}),
+  // Some(Scope::Global)) }
 
   // if let Some(nested_val) = options.get("nested") {
-  //   state.assign_value(format!("nested_counters_{}", ctr), ObjectStore::String(nested_val), Some(Scope::Global))
-  // }
+  // state.assign_value(format!("nested_counters_{}", ctr), ObjectStore::String(nested_val),
+  // Some(Scope::Global)) }
 
   // // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
   // DefMacroI!(T_CS!(format!("\\the{}",ctr)), None, move |gullet, args, inner_state| {
@@ -2543,8 +2625,8 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<HashMap<String, Stri
 
   // let mut prefix = options.get("idprefix").unwrap_or(String::new());
   // if !prefix.is_empty() {
-  //   state.assign_value(format!("@ID@prefix@{}",ctr), ObjectStore::String(prefix), Some(Scope::Global));
-  // } else {
+  // state.assign_value(format!("@ID@prefix@{}",ctr), ObjectStore::String(prefix),
+  // Some(Scope::Global)); } else {
   //   prefix = state.lookup_string(format!("@ID@prefix@{}",ctr));
   //   if prefix.is_empty() {
   //     prefix = clean_id(ctr);

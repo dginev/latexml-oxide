@@ -7,33 +7,35 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // But we define a number of stubs here that will automatically load
   // the LaTeX pool (or AmSTeX.pool) (which will presumably redefine them), and then
   // stuff the token back to be reexecuted.
-  for ltxtrigger in ["\\documentclass",
-                     "\\newcommand",
-                     "\\renewcommand",
-                     "\\newenvironment",
-                     "\\renewenvironment",
-                     "\\NeedsTeXFormat",
-                     "\\ProvidesPackage",
-                     "\\RequirePackage",
-                     "\\ProvidesFile",
-                     "\\makeatletter",
-                     "\\makeatother",
-                     "\\typeout",
-                     "\\begin",
-                     "\\listfiles"]
-                      .into_iter()
-                      .map(|s| s.to_string()) {
-
-    DefMacroI!(T_CS!(ltxtrigger),
-               None,
-               move |_gullet, _args, state| {
-                 try!(input_definitions("LaTeX".to_string(),
-                  InputDefinitionOptions {
-                    extension: Some("pool"),
-                    ..InputDefinitionOptions::default()
-                  }, state));
-                 Ok(Tokens!(T_CS!(ltxtrigger)))
-               });
+  for ltxtrigger in [
+    "\\documentclass",
+    "\\newcommand",
+    "\\renewcommand",
+    "\\newenvironment",
+    "\\renewenvironment",
+    "\\NeedsTeXFormat",
+    "\\ProvidesPackage",
+    "\\RequirePackage",
+    "\\ProvidesFile",
+    "\\makeatletter",
+    "\\makeatother",
+    "\\typeout",
+    "\\begin",
+    "\\listfiles",
+  ].into_iter()
+    .map(|s| s.to_string())
+  {
+    DefMacroI!(T_CS!(ltxtrigger), None, move |_gullet, _args, state| {
+      try!(input_definitions(
+        "LaTeX".to_string(),
+        InputDefinitionOptions {
+          extension: Some("pool"),
+          ..InputDefinitionOptions::default()
+        },
+        state
+      ));
+      Ok(Tokens!(T_CS!(ltxtrigger)))
+    });
   }
 
   Ok(())

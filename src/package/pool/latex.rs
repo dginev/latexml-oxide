@@ -15,7 +15,7 @@ lazy_static!{
   static ref OPTS_REGEX : Regex = Regex::new(r",\s*").unwrap();
 }
 
- pub fn load_definitions(state: &mut State) -> Result<()> {
+pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
   LoadPool!("TeX");
 
@@ -33,8 +33,7 @@ lazy_static!{
   // Let('\@currentlabel', '\@empty');
 
   // Let's try just starting with this set (since we've loaded LaTeX)
-  state.assign_value("inPreamble", ObjectStore::Bool(true), None);    // \begin{document} will clear this.
-
+  state.assign_value("inPreamble", ObjectStore::Bool(true), None); // \begin{document} will clear this.
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
@@ -51,7 +50,6 @@ lazy_static!{
     }))
   );
 
-
   // ======================================================================
   // C.1.2 Environments
   // ======================================================================
@@ -67,7 +65,11 @@ lazy_static!{
   // it can be processed specially, if needed.  These are the magic
   // "\begin{env}", "\end{env}" control sequences created by DefEnvironment.
 
-  AssignValue!("current_environment", ObjectStore::String(String::new()), Some(Scope::Global));
+  AssignValue!(
+    "current_environment",
+    ObjectStore::String(String::new()),
+    Some(Scope::Global)
+  );
   // DefMacroI!("\@currenvir", "", Rc::new(move |state| {}), state);
   // DefPrimitive("\lx@setcurrenvir{}", sub {
   //     DefMacro("\@currenvir", $_[1]);
@@ -76,16 +78,15 @@ lazy_static!{
 
   DefMacro!("\\begin{}", gullet, args, state, {
     let name = &args[0].to_string();
-    let begin_name = "\\begin{".to_string()+name+"}";
+    let begin_name = "\\begin{".to_string() + name + "}";
     if is_defined(&begin_name, state) {
       Ok(Tokens!(T_CS!(begin_name))) // Magic cs!
-    }
-    else {
+    } else {
       let token = T_CS!("\\".to_string() + name);
       if !is_defined_token(&token, state) {
         let undef = "{".to_string() + name + "}";
         let category_object = format!("undefined:{:?}", undef);
-        error!(target: &category_object,"The environment is not defined.");
+        error!(target: &category_object, "The environment is not defined.");
         // state.note_status("undefined", undef);
         //   Error("undefined", $undef, $gullet, "The environment " . $undef . " is not defined.");
         // state.install_definition(LaTeXML::Core::Definition::Constructor->new($token, undef,
@@ -97,19 +98,20 @@ lazy_static!{
   });
 
   DefMacro!("\\end{}", gullet, args, state, {
-    let name : String = args[0].to_string();
-    let mut t = T_CS!("\\end{".to_string()+&name+"}");
-    if is_defined_token(&t, state) {// Magic CS!
-    Ok(Tokens!(t))
-  } else {
-    t = T_CS!("\\end".to_string()+&name);
+    let name: String = args[0].to_string();
+    let mut t = T_CS!("\\end{".to_string() + &name + "}");
     if is_defined_token(&t, state) {
-      Ok(Tokens!(t, T_CS!("\\endgroup")))
+      // Magic CS!
+      Ok(Tokens!(t))
     } else {
-      Ok(Tokens!(T_CS!("\\endgroup")))
+      t = T_CS!("\\end".to_string() + &name);
+      if is_defined_token(&t, state) {
+        Ok(Tokens!(t, T_CS!("\\endgroup")))
+      } else {
+        Ok(Tokens!(T_CS!("\\endgroup")))
+      }
     }
-  }});
-
+  });
 
   //**********************************************************************
   // C.2. The Structure of the Document
@@ -174,7 +176,6 @@ lazy_static!{
     mode => Some("text".to_string())
   );
 
-
   //**********************************************************************
   // C.4 Sectioning and Table of Contents
   //**********************************************************************
@@ -200,13 +201,24 @@ lazy_static!{
   DefMacro!("\\part", "\\@startsection{part}{-1}{}{}{}{}"); // not locked since sometimes redefined as partition?
   DefMacro!("\\section", "\\@startsection{section}{1}{}{}{}{}"); // TODO: locked => true);
   DefMacro!("\\subsection", "\\@startsection{subsection}{2}{}{}{}{}"); // TODO: locked => true);
-  DefMacro!("\\subsubsection", "\\@startsection{subsubsection}{3}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!(
+    "\\subsubsection",
+    "\\@startsection{subsubsection}{3}{}{}{}{}"
+  ); // TODO: locked => true);
   DefMacro!("\\paragraph", "\\@startsection{paragraph}{4}{}{}{}{}"); // TODO: locked => true);
   DefMacro!("\\subparagraph", "\\@startsection{subparagraph}{5}{}{}{}{}"); // TODO: locked => true);
-  for tag in ["part", "chapter", "section", "subsection", "subsubsection", "paragraph", "subparagraph"].iter() {
+  for tag in [
+    "part",
+    "chapter",
+    "section",
+    "subsection",
+    "subsubsection",
+    "paragraph",
+    "subparagraph",
+  ].iter()
+  {
     Tag!(&format!("ltx:{:?}",tag), auto_close => true);
   }
-
 
   DefMacro!("\\secdef {}{} OptionalMatch:*", gullet, args, state, {
     if args.len() == 3 {
@@ -216,40 +228,60 @@ lazy_static!{
     } // ($_[3] ? ($_[2]) : ($_[1])); });
   });
 
-  DefMacro!("\\@startsection@hook","");
+  DefMacro!("\\@startsection@hook", "");
 
   // NewCounter!("secnumdepth");
   // SetCounter!("secnumdepth", Number(3));
-  DefMacro!("\\@startsection{}{}{}{}{}{} OptionalMatch:*", gullet, args, state, {
-    let type_tokens = args[0].clone();
-    let stype = type_tokens.to_string();
-    let mut ctr = state.lookup_string(&format!("counter_for_{}", stype));
-    if ctr.is_empty() { ctr = stype};
-    let level = args[1].to_string();
-    let flag = args[6].to_string();
-    if !flag.is_empty() {//|| (!level.is_empty() && (level > CounterValue!("secnumdepth").value_of())) {
-      // RefStepID!(ctr);
-      let mut tokens : Vec<Token> = vec![T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"), T_BEGIN!()];
-      tokens.append(&mut type_tokens.unlist());
-      tokens.push(T_END!());
-      Ok(Tokens {tokens: tokens})
-    } else  {
-      // RefStepCounter!(ctr);
-      let mut tokens : Vec<Token> = vec![T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"), T_BEGIN!()];
-      tokens.append(&mut type_tokens.unlist());
-      tokens.push(T_END!());
-      Ok(Tokens {tokens: tokens})
+  DefMacro!(
+    "\\@startsection{}{}{}{}{}{} OptionalMatch:*",
+    gullet,
+    args,
+    state,
+    {
+      let type_tokens = args[0].clone();
+      let stype = type_tokens.to_string();
+      let mut ctr = state.lookup_string(&format!("counter_for_{}", stype));
+      if ctr.is_empty() {
+        ctr = stype
+      };
+      let level = args[1].to_string();
+      let flag = args[6].to_string();
+      if !flag.is_empty() {
+        //|| (!level.is_empty() && (level > CounterValue!("secnumdepth").value_of())) {
+        // RefStepID!(ctr);
+        let mut tokens: Vec<Token> = vec![
+          T_CS!("\\@startsection@hook"),
+          T_CS!("\\@@unnumbered@section"),
+          T_BEGIN!(),
+        ];
+        tokens.append(&mut type_tokens.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens { tokens: tokens })
+      } else {
+        // RefStepCounter!(ctr);
+        let mut tokens: Vec<Token> = vec![
+          T_CS!("\\@startsection@hook"),
+          T_CS!("\\@@numbered@section"),
+          T_BEGIN!(),
+        ];
+        tokens.append(&mut type_tokens.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens { tokens: tokens })
+      }
     }
-  });
+  );
 
-  // Redefine these if you want to assemble the name (eg. \chaptername), refnum and titles differently
-  // \@@numbered@section{type}[toctitle]{title}
+  // Redefine these if you want to assemble the name (eg. \chaptername), refnum and titles
+  // differently \@@numbered@section{type}[toctitle]{title}
   DefMacro!("\\@@numbered@section{}[]{}",
     "\\@@section{#1}{\\@currentID}{\\@currentlabel}{\\lx@fnum@@{#1}}{\\format@toctitle@{#1}{\\ifx.#2.#3\\else#2\\fi}}{\\format@title@{#1}{#3}}"
   );
-  // NOTE: Unclear here, whether the "formatted refnum" should be empty, or just the type abbreviation?
-  DefMacro!("\\@@unnumbered@section{}[]{}",
-    "\\@@section{#1}{\\@currentID}{}{}{#2}{#3}");
+  // NOTE: Unclear here, whether the "formatted refnum" should be empty, or just the type
+  // abbreviation?
+  DefMacro!(
+    "\\@@unnumbered@section{}[]{}",
+    "\\@@section{#1}{\\@currentID}{}{}{#2}{#3}"
+  );
 
   //----------------------------------------------------------------------
   // The following macros provide a few layers of customization
@@ -257,48 +289,72 @@ lazy_static!{
   //----------------------------------------------------------------------
   // \format@title@{type}{title}
   // Format a title (or caption) appropriately for type.
-  // This is usually somewhat verbose, but establishes the context that this is a Chapter, or Figure, or whatever
-  // invokes \format@title@type{title} if that macro is defined, else composes \lx@fnum@@{type} title.
-  // Define \format@title@type{title} if the default is not appropriate.
+  // This is usually somewhat verbose, but establishes the context that this is a Chapter, or
+  // Figure, or whatever invokes \format@title@type{title} if that macro is defined, else
+  // composes \lx@fnum@@{type} title. Define \format@title@type{title} if the default is not
+  // appropriate.
 
   // TODO:
   // DefMacro!("\\format@title@{}{}",
-  // "{\\@ifundefined{format@title@#1}{\\@@compose@title{\\lx@fnum@@{#1}}{#2}}{\\csname format@title@#1\\endcsname{#2}}}");
+  // "{\\@ifundefined{format@title@#1}{\\@@compose@title{\\lx@fnum@@{#1}}{#2}}{\\csname
+  // format@title@#1\\endcsname{#2}}}");
 
   // \format@toctitle@{type}{toctitle}
   // Format a toctitle (or toccaption) appropriately for type.
-  // This is usually somewhat concise, and the context implies that this is a Chapter, Figure or whatever
-  // invokes \format@toctitle@type{title} if that macro is defined, else composes \lx@fnum@toc@@{type} title
-  // Define \format@toctitle@type{title} if the default is not appropriate.
+  // This is usually somewhat concise, and the context implies that this is a Chapter, Figure or
+  // whatever invokes \format@toctitle@type{title} if that macro is defined, else composes
+  // \lx@fnum@toc@@{type} title Define \format@toctitle@type{title} if the default is not
+  // appropriate.
 
   // TODO:
   // DefMacro!("\\format@toctitle@{}{}",
-  // "{\\@ifundefined{format@toctitle@#1}{\\@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}{\\csname format@toctitle@#1\\endcsname{#2}}}");
-  // DefMacro!("\\@@compose@title{}{}", "\\@tag[][ ]{#1}#2");
-  // DefConstructor!("\\@tag[][]{}", "?#3(<ltx:tag open='#1' close='#2'>#3</ltx:tag>)()");
+  // "{\\@ifundefined{format@toctitle@#1}{\\@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}{\\csname
+  // format@toctitle@#1\\endcsname{#2}}}"); DefMacro!("\\@@compose@title{}{}", "\\@tag[][
+  // ]{#1}#2"); DefConstructor!("\\@tag[][]{}", "?#3(<ltx:tag open='#1'
+  // close='#2'>#3</ltx:tag>)()");
 
-  //// NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the type.
-  //// This would be useful for the titles in links; thus can be plain (unicode) text.
-  //// However, I hate setting up even more machinery & options and dragging yet another form around....
+  //// NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the
+  //// type. This would be useful for the titles in links; thus can be plain (unicode) text.
+  //// However, I hate setting up even more machinery & options and dragging yet another form
+  //// around....
   // \@@section{type}{id}{refnum}{formattedrefnum}{toctitle}{title}
-  DefConstructor!("\\@@section{}{}{}{}{}{}", document, args, props, inner_state, {
-    // TODO: This bizarre argument API interaction needs to be simplified down to Perl's intuitive level of:
-    //       let (x,y,z, ...) = @args;
-    let (stype, id, refnum, mut frefnum, toctitle, title) =
-      (args[0].clone().unwrap().to_string(), args[1].clone().unwrap().to_string(), args[2].clone().unwrap().to_string(), args[3].clone().unwrap().to_string(), args[4].clone().unwrap(), args[5].clone().unwrap());
+  DefConstructor!(
+    "\\@@section{}{}{}{}{}{}",
+    document,
+    args,
+    props,
+    inner_state,
+    {
+      // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
+      // intuitive level of:       let (x,y,z, ...) = @args;
+      let (stype, id, refnum, mut frefnum, toctitle, title) = (
+        args[0].clone().unwrap().to_string(),
+        args[1].clone().unwrap().to_string(),
+        args[2].clone().unwrap().to_string(),
+        args[3].clone().unwrap().to_string(),
+        args[4].clone().unwrap(),
+        args[5].clone().unwrap(),
+      );
 
-    if frefnum == refnum {
-      frefnum = String::new();
-    }
+      if frefnum == refnum {
+        frefnum = String::new();
+      }
 
-    let clean_id = id;// TODO: CleanID($id);
-    let has_toctitle = !toctitle.to_string().is_empty() && (toctitle.to_string() != title.to_string());
-    document.open_element(&format!("ltx:{}",stype), Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)), None, inner_state);
-    document.insert_element("ltx:title", vec![title], None, inner_state);
-    if has_toctitle {
-      document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state);
+      let clean_id = id; // TODO: CleanID($id);
+      let has_toctitle =
+        !toctitle.to_string().is_empty() && (toctitle.to_string() != title.to_string());
+      document.open_element(
+        &format!("ltx:{}", stype),
+        Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)),
+        None,
+        inner_state,
+      );
+      document.insert_element("ltx:title", vec![title], None, inner_state);
+      if has_toctitle {
+        document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state);
+      }
     }
-  });
+  );
 
   // Not sure if this is best, but if no explicit \section'ing...
   //### Tag('ltx:section',autoOpen=>1);
@@ -307,9 +363,8 @@ lazy_static!{
   // C.4.2 The Appendix
   //======================================================================
   // Handled in article,report or book.
-  DefMacro!("\\appendixname",   "Appendix");
+  DefMacro!("\\appendixname", "Appendix");
   DefMacro!("\\appendixesname", "Appendixes");
-
 
   // ======================================================================
   // C.5.2 Packages
@@ -322,13 +377,16 @@ lazy_static!{
 
   DefMacro!("\\@clsextension", "cls");
   DefMacro!("\\@pkgextension", "sty");
-  Let!("\\@currext",  "\\@empty");
+  Let!("\\@currext", "\\@empty");
   Let!("\\@currname", "\\@empty");
 
   fn only_preamble(cs: &str, state: &mut State) {
     if !state.lookup_bool("inPreamble") {
       let category_object = format!("unexpected:{:?}", cs);
-      error!(target: &category_object, "The current command can only appear in the preamble");
+      error!(
+        target: &category_object,
+        "The current command can only appear in the preamble"
+      );
     }
   }
 
@@ -357,25 +415,25 @@ lazy_static!{
       })
   );
 
-
-
   // STUBS:
-  for ltxtrigger in ["\\renewcommand",
-                     "\\newenvironment",
-                     "\\renewenvironment",
-                     "\\NeedsTeXFormat",
-                     "\\ProvidesPackage",
-                     "\\RequirePackage",
-                     "\\ProvidesFile",
-                     "\\makeatletter",
-                     "\\makeatother",
-                     "\\typeout",
-                     "\\listfiles"]
-                      .into_iter()
-                      .map(|s| s.to_string()) {
-    DefMacroI!(T_CS!(ltxtrigger), None,
-      move |_gullet, _args, _state| Ok(Tokens!())
-    );
+  for ltxtrigger in [
+    "\\renewcommand",
+    "\\newenvironment",
+    "\\renewenvironment",
+    "\\NeedsTeXFormat",
+    "\\ProvidesPackage",
+    "\\RequirePackage",
+    "\\ProvidesFile",
+    "\\makeatletter",
+    "\\makeatother",
+    "\\typeout",
+    "\\listfiles",
+  ].into_iter()
+    .map(|s| s.to_string())
+  {
+    DefMacroI!(T_CS!(ltxtrigger), None, move |_gullet, _args, _state| Ok(
+      Tokens!()
+    ));
   }
 
   //======================================================================
@@ -399,8 +457,8 @@ lazy_static!{
     "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
     mode => Some("inline_math".to_string())
   );
-  // My first inclination is to Lock {math}, but it is surprisingly common to redefine it in silly ways... So...?
-
+  // My first inclination is to Lock {math}, but it is surprisingly common to redefine it in silly
+  // ways... So...?
 
   //**********************************************************************
   // C.8 Definitions, Numbering and Programming
@@ -412,7 +470,9 @@ lazy_static!{
 
   // DefMacro('\@tabacckludge {}', '\csname\string#1\endcsname');
 
-  DefPrimitiveI!("\\newcommand OptionalMatch:* DefToken [Number][]{}", primitiveproc!(stomach, args, state, {
+  DefPrimitiveI!(
+    "\\newcommand OptionalMatch:* DefToken [Number][]{}",
+    primitiveproc!(stomach, args, state, {
       // my ($stomach, $star, $cs, $nargs, $opt, $body) = @_;
       let star = &args[0];
       let cs = &args[1].tokens[0];
@@ -427,9 +487,11 @@ lazy_static!{
       //   return; }
 
       // TODO: convertLaTeXArgs($nargs, $opt)
-      let body_closure = move |gullet:&mut Gullet, args:Vec<Tokens>, state:&mut State|{ Ok(body.clone()) };
+      let body_closure =
+        move |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| Ok(body.clone());
       DefMacroI!(cs.clone(), None, body_closure, state);
-  }));
+    })
+  );
 
   //======================================================================
   // C.8.4 Numbering

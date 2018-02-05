@@ -16,6 +16,5 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
   });
 
-
   Ok(())
 }

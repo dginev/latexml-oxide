@@ -68,7 +68,7 @@ fn process_texfile(tex_path: String, name: &str) -> Vec<String> {
     search_paths: None,
     preload: None,
     include_comments: Some(false),
-    .. CoreOptions::default()
+    ..CoreOptions::default()
   });
 
   match latexml.convert_file(tex_path.clone()) {
@@ -85,8 +85,16 @@ fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
   }
 }
 fn process_ltx_doc(doc: Document, _name: &str, state: &mut State) -> Vec<String> {
-  doc.to_string(state).split('\n').map(|line| line.to_string()).collect()
+  doc
+    .to_string(state)
+    .split('\n')
+    .map(|line| line.to_string())
+    .collect()
 }
 fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {
-  dom.to_string(true).split('\n').map(|line| line.to_string()).collect()
+  dom
+    .to_string(true)
+    .split('\n')
+    .map(|line| line.to_string())
+    .collect()
 }

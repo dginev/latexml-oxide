@@ -5,7 +5,8 @@ extern crate rtx;
 use rtx::util::test::*;
 use std::collections::HashMap;
 
-#[test] #[ignore]
+#[test]
+#[ignore]
 fn can_graphics() {
   let mut requires = HashMap::new();
   requires.insert("colors", "dvipsnam.def");

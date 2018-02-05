@@ -1,12 +1,12 @@
 use package::*;
- pub fn load_definitions(state: &mut State) -> Result<()> {
+pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
-  RegisterNamespace!("ltx"  , "http://dlmf.nist.gov/LaTeXML");
-  RegisterNamespace!("svg"  , "http://www.w3.org/2000/svg");
-  RegisterNamespace!("xlink", "http://www.w3.org/1999/xlink");   // Needed for SVG
-  // Not directly used, but let's stake out the ground
-  RegisterNamespace!("m"    , "http://www.w3.org/1998/Math/MathML");
+  RegisterNamespace!("ltx", "http://dlmf.nist.gov/LaTeXML");
+  RegisterNamespace!("svg", "http://www.w3.org/2000/svg");
+  RegisterNamespace!("xlink", "http://www.w3.org/1999/xlink"); // Needed for SVG
+                                                               // Not directly used, but let's stake out the ground
+  RegisterNamespace!("m", "http://www.w3.org/1998/Math/MathML");
   RegisterNamespace!("xhtml", "http://www.w3.org/1999/xhtml");
 
   DefMacro!("\\@empty", "");
@@ -54,7 +54,6 @@ use package::*;
   );
 
   RequireResource!("LaTeXML.css");
-
 
   //**********************************************************************
   // CORE TeX; Built-in commands.
@@ -126,8 +125,8 @@ use package::*;
   // // however, <filler> does get expanded while searching for the initial {
   // // which IS required in contrast to a general argument; ie a single token is not correct.
   // DefParameterType!("GeneralText",Parameter{
-  //   reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
-  //     let open = gullet.read_x_token();
+  // reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>,
+  // state: &mut State| {     let open = gullet.read_x_token();
   //     if open.equals(T_BEGIN!()) {
   //       gullet.read_balanced()
   //     } else {
@@ -147,8 +146,8 @@ use package::*;
   );
 
   // DefParameterType!("Skip1Space",Parameter{
-  //   reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
-  //     gullet.skip_one_space();
+  // reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>,
+  // state: &mut State| {     gullet.skip_one_space();
   //     vec![]
   //   }),
   //   novalue: true,
@@ -177,7 +176,6 @@ use package::*;
       gullet.read_balanced(state)
     })
   );
-
 
   // Read a Semiverbatim argument; ie w/ most catcodes neutralized.
   DefParameterType!("Semiverbatim",
@@ -271,8 +269,8 @@ use package::*;
 
   // // Read a floating point number
   // DefParameterType!("Float",Parameter{
-  //   reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
-  //     gullet.read_float()
+  // reader: Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>,
+  // state: &mut State| {     gullet.read_float()
   //   }),
   //   ..Parameter::default()
   // }, state);

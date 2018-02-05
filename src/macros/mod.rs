@@ -28,7 +28,6 @@ macro_rules! compile_expansion {
   })
 }
 
-
 #[macro_export]
 macro_rules! load_model {
   ($var: expr, $name: expr) => ({

@@ -3,7 +3,7 @@ use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_core::list::List;
 use rtx_core::document::Document;
 use rtx_core::token;
-use rtx_core::{Core, Digested, BoxOps};
+use rtx_core::{BoxOps, Core, Digested};
 use rtx_core::common::error::*;
 use core::DigestionAPI;
 
@@ -44,9 +44,7 @@ impl Converter {
     self.ready = true;
     Ok(())
   }
-  pub fn state_mut(&mut self) -> &mut State {
-    self.core.state_mut()
-  }
+  pub fn state_mut(&mut self) -> &mut State { self.core.state_mut() }
   pub fn bind_log(&mut self) {
     // TODO
   }
@@ -87,22 +85,18 @@ impl Converter {
     // - Fragments need to have a default pre- and postamble, if none provided
     let current_preamble = match self.opts.whatsin {
       DataSize::Math => Some("literal:\\begin{document}\\ensuremathfollows".to_string()),
-      DataSize::Fragment => {
-        match self.opts.preamble.clone() {
-          Some(p) => Some(p.clone()),
-          None => Some("standard_preamble.tex".to_string()),
-        }
-      }
+      DataSize::Fragment => match self.opts.preamble.clone() {
+        Some(p) => Some(p.clone()),
+        None => Some("standard_preamble.tex".to_string()),
+      },
       _ => None,
     };
     let current_postamble = match self.opts.whatsout {
       DataSize::Math => Some("literal:\\ensuremathpreceeds\\end{document}".to_string()),
-      DataSize::Fragment => {
-        match self.opts.postamble.clone() {
-          Some(p) => Some(p),
-          None => Some("standard_postamble.tex".to_string()),
-        }
-      }
+      DataSize::Fragment => match self.opts.postamble.clone() {
+        Some(p) => Some(p),
+        None => Some("standard_postamble.tex".to_string()),
+      },
       _ => None,
     };
     // TODO:
@@ -117,10 +111,11 @@ impl Converter {
     //     if (!defined $source) {    // Unpacking failed to find a source
     //       $$opts{sourcedirectory} = $$opts{archive_sourcedirectory};
     //       my $log = $self->flush_log;
-    //       return { result => undef, log => $log, status => "Fatal:IO:Archive Can't detect a source TeX file!", status_code => 3 }; }
-    // // Destination magic: If we expect an archive on output, we need to invent the appropriate destination ourselves when not given.
-    // // Since the LaTeXML API never writes the final archive file to disk, we just use a pretend sourcename.zip:
-    //     if (($$opts{whatsout} =~ /^archive/) && (!$$opts{destination})) {
+    // return { result => undef, log => $log, status => "Fatal:IO:Archive Can't detect a
+    // source TeX file!", status_code => 3 }; } // Destination magic: If we expect an archive
+    // on output, we need to invent the appropriate destination ourselves when not given.
+    // // Since the LaTeXML API never writes the final archive file to disk, we just use a pretend
+    // sourcename.zip:     if (($$opts{whatsout} =~ /^archive/) && (!$$opts{destination})) {
     //       $$opts{placeholder_destination} = 1;
     //       $$opts{destination}             = pathname_name($source) . ".zip"; } }
 
@@ -128,8 +123,8 @@ impl Converter {
     //   if ($$opts{whatsout} =~ /^archive/) {
     //     $$opts{archive_sitedirectory} = $$opts{sitedirectory};
     //     $$opts{archive_destination}   = $$opts{destination};
-    //     my $destination_name = $$opts{destination} ? pathname_name($$opts{destination}) : 'document';
-    //     my $sandbox_directory = File::Temp->newdir(TMPDIR => 1);
+    // my $destination_name = $$opts{destination} ? pathname_name($$opts{destination}) :
+    // 'document';     my $sandbox_directory = File::Temp->newdir(TMPDIR => 1);
     //     my $extension = $$opts{format};
     //     $extension =~ s/\d+$//;
     //     $extension =~ s/^epub|mobi$/xhtml/;
@@ -138,8 +133,8 @@ impl Converter {
 
     //     if ($$opts{format} eq 'epub') {
     //       $$opts{resource_directory} = File::Spec->catdir($sandbox_directory, 'OPS');
-    //       $$opts{destination} = pathname_concat(File::Spec->catdir($sandbox_directory, 'OPS'), $sandbox_destination); }
-    //     else {
+    // $$opts{destination} = pathname_concat(File::Spec->catdir($sandbox_directory, 'OPS'),
+    // $sandbox_destination); }     else {
     //       $$opts{destination} = pathname_concat($sandbox_directory, $sandbox_destination); }
     //   }
 
@@ -159,17 +154,19 @@ impl Converter {
     // "Conversion timed out after " . $$opts{timeout} . " seconds!\n"); };
     // alarm($$opts{timeout});
     // my $mode = ($$opts{type} eq 'auto') ? 'TeX' : $$opts{type};
-    let digest_result = self.core.digest(source,
-                                         current_preamble,
-                                         current_postamble,
-                                         self.opts.mode.clone(),
-                                         true);
+    let digest_result = self.core.digest(
+      source,
+      current_preamble,
+      current_postamble,
+      self.opts.mode.clone(),
+      true,
+    );
     let digested = match digest_result {
       Err(e) => {
         // TODO digestion failed, report
         e.log_fatal();
         Digested::List(List::new(Vec::new()))
-      }
+      },
       Ok(d) => d,
     };
     // 2.1 Now, convert to DOM and output, if desired.
@@ -182,7 +179,7 @@ impl Converter {
         } else {
           digested.to_string()
         }
-      }
+      },
       _ => {
         dom_result = self.core.convert_document(digested);
         match dom_result {
@@ -190,9 +187,9 @@ impl Converter {
           Err(e) => {
             error!(target: "document:convert", "{:?}", e);
             "Fatal: convert document failed".to_string()
-          }
+          },
         }
-      }
+      },
     };
 
     let status_code = self.core.state.status_code;
@@ -201,16 +198,16 @@ impl Converter {
 
     // 2.2 Bookkeeping in case fatal errors occurred
     // $$latexml{state}->noteStatus('fatal') if $latexml && $@;    // Fatal Error?
-    // local $@ = 'Fatal:conversion:unknown TeX to XML conversion failed! (Unknown Reason)' if ((!$convert_eval_return) && (!$@));
-    // my $eval_report = $@;
+    // local $@ = 'Fatal:conversion:unknown TeX to XML conversion failed! (Unknown Reason)' if
+    // ((!$convert_eval_return) && (!$@)); my $eval_report = $@;
     // $$runtime{status}      = $latexml->getStatusMessage;
     // $$runtime{status_code} = $latexml->getStatusCode;
-    // $$runtime{status_data}->{$_} = $$latexml{state}->{status}->{$_} foreach (qw(warning error fatal));
-    // // End daemon run, by popping frame:
+    // $$runtime{status_data}->{$_} = $$latexml{state}->{status}->{$_} foreach (qw(warning error
+    // fatal)); // End daemon run, by popping frame:
     // $latexml->withState(sub {
     //     my ($state) = @_;                                       // Remove current state frame
-    //     $$opts{searchpaths} = $state->lookupValue('SEARCHPATHS'); // save the searchpaths for post-processing
-    //     $state->popDaemonFrame;
+    // $$opts{searchpaths} = $state->lookupValue('SEARCHPATHS'); // save the searchpaths for
+    // post-processing     $state->popDaemonFrame;
     //     $$state{status} = {};
     // });
     // if ($eval_report || ($$runtime{status_code} == 3)) {
@@ -229,8 +226,8 @@ impl Converter {
     // $serialized = $dom->to_string if ($dom && (!defined $serialized));
     // $self->sanitize($log);
 
-    // return { result => $serialized, log => $log, status => $$runtime{status}, status_code => $$runtime{status_code} }; }
-    // else {
+    // return { result => $serialized, log => $log, status => $$runtime{status}, status_code =>
+    // $$runtime{status_code} }; } else {
     // Standard report, if we're not in a Fatal case
     // log!("\nConversion complete: " . $$runtime{status} . ".\n"; );
 
@@ -242,8 +239,8 @@ impl Converter {
     //     rmtree($$opts{sourcedirectory});
     //     $$opts{sourcedirectory} = $$opts{archive_sourcedirectory}; }
     //   my $log = $self->flush_log;
-    //   return { result => $serialized, log => $log, status => $$runtime{status}, status_code => $$runtime{status_code} };
-    // }
+    // return { result => $serialized, log => $log, status => $$runtime{status}, status_code =>
+    // $$runtime{status_code} }; }
 
     // 3 If desired, post-process
     // my $result = $dom;
@@ -309,8 +306,11 @@ impl Converter {
     }
   }
 
-
-  pub fn prepare_session<'preplifetime>(&'preplifetime mut self, _opts: &'preplifetime Config) -> Result<()> {
+  pub fn prepare_session<'preplifetime>(
+    &'preplifetime mut self,
+    _opts: &'preplifetime Config,
+  ) -> Result<()>
+  {
     if !self.ready {
       try!(self.initialize_session())
     }

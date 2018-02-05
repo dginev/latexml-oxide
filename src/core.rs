@@ -1,13 +1,13 @@
-use regex::{Regex, Captures};
+use regex::{Captures, Regex};
 use std::path::Path;
 use std::rc::Rc;
 
-use rtx_core::common::{DigestionMode};
+use rtx_core::common::DigestionMode;
 use rtx_core::{Core, Digested};
 use rtx_core::common::error::*;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::FindOptions;
-use rtx_core::state::{Scope, ObjectStore}; // State
+use rtx_core::state::{ObjectStore, Scope}; // State
 use rtx_core::definition::expandable::Expandable;
 use rtx_core::document::Document;
 use rtx_core::list::List;
@@ -31,7 +31,14 @@ pub struct DigestionOptions {
 
 pub trait DigestionAPI {
   fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()>;
-  fn digest(&mut self, request: String, preamble: Option<String>, postamble: Option<String>, mode: Option<DigestionMode>, no_init: bool) -> Result<Digested>;
+  fn digest(
+    &mut self,
+    request: String,
+    preamble: Option<String>,
+    postamble: Option<String>,
+    mode: Option<DigestionMode>,
+    no_init: bool,
+  ) -> Result<Digested>;
   fn digest_file(&mut self, request: String, options: DigestionOptions) -> Result<Digested>;
   fn digest_internal(&mut self) -> Result<Digested>; // used to be "finishDigestion"
   fn convert_file(&mut self, filepath: String) -> Result<Document>;
@@ -45,21 +52,35 @@ impl DigestionAPI for Core {
   fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()> {
     self.state.initialize_stomach();
     // let paths = state.lookup_value("SEARCHPATHS");
-    self.state.assign_value("InitialPreloads",
-                            ObjectStore::Bool(true),
-                            Some(Scope::Global));
+    self.state.assign_value(
+      "InitialPreloads",
+      ObjectStore::Bool(true),
+      Some(Scope::Global),
+    );
     for preload in preloads {
-      try!(input_definitions(preload, InputDefinitionOptions::default(), &mut self.state));
+      try!(input_definitions(
+        preload,
+        InputDefinitionOptions::default(),
+        &mut self.state
+      ));
     }
-    self.state.assign_value("InitialPreloads",
-                            ObjectStore::Bool(false),
-                            Some(Scope::Global));
+    self.state.assign_value(
+      "InitialPreloads",
+      ObjectStore::Bool(false),
+      Some(Scope::Global),
+    );
     Ok(())
   }
 
-  fn digest(&mut self, request: String, _preamble: Option<String>, _postamble: Option<String>,
-    _mode: Option<DigestionMode>, _no_init: bool) -> Result<Digested> {
-
+  fn digest(
+    &mut self,
+    request: String,
+    _preamble: Option<String>,
+    _postamble: Option<String>,
+    _mode: Option<DigestionMode>,
+    _no_init: bool,
+  ) -> Result<Digested>
+  {
     // let mut ext = match mode {
     //   Some(m) => Some(m.extension()),
     //   None => Some(DigestionMode::TeX.extension()),
@@ -87,10 +108,10 @@ impl DigestionAPI for Core {
     // };
     let digestion_note = "Digesting ".to_string() + &name.clone().unwrap();
     note_begin(&digestion_note);
-    // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless $options{noinitialize};
-    // $state->assignValue(SOURCEFILE      => $request) if (!pathname::is_literaldata($request));
-    // $state->assignValue(SOURCEDIRECTORY => $dir)     if defined $dir;
-    // $state->unshiftValue(SEARCHPATHS => $dir)
+    // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless
+    // $options{noinitialize}; $state->assignValue(SOURCEFILE      => $request) if
+    // (!pathname::is_literaldata($request)); $state->assignValue(SOURCEDIRECTORY => $dir)
+    // if defined $dir; $state->unshiftValue(SEARCHPATHS => $dir)
     //   if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('SEARCHPATHS') };
     // $state->unshiftValue(GRAPHICSPATHS => $dir)
 
@@ -128,7 +149,7 @@ impl DigestionAPI for Core {
     let mut state = &mut self.state;
     let search_paths = match state.lookup_value("SEARCHPATHS") {
       Some(&ObjectStore::VecString(ref paths)) => Some(paths.clone()),
-      _ => None
+      _ => None,
     };
     // Compile-time load of model AND indirect model
     load_model!(&mut state, "LaTeXML");
@@ -226,22 +247,31 @@ impl DigestionAPI for Core {
       // ext = mode.extension();
       name = request.clone();
     } else {
-      let ext_str = format!(".{}",mode.extension());
+      let ext_str = format!(".{}", mode.extension());
       let request_base = if request.ends_with(&ext_str) {
-        request[0 .. request.len()-ext_str.len()].to_string()
+        request[0..request.len() - ext_str.len()].to_string()
       } else {
         request.to_string()
       };
 
-      if let Some(pathname) = pathname::find(&request_base, FindOptions {
-        types: Some(vec![mode.extension(), String::new()]), ..FindOptions::default()
-      }) {
+      if let Some(pathname) = pathname::find(
+        &request_base,
+        FindOptions {
+          types: Some(vec![mode.extension(), String::new()]),
+          ..FindOptions::default()
+        },
+      ) {
         request = pathname;
         dir = pathname::directory(&request);
         name = pathname::file_name(&request);
-        // ext = pathname::extension(&request);
+      // ext = pathname::extension(&request);
       } else {
-        error!(target: &format!("Fatal:missing_file:{}", request_base), "Can't find {} file {} ", mode, request);
+        error!(
+          target: &format!("Fatal:missing_file:{}", request_base),
+          "Can't find {} file {} ",
+          mode,
+          request
+        );
       }
     }
 
@@ -255,21 +285,28 @@ impl DigestionAPI for Core {
     }
 
     if !pathname::is_literaldata(&request) {
-      self.state.assign_value("SOURCEFILE", ObjectStore::String(request.clone()), None);
+      self
+        .state
+        .assign_value("SOURCEFILE", ObjectStore::String(request.clone()), None);
     }
     if !dir.is_empty() {
-      self.state.assign_value("SOURCEDIRECTORY", ObjectStore::String(dir.clone()), None);
+      self
+        .state
+        .assign_value("SOURCEDIRECTORY", ObjectStore::String(dir.clone()), None);
     }
     self.state.search_paths.push_front(dir.clone());
     self.state.graphics_paths.push_front(dir.clone());
 
     let name_copy = name.clone();
-    self.state.install_definition(ObjectStore::Expandable(Rc::new(Expandable{
-      cs: T_CS!("\\jobname"),
-      paramlist: None,
-      expansion: SimpleExpansion!(Tokens::new(Explode!(name_copy))),
-      ..Expandable::default()
-    })), None);
+    self.state.install_definition(
+      ObjectStore::Expandable(Rc::new(Expandable {
+        cs: T_CS!("\\jobname"),
+        paramlist: None,
+        expansion: SimpleExpansion!(Tokens::new(Explode!(name_copy))),
+        ..Expandable::default()
+      })),
+      None,
+    );
 
     // Reverse order, since last opened is first read!
     if let Some(postamble) = options.postamble {

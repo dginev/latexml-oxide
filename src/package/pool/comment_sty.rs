@@ -1,14 +1,14 @@
 use package::*;
 
- pub fn load_definitions(state: &mut State) -> Result<()> {
+pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
   //**********************************************************************
   // Define \name and \begin{name} to start an ignored section
   // until \endname or \end{name}, respectively
-  let define_excluded = primitivesub!(stomach, args, state,{
+  let define_excluded = primitivesub!(stomach, args, state, {
     let name = args[0].to_string();
-    let begin_mark = format!("\\begin{{{}}}",name);
+    let begin_mark = format!("\\begin{{{}}}", name);
     let end_mark = format!("\\end{{{}}}", name);
     {
       DefConstructorI!(T_CS!(begin_mark), None, noreplacement!(),
@@ -30,7 +30,8 @@ use package::*;
     Ok(Vec::new())
   });
 
-  // I don't understand Rust closures enough to figure out how to clone one, so instantiating it twice instead, via a macro
+  // I don't understand Rust closures enough to figure out how to clone one, so instantiating it
+  // twice instead, via a macro
   macro_rules! define_included {() =>(primitivesub!(stomach, args, state,{
     args.reverse(); // we'll be popping from the front
     let name = if let Some(name_token) = args.pop() {
@@ -65,10 +66,18 @@ use package::*;
   });)}
 
   let mut mock_stomach = Stomach::default();
-  try!(define_excluded(&mut mock_stomach, vec![Tokens{tokens: vec![T_OTHER!("comment")]}], state));
+  try!(define_excluded(
+    &mut mock_stomach,
+    vec![
+      Tokens {
+        tokens: vec![T_OTHER!("comment")],
+      },
+    ],
+    state
+  ));
 
-  DefPrimitiveI!("\\includecomment{}",     define_included!());
-  DefPrimitiveI!("\\excludecomment{}",     define_excluded);
+  DefPrimitiveI!("\\includecomment{}", define_included!());
+  DefPrimitiveI!("\\excludecomment{}", define_excluded);
   DefPrimitiveI!("\\specialcomment{}{}{}", define_included!());
   DefPrimitiveI!("\\processcomment{}{}{}{}", noprimitive!());
 

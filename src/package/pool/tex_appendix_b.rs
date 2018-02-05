@@ -1,38 +1,38 @@
 use package::*;
- pub fn load_definitions(state: &mut State) -> Result<()> {
+pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
-//
-//**********************************************************************
-// Plain;  Extracted from Appendix B.
-//**********************************************************************
-//
-//======================================================================
-// TeX Book, Appendix B, p. 344
-//======================================================================
-// \dospecials ??
-//
-// Normally, the content branch contains the pure structure and meaning of a construct,
-// and the presentation is generated from lower level TeX macros that only concern
-// themselves with how to display the object.
-// Nevertheless, it is sometimes useful to know where the tokens in the presentation branch
-// came from;  particularly what their presumed "meaning" is.
-// For example, when search-indexing pmml, or providing links to definitions from the pmml.
-//
-// The following constructor (see how it's used in DefMath), adds meaning attributes
-// whereever it seems sensible on the presentation branch, after it has been generated.
+  //
+  //**********************************************************************
+  // Plain;  Extracted from Appendix B.
+  //**********************************************************************
+  //
+  //======================================================================
+  // TeX Book, Appendix B, p. 344
+  //======================================================================
+  // \dospecials ??
+  //
+  // Normally, the content branch contains the pure structure and meaning of a construct,
+  // and the presentation is generated from lower level TeX macros that only concern
+  // themselves with how to display the object.
+  // Nevertheless, it is sometimes useful to know where the tokens in the presentation branch
+  // came from;  particularly what their presumed "meaning" is.
+  // For example, when search-indexing pmml, or providing links to definitions from the pmml.
+  //
+  // The following constructor (see how it's used in DefMath), adds meaning attributes
+  // whereever it seems sensible on the presentation branch, after it has been generated.
 
-// DefConstructor('\@ASSERT@MEANING{}{}', '#2',
-//   reversion      => '#2',
-//   afterConstruct => sub {
-//     my ($document, $whatsit) = @_;
-//     my $node    = $document->getNode;              # This should be the wrapper just added.
-//     my $meaning = ToString($whatsit->getArg(1));
-//     addMeaningRec($document, $node, $meaning);
-//     $node; });
+  // DefConstructor('\@ASSERT@MEANING{}{}', '#2',
+  //   reversion      => '#2',
+  //   afterConstruct => sub {
+  //     my ($document, $whatsit) = @_;
+  //     my $node    = $document->getNode;              # This should be the wrapper just added.
+  //     my $meaning = ToString($whatsit->getArg(1));
+  //     addMeaningRec($document, $node, $meaning);
+  //     $node; });
 
-//======================================================================
-// Properties for plain characters.
-// These are allowed in plain text, but need to act a bit special in math.
+  //======================================================================
+  // Properties for plain characters.
+  // These are allowed in plain text, but need to act a bit special in math.
   DefMathI!('=', None, '=', role => v!("RELOP"),   meaning  => v!("equals"));
   DefMathI!('+', None, '+', role => v!("ADDOP"),   meaning  => v!("plus"));
   DefMathI!('-', None, '-', role => v!("ADDOP"),   meaning  => v!("minus"));
@@ -47,7 +47,7 @@ use package::*;
   DefMathI!('[', None, '[', role => v!("OPEN"),    stretchy => false);
   DefMathI!(']', None, ']', role => v!("CLOSE"),   stretchy => false);
   DefMathI!('|', None, '|', role => v!("VERTBAR"), stretchy => false);
-  DefMathI!(':', None, ':', role => v!("METARELOP"), name => v!("colon"));    // Seems like good default role
+  DefMathI!(':', None, ':', role => v!("METARELOP"), name => v!("colon")); // Seems like good default role
   DefMathI!('<', None, '<', role => v!("RELOP"), meaning => v!("less-than"));
   DefMathI!('>', None, '>', role => v!("RELOP"), meaning => v!("greater-than"));
 
@@ -92,27 +92,27 @@ use package::*;
 
   DefPrimitiveI!("\\mit", noprimitive!(), require_math => true, font => Font!(family => "italic"));
 
-  DefPrimitiveI!("\\frenchspacing",    noprimitive!());
+  DefPrimitiveI!("\\frenchspacing", noprimitive!());
   DefPrimitiveI!("\\nonfrenchspacing", noprimitive!());
   // DefMacroI!("\\normalbaselines", undef,
   //   '\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\normallineskiplimit');
   DefMacroT!(T_CS!("\\space"), None, T_SPACE!());
-  DefMacroT!(T_CS!("\\lq"),    None, T_OTHER!("`"));
-  DefMacroT!(T_CS!("\\rq"),    None, T_OTHER!("'"));
+  DefMacroT!(T_CS!("\\lq"), None, T_OTHER!("`"));
+  DefMacroT!(T_CS!("\\rq"), None, T_OTHER!("'"));
   Let!("\\empty", "\\@empty");
   // DefMacroT!(T_CS!("\\null"), None, "\hbox{}");
-  Let!("\\bgroup",  T_BEGIN!());
-  Let!("\\egroup",  T_END!());
+  Let!("\\bgroup", T_BEGIN!());
+  Let!("\\egroup", T_END!());
   Let!("\\endgraf", "\\par");
   Let!("\\endline", "\\cr");
 
   DefPrimitiveI!("\\endline", noprimitive!());
 
   // Use \r for the newline from TeX!!!
-  DefMacroT!(T_CS!("\\\r"), None, T_CS!("\\ "));    // \<cr> == \<space> Interesting (see latex.ltx)
-  Let!(T_ACTIVE!("\r"), "\\par");       // (or is this just LaTeX?)
+  DefMacroT!(T_CS!("\\\r"), None, T_CS!("\\ ")); // \<cr> == \<space> Interesting (see latex.ltx)
+  Let!(T_ACTIVE!("\r"), "\\par"); // (or is this just LaTeX?)
 
-  Let!("\\\t", "\\\r");               // \<tab> == \<space>, also
+  Let!("\\\t", "\\\r"); // \<tab> == \<space>, also
 
   Ok(())
 }

@@ -125,7 +125,7 @@ impl MathParser {
       // notations.\n"); } } if (my @funcs = keys %{
       // $$self{maybe_functions} }) { note_progress("Possibly used as
       // functions?\n  " . join(', ', map { "'$_'
-      // ($$self{maybe_functions}{$_}/$$self{unknowns}{$_} usages)" } 
+      // ($$self{maybe_functions}{$_}/$$self{unknowns}{$_} usages)" }
       // sort @funcs) . "\n"); }
 
       note_end("Math Parsing");
@@ -311,8 +311,8 @@ impl MathParser {
       //     foreach my $id (keys %$LaTeXML::MathParser::PUNCTUATION) {
       //       my $r = $$LaTeXML::MathParser::PUNCTUATION{$id}->cloneNode;
       //       $r->removeAttribute('xml:id');
-      //       foreach my $n ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
-      //         $document->replaceTree($r, $n); } }
+      // foreach my $n ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']",
+      // $p)) {         $document->replaceTree($r, $n); } }
       //     foreach my $id (keys %$LaTeXML::MathParser::LOSTNODES) {
       //       my $repid = $$LaTeXML::MathParser::LOSTNODES{$id};
       //       # but the replacement my have been replaced as well!
@@ -320,12 +320,13 @@ impl MathParser {
       //         $repid = $reprepid; }
       //       if ($document->findnodes("descendant-or-self::*[\@xml:id='$id']")
       // &&
-      // !$document->findnodes("descendant-or-self::*[\@xml:id='$repid']")) { 
+      // !$document->findnodes("descendant-or-self::*[\@xml:id='$repid']")) {
       // # Do nothing if the node never actually got replaced (parse ultimately
       // failed?)       }
       //       else {
-      //         foreach my $n ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
-      //           $document->setAttribute($n, idref => $repid); } } }
+      // foreach my $n
+      // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) { 
+      // $document->setAttribute($n, idref => $repid); } } }
       p.set_attribute("text", &self.text_form(&result, document, state));
     }
     Ok(())
@@ -334,7 +335,14 @@ impl MathParser {
   // my %TAG_FEEDBACK = ('ltx:XMArg' => 'a', 'ltx:XMWrap' => 'w');    # [CONSTANT]
   // Recursively parse a node with some internal structure
   // by first parsing any structured children, then it's content.
-  fn parse_rec(&mut self, node: &mut Node, rule_opt: &str, document: &mut Document, state: &mut State) -> Result<Option<Node>> {
+  fn parse_rec(
+    &mut self,
+    node: &mut Node,
+    rule_opt: &str,
+    document: &mut Document,
+    state: &mut State,
+  ) -> Result<Option<Node>>
+  {
     try!(self.parse_children(node, document, state));
     // This will only handle 1 layer nesting (successfully?)
     // Note that this would have been found by the top level xpath,
@@ -402,7 +410,7 @@ impl MathParser {
         // from XMArg,.. // If there are any references to $resultid, we need
         // to point them to $newid! if ($resultid && $newid && ($resultid
         // ne $newid)) { foreach my $ref
-        // ($document->findnodes("//*[\@idref='$resultid']")) { 
+        // ($document->findnodes("//*[\@idref='$resultid']")) {
         // $ref->setAttribute(idref => $newid); } }
       }
       return Ok(Some(result));
@@ -418,7 +426,13 @@ impl MathParser {
   }
 
   // Depth first parsing of XMArg nodes.
-  fn parse_children(&mut self, node: &mut Node, document: &mut Document, state: &mut State) -> Result<()> {
+  fn parse_children(
+    &mut self,
+    node: &mut Node,
+    document: &mut Document,
+    state: &mut State,
+  ) -> Result<()>
+  {
     for mut child in element_nodes(node) {
       let tag = document.get_node_qname(&child, state);
       match tag.as_str() {
@@ -428,7 +442,9 @@ impl MathParser {
         "ltx:XMWrap" => {
           try!(self.parse_rec(&mut child, "Anything", document, state));
         },
-        "ltx:XMApp" | "ltx:XMArray" | "ltx:XMRow" | "ltx:XMCell" => try!(self.parse_children(&mut child, document, state)),
+        "ltx:XMApp" | "ltx:XMArray" | "ltx:XMRow" | "ltx:XMCell" => {
+          try!(self.parse_children(&mut child, document, state))
+        },
         "ltx:XMDual" => try!(self.parse_children(&mut child, document, state)),
         _ => {},
       };
@@ -473,7 +489,7 @@ impl MathParser {
   // # Really shouldn't happen, but if XMHint is in XMWrap, it may end up
   // with id....?       if (my $id = $node->getAttribute('xml:id')) {
   // if
-  // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']")) { 
+  // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']")) {
   // push(@prefiltered, $node); $prev = $node; } } } # Don't store stuff on
   // APPLYOP, since they tend to disappear. elsif ((getQName($node) eq
   // 'ltx:XMTok') && (($node->getAttribute('role') || '') eq 'APPLYOP')) {
@@ -501,8 +517,8 @@ impl MathParser {
   // the wide space # I'm leary that this is a safe way to create an
   // XML node that's NOT in the tree, but...         my $p = $node->parentNode;
   // #        my $punct =
-  // $document->openElementAt($p,'ltx:XMTok',role=>'PUNCT',rpadding=>$s.'pt'); 
-  // my $punct = $document->openElementAt($p, 'ltx:XMTok', role => 'PUNCT', 
+  // $document->openElementAt($p,'ltx:XMTok',role=>'PUNCT',rpadding=>$s.'pt');
+  // my $punct = $document->openElementAt($p, 'ltx:XMTok', role => 'PUNCT',
   // name => ('q' x int($s / 10)) . 'uad');
   //         $punct->appendText(spacingToString($s));
   // $p->removeChild($punct);    # But don't actually leave it in the
@@ -667,7 +683,14 @@ impl MathParser {
   // Low-level Parser: parse a single expression
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Convert to textual form for processing by MathGrammar
-  fn parse_single(&self, mathnode: &mut Node, document: &mut Document, rule: String, state: &mut State) -> Result<Option<Node>> {
+  fn parse_single(
+    &self,
+    mathnode: &mut Node,
+    document: &mut Document,
+    rule: String,
+    state: &mut State,
+  ) -> Result<Option<Node>>
+  {
     //   my @nodes = $self->filter_hints($document, $mathnode->childNodes);
     let nodes = mathnode.get_child_nodes();
     let mut result;
@@ -730,7 +753,13 @@ impl MathParser {
     Ok(result)
   }
 
-  fn parse_internal(&self, rule: &str, nodes: Vec<Node>, document: &mut Document) -> Result<(Option<Node>, Option<Node>)> {
+  fn parse_internal(
+    &self,
+    rule: &str,
+    nodes: Vec<Node>,
+    document: &mut Document,
+  ) -> Result<(Option<Node>, Option<Node>)>
+  {
     // Generate a textual token for each node; The parser operates on this encoded
     // string.   local $LaTeXML::MathParser::LEXEMES = {};
     //   my $i       = 0;
@@ -902,7 +931,15 @@ impl MathParser {
   //   ADDOP         => 10,   MULOP       => 100, FRACOP => 100,
   //   SUPERSCRIPTOP => 1000, SUBSCRIPTOP => 1000);
 
-  fn textrec(&self, node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<&str>, document: &Document, state: &mut State) -> String {
+  fn textrec(
+    &self,
+    node_opt: &Node,
+    outer_bp_opt: Option<usize>,
+    outer_name_opt: Option<&str>,
+    document: &Document,
+    state: &mut State,
+  ) -> String
+  {
     let node = self.realize_xmnode(node_opt, document);
     let tag = document.get_node_qname(&node, state);
     let outer_bp = match outer_bp_opt {
@@ -971,7 +1008,15 @@ impl MathParser {
     }
   }
 
-  fn textrec_apply(&self, name: &str, op: Node, args: Vec<Node>, document: &Document, state: &mut State) -> (usize, String) {
+  fn textrec_apply(
+    &self,
+    name: &str,
+    op: Node,
+    args: Vec<Node>,
+    document: &Document,
+    state: &mut State,
+  ) -> (usize, String)
+  {
     let role = op.get_attribute("role").unwrap_or("Unknown".to_owned());
     // if (($role =~ /^(SUB|SUPER)SCRIPTOP$/) && (($op->getAttribute('scriptpos')
     // || '') =~ /^pre\d+$/)) { # Note that this will likely get
@@ -1164,7 +1209,7 @@ impl MathParser {
   //         $repl = 1; }
   //       else {
   // foreach my $r
-  // ($doc->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']")) { 
+  // ($doc->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']")) {
   // $doc->removeNode($r); } }    # ? Hopefully this is safe.     } }
   //   return $new; }
 
@@ -1195,7 +1240,7 @@ impl MathParser {
   // node too # and not just use it directly; else that node will be
   // duplicated in both branches of XMDual if ($nth &&
   // !$node->isSameNode($onode)) { return
-  // LaTeXML::Package::createXMRefs($LaTeXML::MathParser::DOCUMENT, $nth); } 
+  // LaTeXML::Package::createXMRefs($LaTeXML::MathParser::DOCUMENT, $nth); }
   // else {       return $args[$n]; } } }    # will get cloned if/when needed.
 
   // Add more attributes to a node.
@@ -1266,7 +1311,7 @@ impl MathParser {
   //   my ($seps, @args) = extract_separators(@stuff[1 .. $#stuff - 1]);
   //   return ['ltx:XMDual', {},
   // Apply($op,
-  // LaTeXML::Package::createXMRefs($LaTeXML::MathParser::DOCUMENT, @args)), 
+  // LaTeXML::Package::createXMRefs($LaTeXML::MathParser::DOCUMENT, @args)),
   // ['ltx:XMWrap', {}, @stuff]]; }
 
   // Given a sequence of operators, form the nested application op(op(...(arg)))
@@ -1442,7 +1487,7 @@ impl MathParser {
   // # Check that arg1 isn't wrapped, fenced or enclosed in some
   // restrictive way # Especially an ID! (but really only important if
   // the id is referenced somewhere?) && !(grep {
-  // p_getAttribute(self.realize_xmnode($arg1), $_) } qw(enclose xml:id))) { 
+  // p_getAttribute(self.realize_xmnode($arg1), $_) } qw(enclose xml:id))) {
   // # Note that $op1 GOES AWAY!!!       ReplacedBy($op1, $rop, 1);
   //       push(@args, @args1); }
   //     else {

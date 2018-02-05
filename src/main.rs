@@ -1,11 +1,11 @@
 #[macro_use]
 extern crate log;
-extern crate rtx_core;
 extern crate rtx;
+extern crate rtx_core;
 
 use std::env;
 use std::process;
-use rtx_core::common::{Config, OutputFormat, DataSize};
+use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx::converter::Converter;
 
 fn main() {
@@ -21,7 +21,7 @@ fn main() {
     None => {
       error!("Please provide a source document! Exiting...");
       process::exit(1);
-    }
+    },
   };
   // Prepare to convert:
   let opts = Config {
@@ -39,10 +39,10 @@ fn main() {
   }
   // Perform the conversion:
   let response = converter.convert(source);
-  
+
   // TODO: Should never have to handle the response log for print?
-  //       the right arguments can be passed in so that the response is either captured - and passed, or printed internally by the logger
-  // info!("{:?}\n\n", r.log);
+  // the right arguments can be passed in so that the response is either captured - and
+  // passed, or printed internally by the logger info!("{:?}\n\n", r.log);
   if let Some(xml) = response.result {
     info!("{}", xml);
   }

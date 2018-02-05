@@ -4,7 +4,6 @@
 extern crate rtx;
 use rtx::util::test::*;
 
-#[test] #[ignore]
-fn can_theorem() {
-  rtx_tests("tests/ams", None);
-}
+#[test]
+#[ignore]
+fn can_theorem() { rtx_tests("tests/ams", None); }

@@ -16,7 +16,11 @@ use rtx_core::document::tag::TagConstructionClosure;
 pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
-  AssignValue!("frontmatter", ObjectStore::HashTagData(HashMap::new()),Some(Scope::Global));
+  AssignValue!(
+    "frontmatter",
+    ObjectStore::HashTagData(HashMap::new()),
+    Some(Scope::Global)
+  );
 
   // // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // // The content is the result of digesting $tokens.
@@ -27,45 +31,51 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   // TODO: Real signature when we have KeyVals
   // DefPrimitiveI!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
-  DefPrimitiveI!("\\@add@frontmatter{}{}",
+  DefPrimitiveI!(
+    "\\@add@frontmatter{}{}",
     primitiveproc!(stomach, args, state, {
-    // TODO: Real args when we have KeyVals
-    // let ref keys = args[0];
-    // let ref tag = args[1];
-    // let ref attr = args[2];
-    // let ref tokens = args[3];
+      // TODO: Real args when we have KeyVals
+      // let ref keys = args[0];
+      // let ref tag = args[1];
+      // let ref attr = args[2];
+      // let ref tokens = args[3];
 
-    let ref tag = args[0];
-    let ref tokens = args[1];
+      let ref tag = args[0];
+      let ref tokens = args[1];
 
-    // Digest this as if we're already in the document body!
-    let inpreamble  = state.lookup_bool("inPreamble");
-    state.assign_value("inPreamble", ObjectStore::Bool(false), None);
-    {
-    // Be careful since the contents may also want to add frontmatter
-    // (which should be inside or after this one!)
-    // So, we append this entry before digesting
-  //   if ($keys && $keys->hasKey('replace') && $$frontmatter{$tag}) {    // if replace and previous entries
-  //     $$frontmatter{$tag} = []; }                                      // Remove previous entries
-  //   if ($keys && $keys->hasKey('ifnew') && $$frontmatter{$tag}) {      // if ifnew and previous entries
-  //     return; }                                                        // Skip this one.
-  //   if ($attr) {
-  //     $$entry[1] = { $attr->beDigested($stomach)->getHash }; }
-  //   $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
-      let mut wrapped_tokens = vec![T_BEGIN!()];
-      wrapped_tokens.extend(tokens.clone().unlist());
-      wrapped_tokens.push(T_END!());
-      let digested_tokens = try!(stomach.digest(Tokens::new(wrapped_tokens), state));
-      let entry = (tag.to_string(), None, digested_tokens);
-      let frontmatter = match state.lookup_value_mut("frontmatter") {
-        Some(&mut ObjectStore::HashTagData(ref mut frnt)) => frnt,
-        _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen")
-      };
-      let f_entry = frontmatter.entry(tag.to_string()).or_insert(Vec::new());
-      f_entry.push(entry);
-    }
-     state.assign_value("inPreamble", ObjectStore::Bool(inpreamble), None);
-  }));
+      // Digest this as if we're already in the document body!
+      let inpreamble = state.lookup_bool("inPreamble");
+      state.assign_value("inPreamble", ObjectStore::Bool(false), None);
+      {
+        // Be careful since the contents may also want to add frontmatter
+        // (which should be inside or after this one!)
+        // So, we append this entry before digesting
+        // if ($keys && $keys->hasKey('replace') && $$frontmatter{$tag}) {    // if replace and
+        // previous entries $$frontmatter{$tag} = []; }
+        // // Remove previous entries if ($keys && $keys->hasKey('ifnew') &&
+        // $$frontmatter{$tag}) {      // if ifnew and previous entries return; }
+        // // Skip this one.   if ($attr) {
+        //     $$entry[1] = { $attr->beDigested($stomach)->getHash }; }
+        //   $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
+        let mut wrapped_tokens = vec![T_BEGIN!()];
+        wrapped_tokens.extend(tokens.clone().unlist());
+        wrapped_tokens.push(T_END!());
+        let digested_tokens = try!(stomach.digest(Tokens::new(wrapped_tokens), state));
+        let entry = (tag.to_string(), None, digested_tokens);
+        let frontmatter = match state.lookup_value_mut("frontmatter") {
+          Some(&mut ObjectStore::HashTagData(ref mut frnt)) => frnt,
+          _ => fatal!(
+            TexPool,
+            Expected,
+            "Global TeX Frontmatter hash was not available, should never happen"
+          ),
+        };
+        let f_entry = frontmatter.entry(tag.to_string()).or_insert(Vec::new());
+        f_entry.push(entry);
+      }
+      state.assign_value("inPreamble", ObjectStore::Bool(inpreamble), None);
+    })
+  );
 
   // // Append a piece of data to an existing frontmatter item that is contained in <$tag>
   // // If $label is given, look for an item which has label=>$label,
@@ -98,29 +108,52 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // This is called by afterOpen (by default on <ltx:document>) to
   // output any frontmatter that was accumulated.
 
-  let insert_frontmatter : Vec<TagConstructionClosure> = tagsub!(document, node, state, {
-    let frontmatter_elements : HashSet<String> =
-      ["ltx:title", "ltx:toctitle", "ltx:subtitle", "ltx:creator", "ltx:date",
-      "ltx:abstract", "ltx:keywords", "ltx:classification", "ltx:acknowledgements"].iter().map(|s| s.to_string()).collect();
+  let insert_frontmatter: Vec<TagConstructionClosure> = tagsub!(document, node, state, {
+    let frontmatter_elements: HashSet<String> = [
+      "ltx:title",
+      "ltx:toctitle",
+      "ltx:subtitle",
+      "ltx:creator",
+      "ltx:date",
+      "ltx:abstract",
+      "ltx:keywords",
+      "ltx:classification",
+      "ltx:acknowledgements",
+    ].iter()
+      .map(|s| s.to_string())
+      .collect();
 
     let mut frontmatter = match state.remove_value("frontmatter") {
       Some(ObjectStore::HashTagData(frnt)) => frnt,
-      _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen")
+      _ => fatal!(
+        TexPool,
+        Expected,
+        "Global TeX Frontmatter hash was not available, should never happen"
+      ),
     };
-    state.assign_value("frontmatter", ObjectStore::HashTagData(HashMap::new()),Some(Scope::Global));
-    let state_keys : HashSet<String> = frontmatter.keys().cloned().collect();
-    let mut all_keys : HashSet<String> = frontmatter_elements.union(&state_keys).cloned().collect();;
+    state.assign_value(
+      "frontmatter",
+      ObjectStore::HashTagData(HashMap::new()),
+      Some(Scope::Global),
+    );
+    let state_keys: HashSet<String> = frontmatter.keys().cloned().collect();
+    let mut all_keys: HashSet<String> = frontmatter_elements.union(&state_keys).cloned().collect();
     for key in all_keys.iter() {
       if let Some(list) = frontmatter.remove(key) {
         // Dubious, but assures that frontmatter appears in text mode...
         // TODO:
         //local $LaTeXML::BOX = Box('', $STATE->lookupValue('font'), '', T_SPACE);
-        document.box_to_absorb = Some(Digested::Box(
-          Tbox::new(String::new(), state.lookup_font(), None, Tokens!(T_SPACE!()), HashMap::new(), state)
-        ));
+        document.box_to_absorb = Some(Digested::Box(Tbox::new(
+          String::new(),
+          state.lookup_font(),
+          None,
+          Tokens!(T_SPACE!()),
+          HashMap::new(),
+          state,
+        )));
         for (tag, attr, stuff) in list {
           try!(document.open_element(&tag, attr, None, state)); // TODO:  //           (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
-  //             ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
+                                                                //             ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
           try!(document.absorb(stuff, state));
 
           try!(document.close_element(&tag, state));

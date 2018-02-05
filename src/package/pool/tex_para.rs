@@ -59,46 +59,60 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
-  DefConstructorI!(T_CS!("\\inner@par"), None, replacement!(document, args, props, state, {
-    if try!(document.maybe_close_element("ltx:p", state)).is_some() { }
-    else if document.can_contain(document.get_node(), "ltx:break", state) {
-      try!(document.insert_element("ltx:break", Vec::new(), None, state));
-    }
-  }));
+  DefConstructorI!(
+    T_CS!("\\inner@par"),
+    None,
+    replacement!(document, args, props, state, {
+      if try!(document.maybe_close_element("ltx:p", state)).is_some() {
+      } else if document.can_contain(document.get_node(), "ltx:break", state) {
+        try!(document.insert_element("ltx:break", Vec::new(), None, state));
+      }
+    })
+  );
 
-  fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach,  args: Vec<Tokens>, state: &mut State) -> Result<Vec<Digested>> {
+  fn do_def(
+    globally: bool,
+    expanded: bool,
+    stomach: &mut Stomach,
+    args: Vec<Tokens>,
+    state: &mut State,
+  ) -> Result<Vec<Digested>>
+  {
     // params = parseDefParameters(cs, params);
     if expanded {
       state.noexpand_the = true;
       // body = Expand!(body);
     }
 
-    let scope = if globally {
-      Some(Scope::Global)
-    } else {
-      None
-    };
+    let scope = if globally { Some(Scope::Global) } else { None };
     // switch args from a Vec<Tokens> into a Vec<Token>
-    let mut token_args : VecDeque<Token> = VecDeque::new();
+    let mut token_args: VecDeque<Token> = VecDeque::new();
     for arg in args {
       token_args.extend(arg.unlist().into_iter());
     }
     let cs = match token_args.pop_front() {
       Some(cs) => cs,
-      None => fatal!(Macro, Expected, "Bad definition macro - no arguments, when some were expected.")
+      None => fatal!(
+        Macro,
+        Expected,
+        "Bad definition macro - no arguments, when some were expected."
+      ),
     };
     // is there a more idiomatic way to downgrade a VecDeque into a Vec?
     let def_body = token_args.into_iter().collect::<Vec<Token>>();
     let params = None;
-    state.install_definition(ObjectStore::Expandable(Rc::new(
-      Expandable{cs: cs, paramlist: params, expansion: SimpleExpansion!(Tokens::new(def_body.clone())),
+    state.install_definition(
+      ObjectStore::Expandable(Rc::new(Expandable {
+        cs: cs,
+        paramlist: params,
+        expansion: SimpleExpansion!(Tokens::new(def_body.clone())),
         ..Expandable::default()
       })),
-      scope);
+      scope,
+    );
     //TODO: AfterAssignment!(state);
     Ok(Vec::new())
-}
-
+  }
 
   DefPrimitiveI!("\\def SkipSpaces Token UntilBrace {}", |stomach, args, state| {
       do_def(false, false, stomach, args, state)
@@ -123,12 +137,13 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   Tag!("ltx:para", auto_close => true, auto_open => true);
 
-  let trim_node_whitespace_closure  : Vec<TagConstructionClosure> = tagsub!(document, node, state, {
+  let trim_node_whitespace_closure: Vec<TagConstructionClosure> = tagsub!(document, node, state, {
     document.trim_node_whitespace(node);
   });
   Tag!("ltx:p", auto_close => true, auto_open => true, after_close => trim_node_whitespace_closure);
 
-  // TODO: Move to the right place in the pool definitions (maybe split out individual sub-pools by chapter?)
+  // TODO: Move to the right place in the pool definitions (maybe split out individual sub-pools by
+  // chapter?)
   DefMacroT!(T_CS!("\\space"), None, T_SPACE!());
 
   Ok(())
