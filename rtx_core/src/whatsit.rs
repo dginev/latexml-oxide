@@ -4,8 +4,8 @@ use std::rc::Rc;
 
 use common::error::*;
 use common::font::Font;
-use state::{State, ObjectStore};
-use {Digested, BoxOps, TexMode};
+use state::{ObjectStore, State};
+use {BoxOps, Digested, TexMode};
 use list::List;
 use tokens::Tokens;
 use definition::expandable::Expandable;
@@ -24,7 +24,7 @@ impl Default for Whatsit {
     Whatsit {
       args: Vec::new(),
       properties: HashMap::new(),
-      definition: Rc::new(Expandable::default())
+      definition: Rc::new(Expandable::default()),
     }
   }
 }
@@ -37,14 +37,12 @@ impl PartialEq for Whatsit {
 impl Whatsit {
   pub fn is_math(&self) -> bool {
     match self.properties.get("isMath") {
-      Some(& ObjectStore::Bool(v)) => v,
-      _ => false
+      Some(&ObjectStore::Bool(v)) => v,
+      _ => false,
     }
   }
 
-  pub fn get_properties(&self) -> &HashMap<String, ObjectStore> {
-    &self.properties
-  }
+  pub fn get_properties(&self) -> &HashMap<String, ObjectStore> { &self.properties }
 
   pub fn set_properties(&mut self, props: HashMap<String, ObjectStore>) {
     for (key, value) in props {
@@ -55,17 +53,13 @@ impl Whatsit {
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
     match self.args.get(n - 1) {
       Some(&Some(ref opt)) => Some(opt),
-      _ => None
+      _ => None,
     }
   }
 
-  pub fn get_args(&self) -> &Vec<Option<Digested>> {
-    &self.args
-  }
+  pub fn get_args(&self) -> &Vec<Option<Digested>> { &self.args }
 
-  pub fn set_args(&mut self, args: Vec<Option<Digested>>) {
-    self.args = args;
-  }
+  pub fn set_args(&mut self, args: Vec<Option<Digested>>) { self.args = args; }
 
   pub fn set_body(&mut self, mut body: Vec<Digested>) {
     let trailer_opt = body.pop();
@@ -79,17 +73,26 @@ impl Whatsit {
     if self.is_math() {
       list.mode = Some(mode);
     }
-    self.properties.insert("body".to_string(), ObjectStore::Digested(Rc::new(Digested::List(list))));
+    self.properties.insert(
+      "body".to_string(),
+      ObjectStore::Digested(Rc::new(Digested::List(list))),
+    );
     if let Some(trailer) = trailer_opt {
-      self.properties.insert("trailer".to_string(), ObjectStore::Digested(Rc::new(trailer.clone())));
+      self.properties.insert(
+        "trailer".to_string(),
+        ObjectStore::Digested(Rc::new(trailer.clone())),
+      );
       // And copy any otherwise undefined properties from the trailer
       let trailer_whatsit = match trailer {
         Digested::Whatsit(w) => w,
-        _ => Whatsit::default()
+        _ => Whatsit::default(),
       };
       let trailer_props = trailer_whatsit.get_properties();
       for (prop, value) in trailer_props {
-        self.properties.entry(prop.to_string()).or_insert_with(|| value.clone());
+        self
+          .properties
+          .entry(prop.to_string())
+          .or_insert_with(|| value.clone());
       }
     }
   }
@@ -97,10 +100,11 @@ impl Whatsit {
 
 impl fmt::Debug for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f,
-           "Whatsit {{ args: {:?}, properties: {:?} }}",
-           self.args,
-           self.properties)
+    write!(
+      f,
+      "Whatsit {{ args: {:?}, properties: {:?} }}",
+      self.args, self.properties
+    )
   }
 }
 
@@ -109,9 +113,7 @@ impl BoxOps for Whatsit {
     self.revert().to_string() // What else??
   }
 
-  fn unlist(self) -> Vec<Digested> {
-    Vec::new()
-  }
+  fn unlist(self) -> Vec<Digested> { Vec::new() }
 
   fn be_absorbed(mut self, document: &mut Document, state: &mut State) -> Result<()> {
     // Significant time is consumed here, and associated with a specific CS,
@@ -126,9 +128,7 @@ impl BoxOps for Whatsit {
     Ok(())
   }
 
-  fn get_property(&self, key: &str) -> Option<&ObjectStore> {
-    self.properties.get(key)
-  }
+  fn get_property(&self, key: &str) -> Option<&ObjectStore> { self.properties.get(key) }
 
   fn set_property(&mut self, key: &str, value: ObjectStore) {
     self.properties.insert(key.to_string(), value);
@@ -136,8 +136,8 @@ impl BoxOps for Whatsit {
 
   fn get_body(&self) -> Option<&Digested> {
     match self.properties.get("body") {
-      Some(& ObjectStore::Digested(ref body)) => Some(body),
-      _ => None
+      Some(&ObjectStore::Digested(ref body)) => Some(body),
+      _ => None,
     }
   }
 
@@ -149,7 +149,7 @@ impl BoxOps for Whatsit {
   fn get_font(&self) -> Option<&Font> {
     match self.properties.get("font") {
       Some(&ObjectStore::Font(ref font)) => Some(font),
-      _ => None
+      _ => None,
     }
   }
 }

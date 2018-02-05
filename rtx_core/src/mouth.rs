@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use regex::Regex;
 
 use common::error::*;
-use state::{State, Scope, Catcodes, ObjectStore, StateOptions};
+use state::{Catcodes, ObjectStore, Scope, State, StateOptions};
 use token::*;
 use tokens::Tokens;
 
@@ -45,11 +45,8 @@ pub struct Mouth {
 }
 
 impl PartialEq for Mouth {
-  fn eq(&self, other: &Mouth) -> bool {
-    self.source == other.source
-  }
+  fn eq(&self, other: &Mouth) -> bool { self.source == other.source }
 }
-
 
 impl Default for Mouth {
   fn default() -> Self {
@@ -74,7 +71,10 @@ impl Default for Mouth {
 
 impl Mouth {
   pub fn new(text: &str, state: &mut State) -> Self {
-    let mut mouth = Mouth{ foodtype: FoodType::Literal, ..Mouth::default()};
+    let mut mouth = Mouth {
+      foodtype: FoodType::Literal,
+      ..Mouth::default()
+    };
     mouth.open_literal(text);
     mouth.initialize(state);
     mouth
@@ -99,16 +99,15 @@ impl Mouth {
       // open($IN, '<', $pathname)
       //   || Fatal('I/O', $pathname, $self, "Can't open $pathname for reading", $!);
 
-
       let mut f = match File::open(pathname) {
         Ok(handle) => handle,
         Err(e) => {
           if e.kind() == io::ErrorKind::NotFound {
             fatal!(Mouth, MissingFile, format!("Can't find file {}", pathname));
           } else {
-            return Err(e.into())
+            return Err(e.into());
           }
-        }
+        },
       };
       let mut content = String::new();
       try!(f.read_to_string(&mut content));
@@ -116,9 +115,7 @@ impl Mouth {
     }
     Ok(())
   }
-  fn open_literal(&mut self, content: &str) {
-    self.buffer = Mouth::split_lines(content);
-  }
+  fn open_literal(&mut self, content: &str) { self.buffer = Mouth::split_lines(content); }
   fn open_http(&mut self, _content: &str) {}
   fn open_https(&mut self, _content: &str) {}
   // fn open_binding(&mut self, _content: &str) {}
@@ -130,7 +127,9 @@ impl Mouth {
       } else {
         Some("Processing content".to_string())
       }
-    } else { None };
+    } else {
+      None
+    };
     if self.fordefinitions {
       self.saved_at_cc = state.lookup_catcode(&'@');
       self.saved_include_comments = match state.lookup_value("INCLUDE_COMMENTS") {
@@ -138,9 +137,11 @@ impl Mouth {
         _ => None,
       };
       state.assign_catcode('@', Catcode::LETTER, None);
-      state.assign_value("INCLUDE_COMMENTS",
-                         ObjectStore::Bool(false),
-                         Some(Scope::Local));
+      state.assign_value(
+        "INCLUDE_COMMENTS",
+        ObjectStore::Bool(false),
+        Some(Scope::Local),
+      );
     }
     return;
   }
@@ -155,9 +156,11 @@ impl Mouth {
         state.assign_catcode('@', cc, None);
       }
       if let Some(sic) = self.saved_include_comments {
-        state.assign_value("INCLUDE_COMMENTS",
-                           ObjectStore::Bool(sic),
-                           Some(Scope::Local))
+        state.assign_value(
+          "INCLUDE_COMMENTS",
+          ObjectStore::Bool(sic),
+          Some(Scope::Local),
+        )
       }
     }
     if self.notes {
@@ -172,7 +175,10 @@ impl Mouth {
   /// into "lines" ending with CRLF, CR or LF (DOS, Mac or Unix).
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
   fn split_lines(lines: &str) -> VecDeque<String> {
-    LINEBREAK_REGEX.split(lines).map(|s| s.to_string()).collect() // And split.
+    LINEBREAK_REGEX
+      .split(lines)
+      .map(|s| s.to_string())
+      .collect() // And split.
   }
 
   /// Original LaTeXML:
@@ -198,11 +204,10 @@ impl Mouth {
         } else {
           Some(line.to_string())
         }
-      }
+      },
       None => None,
     }
   }
-
 
   /// Get the next character & it's catcode from the input,
   /// handling TeX's "^^" encoding.
@@ -220,11 +225,15 @@ impl Mouth {
         let mut cc: Option<Catcode> = state.lookup_catcode(ch);
         let next_ch = self.chars.get(self.colno);
         if cc == Some(Catcode::SUPER) && // Possible convert ^^x
-          next_ch.is_some() && (ch == next_ch.unwrap()) {
+          next_ch.is_some() && (ch == next_ch.unwrap())
+        {
           let c1: Option<&char> = self.chars.get(self.colno + 1);
           let c2: Option<&char> = self.chars.get(self.colno + 2);
           if (self.colno + 2 < self.nchars) &&   // ^^ followed by TWO LOWERCASE Hex digits???
-            c1.is_some() && c2.is_some() && LOWERHEX_REGEX.is_match(&c1.unwrap().to_string()) && LOWERHEX_REGEX.is_match(&c2.unwrap().to_string()) {
+            c1.is_some() && c2.is_some()
+            && LOWERHEX_REGEX.is_match(&c1.unwrap().to_string())
+            && LOWERHEX_REGEX.is_match(&c2.unwrap().to_string())
+          {
             // TODO
             // ch = chr(hex($c1 . $c2));
             // splice(@{ self.chars }, self.colno - 1, 4, $ch);
@@ -237,19 +246,17 @@ impl Mouth {
             // $ch = chr($cn + ($cn > 64 ? -64 : 64));
             // splice(@{ self.chars }, self.colno - 1, 3, $ch);
             // self.nchars -= 2;
-          // }
+            // }
           cc = state.lookup_catcode(ch);
         }
         if cc.is_none() {
           cc = Some(Catcode::OTHER);
         }
         Some((*ch, cc.unwrap()))
-      }
+      },
     }
   }
-  pub fn has_more_input(&self) -> bool {
-    self.colno < self.nchars || !self.buffer.is_empty()
-  }
+  pub fn has_more_input(&self) -> bool { self.colno < self.nchars || !self.buffer.is_empty() }
   // fn stringify(&self) -> String {
   //   // TODO
   //   "mouth stringify".to_string()
@@ -279,21 +286,20 @@ impl Mouth {
             self.chars = VecDeque::new();
             self.nchars = 0;
             return None;
-          }
+          },
           Some(line) => {
-            // Remove trailing space, but NOT a control space!  End with CR (not \n) since this gets tokenized!
+            // Remove trailing space, but NOT a control space!  End with CR (not \n) since this
+            // gets tokenized!
             let sanitized_line = SANITIZE_LINE_REGEX.replace_all(&line, "$1\r");
             self.chars = sanitized_line.chars().collect();
             self.nchars = self.chars.len();
             while self.colno < self.nchars {
               let cc_next = match self.chars.get(self.colno) {
                 None => Catcode::OTHER,
-                Some(c) => {
-                  match state.lookup_catcode(c) {
-                    Some(cc) => cc,
-                    None => Catcode::OTHER,
-                  }
-                }
+                Some(c) => match state.lookup_catcode(c) {
+                  Some(cc) => cc,
+                  None => Catcode::OTHER,
+                },
               };
               if cc_next == Catcode::SPACE {
                 self.colno += 1;
@@ -307,11 +313,14 @@ impl Mouth {
               let include_comments: Option<&ObjectStore> = state.lookup_value("INCLUDE_COMMENTS");
               if let Some(&ObjectStore::Bool(ref x)) = include_comments {
                 if *x {
-                  return Some(T_COMMENT!("**** ".to_string() + &self.shortsource + " Line " + &self.lineno.to_string() + " ****"));
+                  return Some(T_COMMENT!(
+                    "**** ".to_string() + &self.shortsource + " Line " + &self.lineno.to_string()
+                      + " ****"
+                  ));
                 }
               }
             }
-          }
+          },
         };
       }
       // ==== Extract next token from line.
@@ -321,7 +330,7 @@ impl Mouth {
           if let Some(token) = Mouth::dispatch_char(self, ch, cc, state) {
             return Some(token);
           } // Else, repeat till we get something or run out.
-        }
+        },
       }
     }
   }
@@ -343,10 +352,11 @@ impl Mouth {
       }
       tokens.push(token);
     }
-    while !tokens.is_empty() && tokens.last().unwrap().get_catcode() == Catcode::SPACE {    // Remove trailing space
+    while !tokens.is_empty() && tokens.last().unwrap().get_catcode() == Catcode::SPACE {
+      // Remove trailing space
       tokens.pop();
     }
-    Tokens{ tokens: tokens }
+    Tokens { tokens: tokens }
   }
 
   //**********************************************************************
@@ -380,10 +390,10 @@ impl Mouth {
         Some(next_line) => {
           line = next_line;
           self.lineno += 1;
-          self.chars  = line.chars().collect();
+          self.chars = line.chars().collect();
           self.nchars = self.chars.len();
-          self.colno  = self.nchars;
-        }
+          self.colno = self.nchars;
+        },
       }
     }
     line = line.trim_right().to_owned(); // Is this right?
@@ -393,7 +403,6 @@ impl Mouth {
       Some(line)
     }
   }
-
 
   fn dispatch_char(&mut self, ch: char, cc: Catcode, state: &mut State) -> Option<Token> {
     // Possibly want to think about caching (common) letters, etc to keep from
@@ -410,7 +419,7 @@ impl Mouth {
             code: BEGIN,
           })
         }
-      }    // T_BEGIN
+      }, // T_BEGIN
       END => {
         if ch == '}' {
           Some(T_END!())
@@ -420,7 +429,7 @@ impl Mouth {
             code: END,
           })
         }
-      }      // T_END
+      }, // T_END
       MATH => {
         if ch == '$' {
           Some(T_MATH!())
@@ -430,7 +439,7 @@ impl Mouth {
             code: MATH,
           })
         }
-      }     // T_MATH
+      }, // T_MATH
       ALIGN => {
         if ch == '&' {
           Some(T_ALIGN!())
@@ -440,7 +449,7 @@ impl Mouth {
             code: ALIGN,
           })
         }
-      }    // T_ALIGN
+      }, // T_ALIGN
       EOL => self.handle_end_of_line(ch, state), // T_EOL
       PARAM => {
         if ch == '#' {
@@ -451,7 +460,7 @@ impl Mouth {
             code: PARAM,
           })
         }
-      }    // T_PARAM
+      }, // T_PARAM
       SUPER => {
         if ch == '^' {
           Some(T_SUPER!())
@@ -461,7 +470,7 @@ impl Mouth {
             code: SUPER,
           })
         }
-      }    // T_SUPER
+      }, // T_SUPER
       SUB => {
         if ch == '_' {
           Some(T_SUB!())
@@ -471,14 +480,14 @@ impl Mouth {
             code: SUB,
           })
         }
-      }      // T_SUB
+      }, // T_SUB
       SPACE => self.handle_space(ch, state),
       LETTER => Some(T_LETTER!(ch.to_string())),
       OTHER => Some(T_OTHER!(ch.to_string())),
       ACTIVE => Some(T_ACTIVE!(ch.to_string())),
       COMMENT => self.handle_comment(ch, state),
       INVALID => Some(T_OTHER!(ch.to_string())), // T_INVALID (we could get unicode!)
-      _ => None, // IGNORE, others
+      _ => None,                                 // IGNORE, others
     }
   }
 
@@ -505,7 +514,7 @@ impl Mouth {
           if (cc != Catcode::SPACE) && (cc != Catcode::EOL) {
             break;
           }
-        }
+        },
       }
     }
     if self.colno < self.nchars {
@@ -519,9 +528,10 @@ impl Mouth {
     self.colno = self.nchars;
     let mut comment = String::new();
     // TODO: Probably too slow to do so many .get()s, ideally we want an iterator on a slice.
-    for c in n..self.nchars { // warning: .. range is half-open in rust
+    for c in n..self.nchars {
+      // warning: .. range is half-open in rust
       match self.chars.get(c) {
-        None => {}
+        None => {},
         Some(c) => comment.push(*c),
       };
     }
@@ -545,9 +555,9 @@ impl Mouth {
   /// Read control sequence
   fn handle_escape(&mut self, _c: char, state: &mut State) -> Option<Token> {
     // NOTE: We're using control sequences WITH the \ prepended!!!
-    let mut cs = "\\".to_string();  // I need this standardized to be able to lookup tokens (A better way???)
+    let mut cs = "\\".to_string(); // I need this standardized to be able to lookup tokens (A better way???)
     match self.get_next_char(state) {
-      None => {}
+      None => {},
       Some((ch, cc)) => {
         // Knuth, p.46 says that Newlines are converted to spaces,
         // Bit I believe that he does NOT mean within control sequences
@@ -565,7 +575,7 @@ impl Mouth {
                   cc_after_letter = Some(cc);
                   break;
                 }
-              }
+              },
             };
           }
           self.colno -= 1;
@@ -581,7 +591,7 @@ impl Mouth {
                   cc_after_letter = Some(cc);
                   break;
                 }
-              }
+              },
             };
           }
           if self.colno < self.nchars {
@@ -594,14 +604,14 @@ impl Mouth {
           // if in \read mode, leave the EOL to be turned into a T_SPACE
           // TODO: preserve_newlines NYI
           // if state.lookup_value("PRESERVE_NEWLINES") > 1 {
-            // else skip it.
-            self.get_next_char(state);
-            if self.colno < self.nchars {
-              self.colno -= 1;
-            }
+          // else skip it.
+          self.get_next_char(state);
+          if self.colno < self.nchars {
+            self.colno -= 1;
+          }
           // }
         }
-      }
+      },
     };
     Some(T_CS!(cs))
   }
@@ -611,7 +621,6 @@ impl Mouth {
     *lastid += 1;
     lastid.to_string()
   }
-
 }
 
 // WARNING: These two utilities bind $STATE to simple State objects with known fixed catcodes.
@@ -625,18 +634,24 @@ impl Mouth {
 pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
   match state_opt {
     None => {
-      let mut std_state = State::new(StateOptions{catcodes: Some(Catcodes::Standard), ..StateOptions::default()});
+      let mut std_state = State::new(StateOptions {
+        catcodes: Some(Catcodes::Standard),
+        ..StateOptions::default()
+      });
       Mouth::new(text, &mut std_state).read_tokens(None, &mut std_state)
     },
-    Some(s) => Mouth::new(&text, s).read_tokens(None, s)
+    Some(s) => Mouth::new(&text, s).read_tokens(None, s),
   }
 }
 pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
   match state_opt {
     None => {
-      let mut sty_state = State::new(StateOptions{catcodes: Some(Catcodes::Style), ..StateOptions::default()});
+      let mut sty_state = State::new(StateOptions {
+        catcodes: Some(Catcodes::Style),
+        ..StateOptions::default()
+      });
       Mouth::new(text, &mut sty_state).read_tokens(None, &mut sty_state)
     },
-    Some(s) => Mouth::new(&text, s).read_tokens(None, s)
+    Some(s) => Mouth::new(&text, s).read_tokens(None, s),
   }
 }

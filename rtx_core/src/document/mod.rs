@@ -38,9 +38,7 @@ pub struct Document {
   pub box_to_absorb: Option<Digested>,
 }
 impl Default for Document {
-  fn default() -> Self {
-    Self::new()
-  }
+  fn default() -> Self { Self::new() }
 }
 impl Document {
   pub fn new() -> Self {
@@ -100,12 +98,8 @@ impl Document {
     state.model.get_node_qname(node)
   }
 
-  pub fn get_node(&self) -> &Node {
-    &self.node
-  }
-  pub fn get_document(&self) -> &XmlDoc {
-    &self.document
-  }
+  pub fn get_node(&self) -> &Node { &self.node }
+  pub fn get_document(&self) -> &XmlDoc { &self.document }
 
   // **********************************************************************
   // This should be called before returning the final XML::LibXML::Document to the
@@ -145,7 +139,9 @@ impl Document {
       if let Some(font) = self.get_node_font(node) {
         desired_font = font.clone();
         pending_declaration = desired_font.relative_to(&declared_font);
-        if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some()) && !pending_declaration.is_empty() {
+        if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some())
+          && !pending_declaration.is_empty()
+        {
           for (ref key, &(ref value, ref properties)) in &pending_declaration {
             if state.model.can_have_attribute(&qname, key) {
               attrs_to_set.push((key.to_string(), value.to_string()));
@@ -172,7 +168,9 @@ impl Document {
         self.finalize_rec(&mut child, new_init_font, state);
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
-        if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME) && !was_forcefont && child.get_attributes().is_empty() {
+        if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME) && !was_forcefont
+          && child.get_attributes().is_empty()
+        {
           let grandchildren = child.get_child_nodes();
           if grandchildren
             .iter()
@@ -287,7 +285,14 @@ impl Document {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   /// Shorthand for open,absorb,close, but returns the new node.
-  pub fn insert_element(&mut self, qname: &str, content: Vec<Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
+  pub fn insert_element(
+    &mut self,
+    qname: &str,
+    content: Vec<Digested>,
+    attrib: Option<HashMap<String, String>>,
+    state: &mut State,
+  ) -> Result<Node>
+  {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone()
     // calls removed
     let node = try!(self.open_element(qname, attrib, None, state));
@@ -302,7 +307,9 @@ impl Document {
     let self_node = self.node.clone();
     let mut c = Some(self_node);
 
-    while c.is_some() && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode) && c != Some(node.clone()) {
+    while c.is_some() && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode)
+      && c != Some(node.clone())
+    {
       let parent = c.unwrap().get_parent();
       c = match parent {
         None => None,
@@ -321,7 +328,7 @@ impl Document {
   /// but may move up past a text node.
   // Rust note: attrib would have been best as Vec<(String,String)> but
   // currently quote!() doesn't work out of the box on them
-  pub fn insert_pi(&mut self, op: &str, attributes: Option<HashMap<String, String>>) {
+  pub fn insert_pi(&mut self, op: &str, attributes: Option<HashMap<String, String>>) -> Result<()> {
     let mut attr_data = String::new();
     for (key, value) in &attributes.unwrap_or_default() {
       attr_data.push_str(key);
@@ -337,12 +344,19 @@ impl Document {
     if self.node.get_type() == Some(NodeType::DocumentNode) {
       self.pending.push(pi_node);
     } else {
-      self.node.add_prev_sibling(&pi_node);
+      try!(self.node.add_prev_sibling(&pi_node));
     }
-    return;
+    Ok(())
   }
 
-  pub fn open_element(&mut self, qname: &str, attributes: Option<HashMap<String, String>>, font_opt: Option<&Font>, state: &mut State) -> Result<Node> {
+  pub fn open_element(
+    &mut self,
+    qname: &str,
+    attributes: Option<HashMap<String, String>>,
+    font_opt: Option<&Font>,
+    state: &mut State,
+  ) -> Result<Node>
+  {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
     if self.debug {
       debug!("Open element {:?} at {:?}", qname, self.node.get_name());
@@ -377,8 +391,8 @@ impl Document {
   /// Note: This closes the deepest open node of a given type.
   /// This can cause problems with auto-opened nodes, esp. ones for fontswitches!
   /// Since this is an "explicit request", we're currently skipping over those nodes,
-  /// ie. we're automatically closing them, even if they're the same type as we're asking to close!!!
-  /// This is kinda risky! Maybe we should try to request closing of specific nodes.
+  /// ie. we're automatically closing them, even if they're the same type as we're asking to
+  /// close!!! This is kinda risky! Maybe we should try to request closing of specific nodes.
   pub fn close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
     if self.debug {
       debug!("Close element {:?} at {:?}", qname, self.node.get_name());
@@ -569,12 +583,16 @@ impl Document {
     return;
   }
 
-  pub fn can_auto_close(&self, _node: &Node) -> bool {
-    true
-  }
+  pub fn can_auto_close(&self, _node: &Node) -> bool { true }
 
   /// get the actions that should be performed on afterOpen or afterClose
-  pub fn get_tag_action_list(&self, tag: &str, when: TagOptionName, state: &mut State) -> Vec<TagConstructionClosure> {
+  pub fn get_tag_action_list(
+    &self,
+    tag: &str,
+    when: TagOptionName,
+    state: &mut State,
+  ) -> Vec<TagConstructionClosure>
+  {
     use self::tag::TagOptionName::*;
     // my ($p, $n) = (undef, $tag);
     // if ($tag =~ /^([^:]+):(.+)$/) {
@@ -652,7 +670,15 @@ impl Document {
 
   /// We ought to try for something close to C14N (http://www.w3.org/TR/xml-c14n),
   /// but keep XML declaration, comments and don't convert empty elements.
-  pub fn serialize_aux(&self, node: &Node, depth: usize, noindent: bool, heuristic: bool, state: &mut State) -> String {
+  pub fn serialize_aux(
+    &self,
+    node: &Node,
+    depth: usize,
+    noindent: bool,
+    heuristic: bool,
+    state: &mut State,
+  ) -> String
+  {
     let indent = iter::repeat("  ").take(depth).collect::<String>();
     let mut serialized = String::new();
 
@@ -664,7 +690,8 @@ impl Document {
           serialized.push_str(&child_serialized);
           let mut current_child = child;
           while let Some(sibling) = current_child.get_next_sibling() {
-            let sibling_serialized = self.serialize_aux(&sibling, depth, noindent, heuristic, state);
+            let sibling_serialized =
+              self.serialize_aux(&sibling, depth, noindent, heuristic, state);
             serialized.push_str(&sibling_serialized);
             current_child = sibling;
           }
@@ -733,7 +760,13 @@ impl Document {
             serialized.push_str("\n");
           }
           for child in children {
-            serialized.push_str(&self.serialize_aux(&child, depth + 1, noindent_children, heuristic, state));
+            serialized.push_str(&self.serialize_aux(
+              &child,
+              depth + 1,
+              noindent_children,
+              heuristic,
+              state,
+            ));
           }
           if !noindent_children {
             serialized.push_str(&indent)
@@ -800,7 +833,14 @@ impl Document {
 
   fn prune_xmduals(&self) {}
 
-  pub fn insert_math_token(&mut self, text: &str, mut attributes: HashMap<String, String>, font_opt: Option<&Font>, state: &mut State) -> Result<Node> {
+  pub fn insert_math_token(
+    &mut self,
+    text: &str,
+    mut attributes: HashMap<String, String>,
+    font_opt: Option<&Font>,
+    state: &mut State,
+  ) -> Result<Node>
+  {
     attributes
       .entry("role".to_string())
       .or_insert("UNKNOWN".to_string());
@@ -849,7 +889,11 @@ impl Document {
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
-      if ONLY_SPACE_RE.is_match(text) && (node_type == Some(NodeType::DocumentNode) || (node_type == Some(NodeType::ElementNode) && !self.can_contain(&self.node, "#PCDATA", state))) {
+      if ONLY_SPACE_RE.is_match(text)
+        && (node_type == Some(NodeType::DocumentNode)
+          || (node_type == Some(NodeType::ElementNode)
+            && !self.can_contain(&self.node, "#PCDATA", state)))
+      {
         return Ok(None);
       }
     }
@@ -882,7 +926,9 @@ impl Document {
         if d < bestdiff {
           bestdiff = d;
           closeto = n.clone();
-          if d == 0 || state.model.get_node_qname(&n) != FONT_ELEMENT_NAME || n.get_attribute("_noautoclose").is_some() {
+          if d == 0 || state.model.get_node_qname(&n) != FONT_ELEMENT_NAME
+            || n.get_attribute("_noautoclose").is_some()
+          {
             break;
           }
         }
@@ -929,7 +975,13 @@ impl Document {
   /// Can an element with (qualified name) $tag contain a $childtag element indirectly?
   /// That is, by openning some number of autoOpen'able tags?
   /// And if so, return the tag to open.
-  pub fn can_contain_indirect(&mut self, tag: &str, child: &str, state: &mut State) -> Option<String> {
+  pub fn can_contain_indirect(
+    &mut self,
+    tag: &str,
+    child: &str,
+    state: &mut State,
+  ) -> Option<String>
+  {
     // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
     // node. $child = $model->getNodeQName($child) if ref $child;    // In case
     // child is a node.
@@ -1091,7 +1143,9 @@ impl Document {
     };
     let mut node = self.node.clone();
     let node_type = node.get_type();
-    if node_type != Some(NodeType::TextNode) && node_type != Some(NodeType::ElementNode) && node_type != Some(NodeType::DocumentNode) {
+    if node_type != Some(NodeType::TextNode) && node_type != Some(NodeType::ElementNode)
+      && node_type != Some(NodeType::DocumentNode)
+    {
       error!(target: "internal:context", "Insertion point is not an element, document or text: {:?}", self.document.node_to_string(&node));
       return String::new();
     }
@@ -1265,7 +1319,15 @@ impl Document {
   /// This opens a new element at the _specified_ point, rather than the current insertion point.
   /// This is useful during document rearrangement or augmentation that may be needed later
   /// in the process.
-  pub fn open_element_at(&mut self, mut point: Node, qname: &str, attributes: Option<HashMap<String, String>>, font_opt: Option<&Font>, state: &mut State) -> Result<Node> {
+  pub fn open_element_at(
+    &mut self,
+    mut point: Node,
+    qname: &str,
+    attributes: Option<HashMap<String, String>>,
+    font_opt: Option<&Font>,
+    state: &mut State,
+  ) -> Result<Node>
+  {
     let (decoded_ns, tag) = state.model.decode_qname(qname);
     let mut font_opt_cloned: Option<Font> = match font_opt {
       // TODO: lifetime trouble forced me into cloning, there is a better way...
@@ -1283,7 +1345,7 @@ impl Document {
       newnode = Node::new(&tag, None, &self.document).unwrap();
       self.document.set_root_element(&newnode);
       for node in &self.pending {
-        newnode.add_prev_sibling(&node); // Add saved comments, PI's
+        try!(newnode.add_prev_sibling(&node)); // Add saved comments, PI's
       }
       self.record_constructed_node(&newnode);
 
@@ -1355,10 +1417,18 @@ impl Document {
     Ok(newnode)
   }
 
-  fn open_element_internal(&mut self, point: &mut Node, ns_opt: Option<String>, tag: &str, state: &mut State) -> Node {
+  fn open_element_internal(
+    &mut self,
+    point: &mut Node,
+    ns_opt: Option<String>,
+    tag: &str,
+    state: &mut State,
+  ) -> Node
+  {
     // TODO:
     //
-    //       I am seriously irritated by the XML namespace and the confusion of the "default#" tricks and libxml2's custom decisions about namespace interactions
+    // I am seriously irritated by the XML namespace and the confusion of the "default#"
+    // tricks and libxml2's custom decisions about namespace interactions
     //
     // I have "hacked together" a working flow for now, but I expect to
     // encounter bugs related to the shortcuts taken here. I would welcome a

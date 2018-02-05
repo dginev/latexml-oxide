@@ -1,12 +1,12 @@
-extern crate log;
 extern crate ansi_term;
+extern crate log;
 
 use ansi_term::Style;
-use ansi_term::Colour::{Yellow, Red, Green, White};
-use log::{Record, Level, Metadata, SetLoggerError, LevelFilter};
+use ansi_term::Colour::{Green, Red, White, Yellow};
+use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
 
 struct RtxLogger;
-static LOGGER : RtxLogger = RtxLogger;
+static LOGGER: RtxLogger = RtxLogger;
 
 #[macro_export]
 macro_rules! println_stderr(
@@ -30,36 +30,35 @@ macro_rules! print_stderr(
     })
 );
 
-
 impl log::Log for RtxLogger {
-  fn enabled(&self, metadata: &Metadata) -> bool {
-    metadata.level() <= Level::Info
-  }
+  fn enabled(&self, metadata: &Metadata) -> bool { metadata.level() <= Level::Info }
 
   fn log(&self, record: &Record) {
     if self.enabled(record.metadata()) {
       let record_target = record.target();
       let details = record.args();
-      if record_target == "note" { // simple print here
-        print_stderr!("{}",details.to_string());
+      if record_target == "note" {
+        // simple print here
+        print_stderr!("{}", details.to_string());
         return;
       }
       let category_object = if record_target.is_empty() {
-       "" // "unknown:unknown" ???
+        "" // "unknown:unknown" ???
       } else {
         record_target
       };
       // Following the reporting syntax at: http://dlmf.nist.gov/LaTeXML/manual/errorcodes/
       let severity = if category_object.starts_with("Fatal:") {
-          ""
-        } else { match record.level() {
+        ""
+      } else {
+        match record.level() {
           Level::Info => "Info",
           Level::Warn => "Warn",
           Level::Error => "Error",
           Level::Debug => "Debug",
-          _ => ""
-        } };
-
+          _ => "",
+        }
+      };
 
       let message = if severity.is_empty() {
         format!("{} ", category_object)
@@ -71,7 +70,7 @@ impl log::Log for RtxLogger {
         Level::Warn => Yellow.paint(message),
         Level::Error => Red.paint(message),
         Level::Debug => Green.paint(message),
-        _ => White.paint(message)
+        _ => White.paint(message),
       }.to_string() + &details.to_string();
 
       println_stderr!("{}", painted_message);
@@ -81,7 +80,7 @@ impl log::Log for RtxLogger {
   fn flush(&self) {}
 }
 
-pub fn init(level : LevelFilter) -> Result<(), SetLoggerError> {
+pub fn init(level: LevelFilter) -> Result<(), SetLoggerError> {
   let logger = log::set_logger(&LOGGER).unwrap();
   log::set_max_level(level);
   Ok(logger)

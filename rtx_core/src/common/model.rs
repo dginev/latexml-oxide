@@ -4,7 +4,7 @@ use std::io::BufRead;
 use std::collections::{HashMap, HashSet};
 use regex::Regex;
 
-use libxml::tree::{Node};
+use libxml::tree::Node;
 use libxml::tree::Document as XmlDoc;
 use common::relaxng::Relaxng;
 use document::Document;
@@ -53,7 +53,7 @@ pub struct Model {
   pub no_compiled: bool,
   pub debug_mode: bool,
   pub namespace_errors: u8,
-  pub tagprop: HashMap<String, TagFrame>
+  pub tagprop: HashMap<String, TagFrame>,
 }
 impl Default for Model {
   fn default() -> Self {
@@ -70,7 +70,7 @@ impl Default for Model {
       permissive: false,
       no_compiled: false,
       debug_mode: false,
-      tagprop: HashMap::new()
+      tagprop: HashMap::new(),
     }
   }
 }
@@ -79,10 +79,14 @@ impl Model {
   pub fn new() -> Self {
     let mut model = Model::default();
     // model.xpath.register_function("match-font", |x, y| {font::match_font(x,y)})
-    model.register_namespace("xml",
-                             Some("http://www.w3.org/XML/1998/namespace".to_string()));
-    model.register_document_namespace("xml",
-                                      Some("http://www.w3.org/XML/1998/namespace".to_string()));
+    model.register_namespace(
+      "xml",
+      Some("http://www.w3.org/XML/1998/namespace".to_string()),
+    );
+    model.register_document_namespace(
+      "xml",
+      Some("http://www.w3.org/XML/1998/namespace".to_string()),
+    );
     model
   }
 
@@ -114,14 +118,10 @@ impl Model {
       self.register_document_namespace("ltx", Some(LTX_NAMESPACE.to_string()));
       self.set_relaxng_schema("LaTeXML".to_string());
       self.register_namespace("ltx", Some(LTX_NAMESPACE.to_string()));
-      self.register_namespace("svg",
-                              Some("http://www.w3.org/2000/svg".to_string()));
-      self.register_namespace("xlink",
-                              Some("http://www.w3.org/1999/xlink".to_string())); // Needed for SVG
-      self.register_namespace("m",
-                              Some("http://www.w3.org/1998/Math/MathML".to_string()));
-      self.register_namespace("xhtml",
-                              Some("http://www.w3.org/1999/xhtml".to_string()));
+      self.register_namespace("svg", Some("http://www.w3.org/2000/svg".to_string()));
+      self.register_namespace("xlink", Some("http://www.w3.org/1999/xlink".to_string())); // Needed for SVG
+      self.register_namespace("m", Some("http://www.w3.org/1998/Math/MathML".to_string()));
+      self.register_namespace("xhtml", Some("http://www.w3.org/1999/xhtml".to_string()));
       self.permissive = true;
     } // Actually, they could have declared all sorts of Tags....
     let mut schema_type = String::new();
@@ -135,27 +135,34 @@ impl Model {
             // my ($roottag, $publicid, $systemid) = @data;
             // require LaTeXML::Common::Model::DTD;
             // $name = $systemid;
-            // $$self{schema} = LaTeXML::Common::Model::DTD->new($self, $roottag, $publicid, $systemid);
-          }
+            // $$self{schema} = LaTeXML::Common::Model::DTD->new($self, $roottag, $publicid,
+            // $systemid);
+          },
           "RelaxNG" => {
             name = data[1].to_string();
-            self.schema = Some(Relaxng{ name: name.clone(), ..Relaxng::default()});
-          }
-          _ => {}
+            self.schema = Some(Relaxng {
+              name: name.clone(),
+              ..Relaxng::default()
+            });
+          },
+          _ => {},
         };
-      }
+      },
     };
 
     if !self.no_compiled {
-      let pathname_opt = pathname::find(&name, pathname::FindOptions{
-        paths: search_paths,
-        types: Some(vec!["model".to_string()]),
-        installation_subdir: Some(format!("resources/{}", schema_type))
-      });
+      let pathname_opt = pathname::find(
+        &name,
+        pathname::FindOptions {
+          paths: search_paths,
+          types: Some(vec!["model".to_string()]),
+          installation_subdir: Some(format!("resources/{}", schema_type)),
+        },
+      );
 
       match pathname_opt {
-        Some(compiled_path) =>self.load_compiled_schema(&compiled_path),
-        None => self.schema.as_mut().unwrap().load_schema()
+        Some(compiled_path) => self.load_compiled_schema(&compiled_path),
+        None => self.schema.as_mut().unwrap().load_schema(),
       };
     }
 
@@ -170,7 +177,8 @@ impl Model {
   pub fn get_xpath<'o>(&'o self, document: &'o XmlDoc) -> XPath {
     let mut context = XPath::new(document, HashMap::new());
     for (prefix, ns) in &self.code_namespaces {
-      // TODO: Is this too slow? We may need to store an active context in the State as an alternative
+      // TODO: Is this too slow? We may need to store an active context in the State as an
+      // alternative
       context.register_namespace(prefix, ns);
     }
     context
@@ -199,26 +207,35 @@ impl Model {
         } else {
           Some(val)
         }
-      }
+      },
     };
 
     match namespace_opt_checked {
       Some(namespace) => {
-        self.code_namespace_prefixes.insert(namespace.clone(), codeprefix.to_string());
-        self.code_namespaces.insert(codeprefix.to_string(), namespace.clone());
-      }
+        self
+          .code_namespace_prefixes
+          .insert(namespace.clone(), codeprefix.to_string());
+        self
+          .code_namespaces
+          .insert(codeprefix.to_string(), namespace.clone());
+      },
       None => {
         match self.code_namespaces.get(codeprefix) {
           Some(prev) => self.code_namespace_prefixes.remove(prev),
           None => None,
         };
         self.code_namespaces.remove(codeprefix);
-      }
+      },
     };
     return;
   }
 
-  pub fn register_document_namespace(&mut self, mut docprefix: &str, namespace_opt: Option<String>) {
+  pub fn register_document_namespace(
+    &mut self,
+    mut docprefix: &str,
+    namespace_opt: Option<String>,
+  )
+  {
     if docprefix.is_empty() {
       docprefix = "#default";
     }
@@ -232,33 +249,48 @@ impl Model {
         } else {
           namespace.to_string()
         };
-        self.document_namespace_prefixes.insert(regnamespace, docprefix.to_string());
-        self.document_namespaces.insert(docprefix.to_string(), namespace);
-      }
+        self
+          .document_namespace_prefixes
+          .insert(regnamespace, docprefix.to_string());
+        self
+          .document_namespaces
+          .insert(docprefix.to_string(), namespace);
+      },
       None => {
         if let Some(prev) = self.document_namespaces.get(docprefix) {
           self.document_namespace_prefixes.remove(prev);
         };
         self.document_namespaces.remove(docprefix);
-      }
+      },
     };
     return;
   }
 
-  pub fn get_document_namespace_prefix(&mut self, namespace: &str, forattribute: bool, probe: bool) -> Option<String> {
-   // Get the prefix associated with the namespace url, noting that for elements, it might by "#default",
-   // but for attributes would never be.
+  pub fn get_document_namespace_prefix(
+    &mut self,
+    namespace: &str,
+    forattribute: bool,
+    probe: bool,
+  ) -> Option<String>
+  {
+    // Get the prefix associated with the namespace url, noting that for elements, it might by
+    // "#default", but for attributes would never be.
     // log!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
     let mut docprefix = if !forattribute {
-      match self.document_namespace_prefixes.get(&("DEFAULT#".to_string() + namespace)) {
+      match self
+        .document_namespace_prefixes
+        .get(&("DEFAULT#".to_string() + namespace))
+      {
         Some(prefix) => Some(prefix.to_string()),
-        None => None
+        None => None,
       }
-    } else { None };
+    } else {
+      None
+    };
     if docprefix.is_none() {
       docprefix = match self.document_namespace_prefixes.get(namespace) {
         Some(prefix) => Some(prefix.to_string()),
-        None => None
+        None => None,
       };
     }
 
@@ -266,10 +298,13 @@ impl Model {
       self.namespace_errors += 1;
       docprefix = Some("namespace".to_string() + &self.namespace_errors.to_string());
       self.register_document_namespace(docprefix.as_ref().unwrap(), Some(namespace.to_string()));
-      warn!(target: &format!("malformed:{:?}",namespace), "No prefix has been registered for namespace.");
+      warn!(
+        target: &format!("malformed:{:?}", namespace),
+        "No prefix has been registered for namespace."
+      );
       // Warn('malformed', $namespace, undef,
-        // "No prefix has been registered for namespace '$namespace' (in document)",
-        // "Using '$docprefix' instead"); }
+      // "No prefix has been registered for namespace '$namespace' (in document)",
+      // "Using '$docprefix' instead"); }
     }
     match docprefix {
       None => None,
@@ -279,7 +314,7 @@ impl Model {
         } else {
           Some(p)
         }
-      }
+      },
     }
   }
 
@@ -295,14 +330,18 @@ impl Model {
         } else {
           s.to_string()
         }
-      }
+      },
     };
 
     if docprefix != "#default" && ns_str.is_empty() && !probe {
       self.namespace_errors += 1;
-      let ns_error = "http://example.com/namespace".to_string() + &self.namespace_errors.to_string();
+      let ns_error =
+        "http://example.com/namespace".to_string() + &self.namespace_errors.to_string();
       self.register_document_namespace(docprefix, Some(ns_error));
-      error!(target: &format!("malformed:{:?}", docprefix), "No namespace has been registered for prefix.");
+      error!(
+        target: &format!("malformed:{:?}", docprefix),
+        "No namespace has been registered for prefix."
+      );
       // Error('malformed', $docprefix, undef,
       //   "No namespace has been registered for prefix '$docprefix' (in document)",
       //   "Using '$ns' instead"); }
@@ -315,17 +354,23 @@ impl Model {
   }
 
   /// In the following:
-  ///    $forattribute is 1 if the namespace is for an attribute (in which case, there must be a non-empty prefix)
-  ///    $probe, if non 0, just test for namespace, without creating an entry if missing.
-  /// Get the (code) prefix associated with $namespace,
+  /// $forattribute is 1 if the namespace is for an attribute (in which case, there must be a
+  /// non-empty prefix) $probe, if non 0, just test for namespace, without creating an entry
+  /// if missing. Get the (code) prefix associated with $namespace,
   /// creating a dummy prefix and signalling an error if none has been registered.
-  pub fn get_namespace_prefix(&mut self, namespace: &str, _forattribute: bool, probe: bool) -> Option<String> {
-    let mut codeprefix : Option<String> = None;
+  pub fn get_namespace_prefix(
+    &mut self,
+    namespace: &str,
+    _forattribute: bool,
+    probe: bool,
+  ) -> Option<String>
+  {
+    let mut codeprefix: Option<String> = None;
 
     if !namespace.is_empty() {
       codeprefix = match self.code_namespace_prefixes.get(namespace) {
         None => None,
-        Some(p) => Some(p.clone())
+        Some(p) => Some(p.clone()),
       };
 
       if codeprefix.is_some() && !probe {
@@ -335,11 +380,12 @@ impl Model {
           if docprefix.is_some() && self.code_namespaces.get(docprefix.unwrap()).is_none() {
             codeprefix = match docprefix {
               None => None,
-              Some(p) => Some(p.to_string())
+              Some(p) => Some(p.to_string()),
             };
           }
         }
-      } else { // Else synthesize one
+      } else {
+        // Else synthesize one
         self.namespace_errors += 1;
         let auto_prefix = "namespace".to_string() + &self.namespace_errors.to_string();
         codeprefix = Some(auto_prefix);
@@ -352,18 +398,19 @@ impl Model {
 
     match codeprefix {
       None => None,
-      Some(cp) => Some(cp.to_string())
+      Some(cp) => Some(cp.to_string()),
     }
   }
 
   pub fn get_namespace(&mut self, codeprefix: &str, probe: bool) -> Option<String> {
-    let mut ns : Option<String> = match self.code_namespaces.get(codeprefix) {
+    let mut ns: Option<String> = match self.code_namespaces.get(codeprefix) {
       None => None,
-      Some(ns) => Some(ns.to_string())
+      Some(ns) => Some(ns.to_string()),
     };
     if ns.is_none() && !probe {
       self.namespace_errors += 1;
-      let example_namespace = "http://example.com/namespace".to_string() + &self.namespace_errors.to_string();
+      let example_namespace =
+        "http://example.com/namespace".to_string() + &self.namespace_errors.to_string();
       ns = Some(example_namespace.clone());
       self.register_namespace(codeprefix, Some(example_namespace));
       // Error!('malformed', $codeprefix, undef,
@@ -372,7 +419,7 @@ impl Model {
     }
     match ns {
       None => None,
-      Some(ns) => Some(ns.to_string())
+      Some(ns) => Some(ns.to_string()),
     }
   }
 
@@ -383,7 +430,7 @@ impl Model {
     use libxml::tree::NodeType::*;
     let node_type = node.get_type();
     if node_type.is_none() {
-      return "#BrokenNode".to_string()
+      return "#BrokenNode".to_string();
     }
     match node_type.unwrap() {
       TextNode => "#PCDATA".to_string(),
@@ -410,12 +457,14 @@ impl Model {
         //   None => node.get_name()
         // }
         // TODO: Mock for now, add namespace_uri capability to rust-libxml next
-        format!("ltx:{}",node.get_name())
+        format!("ltx:{}", node.get_name())
       },
       // Need others?
-      t =>  panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {:?}", t)
-        // Fatal('misdefined', '<caller>', undef,
-        //   "Should not ask for Qualified Name for node of type $type: " . Stringify($node));
+      t => panic!(
+        "Fatal:misdefined:<caller> should not ask for qualified name for node of type {:?}",
+        t
+      ), /* Fatal('misdefined', '<caller>', undef,
+          *   "Should not ask for Qualified Name for node of type $type: " . Stringify($node)); */
     }
   }
 
@@ -424,7 +473,7 @@ impl Model {
     use libxml::tree::NodeType::*;
     let node_type = node.get_type();
     if node_type.is_none() {
-      return "#BrokenNode".to_string()
+      return "#BrokenNode".to_string();
     }
 
     match node_type.unwrap() {
@@ -446,17 +495,22 @@ impl Model {
         if let Some(ns) = node.get_namespace() {
           let href = ns.get_href();
           if !href.is_empty() {
-            prefix = self.get_document_namespace_prefix(&href, false, true).unwrap_or_default();
+            prefix = self
+              .get_document_namespace_prefix(&href, false, true)
+              .unwrap_or_default();
           }
         }
         if prefix.is_empty() {
           node.get_name()
         } else {
-          format!("{}:{}",prefix, node.get_name())
+          format!("{}:{}", prefix, node.get_name())
         }
       },
       // Need others?
-      t =>  panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {:?}", t)
+      t => panic!(
+        "Fatal:misdefined:<caller> should not ask for qualified name for node of type {:?}",
+        t
+      ),
     }
   }
 
@@ -475,10 +529,9 @@ impl Model {
           (self.get_namespace(prefix, false), localname.to_string())
         }
       },
-      None => (None, codetag.to_string())
+      None => (None, codetag.to_string()),
     }
   }
-
 
   //**********************************************************************
   // Document Structure Queries
@@ -493,22 +546,27 @@ impl Model {
     match tag {
       "#PCDATA" | "#Comment" => return false,
       "_WildCard_" => return true,
-      _ => {}
+      _ => {},
     };
-    if CAPTURE_TAG_RE.is_match(tag) || CAPTURE_TAG_RE.is_match(child) { // with or without namespace prefix
+    if CAPTURE_TAG_RE.is_match(tag) || CAPTURE_TAG_RE.is_match(child) {
+      // with or without namespace prefix
       return true;
     }
 
     match child {
       "_WildCard_" | "#Comment" | "#ProcessingInstruction" | "#DTD" => return true,
-      _ => {}
+      _ => {},
     };
     if self.permissive && tag == "#Document" && child != "#PCDATA" {
       return true; // No DTD? Punt!
     }
 
     // Else query tag properties.
-    let model = &mut self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default).model;
+    let model = &mut self
+      .tagprop
+      .entry(tag.to_owned())
+      .or_insert_with(TagFrame::default)
+      .model;
     model.contains("ANY") || model.contains(child)
   }
 
@@ -517,7 +575,7 @@ impl Model {
     match tag {
       "#PCDATA" | "#Comment" | "#Document" | "#ProcessingInstruction" | "#DTD" => return false,
       "_WildCard_" => return true,
-      _ => {}
+      _ => {},
     };
 
     if CAPTURE_TAG_RE.is_match(tag) {
@@ -529,15 +587,19 @@ impl Model {
     }
 
     // Else query tag properties.
-    let attributes = &mut self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default).attributes;
+    let attributes = &mut self
+      .tagprop
+      .entry(tag.to_owned())
+      .or_insert_with(TagFrame::default)
+      .attributes;
 
     attributes.contains(attrib)
   }
 
-
   /// TODO: This is another component that would fit perfectly as a compiler plugin,
-  ///       which generates a rust objects from all available schemas and has them directly available at runtime
-  ///       For now, simply reimplementing the runtime loading of LaTeXML.model as-is from Model.pm
+  /// which generates a rust objects from all available schemas and has them directly
+  /// available at runtime For now, simply reimplementing the runtime loading of
+  /// LaTeXML.model as-is from Model.pm
   pub fn load_compiled_schema(&mut self, path: &str) {
     note_begin(&format!("Loading compiled schema {}", path));
     let compiled_fh = File::open(path).unwrap();
@@ -550,7 +612,6 @@ impl Model {
           let children = caps.get(3).map_or("", |m| m.as_str());
           self.add_tag_attribute(tag, attr.split(',').collect());
           self.add_tag_content(tag, children.split(',').collect());
-
         } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
           let classname = caps.get(1).map_or("", |m| m.as_str());
           let elements = caps.get(2).map_or("", |m| m.as_str());
@@ -559,13 +620,15 @@ impl Model {
             class_set.insert(set_element.to_owned());
           }
           self.set_schema_class(classname, class_set);
-
         } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
           let prefix = caps.get(1).map_or("", |m| m.as_str());
           let namespace = caps.get(2).map_or("", |m| m.as_str());
           self.register_document_namespace(prefix, Some(namespace.to_owned()));
         } else {
-          panic!("Fatal:internal:{:?} Compiled model '{:?}' is malformatted at \"{:?}\"", path, path, line);
+          panic!(
+            "Fatal:internal:{:?} Compiled model '{:?}' is malformatted at \"{:?}\"",
+            path, path, line
+          );
         }
       }
     }
@@ -579,43 +642,49 @@ impl Model {
   //**********************************************************************
 
   pub fn get_tags(&self) -> Vec<String> {
-    let mut keys : Vec<String> = self.tagprop.keys().map(|k| k.as_str().to_owned()).collect();
+    let mut keys: Vec<String> = self.tagprop.keys().map(|k| k.as_str().to_owned()).collect();
     keys.sort();
     keys
   }
 
-  pub fn get_tag_contents(&self, tag :&str) -> Vec<&str> {
+  pub fn get_tag_contents(&self, tag: &str) -> Vec<&str> {
     match self.tagprop.get(tag) {
       Some(h) => {
-        let mut keys : Vec<&str> = h.model.iter().map(|k| k.as_str()).collect();
+        let mut keys: Vec<&str> = h.model.iter().map(|k| k.as_str()).collect();
         keys.sort();
         keys
       },
-      None => Vec::new()
+      None => Vec::new(),
     }
   }
 
   pub fn add_tag_content(&mut self, tag: &str, elements: Vec<&str>) {
-    let frame = self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default);
+    let frame = self
+      .tagprop
+      .entry(tag.to_owned())
+      .or_insert_with(TagFrame::default);
 
     for element in elements {
       frame.model.insert(element.to_owned());
     }
   }
 
-  pub fn get_tag_attributes(&self, tag :&str) -> Vec<&str> {
+  pub fn get_tag_attributes(&self, tag: &str) -> Vec<&str> {
     match self.tagprop.get(tag) {
       Some(h) => {
-        let mut keys : Vec<&str> = h.attributes.iter().map(|k| k.as_str()).collect();
+        let mut keys: Vec<&str> = h.attributes.iter().map(|k| k.as_str()).collect();
         keys.sort();
         keys
       },
-      None => Vec::new()
+      None => Vec::new(),
     }
   }
 
   pub fn add_tag_attribute(&mut self, tag: &str, attributes: Vec<&str>) {
-    let frame = self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default);
+    let frame = self
+      .tagprop
+      .entry(tag.to_owned())
+      .or_insert_with(TagFrame::default);
 
     for attribute in attributes {
       frame.attributes.insert(attribute.to_owned());

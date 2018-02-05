@@ -12,7 +12,7 @@ lazy_static! {
 pub struct Error {
   pub target: ErrorTarget,
   pub category: ErrorCategory,
-  pub message: String
+  pub message: String,
 }
 
 #[derive(Debug)]
@@ -44,7 +44,7 @@ pub enum ErrorCategory {
   Malformed,
   Libxml,
   Recursion,
-  EoF
+  EoF,
 }
 
 #[macro_export]
@@ -59,8 +59,6 @@ macro_rules! fatal {
   })
 }
 
-
-
 pub type Result<T> = result::Result<T, Error>;
 
 impl fmt::Display for Error {
@@ -69,10 +67,13 @@ impl fmt::Display for Error {
     match self.category {
       Init => write!(f, "Init"),
       Io(ref err) => err.fmt(f),
-      NotFound => write!(f, "No matching cities with a \
-                                       population were found."),
+      NotFound => write!(
+        f,
+        "No matching cities with a \
+         population were found."
+      ),
       MissingFile => write!(f, "missing file"),
-      Misdefined =>  write!(f, "misdefined"),
+      Misdefined => write!(f, "misdefined"),
       Unknown => write!(f, "unknown"),
       Malformed => write!(f, "malformed"),
       Expected => write!(f, "expected"),
@@ -116,23 +117,30 @@ impl ErrorTrait for Error {
 
 impl Error {
   pub fn log_fatal(&self) {
-    let target_str = format!("Fatal:{:?}:{:?} ",self.target, self.category);
+    let target_str = format!("Fatal:{:?}:{:?} ", self.target, self.category);
     error!(target: &target_str, "{}", self.message);
   }
 }
 
 impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Error {
-        Error{target: ErrorTarget::Mouth, category: ErrorCategory::Io(err), message: "IO error".to_owned()}
+  fn from(err: io::Error) -> Error {
+    Error {
+      target: ErrorTarget::Mouth,
+      category: ErrorCategory::Io(err),
+      message: "IO error".to_owned(),
     }
+  }
 }
 
 impl From<()> for Error {
-    fn from(_e: ()) -> Error {
-        Error{target: ErrorTarget::Document, category: ErrorCategory::Libxml, message: "LibXML error".to_owned()}
+  fn from(_e: ()) -> Error {
+    Error {
+      target: ErrorTarget::Document,
+      category: ErrorCategory::Libxml,
+      message: "LibXML error".to_owned(),
     }
+  }
 }
-
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Progress Reporting
@@ -152,7 +160,6 @@ pub fn note_begin(stage: &str) {
   // $state->assignMapping('NOTE_TIMERS', $stage, [Time::HiRes::gettimeofday]);
   info!(target: "note", "\n({}...", stage);
 }
-
 
 pub fn note_end(_stage: &str) {
   // if (my $start = $state && $state->lookupMapping('NOTE_TIMERS', $stage)) {

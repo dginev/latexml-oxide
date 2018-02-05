@@ -105,7 +105,7 @@ impl MathParser {
     if !xmath_nodes.is_empty() {
       note_begin("Math Parsing");
       note_progress(&format!("{:?} formulae ...", xmath_nodes.len()));
-      for math in xmath_nodes.into_iter() {
+      for math in xmath_nodes {
         try!(self.parse(math, document, state));
       }
 
@@ -325,7 +325,7 @@ impl MathParser {
       // failed?)       }
       //       else {
       // foreach my $n
-      // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) { 
+      // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
       // $document->setAttribute($n, idref => $repid); } } }
       p.set_attribute("text", &self.text_form(&result, document, state));
     }

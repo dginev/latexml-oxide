@@ -1,9 +1,7 @@
 struct Number {
-  number: usize
+  number: usize,
 }
 
 impl Number {
-  pub fn new(number: usize) -> Self {
-    Number { number: number }
-  }
+  pub fn new(number: usize) -> Self { Number { number: number } }
 }

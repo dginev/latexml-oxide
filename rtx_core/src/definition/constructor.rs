@@ -1,6 +1,6 @@
 use std::rc::Rc;
 use std::collections::HashMap;
-use state::{State, Scope, ObjectStore};
+use state::{ObjectStore, Scope, State};
 use common::object::Object;
 use common::error::*;
 use common::font::Font;
@@ -12,7 +12,8 @@ use gullet::Gullet;
 use stomach::Stomach;
 use whatsit::Whatsit;
 use parameter::Parameters;
-use definition::{Definition,BeforeDigestClosure, DigestionClosure, ConstructionClosure, ReplacementClosure};
+use definition::{BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure,
+                 ReplacementClosure};
 use document::Document;
 
 #[derive(Clone)]
@@ -33,13 +34,13 @@ pub struct ConstructorOptions {
   pub font: Option<Font>,
 
   pub after_digest_begin: Vec<DigestionClosure>,
-  pub before_digest_end : Vec<BeforeDigestClosure>,
-  pub after_digest_body : Vec<DigestionClosure>,
+  pub before_digest_end: Vec<BeforeDigestClosure>,
+  pub after_digest_body: Vec<DigestionClosure>,
   // reversion       : 1,
   // sizer           : 1,
-  pub scope : Option<Scope>,
+  pub scope: Option<Scope>,
   pub locked: bool,
-  pub alias: Option<String>
+  pub alias: Option<String>,
 }
 impl Default for ConstructorOptions {
   fn default() -> Self {
@@ -58,11 +59,11 @@ impl Default for ConstructorOptions {
       capture_body: false,
       font: None,
       after_digest_begin: vec![],
-      before_digest_end : vec![],
-      after_digest_body : vec![],
+      before_digest_end: vec![],
+      after_digest_body: vec![],
       scope: None,
       locked: false,
-      alias: None
+      alias: None,
     }
   }
 }
@@ -85,32 +86,27 @@ impl Default for Constructor {
   }
 }
 impl PartialEq for Constructor {
-  fn eq(&self, other: &Constructor) -> bool {
-    self.cs == other.cs
-  }
+  fn eq(&self, other: &Constructor) -> bool { self.cs == other.cs }
 }
-
 
 impl Object for Constructor {}
 impl Definition for Constructor {
-  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> {
-    Some(&self.options.before_digest)
-  }
-  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {
-    Some(&self.options.after_digest)
-  }
+  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }
+  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> {
     Some(&self.options.after_digest_body)
   }
-  fn capture_body(&self) -> bool {
-    self.options.capture_body
-  }
-  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> {
-    Ok(Tokens!())
-  }
+  fn capture_body(&self) -> bool { self.options.capture_body }
+  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
-  fn invoke_primitive(&self, stomach: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(
+    &self,
+    stomach: &mut Stomach,
+    caller: Rc<Definition>,
+    state: &mut State,
+  ) -> Result<Vec<Digested>>
+  {
     debug!(target: "constructor", "invoke for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing
@@ -145,13 +141,15 @@ impl Definition for Constructor {
       Some(ref f) => f.clone(),
       None => match state.lookup_font() {
         Some(f) => f,
-        None => Font::text_default() // should never happen?
-      }
+        None => Font::text_default(), // should never happen?
+      },
     };
 
     props.insert("font".to_owned(), ObjectStore::Font(Box::new(this_font)));
     // $props{locator} = $stomach->getGullet->getMouth->getLocator unless defined $props{locator};
-    props.entry("isMath".to_owned()).or_insert(ObjectStore::Bool(ismath));
+    props
+      .entry("isMath".to_owned())
+      .or_insert(ObjectStore::Bool(ismath));
     // $props{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.
@@ -173,7 +171,6 @@ impl Definition for Constructor {
     let post_post = try!(self.execute_after_digest_body(stomach, &mut whatsit, state));
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 
-
     // Package the result boxes
     result.push(Digested::Whatsit(whatsit));
     result.extend(post);
@@ -181,44 +178,40 @@ impl Definition for Constructor {
     Ok(result)
   }
 
-  fn get_cs(&self) -> Token {
-    self.cs.clone()
-  }
-  fn get_cs_name(&self) -> String {
-    self.cs.get_cs_name()
-  }
-  fn get_locator(&self) -> String {
-    unimplemented!()
-  }
-  fn get_parameters(&self) -> &Option<Parameters> {
-    &self.paramlist
-  }
+  fn get_cs(&self) -> Token { self.cs.clone() }
+  fn get_cs_name(&self) -> String { self.cs.get_cs_name() }
+  fn get_locator(&self) -> String { unimplemented!() }
+  fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
   fn get_num_args(&self) -> usize {
     match self.options.nargs {
       Some(n) => n,
-      None => {
-        match self.paramlist {
-          Some(ref params) => params.get_num_args(),
-          None => 0,
-        }
-      }
+      None => match self.paramlist {
+        Some(ref params) => params.get_num_args(),
+        None => 0,
+      },
     }
     // self.nargs = Some(nargs);
   }
 
-  fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) -> Result<()> {
+  fn do_absorbtion(
+    &self,
+    document: &mut Document,
+    whatsit: &Whatsit,
+    state: &mut State,
+  ) -> Result<()>
+  {
     for pre_closure in &self.options.before_construct {
       pre_closure(document, whatsit, state);
     }
 
     match self.replacement {
       None => {},
-      Some(ref main_closure) => {
-        try!(main_closure(document,
-                     whatsit.get_args(),
-                     whatsit.get_properties(),
-                     state))
-      }
+      Some(ref main_closure) => try!(main_closure(
+        document,
+        whatsit.get_args(),
+        whatsit.get_properties(),
+        state
+      )),
     };
 
     for post_closure in &self.options.after_construct {

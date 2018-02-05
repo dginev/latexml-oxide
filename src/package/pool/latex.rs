@@ -343,15 +343,15 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       let clean_id = id; // TODO: CleanID($id);
       let has_toctitle =
         !toctitle.to_string().is_empty() && (toctitle.to_string() != title.to_string());
-      document.open_element(
+      try!(document.open_element(
         &format!("ltx:{}", stype),
         Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)),
         None,
         inner_state,
-      );
-      document.insert_element("ltx:title", vec![title], None, inner_state);
+      ));
+      try!(document.insert_element("ltx:title", vec![title], None, inner_state));
       if has_toctitle {
-        document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state);
+        try!(document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state));
       }
     }
   );

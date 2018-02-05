@@ -1,21 +1,28 @@
-#[macro_use] extern crate log;
-#[macro_use] extern crate lazy_static;
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate log;
 
 extern crate ansi_term;
 extern crate glob;
-extern crate libxml;
 extern crate libc;
-extern crate regex;
+extern crate libxml;
+extern crate quote;
 extern crate rand;
+extern crate regex;
 extern crate tempfile;
 extern crate time;
-extern crate quote;
 
-#[macro_use]pub mod aux_macros;
-#[macro_use]pub mod common;
-#[macro_use]pub mod token;
-#[macro_use]pub mod tokens;
-#[macro_use]pub mod definition;
+#[macro_use]
+pub mod aux_macros;
+#[macro_use]
+pub mod common;
+#[macro_use]
+pub mod token;
+#[macro_use]
+pub mod tokens;
+#[macro_use]
+pub mod definition;
 pub mod stomach;
 pub mod gullet;
 pub mod mouth;
@@ -31,7 +38,7 @@ use std::fmt;
 use common::error::*;
 use common::model::Model;
 use common::font::Font;
-use state::{State, StateOptions, ObjectStore};
+use state::{ObjectStore, State, StateOptions};
 use stomach::Stomach;
 use tokens::Tokens;
 use tbox::Tbox;
@@ -57,7 +64,7 @@ pub struct CoreOptions {
   pub graphics_paths: Option<Vec<String>>,
   pub input_encoding: Option<String>,
   // The core-related
-  pub preload: Option<Vec<String>>
+  pub preload: Option<Vec<String>>,
 }
 impl Default for CoreOptions {
   fn default() -> Self {
@@ -90,7 +97,7 @@ impl Core {
   pub fn new(options: CoreOptions) -> Self {
     let preload = match options.preload {
       None => Vec::new(),
-      Some(p) => p
+      Some(p) => p,
     };
 
     // pass on the state options, defaults are handled in State::new
@@ -110,25 +117,21 @@ impl Core {
 
     let state = State::new(state_options);
 
-    Core{
+    Core {
       state: state,
       preload: preload,
-      .. Core::default()
+      ..Core::default()
     }
   }
 
-  pub fn state_mut(&mut self) -> &mut State {
-    &mut self.state
-  }
+  pub fn state_mut(&mut self) -> &mut State { &mut self.state }
 }
 
 pub trait BoxOps {
   fn unlist(self) -> Vec<Digested>;
   fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()>;
   fn to_string(&self) -> String;
-  fn stringify(&self) -> String {
-    "Vec<Tbox> for now ".to_string()
-  }
+  fn stringify(&self) -> String { "Vec<Tbox> for now ".to_string() }
   fn set_property(&mut self, _key: &str, _value: ObjectStore) {}
   fn get_property(&self, _key: &str) -> Option<&ObjectStore> {
     error!(target: "boxops:get_property", "Generic BoxOps::get_property should never be called!");
@@ -145,7 +148,7 @@ pub trait BoxOps {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TexMode {
   Math,
-  Text
+  Text,
 }
 
 #[derive(Clone, PartialEq)]
@@ -199,24 +202,40 @@ impl BoxOps for Digested {
 
   fn set_property(&mut self, key: &str, value: ObjectStore) {
     match *self {
-      Digested::Box(ref b) => error!(target: "digested:set_property", "Called set_property on Box: {:?}", b),
-      Digested::List(ref l) => error!(target: "digested:set_property", "Called set_property on List: {:?}", l),
-      Digested::Whatsit(ref mut w) => w.set_property(key, value)
+      Digested::Box(ref b) => {
+        error!(target: "digested:set_property", "Called set_property on Box: {:?}", b)
+      },
+      Digested::List(ref l) => {
+        error!(target: "digested:set_property", "Called set_property on List: {:?}", l)
+      },
+      Digested::Whatsit(ref mut w) => w.set_property(key, value),
     }
   }
 
   fn get_property(&self, key: &str) -> Option<&ObjectStore> {
     match *self {
-      Digested::Box(ref b) => {error!(target: "digested:get_property", "Called get_property on Box: {:?}", b); None}
-      Digested::List(ref l) => {error!(target: "digested:get_property", "Called get_property on List: {:?}", l); None}
-      Digested::Whatsit(ref w) => w.get_property(key)
+      Digested::Box(ref b) => {
+        error!(target: "digested:get_property", "Called get_property on Box: {:?}", b);
+        None
+      },
+      Digested::List(ref l) => {
+        error!(target: "digested:get_property", "Called get_property on List: {:?}", l);
+        None
+      },
+      Digested::Whatsit(ref w) => w.get_property(key),
     }
   }
   fn get_body(&self) -> Option<&Digested> {
     match *self {
-      Digested::Box(ref b) => {error!(target: "digested:get_body", "Called get_body on Box: {:?}", b); None}
-      Digested::List(ref l) => {error!(target: "digested:get_body", "Called get_body on List: {:?}", l); None}
-      Digested::Whatsit(ref w) => w.get_body()
+      Digested::Box(ref b) => {
+        error!(target: "digested:get_body", "Called get_body on Box: {:?}", b);
+        None
+      },
+      Digested::List(ref l) => {
+        error!(target: "digested:get_body", "Called get_body on List: {:?}", l);
+        None
+      },
+      Digested::Whatsit(ref w) => w.get_body(),
     }
   }
 
@@ -232,7 +251,7 @@ impl BoxOps for Digested {
     match *self {
       Digested::Box(ref b) => b.revert(),
       Digested::List(ref l) => l.revert(),
-      Digested::Whatsit(ref w) => w.revert()
+      Digested::Whatsit(ref w) => w.revert(),
     }
   }
 }

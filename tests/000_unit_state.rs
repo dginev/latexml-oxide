@@ -161,7 +161,7 @@ fn assign_lookup_arrays() {
   state.unshift_value("SEARCHPATHS", vec![ObjectStore::String("d".to_string())]);
   if let Some(vdq) = state.lookup_vecdeque("SEARCHPATHS") {
     let mut vdq_expected = VecDeque::new();
-    for entry in ["d", "a", "b", "c"].into_iter() {
+    for entry in &["d", "a", "b", "c"] {
       vdq_expected.push_back(ObjectStore::String(entry.to_string()));
     }
     assert_eq!(vdq, &vdq_expected, "shift/unshift existing key");

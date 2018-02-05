@@ -24,25 +24,27 @@ pub enum TagOptionName {
 impl TagOptionName {
   pub fn all() -> Vec<TagOptionName> {
     use self::TagOptionName::*;
-    vec![AfterOpen,
-         AfterOpenEarly,
-         AfterOpenLate,
-         AfterClose,
-         AfterCloseEarly,
-         AfterCloseLate]
+    vec![
+      AfterOpen,
+      AfterOpenEarly,
+      AfterOpenLate,
+      AfterClose,
+      AfterCloseEarly,
+      AfterCloseLate,
+    ]
   }
   pub fn is_prepend(&self) -> bool {
     use self::TagOptionName::*;
     match *self {
       AfterOpenEarly | AfterCloseEarly => true,
-      _ => false
+      _ => false,
     }
   }
   pub fn is_append(&self) -> bool {
     use self::TagOptionName::*;
     match *self {
       AfterOpen | AfterClose | AfterOpenLate | AfterCloseLate => true,
-      _ => false
+      _ => false,
     }
   }
 }
@@ -82,7 +84,7 @@ impl TagOptions {
       AfterOpenLate => &self.after_open_late,
       AfterClose => &self.after_close,
       AfterCloseEarly => &self.after_close_early,
-      AfterCloseLate => &self.after_close_late
+      AfterCloseLate => &self.after_close_late,
     }
   }
 
@@ -94,7 +96,7 @@ impl TagOptions {
       AfterOpenLate => &mut self.after_open_late,
       AfterClose => &mut self.after_close,
       AfterCloseEarly => &mut self.after_close_early,
-      AfterCloseLate => &mut self.after_close_late
+      AfterCloseLate => &mut self.after_close_late,
     }
   }
 
@@ -106,7 +108,7 @@ impl TagOptions {
       AfterOpenLate => &mut self.after_open_late,
       AfterClose => &mut self.after_close,
       AfterCloseEarly => &mut self.after_close_early,
-      AfterCloseLate => &mut self.after_close_late
+      AfterCloseLate => &mut self.after_close_late,
     };
     field.drain(..).collect()
   }
@@ -139,32 +141,32 @@ impl TagOptions {
     use self::TagOptionName::*;
     match *name {
       AfterOpen => {
-        let drained : Vec<TagConstructionClosure> = self.after_open.drain(..).collect();
+        let drained: Vec<TagConstructionClosure> = self.after_open.drain(..).collect();
         value.extend(drained);
         self.after_open = value;
       },
       AfterOpenEarly => {
-        let drained : Vec<TagConstructionClosure> = self.after_open_early.drain(..).collect();
+        let drained: Vec<TagConstructionClosure> = self.after_open_early.drain(..).collect();
         value.extend(drained);
         self.after_open_early = value;
       },
       AfterOpenLate => {
-        let drained : Vec<TagConstructionClosure> = self.after_open_late.drain(..).collect();
+        let drained: Vec<TagConstructionClosure> = self.after_open_late.drain(..).collect();
         value.extend(drained);
         self.after_open_late = value;
       },
       AfterClose => {
-        let drained : Vec<TagConstructionClosure> = self.after_close.drain(..).collect();
+        let drained: Vec<TagConstructionClosure> = self.after_close.drain(..).collect();
         value.extend(drained);
         self.after_close = value;
       },
       AfterCloseEarly => {
-        let drained : Vec<TagConstructionClosure> = self.after_close_early.drain(..).collect();
+        let drained: Vec<TagConstructionClosure> = self.after_close_early.drain(..).collect();
         value.extend(drained);
         self.after_close_early = value;
       },
       AfterCloseLate => {
-        let drained : Vec<TagConstructionClosure> = self.after_close_late.drain(..).collect();
+        let drained: Vec<TagConstructionClosure> = self.after_close_late.drain(..).collect();
         value.extend(drained);
         self.after_close_late = value;
       },

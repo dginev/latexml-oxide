@@ -8,20 +8,20 @@ use stomach::Stomach;
 use parameter::Parameters;
 use common::object::Object;
 use common::error::*;
-use definition::{Definition, ExpansionClosure, BeforeDigestClosure, DigestionClosure};
+use definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionClosure};
 use whatsit::Whatsit;
 use document::Document;
 
 #[derive(Clone)]
 pub struct ExpandableOptions {
   pub locked: bool,
-  pub scope: Option<Scope>
+  pub scope: Option<Scope>,
 }
 impl Default for ExpandableOptions {
   fn default() -> Self {
     ExpandableOptions {
       locked: false,
-      scope: None
+      scope: None,
     }
   }
 }
@@ -35,7 +35,7 @@ pub struct Expandable {
   pub paramlist: Option<Parameters>,
   pub expansion: Option<ExpansionClosure>,
   pub trivial_expansion: Option<Tokens>,
-  pub options: ExpandableOptions
+  pub options: ExpandableOptions,
 }
 impl Default for Expandable {
   fn default() -> Self {
@@ -47,35 +47,23 @@ impl Default for Expandable {
       cs: T_CS!("Expandable".to_string()),
       paramlist: None,
       expansion: None,
-      options: ExpandableOptions::default()
+      options: ExpandableOptions::default(),
     }
   }
 }
 impl PartialEq for Expandable {
-  fn eq(&self, other: &Expandable) -> bool {
-    self.cs == other.cs
-  }
+  fn eq(&self, other: &Expandable) -> bool { self.cs == other.cs }
 }
 
 impl Object for Expandable {
-  fn is_definition(&self) -> bool {
-    true
-  }
-  fn is_expandable(&self) -> bool {
-    true
-  }
+  fn is_definition(&self) -> bool { true }
+  fn is_expandable(&self) -> bool { true }
 }
 
 impl Definition for Expandable {
-  fn is_protected(&self) -> bool {
-    self.is_protected
-  }
-  fn get_parameters(&self) -> &Option<Parameters> {
-    &self.paramlist
-  }
-  fn get_cs(&self) -> Token {
-    self.cs.clone()
-  }
+  fn is_protected(&self) -> bool { self.is_protected }
+  fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
+  fn get_cs(&self) -> Token { self.cs.clone() }
 
   fn get_cs_name(&self) -> String {
     match self.alias {
@@ -84,9 +72,7 @@ impl Definition for Expandable {
     }
   }
 
-  fn get_locator(&self) -> String {
-    self.locator.clone()
-  }
+  fn get_locator(&self) -> String { self.locator.clone() }
 
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     // Expand the expandable control sequence. This should be carried out by the Gullet.
@@ -100,25 +86,44 @@ impl Definition for Expandable {
   }
 
   // Not implemented for expandable
-  fn invoke_primitive(&self, _gullet: &mut Stomach, _caller: Rc<Definition>, _state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(
+    &self,
+    _gullet: &mut Stomach,
+    _caller: Rc<Definition>,
+    _state: &mut State,
+  ) -> Result<Vec<Digested>>
+  {
     Ok(Vec::new())
   }
-  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> {
-    None
-  }
-  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> {
-    None
-  }
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
-    fatal!(Definition, Unexpected, "do_absorbtion on Expandable should never be called!");
+  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
+  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
+  fn do_absorbtion(
+    &self,
+    _document: &mut Document,
+    _whatsit: &Whatsit,
+    _state: &mut State,
+  ) -> Result<()>
+  {
+    fatal!(
+      Definition,
+      Unexpected,
+      "do_absorbtion on Expandable should never be called!"
+    );
   }
 }
 
 impl Expandable {
-  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Result<Tokens> {
+  fn do_invocation(
+    &self,
+    gullet: &mut Gullet,
+    args: Vec<Tokens>,
+    state: &mut State,
+  ) -> Result<Tokens>
+  {
     if let Some(ref closure) = self.expansion {
       closure(gullet, args.clone(), state)
-    } else { // empty if no expansion
+    } else {
+      // empty if no expansion
       Ok(Tokens!())
     }
   }
@@ -129,4 +134,3 @@ macro_rules! SimpleExpansion(($tokens:expr ) => ({
   use std::rc::Rc;
   Some(Rc::new(move |_gullet, _args, _state| Ok($tokens)))
 }));
-

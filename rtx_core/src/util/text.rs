@@ -1,7 +1,7 @@
 pub enum Delimiter {
   Parenthesis,
   Brace,
-  Bracket
+  Bracket,
 }
 impl Delimiter {
   fn open(&self) -> char {
@@ -9,7 +9,7 @@ impl Delimiter {
     match *self {
       Parenthesis => '(',
       Brace => '{',
-      Bracket => '['
+      Bracket => '[',
     }
   }
   fn close(&self) -> char {
@@ -17,7 +17,7 @@ impl Delimiter {
     match *self {
       Parenthesis => ')',
       Brace => '}',
-      Bracket => ']'
+      Bracket => ']',
     }
   }
 }
@@ -25,11 +25,11 @@ impl Delimiter {
 pub fn extract_bracketed(text: &mut String, delimiter: Option<&Delimiter>) -> String {
   let open_delim = match delimiter {
     None => '(',
-    Some(d) => d.open()
+    Some(d) => d.open(),
   };
   let close_delim = match delimiter {
     None => ')',
-    Some(d) => d.close()
+    Some(d) => d.close(),
   };
 
   // info!("-- eb before: {:?}", text);
@@ -50,11 +50,13 @@ pub fn extract_bracketed(text: &mut String, delimiter: Option<&Delimiter>) -> St
       extracted.push(c)
     }
 
-    if c.is_whitespace() { // whitespaces are neutral
-      continue
+    if c.is_whitespace() {
+      // whitespaces are neutral
+      continue;
     }
 
-    if c == open_delim { // level up on open paren
+    if c == open_delim {
+      // level up on open paren
       level += 1;
     } else if level < 1 {
       // regular chars out of () body should terminate the expression

@@ -8,15 +8,15 @@ use std::fmt;
 use std::collections::HashMap;
 use regex::Regex;
 
-static DEFFAMILY : &'static str     = "serif";
-static DEFSERIES : &'static str     = "medium";
-static DEFSHAPE : &'static str      = "upright";
-static DEFCOLOR : &'static str      = "black";
-static DEFBACKGROUND : &'static str = "white";
-static DEFOPACITY : &'static str    = "1";
-static DEFENCODING : &'static str   = "OT1";
-static DEFLANGUAGE : &'static str   = "en";
-static DEFSIZE : i8   = 10; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
+static DEFFAMILY: &'static str = "serif";
+static DEFSERIES: &'static str = "medium";
+static DEFSHAPE: &'static str = "upright";
+static DEFCOLOR: &'static str = "black";
+static DEFBACKGROUND: &'static str = "white";
+static DEFOPACITY: &'static str = "1";
+static DEFENCODING: &'static str = "OT1";
+static DEFLANGUAGE: &'static str = "en";
+static DEFSIZE: i8 = 10; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
 
 // static FORCE_FAMILY : i8 = 0x1;
 // static FORCE_SERIES : i8 = 0x2;
@@ -29,21 +29,22 @@ lazy_static! {
   static ref DIGIT_LETTER_RE : Regex = Regex::new(r"^[\p{N}]$").unwrap();
 }
 
-/// This struct is a little interesting, as we want to pass overrides that partially modify (via a merge) the current font,
-/// in each definitional binding. To accommodate that with this struct, every single field needs to be an Option,
-/// in order to unambiguously tell the "intend" of override (Some) vs no intent (None).
+/// This struct is a little interesting, as we want to pass overrides that partially modify (via a
+/// merge) the current font, in each definitional binding. To accommodate that with this struct,
+/// every single field needs to be an Option, in order to unambiguously tell the "intend" of
+/// override (Some) vs no intent (None).
 #[derive(Clone, PartialEq)]
 pub struct Font {
-  pub family : Option<String>,
-  pub series : Option<String>,
-  pub shape : Option<String>,
-  pub size : Option<String>,
-  pub color : Option<String>,
-  pub bg : Option<String>,
-  pub opacity : Option<String>,
-  pub encoding : Option<String>,
-  pub language : Option<String>,
-  pub mathstyle : Option<String>,
+  pub family: Option<String>,
+  pub series: Option<String>,
+  pub shape: Option<String>,
+  pub size: Option<String>,
+  pub color: Option<String>,
+  pub bg: Option<String>,
+  pub opacity: Option<String>,
+  pub encoding: Option<String>,
+  pub language: Option<String>,
+  pub mathstyle: Option<String>,
   pub forceseries: Option<bool>,
   pub forcefamily: Option<bool>,
   pub forceshape: Option<bool>,
@@ -54,16 +55,16 @@ pub struct Font {
 impl Default for Font {
   fn default() -> Self {
     Font {
-      family : None,
-      series : None,
-      shape : None,
-      size : None,
-      color : None,
-      bg : None,
-      opacity : None,
-      encoding : None,
-      language : None,
-      mathstyle : None,
+      family: None,
+      series: None,
+      shape: None,
+      size: None,
+      color: None,
+      bg: None,
+      opacity: None,
+      encoding: None,
+      language: None,
+      mathstyle: None,
       forceseries: None,
       forcefamily: None,
       forceshape: None,
@@ -72,24 +73,22 @@ impl Default for Font {
 }
 
 impl fmt::Debug for Font {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", self.to_string())
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.to_string()) }
 }
 
 impl Font {
   pub fn text_default() -> Self {
     Font {
-      family : Some(DEFFAMILY.to_string()),
-      series : Some(DEFSERIES.to_string()),
-      shape : Some(DEFSHAPE.to_string()),
-      size : Some(DEFSIZE.to_string()),
-      color : Some(DEFCOLOR.to_string()),
-      bg : Some(DEFBACKGROUND.to_string()),
-      opacity : Some(DEFOPACITY.to_string()),
-      encoding : Some(DEFENCODING.to_string()),
-      language : Some(DEFLANGUAGE.to_string()),
-      mathstyle : None,
+      family: Some(DEFFAMILY.to_string()),
+      series: Some(DEFSERIES.to_string()),
+      shape: Some(DEFSHAPE.to_string()),
+      size: Some(DEFSIZE.to_string()),
+      color: Some(DEFCOLOR.to_string()),
+      bg: Some(DEFBACKGROUND.to_string()),
+      opacity: Some(DEFOPACITY.to_string()),
+      encoding: Some(DEFENCODING.to_string()),
+      language: Some(DEFLANGUAGE.to_string()),
+      mathstyle: None,
       forceseries: None,
       forcefamily: None,
       forceshape: None,
@@ -97,16 +96,16 @@ impl Font {
   }
   pub fn math_default() -> Self {
     Font {
-      family : Some("math".to_string()),
-      series : Some(DEFSERIES.to_string()),
-      shape : Some("italic".to_string().to_string()),
-      size : Some(DEFSIZE.to_string()),
-      color : Some(DEFCOLOR.to_string()),
-      bg : Some(DEFBACKGROUND.to_string()),
-      opacity : Some(DEFOPACITY.to_string()),
-      encoding : None,
-      language : Some(DEFLANGUAGE.to_string()),
-      mathstyle : Some("text".to_string()),
+      family: Some("math".to_string()),
+      series: Some(DEFSERIES.to_string()),
+      shape: Some("italic".to_string().to_string()),
+      size: Some(DEFSIZE.to_string()),
+      color: Some(DEFCOLOR.to_string()),
+      bg: Some(DEFBACKGROUND.to_string()),
+      opacity: Some(DEFOPACITY.to_string()),
+      encoding: None,
+      language: Some(DEFLANGUAGE.to_string()),
+      mathstyle: Some("text".to_string()),
       forceseries: None,
       forcefamily: None,
       forceshape: None,
@@ -153,7 +152,7 @@ impl Font {
     if let Some(ref forceshape) = self.forceshape {
       parts.push(format!("forceshape: {:?}", forceshape))
     }
-    format!("Font[{}]",parts.join(", "))
+    format!("Font[{}]", parts.join(", "))
   }
 
   // NOTE: In math, NORMALLY, setting any one of
@@ -204,7 +203,6 @@ impl Font {
     newfont
   }
 
-
   /// Instanciate the font for a particular class of symbols.
   /// NOTE: This works in `normal' latex, but probably needs some tunability.
   /// Depending on the fonts being used, the allowable combinations may be different.
@@ -215,46 +213,68 @@ impl Font {
   /// Use Unicode properties to determine font merging.
   pub fn specialize(&self, text: &str) -> Self {
     let mut new = self.clone();
-    if text.is_empty() {return new}    // ?
-    let deffamily = if self.forcefamily.unwrap_or(false) { self.family.clone().unwrap_or(DEFFAMILY.to_string())} else {DEFFAMILY.to_string()};
-    let defseries = if self.forceseries.unwrap_or(false) { self.series.clone().unwrap_or(DEFSERIES.to_string())} else {DEFSERIES.to_string()};
-    let defshape  = if self.forceshape.unwrap_or(false) { self.shape.clone().unwrap_or(DEFSERIES.to_string())} else {DEFSHAPE.to_string()};
+    if text.is_empty() {
+      return new;
+    } // ?
+    let deffamily = if self.forcefamily.unwrap_or(false) {
+      self.family.clone().unwrap_or(DEFFAMILY.to_string())
+    } else {
+      DEFFAMILY.to_string()
+    };
+    let defseries = if self.forceseries.unwrap_or(false) {
+      self.series.clone().unwrap_or(DEFSERIES.to_string())
+    } else {
+      DEFSERIES.to_string()
+    };
+    let defshape = if self.forceshape.unwrap_or(false) {
+      self.shape.clone().unwrap_or(DEFSERIES.to_string())
+    } else {
+      DEFSHAPE.to_string()
+    };
 
-    if LATIN_LETTER_RE.is_match(text) {    // Latin Letter
+    if LATIN_LETTER_RE.is_match(text) {
+      // Latin Letter
       if new.shape.is_none() && new.family.is_none() {
         new.shape = Some("italic".to_string());
       }
-    }
-    else if GREEK_LETTER_RE.is_match(text) { // Single Greek character?
-      if UPPER_LETTER_RE.is_match(text) {                                 // Uppercase
+    } else if GREEK_LETTER_RE.is_match(text) {
+      // Single Greek character?
+      if UPPER_LETTER_RE.is_match(text) {
+        // Uppercase
         if new.family.is_none() || (new.family == Some("math".to_string())) {
           new.family = Some(deffamily);
           if new.shape.is_some() && (new.shape != Some(DEFSHAPE.to_string())) {
             new.shape = Some(defshape); // if ANY shape, must be default
           }
         }
-      } else {    // Lowercase
+      } else {
+        // Lowercase
         if new.family.is_none() || new.family != Some(DEFFAMILY.to_string()) {
           new.family = Some(deffamily);
         }
-        if new.shape.is_none() || new.forceshape == Some(true) { // always ?
-          new.shape  = Some("italic".to_string());
+        if new.shape.is_none() || new.forceshape == Some(true) {
+          // always ?
+          new.shape = Some("italic".to_string());
         }
         if new.series.is_some() && (new.series != Some(DEFSERIES.to_string())) {
           new.series = Some(defseries);
         }
       }
-    } else if DIGIT_LETTER_RE.is_match(text) { // Digit
+    } else if DIGIT_LETTER_RE.is_match(text) {
+      // Digit
       if new.family.is_none() || (new.family == Some("math".to_string())) {
         new.family = Some(deffamily);
-        new.shape  = Some(defshape); // defaults, always.
+        new.shape = Some(defshape); // defaults, always.
       }
-    } else { // Other Symbol
+    } else {
+      // Other Symbol
       new.family = Some(deffamily);
-      new.shape  = Some(defshape); // defaults, always.
-      if new.series.is_some() && (new.series != Some(DEFSERIES.to_string())) { new.series = Some(defseries); } // defaults, always.
+      new.shape = Some(defshape); // defaults, always.
+      if new.series.is_some() && (new.series != Some(DEFSERIES.to_string())) {
+        new.series = Some(defseries);
+      } // defaults, always.
     }
-    return new
+    return new;
   }
 
   pub fn to_attribute(&self) -> String {
@@ -263,7 +283,8 @@ impl Font {
       serialized = serialized + " " + value;
     }
     if let Some(ref value) = self.series {
-      if value != "medium" {// TODO: this is a Hack for alltt.tex, ensure this is generalized
+      if value != "medium" {
+        // TODO: this is a Hack for alltt.tex, ensure this is generalized
         serialized = serialized + " " + value;
       }
     }
@@ -273,21 +294,49 @@ impl Font {
   pub fn distance(&self, other_opt: Option<&Font>) -> i8 {
     if let Some(other) = other_opt {
       let mut distance = 0;
-      if self.family != other.family { distance += 1; }
-      if self.series != other.series { distance += 1; }
-      if self.shape != other.shape { distance += 1; }
-      if self.size != other.size { distance += 1; }
-      if self.color != other.color { distance += 1; }
-      if self.bg != other.bg { distance += 1; }
-      if self.opacity != other.opacity { distance += 1; }
-      if self.encoding != other.encoding { distance += 1; }
-      if self.language != other.language { distance += 1; }
-      if self.mathstyle != other.mathstyle { distance += 1; }
-      if self.forceseries != other.forceseries { distance += 1; }
-      if self.forcefamily != other.forcefamily { distance += 1; }
-      if self.forceshape != other.forceshape { distance += 1; }
+      if self.family != other.family {
+        distance += 1;
+      }
+      if self.series != other.series {
+        distance += 1;
+      }
+      if self.shape != other.shape {
+        distance += 1;
+      }
+      if self.size != other.size {
+        distance += 1;
+      }
+      if self.color != other.color {
+        distance += 1;
+      }
+      if self.bg != other.bg {
+        distance += 1;
+      }
+      if self.opacity != other.opacity {
+        distance += 1;
+      }
+      if self.encoding != other.encoding {
+        distance += 1;
+      }
+      if self.language != other.language {
+        distance += 1;
+      }
+      if self.mathstyle != other.mathstyle {
+        distance += 1;
+      }
+      if self.forceseries != other.forceseries {
+        distance += 1;
+      }
+      if self.forcefamily != other.forcefamily {
+        distance += 1;
+      }
+      if self.forceshape != other.forceshape {
+        distance += 1;
+      }
       distance
-    } else { 0 }
+    } else {
+      0
+    }
   }
 
   /// This method compares 2 fonts, returning the differences between them.
@@ -299,46 +348,46 @@ impl Font {
   ///    value      => "new_attribute_value"
   ///    properties => { %fontproperties }
   /// or (String, Font)
-  pub fn relative_to(&self, other: &Font) -> HashMap<String,(String,Font)> {
-  let family  = match &self.family {
-    &Some(ref fam) => if fam == "math" {
+  pub fn relative_to(&self, other: &Font) -> HashMap<String, (String, Font)> {
+    let family = match &self.family {
+      &Some(ref fam) => if fam == "math" {
         Some("serif".to_string())
       } else {
         Some(fam.to_string())
       },
-    &None => None
-  };
-  let other_family  = match &other.family {
-    &Some(ref fam) => if fam == "math" {
+      &None => None,
+    };
+    let other_family = match &other.family {
+      &Some(ref fam) => if fam == "math" {
         Some("serif".to_string())
       } else {
         Some(fam.to_string())
       },
-    &None => None
-  };
-  let mut diffs = vec![];
-  let mut font_properties = Font::default();
-  if is_diff(&family, &other_family) {
-    diffs.push(family.clone().unwrap());
-    font_properties.family = family;
-  }
-  if is_diff(&self.series, &other.series) {
-    let series = self.series.clone().unwrap();
-    diffs.push(series.clone());
-    font_properties.series = self.series.clone();
-  }
-  if is_diff(&self.shape, &other.shape) {
-    let shape = self.shape.clone().unwrap();
-    diffs.push(shape.clone());
-    font_properties.shape = self.shape.clone();
- }
+      &None => None,
+    };
+    let mut diffs = vec![];
+    let mut font_properties = Font::default();
+    if is_diff(&family, &other_family) {
+      diffs.push(family.clone().unwrap());
+      font_properties.family = family;
+    }
+    if is_diff(&self.series, &other.series) {
+      let series = self.series.clone().unwrap();
+      diffs.push(series.clone());
+      font_properties.series = self.series.clone();
+    }
+    if is_diff(&self.shape, &other.shape) {
+      let shape = self.shape.clone().unwrap();
+      diffs.push(shape.clone());
+      font_properties.shape = self.shape.clone();
+    }
 
-  let mut result = HashMap::new();
+    let mut result = HashMap::new();
 
-  if !diffs.is_empty() {
-    let font_value = diffs.join(" ");
-    result.insert("font".to_string(), (font_value, font_properties));
-  }
+    if !diffs.is_empty() {
+      let font_value = diffs.join(" ");
+      result.insert("font".to_string(), (font_value, font_properties));
+    }
 
     // (is_diff($siz, $osiz)
     // ////      ? (fontsize => { value => $siz, properties => { size => $siz } })
@@ -357,16 +406,14 @@ impl Font {
     //   ? ('xml:lang' => { value => $lang, properties => { language => $lang } })
     //   : ()),
 
-
-        //// Contemplate this: We do NOT want mathstyle showing up (automatically) in the attributes
-        //// So, we presumably want to ignore differences in mathstyle
-        //// They shouldn't (by themselves) affect the display?
+    //// Contemplate this: We do NOT want mathstyle showing up (automatically) in the attributes
+    //// So, we presumably want to ignore differences in mathstyle
+    //// They shouldn't (by themselves) affect the display?
     ////    (is_diff($mstyle, $omstyle)
     ////      ? ('mathstyle' => { value => $mstyle, properties => { mathstyle => $mstyle } })
     ////      : ()),
     result
   }
-
 }
 
 fn is_diff(x: &Option<String>, y: &Option<String>) -> bool {

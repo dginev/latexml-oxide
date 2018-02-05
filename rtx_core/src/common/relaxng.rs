@@ -18,7 +18,7 @@ impl Default for Relaxng {
       elementdefs: HashMap::new(),
       defs: HashMap::new(),
       elements: HashMap::new(),
-      internal_grammars: 0
+      internal_grammars: 0,
     }
   }
 }
@@ -26,9 +26,8 @@ impl Relaxng {
   pub fn add_schema_declaration(&self, document: &mut Document) {
     let mut attributes = HashMap::new();
     attributes.insert("RelaxNGSchema".to_string(), self.name.clone());
-    document.insert_pi("latexml", Some(attributes));
+    document.insert_pi("latexml", Some(attributes)).unwrap(); // should never fail, or will be a very early panic
   }
 
-  pub fn load_schema(&self) {
-  }
+  pub fn load_schema(&self) {}
 }

@@ -3,7 +3,7 @@ use common::error::*;
 use state::State;
 use quote::ToTokens;
 use token::*;
-use stomach::{Stomach};
+use stomach::Stomach;
 use quote::Tokens as QTokens;
 use Digested;
 
@@ -12,14 +12,10 @@ use Digested;
 // .... Efficiently! since this seems to be called MANY times.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tokens {
-  pub tokens: Vec<Token>
+  pub tokens: Vec<Token>,
 }
 impl Default for Tokens {
-  fn default() -> Self {
-    Tokens {
-      tokens: Vec::new()
-    }
-  }
+  fn default() -> Self { Tokens { tokens: Vec::new() } }
 }
 impl ToTokens for Tokens {
   fn to_tokens(&self, tokens: &mut QTokens) {
@@ -35,29 +31,26 @@ macro_rules! Tokens(
 );
 
 impl Tokens {
-  pub fn new(tokens : Vec<Token>) -> Self {
-    Tokens { tokens: tokens }
-  }
+  pub fn new(tokens: Vec<Token>) -> Self { Tokens { tokens: tokens } }
 
   /// Return a list of the tokens making up this Tokens
-  pub fn unlist(self) -> Vec<Token> {
-    self.tokens
-  }
+  pub fn unlist(self) -> Vec<Token> { self.tokens }
 
   /// Checks if there are tokens present
-  pub fn is_empty(&self) -> bool {
-    self.tokens.is_empty()
-  }
+  pub fn is_empty(&self) -> bool { self.tokens.is_empty() }
 
   /// Return a string containing the TeX form of the Tokens
-  pub fn revert(self) -> Vec<Token> {
-    self.tokens
-  }
+  pub fn revert(self) -> Vec<Token> { self.tokens }
 
   /// toString is used often, and for more keyword-like reasons,
   /// NOT for creating valid TeX (use revert or UnTeX for that!)
   pub fn to_string(&self) -> String {
-    self.tokens.iter().map(|t| t.text.as_str()).collect::<Vec<_>>().join("")
+    self
+      .tokens
+      .iter()
+      .map(|t| t.text.as_str())
+      .collect::<Vec<_>>()
+      .join("")
   }
 
   /// Methods for overloaded ops.
@@ -78,19 +71,26 @@ impl Tokens {
   }
 
   pub fn stringify(self) -> String {
-    "Tokens[".to_string() +
-      &self.tokens.iter().map(|t| t.to_string())
-        .collect::<Vec<_>>().join(",")
-    + "]"
+    "Tokens[".to_string()
+      + &self
+        .tokens
+        .iter()
+        .map(|t| t.to_string())
+        .collect::<Vec<_>>()
+        .join(",") + "]"
   }
 
-  pub fn be_digested(self, stomach : &mut Stomach, state: &mut State) -> Result<Digested> {
+  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
     stomach.digest(self, state)
   }
 
   pub fn neutralize(self, extraspecials: &[Token], state: &State) -> Tokens {
     Tokens {
-      tokens: self.tokens.into_iter().map(|t| t.neutralize(extraspecials, state) ).collect::<Vec<_>>()
+      tokens: self
+        .tokens
+        .into_iter()
+        .map(|t| t.neutralize(extraspecials, state))
+        .collect::<Vec<_>>(),
     }
   }
 
@@ -100,7 +100,7 @@ impl Tokens {
       level += match t.code {
         Catcode::BEGIN => 1,
         Catcode::END => -1,
-        _ => 0
+        _ => 0,
       };
     }
     level == 0
@@ -112,15 +112,18 @@ impl Tokens {
     let mut result = Vec::new();
     let mut in_tokens = self.tokens.into_iter();
     while let Some(token) = in_tokens.next() {
-      if token.code != Catcode::PARAM {    // Non '#'; copy it
+      if token.code != Catcode::PARAM {
+        // Non '#'; copy it
         result.push(token);
       } else {
         if let Some(token2) = in_tokens.next() {
-          if token2.code != Catcode::PARAM {    // Not multiple '#'; read arg.
+          if token2.code != Catcode::PARAM {
+            // Not multiple '#'; read arg.
             let arg_number = token2.text.parse::<usize>().unwrap();
             let ref arg = args[arg_number - 1];
             result.extend(arg.clone().unlist());
-          } else {    // Duplicated '#', copy 2nd '#'
+          } else {
+            // Duplicated '#', copy 2nd '#'
             result.push(token2);
           }
         }
@@ -128,5 +131,4 @@ impl Tokens {
     }
     Tokens::new(result)
   }
-
 }

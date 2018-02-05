@@ -163,7 +163,7 @@ impl DigestionAPI for Core {
           if ico_flag {
             let paths_string = search_paths.as_ref().unwrap().join(",");
             let attributes = map!{"paths".to_string() => paths_string};
-            document.insert_pi("latexml", Some(attributes));
+            try!(document.insert_pi("latexml", Some(attributes)));
           }
         }
       }
@@ -181,11 +181,11 @@ impl DigestionAPI for Core {
       if preload.ends_with(".cls") {
         CLS_EXT_REGEX.replace_all(preload, "");
         let attributes = map!{"class".to_string() => preload.to_string()};
-        document.insert_pi("latexml", Some(attributes));
+        try!(document.insert_pi("latexml", Some(attributes)));
       } else {
         STY_EXT_REGEX.replace_all(preload, "");
         let attributes = map!{"package".to_string() => preload.to_string()};
-        document.insert_pi("latexml", Some(attributes));
+        try!(document.insert_pi("latexml", Some(attributes)));
       }
     }
     try!(document.absorb(digested, state));

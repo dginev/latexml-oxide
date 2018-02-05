@@ -1,7 +1,7 @@
 use std::fmt;
 use common::error::*;
 use common::font::Font;
-use {Digested, TexMode, BoxOps};
+use {BoxOps, Digested, TexMode};
 use token::Token;
 use tokens::Tokens;
 use state::State;
@@ -19,21 +19,22 @@ impl fmt::Debug for List {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     try!(write!(f, "\nList["));
     for tbox in &self.boxes {
-      try!(write!(f,"  {:?}\n", tbox));
+      try!(write!(f, "  {:?}\n", tbox));
     }
-    write!(f,"]({:?})\n", self.mode)
+    write!(f, "]({:?})\n", self.mode)
   }
 }
 
 impl BoxOps for List {
-  fn unlist(self) -> Vec<Digested> {
-    self.boxes.into_iter().collect::<Vec<_>>()
-  }
+  fn unlist(self) -> Vec<Digested> { self.boxes.into_iter().collect::<Vec<_>>() }
 
   fn to_string(&self) -> String {
-    self.boxes
-        .iter()
-        .fold(String::new(), |joined, x| joined + &x.to_string())
+    self
+      .boxes
+      .iter()
+      .fold(String::new(), |joined, x| {
+        joined + &x.to_string()
+      })
   }
 
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
@@ -45,14 +46,18 @@ impl BoxOps for List {
   }
 
   fn revert(&self) -> Tokens {
-    let reverted = self.boxes.iter().flat_map(|tbox| tbox.revert().unlist()).collect::<Vec<Token>>();
+    let reverted = self
+      .boxes
+      .iter()
+      .flat_map(|tbox| tbox.revert().unlist())
+      .collect::<Vec<Token>>();
     Tokens::new(reverted)
   }
 
   fn get_font(&self) -> Option<&Font> {
     match self.font {
       Some(ref f) => Some(f),
-      None => None
+      None => None,
     }
   }
 }
@@ -62,8 +67,9 @@ impl List {
     // while (defined($bx = shift(@bxs)) && (!defined $locator)) {
     //   $locator = $bx->getLocator unless defined $locator; }
 
-    // Maybe the most representative font for a List is the font of the LAST box (that _has_ a font!) ???
-    let mut font : Option<Font> = None;
+    // Maybe the most representative font for a List is the font of the LAST box (that _has_ a
+    // font!) ???
+    let mut font: Option<Font> = None;
     for bx in boxes.iter().rev() {
       if let Some(bx_font) = bx.get_font() {
         font = Some(bx_font.clone());

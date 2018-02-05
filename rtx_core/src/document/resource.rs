@@ -14,7 +14,7 @@ impl Default for Resource {
       name: String::new(),
       media: String::new(),
       mimetype: String::new(),
-      content: String::new()
+      content: String::new(),
     }
   }
 }
@@ -23,6 +23,6 @@ pub fn resource_type(abbrev: &str) -> String {
   match abbrev {
     "css" => "text/css",
     "js" => "text/javascript",
-    _ => ""
+    _ => "",
   }.to_string()
 }

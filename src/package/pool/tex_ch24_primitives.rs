@@ -47,7 +47,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
     "}",
     primitivesub!(stomach, _args, state, {
       let f = state.lookup_font();
-      stomach.egroup(state);
+      try!(stomach.egroup(state));
       let return_box = Tbox::new(
         String::new(),
         f,

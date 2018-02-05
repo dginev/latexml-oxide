@@ -156,11 +156,13 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
 fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
   let mut floats: String = String::new();
   let mut has_floats: bool = false;
-  replacement = FLOAT_RE.replace_all(&replacement, |refs: &Captures| -> String {
-    floats = refs.get(1).map_or("", |m| m.as_str()).to_string();
-    has_floats = true;
-    String::new()
-  }).to_string();
+  replacement = FLOAT_RE
+    .replace_all(&replacement, |refs: &Captures| -> String {
+      floats = refs.get(1).map_or("", |m| m.as_str()).to_string();
+      has_floats = true;
+      String::new()
+    })
+    .to_string();
   let mut operations = Vec::new();
 
   while !replacement.is_empty() {
@@ -187,11 +189,13 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
 
     // Processing instruction: <?name a=v ...?>
     if !is_match {
-      replacement = PI_RE.replace(&replacement, |refs: &Captures| -> String {
-        current_tag = refs.get(1).map_or("",|m| m.as_str()).to_string();
-        is_match = true;
-        String::new()
-      }).to_string();
+      replacement = PI_RE
+        .replace(&replacement, |refs: &Captures| -> String {
+          current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
+          is_match = true;
+          String::new()
+        })
+        .to_string();
 
       if is_match {
         // println!("-- matched a PI ");
@@ -202,14 +206,16 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         operations.push(quote!(
           let mut av_props : HashMap<String, String> = HashMap::new();
           #(#av)*
-          document.insert_pi(#current_tag, Some(av_props));
+          try!(document.insert_pi(#current_tag, Some(av_props)));
         ));
 
         let mut pi_closed = false;
-        replacement = PI_CLOSE_RE.replace(&replacement, |_: &Captures| -> String {
-          pi_closed = true;
-          String::new()
-        }).to_string();
+        replacement = PI_CLOSE_RE
+          .replace(&replacement, |_: &Captures| -> String {
+            pi_closed = true;
+            String::new()
+          })
+          .to_string();
 
         if !pi_closed {
           panic!("Missing '?>' at '{:?}'\n", replacement);
@@ -219,12 +225,14 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
 
     // Open tag: <name a=v ...> or .../> (for empty element)
     if !is_match {
-      replacement = LEAD_OPEN_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
-        is_match = true;
-        current_tag = refs.get(1).map_or("",|m| m.as_str()).to_string();
-        // println!("-- open tag {:?}", current_tag);
-        String::new()
-      }).to_string();
+      replacement = LEAD_OPEN_TAG_RE
+        .replace(&replacement, |refs: &Captures| -> String {
+          is_match = true;
+          current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
+          // println!("-- open tag {:?}", current_tag);
+          String::new()
+        })
+        .to_string();
 
       // handle open tag
       if is_match {
@@ -232,9 +240,11 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         if has_floats {
           let float_type = floats.len();
           if float_type == 1 {
-            operations.push(quote!(savenode = Some(document.float_to_element(#current_tag, false));));
+            operations
+              .push(quote!(savenode = Some(document.float_to_element(#current_tag, false));));
           } else if float_type == 2 {
-            operations.push(quote!(savenode = Some(document.float_to_element(#current_tag, true));));
+            operations
+              .push(quote!(savenode = Some(document.float_to_element(#current_tag, true));));
           }
           has_floats = false;
           floats = String::new();
@@ -242,11 +252,11 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         operations.push(quote!(
           let mut av_props : HashMap<String, String> = HashMap::new();
           #(#av)*
-          document.open_element(#current_tag, Some(av_props), None, state);
+          try!(document.open_element(#current_tag, Some(av_props), None, state));
         ));
         // Empty element?
         if replacement.starts_with('/') {
-          operations.push(quote!(document.close_element(#current_tag, state);));
+          operations.push(quote!(try!(document.close_element(#current_tag, state));));
           replacement = replacement[1..].to_owned();
         }
         if replacement.starts_with('>') {
@@ -259,15 +269,17 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
 
     // Close tag: </name>
     if !is_match {
-      replacement = LEAD_CLOSE_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
-        is_match = true;
-        current_tag = refs.get(1).map_or("",|m| m.as_str()).to_string();
-        // println!("-- close tag {:?}", current_tag);
-        String::new()
-      }).to_string();
+      replacement = LEAD_CLOSE_TAG_RE
+        .replace(&replacement, |refs: &Captures| -> String {
+          is_match = true;
+          current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
+          // println!("-- close tag {:?}", current_tag);
+          String::new()
+        })
+        .to_string();
       // handle close tag
       if is_match {
-        operations.push(quote!(document.close_element(#current_tag, state);));
+        operations.push(quote!(try!(document.close_element(#current_tag, state));));
       }
     }
 
@@ -298,17 +310,19 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
 
     // Else random text
     if !is_match {
-      replacement = LEAD_RANDOM_TEXT_RE.replace(&replacement, |refs: &Captures| -> String {
-        if let Some(text_match) = refs.get(1) {
-          let escaped_match = &slashify(&unquote(text_match.as_str()));
-          operations.push(quote!(
+      replacement = LEAD_RANDOM_TEXT_RE
+        .replace(&replacement, |refs: &Captures| -> String {
+          if let Some(text_match) = refs.get(1) {
+            let escaped_match = &slashify(&unquote(text_match.as_str()));
+            operations.push(quote!(
             let content_box = Digested::Box(Tbox{text: #escaped_match.to_string(), ..Tbox::default()});
             try!(document.absorb(content_box, state));
           ));
-          is_match = true;
-        }
-        String::new()
-      }).to_string();
+            is_match = true;
+          }
+          String::new()
+        })
+        .to_string();
     }
   }
 
@@ -347,11 +361,13 @@ fn translate_string(mut text: &mut String) -> quote::Tokens {
       } else {
         let mut is_quoted_match = false;
         let mut quoted_match = String::new();
-        *text = LEAD_QUOTED_RE.replace(text, |refs: &Captures| -> String {
-          quoted_match = refs.get(1).map_or("",|m| m.as_str()).to_string();
-          is_quoted_match = true;
-          String::new()
-        }).to_string();
+        *text = LEAD_QUOTED_RE
+          .replace(text, |refs: &Captures| -> String {
+            quoted_match = refs.get(1).map_or("", |m| m.as_str()).to_string();
+            is_quoted_match = true;
+            String::new()
+          })
+          .to_string();
         if is_quoted_match {
           let escaped_match = &slashify(&unquote(&quoted_match));
           values.push(quote!(#escaped_match));
@@ -411,11 +427,13 @@ fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
       //       push(@avs, '%{' . translate_value() . '}'); }
     }
     if !is_match {
-      *text = KEY_RE.replace(text, |refs: &Captures| -> String {
-        key = refs.get(1).map_or("",|m| m.as_str()).to_string();
-        is_match = true;
-        String::new()
-      }).to_string();
+      *text = KEY_RE
+        .replace(text, |refs: &Captures| -> String {
+          key = refs.get(1).map_or("", |m| m.as_str()).to_string();
+          is_match = true;
+          String::new()
+        })
+        .to_string();
       if is_match {
         let val = translate_string(&mut text);
         avs.push(quote!(av_props.insert(#key.to_string(), #val);));
@@ -437,11 +455,13 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
   let mut is_match = false;
   let mut fcn = String::new();
   // Recognize a function call, w/args
-  *text = FN_RE.replace(text, |refs: &Captures| -> String {
-    fcn = refs.get(1).map_or("",|m| m.as_str()).to_owned();
-    is_match = true;
-    String::new()
-  }).to_string();
+  *text = FN_RE
+    .replace(text, |refs: &Captures| -> String {
+      fcn = refs.get(1).map_or("", |m| m.as_str()).to_owned();
+      is_match = true;
+      String::new()
+    })
+    .to_string();
   if is_match {
     let mut args = Vec::new();
     while !LEAD_CPAREN_RE.is_match(text) {
@@ -457,10 +477,12 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
       };
       args.push(arg);
       let mut intermediate_kv = false;
-      *text = LEAD_KV_SEP.replace(text, |_: &Captures| {
-        intermediate_kv = true;
-        String::new()
-      }).to_string();
+      *text = LEAD_KV_SEP
+        .replace(text, |_: &Captures| {
+          intermediate_kv = true;
+          String::new()
+        })
+        .to_string();
       if !intermediate_kv {
         break;
       }
@@ -477,45 +499,52 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
 
   if !is_match {
     // Recognize an explicit #1 for whatsit args
-    *text = ARG_HOLE_RE.replace(text, |arg_refs: &Captures| {
-      is_match = true;
-      let n = arg_refs.get(1).map_or("",|m| m.as_str()).to_string();
-      let n_int = n.parse::<i32>().unwrap_or(-1);
-      if n_int < 1 {
-        //|| (n_int > *NARGS) {
-        panic!("Illegal argument number {:?} at '{:?}'\n", n_int, text);
-      } else {
-        let n_usize: usize = (n_int - 1) as usize; // index starts at 0
-        val = quote!(args[#n_usize])
-      }
-      String::new()
-    }).to_string();
+    *text = ARG_HOLE_RE
+      .replace(text, |arg_refs: &Captures| {
+        is_match = true;
+        let n = arg_refs.get(1).map_or("", |m| m.as_str()).to_string();
+        let n_int = n.parse::<i32>().unwrap_or(-1);
+        if n_int < 1 {
+          //|| (n_int > *NARGS) {
+          panic!("Illegal argument number {:?} at '{:?}'\n", n_int, text);
+        } else {
+          let n_usize: usize = (n_int - 1) as usize; // index starts at 0
+          val = quote!(args[#n_usize])
+        }
+        String::new()
+      })
+      .to_string();
   }
   if !is_match {
-    *text = PROP_HOLE_RE.replace(text, |prop_refs: &Captures| {
-      let prop_name = prop_refs.get(1).map_or("",|m| m.as_str()).to_owned();
-      is_match = true;
-      // Recognize #prop for whatsit properties
-      // val = if prop_name == "body" {
-      // body is Digested, TODO: What strategy do we need to unwrap any ObjectStore
-      // meaningfully ?
-      val = quote!(props.get(#prop_name));
-      String::new()
-    }).to_string();
+    *text = PROP_HOLE_RE
+      .replace(text, |prop_refs: &Captures| {
+        let prop_name = prop_refs.get(1).map_or("", |m| m.as_str()).to_owned();
+        is_match = true;
+        // Recognize #prop for whatsit properties
+        // val = if prop_name == "body" {
+        // body is Digested, TODO: What strategy do we need to unwrap any ObjectStore
+        // meaningfully ?
+        val = quote!(props.get(#prop_name));
+        String::new()
+      })
+      .to_string();
   }
   if !is_match {
     // Build the exclusion regex
-    let mut exclusion_str: String = concat!(r"^((?:", QUOTED_SPECIALS!(), r"|[^", SPECIALS!()).to_owned();
+    let mut exclusion_str: String =
+      concat!(r"^((?:", QUOTED_SPECIALS!(), r"|[^", SPECIALS!()).to_owned();
     exclusion_str = exclusion_str + exclude_chars + r"])+)";
     let exclusion_re: Regex = Regex::new(&exclusion_str).unwrap();
 
-    exclusion_re.replace(text, |quoted_refs: &Captures| {
-      is_match = true;
-      let quoted = quoted_refs.get(1).map_or("",|m| m.as_str()).to_owned();
-      let normalized_val = &slashify(&unquote(&quoted));
-      val = quote!(#normalized_val);
-      String::new()
-    }).to_string();
+    exclusion_re
+      .replace(text, |quoted_refs: &Captures| {
+        is_match = true;
+        let quoted = quoted_refs.get(1).map_or("", |m| m.as_str()).to_owned();
+        let normalized_val = &slashify(&unquote(&quoted));
+        val = quote!(#normalized_val);
+        String::new()
+      })
+      .to_string();
   }
   if !is_match {
     panic!("Missing value at '{:?}'\n", text);
@@ -526,7 +555,9 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
 fn parse_conditional(text: &mut String) -> (quote::Tokens, String, String) {
   // Remove leading "?"
   // println!("-- cond before: {:?}", text);
-  *text = LEAD_QMARK.replace(text, |_: &Captures| String::new()).to_string();
+  *text = LEAD_QMARK
+    .replace(text, |_: &Captures| String::new())
+    .to_string();
   let translated_bool = translate_value("(", text);
   let bool_branch = quote!(  #translated_bool );
   let if_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis));
@@ -539,13 +570,11 @@ fn parse_conditional(text: &mut String) -> (quote::Tokens, String, String) {
   }
 }
 
-fn slashify(text: &str) -> String {
-  text.replace("\\", "\\\\")
-}
+fn slashify(text: &str) -> String { text.replace("\\", "\\\\") }
 fn unquote(text: &str) -> String {
   ESCAPED_OP
     .replace_all(text, |escaped_refs: &Captures| -> String {
-      escaped_refs.get(1).map_or("",|m| m.as_str()).to_string()
+      escaped_refs.get(1).map_or("", |m| m.as_str()).to_string()
     })
     .replace("##", "#")
     .replace("&amp;", "&")

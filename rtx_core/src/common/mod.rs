@@ -1,4 +1,5 @@
-#[macro_use]pub mod error;
+#[macro_use]
+pub mod error;
 pub mod object;
 pub mod model;
 pub mod xml;
@@ -43,20 +44,18 @@ impl fmt::Display for DigestionMode {
       TeX => "TeX",
       LaTeX => "LaTeX",
       AmSTeX => "AmSTeX",
-      BibTeX => "BibTeX"
+      BibTeX => "BibTeX",
     };
     write!(f, "{}", formatted)
   }
 }
-
 
 impl DigestionMode {
   pub fn extension(&self) -> String {
     match *self {
       DigestionMode::TeX | DigestionMode::LaTeX | DigestionMode::AmSTeX => "tex",
       DigestionMode::BibTeX => "bib",
-    }
-    .to_string()
+    }.to_string()
   }
 }
 #[derive(Clone)]

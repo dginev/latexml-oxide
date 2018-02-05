@@ -1,7 +1,7 @@
 use syn;
 use quote;
 use regex::Regex;
-use util::{get_options_from_input, get_option};
+use util::{get_option, get_options_from_input};
 
 use std::fs::File;
 use std::io::BufReader;
@@ -18,27 +18,31 @@ lazy_static! {
 
 pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
   fn bug() -> ! {
-      panic!("This is a bug. Please open a Github issue \
-             with your load_model invocation");
+    panic!(
+      "This is a bug. Please open a Github issue \
+       with your load_model invocation"
+    );
   }
   let options = get_options_from_input("load_model_options", &input.attrs, bug);
   let name_opt = options.as_ref().map(|o| get_option(&o, "name", bug));
   let name = match name_opt {
     Some(n) => n,
-    None => panic!("Model name is required to load a compiled model!")
+    None => panic!("Model name is required to load a compiled model!"),
   };
 
-  let pathname_opt = pathname::find(&name, pathname::FindOptions{
-    paths: Some(vec![".".to_owned()]),
-    types: Some(vec!["model".to_string()]),
-    installation_subdir: Some("resources/RelaxNG".to_owned())
-  });
+  let pathname_opt = pathname::find(
+    &name,
+    pathname::FindOptions {
+      paths: Some(vec![".".to_owned()]),
+      types: Some(vec!["model".to_string()]),
+      installation_subdir: Some("resources/RelaxNG".to_owned()),
+    },
+  );
 
   let path = match pathname_opt {
     Some(n) => n,
-    None => panic!("Model not found, required to load a compiled model!")
+    None => panic!("Model not found, required to load a compiled model!"),
   };
-
 
   let mut operations = Vec::new();
   // NOTE: Do something automatic about this too!?!
@@ -54,34 +58,44 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
   for line_result in compiled_reader.lines() {
     if let Ok(line) = line_result {
       if let Some(caps) = TAG_MODEL_LINE.captures(&line) {
-        let tag = caps.get(1).map_or("",|m| m.as_str()).to_string();
-        let attr = caps.get(2).map_or("",|m| m.as_str()).to_string();
-        let children = caps.get(3).map_or("",|m| m.as_str()).to_string();
+        let tag = caps.get(1).map_or("", |m| m.as_str()).to_string();
+        let attr = caps.get(2).map_or("", |m| m.as_str()).to_string();
+        let children = caps.get(3).map_or("", |m| m.as_str()).to_string();
 
-        let attr_vec : Vec<String> = attr.split(",").map(|t| t.to_string()).collect();
-        let child_vec : Vec<String> = children.split(",").map(|t| t.to_string()).collect();
+        let attr_vec: Vec<String> = attr.split(",").map(|t| t.to_string()).collect();
+        let child_vec: Vec<String> = children.split(",").map(|t| t.to_string()).collect();
 
         operations.push(quote!(
           model.add_tag_attribute(#tag, vec![#(#attr_vec),*]);
           model.add_tag_content(#tag, vec![#(#child_vec),*]);
         ));
       } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
-        let classname = caps.get(1).map_or("",|m| m.as_str()).to_string();
-        let elements = caps.get(2).map_or("",|m| m.as_str()).to_string();
-        let elements_vec = elements.split(",").map(|t| t.to_string()).collect::<Vec<String>>();
+        let classname = caps.get(1).map_or("", |m| m.as_str()).to_string();
+        let elements = caps.get(2).map_or("", |m| m.as_str()).to_string();
+        let elements_vec = elements
+          .split(",")
+          .map(|t| t.to_string())
+          .collect::<Vec<String>>();
 
         operations.push(quote!(
           model.set_schema_class(#classname,
             HashSet::from_iter(vec![#(#elements_vec),*].iter().map(|t| t.to_string())));
         ));
       } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
-        let prefix = caps.get(1).map_or("",|m| m.as_str()).to_string();
-        let namespace = caps.get(2).map_or("",|m| m.as_str()).to_string();
+        let prefix = caps.get(1).map_or("", |m| m.as_str()).to_string();
+        let namespace = caps.get(2).map_or("", |m| m.as_str()).to_string();
         operations.push(quote!(
           model.register_document_namespace(#prefix, Some(#namespace.to_owned()));
         ));
       } else {
-        fatal!(Codegen, Malformed, format!(" Loaded model '{:?}' is malformatted at \"{:?}\"", path, line));
+        fatal!(
+          Codegen,
+          Malformed,
+          format!(
+            " Loaded model '{:?}' is malformatted at \"{:?}\"",
+            path, line
+          )
+        );
       }
     }
   }
@@ -98,18 +112,19 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
   ))
 }
 
-
 pub fn load_indirect_model(input: syn::MacroInput) -> quote::Tokens {
   // Load the model as one would at runtime
-    fn bug() -> ! {
-      panic!("This is a bug. Please open a Github issue \
-             with your load_model invocation");
+  fn bug() -> ! {
+    panic!(
+      "This is a bug. Please open a Github issue \
+       with your load_model invocation"
+    );
   }
   let options = get_options_from_input("load_indirect_model_options", &input.attrs, bug);
   let name_opt = options.as_ref().map(|o| get_option(&o, "name", bug));
   let name = match name_opt {
     Some(n) => n,
-    None => panic!("Model name is required to load a compiled model!")
+    None => panic!("Model name is required to load a compiled model!"),
   };
 
   let mut state = State::default();
@@ -122,7 +137,9 @@ pub fn load_indirect_model(input: syn::MacroInput) -> quote::Tokens {
   operations.push(quote!(let mut im : IndirectModel = HashMap::new();));
   for (key, sub_model) in indirect_model {
     for (sub_key, value) in sub_model {
-      operations.push(quote!(im.entry(#key).or_insert_with(HashMap::new).entry(#sub_key).or_insert(#value)));
+      operations.push(
+        quote!(im.entry(#key).or_insert_with(HashMap::new).entry(#sub_key).or_insert(#value)),
+      );
     }
   }
   operations.push(quote!(return im));
