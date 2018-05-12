@@ -49,8 +49,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // The core sectioning commands are defined in LaTeX.pm
   // but the counter setup, etc, depends on article
   SetCounter!("secnumdepth", Number!(3), None);
-  // NewCounter!("part",          "document",      idprefix => "Pt",  nested => ["section"]);
-  // NewCounter("section",       "document",      idprefix => "S",   nested => ["subsection"]);
+  NewCounter!("part",          "document",      idprefix => "Pt",  nested => vec!["section"]);
+  NewCounter!("section",       "document",      idprefix => "S",   nested => vec!["subsection"]);
   // NewCounter("subsection",    "section",       idprefix => "SS",  nested => ["subsubsection"]);
   // NewCounter("subsubsection", "subsection",    idprefix => "SSS", nested => ["paragraph"]);
   // NewCounter("paragraph",     "subsubsection", idprefix => "P",   nested => ["subparagraph"]);

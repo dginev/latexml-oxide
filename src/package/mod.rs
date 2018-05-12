@@ -527,7 +527,7 @@ pub fn select_relaxng_schema(
   return;
 }
 
-pub fn def_macro_i(
+pub fn def_macro(
   cs: Token,
   paramlist: Option<Parameters>,
   expansion: Option<ExpansionClosure>,
@@ -551,6 +551,40 @@ pub fn def_macro_i(
     })),
     None,
   );
+}
+
+pub struct RegisterOptions {
+  getter: bool,
+  setter: bool,
+}
+
+pub fn def_register(
+  cs: Token,
+  paramlist: Option<Parameters>,
+  value_opt: Option<Number>,
+  options: Option<RegisterOptions>,
+  state: &mut State,
+)
+{
+  //   my $type   = $register_types{ ref $value };
+  //   my $name   = ToString($cs);
+  //   my $getter = $options{getter}
+  //     || sub { LookupValue(join('', $name, map { ToString($_) } @_)) || $value; };
+  //   my $setter = $options{setter}
+  //     || ($options{readonly}
+  //     ? sub { my ($v, @args) = @_;
+  //       Warn('unexpected', $name, $STATE->getStomach,
+  //         "Can't assign to register $name"); return; }
+  //     : sub { my ($v, @args) = @_;
+  //       AssignValue(join('', $name, map { ToString($_) } @args) => $v); });
+  //   # Not really right to set the value!
+  //   AssignValue(ToString($cs) => $value) if defined $value;
+  //   $STATE->installDefinition(LaTeXML::Core::Definition::Register->new($cs, $paramlist,
+  //       registerType => $type,
+  //       getter       => $getter, setter => $setter,
+  //       readonly     => $options{readonly}),
+  //     'global');
+  return;
 }
 
 //**********************************************************************
@@ -1017,10 +1051,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
     // With explicit state
     // TODO: package::coerce_cs on $cs
-    ($cs:expr, $paramlist:expr, None, $state_arg:expr) => (def_macro_i($cs, $paramlist, None, $state_arg));
-    ($cs:expr, $paramlist:expr, $expansion:expr, $state_arg:expr) => (def_macro_i($cs, $paramlist, Some(Rc::new($expansion)), $state_arg));
+    ($cs:expr, $paramlist:expr, None, $state_arg:expr) => (def_macro($cs, $paramlist, None, $state_arg));
+    ($cs:expr, $paramlist:expr, $expansion:expr, $state_arg:expr) => (def_macro($cs, $paramlist, Some(Rc::new($expansion)), $state_arg));
     // TODO: Use the definitional options such as "locked"
-    ($cs:expr, $paramlist:expr, $expansion:expr, $key1:ident=>$val1:expr, $state_arg:expr) => (def_macro_i($cs, $paramlist, Some(Rc::new($expansion)), $state_arg));
+    ($cs:expr, $paramlist:expr, $expansion:expr, $key1:ident=>$val1:expr, $state_arg:expr) => (def_macro($cs, $paramlist, Some(Rc::new($expansion)), $state_arg));
   );
 
   macro_rules! DefMacroT(
@@ -1077,7 +1111,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       let expansion;
       compile_expansion!(expansion, $expansion);
       // TODO: Also pass in options
-      def_macro_i(cs, paramlist, expansion, $state_arg);
+      def_macro(cs, paramlist, expansion, $state_arg);
     });
     // Rust closure expansion form
     ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $options:expr) => (
@@ -1085,7 +1119,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $options:expr, $state_arg:ident) => ({
       let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
       // TODO: Also pass in options
-      def_macro_i(cs, paramlist, Some(Rc::new(|$gullet, $args, $inner_state| {$block})), $state_arg);
+      def_macro(cs, paramlist, Some(Rc::new(|$gullet, $args, $inner_state| {$block})), $state_arg);
     })
   );
 
@@ -1385,26 +1419,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   macro_rules! DefRegisterI {
     ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => (DefRegisterI!($cs, $paramlist, $value, $options, $state));
-    ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => ({
-  //   my $type   = $register_types{ ref $value };
-  //   my $name   = ToString($cs);
-  //   my $getter = $options{getter}
-  //     || sub { LookupValue(join('', $name, map { ToString($_) } @_)) || $value; };
-  //   my $setter = $options{setter}
-  //     || ($options{readonly}
-  //     ? sub { my ($v, @args) = @_;
-  //       Warn('unexpected', $name, $STATE->getStomach,
-  //         "Can't assign to register $name"); return; }
-  //     : sub { my ($v, @args) = @_;
-  //       AssignValue(join('', $name, map { ToString($_) } @args) => $v); });
-  //   # Not really right to set the value!
-  //   AssignValue(ToString($cs) => $value) if defined $value;
-  //   $STATE->installDefinition(LaTeXML::Core::Definition::Register->new($cs, $paramlist,
-  //       registerType => $type,
-  //       getter       => $getter, setter => $setter,
-  //       readonly     => $options{readonly}),
-  //     'global');
-    });
+    ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => (def_register($cs, $paramlist, $value, $options, $state_arg));
   }
 
   // sub LookupRegister {
@@ -2476,10 +2491,17 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   #[macro_export]
   macro_rules! NewCounter {
-    ($ctr:ident) => (NewCounter!($ctr, "", None, $state));
-    ($ctr:ident, $within:expr) => (NewCounter!($ctr, $within, None, $state));
-    ($ctr:ident, $within:expr, $options:expr) => (NewCounter!($ctr, $within, $options, $state));
-    ($ctr:ident, $within:expr, $options:expr, $state_arg:ident) => (new_counter($ctr, $within, $options, $state_arg));
+    ($ctr:expr) => (NewCounter!($ctr, "", None, $state));
+    ($ctr:expr, $within:expr) => (NewCounter!($ctr, $within, None, $state));
+    ($ctr:expr, $within:expr, None, $state_arg:ident) => (new_counter($ctr, $within, None, $state_arg));
+
+    // with options
+    ($ctr:expr, $within:expr, $key1:ident => $val1:expr) => (NewCounter!($ctr, $within, $key1 => $val1, $state));
+    ($ctr:expr, $within:expr, $key1:ident => $val1:expr, $state_arg: ident) =>
+     (new_counter($ctr, $within, Some(NewDefault!(NewCounterOptions, $key1=>$val1)), $state_arg));
+    ($ctr:expr, $within:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr) => (NewCounter!($ctr, $within, $key1=>$val1, $key2=>$val2, $state));
+    ($ctr:expr, $within:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr, $state_arg: ident) =>
+     (new_counter($ctr, $within, Some(NewDefault!(NewCounterOptions, $key1=>$val1, $key2=>$val2)), $state_arg));
   }
 
   #[macro_export]
@@ -2614,21 +2636,27 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
 )}
 
-pub fn new_counter(
-  ctr: &str,
-  within: &str,
-  options: Option<HashMap<String, String>>,
-  state: &mut State,
-)
-{
-  SetupBindingMacros!(state);
+pub struct NewCounterOptions {
+  idprefix: &'static str,
+  nested: Vec<&'static str>,
+}
+impl Default for NewCounterOptions {
+  fn default() -> Self {
+    NewCounterOptions {
+      idprefix: "",
+      nested: Vec::new(),
+    }
+  }
+}
+
+pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, state: &mut State) {
   let unctr = format!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
   let cctr = format!("\\c@{}", ctr);
   let clctr = format!("\\cl@{}", ctr);
   let cunctr = format!("\\c@{}", unctr);
   let clunctr = format!("\\cl@{}", unctr);
 
-  DefRegisterI!(T_CS!(cctr), None, Number!(0), None);
+  def_register(T_CS!(cctr), None, Some(Number::new(0)), None, state);
   // state.assign_value(cctr, Number!(0), Some(Scope::Global));
   // // TODO:
   // // AfterAssignment!();

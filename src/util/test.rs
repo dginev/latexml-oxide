@@ -2,13 +2,13 @@ extern crate log;
 extern crate rtx_core;
 
 use glob::glob;
-use std::collections::HashMap;
 use libxml::parser::Parser;
+use std::collections::HashMap;
 
-use rtx_core::{Core, CoreOptions};
-use rtx_core::state::State;
-use rtx_core::document::Document;
 use libxml::tree::Document as XmlDoc;
+use rtx_core::document::Document;
+use rtx_core::state::State;
+use rtx_core::{Core, CoreOptions};
 
 use core::DigestionAPI;
 
@@ -44,7 +44,6 @@ fn rtx_ok(tex_path: String, xml_path: &str, name: &str) {
   if !tex_strings.is_empty() {
     let xml_strings = process_xmlfile(xml_path, name);
     if !xml_strings.is_empty() {
-      info!("[test] xml diff for {:?}", name);
       for (tex_line, xml_line) in tex_strings.iter().zip(xml_strings.iter()) {
         assert_eq!(tex_line, xml_line);
       }
