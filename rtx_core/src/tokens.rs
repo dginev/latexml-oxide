@@ -1,10 +1,10 @@
 ///! Token List constructors.
 use common::error::*;
-use state::State;
 use quote::ToTokens;
-use token::*;
-use stomach::Stomach;
 use quote::Tokens as QTokens;
+use state::State;
+use stomach::Stomach;
+use token::*;
 use Digested;
 
 // Form a Tokens list of Token's

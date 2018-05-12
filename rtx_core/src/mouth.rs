@@ -1,9 +1,9 @@
+use regex::Regex;
+use std::collections::VecDeque;
+use std::fs::File;
 use std::io;
 use std::io::prelude::*;
-use std::fs::File;
-use std::collections::VecDeque;
 use std::sync::Mutex;
-use regex::Regex;
 
 use common::error::*;
 use state::{Catcodes, ObjectStore, Scope, State, StateOptions};
@@ -20,9 +20,9 @@ pub enum FoodType {
 }
 
 lazy_static! {
-  static ref LASTID : Mutex<u32> = Mutex::new(0);
-  static ref LINEBREAK_REGEX : Regex = Regex::new(r"(?s:\015\012|\015|\012|\r)").unwrap();
-  static ref LOWERHEX_REGEX : Regex = Regex::new(r"^[0-9a-f]$").unwrap();
+  static ref LASTID: Mutex<u32> = Mutex::new(0);
+  static ref LINEBREAK_REGEX: Regex = Regex::new(r"(?s:\015\012|\015|\012|\r)").unwrap();
+  static ref LOWERHEX_REGEX: Regex = Regex::new(r"^[0-9a-f]$").unwrap();
   static ref SANITIZE_LINE_REGEX: Regex = Regex::new(r"((\\ )*)\s*$").unwrap();
 }
 

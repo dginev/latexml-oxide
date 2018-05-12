@@ -1,16 +1,16 @@
-use std::rc::Rc;
+use common::error::*;
+use common::object::Object;
+use definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionClosure};
+use document::Document;
+use gullet::Gullet;
+use parameter::Parameters;
 use state::{Scope, State};
-use Digested;
+use std::rc::Rc;
+use stomach::Stomach;
 use token::*;
 use tokens::Tokens;
-use gullet::Gullet;
-use stomach::Stomach;
-use parameter::Parameters;
-use common::object::Object;
-use common::error::*;
-use definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionClosure};
 use whatsit::Whatsit;
-use document::Document;
+use Digested;
 
 #[derive(Clone)]
 pub struct ExpandableOptions {

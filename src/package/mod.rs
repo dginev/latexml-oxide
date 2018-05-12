@@ -1,36 +1,38 @@
-pub use std::collections::HashMap;
-pub use regex::Regex;
-pub use std::rc::Rc;
-pub use std::collections::VecDeque;
 pub use libxml::tree::{Namespace, Node};
+pub use regex::Regex;
+pub use std::collections::HashMap;
+pub use std::collections::VecDeque;
+pub use std::rc::Rc;
 
-pub use rtx_core::{BoxOps, Core, Digested};
-pub use rtx_core::tbox::Tbox;
-pub use rtx_core::state::{ObjectStore, Scope, State};
 pub use rtx_core::common::error::*;
 pub use rtx_core::common::font::Font;
-pub use rtx_core::common::number;
-pub use rtx_core::token::*;
-pub use rtx_core::parameter::{Parameter, Parameters};
-pub use rtx_core::mouth;
-pub use rtx_core::mouth::Mouth;
-pub use rtx_core::definition::{BeforeDigestClosure, ConstructionClosure, Definition,
-                               DigestionClosure, ExpansionClosure, ReplacementClosure};
-pub use rtx_core::document::Document;
+pub use rtx_core::common::number::Number;
+pub use rtx_core::definition::conditional::{Conditional, ConditionalType};
+pub use rtx_core::definition::constructor::ConstructorOptions;
+pub use rtx_core::definition::expandable::Expandable;
+pub use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
+pub use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
+pub use rtx_core::definition::ConditionalClosure;
+pub use rtx_core::definition::{
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionClosure,
+  ReplacementClosure,
+};
 pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptionName, TagOptions};
-pub use rtx_core::util::pathname;
-pub use rtx_core::token::Token;
-pub use rtx_core::tokens::Tokens;
+pub use rtx_core::document::Document;
 pub use rtx_core::gullet::Gullet;
+pub use rtx_core::mouth;
+pub use rtx_core::mouth::Mouth;
+pub use rtx_core::parameter::{Parameter, Parameters};
+pub use rtx_core::state::{ObjectStore, Scope, State};
 pub use rtx_core::stomach::Stomach;
+pub use rtx_core::tbox::Tbox;
+pub use rtx_core::token::Token;
+pub use rtx_core::token::*;
+pub use rtx_core::tokens::Tokens;
+pub use rtx_core::util::pathname;
 pub use rtx_core::whatsit::Whatsit;
-pub use rtx_core::definition::ConditionalClosure;
-pub use rtx_core::definition::expandable::Expandable;
-pub use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
-pub use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
-pub use rtx_core::definition::constructor::ConstructorOptions;
-pub use rtx_core::definition::conditional::{Conditional, ConditionalType};
+pub use rtx_core::{BoxOps, Core, Digested};
 
 //**********************************************************************
 //   Initially, I thought LaTeXML Packages should try to be like perl modules:
@@ -180,15 +182,23 @@ impl Default for RequireOptions {
 /// Tokenize($string); Tokenizes the string using the standard cattable, returning a
 /// LaTeXML::Core::Tokens
 macro_rules! Tokenize {
-  ($string:expr)=>(mouth::tokenize($string, None));
-  ($string:expr, $state:ident)=>(mouth::tokenize($string, Some($state)));
+  ($string:expr) => {
+    mouth::tokenize($string, None)
+  };
+  ($string:expr, $state:ident) => {
+    mouth::tokenize($string, Some($state))
+  };
 }
 
 /// TokenizeInternal($string); Tokenizes the string using the internal cattable, returning a
 /// LaTeXML::Core::Tokens
 macro_rules! TokenizeInternal {
-  ($string:expr)=>(mouth::tokenize_internal($string, None));
-  ($string:expr, $state:ident)=>(mouth::tokenize_internal($string, Some($state)));
+  ($string:expr) => {
+    mouth::tokenize_internal($string, None)
+  };
+  ($string:expr, $state:ident) => {
+    mouth::tokenize_internal($string, Some($state))
+  };
 }
 
 /// This (and `FindFile`) needs to evolve a bit to support reading raw .sty (.def, etc) files from
@@ -289,10 +299,10 @@ pub fn find_file(request: &str, _forbid_ltxml: bool) -> Option<String> {
 pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
 
 lazy_static! {
-  static ref CSNAME_MACRO_REGEX : Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
-  static ref CS_REGEX : Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
-  static ref SINGLE_CHAR_REGEX : Regex = Regex::new(r"^(\\.)").unwrap();
-  static ref ACTIVE_CHAR_REGEX : Regex = Regex::new(r"^(.)").unwrap();
+  static ref CSNAME_MACRO_REGEX: Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
+  static ref CS_REGEX: Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
+  static ref SINGLE_CHAR_REGEX: Regex = Regex::new(r"^(\\.)").unwrap();
+  static ref ACTIVE_CHAR_REGEX: Regex = Regex::new(r"^(.)").unwrap();
 }
 
 pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option<Parameters>))> {
@@ -336,10 +346,10 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
 }
 
 lazy_static! {
-  static ref NESTED_CHECK : Regex = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
-  static ref OPTIONAL_CHECK : Regex = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
-  static ref DEFAULT_CHECK : Regex = Regex::new(r"^Default:(.*)$").unwrap();
-  static ref PARAMSPECT_CHECK : Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
+  static ref NESTED_CHECK: Regex = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
+  static ref OPTIONAL_CHECK: Regex = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
+  static ref DEFAULT_CHECK: Regex = Regex::new(r"^Default:(.*)$").unwrap();
+  static ref PARAMSPECT_CHECK: Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
 }
 pub fn parse_parameters(
   mut prototype: String,
@@ -627,36 +637,47 @@ macro_rules! NewDefault {
 
 #[macro_export]
 macro_rules! transfer_default {
-  ($val:ident, $struct_source:ident, $hash_receiver:ident) => (
-    $hash_receiver.entry(stringify!($val).to_owned()).or_insert($struct_source.$val.clone().to_string());
-  )
+  ($val:ident, $struct_source:ident, $hash_receiver:ident) => {
+    $hash_receiver
+      .entry(stringify!($val).to_owned())
+      .or_insert($struct_source.$val.clone().to_string());
+  };
 }
 #[macro_export]
 macro_rules! transfer_opt_default {
-  ($val:ident, $struct_source:ident, $hash_receiver:ident) => (
+  ($val:ident, $struct_source:ident, $hash_receiver:ident) => {
     if let &Some(ref $val) = &$struct_source.$val {
-      $hash_receiver.entry(stringify!($val).to_owned()).or_insert($val.to_owned());
+      $hash_receiver
+        .entry(stringify!($val).to_owned())
+        .or_insert($val.to_owned());
     }
-  )
+  };
 }
 
 #[macro_export]
 macro_rules! sub {
-  ($body:expr) => (vec![Rc::new($body)])
+  ($body:expr) => {
+    vec![Rc::new($body)]
+  };
 }
 
 #[macro_export]
 macro_rules! tagsub {
-  ($document:ident, $node:ident, $state:ident, $body:expr) => (vec![Rc::new(
-    |$document:&mut Document, mut $node:&mut Node, $state:&mut State| -> Result<()>  {
-      $body;
-      Ok(())
-    })])
+  ($document:ident, $node:ident, $state:ident, $body:expr) => {
+    vec![Rc::new(
+      |$document: &mut Document, mut $node: &mut Node, $state: &mut State| -> Result<()> {
+        $body;
+        Ok(())
+      },
+    )]
+  };
 }
 
 #[macro_export]
 macro_rules! noreplacement {
-  () => (|doc,whatsit,props,state|{Ok(())})
+  () => {
+    |doc, whatsit, props, state| Ok(())
+  };
 }
 
 #[macro_export]
@@ -670,16 +691,16 @@ macro_rules! replacement {
 
 #[macro_export]
 macro_rules! noprimitive {
-  () => ( |stomach:&mut Stomach, args : Vec<Tokens>, state:&mut State| {Ok(Vec::new())})
+  () => {
+    |stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State| Ok(Vec::new())
+  };
 }
 
 #[macro_export]
 macro_rules! primitivesub {
-  ($stomach:ident, $args:ident, $state:ident, $body:expr) => (
-    |$stomach:&mut Stomach, mut $args : Vec<Tokens>, $state:&mut State| {
-      $body
-    }
-  )
+  ($stomach:ident, $args:ident, $state:ident, $body:expr) => {
+    |$stomach: &mut Stomach, mut $args: Vec<Tokens>, $state: &mut State| $body
+  };
 }
 #[macro_export]
 macro_rules! primitiveproc {
@@ -693,29 +714,26 @@ macro_rules! primitiveproc {
 
 #[macro_export]
 macro_rules! beforesub {
-  ($stomach:ident, $state:ident, $body:expr) => (
-    |$stomach:&mut Stomach, $state:&mut State| {
-      $body
-    }
-  )
+  ($stomach:ident, $state:ident, $body:expr) => {
+    |$stomach: &mut Stomach, $state: &mut State| $body
+  };
 }
 #[macro_export]
-macro_rules! beforeproc { // just as beforesub! but with a default return value
-  ($stomach:ident, $state:ident, $body:expr) => (
-    Rc::new(move |$stomach:&mut Stomach, $state:&mut State| {
+macro_rules! beforeproc {
+  // just as beforesub! but with a default return value
+  ($stomach:ident, $state:ident, $body:expr) => {
+    Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
       $body;
       Ok(Vec::new())
-    }
-  ))
+    })
+  };
 }
 
 #[macro_export]
 macro_rules! aftersub {
-  ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => (
-    |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $state:&mut State| {
-      $body
-    }
-  )
+  ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => {
+    |$stomach: &mut Stomach, $whatsit: &mut Whatsit, $state: &mut State| $body
+  };
 }
 #[macro_export]
 macro_rules! afterproc {
@@ -738,7 +756,9 @@ macro_rules! afterproc {
 
 #[macro_export]
 macro_rules! v {
-  ($val:expr) => (Some($val.to_string()))
+  ($val:expr) => {
+    Some($val.to_string())
+  };
 }
 /// Macros and pool come at the end, so that they load seamlessly
 
@@ -763,6 +783,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! LookupString {
     ($name:expr) => (LookupString!($name, $state));
     ($name:expr, $state_arg:ident) => ($state_arg.lookup_string($name))
+  }
+  macro_rules! LookupNumber {
+    ($name:expr) => (LookupNumber!($name, $state));
+    ($name:expr, $state_arg:ident) => ($state_arg.lookup_number($name))
+  }
+  macro_rules! LookupTokens {
+    ($name:expr) => (LookupTokens!($name, $state));
+    ($name:expr, $state_arg:ident) => ($state_arg.lookup_tokens($name))
   }
   macro_rules! AssignValue {
     ($name:expr, $value:expr) => (AssignValue!($name, $value, None, $state));
@@ -996,10 +1024,28 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   );
 
   macro_rules! DefMacroT(
-    // Tokens form
+    // $body is an ungrouped stream of Token literals, which will be then grouped by Tokens!
     ($cs:expr, $paramlist:expr, $arg:expr) => (DefMacroT!($cs, $paramlist, $arg, $state));
     ($cs:expr, $paramlist:expr, $body:expr, $state_arg:ident) => ({
       DefMacroI!($cs, $paramlist, move |_gullet, _args, _state| {Ok(Tokens!($body))}, $state_arg)
+    });
+    // with 1 key=>val param
+    ($cs:expr, $paramlist:expr, $arg:expr, $key1:ident => $val1:expr) => (DefMacroT!($cs, $paramlist, $arg, $key1=>$val, $state));
+    ($cs:expr, $paramlist:expr, $body:expr,$key1:ident => $val1:expr, $state_arg:ident) => ({
+      DefMacroI!($cs, $paramlist, move |_gullet, _args, _state| {Ok(Tokens!($body))}, $key1=>$val1, $state_arg)
+    });
+  );
+
+  macro_rules! DefMacroTS(
+    // $body is a Tokens-typed expression | TODO: Ideally we want to improve the Tokens! macro to be a no-op when nothing to do
+    ($cs:expr, $paramlist:expr, $arg:expr) => (DefMacroTS!($cs, $paramlist, $arg, $state));
+    ($cs:expr, $paramlist:expr, $body:expr, $state_arg:ident) => ({
+      DefMacroI!($cs, $paramlist, move |_gullet, _args, _state| {Ok($body)}, $state_arg)
+    });
+    // with 1 key=>val param
+    ($cs:expr, $paramlist:expr, $arg:expr, $key1:ident=>$val1:expr) => (DefMacroTS!($cs, $paramlist, $arg, $key1=>$val1,$state));
+    ($cs:expr, $paramlist:expr, $body:expr, $key1:ident=>$val1:expr, $state_arg:ident) => ({
+      DefMacroI!($cs, $paramlist, move |_gullet, _args, _state| {Ok($body)}, $key1=>$val1, $state_arg)
     });
   );
 
@@ -2436,60 +2482,68 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($ctr:ident, $within:expr, $options:expr, $state_arg:ident) => (new_counter($ctr, $within, $options, $state_arg));
   }
 
-//   #[macro_export]
-//   macro_rules! CounterValue {
-//   my ($ctr) = @_;
-//   $ctr = ToString($ctr) if ref $ctr;
-//   my $value = LookupValue('\c@' . $ctr);
-//   if (!$value) {
-//     Warn('undefined', $ctr, $STATE->getStomach,
-//       "Counter '$ctr' was not defined; assuming 0");
-//     $value = Number(0); }
-//   return $value; }
+  #[macro_export]
+  macro_rules! CounterValue {
+    ($ctr:ident) => (counter_value($ctr, $state));
+    ($ctr:ident, $state_arg:ident) => (counter_value($ctr, $state_arg));
+  }
 
-//   #[macro_export]
-//   macro_rules! AfterAssignment {
-//   if (my $after = $STATE->lookupValue('afterAssignment')) {
-//     $STATE->assignValue(afterAssignment => undef, Some(Scope::Global));
-//     $STATE->getStomach->getGullet->unread($after); } // primitive returns boxes, so these need to be digested!
-//   return; }
+  #[macro_export]
+  macro_rules! AfterAssignment {
+    ($gullet: ident) => {
+      if let Some(after) = $state.lookup_value("afterAssignment") {
+        $state.assign_value("afterAssignment", None, Some(Scope::Global));
+        $gullet.unread(after);  // primitive returns boxes, so these need to be digested!
+      }
+  }}
 
-//   #[macro_export]
-//   macro_rules! SetCounter {
-//   my ($ctr, $value) = @_;
-//   $ctr = ToString($ctr) if ref $ctr;
-//   AssignValue('\c@' . $ctr => $value, Some(Scope::Global));
-//   AfterAssignment();
-//   DefMacroI(T_CS("\\\@$ctr\@ID"), undef, Tokens(Explode($value->valueOf)), scope => Some(Scope::Global));
-//   return; }
+  #[macro_export]
+  macro_rules! SetCounter {
+    ($ctr:expr, $value:expr, None) => {
+      AssignValue!(&format!("\\c@{}",$ctr), ObjectStore::Number(Box::new($value)), Some(Scope::Global));
+      DefMacroTS!(T_CS!(format!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+                  scope => Some(Scope::Global)
+      );
+    };
+    ($ctr:expr, $value:expr, $gullet:ident) => {
+      AssignValue!(&format!("\\c@{}",$ctr), ObjectStore::Number(Box::new($value)), Some(Scope::Global));
+      AfterAssignment!($gullet);
+      DefMacroTS!(T_CS!(format!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+                  scope => Some(Scope::Global)
+      );
+    }
+  }
 
-//   #[macro_export]
-//   macro_rules! AddToCounter {
-//   my ($ctr, $value) = @_;
-//   $ctr = ToString($ctr) if ref $ctr;
-//   my $v = CounterValue($ctr)->add($value);
-//   AssignValue('\c@' . $ctr => $v, Some(Scope::Global));
-//   AfterAssignment();
-//   DefMacroI(T_CS("\\\@$ctr\@ID"), undef, Tokens(Explode($v->valueOf)), scope => Some(Scope::Global));
-//   return; }
+  #[macro_export]
+  macro_rules! AddToCounter {
+    ($gullet:ident, $ctr:expr, $value:expr) => {
+      let v = CounterValue!($ctr).add($value);
+      AssignValue!(&format!("\\c@{}",ctr), ObjectStore::Number(Box::new($v)), Some(Scope::Global));
+      AfterAssignment($gullet);
+      DefMacroTS!(T_CS!(format!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($v.value_of()))); // TODO: , scope: Some(Scope::Global));
+    }
+  }
 
-//   #[macro_export]
-//   macro_rules! StepCounter {
-//   my ($ctr, $noreset) = @_;
-//   my $value = CounterValue($ctr);
-//   AssignValue(format!("\\c@{}",$ctr) => $value->add(Number(1)), Some(Scope::Global));
-//   AfterAssignment();
-//   DefMacroI(T_CS("\\\@$ctr\@ID"), undef, Tokens(Explode(LookupValue('\c@' . $ctr)->valueOf)),
-//     scope => Some(Scope::Global));
-//   // and reset any within counters!
-//   if (!$noreset) {
-//     if (my $nested = LookupValue(format!("\\cl@{}",$ctr))) {
-//       foreach my $c ($nested->unlist) {
-//         ResetCounter(ToString($c)); } } }
-//   DigestIf(T_CS("\\the$ctr"));
-//   return; }
+  #[macro_export]
+  macro_rules! StepCounter {
+    ($gullet:ident, $ctr:expr, $noreset:expr) => {
+      let value = CounterValue!($ctr);
+      AssignValue!(format!("\\c@{}",$ctr), value.add(Number!(1)), Some(Scope::Global));
+      AfterAssignment($gullet);
+      DefMacroTS!(T_CS!(format!("\\@{}@ID")), None, Explode!(LookupNumber!(format!("\\c@{}",$ctr))->value_of));
+      // scope: Some(Scope::Global));
+      // and reset any within counters!
+      if (!$noreset) {
+        if let Some(nested) = LookupTokens!(format!("\\cl@{}",$ctr)) {
+          for c in nested.unlist() {
+            ResetCounter!(c.to_string());
+          } 
+        } 
+      }
+      DigestIf!(T_CS!("\\the$ctr"));
+    } 
+  }
 
-// // HOW can we retract this?
 //   #[macro_export]
 //   macro_rules! RefStepCounter {
 //   my ($ctr, $noreset) = @_;
@@ -2648,6 +2702,20 @@ pub fn new_counter(
   //   DefMacro!(format!("\\@{}@ID",ctr), "0", scope => Some(Scope::Global));
   // }
   return;
+}
+
+pub fn counter_value(ctr: &str, state: &mut State) -> Number {
+  match state.lookup_number(&format!("\\c@{:?}", ctr)) {
+    None => {
+      warn!(
+        target: &format!("undefined:{:?}", ctr),
+        "Counter {} was not defined; assuming 0",
+        ctr
+      );
+      Number::new(0)
+    },
+    Some(value) => value,
+  }
 }
 
 pub mod pool;

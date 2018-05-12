@@ -1,12 +1,12 @@
 #[macro_use]
 extern crate rtx_core;
 
+use rtx_core::definition::expandable::Expandable;
+use rtx_core::state::*;
+use rtx_core::token::{Catcode, Token};
+use rtx_core::tokens::Tokens;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
-use rtx_core::state::*;
-use rtx_core::token::Catcode;
-use rtx_core::tokens::Tokens;
-use rtx_core::definition::expandable::Expandable;
 
 #[test]
 fn basic_state_init() {

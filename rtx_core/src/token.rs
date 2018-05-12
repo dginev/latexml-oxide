@@ -1,12 +1,12 @@
-use std::iter::FromIterator;
 use std::collections::VecDeque;
+use std::iter::FromIterator;
 
 use common::error::*;
-use state::{ObjectStore, State};
-use {BoxOps, Digested};
-use stomach::Stomach;
 use quote;
+use state::{ObjectStore, State};
+use stomach::Stomach;
 use tokens::Tokens;
+use {BoxOps, Digested};
 
 #[derive(PartialEq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
@@ -263,23 +263,23 @@ macro_rules! Token(($text:expr, $cc_opt:expr) => ({
 
 // Explode a string into a list of tokens, all w/catcode OTHER (except space).
 #[macro_export]
-macro_rules! Explode(($text:expr) => ({
-  $text.chars().map(|c|
+macro_rules! Explode(($text:expr) => (
+  $text.to_string().as_str().chars().map(|c|
     if c==' ' { T_SPACE!() }
     else { T_OTHER!(c.to_string()) }
-  ).collect()
-}));
+  ).collect::<Vec<Token>>()
+));
 
 // Similar to Explode, but convert letters to catcode LETTER and others to OTHER
 // Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
 #[macro_export]
-macro_rules! ExplodeText(($text:expr) => ({
-  $text.chars().map(|c|
+macro_rules! ExplodeText(($text:expr) => (
+  $text.to_string().as_str().chars().map(|c|
     if c==' ' { T_SPACE!() }
     else if c.is_alphabetic() { T_LETTER!(c.to_string()) }
     else { T_OTHER!(c.to_string()) }
   ).collect::<Vec<Token>>()
-}));
+));
 
 static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
 pub fn untex(digested: &Digested, state: &State) -> String {

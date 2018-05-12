@@ -1,29 +1,30 @@
-use std::hash::Hash;
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::rc::Rc;
-use std::fmt;
 use regex::Regex;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::fmt;
+use std::hash::Hash;
+use std::rc::Rc;
 
-use util::pathname;
-use common::model::{IndirectModel, Model};
 use common::font::Font;
+use common::model::{IndirectModel, Model};
+use common::number::Number;
+use definition::conditional::Conditional;
+use definition::constructor::Constructor;
+use definition::expandable::Expandable;
+use definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
+use definition::primitive::Primitive;
+use definition::Definition;
+use document::resource::Resource;
+use document::tag::{TagData, TagOptions};
+use document::Document;
+use parameter::Parameter;
 use token::{Catcode, Token};
 use tokens::Tokens;
-use parameter::Parameter;
-use definition::Definition;
-use definition::expandable::Expandable;
-use definition::constructor::Constructor;
-use definition::primitive::Primitive;
-use definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
-use definition::conditional::Conditional;
-use document::Document;
-use document::tag::{TagData, TagOptions};
-use document::resource::Resource;
+use util::pathname;
 
 static CODE_TEX_EXT: &'static str = ".code.tex";
 
 lazy_static! {
-  static ref TEX_OR_BIB_EXT_RE : Regex = Regex::new(r"\.(tex|bib)$").unwrap();
+  static ref TEX_OR_BIB_EXT_RE: Regex = Regex::new(r"\.(tex|bib)$").unwrap();
 }
 
 #[derive(Clone, PartialEq)]
@@ -82,6 +83,7 @@ pub enum ObjectStore {
   Digested(Rc<::Digested>),
   Parameter(Parameter),
   Font(Box<Font>),
+  Number(Box<Number>),
   // Collections
   VecChar(Vec<char>),
   VecString(Vec<String>),
@@ -115,6 +117,7 @@ impl fmt::Debug for ObjectStore {
       Digested(ref digested) => write!(f, "{:?}", digested),
       Parameter(ref parameter) => write!(f, "{:?}", parameter),
       Font(ref font) => write!(f, "{:?}", font),
+      Number(ref number) => write!(f, "{:?}", number),
       VecToken(ref token_vec) => write!(f, "{:?}", token_vec),
       VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
       VecDequeOS(ref vec) => write!(f, "VecDequeOS({:?})", vec),
@@ -420,7 +423,7 @@ impl State {
     let mut value_table = HashMap::new();
     let mut specials_vdq = VecDeque::new();
     specials_vdq.push_front(ObjectStore::VecChar(vec![
-      '^', '_', '@', '~', '&', '$', '#', '%', '\''
+      '^', '_', '@', '~', '&', '$', '#', '%', '\'',
     ]));
     value_table.insert("SPECIALS".to_string(), specials_vdq);
 
@@ -710,6 +713,22 @@ impl State {
   pub fn lookup_mathfont<'font>(&'font self) -> Option<Font> {
     match self.lookup_value("mathfont") {
       Some(&ObjectStore::Font(ref f)) => Some(*f.clone()), /* TODO: is this clone heavy/slow?
+                                                             * We can refactor into refs */
+      _ => None,
+    }
+  }
+
+  pub fn lookup_number(&self, key: &str) -> Option<Number> {
+    match self.lookup_value(key) {
+      Some(&ObjectStore::Number(ref n)) => Some(*n.clone()), /* TODO: is this clone heavy/slow?
+                                                             * We can refactor into refs */
+      _ => None,
+    }
+  }
+
+  pub fn lookup_tokens(&self, key: &str) -> Option<Tokens> {
+    match self.lookup_value(key) {
+      Some(&ObjectStore::Tokens(ref ts)) => Some(ts.clone()), /* TODO: is this clone heavy/slow?
                                                              * We can refactor into refs */
       _ => None,
     }
