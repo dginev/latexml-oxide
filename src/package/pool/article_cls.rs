@@ -51,44 +51,48 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   SetCounter!("secnumdepth", Number!(3), None);
   NewCounter!("part",          "document",      idprefix => "Pt",  nested => vec!["section"]);
   NewCounter!("section",       "document",      idprefix => "S",   nested => vec!["subsection"]);
-  // NewCounter("subsection",    "section",       idprefix => "SS",  nested => ["subsubsection"]);
-  // NewCounter("subsubsection", "subsection",    idprefix => "SSS", nested => ["paragraph"]);
-  // NewCounter("paragraph",     "subsubsection", idprefix => "P",   nested => ["subparagraph"]);
-  // NewCounter("subparagraph", "paragraph", idprefix => "SP", nested => ["equation", "figure",
-  // "table"]);
+  NewCounter!("subsection",    "section",       idprefix => "SS",  nested => vec!["subsubsection"]);
+  NewCounter!("subsubsection", "subsection",    idprefix => "SSS", nested => vec!["paragraph"]);
+  NewCounter!("paragraph",     "subsubsection", idprefix => "P",   nested => vec!["subparagraph"]);
+  NewCounter!("subparagraph", "paragraph", idprefix => "SP", nested => vec!["equation", "figure", "table"]);
 
-  // DefMacro("\thepart",          "\Roman{part}");
-  // DefMacro("\thesection",       "\arabic{section}");
-  // DefMacro("\thesubsection",    "\thesection.\arabic{subsection}");
-  // DefMacro("\thesubsubsection", "\thesubsection.\arabic{subsubsection}");
-  // DefMacro("\theparagraph",     "\thesubsubsection.\arabic{paragraph}");
-  // DefMacro("\thesubparagraph",  "\theparagraph.\arabic{subparagraph}");
-  // SetCounter(tocdepth => Number(3));
+  DefMacro!("\\thepart", "\\Roman{part}");
+  DefMacro!("\\thesection", "\\arabic{section}");
+  DefMacro!("\\thesubsection", "\\thesection.\\arabic{subsection}");
+  DefMacro!(
+    "\\thesubsubsection",
+    "\\thesubsection.\\arabic{subsubsection}"
+  );
+  DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");
+  DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
+  SetCounter!("tocdepth", Number!(3), None);
 
-  // NewCounter("equation",       "document", idprefix => "E",  idwithin => "section");
-  // NewCounter("@equationgroup", "document", idprefix => "EG", idwithin => "section");
-  // NewCounter("figure",         "document", idprefix => "F",  idwithin => "section");
-  // NewCounter("table",          "document", idprefix => "T",  idwithin => "section");
+  NewCounter!("equation",       "document", idprefix => "E",  idwithin => "section");
+  NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");
+  NewCounter!("figure",         "document", idprefix => "F",  idwithin => "section");
+  NewCounter!("table",          "document", idprefix => "T",  idwithin => "section");
 
-  // DefMacro("\theequation", "\arabic{equation}");
-  // DefMacro("\thefigure",   "\arabic{figure}");
-  // DefMacro("\thetable",    "\arabic{table}");
+  DefMacro!("\\theequation", "\\arabic{equation}");
+  DefMacro!("\\thefigure", "\\arabic{figure}");
+  DefMacro!("\\thetable", "\\arabic{table}");
 
-  // NewCounter("enumi",   undef, idwithin => "@itemizei", idprefix => "i");
-  // NewCounter("enumii",  undef, idwithin => "enumi",     idprefix => "i");
-  // NewCounter("enumiii", undef, idwithin => "enumii",    idprefix => "i");
-  // NewCounter("enumiv",  undef, idwithin => "enumiii",   idprefix => "i");
-  // DefMacro("\theenumi",   "\arabic{enumi}");
-  // DefMacro("\theenumii",  "\alph{enumii}");
-  // DefMacro("\theenumiii", "\roman{enumiii}");
-  // DefMacro("\theenumiv",  "\Alph{enumiv}");
+  NewCounter!("enumi",   "", idwithin => "@itemizei", idprefix => "i");
+  NewCounter!("enumii",  "", idwithin => "enumi",     idprefix => "i");
+  NewCounter!("enumiii", "", idwithin => "enumii",    idprefix => "i");
+  NewCounter!("enumiv",  "", idwithin => "enumiii",   idprefix => "i");
+  DefMacro!("\\theenumi", "\\arabic{enumi}");
+  DefMacro!("\\theenumii", "\\alph{enumii}");
+  DefMacro!("\\theenumiii", "\\roman{enumiii}");
+  DefMacro!("\\theenumiv", "\\Alph{enumiv}");
 
-  // DefMacro("\refname", "References");
+  DefMacro!("\\refname", "References");
 
-  // Tag("ltx:appendix", autoClose => 1);
-  // DefMacro("\appendix", "\@appendix");
-  // # Actually we should be using section counter
-  // DefPrimitive("\@appendix", sub { startAppendices("section"); });
+  // TODO:
+  // Tag!("ltx:appendix", auto_close => true);
+  DefMacro!("\\appendix", "\\@appendix");
+  // Actually we should be using section counter
+  // TODO:
+  // DefPrimitive!("\\@appendix", sub { startAppendices("section"); });
 
   Ok(())
 }

@@ -2638,12 +2638,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
 pub struct NewCounterOptions {
   idprefix: &'static str,
+  idwithin: &'static str,
   nested: Vec<&'static str>,
 }
 impl Default for NewCounterOptions {
   fn default() -> Self {
     NewCounterOptions {
       idprefix: "",
+      idwithin: "",
       nested: Vec::new(),
     }
   }
