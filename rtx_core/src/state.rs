@@ -1188,8 +1188,7 @@ impl State {
 
   // #======================================================================
 
-  // sub activateScope {
-  //   my ($self, $scope) = @_;
+  pub fn activate_scope(&mut self, scope: &str) {}
   //   if (!$$self{stash_active}{$scope}[0]) {
   //     assign_internal($self, 'stash_active', $scope, 1, 'local');
   //     if (defined(my $defns = $$self{stash}{$scope}[0])) {
@@ -1206,7 +1205,8 @@ impl State {
   // # Probably, in most cases, the assignments made by activateScope
   // # will be undone by egroup or popping frames.
   // # But they can also be undone explicitly
-  // sub deactivateScope {
+
+  pub fn deactivate_scope(&mut self, scope: &str) {}
   //   my ($self, $scope) = @_;
   //   if ($$self{stash_active}{$scope}[0]) {
   //     assign_internal($self, 'stash_active', $scope, 0, 'global');
@@ -1224,6 +1224,7 @@ impl State {
   //             "Unassigning wrong value for $key from table $table in deactivateScope",
   //             "value is $value but stack is " . join(', ', @{ $$self{$table}{$key} })); } } } }
   //   return; }
+  pub fn deactivate_counter_scope(&mut self, scope: &str) {} // ???
 
   // sub getKnownScopes {
   //   my ($self) = @_;

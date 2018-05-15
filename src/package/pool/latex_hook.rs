@@ -29,7 +29,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       try!(input_definitions(
         "LaTeX".to_string(),
         InputDefinitionOptions {
-          extension: Some("pool"),
+          extension: Some(String::from("pool")),
           ..InputDefinitionOptions::default()
         },
         state

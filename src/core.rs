@@ -2,23 +2,23 @@ use regex::{Captures, Regex};
 use std::path::Path;
 use std::rc::Rc;
 
-use rtx_core::common::DigestionMode;
-use rtx_core::{Core, Digested};
 use rtx_core::common::error::*;
-use rtx_core::util::pathname;
-use rtx_core::util::pathname::FindOptions;
-use rtx_core::state::{ObjectStore, Scope}; // State
+use rtx_core::common::DigestionMode;
 use rtx_core::definition::expandable::Expandable;
 use rtx_core::document::Document;
 use rtx_core::list::List;
+use rtx_core::state::{ObjectStore, Scope}; // State
+use rtx_core::util::pathname;
+use rtx_core::util::pathname::FindOptions;
+use rtx_core::{Core, Digested};
 
-use package::*;
 use math_parser::MathParser;
+use package::*;
 
 lazy_static! {
-  static ref CLS_EXT_REGEX : Regex = Regex::new(r"\.cls$").unwrap();
-  static ref STY_EXT_REGEX : Regex = Regex::new(r"\.sty$").unwrap();
-  static ref LATEX_OPTION_REGEX : Regex = Regex::new(r"^\[([^\]]*)\]").unwrap();
+  static ref CLS_EXT_REGEX: Regex = Regex::new(r"\.cls$").unwrap();
+  static ref STY_EXT_REGEX: Regex = Regex::new(r"\.sty$").unwrap();
+  static ref LATEX_OPTION_REGEX: Regex = Regex::new(r"^\[([^\]]*)\]").unwrap();
 }
 
 #[derive(Default)]
