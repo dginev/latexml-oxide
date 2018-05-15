@@ -12,3 +12,6 @@
 *target/
 *.lock
 *.bk
+
+# Rls auxiliaries
+rls/*
