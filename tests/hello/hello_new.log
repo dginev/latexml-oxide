@@ -1,0 +1,188 @@
+Transcript file of tralics 2.15.4 for file /home/dreamweaver/git/rtx/tests/hello/hello_new.tex
+Copyright INRIA/MIAOU/APICS/MARELLE 2002-2015, Jos\'e Grimm
+Tralics is licensed under the CeCILL Free Software Licensing Agreement
+Start compilation: 2016/12/17 09:57:15
+OS: Linux, machine dream-think
+Starting translation of file /home/dreamweaver/git/rtx/tests/hello/hello_new.tex.
+Output encoding: UTF8  (idem transcript).
+Left quote is ` right quote is '
+\notrivialmath=1
+Input path (/home/dreamweaver/git/rtx/tests/hello:)
+++ Input encoding is 1 (iso-8859-1) for the main file
+++ file .tralics_rc does not exist.
+++ file ../confdir/.tralics_rc exists.
+Configuration file identification: standard $ Revision: 2.24 $
+Read configuration file ../confdir/.tralics_rc.
+Configuration file has type \documentclass
+Seen \documentclass article
+Potential type is article
+Defined type: std
+++ file article.tcf does not exist.
+++ file ../confdir/article.tcf does not exist.
+Alias torture does not match article
+Potential type article aliased to std
+Using type std
+dtd is std from classes.dtd (standard mode)
+OK with the configuration file, dealing with the TeX file...
+There are 6 lines
+Starting translation
+{\countdef \count@=\count255}
+{\countdef \c@page=\count0}
+{\dimendef \dimen@=\dimen0}
+{\dimendef \dimen@i=\dimen1}
+{\dimendef \dimen@ii=\dimen2}
+{\chardef \@ne=\char"1}
+{\chardef \tw@=\char"2}
+{\chardef \thr@@=\char"3}
+{\chardef \sixt@@n=\char"10}
+{\chardef \@cclv=\char"FF}
+{\mathchardef \@cclvi=\mathchar"100}
+{\mathchardef \@m=\mathchar"3E8}
+{\mathchardef \@M=\mathchar"2710}
+{\mathchardef \@Mi=\mathchar"2711}
+{\mathchardef \@Mii=\mathchar"2712}
+{\mathchardef \@Miii=\mathchar"2713}
+{\mathchardef \@Miv=\mathchar"2714}
+{\mathchardef \@MM=\mathchar"4E20}
+{\chardef \active=\char"D}
+{\toksdef \toks@=\toks0}
+{\skipdef \skip@=\skip0}
+{\dimendef \epsfxsize=\dimen11}
+{\dimendef \epsfysize=\dimen12}
+{\dimendef \z@=\dimen13}
+{\dimendef \p@=\dimen14}
+{\dimendef \oddsidemargin=\dimen15}
+{\dimendef \evensidemargin=\dimen16}
+{\dimendef \leftmargin=\dimen17}
+{\dimendef \rightmargin=\dimen18}
+{\dimendef \leftmargini=\dimen19}
+{\dimendef \leftmarginii=\dimen20}
+{\dimendef \leftmarginiii=\dimen21}
+{\dimendef \leftmarginiv=\dimen22}
+{\dimendef \leftmarginv=\dimen23}
+{\dimendef \leftmarginvi=\dimen24}
+{\dimendef \itemindent=\dimen25}
+{\dimendef \labelwidth=\dimen26}
+{\dimendef \fboxsep=\dimen27}
+{\dimendef \fboxrule=\dimen28}
+{\dimendef \arraycolsep=\dimen29}
+{\dimendef \tabcolsep=\dimen30}
+{\dimendef \arrayrulewidth=\dimen31}
+{\dimendef \doublerulesep=\dimen32}
+{\dimendef \@tempdima=\dimen33}
+{\dimendef \@tempdimb=\dimen34}
+{\dimendef \@tempdimc=\dimen35}
+{\dimendef \footnotesep=\dimen36}
+{\dimendef \topmargin=\dimen37}
+{\dimendef \headheight=\dimen38}
+{\dimendef \headsep=\dimen39}
+{\dimendef \footskip=\dimen40}
+{\dimendef \columnsep=\dimen41}
+{\dimendef \columnseprule=\dimen42}
+{\dimendef \marginparwidth=\dimen43}
+{\dimendef \marginparsep=\dimen44}
+{\dimendef \marginparpush=\dimen45}
+{\dimendef \maxdimen=\dimen46}
+{\dimendef \normallineskiplimit=\dimen47}
+{\dimendef \jot=\dimen48}
+{\dimendef \paperheight=\dimen49}
+{\dimendef \paperwidth=\dimen50}
+{\skipdef \topsep=\skip11}
+{\skipdef \partopsep=\skip12}
+{\skipdef \itemsep=\skip13}
+{\skipdef \labelsep=\skip14}
+{\skipdef \parsep=\skip15}
+{\skipdef \fill=\skip16}
+{\skipdef \@tempskipa=\skip17}
+{\skipdef \@tempskipb=\skip18}
+{\skipdef \@flushglue=\skip19}
+{\skipdef \listparindent=\skip20}
+{\skipdef \hideskip=\skip21}
+{\skipdef \z@skip=\skip22}
+{\skipdef \normalbaselineskip=\skip23}
+{\skipdef \normallineskip=\skip24}
+{\skipdef \smallskipamount=\skip25}
+{\skipdef \medskipamount=\skip26}
+{\skipdef \bigskipamount=\skip27}
+{\skipdef \floatsep=\skip28}
+{\skipdef \textfloatsep=\skip29}
+{\skipdef \intextsep=\skip30}
+{\skipdef \dblfloatsep=\skip31}
+{\skipdef \dbltextfloatsep=\skip32}
+{\countdef \m@ne=\count20}
+{\countdef \c@FancyVerbLine=\count21}
+{\countdef \c@enumi=\count22}
+{\countdef \c@enumii=\count23}
+{\countdef \c@enumiii=\count24}
+{\countdef \c@enumiv=\count25}
+{\countdef \c@enumv=\count26}
+{\countdef \c@enumvi=\count27}
+{\countdef \c@enumvii=\count28}
+{\countdef \c@enumviii=\count29}
+{\countdef \c@enumix=\count30}
+{\countdef \c@enumx=\count31}
+{\countdef \c@Enumi=\count32}
+{\countdef \c@Enumii=\count33}
+{\countdef \c@Enumiii=\count34}
+{\countdef \c@Enumiv=\count35}
+{\countdef \c@Enumv=\count36}
+{\countdef \c@Enumvi=\count37}
+{\countdef \c@Enumvii=\count38}
+{\countdef \c@Enumviii=\count39}
+{\countdef \c@Enumix=\count40}
+{\countdef \c@Enumx=\count41}
+{\countdef \c@tocdepth=\count42}
+{\countdef \c@footnote=\count43}
+{\countdef \c@part=\count44}
+{\countdef \c@chapter=\count45}
+{\countdef \c@section=\count46}
+{\countdef \c@subsection=\count47}
+{\countdef \c@subsubsection=\count48}
+{\countdef \c@paragraph=\count49}
+{\countdef \c@subparagraph=\count50}
+{\countdef \c@mpfootnote=\count51}
+{\countdef \c@table=\count52}
+{\countdef \c@figure=\count53}
+{\countdef \c@subfigure=\count54}
+{\countdef \c@equation=\count55}
+{\countdef \c@parentequation=\count56}
+{\countdef \c@bottomnumber=\count57}
+{\countdef \c@topnumber=\count58}
+{\countdef \@tempcnta=\count59}
+{\countdef \@tempcntb=\count60}
+{\countdef \c@totalnumber=\count61}
+{\countdef \c@dbltopnumber=\count62}
+{\countdef \interfootnotelinepenalty=\count63}
+{\countdef \interdisplaylinepenalty=\count64}
+{\toksdef \@temptokena=\toks11}
+{\chardef \@tempboxa=\char"B}
+{\chardef \voidb@x=\char"C}
+++ file /home/dreamweaver/git/rtx/tests/hello/hello_new.ult does not exist.
+++ file article.clt does not exist.
+++ file ../confdir/article.clt exists.
+++ Made @ a letter
+++ Opened file ../confdir/article.clt; it has 34 lines
+Document class: article 2011/05/09 v1.2 Article document class for Tralics
+++ file std.clt does not exist.
+++ file ../confdir/std.clt exists.
+++ Made @ a letter
+++ Opened file ../confdir/std.clt; it has 91 lines
+File: std 2008/10/23 v1.1 Standard LaTeX document class, for Tralics
+++ End of file ../confdir/std.clt
+++ cur_file_pos restored to 1
+{Options to execute->letterpaper,10pt,oneside,onecolumn,final}
+{Options to execute->}
+++ End of file ../confdir/article.clt
+++ cur_file_pos restored to 0
+++ End of virtual file
+++ cur_file_pos restored to 0
+Bib stats: seen 0 entries.
+Math stats: formulas 0, kernels 0, trivial 0, \mbox 0, large 0, small 0.
+Buffer realloc 2, string 1561, size 17536, merge 0
+Macros created 212, deleted 17; hash size 2233 + 212; foonotes 0.
+Save stack +18 -18.
+Attribute list search 1518(1509) found 1079 in 1122 elements (1120 at boot).
+Number of ref 0, of used labels 0, of defined labels 0, of ext. ref. 0.
+Output written on /home/dreamweaver/git/rtx/tests/hello/hello_new.xml (179 bytes).
+No error found.
+(For more information, see transcript file /home/dreamweaver/git/rtx/tests/hello/hello_new.log)
