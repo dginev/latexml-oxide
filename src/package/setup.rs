@@ -1718,8 +1718,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   #[macro_export]
   macro_rules! CounterValue {
-    ($ctr:ident) => (counter_value($ctr, $state));
-    ($ctr:ident, $state_arg:ident) => (counter_value($ctr, $state_arg));
+    ($ctr:expr) => (counter_value($ctr, $state));
+    ($ctr:expr, $state_arg:ident) => (counter_value($ctr, $state_arg));
   }
 
   #[macro_export]

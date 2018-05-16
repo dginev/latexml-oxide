@@ -230,8 +230,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefMacro!("\\@startsection@hook", "");
 
-  // NewCounter!("secnumdepth");
-  // SetCounter!("secnumdepth", Number(3));
+  NewCounter!("secnumdepth");
+  SetCounter!("secnumdepth", Number!(3), None);
   DefMacro!(
     "\\@startsection{}{}{}{}{}{} OptionalMatch:*",
     gullet,
@@ -246,7 +246,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       };
       let level = args[1].to_string();
       let flag = args[6].to_string();
-      if !flag.is_empty() {
+      if !flag.is_empty() { // No number, not in TOC
         //|| (!level.is_empty() && (level > CounterValue!("secnumdepth").value_of())) {
         // RefStepID!(ctr);
         let mut tokens: Vec<Token> = vec![
@@ -256,32 +256,74 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         ];
         tokens.append(&mut type_tokens.unlist());
         tokens.push(T_END!());
-        Ok(Tokens { tokens: tokens })
-      } else {
-        // RefStepCounter!(ctr);
-        let mut tokens: Vec<Token> = vec![
-          T_CS!("\\@startsection@hook"),
-          T_CS!("\\@@numbered@section"),
-          T_BEGIN!(),
+        tokens.push(T_BEGIN!());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      } else if !level.is_empty() && (level.parse::<i32>().unwrap() > CounterValue!("secnumdepth", state).value_of())
+                || LookupBool!("no_number_sections", state) {
+        // No number, but in TOC
+        let mut tokens: Vec<Token> = vec![ 
+          T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"), T_BEGIN!()
         ];
         tokens.append(&mut type_tokens.unlist());
         tokens.push(T_END!());
-        Ok(Tokens { tokens: tokens })
+        tokens.push(T_BEGIN!());
+        tokens.push(T_OTHER!("toc"));
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      } else { // Number and in TOC
+        let mut tokens : Vec<Token> = vec![ 
+          T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"),
+          T_BEGIN!()
+        ];
+        tokens.append(&mut type_tokens.unlist());
+        tokens.push(T_END!());
+        tokens.push(T_BEGIN!());
+        tokens.push(T_OTHER!("toc"));
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
       }
     }
   );
 
-  // Redefine these if you want to assemble the name (eg. \chaptername), refnum and titles
-  // differently \@@numbered@section{type}[toctitle]{title}
-  DefMacro!("\\@@numbered@section{}[]{}",
-    "\\@@section{#1}{\\@currentID}{\\@currentlabel}{\\lx@fnum@@{#1}}{\\format@toctitle@{#1}{\\ifx.#2.#3\\else#2\\fi}}{\\format@title@{#1}{#3}}"
-  );
-  // NOTE: Unclear here, whether the "formatted refnum" should be empty, or just the type
-  // abbreviation?
-  DefMacro!(
-    "\\@@unnumbered@section{}[]{}",
-    "\\@@section{#1}{\\@currentID}{}{}{#2}{#3}"
-  );
+// DefConstructor('\@@numbered@section{} Undigested OptionalUndigested Undigested', sub {
+//     my ($document, $type, $inlist, $toctitle, $title, %props) = @_;
+//     my $id = $props{id};
+//     $document->openElement("ltx:" . ToString($type),
+//       'xml:id' => CleanID($id),
+//       inlist   => ToString($inlist));
+//     if (my $tags = $props{tags}) {
+//       $document->absorb($tags); }
+//     $document->insertElement('ltx:title', $props{title});
+//     $document->insertElement('ltx:toctitle', $props{toctitle}) if $props{toctitle}; },
+//   properties => sub {
+//     my ($stomach, $type, $inlist, $toctitle, $title) = @_;
+//     my %props     = RefStepCounter(ToString($type));
+//     my $xtitle    = Digest(Invocation(T_CS('\lx@format@title@@'), $type, $title));
+//     my $xtoctitle = Digest(Invocation(T_CS('\lx@format@toctitle@@'), $type, $toctitle || $title));
+//     $props{title}    = $xtitle;
+//     $props{toctitle} = $xtoctitle
+//       if $xtoctitle && $xtoctitle->unlist && (ToString($xtoctitle) ne ToString($xtitle));
+//     return %props; });
+
+// # No tags, at all? Consider...
+// DefConstructor('\@@unnumbered@section{} Undigested OptionalUndigested Undigested', sub {
+//     my ($document, $type, $inlist, $toctitle, $title, %props) = @_;
+//     my $id = $props{id};
+//     $document->openElement("ltx:" . ToString($type),
+//       'xml:id' => CleanID($id),
+//       inlist   => ToString($inlist));
+//     $document->insertElement('ltx:title', $props{title});
+//     $document->insertElement('ltx:toctitle', $props{toctitle}) if $props{toctitle}; },
+//   properties => sub {
+//     my ($stomach, $type, $inlist, $toctitle, $title) = @_;
+//     my %props = RefStepID(ToString($type));
+//     $props{title} = Digest(T_CS('\@hidden@bgroup'), $title, T_CS('\@hidden@egroup'));
+//     $props{toctitle} = $toctitle
+//       && Digest(T_CS('\@hidden@bgroup'), $toctitle, T_CS('\@hidden@egroup'));
+//     return %props; });
+
+
 
   //----------------------------------------------------------------------
   // The following macros provide a few layers of customization
