@@ -203,7 +203,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     reversion => Some(Rc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
      if !arg.is_empty() {
        let mut read_tokens = vec![T_OTHER!("[".to_string())];
-       // TODO: add these: Revert($_[0])
+       // TODO: add these: Revert!(arg, state)
        read_tokens.push(T_OTHER!("]".to_string()));
        Ok(Tokens::new(read_tokens))
      } else {
@@ -211,6 +211,26 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
      }
     }))
   );
+
+  // Read an argument that will not be digested.
+  DefParameterType!("Undigested",
+  reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_arg(state)),
+  undigested => true,
+  reversion => Some(Rc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
+    let read_tokens = Tokens!(T_BEGIN!(), T_END!());
+    // TODO: add to read_tokens Revert!(arg, state)
+    Ok(read_tokens)
+  })));
+
+  // Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
+  DefParameterType!("OptionalUndigested", 
+  reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_optional(state)),
+  undigested => true, optional => true
+  // TODO
+  // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
+  );
+
+
 
   // Read a token as used when defining it, ie. it may be enclosed in braces.
   DefParameterType!("DefToken",

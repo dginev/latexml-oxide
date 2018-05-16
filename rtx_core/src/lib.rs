@@ -167,6 +167,12 @@ impl fmt::Debug for Digested {
   }
 }
 
+impl Default for Digested {
+  fn default() -> Self {
+    Digested::Box(Tbox::default())
+  }
+}
+
 impl BoxOps for Digested {
   fn unlist(self) -> Vec<Digested> {
     match self {

@@ -286,16 +286,57 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
   );
 
-// DefConstructor('\@@numbered@section{} Undigested OptionalUndigested Undigested', sub {
-//     my ($document, $type, $inlist, $toctitle, $title, %props) = @_;
-//     my $id = $props{id};
-//     $document->openElement("ltx:" . ToString($type),
-//       'xml:id' => CleanID($id),
-//       inlist   => ToString($inlist));
-//     if (my $tags = $props{tags}) {
-//       $document->absorb($tags); }
-//     $document->insertElement('ltx:title', $props{title});
-//     $document->insertElement('ltx:toctitle', $props{toctitle}) if $props{toctitle}; },
+DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested",
+    document,
+    args,
+    props,
+    state,
+    {
+      // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
+      // intuitive level of:       let (x,y,z, ...) = @args;
+      let (stype, inlist, toctitle, title) = (
+        args[0].clone().unwrap_or_default().to_string(),
+        args[1].clone().unwrap_or_default().to_string(),
+        args[2].clone().unwrap_or_default().to_string(),
+        args[3].clone().unwrap_or_default().to_string(),
+      );
+      let id = match props.get("id") {
+        Some(& ObjectStore::String(ref id)) => id,
+        _ => ""
+      };
+      let clean_id = id; // TODO: CleanID($id);
+      try!(document.open_element(
+        &format!("ltx:{}", stype),
+        Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
+        None,
+        state,
+      ));
+      // TODO: Another instance where the immutability of props causes endless cloning
+      //       which is slow and wasteful.
+      //       The big problem is that for props to be mutable, the entire parent whatsit needs to be mutable,
+      //       and Rust hits a mutability conflict between the parent, and the "args" and "props" children
+      //       ... will come back here after performance becomes an issue again
+      if let Some(ObjectStore::Digested(tags)) = props.get("tags") {
+        try!(document.absorb((**tags).clone(), state)); 
+      }
+      let title_prop = props.get("title");
+      let title_digested = match title_prop {
+        Some(ObjectStore::VecDigested(vd)) => vd.clone(),
+        Some(ObjectStore::Digested(d)) => vec![(**d).clone()],
+        _ => Vec::new()
+      };
+      try!(document.insert_element("ltx:title", title_digested, None, state));
+
+      let toctitle_prop = props.get("toctitle");
+      let toctitle_digested = match toctitle_prop {
+        Some(ObjectStore::VecDigested(vd)) => vd.clone(),
+        Some(ObjectStore::Digested(d)) => vec![(**d).clone()],
+        _ => Vec::new()
+      };
+      if !toctitle_digested.is_empty() {
+        try!(document.insert_element("ltx:toctitle", toctitle_digested, None, state));
+      }
+    });
 //   properties => sub {
 //     my ($stomach, $type, $inlist, $toctitle, $title) = @_;
 //     my %props     = RefStepCounter(ToString($type));

@@ -43,6 +43,7 @@ impl Whatsit {
   }
 
   pub fn get_properties(&self) -> &HashMap<String, ObjectStore> { &self.properties }
+  pub fn properties(self) -> HashMap<String, ObjectStore> { self.properties }
 
   pub fn set_properties(&mut self, props: HashMap<String, ObjectStore>) {
     for (key, value) in props {
