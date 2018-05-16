@@ -443,6 +443,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // See frontmatter support in TeX.ltxml
   DefMacro!("\\title{}", "\\@add@frontmatter{ltx:title}{#1}");
 
+  //======================================================================
+  // C.6.2 List-Making environments
+  //======================================================================
+  Tag!("ltx:item",        auto_close => true, auto_open => true);
+  Tag!("ltx:inline-item", auto_close => true, auto_open => true);
+
   //**********************************************************************
   // C.7 Mathematical Formulas
   //**********************************************************************

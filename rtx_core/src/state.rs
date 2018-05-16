@@ -1324,7 +1324,7 @@ impl State {
     let mut openable: HashSet<String> = HashSet::new();
     for tag in self.model.get_tags() {
       if let Some(x) = self.tag_properties.get(&tag) {
-        if x.auto_open {
+        if let Some(true) = x.auto_open {
           openable.insert(tag.to_owned());
         }
       }

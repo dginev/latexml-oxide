@@ -88,7 +88,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefMacro!("\\refname", "References");
 
   // TODO:
-  // Tag!("ltx:appendix", auto_close => true);
+  Tag!("ltx:appendix", auto_close => true);
   DefMacro!("\\appendix", "\\@appendix");
   // Actually we should be using section counter
   // TODO:

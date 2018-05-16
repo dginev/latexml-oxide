@@ -1363,15 +1363,15 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key1:ident => $val1:expr,
      $state_arg:ident
     ) => (TagWO!($tag, NewDefault!(TagOptions,
-     $key1 => $val1), $state_arg));
+     $key1 => Some($val1)), $state_arg));
 
     ($tag:expr,
      $key1:ident => $val1:expr,
      $key2:ident => $val2:expr,
      $state_arg:ident
     ) => (TagWO!($tag, NewDefault!(TagOptions,
-     $key1 => $val1,
-     $key2 => $val2
+     $key1 => Some($val1),
+     $key2 => Some($val2)
     ), $state_arg));
 
     ($tag:expr,
@@ -1380,9 +1380,9 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key3:ident => $val3:expr,
      $state_arg:ident
     ) => (TagWO!($tag, NewDefault!(TagOptions,
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3
+     $key1 => Some($val1),
+     $key2 => Some($val2),
+     $key3 => Some($val3)
     ), $state_arg));
 
     ($tag:expr,
@@ -1392,10 +1392,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key4:ident => $val4:expr,
      $state_arg:ident
     ) => (TagWO!($tag, NewDefault!(TagOptions,
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3,
-     $key4 => $val4
+     $key1 => Some($val1),
+     $key2 => Some($val2),
+     $key3 => Some($val3),
+     $key4 => Some($val4)
     ),$state_arg));
 
     ($tag:expr,
@@ -1406,11 +1406,11 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key5:ident => $val5:expr,
      $state_arg:ident
     ) => (TagWO!($tag, NewDefault!(TagOptions,
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3,
-     $key4 => $val4,
-     $key5 => $val5
+     $key1 => Some($val1),
+     $key2 => Some($val2),
+     $key3 => Some($val3),
+     $key4 => Some($val4),
+     $key5 => Some($val5)
     ),$state_arg));
   }
 

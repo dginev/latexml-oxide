@@ -629,19 +629,19 @@ impl Document {
     // we have Rc<> around the closures, so cloning them is cheap - just another
     // pointer with a bumped up reference counter
     if let Some(when0) = when_early {
-      actions.extend(tag_hash.get(&when0).clone());
+      actions.extend(tag_hash.get(&when0).clone().unwrap_or_default());
       // ns_hash TODO
-      actions.extend(all_hash.get(&when0).clone());
+      actions.extend(all_hash.get(&when0).clone().unwrap_or_default());
     }
 
-    actions.extend(tag_hash.get(&when).clone());
+    actions.extend(tag_hash.get(&when).clone().unwrap_or_default());
     // ns_hash TODO
-    actions.extend(all_hash.get(&when).clone());
+    actions.extend(all_hash.get(&when).clone().unwrap_or_default());
 
     if let Some(when1) = when_late {
-      actions.extend(tag_hash.get(&when1).clone());
+      actions.extend(tag_hash.get(&when1).clone().unwrap_or_default());
       // ns_hash TODO
-      actions.extend(all_hash.get(&when1).clone());
+      actions.extend(all_hash.get(&when1).clone().unwrap_or_default());
     }
     // return (
     //   (($v = $$taghash{$when0}) ? @$v : ()),
@@ -1206,11 +1206,12 @@ impl Document {
         return self.find_insertion_point(qname, state); // Then retry, possibly w/auto open's
       } else {
         // Didn't find a legit place.
-        error!(target: &format!("malformed:{}", qname), "TODO");
+        error!(target: &format!("malformed:{}", qname), "{:?} isn't allowed in <{}>", qname, cur_qname);
         // ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed
         // in <$cur_qname>", "Currently in " .
         // self.getInsertionContext()); return self.node}; } } }
-        // // But we'll do it anyway, unless Error => Fatal.
+
+        // But we'll do it anyway, unless Error => Fatal.
         return Ok(self.node.clone());
       }
     }

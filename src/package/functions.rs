@@ -447,8 +447,12 @@ pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
     .tag_properties
     .entry(tag.to_string())
     .or_insert_with(TagOptions::default);
-  options.auto_open = properties.auto_open;
-  options.auto_close = properties.auto_close;
+  if properties.auto_open.is_some() {
+    options.auto_open = properties.auto_open;
+  }
+  if properties.auto_close.is_some() {
+    options.auto_close = properties.auto_close;
+  }
 
   for name in &TagOptionName::all() {
     if name.is_prepend() {

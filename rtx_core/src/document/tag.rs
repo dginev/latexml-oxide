@@ -51,32 +51,32 @@ impl TagOptionName {
 
 #[derive(Clone)]
 pub struct TagOptions {
-  pub auto_open: bool,
-  pub auto_close: bool,
-  pub after_open: Vec<TagConstructionClosure>,
-  pub after_close: Vec<TagConstructionClosure>,
-  pub after_open_early: Vec<TagConstructionClosure>,
-  pub after_close_early: Vec<TagConstructionClosure>,
-  pub after_open_late: Vec<TagConstructionClosure>,
-  pub after_close_late: Vec<TagConstructionClosure>,
+  pub auto_open: Option<bool>,
+  pub auto_close: Option<bool>,
+  pub after_open: Option<Vec<TagConstructionClosure>>,
+  pub after_close: Option<Vec<TagConstructionClosure>>,
+  pub after_open_early: Option<Vec<TagConstructionClosure>>,
+  pub after_close_early: Option<Vec<TagConstructionClosure>>,
+  pub after_open_late: Option<Vec<TagConstructionClosure>>,
+  pub after_close_late: Option<Vec<TagConstructionClosure>>,
 }
 impl Default for TagOptions {
   fn default() -> Self {
     TagOptions {
-      auto_open: true,
-      auto_close: true,
-      after_open: Vec::new(),
-      after_close: Vec::new(),
-      after_open_early: Vec::new(),
-      after_open_late: Vec::new(),
-      after_close_early: Vec::new(),
-      after_close_late: Vec::new(),
+      auto_open: None,
+      auto_close: None,
+      after_open: None,
+      after_close: None,
+      after_open_early: None,
+      after_open_late: None,
+      after_close_early: None,
+      after_close_late: None,
     }
   }
 }
 #[allow(dead_code)]
 impl TagOptions {
-  pub fn get(&self, name: &TagOptionName) -> &Vec<TagConstructionClosure> {
+  pub fn get(&self, name: &TagOptionName) -> &Option<Vec<TagConstructionClosure>> {
     use self::TagOptionName::*;
     match *name {
       AfterOpen => &self.after_open,
@@ -88,7 +88,7 @@ impl TagOptions {
     }
   }
 
-  pub fn get_mut(&mut self, name: &TagOptionName) -> &mut Vec<TagConstructionClosure> {
+  pub fn get_mut(&mut self, name: &TagOptionName) -> &mut Option<Vec<TagConstructionClosure>> {
     use self::TagOptionName::*;
     match *name {
       AfterOpen => &mut self.after_open,
@@ -110,10 +110,13 @@ impl TagOptions {
       AfterCloseEarly => &mut self.after_close_early,
       AfterCloseLate => &mut self.after_close_late,
     };
-    field.drain(..).collect()
+    match field {
+      Some(ref mut vec) => vec.drain(..).collect(),
+      None => Vec::new()
+    }
   }
 
-  pub fn set(&mut self, name: &TagOptionName, value: Vec<TagConstructionClosure>) {
+  pub fn set(&mut self, name: &TagOptionName, value: Option<Vec<TagConstructionClosure>>) {
     use self::TagOptionName::*;
     match *name {
       AfterOpen => {
@@ -139,61 +142,28 @@ impl TagOptions {
 
   pub fn prepend(&mut self, name: &TagOptionName, mut value: Vec<TagConstructionClosure>) {
     use self::TagOptionName::*;
-    match *name {
-      AfterOpen => {
-        let drained: Vec<TagConstructionClosure> = self.after_open.drain(..).collect();
-        value.extend(drained);
-        self.after_open = value;
-      },
-      AfterOpenEarly => {
-        let drained: Vec<TagConstructionClosure> = self.after_open_early.drain(..).collect();
-        value.extend(drained);
-        self.after_open_early = value;
-      },
-      AfterOpenLate => {
-        let drained: Vec<TagConstructionClosure> = self.after_open_late.drain(..).collect();
-        value.extend(drained);
-        self.after_open_late = value;
-      },
-      AfterClose => {
-        let drained: Vec<TagConstructionClosure> = self.after_close.drain(..).collect();
-        value.extend(drained);
-        self.after_close = value;
-      },
-      AfterCloseEarly => {
-        let drained: Vec<TagConstructionClosure> = self.after_close_early.drain(..).collect();
-        value.extend(drained);
-        self.after_close_early = value;
-      },
-      AfterCloseLate => {
-        let drained: Vec<TagConstructionClosure> = self.after_close_late.drain(..).collect();
-        value.extend(drained);
-        self.after_close_late = value;
-      },
+    {// scoping the borrow for "field"
+      let drained : Vec<TagConstructionClosure> = match self.get_mut(name) {
+        Some(vec) => vec.drain(..).collect(),
+        None => Vec::new()
+      };
+      value.extend(drained);
     }
+    // is there a briefer syntax for the assignment?
+    self.set(name, Some(value));
   }
 
   pub fn append(&mut self, name: &TagOptionName, value: Vec<TagConstructionClosure>) {
     use self::TagOptionName::*;
-    match *name {
-      AfterOpen => {
-        self.after_open.extend(value);
-      },
-      AfterOpenEarly => {
-        self.after_open_early.extend(value);
-      },
-      AfterOpenLate => {
-        self.after_open_late.extend(value);
-      },
-      AfterClose => {
-        self.after_close.extend(value);
-      },
-      AfterCloseEarly => {
-        self.after_close_early.extend(value);
-      },
-      AfterCloseLate => {
-        self.after_close_late.extend(value);
-      },
+    {
+      // initialize
+      if self.get(name).is_none() {
+        self.set(name,Some(Vec::new()));
+      }
+    }
+    // set
+    if let Some(vec) = self.get_mut(name) {
+      vec.extend(value);
     }
   }
 }
