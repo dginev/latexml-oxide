@@ -1,22 +1,13 @@
-use libxml::tree::{Namespace, Node};
+use libxml::tree::{Node};
 use regex::Regex;
 use std::collections::HashMap;
-use std::collections::VecDeque;
 use std::rc::Rc;
 
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
 use rtx_core::common::number::Number;
-use rtx_core::definition::conditional::{Conditional, ConditionalType};
-use rtx_core::definition::constructor::ConstructorOptions;
 use rtx_core::definition::expandable::Expandable;
-use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
-use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
-use rtx_core::definition::ConditionalClosure;
-use rtx_core::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionClosure,
-  ReplacementClosure,
-};
+use rtx_core::definition::{Definition, ExpansionClosure};
 use rtx_core::document::resource::*;
 use rtx_core::document::tag::{TagOptionName, TagOptions};
 use rtx_core::document::Document;
@@ -26,12 +17,11 @@ use rtx_core::mouth::Mouth;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::state::{ObjectStore, Scope, State};
 use rtx_core::stomach::Stomach;
-// use rtx_core::tbox::Tbox;
+
 use rtx_core::token::Token;
-// use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
-use rtx_core::{BoxOps, Core, Digested};
+use rtx_core::{Core, Digested};
 
 use super::pool;
 

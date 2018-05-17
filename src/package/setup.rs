@@ -1659,7 +1659,6 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     })
   }
 
-  #[macro_export]
   macro_rules! requireMath {
     ($cs_name:expr, $state_arg:ident) => (
       if !LookupBool!("IN_MATH", $state_arg) {
@@ -1667,7 +1666,6 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       }
     )
   }
-  #[macro_export]
   macro_rules! forbidMath {
     ($cs_name:expr) => (forbidMath!($cs_name, $state));
     ($cs_name:expr, $state_arg:ident) => (
@@ -1701,7 +1699,6 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   //           NOTE: I'm not sure this is even a sensible implementation,
   //           or why inner should be different than the counters reset by incrementing this counter.
 
-  #[macro_export]
   macro_rules! NewCounter {
     ($ctr:expr) => (NewCounter!($ctr, "", None, $state));
     ($ctr:expr, $within:expr) => (NewCounter!($ctr, $within, None, $state));
@@ -1716,13 +1713,11 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      (new_counter($ctr, $within, Some(NewDefault!(NewCounterOptions, $key1=>$val1, $key2=>$val2)), $state_arg));
   }
 
-  #[macro_export]
   macro_rules! CounterValue {
     ($ctr:expr) => (counter_value($ctr, $state));
     ($ctr:expr, $state_arg:ident) => (counter_value($ctr, $state_arg));
   }
 
-  #[macro_export]
   macro_rules! SetCounter {
     ($ctr:expr, $value:expr, None) => {
       AssignValue!(&format!("\\c@{}",$ctr), ObjectStore::Number(Box::new($value)), Some(Scope::Global));
@@ -1739,19 +1734,16 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     }
   }
 
-  #[macro_export]
   macro_rules! AddToCounter {
     ($ctr:expr, $value:expr, $gullet:ident) => (AddToCounter!($ctr, $value, $gullet, $state));
     ($ctr:expr, $value:expr, $gullet:ident, $state_arg:ident) => (add_to_counter($ctr, $value, $gullet, $state_arg));
   }
 
-  #[macro_export]
   macro_rules! StepCounter {
     ($ctr:expr, $noreset:expr, $gullet:ident) => (StepCounter!($ctr, $noreset, $gullet, $state));
     ($ctr:expr, $noreset:expr, $gullet:ident, $state_arg:ident) => (step_counter($ctr, $noreset, $gullet, $state_arg));
   }
 
-  #[macro_export]
   macro_rules! RefStepCounter {
     ($ctr:expr, $noreset:expr, $gullet:ident) => (RefStepCounter!($ctr, $noreset, $gullet, $state));
     ($ctr:expr, $noreset:expr, $gullet:ident, $state_arg:ident) => (ref_step_counter($ctr, $noreset, $gullet, $state_arg));
