@@ -249,8 +249,8 @@ impl Document {
           boxes.push_front(tbox);
         },
         // A Proper Box or Whatsit? Absorb it.
-        Digested::Box(digested) => try!(digested.be_absorbed(self, state)),
-        Digested::Whatsit(digested) => try!(digested.be_absorbed(self, state)),
+        Digested::Box(digested) => digested.be_absorbed(self, state)?,
+        Digested::Whatsit(digested) => digested.be_absorbed(self, state)?,
       };
 
       let newly_created: Vec<Node> = self.constructed_nodes.drain(0..).collect(); // These were created just now
@@ -295,12 +295,12 @@ impl Document {
   {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone()
     // calls removed
-    let node = try!(self.open_element(qname, attrib, None, state));
+    let node = self.open_element(qname, attrib, None, state)?;
     if self.debug {
       debug!("Inserting element {:?} with body: {:?}", qname, content);
     }
     for digested in content {
-      try!(self.absorb(digested, state));
+      self.absorb(digested, state)?;
     }
     // In obscure situations, `node` may have already gotten closed?
     // close it if it is still open.
@@ -317,7 +317,7 @@ impl Document {
       };
     }
     if c == Some(node.clone()) {
-      try!(self.close_element(qname, state));
+      self.close_element(qname, state)?;
     }
 
     Ok(node.clone())
@@ -344,7 +344,7 @@ impl Document {
     if self.node.get_type() == Some(NodeType::DocumentNode) {
       self.pending.push(pi_node);
     } else {
-      try!(self.node.add_prev_sibling(&pi_node));
+      self.node.add_prev_sibling(&pi_node)?;
     }
     Ok(())
   }
@@ -361,8 +361,8 @@ impl Document {
     if self.debug {
       debug!("Open element {:?} at {:?}", qname, self.node.get_name());
     }
-    let point = try!(self.find_insertion_point(qname, state));
-    let newnode = try!(self.open_element_at(point, qname, attributes, font_opt, state));
+    let point = self.find_insertion_point(qname, state)?;
+    let newnode = self.open_element_at(point, qname, attributes, font_opt, state)?;
     self.set_node(newnode.clone());
     // Underscore attributes such as _box and _font from LaTeXML-proper are now
     // bookkept in special substructs of Document Connected to the node hash.
@@ -444,7 +444,7 @@ impl Document {
         //   if @cant_close;
       }
       // So, now close up to the desired node.
-      try!(self.close_node_internal(&node, state));
+      self.close_node_internal(&node, state)?;
       Ok(Some(node))
     }
   }
@@ -509,7 +509,7 @@ impl Document {
     let mut qname_vdq = VecDeque::new();
     qname_vdq.push_front(qname.to_string());
     if let Some(node) = self.is_closeable(qname_vdq, state) {
-      try!(self.close_node_internal(&node, state));
+      self.close_node_internal(&node, state)?;
       Ok(Some(node))
     } else {
       Ok(None)
@@ -555,7 +555,7 @@ impl Document {
            //     "Descendents are " . join(', ', map { Stringify($_) } @cant_close))
       }
       if let Some(lastopen_node) = lastopen {
-        try!(self.close_node_internal(&lastopen_node, state));
+        self.close_node_internal(&lastopen_node, state)?;
       }
     }
     Ok(())
@@ -857,15 +857,15 @@ impl Document {
     };
     attributes.remove("mode");
     attributes.remove("stretchy");
-    let node = try!(self.open_element(MATH_TOKEN_NAME, Some(attributes), None, state));
+    let node = self.open_element(MATH_TOKEN_NAME, Some(attributes), None, state)?;
 
     // let tbox  = attributes.get("_box").or_insert( LateXML::Box ) // ???
     self.set_node_font(&node, &font);
     if let Some(digested) = self.box_to_absorb.clone() {
       self.set_node_box(&node, digested);
     }
-    try!(self.open_math_text_internal(text, state));
-    try!(self.close_node_internal(&node, state)); // Should be safe.
+    self.open_math_text_internal(text, state)?;
+    self.close_node_internal(&node, state)?; // Should be safe.
     Ok(self.node.clone())
   }
 
@@ -940,22 +940,20 @@ impl Document {
 
       // Move to best starting point for this text.
       if closeto != node {
-        try!(self.close_to_node(&closeto, false, state));
+        self.close_to_node(&closeto, false, state)?;
       }
       if bestdiff > 0 {
-        try!(
-          self.open_element(
-            FONT_ELEMENT_NAME,
-            Some(string_map!("_fontswitch" => "true")),
-            Some(font),
-            state
-          ) // Open if needed.
-        );
+        self.open_element(
+          FONT_ELEMENT_NAME,
+          Some(string_map!("_fontswitch" => "true")),
+          Some(font),
+          state
+        )?; // Open if needed.
       }
     }
 
     // Finally, insert the darned text.
-    let tnode = try!(self.open_text_internal(text, state));
+    let tnode = self.open_text_internal(text, state)?;
     self.record_constructed_node(&tnode);
     Ok(Some(&self.node))
   }
@@ -1038,7 +1036,7 @@ impl Document {
     let closeto = node.get_parent().unwrap(); // Grab now in case afterClose screws the structure.
     let mut n = self.close_text_internal(); // Close any open text node.
     while n.get_type() == Some(NodeType::ElementNode) {
-      try!(self.close_element_at(&mut n, state));
+      self.close_element_at(&mut n, state)?;
       // self.auto_collapse_children(n);
       if *node == n {
         break;
@@ -1061,7 +1059,7 @@ impl Document {
       self.node.append_text(text);
     } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
       // or text allowed here
-      let mut point = try!(self.find_insertion_point("#PCDATA", state));
+      let mut point = self.find_insertion_point("#PCDATA", state)?;
       let node = Node::new_text(text, &self.document).unwrap();
       if self.debug {
         debug!(
@@ -1178,7 +1176,7 @@ impl Document {
     // that.
     } else if let Some(inter) = self.can_contain_indirect(&cur_qname, qname, state) {
       if (inter != qname) && (inter != cur_qname) {
-        try!(self.open_element(&inter, None, None, state)); // font => self.getNodeFont(self.node}));
+        self.open_element(&inter, None, None, state)?; // font => self.getNodeFont(self.node}));
         return self.find_insertion_point(qname, state); // And retry insertion (should work now).
       }
     } else {
@@ -1202,7 +1200,7 @@ impl Document {
         };
       }
       if let Some(close_to_node) = close_to {
-        try!(self.close_node_internal(&close_to_node, state)); // Close the auto closeable nodes.
+        self.close_node_internal(&close_to_node, state)?; // Close the auto closeable nodes.
         return self.find_insertion_point(qname, state); // Then retry, possibly w/auto open's
       } else {
         // Didn't find a legit place.
@@ -1346,7 +1344,7 @@ impl Document {
       newnode = Node::new(&tag, None, &self.document).unwrap();
       self.document.set_root_element(&newnode);
       for node in &self.pending {
-        try!(newnode.add_prev_sibling(&node)); // Add saved comments, PI's
+        newnode.add_prev_sibling(&node)?; // Add saved comments, PI's
       }
       self.record_constructed_node(&newnode);
 
@@ -1413,7 +1411,7 @@ impl Document {
     }
 
     // Run afterOpen operations
-    try!(self.after_open(&mut newnode, state));
+    self.after_open(&mut newnode, state)?;
 
     Ok(newnode)
   }
@@ -1506,7 +1504,7 @@ impl Document {
     self.set_node(node.clone());
     let node_qname = self.get_node_qname(node, state);
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterOpen, state) {
-      try!(action(self, node, state));
+      action(self, node, state)?;
     }
     self.set_node(savenode);
     Ok(())
@@ -1517,7 +1515,7 @@ impl Document {
     let savenode = self.node.clone();
     let node_qname = self.get_node_qname(node, state);
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterClose, state) {
-      try!(action(self, node, state));
+      action(self, node, state)?;
     }
     self.set_node(savenode);
     Ok(())
@@ -1571,7 +1569,7 @@ impl Document {
       text: resource.content,
       ..Tbox::default()
     });
-    try!(self.insert_element("ltx:resource", vec![content_box], Some(attrib), state));
+    self.insert_element("ltx:resource", vec![content_box], Some(attrib), state)?;
     if let Some(savenode) = savenode_opt {
       self.set_node(savenode);
     }
@@ -1581,7 +1579,7 @@ impl Document {
   pub fn process_pending_resources(&mut self, state: &mut State) -> Result<()> {
     let resources: Vec<Resource> = state.pending_resources.drain(..).collect();
     for resource in resources {
-      try!(self.add_resource(resource, state));
+      self.add_resource(resource, state)?;
     }
     state.pending_resources = Vec::new();
     Ok(())
@@ -1594,13 +1592,13 @@ impl Document {
     } else {
       None
     };
-    try!(self.open_element(
+    self.open_element(
       "ltx:ERROR",
       Some(string_map!("class"=>error_class)),
       None,
       state
-    ));
-    try!(self.close_element("ltx:ERROR", state));
+    )?;
+    self.close_element("ltx:ERROR", state)?;
     if let Some(savenode) = savenode_opt {
       self.set_node(savenode);
     }

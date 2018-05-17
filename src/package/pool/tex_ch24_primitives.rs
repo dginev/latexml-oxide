@@ -30,7 +30,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
       );
       let ismath = state.lookup_bool("IN_MATH");
       let mode = if ismath { TexMode::Math } else { TexMode::Text };
-      let body = try!(stomach.digest_next_body(false, state));
+      let body = stomach.digest_next_body(false, state)?;
       let mut boxes = vec![Digested::Box(open)];
       boxes.extend(body);
       let return_list = List {
@@ -47,7 +47,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
     "}",
     primitivesub!(stomach, _args, state, {
       let f = state.lookup_font();
-      try!(stomach.egroup(state));
+      stomach.egroup(state)?;
       let return_box = Tbox::new(
         String::new(),
         f,
@@ -77,7 +77,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   DefPrimitiveI!(
     "\\endgroup",
     primitiveproc!(stomach, _args, state, {
-      try!(stomach.endgroup(state));
+      stomach.endgroup(state)?;
     })
   );
 

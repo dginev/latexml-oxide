@@ -58,11 +58,11 @@ impl DigestionAPI for Core {
       Some(Scope::Global),
     );
     for preload in preloads {
-      try!(input_definitions(
+      input_definitions(
         preload,
         InputDefinitionOptions::default(),
         &mut self.state
-      ));
+      )?;
     }
     self.state.assign_value(
       "InitialPreloads",
@@ -122,7 +122,7 @@ impl DigestionAPI for Core {
     // // Reverse order, since last opened is first read!
 
     // $self->loadPostamble($options{postamble}) if $options{postamble};
-    try!(input_content(self, &request));
+    input_content(self, &request)?;
     // $self->loadPreamble($options{preamble}) if $options{preamble};
 
     // // Now for the Hacky part for BibTeX!!!
@@ -130,7 +130,7 @@ impl DigestionAPI for Core {
     //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
     //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX); }
 
-    let list = try!(self.digest_internal());
+    let list = self.digest_internal()?;
     note_end(&digestion_note);
 
     Ok(list)
@@ -163,7 +163,7 @@ impl DigestionAPI for Core {
           if ico_flag {
             let paths_string = search_paths.as_ref().unwrap().join(",");
             let attributes = map!{"paths".to_string() => paths_string};
-            try!(document.insert_pi("latexml", Some(attributes)));
+            document.insert_pi("latexml", Some(attributes))?;
           }
         }
       }
@@ -181,14 +181,14 @@ impl DigestionAPI for Core {
       if preload.ends_with(".cls") {
         CLS_EXT_REGEX.replace_all(preload, "");
         let attributes = map!{"class".to_string() => preload.to_string()};
-        try!(document.insert_pi("latexml", Some(attributes)));
+        document.insert_pi("latexml", Some(attributes))?;
       } else {
         STY_EXT_REGEX.replace_all(preload, "");
         let attributes = map!{"package".to_string() => preload.to_string()};
-        try!(document.insert_pi("latexml", Some(attributes)));
+        document.insert_pi("latexml", Some(attributes))?;
       }
     }
-    try!(document.absorb(digested, state));
+    document.absorb(digested, state)?;
     note_end("Building");
 
     // if (my $rules = $state->lookupValue('DOCUMENT_REWRITE_RULES')) {
@@ -200,7 +200,7 @@ impl DigestionAPI for Core {
 
     if !state.nomathparse {
       let mut parser = MathParser::default();
-      try!(parser.parse_math(&mut document, state));
+      parser.parse_math(&mut document, state)?;
     }
     note_begin("Finalizing");
     document.finalize(&mut state);
@@ -213,7 +213,7 @@ impl DigestionAPI for Core {
     let mut state = &mut self.state;
 
     while self.stomach.get_gullet().has_more_input() {
-      let next_bodies: Vec<Digested> = try!(self.stomach.digest_next_body(false, state));
+      let next_bodies: Vec<Digested> = self.stomach.digest_next_body(false, state)?;
       for body in next_bodies {
         boxes.push(body);
       }
@@ -281,7 +281,7 @@ impl DigestionAPI for Core {
     if !noinitialize {
       let mut preloads = vec![main_pool];
       preloads.extend(self.preload.clone());
-      try!(self.initialize_state(preloads));
+      self.initialize_state(preloads)?;
     }
 
     if !pathname::is_literaldata(&request) {
@@ -313,7 +313,7 @@ impl DigestionAPI for Core {
       self.load_postamble(postamble);
     }
 
-    try!(input_content(self, &request));
+    input_content(self, &request)?;
 
     if let Some(preamble) = options.preamble {
       self.load_preamble(preamble);
@@ -325,7 +325,7 @@ impl DigestionAPI for Core {
     //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX);
     // }
 
-    let list = try!(self.digest_internal());
+    let list = self.digest_internal()?;
     note_end(&format!("Digesting {} {}", mode, name));
     Ok(list)
   }

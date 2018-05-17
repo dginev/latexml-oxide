@@ -17,9 +17,9 @@ pub struct List {
 
 impl fmt::Debug for List {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    try!(write!(f, "\nList["));
+    write!(f, "\nList[")?;
     for tbox in &self.boxes {
-      try!(write!(f, "  {:?}\n", tbox));
+      write!(f, "  {:?}\n", tbox)?;
     }
     write!(f, "]({:?})\n", self.mode)
   }
@@ -40,7 +40,7 @@ impl BoxOps for List {
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
   fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()> {
     for digested in self.unlist() {
-      try!(document.absorb(digested, state));
+      document.absorb(digested, state)?;
     }
     Ok(())
   }

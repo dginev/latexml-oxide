@@ -63,7 +63,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Define parsers for standard parameter types.
   DefParameterType!("Plain",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
-      let mut value: Tokens = try!(gullet.read_arg(state));
+      let mut value: Tokens = gullet.read_arg(state)?;
       for inner_opt in inner {
         if let Some(inner_p) = inner_opt {
           value = inner_p.reparse_argument(gullet, value, state);
@@ -240,7 +240,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       let space_token = T_SPACE!();
 
       while token == begin_token {
-        let mut toks : Vec<Token> = try!(gullet.read_balanced(state)).unlist().into_iter().filter(|t| *t != space_token).collect();
+        let mut toks : Vec<Token> = gullet.read_balanced(state)?.unlist().into_iter().filter(|t| *t != space_token).collect();
         let mut new_tokens = toks.split_off(1);
         gullet.unread(Tokens::new(toks));
 
@@ -272,7 +272,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Read the next token, after expanding any expandable ones.
   DefParameterType!("XToken",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
-      if let Some(t) = try!(gullet.read_x_token(false, false, state)) {
+      if let Some(t) = gullet.read_x_token(false, false, state)? {
         Ok(Tokens!(t))
       } else {
         Ok(Tokens!())

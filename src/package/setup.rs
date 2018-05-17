@@ -241,16 +241,16 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   macro_rules! LoadPool {
     ($name:expr) => (LoadPool!($name, $state));
-    ($name:expr, $state_arg:ident) => (try!(input_definitions($name.to_string(),
+    ($name:expr, $state_arg:ident) => (input_definitions($name.to_string(),
       InputDefinitionOptions {
         extension: Some(String::from("pool")),
         ..InputDefinitionOptions::default()
-      }, $state_arg)))
+      }, $state_arg)?)
   }
   /// Loader shorthand for pool dependencies
   macro_rules! InnerPool {
     ($name:ident) => (InnerPool!($name, $state));
-    ($name:ident, $state_arg:ident) => (try!(pool::$name::load_definitions(&mut $state_arg)))
+    ($name:ident, $state_arg:ident) => (pool::$name::load_definitions(&mut $state_arg)?)
   }
 
   macro_rules! RequirePackage{
@@ -323,7 +323,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     // String expansion forms
     ($proto:expr, $expansion:expr, $options:expr) => (DefMacroWO!($proto, $expansion, $options, $state));
     ($proto:expr, $expansion:expr, $options:expr, $state_arg:ident) => ({
-      let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
+      let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       let expansion;
       compile_expansion!(expansion, $expansion);
       // TODO: Also pass in options
@@ -333,7 +333,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $options:expr) => (
       DefMacroWO!($proto, $gullet, $args, $inner_state, $block, $options, $state));
     ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $options:expr, $state_arg:ident) => ({
-      let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
+      let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       // TODO: Also pass in options
       def_macro(cs, paramlist, Some(Rc::new(|$gullet, $args, $inner_state| {$block})), $state_arg);
     })
@@ -360,7 +360,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     // test is always a rust closure
     ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr) => (DefConditional!($proto, $gullet, $args, $inner_state, $block, $state));
     ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $state_arg:ident) => ({
-      let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
+      let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       DefConditionalI!(cs, paramlist, $gullet, $args, $inner_state, $block, $state_arg)
     })
   );
@@ -565,7 +565,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       }
       if let Some(ref mode) = options.mode {
         let mode_clone = mode.clone();
-        let begin_mode_closure = beforeproc!(stomach, state, { try!(stomach.begin_mode(&mode_clone, state)); });
+        let begin_mode_closure = beforeproc!(stomach, state, { stomach.begin_mode(&mode_clone, state)?; });
         before_digest_env.push(begin_mode_closure);
       }
       if options.bounded {
@@ -584,11 +584,11 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       after_digest_env.extend(options.after_digest);
       if let Some(ref mode) = options.mode {
         let mode_clone = mode.clone();
-        let end_mode_closure = afterproc!(stomach, whatsit, state, { try!(stomach.end_mode(&mode_clone, state)); });
+        let end_mode_closure = afterproc!(stomach, whatsit, state, { stomach.end_mode(&mode_clone, state)?; });
         after_digest_env.push(end_mode_closure);
       }
       if options.bounded {
-        let egroup_closure = afterproc!(stomach, whatsit,state, { try!(stomach.egroup(state)); });
+        let egroup_closure = afterproc!(stomach, whatsit,state, { stomach.egroup(state)?; });
         after_digest_env.push(egroup_closure);
       }
 
@@ -611,7 +611,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   macro_rules! DefPrimitiveIWO(
     ($proto:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
-      let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
+      let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       DefPrimitiveII!(cs, paramlist, $compiled_replacement, $options, $state_arg);
     })
   );
@@ -628,7 +628,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! DefRegister {
     ($proto:expr, $value:expr, $options:expr) => (DefRegister!($proto, $value, $options, $state));
     ($proto:expr, $value:expr, $options:expr, $state_arg:ident) => ({
-      let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
+      let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       DefRegisterI!(cs, paramlist, $value, $options, $state_arg);
     });
   }
@@ -983,14 +983,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! DefConstructorWO(
     ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
       // check_options("DefConstructor (prototype)", $constructor_options, %options);
-      let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
+      let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       let compiled_replacement;
       compile_replacement!(compiled_replacement, $replacement);
       DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
     });
     ($proto:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $options:expr, $state_arg:ident) => ({
       let compiled_replacement : Option<ReplacementClosure> = Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body)));
-      let (cs, paramlist) = try!(parse_prototype($proto, $state_arg));
+      let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
     });
   );
@@ -1171,7 +1171,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         &Some(ref mode) => {
           let bmode = mode.clone();
           let mode_closure = Rc::new(move |stomach: &mut Stomach, state: &mut State| {
-            try!(stomach.begin_mode(&bmode, state));
+            stomach.begin_mode(&bmode, state)?;
             Ok(Vec::new())
           });
           before_digest_env.push(mode_closure);
@@ -1260,14 +1260,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         Some(mode) => {
           let emode = mode.clone();
           let emode_closure = Rc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-            try!(stomach.end_mode(&emode, state));
+            stomach.end_mode(&emode, state)?;
             Ok(Vec::new())
           });
           after_digest_env.push(emode_closure);
         },
         None => {
           let egroup_closure = Rc::new(|stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-            try!(stomach.egroup(state));
+            stomach.egroup(state)?;
             Ok(Vec::new())
           });
           after_digest_env.push(egroup_closure);

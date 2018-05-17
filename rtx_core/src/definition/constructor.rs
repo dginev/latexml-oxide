@@ -114,7 +114,7 @@ impl Definition for Constructor {
     // let tracing = state.lookup_value("TRACINGCOMMANDS");
     // LaTeXML::Definition::startProfiling($profiled, "digest") if $profiled;
 
-    let mut result = try!(self.execute_before_digest(stomach, state));
+    let mut result = self.execute_before_digest(stomach, state)?;
 
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
@@ -124,7 +124,7 @@ impl Definition for Constructor {
     // Parse AND digest the arguments to the Constructor
     let mut args: Vec<Option<Digested>> = match *self.get_parameters() {
       None => Vec::new(),
-      Some(ref params) => try!(params.read_arguments_and_digest(stomach, self, state)),
+      Some(ref params) => params.read_arguments_and_digest(stomach, self, state)?,
     };
     // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;
     let nargs = self.get_num_args();
@@ -160,15 +160,15 @@ impl Definition for Constructor {
     };
 
     // Call any 'After' code.
-    let mut post = try!(self.execute_after_digest(stomach, &mut whatsit, state));
+    let mut post = self.execute_after_digest(stomach, &mut whatsit, state)?;
 
     if self.options.capture_body {
-      post.extend(try!(stomach.digest_next_body(false, state)));
+      post.extend(stomach.digest_next_body(false, state)?);
       // info!(" -- Captured body: {:?}", post);
       whatsit.set_body(post);
       post = vec![];
     }
-    let post_post = try!(self.execute_after_digest_body(stomach, &mut whatsit, state));
+    let post_post = self.execute_after_digest_body(stomach, &mut whatsit, state)?;
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 
     // Package the result boxes
@@ -206,12 +206,12 @@ impl Definition for Constructor {
 
     match self.replacement {
       None => {},
-      Some(ref main_closure) => try!(main_closure(
+      Some(ref main_closure) => main_closure(
         document,
         whatsit.get_args(),
         whatsit.get_properties(),
         state
-      )),
+      )?,
     };
 
     for post_closure in &self.options.after_construct {

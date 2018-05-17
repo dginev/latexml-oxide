@@ -252,7 +252,7 @@ impl Gullet {
       } else if expand_next {
         // Do the check here, to be more forgiving and more informative
         let expansion = match defn_next {
-          Some(defn) => try!(defn.invoke(self, state)),
+          Some(defn) => defn.invoke(self, state)?,
           None => Tokens!(),
         };
         // _ => Error("misdefined", token, undef,

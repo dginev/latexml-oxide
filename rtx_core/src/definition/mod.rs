@@ -101,7 +101,7 @@ pub trait Definition {
     let mut before_digested = Vec::new();
     if let Some(pre_list) = self.before_digest() {
       for pre in pre_list.iter() {
-        let before_digest_result = try!(pre(stomach, state));
+        let before_digest_result = pre(stomach, state)?;
         before_digested.extend(before_digest_result);
       }
     }
@@ -118,7 +118,7 @@ pub trait Definition {
     let mut after_digested = Vec::new();
     if let Some(post_list) = self.after_digest() {
       for post in post_list.iter() {
-        let after_digest_result = try!(post(stomach, whatsit, state));
+        let after_digest_result = post(stomach, whatsit, state)?;
         after_digested.extend(after_digest_result);
       }
     }
@@ -138,7 +138,7 @@ pub trait Definition {
       // info!("Found {:?} after_digest_body closures, capture_body was: {:?}", post_list.len(),
       // self.capture_body());
       for post in post_list {
-        let after_body_digest_result = try!(post(stomach, whatsit, state));
+        let after_body_digest_result = post(stomach, whatsit, state)?;
         after_body_digested.extend(after_body_digest_result);
       }
     }

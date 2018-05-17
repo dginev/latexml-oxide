@@ -60,7 +60,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         let mut wrapped_tokens = vec![T_BEGIN!()];
         wrapped_tokens.extend(tokens.clone().unlist());
         wrapped_tokens.push(T_END!());
-        let digested_tokens = try!(stomach.digest(Tokens::new(wrapped_tokens), state));
+        let digested_tokens = stomach.digest(Tokens::new(wrapped_tokens), state)?;
         let entry = (tag.to_string(), None, digested_tokens);
         let frontmatter = match state.lookup_value_mut("frontmatter") {
           Some(&mut ObjectStore::HashTagData(ref mut frnt)) => frnt,
@@ -152,11 +152,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
           state,
         )));
         for (tag, attr, stuff) in list {
-          try!(document.open_element(&tag, attr, None, state)); // TODO:  //           (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
-                                                                //             ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
-          try!(document.absorb(stuff, state));
+          document.open_element(&tag, attr, None, state)?; // TODO:  (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
+                                                           //        ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
+          document.absorb(stuff, state)?;
 
-          try!(document.close_element(&tag, state));
+          document.close_element(&tag, state)?;
         }
       }
     }

@@ -53,7 +53,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
   ));
 
   // note_begin(&(format!("Compiling .model file: {}", path)));
-  let compiled_fh = try!(File::open(path.clone()));
+  let compiled_fh = File::open(path.clone())?;
   let compiled_reader = BufReader::new(&compiled_fh);
   for line_result in compiled_reader.lines() {
     if let Ok(line) = line_result {

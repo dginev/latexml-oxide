@@ -40,7 +40,7 @@ impl Converter {
   }
   pub fn initialize_session(&mut self) -> Result<()> {
     // Prepare LaTeXML object
-    try!(self.core.initialize_state(vec!["TeX.pool".to_string()]));
+    self.core.initialize_state(vec!["TeX.pool".to_string()])?;
     self.ready = true;
     Ok(())
   }
@@ -312,7 +312,7 @@ impl Converter {
   ) -> Result<()>
   {
     if !self.ready {
-      try!(self.initialize_session())
+      self.initialize_session()?
     }
     Ok(())
   }

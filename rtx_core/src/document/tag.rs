@@ -141,29 +141,24 @@ impl TagOptions {
   }
 
   pub fn prepend(&mut self, name: &TagOptionName, mut value: Vec<TagConstructionClosure>) {
-    use self::TagOptionName::*;
-    {// scoping the borrow for "field"
-      let drained : Vec<TagConstructionClosure> = match self.get_mut(name) {
-        Some(vec) => vec.drain(..).collect(),
-        None => Vec::new()
-      };
-      value.extend(drained);
-    }
-    // is there a briefer syntax for the assignment?
+    let drained : Vec<TagConstructionClosure> = match self.get_mut(name) {
+      Some(vec) => vec.drain(..).collect(),
+      None => Vec::new()
+    };
+
+    value.extend(drained);
+
     self.set(name, Some(value));
   }
 
   pub fn append(&mut self, name: &TagOptionName, value: Vec<TagConstructionClosure>) {
-    use self::TagOptionName::*;
-    {
-      // initialize
-      if self.get(name).is_none() {
-        self.set(name,Some(Vec::new()));
-      }
+    if self.get(name).is_none() { // initialize if needed
+      self.set(name,Some(Vec::new()));
     }
-    // set
+
     if let Some(vec) = self.get_mut(name) {
       vec.extend(value);
     }
   }
+  
 }

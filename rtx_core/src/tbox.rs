@@ -104,9 +104,9 @@ impl BoxOps for Tbox {
     };
     if !text.is_empty() {
       if mode == "math" {
-        try!(document.insert_math_token(text, self.properties, Some(&self.font), state));
+        document.insert_math_token(text, self.properties, Some(&self.font), state)?;
       } else {
-        try!(document.open_text(text, font, state));
+        document.open_text(text, font, state)?;
       }
     }
     Ok(())

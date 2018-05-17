@@ -26,7 +26,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         let mode = LookupString!("MODE", state);
         debug!("T_MATH primitive current mode: {:?}", mode);
         if mode == "display_math" {
-          if try!(gullet.if_next(T_MATH!(), state)) {
+          if gullet.if_next(T_MATH!(), state)? {
             gullet.read_token(state);
             op = "\\@@ENDDISPLAYMATH";
           } else {
@@ -39,13 +39,13 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
           }
         } else if mode == "inline_math" {
           op = "\\@@ENDINLINEMATH";
-        } else if try!(gullet.if_next(T_MATH!(), state)) {
+        } else if gullet.if_next(T_MATH!(), state)? {
           gullet.read_token(state);
           op = "\\@@BEGINDISPLAYMATH";
         }
       }
       if !op.is_empty() {
-        try!(stomach.invoke_token(T_CS!(op), state));
+        stomach.invoke_token(T_CS!(op), state)?;
       }
       Ok(Vec::new())
     },
@@ -64,12 +64,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     </ltx:Math>
   </ltx:equation>",
     alias         => Some("$$".to_string()),
-    before_digest => vec!(beforeproc!(stomach, state, { try!(stomach.begin_mode("display_math", state)); })),
+    before_digest => vec!(beforeproc!(stomach, state, { stomach.begin_mode("display_math", state)?; })),
     capture_body  => true
   );
 
   DefConstructorI!(T_CS!("\\@@ENDDISPLAYMATH"), None, noreplacement!(), alias => Some("$$".to_string()),
-    before_digest => vec!(beforeproc!(stomach, state, { try!(stomach.end_mode("display_math", state)); })));
+    before_digest => vec!(beforeproc!(stomach, state, { stomach.end_mode("display_math", state)?; })));
 
   DefConstructor!("\\@@BEGININLINEMATH",
   "<ltx:Math mode=\"inline\">
@@ -78,11 +78,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     </ltx:XMath>
   </ltx:Math>",
     alias => Some("$".to_string()),
-    before_digest => vec!(beforeproc!(stomach, state, {try!(stomach.begin_mode("inline_math", state)); })),
+    before_digest => vec!(beforeproc!(stomach, state, { stomach.begin_mode("inline_math", state)?; })),
     capture_body => true);
 
   DefConstructorI!(T_CS!("\\@@ENDINLINEMATH"), None, noreplacement!(), alias => Some("$".to_string()),
-    before_digest => vec!(beforeproc!(stomach, state, { try!(stomach.end_mode("inline_math", state));})));
+    before_digest => vec!(beforeproc!(stomach, state, { stomach.end_mode("inline_math", state)?; })));
 
   // Same as add_TeX, but add the code from the body of the object.
   let add_body_tex_closure: Vec<TagConstructionClosure> = tagsub!(document, node, state, {

@@ -80,7 +80,7 @@ impl Definition for Expandable {
     if let Some(ref trivial_expansion) = self.trivial_expansion {
       Ok(trivial_expansion.clone())
     } else {
-      let args = try!(self.read_arguments(gullet, state));
+      let args = self.read_arguments(gullet, state)?;
       self.do_invocation(gullet, args, state)
     }
   }

@@ -106,7 +106,7 @@ impl MathParser {
       note_begin("Math Parsing");
       note_progress(&format!("{:?} formulae ...", xmath_nodes.len()));
       for math in xmath_nodes {
-        try!(self.parse(math, document, state));
+        self.parse(math, document, state)?;
       }
 
       //     note_progress("\nMath parsing succeeded:"
@@ -290,7 +290,7 @@ impl MathParser {
     // foreach my $n ($document->findnodes("descendant-or-self::*[\@xml:id]",
     // $xnode)) {     my $id = $n->getAttribute('xml:id');
     //     $LaTeXML::MathParser::IDREFS{$id} = $n; }
-    if let Some(result) = try!(self.parse_rec(&mut xnode, "Anything,", document, state)) {
+    if let Some(result) = self.parse_rec(&mut xnode, "Anything,", document, state)? {
       // Add text representation to the containing Math element.
       let mut p = xnode.get_parent().unwrap();
       // This is a VERY screwy situation? How can the parent be a document fragment??
@@ -343,12 +343,12 @@ impl MathParser {
     state: &mut State,
   ) -> Result<Option<Node>>
   {
-    try!(self.parse_children(node, document, state));
+    self.parse_children(node, document, state)?;
     // This will only handle 1 layer nesting (successfully?)
     // Note that this would have been found by the top level xpath,
     // but we've got to worry about node identity: the parent is being rebuilt
     for nested in document.findnodes("descendant::ltx:XMath", Some(node), state) {
-      try!(self.parse(nested, document, state));
+      self.parse(nested, document, state)?;
     }
     let tag = document.get_node_qname(node, state);
     let rule = if let Some(requested_rule) = node.get_attribute("rule") {
@@ -360,7 +360,7 @@ impl MathParser {
     if rule == "kludge" {
       self.parse_kludge(node, document, state);
       Ok(None)
-    } else if let Some(result) = try!(self.parse_single(node, document, rule, state)) {
+    } else if let Some(result) = self.parse_single(node, document, rule, state)? {
       *self.passed.entry(tag.clone()).or_insert(0) += 1;
       if tag == "ltx:XMath" {
         // Replace the content of XMath with parsed result
@@ -437,15 +437,15 @@ impl MathParser {
       let tag = document.get_node_qname(&child, state);
       match tag.as_str() {
         "ltx:XMArg" => {
-          try!(self.parse_rec(&mut child, "Anything", document, state));
+          self.parse_rec(&mut child, "Anything", document, state)?;
         },
         "ltx:XMWrap" => {
-          try!(self.parse_rec(&mut child, "Anything", document, state));
+          self.parse_rec(&mut child, "Anything", document, state)?;
         },
         "ltx:XMApp" | "ltx:XMArray" | "ltx:XMRow" | "ltx:XMCell" => {
-          try!(self.parse_children(&mut child, document, state))
+          self.parse_children(&mut child, document, state)?
         },
-        "ltx:XMDual" => try!(self.parse_children(&mut child, document, state)),
+        "ltx:XMDual" => self.parse_children(&mut child, document, state)?,
         _ => {},
       };
     }
@@ -731,7 +731,7 @@ impl MathParser {
       };
     } else {
       // Now do the actual parse.
-      let (result_internal, unparsed) = try!(self.parse_internal(&rule, nodes, document));
+      let (result_internal, unparsed) = self.parse_internal(&rule, nodes, document)?;
       result = result_internal;
     }
 
@@ -817,9 +817,9 @@ impl MathParser {
 
       let mut new_app_node = Node::new("XMApp", None, &mut document.document).unwrap();
       new_app_node.set_namespace(&left_arg.get_namespace().unwrap());
-      try!(new_app_node.add_child(infix_op));
-      try!(new_app_node.add_child(left_arg));
-      try!(new_app_node.add_child(right_arg));
+      new_app_node.add_child(infix_op)?;
+      new_app_node.add_child(left_arg)?;
+      new_app_node.add_child(right_arg)?;
 
       let new_app_child = parent.add_child(new_app_node).unwrap();
 

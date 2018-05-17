@@ -82,7 +82,7 @@ impl Mouth {
 
   pub fn open<'open>(&'open mut self, content: &str, mut state: &mut State) -> Result<()> {
     match self.foodtype {
-      FoodType::File | FoodType::Binding => try!(self.open_file(content)),
+      FoodType::File | FoodType::Binding => self.open_file(content)?,
       FoodType::Literal => self.open_literal(content),
       FoodType::HTTP => self.open_http(content),
       FoodType::HTTPS => self.open_https(content),
@@ -110,7 +110,7 @@ impl Mouth {
         },
       };
       let mut content = String::new();
-      try!(f.read_to_string(&mut content));
+      f.read_to_string(&mut content)?;
       self.open_literal(&content);
     }
     Ok(())

@@ -94,13 +94,13 @@ pub fn input_definitions(
   state.assign_value(&loaded_flag, ObjectStore::Bool(true), Some(Scope::Global));
 
   match file.as_ref() {
-    "TeX.pool" => try!(pool::tex::load_definitions(&mut state)),
-    "LaTeX.pool" => try!(pool::latex::load_definitions(&mut state)),
-    "eTeX.pool" => try!(pool::etex::load_definitions(&mut state)),
-    "pdfTeX.pool" => try!(pool::pdftex::load_definitions(&mut state)),
-    "article.cls" => try!(pool::article_cls::load_definitions(&mut state)),
-    "alltt.sty" => try!(pool::alltt_sty::load_definitions(&mut state)),
-    "comment.sty" => try!(pool::comment_sty::load_definitions(&mut state)),
+    "TeX.pool" => pool::tex::load_definitions(&mut state)?,
+    "LaTeX.pool" => pool::latex::load_definitions(&mut state)?,
+    "eTeX.pool" => pool::etex::load_definitions(&mut state)?,
+    "pdfTeX.pool" => pool::pdftex::load_definitions(&mut state)?,
+    "article.cls" => pool::article_cls::load_definitions(&mut state)?,
+    "alltt.sty" => pool::alltt_sty::load_definitions(&mut state)?,
+    "comment.sty" => pool::comment_sty::load_definitions(&mut state)?,
     other => fatal!(
       Package,
       Unknown,
@@ -127,7 +127,7 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
     notes: true,
     ..Mouth::default()
   };
-  try!(mouth.open(path, &mut core.state));
+  mouth.open(path, &mut core.state)?;
   // TODO:
   // If there is a file-specific declaration file (name.latexml), load it first!
   // let file = path;
@@ -310,7 +310,7 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
     proto.to_string()
   };
   final_proto = final_proto.trim_left().to_string();
-  let paramlist = try!(parse_parameters(final_proto, &cs, state));
+  let paramlist = parse_parameters(final_proto, &cs, state)?;
   Ok((cs, paramlist))
 }
 
@@ -338,16 +338,16 @@ pub fn parse_parameters(
       let inner: Option<Parameters> = if inner_spec.is_empty() {
         None
       } else {
-        try!(parse_parameters(inner_spec.to_string(), cs, state))
+        parse_parameters(inner_spec.to_string(), cs, state)?
       };
-      parameters.push(try!(
+      parameters.push(
         Parameter {
           name: "Plain".to_string(),
           spec: spec.to_string(),
           extra: vec![inner],
           ..Parameter::default()
-        }.init(state)
-      ));
+        }.init(state)?
+      );
     } else if OPTIONAL_CHECK.is_match(&prototype) {
       // Ditto for Optional
       let captures = OPTIONAL_CHECK.captures(&prototype).unwrap();
@@ -357,7 +357,7 @@ pub fn parse_parameters(
 
       if DEFAULT_CHECK.is_match(inner_spec) {
         // let default_captures = DEFAULT_CHECK.captures(&inner_spec).unwrap();
-        parameters.push(try!(
+        parameters.push(
           Parameter {
             name: "Optional".to_string(),
             spec: spec.to_string(),
@@ -365,29 +365,29 @@ pub fn parse_parameters(
             // None]});
             extra: Vec::new(),
             ..Parameter::default()
-          }.init(state)
-        ));
+          }.init(state)?
+        );
       } else if !inner_spec.is_empty() {
-        parameters.push(try!(
+        parameters.push(
           Parameter {
             name: "Optional".to_string(),
             spec: spec.to_string(),
             extra: vec![
               None,
-              try!(parse_parameters(inner_spec.to_string(), cs, state)),
+              parse_parameters(inner_spec.to_string(), cs, state)?,
             ],
             ..Parameter::default()
-          }.init(state)
-        ));
+          }.init(state)?
+        );
       } else {
-        parameters.push(try!(
+        parameters.push(
           Parameter {
             name: "Optional".to_string(),
             spec: spec.to_string(),
             extra: Vec::new(),
             ..Parameter::default()
-          }.init(state)
-        ));
+          }.init(state)?
+        );
       }
     } else if PARAMSPECT_CHECK.is_match(&prototype) {
       let captures = PARAMSPECT_CHECK.captures(&prototype).unwrap();
@@ -402,14 +402,14 @@ pub fn parse_parameters(
           Vec::new()
         },
       };
-      parameters.push(try!(
+      parameters.push(
         Parameter {
           name: spec_type.to_string(),
           spec: spec.to_string(),
           extra: extra,
           ..Parameter::default()
-        }.init(state)
-      ));
+        }.init(state)?
+      );
     } else {
       // Fatal('misdefined', cs, undef, "Unrecognized parameter specification at \"prototype\""); }
       panic!(

@@ -48,7 +48,7 @@ impl Stomach {
     let mut box_list: Vec<Digested> = Vec::new();
 
     loop {
-      match try!(self.get_gullet_mut().read_x_token(true, true, state)) {
+      match self.get_gullet_mut().read_x_token(true, true, state)? {
         // try reading a executable token
         None => {
           // Wer ran out, terminate,
@@ -57,7 +57,7 @@ impl Stomach {
           break;
         },
         Some(token) => {
-          box_list.extend(try!(self.invoke_token(token, state)));
+          box_list.extend(self.invoke_token(token, state)?);
           // TODO:
           // if terminal.is_some() && Equals(token, terminal)
           if init_depth > self.boxing.len() {
@@ -99,11 +99,11 @@ impl Stomach {
         //   *list = Rc::new(Vec::new());
         // }
         let mut digested_boxes = Vec::new();
-        while let Some(token) = try!(stomach.get_gullet_mut().read_x_token(true, true, state)) {
+        while let Some(token) = stomach.get_gullet_mut().read_x_token(true, true, state)? {
           // Done if we run out of tokens
           // {
           //   let list = STOMACH_LIST.lock()
-          digested_boxes.extend(try!(stomach.invoke_token(token, state)));
+          digested_boxes.extend(stomach.invoke_token(token, state)?);
           // }
 
           if initdepth > stomach.boxing.len() {
@@ -162,7 +162,7 @@ impl Stomach {
       match looked_up_definition {
         None => {
           // Supposedly executable token, but no definition!
-          result = try!(self.invoke_token_undefined(&token, state));
+          result = self.invoke_token_undefined(&token, state)?;
         },
         Some(store) => {
           // Rust notes: It would be ideal if we could unify the cases for (Primtive, Constructor,
@@ -175,7 +175,7 @@ impl Stomach {
               // Common case
               let cc = meaning.get_catcode();
               if cc == Catcode::CS {
-                result = try!(self.invoke_token_undefined(&token, state));
+                result = self.invoke_token_undefined(&token, state)?;
               } else if cc.is_absorbable() {
                 result = self.invoke_token_simple(meaning, state);
               } else {
@@ -191,29 +191,29 @@ impl Stomach {
               // A math-active character will (typically) be a macro,
               // but it isn't expanded in the gullet, but later when digesting, in math mode (? I
               // think)
-              let invoked_meaning = try!(meaning.invoke(&mut self.gullet, state));
+              let invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
               self.gullet.unread(invoked_meaning);
-              maybe_token = try!(self.gullet.read_x_token(true, false, state)); // replace the token by it's expansion!!!
+              maybe_token = self.gullet.read_x_token(true, false, state)?; // replace the token by it's expansion!!!
               self.token_stack.pop();
               continue;
             },
             ObjectStore::Conditional(meaning) => {
               // Conditionals are "expandable", use the regular invoke.
-              let invoked_meaning = try!(meaning.invoke(&mut self.gullet, state));
+              let invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
               self.gullet.unread(invoked_meaning);
-              maybe_token = try!(self.gullet.read_x_token(true, false, state)); // replace the token by it's expansion!!!
+              maybe_token = self.gullet.read_x_token(true, false, state)?; // replace the token by it's expansion!!!
               self.token_stack.pop();
             },
             ObjectStore::Constructor(meaning) => {
               // Otherwise, a normal primitive or constructor
-              result = try!(meaning.invoke_primitive(self, meaning.clone(), state));
+              result = meaning.invoke_primitive(self, meaning.clone(), state)?;
               if !meaning.is_prefix() {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
             },
             ObjectStore::Primitive(meaning) => {
               // Otherwise, a normal primitive or constructor
-              result = try!(meaning.invoke_primitive(self, meaning.clone(), state));
+              result = meaning.invoke_primitive(self, meaning.clone(), state)?;
               if !meaning.is_prefix() {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
@@ -221,7 +221,7 @@ impl Stomach {
             ObjectStore::MathPrimitive(meaning) => {
               // Copy of regular Primitive
               // Otherwise, a normal primitive or constructor
-              result = try!(meaning.invoke_primitive(self, meaning.clone(), state));
+              result = meaning.invoke_primitive(self, meaning.clone(), state)?;
               if !meaning.is_prefix() {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
@@ -618,7 +618,7 @@ impl Stomach {
     // self.currentFrameMessage);
     } else {
       // Don"t pop if there"s an error; maybe we'll recover?
-      try!(self.pop_stack_frame(false, state));
+      self.pop_stack_frame(false, state)?;
     } // Effectively egroup.
     Ok(())
   }

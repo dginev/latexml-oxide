@@ -206,7 +206,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         operations.push(quote!(
           let mut av_props : HashMap<String, String> = HashMap::new();
           #(#av)*
-          try!(document.insert_pi(#current_tag, Some(av_props)));
+          document.insert_pi(#current_tag, Some(av_props))?;
         ));
 
         let mut pi_closed = false;
@@ -252,11 +252,11 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         operations.push(quote!(
           let mut av_props : HashMap<String, String> = HashMap::new();
           #(#av)*
-          try!(document.open_element(#current_tag, Some(av_props), None, state));
+          document.open_element(#current_tag, Some(av_props), None, state)?;
         ));
         // Empty element?
         if replacement.starts_with('/') {
-          operations.push(quote!(try!(document.close_element(#current_tag, state));));
+          operations.push(quote!(document.close_element(#current_tag, state)?;));
           replacement = replacement[1..].to_owned();
         }
         if replacement.starts_with('>') {
@@ -279,7 +279,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         .to_string();
       // handle close tag
       if is_match {
-        operations.push(quote!(try!(document.close_element(#current_tag, state));));
+        operations.push(quote!(document.close_element(#current_tag, state)?;));
       }
     }
 
@@ -290,7 +290,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         let to_absorb = translate_value("", &mut replacement);
         operations.push(quote!(
           if let Some(& ObjectStore::Digested(ref digested)) = #to_absorb {
-            try!(document.absorb((**digested).clone(), state));
+            document.absorb((**digested).clone(), state)?;
           }
         ));
       }
@@ -316,7 +316,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
             let escaped_match = &slashify(&unquote(text_match.as_str()));
             operations.push(quote!(
             let content_box = Digested::Box(Tbox{text: #escaped_match.to_string(), ..Tbox::default()});
-            try!(document.absorb(content_box, state));
+            document.absorb(content_box, state)?;
           ));
             is_match = true;
           }

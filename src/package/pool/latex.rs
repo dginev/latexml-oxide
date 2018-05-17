@@ -43,10 +43,10 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
         None => Vec::new(),
       };
-      try!(load_class(whatsit.get_arg(2).unwrap().to_string(),
+      load_class(whatsit.get_arg(2).unwrap().to_string(),
                 class_opts,
                 Tokens!(T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())),
-                state));
+                state)?;
     }))
   );
 
@@ -144,11 +144,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         if !id.is_empty() {
           document.set_attribute(&mut docel, "xml:id", id);
         }
-        try!(document.absorb(body, state));
+        document.absorb(body, state)?;
       } else {
         let mut attrib : HashMap<String, String> = HashMap::new();
         attrib.insert("xml:id".to_string(), id.to_string());
-        try!(document.insert_element("ltx:document", vec![body], Some(attrib), state));
+        document.insert_element("ltx:document", vec![body], Some(attrib), state)?;
       }
       Ok(())
     })),
@@ -305,19 +305,19 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
         _ => ""
       };
       let clean_id = id; // TODO: CleanID($id);
-      try!(document.open_element(
+      document.open_element(
         &format!("ltx:{}", stype),
         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
         None,
         state,
-      ));
+      )?;
       // TODO: Another instance where the immutability of props causes endless cloning
       //       which is slow and wasteful.
       //       The big problem is that for props to be mutable, the entire parent whatsit needs to be mutable,
       //       and Rust hits a mutability conflict between the parent, and the "args" and "props" children
       //       ... will come back here after performance becomes an issue again
       if let Some(ObjectStore::Digested(tags)) = props.get("tags") {
-        try!(document.absorb((**tags).clone(), state)); 
+        document.absorb((**tags).clone(), state)?; 
       }
       let title_prop = props.get("title");
       let title_digested = match title_prop {
@@ -325,7 +325,7 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
         Some(ObjectStore::Digested(d)) => vec![(**d).clone()],
         _ => Vec::new()
       };
-      try!(document.insert_element("ltx:title", title_digested, None, state));
+      document.insert_element("ltx:title", title_digested, None, state)?;
 
       let toctitle_prop = props.get("toctitle");
       let toctitle_digested = match toctitle_prop {
@@ -334,7 +334,7 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
         _ => Vec::new()
       };
       if !toctitle_digested.is_empty() {
-        try!(document.insert_element("ltx:toctitle", toctitle_digested, None, state));
+        document.insert_element("ltx:toctitle", toctitle_digested, None, state)?;
       }
     });
 //   properties => sub {
@@ -426,15 +426,15 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
       let clean_id = id; // TODO: CleanID($id);
       let has_toctitle =
         !toctitle.to_string().is_empty() && (toctitle.to_string() != title.to_string());
-      try!(document.open_element(
+      document.open_element(
         &format!("ltx:{}", stype),
         Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)),
         None,
         inner_state,
-      ));
-      try!(document.insert_element("ltx:title", vec![title], None, inner_state));
+      )?;
+      document.insert_element("ltx:title", vec![title], None, inner_state)?;
       if has_toctitle {
-        try!(document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state));
+        document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state)?;
       }
     }
   );
@@ -489,10 +489,10 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
         };
 
         for package in package_list {
-          try!(require_package(package, RequireOptions {
+          require_package(package, RequireOptions {
             options: options_list.clone(),
             ..RequireOptions::default()
-          }, state))
+          }, state)?
         }
         Ok(Vec::new())
       })

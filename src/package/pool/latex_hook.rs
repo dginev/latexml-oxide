@@ -42,14 +42,14 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     .map(|s| s.to_string())
   {
     DefMacroI!(T_CS!(ltxtrigger), None, move |_gullet, _args, state| {
-      try!(input_definitions(
+      input_definitions(
         "LaTeX".to_string(),
         InputDefinitionOptions {
           extension: Some(String::from("pool")),
           ..InputDefinitionOptions::default()
         },
         state
-      ));
+      )?;
       Ok(Tokens!(T_CS!(ltxtrigger)))
     });
   }

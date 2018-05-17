@@ -24,7 +24,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         _ => false
       };
       if !in_preamble {
-        try!(document.maybe_close_element("ltx:p", state));
+        document.maybe_close_element("ltx:p", state)?;
         if let Some(c) = props.get("class") {
           let element = document.get_element();
           if let Some(mut node) = element {
@@ -37,7 +37,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
             }
           }
         }
-        try!(document.maybe_close_element("ltx:para", state));
+        document.maybe_close_element("ltx:para", state)?;
      }
     }),
     after_digest => sub!(|stomach, whatsit, state| {
@@ -63,9 +63,9 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     T_CS!("\\inner@par"),
     None,
     replacement!(document, args, props, state, {
-      if try!(document.maybe_close_element("ltx:p", state)).is_some() {
+      if document.maybe_close_element("ltx:p", state)?.is_some() {
       } else if document.can_contain(document.get_node(), "ltx:break", state) {
-        try!(document.insert_element("ltx:break", Vec::new(), None, state));
+        document.insert_element("ltx:break", Vec::new(), None, state)?;
       }
     })
   );

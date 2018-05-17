@@ -185,7 +185,7 @@ impl Parameter {
       state.begin_semiverbatim(None);
     }
     let closure: &ReaderClosure = &self.reader;
-    let value = try!(closure(gullet, self.extra.clone(), vec![], state));
+    let value = closure(gullet, self.extra.clone(), vec![], state)?;
     // TODO:
     // $value = $value->neutralize if $$self{semiverbatim} && (ref $value)
     //   && $value->can('neutralize');
@@ -214,7 +214,7 @@ impl Parameter {
     let value_to_digest = value.clone();
     if self.semiverbatim {
       state.begin_semiverbatim(None);
-      try!(stomach.reading_from_mouth(
+      stomach.reading_from_mouth(
         Mouth::default(),
         state,
         Box::new(move |stomach: &mut Stomach, state: &mut State| {
@@ -233,23 +233,23 @@ impl Parameter {
           let evec = Vec::new();
           Ok(Tokens { tokens: tokens }.neutralize(&evec, state).unlist())
         })
-      ));
+      )?;
     }
 
     if let Some(ref pre) = self.before_digest {
       // Done for effect only.
-      try!(pre(stomach, state)); // maybe pass extras?
+      pre(stomach, state)?; // maybe pass extras?
     }
 
     let digested_value = if !value_to_digest.is_empty() && !self.undigested {
-      Some(try!(value_to_digest.be_digested(stomach, state)))
+      Some(value_to_digest.be_digested(stomach, state)?)
     } else {
       None
     };
     if let Some(ref post) = self.after_digest {
       // Done for effect only.
       let mut w = Whatsit::default();
-      try!(post(stomach, &mut w, state)); // maybe pass extras?
+      post(stomach, &mut w, state)?; // maybe pass extras?
     }
     if self.semiverbatim {
       state.end_semiverbatim() // Corner case?
@@ -281,7 +281,7 @@ impl Parameters {
   {
     let mut args = Vec::new();
     for parameter in &self.params {
-      let values = try!(parameter.read(gullet, fordefn, state));
+      let values = parameter.read(gullet, fordefn, state)?;
       if !parameter.novalue {
         args.push(values);
       }
@@ -298,9 +298,9 @@ impl Parameters {
   {
     let mut args = Vec::new();
     for parameter in &self.params {
-      let value = try!(parameter.read(&mut stomach.gullet, fordefn, state));
+      let value = parameter.read(&mut stomach.gullet, fordefn, state)?;
       if !parameter.novalue {
-        let digested_value = try!(parameter.digest(stomach, value, fordefn, state));
+        let digested_value = parameter.digest(stomach, value, fordefn, state)?;
         args.push(digested_value);
       }
     }
