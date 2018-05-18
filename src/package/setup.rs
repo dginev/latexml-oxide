@@ -125,6 +125,15 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     //   ($tokens:expr, $core:ident) => ($core.stomach.digest($tokens, $core.state);)
   // }
   
+// sub Digest {
+//   my (@stuff) = @_;
+//   return $STATE->getStomach->digest(Tokens(map { (ref $_ ? $_ : TokenizeInternal($_)) } @stuff)); }
+
+  macro_rules! DigestText {
+    ($stuff:expr, $stomach:ident) => (DigestText!($stuff, $stomach, $state));
+    ($stuff:expr, $stomach:ident, $state_arg:ident) => (digest_text($stuff, $stomach, $state_arg));
+  }
+
   macro_rules! DigestIf {
     ($token:expr, $stomach:ident) => (DigestIf!($token, $stomach, $state));
     ($token:expr, $stomach:ident, $state_arg: ident) => (digest_if($token, $stomach, $state_arg));

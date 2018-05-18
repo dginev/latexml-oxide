@@ -18,7 +18,7 @@ use rtx_core::document::Document;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::state::{ObjectStore, Scope, State};
 use rtx_core::stomach::Stomach;
-
+use rtx_core::BoxOps;
 use rtx_core::token::Token;
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
@@ -683,6 +683,14 @@ pub fn merge_font(font: Font, state: &mut State) {
   return;
 }
 
+pub fn digest_text(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
+  stomach.begin_mode("text", state);
+  let result = stomach.digest(stuff, state);
+  // TODO: ??? : Tokens!(map { (ref $_ ? $_ : TokenizeInternal($_)) } @stuff));
+  stomach.end_mode("text", state);
+  result
+}
+
 pub fn digest_if(token: Token, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
   if let Some(defn) = state.lookup_definition(&token) {
     match stomach.digest(Tokens!(token), state) {
@@ -846,10 +854,16 @@ pub fn step_counter(ctr: &str, noreset: bool, gullet: &mut Gullet, state: &mut S
   // DigestIf!(T_CS!("\\the$ctr"), stomach);
 }
 
-pub fn ref_step_counter(ctr: &str, noreset: bool, gullet: &mut Gullet, state: &mut State) {
-  // {
-  //   step_counter(ctr, noreset, gullet, state);
-  // }
+pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+  let ctr = match state.lookup_mapping("counter_for_type", ctype) {
+    Some(ObjectStore::String(ctr)) => ctr.to_string(),
+    _ => ctype.to_string()
+  };
+
+  {
+    let gullet = stomach.get_gullet_mut();
+    step_counter(&ctr, noreset, gullet, state);
+  }
   let iddef = state.lookup_definition(&T_CS!(format!("\\the{}@ID", ctr)));
   // TODO:
   // let has_id = match iddef {
@@ -870,36 +884,33 @@ pub fn ref_step_counter(ctr: &str, noreset: bool, gullet: &mut Gullet, state: &m
   // let id = has_id && ToString(DigestLiteral(T_CS!(format!("\\the{}@ID",ctr)));
   let id : Option<String> = None;
 
+  let refnum = digest_text(Tokens!(T_CS!(format!("\\the{}",ctr))), stomach, state)?;
   // TODO:
-  // let refnum = DigestText(T_CS!(format!("\\the{}", ctr)));
-  // let frefnum = DigestText(Invocation(T_CS!("\\lx@fnum@@"), ctr));
-  // let rrefnum = DigestText(Invocation(T_CS!("\\lx@refnum@@"), ctr));
-  let refnum = Tokens!();
-  let frefnum = Tokens!();
-  let rrefnum = Tokens!();
-
-  let s_refnum = refnum.to_string();
-  let s_frefnum = frefnum.to_string();
-  let s_rrefnum = rrefnum.to_string();
+  // my $tags = Digest(Invocation(T_CS('\lx@make@tags'), $type));
+  // # Any scopes activated for previous value of this counter (& any nested counters) must be removed.
+  // # This may also include scopes activated for \label
 
   // Any scopes activated for previous value of this counter (& any nested counters) must be
   // removed. This may also include scopes activated for \label
-  deactivate_counter_scope(ctr, state);
+  deactivate_counter_scope(&ctr, state);
 
   // And install the scope (if any) for this reference number.
   state.assign_value("current_counter", ObjectStore::String(ctr.to_string()), Some(Scope::Local));
+
+  let scope = format!("{}:{}", ctr, refnum.to_string());
   state.assign_value(
     &format!("scopes_for_counter:{}", ctr),
-    ObjectStore::VecString(vec![format!("{}:{}", ctr, s_refnum)]),
+    ObjectStore::VecString(vec![scope.clone()]),
     Some(Scope::Local),
   );
-  state.activate_scope(&format!("{}:{}", ctr, s_refnum));
-  // return (refnum => $refnum,
-  //   ($frefnum && (!$refnum || ($s_frefnum ne $s_refnum)) ? (frefnum => $frefnum) : ()),
-  // ($rrefnum && ($frefnum ? ($s_rrefnum ne $s_frefnum) : (!$refnum || ($s_rrefnum ne
-  // $s_refnum)))     ? (rrefnum => $rrefnum) : ()),
-  //   ($has_id ? (id => $id) : ()));
-  // }
+  state.activate_scope(&scope);
+
+  Ok(())
+  // TODO:
+  // return (
+  //   ($tags   ? (tags => $tags) : ()),
+  //   ($has_id ? (id   => $id)   : ())); }
+  
 }
 
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {
