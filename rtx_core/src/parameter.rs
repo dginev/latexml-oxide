@@ -96,7 +96,7 @@ impl Parameter {
                 None => fatal!(
                   Parameter,
                   Init,
-                  format!("Can't initialize parameter {:?}, unknown?", self.name)
+                  s!("Can't initialize parameter {:?}, unknown?", self.name)
                 ),
               },
             },

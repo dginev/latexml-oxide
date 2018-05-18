@@ -103,7 +103,7 @@ impl Definition for Conditional {
       }
     } else {
       error!(
-        target: &format!("unexpected:{:?}", self.cs), //$gullet,
+        target: &s!("unexpected:{:?}", self.cs), //$gullet,
         "Unknown conditional control sequence {:?}",
         state.current_token
       );

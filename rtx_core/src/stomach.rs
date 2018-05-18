@@ -149,7 +149,7 @@ impl Stomach {
         fatal!(
           Stomach,
           Recursion,
-          format!(
+          s!(
             "Excessive recursion(?): Tokens on stack: {:?}",
             self.token_stack
           )
@@ -180,7 +180,7 @@ impl Stomach {
                 result = self.invoke_token_simple(meaning, state);
               } else {
                 error!(
-                  target: &format!("misdefined:{:?}", token),
+                  target: &s!("misdefined:{:?}", token),
                   "The token {:?} should never reach Stomach!",
                   token
                 );
@@ -230,7 +230,7 @@ impl Stomach {
               fatal!(
                 Stomach,
                 Misdefined,
-                format!("The object {:?} should never reach Stomach!", meaning)
+                s!("The object {:?} should never reach Stomach!", meaning)
               );
             },
           };
@@ -252,7 +252,7 @@ impl Stomach {
       // Apparently an \ifsomething ???
       let name = cs.replace("\\if", "");
       error!(
-        target: &format!("undefined:{}", cs),
+        target: &s!("undefined:{}", cs),
         "The token {:?} is not defined. Defining it now as with \\newif",
         cs
       );
@@ -260,7 +260,7 @@ impl Stomach {
       let cs_clone = cs.clone();
       state.install_definition(
         ObjectStore::Expandable(Rc::new(Expandable {
-          cs: T_CS!(format!("\\{}true", name)),
+          cs: T_CS!(s!("\\{}true", name)),
           paramlist: None,
           expansion: Some(Rc::new(move |_gullet, _args, _state| {
             Ok(Tokens!(T_CS!("\\let"), T_CS!(cs_clone), T_CS!("\\iftrue")))
@@ -271,7 +271,7 @@ impl Stomach {
       );
       state.install_definition(
         ObjectStore::Expandable(Rc::new(Expandable {
-          cs: T_CS!(format!("\\{}false", name)),
+          cs: T_CS!(s!("\\{}false", name)),
           paramlist: None,
           expansion: Some(Rc::new(move |_gullet, _args, _state| {
             Ok(Tokens!(T_CS!("\\let"), T_CS!(cs), T_CS!("\\iffalse")))
@@ -286,7 +286,7 @@ impl Stomach {
       Ok(Vec::new())
     } else {
       error!(
-        target: &format!("undefined:{}", cs),
+        target: &s!("undefined:{}", cs),
         "The token {:?} is not defined. Defining it now as <ltx:ERROR/>",
         cs
       );
@@ -612,7 +612,7 @@ impl Stomach {
     {
       // Or was a mode switch to a different mode
       error!(
-        target: &format!("unexpected:{:?}", state.current_token),
+        target: &s!("unexpected:{:?}", state.current_token),
         "Attempt to end mode"
       )
     // self.currentFrameMessage);

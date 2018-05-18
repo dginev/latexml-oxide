@@ -104,7 +104,7 @@ impl MathParser {
 
     if !xmath_nodes.is_empty() {
       note_begin("Math Parsing");
-      note_progress(&format!("{:?} formulae ...", xmath_nodes.len()));
+      note_progress(&s!("{:?} formulae ...", xmath_nodes.len()));
       for math in xmath_nodes {
         self.parse(math, document, state)?;
       }
@@ -365,7 +365,7 @@ impl MathParser {
       if tag == "ltx:XMath" {
         // Replace the content of XMath with parsed result
         self.n_parsed += 1;
-        note_progress(&format!("[{:?}]", self.n_parsed));
+        note_progress(&s!("[{:?}]", self.n_parsed));
         for el_node in element_nodes(node) {
           // document.unrecord_node_ids(el_node);
         }
@@ -979,7 +979,7 @@ impl MathParser {
           };
           let (bp, string) = self.textrec_apply(&name, op, args, document, state);
           if bp < outer_bp || (bp == outer_bp && name != outer_name) {
-            format!("({})", string)
+            s!("({})", string)
           } else {
             string
           }
@@ -1004,7 +1004,7 @@ impl MathParser {
         String::new()
       },
       "ltx:XMArray" => String::new(), // TODO:     return textrec_array($node); }
-      _ => format!("[{}]", self.p_get_value(&node)),
+      _ => s!("[{}]", self.p_get_value(&node)),
     }
   }
 
@@ -1029,7 +1029,7 @@ impl MathParser {
       // unless a single arg; then prefix.
       (
         bp,
-        format!(
+        s!(
           "{} {}",
           self.textrec(&op, None, None, document, state),
           self.textrec(args.first().unwrap(), Some(bp), Some(name), document, state)
@@ -1040,7 +1040,7 @@ impl MathParser {
         .iter()
         .map(|arg| self.textrec(arg, Some(bp), Some(name), document, state))
         .collect();
-      let op_string: String = format!(" {} ", self.textrec(&op, None, None, document, state));
+      let op_string: String = s!(" {} ", self.textrec(&op, None, None, document, state));
       let apply_string: String = args_rec.join(&op_string);
       (bp, apply_string)
     };

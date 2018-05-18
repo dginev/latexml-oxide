@@ -156,7 +156,7 @@ impl Model {
         pathname::FindOptions {
           paths: search_paths,
           types: Some(vec!["model".to_string()]),
-          installation_subdir: Some(format!("resources/{}", schema_type)),
+          installation_subdir: Some(s!("resources/{}", schema_type)),
         },
       );
 
@@ -299,7 +299,7 @@ impl Model {
       docprefix = Some("namespace".to_string() + &self.namespace_errors.to_string());
       self.register_document_namespace(docprefix.as_ref().unwrap(), Some(namespace.to_string()));
       warn!(
-        target: &format!("malformed:{:?}", namespace),
+        target: &s!("malformed:{:?}", namespace),
         "No prefix has been registered for namespace."
       );
       // Warn('malformed', $namespace, undef,
@@ -339,7 +339,7 @@ impl Model {
         "http://example.com/namespace".to_string() + &self.namespace_errors.to_string();
       self.register_document_namespace(docprefix, Some(ns_error));
       error!(
-        target: &format!("malformed:{:?}", docprefix),
+        target: &s!("malformed:{:?}", docprefix),
         "No namespace has been registered for prefix."
       );
       // Error('malformed', $docprefix, undef,
@@ -457,7 +457,7 @@ impl Model {
         //   None => node.get_name()
         // }
         // TODO: Mock for now, add namespace_uri capability to rust-libxml next
-        format!("ltx:{}", node.get_name())
+        s!("ltx:{}", node.get_name())
       },
       // Need others?
       t => panic!(
@@ -503,7 +503,7 @@ impl Model {
         if prefix.is_empty() {
           node.get_name()
         } else {
-          format!("{}:{}", prefix, node.get_name())
+          s!("{}:{}", prefix, node.get_name())
         }
       },
       // Need others?
@@ -601,7 +601,7 @@ impl Model {
   /// available at runtime For now, simply reimplementing the runtime loading of
   /// LaTeXML.model as-is from Model.pm
   pub fn load_compiled_schema(&mut self, path: &str) {
-    note_begin(&format!("Loading compiled schema {}", path));
+    note_begin(&s!("Loading compiled schema {}", path));
     let compiled_fh = File::open(path).unwrap();
     let compiled_reader = BufReader::new(&compiled_fh);
     for line_result in compiled_reader.lines() {
@@ -633,7 +633,7 @@ impl Model {
       }
     }
 
-    note_end(&(format!("Loading compiled schema {}", path)));
+    note_end(&(s!("Loading compiled schema {}", path)));
     return;
   }
 

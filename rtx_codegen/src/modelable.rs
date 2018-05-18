@@ -52,7 +52,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
     model.schema = Some(Relaxng{ name: #name.to_owned(), ..Relaxng::default()});
   ));
 
-  // note_begin(&(format!("Compiling .model file: {}", path)));
+  // note_begin(&(s!("Compiling .model file: {}", path)));
   let compiled_fh = File::open(path.clone())?;
   let compiled_reader = BufReader::new(&compiled_fh);
   for line_result in compiled_reader.lines() {
@@ -91,7 +91,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
         fatal!(
           Codegen,
           Malformed,
-          format!(
+          s!(
             " Loaded model '{:?}' is malformatted at \"{:?}\"",
             path, line
           )
@@ -101,7 +101,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
   }
 
   operations.push(quote!(return;));
-  // note_end(&(format!("Compiling .model file: {}", path)));
+  // note_end(&(s!("Compiling .model file: {}", path)));
 
   Ok(quote!(
     impl _ModelLoader {

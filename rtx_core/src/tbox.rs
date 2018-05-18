@@ -62,7 +62,7 @@ impl Tbox {
       let mut box_props = properties;
       box_props.insert("mode".to_string(), "math".to_string());
       if !string.is_empty() {
-        match state.lookup_value(&format!("math_token_attributes_{}", string)) {
+        match state.lookup_value(&s!("math_token_attributes_{}", string)) {
           Some(&ObjectStore::HashStr(ref attr)) => for (key, value) in attr.iter() {
             box_props
               .entry(key.to_string())

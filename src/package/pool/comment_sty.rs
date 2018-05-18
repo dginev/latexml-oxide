@@ -8,8 +8,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // until \endname or \end{name}, respectively
   let define_excluded = primitivesub!(stomach, args, state, {
     let name = args[0].to_string();
-    let begin_mark = format!("\\begin{{{}}}", name);
-    let end_mark = format!("\\end{{{}}}", name);
+    let begin_mark = s!("\\begin{{{}}}", name);
+    let end_mark = s!("\\end{{{}}}", name);
     {
       DefConstructorI!(T_CS!(begin_mark), None, noreplacement!(),
         after_digest => sub!(move |stomach: &mut Stomach, whatsit: &mut Whatsit, _state: &mut State| {
@@ -22,7 +22,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
             }
             nlines += 1;
           }
-          note_progress(&format!("[Skipped {} ({} lines)]",name,nlines));
+          note_progress(&s!("[Skipped {} ({} lines)]",name,nlines));
           Ok(Vec::new())
         })
       ,state);
@@ -57,7 +57,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         // Note that we define the `magic' environment control sequences,
         // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
         DefMacroI!(
-          T_CS!(format!("\\begin{{{}}}", name)),
+          T_CS!(s!("\\begin{{{}}}", name)),
           None,
           move |gullet, _args, _state| {
             gullet.read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
@@ -66,7 +66,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
           state
         );
         DefMacroI!(
-          T_CS!(format!("\\end{{{}}}", name)),
+          T_CS!(s!("\\end{{{}}}", name)),
           None,
           move |_gullet, _args, _state| Ok(Tokens::new(after_tokens.clone())),
           state

@@ -15,3 +15,8 @@ macro_rules! string_map {
     map
   }}
 }
+
+#[macro_export]
+macro_rules! s {
+  ($($arg : tt )*) => (format!($($arg)*))
+}

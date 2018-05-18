@@ -247,7 +247,7 @@ impl DigestionAPI for Core {
       // ext = mode.extension();
       name = request.clone();
     } else {
-      let ext_str = format!(".{}", mode.extension());
+      let ext_str = s!(".{}", mode.extension());
       let request_base = if request.ends_with(&ext_str) {
         request[0..request.len() - ext_str.len()].to_string()
       } else {
@@ -267,7 +267,7 @@ impl DigestionAPI for Core {
       // ext = pathname::extension(&request);
       } else {
         error!(
-          target: &format!("Fatal:missing_file:{}", request_base),
+          target: &s!("Fatal:missing_file:{}", request_base),
           "Can't find {} file {} ",
           mode,
           request
@@ -275,8 +275,8 @@ impl DigestionAPI for Core {
       }
     }
 
-    note_begin(&format!("Digesting {} {}", mode, name));
-    let main_pool = format!("{}.pool", mode);
+    note_begin(&s!("Digesting {} {}", mode, name));
+    let main_pool = s!("{}.pool", mode);
     let noinitialize = options.noinitialize.unwrap_or(false);
     if !noinitialize {
       let mut preloads = vec![main_pool];
@@ -326,7 +326,7 @@ impl DigestionAPI for Core {
     // }
 
     let list = self.digest_internal()?;
-    note_end(&format!("Digesting {} {}", mode, name));
+    note_end(&s!("Digesting {} {}", mode, name));
     Ok(list)
   }
 }

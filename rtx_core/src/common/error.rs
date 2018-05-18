@@ -117,7 +117,7 @@ impl ErrorTrait for Error {
 
 impl Error {
   pub fn log_fatal(&self) {
-    let target_str = format!("Fatal:{:?}:{:?} ", self.target, self.category);
+    let target_str = s!("Fatal:{:?}:{:?} ", self.target, self.category);
     error!(target: &target_str, "{}", self.message);
   }
 }

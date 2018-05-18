@@ -61,9 +61,9 @@ impl log::Log for RtxLogger {
       };
 
       let message = if severity.is_empty() {
-        format!("{} ", category_object)
+        s!("{} ", category_object)
       } else {
-        format!("{}:{} ", severity, category_object)
+        s!("{}:{} ", severity, category_object)
       };
       let painted_message = match record.level() {
         Level::Info => Style::default().paint(message),

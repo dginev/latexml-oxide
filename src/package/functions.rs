@@ -105,7 +105,7 @@ pub fn input_definitions(
     other => fatal!(
       Package,
       Unknown,
-      format!("TODO: unknown binding {:?}, can't load", other)
+      s!("TODO: unknown binding {:?}, can't load", other)
     ),
   };
 
@@ -567,9 +567,9 @@ pub fn def_conditional(cs: Token, paramlist: Option<Parameters>,
         //       second, each invocation of the conditional macro needs to create new tokens to return,
         //       hence a clone is required on each call.
         let cs_c1 = cs.clone();
-        DefMacroTS!(T_CS!(format!("\\{}true", name)), None, Tokens!(T_CS!("\\let"), cs_c1.clone(), T_CS!("\\iftrue")), state);
+        DefMacroTS!(T_CS!(s!("\\{}true", name)), None, Tokens!(T_CS!("\\let"), cs_c1.clone(), T_CS!("\\iftrue")), state);
         let cs_c2 = cs.clone();
-        DefMacroTS!(T_CS!(format!("\\{}false",name)), None, Tokens!(T_CS!("\\let"), cs_c2.clone(), T_CS!("\\iffalse")), state);
+        DefMacroTS!(T_CS!(s!("\\{}false",name)), None, Tokens!(T_CS!("\\let"), cs_c2.clone(), T_CS!("\\iffalse")), state);
         state.let_i(&cs, T_CS!("\\iffalse"), None);
         } else { //  For \ifcase, the parameter list better be a single Number !!
           state.install_definition(ObjectStore::Conditional(Rc::new(
@@ -577,13 +577,13 @@ pub fn def_conditional(cs: Token, paramlist: Option<Parameters>,
           )), options.scope);
         }
       } else {
-        error!(target: &format!("misdefined:{}", cs), "The conditional {} is being defined but doesn't start with \\if", cs); 
+        error!(target: &s!("misdefined:{}", cs), "The conditional {} is being defined but doesn't start with \\if", cs); 
       }
     }
   }
 
   if let Some(true) = options.locked {
-    state.assign_value(&format!("{}:locked",cs), ObjectStore::Bool(true), None);
+    state.assign_value(&s!("{}:locked",cs), ObjectStore::Bool(true), None);
   }
   return;
 }
@@ -684,10 +684,10 @@ pub fn merge_font(font: Font, state: &mut State) {
 }
 
 pub fn digest_text(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
-  stomach.begin_mode("text", state);
+  stomach.begin_mode("text", state)?;
   let result = stomach.digest(stuff, state);
   // TODO: ??? : Tokens!(map { (ref $_ ? $_ : TokenizeInternal($_)) } @stuff));
-  stomach.end_mode("text", state);
+  stomach.end_mode("text", state)?;
   result
 }
 
@@ -718,11 +718,11 @@ impl <'ct> Default for NewCounterOptions<'ct> {
 }
 
 pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, state: &mut State) {
-  let unctr = format!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
-  let cctr = format!("\\c@{}", ctr);
-  let clctr = format!("\\cl@{}", ctr);
-  let cunctr = format!("\\c@{}", unctr);
-  let clunctr = format!("\\cl@{}", unctr);
+  let unctr = s!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
+  let cctr = s!("\\c@{}", ctr);
+  let clctr = s!("\\cl@{}", ctr);
+  let cunctr = s!("\\c@{}", unctr);
+  let clunctr = s!("\\cl@{}", unctr);
 
   def_register(T_CS!(cctr), None, Some(Number::new(0)), None, state);
   // state.assign_value(cctr, Number!(0), Some(Scope::Global));
@@ -739,8 +739,8 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, 
   // }
 
   // if !within.is_empty() {
-  //   let clwithin = format!("\\cl@{}",within);
-  //   let clunwithin = format!("\\cl@UN{}",within);
+  //   let clwithin = s!("\\cl@{}",within);
+  //   let clunwithin = s!("\\cl@UN{}",within);
   //   let x = if let Some(ObjectStore::Tokens(cl)) = state.lookup_value(clwithin) {
   //    cl.unlist()
   //   } else {
@@ -763,11 +763,11 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, 
   // Some(Scope::Global)) }
 
   // if let Some(nested_val) = options.get("nested") {
-  // state.assign_value(format!("nested_counters_{}", ctr), ObjectStore::String(nested_val),
+  // state.assign_value(s!("nested_counters_{}", ctr), ObjectStore::String(nested_val),
   // Some(Scope::Global)) }
 
   // // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
-  // DefMacroI!(T_CS!(format!("\\the{}",ctr)), None, move |gullet, args, inner_state| {
+  // DefMacroI!(T_CS!(s!("\\the{}",ctr)), None, move |gullet, args, inner_state| {
   //   let counter_value = CounterValue!(ctr, inner_state).value_of();
   //   Ok(ExplodeText!(counter_value))
   // },
@@ -775,9 +775,9 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, 
 
   // let mut prefix = options.get("idprefix").unwrap_or(String::new());
   // if !prefix.is_empty() {
-  // state.assign_value(format!("@ID@prefix@{}",ctr), ObjectStore::String(prefix),
+  // state.assign_value(s!("@ID@prefix@{}",ctr), ObjectStore::String(prefix),
   // Some(Scope::Global)); } else {
-  //   prefix = state.lookup_string(format!("@ID@prefix@{}",ctr));
+  //   prefix = state.lookup_string(s!("@ID@prefix@{}",ctr));
   //   if prefix.is_empty() {
   //     prefix = clean_id(ctr);
   //   }
@@ -785,26 +785,26 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, 
   // if !prefix.is_empty() {
   //   let idwithin = options.get("idwithin").unwrap_or(within.clone());
   //   if !idwithin.is_empty() {
-  //     DefMacro!(format!("\\the{}@ID",ctr),
-  //       concat!(format!("\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty",idwithin),
-  //               format!("\\else\\csname the{}@ID\\endcsname.\\fi",idwithin),
-  //               format!(" {}\\csname @{}@ID\\endcsname",prefix,ctr)),
+  //     DefMacro!(s!("\\the{}@ID",ctr),
+  //       concat!(s!("\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty",idwithin),
+  //               s!("\\else\\csname the{}@ID\\endcsname.\\fi",idwithin),
+  //               s!(" {}\\csname @{}@ID\\endcsname",prefix,ctr)),
   //       scope => Some(Scope::Global));
   //   }
   //   else {
-  //     DefMacro!(format!("\\the{}@ID",ctr), format!("{}\\csname @{}@ID\\endcsname",prefix,ctr),
+  //     DefMacro!(s!("\\the{}@ID",ctr), s!("{}\\csname @{}@ID\\endcsname",prefix,ctr),
   //       scope => Some(Scope::Global));
   //   }
-  //   DefMacro!(format!("\\@{}@ID",ctr), "0", scope => Some(Scope::Global));
+  //   DefMacro!(s!("\\@{}@ID",ctr), "0", scope => Some(Scope::Global));
   // }
   return;
 }
 
 pub fn counter_value(ctr: &str, state: &mut State) -> Number {
-  match state.lookup_number(&format!("\\c@{}", ctr)) {
+  match state.lookup_number(&s!("\\c@{}", ctr)) {
     None => {
       warn!(
-        target: &format!("undefined:{:?}", ctr),
+        target: &s!("undefined:{:?}", ctr),
         "Counter {} was not defined; assuming 0",
         ctr
       );
@@ -817,41 +817,44 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
 pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut State) {
   let v = counter_value(ctr, state).add(value);
   state.assign_value(
-    &format!("\\c@{}", ctr),
+    &s!("\\c@{}", ctr),
     ObjectStore::Number(Box::new(v.clone())),
     Some(Scope::Global),
   );
   after_assignment(gullet, state);
   SetupBindingMacros!(state);
-  let id_cs = T_CS!(format!("\\@{}@ID",ctr));
+  let id_cs = T_CS!(s!("\\@{}@ID",ctr));
   DefMacroTS!(id_cs.clone(), None, Tokens::new(Explode!(v.value_of())),
     scope => Some(Scope::Global));
 }
 
-pub fn step_counter(ctr: &str, noreset: bool, gullet: &mut Gullet, state: &mut State) {
+pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
   let value = counter_value(ctr, state);
   state.assign_value(
-    &format!("\\c@{}", ctr),
+    &s!("\\c@{}", ctr),
     ObjectStore::Number(Box::new(value.add(Number!(1)))),
     Some(Scope::Global),
   );
-  after_assignment(gullet, state);
+  {
+    let gullet = stomach.get_gullet_mut();
+    after_assignment(gullet, state);
+  }
   let token_value = Tokens::new(Explode!(counter_value(ctr,state).value_of()));
-  let id_cs = T_CS!(format!("\\@{}@ID",ctr));
+  let id_cs = T_CS!(s!("\\@{}@ID",ctr));
   DefMacroTS!(id_cs.clone(), None, 
               token_value.clone(), scope => Some(Scope::Global));
 
   // and reset any within counters!
   if !noreset {
-    if let Some(nested) = state.lookup_tokens(&format!("\\cl@{}", ctr)) {
+    if let Some(nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
       for c in nested.unlist() {
         reset_counter(&c.to_string(), state);
       }
     }
   }
-  // TODO!
-  // DigestIf!(T_CS!("\\the$ctr"), stomach);
+  digest_if(T_CS!(s!("\\the{}",ctr)), stomach, state)?;
+  Ok(())
 }
 
 pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
@@ -861,10 +864,9 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   };
 
   {
-    let gullet = stomach.get_gullet_mut();
-    step_counter(&ctr, noreset, gullet, state);
+    step_counter(&ctr, noreset, stomach, state)?;
   }
-  let iddef = state.lookup_definition(&T_CS!(format!("\\the{}@ID", ctr)));
+  let iddef = state.lookup_definition(&T_CS!(s!("\\the{}@ID", ctr)));
   // TODO:
   // let has_id = match iddef {
   // Some(def) => Some(!defined iddef.get_parameters()) || (iddef->getParameters->getNumArgs ==
@@ -873,18 +875,18 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   let has_id : Option<usize> = None;
 
   SetupBindingMacros!(state);
-  let the_cs = T_CS!(format!("\\the{}",ctr));
-  let the_id_cs = T_CS!(format!("\\the{}@ID",ctr));
+  let the_cs = T_CS!(s!("\\the{}",ctr));
+  let the_id_cs = T_CS!(s!("\\the{}@ID",ctr));
   DefMacroT!(T_CS!("\\@currentlabel"), None, the_cs.clone(), scope => Some(Scope::Global));
   if has_id.is_some() {
     DefMacroT!(T_CS!("\\@currentID"), None, the_id_cs.clone(), scope => Some(Scope::Global))
   }
 
   // TODO:
-  // let id = has_id && ToString(DigestLiteral(T_CS!(format!("\\the{}@ID",ctr)));
+  // let id = has_id && ToString(DigestLiteral(T_CS!(s!("\\the{}@ID",ctr)));
   let id : Option<String> = None;
 
-  let refnum = digest_text(Tokens!(T_CS!(format!("\\the{}",ctr))), stomach, state)?;
+  let refnum = digest_text(Tokens!(T_CS!(s!("\\the{}",ctr))), stomach, state)?;
   // TODO:
   // my $tags = Digest(Invocation(T_CS('\lx@make@tags'), $type));
   // # Any scopes activated for previous value of this counter (& any nested counters) must be removed.
@@ -897,9 +899,9 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   // And install the scope (if any) for this reference number.
   state.assign_value("current_counter", ObjectStore::String(ctr.to_string()), Some(Scope::Local));
 
-  let scope = format!("{}:{}", ctr, refnum.to_string());
+  let scope = s!("{}:{}", ctr, refnum.to_string());
   state.assign_value(
-    &format!("scopes_for_counter:{}", ctr),
+    &s!("scopes_for_counter:{}", ctr),
     ObjectStore::VecString(vec![scope.clone()]),
     Some(Scope::Local),
   );
@@ -916,7 +918,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   //  print STDERR "Unusing scopes for $ctr\n";
   let scopes = if let Some(ObjectStore::VecString(stored_scopes)) =
-    state.lookup_value(&format!("scopes_for_counter:{}", ctr))
+    state.lookup_value(&s!("scopes_for_counter:{}", ctr))
   {
     stored_scopes.clone()
   } else {
@@ -927,7 +929,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   }
 
   let counters = if let Some(ObjectStore::VecString(stored_counters)) =
-    state.lookup_value(&format!("nested_counters_{}", ctr))
+    state.lookup_value(&s!("nested_counters_{}", ctr))
   {
     stored_counters.clone()
   } else {
@@ -953,9 +955,9 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 //   return (id => ToString(DigestLiteral(T_CS!("\\the$ctr\@ID")))); }
 
 fn reset_counter(ctr: &str, state: &mut State) {
-  state.assign_value(&format!("\\c@{}", ctr), ObjectStore::Number(Box::new(Number!(0))), Some(Scope::Global));
+  state.assign_value(&s!("\\c@{}", ctr), ObjectStore::Number(Box::new(Number!(0))), Some(Scope::Global));
   // and reset any within counters!
-  let nested = if let Some(ObjectStore::Tokens(nested)) = state.lookup_value(&format!("\\cl@{}", ctr)) {
+  let nested = if let Some(ObjectStore::Tokens(nested)) = state.lookup_value(&s!("\\cl@{}", ctr)) {
     nested.clone()
   } else { Tokens!() };
 

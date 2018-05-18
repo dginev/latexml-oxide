@@ -114,45 +114,45 @@ impl Font {
   pub fn to_string(&self) -> String {
     let mut parts = Vec::new();
     if let Some(ref family) = self.family {
-      parts.push(format!("family: {:?}", family))
+      parts.push(s!("family: {:?}", family))
     }
     if let Some(ref series) = self.series {
-      parts.push(format!("series: {:?}", series))
+      parts.push(s!("series: {:?}", series))
     }
     if let Some(ref shape) = self.shape {
-      parts.push(format!("shape: {:?}", shape))
+      parts.push(s!("shape: {:?}", shape))
     }
     if let Some(ref size) = self.size {
-      parts.push(format!("size: {:?}", size))
+      parts.push(s!("size: {:?}", size))
     }
     if let Some(ref color) = self.color {
-      parts.push(format!("color: {:?}", color))
+      parts.push(s!("color: {:?}", color))
     }
     if let Some(ref bg) = self.bg {
-      parts.push(format!("bg: {:?}", bg))
+      parts.push(s!("bg: {:?}", bg))
     }
     if let Some(ref opacity) = self.opacity {
-      parts.push(format!("opacity: {:?}", opacity))
+      parts.push(s!("opacity: {:?}", opacity))
     }
     if let Some(ref encoding) = self.encoding {
-      parts.push(format!("encoding: {:?}", encoding))
+      parts.push(s!("encoding: {:?}", encoding))
     }
     if let Some(ref language) = self.language {
-      parts.push(format!("language: {:?}", language))
+      parts.push(s!("language: {:?}", language))
     }
     if let Some(ref mathstyle) = self.mathstyle {
-      parts.push(format!("mathstyle: {:?}", mathstyle))
+      parts.push(s!("mathstyle: {:?}", mathstyle))
     }
     if let Some(ref forceseries) = self.forceseries {
-      parts.push(format!("forceseries: {:?}", forceseries))
+      parts.push(s!("forceseries: {:?}", forceseries))
     }
     if let Some(ref forcefamily) = self.forcefamily {
-      parts.push(format!("forcefamily: {:?}", forcefamily))
+      parts.push(s!("forcefamily: {:?}", forcefamily))
     }
     if let Some(ref forceshape) = self.forceshape {
-      parts.push(format!("forceshape: {:?}", forceshape))
+      parts.push(s!("forceshape: {:?}", forceshape))
     }
-    format!("Font[{}]", parts.join(", "))
+    s!("Font[{}]", parts.join(", "))
   }
 
   // NOTE: In math, NORMALLY, setting any one of

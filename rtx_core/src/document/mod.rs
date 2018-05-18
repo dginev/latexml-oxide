@@ -420,10 +420,10 @@ impl Document {
       // Didn't find $qname at all!!
       let qname_msg: String = match qname {
         "#PCDATA" => qname.to_owned(),
-        _ => format!("</{}>", qname),
+        _ => s!("</{}>", qname),
       };
       error!(
-        target: &format!("malformed:{:?}", qname),
+        target: &s!("malformed:{:?}", qname),
         "Attempt to close {}, which isn't open. Currently in {}",
         qname_msg,
         self.get_insertion_context(None, state)
@@ -434,7 +434,7 @@ impl Document {
       if !cant_close.is_empty() {
         // Intervening non-auto-closeable nodes!!
         error!(
-          target: &format!("malformed:{:?}", qname),
+          target: &s!("malformed:{:?}", qname),
           "Closing tag whose open descendents do not auto-close"
         );
         // Error('malformed', $qname, $self,
@@ -538,7 +538,7 @@ impl Document {
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
       error!(
-        target: &format!("malformed:{}", state.model.get_node_qname(node)),
+        target: &s!("malformed:{}", state.model.get_node_qname(node)),
         "Attempt to close {:?}, which isn't open",
         node.get_name()
       );
@@ -548,7 +548,7 @@ impl Document {
       if !cant_close.is_empty() {
         // But found has intervening non-auto-closeable nodes!!
         error!(
-          target: &format!("malformed:{}", state.model.get_node_qname(node)), //$self,
+          target: &s!("malformed:{}", state.model.get_node_qname(node)), //$self,
           "Closing {:?} whose open descendents do not auto-close",
           node.get_name()
         ); //,
@@ -702,7 +702,7 @@ impl Document {
         // let tag = state.model.get_node_document_qname(&node);
         let tag = node.get_name();
         let children = node.get_child_nodes();
-        let mut open_tag = format!("<{}", tag);
+        let mut open_tag = s!("<{}", tag);
 
         let nsnodes = node.get_namespace_declarations();
         for ns in nsnodes {
@@ -710,10 +710,10 @@ impl Document {
           let prefix_declaration = if prefix.is_empty() {
             "xmlns".to_string()
           } else {
-            format!("xmlns:{}", prefix)
+            s!("xmlns:{}", prefix)
           };
           let href = ns.get_href();
-          open_tag.push_str(&format!(" {}=\"{}\"", prefix_declaration, href));
+          open_tag.push_str(&s!(" {}=\"{}\"", prefix_declaration, href));
         }
 
         let anodes = node.get_attributes();
@@ -727,12 +727,12 @@ impl Document {
             .model
             .get_node_document_qname(&node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
-          open_tag.push_str(&format!(" {}=\"{}\"", key_serialized, val_serialized));
+          open_tag.push_str(&s!(" {}=\"{}\"", key_serialized, val_serialized));
         }
         // HACK for xml:id for now, assuming last element
         if anodes.get("id").is_some() {
           let val_serialized = serialize_attr(&node.get_property("id").unwrap_or_default());
-          open_tag.push_str(&format!(" {}=\"{}\"", "xml:id", val_serialized));
+          open_tag.push_str(&s!(" {}=\"{}\"", "xml:id", val_serialized));
         }
 
         let noindent_children: bool = if heuristic {
@@ -771,7 +771,7 @@ impl Document {
           if !noindent_children {
             serialized.push_str(&indent)
           }
-          serialized.push_str(&format!("</{}>", tag));
+          serialized.push_str(&s!("</{}>", tag));
           if !noindent {
             serialized.push_str("\n");
           }
@@ -797,7 +797,7 @@ impl Document {
         }
       },
       Some(NodeType::CommentNode) => {
-        serialized.push_str(&format!(
+        serialized.push_str(&s!(
           "<!-- {}-->",
           serialize_string(&node.get_content())
         ));
@@ -1153,7 +1153,7 @@ impl Document {
       if let Some(levels_val) = levels {
         levels = Some(levels_val - 1);
         if levels_val <= 1 {
-          path = format!("...{}", path);
+          path = s!("...{}", path);
           break;
         }
       }
@@ -1204,7 +1204,7 @@ impl Document {
         return self.find_insertion_point(qname, state); // Then retry, possibly w/auto open's
       } else {
         // Didn't find a legit place.
-        error!(target: &format!("malformed:{}", qname), "{:?} isn't allowed in <{}>", qname, cur_qname);
+        error!(target: &s!("malformed:{}", qname), "{:?} isn't allowed in <{}>", qname, cur_qname);
         // ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed
         // in <$cur_qname>", "Currently in " .
         // self.getInsertionContext()); return self.node}; } } }

@@ -103,7 +103,7 @@ impl Mouth {
         Ok(handle) => handle,
         Err(e) => {
           if e.kind() == io::ErrorKind::NotFound {
-            fatal!(Mouth, MissingFile, format!("Can't find file {}", pathname));
+            fatal!(Mouth, MissingFile, s!("Can't find file {}", pathname));
           } else {
             return Err(e.into());
           }

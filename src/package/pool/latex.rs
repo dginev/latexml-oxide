@@ -85,7 +85,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       let token = T_CS!("\\".to_string() + name);
       if !is_defined_token(&token, state) {
         let undef = "{".to_string() + name + "}";
-        let category_object = format!("undefined:{:?}", undef);
+        let category_object = s!("undefined:{:?}", undef);
         error!(target: &category_object, "The environment is not defined.");
         // state.note_status("undefined", undef);
         //   Error("undefined", $undef, $gullet, "The environment " . $undef . " is not defined.");
@@ -217,7 +217,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "subparagraph",
   ].iter()
   {
-    Tag!(&format!("ltx:{:?}",tag), auto_close => true);
+    Tag!(&s!("ltx:{:?}",tag), auto_close => true);
   }
 
   DefMacro!("\\secdef {}{} OptionalMatch:*", gullet, args, state, {
@@ -240,7 +240,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     {
       let type_tokens = args[0].clone();
       let stype = type_tokens.to_string();
-      let mut ctr = state.lookup_string(&format!("counter_for_{}", stype));
+      let mut ctr = state.lookup_string(&s!("counter_for_{}", stype));
       if ctr.is_empty() {
         ctr = stype
       };
@@ -306,7 +306,7 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
       };
       let clean_id = id; // TODO: CleanID($id);
       document.open_element(
-        &format!("ltx:{}", stype),
+        &s!("ltx:{}", stype),
         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
         None,
         state,
@@ -427,7 +427,7 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
       let has_toctitle =
         !toctitle.to_string().is_empty() && (toctitle.to_string() != title.to_string());
       document.open_element(
-        &format!("ltx:{}", stype),
+        &s!("ltx:{}", stype),
         Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)),
         None,
         inner_state,
@@ -465,7 +465,7 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
 
   fn only_preamble(cs: &str, state: &mut State) {
     if !state.lookup_bool("inPreamble") {
-      let category_object = format!("unexpected:{:?}", cs);
+      let category_object = s!("unexpected:{:?}", cs);
       error!(
         target: &category_object,
         "The current command can only appear in the preamble"

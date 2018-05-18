@@ -735,7 +735,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
       //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
       if options.locked {
-        $state_arg.assign_value(&format!("{}:locked",$cs.get_cs_name()), ObjectStore::Bool(true), None)
+        $state_arg.assign_value(&s!("{}:locked",$cs.get_cs_name()), ObjectStore::Bool(true), None)
       }
       let constructor = Constructor {
         cs: $cs,
@@ -1554,7 +1554,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         transfer_opt_default!(mathstyle, options, math_attr_hash);
         transfer_default!(stretchy, options, math_attr_hash);
 
-        $state_arg.assign_value(&format!("math_token_attributes_{}",csname), ObjectStore::HashStr(math_attr_hash), Some(Scope::Global));
+        $state_arg.assign_value(&s!("math_token_attributes_{}",csname), ObjectStore::HashStr(math_attr_hash), Some(Scope::Global));
       }
       // TODO:
       // // If the presentation is complex, and involves arguments,
@@ -1668,15 +1668,15 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   macro_rules! SetCounter {
     ($ctr:expr, $value:expr, None) => {
-      AssignValue!(&format!("\\c@{}",$ctr), ObjectStore::Number(Box::new($value)), Some(Scope::Global));
-      DefMacroTS!(T_CS!(format!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+      AssignValue!(&s!("\\c@{}",$ctr), ObjectStore::Number(Box::new($value)), Some(Scope::Global));
+      DefMacroTS!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
                   scope => Some(Scope::Global)
       );
     };
     ($ctr:expr, $value:expr, $gullet:ident) => {
-      AssignValue!(&format!("\\c@{}",$ctr), ObjectStore::Number(Box::new($value)), Some(Scope::Global));
+      AssignValue!(&s!("\\c@{}",$ctr), ObjectStore::Number(Box::new($value)), Some(Scope::Global));
       AfterAssignment!($gullet);
-      DefMacroTS!(T_CS!(format!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+      DefMacroTS!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
                   scope => Some(Scope::Global)
       );
     }
