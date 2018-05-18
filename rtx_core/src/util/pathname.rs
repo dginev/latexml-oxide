@@ -23,7 +23,7 @@ static HOME_TILDE: &'static str = "~";
 lazy_static! {
   static ref HOME_PATH : String = match env::home_dir() {
     Some(val) => val.to_string_lossy().to_string(),
-    _ => "~".to_owned(),
+    _ => s!("~"),
   };
   // static ref PROTOCOL_RE : Regex = Regex::new(r"(https|http|ftp):").unwrap();
   // static ref INSTALLDIRS : Vec<String> = match env::current_exe() {

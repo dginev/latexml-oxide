@@ -1370,7 +1370,7 @@ impl State {
       imodel
         .entry(s!("#Document"))
         .or_insert_with(HashMap::new)
-        .insert("#PCDATA".to_owned(), "ltx:p".to_owned());
+        .insert(s!("#PCDATA"), s!("ltx:p"));
     }
 
     imodel

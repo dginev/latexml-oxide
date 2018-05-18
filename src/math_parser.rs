@@ -954,7 +954,7 @@ impl MathParser {
       "ltx:XMApp" => {
         let app_role = node
           .get_attribute("role")
-          .unwrap_or("missing_role".to_owned());
+          .unwrap_or(s!("missing_role"));
         let mut all_args = element_nodes(&node);
         info!("xmapp args : {:?}", all_args.len());
         if all_args.is_empty() {
@@ -972,10 +972,10 @@ impl MathParser {
           let name = if document.get_node_qname(&op, state) == "ltx:XMTok" {
             match self.get_token_meaning(&op, document) {
               Some(meaning) => meaning,
-              None => "Unknown".to_owned(),
+              None => s!("Unknown"),
             }
           } else {
-            "unknown".to_owned()
+            s!("unknown")
           };
           let (bp, string) = self.textrec_apply(&name, op, args, document, state);
           if bp < outer_bp || (bp == outer_bp && name != outer_name) {
@@ -994,7 +994,7 @@ impl MathParser {
       "ltx:XMTok" => {
         let name = match self.get_token_meaning(&node, document) {
           Some(meaning) => meaning,
-          None => "Unknown".to_owned(),
+          None => s!("Unknown"),
         };
         self.prefix_alias(&name)
       },
@@ -1017,7 +1017,7 @@ impl MathParser {
     state: &mut State,
   ) -> (usize, String)
   {
-    let role = op.get_attribute("role").unwrap_or("Unknown".to_owned());
+    let role = op.get_attribute("role").unwrap_or(s!("Unknown"));
     // if (($role =~ /^(SUB|SUPER)SCRIPTOP$/) && (($op->getAttribute('scriptpos')
     // || '') =~ /^pre\d+$/)) { # Note that this will likely get
     // parenthesized due to high bp return (5000, textrec($op) . " " .

@@ -1590,7 +1590,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       replacement: Some(Rc::new(move |stomach, args, state| {
         // let locator    = $stomach->getGullet->getLocator;
         let mut properties = HashMap::new(); // TODO: sync with perl master here
-        properties.insert("mode".to_owned(), "math".to_owned());
+        properties.insert(s!("mode"), s!("math"));
         let font       = state.lookup_font().unwrap().merge(reqfont.clone().unwrap()).specialize(&$presentation);
         // foreach my $key (keys %properties) {
         //   my $value = $properties{$key};

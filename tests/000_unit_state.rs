@@ -171,22 +171,22 @@ fn assign_lookup_arrays() {
 
   assert_eq!(
     state.shift_value("SEARCHPATHS"),
-    Some(ObjectStore::String("d".to_owned())),
+    Some(ObjectStore::String(s!("d"))),
     "shift searchpaths"
   );
   assert_eq!(
     state.pop_value("SEARCHPATHS"),
-    Some(ObjectStore::String("c".to_owned())),
+    Some(ObjectStore::String(s!("c"))),
     "pop searchpaths"
   );
   assert_eq!(
     state.shift_value("SEARCHPATHS"),
-    Some(ObjectStore::String("a".to_owned())),
+    Some(ObjectStore::String(s!("a"))),
     "shift searchpaths"
   );
   assert_eq!(
     state.pop_value("SEARCHPATHS"),
-    Some(ObjectStore::String("b".to_owned())),
+    Some(ObjectStore::String(s!("b"))),
     "pop searchpaths"
   );
   assert_eq!(
@@ -206,7 +206,7 @@ fn assign_lookup_arrays() {
     .map(|x| ObjectStore::String(x.to_string()))
     .collect::<VecDeque<ObjectStore>>();
   state.assign_value("SEARCHPATHS", ObjectStore::VecDequeOS(vdq.clone()), None);
-  let new_d = ObjectStore::String("d".to_owned());
+  let new_d = ObjectStore::String(s!("d"));
   state.push_value("SEARCHPATHS", new_d.clone());
   vdq.push_back(new_d.clone());
   assert_eq!(
@@ -221,17 +221,17 @@ fn assign_lookup_arrays() {
   );
   assert_eq!(
     state.shift_value("SEARCHPATHS"),
-    Some(ObjectStore::String("a".to_owned())),
+    Some(ObjectStore::String(s!("a"))),
     "shift searchpaths"
   );
   assert_eq!(
     state.pop_value("SEARCHPATHS"),
-    Some(ObjectStore::String("c".to_owned())),
+    Some(ObjectStore::String(s!("c"))),
     "pop searchpaths"
   );
   assert_eq!(
     state.pop_value("SEARCHPATHS"),
-    Some(ObjectStore::String("b".to_owned())),
+    Some(ObjectStore::String(s!("b"))),
     "pop searchpaths"
   );
   assert_eq!(
@@ -256,7 +256,7 @@ fn install_definition_and_meaning() {
     paramlist: None,
     //       expansion: SimpleExpansion!(Tokens::new(Explode!("name"))),
     expansion: SimpleExpansion!(Tokens::new(Explode!("name"))),
-    locator: "from unit test, line 99".to_owned(),
+    locator: s!("from unit test, line 99"),
     is_protected: state.get_prefix("protected"),
     ..Expandable::default()
   };

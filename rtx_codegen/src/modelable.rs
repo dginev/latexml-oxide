@@ -35,7 +35,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
     pathname::FindOptions {
       paths: Some(vec![s!(".")]),
       types: Some(vec![s!("model")]),
-      installation_subdir: Some("resources/RelaxNG".to_owned()),
+      installation_subdir: Some(s!("resources/RelaxNG")),
     },
   );
 
@@ -48,7 +48,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
   // NOTE: Do something automatic about this too!?!
   // We'll need to generate namespace prefixes for all namespaces found in the doc!
   operations.push(quote!(
-    model.register_document_namespace("", Some("http://dlmf.nist.gov/LaTeXML".to_owned()));
+    model.register_document_namespace("", Some(s!("http://dlmf.nist.gov/LaTeXML")));
     model.schema = Some(Relaxng{ name: #name.to_owned(), ..Relaxng::default()});
   ));
 
@@ -92,7 +92,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
           Codegen,
           Malformed,
           s!(
-            " Loaded model '{:?}' is malformatted at \"{:?}\"",
+            " Loaded model '{}' is malformatted at \"{}\"",
             path, line
           )
         );

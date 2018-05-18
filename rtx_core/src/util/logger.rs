@@ -73,7 +73,7 @@ impl log::Log for RtxLogger {
         _ => White.paint(message),
       }.to_string() + &details.to_string();
 
-      println_stderr!("{}", painted_message);
+      println_stderr!("\r{}", painted_message);
     }
   }
 

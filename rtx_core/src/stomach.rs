@@ -611,11 +611,17 @@ impl Stomach {
       || (state.lookup_string("MODE") != mode)
     {
       // Or was a mode switch to a different mode
-      error!(
-        target: &s!("unexpected:{:?}", state.current_token),
-        "Attempt to end mode"
-      )
-    // self.currentFrameMessage);
+      if let Some(ref token) = state.current_token {
+        error!(
+          target: &s!("unexpected:{}", token),
+          "Attempt to end mode {}", mode
+        );// self.currentFrameMessage);
+      } else {
+        error!(
+          target: &s!("unexpected:mode"),
+          "Attempt to end mode {}", mode
+        );
+      }
     } else {
       // Don"t pop if there"s an error; maybe we'll recover?
       self.pop_stack_frame(false, state)?;

@@ -127,7 +127,7 @@ impl From<io::Error> for Error {
     Error {
       target: ErrorTarget::Mouth,
       category: ErrorCategory::Io(err),
-      message: "IO error".to_owned(),
+      message: s!("IO error"),
     }
   }
 }
@@ -137,7 +137,7 @@ impl From<()> for Error {
     Error {
       target: ErrorTarget::Document,
       category: ErrorCategory::Libxml,
-      message: "LibXML error".to_owned(),
+      message: s!("LibXML error"),
     }
   }
 }

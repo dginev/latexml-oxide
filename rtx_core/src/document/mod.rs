@@ -897,7 +897,7 @@ impl Document {
         return Ok(None);
       }
     }
-    if font.family == Some("nullfont".to_owned()) {
+    if font.family == Some(s!("nullfont")) {
       return Ok(None);
     }
     if self.debug {
@@ -1147,7 +1147,7 @@ impl Document {
       error!(target: "internal:context", "Insertion point is not an element, document or text: {:?}", self.document.node_to_string(&node));
       return String::new();
     }
-    let mut path = "TODO".to_owned(); // Stringify($node);
+    let mut path = s!("TODO"); //TODO: Stringify($node);
     while let Some(parent_node) = node.get_parent() {
       node = parent_node;
       if let Some(levels_val) = levels {
@@ -1562,9 +1562,9 @@ impl Document {
     // let savenode_opt = self.float_to_element("ltx:resource", false);
     let savenode_opt = None;
     let mut attrib: HashMap<String, String> = HashMap::new();
-    attrib.insert("src".to_owned(), resource.name);
-    attrib.insert("type".to_owned(), resource.mimetype);
-    attrib.insert("media".to_owned(), resource.media);
+    attrib.insert(s!("src"), resource.name);
+    attrib.insert(s!("type"), resource.mimetype);
+    attrib.insert(s!("media"), resource.media);
     let content_box = Digested::Box(Tbox {
       text: resource.content,
       ..Tbox::default()
