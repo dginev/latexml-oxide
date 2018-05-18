@@ -356,7 +356,7 @@ impl Mouth {
       // Remove trailing space
       tokens.pop();
     }
-    Tokens { tokens: tokens }
+    Tokens::new(tokens)
   }
 
   //**********************************************************************

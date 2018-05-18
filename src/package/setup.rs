@@ -339,23 +339,6 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     })
   );
 
-
-//======================================================================
-// Defining Conditional Control Sequences.
-//======================================================================
-// Define a conditional control sequence. Its processing takes place in
-// the Gullet.  The test is applied to the arguments (if any),
-// which determines which branch is executed.
-// If the test is undefined, the conditional is a "user defined" one;
-// Two additional primitives are defined \footrue and \foofalse;
-// the test is then determined by the most recently called of those.
-//
-// If you supply a skipper instead of a test, it is also applied to the arguments
-// and should skip to the right place in the following \or, \else, \fi.
-
-// This is ONLY used for \ifcase.
-// my $conditional_options = {    # [CONSTANT]
-//   scope => 1, locked => 1, skipper => 1 };
   macro_rules! DefConditional(
     // test is always a rust closure
     ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr) => (DefConditional!($proto, $gullet, $args, $inner_state, $block, $state));
@@ -371,53 +354,9 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       (DefConditionalI!($cs, $paramlist, $gullet, $args, $inner_state, $block, $state));
     ($cs:expr, $paramlist:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $state_arg:ident) => ({
       let test : ConditionalClosure = Rc::new(|$gullet, $args, $inner_state| {$block});
-      // match $cs.get_cs_name() {
-      //   "\\fi" => $state_arg.install_definition(ObjectStore::Conditional(Rc::new(
-      //               Conditional { cs: $cs, paramlist: None, test: None, conditional_type: ConditionalType::Fi}
-      //               )))
-      //   "\\else" => ,
-      //   "\\or" => ,
-      //   csname => {
-      //     if
-
-      //   }
-      // }
-      $state_arg.install_definition(ObjectStore::Conditional(Rc::new(
-        Conditional { cs: $cs, paramlist: $paramlist, test: Some(test),
-         ..Conditional::default()})),
-        None);
-    })
+      def_conditional($cs, $paramlist, Some(test), ConditionalOptions::default(), $state_arg);
+    });
   );
-//   if ($csname eq '\fi') {
-//     $STATE->installDefinition(LaTeXML::Core::Definition::Conditional->new(
-//         $cs, undef, undef, conditional_type => 'fi', %options),
-//       $options{scope}); }
-//   elsif ($csname eq '\else') {
-//     $STATE->installDefinition(LaTeXML::Core::Definition::Conditional->new(
-//         $cs, undef, undef, conditional_type => 'else', %options),
-//       $options{scope}); }
-//   elsif ($csname eq '\or') {
-//     $STATE->installDefinition(LaTeXML::Core::Definition::Conditional->new(
-//         $cs, undef, undef, conditional_type => 'or', %options),
-//       $options{scope}); }
-//   elsif ($csname =~ /^\\(?:if(.*)|unless)$/) {
-//     my $name = $1;
-//     if ((defined $name) && ($name ne 'case')
-//       && (!defined $test)) {    # user-defined conditional, like with \newif
-//       DefMacroI(T_CS('\\' . $name . 'true'),  undef, Tokens(T_CS('\let'), $cs, T_CS('\iftrue')));
-//       DefMacroI(T_CS('\\' . $name . 'false'), undef, Tokens(T_CS('\let'), $cs, T_CS('\iffalse')));
-//       Let($cs, T_CS('\iffalse')); }
-//     else {
-//       # For \ifcase, the parameter list better be a single Number !!
-//       $STATE->installDefinition(LaTeXML::Core::Definition::Conditional->new($cs, $paramlist, $test,
-//           conditional_type => 'if', %options),
-//         $options{scope}); }
-//   }
-//   else {
-//     Error('misdefined', $cs, $STATE->getStomach,
-//       "The conditional " . Stringify($cs) . " is being defined but doesn't start with \\if"); }
-//   AssignValue(ToString($cs) . ":locked" => 1) if $options{locked};
-//   return; }
 
 // sub IfCondition {
 //   my ($if, @args) = @_;

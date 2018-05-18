@@ -1,19 +1,20 @@
-use libxml::tree::{Node};
 use regex::Regex;
 use std::collections::HashMap;
 use std::rc::Rc;
+use libxml::tree::Node;
 
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
 use rtx_core::common::number::Number;
 use rtx_core::definition::expandable::Expandable;
-use rtx_core::definition::{Definition, ExpansionClosure};
+use rtx_core::definition::{Definition, ExpansionClosure, ConditionalClosure};
+use rtx_core::definition::conditional::{Conditional, ConditionalType, ConditionalOptions};
 use rtx_core::document::resource::*;
 use rtx_core::document::tag::{TagOptionName, TagOptions};
-use rtx_core::document::Document;
-use rtx_core::gullet::Gullet;
 use rtx_core::mouth;
 use rtx_core::mouth::Mouth;
+use rtx_core::gullet::Gullet;
+use rtx_core::document::Document;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::state::{ObjectStore, Scope, State};
 use rtx_core::stomach::Stomach;
@@ -272,6 +273,7 @@ lazy_static! {
   static ref CS_REGEX: Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
   static ref SINGLE_CHAR_REGEX: Regex = Regex::new(r"^(\\.)").unwrap();
   static ref ACTIVE_CHAR_REGEX: Regex = Regex::new(r"^(.)").unwrap();
+  static ref CONDITIONAL_REGEX: Regex = Regex::new(r"^\\(?:if(.*)|unless)$").unwrap();
 }
 
 pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option<Parameters>))> {
@@ -531,6 +533,61 @@ pub struct RegisterOptions {
   pub setter: bool,
 }
 
+//======================================================================
+// Defining Conditional Control Sequences.
+//======================================================================
+// Define a conditional control sequence. Its processing takes place in
+// the Gullet.  The test is applied to the arguments (if any),
+// which determines which branch is executed.
+// If the test is undefined, the conditional is a "user defined" one;
+// Two additional primitives are defined \footrue and \foofalse;
+// the test is then determined by the most recently called of those.
+//
+// If you supply a skipper instead of a test, it is also applied to the arguments
+// and should skip to the right place in the following \or, \else, \fi.
+
+pub fn def_conditional(cs: Token, paramlist: Option<Parameters>,
+                       test: Option<ConditionalClosure>, options: ConditionalOptions, state: &mut State) {
+  let cs_name = cs.get_cs_name();
+  match cs_name.as_str() {
+    "\\fi" | "\\else" | "\\or" => 
+      state.install_definition(ObjectStore::Conditional(Rc::new(
+        Conditional { cs: cs.clone(), paramlist: None, test: None, 
+          conditional_type: Some(ConditionalType::from(&cs_name)), locked: options.locked, skipper: options.skipper }
+      )), options.scope),
+    custom => {
+      if CONDITIONAL_REGEX.is_match(custom) {
+        let captures = CONDITIONAL_REGEX.captures(custom).unwrap();
+        let name = captures.get(0).map_or("", |m| m.as_str()).to_string();
+        if !name.is_empty() && name != "case" && test.is_none() { // user-defined conditional, like with \newif
+        // Note: setting up these macros is compile-time expensive, maybe there is some way to avoid...
+        SetupBindingMacros!(state);
+        // Note: the double clones are technically correct Rust if annoying to write and read.
+        //       first, we want to capture a cloned value of cs, to be able to keep using cs here.
+        //       second, each invocation of the conditional macro needs to create new tokens to return,
+        //       hence a clone is required on each call.
+        let cs_c1 = cs.clone();
+        DefMacroTS!(T_CS!(format!("\\{}true", name)), None, Tokens!(T_CS!("\\let"), cs_c1.clone(), T_CS!("\\iftrue")), state);
+        let cs_c2 = cs.clone();
+        DefMacroTS!(T_CS!(format!("\\{}false",name)), None, Tokens!(T_CS!("\\let"), cs_c2.clone(), T_CS!("\\iffalse")), state);
+        state.let_i(&cs, T_CS!("\\iffalse"), None);
+        } else { //  For \ifcase, the parameter list better be a single Number !!
+          state.install_definition(ObjectStore::Conditional(Rc::new(
+            Conditional { cs: cs.clone(), paramlist, test, conditional_type: Some(ConditionalType::If), locked: options.locked, skipper: options.skipper }
+          )), options.scope);
+        }
+      } else {
+        error!(target: &format!("misdefined:{}", cs), "The conditional {} is being defined but doesn't start with \\if", cs); 
+      }
+    }
+  }
+
+  if let Some(true) = options.locked {
+    state.assign_value(&format!("{}:locked",cs), ObjectStore::Bool(true), None);
+  }
+  return;
+}
+
 pub fn def_register(
   cs: Token,
   paramlist: Option<Parameters>,
@@ -538,7 +595,7 @@ pub fn def_register(
   options: Option<RegisterOptions>,
   state: &mut State,
 )
-{
+{ // TODO:
   //   my $type   = $register_types{ ref $value };
   //   my $name   = ToString($cs);
   //   my $getter = $options{getter}

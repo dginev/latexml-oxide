@@ -231,7 +231,7 @@ impl Parameter {
             }
           }
           let evec = Vec::new();
-          Ok(Tokens { tokens: tokens }.neutralize(&evec, state).unlist())
+          Ok(Tokens::new(tokens).neutralize(&evec, state).unlist())
         })
       )?;
     }

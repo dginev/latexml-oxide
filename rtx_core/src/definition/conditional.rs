@@ -11,6 +11,7 @@ use whatsit::Whatsit;
 use stomach::Stomach;
 use document::Document;
 use definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
+use state::Scope;
 
 // Conditional control sequences; Expandable
 //   Expand enough to determine true/false, then maybe skip
@@ -24,13 +25,43 @@ pub enum ConditionalType {
   Fi,
 }
 
+impl ConditionalType {
+  pub fn from(cs: &str) -> Self {
+    use self::ConditionalType::*;
+    match cs {
+      "\\if" => If,
+      "\\else" => Else,
+      "\\or" => Or,
+      "\\fi" => Fi,
+      _ => If
+    }
+  }
+}
+
+// This is ONLY used for \ifcase.
+pub struct ConditionalOptions {
+  pub scope: Option<Scope>,
+  pub locked: Option<bool>,
+  pub skipper: Option<bool>
+}
+impl Default for ConditionalOptions {
+  fn default() -> Self {
+    ConditionalOptions {
+      scope: None,
+      locked: None,
+      skipper: None
+    }
+  }
+}
+
 #[derive(Clone)]
 pub struct Conditional {
   pub cs: Token,
   pub paramlist: Option<Parameters>,
   pub test: Option<ConditionalClosure>,
-  // pub options: PrimitiveOptions,
   pub conditional_type: Option<ConditionalType>,
+  pub locked: Option<bool>,
+  pub skipper: Option<bool>
 }
 impl Default for Conditional {
   fn default() -> Self {
@@ -39,6 +70,8 @@ impl Default for Conditional {
       paramlist: None,
       test: None,
       conditional_type: None,
+      locked: None,
+      skipper: None
     }
   }
 }

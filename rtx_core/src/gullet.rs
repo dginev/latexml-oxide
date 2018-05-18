@@ -388,7 +388,7 @@ impl Gullet {
       }
       tokens.push(token);
     }
-    Ok(Tokens { tokens: tokens })
+    Ok(Tokens::new(tokens))
   }
 
   ///**********************************************************************

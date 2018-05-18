@@ -1159,7 +1159,7 @@ impl Document {
       }
       // TODO: $path = Stringify($node) . $path; }
     }
-    return path;
+    path
   }
 
   /// Find the node where an element with qualified name $qname can be inserted.

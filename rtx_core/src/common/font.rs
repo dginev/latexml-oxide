@@ -274,7 +274,7 @@ impl Font {
         new.series = Some(defseries);
       } // defaults, always.
     }
-    return new;
+    new
   }
 
   pub fn to_attribute(&self) -> String {

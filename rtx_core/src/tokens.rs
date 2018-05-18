@@ -31,7 +31,7 @@ macro_rules! Tokens(
 );
 
 impl Tokens {
-  pub fn new(tokens: Vec<Token>) -> Self { Tokens { tokens: tokens } }
+  pub fn new(tokens: Vec<Token>) -> Self { Tokens { tokens } }
 
   /// Return a list of the tokens making up this Tokens
   pub fn unlist(self) -> Vec<Token> { self.tokens }
@@ -115,17 +115,15 @@ impl Tokens {
       if token.code != Catcode::PARAM {
         // Non '#'; copy it
         result.push(token);
-      } else {
-        if let Some(token2) = in_tokens.next() {
-          if token2.code != Catcode::PARAM {
-            // Not multiple '#'; read arg.
-            let arg_number = token2.text.parse::<usize>().unwrap();
-            let ref arg = args[arg_number - 1];
-            result.extend(arg.clone().unlist());
-          } else {
-            // Duplicated '#', copy 2nd '#'
-            result.push(token2);
-          }
+      } else if let Some(token2) = in_tokens.next() {
+        if token2.code != Catcode::PARAM {
+          // Not multiple '#'; read arg.
+          let arg_number = token2.text.parse::<usize>().unwrap();
+          let ref arg = args[arg_number - 1];
+          result.extend(arg.clone().unlist());
+        } else {
+          // Duplicated '#', copy 2nd '#'
+          result.push(token2);
         }
       }
     }

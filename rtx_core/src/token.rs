@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 use std::iter::FromIterator;
+use std::fmt::Display;
+use std::fmt;
 
 use common::error::*;
 use quote;
@@ -156,6 +158,12 @@ impl quote::ToTokens for Token {
     tokens.append(".to_string(), code: ");
     self.code.to_tokens(tokens);
     tokens.append("}")
+  }
+}
+
+impl Display for Token {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+      write!(f, "{}", self.text)
   }
 }
 

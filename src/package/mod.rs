@@ -7,7 +7,7 @@ pub use std::rc::Rc;
 pub use rtx_core::common::error::*;
 pub use rtx_core::common::font::Font;
 pub use rtx_core::common::number::Number;
-pub use rtx_core::definition::conditional::{Conditional, ConditionalType};
+pub use rtx_core::definition::conditional::{Conditional, ConditionalType, ConditionalOptions};
 pub use rtx_core::definition::constructor::ConstructorOptions;
 pub use rtx_core::definition::expandable::Expandable;
 pub use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};

@@ -14,7 +14,7 @@ use common::error::*;
 
 // use common::font::*;
 
-pub const LTX_NAMESPACE: &'static str = "http://dlmf.nist.gov/LaTeXML";
+pub const LTX_NAMESPACE: &str = "http://dlmf.nist.gov/LaTeXML";
 pub type IndirectModel = HashMap<String, HashMap<String, String>>;
 
 lazy_static! {

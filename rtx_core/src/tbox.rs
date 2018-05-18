@@ -74,7 +74,7 @@ impl Tbox {
       let specialized_font = font.specialize(&string);
       Tbox {
         text: string,
-        tokens: tokens,
+        tokens,
         font: specialized_font, // $locator,
         properties: box_props,
         ..Tbox::default()

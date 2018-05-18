@@ -482,16 +482,16 @@ impl State {
     State {
       value: value_table,
       catcode: catcodes_typed,
-      model: model,
-      verbosity: verbosity,
-      strict: strict,
-      include_comments: include_comments,
-      documentid: documentid,
-      search_paths: search_paths,
-      graphics_paths: graphics_paths,
-      include_styles: include_styles,
+      model,
+      verbosity,
+      strict,
+      include_comments,
+      documentid,
+      search_paths,
+      graphics_paths,
+      include_styles,
       input_encoding: options.input_encoding,
-      nomathparse: nomathparse,
+      nomathparse,
       ..State::default()
     }
   }

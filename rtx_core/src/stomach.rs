@@ -283,7 +283,7 @@ impl Stomach {
 
       state.let_i(token, T_CS!("\\iffalse"), None);
       self.get_gullet_mut().unread(Tokens!(token.clone())); // Retry
-      return Ok(Vec::new());
+      Ok(Vec::new())
     } else {
       error!(
         target: &format!("undefined:{}", cs),
@@ -303,7 +303,7 @@ impl Stomach {
         Some(Scope::Global),
       );
       // and then invoke it.
-      return self.invoke_token(token.clone(), state);
+      self.invoke_token(token.clone(), state)
     }
   }
 
