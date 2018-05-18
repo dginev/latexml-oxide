@@ -91,7 +91,7 @@ pub fn input_definitions(
   }
 
   // Mark as loaded, then process the definitions
-  info!("Loading {:?} definitions...", file);
+  note_begin(&s!("Loading {:?} definitions...", file));
   state.assign_value(&loaded_flag, ObjectStore::Bool(true), Some(Scope::Global));
 
   match file.as_ref() {
@@ -108,7 +108,7 @@ pub fn input_definitions(
       s!("TODO: unknown binding {:?}, can't load", other)
     ),
   };
-
+  note_end(&s!("Loading {:?} definitions...", file));
   Ok(())
 }
 

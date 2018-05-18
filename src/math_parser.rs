@@ -365,7 +365,7 @@ impl MathParser {
       if tag == "ltx:XMath" {
         // Replace the content of XMath with parsed result
         self.n_parsed += 1;
-        note_progress(&s!("[{:?}]", self.n_parsed));
+        note_progress(&s!("[{}]", self.n_parsed));
         for el_node in element_nodes(node) {
           // document.unrecord_node_ids(el_node);
         }

@@ -339,7 +339,7 @@ impl Model {
         s!("http://example.com/namespace{}", &self.namespace_errors.to_string());
       self.register_document_namespace(docprefix, Some(ns_error));
       error!(
-        target: &s!("malformed:{:?}", docprefix),
+        target: &s!("malformed:{}", docprefix),
         "No namespace has been registered for prefix."
       );
       // Error('malformed', $docprefix, undef,
@@ -626,14 +626,14 @@ impl Model {
           self.register_document_namespace(prefix, Some(namespace.to_owned()));
         } else {
           panic!(
-            "Fatal:internal:{:?} Compiled model '{:?}' is malformatted at \"{:?}\"",
+            "Fatal:internal:{} Compiled model '{}' is malformatted at \"{}\"",
             path, path, line
           );
         }
       }
     }
 
-    note_end(&(s!("Loading compiled schema {}", path)));
+    note_end(&s!("Loading compiled schema {}", path));
     return;
   }
 
