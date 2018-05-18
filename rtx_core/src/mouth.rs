@@ -58,8 +58,8 @@ impl Default for Mouth {
       colno: 0,
       chars: VecDeque::new(),
       nchars: 0,
-      source: "Anonymous String".to_string() + &Mouth::gid(),
-      shortsource: "String".to_string(),
+      source: s!("Anonymous String {}", &Mouth::gid()),
+      shortsource: s!("String"),
       // handle : None,
       foodtype: FoodType::File,
       saved_at_cc: None,
@@ -123,9 +123,9 @@ impl Mouth {
   fn initialize(&mut self, state: &mut State) {
     self.note_message = if self.notes {
       if self.fordefinitions {
-        Some("Processing definitions".to_string())
+        Some(s!("Processing definitions"))
       } else {
-        Some("Processing content".to_string())
+        Some(s!("Processing content"))
       }
     } else {
       None
@@ -259,11 +259,11 @@ impl Mouth {
   pub fn has_more_input(&self) -> bool { self.colno < self.nchars || !self.buffer.is_empty() }
   // fn stringify(&self) -> String {
   //   // TODO
-  //   "mouth stringify".to_string()
+  //   s!("mouth stringify")
   // } // This should be an implementation of Debug?
   // fn get_locator(&self, length: usize) -> String {
   //   // TODO
-  //   "mouth locator".to_string()
+  //   s!("mouth locator")
   // }
   // fn get_source(&self) -> String {
   //   self.source.to_string()
@@ -314,8 +314,7 @@ impl Mouth {
               if let Some(&ObjectStore::Bool(ref x)) = include_comments {
                 if *x {
                   return Some(T_COMMENT!(
-                    "**** ".to_string() + &self.shortsource + " Line " + &self.lineno.to_string()
-                      + " ****"
+                    s!("**** {} Line {} ****", &self.shortsource, &self.lineno.to_string())
                   ));
                 }
               }
@@ -555,7 +554,7 @@ impl Mouth {
   /// Read control sequence
   fn handle_escape(&mut self, _c: char, state: &mut State) -> Option<Token> {
     // NOTE: We're using control sequences WITH the \ prepended!!!
-    let mut cs = "\\".to_string(); // I need this standardized to be able to lookup tokens (A better way???)
+    let mut cs = s!("\\"); // I need this standardized to be able to lookup tokens (A better way???)
     match self.get_next_char(state) {
       None => {},
       Some((ch, cc)) => {

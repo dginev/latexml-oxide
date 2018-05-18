@@ -66,7 +66,7 @@ pub struct Conditional {
 impl Default for Conditional {
   fn default() -> Self {
     Conditional {
-      cs: T_CS!("Conditional".to_string()),
+      cs: T_CS!(s!("Conditional")),
       paramlist: None,
       test: None,
       conditional_type: None,

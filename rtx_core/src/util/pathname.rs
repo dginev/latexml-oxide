@@ -175,10 +175,10 @@ pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> 
       if ext.is_empty() || pathname_ext == ext.to_lowercase() {
         exts.push(String::new());
       } else if ext == "*" {
-        exts.push(".*".to_string());
+        exts.push(s!(".*"));
         exts.push(String::new());
       } else {
-        exts.push('.'.to_string() + &ext);
+        exts.push(s!(".{}", &ext));
       }
     }
   }

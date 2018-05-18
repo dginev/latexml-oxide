@@ -96,16 +96,16 @@ impl Font {
   }
   pub fn math_default() -> Self {
     Font {
-      family: Some("math".to_string()),
+      family: Some(s!("math")),
       series: Some(DEFSERIES.to_string()),
-      shape: Some("italic".to_string().to_string()),
+      shape: Some(s!("italic")),
       size: Some(DEFSIZE.to_string()),
       color: Some(DEFCOLOR.to_string()),
       bg: Some(DEFBACKGROUND.to_string()),
       opacity: Some(DEFOPACITY.to_string()),
       encoding: None,
       language: Some(DEFLANGUAGE.to_string()),
-      mathstyle: Some("text".to_string()),
+      mathstyle: Some(s!("text")),
       forceseries: None,
       forcefamily: None,
       forceshape: None,
@@ -235,13 +235,13 @@ impl Font {
     if LATIN_LETTER_RE.is_match(text) {
       // Latin Letter
       if new.shape.is_none() && new.family.is_none() {
-        new.shape = Some("italic".to_string());
+        new.shape = Some(s!("italic"));
       }
     } else if GREEK_LETTER_RE.is_match(text) {
       // Single Greek character?
       if UPPER_LETTER_RE.is_match(text) {
         // Uppercase
-        if new.family.is_none() || (new.family == Some("math".to_string())) {
+        if new.family.is_none() || (new.family == Some(s!("math"))) {
           new.family = Some(deffamily);
           if new.shape.is_some() && (new.shape != Some(DEFSHAPE.to_string())) {
             new.shape = Some(defshape); // if ANY shape, must be default
@@ -254,7 +254,7 @@ impl Font {
         }
         if new.shape.is_none() || new.forceshape == Some(true) {
           // always ?
-          new.shape = Some("italic".to_string());
+          new.shape = Some(s!("italic"));
         }
         if new.series.is_some() && (new.series != Some(DEFSERIES.to_string())) {
           new.series = Some(defseries);
@@ -262,7 +262,7 @@ impl Font {
       }
     } else if DIGIT_LETTER_RE.is_match(text) {
       // Digit
-      if new.family.is_none() || (new.family == Some("math".to_string())) {
+      if new.family.is_none() || (new.family == Some(s!("math"))) {
         new.family = Some(deffamily);
         new.shape = Some(defshape); // defaults, always.
       }
@@ -351,7 +351,7 @@ impl Font {
   pub fn relative_to(&self, other: &Font) -> HashMap<String, (String, Font)> {
     let family = match &self.family {
       &Some(ref fam) => if fam == "math" {
-        Some("serif".to_string())
+        Some(s!("serif"))
       } else {
         Some(fam.to_string())
       },
@@ -359,7 +359,7 @@ impl Font {
     };
     let other_family = match &other.family {
       &Some(ref fam) => if fam == "math" {
-        Some("serif".to_string())
+        Some(s!("serif"))
       } else {
         Some(fam.to_string())
       },
@@ -386,7 +386,7 @@ impl Font {
 
     if !diffs.is_empty() {
       let font_value = diffs.join(" ");
-      result.insert("font".to_string(), (font_value, font_properties));
+      result.insert(s!("font"), (font_value, font_properties));
     }
 
     // (is_diff($siz, $osiz)

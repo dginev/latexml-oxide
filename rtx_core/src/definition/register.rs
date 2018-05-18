@@ -23,7 +23,7 @@ pub struct Register {
 impl Default for Register {
   fn default() -> Self {
     Register {
-      cs: T_CS!("Register".to_string()),
+      cs: T_CS!(s!("Register")),
       parameters: None,
       register_type: None,
       readonly: false,

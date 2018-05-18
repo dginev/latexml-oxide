@@ -63,12 +63,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     </ltx:XMath>
     </ltx:Math>
   </ltx:equation>",
-    alias         => Some("$$".to_string()),
+    alias         => Some(s!("$$")),
     before_digest => vec!(beforeproc!(stomach, state, { stomach.begin_mode("display_math", state)?; })),
     capture_body  => true
   );
 
-  DefConstructorI!(T_CS!("\\@@ENDDISPLAYMATH"), None, noreplacement!(), alias => Some("$$".to_string()),
+  DefConstructorI!(T_CS!("\\@@ENDDISPLAYMATH"), None, noreplacement!(), alias => Some(s!("$$")),
     before_digest => vec!(beforeproc!(stomach, state, { stomach.end_mode("display_math", state)?; })));
 
   DefConstructor!("\\@@BEGININLINEMATH",
@@ -77,11 +77,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     #body
     </ltx:XMath>
   </ltx:Math>",
-    alias => Some("$".to_string()),
+    alias => Some(s!("$")),
     before_digest => vec!(beforeproc!(stomach, state, { stomach.begin_mode("inline_math", state)?; })),
     capture_body => true);
 
-  DefConstructorI!(T_CS!("\\@@ENDINLINEMATH"), None, noreplacement!(), alias => Some("$".to_string()),
+  DefConstructorI!(T_CS!("\\@@ENDINLINEMATH"), None, noreplacement!(), alias => Some(s!("$")),
     before_digest => vec!(beforeproc!(stomach, state, { stomach.end_mode("inline_math", state)?; })));
 
   // Same as add_TeX, but add the code from the body of the object.

@@ -33,7 +33,7 @@ fn assign_lookup_value() {
   // initially missing
   assert!(state.lookup_value("STRICT").is_none());
 
-  let strict_value = "testing strict".to_string();
+  let strict_value = s!("testing strict");
   let strict_store = ObjectStore::String(strict_value.clone());
   state.assign_value("STRICT", strict_store, None);
   match state.lookup_value("STRICT") {
@@ -43,7 +43,7 @@ fn assign_lookup_value() {
   };
 
   let mut hash_val = HashMap::new();
-  hash_val.insert("a".to_string(), ObjectStore::Bool(true));
+  hash_val.insert(s!("a"), ObjectStore::Bool(true));
   let hash_store = ObjectStore::HashOS(hash_val);
 
   state.assign_value("hashref_test", hash_store, Some(Scope::Global));
@@ -75,7 +75,7 @@ fn scoped_assign_lookup_value() {
   assert!(state.lookup_value("foo").is_none());
   state.assign_value(
     "foo",
-    ObjectStore::String("bar".to_string()),
+    ObjectStore::String(s!("bar")),
     Some(Scope::Global),
   );
   match state.lookup_value("foo") {
@@ -91,7 +91,7 @@ fn scoped_assign_lookup_value() {
 
   state.assign_value(
     "foo",
-    ObjectStore::String("baz".to_string()),
+    ObjectStore::String(s!("baz")),
     Some(Scope::Local),
   );
   match state.lookup_value("foo") {
@@ -105,7 +105,7 @@ fn scoped_assign_lookup_value() {
 
   state.assign_value(
     "foo",
-    ObjectStore::String("overwrite".to_string()),
+    ObjectStore::String(s!("overwrite")),
     Some(Scope::Local),
   );
   match state.lookup_value("foo") {
@@ -150,7 +150,7 @@ fn assign_lookup_arrays() {
     Some(_) => panic!("Looked up value of SEARCHPATHS didn't match assignment value"),
   };
 
-  state.unshift_value("empty_key", vec![ObjectStore::String("mydir".to_string())]);
+  state.unshift_value("empty_key", vec![ObjectStore::String(s!("mydir"))]);
   let shifted = state.shift_value("empty_key");
   if let Some(ObjectStore::String(shifted_str)) = shifted {
     assert_eq!(shifted_str, "mydir", "shift/unshift new key");
@@ -158,7 +158,7 @@ fn assign_lookup_arrays() {
     panic!("state.shift_value returned wrong/no ObjectStore")
   }
 
-  state.unshift_value("SEARCHPATHS", vec![ObjectStore::String("d".to_string())]);
+  state.unshift_value("SEARCHPATHS", vec![ObjectStore::String(s!("d"))]);
   if let Some(vdq) = state.lookup_vecdeque("SEARCHPATHS") {
     let mut vdq_expected = VecDeque::new();
     for entry in &["d", "a", "b", "c"] {

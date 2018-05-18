@@ -60,7 +60,7 @@ impl Tbox {
 
     if state.lookup_bool("IN_MATH") {
       let mut box_props = properties;
-      box_props.insert("mode".to_string(), "math".to_string());
+      box_props.insert(s!("mode"), s!("math"));
       if !string.is_empty() {
         match state.lookup_value(&s!("math_token_attributes_{}", string)) {
           Some(&ObjectStore::HashStr(ref attr)) => for (key, value) in attr.iter() {
@@ -100,7 +100,7 @@ impl BoxOps for Tbox {
     let font = &self.font;
     let mode = match self.properties.get("mode") {
       Some(s) => s.to_owned(),
-      None => "text".to_string(),
+      None => s!("text"),
     };
     if !text.is_empty() {
       if mode == "math" {

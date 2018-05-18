@@ -81,21 +81,21 @@ impl Model {
     // model.xpath.register_function("match-font", |x, y| {font::match_font(x,y)})
     model.register_namespace(
       "xml",
-      Some("http://www.w3.org/XML/1998/namespace".to_string()),
+      Some(s!("http://www.w3.org/XML/1998/namespace")),
     );
     model.register_document_namespace(
       "xml",
-      Some("http://www.w3.org/XML/1998/namespace".to_string()),
+      Some(s!("http://www.w3.org/XML/1998/namespace")),
     );
     model
   }
 
   pub fn set_doc_type(&mut self, roottag: String, publicid: String, systemid: String) {
-    self.schema_data = Some(vec!["DTD".to_string(), roottag, publicid, systemid]);
+    self.schema_data = Some(vec![s!("DTD"), roottag, publicid, systemid]);
   }
 
   pub fn set_relaxng_schema(&mut self, schema: String) {
-    self.schema_data = Some(vec!["RelaxNG".to_string(), schema]);
+    self.schema_data = Some(vec![s!("RelaxNG"), schema]);
   }
   pub fn add_schema_declaration(&self, document: &mut Document) {
     if let Some(ref schema) = self.schema {
@@ -116,12 +116,12 @@ impl Model {
       // // article ??? or what ? undef gives problems!
 
       self.register_document_namespace("ltx", Some(LTX_NAMESPACE.to_string()));
-      self.set_relaxng_schema("LaTeXML".to_string());
+      self.set_relaxng_schema(s!("LaTeXML"));
       self.register_namespace("ltx", Some(LTX_NAMESPACE.to_string()));
-      self.register_namespace("svg", Some("http://www.w3.org/2000/svg".to_string()));
-      self.register_namespace("xlink", Some("http://www.w3.org/1999/xlink".to_string())); // Needed for SVG
-      self.register_namespace("m", Some("http://www.w3.org/1998/Math/MathML".to_string()));
-      self.register_namespace("xhtml", Some("http://www.w3.org/1999/xhtml".to_string()));
+      self.register_namespace("svg", Some(s!("http://www.w3.org/2000/svg")));
+      self.register_namespace("xlink", Some(s!("http://www.w3.org/1999/xlink"))); // Needed for SVG
+      self.register_namespace("m", Some(s!("http://www.w3.org/1998/Math/MathML")));
+      self.register_namespace("xhtml", Some(s!("http://www.w3.org/1999/xhtml")));
       self.permissive = true;
     } // Actually, they could have declared all sorts of Tags....
     let mut schema_type = String::new();
@@ -155,7 +155,7 @@ impl Model {
         &name,
         pathname::FindOptions {
           paths: search_paths,
-          types: Some(vec!["model".to_string()]),
+          types: Some(vec![s!("model")]),
           installation_subdir: Some(s!("resources/{}", schema_type)),
         },
       );
@@ -245,7 +245,7 @@ impl Model {
         // Since the default namespace url can still ALSO have a prefix associated,
         // we prepend "DEFAULT#url" when using as a hash key in the prefixes table.
         let regnamespace = if docprefix == "#default" {
-          "DEFAULT#".to_string() + &namespace
+          s!("DEFAULT#{}", &namespace)
         } else {
           namespace.to_string()
         };
@@ -279,7 +279,7 @@ impl Model {
     let mut docprefix = if !forattribute {
       match self
         .document_namespace_prefixes
-        .get(&("DEFAULT#".to_string() + namespace))
+        .get(&s!("DEFAULT#{}", namespace))
       {
         Some(prefix) => Some(prefix.to_string()),
         None => None,
@@ -296,10 +296,10 @@ impl Model {
 
     if docprefix.is_none() && !probe {
       self.namespace_errors += 1;
-      docprefix = Some("namespace".to_string() + &self.namespace_errors.to_string());
+      docprefix = Some(s!("namespace{}", &self.namespace_errors.to_string()));
       self.register_document_namespace(docprefix.as_ref().unwrap(), Some(namespace.to_string()));
       warn!(
-        target: &s!("malformed:{:?}", namespace),
+        target: &s!("malformed:{}", namespace),
         "No prefix has been registered for namespace."
       );
       // Warn('malformed', $namespace, undef,
@@ -336,7 +336,7 @@ impl Model {
     if docprefix != "#default" && ns_str.is_empty() && !probe {
       self.namespace_errors += 1;
       let ns_error =
-        "http://example.com/namespace".to_string() + &self.namespace_errors.to_string();
+        s!("http://example.com/namespace{}", &self.namespace_errors.to_string());
       self.register_document_namespace(docprefix, Some(ns_error));
       error!(
         target: &s!("malformed:{:?}", docprefix),
@@ -387,7 +387,7 @@ impl Model {
       } else {
         // Else synthesize one
         self.namespace_errors += 1;
-        let auto_prefix = "namespace".to_string() + &self.namespace_errors.to_string();
+        let auto_prefix = s!("namespace{}", &self.namespace_errors.to_string());
         codeprefix = Some(auto_prefix);
       }
       self.register_namespace(codeprefix.as_ref().unwrap(), Some(namespace.to_string()));
@@ -410,7 +410,7 @@ impl Model {
     if ns.is_none() && !probe {
       self.namespace_errors += 1;
       let example_namespace =
-        "http://example.com/namespace".to_string() + &self.namespace_errors.to_string();
+        s!("http://example.com/namespace{}", &self.namespace_errors.to_string());
       ns = Some(example_namespace.clone());
       self.register_namespace(codeprefix, Some(example_namespace));
       // Error!('malformed', $codeprefix, undef,
@@ -430,23 +430,23 @@ impl Model {
     use libxml::tree::NodeType::*;
     let node_type = node.get_type();
     if node_type.is_none() {
-      return "#BrokenNode".to_string();
+      return s!("#BrokenNode");
     }
     match node_type.unwrap() {
-      TextNode => "#PCDATA".to_string(),
-      DocumentNode => "#Document".to_string(),
-      CommentNode => "#Comment".to_string(),
-      PiNode => "#ProcessingInstruction".to_string(),
-      DTDNode => "#DTD".to_string(),
+      TextNode => s!("#PCDATA"),
+      DocumentNode => s!("#Document"),
+      CommentNode => s!("#Comment"),
+      PiNode => s!("#ProcessingInstruction"),
+      DTDNode => s!("#DTD"),
       NamespaceDecl => {
         // match node.declared_uri() {
         //   Some(ns) => match self.get_namespace_prefix(ns, false, true) {
-        //     Some(prefix) => "xmlns:".to_string()+prefix,
-        //     None => "xmlns".to_string()
+        //     Some(prefix) => s!("xmlns:")+prefix,
+        //     None => s!("xmlns")
         //   },
-        //   None => "xmlns".to_string()
+        //   None => s!("xmlns")
         // }
-        "xmlns".to_string()
+        s!("xmlns")
       },
       ElementNode | AttributeNode => {
         // match node.namespace_uri() {
@@ -473,22 +473,22 @@ impl Model {
     use libxml::tree::NodeType::*;
     let node_type = node.get_type();
     if node_type.is_none() {
-      return "#BrokenNode".to_string();
+      return s!("#BrokenNode");
     }
 
     match node_type.unwrap() {
-      TextNode => "#PCDATA".to_string(),
-      DocumentNode => "#Document".to_string(),
-      CommentNode => "#Comment".to_string(),
-      PiNode => "#ProcessingInstruction".to_string(),
-      DTDNode => "#DTD".to_string(),
+      TextNode => s!("#PCDATA"),
+      DocumentNode => s!("#Document"),
+      CommentNode => s!("#Comment"),
+      PiNode => s!("#ProcessingInstruction"),
+      DTDNode => s!("#DTD"),
 
       // TODO
       // elsif ($type == XML_NAMESPACE_DECL) {
       //   my $ns = $node->declaredURI;
       //   my $prefix = $ns && $self->getDocumentNamespacePrefix($ns, 0, 1);
       //   return ($prefix ? 'xmlns:' . $prefix : 'xmlns'); }
-      NamespaceDecl => "xmlns".to_string(),
+      NamespaceDecl => s!("xmlns"),
 
       ElementNode | AttributeNode => {
         let mut prefix = String::new();

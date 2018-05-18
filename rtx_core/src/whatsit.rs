@@ -75,12 +75,12 @@ impl Whatsit {
       list.mode = Some(mode);
     }
     self.properties.insert(
-      "body".to_string(),
+      s!("body"),
       ObjectStore::Digested(Rc::new(Digested::List(list))),
     );
     if let Some(trailer) = trailer_opt {
       self.properties.insert(
-        "trailer".to_string(),
+        s!("trailer"),
         ObjectStore::Digested(Rc::new(trailer.clone())),
       );
       // And copy any otherwise undefined properties from the trailer

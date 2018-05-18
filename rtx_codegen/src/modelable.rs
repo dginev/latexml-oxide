@@ -33,8 +33,8 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
   let pathname_opt = pathname::find(
     &name,
     pathname::FindOptions {
-      paths: Some(vec![".".to_owned()]),
-      types: Some(vec!["model".to_string()]),
+      paths: Some(vec![s!(".")]),
+      types: Some(vec![s!("model")]),
       installation_subdir: Some("resources/RelaxNG".to_owned()),
     },
   );

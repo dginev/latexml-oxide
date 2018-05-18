@@ -59,7 +59,7 @@ pub struct Primitive {
 impl Default for Primitive {
   fn default() -> Self {
     Primitive {
-      cs: T_CS!("Primitive".to_string()),
+      cs: T_CS!(s!("Primitive")),
       paramlist: None,
       replacement: None,
       options: PrimitiveOptions::default(),

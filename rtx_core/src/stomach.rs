@@ -130,7 +130,7 @@ impl Stomach {
     )
   }
 
-  pub fn get_locator(&self) -> String { "fake stomach locator".to_string() }
+  pub fn get_locator(&self) -> String { s!("fake stomach locator") }
 
   /// Invoke a token;
   /// If it is a primitive or constructor, the definition will be invoked,
@@ -506,7 +506,7 @@ impl Stomach {
     //     ? "non-boxing" : "boxing") . " group")
     //   . " due to " . Stringify(state.lookup_value('groupInitiator'))
     //   . " " . ToString(state.lookup_value('groupInitiatorLocator')); }
-    "current frame is mock".to_string()
+    s!("current frame is mock")
   }
 
   //======================================================================
@@ -573,9 +573,9 @@ impl Stomach {
           bg: cf.bg.clone(),
           size: cf.size.clone(),
           mathstyle: if isdisplay {
-            Some("display".to_string())
+            Some(s!("display"))
           } else {
-            Some("text".to_string())
+            Some(s!("text"))
           },
           ..Font::default()
         });

@@ -45,7 +45,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       };
       load_class(whatsit.get_arg(2).unwrap().to_string(),
                 class_opts,
-                Tokens!(T_CS!("\\AtBeginDocument".to_string()), T_CS!("\\warn@unusedclassoptions".to_string())),
+                Tokens!(T_CS!(s!("\\AtBeginDocument")), T_CS!(s!("\\warn@unusedclassoptions"))),
                 state)?;
     }))
   );
@@ -78,14 +78,14 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefMacro!("\\begin{}", gullet, args, state, {
     let name = &args[0].to_string();
-    let begin_name = "\\begin{".to_string() + name + "}";
+    let begin_name = s!("\\begin{{{}}}",name);
     if is_defined(&begin_name, state) {
       Ok(Tokens!(T_CS!(begin_name))) // Magic cs!
     } else {
-      let token = T_CS!("\\".to_string() + name);
+      let token = T_CS!(s!("\\{}",name));
       if !is_defined_token(&token, state) {
-        let undef = "{".to_string() + name + "}";
-        let category_object = s!("undefined:{:?}", undef);
+        let undef = s!("{{{}}}",name); // this creates {name} , {{ and }} are escapes in Rust's format!
+        let category_object = s!("undefined:{}", undef);
         error!(target: &category_object, "The environment is not defined.");
         // state.note_status("undefined", undef);
         //   Error("undefined", $undef, $gullet, "The environment " . $undef . " is not defined.");
@@ -99,12 +99,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefMacro!("\\end{}", gullet, args, state, {
     let name: String = args[0].to_string();
-    let mut t = T_CS!("\\end{".to_string() + &name + "}");
+    let mut t = T_CS!(s!("\\end{{{}}}",name));
     if is_defined_token(&t, state) {
       // Magic CS!
       Ok(Tokens!(t))
     } else {
-      t = T_CS!("\\end".to_string() + &name);
+      t = T_CS!(s!("\\end{}",name));
       if is_defined_token(&t, state) {
         Ok(Tokens!(t, T_CS!("\\endgroup")))
       } else {
@@ -147,7 +147,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         document.absorb(body, state)?;
       } else {
         let mut attrib : HashMap<String, String> = HashMap::new();
-        attrib.insert("xml:id".to_string(), id.to_string());
+        attrib.insert(s!("xml:id"), id.to_string());
         document.insert_element("ltx:document", vec![body], Some(attrib), state)?;
       }
       Ok(())
@@ -173,7 +173,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         Ok(Vec::new())
       }
     }),
-    mode => Some("text".to_string())
+    mode => Some(s!("text"))
   );
 
   //**********************************************************************
@@ -217,7 +217,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "subparagraph",
   ].iter()
   {
-    Tag!(&s!("ltx:{:?}",tag), auto_close => true);
+    Tag!(&s!("ltx:{}",tag), auto_close => true);
   }
 
   DefMacro!("\\secdef {}{} OptionalMatch:*", gullet, args, state, {
@@ -465,7 +465,7 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
 
   fn only_preamble(cs: &str, state: &mut State) {
     if !state.lookup_bool("inPreamble") {
-      let category_object = s!("unexpected:{:?}", cs);
+      let category_object = s!("unexpected:{}", cs);
       error!(
         target: &category_object,
         "The current command can only appear in the preamble"
@@ -544,7 +544,7 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
   // TODO: Re-add ltx: namespace when compiler can parse it
   DefEnvironment!("{math}",
     "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
-    mode => Some("inline_math".to_string())
+    mode => Some(s!("inline_math"))
   );
   // My first inclination is to Lock {math}, but it is surprisingly common to redefine it in silly
   // ways... So...?

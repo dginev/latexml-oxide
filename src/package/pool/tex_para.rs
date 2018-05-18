@@ -16,7 +16,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Remember; \par _closes_, not opens, paragraphs!
   // Here, we want to close both an open p and para (if either are open).
   let mut skippable_props = HashMap::new();
-  skippable_props.insert("alignmentSkippable".to_string(), ObjectStore::Bool(true));
+  skippable_props.insert(s!("alignmentSkippable"), ObjectStore::Bool(true));
 
   DefConstructorI!(T_CS!("\\par"), None, replacement!(document, args, props, state, {
       let in_preamble = match props.get("inPreamble") {
@@ -54,7 +54,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       Ok(Vec::new())
     }),
     properties => skippable_props,
-    alias => Some("\\par\n".to_string())
+    alias => Some(s!("\\par\n"))
   );
 
   // OTOH, sometimes \par is just a minimalistic "start a new line"

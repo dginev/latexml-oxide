@@ -39,7 +39,7 @@ impl Default for Parameter {
       semiverbatim: false,
       optional: false,
       undigested: false,
-      name: "parameter_default".to_string(),
+      name: s!("parameter_default"),
       spec: String::new(),
       extra: Vec::new(),
       reader: Rc::new(|_gullet, _args, _extra, _state| {
@@ -83,12 +83,12 @@ impl Parameter {
           let basetype = captures.get(1).map_or("", |m| m.as_str());
           descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
             Some(&ObjectStore::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
-            _ => match Parameter::check_reader_function("Read".to_string() + &self.name) {
+            _ => match Parameter::check_reader_function(s!("Read{}",&self.name)) {
               Some(reader) => Some(Parameter {
                 reader: reader,
                 ..Parameter::default()
               }),
-              None => match Parameter::check_reader_function("Read".to_string() + basetype) {
+              None => match Parameter::check_reader_function(s!("Read{}", basetype)) {
                 Some(reader) => Some(Parameter {
                   reader: reader,
                   ..Parameter::default()
@@ -113,7 +113,7 @@ impl Parameter {
                 reader: reader,
                 ..Parameter::default()
               }),
-              None => match Parameter::check_reader_function("Read".to_string() + basetype) {
+              None => match Parameter::check_reader_function(s!("Read{}", basetype)) {
                 Some(reader) => Some(Parameter {
                   reader: reader,
                   ..Parameter::default()
@@ -125,7 +125,7 @@ impl Parameter {
           descriptor.as_mut().unwrap().novalue = true;
           descriptor.as_mut().unwrap().optional = true;
         } else {
-          descriptor = match Parameter::check_reader_function("Read".to_string() + &self.name) {
+          descriptor = match Parameter::check_reader_function(s!("Read{}", &self.name)) {
             Some(reader) => Some(Parameter {
               reader: reader,
               ..Parameter::default()

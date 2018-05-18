@@ -87,7 +87,7 @@ impl DigestionAPI for Core {
     // };
     // let mut dir = None;
     let name = if pathname::is_literaldata(&request) {
-      Some("Anonymous String".to_string())
+      Some(s!("Anonymous String"))
     } else if pathname::is_url(&request) {
       Some(request.clone())
     } else {
@@ -98,7 +98,7 @@ impl DigestionAPI for Core {
       // };
       // dir = path.parent();
       match path.file_stem() {
-        None => Some("missing_name".to_string()),
+        None => Some(s!("missing_name")),
         Some(pf) => Some(pf.to_str().unwrap().to_string()),
       }
     };
@@ -106,7 +106,7 @@ impl DigestionAPI for Core {
     //   $self->withState(sub {
     //       Fatal('missing_file', $request, undef, "Can't find $mode file $request"); }); } }
     // };
-    let digestion_note = "Digesting ".to_string() + &name.clone().unwrap();
+    let digestion_note = s!("Digesting {}",&name.clone().unwrap());
     note_begin(&digestion_note);
     // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless
     // $options{noinitialize}; $state->assignValue(SOURCEFILE      => $request) if
@@ -162,7 +162,7 @@ impl DigestionAPI for Core {
         if let Some(&ObjectStore::Bool(ico_flag)) = state.lookup_value("INCLUDE_COMMENTS") {
           if ico_flag {
             let paths_string = search_paths.as_ref().unwrap().join(",");
-            let attributes = map!{"paths".to_string() => paths_string};
+            let attributes = map!{s!("paths") => paths_string};
             document.insert_pi("latexml", Some(attributes))?;
           }
         }
@@ -180,11 +180,11 @@ impl DigestionAPI for Core {
       });
       if preload.ends_with(".cls") {
         CLS_EXT_REGEX.replace_all(preload, "");
-        let attributes = map!{"class".to_string() => preload.to_string()};
+        let attributes = map!{s!("class") => preload.to_string()};
         document.insert_pi("latexml", Some(attributes))?;
       } else {
         STY_EXT_REGEX.replace_all(preload, "");
-        let attributes = map!{"package".to_string() => preload.to_string()};
+        let attributes = map!{s!("package") => preload.to_string()};
         document.insert_pi("latexml", Some(attributes))?;
       }
     }
@@ -242,7 +242,7 @@ impl DigestionAPI for Core {
 
     if pathname::is_literaldata(&request) {
       // ext = mode.extension();
-      name = "Anonymous String".to_string();
+      name = s!("Anonymous String");
     } else if pathname::is_url(&request) {
       // ext = mode.extension();
       name = request.clone();

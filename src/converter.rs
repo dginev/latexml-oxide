@@ -40,7 +40,7 @@ impl Converter {
   }
   pub fn initialize_session(&mut self) -> Result<()> {
     // Prepare LaTeXML object
-    self.core.initialize_state(vec!["TeX.pool".to_string()])?;
+    self.core.initialize_state(vec![s!("TeX.pool")])?;
     self.ready = true;
     Ok(())
   }
@@ -50,7 +50,7 @@ impl Converter {
   }
   pub fn flush_log(&mut self) -> String {
     // TODO
-    "mock flush log".to_string()
+    s!("mock flush log")
   }
 
   pub fn convert(mut self, source: String) -> ConversionResponse {
@@ -65,7 +65,7 @@ impl Converter {
         return ConversionResponse {
           result: None,
           log: self.flush_log(),
-          status: "Initialization failed.".to_string(),
+          status: s!("Initialization failed."),
           status_code: 3,
         };
       }
@@ -84,18 +84,18 @@ impl Converter {
     // - Math needs to magically trigger math mode if needed
     // - Fragments need to have a default pre- and postamble, if none provided
     let current_preamble = match self.opts.whatsin {
-      DataSize::Math => Some("literal:\\begin{document}\\ensuremathfollows".to_string()),
+      DataSize::Math => Some(s!("literal:\\begin{{document}}\\ensuremathfollows")),
       DataSize::Fragment => match self.opts.preamble.clone() {
         Some(p) => Some(p.clone()),
-        None => Some("standard_preamble.tex".to_string()),
+        None => Some(s!("standard_preamble.tex")),
       },
       _ => None,
     };
     let current_postamble = match self.opts.whatsout {
-      DataSize::Math => Some("literal:\\ensuremathpreceeds\\end{document}".to_string()),
+      DataSize::Math => Some(s!("literal:\\ensuremathpreceeds\\end{{document}}")),
       DataSize::Fragment => match self.opts.postamble.clone() {
         Some(p) => Some(p),
-        None => Some("standard_postamble.tex".to_string()),
+        None => Some(s!("standard_postamble.tex")),
       },
       _ => None,
     };
@@ -186,7 +186,7 @@ impl Converter {
           Ok(dom) => dom.to_string(self.state_mut()),
           Err(e) => {
             error!(target: "document:convert", "{:?}", e);
-            "Fatal: convert document failed".to_string()
+            s!("Fatal: convert document failed")
           },
         }
       },

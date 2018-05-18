@@ -131,7 +131,7 @@ pub trait BoxOps {
   fn unlist(self) -> Vec<Digested>;
   fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()>;
   fn to_string(&self) -> String;
-  fn stringify(&self) -> String { "Vec<Tbox> for now ".to_string() }
+  fn stringify(&self) -> String { s!("Vec<Tbox> for now ") }
   fn set_property(&mut self, _key: &str, _value: ObjectStore) {}
   fn get_property(&self, _key: &str) -> Option<&ObjectStore> {
     error!(target: "boxops:get_property", "Generic BoxOps::get_property should never be called!");

@@ -425,7 +425,7 @@ impl State {
     specials_vdq.push_front(ObjectStore::VecChar(vec![
       '^', '_', '@', '~', '&', '$', '#', '%', '\'',
     ]));
-    value_table.insert("SPECIALS".to_string(), specials_vdq);
+    value_table.insert(s!("SPECIALS"), specials_vdq);
 
     let mut catcodes_typed: Table = HashMap::new();
     for (k, v) in catcodes {
@@ -1007,7 +1007,7 @@ impl State {
       ObjectStore::Primitive(ref defn) => defn.get_cs(),
       ObjectStore::MathPrimitive(ref defn) => defn.get_cs(),
       ObjectStore::Token(ref token) => token.clone(),
-      _ => T_LETTER!("_wrong_argument_for_install_definition".to_string()),
+      _ => T_LETTER!(s!("_wrong_argument_for_install_definition")),
     };
     let cs = token.get_cs_name();
     // info!("-- installing definition for: {:?}", token);
@@ -1076,7 +1076,7 @@ impl State {
   pub fn begin_semiverbatim(&mut self, extraspecials: Option<Vec<Token>>) {
     // Is this a good/safe enough shorthand, or should we really be doing beginMode?
     self.push_frame();
-    self.assign_value("MODE", ObjectStore::String("text".to_string()), None);
+    self.assign_value("MODE", ObjectStore::String(s!("text")), None);
     self.assign_value("IN_MATH", ObjectStore::Bool(false), None);
     let mut all_specials: Vec<char> = Vec::new();
     if let Some(extra) = extraspecials {
@@ -1099,7 +1099,7 @@ impl State {
     // try to stay as ASCII as possible
     let new_font = if let Some(&ObjectStore::Font(ref current_font)) = self.lookup_value("font") {
       Some(current_font.merge(Font {
-        encoding: Some("ASCII".to_string()),
+        encoding: Some(s!("ASCII")),
         ..Font::default()
       }))
     } else {
@@ -1368,7 +1368,7 @@ impl State {
     if self.model.permissive {
       // !!! Alarm!!!
       imodel
-        .entry("#Document".to_string())
+        .entry(s!("#Document"))
         .or_insert_with(HashMap::new)
         .insert("#PCDATA".to_owned(), "ltx:p".to_owned());
     }
@@ -1433,7 +1433,7 @@ impl State {
   pub fn initialize_stomach(&mut self) {
     self.assign_value(
       "MODE",
-      ObjectStore::String("text".to_string()),
+      ObjectStore::String(s!("text")),
       Some(Scope::Global),
     );
     self.assign_value("IN_MATH", ObjectStore::Bool(false), Some(Scope::Global));
@@ -1454,7 +1454,7 @@ impl State {
     ); // undef ???
     self.assign_value(
       "groupInitiator",
-      ObjectStore::String("Initialization".to_string()),
+      ObjectStore::String(s!("Initialization")),
       Some(Scope::Global),
     );
     // Setup default fonts.

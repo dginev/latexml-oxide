@@ -171,56 +171,56 @@ impl Display for Token {
 macro_rules! T_BEGIN(() => ({
   use $crate::token::Token;
   use $crate::token::Catcode;
-  Token { text: "{".to_string(), code: Catcode::BEGIN }
+  Token { text: s!("{{"), code: Catcode::BEGIN }
 }));
 
 #[macro_export]
 macro_rules! T_END(() => ({
   use $crate::token::Token;
   use $crate::token::Catcode;
-  Token { text: "}".to_string(), code: Catcode::END }
+  Token { text: s!("}}"), code: Catcode::END }
 }));
 #[macro_export]
 macro_rules! T_MATH(() => ({
   use $crate::token::Token;
   use $crate::token::Catcode;
-  Token { text: "$".to_string(), code: Catcode::MATH }
+  Token { text: s!("$"), code: Catcode::MATH }
 }));
 #[macro_export]
 macro_rules! T_ALIGN(() => ({
   use $crate::token::Token;
   use $crate::token::Catcode;
-  Token { text: "&".to_string(), code: Catcode::ALIGN }
+  Token { text: s!("&"), code: Catcode::ALIGN }
 }));
 #[macro_export]
 macro_rules! T_PARAM(() => ({
   use $crate::token::Token;
   use $crate::token::Catcode;
-  Token { text: "#".to_string(), code: Catcode::PARAM }
+  Token { text: s!("#"), code: Catcode::PARAM }
 }));
 #[macro_export]
 macro_rules! T_SUPER(() => ({
   use $crate::token::Token;
   use $crate::token::Catcode;
- Token { text: "^".to_string(), code: Catcode::SUPER }
+ Token { text: s!("^"), code: Catcode::SUPER }
 }));
 #[macro_export]
 macro_rules! T_SUB(() => ({
   use $crate::token::Token;
   use $crate::token::Catcode;
-  Token { text: "_".to_string(), code: Catcode::SUB }
+  Token { text: s!("_"), code: Catcode::SUB }
 }));
 #[macro_export]
 macro_rules! T_SPACE(() => ({
   use $crate::token::Token;
   use $crate::token::Catcode;
-  Token { text: " ".to_string(), code: Catcode::SPACE }
+  Token { text: s!(" "), code: Catcode::SPACE }
 }));
 #[macro_export]
 macro_rules! T_CR(() => ({
   use $crate::token::Token;
   use $crate::token::Catcode;
-  Token { text: "\n".to_string(), code: Catcode::SPACE }
+  Token { text: s!("\n"), code: Catcode::SPACE }
 }));
 #[macro_export]
 macro_rules! T_LETTER(($text:expr) => ({

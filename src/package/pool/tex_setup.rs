@@ -101,9 +101,9 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     reversion => Some(Rc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
       // TODO : default!
       if !arg.is_empty() {
-        let mut read_tokens: Vec<Token> = vec![T_OTHER!("[".to_string())];
+        let mut read_tokens: Vec<Token> = vec![T_OTHER!(s!("["))];
         // TODO: ($inner ? $inner->revertArguments($arg) : Revert($arg)),
-        read_tokens.push(T_OTHER!("]".to_string()));
+        read_tokens.push(T_OTHER!(s!("]")));
         Ok(Tokens::new(read_tokens))
       } else {
         Ok(Tokens!())
@@ -202,9 +202,9 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     optional => true,
     reversion => Some(Rc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
      if !arg.is_empty() {
-       let mut read_tokens = vec![T_OTHER!("[".to_string())];
+       let mut read_tokens = vec![T_OTHER!(s!("["))];
        // TODO: add these: Revert!(arg, state)
-       read_tokens.push(T_OTHER!("]".to_string()));
+       read_tokens.push(T_OTHER!(s!("]")));
        Ok(Tokens::new(read_tokens))
      } else {
        Ok(Tokens!())

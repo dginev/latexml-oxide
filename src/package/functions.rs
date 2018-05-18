@@ -277,10 +277,10 @@ lazy_static! {
 }
 
 pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option<Parameters>))> {
-  let mut cs = T_CS!("\\".to_string()); // Should never happen
+  let mut cs = T_CS!(s!("\\")); // Should never happen
   let mut final_proto = if CSNAME_MACRO_REGEX.is_match(proto) {
     let captures = CSNAME_MACRO_REGEX.captures(proto).unwrap();
-    cs = T_CS!("\\".to_string() + captures.get(0).map_or("", |m| m.as_str()));
+    cs = T_CS!(s!("\\") + captures.get(0).map_or("", |m| m.as_str()));
     // also replace in proto
     CSNAME_MACRO_REGEX.replace(proto, "").to_string()
   } else if CS_REGEX.is_match(proto) {
@@ -344,7 +344,7 @@ pub fn parse_parameters(
       };
       parameters.push(
         Parameter {
-          name: "Plain".to_string(),
+          name: s!("Plain"),
           spec: spec.to_string(),
           extra: vec![inner],
           ..Parameter::default()
@@ -361,7 +361,7 @@ pub fn parse_parameters(
         // let default_captures = DEFAULT_CHECK.captures(&inner_spec).unwrap();
         parameters.push(
           Parameter {
-            name: "Optional".to_string(),
+            name: s!("Optional"),
             spec: spec.to_string(),
             // extra: vec![TokenizeInternal(default_captures.get(0).map_or("", |m| m.as_str())),
             // None]});
@@ -372,7 +372,7 @@ pub fn parse_parameters(
       } else if !inner_spec.is_empty() {
         parameters.push(
           Parameter {
-            name: "Optional".to_string(),
+            name: s!("Optional"),
             spec: spec.to_string(),
             extra: vec![
               None,
@@ -384,7 +384,7 @@ pub fn parse_parameters(
       } else {
         parameters.push(
           Parameter {
-            name: "Optional".to_string(),
+            name: s!("Optional"),
             spec: spec.to_string(),
             extra: Vec::new(),
             ..Parameter::default()
@@ -651,10 +651,10 @@ pub fn generate_id(
       prefix = "id";
     }
 
-    let ctrkey = "_ID_counter_".to_string() + prefix + "_";
+    let ctrkey = s!("_ID_counter_") + prefix + "_";
     let a_ctr = ancestor
       .get_attribute(&ctrkey)
-      .unwrap_or_else(|| "0".to_string());
+      .unwrap_or_else(|| s!("0"));
 
     let ctr_int = 1 + a_ctr.parse::<u32>().unwrap_or(0);
     let ctr = ctr_int.to_string();

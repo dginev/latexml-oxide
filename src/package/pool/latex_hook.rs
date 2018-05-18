@@ -43,7 +43,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   {
     DefMacroI!(T_CS!(ltxtrigger), None, move |_gullet, _args, state| {
       input_definitions(
-        "LaTeX".to_string(),
+        s!("LaTeX"),
         InputDefinitionOptions {
           extension: Some(String::from("pool")),
           ..InputDefinitionOptions::default()

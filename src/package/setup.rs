@@ -1110,8 +1110,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       use rtx_core::definition::constructor::Constructor;
       let name = $name_raw.to_string();
       let options = $options;
-      let begin_name = "\\begin{".to_string()+&name+"}";
-      let end_name = "\\end{".to_string()+&name+"}";
+      let begin_name = s!("\\begin{{{}}}",&name);
+      let end_name = s!("\\end{{{}}}",&name);
       // This is for the common case where the environment is opened by \begin{env}
       // let sizer = inferSizer($options.sizer, $options.reversion);
       let mut before_digest_env : Vec<BeforeDigestClosure> = Vec::new();
@@ -1236,7 +1236,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
       // For the uncommon case opened by \csname env\endcsname
       let name_constructor = Rc::new(Constructor{
-        cs: T_CS!("\\".to_string() +&name),
+        cs: T_CS!(s!("\\{}", &name)),
         paramlist: $paramlist,
         replacement: $cc_copy,
         // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
@@ -1262,7 +1262,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       $state_arg.install_definition(ObjectStore::Constructor(name_constructor), options.scope.clone());
 
       let end_name_constructor = Rc::new(Constructor {
-        cs: T_CS!("\\end".to_string() + &name),
+        cs: T_CS!(s!("\\end{}",&name)),
         paramlist: None,
         replacement: Some(Rc::new(|document, whatsit, properties, state|{
           let env = state.lookup_value("current_environment");
@@ -1281,10 +1281,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       $state_arg.install_definition(ObjectStore::Constructor(end_name_constructor), options.scope);
 
       if options.locked {
-        AssignValue!(&("\\begin{".to_string() + &name+"}:locked"), ObjectStore::Bool(true), None, $state_arg);
-        AssignValue!(&("\\end{".to_string()+&name+"}:locked")  , ObjectStore::Bool(true), None, $state_arg);
-        AssignValue!(&("\\".to_string()+&name+":locked")       , ObjectStore::Bool(true), None, $state_arg);
-        AssignValue!(&("\\end".to_string()+&name+":locked")    , ObjectStore::Bool(true), None, $state_arg);
+        AssignValue!(&s!("\\begin{{{}}}:locked",&name), ObjectStore::Bool(true), None, $state_arg);
+        AssignValue!(&s!("\\end{{{}}}:locked",&name)  , ObjectStore::Bool(true), None, $state_arg);
+        AssignValue!(&s!("\\{}:locked",&name)       , ObjectStore::Bool(true), None, $state_arg);
+        AssignValue!(&s!("\\end{}:locked",&name)    , ObjectStore::Bool(true), None, $state_arg);
       }
     })
   }
@@ -1529,10 +1529,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       };
       options.name = name_opt;
       if nargs == 0 && options.role.is_none() {
-        options.role = Some("UNKNOWN".to_string())
+        options.role = Some(s!("UNKNOWN"))
       }
       if nargs > 0 && options.operator_role.is_none() {
-        options.operator_role = Some("UNKNOWN".to_string())
+        options.operator_role = Some(s!("UNKNOWN"))
       }
 
       // Store some data for introspection

@@ -621,7 +621,7 @@ impl Document {
     // ':*')) || {};
     let all_hash = state
       .tag_properties
-      .entry("ltx:*".to_string())
+      .entry(s!("ltx:*"))
       .or_insert_with(TagOptions::default)
       .clone();
 
@@ -708,7 +708,7 @@ impl Document {
         for ns in nsnodes {
           let prefix = ns.get_prefix();
           let prefix_declaration = if prefix.is_empty() {
-            "xmlns".to_string()
+            s!("xmlns")
           } else {
             s!("xmlns:{}", prefix)
           };
@@ -842,8 +842,8 @@ impl Document {
   ) -> Result<Node>
   {
     attributes
-      .entry("role".to_string())
-      .or_insert("UNKNOWN".to_string());
+      .entry(s!("role"))
+      .or_insert(s!("UNKNOWN"));
 
     let font = match font_opt {
       Some(f) => f.clone(),

@@ -417,7 +417,7 @@ impl Gullet {
       None => Ok(Tokens!()),
       Some(t) => {
         if t.code == Catcode::OTHER && t.text == "[" {
-          self.read_until(vec![T_OTHER!("]".to_string())], state)
+          self.read_until(vec![T_OTHER!(s!("]"))], state)
         } else {
           self.unread(Tokens!(t));
           Ok(Tokens!()) // TODO: default

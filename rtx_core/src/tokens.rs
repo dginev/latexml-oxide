@@ -71,13 +71,12 @@ impl Tokens {
   }
 
   pub fn stringify(self) -> String {
-    "Tokens[".to_string()
-      + &self
+    s!("Tokens[{}]", &self
         .tokens
         .iter()
         .map(|t| t.to_string())
         .collect::<Vec<_>>()
-        .join(",") + "]"
+        .join(","))
   }
 
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
