@@ -166,3 +166,56 @@ macro_rules! v {
     Some($val.to_string())
   };
 }
+
+#[macro_export]
+macro_rules! prop_digested {
+  ($props: ident, $key: expr) =>(
+    match $props.get($key) {
+        Some(ObjectStore::VecDigested(vd)) => vd.clone(),
+        Some(ObjectStore::Digested(d)) => vec![(**d).clone()],
+        _ => Vec::new()
+    }
+  )
+}
+
+#[macro_export]
+macro_rules! prop_str {
+  ($props: ident, $key: expr) =>(
+    match $props.get($key) {
+      Some(& ObjectStore::String(ref id)) => id,
+      _ => ""
+    }
+  )
+}
+
+
+#[macro_export]
+macro_rules! prop_string {
+  ($props: ident, $key: expr) =>(
+    match $props.get($key) {
+      Some(& ObjectStore::String(ref id)) => id.to_string(),
+      _ => String::new()
+    }
+  )
+}
+
+#[macro_export]
+macro_rules! prop_whatsit {
+  ($props: ident, $key: expr) =>(
+    match $props.get($key) {
+      // TODO: Cloning here ought to be terribly inefficient and should be avoided. How?
+      Some(& ObjectStore::Digested(ref rc)) => (**rc).clone(),
+      _ => Digested::Whatsit(Whatsit::default())
+    };
+  )
+}
+
+#[macro_export]
+macro_rules! prop_bool {
+  ($props: ident, $key: expr) =>(
+    match $props.get($key) {
+      Some(& ObjectStore::Bool(v)) => v,
+      _ => false
+    }
+  )
+}

@@ -873,7 +873,13 @@ pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut
   Ok(())
 }
 
-pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+
+pub struct RefStepValue {
+  pub id: Option<String>,
+  pub tags: Option<Tokens>
+}
+
+pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<RefStepValue> {
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(ObjectStore::String(ctr)) => ctr.to_string(),
     _ => ctype.to_string()
@@ -905,8 +911,6 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
 
   let refnum = digest_text(Tokens!(T_CS!(s!("\\the{}",ctr))), stomach, state)?;
   // let tags = digest(Invocation!(T_CS!("\\lx@make@tags"), ctype));
-  // # Any scopes activated for previous value of this counter (& any nested counters) must be removed.
-  // # This may also include scopes activated for \label
 
   // Any scopes activated for previous value of this counter (& any nested counters) must be
   // removed. This may also include scopes activated for \label
@@ -923,12 +927,11 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   );
   state.activate_scope(&scope);
 
-  Ok(())
-  // TODO:
-  // return (
-  //   ($tags   ? (tags => $tags) : ()),
-  //   ($has_id ? (id   => $id)   : ())); }
-  
+  Ok(RefStepValue {
+    //   ($tags   ? (tags => $tags) : ()),    
+    tags: None,
+    id: if has_id {Some(id)} else {None}
+  })
 }
 
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {

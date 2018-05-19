@@ -131,15 +131,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefEnvironmentC!("{document}",
     Some(Rc::new(|document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
-      let id = match props.get("id") {
-        Some(& ObjectStore::String(ref id)) => id,
-        _ => ""
-      };
-      // TODO: Cloning here ought to be terribly inefficient and should be avoided. How?
-      let body = match props.get("body") {
-        Some(& ObjectStore::Digested(ref rc)) => (**rc).clone(),
-        _ => Digested::Whatsit(Whatsit::default())
-      };
+      let id = prop_str!(props,"id");
+      let body = prop_whatsit!(props,"body");
       if let Some(mut docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
         if !id.is_empty() {
           document.set_attribute(&mut docel, "xml:id", id);
@@ -300,10 +293,7 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
         args[2].clone().unwrap_or_default().to_string(),
         args[3].clone().unwrap_or_default().to_string(),
       );
-      let id = match props.get("id") {
-        Some(& ObjectStore::String(ref id)) => id,
-        _ => ""
-      };
+      let id = prop_str!(props,"id");
       let clean_id = id; // TODO: CleanID($id);
       document.open_element(
         &s!("ltx:{}", stype),
@@ -319,22 +309,12 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
       if let Some(ObjectStore::Digested(tags)) = props.get("tags") {
         document.absorb((**tags).clone(), state)?; 
       }
-      let title_prop = props.get("title");
-      let title_digested = match title_prop {
-        Some(ObjectStore::VecDigested(vd)) => vd.clone(),
-        Some(ObjectStore::Digested(d)) => vec![(**d).clone()],
-        _ => Vec::new()
-      };
-      document.insert_element("ltx:title", title_digested, None, state)?;
+      let title = prop_digested!(props,"title");
+      document.insert_element("ltx:title", title, None, state)?;
 
-      let toctitle_prop = props.get("toctitle");
-      let toctitle_digested = match toctitle_prop {
-        Some(ObjectStore::VecDigested(vd)) => vd.clone(),
-        Some(ObjectStore::Digested(d)) => vec![(**d).clone()],
-        _ => Vec::new()
-      };
-      if !toctitle_digested.is_empty() {
-        document.insert_element("ltx:toctitle", toctitle_digested, None, state)?;
+      let toctitle = prop_digested!(props,"toctitle");
+      if !toctitle.is_empty() {
+        document.insert_element("ltx:toctitle", toctitle, None, state)?;
       }
     });
 //   properties => sub {

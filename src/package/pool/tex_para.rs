@@ -19,20 +19,14 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   skippable_props.insert(s!("alignmentSkippable"), ObjectStore::Bool(true));
 
   DefConstructorI!(T_CS!("\\par"), None, replacement!(document, args, props, state, {
-      let in_preamble = match props.get("inPreamble") {
-        Some(& ObjectStore::Bool(v)) => v,
-        _ => false
-      };
+      let in_preamble = prop_bool!(props, "inPreamble");
       if !in_preamble {
         document.maybe_close_element("ltx:p", state)?;
-        if let Some(c) = props.get("class") {
+        let class_str = prop_str!(props,"class");
+        if !class_str.is_empty() {
           let element = document.get_element();
           if let Some(mut node) = element {
             if document.get_node_qname(&node, state) == "ltx:para" {  // Only set on the para about to close!
-              let class_str = match *c {
-                ObjectStore::String(ref v) => v.to_string(),
-                _ => String::new()
-              };
               document.set_attribute(&mut node, "class", &class_str);
             }
           }
