@@ -145,7 +145,7 @@ impl Definition for Constructor {
       },
     };
 
-    props.insert(s!("font"), ObjectStore::Font(Box::new(this_font)));
+    props.insert(s!("font"), ObjectStore::Font(this_font));
     // $props{locator} = $stomach->getGullet->getMouth->getLocator unless defined $props{locator};
     props
       .entry(s!("isMath"))

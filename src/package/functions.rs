@@ -671,13 +671,13 @@ pub fn generate_id(
 
 pub fn merge_font(font: Font, state: &mut State) {
   let mut current_font = match state.remove_value("font") {
-    Some(ObjectStore::Font(f)) => *f,
+    Some(ObjectStore::Font(f)) => f,
     _ => Font::text_default(),
   };
   let newfont = current_font.merge(font);
   state.assign_value(
     "font",
-    ObjectStore::Font(Box::new(newfont)),
+    ObjectStore::Font(newfont),
     Some(Scope::Local),
   );
   return;
@@ -818,7 +818,7 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
   let v = counter_value(ctr, state).add(value);
   state.assign_value(
     &s!("\\c@{}", ctr),
-    ObjectStore::Number(Box::new(v.clone())),
+    ObjectStore::Number(v.clone()),
     Some(Scope::Global),
   );
   after_assignment(gullet, state);
@@ -830,10 +830,10 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
 
 pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
-  let value = counter_value(ctr, state);
+  let value = counter_value(ctr, state).add(Number!(1));
   state.assign_value(
     &s!("\\c@{}", ctr),
-    ObjectStore::Number(Box::new(value.add(Number!(1)))),
+    ObjectStore::Number(value),
     Some(Scope::Global),
   );
   {
@@ -955,7 +955,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 //   return (id => ToString(DigestLiteral(T_CS!("\\the$ctr\@ID")))); }
 
 fn reset_counter(ctr: &str, state: &mut State) {
-  state.assign_value(&s!("\\c@{}", ctr), ObjectStore::Number(Box::new(Number!(0))), Some(Scope::Global));
+  state.assign_value(&s!("\\c@{}", ctr), ObjectStore::Number(Number!(0)), Some(Scope::Global));
   // and reset any within counters!
   let nested = if let Some(ObjectStore::Tokens(nested)) = state.lookup_value(&s!("\\cl@{}", ctr)) {
     nested.clone()

@@ -565,7 +565,7 @@ impl Stomach {
         // and save the text font for any embedded text.
         state.assign_value(
           "savedfont",
-          ObjectStore::Font(Box::new(cf.clone())),
+          ObjectStore::Font(cf.clone()),
           Some(Scope::Local),
         );
         let new_font = state.lookup_mathfont().unwrap().merge(Font {
@@ -581,7 +581,7 @@ impl Stomach {
         });
         state.assign_value(
           "font",
-          ObjectStore::Font(Box::new(new_font)),
+          ObjectStore::Font(new_font),
           Some(Scope::Local),
         );
       } else {
@@ -599,7 +599,7 @@ impl Stomach {
             None
           };
         if let Some(nf) = new_font {
-          state.assign_value("font", ObjectStore::Font(Box::new(nf)), Some(Scope::Local));
+          state.assign_value("font", ObjectStore::Font(nf), Some(Scope::Local));
         }
       }
     }

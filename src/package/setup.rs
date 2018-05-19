@@ -1668,13 +1668,13 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   macro_rules! SetCounter {
     ($ctr:expr, $value:expr, None) => {
-      AssignValue!(&s!("\\c@{}",$ctr), ObjectStore::Number(Box::new($value)), Some(Scope::Global));
+      AssignValue!(&s!("\\c@{}",$ctr), ObjectStore::Number($value), Some(Scope::Global));
       DefMacroTS!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
                   scope => Some(Scope::Global)
       );
     };
     ($ctr:expr, $value:expr, $gullet:ident) => {
-      AssignValue!(&s!("\\c@{}",$ctr), ObjectStore::Number(Box::new($value)), Some(Scope::Global));
+      AssignValue!(&s!("\\c@{}",$ctr), ObjectStore::Number($value), Some(Scope::Global));
       AfterAssignment!($gullet);
       DefMacroTS!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
                   scope => Some(Scope::Global)

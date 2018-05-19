@@ -82,8 +82,8 @@ pub enum ObjectStore {
   Constructor(Rc<Constructor>),
   Digested(Rc<::Digested>),
   Parameter(Parameter),
-  Font(Box<Font>),
-  Number(Box<Number>),
+  Font(Font),
+  Number(Number),
   // Collections
   VecChar(Vec<char>),
   VecString(Vec<String>),
@@ -705,14 +705,14 @@ impl State {
 
   pub fn lookup_font<'font>(&'font self) -> Option<Font> {
     match self.lookup_value("font") {
-      Some(&ObjectStore::Font(ref f)) => Some(*f.clone()), /* TODO: is this clone heavy/slow?
+      Some(&ObjectStore::Font(ref f)) => Some(f.clone()), /* TODO: is this clone heavy/slow?
                                                              * We can refactor into refs */
       _ => None,
     }
   }
   pub fn lookup_mathfont<'font>(&'font self) -> Option<Font> {
     match self.lookup_value("mathfont") {
-      Some(&ObjectStore::Font(ref f)) => Some(*f.clone()), /* TODO: is this clone heavy/slow?
+      Some(&ObjectStore::Font(ref f)) => Some(f.clone()), /* TODO: is this clone heavy/slow?
                                                              * We can refactor into refs */
       _ => None,
     }
@@ -720,7 +720,7 @@ impl State {
 
   pub fn lookup_number(&self, key: &str) -> Option<Number> {
     match self.lookup_value(key) {
-      Some(&ObjectStore::Number(ref n)) => Some(*n.clone()), /* TODO: is this clone heavy/slow?
+      Some(&ObjectStore::Number(ref n)) => Some(n.clone()), /* TODO: is this clone heavy/slow?
                                                              * We can refactor into refs */
       _ => None,
     }
@@ -1108,7 +1108,7 @@ impl State {
     if let Some(local_font) = new_font {
       self.assign_value(
         "font",
-        ObjectStore::Font(Box::new(local_font)),
+        ObjectStore::Font(local_font),
         Some(Scope::Local),
       );
     }
@@ -1460,12 +1460,12 @@ impl State {
     // Setup default fonts.
     self.assign_value(
       "font",
-      ObjectStore::Font(Box::new(Font::text_default())),
+      ObjectStore::Font(Font::text_default()),
       Some(Scope::Global),
     );
     self.assign_value(
       "mathfont",
-      ObjectStore::Font(Box::new(Font::math_default())),
+      ObjectStore::Font(Font::math_default()),
       Some(Scope::Global),
     );
   }
