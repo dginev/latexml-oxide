@@ -808,7 +808,7 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
         "Counter {} was not defined; assuming 0",
         ctr
       );
-      Number::new(0)
+      Number!(0)
     },
     Some(value) => value,
   }
@@ -830,10 +830,10 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
 
 pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
-  let value = counter_value(ctr, state).add(Number!(1));
+  let value = counter_value(ctr, state);
   state.assign_value(
     &s!("\\c@{}", ctr),
-    ObjectStore::Number(value),
+    ObjectStore::Number(value.add(Number!(1))),
     Some(Scope::Global),
   );
   {
@@ -841,8 +841,7 @@ pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut
     after_assignment(gullet, state);
   }
   let token_value = Tokens::new(Explode!(counter_value(ctr,state).value_of()));
-  let id_cs = T_CS!(s!("\\@{}@ID",ctr));
-  DefMacroTS!(id_cs.clone(), None, 
+  DefMacroTS!(T_CS!(s!("\\@{}@ID",ctr)), None, 
               token_value.clone(), scope => Some(Scope::Global));
 
   // and reset any within counters!
@@ -862,14 +861,12 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
     Some(ObjectStore::String(ctr)) => ctr.to_string(),
     _ => ctype.to_string()
   };
+  step_counter(&ctr, noreset, stomach, state)?;
 
-  {
-    step_counter(&ctr, noreset, stomach, state)?;
-  }
   let iddef = state.lookup_definition(&T_CS!(s!("\\the{}@ID", ctr)));
   // TODO:
   // let has_id = match iddef {
-  // Some(def) => Some(!defined iddef.get_parameters()) || (iddef->getParameters->getNumArgs ==
+  //   Some(def) => Some(!defined iddef.get_parameters()) || (iddef->getParameters->getNumArgs ==
   // 0),   None => None
   // };
   let has_id : Option<usize> = None;
