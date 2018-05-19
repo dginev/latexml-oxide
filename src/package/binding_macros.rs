@@ -219,3 +219,37 @@ macro_rules! prop_bool {
     }
   )
 }
+
+#[macro_export]
+macro_rules! unpack_to_string {
+  ($args:ident => $var:ident) => (count_unpack_to_string!(0usize, $args => $var));
+  ($args:ident => $($var:ident),*) => (count_unpack_to_string!(0usize, $args => $($var),*));
+}
+
+#[macro_export]
+macro_rules! count_unpack_to_string {
+  ($index:expr, $args:ident => $var:ident) => (
+    let $var = $args[$index].clone().unwrap_or_default().to_string();
+  );
+  ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
+    count_unpack_to_string!($index,$args => $var);
+    count_unpack_to_string!(1usize+$index, $args => $($tail),*)
+  }
+}
+
+#[macro_export]
+macro_rules! unpack {
+  ($args:ident => $var:ident) => (count_unpack!(0usize, $args => $var));
+  ($args:ident => $($var:ident),*) => (count_unpack!(0usize, $args => $($var),*));
+}
+
+#[macro_export]
+macro_rules! count_unpack {
+  ($index:expr, $args:ident => $var:ident) => (
+    let $var = $args[$index].clone().unwrap_or_default();
+  );
+  ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
+    count_unpack!($index,$args => $var);
+    count_unpack!(1usize+$index, $args => $($tail),*)
+  }
+}

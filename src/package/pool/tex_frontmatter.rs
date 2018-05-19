@@ -34,14 +34,9 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefPrimitiveI!(
     "\\@add@frontmatter{}{}",
     primitiveproc!(stomach, args, state, {
+      unpack!(args => tag, tokens);
       // TODO: Real args when we have KeyVals
-      // let ref keys = args[0];
-      // let ref tag = args[1];
-      // let ref attr = args[2];
-      // let ref tokens = args[3];
-
-      let ref tag = args[0];
-      let ref tokens = args[1];
+      // unpack!(args => keys, tag, attr, tokens);
 
       // Digest this as if we're already in the document body!
       let inpreamble = state.lookup_bool("inPreamble");

@@ -1,4 +1,7 @@
 ///! Token List constructors.
+use fmt;
+use std::fmt::Display;
+
 use common::error::*;
 use quote::ToTokens;
 use quote::Tokens as QTokens;
@@ -29,6 +32,15 @@ impl ToTokens for Tokens {
 macro_rules! Tokens(
   ($( $tokens:expr ),*) => ($crate::tokens::Tokens{ tokens: vec![$($tokens),*] });
 );
+
+impl Display for Tokens {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    for t in &self.tokens {
+      write!(f, "{}", t)?;
+    }
+    Ok(())
+  }
+}
 
 impl Tokens {
   pub fn new(tokens: Vec<Token>) -> Self { Tokens { tokens } }
@@ -69,6 +81,13 @@ impl Tokens {
       true
     }
   }
+
+  // stopgap, how do we unpack! gullet-stage arguments without the unwrap?
+  // should we unify the interfaces so that Options are always used? Could be cumbursome...
+  pub fn unwrap_or_default(self) -> Tokens {
+    self
+  }
+
 
   pub fn stringify(self) -> String {
     s!("Tokens[{}]", &self

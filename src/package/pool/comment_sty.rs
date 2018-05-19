@@ -7,7 +7,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Define \name and \begin{name} to start an ignored section
   // until \endname or \end{name}, respectively
   let define_excluded = primitivesub!(stomach, args, state, {
-    let name = args[0].to_string();
+    unpack_to_string!(args => name);
     let begin_mark = s!("\\begin{{{}}}", name);
     let end_mark = s!("\\end{{{}}}", name);
     {

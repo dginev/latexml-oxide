@@ -77,7 +77,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Let("\@currenvline", "\@empty");
 
   DefMacro!("\\begin{}", gullet, args, state, {
-    let name = &args[0].to_string();
+    unpack!(args => name);
     let begin_name = s!("\\begin{{{}}}",name);
     if is_defined(&begin_name, state) {
       Ok(Tokens!(T_CS!(begin_name))) // Magic cs!
@@ -217,8 +217,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     if args.len() == 3 {
       Ok(args[1].clone()) // can't move out without clone, how to circumvent?
     } else {
-      Ok(args[2].clone())
-    } // ($_[3] ? ($_[2]) : ($_[1])); });
+      Ok(args[0].clone())
+    }
   });
 
   DefMacro!("\\@startsection@hook", "");
@@ -287,12 +287,7 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
     {
       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
       // intuitive level of:       let (x,y,z, ...) = @args;
-      let (stype, inlist, toctitle, title) = (
-        args[0].clone().unwrap_or_default().to_string(),
-        args[1].clone().unwrap_or_default().to_string(),
-        args[2].clone().unwrap_or_default().to_string(),
-        args[3].clone().unwrap_or_default().to_string(),
-      );
+      unpack_to_string!(args => stype, inlist, toctitle, title);
       let id = prop_str!(props,"id");
       let clean_id = id; // TODO: CleanID($id);
       document.open_element(
@@ -388,17 +383,9 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
     props,
     inner_state,
     {
-      // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
-      // intuitive level of:       let (x,y,z, ...) = @args;
-      let (stype, id, refnum, mut frefnum, toctitle, title) = (
-        args[0].clone().unwrap().to_string(),
-        args[1].clone().unwrap().to_string(),
-        args[2].clone().unwrap().to_string(),
-        args[3].clone().unwrap().to_string(),
-        args[4].clone().unwrap(),
-        args[5].clone().unwrap(),
-      );
-
+      unpack!(args => stype, id, refnum_arg, frefnum_arg, toctitle, title);
+      let refnum = refnum_arg.to_string();
+      let mut frefnum = frefnum_arg.to_string();
       if frefnum == refnum {
         frefnum = String::new();
       }
@@ -407,7 +394,7 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
       let has_toctitle =
         !toctitle.to_string().is_empty() && (toctitle.to_string() != title.to_string());
       document.open_element(
-        &s!("ltx:{}", stype),
+        &s!("ltx:{}", stype.to_string()),
         Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)),
         None,
         inner_state,
