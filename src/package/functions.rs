@@ -685,11 +685,28 @@ pub fn merge_font(font: Font, state: &mut State) {
 
 pub fn digest_text(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
   stomach.begin_mode("text", state)?;
-  let result = stomach.digest(stuff, state);
+  let value = stomach.digest(stuff, state);
   // TODO: ??? : Tokens!(map { (ref $_ ? $_ : TokenizeInternal($_)) } @stuff));
   stomach.end_mode("text", state)?;
-  result
+  value
 }
+
+pub fn digest_literal(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
+  // Perhaps should do StartSemiverbatim, but is it safe to push a frame? (we might cover over valid changes of state!)
+  stomach.begin_mode("text", state)?;
+  
+  let font = state.lookup_font().unwrap(); // TODO: raise error if font missing
+  state.assign_value("font", ObjectStore::Font(
+    font.merge(Font{encoding: Some(s!("ASCII")), ..Font::default()})), 
+    Some(Scope::Local)); // try to stay as ASCII as possible
+
+  let value = stomach.digest(stuff, state);
+
+  state.assign_value("font", ObjectStore::Font(font), None); // TODO: maybe we need .assign_font ?
+  stomach.end_mode("text", state)?;
+  value
+}
+
 
 pub fn digest_if(token: Token, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
   if let Some(defn) = state.lookup_definition(&token) {
@@ -863,29 +880,31 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   };
   step_counter(&ctr, noreset, stomach, state)?;
 
-  let iddef = state.lookup_definition(&T_CS!(s!("\\the{}@ID", ctr)));
-  // TODO:
-  // let has_id = match iddef {
-  //   Some(def) => Some(!defined iddef.get_parameters()) || (iddef->getParameters->getNumArgs ==
-  // 0),   None => None
-  // };
-  let has_id : Option<usize> = None;
+  let iddef_opt = state.lookup_definition(&T_CS!(s!("\\the{}@ID", ctr)));
+  let has_id : bool = match iddef_opt {
+    Some(ObjectStore::Expandable(iddef)) => match iddef.get_parameters() {
+      Some(params) => params.get_num_args() == 0,
+      None => false,
+    }
+    _ => false
+  };
 
   SetupBindingMacros!(state);
   let the_cs = T_CS!(s!("\\the{}",ctr));
   let the_id_cs = T_CS!(s!("\\the{}@ID",ctr));
   DefMacroT!(T_CS!("\\@currentlabel"), None, the_cs.clone(), scope => Some(Scope::Global));
-  if has_id.is_some() {
+  if has_id {
     DefMacroT!(T_CS!("\\@currentID"), None, the_id_cs.clone(), scope => Some(Scope::Global))
   }
 
-  // TODO:
-  // let id = has_id && ToString(DigestLiteral(T_CS!(s!("\\the{}@ID",ctr)));
-  let id : Option<String> = None;
+  let id = if has_id {
+    digest_literal(Tokens!(T_CS!(s!("\\the{}@ID",ctr))),stomach,state)?.to_string()
+  } else {
+    String::new()
+  };
 
   let refnum = digest_text(Tokens!(T_CS!(s!("\\the{}",ctr))), stomach, state)?;
-  // TODO:
-  // my $tags = Digest(Invocation(T_CS('\lx@make@tags'), $type));
+  // let tags = digest(Invocation!(T_CS!("\\lx@make@tags"), ctype));
   // # Any scopes activated for previous value of this counter (& any nested counters) must be removed.
   // # This may also include scopes activated for \label
 
