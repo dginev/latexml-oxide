@@ -225,58 +225,48 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     args,
     state,
     {
-      let type_tokens = args[0].clone();
+      unpack!(args => type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag);
+
       let stype = type_tokens.to_string();
+      let level = level_arg.to_string();
+
       let mut ctr = state.lookup_string(&s!("counter_for_{}", stype));
       if ctr.is_empty() {
         ctr = stype
       };
-      let level = args[1].to_string();
-      let flag = args[6].to_string();
+      let mut tokens: Vec<Token> = Vec::new();
       if !flag.is_empty() {
         // No number, not in TOC
-        //|| (!level.is_empty() && (level > CounterValue!("secnumdepth").value_of())) {
-        // RefStepID!(ctr);
-        let mut tokens: Vec<Token> = vec![
+        tokens = vec![
           T_CS!("\\@startsection@hook"),
           T_CS!("\\@@unnumbered@section"),
           T_BEGIN!(),
         ];
         tokens.append(&mut type_tokens.unlist());
-        tokens.push(T_END!());
-        tokens.push(T_BEGIN!());
-        tokens.push(T_END!());
-        Ok(Tokens::new(tokens))
+        tokens.append(&mut vec![T_END!(), T_BEGIN!(), T_END!()]);
       } else if !level.is_empty()
         && (level.parse::<i32>().unwrap() > CounterValue!("secnumdepth", state).value_of())
         || LookupBool!("no_number_sections", state)
       {
         // No number, but in TOC
-        let mut tokens: Vec<Token> = vec![
+        tokens = vec![
           T_CS!("\\@startsection@hook"),
           T_CS!("\\@@unnumbered@section"),
           T_BEGIN!(),
         ];
         tokens.append(&mut type_tokens.unlist());
-        tokens.push(T_END!());
-        tokens.push(T_BEGIN!());
-        tokens.push(T_OTHER!("toc"));
-        tokens.push(T_END!());
-        Ok(Tokens::new(tokens))
+        tokens.append(&mut vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
       } else {
         // Number and in TOC
-        let mut tokens: Vec<Token> = vec![
+        tokens = vec![
           T_CS!("\\@startsection@hook"),
           T_CS!("\\@@numbered@section"),
           T_BEGIN!(),
         ];
         tokens.append(&mut type_tokens.unlist());
-        tokens.push(T_END!());
-        tokens.push(T_BEGIN!());
-        tokens.push(T_OTHER!("toc"));
-        tokens.push(T_END!());
-        Ok(Tokens::new(tokens))
+        tokens.append(&mut vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
       }
+      Ok(Tokens::new(tokens))
     }
   );
 
@@ -290,10 +280,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
       // intuitive level of:       let (x,y,z, ...) = @args;
       unpack_to_string!(args => stype, inlist, toctitle, title);
-      let id = prop_str!(props, "id");
-      let clean_id = id; // TODO: CleanID($id);
-      document.open_element(
-        &s!("ltx:{}", stype),
+      let clean_id = prop_str!(props,"id"); // TODO: CleanID($id);
+      document.open_element(&s!("ltx:{}", stype),
         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
         None,
         state,
@@ -314,17 +302,24 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       if !toctitle.is_empty() {
         document.insert_element("ltx:toctitle", toctitle, None, state)?;
       }
-    }
-  );
-  //   properties => sub {
-  //     my ($stomach, $type, $inlist, $toctitle, $title) = @_;
-  //     my %props     = RefStepCounter(ToString($type));
-  //     my $xtitle    = Digest(Invocation(T_CS('\lx@format@title@@'), $type, $title));
-  // my $xtoctitle = Digest(Invocation(T_CS('\lx@format@toctitle@@'), $type, $toctitle ||
-  // $title));     $props{title}    = $xtitle;
-  //     $props{toctitle} = $xtoctitle
-  //       if $xtoctitle && $xtoctitle->unlist && (ToString($xtoctitle) ne ToString($xtitle));
-  //     return %props; });
+    },
+    properties => properties!(stomach, args, state, {
+      unpack!(args => stype, inlist, toctitle_arg, title);
+      let mut props = ref_step_counter(stype.to_string(), state);
+      let toctitle = if toctitle_arg.to_string().is_empty() {
+        toctitle_arg
+      } else {
+        title
+      };
+      let xtitle    = stomach.digest(Invocation!(T_CS!("\\lx@format@title@@"), stype, title))?;
+      let xtoctitle = stomach.digest(Invocation!(T_CS!("\\lx@format@toctitle@@"), stype, toctitle))?;
+      props.set(s!("title"), xtitle.into());
+      if xtoctitle.to_string() != xtitle.to_string() {
+        props.set(s!("toctitle"), xtoctitle.int());
+      }
+      props
+    })
+ );
 
   // # No tags, at all? Consider...
   // DefConstructor('\@@unnumbered@section{} Undigested OptionalUndigested Undigested', sub {

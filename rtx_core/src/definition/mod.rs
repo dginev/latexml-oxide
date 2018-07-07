@@ -25,6 +25,7 @@ pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Resul
 pub type ConditionalClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<bool>>;
 pub type PrimitiveClosure = Rc<Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<Digested>>>;
 pub type BeforeDigestClosure = Rc<Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
+pub type PropertiesClosure = Rc<Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<HashMap<String, ObjectStore>>>;
 pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
 pub type ReplacementClosure =
   Rc<Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;

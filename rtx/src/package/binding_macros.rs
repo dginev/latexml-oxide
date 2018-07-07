@@ -136,6 +136,13 @@ macro_rules! beforeproc {
 }
 
 #[macro_export]
+macro_rules! properties {
+  ($stomach:ident, $args:ident, $state:ident, $body:expr) => {
+    |$stomach: &mut Stomach, mut $args: Vec<Tokens>, $state: &mut State| $body
+  };
+}
+
+#[macro_export]
 macro_rules! aftersub {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => {
     vec![Rc::new(
@@ -146,6 +153,7 @@ macro_rules! aftersub {
     )]
   };
 }
+
 #[macro_export]
 macro_rules! afterproc {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => (
