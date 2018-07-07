@@ -6,6 +6,7 @@
 #![allow(unused_variables, unused_mut, unused_macros)]
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
+#![feature(match_default_bindings)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -17,7 +18,6 @@ extern crate rtx_codegen;
 extern crate rtx_core;
 
 extern crate glob;
-extern crate libc;
 extern crate libxml;
 extern crate rand;
 extern crate regex;

@@ -8,7 +8,6 @@ name = "rtx_core"
 crate-type = ["rlib", "dylib", "staticlib"]
 
 [dependencies]
-libc = "0.2"
 rustc-serialize = "0.3"
 glob = "0.2"
 rand = "0.3"

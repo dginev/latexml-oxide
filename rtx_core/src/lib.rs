@@ -1,3 +1,4 @@
+#![feature(match_default_bindings)]
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -5,7 +6,6 @@ extern crate log;
 
 extern crate ansi_term;
 extern crate glob;
-extern crate libc;
 extern crate libxml;
 extern crate quote;
 extern crate rand;
@@ -168,9 +168,7 @@ impl fmt::Debug for Digested {
 }
 
 impl Default for Digested {
-  fn default() -> Self {
-    Digested::Box(Tbox::default())
-  }
+  fn default() -> Self { Digested::Box(Tbox::default()) }
 }
 
 impl BoxOps for Digested {
