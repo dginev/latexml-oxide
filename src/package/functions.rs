@@ -1,27 +1,27 @@
+use libxml::tree::Node;
 use regex::Regex;
 use std::collections::HashMap;
 use std::rc::Rc;
-use libxml::tree::Node;
 
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
 use rtx_core::common::number::Number;
+use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::expandable::Expandable;
-use rtx_core::definition::{Definition, ExpansionClosure, ConditionalClosure};
-use rtx_core::definition::conditional::{Conditional, ConditionalType, ConditionalOptions};
+use rtx_core::definition::{ConditionalClosure, Definition, ExpansionClosure};
 use rtx_core::document::resource::*;
 use rtx_core::document::tag::{TagOptionName, TagOptions};
+use rtx_core::document::Document;
+use rtx_core::gullet::Gullet;
 use rtx_core::mouth;
 use rtx_core::mouth::Mouth;
-use rtx_core::gullet::Gullet;
-use rtx_core::document::Document;
 use rtx_core::parameter::{Parameter, Parameters};
 use rtx_core::state::{ObjectStore, Scope, State};
 use rtx_core::stomach::Stomach;
-use rtx_core::BoxOps;
 use rtx_core::token::Token;
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
+use rtx_core::BoxOps;
 use rtx_core::{Core, Digested};
 
 use super::pool;
@@ -348,7 +348,7 @@ pub fn parse_parameters(
           spec: spec.to_string(),
           extra: vec![inner],
           ..Parameter::default()
-        }.init(state)?
+        }.init(state)?,
       );
     } else if OPTIONAL_CHECK.is_match(&prototype) {
       // Ditto for Optional
@@ -367,19 +367,16 @@ pub fn parse_parameters(
             // None]});
             extra: Vec::new(),
             ..Parameter::default()
-          }.init(state)?
+          }.init(state)?,
         );
       } else if !inner_spec.is_empty() {
         parameters.push(
           Parameter {
             name: s!("Optional"),
             spec: spec.to_string(),
-            extra: vec![
-              None,
-              parse_parameters(inner_spec.to_string(), cs, state)?,
-            ],
+            extra: vec![None, parse_parameters(inner_spec.to_string(), cs, state)?],
             ..Parameter::default()
-          }.init(state)?
+          }.init(state)?,
         );
       } else {
         parameters.push(
@@ -388,7 +385,7 @@ pub fn parse_parameters(
             spec: spec.to_string(),
             extra: Vec::new(),
             ..Parameter::default()
-          }.init(state)?
+          }.init(state)?,
         );
       }
     } else if PARAMSPECT_CHECK.is_match(&prototype) {
@@ -410,7 +407,7 @@ pub fn parse_parameters(
           spec: spec.to_string(),
           extra: extra,
           ..Parameter::default()
-        }.init(state)?
+        }.init(state)?,
       );
     } else {
       // Fatal('misdefined', cs, undef, "Unrecognized parameter specification at \"prototype\""); }
@@ -546,44 +543,81 @@ pub struct RegisterOptions {
 // If you supply a skipper instead of a test, it is also applied to the arguments
 // and should skip to the right place in the following \or, \else, \fi.
 
-pub fn def_conditional(cs: Token, paramlist: Option<Parameters>,
-                       test: Option<ConditionalClosure>, options: ConditionalOptions, state: &mut State) {
+pub fn def_conditional(
+  cs: Token,
+  paramlist: Option<Parameters>,
+  test: Option<ConditionalClosure>,
+  options: ConditionalOptions,
+  state: &mut State,
+)
+{
   let cs_name = cs.get_cs_name();
   match cs_name.as_str() {
-    "\\fi" | "\\else" | "\\or" => 
-      state.install_definition(ObjectStore::Conditional(Rc::new(
-        Conditional { cs: cs.clone(), paramlist: None, test: None, 
-          conditional_type: Some(ConditionalType::from(&cs_name)), locked: options.locked, skipper: options.skipper }
-      )), options.scope),
+    "\\fi" | "\\else" | "\\or" => state.install_definition(
+      ObjectStore::Conditional(Rc::new(Conditional {
+        cs: cs.clone(),
+        paramlist: None,
+        test: None,
+        conditional_type: Some(ConditionalType::from(&cs_name)),
+        locked: options.locked,
+        skipper: options.skipper,
+      })),
+      options.scope,
+    ),
     custom => {
       if CONDITIONAL_REGEX.is_match(custom) {
         let captures = CONDITIONAL_REGEX.captures(custom).unwrap();
         let name = captures.get(0).map_or("", |m| m.as_str()).to_string();
-        if !name.is_empty() && name != "case" && test.is_none() { // user-defined conditional, like with \newif
-        // Note: setting up these macros is compile-time expensive, maybe there is some way to avoid...
-        SetupBindingMacros!(state);
-        // Note: the double clones are technically correct Rust if annoying to write and read.
-        //       first, we want to capture a cloned value of cs, to be able to keep using cs here.
-        //       second, each invocation of the conditional macro needs to create new tokens to return,
-        //       hence a clone is required on each call.
-        let cs_c1 = cs.clone();
-        DefMacroTS!(T_CS!(s!("\\{}true", name)), None, Tokens!(T_CS!("\\let"), cs_c1.clone(), T_CS!("\\iftrue")), state);
-        let cs_c2 = cs.clone();
-        DefMacroTS!(T_CS!(s!("\\{}false",name)), None, Tokens!(T_CS!("\\let"), cs_c2.clone(), T_CS!("\\iffalse")), state);
-        state.let_i(&cs, T_CS!("\\iffalse"), None);
-        } else { //  For \ifcase, the parameter list better be a single Number !!
-          state.install_definition(ObjectStore::Conditional(Rc::new(
-            Conditional { cs: cs.clone(), paramlist, test, conditional_type: Some(ConditionalType::If), locked: options.locked, skipper: options.skipper }
-          )), options.scope);
+        if !name.is_empty() && name != "case" && test.is_none() {
+          // user-defined conditional, like with \newif
+          // Note: setting up these macros is compile-time expensive, maybe there is some way to
+          // avoid...
+          SetupBindingMacros!(state);
+          // Note: the double clones are technically correct Rust if annoying to write and read.
+          //       first, we want to capture a cloned value of cs, to be able to keep using cs here.
+          // second, each invocation of the conditional macro needs to create new tokens to
+          // return,       hence a clone is required on each call.
+          let cs_c1 = cs.clone();
+          DefMacroTS!(
+            T_CS!(s!("\\{}true", name)),
+            None,
+            Tokens!(T_CS!("\\let"), cs_c1.clone(), T_CS!("\\iftrue")),
+            state
+          );
+          let cs_c2 = cs.clone();
+          DefMacroTS!(
+            T_CS!(s!("\\{}false", name)),
+            None,
+            Tokens!(T_CS!("\\let"), cs_c2.clone(), T_CS!("\\iffalse")),
+            state
+          );
+          state.let_i(&cs, T_CS!("\\iffalse"), None);
+        } else {
+          //  For \ifcase, the parameter list better be a single Number !!
+          state.install_definition(
+            ObjectStore::Conditional(Rc::new(Conditional {
+              cs: cs.clone(),
+              paramlist,
+              test,
+              conditional_type: Some(ConditionalType::If),
+              locked: options.locked,
+              skipper: options.skipper,
+            })),
+            options.scope,
+          );
         }
       } else {
-        error!(target: &s!("misdefined:{}", cs), "The conditional {} is being defined but doesn't start with \\if", cs); 
+        error!(
+          target: &s!("misdefined:{}", cs),
+          "The conditional {} is being defined but doesn't start with \\if",
+          cs
+        );
       }
-    }
+    },
   }
 
   if let Some(true) = options.locked {
-    state.assign_value(&s!("{}:locked",cs), ObjectStore::Bool(true), None);
+    state.assign_value(&s!("{}:locked", cs), ObjectStore::Bool(true), None);
   }
   return;
 }
@@ -595,7 +629,8 @@ pub fn def_register(
   options: Option<RegisterOptions>,
   state: &mut State,
 )
-{ // TODO:
+{
+  // TODO:
   //   my $type   = $register_types{ ref $value };
   //   my $name   = ToString($cs);
   //   my $getter = $options{getter}
@@ -640,7 +675,7 @@ pub fn generate_id(
   {
     let mut ancestor = document
       .findnode("ancestor::*[@xml:id][1]", Some(node), state)
-      .unwrap_or_else(|| document.get_document().get_root_element());
+      .unwrap_or_else(|| document.get_document().get_root_element().unwrap());
     //// Old versions don't like ancestor.getAttribute('xml:id');
     let ancestor_id = ancestor.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace");
     // If we've got no ancestor_id, then we've got no ancestor (no document yet!),
@@ -652,9 +687,7 @@ pub fn generate_id(
     }
 
     let ctrkey = s!("_ID_counter_") + prefix + "_";
-    let a_ctr = ancestor
-      .get_attribute(&ctrkey)
-      .unwrap_or_else(|| s!("0"));
+    let a_ctr = ancestor.get_attribute(&ctrkey).unwrap_or_else(|| s!("0"));
 
     let ctr_int = 1 + a_ctr.parse::<u32>().unwrap_or(0);
     let ctr = ctr_int.to_string();
@@ -675,11 +708,7 @@ pub fn merge_font(font: Font, state: &mut State) {
     _ => Font::text_default(),
   };
   let newfont = current_font.merge(font);
-  state.assign_value(
-    "font",
-    ObjectStore::Font(newfont),
-    Some(Scope::Local),
-  );
+  state.assign_value("font", ObjectStore::Font(newfont), Some(Scope::Local));
   return;
 }
 
@@ -692,13 +721,19 @@ pub fn digest_text(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> R
 }
 
 pub fn digest_literal(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
-  // Perhaps should do StartSemiverbatim, but is it safe to push a frame? (we might cover over valid changes of state!)
+  // Perhaps should do StartSemiverbatim, but is it safe to push a frame? (we might cover over
+  // valid changes of state!)
   stomach.begin_mode("text", state)?;
-  
+
   let font = state.lookup_font().unwrap(); // TODO: raise error if font missing
-  state.assign_value("font", ObjectStore::Font(
-    font.merge(Font{encoding: Some(s!("ASCII")), ..Font::default()})), 
-    Some(Scope::Local)); // try to stay as ASCII as possible
+  state.assign_value(
+    "font",
+    ObjectStore::Font(font.merge(Font {
+      encoding: Some(s!("ASCII")),
+      ..Font::default()
+    })),
+    Some(Scope::Local),
+  ); // try to stay as ASCII as possible
 
   let value = stomach.digest(stuff, state);
 
@@ -707,12 +742,11 @@ pub fn digest_literal(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -
   value
 }
 
-
 pub fn digest_if(token: Token, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
   if let Some(defn) = state.lookup_definition(&token) {
     match stomach.digest(Tokens!(token), state) {
       Ok(t) => Ok(vec![t]),
-      Err(e) => Err(e)
+      Err(e) => Err(e),
     }
   } else {
     Ok(Vec::new())
@@ -724,7 +758,7 @@ pub struct NewCounterOptions<'ct> {
   pub idwithin: &'ct str,
   pub nested: Vec<&'ct str>,
 }
-impl <'ct> Default for NewCounterOptions<'ct> {
+impl<'ct> Default for NewCounterOptions<'ct> {
   fn default() -> Self {
     NewCounterOptions {
       idprefix: "",
@@ -840,12 +874,18 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
   );
   after_assignment(gullet, state);
   SetupBindingMacros!(state);
-  let id_cs = T_CS!(s!("\\@{}@ID",ctr));
+  let id_cs = T_CS!(s!("\\@{}@ID", ctr));
   DefMacroTS!(id_cs.clone(), None, Tokens::new(Explode!(v.value_of())),
     scope => Some(Scope::Global));
 }
 
-pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+pub fn step_counter(
+  ctr: &str,
+  noreset: bool,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Result<()>
+{
   SetupBindingMacros!(state);
   let value = counter_value(ctr, state);
   state.assign_value(
@@ -857,7 +897,7 @@ pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut
     let gullet = stomach.get_gullet_mut();
     after_assignment(gullet, state);
   }
-  let token_value = Tokens::new(Explode!(counter_value(ctr,state).value_of()));
+  let token_value = Tokens::new(Explode!(counter_value(ctr, state).value_of()));
   DefMacroTS!(T_CS!(s!("\\@{}@ID",ctr)), None, 
               token_value.clone(), scope => Some(Scope::Global));
 
@@ -869,47 +909,52 @@ pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut
       }
     }
   }
-  digest_if(T_CS!(s!("\\the{}",ctr)), stomach, state)?;
+  digest_if(T_CS!(s!("\\the{}", ctr)), stomach, state)?;
   Ok(())
 }
 
-
 pub struct RefStepValue {
   pub id: Option<String>,
-  pub tags: Option<Tokens>
+  pub tags: Option<Tokens>,
 }
 
-pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<RefStepValue> {
+pub fn ref_step_counter(
+  ctype: &str,
+  noreset: bool,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Result<RefStepValue>
+{
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(ObjectStore::String(ctr)) => ctr.to_string(),
-    _ => ctype.to_string()
+    _ => ctype.to_string(),
   };
   step_counter(&ctr, noreset, stomach, state)?;
 
   let iddef_opt = state.lookup_definition(&T_CS!(s!("\\the{}@ID", ctr)));
-  let has_id : bool = match iddef_opt {
+  let has_id: bool = match iddef_opt {
     Some(ObjectStore::Expandable(iddef)) => match iddef.get_parameters() {
       Some(params) => params.get_num_args() == 0,
       None => false,
-    }
-    _ => false
+    },
+    _ => false,
   };
 
   SetupBindingMacros!(state);
-  let the_cs = T_CS!(s!("\\the{}",ctr));
-  let the_id_cs = T_CS!(s!("\\the{}@ID",ctr));
+  let the_cs = T_CS!(s!("\\the{}", ctr));
+  let the_id_cs = T_CS!(s!("\\the{}@ID", ctr));
   DefMacroT!(T_CS!("\\@currentlabel"), None, the_cs.clone(), scope => Some(Scope::Global));
   if has_id {
     DefMacroT!(T_CS!("\\@currentID"), None, the_id_cs.clone(), scope => Some(Scope::Global))
   }
 
   let id = if has_id {
-    digest_literal(Tokens!(T_CS!(s!("\\the{}@ID",ctr))),stomach,state)?.to_string()
+    digest_literal(Tokens!(T_CS!(s!("\\the{}@ID", ctr))), stomach, state)?.to_string()
   } else {
     String::new()
   };
 
-  let refnum = digest_text(Tokens!(T_CS!(s!("\\the{}",ctr))), stomach, state)?;
+  let refnum = digest_text(Tokens!(T_CS!(s!("\\the{}", ctr))), stomach, state)?;
   // let tags = digest(Invocation!(T_CS!("\\lx@make@tags"), ctype));
 
   // Any scopes activated for previous value of this counter (& any nested counters) must be
@@ -917,7 +962,11 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   deactivate_counter_scope(&ctr, state);
 
   // And install the scope (if any) for this reference number.
-  state.assign_value("current_counter", ObjectStore::String(ctr.to_string()), Some(Scope::Local));
+  state.assign_value(
+    "current_counter",
+    ObjectStore::String(ctr.to_string()),
+    Some(Scope::Local),
+  );
 
   let scope = s!("{}:{}", ctr, refnum.to_string());
   state.assign_value(
@@ -928,9 +977,9 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   state.activate_scope(&scope);
 
   Ok(RefStepValue {
-    //   ($tags   ? (tags => $tags) : ()),    
+    //   ($tags   ? (tags => $tags) : ()),
     tags: None,
-    id: if has_id {Some(id)} else {None}
+    id: if has_id { Some(id) } else { None },
   })
 }
 
@@ -974,11 +1023,17 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 //   return (id => ToString(DigestLiteral(T_CS!("\\the$ctr\@ID")))); }
 
 fn reset_counter(ctr: &str, state: &mut State) {
-  state.assign_value(&s!("\\c@{}", ctr), ObjectStore::Number(Number!(0)), Some(Scope::Global));
+  state.assign_value(
+    &s!("\\c@{}", ctr),
+    ObjectStore::Number(Number!(0)),
+    Some(Scope::Global),
+  );
   // and reset any within counters!
   let nested = if let Some(ObjectStore::Tokens(nested)) = state.lookup_value(&s!("\\cl@{}", ctr)) {
     nested.clone()
-  } else { Tokens!() };
+  } else {
+    Tokens!()
+  };
 
   for c in nested.unlist().iter() {
     reset_counter(&c.to_string(), state);

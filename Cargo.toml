@@ -9,6 +9,9 @@ path = "rtx_core"
 [dependencies.rtx_codegen]
 path = "rtx_codegen"
 
+[dependencies.libxml]
+git = "https://github.com/KWARC/rust-libxml.git"
+
 [dependencies]
 gcc = "0.3.54"
 rustc-serialize = "0.3"
@@ -18,5 +21,4 @@ tempfile = "2.2"
 time = "0.1"
 lazy_static = "0.1"
 regex = "0.2.5"
-libxml = "0.1.2"
 log = "0.4"

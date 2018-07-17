@@ -4,24 +4,24 @@ pub mod tag;
 extern crate libxml;
 extern crate regex;
 
-use std::collections::{HashMap, VecDeque};
-use std::iter;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Namespace, Node, NodeType};
 use regex::Regex;
+use std::collections::{HashMap, VecDeque};
+use std::iter;
 
 use common::error::*;
 use common::font::Font;
 use state::{ObjectStore, State};
 
-use {BoxOps, Digested};
-use Tbox;
 use document::resource::Resource;
 use document::tag::{TagConstructionClosure, TagOptionName, TagOptions};
+use Tbox;
+use {BoxOps, Digested};
 
 lazy_static! {
-  static ref HAS_NONSPACE_RE : Regex = Regex::new(r"\S").unwrap();
-  static ref ONLY_SPACE_RE : Regex = Regex::new(r"^\s+$").unwrap();
+  static ref HAS_NONSPACE_RE: Regex = Regex::new(r"\S").unwrap();
+  static ref ONLY_SPACE_RE: Regex = Regex::new(r"^\s+$").unwrap();
 }
 
 static FONT_ELEMENT_NAME: &'static str = "ltx:text";
@@ -43,7 +43,10 @@ impl Default for Document {
 impl Document {
   pub fn new() -> Self {
     let doc_scaffold = XmlDoc::new().unwrap();
-    let root = doc_scaffold.get_root_element();
+    let root = match doc_scaffold.get_root_element() {
+      Some(root) => root,
+      None => doc_scaffold.as_node(), // when empty, set the document node as a node.
+    };
     Document {
       document: doc_scaffold,
       node: root,
@@ -76,7 +79,7 @@ impl Document {
       None => state
         .model
         .get_xpath(&self.document)
-        .findnodes(xpath, Some(&self.document.get_root_element())),
+        .findnodes(xpath, Some(&self.document.get_root_element().unwrap())),
     }
   }
 
@@ -108,7 +111,7 @@ impl Document {
   // box, etc.
   pub fn finalize(&mut self, state: &mut State) {
     self.prune_xmduals();
-    let mut root = self.document.get_root_element();
+    let mut root = self.document.get_root_element().unwrap();
     let init_font = Font::text_default();
     self.finalize_rec(&mut root, &init_font, state);
     if let Some(&ObjectStore::String(ref prefixes)) = state.lookup_value("RDFa_prefixes") {
@@ -168,7 +171,8 @@ impl Document {
         self.finalize_rec(&mut child, new_init_font, state);
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
-        if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME) && !was_forcefont
+        if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME)
+          && !was_forcefont
           && child.get_attributes().is_empty()
         {
           let grandchildren = child.get_child_nodes();
@@ -307,7 +311,8 @@ impl Document {
     let self_node = self.node.clone();
     let mut c = Some(self_node);
 
-    while c.is_some() && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode)
+    while c.is_some()
+      && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode)
       && c != Some(node.clone())
     {
       let parent = c.unwrap().get_parent();
@@ -337,14 +342,14 @@ impl Document {
       attr_data.push('"');
     }
     // self.close_text_internal();  // Close any open text node
-    let pi_node = self
+    let mut pi_node = self
       .document
       .create_processing_instruction(op, &attr_data)
       .unwrap();
     if self.node.get_type() == Some(NodeType::DocumentNode) {
       self.pending.push(pi_node);
     } else {
-      self.node.add_prev_sibling(&pi_node)?;
+      self.node.add_prev_sibling(&mut pi_node)?;
     }
     Ok(())
   }
@@ -797,10 +802,7 @@ impl Document {
         }
       },
       Some(NodeType::CommentNode) => {
-        serialized.push_str(&s!(
-          "<!-- {}-->",
-          serialize_string(&node.get_content())
-        ));
+        serialized.push_str(&s!("<!-- {}-->", serialize_string(&node.get_content())));
       },
       _ => {},
     }
@@ -841,9 +843,7 @@ impl Document {
     state: &mut State,
   ) -> Result<Node>
   {
-    attributes
-      .entry(s!("role"))
-      .or_insert(s!("UNKNOWN"));
+    attributes.entry(s!("role")).or_insert(s!("UNKNOWN"));
 
     let font = match font_opt {
       Some(f) => f.clone(),
@@ -926,7 +926,8 @@ impl Document {
         if d < bestdiff {
           bestdiff = d;
           closeto = n.clone();
-          if d == 0 || state.model.get_node_qname(&n) != FONT_ELEMENT_NAME
+          if d == 0
+            || state.model.get_node_qname(&n) != FONT_ELEMENT_NAME
             || n.get_attribute("_noautoclose").is_some()
           {
             break;
@@ -947,7 +948,7 @@ impl Document {
           FONT_ELEMENT_NAME,
           Some(string_map!("_fontswitch" => "true")),
           Some(font),
-          state
+          state,
         )?; // Open if needed.
       }
     }
@@ -1060,7 +1061,7 @@ impl Document {
     } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", state)?;
-      let node = Node::new_text(text, &self.document).unwrap();
+      let mut node = Node::new_text(text, &self.document).unwrap();
       if self.debug {
         debug!(
           "Inserting text node for {:?} into {:?}",
@@ -1068,7 +1069,7 @@ impl Document {
           self.document.node_to_string(&point)
         );
       }
-      let added_node = point.add_child(node).unwrap();
+      let added_node = point.add_child(&mut node).unwrap();
       self.set_node(added_node);
     }
 
@@ -1141,7 +1142,8 @@ impl Document {
     };
     let mut node = self.node.clone();
     let node_type = node.get_type();
-    if node_type != Some(NodeType::TextNode) && node_type != Some(NodeType::ElementNode)
+    if node_type != Some(NodeType::TextNode)
+      && node_type != Some(NodeType::ElementNode)
       && node_type != Some(NodeType::DocumentNode)
     {
       error!(target: "internal:context", "Insertion point is not an element, document or text: {:?}", self.document.node_to_string(&node));
@@ -1204,7 +1206,12 @@ impl Document {
         return self.find_insertion_point(qname, state); // Then retry, possibly w/auto open's
       } else {
         // Didn't find a legit place.
-        error!(target: &s!("malformed:{}", qname), "{:?} isn't allowed in <{}>", qname, cur_qname);
+        error!(
+          target: &s!("malformed:{}", qname),
+          "{:?} isn't allowed in <{}>",
+          qname,
+          cur_qname
+        );
         // ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed
         // in <$cur_qname>", "Currently in " .
         // self.getInsertionContext()); return self.node}; } } }
@@ -1343,8 +1350,8 @@ impl Document {
       state.model.add_schema_declaration(self);
       newnode = Node::new(&tag, None, &self.document).unwrap();
       self.document.set_root_element(&newnode);
-      for node in &self.pending {
-        newnode.add_prev_sibling(&node)?; // Add saved comments, PI's
+      for mut node in &mut self.pending {
+        newnode.add_prev_sibling(&mut node)?; // Add saved comments, PI's
       }
       self.record_constructed_node(&newnode);
 
@@ -1358,13 +1365,13 @@ impl Document {
         let prefix = state.model.get_document_namespace_prefix(&ns, false, false);
         let attprefix = state.model.get_document_namespace_prefix(&ns, true, true);
         if prefix.is_none() && attprefix.is_some() {
-          let attr_ns_node = Namespace::new(&attprefix.unwrap(), &ns, &newnode).unwrap();
+          let attr_ns_node = Namespace::new(&attprefix.unwrap(), &ns, &mut newnode).unwrap();
           newnode.set_namespace(&attr_ns_node);
         }
         // TODO: Figure out a better way to achieve the "activate" effect in
         // XML:LibXML::Element it seems just creating the namespace without
         // setting it is equivalent ??
-        let ns_node = Namespace::new("", &ns, &newnode).unwrap();
+        let ns_node = Namespace::new("", &ns, &mut newnode).unwrap();
         newnode.set_namespace(&ns_node);
       }
     // TODO: Else case
@@ -1442,7 +1449,8 @@ impl Document {
               .get_document_namespace_prefix(&ns_uri, false, false)
             {
               if !prefix.is_empty() {
-                match Namespace::new(&prefix, &ns_uri, &self.document.get_root_element()) {
+                let mut root = self.document.get_root_element().unwrap();
+                match Namespace::new(&prefix, &ns_uri, &mut root) {
                   Ok(ns) => Some(ns),
                   Err(_) => {
                     error!(target: "document:open_element_internal", "failed to create namespace: {:?}", prefix);
@@ -1460,7 +1468,8 @@ impl Document {
           },
           Some(prefix) => {
             if !prefix.is_empty() {
-              match Namespace::new(&prefix, &ns_uri, &self.document.get_root_element()) {
+              let mut root = self.document.get_root_element().unwrap();
+              match Namespace::new(&prefix, &ns_uri, &mut root) {
                 Ok(ns) => Some(ns),
                 Err(_) => {
                   error!(target: "document:open_element_internal", "failed to create namespace: {:?}", prefix);
@@ -1478,9 +1487,8 @@ impl Document {
     };
 
     let no_ns = new_ns.is_none();
-    let mut newnode = point
-      .add_child(Node::new(tag, new_ns, &self.document).unwrap())
-      .unwrap();
+    let mut newnode_raw = Node::new(tag, new_ns, &self.document).unwrap();
+    let mut newnode = point.add_child(&mut newnode_raw).unwrap();
     if no_ns {
       // without this explicit set call, an XPath for things such as "ltx:XMath"
       // fails ???
@@ -1596,7 +1604,7 @@ impl Document {
       "ltx:ERROR",
       Some(string_map!("class"=>error_class)),
       None,
-      state
+      state,
     )?;
     self.close_element("ltx:ERROR", state)?;
     if let Some(savenode) = savenode_opt {
