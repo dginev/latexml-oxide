@@ -1,11 +1,11 @@
-use std::io;
-use std::fmt;
-use std::error::Error as ErrorTrait;
-use std::result;
 use std::collections::HashMap;
+use std::error::Error as ErrorTrait;
+use std::fmt;
+use std::io;
+use std::result;
 
 lazy_static! {
-  static ref NOTE_TIMERS : HashMap<String, String> = HashMap::new();
+  static ref _NOTE_TIMERS: HashMap<String, String> = HashMap::new();
 }
 
 #[derive(Debug)]
@@ -45,18 +45,21 @@ pub enum ErrorCategory {
   Libxml,
   Recursion,
   EoF,
+  Generic(Box<ErrorTrait>),
 }
 
 #[macro_export]
 macro_rules! fatal {
-  ($target:tt, $category:tt, $message:expr) => ({
+  ($target:tt, $category:tt, $message:expr) => {{
     use $crate::common::error::Error as RtxError;
-    use $crate::common::error::ErrorTarget::*;
     use $crate::common::error::ErrorCategory::*;
-    return Err(RtxError{
-      target: $target, category: $category, message: $message.to_string()
-    })
-  })
+    use $crate::common::error::ErrorTarget::*;
+    return Err(RtxError {
+      target: $target,
+      category: $category,
+      message: $message.to_string(),
+    });
+  }};
 }
 
 pub type Result<T> = result::Result<T, Error>;
@@ -81,6 +84,7 @@ impl fmt::Display for Error {
       Libxml => write!(f, "libxml error"),
       Recursion => write!(f, "<recursion>"),
       EoF => write!(f, "<EOF>"),
+      Generic(ref err) => err.fmt(f),
     }
   }
 }
@@ -101,6 +105,7 @@ impl ErrorTrait for Error {
       Libxml => "libxml error",
       Recursion => "<recursion>",
       EoF => "<EOF>",
+      Generic(ref err) => err.description(),
     }
   }
 
@@ -128,6 +133,26 @@ impl From<io::Error> for Error {
       target: ErrorTarget::Mouth,
       category: ErrorCategory::Io(err),
       message: s!("IO error"),
+    }
+  }
+}
+
+impl From<Box<ErrorTrait>> for Error {
+  fn from(err: Box<ErrorTrait>) -> Error {
+    Error {
+      target: ErrorTarget::Document,
+      message: err.description().to_string(),
+      category: ErrorCategory::Generic(err),
+    }
+  }
+}
+
+impl From<String> for Error {
+  fn from(err: String) -> Error {
+    Error {
+      target: ErrorTarget::Document,
+      category: ErrorCategory::Generic(From::from(err.clone())),
+      message: err,
     }
   }
 }

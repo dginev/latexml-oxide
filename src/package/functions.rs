@@ -665,7 +665,7 @@ pub fn generate_id(
   mut node: &mut Node,
   mut prefix: &str,
   state: &mut State,
-)
+) -> Result<()>
 {
   // If node doesn't already have an id, and can
   let node_qname = document.get_node_qname(node, state);
@@ -697,9 +697,10 @@ pub fn generate_id(
       None => String::new(),
     } + prefix + &ctr;
 
-    ancestor.set_attribute(&ctrkey, &ctr);
-    node.set_attribute("xml:id", &id);
+    ancestor.set_attribute(&ctrkey, &ctr)?;
+    node.set_attribute("xml:id", &id)?;
   }
+  Ok(())
 }
 
 pub fn merge_font(font: Font, state: &mut State) {

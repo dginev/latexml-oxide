@@ -1,6 +1,6 @@
 use package::*;
-use rtx_core::BoxOps;
 use rtx_core::document::tag::TagConstructionClosure;
+use rtx_core::BoxOps;
 
 pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
@@ -13,7 +13,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   Tag!("ltx:XMText", auto_open => true, auto_close => true);
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
   Tag!("ltx:Math", after_open => tagsub!(document, node, state, {
-    generate_id(document, node, "m", state);
+    generate_id(document, node, "m", state)?;
   }));
 
   DefPrimitiveII!(
@@ -106,7 +106,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         None
       };
       if let Some(tex_string) = tex_opt {
-        document.set_attribute(&mut node, "tex", &tex_string);
+        document.set_attribute(&mut node, "tex", &tex_string)?;
       }
     }
   });

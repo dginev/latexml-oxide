@@ -8,11 +8,10 @@
 ///**********************************************************************
 /// NOTE: This will be loaded after `TeX.pool`, so it inherits.
 ///**********************************************************************
-
 use package::*;
 
-lazy_static!{
-  static ref OPTS_REGEX : Regex = Regex::new(r",\s*").unwrap();
+lazy_static! {
+  static ref OPTS_REGEX: Regex = Regex::new(r",\s*").unwrap();
 }
 
 pub fn load_definitions(state: &mut State) -> Result<()> {
@@ -78,13 +77,13 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefMacro!("\\begin{}", gullet, args, state, {
     unpack!(args => name);
-    let begin_name = s!("\\begin{{{}}}",name);
+    let begin_name = s!("\\begin{{{}}}", name);
     if is_defined(&begin_name, state) {
       Ok(Tokens!(T_CS!(begin_name))) // Magic cs!
     } else {
-      let token = T_CS!(s!("\\{}",name));
+      let token = T_CS!(s!("\\{}", name));
       if !is_defined_token(&token, state) {
-        let undef = s!("{{{}}}",name); // this creates {name} , {{ and }} are escapes in Rust's format!
+        let undef = s!("{{{}}}", name); // this creates {name} , {{ and }} are escapes in Rust's format!
         let category_object = s!("undefined:{}", undef);
         error!(target: &category_object, "The environment is not defined.");
         // state.note_status("undefined", undef);
@@ -99,12 +98,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefMacro!("\\end{}", gullet, args, state, {
     let name: String = args[0].to_string();
-    let mut t = T_CS!(s!("\\end{{{}}}",name));
+    let mut t = T_CS!(s!("\\end{{{}}}", name));
     if is_defined_token(&t, state) {
       // Magic CS!
       Ok(Tokens!(t))
     } else {
-      t = T_CS!(s!("\\end{}",name));
+      t = T_CS!(s!("\\end{}", name));
       if is_defined_token(&t, state) {
         Ok(Tokens!(t, T_CS!("\\endgroup")))
       } else {
@@ -135,7 +134,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       let body = prop_whatsit!(props,"body");
       if let Some(mut docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
         if !id.is_empty() {
-          document.set_attribute(&mut docel, "xml:id", id);
+          document.set_attribute(&mut docel, "xml:id", id)?;
         }
         document.absorb(body, state)?;
       } else {
@@ -239,7 +238,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       };
       let level = args[1].to_string();
       let flag = args[6].to_string();
-      if !flag.is_empty() { // No number, not in TOC
+      if !flag.is_empty() {
+        // No number, not in TOC
         //|| (!level.is_empty() && (level > CounterValue!("secnumdepth").value_of())) {
         // RefStepID!(ctr);
         let mut tokens: Vec<Token> = vec![
@@ -252,11 +252,15 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         tokens.push(T_BEGIN!());
         tokens.push(T_END!());
         Ok(Tokens::new(tokens))
-      } else if !level.is_empty() && (level.parse::<i32>().unwrap() > CounterValue!("secnumdepth", state).value_of())
-                || LookupBool!("no_number_sections", state) {
+      } else if !level.is_empty()
+        && (level.parse::<i32>().unwrap() > CounterValue!("secnumdepth", state).value_of())
+        || LookupBool!("no_number_sections", state)
+      {
         // No number, but in TOC
-        let mut tokens: Vec<Token> = vec![ 
-          T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"), T_BEGIN!()
+        let mut tokens: Vec<Token> = vec![
+          T_CS!("\\@startsection@hook"),
+          T_CS!("\\@@unnumbered@section"),
+          T_BEGIN!(),
         ];
         tokens.append(&mut type_tokens.unlist());
         tokens.push(T_END!());
@@ -264,10 +268,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         tokens.push(T_OTHER!("toc"));
         tokens.push(T_END!());
         Ok(Tokens::new(tokens))
-      } else { // Number and in TOC
-        let mut tokens : Vec<Token> = vec![ 
-          T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"),
-          T_BEGIN!()
+      } else {
+        // Number and in TOC
+        let mut tokens: Vec<Token> = vec![
+          T_CS!("\\@startsection@hook"),
+          T_CS!("\\@@numbered@section"),
+          T_BEGIN!(),
         ];
         tokens.append(&mut type_tokens.unlist());
         tokens.push(T_END!());
@@ -279,7 +285,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
   );
 
-DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested",
+  DefConstructor!(
+    "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
     document,
     args,
     props,
@@ -288,7 +295,7 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
       // intuitive level of:       let (x,y,z, ...) = @args;
       unpack_to_string!(args => stype, inlist, toctitle, title);
-      let id = prop_str!(props,"id");
+      let id = prop_str!(props, "id");
       let clean_id = id; // TODO: CleanID($id);
       document.open_element(
         &s!("ltx:{}", stype),
@@ -298,48 +305,48 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
       )?;
       // TODO: Another instance where the immutability of props causes endless cloning
       //       which is slow and wasteful.
-      //       The big problem is that for props to be mutable, the entire parent whatsit needs to be mutable,
-      //       and Rust hits a mutability conflict between the parent, and the "args" and "props" children
-      //       ... will come back here after performance becomes an issue again
+      // The big problem is that for props to be mutable, the entire parent whatsit needs to
+      // be mutable, and Rust hits a mutability conflict between the parent, and the
+      // "args" and "props" children ... will come back here after performance becomes
+      // an issue again
       if let Some(ObjectStore::Digested(tags)) = props.get("tags") {
-        document.absorb((**tags).clone(), state)?; 
+        document.absorb((**tags).clone(), state)?;
       }
-      let title = prop_digested!(props,"title");
+      let title = prop_digested!(props, "title");
       document.insert_element("ltx:title", title, None, state)?;
 
-      let toctitle = prop_digested!(props,"toctitle");
+      let toctitle = prop_digested!(props, "toctitle");
       if !toctitle.is_empty() {
         document.insert_element("ltx:toctitle", toctitle, None, state)?;
       }
-    });
-//   properties => sub {
-//     my ($stomach, $type, $inlist, $toctitle, $title) = @_;
-//     my %props     = RefStepCounter(ToString($type));
-//     my $xtitle    = Digest(Invocation(T_CS('\lx@format@title@@'), $type, $title));
-//     my $xtoctitle = Digest(Invocation(T_CS('\lx@format@toctitle@@'), $type, $toctitle || $title));
-//     $props{title}    = $xtitle;
-//     $props{toctitle} = $xtoctitle
-//       if $xtoctitle && $xtoctitle->unlist && (ToString($xtoctitle) ne ToString($xtitle));
-//     return %props; });
+    }
+  );
+  //   properties => sub {
+  //     my ($stomach, $type, $inlist, $toctitle, $title) = @_;
+  //     my %props     = RefStepCounter(ToString($type));
+  //     my $xtitle    = Digest(Invocation(T_CS('\lx@format@title@@'), $type, $title));
+  // my $xtoctitle = Digest(Invocation(T_CS('\lx@format@toctitle@@'), $type, $toctitle ||
+  // $title));     $props{title}    = $xtitle;
+  //     $props{toctitle} = $xtoctitle
+  //       if $xtoctitle && $xtoctitle->unlist && (ToString($xtoctitle) ne ToString($xtitle));
+  //     return %props; });
 
-// # No tags, at all? Consider...
-// DefConstructor('\@@unnumbered@section{} Undigested OptionalUndigested Undigested', sub {
-//     my ($document, $type, $inlist, $toctitle, $title, %props) = @_;
-//     my $id = $props{id};
-//     $document->openElement("ltx:" . ToString($type),
-//       'xml:id' => CleanID($id),
-//       inlist   => ToString($inlist));
-//     $document->insertElement('ltx:title', $props{title});
-//     $document->insertElement('ltx:toctitle', $props{toctitle}) if $props{toctitle}; },
-//   properties => sub {
-//     my ($stomach, $type, $inlist, $toctitle, $title) = @_;
-//     my %props = RefStepID(ToString($type));
-//     $props{title} = Digest(T_CS('\@hidden@bgroup'), $title, T_CS('\@hidden@egroup'));
-//     $props{toctitle} = $toctitle
-//       && Digest(T_CS('\@hidden@bgroup'), $toctitle, T_CS('\@hidden@egroup'));
-//     return %props; });
-
-
+  // # No tags, at all? Consider...
+  // DefConstructor('\@@unnumbered@section{} Undigested OptionalUndigested Undigested', sub {
+  //     my ($document, $type, $inlist, $toctitle, $title, %props) = @_;
+  //     my $id = $props{id};
+  //     $document->openElement("ltx:" . ToString($type),
+  //       'xml:id' => CleanID($id),
+  //       inlist   => ToString($inlist));
+  //     $document->insertElement('ltx:title', $props{title});
+  //     $document->insertElement('ltx:toctitle', $props{toctitle}) if $props{toctitle}; },
+  //   properties => sub {
+  //     my ($stomach, $type, $inlist, $toctitle, $title) = @_;
+  //     my %props = RefStepID(ToString($type));
+  //     $props{title} = Digest(T_CS('\@hidden@bgroup'), $title, T_CS('\@hidden@egroup'));
+  //     $props{toctitle} = $toctitle
+  //       && Digest(T_CS('\@hidden@bgroup'), $toctitle, T_CS('\@hidden@egroup'));
+  //     return %props; });
 
   //----------------------------------------------------------------------
   // The following macros provide a few layers of customization
@@ -481,9 +488,9 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
   ].into_iter()
     .map(|s| s.to_string())
   {
-    DefMacroI!(T_CS!(ltxtrigger), None, move |_gullet, _args, _state| Ok(
-      Tokens!()
-    ));
+    DefMacroI!(T_CS!(ltxtrigger), None, move |_gullet, _args, _state| {
+      Ok(Tokens!())
+    });
   }
 
   //======================================================================
@@ -556,7 +563,7 @@ DefConstructor!("\\@@numbered@section{} Undigested OptionalUndigested Undigested
   // However, para get created implicitly on Document construction, rather than
   // explicitly during digestion (via a whatsit), we can't use the usual LaTeX counter mechanism.
   Tag!("ltx:para", after_open => tagsub!(document, node, state, {
-    generate_id(document, node, "p", state);
+    generate_id(document, node, "p", state)?;
   }));
 
   Ok(())

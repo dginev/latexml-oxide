@@ -327,7 +327,7 @@ impl MathParser {
       // foreach my $n
       // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
       // $document->setAttribute($n, idref => $repid); } } }
-      p.set_attribute("text", &self.text_form(&result, document, state));
+      p.set_attribute("text", &self.text_form(&result, document, state))?;
     }
     Ok(())
   }
@@ -816,14 +816,14 @@ impl MathParser {
       right_arg.unbind_node();
 
       let mut new_app_node = Node::new("XMApp", None, &mut document.document).unwrap();
-      new_app_node.set_namespace(&left_arg.get_namespace().unwrap());
+      new_app_node.set_namespace(&left_arg.get_namespace().unwrap())?;
       new_app_node.add_child(&mut infix_op)?;
       new_app_node.add_child(&mut left_arg)?;
       new_app_node.add_child(&mut right_arg)?;
 
-      let new_app_child = parent.add_child(&mut new_app_node).unwrap();
+      parent.add_child(&mut new_app_node)?;
 
-      result = Some(new_app_child);
+      result = Some(new_app_node);
     }
     // If still failed, try other strategies?
 

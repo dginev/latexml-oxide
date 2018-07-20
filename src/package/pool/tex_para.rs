@@ -27,14 +27,14 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
           let element = document.get_element();
           if let Some(mut node) = element {
             if document.get_node_qname(&node, state) == "ltx:para" {  // Only set on the para about to close!
-              document.set_attribute(&mut node, "class", &class_str);
+              document.set_attribute(&mut node, "class", &class_str)?;
             }
           }
         }
         document.maybe_close_element("ltx:para", state)?;
      }
     }),
-    after_digest => sub!(|stomach, whatsit, state| {
+    after_digest => aftersub!(stomach, whatsit, state, {
       let in_preamble = state.lookup_bool("inPreamble");
       if in_preamble {
         whatsit.set_property("inPreamble", ObjectStore::Bool(true));
@@ -132,7 +132,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   Tag!("ltx:para", auto_close => true, auto_open => true);
 
   let trim_node_whitespace_closure: Vec<TagConstructionClosure> = tagsub!(document, node, state, {
-    document.trim_node_whitespace(node);
+    document.trim_node_whitespace(node)?;
   });
   Tag!("ltx:p", auto_close => true, auto_open => true, after_close => trim_node_whitespace_closure);
 

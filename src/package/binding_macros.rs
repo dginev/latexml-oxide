@@ -138,13 +138,18 @@ macro_rules! beforeproc {
 #[macro_export]
 macro_rules! aftersub {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => {
-    |$stomach: &mut Stomach, $whatsit: &mut Whatsit, $state: &mut State| $body
+    vec![Rc::new(
+      move |$stomach: &mut Stomach,
+            $whatsit: &mut Whatsit,
+            $state: &mut State|
+            -> Result<Vec<Digested>> { $body },
+    )]
   };
 }
 #[macro_export]
 macro_rules! afterproc {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => (
-    Rc::new(move |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $state:&mut State| {
+    Rc::new(move |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $state:&mut State| -> Result<Vec<Digested>> {
       $body
       Ok(Vec::new())
     }
@@ -169,55 +174,54 @@ macro_rules! v {
 
 #[macro_export]
 macro_rules! prop_digested {
-  ($props: ident, $key: expr) =>(
+  ($props:ident, $key:expr) => {
     match $props.get($key) {
-        Some(ObjectStore::VecDigested(vd)) => vd.clone(),
-        Some(ObjectStore::Digested(d)) => vec![(**d).clone()],
-        _ => Vec::new()
+      Some(ObjectStore::VecDigested(vd)) => vd.clone(),
+      Some(ObjectStore::Digested(d)) => vec![(**d).clone()],
+      _ => Vec::new(),
     }
-  )
+  };
 }
 
 #[macro_export]
 macro_rules! prop_str {
-  ($props: ident, $key: expr) =>(
+  ($props:ident, $key:expr) => {
     match $props.get($key) {
-      Some(& ObjectStore::String(ref id)) => id,
-      _ => ""
+      Some(&ObjectStore::String(ref id)) => id,
+      _ => "",
     }
-  )
+  };
 }
-
 
 #[macro_export]
 macro_rules! prop_string {
-  ($props: ident, $key: expr) =>(
+  ($props:ident, $key:expr) => {
     match $props.get($key) {
-      Some(& ObjectStore::String(ref id)) => id.to_string(),
-      _ => String::new()
+      Some(&ObjectStore::String(ref id)) => id.to_string(),
+      _ => String::new(),
     }
-  )
+  };
 }
 
 #[macro_export]
 macro_rules! prop_whatsit {
-  ($props: ident, $key: expr) =>(
+  ($props:ident, $key:expr) => {
     match $props.get($key) {
       // TODO: Cloning here ought to be terribly inefficient and should be avoided. How?
-      Some(& ObjectStore::Digested(ref rc)) => (**rc).clone(),
-      _ => Digested::Whatsit(Whatsit::default())
+      Some(&ObjectStore::Digested(ref rc)) => (**rc).clone(),
+      _ => Digested::Whatsit(Whatsit::default()),
     };
-  )
+  };
 }
 
 #[macro_export]
 macro_rules! prop_bool {
-  ($props: ident, $key: expr) =>(
+  ($props:ident, $key:expr) => {
     match $props.get($key) {
-      Some(& ObjectStore::Bool(v)) => v,
-      _ => false
+      Some(&ObjectStore::Bool(v)) => v,
+      _ => false,
     }
-  )
+  };
 }
 
 #[macro_export]

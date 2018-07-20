@@ -1,8 +1,8 @@
-use syn;
 use quote;
 use regex::{Captures, Regex};
-use rtx_core::util::text::*;
 use rtx_core::mouth;
+use rtx_core::util::text::*;
+use syn;
 use util::{get_option, get_options_from_input};
 
 // We recognize several special operators:
@@ -93,7 +93,7 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
           #(#operations)*
 
           if let Some(snode) = savenode {
-            document.set_node(snode);
+            document.set_node(&snode);
           }
           Ok(())
         }))

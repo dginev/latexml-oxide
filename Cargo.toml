@@ -10,7 +10,7 @@ path = "rtx_core"
 path = "rtx_codegen"
 
 [dependencies.libxml]
-git = "https://github.com/KWARC/rust-libxml.git"
+git = "https://github.com/KWARC/rust-libxml"
 
 [dependencies]
 gcc = "0.3.54"

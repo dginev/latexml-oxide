@@ -4,6 +4,7 @@ pub mod tag;
 extern crate libxml;
 extern crate regex;
 
+use libxml::tree::set_node_rc_guard;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Namespace, Node, NodeType};
 use regex::Regex;
@@ -42,6 +43,7 @@ impl Default for Document {
 }
 impl Document {
   pub fn new() -> Self {
+    set_node_rc_guard(90); // We will need a high treshold for Node mutability
     let doc_scaffold = XmlDoc::new().unwrap();
     let root = match doc_scaffold.get_root_element() {
       Some(root) => root,
@@ -85,11 +87,11 @@ impl Document {
 
   /// Like findnodes, but only returns the first matched node
   pub fn findnode(&self, xpath: &str, node: Option<&Node>, state: &mut State) -> Option<Node> {
-    let nodes = state.model.get_xpath(&self.document).findnodes(xpath, node);
+    let mut nodes = state.model.get_xpath(&self.document).findnodes(xpath, node);
     if nodes.is_empty() {
       None
     } else {
-      Some(nodes[0].clone())
+      Some(nodes.remove(0))
     }
   }
 
@@ -109,17 +111,18 @@ impl Document {
   // outside world.  It resolves the fonts for each node relative to it's
   // ancestors. It removes the `helper' attributes that store fonts, source
   // box, etc.
-  pub fn finalize(&mut self, state: &mut State) {
+  pub fn finalize(&mut self, state: &mut State) -> Result<()> {
     self.prune_xmduals();
     let mut root = self.document.get_root_element().unwrap();
     let init_font = Font::text_default();
-    self.finalize_rec(&mut root, &init_font, state);
+    self.finalize_rec(&mut root, &init_font, state)?;
     if let Some(&ObjectStore::String(ref prefixes)) = state.lookup_value("RDFa_prefixes") {
       self.set_rdfa_prefixes(Some(prefixes.clone()));
     }
+    Ok(())
   }
 
-  fn finalize_rec(&mut self, node: &mut Node, init_font: &Font, state: &mut State) {
+  fn finalize_rec(&mut self, node: &mut Node, init_font: &Font, state: &mut State) -> Result<()> {
     let qname = state.model.get_node_qname(node);
     let mut declared_font = init_font.clone();
     let desired_font;
@@ -157,7 +160,7 @@ impl Document {
       }
     }
     for (key, value) in attrs_to_set {
-      self.set_attribute(node, &key, &value);
+      self.set_attribute(node, &key, &value)?;
     }
     for key in keys_to_remove {
       pending_declaration.remove(&key);
@@ -168,7 +171,7 @@ impl Document {
       let child_type = child.get_type();
       if child_type == Some(NodeType::ElementNode) {
         let was_forcefont = child.get_attribute("_force_font").is_some();
-        self.finalize_rec(&mut child, new_init_font, state);
+        self.finalize_rec(&mut child, new_init_font, state)?;
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
         if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME)
@@ -214,9 +217,11 @@ impl Document {
     // Remove them now.
     for (name, _) in node.get_attributes() {
       if name.starts_with('_') {
-        node.remove_attribute(&name);
+        node.remove_attribute(&name)?;
       }
     }
+
+    Ok(())
   }
 
   /// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -259,7 +264,7 @@ impl Document {
 
       let newly_created: Vec<Node> = self.constructed_nodes.drain(0..).collect(); // These were created just now
       for node in &newly_created {
-        self.record_constructed_node(node); // record these for OUTER caller!
+        self.record_constructed_node(&node); // record these for OUTER caller!
       }
       results.extend(newly_created); // but return only the most recent set.
 
@@ -306,26 +311,35 @@ impl Document {
     for digested in content {
       self.absorb(digested, state)?;
     }
-    // In obscure situations, `node` may have already gotten closed?
-    // close it if it is still open.
-    let self_node = self.node.clone();
-    let mut c = Some(self_node);
 
-    while c.is_some()
-      && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode)
-      && c != Some(node.clone())
+    let mut needs_close = &self.node == &node;
     {
-      let parent = c.unwrap().get_parent();
-      c = match parent {
-        None => None,
-        Some(n) => Some(n),
-      };
+      // In obscure situations, `node` may have already gotten closed?
+      // close it if it is still open.
+      let self_node = self.node.get_parent().unwrap();
+      let mut c = Some(self_node);
+
+      while c.is_some()
+        && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode)
+        && c.as_ref().unwrap() != &node
+      {
+        let parent = c.unwrap().get_parent().unwrap();
+        if parent.get_type() != Some(NodeType::DocumentNode) {
+          c = Some(parent);
+        } else {
+          c = None;
+        }
+      }
+      if let Some(ref c_node) = c {
+        if c_node == &node {
+          needs_close = true;
+        }
+      }
     }
-    if c == Some(node.clone()) {
+    if needs_close {
       self.close_element(qname, state)?;
     }
-
-    Ok(node.clone())
+    Ok(node)
   }
 
   /// Insert a ProcessingInstruction of the form <?op attr=value ...?>
@@ -368,7 +382,7 @@ impl Document {
     }
     let point = self.find_insertion_point(qname, state)?;
     let newnode = self.open_element_at(point, qname, attributes, font_opt, state)?;
-    self.set_node(newnode.clone());
+    self.set_node(&newnode);
     // Underscore attributes such as _box and _font from LaTeXML-proper are now
     // bookkept in special substructs of Document Connected to the node hash.
     // Ideally should be as quick to recompute natively as it would be to set/get
@@ -809,7 +823,7 @@ impl Document {
     serialized
   }
 
-  pub fn set_node(&mut self, node: Node) {
+  pub fn set_node(&mut self, node: &Node) {
     // TODO: Does the frag_node check still make sense here?
 
     // if node.get_type() == Some(NodeType::DocumentNode) {  // Whoops
@@ -827,7 +841,7 @@ impl Document {
     //       //   "Cannot set insertion point to an empty DOCUMENT_FRAG_NODE"); }
 
     //   }
-    self.node = node;
+    self.node = node.clone();
   }
 
   // Internals
@@ -1023,7 +1037,7 @@ impl Document {
       //     if fonttest.is_some() && ! fonttest(font);
       //     $data = &{ $$ligature{code} }($data); } }
       // node.setData(data) unless $data eq $odata;
-      self.set_node(parent.clone()); // Now, effectively Closed
+      self.set_node(&parent); // Now, effectively Closed
       parent
     } else {
       self.node.clone()
@@ -1045,7 +1059,7 @@ impl Document {
       n = n.get_parent().unwrap();
     }
 
-    self.set_node(closeto);
+    self.set_node(&closeto);
     Ok(())
   }
 
@@ -1057,7 +1071,7 @@ impl Document {
       //                   text,
       //                   self.document.node_to_string(&self.node));
       // }
-      self.node.append_text(text);
+      self.node.append_text(text)?;
     } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", state)?;
@@ -1069,8 +1083,8 @@ impl Document {
           self.document.node_to_string(&point)
         );
       }
-      let added_node = point.add_child(&mut node).unwrap();
-      self.set_node(added_node);
+      point.add_child(&mut node)?;
+      self.set_node(&node);
     }
 
     Ok(self.node.clone())
@@ -1083,7 +1097,7 @@ impl Document {
     // And if there's already text???
     let mut node = self.node.clone();
     // my $font = $self->getNodeFont($node);
-    node.append_text(text);
+    node.append_text(text)?;
     // print STDERR "Trying Math Ligatures at \"$string\"\n";
     if !state.nomathparse {
       self.apply_math_ligatures(&node);
@@ -1233,15 +1247,15 @@ impl Document {
   // Set any allowed attribute on a node, decoding the prefix, if any.
   // Also records, and checks, any id attributes.
   // [xml:id and namespaced attributes are always allowed]
-  pub fn set_attribute(&mut self, node: &mut Node, key: &str, value: &str) {
+  pub fn set_attribute(&mut self, node: &mut Node, key: &str, value: &str) -> Result<()> {
     if value.is_empty() {
-      return; // skip if empty
+      return Ok(()); // skip if empty
     }
     if key == "xml:id" {
       // If it's an ID attribute
       // value = self.record_id(value, node);    // Do id book keeping
       // node.set_attribute_ns(XML_NS, "id", value); }    // and bypass all ns stuff
-      node.set_attribute("id", value);
+      node.set_attribute("id", value)?;
     } else if !key.contains(':') {
       // No colon; no namespace (the common case!)
       // Ignore attributes not allowed by the model,
@@ -1249,7 +1263,7 @@ impl Document {
       // let model = self.model;
       // let qname = model.get_node_qname(node);
       // if key.starts_with("_") || model.can_have_attribute(qname, key) {
-      node.set_attribute(key, value);
+      node.set_attribute(key, value)?;
       // }
     }
     // else {                   // Accept any namespaced attributes
@@ -1266,7 +1280,7 @@ impl Document {
     //       node.setAttributeNS($ns, "$prefix:$name" => $value); } }
     //   else {
     //     node.setAttribute($name => $value); } } }    // redundant case...
-    return;
+    Ok(())
   }
 
   //**********************************************************************
@@ -1353,7 +1367,6 @@ impl Document {
       for mut node in &mut self.pending {
         newnode.add_prev_sibling(&mut node)?; // Add saved comments, PI's
       }
-      self.record_constructed_node(&newnode);
 
       if let Some(ns) = decoded_ns {
         // Here, we're creating the initial, document element, which will hold ALL of
@@ -1366,15 +1379,15 @@ impl Document {
         let attprefix = state.model.get_document_namespace_prefix(&ns, true, true);
         if prefix.is_none() && attprefix.is_some() {
           let attr_ns_node = Namespace::new(&attprefix.unwrap(), &ns, &mut newnode).unwrap();
-          newnode.set_namespace(&attr_ns_node);
+          newnode.set_namespace(&attr_ns_node)?;
         }
         // TODO: Figure out a better way to achieve the "activate" effect in
         // XML:LibXML::Element it seems just creating the namespace without
         // setting it is equivalent ??
         let ns_node = Namespace::new("", &ns, &mut newnode).unwrap();
-        newnode.set_namespace(&ns_node);
+        newnode.set_namespace(&ns_node)?;
       }
-    // TODO: Else case
+      self.record_constructed_node(&newnode);
     } else {
       if font_opt.is_none() {
         font_opt_cloned = match self.get_node_font(&point) {
@@ -1384,7 +1397,7 @@ impl Document {
         };
       }
       // box  = self.get_node_box(point); // unless $box
-      newnode = self.open_element_internal(&mut point, decoded_ns, &tag, state);
+      newnode = self.open_element_internal(&mut point, decoded_ns, &tag, state)?;
     }
 
     if let Some(attrs) = attributes {
@@ -1394,7 +1407,7 @@ impl Document {
         if key == "font" || key == "locator" {
           continue;
         }
-        self.set_attribute(&mut newnode, key, &attrs[key]);
+        self.set_attribute(&mut newnode, key, &attrs[key])?;
       }
     }
     if let Some(font) = font_opt_cloned {
@@ -1429,7 +1442,7 @@ impl Document {
     ns_opt: Option<String>,
     tag: &str,
     state: &mut State,
-  ) -> Node
+  ) -> Result<Node>
   {
     // TODO:
     //
@@ -1487,16 +1500,16 @@ impl Document {
     };
 
     let no_ns = new_ns.is_none();
-    let mut newnode_raw = Node::new(tag, new_ns, &self.document).unwrap();
-    let mut newnode = point.add_child(&mut newnode_raw).unwrap();
+    let mut newnode = Node::new(tag, new_ns, &self.document).unwrap();
+    point.add_child(&mut newnode)?;
     if no_ns {
       // without this explicit set call, an XPath for things such as "ltx:XMath"
       // fails ???
-      newnode.set_namespace(&point.get_namespace().unwrap());
+      newnode.set_namespace(&point.get_namespace().unwrap())?;
     }
 
     self.record_constructed_node(&newnode);
-    newnode
+    Ok(newnode)
   }
 
   /// Whenever a node has been created using openElementAt,
@@ -1509,12 +1522,12 @@ impl Document {
   pub fn after_open(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Set current point to this node, just in case the afterOpen's use it.
     let savenode = self.node.clone();
-    self.set_node(node.clone());
+    self.set_node(&node);
     let node_qname = self.get_node_qname(node, state);
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterOpen, state) {
       action(self, node, state)?;
     }
-    self.set_node(savenode);
+    self.set_node(&savenode);
     Ok(())
   }
 
@@ -1525,45 +1538,48 @@ impl Document {
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterClose, state) {
       action(self, node, state)?;
     }
-    self.set_node(savenode);
+    self.set_node(&savenode);
     Ok(())
   }
 
-  pub fn trim_node_whitespace(&mut self, node: &mut Node) {
-    self.trim_node_left_whitespace(node);
-    self.trim_node_right_whitespace(node);
+  pub fn trim_node_whitespace(&mut self, node: &mut Node) -> Result<()> {
+    self.trim_node_left_whitespace(node)?;
+    self.trim_node_right_whitespace(node)?;
+    Ok(())
   }
 
-  pub fn trim_node_left_whitespace(&mut self, node: &mut Node) {
+  pub fn trim_node_left_whitespace(&mut self, node: &mut Node) -> Result<()> {
     if let Some(mut first_child) = node.get_first_child() {
       match first_child.get_type() {
         Some(NodeType::TextNode) => {
           let content = first_child.get_content();
           let trimmed_content = content.trim_left();
           if !content.is_empty() && (trimmed_content != content) {
-            first_child.set_content(trimmed_content);
+            first_child.set_content(trimmed_content)?;
           }
         },
-        Some(NodeType::ElementNode) => self.trim_node_left_whitespace(&mut first_child),
+        Some(NodeType::ElementNode) => self.trim_node_left_whitespace(&mut first_child)?,
         _ => {},
       };
     }
+    Ok(())
   }
 
-  pub fn trim_node_right_whitespace(&mut self, node: &mut Node) {
+  pub fn trim_node_right_whitespace(&mut self, node: &mut Node) -> Result<()> {
     if let Some(mut last_child) = node.get_last_child() {
       match last_child.get_type() {
         Some(NodeType::TextNode) => {
           let content = last_child.get_content();
           let trimmed_content = content.trim_right();
           if !content.is_empty() && (trimmed_content != content) {
-            last_child.set_content(trimmed_content);
+            last_child.set_content(trimmed_content)?;
           }
         },
-        Some(NodeType::ElementNode) => self.trim_node_right_whitespace(&mut last_child),
+        Some(NodeType::ElementNode) => self.trim_node_right_whitespace(&mut last_child)?,
         _ => {},
       };
     }
+    Ok(())
   }
 
   pub fn add_resource(&mut self, resource: Resource, state: &mut State) -> Result<()> {
@@ -1579,7 +1595,7 @@ impl Document {
     });
     self.insert_element("ltx:resource", vec![content_box], Some(attrib), state)?;
     if let Some(savenode) = savenode_opt {
-      self.set_node(savenode);
+      self.set_node(&savenode);
     }
     Ok(())
   }
@@ -1608,7 +1624,7 @@ impl Document {
     )?;
     self.close_element("ltx:ERROR", state)?;
     if let Some(savenode) = savenode_opt {
-      self.set_node(savenode);
+      self.set_node(&savenode);
     }
     Ok(())
   }
