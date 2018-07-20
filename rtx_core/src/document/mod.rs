@@ -43,7 +43,7 @@ impl Default for Document {
 }
 impl Document {
   pub fn new() -> Self {
-    set_node_rc_guard(90); // We will need a high treshold for Node mutability
+    set_node_rc_guard(10); // We will need a high treshold for Node mutability
     let doc_scaffold = XmlDoc::new().unwrap();
     let root = match doc_scaffold.get_root_element() {
       Some(root) => root,
@@ -243,8 +243,8 @@ impl Document {
   /// that will record the nodes that were created.
   /// $box can also be a plain string which will be inserted according to whatever
   /// font, mode, etc, are in %props.
-  pub fn absorb(&mut self, object: Digested, state: &mut State) -> Result<Vec<Node>> {
-    let mut results = Vec::new();
+  pub fn absorb(&mut self, object: Digested, state: &mut State) -> Result<()> {
+    // let mut results = Vec::new();
     let mut boxes = VecDeque::new();
     boxes.push_front(object);
 
@@ -262,11 +262,14 @@ impl Document {
         Digested::Whatsit(digested) => digested.be_absorbed(self, state)?,
       };
 
-      let newly_created: Vec<Node> = self.constructed_nodes.drain(0..).collect(); // These were created just now
-      for node in &newly_created {
-        self.record_constructed_node(&node); // record these for OUTER caller!
-      }
-      results.extend(newly_created); // but return only the most recent set.
+      // TODO: Does the results extension make ANY sense???
+      // These were created just now
+      // let newly_created: Vec<Node> = self.constructed_nodes.drain(0..).collect();
+
+      //for node in &newly_created {
+      //   self.record_constructed_node(Some(&node)); // record these for OUTER caller!
+      // }
+      // results.extend(newly_created); // but return only the most recent set.
 
       // Else, plain string in text mode.
       // elsif (!$props{isMath}) {
@@ -285,10 +288,12 @@ impl Document {
       //   let mut box_node = self.node.add_child(None, "box").unwrap();
       //   box_node.set_content(&tbox.text);
     }
-    if self.debug {
-      debug!("Document absorbed {:?} nodes", results.len());
-    }
-    Ok(results)
+    // if self.debug {
+    //   debug!("Document absorbed {:?} nodes", results.len());
+    // }
+    // Results never used, BUT leak Rc<Node> strong counts!!!
+    // Ok(results)
+    Ok(())
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -417,6 +422,7 @@ impl Document {
       debug!("Close element {:?} at {:?}", qname, self.node.get_name());
     }
     self.close_text_internal();
+    println!("Will clone 2 {:?}", self.node.get_name());
     let mut node = self.node.clone();
     let mut cant_close = Vec::new();
     while node.get_type() != Some(NodeType::DocumentNode) {
@@ -427,6 +433,7 @@ impl Document {
         break;
       }
       if !self.can_auto_close(&node) {
+        println!("Will clone {:?}", node.get_name());
         cant_close.push(node.clone());
       }
       match node.get_parent() {
@@ -471,6 +478,7 @@ impl Document {
   // Check whether it is possible to open $qname at this point,
   // possibly by autoOpen'ing & autoClosing other tags.
   pub fn is_openable(&mut self, qname: &str, state: &mut State) -> bool {
+    println!("Will clone 3 {:?}", self.node.get_name());
     let mut node_opt = Some(self.node.clone());
     while let Some(node) = node_opt {
       let node_qname = self.get_node_qname(&node, state);
@@ -493,6 +501,7 @@ impl Document {
     let mut node_opt = if self.node.get_type() == Some(NodeType::TextNode) {
       self.node.get_parent()
     } else {
+      println!("Will clone 4 {:?}", self.node.get_name());
       Some(self.node.clone())
     };
     while let Some(qname) = tags.pop_front() {
@@ -500,6 +509,7 @@ impl Document {
         if node_opt.is_none() {
           break;
         }
+        println!("Will clone 5 {:?}", self.node.get_name());
         let node = node_opt.as_ref().unwrap().clone();
 
         if node.get_type() == Some(NodeType::DocumentNode) || node.get_type() == None {
@@ -539,13 +549,16 @@ impl Document {
   pub fn close_to_node(&mut self, node: &Node, _ifopen: bool, state: &mut State) -> Result<()> {
     let mut cant_close = Vec::new();
     let mut lastopen: Option<Node> = None;
+    println!("Will clone2 {:?}", self.node.get_name());
     let mut n = self.node.clone();
     let mut n_type = n.get_type();
     // go up the tree from current node, till we find `node`
     while n_type != Some(NodeType::DocumentNode) && &n != node {
       if !self.can_auto_close(&n) {
+        println!("Will clone 6 {:?}", self.node.get_name());
         cant_close.push(n.clone());
       }
+      println!("Will clone 7 {:?}", self.node.get_name());
       lastopen = Some(n.clone());
       if let Some(p) = n.get_parent() {
         n = p;
@@ -841,6 +854,7 @@ impl Document {
     //       //   "Cannot set insertion point to an empty DOCUMENT_FRAG_NODE"); }
 
     //   }
+    println!("Will clone 8 {:?}", self.node.get_name());
     self.node = node.clone();
   }
 
@@ -880,6 +894,7 @@ impl Document {
     }
     self.open_math_text_internal(text, state)?;
     self.close_node_internal(&node, state)?; // Should be safe.
+    println!("Will clone 9 {:?}", self.node.get_name());
     Ok(self.node.clone())
   }
 
@@ -929,6 +944,7 @@ impl Document {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal(); // Close text node, if any.
       let mut bestdiff = 99;
+      println!("Will clone 10 {:?}", node.get_name());
       let mut closeto: Node = node.clone();
       let mut n: Node = node.clone();
       while n.get_type() != Some(NodeType::DocumentNode) {
@@ -939,6 +955,7 @@ impl Document {
         let d = font.distance(Some(&node_font));
         if d < bestdiff {
           bestdiff = d;
+          println!("Will clone 11 {:?}", n.get_name());
           closeto = n.clone();
           if d == 0
             || state.model.get_node_qname(&n) != FONT_ELEMENT_NAME
@@ -968,8 +985,8 @@ impl Document {
     }
 
     // Finally, insert the darned text.
-    let tnode = self.open_text_internal(text, state)?;
-    self.record_constructed_node(&tnode);
+    self.open_text_internal(text, state)?;
+    self.record_constructed_node(None);
     Ok(Some(&self.node))
   }
 
@@ -1040,6 +1057,7 @@ impl Document {
       self.set_node(&parent); // Now, effectively Closed
       parent
     } else {
+      println!("Will clone 12 {:?}", self.node.get_name());
       self.node.clone()
     }
   }
@@ -1063,7 +1081,7 @@ impl Document {
     Ok(())
   }
 
-  pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Result<Node> {
+  pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Result<()> {
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
       // if self.debug {
@@ -1086,8 +1104,7 @@ impl Document {
       point.add_child(&mut node)?;
       self.set_node(&node);
     }
-
-    Ok(self.node.clone())
+    Ok(())
   }
 
   // Question: Why do I have math ligatures handled within openMathText_internal,
@@ -1102,7 +1119,7 @@ impl Document {
     if !state.nomathparse {
       self.apply_math_ligatures(&node);
     }
-    Ok(self.node.clone())
+    Ok(node)
   }
 
   // New stategy (but inefficient): apply ligatures until one succeeds,
@@ -1124,7 +1141,11 @@ impl Document {
   /// Note that a box has been absorbed creating $node;
   /// This does book keeping so that we can return the sequence of nodes
   /// that were added by absorbing material.
-  pub fn record_constructed_node(&mut self, node: &Node) {
+  pub fn record_constructed_node(&mut self, node_opt: Option<&Node>) {
+    let node = match node_opt {
+      None => &self.node,
+      Some(ref n) => n,
+    };
     // if ((defined $LaTeXML::RECORDING_CONSTRUCTION)    // If we're recording!
     let should_push = match self.constructed_nodes.last() {
       // and this node isn't already recorded
@@ -1133,6 +1154,7 @@ impl Document {
     };
 
     if should_push {
+      println!("Will clone 14 {:?}", node.get_name());
       self.constructed_nodes.push(node.clone());
     }
   }
@@ -1154,6 +1176,7 @@ impl Document {
       },
       Some(t) => Some(t),
     };
+    println!("Will clone 15 {:?}", self.node.get_name());
     let mut node = self.node.clone();
     let node_type = node.get_type();
     if node_type != Some(NodeType::TextNode)
@@ -1187,6 +1210,7 @@ impl Document {
     // let inter;
     // If `qname` is allowed at the current point, we're done.
     if self.can_contain_qname(&cur_qname, qname, state) {
+      println!("Will clone 16 {:?}", self.node.get_name());
       return Ok(self.node.clone());
     // Else, if we can create an intermediate node that accepts $qname, we'll do
     // that.
@@ -1198,6 +1222,7 @@ impl Document {
     } else {
       // Now we're getting more desparate...
       // Check if we can auto close some nodes, and _then_ insert the `qname`.
+      println!("Will clone 17 {:?}", self.node.get_name());
       let mut node = self.node.clone();
       let mut close_to = None;
       while (node.get_type() != Some(NodeType::DocumentNode)) && self.can_auto_close(&node) {
@@ -1231,9 +1256,11 @@ impl Document {
         // self.getInsertionContext()); return self.node}; } } }
 
         // But we'll do it anyway, unless Error => Fatal.
+        println!("Will clone 18 {:?}", self.node.get_name());
         return Ok(self.node.clone());
       }
     }
+    println!("Will clone 19 {:?}", self.node.get_name());
     Ok(self.node.clone())
   }
 
@@ -1387,7 +1414,7 @@ impl Document {
         let ns_node = Namespace::new("", &ns, &mut newnode).unwrap();
         newnode.set_namespace(&ns_node)?;
       }
-      self.record_constructed_node(&newnode);
+      self.record_constructed_node(Some(&newnode));
     } else {
       if font_opt.is_none() {
         font_opt_cloned = match self.get_node_font(&point) {
@@ -1508,7 +1535,7 @@ impl Document {
       newnode.set_namespace(&point.get_namespace().unwrap())?;
     }
 
-    self.record_constructed_node(&newnode);
+    self.record_constructed_node(Some(&newnode));
     Ok(newnode)
   }
 
@@ -1521,6 +1548,7 @@ impl Document {
 
   pub fn after_open(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Set current point to this node, just in case the afterOpen's use it.
+    println!("Will clone 19 {:?}", self.node.get_name());
     let savenode = self.node.clone();
     self.set_node(&node);
     let node_qname = self.get_node_qname(node, state);
@@ -1533,6 +1561,7 @@ impl Document {
 
   pub fn after_close(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Should we set point to this node? (or to last child, or something ??
+    println!("Will clone 19 {:?}", self.node.get_name());
     let savenode = self.node.clone();
     let node_qname = self.get_node_qname(node, state);
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterClose, state) {

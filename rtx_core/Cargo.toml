@@ -8,7 +8,7 @@ name = "rtx_core"
 crate-type = ["rlib", "dylib", "staticlib"]
 
 [dependencies.libxml]
-git = "https://github.com/KWARC/rust-libxml"
+path = "../../rust-libxml"
 
 [dependencies]
 rustc-serialize = "0.3"
