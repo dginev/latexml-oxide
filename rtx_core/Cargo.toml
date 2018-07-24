@@ -7,9 +7,6 @@ authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
 name = "rtx_core"
 crate-type = ["rlib", "dylib", "staticlib"]
 
-[dependencies.libxml]
-path = "../../rust-libxml"
-
 [dependencies]
 rustc-serialize = "0.3"
 glob = "0.2"
@@ -21,3 +18,4 @@ regex = "0.2.5"
 log = "0.4"
 quote = "0.3.15"
 ansi_term = "0.9.0"
+libxml = "0.2.2"

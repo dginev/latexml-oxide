@@ -9,11 +9,7 @@ path = "rtx_core"
 [dependencies.rtx_codegen]
 path = "rtx_codegen"
 
-[dependencies.libxml]
-path = "../rust-libxml"
-
 [dependencies]
-gcc = "0.3.54"
 rustc-serialize = "0.3"
 glob = "0.2"
 rand = "0.3"
@@ -22,3 +18,4 @@ time = "0.1"
 lazy_static = "0.1"
 regex = "0.2.5"
 log = "0.4"
+libxml = "0.2.2"
