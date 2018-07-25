@@ -962,7 +962,8 @@ impl State {
     }
     let lookupname = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS)
       || ((cc == &Catcode::LETTER)
-        || (cc == &Catcode::OTHER) && self.lookup_bool("IN_MATH")
+        || (cc == &Catcode::OTHER)
+          && self.lookup_bool("IN_MATH")
           && ((self.lookup_mathcode(name).unwrap_or(0)) == 0x8000))
     {
       name.clone()
@@ -1106,11 +1107,7 @@ impl State {
       None
     };
     if let Some(local_font) = new_font {
-      self.assign_value(
-        "font",
-        ObjectStore::Font(local_font),
-        Some(Scope::Local),
-      );
+      self.assign_value("font", ObjectStore::Font(local_font), Some(Scope::Local));
     }
   }
 
@@ -1431,11 +1428,7 @@ impl State {
 
   /// Initialize various stomach parameters, preload, etc.
   pub fn initialize_stomach(&mut self) {
-    self.assign_value(
-      "MODE",
-      ObjectStore::String(s!("text")),
-      Some(Scope::Global),
-    );
+    self.assign_value("MODE", ObjectStore::String(s!("text")), Some(Scope::Global));
     self.assign_value("IN_MATH", ObjectStore::Bool(false), Some(Scope::Global));
     self.assign_value(
       "PRESERVE_NEWLINES",

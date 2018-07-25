@@ -21,12 +21,12 @@
 // use LaTeXML::Common::Font;
 // use LaTeXML::Common::XML;
 // use List::Util qw(min max);
-use std::collections::HashMap;
+use libxml::tree::{Node, NodeType};
 use rtx_core::common::error::*;
 use rtx_core::common::xml::*;
 use rtx_core::document::Document;
 use rtx_core::state::State;
-use libxml::tree::{Node, NodeType};
+use std::collections::HashMap;
 
 // our @EXPORT_OK = (qw(&Lookup &New &Absent &Apply &ApplyNary &recApply
 // &CatSymbols     &Annotate &InvisibleTimes &InvisibleComma
@@ -327,7 +327,7 @@ impl MathParser {
       // foreach my $n
       // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
       // $document->setAttribute($n, idref => $repid); } } }
-      p.set_attribute("text", &self.text_form(&result, document, state));
+      p.set_attribute("text", &self.text_form(&result, document, state))?;
     }
     Ok(())
   }
@@ -816,14 +816,14 @@ impl MathParser {
       right_arg.unbind_node();
 
       let mut new_app_node = Node::new("XMApp", None, &mut document.document).unwrap();
-      new_app_node.set_namespace(&left_arg.get_namespace().unwrap());
-      new_app_node.add_child(infix_op)?;
-      new_app_node.add_child(left_arg)?;
-      new_app_node.add_child(right_arg)?;
+      new_app_node.set_namespace(&left_arg.get_namespace().unwrap())?;
+      new_app_node.add_child(&mut infix_op)?;
+      new_app_node.add_child(&mut left_arg)?;
+      new_app_node.add_child(&mut right_arg)?;
 
-      let new_app_child = parent.add_child(new_app_node).unwrap();
+      parent.add_child(&mut new_app_node)?;
 
-      result = Some(new_app_child);
+      result = Some(new_app_node);
     }
     // If still failed, try other strategies?
 
@@ -952,9 +952,7 @@ impl MathParser {
     };
     match tag.as_str() {
       "ltx:XMApp" => {
-        let app_role = node
-          .get_attribute("role")
-          .unwrap_or(s!("missing_role"));
+        let app_role = node.get_attribute("role").unwrap_or(s!("missing_role"));
         let mut all_args = element_nodes(&node);
         info!("xmapp args : {:?}", all_args.len());
         if all_args.is_empty() {

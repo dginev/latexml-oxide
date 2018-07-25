@@ -58,11 +58,7 @@ impl DigestionAPI for Core {
       Some(Scope::Global),
     );
     for preload in preloads {
-      input_definitions(
-        preload,
-        InputDefinitionOptions::default(),
-        &mut self.state
-      )?;
+      input_definitions(preload, InputDefinitionOptions::default(), &mut self.state)?;
     }
     self.state.assign_value(
       "InitialPreloads",
@@ -106,7 +102,7 @@ impl DigestionAPI for Core {
     //   $self->withState(sub {
     //       Fatal('missing_file', $request, undef, "Can't find $mode file $request"); }); } }
     // };
-    let digestion_note = s!("Digesting {}",&name.clone().unwrap());
+    let digestion_note = s!("Digesting {}", &name.clone().unwrap());
     note_begin(&digestion_note);
     // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless
     // $options{noinitialize}; $state->assignValue(SOURCEFILE      => $request) if
@@ -203,7 +199,7 @@ impl DigestionAPI for Core {
       parser.parse_math(&mut document, state)?;
     }
     note_begin("Finalizing");
-    document.finalize(&mut state);
+    document.finalize(&mut state)?;
     note_end("Finalizing");
     Ok(document)
   }

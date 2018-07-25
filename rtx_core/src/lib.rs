@@ -1,4 +1,3 @@
-#![feature(match_default_bindings)]
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -10,7 +9,6 @@ extern crate libxml;
 extern crate quote;
 extern crate rand;
 extern crate regex;
-extern crate tempfile;
 extern crate time;
 
 #[macro_use]
@@ -23,28 +21,28 @@ pub mod token;
 pub mod tokens;
 #[macro_use]
 pub mod definition;
-pub mod stomach;
+pub mod document;
 pub mod gullet;
+pub mod list;
 pub mod mouth;
 pub mod parameter;
-pub mod tbox;
-pub mod list;
-pub mod document;
-pub mod whatsit;
 pub mod state;
+pub mod stomach;
+pub mod tbox;
 pub mod util;
+pub mod whatsit;
 
-use std::fmt;
 use common::error::*;
-use common::model::Model;
 use common::font::Font;
-use state::{ObjectStore, State, StateOptions};
-use stomach::Stomach;
-use tokens::Tokens;
-use tbox::Tbox;
-use list::List;
-use whatsit::Whatsit;
+use common::model::Model;
 use document::Document;
+use list::List;
+use state::{ObjectStore, State, StateOptions};
+use std::fmt;
+use stomach::Stomach;
+use tbox::Tbox;
+use tokens::Tokens;
+use whatsit::Whatsit;
 
 pub struct Core {
   pub state: State,
