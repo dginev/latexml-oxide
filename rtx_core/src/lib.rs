@@ -9,7 +9,6 @@ extern crate libxml;
 extern crate quote;
 extern crate rand;
 extern crate regex;
-extern crate tempfile;
 extern crate time;
 
 #[macro_use]

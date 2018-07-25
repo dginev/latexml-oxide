@@ -422,7 +422,6 @@ impl Document {
       debug!("Close element {:?} at {:?}", qname, self.node.get_name());
     }
     self.close_text_internal();
-    println!("Will clone 2 {:?}", self.node.get_name());
     let mut node = self.node.clone();
     let mut cant_close = Vec::new();
     while node.get_type() != Some(NodeType::DocumentNode) {
@@ -433,7 +432,6 @@ impl Document {
         break;
       }
       if !self.can_auto_close(&node) {
-        println!("Will clone {:?}", node.get_name());
         cant_close.push(node.clone());
       }
       match node.get_parent() {
@@ -478,7 +476,6 @@ impl Document {
   // Check whether it is possible to open $qname at this point,
   // possibly by autoOpen'ing & autoClosing other tags.
   pub fn is_openable(&mut self, qname: &str, state: &mut State) -> bool {
-    println!("Will clone 3 {:?}", self.node.get_name());
     let mut node_opt = Some(self.node.clone());
     while let Some(node) = node_opt {
       let node_qname = self.get_node_qname(&node, state);
@@ -501,7 +498,6 @@ impl Document {
     let mut node_opt = if self.node.get_type() == Some(NodeType::TextNode) {
       self.node.get_parent()
     } else {
-      println!("Will clone 4 {:?}", self.node.get_name());
       Some(self.node.clone())
     };
     while let Some(qname) = tags.pop_front() {
@@ -509,7 +505,6 @@ impl Document {
         if node_opt.is_none() {
           break;
         }
-        println!("Will clone 5 {:?}", self.node.get_name());
         let node = node_opt.as_ref().unwrap().clone();
 
         if node.get_type() == Some(NodeType::DocumentNode) || node.get_type() == None {
@@ -549,16 +544,13 @@ impl Document {
   pub fn close_to_node(&mut self, node: &Node, _ifopen: bool, state: &mut State) -> Result<()> {
     let mut cant_close = Vec::new();
     let mut lastopen: Option<Node> = None;
-    println!("Will clone2 {:?}", self.node.get_name());
     let mut n = self.node.clone();
     let mut n_type = n.get_type();
     // go up the tree from current node, till we find `node`
     while n_type != Some(NodeType::DocumentNode) && &n != node {
       if !self.can_auto_close(&n) {
-        println!("Will clone 6 {:?}", self.node.get_name());
         cant_close.push(n.clone());
       }
-      println!("Will clone 7 {:?}", self.node.get_name());
       lastopen = Some(n.clone());
       if let Some(p) = n.get_parent() {
         n = p;
@@ -854,7 +846,6 @@ impl Document {
     //       //   "Cannot set insertion point to an empty DOCUMENT_FRAG_NODE"); }
 
     //   }
-    println!("Will clone 8 {:?}", self.node.get_name());
     self.node = node.clone();
   }
 
@@ -894,7 +885,6 @@ impl Document {
     }
     self.open_math_text_internal(text, state)?;
     self.close_node_internal(&node, state)?; // Should be safe.
-    println!("Will clone 9 {:?}", self.node.get_name());
     Ok(self.node.clone())
   }
 
@@ -944,7 +934,6 @@ impl Document {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal(); // Close text node, if any.
       let mut bestdiff = 99;
-      println!("Will clone 10 {:?}", node.get_name());
       let mut closeto: Node = node.clone();
       let mut n: Node = node.clone();
       while n.get_type() != Some(NodeType::DocumentNode) {
@@ -955,7 +944,6 @@ impl Document {
         let d = font.distance(Some(&node_font));
         if d < bestdiff {
           bestdiff = d;
-          println!("Will clone 11 {:?}", n.get_name());
           closeto = n.clone();
           if d == 0
             || state.model.get_node_qname(&n) != FONT_ELEMENT_NAME
@@ -1057,7 +1045,6 @@ impl Document {
       self.set_node(&parent); // Now, effectively Closed
       parent
     } else {
-      println!("Will clone 12 {:?}", self.node.get_name());
       self.node.clone()
     }
   }
@@ -1154,7 +1141,6 @@ impl Document {
     };
 
     if should_push {
-      println!("Will clone 14 {:?}", node.get_name());
       self.constructed_nodes.push(node.clone());
     }
   }
@@ -1176,7 +1162,6 @@ impl Document {
       },
       Some(t) => Some(t),
     };
-    println!("Will clone 15 {:?}", self.node.get_name());
     let mut node = self.node.clone();
     let node_type = node.get_type();
     if node_type != Some(NodeType::TextNode)
@@ -1210,7 +1195,6 @@ impl Document {
     // let inter;
     // If `qname` is allowed at the current point, we're done.
     if self.can_contain_qname(&cur_qname, qname, state) {
-      println!("Will clone 16 {:?}", self.node.get_name());
       return Ok(self.node.clone());
     // Else, if we can create an intermediate node that accepts $qname, we'll do
     // that.
@@ -1222,7 +1206,6 @@ impl Document {
     } else {
       // Now we're getting more desparate...
       // Check if we can auto close some nodes, and _then_ insert the `qname`.
-      println!("Will clone 17 {:?}", self.node.get_name());
       let mut node = self.node.clone();
       let mut close_to = None;
       while (node.get_type() != Some(NodeType::DocumentNode)) && self.can_auto_close(&node) {
@@ -1256,11 +1239,9 @@ impl Document {
         // self.getInsertionContext()); return self.node}; } } }
 
         // But we'll do it anyway, unless Error => Fatal.
-        println!("Will clone 18 {:?}", self.node.get_name());
         return Ok(self.node.clone());
       }
     }
-    println!("Will clone 19 {:?}", self.node.get_name());
     Ok(self.node.clone())
   }
 
@@ -1548,7 +1529,6 @@ impl Document {
 
   pub fn after_open(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Set current point to this node, just in case the afterOpen's use it.
-    println!("Will clone 19 {:?}", self.node.get_name());
     let savenode = self.node.clone();
     self.set_node(&node);
     let node_qname = self.get_node_qname(node, state);
@@ -1561,7 +1541,6 @@ impl Document {
 
   pub fn after_close(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Should we set point to this node? (or to last child, or something ??
-    println!("Will clone 19 {:?}", self.node.get_name());
     let savenode = self.node.clone();
     let node_qname = self.get_node_qname(node, state);
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterClose, state) {

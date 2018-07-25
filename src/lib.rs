@@ -6,7 +6,6 @@
 #![allow(unused_variables, unused_mut, unused_macros)]
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
-#![feature(rust_2018_preview)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -21,7 +20,6 @@ extern crate glob;
 extern crate libxml;
 extern crate rand;
 extern crate regex;
-extern crate tempfile;
 extern crate time;
 
 #[macro_use]
