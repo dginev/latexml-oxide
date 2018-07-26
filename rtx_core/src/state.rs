@@ -575,11 +575,11 @@ impl State {
       self.assign_internal(
         TableName::Value,
         key,
-        Stored::VecDequeOS(VecDeque::new()),
+        Stored::VecDequeStored(VecDeque::new()),
         Some(Scope::Global),
       );
     }
-    if let Some(&mut Stored::VecDequeOS(ref mut front)) =
+    if let Some(&mut Stored::VecDequeStored(ref mut front)) =
       self.value.get_mut(key).unwrap().front_mut()
     {
       front.push_back(value);
@@ -593,11 +593,11 @@ impl State {
       self.assign_internal(
         TableName::Value,
         key,
-        Stored::VecDequeOS(VecDeque::new()),
+        Stored::VecDequeStored(VecDeque::new()),
         Some(Scope::Global),
       );
     }
-    if let Some(&mut Stored::VecDequeOS(ref mut front)) =
+    if let Some(&mut Stored::VecDequeStored(ref mut front)) =
       self.value.get_mut(key).unwrap().front_mut()
     {
       front.pop_back()
@@ -625,7 +625,7 @@ impl State {
 
   pub fn lookup_vecdeque<'lvdq>(&'lvdq self, key: &'lvdq str) -> Option<&VecDeque<Stored>> {
     match self.lookup_value(key) {
-      Some(&Stored::VecDequeOS(ref v)) => Some(v),
+      Some(&Stored::VecDequeStored(ref v)) => Some(v),
       _ => None,
     }
   }
@@ -666,11 +666,11 @@ impl State {
       self.assign_internal(
         TableName::Value,
         key,
-        Stored::VecDequeOS(VecDeque::new()),
+        Stored::VecDequeStored(VecDeque::new()),
         Some(Scope::Global),
       )
     }
-    if let Some(&mut Stored::VecDequeOS(ref mut front)) =
+    if let Some(&mut Stored::VecDequeStored(ref mut front)) =
       self.value.get_mut(key).unwrap().front_mut()
     {
       for value in values.into_iter().rev() {
@@ -685,11 +685,11 @@ impl State {
       self.assign_internal(
         TableName::Value,
         key,
-        Stored::VecDequeOS(VecDeque::new()),
+        Stored::VecDequeStored(VecDeque::new()),
         Some(Scope::Global),
       )
     }
-    if let Some(&mut Stored::VecDequeOS(ref mut front)) =
+    if let Some(&mut Stored::VecDequeStored(ref mut front)) =
       self.value.get_mut(key).unwrap().front_mut()
     {
       front.pop_front()
@@ -704,7 +704,7 @@ impl State {
     match self.value.get(map) {
       None => None,
       Some(map_vec) => match map_vec.front() {
-        Some(&Stored::HashOS(ref h)) => h.get(key),
+        Some(&Stored::HashStored(ref h)) => h.get(key),
         _ => None,
       },
     }
@@ -715,14 +715,14 @@ impl State {
       self.assign_internal(
         TableName::Value,
         map,
-        Stored::HashOS(HashMap::new()),
+        Stored::HashStored(HashMap::new()),
         Some(Scope::Global),
       );
     }
     let map_store = self.value.get_mut(map).unwrap();
     let mut stub_hash = HashMap::new(); // TODO: What is the right abstraction here? this is hacky
     let mapping = match *map_store.front_mut().unwrap() {
-      Stored::HashOS(ref mut mapping) => mapping,
+      Stored::HashStored(ref mut mapping) => mapping,
       _ => &mut stub_hash,
     };
 

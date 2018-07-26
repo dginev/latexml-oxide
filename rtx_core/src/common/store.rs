@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::rc::Rc;
 
@@ -55,8 +55,8 @@ pub enum Stored {
   VecToken(Vec<Token>),
   VecDigested(Vec<::Digested>),
   HashStr(HashMap<String, String>),
-  VecDequeOS(VecDeque<Stored>),
-  HashOS(HashMap<String, Stored>),
+  VecDequeStored(VecDeque<Stored>),
+  HashStored(HashMap<String, Stored>),
   HashTagData(HashMap<String, Vec<TagData>>),
 }
 
@@ -85,8 +85,8 @@ impl fmt::Debug for Stored {
       Number(ref number) => write!(f, "{:?}", number),
       VecToken(ref token_vec) => write!(f, "{:?}", token_vec),
       VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
-      VecDequeOS(ref vec) => write!(f, "VecDequeOS({:?})", vec),
-      HashOS(ref hos) => write!(f, "HashOS({:?})", hos),
+      VecDequeStored(ref vec) => write!(f, "VecDequeStored({:?})", vec),
+      HashStored(ref hos) => write!(f, "HashStored({:?})", hos),
       HashTagData(ref htd) => write!(f, "HashTagData({:?})", htd),
       HashStr(ref hstr) => write!(f, "HashStr({:?})", hstr),
     }

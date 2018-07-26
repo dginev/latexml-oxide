@@ -44,12 +44,12 @@ fn assign_lookup_value() {
 
   let mut hash_val = HashMap::new();
   hash_val.insert(s!("a"), Stored::Bool(true));
-  let hash_store = Stored::HashOS(hash_val);
+  let hash_store = Stored::HashStored(hash_val);
 
   state.assign_value("hashref_test", hash_store, Some(Scope::Global));
   match state.lookup_value("hashref_test") {
     None => panic!("Couldn't lookup hashref_test value after assignment"),
-    Some(&Stored::HashOS(ref received_hash)) => match received_hash.get("a") {
+    Some(&Stored::HashStored(ref received_hash)) => match received_hash.get("a") {
       None => panic!("Assigned hash was missing key!"),
       Some(&Stored::Bool(ref b)) => assert_eq!(*b, true),
       Some(_) => panic!("Assigned hash had malformed key!"),
@@ -124,10 +124,14 @@ fn assign_lookup_arrays() {
     .iter()
     .map(|x| Stored::String(x.to_string()))
     .collect::<VecDeque<Stored>>();
-  state.assign_value("SEARCHPATHS", Stored::VecDequeOS(mock_vec.clone()), None);
+  state.assign_value(
+    "SEARCHPATHS",
+    Stored::VecDequeStored(mock_vec.clone()),
+    None,
+  );
   match state.lookup_value("SEARCHPATHS") {
     None => panic!("Couldn't lookup SEARCHPATHS value after assignment"),
-    Some(&Stored::VecDequeOS(ref received_value)) => assert_eq!(
+    Some(&Stored::VecDequeStored(ref received_value)) => assert_eq!(
       received_value, &mock_vec,
       "looked up array has correct value"
     ),
@@ -181,7 +185,7 @@ fn assign_lookup_arrays() {
   assert_eq!(state.pop_value("SEARCHPATHS"), None, "pop searchpaths None");
   assert_eq!(
     state.lookup_value("SEARCHPATHS"),
-    Some(&Stored::VecDequeOS(VecDeque::new())),
+    Some(&Stored::VecDequeStored(VecDeque::new())),
     "lookup searchpaths []"
   );
 
@@ -189,13 +193,13 @@ fn assign_lookup_arrays() {
     .iter()
     .map(|x| Stored::String(x.to_string()))
     .collect::<VecDeque<Stored>>();
-  state.assign_value("SEARCHPATHS", Stored::VecDequeOS(vdq.clone()), None);
+  state.assign_value("SEARCHPATHS", Stored::VecDequeStored(vdq.clone()), None);
   let new_d = Stored::String(s!("d"));
   state.push_value("SEARCHPATHS", new_d.clone());
   vdq.push_back(new_d.clone());
   assert_eq!(
     state.lookup_value("SEARCHPATHS"),
-    Some(&Stored::VecDequeOS(vdq)),
+    Some(&Stored::VecDequeStored(vdq)),
     "push works as intended"
   );
   assert_eq!(
@@ -226,7 +230,7 @@ fn assign_lookup_arrays() {
   assert_eq!(state.pop_value("SEARCHPATHS"), None, "pop searchpaths None");
   assert_eq!(
     state.lookup_value("SEARCHPATHS"),
-    Some(&Stored::VecDequeOS(VecDeque::new())),
+    Some(&Stored::VecDequeStored(VecDeque::new())),
     "lookup searchpaths []"
   );
 }
