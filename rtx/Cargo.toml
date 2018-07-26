@@ -1,0 +1,21 @@
+[package]
+name = "rtx"
+version = "0.1.2"
+authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
+license = "CC0"
+homepage = "https://github.com/dginev/rtx"
+repository = "https://github.com/dginev/rtx"
+readme = "README.md"
+description = "A TeX to XML/HTML/ePub converster: a LaTeXML reimplementation in Rust"
+
+[dependencies]
+rustc-serialize = "0.3"
+glob = "0.2"
+rand = "0.4"
+time = "0.1"
+lazy_static = "1.0.0"
+regex = "0.2.5"
+log = "0.4"
+libxml = "0.2.2"
+rtx_codegen = {path = "../rtx_codegen"}
+rtx_core = {path = "../rtx_core"}

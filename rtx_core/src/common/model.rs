@@ -1,16 +1,16 @@
-use std::fs::File;
-use std::io::BufReader;
-use std::io::BufRead;
-use std::collections::{HashMap, HashSet};
 use regex::Regex;
+use std::collections::{HashMap, HashSet};
+use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
 
-use libxml::tree::Node;
-use libxml::tree::Document as XmlDoc;
-use common::relaxng::Relaxng;
-use document::Document;
-use common::xml::XPath;
-use util::pathname;
 use common::error::*;
+use common::relaxng::Relaxng;
+use common::xml::XPath;
+use document::Document;
+use libxml::tree::Document as XmlDoc;
+use libxml::tree::Node;
+use util::pathname;
 
 // use common::font::*;
 
@@ -79,14 +79,8 @@ impl Model {
   pub fn new() -> Self {
     let mut model = Model::default();
     // model.xpath.register_function("match-font", |x, y| {font::match_font(x,y)})
-    model.register_namespace(
-      "xml",
-      Some(s!("http://www.w3.org/XML/1998/namespace")),
-    );
-    model.register_document_namespace(
-      "xml",
-      Some(s!("http://www.w3.org/XML/1998/namespace")),
-    );
+    model.register_namespace("xml", Some(s!("http://www.w3.org/XML/1998/namespace")));
+    model.register_document_namespace("xml", Some(s!("http://www.w3.org/XML/1998/namespace")));
     model
   }
 
@@ -335,8 +329,10 @@ impl Model {
 
     if docprefix != "#default" && ns_str.is_empty() && !probe {
       self.namespace_errors += 1;
-      let ns_error =
-        s!("http://example.com/namespace{}", &self.namespace_errors.to_string());
+      let ns_error = s!(
+        "http://example.com/namespace{}",
+        &self.namespace_errors.to_string()
+      );
       self.register_document_namespace(docprefix, Some(ns_error));
       error!(
         target: &s!("malformed:{}", docprefix),
@@ -409,8 +405,10 @@ impl Model {
     };
     if ns.is_none() && !probe {
       self.namespace_errors += 1;
-      let example_namespace =
-        s!("http://example.com/namespace{}", &self.namespace_errors.to_string());
+      let example_namespace = s!(
+        "http://example.com/namespace{}",
+        &self.namespace_errors.to_string()
+      );
       ns = Some(example_namespace.clone());
       self.register_namespace(codeprefix, Some(example_namespace));
       // Error!('malformed', $codeprefix, undef,

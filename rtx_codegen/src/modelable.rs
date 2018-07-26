@@ -1,19 +1,19 @@
-use syn;
 use quote;
 use regex::Regex;
+use syn;
 use util::{get_option, get_options_from_input};
 
-use std::fs::File;
-use std::io::BufReader;
-use std::io::BufRead;
 use rtx_core::common::error::*;
-use rtx_core::util::pathname;
 use rtx_core::state::State;
+use rtx_core::util::pathname;
+use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
 
 lazy_static! {
-  static ref TAG_MODEL_LINE : Regex = Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap();
-  static ref CLASS_MODEL_LINE : Regex = Regex::new(r"^([^:=]+):=(.*?)$").unwrap();
-  static ref NAMESPACE_MODEL_LINE : Regex = Regex::new(r"^([^=]+)=(.*?)$").unwrap();
+  static ref TAG_MODEL_LINE: Regex = Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap();
+  static ref CLASS_MODEL_LINE: Regex = Regex::new(r"^([^:=]+):=(.*?)$").unwrap();
+  static ref NAMESPACE_MODEL_LINE: Regex = Regex::new(r"^([^=]+)=(.*?)$").unwrap();
 }
 
 pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
@@ -41,7 +41,10 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
 
   let path = match pathname_opt {
     Some(n) => n,
-    None => panic!("Model not found, required to load a compiled model!"),
+    None => panic!(
+      "Model {:?} not found, required to load a compiled model!",
+      name
+    ),
   };
 
   let mut operations = Vec::new();
@@ -91,10 +94,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
         fatal!(
           Codegen,
           Malformed,
-          s!(
-            " Loaded model '{}' is malformatted at \"{}\"",
-            path, line
-          )
+          s!(" Loaded model '{}' is malformatted at \"{}\"", path, line)
         );
       }
     }

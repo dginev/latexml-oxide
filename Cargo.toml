@@ -1,20 +1,6 @@
-[package]
-name = "rtx"
-version = "0.1.2"
-authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
-
-[dependencies.rtx_core]
-path = "rtx_core"
-
-[dependencies.rtx_codegen]
-path = "rtx_codegen"
-
-[dependencies]
-rustc-serialize = "0.3"
-glob = "0.2"
-rand = "0.3"
-time = "0.1"
-lazy_static = "0.1"
-regex = "0.2.5"
-log = "0.4"
-libxml = "0.2.2"
+[workspace]
+members = [
+  "rtx_core",
+  "rtx_codegen",
+  "rtx"
+]

@@ -166,7 +166,15 @@ pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> 
   // And, if installation dir specified, append it.
   if let Some(subdir) = options.installation_subdir {
     // dirs.extend((*INSTALLDIRS).iter().map(|dir| concat(dir, &subdir)));
-    dirs.push(concat(&cwd, &subdir));
+    let full_subdir = concat(&cwd, &subdir);
+    if Path::new(&full_subdir).exists() {
+      dirs.push(full_subdir);
+    } else {
+      let full_subdir_oneup = concat(&format!("{}/..", cwd), &subdir);
+      if Path::new(&full_subdir_oneup).exists() {
+        dirs.push(full_subdir_oneup);
+      }
+    }
   }
   // extract the desired extensions.
   let mut exts = Vec::new();

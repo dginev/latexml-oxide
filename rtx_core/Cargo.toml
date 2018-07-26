@@ -1,7 +1,9 @@
 [package]
 name = "rtx_core"
-version = "0.1.0"
-authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
+version = "0.1.2"
+license = "CC0"
+authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
+description = "Core conversion capabilities of rtx"
 
 [lib]
 name = "rtx_core"
@@ -10,9 +12,9 @@ crate-type = ["rlib", "dylib", "staticlib"]
 [dependencies]
 rustc-serialize = "0.3"
 glob = "0.2"
-rand = "0.3"
+rand = "0.4"
 time = "0.1"
-lazy_static = "0.1"
+lazy_static = "1.0.0"
 regex = "0.2.5"
 log = "0.4"
 quote = "0.3.15"
