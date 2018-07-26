@@ -8,6 +8,10 @@ repository = "https://github.com/dginev/rtx"
 readme = "README.md"
 description = "A TeX to XML/HTML/ePub converster: a LaTeXML reimplementation in Rust"
 
+[[bin]]
+name = "rtx"
+path = "src/main.rs"
+
 [dependencies]
 rustc-serialize = "0.3"
 glob = "0.2"
