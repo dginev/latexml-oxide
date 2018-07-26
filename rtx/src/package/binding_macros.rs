@@ -89,7 +89,7 @@ macro_rules! noreplacement {
 #[macro_export]
 macro_rules! replacement {
   ($doc:ident, $args:ident, $props:ident, $state:ident, $body:expr) => (
-    |$doc:&mut Document,$args: &Vec<Option<Digested>>,$props: &HashMap<String, ObjectStore>, $state: &mut State| -> Result<()> {
+    |$doc:&mut Document,$args: &Vec<Option<Digested>>,$props: &HashMap<String, Stored>, $state: &mut State| -> Result<()> {
     $body
     Ok(())
   })
@@ -176,8 +176,8 @@ macro_rules! v {
 macro_rules! prop_digested {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
-      Some(ObjectStore::VecDigested(vd)) => vd.clone(),
-      Some(ObjectStore::Digested(d)) => vec![(**d).clone()],
+      Some(Stored::VecDigested(vd)) => vd.clone(),
+      Some(Stored::Digested(d)) => vec![(**d).clone()],
       _ => Vec::new(),
     }
   };
@@ -187,7 +187,7 @@ macro_rules! prop_digested {
 macro_rules! prop_str {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
-      Some(&ObjectStore::String(ref id)) => id,
+      Some(&Stored::String(ref id)) => id,
       _ => "",
     }
   };
@@ -197,7 +197,7 @@ macro_rules! prop_str {
 macro_rules! prop_string {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
-      Some(&ObjectStore::String(ref id)) => id.to_string(),
+      Some(&Stored::String(ref id)) => id.to_string(),
       _ => String::new(),
     }
   };
@@ -208,7 +208,7 @@ macro_rules! prop_whatsit {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
       // TODO: Cloning here ought to be terribly inefficient and should be avoided. How?
-      Some(&ObjectStore::Digested(ref rc)) => (**rc).clone(),
+      Some(&Stored::Digested(ref rc)) => (**rc).clone(),
       _ => Digested::Whatsit(Box::new(Whatsit::default())),
     };
   };
@@ -218,7 +218,7 @@ macro_rules! prop_whatsit {
 macro_rules! prop_bool {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
-      Some(&ObjectStore::Bool(v)) => v,
+      Some(&Stored::Bool(v)) => v,
       _ => false,
     }
   };

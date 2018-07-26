@@ -35,9 +35,10 @@ pub mod whatsit;
 use common::error::*;
 use common::font::Font;
 use common::model::Model;
+use common::store::Stored;
 use document::Document;
 use list::List;
-use state::{ObjectStore, State, StateOptions};
+use state::{State, StateOptions};
 use std::fmt;
 use stomach::Stomach;
 use tbox::Tbox;
@@ -130,8 +131,8 @@ pub trait BoxOps {
   fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()>;
   fn to_string(&self) -> String;
   fn stringify(&self) -> String { s!("Vec<Tbox> for now ") }
-  fn set_property(&mut self, _key: &str, _value: ObjectStore) {}
-  fn get_property(&self, _key: &str) -> Option<&ObjectStore> {
+  fn set_property(&mut self, _key: &str, _value: Stored) {}
+  fn get_property(&self, _key: &str) -> Option<&Stored> {
     error!(target: "boxops:get_property", "Generic BoxOps::get_property should never be called!");
     None
   }
@@ -202,7 +203,7 @@ impl BoxOps for Digested {
     }
   }
 
-  fn set_property(&mut self, key: &str, value: ObjectStore) {
+  fn set_property(&mut self, key: &str, value: Stored) {
     match *self {
       Digested::TBox(ref b) => {
         error!(target: "digested:set_property", "Called set_property on Box: {:?}", b)
@@ -214,7 +215,7 @@ impl BoxOps for Digested {
     }
   }
 
-  fn get_property(&self, key: &str) -> Option<&ObjectStore> {
+  fn get_property(&self, key: &str) -> Option<&Stored> {
     match *self {
       Digested::TBox(ref b) => {
         error!(target: "digested:get_property", "Called get_property on Box: {:?}", b);

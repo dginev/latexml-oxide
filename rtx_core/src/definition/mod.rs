@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use common::error::*;
+use common::store::Stored;
 use gullet::Gullet;
 use stomach::Stomach;
 use token::Token;
@@ -17,7 +18,7 @@ use Digested;
 // use tbox::Tbox;
 use document::Document;
 use parameter::Parameters;
-use state::{ObjectStore, State};
+use state::State;
 use whatsit::Whatsit;
 
 pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Tokens>>;
@@ -25,10 +26,8 @@ pub type ConditionalClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Res
 pub type PrimitiveClosure = Rc<Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<Digested>>>;
 pub type BeforeDigestClosure = Rc<Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
 pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
-pub type ReplacementClosure = Rc<
-  Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, ObjectStore>, &mut State)
-    -> Result<()>,
->;
+pub type ReplacementClosure =
+  Rc<Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
 pub type ConstructionClosure = Rc<Fn(&mut Document, &Whatsit, &mut State)>;
 
 pub trait Definition {

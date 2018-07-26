@@ -1,22 +1,17 @@
 use regex::Regex;
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::fmt;
 use std::hash::Hash;
 use std::rc::Rc;
 
 use common::font::Font;
 use common::model::{IndirectModel, Model};
 use common::number::Number;
-use definition::conditional::Conditional;
-use definition::constructor::Constructor;
-use definition::expandable::Expandable;
-use definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
-use definition::primitive::Primitive;
+pub use common::store::Stored; // reexport for convenience
 use definition::Definition;
 use document::resource::Resource;
-use document::tag::{TagData, TagOptions};
+use document::tag::TagOptions;
 use document::Document;
-use parameter::Parameter;
+
 use token::{Catcode, Token};
 use tokens::Tokens;
 use util::pathname;
@@ -61,74 +56,6 @@ impl TableName {
       StashActive,
     ]
   }
-}
-
-#[derive(Clone, PartialEq)]
-pub enum ObjectStore {
-  // Primitives
-  Bool(bool),
-  String(String),
-  Mathcode(usize),
-  Int(i32),
-  // LaTeXML objects
-  Catcode(Catcode),
-  Token(Token),
-  Tokens(Tokens),
-  Expandable(Rc<Expandable>),
-  Conditional(Rc<Conditional>),
-  Primitive(Rc<Primitive>),
-  MathPrimitive(Rc<MathPrimitive>),
-  // MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
-  Constructor(Rc<Constructor>),
-  Digested(Rc<::Digested>),
-  Parameter(Parameter),
-  Font(Rc<Font>),
-  Number(Number),
-  // Collections
-  VecChar(Vec<char>),
-  VecString(Vec<String>),
-  VecToken(Vec<Token>),
-  VecDigested(Vec<::Digested>),
-  HashStr(HashMap<String, String>),
-  VecDequeOS(VecDeque<ObjectStore>),
-  HashOS(HashMap<String, ObjectStore>),
-  HashTagData(HashMap<String, Vec<TagData>>),
-}
-
-impl fmt::Debug for ObjectStore {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    use state::ObjectStore::*;
-    match *self {
-      String(ref s) => write!(f, "{}", s),
-      Int(ref num) => write!(f, "{}", num),
-      VecChar(ref vs) => write!(f, "{:?}", vs),
-      VecString(ref vs) => write!(f, "{:?}", vs),
-      Bool(ref b) => write!(f, "{:?}", b),
-      Token(ref t) => write!(f, "{:?}", t),
-      Tokens(ref t) => write!(f, "{:?}", t),
-      Catcode(ref cc) => write!(f, "{:?}", cc),
-      Mathcode(ref cc) => write!(f, "{:?}", cc),
-      Expandable(ref _expandable) => write!(f, "<closure for expandable definition>"),
-      Conditional(ref _conditional) => write!(f, "<closure for conditional definition>"),
-      Primitive(ref _primitive) => write!(f, "<closure for primitive definition>"),
-      MathPrimitive(ref _primitive) => write!(f, "<closure for math primitive definition>"),
-      // MathPrimitiveOptions(ref _primitive) => write!(f, "<math primitive options>"),
-      Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
-      Digested(ref digested) => write!(f, "{:?}", digested),
-      Parameter(ref parameter) => write!(f, "{:?}", parameter),
-      Font(ref font) => write!(f, "{:?}", font),
-      Number(ref number) => write!(f, "{:?}", number),
-      VecToken(ref token_vec) => write!(f, "{:?}", token_vec),
-      VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
-      VecDequeOS(ref vec) => write!(f, "VecDequeOS({:?})", vec),
-      HashOS(ref hos) => write!(f, "HashOS({:?})", hos),
-      HashTagData(ref htd) => write!(f, "HashTagData({:?})", htd),
-      HashStr(ref hstr) => write!(f, "HashStr({:?})", hstr),
-    }
-  }
-}
-impl fmt::Display for ObjectStore {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{:?}", self) }
 }
 
 /// High-level catcode profiles
@@ -262,7 +189,7 @@ impl UndoFrame {
 ///  meaning: The definition assocated with `key`, usually a control-sequence.
 ///  stash & stash_active: support named scopes
 ///      (see also activateScope & deactivateScope)
-pub type Table = HashMap<String, VecDeque<ObjectStore>>;
+pub type Table = HashMap<String, VecDeque<Stored>>;
 pub struct State {
   /// Tables
   pub value: Table,
@@ -422,7 +349,7 @@ impl State {
 
     let mut value_table = HashMap::new();
     let mut specials_vdq = VecDeque::new();
-    specials_vdq.push_front(ObjectStore::VecChar(vec![
+    specials_vdq.push_front(Stored::VecChar(vec![
       '^', '_', '@', '~', '&', '$', '#', '%', '\'',
     ]));
     value_table.insert(s!("SPECIALS"), specials_vdq);
@@ -430,7 +357,7 @@ impl State {
     let mut catcodes_typed: Table = HashMap::new();
     for (k, v) in catcodes {
       let mut vdq = VecDeque::new();
-      vdq.push_front(ObjectStore::Catcode(v));
+      vdq.push_front(Stored::Catcode(v));
       catcodes_typed.insert(k.to_string(), vdq);
     }
 
@@ -531,7 +458,7 @@ impl State {
     &mut self,
     table_name: TableName,
     key: &str,
-    value: ObjectStore,
+    value: Stored,
     scope_opt: Option<Scope>,
   )
   {
@@ -617,65 +544,65 @@ impl State {
 
   //======================================================================
 
-  pub fn lookup_value<'lv>(&'lv self, key: &'lv str) -> Option<&ObjectStore> {
+  pub fn lookup_value<'lv>(&'lv self, key: &'lv str) -> Option<&Stored> {
     match self.value.get(key) {
       None => None,
       Some(vvec) => vvec.front(),
     }
   }
 
-  pub fn lookup_value_mut<'lv>(&'lv mut self, key: &'lv str) -> Option<&mut ObjectStore> {
+  pub fn lookup_value_mut<'lv>(&'lv mut self, key: &'lv str) -> Option<&mut Stored> {
     match self.value.get_mut(key) {
       None => None,
       Some(vvec) => vvec.front_mut(),
     }
   }
 
-  pub fn remove_value<'lv>(&'lv mut self, key: &'lv str) -> Option<ObjectStore> {
+  pub fn remove_value<'lv>(&'lv mut self, key: &'lv str) -> Option<Stored> {
     match self.value.get_mut(key) {
       None => None,
       Some(vvec) => vvec.pop_front(),
     }
   }
 
-  pub fn assign_value<'av>(&'av mut self, key: &'av str, value: ObjectStore, scope: Option<Scope>) {
+  pub fn assign_value<'av>(&'av mut self, key: &'av str, value: Stored, scope: Option<Scope>) {
     self.assign_internal(TableName::Value, key, value, scope);
   }
 
   // manage a (global) list of values
-  pub fn push_value(&mut self, key: &str, value: ObjectStore) {
+  pub fn push_value(&mut self, key: &str, value: Stored) {
     if self.value.get(key).is_none() {
       self.assign_internal(
         TableName::Value,
         key,
-        ObjectStore::VecDequeOS(VecDeque::new()),
+        Stored::VecDequeOS(VecDeque::new()),
         Some(Scope::Global),
       );
     }
-    if let Some(&mut ObjectStore::VecDequeOS(ref mut front)) =
+    if let Some(&mut Stored::VecDequeOS(ref mut front)) =
       self.value.get_mut(key).unwrap().front_mut()
     {
       front.push_back(value);
     } else {
-      error!(target: "state:objectstore", "BUG: Tried to push_value into a non-vecdeque value key!");
+      error!(target: "state:Stored", "BUG: Tried to push_value into a non-vecdeque value key!");
     }
   }
 
-  pub fn pop_value(&mut self, key: &str) -> Option<ObjectStore> {
+  pub fn pop_value(&mut self, key: &str) -> Option<Stored> {
     if self.value.get(key).is_none() {
       self.assign_internal(
         TableName::Value,
         key,
-        ObjectStore::VecDequeOS(VecDeque::new()),
+        Stored::VecDequeOS(VecDeque::new()),
         Some(Scope::Global),
       );
     }
-    if let Some(&mut ObjectStore::VecDequeOS(ref mut front)) =
+    if let Some(&mut Stored::VecDequeOS(ref mut front)) =
       self.value.get_mut(key).unwrap().front_mut()
     {
       front.pop_back()
     } else {
-      error!(target: "state:objectstore", "BUG: Tried to pop_value from a non-vecdeque value key!");
+      error!(target: "state:Stored", "BUG: Tried to pop_value from a non-vecdeque value key!");
       None
     }
   }
@@ -683,7 +610,7 @@ impl State {
   /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
   pub fn lookup_bool(&self, key: &str) -> bool {
     match self.lookup_value(key) {
-      Some(&ObjectStore::Bool(ref v)) => *v,
+      Some(&Stored::Bool(ref v)) => *v,
       Some(_) => true,
       None => false,
     }
@@ -691,28 +618,28 @@ impl State {
 
   pub fn lookup_string(&self, key: &str) -> String {
     match self.lookup_value(key) {
-      Some(&ObjectStore::String(ref v)) => v.to_owned(),
+      Some(&Stored::String(ref v)) => v.to_owned(),
       _ => String::new(),
     }
   }
 
-  pub fn lookup_vecdeque<'lvdq>(&'lvdq self, key: &'lvdq str) -> Option<&VecDeque<ObjectStore>> {
+  pub fn lookup_vecdeque<'lvdq>(&'lvdq self, key: &'lvdq str) -> Option<&VecDeque<Stored>> {
     match self.lookup_value(key) {
-      Some(&ObjectStore::VecDequeOS(ref v)) => Some(v),
+      Some(&Stored::VecDequeOS(ref v)) => Some(v),
       _ => None,
     }
   }
 
   pub fn lookup_font(&self) -> Option<Rc<Font>> {
     match self.lookup_value("font") {
-      Some(&ObjectStore::Font(ref f)) => Some(f.clone()), /* TODO: is this clone heavy/slow?
+      Some(&Stored::Font(ref f)) => Some(f.clone()), /* TODO: is this clone heavy/slow?
                                                              * We can refactor into refs */
       _ => None,
     }
   }
   pub fn lookup_mathfont(&self) -> Option<Rc<Font>> {
     match self.lookup_value("mathfont") {
-      Some(&ObjectStore::Font(ref f)) => Some(f.clone()), /* TODO: is this clone heavy/slow?
+      Some(&Stored::Font(ref f)) => Some(f.clone()), /* TODO: is this clone heavy/slow?
                                                              * We can refactor into refs */
       _ => None,
     }
@@ -720,7 +647,7 @@ impl State {
 
   pub fn lookup_number(&self, key: &str) -> Option<Number> {
     match self.lookup_value(key) {
-      Some(&ObjectStore::Number(ref n)) => Some(n.clone()), /* TODO: is this clone heavy/slow?
+      Some(&Stored::Number(ref n)) => Some(n.clone()), /* TODO: is this clone heavy/slow?
                                                              * We can refactor into refs */
       _ => None,
     }
@@ -728,22 +655,22 @@ impl State {
 
   pub fn lookup_tokens(&self, key: &str) -> Option<Tokens> {
     match self.lookup_value(key) {
-      Some(&ObjectStore::Tokens(ref ts)) => Some(ts.clone()), /* TODO: is this clone heavy/slow?
+      Some(&Stored::Tokens(ref ts)) => Some(ts.clone()), /* TODO: is this clone heavy/slow?
                                                              * We can refactor into refs */
       _ => None,
     }
   }
 
-  pub fn unshift_value(&mut self, key: &str, values: Vec<ObjectStore>) {
+  pub fn unshift_value(&mut self, key: &str, values: Vec<Stored>) {
     if self.value.get(key).is_none() {
       self.assign_internal(
         TableName::Value,
         key,
-        ObjectStore::VecDequeOS(VecDeque::new()),
+        Stored::VecDequeOS(VecDeque::new()),
         Some(Scope::Global),
       )
     }
-    if let Some(&mut ObjectStore::VecDequeOS(ref mut front)) =
+    if let Some(&mut Stored::VecDequeOS(ref mut front)) =
       self.value.get_mut(key).unwrap().front_mut()
     {
       for value in values.into_iter().rev() {
@@ -753,49 +680,49 @@ impl State {
     }
   }
 
-  pub fn shift_value(&mut self, key: &str) -> Option<ObjectStore> {
+  pub fn shift_value(&mut self, key: &str) -> Option<Stored> {
     if self.value.get(key).is_none() {
       self.assign_internal(
         TableName::Value,
         key,
-        ObjectStore::VecDequeOS(VecDeque::new()),
+        Stored::VecDequeOS(VecDeque::new()),
         Some(Scope::Global),
       )
     }
-    if let Some(&mut ObjectStore::VecDequeOS(ref mut front)) =
+    if let Some(&mut Stored::VecDequeOS(ref mut front)) =
       self.value.get_mut(key).unwrap().front_mut()
     {
       front.pop_front()
     } else {
-      error!(target: "state:objectstore", "BUG: Tried to shift_value from a non-vecdeque value key!");
+      error!(target: "state:Stored", "BUG: Tried to shift_value from a non-vecdeque value key!");
       None
     }
   }
 
   /// manage a (global) hash of values
-  pub fn lookup_mapping(&self, map: &str, key: &str) -> Option<&ObjectStore> {
+  pub fn lookup_mapping(&self, map: &str, key: &str) -> Option<&Stored> {
     match self.value.get(map) {
       None => None,
       Some(map_vec) => match map_vec.front() {
-        Some(&ObjectStore::HashOS(ref h)) => h.get(key),
+        Some(&Stored::HashOS(ref h)) => h.get(key),
         _ => None,
       },
     }
   }
 
-  pub fn assign_mapping(&mut self, map: &str, key: &str, value: Option<ObjectStore>) {
+  pub fn assign_mapping(&mut self, map: &str, key: &str, value: Option<Stored>) {
     if self.value.get(map).is_none() || self.value[map].is_empty() {
       self.assign_internal(
         TableName::Value,
         map,
-        ObjectStore::HashOS(HashMap::new()),
+        Stored::HashOS(HashMap::new()),
         Some(Scope::Global),
       );
     }
     let map_store = self.value.get_mut(map).unwrap();
     let mut stub_hash = HashMap::new(); // TODO: What is the right abstraction here? this is hacky
     let mapping = match *map_store.front_mut().unwrap() {
-      ObjectStore::HashOS(ref mut mapping) => mapping,
+      Stored::HashOS(ref mut mapping) => mapping,
       _ => &mut stub_hash,
     };
 
@@ -838,7 +765,7 @@ impl State {
     }
   }
 
-  pub fn value_in_frame(&self, key: &str, frame_opt: Option<usize>) -> Option<&ObjectStore> {
+  pub fn value_in_frame(&self, key: &str, frame_opt: Option<usize>) -> Option<&Stored> {
     let frame = match frame_opt {
       None => 0,
       Some(n) => n,
@@ -867,7 +794,7 @@ impl State {
     match self.catcode.get(&c.to_string()) {
       None => None,
       Some(cvec) => match cvec.front() {
-        Some(&ObjectStore::Catcode(ref cc)) => Some(*cc),
+        Some(&Stored::Catcode(ref cc)) => Some(*cc),
         _ => None,
       },
     }
@@ -877,7 +804,7 @@ impl State {
     self.assign_internal(
       TableName::Catcode,
       &key.to_string(),
-      ObjectStore::Catcode(value),
+      Stored::Catcode(value),
       scope,
     );
   }
@@ -885,7 +812,7 @@ impl State {
   pub fn lookup_mathcode(&mut self, key: &str) -> Option<usize> {
     match self.mathcode.get(&key.to_string()) {
       Some(c) => match c.front() {
-        Some(&ObjectStore::Mathcode(ref codeval)) => Some(*codeval),
+        Some(&Stored::Mathcode(ref codeval)) => Some(*codeval),
         _ => None,
       },
       None => None,
@@ -896,7 +823,7 @@ impl State {
     self.assign_internal(
       TableName::Mathcode,
       &key.to_string(),
-      ObjectStore::Mathcode(value),
+      Stored::Mathcode(value),
       scope,
     );
   }
@@ -904,12 +831,12 @@ impl State {
   /// Get the `Meaning' of a token.  For active control sequence's
   /// this may give the definition object (if defined) or another token (if \let) or undef
   /// Any other token is returned as is.
-  pub fn lookup_meaning<'t, 'm>(&'m mut self, token: &'t Token) -> Option<&ObjectStore> {
+  pub fn lookup_meaning<'t, 'm>(&'m mut self, token: &'t Token) -> Option<&Stored> {
     if token.code.is_active_or_cs() && !token.text.is_empty() {
 
     } else {
       let mut token_defs = VecDeque::new();
-      token_defs.push_front(ObjectStore::Token(token.clone()));
+      token_defs.push_front(Stored::Token(token.clone()));
       self.meaning.insert(token.text.clone(), token_defs);
     }
     match self.meaning.get(&token.text) {
@@ -920,7 +847,7 @@ impl State {
 
   /// $meaning should be a definition (for defining active control sequences)
   /// or another token, for \let
-  pub fn assign_meaning(&mut self, token: &Token, meaning: ObjectStore, scope: Option<Scope>) {
+  pub fn assign_meaning(&mut self, token: &Token, meaning: Stored, scope: Option<Scope>) {
     self.assign_internal(TableName::Meaning, &token.get_cs_name(), meaning, scope);
   }
 
@@ -928,7 +855,7 @@ impl State {
   /// Since we're not doing digestion here, we don't need to handle mathactive,
   /// nor cs let to executable tokens
   /// This returns a definition object, or undef
-  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<ObjectStore> {
+  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Stored> {
     let cc = &key.code;
     let name = &key.text;
     let lookupname: String = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) {
@@ -950,11 +877,7 @@ impl State {
     }
   }
 
-  pub fn lookup_digestable_definition<'def>(
-    &'def mut self,
-    token: &'def Token,
-  ) -> Option<ObjectStore>
-  {
+  pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<Stored> {
     let cc = &token.code;
     let name = &token.text;
     if name.is_empty() {
@@ -984,7 +907,7 @@ impl State {
       // $defn = $$entry[0]; }
       Some(defn.front().unwrap().clone())
     } else {
-      Some(ObjectStore::Token(token.clone()))
+      Some(Stored::Token(token.clone()))
     }
   }
 
@@ -997,17 +920,17 @@ impl State {
   }
 
   /// And a shorthand for installing definitions
-  pub fn install_definition(&mut self, definition: ObjectStore, scope: Option<Scope>) {
+  pub fn install_definition(&mut self, definition: Stored, scope: Option<Scope>) {
     // Locked definitions!!! (or should this test be in assignMeaning?)
     // Ignore attempts to (re)define $cs from tex sources
     //  my $cs = $definition->getCS->getCSName;
     let token = match definition {
-      ObjectStore::Expandable(ref defn) => defn.get_cs(),
-      ObjectStore::Conditional(ref defn) => defn.get_cs(),
-      ObjectStore::Constructor(ref defn) => defn.get_cs(),
-      ObjectStore::Primitive(ref defn) => defn.get_cs(),
-      ObjectStore::MathPrimitive(ref defn) => defn.get_cs(),
-      ObjectStore::Token(ref token) => token.clone(),
+      Stored::Expandable(ref defn) => defn.get_cs(),
+      Stored::Conditional(ref defn) => defn.get_cs(),
+      Stored::Constructor(ref defn) => defn.get_cs(),
+      Stored::Primitive(ref defn) => defn.get_cs(),
+      Stored::MathPrimitive(ref defn) => defn.get_cs(),
+      Stored::Token(ref token) => token.clone(),
       _ => T_LETTER!(s!("_wrong_argument_for_install_definition")),
     };
     let cs = token.get_cs_name();
@@ -1016,15 +939,15 @@ impl State {
     let cs_locked = cs.clone() + ":locked";
     // TODO, .is_none() should be a real false check
     let is_cs_locked = match self.lookup_value(&cs_locked) {
-      Some(&ObjectStore::Bool(ref x)) => *x,
+      Some(&Stored::Bool(ref x)) => *x,
       _ => false,
     };
     let is_state_unlocked: bool = match self.lookup_value("UNLOCKED") {
-      Some(&ObjectStore::Bool(ref x)) => *x,
+      Some(&Stored::Bool(ref x)) => *x,
       _ => false,
     };
     if is_cs_locked && !is_state_unlocked {
-      if let Some(&ObjectStore::String(ref s)) = self.lookup_value("SOURCEFILE") {
+      if let Some(&Stored::String(ref s)) = self.lookup_value("SOURCEFILE") {
         // report if the redefinition seems to come from document source
         if ((s == "Anonymous String") || TEX_OR_BIB_EXT_RE.is_match(s))
           && (!s.ends_with(CODE_TEX_EXT))
@@ -1077,8 +1000,8 @@ impl State {
   pub fn begin_semiverbatim(&mut self, extraspecials: Option<Vec<Token>>) {
     // Is this a good/safe enough shorthand, or should we really be doing beginMode?
     self.push_frame();
-    self.assign_value("MODE", ObjectStore::String(s!("text")), None);
-    self.assign_value("IN_MATH", ObjectStore::Bool(false), None);
+    self.assign_value("MODE", Stored::String(s!("text")), None);
+    self.assign_value("IN_MATH", Stored::Bool(false), None);
     let mut all_specials: Vec<char> = Vec::new();
     if let Some(extra) = extraspecials {
       for special in extra {
@@ -1086,7 +1009,7 @@ impl State {
         all_specials.push(special_char);
       }
     }
-    if let Some(&ObjectStore::VecChar(ref specials_store)) = self.lookup_value("SPECIALS") {
+    if let Some(&Stored::VecChar(ref specials_store)) = self.lookup_value("SPECIALS") {
       for special_char in specials_store {
         all_specials.push(*special_char);
       }
@@ -1098,7 +1021,7 @@ impl State {
     // TODO:
     // self.assign_mathcode('\'' => 0x8000, Some(Scope::Local));
     // try to stay as ASCII as possible
-    let new_font = if let Some(&ObjectStore::Font(ref current_font)) = self.lookup_value("font") {
+    let new_font = if let Some(&Stored::Font(ref current_font)) = self.lookup_value("font") {
       Some(current_font.merge(Font {
         encoding: Some(s!("ASCII")),
         ..Font::default()
@@ -1109,7 +1032,7 @@ impl State {
     if let Some(local_font) = new_font {
       self.assign_value(
         "font",
-        ObjectStore::Font(Rc::new(local_font)),
+        Stored::Font(Rc::new(local_font)),
         Some(Scope::Local),
       );
     }
@@ -1432,37 +1355,33 @@ impl State {
 
   /// Initialize various stomach parameters, preload, etc.
   pub fn initialize_stomach(&mut self) {
-    self.assign_value("MODE", ObjectStore::String(s!("text")), Some(Scope::Global));
-    self.assign_value("IN_MATH", ObjectStore::Bool(false), Some(Scope::Global));
-    self.assign_value(
-      "PRESERVE_NEWLINES",
-      ObjectStore::Bool(true),
-      Some(Scope::Global),
-    );
+    self.assign_value("MODE", Stored::String(s!("text")), Some(Scope::Global));
+    self.assign_value("IN_MATH", Stored::Bool(false), Some(Scope::Global));
+    self.assign_value("PRESERVE_NEWLINES", Stored::Bool(true), Some(Scope::Global));
     self.assign_value(
       "afterGroup",
-      ObjectStore::VecDigested(Vec::new()),
+      Stored::VecDigested(Vec::new()),
       Some(Scope::Global),
     );
     self.assign_value(
       "afterAssignment",
-      ObjectStore::VecDigested(Vec::new()),
+      Stored::VecDigested(Vec::new()),
       Some(Scope::Global),
     ); // undef ???
     self.assign_value(
       "groupInitiator",
-      ObjectStore::String(s!("Initialization")),
+      Stored::String(s!("Initialization")),
       Some(Scope::Global),
     );
     // Setup default fonts.
     self.assign_value(
       "font",
-      ObjectStore::Font(Rc::new(Font::text_default())),
+      Stored::Font(Rc::new(Font::text_default())),
       Some(Scope::Global),
     );
     self.assign_value(
       "mathfont",
-      ObjectStore::Font(Rc::new(Font::math_default())),
+      Stored::Font(Rc::new(Font::math_default())),
       Some(Scope::Global),
     );
   }
@@ -1473,15 +1392,14 @@ impl State {
     // If strings are given, assume CS tokens (most common case)
     let meaning = match self.lookup_meaning(&token2) {
       Some(m) => m.clone(),
-      None => ObjectStore::Token(token2),
+      None => Stored::Token(token2),
     };
     self.assign_meaning(token1, meaning, scope);
     // TODO: AfterAssignment!();
   }
   /// `XEquals` check for two token arguments
   pub fn x_equals(&mut self, token1: &Token, token2: &Token) -> bool {
-    let def1_opt: Option<ObjectStore>;
-    let def2_opt: Option<ObjectStore>;
+    let def1_opt: Option<Stored>;
     {
       // mutability guard
       def1_opt = match self.lookup_meaning(token1) {

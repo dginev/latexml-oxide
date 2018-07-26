@@ -3,8 +3,9 @@ use std::rc::Rc;
 
 use common::error::*;
 use common::font::Font;
+use common::store::Stored;
 use document::Document;
-use state::{ObjectStore, State};
+use state::State;
 use tokens::Tokens;
 use {BoxOps, Digested};
 
@@ -64,7 +65,7 @@ impl Tbox {
       let mut box_props = properties;
       box_props.insert(s!("mode"), s!("math"));
       if !text.is_empty() {
-        if let Some(&ObjectStore::HashStr(ref attr)) =
+        if let Some(&Stored::HashStr(ref attr)) =
           state.lookup_value(&s!("math_token_attributes_{}", text))
         {
           for (key, value) in attr.iter() {

@@ -3,13 +3,14 @@ use std::rc::Rc;
 
 use common::error::*;
 use common::font::Font;
+use common::store::Stored;
 use definition::constructor::{Constructor, ConstructorOptions};
 use definition::expandable::Expandable;
 use definition::Definition;
 use gullet::Gullet;
 use list::List;
 use mouth::Mouth;
-use state::{ObjectStore, Scope, State};
+use state::{Scope, State};
 use tbox::*;
 use token::{Catcode, Token};
 use tokens::Tokens;
@@ -88,7 +89,7 @@ impl Stomach {
         {
           let ismath = state.lookup_value("IN_MATH");
           mode = match ismath {
-            Some(&ObjectStore::Bool(true)) => TexMode::Math,
+            Some(&Stored::Bool(true)) => TexMode::Math,
             _ => TexMode::Text,
           };
         }
@@ -158,7 +159,7 @@ impl Stomach {
       state.current_token = Some(token.clone());
       result = Vec::new();
 
-      let looked_up_definition: Option<ObjectStore> = state.lookup_digestable_definition(&token);
+      let looked_up_definition: Option<Stored> = state.lookup_digestable_definition(&token);
       match looked_up_definition {
         None => {
           // Supposedly executable token, but no definition!
@@ -171,7 +172,7 @@ impl Stomach {
           // constrains us here, we need separate match arms for each
           // distinctly typed enum case.
           match store {
-            ObjectStore::Token(meaning) => {
+            Stored::Token(meaning) => {
               // Common case
               let cc = meaning.get_catcode();
               if cc == Catcode::CS {
@@ -187,7 +188,7 @@ impl Stomach {
                 result = self.invoke_token_simple(meaning, state);
               }
             },
-            ObjectStore::Expandable(meaning) => {
+            Stored::Expandable(meaning) => {
               // A math-active character will (typically) be a macro,
               // but it isn't expanded in the gullet, but later when digesting, in math mode (? I
               // think)
@@ -197,28 +198,29 @@ impl Stomach {
               self.token_stack.pop();
               continue;
             },
-            ObjectStore::Conditional(meaning) => {
+            Stored::Conditional(meaning) => {
               // Conditionals are "expandable", use the regular invoke.
               let invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
               self.gullet.unread(invoked_meaning);
               maybe_token = self.gullet.read_x_token(true, false, state)?; // replace the token by it's expansion!!!
               self.token_stack.pop();
+              continue;
             },
-            ObjectStore::Constructor(meaning) => {
+            Stored::Constructor(meaning) => {
               // Otherwise, a normal primitive or constructor
               result = meaning.invoke_primitive(self, meaning.clone(), state)?;
               if !meaning.is_prefix() {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
             },
-            ObjectStore::Primitive(meaning) => {
+            Stored::Primitive(meaning) => {
               // Otherwise, a normal primitive or constructor
               result = meaning.invoke_primitive(self, meaning.clone(), state)?;
               if !meaning.is_prefix() {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
             },
-            ObjectStore::MathPrimitive(meaning) => {
+            Stored::MathPrimitive(meaning) => {
               // Copy of regular Primitive
               // Otherwise, a normal primitive or constructor
               result = meaning.invoke_primitive(self, meaning.clone(), state)?;
@@ -259,7 +261,7 @@ impl Stomach {
       // install stub definitions for new conditional
       let cs_clone = cs.clone();
       state.install_definition(
-        ObjectStore::Expandable(Rc::new(Expandable {
+        Stored::Expandable(Rc::new(Expandable {
           cs: T_CS!(s!("\\{}true", name)),
           paramlist: None,
           expansion: Some(Rc::new(move |_gullet, _args, _state| {
@@ -270,7 +272,7 @@ impl Stomach {
         None,
       );
       state.install_definition(
-        ObjectStore::Expandable(Rc::new(Expandable {
+        Stored::Expandable(Rc::new(Expandable {
           cs: T_CS!(s!("\\{}false", name)),
           paramlist: None,
           expansion: Some(Rc::new(move |_gullet, _args, _state| {
@@ -292,7 +294,7 @@ impl Stomach {
       );
       let closure_cs = cs.clone();
       state.install_definition(
-        ObjectStore::Constructor(Rc::new(Constructor {
+        Stored::Constructor(Rc::new(Constructor {
           cs: token.clone(),
           paramlist: None,
           replacement: Some(Rc::new(move |document, _args, _props, state| {
@@ -440,27 +442,23 @@ impl Stomach {
     state.push_frame();
     state.assign_value(
       "beforeAfterGroup",
-      ObjectStore::VecDigested(Vec::new()),
+      Stored::VecDigested(Vec::new()),
       Some(Scope::Local),
     ); // ALWAYS bind this!
     state.assign_value(
       "afterGroup",
-      ObjectStore::VecDigested(Vec::new()),
+      Stored::VecDigested(Vec::new()),
       Some(Scope::Local),
     ); // ALWAYS bind this!
     state.assign_value(
       "afterAssignment",
-      ObjectStore::VecDigested(Vec::new()),
+      Stored::VecDigested(Vec::new()),
       Some(Scope::Local),
     ); // ALWAYS bind this!
-    state.assign_value(
-      "groupNonBoxing",
-      ObjectStore::Bool(nobox),
-      Some(Scope::Local),
-    ); // ALWAYS bind this!
+    state.assign_value("groupNonBoxing", Stored::Bool(nobox), Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value(
       "groupInitiator",
-      ObjectStore::Token(current_token.clone()),
+      Stored::Token(current_token.clone()),
       Some(Scope::Local),
     );
     // state.assign_value("groupInitiatorLocator" , self.getLocator,       Scope::Local);
@@ -470,7 +468,7 @@ impl Stomach {
   }
 
   pub fn pop_stack_frame(&mut self, nobox: bool, state: &mut State) -> Result<()> {
-    if let Some(ObjectStore::VecToken(beforeafter)) = state.remove_value("beforeAfterGroup") {
+    if let Some(Stored::VecToken(beforeafter)) = state.remove_value("beforeAfterGroup") {
       if !beforeafter.is_empty() {
         let _result = beforeafter
           .into_iter()
@@ -486,7 +484,7 @@ impl Stomach {
     if !nobox {
       self.boxing.pop(); // For begingroup/endgroup
     }
-    if let Some(ObjectStore::VecToken(after)) = after {
+    if let Some(Stored::VecToken(after)) = after {
       if !after.is_empty() {
         self.gullet.unread(Tokens::new(after));
       }
@@ -547,23 +545,15 @@ impl Stomach {
     let prevmode = state.lookup_string("MODE");
     let ismath = mode.ends_with("math");
     let isdisplay = mode.starts_with("display");
-    state.assign_value(
-      "MODE",
-      ObjectStore::String(mode.to_string()),
-      Some(Scope::Local),
-    );
-    state.assign_value("IN_MATH", ObjectStore::Bool(ismath), Some(Scope::Local));
+    state.assign_value("MODE", Stored::String(mode.to_string()), Some(Scope::Local));
+    state.assign_value("IN_MATH", Stored::Bool(ismath), Some(Scope::Local));
     let curfont = state.lookup_font();
     if let Some(cf) = curfont {
       if mode == prevmode {
       } else if ismath {
         // When entering math mode, we set the font to the default math font,
         // and save the text font for any embedded text.
-        state.assign_value(
-          "savedfont",
-          ObjectStore::Font(cf.clone()),
-          Some(Scope::Local),
-        );
+        state.assign_value("savedfont", Stored::Font(cf.clone()), Some(Scope::Local));
         let new_font = state.lookup_mathfont().unwrap().merge(Font {
           color: cf.color.clone(),
           bg: cf.bg.clone(),
@@ -575,27 +565,23 @@ impl Stomach {
           },
           ..Font::default()
         });
-        state.assign_value(
-          "font",
-          ObjectStore::Font(Rc::new(new_font)),
-          Some(Scope::Local),
-        );
+        state.assign_value("font", Stored::Font(Rc::new(new_font)), Some(Scope::Local));
       } else {
         // When entering text mode, we should set the font to the text font in use before the math
         // but inherit color and size
-        let new_font =
-          if let Some(&ObjectStore::Font(ref saved_font)) = state.lookup_value("savedfont") {
-            Some(saved_font.merge(Font {
-              color: cf.color.clone(),
-              bg: cf.bg.clone(),
-              size: cf.size.clone(),
-              ..Font::default()
-            }))
-          } else {
-            None
-          };
+        let new_font = if let Some(&Stored::Font(ref saved_font)) = state.lookup_value("savedfont")
+        {
+          Some(saved_font.merge(Font {
+            color: cf.color.clone(),
+            bg: cf.bg.clone(),
+            size: cf.size.clone(),
+            ..Font::default()
+          }))
+        } else {
+          None
+        };
         if let Some(nf) = new_font {
-          state.assign_value("font", ObjectStore::Font(Rc::new(nf)), Some(Scope::Local));
+          state.assign_value("font", Stored::Font(Rc::new(nf)), Some(Scope::Local));
         }
       }
     }

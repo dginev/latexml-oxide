@@ -18,7 +18,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   AssignValue!(
     "frontmatter",
-    ObjectStore::HashTagData(HashMap::new()),
+    Stored::HashTagData(HashMap::new()),
     Some(Scope::Global)
   );
 
@@ -40,7 +40,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
       // Digest this as if we're already in the document body!
       let inpreamble = state.lookup_bool("inPreamble");
-      state.assign_value("inPreamble", ObjectStore::Bool(false), None);
+      state.assign_value("inPreamble", Stored::Bool(false), None);
       {
         // Be careful since the contents may also want to add frontmatter
         // (which should be inside or after this one!)
@@ -58,7 +58,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         let digested_tokens = stomach.digest(Tokens::new(wrapped_tokens), state)?;
         let entry = (tag.to_string(), None, digested_tokens);
         let frontmatter = match state.lookup_value_mut("frontmatter") {
-          Some(&mut ObjectStore::HashTagData(ref mut frnt)) => frnt,
+          Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
           _ => fatal!(
             TexPool,
             Expected,
@@ -68,7 +68,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         let f_entry = frontmatter.entry(tag.to_string()).or_insert(Vec::new());
         f_entry.push(entry);
       }
-      state.assign_value("inPreamble", ObjectStore::Bool(inpreamble), None);
+      state.assign_value("inPreamble", Stored::Bool(inpreamble), None);
     })
   );
 
@@ -119,7 +119,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       .collect();
 
     let mut frontmatter = match state.remove_value("frontmatter") {
-      Some(ObjectStore::HashTagData(frnt)) => frnt,
+      Some(Stored::HashTagData(frnt)) => frnt,
       _ => fatal!(
         TexPool,
         Expected,
@@ -128,7 +128,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     };
     state.assign_value(
       "frontmatter",
-      ObjectStore::HashTagData(HashMap::new()),
+      Stored::HashTagData(HashMap::new()),
       Some(Scope::Global),
     );
     let state_keys: HashSet<String> = frontmatter.keys().cloned().collect();

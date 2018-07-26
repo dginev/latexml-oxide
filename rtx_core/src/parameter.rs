@@ -3,11 +3,12 @@ use regex::Regex;
 use std::rc::Rc;
 
 use common::error::*;
+use common::store::Stored;
 use definition::constructor::Constructor;
 use definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use gullet::Gullet;
 use mouth::Mouth;
-use state::{ObjectStore, State};
+use state::State;
 use stomach::Stomach;
 use token::Token;
 use tokens::Tokens;
@@ -74,7 +75,7 @@ impl Parameter {
     let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
     let mut descriptor: Option<Parameter>;
     match looked_up_mapping {
-      Some(&ObjectStore::Parameter(ref d_lookup)) => {
+      Some(&Stored::Parameter(ref d_lookup)) => {
         descriptor = Some((*d_lookup).clone());
       },
       _ => {
@@ -82,7 +83,7 @@ impl Parameter {
           let captures = OPTIONAL_REGEX.captures(&self.name).unwrap();
           let basetype = captures.get(1).map_or("", |m| m.as_str());
           descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-            Some(&ObjectStore::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
+            Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
             _ => match Parameter::check_reader_function(s!("Read{}", &self.name)) {
               Some(reader) => Some(Parameter {
                 reader,
@@ -107,7 +108,7 @@ impl Parameter {
           let basetype = captures.get(1).map_or("", |m| m.as_str());
           info!("param basetype: {:?}", basetype);
           descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-            Some(&ObjectStore::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
+            Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
             _ => match Parameter::check_reader_function(self.name.clone()) {
               Some(reader) => Some(Parameter {
                 reader,

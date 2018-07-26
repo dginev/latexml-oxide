@@ -16,7 +16,7 @@ use rtx_core::gullet::Gullet;
 use rtx_core::mouth;
 use rtx_core::mouth::Mouth;
 use rtx_core::parameter::{Parameter, Parameters};
-use rtx_core::state::{ObjectStore, Scope, State};
+use rtx_core::state::{Stored, Scope, State};
 use rtx_core::stomach::Stomach;
 use rtx_core::token::Token;
 use rtx_core::tokens::Tokens;
@@ -47,10 +47,10 @@ pub fn is_defined(name: &str, state: &mut State) -> bool {
 pub fn is_defined_token(cs: &Token, state: &mut State) -> bool {
   match state.lookup_meaning(cs) {
     Some(store) => match *store {
-      ObjectStore::Token(ref m) => true,
-      ObjectStore::Expandable(ref m) => m.get_cs_name() != "\\relax",
-      ObjectStore::Primitive(ref m) => m.get_cs_name() != "\\relax",
-      ObjectStore::Constructor(ref m) => m.get_cs_name() != "\\relax",
+      Stored::Token(ref m) => true,
+      Stored::Expandable(ref m) => m.get_cs_name() != "\\relax",
+      Stored::Primitive(ref m) => m.get_cs_name() != "\\relax",
+      Stored::Constructor(ref m) => m.get_cs_name() != "\\relax",
       _ => false,
     },
     _ => false,
@@ -68,7 +68,7 @@ pub fn input_definitions(
 
   // let prevname = if options.handleoptions {
   //   match state.lookup_definition(T_CS!("\@currname")) {
-  //     Some(ObjectStore::Expandable(name)) => Digest!(T_CS!("\@currname")).to_string()
+  //     Some(Stored::Expandable(name)) => Digest!(T_CS!("\@currname")).to_string()
   // }
   // let prevext = options.handleoptions && $state->lookupDefinition(T_CS!('\@currext')) &&
   // ToString(Digest(T_CS!('\@currext')));
@@ -82,7 +82,7 @@ pub fn input_definitions(
   let loaded_flag = file.clone() + "_loaded";
   {
     // Only load definitions once
-    if let Some(&ObjectStore::Bool(flag)) = state.lookup_value(&loaded_flag) {
+    if let Some(&Stored::Bool(flag)) = state.lookup_value(&loaded_flag) {
       if flag {
         // do nothing if we've loaded before
         return Ok(());
@@ -91,8 +91,8 @@ pub fn input_definitions(
   }
 
   // Mark as loaded, then process the definitions
-  note_begin(&s!("Loading {:?} definitions...", file));
-  state.assign_value(&loaded_flag, ObjectStore::Bool(true), Some(Scope::Global));
+  note_begin(&s!("Loading {:?} definitions", file));
+  state.assign_value(&loaded_flag, Stored::Bool(true), Some(Scope::Global));
 
   match file.as_ref() {
     "TeX.pool" => pool::tex::load_definitions(&mut state)?,
@@ -108,7 +108,7 @@ pub fn input_definitions(
       s!("TODO: unknown binding {:?}, can't load", other)
     ),
   };
-  note_end(&s!("Loading {:?} definitions...", file));
+  note_end(&s!("Loading {:?} definitions", file));
   Ok(())
 }
 
@@ -515,7 +515,7 @@ pub fn def_macro(
   //       // }
 
   state.install_definition(
-    ObjectStore::Expandable(Rc::new(Expandable {
+    Stored::Expandable(Rc::new(Expandable {
       cs: cs,
       paramlist: paramlist,
       expansion: expansion,
@@ -554,7 +554,7 @@ pub fn def_conditional(
   let cs_name = cs.get_cs_name();
   match cs_name.as_str() {
     "\\fi" | "\\else" | "\\or" => state.install_definition(
-      ObjectStore::Conditional(Rc::new(Conditional {
+      Stored::Conditional(Rc::new(Conditional {
         cs: cs.clone(),
         paramlist: None,
         test: None,
@@ -595,7 +595,7 @@ pub fn def_conditional(
         } else {
           //  For \ifcase, the parameter list better be a single Number !!
           state.install_definition(
-            ObjectStore::Conditional(Rc::new(Conditional {
+            Stored::Conditional(Rc::new(Conditional {
               cs: cs.clone(),
               paramlist,
               test,
@@ -617,7 +617,7 @@ pub fn def_conditional(
   }
 
   if let Some(true) = options.locked {
-    state.assign_value(&s!("{}:locked", cs), ObjectStore::Bool(true), None);
+    state.assign_value(&s!("{}:locked", cs), Stored::Bool(true), None);
   }
   return;
 }
@@ -705,13 +705,13 @@ pub fn generate_id(
 
 pub fn merge_font(font: Font, state: &mut State) {
   let mut current_font = match state.remove_value("font") {
-    Some(ObjectStore::Font(f)) => f,
+    Some(Stored::Font(f)) => f,
     _ => Rc::new(Font::text_default()),
   };
   let newfont = current_font.merge(font);
   state.assign_value(
     "font",
-    ObjectStore::Font(Rc::new(newfont)),
+    Stored::Font(Rc::new(newfont)),
     Some(Scope::Local),
   );
   return;
@@ -733,7 +733,7 @@ pub fn digest_literal(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -
   let font = state.lookup_font().unwrap(); // TODO: raise error if font missing
   state.assign_value(
     "font",
-    ObjectStore::Font(Rc::new(font.merge(Font {
+    Stored::Font(Rc::new(font.merge(Font {
       encoding: Some(s!("ASCII")),
       ..Font::default()
     }))),
@@ -742,7 +742,7 @@ pub fn digest_literal(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -
 
   let value = stomach.digest(stuff, state);
 
-  state.assign_value("font", ObjectStore::Font(font), None); // TODO: maybe we need .assign_font ?
+  state.assign_value("font", Stored::Font(font), None); // TODO: maybe we need .assign_font ?
   stomach.end_mode("text", state)?;
   value
 }
@@ -797,17 +797,17 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, 
   // if !within.is_empty() {
   //   let clwithin = s!("\\cl@{}",within);
   //   let clunwithin = s!("\\cl@UN{}",within);
-  //   let x = if let Some(ObjectStore::Tokens(cl)) = state.lookup_value(clwithin) {
+  //   let x = if let Some(Stored::Tokens(cl)) = state.lookup_value(clwithin) {
   //    cl.unlist()
   //   } else {
   //     Vec::new()
   //   };
   //   let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(unctr)];
   //   clwithin_tokens.append(x);
-  // state.assign_value(clwithin, ObjectStore::Tokens(Tokens{tokens: clwithin_tokens}),
+  // state.assign_value(clwithin, Stored::Tokens(Tokens{tokens: clwithin_tokens}),
   // Some(Scope::Global));
 
-  //   let unx = if let Some(ObjectStore::Tokens(clun)) = state.lookup_value(clunwithin) {
+  //   let unx = if let Some(Stored::Tokens(clun)) = state.lookup_value(clunwithin) {
   //     clun.unlist()
   //   } else {
   //    Vec::new()
@@ -815,11 +815,11 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, 
   //   let mut clunwithin_tokens = T_CS!(unctr);
   //   clunwithin_tokens.append(unx);
 
-  // state.assign_value(clunwithin, ObjectStore::Tokens(Tokens{tokens: clunwithin_tokens}),
+  // state.assign_value(clunwithin, Stored::Tokens(Tokens{tokens: clunwithin_tokens}),
   // Some(Scope::Global)) }
 
   // if let Some(nested_val) = options.get("nested") {
-  // state.assign_value(s!("nested_counters_{}", ctr), ObjectStore::String(nested_val),
+  // state.assign_value(s!("nested_counters_{}", ctr), Stored::String(nested_val),
   // Some(Scope::Global)) }
 
   // // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
@@ -831,7 +831,7 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, 
 
   // let mut prefix = options.get("idprefix").unwrap_or(String::new());
   // if !prefix.is_empty() {
-  // state.assign_value(s!("@ID@prefix@{}",ctr), ObjectStore::String(prefix),
+  // state.assign_value(s!("@ID@prefix@{}",ctr), Stored::String(prefix),
   // Some(Scope::Global)); } else {
   //   prefix = state.lookup_string(s!("@ID@prefix@{}",ctr));
   //   if prefix.is_empty() {
@@ -874,7 +874,7 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
   let v = counter_value(ctr, state).add(value);
   state.assign_value(
     &s!("\\c@{}", ctr),
-    ObjectStore::Number(v.clone()),
+    Stored::Number(v.clone()),
     Some(Scope::Global),
   );
   after_assignment(gullet, state);
@@ -895,7 +895,7 @@ pub fn step_counter(
   let value = counter_value(ctr, state);
   state.assign_value(
     &s!("\\c@{}", ctr),
-    ObjectStore::Number(value.add(Number!(1))),
+    Stored::Number(value.add(Number!(1))),
     Some(Scope::Global),
   );
   {
@@ -931,14 +931,14 @@ pub fn ref_step_counter(
 ) -> Result<RefStepValue>
 {
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
-    Some(ObjectStore::String(ctr)) => ctr.to_string(),
+    Some(Stored::String(ctr)) => ctr.to_string(),
     _ => ctype.to_string(),
   };
   step_counter(&ctr, noreset, stomach, state)?;
 
   let iddef_opt = state.lookup_definition(&T_CS!(s!("\\the{}@ID", ctr)));
   let has_id: bool = match iddef_opt {
-    Some(ObjectStore::Expandable(iddef)) => match iddef.get_parameters() {
+    Some(Stored::Expandable(iddef)) => match iddef.get_parameters() {
       Some(params) => params.get_num_args() == 0,
       None => false,
     },
@@ -969,14 +969,14 @@ pub fn ref_step_counter(
   // And install the scope (if any) for this reference number.
   state.assign_value(
     "current_counter",
-    ObjectStore::String(ctr.to_string()),
+    Stored::String(ctr.to_string()),
     Some(Scope::Local),
   );
 
   let scope = s!("{}:{}", ctr, refnum.to_string());
   state.assign_value(
     &s!("scopes_for_counter:{}", ctr),
-    ObjectStore::VecString(vec![scope.clone()]),
+    Stored::VecString(vec![scope.clone()]),
     Some(Scope::Local),
   );
   state.activate_scope(&scope);
@@ -990,7 +990,7 @@ pub fn ref_step_counter(
 
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   //  print STDERR "Unusing scopes for $ctr\n";
-  let scopes = if let Some(ObjectStore::VecString(stored_scopes)) =
+  let scopes = if let Some(Stored::VecString(stored_scopes)) =
     state.lookup_value(&s!("scopes_for_counter:{}", ctr))
   {
     stored_scopes.clone()
@@ -1001,7 +1001,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
     state.deactivate_scope(scope);
   }
 
-  let counters = if let Some(ObjectStore::VecString(stored_counters)) =
+  let counters = if let Some(Stored::VecString(stored_counters)) =
     state.lookup_value(&s!("nested_counters_{}", ctr))
   {
     stored_counters.clone()
@@ -1030,11 +1030,11 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 fn reset_counter(ctr: &str, state: &mut State) {
   state.assign_value(
     &s!("\\c@{}", ctr),
-    ObjectStore::Number(Number!(0)),
+    Stored::Number(Number!(0)),
     Some(Scope::Global),
   );
   // and reset any within counters!
-  let nested = if let Some(ObjectStore::Tokens(nested)) = state.lookup_value(&s!("\\cl@{}", ctr)) {
+  let nested = if let Some(Stored::Tokens(nested)) = state.lookup_value(&s!("\\cl@{}", ctr)) {
     nested.clone()
   } else {
     Tokens!()
@@ -1048,7 +1048,7 @@ fn reset_counter(ctr: &str, state: &mut State) {
 }
 
 fn after_assignment(gullet: &mut Gullet, state: &mut State) {
-  if let Some(ObjectStore::Tokens(after)) = state.remove_value("afterAssignment") {
+  if let Some(Stored::Tokens(after)) = state.remove_value("afterAssignment") {
     gullet.unread(after); // primitive returns boxes, so these need to be digested!
   }
 }

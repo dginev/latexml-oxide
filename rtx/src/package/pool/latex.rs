@@ -32,7 +32,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Let('\@currentlabel', '\@empty');
 
   // Let's try just starting with this set (since we've loaded LaTeX)
-  state.assign_value("inPreamble", ObjectStore::Bool(true), None); // \begin{document} will clear this.
+  state.assign_value("inPreamble", Stored::Bool(true), None); // \begin{document} will clear this.
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
@@ -66,7 +66,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   AssignValue!(
     "current_environment",
-    ObjectStore::String(String::new()),
+    Stored::String(String::new()),
     Some(Scope::Global)
   );
   // DefMacroI!("\@currenvir", "", Rc::new(move |state| {}), state);
@@ -129,7 +129,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //     PushValue('@at@end@document', $_[1]->unlist); });
 
   DefEnvironmentC!("{document}",
-    Some(Rc::new(|document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
+    Some(Rc::new(|document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, Stored>, state: &mut State| {
       let id = prop_str!(props,"id");
       let body = prop_whatsit!(props,"body");
       if let Some(mut docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
@@ -144,7 +144,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       }
       Ok(())
     })),
-    before_digest => vec!(beforeproc!(_stomach, state, { state.assign_value("inPreamble", ObjectStore::Bool(false), None); })),
+    before_digest => vec!(beforeproc!(_stomach, state, { state.assign_value("inPreamble", Stored::Bool(false), None); })),
     // after_digest_begin => |stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
@@ -309,7 +309,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       // be mutable, and Rust hits a mutability conflict between the parent, and the
       // "args" and "props" children ... will come back here after performance becomes
       // an issue again
-      if let Some(ObjectStore::Digested(tags)) = props.get("tags") {
+      if let Some(Stored::Digested(tags)) = props.get("tags") {
         document.absorb((**tags).clone(), state)?;
       }
       let title = prop_digested!(props, "title");

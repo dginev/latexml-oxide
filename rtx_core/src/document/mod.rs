@@ -13,7 +13,8 @@ use std::iter;
 
 use common::error::*;
 use common::font::Font;
-use state::{ObjectStore, State};
+use common::store::Stored;
+use state::State;
 
 use document::resource::Resource;
 use document::tag::{TagConstructionClosure, TagOptionName, TagOptions};
@@ -116,7 +117,7 @@ impl Document {
     let mut root = self.document.get_root_element().unwrap();
     let init_font = Font::text_default();
     self.finalize_rec(&mut root, &init_font, state)?;
-    if let Some(&ObjectStore::String(ref prefixes)) = state.lookup_value("RDFa_prefixes") {
+    if let Some(&Stored::String(ref prefixes)) = state.lookup_value("RDFa_prefixes") {
       self.set_rdfa_prefixes(Some(prefixes.clone()));
     }
     Ok(())

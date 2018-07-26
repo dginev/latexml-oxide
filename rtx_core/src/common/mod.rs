@@ -5,6 +5,7 @@ pub mod model;
 pub mod number;
 pub mod object;
 pub mod relaxng;
+pub mod store;
 pub mod xml;
 
 use fmt;

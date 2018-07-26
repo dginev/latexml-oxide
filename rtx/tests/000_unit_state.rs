@@ -34,24 +34,24 @@ fn assign_lookup_value() {
   assert!(state.lookup_value("STRICT").is_none());
 
   let strict_value = s!("testing strict");
-  let strict_store = ObjectStore::String(strict_value.clone());
+  let strict_store = Stored::String(strict_value.clone());
   state.assign_value("STRICT", strict_store, None);
   match state.lookup_value("STRICT") {
     None => panic!("Couldn't lookup STRICT value after assignment"),
-    Some(&ObjectStore::String(ref received_value)) => assert_eq!(*received_value, strict_value),
+    Some(&Stored::String(ref received_value)) => assert_eq!(*received_value, strict_value),
     Some(_) => panic!("Looked up value of STRICT didn't match assigned value"),
   };
 
   let mut hash_val = HashMap::new();
-  hash_val.insert(s!("a"), ObjectStore::Bool(true));
-  let hash_store = ObjectStore::HashOS(hash_val);
+  hash_val.insert(s!("a"), Stored::Bool(true));
+  let hash_store = Stored::HashOS(hash_val);
 
   state.assign_value("hashref_test", hash_store, Some(Scope::Global));
   match state.lookup_value("hashref_test") {
     None => panic!("Couldn't lookup hashref_test value after assignment"),
-    Some(&ObjectStore::HashOS(ref received_hash)) => match received_hash.get("a") {
+    Some(&Stored::HashOS(ref received_hash)) => match received_hash.get("a") {
       None => panic!("Assigned hash was missing key!"),
-      Some(&ObjectStore::Bool(ref b)) => assert_eq!(*b, true),
+      Some(&Stored::Bool(ref b)) => assert_eq!(*b, true),
       Some(_) => panic!("Assigned hash had malformed key!"),
     },
     Some(_) => panic!("Looked up value of hashref_test didn't match assignment value"),
@@ -59,7 +59,7 @@ fn assign_lookup_value() {
 
   match state.remove_value("STRICT") {
     None => panic!("Couldn't lookup STRICT value on removal"),
-    Some(ObjectStore::String(received_value)) => assert_eq!(received_value, strict_value),
+    Some(Stored::String(received_value)) => assert_eq!(received_value, strict_value),
     Some(_) => panic!("Looked up value of STRICT didn't match removed value"),
   };
 
@@ -73,10 +73,10 @@ fn scoped_assign_lookup_value() {
   // First, can we push/pop frames?
   let mut state = State::new(StateOptions::default());
   assert!(state.lookup_value("foo").is_none());
-  state.assign_value("foo", ObjectStore::String(s!("bar")), Some(Scope::Global));
+  state.assign_value("foo", Stored::String(s!("bar")), Some(Scope::Global));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
-    Some(&ObjectStore::String(ref received_value)) => assert_eq!(
+    Some(&Stored::String(ref received_value)) => assert_eq!(
       received_value, "bar",
       "global assignment should have value bar"
     ),
@@ -85,24 +85,20 @@ fn scoped_assign_lookup_value() {
 
   state.push_frame();
 
-  state.assign_value("foo", ObjectStore::String(s!("baz")), Some(Scope::Local));
+  state.assign_value("foo", Stored::String(s!("baz")), Some(Scope::Local));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
-    Some(&ObjectStore::String(ref received_value)) => assert_eq!(
+    Some(&Stored::String(ref received_value)) => assert_eq!(
       received_value, "baz",
       "local assignment should have value baz"
     ),
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 
-  state.assign_value(
-    "foo",
-    ObjectStore::String(s!("overwrite")),
-    Some(Scope::Local),
-  );
+  state.assign_value("foo", Stored::String(s!("overwrite")), Some(Scope::Local));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
-    Some(&ObjectStore::String(ref received_value)) => assert_eq!(
+    Some(&Stored::String(ref received_value)) => assert_eq!(
       received_value, "overwrite",
       "second local assignment should have value overwrite"
     ),
@@ -113,7 +109,7 @@ fn scoped_assign_lookup_value() {
 
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
-    Some(&ObjectStore::String(ref received_value)) => assert_eq!(
+    Some(&Stored::String(ref received_value)) => assert_eq!(
       received_value, "bar",
       "global assignment should have value bar"
     ),
@@ -126,35 +122,31 @@ fn assign_lookup_arrays() {
   let mut state = State::new(StateOptions::default());
   let mock_vec = ["a", "b", "c"]
     .iter()
-    .map(|x| ObjectStore::String(x.to_string()))
-    .collect::<VecDeque<ObjectStore>>();
-  state.assign_value(
-    "SEARCHPATHS",
-    ObjectStore::VecDequeOS(mock_vec.clone()),
-    None,
-  );
+    .map(|x| Stored::String(x.to_string()))
+    .collect::<VecDeque<Stored>>();
+  state.assign_value("SEARCHPATHS", Stored::VecDequeOS(mock_vec.clone()), None);
   match state.lookup_value("SEARCHPATHS") {
     None => panic!("Couldn't lookup SEARCHPATHS value after assignment"),
-    Some(&ObjectStore::VecDequeOS(ref received_value)) => assert_eq!(
+    Some(&Stored::VecDequeOS(ref received_value)) => assert_eq!(
       received_value, &mock_vec,
       "looked up array has correct value"
     ),
     Some(_) => panic!("Looked up value of SEARCHPATHS didn't match assignment value"),
   };
 
-  state.unshift_value("empty_key", vec![ObjectStore::String(s!("mydir"))]);
+  state.unshift_value("empty_key", vec![Stored::String(s!("mydir"))]);
   let shifted = state.shift_value("empty_key");
-  if let Some(ObjectStore::String(shifted_str)) = shifted {
+  if let Some(Stored::String(shifted_str)) = shifted {
     assert_eq!(shifted_str, "mydir", "shift/unshift new key");
   } else {
-    panic!("state.shift_value returned wrong/no ObjectStore")
+    panic!("state.shift_value returned wrong/no Stored")
   }
 
-  state.unshift_value("SEARCHPATHS", vec![ObjectStore::String(s!("d"))]);
+  state.unshift_value("SEARCHPATHS", vec![Stored::String(s!("d"))]);
   if let Some(vdq) = state.lookup_vecdeque("SEARCHPATHS") {
     let mut vdq_expected = VecDeque::new();
     for entry in &["d", "a", "b", "c"] {
-      vdq_expected.push_back(ObjectStore::String(entry.to_string()));
+      vdq_expected.push_back(Stored::String(entry.to_string()));
     }
     assert_eq!(vdq, &vdq_expected, "shift/unshift existing key");
   } else {
@@ -163,22 +155,22 @@ fn assign_lookup_arrays() {
 
   assert_eq!(
     state.shift_value("SEARCHPATHS"),
-    Some(ObjectStore::String(s!("d"))),
+    Some(Stored::String(s!("d"))),
     "shift searchpaths"
   );
   assert_eq!(
     state.pop_value("SEARCHPATHS"),
-    Some(ObjectStore::String(s!("c"))),
+    Some(Stored::String(s!("c"))),
     "pop searchpaths"
   );
   assert_eq!(
     state.shift_value("SEARCHPATHS"),
-    Some(ObjectStore::String(s!("a"))),
+    Some(Stored::String(s!("a"))),
     "shift searchpaths"
   );
   assert_eq!(
     state.pop_value("SEARCHPATHS"),
-    Some(ObjectStore::String(s!("b"))),
+    Some(Stored::String(s!("b"))),
     "pop searchpaths"
   );
   assert_eq!(
@@ -189,21 +181,21 @@ fn assign_lookup_arrays() {
   assert_eq!(state.pop_value("SEARCHPATHS"), None, "pop searchpaths None");
   assert_eq!(
     state.lookup_value("SEARCHPATHS"),
-    Some(&ObjectStore::VecDequeOS(VecDeque::new())),
+    Some(&Stored::VecDequeOS(VecDeque::new())),
     "lookup searchpaths []"
   );
 
   let mut vdq = ["a", "b", "c"]
     .iter()
-    .map(|x| ObjectStore::String(x.to_string()))
-    .collect::<VecDeque<ObjectStore>>();
-  state.assign_value("SEARCHPATHS", ObjectStore::VecDequeOS(vdq.clone()), None);
-  let new_d = ObjectStore::String(s!("d"));
+    .map(|x| Stored::String(x.to_string()))
+    .collect::<VecDeque<Stored>>();
+  state.assign_value("SEARCHPATHS", Stored::VecDequeOS(vdq.clone()), None);
+  let new_d = Stored::String(s!("d"));
   state.push_value("SEARCHPATHS", new_d.clone());
   vdq.push_back(new_d.clone());
   assert_eq!(
     state.lookup_value("SEARCHPATHS"),
-    Some(&ObjectStore::VecDequeOS(vdq)),
+    Some(&Stored::VecDequeOS(vdq)),
     "push works as intended"
   );
   assert_eq!(
@@ -213,17 +205,17 @@ fn assign_lookup_arrays() {
   );
   assert_eq!(
     state.shift_value("SEARCHPATHS"),
-    Some(ObjectStore::String(s!("a"))),
+    Some(Stored::String(s!("a"))),
     "shift searchpaths"
   );
   assert_eq!(
     state.pop_value("SEARCHPATHS"),
-    Some(ObjectStore::String(s!("c"))),
+    Some(Stored::String(s!("c"))),
     "pop searchpaths"
   );
   assert_eq!(
     state.pop_value("SEARCHPATHS"),
-    Some(ObjectStore::String(s!("b"))),
+    Some(Stored::String(s!("b"))),
     "pop searchpaths"
   );
   assert_eq!(
@@ -234,7 +226,7 @@ fn assign_lookup_arrays() {
   assert_eq!(state.pop_value("SEARCHPATHS"), None, "pop searchpaths None");
   assert_eq!(
     state.lookup_value("SEARCHPATHS"),
-    Some(&ObjectStore::VecDequeOS(VecDeque::new())),
+    Some(&Stored::VecDequeOS(VecDeque::new())),
     "lookup searchpaths []"
   );
 }
@@ -252,11 +244,10 @@ fn install_definition_and_meaning() {
     is_protected: state.get_prefix("protected"),
     ..Expandable::default()
   };
-  let job_definition_os = ObjectStore::Expandable(Rc::new(job_definition));
+  let job_definition_os = Stored::Expandable(Rc::new(job_definition));
   // Install a Definition
   state.install_definition(job_definition_os.clone(), None);
-  if let Some(ObjectStore::Expandable(stored_definition)) =
-    state.lookup_definition(&T_CS!("\\jobname"))
+  if let Some(Stored::Expandable(stored_definition)) = state.lookup_definition(&T_CS!("\\jobname"))
   {
     assert_eq!(stored_definition.cs, T_CS!("\\jobname"));
   } else {
@@ -265,9 +256,7 @@ fn install_definition_and_meaning() {
 
   // Assign a Meaning
   state.assign_meaning(&T_CS!("\\foobar"), job_definition_os, Some(Scope::Local));
-  if let Some(&ObjectStore::Expandable(ref stored_meaning)) =
-    state.lookup_meaning(&T_CS!("\\foobar"))
-  {
+  if let Some(&Stored::Expandable(ref stored_meaning)) = state.lookup_meaning(&T_CS!("\\foobar")) {
     assert_eq!(stored_meaning.cs, T_CS!("\\jobname")); // Note: meaning for \foobar still has definition for CS \jobname
   } else {
     panic!("Failed to lookup installed meaning!");
@@ -341,19 +330,19 @@ fn assign_lookup_mapping() {
 #[test]
 fn push_pop_daemon_frames() {
   // TODO
-  // state.assign_value("daemon_mode", ObjectStore::Bool(false), Some(Scope::Global));
+  // state.assign_value("daemon_mode", Stored::Bool(false), Some(Scope::Global));
   // state.push_daemon_frame();
-  // state.assign_value("daemon_mode", ObjectStore::Bool(true),Some(Scope::Global));
+  // state.assign_value("daemon_mode", Stored::Bool(true),Some(Scope::Global));
   // match state.lookup_value("daemon_mode") {
   //   None => panic!("Couldn't lookup daemon_mode value after assignment"),
-  //   Some(& ObjectStore::Bool(b)) => assert_eq!(b, true, "in daemon mode"),
+  //   Some(& Stored::Bool(b)) => assert_eq!(b, true, "in daemon mode"),
   //   Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value")
   // };
 
   // state.pop_daemon_frame();
   // match state.lookup_value("daemon_mode") {
   //   None => panic!("Couldn't lookup daemon_mode value after assignment"),
-  //   Some(& ObjectStore::Bool(b)) => assert_eq!(b, false, "out of daemon mode"),
+  //   Some(& Stored::Bool(b)) => assert_eq!(b, false, "out of daemon mode"),
   //   Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value")
   // };
 }

@@ -7,7 +7,7 @@ use rtx_core::common::DigestionMode;
 use rtx_core::definition::expandable::Expandable;
 use rtx_core::document::Document;
 use rtx_core::list::List;
-use rtx_core::state::{ObjectStore, Scope}; // State
+use rtx_core::state::{Scope, Stored}; // State
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::FindOptions;
 use rtx_core::{Core, Digested};
@@ -52,19 +52,15 @@ impl DigestionAPI for Core {
   fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()> {
     self.state.initialize_stomach();
     // let paths = state.lookup_value("SEARCHPATHS");
-    self.state.assign_value(
-      "InitialPreloads",
-      ObjectStore::Bool(true),
-      Some(Scope::Global),
-    );
+    self
+      .state
+      .assign_value("InitialPreloads", Stored::Bool(true), Some(Scope::Global));
     for preload in preloads {
       input_definitions(preload, InputDefinitionOptions::default(), &mut self.state)?;
     }
-    self.state.assign_value(
-      "InitialPreloads",
-      ObjectStore::Bool(false),
-      Some(Scope::Global),
-    );
+    self
+      .state
+      .assign_value("InitialPreloads", Stored::Bool(false), Some(Scope::Global));
     Ok(())
   }
 
@@ -144,7 +140,7 @@ impl DigestionAPI for Core {
 
     let mut state = &mut self.state;
     let search_paths = match state.lookup_value("SEARCHPATHS") {
-      Some(&ObjectStore::VecString(ref paths)) => Some(paths.clone()),
+      Some(&Stored::VecString(ref paths)) => Some(paths.clone()),
       _ => None,
     };
     // Compile-time load of model AND indirect model
@@ -155,7 +151,7 @@ impl DigestionAPI for Core {
     let mut document = Document::new();
     if search_paths.is_none() || !search_paths.as_ref().unwrap().is_empty() {
       {
-        if let Some(&ObjectStore::Bool(ico_flag)) = state.lookup_value("INCLUDE_COMMENTS") {
+        if let Some(&Stored::Bool(ico_flag)) = state.lookup_value("INCLUDE_COMMENTS") {
           if ico_flag {
             let paths_string = search_paths.as_ref().unwrap().join(",");
             let attributes = map!{s!("paths") => paths_string};
@@ -283,19 +279,19 @@ impl DigestionAPI for Core {
     if !pathname::is_literaldata(&request) {
       self
         .state
-        .assign_value("SOURCEFILE", ObjectStore::String(request.clone()), None);
+        .assign_value("SOURCEFILE", Stored::String(request.clone()), None);
     }
     if !dir.is_empty() {
       self
         .state
-        .assign_value("SOURCEDIRECTORY", ObjectStore::String(dir.clone()), None);
+        .assign_value("SOURCEDIRECTORY", Stored::String(dir.clone()), None);
     }
     self.state.search_paths.push_front(dir.clone());
     self.state.graphics_paths.push_front(dir.clone());
 
     let name_copy = name.clone();
     self.state.install_definition(
-      ObjectStore::Expandable(Rc::new(Expandable {
+      Stored::Expandable(Rc::new(Expandable {
         cs: T_CS!("\\jobname"),
         paramlist: None,
         expansion: SimpleExpansion!(Tokens::new(Explode!(name_copy))),

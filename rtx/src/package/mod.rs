@@ -24,7 +24,7 @@ pub use rtx_core::gullet::Gullet;
 pub use rtx_core::mouth;
 pub use rtx_core::mouth::Mouth;
 pub use rtx_core::parameter::{Parameter, Parameters};
-pub use rtx_core::state::{ObjectStore, Scope, State};
+pub use rtx_core::state::{Scope, State, Stored};
 pub use rtx_core::stomach::Stomach;
 pub use rtx_core::tbox::Tbox;
 pub use rtx_core::token::Token;

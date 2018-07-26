@@ -6,7 +6,8 @@ use std::io::prelude::*;
 use std::sync::Mutex;
 
 use common::error::*;
-use state::{Catcodes, ObjectStore, Scope, State, StateOptions};
+use common::store::Stored;
+use state::{Catcodes, Scope, State, StateOptions};
 use token::*;
 use tokens::Tokens;
 
@@ -133,15 +134,11 @@ impl Mouth {
     if self.fordefinitions {
       self.saved_at_cc = state.lookup_catcode('@');
       self.saved_include_comments = match state.lookup_value("INCLUDE_COMMENTS") {
-        Some(&ObjectStore::Bool(ref x)) => Some(*x),
+        Some(&Stored::Bool(ref x)) => Some(*x),
         _ => None,
       };
       state.assign_catcode('@', Catcode::LETTER, None);
-      state.assign_value(
-        "INCLUDE_COMMENTS",
-        ObjectStore::Bool(false),
-        Some(Scope::Local),
-      );
+      state.assign_value("INCLUDE_COMMENTS", Stored::Bool(false), Some(Scope::Local));
     }
     return;
   }
@@ -156,11 +153,7 @@ impl Mouth {
         state.assign_catcode('@', cc, None);
       }
       if let Some(sic) = self.saved_include_comments {
-        state.assign_value(
-          "INCLUDE_COMMENTS",
-          ObjectStore::Bool(sic),
-          Some(Scope::Local),
-        )
+        state.assign_value("INCLUDE_COMMENTS", Stored::Bool(sic), Some(Scope::Local))
       }
     }
     if self.notes {
@@ -310,8 +303,8 @@ impl Mouth {
 
             // Sneak a comment out, every so often.
             if (self.lineno % 25) == 0 {
-              let include_comments: Option<&ObjectStore> = state.lookup_value("INCLUDE_COMMENTS");
-              if let Some(&ObjectStore::Bool(ref x)) = include_comments {
+              let include_comments: Option<&Stored> = state.lookup_value("INCLUDE_COMMENTS");
+              if let Some(&Stored::Bool(ref x)) = include_comments {
                 if *x {
                   return Some(T_COMMENT!(s!(
                     "**** {} Line {} ****",
@@ -539,7 +532,7 @@ impl Mouth {
     comment.trim();
     // TODO: Handle properly
     let include_comments: bool = match state.lookup_value("INCLUDE_COMMENTS") {
-      Some(&ObjectStore::Bool(x)) => x,
+      Some(&Stored::Bool(x)) => x,
       _ => false,
     };
     if !comment.is_empty() && include_comments {

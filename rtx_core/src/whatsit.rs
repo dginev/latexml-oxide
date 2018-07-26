@@ -4,18 +4,19 @@ use std::rc::Rc;
 
 use common::error::*;
 use common::font::Font;
+use common::store::Stored;
 use definition::expandable::Expandable;
 use definition::Definition;
 use document::Document;
 use list::List;
-use state::{ObjectStore, State};
+use state::State;
 use tokens::Tokens;
 use {BoxOps, Digested, TexMode};
 
 #[derive(Clone)]
 pub struct Whatsit {
   pub args: Vec<Option<Digested>>,
-  pub properties: HashMap<String, ObjectStore>,
+  pub properties: HashMap<String, Stored>,
   pub definition: Rc<Definition>,
 }
 
@@ -37,15 +38,15 @@ impl PartialEq for Whatsit {
 impl Whatsit {
   pub fn is_math(&self) -> bool {
     match self.properties.get("isMath") {
-      Some(&ObjectStore::Bool(v)) => v,
+      Some(&Stored::Bool(v)) => v,
       _ => false,
     }
   }
 
-  pub fn get_properties(&self) -> &HashMap<String, ObjectStore> { &self.properties }
-  pub fn properties(self) -> HashMap<String, ObjectStore> { self.properties }
+  pub fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  pub fn properties(self) -> HashMap<String, Stored> { self.properties }
 
-  pub fn set_properties(&mut self, props: HashMap<String, ObjectStore>) {
+  pub fn set_properties(&mut self, props: HashMap<String, Stored>) {
     for (key, value) in props {
       self.properties.insert(key, value);
     }
@@ -76,13 +77,12 @@ impl Whatsit {
     }
     self.properties.insert(
       s!("body"),
-      ObjectStore::Digested(Rc::new(Digested::List(Box::new(list)))),
+      Stored::Digested(Rc::new(Digested::List(Box::new(list)))),
     );
     if let Some(trailer) = trailer_opt {
-      self.properties.insert(
-        s!("trailer"),
-        ObjectStore::Digested(Rc::new(trailer.clone())),
-      );
+      self
+        .properties
+        .insert(s!("trailer"), Stored::Digested(Rc::new(trailer.clone())));
       // And copy any otherwise undefined properties from the trailer
       let trailer_whatsit = match trailer {
         Digested::Whatsit(w) => *w,
@@ -131,15 +131,15 @@ impl BoxOps for Whatsit {
     Ok(())
   }
 
-  fn get_property(&self, key: &str) -> Option<&ObjectStore> { self.properties.get(key) }
+  fn get_property(&self, key: &str) -> Option<&Stored> { self.properties.get(key) }
 
-  fn set_property(&mut self, key: &str, value: ObjectStore) {
+  fn set_property(&mut self, key: &str, value: Stored) {
     self.properties.insert(key.to_string(), value);
   }
 
   fn get_body(&self) -> Option<&Digested> {
     match self.properties.get("body") {
-      Some(&ObjectStore::Digested(ref body)) => Some(body),
+      Some(&Stored::Digested(ref body)) => Some(body),
       _ => None,
     }
   }
@@ -151,7 +151,7 @@ impl BoxOps for Whatsit {
 
   fn get_font(&self) -> Option<&Font> {
     match self.properties.get("font") {
-      Some(&ObjectStore::Font(ref font)) => Some(font),
+      Some(&Stored::Font(ref font)) => Some(font),
       _ => None,
     }
   }

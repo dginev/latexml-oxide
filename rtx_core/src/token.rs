@@ -4,8 +4,9 @@ use std::fmt::Display;
 use std::iter::FromIterator;
 
 use common::error::*;
+use common::store::Stored;
 use quote;
-use state::{ObjectStore, State};
+use state::State;
 use stomach::Stomach;
 use tokens::Tokens;
 use {BoxOps, Digested};
@@ -442,7 +443,7 @@ impl Token {
       if let Some(specials_store) = state.lookup_value("SPECIALS") {
         let evec = Vec::new();
         let specials_list: &Vec<char> = match *specials_store {
-          ObjectStore::VecChar(ref list) => list,
+          Stored::VecChar(ref list) => list,
           _ => &evec,
         };
         for special in specials_list.iter() {

@@ -1,7 +1,8 @@
 use common::error::*;
 use common::font::Font;
 use common::object::Object;
-use state::{ObjectStore, Scope, State};
+use common::store::Stored;
+use state::{Scope, State};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -30,7 +31,7 @@ pub struct ConstructorOptions {
   // environment-specific
   pub require_math: bool,
   pub forbid_math: bool,
-  pub properties: HashMap<String, ObjectStore>,
+  pub properties: HashMap<String, Stored>,
   pub capture_body: bool,
   pub font: Option<Font>,
 
@@ -146,11 +147,9 @@ impl Definition for Constructor {
       },
     };
 
-    props.insert(s!("font"), ObjectStore::Font(Rc::new(this_font)));
+    props.insert(s!("font"), Stored::Font(Rc::new(this_font)));
     // $props{locator} = $stomach->getGullet->getMouth->getLocator unless defined $props{locator};
-    props
-      .entry(s!("isMath"))
-      .or_insert(ObjectStore::Bool(ismath));
+    props.entry(s!("isMath")).or_insert(Stored::Bool(ismath));
     // $props{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.

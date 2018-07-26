@@ -87,7 +87,7 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
 
       quote!(
         Some(Rc::new(
-        |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, ObjectStore>, state: &mut State| {
+        |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, Stored>, state: &mut State| {
           let mut savenode : Option<Node> = None;
 
           #(#operations)*
@@ -289,7 +289,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         is_match = true;
         let to_absorb = translate_value("", &mut replacement);
         operations.push(quote!(
-          if let Some(& ObjectStore::Digested(ref digested)) = #to_absorb {
+          if let Some(& Stored::Digested(ref digested)) = #to_absorb {
             document.absorb((**digested).clone(), state)?;
           }
         ));
@@ -522,7 +522,7 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
         is_match = true;
         // Recognize #prop for whatsit properties
         // val = if prop_name == "body" {
-        // body is Digested, TODO: What strategy do we need to unwrap any ObjectStore
+        // body is Digested, TODO: What strategy do we need to unwrap any Stored
         // meaningfully ?
         val = quote!(props.get(#prop_name));
         String::new()

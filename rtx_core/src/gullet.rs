@@ -1,8 +1,9 @@
 use common::error::*;
 use common::object::Object;
+use common::store::Stored;
 use definition::Definition;
 use mouth::Mouth;
-use state::{ObjectStore, State};
+use state::State;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use token::{Catcode, Token};
@@ -220,11 +221,11 @@ impl Gullet {
                 //   LaTeXML::Definition::stopProfiling($token, 'expand'); }
                 // }
                 _ => {
-                  let looked_up_definition: Option<ObjectStore> = state.lookup_definition(&token);
+                  let looked_up_definition: Option<Stored> = state.lookup_definition(&token);
                   match looked_up_definition {
                     Some(defn_store) => {
                       match defn_store {
-                        ObjectStore::Expandable(defn) => {
+                        Stored::Expandable(defn) => {
                           if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
                             // is this the right logic here? don't expand unless digesting?
                             state.current_token = Some(token);

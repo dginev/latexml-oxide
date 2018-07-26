@@ -16,7 +16,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Remember; \par _closes_, not opens, paragraphs!
   // Here, we want to close both an open p and para (if either are open).
   let mut skippable_props = HashMap::new();
-  skippable_props.insert(s!("alignmentSkippable"), ObjectStore::Bool(true));
+  skippable_props.insert(s!("alignmentSkippable"), Stored::Bool(true));
 
   DefConstructorI!(T_CS!("\\par"), None, replacement!(document, args, props, state, {
       let in_preamble = prop_bool!(props, "inPreamble");
@@ -37,7 +37,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     after_digest => aftersub!(stomach, whatsit, state, {
       let in_preamble = state.lookup_bool("inPreamble");
       if in_preamble {
-        whatsit.set_property("inPreamble", ObjectStore::Bool(true));
+        whatsit.set_property("inPreamble", Stored::Bool(true));
       } else if let Some(c) = state.remove_value("next_para_class") {
           whatsit.set_property("class", c);
         // Digest!(Tokens!(
@@ -96,7 +96,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     let def_body = token_args.into_iter().collect::<Vec<Token>>();
     let params = None;
     state.install_definition(
-      ObjectStore::Expandable(Rc::new(Expandable {
+      Stored::Expandable(Rc::new(Expandable {
         cs: cs,
         paramlist: params,
         expansion: SimpleExpansion!(Tokens::new(def_body.clone())),
