@@ -1,16 +1,16 @@
-use std::fmt;
 use std::collections::HashMap;
+use std::fmt;
 use std::rc::Rc;
 
 use common::error::*;
 use common::font::Font;
-use state::{ObjectStore, State};
-use {BoxOps, Digested, TexMode};
-use list::List;
-use tokens::Tokens;
 use definition::expandable::Expandable;
 use definition::Definition;
 use document::Document;
+use list::List;
+use state::{ObjectStore, State};
+use tokens::Tokens;
+use {BoxOps, Digested, TexMode};
 
 #[derive(Clone)]
 pub struct Whatsit {
@@ -124,7 +124,9 @@ impl BoxOps for Whatsit {
     // my $profiled = $STATE->lookupValue('PROFILING') && $defn->getCS;
     // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
     let self_mut = &mut self;
-    self_mut.definition.do_absorbtion(document, self_mut, state)?;
+    self_mut
+      .definition
+      .do_absorbtion(document, self_mut, state)?;
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
     Ok(())
   }

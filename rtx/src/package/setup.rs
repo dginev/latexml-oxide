@@ -9,7 +9,7 @@
 // So DefMacro could be decoupled into DefMacro_State, which is terrible boilerplate
 // and was in fact the first implementation attempt here.
 // The current trade-off is to keep the macro variants tightly together, under the same name, and only
-// create new names for new macro functions. 
+// create new names for new macro functions.
 
 #[macro_export]
 macro_rules! SetupBindingMacros {($state:ident) => (
@@ -124,7 +124,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     // ($tokens:expr) => (Digest!($tokens, $state))
     //   ($tokens:expr, $core:ident) => ($core.stomach.digest($tokens, $core.state);)
   // }
-  
+
 // sub Digest {
 //   my (@stuff) = @_;
 //   return $STATE->getStomach->digest(Tokens(map { (ref $_ ? $_ : TokenizeInternal($_)) } @stuff)); }

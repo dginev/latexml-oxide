@@ -83,7 +83,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     vec![Tokens {
       tokens: vec![T_OTHER!("comment")],
     }],
-    state
+    state,
   )?;
 
   DefPrimitiveI!("\\includecomment{}", define_included!());

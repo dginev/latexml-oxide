@@ -18,7 +18,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //         if ($bg ne 'white') {
   //           $document->setAttribute($root, backgroundcolor => $bg); } } } });
 
-
   // No, \documentclass isn't really a primitive -- It's not even TeX!
   // But we define a number of stubs here that will automatically load
   // the LaTeX pool (or AmSTeX.pool) (which will presumably redefine them), and then
@@ -48,7 +47,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
           extension: Some(String::from("pool")),
           ..InputDefinitionOptions::default()
         },
-        state
+        state,
       )?;
       Ok(Tokens!(T_CS!(ltxtrigger)))
     });

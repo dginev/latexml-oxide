@@ -15,9 +15,9 @@ use proc_macro::TokenStream;
 use syn::parse_macro_input;
 
 mod ast_builder;
-mod util;
 mod constructable;
 mod modelable;
+mod util;
 
 #[proc_macro_derive(CompileReplacement, attributes(compile_replacement_options))]
 pub fn derive_compile_replacement(input: TokenStream) -> TokenStream {

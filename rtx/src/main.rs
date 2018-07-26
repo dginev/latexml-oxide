@@ -3,10 +3,10 @@ extern crate log;
 extern crate rtx;
 extern crate rtx_core;
 
+use rtx::converter::Converter;
+use rtx_core::common::{Config, DataSize, OutputFormat};
 use std::env;
 use std::process;
-use rtx_core::common::{Config, DataSize, OutputFormat};
-use rtx::converter::Converter;
 
 fn main() {
   if rtx_core::util::logger::init(log::LevelFilter::Info).is_err() {

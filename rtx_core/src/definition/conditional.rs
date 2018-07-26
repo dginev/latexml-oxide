@@ -1,17 +1,17 @@
-use std::rc::Rc;
-use Digested;
 use common::error::*;
 use common::object::Object;
+use definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
+use document::Document;
+use gullet::Gullet;
+use parameter::Parameters;
+use state::Scope;
+use state::State;
+use std::rc::Rc;
+use stomach::Stomach;
 use token::*;
 use tokens::Tokens;
-use state::State;
-use parameter::Parameters;
-use gullet::Gullet;
 use whatsit::Whatsit;
-use stomach::Stomach;
-use document::Document;
-use definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
-use state::Scope;
+use Digested;
 
 // Conditional control sequences; Expandable
 //   Expand enough to determine true/false, then maybe skip
@@ -33,7 +33,7 @@ impl ConditionalType {
       "\\else" => Else,
       "\\or" => Or,
       "\\fi" => Fi,
-      _ => If
+      _ => If,
     }
   }
 }
@@ -42,14 +42,14 @@ impl ConditionalType {
 pub struct ConditionalOptions {
   pub scope: Option<Scope>,
   pub locked: Option<bool>,
-  pub skipper: Option<bool>
+  pub skipper: Option<bool>,
 }
 impl Default for ConditionalOptions {
   fn default() -> Self {
     ConditionalOptions {
       scope: None,
       locked: None,
-      skipper: None
+      skipper: None,
     }
   }
 }
@@ -61,7 +61,7 @@ pub struct Conditional {
   pub test: Option<ConditionalClosure>,
   pub conditional_type: Option<ConditionalType>,
   pub locked: Option<bool>,
-  pub skipper: Option<bool>
+  pub skipper: Option<bool>,
 }
 impl Default for Conditional {
   fn default() -> Self {
@@ -71,7 +71,7 @@ impl Default for Conditional {
       test: None,
       conditional_type: None,
       locked: None,
-      skipper: None
+      skipper: None,
     }
   }
 }

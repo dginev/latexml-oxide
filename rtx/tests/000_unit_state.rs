@@ -73,11 +73,7 @@ fn scoped_assign_lookup_value() {
   // First, can we push/pop frames?
   let mut state = State::new(StateOptions::default());
   assert!(state.lookup_value("foo").is_none());
-  state.assign_value(
-    "foo",
-    ObjectStore::String(s!("bar")),
-    Some(Scope::Global),
-  );
+  state.assign_value("foo", ObjectStore::String(s!("bar")), Some(Scope::Global));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
     Some(&ObjectStore::String(ref received_value)) => assert_eq!(
@@ -89,11 +85,7 @@ fn scoped_assign_lookup_value() {
 
   state.push_frame();
 
-  state.assign_value(
-    "foo",
-    ObjectStore::String(s!("baz")),
-    Some(Scope::Local),
-  );
+  state.assign_value("foo", ObjectStore::String(s!("baz")), Some(Scope::Local));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
     Some(&ObjectStore::String(ref received_value)) => assert_eq!(

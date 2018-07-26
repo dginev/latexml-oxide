@@ -313,9 +313,11 @@ impl Mouth {
               let include_comments: Option<&ObjectStore> = state.lookup_value("INCLUDE_COMMENTS");
               if let Some(&ObjectStore::Bool(ref x)) = include_comments {
                 if *x {
-                  return Some(T_COMMENT!(
-                    s!("**** {} Line {} ****", &self.shortsource, &self.lineno.to_string())
-                  ));
+                  return Some(T_COMMENT!(s!(
+                    "**** {} Line {} ****",
+                    &self.shortsource,
+                    &self.lineno.to_string()
+                  )));
                 }
               }
             }

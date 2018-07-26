@@ -10,9 +10,9 @@
 // Note: could be circumstances where you'd want modular frontmatter?
 // (ie. frontmatter for each sectional unit)
 
-use std::collections::HashSet;
 use package::*;
 use rtx_core::document::tag::TagConstructionClosure;
+use std::collections::HashSet;
 pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 

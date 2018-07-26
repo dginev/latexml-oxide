@@ -1,20 +1,21 @@
-use std::rc::Rc;
-use std::collections::HashMap;
-use state::{ObjectStore, Scope, State};
-use common::object::Object;
 use common::error::*;
 use common::font::Font;
+use common::object::Object;
+use state::{ObjectStore, Scope, State};
+use std::collections::HashMap;
+use std::rc::Rc;
 
+use definition::{
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ReplacementClosure,
+};
+use document::Document;
+use gullet::Gullet;
+use parameter::Parameters;
+use stomach::Stomach;
 use token::*;
 use tokens::Tokens;
-use Digested;
-use gullet::Gullet;
-use stomach::Stomach;
 use whatsit::Whatsit;
-use parameter::Parameters;
-use definition::{BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure,
-                 ReplacementClosure};
-use document::Document;
+use Digested;
 
 #[derive(Clone)]
 pub struct ConstructorOptions {
@@ -210,7 +211,7 @@ impl Definition for Constructor {
         document,
         whatsit.get_args(),
         whatsit.get_properties(),
-        state
+        state,
       )?,
     };
 

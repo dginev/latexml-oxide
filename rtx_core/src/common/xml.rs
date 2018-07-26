@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use libxml::tree::{Document, Node, NodeType};
 use libxml::xpath::Context;
+use std::collections::HashMap;
 
 pub struct XPath<'xp> {
   context: Context<'xp>,

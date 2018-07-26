@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
-use std::iter::FromIterator;
-use std::fmt::Display;
 use std::fmt;
+use std::fmt::Display;
+use std::iter::FromIterator;
 
 use common::error::*;
 use quote;
@@ -162,9 +162,7 @@ impl quote::ToTokens for Token {
 }
 
 impl Display for Token {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-      write!(f, "{}", self.text)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.text) }
 }
 
 #[macro_export]
@@ -327,7 +325,8 @@ pub fn untex(digested: &Digested, state: &State) -> String {
       }
     }
     // If this token is a letter (or otherwise starts with a letter or digit): space or linebreak
-    else if ((cc == LETTER) || ((cc == OTHER) && first_char.is_alphanumeric())) && (prevcc == CS)
+    else if ((cc == LETTER) || ((cc == OTHER) && first_char.is_alphanumeric()))
+      && (prevcc == CS)
       && (!prevs.is_empty())
       && (state.lookup_catcode(&prevs.chars().rev().next().unwrap()) == Some(LETTER))
     {

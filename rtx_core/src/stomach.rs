@@ -1,19 +1,19 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use state::{ObjectStore, Scope, State};
 use common::error::*;
 use common::font::Font;
-use {Digested, TexMode};
-use mouth::Mouth;
-use gullet::Gullet;
-use tokens::Tokens;
-use token::{Catcode, Token};
-use definition::Definition;
-use definition::expandable::Expandable;
 use definition::constructor::{Constructor, ConstructorOptions};
-use tbox::*;
+use definition::expandable::Expandable;
+use definition::Definition;
+use gullet::Gullet;
 use list::List;
+use mouth::Mouth;
+use state::{ObjectStore, Scope, State};
+use tbox::*;
+use token::{Catcode, Token};
+use tokens::Tokens;
+use {Digested, TexMode};
 
 static MAXSTACK: usize = 200;
 
@@ -318,16 +318,14 @@ impl Stomach {
       if in_math || in_preamble {
         Vec::new()
       } else {
-        vec![
-          Digested::Box(Tbox::new(
-            meaning.to_string(), //text
-            font,
-            Some(self.gullet.get_locator()), //locator
-            Tokens!(meaning),                // tokens
-            HashMap::new(),                  // properties
-            state,
-          )),
-        ]
+        vec![Digested::Box(Tbox::new(
+          meaning.to_string(), //text
+          font,
+          Some(self.gullet.get_locator()), //locator
+          Tokens!(meaning),                // tokens
+          HashMap::new(),                  // properties
+          state,
+        ))]
       }
     } else if meaning.code == Catcode::COMMENT {
       // Note: Comments need char decoding as well!
@@ -344,16 +342,14 @@ impl Stomach {
     //   "The token " . Stringify($token) . " should never reach Stomach!");
     // return; }
     else {
-      vec![
-        Digested::Box(Tbox::new(
-          meaning.to_string(), //text
-          font,
-          None,             // locator
-          Tokens!(meaning), // tokens
-          HashMap::new(),   // properties
-          state,
-        )),
-      ]
+      vec![Digested::Box(Tbox::new(
+        meaning.to_string(), //text
+        font,
+        None,             // locator
+        Tokens!(meaning), // tokens
+        HashMap::new(),   // properties
+        state,
+      ))]
     }
   }
 
@@ -579,11 +575,7 @@ impl Stomach {
           },
           ..Font::default()
         });
-        state.assign_value(
-          "font",
-          ObjectStore::Font(new_font),
-          Some(Scope::Local),
-        );
+        state.assign_value("font", ObjectStore::Font(new_font), Some(Scope::Local));
       } else {
         // When entering text mode, we should set the font to the text font in use before the math
         // but inherit color and size
@@ -614,12 +606,14 @@ impl Stomach {
       if let Some(ref token) = state.current_token {
         error!(
           target: &s!("unexpected:{}", token),
-          "Attempt to end mode {}", mode
-        );// self.currentFrameMessage);
+          "Attempt to end mode {}",
+          mode
+        ); // self.currentFrameMessage);
       } else {
         error!(
           target: &s!("unexpected:mode"),
-          "Attempt to end mode {}", mode
+          "Attempt to end mode {}",
+          mode
         );
       }
     } else {

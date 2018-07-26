@@ -1,7 +1,7 @@
-use rtx_core::TexMode;
-use rtx_core::tbox::Tbox;
-use rtx_core::list::List;
 use package::*;
+use rtx_core::list::List;
+use rtx_core::tbox::Tbox;
+use rtx_core::TexMode;
 
 pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   SetupBindingMacros!(outer_state);

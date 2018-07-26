@@ -1,3 +1,5 @@
+use regex::Regex;
+use std::collections::HashMap;
 /// Note that this has evolved way beynond just "font",
 /// but covers text properties (or even display properties) in general
 /// including basic font information, color & background color
@@ -5,8 +7,6 @@
 ///
 /// NOTE: This is now in Common that it may evolve to be useful in Post processing...
 use std::fmt;
-use std::collections::HashMap;
-use regex::Regex;
 
 static DEFFAMILY: &'static str = "serif";
 static DEFSERIES: &'static str = "medium";
@@ -23,10 +23,10 @@ static DEFSIZE: i8 = 10; // TODO: master consults state "NOMINAL_FONT_SIZE" befo
 // static FORCE_SHAPE : i8  = 0x4;
 
 lazy_static! {
-  static ref LATIN_LETTER_RE : Regex = Regex::new(r"^[\p{Latin}&&\pL]$").unwrap();
-  static ref GREEK_LETTER_RE : Regex = Regex::new(r"^[\p{Greek}&&\pL]$").unwrap();
-  static ref UPPER_LETTER_RE : Regex = Regex::new(r"^[\p{Lu}]$").unwrap();
-  static ref DIGIT_LETTER_RE : Regex = Regex::new(r"^[\p{N}]$").unwrap();
+  static ref LATIN_LETTER_RE: Regex = Regex::new(r"^[\p{Latin}&&\pL]$").unwrap();
+  static ref GREEK_LETTER_RE: Regex = Regex::new(r"^[\p{Greek}&&\pL]$").unwrap();
+  static ref UPPER_LETTER_RE: Regex = Regex::new(r"^[\p{Lu}]$").unwrap();
+  static ref DIGIT_LETTER_RE: Regex = Regex::new(r"^[\p{N}]$").unwrap();
 }
 
 /// This struct is a little interesting, as we want to pass overrides that partially modify (via a

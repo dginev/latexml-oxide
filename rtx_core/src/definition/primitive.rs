@@ -5,15 +5,15 @@ use common::font::Font;
 use common::object::Object;
 use state::{Scope, State};
 
-use Digested;
+use definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure};
+use document::Document;
+use gullet::Gullet;
+use parameter::Parameters;
+use stomach::Stomach;
 use token::*;
 use tokens::Tokens;
-use gullet::Gullet;
-use stomach::Stomach;
 use whatsit::Whatsit;
-use parameter::Parameters;
-use document::Document;
-use definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure};
+use Digested;
 
 #[derive(Clone)]
 pub struct PrimitiveOptions {

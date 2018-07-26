@@ -1,11 +1,11 @@
-use std::fmt;
 use common::error::*;
 use common::font::Font;
-use {BoxOps, Digested, TexMode};
+use document::Document;
+use state::State;
+use std::fmt;
 use token::Token;
 use tokens::Tokens;
-use state::State;
-use document::Document;
+use {BoxOps, Digested, TexMode};
 
 /// Lists can contain any Digested items, such as boxes, whatsits or other lists
 #[derive(Clone, PartialEq)]
@@ -32,9 +32,7 @@ impl BoxOps for List {
     self
       .boxes
       .iter()
-      .fold(String::new(), |joined, x| {
-        joined + &x.to_string()
-      })
+      .fold(String::new(), |joined, x| joined + &x.to_string())
   }
 
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.

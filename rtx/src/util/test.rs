@@ -18,7 +18,7 @@ pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) {
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
   }
-  for tex_file in glob(&s!("{}/*.tex",dirpath)).unwrap() {
+  for tex_file in glob(&s!("{}/*.tex", dirpath)).unwrap() {
     if let Ok(tex_file) = tex_file {
       let name = tex_file.file_stem().unwrap().to_str().unwrap();
       let xml_file = tex_file.with_extension("xml");

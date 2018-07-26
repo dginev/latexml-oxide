@@ -1,11 +1,11 @@
 #[macro_use]
 pub mod error;
-pub mod object;
-pub mod model;
-pub mod xml;
 pub mod font;
-pub mod relaxng;
+pub mod model;
 pub mod number;
+pub mod object;
+pub mod relaxng;
+pub mod xml;
 
 use fmt;
 

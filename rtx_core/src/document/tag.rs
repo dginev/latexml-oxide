@@ -1,11 +1,11 @@
+use libxml::tree::Node;
 use std::collections::HashMap;
 use std::rc::Rc;
-use libxml::tree::Node;
 
 use common::error::*;
-use Digested;
-use state::State;
 use document::Document;
+use state::State;
+use Digested;
 
 pub type TagConstructionClosure = Rc<Fn(&mut Document, &mut Node, &mut State) -> Result<()>>;
 pub type TagData = (String, Option<HashMap<String, String>>, Digested);
@@ -112,7 +112,7 @@ impl TagOptions {
     };
     match field {
       Some(ref mut vec) => vec.drain(..).collect(),
-      None => Vec::new()
+      None => Vec::new(),
     }
   }
 
@@ -141,9 +141,9 @@ impl TagOptions {
   }
 
   pub fn prepend(&mut self, name: &TagOptionName, mut value: Vec<TagConstructionClosure>) {
-    let drained : Vec<TagConstructionClosure> = match self.get_mut(name) {
+    let drained: Vec<TagConstructionClosure> = match self.get_mut(name) {
       Some(vec) => vec.drain(..).collect(),
-      None => Vec::new()
+      None => Vec::new(),
     };
 
     value.extend(drained);
@@ -152,13 +152,13 @@ impl TagOptions {
   }
 
   pub fn append(&mut self, name: &TagOptionName, value: Vec<TagConstructionClosure>) {
-    if self.get(name).is_none() { // initialize if needed
-      self.set(name,Some(Vec::new()));
+    if self.get(name).is_none() {
+      // initialize if needed
+      self.set(name, Some(Vec::new()));
     }
 
     if let Some(vec) = self.get_mut(name) {
       vec.extend(value);
     }
   }
-  
 }

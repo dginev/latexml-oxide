@@ -1,10 +1,10 @@
-use std::collections::VecDeque;
-use std::rc::Rc;
-use state::{ObjectStore, State};
-use common::object::Object;
 use common::error::*;
+use common::object::Object;
 use definition::Definition;
 use mouth::Mouth;
+use state::{ObjectStore, State};
+use std::collections::VecDeque;
+use std::rc::Rc;
 use token::{Catcode, Token};
 use tokens::Tokens;
 

@@ -1,10 +1,10 @@
 use common::error::*;
 use common::font::Font;
-use {BoxOps, Digested};
-use tokens::Tokens;
 use document::Document;
 use state::{ObjectStore, State};
 use std::collections::HashMap;
+use tokens::Tokens;
+use {BoxOps, Digested};
 
 /// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
 #[derive(Debug, Clone, PartialEq)]

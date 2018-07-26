@@ -1,8 +1,8 @@
 extern crate ansi_term;
 extern crate log;
 
-use ansi_term::Style;
 use ansi_term::Colour::{Green, Red, White, Yellow};
+use ansi_term::Style;
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
 
 struct RtxLogger;

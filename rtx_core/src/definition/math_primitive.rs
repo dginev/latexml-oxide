@@ -1,18 +1,18 @@
-use std::rc::Rc;
-use state::{Scope, State};
-use common::object::Object;
 use common::error::*;
 use common::font::Font;
+use common::object::Object;
+use state::{Scope, State};
+use std::rc::Rc;
 
-use Digested;
+use definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure};
+use document::Document;
+use gullet::Gullet;
+use parameter::Parameters;
+use stomach::Stomach;
 use token::*;
 use tokens::Tokens;
-use gullet::Gullet;
-use stomach::Stomach;
 use whatsit::Whatsit;
-use parameter::Parameters;
-use document::Document;
-use definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure};
+use Digested;
 
 // DefMath Define a Mathematical symbol or function.
 // There are two sets of cases:

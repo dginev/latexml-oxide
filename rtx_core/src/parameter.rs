@@ -1,17 +1,17 @@
 use fmt;
-use std::rc::Rc;
 use regex::Regex;
+use std::rc::Rc;
 
 use common::error::*;
+use definition::constructor::Constructor;
+use definition::{BeforeDigestClosure, Definition, DigestionClosure};
+use gullet::Gullet;
+use mouth::Mouth;
+use state::{ObjectStore, State};
+use stomach::Stomach;
 use token::Token;
 use tokens::Tokens;
-use gullet::Gullet;
-use stomach::Stomach;
-use definition::{BeforeDigestClosure, Definition, DigestionClosure};
-use definition::constructor::Constructor;
 use whatsit::Whatsit;
-use state::{ObjectStore, State};
-use mouth::Mouth;
 use Digested;
 
 pub type ReaderClosure =
@@ -61,9 +61,9 @@ impl PartialEq for Parameter {
   fn eq(&self, other: &Parameter) -> bool { self.name == other.name }
 }
 
-lazy_static!{
-  static ref OPTIONAL_REGEX : Regex = Regex::new(r"^Optional(.+)$").unwrap();
-  static ref SKIP_REGEX : Regex = Regex::new(r"^Skip(.+)$").unwrap();
+lazy_static! {
+  static ref OPTIONAL_REGEX: Regex = Regex::new(r"^Optional(.+)$").unwrap();
+  static ref SKIP_REGEX: Regex = Regex::new(r"^Skip(.+)$").unwrap();
 }
 
 impl Parameter {
@@ -83,7 +83,7 @@ impl Parameter {
           let basetype = captures.get(1).map_or("", |m| m.as_str());
           descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
             Some(&ObjectStore::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
-            _ => match Parameter::check_reader_function(s!("Read{}",&self.name)) {
+            _ => match Parameter::check_reader_function(s!("Read{}", &self.name)) {
               Some(reader) => Some(Parameter {
                 reader: reader,
                 ..Parameter::default()
@@ -232,7 +232,7 @@ impl Parameter {
           }
           let evec = Vec::new();
           Ok(Tokens::new(tokens).neutralize(&evec, state).unlist())
-        })
+        }),
       )?;
     }
 
@@ -265,9 +265,7 @@ pub struct Parameters {
 }
 
 impl Parameters {
-  pub fn get_num_args(&self) -> usize { 
-    self.params.iter().filter(|&p| !p.novalue).count()
-  }
+  pub fn get_num_args(&self) -> usize { self.params.iter().filter(|&p| !p.novalue).count() }
 
   pub fn revert_arguments(&self, _args: Vec<Token>, _state: &mut State) -> Tokens {
     // TODO

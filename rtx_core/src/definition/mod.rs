@@ -1,24 +1,24 @@
 #[macro_use]
 pub mod expandable;
-pub mod constructor;
-pub mod primitive;
-pub mod math_primitive;
 pub mod conditional;
+pub mod constructor;
+pub mod math_primitive;
+pub mod primitive;
 
-use std::rc::Rc;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use common::error::*;
-use Digested;
 use gullet::Gullet;
 use stomach::Stomach;
 use token::Token;
 use tokens::Tokens;
+use Digested;
 // use tbox::Tbox;
-use parameter::Parameters;
 use document::Document;
-use whatsit::Whatsit;
+use parameter::Parameters;
 use state::{ObjectStore, State};
+use whatsit::Whatsit;
 
 pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Tokens>>;
 pub type ConditionalClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<bool>>;

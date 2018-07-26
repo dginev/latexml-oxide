@@ -230,8 +230,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
   );
 
-
-
   // Read a token as used when defining it, ie. it may be enclosed in braces.
   DefParameterType!("DefToken",
     reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {

@@ -58,7 +58,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // \@titlepagefalse
   // EOTeX
 
-
   //**********************************************************************
   // The core sectioning commands are defined in LaTeX.pm
   // but the counter setup, etc, depends on article

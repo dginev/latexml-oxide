@@ -84,18 +84,18 @@ impl Tokens {
 
   // stopgap, how do we unpack! gullet-stage arguments without the unwrap?
   // should we unify the interfaces so that Options are always used? Could be cumbursome...
-  pub fn unwrap_or_default(self) -> Tokens {
-    self
-  }
-
+  pub fn unwrap_or_default(self) -> Tokens { self }
 
   pub fn stringify(self) -> String {
-    s!("Tokens[{}]", &self
+    s!(
+      "Tokens[{}]",
+      &self
         .tokens
         .iter()
         .map(|t| t.to_string())
         .collect::<Vec<_>>()
-        .join(","))
+        .join(",")
+    )
   }
 
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {

@@ -1,11 +1,11 @@
-use rtx_core::state::State;
+use core::DigestionAPI;
+use rtx_core::common::error::*;
 use rtx_core::common::{Config, DataSize, OutputFormat};
-use rtx_core::list::List;
 use rtx_core::document::Document;
+use rtx_core::list::List;
+use rtx_core::state::State;
 use rtx_core::token;
 use rtx_core::{BoxOps, Core, Digested};
-use rtx_core::common::error::*;
-use core::DigestionAPI;
 
 const CONVERTER_IDENTITY: &'static str = "rtx (v 0.1)";
 

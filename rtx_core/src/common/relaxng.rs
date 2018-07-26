@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use document::Document;
+use std::collections::HashMap;
 
 pub struct Relaxng {
   pub name: String,
