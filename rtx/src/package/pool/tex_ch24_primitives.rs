@@ -31,7 +31,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
       let ismath = state.lookup_bool("IN_MATH");
       let mode = if ismath { TexMode::Math } else { TexMode::Text };
       let body = stomach.digest_next_body(false, state)?;
-      let mut boxes = vec![Digested::Box(open)];
+      let mut boxes = vec![Digested::TBox(Box::new(open))];
       boxes.extend(body);
       let return_list = List {
         boxes: boxes,
@@ -39,7 +39,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
         font: None,
       };
 
-      Ok(vec![Digested::List(return_list)])
+      Ok(vec![Digested::List(Box::new(return_list))])
     })
   );
 
@@ -56,7 +56,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
         HashMap::new(),
         state,
       );
-      Ok(vec![Digested::Box(return_box)])
+      Ok(vec![Digested::TBox(Box::new(return_box))])
     })
   );
 

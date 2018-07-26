@@ -27,13 +27,13 @@ lazy_static! {
   static ref TEX_OR_BIB_EXT_RE: Regex = Regex::new(r"\.(tex|bib)$").unwrap();
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum Scope {
   Global,
   Local,
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub enum TableName {
   Meaning,
   Value,
@@ -82,7 +82,7 @@ pub enum ObjectStore {
   Constructor(Rc<Constructor>),
   Digested(Rc<::Digested>),
   Parameter(Parameter),
-  Font(Font),
+  Font(Rc<Font>),
   Number(Number),
   // Collections
   VecChar(Vec<char>),
@@ -174,9 +174,9 @@ impl Default for UndoFrame {
   }
 }
 impl UndoFrame {
-  pub fn table(&self, name: &TableName) -> &AssignmentCount {
+  pub fn table(&self, name: TableName) -> &AssignmentCount {
     use self::TableName::*;
-    match *name {
+    match name {
       Meaning => &self.meaning,
       Value => &self.value,
       Catcode => &self.catcode,
@@ -189,9 +189,9 @@ impl UndoFrame {
       StashActive => &self.stash_active,
     }
   }
-  pub fn table_mut(&mut self, name: &TableName) -> &mut AssignmentCount {
+  pub fn table_mut(&mut self, name: TableName) -> &mut AssignmentCount {
     use self::TableName::*;
-    match *name {
+    match name {
       Meaning => &mut self.meaning,
       Value => &mut self.value,
       Catcode => &mut self.catcode,
@@ -496,9 +496,9 @@ impl State {
     }
   }
 
-  pub fn table(&self, name: &TableName) -> &Table {
+  pub fn table(&self, name: TableName) -> &Table {
     use self::TableName::*;
-    match *name {
+    match name {
       Meaning => &self.meaning,
       Value => &self.value,
       Catcode => &self.catcode,
@@ -511,9 +511,9 @@ impl State {
       StashActive => &self.stash_active,
     }
   }
-  pub fn table_mut(&mut self, name: &TableName) -> &mut Table {
+  pub fn table_mut(&mut self, name: TableName) -> &mut Table {
     use self::TableName::*;
-    match *name {
+    match name {
       Meaning => &mut self.meaning,
       Value => &mut self.value,
       Catcode => &mut self.catcode,
@@ -554,7 +554,7 @@ impl State {
 
         for frame in &mut self.undo {
           let is_locked = frame.locked;
-          frame_table = frame.table_mut(&table_name);
+          frame_table = frame.table_mut(table_name);
           if let Some(n) = frame_table.remove(key) {
             undo_count += n;
           }
@@ -568,7 +568,7 @@ impl State {
       }
       {
         // Undo the bindings, if `key` was bound in this frame
-        let state_table = self.table_mut(&table_name);
+        let state_table = self.table_mut(table_name);
         if let Some(defs) = state_table.get_mut(key) {
           for _ in 1..undo_count + 1 {
             defs.pop_front();
@@ -586,7 +586,7 @@ impl State {
       {
         // 1. Undo mutable logic
         if let Some(current_frame) = self.undo.front_mut() {
-          let current_frame_table = current_frame.table_mut(&table_name);
+          let current_frame_table = current_frame.table_mut(table_name);
 
           // If the value was previously assigned in this frame
           if current_frame_table.get(key).is_some() {
@@ -601,7 +601,7 @@ impl State {
       }
       {
         // 2. State table mutable logic
-        let state_table = self.table_mut(&table_name);
+        let state_table = self.table_mut(table_name);
         let defs = state_table
           .entry(key.to_string())
           .or_insert_with(VecDeque::new);
@@ -703,14 +703,14 @@ impl State {
     }
   }
 
-  pub fn lookup_font<'font>(&'font self) -> Option<Font> {
+  pub fn lookup_font(&self) -> Option<Rc<Font>> {
     match self.lookup_value("font") {
       Some(&ObjectStore::Font(ref f)) => Some(f.clone()), /* TODO: is this clone heavy/slow?
                                                              * We can refactor into refs */
       _ => None,
     }
   }
-  pub fn lookup_mathfont<'font>(&'font self) -> Option<Font> {
+  pub fn lookup_mathfont(&self) -> Option<Rc<Font>> {
     match self.lookup_value("mathfont") {
       Some(&ObjectStore::Font(ref f)) => Some(f.clone()), /* TODO: is this clone heavy/slow?
                                                              * We can refactor into refs */
@@ -826,7 +826,7 @@ impl State {
         .get(frame)
         .as_ref()
         .unwrap()
-        .table(&TableName::Value)
+        .table(TableName::Value)
         .get(key)
         .is_some(),
       None => self
@@ -850,7 +850,7 @@ impl State {
         .get(f)
         .as_ref()
         .unwrap()
-        .table(&TableName::Value)
+        .table(TableName::Value)
         .get(key);
       let value = match val_opt {
         Some(v) => *v,
@@ -863,7 +863,7 @@ impl State {
 
   //======================================================================
   /// Lookup & assign a character's Catcode
-  pub fn lookup_catcode(&self, c: &char) -> Option<Catcode> {
+  pub fn lookup_catcode(&self, c: char) -> Option<Catcode> {
     match self.catcode.get(&c.to_string()) {
       None => None,
       Some(cvec) => match cvec.front() {
@@ -1061,7 +1061,7 @@ impl State {
     // "Attempt to pop last locked stack frame"); }
     } else {
       let popped_frame = self.undo.pop_front().unwrap();
-      for table_name in &TableName::variants() {
+      for table_name in TableName::variants() {
         let undo_table = popped_frame.table(table_name);
         for (key, undo_count) in undo_table.iter() {
           // Typically only 1 value to shift off the table, unless scopes have been activated.
@@ -1107,7 +1107,11 @@ impl State {
       None
     };
     if let Some(local_font) = new_font {
-      self.assign_value("font", ObjectStore::Font(local_font), Some(Scope::Local));
+      self.assign_value(
+        "font",
+        ObjectStore::Font(Rc::new(local_font)),
+        Some(Scope::Local),
+      );
     }
   }
 
@@ -1453,12 +1457,12 @@ impl State {
     // Setup default fonts.
     self.assign_value(
       "font",
-      ObjectStore::Font(Font::text_default()),
+      ObjectStore::Font(Rc::new(Font::text_default())),
       Some(Scope::Global),
     );
     self.assign_value(
       "mathfont",
-      ObjectStore::Font(Font::math_default()),
+      ObjectStore::Font(Rc::new(Font::math_default())),
       Some(Scope::Global),
     );
   }

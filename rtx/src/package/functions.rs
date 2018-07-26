@@ -706,10 +706,14 @@ pub fn generate_id(
 pub fn merge_font(font: Font, state: &mut State) {
   let mut current_font = match state.remove_value("font") {
     Some(ObjectStore::Font(f)) => f,
-    _ => Font::text_default(),
+    _ => Rc::new(Font::text_default()),
   };
   let newfont = current_font.merge(font);
-  state.assign_value("font", ObjectStore::Font(newfont), Some(Scope::Local));
+  state.assign_value(
+    "font",
+    ObjectStore::Font(Rc::new(newfont)),
+    Some(Scope::Local),
+  );
   return;
 }
 
@@ -729,10 +733,10 @@ pub fn digest_literal(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -
   let font = state.lookup_font().unwrap(); // TODO: raise error if font missing
   state.assign_value(
     "font",
-    ObjectStore::Font(font.merge(Font {
+    ObjectStore::Font(Rc::new(font.merge(Font {
       encoding: Some(s!("ASCII")),
       ..Font::default()
-    })),
+    }))),
     Some(Scope::Local),
   ); // try to stay as ASCII as possible
 

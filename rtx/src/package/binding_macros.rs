@@ -209,7 +209,7 @@ macro_rules! prop_whatsit {
     match $props.get($key) {
       // TODO: Cloning here ought to be terribly inefficient and should be avoided. How?
       Some(&ObjectStore::Digested(ref rc)) => (**rc).clone(),
-      _ => Digested::Whatsit(Whatsit::default()),
+      _ => Digested::Whatsit(Box::new(Whatsit::default())),
     };
   };
 }

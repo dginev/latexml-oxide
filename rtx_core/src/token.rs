@@ -328,7 +328,7 @@ pub fn untex(digested: &Digested, state: &State) -> String {
     else if ((cc == LETTER) || ((cc == OTHER) && first_char.is_alphanumeric()))
       && (prevcc == CS)
       && (!prevs.is_empty())
-      && (state.lookup_catcode(&prevs.chars().rev().next().unwrap()) == Some(LETTER))
+      && (state.lookup_catcode(prevs.chars().rev().next().unwrap()) == Some(LETTER))
     {
       // Insert a (virtual) space before a letter if previous token was a CS w/letters
       // This is required for letters, but just aesthetic for digits (to me?)

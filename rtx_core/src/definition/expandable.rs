@@ -121,7 +121,7 @@ impl Expandable {
   ) -> Result<Tokens>
   {
     if let Some(ref closure) = self.expansion {
-      closure(gullet, args.clone(), state)
+      closure(gullet, args.to_owned(), state)
     } else {
       // empty if no expansion
       Ok(Tokens!())

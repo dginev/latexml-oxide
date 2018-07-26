@@ -258,7 +258,7 @@ impl Document {
           boxes.push_front(tbox);
         },
         // A Proper Box or Whatsit? Absorb it.
-        Digested::Box(digested) => digested.be_absorbed(self, state)?,
+        Digested::TBox(digested) => digested.be_absorbed(self, state)?,
         Digested::Whatsit(digested) => digested.be_absorbed(self, state)?,
       };
 
@@ -1597,10 +1597,10 @@ impl Document {
     attrib.insert(s!("src"), resource.name);
     attrib.insert(s!("type"), resource.mimetype);
     attrib.insert(s!("media"), resource.media);
-    let content_box = Digested::Box(Tbox {
+    let content_box = Digested::TBox(Box::new(Tbox {
       text: resource.content,
       ..Tbox::default()
-    });
+    }));
     self.insert_element("ltx:resource", vec![content_box], Some(attrib), state)?;
     if let Some(savenode) = savenode_opt {
       self.set_node(&savenode);

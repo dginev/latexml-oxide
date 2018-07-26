@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+use std::rc::Rc;
+
 use common::error::*;
 use common::font::Font;
 use document::Document;
 use state::{ObjectStore, State};
-use std::collections::HashMap;
 use tokens::Tokens;
 use {BoxOps, Digested};
 
@@ -11,7 +13,7 @@ use {BoxOps, Digested};
 pub struct Tbox {
   // TODO
   pub text: String,
-  pub font: Font,
+  pub font: Rc<Font>,
   pub locator: String,
   pub properties: HashMap<String, String>,
   pub tokens: Tokens,
@@ -21,7 +23,7 @@ impl Default for Tbox {
   fn default() -> Self {
     Tbox {
       text: String::new(),
-      font: Font::text_default(),
+      font: Rc::new(Font::text_default()),
       locator: String::new(),
       properties: HashMap::new(),
       tokens: Tokens!(),
@@ -34,8 +36,8 @@ impl Default for Tbox {
 
 impl Tbox {
   pub fn new(
-    string: String,
-    font_opt: Option<Font>,
+    text: String,
+    font_opt: Option<Rc<Font>>,
     locator_opt: Option<String>,
     tokens_opt: Tokens,
     properties: HashMap<String, String>,
@@ -45,15 +47,15 @@ impl Tbox {
     let font = match font_opt {
       Some(f) => f,
       None => match state.lookup_font() {
-        Some(state_font) => state_font,
-        None => Font::text_default(), // should never happen
+        Some(state_font) => state_font.clone(),
+        None => Rc::new(Font::text_default()), // should never happen
       },
     };
     // let locator = $STATE->getStomach->getGullet->getLocator unless defined $locator;
     let _locator = locator_opt;
 
-    let tokens = if !string.is_empty() && tokens_opt.is_empty() {
-      Tokens!(T_OTHER!(string))
+    let tokens = if !text.is_empty() && tokens_opt.is_empty() {
+      Tokens!(T_OTHER!(text))
     } else {
       tokens_opt
     };
@@ -61,30 +63,31 @@ impl Tbox {
     if state.lookup_bool("IN_MATH") {
       let mut box_props = properties;
       box_props.insert(s!("mode"), s!("math"));
-      if !string.is_empty() {
-        match state.lookup_value(&s!("math_token_attributes_{}", string)) {
-          Some(&ObjectStore::HashStr(ref attr)) => for (key, value) in attr.iter() {
+      if !text.is_empty() {
+        if let Some(&ObjectStore::HashStr(ref attr)) =
+          state.lookup_value(&s!("math_token_attributes_{}", text))
+        {
+          for (key, value) in attr.iter() {
             box_props
               .entry(key.to_string())
-              .or_insert(value.to_string());
-          },
-          _ => {},
-        };
+              .or_insert_with(|| value.to_string());
+          }
+        }
       }
-      let specialized_font = font.specialize(&string);
+      let specialized_font = font.specialize(&text);
       Tbox {
-        text: string,
+        text,
         tokens,
-        font: specialized_font, // $locator,
+        font: Rc::new(specialized_font), // $locator,
         properties: box_props,
         ..Tbox::default()
       }
     } else {
       Tbox {
-        text: string,
-        font: font, // $locator,
+        text,
+        font, // $locator,
         tokens,
-        properties: properties,
+        properties,
         ..Tbox::default()
       }
     }

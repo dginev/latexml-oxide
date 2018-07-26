@@ -76,7 +76,7 @@ impl Whatsit {
     }
     self.properties.insert(
       s!("body"),
-      ObjectStore::Digested(Rc::new(Digested::List(list))),
+      ObjectStore::Digested(Rc::new(Digested::List(Box::new(list)))),
     );
     if let Some(trailer) = trailer_opt {
       self.properties.insert(
@@ -85,7 +85,7 @@ impl Whatsit {
       );
       // And copy any otherwise undefined properties from the trailer
       let trailer_whatsit = match trailer {
-        Digested::Whatsit(w) => w,
+        Digested::Whatsit(w) => *w,
         _ => Whatsit::default(),
       };
       let trailer_props = trailer_whatsit.get_properties();

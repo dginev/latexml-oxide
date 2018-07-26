@@ -1591,15 +1591,16 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         // let locator    = $stomach->getGullet->getLocator;
         let mut properties = HashMap::new(); // TODO: sync with perl master here
         properties.insert(s!("mode"), s!("math"));
-        let font       = state.lookup_font().unwrap().merge(reqfont.clone().unwrap()).specialize(&$presentation);
+        let font = state.lookup_font().unwrap().merge(reqfont.clone().unwrap()).specialize(&$presentation);
+        let font = Rc::new(font);
         // foreach my $key (keys %properties) {
         //   my $value = $properties{$key};
         //   if (ref $value eq 'CODE') {
         //     $properties{$key} = &$value(); } }
         info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
-        Ok(vec![Digested::Box( // TODO: Can we reduce boilerplate?
-          Tbox{ text: $presentation, tokens: Tokens!($cs.clone()), font: font, properties: properties, ..Tbox::default()}
-        )])
+        Ok(vec![Digested::TBox(Box::new( // TODO: Can we reduce boilerplate?
+          Tbox{ text: $presentation, tokens: Tokens!($cs.clone()), font, properties: properties, ..Tbox::default()}
+        ))])
       })),
       options: prim_options,
       ..MathPrimitive::default()

@@ -215,7 +215,7 @@ impl DigestionAPI for Core {
       }
     }
     self.stomach.get_gullet_mut().flush(state);
-    Ok(Digested::List(List::new(boxes)))
+    Ok(Digested::List(Box::new(List::new(boxes))))
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

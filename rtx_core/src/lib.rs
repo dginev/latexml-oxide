@@ -116,8 +116,8 @@ impl Core {
     let state = State::new(state_options);
 
     Core {
-      state: state,
-      preload: preload,
+      state,
+      preload,
       ..Core::default()
     }
   }
@@ -151,14 +151,14 @@ pub enum TexMode {
 
 #[derive(Clone, PartialEq)]
 pub enum Digested {
-  Box(Tbox),
-  List(List),
-  Whatsit(Whatsit),
+  TBox(Box<Tbox>),
+  List(Box<List>),
+  Whatsit(Box<Whatsit>),
 }
 impl fmt::Debug for Digested {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match *self {
-      Digested::Box(ref v) => write!(f, "{:?}", v),
+      Digested::TBox(ref v) => write!(f, "{:?}", v),
       Digested::List(ref v) => write!(f, "{:?}", v),
       Digested::Whatsit(ref v) => write!(f, "{:?}", v),
     }
@@ -166,13 +166,13 @@ impl fmt::Debug for Digested {
 }
 
 impl Default for Digested {
-  fn default() -> Self { Digested::Box(Tbox::default()) }
+  fn default() -> Self { Digested::TBox(Box::new(Tbox::default())) }
 }
 
 impl BoxOps for Digested {
   fn unlist(self) -> Vec<Digested> {
     match self {
-      Digested::Box(b) => b.unlist(),
+      Digested::TBox(b) => b.unlist(),
       Digested::List(l) => l.unlist(),
       Digested::Whatsit(w) => w.unlist(),
     }
@@ -180,7 +180,7 @@ impl BoxOps for Digested {
 
   fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()> {
     match self {
-      Digested::Box(b) => b.be_absorbed(document, state),
+      Digested::TBox(b) => b.be_absorbed(document, state),
       Digested::List(l) => l.be_absorbed(document, state),
       Digested::Whatsit(w) => w.be_absorbed(document, state),
     }
@@ -188,7 +188,7 @@ impl BoxOps for Digested {
 
   fn to_string(&self) -> String {
     match *self {
-      Digested::Box(ref b) => b.to_string(),
+      Digested::TBox(ref b) => b.to_string(),
       Digested::List(ref l) => l.to_string(),
       Digested::Whatsit(ref w) => w.to_string(),
     }
@@ -196,7 +196,7 @@ impl BoxOps for Digested {
 
   fn stringify(&self) -> String {
     match *self {
-      Digested::Box(ref b) => b.stringify(),
+      Digested::TBox(ref b) => b.stringify(),
       Digested::List(ref l) => l.stringify(),
       Digested::Whatsit(ref w) => w.stringify(),
     }
@@ -204,7 +204,7 @@ impl BoxOps for Digested {
 
   fn set_property(&mut self, key: &str, value: ObjectStore) {
     match *self {
-      Digested::Box(ref b) => {
+      Digested::TBox(ref b) => {
         error!(target: "digested:set_property", "Called set_property on Box: {:?}", b)
       },
       Digested::List(ref l) => {
@@ -216,7 +216,7 @@ impl BoxOps for Digested {
 
   fn get_property(&self, key: &str) -> Option<&ObjectStore> {
     match *self {
-      Digested::Box(ref b) => {
+      Digested::TBox(ref b) => {
         error!(target: "digested:get_property", "Called get_property on Box: {:?}", b);
         None
       },
@@ -229,7 +229,7 @@ impl BoxOps for Digested {
   }
   fn get_body(&self) -> Option<&Digested> {
     match *self {
-      Digested::Box(ref b) => {
+      Digested::TBox(ref b) => {
         error!(target: "digested:get_body", "Called get_body on Box: {:?}", b);
         None
       },
@@ -243,7 +243,7 @@ impl BoxOps for Digested {
 
   fn get_font(&self) -> Option<&Font> {
     match *self {
-      Digested::Box(ref b) => b.get_font(),
+      Digested::TBox(ref b) => b.get_font(),
       Digested::List(ref l) => l.get_font(),
       Digested::Whatsit(ref w) => w.get_font(),
     }
@@ -251,7 +251,7 @@ impl BoxOps for Digested {
 
   fn revert(&self) -> Tokens {
     match *self {
-      Digested::Box(ref b) => b.revert(),
+      Digested::TBox(ref b) => b.revert(),
       Digested::List(ref l) => l.revert(),
       Digested::Whatsit(ref w) => w.revert(),
     }

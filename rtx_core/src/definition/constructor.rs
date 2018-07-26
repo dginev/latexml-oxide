@@ -141,12 +141,12 @@ impl Definition for Constructor {
     let this_font = match self.options.font {
       Some(ref f) => f.clone(),
       None => match state.lookup_font() {
-        Some(f) => f,
+        Some(f) => (*f).clone(),
         None => Font::text_default(), // should never happen?
       },
     };
 
-    props.insert(s!("font"), ObjectStore::Font(this_font));
+    props.insert(s!("font"), ObjectStore::Font(Rc::new(this_font)));
     // $props{locator} = $stomach->getGullet->getMouth->getLocator unless defined $props{locator};
     props
       .entry(s!("isMath"))
@@ -173,7 +173,7 @@ impl Definition for Constructor {
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 
     // Package the result boxes
-    result.push(Digested::Whatsit(whatsit));
+    result.push(Digested::Whatsit(Box::new(whatsit)));
     result.extend(post);
     result.extend(post_post);
     Ok(result)

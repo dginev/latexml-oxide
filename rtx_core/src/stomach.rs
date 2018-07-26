@@ -53,7 +53,7 @@ impl Stomach {
         None => {
           // Wer ran out, terminate,
           // and add a Dummy `trailer' if none explicit.
-          box_list.push(Digested::Box(Tbox::default()));
+          box_list.push(Digested::TBox(Box::new(Tbox::default())));
           break;
         },
         Some(token) => {
@@ -125,7 +125,7 @@ impl Stomach {
         // let list = STOMACH_LIST.lock()
         let mut digested_list = List::new(digested_boxes);
         digested_list.mode = Some(mode);
-        Ok(Digested::List(digested_list))
+        Ok(Digested::List(Box::new(digested_list)))
       }),
     )
   }
@@ -295,7 +295,7 @@ impl Stomach {
         ObjectStore::Constructor(Rc::new(Constructor {
           cs: token.clone(),
           paramlist: None,
-          replacement: Some(Rc::new(move |document, args, _props, state| {
+          replacement: Some(Rc::new(move |document, _args, _props, state| {
             document.make_error("undefined", &closure_cs, state)
           })),
           options: ConstructorOptions::default(),
@@ -318,14 +318,14 @@ impl Stomach {
       if in_math || in_preamble {
         Vec::new()
       } else {
-        vec![Digested::Box(Tbox::new(
+        vec![Digested::TBox(Box::new(Tbox::new(
           meaning.to_string(), //text
           font,
           Some(self.gullet.get_locator()), //locator
           Tokens!(meaning),                // tokens
           HashMap::new(),                  // properties
           state,
-        ))]
+        )))]
       }
     } else if meaning.code == Catcode::COMMENT {
       // Note: Comments need char decoding as well!
@@ -342,14 +342,14 @@ impl Stomach {
     //   "The token " . Stringify($token) . " should never reach Stomach!");
     // return; }
     else {
-      vec![Digested::Box(Tbox::new(
+      vec![Digested::TBox(Box::new(Tbox::new(
         meaning.to_string(), //text
         font,
         None,             // locator
         Tokens!(meaning), // tokens
         HashMap::new(),   // properties
         state,
-      ))]
+      )))]
     }
   }
 
@@ -575,7 +575,11 @@ impl Stomach {
           },
           ..Font::default()
         });
-        state.assign_value("font", ObjectStore::Font(new_font), Some(Scope::Local));
+        state.assign_value(
+          "font",
+          ObjectStore::Font(Rc::new(new_font)),
+          Some(Scope::Local),
+        );
       } else {
         // When entering text mode, we should set the font to the text font in use before the math
         // but inherit color and size
@@ -591,7 +595,7 @@ impl Stomach {
             None
           };
         if let Some(nf) = new_font {
-          state.assign_value("font", ObjectStore::Font(nf), Some(Scope::Local));
+          state.assign_value("font", ObjectStore::Font(Rc::new(nf)), Some(Scope::Local));
         }
       }
     }

@@ -315,7 +315,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
           if let Some(text_match) = refs.get(1) {
             let escaped_match = &slashify(&unquote(text_match.as_str()));
             operations.push(quote!(
-            let content_box = Digested::Box(Tbox{text: #escaped_match.to_string(), ..Tbox::default()});
+            let content_box = Digested::TBox(Box::new(Tbox{text: #escaped_match.to_string(), ..Tbox::default()}));
             document.absorb(content_box, state)?;
           ));
             is_match = true;

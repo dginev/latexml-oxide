@@ -11,20 +11,20 @@ use std::rc::Rc;
 #[test]
 fn basic_state_init() {
   let state = State::new(StateOptions::default());
-  assert_eq!(state.lookup_catcode(&'@'), None); // OTHER
+  assert_eq!(state.lookup_catcode('@'), None); // OTHER
 
   let state_standard = State::new(StateOptions {
     catcodes: Some(Catcodes::Standard),
     ..StateOptions::default()
   });
-  assert_eq!(state_standard.lookup_catcode(&'@'), None); // OTHER
-  assert_eq!(state_standard.lookup_catcode(&'\\'), Some(Catcode::ESCAPE));
+  assert_eq!(state_standard.lookup_catcode('@'), None); // OTHER
+  assert_eq!(state_standard.lookup_catcode('\\'), Some(Catcode::ESCAPE));
 
   let state_style = State::new(StateOptions {
     catcodes: Some(Catcodes::Style),
     ..StateOptions::default()
   });
-  assert_eq!(state_style.lookup_catcode(&'@'), Some(Catcode::LETTER));
+  assert_eq!(state_style.lookup_catcode('@'), Some(Catcode::LETTER));
 }
 
 #[test]

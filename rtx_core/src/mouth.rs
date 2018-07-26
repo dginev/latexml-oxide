@@ -131,7 +131,7 @@ impl Mouth {
       None
     };
     if self.fordefinitions {
-      self.saved_at_cc = state.lookup_catcode(&'@');
+      self.saved_at_cc = state.lookup_catcode('@');
       self.saved_include_comments = match state.lookup_value("INCLUDE_COMMENTS") {
         Some(&ObjectStore::Bool(ref x)) => Some(*x),
         _ => None,
@@ -222,7 +222,7 @@ impl Mouth {
     match ch_opt {
       None => None,
       Some(ch) => {
-        let mut cc: Option<Catcode> = state.lookup_catcode(ch);
+        let mut cc: Option<Catcode> = state.lookup_catcode(*ch);
         let next_ch = self.chars.get(self.colno);
         if cc == Some(Catcode::SUPER) && // Possible convert ^^x
           next_ch.is_some() && (ch == next_ch.unwrap())
@@ -247,7 +247,7 @@ impl Mouth {
             // splice(@{ self.chars }, self.colno - 1, 3, $ch);
             // self.nchars -= 2;
             // }
-          cc = state.lookup_catcode(ch);
+          cc = state.lookup_catcode(*ch);
         }
         if cc.is_none() {
           cc = Some(Catcode::OTHER);
@@ -296,7 +296,7 @@ impl Mouth {
             while self.colno < self.nchars {
               let cc_next = match self.chars.get(self.colno) {
                 None => Catcode::OTHER,
-                Some(c) => match state.lookup_catcode(c) {
+                Some(c) => match state.lookup_catcode(*c) {
                   Some(cc) => cc,
                   None => Catcode::OTHER,
                 },

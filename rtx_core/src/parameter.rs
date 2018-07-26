@@ -85,12 +85,12 @@ impl Parameter {
             Some(&ObjectStore::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
             _ => match Parameter::check_reader_function(s!("Read{}", &self.name)) {
               Some(reader) => Some(Parameter {
-                reader: reader,
+                reader,
                 ..Parameter::default()
               }),
               None => match Parameter::check_reader_function(s!("Read{}", basetype)) {
                 Some(reader) => Some(Parameter {
-                  reader: reader,
+                  reader,
                   ..Parameter::default()
                 }),
                 None => fatal!(
@@ -110,12 +110,12 @@ impl Parameter {
             Some(&ObjectStore::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
             _ => match Parameter::check_reader_function(self.name.clone()) {
               Some(reader) => Some(Parameter {
-                reader: reader,
+                reader,
                 ..Parameter::default()
               }),
               None => match Parameter::check_reader_function(s!("Read{}", basetype)) {
                 Some(reader) => Some(Parameter {
-                  reader: reader,
+                  reader,
                   ..Parameter::default()
                 }),
                 None => None,
@@ -127,7 +127,7 @@ impl Parameter {
         } else {
           descriptor = match Parameter::check_reader_function(s!("Read{}", &self.name)) {
             Some(reader) => Some(Parameter {
-              reader: reader,
+              reader,
               ..Parameter::default()
             }),
             None => None,
