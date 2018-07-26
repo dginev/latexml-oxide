@@ -75,14 +75,13 @@ impl Whatsit {
     if self.is_math() {
       list.mode = Some(mode);
     }
-    self.properties.insert(
-      s!("body"),
-      Stored::Digested(Rc::new(Digested::List(Box::new(list)))),
-    );
+    self
+      .properties
+      .insert(s!("body"), Digested::List(Box::new(list)).into());
     if let Some(trailer) = trailer_opt {
       self
         .properties
-        .insert(s!("trailer"), Stored::Digested(Rc::new(trailer.clone())));
+        .insert(s!("trailer"), trailer.clone().into());
       // And copy any otherwise undefined properties from the trailer
       let trailer_whatsit = match trailer {
         Digested::Whatsit(w) => *w,
@@ -133,8 +132,8 @@ impl BoxOps for Whatsit {
 
   fn get_property(&self, key: &str) -> Option<&Stored> { self.properties.get(key) }
 
-  fn set_property(&mut self, key: &str, value: Stored) {
-    self.properties.insert(key.to_string(), value);
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    self.properties.insert(key.to_string(), value.into());
   }
 
   fn get_body(&self) -> Option<&Digested> {

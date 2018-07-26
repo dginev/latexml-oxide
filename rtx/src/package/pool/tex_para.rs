@@ -15,8 +15,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   // Remember; \par _closes_, not opens, paragraphs!
   // Here, we want to close both an open p and para (if either are open).
-  let mut skippable_props = HashMap::new();
-  skippable_props.insert(s!("alignmentSkippable"), Stored::Bool(true));
+  let mut skippable_props: HashMap<String, Stored> = HashMap::new();
+  skippable_props.insert(s!("alignmentSkippable"), true.into());
 
   DefConstructorI!(T_CS!("\\par"), None, replacement!(document, args, props, state, {
       let in_preamble = prop_bool!(props, "inPreamble");
@@ -37,7 +37,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     after_digest => aftersub!(stomach, whatsit, state, {
       let in_preamble = state.lookup_bool("inPreamble");
       if in_preamble {
-        whatsit.set_property("inPreamble", Stored::Bool(true));
+        whatsit.set_property("inPreamble", true);
       } else if let Some(c) = state.remove_value("next_para_class") {
           whatsit.set_property("class", c);
         // Digest!(Tokens!(
@@ -94,14 +94,14 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     };
     // is there a more idiomatic way to downgrade a VecDeque into a Vec?
     let def_body = token_args.into_iter().collect::<Vec<Token>>();
-    let params = None;
+    let paramlist = None;
     state.install_definition(
-      Stored::Expandable(Rc::new(Expandable {
-        cs: cs,
-        paramlist: params,
+      Expandable {
+        cs,
+        paramlist,
         expansion: SimpleExpansion!(Tokens::new(def_body.clone())),
         ..Expandable::default()
-      })),
+      },
       scope,
     );
     //TODO: AfterAssignment!(state);

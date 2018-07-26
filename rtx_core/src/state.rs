@@ -454,14 +454,15 @@ impl State {
     }
   }
 
-  pub fn assign_internal(
+  pub fn assign_internal<T: Into<Stored>>(
     &mut self,
     table_name: TableName,
     key: &str,
-    value: Stored,
+    value: T,
     scope_opt: Option<Scope>,
   )
   {
+    let value = value.into();
     let scope = match scope_opt {
       Some(s) => s,
       None => if let Some(&true) = self.prefixes.get("global") {
@@ -565,12 +566,19 @@ impl State {
     }
   }
 
-  pub fn assign_value<'av>(&'av mut self, key: &'av str, value: Stored, scope: Option<Scope>) {
+  pub fn assign_value<'av, T: Into<Stored>>(
+    &'av mut self,
+    key: &'av str,
+    value: T,
+    scope: Option<Scope>,
+  )
+  {
     self.assign_internal(TableName::Value, key, value, scope);
   }
 
   // manage a (global) list of values
-  pub fn push_value(&mut self, key: &str, value: Stored) {
+  pub fn push_value<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    let value = value.into();
     if self.value.get(key).is_none() {
       self.assign_internal(
         TableName::Value,
@@ -847,7 +855,13 @@ impl State {
 
   /// $meaning should be a definition (for defining active control sequences)
   /// or another token, for \let
-  pub fn assign_meaning(&mut self, token: &Token, meaning: Stored, scope: Option<Scope>) {
+  pub fn assign_meaning<T: Into<Stored>>(
+    &mut self,
+    token: &Token,
+    meaning: T,
+    scope: Option<Scope>,
+  )
+  {
     self.assign_internal(TableName::Meaning, &token.get_cs_name(), meaning, scope);
   }
 
@@ -920,7 +934,9 @@ impl State {
   }
 
   /// And a shorthand for installing definitions
-  pub fn install_definition(&mut self, definition: Stored, scope: Option<Scope>) {
+  pub fn install_definition<T: Into<Stored>>(&mut self, definition: T, scope: Option<Scope>) {
+    let definition = definition.into();
+
     // Locked definitions!!! (or should this test be in assignMeaning?)
     // Ignore attempts to (re)define $cs from tex sources
     //  my $cs = $definition->getCS->getCSName;

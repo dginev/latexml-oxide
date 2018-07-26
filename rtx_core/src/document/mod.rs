@@ -1620,8 +1620,7 @@ impl Document {
 
   pub fn make_error(&mut self, error_class: &str, content: &str, state: &mut State) -> Result<()> {
     let savenode_opt = if !self.is_openable("ltx:ERROR", state) {
-      // self.float_to_element("ltx:ERROR", false);
-      None
+      self.float_to_element("ltx:ERROR", false)
     } else {
       None
     };
@@ -1637,6 +1636,9 @@ impl Document {
     }
     Ok(())
   }
+
+  // TODO!
+  fn float_to_element(&mut self, element: &str, flag: bool) -> Option<Node> { None }
 }
 
 // Auxiliary

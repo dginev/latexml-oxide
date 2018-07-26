@@ -7,7 +7,7 @@ use rtx_core::state::State;
 use rtx_core::token;
 use rtx_core::{BoxOps, Core, Digested};
 
-const CONVERTER_IDENTITY: &'static str = "rtx (v 0.1)";
+const CONVERTER_IDENTITY: &str = "rtx (v0.1)";
 
 pub struct ConversionResponse {
   pub result: Option<String>,

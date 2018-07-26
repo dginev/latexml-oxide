@@ -22,7 +22,7 @@ pub enum FoodType {
 
 lazy_static! {
   static ref LASTID: Mutex<u32> = Mutex::new(0);
-  static ref LINEBREAK_REGEX: Regex = Regex::new(r"(?s:\015\012|\015|\012|\r)").unwrap();
+  static ref LINEBREAK_REGEX: Regex = Regex::new(r"\r\n?|\n\r?").unwrap();
   static ref LOWERHEX_REGEX: Regex = Regex::new(r"^[0-9a-f]$").unwrap();
   static ref SANITIZE_LINE_REGEX: Regex = Regex::new(r"((\\ )*)\s*$").unwrap();
 }
@@ -138,7 +138,7 @@ impl Mouth {
         _ => None,
       };
       state.assign_catcode('@', Catcode::LETTER, None);
-      state.assign_value("INCLUDE_COMMENTS", Stored::Bool(false), Some(Scope::Local));
+      state.assign_value("INCLUDE_COMMENTS", false, Some(Scope::Local));
     }
     return;
   }
@@ -153,7 +153,7 @@ impl Mouth {
         state.assign_catcode('@', cc, None);
       }
       if let Some(sic) = self.saved_include_comments {
-        state.assign_value("INCLUDE_COMMENTS", Stored::Bool(sic), Some(Scope::Local))
+        state.assign_value("INCLUDE_COMMENTS", sic, Some(Scope::Local))
       }
     }
     if self.notes {

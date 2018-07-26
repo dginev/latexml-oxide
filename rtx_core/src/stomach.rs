@@ -261,25 +261,25 @@ impl Stomach {
       // install stub definitions for new conditional
       let cs_clone = cs.clone();
       state.install_definition(
-        Stored::Expandable(Rc::new(Expandable {
+        Expandable {
           cs: T_CS!(s!("\\{}true", name)),
           paramlist: None,
           expansion: Some(Rc::new(move |_gullet, _args, _state| {
             Ok(Tokens!(T_CS!("\\let"), T_CS!(cs_clone), T_CS!("\\iftrue")))
           })),
           ..Expandable::default()
-        })),
+        },
         None,
       );
       state.install_definition(
-        Stored::Expandable(Rc::new(Expandable {
+        Expandable {
           cs: T_CS!(s!("\\{}false", name)),
           paramlist: None,
           expansion: Some(Rc::new(move |_gullet, _args, _state| {
             Ok(Tokens!(T_CS!("\\let"), T_CS!(cs), T_CS!("\\iffalse")))
           })),
           ..Expandable::default()
-        })),
+        },
         None,
       );
 
@@ -294,14 +294,14 @@ impl Stomach {
       );
       let closure_cs = cs.clone();
       state.install_definition(
-        Stored::Constructor(Rc::new(Constructor {
+        Constructor {
           cs: token.clone(),
           paramlist: None,
           replacement: Some(Rc::new(move |document, _args, _props, state| {
             document.make_error("undefined", &closure_cs, state)
           })),
           options: ConstructorOptions::default(),
-        })),
+        },
         Some(Scope::Global),
       );
       // and then invoke it.
@@ -455,12 +455,8 @@ impl Stomach {
       Stored::VecDigested(Vec::new()),
       Some(Scope::Local),
     ); // ALWAYS bind this!
-    state.assign_value("groupNonBoxing", Stored::Bool(nobox), Some(Scope::Local)); // ALWAYS bind this!
-    state.assign_value(
-      "groupInitiator",
-      Stored::Token(current_token.clone()),
-      Some(Scope::Local),
-    );
+    state.assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
+    state.assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
     // state.assign_value("groupInitiatorLocator" , self.getLocator,       Scope::Local);
     if !nobox {
       self.boxing.push(current_token) // For begingroup/endgroup
@@ -545,15 +541,15 @@ impl Stomach {
     let prevmode = state.lookup_string("MODE");
     let ismath = mode.ends_with("math");
     let isdisplay = mode.starts_with("display");
-    state.assign_value("MODE", Stored::String(mode.to_string()), Some(Scope::Local));
-    state.assign_value("IN_MATH", Stored::Bool(ismath), Some(Scope::Local));
+    state.assign_value("MODE", mode.to_string(), Some(Scope::Local));
+    state.assign_value("IN_MATH", ismath, Some(Scope::Local));
     let curfont = state.lookup_font();
     if let Some(cf) = curfont {
       if mode == prevmode {
       } else if ismath {
         // When entering math mode, we set the font to the default math font,
         // and save the text font for any embedded text.
-        state.assign_value("savedfont", Stored::Font(cf.clone()), Some(Scope::Local));
+        state.assign_value("savedfont", cf.clone(), Some(Scope::Local));
         let new_font = state.lookup_mathfont().unwrap().merge(Font {
           color: cf.color.clone(),
           bg: cf.bg.clone(),
@@ -565,7 +561,7 @@ impl Stomach {
           },
           ..Font::default()
         });
-        state.assign_value("font", Stored::Font(Rc::new(new_font)), Some(Scope::Local));
+        state.assign_value("font", new_font, Some(Scope::Local));
       } else {
         // When entering text mode, we should set the font to the text font in use before the math
         // but inherit color and size
@@ -581,7 +577,7 @@ impl Stomach {
           None
         };
         if let Some(nf) = new_font {
-          state.assign_value("font", Stored::Font(Rc::new(nf)), Some(Scope::Local));
+          state.assign_value("font", nf, Some(Scope::Local));
         }
       }
     }

@@ -95,3 +95,118 @@ impl fmt::Debug for Stored {
 impl fmt::Display for Stored {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{:?}", self) }
 }
+
+impl From<bool> for Stored {
+  fn from(value: bool) -> Self { Stored::Bool(value) }
+}
+
+impl From<String> for Stored {
+  fn from(value: String) -> Self { Stored::String(value) }
+}
+
+impl From<i32> for Stored {
+  fn from(value: i32) -> Self { Stored::Int(value) }
+}
+
+impl From<Catcode> for Stored {
+  fn from(value: Catcode) -> Self { Stored::Catcode(value) }
+}
+
+impl From<Token> for Stored {
+  fn from(value: Token) -> Self { Stored::Token(value) }
+}
+
+impl From<Tokens> for Stored {
+  fn from(value: Tokens) -> Self { Stored::Tokens(value) }
+}
+
+/// Storing all definitions is expected - Rc<Expandable> case
+impl From<Rc<Expandable>> for Stored {
+  fn from(definition: Rc<Expandable>) -> Self { Stored::Expandable(definition) }
+}
+/// Storing all definitions is expected - Expandable case
+impl From<Expandable> for Stored {
+  fn from(definition: Expandable) -> Self { Rc::new(definition).into() }
+}
+
+impl From<Rc<Conditional>> for Stored {
+  fn from(definition: Rc<Conditional>) -> Self { Stored::Conditional(definition) }
+}
+impl From<Conditional> for Stored {
+  fn from(value: Conditional) -> Self { Rc::new(value).into() }
+}
+
+impl From<Rc<Primitive>> for Stored {
+  fn from(definition: Rc<Primitive>) -> Self { Stored::Primitive(definition) }
+}
+impl From<Primitive> for Stored {
+  fn from(value: Primitive) -> Self { Rc::new(value).into() }
+}
+
+impl From<Rc<MathPrimitive>> for Stored {
+  fn from(definition: Rc<MathPrimitive>) -> Self { Stored::MathPrimitive(definition) }
+}
+impl From<MathPrimitive> for Stored {
+  fn from(value: MathPrimitive) -> Self { Rc::new(value).into() }
+}
+
+impl From<Rc<Constructor>> for Stored {
+  fn from(definition: Rc<Constructor>) -> Self { Stored::Constructor(definition) }
+}
+impl From<Constructor> for Stored {
+  fn from(value: Constructor) -> Self { Rc::new(value).into() }
+}
+
+impl From<Rc<::Digested>> for Stored {
+  fn from(definition: Rc<::Digested>) -> Self { Stored::Digested(definition) }
+}
+impl From<::Digested> for Stored {
+  fn from(value: ::Digested) -> Self { Rc::new(value).into() }
+}
+
+impl From<Parameter> for Stored {
+  fn from(value: Parameter) -> Self { Stored::Parameter(value) }
+}
+
+impl From<Rc<Font>> for Stored {
+  fn from(definition: Rc<Font>) -> Self { Stored::Font(definition) }
+}
+impl From<Font> for Stored {
+  fn from(value: Font) -> Self { Rc::new(value).into() }
+}
+
+impl From<Number> for Stored {
+  fn from(value: Number) -> Self { Stored::Number(value) }
+}
+
+impl From<Vec<char>> for Stored {
+  fn from(value: Vec<char>) -> Self { Stored::VecChar(value) }
+}
+
+impl From<Vec<String>> for Stored {
+  fn from(value: Vec<String>) -> Self { Stored::VecString(value) }
+}
+
+impl From<Vec<Token>> for Stored {
+  fn from(value: Vec<Token>) -> Self { Stored::VecToken(value) }
+}
+
+impl From<Vec<::Digested>> for Stored {
+  fn from(value: Vec<::Digested>) -> Self { Stored::VecDigested(value) }
+}
+
+impl From<HashMap<String, String>> for Stored {
+  fn from(value: HashMap<String, String>) -> Self { Stored::HashStr(value) }
+}
+
+impl From<VecDeque<Stored>> for Stored {
+  fn from(value: VecDeque<Stored>) -> Self { Stored::VecDequeStored(value) }
+}
+
+impl From<HashMap<String, Stored>> for Stored {
+  fn from(value: HashMap<String, Stored>) -> Self { Stored::HashStored(value) }
+}
+
+impl From<HashMap<String, Vec<TagData>>> for Stored {
+  fn from(value: HashMap<String, Vec<TagData>>) -> Self { Stored::HashTagData(value) }
+}

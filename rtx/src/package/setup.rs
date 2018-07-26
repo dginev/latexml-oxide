@@ -540,7 +540,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         after_digest_env.push(egroup_closure);
       }
 
-      $state_arg.install_definition(Stored::Primitive(Rc::new(Primitive{
+      $state_arg.install_definition(Primitive{
           cs: $cs.clone(),
           paramlist: $paramlist,
           replacement: Some(Rc::new($compiled_replacement)),
@@ -549,10 +549,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
             after_digest: after_digest_env,
             ..PrimitiveOptions::default()
           }
-        })),
+        },
         scope);
       if options_locked {
-        AssignValue!(&($cs.to_string()+":locked"), Stored::Bool(true), None, $state_arg);
+        AssignValue!(&($cs.to_string()+":locked"), true, None, $state_arg);
       }
     })
   }
@@ -735,7 +735,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
       //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
       if options.locked {
-        $state_arg.assign_value(&s!("{}:locked",$cs.get_cs_name()), Stored::Bool(true), None)
+        $state_arg.assign_value(&s!("{}:locked",$cs.get_cs_name()), true, None)
       }
       let constructor = Constructor {
         cs: $cs,
@@ -743,7 +743,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         replacement: $compiled_replacement,
         options: options};
 
-      $state_arg.install_definition(Stored::Constructor(Rc::new(constructor)), None);
+      $state_arg.install_definition(constructor, None);
   //   before_digest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
   //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),
   //     ($mode ? (sub { $_[0]->beginMode($mode); })
@@ -1116,7 +1116,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       // let sizer = inferSizer($options.sizer, $options.reversion);
       let mut before_digest_env : Vec<BeforeDigestClosure> = Vec::new();
       match &options.mode {
-        &Some(ref mode) => {
+        Some(ref mode) => {
           let bmode = mode.clone();
           let mode_closure = Rc::new(move |stomach: &mut Stomach, state: &mut State| {
             stomach.begin_mode(&bmode, state)?;
@@ -1124,7 +1124,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
           });
           before_digest_env.push(mode_closure);
         },
-        &None => {
+        None => {
           let bgroup_closure = beforeproc!(stomach, state, {stomach.bgroup(state);});
           before_digest_env.push(bgroup_closure);
         }
@@ -1142,7 +1142,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
       let env_name = name.clone();
       let current_environment_closure = beforeproc!(stomach, state, {
-        AssignValue!("current_environment", Stored::String(env_name.clone()), None, state);
+        AssignValue!("current_environment", env_name.clone(), None, state);
         let body = T_LETTER!(env_name.clone());
         DefMacroT!(T_CS!("\\@currenvir"), None, body.clone(), state);
       });
@@ -1188,7 +1188,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
             // ), $options{scope});
             ..ConstructorOptions::default()
           }});
-      $state_arg.install_definition(Stored::Constructor(begin_name_constructor), options.scope.clone());
+      $state_arg.install_definition(begin_name_constructor, options.scope.clone());
 
 
       let mut after_digest_env = options.after_digest;
@@ -1232,7 +1232,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
           ..ConstructorOptions::default()
         }
       });
-      $state_arg.install_definition(Stored::Constructor(end_envname_constructor), options.scope.clone());
+      $state_arg.install_definition(end_envname_constructor, options.scope.clone());
 
       // For the uncommon case opened by \csname env\endcsname
       let name_constructor = Rc::new(Constructor{
@@ -1259,7 +1259,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
           ..ConstructorOptions::default()
         }
       });
-      $state_arg.install_definition(Stored::Constructor(name_constructor), options.scope.clone());
+      $state_arg.install_definition(name_constructor, options.scope.clone());
 
       let end_name_constructor = Rc::new(Constructor {
         cs: T_CS!(s!("\\end{}",&name)),
@@ -1278,13 +1278,13 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         // ), $options{scope});
         options: ConstructorOptions::default()
       });
-      $state_arg.install_definition(Stored::Constructor(end_name_constructor), options.scope);
+      $state_arg.install_definition(end_name_constructor, options.scope);
 
       if options.locked {
-        AssignValue!(&s!("\\begin{{{}}}:locked",&name), Stored::Bool(true), None, $state_arg);
-        AssignValue!(&s!("\\end{{{}}}:locked",&name)  , Stored::Bool(true), None, $state_arg);
-        AssignValue!(&s!("\\{}:locked",&name)       , Stored::Bool(true), None, $state_arg);
-        AssignValue!(&s!("\\end{}:locked",&name)    , Stored::Bool(true), None, $state_arg);
+        AssignValue!(&s!("\\begin{{{}}}:locked",&name), true, None, $state_arg);
+        AssignValue!(&s!("\\end{{{}}}:locked",&name)  , true, None, $state_arg);
+        AssignValue!(&s!("\\{}:locked",&name)       , true, None, $state_arg);
+        AssignValue!(&s!("\\end{}:locked",&name)    , true, None, $state_arg);
       }
     })
   }
@@ -1554,7 +1554,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         transfer_opt_default!(mathstyle, options, math_attr_hash);
         transfer_default!(stretchy, options, math_attr_hash);
 
-        $state_arg.assign_value(&s!("math_token_attributes_{}",csname), Stored::HashStr(math_attr_hash), Some(Scope::Global));
+        $state_arg.assign_value(&s!("math_token_attributes_{}",csname), math_attr_hash, Some(Scope::Global));
       }
       // TODO:
       // // If the presentation is complex, and involves arguments,
@@ -1584,7 +1584,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     prim_options.font = None;
     let scope = prim_options.scope.clone();
     let reqfont = prim_options.font.clone();
-    $state_arg.install_definition(Stored::MathPrimitive(Rc::new(MathPrimitive{
+    $state_arg.install_definition(MathPrimitive{
       cs: $cs.clone(),
       paramlist: None, // never any parameters, this is intentional
       replacement: Some(Rc::new(move |stomach, args, state| {
@@ -1604,7 +1604,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       })),
       options: prim_options,
       ..MathPrimitive::default()
-      })), scope);
+      }, scope);
     })
   }
 

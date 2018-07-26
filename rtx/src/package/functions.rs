@@ -16,7 +16,7 @@ use rtx_core::gullet::Gullet;
 use rtx_core::mouth;
 use rtx_core::mouth::Mouth;
 use rtx_core::parameter::{Parameter, Parameters};
-use rtx_core::state::{Stored, Scope, State};
+use rtx_core::state::{Scope, State, Stored};
 use rtx_core::stomach::Stomach;
 use rtx_core::token::Token;
 use rtx_core::tokens::Tokens;
@@ -92,7 +92,7 @@ pub fn input_definitions(
 
   // Mark as loaded, then process the definitions
   note_begin(&s!("Loading {:?} definitions", file));
-  state.assign_value(&loaded_flag, Stored::Bool(true), Some(Scope::Global));
+  state.assign_value(&loaded_flag, true, Some(Scope::Global));
 
   match file.as_ref() {
     "TeX.pool" => pool::tex::load_definitions(&mut state)?,
@@ -515,12 +515,12 @@ pub fn def_macro(
   //       // }
 
   state.install_definition(
-    Stored::Expandable(Rc::new(Expandable {
-      cs: cs,
-      paramlist: paramlist,
-      expansion: expansion,
+    Expandable {
+      cs,
+      paramlist,
+      expansion,
       ..Expandable::default()
-    })),
+    },
     None,
   );
 }
@@ -554,14 +554,14 @@ pub fn def_conditional(
   let cs_name = cs.get_cs_name();
   match cs_name.as_str() {
     "\\fi" | "\\else" | "\\or" => state.install_definition(
-      Stored::Conditional(Rc::new(Conditional {
+      Conditional {
         cs: cs.clone(),
         paramlist: None,
         test: None,
         conditional_type: Some(ConditionalType::from(&cs_name)),
         locked: options.locked,
         skipper: options.skipper,
-      })),
+      },
       options.scope,
     ),
     custom => {
@@ -595,14 +595,14 @@ pub fn def_conditional(
         } else {
           //  For \ifcase, the parameter list better be a single Number !!
           state.install_definition(
-            Stored::Conditional(Rc::new(Conditional {
+            Conditional {
               cs: cs.clone(),
               paramlist,
               test,
               conditional_type: Some(ConditionalType::If),
               locked: options.locked,
               skipper: options.skipper,
-            })),
+            },
             options.scope,
           );
         }
@@ -617,7 +617,7 @@ pub fn def_conditional(
   }
 
   if let Some(true) = options.locked {
-    state.assign_value(&s!("{}:locked", cs), Stored::Bool(true), None);
+    state.assign_value(&s!("{}:locked", cs), true, None);
   }
   return;
 }
@@ -709,11 +709,7 @@ pub fn merge_font(font: Font, state: &mut State) {
     _ => Rc::new(Font::text_default()),
   };
   let newfont = current_font.merge(font);
-  state.assign_value(
-    "font",
-    Stored::Font(Rc::new(newfont)),
-    Some(Scope::Local),
-  );
+  state.assign_value("font", newfont, Some(Scope::Local));
   return;
 }
 
@@ -733,16 +729,16 @@ pub fn digest_literal(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -
   let font = state.lookup_font().unwrap(); // TODO: raise error if font missing
   state.assign_value(
     "font",
-    Stored::Font(Rc::new(font.merge(Font {
+    font.merge(Font {
       encoding: Some(s!("ASCII")),
       ..Font::default()
-    }))),
+    }),
     Some(Scope::Local),
   ); // try to stay as ASCII as possible
 
   let value = stomach.digest(stuff, state);
 
-  state.assign_value("font", Stored::Font(font), None); // TODO: maybe we need .assign_font ?
+  state.assign_value("font", font, None); // TODO: maybe we need .assign_font ?
   stomach.end_mode("text", state)?;
   value
 }
@@ -872,11 +868,7 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
 
 pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut State) {
   let v = counter_value(ctr, state).add(value);
-  state.assign_value(
-    &s!("\\c@{}", ctr),
-    Stored::Number(v.clone()),
-    Some(Scope::Global),
-  );
+  state.assign_value(&s!("\\c@{}", ctr), v.clone(), Some(Scope::Global));
   after_assignment(gullet, state);
   SetupBindingMacros!(state);
   let id_cs = T_CS!(s!("\\@{}@ID", ctr));
@@ -895,7 +887,7 @@ pub fn step_counter(
   let value = counter_value(ctr, state);
   state.assign_value(
     &s!("\\c@{}", ctr),
-    Stored::Number(value.add(Number!(1))),
+    value.add(Number!(1)),
     Some(Scope::Global),
   );
   {
@@ -967,16 +959,12 @@ pub fn ref_step_counter(
   deactivate_counter_scope(&ctr, state);
 
   // And install the scope (if any) for this reference number.
-  state.assign_value(
-    "current_counter",
-    Stored::String(ctr.to_string()),
-    Some(Scope::Local),
-  );
+  state.assign_value("current_counter", ctr.to_string(), Some(Scope::Local));
 
   let scope = s!("{}:{}", ctr, refnum.to_string());
   state.assign_value(
     &s!("scopes_for_counter:{}", ctr),
-    Stored::VecString(vec![scope.clone()]),
+    vec![scope.clone()],
     Some(Scope::Local),
   );
   state.activate_scope(&scope);
@@ -1028,11 +1016,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 //   return (id => ToString(DigestLiteral(T_CS!("\\the$ctr\@ID")))); }
 
 fn reset_counter(ctr: &str, state: &mut State) {
-  state.assign_value(
-    &s!("\\c@{}", ctr),
-    Stored::Number(Number!(0)),
-    Some(Scope::Global),
-  );
+  state.assign_value(&s!("\\c@{}", ctr), Number!(0), Some(Scope::Global));
   // and reset any within counters!
   let nested = if let Some(Stored::Tokens(nested)) = state.lookup_value(&s!("\\cl@{}", ctr)) {
     nested.clone()

@@ -131,7 +131,7 @@ pub trait BoxOps {
   fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()>;
   fn to_string(&self) -> String;
   fn stringify(&self) -> String { s!("Vec<Tbox> for now ") }
-  fn set_property(&mut self, _key: &str, _value: Stored) {}
+  fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {}
   fn get_property(&self, _key: &str) -> Option<&Stored> {
     error!(target: "boxops:get_property", "Generic BoxOps::get_property should never be called!");
     None
@@ -203,7 +203,7 @@ impl BoxOps for Digested {
     }
   }
 
-  fn set_property(&mut self, key: &str, value: Stored) {
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     match *self {
       Digested::TBox(ref b) => {
         error!(target: "digested:set_property", "Called set_property on Box: {:?}", b)

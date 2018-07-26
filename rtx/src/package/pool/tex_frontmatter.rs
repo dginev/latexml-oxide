@@ -40,7 +40,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
       // Digest this as if we're already in the document body!
       let inpreamble = state.lookup_bool("inPreamble");
-      state.assign_value("inPreamble", Stored::Bool(false), None);
+      state.assign_value("inPreamble", false, None);
       {
         // Be careful since the contents may also want to add frontmatter
         // (which should be inside or after this one!)
@@ -68,7 +68,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         let f_entry = frontmatter.entry(tag.to_string()).or_insert(Vec::new());
         f_entry.push(entry);
       }
-      state.assign_value("inPreamble", Stored::Bool(inpreamble), None);
+      state.assign_value("inPreamble", inpreamble, None);
     })
   );
 

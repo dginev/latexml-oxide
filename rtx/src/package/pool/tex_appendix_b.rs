@@ -78,7 +78,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     font => Font!(shape => "smallcaps", family => "serif", series => "medium" ));
 
   // Ideally, we should set these sizes from class files
-  AssignValue!("NOMINAL_FONT_SIZE", Stored::Int(10));
+  AssignValue!("NOMINAL_FONT_SIZE", 10);
   DefPrimitiveI!("\\tiny",         noprimitive!(), font => Font!(size => 5 ));
   DefPrimitiveI!("\\scriptsize",   noprimitive!(), font => Font!(size => 7 ));
   DefPrimitiveI!("\\footnotesize", noprimitive!(), font => Font!(size => 8 ));

@@ -53,7 +53,7 @@ lazy_static! {
   static ref KEY_RE : Regex = Regex::new(KEY_RE_STR!()).unwrap();
   static ref FN_RE : Regex = Regex::new(r"^&([\w:]*)\(").unwrap();
   static ref LEAD_CPAREN_RE : Regex = Regex::new(r"^\s*\)").unwrap();
-  static ref LEAD_KV_SEP : Regex = Regex::new(r"^\s*\,\s*").unwrap();
+  static ref LEAD_KV_SEP : Regex = Regex::new(r"^\s*,\s*").unwrap();
   static ref ARG_HOLE_RE : Regex = Regex::new(r"^#(\d+)").unwrap();
   static ref PROP_HOLE_RE : Regex = Regex::new(r"^\#([\w_-]+)").unwrap();
   static ref ESCAPED_OP : Regex = Regex::new(r"\\[#\?(&,<>\\%]").unwrap();

@@ -54,13 +54,13 @@ impl DigestionAPI for Core {
     // let paths = state.lookup_value("SEARCHPATHS");
     self
       .state
-      .assign_value("InitialPreloads", Stored::Bool(true), Some(Scope::Global));
+      .assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
       input_definitions(preload, InputDefinitionOptions::default(), &mut self.state)?;
     }
     self
       .state
-      .assign_value("InitialPreloads", Stored::Bool(false), Some(Scope::Global));
+      .assign_value("InitialPreloads", false, Some(Scope::Global));
     Ok(())
   }
 
@@ -277,14 +277,12 @@ impl DigestionAPI for Core {
     }
 
     if !pathname::is_literaldata(&request) {
-      self
-        .state
-        .assign_value("SOURCEFILE", Stored::String(request.clone()), None);
+      self.state.assign_value("SOURCEFILE", request.clone(), None);
     }
     if !dir.is_empty() {
       self
         .state
-        .assign_value("SOURCEDIRECTORY", Stored::String(dir.clone()), None);
+        .assign_value("SOURCEDIRECTORY", dir.clone(), None);
     }
     self.state.search_paths.push_front(dir.clone());
     self.state.graphics_paths.push_front(dir.clone());

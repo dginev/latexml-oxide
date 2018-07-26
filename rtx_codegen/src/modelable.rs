@@ -76,7 +76,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
         let classname = caps.get(1).map_or("", |m| m.as_str()).to_string();
         let elements = caps.get(2).map_or("", |m| m.as_str()).to_string();
         let elements_vec = elements
-          .split(",")
+          .split(',')
           .map(|t| t.to_string())
           .collect::<Vec<String>>();
 

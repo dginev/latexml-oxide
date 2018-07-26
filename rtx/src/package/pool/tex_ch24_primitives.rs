@@ -29,13 +29,17 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
         state,
       );
       let ismath = state.lookup_bool("IN_MATH");
-      let mode = if ismath { TexMode::Math } else { TexMode::Text };
+      let mode = if ismath {
+        Some(TexMode::Math)
+      } else {
+        Some(TexMode::Text)
+      };
       let body = stomach.digest_next_body(false, state)?;
       let mut boxes = vec![Digested::TBox(Box::new(open))];
       boxes.extend(body);
       let return_list = List {
-        boxes: boxes,
-        mode: Some(mode),
+        boxes,
+        mode,
         font: None,
       };
 

@@ -6,7 +6,6 @@ use rtx_core::state::*;
 use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use std::collections::{HashMap, VecDeque};
-use std::rc::Rc;
 
 #[test]
 fn basic_state_init() {
@@ -34,8 +33,7 @@ fn assign_lookup_value() {
   assert!(state.lookup_value("STRICT").is_none());
 
   let strict_value = s!("testing strict");
-  let strict_store = Stored::String(strict_value.clone());
-  state.assign_value("STRICT", strict_store, None);
+  state.assign_value("STRICT", strict_value.clone(), None);
   match state.lookup_value("STRICT") {
     None => panic!("Couldn't lookup STRICT value after assignment"),
     Some(&Stored::String(ref received_value)) => assert_eq!(*received_value, strict_value),
@@ -73,7 +71,7 @@ fn scoped_assign_lookup_value() {
   // First, can we push/pop frames?
   let mut state = State::new(StateOptions::default());
   assert!(state.lookup_value("foo").is_none());
-  state.assign_value("foo", Stored::String(s!("bar")), Some(Scope::Global));
+  state.assign_value("foo", s!("bar"), Some(Scope::Global));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
     Some(&Stored::String(ref received_value)) => assert_eq!(
@@ -85,7 +83,7 @@ fn scoped_assign_lookup_value() {
 
   state.push_frame();
 
-  state.assign_value("foo", Stored::String(s!("baz")), Some(Scope::Local));
+  state.assign_value("foo", s!("baz"), Some(Scope::Local));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
     Some(&Stored::String(ref received_value)) => assert_eq!(
@@ -95,7 +93,7 @@ fn scoped_assign_lookup_value() {
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 
-  state.assign_value("foo", Stored::String(s!("overwrite")), Some(Scope::Local));
+  state.assign_value("foo", s!("overwrite"), Some(Scope::Local));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
     Some(&Stored::String(ref received_value)) => assert_eq!(
@@ -248,9 +246,8 @@ fn install_definition_and_meaning() {
     is_protected: state.get_prefix("protected"),
     ..Expandable::default()
   };
-  let job_definition_os = Stored::Expandable(Rc::new(job_definition));
   // Install a Definition
-  state.install_definition(job_definition_os.clone(), None);
+  state.install_definition(job_definition.clone(), None);
   if let Some(Stored::Expandable(stored_definition)) = state.lookup_definition(&T_CS!("\\jobname"))
   {
     assert_eq!(stored_definition.cs, T_CS!("\\jobname"));
@@ -259,7 +256,7 @@ fn install_definition_and_meaning() {
   }
 
   // Assign a Meaning
-  state.assign_meaning(&T_CS!("\\foobar"), job_definition_os, Some(Scope::Local));
+  state.assign_meaning(&T_CS!("\\foobar"), job_definition, Some(Scope::Local));
   if let Some(&Stored::Expandable(ref stored_meaning)) = state.lookup_meaning(&T_CS!("\\foobar")) {
     assert_eq!(stored_meaning.cs, T_CS!("\\jobname")); // Note: meaning for \foobar still has definition for CS \jobname
   } else {

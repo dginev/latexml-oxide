@@ -32,7 +32,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Let('\@currentlabel', '\@empty');
 
   // Let's try just starting with this set (since we've loaded LaTeX)
-  state.assign_value("inPreamble", Stored::Bool(true), None); // \begin{document} will clear this.
+  state.assign_value("inPreamble", true, None); // \begin{document} will clear this.
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
@@ -64,11 +64,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // it can be processed specially, if needed.  These are the magic
   // "\begin{env}", "\end{env}" control sequences created by DefEnvironment.
 
-  AssignValue!(
-    "current_environment",
-    Stored::String(String::new()),
-    Some(Scope::Global)
-  );
+  AssignValue!("current_environment", String::new(), Some(Scope::Global));
   // DefMacroI!("\@currenvir", "", Rc::new(move |state| {}), state);
   // DefPrimitive("\lx@setcurrenvir{}", sub {
   //     DefMacro("\@currenvir", $_[1]);
@@ -144,7 +140,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       }
       Ok(())
     })),
-    before_digest => vec!(beforeproc!(_stomach, state, { state.assign_value("inPreamble", Stored::Bool(false), None); })),
+    before_digest => vec!(beforeproc!(_stomach, state, { state.assign_value("inPreamble", false, None); })),
     // after_digest_begin => |stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {

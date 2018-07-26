@@ -827,7 +827,7 @@ impl MathParser {
     }
     // If still failed, try other strategies?
 
-    return Ok((result, None));
+    Ok((result, None))
   }
 
   // sub getGrammaticalRole {
