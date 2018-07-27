@@ -42,7 +42,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
         None => Vec::new(),
       };
-      load_class(whatsit.get_arg(2).unwrap().to_string(),
+      load_class(&(whatsit.get_arg(2).unwrap().to_string()),
                 class_opts,
                 Tokens!(T_CS!(s!("\\AtBeginDocument")), T_CS!(s!("\\warn@unusedclassoptions"))),
                 state)?;
@@ -195,7 +195,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   ); // TODO: locked => true);
   DefMacro!("\\paragraph", "\\@startsection{paragraph}{4}{}{}{}{}"); // TODO: locked => true);
   DefMacro!("\\subparagraph", "\\@startsection{subparagraph}{5}{}{}{}{}"); // TODO: locked => true);
-  for tag in [
+  for tag in &[
     "part",
     "chapter",
     "section",
@@ -203,8 +203,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "subsubsection",
     "paragraph",
     "subparagraph",
-  ].iter()
-  {
+  ] {
     Tag!(&s!("ltx:{}",tag), auto_close => true);
   }
 
@@ -459,7 +458,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         };
 
         for package in package_list {
-          require_package(package, RequireOptions {
+          require_package(&package, RequireOptions {
             options: options_list.clone(),
             ..RequireOptions::default()
           }, state)?

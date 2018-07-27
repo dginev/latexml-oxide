@@ -360,7 +360,7 @@ impl MathParser {
     if rule == "kludge" {
       self.parse_kludge(node, document, state);
       Ok(None)
-    } else if let Some(result) = self.parse_single(node, document, rule, state)? {
+    } else if let Some(result) = self.parse_single(node, document, &rule, state)? {
       *self.passed.entry(tag.clone()).or_insert(0) += 1;
       if tag == "ltx:XMath" {
         // Replace the content of XMath with parsed result
@@ -687,7 +687,7 @@ impl MathParser {
     &self,
     mathnode: &mut Node,
     document: &mut Document,
-    rule: String,
+    rule: &str,
     state: &mut State,
   ) -> Result<Option<Node>>
   {
@@ -731,7 +731,7 @@ impl MathParser {
       };
     } else {
       // Now do the actual parse.
-      let (result_internal, unparsed) = self.parse_internal(&rule, nodes, document)?;
+      let (result_internal, unparsed) = self.parse_internal(rule, nodes, document)?;
       result = result_internal;
     }
 
@@ -815,7 +815,7 @@ impl MathParser {
       infix_op.unbind_node();
       right_arg.unbind_node();
 
-      let mut new_app_node = Node::new("XMApp", None, &mut document.document).unwrap();
+      let mut new_app_node = Node::new("XMApp", None, &document.document).unwrap();
       new_app_node.set_namespace(&left_arg.get_namespace().unwrap())?;
       new_app_node.add_child(&mut infix_op)?;
       new_app_node.add_child(&mut left_arg)?;
@@ -975,7 +975,7 @@ impl MathParser {
           } else {
             s!("unknown")
           };
-          let (bp, string) = self.textrec_apply(&name, op, args, document, state);
+          let (bp, string) = self.textrec_apply(&name, &op, args, document, state);
           if bp < outer_bp || (bp == outer_bp && name != outer_name) {
             s!("({})", string)
           } else {
@@ -1009,7 +1009,7 @@ impl MathParser {
   fn textrec_apply(
     &self,
     name: &str,
-    op: Node,
+    op: &Node,
     args: Vec<Node>,
     document: &Document,
     state: &mut State,
@@ -1023,7 +1023,7 @@ impl MathParser {
     // $IS_INFIX{$role}) {
     let bp = 10; // TODO
                  //     # Format as infix.
-    return if args.len() == 1 {
+    if args.len() == 1 {
       // unless a single arg; then prefix.
       (
         bp,
@@ -1041,7 +1041,7 @@ impl MathParser {
       let op_string: String = s!(" {} ", self.textrec(&op, None, None, document, state));
       let apply_string: String = args_rec.join(&op_string);
       (bp, apply_string)
-    };
+    }
     //   elsif ($role eq 'POSTFIX') {
     //     return (10000, textrec($args[0], 10000, $name) . textrec($op)); }
     //   elsif ($name eq 'multirelation') {
@@ -1120,17 +1120,20 @@ impl MathParser {
           None => String::new(),
         }
       }
-    }
     //   elsif (ref $node eq 'ARRAY') {
     //     my ($op, $attr, @args) = @$node;
     //     if (@args) {
     //       return join('', grep { defined $_ } map { p_get_value($_) } @args); }
     //     else {
     //       return $$node[1]{name}; } }
-    else if node_type == Some(NodeType::TextNode) {
-      node.get_content()
     } else {
-      node.get_content() // ??? Used to return Node directly in Perl ???
+      node.get_content()
+      // TODO instead?:
+      //  if node_type == Some(NodeType::TextNode) {
+      //   node.get_content()
+      // } else {
+      //   node.get_content() // ??? Used to return Node directly in Perl ???
+      // }
     }
   }
 

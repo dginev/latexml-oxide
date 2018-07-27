@@ -718,7 +718,7 @@ impl State {
     }
   }
 
-  pub fn assign_mapping(&mut self, map: &str, key: &str, value: Option<Stored>) {
+  pub fn assign_mapping<T: Into<Stored>>(&mut self, map: &str, key: &str, value: Option<T>) {
     if self.value.get(map).is_none() || self.value[map].is_empty() {
       self.assign_internal(
         TableName::Value,
@@ -736,7 +736,7 @@ impl State {
 
     match value {
       None => mapping.remove(key),
-      Some(v) => mapping.insert(key.to_string(), v),
+      Some(v) => mapping.insert(key.to_string(), v.into()),
     };
   }
 

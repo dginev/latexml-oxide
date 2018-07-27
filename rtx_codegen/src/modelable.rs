@@ -65,8 +65,8 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
         let attr = caps.get(2).map_or("", |m| m.as_str()).to_string();
         let children = caps.get(3).map_or("", |m| m.as_str()).to_string();
 
-        let attr_vec: Vec<String> = attr.split(",").map(|t| t.to_string()).collect();
-        let child_vec: Vec<String> = children.split(",").map(|t| t.to_string()).collect();
+        let attr_vec: Vec<String> = attr.split(',').map(|t| t.to_string()).collect();
+        let child_vec: Vec<String> = children.split(',').map(|t| t.to_string()).collect();
 
         operations.push(quote!(
           model.add_tag_attribute(#tag, vec![#(#attr_vec),*]);

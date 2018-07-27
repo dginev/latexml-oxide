@@ -284,23 +284,20 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
     }
 
     // Substitutable value: argument, property...
-    if !is_match {
-      if LEAD_VALUE_RE.is_match(&replacement) {
-        is_match = true;
-        let to_absorb = translate_value("", &mut replacement);
-        operations.push(quote!(
-          if let Some(& Stored::Digested(ref digested)) = #to_absorb {
-            document.absorb((**digested).clone(), state)?;
-          }
-        ));
-      }
+    if !is_match && LEAD_VALUE_RE.is_match(&replacement) {
+      is_match = true;
+      let to_absorb = translate_value("", &mut replacement);
+      operations.push(quote!(
+        if let Some(& Stored::Digested(ref digested)) = #to_absorb {
+          document.absorb((**digested).clone(), state)?;
+        }
+      ));
     }
 
     // TODO: Still to be implemented cases:
     if !is_match {
-      // Attribute: a=v; assigns in current node? [May conflict with random
-      // replacement!?!]
-      if let Some(eq_index) = replacement.find("=") {
+      // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
+      if let Some(eq_index) = replacement.find('=') {
         is_match = true;
         println!("-- Attribute");
         let consumed = replacement[0..1 + eq_index].to_owned();

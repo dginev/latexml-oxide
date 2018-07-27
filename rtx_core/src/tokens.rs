@@ -137,7 +137,7 @@ impl Tokens {
         if token2.code != Catcode::PARAM {
           // Not multiple '#'; read arg.
           let arg_number = token2.text.parse::<usize>().unwrap();
-          let ref arg = args[arg_number - 1];
+          let arg = &args[arg_number - 1];
           result.extend(arg.clone().unlist());
         } else {
           // Duplicated '#', copy 2nd '#'

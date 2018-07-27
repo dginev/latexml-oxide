@@ -75,9 +75,9 @@ impl Gullet {
       self.mouthstack.push_front(runtime.clone());
     };
     self.mouth = Some(MouthRuntime {
-      mouth: mouth,
+      mouth,
+      autoclose,
       pushback: VecDeque::new(),
-      autoclose: autoclose,
     });
   }
 

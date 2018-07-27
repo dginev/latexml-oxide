@@ -318,7 +318,7 @@ impl Document {
       self.absorb(digested, state)?;
     }
 
-    let mut needs_close = &self.node == &node;
+    let mut needs_close = self.node == node;
     {
       // In obscure situations, `node` may have already gotten closed?
       // close it if it is still open.
@@ -863,7 +863,9 @@ impl Document {
     state: &mut State,
   ) -> Result<Node>
   {
-    attributes.entry(s!("role")).or_insert(s!("UNKNOWN"));
+    attributes
+      .entry(s!("role"))
+      .or_insert_with(|| s!("UNKNOWN"));
 
     let font = match font_opt {
       Some(f) => f.clone(),

@@ -19,9 +19,9 @@ impl fmt::Debug for List {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "\nList[")?;
     for tbox in &self.boxes {
-      write!(f, "  {:?}\n", tbox)?;
+      writeln!(f, "  {:?}", tbox)?;
     }
-    write!(f, "]({:?})\n", self.mode)
+    writeln!(f, "]({:?})", self.mode)
   }
 }
 
@@ -52,12 +52,7 @@ impl BoxOps for List {
     Tokens::new(reverted)
   }
 
-  fn get_font(&self) -> Option<&Font> {
-    match self.font {
-      Some(ref f) => Some(f),
-      None => None,
-    }
-  }
+  fn get_font(&self) -> Option<&Font> { self.font.as_ref() }
 }
 
 impl List {
@@ -75,8 +70,8 @@ impl List {
       }
     }
     List {
-      boxes: boxes,
-      font: font,
+      boxes,
+      font,
       mode: None,
     }
   }

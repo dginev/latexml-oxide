@@ -59,7 +59,7 @@ pub fn is_defined_token(cs: &Token, state: &mut State) -> bool {
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
 pub fn input_definitions(
-  raw_file: String,
+  raw_file: &str,
   options: InputDefinitionOptions,
   mut state: &mut State,
 ) -> Result<()>
@@ -175,7 +175,7 @@ impl Default for RequireOptions {
 /// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of `pathname_find`
 /// ???) Another potentially useful option might be that if we are reading a raw file,
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
-pub fn require_package(name: String, mut options: RequireOptions, state: &mut State) -> Result<()> {
+pub fn require_package(name: &str, mut options: RequireOptions, state: &mut State) -> Result<()> {
   if options.raw {
     options.raw = false;
     // Warn('deprecated', 'raw', $STATE->getStomach->getGullet,
@@ -226,7 +226,7 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
 }
 
 pub fn load_class(
-  name: String,
+  name: &str,
   options: Vec<String>,
   after: Tokens,
   state: &mut State,
@@ -236,7 +236,7 @@ pub fn load_class(
     name,
     InputDefinitionOptions {
       extension: Some(String::from("cls")),
-      after: after,
+      after,
       notex: true,
       handleoptions: true,
       noerror: true,
@@ -391,8 +391,8 @@ pub fn parse_parameters(
     } else if PARAMSPECT_CHECK.is_match(&prototype) {
       let captures = PARAMSPECT_CHECK.captures(&prototype).unwrap();
       next_proto = PARAMSPECT_CHECK.replace(&prototype, "").to_string();
-      let spec = captures.get(1).map_or("", |m| m.as_str());
-      let spec_type = captures.get(2).map_or("", |m| m.as_str());
+      let spec = captures.get(1).map_or("", |m| m.as_str()).to_string();
+      let name = captures.get(2).map_or("", |m| m.as_str()).to_string();
       let extra = match captures.get(4) {
         None => Vec::new(),
         Some(_extra_string) => {
@@ -403,9 +403,9 @@ pub fn parse_parameters(
       };
       parameters.push(
         Parameter {
-          name: spec_type.to_string(),
-          spec: spec.to_string(),
-          extra: extra,
+          name,
+          spec,
+          extra,
           ..Parameter::default()
         }.init(state)?,
       );
@@ -985,7 +985,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   } else {
     Vec::new()
   };
-  for scope in scopes.iter() {
+  for scope in &scopes {
     state.deactivate_scope(scope);
   }
 
@@ -996,7 +996,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   } else {
     Vec::new()
   };
-  for inner_ctr in counters.iter() {
+  for inner_ctr in &counters {
     state.deactivate_counter_scope(inner_ctr);
   }
 
@@ -1024,7 +1024,7 @@ fn reset_counter(ctr: &str, state: &mut State) {
     Tokens!()
   };
 
-  for c in nested.unlist().iter() {
+  for c in &(nested.unlist()) {
     reset_counter(&c.to_string(), state);
   }
 

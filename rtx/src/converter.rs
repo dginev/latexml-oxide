@@ -34,7 +34,7 @@ impl Converter {
         status_code: 3,
       },
       ready: false,
-      opts: opts,
+      opts,
       core: Core::default(),
     }
   }
@@ -300,7 +300,7 @@ impl Converter {
 
     ConversionResponse {
       result: Some(serialized),
-      log: log,
+      log,
       status: self.runtime.status.clone(),
       status_code: self.runtime.status_code,
     }

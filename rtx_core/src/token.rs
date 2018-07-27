@@ -64,9 +64,9 @@ impl quote::ToTokens for Catcode {
   }
 }
 impl Catcode {
-  pub fn name(&self) -> String {
+  pub fn name(self) -> String {
     use token::Catcode::*;
-    match *self {
+    match self {
       // Primitive
       ESCAPE => "Escape",
       BEGIN => "Begin",
@@ -95,9 +95,9 @@ impl Catcode {
   // Categories of Category codes.
   // For Tokens with these catcodes, only the catcode is relevant for comparison.
   // (if they even make it to a stage where they get compared)
-  pub fn is_primitive(&self) -> bool {
+  pub fn is_primitive(self) -> bool {
     use token::Catcode::*;
-    match *self {
+    match self {
       // Primitives
       ESCAPE | BEGIN | END | MATH | ALIGN | EOL | PARAM | SUPER | SUB | SPACE | NOTEXPANDED => true,
       // Non-primitive
@@ -105,9 +105,9 @@ impl Catcode {
     }
   }
 
-  pub fn is_executable(&self) -> bool {
+  pub fn is_executable(self) -> bool {
     use token::Catcode::*;
-    match *self {
+    match self {
       // Executable
       BEGIN | END | MATH | ALIGN | SUPER | SUB | ACTIVE | CS => true,
       // Non-executable
@@ -116,9 +116,9 @@ impl Catcode {
     }
   }
 
-  pub fn is_neutralizable(&self) -> bool {
+  pub fn is_neutralizable(self) -> bool {
     use token::Catcode::*;
-    match *self {
+    match self {
       // Neutralizable
       MATH | ALIGN | PARAM | SUPER | SUB | ACTIVE => true,
       // Non-neutralizable
@@ -127,17 +127,17 @@ impl Catcode {
     }
   }
 
-  pub fn is_active_or_cs(&self) -> bool {
+  pub fn is_active_or_cs(self) -> bool {
     use token::Catcode::*;
-    match *self {
+    match self {
       ACTIVE | CS => true,
       _ => false,
     }
   }
 
-  pub fn is_absorbable(&self) -> bool {
+  pub fn is_absorbable(self) -> bool {
     use token::Catcode::*;
-    match *self {
+    match self {
       // Absorbable
       SPACE | LETTER | OTHER | COMMENT => true,
       _ => false,
@@ -309,7 +309,7 @@ pub fn untex(digested: &Digested, state: &State) -> String {
     };
     if cc == LETTER {
       // keep "words" together, just for aesthetics
-      while !tokens.is_empty() && tokens.get(0).unwrap().get_catcode() == LETTER {
+      while !tokens.is_empty() && tokens[0].get_catcode() == LETTER {
         token_string += tokens.pop_front().unwrap().get_string()
       }
     }

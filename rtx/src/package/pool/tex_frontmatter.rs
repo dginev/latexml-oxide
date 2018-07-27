@@ -65,7 +65,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
             "Global TeX Frontmatter hash was not available, should never happen"
           ),
         };
-        let f_entry = frontmatter.entry(tag.to_string()).or_insert(Vec::new());
+        let f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
         f_entry.push(entry);
       }
       state.assign_value("inPreamble", inpreamble, None);
@@ -133,7 +133,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     );
     let state_keys: HashSet<String> = frontmatter.keys().cloned().collect();
     let mut all_keys: HashSet<String> = frontmatter_elements.union(&state_keys).cloned().collect();
-    for key in all_keys.iter() {
+    for key in &all_keys {
       if let Some(list) = frontmatter.remove(key) {
         // Dubious, but assures that frontmatter appears in text mode...
         // TODO:
