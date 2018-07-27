@@ -1018,11 +1018,9 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 fn reset_counter(ctr: &str, state: &mut State) {
   state.assign_value(&s!("\\c@{}", ctr), Number!(0), Some(Scope::Global));
   // and reset any within counters!
-  let nested = if let Some(Stored::Tokens(nested)) = state.lookup_value(&s!("\\cl@{}", ctr)) {
-    nested.clone()
-  } else {
-    Tokens!()
-  };
+  let nested = state
+    .lookup_tokens(&s!("\\cl@{}", ctr))
+    .unwrap_or_else(|| Tokens!());
 
   for c in &(nested.unlist()) {
     reset_counter(&c.to_string(), state);

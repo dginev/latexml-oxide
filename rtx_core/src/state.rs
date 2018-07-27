@@ -618,53 +618,49 @@ impl State {
   /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
   pub fn lookup_bool(&self, key: &str) -> bool {
     match self.lookup_value(key) {
-      Some(&Stored::Bool(ref v)) => *v,
-      Some(_) => true,
+      Some(v) => v.into(),
       None => false,
     }
   }
 
   pub fn lookup_string(&self, key: &str) -> String {
     match self.lookup_value(key) {
-      Some(&Stored::String(ref v)) => v.to_owned(),
-      _ => String::new(),
+      Some(v) => v.into(),
+      None => String::new(),
     }
   }
 
   pub fn lookup_vecdeque<'lvdq>(&'lvdq self, key: &'lvdq str) -> Option<&VecDeque<Stored>> {
     match self.lookup_value(key) {
-      Some(&Stored::VecDequeStored(ref v)) => Some(v),
+      Some(v) => v.into(),
       _ => None,
     }
   }
 
   pub fn lookup_font(&self) -> Option<Rc<Font>> {
     match self.lookup_value("font") {
-      Some(&Stored::Font(ref f)) => Some(f.clone()), /* TODO: is this clone heavy/slow?
-                                                             * We can refactor into refs */
+      Some(f) => f.into(),
       _ => None,
     }
   }
+
   pub fn lookup_mathfont(&self) -> Option<Rc<Font>> {
     match self.lookup_value("mathfont") {
-      Some(&Stored::Font(ref f)) => Some(f.clone()), /* TODO: is this clone heavy/slow?
-                                                             * We can refactor into refs */
+      Some(v) => v.into(),
       _ => None,
     }
   }
 
   pub fn lookup_number(&self, key: &str) -> Option<Number> {
     match self.lookup_value(key) {
-      Some(&Stored::Number(ref n)) => Some(n.clone()), /* TODO: is this clone heavy/slow?
-                                                             * We can refactor into refs */
+      Some(v) => v.into(),
       _ => None,
     }
   }
 
   pub fn lookup_tokens(&self, key: &str) -> Option<Tokens> {
     match self.lookup_value(key) {
-      Some(&Stored::Tokens(ref ts)) => Some(ts.clone()), /* TODO: is this clone heavy/slow?
-                                                             * We can refactor into refs */
+      Some(v) => v.into(),
       _ => None,
     }
   }
@@ -802,7 +798,7 @@ impl State {
     match self.catcode.get(&c.to_string()) {
       None => None,
       Some(cvec) => match cvec.front() {
-        Some(&Stored::Catcode(ref cc)) => Some(*cc),
+        Some(cc) => cc.into(),
         _ => None,
       },
     }
@@ -921,7 +917,7 @@ impl State {
       // $defn = $$entry[0]; }
       Some(defn.front().unwrap().clone())
     } else {
-      Some(Stored::Token(token.clone()))
+      Some(token.into())
     }
   }
 
@@ -931,6 +927,7 @@ impl State {
     _definition: T,
   )
   {
+    unimplemented!()
   }
 
   /// And a shorthand for installing definitions
@@ -954,14 +951,9 @@ impl State {
 
     let cs_locked = cs.clone() + ":locked";
     // TODO, .is_none() should be a real false check
-    let is_cs_locked = match self.lookup_value(&cs_locked) {
-      Some(&Stored::Bool(ref x)) => *x,
-      _ => false,
-    };
-    let is_state_unlocked: bool = match self.lookup_value("UNLOCKED") {
-      Some(&Stored::Bool(ref x)) => *x,
-      _ => false,
-    };
+    let is_cs_locked = self.lookup_bool(&cs_locked);
+    let is_state_unlocked = self.lookup_bool("UNLOCKED");
+
     if is_cs_locked && !is_state_unlocked {
       if let Some(&Stored::String(ref s)) = self.lookup_value("SOURCEFILE") {
         // report if the redefinition seems to come from document source
