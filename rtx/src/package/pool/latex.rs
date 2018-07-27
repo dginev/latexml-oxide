@@ -270,56 +270,53 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
   );
 
-  DefConstructor!(
-    "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
-    document,
-    args,
-    props,
-    state,
-    {
-      // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
-      // intuitive level of:       let (x,y,z, ...) = @args;
-      unpack_to_string!(args => stype, inlist, toctitle, title);
-      let clean_id = prop_str!(props,"id"); // TODO: CleanID($id);
-      document.open_element(&s!("ltx:{}", stype),
-        Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
-        None,
-        state,
-      )?;
-      // TODO: Another instance where the immutability of props causes endless cloning
-      //       which is slow and wasteful.
-      // The big problem is that for props to be mutable, the entire parent whatsit needs to
-      // be mutable, and Rust hits a mutability conflict between the parent, and the
-      // "args" and "props" children ... will come back here after performance becomes
-      // an issue again
-      if let Some(Stored::Digested(tags)) = props.get("tags") {
-        document.absorb((**tags).clone(), state)?;
-      }
-      let title = prop_digested!(props, "title");
-      document.insert_element("ltx:title", title, None, state)?;
+  //   DefConstructorI!(
+  //     "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
+  //      replacement!(document, args, props, state,
+  //     {
+  //       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
+  //       // intuitive level of:       let (x,y,z, ...) = @args;
+  //       unpack_to_string!(args => stype, inlist, toctitle, title);
+  //       let clean_id = prop_str!(props,"id"); // TODO: CleanID($id);
+  //       document.open_element(&s!("ltx:{}", stype),
+  //         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
+  //         None,
+  //         state,
+  //       )?;
+  //       // TODO: Another instance where the immutability of props causes endless cloning
+  //       //       which is slow and wasteful.
+  //       // The big problem is that for props to be mutable, the entire parent whatsit needs to
+  //       // be mutable, and Rust hits a mutability conflict between the parent, and the
+  //       // "args" and "props" children ... will come back here after performance becomes
+  //       // an issue again
+  //       if let Some(Stored::Digested(tags)) = props.get("tags") {
+  //         document.absorb((**tags).clone(), state)?;
+  //       }
+  //       let title = prop_digested!(props, "title");
+  //       document.insert_element("ltx:title", title, None, state)?;
 
-      let toctitle = prop_digested!(props, "toctitle");
-      if !toctitle.is_empty() {
-        document.insert_element("ltx:toctitle", toctitle, None, state)?;
-      }
-    },
-    properties => properties!(stomach, args, state, {
-      unpack!(args => stype, inlist, toctitle_arg, title);
-      let mut props = ref_step_counter(stype.to_string(), state);
-      let toctitle = if toctitle_arg.to_string().is_empty() {
-        toctitle_arg
-      } else {
-        title
-      };
-      let xtitle    = stomach.digest(Invocation!(T_CS!("\\lx@format@title@@"), stype, title))?;
-      let xtoctitle = stomach.digest(Invocation!(T_CS!("\\lx@format@toctitle@@"), stype, toctitle))?;
-      props.set(s!("title"), xtitle.into());
-      if xtoctitle.to_string() != xtitle.to_string() {
-        props.set(s!("toctitle"), xtoctitle.int());
-      }
-      props
-    })
- );
+  //       let toctitle = prop_digested!(props, "toctitle");
+  //       if !toctitle.is_empty() {
+  //         document.insert_element("ltx:toctitle", toctitle, None, state)?;
+  //       }
+  //     }),
+  //     properties => properties!(stomach, args, state, {
+  //       unpack!(args => stype, inlist, toctitle_arg, title);
+  //       let mut props = ref_step_counter(stype.to_string(), state);
+  //       let toctitle = if toctitle_arg.to_string().is_empty() {
+  //         toctitle_arg
+  //       } else {
+  //         title
+  //       };
+  //       let xtitle    = stomach.digest(Invocation!(T_CS!("\\lx@format@title@@"), stype, title))?;
+  // let xtoctitle = stomach.digest(Invocation!(T_CS!("\\lx@format@toctitle@@"), stype,
+  // toctitle))?;       props.set(s!("title"), xtitle.into());
+  //       if xtoctitle.to_string() != xtitle.to_string() {
+  //         props.set(s!("toctitle"), xtoctitle.int());
+  //       }
+  //       props
+  //     })
+  //  );
 
   // # No tags, at all? Consider...
   // DefConstructor('\@@unnumbered@section{} Undigested OptionalUndigested Undigested', sub {
@@ -373,35 +370,33 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //// However, I hate setting up even more machinery & options and dragging yet another form
   //// around....
   // \@@section{type}{id}{refnum}{formattedrefnum}{toctitle}{title}
-  DefConstructor!(
-    "\\@@section{}{}{}{}{}{}",
-    document,
-    args,
-    props,
-    inner_state,
-    {
-      unpack!(args => stype, id, refnum_arg, frefnum_arg, toctitle, title);
-      let refnum = refnum_arg.to_string();
-      let mut frefnum = frefnum_arg.to_string();
-      if frefnum == refnum {
-        frefnum = String::new();
-      }
 
-      let clean_id = id; // TODO: CleanID($id);
-      let has_toctitle =
-        !toctitle.to_string().is_empty() && (toctitle.to_string() != title.to_string());
-      document.open_element(
-        &s!("ltx:{}", stype.to_string()),
-        Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)),
-        None,
-        inner_state,
-      )?;
-      document.insert_element("ltx:title", vec![title], None, inner_state)?;
-      if has_toctitle {
-        document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state)?;
-      }
-    }
-  );
+  // DefConstructorI!(
+  //   "\\@@section{}{}{}{}{}{}",
+  //   replacement!(document, args, props, inner_state, {
+  //     unpack!(args => stype, id, refnum_arg, frefnum_arg, toctitle, title);
+  //     let refnum = refnum_arg.to_string();
+  //     let mut frefnum = frefnum_arg.to_string();
+  //     if frefnum == refnum {
+  //       frefnum = String::new();
+  //     }
+
+  //     let clean_id = id; // TODO: CleanID($id);
+  //     let has_toctitle =
+  //       !toctitle.to_string().is_empty() && (toctitle.to_string() != title.to_string());
+  //     document.open_element(
+  //       &s!("ltx:{}", stype.to_string()),
+  //       Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)),
+  //       None,
+  //       inner_state,
+  //     )?;
+  //     document.insert_element("ltx:title", vec![title], None, inner_state)?;
+  //     if has_toctitle {
+  //       document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state)?;
+  //     }
+  //   }),
+  //   state
+  // );
 
   // Not sure if this is best, but if no explicit \section'ing...
   //### Tag('ltx:section',autoOpen=>1);
