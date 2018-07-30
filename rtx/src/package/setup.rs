@@ -344,18 +344,18 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   macro_rules! DefConditional(
     // test is always a rust closure
-    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $body:block) => (DefConditional!($proto, $gullet, $args, $inner_state, $body, $state));
-    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $body:block, $state_arg:ident) => ({
+    ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block) => (DefConditional!($proto, sub[$gullet, $args, $inner_state] $body, $state));
+    ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-      DefConditionalI!(cs, paramlist, $gullet, $args, $inner_state, $body, $state_arg)
+      DefConditionalI!(cs, paramlist, sub[$gullet, $args, $inner_state] $body, $state_arg)
     })
   );
 
   macro_rules! DefConditionalI(
     // test is always a rust closure
-    ($cs:expr, $paramlist:expr, $gullet:ident, $args:ident, $inner_state:ident, $body:block) =>
+    ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block) =>
       (DefConditionalI!($cs, $paramlist, $gullet, $args, $inner_state, $body, $state));
-    ($cs:expr, $paramlist:expr, $gullet:ident, $args:ident, $inner_state:ident, $body:block, $state_arg:ident) => ({
+    ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
       let test : ConditionalClosure = Rc::new(|$gullet, $args, $inner_state| {$body});
       def_conditional($cs, $paramlist, Some(test), ConditionalOptions::default(), $state_arg);
     });

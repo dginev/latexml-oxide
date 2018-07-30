@@ -10,23 +10,22 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     unpack_to_string!(args => name);
     let begin_mark = s!("\\begin{{{}}}", name);
     let end_mark = s!("\\end{{{}}}", name);
-    {
-      DefConstructorI!(T_CS!(begin_mark), None, noreplacement!(),
-        after_digest => sub!(move |stomach: &mut Stomach, whatsit: &mut Whatsit, _state: &mut State| {
-          let mut nlines = 0;
-          let gullet = &mut stomach.gullet;
-          gullet.read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
-          while let Some(line) = gullet.read_raw_line() {
-            if line == end_mark {
-              break;
-            }
-            nlines += 1;
+    DefConstructorI!(T_CS!(begin_mark), None, noreplacement!(),
+      after_digest => sub!(move |stomach: &mut Stomach, whatsit: &mut Whatsit, _state: &mut State| {
+        let mut nlines = 0;
+        let gullet = &mut stomach.gullet;
+        gullet.read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
+        while let Some(line) = gullet.read_raw_line() {
+          if line == end_mark {
+            break;
           }
-          note_progress(&s!("[Skipped {} ({} lines)]",name,nlines));
-          Ok(Vec::new())
-        })
-      ,state);
-    }
+          nlines += 1;
+        }
+        note_progress(&s!("[Skipped {} ({} lines)]",name,nlines));
+        Ok(Vec::new())
+      })
+    ,state);
+
     Ok(Vec::new())
   });
 
@@ -35,36 +34,26 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   macro_rules! define_included {
     () => {
       primitivesub!(stomach, args, state, {
-        args.reverse(); // we'll be popping from the front
-        let name = if let Some(name_token) = args.pop() {
-          name_token.to_string()
-        } else {
-          String::new()
-        };
-        // TODO: All instances of `.clone` here look like Rust memory waste, consider improving
-        let mut before_tokens = if let Some(before) = args.pop() {
-          before.unlist()
-        } else {
-          Vec::new()
-        };
+        args.reverse(); // we'll be using .pop() from the front
+        let name = args.pop().unwrap_or(Tokens!()).to_string();
+        let mut before_tokens = args.pop().unwrap_or(Tokens!()).unlist();
         before_tokens.push(T_CS!("\\ignorespaces"));
-        let mut after_tokens = if let Some(after) = args.pop() {
-          after.unlist()
-        } else {
-          Vec::new()
-        };
+        let mut after_tokens = args.pop().unwrap_or(Tokens!()).unlist();
         after_tokens.push(T_CS!("\\ignorespaces"));
         // Note that we define the `magic' environment control sequences,
         // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
         DefMacroI!(T_CS!(s!("\\begin{{{}}}", name)),
-                      None,
-                      sub[gullet, _args, _state] {
-                        gullet.read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
-                        Ok(Tokens::new(before_tokens.clone()))
-                      },
-                      state
-                    );
-        DefMacroI!(T_CS!(s!("\\end{{{}}}", name)), None, Tokens{tokens: after_tokens}, state);
+                          None,
+                          sub[gullet, _args, _state] {
+                            gullet.read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
+                            Ok(before_tokens.clone().into())
+                          },
+                          state
+                        );
+        DefMacroI!(T_CS!(s!("\\end{{{}}}", name)),None,
+          Tokens::new(after_tokens),
+          state
+        );
 
         Ok(Vec::new())
       });
