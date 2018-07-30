@@ -766,6 +766,33 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! DefConstructor(
+    // Code replacement flavors
+   ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $state));
+   ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+      $key1:ident => $val1:expr) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $key1 => $val1, $state));
+    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+      $key1:ident => $val1:expr,
+      $key2:ident => $val2:expr) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $key1 => $val1, $key2=>$val2, $state));
+    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+      $key1:ident => $val1:expr,
+      $key2:ident => $val2:expr,
+      $key3:ident => $val3:expr) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $key1 => $val1, $key2=>$val2, $key3=>$val3, $state));
+    // with explicit state
+    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $state_arg:ident) => (
+      DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, ConstructorOptions::default(), $state_arg));
+    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+      $key1:ident => $val1:expr, $state_arg:ident ) => (
+      DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,$key1=>$val1), $state_arg));
+    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+      $key1:ident => $val1:expr,
+      $key2:ident => $val2:expr, $state_arg:ident ) => (
+      DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,$key1=>$val1, $key2=>$val2), $state_arg));
+    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+      $key1:ident => $val1:expr,
+      $key2:ident => $val2:expr,
+      $key3:ident => $val3:expr, $state_arg:ident ) => (
+      DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,$key1=>$val1, $key2=>$val2, $key3=>$val3), $state_arg));
+
     // String replacement flavors
     ($cs:expr, $replacement:expr) => (DefConstructor!($cs, $replacement, $state));
     ($cs:expr, $replacement:expr,

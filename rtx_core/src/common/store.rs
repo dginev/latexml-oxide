@@ -289,3 +289,12 @@ impl<'a> From<&'a Stored> for Option<Catcode> {
     }
   }
 }
+
+impl<'a> From<&'a Stored> for Option<&'a Vec<char>> {
+  fn from(value: &'a Stored) -> Option<&'a Vec<char>> {
+    match value {
+      Stored::VecChar(ref cc) => Some(cc),
+      _ => None,
+    }
+  }
+}
