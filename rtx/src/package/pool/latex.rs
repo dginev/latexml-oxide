@@ -71,7 +71,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //     state.assign_value(current_environment => ToString($_[1])); });
   // Let("\@currenvline", "\@empty");
 
-  DefMacro!("\\begin{}", gullet, args, state, {
+  DefMacro!("\\begin{}", sub [gullet, args, state] {
     unpack!(args => name);
     let begin_name = s!("\\begin{{{}}}", name);
     if is_defined(&begin_name, state) {
@@ -92,7 +92,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
   });
 
-  DefMacro!("\\end{}", gullet, args, state, {
+  DefMacro!("\\end{}", sub[gullet, args, state]{
     let name: String = args[0].to_string();
     let mut t = T_CS!(s!("\\end{{{}}}", name));
     if is_defined_token(&t, state) {
@@ -207,7 +207,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     Tag!(&s!("ltx:{}",tag), auto_close => true);
   }
 
-  DefMacro!("\\secdef {}{} OptionalMatch:*", gullet, args, state, {
+  DefMacro!("\\secdef {}{} OptionalMatch:*", sub[gullet, args, state] {
     if args.len() == 3 {
       Ok(args[1].clone()) // can't move out without clone, how to circumvent?
     } else {
@@ -220,11 +220,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   NewCounter!("secnumdepth");
   SetCounter!("secnumdepth", Number!(3), None);
   DefMacro!(
-    "\\@startsection{}{}{}{}{}{} OptionalMatch:*",
-    gullet,
-    args,
-    state,
-    {
+    "\\@startsection{}{}{}{}{}{} OptionalMatch:*", sub[gullet,args,state] {
       unpack!(args => type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag);
 
       let stype = type_tokens.to_string();
@@ -470,12 +466,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "\\makeatother",
     "\\typeout",
     "\\listfiles",
-  ].into_iter()
+  ]
+    .into_iter()
     .map(|s| s.to_string())
   {
-    DefMacroI!(T_CS!(ltxtrigger), None, move |_gullet, _args, _state| {
-      Ok(Tokens!())
-    });
+    DefMacroI!(T_CS!(ltxtrigger), None, Tokens!());
   }
 
   //======================================================================
@@ -535,9 +530,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       //   return; }
 
       // TODO: convertLaTeXArgs($nargs, $opt)
-      let body_closure =
-        move |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| Ok(body.clone());
-      DefMacroI!(cs.clone(), None, body_closure, state);
+      DefMacroI!(cs.clone(), None, body, state);
     })
   );
 

@@ -133,7 +133,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   // TODO: Move to the right place in the pool definitions (maybe split out individual sub-pools by
   // chapter?)
-  DefMacroT!(T_CS!("\\space"), None, T_SPACE!());
+  DefMacroI!(T_CS!("\\space"), None, T_SPACE!());
 
   Ok(())
 }

@@ -499,10 +499,10 @@ pub fn select_relaxng_schema(
   return;
 }
 
-pub fn def_macro(
+pub fn def_macro<T: Into<Option<ExpansionClosure>>>(
   cs: Token,
   paramlist: Option<Parameters>,
-  expansion: Option<ExpansionClosure>,
+  expansion: T,
   state: &mut State,
 )
 {
@@ -513,6 +513,7 @@ pub fn def_macro(
   // expansion: $expansion});//, %options), $options{scope});       // if $options{locked} {
   //       //   $state.assign_value(ToString($cs)+":locked", true, "global")
   //       // }
+  let expansion = expansion.into();
 
   state.install_definition(
     Expandable {
@@ -578,14 +579,14 @@ pub fn def_conditional(
           // second, each invocation of the conditional macro needs to create new tokens to
           // return,       hence a clone is required on each call.
           let cs_c1 = cs.clone();
-          DefMacroTS!(
+          DefMacroI!(
             T_CS!(s!("\\{}true", name)),
             None,
             Tokens!(T_CS!("\\let"), cs_c1.clone(), T_CS!("\\iftrue")),
             state
           );
           let cs_c2 = cs.clone();
-          DefMacroTS!(
+          DefMacroI!(
             T_CS!(s!("\\{}false", name)),
             None,
             Tokens!(T_CS!("\\let"), cs_c2.clone(), T_CS!("\\iffalse")),
@@ -695,7 +696,8 @@ pub fn generate_id(
     let id = match ancestor_id {
       Some(aid) => aid + ".",
       None => String::new(),
-    } + prefix + &ctr;
+    } + prefix
+      + &ctr;
 
     ancestor.set_attribute(&ctrkey, &ctr)?;
     node.set_attribute("xml:id", &id)?;
@@ -872,7 +874,7 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
   after_assignment(gullet, state);
   SetupBindingMacros!(state);
   let id_cs = T_CS!(s!("\\@{}@ID", ctr));
-  DefMacroTS!(id_cs.clone(), None, Tokens::new(Explode!(v.value_of())),
+  DefMacroI!(id_cs.clone(), None, Tokens::new(Explode!(v.value_of())),
     scope => Some(Scope::Global));
 }
 
@@ -895,7 +897,7 @@ pub fn step_counter(
     after_assignment(gullet, state);
   }
   let token_value = Tokens::new(Explode!(counter_value(ctr, state).value_of()));
-  DefMacroTS!(T_CS!(s!("\\@{}@ID",ctr)), None, 
+  DefMacroI!(T_CS!(s!("\\@{}@ID",ctr)), None, 
               token_value.clone(), scope => Some(Scope::Global));
 
   // and reset any within counters!
@@ -940,9 +942,9 @@ pub fn ref_step_counter(
   SetupBindingMacros!(state);
   let the_cs = T_CS!(s!("\\the{}", ctr));
   let the_id_cs = T_CS!(s!("\\the{}@ID", ctr));
-  DefMacroT!(T_CS!("\\@currentlabel"), None, the_cs.clone(), scope => Some(Scope::Global));
+  DefMacroI!(T_CS!("\\@currentlabel"), None, the_cs.clone(), scope => Some(Scope::Global));
   if has_id {
-    DefMacroT!(T_CS!("\\@currentID"), None, the_id_cs.clone(), scope => Some(Scope::Global))
+    DefMacroI!(T_CS!("\\@currentID"), None, the_id_cs.clone(), scope => Some(Scope::Global))
   }
 
   let id = if has_id {

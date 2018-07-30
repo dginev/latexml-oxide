@@ -23,7 +23,8 @@ use whatsit::Whatsit;
 
 pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Tokens>>;
 pub type ConditionalClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<bool>>;
-pub type PrimitiveClosure = Rc<Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<Digested>>>;
+pub type PrimitiveFn = Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<Digested>>;
+pub type PrimitiveClosure = Rc<PrimitiveFn>;
 pub type BeforeDigestClosure = Rc<Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
 pub type PropertiesClosure =
   Rc<Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<HashMap<String, Stored>>>;
@@ -31,6 +32,16 @@ pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Res
 pub type ReplacementClosure =
   Rc<Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
 pub type ConstructionClosure = Rc<Fn(&mut Document, &Whatsit, &mut State)>;
+
+impl From<Token> for Option<ExpansionClosure> {
+  fn from(t: Token) -> Option<ExpansionClosure> { Tokens!(t).into() }
+}
+
+impl From<Tokens> for Option<ExpansionClosure> {
+  fn from(t: Tokens) -> Option<ExpansionClosure> {
+    Some(Rc::new(move |gullet, args, state| Ok(t.clone())))
+  }
+}
 
 pub trait Definition {
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens>;

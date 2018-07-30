@@ -56,21 +56,15 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         after_tokens.push(T_CS!("\\ignorespaces"));
         // Note that we define the `magic' environment control sequences,
         // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
-        DefMacroI!(
-          T_CS!(s!("\\begin{{{}}}", name)),
-          None,
-          move |gullet, _args, _state| {
-            gullet.read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
-            Ok(Tokens::new(before_tokens.clone()))
-          },
-          state
-        );
-        DefMacroI!(
-          T_CS!(s!("\\end{{{}}}", name)),
-          None,
-          move |_gullet, _args, _state| Ok(Tokens::new(after_tokens.clone())),
-          state
-        );
+        DefMacroI!(T_CS!(s!("\\begin{{{}}}", name)),
+                      None,
+                      sub[gullet, _args, _state] {
+                        gullet.read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
+                        Ok(Tokens::new(before_tokens.clone()))
+                      },
+                      state
+                    );
+        DefMacroI!(T_CS!(s!("\\end{{{}}}", name)), None, Tokens{tokens: after_tokens}, state);
 
         Ok(Vec::new())
       });

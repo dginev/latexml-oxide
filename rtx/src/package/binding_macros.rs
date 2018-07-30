@@ -104,13 +104,13 @@ macro_rules! noprimitive {
 
 #[macro_export]
 macro_rules! primitivesub {
-  ($stomach:ident, $args:ident, $state:ident, $body:expr) => {
+  ($stomach:ident, $args:ident, $state:ident, $body:block) => {
     |$stomach: &mut Stomach, mut $args: Vec<Tokens>, $state: &mut State| $body
   };
 }
 #[macro_export]
 macro_rules! primitiveproc {
-  ($stomach:ident, $args:ident, $state:ident, $body:expr) => (
+  ($stomach:ident, $args:ident, $state:ident, $body:block) => (
     |$stomach:&mut Stomach, mut $args : Vec<Tokens>, $state:&mut State| {
       $body
       Ok(Vec::new())
@@ -120,7 +120,7 @@ macro_rules! primitiveproc {
 
 #[macro_export]
 macro_rules! beforesub {
-  ($stomach:ident, $state:ident, $body:expr) => {
+  ($stomach:ident, $state:ident, $body:block) => {
     |$stomach: &mut Stomach, $state: &mut State| $body
   };
 }

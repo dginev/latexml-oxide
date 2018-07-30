@@ -6,6 +6,7 @@
 #![allow(unused_variables, unused_mut, unused_macros)]
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
+#![feature(macro_literal_matcher)]
 
 #[macro_use]
 extern crate lazy_static;
