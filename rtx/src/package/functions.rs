@@ -871,7 +871,7 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
 pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut State) {
   let v = counter_value(ctr, state).add(value);
   state.assign_value(&s!("\\c@{}", ctr), v.clone(), Some(Scope::Global));
-  after_assignment(gullet, state);
+  gullet.after_assignment(state);
   SetupBindingMacros!(state);
   let id_cs = T_CS!(s!("\\@{}@ID", ctr));
   DefMacroI!(id_cs.clone(), None, Tokens::new(Explode!(v.value_of())),
@@ -894,7 +894,7 @@ pub fn step_counter(
   );
   {
     let gullet = stomach.get_gullet_mut();
-    after_assignment(gullet, state);
+    gullet.after_assignment(state);
   }
   let token_value = Tokens::new(Explode!(counter_value(ctr, state).value_of()));
   DefMacroI!(T_CS!(s!("\\@{}@ID",ctr)), None, 
@@ -1030,12 +1030,6 @@ fn reset_counter(ctr: &str, state: &mut State) {
   }
 
   return;
-}
-
-fn after_assignment(gullet: &mut Gullet, state: &mut State) {
-  if let Some(Stored::Tokens(after)) = state.remove_value("afterAssignment") {
-    gullet.unread(after); // primitive returns boxes, so these need to be digested!
-  }
 }
 
 pub fn build_invocation(token: Token, args: Vec<Tokens>, state: &mut State) -> Tokens {

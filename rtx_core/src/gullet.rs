@@ -514,4 +514,10 @@ impl Gullet {
       },
     }
   }
+
+  pub fn after_assignment(&mut self, state: &mut State) {
+    if let Some(Stored::Tokens(after)) = state.remove_value("afterAssignment") {
+      self.unread(after); // primitive returns boxes, so these need to be digested!
+    }
+  }
 }
