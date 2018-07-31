@@ -141,7 +141,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   macro_rules! AfterAssignment {
     ($gullet: ident) => (AfterAssignment!($gullet, $state));
-    ($gullet:ident, $state_arg: ident) => (after_assignment($gullet, $state));
+    ($gullet:ident, $state_arg: ident) => (after_assignment($gullet, $state_arg));
   }
 
   // Merge the current font with the style specifications
