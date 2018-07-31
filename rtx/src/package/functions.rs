@@ -795,33 +795,44 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, 
     state.assign_value(&clunctr, Tokens!(), Some(Scope::Global));
   }
 
-  // if !within.is_empty() {
-  //   let clwithin = s!("\\cl@{}",within);
-  //   let clunwithin = s!("\\cl@UN{}",within);
-  //   let x = if let Some(Stored::Tokens(cl)) = state.lookup_value(clwithin) {
-  //    cl.unlist()
-  //   } else {
-  //     Vec::new()
-  //   };
-  //   let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(unctr)];
-  //   clwithin_tokens.append(x);
-  // state.assign_value(clwithin, Stored::Tokens(Tokens{tokens: clwithin_tokens}),
-  // Some(Scope::Global));
+  if !within.is_empty() {
+    let clwithin = s!("\\cl@{}", within);
+    let clunwithin = s!("\\cl@UN{}", within);
+    let mut x = if let Some(Stored::Tokens(cl)) = state.remove_value(&clwithin) {
+      cl.unlist()
+    } else {
+      Vec::new()
+    };
+    let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(unctr)];
+    clwithin_tokens.append(&mut x);
+    state.assign_value(
+      &clwithin,
+      Stored::Tokens(Tokens::new(clwithin_tokens)),
+      Some(Scope::Global),
+    );
 
-  //   let unx = if let Some(Stored::Tokens(clun)) = state.lookup_value(clunwithin) {
-  //     clun.unlist()
-  //   } else {
-  //    Vec::new()
-  //   };
-  //   let mut clunwithin_tokens = T_CS!(unctr);
-  //   clunwithin_tokens.append(unx);
+    let mut unx = if let Some(Stored::Tokens(clun)) = state.remove_value(&clunwithin) {
+      clun.unlist()
+    } else {
+      Vec::new()
+    };
+    let mut clunwithin_tokens = vec![T_CS!(unctr)];
+    clunwithin_tokens.append(&mut unx);
 
-  // state.assign_value(clunwithin, Stored::Tokens(Tokens{tokens: clunwithin_tokens}),
-  // Some(Scope::Global)) }
+    state.assign_value(
+      &clunwithin,
+      Stored::Tokens(Tokens::new(clunwithin_tokens)),
+      Some(Scope::Global),
+    )
+  }
 
   // if let Some(nested_val) = options.get("nested") {
-  // state.assign_value(s!("nested_counters_{}", ctr), Stored::String(nested_val),
-  // Some(Scope::Global)) }
+  //   state.assign_value(
+  //     &s!("nested_counters_{}", ctr),
+  //     Stored::String(nested_val),
+  //     Some(Scope::Global),
+  //   )
+  // }
 
   // // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
   // DefMacroI!(T_CS!(s!("\\the{}",ctr)), None, move |gullet, args, inner_state| {
