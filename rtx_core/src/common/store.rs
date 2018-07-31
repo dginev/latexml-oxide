@@ -9,6 +9,7 @@ use definition::constructor::Constructor;
 use definition::expandable::Expandable;
 use definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use definition::primitive::Primitive;
+use definition::register::Register;
 use document::tag::TagData;
 use parameter::Parameter;
 use token::{Catcode, Token};
@@ -61,6 +62,7 @@ pub enum Stored {
   Conditional(Rc<Conditional>),
   Primitive(Rc<Primitive>),
   MathPrimitive(Rc<MathPrimitive>),
+  Register(Rc<Register>),
   // MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Rc<Constructor>),
   Digested(Rc<::Digested>),
@@ -89,6 +91,7 @@ impl fmt::Debug for Stored {
       Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
       Digested(ref digested) => write!(f, "{:?}", digested),
       Parameter(ref parameter) => write!(f, "{:?}", parameter),
+      Register(ref register) => write!(f, "{:?}", register),
       Font(ref font) => write!(f, "{:?}", font),
       Number(ref number) => write!(f, "{:?}", number),
       VecToken(ref token_vec) => write!(f, "{:?}", token_vec),

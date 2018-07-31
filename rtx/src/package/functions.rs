@@ -922,7 +922,7 @@ pub fn ref_step_counter(
   noreset: bool,
   stomach: &mut Stomach,
   state: &mut State,
-) -> Result<RefStepValue>
+) -> Result<HashMap<String, Stored>>
 {
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(Stored::String(ctr)) => ctr.to_string(),
@@ -930,13 +930,14 @@ pub fn ref_step_counter(
   };
   step_counter(&ctr, noreset, stomach, state)?;
 
-  let iddef_opt = state.lookup_definition(&T_CS!(s!("\\the{}@ID", ctr)));
-  let has_id: bool = match iddef_opt {
-    Some(Stored::Expandable(iddef)) => match iddef.get_parameters() {
-      Some(params) => params.get_num_args() == 0,
-      None => false,
-    },
-    _ => false,
+  let has_id: bool = if let Some(iddef) = state.lookup_definition(&T_CS!(s!("\\the{}@ID", ctr))) {
+    if let Some(params) = iddef.get_parameters() {
+      params.get_num_args() == 0
+    } else {
+      false
+    }
+  } else {
+    false
   };
 
   SetupBindingMacros!(state);
@@ -971,11 +972,11 @@ pub fn ref_step_counter(
   );
   state.activate_scope(&scope);
 
-  Ok(RefStepValue {
+  Ok(map!(
     //   ($tags   ? (tags => $tags) : ()),
-    tags: None,
-    id: if has_id { Some(id) } else { None },
-  })
+    "tags" => Stored::VecString(Vec::new()),
+    "id" => Stored::String(id)
+  ))
 }
 
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {
@@ -1034,5 +1035,39 @@ fn reset_counter(ctr: &str, state: &mut State) {
 fn after_assignment(gullet: &mut Gullet, state: &mut State) {
   if let Some(Stored::Tokens(after)) = state.remove_value("afterAssignment") {
     gullet.unread(after); // primitive returns boxes, so these need to be digested!
+  }
+}
+
+pub fn build_invocation(token: Token, args: Vec<Tokens>, state: &mut State) -> Tokens {
+  // Note: token may have been \let to another defn!
+  if let Some(defn) = state.lookup_definition(&token) {
+    let mut invoked_tokens = vec![token];
+    let mut reverted_args = if let Some(params) = defn.get_parameters() {
+      params.revert_arguments(args, state).unlist()
+    } else {
+      Vec::new()
+    };
+    invoked_tokens.append(&mut reverted_args);
+    Tokens::new(invoked_tokens)
+  } else {
+    let mut invoked_tokens = vec![token];
+    // error!(
+    //   "undefined",
+    //   token,
+    //   None,
+    //   format!("Can't invoke {:?}; it is undefined", token)
+    // );
+    // DefConstructorI!(token, convert_latex_args(args.len(), 0),
+    // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
+    let mut wrapped_args: Vec<Token> = args
+      .into_iter()
+      .flat_map(|arg| {
+        let mut wrapped = vec![T_BEGIN!()];
+        wrapped.append(&mut arg.unlist());
+        wrapped.push(T_END!());
+        wrapped
+      }).collect();
+    invoked_tokens.append(&mut wrapped_args);
+    Tokens::new(invoked_tokens)
   }
 }

@@ -759,7 +759,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
    })
   }
 
-  macro_rules! DefConstructor(
+  macro_rules! DefConstructor (
     // Code replacement flavors
    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $state));
    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
@@ -1717,6 +1717,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! RefStepCounter {
     ($ctr:expr, $noreset:expr, $gullet:ident) => (RefStepCounter!($ctr, $noreset, $gullet, $state));
     ($ctr:expr, $noreset:expr, $gullet:ident, $state_arg:ident) => (ref_step_counter($ctr, $noreset, $gullet, $state_arg));
+  }
+
+  /// Invocation(<list of Token>); builds a representation of a command sequence invoked on its
+  /// arguments
+  macro_rules! Invocation {
+    ($token:expr, $args:expr) => {
+      build_invocation($token, $args, $state)
+    };
   }
 
 )}

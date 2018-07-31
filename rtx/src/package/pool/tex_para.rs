@@ -46,7 +46,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       }
       Ok(Vec::new())
     }),
-    properties => skippable_props,
+    properties => properties!(skippable_props),
     alias => Some(s!("\\par\n"))
   );
 

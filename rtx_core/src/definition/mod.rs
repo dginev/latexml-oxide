@@ -4,12 +4,15 @@ pub mod conditional;
 pub mod constructor;
 pub mod math_primitive;
 pub mod primitive;
+pub mod register;
 
 use std::collections::HashMap;
 use std::rc::Rc;
 
 use common::error::*;
+use common::object::Object;
 use common::store::Stored;
+
 use gullet::Gullet;
 use stomach::Stomach;
 use token::Token;
@@ -27,7 +30,7 @@ pub type PrimitiveFn = Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<D
 pub type PrimitiveClosure = Rc<PrimitiveFn>;
 pub type BeforeDigestClosure = Rc<Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
 pub type PropertiesClosure =
-  Rc<Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<HashMap<String, Stored>>>;
+  Rc<Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
 pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
 pub type ReplacementClosure =
   Rc<Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
@@ -43,7 +46,7 @@ impl From<Tokens> for Option<ExpansionClosure> {
   }
 }
 
-pub trait Definition {
+pub trait Definition: Object {
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens>;
   fn invoke_primitive(
     &self,
@@ -77,7 +80,7 @@ pub trait Definition {
   fn to_string(&self) -> String { unimplemented!() }
 
   // Return the Tokens that would invoke the given definition with arguments.
-  fn invocation(&mut self, args: Vec<Token>, state: &mut State) -> Tokens {
+  fn invocation(&mut self, args: Vec<Tokens>, state: &mut State) -> Tokens {
     let mut invocation_result = Vec::new();
     invocation_result.push(self.get_cs());
 

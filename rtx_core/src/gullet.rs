@@ -1,5 +1,4 @@
 use common::error::*;
-use common::object::Object;
 use common::store::Stored;
 use definition::Definition;
 use mouth::Mouth;
@@ -221,25 +220,20 @@ impl Gullet {
                 //   LaTeXML::Definition::stopProfiling($token, 'expand'); }
                 // }
                 _ => {
-                  let looked_up_definition: Option<Stored> = state.lookup_definition(&token);
-                  match looked_up_definition {
-                    Some(defn_store) => {
-                      match defn_store {
-                        Stored::Expandable(defn) => {
-                          if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
-                            // is this the right logic here? don't expand unless digesting?
-                            state.current_token = Some(token);
-                            defn_next = Some(defn.clone());
-                            expand_next = true;
-                          } else {
-                            return Ok(Some(token));
-                          }
-                        },
-                        _ => return Ok(Some(token)),
-                      }
-                    },
-                    None => return Ok(Some(token)),
-                  };
+                  let looked_up_definition: Option<Rc<Definition>> =
+                    state.lookup_definition(&token);
+                  if let Some(defn) = looked_up_definition {
+                    if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
+                      // is this the right logic here? don't expand unless digesting?
+                      state.current_token = Some(token);
+                      defn_next = Some(defn.clone());
+                      expand_next = true;
+                    } else {
+                      return Ok(Some(token));
+                    }
+                  } else {
+                    return Ok(Some(token));
+                  }
                 },
               };
             },

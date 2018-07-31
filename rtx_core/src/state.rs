@@ -865,7 +865,7 @@ impl State {
   /// Since we're not doing digestion here, we don't need to handle mathactive,
   /// nor cs let to executable tokens
   /// This returns a definition object, or undef
-  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Stored> {
+  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Rc<Definition>> {
     let cc = &key.code;
     let name = &key.text;
     let lookupname: String = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) {
@@ -879,8 +879,13 @@ impl State {
     } else {
       match self.meaning.get(&lookupname) {
         Some(defs) => match defs.front() {
-          Some(entry) => Some(entry.clone()),
-          None => None,
+          Some(Stored::Conditional(entry)) => Some(entry.clone()),
+          Some(Stored::Constructor(entry)) => Some(entry.clone()),
+          Some(Stored::Expandable(entry)) => Some(entry.clone()),
+          Some(Stored::MathPrimitive(entry)) => Some(entry.clone()),
+          Some(Stored::Primitive(entry)) => Some(entry.clone()),
+          Some(Stored::Register(entry)) => Some(entry.clone()),
+          _ => None,
         },
         _ => None,
       }
@@ -893,7 +898,8 @@ impl State {
     if name.is_empty() {
       return None;
     }
-    let lookupname = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS)
+    let lookupname = if (cc == &Catcode::ACTIVE)
+      || (cc == &Catcode::CS)
       || ((cc == &Catcode::LETTER)
         || (cc == &Catcode::OTHER)
           && self.lookup_bool("IN_MATH")
