@@ -141,8 +141,11 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
   // content => LookupValue($pathname . '_contents')
 
   // Open a mouth for that TeX content
-  let gullet = core.stomach.get_gullet_mut();
-  gullet.open_mouth(mouth, true);
+  core
+    .stomach
+    .borrow_mut()
+    .get_gullet_mut()
+    .open_mouth(mouth, true);
   Ok(())
 }
 
@@ -779,18 +782,18 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, 
   let clunctr = s!("\\cl@{}", unctr);
 
   def_register(T_CS!(cctr), None, Some(Number::new(0)), None, state);
-  // state.assign_value(cctr, Number!(0), Some(Scope::Global));
-  // // TODO:
-  // // AfterAssignment!();
-  // if !state.lookup_bool(&clctr) {
-  //   state.assign_value(clctr, Tokens!(), Some(Scope::Global));
-  // }
-  // // TODO:
-  // // DefRegisterI!(T_CS!(cunctr), None, Number!(0));
-  // state.assign_value(cunctr, Number!(0), Some(Scope::Global));
-  // if !state.lookup_bool(clunctr) {
-  //   state.assign_value(clunctr, Tokens!(), Some(Scope::Global));
-  // }
+  state.assign_value(&cctr, Number!(0), Some(Scope::Global));
+  state.after_assignment();
+  if !state.lookup_bool(&clctr) {
+    state.assign_value(&clctr, Tokens!(), Some(Scope::Global));
+  }
+  SetupBindingMacros!(state);
+
+  DefRegisterI!(T_CS!(cunctr), None, Some(Number!(0)), None);
+  state.assign_value(&cunctr, Number!(0), Some(Scope::Global));
+  if !state.lookup_bool(&clunctr) {
+    state.assign_value(&clunctr, Tokens!(), Some(Scope::Global));
+  }
 
   // if !within.is_empty() {
   //   let clwithin = s!("\\cl@{}",within);
@@ -871,7 +874,7 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
 pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut State) {
   let v = counter_value(ctr, state).add(value);
   state.assign_value(&s!("\\c@{}", ctr), v.clone(), Some(Scope::Global));
-  gullet.after_assignment(state);
+  state.after_assignment();
   SetupBindingMacros!(state);
   let id_cs = T_CS!(s!("\\@{}@ID", ctr));
   DefMacroI!(id_cs.clone(), None, Tokens::new(Explode!(v.value_of())),
@@ -892,10 +895,7 @@ pub fn step_counter(
     value.add(Number!(1)),
     Some(Scope::Global),
   );
-  {
-    let gullet = stomach.get_gullet_mut();
-    gullet.after_assignment(state);
-  }
+  state.after_assignment();
   let token_value = Tokens::new(Explode!(counter_value(ctr, state).value_of()));
   DefMacroI!(T_CS!(s!("\\@{}@ID",ctr)), None, 
               token_value.clone(), scope => Some(Scope::Global));

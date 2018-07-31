@@ -283,8 +283,9 @@ impl Stomach {
         None,
       );
 
+      let gullet = self.get_gullet_mut();
       state.let_i(token, T_CS!("\\iffalse"), None);
-      self.get_gullet_mut().unread(Tokens!(token.clone())); // Retry
+      gullet.unread(Tokens!(token.clone())); // Retry
       Ok(Vec::new())
     } else {
       error!(

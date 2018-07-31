@@ -2,7 +2,7 @@ use common::error::*;
 use common::store::Stored;
 use definition::Definition;
 use mouth::Mouth;
-use state::State;
+use state::{Scope, State};
 use std::collections::VecDeque;
 use std::rc::Rc;
 use token::{Catcode, Token};
@@ -512,12 +512,6 @@ impl Gullet {
       Some(t) => {
         self.unread(Tokens!(t));
       },
-    }
-  }
-
-  pub fn after_assignment(&mut self, state: &mut State) {
-    if let Some(Stored::Tokens(after)) = state.remove_value("afterAssignment") {
-      self.unread(after); // primitive returns boxes, so these need to be digested!
     }
   }
 }

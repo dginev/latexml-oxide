@@ -99,7 +99,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       },
       scope,
     );
-    stomach.get_gullet_mut().after_assignment(state);
+    state.after_assignment();
     Ok(Vec::new())
   }
 

@@ -32,14 +32,18 @@ pub mod tbox;
 pub mod util;
 pub mod whatsit;
 
+use std::cell::RefCell;
+use std::fmt;
+use std::rc::Rc;
+
 use common::error::*;
 use common::font::Font;
 use common::model::Model;
 use common::store::Stored;
 use document::Document;
+use gullet::Gullet;
 use list::List;
 use state::{State, StateOptions};
-use std::fmt;
 use stomach::Stomach;
 use tbox::Tbox;
 use tokens::Tokens;
@@ -47,7 +51,7 @@ use whatsit::Whatsit;
 
 pub struct Core {
   pub state: State,
-  pub stomach: Stomach,
+  pub stomach: Rc<RefCell<Stomach>>,
   pub preload: Vec<String>,
 }
 pub struct CoreOptions {
@@ -85,10 +89,13 @@ impl Default for CoreOptions {
 
 impl Default for Core {
   fn default() -> Self {
+    let stomach = Rc::new(RefCell::new(Stomach::default()));
+    let mut state = State::new(StateOptions::default());
+    state.stomach = stomach.clone();
     Core {
       preload: Vec::new(),
-      stomach: Stomach::default(),
-      state: State::new(StateOptions::default()),
+      stomach: stomach,
+      state: state,
     }
   }
 }
@@ -113,17 +120,20 @@ impl Core {
       nomathparse: options.nomathparse,
       ..StateOptions::default()
     };
-
-    let state = State::new(state_options);
+    let stomach = Rc::new(RefCell::new(Stomach::default()));
+    let mut state = State::new(state_options);
+    state.stomach = stomach.clone();
 
     Core {
       state,
       preload,
+      stomach,
       ..Core::default()
     }
   }
 
-  pub fn state_mut(&mut self) -> &mut State { &mut self.state }
+  pub fn get_state(&self) -> &State { &self.state }
+  pub fn get_state_mut(&mut self) -> &mut State { &mut self.state }
 }
 
 pub trait BoxOps {
