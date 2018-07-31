@@ -7,7 +7,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ReplacementClosure,
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure,
+  ReplacementClosure,
 };
 use document::Document;
 use gullet::Gullet;
@@ -31,7 +32,7 @@ pub struct ConstructorOptions {
   // environment-specific
   pub require_math: bool,
   pub forbid_math: bool,
-  pub properties: HashMap<String, Stored>,
+  pub properties: PropertiesClosure,
   pub capture_body: bool,
   pub font: Option<Font>,
 
@@ -57,7 +58,7 @@ impl Default for ConstructorOptions {
       // environment-specific
       require_math: false,
       forbid_math: false,
-      properties: HashMap::new(),
+      properties: Rc::new(|stomach, whatsit, state| Ok(HashMap::new())),
       capture_body: false,
       font: None,
       after_digest_begin: vec![],
@@ -134,7 +135,7 @@ impl Definition for Constructor {
 
     // Compute any extra Whatsit properties (many end up as element attributes)
 
-    let mut props = self.options.properties.clone();
+    let mut props = (self.options.properties)(stomach, &args, state)?;
     // for (key, value) in props.iter() {
     //   if (ref $value eq 'CODE') {
     //     $props{$key} = &$value($stomach, @args); } }

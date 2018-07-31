@@ -71,7 +71,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //     state.assign_value(current_environment => ToString($_[1])); });
   // Let("\@currenvline", "\@empty");
 
-  DefMacro!("\\begin{}", gullet, args, state, {
+  DefMacro!("\\begin{}", sub [gullet, args, state] {
     unpack!(args => name);
     let begin_name = s!("\\begin{{{}}}", name);
     if is_defined(&begin_name, state) {
@@ -92,7 +92,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
   });
 
-  DefMacro!("\\end{}", gullet, args, state, {
+  DefMacro!("\\end{}", sub[gullet, args, state]{
     let name: String = args[0].to_string();
     let mut t = T_CS!(s!("\\end{{{}}}", name));
     if is_defined_token(&t, state) {
@@ -207,7 +207,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     Tag!(&s!("ltx:{}",tag), auto_close => true);
   }
 
-  DefMacro!("\\secdef {}{} OptionalMatch:*", gullet, args, state, {
+  DefMacro!("\\secdef {}{} OptionalMatch:*", sub[gullet, args, state] {
     if args.len() == 3 {
       Ok(args[1].clone()) // can't move out without clone, how to circumvent?
     } else {
@@ -220,111 +220,102 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   NewCounter!("secnumdepth");
   SetCounter!("secnumdepth", Number!(3), None);
   DefMacro!(
-    "\\@startsection{}{}{}{}{}{} OptionalMatch:*",
-    gullet,
-    args,
-    state,
-    {
-      let type_tokens = args[0].clone();
+    "\\@startsection{}{}{}{}{}{} OptionalMatch:*", sub[gullet,args,state] {
+      unpack!(args => type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag);
+
       let stype = type_tokens.to_string();
+      let level = level_arg.to_string();
+
       let mut ctr = state.lookup_string(&s!("counter_for_{}", stype));
       if ctr.is_empty() {
         ctr = stype
       };
-      let level = args[1].to_string();
-      let flag = args[6].to_string();
+      let mut tokens: Vec<Token> = Vec::new();
       if !flag.is_empty() {
         // No number, not in TOC
-        //|| (!level.is_empty() && (level > CounterValue!("secnumdepth").value_of())) {
-        // RefStepID!(ctr);
-        let mut tokens: Vec<Token> = vec![
+        tokens = vec![
           T_CS!("\\@startsection@hook"),
           T_CS!("\\@@unnumbered@section"),
           T_BEGIN!(),
         ];
         tokens.append(&mut type_tokens.unlist());
-        tokens.push(T_END!());
-        tokens.push(T_BEGIN!());
-        tokens.push(T_END!());
-        Ok(Tokens::new(tokens))
+        tokens.append(&mut vec![T_END!(), T_BEGIN!(), T_END!()]);
       } else if !level.is_empty()
         && (level.parse::<i32>().unwrap() > CounterValue!("secnumdepth", state).value_of())
         || LookupBool!("no_number_sections", state)
       {
         // No number, but in TOC
-        let mut tokens: Vec<Token> = vec![
+        tokens = vec![
           T_CS!("\\@startsection@hook"),
           T_CS!("\\@@unnumbered@section"),
           T_BEGIN!(),
         ];
         tokens.append(&mut type_tokens.unlist());
-        tokens.push(T_END!());
-        tokens.push(T_BEGIN!());
-        tokens.push(T_OTHER!("toc"));
-        tokens.push(T_END!());
-        Ok(Tokens::new(tokens))
+        tokens.append(&mut vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
       } else {
         // Number and in TOC
-        let mut tokens: Vec<Token> = vec![
+        tokens = vec![
           T_CS!("\\@startsection@hook"),
           T_CS!("\\@@numbered@section"),
           T_BEGIN!(),
         ];
         tokens.append(&mut type_tokens.unlist());
-        tokens.push(T_END!());
-        tokens.push(T_BEGIN!());
-        tokens.push(T_OTHER!("toc"));
-        tokens.push(T_END!());
-        Ok(Tokens::new(tokens))
+        tokens.append(&mut vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
       }
+      Ok(Tokens::new(tokens))
     }
   );
 
   DefConstructor!(
-    "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
-    document,
-    args,
-    props,
-    state,
-    {
-      // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
-      // intuitive level of:       let (x,y,z, ...) = @args;
-      unpack_to_string!(args => stype, inlist, toctitle, title);
-      let id = prop_str!(props, "id");
-      let clean_id = id; // TODO: CleanID($id);
-      document.open_element(
-        &s!("ltx:{}", stype),
-        Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
-        None,
-        state,
-      )?;
-      // TODO: Another instance where the immutability of props causes endless cloning
-      //       which is slow and wasteful.
-      // The big problem is that for props to be mutable, the entire parent whatsit needs to
-      // be mutable, and Rust hits a mutability conflict between the parent, and the
-      // "args" and "props" children ... will come back here after performance becomes
-      // an issue again
-      if let Some(Stored::Digested(tags)) = props.get("tags") {
-        document.absorb((**tags).clone(), state)?;
-      }
-      let title = prop_digested!(props, "title");
-      document.insert_element("ltx:title", title, None, state)?;
+      "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
+       sub[document, args, props, state] {
+        // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
+        // intuitive level of:       let (x,y,z, ...) = @args;
+        unpack_to_string!(args => stype, inlist, toctitle, title);
+        let clean_id = prop_str!(props,"id"); // TODO: CleanID($id);
+        document.open_element(&s!("ltx:{}", stype),
+          Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
+          None,
+          state,
+        )?;
+        // TODO: Another instance where the immutability of props causes endless cloning
+        //       which is slow and wasteful.
+        // The big problem is that for props to be mutable, the entire parent whatsit needs to
+        // be mutable, and Rust hits a mutability conflict between the parent, and the
+        // "args" and "props" children ... will come back here after performance becomes
+        // an issue again
+        if let Some(Stored::Digested(tags)) = props.get("tags") {
+          document.absorb((**tags).clone(), state)?;
+        }
+        let title = prop_digested!(props, "title");
+        document.insert_element("ltx:title", title, None, state)?;
 
-      let toctitle = prop_digested!(props, "toctitle");
-      if !toctitle.is_empty() {
-        document.insert_element("ltx:toctitle", toctitle, None, state)?;
-      }
-    }
-  );
-  //   properties => sub {
-  //     my ($stomach, $type, $inlist, $toctitle, $title) = @_;
-  //     my %props     = RefStepCounter(ToString($type));
-  //     my $xtitle    = Digest(Invocation(T_CS('\lx@format@title@@'), $type, $title));
-  // my $xtoctitle = Digest(Invocation(T_CS('\lx@format@toctitle@@'), $type, $toctitle ||
-  // $title));     $props{title}    = $xtitle;
-  //     $props{toctitle} = $xtoctitle
-  //       if $xtoctitle && $xtoctitle->unlist && (ToString($xtoctitle) ne ToString($xtitle));
-  //     return %props; });
+        let toctitle = prop_digested!(props, "toctitle");
+        if !toctitle.is_empty() {
+          document.insert_element("ltx:toctitle", toctitle, None, state)?;
+        }
+      },
+      properties => properties!(sub[stomach, args, state] {
+        unpack!(args => stype, inlist, toctitle_arg, title);
+        let mut props = ref_step_counter(&stype.to_string(), false, stomach, state)?;
+        let toctitle = if toctitle_arg.to_string().is_empty() {
+          toctitle_arg
+        } else {
+          title
+        };
+        // TODO!
+        // let xtitle    = stomach.digest(Invocation!(T_CS!("\\lx@format@title@@"), vec![stype, title]), state)?;
+        // let xtoctitle = stomach.digest(Invocation!(T_CS!("\\lx@format@toctitle@@"), vec![stype, toctitle]), state)?;
+        let xtitle = Stored::String("xtitle".into());
+        let xtoctitle = Stored::String("xtoctitle".into());
+        
+        if xtoctitle.to_string() != xtitle.to_string() {
+          props.insert(s!("toctitle"), xtoctitle);
+        }
+        props.insert(s!("title"), xtitle);
+        Ok(props)
+      })
+   );
 
   // # No tags, at all? Consider...
   // DefConstructor('\@@unnumbered@section{} Undigested OptionalUndigested Undigested', sub {
@@ -378,35 +369,33 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //// However, I hate setting up even more machinery & options and dragging yet another form
   //// around....
   // \@@section{type}{id}{refnum}{formattedrefnum}{toctitle}{title}
-  DefConstructor!(
-    "\\@@section{}{}{}{}{}{}",
-    document,
-    args,
-    props,
-    inner_state,
-    {
-      unpack!(args => stype, id, refnum_arg, frefnum_arg, toctitle, title);
-      let refnum = refnum_arg.to_string();
-      let mut frefnum = frefnum_arg.to_string();
-      if frefnum == refnum {
-        frefnum = String::new();
-      }
 
-      let clean_id = id; // TODO: CleanID($id);
-      let has_toctitle =
-        !toctitle.to_string().is_empty() && (toctitle.to_string() != title.to_string());
-      document.open_element(
-        &s!("ltx:{}", stype.to_string()),
-        Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)),
-        None,
-        inner_state,
-      )?;
-      document.insert_element("ltx:title", vec![title], None, inner_state)?;
-      if has_toctitle {
-        document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state)?;
-      }
-    }
-  );
+  // DefConstructorI!(
+  //   "\\@@section{}{}{}{}{}{}",
+  //   replacement!(document, args, props, inner_state, {
+  //     unpack!(args => stype, id, refnum_arg, frefnum_arg, toctitle, title);
+  //     let refnum = refnum_arg.to_string();
+  //     let mut frefnum = frefnum_arg.to_string();
+  //     if frefnum == refnum {
+  //       frefnum = String::new();
+  //     }
+
+  //     let clean_id = id; // TODO: CleanID($id);
+  //     let has_toctitle =
+  //       !toctitle.to_string().is_empty() && (toctitle.to_string() != title.to_string());
+  //     document.open_element(
+  //       &s!("ltx:{}", stype.to_string()),
+  //       Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)),
+  //       None,
+  //       inner_state,
+  //     )?;
+  //     document.insert_element("ltx:title", vec![title], None, inner_state)?;
+  //     if has_toctitle {
+  //       document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state)?;
+  //     }
+  //   }),
+  //   state
+  // );
 
   // Not sure if this is best, but if no explicit \section'ing...
   //### Tag('ltx:section',autoOpen=>1);
@@ -480,12 +469,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "\\makeatother",
     "\\typeout",
     "\\listfiles",
-  ].into_iter()
+  ]
+    .into_iter()
     .map(|s| s.to_string())
   {
-    DefMacroI!(T_CS!(ltxtrigger), None, move |_gullet, _args, _state| {
-      Ok(Tokens!())
-    });
+    DefMacroI!(T_CS!(ltxtrigger), None, Tokens!());
   }
 
   //======================================================================
@@ -545,9 +533,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       //   return; }
 
       // TODO: convertLaTeXArgs($nargs, $opt)
-      let body_closure =
-        move |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| Ok(body.clone());
-      DefMacroI!(cs.clone(), None, body_closure, state);
+      DefMacroI!(cs.clone(), None, body, state);
     })
   );
 

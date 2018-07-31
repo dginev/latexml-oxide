@@ -271,64 +271,66 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($class:expr, $options:expr, $after:expr, $state_arg:ident) => (load_class($class, $options, $after, $state_arg))
   }
   macro_rules! DefMacroI(
+    // With explicit state
+    // TODO: Propagate options, such as "locked", etc
+    // Expansion closure syntax + explicit state
+    ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $state_arg:ident) => {
+      let expansion_closure : Option<ExpansionClosure> = Some(Rc::new(move |$gullet, $args, $inner_state| $body));
+      def_macro($cs, $paramlist, expansion_closure, $state_arg); };
+    ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $key1:ident=>$val1:expr, $state_arg:ident) => {
+      let expansion_closure : Option<ExpansionClosure> = Some(Rc::new(move |$gullet, $args, $inner_state| $body));
+      def_macro($cs, $paramlist, expansion_closure, $state_arg); };
+    // Without explicit state
+    // Expansion closure syntax
+    ($cs:expr, $paramlist:expr, sub [$gullet:ident, $args:ident, $inner_state:ident ] $body:block) =>
+        (DefMacroI!($cs, $paramlist, sub [$gullet, $args, $inner_state] $body, $state));
+    ($cs:expr, $paramlist:expr, sub [$gullet:ident, $args:ident, $inner_state:ident ] $body:block, $key1:ident=>$val1:expr) =>
+        (DefMacroI!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, $key1=>$val1, $state));
+
+    // With explicit state
+    // TODO: Propagate options, such as "locked", etc
+    // Simple Expression syntax + explicit state
+    ($cs:expr, $paramlist:expr, None, $state_arg:ident) => (def_macro($cs, $paramlist, None, $state_arg));
+    ($cs:expr, $paramlist:expr, $expansion:expr, $state_arg:ident) => (def_macro($cs, $paramlist, $expansion, $state_arg));
+    ($cs:expr, $paramlist:expr, $expansion:expr, $key1:ident=>$val1:expr, $state_arg:ident) => (def_macro($cs, $paramlist, $expansion, $state_arg));
+
+    // Simple Expression syntax
+    ($cs:expr, $paramlist:expr, None) => (DefMacroI!($cs, $paramlist, None, $state));
     ($cs:expr, $paramlist:expr, $expansion:expr) => (DefMacroI!($cs, $paramlist, $expansion, $state));
     ($cs:expr, $paramlist:expr, $expansion:expr, $key1:ident=>$val1:expr) => (DefMacroI!($cs, $paramlist, $expansion, $key1=>$val1, $state));
 
-    // With explicit state
-    // TODO: package::coerce_cs on $cs
-    ($cs:expr, $paramlist:expr, None, $state_arg:expr) => (def_macro($cs, $paramlist, None, $state_arg));
-    ($cs:expr, $paramlist:expr, $expansion:expr, $state_arg:expr) => (def_macro($cs, $paramlist, Some(Rc::new($expansion)), $state_arg));
-    // TODO: Use the definitional options such as "locked"
-    ($cs:expr, $paramlist:expr, $expansion:expr, $key1:ident=>$val1:expr, $state_arg:expr) => (def_macro($cs, $paramlist, Some(Rc::new($expansion)), $state_arg));
-  );
-
-  macro_rules! DefMacroT(
-    // $body is an ungrouped stream of Token literals, which will be then grouped by Tokens!
-    ($cs:expr, $paramlist:expr, $arg:expr) => (DefMacroT!($cs, $paramlist, $arg, $state));
-    ($cs:expr, $paramlist:expr, $body:expr, $state_arg:ident) => ({
-      DefMacroI!($cs, $paramlist, move |_gullet, _args, _state| {Ok(Tokens!($body))}, $state_arg)
-    });
-    // with 1 key=>val param
-    ($cs:expr, $paramlist:expr, $arg:expr, $key1:ident => $val1:expr) => (DefMacroT!($cs, $paramlist, $arg, $key1=>$val1, $state));
-    ($cs:expr, $paramlist:expr, $body:expr,$key1:ident => $val1:expr, $state_arg:ident) => ({
-      DefMacroI!($cs, $paramlist, move |_gullet, _args, _state| {Ok(Tokens!($body))}, $key1=>$val1, $state_arg)
-    });
-  );
-
-  macro_rules! DefMacroTS(
-    // $body is a Tokens-typed expression | TODO: Ideally we want to improve the Tokens! macro to be a no-op when nothing to do
-    ($cs:expr, $paramlist:expr, $arg:expr) => (DefMacroTS!($cs, $paramlist, $arg, $state));
-    ($cs:expr, $paramlist:expr, $body:expr, $state_arg:ident) => ({
-      DefMacroI!($cs, $paramlist, move |_gullet, _args, _state| {Ok($body)}, $state_arg)
-    });
-    // with 1 key=>val param
-    ($cs:expr, $paramlist:expr, $arg:expr, $key1:ident=>$val1:expr) => (DefMacroTS!($cs, $paramlist, $arg, $key1=>$val1,$state));
-    ($cs:expr, $paramlist:expr, $body:expr, $key1:ident=>$val1:expr, $state_arg:ident) => ({
-      DefMacroI!($cs, $paramlist, move |_gullet, _args, _state| {Ok($body)}, $key1=>$val1, $state_arg)
-    });
   );
 
   macro_rules! DefMacro {
-    // String form
-    ($proto:expr, $expansion:expr) => (DefMacroWO!($proto, $expansion, ExpandableOptions::default()));
-    ($proto:expr, $expansion:expr, $key1:ident=>$val1:expr) => (
-      DefMacroWO!($proto, $expansion, NewDefault!(ExpandableOptions, $key1=>$val1)));
-    // string; explicit state
-    ($proto:expr, $expansion:expr,$state_arg:ident) => (DefMacroWO!($proto, $expansion, ExpandableOptions::default(), $state_arg));
     // Closure form
-    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr) => (
-      DefMacroWO!($proto, $gullet, $args, $inner_state, $block, None)
+    ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block) => (
+      DefMacroWO!($proto, sub [$gullet, $args, $inner_state] $body, ExpandableOptions::default(), $state)
     );
-    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $key1:ident=>$val1:expr) => (
-      DefMacroWO!($proto, $gullet, $args, $inner_state, $block, NewDefault!(ExpandableOptions, $key1=>$val1))
+    ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $key1:ident=>$val1:expr) => (
+      DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, NewDefault!(ExpandableOptions, $key1=>$val1))
     );
     // closure; explicit state
-    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $state_arg:ident) => (
-      DefMacroWO!($proto, $gullet, $args, $inner_state, $block, None, $state_arg);
+    ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $state_arg:ident) => (
+      DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, ExpandableOptions::default(), $state_arg);
     );
+    // String form
+    ($proto:expr, $expansion:expr) => (DefMacroWO!($proto, $expansion, ExpandableOptions::default()));
+    ($proto:expr, $expansion:expr, $key1:ident=>$val1:expr) =>
+      (DefMacroWO!($proto, $expansion, NewDefault!(ExpandableOptions, $key1=>$val1)));
+    // string; explicit state
+    ($proto:expr, $expansion:expr,$state_arg:ident) => (DefMacroWO!($proto, $expansion, ExpandableOptions::default(), $state_arg));
   }
 
   macro_rules! DefMacroWO(
+    // Rust closure expansion form
+    ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {
+      let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
+      let expansion_closure : Option<ExpansionClosure> = Some(Rc::new(|$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| $body));
+      // TODO: Also pass in options
+      def_macro(cs, paramlist, expansion_closure, $state_arg);
+    };
+    ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) => (
+      DefMacroWO!($proto, sub [ $gullet, $args, $inner_state ] $body, $options, $state));
     // String expansion forms
     ($proto:expr, $expansion:expr, $options:expr) => (DefMacroWO!($proto, $expansion, $options, $state));
     ($proto:expr, $expansion:expr, $options:expr, $state_arg:ident) => ({
@@ -338,31 +340,23 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       // TODO: Also pass in options
       def_macro(cs, paramlist, expansion, $state_arg);
     });
-    // Rust closure expansion form
-    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $options:expr) => (
-      DefMacroWO!($proto, $gullet, $args, $inner_state, $block, $options, $state));
-    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $options:expr, $state_arg:ident) => ({
-      let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-      // TODO: Also pass in options
-      def_macro(cs, paramlist, Some(Rc::new(|$gullet, $args, $inner_state| {$block})), $state_arg);
-    })
   );
 
   macro_rules! DefConditional(
     // test is always a rust closure
-    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr) => (DefConditional!($proto, $gullet, $args, $inner_state, $block, $state));
-    ($proto:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $state_arg:ident) => ({
+    ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block) => (DefConditional!($proto, sub[$gullet, $args, $inner_state] $body, $state));
+    ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-      DefConditionalI!(cs, paramlist, $gullet, $args, $inner_state, $block, $state_arg)
+      DefConditionalI!(cs, paramlist, sub[$gullet, $args, $inner_state] $body, $state_arg)
     })
   );
 
   macro_rules! DefConditionalI(
     // test is always a rust closure
-    ($cs:expr, $paramlist:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr) =>
-      (DefConditionalI!($cs, $paramlist, $gullet, $args, $inner_state, $block, $state));
-    ($cs:expr, $paramlist:expr, $gullet:ident, $args:ident, $inner_state:ident, $block:expr, $state_arg:ident) => ({
-      let test : ConditionalClosure = Rc::new(|$gullet, $args, $inner_state| {$block});
+    ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block) =>
+      (DefConditionalI!($cs, $paramlist, $gullet, $args, $inner_state, $body, $state));
+    ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
+      let test : ConditionalClosure = Rc::new(|$gullet, $args, $inner_state| {$body});
       def_conditional($cs, $paramlist, Some(test), ConditionalOptions::default(), $state_arg);
     });
   );
@@ -765,7 +759,34 @@ macro_rules! SetupBindingMacros {($state:ident) => (
    })
   }
 
-  macro_rules! DefConstructor(
+  macro_rules! DefConstructor (
+    // Code replacement flavors
+   ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $state));
+   ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+      $key1:ident => $val1:expr) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $key1 => $val1, $state));
+    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+      $key1:ident => $val1:expr,
+      $key2:ident => $val2:expr) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $key1 => $val1, $key2=>$val2, $state));
+    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+      $key1:ident => $val1:expr,
+      $key2:ident => $val2:expr,
+      $key3:ident => $val3:expr) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $key1 => $val1, $key2=>$val2, $key3=>$val3, $state));
+    // with explicit state
+    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $state_arg:ident) => (
+      DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, ConstructorOptions::default(), $state_arg));
+    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+      $key1:ident => $val1:expr, $state_arg:ident ) => (
+      DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,$key1=>$val1), $state_arg));
+    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+      $key1:ident => $val1:expr,
+      $key2:ident => $val2:expr, $state_arg:ident ) => (
+      DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,$key1=>$val1, $key2=>$val2), $state_arg));
+    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+      $key1:ident => $val1:expr,
+      $key2:ident => $val2:expr,
+      $key3:ident => $val3:expr, $state_arg:ident ) => (
+      DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,$key1=>$val1, $key2=>$val2, $key3=>$val3), $state_arg));
+
     // String replacement flavors
     ($cs:expr, $replacement:expr) => (DefConstructor!($cs, $replacement, $state));
     ($cs:expr, $replacement:expr,
@@ -936,7 +957,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       compile_replacement!(compiled_replacement, $replacement);
       DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
     });
-    ($proto:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $options:expr, $state_arg:ident) => ({
+    ($proto:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:block, $options:expr, $state_arg:ident) => ({
       let compiled_replacement : Option<ReplacementClosure> = Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body)));
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
@@ -1144,7 +1165,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       let current_environment_closure = beforeproc!(stomach, state, {
         AssignValue!("current_environment", env_name.clone(), None, state);
         let body = T_LETTER!(env_name.clone());
-        DefMacroT!(T_CS!("\\@currenvir"), None, body.clone(), state);
+        DefMacroI!(T_CS!("\\@currenvir"), None, body.clone(), state);
       });
       before_digest_env.push(current_environment_closure);
 
@@ -1670,14 +1691,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! SetCounter {
     ($ctr:expr, $value:expr, None) => {
       AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
-      DefMacroTS!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+      DefMacroI!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
                   scope => Some(Scope::Global)
       );
     };
     ($ctr:expr, $value:expr, $gullet:ident) => {
       AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
       AfterAssignment!($gullet);
-      DefMacroTS!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+      DefMacroI!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
                   scope => Some(Scope::Global)
       );
     }
@@ -1696,6 +1717,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! RefStepCounter {
     ($ctr:expr, $noreset:expr, $gullet:ident) => (RefStepCounter!($ctr, $noreset, $gullet, $state));
     ($ctr:expr, $noreset:expr, $gullet:ident, $state_arg:ident) => (ref_step_counter($ctr, $noreset, $gullet, $state_arg));
+  }
+
+  /// Invocation(<list of Token>); builds a representation of a command sequence invoked on its
+  /// arguments
+  macro_rules! Invocation {
+    ($token:expr, $args:expr) => {
+      build_invocation($token, $args, $state)
+    };
   }
 
 )}

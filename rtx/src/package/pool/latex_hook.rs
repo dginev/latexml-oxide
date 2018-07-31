@@ -37,10 +37,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "\\typeout",
     "\\begin",
     "\\listfiles",
-  ].into_iter()
+  ]
+    .into_iter()
     .map(|s| s.to_string())
   {
-    DefMacroI!(T_CS!(ltxtrigger), None, move |_gullet, _args, state| {
+    let inner_ltxtrigger = ltxtrigger.clone();
+    DefMacroI!(T_CS!(ltxtrigger), None, sub[ _gullet, _args, state] {
       input_definitions(
         "LaTeX",
         InputDefinitionOptions {
@@ -49,7 +51,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         },
         state,
       )?;
-      Ok(Tokens!(T_CS!(ltxtrigger)))
+      Ok(Tokens!(T_CS!(inner_ltxtrigger)))
     });
   }
 

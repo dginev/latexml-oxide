@@ -12,7 +12,7 @@ use tokens::Tokens;
 use whatsit::Whatsit;
 use Digested;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Register {
   pub cs: Token,
   pub parameters: Option<Parameters>,
@@ -30,6 +30,9 @@ impl Default for Register {
     }
   }
 }
+impl PartialEq for Register {
+  fn eq(&self, other: &Register) -> bool { self.cs == other.cs }
+}
 
 impl Register {
   // `is_register` begs to be refactored into a better naming scheme
@@ -44,7 +47,7 @@ impl Definition for Register {
   // (other than afterassign)
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   // TODO:
-  fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
+  fn get_parameters(&self) -> &Option<Parameters> { &self.parameters }
   fn get_cs(&self) -> Token { self.cs.clone() }
 
   fn get_cs_name(&self) -> String { self.cs.get_cs_name() }
@@ -70,6 +73,7 @@ impl Definition for Register {
     _state: &mut State,
   ) -> Result<()>
   {
+    Ok(())
   }
 }
 

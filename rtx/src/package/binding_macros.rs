@@ -104,13 +104,13 @@ macro_rules! noprimitive {
 
 #[macro_export]
 macro_rules! primitivesub {
-  ($stomach:ident, $args:ident, $state:ident, $body:expr) => {
+  ($stomach:ident, $args:ident, $state:ident, $body:block) => {
     |$stomach: &mut Stomach, mut $args: Vec<Tokens>, $state: &mut State| $body
   };
 }
 #[macro_export]
 macro_rules! primitiveproc {
-  ($stomach:ident, $args:ident, $state:ident, $body:expr) => (
+  ($stomach:ident, $args:ident, $state:ident, $body:block) => (
     |$stomach:&mut Stomach, mut $args : Vec<Tokens>, $state:&mut State| {
       $body
       Ok(Vec::new())
@@ -120,7 +120,7 @@ macro_rules! primitiveproc {
 
 #[macro_export]
 macro_rules! beforesub {
-  ($stomach:ident, $state:ident, $body:expr) => {
+  ($stomach:ident, $state:ident, $body:block) => {
     |$stomach: &mut Stomach, $state: &mut State| $body
   };
 }
@@ -136,6 +136,26 @@ macro_rules! beforeproc {
 }
 
 #[macro_export]
+macro_rules! properties {
+  (sub [ $stomach:ident, $args:ident, $inner_state:ident ] $body:block) => {
+    Rc::new(
+      move |$stomach: &mut Stomach,
+            mut $args: &Vec<Option<Digested>>,
+            $inner_state: &mut State|
+            -> Result<HashMap<String, Stored>> { $body },
+    )
+  };
+  ($value:expr) => {
+    Rc::new(
+      move |_stomach: &mut Stomach,
+            _args: &Vec<Option<Digested>>,
+            _state: &mut State|
+            -> Result<HashMap<String, Stored>> { Ok($value.clone()) },
+    )
+  };
+}
+
+#[macro_export]
 macro_rules! aftersub {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => {
     vec![Rc::new(
@@ -146,6 +166,7 @@ macro_rules! aftersub {
     )]
   };
 }
+
 #[macro_export]
 macro_rules! afterproc {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => (

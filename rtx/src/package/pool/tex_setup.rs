@@ -19,7 +19,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   if !state.documentid.is_empty() {
     let docid = state.documentid.clone();
     // Wrap in T_OTHER so funny chars don't screw up (no space!)
-    DefMacroT!(T_CS!("\\thedocument@ID"), None, T_OTHER!(docid));
+    DefMacroI!(T_CS!("\\thedocument@ID"), None, T_OTHER!(docid));
   } else {
     Let!("\\thedocument@ID", "\\@empty");
   }

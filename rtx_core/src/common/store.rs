@@ -9,6 +9,7 @@ use definition::constructor::Constructor;
 use definition::expandable::Expandable;
 use definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use definition::primitive::Primitive;
+use definition::register::Register;
 use document::tag::TagData;
 use parameter::Parameter;
 use token::{Catcode, Token};
@@ -28,28 +29,21 @@ use tokens::Tokens;
 //    rather than requiring writing Stored::Primitive(Rc::new(p)) each time
 //    and equally importantly for unwrapping.
 
+// Basic principles:
+// 1. If the type is `Copy`, store directly
+// 2. If the type is intended as State-exclusive, store in a Box
+//      (or directly if any already Boxed datatype such as Vec, VecDeque)
+// 3. If the struct is intended for reuse/(mutation?!) in digestion components, store it in an Rc,
+//    e.g. Rc<Font>
+
 #[derive(Clone, PartialEq)]
 pub enum Stored {
-  // Primitives
+  // Primitives (Copy types, or cheap Clone)
   Bool(bool),
   String(String),
   Mathcode(usize),
   Int(i32),
-  // LaTeXML objects
-  Catcode(Catcode),
-  Token(Token),
-  Tokens(Tokens),
-  Expandable(Rc<Expandable>),
-  Conditional(Rc<Conditional>),
-  Primitive(Rc<Primitive>),
-  MathPrimitive(Rc<MathPrimitive>),
-  // MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
-  Constructor(Rc<Constructor>),
-  Digested(Rc<::Digested>),
-  Parameter(Parameter),
-  Font(Rc<Font>),
-  Number(Number),
-  // Collections
+  // Collections (boxed)
   VecChar(Vec<char>),
   VecString(Vec<String>),
   VecToken(Vec<Token>),
@@ -58,6 +52,22 @@ pub enum Stored {
   VecDequeStored(VecDeque<Stored>),
   HashStored(HashMap<String, Stored>),
   HashTagData(HashMap<String, Vec<TagData>>),
+  // LaTeXML primitives (Copy types)
+  Catcode(Catcode),
+  Token(Token),
+  Tokens(Tokens),
+  Number(Number),
+  // LaTeXML objects (Rc-wrapped)
+  Expandable(Rc<Expandable>),
+  Conditional(Rc<Conditional>),
+  Primitive(Rc<Primitive>),
+  MathPrimitive(Rc<MathPrimitive>),
+  Register(Rc<Register>),
+  // MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
+  Constructor(Rc<Constructor>),
+  Digested(Rc<::Digested>),
+  Parameter(Parameter),
+  Font(Rc<Font>),
 }
 
 impl fmt::Debug for Stored {
@@ -81,6 +91,7 @@ impl fmt::Debug for Stored {
       Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
       Digested(ref digested) => write!(f, "{:?}", digested),
       Parameter(ref parameter) => write!(f, "{:?}", parameter),
+      Register(ref register) => write!(f, "{:?}", register),
       Font(ref font) => write!(f, "{:?}", font),
       Number(ref number) => write!(f, "{:?}", number),
       VecToken(ref token_vec) => write!(f, "{:?}", token_vec),
@@ -116,11 +127,12 @@ impl From<Token> for Stored {
   fn from(value: Token) -> Self { Stored::Token(value) }
 }
 
+// Storing all definitions is expected - Rc<Expandable> case
+
 impl From<Tokens> for Stored {
   fn from(value: Tokens) -> Self { Stored::Tokens(value) }
 }
 
-/// Storing all definitions is expected - Rc<Expandable> case
 impl From<Rc<Expandable>> for Stored {
   fn from(definition: Rc<Expandable>) -> Self { Stored::Expandable(definition) }
 }
@@ -179,6 +191,10 @@ impl From<Number> for Stored {
   fn from(value: Number) -> Self { Stored::Number(value) }
 }
 
+impl<'a> From<&'a Token> for Stored {
+  fn from(value: &'a Token) -> Self { Stored::Token(value.clone()) }
+}
+
 impl From<Vec<char>> for Stored {
   fn from(value: Vec<char>) -> Self { Stored::VecChar(value) }
 }
@@ -209,4 +225,79 @@ impl From<HashMap<String, Stored>> for Stored {
 
 impl From<HashMap<String, Vec<TagData>>> for Stored {
   fn from(value: HashMap<String, Vec<TagData>>) -> Self { Stored::HashTagData(value) }
+}
+
+// Reverse direction -- cast Stored back into concrete types, with meaningfull fallbacks where
+// impossible
+
+impl<'a> From<&'a Stored> for bool {
+  fn from(value: &Stored) -> bool {
+    match value {
+      Stored::Bool(b) => *b,
+      _ => true,
+    }
+  }
+}
+
+impl<'a> From<&'a Stored> for String {
+  fn from(value: &Stored) -> String {
+    match value {
+      &Stored::String(ref v) => v.to_owned(),
+      v => s!("{:?}", v),
+    }
+  }
+}
+
+impl<'a> From<&'a Stored> for Option<&'a VecDeque<Stored>> {
+  fn from(value: &'a Stored) -> Option<&'a VecDeque<Stored>> {
+    match value {
+      Stored::VecDequeStored(ref v) => Some(v),
+      _ => None,
+    }
+  }
+}
+
+impl<'a> From<&'a Stored> for Option<Rc<Font>> {
+  fn from(value: &'a Stored) -> Option<Rc<Font>> {
+    match value {
+      Stored::Font(ref f) => Some(f.clone()),
+      _ => None,
+    }
+  }
+}
+
+impl<'a> From<&'a Stored> for Option<Number> {
+  fn from(value: &'a Stored) -> Option<Number> {
+    match value {
+      Stored::Number(ref n) => Some(*n),
+      _ => None,
+    }
+  }
+}
+
+impl<'a> From<&'a Stored> for Option<Tokens> {
+  fn from(value: &'a Stored) -> Option<Tokens> {
+    match value {
+      Stored::Tokens(ref ts) => Some(ts.clone()),
+      _ => None,
+    }
+  }
+}
+
+impl<'a> From<&'a Stored> for Option<Catcode> {
+  fn from(value: &'a Stored) -> Option<Catcode> {
+    match value {
+      Stored::Catcode(ref cc) => Some(*cc),
+      _ => None,
+    }
+  }
+}
+
+impl<'a> From<&'a Stored> for Option<&'a Vec<char>> {
+  fn from(value: &'a Stored) -> Option<&'a Vec<char>> {
+    match value {
+      Stored::VecChar(ref cc) => Some(cc),
+      _ => None,
+    }
+  }
 }

@@ -96,11 +96,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefPrimitiveI!("\\nonfrenchspacing", noprimitive!());
   // DefMacroI!("\\normalbaselines", undef,
   //   '\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\normallineskiplimit');
-  DefMacroT!(T_CS!("\\space"), None, T_SPACE!());
-  DefMacroT!(T_CS!("\\lq"), None, T_OTHER!("`"));
-  DefMacroT!(T_CS!("\\rq"), None, T_OTHER!("'"));
+  DefMacroI!(T_CS!("\\space"), None, T_SPACE!());
+  DefMacroI!(T_CS!("\\lq"), None, T_OTHER!("`"));
+  DefMacroI!(T_CS!("\\rq"), None, T_OTHER!("'"));
   Let!("\\empty", "\\@empty");
-  // DefMacroT!(T_CS!("\\null"), None, "\hbox{}");
+  //DefMacro!("\\null", "\hbox{}");
   Let!("\\bgroup", T_BEGIN!());
   Let!("\\egroup", T_END!());
   Let!("\\endgraf", "\\par");
@@ -109,7 +109,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefPrimitiveI!("\\endline", noprimitive!());
 
   // Use \r for the newline from TeX!!!
-  DefMacroT!(T_CS!("\\\r"), None, T_CS!("\\ ")); // \<cr> == \<space> Interesting (see latex.ltx)
+  DefMacroI!(T_CS!("\\\r"), None, T_CS!("\\ ")); // \<cr> == \<space> Interesting (see latex.ltx)
   Let!(T_ACTIVE!("\r"), "\\par"); // (or is this just LaTeX?)
 
   Let!("\\\t", "\\\r"); // \<tab> == \<space>, also

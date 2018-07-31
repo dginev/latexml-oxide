@@ -10,9 +10,6 @@ use stomach::Stomach;
 use token::*;
 use Digested;
 
-// Form a Tokens list of Token's
-// Flatten the arguments Token's and Tokens's into plain Token's
-// .... Efficiently! since this seems to be called MANY times.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tokens {
   pub tokens: Vec<Token>,
@@ -26,6 +23,11 @@ impl ToTokens for Tokens {
     self.tokens.to_tokens(tokens);
     tokens.append("}");
   }
+}
+
+// We also need convenient auxiliaries, including auto-casting
+impl From<Vec<Token>> for Tokens {
+  fn from(ts: Vec<Token>) -> Tokens { Tokens::new(ts) }
 }
 
 #[macro_export]
