@@ -8,7 +8,9 @@ use rtx_core::common::font::Font;
 use rtx_core::common::number::Number;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::expandable::Expandable;
-use rtx_core::definition::register::{Register, RegisterType, RegisterValue};
+use rtx_core::definition::register::{
+  Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue,
+};
 use rtx_core::definition::{ConditionalClosure, Definition, ExpansionClosure};
 use rtx_core::document::resource::*;
 use rtx_core::document::tag::{TagOptionName, TagOptions};
@@ -531,8 +533,16 @@ pub fn def_macro<T: Into<Option<ExpansionClosure>>>(
 }
 
 pub struct RegisterOptions {
-  pub getter: Option<Rc<Fn(Vec<Token>) -> Result<Tokens>>>,
-  pub setter: Option<Rc<Fn(Stored, Vec<Token>)>>,
+  pub getter: Option<RegisterGetterClosure>,
+  pub setter: Option<RegisterSetterClosure>,
+}
+impl Default for RegisterOptions {
+  fn default() -> Self {
+    RegisterOptions {
+      getter: None,
+      setter: None,
+    }
+  }
 }
 
 //======================================================================
@@ -637,9 +647,23 @@ pub fn def_register<T: Into<RegisterValue>>(
 {
   let value: RegisterValue = value.into();
   let name = cs.to_string();
-  let rtype: RegisterType = value.into();
-  //   my $getter = $options{getter}
-  //     || sub { LookupValue(join('', $name, map { ToString($_) } @_)) || $value; };
+  let rtype: RegisterType = (&value).into();
+  let options = options.unwrap_or(RegisterOptions::default());
+  let getter: RegisterGetterClosure = match options.getter {
+    Some(getter) => getter.clone(),
+    None => Rc::new(move |args: Vec<Token>, state: &mut State| -> Stored {
+      let args_string: String = args
+        .iter()
+        .map(|arg: &Token| arg.to_string())
+        .collect::<Vec<String>>()
+        .join("");
+      match state.lookup_value(&(name.clone() + &args_string)) {
+        Some(v) => v.clone(),
+        None => value.clone().into(),
+      }
+    }),
+  };
+
   //   my $setter = $options{setter}
   //     || ($options{readonly}
   //     ? sub { my ($v, @args) = @_;
@@ -789,7 +813,7 @@ pub fn new_counter(
   let cunctr = s!("\\c@{}", unctr);
   let clunctr = s!("\\cl@{}", unctr);
 
-  def_register(T_CS!(cctr), None, Number::new(0), None, state);
+  DefRegisterI!(T_CS!(cctr), None, Number::new(0), None);
   state.assign_value(&cctr, Number!(0), Some(Scope::Global));
   AfterAssignment!();
   if !state.lookup_bool(&clctr) {

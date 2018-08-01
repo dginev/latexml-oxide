@@ -5,6 +5,7 @@ use common::error::*;
 use common::glue::{Glue, MuGlue};
 use common::number::Number;
 use common::object::Object;
+use common::store::Stored;
 use definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
 use document::Document;
 use gullet::Gullet;
@@ -16,7 +17,7 @@ use tokens::Tokens;
 use whatsit::Whatsit;
 use Digested;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum RegisterValue {
   Number(Number),
   Dimension(Dimension),
@@ -28,9 +29,24 @@ pub enum RegisterValue {
 impl From<Number> for RegisterValue {
   fn from(n: Number) -> RegisterValue { RegisterValue::Number(n) }
 }
-impl From<RegisterValue> for RegisterType {
-  fn from(v: RegisterValue) -> RegisterType {
-    match v {
+impl From<Dimension> for RegisterValue {
+  fn from(n: Dimension) -> RegisterValue { RegisterValue::Dimension(n) }
+}
+impl From<Glue> for RegisterValue {
+  fn from(n: Glue) -> RegisterValue { RegisterValue::Glue(n) }
+}
+impl From<MuGlue> for RegisterValue {
+  fn from(n: MuGlue) -> RegisterValue { RegisterValue::MuGlue(n) }
+}
+impl From<Token> for RegisterValue {
+  fn from(n: Token) -> RegisterValue { RegisterValue::Token(n) }
+}
+impl From<Tokens> for RegisterValue {
+  fn from(n: Tokens) -> RegisterValue { RegisterValue::Tokens(n) }
+}
+impl<'a> From<&'a RegisterValue> for RegisterType {
+  fn from(v: &RegisterValue) -> RegisterType {
+    match *v {
       RegisterValue::Number(_) => RegisterType::Number,
       RegisterValue::Dimension(_) => RegisterType::Dimension,
       RegisterValue::Glue(_) => RegisterType::Glue,
@@ -51,12 +67,17 @@ pub enum RegisterType {
   Tokens,
 }
 
-#[derive(Debug, Clone)]
+pub type RegisterGetterClosure = Rc<Fn(Vec<Token>, &mut State) -> Stored>;
+pub type RegisterSetterClosure = Rc<Fn(RegisterValue, &mut State)>;
+
+#[derive(Clone)]
 pub struct Register {
   pub cs: Token,
   pub parameters: Option<Parameters>,
   pub register_type: RegisterType,
   pub readonly: bool,
+  pub getter: RegisterGetterClosure,
+  pub setter: RegisterSetterClosure,
   // pub traits: PrimitiveOptions,
 }
 impl Default for Register {
@@ -65,6 +86,8 @@ impl Default for Register {
       cs: T_CS!(s!("Register")),
       parameters: None,
       register_type: RegisterType::Number,
+      getter: Rc::new(|_: Vec<Token>, _: &mut State| Stored::Number(Number::new(0))),
+      setter: Rc::new(|_: RegisterValue, _: &mut State| {}),
       readonly: false,
     }
   }
