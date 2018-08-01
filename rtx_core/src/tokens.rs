@@ -36,6 +36,25 @@ impl From<Vec<Token>> for Tokens {
 impl From<Token> for Tokens {
   fn from(t: Token) -> Tokens { Tokens!(t) }
 }
+impl From<Tokens> for Result<Tokens> {
+  fn from(t: Tokens) -> Result<Tokens> { Ok(t) }
+}
+impl From<Token> for Result<Tokens> {
+  fn from(t: Token) -> Result<Tokens> { Ok(Tokens!(t)) }
+}
+
+impl From<Tokens> for Token {
+  fn from(ts: Tokens) -> Token {
+    if ts.tokens.is_empty() {
+      Token::default()
+    } else if ts.tokens.len() == 1 {
+      ts.tokens.first().unwrap().clone()
+    } else {
+      warn!(target: "expected:token", "multiple Tokens cast into a single Token");
+      ts.tokens.first().unwrap().clone()
+    }
+  }
+}
 
 impl Display for Tokens {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
