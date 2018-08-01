@@ -99,7 +99,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       },
       scope,
     );
-    state.after_assignment();
+    AfterAssignment!(state);
     Ok(Vec::new())
   }
 

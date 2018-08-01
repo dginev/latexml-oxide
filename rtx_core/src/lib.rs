@@ -128,7 +128,6 @@ impl Core {
       state,
       preload,
       stomach,
-      ..Core::default()
     }
   }
 

@@ -774,7 +774,14 @@ impl<'ct> Default for NewCounterOptions<'ct> {
   }
 }
 
-pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, state: &mut State) {
+pub fn new_counter(
+  ctr: &str,
+  within: &str,
+  options_opt: Option<NewCounterOptions>,
+  state: &mut State,
+) -> Result<()>
+{
+  SetupBindingMacros!(state);
   let unctr = s!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
   let cctr = s!("\\c@{}", ctr);
   let clctr = s!("\\cl@{}", ctr);
@@ -783,11 +790,10 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, 
 
   def_register(T_CS!(cctr), None, Some(Number::new(0)), None, state);
   state.assign_value(&cctr, Number!(0), Some(Scope::Global));
-  state.after_assignment();
+  AfterAssignment!();
   if !state.lookup_bool(&clctr) {
     state.assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
-  SetupBindingMacros!(state);
 
   DefRegisterI!(T_CS!(cunctr), None, Some(Number!(0)), None);
   state.assign_value(&cunctr, Number!(0), Some(Scope::Global));
@@ -826,46 +832,66 @@ pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, 
     )
   }
 
-  // if let Some(nested_val) = options.get("nested") {
-  //   state.assign_value(
-  //     &s!("nested_counters_{}", ctr),
-  //     Stored::String(nested_val),
-  //     Some(Scope::Global),
-  //   )
-  // }
+  if let Some(ref options) = options_opt {
+    if !options.nested.is_empty() {
+      state.assign_value(
+        &s!("nested_counters_{}", ctr),
+        options.nested.clone(),
+        Some(Scope::Global),
+      )
+    }
+  }
 
-  // // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
-  // DefMacroI!(T_CS!(s!("\\the{}",ctr)), None, move |gullet, args, inner_state| {
-  //   let counter_value = CounterValue!(ctr, inner_state).value_of();
-  //   Ok(ExplodeText!(counter_value))
-  // },
-  // scope => Some(Scope::Global));
+  // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
+  let ctr_string = ctr.to_string();
+  DefMacro!(&s!("\\the{}",ctr), sub[gullet, args, inner_state] {
+    let counter_value = CounterValue!(&ctr_string, inner_state).value_of();
+    Ok(Tokens::new(ExplodeText!(counter_value)))
+  }, scope => Some(Scope::Global));
 
-  // let mut prefix = options.get("idprefix").unwrap_or(String::new());
-  // if !prefix.is_empty() {
-  // state.assign_value(s!("@ID@prefix@{}",ctr), Stored::String(prefix),
-  // Some(Scope::Global)); } else {
-  //   prefix = state.lookup_string(s!("@ID@prefix@{}",ctr));
-  //   if prefix.is_empty() {
-  //     prefix = clean_id(ctr);
-  //   }
-  // }
-  // if !prefix.is_empty() {
-  //   let idwithin = options.get("idwithin").unwrap_or(within.clone());
-  //   if !idwithin.is_empty() {
-  //     DefMacro!(s!("\\the{}@ID",ctr),
-  //       concat!(s!("\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty",idwithin),
-  //               s!("\\else\\csname the{}@ID\\endcsname.\\fi",idwithin),
-  //               s!(" {}\\csname @{}@ID\\endcsname",prefix,ctr)),
-  //       scope => Some(Scope::Global));
-  //   }
-  //   else {
-  //     DefMacro!(s!("\\the{}@ID",ctr), s!("{}\\csname @{}@ID\\endcsname",prefix,ctr),
-  //       scope => Some(Scope::Global));
-  //   }
-  //   DefMacro!(s!("\\@{}@ID",ctr), "0", scope => Some(Scope::Global));
-  // }
-  return;
+  if let Some(options) = options_opt {
+    let mut prefix = options.idprefix.to_string();
+    if !prefix.is_empty() {
+      state.assign_value(
+        &s!("@ID@prefix@{}", ctr),
+        prefix.clone(),
+        Some(Scope::Global),
+      );
+    } else {
+      prefix = state.lookup_string(&s!("@ID@prefix@{}", ctr));
+      if prefix.is_empty() {
+        // TODO:
+        prefix = "clean_id(ctr)".to_string();
+      }
+    }
+    if !prefix.is_empty() {
+      let mut idwithin = if !options.idwithin.is_empty() {
+        options.idwithin.to_string()
+      } else {
+        within.to_string()
+      };
+      if !idwithin.is_empty() {
+        let ctr_string = ctr.to_string();
+        DefMacro!(&s!("\\the{}@ID",ctr), sub[gullet, args, inner_state] {
+          Ok(TokenizeInternal!(
+            &s!("\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
+          idwithin,idwithin,prefix,ctr_string)
+          ))
+        },
+        scope => Some(Scope::Global));
+      } else {
+        let ctr_string = ctr.to_string();
+        DefMacro!(&s!("\\the{}@ID",ctr), sub[gullet,args, inner_state] {
+          Ok(TokenizeInternal!(
+              &s!("{}\\csname @{}@ID\\endcsname",prefix,ctr_string)
+          ))},
+          scope => Some(Scope::Global));
+      }
+      DefMacro!(&s!("\\@{}@ID",ctr), "0", scope => Some(Scope::Global));
+    }
+  }
+
+  Ok(())
 }
 
 pub fn counter_value(ctr: &str, state: &mut State) -> Number {
