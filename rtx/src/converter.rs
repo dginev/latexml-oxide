@@ -44,7 +44,7 @@ impl Converter {
     self.ready = true;
     Ok(())
   }
-  pub fn state_mut(&mut self) -> &mut State { self.core.state_mut() }
+  pub fn state_mut(&mut self) -> &mut State { self.core.get_state_mut() }
   pub fn bind_log(&mut self) {
     // TODO
   }

@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 use std::rc::Rc;
@@ -12,6 +13,8 @@ use document::resource::Resource;
 use document::tag::TagOptions;
 use document::Document;
 
+use mouth::Mouth;
+use stomach::Stomach;
 use token::{Catcode, Token};
 use tokens::Tokens;
 use util::pathname;
@@ -191,7 +194,7 @@ impl UndoFrame {
 ///      (see also activateScope & deactivateScope)
 pub type Table = HashMap<String, VecDeque<Stored>>;
 pub struct State {
-  /// Tables
+  // Tables
   pub value: Table,
   pub meaning: Table,
   pub stash: Table,
@@ -202,9 +205,9 @@ pub struct State {
   pub lccode: Table,
   pub uccode: Table,
   pub delcode: Table,
-  /// Table bookkeeping
+  // Table bookkeeping
   pub undo: VecDeque<UndoFrame>,
-  /// Stateful runtime - data structures
+  // Stateful runtime - data structures
   pub model: Model,
   pub document: Option<Document>,
   pub prefixes: HashMap<String, bool>, // ?
@@ -213,7 +216,7 @@ pub struct State {
   pub tag_properties: HashMap<String, TagOptions>,
   pub indirect_model: Option<IndirectModel>,
   pub pending_resources: Vec<Resource>,
-  /// Stateful runtime - simple fields
+  // Stateful runtime - simple fields
   pub verbosity: i32,
   pub status_code: usize,
   pub unlocked: bool,
@@ -227,6 +230,9 @@ pub struct State {
   pub graphics_paths: VecDeque<String>,
   pub include_styles: bool,
   pub nomathparse: bool,
+  // Circular dependency and global $STATE in Perl requires a bad
+  // style use of interior mutability...
+  pub stomach: Rc<RefCell<Stomach>>,
 }
 
 impl Default for State {
@@ -275,6 +281,8 @@ impl Default for State {
       graphics_paths: VecDeque::new(),
       include_styles: false,
       nomathparse: false,
+      // interiorly mutable
+      stomach: Rc::new(RefCell::new(Stomach::default())),
     }
   }
 }
@@ -1409,7 +1417,7 @@ impl State {
       None => Stored::Token(token2),
     };
     self.assign_meaning(token1, meaning, scope);
-    // TODO: AfterAssignment!();
+    self.after_assignment();
   }
   /// `XEquals` check for two token arguments
   pub fn x_equals(&mut self, token1: &Token, token2: &Token) -> bool {
@@ -1437,6 +1445,15 @@ impl State {
       }
     } else {
       false // False, if only one has 'meaning'
+    }
+  }
+
+  // WALL OF SHAME
+  // HACKY functions that violate Rust's mutability guards, to succeed in emulating the most
+  // arbitrary uses of Global scope in latexml
+  pub fn after_assignment(&mut self) {
+    if let Some(Stored::Tokens(after)) = self.remove_value("afterAssignment") {
+      self.stomach.borrow_mut().get_gullet_mut().unread(after); // primitive returns boxes, so these need to be digested!
     }
   }
 }

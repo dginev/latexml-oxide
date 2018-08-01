@@ -140,8 +140,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! AfterAssignment {
-    ($gullet: ident) => (AfterAssignment!($gullet, $state));
-    ($gullet:ident, $state_arg: ident) => (after_assignment($gullet, $state));
+    () => (AfterAssignment!($state));
+    ($state_arg: ident) => ($state_arg.after_assignment());
   }
 
   // Merge the current font with the style specifications
@@ -325,7 +325,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     // Rust closure expansion form
     ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-      let expansion_closure : Option<ExpansionClosure> = Some(Rc::new(|$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| $body));
+      let expansion_closure : Option<ExpansionClosure> = Some(Rc::new(move |$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| $body));
       // TODO: Also pass in options
       def_macro(cs, paramlist, expansion_closure, $state_arg);
     };
@@ -356,7 +356,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block) =>
       (DefConditionalI!($cs, $paramlist, $gullet, $args, $inner_state, $body, $state));
     ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
-      let test : ConditionalClosure = Rc::new(|$gullet, $args, $inner_state| {$body});
+      let test : ConditionalClosure = Rc::new(move |$gullet, $args, $inner_state| {$body});
       def_conditional($cs, $paramlist, Some(test), ConditionalOptions::default(), $state_arg);
     });
   );
@@ -1672,15 +1672,15 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! NewCounter {
     ($ctr:expr) => (NewCounter!($ctr, "", None, $state));
     ($ctr:expr, $within:expr) => (NewCounter!($ctr, $within, None, $state));
-    ($ctr:expr, $within:expr, None, $state_arg:ident) => (new_counter($ctr, $within, None, $state_arg));
+    ($ctr:expr, $within:expr, None, $state_arg:ident) => (new_counter($ctr, $within, None, $state_arg)?);
 
     // with options
     ($ctr:expr, $within:expr, $key1:ident => $val1:expr) => (NewCounter!($ctr, $within, $key1 => $val1, $state));
     ($ctr:expr, $within:expr, $key1:ident => $val1:expr, $state_arg: ident) =>
-     (new_counter($ctr, $within, Some(NewDefault!(NewCounterOptions, $key1=>$val1)), $state_arg));
+     (new_counter($ctr, $within, Some(NewDefault!(NewCounterOptions, $key1=>$val1)), $state_arg)?);
     ($ctr:expr, $within:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr) => (NewCounter!($ctr, $within, $key1=>$val1, $key2=>$val2, $state));
     ($ctr:expr, $within:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr, $state_arg: ident) =>
-     (new_counter($ctr, $within, Some(NewDefault!(NewCounterOptions, $key1=>$val1, $key2=>$val2)), $state_arg));
+     (new_counter($ctr, $within, Some(NewDefault!(NewCounterOptions, $key1=>$val1, $key2=>$val2)), $state_arg)?);
   }
 
   macro_rules! CounterValue {
@@ -1697,7 +1697,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     };
     ($ctr:expr, $value:expr, $gullet:ident) => {
       AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
-      AfterAssignment!($gullet);
+      AfterAssignment!();
       DefMacroI!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
                   scope => Some(Scope::Global)
       );
@@ -1717,6 +1717,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! RefStepCounter {
     ($ctr:expr, $noreset:expr, $gullet:ident) => (RefStepCounter!($ctr, $noreset, $gullet, $state));
     ($ctr:expr, $noreset:expr, $gullet:ident, $state_arg:ident) => (ref_step_counter($ctr, $noreset, $gullet, $state_arg));
+  }
+
+  /// Return $tokens with all tokens expanded
+  macro_rules! Expand {
+    ($tokens:expr, $gullet:ident) => (Expand!($tokens, $gullet, $state));
+    ($tokens:expr, $gullet:ident, $state_arg:ident) => (do_expand($tokens, $gullet, $state_arg));
   }
 
   /// Invocation(<list of Token>); builds a representation of a command sequence invoked on its

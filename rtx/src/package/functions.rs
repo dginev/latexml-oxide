@@ -8,6 +8,9 @@ use rtx_core::common::font::Font;
 use rtx_core::common::number::Number;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::expandable::Expandable;
+use rtx_core::definition::register::{
+  Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue,
+};
 use rtx_core::definition::{ConditionalClosure, Definition, ExpansionClosure};
 use rtx_core::document::resource::*;
 use rtx_core::document::tag::{TagOptionName, TagOptions};
@@ -141,8 +144,11 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
   // content => LookupValue($pathname . '_contents')
 
   // Open a mouth for that TeX content
-  let gullet = core.stomach.get_gullet_mut();
-  gullet.open_mouth(mouth, true);
+  core
+    .stomach
+    .borrow_mut()
+    .get_gullet_mut()
+    .open_mouth(mouth, true);
   Ok(())
 }
 
@@ -527,8 +533,18 @@ pub fn def_macro<T: Into<Option<ExpansionClosure>>>(
 }
 
 pub struct RegisterOptions {
-  pub getter: bool,
-  pub setter: bool,
+  pub getter: Option<RegisterGetterClosure>,
+  pub setter: Option<RegisterSetterClosure>,
+  pub readonly: bool,
+}
+impl Default for RegisterOptions {
+  fn default() -> Self {
+    RegisterOptions {
+      getter: None,
+      setter: None,
+      readonly: false,
+    }
+  }
 }
 
 //======================================================================
@@ -623,33 +639,74 @@ pub fn def_conditional(
   return;
 }
 
-pub fn def_register(
+pub fn def_register<T: Into<RegisterValue>>(
   cs: Token,
-  paramlist: Option<Parameters>,
-  value_opt: Option<Number>,
+  parameters: Option<Parameters>,
+  value: T,
   options: Option<RegisterOptions>,
   state: &mut State,
 )
 {
-  // TODO:
-  //   my $type   = $register_types{ ref $value };
-  //   my $name   = ToString($cs);
-  //   my $getter = $options{getter}
-  //     || sub { LookupValue(join('', $name, map { ToString($_) } @_)) || $value; };
-  //   my $setter = $options{setter}
-  //     || ($options{readonly}
-  //     ? sub { my ($v, @args) = @_;
-  //       Warn('unexpected', $name, $STATE->getStomach,
-  //         "Can't assign to register $name"); return; }
-  //     : sub { my ($v, @args) = @_;
-  //       AssignValue(join('', $name, map { ToString($_) } @args) => $v); });
-  //   # Not really right to set the value!
-  //   AssignValue(ToString($cs) => $value) if defined $value;
-  //   $STATE->installDefinition(LaTeXML::Core::Definition::Register->new($cs, $paramlist,
-  //       registerType => $type,
-  //       getter       => $getter, setter => $setter,
-  //       readonly     => $options{readonly}),
-  //     'global');
+  let options: RegisterOptions = options.unwrap_or_else(|| RegisterOptions::default());
+  let value: RegisterValue = value.into();
+  let name = cs.to_string();
+  let register_type: RegisterType = (&value).into();
+  // Prepare clones to move into closures
+  let getter_value = value.clone();
+  let setter_name = name.clone();
+
+  let getter: RegisterGetterClosure = match options.getter {
+    Some(getter) => getter.clone(),
+    None => Rc::new(move |args: Vec<Token>, state: &mut State| -> Stored {
+      let args_string: String = args
+        .iter()
+        .map(|arg: &Token| arg.to_string())
+        .collect::<Vec<String>>()
+        .join("");
+      match state.lookup_value(&(name.clone() + &args_string)) {
+        Some(v) => v.clone(),
+        None => getter_value.clone().into(),
+      }
+    }),
+  };
+  let readonly = options.readonly;
+
+  let setter: RegisterSetterClosure = match options.setter {
+    Some(setter) => setter.clone(),
+    None => if readonly {
+      Rc::new(move |value, args, state| {
+        warn!(
+          target: &s!("unexpected:{}", setter_name),
+          "Can't assign to register {}",
+          setter_name
+        );
+      })
+    } else {
+      Rc::new(move |value, args, state| {
+        let args_string: String = args
+          .iter()
+          .map(|arg: &Token| arg.to_string())
+          .collect::<Vec<String>>()
+          .join("");
+
+        state.assign_value(&(setter_name.clone() + &args_string), value, None);
+      })
+    },
+  };
+
+  // Not really right to set the value!
+  state.assign_value(&cs.to_string(), value, None);
+  state.install_definition(
+    Register {
+      cs,
+      parameters,
+      register_type,
+      readonly,
+      getter,
+      setter,
+    },
+    Some(Scope::Global),
+  );
   return;
 }
 
@@ -771,87 +828,124 @@ impl<'ct> Default for NewCounterOptions<'ct> {
   }
 }
 
-pub fn new_counter(ctr: &str, within: &str, options: Option<NewCounterOptions>, state: &mut State) {
+pub fn new_counter(
+  ctr: &str,
+  within: &str,
+  options_opt: Option<NewCounterOptions>,
+  state: &mut State,
+) -> Result<()>
+{
+  SetupBindingMacros!(state);
   let unctr = s!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
   let cctr = s!("\\c@{}", ctr);
   let clctr = s!("\\cl@{}", ctr);
   let cunctr = s!("\\c@{}", unctr);
   let clunctr = s!("\\cl@{}", unctr);
 
-  def_register(T_CS!(cctr), None, Some(Number::new(0)), None, state);
-  // state.assign_value(cctr, Number!(0), Some(Scope::Global));
-  // // TODO:
-  // // AfterAssignment!();
-  // if !state.lookup_bool(&clctr) {
-  //   state.assign_value(clctr, Tokens!(), Some(Scope::Global));
-  // }
-  // // TODO:
-  // // DefRegisterI!(T_CS!(cunctr), None, Number!(0));
-  // state.assign_value(cunctr, Number!(0), Some(Scope::Global));
-  // if !state.lookup_bool(clunctr) {
-  //   state.assign_value(clunctr, Tokens!(), Some(Scope::Global));
-  // }
+  DefRegisterI!(T_CS!(cctr), None, Number::new(0), None);
+  state.assign_value(&cctr, Number!(0), Some(Scope::Global));
+  AfterAssignment!();
+  if !state.lookup_bool(&clctr) {
+    state.assign_value(&clctr, Tokens!(), Some(Scope::Global));
+  }
 
-  // if !within.is_empty() {
-  //   let clwithin = s!("\\cl@{}",within);
-  //   let clunwithin = s!("\\cl@UN{}",within);
-  //   let x = if let Some(Stored::Tokens(cl)) = state.lookup_value(clwithin) {
-  //    cl.unlist()
-  //   } else {
-  //     Vec::new()
-  //   };
-  //   let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(unctr)];
-  //   clwithin_tokens.append(x);
-  // state.assign_value(clwithin, Stored::Tokens(Tokens{tokens: clwithin_tokens}),
-  // Some(Scope::Global));
+  DefRegisterI!(T_CS!(cunctr), None, Number::new(0), None);
+  state.assign_value(&cunctr, Number!(0), Some(Scope::Global));
+  if !state.lookup_bool(&clunctr) {
+    state.assign_value(&clunctr, Tokens!(), Some(Scope::Global));
+  }
 
-  //   let unx = if let Some(Stored::Tokens(clun)) = state.lookup_value(clunwithin) {
-  //     clun.unlist()
-  //   } else {
-  //    Vec::new()
-  //   };
-  //   let mut clunwithin_tokens = T_CS!(unctr);
-  //   clunwithin_tokens.append(unx);
+  if !within.is_empty() {
+    let clwithin = s!("\\cl@{}", within);
+    let clunwithin = s!("\\cl@UN{}", within);
+    let mut x = if let Some(Stored::Tokens(cl)) = state.remove_value(&clwithin) {
+      cl.unlist()
+    } else {
+      Vec::new()
+    };
+    let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(unctr)];
+    clwithin_tokens.append(&mut x);
+    state.assign_value(
+      &clwithin,
+      Stored::Tokens(Tokens::new(clwithin_tokens)),
+      Some(Scope::Global),
+    );
 
-  // state.assign_value(clunwithin, Stored::Tokens(Tokens{tokens: clunwithin_tokens}),
-  // Some(Scope::Global)) }
+    let mut unx = if let Some(Stored::Tokens(clun)) = state.remove_value(&clunwithin) {
+      clun.unlist()
+    } else {
+      Vec::new()
+    };
+    let mut clunwithin_tokens = vec![T_CS!(unctr)];
+    clunwithin_tokens.append(&mut unx);
 
-  // if let Some(nested_val) = options.get("nested") {
-  // state.assign_value(s!("nested_counters_{}", ctr), Stored::String(nested_val),
-  // Some(Scope::Global)) }
+    state.assign_value(
+      &clunwithin,
+      Stored::Tokens(Tokens::new(clunwithin_tokens)),
+      Some(Scope::Global),
+    )
+  }
 
-  // // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
-  // DefMacroI!(T_CS!(s!("\\the{}",ctr)), None, move |gullet, args, inner_state| {
-  //   let counter_value = CounterValue!(ctr, inner_state).value_of();
-  //   Ok(ExplodeText!(counter_value))
-  // },
-  // scope => Some(Scope::Global));
+  if let Some(ref options) = options_opt {
+    if !options.nested.is_empty() {
+      state.assign_value(
+        &s!("nested_counters_{}", ctr),
+        options.nested.clone(),
+        Some(Scope::Global),
+      )
+    }
+  }
 
-  // let mut prefix = options.get("idprefix").unwrap_or(String::new());
-  // if !prefix.is_empty() {
-  // state.assign_value(s!("@ID@prefix@{}",ctr), Stored::String(prefix),
-  // Some(Scope::Global)); } else {
-  //   prefix = state.lookup_string(s!("@ID@prefix@{}",ctr));
-  //   if prefix.is_empty() {
-  //     prefix = clean_id(ctr);
-  //   }
-  // }
-  // if !prefix.is_empty() {
-  //   let idwithin = options.get("idwithin").unwrap_or(within.clone());
-  //   if !idwithin.is_empty() {
-  //     DefMacro!(s!("\\the{}@ID",ctr),
-  //       concat!(s!("\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty",idwithin),
-  //               s!("\\else\\csname the{}@ID\\endcsname.\\fi",idwithin),
-  //               s!(" {}\\csname @{}@ID\\endcsname",prefix,ctr)),
-  //       scope => Some(Scope::Global));
-  //   }
-  //   else {
-  //     DefMacro!(s!("\\the{}@ID",ctr), s!("{}\\csname @{}@ID\\endcsname",prefix,ctr),
-  //       scope => Some(Scope::Global));
-  //   }
-  //   DefMacro!(s!("\\@{}@ID",ctr), "0", scope => Some(Scope::Global));
-  // }
-  return;
+  // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
+  let ctr_string = ctr.to_string();
+  DefMacro!(&s!("\\the{}",ctr), sub[gullet, args, inner_state] {
+    let counter_value = CounterValue!(&ctr_string, inner_state).value_of();
+    Ok(Tokens::new(ExplodeText!(counter_value)))
+  }, scope => Some(Scope::Global));
+
+  if let Some(options) = options_opt {
+    let mut prefix = options.idprefix.to_string();
+    if !prefix.is_empty() {
+      state.assign_value(
+        &s!("@ID@prefix@{}", ctr),
+        prefix.clone(),
+        Some(Scope::Global),
+      );
+    } else {
+      prefix = state.lookup_string(&s!("@ID@prefix@{}", ctr));
+      if prefix.is_empty() {
+        // TODO:
+        prefix = "clean_id(ctr)".to_string();
+      }
+    }
+    if !prefix.is_empty() {
+      let mut idwithin = if !options.idwithin.is_empty() {
+        options.idwithin.to_string()
+      } else {
+        within.to_string()
+      };
+      if !idwithin.is_empty() {
+        let ctr_string = ctr.to_string();
+        DefMacro!(&s!("\\the{}@ID",ctr), sub[gullet, args, inner_state] {
+          Ok(TokenizeInternal!(
+            &s!("\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
+          idwithin,idwithin,prefix,ctr_string)
+          ))
+        },
+        scope => Some(Scope::Global));
+      } else {
+        let ctr_string = ctr.to_string();
+        DefMacro!(&s!("\\the{}@ID",ctr), sub[gullet,args, inner_state] {
+          Ok(TokenizeInternal!(
+              &s!("{}\\csname @{}@ID\\endcsname",prefix,ctr_string)
+          ))},
+          scope => Some(Scope::Global));
+      }
+      DefMacro!(&s!("\\@{}@ID",ctr), "0", scope => Some(Scope::Global));
+    }
+  }
+
+  Ok(())
 }
 
 pub fn counter_value(ctr: &str, state: &mut State) -> Number {
@@ -871,7 +965,7 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
 pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut State) {
   let v = counter_value(ctr, state).add(value);
   state.assign_value(&s!("\\c@{}", ctr), v.clone(), Some(Scope::Global));
-  after_assignment(gullet, state);
+  state.after_assignment();
   SetupBindingMacros!(state);
   let id_cs = T_CS!(s!("\\@{}@ID", ctr));
   DefMacroI!(id_cs.clone(), None, Tokens::new(Explode!(v.value_of())),
@@ -892,10 +986,7 @@ pub fn step_counter(
     value.add(Number!(1)),
     Some(Scope::Global),
   );
-  {
-    let gullet = stomach.get_gullet_mut();
-    after_assignment(gullet, state);
-  }
+  state.after_assignment();
   let token_value = Tokens::new(Explode!(counter_value(ctr, state).value_of()));
   DefMacroI!(T_CS!(s!("\\@{}@ID",ctr)), None, 
               token_value.clone(), scope => Some(Scope::Global));
@@ -1032,12 +1123,6 @@ fn reset_counter(ctr: &str, state: &mut State) {
   return;
 }
 
-fn after_assignment(gullet: &mut Gullet, state: &mut State) {
-  if let Some(Stored::Tokens(after)) = state.remove_value("afterAssignment") {
-    gullet.unread(after); // primitive returns boxes, so these need to be digested!
-  }
-}
-
 pub fn build_invocation(token: Token, args: Vec<Tokens>, state: &mut State) -> Tokens {
   // Note: token may have been \let to another defn!
   if let Some(defn) = state.lookup_definition(&token) {
@@ -1070,4 +1155,26 @@ pub fn build_invocation(token: Token, args: Vec<Tokens>, state: &mut State) -> T
     invoked_tokens.append(&mut wrapped_args);
     Tokens::new(invoked_tokens)
   }
+}
+
+pub fn do_expand(
+  tokens: Tokens,
+  outer_gullet: &mut Gullet,
+  outer_state: &mut State,
+) -> Result<Tokens>
+{
+  outer_gullet.reading_from_mouth(
+    Mouth::default(),
+    outer_state,
+    Box::new(
+      move |expand_gullet: &mut Gullet, expand_state: &mut State| -> Result<Tokens> {
+        expand_gullet.unread(tokens.clone());
+        let mut expanded = Vec::new();
+        while let Some(t) = expand_gullet.read_x_token(false, false, expand_state)? {
+          expanded.push(t);
+        }
+        Ok(Tokens::new(expanded))
+      },
+    ),
+  )
 }

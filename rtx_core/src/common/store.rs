@@ -2,14 +2,16 @@ use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::rc::Rc;
 
+use common::dimension::Dimension;
 use common::font::Font;
+use common::glue::{Glue, MuGlue};
 use common::number::Number;
 use definition::conditional::Conditional;
 use definition::constructor::Constructor;
 use definition::expandable::Expandable;
 use definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use definition::primitive::Primitive;
-use definition::register::Register;
+use definition::register::{Register, RegisterValue};
 use document::tag::TagData;
 use parameter::Parameter;
 use token::{Catcode, Token};
@@ -57,6 +59,9 @@ pub enum Stored {
   Token(Token),
   Tokens(Tokens),
   Number(Number),
+  Glue(Glue),
+  MuGlue(MuGlue),
+  Dimension(Dimension),
   // LaTeXML objects (Rc-wrapped)
   Expandable(Rc<Expandable>),
   Conditional(Rc<Conditional>),
@@ -91,9 +96,12 @@ impl fmt::Debug for Stored {
       Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
       Digested(ref digested) => write!(f, "{:?}", digested),
       Parameter(ref parameter) => write!(f, "{:?}", parameter),
-      Register(ref register) => write!(f, "{:?}", register),
+      Register(ref register) => write!(f, "<register {:?}>", register.cs),
       Font(ref font) => write!(f, "{:?}", font),
       Number(ref number) => write!(f, "{:?}", number),
+      Glue(ref glue) => write!(f, "{:?}", glue),
+      MuGlue(ref glue) => write!(f, "{:?}", glue),
+      Dimension(ref dimension) => write!(f, "{:?}", dimension),
       VecToken(ref token_vec) => write!(f, "{:?}", token_vec),
       VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
       VecDequeStored(ref vec) => write!(f, "VecDequeStored({:?})", vec),
@@ -181,8 +189,16 @@ impl From<Parameter> for Stored {
 }
 
 impl From<Rc<Font>> for Stored {
-  fn from(definition: Rc<Font>) -> Self { Stored::Font(definition) }
+  fn from(font: Rc<Font>) -> Self { Stored::Font(font) }
 }
+
+impl From<Rc<Register>> for Stored {
+  fn from(register: Rc<Register>) -> Self { Stored::Register(register) }
+}
+impl From<Register> for Stored {
+  fn from(register: Register) -> Self { Rc::new(register).into() }
+}
+
 impl From<Font> for Stored {
   fn from(value: Font) -> Self { Rc::new(value).into() }
 }
@@ -201,6 +217,12 @@ impl From<Vec<char>> for Stored {
 
 impl From<Vec<String>> for Stored {
   fn from(value: Vec<String>) -> Self { Stored::VecString(value) }
+}
+
+impl<'a> From<Vec<&'a str>> for Stored {
+  fn from(value: Vec<&'a str>) -> Self {
+    Stored::VecString(value.iter().map(|x| x.to_string()).collect::<Vec<String>>())
+  }
 }
 
 impl From<Vec<Token>> for Stored {
@@ -225,6 +247,19 @@ impl From<HashMap<String, Stored>> for Stored {
 
 impl From<HashMap<String, Vec<TagData>>> for Stored {
   fn from(value: HashMap<String, Vec<TagData>>) -> Self { Stored::HashTagData(value) }
+}
+
+impl From<RegisterValue> for Stored {
+  fn from(rv: RegisterValue) -> Self {
+    match rv {
+      RegisterValue::Number(v) => Stored::Number(v),
+      RegisterValue::Dimension(v) => Stored::Dimension(v),
+      RegisterValue::Glue(v) => Stored::Glue(v),
+      RegisterValue::MuGlue(v) => Stored::MuGlue(v),
+      RegisterValue::Token(v) => Stored::Token(v),
+      RegisterValue::Tokens(v) => Stored::Tokens(v),
+    }
+  }
 }
 
 // Reverse direction -- cast Stored back into concrete types, with meaningfull fallbacks where

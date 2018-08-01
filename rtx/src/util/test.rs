@@ -72,7 +72,7 @@ fn process_texfile(tex_path: &str, name: &str) -> Vec<String> {
 
   match latexml.convert_file(tex_path.to_owned()) {
     Err(e) => panic!("{:?}: Couldn't convert {:?}; {:?}", name, tex_path, e),
-    Ok(doc) => process_ltx_doc(doc, name, latexml.state_mut()),
+    Ok(doc) => process_ltx_doc(doc, name, latexml.get_state_mut()),
   }
 }
 

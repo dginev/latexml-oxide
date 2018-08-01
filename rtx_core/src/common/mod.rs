@@ -1,6 +1,8 @@
 #[macro_use]
 pub mod error;
+pub mod dimension;
 pub mod font;
+pub mod glue;
 pub mod model;
 pub mod number;
 pub mod object;
