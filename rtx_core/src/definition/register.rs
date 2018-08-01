@@ -1,11 +1,15 @@
+use std::rc::Rc;
+
+use common::dimension::Dimension;
 use common::error::*;
+use common::glue::{Glue, MuGlue};
+use common::number::Number;
 use common::object::Object;
 use definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
 use document::Document;
 use gullet::Gullet;
 use parameter::Parameters;
 use state::State;
-use std::rc::Rc;
 use stomach::Stomach;
 use token::*;
 use tokens::Tokens;
@@ -13,10 +17,45 @@ use whatsit::Whatsit;
 use Digested;
 
 #[derive(Debug, Clone)]
+pub enum RegisterValue {
+  Number(Number),
+  Dimension(Dimension),
+  Glue(Glue),
+  MuGlue(MuGlue),
+  Token(Token),
+  Tokens(Tokens),
+}
+impl From<Number> for RegisterValue {
+  fn from(n: Number) -> RegisterValue { RegisterValue::Number(n) }
+}
+impl From<RegisterValue> for RegisterType {
+  fn from(v: RegisterValue) -> RegisterType {
+    match v {
+      RegisterValue::Number(_) => RegisterType::Number,
+      RegisterValue::Dimension(_) => RegisterType::Dimension,
+      RegisterValue::Glue(_) => RegisterType::Glue,
+      RegisterValue::MuGlue(_) => RegisterType::MuGlue,
+      RegisterValue::Token(_) => RegisterType::Token,
+      RegisterValue::Tokens(_) => RegisterType::Tokens,
+    }
+  }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum RegisterType {
+  Number,
+  Dimension,
+  Glue,
+  MuGlue,
+  Token,
+  Tokens,
+}
+
+#[derive(Debug, Clone)]
 pub struct Register {
   pub cs: Token,
   pub parameters: Option<Parameters>,
-  pub register_type: Option<String>,
+  pub register_type: RegisterType,
   pub readonly: bool,
   // pub traits: PrimitiveOptions,
 }
@@ -25,7 +64,7 @@ impl Default for Register {
     Register {
       cs: T_CS!(s!("Register")),
       parameters: None,
-      register_type: None,
+      register_type: RegisterType::Number,
       readonly: false,
     }
   }
@@ -35,14 +74,13 @@ impl PartialEq for Register {
 }
 
 impl Register {
-  // `is_register` begs to be refactored into a better naming scheme
-  fn is_register(&self) -> Option<String> { self.register_type.clone() }
   fn is_readonly(&self) -> bool { self.readonly }
-  fn is_prefix(&self) -> bool { false }
 }
 
 impl Object for Register {}
 impl Definition for Register {
+  fn is_register(&self) -> bool { true }
+  fn is_prefix(&self) -> bool { false }
   // No before/after daemons ???
   // (other than afterassign)
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }

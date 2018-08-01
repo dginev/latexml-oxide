@@ -8,6 +8,7 @@ use rtx_core::common::font::Font;
 use rtx_core::common::number::Number;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::expandable::Expandable;
+use rtx_core::definition::register::{Register, RegisterType, RegisterValue};
 use rtx_core::definition::{ConditionalClosure, Definition, ExpansionClosure};
 use rtx_core::document::resource::*;
 use rtx_core::document::tag::{TagOptionName, TagOptions};
@@ -530,8 +531,8 @@ pub fn def_macro<T: Into<Option<ExpansionClosure>>>(
 }
 
 pub struct RegisterOptions {
-  pub getter: bool,
-  pub setter: bool,
+  pub getter: Option<Rc<Fn(Vec<Token>) -> Result<Tokens>>>,
+  pub setter: Option<Rc<Fn(Stored, Vec<Token>)>>,
 }
 
 //======================================================================
@@ -626,17 +627,17 @@ pub fn def_conditional(
   return;
 }
 
-pub fn def_register(
+pub fn def_register<T: Into<RegisterValue>>(
   cs: Token,
   paramlist: Option<Parameters>,
-  value_opt: Option<Number>,
+  value: T,
   options: Option<RegisterOptions>,
   state: &mut State,
 )
 {
-  // TODO:
-  //   my $type   = $register_types{ ref $value };
-  //   my $name   = ToString($cs);
+  let value: RegisterValue = value.into();
+  let name = cs.to_string();
+  let rtype: RegisterType = value.into();
   //   my $getter = $options{getter}
   //     || sub { LookupValue(join('', $name, map { ToString($_) } @_)) || $value; };
   //   my $setter = $options{setter}
@@ -788,14 +789,14 @@ pub fn new_counter(
   let cunctr = s!("\\c@{}", unctr);
   let clunctr = s!("\\cl@{}", unctr);
 
-  def_register(T_CS!(cctr), None, Some(Number::new(0)), None, state);
+  def_register(T_CS!(cctr), None, Number::new(0), None, state);
   state.assign_value(&cctr, Number!(0), Some(Scope::Global));
   AfterAssignment!();
   if !state.lookup_bool(&clctr) {
     state.assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
 
-  DefRegisterI!(T_CS!(cunctr), None, Some(Number!(0)), None);
+  DefRegisterI!(T_CS!(cunctr), None, Number::new(0), None);
   state.assign_value(&cunctr, Number!(0), Some(Scope::Global));
   if !state.lookup_bool(&clunctr) {
     state.assign_value(&clunctr, Tokens!(), Some(Scope::Global));
