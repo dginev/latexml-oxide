@@ -120,14 +120,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($token1:expr, $token2:expr, $state_arg:ident) => ($state_arg.let_i($token1, $token2, None));
     ($token1:expr, $token2:expr, $scope:expr, $state_arg:ident) => ($state_arg.let_i($token1, $token2, $scope));
   }
-  // macro_rules! Digest {
-    // ($tokens:expr) => (Digest!($tokens, $state))
-    //   ($tokens:expr, $core:ident) => ($core.stomach.digest($tokens, $core.state);)
-  // }
-
-// sub Digest {
-//   my (@stuff) = @_;
-//   return $STATE->getStomach->digest(Tokens(map { (ref $_ ? $_ : TokenizeInternal($_)) } @stuff)); }
+  macro_rules! Digest {
+    ($tokens:expr, $stomach:ident) => (Digest!($tokens, $stomach, $state));
+    ($tokens:expr, $stomach:ident, $state_arg:ident) => ($stomach.digest($tokens, $state_arg));
+  }
 
   macro_rules! DigestText {
     ($stuff:expr, $stomach:ident) => (DigestText!($stuff, $stomach, $state));
@@ -400,6 +396,11 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   ///    isPrefix  : 1 for things like \global, \long, etc.
   ///    registerType : for parameters (but needs to be worked into `DefParameter`, below).
   macro_rules! DefPrimitive{
+    ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block) =>
+      (DefPrimitive!($proto, sub[$stomach, $whatsit, $inner_state] $body, $state));
+    ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $state_arg:ident) =>
+      (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {$body}, PrimitiveOptions::default(), $state));
+
     ($proto:expr, $replacement:expr, $options:expr) => (DefPrimitive!($proto, $replacement, $options, $state));
     ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
       // TODO:

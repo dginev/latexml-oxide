@@ -67,7 +67,7 @@ pub enum RegisterType {
   Tokens,
 }
 
-pub type RegisterGetterClosure = Rc<Fn(Vec<Token>, &mut State) -> Stored>;
+pub type RegisterGetterClosure = Rc<Fn(Vec<Token>, &State) -> Option<RegisterValue>>;
 pub type RegisterSetterClosure = Rc<Fn(RegisterValue, Vec<Token>, &mut State)>;
 
 #[derive(Clone)]
@@ -86,7 +86,7 @@ impl Default for Register {
       cs: T_CS!(s!("Register")),
       parameters: None,
       register_type: RegisterType::Number,
-      getter: Rc::new(|_: Vec<Token>, _: &mut State| Stored::Number(Number::new(0))),
+      getter: Rc::new(|_: Vec<Token>, _: &State| Some(RegisterValue::Number(Number::new(0)))),
       setter: Rc::new(|_: RegisterValue, _: Vec<Token>, _: &mut State| {}),
       readonly: false,
     }
@@ -94,10 +94,6 @@ impl Default for Register {
 }
 impl PartialEq for Register {
   fn eq(&self, other: &Register) -> bool { self.cs == other.cs }
-}
-
-impl Register {
-  fn is_readonly(&self) -> bool { self.readonly }
 }
 
 impl Object for Register {}
@@ -136,6 +132,14 @@ impl Definition for Register {
   {
     Ok(())
   }
+  fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> {
+    (self.getter)(args, state)
+  }
 }
 
-//impl Register {}
+impl Register {
+  fn is_readonly(&self) -> bool { self.readonly }
+  fn set_value(&mut self, value: RegisterValue, args: Vec<Token>, state: &mut State) {
+    (self.setter)(value, args, state);
+  }
+}

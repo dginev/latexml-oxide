@@ -25,15 +25,17 @@ impl ToTokens for Tokens {
   }
 }
 
-// We also need convenient auxiliaries, including auto-casting
-impl From<Vec<Token>> for Tokens {
-  fn from(ts: Vec<Token>) -> Tokens { Tokens::new(ts) }
-}
-
 #[macro_export]
 macro_rules! Tokens(
   ($( $tokens:expr ),*) => ($crate::tokens::Tokens{ tokens: vec![$($tokens),*] });
 );
+// We also need convenient auxiliaries, including auto-casting
+impl From<Vec<Token>> for Tokens {
+  fn from(ts: Vec<Token>) -> Tokens { Tokens::new(ts) }
+}
+impl From<Token> for Tokens {
+  fn from(t: Token) -> Tokens { Tokens!(t) }
+}
 
 impl Display for Tokens {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

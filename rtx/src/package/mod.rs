@@ -12,6 +12,7 @@ pub use rtx_core::definition::constructor::ConstructorOptions;
 pub use rtx_core::definition::expandable::Expandable;
 pub use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 pub use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
+pub use rtx_core::definition::register::{Register, RegisterValue};
 pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionClosure,

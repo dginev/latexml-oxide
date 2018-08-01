@@ -141,16 +141,16 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       Ok(())
     })),
     before_digest => vec!(beforeproc!(_stomach, state, { state.assign_value("inPreamble", false, None); })),
-    // after_digest_begin => |stomach, whatsit, state| {
-    //   whatsit.set_property("id", Expand!(T_CS!("\thedocument@ID"), state));
+    // after_digest_begin => vec![|stomach, whatsit, state| {
+    //   whatsit.set_property("id", Expand!(T_CS!("\\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
-    //     let boxes = Digest!(Tokens!(ops));
+    //     let boxes = Digest!(ops, stomach);
     //     whatsit.set_font(LookupValue!("font")); // Start w/ whatever font was selected.
     //     return boxes
     //   } else {
     //     return Vec::new()
     //   }
-    // },
+    // }],
     before_digest_end => sub!(|stomach, state| {
       stomach.get_gullet_mut().flush(state);
       if let Some(ops) = LookupValue!("@at@end@document", state) {
@@ -313,6 +313,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
           props.insert(s!("toctitle"), xtoctitle);
         }
         props.insert(s!("title"), xtitle);
+        println!("\n\n\n EXECUTED PROPERTIES: \n\n\n {:?}\n\n", props);
         Ok(props)
       })
    );

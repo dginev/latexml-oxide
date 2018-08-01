@@ -319,6 +319,15 @@ impl<'a> From<&'a Stored> for Option<Tokens> {
   }
 }
 
+impl<'a> From<&'a Stored> for Option<Rc<Register>> {
+  fn from(value: &'a Stored) -> Option<Rc<Register>> {
+    match value {
+      Stored::Register(ref reg) => Some(reg.clone()),
+      _ => None,
+    }
+  }
+}
+
 impl<'a> From<&'a Stored> for Option<Catcode> {
   fn from(value: &'a Stored) -> Option<Catcode> {
     match value {
@@ -332,6 +341,20 @@ impl<'a> From<&'a Stored> for Option<&'a Vec<char>> {
   fn from(value: &'a Stored) -> Option<&'a Vec<char>> {
     match value {
       Stored::VecChar(ref cc) => Some(cc),
+      _ => None,
+    }
+  }
+}
+
+impl<'a> From<&'a Stored> for Option<RegisterValue> {
+  fn from(value: &'a Stored) -> Option<RegisterValue> {
+    match value {
+      Stored::Number(v) => Some(RegisterValue::Number(v.clone())),
+      Stored::Dimension(v) => Some(RegisterValue::Dimension(v.clone())),
+      Stored::Glue(v) => Some(RegisterValue::Glue(v.clone())),
+      Stored::MuGlue(v) => Some(RegisterValue::MuGlue(v.clone())),
+      Stored::Token(v) => Some(RegisterValue::Token(v.clone())),
+      Stored::Tokens(v) => Some(RegisterValue::Tokens(v.clone())),
       _ => None,
     }
   }

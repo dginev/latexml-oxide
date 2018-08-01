@@ -20,8 +20,8 @@ static MAXSTACK: usize = 200;
 
 pub struct Stomach {
   pub gullet: Gullet,
-  token_stack: Vec<Token>,
-  boxing: Vec<Token>,
+  pub token_stack: Vec<Token>,
+  pub boxing: Vec<Token>,
 }
 
 impl Default for Stomach {

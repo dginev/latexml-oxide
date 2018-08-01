@@ -19,6 +19,7 @@ use token::Token;
 use tokens::Tokens;
 use Digested;
 // use tbox::Tbox;
+use definition::register::RegisterValue;
 use document::Document;
 use parameter::Parameters;
 use state::State;
@@ -159,4 +160,6 @@ pub trait Definition: Object {
     }
     Ok(after_body_digested)
   }
+
+  fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> { None }
 }

@@ -8,12 +8,12 @@ use common::font::Font;
 use common::model::{IndirectModel, Model};
 use common::number::Number;
 pub use common::store::Stored; // reexport for convenience
+use definition::register::RegisterValue;
 use definition::Definition;
 use document::resource::Resource;
 use document::tag::TagOptions;
 use document::Document;
 
-use mouth::Mouth;
 use stomach::Stomach;
 use token::{Catcode, Token};
 use tokens::Tokens;
@@ -673,6 +673,20 @@ impl State {
     }
   }
 
+  pub fn lookup_register(&self, cs: &str, parameters: Vec<Token>) -> Option<RegisterValue> {
+    let cs = T_CS!(cs);
+    if let Some(defn) = self.lookup_definition(&cs) {
+      if defn.is_register() {
+        defn.value_of(parameters, self)
+      } else {
+        warn!(target: "expected:register", "The control sequence {:?} is not a register",cs);
+        None
+      }
+    } else {
+      warn!(target: "expected:register", "The control sequence {:?} is not defined",cs);
+      None
+    }
+  }
   pub fn unshift_value(&mut self, key: &str, values: Vec<Stored>) {
     if self.value.get(key).is_none() {
       self.assign_internal(
