@@ -344,7 +344,13 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       DefConditionalI!(cs, paramlist, sub[$gullet, $args, $inner_state] $body, $state_arg)
-    })
+    });
+    // or None
+    ($proto:expr, None) => (DefConditional!($proto, None, $state));
+    ($proto:expr, None, $state_arg:ident) => ({
+      let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
+      DefConditionalI!(cs, paramlist, None, $state_arg)
+    });
   );
 
   macro_rules! DefConditionalI(
@@ -354,6 +360,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
       let test : ConditionalClosure = Rc::new(move |$gullet, $args, $inner_state| {$body});
       def_conditional($cs, $paramlist, Some(test), ConditionalOptions::default(), $state_arg);
+    });
+    // or None
+    ($cs:expr, $paramlist:expr, None) =>
+      (DefConditionalI!($cs, $paramlist, None, $state));
+    ($cs:expr, $paramlist:expr, None, $state_arg:ident) => ({
+      def_conditional($cs, $paramlist, None, ConditionalOptions::default(), $state_arg);
     });
   );
 

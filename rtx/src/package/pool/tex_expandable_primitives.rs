@@ -22,7 +22,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     let token1 : Token = token1.into();
     let token2 : Token = token2.into();
     let xequals = XEquals!(&token1, &token2, inner_state);
-    println!("\n\n\n\n t1: {}, t2: {}, xeq: {}\n\n\n", token1, token2, xequals);
     Ok(xequals)
   });
 
@@ -80,10 +79,10 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   });
 
   // The following special cases are built-in to Definition
-  // DefConditional!("\\else",          "");
-  // DefConditional!("\\or",            "");
-  // DefConditional!("\\fi",            "");
-  // DefConditional!("\\ifcase Number", "");
+  DefConditional!("\\else",          None);
+  DefConditional!("\\or",            None);
+  DefConditional!("\\fi",            None);
+  DefConditional!("\\ifcase Number", None);
 
   Ok(())
 }
