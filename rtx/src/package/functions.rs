@@ -535,12 +535,14 @@ pub fn def_macro<T: Into<Option<ExpansionClosure>>>(
 pub struct RegisterOptions {
   pub getter: Option<RegisterGetterClosure>,
   pub setter: Option<RegisterSetterClosure>,
+  pub readonly: bool,
 }
 impl Default for RegisterOptions {
   fn default() -> Self {
     RegisterOptions {
       getter: None,
       setter: None,
+      readonly: false,
     }
   }
 }
@@ -639,16 +641,20 @@ pub fn def_conditional(
 
 pub fn def_register<T: Into<RegisterValue>>(
   cs: Token,
-  paramlist: Option<Parameters>,
+  parameters: Option<Parameters>,
   value: T,
   options: Option<RegisterOptions>,
   state: &mut State,
 )
 {
+  let options: RegisterOptions = options.unwrap_or_else(|| RegisterOptions::default());
   let value: RegisterValue = value.into();
   let name = cs.to_string();
-  let rtype: RegisterType = (&value).into();
-  let options = options.unwrap_or(RegisterOptions::default());
+  let register_type: RegisterType = (&value).into();
+  // Prepare clones to move into closures
+  let getter_value = value.clone();
+  let setter_name = name.clone();
+
   let getter: RegisterGetterClosure = match options.getter {
     Some(getter) => getter.clone(),
     None => Rc::new(move |args: Vec<Token>, state: &mut State| -> Stored {
@@ -659,25 +665,48 @@ pub fn def_register<T: Into<RegisterValue>>(
         .join("");
       match state.lookup_value(&(name.clone() + &args_string)) {
         Some(v) => v.clone(),
-        None => value.clone().into(),
+        None => getter_value.clone().into(),
       }
     }),
   };
+  let readonly = options.readonly;
 
-  //   my $setter = $options{setter}
-  //     || ($options{readonly}
-  //     ? sub { my ($v, @args) = @_;
-  //       Warn('unexpected', $name, $STATE->getStomach,
-  //         "Can't assign to register $name"); return; }
-  //     : sub { my ($v, @args) = @_;
-  //       AssignValue(join('', $name, map { ToString($_) } @args) => $v); });
-  //   # Not really right to set the value!
-  //   AssignValue(ToString($cs) => $value) if defined $value;
-  //   $STATE->installDefinition(LaTeXML::Core::Definition::Register->new($cs, $paramlist,
-  //       registerType => $type,
-  //       getter       => $getter, setter => $setter,
-  //       readonly     => $options{readonly}),
-  //     'global');
+  let setter: RegisterSetterClosure = match options.setter {
+    Some(setter) => setter.clone(),
+    None => if readonly {
+      Rc::new(move |value, args, state| {
+        warn!(
+          target: &s!("unexpected:{}", setter_name),
+          "Can't assign to register {}",
+          setter_name
+        );
+      })
+    } else {
+      Rc::new(move |value, args, state| {
+        let args_string: String = args
+          .iter()
+          .map(|arg: &Token| arg.to_string())
+          .collect::<Vec<String>>()
+          .join("");
+
+        state.assign_value(&(setter_name.clone() + &args_string), value, None);
+      })
+    },
+  };
+
+  // Not really right to set the value!
+  state.assign_value(&cs.to_string(), value, None);
+  state.install_definition(
+    Register {
+      cs,
+      parameters,
+      register_type,
+      readonly,
+      getter,
+      setter,
+    },
+    Some(Scope::Global),
+  );
   return;
 }
 

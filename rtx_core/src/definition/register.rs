@@ -68,7 +68,7 @@ pub enum RegisterType {
 }
 
 pub type RegisterGetterClosure = Rc<Fn(Vec<Token>, &mut State) -> Stored>;
-pub type RegisterSetterClosure = Rc<Fn(RegisterValue, &mut State)>;
+pub type RegisterSetterClosure = Rc<Fn(RegisterValue, Vec<Token>, &mut State)>;
 
 #[derive(Clone)]
 pub struct Register {
@@ -87,7 +87,7 @@ impl Default for Register {
       parameters: None,
       register_type: RegisterType::Number,
       getter: Rc::new(|_: Vec<Token>, _: &mut State| Stored::Number(Number::new(0))),
-      setter: Rc::new(|_: RegisterValue, _: &mut State| {}),
+      setter: Rc::new(|_: RegisterValue, _: Vec<Token>, _: &mut State| {}),
       readonly: false,
     }
   }

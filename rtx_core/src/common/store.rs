@@ -189,8 +189,16 @@ impl From<Parameter> for Stored {
 }
 
 impl From<Rc<Font>> for Stored {
-  fn from(definition: Rc<Font>) -> Self { Stored::Font(definition) }
+  fn from(font: Rc<Font>) -> Self { Stored::Font(font) }
 }
+
+impl From<Rc<Register>> for Stored {
+  fn from(register: Rc<Register>) -> Self { Stored::Register(register) }
+}
+impl From<Register> for Stored {
+  fn from(register: Register) -> Self { Rc::new(register).into() }
+}
+
 impl From<Font> for Stored {
   fn from(value: Font) -> Self { Rc::new(value).into() }
 }
