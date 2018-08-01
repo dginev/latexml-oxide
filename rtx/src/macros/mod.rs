@@ -21,7 +21,9 @@ macro_rules! compile_replacement {
 macro_rules! compile_expansion {
   ($var:ident, $expansion:expr) => {{
     use rtx_core::definition::ExpansionClosure;
+    #[allow(unused_imports)]
     use rtx_core::token::Catcode;
+
     #[derive(CompileExpansion)]
     #[compile_expansion_options(expansion=$expansion)]
     struct _DummyE;

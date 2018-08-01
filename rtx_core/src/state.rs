@@ -13,6 +13,7 @@ use document::resource::Resource;
 use document::tag::TagOptions;
 use document::Document;
 
+use mouth::Mouth;
 use stomach::Stomach;
 use token::{Catcode, Token};
 use tokens::Tokens;
@@ -1447,6 +1448,9 @@ impl State {
     }
   }
 
+  // WALL OF SHAME
+  // HACKY functions that violate Rust's mutability guards, to succeed in emulating the most
+  // arbitrary uses of Global scope in latexml
   pub fn after_assignment(&mut self) {
     if let Some(Stored::Tokens(after)) = self.remove_value("afterAssignment") {
       self.stomach.borrow_mut().get_gullet_mut().unread(after); // primitive returns boxes, so these need to be digested!

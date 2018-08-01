@@ -26,7 +26,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "twocolumn",
     "notitlepage",
     "titlepage",
-  ].into_iter()
+  ]
+    .into_iter()
     .map(|s| s.to_string())
   {
     // DeclareOption!(option, None);

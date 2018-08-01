@@ -514,4 +514,68 @@ impl Gullet {
       },
     }
   }
+
+  pub fn reading_from_mouth<R>(
+    &mut self,
+    mouth: Mouth,
+    state: &mut State,
+    reader: Box<Fn(&mut Gullet, &mut State) -> R>,
+  ) -> R
+  {
+    let mouth_source = mouth.source.clone();
+    {
+      self.open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
+    }
+    let results: R = reader(self, state);
+    // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
+    loop {
+      let mut is_mouth = false;
+      {
+        if let Some(ref mut runtime) = self.mouth {
+          if runtime.mouth.source == mouth_source {
+            is_mouth = true;
+          }
+        } else {
+          error!(target: "unexpected:runtime", "TODO: gullet had no active runtime");
+          break;
+        }
+      }
+      if is_mouth {
+        self.close_mouth(true, state);
+        break;
+      } else if self.mouthstack.is_empty() {
+        error!(target: "unexpected:<closed>", "TODO: Mouth is unexpectedly already closed");
+        // Error('unexpected', '<closed>', $gullet, "Mouth is unexpectedly already closed",
+        //   "Reading from " . Stringify($mouth) . ", but it has already been closed.");
+        break;
+      } else {
+        let mut ready_to_read = false;
+        {
+          if let Some(ref mut runtime) = self.mouth {
+            if !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input()
+            {
+              ready_to_read = true;
+            }
+          }
+        }
+        if ready_to_read {
+          let _next = self.read_token(state); // stringify( ?
+          error!(target: "unexpected:next", "TODO: unexpected input remaining");
+          // Error('unexpected', $next, $gullet, "Unexpected input remaining: '$next'",
+          //   "Finished reading from " . Stringify($mouth) . ", but it still has input.");
+          {
+            if let Some(ref mut runtime) = self.mouth {
+              runtime.mouth.finish(state);
+            }
+          }
+          self.close_mouth(true, state);
+        }
+        // ?? if we continue?
+        else {
+          self.close_mouth(false, state);
+        }
+      }
+    }
+    results
+  }
 }

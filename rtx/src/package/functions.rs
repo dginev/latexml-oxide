@@ -1102,3 +1102,25 @@ pub fn build_invocation(token: Token, args: Vec<Tokens>, state: &mut State) -> T
     Tokens::new(invoked_tokens)
   }
 }
+
+pub fn do_expand(
+  tokens: Tokens,
+  outer_gullet: &mut Gullet,
+  outer_state: &mut State,
+) -> Result<Tokens>
+{
+  outer_gullet.reading_from_mouth(
+    Mouth::default(),
+    outer_state,
+    Box::new(
+      move |expand_gullet: &mut Gullet, expand_state: &mut State| -> Result<Tokens> {
+        expand_gullet.unread(tokens.clone());
+        let mut expanded = Vec::new();
+        while let Some(t) = expand_gullet.read_x_token(false, false, expand_state)? {
+          expanded.push(t);
+        }
+        Ok(Tokens::new(expanded))
+      },
+    ),
+  )
+}
