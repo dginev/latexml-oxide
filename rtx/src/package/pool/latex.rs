@@ -313,7 +313,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
           props.insert(s!("toctitle"), xtoctitle);
         }
         props.insert(s!("title"), xtitle);
-        println!("\n\n\n EXECUTED PROPERTIES: \n\n\n {:?}\n\n", props);
+        println!("\n\n\n EXECUTED PROPERTIES:\n {:?}\n", props);
         Ok(props)
       })
    );

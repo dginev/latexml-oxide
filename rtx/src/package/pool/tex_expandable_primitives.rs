@@ -18,16 +18,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
   DefConditional!("\\ifx Token Token", sub[gullet, args, inner_state] {
-    if let Some(token1) = args[0].tokens.first() {
-      if let Some(token2) = args[1].tokens.first() {
-        let xequals = XEquals!(token1, token2, inner_state);
-        Ok(xequals)
-      } else {
-        Ok(false)
-      }
-    } else {
-      Ok(false)
-    }
+    unpack!(args => token1, token2);
+    let token1 : Token = token1.into();
+    let token2 : Token = token2.into();
+    let xequals = XEquals!(&token1, &token2, inner_state);
+    println!("\n\n\n\n t1: {}, t2: {}, xeq: {}\n\n\n", token1, token2, xequals);
+    Ok(xequals)
   });
 
   DefParameterType!("CSName", reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
@@ -70,7 +66,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefMacro!("\\expandafter Token Token", sub[gullet, args, state] {
     unpack!(args => tok, xtok);
-    let mut tokens : Vec<Token> = tok.unlist();
+    let mut tokens : Vec<Token> = vec![tok.into()];
     let xtok_single = xtok.clone().into();
     if let Some(defn) = state.lookup_expandable(&xtok_single, false) {
       // Note that IF expandafter ends up expanding a \the in an \edef,
@@ -82,6 +78,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     };
     Ok(tokens.into())
   });
+
+  // The following special cases are built-in to Definition
+  // DefConditional!("\\else",          "");
+  // DefConditional!("\\or",            "");
+  // DefConditional!("\\fi",            "");
+  // DefConditional!("\\ifcase Number", "");
 
   Ok(())
 }

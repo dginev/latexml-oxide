@@ -986,6 +986,7 @@ impl State {
       Stored::Constructor(ref defn) => defn.get_cs(),
       Stored::Primitive(ref defn) => defn.get_cs(),
       Stored::MathPrimitive(ref defn) => defn.get_cs(),
+      Stored::Register(ref defn) => defn.get_cs(),
       Stored::Token(ref token) => token.clone(),
       _ => T_LETTER!(s!("_wrong_argument_for_install_definition")),
     };

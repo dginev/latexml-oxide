@@ -569,6 +569,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   // );
 
   macro_rules! DefRegister {
+    ($proto:expr, $value:expr) => (DefRegister!($proto, $value, None, $state));
     ($proto:expr, $value:expr, $options:expr) => (DefRegister!($proto, $value, $options, $state));
     ($proto:expr, $value:expr, $options:expr, $state_arg:ident) => ({
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;

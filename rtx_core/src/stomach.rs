@@ -139,7 +139,7 @@ impl Stomach {
   /// Otherwise, the token is simply digested: turned into an appropriate box.
   /// Returns a list of boxes/whatsits.
   pub fn invoke_token(&mut self, input_token: Token, state: &mut State) -> Result<Vec<Digested>> {
-    let mut maybe_token = Some(input_token);
+    let mut maybe_token = Some(input_token.clone());
 
     // Overly complex, but want to avoid recursion/stack
     let mut result: Vec<Digested> = Vec::new();
@@ -178,14 +178,14 @@ impl Stomach {
               if cc == Catcode::CS {
                 result = self.invoke_token_undefined(&token, state)?;
               } else if cc.is_absorbable() {
-                result = self.invoke_token_simple(meaning, state);
+                result = self.invoke_token_simple(meaning, state)?;
               } else {
                 error!(
                   target: &s!("misdefined:{:?}", token),
                   "The token {:?} should never reach Stomach!",
                   token
                 );
-                result = self.invoke_token_simple(meaning, state);
+                result = self.invoke_token_simple(meaning, state)?;
               }
             },
             Stored::Expandable(meaning) => {
@@ -310,7 +310,7 @@ impl Stomach {
     }
   }
 
-  fn invoke_token_simple(&mut self, meaning: Token, state: &mut State) -> Vec<Digested> {
+  fn invoke_token_simple(&mut self, meaning: Token, state: &mut State) -> Result<Vec<Digested>> {
     // log!("-- Simple invoke {:?}", token);
     let font = state.lookup_font();
     state.clear_prefixes(); // prefixes shouldn't apply here.
@@ -319,16 +319,16 @@ impl Stomach {
       let in_math = state.lookup_bool("IN_MATH");
       let in_preamble = state.lookup_bool("inPreamble");
       if in_math || in_preamble {
-        Vec::new()
+        Ok(Vec::new())
       } else {
-        vec![Digested::TBox(Box::new(Tbox::new(
+        Ok(vec![Digested::TBox(Box::new(Tbox::new(
           meaning.to_string(), //text
           font,
           Some(self.gullet.get_locator()), //locator
           Tokens!(meaning),                // tokens
           HashMap::new(),                  // properties
           state,
-        )))]
+        )))])
       }
     } else if meaning.code == Catcode::COMMENT {
       // Note: Comments need char decoding as well!
@@ -337,7 +337,7 @@ impl Stomach {
       // let badspace = pack('U', 0xA0) . "\x{0335}";    // This is at space's pos in OT1
       // $comment =~ s/\Q$badspace\E/ /g;
       // return LaTeXML::Comment->new($comment); }
-      Vec::new()
+      Ok(Vec::new())
     }
     // TODO
     // else if ($forbidden_cc[meaning.code]) {
@@ -345,14 +345,14 @@ impl Stomach {
     //   "The token " . Stringify($token) . " should never reach Stomach!");
     // return; }
     else {
-      vec![Digested::TBox(Box::new(Tbox::new(
+      Ok(vec![Digested::TBox(Box::new(Tbox::new(
         meaning.to_string(), //text
         font,
         None,             // locator
         Tokens!(meaning), // tokens
         HashMap::new(),   // properties
         state,
-      )))]
+      )))])
     }
   }
 
