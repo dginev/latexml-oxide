@@ -7,3 +7,11 @@ pub struct Glue {
 pub struct MuGlue {
   number: i32,
 }
+
+impl Glue {
+  pub fn value_of(&self) -> i32 { self.number }
+}
+
+impl MuGlue {
+  pub fn value_of(&self) -> i32 { self.number }
+}

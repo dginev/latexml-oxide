@@ -96,10 +96,10 @@ impl Definition for Conditional {
     if let Some(ref cond_type) = self.conditional_type {
       use self::ConditionalType::*;
       match *cond_type {
-        If => self.invoke_conditional(gullet, state),
-        Else => self.invoke_else(gullet, state),
-        Or => self.invoke_else(gullet, state),
-        Fi => self.invoke_fi(gullet, state),
+        If => self.invoke_conditional(gullet, state)?,
+        Else => self.invoke_else(gullet, state)?,
+        Or => self.invoke_else(gullet, state)?,
+        Fi => self.invoke_fi(gullet, state)?,
       };
     } else {
       error!(

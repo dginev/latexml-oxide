@@ -581,6 +581,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   // );
 
   macro_rules! DefRegister {
+    ($proto:expr, $value:expr, $key1:ident => $val1:expr) => (DefRegister!($proto, $value, $key1=>$val1, $state));
+    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr) => (DefRegister!($proto, $value, $key1=>$val1, $key2=>$val2, $state));
+    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr, $key3:ident => $val3:expr) => (DefRegister!($proto, $value, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
+    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $state_arg:ident) => (DefRegister!($proto, $value, Some(NewDefault!(RegisterOptions, $key1=>$val1)), $state_arg));
+    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr, $state_arg:ident) => (DefRegister!($proto, $value, Some(NewDefault!(RegisterOptions, $key1=>$val1, $key2=>$val2)), $state_arg));
+    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr, $key3:ident=>$val3:expr, $state_arg:ident) => (DefRegister!($proto, $value, Some(NewDefault!(RegisterOptions, $key1=>$val1, $key2=>$val2, $key3=>$val3)), $state_arg));
     ($proto:expr, $value:expr) => (DefRegister!($proto, $value, None, $state));
     ($proto:expr, $value:expr, $options:expr) => (DefRegister!($proto, $value, $options, $state));
     ($proto:expr, $value:expr, $options:expr, $state_arg:ident) => ({
@@ -590,8 +596,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! DefRegisterI {
-    ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => (DefRegisterI!($cs, $paramlist, $value, $options, $state));
     ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => (def_register($cs, $paramlist, $value, $options, $state_arg));
+    ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => (DefRegisterI!($cs, $paramlist, $value, $options, $state));
   }
 
   // sub LookupRegister {

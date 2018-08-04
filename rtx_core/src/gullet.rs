@@ -1,4 +1,5 @@
 use common::error::*;
+use common::number::Number;
 use common::store::Stored;
 use definition::Definition;
 use mouth::Mouth;
@@ -489,21 +490,27 @@ impl Gullet {
   /// <number> = <optional signs><unsigned number>
   /// <unsigned number> = <normal integer> | <coerced integer>
   /// <coerced integer> = <internal dimen> | <internal glue>
-  pub fn read_number(&mut self, _state: &mut State) -> Result<Tokens> {
-    // let s = $self->readOptionalSigns;
-    // if (defined(my $n = $self->readNormalInteger)) { return ($s < 0 ? $n->negate : $n); }
-    // elsif (defined($n = $self->readInternalDimension)) { return Number($s * $n->valueOf); }
-    // elsif (defined($n = $self->readInternalGlue))      { return Number($s * $n->valueOf); }
-    // else {
-    //   my $next = $self->readToken();
-    //   unshift(@{ $$self{pushback} }, $next);    # Unread
-    //   Warn('expected', '<number>', $self, "Missing number, treated as zero",
-    //     "while processing " . ToString($LaTeXML::CURRENT_TOKEN),
-    //     "next token is " . ToString($next));
-    //   return Number(0); } }
-
+  pub fn read_number(&mut self, state: &mut State) -> Result<Number> {
     // TODO
-    Ok(Tokens!())
+    let is_negative = self.read_optional_signs(state)?;
+    if let Some(n) = self.read_normal_integer()? {
+      if is_negative {
+        Ok(n.negate())
+      } else {
+        Ok(n)
+      }
+    } else {
+      // elsif (defined($n = $self->readInternalDimension)) { return Number($s * $n->valueOf); }
+      // elsif (defined($n = $self->readInternalGlue))      { return Number($s * $n->valueOf); }
+      // else {
+      //   my $next = $self->readToken();
+      //   unshift(@{ $$self{pushback} }, $next);    # Unread
+      //   Warn('expected', '<number>', $self, "Missing number, treated as zero",
+      //     "while processing " . ToString($LaTeXML::CURRENT_TOKEN),
+      //     "next token is " . ToString($next));
+      //   return Number(0); } }
+      Ok(Number::new(0))
+    }
   }
 
   pub fn skip_spaces(&mut self, state: &mut State) {
@@ -578,4 +585,24 @@ impl Gullet {
     }
     results
   }
+
+  //======================================================================
+  // some helpers...
+
+  // <optional signs> = <optional spaces> | <optional signs><plus or minus><optional spaces>
+  // returns false if None, or positive, true if negative
+  fn read_optional_signs(&mut self, state: &mut State) -> Result<bool> {
+    let mut sign = false;
+    while let Some(t) = self.read_x_token(false, false, state)? {
+      let token_text = t.get_string().to_owned();
+      if token_text == "-" {
+        sign = true;
+      } else if (token_text != "+") && t.get_catcode() != Catcode::SPACE {
+        self.unread(Tokens!(t)); // Unread and end
+        break;
+      }
+    }
+    Ok(sign)
+  }
+  fn read_normal_integer(&mut self) -> Result<Option<Number>> { Ok(Some(Number::new(0))) }
 }

@@ -29,6 +29,9 @@ pub enum RegisterValue {
 impl From<Number> for RegisterValue {
   fn from(n: Number) -> RegisterValue { RegisterValue::Number(n) }
 }
+impl From<Number> for Option<RegisterValue> {
+  fn from(n: Number) -> Option<RegisterValue> { Some(n.into()) }
+}
 impl From<Dimension> for RegisterValue {
   fn from(n: Dimension) -> RegisterValue { RegisterValue::Dimension(n) }
 }
@@ -53,6 +56,25 @@ impl<'a> From<&'a RegisterValue> for RegisterType {
       RegisterValue::MuGlue(_) => RegisterType::MuGlue,
       RegisterValue::Token(_) => RegisterType::Token,
       RegisterValue::Tokens(_) => RegisterType::Tokens,
+    }
+  }
+}
+
+impl RegisterValue {
+  pub fn value_of(&self) -> i32 {
+    match self {
+      RegisterValue::Number(v) => v.value_of(),
+      RegisterValue::Dimension(v) => v.value_of(),
+      RegisterValue::Glue(v) => v.value_of(),
+      RegisterValue::MuGlue(v) => v.value_of(),
+      RegisterValue::Token(v) => {
+        warn!(target: "register:value_of", ".value_of called on Token {:?}", v);
+        -1
+      },
+      RegisterValue::Tokens(v) => {
+        warn!(target: "register:value_of", ".value_of called on Tokens {:?}", v);
+        -1
+      },
     }
   }
 }
