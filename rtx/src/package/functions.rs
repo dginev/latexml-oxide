@@ -687,7 +687,7 @@ pub fn def_register<T: Into<RegisterValue>>(
       Rc::new(move |value, args, state| {
         let args_string: String = args
           .iter()
-          .map(|arg: &Token| arg.to_string())
+          .map(|arg: &Tokens| arg.to_string())
           .collect::<Vec<String>>()
           .join("");
 

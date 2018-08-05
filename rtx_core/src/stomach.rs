@@ -228,6 +228,13 @@ impl Stomach {
                 state.clear_prefixes(); // Clear prefixes unless we just set one.
               }
             },
+            Stored::Register(meaning) => {
+              // Registers are special primitives
+              result = meaning.invoke_primitive(self, meaning.clone(), state)?;
+              if !meaning.is_prefix() {
+                state.clear_prefixes(); // Clear prefixes unless we just set one.
+              }
+            },
             meaning => {
               fatal!(
                 Stomach,

@@ -1,6 +1,9 @@
+use common::dimension::Dimension;
 use common::error::*;
+use common::glue::{Glue, MuGlue};
 use common::number::Number;
-use common::store::Stored;
+use definition::register::{RegisterType, RegisterValue};
+
 use definition::Definition;
 use mouth::Mouth;
 use state::{Scope, State};
@@ -349,17 +352,48 @@ impl Gullet {
     Ok(Tokens::new(tokens))
   }
 
+  /// Match the input against a set of keywords; Similar to readMatch, but the keywords are strings,
+  /// and Case and catcodes are ignored; additionally, leading spaces are skipped.
+  /// AND, macros are expanded.
+  pub fn read_keyword(&mut self, keywords: &[&str], state: &mut State) -> Result<Tokens> {
+    self.skip_spaces(state);
+    for keyword in keywords.iter() {
+      let mut to_match: VecDeque<char> = keyword.to_uppercase().chars().collect();
+      let mut matched = Vec::new();
+      while !to_match.is_empty() {
+        if let Some(tok) = self.read_x_token(false, false, state)? {
+          if tok.get_string().to_uppercase() == to_match[0].to_string() {
+            to_match.pop_front();
+            matched.push(tok);
+          } else {
+            matched.push(tok);
+            break;
+          }
+        } else {
+          break;
+        }
+      }
+      if to_match.is_empty() {
+        // All matched!!!
+        return Ok(T_OTHER!(keyword).into());
+      } else {
+        self.unread(matched.into()); // Put 'em back and try next!
+      }
+    }
+    Ok(Tokens!())
+  }
+
   /// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
   /// In list context, also returns the found delimiter.
   pub fn read_until(&mut self, _delims: Vec<Token>, _state: &mut State) -> Result<Tokens> {
     // my ($n, $found, @tokens) = (0);
-    // while (!defined($found = $self->readMatch(@delims))) {
-    //   my $token = $self->readToken();    # Copy next token to args
+    // while (!defined($found = self.readMatch(@delims))) {
+    //   my $token = self.readToken();    // Copy next token to args
     //   return unless defined $token;
     //   push(@tokens, $token);
     //   $n++;
     //   if ($$token[1] == CC_BEGIN) {      # And if it's a BEGIN, copy till balanced END
-    //     push(@tokens, $self->readBalanced->unlist, T_END); } }
+    //     push(@tokens, self.readBalanced->unlist, T_END); } }
     // # Notice that IFF the arg looks like {balanced}, the outer braces are stripped
     // # so that delimited arguments behave more similarly to simple, undelimited arguments.
     // if (($n == 1) && ($tokens[0][1] == CC_BEGIN)) {
@@ -435,6 +469,29 @@ impl Gullet {
     Ok(is_next)
   }
 
+  //**********************************************************************
+  //  Numbers, Dimensions, Glue
+  // See TeXBook, Ch.24, pp.269-271.
+  //**********************************************************************
+
+  pub fn read_value(
+    &mut self,
+    value_type: RegisterType,
+    state: &mut State,
+  ) -> Result<RegisterValue>
+  {
+    match value_type {
+      RegisterType::Number => Ok(self.read_number(state)?.into()),
+      RegisterType::Dimension => Ok(self.read_dimension(state)?.into()),
+      RegisterType::Glue => Ok(self.read_glue(state)?.into()),
+      RegisterType::MuGlue => Ok(self.read_muglue(state)?.into()),
+      RegisterType::Tokens => Ok(self.read_tokens_value(state)?.into()),
+      // TODO: unwrap should be a proper error, value is expected
+      RegisterType::Token => Ok(self.read_token(state).unwrap().into()),
+      RegisterType::Any => Ok(self.read_arg(state)?.into()),
+    }
+  }
+
   /// Match the input against one of the Token or Tokens in @choices; return the matching one or
   /// undef.
   pub fn read_match(&mut self, choices: Vec<Token>, state: &mut State) -> Result<Tokens> {
@@ -500,10 +557,10 @@ impl Gullet {
         Ok(n)
       }
     } else {
-      // elsif (defined($n = $self->readInternalDimension)) { return Number($s * $n->valueOf); }
-      // elsif (defined($n = $self->readInternalGlue))      { return Number($s * $n->valueOf); }
+      // elsif (defined($n = self.readInternalDimension)) { return Number($s * $n->valueOf); }
+      // elsif (defined($n = self.readInternalGlue))      { return Number($s * $n->valueOf); }
       // else {
-      //   my $next = $self->readToken();
+      //   my $next = self.readToken();
       //   unshift(@{ $$self{pushback} }, $next);    # Unread
       //   Warn('expected', '<number>', $self, "Missing number, treated as zero",
       //     "while processing " . ToString($LaTeXML::CURRENT_TOKEN),
@@ -512,6 +569,11 @@ impl Gullet {
       Ok(Number::new(0))
     }
   }
+
+  pub fn read_dimension(&mut self, state: &mut State) -> Result<Dimension> { unimplemented!() }
+  pub fn read_glue(&mut self, state: &mut State) -> Result<Glue> { unimplemented!() }
+  pub fn read_muglue(&mut self, state: &mut State) -> Result<MuGlue> { unimplemented!() }
+  pub fn read_tokens_value(&mut self, state: &mut State) -> Result<MuGlue> { unimplemented!() }
 
   pub fn skip_spaces(&mut self, state: &mut State) {
     match self.read_non_space(state) {

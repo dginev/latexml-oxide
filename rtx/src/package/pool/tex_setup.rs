@@ -281,7 +281,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Read a number
   DefParameterType!("Number",
     reader => Rc::new(|gullet: &mut Gullet, inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
-      gullet.read_number(state)
+      gullet.read_number(state)?.to_token().into()
     })
   );
 

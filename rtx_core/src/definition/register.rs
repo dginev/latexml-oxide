@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use common::dimension::Dimension;
@@ -5,7 +6,6 @@ use common::error::*;
 use common::glue::{Glue, MuGlue};
 use common::number::Number;
 use common::object::Object;
-use common::store::Stored;
 use definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
 use document::Document;
 use gullet::Gullet;
@@ -87,10 +87,11 @@ pub enum RegisterType {
   MuGlue,
   Token,
   Tokens,
+  Any, // Placeholder for any argument accepted
 }
 
 pub type RegisterGetterClosure = Rc<Fn(Vec<Token>, &State) -> Option<RegisterValue>>;
-pub type RegisterSetterClosure = Rc<Fn(RegisterValue, Vec<Token>, &mut State)>;
+pub type RegisterSetterClosure = Rc<Fn(RegisterValue, Vec<Tokens>, &mut State)>;
 
 #[derive(Clone)]
 pub struct Register {
@@ -109,7 +110,7 @@ impl Default for Register {
       parameters: None,
       register_type: RegisterType::Number,
       getter: Rc::new(|_: Vec<Token>, _: &State| Some(RegisterValue::Number(Number::new(0)))),
-      setter: Rc::new(|_: RegisterValue, _: Vec<Token>, _: &mut State| {}),
+      setter: Rc::new(|_: RegisterValue, _: Vec<Tokens>, _: &mut State| {}),
       readonly: false,
     }
   }
@@ -118,33 +119,57 @@ impl PartialEq for Register {
   fn eq(&self, other: &Register) -> bool { self.cs == other.cs }
 }
 
-impl Object for Register {}
-impl Definition for Register {
+impl Object for RefCell<Register> {}
+impl Definition for RefCell<Register> {
   fn is_register(&self) -> bool { true }
   fn is_prefix(&self) -> bool { false }
-  // No before/after daemons ???
-  // (other than afterassign)
+  // not implemented for primitives
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   // TODO:
-  fn get_parameters(&self) -> &Option<Parameters> { &self.parameters }
-  fn get_cs(&self) -> Token { self.cs.clone() }
+  fn get_parameters(&self) -> &Option<Parameters> { &None } // TODO: How do we do this with a RefCell ?!
+  fn get_cs(&self) -> Token { self.borrow().cs.clone() }
 
-  fn get_cs_name(&self) -> String { self.cs.get_cs_name() }
+  fn get_cs_name(&self) -> String { self.borrow().cs.get_cs_name() }
 
   fn get_locator(&self) -> String { String::from("Locator is TODO") }
 
-  // Not implemented for expandable
+  // No before/after daemons ???
+  // (other than afterassign)
   fn invoke_primitive(
     &self,
-    _gullet: &mut Stomach,
+    stomach: &mut Stomach,
     _caller: Rc<Definition>,
-    _state: &mut State,
+    state: &mut State,
   ) -> Result<Vec<Digested>>
   {
+    // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
+    // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
+
+    let gullet = stomach.get_gullet_mut();
+    let args = self.read_arguments(gullet, state)?;
+    gullet.read_keyword(&["="], state)?; // Ignore
+    let value = gullet.read_value(self.borrow().register_type, state)?;
+
+    self.borrow_mut().set_value(value, args, state);
+
+    // if (my $after = $STATE->lookupValue('afterAssignment')) {
+    //   $STATE->assignValue(afterAssignment => undef, 'global');
+    //   $gullet->unread($after); }    # primitive returns boxes, so these need to be digested!
+    // # Tracing ?
+    // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
+
     Ok(Vec::new())
   }
+
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
+  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Tokens>> {
+    match self.borrow().parameters {
+      None => Ok(Vec::new()),
+      Some(ref params) => params.read_arguments(gullet, self, state),
+    }
+  }
+
   fn do_absorbtion(
     &self,
     _document: &mut Document,
@@ -155,13 +180,13 @@ impl Definition for Register {
     Ok(())
   }
   fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> {
-    (self.getter)(args, state)
+    (self.borrow().getter)(args, state)
   }
 }
 
 impl Register {
   fn is_readonly(&self) -> bool { self.readonly }
-  fn set_value(&mut self, value: RegisterValue, args: Vec<Token>, state: &mut State) {
+  fn set_value(&mut self, value: RegisterValue, args: Vec<Tokens>, state: &mut State) {
     (self.setter)(value, args, state);
   }
 }

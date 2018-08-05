@@ -3,6 +3,7 @@ use fmt;
 use std::fmt::Display;
 
 use common::error::*;
+use common::number::Number;
 use quote::ToTokens;
 use quote::Tokens as QTokens;
 use state::State;
@@ -44,7 +45,11 @@ impl From<Token> for Result<Tokens> {
 }
 
 impl From<Tokens> for Token {
-  fn from(ts: Tokens) -> Token {
+  fn from(ts: Tokens) -> Token { (&ts).into() }
+}
+
+impl<'a> From<&'a Tokens> for Token {
+  fn from(ts: &'a Tokens) -> Token {
     if ts.tokens.is_empty() {
       Token::default()
     } else if ts.tokens.len() == 1 {
@@ -86,6 +91,13 @@ impl Tokens {
       .map(|t| t.text.as_str())
       .collect::<Vec<_>>()
       .join("")
+  }
+
+  /// to_number casts back to a parsed Number (usually via gullet.read_number)
+  /// which had to be re-converted to a Tokens for reentering the expansion flow
+  pub fn to_number(&self) -> Number {
+    let token: Token = self.into();
+    token.to_number()
   }
 
   /// Methods for overloaded ops.

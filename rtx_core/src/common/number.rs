@@ -1,3 +1,5 @@
+use token::Token;
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Number {
   number: i32,
@@ -14,6 +16,7 @@ impl Number {
       self.clone()
     }
   }
+  pub fn to_token(&self) -> Token { T_OTHER!(self.number.to_string()) }
 }
 
 #[macro_export]

@@ -14,9 +14,9 @@ extern crate time;
 #[macro_use]
 pub mod aux_macros;
 #[macro_use]
-pub mod common;
-#[macro_use]
 pub mod token;
+#[macro_use]
+pub mod common;
 #[macro_use]
 pub mod tokens;
 #[macro_use]
@@ -41,7 +41,6 @@ use common::font::Font;
 use common::model::Model;
 use common::store::Stored;
 use document::Document;
-use gullet::Gullet;
 use list::List;
 use state::{State, StateOptions};
 use stomach::Stomach;
