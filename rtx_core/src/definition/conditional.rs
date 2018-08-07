@@ -243,12 +243,12 @@ impl Conditional {
           // Found a \fi
           if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
             if let Some(Stored::IfFrame(stack_frame)) = stack.pop_front() {
-              if &stack_frame != local_frame.as_ref().unwrap() {
+              if stack_frame != *local_frame.as_ref().unwrap() {
                 // But is it for a condition nested in the test clause?
                 // then DO pop that conditional's frame; it's DONE!
               } else {
                 level -= 1;
-                if level <= 0 {
+                if level == 0 {
                   // otherwise, if no more nesting, we're done.
                   // Done with this frame, keep it removed
                   return t; // AND Return the finishing token.
@@ -260,24 +260,26 @@ impl Conditional {
           }
         },
         _ => {
-          if level > 1 {
-          }
-          // Ignore \else,\or nested in the body.
-          else if cond_type == Some(ConditionalType::Or) {
-            n_ors += 1;
-            if n_ors == nskips {
-              return t;
-            }
-          } else if cond_type == Some(ConditionalType::Else) && nskips != 0 {
-            // Found \else and we're looking for one?
-            // Make sure this \else is NOT for a nested \if that is part of the test clause!
-            if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
-              if let Some(Stored::IfFrame(mut stack_frame)) = stack.pop_front() {
-                if &stack_frame == local_frame.as_ref().unwrap() {
-                  // No need to actually call elseHandler, but note that we've seen an \else!
-                  stack_frame.borrow_mut().elses = true;
-                  stack.push_front(stack_frame.into());
-                  return t;
+          if level <= 1 {
+            // Ignore \else,\or nested in the body.
+            if cond_type == Some(ConditionalType::Or) {
+              n_ors += 1;
+              if n_ors == nskips {
+                return t;
+              }
+            } else if cond_type == Some(ConditionalType::Else) && nskips != 0 {
+              // Found \else and we're looking for one?
+              // Make sure this \else is NOT for a nested \if that is part of the test clause!
+              if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
+                if let Some(Stored::IfFrame(mut stack_frame)) = stack.pop_front() {
+                  if stack_frame == *local_frame.as_ref().unwrap() {
+                    // No need to actually call elseHandler, but note that we've seen an \else!
+                    stack_frame.borrow_mut().elses = true;
+                    stack.push_front(stack_frame.into());
+                    return t;
+                  } else {
+                    stack.push_front(stack_frame.into());
+                  }
                 }
               }
             }
@@ -293,8 +295,8 @@ impl Conditional {
     let local_token = state.current_token.as_ref().unwrap().clone();
     let stack_frame_opt =
       if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
-        if let Some(Stored::IfFrame(stack_frame)) = stack.pop_front() {
-          Some(stack_frame)
+        if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
+          Some(stack_frame.clone())
         } else {
           None
         }
