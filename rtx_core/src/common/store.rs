@@ -64,12 +64,13 @@ pub enum Stored {
   MuGlue(MuGlue),
   Dimension(Dimension),
   // LaTeXML objects (Rc-wrapped)
-  IfFrame(IfFrame),
   Expandable(Rc<Expandable>),
   Conditional(Rc<Conditional>),
   Primitive(Rc<Primitive>),
   MathPrimitive(Rc<MathPrimitive>),
+  // WALL OF SHAME (interior mutability)
   Register(Rc<RefCell<Register>>),
+  IfFrame(Rc<RefCell<IfFrame>>),
   /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Rc<Constructor>),
   Digested(Rc<::Digested>),
@@ -265,8 +266,8 @@ impl From<RegisterValue> for Stored {
   }
 }
 
-impl From<IfFrame> for Stored {
-  fn from(frame: IfFrame) -> Stored { Stored::IfFrame(frame) }
+impl From<Rc<RefCell<IfFrame>>> for Stored {
+  fn from(frame: Rc<RefCell<IfFrame>>) -> Stored { Stored::IfFrame(frame) }
 }
 
 // Reverse direction -- cast Stored back into concrete types, with meaningfull fallbacks where

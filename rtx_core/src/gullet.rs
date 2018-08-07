@@ -231,7 +231,7 @@ impl Gullet {
                     if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
                       // is this the right logic here? don't expand unless digesting?
                       state.current_token = Some(token);
-                      defn_next = Some(defn.clone());
+                      defn_next = Some(defn);
                       expand_next = true;
                     } else {
                       return Ok(Some(token));
@@ -581,10 +581,10 @@ impl Gullet {
     }
   }
 
-  pub fn read_dimension(&mut self, state: &mut State) -> Result<Dimension> { unimplemented!() }
-  pub fn read_glue(&mut self, state: &mut State) -> Result<Glue> { unimplemented!() }
-  pub fn read_muglue(&mut self, state: &mut State) -> Result<MuGlue> { unimplemented!() }
-  pub fn read_tokens_value(&mut self, state: &mut State) -> Result<MuGlue> { unimplemented!() }
+  pub fn read_dimension(&mut self, _state: &mut State) -> Result<Dimension> { unimplemented!() }
+  pub fn read_glue(&mut self, _state: &mut State) -> Result<Glue> { unimplemented!() }
+  pub fn read_muglue(&mut self, _state: &mut State) -> Result<MuGlue> { unimplemented!() }
+  pub fn read_tokens_value(&mut self, _state: &mut State) -> Result<MuGlue> { unimplemented!() }
 
   pub fn skip_spaces(&mut self, state: &mut State) {
     match self.read_non_space(state) {
