@@ -67,8 +67,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($map:expr, $key:expr, $state_arg:ident) => ($state_arg.lookup_mapping($map, $key))
   }
   macro_rules! AssignMapping {
-    ($map:expr, $key:expr, $value:expr) => (AssignMapping!($map, $key, $value, $state));
-    ($map:expr, $key:expr, $value:expr, $state_arg:ident) => ($state_arg.assign_mapping($map, $key, $value))
+    ($map:expr, $key:expr => $value:expr) => (AssignMapping!($map, $key => $value, $state));
+    ($map:expr, $key:expr => $value:expr, $state_arg:ident) => ($state_arg.assign_mapping($map, $key, $value.into()))
   }
   macro_rules! LookupMappingKeys {
     ($map:expr) => (LookupMappingKeys!($map, $state));
@@ -1749,8 +1749,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   /// arguments
   macro_rules! Invocation {
     ($token:expr, $args:expr) => {
-      build_invocation($token, $args, $state)
+      Invocation!($token, $args, $state)
+    };
+    ($token:expr, $args:expr, $state_arg:ident) => {
+      build_invocation($token, $args, $state_arg)
     };
   }
-
 )}

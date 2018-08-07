@@ -82,8 +82,14 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
 
       operations.extend(compile_replacement_tokens(replacement.to_owned()));
 
-      // println!("Into: \n{}",
-      //   operations.iter().map(|x| x.to_string()).collect::<Vec<_>>().join("\n"));
+      // println!(
+      //   "Into: \n{}",
+      //   operations
+      //     .iter()
+      //     .map(|x| x.to_string())
+      //     .collect::<Vec<_>>()
+      //     .join("\n")
+      // );
 
       quote!(
         Some(Rc::new(
@@ -283,8 +289,11 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       is_match = true;
       let to_absorb = translate_value("", &mut replacement);
       operations.push(quote!(
-        if let Some(& Stored::Digested(ref digested)) = #to_absorb {
-          document.absorb((**digested).clone(), state)?;
+        if let Some(ref stored_digested) = #to_absorb {
+          let digested_opt : Option<Digested> = stored_digested.into();
+          if let Some(digested) = digested_opt {
+            document.absorb(digested, state)?;
+          }
         }
       ));
     }

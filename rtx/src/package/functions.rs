@@ -1047,7 +1047,10 @@ pub fn ref_step_counter(
   };
 
   let refnum = digest_text(Tokens!(T_CS!(s!("\\the{}", ctr))), stomach, state)?;
-  // let tags = digest(Invocation!(T_CS!("\\lx@make@tags"), ctype));
+  let tags = stomach.digest(
+    Invocation!(T_CS!("\\lx@make@tags"), vec![Tokens!(T_OTHER!(ctype))]),
+    state,
+  )?;
 
   // Any scopes activated for previous value of this counter (& any nested counters) must be
   // removed. This may also include scopes activated for \label
@@ -1065,8 +1068,7 @@ pub fn ref_step_counter(
   state.activate_scope(&scope);
 
   Ok(map!(
-    //   ($tags   ? (tags => $tags) : ()),
-    "tags" => Stored::VecString(Vec::new()),
+    "tags" => Stored::Digested(Rc::new(tags)),
     "id" => Stored::String(id)
   ))
 }

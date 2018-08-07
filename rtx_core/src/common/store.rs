@@ -127,6 +127,10 @@ impl From<String> for Stored {
   fn from(value: String) -> Self { Stored::String(value) }
 }
 
+impl<'a> From<&'a str> for Stored {
+  fn from(value: &'a str) -> Self { value.to_owned().into() }
+}
+
 impl From<i32> for Stored {
   fn from(value: i32) -> Self { Stored::Int(value) }
 }
@@ -366,4 +370,17 @@ impl<'a> From<&'a Stored> for Option<RegisterValue> {
       _ => None,
     }
   }
+}
+
+impl<'a> From<&'a Stored> for Option<::Digested> {
+  fn from(value: &'a Stored) -> Option<::Digested> {
+    match value {
+      Stored::Digested(digested) => Some((**digested).clone()),
+      _ => None,
+    }
+  }
+}
+
+impl<'a, 'b> From<&'a &'b Stored> for Option<::Digested> {
+  fn from(value: &'a &'b Stored) -> Option<::Digested> { (*value).into() }
 }

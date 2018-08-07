@@ -176,6 +176,10 @@ impl fmt::Debug for Digested {
   }
 }
 
+impl<'a> From<&'a Digested> for Option<::Digested> {
+  fn from(value: &'a Digested) -> Option<::Digested> { Some(value.clone()) }
+}
+
 impl Default for Digested {
   fn default() -> Self { Digested::TBox(Box::new(Tbox::default())) }
 }
