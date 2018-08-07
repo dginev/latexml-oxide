@@ -217,9 +217,10 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_arg(state)),
   undigested => true,
   reversion => Some(Rc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
-    let read_tokens = Tokens!(T_BEGIN!(), T_END!());
+    unimplemented!()
     // TODO: add to read_tokens Revert!(arg, state)
-    Ok(read_tokens)
+    // let read_tokens = Tokens!(T_BEGIN!(), T_END!());
+    // Ok(read_tokens)
   })));
 
   // Read a LaTeX-style optional argument (ie. in []), but it will not be digested.

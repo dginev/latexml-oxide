@@ -16,8 +16,6 @@ fn can_convert_hello() {
   assert!(conversion_result.result.is_some());
   let response = conversion_result;
   assert!(!response.log.is_empty());
-  println!("Log: \n{:?}", response.log);
   assert!(response.result.is_some());
-  println!("Result: \n{:?}", response.result);
   assert!(response.status_code == 0);
 }

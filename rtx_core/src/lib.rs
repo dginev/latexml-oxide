@@ -163,6 +163,7 @@ pub enum Digested {
   TBox(Box<Tbox>),
   List(Box<List>),
   Whatsit(Box<Whatsit>),
+  Postponed(Tokens),
 }
 impl fmt::Debug for Digested {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -170,6 +171,7 @@ impl fmt::Debug for Digested {
       Digested::TBox(ref v) => write!(f, "{:?}", v),
       Digested::List(ref v) => write!(f, "{:?}", v),
       Digested::Whatsit(ref v) => write!(f, "{:?}", v),
+      Digested::Postponed(ref v) => write!(f, "{:?}", v),
     }
   }
 }
@@ -184,6 +186,7 @@ impl BoxOps for Digested {
       Digested::TBox(b) => b.unlist(),
       Digested::List(l) => l.unlist(),
       Digested::Whatsit(w) => w.unlist(),
+      Digested::Postponed(ref t) => unimplemented!(),
     }
   }
 
@@ -192,6 +195,7 @@ impl BoxOps for Digested {
       Digested::TBox(b) => b.be_absorbed(document, state),
       Digested::List(l) => l.be_absorbed(document, state),
       Digested::Whatsit(w) => w.be_absorbed(document, state),
+      Digested::Postponed(ref t) => unimplemented!(),
     }
   }
 
@@ -200,6 +204,7 @@ impl BoxOps for Digested {
       Digested::TBox(ref b) => b.to_string(),
       Digested::List(ref l) => l.to_string(),
       Digested::Whatsit(ref w) => w.to_string(),
+      Digested::Postponed(ref t) => t.to_string(),
     }
   }
 
@@ -208,6 +213,7 @@ impl BoxOps for Digested {
       Digested::TBox(ref b) => b.stringify(),
       Digested::List(ref l) => l.stringify(),
       Digested::Whatsit(ref w) => w.stringify(),
+      Digested::Postponed(ref t) => t.clone().stringify(),
     }
   }
 
@@ -220,6 +226,7 @@ impl BoxOps for Digested {
         error!(target: "digested:set_property", "Called set_property on List: {:?}", l)
       },
       Digested::Whatsit(ref mut w) => w.set_property(key, value),
+      Digested::Postponed(ref t) => unimplemented!(),
     }
   }
 
@@ -234,6 +241,7 @@ impl BoxOps for Digested {
         None
       },
       Digested::Whatsit(ref w) => w.get_property(key),
+      Digested::Postponed(ref t) => unimplemented!(),
     }
   }
   fn get_body(&self) -> Option<&Digested> {
@@ -247,6 +255,7 @@ impl BoxOps for Digested {
         None
       },
       Digested::Whatsit(ref w) => w.get_body(),
+      Digested::Postponed(ref t) => unimplemented!(),
     }
   }
 
@@ -255,6 +264,7 @@ impl BoxOps for Digested {
       Digested::TBox(ref b) => b.get_font(),
       Digested::List(ref l) => l.get_font(),
       Digested::Whatsit(ref w) => w.get_font(),
+      Digested::Postponed(ref t) => unimplemented!(),
     }
   }
 
@@ -263,6 +273,7 @@ impl BoxOps for Digested {
       Digested::TBox(ref b) => b.revert(),
       Digested::List(ref l) => l.revert(),
       Digested::Whatsit(ref w) => w.revert(),
+      Digested::Postponed(ref t) => t.clone(),
     }
   }
 }

@@ -242,8 +242,12 @@ impl Parameter {
       pre(stomach, state)?; // maybe pass extras?
     }
 
-    let digested_value = if !value_to_digest.is_empty() && !self.undigested {
-      Some(value_to_digest.be_digested(stomach, state)?)
+    let digested_value = if !value_to_digest.is_empty() {
+      if !self.undigested {
+        Some(value_to_digest.be_digested(stomach, state)?)
+      } else {
+        Some(Digested::Postponed(value_to_digest))
+      }
     } else {
       None
     };

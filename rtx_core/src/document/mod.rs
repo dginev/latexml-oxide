@@ -183,7 +183,8 @@ impl Document {
           if grandchildren
             .iter()
             .filter(|gchild| !self.can_contain(node, &gchild.get_name(), state))
-            .count() == 0
+            .count()
+            == 0
           {
             error!(target: "TODO", "replace_node");
             // self.replace_node(child, grandchildren);
@@ -261,6 +262,7 @@ impl Document {
         // A Proper Box or Whatsit? Absorb it.
         Digested::TBox(digested) => digested.be_absorbed(self, state)?,
         Digested::Whatsit(digested) => digested.be_absorbed(self, state)?,
+        Digested::Postponed(ref t) => unimplemented!(),
       };
 
       // TODO: Does the results extension make ANY sense???
@@ -762,12 +764,11 @@ impl Document {
 
         let noindent_children: bool = if heuristic {
           // This emulates libxml2"s heuristic
-          noindent
-            || !children
-              .iter()
-              .filter(|e| e.get_type() == Some(NodeType::TextNode))
-              .collect::<Vec<&Node>>()
-              .is_empty()
+          noindent || !children
+            .iter()
+            .filter(|e| e.get_type() == Some(NodeType::TextNode))
+            .collect::<Vec<&Node>>()
+            .is_empty()
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = self.get_node_qname(node, state);
