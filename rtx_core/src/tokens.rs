@@ -3,6 +3,7 @@ use fmt;
 use std::fmt::Display;
 
 use common::error::*;
+use common::number::Number;
 use quote::ToTokens;
 use quote::Tokens as QTokens;
 use state::State;
@@ -25,15 +26,40 @@ impl ToTokens for Tokens {
   }
 }
 
-// We also need convenient auxiliaries, including auto-casting
-impl From<Vec<Token>> for Tokens {
-  fn from(ts: Vec<Token>) -> Tokens { Tokens::new(ts) }
-}
-
 #[macro_export]
 macro_rules! Tokens(
   ($( $tokens:expr ),*) => ($crate::tokens::Tokens{ tokens: vec![$($tokens),*] });
 );
+// We also need convenient auxiliaries, including auto-casting
+impl From<Vec<Token>> for Tokens {
+  fn from(ts: Vec<Token>) -> Tokens { Tokens::new(ts) }
+}
+impl From<Token> for Tokens {
+  fn from(t: Token) -> Tokens { Tokens!(t) }
+}
+impl From<Tokens> for Result<Tokens> {
+  fn from(t: Tokens) -> Result<Tokens> { Ok(t) }
+}
+impl From<Token> for Result<Tokens> {
+  fn from(t: Token) -> Result<Tokens> { Ok(Tokens!(t)) }
+}
+
+impl From<Tokens> for Token {
+  fn from(ts: Tokens) -> Token { (&ts).into() }
+}
+
+impl<'a> From<&'a Tokens> for Token {
+  fn from(ts: &'a Tokens) -> Token {
+    if ts.tokens.is_empty() {
+      Token::default()
+    } else if ts.tokens.len() == 1 {
+      ts.tokens.first().unwrap().clone()
+    } else {
+      warn!(target: "expected:token", "multiple Tokens cast into a single Token");
+      ts.tokens.first().unwrap().clone()
+    }
+  }
+}
 
 impl Display for Tokens {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -65,6 +91,13 @@ impl Tokens {
       .map(|t| t.text.as_str())
       .collect::<Vec<_>>()
       .join("")
+  }
+
+  /// to_number casts back to a parsed Number (usually via gullet.read_number)
+  /// which had to be re-converted to a Tokens for reentering the expansion flow
+  pub fn to_number(&self) -> Number {
+    let token: Token = self.into();
+    token.to_number()
   }
 
   /// Methods for overloaded ops.

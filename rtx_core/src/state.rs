@@ -8,12 +8,13 @@ use common::font::Font;
 use common::model::{IndirectModel, Model};
 use common::number::Number;
 pub use common::store::Stored; // reexport for convenience
+use definition::conditional::{ConditionalType, IfFrame};
+use definition::register::RegisterValue;
 use definition::Definition;
 use document::resource::Resource;
 use document::tag::TagOptions;
 use document::Document;
 
-use mouth::Mouth;
 use stomach::Stomach;
 use token::{Catcode, Token};
 use tokens::Tokens;
@@ -221,6 +222,7 @@ pub struct State {
   pub status_code: usize,
   pub unlocked: bool,
   pub current_token: Option<Token>,
+  pub if_frame: Option<Rc<RefCell<IfFrame>>>,
   pub noexpand_the: bool,
   pub input_encoding: Option<String>,
   pub strict: bool,
@@ -272,6 +274,7 @@ impl Default for State {
       status_code: 0,
       unlocked: true,
       current_token: None,
+      if_frame: None,
       noexpand_the: false,
       input_encoding: None,
       strict: false,
@@ -462,11 +465,11 @@ impl State {
     }
   }
 
-  pub fn assign_internal<T: Into<Stored>>(
+  pub fn assign_internal(
     &mut self,
     table_name: TableName,
     key: &str,
-    value: T,
+    value: Stored,
     scope_opt: Option<Scope>,
   )
   {
@@ -581,6 +584,7 @@ impl State {
     scope: Option<Scope>,
   )
   {
+    let value = value.into();
     self.assign_internal(TableName::Value, key, value, scope);
   }
 
@@ -638,6 +642,13 @@ impl State {
     }
   }
 
+  pub fn lookup_int(&self, key: &str) -> i32 {
+    match self.lookup_value(key) {
+      Some(Stored::Int(i)) => *i,
+      _ => 0,
+    }
+  }
+
   pub fn lookup_vecdeque<'lvdq>(&'lvdq self, key: &'lvdq str) -> Option<&VecDeque<Stored>> {
     match self.lookup_value(key) {
       Some(v) => v.into(),
@@ -670,6 +681,51 @@ impl State {
     match self.lookup_value(key) {
       Some(v) => v.into(),
       _ => None,
+    }
+  }
+
+  pub fn lookup_register(&self, cs: &str, parameters: Vec<Token>) -> Option<RegisterValue> {
+    let cs = T_CS!(cs);
+    if let Some(defn) = self.lookup_definition(&cs) {
+      if defn.is_register() {
+        defn.value_of(parameters, self)
+      } else {
+        warn!(target: "expected:register", "The control sequence {:?} is not a register",cs);
+        None
+      }
+    } else {
+      warn!(target: "expected:register", "The control sequence {:?} is not defined",cs);
+      None
+    }
+  }
+
+  pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Rc<Definition>> {
+    if let Some(defn) = self.lookup_definition(&token) {
+      // Can only be a token or definition; we want defns!
+      if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
+        // is this the right logic here? don't expand unless digesting?
+        Some(defn)
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  }
+
+  pub fn lookup_conditional(&self, token: &Token) -> Option<ConditionalType> {
+    let lookupname = token.get_executable_name();
+    if lookupname.is_empty() {
+      None
+    } else if let Some(entry) = self.meaning.get(&lookupname) {
+      if let Some(Stored::Conditional(defn)) = entry.front() {
+        // Can only be a token or definition; we only want defns that have conditional_type
+        Some(defn.conditional_type)
+      } else {
+        None
+      }
+    } else {
+      None
     }
   }
 
@@ -866,6 +922,7 @@ impl State {
     scope: Option<Scope>,
   )
   {
+    let meaning = meaning.into();
     self.assign_internal(TableName::Meaning, &token.get_cs_name(), meaning, scope);
   }
 
@@ -957,6 +1014,7 @@ impl State {
       Stored::Constructor(ref defn) => defn.get_cs(),
       Stored::Primitive(ref defn) => defn.get_cs(),
       Stored::MathPrimitive(ref defn) => defn.get_cs(),
+      Stored::Register(ref defn) => defn.get_cs(),
       Stored::Token(ref token) => token.clone(),
       _ => T_LETTER!(s!("_wrong_argument_for_install_definition")),
     };

@@ -575,7 +575,7 @@ pub fn def_conditional(
         cs: cs.clone(),
         paramlist: None,
         test: None,
-        conditional_type: Some(ConditionalType::from(&cs_name)),
+        conditional_type: ConditionalType::from(&cs_name),
         locked: options.locked,
         skipper: options.skipper,
       },
@@ -616,7 +616,7 @@ pub fn def_conditional(
               cs: cs.clone(),
               paramlist,
               test,
-              conditional_type: Some(ConditionalType::If),
+              conditional_type: ConditionalType::If,
               locked: options.locked,
               skipper: options.skipper,
             },
@@ -657,17 +657,19 @@ pub fn def_register<T: Into<RegisterValue>>(
 
   let getter: RegisterGetterClosure = match options.getter {
     Some(getter) => getter.clone(),
-    None => Rc::new(move |args: Vec<Token>, state: &mut State| -> Stored {
-      let args_string: String = args
-        .iter()
-        .map(|arg: &Token| arg.to_string())
-        .collect::<Vec<String>>()
-        .join("");
-      match state.lookup_value(&(name.clone() + &args_string)) {
-        Some(v) => v.clone(),
-        None => getter_value.clone().into(),
-      }
-    }),
+    None => Rc::new(
+      move |args: Vec<Token>, state: &State| -> Option<RegisterValue> {
+        let args_string: String = args
+          .iter()
+          .map(|arg: &Token| arg.to_string())
+          .collect::<Vec<String>>()
+          .join("");
+        match state.lookup_value(&(name.clone() + &args_string)) {
+          None => Some(getter_value.clone()),
+          Some(v) => v.into(),
+        }
+      },
+    ),
   };
   let readonly = options.readonly;
 
@@ -685,7 +687,7 @@ pub fn def_register<T: Into<RegisterValue>>(
       Rc::new(move |value, args, state| {
         let args_string: String = args
           .iter()
-          .map(|arg: &Token| arg.to_string())
+          .map(|arg: &Tokens| arg.to_string())
           .collect::<Vec<String>>()
           .join("");
 
@@ -796,7 +798,6 @@ pub fn digest_literal(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -
   ); // try to stay as ASCII as possible
 
   let value = stomach.digest(stuff, state);
-
   state.assign_value("font", font, None); // TODO: maybe we need .assign_font ?
   stomach.end_mode("text", state)?;
   value
@@ -1025,7 +1026,7 @@ pub fn ref_step_counter(
     if let Some(params) = iddef.get_parameters() {
       params.get_num_args() == 0
     } else {
-      false
+      true
     }
   } else {
     false
@@ -1157,12 +1158,13 @@ pub fn build_invocation(token: Token, args: Vec<Tokens>, state: &mut State) -> T
   }
 }
 
-pub fn do_expand(
-  tokens: Tokens,
+pub fn do_expand<T: Into<Tokens>>(
+  tokens: T,
   outer_gullet: &mut Gullet,
   outer_state: &mut State,
 ) -> Result<Tokens>
 {
+  let tokens: Tokens = tokens.into();
   outer_gullet.reading_from_mouth(
     Mouth::default(),
     outer_state,

@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::rc::Rc;
@@ -6,7 +7,7 @@ use common::dimension::Dimension;
 use common::font::Font;
 use common::glue::{Glue, MuGlue};
 use common::number::Number;
-use definition::conditional::Conditional;
+use definition::conditional::{Conditional, IfFrame};
 use definition::constructor::Constructor;
 use definition::expandable::Expandable;
 use definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
@@ -67,8 +68,10 @@ pub enum Stored {
   Conditional(Rc<Conditional>),
   Primitive(Rc<Primitive>),
   MathPrimitive(Rc<MathPrimitive>),
-  Register(Rc<Register>),
-  // MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
+  // WALL OF SHAME (interior mutability)
+  Register(Rc<RefCell<Register>>),
+  IfFrame(Rc<RefCell<IfFrame>>),
+  /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Rc<Constructor>),
   Digested(Rc<::Digested>),
   Parameter(Parameter),
@@ -79,35 +82,36 @@ impl fmt::Debug for Stored {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     use Stored::*;
     match *self {
-      String(ref s) => write!(f, "{}", s),
-      Int(ref num) => write!(f, "{}", num),
-      VecChar(ref vs) => write!(f, "{:?}", vs),
-      VecString(ref vs) => write!(f, "{:?}", vs),
-      Bool(ref b) => write!(f, "{:?}", b),
-      Token(ref t) => write!(f, "{:?}", t),
-      Tokens(ref t) => write!(f, "{:?}", t),
-      Catcode(ref cc) => write!(f, "{:?}", cc),
-      Mathcode(ref cc) => write!(f, "{:?}", cc),
-      Expandable(ref _expandable) => write!(f, "<closure for expandable definition>"),
-      Conditional(ref _conditional) => write!(f, "<closure for conditional definition>"),
-      Primitive(ref _primitive) => write!(f, "<closure for primitive definition>"),
-      MathPrimitive(ref _primitive) => write!(f, "<closure for math primitive definition>"),
+      String(ref s) => write!(f, "{:?}", s),
+      Int(ref num) => write!(f, "Stored::Int[{:?}]", num),
+      VecChar(ref vs) => write!(f, "Stored::VecChar[{:?}]", vs),
+      VecString(ref vs) => write!(f, "Stored::VecString[{:?}]", vs),
+      Bool(ref b) => write!(f, "Stored::Bool[{:?}]", b),
+      Token(ref t) => write!(f, "Stored::Token[{:?}]", t),
+      Tokens(ref t) => write!(f, "Stored::Tokens[{:?}]", t),
+      Catcode(ref cc) => write!(f, "Stored::Catcode[{:?}]", cc),
+      Mathcode(ref cc) => write!(f, "Stored::Mathcode[{:?}]", cc),
+      IfFrame(ref fr) => write!(f, "Stored::IfFrame[{:?}]", fr),
+      Expandable(ref _expandable) => write!(f, "Stored::Expandable[]"),
+      Conditional(ref _conditional) => write!(f, "Stored::Conditional[]"),
+      Primitive(ref _primitive) => write!(f, "Stored::Primitive[]"),
+      MathPrimitive(ref _primitive) => write!(f, "Stored::MathPrimitive[]"),
       // MathPrimitiveOptions(ref _primitive) => write!(f, "<math primitive options>"),
-      Constructor(ref _constructor) => write!(f, "<closure for constructor definition>"),
-      Digested(ref digested) => write!(f, "{:?}", digested),
-      Parameter(ref parameter) => write!(f, "{:?}", parameter),
-      Register(ref register) => write!(f, "<register {:?}>", register.cs),
-      Font(ref font) => write!(f, "{:?}", font),
-      Number(ref number) => write!(f, "{:?}", number),
-      Glue(ref glue) => write!(f, "{:?}", glue),
-      MuGlue(ref glue) => write!(f, "{:?}", glue),
-      Dimension(ref dimension) => write!(f, "{:?}", dimension),
-      VecToken(ref token_vec) => write!(f, "{:?}", token_vec),
-      VecDigested(ref digested_vec) => write!(f, "{:?}", digested_vec),
-      VecDequeStored(ref vec) => write!(f, "VecDequeStored({:?})", vec),
-      HashStored(ref hos) => write!(f, "HashStored({:?})", hos),
-      HashTagData(ref htd) => write!(f, "HashTagData({:?})", htd),
-      HashStr(ref hstr) => write!(f, "HashStr({:?})", hstr),
+      Constructor(ref _constructor) => write!(f, "Stored::Constructor[]"),
+      Digested(ref digested) => write!(f, "Stored::Digested[{:?}]", digested),
+      Parameter(ref parameter) => write!(f, "Stored::Parameter[{:?}]", parameter),
+      Register(ref register) => write!(f, "Stored::Register[{:?}]", register.borrow().cs),
+      Font(ref font) => write!(f, "Stored::Font[{:?}]", font),
+      Number(ref number) => write!(f, "Stored::Number[{:?}]", number),
+      Glue(ref glue) => write!(f, "Stored::Glue[{:?}]", glue),
+      MuGlue(ref glue) => write!(f, "Stored::MuGlue[{:?}]", glue),
+      Dimension(ref dimension) => write!(f, "Stored::Dimension[{:?}]", dimension),
+      VecToken(ref token_vec) => write!(f, "VecToken[{:?}]", token_vec),
+      VecDigested(ref digested_vec) => write!(f, "VecDigested[{:?}]", digested_vec),
+      VecDequeStored(ref vec) => write!(f, "VecDequeStored[{:?}]", vec),
+      HashStored(ref hos) => write!(f, "HashStored[{:?}]", hos),
+      HashTagData(ref htd) => write!(f, "HashTagData[{:?}]", htd),
+      HashStr(ref hstr) => write!(f, "HashStr[{:?}]", hstr),
     }
   }
 }
@@ -192,11 +196,11 @@ impl From<Rc<Font>> for Stored {
   fn from(font: Rc<Font>) -> Self { Stored::Font(font) }
 }
 
-impl From<Rc<Register>> for Stored {
-  fn from(register: Rc<Register>) -> Self { Stored::Register(register) }
+impl From<Rc<RefCell<Register>>> for Stored {
+  fn from(register: Rc<RefCell<Register>>) -> Self { Stored::Register(register) }
 }
 impl From<Register> for Stored {
-  fn from(register: Register) -> Self { Rc::new(register).into() }
+  fn from(register: Register) -> Self { Rc::new(RefCell::new(register)).into() }
 }
 
 impl From<Font> for Stored {
@@ -262,6 +266,10 @@ impl From<RegisterValue> for Stored {
   }
 }
 
+impl From<Rc<RefCell<IfFrame>>> for Stored {
+  fn from(frame: Rc<RefCell<IfFrame>>) -> Stored { Stored::IfFrame(frame) }
+}
+
 // Reverse direction -- cast Stored back into concrete types, with meaningfull fallbacks where
 // impossible
 
@@ -319,6 +327,15 @@ impl<'a> From<&'a Stored> for Option<Tokens> {
   }
 }
 
+impl<'a> From<&'a Stored> for Option<Rc<RefCell<Register>>> {
+  fn from(value: &'a Stored) -> Option<Rc<RefCell<Register>>> {
+    match value {
+      Stored::Register(ref reg) => Some(reg.clone()),
+      _ => None,
+    }
+  }
+}
+
 impl<'a> From<&'a Stored> for Option<Catcode> {
   fn from(value: &'a Stored) -> Option<Catcode> {
     match value {
@@ -332,6 +349,20 @@ impl<'a> From<&'a Stored> for Option<&'a Vec<char>> {
   fn from(value: &'a Stored) -> Option<&'a Vec<char>> {
     match value {
       Stored::VecChar(ref cc) => Some(cc),
+      _ => None,
+    }
+  }
+}
+
+impl<'a> From<&'a Stored> for Option<RegisterValue> {
+  fn from(value: &'a Stored) -> Option<RegisterValue> {
+    match value {
+      Stored::Number(v) => Some(RegisterValue::Number(v.clone())),
+      Stored::Dimension(v) => Some(RegisterValue::Dimension(v.clone())),
+      Stored::Glue(v) => Some(RegisterValue::Glue(v.clone())),
+      Stored::MuGlue(v) => Some(RegisterValue::MuGlue(v.clone())),
+      Stored::Token(v) => Some(RegisterValue::Token(v.clone())),
+      Stored::Tokens(v) => Some(RegisterValue::Tokens(v.clone())),
       _ => None,
     }
   }

@@ -4,6 +4,7 @@ use std::fmt::Display;
 use std::iter::FromIterator;
 
 use common::error::*;
+use common::number::Number;
 use common::store::Stored;
 use quote;
 use state::State;
@@ -63,6 +64,65 @@ impl quote::ToTokens for Catcode {
     tokens.append(verbatim);
   }
 }
+
+impl From<u8> for Catcode {
+  fn from(num: u8) -> Catcode {
+    use token::Catcode::*;
+    match num {
+      0 => ESCAPE,
+      1 => BEGIN,
+      2 => END,
+      3 => MATH,
+      4 => ALIGN,
+      5 => EOL,
+      6 => PARAM,
+      7 => SUPER,
+      8 => SUB,
+      9 => IGNORE,
+      10 => SPACE,
+      11 => LETTER,
+      12 => OTHER,
+      13 => ACTIVE,
+      14 => COMMENT,
+      15 => INVALID,
+      16 => CS,
+      17 => NOTEXPANDED,
+      18 => MARKER,
+      _ => {
+        warn!(target:"unknown:catcode", "Unrecognized catcode: {:?}", num);
+        IGNORE
+      },
+    }
+  }
+}
+
+impl From<Catcode> for u8 {
+  fn from(cc: Catcode) -> u8 {
+    use token::Catcode::*;
+    match cc {
+      ESCAPE => 0,
+      BEGIN => 1,
+      END => 2,
+      MATH => 3,
+      ALIGN => 4,
+      EOL => 5,
+      PARAM => 6,
+      SUPER => 7,
+      SUB => 8,
+      IGNORE => 9,
+      SPACE => 10,
+      LETTER => 11,
+      OTHER => 12,
+      ACTIVE => 13,
+      COMMENT => 14,
+      INVALID => 15,
+      CS => 16,
+      NOTEXPANDED => 17,
+      MARKER => 18,
+    }
+  }
+}
+
 impl Catcode {
   pub fn name(self) -> String {
     use token::Catcode::*;
@@ -267,6 +327,10 @@ macro_rules! Token(($text:expr, $cc_opt:expr) => ({
     None => Catcode::OTHER
   }}
 }));
+
+impl Default for Token {
+  fn default() -> Self { T_OTHER!("") }
+}
 
 // Explode a string into a list of tokens, all w/catcode OTHER (except space).
 #[macro_export]
@@ -475,6 +539,8 @@ impl Token {
   pub fn revert(&self) -> Token { self.clone() }
 
   pub fn to_string(&self) -> String { self.text.clone() }
+
+  pub fn to_number(&self) -> Number { Number::new(self.text.parse::<i32>().unwrap_or(0)) }
 
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
     stomach.digest(Tokens { tokens: vec![self] }, state)

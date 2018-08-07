@@ -120,14 +120,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($token1:expr, $token2:expr, $state_arg:ident) => ($state_arg.let_i($token1, $token2, None));
     ($token1:expr, $token2:expr, $scope:expr, $state_arg:ident) => ($state_arg.let_i($token1, $token2, $scope));
   }
-  // macro_rules! Digest {
-    // ($tokens:expr) => (Digest!($tokens, $state))
-    //   ($tokens:expr, $core:ident) => ($core.stomach.digest($tokens, $core.state);)
-  // }
-
-// sub Digest {
-//   my (@stuff) = @_;
-//   return $STATE->getStomach->digest(Tokens(map { (ref $_ ? $_ : TokenizeInternal($_)) } @stuff)); }
+  macro_rules! Digest {
+    ($tokens:expr, $stomach:ident) => (Digest!($tokens, $stomach, $state));
+    ($tokens:expr, $stomach:ident, $state_arg:ident) => ($stomach.digest($tokens, $state_arg));
+  }
 
   macro_rules! DigestText {
     ($stuff:expr, $stomach:ident) => (DigestText!($stuff, $stomach, $state));
@@ -348,7 +344,13 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       DefConditionalI!(cs, paramlist, sub[$gullet, $args, $inner_state] $body, $state_arg)
-    })
+    });
+    // or None
+    ($proto:expr, None) => (DefConditional!($proto, None, $state));
+    ($proto:expr, None, $state_arg:ident) => ({
+      let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
+      DefConditionalI!(cs, paramlist, None, $state_arg)
+    });
   );
 
   macro_rules! DefConditionalI(
@@ -358,6 +360,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
       let test : ConditionalClosure = Rc::new(move |$gullet, $args, $inner_state| {$body});
       def_conditional($cs, $paramlist, Some(test), ConditionalOptions::default(), $state_arg);
+    });
+    // or None
+    ($cs:expr, $paramlist:expr, None) =>
+      (DefConditionalI!($cs, $paramlist, None, $state));
+    ($cs:expr, $paramlist:expr, None, $state_arg:ident) => ({
+      def_conditional($cs, $paramlist, None, ConditionalOptions::default(), $state_arg);
     });
   );
 
@@ -400,6 +408,11 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   ///    isPrefix  : 1 for things like \global, \long, etc.
   ///    registerType : for parameters (but needs to be worked into `DefParameter`, below).
   macro_rules! DefPrimitive{
+    ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block) =>
+      (DefPrimitive!($proto, sub[$stomach, $whatsit, $inner_state] $body, $state));
+    ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $state_arg:ident) =>
+      (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {$body}, PrimitiveOptions::default(), $state));
+
     ($proto:expr, $replacement:expr, $options:expr) => (DefPrimitive!($proto, $replacement, $options, $state));
     ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
       // TODO:
@@ -568,6 +581,13 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   // );
 
   macro_rules! DefRegister {
+    ($proto:expr, $value:expr, $key1:ident => $val1:expr) => (DefRegister!($proto, $value, $key1=>$val1, $state));
+    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr) => (DefRegister!($proto, $value, $key1=>$val1, $key2=>$val2, $state));
+    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr, $key3:ident => $val3:expr) => (DefRegister!($proto, $value, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
+    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $state_arg:ident) => (DefRegister!($proto, $value, Some(NewDefault!(RegisterOptions, $key1=>$val1)), $state_arg));
+    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr, $state_arg:ident) => (DefRegister!($proto, $value, Some(NewDefault!(RegisterOptions, $key1=>$val1, $key2=>$val2)), $state_arg));
+    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr, $key3:ident=>$val3:expr, $state_arg:ident) => (DefRegister!($proto, $value, Some(NewDefault!(RegisterOptions, $key1=>$val1, $key2=>$val2, $key3=>$val3)), $state_arg));
+    ($proto:expr, $value:expr) => (DefRegister!($proto, $value, None, $state));
     ($proto:expr, $value:expr, $options:expr) => (DefRegister!($proto, $value, $options, $state));
     ($proto:expr, $value:expr, $options:expr, $state_arg:ident) => ({
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
@@ -576,8 +596,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! DefRegisterI {
-    ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => (DefRegisterI!($cs, $paramlist, $value, $options, $state));
     ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => (def_register($cs, $paramlist, $value, $options, $state_arg));
+    ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => (DefRegisterI!($cs, $paramlist, $value, $options, $state));
   }
 
   // sub LookupRegister {
