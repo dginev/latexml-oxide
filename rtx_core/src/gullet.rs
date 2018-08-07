@@ -2,6 +2,7 @@ use common::dimension::Dimension;
 use common::error::*;
 use common::glue::{Glue, MuGlue};
 use common::number::Number;
+use definition::conditional::ConditionalType;
 use definition::register::{RegisterType, RegisterValue};
 
 use definition::Definition;
@@ -419,6 +420,16 @@ impl Gullet {
       tokens.push(token);
     }
     Ok(Tokens::new(tokens))
+  }
+
+  /// Skipping over conditional branches is used heavily when processing raw TeX (eg. tikz).
+  pub fn read_next_conditional(&mut self, state: &mut State) -> Option<(Token, ConditionalType)> {
+    while let Some(token) = self.read_token(state) {
+      if let Some(cond_type) = state.lookup_conditional(&token) {
+        return Some((token, cond_type));
+      }
+    }
+    None
   }
 
   ///**********************************************************************

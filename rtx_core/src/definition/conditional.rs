@@ -1,12 +1,13 @@
+use std::rc::Rc;
+
 use common::error::*;
 use common::object::Object;
+use common::store::Stored;
 use definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
 use document::Document;
 use gullet::Gullet;
 use parameter::Parameters;
-use state::Scope;
-use state::State;
-use std::rc::Rc;
+use state::{Scope, State};
 use stomach::Stomach;
 use token::*;
 use tokens::Tokens;
@@ -17,12 +18,13 @@ use Digested;
 //   Expand enough to determine true/false, then maybe skip
 //   record a flag somewhere so that \else or \fi is recognized
 //   (otherwise, they should signal an error)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ConditionalType {
   If,
   Else,
   Or,
   Fi,
+  Unknown,
 }
 
 impl ConditionalType {
@@ -59,7 +61,7 @@ pub struct Conditional {
   pub cs: Token,
   pub paramlist: Option<Parameters>,
   pub test: Option<ConditionalClosure>,
-  pub conditional_type: Option<ConditionalType>,
+  pub conditional_type: ConditionalType,
   pub locked: Option<bool>,
   pub skipper: Option<bool>,
 }
@@ -69,7 +71,7 @@ impl Default for Conditional {
       cs: T_CS!(s!("Conditional")),
       paramlist: None,
       test: None,
-      conditional_type: None,
+      conditional_type: ConditionalType::Unknown,
       locked: None,
       skipper: None,
     }
@@ -93,22 +95,21 @@ impl Definition for Conditional {
   // they are NOT defined as macros, so they don't need to handle doInvocation,
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     // A real conditional must have condition_type set
-    if let Some(ref cond_type) = self.conditional_type {
-      use self::ConditionalType::*;
-      match *cond_type {
-        If => self.invoke_conditional(gullet, state)?,
-        Else => self.invoke_else(gullet, state)?,
-        Or => self.invoke_else(gullet, state)?,
-        Fi => self.invoke_fi(gullet, state)?,
-      };
-    } else {
-      error!(
-        target: &s!("unexpected:{}", self.cs), //$gullet,
-        "Unknown conditional control sequence {:?}",
-        state.current_token
-      );
+    use self::ConditionalType::*;
+    match self.conditional_type {
+      If => self.invoke_conditional(gullet, state),
+      Else => self.invoke_else(gullet, state),
+      Or => self.invoke_else(gullet, state),
+      Fi => self.invoke_fi(gullet, state),
+      _ => {
+        error!(
+          target: &s!("unexpected:{}", self.cs), //$gullet,
+          "Unknown conditional control sequence {:?}",
+          state.current_token
+        );
+        Ok(Tokens!())
+      },
     }
-    Ok(Tokens!())
   }
   // TODO:
   fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
@@ -145,37 +146,55 @@ impl Definition for Conditional {
   }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct IfFrame {
+  pub token: Token,
+  pub start: String,
+  pub parsing: bool,
+  pub elses: bool,
+  pub ifid: i32,
+}
+
 impl Conditional {
-  pub fn invoke_conditional(&self, gullet: &mut Gullet, state: &mut State) -> Result<()> {
+  pub fn invoke_conditional(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     // TODO!!! Implement in full
     // Keep a stack of the conditionals we are processing.
-    // let mut ifid = state.lookup_int("if_count").unwrap_or(0);
-    // ifid += 1;
-    // state.assign_int("if_count", ifid, Some(Scope::Global));
-    //   local $LaTeXML::IFFRAME = { token => $LaTeXML::CURRENT_TOKEN, start => $gullet->getLocator,
-    //     parsing => 1, elses => 0, ifid => $ifid };
-    //   $STATE->unshiftValue(if_stack => $LaTeXML::IFFRAME);
+    let mut ifid = state.lookup_int("if_count");
+    ifid += 1;
+    state.assign_value("if_count", ifid, Some(Scope::Global));
+    let mut if_frame = IfFrame {
+      token: state.current_token.as_ref().unwrap().clone(),
+      start: gullet.get_locator(),
+      parsing: true,
+      elses: false,
+      ifid: ifid,
+    };
+    state.if_frame = Some(if_frame.clone());
+    state.unshift_value("if_stack", vec![if_frame.into()]);
 
     let args = self.read_arguments(gullet, state)?;
+
     //   $$LaTeXML::IFFRAME{parsing} = 0;    # Now, we're done parsing the Test clause.
+    if_frame.parsing = false;
     //   my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
     //   print STDERR '{' . $self->tracingCSName . "} [#$ifid]\n" if $tracing;
     //   print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
     if let Some(ref test) = self.test {
       if (test)(gullet, args, state)? {
-        // print STDERR "{true}\n" if $tracing; }
+        // print STDERR "{true}\n" if $tracing;
       } else {
-        let to = self.skip_conditional_body(gullet, -1);
-        // print STDERR "{false} [skipped to " . ToString($to) . "]\n" if $tracing; } }
+        let to = self.skip_conditional_body(-1, gullet, state);
+        // print STDERR "{false} [skipped to " . ToString($to) . "]\n" if $tracing;
       }
     } else {
       // If there's no test, it must be the Special Case, \ifcase
-      //     my $num = $args[0]->valueOf;
-      //     if ($num > 0) {
-      //       my $to = skipConditionalBody($gullet, $num);
-      //       print STDERR "{$num} [skipped to " . ToString($to) . "]\n" if $tracing; } }
+      let num = args[0].to_number().value_of();
+      if num > 0 {
+        let to = self.skip_conditional_body(num, gullet, state);
+        //       print STDERR "{$num} [skipped to " . ToString($to) . "]\n" if $tracing;
+      }
     }
-    Ok(())
+    Ok(Tokens!())
   }
 
   // #======================================================================
@@ -202,79 +221,137 @@ impl Conditional {
   // #   \if\ifx AA XY junk \else blah \fi True \else False \fi
   // # The inner \ifx should expand to "XY junk", since A==A
   // # Return the token we've skipped to, and the frame that this applies to.
-  fn skip_conditional_body(&self, gullet: &mut Gullet, nskips: i32) {
-    //   my $level = 1;
-    //   my $n_ors = 0;
-    //   my $start = $gullet->getLocator;
-    //   # NOTE: Open-coded manipulation of if_stack!
-    //   # [we're only reading tokens & looking up, so State shouldn't change behind our backs]
-    //   my $stack = $STATE->lookupValue('if_stack');
-    //   while (1) {
-    //     my ($t, $cond_type) = $gullet->readNextConditional;
-    //     last unless $cond_type;
-    //     if ($cond_type eq 'if') {    #  Found a \ifxx of some sort
-    //       $level++; }
-    //     elsif ($cond_type eq 'fi') {    #  Found a \fi
-    //       if ($$stack[0] ne $LaTeXML::IFFRAME) {
-    //         # But is it for a condition nested in the test clause?
-    //         shift(@$stack); }           # then DO pop that conditional's frame; it's DONE!
-    //       elsif (!--$level) {           # If no more nesting, we're done.
-    //         shift(@$stack);             # Done with this frame
-    //         return $t; } }              # AND Return the finishing token.
-    //     elsif ($level > 1) {            # Ignore \else,\or nested in the body.
-    //     }
-    //     elsif (($cond_type eq 'or') && (++$n_ors == $nskips)) {
-    //       return $t; }
-    //     elsif (($cond_type eq 'else') && $nskips
-    //       # Found \else and we're looking for one?
-    //       # Make sure this \else is NOT for a nested \if that is part of the test clause!
-    //       && ($$stack[0] eq $LaTeXML::IFFRAME)) {
-    //       # No need to actually call elseHandler, but note that we've seen an \else!
-    //       $$stack[0]{elses} = 1;
-    //       return $t; } }    # } #}
-    //   Error('expected', '\fi', $gullet, "Missing \\fi or \\else, conditional fell off end",
-    //     "Conditional started at $start");
-    return;
+  fn skip_conditional_body(&self, nskips: i32, gullet: &mut Gullet, state: &mut State) -> Tokens {
+    let mut level = 1;
+    let mut n_ors = 0;
+    let start = gullet.get_locator();
+    // NOTE: Open-coded manipulation of if_stack!
+    // [we're only reading tokens & looking up, so State shouldn't change behind our backs]
+    if state.lookup_value("if_stack").is_none() {
+      return Tokens!();
+    }
+    let local_frame = state.if_frame.clone();
+    loop {
+      let (t, cond_type) = match gullet.read_next_conditional(state) {
+        Some((tok, typ)) => (Tokens!(tok), Some(typ)),
+        None => (Tokens!(), None),
+      };
+      match cond_type {
+        None => break,
+        Some(ConditionalType::If) => level += 1, //  Found a \ifxx of some sort
+        Some(ConditionalType::Fi) => {
+          // Found a \fi
+          if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
+            if let Some(Stored::IfFrame(stack_frame)) = stack.pop_front() {
+              if &stack_frame != local_frame.as_ref().unwrap() {
+                // But is it for a condition nested in the test clause?
+                // then DO pop that conditional's frame; it's DONE!
+              } else {
+                level -= 1;
+                if level <= 0 {
+                  // otherwise, if no more nesting, we're done.
+                  // Done with this frame, keep it removed
+                  return t; // AND Return the finishing token.
+                } else {
+                  stack.push_front(Stored::IfFrame(stack_frame));
+                }
+              }
+            }
+          }
+        },
+        _ => {
+          if level > 1 {
+          }
+          // Ignore \else,\or nested in the body.
+          else if cond_type == Some(ConditionalType::Or) {
+            n_ors += 1;
+            if n_ors == nskips {
+              return t;
+            }
+          } else if cond_type == Some(ConditionalType::Else) && nskips > 0 {
+            // Found \else and we're looking for one?
+            // Make sure this \else is NOT for a nested \if that is part of the test clause!
+            if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
+              if let Some(Stored::IfFrame(mut stack_frame)) = stack.pop_front() {
+                if &stack_frame == local_frame.as_ref().unwrap() {
+                  // No need to actually call elseHandler, but note that we've seen an \else!
+                  stack_frame.elses = true;
+                  stack.push_front(stack_frame.into());
+                  return t;
+                }
+              }
+            }
+          }
+        },
+      };
+    }
+    error!(target: "expected:\\fi", "Missing \\fi or \\else, conditional fell off end");
+    Tokens!()
   }
 
-  pub fn invoke_else(&self, gullet: &mut Gullet, state: &mut State) -> Result<()> { Ok(()) }
-  //   my $stack = $STATE->lookupValue('if_stack');
-  //   if (!($stack && $$stack[0])) {    # No if stack entry ?
-  //     Error('unexpected', $LaTeXML::CURRENT_TOKEN, $gullet,
-  //       "Didn't expect a " . Stringify($LaTeXML::CURRENT_TOKEN)
-  //         . " since we seem not to be in a conditional");
-  //     return; }
-  //   elsif ($$stack[0]{parsing}) {     # Defer expanding the \else if we're still parsing the test
-  //     return [T_CS('\relax'), $LaTeXML::CURRENT_TOKEN]; }
-  //   elsif ($$stack[0]{elses}) {       # Already seen an \else's at this level?
-  //     Error('unexpected', $LaTeXML::CURRENT_TOKEN, $gullet,
-  //       "Extra " . Stringify($LaTeXML::CURRENT_TOKEN),
-  // "already saw \\else for " . Stringify($$stack[0]{token}) . " [" . $$stack[0]{ifid} . "] at " .
-  // $$stack[0]{start});     return; }
-  //   else {
-  //     local $LaTeXML::IFFRAME = $$stack[0];
-  //     my $t = skipConditionalBody($gullet, 0);
-  //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
-  //       . " [for " . ToString($$LaTeXML::IFFRAME{token}) . " #" . $$LaTeXML::IFFRAME{ifid}
-  //       . " skipping to " . ToString($t) . "]\n"
-  //       if $STATE->lookupValue('TRACINGCOMMANDS');
-  //     return; } }
+  pub fn invoke_else(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+    let local_token = state.current_token.as_ref().unwrap().clone();
+    let stack_frame_opt =
+      if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
+        if let Some(Stored::IfFrame(stack_frame)) = stack.pop_front() {
+          Some(stack_frame)
+        } else {
+          None
+        }
+      } else {
+        None
+      };
 
-  pub fn invoke_fi(&self, gullet: &mut Gullet, state: &mut State) -> Result<()> { Ok(()) }
-  //   my ($self, $gullet) = @_;
-  //   my $stack = $STATE->lookupValue('if_stack');
-  //   if (!($stack && $$stack[0])) {    # No if stack entry ?
-  //     Error('unexpected', $LaTeXML::CURRENT_TOKEN, $gullet,
-  //       "Didn't expect a " . Stringify($LaTeXML::CURRENT_TOKEN)
-  //         . " since we seem not to be in a conditional");
-  //     return; }
-  //   elsif ($$stack[0]{parsing}) {     # Defer expanding the \else if we're still parsing the test
-  //     return [T_CS('\relax'), $LaTeXML::CURRENT_TOKEN]; }
-  //   else {                            # "expand" by removing the stack entry for this level
-  //     local $LaTeXML::IFFRAME = $$stack[0];
-  //     $STATE->shiftValue('if_stack');    # Done with this frame
-  //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
-  // . " [for " . Stringify($$LaTeXML::IFFRAME{token}) . " #" . $$LaTeXML::IFFRAME{ifid} .
-  // "]\n"       if $STATE->lookupValue('TRACINGCOMMANDS');
-  //     return; } }
+    if let Some(stack_frame) = stack_frame_opt {
+      if (stack_frame.parsing) {
+        // Defer expanding the \else if we're still parsing the test
+        Ok(Tokens!(T_CS!("\\relax"), local_token))
+      } else if stack_frame.elses {
+        // Already seen an \else's at this level?
+        error!(
+          target: &format!("unexpected:{:?}", local_token),
+          "Extra {:?} already saw \\else for {:?} [{:?}] at {:?}",
+          local_token,
+          stack_frame.token,
+          stack_frame.ifid,
+          stack_frame.start
+        );
+        Ok(Tokens!())
+      } else {
+        state.if_frame = Some(stack_frame);
+        let t = self.skip_conditional_body(0, gullet, state);
+        //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
+        //       . " [for " . ToString($$LaTeXML::IFFRAME{token}) . " #" .
+        // $$LaTeXML::IFFRAME{ifid}       . " skipping to " . ToString($t) . "]\n"
+        //       if $STATE->lookupValue('TRACINGCOMMANDS');
+        Ok(Tokens!())
+      }
+    } else {
+      // No if stack entry ?
+      error!(
+        target: &format!("unexpected:{:?}", local_token),
+        "Didn't expect a {:?} since we seem not to be in a conditional",
+        local_token
+      );
+      Ok(Tokens!())
+    }
+  }
+
+  pub fn invoke_fi(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+    if let Some(Stored::IfFrame(stack)) = state.lookup_value("if_stack") {
+      //   elsif (stack_frame.parsing) {     // Defer expanding the \else if we're still parsing the
+      // test     return [T_CS('\relax'), $LaTeXML::CURRENT_TOKEN]; }
+      //   else {                            // "expand" by removing the stack entry for this level
+      //     local $LaTeXML::IFFRAME = $$stack[0];
+      //     $STATE->shiftValue('if_stack');    // Done with this frame
+      //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
+      // . " [for " . Stringify($$LaTeXML::IFFRAME{token}) . " #" . $$LaTeXML::IFFRAME{ifid} .
+      // "]\n"       if $STATE->lookupValue('TRACINGCOMMANDS');
+
+      Ok(Tokens!())
+    } else {
+      error!(target: "unexpected:fi",  "Didn't expect a {:?} since we seem not to be in a conditional", state.current_token);
+      Ok(Tokens!())
+    }
+  }
 }

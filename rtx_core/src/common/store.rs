@@ -7,7 +7,7 @@ use common::dimension::Dimension;
 use common::font::Font;
 use common::glue::{Glue, MuGlue};
 use common::number::Number;
-use definition::conditional::Conditional;
+use definition::conditional::{Conditional, IfFrame};
 use definition::constructor::Constructor;
 use definition::expandable::Expandable;
 use definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
@@ -64,12 +64,13 @@ pub enum Stored {
   MuGlue(MuGlue),
   Dimension(Dimension),
   // LaTeXML objects (Rc-wrapped)
+  IfFrame(IfFrame),
   Expandable(Rc<Expandable>),
   Conditional(Rc<Conditional>),
   Primitive(Rc<Primitive>),
   MathPrimitive(Rc<MathPrimitive>),
   Register(Rc<RefCell<Register>>),
-  // MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
+  /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Rc<Constructor>),
   Digested(Rc<::Digested>),
   Parameter(Parameter),
@@ -89,6 +90,7 @@ impl fmt::Debug for Stored {
       Tokens(ref t) => write!(f, "Stored::Tokens[{:?}]", t),
       Catcode(ref cc) => write!(f, "Stored::Catcode[{:?}]", cc),
       Mathcode(ref cc) => write!(f, "Stored::Mathcode[{:?}]", cc),
+      IfFrame(ref fr) => write!(f, "Stored::IfFrame[{:?}]", fr),
       Expandable(ref _expandable) => write!(f, "Stored::Expandable[]"),
       Conditional(ref _conditional) => write!(f, "Stored::Conditional[]"),
       Primitive(ref _primitive) => write!(f, "Stored::Primitive[]"),
@@ -261,6 +263,10 @@ impl From<RegisterValue> for Stored {
       RegisterValue::Tokens(v) => Stored::Tokens(v),
     }
   }
+}
+
+impl From<IfFrame> for Stored {
+  fn from(frame: IfFrame) -> Stored { Stored::IfFrame(frame) }
 }
 
 // Reverse direction -- cast Stored back into concrete types, with meaningfull fallbacks where

@@ -25,6 +25,29 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     Ok(xequals)
   });
 
+
+// TODO:
+// DefConditionalI('\iftrue',  undef, sub { 1; });
+// DefConditionalI('\iffalse', undef, sub { 0; });
+
+//======================================================================
+// This makes \relax disappear completely after digestion
+// (which seems most TeX like).
+DefPrimitiveI!("\\relax", noprimitive!() );
+//// However, this keeps a box, so it can appear in UnTeX
+////// DefPrimitive('\relax',undef);
+//// But if you do that, you've got to watch out since it usually
+//// shouldn't be a box; See the isRelax code in handleScripts, below
+
+// TODO:
+// DefMacro('\number Number', sub { Explode($_[1]->valueOf); });
+
+// define it here (only approxmiately), since it's already useful.
+Let!("\\protect", "\\relax");
+
+//======================================================================
+
+
   DefParameterType!("CSName", reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
     let mut cs = escapechar(state);
     // keep newlines from having \n inside!
