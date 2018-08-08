@@ -226,9 +226,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
   DefParameterType!("OptionalUndigested", 
   reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| gullet.read_optional(state)),
-  undigested => true, optional => true
-  // TODO
-  // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
+  undigested => true, optional => true,
+   // TODO
+   reversion => Some(Rc::new(|_gullet: &mut Gullet, arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
+     unimplemented!()
+     // ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
+   }))
   );
 
   // Read a token as used when defining it, ie. it may be enclosed in braces.

@@ -1138,13 +1138,12 @@ pub fn build_invocation(token: Token, args: Vec<Tokens>, state: &mut State) -> T
     invoked_tokens.append(&mut reverted_args);
     Tokens::new(invoked_tokens)
   } else {
+    error!(
+      target: &s!("undefined:{}", token.get_cs_name()),
+      "Can't invoke {:?}; it is undefined",
+      token
+    );
     let mut invoked_tokens = vec![token];
-    // error!(
-    //   "undefined",
-    //   token,
-    //   None,
-    //   format!("Can't invoke {:?}; it is undefined", token)
-    // );
     // DefConstructorI!(token, convert_latex_args(args.len(), 0),
     // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
     let mut wrapped_args: Vec<Token> = args

@@ -311,7 +311,7 @@ impl Conditional {
       } else if stack_frame.borrow().elses {
         // Already seen an \else's at this level?
         error!(
-          target: &format!("unexpected:{:?}", local_token),
+          target: &s!("unexpected:{:?}", local_token),
           "Extra {:?} already saw \\else for {:?} [{:?}] at {:?}",
           local_token,
           stack_frame.borrow().token,
@@ -331,7 +331,7 @@ impl Conditional {
     } else {
       // No if stack entry ?
       error!(
-        target: &format!("unexpected:{:?}", local_token),
+        target: &s!("unexpected:{:?}", local_token),
         "Didn't expect a {:?} since we seem not to be in a conditional",
         local_token
       );

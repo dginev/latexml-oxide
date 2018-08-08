@@ -170,7 +170,7 @@ pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> 
     if Path::new(&full_subdir).exists() {
       dirs.push(full_subdir);
     } else {
-      let full_subdir_oneup = concat(&format!("{}/..", cwd), &subdir);
+      let full_subdir_oneup = concat(&s!("{}/..", cwd), &subdir);
       if Path::new(&full_subdir_oneup).exists() {
         dirs.push(full_subdir_oneup);
       }

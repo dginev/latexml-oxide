@@ -217,11 +217,20 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       let mut sorted_keys : Vec<&String> = formatters.keys().collect();
       sorted_keys.sort();
       for role in sorted_keys.iter() {
-        let formatter = formatters.get(*role).unwrap();
+        let formatter = match formatters.get(*role).unwrap() {
+          Stored::Tokens(ts) => {
+            let t : Token = ts.into();
+            t
+          },
+          Stored::Token(t) => (*t).clone(),
+          Stored::String(t) => T_CS!(t),
+          t => T_CS!(t.to_string())
+        };
+
         tags.push(Invocation!(T_CS!("\\lx@tag@intags"), 
           vec![
             Tokens!(T_OTHER!(role)),
-            Invocation!(T_CS!(formatter), vec![Tokens!(T_OTHER!(ttype))], state)
+            Invocation!(formatter, vec![Tokens!(T_OTHER!(ttype))], state)
           ], state)
         ); 
       }
@@ -232,7 +241,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       lx_tags.append(&mut invoked_tag.unlist());
     }
     lx_tags.push(T_END!());
-    println!(" LX TAGS : {:?}\n\n\n", lx_tags);
 
     Ok(Tokens::new(lx_tags))
   });

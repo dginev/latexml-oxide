@@ -751,13 +751,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       if options.locked {
         $state_arg.assign_value(&s!("{}:locked",$cs.get_cs_name()), true, None)
       }
+      let scope = options.scope.clone();
       let constructor = Constructor {
         cs: $cs,
         paramlist: $paramlist,
         replacement: $compiled_replacement,
         options: options};
 
-      $state_arg.install_definition(constructor, None);
+      $state_arg.install_definition(constructor, scope);
   //   before_digest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
   //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),
   //     ($mode ? (sub { $_[0]->beginMode($mode); })
