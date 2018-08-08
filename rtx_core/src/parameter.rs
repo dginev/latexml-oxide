@@ -55,7 +55,17 @@ impl Default for Parameter {
 }
 impl fmt::Debug for Parameter {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "Parameter(name: {:?})", self.name)
+    write!(f, "Parameter(\n\t name: {:?}, novalue:{:?}, semiverbatim:{:?},\n\t optional:{:?}, undigested:{:?}, spec:{:?}\n\t extra: {:?}\n\t reversion: {:?}, before_digest: {:?}, after_digest: {:?} )", 
+    self.name,
+    self.novalue,
+    self.semiverbatim,
+    self.optional,
+    self.undigested,
+    self.spec,
+    self.extra,
+    self.reversion.is_some(),
+    self.before_digest.is_some(),
+    self.after_digest.is_some())
   }
 }
 impl PartialEq for Parameter {
@@ -262,6 +272,15 @@ impl Parameter {
 
     Ok(digested_value)
   }
+
+  pub fn revert(&self, value: Tokens, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+    if let Some(ref reverter) = self.reversion {
+      println!("invoking reversion for {:?}", self);
+      (reverter)(gullet, value.unlist(), self.extra.clone(), state)
+    } else {
+      Ok(value) // TODO: Revert!(value)
+    }
+  }
 }
 
 #[derive(Clone, Debug)]
@@ -272,9 +291,20 @@ pub struct Parameters {
 impl Parameters {
   pub fn get_num_args(&self) -> usize { self.params.iter().filter(|&p| !p.novalue).count() }
 
-  pub fn revert_arguments(&self, _args: Vec<Tokens>, _state: &mut State) -> Tokens {
-    // TODO
-    Tokens!()
+  pub fn revert_arguments(
+    &self,
+    args: Vec<Tokens>,
+    gullet: &mut Gullet,
+    state: &mut State,
+  ) -> Result<Vec<Token>>
+  {
+    let mut tokens = Vec::new();
+    for (parameter, arg) in self.params.iter().zip(args.into_iter()) {
+      if !parameter.novalue {
+        tokens.append(&mut parameter.revert(arg, gullet, state)?.unlist());
+      }
+    }
+    Ok(tokens)
   }
 
   pub fn read_arguments(

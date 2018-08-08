@@ -384,3 +384,15 @@ impl<'a> From<&'a Stored> for Option<::Digested> {
 impl<'a, 'b> From<&'a &'b Stored> for Option<::Digested> {
   fn from(value: &'a &'b Stored) -> Option<::Digested> { (*value).into() }
 }
+
+impl<'a> From<&'a Stored> for Token {
+  fn from(value: &'a Stored) -> Token {
+    match value {
+      Stored::Tokens(ts) => ts.into(),
+      Stored::Token(t) => (*t).clone(),
+      Stored::String(t) => T_CS!(t),
+      t => T_CS!(t.to_string()), /* TODO, is this the right place to default to CS? Do we need a
+                                  * custom method instead? */
+    }
+  }
+}

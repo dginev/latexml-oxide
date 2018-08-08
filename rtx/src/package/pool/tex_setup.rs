@@ -71,16 +71,21 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       }
       Ok(value)
     }),
-    reversion => Some(Rc::new(|_gullet: &mut Gullet, _arg: Vec<Token>, _inner: Vec<Option<Parameters>>, _state: &mut State| {
+    reversion => Some(Rc::new(|gullet: &mut Gullet, mut arg: Vec<Token>, inner: Vec<Option<Parameters>>, state: &mut State| {
      // let mut reverted_inner;
+     println!("-- Plain reversion for arg: {:?}", arg);
      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
-     // for inner_opt in inner.into_iter() {
-     //   reverted_inner = match inner_opt {
-     //     Some(inner_p) => inner_p.revert_arguments(arg, state),
-     //     None => Revert(arg)
-     //   };
-     // }
-     // TODO : push reverted_inner to the read_tokens
+     if !inner.is_empty() {
+      for inner_opt in inner.into_iter() {
+        let mut reverted_inner = match inner_opt {
+          Some(inner_p) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
+          None => Vec::new()
+        };
+        read_tokens.append(&mut reverted_inner);
+      }
+     } else {
+       read_tokens.append(&mut arg); // TODO: implement Revert(arg)
+     }
      read_tokens.push(T_END!());
      Ok(Tokens::new(read_tokens))
     }))

@@ -1047,10 +1047,18 @@ pub fn ref_step_counter(
   };
 
   let refnum = digest_text(Tokens!(T_CS!(s!("\\the{}", ctr))), stomach, state)?;
-  let tags = stomach.digest(
-    Invocation!(T_CS!("\\lx@make@tags"), vec![Tokens!(T_OTHER!(ctype))]),
-    state,
-  )?;
+  let invocation;
+  {
+    let gullet = stomach.get_gullet_mut();
+    invocation = Invocation!(
+      T_CS!("\\lx@make@tags"),
+      vec![Tokens!(T_OTHER!(ctype))],
+      gullet,
+      state
+    )?;
+  }
+
+  let tags = stomach.digest(invocation, state)?;
 
   // Any scopes activated for previous value of this counter (& any nested counters) must be
   // removed. This may also include scopes activated for \label
@@ -1126,17 +1134,25 @@ fn reset_counter(ctr: &str, state: &mut State) {
   return;
 }
 
-pub fn build_invocation(token: Token, args: Vec<Tokens>, state: &mut State) -> Tokens {
+pub fn build_invocation<T: Into<Token>>(
+  token: T,
+  args: Vec<Tokens>,
+  gullet: &mut Gullet,
+  state: &mut State,
+) -> Result<Tokens>
+{
+  let token: Token = token.into();
   // Note: token may have been \let to another defn!
   if let Some(defn) = state.lookup_definition(&token) {
     let mut invoked_tokens = vec![token];
     let mut reverted_args = if let Some(params) = defn.get_parameters() {
-      params.revert_arguments(args, state).unlist()
+      params.revert_arguments(args, gullet, state)?
     } else {
       Vec::new()
     };
     invoked_tokens.append(&mut reverted_args);
-    Tokens::new(invoked_tokens)
+    println!("\nINVOKED TOKENS: {:?}\n\n", invoked_tokens);
+    Ok(Tokens::new(invoked_tokens))
   } else {
     error!(
       target: &s!("undefined:{}", token.get_cs_name()),
@@ -1155,7 +1171,7 @@ pub fn build_invocation(token: Token, args: Vec<Tokens>, state: &mut State) -> T
         wrapped
       }).collect();
     invoked_tokens.append(&mut wrapped_args);
-    Tokens::new(invoked_tokens)
+    Ok(Tokens::new(invoked_tokens))
   }
 }
 

@@ -81,17 +81,23 @@ pub trait Definition: Object {
   fn to_string(&self) -> String { unimplemented!() }
 
   // Return the Tokens that would invoke the given definition with arguments.
-  fn invocation(&mut self, args: Vec<Tokens>, state: &mut State) -> Tokens {
+  fn invocation(
+    &mut self,
+    args: Vec<Tokens>,
+    gullet: &mut Gullet,
+    state: &mut State,
+  ) -> Result<Tokens>
+  {
     let mut invocation_result = Vec::new();
     invocation_result.push(self.get_cs());
 
     match *self.get_parameters() {
       None => {},
-      Some(ref params) => for result_token in params.revert_arguments(args, state).unlist() {
-        invocation_result.push(result_token);
+      Some(ref params) => for result_token in params.revert_arguments(args, gullet, state)? {
+        invocation_result.append(&mut result_token.unlist());
       },
     }
-    Tokens::new(invocation_result)
+    Ok(Tokens::new(invocation_result))
   }
 
   fn get_num_args(&self) -> usize { 0 }

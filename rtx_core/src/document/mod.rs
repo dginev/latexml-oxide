@@ -262,7 +262,7 @@ impl Document {
         // A Proper Box or Whatsit? Absorb it.
         Digested::TBox(digested) => digested.be_absorbed(self, state)?,
         Digested::Whatsit(digested) => digested.be_absorbed(self, state)?,
-        Digested::Postponed(ref t) => unimplemented!(),
+        Digested::Postponed(ref _t) => unimplemented!(),
       };
 
       // TODO: Does the results extension make ANY sense???

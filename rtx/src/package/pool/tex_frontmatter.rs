@@ -204,7 +204,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   // This collects up the various declared ltx:tag's into an ltx:tags
   DefMacro!("\\lx@make@tags {}", sub[gullet, args, state] {
-    unpack_to_string!(args => ttype);
+    unpack!(args => ttype);
     
     let formatters = if let Some(Stored::HashStored(formatters)) = state.lookup_value("type_tag_formatter") {
       Some(formatters.clone()) 
@@ -217,21 +217,13 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       let mut sorted_keys : Vec<&String> = formatters.keys().collect();
       sorted_keys.sort();
       for role in sorted_keys.iter() {
-        let formatter = match formatters.get(*role).unwrap() {
-          Stored::Tokens(ts) => {
-            let t : Token = ts.into();
-            t
-          },
-          Stored::Token(t) => (*t).clone(),
-          Stored::String(t) => T_CS!(t),
-          t => T_CS!(t.to_string())
-        };
+        let formatter = formatters.get(*role).unwrap();
 
         tags.push(Invocation!(T_CS!("\\lx@tag@intags"), 
           vec![
             Tokens!(T_OTHER!(role)),
-            Invocation!(formatter, vec![Tokens!(T_OTHER!(ttype))], state)
-          ], state)
+            Invocation!(formatter, vec![ttype.clone()], gullet, state)?
+          ], gullet, state)?
         ); 
       }
     }

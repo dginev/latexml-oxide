@@ -179,12 +179,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($name:expr,
      $key1:ident => $val1:expr, $state_arg:ident
     ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
+     name => $name.to_string(),
      $key1 => $val1), $state_arg));
 
     ($name:expr,
      $key1:ident => $val1:expr,
      $key2:ident => $val2:expr, $state_arg:ident
     ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
+     name => $name.to_string(),
      $key1 => $val1,
      $key2 => $val2
     ), $state_arg));
@@ -194,6 +196,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key2:ident => $val2:expr,
      $key3:ident => $val3:expr, $state_arg:ident
     ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
+     name => $name.to_string(),
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3
@@ -205,6 +208,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key3:ident => $val3:expr,
      $key4:ident => $val4:expr, $state_arg:ident
     ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
+     name => $name.to_string(),
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3,
@@ -218,6 +222,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key4:ident => $val4:expr,
      $key5:ident => $val5:expr, $state_arg:ident
     ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
+     name => $name.to_string(),
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3,
@@ -232,6 +237,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key4:ident => $val4:expr,
      $key6:ident => $val6:expr, $state_arg:ident
     ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
+     name => $name.to_string(),
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3,
@@ -1749,11 +1755,11 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   /// Invocation(<list of Token>); builds a representation of a command sequence invoked on its
   /// arguments
   macro_rules! Invocation {
-    ($token:expr, $args:expr) => {
-      Invocation!($token, $args, $state)
+    ($token:expr, $args:expr, $gullet:ident) => {
+      Invocation!($token, $args, $gullet, $state)
     };
-    ($token:expr, $args:expr, $state_arg:ident) => {
-      build_invocation($token, $args, $state_arg)
+    ($token:expr, $args:expr, $gullet:ident, $state_arg:ident) => {
+      build_invocation($token, $args, $gullet, $state_arg)
     };
   }
 )}

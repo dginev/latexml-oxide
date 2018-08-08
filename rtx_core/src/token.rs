@@ -205,7 +205,7 @@ impl Catcode {
   }
 }
 
-#[derive(Clone, Hash, Debug, PartialEq)]
+#[derive(Clone, Hash, PartialEq)]
 pub struct Token {
   pub text: String,
   pub code: Catcode,
@@ -220,6 +220,9 @@ impl quote::ToTokens for Token {
     self.code.to_tokens(tokens);
     tokens.append("}")
   }
+}
+impl fmt::Debug for Token {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{:?}", self.text) }
 }
 
 impl Display for Token {

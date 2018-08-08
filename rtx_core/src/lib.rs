@@ -190,7 +190,7 @@ impl BoxOps for Digested {
       Digested::TBox(b) => b.unlist(),
       Digested::List(l) => l.unlist(),
       Digested::Whatsit(w) => w.unlist(),
-      Digested::Postponed(ref t) => unimplemented!(),
+      Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
 
@@ -199,7 +199,7 @@ impl BoxOps for Digested {
       Digested::TBox(b) => b.be_absorbed(document, state),
       Digested::List(l) => l.be_absorbed(document, state),
       Digested::Whatsit(w) => w.be_absorbed(document, state),
-      Digested::Postponed(ref t) => unimplemented!(),
+      Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
 
@@ -230,7 +230,7 @@ impl BoxOps for Digested {
         error!(target: "digested:set_property", "Called set_property on List: {:?}", l)
       },
       Digested::Whatsit(ref mut w) => w.set_property(key, value),
-      Digested::Postponed(ref t) => unimplemented!(),
+      Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
 
@@ -245,7 +245,7 @@ impl BoxOps for Digested {
         None
       },
       Digested::Whatsit(ref w) => w.get_property(key),
-      Digested::Postponed(ref t) => unimplemented!(),
+      Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
   fn get_body(&self) -> Option<&Digested> {
@@ -259,7 +259,7 @@ impl BoxOps for Digested {
         None
       },
       Digested::Whatsit(ref w) => w.get_body(),
-      Digested::Postponed(ref t) => unimplemented!(),
+      Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
 
@@ -268,7 +268,7 @@ impl BoxOps for Digested {
       Digested::TBox(ref b) => b.get_font(),
       Digested::List(ref l) => l.get_font(),
       Digested::Whatsit(ref w) => w.get_font(),
-      Digested::Postponed(ref t) => unimplemented!(),
+      Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
 
