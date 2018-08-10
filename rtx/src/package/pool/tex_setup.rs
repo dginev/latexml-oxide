@@ -79,12 +79,13 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       for inner_opt in inner.into_iter() {
         let mut reverted_inner = match inner_opt {
           Some(inner_p) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
-          None => Vec::new()
+          None => arg.iter().map(|t| t.revert()).collect()
         };
         read_tokens.append(&mut reverted_inner);
       }
      } else {
-       read_tokens.append(&mut arg); // TODO: implement Revert(arg)
+       let mut arg_reverted = arg.iter().map(|a| a.revert()).collect();
+       read_tokens.append(&mut arg_reverted);
      }
      read_tokens.push(T_END!());
      Ok(Tokens::new(read_tokens))
@@ -93,21 +94,37 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefParameterType!("Optional",
     reader => reader!(gullet, inner, _extra, state, {
-      // TODO: default !!!
-      // let value = gullet.read_optional(state);
+      let mut value = gullet.read_optional(state)?;
+      // TODO: Default
       // if (!$value && $default) {
       //   $value = $default; }
-      // elsif ($inner) {
-      //   ($value) = $inner->reparseArgument($gullet, $value); }
-      // value
-      gullet.read_optional(state)
+      if !inner.is_empty() {
+        for inner_opt in inner {
+          if let Some(inner_p) = inner_opt {
+            value = inner_p.reparse_argument(gullet, value, state);
+          }
+        }
+      }
+      Ok(value)
     }),
     optional => true,
     reversion => reversion!(gullet, arg, inner, state, {
       // TODO : default!
       if !arg.is_empty() {
         let mut read_tokens: Vec<Token> = vec![T_OTHER!(s!("["))];
-        // TODO: ($inner ? $inner->revertArguments($arg) : Revert($arg)),
+        let mut reverted_arg = if inner.is_empty() {
+            arg.iter().map(|t| t.revert()).collect()
+        } else {
+          let mut value = Vec::new();
+          for inner_opt in inner.iter() {
+            value = match inner_opt {
+              Some(inner) => inner.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
+              None => arg.iter().map(|t| t.revert()).collect()
+            }
+          }
+          value
+        };
+        read_tokens.append(&mut reverted_arg);
         read_tokens.push(T_OTHER!(s!("]")));
         Ok(Tokens::new(read_tokens))
       } else {
@@ -188,13 +205,19 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     reversion => reversion!(gullet, arg, inner, state, {
       // let mut reverted_inner;
       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
-      // for inner_opt in inner.into_iter() {
-      //   reverted_inner = match inner_opt {
-      //     Some(inner_p) => inner_p.revert_arguments(arg, state),
-      //     None => Revert(arg)
-      //   };
-      // }
-      // TODO : push reverted_inner to the read_tokens
+      if !inner.is_empty() {
+        for inner_opt in inner.into_iter() {
+          let mut reverted_inner = match inner_opt { // TODO: the revert_arguments arg type is confusing me!
+            Some(inner_p) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
+            None => arg.iter().map(|t| t.revert()).collect()
+          };
+          read_tokens.append(&mut reverted_inner);
+        }
+        
+      } else {
+        let mut reverted_arg = arg.iter().map(|t| t.revert()).collect();
+        read_tokens.append(&mut reverted_arg);
+      }
       read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))
     }),
@@ -208,7 +231,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     reversion => reversion!(gullet, arg, inner, state, {
      if !arg.is_empty() {
        let mut read_tokens = vec![T_OTHER!(s!("["))];
-       // TODO: add these: Revert!(arg, state)
+       let mut reverted_arg = arg.iter().map(|a| a.revert()).collect();   
+       read_tokens.append(&mut reverted_arg);
        read_tokens.push(T_OTHER!(s!("]")));
        Ok(Tokens::new(read_tokens))
      } else {
@@ -221,23 +245,29 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefParameterType!("Undigested",
   reader => reader!(gullet, inner, _extra, state, { gullet.read_arg(state)}),
   undigested => true,
-  reversion => reversion!(gullet, arg, inner, state, {
-    unimplemented!()
-    // TODO: add to read_tokens Revert!(arg, state)
-    // let read_tokens = Tokens!(T_BEGIN!(), T_END!());
-    // Ok(read_tokens)
+  reversion => reversion!(gullet, arg, inner, state, {  
+    let mut read_tokens = vec!(T_BEGIN!());
+    let mut reverted_arg = arg.iter().map(|a| a.revert()).collect();
+    read_tokens.append(&mut reverted_arg);
+    read_tokens.push(T_END!());
+    Ok(Tokens::new(read_tokens))
   }));
 
   // Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
   DefParameterType!("OptionalUndigested", 
   reader => reader!(gullet, inner, _extra, state, { gullet.read_optional(state) }),
   undigested => true, optional => true,
-   // TODO
-   reversion => reversion!(gullet, arg, inner, state, {
-     unimplemented!()
-     // ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
-   })
-  );
+  reversion => reversion!(gullet, arg, inner, state, {
+    if arg.is_empty() {
+      Ok(Tokens!())
+    } else {
+      let mut read_tokens = vec!(T_OTHER!("["));
+      let mut reverted_arg = arg.iter().map(|a| a.revert()).collect();
+      read_tokens.append(&mut reverted_arg);
+      read_tokens.push(T_OTHER!("]"));
+      Ok(Tokens::new(read_tokens))
+    }
+  }));
 
   // Read a token as used when defining it, ie. it may be enclosed in braces.
   DefParameterType!("DefToken",

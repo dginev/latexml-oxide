@@ -960,9 +960,6 @@ impl State {
   pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<Stored> {
     let cc = &token.code;
     let name = &token.text;
-    if name.is_empty() {
-      return None;
-    }
     let lookupname = if (cc == &Catcode::ACTIVE)
       || (cc == &Catcode::CS)
       || ((cc == &Catcode::LETTER)

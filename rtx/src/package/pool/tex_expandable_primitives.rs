@@ -14,14 +14,22 @@ fn escapechar(state: &State) -> String {
   }
 }
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
+pub fn load_definitions(core_state: &mut State) -> Result<()> {
+  SetupBindingMacros!(core_state);
 
-  DefConditional!("\\ifx Token Token", sub[gullet, args, inner_state] {
-    unpack!(args => token1, token2);
-    let token1 : Token = token1.into();
-    let token2 : Token = token2.into();
-    let xequals = XEquals!(&token1, &token2, inner_state);
+  DefConditional!("\\if XToken XToken", sub[gullet, args, state] {
+    unpack!(args=>tokens1, tokens2);
+    let token1 : Token = tokens1.into();
+    let token2 : Token = tokens2.into();
+    Ok(token1.get_charcode() == token2.get_charcode())
+  });
+
+
+  DefConditional!("\\ifx Token Token", sub[gullet, args, state] {
+    unpack!(args => tokens1, tokens2);
+    let token1 : Token = tokens1.into();
+    let token2 : Token = tokens2.into();
+    let xequals = XEquals!(&token1, &token2, state);
     Ok(xequals)
   });
 
