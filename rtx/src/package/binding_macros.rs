@@ -177,6 +177,32 @@ macro_rules! afterproc {
   ))
 }
 
+#[macro_export]
+macro_rules! reader {
+  ($gullet:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
+    Rc::new(
+      |$gullet: &mut Gullet,
+       $inner: Vec<Option<Parameters>>,
+       $extra: Vec<Token>,
+       $state: &mut State|
+       -> Result<Tokens> { $body },
+    )
+  };
+}
+
+#[macro_export]
+macro_rules! reversion {
+  ($gullet:ident, $arg:ident, $inner:ident, $state:ident, $body:block) => {
+    Some(Rc::new(
+      |$gullet: &mut Gullet,
+       mut $arg: Vec<Token>,
+       $inner: Vec<Option<Parameters>>,
+       $state: &mut State|
+       -> Result<Tokens> { $body },
+    ))
+  };
+}
+
 // Discussion: It is unclear what the best authoring syntax is for our family of latexml binding
 // macros. One idea is to keep them very close to the Rust internals, but we suffer from a variety
 // of boilerplate, such as needing to spell out `key => Some(value.to_string())`, rather than a

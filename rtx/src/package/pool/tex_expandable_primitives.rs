@@ -48,7 +48,7 @@ Let!("\\protect", "\\relax");
 //======================================================================
 
 
-  DefParameterType!("CSName", reader => Rc::new(|gullet: &mut Gullet, _inner: Vec<Option<Parameters>>, _extra: Vec<Token>, state: &mut State| {
+  DefParameterType!("CSName", reader => reader!(gullet, inner, extra, state, {
     let mut cs = escapechar(state);
     // keep newlines from having \n inside!
     while let Some(token) = gullet.read_x_token(true, true, state)? {
