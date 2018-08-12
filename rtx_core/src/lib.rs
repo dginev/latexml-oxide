@@ -236,10 +236,7 @@ impl BoxOps for Digested {
 
   fn get_property(&self, key: &str) -> Option<&Stored> {
     match *self {
-      Digested::TBox(ref b) => {
-        error!(target: "digested:get_property", "Called get_property on Box: {:?}", b);
-        None
-      },
+      Digested::TBox(ref b) => b.get_property(key),
       Digested::List(ref l) => {
         error!(target: "digested:get_property", "Called get_property on List: {:?}", l);
         None
