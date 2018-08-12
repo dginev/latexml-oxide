@@ -1151,7 +1151,6 @@ pub fn build_invocation<T: Into<Token>>(
       Vec::new()
     };
     invoked_tokens.append(&mut reverted_args);
-    println!("\nINVOKED TOKENS: {:?}\n\n", invoked_tokens);
     Ok(Tokens::new(invoked_tokens))
   } else {
     error!(

@@ -620,6 +620,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // DefMacro('\fnsymbol{}', sub {
   //     ExplodeText(radix_format(CounterValue(ToString(Expand($_[1])))->valueOf, @fnsymbols)); });
 
+  // TODO
+  DefMacro!("\\normalfont", "");
 
   Ok(())
 }

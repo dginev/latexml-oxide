@@ -73,7 +73,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }),
     reversion => reversion!(gullet, arg, inner, state, {
      // let mut reverted_inner;
-     println!("-- Plain reversion for arg: {:?}", arg);
      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
      if !inner.is_empty() {
       for inner_opt in inner.into_iter() {
@@ -137,7 +136,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefParameterType!("SkipSpaces",
     reader => reader!(gullet, inner, _extra, state, {
       gullet.skip_spaces(state);
-      Ok(Tokens!())
+      Ok(Tokens!(T_OTHER!("")))
     }),
     novalue => true
   );
@@ -179,7 +178,10 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Read a matching keyword, eg. Match:=
   DefParameterType!("Match",
     reader => reader!(gullet, _inner, extra, state, {
-      gullet.read_match(extra, state)
+      match gullet.read_match(&extra, state)? {
+        Some(t) => Ok(Tokens!(t)), 
+        None => Ok(Tokens!())
+      }
     })
   );
 
@@ -339,6 +341,31 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       gullet.read_until_brace(state)
     })
   );
+
+
+//**********************************************************************
+// LaTeX has a very particular notion of "Undefined",
+// so let's get that squared away at the outset; it's useful for TeX, too!
+// Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as \relax
+DefMacro!("\\@ifundefined{}{}{}", sub[gullet, args, inner_state] {
+  unpack!(args=>name, if_token, else_token);
+  let cs = T_CS!(&format!("\\{}", Expand!(name,gullet,inner_state)?.to_string()));
+  if IsDefined!(&cs, inner_state) {
+    Ok(else_token)
+  } else {
+    Let!(cs, "\\relax", inner_state); // Yuck, but traditional!
+    Ok(if_token)
+  }
+});
+
+// sub isDefinable {
+//   my ($token) = @_;
+//   return unless $token;
+//   my $meaning = LookupMeaning($token);
+//   my $name = $token->getString; $name =~ s/^\\//;
+//   return (((!defined $meaning) || ($meaning eq LookupMeaning(T_CS('\relax'))))
+//       && (($name ne 'relax') && ($name !~ /^end/))); }
+
 
   Ok(())
 }

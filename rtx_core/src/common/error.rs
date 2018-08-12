@@ -157,6 +157,16 @@ impl From<String> for Error {
   }
 }
 
+impl<'a> From<&'a str> for Error {
+  fn from(err: &'a str) -> Error {
+    Error {
+      target: ErrorTarget::Document,
+      category: ErrorCategory::Generic(From::from(err.to_owned())),
+      message: err.to_owned(),
+    }
+  }
+}
+
 impl From<()> for Error {
   fn from(_e: ()) -> Error {
     Error {

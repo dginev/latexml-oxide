@@ -233,7 +233,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       lx_tags.append(&mut invoked_tag.unlist());
     }
     lx_tags.push(T_END!());
-
     Ok(Tokens::new(lx_tags))
   });
 
@@ -289,8 +288,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefMacro!("\\lx@refnum@compose{}{}",  "\\expandafter\\lx@refnum@compose@\\expandafter{#2}{#1}");
   DefMacro!("\\lx@refnum@compose@{}{}", "\\if.#1.#2\\else#2\\space#1\\fi");
-  //###DefMacro!("\lx@refnum@compose@{}{}", "\if.#1.#2\else#2~#1\fi");
-
+  
   DefMacro!("\\lx@fnum@@{}",
     "{\\normalfont\\@ifundefined{fnum@font@#1}{}{\\csname fnum@font@#1\\endcsname}\\@ifundefined{fnum@#1}{\\lx@@fnum@@{#1}}{\\csname fnum@#1\\endcsname}}");
 
@@ -317,7 +315,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "\\@ifundefined{#1typerefname}{\\@ifundefined{#1name}{}{\\lx@refnum@compose{\\csname #1name\\endcsname}{\\lx@the@@{#1}}}}{\\lx@refnum@compose{\\csname #1typerefname\\endcsname}{\\lx@the@@{#1}}}");
 
   AssignMapping!("type_tag_formatter", "typerefnum" => "\\lx@typerefnum@@");
-
 
   Ok(())
 }

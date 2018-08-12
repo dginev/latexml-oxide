@@ -350,6 +350,11 @@ impl Gullet {
         },
       };
     }
+    if tokens.is_empty() {
+      // Default to empty token list, to signify success (TODO, or improve to
+      // Result<Option<Tokens>> ??)
+      tokens.push(T_OTHER!(""));
+    }
     Ok(Tokens::new(tokens))
   }
 
@@ -386,23 +391,40 @@ impl Gullet {
 
   /// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
   /// In list context, also returns the found delimiter.
-  pub fn read_until(&mut self, _delims: Vec<Token>, _state: &mut State) -> Result<Tokens> {
-    // my ($n, $found, @tokens) = (0);
-    // while (!defined($found = self.readMatch(@delims))) {
-    //   my $token = self.readToken();    // Copy next token to args
-    //   return unless defined $token;
-    //   push(@tokens, $token);
-    //   $n++;
-    //   if ($$token[1] == CC_BEGIN) {      # And if it's a BEGIN, copy till balanced END
-    //     push(@tokens, self.readBalanced->unlist, T_END); } }
-    // # Notice that IFF the arg looks like {balanced}, the outer braces are stripped
-    // # so that delimited arguments behave more similarly to simple, undelimited arguments.
-    // if (($n == 1) && ($tokens[0][1] == CC_BEGIN)) {
-    //   shift(@tokens); pop(@tokens); }
-    // return (wantarray ? (Tokens(@tokens), $found) : Tokens(@tokens)); }
+  pub fn read_until(&mut self, delims: Vec<Token>, state: &mut State) -> Result<Tokens> {
+    let mut n = 0;
+    let mut found = None;
+    let mut tokens: Vec<Token> = Vec::new();
 
-    // TODO
-    Ok(Tokens!())
+    loop {
+      found = self.read_match(&delims, state)?;
+      if found.is_some() {
+        break;
+      } else {
+        match self.read_token(state) {
+          // Copy next token to args
+          None => return Ok(Tokens!()),
+          Some(token) => {
+            let catcode = token.get_catcode();
+            tokens.push(token);
+            n += 1;
+            if catcode == Catcode::BEGIN {
+              // And if it's a BEGIN, copy till balanced END
+              let mut balanced_tokens = self.read_balanced(state)?.unlist();
+              tokens.append(&mut balanced_tokens);
+              tokens.push(T_END!());
+            }
+          },
+        }
+      }
+    }
+
+    // Notice that IFF the arg looks like {balanced}, the outer braces are stripped
+    // so that delimited arguments behave more similarly to simple, undelimited arguments.
+    if n == 1 && tokens[0].get_catcode() == Catcode::BEGIN {
+      tokens = tokens[1..tokens.len() - 1].to_vec();
+    }
+    Ok(Tokens::new(tokens))
   }
 
   pub fn read_until_brace(&mut self, state: &mut State) -> Result<Tokens> {
@@ -418,6 +440,11 @@ impl Gullet {
         break;
       }
       tokens.push(token);
+    }
+    if tokens.is_empty() {
+      tokens.push(T_OTHER!(""));
+      // TODO: we need a non-empty Tokens object to pass the success check in parameter::read
+      // is there a better approach? Is returning Result<Option<Tokens>> cleaner? (I guess yes ...)
     }
     Ok(Tokens::new(tokens))
   }
@@ -458,7 +485,7 @@ impl Gullet {
       None => Ok(Tokens!()),
       Some(t) => {
         if t.code == Catcode::OTHER && t.text == "[" {
-          self.read_until(vec![T_OTHER!(s!("]"))], state)
+          self.read_until(vec![T_OTHER!("]")], state)
         } else {
           self.unread(Tokens!(t));
           Ok(Tokens!()) // TODO: default
@@ -505,7 +532,7 @@ impl Gullet {
 
   /// Match the input against one of the Token or Tokens in @choices; return the matching one or
   /// undef.
-  pub fn read_match(&mut self, choices: Vec<Token>, state: &mut State) -> Result<Tokens> {
+  pub fn read_match(&mut self, choices: &Vec<Token>, state: &mut State) -> Result<Option<Token>> {
     for choice in choices {
       let mut to_match: Vec<Token> = choice.unlist().into_iter().rev().collect();
       let mut matched = Vec::new();
@@ -539,7 +566,7 @@ impl Gullet {
         }
       }
       if to_match.is_empty() {
-        return Ok(Tokens!(choice)); // All matched!!!
+        return Ok(Some(choice.clone())); // All matched!!!
       } else {
         for matched_token in matched.into_iter().rev() {
           match self.mouth.as_mut() {
@@ -549,7 +576,7 @@ impl Gullet {
         }
       }
     }
-    Ok(Tokens!())
+    Ok(None)
   }
 
   ///======================================================================

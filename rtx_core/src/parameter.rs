@@ -97,11 +97,14 @@ impl Parameter {
             _ => match Parameter::check_reader_function(s!("Read{}", &self.name)) {
               Some(reader) => Some(Parameter {
                 reader,
+                optional: true,
                 ..Parameter::default()
               }),
               None => match Parameter::check_reader_function(s!("Read{}", basetype)) {
                 Some(reader) => Some(Parameter {
                   reader,
+                  optional: true,
+                  novalue: true,
                   ..Parameter::default()
                 }),
                 None => fatal!(
@@ -122,11 +125,15 @@ impl Parameter {
             _ => match Parameter::check_reader_function(self.name.clone()) {
               Some(reader) => Some(Parameter {
                 reader,
+                optional: true,
+                novalue: true,
                 ..Parameter::default()
               }),
               None => match Parameter::check_reader_function(s!("Read{}", basetype)) {
                 Some(reader) => Some(Parameter {
                   reader,
+                  optional: true,
+                  novalue: true,
                   ..Parameter::default()
                 }),
                 None => None,
@@ -177,7 +184,7 @@ impl Parameter {
   pub fn read(
     &self,
     gullet: &mut Gullet,
-    _fordefn: &Definition,
+    fordefn: &Definition,
     state: &mut State,
   ) -> Result<Tokens>
   {
@@ -196,19 +203,22 @@ impl Parameter {
       state.begin_semiverbatim(None);
     }
     let closure: &ReaderClosure = &self.reader;
-    let value = closure(gullet, self.extra.clone(), vec![], state)?;
+    let mut value = closure(gullet, self.extra.clone(), vec![], state)?;
     // TODO:
     // $value = $value->neutralize if $$self{semiverbatim} && (ref $value)
     //   && $value->can('neutralize');
     if self.semiverbatim {
       state.end_semiverbatim();
     }
-    // TODO:
-    // if ((!defined $value) && !$$self{optional}) {
-    //   Error('expected', $self, $gullet,
-    //     "Missing argument " . Stringify($self) . " for " . Stringify($fordefn),
-    //     $gullet->showUnexpected);
-    //   $value = T_OTHER('missing'); }
+
+    if !self.optional && value.is_empty() {
+      error!(
+        target: &format!("expected:{:?}", self),
+        "Missing argument for TODO:fordefn"
+      );
+      //     $gullet->showUnexpected);
+      value = Tokens!(T_OTHER!("missing"));
+    }
 
     Ok(value)
   }
@@ -275,10 +285,9 @@ impl Parameter {
 
   pub fn revert(&self, value: Tokens, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     if let Some(ref reverter) = self.reversion {
-      println!("invoking reversion for {:?}", self);
       (reverter)(gullet, value.unlist(), self.extra.clone(), state)
     } else {
-      Ok(value) // TODO: Revert!(value)
+      Ok(Tokens::new(value.revert()))
     }
   }
 }
