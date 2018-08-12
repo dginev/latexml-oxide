@@ -484,6 +484,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // See frontmatter support in TeX.ltxml
   DefMacro!("\\title{}", "\\@add@frontmatter{ltx:title}{#1}");
 
+  DefMacro!("\\sectionmark{}",       "");
+  DefMacro!("\\subsectionmark{}",    "");
+  DefMacro!("\\subsubsectionmark{}", "");
+  DefMacro!("\\paragraphmark{}",     "");
+  DefMacro!("\\subparagraphmark{}",  "");
+
   //======================================================================
   // C.6.2 List-Making environments
   //======================================================================
@@ -622,6 +628,45 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   // TODO
   DefMacro!("\\normalfont", "");
+
+
+  //======================================================================
+  // Hair
+  DefPrimitive!("\\makeatletter", sub[stomach, whatsit, state] { state.assign_catcode('@', Catcode::LETTER, Some(Scope::Local)); Ok(vec![]) });
+  DefPrimitive!("\\makeatother",  sub[stomach, whatsit, state] { state.assign_catcode('@', Catcode::OTHER, Some(Scope::Local)); Ok(vec![]) });
+
+  //**********************************************************************
+  //**********************************************************************
+  // Sundry (is this ams ?)
+  DefMacro!("\\textprime", "\u{00B4}");    // ACUTE ACCENT
+
+  Let!("\\endgraf", "\\par");
+  Let!("\\endline", "\\cr");
+  //**********************************************************************
+  // Should be defined in each (or many) package, but it"s not going to
+  // get set correctly or maintained, so...
+  DefMacro!("\\fileversion", "");
+  DefMacro!("\\filedate", "");
+
+  // Ultimately these may be overridden by babel, or otherwise,
+  // various of these are defined in various places by different classes.
+  DefMacro!("\\chaptername", "Chapter");
+  DefMacro!("\\partname", "Part");
+  // The rest of these are defined in some classes, but not most.
+  //DefMacroI("\sectionname",       undef, "Section");
+  //DefMacroI("\subsectionname",    undef, "Subsection");
+  //DefMacroI("\subsubsectionname", undef, "Subsubsection");
+  //DefMacroI("\paragraphname",     undef, "Paragraph");
+  //DefMacroI("\subparagraphname",  undef, "Subparagraph");
+
+  DefMacro!("\\appendixname", "Appendix");
+  // These aren"t defined in LaTeX,
+  // these definitions will give us more meaningful typerefnum"s
+  DefMacro!("\\sectiontyperefname",       "\\lx@sectionsign\\lx@ignorehardspaces");
+  DefMacro!("\\subsectiontyperefname",    "\\lx@sectionsign\\lx@ignorehardspaces");
+  DefMacro!("\\subsubsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
+  DefMacro!("\\paragraphtyperefname",     "\\lx@paragraphsign\\lx@ignorehardspaces");
+  DefMacro!("\\subparagraphtyperefname",  "\\lx@paragraphsign\\lx@ignorehardspaces");
 
   Ok(())
 }

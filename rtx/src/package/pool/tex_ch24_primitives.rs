@@ -94,6 +94,36 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   // // DefPrimitive('\shipout ??
   DefPrimitiveI!("\\ignorespaces SkipSpaces", noprimitive!());
 
+  DefPrimitive!("\\lx@ignorehardspaces", sub[stomach, whatsit, state] {
+    let mut boxes = Vec::new();
+    while let Some(token) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
+      boxes = stomach.invoke_token(token, state)?;
+      if boxes.is_empty() {
+        break;
+      }
+      while !boxes.is_empty() {
+        let is_space : bool;
+        {
+          is_space = if let Some(Stored::Bool(space_bool)) = boxes[0].get_property("isSpace") {
+            *space_bool 
+          } else {
+            false
+          };
+        }
+        if is_space {
+          boxes = boxes[1..].to_vec();
+        } else {
+          break;
+        }
+      }
+      
+      if !boxes.is_empty() {
+        break;
+      }
+    }
+    Ok(boxes)
+  });
+
   // // \afterassignment saves ONE token (globally!) to execute after the next assignment
   // DefPrimitive('\afterassignment Token', sub { AssignValue(afterAssignment => $_[1], 'global');
   // }); // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the
