@@ -17,6 +17,17 @@ fn escapechar(state: &State) -> String {
 pub fn load_definitions(core_state: &mut State) -> Result<()> {
   SetupBindingMacros!(core_state);
 
+  // DefConditional('\ifnum Number Token Number',       sub { compare($_[1], $_[2], $_[3]); });
+  // DefConditional('\ifdim Dimension Token Dimension', sub { compare($_[1], $_[2], $_[3]); });
+  // DefConditional('\ifodd Number',                    sub { $_[1]->valueOf % 2; });
+
+  // NOTE: We don't KNOW if we're in vertical, horizontal or inner mode!!!!!!!
+  DefConditional!("\\ifvmode", sub[gullet,args,state] {Ok(false)});
+  DefConditional!("\\ifhmode", sub[gullet,args,state] {Ok(false)});
+  DefConditional!("\\ifinner", sub[gullet,args,state] {Ok(false)});
+  
+  DefConditional!("\\ifmmode", sub[gullet,args,state] {Ok(state.lookup_bool("IN_MATH"))});
+
   DefConditional!("\\if XToken XToken", sub[gullet, args, state] {
     unpack!(args=>tokens1, tokens2);
     let token1 : Token = tokens1.into();

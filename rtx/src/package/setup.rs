@@ -1630,7 +1630,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     prim_options.locked = false;
     prim_options.font = None;
     let scope = prim_options.scope.clone();
-    let reqfont = prim_options.font.clone();
+    let reqfont = prim_options.font.clone().unwrap_or_else(|| Font::default());
     $state_arg.install_definition(MathPrimitive{
       cs: $cs.clone(),
       paramlist: None, // never any parameters, this is intentional
@@ -1638,7 +1638,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         // let locator    = $stomach->getGullet->getLocator;
         let mut properties = HashMap::new(); // TODO: sync with perl master here
         properties.insert(s!("mode"), Stored::String(String::from("math")));
-        let font = state.lookup_font().unwrap().merge(reqfont.clone().unwrap()).specialize(&$presentation);
+        // TODO: Improve font precision here, the defaults may not belong in this lookup
+        let font = state.lookup_font().unwrap_or_else(|| Rc::new(Font::default())).merge(reqfont.clone()).specialize(&$presentation);
         let font = Rc::new(font);
         // foreach my $key (keys %properties) {
         //   my $value = $properties{$key};

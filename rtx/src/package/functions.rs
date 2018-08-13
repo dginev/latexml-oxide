@@ -585,7 +585,7 @@ pub fn def_conditional(
     custom => {
       if CONDITIONAL_REGEX.is_match(custom) {
         let captures = CONDITIONAL_REGEX.captures(custom).unwrap();
-        let name = captures.get(0).map_or("", |m| m.as_str()).to_string();
+        let name = captures.get(1).map_or("", |m| m.as_str()).to_string();
         if !name.is_empty() && name != "case" && test.is_none() {
           // user-defined conditional, like with \newif
           // Note: setting up these macros is compile-time expensive, maybe there is some way to
