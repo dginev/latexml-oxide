@@ -14,7 +14,6 @@ use std::iter;
 use common::error::*;
 use common::font::Font;
 use common::store::Stored;
-use common::xml::XML_NS;
 use state::State;
 
 use document::resource::Resource;

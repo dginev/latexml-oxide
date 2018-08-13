@@ -6,6 +6,7 @@ use std::rc::Rc;
 use common::dimension::Dimension;
 use common::font::Font;
 use common::glue::{Glue, MuGlue};
+use common::ligature::Ligature;
 use common::number::Number;
 use definition::conditional::{Conditional, IfFrame};
 use definition::constructor::Constructor;
@@ -79,6 +80,7 @@ pub enum Stored {
   Digested(Rc<::Digested>),
   Parameter(Parameter),
   Font(Rc<Font>),
+  Ligature(Box<Ligature>),
 }
 
 impl fmt::Debug for Stored {
@@ -115,6 +117,7 @@ impl fmt::Debug for Stored {
       HashStored(ref hos) => write!(f, "HashStored[{:?}]", hos),
       HashTagData(ref htd) => write!(f, "HashTagData[{:?}]", htd),
       HashStr(ref hstr) => write!(f, "HashStr[{:?}]", hstr),
+      Ligature(ref lig) => write!(f, "Ligature[{:?}]", lig),
     }
   }
 }
@@ -300,6 +303,15 @@ impl From<RegisterValue> for Stored {
 impl From<Rc<RefCell<IfFrame>>> for Stored {
   fn from(frame: Rc<RefCell<IfFrame>>) -> Stored { Stored::IfFrame(frame) }
 }
+
+impl From<Box<Ligature>> for Stored {
+  fn from(lig: Box<Ligature>) -> Stored { Stored::Ligature(lig) }
+}
+
+impl From<Ligature> for Stored {
+  fn from(lig: Ligature) -> Stored { Box::new(lig).into() }
+}
+
 // Reverse direction -- cast Stored back into concrete types, with meaningfull fallbacks where
 // impossible
 

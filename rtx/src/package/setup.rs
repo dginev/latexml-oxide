@@ -1761,4 +1761,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       build_invocation($token, $args.into_iter().map(|arg| arg.into()).collect(), $gullet, $state_arg)
     };
   }
+
+  macro_rules! DefLigature {
+    ($regexp:expr, $replacement:expr) => (DefLigature!($regexp, $replacement, $state));
+    ($regexp:expr, $replacement:expr, $state_arg:ident) => {
+      $state_arg.unshift_value("TEXT_LIGATURES",vec!["test".into()]);
+        // Box::new(Ligature {regexp: $regexp,
+        //   code: sub { $_[0] =~ s/$regexp/$replacement/g; $_[0]; },
+        //   %options });
+    }
+  }
 )}
