@@ -6,6 +6,7 @@ pub use std::rc::Rc;
 
 pub use rtx_core::common::error::*;
 pub use rtx_core::common::font::Font;
+pub use rtx_core::common::ligature::Ligature;
 pub use rtx_core::common::number::Number;
 pub use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 pub use rtx_core::definition::constructor::ConstructorOptions;

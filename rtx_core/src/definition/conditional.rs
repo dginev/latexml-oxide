@@ -171,7 +171,7 @@ impl Conditional {
       ifid: ifid,
     }));
     state.if_frame = Some(if_frame.clone());
-    state.unshift_value("if_stack", vec![if_frame.clone().into()]);
+    state.unshift_value("if_stack", vec![if_frame.clone()]);
 
     let args = self.read_arguments(gullet, state)?;
 

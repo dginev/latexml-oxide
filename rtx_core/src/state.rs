@@ -729,7 +729,8 @@ impl State {
     }
   }
 
-  pub fn unshift_value(&mut self, key: &str, values: Vec<Stored>) {
+  pub fn unshift_value<T: Into<Stored>>(&mut self, key: &str, values: Vec<T>) {
+    let values: Vec<Stored> = values.into_iter().map(|v: T| v.into()).collect();
     if self.value.get(key).is_none() {
       self.assign_internal(
         TableName::Value,

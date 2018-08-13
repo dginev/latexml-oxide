@@ -9,7 +9,7 @@ pub type FontTestClosure = Rc<Fn(&Font) -> bool>;
 pub struct Ligature {
   pub regex: String,
   pub code: LigatureClosure,
-  pub font_test: FontTestClosure,
+  pub font_test: Option<FontTestClosure>,
 }
 
 impl fmt::Debug for Ligature {

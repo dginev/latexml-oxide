@@ -1763,12 +1763,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! DefLigature {
-    ($regexp:expr, $replacement:expr) => (DefLigature!($regexp, $replacement, $state));
-    ($regexp:expr, $replacement:expr, $state_arg:ident) => {
-      $state_arg.unshift_value("TEXT_LIGATURES",vec!["test".into()]);
-        // Box::new(Ligature {regexp: $regexp,
-        //   code: sub { $_[0] =~ s/$regexp/$replacement/g; $_[0]; },
-        //   %options });
+    ($regex:expr, $replacement:expr) => (DefLigature!($regex, $replacement, $state));
+    ($regex:expr, $replacement:expr, $state_arg:ident) => {
+      let regex_compiled = Regex::new($regex).unwrap();
+      $state_arg.unshift_value("TEXT_LIGATURES",vec![
+        Ligature {regex: $regex.to_string(),
+          code: Rc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string()),
+          font_test: None }]);
+
     }
   }
 )}
