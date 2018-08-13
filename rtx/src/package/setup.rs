@@ -1758,7 +1758,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       Invocation!($token, $args, $gullet, $state)
     };
     ($token:expr, $args:expr, $gullet:ident, $state_arg:ident) => {
-      build_invocation($token, $args, $gullet, $state_arg)
+      build_invocation($token, $args.into_iter().map(|arg| arg.into()).collect(), $gullet, $state_arg)
     };
   }
 )}

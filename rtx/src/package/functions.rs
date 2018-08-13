@@ -6,6 +6,7 @@ use std::rc::Rc;
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
 use rtx_core::common::number::Number;
+use rtx_core::common::xml::XML_NS;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::expandable::Expandable;
 use rtx_core::definition::register::{
@@ -737,7 +738,7 @@ pub fn generate_id(
       .findnode("ancestor::*[@xml:id][1]", Some(node), state)
       .unwrap_or_else(|| document.get_document().get_root_element().unwrap());
     //// Old versions don't like ancestor.getAttribute('xml:id');
-    let ancestor_id = ancestor.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace");
+    let ancestor_id = ancestor.get_attribute_ns("id", XML_NS);
     // If we've got no ancestor_id, then we've got no ancestor (no document yet!),
     // or ancestor IS the root element (but without an id);
     // If we also have no prefix, we'll end up with an illegal id (just digits)!!!

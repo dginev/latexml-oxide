@@ -6,6 +6,7 @@ extern crate lazy_static;
 extern crate log;
 
 extern crate ansi_term;
+extern crate dirs;
 extern crate glob;
 extern crate libxml;
 extern crate quote;
@@ -178,8 +179,23 @@ impl fmt::Debug for Digested {
   }
 }
 
+impl<'a> From<&'a String> for Digested {
+  fn from(value: &'a String) -> Digested {
+    Digested::TBox(Box::new(Tbox {
+      text: value.to_string(),
+      ..Tbox::default()
+    }))
+  }
+}
+
 impl<'a> From<&'a Digested> for Option<::Digested> {
   fn from(value: &'a Digested) -> Option<::Digested> { Some(value.clone()) }
+}
+impl<'a> From<&'a Digested> for Tokens {
+  fn from(value: &'a Digested) -> Tokens { value.revert() }
+}
+impl<'a> From<Digested> for Tokens {
+  fn from(value: Digested) -> Tokens { value.revert() }
 }
 
 impl Default for Digested {

@@ -229,7 +229,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       if ctr.is_empty() {
         ctr = stype
       };
-      let mut tokens: Vec<Token> = Vec::new();
+      let mut tokens: Vec<Token>;
       if !flag.is_empty() {
         // No number, not in TOC
         tokens = vec![
@@ -300,19 +300,29 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         let toctitle = if toctitle_arg.to_string().is_empty() {
           toctitle_arg
         } else {
-          title
+          title.clone()
         };
-        // TODO!
-        // let xtitle    = stomach.digest(Invocation!(T_CS!("\\lx@format@title@@"), vec![stype, title]), state)?;
-        // let xtoctitle = stomach.digest(Invocation!(T_CS!("\\lx@format@toctitle@@"), vec![stype, toctitle]), state)?;
-        let xtitle = Stored::String("xtitle".into());
-        let xtoctitle = Stored::String("xtoctitle".into());
         
-        if xtoctitle.to_string() != xtitle.to_string() {
-          props.insert(s!("toctitle"), xtoctitle);
+        let invoked_title;
+        {
+          let gullet = stomach.get_gullet_mut();
+          invoked_title = Invocation!(T_CS!("\\lx@format@title@@"), vec![&stype, &title], gullet, state)?;
         }
-        props.insert(s!("title"), xtitle);
-        //println!("\n\n\n EXECUTED PROPERTIES:\n {:?}\n", props);
+        let xtitle    = stomach.digest(invoked_title, state)?;
+        props.insert(s!("title"), xtitle.into());
+
+        // TODO
+        // let invoked_toctitle;
+        // {
+        //   let gullet = stomach.get_gullet_mut();
+        //   invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"), vec![&stype, &toctitle], gullet, state)?;
+        // }
+        // let xtoctitle = stomach.digest(invoked_toctitle, state)?;
+        //
+        // if xtoctitle.to_string() != xtitle.to_string() {
+        //   props.insert(s!("toctitle"), xtoctitle.into());
+        // }
+        
         Ok(props)
       })
    );

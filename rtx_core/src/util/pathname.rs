@@ -1,3 +1,4 @@
+use dirs;
 use std::env;
 use std::path::{Path, PathBuf};
 // use regex::Regex;
@@ -21,7 +22,7 @@ impl Default for FindOptions {
 static LITERAL: &'static str = "literal:";
 static HOME_TILDE: &'static str = "~";
 lazy_static! {
-  static ref HOME_PATH : String = match env::home_dir() {
+  static ref HOME_PATH : String = match dirs::home_dir() {
     Some(val) => val.to_string_lossy().to_string(),
     _ => s!("~"),
   };

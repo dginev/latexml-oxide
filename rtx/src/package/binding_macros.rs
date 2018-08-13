@@ -225,6 +225,7 @@ macro_rules! prop_digested {
     match $props.get($key) {
       Some(Stored::VecDigested(vd)) => vd.clone(),
       Some(Stored::Digested(d)) => vec![(**d).clone()],
+      Some(Stored::String(s)) => vec![s.into()],
       _ => Vec::new(),
     }
   };

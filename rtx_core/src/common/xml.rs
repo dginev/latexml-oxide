@@ -2,6 +2,9 @@ use libxml::tree::{Document, Node, NodeType};
 use libxml::xpath::Context;
 use std::collections::HashMap;
 
+pub const XMLNS_NS: &'static str = "http://www.w3.org/2000/xmlns/";
+pub const XML_NS: &'static str = "http://www.w3.org/XML/1998/namespace";
+
 pub struct XPath<'xp> {
   context: Context<'xp>,
 }

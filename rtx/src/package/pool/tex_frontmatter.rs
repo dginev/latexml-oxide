@@ -316,5 +316,35 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   AssignMapping!("type_tag_formatter", "typerefnum" => "\\lx@typerefnum@@");
 
+  //----------------------------------------------------------------------
+  // The following macros provide similar customization for titles & toctitles
+  // in particular for supporting localization for different languages.
+  // Redefine these if you want to assemble the name (eg. \chaptername), refnum and titles differently
+  //----------------------------------------------------------------------
+  // \lx@format@title@@{type}{title}
+  // Format a title (or caption) appropriately for type.
+  // Customize by defining \format@title@type{title}
+  // Default composes \lx@fnum@@{type} space title.
+  DefMacro!("\\lx@format@title@@{}{}",
+    "\\lx@@format@title@@{#1}{{\\@ifundefined{format@title@font@#1}{}{\\csname format@title@font@#1\\endcsname}#2}}");
+  DefMacro!("\\lx@@format@title@@{}{}",
+    "{\\@ifundefined{format@title@#1}{\\lx@@compose@title{\\lx@fnum@@{#1}}{#2}}{\\csname format@title@#1\\endcsname{#2}}}");
+
+  // \\lx@format@toctitle@@{type}{toctitle}
+  // Similar for toctitle, typically briefer
+  // Customize by defining \\format@toctitle@type{title}
+  // Default composes \\lx@fnum@toc@@{type} space title.
+  DefMacro!("\\lx@format@toctitle@@{}{}",
+    "\\lx@@format@toctitle@@{#1}{{\\@ifundefined{format@toctitle@font@#1}{}{\\csname format@toctitle@font@#1\\endcsname}#2}}");
+
+  DefMacro!("\\lx@@format@toctitle@@{}{}",
+    "{\\@ifundefined{format@toctitle@#1}{\\lx@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}{\\csname format@toctitle@#1\\endcsname{#2}}}");
+
+  DefMacro!("\\lx@@compose@title{}{}", "\\lx@tag[][ ]{#1}#2");
+
+  // NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the type.
+  // This would be useful for the titles in links; thus can be plain (unicode) text.
+
+
   Ok(())
 }

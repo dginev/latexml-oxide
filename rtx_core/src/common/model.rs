@@ -6,7 +6,7 @@ use std::io::BufReader;
 
 use common::error::*;
 use common::relaxng::Relaxng;
-use common::xml::XPath;
+use common::xml::{XPath, XML_NS};
 use document::Document;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::Node;
@@ -79,8 +79,8 @@ impl Model {
   pub fn new() -> Self {
     let mut model = Model::default();
     // model.xpath.register_function("match-font", |x, y| {font::match_font(x,y)})
-    model.register_namespace("xml", Some(s!("http://www.w3.org/XML/1998/namespace")));
-    model.register_document_namespace("xml", Some(s!("http://www.w3.org/XML/1998/namespace")));
+    model.register_namespace("xml", Some(XML_NS.to_string()));
+    model.register_document_namespace("xml", Some(XML_NS.to_string()));
     model
   }
 

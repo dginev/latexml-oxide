@@ -14,6 +14,7 @@ use std::iter;
 use common::error::*;
 use common::font::Font;
 use common::store::Stored;
+use common::xml::XML_NS;
 use state::State;
 
 use document::resource::Resource;
@@ -1266,8 +1267,34 @@ impl Document {
     if key == "xml:id" {
       // If it's an ID attribute
       // value = self.record_id(value, node);    // Do id book keeping
-      // node.set_attribute_ns(XML_NS, "id", value); }    // and bypass all ns stuff
-      node.set_attribute("id", value)?;
+      // TODO: Need to improve Namespace ergonomics, also in rust-libxml
+      // let node_ns = self
+      //   .document
+      //   .get_root_element()
+      //   .unwrap()
+      //   .get_namespace_declarations()
+      //   .into_iter()
+      //   .find(|ns| ns.get_href() == XML_NS)
+      //   .unwrap_or_else(|| {
+      //     node
+      //       .get_namespace_declarations()
+      //       .into_iter()
+      //       .find(|ns| ns.get_href() == XML_NS)
+      //       .unwrap_or_else(|| {
+      //         Namespace::new(
+      //           "xml",
+      //           &XML_NS.to_string().clone(),
+      //           &mut self.document.get_root_element().unwrap(),
+      //         ).unwrap_or_else(|_| {
+      //           panic!(
+      //             "Could not set NS for {:?}\n\n at \n\n {:?}",
+      //             self.document.node_to_string(node),
+      //             self.document.to_string(true)
+      //           )
+      //         })
+      //       })
+      //   });
+      node.set_attribute("xml:id", value)?; // and bypass all ns stuff
     } else if !key.contains(':') {
       // No colon; no namespace (the common case!)
       // Ignore attributes not allowed by the model,
