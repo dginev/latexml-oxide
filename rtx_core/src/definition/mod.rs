@@ -19,7 +19,7 @@ use token::Token;
 use tokens::Tokens;
 use Digested;
 // use tbox::Tbox;
-use definition::register::RegisterValue;
+use definition::register::{RegisterType, RegisterValue};
 use document::Document;
 use parameter::Parameters;
 use state::State;
@@ -67,7 +67,7 @@ pub trait Definition: Object {
 
   fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Tokens>>
   where Self: Sized {
-    match *self.get_parameters() {
+    match self.get_parameters() {
       None => Ok(Vec::new()),
       Some(ref params) => params.read_arguments(gullet, self, state),
     }
@@ -168,4 +168,5 @@ pub trait Definition: Object {
   }
 
   fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> { None }
+  fn register_type(&self) -> Option<RegisterType> { None }
 }

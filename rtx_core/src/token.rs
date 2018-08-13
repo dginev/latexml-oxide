@@ -322,6 +322,13 @@ macro_rules! T_MARKER(($text:expr) => ({
 }));
 
 #[macro_export]
+macro_rules! T_NOTEXPANDED(() => ({
+  use $crate::token::Token;
+  use $crate::token::Catcode;
+  Token { text: s!(""), code: Catcode::NOTEXPANDED }
+}));
+
+#[macro_export]
 macro_rules! Token(($text:expr, $cc_opt:expr) => ({
   use $crate::token::Token;
   use $crate::token::Catcode;

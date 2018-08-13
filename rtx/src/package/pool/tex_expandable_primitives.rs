@@ -120,6 +120,51 @@ Let!("\\protect", "\\relax");
     Ok(tokens.into())
   });
 
+  // Insert magic token that Gullet knows not to expand the next one.
+  DefMacroI!(T_CS!("\\noexpand"), None, T_NOTEXPANDED!());
+
+  DefMacroI!(T_CS!("\\topmark"), None,        Tokens!());
+  DefMacroI!(T_CS!("\\firstmark"), None,      Tokens!());
+  DefMacroI!(T_CS!("\\botmark"), None,        Tokens!());
+  DefMacroI!(T_CS!("\\splitfirstmark"), None, Tokens!());
+  DefMacroI!(T_CS!("\\splitbotmark"), None,   Tokens!());
+
+  // DefMacro('\input TeXFileName', sub { Input($_[1]); });
+
+  // # Note that TeX doesn't actually close the mouth;
+  // # it just flushes it so that it will close the next time it's read!
+  // DefMacroI('\endinput', undef, sub {
+  //     my ($gullet) = @_;
+  //     my $mouth = $gullet->getMouth;
+  //     my $line;
+  //     if (!$mouth->isEOL) {
+  //       $line = $gullet->readRawLine; }
+  //     $gullet->flushMouth;
+  //     if ($line) {
+  //       $gullet->unread(Tokenize($line)); }
+  //     return;
+  // });
+
+  // \the<internal quantity>
+  DefMacro!("\\the Register", sub[gullet, args, state] {
+    unpack!(args => variable);
+    let mut tokens = vec![];
+    //     my ($defn, @args) = @$variable;
+  //     if (!$defn || $defn eq 'missing') {
+  //       Error('expected', "<register>", $gullet, "a register was expected to be here"); return (); }
+  //     my $type = $defn->isRegister;
+  //     if (!$type) {
+  //       my $cs = ToString($defn->getCS);
+  //       Error('unexpected', "\\the$cs", $gullet, "You can't use $cs after \\the"); return (); }
+  //     my $value = $defn->valueOf(@args);
+  //     ## In all cases, these should be OTHER, except for space. (!?)
+  //     my @tokens = ($type eq 'Tokens' ? ($value ? $value->unlist : ()) : Explode(ToString($value)));
+  //     if ($LaTeXML::NOEXPAND_THE) {    # See \the for the sense in this.
+  //       @tokens = $gullet->neutralizeTokens(@tokens); }
+    Ok(Tokens::new(tokens))
+  });
+
+
   // The following special cases are built-in to Definition
   DefConditional!("\\else",          None);
   DefConditional!("\\or",            None);

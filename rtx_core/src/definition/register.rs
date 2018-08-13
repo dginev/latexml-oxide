@@ -60,6 +60,28 @@ impl<'a> From<&'a RegisterValue> for RegisterType {
   }
 }
 
+impl<'a> From<&'a RegisterValue> for Number {
+  fn from(v: &RegisterValue) -> Number {
+    match v {
+      RegisterValue::Number(n) => n.clone(),
+      RegisterValue::Dimension(other) => Number::new(other.value_of()),
+      RegisterValue::Glue(other) => Number::new(other.value_of()),
+      RegisterValue::MuGlue(other) => Number::new(other.value_of()),
+      RegisterValue::Token(other) => {
+        error!(target:"expected:number", "Token register can not be cast into a number: {:?}", other);
+        Number::new(0)
+      },
+      RegisterValue::Tokens(other) => {
+        error!(target:"expected:number", "Token register can not be cast into a number: {:?}", other);
+        Number::new(0)
+      },
+    }
+  }
+}
+impl From<RegisterValue> for Number {
+  fn from(v: RegisterValue) -> Number { (&v).into() }
+}
+
 impl RegisterValue {
   pub fn value_of(&self) -> i32 {
     match self {
@@ -79,7 +101,7 @@ impl RegisterValue {
   }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum RegisterType {
   Number,
   Dimension,
@@ -148,7 +170,7 @@ impl Definition for RefCell<Register> {
     let gullet = stomach.get_gullet_mut();
     let args = self.read_arguments(gullet, state)?;
     gullet.read_keyword(&["="], state)?; // Ignore
-    let value = gullet.read_value(self.borrow().register_type, state)?;
+    let value = gullet.read_value(self.register_type().unwrap(), state)?;
 
     self.borrow_mut().set_value(value, args, state);
 
@@ -182,6 +204,7 @@ impl Definition for RefCell<Register> {
   fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> {
     (self.borrow().getter)(args, state)
   }
+  fn register_type(&self) -> Option<RegisterType> { Some(self.borrow().register_type) }
 }
 
 impl Register {

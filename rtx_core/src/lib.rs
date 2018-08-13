@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_variables, unused_mut, unused_macros)]
+#![feature(range_contains)]
 
 #[macro_use]
 extern crate lazy_static;

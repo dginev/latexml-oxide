@@ -1,15 +1,17 @@
+use regex::Regex;
+use std::collections::VecDeque;
+use std::rc::Rc;
+
 use common::dimension::Dimension;
 use common::error::*;
 use common::glue::{Glue, MuGlue};
 use common::number::Number;
+
 use definition::conditional::ConditionalType;
 use definition::register::{RegisterType, RegisterValue};
-
 use definition::Definition;
 use mouth::Mouth;
 use state::State;
-use std::collections::VecDeque;
-use std::rc::Rc;
 use token::{Catcode, Token};
 use tokens::Tokens;
 
@@ -93,7 +95,7 @@ impl Gullet {
         if !forced && (!runtime.pushback.is_empty()) || runtime.mouth.has_more_input() {
           // TODO:
           // let next = Stringify(self.read_token());
-          // Error('unexpected', $next, $self, "Closing mouth with input remaining '$next'");
+          // Error('unexpected', $next, self, "Closing mouth with input remaining '$next'");
         }
         runtime.mouth.finish(state);
         // I think I can refactor from the original state into this simple assignment, because of
@@ -284,7 +286,7 @@ impl Gullet {
       // let markers : Vec<&Token> = tokens.iter().filter(|t:Token| t.get_catcode() ==
       // Catcode::MARKER).collect(); if !markers.is_empty() {    // Whoops, profiling markers!
 
-      // @tokens = grep { $_->getCatcode != CC_MARKER } @tokens;    // Remove
+      // @tokens = grep { $_->getCatcode != Catcode::MARKER } @tokens;    // Remove
       // map { LaTeXML::Core::Definition::stopProfiling($_, 'expand') } @markers;
       // }
 
@@ -530,6 +532,40 @@ impl Gullet {
     }
   }
 
+  pub fn read_register_value(
+    &mut self,
+    value_type: RegisterType,
+    state: &mut State,
+  ) -> Result<Option<RegisterValue>>
+  {
+    match self.read_x_token(false, false, state)? {
+      None => Ok(None),
+      Some(token) => {
+        if let Some(defn) = state.lookup_register_definition(&token) {
+          if let Some(register_type) = defn.register_type() {
+            if register_type == value_type {
+              let args: Vec<Token> = defn
+                .read_arguments(self, state)?
+                .iter()
+                .map(|ts| ts.into())
+                .collect();
+              Ok(defn.value_of(args, state))
+            } else {
+              self.unread(Tokens!(token)); // Unread
+              Ok(None)
+            }
+          } else {
+            self.unread(Tokens!(token)); // Unread
+            Ok(None)
+          }
+        } else {
+          self.unread(Tokens!(token)); // Unread
+          Ok(None)
+        }
+      },
+    }
+  }
+
   /// Match the input against one of the Token or Tokens in @choices; return the matching one or
   /// undef.
   pub fn read_match(&mut self, choices: &Vec<Token>, state: &mut State) -> Result<Option<Token>> {
@@ -586,9 +622,8 @@ impl Gullet {
   /// <unsigned number> = <normal integer> | <coerced integer>
   /// <coerced integer> = <internal dimen> | <internal glue>
   pub fn read_number(&mut self, state: &mut State) -> Result<Number> {
-    // TODO
     let is_negative = self.read_optional_signs(state)?;
-    if let Some(n) = self.read_normal_integer()? {
+    if let Some(n) = self.read_normal_integer(state)? {
       if is_negative {
         Ok(n.negate())
       } else {
@@ -598,16 +633,68 @@ impl Gullet {
       // elsif (defined($n = self.readInternalDimension)) { return Number($s * $n->valueOf); }
       // elsif (defined($n = self.readInternalGlue))      { return Number($s * $n->valueOf); }
       // else {
-      //   my $next = self.readToken();
-      //   unshift(@{ $$self{pushback} }, $next);    # Unread
-      //   Warn('expected', '<number>', $self, "Missing number, treated as zero",
-      //     "while processing " . ToString($LaTeXML::CURRENT_TOKEN),
-      //     "next token is " . ToString($next));
-      //   return Number(0); } }
+      let next = self.read_token(state);
+      warn!(target:"expected:<number>", "Missing number, treated as zero while processing {:?}, next token is {:?}", state.current_token, next);
+      if let Some(next) = next {
+        self.unread(Tokens!(next));
+      }
       Ok(Number::new(0))
     }
   }
 
+  /// <normal integer> = <internal integer> | <integer constant>
+  ///   | '<octal constant><one optional space> | "<hexadecimal constant><one optional space>
+  ///   | `<character token><one optional space>
+  pub fn read_normal_integer(&mut self, state: &mut State) -> Result<Option<Number>> {
+    match self.read_x_token(false, false, state)? {
+      None => Ok(None),
+      Some(token) => {
+        let cc = token.get_catcode();
+        let mut text = token.get_string().to_string();
+        if cc == Catcode::OTHER && text.chars().all(|c| c.is_digit(10)) {
+          // Read decimal literal
+          text.push_str(&self.read_digits(r"[0-9]", true, state)?);
+          Ok(Some(Number::new(text.parse::<i32>()?)))
+        } else if token == T_OTHER!("'") {
+          // Read Octal literal
+          Ok(Some(Number::new(i32::from_str_radix(
+            &self.read_digits(r"[0-7]", true, state)?,
+            8,
+          )?)))
+        } else if token == T_OTHER!("\"") {
+          //  Read Hex literal
+          Ok(Some(Number::new(i32::from_str_radix(
+            &self.read_digits(r"[0-9A-F]", true, state)?,
+            16,
+          )?)))
+        } else if token == T_OTHER!("`") {
+          //  Read Charcode
+          let mut s = match self.read_token(state) {
+            None => String::new(),
+            Some(next) => next.get_string().to_string(),
+          };
+          if s.starts_with('\\') {
+            s.remove(0);
+          }
+          let s_char = s.chars().next().unwrap();
+          let s_char = s_char as u8;
+          let s_char = s_char as i32;
+          Ok(Some(Number::new(s_char))) //  Only a character token!!! NOT expanded!!!!
+        } else {
+          self.unread(Tokens!(token)); // Unread
+          self.read_internal_integer(state)
+        }
+      },
+    }
+  }
+
+  fn read_internal_integer(&mut self, state: &mut State) -> Result<Option<Number>> {
+    match self.read_register_value(RegisterType::Number, state) {
+      Err(e) => Err(e),
+      Ok(None) => Ok(None),
+      Ok(Some(val)) => Ok(Some(val.into())),
+    }
+  }
   pub fn read_dimension(&mut self, _state: &mut State) -> Result<Dimension> { unimplemented!() }
   pub fn read_glue(&mut self, _state: &mut State) -> Result<Glue> { unimplemented!() }
   pub fn read_muglue(&mut self, _state: &mut State) -> Result<MuGlue> { unimplemented!() }
@@ -704,5 +791,21 @@ impl Gullet {
     }
     Ok(sign)
   }
-  fn read_normal_integer(&mut self) -> Result<Option<Number>> { Ok(Some(Number::new(0))) }
+
+  fn read_digits(&mut self, range: &str, skip: bool, state: &mut State) -> Result<String> {
+    let mut result = String::new();
+    let range_regex = Regex::new(range).unwrap();
+    while let Some(token) = self.read_x_token(false, false, state)? {
+      let digit = token.get_string().to_string();
+      if digit.len() == 1 && range_regex.is_match(&digit) {
+        result.push_str(&digit);
+      } else {
+        if !(skip && token.get_catcode() == Catcode::SPACE) {
+          self.unread(Tokens!(token));
+        }
+        break;
+      }
+    }
+    Ok(result)
+  }
 }

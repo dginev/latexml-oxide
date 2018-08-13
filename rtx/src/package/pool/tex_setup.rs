@@ -271,6 +271,31 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
   }));
 
+  // Same, but not necessarily writable
+  DefParameterType!("Register", reader => reader!(gullet, inner, _extra, state, {
+      // my $token = $gullet->readXToken;
+      // my $defn = $token && LookupDefinition($token);
+      // if ((defined $defn) && $defn->isRegister) {
+      //   [$defn, $defn->readArguments($gullet)]; }
+      // else {
+      //   Error('expected', '<register>', $gullet,
+      //     "A <register> was supposed to be here", "Got " . Stringify($token));
+      //   if (isDefinable($token)) {
+      //     DefRegisterI($token, undef, Tokens());
+      //     return [$defn]; }
+      //   else {
+          // return; } } }
+      Ok(Tokens!())
+    }),
+    reversion => reversion!(gullet, arg, inner, state, {
+      // my ($var) = @_;
+      // my ($defn, @args) = @$var;
+      // my $params = $defn->getParameters;
+      // return Tokens($defn->getCS, ($params ? $params->revertArguments(@args) : ())); 
+      Ok(Tokens!())
+    })
+  );
+
   // Read a token as used when defining it, ie. it may be enclosed in braces.
   DefParameterType!("DefToken",
     reader => reader!(gullet, inner, _extra, state, {

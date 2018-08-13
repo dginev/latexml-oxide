@@ -9,7 +9,7 @@ use common::model::{IndirectModel, Model};
 use common::number::Number;
 pub use common::store::Stored; // reexport for convenience
 use definition::conditional::{ConditionalType, IfFrame};
-use definition::register::RegisterValue;
+use definition::register::{Register, RegisterValue};
 use definition::Definition;
 use document::resource::Resource;
 use document::tag::TagOptions;
@@ -927,11 +927,11 @@ impl State {
     self.assign_internal(TableName::Meaning, &token.get_cs_name(), meaning, scope);
   }
 
-  /// used for expansion & various queries
-  /// Since we're not doing digestion here, we don't need to handle mathactive,
-  /// nor cs let to executable tokens
-  /// This returns a definition object, or undef
-  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Rc<Definition>> {
+  pub fn lookup_definition_internal<'def>(
+    &'def self,
+    key: &'def Token,
+  ) -> Option<&VecDeque<Stored>>
+  {
     let cc = &key.code;
     let name = &key.text;
     let lookupname: String = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) {
@@ -943,18 +943,42 @@ impl State {
     if lookupname.is_empty() {
       None
     } else {
-      match self.meaning.get(&lookupname) {
-        Some(defs) => match defs.front() {
-          Some(Stored::Conditional(entry)) => Some(entry.clone()),
-          Some(Stored::Constructor(entry)) => Some(entry.clone()),
-          Some(Stored::Expandable(entry)) => Some(entry.clone()),
-          Some(Stored::MathPrimitive(entry)) => Some(entry.clone()),
-          Some(Stored::Primitive(entry)) => Some(entry.clone()),
-          Some(Stored::Register(entry)) => Some(entry.clone()),
-          _ => None,
-        },
+      self.meaning.get(&lookupname)
+    }
+  }
+
+  /// used for expansion & various queries
+  /// Since we're not doing digestion here, we don't need to handle mathactive,
+  /// nor cs let to executable tokens
+  /// This returns a definition object, or undef
+  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Rc<Definition>> {
+    match self.lookup_definition_internal(key) {
+      Some(defs) => match defs.front() {
+        Some(Stored::Conditional(entry)) => Some(entry.clone()),
+        Some(Stored::Constructor(entry)) => Some(entry.clone()),
+        Some(Stored::Expandable(entry)) => Some(entry.clone()),
+        Some(Stored::MathPrimitive(entry)) => Some(entry.clone()),
+        Some(Stored::Primitive(entry)) => Some(entry.clone()),
+        Some(Stored::Register(entry)) => Some(entry.clone()),
         _ => None,
-      }
+      },
+      _ => None,
+    }
+  }
+
+  /// A specialized version of `lookup_definition` for registers, since we can't adequately perform
+  /// multi-dispatch when we have a "Self: Sized" for the Definition trait object.
+  pub fn lookup_register_definition<'def>(
+    &self,
+    key: &'def Token,
+  ) -> Option<Rc<RefCell<Register>>>
+  {
+    match self.lookup_definition_internal(key) {
+      Some(defs) => match defs.front() {
+        Some(Stored::Register(entry)) => Some(entry.clone()),
+        _ => None,
+      },
+      _ => None,
     }
   }
 

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::error::Error as ErrorTrait;
 use std::fmt;
 use std::io;
+use std::num::{ParseFloatError, ParseIntError};
 use std::result;
 
 lazy_static! {
@@ -173,6 +174,26 @@ impl From<()> for Error {
       target: ErrorTarget::Document,
       category: ErrorCategory::Libxml,
       message: s!("LibXML error"),
+    }
+  }
+}
+
+impl From<ParseIntError> for Error {
+  fn from(err: ParseIntError) -> Error {
+    Error {
+      target: ErrorTarget::Document,
+      message: err.description().to_string(),
+      category: ErrorCategory::Generic(Box::new(err)),
+    }
+  }
+}
+
+impl From<ParseFloatError> for Error {
+  fn from(err: ParseFloatError) -> Error {
+    Error {
+      target: ErrorTarget::Document,
+      message: err.description().to_string(),
+      category: ErrorCategory::Generic(Box::new(err)),
     }
   }
 }

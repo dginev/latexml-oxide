@@ -11,7 +11,9 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
       Number::new(code.into()).into()
     })),
     setter => Some(Rc::new(|value, args, state| {
-      state.assign_catcode((args[0].to_number().value_of() as u8) as char, From::from(value.value_of() as u8), None);
+      let c_char = (args[0].to_number().value_of() as u8) as char;
+      let c_code = From::from(value.value_of() as u8);
+      state.assign_catcode(c_char, c_code, None);
     }))
   );
 
