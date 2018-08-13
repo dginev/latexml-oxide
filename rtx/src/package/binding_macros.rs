@@ -38,6 +38,14 @@ macro_rules! NewDefault {
   })
 }
 
+#[macro_export]
+macro_rules! NewDefaultV {
+  ($name:ident, $($key:ident => $value:expr),*) => ($name {
+    $($key: $value.into_option(),)*
+    ..$name::default()
+  })
+}
+
 // Useful shorthand macros, to brainstorm ergonomics ideas,
 // and to aid binding development
 
@@ -211,13 +219,6 @@ macro_rules! reversion {
 // For now I am making the decision to keep writing out the verbose form,
 // and will refactor at a later date, when the trade-offs become more clear. Smart use of the Cow
 // struct is another idea. I will use a helper though:
-
-#[macro_export]
-macro_rules! v {
-  ($val:expr) => {
-    Some($val.to_string())
-  };
-}
 
 #[macro_export]
 macro_rules! prop_digested {

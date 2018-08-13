@@ -1498,14 +1498,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($text:expr,$paramlist:expr,$presentation:expr,
      $key1:ident => $val1:expr,
      $state_arg:ident
-    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefault!(MathPrimitiveOptions,
+    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions,
      $key1 => $val1),$state_arg));
 
     ($text:expr,$paramlist:expr,$presentation:expr,
      $key1:ident => $val1:expr,
      $key2:ident => $val2:expr,
      $state_arg:ident
-    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefault!(MathPrimitiveOptions,
+    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions,
      $key1 => $val1,
      $key2 => $val2
     ), $state_arg));
@@ -1515,7 +1515,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key2:ident => $val2:expr,
      $key3:ident => $val3:expr,
      $state_arg:ident
-    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefault!(MathPrimitiveOptions,
+    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions,
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3
@@ -1527,7 +1527,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key3:ident => $val3:expr,
      $key4:ident => $val4:expr,
      $state_arg:ident
-    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefault!(MathPrimitiveOptions,
+    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions,
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3,
@@ -1541,7 +1541,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
      $key4:ident => $val4:expr,
      $key5:ident => $val5:expr,
      $state_arg:ident
-    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefault!(MathPrimitiveOptions,
+    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions,
      $key1 => $val1,
      $key2 => $val2,
      $key3 => $val3,

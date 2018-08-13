@@ -434,3 +434,16 @@ impl<'a> From<&'a Stored> for Token {
     }
   }
 }
+
+pub trait IntoOption<T>: Sized {
+  /// Performs the conversion.
+  fn into_option(&self) -> T;
+}
+
+impl<'a> IntoOption<Option<String>> for &'a str {
+  fn into_option(&self) -> Option<String> { Some(self.to_string()) }
+}
+
+impl IntoOption<bool> for bool {
+  fn into_option(&self) -> bool { *self }
+}
