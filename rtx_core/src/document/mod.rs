@@ -424,7 +424,7 @@ impl Document {
     if self.debug {
       debug!("Close element {:?} at {:?}", qname, self.node.get_name());
     }
-    self.close_text_internal();
+    self.close_text_internal(state)?;
     let mut node = self.node.clone();
     let mut cant_close = Vec::new();
     while node.get_type() != Some(NodeType::DocumentNode) {
@@ -936,7 +936,7 @@ impl Document {
       && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
     {
       // then we'll need to do some open/close to get fonts matched.
-      let node = self.close_text_internal(); // Close text node, if any.
+      let node = self.close_text_internal(state)?; // Close text node, if any.
       let mut bestdiff = 99;
       let mut closeto: Node = node.clone();
       let mut n: Node = node.clone();
@@ -1032,24 +1032,35 @@ impl Document {
     state.model.can_have_attribute(tag, attrib)
   }
 
-  pub fn close_text_internal(&mut self) -> Node {
+  pub fn close_text_internal(&mut self, state: &State) -> Result<Node> {
     if self.node.get_type() == Some(NodeType::TextNode) {
       // Current node is text?
       let parent = self.node.get_parent().unwrap();
-      // let font    = self.get_node_font(parent);
-      // let data  = node.data();
-      // let odata = data;
+      let mut content = self.node.get_content();
+      let ocontent = content.clone();
       // let fonttest;
-      // if let Some(ligatures) = state.lookup_value("TEXT_LIGATURES") {
-      //   for ligature in ligatures.iter() {
-      //     let fonttest = ligature.get("fontTest");
-      //     if fonttest.is_some() && ! fonttest(font);
-      //     $data = &{ $$ligature{code} }($data); } }
-      // node.setData(data) unless $data eq $odata;
+      if let Some(Stored::VecDequeStored(ligatures)) = state.lookup_value("TEXT_LIGATURES") {
+        let font_opt = self.get_node_font(&parent);
+        for stored_ligature in ligatures.iter() {
+          if let Stored::Ligature(ligature) = stored_ligature {
+            if let Some(font) = font_opt {
+              if let Some(ref font_test) = ligature.font_test {
+                if !(font_test)(font) {
+                  continue; // if the font test fails, skip the ligature
+                }
+              }
+            }
+            content = (ligature.code)(&content);
+          }
+        }
+      }
+      if content != ocontent {
+        self.node.set_content(&content)?;
+      }
       self.set_node(&parent); // Now, effectively Closed
-      parent
+      Ok(parent)
     } else {
-      self.node.clone()
+      Ok(self.node.clone())
     }
   }
 
@@ -1058,7 +1069,7 @@ impl Document {
   /// and, of course, `node` must be current or some ancestor of it!!!
   pub fn close_node_internal(&mut self, node: &Node, state: &mut State) -> Result<()> {
     let closeto = node.get_parent().unwrap(); // Grab now in case afterClose screws the structure.
-    let mut n = self.close_text_internal(); // Close any open text node.
+    let mut n = self.close_text_internal(state)?; // Close any open text node.
     while n.get_type() == Some(NodeType::ElementNode) {
       self.close_element_at(&mut n, state)?;
       // self.auto_collapse_children(n);
@@ -1194,7 +1205,7 @@ impl Document {
   /// This will move up the tree (closing auto-closable elements),
   /// or down (inserting auto-openable elements), as needed.
   pub fn find_insertion_point(&mut self, qname: &str, state: &mut State) -> Result<Node> {
-    self.close_text_internal(); // Close any current text node.
+    self.close_text_internal(state)?; // Close any current text node.
     let cur_qname = state.model.get_node_qname(&self.node);
     // let inter;
     // If `qname` is allowed at the current point, we're done.

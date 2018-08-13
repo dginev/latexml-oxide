@@ -41,7 +41,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
 
   // DefMathLigature("\u{22C5}\u{22C5}\u{22C5}" => "\u{22EF}", role => 'ID', name => 'cdots');
 
-  DefLigature!("...", "\u{2026}"); //, fontTest => fontTest!(font, {font.get_family != "typewriter" }));  // ldots
+  DefLigature!(r"[.][.][.]", "\u{2026}"); //, fontTest => fontTest!(font, {font.get_family != "typewriter" }));  // ldots
 
   // DefMathLigature("..." => "\x{2026}", role => 'ID', name => 'ldots');
 
