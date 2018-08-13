@@ -7,7 +7,7 @@ use definition::register::{RegisterType, RegisterValue};
 
 use definition::Definition;
 use mouth::Mouth;
-use state::{Scope, State};
+use state::State;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use token::{Catcode, Token};
@@ -393,7 +393,7 @@ impl Gullet {
   /// In list context, also returns the found delimiter.
   pub fn read_until(&mut self, delims: Vec<Token>, state: &mut State) -> Result<Tokens> {
     let mut n = 0;
-    let mut found = None;
+    let mut found;
     let mut tokens: Vec<Token> = Vec::new();
 
     loop {

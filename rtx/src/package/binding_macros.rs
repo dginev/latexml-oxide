@@ -46,7 +46,7 @@ macro_rules! transfer_default {
   ($val:ident, $struct_source:ident, $hash_receiver:ident) => {
     $hash_receiver
       .entry(stringify!($val).to_owned())
-      .or_insert($struct_source.$val.clone().to_string());
+      .or_insert($struct_source.$val.to_string());
   };
 }
 #[macro_export]

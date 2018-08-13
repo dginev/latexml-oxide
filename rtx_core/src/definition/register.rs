@@ -6,7 +6,7 @@ use common::error::*;
 use common::glue::{Glue, MuGlue};
 use common::number::Number;
 use common::object::Object;
-use definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
+use definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use document::Document;
 use gullet::Gullet;
 use parameter::Parameters;

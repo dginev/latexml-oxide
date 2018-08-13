@@ -16,7 +16,7 @@ pub struct Tbox {
   pub text: String,
   pub font: Rc<Font>,
   pub locator: String,
-  pub properties: HashMap<String, String>,
+  pub properties: HashMap<String, Stored>,
   pub tokens: Tokens,
 }
 
@@ -41,7 +41,7 @@ impl Tbox {
     font_opt: Option<Rc<Font>>,
     locator_opt: Option<String>,
     tokens_opt: Tokens,
-    properties: HashMap<String, String>,
+    mut properties: HashMap<String, Stored>,
     state: &mut State,
   ) -> Self
   {
@@ -62,16 +62,15 @@ impl Tbox {
     };
 
     if state.lookup_bool("IN_MATH") {
-      let mut box_props = properties;
-      box_props.insert(s!("mode"), s!("math"));
+      properties.insert(s!("mode"), String::from("math").into());
       if !text.is_empty() {
         if let Some(&Stored::HashStr(ref attr)) =
           state.lookup_value(&s!("math_token_attributes_{}", text))
         {
           for (key, value) in attr.iter() {
-            box_props
+            properties
               .entry(key.to_string())
-              .or_insert_with(|| value.to_string());
+              .or_insert_with(|| Stored::String(value.to_owned()));
           }
         }
       }
@@ -79,8 +78,8 @@ impl Tbox {
       Tbox {
         text,
         tokens,
+        properties,
         font: Rc::new(specialized_font), // $locator,
-        properties: box_props,
         ..Tbox::default()
       }
     } else {
@@ -102,13 +101,18 @@ impl BoxOps for Tbox {
   fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()> {
     let text = &self.text;
     let font = &self.font;
-    let mode = match self.properties.get("mode") {
-      Some(s) => s.to_owned(),
-      None => s!("text"),
+    let mode: String = match self.properties.get("mode") {
+      Some(Stored::String(s)) => s.to_owned(),
+      _ => String::from("text"),
     };
     if !text.is_empty() {
       if mode == "math" {
-        document.insert_math_token(text, self.properties, Some(&self.font), state)?;
+        document.insert_math_token(
+          text,
+          Stored::to_string_hash(self.properties),
+          Some(&self.font),
+          state,
+        )?;
       } else {
         document.open_text(text, font, state)?;
       }
@@ -119,4 +123,19 @@ impl BoxOps for Tbox {
   fn revert(&self) -> Tokens { self.tokens.clone() }
 
   fn get_font(&self) -> Option<&Font> { Some(&self.font) }
+
+  fn get_property(&self, key: &str, state: &mut State) -> Option<&Stored> {
+    if key == "isSpace" {
+      match self.properties.get(key) {
+        Some(value) => Some(value),
+        None => {
+          let tex = self.tokens.untex(state); // !
+          let property_bool = !tex.is_empty() && tex.chars().all(|c| c.is_whitespace()); // Check the TeX code, not (just) the string!
+          Some(property_bool.into())
+        },
+      }
+    } else {
+      self.properties.get(key)
+    }
+  }
 }

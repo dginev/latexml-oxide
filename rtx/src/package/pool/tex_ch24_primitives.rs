@@ -97,17 +97,14 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   DefPrimitive!("\\lx@ignorehardspaces", sub[stomach, whatsit, state] {
     let mut boxes = Vec::new();
     while let Some(token) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
-      warn!(target:"ignorehardspaces", "xtoken: {:?}", token);
       boxes = stomach.invoke_token(token, state)?;
       if boxes.is_empty() {
-        warn!(target:"ignorehardspaces", "No boxes at all, done.");
         break;
       }
       while !boxes.is_empty() {
-        warn!(target:"ignorehardspaces", "BOXES: {:?}", boxes);
         let is_space : bool;
         {
-          is_space = if let Some(Stored::Bool(space_bool)) = boxes[0].get_property("isSpace") {
+          is_space = if let Some(Stored::Bool(space_bool)) = boxes[0].get_property("isSpace", state) {
             *space_bool 
           } else {
             false

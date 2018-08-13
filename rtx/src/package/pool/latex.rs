@@ -134,8 +134,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         }
         document.absorb(body, state)?;
       } else {
-        let mut attrib : HashMap<String, String> = HashMap::new();
-        attrib.insert(s!("xml:id"), id.to_string());
+        let attrib = string_map!("xml:id" => id);
         document.insert_element("ltx:document", vec![body], Some(attrib), state)?;
       }
       Ok(())

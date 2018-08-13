@@ -130,7 +130,9 @@ impl BoxOps for Whatsit {
     Ok(())
   }
 
-  fn get_property(&self, key: &str) -> Option<&Stored> { self.properties.get(key) }
+  fn get_property(&self, key: &str, _state: &mut State) -> Option<&Stored> {
+    self.properties.get(key)
+  }
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     self.properties.insert(key.to_string(), value.into());

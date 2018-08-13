@@ -1,5 +1,6 @@
 ///! Token List constructors.
 use fmt;
+use std::collections::VecDeque;
 use std::fmt::Display;
 
 use common::error::*;
@@ -10,6 +11,8 @@ use state::State;
 use stomach::Stomach;
 use token::*;
 use Digested;
+
+const UNTEX_LINELENGTH: usize = 78;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tokens {
@@ -181,5 +184,95 @@ impl Tokens {
       }
     }
     Tokens::new(result)
+  }
+
+  pub fn untex(&self, state: &mut State) -> String {
+    let tokens = self.clone().revert();
+    let mut tokens: VecDeque<Token> = tokens.into();
+    let mut result = String::new();
+    let mut length = 0;
+    let mut level = 0;
+    let mut prevs = String::new();
+    let mut prevcc = Catcode::COMMENT;
+    while !tokens.is_empty() {
+      let token = tokens.pop_front().unwrap();
+      let cc = token.get_catcode();
+      if cc == Catcode::COMMENT {
+        continue;
+      }
+      let mut s = token.get_string().to_owned();
+      if cc == Catcode::LETTER {
+        // keep "words" together, just for aesthetics
+        while !tokens.is_empty() && tokens[0].get_catcode() == Catcode::LETTER {
+          s.push_str(tokens.pop_front().unwrap().get_string());
+        }
+      }
+
+      let l = s.len();
+      if cc == Catcode::BEGIN {
+        level += 1;
+      }
+      //  Seems a reasonable & safe time to line break, for readability, etc.
+      if cc == Catcode::SPACE && s == "\n" {
+        // preserve newlines already present
+        if length > 0 {
+          result = s;
+          length = 0;
+        }
+      // If this token is a letter (or otherwise starts with a letter or digit): space or linebreak
+      } else {
+        let last_prevs = prevs.chars().last().unwrap_or('_');
+        let prev_is_letter = if let Some(prevs_cc) = state.lookup_catcode(last_prevs) {
+          prevs_cc == Catcode::LETTER
+        } else {
+          false
+        };
+
+        if (cc == Catcode::LETTER
+          || (cc == Catcode::OTHER && s.chars().next().unwrap_or('_').is_alphanumeric()))
+          && prevcc == Catcode::CS
+          && prev_is_letter
+        {
+          // Insert a (virtual) space before a letter if previous token was a CS w/letters
+          // This is required for letters, but just aesthetic for digits (to me?)
+          // Of course, use a newline if we're already at end
+          let space = if length > 0 && length + l > UNTEX_LINELENGTH {
+            '\n'
+          } else {
+            ' '
+          };
+          result.push(space);
+          result.push_str(&s);
+          length += 1 + l;
+        } else if length > 0 && (length + l > UNTEX_LINELENGTH) // linebreak before this token?
+            && tokens.len() > 1
+        // and not at end!
+        {
+          // Or even within an arg!
+          result.push_str("%\n");
+          result.push_str(&s);
+          length = l; // with %, so that it "disappears"
+        } else {
+          result.push_str(&s);
+          length += l;
+        }
+        if cc == Catcode::END {
+          level -= 1;
+        }
+        prevs = s;
+        prevcc = cc;
+      }
+    }
+    // Patch up nesting for valid TeX !!!
+    if level > 0 {
+      for _ in 0..level {
+        result.push('}');
+      }
+    } else if level < 0 {
+      for _ in 0..(-level) {
+        result = String::from("{") + &result;
+      }
+    }
+    result
   }
 }

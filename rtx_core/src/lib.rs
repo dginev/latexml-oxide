@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_variables, unused_mut, unused_macros)]
+
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -140,7 +142,7 @@ pub trait BoxOps {
   fn to_string(&self) -> String;
   fn stringify(&self) -> String { s!("Vec<Tbox> for now ") }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {}
-  fn get_property(&self, _key: &str) -> Option<&Stored> {
+  fn get_property(&self, _key: &str, _state: &mut State) -> Option<&Stored> {
     error!(target: "boxops:get_property", "Generic BoxOps::get_property should never be called!");
     None
   }
@@ -234,14 +236,14 @@ impl BoxOps for Digested {
     }
   }
 
-  fn get_property(&self, key: &str) -> Option<&Stored> {
+  fn get_property(&self, key: &str, state: &mut State) -> Option<&Stored> {
     match *self {
-      Digested::TBox(ref b) => b.get_property(key),
+      Digested::TBox(ref b) => b.get_property(key, state),
       Digested::List(ref l) => {
         error!(target: "digested:get_property", "Called get_property on List: {:?}", l);
         None
       },
-      Digested::Whatsit(ref w) => w.get_property(key),
+      Digested::Whatsit(ref w) => w.get_property(key, state),
       Digested::Postponed(ref _t) => unimplemented!(),
     }
   }

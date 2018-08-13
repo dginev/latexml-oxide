@@ -1601,7 +1601,6 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         transfer_opt_default!(role, options, math_attr_hash);
         transfer_opt_default!(mathstyle, options, math_attr_hash);
         transfer_default!(stretchy, options, math_attr_hash);
-
         $state_arg.assign_value(&s!("math_token_attributes_{}",csname), math_attr_hash, Some(Scope::Global));
       }
       // TODO:
@@ -1638,7 +1637,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       replacement: Some(Rc::new(move |stomach, args, state| {
         // let locator    = $stomach->getGullet->getLocator;
         let mut properties = HashMap::new(); // TODO: sync with perl master here
-        properties.insert(s!("mode"), s!("math"));
+        properties.insert(s!("mode"), Stored::String(String::from("math")));
         let font = state.lookup_font().unwrap().merge(reqfont.clone().unwrap()).specialize(&$presentation);
         let font = Rc::new(font);
         // foreach my $key (keys %properties) {
@@ -1647,7 +1646,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         //     $properties{$key} = &$value(); } }
         info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
         Ok(vec![Digested::TBox(Box::new( // TODO: Can we reduce boilerplate?
-          Tbox{ text: $presentation, tokens: Tokens!($cs.clone()), font, properties: properties, ..Tbox::default()}
+          Tbox{ text: $presentation, tokens: Tokens!($cs.clone()), font, properties, ..Tbox::default()}
         ))])
       })),
       options: prim_options,

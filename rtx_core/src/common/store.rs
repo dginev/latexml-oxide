@@ -18,6 +18,9 @@ use parameter::Parameter;
 use token::{Catcode, Token};
 use tokens::Tokens;
 
+const STORED_TRUE: Stored = Stored::Bool(true);
+const STORED_FALSE: Stored = Stored::Bool(false);
+
 // TODO: Some design decisions need to be finalzed w.r.t Stored
 // 1. which types are allowed,
 // 2. should the store be made generic? e.g. T:Clone ? I would lean towards no, since it is very
@@ -82,7 +85,7 @@ impl fmt::Debug for Stored {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     use Stored::*;
     match *self {
-      String(ref s) => write!(f, "{:?}", s),
+      String(ref s) => write!(f, "{}", s),
       Int(ref num) => write!(f, "Stored::Int[{:?}]", num),
       VecChar(ref vs) => write!(f, "Stored::VecChar[{:?}]", vs),
       VecString(ref vs) => write!(f, "Stored::VecString[{:?}]", vs),
@@ -119,12 +122,36 @@ impl fmt::Display for Stored {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{:?}", self) }
 }
 
+impl Stored {
+  pub fn to_string_hash(in_map: HashMap<String, Stored>) -> HashMap<String, String> {
+    let mut out_map: HashMap<String, String> = HashMap::new();
+    for (key, val) in in_map.iter() {
+      out_map.insert(key.to_owned(), val.to_string());
+    }
+    out_map
+  }
+}
+
 impl From<bool> for Stored {
   fn from(value: bool) -> Self { Stored::Bool(value) }
 }
 
+impl<'a> From<bool> for &'a Stored {
+  fn from(value: bool) -> Self {
+    if value {
+      &STORED_TRUE
+    } else {
+      &STORED_FALSE
+    }
+  }
+}
+
 impl From<String> for Stored {
   fn from(value: String) -> Self { Stored::String(value) }
+}
+
+impl<'a> From<&'a String> for Stored {
+  fn from(value: &'a String) -> Self { Stored::String(value.clone()) }
 }
 
 impl<'a> From<&'a str> for Stored {
@@ -273,7 +300,6 @@ impl From<RegisterValue> for Stored {
 impl From<Rc<RefCell<IfFrame>>> for Stored {
   fn from(frame: Rc<RefCell<IfFrame>>) -> Stored { Stored::IfFrame(frame) }
 }
-
 // Reverse direction -- cast Stored back into concrete types, with meaningfull fallbacks where
 // impossible
 
