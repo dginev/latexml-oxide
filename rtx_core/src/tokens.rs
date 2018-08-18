@@ -5,6 +5,7 @@ use std::fmt::Display;
 
 use common::error::*;
 use common::number::Number;
+use definition::register::RegisterValue;
 use quote::ToTokens;
 use quote::Tokens as QTokens;
 use state::State;
@@ -134,6 +135,11 @@ impl Tokens {
         .collect::<Vec<_>>()
         .join(",")
     )
+  }
+
+  pub fn value_of(&self, args: Vec<Token>, state: &mut State) -> Option<RegisterValue> {
+    let token: &Token = &self.tokens[0];
+    token.value_of(args, state)
   }
 
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {

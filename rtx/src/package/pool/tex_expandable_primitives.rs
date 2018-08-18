@@ -45,26 +45,130 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   });
 
 
-// TODO:
-// DefConditionalI('\iftrue',  undef, sub { 1; });
-// DefConditionalI('\iffalse', undef, sub { 0; });
+  // TODO:
+  // DefConditionalI('\iftrue',  undef, sub { 1; });
+  // DefConditionalI('\iffalse', undef, sub { 0; });
 
-//======================================================================
-// This makes \relax disappear completely after digestion
-// (which seems most TeX like).
-DefPrimitiveI!("\\relax", noprimitive!() );
-//// However, this keeps a box, so it can appear in UnTeX
-////// DefPrimitive('\relax',undef);
-//// But if you do that, you've got to watch out since it usually
-//// shouldn't be a box; See the isRelax code in handleScripts, below
+  //======================================================================
+  // This makes \relax disappear completely after digestion
+  // (which seems most TeX like).
+  DefPrimitiveI!("\\relax", noprimitive!() );
+  //// However, this keeps a box, so it can appear in UnTeX
+  ////// DefPrimitive('\relax',undef);
+  //// But if you do that, you've got to watch out since it usually
+  //// shouldn't be a box; See the isRelax code in handleScripts, below
 
-// TODO:
-// DefMacro('\number Number', sub { Explode($_[1]->valueOf); });
+  DefMacro!("\\number Number", sub[gullet, args, state] {
+    unpack!(args=>vals);
+    let mut args = vals.unlist();
+    let num = args.remove(0);
+    Ok(Explode!(num.value_of(args, state).unwrap_or_default().to_string()).into())
+  });
 
-// define it here (only approxmiately), since it's already useful.
-Let!("\\protect", "\\relax");
+  // define it here (only approxmiately), since it's already useful.
+  Let!("\\protect", "\\relax");
 
-//======================================================================
+
+  // DefMacro('\romannumeral Number', sub { roman($_[1]->valueOf); });
+  // # Hmm... I wonder, should getString itself be dealing with escapechar?
+  // sub escapechar {
+  //   my $code = LookupRegister('\escapechar')->valueOf;
+  //   return (($code >= 0) && ($code <= 255) ? chr($code) : ''); }
+
+
+  // # 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
+  // # suggests all characters except spaces are returned in category code Other, i.e. Explode()
+  DefMacro!("\\string Token", sub[gullet, args, state] {
+    unpack!(args => token);
+    let token : Token = token.into();
+    let mut s = token.get_string().to_string();
+    if s.starts_with('/') {
+      s = escapechar(state) + &s; 
+    }
+    Ok(Explode!(s).into())
+  });
+
+  DefMacroI!(T_CS!("\\jobname"), None, Tokens!()); // Set to the filename by initialization
+
+  DefMacroI!(T_CS!("\\fontname"), None, Tokens::new(Explode!("fontname not implemented")));
+
+  DefMacro!("\\meaning Token", sub[gullet, args, state] {
+    unpack!(args => token);
+    let token : Token = token.into();
+    let mut meaning = String::from("undefined");
+
+    if let Some(definition) = state.lookup_meaning(&token) {
+      //     if (my $definition = (Equals($tok, T_ALIGN) ? $tok : LookupMeaning($tok))) {
+      match definition {
+        Stored::Token(t) => {
+          let cc = t.get_catcode();
+          let text = if cc == Catcode::SPACE {
+            " "
+          }else {
+            t.get_string()
+          };
+          let meaning = format!("{} {}", cc.meaning(), text);
+          Ok(Explode!(meaning).into())
+        },
+        _ => Ok(Explode!("meaning").into())
+        // TODO: Continue implementing ...
+      // Stored::Expandable(meaning)
+      // Stored::Conditional(meaning)
+      // }
+      //       if ($type =~ /primitive/i) {
+      //         $definition = $definition->getCSorAlias;
+      //         $type       = ref $definition;
+      //         $type =~ s/^LaTeXML:://; }
+      //       if ($type =~ /con(ditional|structor)/i) {
+      //         $definition = $definition->getCSorAlias;
+      //         $type       = ref $definition;
+      //         $type =~ s/^LaTeXML:://; }
+
+      //       elsif ($type =~ /register/i) {   
+      //         my $value = $definition->valueOf;
+      //         my $register_type = lc(ref $value);
+      //         my $prefix = '\count';
+      //         if ($register_type && $register_type =~ /glue/) {
+      //             $prefix = '\skip'; }
+      //         elsif ($register_type && $register_type =~ /dimension/) {
+      //             $prefix = '\dimen'; }
+      //         my $literal_value = $value->valueOf if $register_type;
+      //         # Should we be more careful to distinguish between latex and tex counters?
+      //         $meaning = $prefix . $literal_value; }
+      //       elsif ($type =~ /expandable/i) {
+      //         my $expansion = $definition->getExpansion;
+      //         my $ltxps     = $definition->getParameters;
+      //         my @params;
+      //         my $argcount = 0;
+      //         if (defined $ltxps) {
+      //           @params   = $ltxps->getParameters;
+      //           $argcount = $ltxps->getNumArgs;
+      //         }
+      //         my $sp;
+      //         my @specparts = map { (($sp = $_->{spec}) =~ s/^(\w+):// ? $sp : $sp) } @params;
+      //         my $arg = 1;
+      //         foreach (@specparts) {
+      //           last if ($arg > $argcount);
+      //           $_ .= "#$arg";
+      //           $arg++; }
+      //         my $spec = join("", @specparts);
+      //         $spec =~ s/\{\}//g;
+      //         $spec =~ s/Token//g;
+      //         my $prefixes = join('',
+      //           ($definition->isProtected ? '\protected' : ()),
+      //           ($definition->isLong      ? '\long'      : ()),
+      //           ($definition->isOuter     ? '\outer'     : ()),
+      //         );
+      //         $meaning = ($prefixes ? $prefixes . ' ' : '') . "macro:" . ToString($spec) . "->" . ToString($expansion); }
+      //       Explode($meaning); }
+      }
+    } else {
+      Ok(Explode!("undefined").into())
+    }
+  });
+
+
+  //======================================================================
 
 
   DefParameterType!("CSName", reader => reader!(gullet, inner, extra, state, {

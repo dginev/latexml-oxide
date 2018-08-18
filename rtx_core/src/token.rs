@@ -8,7 +8,8 @@ use std::rc::Rc;
 use common::error::*;
 use common::number::Number;
 use common::store::Stored;
-use definition::register::Register;
+use definition::register::{Register, RegisterValue};
+use definition::Definition;
 use quote;
 use state::State;
 use stomach::Stomach;
@@ -151,6 +152,29 @@ impl Catcode {
       INVALID => "Invalid",
       CS => "ControlSequence",
       MARKER => "Marker",
+    }.to_string()
+  }
+
+  pub fn meaning(self) -> String {
+    use token::Catcode::*;
+    match self {
+      ESCAPE => "the escape character",
+      BEGIN => "begin-group character",
+      END => "end-group character",
+      MATH => "math shift character",
+      ALIGN => "alignment tab character",
+      EOL => "end-of-line character",
+      PARAM => "macro parameter character",
+      SUPER => "superscript character",
+      SUB => "subscript character",
+      IGNORE => "ignored character",
+      SPACE => "blank space",
+      LETTER => "the letter",
+      OTHER => "the character",
+      ACTIVE => "active character",
+      COMMENT => "comment character",
+      INVALID => "invalid character",
+      _ => "",
     }.to_string()
   }
 
@@ -565,6 +589,13 @@ impl Token {
   }
 
   pub fn to_number(&self) -> Number { Number::new(self.text.parse::<i32>().unwrap_or(0)) }
+
+  pub fn value_of(&self, args: Vec<Token>, state: &mut State) -> Option<RegisterValue> {
+    match self.to_register(state) {
+      None => None,
+      Some(register) => (*register).value_of(args, state),
+    }
+  }
 
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
     stomach.digest(Tokens { tokens: vec![self] }, state)

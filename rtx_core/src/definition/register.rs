@@ -60,6 +60,10 @@ impl<'a> From<&'a RegisterValue> for RegisterType {
   }
 }
 
+impl Default for RegisterValue {
+  fn default() -> Self { RegisterValue::Number(Number::new(0)) }
+}
+
 impl<'a> From<&'a RegisterValue> for Number {
   fn from(v: &RegisterValue) -> Number {
     match v {
