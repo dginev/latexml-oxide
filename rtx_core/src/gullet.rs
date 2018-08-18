@@ -111,6 +111,26 @@ impl Gullet {
 
   pub fn get_locator(&self) -> String { String::new() }
 
+  //**********************************************************************
+  // Not really 100% sure how this is supposed to work
+  // See TeX Ch 20, p216 regarding noexpand, \edef with token list registers, etc.
+  // Solution: Duplicate param tokens, stick NOTEXPANDED infront of expandable tokens.
+  pub fn neutralize_tokens(&mut self, tokens: &Vec<Token>, state: &mut State) -> Vec<Token> {
+    let mut result = Vec::new();
+    for token in tokens.iter() {
+      match token.get_catcode() {
+        Catcode::PARAM => result.push(token.clone()),
+        _ => {
+          if let Some(defn) = state.lookup_definition(token) {
+            result.push(T_NOTEXPANDED!("\\noexpand"));
+          }
+        },
+      };
+      result.push(token.clone());
+    }
+    result
+  }
+
   ///**********************************************************************
   /// Low-level readers: read token, read expanded token
   ///**********************************************************************

@@ -148,20 +148,31 @@ Let!("\\protect", "\\relax");
   // \the<internal quantity>
   DefMacro!("\\the Register", sub[gullet, args, state] {
     unpack!(args => variable);
-    let mut tokens = vec![];
-    //     my ($defn, @args) = @$variable;
-  //     if (!$defn || $defn eq 'missing') {
-  //       Error('expected', "<register>", $gullet, "a register was expected to be here"); return (); }
-  //     my $type = $defn->isRegister;
-  //     if (!$type) {
-  //       my $cs = ToString($defn->getCS);
-  //       Error('unexpected', "\\the$cs", $gullet, "You can't use $cs after \\the"); return (); }
-  //     my $value = $defn->valueOf(@args);
-  //     ## In all cases, these should be OTHER, except for space. (!?)
-  //     my @tokens = ($type eq 'Tokens' ? ($value ? $value->unlist : ()) : Explode(ToString($value)));
-  //     if ($LaTeXML::NOEXPAND_THE) {    # See \the for the sense in this.
-  //       @tokens = $gullet->neutralizeTokens(@tokens); }
-    Ok(Tokens::new(tokens))
+    let mut args = variable.unlist();
+    let defn = args.remove(0).to_register(state);
+    match defn {
+      None => {
+        error!(target:"expected:<register>", "a register was expected to be here");
+        Ok(Tokens!())
+      },
+      Some(defn) => {
+        let register_type = defn.borrow().register_type;
+        //     if (!$type) {
+        //       my $cs = ToString($defn->getCS);
+        //       Error('unexpected', "\\the$cs", $gullet, "You can't use $cs after \\the"); return (); }
+        let value = defn.value_of(args, state).unwrap_or(RegisterValue::Tokens(Tokens!()));
+        // In all cases, these should be OTHER, except for space. (!?)
+        let mut tokens : Vec<Token> = match value {
+          RegisterValue::Tokens(ts) => ts.unlist(),
+          RegisterValue::Token(t) => vec![t],
+          rv => Explode!(rv.to_string()),
+        };
+        if state.noexpand_the { // See \the for the sense in this.
+          tokens = gullet.neutralize_tokens(&tokens, state);
+        }
+        Ok(Tokens::new(tokens))
+      }
+    }
   });
 
 

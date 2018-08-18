@@ -1,11 +1,14 @@
+use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Display;
 use std::iter::FromIterator;
+use std::rc::Rc;
 
 use common::error::*;
 use common::number::Number;
 use common::store::Stored;
+use definition::register::Register;
 use quote;
 use state::State;
 use stomach::Stomach;
@@ -322,11 +325,18 @@ macro_rules! T_MARKER(($text:expr) => ({
 }));
 
 #[macro_export]
-macro_rules! T_NOTEXPANDED(() => ({
-  use $crate::token::Token;
-  use $crate::token::Catcode;
-  Token { text: s!(""), code: Catcode::NOTEXPANDED }
-}));
+macro_rules! T_NOTEXPANDED(
+  () => ({
+    use $crate::token::Token;
+    use $crate::token::Catcode;
+    Token { text: s!(""), code: Catcode::NOTEXPANDED }
+  });
+  ($text:expr) => ({
+    use $crate::token::Token;
+    use $crate::token::Catcode;
+    Token { text: $text.to_string(), code: Catcode::NOTEXPANDED }
+  });
+);
 
 #[macro_export]
 macro_rules! Token(($text:expr, $cc_opt:expr) => ({
@@ -549,6 +559,10 @@ impl Token {
   pub fn revert(&self) -> Token { self.clone() }
 
   pub fn to_string(&self) -> String { self.text.clone() }
+
+  pub fn to_register(&self, state: &State) -> Option<Rc<RefCell<Register>>> {
+    state.lookup_register_definition(self)
+  }
 
   pub fn to_number(&self) -> Number { Number::new(self.text.parse::<i32>().unwrap_or(0)) }
 

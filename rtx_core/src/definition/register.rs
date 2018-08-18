@@ -99,6 +99,8 @@ impl RegisterValue {
       },
     }
   }
+
+  pub fn to_string(&self) -> String { self.value_of().to_string() }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

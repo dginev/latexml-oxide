@@ -273,18 +273,27 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   // Same, but not necessarily writable
   DefParameterType!("Register", reader => reader!(gullet, inner, _extra, state, {
-      // my $token = $gullet->readXToken;
-      // my $defn = $token && LookupDefinition($token);
-      // if ((defined $defn) && $defn->isRegister) {
-      //   [$defn, $defn->readArguments($gullet)]; }
-      // else {
-      //   Error('expected', '<register>', $gullet,
-      //     "A <register> was supposed to be here", "Got " . Stringify($token));
-      //   if (isDefinable($token)) {
-      //     DefRegisterI($token, undef, Tokens());
-      //     return [$defn]; }
-      //   else {
-          // return; } } }
+      let token = gullet.read_x_token(false, false, state)?;
+      let defn = match token {
+        None => None,
+        Some(ref t) => state.lookup_register_definition(t)
+      };
+      match defn {
+        Some(register) => {
+          let mut invoked = vec![token.clone().unwrap()];
+          for mut arg in register.read_arguments(gullet, state)? {
+            invoked.append(&mut arg.unlist());
+          }
+          return Ok(Tokens::new(invoked));
+        },
+        None => {
+          error!(target:"expected:<register>", "A <register> was supposed to be here. Got {:?}", token);
+          // if isDefinable!(token) {
+          //   DefRegisterI!(token, None, Tokens!(), state);
+          //   return Tokens!(defn);
+          // }
+        }
+      }
       Ok(Tokens!())
     }),
     reversion => reversion!(gullet, arg, inner, state, {
