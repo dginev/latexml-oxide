@@ -272,6 +272,23 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($class:expr, $options:expr, $after:expr) => (LoadClass!($class, $options, $after, $state));
     ($class:expr, $options:expr, $after:expr, $state_arg:ident) => (load_class($class, $options, $after, $state_arg))
   }
+
+  macro_rules! DeclareFontMap{
+    ($name:expr, $map:expr, $family:expr, $state_arg: ident) => (
+      let mapname = format!("{}_{}_fontmap",$name, $family);
+      let map : Vec<Option<char>> = $map;
+      $state_arg.assign_value(&mapname, map, Some(Scope::Global));
+    );
+    ($name:expr, $map:expr, $state_arg: ident) => (
+      let mapname = format!("{}_fontmap",$name);
+      let map : Vec<Option<char>> = $map;
+      $state_arg.assign_value(&mapname, map, Some(Scope::Global));
+    );
+
+    ($name:expr, $map:expr, $family:expr) => (DeclareFontMap!($name, $map, $family, $state));
+    ($name:expr, $map:expr) => (DeclareFontMap!($name, $map, $state));
+  }
+
   macro_rules! DefMacroI(
     // With explicit state
     // TODO: Propagate options, such as "locked", etc

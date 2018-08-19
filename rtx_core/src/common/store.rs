@@ -52,6 +52,7 @@ pub enum Stored {
   Int(i32),
   // Collections (boxed)
   VecChar(Vec<char>),
+  VecOptionChar(Vec<Option<char>>),
   VecString(Vec<String>),
   VecToken(Vec<Token>),
   VecDigested(Vec<::Digested>),
@@ -90,6 +91,7 @@ impl fmt::Debug for Stored {
       String(ref s) => write!(f, "{}", s),
       Int(ref num) => write!(f, "Stored::Int[{:?}]", num),
       VecChar(ref vs) => write!(f, "Stored::VecChar[{:?}]", vs),
+      VecOptionChar(ref vs) => write!(f, "Stored::VecOptionChar[{:?}]", vs),
       VecString(ref vs) => write!(f, "Stored::VecString[{:?}]", vs),
       Bool(ref b) => write!(f, "Stored::Bool[{:?}]", b),
       Token(ref t) => write!(f, "Stored::Token[{:?}]", t),
@@ -252,6 +254,9 @@ impl<'a> From<&'a Token> for Stored {
 impl From<Vec<char>> for Stored {
   fn from(value: Vec<char>) -> Self { Stored::VecChar(value) }
 }
+impl From<Vec<Option<char>>> for Stored {
+  fn from(value: Vec<Option<char>>) -> Self { Stored::VecOptionChar(value) }
+}
 
 impl From<Vec<String>> for Stored {
   fn from(value: Vec<String>) -> Self { Stored::VecString(value) }
@@ -391,6 +396,15 @@ impl<'a> From<&'a Stored> for Option<&'a Vec<char>> {
   fn from(value: &'a Stored) -> Option<&'a Vec<char>> {
     match value {
       Stored::VecChar(ref cc) => Some(cc),
+      _ => None,
+    }
+  }
+}
+
+impl<'a> From<&'a Stored> for Option<&'a Vec<Option<char>>> {
+  fn from(value: &'a Stored) -> Option<&'a Vec<Option<char>>> {
+    match value {
+      Stored::VecOptionChar(ref cc) => Some(cc),
       _ => None,
     }
   }

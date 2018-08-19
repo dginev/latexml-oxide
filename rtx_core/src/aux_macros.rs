@@ -20,3 +20,11 @@ macro_rules! string_map {
 macro_rules! s {
   ($($arg : tt )*) => (format!($($arg)*))
 }
+
+#[macro_export]
+macro_rules! mixvec {
+  ($( $val:expr ),*) => {{
+    vec![ $($val.into()),*]
+  }}
+
+}
