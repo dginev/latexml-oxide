@@ -433,15 +433,19 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! DefPrimitive{
     ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block) =>
       (DefPrimitive!($proto, sub[$stomach, $whatsit, $inner_state] $body, $state));
+    ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $key1:ident=>$val1:expr) =>
+      (DefPrimitive!($proto, sub[$stomach, $whatsit, $inner_state] $body, $key1=>$val1, $state));
+
     ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $state_arg:ident) =>
       (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {$body}, PrimitiveOptions::default(), $state));
+    ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $key1:ident=>$val1:expr, $state_arg:ident) =>
+      (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {$body}, NewDefault!(PrimitiveOptions, $key1=>$val1), $state));
 
     ($proto:expr, $replacement:expr, $options:expr) => (DefPrimitive!($proto, $replacement, $options, $state));
     ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
       // TODO:
       // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
       let compiled_replacement = $replacement;
-
       DefPrimitiveIWO!($proto, compiled_replacement, $options, $state_arg);
     });
   }

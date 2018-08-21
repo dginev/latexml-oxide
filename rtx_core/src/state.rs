@@ -1201,7 +1201,7 @@ impl State {
 
   // ======================================================================
   // Set one of the definition prefixes global, etc (only global matters!)
-  pub fn set_prefix(&mut self, prefix: String) { self.prefixes.insert(prefix, true); }
+  pub fn set_prefix(&mut self, prefix: &str) { self.prefixes.insert(prefix.to_string(), true); }
 
   pub fn get_prefix(&self, prefix: &str) -> bool {
     match self.prefixes.get(prefix) {
