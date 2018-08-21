@@ -280,6 +280,12 @@ macro_rules! unpack_to_string {
 }
 
 #[macro_export]
+macro_rules! unpack_to_token {
+  ($args:ident => $var:ident) => (count_unpack_to_token!(0usize, $args => $var));
+  ($args:ident => $($var:ident),*) => (count_unpack_to_token!(0usize, $args => $($var),*));
+}
+
+#[macro_export]
 macro_rules! count_unpack_to_string {
   ($index:expr, $args:ident => $var:ident) => (
     let $var = $args[$index].clone().unwrap_or_default().to_string();
@@ -287,6 +293,18 @@ macro_rules! count_unpack_to_string {
   ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
     count_unpack_to_string!($index,$args => $var);
     count_unpack_to_string!(1usize+$index, $args => $($tail),*)
+  }
+}
+
+#[macro_export]
+macro_rules! count_unpack_to_token {
+  ($index:expr, $args:ident => $var:ident) => (
+    let tmp_tks : Tokens = $args[$index].clone().unwrap_or_default();
+    let $var : Token = tmp_tks.into();
+  );
+  ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
+    count_unpack_to_token!($index,$args => $var);
+    count_unpack_to_token!(1usize+$index, $args => $($tail),*)
   }
 }
 

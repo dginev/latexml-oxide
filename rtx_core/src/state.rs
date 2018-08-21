@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 use std::rc::Rc;
 
-use common::font::Font;
+use common::font::{Font, Fontmap};
 use common::model::{IndirectModel, Model};
 use common::number::Number;
 pub use common::store::Stored; // reexport for convenience
@@ -556,7 +556,7 @@ impl State {
 
   //======================================================================
 
-  pub fn lookup_value<'lv>(&'lv self, key: &'lv str) -> Option<&Stored> {
+  pub fn lookup_value(&self, key: &str) -> Option<&Stored> {
     match self.value.get(key) {
       None => None,
       Some(vvec) => vvec.front(),
@@ -1526,6 +1526,46 @@ impl State {
     } else {
       false // False, if only one has 'meaning'
     }
+  }
+
+  pub fn load_font_map(&self, encoding: &str) -> Option<&Fontmap> {
+    let fontmap_key = format!("{}_fontmap", encoding);
+    {
+      if let Some(map) = self.lookup_value(&fontmap_key) {
+        return map.into();
+      }
+    }
+
+    // TODO: Once we try to load font maps via require package we will have some serious mutability
+    // issues to resolve... punt for now.
+
+    // no map, try to load one
+    // let can_load_ok: bool;
+    // let fail_suffix = "_fontmap_failed_to_load";
+    // let fail_to_load_key = format!("{}{}", encoding, fail_suffix);
+    // {
+    //   can_load_ok = !self.lookup_bool(&fail_to_load_key);
+    // }
+
+    // if can_load_ok {
+    //   self.assign_value(&fail_to_load_key, true, None); // Stop recursion?
+
+    //   // TODO: difficult .... this is main rtx functionality
+    //   // RequirePackage(lc($encoding), type => 'fontmap'); //
+    //   self.assign_value(&fail_to_load_key, false, None);
+    //   {
+    //     if let Some(map) = self.lookup_value(&fontmap_key) {
+    //       // Got map?
+    //       return map.into();
+    //     }
+    //   }
+    //   self.assign_value(&fail_to_load_key, false, None);
+
+    //   self.assign_value(&fail_to_load_key, true, Some(Scope::Global));
+    //   None
+    // } else {
+    None
+    // }
   }
 
   // WALL OF SHAME

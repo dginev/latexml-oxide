@@ -166,14 +166,13 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     // reversion: |arg, until| { vec![Revert!(arg), Revert!(until)] },
   );
 
-  // DefParameterType!("Skip1Space",Parameter{
-  // reader: reader!(gullet, inner, _extra, state, {
-  //   gullet.skip_one_space();
-  //     vec![]
-  //   }),
-  //   novalue: true,
-  //   ..Parameter::default()
-  // }, state);
+  DefParameterType!("Skip1Space",
+    reader => reader!(gullet, inner, _extra, state, {
+      gullet.skip_one_space(state);
+      Ok(Tokens!())
+    }),
+    novalue => true
+  );
 
   // Read a matching keyword, eg. Match:=
   DefParameterType!("Match",

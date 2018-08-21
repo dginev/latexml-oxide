@@ -8,6 +8,10 @@ use std::collections::HashMap;
 /// NOTE: This is now in Common that it may evolve to be useful in Post processing...
 use std::fmt;
 
+use state::State;
+
+pub type Fontmap = Vec<Option<char>>;
+
 static DEFFAMILY: &'static str = "serif";
 static DEFSERIES: &'static str = "medium";
 static DEFSHAPE: &'static str = "upright";
@@ -154,6 +158,10 @@ impl Font {
     }
     s!("Font[{}]", parts.join(", "))
   }
+
+  /// Getter for encoding field
+  pub fn get_encoding(&self) -> Option<String> { self.encoding.clone() }
+  pub fn get_family(&self) -> Option<String> { self.family.clone() }
 
   // NOTE: In math, NORMALLY, setting any one of
   //    family, series or shape
@@ -418,4 +426,144 @@ impl Font {
 
 fn is_diff(x: &Option<String>, y: &Option<String>) -> bool {
   x.is_some() && (y.is_none() || (x != y))
+}
+
+/// Decode a codepoint using the fontmap for a given font and/or fontencoding.
+/// If `encoding` not provided, then lookup according to the current font's
+/// encoding; the font family may also be used to choose the fontmap (think tt fonts!).
+/// When `implicit` is false, we are "explicitly" asking for a decoding, such as
+/// with \char, \mathchar, \symbol, DeclareTextSymbol and such cases.
+/// In such cases, only codepoints specifically within the map are covered; the rest are undef.
+/// If `implicit` is true, we'll decode token content that has made it to the stomach:
+/// We're going to assume that SOME sort of handling of input encoding is taking place,
+/// so that if anything above 128 comes in, it must already be Unicode!.
+/// The lower half plane still needs to go through decoding, though, to deal
+/// with TeX's rearrangement of ASCII...
+pub fn decode(
+  code: u8,
+  encoding_opt: Option<String>,
+  implicit: bool,
+  state: &mut State,
+) -> Option<char>
+{
+  let mut font = None;
+  let encoding = match encoding_opt {
+    None => {
+      font = state.lookup_font();
+      if let Some(ref font) = font {
+        font.get_encoding().unwrap_or(String::new())
+      } else {
+        String::new()
+      }
+    },
+    Some(encoding) => encoding,
+  };
+
+  let mut map: Option<&Fontmap> = None;
+  if !encoding.is_empty() {
+    if let Some(encmap) = state.load_font_map(&encoding) {
+      // OK got some map.
+      map = Some(encmap);
+      if let Some(font) = font {
+        if let Some(family) = (*font).get_family() {
+          if let Some(fmap) = state.lookup_value(&format!("{}_{}_fontmap", encoding, family)) {
+            map = fmap.into(); // Use the family specific map, if any.
+          }
+        }
+      }
+    }
+  }
+
+  if implicit {
+    if let Some(map) = map {
+      if code < 128 {
+        match map.get(code as usize) {
+          None => None,
+          Some(c) => *c,
+        }
+      } else {
+        Some(code.into())
+      }
+    } else {
+      Some(code.into())
+    }
+  } else {
+    if let Some(map) = map {
+      match map.get(code as usize) {
+        None => None,
+        Some(c) => *c,
+      }
+    } else {
+      None
+    }
+  }
+}
+
+pub fn decode_string(
+  string: String,
+  encoding_opt: Option<String>,
+  implicit: bool,
+  state: &mut State,
+) -> String
+{
+  if string.is_empty() {
+    return String::new();
+  }
+  let mut font = None;
+  let encoding = match encoding_opt {
+    None => {
+      font = state.lookup_font();
+      if let Some(ref font) = font {
+        font.get_encoding().unwrap_or(String::new())
+      } else {
+        String::new()
+      }
+    },
+    Some(encoding) => encoding,
+  };
+
+  let mut map: Option<&Fontmap> = None;
+  if !encoding.is_empty() {
+    if let Some(encmap) = state.load_font_map(&encoding) {
+      // OK got some map.
+      map = Some(encmap);
+      if let Some(font) = font {
+        if let Some(family) = (*font).get_family() {
+          if let Some(fmap) = state.lookup_value(&format!("{}_{}_fontmap", encoding, family)) {
+            map = fmap.into(); // Use the family specific map, if any.
+          }
+        }
+      }
+    }
+  }
+
+  let mut result_string: String = String::new();
+  for c in string.chars() {
+    if implicit {
+      if let Some(map) = map {
+        let code = c as u8;
+        if code < 128 {
+          if let Some(mapc) = map.get(code as usize) {
+            if let Some(mapc_val) = mapc {
+              result_string.push(*mapc_val);
+            }
+          }
+        } else {
+          result_string.push(c);
+        }
+      } else {
+        result_string.push(c)
+      }
+    } else {
+      if let Some(map) = map {
+        let code = c as u8;
+        if let Some(mapc) = map.get(code as usize) {
+          if let Some(mapc_val) = mapc {
+            result_string.push(*mapc_val);
+          }
+        }
+      }
+    }
+  }
+  result_string
 }

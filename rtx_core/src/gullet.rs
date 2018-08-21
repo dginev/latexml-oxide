@@ -729,6 +729,15 @@ impl Gullet {
     }
   }
 
+  pub fn skip_one_space(&mut self, state: &mut State) {
+    if let Some(token) = self.read_token(state) {
+      if token.get_catcode() != Catcode::SPACE {
+        self.unread(Tokens!(token));
+      }
+    }
+    return;
+  }
+
   pub fn reading_from_mouth<R>(
     &mut self,
     mouth: Mouth,

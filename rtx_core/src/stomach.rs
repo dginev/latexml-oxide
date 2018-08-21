@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use common::error::*;
+use common::font;
 use common::font::Font;
 use common::store::Stored;
 use definition::constructor::{Constructor, ConstructorOptions};
@@ -338,6 +339,7 @@ impl Stomach {
         )))])
       }
     } else if meaning.code == Catcode::COMMENT {
+      // TODO
       // Note: Comments need char decoding as well!
       //  let comment = LaTeXML::Package::FontDecodeString($meaning->getString, undef, 1);
       // // However, spaces normally would have be digested away as positioning...
@@ -353,7 +355,7 @@ impl Stomach {
     // return; }
     else {
       Ok(vec![Digested::TBox(Box::new(Tbox::new(
-        meaning.to_string(), //text
+        font::decode_string(meaning.to_string(), None, true, state), //text
         font,
         None,             // locator
         Tokens!(meaning), // tokens
