@@ -982,7 +982,7 @@ impl State {
     }
   }
 
-  pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<Stored> {
+  pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Stored {
     let cc = &token.code;
     let name = &token.text;
     let lookupname = if (cc == &Catcode::ACTIVE)
@@ -1002,15 +1002,21 @@ impl State {
 
     if !lookupname.is_empty() && entry.is_some() {
       debug!("Found definition for: {:?}", lookupname);
-      let defn = entry.unwrap();
-      // If a cs has been let to an executable token, lookup ITS defn.
-      // if defn->isa('LaTeXML::Token')
-      // && ($lookupname = $LaTeXML::Token::PRIMITIVE_NAME[$$defn[1]])
-      // && ($entry      = $$self{meaning}{$lookupname})) {
-      // $defn = $$entry[0]; }
-      Some(defn.front().unwrap().clone())
+      let mut defn = entry.unwrap().front().unwrap().clone();
+      if let Stored::Token(ref t) = defn {
+        let cc = t.get_catcode();
+        if let Some(lookupname) = t.get_primitive_name() {
+          if let Some(retry_entry) = self.meaning.get(&lookupname) {
+            // special case,
+            // If a cs has been let to an executable token, lookup ITS defn.
+            return retry_entry.front().unwrap().clone();
+          }
+        }
+      }
+      // if a regular definition, just return.
+      defn
     } else {
-      Some(token.into())
+      token.into()
     }
   }
 

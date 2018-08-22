@@ -497,15 +497,22 @@ impl Token {
     }
   }
 
+  /// Get the fixed name of a primitive catcode, or empty string otherwise
+  pub fn get_primitive_name(&self) -> Option<String> {
+    if self.code.is_primitive() {
+      Some(self.code.name())
+    } else {
+      None
+    }
+  }
+
   /// Get the CS name only if the catcode is executable!
   pub fn get_executable_name(&self) -> String {
     let cc = self.code;
     if cc.is_executable() {
-      if cc.is_primitive() {
-        cc.name()
-      } else {
-        self.text.clone()
-      }
+      self
+        .get_primitive_name()
+        .unwrap_or_else(|| self.text.clone())
     } else {
       String::new()
     }

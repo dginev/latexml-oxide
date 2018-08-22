@@ -192,92 +192,84 @@ impl Stomach {
       state.current_token = Some(token.clone());
       result = Vec::new();
 
-      let looked_up_definition: Option<Stored> = state.lookup_digestable_definition(&token);
-      match looked_up_definition {
-        None => {
-          // Supposedly executable token, but no definition!
-          result = self.invoke_token_undefined(&token, state)?;
+      // Rust notes: It would be ideal if we could unify the cases for (Primtive, Constructor,
+      // MathPrimitive), as well as (Expandable, Conditional) since the
+      // API is identical. However, as the types are different, Rust
+      // constrains us here, we need separate match arms for each
+      // distinctly typed enum case.
+      match state.lookup_digestable_definition(&token) {
+        // should always return a value, self if no def
+        Stored::Token(meaning) => {
+          // Common case
+          let cc = meaning.get_catcode();
+          if cc == Catcode::CS {
+            result = self.invoke_token_undefined(&token, state)?;
+          } else if cc.is_absorbable() {
+            result = self.invoke_token_simple(meaning, state)?;
+          } else {
+            error!(
+              target: &s!("misdefined:{:?}", token),
+              "The token {:?} should never reach Stomach!",
+              token
+            );
+            result = self.invoke_token_simple(meaning, state)?;
+          }
         },
-        Some(store) => {
-          // Rust notes: It would be ideal if we could unify the cases for (Primtive, Constructor,
-          // MathPrimitive), as well as (Expandable, Conditional) since the
-          // API is identical. However, as the types are different, Rust
-          // constrains us here, we need separate match arms for each
-          // distinctly typed enum case.
-          match store {
-            Stored::Token(meaning) => {
-              // Common case
-              let cc = meaning.get_catcode();
-              if cc == Catcode::CS {
-                result = self.invoke_token_undefined(&token, state)?;
-              } else if cc.is_absorbable() {
-                result = self.invoke_token_simple(meaning, state)?;
-              } else {
-                error!(
-                  target: &s!("misdefined:{:?}", token),
-                  "The token {:?} should never reach Stomach!",
-                  token
-                );
-                result = self.invoke_token_simple(meaning, state)?;
-              }
-            },
-            Stored::Expandable(meaning) => {
-              // A math-active character will (typically) be a macro,
-              // but it isn't expanded in the gullet, but later when digesting, in math mode (? I
-              // think)
-              let invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
-              self.gullet.unread(invoked_meaning);
-              maybe_token = self.gullet.read_x_token(true, false, state)?; // replace the token by it's expansion!!!
-              self.token_stack.pop();
-              continue;
-            },
-            Stored::Conditional(meaning) => {
-              // Conditionals are "expandable", use the regular invoke.
-              let invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
-              self.gullet.unread(invoked_meaning);
-              maybe_token = self.gullet.read_x_token(true, false, state)?; // replace the token by it's expansion!!!
-              self.token_stack.pop();
-              continue;
-            },
-            Stored::Constructor(meaning) => {
-              // Otherwise, a normal primitive or constructor
-              result = meaning.invoke_primitive(self, meaning.clone(), state)?;
-              if !meaning.is_prefix() {
-                state.clear_prefixes(); // Clear prefixes unless we just set one.
-              }
-            },
-            Stored::Primitive(meaning) => {
-              // Otherwise, a normal primitive or constructor
-              result = meaning.invoke_primitive(self, meaning.clone(), state)?;
-              if !meaning.is_prefix() {
-                state.clear_prefixes(); // Clear prefixes unless we just set one.
-              }
-            },
-            Stored::MathPrimitive(meaning) => {
-              // Copy of regular Primitive
-              // Otherwise, a normal primitive or constructor
-              result = meaning.invoke_primitive(self, meaning.clone(), state)?;
-              if !meaning.is_prefix() {
-                state.clear_prefixes(); // Clear prefixes unless we just set one.
-              }
-            },
-            Stored::Register(meaning) => {
-              // Registers are special primitives
-              result = meaning.invoke_primitive(self, meaning.clone(), state)?;
-              if !meaning.is_prefix() {
-                state.clear_prefixes(); // Clear prefixes unless we just set one.
-              }
-            },
-            meaning => {
-              fatal!(
-                Stomach,
-                Misdefined,
-                s!("The object {:?} should never reach Stomach!", meaning)
-              );
-            },
-          };
+        Stored::Expandable(meaning) => {
+          // A math-active character will (typically) be a macro,
+          // but it isn't expanded in the gullet, but later when digesting, in math mode (? I
+          // think)
+          let invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
+          self.gullet.unread(invoked_meaning);
+          maybe_token = self.gullet.read_x_token(true, false, state)?; // replace the token by it's expansion!!!
+          self.token_stack.pop();
+          continue;
         },
-      };
+        Stored::Conditional(meaning) => {
+          // Conditionals are "expandable", use the regular invoke.
+          let invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
+          self.gullet.unread(invoked_meaning);
+          maybe_token = self.gullet.read_x_token(true, false, state)?; // replace the token by it's expansion!!!
+          self.token_stack.pop();
+          continue;
+        },
+        Stored::Constructor(meaning) => {
+          // Otherwise, a normal primitive or constructor
+          result = meaning.invoke_primitive(self, meaning.clone(), state)?;
+          if !meaning.is_prefix() {
+            state.clear_prefixes(); // Clear prefixes unless we just set one.
+          }
+        },
+        Stored::Primitive(meaning) => {
+          // Otherwise, a normal primitive or constructor
+          result = meaning.invoke_primitive(self, meaning.clone(), state)?;
+          if !meaning.is_prefix() {
+            state.clear_prefixes(); // Clear prefixes unless we just set one.
+          }
+        },
+        Stored::MathPrimitive(meaning) => {
+          // Copy of regular Primitive
+          // Otherwise, a normal primitive or constructor
+          result = meaning.invoke_primitive(self, meaning.clone(), state)?;
+          if !meaning.is_prefix() {
+            state.clear_prefixes(); // Clear prefixes unless we just set one.
+          }
+        },
+        Stored::Register(meaning) => {
+          // Registers are special primitives
+          result = meaning.invoke_primitive(self, meaning.clone(), state)?;
+          if !meaning.is_prefix() {
+            state.clear_prefixes(); // Clear prefixes unless we just set one.
+          }
+        },
+        meaning => {
+          fatal!(
+            Stomach,
+            Misdefined,
+            s!("The object {:?} should never reach Stomach!", meaning)
+          );
+        },
+      }
       break;
     }
 
@@ -362,7 +354,7 @@ impl Stomach {
         Ok(Vec::new())
       } else {
         Ok(vec![Digested::TBox(Box::new(Tbox::new(
-          meaning.to_string(), //text
+          meaning.get_string().to_string(), //text
           font,
           Some(self.gullet.get_locator()), //locator
           Tokens!(meaning),                // tokens

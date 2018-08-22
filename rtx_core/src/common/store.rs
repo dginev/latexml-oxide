@@ -443,8 +443,11 @@ impl<'a> From<&'a Stored> for Token {
       Stored::Tokens(ts) => ts.into(),
       Stored::Token(t) => (*t).clone(),
       Stored::String(t) => T_CS!(t),
-      t => T_CS!(t.to_string()), /* TODO, is this the right place to default to CS? Do we need a
-                                  * custom method instead? */
+      t => {
+        warn!(target:"Stored:cast", "dangerous cast to CS for {:?}", t);
+        T_CS!(t.to_string())
+      }, /* TODO, is this the right place to default to CS? Do we need a
+          * custom method instead? */
     }
   }
 }
