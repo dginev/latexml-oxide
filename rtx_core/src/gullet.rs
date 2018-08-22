@@ -563,7 +563,11 @@ impl Gullet {
       None => Ok(None),
       Some(token) => {
         if let Some(defn) = state.lookup_register_definition(&token) {
-          if let Some(register_type) = defn.register_type() {
+          if let Some(mut register_type) = defn.register_type() {
+            if register_type == RegisterType::CharDef {
+              // CharDefs treated as numbers here
+              register_type = RegisterType::Number;
+            }
             if register_type == value_type {
               let args: Vec<Token> = defn
                 .read_arguments(self, state)?

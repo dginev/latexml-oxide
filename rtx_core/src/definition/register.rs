@@ -71,10 +71,7 @@ impl<'a> From<&'a RegisterValue> for Number {
       RegisterValue::Dimension(other) => Number::new(other.value_of()),
       RegisterValue::Glue(other) => Number::new(other.value_of()),
       RegisterValue::MuGlue(other) => Number::new(other.value_of()),
-      RegisterValue::Token(other) => {
-        error!(target:"expected:number", "Token register can not be cast into a number: {:?}", other);
-        Number::new(0)
-      },
+      RegisterValue::Token(other) => other.to_number(),
       RegisterValue::Tokens(other) => {
         error!(target:"expected:number", "Token register can not be cast into a number: {:?}", other);
         Number::new(0)
@@ -157,9 +154,8 @@ impl Definition for RefCell<Register> {
   fn is_register(&self) -> bool { true }
   fn is_prefix(&self) -> bool { false }
   // not implemented for primitives
-  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
-  // TODO:
-  fn get_parameters(&self) -> &Option<Parameters> { &None } // TODO: How do we do this with a RefCell ?!
+  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> { unimplemented!() }
+  fn get_parameters(&self) -> &Option<Parameters> { unimplemented!() } // TODO: How do we do this with a RefCell ?!
   fn get_cs(&self) -> Token { self.borrow().cs.clone() }
 
   fn get_cs_name(&self) -> String { self.borrow().cs.get_cs_name() }
