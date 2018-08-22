@@ -16,9 +16,40 @@ use whatsit::Whatsit;
 use Digested;
 
 pub type ReaderClosure =
-  Rc<Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<Token>, &mut State) -> Result<Tokens>>;
+  Rc<Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
 pub type ReversionClosure =
-  Rc<Fn(&mut Gullet, Vec<Token>, Vec<Option<Parameters>>, &mut State) -> Result<Tokens>>;
+  Rc<Fn(&mut Gullet, Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
+
+#[derive(Clone, Debug)]
+pub enum ParameterExtra {
+  Token(Token),
+  ParametersOption(Option<Parameters>),
+}
+impl From<Token> for ParameterExtra {
+  fn from(t: Token) -> ParameterExtra { ParameterExtra::Token(t) }
+}
+impl From<Option<Parameters>> for ParameterExtra {
+  fn from(opt: Option<Parameters>) -> ParameterExtra { ParameterExtra::ParametersOption(opt) }
+}
+impl From<ParameterExtra> for Token {
+  fn from(param: ParameterExtra) -> Token {
+    if let ParameterExtra::Token(t) = param {
+      t
+    } else {
+      T_OTHER!("")
+    }
+  }
+}
+impl From<ParameterExtra> for Option<Parameters> {
+  fn from(param: ParameterExtra) -> Option<Parameters> {
+    if let ParameterExtra::ParametersOption(ps) = param {
+      ps
+    } else {
+      None
+    }
+  }
+}
+
 #[derive(Clone)]
 pub struct Parameter {
   pub novalue: bool,
@@ -27,7 +58,7 @@ pub struct Parameter {
   pub undigested: bool,
   pub name: String,
   pub spec: String,
-  pub extra: Vec<Option<Parameters>>,
+  pub extra: Vec<ParameterExtra>,
   pub reader: ReaderClosure,
   pub reversion: Option<ReversionClosure>,
   pub before_digest: Option<BeforeDigestClosure>,
@@ -84,84 +115,82 @@ impl Parameter {
     // is defined.
     let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
     let mut descriptor: Option<Parameter>;
-    match looked_up_mapping {
-      Some(&Stored::Parameter(ref d_lookup)) => {
-        descriptor = Some((*d_lookup).clone());
-      },
-      _ => {
-        if OPTIONAL_REGEX.is_match(&self.name) {
-          let captures = OPTIONAL_REGEX.captures(&self.name).unwrap();
-          let basetype = captures.get(1).map_or("", |m| m.as_str());
-          descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-            Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
-            _ => match Parameter::check_reader_function(s!("Read{}", &self.name)) {
-              Some(reader) => Some(Parameter {
-                reader,
-                optional: true,
-                ..Parameter::default()
-              }),
-              None => match Parameter::check_reader_function(s!("Read{}", basetype)) {
-                Some(reader) => Some(Parameter {
-                  reader,
-                  optional: true,
-                  novalue: true,
-                  ..Parameter::default()
-                }),
-                None => fatal!(
-                  Parameter,
-                  Init,
-                  s!("Can't initialize parameter {:?}, unknown?", self.name)
-                ),
-              },
-            },
-          };
-          descriptor.as_mut().unwrap().optional = true;
-        } else if SKIP_REGEX.is_match(&self.name) {
-          let captures = SKIP_REGEX.captures(&self.name).unwrap();
-          let basetype = captures.get(1).map_or("", |m| m.as_str());
-          info!("param basetype: {:?}", basetype);
-          descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-            Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
-            _ => match Parameter::check_reader_function(self.name.clone()) {
-              Some(reader) => Some(Parameter {
-                reader,
-                optional: true,
-                novalue: true,
-                ..Parameter::default()
-              }),
-              None => match Parameter::check_reader_function(s!("Read{}", basetype)) {
-                Some(reader) => Some(Parameter {
-                  reader,
-                  optional: true,
-                  novalue: true,
-                  ..Parameter::default()
-                }),
-                None => None,
-              },
-            },
-          };
-          descriptor.as_mut().unwrap().novalue = true;
-          descriptor.as_mut().unwrap().optional = true;
-        } else {
-          descriptor = match Parameter::check_reader_function(s!("Read{}", &self.name)) {
+    if let Some(&Stored::Parameter(ref d_lookup)) = looked_up_mapping {
+      descriptor = Some((*d_lookup).clone());
+    } else if OPTIONAL_REGEX.is_match(&self.name) {
+      let captures = OPTIONAL_REGEX.captures(&self.name).unwrap();
+      let basetype = captures.get(1).map_or("", |m| m.as_str());
+      descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
+        Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
+        _ => match Parameter::check_reader_function(s!("Read{}", &self.name)) {
+          Some(reader) => Some(Parameter {
+            reader,
+            optional: true,
+            ..Parameter::default()
+          }),
+          None => match Parameter::check_reader_function(s!("Read{}", basetype)) {
             Some(reader) => Some(Parameter {
               reader,
+              optional: true,
+              novalue: true,
+              ..Parameter::default()
+            }),
+            None => fatal!(
+              Parameter,
+              Init,
+              s!("Can't initialize parameter {:?}, unknown?", self.name)
+            ),
+          },
+        },
+      };
+      descriptor.as_mut().unwrap().optional = true;
+    } else if SKIP_REGEX.is_match(&self.name) {
+      let captures = SKIP_REGEX.captures(&self.name).unwrap();
+      let basetype = captures.get(1).map_or("", |m| m.as_str());
+
+      descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
+        Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
+        _ => match Parameter::check_reader_function(self.name.clone()) {
+          Some(reader) => Some(Parameter {
+            reader,
+            optional: true,
+            novalue: true,
+            ..Parameter::default()
+          }),
+          None => match Parameter::check_reader_function(s!("Read{}", basetype)) {
+            Some(reader) => Some(Parameter {
+              reader,
+              optional: true,
+              novalue: true,
               ..Parameter::default()
             }),
             None => None,
-          };
-        }
-      },
-    };
+          },
+        },
+      };
+      if let Some(ref mut desc) = descriptor {
+        desc.novalue = true;
+        desc.optional = true;
+      }
+    } else {
+      descriptor = match Parameter::check_reader_function(s!("Read{}", &self.name)) {
+        Some(reader) => Some(Parameter {
+          reader,
+          ..Parameter::default()
+        }),
+        None => None,
+      };
+    }
+
     match descriptor {
       Some(descriptor) => {
         // descriptor needs to get integrated into Self
+        //  except `spec` and `name` which are always preserved!
         self.reader = descriptor.reader; // What else?
         self.novalue = descriptor.novalue;
         self.semiverbatim = descriptor.semiverbatim;
         self.optional = descriptor.optional;
         self.undigested = descriptor.undigested;
-        self.name = descriptor.name;
         self.reversion = descriptor.reversion;
         self.before_digest = descriptor.before_digest;
         self.after_digest = descriptor.after_digest;
@@ -203,7 +232,7 @@ impl Parameter {
       state.begin_semiverbatim(None);
     }
     let closure: &ReaderClosure = &self.reader;
-    let mut value = closure(gullet, self.extra.clone(), vec![], state)?;
+    let mut value = closure(gullet, vec![], self.extra.clone(), state)?;
     // TODO:
     // $value = $value->neutralize if $$self{semiverbatim} && (ref $value)
     //   && $value->can('neutralize');
@@ -211,7 +240,7 @@ impl Parameter {
       state.end_semiverbatim();
     }
 
-    if !self.optional && value.is_empty() {
+    if !self.optional && !self.novalue && value.is_empty() {
       error!(
         target: &format!("expected:{:?}", self),
         "Missing argument for TODO:fordefn"

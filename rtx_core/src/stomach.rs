@@ -10,7 +10,7 @@ use definition::expandable::Expandable;
 use definition::Definition;
 use gullet::Gullet;
 use list::List;
-use mouth::Mouth;
+use mouth::{Mouth, MouthOptions};
 use state::{Scope, State};
 use tbox::*;
 use token::{Catcode, Token};
@@ -130,6 +130,38 @@ impl Stomach {
         Ok(Digested::List(Box::new(digested_list)))
       }),
     )
+  }
+
+  pub fn raw_tex(&mut self, text: &str, state: &mut State) -> Result<()> {
+    // It could be as simple as this, except if catcodes get changed, it's too late!!!
+    //  Digest(TokenizeInternal($text));
+    let savedcc = state.lookup_catcode('@').unwrap_or(Catcode::OTHER);
+    state.assign_catcode('@', Catcode::LETTER, None);
+    let raw_tex_mouth;
+    {
+      raw_tex_mouth = Mouth::new(
+        text,
+        Some(MouthOptions {
+          fordefinitions: true,
+        }),
+        state,
+      );
+    }
+    self.reading_from_mouth(
+      raw_tex_mouth,
+      state,
+      Box::new(move |stomach, state| -> Result<()> {
+        while let Some(token) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
+          if token != T_SPACE!() {
+            stomach.invoke_token(token, state)?;
+          }
+        }
+        Ok(())
+      }),
+    )?;
+
+    state.assign_catcode('@', savedcc, None);
+    Ok(())
   }
 
   pub fn get_locator(&self) -> String { s!("fake stomach locator") }

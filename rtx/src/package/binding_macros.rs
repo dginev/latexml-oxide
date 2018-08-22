@@ -191,7 +191,7 @@ macro_rules! reader {
     Rc::new(
       |$gullet: &mut Gullet,
        $inner: Vec<Option<Parameters>>,
-       $extra: Vec<Token>,
+       $extra: Vec<ParameterExtra>,
        $state: &mut State|
        -> Result<Tokens> { $body },
     )
@@ -204,7 +204,7 @@ macro_rules! reversion {
     Some(Rc::new(
       |$gullet: &mut Gullet,
        mut $arg: Vec<Token>,
-       $inner: Vec<Option<Parameters>>,
+       $inner: Vec<ParameterExtra>,
        $state: &mut State|
        -> Result<Tokens> { $body },
     ))

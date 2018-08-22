@@ -5,6 +5,7 @@ pub use std::collections::VecDeque;
 pub use std::rc::Rc;
 
 pub use rtx_core::common::error::*;
+pub use rtx_core::common::font;
 pub use rtx_core::common::font::Font;
 pub use rtx_core::common::ligature::Ligature;
 pub use rtx_core::common::number::Number;
@@ -26,7 +27,7 @@ pub use rtx_core::document::Document;
 pub use rtx_core::gullet::Gullet;
 pub use rtx_core::mouth;
 pub use rtx_core::mouth::Mouth;
-pub use rtx_core::parameter::{Parameter, Parameters};
+pub use rtx_core::parameter::{Parameter, ParameterExtra, Parameters};
 pub use rtx_core::state::{Scope, State, Stored};
 pub use rtx_core::stomach::Stomach;
 pub use rtx_core::tbox::Tbox;

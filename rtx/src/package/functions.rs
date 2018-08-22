@@ -19,7 +19,7 @@ use rtx_core::document::Document;
 use rtx_core::gullet::Gullet;
 use rtx_core::mouth;
 use rtx_core::mouth::Mouth;
-use rtx_core::parameter::{Parameter, Parameters};
+use rtx_core::parameter::{Parameter, ParameterExtra, Parameters};
 use rtx_core::state::{Scope, State, Stored};
 use rtx_core::stomach::Stomach;
 use rtx_core::token::Token;
@@ -353,7 +353,7 @@ pub fn parse_parameters(
         Parameter {
           name: s!("Plain"),
           spec: spec.to_string(),
-          extra: vec![inner],
+          extra: vec![inner.into()],
           ..Parameter::default()
         }.init(state)?,
       );
@@ -381,7 +381,10 @@ pub fn parse_parameters(
           Parameter {
             name: s!("Optional"),
             spec: spec.to_string(),
-            extra: vec![None, parse_parameters(inner_spec.to_string(), cs, state)?],
+            extra: vec![
+              ParameterExtra::ParametersOption(None),
+              parse_parameters(inner_spec.to_string(), cs, state)?.into(),
+            ],
             ..Parameter::default()
           }.init(state)?,
         );
@@ -400,14 +403,13 @@ pub fn parse_parameters(
       next_proto = PARAMSPECT_CHECK.replace(&prototype, "").to_string();
       let spec = captures.get(1).map_or("", |m| m.as_str()).to_string();
       let name = captures.get(2).map_or("", |m| m.as_str()).to_string();
-      let extra = match captures.get(4) {
-        None => Vec::new(),
-        Some(_extra_string) => {
-          // TODO: Ask Bruce about the "extra" functionality and its types
-          // extra_string.split("|").map(|t| tokenize_internal(t)).collect::<Vec<Token>>();
-          Vec::new()
-        },
-      };
+      let extra_str = captures.get(4).map_or("", |m| m.as_str()).to_string();
+      // TODO: Ask Bruce about the "extra" functionality and its types
+      let extra = extra_str
+        .split("|")
+        .flat_map(|t| mouth::tokenize_internal(t, None).unlist())
+        .map(|t| t.into())
+        .collect::<Vec<ParameterExtra>>();
       parameters.push(
         Parameter {
           name,
@@ -707,6 +709,8 @@ pub fn def_register<T: Into<RegisterValue>>(
       readonly,
       getter,
       setter,
+      internalcs: None,
+      internalvalue: None,
     },
     Some(Scope::Global),
   );

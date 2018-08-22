@@ -16,7 +16,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
       'x', 'y', 'z', '{', '|', '}', '~', None
     ]
-  );
+  ); 
 
   // Note that several entries are used for accents, and in practice will actually
   // be used in something like an m:mover; thus they needn't (shouldn't?) be "small"
@@ -297,8 +297,50 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     ]
   );
 
-  // DefPrimitive!("\\char Number", sub[gullet, args, state] {
-  //   Box(FontDecode($_[1]->valueOf), None, None, Invocation(T_CS('\char'), $_[1])); });
+  DefPrimitive!("\\char Number", sub[stomach, args, p_state] {
+    unpack_to_token!(args=>token);
+    let number = token.to_number();
+    let gullet = stomach.get_gullet_mut();
+    let decoded = match font::decode(number.value_of() as u8, None, false, p_state) {
+      None => String::new(),
+      Some(c) => c.to_string()
+    };
+    let invoked = Invocation!(T_CS!("\\char"), vec![token], gullet, p_state)?;
+    Tbox::new(
+     decoded,
+     None,
+     None,
+     invoked,
+     HashMap::new(), 
+     p_state).into()
+  });
+
+  // Almost like a register, but different...
+  DefPrimitive!("\\chardef Token SkipMatch:= Number", sub[stomach, args, p_state] {
+    unpack_to_token!(args => newcs, value);
+    let csname = newcs.get_cs_name();
+    let number = value.to_number();
+    let chardef_value = value.clone();
+    let internalcs = T_CS!(&format!("\\@chardef@{}", csname));
+    DefPrimitiveII!(internalcs, None, sub[stomach,args,i_state] {
+      let gullet = stomach.get_gullet_mut();
+      let decoded = match font::decode(number.value_of() as u8, None, false, i_state) {
+        None => String::new(),
+        Some(c) => c.to_string()
+      };
+      Tbox::new(decoded, 
+        None,
+        None,
+        Invocation!(T_CS!("\\char"), vec![value.clone()], gullet, i_state)?, 
+        HashMap::new(),
+        i_state).into()
+    }, p_state); 
+
+    p_state.install_definition(Register::new_chardef(newcs, Some(chardef_value.into()), Some(internalcs)), None);
+    AfterAssignment!(p_state);
+    Ok(vec![])
+  });
 
   Ok(())
 }
+ 

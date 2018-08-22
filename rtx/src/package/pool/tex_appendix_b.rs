@@ -96,6 +96,160 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   DefMathI!('>', None, '>', role => "RELOP", meaning => "greater-han");
 
   //======================================================================
+  // TeX Book, Appendix B, p. 345
+
+  RawTeX!(
+    r###"
+    \chardef\active=13
+    \chardef\@ne=1
+    \chardef\tw@=2
+    \chardef\thr@@=3
+    \chardef\sixt@@n=16
+    \chardef\@cclv=255
+    \mathchardef\@cclvi=256
+    \mathchardef\@m=1000
+    \mathchardef\@M=10000
+    \mathchardef\@MM=20000
+    \countdef\m@ne=21\relax
+    \m@ne=-1
+  "###
+  );
+
+  // #======================================================================
+  // # TeX Book, Appendix B, p. 346
+
+  // RawTeX(<<'EoTeX');
+  //   \countdef\count@=255
+  //   \toksdef\toks@=0
+  //   \skipdef\skip@=0
+  //   \dimendef\dimen@=0
+  //   \dimendef\dimen@i=1
+  //   \dimendef\dimen@ii=2
+  // \count10=22 % allocates \count registers 23, 24, ...
+  // \count11=9 % allocates \dimen registers 10, 11, ...
+  // \count12=9 % allocates \skip registers 10, 11, ...
+  // \count13=9 % allocates \muskip registers 10, 11, ...
+  // \count14=9 % allocates \box registers 10, 11, ...
+  // \count15=9 % allocates \toks registers 10, 11, ...
+  // \count16=-1 % allocates input streams 0, 1, ...
+  // \count17=-1 % allocates output streams 0, 1, ...
+  // \count18=3 % allocates math families 4, 5, ...
+  // \count19=0 % allocates \language codes 1, 2, ...
+  // \count20=255 % allocates insertions 254, 253, ...
+  // \countdef\insc@unt=20
+  // \countdef\allocationnumber=21
+  // \countdef\m@ne=22 \m@ne=-1
+  // EoTeX
+  // # Various \count's are set; should we?
+
+  // #======================================================================
+  // # TeX Book, Appendix B, p. 347
+  // # \wlog ??
+  // # From plain.tex
+  // DefPrimitive('\newcount  Token', sub { DefRegisterI($_[1], undef, Number(0)); });
+  // DefPrimitive('\newdimen  Token', sub { DefRegisterI($_[1], undef, Dimension(0)); });
+  // DefPrimitive('\newskip   Token', sub { DefRegisterI($_[1], undef, Glue(0)); });
+  // DefPrimitive('\newmuskip Token', sub { DefRegisterI($_[1], undef, MuGlue(0)); });
+  // AssignValue(allocated_boxes => 0);
+  // DefPrimitive('\newbox    Token', sub {
+  //     my $n = LookupValue('allocated_boxes');
+  //     AssignValue(allocated_boxes => $n + 1, 'global');
+  //     AssignValue("box$n", List());
+  //     DefRegisterI($_[1], undef, Number($n)); });
+  // DefPrimitive('\newhelp Token {}', sub { AssignValue(ToString($_[1]) => $_[2]); });
+  // DefPrimitive('\newtoks Token', sub { DefRegisterI($_[1], undef, Tokens()); });
+  // # the next 4 actually work by doing a \chardef instead of \countdef, etc.
+  // # which means they actually work quite differently
+  // DefRegister('\allocationnumber' => Number(0));
+  // DefMacro('\alloc@@ {}', sub {
+  //     my ($gullet, $type) = @_;
+  //     my $c = 'allocation @' . ToString($type);
+  //     my $n = LookupValue($c) || '0';
+  //     $n = $n->valueOf if ref $n;
+  //     AssignValue($c                  => $n + 1,     'global');
+  //     AssignValue('\allocationnumber' => Number($n), 'global'); });
+  // DefMacro('\newread Token',     '\alloc@@{read}\global\chardef#1=\allocationnumber');
+  // DefMacro('\newwrite Token',    '\alloc@@{write}\global\chardef#1=\allocationnumber');
+  // DefMacro('\newfam Token',      '\alloc@@{fam}\global\chardef#1=\allocationnumber');
+  // DefMacro('\newlanguage Token', '\alloc@@{language}\global\chardef#1=\allocationnumber');
+
+  // # This implementation is quite wrong
+  // DefPrimitive('\newinsert Token', sub { DefRegisterI($_[1], undef, Number(0)); });
+  // # \alloc@, \ch@ck
+
+  // # TeX plain uses \newdimen, etc. for these.
+  // # Is there any advantage to that?
+  // DefRegister('\maxdimen',  Dimension(16383.99999 * 65536));
+  // DefRegister('\hideskip',  Glue(-1000 * 65536, '1fill'));
+  // DefRegister('\centering', Glue('0pt plus 1000pt minus 1000pt'));
+  // DefRegister('\p@',        Dimension(65536));
+  // DefRegister('\z@',        Dimension(0));
+  // DefRegister('\z@skip',    Glue(0, 0, 0));
+
+  // # First approximation. till I figure out \newbox
+  // RawTeX('\newbox\voidb@x');
+  // #======================================================================
+  // # TeX Book, Appendix B, p. 348
+
+  // DefMacro('\newif DefToken', sub {
+  //     my ($ignore, $cs) = @_;
+  //     DefConditionalI($cs, undef);
+  //     return; });
+
+  // # See the section Registers & Parameters, above for setting default values.
+  // #======================================================================
+  // # TeX Book, Appendix B, p. 349
+  // # See the section Registers & Parameters, above for setting default values.
+
+  // # These are originally defined with \newskip, etc
+  // DefRegister('\smallskipamount'          => Glue('3pt plus1pt minus1pt'));
+  // DefRegister('\medskipamount'            => Glue('6pt plus2pt minus2pt'));
+  // DefRegister('\bigskipamount'            => Glue('12pt plus4pt minus4pt'));
+  // DefRegister('\normalbaselineskip'       => Glue('12pt'));
+  // DefRegister('\normallineskip'           => Glue('1pt'));
+  // DefRegister('\normallineskiplimit'      => Dimension('0pt'));
+  // DefRegister('\jot'                      => Dimension('3pt'));
+  // DefRegister('\lx@default@jot'           => LookupRegister('\jot'));
+  // DefRegister('\interdisplaylinepenalty'  => Number(100));
+  // DefRegister('\interfootnotelinepenalty' => Number(100));
+
+  // DefMacroI('\magstephalf', undef, '1095');
+  // our @mags = (1000, 1200, 1440, 1728, 2074, 2488);
+  // DefMacro('\magstep{}', sub { Explode($mags[ToString($_[1])]); });
+
+  // #======================================================================
+  // # TeX Book, Appendix B, p. 350
+
+  // # Font stuff ...
+  // RawTeX(<<'EoTeX');
+  // \font\tenrm=cmr10
+  // \font\sevenrm=cmr7
+  // \font\fiverm=cmr5
+  // \font\teni=cmmi10
+  // \font\seveni=cmmi7
+  // \font\fivei=cmmi7
+  // \font\tensy=cmsy10
+  // \font\sevensy=cmsy7
+  // \font\fivesy=cmsy5
+  // \font\tenex=cmex10
+  // \font\tenbf=cmbx10
+  // \font\sevenbf=cmbx7
+  // \font\fivebf=cmbx5
+  // \font\tensl=cmsl10
+  // \font\tentt=cmtt10
+  // \font\tenit=cmti10
+  // \newfam\itfam
+  // \newfam\slfam
+  // \newfam\bffam
+  // \newfam\ttfam
+  // \textfont0=\tenrm\scriptfont0=\sevenrm\scriptscriptfont0=\fiverm
+  // \textfont1=\teni\scriptfont1=\seveni\scriptscriptfont1=\fivei
+  // \textfont2=\tensy\scriptfont2=\sevensy\scriptscriptfont2=\fivesy
+  // \textfont3=\tenex
+  // EoTeX
+  // # Note: \newfam in math should be font switching(?)
+
+  //======================================================================
   // TeX Book, Appendix B, p. 351
 
   // Old style font styles.

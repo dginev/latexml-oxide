@@ -115,6 +115,7 @@ pub enum RegisterType {
   MuGlue,
   Token,
   Tokens,
+  CharDef,
   Any, // Placeholder for any argument accepted
 }
 
@@ -127,6 +128,8 @@ pub struct Register {
   pub parameters: Option<Parameters>,
   pub register_type: RegisterType,
   pub readonly: bool,
+  pub internalcs: Option<Token>,
+  pub internalvalue: Option<RegisterValue>,
   pub getter: RegisterGetterClosure,
   pub setter: RegisterSetterClosure,
   // pub traits: PrimitiveOptions,
@@ -140,6 +143,8 @@ impl Default for Register {
       getter: Rc::new(|_: Vec<Token>, _: &State| Some(RegisterValue::Number(Number::new(0)))),
       setter: Rc::new(|_: RegisterValue, _: Vec<Tokens>, _: &mut State| {}),
       readonly: false,
+      internalcs: None,
+      internalvalue: None,
     }
   }
 }
@@ -170,6 +175,15 @@ impl Definition for RefCell<Register> {
     state: &mut State,
   ) -> Result<Vec<Digested>>
   {
+    // CharDef case
+    if self.borrow().register_type == RegisterType::CharDef {
+      return match self.borrow().internalcs {
+        // Tracing ?
+        None => Ok(Vec::new()),
+        Some(ref cs) => stomach.invoke_token(cs.clone(), state),
+      };
+    }
+
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
 
@@ -192,10 +206,11 @@ impl Definition for RefCell<Register> {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Tokens>> {
-    match self.borrow().parameters {
+    let args = match self.borrow().parameters {
       None => Ok(Vec::new()),
       Some(ref params) => params.read_arguments(gullet, self, state),
-    }
+    };
+    args
   }
 
   fn do_absorbtion(
@@ -208,14 +223,42 @@ impl Definition for RefCell<Register> {
     Ok(())
   }
   fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> {
-    (self.borrow().getter)(args, state)
+    if self.borrow().register_type == RegisterType::CharDef {
+      self.borrow().internalvalue.clone()
+    } else {
+      (self.borrow().getter)(args, state)
+    }
   }
   fn register_type(&self) -> Option<RegisterType> { Some(self.borrow().register_type) }
 }
 
 impl Register {
-  fn is_readonly(&self) -> bool { self.readonly }
-  fn set_value(&mut self, value: RegisterValue, args: Vec<Tokens>, state: &mut State) {
-    (self.setter)(value, args, state);
+  pub fn is_readonly(&self) -> bool { self.readonly }
+  pub fn set_value(&mut self, value: RegisterValue, args: Vec<Tokens>, state: &mut State) {
+    if self.register_type == RegisterType::CharDef {
+      error!(target:"unexpected:chardef", "Can't assign to chardef {}",self.cs.get_cs_name());
+    } else {
+      (self.setter)(value, args, state);
+    }
+  }
+
+  pub fn new_chardef(
+    cs: Token,
+    internalvalue: Option<RegisterValue>,
+    internalcs: Option<Token>,
+  ) -> Self
+  {
+    Register {
+      cs,
+      parameters: None,
+      internalvalue,
+      internalcs,
+      register_type: RegisterType::CharDef,
+      readonly: true,
+      //locator => $STATE->getStomach->getGullet->getMouth->getLocator,
+      ..Register::default()
+    }
   }
 }
+
+//===============================================================================

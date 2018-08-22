@@ -70,11 +70,29 @@ impl Default for Mouth {
   }
 }
 
+pub struct MouthOptions {
+  pub fordefinitions: bool,
+}
+impl Default for MouthOptions {
+  fn default() -> Self {
+    MouthOptions {
+      fordefinitions: false,
+    }
+  }
+}
+
 impl Mouth {
-  pub fn new(text: &str, state: &mut State) -> Self {
-    let mut mouth = Mouth {
-      foodtype: FoodType::Literal,
-      ..Mouth::default()
+  pub fn new(text: &str, options: Option<MouthOptions>, state: &mut State) -> Self {
+    let mut mouth = match options {
+      None => Mouth {
+        foodtype: FoodType::Literal,
+        ..Mouth::default()
+      },
+      Some(opts) => Mouth {
+        foodtype: FoodType::Literal,
+        fordefinitions: opts.fordefinitions,
+        ..Mouth::default()
+      },
     };
     mouth.open_literal(text);
     mouth.initialize(state);
@@ -632,9 +650,9 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
         catcodes: Some(Catcodes::Standard),
         ..StateOptions::default()
       });
-      Mouth::new(text, &mut std_state).read_tokens(None, &mut std_state)
+      Mouth::new(text, None, &mut std_state).read_tokens(None, &mut std_state)
     },
-    Some(s) => Mouth::new(&text, s).read_tokens(None, s),
+    Some(s) => Mouth::new(&text, None, s).read_tokens(None, s),
   }
 }
 pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
@@ -644,8 +662,8 @@ pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
         catcodes: Some(Catcodes::Style),
         ..StateOptions::default()
       });
-      Mouth::new(text, &mut sty_state).read_tokens(None, &mut sty_state)
+      Mouth::new(text, None, &mut sty_state).read_tokens(None, &mut sty_state)
     },
-    Some(s) => Mouth::new(&text, s).read_tokens(None, s),
+    Some(s) => Mouth::new(&text, None, s).read_tokens(None, s),
   }
 }

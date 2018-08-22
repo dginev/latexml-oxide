@@ -13,6 +13,7 @@
 
 #[macro_export]
 macro_rules! SetupBindingMacros {($state:ident) => (
+  let state_stomach = $state.stomach.clone();
   #[allow(unused_macros)]
   //============================================
   // Convenience macros for writing definitions.
@@ -121,11 +122,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($token1:expr, $token2:expr, $scope:expr, $state_arg:ident) => ($state_arg.let_i($token1, $token2, $scope));
   }
   macro_rules! Digest {
-    ($tokens:expr, $stomach:ident) => (Digest!($tokens, $stomach, $state));
-    ($tokens:expr, $stomach:ident, $state_arg:ident) => ($stomach.digest($tokens, $state_arg));
+    ($tokens:expr) => (state_stomach.borrow_mut().digest($tokens, $state));
+    ($tokens:expr, $state_arg:ident) => (state_stomach.borrow_mut().digest($tokens, $state_arg));
   }
 
   macro_rules! DigestText {
+    ($stuff:expr) => (state_stomach.borrow_mut().digest_text($stuff, $state));
     ($stuff:expr, $stomach:ident) => (DigestText!($stuff, $stomach, $state));
     ($stuff:expr, $stomach:ident, $state_arg:ident) => (digest_text($stuff, $stomach, $state_arg));
   }
@@ -527,6 +529,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! DefPrimitiveII{
+    ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block) =>
+      (DefPrimitiveII!($cs, $paramlist, sub[$stomach, $args, $inner_state] $body, $state));
+    ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block, $state_arg:ident) =>
+      (DefPrimitiveII!($cs, $paramlist, move |$stomach, $args, $inner_state| {$body}, PrimitiveOptions::default(), $state_arg));
     ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => (DefPrimitiveII!($cs, $paramlist, $compiled_replacement, $options, $state));
     ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
       let options = $options;
@@ -1794,5 +1800,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
           font_test: None }]);
 
     }
+  }
+
+  macro_rules! RawTeX {
+    ($text:expr) => (RawTeX!($text, $state));
+    ($text:expr, $state_arg:ident) => ({
+      state_stomach.borrow_mut().raw_tex($text, $state_arg)?
+    });
   }
 )}

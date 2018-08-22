@@ -77,8 +77,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
      if !inner.is_empty() {
       for inner_opt in inner.into_iter() {
         let mut reverted_inner = match inner_opt {
-          Some(inner_p) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
-          None => arg.iter().map(|t| t.revert()).collect()
+          ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
+          _ => arg.iter().map(|t| t.revert()).collect()
         };
         read_tokens.append(&mut reverted_inner);
       }
@@ -117,8 +117,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
           let mut value = Vec::new();
           for inner_opt in inner.iter() {
             value = match inner_opt {
-              Some(inner) => inner.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
-              None => arg.iter().map(|t| t.revert()).collect()
+              ParameterExtra::ParametersOption(Some(inner)) => inner.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
+              _ => arg.iter().map(|t| t.revert()).collect()
             }
           }
           value
@@ -161,6 +161,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefParameterType!("Until",
     reader => reader!(gullet, _inner, until, state, {
+      let until = until.into_iter().map(|x| if let ParameterExtra::Token(t) = x {
+        t
+      } else {
+        T_OTHER!("")
+      }).collect();
       gullet.read_until(until, state)
     })
     // reversion: |arg, until| { vec![Revert!(arg), Revert!(until)] },
@@ -177,11 +182,18 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Read a matching keyword, eg. Match:=
   DefParameterType!("Match",
     reader => reader!(gullet, _inner, extra, state, {
-      match gullet.read_match(&extra, state)? {
+      let extra_tokens : Vec<Token> = extra.into_iter().filter(|e| 
+      if let ParameterExtra::Token(t) = e {
+          true
+        } else {
+          false
+        }
+      ).map(|x| x.into()).collect();
+      match gullet.read_match(&extra_tokens, state)? {
         Some(t) => Ok(Tokens!(t)), 
         None => Ok(Tokens!())
       }
-    })
+    }) 
   );
 
   // Read a keyword; eg. Keyword:to
@@ -209,8 +221,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       if !inner.is_empty() {
         for inner_opt in inner.into_iter() {
           let mut reverted_inner = match inner_opt { // TODO: the revert_arguments arg type is confusing me!
-            Some(inner_p) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
-            None => arg.iter().map(|t| t.revert()).collect()
+            ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
+            _ => arg.iter().map(|t| t.revert()).collect()
           };
           read_tokens.append(&mut reverted_inner);
         }

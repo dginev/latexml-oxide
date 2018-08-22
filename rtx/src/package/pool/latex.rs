@@ -152,10 +152,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     // }],
     before_digest_end => sub!(|stomach, state| {
       stomach.get_gullet_mut().flush(state);
-      if let Some(ops) = LookupValue!("@at@end@document", state) {
-        // TODO:
-        // Ok(Digest!(Tokens!(ops)))
-        Ok(Vec::new())
+      if let Some(Stored::VecToken(ops)) = RemoveValue!("@at@end@document", state) {
+        Ok(vec![stomach.digest(Tokens::new(ops.to_vec()), state)?]) // TODO: Can we improve to the regular Digest!(ops) syntax?
       } else {
         Ok(Vec::new())
       }
@@ -225,10 +223,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       let stype = type_tokens.to_string();
       let level = level_arg.to_string();
 
-      let mut ctr = state.lookup_string(&s!("counter_for_{}", stype));
-      if ctr.is_empty() {
-        ctr = stype
-      };
+      // Dead code in master?
+      // let mut ctr = state.lookup_string(&s!("counter_for_{}", stype));
+      // if ctr.is_empty() {
+      //   ctr = stype
+      // };
       let mut tokens: Vec<Token>;
       if !flag.is_empty() {
         // No number, not in TOC

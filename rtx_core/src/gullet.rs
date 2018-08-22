@@ -548,6 +548,7 @@ impl Gullet {
       RegisterType::Tokens => Ok(self.read_tokens_value(state)?.into()),
       // TODO: unwrap should be a proper error, value is expected
       RegisterType::Token => Ok(self.read_token(state).unwrap().into()),
+      RegisterType::CharDef => Ok(self.read_number(state)?.into()),
       RegisterType::Any => Ok(self.read_arg(state)?.into()),
     }
   }
