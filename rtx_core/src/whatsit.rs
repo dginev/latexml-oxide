@@ -122,7 +122,10 @@ impl BoxOps for Whatsit {
 
     // my $profiled = $STATE->lookupValue('PROFILING') && $defn->getCS;
     // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
+    // info!(target:"whatsit:be_absorbed", "{:?}", self);
+
     let self_mut = &mut self;
+
     self_mut
       .definition
       .do_absorbtion(document, self_mut, state)?;
@@ -156,4 +159,8 @@ impl BoxOps for Whatsit {
       _ => None,
     }
   }
+}
+
+impl From<Whatsit> for Digested {
+  fn from(w: Whatsit) -> Digested { Digested::Whatsit(Box::new(w)) }
 }

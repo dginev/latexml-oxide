@@ -809,24 +809,6 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         options: options};
 
       $state_arg.install_definition(constructor, scope);
-  //   before_digest => flatten(($options{requireMath} ? (sub { requireMath($cs); }) : ()),
-  //     ($options{forbidMath} ? (sub { forbidMath($cs); }) : ()),
-  //     ($mode ? (sub { $_[0]->beginMode($mode); })
-  //       : ($bounded ? (sub { $_[0]->bgroup; }) : ())),
-  //     ($options{font} ? (sub { MergeFont(%{ $options{font} }); }) : ()),
-  //     $options{before_digest}),
-  //   after_digest => flatten($options{after_digest},
-  //     ($mode ? (sub { $_[0]->endMode($mode) })
-  //       : ($bounded ? (sub { $_[0]->egroup; }) : ()))),
-  //   beforeConstruct => flatten($options{beforeConstruct}),
-  //   afterConstruct  => flatten($options{afterConstruct}),
-  //   nargs           => $options{nargs},
-  //   alias           => $options{alias},
-  //   reversion       => $options{reversion},
-  //   sizer           => inferSizer($options{sizer}, $options{reversion}),
-  //   captureBody     => $options{captureBody},
-  //   properties      => $options{properties} || {}),
-  // $options{scope});
    })
   }
 

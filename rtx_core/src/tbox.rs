@@ -74,12 +74,12 @@ impl Tbox {
           }
         }
       }
-      let specialized_font = font.specialize(&text);
+      let font = Rc::new(font.specialize(&text));
       Tbox {
         text,
+        font, // $locator,
         tokens,
         properties,
-        font: Rc::new(specialized_font), // $locator,
         ..Tbox::default()
       }
     } else {
@@ -105,6 +105,7 @@ impl BoxOps for Tbox {
       Some(Stored::String(s)) => s.to_owned(),
       _ => String::from("text"),
     };
+
     if !text.is_empty() {
       if mode == "math" {
         document.insert_math_token(

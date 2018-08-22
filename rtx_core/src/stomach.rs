@@ -44,7 +44,10 @@ impl Stomach {
   // **********************************************************************
   // NOTE: Worry about whether the $autoflush thing is right?
   // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
-  pub fn digest_next_body(&mut self, _terminal: bool, state: &mut State) -> Result<Vec<Digested>> {
+  pub fn digest_next_body(&mut self, terminal: bool, state: &mut State) -> Result<Vec<Digested>> {
+    if terminal {
+      unimplemented!()
+    } // TODO
     let _start_location = self.get_locator();
     let init_depth = self.boxing.len();
     let mut box_list: Vec<Digested> = Vec::new();
@@ -56,13 +59,16 @@ impl Stomach {
           // Wer ran out, terminate,
           // and add a Dummy `trailer' if none explicit.
           box_list.push(Digested::TBox(Box::new(Tbox::default())));
+          // info!(target:"digest_next_body","no_token");
           break;
         },
         Some(token) => {
+          // info!(target:"stomach:digest_next:invoke_token","{:?}", token);
           box_list.extend(self.invoke_token(token, state)?);
           // TODO:
           // if terminal.is_some() && Equals(token, terminal)
           if init_depth > self.boxing.len() {
+            // info!(target:"digest_next_body","init_depth");
             break;
           }
         },
@@ -86,14 +92,11 @@ impl Stomach {
       Box::new(move |stomach, state| {
         stomach.get_gullet_mut().unread(tokens.clone());
         state.clear_prefixes(); // prefixes shouldn't apply here.
-        let mode;
-        {
-          let ismath = state.lookup_value("IN_MATH");
-          mode = match ismath {
-            Some(&Stored::Bool(true)) => TexMode::Math,
-            _ => TexMode::Text,
-          };
-        }
+        let mode = if state.lookup_bool("IN_MATH") {
+          TexMode::Math
+        } else {
+          TexMode::Text
+        };
         let initdepth = stomach.boxing.len();
         let depth = initdepth;
         // {
@@ -105,6 +108,7 @@ impl Stomach {
           // Done if we run out of tokens
           // {
           //   let list = STOMACH_LIST.lock()
+          // info!(target:"stomach:digest:invoke_token","{:?}", token);
           digested_boxes.extend(stomach.invoke_token(token, state)?);
           // }
 
@@ -153,6 +157,7 @@ impl Stomach {
       Box::new(move |stomach, state| -> Result<()> {
         while let Some(token) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
           if token != T_SPACE!() {
+            // info!(target:"raw_tex:invoke_token","{:?}", token);
             stomach.invoke_token(token, state)?;
           }
         }
@@ -178,6 +183,7 @@ impl Stomach {
     let mut result: Vec<Digested> = Vec::new();
     // INVOKE:
     while let Some(token) = maybe_token {
+      // info!(target:"invoke_token", "{:?}", token);
       self.token_stack.push(token.clone());
       if self.token_stack.len() > MAXSTACK {
         fatal!(
@@ -378,8 +384,9 @@ impl Stomach {
     //   "The token " . Stringify($token) . " should never reach Stomach!");
     // return; }
     else {
+      let text = font::decode_string(meaning.get_string().to_string(), None, true, state);
       Ok(vec![Digested::TBox(Box::new(Tbox::new(
-        font::decode_string(meaning.to_string(), None, true, state), //text
+        text,
         font,
         None,             // locator
         Tokens!(meaning), // tokens

@@ -143,5 +143,23 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
     }))
   );
 
+  // Only used for active math characters, so far
+  DefRegister!("\\mathcode Number", Number::new(0),
+    getter => Some(Rc::new(|args, state| {
+      let ch_code   = args[0].to_number().value_of() as u8;
+      let ch : char = ch_code as char;
+      let code = match state.lookup_mathcode(&ch.to_string()) {
+        None => ch_code,
+        Some(code) => code as u8
+      };
+      Some(Number::new(code as i32).into())
+    })),    // defaults to the char's code itself(?)
+    setter => Some(Rc::new(|value, args, state| {
+      let ch = args[0].to_number().value_of() as u8;
+      let ch : char = ch as char;
+      state.assign_mathcode(ch, value.value_of() as usize, None);
+    }))
+  );
+
   Ok(())
 }

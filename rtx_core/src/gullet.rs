@@ -228,6 +228,7 @@ impl Gullet {
               needs_close = true; // Close mouth
             },
             Some(token) => {
+              // info!(target:"read_x_token", "at: {:?}", token);
               cc = token.code;
               match cc {
                 Catcode::NOTEXPANDED => {
@@ -256,9 +257,11 @@ impl Gullet {
                       defn_next = Some(defn);
                       expand_next = true;
                     } else {
+                      // info!(target:"read_x_token", "returning x {:?}", token);
                       return Ok(Some(token));
                     }
                   } else {
+                    // info!(target:"read_x_token", "returning non-def {:?}", token);
                     return Ok(Some(token));
                   }
                 },
@@ -268,10 +271,13 @@ impl Gullet {
         },
       };
       if needs_close {
+        // info!(target:"read_x_token", "needs_close");
         self.close_mouth(false, state); // Next input stream.
       } else if return_next {
+        // info!(target:"read_x_token", "return_next");
         return Ok(self.read_token(state)); // Just return the next token.
       } else if expand_next {
+        // info!(target:"read_x_token", "expand_next");
         // Do the check here, to be more forgiving and more informative
         let expansion = match defn_next {
           Some(defn) => defn.invoke(self, state)?,

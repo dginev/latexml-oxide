@@ -123,7 +123,7 @@ impl Definition for Constructor {
     // Get some info before we process arguments...
 
     let ismath = state.lookup_bool("IN_MATH");
-
+    // info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
     // Parse AND digest the arguments to the Constructor
     let mut args: Vec<Option<Digested>> = match *self.get_parameters() {
       None => Vec::new(),
@@ -148,7 +148,9 @@ impl Definition for Constructor {
       },
     };
 
-    props.insert(s!("font"), Stored::Font(Rc::new(this_font)));
+    props
+      .entry(s!("font"))
+      .or_insert(Stored::Font(Rc::new(this_font)));
     // $props{locator} = $stomach->getGullet->getMouth->getLocator unless defined $props{locator};
     props.entry(s!("isMath")).or_insert(Stored::Bool(ismath));
     // $props{level}   = $stomach->getBoxingLevel;
@@ -164,16 +166,20 @@ impl Definition for Constructor {
     let mut post = self.execute_after_digest(stomach, &mut whatsit, state)?;
 
     if self.options.capture_body {
-      post.extend(stomach.digest_next_body(false, state)?);
-      // info!(" -- Captured body: {:?}", post);
+      let captured = stomach.digest_next_body(false, state)?;
+      // info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
+      post.extend(captured);
+
       whatsit.set_body(post);
       post = vec![];
+      //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);
+      // info!(target: "constructor:capture", "constructor: {:?}", self.get_cs_name());
     }
     let post_post = self.execute_after_digest_body(stomach, &mut whatsit, state)?;
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 
     // Package the result boxes
-    result.push(Digested::Whatsit(Box::new(whatsit)));
+    result.push(whatsit.into());
     result.extend(post);
     result.extend(post_post);
     Ok(result)
@@ -206,13 +212,18 @@ impl Definition for Constructor {
     }
 
     match self.replacement {
-      None => {},
-      Some(ref main_closure) => main_closure(
-        document,
-        whatsit.get_args(),
-        whatsit.get_properties(),
-        state,
-      )?,
+      None => {
+        // info!(target:"constructor:replacement", "no replacement for {:?}", self.get_cs_name());
+      },
+      Some(ref main_closure) => {
+        // info!(target:"constructor:replacement", "invoked for {:?}", self.get_cs_name());
+        main_closure(
+          document,
+          whatsit.get_args(),
+          whatsit.get_properties(),
+          state,
+        )?
+      },
     };
 
     for post_closure in &self.options.after_construct {

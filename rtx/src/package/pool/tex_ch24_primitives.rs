@@ -28,8 +28,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
         HashMap::new(),
         state,
       );
-      let ismath = state.lookup_bool("IN_MATH");
-      let mode = if ismath {
+      let mode = if state.lookup_bool("IN_MATH") {
         Some(TexMode::Math)
       } else {
         Some(TexMode::Text)
@@ -60,7 +59,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
         HashMap::new(),
         state,
       );
-      Ok(vec![Digested::TBox(Box::new(return_box))])
+      return_box.into()
     })
   );
 

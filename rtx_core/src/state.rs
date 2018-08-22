@@ -878,7 +878,7 @@ impl State {
     );
   }
 
-  pub fn lookup_mathcode(&mut self, key: &str) -> Option<usize> {
+  pub fn lookup_mathcode(&self, key: &str) -> Option<usize> {
     match self.mathcode.get(&key.to_string()) {
       Some(c) => match c.front() {
         Some(&Stored::Mathcode(ref codeval)) => Some(*codeval),
@@ -900,17 +900,17 @@ impl State {
   /// Get the `Meaning' of a token.  For active control sequence's
   /// this may give the definition object (if defined) or another token (if \let) or undef
   /// Any other token is returned as is.
-  pub fn lookup_meaning<'t, 'm>(&'m mut self, token: &'t Token) -> Option<&Stored> {
-    if token.code.is_active_or_cs() && !token.text.is_empty() {
-
+  pub fn lookup_meaning<'t, 'm>(&'m mut self, token: &'t Token) -> Option<Stored> {
+    if token.get_catcode().is_active_or_cs() && !token.get_string().is_empty() {
+      match self.meaning.get(&token.get_cs_name()) {
+        Some(entry) => match entry.front() {
+          Some(v) => Some(v.clone()),
+          None => None,
+        },
+        None => None,
+      }
     } else {
-      let mut token_defs = VecDeque::new();
-      token_defs.push_front(Stored::Token(token.clone()));
-      self.meaning.insert(token.text.clone(), token_defs);
-    }
-    match self.meaning.get(&token.text) {
-      Some(m) => m.front(),
-      None => None,
+      Some(token.into())
     }
   }
 
@@ -983,16 +983,16 @@ impl State {
   }
 
   pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Stored {
-    let cc = &token.code;
-    let name = &token.text;
-    let lookupname = if (cc == &Catcode::ACTIVE)
-      || (cc == &Catcode::CS)
-      || ((cc == &Catcode::LETTER)
-        || (cc == &Catcode::OTHER)
+    let cc = token.get_catcode();
+    let name = token.get_string();
+    let lookupname = if (cc == Catcode::ACTIVE)
+      || (cc == Catcode::CS)
+      || ((cc == Catcode::LETTER)
+        || (cc == Catcode::OTHER)
           && self.lookup_bool("IN_MATH")
           && ((self.lookup_mathcode(name).unwrap_or(0)) == 0x8000))
     {
-      name.clone()
+      name.to_string()
     } else {
       cc.name()
     };
@@ -1524,7 +1524,7 @@ impl State {
       true
     } else if let Some(def1) = def1_opt {
       if let Some(def2) = def2_opt {
-        def1 == *def2 // If both have defns, must be same defn!
+        def1 == def2 // If both have defns, must be same defn!
       } else {
         // False, if only one has 'meaning'
         false

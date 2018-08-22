@@ -516,10 +516,8 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
         let prop_name = prop_refs.get(1).map_or("", |m| m.as_str()).to_owned();
         is_match = true;
         // Recognize #prop for whatsit properties
-        // val = if prop_name == "body" {
-        // body is Digested, TODO: What strategy do we need to unwrap any Stored
-        // meaningfully ?
         val = quote!(props.get(#prop_name));
+
         String::new()
       }).to_string();
   }

@@ -37,10 +37,11 @@ impl BoxOps for List {
 
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
   fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()> {
-    for digested in self.unlist() {
-      document.absorb(digested, state)?;
-    }
-    Ok(())
+    unimplemented!()
+    // for digested in self.unlist() {
+    //   document.absorb(digested, state)?;
+    // }
+    // Ok(())
   }
 
   fn revert(&self) -> Tokens {
@@ -75,4 +76,12 @@ impl List {
       mode: None,
     }
   }
+}
+
+impl From<List> for Result<Vec<Digested>> {
+  fn from(list: List) -> Result<Vec<Digested>> { Ok(list.boxes) }
+}
+
+impl From<List> for Result<Digested> {
+  fn from(list: List) -> Result<Digested> { Ok(Digested::List(Box::new(list))) }
 }

@@ -45,9 +45,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         }
       }
       if !op.is_empty() {
-        stomach.invoke_token(T_CS!(op), state)?;
+        // info!(target:"math_op:invoke_token","{:?}", op);
+        Ok(stomach.invoke_token(T_CS!(op), state)?)
+      } else {
+        Ok(Vec::new())
       }
-      Ok(Vec::new())
     },
     PrimitiveOptions::default()
   );
@@ -72,22 +74,20 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     before_digest => vec!(beforeproc!(stomach, state, { stomach.end_mode("display_math", state)?; })));
 
   DefConstructor!("\\@@BEGININLINEMATH",
-  "<ltx:Math mode=\"inline\">
-    <ltx:XMath>
-    #body
-    </ltx:XMath>
-  </ltx:Math>",
+    "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
     alias => Some(s!("$")),
-    before_digest => vec!(beforeproc!(stomach, state, { stomach.begin_mode("inline_math", state)?; })),
+    before_digest => vec![beforeproc!(stomach, state, { 
+      stomach.begin_mode("inline_math", state)?; })],
     capture_body => true);
 
   DefConstructorI!(T_CS!("\\@@ENDINLINEMATH"), None, None, alias => Some(s!("$")),
-    before_digest => vec!(beforeproc!(stomach, state, { stomach.end_mode("inline_math", state)?; })));
+    before_digest => vec![beforeproc!(stomach, state, { stomach.end_mode("inline_math", state)?; })]);
 
   // Same as add_TeX, but add the code from the body of the object.
   let add_body_tex_closure: Vec<TagConstructionClosure> = tagsub!(document, node, state, {
     if node.get_attribute("tex").is_none() {
       // only do this once.
+
       let tex_opt = if let Some(ref tbox) = document.get_node_box(&node) {
         if let Some(body) = tbox.get_body() {
           Some(untex(body, state))
