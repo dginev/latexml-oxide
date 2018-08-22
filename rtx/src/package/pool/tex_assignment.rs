@@ -109,6 +109,26 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
       Ok(Tokens!(token1, token2))
   });
 
+  // <shorthand definition> = \chardef<control sequence><equals><8bit>
+  //    | \mathchardef <control sequence><equals><15bit>
+  //    | <registerdef><control sequence><equals><8bit>
+  // <registerdef> = \countdef | \dimendef | \skipdef | \muskipdef | toksdef
+
+  // See below for \chardef & \mathchardef
+
+  DefPrimitive!("\\countdef Token SkipMatch:= Number", sub[stomach, args, inner_state] {
+    unpack_to_token!(args => cs, num);
+    let count = format!("\\count{}", num.to_number().value_of());
+    let setter_count = count.clone();
+    DefRegister!(&cs.get_cs_name(), Number::new(0),
+      getter => Some(Rc::new(move |args, state| { Some(state.lookup_number(&count).unwrap_or_default().into()) })),
+      setter => Some(Rc::new(move |value, args, state| { state.assign_value(&setter_count, value, None); })),
+      inner_state);
+    AfterAssignment!(inner_state); 
+    Ok(vec![])
+  });
+
+
   DefRegister!("\\catcode Number", Number::new(0),
     getter => Some(Rc::new(|args, state| {
       let num : i32 = args[0].to_number().value_of();

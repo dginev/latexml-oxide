@@ -341,6 +341,71 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     Ok(vec![])
   });
 
+
+// our @mathclassrole = (undef, 'BIGOP', 'BINOP', 'RELOP', 'OPEN', 'CLOSE', 'PUNCT', undef);
+// Is this "fontinfo" stuff sufficient to maintain a math font "family" ??
+// What we're really after is a connectio nto a font encoding mapping.
+fn decode_math_char(n: u8) -> (Option<String>, Option<char>) { // TODO
+  // my $class = int($n / (16 * 256)); $n = $n % (16 * 256);
+  // my $fam   = int($n / 256);        $n = $n % 256;
+  // my $font  = LookupValue('fontinfo_' . $fam . '_text')
+  //   || LookupValue('fontinfo_' . $fam . '_script')
+  //   || LookupValue('fontinfo_' . $fam . '_scriptscript');
+  // my $char = chr($n);
+  // // If no specific class, Lookup properties from a DefMath?
+  // my $charinfo = LookupValue('math_token_attributes_' . $char);
+  // my $fontinfo = LookupValue('fontinfo_' . ToString($font));
+  // my $role     = $mathclassrole[$class];
+  // $role = $$charinfo{role} if (!defined $role) && $charinfo;
+  // return ($role,
+  //   ($fontinfo && $$fontinfo{encoding} ? FontDecode($n, $$fontinfo{encoding}) : $char)); 
+  (None, None)
+}
+
+// DefConstructor('\mathchar Number',
+//   "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",
+//   sizer       => '#1',
+//   afterDigest => sub {
+//     my ($stomach, $whatsit) = @_;
+//     my $n = $whatsit->getArg(1)->valueOf;
+//     my ($role, $glyph) = decodeMathChar($n);
+//     $whatsit->setProperty(glyph => $glyph)                                  if $glyph;
+//     $whatsit->setProperty(role  => $role)                                   if defined $role;
+//     $whatsit->setProperty(font  => LookupValue('font')->specialize($glyph)) if $glyph;
+//     return; });
+
+  // Almost like a register, but different...
+  DefPrimitive!("\\mathchardef Token SkipMatch:= Number", sub[stomach, args, state] {
+    unpack!(args => newcs, value);
+    let newcs : Token = newcs.into();
+    let csname = newcs.get_cs_name();
+    let (role, glyph) = decode_math_char(value.to_number().value_of() as u8);
+    let internalcs = match glyph {
+      Some(_) => Some(T_CS!(&format!("\\@mathchardef@{}", csname))),
+      None => None
+    };
+    if let Some(internalcs) = internalcs {
+      let mut glyph_props: HashMap<String, Stored> = HashMap::new();
+      glyph_props.insert(s!("role"), role.unwrap_or_default().into());
+      let glyph_str = match glyph {
+        Some(c) => c.to_string(),
+        None => String::new()
+      };
+      glyph_props.insert(s!("glyph"), glyph_str.into());
+      // TODO:
+      // glyph_props.insert(s!("font"), |state| state.lookup_font().unwrap().specialize(glyph)); 
+      DefConstructor!(&internalcs.get_cs_name(), "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
+      // TODO
+        // sizer => "#1", 
+        properties => properties!(glyph_props),
+        // reversion => (ord($glyph) < 128 ? $glyph : '\mathchar' . $value.valueOf . '\relax'),
+      state);
+      state.install_definition(Register::new_chardef(newcs,Some(value.into()),Some(internalcs)), None);
+      AfterAssignment!(state);
+    }
+    Ok(vec![])
+  });
+
   Ok(())
 }
  
