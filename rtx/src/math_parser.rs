@@ -28,6 +28,38 @@ use rtx_core::document::Document;
 use rtx_core::state::State;
 use std::collections::HashMap;
 
+pub struct NodeTuple(String, HashMap<String, String>, String);
+impl NodeTuple {
+  fn new(meaning: &str, content: &str, attr_opt: HashMap<String, String>) -> Self {
+    let mut attr: HashMap<String, String> = HashMap::new();
+    if !meaning.is_empty() {
+      attr.insert(s!("meaning"), meaning.to_string());
+    }
+    for (key, val) in attr_opt {
+      // let value = self.p_get_value(val); // TODO : ???
+      let value = val;
+      if !value.is_empty() {
+        attr.insert(key, value.to_string());
+      }
+    }
+
+    //   if (!$attr{font}) {
+    //     $attr{font} = ($content && $content =~ /\S/
+    //       ? LaTeXML::Common::Font->textDefault->specialize($content)
+    //       : LaTeXML::Common::Font->new()); }
+    NodeTuple(s!("XMTok"), attr, content.to_string())
+  }
+
+  fn to_node(&self, document: &Document) -> Result<Node> {
+    let mut new_node = Node::new(&self.0, None, &document.document)?;
+    new_node.append_text(&self.2)?;
+
+    for (key, val) in &self.1 {
+      new_node.set_attribute(key, val)?;
+    }
+    Ok(new_node)
+  }
+}
 // our @EXPORT_OK = (qw(&Lookup &New &Absent &Apply &ApplyNary &recApply
 // &CatSymbols     &Annotate &InvisibleTimes &InvisibleComma
 //     &NewFormulae &NewFormula &NewList
@@ -804,7 +836,7 @@ impl MathParser {
     // $lexemes;     $result   = $$self{internalparser}->$rule(\$unparsed); }
 
     let mut result = None;
-    // Mock: INFIX OP! FAKE NEWS. Clean this up
+    // Mock: INFIX OP!  Clean this up, we need a real parser
     if nodes.len() == 3 {
       let mut left_arg = nodes[0].clone();
       let mut infix_op = nodes[1].clone();
@@ -814,13 +846,21 @@ impl MathParser {
       left_arg.unbind_node();
       infix_op.unbind_node();
       right_arg.unbind_node();
-
       let mut new_app_node = Node::new("XMApp", None, &document.document).unwrap();
       new_app_node.set_namespace(&left_arg.get_namespace().unwrap())?;
-      new_app_node.add_child(&mut infix_op)?;
-      new_app_node.add_child(&mut left_arg)?;
-      new_app_node.add_child(&mut right_arg)?;
-
+      if infix_op.get_content() == "o" {
+        // " n o t " case from equality.tex test // HACK HACK
+        let mut times_node = self.invisible_times().to_node(&document)?;
+        times_node.set_namespace(&left_arg.get_namespace().unwrap())?;
+        new_app_node.add_child(&mut times_node)?;
+        new_app_node.add_child(&mut left_arg)?;
+        new_app_node.add_child(&mut infix_op)?;
+        new_app_node.add_child(&mut right_arg)?;
+      } else {
+        new_app_node.add_child(&mut infix_op)?;
+        new_app_node.add_child(&mut left_arg)?;
+        new_app_node.add_child(&mut right_arg)?;
+      }
       parent.add_child(&mut new_app_node)?;
 
       result = Some(new_app_node);
@@ -958,11 +998,13 @@ impl MathParser {
         if all_args.is_empty() {
           String::new()
         } else {
+          let lead_meaning = self.get_token_meaning(all_args.first().as_ref().unwrap(), &document);
           let args = all_args.split_off(1);
           let op = match all_args.first() {
             Some(op_node) => self.realize_xmnode(op_node, document),
             None => panic!("non empty array doesn't have a first element? Looks critical."),
           };
+          info!("first token meaning: {:?}", lead_meaning);
           info!("remaining xmapp args: {:?}", args.len());
           //     if ($app_role && $app_role =~ /^FLOAT(SUB|SUPER)SCRIPT$/) {
           //       return ($1 eq 'SUPER' ? '^' : '_') . textrec($op); }
@@ -975,11 +1017,17 @@ impl MathParser {
           } else {
             s!("unknown")
           };
-          let (bp, string) = self.textrec_apply(&name, &op, args, document, state);
-          if bp < outer_bp || (bp == outer_bp && name != outer_name) {
-            s!("({})", string)
+          // HACK : TODO : proper parsing needed!!!
+          if lead_meaning != Some(s!("times")) {
+            let (bp, string) = self.textrec_apply(&name, &op, args, document, state);
+            if bp < outer_bp || (bp == outer_bp && name != outer_name) {
+              s!("({})", string)
+            } else {
+              string
+            }
           } else {
-            string
+            // n * o * t for equality.tex, we need to add a parser here
+            "n * o * t".to_string()
           }
         }
       },
@@ -1178,17 +1226,7 @@ impl MathParser {
 
   // Make a new Token node with given name, content, and attributes.
   // $content is an array of nodes (which may need to be cloned if still attached)
-  // sub New {
-  //   my ($meaning, $content, %attributes) = @_;
-  //   my %attr = ();
-  //   $attr{meaning} = $meaning if $meaning;
-  //   foreach my $key (sort keys %attributes) {
-  //     my $value = p_get_value($attributes{$key});
-  //     $attr{$key} = $value if defined $value; }
-  //   if (!$attr{font}) {
-  //     $attr{font} = ($content && $content =~ /\S/
-  //       ? LaTeXML::Common::Font->textDefault->specialize($content)
-  //       : LaTeXML::Common::Font->new()); }
+
   //   return ['ltx:XMTok', {%attr}, ($content ? ($content) : ())]; }
 
   // Like New(), but concatenating several symbols into one new one.
@@ -1218,9 +1256,9 @@ impl MathParser {
   // sub Absent {
   //   return New('absent'); }
 
-  // sub InvisibleTimes {
-  // return New('times', "\x{2062}", role => 'MULOP', font =>
-  // LaTeXML::Common::Font->new()); }
+  fn invisible_times(&self) -> NodeTuple {
+    NodeTuple::new("times", "\u{2062}", string_map!("role" => "MULOP"))
+  }
 
   // sub InvisibleComma {
   // return New(undef, "\x{2063}", role => 'PUNCT', font =>

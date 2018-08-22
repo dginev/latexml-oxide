@@ -7,14 +7,19 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
 
   // Ah, since \ldots can appear in text and math....
 
-  // DefConstructorI('\ldots', undef,
-  //   "?#isMath(<ltx:XMTok name='ldots' font='#font' role='ID'>\x{2026}</ltx:XMTok>)(\x{2026})",
-  //   properties => sub {
-  //     (LookupValue('IN_MATH')
-  //       ? (font => LookupValue('font')->merge(family => 'serif',
-  //           series => 'medium', shape => 'upright')->specialize("\x{2026}"))
-  //       : ()); });    # Since not DefMath!
-  //                     # And so can \vdots
+  DefConstructor!(
+    "\\ldots",
+    "?#isMath(<ltx:XMTok name='ldots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})"
+  );
+  // TODO
+  // properties => properties!(sub[stomach, args, state] {
+  //   if state.lookup_bool("IN_MATH") {
+  //     font => state.lookup_font().merge(family => "serif", series => "medium", shape =>
+  // "upright").specialize("\u{2026}")   }
+  //  })
+  // Since not DefMath!
+
+  // And so can \vdots
   // DefConstructorI('\vdots', undef,
   //   "?#isMath(<ltx:XMTok name='vdots' font='#font' role='ID'>\x{22EE}</ltx:XMTok>)(\x{22EE})",
   //   properties => sub {
@@ -42,6 +47,19 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   // DefMathLigature("\u{22C5}\u{22C5}\u{22C5}" => "\u{22EF}", role => 'ID', name => 'cdots');
 
   DefLigature!(r"[.][.][.]", "\u{2026}"); //, fontTest => fontTest!(font, {font.get_family != "typewriter" }));  // ldots
+
+  DefLigature!(r"--", "\u{2013}"); //, fontTest => sub { $_[0]->getFamily ne 'typewriter'; }); # EN DASH (NOTE: With digits before &
+                                   //, aft => \N{FIGURE DASH})
+  DefLigature!(r"---", "\u{2014}"); //, fontTest => sub { $_[0]->getFamily ne 'typewriter'; });    # EM DASH
+                                    // Ligatures for doubled single left & right quotes to convert to double quotes
+                                    // [should ligatures be part of a font, in the first place? (it is in TeX!)
+  DefLigature!("\u{2018}\u{2018}", "\u{201C}"); //, fontTest => sub { ($_[0]->getFamily ne 'typewriter') && (($_[0]->getEncoding || 'OT1') =~
+                                                //, /^(OT1|T1)$/); });    // is this needed?
+  DefLigature!("\u{2019}\u{2019}", "\u{201D}"); //, fontTest => sub { ($_[0]->getFamily ne 'typewriter') && (($_[0]->getEncoding || 'OT1') =~
+                                                //, /^(OT1|T1)$/); });
+  DefMacroI!(T_CS!("\\TeX"), None, Tokens::new(ExplodeText!("TeX")));
+  DefMacroI!(T_CS!("\\i"), None, T_OTHER!("\u{0131}")); // LATIN SMALL LETTER DOTLESS I
+  DefMacroI!(T_CS!("\\j"), None, T_OTHER!("\u{0237}"));
 
   // DefMathLigature("..." => "\x{2026}", role => 'ID', name => 'ldots');
 

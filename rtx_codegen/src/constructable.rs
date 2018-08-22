@@ -184,7 +184,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       let else_branch_compiled = compile_replacement_tokens(else_branch);
 
       operations.push(quote!(
-        if #bool_branch.is_some() {
+        if #bool_branch.is_some() && #bool_branch != Some(&Stored::Bool(false)) {
           #(#if_branch_compiled)*
         } else {
           #(#else_branch_compiled)*

@@ -676,5 +676,21 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefMacro!("\\paragraphtyperefname",     "\\lx@paragraphsign\\lx@ignorehardspaces");
   DefMacro!("\\subparagraphtyperefname",  "\\lx@paragraphsign\\lx@ignorehardspaces");
 
+
+  // These really should be robust! which is a source of expand timing issues!
+  DefMacro!("\\textmd{}",     "\\ifmmode\\textmd@math{#1}\\else{\\mdseries #1}\\fi",       protected => 1);
+  DefMacro!("\\textbf{}",     "\\ifmmode\\textbf@math{#1}\\else{\\bfseries #1}\\fi",       protected => 1);
+  DefMacro!("\\textrm{}",     "\\ifmmode\\textrm@math{#1}\\else{\\rmfamily #1}\\fi",       protected => 1);
+  DefMacro!("\\textsf{}",     "\\ifmmode\\textsf@math{#1}\\else{\\sffamily #1}\\fi",       protected => 1);
+  DefMacro!("\\texttt{}",     "\\ifmmode\\texttt@math{#1}\\else{\\ttfamily #1}\\fi",       protected => 1);
+  DefMacro!("\\textup{}",     "\\ifmmode\\textup@math{#1}\\else{\\upshape #1}\\fi",        protected => 1);
+  DefMacro!("\\textit{}",     "\\ifmmode\\textit@math{#1}\\else{\\itshape #1}\\fi",        protected => 1);
+  DefMacro!("\\textsl{}",     "\\ifmmode\\textsl@math{#1}\\else{\\slshape #1}\\fi",        protected => 1);
+  DefMacro!("\\textsc{}",     "\\ifmmode\\textsc@math{#1}\\else{\\scshape #1}\\fi",        protected => 1);
+  DefMacro!("\\textnormal{}", "\\ifmmode\\textnormal@math{#1}\\else{\\normalfont #1}\\fi", protected => 1);
+
+  // TODO:
+  DefMacroI!(T_CS!("\\ttfamily"), None, Tokens!());
+
   Ok(())
 }
