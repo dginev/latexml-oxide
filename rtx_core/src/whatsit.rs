@@ -78,22 +78,17 @@ impl Whatsit {
     self
       .properties
       .insert(s!("body"), Digested::List(Box::new(list)).into());
-    if let Some(trailer) = trailer_opt {
-      self
-        .properties
-        .insert(s!("trailer"), trailer.clone().into());
+    if let Some(Digested::Whatsit(trailer)) = trailer_opt {
       // And copy any otherwise undefined properties from the trailer
-      let trailer_whatsit = match trailer {
-        Digested::Whatsit(w) => *w,
-        _ => Whatsit::default(),
-      };
-      let trailer_props = trailer_whatsit.get_properties();
-      for (prop, value) in trailer_props {
+      for (prop, value) in trailer.get_properties() {
         self
           .properties
           .entry(prop.to_string())
           .or_insert_with(|| value.clone());
       }
+      self
+        .properties
+        .insert(s!("trailer"), Digested::Whatsit(trailer).into());
     }
   }
 }
