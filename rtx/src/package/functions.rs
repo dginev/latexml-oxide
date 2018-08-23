@@ -864,7 +864,7 @@ pub fn new_counter(
   if !within.is_empty() {
     let clwithin = s!("\\cl@{}", within);
     let clunwithin = s!("\\cl@UN{}", within);
-    let mut x = if let Some(Stored::Tokens(cl)) = state.remove_value(&clwithin) {
+    let mut x = if let Some(Stored::Tokens(mut cl)) = state.remove_value(&clwithin) {
       cl.unlist()
     } else {
       Vec::new()
@@ -877,7 +877,7 @@ pub fn new_counter(
       Some(Scope::Global),
     );
 
-    let mut unx = if let Some(Stored::Tokens(clun)) = state.remove_value(&clunwithin) {
+    let mut unx = if let Some(Stored::Tokens(mut clun)) = state.remove_value(&clunwithin) {
       clun.unlist()
     } else {
       Vec::new()
@@ -999,7 +999,7 @@ pub fn step_counter(
 
   // and reset any within counters!
   if !noreset {
-    if let Some(nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
+    if let Some(mut nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
       for c in nested.unlist() {
         reset_counter(&c.to_string(), state);
       }
@@ -1128,7 +1128,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 fn reset_counter(ctr: &str, state: &mut State) {
   state.assign_value(&s!("\\c@{}", ctr), Number!(0), Some(Scope::Global));
   // and reset any within counters!
-  let nested = state
+  let mut nested = state
     .lookup_tokens(&s!("\\cl@{}", ctr))
     .unwrap_or_else(|| Tokens!());
 
@@ -1168,7 +1168,7 @@ pub fn build_invocation<T: Into<Token>>(
     // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
     let mut wrapped_args: Vec<Token> = args
       .into_iter()
-      .flat_map(|arg| {
+      .flat_map(|mut arg| {
         let mut wrapped = vec![T_BEGIN!()];
         wrapped.append(&mut arg.unlist());
         wrapped.push(T_END!());
@@ -1180,18 +1180,18 @@ pub fn build_invocation<T: Into<Token>>(
 }
 
 pub fn do_expand<T: Into<Tokens>>(
-  tokens: T,
+  mut tokens: T,
   outer_gullet: &mut Gullet,
   outer_state: &mut State,
 ) -> Result<Tokens>
 {
-  let tokens: Tokens = tokens.into();
+  let mut tokens: Tokens = tokens.into();
   outer_gullet.reading_from_mouth(
     Mouth::default(),
     outer_state,
     Box::new(
       move |expand_gullet: &mut Gullet, expand_state: &mut State| -> Result<Tokens> {
-        expand_gullet.unread(tokens.clone());
+        expand_gullet.unread(&mut tokens);
         let mut expanded = Vec::new();
         while let Some(t) = expand_gullet.read_x_token(false, false, expand_state)? {
           expanded.push(t);

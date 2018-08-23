@@ -229,7 +229,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
     
     let mut lx_tags = vec![T_CS!("\\lx@tags"), T_BEGIN!()];
-    for invoked_tag in tags {
+    for mut invoked_tag in tags {
       lx_tags.append(&mut invoked_tag.unlist());
     }
     lx_tags.push(T_END!());

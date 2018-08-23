@@ -85,12 +85,12 @@ impl Stomach {
   // Digest a list of tokens independent from any current Gullet.
   // Typically used to digest arguments to primitives or constructors.
   // Returns a List containing the digested material.
-  pub fn digest(&mut self, tokens: Tokens, state: &mut State) -> Result<Digested> {
+  pub fn digest(&mut self, mut tokens: Tokens, state: &mut State) -> Result<Digested> {
     self.reading_from_mouth(
       Mouth::default(),
       state,
       Box::new(move |stomach, state| {
-        stomach.get_gullet_mut().unread(tokens.clone());
+        stomach.get_gullet_mut().unread(&mut tokens);
         state.clear_prefixes(); // prefixes shouldn't apply here.
         let mode = if state.lookup_bool("IN_MATH") {
           TexMode::Math
@@ -225,16 +225,16 @@ impl Stomach {
           // A math-active character will (typically) be a macro,
           // but it isn't expanded in the gullet, but later when digesting, in math mode (? I
           // think)
-          let invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
-          self.gullet.unread(invoked_meaning);
+          let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
+          self.gullet.unread(&mut invoked_meaning);
           maybe_token = self.gullet.read_x_token(true, false, state)?; // replace the token by it's expansion!!!
           self.token_stack.pop();
           continue;
         },
         Stored::Conditional(meaning) => {
           // Conditionals are "expandable", use the regular invoke.
-          let invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
-          self.gullet.unread(invoked_meaning);
+          let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
+          self.gullet.unread(&mut invoked_meaning);
           maybe_token = self.gullet.read_x_token(true, false, state)?; // replace the token by it's expansion!!!
           self.token_stack.pop();
           continue;
@@ -323,7 +323,7 @@ impl Stomach {
 
       let gullet = self.get_gullet_mut();
       state.let_i(token, T_CS!("\\iffalse"), None);
-      gullet.unread(Tokens!(token.clone())); // Retry
+      gullet.unread(&mut Tokens!(token.clone())); // Retry
       Ok(Vec::new())
     } else {
       error!(
@@ -403,7 +403,7 @@ impl Stomach {
     &mut self,
     mouth: Mouth,
     state: &mut State,
-    reader: Box<Fn(&mut Stomach, &mut State) -> R>,
+    mut reader: Box<FnMut(&mut Stomach, &mut State) -> R>,
   ) -> R
   {
     let mouth_source = mouth.source.clone();
@@ -523,7 +523,7 @@ impl Stomach {
     }
     if let Some(Stored::VecToken(after)) = after {
       if !after.is_empty() {
-        self.gullet.unread(Tokens::new(after));
+        self.gullet.unread(&mut Tokens::new(after));
       }
     }
     Ok(())

@@ -317,7 +317,7 @@ macro_rules! unpack {
 #[macro_export]
 macro_rules! count_unpack {
   ($index:expr, $args:ident => $var:ident) => (
-    let $var = $args[$index].clone().unwrap_or_default();
+    let mut $var = $args[$index].clone().unwrap_or_default();
   );
   ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
     count_unpack!($index,$args => $var);

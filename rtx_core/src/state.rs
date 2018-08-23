@@ -1578,8 +1578,12 @@ impl State {
   // HACKY functions that violate Rust's mutability guards, to succeed in emulating the most
   // arbitrary uses of Global scope in latexml
   pub fn after_assignment(&mut self) {
-    if let Some(Stored::Tokens(after)) = self.remove_value("afterAssignment") {
-      self.stomach.borrow_mut().get_gullet_mut().unread(after); // primitive returns boxes, so these need to be digested!
+    if let Some(Stored::Tokens(mut after)) = self.remove_value("afterAssignment") {
+      self
+        .stomach
+        .borrow_mut()
+        .get_gullet_mut()
+        .unread(&mut after); // primitive returns boxes, so these need to be digested!
     }
   }
 }

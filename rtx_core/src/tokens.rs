@@ -78,7 +78,7 @@ impl Tokens {
   pub fn new(tokens: Vec<Token>) -> Self { Tokens { tokens } }
 
   /// Return a list of the tokens making up this Tokens
-  pub fn unlist(self) -> Vec<Token> { self.tokens }
+  pub fn unlist(&mut self) -> Vec<Token> { self.tokens.drain(..).collect() }
 
   /// Checks if there are tokens present
   pub fn is_empty(&self) -> bool { self.tokens.is_empty() }

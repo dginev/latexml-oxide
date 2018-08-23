@@ -128,7 +128,7 @@ impl fmt::Display for Stored {
 }
 
 impl Stored {
-  pub fn to_string_hash(in_map: HashMap<String, Stored>) -> HashMap<String, String> {
+  pub fn to_string_hash(in_map: &HashMap<String, Stored>) -> HashMap<String, String> {
     let mut out_map: HashMap<String, String> = HashMap::new();
     for (key, val) in in_map.iter() {
       out_map.insert(key.to_owned(), val.to_string());

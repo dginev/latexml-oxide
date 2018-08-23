@@ -76,7 +76,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     let scope = if globally { Some(Scope::Global) } else { None };
     // switch args from a Vec<Tokens> into a Vec<Token>
     let mut token_args: VecDeque<Token> = VecDeque::new();
-    for arg in args {
+    for mut arg in args {
       token_args.extend(arg.unlist().into_iter());
     }
     let cs = match token_args.pop_front() {
