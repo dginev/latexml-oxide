@@ -8,8 +8,10 @@ use libxml::tree::set_node_rc_guard;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Namespace, Node, NodeType};
 use regex::Regex;
+
 use std::collections::{HashMap, VecDeque};
 use std::iter;
+use std::rc::Rc;
 
 use common::error::*;
 use common::font::Font;
@@ -33,11 +35,11 @@ pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
   pub node: Node,
-  pub node_boxes: HashMap<usize, Digested>, // used to be _box attribute
-  pub node_fonts: HashMap<usize, Font>,     // used to be _font attribute
+  pub node_boxes: HashMap<usize, Rc<Digested>>, // used to be _box attribute
+  pub node_fonts: HashMap<usize, Font>,         // used to be _font attribute
   pub debug: bool,
   pub constructed_nodes: Vec<Node>,
-  pub box_to_absorb: Option<Digested>,
+  pub box_to_absorb: Option<Rc<Digested>>,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -252,7 +254,7 @@ impl Document {
 
     while let Some(front_box) = boxes.pop_front() {
       self.constructed_nodes = Vec::new();
-      self.box_to_absorb = Some(front_box.clone());
+      self.box_to_absorb = Some(Rc::new(front_box.clone()));
       // info!(target: "document:absorb", "front box: {:?}", front_box);
       match front_box {
         // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
@@ -401,15 +403,7 @@ impl Document {
     if let Some(box_font) = font_opt {
       self.set_node_font(&newnode, &box_font);
     } else {
-      let mut box_opt = None;
-      if let Some(ref tbox) = self.box_to_absorb {
-        if let Some(box_font) = tbox.get_font() {
-          box_opt = Some(box_font.clone());
-        }
-      }
-      if let Some(box_font) = box_opt {
-        self.set_node_font(&newnode, &box_font);
-      }
+      self.set_box_font(&newnode);
     }
 
     Ok(newnode)
@@ -1335,12 +1329,12 @@ impl Document {
 
   //**********************************************************************
   /// Record the Box that created this node.
-  pub fn set_node_box(&mut self, node: &Node, digested: Digested) {
+  pub fn set_node_box(&mut self, node: &Node, digested: Rc<Digested>) {
     let nodeid = node.to_hashable();
     self.node_boxes.insert(nodeid, digested);
   }
 
-  pub fn get_node_box(&self, node: &Node) -> Option<&Digested> {
+  pub fn get_node_box(&self, node: &Node) -> Option<&Rc<Digested>> {
     if node.get_type() == Some(NodeType::ElementNode) {
       let nodeid = node.to_hashable();
       self.node_boxes.get(&nodeid)
@@ -1354,6 +1348,24 @@ impl Document {
   pub fn set_node_font(&mut self, node: &Node, font: &Font) {
     let nodeid = node.to_hashable();
     self.node_fonts.insert(nodeid, font.clone());
+  }
+
+  pub fn set_box_font(&mut self, node: &Node) {
+    let nodeid = node.to_hashable();
+    let has_box_font =
+      self.box_to_absorb.is_some() && self.box_to_absorb.as_ref().unwrap().get_font().is_some();
+    if has_box_font {
+      self.node_fonts.insert(
+        nodeid,
+        self
+          .box_to_absorb
+          .as_ref()
+          .unwrap()
+          .get_font()
+          .unwrap()
+          .clone(),
+      );
+    }
   }
 
   pub fn get_node_font(&self, node: &Node) -> Option<&Font> {
