@@ -77,8 +77,8 @@ impl Gullet {
   }
 
   pub fn open_mouth(&mut self, mouth: Mouth, autoclose: bool) {
-    if let Some(ref runtime) = self.mouth {
-      self.mouthstack.push_front(runtime.clone());
+    if let Some(runtime) = self.mouth.take() {
+      self.mouthstack.push_front(runtime);
     };
     self.mouth = Some(MouthRuntime {
       mouth,
