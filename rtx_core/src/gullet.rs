@@ -613,26 +613,28 @@ impl Gullet {
         match self.read_token(state) {
           None => break,
           Some(token) => {
-            matched.push(token.clone());
-            if Some(&token) == to_match.last() {
+            let is_to_match: bool = Some(&token) == to_match.last();
+            let cc = token.get_catcode();
+            matched.push(token);
+            if is_to_match {
               to_match.pop();
             } else {
               break;
             }
 
-            if token.code == Catcode::SPACE {
+            if cc == Catcode::SPACE {
               // If this was space, SKIP any following!!!
               while let Some(space_token) = self.read_token(state) {
                 if space_token.code != Catcode::SPACE {
+                  // Unread non-space and end
+                  match self.mouth.as_mut() {
+                    Some(mouth) => mouth.pushback.push_front(space_token),
+                    None => fatal!(Mouth, NotFound, "No Mouth in Gullet.read_match"),
+                  }
                   break;
                 } else {
                   matched.push(space_token);
                 }
-              }
-
-              match self.mouth.as_mut() {
-                Some(mouth) => mouth.pushback.push_front(token), // Unread
-                None => fatal!(Mouth, NotFound, "No Mouth in Gullet.read_match"),
               }
             }
           },

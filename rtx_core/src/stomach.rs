@@ -185,8 +185,8 @@ impl Stomach {
     while maybe_token.is_some() {
       let token = Rc::new(maybe_token.take().unwrap());
       // info!(target:"invoke_token", "{:?}", token);
-      state.current_token = Some(token.clone());
-      self.token_stack.push(token.clone());
+      state.current_token = Some(Rc::clone(&token));
+      self.token_stack.push(Rc::clone(&token));
       if self.token_stack.len() > MAXSTACK {
         fatal!(
           Stomach,
