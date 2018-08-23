@@ -1,10 +1,12 @@
+use std::borrow::Cow;
+use std::collections::HashMap;
+use std::rc::Rc;
+
 use common::error::*;
 use common::font::Font;
 use common::object::Object;
 use common::store::Stored;
 use state::{Scope, State};
-use std::collections::HashMap;
-use std::rc::Rc;
 
 use definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure,
@@ -185,7 +187,7 @@ impl Definition for Constructor {
     Ok(result)
   }
 
-  fn get_cs(&self) -> Token { self.cs.clone() }
+  fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }
   fn get_cs_name(&self) -> String { self.cs.get_cs_name() }
   fn get_locator(&self) -> String { unimplemented!() }
   fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }

@@ -249,7 +249,7 @@ fn install_definition_and_meaning() {
   // Install a Definition
   state.install_definition(job_definition.clone(), None);
   if let Some(stored_definition) = state.lookup_definition(&T_CS!("\\jobname")) {
-    assert_eq!(stored_definition.get_cs(), T_CS!("\\jobname"));
+    assert_eq!(stored_definition.get_cs().into_owned(), T_CS!("\\jobname"));
   } else {
     panic!("Failed to lookup installed definition!");
   }

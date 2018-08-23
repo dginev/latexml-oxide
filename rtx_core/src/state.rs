@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
@@ -1035,19 +1036,21 @@ impl State {
 
     // Locked definitions!!! (or should this test be in assignMeaning?)
     // Ignore attempts to (re)define $cs from tex sources
-    //  my $cs = $definition->getCS->getCSName;
-    let token = match definition {
-      Stored::Expandable(ref defn) => defn.get_cs(),
-      Stored::Conditional(ref defn) => defn.get_cs(),
-      Stored::Constructor(ref defn) => defn.get_cs(),
-      Stored::Primitive(ref defn) => defn.get_cs(),
-      Stored::MathPrimitive(ref defn) => defn.get_cs(),
-      Stored::Register(ref defn) => defn.get_cs(),
-      Stored::Token(ref token) => token.clone(),
-      _ => T_LETTER!(s!("_wrong_argument_for_install_definition")),
-    };
-    let cs = token.get_cs_name();
-    // info!("-- installing definition for: {:?}", token);
+    let cs;
+    {
+      let token = match definition {
+        Stored::Expandable(ref defn) => defn.get_cs(),
+        Stored::Conditional(ref defn) => defn.get_cs(),
+        Stored::Constructor(ref defn) => defn.get_cs(),
+        Stored::Primitive(ref defn) => defn.get_cs(),
+        Stored::MathPrimitive(ref defn) => defn.get_cs(),
+        Stored::Register(ref defn) => defn.get_cs(),
+        Stored::Token(ref token) => Cow::Borrowed(token),
+        _ => panic!(s!("_wrong_argument_for_install_definition")),
+      };
+      cs = token.get_cs_name();
+      // info!("-- installing definition for: {:?}", token);
+    }
 
     let cs_locked = cs.clone() + ":locked";
     // TODO, .is_none() should be a real false check

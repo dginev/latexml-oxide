@@ -1,11 +1,14 @@
+use std::borrow::Cow;
+use std::rc::Rc;
+
 use common::error::*;
 use common::object::Object;
+use state::{Scope, State};
+
 use definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionClosure};
 use document::Document;
 use gullet::Gullet;
 use parameter::Parameters;
-use state::{Scope, State};
-use std::rc::Rc;
 use stomach::Stomach;
 use token::*;
 use tokens::Tokens;
@@ -62,7 +65,7 @@ impl Object for Expandable {
 impl Definition for Expandable {
   fn is_protected(&self) -> bool { self.is_protected }
   fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
-  fn get_cs(&self) -> Token { self.cs.clone() }
+  fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }
 
   fn get_cs_name(&self) -> String {
     match self.alias {

@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -156,7 +157,7 @@ impl Definition for RefCell<Register> {
   // not implemented for primitives
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> { unimplemented!() }
   fn get_parameters(&self) -> &Option<Parameters> { unimplemented!() } // TODO: How do we do this with a RefCell ?!
-  fn get_cs(&self) -> Token { self.borrow().cs.clone() }
+  fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.borrow().cs.clone()) }
 
   fn get_cs_name(&self) -> String { self.borrow().cs.get_cs_name() }
 

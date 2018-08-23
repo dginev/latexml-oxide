@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -112,9 +113,9 @@ impl Definition for Conditional {
       },
     }
   }
-  // TODO:
+
   fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
-  fn get_cs(&self) -> Token { self.cs.clone() }
+  fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }
 
   fn get_cs_name(&self) -> String { self.cs.get_cs_name() }
 

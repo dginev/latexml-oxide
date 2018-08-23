@@ -6,6 +6,7 @@ pub mod math_primitive;
 pub mod primitive;
 pub mod register;
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -56,7 +57,9 @@ pub trait Definition: Object {
     state: &mut State,
   ) -> Result<Vec<Digested>>;
 
-  fn get_cs(&self) -> Token;
+  /// We can almost always return the CS by reference, except in a Register's RefCell, where we are
+  /// forced to clone
+  fn get_cs(&self) -> Cow<Token>;
   fn get_cs_name(&self) -> String;
 
   fn is_protected(&self) -> bool { false }
@@ -88,8 +91,8 @@ pub trait Definition: Object {
     state: &mut State,
   ) -> Result<Tokens>
   {
-    let mut invocation_result = Vec::new();
-    invocation_result.push(self.get_cs());
+    let mut invocation_result: Vec<Token> = Vec::new();
+    invocation_result.push(self.get_cs().into_owned());
 
     match *self.get_parameters() {
       None => {},
