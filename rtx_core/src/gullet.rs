@@ -259,7 +259,7 @@ impl Gullet {
                   if let Some(defn) = looked_up_definition {
                     if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
                       // is this the right logic here? don't expand unless digesting?
-                      state.current_token = Some(token);
+                      state.current_token = Some(Rc::new(token));
                       defn_next = Some(defn);
                       expand_next = true;
                     } else {

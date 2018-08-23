@@ -165,7 +165,7 @@ impl Conditional {
     ifid += 1;
     state.assign_value("if_count", ifid, Some(Scope::Global));
     let if_frame = Rc::new(RefCell::new(IfFrame {
-      token: state.current_token.as_ref().unwrap().clone(),
+      token: (**state.current_token.as_ref().unwrap()).clone(),
       start: gullet.get_locator(),
       parsing: true,
       elses: false,
@@ -308,7 +308,7 @@ impl Conditional {
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {
         // Defer expanding the \else if we're still parsing the test
-        Ok(Tokens!(T_CS!("\\relax"), local_token))
+        Ok(Tokens!(T_CS!("\\relax"), (*local_token).clone()))
       } else if stack_frame.borrow().elses {
         // Already seen an \else's at this level?
         error!(
@@ -356,7 +356,7 @@ impl Conditional {
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {
         // Defer expanding the \else if we're still parsing the test
-        Ok(Tokens!(T_CS!("\\relax"), local_token))
+        Ok(Tokens!(T_CS!("\\relax"), (*local_token).clone()))
       } else {
         // "expand" by removing the stack entry for this level
         state.if_frame = Some(stack_frame);

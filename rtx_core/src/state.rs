@@ -222,7 +222,7 @@ pub struct State {
   pub verbosity: i32,
   pub status_code: usize,
   pub unlocked: bool,
-  pub current_token: Option<Token>,
+  pub current_token: Option<Rc<Token>>,
   pub if_frame: Option<Rc<RefCell<IfFrame>>>,
   pub noexpand_the: bool,
   pub input_encoding: Option<String>,

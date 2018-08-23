@@ -21,7 +21,7 @@ static MAXSTACK: usize = 200;
 
 pub struct Stomach {
   pub gullet: Gullet,
-  pub token_stack: Vec<Token>,
+  pub token_stack: Vec<Rc<Token>>,
   pub boxing: Vec<Token>,
 }
 
@@ -177,13 +177,15 @@ impl Stomach {
   /// Otherwise, the token is simply digested: turned into an appropriate box.
   /// Returns a list of boxes/whatsits.
   pub fn invoke_token(&mut self, input_token: Token, state: &mut State) -> Result<Vec<Digested>> {
-    let mut maybe_token = Some(input_token.clone());
+    let mut maybe_token = Some(input_token);
 
     // Overly complex, but want to avoid recursion/stack
     let mut result: Vec<Digested> = Vec::new();
     // INVOKE:
-    while let Some(token) = maybe_token {
+    while maybe_token.is_some() {
+      let token = Rc::new(maybe_token.take().unwrap());
       // info!(target:"invoke_token", "{:?}", token);
+      state.current_token = Some(token.clone());
       self.token_stack.push(token.clone());
       if self.token_stack.len() > MAXSTACK {
         fatal!(
@@ -195,7 +197,6 @@ impl Stomach {
           )
         );
       }
-      state.current_token = Some(token.clone());
       result = Vec::new();
 
       // Rust notes: It would be ideal if we could unify the cases for (Primtive, Constructor,
@@ -214,7 +215,7 @@ impl Stomach {
             result = self.invoke_token_simple(meaning, state)?;
           } else {
             error!(
-              target: &s!("misdefined:{:?}", token),
+              target: &s!("misdefined:{:?}", &token),
               "The token {:?} should never reach Stomach!",
               token
             );
@@ -475,8 +476,8 @@ impl Stomach {
   // Note that lookups happen more often than bgroup/egroup (which open/close frames).
 
   pub fn push_stack_frame(&mut self, nobox: bool, state: &mut State) {
-    let current_token = match state.current_token {
-      Some(ref t) => t.clone(),
+    let current_token = match &state.current_token {
+      Some(t) => (**t).clone(),
       _ => T_OTHER!(String::new()),
     };
 
