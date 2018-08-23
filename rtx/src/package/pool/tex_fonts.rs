@@ -321,7 +321,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     let csname = newcs.get_cs_name();
     let number = value.to_number();
     let chardef_value = value.clone();
-    let internalcs = T_CS!(&format!("\\@chardef@{}", csname));
+    let internalcs = T_CS!(&s!("\\@chardef@{}", csname));
     DefPrimitiveII!(internalcs, None, sub[stomach,args,i_state] {
       let gullet = stomach.get_gullet_mut();
       let decoded = match font::decode(number.value_of() as u8, None, false, i_state) {
@@ -381,7 +381,7 @@ fn decode_math_char(n: u8) -> (Option<String>, Option<char>) { // TODO
     let csname = newcs.get_cs_name();
     let (role, glyph) = decode_math_char(value.to_number().value_of() as u8);
     let internalcs = match glyph {
-      Some(_) => Some(T_CS!(&format!("\\@mathchardef@{}", csname))),
+      Some(_) => Some(T_CS!(&s!("\\@mathchardef@{}", csname))),
       None => None
     };
     if let Some(internalcs) = internalcs {

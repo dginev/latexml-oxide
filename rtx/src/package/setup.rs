@@ -277,12 +277,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
   macro_rules! DeclareFontMap{
     ($name:expr, $map:expr, $family:expr, $state_arg: ident) => (
-      let mapname = format!("{}_{}_fontmap",$name, $family);
+      let mapname = s!("{}_{}_fontmap",$name, $family);
       let map : Vec<Option<char>> = $map;
       $state_arg.assign_value(&mapname, map, Some(Scope::Global));
     );
     ($name:expr, $map:expr, $state_arg: ident) => (
-      let mapname = format!("{}_fontmap",$name);
+      let mapname = s!("{}_fontmap",$name);
       let map : Vec<Option<char>> = $map;
       $state_arg.assign_value(&mapname, map, Some(Scope::Global));
     );
@@ -1712,7 +1712,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   // Defines a new counter named $ctr.
   // If $within is defined, $ctr will be reset whenever $within is incremented.
   // Keywords:
-  //  idprefix : specifies a prefix to be used in formatting ID's for document structure elements
+  //  idprefix : specifies a prefix to be used in sting ID's for document structure elements
   //           counted by this counter.  Ie. subsection 3 in section 2 might get: id="S2.SS3"
   //  idwithin : specifies that the ID is composed from $idwithin's ID,, even though
   //           the counter isn't numbered within it.  (mainly to avoid duplicated ids)

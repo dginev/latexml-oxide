@@ -107,7 +107,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
           }else {
             t.get_string()
           };
-          let meaning = format!("{} {}", cc.meaning(), text);
+          let meaning = s!("{} {}", cc.meaning(), text);
           Ok(Explode!(meaning).into())
         },
         _ => Ok(Explode!("meaning").into())

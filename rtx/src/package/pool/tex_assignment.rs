@@ -118,7 +118,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
 
   DefPrimitive!("\\countdef Token SkipMatch:= Number", sub[stomach, args, inner_state] {
     unpack_to_token!(args => cs, num);
-    let count = format!("\\count{}", num.to_number().value_of());
+    let count = s!("\\count{}", num.to_number().value_of());
     let setter_count = count.clone();
     DefRegister!(&cs.get_cs_name(), Number::new(0),
       getter => Some(Rc::new(move |args, state| { Some(state.lookup_number(&count).unwrap_or_default().into()) })),

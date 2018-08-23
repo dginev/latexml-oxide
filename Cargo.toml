@@ -4,3 +4,6 @@ members = [
   "rtx_codegen",
   "rtx"
 ]
+
+[profile.release]
+debug = false

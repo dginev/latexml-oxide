@@ -242,7 +242,7 @@ impl Parameter {
 
     if !self.optional && !self.novalue && value.is_empty() {
       error!(
-        target: &format!("expected:{:?}", self),
+        target: &s!("expected:{:?}", self),
         "Missing argument for TODO:fordefn"
       );
       //     $gullet->showUnexpected);

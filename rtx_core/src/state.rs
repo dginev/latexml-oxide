@@ -1052,7 +1052,7 @@ impl State {
       // info!("-- installing definition for: {:?}", token);
     }
 
-    let cs_locked = cs.clone() + ":locked";
+    let cs_locked = s!("{}:locked", cs);
     // TODO, .is_none() should be a real false check
     let is_cs_locked = self.lookup_bool(&cs_locked);
     let is_state_unlocked = self.lookup_bool("UNLOCKED");
@@ -1538,7 +1538,7 @@ impl State {
   }
 
   pub fn load_font_map(&self, encoding: &str) -> Option<&Fontmap> {
-    let fontmap_key = format!("{}_fontmap", encoding);
+    let fontmap_key = s!("{}_fontmap", encoding);
     {
       if let Some(map) = self.lookup_value(&fontmap_key) {
         return map.into();
@@ -1551,7 +1551,7 @@ impl State {
     // no map, try to load one
     // let can_load_ok: bool;
     // let fail_suffix = "_fontmap_failed_to_load";
-    // let fail_to_load_key = format!("{}{}", encoding, fail_suffix);
+    // let fail_to_load_key = s!("{}{}", encoding, fail_suffix);
     // {
     //   can_load_ok = !self.lookup_bool(&fail_to_load_key);
     // }
