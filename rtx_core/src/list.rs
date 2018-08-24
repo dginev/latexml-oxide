@@ -36,7 +36,7 @@ impl BoxOps for List {
   }
 
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
-  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) -> Result<()> {
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
     unimplemented!()
     // for digested in self.unlist() {
     //   document.absorb(digested, state)?;

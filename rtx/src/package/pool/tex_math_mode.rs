@@ -89,7 +89,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       // only do this once.
 
       let tex_opt = if let Some(ref tbox) = document.get_node_box(&node) {
-        if let Some(body) = tbox.get_body() {
+        if let Some(body) = tbox.borrow().get_body() {
           Some(untex(body, state))
         // local $LaTeXML::DUAL_BRANCH = 'presentation';
         // let tex = untex(body, state);

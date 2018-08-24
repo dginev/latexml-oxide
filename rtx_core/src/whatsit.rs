@@ -110,7 +110,7 @@ impl BoxOps for Whatsit {
 
   fn unlist(self) -> Vec<Digested> { Vec::new() }
 
-  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) -> Result<()> {
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
     // Significant time is consumed here, and associated with a specific CS,
     // so we should be profiling as well!
     // Hopefully the csname is the same that was charged in the digestioned phase!

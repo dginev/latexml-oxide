@@ -139,7 +139,7 @@ impl Core {
 
 pub trait BoxOps {
   fn unlist(self) -> Vec<Digested>;
-  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) -> Result<()>;
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()>;
   fn to_string(&self) -> String;
   fn stringify(&self) -> String { s!("Vec<Tbox> for now ") }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {}
@@ -212,7 +212,7 @@ impl BoxOps for Digested {
     }
   }
 
-  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) -> Result<()> {
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
     match self {
       Digested::TBox(b) => b.be_absorbed(document, state),
       Digested::List(l) => l.be_absorbed(document, state),

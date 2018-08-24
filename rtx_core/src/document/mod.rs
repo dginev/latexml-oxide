@@ -12,6 +12,7 @@ use regex::Regex;
 use std::collections::{HashMap, VecDeque};
 use std::iter;
 use std::rc::Rc;
+use std::cell::RefCell;
 
 use common::error::*;
 use common::font::Font;
@@ -31,16 +32,18 @@ lazy_static! {
 static FONT_ELEMENT_NAME: &'static str = "ltx:text";
 static MATH_TOKEN_NAME: &'static str = "ltx:XMTok";
 
+pub type DigestedRef = Rc<RefCell<Digested>>;
+
 pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
   pub node: Node,
-  pub node_boxes: HashMap<usize, Rc<Digested>>, // used to be _box attribute
+  pub node_boxes: HashMap<usize, DigestedRef>, // used to be _box attribute
   pub node_fonts: HashMap<usize, Font>,         // used to be _font attribute
   pub debug: bool,
   pub constructed_nodes: Vec<Node>,
-  box_to_absorb: Option<Rc<Digested>>, // local $LaTeXML::BOX;
-  localized_boxes: Vec<Option<Rc<Digested>>>,
+  box_to_absorb: Option<DigestedRef>, // local $LaTeXML::BOX;
+  localized_boxes: Vec<Option<DigestedRef>>,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -262,11 +265,12 @@ impl Document {
       } else {
         // info!(target: "document:absorb", "front box: {:?}", front_box);
         // self.constructed_nodes = Vec::new();
-        self.set_box_to_absorb(Some(Rc::new(front_box.clone())));
-        match front_box {
+        let front_box = Rc::new(RefCell::new(front_box));
+        self.set_box_to_absorb(Some(front_box.clone()));
+        match *front_box.borrow() {
           // A Proper Box or Whatsit? Absorb it.
-          Digested::TBox(mut digested) => digested.be_absorbed(self, state)?,
-          Digested::Whatsit(mut digested) => digested.be_absorbed(self, state)?,
+          Digested::TBox(ref digested) => digested.be_absorbed(self, state)?,
+          Digested::Whatsit(ref digested) => digested.be_absorbed(self, state)?,
           _ => unimplemented!(),
         };
         self.localize_box_to_absorb();
@@ -871,7 +875,7 @@ impl Document {
     let font = match font_opt {
       Some(f) => f.clone(),
       None => match &self.box_to_absorb {
-        &Some(ref tbox) => match tbox.get_font() {
+        &Some(ref tbox) => match tbox.borrow().get_font() {
           Some(f) => f.clone(),
           None => Font::math_default(), // should never happen?
         },
@@ -1334,12 +1338,12 @@ impl Document {
 
   //**********************************************************************
   /// Record the Box that created this node.
-  pub fn set_node_box(&mut self, node: &Node, digested: Rc<Digested>) {
+  pub fn set_node_box(&mut self, node: &Node, digested: DigestedRef) {
     let nodeid = node.to_hashable();
     self.node_boxes.insert(nodeid, digested);
   }
 
-  pub fn get_node_box(&self, node: &Node) -> Option<&Rc<Digested>> {
+  pub fn get_node_box(&self, node: &Node) -> Option<&DigestedRef> {
     if node.get_type() == Some(NodeType::ElementNode) {
       let nodeid = node.to_hashable();
       self.node_boxes.get(&nodeid)
@@ -1358,14 +1362,14 @@ impl Document {
   pub fn set_box_font(&mut self, node: &Node) {
     let nodeid = node.to_hashable();
     let has_box_font =
-      self.box_to_absorb.is_some() && self.box_to_absorb.as_ref().unwrap().get_font().is_some();
+      self.box_to_absorb.is_some() && self.box_to_absorb.as_ref().unwrap().borrow().get_font().is_some();
     if has_box_font {
       self.node_fonts.insert(
         nodeid,
         self
           .box_to_absorb
           .as_ref()
-          .unwrap()
+          .unwrap().borrow()
           .get_font()
           .unwrap()
           .clone(),
@@ -1698,7 +1702,7 @@ impl Document {
   // TODO!
   fn float_to_element(&mut self, element: &str, flag: bool) -> Option<Node> { None }
 
-  pub fn set_box_to_absorb(&mut self, arg: Option<Rc<Digested>>) {
+  pub fn set_box_to_absorb(&mut self, arg: Option<DigestedRef>) {
     self.localized_boxes.push(self.box_to_absorb.take());
     self.box_to_absorb = arg;
   }

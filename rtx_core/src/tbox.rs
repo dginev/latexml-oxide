@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::cell::RefCell;
 
 use common::error::*;
 use common::font::Font;
@@ -98,7 +99,7 @@ impl BoxOps for Tbox {
   fn to_string(&self) -> String { self.text.clone() }
   fn unlist(self) -> Vec<Digested> { Vec::new() }
 
-  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) -> Result<()> {
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
     let text = &self.text;
     let font = &self.font;
     let mode: String = match self.properties.get("mode") {
@@ -146,4 +147,7 @@ impl From<Tbox> for Result<Vec<Digested>> {
 }
 impl From<Tbox> for Option<Rc<Digested>> {
   fn from(tbox: Tbox) -> Option<Rc<Digested>> { Some(Rc::new(Digested::TBox(Box::new(tbox)))) }
+}
+impl From<Tbox> for Option<Rc<RefCell<Digested>>> {
+  fn from(tbox: Tbox) -> Option<Rc<RefCell<Digested>>> { Some(Rc::new(RefCell::new(Digested::TBox(Box::new(tbox))))) }
 }
