@@ -39,7 +39,8 @@ pub struct Document {
   pub node_fonts: HashMap<usize, Font>,         // used to be _font attribute
   pub debug: bool,
   pub constructed_nodes: Vec<Node>,
-  pub box_to_absorb: Option<Rc<Digested>>, // local $LaTeXML::BOX;
+  box_to_absorb: Option<Rc<Digested>>, // local $LaTeXML::BOX;
+  localized_boxes: Vec<Option<Rc<Digested>>>,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -61,6 +62,7 @@ impl Document {
       debug: true,
       constructed_nodes: Vec::new(),
       box_to_absorb: None,
+      localized_boxes: Vec::new(),
     }
   }
 
@@ -260,13 +262,14 @@ impl Document {
       } else {
         // info!(target: "document:absorb", "front box: {:?}", front_box);
         // self.constructed_nodes = Vec::new();
-        self.box_to_absorb = Some(Rc::new(front_box.clone()));
+        self.set_box_to_absorb(Some(Rc::new(front_box.clone())));
         match front_box {
           // A Proper Box or Whatsit? Absorb it.
           Digested::TBox(digested) => digested.be_absorbed(self, state)?,
           Digested::Whatsit(digested) => digested.be_absorbed(self, state)?,
           _ => unimplemented!(),
         };
+        self.localize_box_to_absorb();
       }
 
       // TODO: Does the results extension make ANY sense???
@@ -1694,6 +1697,14 @@ impl Document {
 
   // TODO!
   fn float_to_element(&mut self, element: &str, flag: bool) -> Option<Node> { None }
+
+  pub fn set_box_to_absorb(&mut self, arg: Option<Rc<Digested>>) {
+    self.localized_boxes.push(self.box_to_absorb.take());
+    self.box_to_absorb = arg;
+  }
+  pub fn localize_box_to_absorb(&mut self) {
+    self.box_to_absorb = self.localized_boxes.pop().unwrap();
+  }
 }
 
 // Auxiliary

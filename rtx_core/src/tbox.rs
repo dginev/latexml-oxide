@@ -144,3 +144,6 @@ impl BoxOps for Tbox {
 impl From<Tbox> for Result<Vec<Digested>> {
   fn from(tbox: Tbox) -> Result<Vec<Digested>> { Ok(vec![Digested::TBox(Box::new(tbox))]) }
 }
+impl From<Tbox> for Option<Rc<Digested>> {
+  fn from(tbox: Tbox) -> Option<Rc<Digested>> { Some(Rc::new(Digested::TBox(Box::new(tbox)))) }
+}

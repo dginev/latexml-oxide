@@ -217,7 +217,11 @@ impl Definition for RefCell<Register> {
     _state: &mut State,
   ) -> Result<()>
   {
-    Ok(())
+        fatal!(
+      Definition,
+      Unexpected,
+      "do_absorbtion on Primitive should never be called!"
+    );
   }
   fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> {
     if self.borrow().register_type == RegisterType::CharDef {
