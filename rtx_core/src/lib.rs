@@ -217,7 +217,7 @@ impl BoxOps for Digested {
       Digested::TBox(b) => b.be_absorbed(document, state),
       Digested::List(l) => l.be_absorbed(document, state),
       Digested::Whatsit(w) => w.be_absorbed(document, state),
-      Digested::Postponed(ref _t) => unimplemented!(),
+      Digested::Postponed(_) => unimplemented!(),
     }
   }
 

@@ -221,10 +221,10 @@ impl Gullet {
       match self.mouth {
         None => return Ok(None),
         Some(ref mut runtime) => {
-          read_token = if runtime.pushback.is_empty() {
-            runtime.mouth.read_token(state)
-          } else {
+          read_token = if !runtime.pushback.is_empty() {
             runtime.pushback.pop_front()
+          } else {
+            runtime.mouth.read_token(state)
           };
           match read_token {
             None => {
@@ -235,8 +235,7 @@ impl Gullet {
             },
             Some(token) => {
               // info!(target:"read_x_token", "at: {:?}", token);
-              cc = token.code;
-              match cc {
+              match token.code {
                 Catcode::NOTEXPANDED => {
                   // NOTE: Inlined ->getCatcode
                   // Should only occur IMMEDIATELY after expanding \noexpand (by readXToken),

@@ -39,7 +39,7 @@ pub struct Document {
   pub node_fonts: HashMap<usize, Font>,         // used to be _font attribute
   pub debug: bool,
   pub constructed_nodes: Vec<Node>,
-  pub box_to_absorb: Option<Rc<Digested>>,
+  pub box_to_absorb: Option<Rc<Digested>>, // local $LaTeXML::BOX;
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -251,21 +251,23 @@ impl Document {
     // let mut results = Vec::new();
     let mut boxes = VecDeque::new();
     boxes.push_front(object);
-
     while let Some(front_box) = boxes.pop_front() {
-      self.constructed_nodes = Vec::new();
-      self.box_to_absorb = Some(Rc::new(front_box.clone()));
-      // info!(target: "document:absorb", "front box: {:?}", front_box);
-      match front_box {
+      if let Digested::List(list) = front_box {
         // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
-        Digested::List(list) => for tbox in list.unlist().into_iter().rev() {
+        for tbox in list.unlist().into_iter().rev() {
           boxes.push_front(tbox);
-        },
-        // A Proper Box or Whatsit? Absorb it.
-        Digested::TBox(digested) => digested.be_absorbed(self, state)?,
-        Digested::Whatsit(digested) => digested.be_absorbed(self, state)?,
-        Digested::Postponed(ref _t) => unimplemented!(),
-      };
+        }
+      } else {
+        // info!(target: "document:absorb", "front box: {:?}", front_box);
+        // self.constructed_nodes = Vec::new();
+        self.box_to_absorb = Some(Rc::new(front_box.clone()));
+        match front_box {
+          // A Proper Box or Whatsit? Absorb it.
+          Digested::TBox(digested) => digested.be_absorbed(self, state)?,
+          Digested::Whatsit(digested) => digested.be_absorbed(self, state)?,
+          _ => unimplemented!(),
+        };
+      }
 
       // TODO: Does the results extension make ANY sense???
       // These were created just now
