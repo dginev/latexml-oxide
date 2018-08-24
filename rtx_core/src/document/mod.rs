@@ -12,7 +12,6 @@ use regex::Regex;
 use std::collections::{HashMap, VecDeque};
 use std::iter;
 use std::rc::Rc;
-use std::cell::RefCell;
 
 use common::error::*;
 use common::font::Font;
@@ -32,7 +31,7 @@ lazy_static! {
 static FONT_ELEMENT_NAME: &'static str = "ltx:text";
 static MATH_TOKEN_NAME: &'static str = "ltx:XMTok";
 
-pub type DigestedRef = Rc<RefCell<Digested>>;
+pub type DigestedRef = Rc<Digested>;
 
 pub struct Document {
   pub document: XmlDoc,
@@ -265,9 +264,9 @@ impl Document {
       } else {
         // info!(target: "document:absorb", "front box: {:?}", front_box);
         // self.constructed_nodes = Vec::new();
-        let front_box = Rc::new(RefCell::new(front_box));
+        let front_box = Rc::new(front_box);
         self.set_box_to_absorb(Some(front_box.clone()));
-        match *front_box.borrow() {
+        match *front_box {
           // A Proper Box or Whatsit? Absorb it.
           Digested::TBox(ref digested) => digested.be_absorbed(self, state)?,
           Digested::Whatsit(ref digested) => digested.be_absorbed(self, state)?,
@@ -875,7 +874,7 @@ impl Document {
     let font = match font_opt {
       Some(f) => f.clone(),
       None => match &self.box_to_absorb {
-        &Some(ref tbox) => match tbox.borrow().get_font() {
+        &Some(ref tbox) => match tbox.get_font() {
           Some(f) => f.clone(),
           None => Font::math_default(), // should never happen?
         },
@@ -1362,14 +1361,14 @@ impl Document {
   pub fn set_box_font(&mut self, node: &Node) {
     let nodeid = node.to_hashable();
     let has_box_font =
-      self.box_to_absorb.is_some() && self.box_to_absorb.as_ref().unwrap().borrow().get_font().is_some();
+      self.box_to_absorb.is_some() && self.box_to_absorb.as_ref().unwrap().get_font().is_some();
     if has_box_font {
       self.node_fonts.insert(
         nodeid,
         self
           .box_to_absorb
           .as_ref()
-          .unwrap().borrow()
+          .unwrap()
           .get_font()
           .unwrap()
           .clone(),
