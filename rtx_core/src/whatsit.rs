@@ -110,7 +110,7 @@ impl BoxOps for Whatsit {
 
   fn unlist(self) -> Vec<Digested> { Vec::new() }
 
-  fn be_absorbed(mut self, document: &mut Document, state: &mut State) -> Result<()> {
+  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) -> Result<()> {
     // Significant time is consumed here, and associated with a specific CS,
     // so we should be profiling as well!
     // Hopefully the csname is the same that was charged in the digestioned phase!
@@ -119,11 +119,9 @@ impl BoxOps for Whatsit {
     // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
     // info!(target:"whatsit:be_absorbed", "{:?}", self);
 
-    let self_mut = &mut self;
-
-    self_mut
+    self
       .definition
-      .do_absorbtion(document, self_mut, state)?;
+      .do_absorbtion(document, self, state)?;
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
     Ok(())
   }

@@ -98,7 +98,7 @@ impl BoxOps for Tbox {
   fn to_string(&self) -> String { self.text.clone() }
   fn unlist(self) -> Vec<Digested> { Vec::new() }
 
-  fn be_absorbed(self, document: &mut Document, state: &mut State) -> Result<()> {
+  fn be_absorbed(&mut self, document: &mut Document, state: &mut State) -> Result<()> {
     let text = &self.text;
     let font = &self.font;
     let mode: String = match self.properties.get("mode") {

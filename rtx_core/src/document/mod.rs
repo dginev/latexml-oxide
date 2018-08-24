@@ -265,8 +265,8 @@ impl Document {
         self.set_box_to_absorb(Some(Rc::new(front_box.clone())));
         match front_box {
           // A Proper Box or Whatsit? Absorb it.
-          Digested::TBox(digested) => digested.be_absorbed(self, state)?,
-          Digested::Whatsit(digested) => digested.be_absorbed(self, state)?,
+          Digested::TBox(mut digested) => digested.be_absorbed(self, state)?,
+          Digested::Whatsit(mut digested) => digested.be_absorbed(self, state)?,
           _ => unimplemented!(),
         };
         self.localize_box_to_absorb();
