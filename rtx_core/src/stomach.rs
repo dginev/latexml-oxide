@@ -46,8 +46,8 @@ impl Stomach {
   // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
   pub fn digest_next_body(&mut self, terminal: bool, state: &mut State) -> Result<Vec<Digested>> {
     if terminal {
-      unimplemented!()
-    } // TODO
+      unimplemented!("TODO: Add logic for terminal=true case in digest_next_body")
+    }
     let _start_location = self.get_locator();
     let init_depth = self.boxing.len();
     let mut box_list: Vec<Digested> = Vec::new();
