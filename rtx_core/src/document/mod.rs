@@ -38,7 +38,7 @@ pub struct Document {
   pub pending: Vec<Node>,
   pub node: Node,
   pub node_boxes: HashMap<usize, DigestedRef>, // used to be _box attribute
-  pub node_fonts: HashMap<usize, Font>,         // used to be _font attribute
+  pub node_fonts: HashMap<usize, Font>,        // used to be _font attribute
   pub debug: bool,
   pub constructed_nodes: Vec<Node>,
   box_to_absorb: Option<DigestedRef>, // local $LaTeXML::BOX;

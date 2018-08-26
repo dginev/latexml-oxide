@@ -205,10 +205,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   }
 
   DefMacro!("\\secdef {}{} OptionalMatch:*", sub[gullet, args, state] {
+    unpack!(args=>token1, token2);
     if args.len() == 3 {
-      Ok(args[1].clone()) // can't move out without clone, how to circumvent?
+      Ok(token2) // can't move out without clone, how to circumvent?
     } else {
-      Ok(args[0].clone())
+      Ok(token1)
     }
   });
 
@@ -282,6 +283,14 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         // be mutable, and Rust hits a mutability conflict between the parent, and the
         // "args" and "props" children ... will come back here after performance becomes
         // an issue again
+        // 
+        // Part 2: I have now, with great attention and profiling, solidified the position that Whatsits are immutable
+        // during the absorbtion phase -- and hense the args and props passed in here will remain immutable in rtx.
+        // Hence, for this absorb call to run correctly, it must either:
+        // 1) Accept a cloned value as currently, paying with performance
+        // 2) Accept immutable references to digested objects, which may lead to far-reaching borrowing constraints
+        //   e.g. unlist()-ing a digested List will have to produce box references, rather than provide the owned boxes directly.
+        //   would have to experiment with this - as it is of course much lighter on performance
         if let Some(Stored::Digested(tags)) = props.get("tags") {
           document.absorb((**tags).clone(), state)?;
         }
