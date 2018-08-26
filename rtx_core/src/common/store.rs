@@ -78,7 +78,7 @@ pub enum Stored {
   IfFrame(Rc<RefCell<IfFrame>>),
   /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Rc<Constructor>),
-  Digested(Rc<::Digested>),
+  Digested(::Digested),
   Parameter(Parameter),
   Font(Rc<Font>),
   Ligature(Box<Ligature>),
@@ -217,11 +217,8 @@ impl From<Constructor> for Stored {
   fn from(value: Constructor) -> Self { Rc::new(value).into() }
 }
 
-impl From<Rc<::Digested>> for Stored {
-  fn from(definition: Rc<::Digested>) -> Self { Stored::Digested(definition) }
-}
 impl From<::Digested> for Stored {
-  fn from(value: ::Digested) -> Self { Rc::new(value).into() }
+  fn from(value: ::Digested) -> Self { Stored::Digested(value) }
 }
 
 impl From<Parameter> for Stored {
@@ -427,7 +424,7 @@ impl<'a> From<&'a Stored> for Option<RegisterValue> {
 impl<'a> From<&'a Stored> for Option<::Digested> {
   fn from(value: &'a Stored) -> Option<::Digested> {
     match value {
-      Stored::Digested(digested) => Some((**digested).clone()),
+      Stored::Digested(digested) => Some((*digested).clone()),
       _ => None,
     }
   }

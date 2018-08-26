@@ -1,8 +1,11 @@
+use std::borrow::Cow;
+use std::fmt;
+
 use common::error::*;
 use common::font::Font;
 use document::Document;
 use state::State;
-use std::fmt;
+
 use token::Token;
 use tokens::Tokens;
 use {BoxOps, Digested, TexMode};
@@ -26,7 +29,7 @@ impl fmt::Debug for List {
 }
 
 impl BoxOps for List {
-  fn unlist(self) -> Vec<Digested> { self.boxes.into_iter().collect::<Vec<_>>() }
+  fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
 
   fn to_string(&self) -> String {
     self
@@ -53,7 +56,12 @@ impl BoxOps for List {
     Tokens::new(reverted)
   }
 
-  fn get_font(&self) -> Option<&Font> { self.font.as_ref() }
+  fn get_font(&self) -> Option<Cow<Font>> {
+    match self.font {
+      None => None,
+      Some(ref f) => Some(Cow::Borrowed(&f)),
+    }
+  }
 }
 
 impl List {
@@ -66,7 +74,7 @@ impl List {
     let mut font: Option<Font> = None;
     for bx in boxes.iter().rev() {
       if let Some(bx_font) = bx.get_font() {
-        font = Some(bx_font.clone());
+        font = Some(bx_font.into_owned());
         break;
       }
     }
@@ -83,5 +91,5 @@ impl From<List> for Result<Vec<Digested>> {
 }
 
 impl From<List> for Result<Digested> {
-  fn from(list: List) -> Result<Digested> { Ok(Digested::List(Box::new(list))) }
+  fn from(list: List) -> Result<Digested> { Ok(Digested::List(list)) }
 }

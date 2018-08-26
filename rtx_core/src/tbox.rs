@@ -1,6 +1,7 @@
+use std::borrow::Cow;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::cell::RefCell;
 
 use common::error::*;
 use common::font::Font;
@@ -97,7 +98,7 @@ impl Tbox {
 
 impl BoxOps for Tbox {
   fn to_string(&self) -> String { self.text.clone() }
-  fn unlist(self) -> Vec<Digested> { Vec::new() }
+  fn unlist(&self) -> Vec<Digested> { Vec::new() }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
     let text = &self.text;
@@ -124,30 +125,35 @@ impl BoxOps for Tbox {
 
   fn revert(&self) -> Tokens { self.tokens.clone() }
 
-  fn get_font(&self) -> Option<&Font> { Some(&self.font) }
+  fn get_font(&self) -> Option<Cow<Font>> { Some(Cow::Borrowed(&self.font)) }
 
-  fn get_property(&self, key: &str, state: &mut State) -> Option<&Stored> {
+  fn get_property(&self, key: &str, state: &mut State) -> Option<Cow<Stored>> {
     if key == "isSpace" {
       match self.properties.get(key) {
-        Some(value) => Some(value),
+        Some(value) => Some(Cow::Borrowed(value)),
         None => {
           let tex = self.tokens.untex(state); // !
           let property_bool = !tex.is_empty() && tex.chars().all(|c| c.is_whitespace()); // Check the TeX code, not (just) the string!
-          Some(property_bool.into())
+          Some(Cow::Borrowed(property_bool.into()))
         },
       }
     } else {
-      self.properties.get(key)
+      match self.properties.get(key) {
+        None => None,
+        Some(v) => Some(Cow::Borrowed(v)),
+      }
     }
   }
 }
 
 impl From<Tbox> for Result<Vec<Digested>> {
-  fn from(tbox: Tbox) -> Result<Vec<Digested>> { Ok(vec![Digested::TBox(Box::new(tbox))]) }
+  fn from(tbox: Tbox) -> Result<Vec<Digested>> { Ok(vec![Digested::TBox(Rc::new(tbox))]) }
 }
-impl From<Tbox> for Option<Rc<Digested>> {
-  fn from(tbox: Tbox) -> Option<Rc<Digested>> { Some(Rc::new(Digested::TBox(Box::new(tbox)))) }
+impl From<Tbox> for Option<Digested> {
+  fn from(tbox: Tbox) -> Option<Digested> { Some(Digested::TBox(Rc::new(tbox))) }
 }
 impl From<Tbox> for Option<Rc<RefCell<Digested>>> {
-  fn from(tbox: Tbox) -> Option<Rc<RefCell<Digested>>> { Some(Rc::new(RefCell::new(Digested::TBox(Box::new(tbox))))) }
+  fn from(tbox: Tbox) -> Option<Rc<RefCell<Digested>>> {
+    Some(Rc::new(RefCell::new(Digested::TBox(Rc::new(tbox)))))
+  }
 }

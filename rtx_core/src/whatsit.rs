@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
@@ -77,10 +79,10 @@ impl Whatsit {
     }
     self
       .properties
-      .insert(s!("body"), Digested::List(Box::new(list)).into());
-    if let Some(Digested::Whatsit(trailer)) = trailer_opt {
+      .insert(s!("body"), Digested::List(list).into());
+    if let Some(Digested::Whatsit(ref trailer)) = trailer_opt {
       // And copy any otherwise undefined properties from the trailer
-      for (prop, value) in trailer.get_properties() {
+      for (prop, value) in trailer.borrow().get_properties() {
         self
           .properties
           .entry(prop.to_string())
@@ -88,7 +90,7 @@ impl Whatsit {
       }
       self
         .properties
-        .insert(s!("trailer"), Digested::Whatsit(trailer).into());
+        .insert(s!("trailer"), trailer_opt.as_ref().unwrap().clone().into());
     }
   }
 }
@@ -108,7 +110,7 @@ impl BoxOps for Whatsit {
     self.revert().to_string() // What else??
   }
 
-  fn unlist(self) -> Vec<Digested> { Vec::new() }
+  fn unlist(&self) -> Vec<Digested> { Vec::new() }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
     // Significant time is consumed here, and associated with a specific CS,
@@ -119,24 +121,25 @@ impl BoxOps for Whatsit {
     // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
     // info!(target:"whatsit:be_absorbed", "{:?}", self);
 
-    self
-      .definition
-      .do_absorbtion(document, self, state)?;
+    self.definition.do_absorbtion(document, self, state)?;
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
     Ok(())
   }
 
-  fn get_property(&self, key: &str, _state: &mut State) -> Option<&Stored> {
-    self.properties.get(key)
+  fn get_property(&self, key: &str, _state: &mut State) -> Option<Cow<Stored>> {
+    match self.properties.get(key) {
+      None => None,
+      Some(v) => Some(Cow::Borrowed(v)),
+    }
   }
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     self.properties.insert(key.to_string(), value.into());
   }
 
-  fn get_body(&self) -> Option<&Digested> {
+  fn get_body(&self) -> Option<Digested> {
     match self.properties.get("body") {
-      Some(&Stored::Digested(ref body)) => Some(body),
+      Some(&Stored::Digested(ref body)) => Some(body.clone()),
       _ => None,
     }
   }
@@ -146,14 +149,14 @@ impl BoxOps for Whatsit {
     Tokens!()
   }
 
-  fn get_font(&self) -> Option<&Font> {
+  fn get_font(&self) -> Option<Cow<Font>> {
     match self.properties.get("font") {
-      Some(&Stored::Font(ref font)) => Some(font),
+      Some(&Stored::Font(ref font)) => Some(Cow::Owned((**font).clone())),
       _ => None,
     }
   }
 }
 
 impl From<Whatsit> for Digested {
-  fn from(w: Whatsit) -> Digested { Digested::Whatsit(Box::new(w)) }
+  fn from(w: Whatsit) -> Digested { Digested::Whatsit(Rc::new(RefCell::new(w))) }
 }

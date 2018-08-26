@@ -295,7 +295,7 @@ impl Parameter {
       if !self.undigested {
         Some(value_to_digest.be_digested(stomach, state)?)
       } else {
-        Some(Digested::Postponed(value_to_digest))
+        Some(Digested::Postponed(Rc::new(value_to_digest)))
       }
     } else {
       None

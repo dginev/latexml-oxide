@@ -58,7 +58,7 @@ impl Stomach {
         None => {
           // Wer ran out, terminate,
           // and add a Dummy `trailer' if none explicit.
-          box_list.push(Digested::TBox(Box::new(Tbox::default())));
+          box_list.push(Digested::TBox(Rc::new(Tbox::default())));
           // info!(target:"digest_next_body","no_token");
           break;
         },
@@ -131,7 +131,7 @@ impl Stomach {
         // let list = STOMACH_LIST.lock()
         let mut digested_list = List::new(digested_boxes);
         digested_list.mode = Some(mode);
-        Ok(Digested::List(Box::new(digested_list)))
+        digested_list.into()
       }),
     )
   }
@@ -360,7 +360,7 @@ impl Stomach {
       if in_math || in_preamble {
         Ok(Vec::new())
       } else {
-        Ok(vec![Digested::TBox(Box::new(Tbox::new(
+        Ok(vec![Digested::TBox(Rc::new(Tbox::new(
           meaning.get_string().to_string(), //text
           font,
           Some(self.gullet.get_locator()), //locator
@@ -386,7 +386,7 @@ impl Stomach {
     // return; }
     else {
       let text = font::decode_string(meaning.get_string().to_string(), None, true, state);
-      Ok(vec![Digested::TBox(Box::new(Tbox::new(
+      Ok(vec![Digested::TBox(Rc::new(Tbox::new(
         text,
         font,
         None,             // locator

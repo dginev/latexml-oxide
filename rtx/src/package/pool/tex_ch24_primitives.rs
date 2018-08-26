@@ -34,7 +34,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
         Some(TexMode::Text)
       };
       let body = stomach.digest_next_body(false, state)?;
-      let mut boxes = vec![Digested::TBox(Box::new(open))];
+      let mut boxes = vec![Digested::TBox(Rc::new(open))];
       boxes.extend(body);
       let return_list = List {
         boxes,
@@ -42,7 +42,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
         font: None,
       };
 
-      Ok(vec![Digested::List(Box::new(return_list))])
+      Ok(vec![Digested::List(return_list)])
     })
   );
 
@@ -103,8 +103,12 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
       while !boxes.is_empty() {
         let is_space : bool;
         {
-          is_space = if let Some(Stored::Bool(space_bool)) = boxes[0].get_property("isSpace", state) {
-            *space_bool 
+          is_space = if let Some(space_val) = boxes[0].get_property("isSpace", state) {
+            match space_val {
+              Cow::Borrowed(Stored::Bool(space_bool)) => *space_bool,
+              Cow::Owned(Stored::Bool(ref space_bool))  => *space_bool, // TODO : is there match syntax for Cow ?
+              _ => false
+            }
           } else {
             false
           };
