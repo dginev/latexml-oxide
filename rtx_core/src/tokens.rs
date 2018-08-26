@@ -125,7 +125,7 @@ impl Tokens {
   // should we unify the interfaces so that Options are always used? Could be cumbursome...
   pub fn unwrap_or_default(self) -> Tokens { self }
 
-  pub fn stringify(self) -> String {
+  pub fn stringify(&self) -> String {
     s!(
       "Tokens[{}]",
       &self

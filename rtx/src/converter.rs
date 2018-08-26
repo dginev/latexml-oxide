@@ -165,7 +165,7 @@ impl Converter {
       Err(e) => {
         // TODO digestion failed, report
         e.log_fatal();
-        Digested::List(Box::new(List::new(Vec::new())))
+        Digested::List(List::new(Vec::new()))
       },
       Ok(d) => d,
     };

@@ -1672,7 +1672,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         //   if (ref $value eq 'CODE') {
         //     $properties{$key} = &$value(); } }
         info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
-        Ok(vec![Digested::TBox(Box::new( // TODO: Can we reduce boilerplate?
+        Ok(vec![Digested::TBox(Rc::new( // TODO: Can we reduce boilerplate?
           Tbox{ text: $presentation, tokens: Tokens!($cs.clone()), font, properties, ..Tbox::default()}
         ))])
       })),

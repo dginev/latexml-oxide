@@ -31,18 +31,16 @@ lazy_static! {
 static FONT_ELEMENT_NAME: &'static str = "ltx:text";
 static MATH_TOKEN_NAME: &'static str = "ltx:XMTok";
 
-pub type DigestedRef = Rc<Digested>;
-
 pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
   pub node: Node,
-  pub node_boxes: HashMap<usize, DigestedRef>, // used to be _box attribute
-  pub node_fonts: HashMap<usize, Font>,        // used to be _font attribute
+  pub node_boxes: HashMap<usize, Digested>, // used to be _box attribute
+  pub node_fonts: HashMap<usize, Font>,     // used to be _font attribute
   pub debug: bool,
   pub constructed_nodes: Vec<Node>,
-  box_to_absorb: Option<DigestedRef>, // local $LaTeXML::BOX;
-  localized_boxes: Vec<Option<DigestedRef>>,
+  box_to_absorb: Option<Digested>, // local $LaTeXML::BOX;
+  localized_boxes: Vec<Option<Digested>>,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -256,7 +254,7 @@ impl Document {
     let mut boxes = VecDeque::new();
     boxes.push_front(object);
     while let Some(front_box) = boxes.pop_front() {
-      if let Digested::List(list) = front_box {
+      if let Digested::List(ref list) = front_box {
         // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
         for tbox in list.unlist().into_iter().rev() {
           boxes.push_front(tbox);
@@ -264,12 +262,11 @@ impl Document {
       } else {
         // info!(target: "document:absorb", "front box: {:?}", front_box);
         // self.constructed_nodes = Vec::new();
-        let front_box = Rc::new(front_box);
         self.set_box_to_absorb(Some(front_box.clone()));
-        match *front_box {
+        match front_box {
           // A Proper Box or Whatsit? Absorb it.
           Digested::TBox(ref digested) => digested.be_absorbed(self, state)?,
-          Digested::Whatsit(ref digested) => digested.be_absorbed(self, state)?,
+          Digested::Whatsit(ref digested) => digested.borrow().be_absorbed(self, state)?,
           _ => unimplemented!(),
         };
         self.localize_box_to_absorb();
@@ -875,7 +872,7 @@ impl Document {
       Some(f) => f.clone(),
       None => match &self.box_to_absorb {
         &Some(ref tbox) => match tbox.get_font() {
-          Some(f) => f.clone(),
+          Some(f) => f.into_owned(),
           None => Font::math_default(), // should never happen?
         },
         &None => Font::math_default(), // should never happen?
@@ -1337,12 +1334,12 @@ impl Document {
 
   //**********************************************************************
   /// Record the Box that created this node.
-  pub fn set_node_box(&mut self, node: &Node, digested: DigestedRef) {
+  pub fn set_node_box(&mut self, node: &Node, digested: Digested) {
     let nodeid = node.to_hashable();
     self.node_boxes.insert(nodeid, digested);
   }
 
-  pub fn get_node_box(&self, node: &Node) -> Option<&DigestedRef> {
+  pub fn get_node_box(&self, node: &Node) -> Option<&Digested> {
     if node.get_type() == Some(NodeType::ElementNode) {
       let nodeid = node.to_hashable();
       self.node_boxes.get(&nodeid)
@@ -1371,7 +1368,7 @@ impl Document {
           .unwrap()
           .get_font()
           .unwrap()
-          .clone(),
+          .into_owned(),
       );
     }
   }
@@ -1659,7 +1656,7 @@ impl Document {
     attrib.insert(s!("src"), resource.name);
     attrib.insert(s!("type"), resource.mimetype);
     attrib.insert(s!("media"), resource.media);
-    let content_box = Digested::TBox(Box::new(Tbox {
+    let content_box = Digested::TBox(Rc::new(Tbox {
       text: resource.content,
       ..Tbox::default()
     }));
@@ -1701,7 +1698,7 @@ impl Document {
   // TODO!
   fn float_to_element(&mut self, element: &str, flag: bool) -> Option<Node> { None }
 
-  pub fn set_box_to_absorb(&mut self, arg: Option<DigestedRef>) {
+  pub fn set_box_to_absorb(&mut self, arg: Option<Digested>) {
     self.localized_boxes.push(self.box_to_absorb.take());
     self.box_to_absorb = arg;
   }

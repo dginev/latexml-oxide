@@ -35,6 +35,7 @@ pub mod tbox;
 pub mod util;
 pub mod whatsit;
 
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
@@ -138,20 +139,20 @@ impl Core {
 }
 
 pub trait BoxOps {
-  fn unlist(self) -> Vec<Digested>;
+  fn unlist(&self) -> Vec<Digested>;
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()>;
   fn to_string(&self) -> String;
   fn stringify(&self) -> String { s!("Vec<Tbox> for now ") }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {}
-  fn get_property(&self, _key: &str, _state: &mut State) -> Option<&Stored> {
+  fn get_property(&self, _key: &str, _state: &mut State) -> Option<Cow<Stored>> {
     error!(target: "boxops:get_property", "Generic BoxOps::get_property should never be called!");
     None
   }
-  fn get_body(&self) -> Option<&Digested> {
+  fn get_body(&self) -> Option<Digested> {
     error!(target: "boxops:get_body", "Generic BoxOps::get_body should never be called!");
     None
   }
-  fn get_font(&self) -> Option<&Font>;
+  fn get_font(&self) -> Option<Cow<Font>>;
   fn revert(&self) -> Tokens;
 }
 
@@ -163,10 +164,10 @@ pub enum TexMode {
 
 #[derive(Clone, PartialEq)]
 pub enum Digested {
-  TBox(Box<Tbox>),
-  List(Box<List>),
-  Whatsit(Box<Whatsit>),
-  Postponed(Tokens),
+  TBox(Rc<Tbox>),
+  Whatsit(Rc<RefCell<Whatsit>>),
+  List(List),
+  Postponed(Rc<Tokens>),
 }
 impl fmt::Debug for Digested {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -181,7 +182,7 @@ impl fmt::Debug for Digested {
 
 impl<'a> From<&'a String> for Digested {
   fn from(value: &'a String) -> Digested {
-    Digested::TBox(Box::new(Tbox {
+    Digested::TBox(Rc::new(Tbox {
       text: value.to_string(),
       ..Tbox::default()
     }))
@@ -199,15 +200,15 @@ impl<'a> From<Digested> for Tokens {
 }
 
 impl Default for Digested {
-  fn default() -> Self { Digested::TBox(Box::new(Tbox::default())) }
+  fn default() -> Self { Digested::TBox(Rc::new(Tbox::default())) }
 }
 
 impl BoxOps for Digested {
-  fn unlist(self) -> Vec<Digested> {
+  fn unlist(&self) -> Vec<Digested> {
     match self {
-      Digested::TBox(b) => b.unlist(),
-      Digested::List(l) => l.unlist(),
-      Digested::Whatsit(w) => w.unlist(),
+      Digested::TBox(ref b) => b.unlist(),
+      Digested::List(ref l) => l.unlist(),
+      Digested::Whatsit(ref w) => w.borrow().unlist(),
       Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
@@ -216,7 +217,7 @@ impl BoxOps for Digested {
     match self {
       Digested::TBox(b) => b.be_absorbed(document, state),
       Digested::List(l) => l.be_absorbed(document, state),
-      Digested::Whatsit(w) => w.be_absorbed(document, state),
+      Digested::Whatsit(w) => w.borrow().be_absorbed(document, state),
       Digested::Postponed(_) => unimplemented!(),
     }
   }
@@ -225,7 +226,7 @@ impl BoxOps for Digested {
     match *self {
       Digested::TBox(ref b) => b.to_string(),
       Digested::List(ref l) => l.to_string(),
-      Digested::Whatsit(ref w) => w.to_string(),
+      Digested::Whatsit(ref w) => w.borrow().to_string(),
       Digested::Postponed(ref t) => t.to_string(),
     }
   }
@@ -234,8 +235,8 @@ impl BoxOps for Digested {
     match *self {
       Digested::TBox(ref b) => b.stringify(),
       Digested::List(ref l) => l.stringify(),
-      Digested::Whatsit(ref w) => w.stringify(),
-      Digested::Postponed(ref t) => t.clone().stringify(),
+      Digested::Whatsit(ref w) => w.borrow().stringify(),
+      Digested::Postponed(ref t) => (*t).stringify(),
     }
   }
 
@@ -247,23 +248,26 @@ impl BoxOps for Digested {
       Digested::List(ref l) => {
         error!(target: "digested:set_property", "Called set_property on List: {:?}", l)
       },
-      Digested::Whatsit(ref mut w) => w.set_property(key, value),
+      Digested::Whatsit(ref w) => w.borrow_mut().set_property(key, value), // TODO
       Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
 
-  fn get_property(&self, key: &str, state: &mut State) -> Option<&Stored> {
+  fn get_property(&self, key: &str, state: &mut State) -> Option<Cow<Stored>> {
     match *self {
       Digested::TBox(ref b) => b.get_property(key, state),
       Digested::List(ref l) => {
         error!(target: "digested:get_property", "Called get_property on List: {:?}", l);
         None
       },
-      Digested::Whatsit(ref w) => w.get_property(key, state),
+      Digested::Whatsit(ref w) => match w.borrow().get_property(key, state) {
+        None => None,
+        Some(v) => Some(Cow::Owned(v.into_owned())),
+      },
       Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
-  fn get_body(&self) -> Option<&Digested> {
+  fn get_body(&self) -> Option<Digested> {
     match *self {
       Digested::TBox(ref b) => {
         error!(target: "digested:get_body", "Called get_body on Box: {:?}", b);
@@ -273,16 +277,19 @@ impl BoxOps for Digested {
         error!(target: "digested:get_body", "Called get_body on List: {:?}", l);
         None
       },
-      Digested::Whatsit(ref w) => w.get_body(),
+      Digested::Whatsit(ref w) => w.borrow().get_body(),
       Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
 
-  fn get_font(&self) -> Option<&Font> {
+  fn get_font(&self) -> Option<Cow<Font>> {
     match *self {
       Digested::TBox(ref b) => b.get_font(),
       Digested::List(ref l) => l.get_font(),
-      Digested::Whatsit(ref w) => w.get_font(),
+      Digested::Whatsit(ref w) => match w.borrow().get_font() {
+        None => None,
+        Some(t) => Some(Cow::Owned(t.into_owned())),
+      },
       Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
@@ -291,8 +298,8 @@ impl BoxOps for Digested {
     match *self {
       Digested::TBox(ref b) => b.revert(),
       Digested::List(ref l) => l.revert(),
-      Digested::Whatsit(ref w) => w.revert(),
-      Digested::Postponed(ref t) => t.clone(),
+      Digested::Whatsit(ref w) => w.borrow().revert(),
+      Digested::Postponed(ref t) => (**t).clone(),
     }
   }
 }
