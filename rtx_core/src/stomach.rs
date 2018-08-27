@@ -597,9 +597,9 @@ impl Stomach {
           bg: cf.bg.clone(),
           size: cf.size.clone(),
           mathstyle: if isdisplay {
-            Some(s!("display"))
+            Some("display".into())
           } else {
-            Some(s!("text"))
+            Some("text".into())
           },
           ..Font::default()
         });

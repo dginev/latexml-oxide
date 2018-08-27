@@ -796,7 +796,7 @@ pub fn digest_literal(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -
   state.assign_value(
     "font",
     font.merge(Font {
-      encoding: Some(s!("ASCII")),
+      encoding: Some("ASCII".into()),
       ..Font::default()
     }),
     Some(Scope::Local),

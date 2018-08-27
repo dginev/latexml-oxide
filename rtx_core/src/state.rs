@@ -1134,7 +1134,7 @@ impl State {
     // try to stay as ASCII as possible
     let new_font = if let Some(&Stored::Font(ref current_font)) = self.lookup_value("font") {
       Some(current_font.merge(Font {
-        encoding: Some(s!("ASCII")),
+        encoding: Some("ASCII".into()),
         ..Font::default()
       }))
     } else {

@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::borrow::Cow;
 use std::collections::HashMap;
 /// Note that this has evolved way beynond just "font",
 /// but covers text properties (or even display properties) in general
@@ -20,7 +21,7 @@ static DEFBACKGROUND: &'static str = "white";
 static DEFOPACITY: &'static str = "1";
 static DEFENCODING: &'static str = "OT1";
 static DEFLANGUAGE: &'static str = "en";
-static DEFSIZE: i8 = 10; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
+static DEFSIZE: &'static str = "10"; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
 
 // static FORCE_FAMILY : i8 = 0x1;
 // static FORCE_SERIES : i8 = 0x2;
@@ -39,16 +40,16 @@ lazy_static! {
 /// override (Some) vs no intent (None).
 #[derive(Clone, PartialEq)]
 pub struct Font {
-  pub family: Option<String>,
-  pub series: Option<String>,
-  pub shape: Option<String>,
-  pub size: Option<String>,
-  pub color: Option<String>,
-  pub bg: Option<String>,
-  pub opacity: Option<String>,
-  pub encoding: Option<String>,
-  pub language: Option<String>,
-  pub mathstyle: Option<String>,
+  pub family: Option<Cow<'static, str>>,
+  pub series: Option<Cow<'static, str>>,
+  pub shape: Option<Cow<'static, str>>,
+  pub size: Option<Cow<'static, str>>,
+  pub color: Option<Cow<'static, str>>,
+  pub bg: Option<Cow<'static, str>>,
+  pub opacity: Option<Cow<'static, str>>,
+  pub encoding: Option<Cow<'static, str>>,
+  pub language: Option<Cow<'static, str>>,
+  pub mathstyle: Option<Cow<'static, str>>,
   pub forceseries: Option<bool>,
   pub forcefamily: Option<bool>,
   pub forceshape: Option<bool>,
@@ -83,15 +84,15 @@ impl fmt::Debug for Font {
 impl Font {
   pub fn text_default() -> Self {
     Font {
-      family: Some(DEFFAMILY.to_string()),
-      series: Some(DEFSERIES.to_string()),
-      shape: Some(DEFSHAPE.to_string()),
-      size: Some(DEFSIZE.to_string()),
-      color: Some(DEFCOLOR.to_string()),
-      bg: Some(DEFBACKGROUND.to_string()),
-      opacity: Some(DEFOPACITY.to_string()),
-      encoding: Some(DEFENCODING.to_string()),
-      language: Some(DEFLANGUAGE.to_string()),
+      family: Some(Cow::Borrowed(DEFFAMILY)),
+      series: Some(Cow::Borrowed(DEFSERIES)),
+      shape: Some(Cow::Borrowed(DEFSHAPE)),
+      size: Some(Cow::Borrowed(DEFSIZE)),
+      color: Some(Cow::Borrowed(DEFCOLOR)),
+      bg: Some(Cow::Borrowed(DEFBACKGROUND)),
+      opacity: Some(Cow::Borrowed(DEFOPACITY)),
+      encoding: Some(Cow::Borrowed(DEFENCODING)),
+      language: Some(Cow::Borrowed(DEFLANGUAGE)),
       mathstyle: None,
       forceseries: None,
       forcefamily: None,
@@ -100,16 +101,16 @@ impl Font {
   }
   pub fn math_default() -> Self {
     Font {
-      family: Some(s!("math")),
-      series: Some(DEFSERIES.to_string()),
-      shape: Some(s!("italic")),
-      size: Some(DEFSIZE.to_string()),
-      color: Some(DEFCOLOR.to_string()),
-      bg: Some(DEFBACKGROUND.to_string()),
-      opacity: Some(DEFOPACITY.to_string()),
+      family: Some(Cow::Borrowed("math")),
+      series: Some(Cow::Borrowed(DEFSERIES)),
+      shape: Some(Cow::Borrowed("italic")),
+      size: Some(Cow::Borrowed(DEFSIZE)),
+      color: Some(Cow::Borrowed(DEFCOLOR)),
+      bg: Some(Cow::Borrowed(DEFBACKGROUND)),
+      opacity: Some(Cow::Borrowed(DEFOPACITY)),
       encoding: None,
-      language: Some(DEFLANGUAGE.to_string()),
-      mathstyle: Some(s!("text")),
+      language: Some(Cow::Borrowed(DEFLANGUAGE)),
+      mathstyle: Some(Cow::Borrowed("text")),
       forceseries: None,
       forcefamily: None,
       forceshape: None,
@@ -160,8 +161,8 @@ impl Font {
   }
 
   /// Getter for encoding field
-  pub fn get_encoding(&self) -> Option<String> { self.encoding.clone() }
-  pub fn get_family(&self) -> Option<String> { self.family.clone() }
+  pub fn get_encoding(&self) -> Option<Cow<str>> { self.encoding.clone() }
+  pub fn get_family(&self) -> Option<Cow<str>> { self.family.clone() }
 
   // NOTE: In math, NORMALLY, setting any one of
   //    family, series or shape
@@ -225,52 +226,52 @@ impl Font {
       return new;
     } // ?
     let deffamily = if self.forcefamily.unwrap_or(false) {
-      self.family.clone().unwrap_or(DEFFAMILY.to_string())
+      self.family.clone().unwrap_or(DEFFAMILY.into())
     } else {
-      DEFFAMILY.to_string()
+      DEFFAMILY.into()
     };
     let defseries = if self.forceseries.unwrap_or(false) {
-      self.series.clone().unwrap_or(DEFSERIES.to_string())
+      self.series.clone().unwrap_or(DEFSERIES.into())
     } else {
-      DEFSERIES.to_string()
+      DEFSERIES.into()
     };
     let defshape = if self.forceshape.unwrap_or(false) {
-      self.shape.clone().unwrap_or(DEFSERIES.to_string())
+      self.shape.clone().unwrap_or(DEFSERIES.into())
     } else {
-      DEFSHAPE.to_string()
+      DEFSHAPE.into()
     };
 
     if LATIN_LETTER_RE.is_match(text) {
       // Latin Letter
       if new.shape.is_none() && new.family.is_none() {
-        new.shape = Some(s!("italic"));
+        new.shape = Some("italic".into());
       }
     } else if GREEK_LETTER_RE.is_match(text) {
       // Single Greek character?
       if UPPER_LETTER_RE.is_match(text) {
         // Uppercase
-        if new.family.is_none() || (new.family == Some(s!("math"))) {
+        if new.family.is_none() || (new.family == Some(Cow::Borrowed("math"))) {
           new.family = Some(deffamily);
-          if new.shape.is_some() && (new.shape != Some(DEFSHAPE.to_string())) {
+          if new.shape.is_some() && (new.shape != Some(DEFSHAPE.into())) {
             new.shape = Some(defshape); // if ANY shape, must be default
           }
         }
       } else {
         // Lowercase
-        if new.family.is_none() || new.family != Some(DEFFAMILY.to_string()) {
+        if new.family.is_none() || new.family != Some(DEFFAMILY.into()) {
           new.family = Some(deffamily);
         }
         if new.shape.is_none() || new.forceshape == Some(true) {
           // always ?
-          new.shape = Some(s!("italic"));
+          new.shape = Some("italic".into());
         }
-        if new.series.is_some() && (new.series != Some(DEFSERIES.to_string())) {
+        if new.series.is_some() && (new.series != Some(DEFSERIES.into())) {
           new.series = Some(defseries);
         }
       }
     } else if DIGIT_LETTER_RE.is_match(text) {
       // Digit
-      if new.family.is_none() || (new.family == Some(s!("math"))) {
+      if new.family.is_none() || (new.family == Some(Cow::Borrowed("math"))) {
         new.family = Some(deffamily);
         new.shape = Some(defshape); // defaults, always.
       }
@@ -278,7 +279,7 @@ impl Font {
       // Other Symbol
       new.family = Some(deffamily);
       new.shape = Some(defshape); // defaults, always.
-      if new.series.is_some() && (new.series != Some(DEFSERIES.to_string())) {
+      if new.series.is_some() && (new.series != Some(Cow::Borrowed(DEFSERIES))) {
         new.series = Some(defseries);
       } // defaults, always.
     }
@@ -357,21 +358,21 @@ impl Font {
   ///    properties => { %fontproperties }
   /// or (String, Font)
   pub fn relative_to(&self, other: &Font) -> HashMap<String, (String, Font)> {
-    let family = match &self.family {
-      &Some(ref fam) => if fam == "math" {
-        Some(s!("serif"))
+    let family = match self.family {
+      Some(ref fam) => if *fam == Cow::Borrowed("math") {
+        Some(Cow::Borrowed("serif"))
       } else {
-        Some(fam.to_string())
+        Some(fam.clone())
       },
-      &None => None,
+      None => None,
     };
-    let other_family = match &other.family {
-      &Some(ref fam) => if fam == "math" {
-        Some(s!("serif"))
+    let other_family = match other.family {
+      Some(ref fam) => if fam == "math" {
+        Some(Cow::Borrowed("serif"))
       } else {
-        Some(fam.to_string())
+        Some(fam.clone())
       },
-      &None => None,
+      None => None,
     };
     let mut diffs = vec![];
     let mut font_properties = Font::default();
@@ -381,12 +382,12 @@ impl Font {
     }
     if is_diff(&self.series, &other.series) {
       let series = self.series.clone().unwrap();
-      diffs.push(series.clone());
+      diffs.push(series);
       font_properties.series = self.series.clone();
     }
     if is_diff(&self.shape, &other.shape) {
       let shape = self.shape.clone().unwrap();
-      diffs.push(shape.clone());
+      diffs.push(shape);
       font_properties.shape = self.shape.clone();
     }
 
@@ -424,7 +425,7 @@ impl Font {
   }
 }
 
-fn is_diff(x: &Option<String>, y: &Option<String>) -> bool {
+fn is_diff(x: &Option<Cow<str>>, y: &Option<Cow<str>>) -> bool {
   x.is_some() && (y.is_none() || (x != y))
 }
 
@@ -451,7 +452,7 @@ pub fn decode(
     None => {
       font = state.lookup_font();
       if let Some(ref font) = font {
-        font.get_encoding().unwrap_or(String::new())
+        font.get_encoding().unwrap_or_default().into_owned()
       } else {
         String::new()
       }
@@ -514,7 +515,7 @@ pub fn decode_string(
     None => {
       font = state.lookup_font();
       if let Some(ref font) = font {
-        font.get_encoding().unwrap_or(String::new())
+        font.get_encoding().unwrap_or_default().into_owned()
       } else {
         String::new()
       }

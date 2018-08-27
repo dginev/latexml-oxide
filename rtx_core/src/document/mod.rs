@@ -920,7 +920,7 @@ impl Document {
         return Ok(None);
       }
     }
-    if font.family == Some(s!("nullfont")) {
+    if font.family == Some("nullfont".into()) {
       return Ok(None);
     }
     if self.debug {

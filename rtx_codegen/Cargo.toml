@@ -8,6 +8,7 @@ description = "Syntax extension plugins for LaTeXML's binding language"
 [lib]
 name = "rtx_codegen"
 proc-macro = true
+crate-type = ["proc-macro"]
 
 [dependencies]
 syn = "0.8.5"
