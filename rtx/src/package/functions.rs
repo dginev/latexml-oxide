@@ -1,5 +1,6 @@
 use libxml::tree::Node;
 use regex::Regex;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -22,7 +23,7 @@ use rtx_core::mouth::Mouth;
 use rtx_core::parameter::{Parameter, ParameterExtra, Parameters};
 use rtx_core::state::{Scope, State, Stored};
 use rtx_core::stomach::Stomach;
-use rtx_core::token::Token;
+use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
 use rtx_core::BoxOps;

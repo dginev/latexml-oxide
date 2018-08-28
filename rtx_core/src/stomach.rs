@@ -327,7 +327,11 @@ impl<'t> Stomach {
           cs: T_CS!(s!("\\{}true", name)),
           paramlist: None,
           expansion: Some(Rc::new(move |_gullet, _args, _state| {
-            Ok(Tokens!(T_CS!("\\let"), T_CS!(cs_clone), T_CS!("\\iftrue")))
+            Ok(Tokens!(
+              T_CS!("\\let"),
+              T_CS!(cs_clone.clone()),
+              T_CS!("\\iftrue")
+            ))
           })),
           ..Expandable::default()
         },
@@ -338,7 +342,11 @@ impl<'t> Stomach {
           cs: T_CS!(s!("\\{}false", name)),
           paramlist: None,
           expansion: Some(Rc::new(move |_gullet, _args, _state| {
-            Ok(Tokens!(T_CS!("\\let"), T_CS!(cs), T_CS!("\\iffalse")))
+            Ok(Tokens!(
+              T_CS!("\\let"),
+              T_CS!(cs.clone()),
+              T_CS!("\\iffalse")
+            ))
           })),
           ..Expandable::default()
         },

@@ -70,7 +70,7 @@ pub struct Conditional {
 impl Default for Conditional {
   fn default() -> Self {
     Conditional {
-      cs: T_CS!(s!("Conditional")),
+      cs: T_CS!("Conditional"),
       paramlist: None,
       test: None,
       conditional_type: ConditionalType::Unknown,

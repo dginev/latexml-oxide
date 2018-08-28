@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
@@ -414,7 +415,7 @@ impl Gullet {
       }
       if to_match.is_empty() {
         // All matched!!!
-        return Ok(T_OTHER!(keyword).into());
+        return Ok(T_OTHER!(keyword.to_string()).into());
       } else {
         self.unread(&mut matched.into()); // Put 'em back and try next!
       }

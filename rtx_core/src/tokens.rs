@@ -89,12 +89,11 @@ impl Tokens {
   /// toString is used often, and for more keyword-like reasons,
   /// NOT for creating valid TeX (use revert or UnTeX for that!)
   pub fn to_string(&self) -> String {
-    self
-      .tokens
-      .iter()
-      .map(|t| t.text.as_str())
-      .collect::<Vec<_>>()
-      .join("")
+    let mut result = String::new();
+    for t in self.tokens.iter() {
+      result.push_str(&t.text);
+    }
+    result
   }
 
   /// to_number casts back to a parsed Number (usually via gullet.read_number)

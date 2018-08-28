@@ -1,5 +1,6 @@
 use fmt;
 use regex::Regex;
+use std::borrow::Cow;
 use std::rc::Rc;
 
 use common::error::*;
@@ -10,7 +11,7 @@ use gullet::Gullet;
 use mouth::Mouth;
 use state::State;
 use stomach::Stomach;
-use token::Token;
+use token::{Catcode, Token};
 use tokens::Tokens;
 use whatsit::Whatsit;
 use Digested;

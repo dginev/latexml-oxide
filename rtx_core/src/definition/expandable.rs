@@ -47,7 +47,7 @@ impl Default for Expandable {
       trivial_expansion: None,
       alias: None,
       locator: String::new(),
-      cs: T_CS!(s!("Expandable")),
+      cs: T_CS!("Expandable"),
       paramlist: None,
       expansion: None,
       options: ExpandableOptions::default(),

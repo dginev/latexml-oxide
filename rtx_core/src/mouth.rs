@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io;
@@ -427,7 +428,7 @@ impl Mouth {
           Some(T_BEGIN!())
         } else {
           Some(Token {
-            text: ch.to_string(),
+            text: ch.to_string().into(),
             code: BEGIN,
           })
         }
@@ -437,7 +438,7 @@ impl Mouth {
           Some(T_END!())
         } else {
           Some(Token {
-            text: ch.to_string(),
+            text: ch.to_string().into(),
             code: END,
           })
         }
@@ -447,7 +448,7 @@ impl Mouth {
           Some(T_MATH!())
         } else {
           Some(Token {
-            text: ch.to_string(),
+            text: ch.to_string().into(),
             code: MATH,
           })
         }
@@ -457,7 +458,7 @@ impl Mouth {
           Some(T_ALIGN!())
         } else {
           Some(Token {
-            text: ch.to_string(),
+            text: ch.to_string().into(),
             code: ALIGN,
           })
         }
@@ -468,7 +469,7 @@ impl Mouth {
           Some(T_PARAM!())
         } else {
           Some(Token {
-            text: ch.to_string(),
+            text: ch.to_string().into(),
             code: PARAM,
           })
         }
@@ -478,7 +479,7 @@ impl Mouth {
           Some(T_SUPER!())
         } else {
           Some(Token {
-            text: ch.to_string(),
+            text: ch.to_string().into(),
             code: SUPER,
           })
         }
@@ -488,7 +489,7 @@ impl Mouth {
           Some(T_SUB!())
         } else {
           Some(Token {
-            text: ch.to_string(),
+            text: ch.to_string().into(),
             code: SUB,
           })
         }

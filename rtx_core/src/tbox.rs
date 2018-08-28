@@ -8,6 +8,7 @@ use common::font::Font;
 use common::store::Stored;
 use document::Document;
 use state::State;
+use token::{Catcode, Token};
 use tokens::Tokens;
 use {BoxOps, Digested};
 
@@ -58,7 +59,7 @@ impl Tbox {
     let _locator = locator_opt;
 
     let tokens = if !text.is_empty() && tokens_opt.is_empty() {
-      Tokens!(T_OTHER!(text))
+      Tokens!(T_OTHER!(text.clone()))
     } else {
       tokens_opt
     };
