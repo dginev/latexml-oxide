@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -64,7 +65,7 @@ impl<'t> Stomach {
         },
         Some(token) => {
           // info!(target:"stomach:digest_next:invoke_token","{:?}", token);
-          box_list.extend(self.invoke_token(token, state)?);
+          box_list.extend(self.invoke_token(&token, state)?);
           // TODO:
           // if terminal.is_some() && Equals(token, terminal)
           if init_depth > self.boxing.len() {
@@ -109,7 +110,7 @@ impl<'t> Stomach {
           // {
           //   let list = STOMACH_LIST.lock()
           // info!(target:"stomach:digest:invoke_token","{:?}", token);
-          digested_boxes.extend(stomach.invoke_token(token, state)?);
+          digested_boxes.extend(stomach.invoke_token(&token, state)?);
           // }
 
           if initdepth > stomach.boxing.len() {
@@ -158,7 +159,7 @@ impl<'t> Stomach {
         while let Some(token) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
           if token != T_SPACE!() {
             // info!(target:"raw_tex:invoke_token","{:?}", token);
-            stomach.invoke_token(token, state)?;
+            stomach.invoke_token(&token, state)?;
           }
         }
         Ok(())
@@ -176,14 +177,19 @@ impl<'t> Stomach {
   /// possibly arguments will be parsed from the Gullet.
   /// Otherwise, the token is simply digested: turned into an appropriate box.
   /// Returns a list of boxes/whatsits.
-  pub fn invoke_token(&mut self, input_token: Token, state: &mut State) -> Result<Vec<Digested>> {
-    let mut maybe_token = Some(input_token);
+  pub fn invoke_token<'a>(
+    &mut self,
+    input_token: &'a Token,
+    state: &mut State,
+  ) -> Result<Vec<Digested>>
+  {
+    let mut maybe_token: Option<Cow<'a, Token>> = Some(Cow::Borrowed(input_token));
 
     // Overly complex, but want to avoid recursion/stack
     let mut result: Vec<Digested> = Vec::new();
     // INVOKE:
     while maybe_token.is_some() {
-      let token = Rc::new(maybe_token.take().unwrap());
+      let token = Rc::new(maybe_token.take().unwrap().into_owned());
       // info!(target:"invoke_token", "{:?}", token);
       state.current_token = Some(Rc::clone(&token));
       self.token_stack.push(Rc::clone(&token));
@@ -232,7 +238,11 @@ impl<'t> Stomach {
           // (? I think)
           let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
           self.gullet.unread(&mut invoked_meaning);
-          maybe_token = self.gullet.read_x_token(true, false, state)?; // replace the token by it's expansion!!!
+          maybe_token = match self.gullet.read_x_token(true, false, state)? {
+            // replace the token by it's expansion!!!
+            None => None,
+            Some(t) => Some(Cow::Owned(t)),
+          };
           self.token_stack.pop();
           continue;
         },
@@ -240,7 +250,11 @@ impl<'t> Stomach {
           // Conditionals are "expandable", use the regular invoke.
           let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
           self.gullet.unread(&mut invoked_meaning);
-          maybe_token = self.gullet.read_x_token(true, false, state)?; // replace the token by it's expansion!!!
+          maybe_token = match self.gullet.read_x_token(true, false, state)? {
+            // replace the token by it's expansion!!!
+            None => None,
+            Some(t) => Some(Cow::Owned(t)),
+          };
           self.token_stack.pop();
           continue;
         },
@@ -354,7 +368,7 @@ impl<'t> Stomach {
         Some(Scope::Global),
       );
       // and then invoke it.
-      self.invoke_token(token.clone(), state)
+      self.invoke_token(&token, state)
     }
   }
 

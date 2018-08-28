@@ -177,7 +177,7 @@ impl Definition for RefCell<Register> {
       return match self.borrow().internalcs {
         // Tracing ?
         None => Ok(Vec::new()),
-        Some(ref cs) => stomach.invoke_token(cs.clone(), state),
+        Some(ref cs) => stomach.invoke_token(cs, state),
       };
     }
 

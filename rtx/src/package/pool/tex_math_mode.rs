@@ -46,7 +46,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       }
       if !op.is_empty() {
         // info!(target:"math_op:invoke_token","{:?}", op);
-        Ok(stomach.invoke_token(T_CS!(op), state)?)
+        Ok(stomach.invoke_token(&T_CS!(op), state)?)
       } else {
         Ok(Vec::new())
       }
