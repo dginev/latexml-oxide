@@ -60,7 +60,7 @@ pub trait Definition: Object {
   /// We can almost always return the CS by reference, except in a Register's RefCell, where we are
   /// forced to clone
   fn get_cs(&self) -> Cow<Token>;
-  fn get_cs_name(&self) -> String;
+  fn get_cs_name(&self) -> Cow<str>;
 
   fn is_protected(&self) -> bool { false }
   fn is_register(&self) -> bool { false }

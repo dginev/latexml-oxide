@@ -35,7 +35,7 @@ impl Default for Stomach {
   }
 }
 
-impl Stomach {
+impl<'t> Stomach {
   pub fn get_gullet_mut(&mut self) -> &mut Gullet { &mut self.gullet }
   pub fn get_gullet(&self) -> &Gullet { &self.gullet }
 
@@ -284,9 +284,14 @@ impl Stomach {
     Ok(result)
   }
 
-  fn invoke_token_undefined(&mut self, token: &Token, state: &mut State) -> Result<Vec<Digested>> {
-    let cs: String = token.get_cs_name();
-    // TODO: state.note_status("undefined", cs);
+  fn invoke_token_undefined(
+    &mut self,
+    token: &'t Token,
+    state: &mut State,
+  ) -> Result<Vec<Digested>>
+  {
+    let cs = token.get_cs_name().to_owned(); // TODO: use the Cow directly
+                                             // TODO: state.note_status("undefined", cs);
 
     // To minimize chatter, go ahead and define it...
     if cs.starts_with("\\if") {

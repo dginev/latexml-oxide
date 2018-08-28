@@ -128,7 +128,7 @@ impl From<Catcode> for u8 {
 }
 
 impl Catcode {
-  pub fn name(self) -> String {
+  pub fn name(self) -> &'static str {
     use token::Catcode::*;
     match self {
       // Primitive
@@ -152,10 +152,10 @@ impl Catcode {
       INVALID => "Invalid",
       CS => "ControlSequence",
       MARKER => "Marker",
-    }.to_string()
+    }
   }
 
-  pub fn meaning(self) -> String {
+  pub fn meaning(self) -> &'static str {
     use token::Catcode::*;
     match self {
       ESCAPE => "the escape character",
@@ -175,7 +175,7 @@ impl Catcode {
       COMMENT => "comment character",
       INVALID => "invalid character",
       _ => "",
-    }.to_string()
+    }
   }
 
   // ======================================================================
@@ -484,21 +484,21 @@ pub fn untex(digested: &Digested, state: &State) -> String {
 
 ///======================================================================
 /// Accessors.
-impl Token {
+impl<'a> Token {
   pub fn isa_token(&self) -> bool { true }
 
   /// Get the CS Name of the token. This is the name that definitions will be
   /// stored under; It's the same for various `different' BEGIN tokens, eg.
-  pub fn get_cs_name(&self) -> String {
+  pub fn get_cs_name(&'a self) -> &'a str {
     if self.code.is_primitive() {
       self.code.name()
     } else {
-      self.text.clone()
+      &self.text
     }
   }
 
   /// Get the fixed name of a primitive catcode, or empty string otherwise
-  pub fn get_primitive_name(&self) -> Option<String> {
+  pub fn get_primitive_name(&self) -> Option<&'static str> {
     if self.code.is_primitive() {
       Some(self.code.name())
     } else {
@@ -512,7 +512,8 @@ impl Token {
     if cc.is_executable() {
       self
         .get_primitive_name()
-        .unwrap_or_else(|| self.text.clone())
+        .unwrap_or_else(|| &self.text)
+        .to_string()
     } else {
       String::new()
     }
@@ -589,7 +590,7 @@ impl Token {
 
   pub fn revert(&self) -> Token { self.clone() }
 
-  pub fn to_string(&self) -> String { self.text.clone() }
+  pub fn as_str(&self) -> &str { &self.text }
 
   pub fn to_register(&self, state: &State) -> Option<Rc<RefCell<Register>>> {
     state.lookup_register_definition(self)

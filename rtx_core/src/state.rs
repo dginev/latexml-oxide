@@ -903,7 +903,7 @@ impl State {
   /// Any other token is returned as is.
   pub fn lookup_meaning<'t, 'm>(&'m mut self, token: &'t Token) -> Option<Stored> {
     if token.get_catcode().is_active_or_cs() && !token.get_string().is_empty() {
-      match self.meaning.get(&token.get_cs_name()) {
+      match self.meaning.get(&token.get_cs_name().to_owned()) {
         Some(entry) => match entry.front() {
           Some(v) => Some(v.clone()),
           None => None,
@@ -935,8 +935,8 @@ impl State {
   {
     let cc = &key.code;
     let name = &key.text;
-    let lookupname: String = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) {
-      name.clone()
+    let lookupname: &str = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) {
+      name
     } else {
       cc.name()
     };
@@ -944,7 +944,7 @@ impl State {
     if lookupname.is_empty() {
       None
     } else {
-      self.meaning.get(&lookupname)
+      self.meaning.get(lookupname)
     }
   }
 
@@ -993,13 +993,13 @@ impl State {
           && self.lookup_bool("IN_MATH")
           && ((self.lookup_mathcode(name).unwrap_or(0)) == 0x8000))
     {
-      name.to_string()
+      name
     } else {
       cc.name()
     };
 
     debug!("Looking up digestable {:?}", lookupname);
-    let entry = self.meaning.get(&lookupname);
+    let entry = self.meaning.get(lookupname);
 
     if !lookupname.is_empty() && entry.is_some() {
       debug!("Found definition for: {:?}", lookupname);
@@ -1007,7 +1007,7 @@ impl State {
       if let Stored::Token(ref t) = defn {
         let cc = t.get_catcode();
         if let Some(lookupname) = t.get_primitive_name() {
-          if let Some(retry_entry) = self.meaning.get(&lookupname) {
+          if let Some(retry_entry) = self.meaning.get(lookupname) {
             // special case,
             // If a cs has been let to an executable token, lookup ITS defn.
             return retry_entry.front().unwrap().clone();
@@ -1048,7 +1048,7 @@ impl State {
         Stored::Token(ref token) => Cow::Borrowed(token),
         _ => panic!(s!("_wrong_argument_for_install_definition")),
       };
-      cs = token.get_cs_name();
+      cs = token.get_cs_name().to_owned();
       // info!("-- installing definition for: {:?}", token);
     }
 

@@ -318,7 +318,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Almost like a register, but different...
   DefPrimitive!("\\chardef Token SkipMatch:= Number", sub[stomach, args, p_state] {
     unpack_to_token!(args => newcs, value);
-    let csname = newcs.get_cs_name();
+    let csname = newcs.get_cs_name().to_owned();
     let number = value.to_number();
     let chardef_value = value.clone();
     let internalcs = T_CS!(&s!("\\@chardef@{}", csname));
@@ -378,7 +378,7 @@ fn decode_math_char(n: u8) -> (Option<String>, Option<char>) { // TODO
   DefPrimitive!("\\mathchardef Token SkipMatch:= Number", sub[stomach, args, state] {
     unpack!(args => newcs, value);
     let newcs : Token = newcs.into();
-    let csname = newcs.get_cs_name();
+    let csname = newcs.get_cs_name().to_owned();
     let (role, glyph) = decode_math_char(value.to_number().value_of() as u8);
     let internalcs = match glyph {
       Some(_) => Some(T_CS!(&s!("\\@mathchardef@{}", csname))),

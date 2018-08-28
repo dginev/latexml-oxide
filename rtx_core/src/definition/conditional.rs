@@ -117,7 +117,7 @@ impl Definition for Conditional {
   fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
   fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }
 
-  fn get_cs_name(&self) -> String { self.cs.get_cs_name() }
+  fn get_cs_name(&self) -> Cow<str> { Cow::Borrowed(self.cs.get_cs_name()) }
 
   fn get_locator(&self) -> String { String::from("Locator is TODO") }
 

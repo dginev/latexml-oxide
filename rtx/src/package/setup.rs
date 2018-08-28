@@ -541,13 +541,13 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       let mut before_digest_env : Vec<BeforeDigestClosure> = Vec::new();
 
       if options.require_math {
-        let cs_name = $cs.get_cs_name();
+        let cs_name = $cs.get_cs_name().to_owned();
         let require_math_closure = beforeproc!(stomach, state, { requireMath!(cs_name, state) });
         before_digest_env.push(require_math_closure);
       }
 
       if options.forbid_math {
-        let cs_name = $cs.get_cs_name();
+        let cs_name = $cs.get_cs_name().to_owned();
         let forbid_math_closure = beforeproc!(stomach, state, { forbidMath!(cs_name, state) });
         before_digest_env.push(forbid_math_closure);
       }

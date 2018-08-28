@@ -572,7 +572,7 @@ pub fn def_conditional(
 )
 {
   let cs_name = cs.get_cs_name();
-  match cs_name.as_str() {
+  match cs_name.as_ref() {
     "\\fi" | "\\else" | "\\or" => state.install_definition(
       Conditional {
         cs: cs.clone(),
