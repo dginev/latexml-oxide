@@ -212,14 +212,18 @@ impl<'t> Stomach {
           if cc == Catcode::CS {
             result = self.invoke_token_undefined(&token, state)?;
           } else if cc.is_absorbable() {
-            result = self.invoke_token_simple(meaning, state)?;
+            if let Some(digested) = self.invoke_token_simple(meaning, state)? {
+              result.push(digested);
+            }
           } else {
             error!(
               target: &s!("misdefined:{:?}", &token),
               "The token {:?} should never reach Stomach!",
               token
             );
-            result = self.invoke_token_simple(meaning, state)?;
+            if let Some(digested) = self.invoke_token_simple(meaning, state)? {
+              result.push(digested);
+            }
           }
         },
         Stored::Expandable(meaning) => {
@@ -354,7 +358,7 @@ impl<'t> Stomach {
     }
   }
 
-  fn invoke_token_simple(&mut self, meaning: Token, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_token_simple(&mut self, meaning: Token, state: &mut State) -> Result<Option<Digested>> {
     // log!("-- Simple invoke {:?}", token);
     let font = state.lookup_font();
     state.clear_prefixes(); // prefixes shouldn't apply here.
@@ -363,16 +367,16 @@ impl<'t> Stomach {
       let in_math = state.lookup_bool("IN_MATH");
       let in_preamble = state.lookup_bool("inPreamble");
       if in_math || in_preamble {
-        Ok(Vec::new())
+        Ok(None)
       } else {
-        Ok(vec![Digested::TBox(Rc::new(Tbox::new(
+        Ok(Some(Digested::TBox(Rc::new(Tbox::new(
           meaning.get_string().to_string(), //text
           font,
           Some(self.gullet.get_locator()), //locator
           Tokens!(meaning),                // tokens
           HashMap::new(),                  // properties
           state,
-        )))])
+        )))))
       }
     } else if meaning.code == Catcode::COMMENT {
       // TODO
@@ -382,7 +386,7 @@ impl<'t> Stomach {
       // let badspace = pack('U', 0xA0) . "\x{0335}";    // This is at space's pos in OT1
       // $comment =~ s/\Q$badspace\E/ /g;
       // return LaTeXML::Comment->new($comment); }
-      Ok(Vec::new())
+      Ok(None)
     }
     // TODO
     // else if ($forbidden_cc[meaning.code]) {
@@ -391,14 +395,14 @@ impl<'t> Stomach {
     // return; }
     else {
       let text = font::decode_string(meaning.get_string().to_string(), None, true, state);
-      Ok(vec![Digested::TBox(Rc::new(Tbox::new(
+      Ok(Some(Digested::TBox(Rc::new(Tbox::new(
         text,
         font,
         None,             // locator
         Tokens!(meaning), // tokens
         HashMap::new(),   // properties
         state,
-      )))])
+      )))))
     }
   }
 
