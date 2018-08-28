@@ -244,7 +244,7 @@ impl quote::ToTokens for Token {
     tokens.append("{");
     tokens.append("text:");
     self.text.to_tokens(tokens);
-    tokens.append(".to_string().into(), code: ");
+    tokens.append(".into(), code: ");
     self.code.to_tokens(tokens);
     tokens.append("}")
   }

@@ -686,7 +686,7 @@ impl State {
   }
 
   pub fn lookup_register(&self, cs: &str, parameters: Vec<Token>) -> Option<RegisterValue> {
-    let cs = T_CS!(cs.to_string());
+    let cs = T_CS!(cs);
     if let Some(defn) = self.lookup_definition(&cs) {
       if defn.is_register() {
         defn.value_of(parameters, self)

@@ -440,7 +440,7 @@ impl<'a> From<&'a Stored> for Token {
     match value {
       Stored::Tokens(ts) => ts.into(),
       Stored::Token(t) => (*t).clone(),
-      Stored::String(t) => T_CS!(t.clone()),
+      Stored::String(t) => T_CS!(t),
       t => {
         warn!(target:"Stored:cast", "dangerous cast to CS for {:?}", t);
         T_CS!(t.to_string())
