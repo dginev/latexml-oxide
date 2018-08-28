@@ -1,3 +1,4 @@
+#![feature(macro_literal_matcher)]
 extern crate rtx;
 extern crate rtx_core;
 

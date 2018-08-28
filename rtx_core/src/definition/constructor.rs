@@ -83,7 +83,7 @@ pub struct Constructor {
 impl Default for Constructor {
   fn default() -> Self {
     Constructor {
-      cs: T_CS!(s!("Constructor")),
+      cs: T_CS!("Constructor"),
       paramlist: None,
       replacement: None,
       options: ConstructorOptions::default(),

@@ -126,7 +126,7 @@ pub struct MathPrimitive {
 impl Default for MathPrimitive {
   fn default() -> Self {
     MathPrimitive {
-      cs: T_CS!(s!("MathPrimitive")),
+      cs: T_CS!("MathPrimitive"),
       paramlist: None,
       nargs: None,
       replacement: None,
