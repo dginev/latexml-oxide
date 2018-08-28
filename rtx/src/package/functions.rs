@@ -637,7 +637,7 @@ pub fn def_conditional(
   }
 
   if let Some(true) = options.locked {
-    state.assign_value(&s!("{}:locked", cs), true, None);
+    state.assign_value(&s!("{}:locked", cs.get_cs_name()), true, None);
   }
   return;
 }

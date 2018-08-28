@@ -592,7 +592,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         },
         scope);
       if options_locked {
-        AssignValue!(&($cs.to_string()+":locked"), true, None, $state_arg);
+        AssignValue!(&s!("{}:locked",$cs.get_cs_name()), true, None, $state_arg);
       }
     })
   }
