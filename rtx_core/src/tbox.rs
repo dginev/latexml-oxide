@@ -8,6 +8,7 @@ use common::font::Font;
 use common::store::Stored;
 use document::Document;
 use state::State;
+use token::{Catcode, Token};
 use tokens::Tokens;
 use {BoxOps, Digested};
 

@@ -1,3 +1,4 @@
+#![feature(macro_literal_matcher)]
 #![allow(dead_code, unused_variables, unused_mut, unused_macros)]
 
 #[macro_use]

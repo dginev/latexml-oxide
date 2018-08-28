@@ -26,5 +26,4 @@ macro_rules! mixvec {
   ($( $val:expr ),*) => {{
     vec![ $($val.into()),*]
   }}
-
 }

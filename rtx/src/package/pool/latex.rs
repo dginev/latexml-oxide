@@ -44,7 +44,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       };
       load_class(&(whatsit.get_arg(2).unwrap().to_string()),
                 class_opts,
-                Tokens!(T_CS!(s!("\\AtBeginDocument")), T_CS!(s!("\\warn@unusedclassoptions"))),
+                Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")),
                 state)?;
     }))
   );

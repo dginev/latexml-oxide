@@ -135,7 +135,7 @@ pub struct Register {
 impl Default for Register {
   fn default() -> Self {
     Register {
-      cs: T_CS!(s!("Register")),
+      cs: T_CS!("Register"),
       parameters: None,
       register_type: RegisterType::Number,
       getter: Rc::new(|_: Vec<Token>, _: &State| Some(RegisterValue::Number(Number::new(0)))),

@@ -1,3 +1,5 @@
+#![feature(macro_literal_matcher)]
+
 #[macro_use]
 extern crate rtx_core;
 
@@ -5,6 +7,7 @@ use rtx_core::definition::expandable::Expandable;
 use rtx_core::state::*;
 use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
+use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 
 #[test]
