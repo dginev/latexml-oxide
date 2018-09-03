@@ -326,8 +326,8 @@ impl<'t> Stomach {
         Expandable {
           cs: T_CS!(s!("\\{}true", name)),
           paramlist: None,
-          expansion: Some(Rc::new(move |_gullet, _args, _state| {
-            Ok(Tokens!(T_CS!("\\let"), T_CS!(cs_clone), T_CS!("\\iftrue")))
+          expansion: Some(Rc::new(move |_gullet, _args, state| {
+            Ok(Tokens!(T_CS!("\\let"), T_CS!(&cs_clone), T_CS!("\\iftrue")))
           })),
           ..Expandable::default()
         },
@@ -337,8 +337,8 @@ impl<'t> Stomach {
         Expandable {
           cs: T_CS!(s!("\\{}false", name)),
           paramlist: None,
-          expansion: Some(Rc::new(move |_gullet, _args, _state| {
-            Ok(Tokens!(T_CS!("\\let"), T_CS!(cs), T_CS!("\\iffalse")))
+          expansion: Some(Rc::new(move |_gullet, _args, state| {
+            Ok(Tokens!(T_CS!("\\let"), T_CS!(&cs), T_CS!("\\iffalse")))
           })),
           ..Expandable::default()
         },
@@ -501,7 +501,7 @@ impl<'t> Stomach {
   pub fn push_stack_frame(&mut self, nobox: bool, state: &mut State) {
     let current_token = match &state.current_token {
       Some(t) => (**t).clone(),
-      _ => T_OTHER!(String::new()),
+      _ => T_OTHER!(""),
     };
 
     state.push_frame();

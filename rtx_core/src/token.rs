@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fmt;
@@ -15,6 +14,7 @@ use quote;
 use state::State;
 use stomach::Stomach;
 use tokens::Tokens;
+use util::crow::Crow;
 use {BoxOps, Digested};
 
 #[derive(PartialEq, Clone, Copy, Hash, Debug)]
@@ -235,7 +235,7 @@ impl Catcode {
 
 #[derive(Clone, Hash, PartialEq)]
 pub struct Token {
-  pub text: Cow<'static, str>,
+  pub text: Crow,
   pub code: Catcode,
 }
 impl quote::ToTokens for Token {
@@ -258,128 +258,151 @@ impl Display for Token {
 }
 
 #[macro_export]
-macro_rules! T_BEGIN(() => {
-  Token { text: Cow::Borrowed("{"), code: Catcode::BEGIN }
-});
+macro_rules! T_BEGIN(() => {{
+  use $crate::util::crow::Crow;
+  Token { text: Crow::Borrowed("{"), code: Catcode::BEGIN }
+}});
 
 #[macro_export]
-macro_rules! T_END(() => {
-  Token { text: Cow::Borrowed("}"), code: Catcode::END }
-});
+macro_rules! T_END(() => {{
+  use $crate::util::crow::Crow;
+  Token { text: Crow::Borrowed("}"), code: Catcode::END }
+}});
 #[macro_export]
-macro_rules! T_MATH(() => {
-  Token { text: Cow::Borrowed("$"), code: Catcode::MATH }
-});
+macro_rules! T_MATH(() => {{
+  use $crate::util::crow::Crow;
+  Token { text: Crow::Borrowed("$"), code: Catcode::MATH }
+}});
 #[macro_export]
-macro_rules! T_ALIGN(() => {
-  Token { text: Cow::Borrowed("&"), code: Catcode::ALIGN }
-});
+macro_rules! T_ALIGN(() => {{
+  use $crate::util::crow::Crow;
+  Token { text: Crow::Borrowed("&"), code: Catcode::ALIGN }
+}});
 #[macro_export]
-macro_rules! T_PARAM(() => {
-  Token { text: Cow::Borrowed("#"), code: Catcode::PARAM }
-});
+macro_rules! T_PARAM(() => {{
+  use $crate::util::crow::Crow;
+  Token { text: Crow::Borrowed("#"), code: Catcode::PARAM }
+}});
 #[macro_export]
-macro_rules! T_SUPER(() => {
- Token { text: Cow::Borrowed("^"), code: Catcode::SUPER }
-});
+macro_rules! T_SUPER(() => {{
+ use $crate::util::crow::Crow;
+ Token { text: Crow::Borrowed("^"), code: Catcode::SUPER }
+}});
 #[macro_export]
-macro_rules! T_SUB(() => {
-  Token { text: Cow::Borrowed("_"), code: Catcode::SUB }
-});
+macro_rules! T_SUB(() => {{
+  use $crate::util::crow::Crow;
+  Token { text: Crow::Borrowed("_"), code: Catcode::SUB }
+}});
 #[macro_export]
-macro_rules! T_SPACE(() => {
-  Token { text: Cow::Borrowed(" "), code: Catcode::SPACE }
-});
+macro_rules! T_SPACE(() => {{
+  use $crate::util::crow::Crow;
+  Token { text: Crow::Borrowed(" "), code: Catcode::SPACE }
+}});
 #[macro_export]
 macro_rules! T_CR(() => (
-  Token { text: Cow::Borrowed("\n"), code: Catcode::SPACE }
+  use $crate::util::crow::Crow;
+  Token { text: Crow::Borrowed("\n"), code: Catcode::SPACE }
 ));
 #[macro_export]
 macro_rules! T_LETTER {
-  ($text:literal) => {
+  ($text:literal) => {{
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Borrowed($text),
+      text: Crow::Borrowed($text),
       code: Catcode::LETTER,
     }
-  };
-  ($text:expr) => {
+  }};
+  ($text:expr) => {{
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: Crow::Shared(Crow::into_arena($text)),
       code: Catcode::LETTER,
     }
-  };
+  }};
 }
 #[macro_export]
 macro_rules! T_OTHER {
-  ($text:literal) => {
+  ($text:literal) => {{
+    use $crate::token::{Catcode, Token};
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Borrowed($text),
+      text: Crow::Borrowed($text),
       code: Catcode::OTHER,
     }
-  };
-  ($text:expr) => {
+  }};
+  ($text:expr) => {{
+    use $crate::token::{Catcode, Token};
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: Crow::Shared(Crow::into_arena($text)),
       code: Catcode::OTHER,
     }
-  };
+  }};
 }
 #[macro_export]
 macro_rules! T_ACTIVE {
-  ($text:literal) => {
+  ($text:literal) => {{
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Borrowed($text),
+      text: Crow::Borrowed($text),
       code: Catcode::ACTIVE,
     }
-  };
-  ($text:expr) => {
+  }};
+  ($text:expr) => {{
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: Crow::Shared(Crow::into_arena($text)),
       code: Catcode::ACTIVE,
     }
-  };
+  }};
 }
 #[macro_export]
 macro_rules! T_COMMENT {
-  ($text:literal) => {
+  ($text:literal) => {{
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Borrowed($text),
+      text: Crow::Borrowed($text),
       code: Catcode::COMMENT,
     }
-  };
-  ($text:expr) => {
+  }};
+  ($text:expr) => {{
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: Crow::Shared(Crow::into_arena($text)),
       code: Catcode::COMMENT,
     }
-  };
+  }};
 }
 #[macro_export]
 macro_rules! T_CS {
-  ($text:literal) => {
+  ($text:literal) => {{
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Borrowed($text),
+      text: Crow::Borrowed($text),
       code: Catcode::CS,
     }
-  };
-  ($text:expr) => {
+  }};
+  ($text:expr) => {{
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: Crow::Shared(Crow::into_arena($text)),
       code: Catcode::CS,
     }
-  };
+  }};
 }
 #[macro_export]
 macro_rules! T_MARKER {
   ($text:literal) => {
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Borrowed($text),
+      text: Crow::Borrowed($text),
       code: Catcode::MARKER,
     }
   };
   ($text:expr) => {
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: Crow::Shared(Crow::into_arena($text)),
       code: Catcode::MARKER,
     }
   };
@@ -387,33 +410,40 @@ macro_rules! T_MARKER {
 
 #[macro_export]
 macro_rules! T_NOTEXPANDED(
-  () => {
-    Token { text: Cow::Borrowed(""), code: Catcode::NOTEXPANDED }
-  };
-  ($text:literal) => { Token { text : Cow::Borrowed($text), code: Catcode::NOTEXPANDED } };
-  ($text:expr) => { Token { text : Cow::Owned($text.to_string()), code: Catcode::NOTEXPANDED } };
+  () => {{
+    use $crate::util::crow::Crow;
+    Token { text: Crow::Borrowed(""), code: Catcode::NOTEXPANDED }
+  }};
+  ($text:literal) => {{
+    use $crate::util::crow::Crow;
+    Token { text : Crow::Borrowed($text), code: Catcode::NOTEXPANDED }}};
+  ($text:literal) => {{
+    use $crate::util::crow::Crow;
+    Token { text : Crow::Shared(Crow::into_arena($text)), code: Catcode::NOTEXPANDED } }};
 );
 
 #[macro_export]
 macro_rules! Token {
-  ($text:literal, $cc_opt:expr) => {
+  ($text:expr, $cc_opt:expr) => {{
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Borrowed($text),
+      text: Crow::Borrowed($text),
       code: match $cc_opt {
         Some(cc) => cc,
         None => Catcode::OTHER,
       },
     }
-  };
-  ($text:expr, $cc_opt:expr) => {
+  }};
+  ($text:expr, $cc_opt:expr) => {{
+    use $crate::util::crow::Crow;
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: Crow::Shared(Crow::into_arena($text)),
       code: match $cc_opt {
         Some(cc) => cc,
         None => Catcode::OTHER,
       },
     }
-  };
+  }};
 }
 
 impl Default for Token {
@@ -422,23 +452,56 @@ impl Default for Token {
 
 // Explode a string into a list of tokens, all w/catcode OTHER (except space).
 #[macro_export]
-macro_rules! Explode(($text:expr) => (
-  $text.to_string().as_str().chars().map(|c|
-    if c==' ' { T_SPACE!() }
-    else { T_OTHER!(c) }
-  ).collect::<Vec<Token>>()
-));
+macro_rules! Explode {
+  ($text:literal) => {
+    $text
+      .chars()
+      .map(|c| if c == ' ' { T_SPACE!() } else { T_OTHER!(c) })
+      .collect::<Vec<Token>>()
+  };
+  ($text:expr) => {
+    $text
+      .to_string()
+      .as_str()
+      .chars()
+      .map(|c| if c == ' ' { T_SPACE!() } else { T_OTHER!(c) })
+      .collect::<Vec<Token>>()
+  };
+}
 
 // Similar to Explode, but convert letters to catcode LETTER and others to OTHER
 // Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
 #[macro_export]
-macro_rules! ExplodeText(($text:expr) => (
-  $text.to_string().as_str().chars().map(|c|
-    if c==' ' { T_SPACE!() }
-    else if c.is_alphabetic() { T_LETTER!(c.to_string()) }
-    else { T_OTHER!(c.to_string()) }
-  ).collect::<Vec<Token>>()
-));
+macro_rules! ExplodeText {
+  ($text:literal) => {
+    $text
+      .chars()
+      .map(|c| {
+        if c == ' ' {
+          T_SPACE!()
+        } else if c.is_alphabetic() {
+          T_LETTER!(c.to_string())
+        } else {
+          T_OTHER!(c.to_string())
+        }
+      }).collect::<Vec<Token>>()
+  };
+  ($text:expr) => {
+    $text
+      .to_string()
+      .as_str()
+      .chars()
+      .map(|c| {
+        if c == ' ' {
+          T_SPACE!()
+        } else if c.is_alphabetic() {
+          T_LETTER!(c.to_string())
+        } else {
+          T_OTHER!(c.to_string())
+        }
+      }).collect::<Vec<Token>>()
+  };
+}
 
 static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
 pub fn untex(digested: &Digested, state: &State) -> String {
@@ -614,7 +677,10 @@ impl<'a> Token {
         }
       }
       if is_special || !extraspecials.is_empty() {
-        T_OTHER!(self.text)
+        Token {
+          text: self.text,
+          code: Catcode::OTHER,
+        }
       } else {
         self
       }

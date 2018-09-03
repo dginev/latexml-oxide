@@ -1,6 +1,5 @@
 use libxml::tree::Node;
 use regex::Regex;
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -849,14 +848,14 @@ pub fn new_counter(
   let cunctr = s!("\\c@{}", unctr);
   let clunctr = s!("\\cl@{}", unctr);
 
-  DefRegisterI!(T_CS!(cctr), None, Number::new(0), None);
+  DefRegisterI!(T_CS!(&cctr), None, Number::new(0), None);
   state.assign_value(&cctr, Number!(0), Some(Scope::Global));
   AfterAssignment!();
   if !state.lookup_bool(&clctr) {
     state.assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
 
-  DefRegisterI!(T_CS!(cunctr), None, Number::new(0), None);
+  DefRegisterI!(T_CS!(&cunctr), None, Number::new(0), None);
   state.assign_value(&cunctr, Number!(0), Some(Scope::Global));
   if !state.lookup_bool(&clunctr) {
     state.assign_value(&clunctr, Tokens!(), Some(Scope::Global));
@@ -870,7 +869,7 @@ pub fn new_counter(
     } else {
       Vec::new()
     };
-    let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(unctr)];
+    let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(&unctr)];
     clwithin_tokens.append(&mut x);
     state.assign_value(
       &clwithin,
@@ -883,7 +882,7 @@ pub fn new_counter(
     } else {
       Vec::new()
     };
-    let mut clunwithin_tokens = vec![T_CS!(unctr)];
+    let mut clunwithin_tokens = vec![T_CS!(&unctr)];
     clunwithin_tokens.append(&mut unx);
 
     state.assign_value(

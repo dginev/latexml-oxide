@@ -1,5 +1,4 @@
 use regex::Regex;
-use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
@@ -518,7 +517,7 @@ impl Gullet {
     match self.read_non_space(state) {
       None => Ok(Tokens!()),
       Some(t) => {
-        if t.code == Catcode::OTHER && t.text == "[" {
+        if t.code == Catcode::OTHER && *t.text == *"[" {
           self.read_until(vec![T_OTHER!("]")], state)
         } else {
           self.unread(&Tokens!(t));

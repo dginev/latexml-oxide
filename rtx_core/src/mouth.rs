@@ -1,5 +1,4 @@
 use regex::Regex;
-use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io;
@@ -11,6 +10,7 @@ use common::store::Stored;
 use state::{Catcodes, Scope, State, StateOptions};
 use token::*;
 use tokens::Tokens;
+use util::crow::Crow;
 
 #[derive(PartialEq, Clone)]
 pub enum FoodType {
@@ -421,6 +421,8 @@ impl Mouth {
     // Possibly want to think about caching (common) letters, etc to keep from
     // creating tokens like crazy... or making them more compact... or ???
     use token::Catcode::*;
+    let ch_str = ch.to_string();
+    let ch_text = Crow::Shared(Crow::into_arena(ch_str));
     match cc {
       ESCAPE => self.handle_escape(ch, state), // T_ESCAPE
       BEGIN => {
@@ -428,7 +430,7 @@ impl Mouth {
           Some(T_BEGIN!())
         } else {
           Some(Token {
-            text: ch.to_string().into(),
+            text: ch_text,
             code: BEGIN,
           })
         }
@@ -438,7 +440,7 @@ impl Mouth {
           Some(T_END!())
         } else {
           Some(Token {
-            text: ch.to_string().into(),
+            text: ch_text,
             code: END,
           })
         }
@@ -448,7 +450,7 @@ impl Mouth {
           Some(T_MATH!())
         } else {
           Some(Token {
-            text: ch.to_string().into(),
+            text: ch_text,
             code: MATH,
           })
         }
@@ -458,7 +460,7 @@ impl Mouth {
           Some(T_ALIGN!())
         } else {
           Some(Token {
-            text: ch.to_string().into(),
+            text: ch_text,
             code: ALIGN,
           })
         }
@@ -469,7 +471,7 @@ impl Mouth {
           Some(T_PARAM!())
         } else {
           Some(Token {
-            text: ch.to_string().into(),
+            text: ch_text,
             code: PARAM,
           })
         }
@@ -479,7 +481,7 @@ impl Mouth {
           Some(T_SUPER!())
         } else {
           Some(Token {
-            text: ch.to_string().into(),
+            text: ch_text,
             code: SUPER,
           })
         }
@@ -489,18 +491,18 @@ impl Mouth {
           Some(T_SUB!())
         } else {
           Some(Token {
-            text: ch.to_string().into(),
+            text: ch_text,
             code: SUB,
           })
         }
       }, // T_SUB
       SPACE => self.handle_space(ch, state),
-      LETTER => Some(T_LETTER!(ch.to_string())),
-      OTHER => Some(T_OTHER!(ch.to_string())),
-      ACTIVE => Some(T_ACTIVE!(ch.to_string())),
+      LETTER => Some(T_LETTER!(ch)),
+      OTHER => Some(T_OTHER!(ch)),
+      ACTIVE => Some(T_ACTIVE!(ch)),
       COMMENT => self.handle_comment(ch, state),
-      INVALID => Some(T_OTHER!(ch.to_string())), // T_INVALID (we could get unicode!)
-      _ => None,                                 // IGNORE, others
+      INVALID => Some(T_OTHER!(ch)), // T_INVALID (we could get unicode!)
+      _ => None,                     // IGNORE, others
     }
   }
 

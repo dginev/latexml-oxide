@@ -51,7 +51,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         },
         state,
       )?;
-      Ok(Tokens!(T_CS!(inner_ltxtrigger)))
+      Ok(Tokens!(T_CS!(&inner_ltxtrigger)))
     });
   }
 

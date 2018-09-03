@@ -10,7 +10,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     unpack_to_string!(args => name);
     let begin_mark = s!("\\begin{{{}}}", name);
     let end_mark = s!("\\end{{{}}}", name);
-    DefConstructorI!(T_CS!(begin_mark), None, None,
+    DefConstructorI!(T_CS!(&begin_mark), None, None,
       after_digest => sub!(move |stomach: &mut Stomach, whatsit: &mut Whatsit, _state: &mut State| {
         let mut nlines = 0;
         let gullet = &mut stomach.gullet;
@@ -43,13 +43,13 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         // Note that we define the `magic' environment control sequences,
         // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
         DefMacroI!(T_CS!(s!("\\begin{{{}}}", name)),
-                                                  None,
-                                                  sub[gullet, _args, _state] {
-                                                    gullet.read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
-                                                    Ok(before_tokens.clone().into())
-                                                  },
-                                                  state
-                                                );
+                                                        None,
+                                                        sub[gullet, _args, _state] {
+                                                          gullet.read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
+                                                          Ok(before_tokens.clone().into())
+                                                        },
+                                                        state
+                                                      );
         DefMacroI!(
           T_CS!(s!("\\end{{{}}}", name)),
           None,

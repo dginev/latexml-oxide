@@ -199,7 +199,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
     unpack!(args => token);
     let token : Token = token.into();
     if state.lookup_meaning(&token).is_none() { 
-      Let!(token, "\\relax", state);
+      Let!(&token, "\\relax", state);
     }
     token.into()
   });
