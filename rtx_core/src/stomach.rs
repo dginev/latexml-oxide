@@ -408,7 +408,7 @@ impl<'t> Stomach {
     //   "The token " . Stringify($token) . " should never reach Stomach!");
     // return; }
     else {
-      let text = font::decode_string(meaning.get_string().to_string(), None, true, state);
+      let text = font::decode_string(meaning.get_string(), None, true, state);
       Ok(Some(Digested::TBox(Rc::new(Tbox::new(
         text,
         font,

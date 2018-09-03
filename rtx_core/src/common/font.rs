@@ -501,8 +501,8 @@ pub fn decode(
 }
 
 pub fn decode_string(
-  string: String,
-  encoding_opt: Option<String>,
+  string: &str,
+  encoding_opt: Option<&str>,
   implicit: bool,
   state: &mut State,
 ) -> String
@@ -515,12 +515,15 @@ pub fn decode_string(
     None => {
       font = state.lookup_font();
       if let Some(ref font) = font {
-        font.get_encoding().unwrap_or_default().into_owned()
+        match font.get_encoding() {
+          Some(s) => s,
+          None => Cow::Borrowed(""),
+        }
       } else {
-        String::new()
+        Cow::Borrowed("")
       }
     },
-    Some(encoding) => encoding,
+    Some(encoding) => Cow::Borrowed(encoding),
   };
 
   let mut map: Option<&Fontmap> = None;
