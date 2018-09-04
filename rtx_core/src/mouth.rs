@@ -421,8 +421,7 @@ impl Mouth {
     // Possibly want to think about caching (common) letters, etc to keep from
     // creating tokens like crazy... or making them more compact... or ???
     use token::Catcode::*;
-    let ch_str = ch.to_string();
-    let ch_text = Crow::Shared(Crow::into_arena(ch_str));
+    let ch_text = Crow::Shared(Crow::into_arena(ch));
     match cc {
       ESCAPE => self.handle_escape(ch, state), // T_ESCAPE
       BEGIN => {
