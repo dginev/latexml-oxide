@@ -292,7 +292,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       match defn {
         Some(register) => {
           let mut invoked = vec![token.clone().unwrap()];
-          for mut arg in register.read_arguments(gullet, state)? {
+          for arg in register.read_arguments(gullet, state)? {
             invoked.append(&mut arg.unlist());
           }
           return Ok(Tokens::new(invoked));
@@ -326,7 +326,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       while token == begin_token {
         let mut toks : Vec<Token> = gullet.read_balanced(state)?.unlist().into_iter().filter(|t| *t != space_token).collect();
         let mut new_tokens = toks.split_off(1);
-        gullet.unread(&mut Tokens::new(toks));
+        gullet.unread(&Tokens::new(toks));
 
         token = if new_tokens.is_empty() {
           None

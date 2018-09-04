@@ -53,7 +53,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         //     $$entry[1] = { $attr->beDigested($stomach)->getHash }; }
         //   $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
         let mut wrapped_tokens = vec![T_BEGIN!()];
-        wrapped_tokens.extend(tokens.clone().unlist());
+        wrapped_tokens.extend(tokens.unlist());
         wrapped_tokens.push(T_END!());
         let digested_tokens = stomach.digest(Tokens::new(wrapped_tokens), state)?;
         let entry = (tag.to_string(), None, digested_tokens);
@@ -230,7 +230,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
     
     let mut lx_tags = vec![T_CS!("\\lx@tags"), T_BEGIN!()];
-    for mut invoked_tag in tags {
+    for invoked_tag in tags {
       lx_tags.append(&mut invoked_tag.unlist());
     }
     lx_tags.push(T_END!());

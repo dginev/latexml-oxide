@@ -264,10 +264,10 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
         //     if (!$type) {
         //       my $cs = ToString($defn->getCS);
         //       Error('unexpected', "\\the$cs", $gullet, "You can't use $cs after \\the"); return (); }
-        let mut value = defn.value_of(args, state).unwrap_or(RegisterValue::Tokens(Tokens!()));
+        let value = defn.value_of(args, state).unwrap_or(RegisterValue::Tokens(Tokens!()));
         // In all cases, these should be OTHER, except for space. (!?)
         let mut tokens : Vec<Token> = match value {
-          RegisterValue::Tokens(mut ts) => ts.unlist(),
+          RegisterValue::Tokens(ts) => ts.unlist(),
           RegisterValue::Token(t) => vec![t],
           rv => Explode!(rv.to_string()),
         };

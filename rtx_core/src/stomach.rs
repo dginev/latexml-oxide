@@ -91,7 +91,7 @@ impl<'t> Stomach {
       Mouth::default(),
       state,
       Box::new(move |stomach, state| {
-        stomach.get_gullet_mut().unread(&mut tokens);
+        stomach.get_gullet_mut().unread(&tokens);
         state.clear_prefixes(); // prefixes shouldn't apply here.
         let mode = if state.lookup_bool("IN_MATH") {
           TexMode::Math
@@ -237,7 +237,7 @@ impl<'t> Stomach {
           // but it isn't expanded in the gullet, but later when digesting, in math mode
           // (? I think)
           let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
-          self.gullet.unread(&mut invoked_meaning);
+          self.gullet.unread(&invoked_meaning);
           maybe_token = match self.gullet.read_x_token(true, false, state)? {
             // replace the token by it's expansion!!!
             None => None,
@@ -249,7 +249,7 @@ impl<'t> Stomach {
         Stored::Conditional(meaning) => {
           // Conditionals are "expandable", use the regular invoke.
           let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
-          self.gullet.unread(&mut invoked_meaning);
+          self.gullet.unread(&invoked_meaning);
           maybe_token = match self.gullet.read_x_token(true, false, state)? {
             // replace the token by it's expansion!!!
             None => None,
@@ -347,7 +347,7 @@ impl<'t> Stomach {
 
       let gullet = self.get_gullet_mut();
       state.let_i(token, T_CS!("\\iffalse"), None);
-      gullet.unread(&mut Tokens!(token.clone())); // Retry
+      gullet.unread(&Tokens!(token.clone())); // Retry
       Ok(Vec::new())
     } else {
       error!(
@@ -547,7 +547,7 @@ impl<'t> Stomach {
     }
     if let Some(Stored::VecToken(after)) = after {
       if !after.is_empty() {
-        self.gullet.unread(&mut Tokens::new(after));
+        self.gullet.unread(&Tokens::new(after));
       }
     }
     Ok(())

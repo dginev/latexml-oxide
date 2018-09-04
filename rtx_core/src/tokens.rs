@@ -78,7 +78,7 @@ impl Tokens {
   pub fn new(tokens: Vec<Token>) -> Self { Tokens { tokens } }
 
   /// Return a list of the tokens making up this Tokens
-  pub fn unlist(&mut self) -> Vec<Token> { self.tokens.drain(..).collect() }
+  pub fn unlist(&self) -> Vec<Token> { self.tokens.clone() }
 
   /// Checks if there are tokens present
   pub fn is_empty(&self) -> bool { self.tokens.is_empty() }
@@ -181,7 +181,7 @@ impl Tokens {
           // Not multiple '#'; read arg.
           let arg_number = token2.text.parse::<usize>().unwrap();
           let arg = &args[arg_number - 1];
-          result.extend(arg.clone().unlist());
+          result.extend(arg.unlist());
         } else {
           // Duplicated '#', copy 2nd '#'
           result.push(token2);

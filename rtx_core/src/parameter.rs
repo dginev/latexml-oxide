@@ -228,7 +228,7 @@ impl Parameter {
       let peek = gullet.read_token(state);
       match peek {
         None => {},
-        Some(tokens) => gullet.unread(&mut Tokens!(tokens)),
+        Some(tokens) => gullet.unread(&Tokens!(tokens)),
       };
       state.begin_semiverbatim(None);
     }
@@ -270,7 +270,7 @@ impl Parameter {
         state,
         Box::new(move |stomach: &mut Stomach, state: &mut State| {
           let gullet = stomach.get_gullet_mut();
-          gullet.unread(&mut value);
+          gullet.unread(&value);
           let mut tokens = Vec::new();
           loop {
             match gullet.read_x_token(true, true, state) {
@@ -313,13 +313,7 @@ impl Parameter {
     Ok(digested_value)
   }
 
-  pub fn revert(
-    &self,
-    mut value: Tokens,
-    gullet: &mut Gullet,
-    state: &mut State,
-  ) -> Result<Tokens>
-  {
+  pub fn revert(&self, value: Tokens, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     if let Some(ref reverter) = self.reversion {
       (reverter)(gullet, value.unlist(), self.extra.clone(), state)
     } else {
