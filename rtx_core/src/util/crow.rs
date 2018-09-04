@@ -1,20 +1,19 @@
 pub use std::borrow::{Borrow, BorrowMut};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter, Result};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
 
-lazy_static! {
-  static ref CROW_ARENA: Mutex<HashMap<String, Arc<String>>> = Mutex::new(HashMap::new());
-}
+pub static mut CROW_ARENA: RefCell<Option<HashMap<String, Rc<String>>>> = RefCell::new(None);
 
 #[derive(Debug, Clone)]
 pub enum Crow {
   /// Borrowed data.
   Borrowed(&'static str),
   /// Shared reference-counted data.
-  Shared(Arc<String>),
+  Shared(Rc<String>),
 }
 
 impl Borrow<str> for Crow {
@@ -52,17 +51,23 @@ impl Hash for Crow {
 
 impl Crow {
   /// Memory arena setter
-  pub fn into_arena<T: ToString>(text: T) -> Arc<String> {
+  pub fn into_arena<T: ToString>(text: T) -> Rc<String> {
     let text: String = text.to_string();
-    let mut arena = CROW_ARENA.lock().unwrap();
-    // .entry() requires a key clone, so...
-    if let Some(value) = arena.get(&text) {
-      return value.clone();
+    unsafe {
+      let mut arena_opt = CROW_ARENA.borrow_mut();
+      if arena_opt.is_none() {
+        *arena_opt = Some(HashMap::new())
+      }
+      let mut arena = arena_opt.as_mut().unwrap();
+      // .entry() requires a key clone, so...
+      if let Some(value) = arena.get(&text) {
+        return value.clone();
+      }
+      // new value, insert.
+      let new_v: Rc<String> = Rc::new(text.to_string());
+      arena.insert(text, new_v.clone());
+      new_v
     }
-    // new value, insert.
-    let new_v: Arc<String> = Arc::new(text.to_string());
-    arena.insert(text, new_v.clone());
-    new_v
   }
 }
 
