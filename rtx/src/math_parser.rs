@@ -725,7 +725,7 @@ impl MathParser {
   {
     //   my @nodes = $self->filter_hints($document, $mathnode->childNodes);
     let nodes = mathnode.get_child_nodes();
-    let mut result;
+    // let mut result;
     //   my ($punct, $result, $unparsed);
     //   my @punct = ();
     //   # Extract trailing punctuation, if rule allows it.
@@ -754,18 +754,18 @@ impl MathParser {
     // "\""       . "\n == " . ToString($mathnode)
     //       . "\n"; }
 
-    if nodes.len() < 2 {
+    let result = if nodes.len() < 2 {
       // Too few nodes? What's to parse?
-      result = match nodes.first() {
+      match nodes.first() {
         // TODO: Absent() constructor ?
         Some(n) => Some(n.clone()),
         None => None,
-      };
+      }
     } else {
       // Now do the actual parse.
       let (result_internal, unparsed) = self.parse_internal(rule, nodes, document)?;
-      result = result_internal;
-    }
+      result_internal
+    };
 
     //   # Failure? No result or uparsed lexemes remain.
     //   # NOTE: Should do script hack??
@@ -835,9 +835,8 @@ impl MathParser {
     // MathParser::MAX_ABS_DEPTH;                 # Try deeper. $unparsed =
     // $lexemes;     $result   = $$self{internalparser}->$rule(\$unparsed); }
 
-    let mut result = None;
     // Mock: INFIX OP!  Clean this up, we need a real parser
-    if nodes.len() == 3 {
+    let result = if nodes.len() == 3 {
       let mut left_arg = nodes[0].clone();
       let mut infix_op = nodes[1].clone();
       let mut right_arg = nodes[2].clone();
@@ -863,8 +862,10 @@ impl MathParser {
       }
       parent.add_child(&mut new_app_node)?;
 
-      result = Some(new_app_node);
-    }
+      Some(new_app_node) // result
+    } else {
+      None // mock
+    };
     // If still failed, try other strategies?
 
     Ok((result, None))
@@ -992,7 +993,7 @@ impl MathParser {
     };
     match tag.as_str() {
       "ltx:XMApp" => {
-        let app_role = node.get_attribute("role").unwrap_or(s!("missing_role"));
+        let app_role = node.get_attribute("role").unwrap_or_else(|| s!("missing_role"));
         let mut all_args = element_nodes(&node);
         info!("xmapp args : {:?}", all_args.len());
         if all_args.is_empty() {
@@ -1063,7 +1064,7 @@ impl MathParser {
     state: &mut State,
   ) -> (usize, String)
   {
-    let role = op.get_attribute("role").unwrap_or(s!("Unknown"));
+    let role = op.get_attribute("role").unwrap_or_else(|| s!("Unknown"));
     // if (($role =~ /^(SUB|SUPER)SCRIPTOP$/) && (($op->getAttribute('scriptpos')
     // || '') =~ /^pre\d+$/)) { # Note that this will likely get
     // parenthesized due to high bp return (5000, textrec($op) . " " .

@@ -488,7 +488,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "\\typeout",
     "\\listfiles",
   ]
-    .into_iter()
+    .iter()
     .map(|s| s.to_string())
   {
     DefMacroI!(T_CS!(ltxtrigger), None, Tokens!());

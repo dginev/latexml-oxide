@@ -1656,7 +1656,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     prim_options.locked = false;
     prim_options.font = None;
     let scope = prim_options.scope.clone();
-    let reqfont = prim_options.font.clone().unwrap_or_else(|| Font::default());
+    let reqfont = prim_options.font.clone().unwrap_or_else(Font::default);
     $state_arg.install_definition(MathPrimitive{
       cs: $cs.clone(),
       paramlist: None, // never any parameters, this is intentional

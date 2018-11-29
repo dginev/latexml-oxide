@@ -407,7 +407,7 @@ pub fn parse_parameters(
       let extra_str = captures.get(4).map_or("", |m| m.as_str()).to_string();
       // TODO: Ask Bruce about the "extra" functionality and its types
       let extra = extra_str
-        .split("|")
+        .split('|')
         .flat_map(|t| mouth::tokenize_internal(t, None).unlist())
         .map(|t| t.into())
         .collect::<Vec<ParameterExtra>>();
@@ -573,7 +573,7 @@ pub fn def_conditional(
 )
 {
   let cs_name = cs.get_cs_name();
-  match cs_name.as_ref() {
+  match cs_name {
     "\\fi" | "\\else" | "\\or" => state.install_definition(
       Conditional {
         cs: cs.clone(),
@@ -651,7 +651,7 @@ pub fn def_register<T: Into<RegisterValue>>(
   state: &mut State,
 )
 {
-  let options: RegisterOptions = options.unwrap_or_else(|| RegisterOptions::default());
+  let options: RegisterOptions = options.unwrap_or_else(RegisterOptions::default);
   let value: RegisterValue = value.into();
   let name = cs.to_string();
   let register_type: RegisterType = (&value).into();
@@ -971,7 +971,7 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
 
 pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut State) {
   let v = counter_value(ctr, state).add(value);
-  state.assign_value(&s!("\\c@{}", ctr), v.clone(), Some(Scope::Global));
+  state.assign_value(&s!("\\c@{}", ctr), v, Some(Scope::Global));
   state.after_assignment();
   SetupBindingMacros!(state);
   let id_cs = T_CS!(s!("\\@{}@ID", ctr));

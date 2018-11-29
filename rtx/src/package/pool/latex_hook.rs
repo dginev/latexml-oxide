@@ -38,7 +38,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "\\begin",
     "\\listfiles",
   ]
-    .into_iter()
+    .iter()
     .map(|s| s.to_string())
   {
     let inner_ltxtrigger = ltxtrigger.clone();

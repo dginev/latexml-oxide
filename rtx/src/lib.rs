@@ -1,4 +1,4 @@
-#![feature(macro_literal_matcher)]
+
 // Copyright 2015-2016 Deyan Ginev. See the LICENSE
 // file at the top-level directory of this distribution.
 //

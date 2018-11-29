@@ -152,7 +152,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
         None => ch_code,
         Some(code) => code as u8
       };
-      Some(Number::new(code as i32).into())
+      Some(Number::new(i32::from(code)).into())
     })),    // defaults to the char's code itself(?)
     setter => Some(Rc::new(|value, args, state| {
       let ch = args[0].to_number().value_of() as u8;
