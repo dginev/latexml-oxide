@@ -5,13 +5,13 @@ use std::collections::HashMap;
 pub const XMLNS_NS: &'static str = "http://www.w3.org/2000/xmlns/";
 pub const XML_NS: &'static str = "http://www.w3.org/XML/1998/namespace";
 
-pub struct XPath<'xp> {
-  context: Context<'xp>,
+pub struct XPath {
+  context: Context,
 }
 
 // pub type XPathClosure = Rc<Fn(&mut Gullet, Tokens, &mut State) -> bool>;
-impl<'xp> XPath<'xp> {
-  pub fn new(doc: &'xp Document, _mappings: HashMap<String, String>) -> Self {
+impl XPath {
+  pub fn new(doc: &Document, _mappings: HashMap<String, String>) -> Self {
     let context = Context::new(doc).unwrap();
     XPath { context: context }
   }
