@@ -1,4 +1,4 @@
-use common::font::Font;
+use crate::common::font::Font;
 use std::fmt;
 use std::rc::Rc;
 

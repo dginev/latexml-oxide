@@ -4,21 +4,21 @@ use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::rc::Rc;
 
-use common::dimension::Dimension;
-use common::font::Font;
-use common::glue::{Glue, MuGlue};
-use common::ligature::Ligature;
-use common::number::Number;
-use definition::conditional::{Conditional, IfFrame};
-use definition::constructor::Constructor;
-use definition::expandable::Expandable;
-use definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
-use definition::primitive::Primitive;
-use definition::register::{Register, RegisterValue};
-use document::tag::TagData;
-use parameter::Parameter;
-use token::{Catcode, Token};
-use tokens::Tokens;
+use crate::common::dimension::Dimension;
+use crate::common::font::Font;
+use crate::common::glue::{Glue, MuGlue};
+use crate::common::ligature::Ligature;
+use crate::common::number::Number;
+use crate::definition::conditional::{Conditional, IfFrame};
+use crate::definition::constructor::Constructor;
+use crate::definition::expandable::Expandable;
+use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
+use crate::definition::primitive::Primitive;
+use crate::definition::register::{Register, RegisterValue};
+use crate::document::tag::TagData;
+use crate::parameter::Parameter;
+use crate::token::{Catcode, Token};
+use crate::tokens::Tokens;
 
 const STORED_TRUE: Stored = Stored::Bool(true);
 const STORED_FALSE: Stored = Stored::Bool(false);
@@ -56,7 +56,7 @@ pub enum Stored {
   VecOptionChar(Vec<Option<char>>),
   VecString(Vec<String>),
   VecToken(Vec<Token>),
-  VecDigested(Vec<::Digested>),
+  VecDigested(Vec<crate::Digested>),
   HashStr(HashMap<String, String>),
   VecDequeStored(VecDeque<Stored>),
   HashStored(HashMap<String, Stored>),
@@ -79,7 +79,7 @@ pub enum Stored {
   IfFrame(Rc<RefCell<IfFrame>>),
   /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Rc<Constructor>),
-  Digested(::Digested),
+  Digested(crate::Digested),
   Parameter(Parameter),
   Font(Rc<Font>),
   Ligature(Box<Ligature>),
@@ -87,7 +87,7 @@ pub enum Stored {
 
 impl fmt::Debug for Stored {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    use Stored::*;
+    use crate::Stored::*;
     match *self {
       String(ref s) => write!(f, "{}", s),
       Int(ref num) => write!(f, "Stored::Int[{:?}]", num),
@@ -218,8 +218,8 @@ impl From<Constructor> for Stored {
   fn from(value: Constructor) -> Self { Rc::new(value).into() }
 }
 
-impl From<::Digested> for Stored {
-  fn from(value: ::Digested) -> Self { Stored::Digested(value) }
+impl From<crate::Digested> for Stored {
+  fn from(value: crate::Digested) -> Self { Stored::Digested(value) }
 }
 
 impl From<Parameter> for Stored {
@@ -270,8 +270,8 @@ impl From<Vec<Token>> for Stored {
   fn from(value: Vec<Token>) -> Self { Stored::VecToken(value) }
 }
 
-impl From<Vec<::Digested>> for Stored {
-  fn from(value: Vec<::Digested>) -> Self { Stored::VecDigested(value) }
+impl From<Vec<crate::Digested>> for Stored {
+  fn from(value: Vec<crate::Digested>) -> Self { Stored::VecDigested(value) }
 }
 
 impl From<HashMap<String, String>> for Stored {
@@ -422,8 +422,8 @@ impl<'a> From<&'a Stored> for Option<RegisterValue> {
   }
 }
 
-impl<'a> From<&'a Stored> for Option<::Digested> {
-  fn from(value: &'a Stored) -> Option<::Digested> {
+impl<'a> From<&'a Stored> for Option<crate::Digested> {
+  fn from(value: &'a Stored) -> Option<crate::Digested> {
     match value {
       Stored::Digested(digested) => Some((*digested).clone()),
       _ => None,
@@ -431,8 +431,8 @@ impl<'a> From<&'a Stored> for Option<::Digested> {
   }
 }
 
-impl<'a, 'b> From<&'a &'b Stored> for Option<::Digested> {
-  fn from(value: &'a &'b Stored) -> Option<::Digested> { (*value).into() }
+impl<'a, 'b> From<&'a &'b Stored> for Option<crate::Digested> {
+  fn from(value: &'a &'b Stored) -> Option<crate::Digested> { (*value).into() }
 }
 
 impl<'a> From<&'a Stored> for Token {

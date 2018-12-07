@@ -10,21 +10,21 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use common::error::*;
-use common::object::Object;
-use common::store::Stored;
+use crate::common::error::*;
+use crate::common::object::Object;
+use crate::common::store::Stored;
 
-use gullet::Gullet;
-use stomach::Stomach;
-use token::Token;
-use tokens::Tokens;
-use Digested;
+use crate::gullet::Gullet;
+use crate::stomach::Stomach;
+use crate::token::Token;
+use crate::tokens::Tokens;
+use crate::Digested;
 // use tbox::Tbox;
-use definition::register::{RegisterType, RegisterValue};
-use document::Document;
-use parameter::Parameters;
-use state::State;
-use whatsit::Whatsit;
+use crate::definition::register::{RegisterType, RegisterValue};
+use crate::document::Document;
+use crate::parameter::Parameters;
+use crate::state::State;
+use crate::whatsit::Whatsit;
 
 pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Tokens>>;
 pub type ConditionalClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<bool>>;

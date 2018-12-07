@@ -1,4 +1,4 @@
-use document::Document;
+use crate::document::Document;
 use std::collections::HashMap;
 
 pub struct Relaxng {

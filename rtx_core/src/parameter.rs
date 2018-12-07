@@ -1,20 +1,20 @@
-use fmt;
+use crate::fmt;
 use regex::Regex;
 use std::borrow::Cow;
 use std::rc::Rc;
 
-use common::error::*;
-use common::store::Stored;
-use definition::constructor::Constructor;
-use definition::{BeforeDigestClosure, Definition, DigestionClosure};
-use gullet::Gullet;
-use mouth::Mouth;
-use state::State;
-use stomach::Stomach;
-use token::{Catcode, Token};
-use tokens::Tokens;
-use whatsit::Whatsit;
-use Digested;
+use crate::common::error::*;
+use crate::common::store::Stored;
+use crate::definition::constructor::Constructor;
+use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
+use crate::gullet::Gullet;
+use crate::mouth::Mouth;
+use crate::state::State;
+use crate::stomach::Stomach;
+use crate::token::{Catcode, Token};
+use crate::tokens::Tokens;
+use crate::whatsit::Whatsit;
+use crate::Digested;
 
 pub type ReaderClosure =
   Rc<Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;

@@ -13,15 +13,15 @@ use std::collections::{HashMap, VecDeque};
 use std::iter;
 use std::rc::Rc;
 
-use common::error::*;
-use common::font::Font;
-use common::store::Stored;
-use state::State;
+use crate::common::error::*;
+use crate::common::font::Font;
+use crate::common::store::Stored;
+use crate::state::State;
 
-use document::resource::Resource;
-use document::tag::{TagConstructionClosure, TagOptionName, TagOptions};
-use Tbox;
-use {BoxOps, Digested};
+use crate::document::resource::Resource;
+use crate::document::tag::{TagConstructionClosure, TagOptionName, TagOptions};
+use crate::Tbox;
+use crate::{BoxOps, Digested};
 
 lazy_static! {
   static ref HAS_NONSPACE_RE: Regex = Regex::new(r"\S").unwrap();

@@ -4,16 +4,16 @@ use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
-use common::error::*;
-use common::font::Font;
-use common::store::Stored;
-use definition::expandable::Expandable;
-use definition::Definition;
-use document::Document;
-use list::List;
-use state::State;
-use tokens::Tokens;
-use {BoxOps, Digested, TexMode};
+use crate::common::error::*;
+use crate::common::font::Font;
+use crate::common::store::Stored;
+use crate::definition::expandable::Expandable;
+use crate::definition::Definition;
+use crate::document::Document;
+use crate::list::List;
+use crate::state::State;
+use crate::tokens::Tokens;
+use crate::{BoxOps, Digested, TexMode};
 
 #[derive(Clone)]
 pub struct Whatsit {

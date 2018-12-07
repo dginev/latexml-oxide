@@ -2,21 +2,21 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use common::dimension::Dimension;
-use common::error::*;
-use common::glue::{Glue, MuGlue};
-use common::number::Number;
-use common::object::Object;
-use definition::{BeforeDigestClosure, Definition, DigestionClosure};
-use document::Document;
-use gullet::Gullet;
-use parameter::Parameters;
-use state::State;
-use stomach::Stomach;
-use token::*;
-use tokens::Tokens;
-use whatsit::Whatsit;
-use Digested;
+use crate::common::dimension::Dimension;
+use crate::common::error::*;
+use crate::common::glue::{Glue, MuGlue};
+use crate::common::number::Number;
+use crate::common::object::Object;
+use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
+use crate::document::Document;
+use crate::gullet::Gullet;
+use crate::parameter::Parameters;
+use crate::state::State;
+use crate::stomach::Stomach;
+use crate::token::*;
+use crate::tokens::Tokens;
+use crate::whatsit::Whatsit;
+use crate::Digested;
 
 #[derive(Clone)]
 pub enum RegisterValue {

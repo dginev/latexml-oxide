@@ -1,17 +1,16 @@
 ///! Token List constructors.
-use fmt;
+use crate::fmt;
 use std::collections::VecDeque;
 use std::fmt::Display;
 
-use common::error::*;
-use common::number::Number;
-use definition::register::RegisterValue;
+use crate::common::error::*;
+use crate::common::number::Number;
+use crate::definition::register::RegisterValue;
+use crate::state::State;
+use crate::stomach::Stomach;
+use crate::token::*;
+use crate::Digested;
 use quote::ToTokens;
-use quote::Tokens as QTokens;
-use state::State;
-use stomach::Stomach;
-use token::*;
-use Digested;
 
 const UNTEX_LINELENGTH: usize = 78;
 
@@ -23,7 +22,7 @@ impl Default for Tokens {
   fn default() -> Self { Tokens { tokens: Vec::new() } }
 }
 impl ToTokens for Tokens {
-  fn to_tokens(&self, tokens: &mut QTokens) {
+  fn to_tokens(&self, tokens: &mut quote::Tokens) {
     tokens.append("Tokens {tokens: vec!");
     self.tokens.to_tokens(tokens);
     tokens.append("}");

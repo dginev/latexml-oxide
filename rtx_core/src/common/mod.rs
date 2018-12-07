@@ -11,7 +11,7 @@ pub mod relaxng;
 pub mod store;
 pub mod xml;
 
-use fmt;
+use crate::fmt;
 
 #[derive(Clone, Debug)]
 pub enum InputFormat {

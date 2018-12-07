@@ -6,11 +6,11 @@ use std::io;
 use std::io::prelude::*;
 use std::sync::Mutex;
 
-use common::error::*;
-use common::store::Stored;
-use state::{Catcodes, Scope, State, StateOptions};
-use token::*;
-use tokens::Tokens;
+use crate::common::error::*;
+use crate::common::store::Stored;
+use crate::state::{Catcodes, Scope, State, StateOptions};
+use crate::token::*;
+use crate::tokens::Tokens;
 
 #[derive(PartialEq, Clone)]
 pub enum FoodType {
@@ -420,7 +420,7 @@ impl Mouth {
   fn dispatch_char(&mut self, ch: char, cc: Catcode, state: &mut State) -> Option<Token> {
     // Possibly want to think about caching (common) letters, etc to keep from
     // creating tokens like crazy... or making them more compact... or ???
-    use token::Catcode::*;
+    use crate::token::Catcode::*;
     match cc {
       ESCAPE => self.handle_escape(ch, state), // T_ESCAPE
       BEGIN => {

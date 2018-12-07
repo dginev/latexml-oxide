@@ -1,9 +1,9 @@
-use quote;
+use crate::util::{get_option, get_options_from_input};
+
 use regex::{Captures, Regex};
 use rtx_core::mouth;
 use rtx_core::util::text::*;
 use syn;
-use util::{get_option, get_options_from_input};
 
 // We recognize several special operators:
 //  #      #number|name      accesses an argument to or property of the whatsit
@@ -110,11 +110,11 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
   // mechanism. Once the new procedural macro scheme lands, this begs to be
   // refactored.
   quote!(
-    impl _Dummy {
-      fn replacement() -> Option<ReplacementClosure> {
-        #compiled_replacement_closure
-      }
-    })
+  impl _Dummy {
+    fn replacement() -> Option<ReplacementClosure> {
+      #compiled_replacement_closure
+    }
+  })
 }
 
 pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
@@ -152,11 +152,11 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
   // mechanism. Once the new procedural macro scheme lands, this begs to be
   // refactored.
   quote!(
-    impl _DummyE {
-      fn expansion() -> Option<ExpansionClosure> {
-        #compiled_expansion_closure
-      }
-    })
+  impl _DummyE {
+    fn expansion() -> Option<ExpansionClosure> {
+      #compiled_expansion_closure
+    }
+  })
 }
 
 fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
@@ -167,7 +167,8 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       floats = refs.get(1).map_or("", |m| m.as_str()).to_string();
       has_floats = true;
       String::new()
-    }).to_string();
+    })
+    .to_string();
   let mut operations = Vec::new();
 
   while !replacement.is_empty() {
@@ -199,7 +200,8 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
           current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
           is_match = true;
           String::new()
-        }).to_string();
+        })
+        .to_string();
 
       if is_match {
         // println!("-- matched a PI ");
@@ -218,7 +220,8 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
           .replace(&replacement, |_: &Captures| -> String {
             pi_closed = true;
             String::new()
-          }).to_string();
+          })
+          .to_string();
 
         if !pi_closed {
           panic!("Missing '?>' at '{:?}'\n", replacement);
@@ -234,7 +237,8 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
           current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
           // println!("-- open tag {:?}", current_tag);
           String::new()
-        }).to_string();
+        })
+        .to_string();
 
       // handle open tag
       if is_match {
@@ -277,7 +281,8 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
           current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
           // println!("-- close tag {:?}", current_tag);
           String::new()
-        }).to_string();
+        })
+        .to_string();
       // handle close tag
       if is_match {
         operations.push(quote!(document.close_element(#current_tag, state)?;));
@@ -367,7 +372,8 @@ fn translate_string(mut text: &mut String) -> quote::Tokens {
             quoted_match = refs.get(1).map_or("", |m| m.as_str()).to_string();
             is_quoted_match = true;
             String::new()
-          }).to_string();
+          })
+          .to_string();
         if is_quoted_match {
           let escaped_match = &slashify(&unquote(&quoted_match));
           values.push(quote!(#escaped_match));
@@ -392,11 +398,12 @@ fn translate_string(mut text: &mut String) -> quote::Tokens {
         quote!(#v)
       } else {
         quote!(match #v {
-        Some(ref val) => val.to_string(),
-        None => String::new()
-      })
+          Some(ref val) => val.to_string(),
+          None => String::new()
+        })
       }
-    }).collect::<Vec<_>>();
+    })
+    .collect::<Vec<_>>();
   quote!(#(#token_values)+*)
 }
 
@@ -431,7 +438,8 @@ fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
           key = refs.get(1).map_or("", |m| m.as_str()).to_string();
           is_match = true;
           String::new()
-        }).to_string();
+        })
+        .to_string();
       if is_match {
         let val = translate_string(&mut text);
         avs.push(quote!(av_props.insert(#key.to_string(), #val);));
@@ -458,7 +466,8 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
       fcn = refs.get(1).map_or("", |m| m.as_str()).to_owned();
       is_match = true;
       String::new()
-    }).to_string();
+    })
+    .to_string();
   if is_match {
     let mut args = Vec::new();
     while !LEAD_CPAREN_RE.is_match(text) {
@@ -478,7 +487,8 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
         .replace(text, |_: &Captures| {
           intermediate_kv = true;
           String::new()
-        }).to_string();
+        })
+        .to_string();
       if !intermediate_kv {
         break;
       }
@@ -508,7 +518,8 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
           val = quote!(args[#n_usize])
         }
         String::new()
-      }).to_string();
+      })
+      .to_string();
   }
   if !is_match {
     *text = PROP_HOLE_RE
@@ -519,7 +530,8 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
         val = quote!(props.get(#prop_name));
 
         String::new()
-      }).to_string();
+      })
+      .to_string();
   }
   if !is_match {
     // Build the exclusion regex
@@ -535,7 +547,8 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
         let normalized_val = &slashify(&unquote(&quoted));
         val = quote!(#normalized_val);
         String::new()
-      }).to_string();
+      })
+      .to_string();
   }
   if !is_match {
     panic!("Missing value at '{:?}'\n", text);
@@ -566,6 +579,7 @@ fn unquote(text: &str) -> String {
   ESCAPED_OP
     .replace_all(text, |escaped_refs: &Captures| -> String {
       escaped_refs.get(1).map_or("", |m| m.as_str()).to_string()
-    }).replace("##", "#")
+    })
+    .replace("##", "#")
     .replace("&amp;", "&")
 }

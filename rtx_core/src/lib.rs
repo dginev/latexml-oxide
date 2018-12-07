@@ -9,6 +9,7 @@ extern crate ansi_term;
 extern crate dirs;
 extern crate glob;
 extern crate libxml;
+extern crate proc_macro;
 extern crate quote;
 extern crate rand;
 extern crate regex;
@@ -40,17 +41,17 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
-use common::error::*;
-use common::font::Font;
-use common::model::Model;
-use common::store::Stored;
-use document::Document;
-use list::List;
-use state::{State, StateOptions};
-use stomach::Stomach;
-use tbox::Tbox;
-use tokens::Tokens;
-use whatsit::Whatsit;
+use crate::common::error::*;
+use crate::common::font::Font;
+use crate::common::model::Model;
+use crate::common::store::Stored;
+use crate::document::Document;
+use crate::list::List;
+use crate::state::{State, StateOptions};
+use crate::stomach::Stomach;
+use crate::tbox::Tbox;
+use crate::tokens::Tokens;
+use crate::whatsit::Whatsit;
 
 pub struct Core {
   pub state: State,
@@ -189,8 +190,8 @@ impl<'a> From<&'a String> for Digested {
   }
 }
 
-impl<'a> From<&'a Digested> for Option<::Digested> {
-  fn from(value: &'a Digested) -> Option<::Digested> { Some(value.clone()) }
+impl<'a> From<&'a Digested> for Option<crate::Digested> {
+  fn from(value: &'a Digested) -> Option<crate::Digested> { Some(value.clone()) }
 }
 impl<'a> From<&'a Digested> for Tokens {
   fn from(value: &'a Digested) -> Tokens { value.revert() }

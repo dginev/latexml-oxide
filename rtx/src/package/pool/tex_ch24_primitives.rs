@@ -1,4 +1,4 @@
-use package::*;
+use crate::package::*;
 use rtx_core::list::List;
 use rtx_core::tbox::Tbox;
 use rtx_core::TexMode;

@@ -6,16 +6,15 @@ use std::fmt::Display;
 use std::iter::FromIterator;
 use std::rc::Rc;
 
-use common::error::*;
-use common::number::Number;
-use common::store::Stored;
-use definition::register::{Register, RegisterValue};
-use definition::Definition;
-use quote;
-use state::State;
-use stomach::Stomach;
-use tokens::Tokens;
-use {BoxOps, Digested};
+use crate::common::error::*;
+use crate::common::number::Number;
+use crate::common::store::Stored;
+use crate::definition::register::{Register, RegisterValue};
+use crate::definition::Definition;
+use crate::state::State;
+use crate::stomach::Stomach;
+use crate::tokens::Tokens;
+use crate::{BoxOps, Digested};
 
 #[derive(PartialEq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
@@ -41,7 +40,7 @@ pub enum Catcode {
 }
 impl quote::ToTokens for Catcode {
   fn to_tokens(&self, tokens: &mut quote::Tokens) {
-    use token::Catcode::*;
+    use crate::token::Catcode::*;
     let verbatim = match *self {
       ESCAPE => "ESCAPE",
       BEGIN => "BEGIN",
@@ -72,7 +71,7 @@ impl quote::ToTokens for Catcode {
 
 impl From<u8> for Catcode {
   fn from(num: u8) -> Catcode {
-    use token::Catcode::*;
+    use crate::token::Catcode::*;
     match num {
       0 => ESCAPE,
       1 => BEGIN,
@@ -103,7 +102,7 @@ impl From<u8> for Catcode {
 
 impl From<Catcode> for u8 {
   fn from(cc: Catcode) -> u8 {
-    use token::Catcode::*;
+    use crate::token::Catcode::*;
     match cc {
       ESCAPE => 0,
       BEGIN => 1,
@@ -130,7 +129,7 @@ impl From<Catcode> for u8 {
 
 impl Catcode {
   pub fn name(self) -> &'static str {
-    use token::Catcode::*;
+    use crate::token::Catcode::*;
     match self {
       // Primitive
       ESCAPE => "Escape",
@@ -157,7 +156,7 @@ impl Catcode {
   }
 
   pub fn meaning(self) -> &'static str {
-    use token::Catcode::*;
+    use crate::token::Catcode::*;
     match self {
       ESCAPE => "the escape character",
       BEGIN => "begin-group character",
@@ -184,7 +183,7 @@ impl Catcode {
   // For Tokens with these catcodes, only the catcode is relevant for comparison.
   // (if they even make it to a stage where they get compared)
   pub fn is_primitive(self) -> bool {
-    use token::Catcode::*;
+    use crate::token::Catcode::*;
     match self {
       // Primitives
       ESCAPE | BEGIN | END | MATH | ALIGN | EOL | PARAM | SUPER | SUB | SPACE | NOTEXPANDED => true,
@@ -194,7 +193,7 @@ impl Catcode {
   }
 
   pub fn is_executable(self) -> bool {
-    use token::Catcode::*;
+    use crate::token::Catcode::*;
     match self {
       // Executable
       BEGIN | END | MATH | ALIGN | SUPER | SUB | ACTIVE | CS => true,
@@ -205,7 +204,7 @@ impl Catcode {
   }
 
   pub fn is_neutralizable(self) -> bool {
-    use token::Catcode::*;
+    use crate::token::Catcode::*;
     match self {
       // Neutralizable
       MATH | ALIGN | PARAM | SUPER | SUB | ACTIVE => true,
@@ -216,7 +215,7 @@ impl Catcode {
   }
 
   pub fn is_active_or_cs(self) -> bool {
-    use token::Catcode::*;
+    use crate::token::Catcode::*;
     match self {
       ACTIVE | CS => true,
       _ => false,
@@ -224,7 +223,7 @@ impl Catcode {
   }
 
   pub fn is_absorbable(self) -> bool {
-    use token::Catcode::*;
+    use crate::token::Catcode::*;
     match self {
       // Absorbable
       SPACE | LETTER | OTHER | COMMENT => true,
@@ -442,7 +441,7 @@ macro_rules! ExplodeText(($text:expr) => (
 
 static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
 pub fn untex(digested: &Digested, state: &State) -> String {
-  use token::Catcode::*;
+  use crate::token::Catcode::*;
   let mut tokens = VecDeque::from_iter(digested.revert().unlist().into_iter());
   let mut tex_string = String::new();
   let mut length = 0;

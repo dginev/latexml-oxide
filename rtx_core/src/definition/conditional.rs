@@ -2,19 +2,19 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use common::error::*;
-use common::object::Object;
-use common::store::Stored;
-use definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
-use document::Document;
-use gullet::Gullet;
-use parameter::Parameters;
-use state::{Scope, State};
-use stomach::Stomach;
-use token::*;
-use tokens::Tokens;
-use whatsit::Whatsit;
-use Digested;
+use crate::common::error::*;
+use crate::common::object::Object;
+use crate::common::store::Stored;
+use crate::definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
+use crate::document::Document;
+use crate::gullet::Gullet;
+use crate::parameter::Parameters;
+use crate::state::{Scope, State};
+use crate::stomach::Stomach;
+use crate::token::*;
+use crate::tokens::Tokens;
+use crate::whatsit::Whatsit;
+use crate::Digested;
 
 // Conditional control sequences; Expandable
 //   Expand enough to determine true/false, then maybe skip

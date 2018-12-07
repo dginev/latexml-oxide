@@ -1,14 +1,14 @@
 use std::borrow::Cow;
 use std::fmt;
 
-use common::error::*;
-use common::font::Font;
-use document::Document;
-use state::State;
+use crate::common::error::*;
+use crate::common::font::Font;
+use crate::document::Document;
+use crate::state::State;
 
-use token::Token;
-use tokens::Tokens;
-use {BoxOps, Digested, TexMode};
+use crate::token::Token;
+use crate::tokens::Tokens;
+use crate::{BoxOps, Digested, TexMode};
 
 /// Lists can contain any Digested items, such as boxes, whatsits or other lists
 #[derive(Clone, PartialEq)]

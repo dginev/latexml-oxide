@@ -1,20 +1,20 @@
 use std::borrow::Cow;
 use std::rc::Rc;
 
-use common::error::*;
-use common::font::Font;
-use common::object::Object;
-use state::{Scope, State};
+use crate::common::error::*;
+use crate::common::font::Font;
+use crate::common::object::Object;
+use crate::state::{Scope, State};
 
-use definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure};
-use document::Document;
-use gullet::Gullet;
-use parameter::Parameters;
-use stomach::Stomach;
-use token::*;
-use tokens::Tokens;
-use whatsit::Whatsit;
-use Digested;
+use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure};
+use crate::document::Document;
+use crate::gullet::Gullet;
+use crate::parameter::Parameters;
+use crate::stomach::Stomach;
+use crate::token::*;
+use crate::tokens::Tokens;
+use crate::whatsit::Whatsit;
+use crate::Digested;
 
 #[derive(Clone)]
 pub struct PrimitiveOptions {

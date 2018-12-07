@@ -1,4 +1,4 @@
-use package::*;
+use crate::package::*;
 use rtx_core::state::State;
 
 pub fn load_definitions(mut state: &mut State) -> Result<()> {

@@ -9,7 +9,7 @@ use std::collections::HashMap;
 /// NOTE: This is now in Common that it may evolve to be useful in Post processing...
 use std::fmt;
 
-use state::State;
+use crate::state::State;
 
 pub type Fontmap = Vec<Option<char>>;
 
@@ -359,18 +359,22 @@ impl Font {
   /// or (String, Font)
   pub fn relative_to(&self, other: &Font) -> HashMap<String, (String, Font)> {
     let family = match self.family {
-      Some(ref fam) => if *fam == Cow::Borrowed("math") {
-        Some(Cow::Borrowed("serif"))
-      } else {
-        Some(fam.clone())
+      Some(ref fam) => {
+        if *fam == Cow::Borrowed("math") {
+          Some(Cow::Borrowed("serif"))
+        } else {
+          Some(fam.clone())
+        }
       },
       None => None,
     };
     let other_family = match other.family {
-      Some(ref fam) => if fam == "math" {
-        Some(Cow::Borrowed("serif"))
-      } else {
-        Some(fam.clone())
+      Some(ref fam) => {
+        if fam == "math" {
+          Some(Cow::Borrowed("serif"))
+        } else {
+          Some(fam.clone())
+        }
       },
       None => None,
     };
@@ -531,7 +535,7 @@ pub fn decode_string(
     if let Some(encmap) = state.load_font_map(&encoding) {
       // OK got some map.
       map = Some(encmap);
-      if let Some(font) = font {
+      if let Some(ref font) = font {
         if let Some(family) = (*font).get_family() {
           if let Some(fmap) = state.lookup_value(&s!("{}_{}_fontmap", encoding, family)) {
             map = fmap.into(); // Use the family specific map, if any.

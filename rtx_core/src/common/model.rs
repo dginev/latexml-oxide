@@ -4,13 +4,13 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 
-use common::error::*;
-use common::relaxng::Relaxng;
-use common::xml::{XPath, XML_NS};
-use document::Document;
+use crate::common::error::*;
+use crate::common::relaxng::Relaxng;
+use crate::common::xml::{XPath, XML_NS};
+use crate::document::Document;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::Node;
-use util::pathname;
+use crate::util::pathname;
 
 // use common::font::*;
 

@@ -3,18 +3,18 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use common::dimension::Dimension;
-use common::error::*;
-use common::glue::{Glue, MuGlue};
-use common::number::Number;
+use crate::common::dimension::Dimension;
+use crate::common::error::*;
+use crate::common::glue::{Glue, MuGlue};
+use crate::common::number::Number;
 
-use definition::conditional::ConditionalType;
-use definition::register::{RegisterType, RegisterValue};
-use definition::Definition;
-use mouth::Mouth;
-use state::State;
-use token::{Catcode, Token};
-use tokens::Tokens;
+use crate::definition::conditional::ConditionalType;
+use crate::definition::register::{RegisterType, RegisterValue};
+use crate::definition::Definition;
+use crate::mouth::Mouth;
+use crate::state::State;
+use crate::token::{Catcode, Token};
+use crate::tokens::Tokens;
 
 lazy_static! {
   static ref DIGIT_RE: Regex = Regex::new(r"[0-9]").unwrap();

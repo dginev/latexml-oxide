@@ -1,4 +1,4 @@
-use package::*;
+use crate::package::*;
 
 // Hmm... I wonder, should getString itself be dealing with escapechar?
 fn escapechar(state: &State) -> String {

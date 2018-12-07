@@ -1,7 +1,6 @@
-use quote;
+use crate::util::{get_option, get_options_from_input};
 use regex::Regex;
 use syn;
-use util::{get_option, get_options_from_input};
 
 use rtx_core::common::error::*;
 use rtx_core::state::State;

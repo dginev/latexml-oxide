@@ -8,7 +8,7 @@
 ///**********************************************************************
 /// NOTE: This will be loaded after `TeX.pool`, so it inherits.
 ///**********************************************************************
-use package::*;
+use crate::package::*;
 
 lazy_static! {
   static ref OPTS_REGEX: Regex = Regex::new(r",\s*").unwrap();

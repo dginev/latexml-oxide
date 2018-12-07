@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use token::{Catcode, Token};
+use crate::token::{Catcode, Token};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Number {

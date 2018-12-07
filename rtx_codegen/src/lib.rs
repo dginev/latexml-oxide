@@ -1,15 +1,15 @@
+#![feature(proc_macro_hygiene)]
+#![feature(proc_macro_quote)]
 #![recursion_limit = "100"]
-
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate rtx_core;
 extern crate proc_macro;
 #[macro_use]
 extern crate quote;
-extern crate syn;
-
-#[macro_use]
-extern crate lazy_static;
 extern crate regex;
-#[macro_use]
-extern crate rtx_core;
+extern crate syn;
 
 use proc_macro::TokenStream;
 use syn::parse_macro_input;

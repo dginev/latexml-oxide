@@ -1,6 +1,7 @@
 [package]
 name = "rtx"
-version = "0.1.4"
+version = "0.1.5"
+edition = "2018"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 license = "CC0"
 homepage = "https://github.com/dginev/rtx"

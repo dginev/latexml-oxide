@@ -1,4 +1,4 @@
-use package::*;
+use crate::package::*;
 use rtx_core::document::tag::TagConstructionClosure;
 use rtx_core::BoxOps;
 

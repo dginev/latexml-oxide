@@ -1,4 +1,4 @@
-use package::*;
+use crate::package::*;
 
 pub fn load_definitions(core_state: &mut State) -> Result<()> {
   SetupBindingMacros!(core_state);

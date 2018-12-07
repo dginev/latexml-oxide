@@ -12,8 +12,8 @@ use rtx_core::util::pathname;
 use rtx_core::util::pathname::FindOptions;
 use rtx_core::{Core, Digested};
 
-use math_parser::MathParser;
-use package::*;
+use crate::math_parser::MathParser;
+use crate::package::*;
 
 lazy_static! {
   static ref CLS_EXT_REGEX: Regex = Regex::new(r"\.cls$").unwrap();

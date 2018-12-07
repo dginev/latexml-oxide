@@ -5,21 +5,21 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 use std::rc::Rc;
 
-use common::font::{Font, Fontmap};
-use common::model::{IndirectModel, Model};
-use common::number::Number;
-pub use common::store::Stored; // reexport for convenience
-use definition::conditional::{ConditionalType, IfFrame};
-use definition::register::{Register, RegisterValue};
-use definition::Definition;
-use document::resource::Resource;
-use document::tag::TagOptions;
-use document::Document;
+use crate::common::font::{Font, Fontmap};
+use crate::common::model::{IndirectModel, Model};
+use crate::common::number::Number;
+pub use crate::common::store::Stored; // reexport for convenience
+use crate::definition::conditional::{ConditionalType, IfFrame};
+use crate::definition::register::{Register, RegisterValue};
+use crate::definition::Definition;
+use crate::document::resource::Resource;
+use crate::document::tag::TagOptions;
+use crate::document::Document;
 
-use stomach::Stomach;
-use token::{Catcode, Token};
-use tokens::Tokens;
-use util::pathname;
+use crate::stomach::Stomach;
+use crate::token::{Catcode, Token};
+use crate::tokens::Tokens;
+use crate::util::pathname;
 
 static CODE_TEX_EXT: &'static str = ".code.tex";
 
@@ -324,7 +324,7 @@ impl Default for StateOptions {
 
 impl State {
   pub fn new(options: StateOptions) -> Self {
-    use token::Catcode::*;
+    use crate::token::Catcode::*;
 
     // Setup default catcodes.
     let catcode_profile = match options.catcodes {

@@ -2,10 +2,10 @@ use libxml::tree::Node;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use common::error::*;
-use document::Document;
-use state::State;
-use Digested;
+use crate::common::error::*;
+use crate::document::Document;
+use crate::state::State;
+use crate::Digested;
 
 pub type TagConstructionClosure = Rc<Fn(&mut Document, &mut Node, &mut State) -> Result<()>>;
 pub type TagData = (String, Option<HashMap<String, String>>, Digested);

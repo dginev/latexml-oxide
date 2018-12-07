@@ -1,9 +1,9 @@
 ///======================================================================
 /// Exported generic functions for dealing with `LaTeXML`'s objects
 ///======================================================================
-use common::error::*;
-use document::Document;
-use tbox::Tbox;
+use crate::common::error::*;
+use crate::document::Document;
+use crate::tbox::Tbox;
 
 // ======================================================================
 // LaTeXML Object

@@ -2,21 +2,21 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use common::error::*;
-use common::font;
-use common::font::Font;
-use common::store::Stored;
-use definition::constructor::{Constructor, ConstructorOptions};
-use definition::expandable::Expandable;
-use definition::Definition;
-use gullet::Gullet;
-use list::List;
-use mouth::{Mouth, MouthOptions};
-use state::{Scope, State};
-use tbox::*;
-use token::{Catcode, Token};
-use tokens::Tokens;
-use {Digested, TexMode};
+use crate::common::error::*;
+use crate::common::font;
+use crate::common::font::Font;
+use crate::common::store::Stored;
+use crate::definition::constructor::{Constructor, ConstructorOptions};
+use crate::definition::expandable::Expandable;
+use crate::definition::Definition;
+use crate::gullet::Gullet;
+use crate::list::List;
+use crate::mouth::{Mouth, MouthOptions};
+use crate::state::{Scope, State};
+use crate::tbox::*;
+use crate::token::{Catcode, Token};
+use crate::tokens::Tokens;
+use crate::{Digested, TexMode};
 
 static MAXSTACK: usize = 200;
 

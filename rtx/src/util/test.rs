@@ -10,7 +10,7 @@ use rtx_core::document::Document;
 use rtx_core::state::State;
 use rtx_core::{Core, CoreOptions};
 
-use core::DigestionAPI;
+use crate::core::DigestionAPI;
 
 pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) {
   assert!(rtx_core::util::logger::init(log::LevelFilter::Info).is_ok());

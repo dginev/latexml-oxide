@@ -3,14 +3,14 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use common::error::*;
-use common::font::Font;
-use common::store::Stored;
-use document::Document;
-use state::State;
-use token::{Catcode, Token};
-use tokens::Tokens;
-use {BoxOps, Digested};
+use crate::common::error::*;
+use crate::common::font::Font;
+use crate::common::store::Stored;
+use crate::document::Document;
+use crate::state::State;
+use crate::token::{Catcode, Token};
+use crate::tokens::Tokens;
+use crate::{BoxOps, Digested};
 
 /// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
 #[derive(Debug, Clone, PartialEq)]
