@@ -119,7 +119,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
           break;
         }
       }
-      
+
       if !boxes.is_empty() {
         break;
       }

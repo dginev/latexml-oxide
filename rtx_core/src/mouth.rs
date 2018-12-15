@@ -409,7 +409,7 @@ impl Mouth {
         },
       }
     }
-    line = line.trim_right().to_owned(); // Is this right?
+    line = line.trim_end().to_owned(); // Is this right?
     if line.is_empty() {
       None
     } else {

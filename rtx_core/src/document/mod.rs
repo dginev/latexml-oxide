@@ -1620,7 +1620,7 @@ impl Document {
       match first_child.get_type() {
         Some(NodeType::TextNode) => {
           let content = first_child.get_content();
-          let trimmed_content = content.trim_left();
+          let trimmed_content = content.trim_start();
           if !content.is_empty() && (trimmed_content != content) {
             first_child.set_content(trimmed_content)?;
           }
@@ -1637,7 +1637,7 @@ impl Document {
       match last_child.get_type() {
         Some(NodeType::TextNode) => {
           let content = last_child.get_content();
-          let trimmed_content = content.trim_right();
+          let trimmed_content = content.trim_end();
           if !content.is_empty() && (trimmed_content != content) {
             last_child.set_content(trimmed_content)?;
           }

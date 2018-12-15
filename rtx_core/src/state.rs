@@ -477,10 +477,12 @@ impl State {
     let value = value.into();
     let scope = match scope_opt {
       Some(s) => s,
-      None => if let Some(&true) = self.prefixes.get("global") {
-        Scope::Global
-      } else {
-        Scope::Local
+      None => {
+        if let Some(&true) = self.prefixes.get("global") {
+          Scope::Global
+        } else {
+          Scope::Local
+        }
       },
     };
 

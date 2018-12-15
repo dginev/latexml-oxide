@@ -1451,7 +1451,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! DefEnvironmentWO (
     ($proto_raw:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
     use rtx_core::util::text::*;
-    let mut proto = $proto_raw.to_string().trim_left().to_string();
+    let mut proto = $proto_raw.to_string().trim_start().to_string();
     let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace));
 
     let compiled_replacement;
@@ -1467,10 +1467,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! DefEnvironmentCWO (
     ($proto_raw:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
     use rtx_core::util::text::*;
-    let mut proto = $proto_raw.to_string().trim_left().to_string();
+    let mut proto = $proto_raw.to_string().trim_start().to_string();
     let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace));
     // TODO: What do we do with param lists?
-    //let paramlist_str = proto.trim_left().to_string();
+    //let paramlist_str = proto.trim_start().to_string();
     DefEnvironmentI!(name, None, $compiled_replacement, $compiled_replacement, $options, $state_arg);
   }));
 

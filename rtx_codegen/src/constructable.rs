@@ -345,7 +345,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
 fn translate_string(mut text: &mut String) -> quote::Tokens {
   // println!("-- ts before: {:?}", text);
   let mut values: Vec<quote::Tokens> = Vec::new();
-  *text = text.trim_left().to_owned();
+  *text = text.trim_start().to_owned();
   if text.starts_with('\'') || text.starts_with('"') {
     let quote = text.remove(0);
     while !text.is_empty() && !text.starts_with(quote) {
@@ -411,7 +411,7 @@ fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
   // Parse a set of attribute value pairs from a constructor pattern,
   // substituting argument and property values from the whatsit.
   let mut avs: Vec<quote::Tokens> = Vec::new();
-  *text = text.trim_left().to_owned();
+  *text = text.trim_start().to_owned();
   while !text.is_empty() {
     let mut is_match = false;
     let mut key = String::new();
@@ -448,7 +448,7 @@ fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
     if !is_match {
       break;
     }
-    *text = text.trim_left().to_owned();
+    *text = text.trim_start().to_owned();
   }
   avs
 }
@@ -473,7 +473,7 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
     while !LEAD_CPAREN_RE.is_match(text) {
       let quoted_follows;
       {
-        let ttl = text.trim_left(); // need an immutable borrow of text, so wrapping in a block
+        let ttl = text.trim_start(); // need an immutable borrow of text, so wrapping in a block
         quoted_follows = ttl.starts_with('\'') || ttl.starts_with('\"');
       }
       let arg = if quoted_follows {
@@ -493,7 +493,7 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
         break;
       }
     }
-    *text = text.trim_left().to_owned();
+    *text = text.trim_start().to_owned();
     if text.starts_with(')') {
       text.remove(0);
     } else {

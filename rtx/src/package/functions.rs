@@ -319,7 +319,7 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
     //   "Definition prototype doesn't have proper control sequence: \"prototype\""); }
     proto.to_string()
   };
-  final_proto = final_proto.trim_left().to_string();
+  final_proto = final_proto.trim_start().to_string();
   let paramlist = parse_parameters(final_proto, &cs, state)?;
   Ok((cs, paramlist))
 }
