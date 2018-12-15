@@ -44,7 +44,7 @@ fn main() {
   // the right arguments can be passed in so that the response is either captured - and
   // passed, or printed internally by the logger info!("{:?}\n\n", r.log);
   if let Some(xml) = response.result {
-    info!("{}", xml);
+    println!("{}",xml);
   }
 
   // Normal exit
