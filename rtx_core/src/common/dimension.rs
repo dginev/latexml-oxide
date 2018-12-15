@@ -4,5 +4,5 @@ pub struct Dimension {
 }
 
 impl Dimension {
-  pub fn value_of(&self) -> i32 { self.number }
+  pub fn value_of(self) -> i32 { self.number }
 }

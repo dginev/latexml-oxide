@@ -122,7 +122,7 @@ impl Gullet {
   // Not really 100% sure how this is supposed to work
   // See TeX Ch 20, p216 regarding noexpand, \edef with token list registers, etc.
   // Solution: Duplicate param tokens, stick NOTEXPANDED infront of expandable tokens.
-  pub fn neutralize_tokens(&mut self, tokens: &Vec<Token>, state: &mut State) -> Vec<Token> {
+  pub fn neutralize_tokens(&mut self, tokens: &[Token], state: &mut State) -> Vec<Token> {
     let mut result = Vec::new();
     for token in tokens.iter() {
       match token.get_catcode() {
@@ -599,7 +599,7 @@ impl Gullet {
 
   /// Match the input against one of the Token or Tokens in @choices; return the matching one or
   /// undef.
-  pub fn read_match(&mut self, choices: &Vec<Token>, state: &mut State) -> Result<Option<Token>> {
+  pub fn read_match(&mut self, choices: &[Token], state: &mut State) -> Result<Option<Token>> {
     for choice in choices {
       let mut to_match: Vec<Token> = choice.unlist().into_iter().rev().collect();
       let mut matched = Vec::new();
@@ -711,7 +711,7 @@ impl Gullet {
           }
           let s_char = s.chars().next().unwrap();
           let s_char = s_char as u8;
-          let s_char = s_char as i32;
+          let s_char = i32::from(s_char);
           Ok(Some(Number::new(s_char))) //  Only a character token!!! NOT expanded!!!!
         } else {
           self.unread(&Tokens!(token)); // Unread

@@ -9,9 +9,9 @@ pub struct MuGlue {
 }
 
 impl Glue {
-  pub fn value_of(&self) -> i32 { self.number }
+  pub fn value_of(self) -> i32 { self.number }
 }
 
 impl MuGlue {
-  pub fn value_of(&self) -> i32 { self.number }
+  pub fn value_of(self) -> i32 { self.number }
 }

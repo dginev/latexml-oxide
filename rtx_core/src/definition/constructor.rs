@@ -137,10 +137,10 @@ impl Definition for Constructor {
 
     // Compute any extra Whatsit properties (many end up as element attributes)
 
-    let mut props = (self.options.properties)(stomach, &args, state)?;
-    // for (key, value) in props.iter() {
+    let mut properties = (self.options.properties)(stomach, &args, state)?;
+    // for (key, value) in properties.iter() {
     //   if (ref $value eq 'CODE') {
-    //     $props{$key} = &$value($stomach, @args); } }
+    //     $properties{$key} = &$value($stomach, @args); } }
 
     let this_font = match self.options.font {
       Some(ref f) => f.clone(),
@@ -150,18 +150,18 @@ impl Definition for Constructor {
       },
     };
 
-    props
+    properties
       .entry(s!("font"))
-      .or_insert(Stored::Font(Rc::new(this_font)));
-    // $props{locator} = $stomach->getGullet->getMouth->getLocator unless defined $props{locator};
-    props.entry(s!("isMath")).or_insert(Stored::Bool(ismath));
-    // $props{level}   = $stomach->getBoxingLevel;
+      .or_insert_with(|| Stored::Font(Rc::new(this_font)));
+    // $properties{locator} = $stomach->getGullet->getMouth->getLocator unless defined $properties{locator};
+    properties.entry(s!("isMath")).or_insert_with(|| Stored::Bool(ismath));
+    // $properties{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.
     let mut whatsit = Whatsit {
       definition: caller,
-      args: args,
-      properties: props,
+      args,
+      properties,
     };
 
     // Call any 'After' code.

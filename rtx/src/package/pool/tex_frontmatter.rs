@@ -218,7 +218,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       let mut sorted_keys : Vec<&String> = formatters.keys().collect();
       sorted_keys.sort();
       for role in sorted_keys.iter() {
-        let formatter = formatters.get(*role).unwrap();
+        let formatter = &formatters[*role];
 
         tags.push(Invocation!(T_CS!("\\lx@tag@intags"), 
           vec![

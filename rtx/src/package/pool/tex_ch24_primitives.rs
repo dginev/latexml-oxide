@@ -42,7 +42,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
         font: None,
       };
 
-      Ok(vec![Digested::List(return_list)])
+      Ok(vec![Digested::List(Box::new(return_list))])
     })
   );
 

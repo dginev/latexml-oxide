@@ -309,7 +309,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
       if let Some(eq_index) = replacement.find('=') {
         is_match = true;
         // println!("-- Attribute");
-        let consumed = replacement[0..1 + eq_index].to_owned();
+        let consumed = replacement[0..=eq_index].to_owned();
         replacement = replacement[consumed.len()..].to_owned();
       }
     }

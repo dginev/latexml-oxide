@@ -766,8 +766,7 @@ impl Document {
           noindent || !children
             .iter()
             .filter(|e| e.get_type() == Some(NodeType::TextNode))
-            .collect::<Vec<&Node>>()
-            .is_empty()
+            .next().is_none()
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = self.get_node_qname(node, state);
@@ -870,12 +869,12 @@ impl Document {
 
     let font = match font_opt {
       Some(f) => f.clone(),
-      None => match &self.box_to_absorb {
-        &Some(ref tbox) => match tbox.get_font() {
+      None => match self.box_to_absorb {
+        Some(ref tbox) => match tbox.get_font() {
           Some(f) => f.into_owned(),
           None => Font::math_default(), // should never happen?
         },
-        &None => Font::math_default(), // should never happen?
+        None => Font::math_default(), // should never happen?
       },
     };
     attributes.remove("mode");

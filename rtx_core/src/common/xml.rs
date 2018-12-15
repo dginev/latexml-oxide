@@ -2,8 +2,8 @@ use libxml::tree::{Document, Node, NodeType};
 use libxml::xpath::Context;
 use std::collections::HashMap;
 
-pub const XMLNS_NS: &'static str = "http://www.w3.org/2000/xmlns/";
-pub const XML_NS: &'static str = "http://www.w3.org/XML/1998/namespace";
+pub const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
+pub const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 
 pub struct XPath {
   context: Context,
@@ -13,7 +13,7 @@ pub struct XPath {
 impl XPath {
   pub fn new(doc: &Document, _mappings: HashMap<String, String>) -> Self {
     let context = Context::new(doc).unwrap();
-    XPath { context: context }
+    XPath { context }
   }
 
   pub fn register_namespace(&mut self, codeprefix: &str, namespace: &str) {

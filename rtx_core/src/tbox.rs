@@ -113,7 +113,7 @@ impl BoxOps for Tbox {
       if mode == "math" {
         document.insert_math_token(
           text,
-          Stored::to_string_hash(&self.properties),
+          Stored::cast_to_string_hash(&self.properties),
           Some(&self.font),
           state,
         )?;

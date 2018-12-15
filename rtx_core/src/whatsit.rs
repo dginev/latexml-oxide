@@ -79,7 +79,7 @@ impl Whatsit {
     }
     self
       .properties
-      .insert(s!("body"), Digested::List(list).into());
+      .insert(s!("body"), Digested::List(Box::new(list)).into());
     if let Some(Digested::Whatsit(ref trailer)) = trailer_opt {
       // And copy any otherwise undefined properties from the trailer
       for (prop, value) in trailer.borrow().get_properties() {
@@ -139,7 +139,7 @@ impl BoxOps for Whatsit {
 
   fn get_body(&self) -> Option<Digested> {
     match self.properties.get("body") {
-      Some(&Stored::Digested(ref body)) => Some(body.clone()),
+      Some(&Stored::Digested(ref body)) => Some(*body.clone()),
       _ => None,
     }
   }

@@ -1082,7 +1082,7 @@ pub fn ref_step_counter(
   state.activate_scope(&scope);
 
   Ok(map!(
-    "tags" => Stored::Digested(tags),
+    "tags" => Stored::Digested(Box::new(tags)),
     "id" => Stored::String(id)
   ))
 }

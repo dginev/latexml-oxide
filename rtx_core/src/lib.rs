@@ -98,8 +98,8 @@ impl Default for Core {
     state.stomach = stomach.clone();
     Core {
       preload: Vec::new(),
-      stomach: stomach,
-      state: state,
+      stomach,
+      state,
     }
   }
 }
@@ -167,7 +167,7 @@ pub enum TexMode {
 pub enum Digested {
   TBox(Rc<Tbox>),
   Whatsit(Rc<RefCell<Whatsit>>),
-  List(List),
+  List(Box<List>),
   Postponed(Rc<Tokens>),
 }
 impl fmt::Debug for Digested {

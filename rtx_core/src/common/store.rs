@@ -79,7 +79,7 @@ pub enum Stored {
   IfFrame(Rc<RefCell<IfFrame>>),
   /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Rc<Constructor>),
-  Digested(crate::Digested),
+  Digested(Box<crate::Digested>),
   Parameter(Parameter),
   Font(Rc<Font>),
   Ligature(Box<Ligature>),
@@ -129,7 +129,7 @@ impl fmt::Display for Stored {
 }
 
 impl Stored {
-  pub fn to_string_hash(in_map: &HashMap<String, Stored>) -> HashMap<String, String> {
+  pub fn cast_to_string_hash(in_map: &HashMap<String, Stored>) -> HashMap<String, String> {
     let mut out_map: HashMap<String, String> = HashMap::new();
     for (key, val) in in_map.iter() {
       out_map.insert(key.to_owned(), val.to_string());
@@ -219,7 +219,11 @@ impl From<Constructor> for Stored {
 }
 
 impl From<crate::Digested> for Stored {
-  fn from(value: crate::Digested) -> Self { Stored::Digested(value) }
+  fn from(value: crate::Digested) -> Self { Box::new(value).into() }
+}
+
+impl From<Box<crate::Digested>> for Stored {
+  fn from(value: Box<crate::Digested>) -> Self { Stored::Digested(value) }
 }
 
 impl From<Parameter> for Stored {
@@ -411,10 +415,10 @@ impl<'a> From<&'a Stored> for Option<&'a Vec<Option<char>>> {
 impl<'a> From<&'a Stored> for Option<RegisterValue> {
   fn from(value: &'a Stored) -> Option<RegisterValue> {
     match value {
-      Stored::Number(v) => Some(RegisterValue::Number(v.clone())),
-      Stored::Dimension(v) => Some(RegisterValue::Dimension(v.clone())),
-      Stored::Glue(v) => Some(RegisterValue::Glue(v.clone())),
-      Stored::MuGlue(v) => Some(RegisterValue::MuGlue(v.clone())),
+      Stored::Number(v) => Some(RegisterValue::Number(*v)),
+      Stored::Dimension(v) => Some(RegisterValue::Dimension(*v)),
+      Stored::Glue(v) => Some(RegisterValue::Glue(*v)),
+      Stored::MuGlue(v) => Some(RegisterValue::MuGlue(*v)),
       Stored::Token(v) => Some(RegisterValue::Token(v.clone())),
       Stored::Tokens(v) => Some(RegisterValue::Tokens(v.clone())),
       _ => None,
@@ -425,7 +429,7 @@ impl<'a> From<&'a Stored> for Option<RegisterValue> {
 impl<'a> From<&'a Stored> for Option<crate::Digested> {
   fn from(value: &'a Stored) -> Option<crate::Digested> {
     match value {
-      Stored::Digested(digested) => Some((*digested).clone()),
+      Stored::Digested(digested) => Some((**digested).clone()),
       _ => None,
     }
   }

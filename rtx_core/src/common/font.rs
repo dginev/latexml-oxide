@@ -226,17 +226,17 @@ impl Font {
       return new;
     } // ?
     let deffamily = if self.forcefamily.unwrap_or(false) {
-      self.family.clone().unwrap_or(DEFFAMILY.into())
+      self.family.clone().unwrap_or_else(|| DEFFAMILY.into())
     } else {
       DEFFAMILY.into()
     };
     let defseries = if self.forceseries.unwrap_or(false) {
-      self.series.clone().unwrap_or(DEFSERIES.into())
+      self.series.clone().unwrap_or_else(|| DEFSERIES.into())
     } else {
       DEFSERIES.into()
     };
     let defshape = if self.forceshape.unwrap_or(false) {
-      self.shape.clone().unwrap_or(DEFSERIES.into())
+      self.shape.clone().unwrap_or_else(|| DEFSERIES.into())
     } else {
       DEFSHAPE.into()
     };
@@ -492,15 +492,13 @@ pub fn decode(
     } else {
       Some(code.into())
     }
-  } else {
-    if let Some(map) = map {
-      match map.get(code as usize) {
-        None => None,
-        Some(c) => *c,
-      }
-    } else {
-      None
+  } else if let Some(map) = map {
+    match map.get(code as usize) {
+      None => None,
+      Some(c) => *c,
     }
+  } else {
+    None
   }
 }
 
@@ -562,13 +560,11 @@ pub fn decode_string(
       } else {
         result_string.push(c)
       }
-    } else {
-      if let Some(map) = map {
-        let code = c as u8;
-        if let Some(mapc) = map.get(code as usize) {
-          if let Some(mapc_val) = mapc {
-            result_string.push(*mapc_val);
-          }
+    } else if let Some(map) = map {
+      let code = c as u8;
+      if let Some(mapc) = map.get(code as usize) {
+        if let Some(mapc_val) = mapc {
+          result_string.push(*mapc_val);
         }
       }
     }

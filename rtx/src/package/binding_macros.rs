@@ -225,7 +225,7 @@ macro_rules! prop_digested {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
       Some(Stored::VecDigested(vd)) => vd.clone(),
-      Some(Stored::Digested(d)) => vec![(*d).clone()],
+      Some(Stored::Digested(d)) => vec![(**d).clone()],
       Some(Stored::String(s)) => vec![s.into()],
       _ => Vec::new(),
     }
@@ -257,7 +257,7 @@ macro_rules! prop_whatsit {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
       // TODO: Cloning here ought to be terribly inefficient and should be avoided. How?
-      Some(&Stored::Digested(ref rc)) => (*rc).clone(),
+      Some(&Stored::Digested(ref rc)) => (**rc).clone(),
       _ => Digested::Whatsit(Rc::new(RefCell::new(Whatsit::default()))),
     };
   };

@@ -91,5 +91,5 @@ impl From<List> for Result<Vec<Digested>> {
 }
 
 impl From<List> for Result<Digested> {
-  fn from(list: List) -> Result<Digested> { Ok(Digested::List(list)) }
+  fn from(list: List) -> Result<Digested> { Ok(Digested::List(Box::new(list))) }
 }

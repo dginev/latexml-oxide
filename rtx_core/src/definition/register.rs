@@ -68,7 +68,7 @@ impl Default for RegisterValue {
 impl<'a> From<&'a RegisterValue> for Number {
   fn from(v: &RegisterValue) -> Number {
     match v {
-      RegisterValue::Number(n) => n.clone(),
+      RegisterValue::Number(n) => *n,
       RegisterValue::Dimension(other) => Number::new(other.value_of()),
       RegisterValue::Glue(other) => Number::new(other.value_of()),
       RegisterValue::MuGlue(other) => Number::new(other.value_of()),
@@ -203,11 +203,10 @@ impl Definition for RefCell<Register> {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Tokens>> {
-    let args = match self.borrow().parameters {
+    match self.borrow().parameters {
       None => Ok(Vec::new()),
       Some(ref params) => params.read_arguments(gullet, self, state),
-    };
-    args
+    }
   }
 
   fn do_absorbtion(

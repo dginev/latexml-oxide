@@ -474,7 +474,6 @@ impl State {
     scope_opt: Option<Scope>,
   )
   {
-    let value = value.into();
     let scope = match scope_opt {
       Some(s) => s,
       None => {
@@ -512,7 +511,7 @@ impl State {
         // Undo the bindings, if `key` was bound in this frame
         let state_table = self.table_mut(table_name);
         if let Some(defs) = state_table.get_mut(key) {
-          for _ in 1..undo_count + 1 {
+          for _ in 1..=undo_count {
             defs.pop_front();
           }
         }
@@ -843,7 +842,7 @@ impl State {
       Some(n) => n,
     };
     let mut p = 0;
-    for f in 0..frame + 1 {
+    for f in 0..=frame {
       let val_opt = self
         .undo
         .get(f)
@@ -903,7 +902,7 @@ impl State {
   /// Get the `Meaning' of a token.  For active control sequence's
   /// this may give the definition object (if defined) or another token (if \let) or undef
   /// Any other token is returned as is.
-  pub fn lookup_meaning<'t, 'm>(&'m mut self, token: &'t Token) -> Option<Stored> {
+  pub fn lookup_meaning(&mut self, token: &Token) -> Option<Stored> {
     if token.get_catcode().is_active_or_cs() && !token.get_string().is_empty() {
       match self.meaning.get(&token.get_cs_name().to_owned()) {
         Some(entry) => match entry.front() {
@@ -1102,7 +1101,7 @@ impl State {
         for (key, undo_count) in undo_table.iter() {
           // Typically only 1 value to shift off the table, unless scopes have been activated.
           let name_table = self.table_mut(table_name).get_mut(key).unwrap();
-          for _ in 1..*undo_count + 1 {
+          for _ in 1..=*undo_count {
             name_table.pop_front();
           }
         }

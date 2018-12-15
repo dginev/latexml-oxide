@@ -169,7 +169,7 @@ impl Conditional {
       start: gullet.get_locator(),
       parsing: true,
       elses: false,
-      ifid: ifid,
+      ifid,
     }));
     state.if_frame = Some(if_frame.clone());
     state.unshift_value("if_stack", vec![if_frame.clone()]);
