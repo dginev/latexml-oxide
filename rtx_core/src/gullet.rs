@@ -167,29 +167,21 @@ impl Gullet {
             },
           }
         }
-        if next_token.is_some() {
-          return next_token;
-        };
-
-        loop {
-          match runtime.mouth.read_token(state) {
-            None => break,
-            Some(token) => {
-              match token.code {
-                Catcode::COMMENT => self.pending_comments.push_back(token),
-                Catcode::MARKER => {
-                  // TODO:
-                  // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
-                },
-                _ => {
-                  next_token = Some(token);
-                  break;
-                },
-              };
-            },
+        if next_token.is_none() {
+          while let Some(token) = runtime.mouth.read_token(state) {
+            match token.code {
+              Catcode::COMMENT => self.pending_comments.push_back(token),
+              Catcode::MARKER => {
+                // TODO:
+                // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
+              },
+              _ => {
+                next_token = Some(token);
+                break;
+              },
+            };
           }
         }
-
         next_token
       },
     }
@@ -298,8 +290,10 @@ impl Gullet {
           None => {
             return Ok(None);
           },
-          Some(ref mut runtime) => for expansion_token in expansion.unlist().into_iter().rev() {
-            runtime.pushback.push_front(expansion_token);
+          Some(ref mut runtime) => {
+            for expansion_token in expansion.unlist().into_iter().rev() {
+              runtime.pushback.push_front(expansion_token);
+            }
           },
         };
       }
