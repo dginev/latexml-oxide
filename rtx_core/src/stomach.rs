@@ -53,27 +53,23 @@ impl<'t> Stomach {
     let init_depth = self.boxing.len();
     let mut box_list: Vec<Digested> = Vec::new();
 
-    loop {
-      match self.get_gullet_mut().read_x_token(true, true, state)? {
-        // try reading a executable token
-        None => {
-          // Wer ran out, terminate,
-          // and add a Dummy `trailer' if none explicit.
-          box_list.push(Digested::TBox(Rc::new(Tbox::default())));
-          // info!(target:"digest_next_body","no_token");
-          break;
-        },
-        Some(token) => {
-          // info!(target:"stomach:digest_next:invoke_token","{:?}", token);
-          box_list.extend(self.invoke_token(&token, state)?);
-          // TODO:
-          // if terminal.is_some() && Equals(token, terminal)
-          if init_depth > self.boxing.len() {
-            // info!(target:"digest_next_body","init_depth");
-            break;
-          }
-        },
-      };
+    // try reading a executable token
+    while let Some(token) = self.get_gullet_mut().read_x_token(true, true, state)? {
+      // info!(target:"stomach:digest_next:invoke_token","{:?}", token);
+      box_list.extend(self.invoke_token(&token, state)?);
+      // TODO:
+      // if terminal.is_some() && Equals(token, terminal)
+      if init_depth > self.boxing.len() {
+        // info!(target:"digest_next_body","init_depth");
+        break;
+      }
+    }
+
+    // We ran out, terminate,
+    // and add a Dummy `trailer' if none explicit.
+    if init_depth <= self.boxing.len() {
+      box_list.push(Digested::TBox(Rc::new(Tbox::default())));
+      // info!(target:"digest_next_body","no_token");
     }
 
     // Warn('expected', $terminal, self, "body should have ended with '" . ToString($terminal) .
@@ -224,8 +220,7 @@ impl<'t> Stomach {
           } else {
             error!(
               target: &s!("misdefined:{:?}", &token),
-              "The token {:?} should never reach Stomach!",
-              token
+              "The token {:?} should never reach Stomach!", token
             );
             if let Some(digested) = self.invoke_token_simple(meaning, state)? {
               result.push(digested);
@@ -317,8 +312,7 @@ impl<'t> Stomach {
       let name = cs.replace("\\if", "");
       error!(
         target: &s!("undefined:{}", cs),
-        "The token {:?} is not defined. Defining it now as with \\newif",
-        cs
+        "The token {:?} is not defined. Defining it now as with \\newif", cs
       );
       // install stub definitions for new conditional
       let cs_clone = cs.clone();
@@ -352,8 +346,7 @@ impl<'t> Stomach {
     } else {
       error!(
         target: &s!("undefined:{}", cs),
-        "The token {:?} is not defined. Defining it now as <ltx:ERROR/>",
-        cs
+        "The token {:?} is not defined. Defining it now as <ltx:ERROR/>", cs
       );
       let closure_cs = cs.clone();
       state.install_definition(
@@ -657,14 +650,12 @@ impl<'t> Stomach {
       if let Some(ref token) = state.current_token {
         error!(
           target: &s!("unexpected:{}", token),
-          "Attempt to end mode {}",
-          mode
+          "Attempt to end mode {}", mode
         ); // self.currentFrameMessage);
       } else {
         error!(
           target: &s!("unexpected:mode"),
-          "Attempt to end mode {}",
-          mode
+          "Attempt to end mode {}", mode
         );
       }
     } else {
