@@ -3,60 +3,158 @@ use crate::package::*;
 pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   SetupBindingMacros!(outer_state);
 
-  // TODO
-  DefMacro!("\\normalfont", "");
-
+  //**********************************************************************
+  // C.15 Font Selection
+  //**********************************************************************
   //======================================================================
-  // Hair
-  DefPrimitive!("\\makeatletter", sub[stomach, whatsit, state] { state.assign_catcode('@', Catcode::LETTER, Some(Scope::Local)); Ok(vec![]) });
-  DefPrimitive!("\\makeatother",  sub[stomach, whatsit, state] { state.assign_catcode('@', Catcode::OTHER, Some(Scope::Local)); Ok(vec![]) });
+  // C.15.1 Changing the Type Style
+  //======================================================================
+  // Text styles.
 
-  //**********************************************************************
-  // Sundry (is this ams ?)
-  DefMacro!("\\textprime", "\u{00B4}"); // ACUTE ACCENT
+  DefMacro!("\\rmdefault", "cmr");
+  DefMacro!("\\sfdefault", "cmss");
+  DefMacro!("\\ttdefault", "cmtt");
+  DefMacro!("\\bfdefault", "bx");
+  DefMacro!("\\mddefault", "m");
+  DefMacro!("\\itdefault", "it");
+  DefMacro!("\\sldefault", "sl");
+  DefMacro!("\\scdefault", "sc");
+  DefMacro!("\\updefault", "n");
+  DefMacro!("\\encodingdefault", "OT1");
+  DefMacro!("\\familydefault", "\\rmdefault");
+  DefMacro!("\\seriesdefault", "\\mddefault");
+  DefMacro!("\\shapedefault", "\\updefault");
 
-  Let!("\\endgraf", "\\par");
-  Let!("\\endline", "\\cr");
-  //**********************************************************************
-  // Should be defined in each (or many) package, but it"s not going to
-  // get set correctly or maintained, so...
-  DefMacro!("\\fileversion", "");
-  DefMacro!("\\filedate", "");
+  Let!("\\mediumseries", "\\mdseries");
+  Let!("\\normalshape", "\\upshape");
 
-  // Ultimately these may be overridden by babel, or otherwise,
-  // various of these are defined in various places by different classes.
-  DefMacro!("\\chaptername", "Chapter");
-  DefMacro!("\\partname", "Part");
-  // The rest of these are defined in some classes, but not most.
-  //DefMacroI("\sectionname",       undef, "Section");
-  //DefMacroI("\subsectionname",    undef, "Subsection");
-  //DefMacroI("\subsubsectionname", undef, "Subsubsection");
-  //DefMacroI("\paragraphname",     undef, "Paragraph");
-  //DefMacroI("\subparagraphname",  undef, "Subparagraph");
+  // ? DefMacro("\\f@encoding','cm');
+  DefMacro!("\\f@family", "cm");
+  DefMacro!("\\f@series", "");
+  DefMacro!("\\f@shape", "");
+  DefMacro!("\\f@size", "");
 
-  DefMacro!("\\appendixname", "Appendix");
-  // These aren"t defined in LaTeX,
-  // these definitions will give us more meaningful typerefnum"s
+  // These do NOT immediately effect the font!
+  DefMacro!("\\fontfamily{}", "\\edef\\f@family{#1}");
+  DefMacro!("\\fontseries{}", "\\edef\\f@series{#1}");
+  DefMacro!("\\fontshape{}", "\\edef\\f@shape{#1}");
+
+  // TODO:
+  // # For fonts not allowed in math!!!
+  DefPrimitive!("\\not@math@alphabet@@ {}", sub[stomach, args, inner_state] {
+    if inner_state.lookup_bool("IN_MATH") {
+      let c = args[1].to_string();
+      warn!(target: &s!("unexpected:{}", c), "Command {:?} invalid in math mode", c);
+    }
+    Ok(vec![])
+  });
+
+  // These DO immediately effect the font!
   DefMacro!(
-    "\\sectiontyperefname",
-    "\\lx@sectionsign\\lx@ignorehardspaces"
+    "\\mdseries",
+    "\\not@math@alphabet@@{\\mddefault}\\fontseries{\\mddefault}\\selectfont"
   );
   DefMacro!(
-    "\\subsectiontyperefname",
-    "\\lx@sectionsign\\lx@ignorehardspaces"
+    "\\bfseries",
+    "\\not@math@alphabet@@{\\bfdefault}\\fontseries{\\bfdefault}\\selectfont"
+  );
+
+  DefMacro!(
+    "\\rmfamily",
+    "\\not@math@alphabet@@{\\rmdefault}\\fontfamily{\\rmdefault}\\selectfont"
   );
   DefMacro!(
-    "\\subsubsectiontyperefname",
-    "\\lx@sectionsign\\lx@ignorehardspaces"
+    "\\sffamily",
+    "\\not@math@alphabet@@{\\sfdefault}\\fontfamily{\\sfdefault}\\selectfont"
   );
   DefMacro!(
-    "\\paragraphtyperefname",
-    "\\lx@paragraphsign\\lx@ignorehardspaces"
+    "\\ttfamily",
+    "\\not@math@alphabet@@{\\ttdefault}\\fontfamily{\\ttdefault}\\selectfont"
+  );
+
+  DefMacro!(
+    "\\upshape",
+    "\\not@math@alphabet@@{\\updefault}\\fontshape{\\updefault}\\selectfont"
   );
   DefMacro!(
-    "\\subparagraphtyperefname",
-    "\\lx@paragraphsign\\lx@ignorehardspaces"
+    "\\itshape",
+    "\\not@math@alphabet@@{\\itdefault}\\fontshape{\\itdefault}\\selectfont"
   );
+  DefMacro!(
+    "\\slshape",
+    "\\not@math@alphabet@@{\\sldefault}\\fontshape{\\sldefault}\\selectfont"
+  );
+  DefMacro!(
+    "\\scshape",
+    "\\not@math@alphabet@@{\\scdefault}\\fontshape{\\scdefault}\\selectfont"
+  );
+
+  DefMacro!(
+    "\\normalfont",
+    "\\fontfamily{\\rmdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
+  );
+  DefMacro!(
+    "\\verbatim@font",
+    "\\fontfamily{\\ttdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
+  );
+
+  Let!("\\reset@font", "\\normalfont");
+
+  DefPrimitive!("\\selectfont", sub[stomach, args, inner_state] {
+    let mut gullet = stomach.get_gullet_mut();
+      let family = Expand!(T_CS!("\\f@family"), gullet, inner_state)?.to_string();
+      let series = Expand!(T_CS!("\\f@series"),gullet,  inner_state)?.to_string();
+      let shape  = Expand!(T_CS!("\\f@shape"), gullet, inner_state)?.to_string();
+      // TODO !!!
+      // if (let sh = LaTeXML::Common::Font::lookupFontFamily(family)) { MergeFont(%$sh); }
+      // else { info!("unexpected", family, $_[0], "Unrecognized font family '$family'."); }
+      // if (let sh = LaTeXML::Common::Font::lookupFontSeries($series)) { MergeFont(%$sh); }
+      // else { info!("unexpected", series, $_[0], "Unrecognized font series '$series'."); }
+      // if (let sh = LaTeXML::Common::Font::lookupFontShape($shape)) { MergeFont(%$sh); }
+      // else { info!("unexpected", shape, $_[0], "Unrecognized font shape '$shape'."); }
+    Ok(vec![])
+  });
+
+  DefMacro!(
+    "\\usefont{}{}{}{}",
+    "\\fontencoding{#1}\\fontfamily{#2}\\fontseries{#3}\\fontshape{#4}\\selectfont"
+  );
+
+// // TODO:
+// // If these series or shapes appear in math, they revert it to roman, medium, upright (?)
+// DefConstructor!("\\textmd@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+//   bounded      => 1, font => { series => "medium" }, alias => "\\textmd",
+//   beforeDigest => sub { DefMacro("\\f@series", "m"); });
+// DefConstructor!("\\textbf@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
+//   bounded      => 1, font => { series => "bold" }, alias => "\\textbf",
+//   beforeDigest => sub { DefMacro("\\f@series", "b"); });
+// DefConstructor!("\\textrm@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
+//   bounded      => 1, font => { family => "serif" }, alias => "\\textrm",
+//   beforeDigest => sub { DefMacro("\\f@family", "cm"); });
+// DefConstructor!("\\textsf@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
+//   bounded      => 1, font => { family => "sansserif" }, alias => "\\textsf",
+//   beforeDigest => sub { DefMacro("\\f@family", "cmss"); });
+// DefConstructor!("\\texttt@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
+//   bounded      => 1, font => { family => "typewriter" }, alias => "\\texttt",
+//   beforeDigest => sub { DefMacro("\\f@family", "cmtt"); });
+
+// DefConstructor!("\\textup@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
+//   bounded      => 1, font => { shape => "upright" }, alias => "\\textup",
+//   beforeDigest => sub { DefMacro("\\f@shape", ""); });
+// DefConstructor!("\\textit@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
+//   bounded      => 1, font => { shape => "italic" }, alias => "\\textit",
+//   beforeDigest => sub { DefMacro("\\f@shape", "i"); });
+// DefConstructor!("\\textsl@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
+//   bounded      => 1, font => { shape => "slanted" }, alias => "\\textsl",
+//   beforeDigest => sub { DefMacro("\\f@shape", "sl"); });
+// DefConstructor!("\\textsc@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
+//   bounded      => 1, font => { shape => "smallcaps" }, alias => "\\textsc",
+//   beforeDigest => sub { DefMacro("\\f@shape", "sc"); });
+// DefConstructor!("\\textnormal@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
+//   bounded => 1, font => { family => "serif", series => "medium", shape => "upright" }, alias => "\\textnormal",
+//   beforeDigest => sub { DefMacro("\\f@family", "cmtt");
+//     DefMacro("\\f@series", "m");
+//     DefMacro("\\f@shape",  "n"); });
 
   // These really should be robust! which is a source of expand timing issues!
   DefMacro!("\\textmd{}",     "\\ifmmode\\textmd@math{#1}\\else{\\mdseries #1}\\fi",       protected => 1);
@@ -69,9 +167,6 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   DefMacro!("\\textsl{}",     "\\ifmmode\\textsl@math{#1}\\else{\\slshape #1}\\fi",        protected => 1);
   DefMacro!("\\textsc{}",     "\\ifmmode\\textsc@math{#1}\\else{\\scshape #1}\\fi",        protected => 1);
   DefMacro!("\\textnormal{}", "\\ifmmode\\textnormal@math{#1}\\else{\\normalfont #1}\\fi", protected => 1);
-
-  // TODO:
-  DefMacroI!(T_CS!("\\ttfamily"), None, Tokens!());
 
   Ok(())
 }

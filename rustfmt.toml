@@ -7,3 +7,4 @@ closure_block_indent_threshold = 0
 fn_return_indent = "WithWhereClause"
 wrap_comments = true
 tab_spaces = 2
+cyclomatic-complexity-threshold = 200
