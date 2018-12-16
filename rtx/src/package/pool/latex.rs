@@ -14,8 +14,19 @@ lazy_static! {
   static ref OPTS_REGEX: Regex = Regex::new(r",\s*").unwrap();
 }
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
+pub fn load_definitions(mut state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
+  //**********************************************************************
+  // Organized following
+  //  "LaTeX: A Document Preparation System"
+  //   by Leslie Lamport
+  //   2nd edition
+  // Addison Wesley, 1994
+  // Appendix C. Reference Manual
+  //**********************************************************************
+  // NOTE: This will be loaded after TeX.pool.ltxml, so it inherits.
+  //**********************************************************************
+
   LoadPool!("TeX");
 
   // Apparently LaTeX does NOT define \magnification,
@@ -266,74 +277,74 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   );
 
   DefConstructor!(
-      "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
-       sub[document, args, props, state] {
-        // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
-        // intuitive level of:       let (x,y,z, ...) = @args;
-        unpack_to_string!(args => stype, inlist, toctitle, title);
-        let clean_id = prop_str!(props,"id"); // TODO: CleanID($id);
-        document.open_element(&s!("ltx:{}", stype),
-          Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
-          None,
-          state,
-        )?;
-        // TODO: Another instance where the immutability of props causes endless cloning
-        //       which is slow and wasteful.
-        // The big problem is that for props to be mutable, the entire parent whatsit needs to
-        // be mutable, and Rust hits a mutability conflict between the parent, and the
-        // "args" and "props" children ... will come back here after performance becomes
-        // an issue again
-        // 
-        // Part 2: I have now, with great attention and profiling, solidified the position that Whatsits are immutable
-        // during the absorbtion phase -- and hense the args and props passed in here will remain immutable in rtx.
-        // Hence, for this absorb call to run correctly, it must either:
-        // 1) Accept a cloned value as currently, paying with performance
-        // 2) Accept immutable references to digested objects, which may lead to far-reaching borrowing constraints
-        //   e.g. unlist()-ing a digested List will have to produce box references, rather than provide the owned boxes directly.
-        //   would have to experiment with this - as it is of course much lighter on performance
-        if let Some(Stored::Digested(tags)) = props.get("tags") {
-          document.absorb((**tags).clone(), state)?;
-        }
-        let title = prop_digested!(props, "title");
-        document.insert_element("ltx:title", title, None, state)?;
+     "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
+      sub[document, args, props, state] {
+       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
+       // intuitive level of:       let (x,y,z, ...) = @args;
+       unpack_to_string!(args => stype, inlist, toctitle, title);
+       let clean_id = prop_str!(props,"id"); // TODO: CleanID($id);
+       document.open_element(&s!("ltx:{}", stype),
+         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
+         None,
+         state,
+       )?;
+       // TODO: Another instance where the immutability of props causes endless cloning
+       //       which is slow and wasteful.
+       // The big problem is that for props to be mutable, the entire parent whatsit needs to
+       // be mutable, and Rust hits a mutability conflict between the parent, and the
+       // "args" and "props" children ... will come back here after performance becomes
+       // an issue again
+       //
+       // Part 2: I have now, with great attention and profiling, solidified the position that Whatsits are immutable
+       // during the absorbtion phase -- and hense the args and props passed in here will remain immutable in rtx.
+       // Hence, for this absorb call to run correctly, it must either:
+       // 1) Accept a cloned value as currently, paying with performance
+       // 2) Accept immutable references to digested objects, which may lead to far-reaching borrowing constraints
+       //   e.g. unlist()-ing a digested List will have to produce box references, rather than provide the owned boxes directly.
+       //   would have to experiment with this - as it is of course much lighter on performance
+       if let Some(Stored::Digested(tags)) = props.get("tags") {
+         document.absorb((**tags).clone(), state)?;
+       }
+       let title = prop_digested!(props, "title");
+       document.insert_element("ltx:title", title, None, state)?;
 
-        let toctitle = prop_digested!(props, "toctitle");
-        if !toctitle.is_empty() {
-          document.insert_element("ltx:toctitle", toctitle, None, state)?;
-        }
-      },
-      properties => properties!(sub[stomach, args, state] {
-        unpack!(args => stype, inlist, toctitle_arg, title);
-        let mut props = ref_step_counter(&stype.to_string(), false, stomach, state)?;
-        let toctitle = if toctitle_arg.to_string().is_empty() {
-          toctitle_arg
-        } else {
-          title.clone()
-        };
-        
-        let invoked_title;
-        {
-          let gullet = stomach.get_gullet_mut();
-          invoked_title = Invocation!(T_CS!("\\lx@format@title@@"), vec![&stype, &title], gullet, state)?;
-        }
-        let xtitle    = stomach.digest(invoked_title, state)?;
-        props.insert(s!("title"), xtitle.into());
+       let toctitle = prop_digested!(props, "toctitle");
+       if !toctitle.is_empty() {
+         document.insert_element("ltx:toctitle", toctitle, None, state)?;
+       }
+     },
+     properties => properties!(sub[stomach, args, state] {
+       unpack!(args => stype, inlist, toctitle_arg, title);
+       let mut props = ref_step_counter(&stype.to_string(), false, stomach, state)?;
+       let toctitle = if toctitle_arg.to_string().is_empty() {
+         toctitle_arg
+       } else {
+         title.clone()
+       };
 
-        // TODO
-        // let invoked_toctitle;
-        // {
-        //   let gullet = stomach.get_gullet_mut();
-        //   invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"), vec![&stype, &toctitle], gullet, state)?;
-        // }
-        // let xtoctitle = stomach.digest(invoked_toctitle, state)?;
-        //
-        // if xtoctitle.to_string() != xtitle.to_string() {
-        //   props.insert(s!("toctitle"), xtoctitle.into());
-        // }
-        
-        Ok(props)
-      })
-   );
+       let invoked_title;
+       {
+         let gullet = stomach.get_gullet_mut();
+         invoked_title = Invocation!(T_CS!("\\lx@format@title@@"), vec![&stype, &title], gullet, state)?;
+       }
+       let xtitle    = stomach.digest(invoked_title, state)?;
+       props.insert(s!("title"), xtitle.into());
+
+       // TODO
+       // let invoked_toctitle;
+       // {
+       //   let gullet = stomach.get_gullet_mut();
+       //   invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"), vec![&stype, &toctitle], gullet, state)?;
+       // }
+       // let xtoctitle = stomach.digest(invoked_toctitle, state)?;
+       //
+       // if xtoctitle.to_string() != xtitle.to_string() {
+       //   props.insert(s!("toctitle"), xtoctitle.into());
+       // }
+
+       Ok(props)
+     })
+  );
 
   // # No tags, at all? Consider...
   // DefConstructor('\@@unnumbered@section{} Undigested OptionalUndigested Undigested', sub {
@@ -488,8 +499,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "\\typeout",
     "\\listfiles",
   ]
-    .iter()
-    .map(|s| s.to_string())
+  .iter()
+  .map(|s| s.to_string())
   {
     DefMacroI!(T_CS!(ltxtrigger), None, Tokens!());
   }
@@ -501,11 +512,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // See frontmatter support in TeX.ltxml
   DefMacro!("\\title{}", "\\@add@frontmatter{ltx:title}{#1}");
 
-  DefMacro!("\\sectionmark{}",       "");
-  DefMacro!("\\subsectionmark{}",    "");
+  DefMacro!("\\sectionmark{}", "");
+  DefMacro!("\\subsectionmark{}", "");
   DefMacro!("\\subsubsectionmark{}", "");
-  DefMacro!("\\paragraphmark{}",     "");
-  DefMacro!("\\subparagraphmark{}",  "");
+  DefMacro!("\\paragraphmark{}", "");
+  DefMacro!("\\subparagraphmark{}", "");
 
   //======================================================================
   // C.6.2 List-Making environments
@@ -588,8 +599,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //         Tokens(T_CS($ctr), T_CS($unctr),
   //         (LookupValue("\\cl\@$within") ? LookupValue("\\cl\@$within")->unlist : ())),
   //       'global');
-  //     # This counter might be doing double duty generating ID's as well, so we may need to patch up.
-  //     my $prefix = LookupValue('@ID@prefix@' . $ctr);
+  //     # This counter might be doing double duty generating ID's as well, so we may need to patch
+  // up.     my $prefix = LookupValue('@ID@prefix@' . $ctr);
   //     if (defined $prefix) {
   //       DefMacroI(T_CS("\\the$ctr\@ID"), undef,
   //         "\\expandafter\\ifx\\csname the$within\@ID\\endcsname\\\@empty"
@@ -643,63 +654,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // DefMacro('\fnsymbol{}', sub {
   //     ExplodeText(radix_format(CounterValue(ToString(Expand($_[1])))->valueOf, @fnsymbols)); });
 
-  // TODO
-  DefMacro!("\\normalfont", "");
-
-
-  //======================================================================
-  // Hair
-  DefPrimitive!("\\makeatletter", sub[stomach, whatsit, state] { state.assign_catcode('@', Catcode::LETTER, Some(Scope::Local)); Ok(vec![]) });
-  DefPrimitive!("\\makeatother",  sub[stomach, whatsit, state] { state.assign_catcode('@', Catcode::OTHER, Some(Scope::Local)); Ok(vec![]) });
-
-  //**********************************************************************
-  //**********************************************************************
-  // Sundry (is this ams ?)
-  DefMacro!("\\textprime", "\u{00B4}");    // ACUTE ACCENT
-
-  Let!("\\endgraf", "\\par");
-  Let!("\\endline", "\\cr");
-  //**********************************************************************
-  // Should be defined in each (or many) package, but it"s not going to
-  // get set correctly or maintained, so...
-  DefMacro!("\\fileversion", "");
-  DefMacro!("\\filedate", "");
-
-  // Ultimately these may be overridden by babel, or otherwise,
-  // various of these are defined in various places by different classes.
-  DefMacro!("\\chaptername", "Chapter");
-  DefMacro!("\\partname", "Part");
-  // The rest of these are defined in some classes, but not most.
-  //DefMacroI("\sectionname",       undef, "Section");
-  //DefMacroI("\subsectionname",    undef, "Subsection");
-  //DefMacroI("\subsubsectionname", undef, "Subsubsection");
-  //DefMacroI("\paragraphname",     undef, "Paragraph");
-  //DefMacroI("\subparagraphname",  undef, "Subparagraph");
-
-  DefMacro!("\\appendixname", "Appendix");
-  // These aren"t defined in LaTeX,
-  // these definitions will give us more meaningful typerefnum"s
-  DefMacro!("\\sectiontyperefname",       "\\lx@sectionsign\\lx@ignorehardspaces");
-  DefMacro!("\\subsectiontyperefname",    "\\lx@sectionsign\\lx@ignorehardspaces");
-  DefMacro!("\\subsubsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
-  DefMacro!("\\paragraphtyperefname",     "\\lx@paragraphsign\\lx@ignorehardspaces");
-  DefMacro!("\\subparagraphtyperefname",  "\\lx@paragraphsign\\lx@ignorehardspaces");
-
-
-  // These really should be robust! which is a source of expand timing issues!
-  DefMacro!("\\textmd{}",     "\\ifmmode\\textmd@math{#1}\\else{\\mdseries #1}\\fi",       protected => 1);
-  DefMacro!("\\textbf{}",     "\\ifmmode\\textbf@math{#1}\\else{\\bfseries #1}\\fi",       protected => 1);
-  DefMacro!("\\textrm{}",     "\\ifmmode\\textrm@math{#1}\\else{\\rmfamily #1}\\fi",       protected => 1);
-  DefMacro!("\\textsf{}",     "\\ifmmode\\textsf@math{#1}\\else{\\sffamily #1}\\fi",       protected => 1);
-  DefMacro!("\\texttt{}",     "\\ifmmode\\texttt@math{#1}\\else{\\ttfamily #1}\\fi",       protected => 1);
-  DefMacro!("\\textup{}",     "\\ifmmode\\textup@math{#1}\\else{\\upshape #1}\\fi",        protected => 1);
-  DefMacro!("\\textit{}",     "\\ifmmode\\textit@math{#1}\\else{\\itshape #1}\\fi",        protected => 1);
-  DefMacro!("\\textsl{}",     "\\ifmmode\\textsl@math{#1}\\else{\\slshape #1}\\fi",        protected => 1);
-  DefMacro!("\\textsc{}",     "\\ifmmode\\textsc@math{#1}\\else{\\scshape #1}\\fi",        protected => 1);
-  DefMacro!("\\textnormal{}", "\\ifmmode\\textnormal@math{#1}\\else{\\normalfont #1}\\fi", protected => 1);
-
-  // TODO:
-  DefMacroI!(T_CS!("\\ttfamily"), None, Tokens!());
+  // lines 4413-4563
+  InnerPool!(latex_font_selection);
 
   Ok(())
 }

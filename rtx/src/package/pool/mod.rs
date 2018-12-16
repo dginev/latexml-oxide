@@ -1,8 +1,4 @@
 // TeX Pool
-pub mod latex_delimiters;
-pub mod latex_hook;
-pub mod latex_loglike_functions;
-pub mod latex_tables_3;
 pub mod tex;
 pub mod tex_accents;
 pub mod tex_alignment;
@@ -34,6 +30,11 @@ pub mod tex_stray_math_style;
 
 // LaTeX Pool
 pub mod latex;
+pub mod latex_delimiters;
+pub mod latex_font_selection;
+pub mod latex_hook;
+pub mod latex_loglike_functions;
+pub mod latex_tables_3;
 
 // eTeX Pool
 pub mod etex;
