@@ -763,10 +763,10 @@ impl Document {
 
         let noindent_children: bool = if heuristic {
           // This emulates libxml2"s heuristic
-          noindent || !children
-            .iter()
-            .filter(|e| e.get_type() == Some(NodeType::TextNode))
-            .next().is_none()
+          noindent
+            || children
+              .iter()
+              .any(|e| e.get_type() == Some(NodeType::TextNode))
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = self.get_node_qname(node, state);
@@ -1244,9 +1244,7 @@ impl Document {
         // Didn't find a legit place.
         error!(
           target: &s!("malformed:{}", qname),
-          "{:?} isn't allowed in <{}>",
-          qname,
-          cur_qname
+          "{:?} isn't allowed in <{}>", qname, cur_qname
         );
         // ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed
         // in <$cur_qname>", "Currently in " .
