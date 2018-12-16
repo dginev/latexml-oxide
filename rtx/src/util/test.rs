@@ -45,15 +45,17 @@ fn rtx_ok(tex_path: &str, xml_path: &str, name: &str) {
     let xml_strings = process_xmlfile(xml_path, name);
     if !xml_strings.is_empty() {
       for (tex_line, xml_line) in tex_strings.iter().zip(xml_strings.iter()) {
-        assert_eq!(tex_line, xml_line);
+        assert_eq!(
+          tex_line, xml_line,
+          "rtx result (left) differs from expected XML (right)"
+        );
       }
-      // match tex_strings.len() - xml_strings.len() {
-      //   0 => {},//As expected,
-      //   diff => match diff > 0 {
-      //     true => panic!("Conversion of {:?} had more content than expected", name),
-      //     false => panic!("Conversion of {:?} had less content than expected", name)
-      //   }
-      // };
+      assert_eq!(
+        tex_strings.len() - xml_strings.len(),
+        0,
+        "Conversion of {:?} had more/fewer lines of content than expected",
+        name
+      );
     }
   }
 }
@@ -76,6 +78,8 @@ fn process_texfile(tex_path: &str, name: &str) -> Vec<String> {
   }
 }
 
+/// Loads and serialized the resulting XML for a test file target,
+/// returning it as a vector of line strings for the serialization
 fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
   let parser = Parser::default();
   match parser.parse_file(xml_path) {
@@ -90,6 +94,8 @@ fn process_ltx_doc(doc: Document, _name: &str, state: &mut State) -> Vec<String>
     .map(|line| line.to_string())
     .collect()
 }
+
+/// Serializes and splits by line a given `XmlDoc`
 fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {
   dom
     .to_string(true)
