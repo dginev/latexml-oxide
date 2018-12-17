@@ -44,81 +44,77 @@ lazy_static! {
   //   family + series + variant + size
   // NOTE: This probably doesn't really belong in here...
 
-  static ref FONT_FAMILY : HashMap<&'static str, HashMap<&'static str, &'static str>> = raw_map!(
-    "cmr"  => raw_map!("family" => "serif"),      "cmss"  => raw_map!("family" => "sansserif"),
-    "cmtt" => raw_map!("family" => "typewriter"), "cmvtt" => raw_map!("family" => "typewriter"),
-    "cmti" => raw_map!("family" => "typewriter", "shape" => "italic"),
-    "cmfib" => raw_map!("family" => "serif"),      "cmfr"  => raw_map!("family" => "serif"),
-    "cmdh"  => raw_map!("family" => "serif"),      "cm"    => raw_map!("family" => "serif"),
-    "ptm"   => raw_map!("family" => "serif"),      "ppl"   => raw_map!("family" => "serif"),
-    "pnc"   => raw_map!("family" => "serif"),      "pbk"   => raw_map!("family" => "serif"),
-    "phv"   => raw_map!("family" => "sansserif"),  "pag"   => raw_map!("family" => "serif"),
-    "pcr"   => raw_map!("family" => "typewriter"), "pzc"   => raw_map!("family" => "script"),
-    "put"   => raw_map!("family" => "serif"),      "bch"   => raw_map!("family" => "serif"),
-    "psy"   => raw_map!("family" => "symbol"),     "pzd"   => raw_map!("family" => "dingbats"),
-    "ccr"   => raw_map!("family" => "serif"),      "ccy"   => raw_map!("family" => "symbol"),
-    "cmbr"  => raw_map!("family" => "sansserif"),  "cmtl"  => raw_map!("family" => "typewriter"),
-    "cmbrs" => raw_map!("family" => "symbol"),     "ul9"   => raw_map!("family" => "typewriter"),
-    "txr"   => raw_map!("family" => "serif"),      "txss"  => raw_map!("family" => "sansserif"),
-    "txtt"  => raw_map!("family" => "typewriter"), "txms"  => raw_map!("family" => "symbol"),
-    "txsya" => raw_map!("family" => "symbol"),     "txsyb" => raw_map!("family" => "symbol"),
-    "pxr"   => raw_map!("family" => "serif"),      "pxms"  => raw_map!("family" => "symbol"),
-    "pxsya" => raw_map!("family" => "symbol"),     "pxsyb" => raw_map!("family" => "symbol"),
-    "futs"  => raw_map!("family" => "serif"),
-    "uaq"   => raw_map!("family" => "serif"),      "ugq"   => raw_map!("family" => "sansserif"),
-    "eur"   => raw_map!("family" => "serif"),      "eus"   => raw_map!("family" => "script"),
-    "euf"   => raw_map!("family" => "fraktur"),    "euex"  => raw_map!("family" => "symbol"),
+  static ref FONT_FAMILY : HashMap<&'static str, Font> = raw_map!(
+    "cmr"  => fontmap!(family => "serif"),      "cmss"  => fontmap!(family => "sansserif"),
+    "cmtt" => fontmap!(family => "typewriter"), "cmvtt" => fontmap!(family => "typewriter"),
+    "cmti" => fontmap!(family => "typewriter", shape => "italic"),
+    "cmfib" => fontmap!(family => "serif"),      "cmfr"  => fontmap!(family => "serif"),
+    "cmdh"  => fontmap!(family => "serif"),      "cm"    => fontmap!(family => "serif"),
+    "ptm"   => fontmap!(family => "serif"),      "ppl"   => fontmap!(family => "serif"),
+    "pnc"   => fontmap!(family => "serif"),      "pbk"   => fontmap!(family => "serif"),
+    "phv"   => fontmap!(family => "sansserif"),  "pag"   => fontmap!(family => "serif"),
+    "pcr"   => fontmap!(family => "typewriter"), "pzc"   => fontmap!(family => "script"),
+    "put"   => fontmap!(family => "serif"),      "bch"   => fontmap!(family => "serif"),
+    "psy"   => fontmap!(family => "symbol"),     "pzd"   => fontmap!(family => "dingbats"),
+    "ccr"   => fontmap!(family => "serif"),      "ccy"   => fontmap!(family => "symbol"),
+    "cmbr"  => fontmap!(family => "sansserif"),  "cmtl"  => fontmap!(family => "typewriter"),
+    "cmbrs" => fontmap!(family => "symbol"),     "ul9"   => fontmap!(family => "typewriter"),
+    "txr"   => fontmap!(family => "serif"),      "txss"  => fontmap!(family => "sansserif"),
+    "txtt"  => fontmap!(family => "typewriter"), "txms"  => fontmap!(family => "symbol"),
+    "txsya" => fontmap!(family => "symbol"),     "txsyb" => fontmap!(family => "symbol"),
+    "pxr"   => fontmap!(family => "serif"),      "pxms"  => fontmap!(family => "symbol"),
+    "pxsya" => fontmap!(family => "symbol"),     "pxsyb" => fontmap!(family => "symbol"),
+    "futs"  => fontmap!(family => "serif"),
+    "uaq"   => fontmap!(family => "serif"),      "ugq"   => fontmap!(family => "sansserif"),
+    "eur"   => fontmap!(family => "serif"),      "eus"   => fontmap!(family => "script"),
+    "euf"   => fontmap!(family => "fraktur"),    "euex"  => fontmap!(family => "symbol"),
     // The following are actually math fonts.
-    "ms"    => raw_map!("family" => "symbol"),
-    "ccm"   => raw_map!("family" => "serif", "shape" => "italic"),
-    "cmm"   => raw_map!("family" => "italic", "encoding" => "OML"),
-    "cmex"  => raw_map!("family" => "symbol", "encoding" => "OMX"),       // Not really symbol, but...
-    "cmsy"  => raw_map!("family" => "symbol", "encoding" => "OMS"),
-    "ccitt" => raw_map!("family" => "typewriter", "shape" => "italic"),
-    "cmbrm" => raw_map!("family" => "sansserif", "shape" => "italic"),
-    "futm"  => raw_map!("family" => "serif", "shape" => "italic"),
-    "futmi" => raw_map!("family" => "serif", "shape" => "italic"),
-    "txmi"  => raw_map!("family" => "serif", "shape" => "italic"),
-    "pxmi"  => raw_map!("family" => "serif", "shape" => "italic"),
-    "bbm"   => raw_map!("family" => "blackboard"),
-    "bbold" => raw_map!("family" => "blackboard"),
-    "bbmss" => raw_map!("family" => "blackboard"),
+    "ms"    => fontmap!(family => "symbol"),
+    "ccm"   => fontmap!(family => "serif", shape => "italic"),
+    "cmm"   => fontmap!(family => "italic", encoding => "OML"),
+    "cmex"  => fontmap!(family => "symbol", encoding => "OMX"),       // Not really symbol, but...
+    "cmsy"  => fontmap!(family => "symbol", encoding => "OMS"),
+    "ccitt" => fontmap!(family => "typewriter", shape => "italic"),
+    "cmbrm" => fontmap!(family => "sansserif", shape => "italic"),
+    "futm"  => fontmap!(family => "serif", shape => "italic"),
+    "futmi" => fontmap!(family => "serif", shape => "italic"),
+    "txmi"  => fontmap!(family => "serif", shape => "italic"),
+    "pxmi"  => fontmap!(family => "serif", shape => "italic"),
+    "bbm"   => fontmap!(family => "blackboard"),
+    "bbold" => fontmap!(family => "blackboard"),
+    "bbmss" => fontmap!(family => "blackboard"),
     // some ams fonts
-    "cmmib" => raw_map!("family" => "italic", "series"   => "bold"),
-    "cmbsy" => raw_map!("family" => "symbol", "series"   => "bold"),
-    "msa"   => raw_map!("family" => "symbol", "encoding" => "AMSa"),
-    "msb"   => raw_map!("family" => "symbol", "encoding" => "AMSb"),
+    "cmmib" => fontmap!(family => "italic", series   => "bold"),
+    "cmbsy" => fontmap!(family => "symbol", series   => "bold"),
+    "msa"   => fontmap!(family => "symbol", encoding => "AMSa"),
+    "msb"   => fontmap!(family => "symbol", encoding => "AMSb"),
     // Are these really the same?
-    "msx" => raw_map!("family" => "symbol", "encoding" => "AMSa"),
-    "msy" => raw_map!("family" => "symbol", "encoding" => "AMSb")
+    "msx" => fontmap!(family => "symbol", encoding => "AMSa"),
+    "msy" => fontmap!(family => "symbol", encoding => "AMSb")
   );
   // Maps the "series code" to an abstract font series name
-  static ref FONT_SERIES : HashMap<&'static str, HashMap<&'static str, &'static str>> = raw_map!(
-    "" => raw_map!("series" => "medium"), "m" => raw_map!("series" => "medium"), "mc" => raw_map!("series" => "medium"),
-    "b"  => raw_map!("series" => "bold"),   "bc"  => raw_map!("series" => "bold"),   "bx" => raw_map!("series" => "bold"),
-    "sb" => raw_map!("series" => "bold"),   "sbc" => raw_map!("series" => "bold"),   "bm" => raw_map!("series" => "bold")
+  static ref FONT_SERIES : HashMap<&'static str, Font> = raw_map!(
+    "" => fontmap!(series => "medium"), "m" => fontmap!(series => "medium"), "mc" => fontmap!(series => "medium"),
+    "b"  => fontmap!(series => "bold"),   "bc"  => fontmap!(series => "bold"),   "bx" => fontmap!(series => "bold"),
+    "sb" => fontmap!(series => "bold"),   "sbc" => fontmap!(series => "bold"),   "bm" => fontmap!(series => "bold")
   );
 
   // Maps the "shape code" to an abstract font shape name.
-  static ref FONT_SHAPE : HashMap<&'static str, HashMap<&'static str, &'static str>> = raw_map!(
-    "" => raw_map!("shape" => "upright"), "n" => raw_map!("shape" => "upright"),
-     "i" => raw_map!("shape" => "italic"), "it" => raw_map!("shape" => "italic"), "sl" => raw_map!("shape" => "slanted"),
-     "sc" => raw_map!("shape" => "smallcaps"), "csc" => raw_map!("shape" => "smallcaps")
+  static ref FONT_SHAPE : HashMap<&'static str, Font> = raw_map!(
+    "" => fontmap!(shape => "upright"), "n" => fontmap!(shape => "upright"),
+     "i" => fontmap!(shape => "italic"), "it" => fontmap!(shape => "italic"), "sl" => fontmap!(shape => "slanted"),
+     "sc" => fontmap!(shape => "smallcaps"), "csc" => fontmap!(shape => "smallcaps")
   );
 }
 
 /// Global auxiliary for font family lookup
-pub fn lookup_font_family(code: &str) -> Option<&HashMap<&'static str, &'static str>> {
-  FONT_FAMILY.get(code)
-}
+pub fn lookup_font_family(code: &str) -> Option<&Font> { FONT_FAMILY.get(code) }
 
-pub fn lookup_font_feries(code: &str) -> Option<&HashMap<&'static str, &'static str>> {
-  FONT_SERIES.get(code)
-}
+/// Global auxiliary for font series lookup
+pub fn lookup_font_series(code: &str) -> Option<&Font> { FONT_SERIES.get(code) }
 
-pub fn lookup_font_fhape(code: &str) -> Option<&HashMap<&'static str, &'static str>> {
-  FONT_SHAPE.get(code)
-}
+/// Global auxiliary for font shape lookup
+pub fn lookup_font_shape(code: &str) -> Option<&Font> { FONT_SHAPE.get(code) }
 
 /// This struct is a little interesting, as we want to pass overrides that partially modify (via a
 /// merge) the current font, in each definitional binding. To accommodate that with this struct,
@@ -254,37 +250,37 @@ impl Font {
   //    family, series or shape
   // will, usually, automatically reset the others to thier defaults!
   // You must arrange this in the calls....
-  pub fn merge(&self, other: Font) -> Self {
+  pub fn merge(&self, other: &Font) -> Self {
     let mut newfont = self.clone();
-    if let Some(value) = other.family {
-      newfont.family = Some(value);
+    if let Some(ref value) = other.family {
+      newfont.family = Some(value.clone());
     }
-    if let Some(value) = other.series {
-      newfont.series = Some(value);
+    if let Some(ref value) = other.series {
+      newfont.series = Some(value.clone());
     }
-    if let Some(value) = other.shape {
-      newfont.shape = Some(value);
+    if let Some(ref value) = other.shape {
+      newfont.shape = Some(value.clone());
     }
-    if let Some(value) = other.size {
-      newfont.size = Some(value);
+    if let Some(ref value) = other.size {
+      newfont.size = Some(value.clone());
     }
-    if let Some(value) = other.color {
-      newfont.color = Some(value);
+    if let Some(ref value) = other.color {
+      newfont.color = Some(value.clone());
     }
-    if let Some(value) = other.bg {
-      newfont.bg = Some(value);
+    if let Some(ref value) = other.bg {
+      newfont.bg = Some(value.clone());
     }
-    if let Some(value) = other.opacity {
-      newfont.opacity = Some(value);
+    if let Some(ref value) = other.opacity {
+      newfont.opacity = Some(value.clone());
     }
-    if let Some(value) = other.encoding {
-      newfont.encoding = Some(value);
+    if let Some(ref value) = other.encoding {
+      newfont.encoding = Some(value.clone());
     }
-    if let Some(value) = other.language {
-      newfont.language = Some(value);
+    if let Some(ref value) = other.language {
+      newfont.language = Some(value.clone());
     }
-    if let Some(value) = other.mathstyle {
-      newfont.mathstyle = Some(value);
+    if let Some(ref value) = other.mathstyle {
+      newfont.mathstyle = Some(value.clone());
     }
     if let Some(value) = other.forceseries {
       newfont.forceseries = Some(value);

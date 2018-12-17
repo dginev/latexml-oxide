@@ -102,16 +102,15 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
 
   DefPrimitive!("\\selectfont", sub[stomach, args, inner_state] {
     let mut gullet = stomach.get_gullet_mut();
-      let family = Expand!(T_CS!("\\f@family"), gullet, inner_state)?.to_string();
-      let series = Expand!(T_CS!("\\f@series"),gullet,  inner_state)?.to_string();
-      let shape  = Expand!(T_CS!("\\f@shape"), gullet, inner_state)?.to_string();
-      // TODO !!!
-      // if let Some(sh) = font::lookup_font_family(&family) { MergeFont!(sh, inner_state); }
-      // else { info!("unexpected", family, $_[0], "Unrecognized font family '$family'."); }
-      // if (let sh = LaTeXML::Common::Font::lookupFontSeries($series)) { MergeFont(%$sh); }
-      // else { info!("unexpected", series, $_[0], "Unrecognized font series '$series'."); }
-      // if (let sh = LaTeXML::Common::Font::lookupFontShape($shape)) { MergeFont(%$sh); }
-      // else { info!("unexpected", shape, $_[0], "Unrecognized font shape '$shape'."); }
+    let family = Expand!(T_CS!("\\f@family"), gullet, inner_state)?.to_string();
+    let series = Expand!(T_CS!("\\f@series"),gullet,  inner_state)?.to_string();
+    let shape  = Expand!(T_CS!("\\f@shape"), gullet, inner_state)?.to_string();
+    if let Some(sh) = font::lookup_font_family(&family) { MergeFont!(sh, inner_state); }
+    else { info!(target: &s!("unexpected:{}", family), "Unrecognized font family {:?}.", family); }
+    if let Some(sh) = font::lookup_font_series(&series) { MergeFont!(sh, inner_state); }
+    else { info!(target: &s!("unexpected:{}", series), "Unrecognized font series {:?}.", series); }
+    if let Some(sh) = font::lookup_font_shape(&shape) { MergeFont!(sh, inner_state); }
+    else { info!(target: &s!("unexpected:{}",shape), "Unrecognized font shape {:?}.", shape); }
     Ok(vec![])
   });
 

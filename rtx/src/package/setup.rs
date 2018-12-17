@@ -5,11 +5,11 @@
 // $state in its initialization.
 
 // We also can not decouple the macro variants with an explicit "state" argument,
-// as decoupling requires a new macro rule, and respectively a new name. 
+// as decoupling requires a new macro rule, and respectively a new name.
 // So DefMacro could be decoupled into DefMacro_State, which is terrible boilerplate
 // and was in fact the first implementation attempt here.
-// The current trade-off is to keep the macro variants tightly together, under the same name, and only
-// create new names for new macro functions.
+// The current trade-off is to keep the macro variants tightly together, under the same name, and
+// only create new names for new macro functions.
 
 #[macro_export]
 macro_rules! SetupBindingMacros {($state:ident) => (
@@ -562,7 +562,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       }
       if let Some(chosen_font) = options.font {
         let merge_font_closure = beforeproc!(stomach, state, {
-          MergeFont!(chosen_font.clone(), state);
+          MergeFont!(&chosen_font, state);
         });
         before_digest_env.push(merge_font_closure);
       }
@@ -1224,7 +1224,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
       if let Some(chosen_font) = options.font {
         let merge_font_closure = beforeproc!(stomach, state, {
-          MergeFont!(chosen_font.clone(), state);
+          MergeFont!(&chosen_font.clone(), state);
         });
         before_digest_env.push(merge_font_closure);
       }
@@ -1665,7 +1665,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
         let mut properties = HashMap::new(); // TODO: sync with perl master here
         properties.insert(s!("mode"), Stored::String(String::from("math")));
         // TODO: Improve font precision here, the defaults may not belong in this lookup
-        let font = state.lookup_font().unwrap_or_else(|| Rc::new(Font::default())).merge(reqfont.clone()).specialize(&$presentation);
+        let font = state.lookup_font().unwrap_or_else(|| Rc::new(Font::default())).merge(&reqfont).specialize(&$presentation);
         let font = Rc::new(font);
         // foreach my $key (keys %properties) {
         //   my $value = $properties{$key};

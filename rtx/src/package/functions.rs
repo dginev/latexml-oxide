@@ -356,7 +356,8 @@ pub fn parse_parameters(
           spec: spec.to_string(),
           extra: vec![inner.into()],
           ..Parameter::default()
-        }.init(state)?,
+        }
+        .init(state)?,
       );
     } else if OPTIONAL_CHECK.is_match(&prototype) {
       // Ditto for Optional
@@ -375,7 +376,8 @@ pub fn parse_parameters(
             // None]});
             extra: Vec::new(),
             ..Parameter::default()
-          }.init(state)?,
+          }
+          .init(state)?,
         );
       } else if !inner_spec.is_empty() {
         parameters.push(
@@ -387,7 +389,8 @@ pub fn parse_parameters(
               parse_parameters(inner_spec.to_string(), cs, state)?.into(),
             ],
             ..Parameter::default()
-          }.init(state)?,
+          }
+          .init(state)?,
         );
       } else {
         parameters.push(
@@ -396,7 +399,8 @@ pub fn parse_parameters(
             spec: spec.to_string(),
             extra: Vec::new(),
             ..Parameter::default()
-          }.init(state)?,
+          }
+          .init(state)?,
         );
       }
     } else if PARAMSPECT_CHECK.is_match(&prototype) {
@@ -417,7 +421,8 @@ pub fn parse_parameters(
           spec,
           extra,
           ..Parameter::default()
-        }.init(state)?,
+        }
+        .init(state)?,
       );
     } else {
       // Fatal('misdefined', cs, undef, "Unrecognized parameter specification at \"prototype\""); }
@@ -630,8 +635,7 @@ pub fn def_conditional(
       } else {
         error!(
           target: &s!("misdefined:{}", cs),
-          "The conditional {} is being defined but doesn't start with \\if",
-          cs
+          "The conditional {} is being defined but doesn't start with \\if", cs
         );
       }
     },
@@ -679,24 +683,25 @@ pub fn def_register<T: Into<RegisterValue>>(
 
   let setter: RegisterSetterClosure = match options.setter {
     Some(setter) => setter.clone(),
-    None => if readonly {
-      Rc::new(move |value, args, state| {
-        warn!(
-          target: &s!("unexpected:{}", setter_name),
-          "Can't assign to register {}",
-          setter_name
-        );
-      })
-    } else {
-      Rc::new(move |value, args, state| {
-        let args_string: String = args
-          .iter()
-          .map(|arg: &Tokens| arg.to_string())
-          .collect::<Vec<String>>()
-          .join("");
+    None => {
+      if readonly {
+        Rc::new(move |value, args, state| {
+          warn!(
+            target: &s!("unexpected:{}", setter_name),
+            "Can't assign to register {}", setter_name
+          );
+        })
+      } else {
+        Rc::new(move |value, args, state| {
+          let args_string: String = args
+            .iter()
+            .map(|arg: &Tokens| arg.to_string())
+            .collect::<Vec<String>>()
+            .join("");
 
-        state.assign_value(&(setter_name.clone() + &args_string), value, None);
-      })
+          state.assign_value(&(setter_name.clone() + &args_string), value, None);
+        })
+      }
     },
   };
 
@@ -770,13 +775,12 @@ pub fn generate_id(
   Ok(())
 }
 
-pub fn merge_font(font: Font, state: &mut State) {
-  let mut current_font = match state.remove_value("font") {
-    Some(Stored::Font(f)) => f,
-    _ => Rc::new(Font::text_default()),
+pub fn merge_font(font: &Font, state: &mut State) {
+  let new_font = match state.lookup_font() {
+    Some(ref f) => f.merge(font),
+    _ => Font::text_default().merge(font)
   };
-  let newfont = current_font.merge(font);
-  state.assign_value("font", newfont, Some(Scope::Local));
+  state.assign_value("font", new_font, Some(Scope::Local));
   return;
 }
 
@@ -796,10 +800,7 @@ pub fn digest_literal(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -
   let font = state.lookup_font().unwrap(); // TODO: raise error if font missing
   state.assign_value(
     "font",
-    font.merge(Font {
-      encoding: Some("ASCII".into()),
-      ..Font::default()
-    }),
+    font.merge(&fontmap!(encoding => "ASCII")),
     Some(Scope::Local),
   ); // try to stay as ASCII as possible
 
@@ -960,8 +961,7 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
     None => {
       warn!(
         target: &s!("undefined:{:?}", ctr),
-        "Counter {} was not defined; assuming 0",
-        ctr
+        "Counter {} was not defined; assuming 0", ctr
       );
       Number!(0)
     },
@@ -1161,8 +1161,7 @@ pub fn build_invocation<T: Into<Token>>(
   } else {
     error!(
       target: &s!("undefined:{}", token.get_cs_name()),
-      "Can't invoke {:?}; it is undefined",
-      token
+      "Can't invoke {:?}; it is undefined", token
     );
     let mut invoked_tokens = vec![token];
     // DefConstructorI!(token, convert_latex_args(args.len(), 0),
@@ -1174,7 +1173,8 @@ pub fn build_invocation<T: Into<Token>>(
         wrapped.append(&mut arg.unlist());
         wrapped.push(T_END!());
         wrapped
-      }).collect();
+      })
+      .collect();
     invoked_tokens.append(&mut wrapped_args);
     Ok(Tokens::new(invoked_tokens))
   }
