@@ -36,3 +36,9 @@ macro_rules! mixvec {
     vec![ $($val.into()),*]
   }}
 }
+
+#[macro_export]
+macro_rules! fontmap {
+  ($($key:ident => $value:expr),*) => (
+    Font { $($key: Some($value.to_string().into()),)* .. Font::default() })
+}

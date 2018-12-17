@@ -157,7 +157,7 @@ impl Document {
             if state.model.can_have_attribute(&qname, key) {
               attrs_to_set.push((key.to_string(), value.to_string()));
               // Merge to set the font currently in effect
-              declared_font = declared_font.merge(properties.clone());
+              declared_font = declared_font.merge(&properties);
               keys_to_remove.push(key.to_string());
             }
           }
