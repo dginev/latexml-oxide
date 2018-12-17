@@ -46,17 +46,22 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
 
   // DefMathLigature("\u{22C5}\u{22C5}\u{22C5}" => "\u{22EF}", role => 'ID', name => 'cdots');
 
-  DefLigature!(r"[.][.][.]", "\u{2026}"); //, fontTest => fontTest!(font, {font.get_family != "typewriter" }));  // ldots
+  DefLigature!(r"[.][.][.]", "\u{2026}", fontTest => sub[arg] {arg.get_family() != Some("typewriter".into()) });  // ldots
 
-  DefLigature!(r"--", "\u{2013}"); //, fontTest => sub { $_[0]->getFamily ne 'typewriter'; }); # EN DASH (NOTE: With digits before &
+  DefLigature!(r"--", "\u{2013}",fontTest => sub[arg] {arg.get_family() != Some("typewriter".into()) }); // EN DASH (NOTE: With digits before &
                                    //, aft => \N{FIGURE DASH})
-  DefLigature!(r"---", "\u{2014}"); //, fontTest => sub { $_[0]->getFamily ne 'typewriter'; });    # EM DASH
+  DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] {arg.get_family() != Some("typewriter".into()) }); // EM DASH
                                     // Ligatures for doubled single left & right quotes to convert to double quotes
                                     // [should ligatures be part of a font, in the first place? (it is in TeX!)
-  DefLigature!("\u{2018}\u{2018}", "\u{201C}"); //, fontTest => sub { ($_[0]->getFamily ne 'typewriter') && (($_[0]->getEncoding || 'OT1') =~
-                                                //, /^(OT1|T1)$/); });    // is this needed?
-  DefLigature!("\u{2019}\u{2019}", "\u{201D}"); //, fontTest => sub { ($_[0]->getFamily ne 'typewriter') && (($_[0]->getEncoding || 'OT1') =~
-                                                //, /^(OT1|T1)$/); });
+  DefLigature!("\u{2018}\u{2018}", "\u{201C}", fontTest => sub[arg] {
+    if arg.get_family() != Some("typewriter".into()) {
+      let encoding = arg.get_encoding().unwrap_or(Cow::Borrowed("OT1"));
+      encoding == "OT1" || encoding == "T1" } else {false} });
+  DefLigature!("\u{2019}\u{2019}", "\u{201D}", fontTest => sub[arg] {
+    if arg.get_family() != Some("typewriter".into()) {
+      let encoding = arg.get_encoding().unwrap_or(Cow::Borrowed("OT1"));
+      encoding == "OT1" || encoding == "T1" } else {false} });
+
   DefMacroI!(T_CS!("\\TeX"), None, Tokens::new(ExplodeText!("TeX")));
   DefMacroI!(T_CS!("\\i"), None, T_OTHER!("\u{0131}")); // LATIN SMALL LETTER DOTLESS I
   DefMacroI!(T_CS!("\\j"), None, T_OTHER!("\u{0237}"));

@@ -1790,6 +1790,15 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! DefLigature {
+    ($regex:expr, $replacement:expr, fontTest => sub[$font:ident] $body:block) => (DefLigature!($regex, $replacement, fontTest => sub[$font]{$body}, $state));
+    ($regex:expr, $replacement:expr, fontTest => sub[$font:ident] $body:block, $state_arg:ident) => {
+      let regex_compiled = Regex::new($regex).unwrap();
+      let test_closure : Option<FontTestClosure> = Some(Rc::new(move |$font| $body));
+      $state_arg.unshift_value("TEXT_LIGATURES",vec![
+        Ligature {regex: $regex.to_string(),
+          code: Rc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string()),
+          font_test: test_closure }]);
+    };
     ($regex:expr, $replacement:expr) => (DefLigature!($regex, $replacement, $state));
     ($regex:expr, $replacement:expr, $state_arg:ident) => {
       let regex_compiled = Regex::new($regex).unwrap();
