@@ -39,8 +39,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   DefMacro!("\\fontseries{}", "\\edef\\f@series{#1}");
   DefMacro!("\\fontshape{}", "\\edef\\f@shape{#1}");
 
-  // TODO:
-  // # For fonts not allowed in math!!!
+  // For fonts not allowed in math!!!
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[stomach, args, inner_state] {
     if inner_state.lookup_bool("IN_MATH") {
       let c = args[1].to_string();
