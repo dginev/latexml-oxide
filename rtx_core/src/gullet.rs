@@ -7,6 +7,7 @@ use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::glue::{Glue, MuGlue};
 use crate::common::number::Number;
+use crate::common::locator::Locator;
 
 use crate::definition::conditional::ConditionalType;
 use crate::definition::register::{RegisterType, RegisterValue};
@@ -116,7 +117,10 @@ impl Gullet {
     return;
   }
 
-  pub fn get_locator(&self) -> String { String::new() }
+  pub fn get_locator(&self) -> Locator {
+    // TODO
+    Locator::default()
+  }
 
   //**********************************************************************
   // Not really 100% sure how this is supposed to work

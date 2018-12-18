@@ -10,6 +10,7 @@ pub mod object;
 pub mod relaxng;
 pub mod store;
 pub mod xml;
+pub mod locator;
 
 use crate::fmt;
 

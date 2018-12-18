@@ -3,6 +3,7 @@ use std::fmt;
 
 use crate::common::error::*;
 use crate::common::font::Font;
+use crate::common::locator::Locator;
 use crate::document::Document;
 use crate::state::State;
 
@@ -61,6 +62,11 @@ impl BoxOps for List {
       None => None,
       Some(ref f) => Some(Cow::Borrowed(&f)),
     }
+  }
+
+  fn get_locator(&self) -> Option<Locator> {
+    // TODO
+    None
   }
 }
 

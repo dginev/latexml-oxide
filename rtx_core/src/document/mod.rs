@@ -28,8 +28,8 @@ lazy_static! {
   static ref ONLY_SPACE_RE: Regex = Regex::new(r"^\s+$").unwrap();
 }
 
-static FONT_ELEMENT_NAME: &'static str = "ltx:text";
-static MATH_TOKEN_NAME: &'static str = "ltx:XMTok";
+pub static FONT_ELEMENT_NAME: &'static str = "ltx:text";
+pub static MATH_TOKEN_NAME: &'static str = "ltx:XMTok";
 
 pub struct Document {
   pub document: XmlDoc,
@@ -280,21 +280,6 @@ impl Document {
       //   self.record_constructed_node(Some(&node)); // record these for OUTER caller!
       // }
       // results.extend(newly_created); // but return only the most recent set.
-
-      // Else, plain string in text mode.
-      // elsif (!$props{isMath}) {
-      // push(@results, self.openText($box, $props{font} || ($LaTeXML::BOX &&
-      // $LaTeXML::BOX->getFont))); } // Or plain string in math mode.
-      // // Note text nodes can ONLY appear in <XMTok> or <text>!!!
-      // // Have we already opened an XMTok? Then insert into it.
-      // elsif (self.model}->getNodeQName(self.node}) eq $MATH_TOKEN_NAME) {
-      //   push(@results, self.openMathText_internal($box)); }
-      // // Else create the XMTok now.
-      // else {
-      // // Odd case: constructors that work in math & text can insert raw strings
-      // in Math mode. push(@results, self.insertMathToken($box, font =>
-      // $props{fontzz})); } }
-
       //   let mut box_node = self.node.add_child(None, "box").unwrap();
       //   box_node.set_content(&tbox.text);
     }
@@ -306,6 +291,47 @@ impl Document {
     Ok(())
   }
 
+  /// This is a refactored `else` cases from the main absorb routine, to allow for better type
+  /// hygiene
+  pub fn absorb_string(
+    &mut self,
+    object: &str,
+    props: &HashMap<String, Stored>,
+    state: &mut State,
+  ) -> Result<()>
+  {
+    // Else, plain string in text mode.
+    let ismath: bool = match props.get("isMath") {
+      Some(v) => v.into(),
+      None => false,
+    };
+    if !ismath {
+      // TODO: ENHANCE , fix lifetimes... font prop object...
+      let font: Font = match self.box_to_absorb {
+        // TODO: clone needed to resolve mutability error
+        Some(ref bx) => match bx.get_font() {
+          None => (*state.lookup_font().unwrap()).clone(),
+          Some(font) => (*font).to_owned(),
+        },
+        None => (*state.lookup_font().unwrap()).clone(),
+      };
+      self.open_text(object, &font, state)?;
+    } else if self.get_node_qname(&self.node, state) == MATH_TOKEN_NAME {
+      // Or plain string in math mode.
+      // Note text nodes can ONLY appear in <XMTok> or <text>!!!
+      // Have we already opened an XMTok? Then insert into it.
+      self.open_math_text_internal(object, state)?;
+    // Else create the XMTok now.
+    } else {
+      // Odd case: constructors that work in math & text can insert raw strings in Math mode.
+      let font_opt = match props.get("font") {
+        Some(Stored::Font(fnt)) => Some(&**fnt),
+        _ => None,
+      };
+      self.insert_math_token(object, HashMap::new(), font_opt, state)?;
+    }
+    Ok(())
+  }
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   /// Shorthand for open,absorb,close, but returns the new node.
@@ -883,8 +909,8 @@ impl Document {
 
     // let tbox  = attributes.get("_box").or_insert( LateXML::Box ) // ???
     self.set_node_font(&node, &font);
-    if let Some(digested) = self.box_to_absorb.clone() {
-      self.set_node_box(&node, digested);
+    if let Some(ref digested) = self.box_to_absorb {
+      self.set_node_box(&node, digested.clone());
     }
     self.open_math_text_internal(text, state)?;
     self.close_node_internal(&node, state)?; // Should be safe.
@@ -929,7 +955,6 @@ impl Document {
         self.document.node_to_string(&self.node)
       );
     }
-
     if node_type != Some(NodeType::DocumentNode) // If not at document begin
       && !(node_type == Some(NodeType::TextNode) // And not appending text in same font.
       && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
@@ -937,8 +962,9 @@ impl Document {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal(state)?; // Close text node, if any.
       let mut bestdiff = 99;
-      let mut closeto: Node = node.clone();
-      let mut n: Node = node.clone();
+      let rc_node = Rc::new(node);
+      let mut closeto: Rc<Node> = rc_node.clone();
+      let mut n: Rc<Node> = rc_node.clone();
       while n.get_type() != Some(NodeType::DocumentNode) {
         let node_font = match self.get_node_font(&n) {
           Some(f) => f.clone(),
@@ -956,14 +982,14 @@ impl Document {
           }
         }
         match n.get_parent() {
-          Some(p) => n = p,
+          Some(p) => n = Rc::new(p),
           None => break,
         }
       }
 
       // Move to best starting point for this text.
-      if closeto != node {
-        self.close_to_node(&closeto, false, state)?;
+      if *closeto != *rc_node {
+        self.close_to_node(&*closeto, false, state)?;
       }
       if bestdiff > 0 {
         self.open_element(
@@ -1111,6 +1137,7 @@ impl Document {
   // Question: Why do I have math ligatures handled within openMathText_internal,
   // but text ligatures handled within closeText_internal ???
 
+  /// Needed externally only for the binding generation
   fn open_math_text_internal(&mut self, text: &str, state: &mut State) -> Result<Node> {
     // And if there's already text???
     let mut node = self.node.clone();
@@ -1482,8 +1509,8 @@ impl Document {
     // It can be eventually avoided by using a "memory arena" for all intermediate
     // objects - tokens, boxes, etc. and a well-designed referncing scheme into
     // the driver structs, such as Gullet, Stomach and Document
-    if let Some(digested) = self.box_to_absorb.clone() {
-      self.set_node_box(&newnode, digested);
+    if let Some(ref digested) = self.box_to_absorb {
+      self.set_node_box(&newnode, digested.clone());
     }
 
     if self.debug {

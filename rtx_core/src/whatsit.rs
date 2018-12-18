@@ -7,6 +7,7 @@ use std::rc::Rc;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::store::Stored;
+use crate::common::locator::Locator;
 use crate::definition::expandable::Expandable;
 use crate::definition::Definition;
 use crate::document::Document;
@@ -154,6 +155,11 @@ impl BoxOps for Whatsit {
       Some(&Stored::Font(ref font)) => Some(Cow::Owned((**font).clone())),
       _ => None,
     }
+  }
+
+  fn get_locator(&self) -> Option<Locator> {
+    // TODO
+    None
   }
 }
 

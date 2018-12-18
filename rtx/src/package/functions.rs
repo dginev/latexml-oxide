@@ -778,16 +778,14 @@ pub fn generate_id(
 pub fn merge_font(font: &Font, state: &mut State) {
   let new_font = match state.lookup_font() {
     Some(ref f) => f.merge(font),
-    _ => Font::text_default().merge(font)
+    _ => Font::text_default().merge(font),
   };
   state.assign_value("font", new_font, Some(Scope::Local));
-  return;
 }
 
 pub fn digest_text(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
   stomach.begin_mode("text", state)?;
   let value = stomach.digest(stuff, state);
-  // TODO: ??? : Tokens!(map { (ref $_ ? $_ : TokenizeInternal($_)) } @stuff));
   stomach.end_mode("text", state)?;
   value
 }

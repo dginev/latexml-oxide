@@ -5,6 +5,7 @@ use std::rc::Rc;
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::common::locator::Locator;
 use crate::definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -151,7 +152,7 @@ impl Definition for Conditional {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfFrame {
   pub token: Token,
-  pub start: String,
+  pub start: Locator,
   pub parsing: bool,
   pub elses: bool,
   pub ifid: i32,
