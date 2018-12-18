@@ -42,7 +42,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   // For fonts not allowed in math!!!
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[stomach, args, inner_state] {
     if inner_state.lookup_bool("IN_MATH") {
-      let c = args[1].to_string();
+      unpack_to_string!(args => c);
       warn!(target: &s!("unexpected:{}", c), "Command {:?} invalid in math mode", c);
     }
     Ok(vec![])

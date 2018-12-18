@@ -5,6 +5,7 @@ use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
+use crate::common::locator::Locator;
 use crate::common::store::Stored;
 use crate::document::Document;
 use crate::state::State;
@@ -18,7 +19,7 @@ pub struct Tbox {
   // TODO
   pub text: String,
   pub font: Rc<Font>,
-  pub locator: String,
+  pub locator: Locator,
   pub properties: HashMap<String, Stored>,
   pub tokens: Tokens,
 }
@@ -28,7 +29,7 @@ impl Default for Tbox {
     Tbox {
       text: String::new(),
       font: Rc::new(Font::text_default()),
-      locator: String::new(),
+      locator: Locator::default(),
       properties: HashMap::new(),
       tokens: Tokens!(),
     }
@@ -42,7 +43,7 @@ impl Tbox {
   pub fn new(
     text: String,
     font_opt: Option<Rc<Font>>,
-    locator_opt: Option<String>,
+    locator_opt: Option<Locator>,
     tokens_opt: Tokens,
     mut properties: HashMap<String, Stored>,
     state: &mut State,
@@ -127,6 +128,12 @@ impl BoxOps for Tbox {
   fn revert(&self) -> Tokens { self.tokens.clone() }
 
   fn get_font(&self) -> Option<Cow<Font>> { Some(Cow::Borrowed(&self.font)) }
+
+  fn get_locator(&self) -> Option<Locator> {
+    // TODO
+    // return $$self{properties}{locator};
+    None
+  }
 
   fn get_property(&self, key: &str, state: &mut State) -> Option<Cow<Stored>> {
     if key == "isSpace" {

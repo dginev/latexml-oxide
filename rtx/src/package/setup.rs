@@ -1781,10 +1781,10 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   /// Invocation(<list of Token>); builds a representation of a command sequence invoked on its
   /// arguments
   macro_rules! Invocation {
-    ($token:expr, $args:expr, $gullet:ident) => {
+    ($token:expr, $args:expr, $gullet:expr) => {
       Invocation!($token, $args, $gullet, $state)
     };
-    ($token:expr, $args:expr, $gullet:ident, $state_arg:ident) => {
+    ($token:expr, $args:expr, $gullet:expr, $state_arg:ident) => {
       build_invocation($token, $args.into_iter().map(|arg| arg.into()).collect(), $gullet, $state_arg)
     };
   }
@@ -1807,6 +1807,34 @@ macro_rules! SetupBindingMacros {($state:ident) => (
           code: Rc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string()),
           font_test: None }]);
 
+    }
+  }
+
+  // Defines an accent command using a combining char that follows the
+  // 1st char of the argument.  In cases where there is no argument, $standalonechar is used.
+  macro_rules! DefAccent {
+    ($accent:expr, $combiningchar:expr, $standalonechar:expr) => {
+      let mut empty_opts : HashMap<String, Stored> = HashMap::new();
+      DefAccent!($accent, $combiningchar, $standalonechar, empty_opts, $state);
+    };
+    ($accent:expr, $combiningchar:expr, $standalonechar:expr, below => true) => (DefAccent!($accent, $combiningchar, $standalonechar, map!("below"=>Stored::Bool(true)), $state));
+    ($accent:expr, $combiningchar:expr, $standalonechar:expr, $options:expr) => (DefAccent!($accent, $combiningchar, $standalonechar, $options, $state));
+    ($accent:expr, $combiningchar:expr, $standalonechar:expr, $options:expr, $state_arg: ident) => {
+      if $options.get("below").is_none() {
+        $options.entry(String::from("above")).or_insert(Stored::Bool(true));
+      }
+      // Used for converting a char used as an above-accent to a combining char (See \accent)
+      if $options.get("above").is_some() {
+        $state_arg.assign_mapping("accent_combiner_above", $standalonechar, Some($combiningchar));
+      } else {
+        $state_arg.assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
+      }
+      DefPrimitive!(&format!("{}{{}}",$accent), sub[stomach, letter, inner_state] {
+        let invoked = Invocation!(T_CS!($accent), letter.clone(), stomach.get_gullet_mut(), inner_state)?;
+        // TODO: check if letter.to_string has artefacts
+        crate::package::pool::tex_accents::apply_accent(stomach, &letter[0].to_string(), $combiningchar, $standalonechar, Some(invoked), inner_state)?;
+        Ok(vec![])
+      }, mode => Some(String::from("text")));
     }
   }
 

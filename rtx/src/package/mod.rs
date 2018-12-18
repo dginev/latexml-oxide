@@ -29,7 +29,7 @@ pub use rtx_core::document::Document;
 pub use rtx_core::gullet::Gullet;
 pub use rtx_core::mouth;
 pub use rtx_core::mouth::Mouth;
-pub use rtx_core::parameter::{Parameter, ParameterExtra, Parameters};
+pub use rtx_core::parameter::{Parameter, ParameterExtra, Parameters, ReversionClosure};
 pub use rtx_core::state::{Scope, State, Stored};
 pub use rtx_core::stomach::Stomach;
 pub use rtx_core::tbox::Tbox;

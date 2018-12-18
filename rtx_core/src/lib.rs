@@ -45,6 +45,7 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::model::Model;
 use crate::common::store::Stored;
+use crate::common::locator::Locator;
 use crate::document::Document;
 use crate::list::List;
 use crate::state::{State, StateOptions};
@@ -154,6 +155,7 @@ pub trait BoxOps {
     None
   }
   fn get_font(&self) -> Option<Cow<Font>>;
+  fn get_locator(&self) -> Option<Locator>;
   fn revert(&self) -> Tokens;
 }
 
@@ -291,6 +293,15 @@ impl BoxOps for Digested {
         None => None,
         Some(t) => Some(Cow::Owned(t.into_owned())),
       },
+      Digested::Postponed(ref _t) => unimplemented!(),
+    }
+  }
+
+  fn get_locator(&self) -> Option<Locator> {
+    match *self {
+      Digested::TBox(ref b) => b.get_locator(),
+      Digested::List(ref l) => l.get_locator(),
+      Digested::Whatsit(ref w) => w.borrow().get_locator(),
       Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
