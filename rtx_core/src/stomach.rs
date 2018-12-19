@@ -312,7 +312,7 @@ impl<'t> Stomach {
       let name = cs.replace("\\if", "");
       error!(
         target: &s!("undefined:{}", cs),
-        "The token {:?} is not defined. Defining it now as with \\newif", cs
+        "The token {} is not defined. Defining it now as with \\newif", cs
       );
       // install stub definitions for new conditional
       let cs_clone = cs.clone();

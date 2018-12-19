@@ -107,7 +107,7 @@ pub fn input_definitions(
     "article.cls" => pool::article_cls::load_definitions(&mut state)?,
     "alltt.sty" => pool::alltt_sty::load_definitions(&mut state)?,
     "comment.sty" => pool::comment_sty::load_definitions(&mut state)?,
-    "url.sty"     => pool::url_sty::load_definitions(&mut state)?,
+    "url.sty" => pool::url_sty::load_definitions(&mut state)?,
     other => fatal!(
       Package,
       Unknown,
@@ -579,6 +579,11 @@ pub fn def_conditional(
 )
 {
   let cs_name = cs.get_cs_name();
+  let locked_key = if let Some(true) = options.locked {
+    s!("{}:locked", cs_name)
+  } else {
+    String::new()
+  };
   match cs_name {
     "\\fi" | "\\else" | "\\or" => state.install_definition(
       Conditional {
@@ -604,26 +609,22 @@ pub fn def_conditional(
           //       first, we want to capture a cloned value of cs, to be able to keep using cs here.
           // second, each invocation of the conditional macro needs to create new tokens to
           // return,       hence a clone is required on each call.
-          let cs_c1 = cs.clone();
           DefMacroI!(
             T_CS!(s!("\\{}true", name)),
             None,
-            Tokens!(T_CS!("\\let"), cs_c1.clone(), T_CS!("\\iftrue")),
-            state
+            Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iftrue"))
           );
-          let cs_c2 = cs.clone();
           DefMacroI!(
             T_CS!(s!("\\{}false", name)),
             None,
-            Tokens!(T_CS!("\\let"), cs_c2.clone(), T_CS!("\\iffalse")),
-            state
+            Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iffalse"))
           );
           state.let_i(&cs, T_CS!("\\iffalse"), None);
         } else {
           //  For \ifcase, the parameter list better be a single Number !!
           state.install_definition(
             Conditional {
-              cs: cs.clone(),
+              cs: cs,
               paramlist,
               test,
               conditional_type: ConditionalType::If,
@@ -643,7 +644,7 @@ pub fn def_conditional(
   }
 
   if let Some(true) = options.locked {
-    state.assign_value(&s!("{}:locked", cs.get_cs_name()), true, None);
+    state.assign_value(&locked_key, true, None);
   }
   return;
 }

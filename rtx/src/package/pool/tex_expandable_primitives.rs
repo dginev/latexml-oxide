@@ -25,7 +25,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   DefConditional!("\\ifvmode", sub[gullet,args,state] {Ok(false)});
   DefConditional!("\\ifhmode", sub[gullet,args,state] {Ok(false)});
   DefConditional!("\\ifinner", sub[gullet,args,state] {Ok(false)});
-  
+
   DefConditional!("\\ifmmode", sub[gullet,args,state] {Ok(state.lookup_bool("IN_MATH"))});
 
   DefConditional!("\\if XToken XToken", sub[gullet, args, state] {
@@ -35,7 +35,6 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
     Ok(token1.get_charcode() == token2.get_charcode())
   });
 
-
   DefConditional!("\\ifx Token Token", sub[gullet, args, state] {
     unpack!(args => tokens1, tokens2);
     let token1 : Token = tokens1.into();
@@ -44,15 +43,13 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
     Ok(xequals)
   });
 
-
-  // TODO:
-  // DefConditionalI('\iftrue',  undef, sub { 1; });
-  // DefConditionalI('\iffalse', undef, sub { 0; });
+  DefConditional!("\\iftrue",  sub[gullet, args, state] { Ok(true) });
+  DefConditional!("\\iffalse", sub[gullet, args, state] { Ok(false) });
 
   //======================================================================
   // This makes \relax disappear completely after digestion
   // (which seems most TeX like).
-  DefPrimitiveI!("\\relax", noprimitive!() );
+  DefPrimitiveI!("\\relax", noprimitive!());
   //// However, this keeps a box, so it can appear in UnTeX
   ////// DefPrimitive('\relax',undef);
   //// But if you do that, you've got to watch out since it usually
@@ -68,13 +65,11 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   // define it here (only approxmiately), since it's already useful.
   Let!("\\protect", "\\relax");
 
-
   // DefMacro('\romannumeral Number', sub { roman($_[1]->valueOf); });
   // # Hmm... I wonder, should getString itself be dealing with escapechar?
   // sub escapechar {
   //   my $code = LookupRegister('\escapechar')->valueOf;
   //   return (($code >= 0) && ($code <= 255) ? chr($code) : ''); }
-
 
   // # 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
   // # suggests all characters except spaces are returned in category code Other, i.e. Explode()
@@ -83,14 +78,18 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
     let token : Token = token.into();
     let mut s = token.get_string().to_string();
     if s.starts_with('/') {
-      s = escapechar(state) + &s; 
+      s = escapechar(state) + &s;
     }
     Ok(Explode!(s).into())
   });
 
   DefMacroI!(T_CS!("\\jobname"), None, Tokens!()); // Set to the filename by initialization
 
-  DefMacroI!(T_CS!("\\fontname"), None, Tokens::new(Explode!("fontname not implemented")));
+  DefMacroI!(
+    T_CS!("\\fontname"),
+    None,
+    Tokens::new(Explode!("fontname not implemented"))
+  );
 
   DefMacro!("\\meaning Token", sub[gullet, args, state] {
     unpack!(args => token);
@@ -124,7 +123,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
       //         $type       = ref $definition;
       //         $type =~ s/^LaTeXML:://; }
 
-      //       elsif ($type =~ /register/i) {   
+      //       elsif ($type =~ /register/i) {
       //         my $value = $definition->valueOf;
       //         my $register_type = lc(ref $value);
       //         my $prefix = '\count';
@@ -167,9 +166,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
     }
   });
 
-
   //======================================================================
-
 
   DefParameterType!("CSName", reader => reader!(gullet, inner, extra, state, {
     let mut cs = escapechar(state);
@@ -185,10 +182,10 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
           error!(target: &s!("unexpected:{}", token), "The control sequence {:?} should not appear between \\csname and \\endcsname", token);
         } else {
           error!(target: &s!("undefined:{}", token), "The token {:?} is not defined", token);
-        } 
+        }
       } else if cc == Catcode::SPACE {  // Keep newlines from having \n!
         cs.push(' ');
-      } else { 
+      } else {
         cs.push_str(s);
       }
     }
@@ -198,7 +195,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   DefMacro!("\\csname CSName", sub[gullet, args, state] {
     unpack!(args => token);
     let token : Token = token.into();
-    if state.lookup_meaning(&token).is_none() { 
+    if state.lookup_meaning(&token).is_none() {
       Let!(token, "\\relax", state);
     }
     token.into()
@@ -219,7 +216,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
       state.remove_value("NOEXPAND_THE");
       tokens.append(&mut defn.invoke(gullet, state)?.unlist()); // Expand $xtok ONCE ONLY!
     } else {
-      tokens.append(&mut xtok.unlist()); 
+      tokens.append(&mut xtok.unlist());
     };
     Ok(tokens.into())
   });
@@ -227,11 +224,11 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   // Insert magic token that Gullet knows not to expand the next one.
   DefMacroI!(T_CS!("\\noexpand"), None, T_NOTEXPANDED!());
 
-  DefMacroI!(T_CS!("\\topmark"), None,        Tokens!());
-  DefMacroI!(T_CS!("\\firstmark"), None,      Tokens!());
-  DefMacroI!(T_CS!("\\botmark"), None,        Tokens!());
+  DefMacroI!(T_CS!("\\topmark"), None, Tokens!());
+  DefMacroI!(T_CS!("\\firstmark"), None, Tokens!());
+  DefMacroI!(T_CS!("\\botmark"), None, Tokens!());
   DefMacroI!(T_CS!("\\splitfirstmark"), None, Tokens!());
-  DefMacroI!(T_CS!("\\splitbotmark"), None,   Tokens!());
+  DefMacroI!(T_CS!("\\splitbotmark"), None, Tokens!());
 
   // DefMacro('\input TeXFileName', sub { Input($_[1]); });
 
@@ -279,12 +276,11 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
     }
   });
 
-
   // The following special cases are built-in to Definition
-  DefConditional!("\\else",          None);
-  DefConditional!("\\or",            None);
-  DefConditional!("\\fi",            None);
-  DefConditional!("\\ifcase Number", None);
+  DefConditional!("\\else");
+  DefConditional!("\\or");
+  DefConditional!("\\fi");
+  DefConditional!("\\ifcase Number");
 
   Ok(())
 }
