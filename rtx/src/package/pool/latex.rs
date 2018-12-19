@@ -47,7 +47,7 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
-    after_digest => vec!(afterproc!(_stomach, whatsit, state, {
+    after_digest => afterproc!(_stomach, whatsit, state, {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
         Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
@@ -57,7 +57,7 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
                 class_opts,
                 Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")),
                 state)?;
-    }))
+    })
   );
 
   // ======================================================================
@@ -523,6 +523,9 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   //======================================================================
   Tag!("ltx:item",        auto_close => true, auto_open => true);
   Tag!("ltx:inline-item", auto_close => true, auto_open => true);
+
+
+  InnerPool!(latex_verbatim);
 
   //**********************************************************************
   // C.7 Mathematical Formulas

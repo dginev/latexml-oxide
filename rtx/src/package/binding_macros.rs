@@ -129,7 +129,7 @@ macro_rules! primitiveproc {
 #[macro_export]
 macro_rules! beforesub {
   ($stomach:ident, $state:ident, $body:block) => {
-    |$stomach: &mut Stomach, $state: &mut State| $body
+    vec![Rc::new(|$stomach: &mut Stomach, $state: &mut State| $body)]
   };
 }
 #[macro_export]
@@ -178,11 +178,11 @@ macro_rules! aftersub {
 #[macro_export]
 macro_rules! afterproc {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => (
-    Rc::new(move |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $state:&mut State| -> Result<Vec<Digested>> {
+    vec![Rc::new(move |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $state:&mut State| -> Result<Vec<Digested>> {
       $body
       Ok(Vec::new())
     }
-  ))
+  )])
 }
 
 #[macro_export]

@@ -36,6 +36,7 @@ pub mod latex_font_selection;
 pub mod latex_hook;
 pub mod latex_loglike_functions;
 pub mod latex_tables_3;
+pub mod latex_verbatim;
 pub mod latex_ch11_moving_information;
 
 // eTeX Pool

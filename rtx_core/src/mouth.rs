@@ -351,7 +351,7 @@ impl Mouth {
   //**********************************************************************
   /// Read all tokens until a token equal to $until (if given), or until exhausted.
   /// Returns an empty Tokens list, if there is no input
-  pub fn read_tokens(&mut self, until: Option<Token>, state: &mut State) -> Tokens {
+  pub fn read_tokens(&mut self, until: Option<&Token>, state: &mut State) -> Tokens {
     let mut tokens = Vec::new();
     let has_until = until.is_some();
     let until_string = if let Some(until_token) = until {

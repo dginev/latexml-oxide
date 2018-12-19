@@ -371,6 +371,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       DefConditionalI!(cs, paramlist, sub[$gullet, $args, $inner_state] $body, $state_arg)
     });
     // or None
+    ($proto:expr) => (DefConditional!($proto, None, $state));
     ($proto:expr, None) => (DefConditional!($proto, None, $state));
     ($proto:expr, None, $state_arg:ident) => ({
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
@@ -572,12 +573,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       after_digest_env.extend(options.after_digest);
       if let Some(ref mode) = options.mode {
         let mode_clone = mode.clone();
-        let end_mode_closure = afterproc!(stomach, whatsit, state, { stomach.end_mode(&mode_clone, state)?; });
-        after_digest_env.push(end_mode_closure);
+        let end_mode_closure : Vec<DigestionClosure>  = afterproc!(stomach, whatsit, state, { stomach.end_mode(&mode_clone, state)?; });
+        after_digest_env.extend(end_mode_closure);
       }
       if options.bounded {
-        let egroup_closure = afterproc!(stomach, whatsit,state, { stomach.egroup(state)?; });
-        after_digest_env.push(egroup_closure);
+        let egroup_closure : Vec<DigestionClosure> = afterproc!(stomach, whatsit,state, { stomach.egroup(state)?; });
+        after_digest_env.extend(egroup_closure);
       }
 
       $state_arg.install_definition(Primitive{

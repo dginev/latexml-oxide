@@ -122,6 +122,13 @@ impl Gullet {
     Locator::default()
   }
 
+  pub fn get_mouth_mut(&mut self) -> Option<&mut Mouth> {
+    match self.mouth {
+      None => None,
+      Some(ref mut runtime) => Some(&mut runtime.mouth),
+    }
+  }
+
   //**********************************************************************
   // Not really 100% sure how this is supposed to work
   // See TeX Ch 20, p216 regarding noexpand, \edef with token list registers, etc.

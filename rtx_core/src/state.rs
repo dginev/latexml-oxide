@@ -1109,7 +1109,7 @@ impl State {
     }
   }
 
-  pub fn begin_semiverbatim(&mut self, extraspecials: Option<Vec<Token>>) {
+  pub fn begin_semiverbatim(&mut self, extraspecials: Option<Vec<char>>) {
     // Is this a good/safe enough shorthand, or should we really be doing beginMode?
     self.push_frame();
     self.assign_value("MODE", Stored::String(s!("text")), None);
@@ -1117,8 +1117,7 @@ impl State {
     let mut all_specials: Vec<char> = Vec::new();
     if let Some(extra) = extraspecials {
       for special in extra {
-        let special_char = special.text.chars().next().unwrap();
-        all_specials.push(special_char);
+        all_specials.push(special);
       }
     }
     if let Some(&Stored::VecChar(ref specials_store)) = self.lookup_value("SPECIALS") {
