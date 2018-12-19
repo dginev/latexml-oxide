@@ -107,6 +107,7 @@ pub fn input_definitions(
     "article.cls" => pool::article_cls::load_definitions(&mut state)?,
     "alltt.sty" => pool::alltt_sty::load_definitions(&mut state)?,
     "comment.sty" => pool::comment_sty::load_definitions(&mut state)?,
+    "url.sty"     => pool::url_sty::load_definitions(&mut state)?,
     other => fatal!(
       Package,
       Unknown,
