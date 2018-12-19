@@ -28,6 +28,7 @@ static DEFSIZE: &'static str = "10"; // TODO: master consults state "NOMINAL_FON
 // static FORCE_SHAPE : i8  = 0x4;
 
 lazy_static! {
+  pub static ref FONT_TEXT_DEFAULT : Font = Font::text_default();
   static ref LATIN_LETTER_RE: Regex = Regex::new(r"^[\p{Latin}&&\pL]$").unwrap();
   static ref GREEK_LETTER_RE: Regex = Regex::new(r"^[\p{Greek}&&\pL]$").unwrap();
   static ref UPPER_LETTER_RE: Regex = Regex::new(r"^[\p{Lu}]$").unwrap();
@@ -382,52 +383,48 @@ impl Font {
     serialized.trim().to_string()
   }
 
-  pub fn distance(&self, other_opt: Option<&Font>) -> i8 {
-    if let Some(other) = other_opt {
-      let mut distance = 0;
-      if self.family != other.family {
-        distance += 1;
-      }
-      if self.series != other.series {
-        distance += 1;
-      }
-      if self.shape != other.shape {
-        distance += 1;
-      }
-      if self.size != other.size {
-        distance += 1;
-      }
-      if self.color != other.color {
-        distance += 1;
-      }
-      if self.bg != other.bg {
-        distance += 1;
-      }
-      if self.opacity != other.opacity {
-        distance += 1;
-      }
-      if self.encoding != other.encoding {
-        distance += 1;
-      }
-      if self.language != other.language {
-        distance += 1;
-      }
-      if self.mathstyle != other.mathstyle {
-        distance += 1;
-      }
-      if self.forceseries != other.forceseries {
-        distance += 1;
-      }
-      if self.forcefamily != other.forcefamily {
-        distance += 1;
-      }
-      if self.forceshape != other.forceshape {
-        distance += 1;
-      }
-      distance
-    } else {
-      0
+  pub fn distance(&self, other: &Font) -> i8 {
+    let mut distance = 0;
+    if self.family != other.family {
+      distance += 1;
     }
+    if self.series != other.series {
+      distance += 1;
+    }
+    if self.shape != other.shape {
+      distance += 1;
+    }
+    if self.size != other.size {
+      distance += 1;
+    }
+    if self.color != other.color {
+      distance += 1;
+    }
+    if self.bg != other.bg {
+      distance += 1;
+    }
+    if self.opacity != other.opacity {
+      distance += 1;
+    }
+    if self.encoding != other.encoding {
+      distance += 1;
+    }
+    if self.language != other.language {
+      distance += 1;
+    }
+    if self.mathstyle != other.mathstyle {
+      distance += 1;
+    }
+    if self.forceseries != other.forceseries {
+      distance += 1;
+    }
+    if self.forcefamily != other.forcefamily {
+      distance += 1;
+    }
+    if self.forceshape != other.forceshape {
+      distance += 1;
+    }
+    distance
   }
 
   /// This method compares 2 fonts, returning the differences between them.

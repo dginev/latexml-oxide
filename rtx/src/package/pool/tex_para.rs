@@ -17,7 +17,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   let mut skippable_props: HashMap<String, Stored> = HashMap::new();
   skippable_props.insert(s!("alignmentSkippable"), true.into());
 
-  DefConstructor!("\\par", sub[document, args, props, state] {
+  DefConstructor!("\\normal@par",
+    sub[document, args, props, state] {
       let in_preamble = prop_bool!(props, "inPreamble");
       if !in_preamble {
         document.maybe_close_element("ltx:p", state)?;
@@ -31,7 +32,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
           }
         }
         document.maybe_close_element("ltx:para", state)?;
-     }
+      }
     },
     after_digest => aftersub!(stomach, whatsit, state, {
       let in_preamble = state.lookup_bool("inPreamble");
@@ -47,8 +48,9 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       Ok(Vec::new())
     }),
     properties => properties!(skippable_props),
-    alias => Some(s!("\\par\n"))
+    alias => Some(s!("\\par"))
   );
+  Let!("\\par","\\normal@par");
 
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
@@ -130,6 +132,9 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     document.trim_node_whitespace(node)?;
   });
   Tag!("ltx:p", auto_close => true, auto_open => true, after_close => trim_node_whitespace_closure);
+
+  // \dump ???
+  DefPrimitive!("\\end", sub[stomach, args, state] { stomach.get_gullet_mut().flush(state); Ok(vec![]) });
 
   // TODO: Move to the right place in the pool definitions (maybe split out individual sub-pools by
   // chapter?)
