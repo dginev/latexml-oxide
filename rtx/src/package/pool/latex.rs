@@ -654,6 +654,11 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   // DefMacro('\fnsymbol{}', sub {
   //     ExplodeText(radix_format(CounterValue(ToString(Expand($_[1])))->valueOf, @fnsymbols)); });
 
+  // line ~2777 ^^
+
+  // lines 3230-3830
+  InnerPool!(latex_ch11_moving_information);
+
   // lines 4413-4563
   InnerPool!(latex_font_selection);
 
