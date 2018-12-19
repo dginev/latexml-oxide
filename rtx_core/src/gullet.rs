@@ -6,8 +6,8 @@ use std::rc::Rc;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::glue::{Glue, MuGlue};
-use crate::common::number::Number;
 use crate::common::locator::Locator;
+use crate::common::number::Number;
 
 use crate::definition::conditional::ConditionalType;
 use crate::definition::register::{RegisterType, RegisterValue};
@@ -150,44 +150,38 @@ impl Gullet {
   pub fn read_token(&mut self, state: &mut State) -> Option<Token> {
     let mut next_token: Option<Token> = None;
     // Check in pushback first....
-    match self.mouth {
-      None => None,
-      Some(ref mut runtime) => {
-        loop {
-          match runtime.pushback.pop_front() {
-            None => break,
-            Some(pushback_token) => {
-              match pushback_token.code {
-                Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
-                Catcode::MARKER => {
-                  // TODO:
-                  // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
-                },
-                _ => {
-                  next_token = Some(pushback_token);
-                  break;
-                },
-              };
+    if let Some(ref mut runtime) = self.mouth {
+      while let Some(pushback_token) = runtime.pushback.pop_front() {
+        match pushback_token.code {
+          Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
+          Catcode::MARKER => {
+            // TODO:
+            // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
+          },
+          _ => {
+            next_token = Some(pushback_token);
+            break;
+          },
+        };
+      }
+      if next_token.is_none() {
+        while let Some(token) = runtime.mouth.read_token(state) {
+          match token.code {
+            Catcode::COMMENT => self.pending_comments.push_back(token),
+            Catcode::MARKER => {
+              // TODO:
+              // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
             },
-          }
+            _ => {
+              next_token = Some(token);
+              break;
+            },
+          };
         }
-        if next_token.is_none() {
-          while let Some(token) = runtime.mouth.read_token(state) {
-            match token.code {
-              Catcode::COMMENT => self.pending_comments.push_back(token),
-              Catcode::MARKER => {
-                // TODO:
-                // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
-              },
-              _ => {
-                next_token = Some(token);
-                break;
-              },
-            };
-          }
-        }
-        next_token
-      },
+      }
+      next_token
+    } else {
+      None
     }
   }
 
@@ -366,21 +360,24 @@ impl Gullet {
   pub fn read_balanced(&mut self, state: &mut State) -> Result<Tokens> {
     let mut tokens = Vec::new();
     let mut level = 1;
-    while level > 0 {
-      match self.read_token(state) {
-        None => break,
-        Some(t) => {
-          match t.code {
-            // Inline ->getCatcode!
-            Catcode::BEGIN => level += 1,
-            Catcode::END => level -= 1,
-            _ => {},
-          };
-          if level > 0 {
-            tokens.push(t);
+    while let Some(t) = self.read_token(state) {
+      // TODO: add $expanded flag for read_x_token(0,1) alternative read
+      match t.code {
+        // Inline ->getCatcode!
+        Catcode::BEGIN => level += 1,
+        Catcode::END => {
+          level -= 1;
+          if level <= 0 {
+            break;
           }
         },
+        // TODO: Marker case
+        _ => {},
       };
+      tokens.push(t);
+    }
+    if level > 0 {
+      error!(target: "expected:}", "Gullet->readBalanced ran out of input in an unbalanced state.");
     }
     if tokens.is_empty() {
       // Default to empty token list, to signify success (TODO, or improve to
@@ -502,7 +499,8 @@ impl Gullet {
         match token.code {
           Catcode::BEGIN => {
             // Inline ->getCatcode!
-            self.read_balanced(state)
+            let readin = self.read_balanced(state);
+            readin
           },
           _ => Ok(Tokens!(token)),
         }

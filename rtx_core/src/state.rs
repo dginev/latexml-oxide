@@ -362,7 +362,7 @@ impl State {
     let mut value_table = HashMap::new();
     let mut specials_vdq = VecDeque::new();
     specials_vdq.push_front(Stored::VecChar(vec![
-      '^', '_', '@', '~', '&', '$', '#', '%', '\'',
+      '^', '_', '@', '~', '&', '$', '#', '\'',
     ]));
     value_table.insert(s!("SPECIALS"), specials_vdq);
 
