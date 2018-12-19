@@ -2,73 +2,6 @@ use crate::package::*;
 pub fn load_definitions(core_state: &mut State) -> Result<()> {
   SetupBindingMacros!(core_state);
 
-  //======================================================================
-  // TeX Book, Appendix B. p. 359
-
-  // Ah, since \ldots can appear in text and math....
-
-  DefConstructor!(
-    "\\ldots",
-    "?#isMath(<ltx:XMTok name='ldots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})"
-  );
-  // TODO
-  // properties => properties!(sub[stomach, args, state] {
-  //   if state.lookup_bool("IN_MATH") {
-  //     font => state.lookup_font().merge(family => "serif", series => "medium", shape =>
-  // "upright").specialize("\u{2026}")   }
-  //  })
-  // Since not DefMath!
-
-  // And so can \vdots
-  // DefConstructorI('\vdots', undef,
-  //   "?#isMath(<ltx:XMTok name='vdots' font='#font' role='ID'>\x{22EE}</ltx:XMTok>)(\x{22EE})",
-  //   properties => sub {
-  //     (LookupValue('IN_MATH')
-  //       ? (font => LookupValue('font')->merge(family => 'serif',
-  //           series => 'medium', shape => 'upright')->specialize("\x{22EE}"))
-  //       : ()); });    # Since not DefMath!
-  //                     # But not these!
-  // DefMathI('\cdots', undef, "\x{22EF}", role => 'ID');    # MIDLINE HORIZONTAL ELLIPSIS
-
-  // DefMathI('\ddots', undef, "\x{22F1}", role => 'ID');           # DOWN RIGHT DIAGONAL ELLIPSIS
-  // DefMathI('\colon', undef, ':',        role => 'METARELOP');    # Seems like good default role
-  //         # Note that amsmath redefines \dots to be `smart'.
-  //         # Aha, also can be in text...
-  // DefConstructorI('\dots', undef,
-  //   "?#isMath(<ltx:XMTok name='dots' font='#font' role='ID'>\x{2026}</ltx:XMTok>)(\x{2026})",
-  //   properties => sub {
-  //     (LookupValue('IN_MATH')
-  //       ? (font => LookupValue('font')->merge(family => 'serif',
-  //           series => 'medium', shape => 'upright')->specialize("\x{2026}"))
-  //       : ()); });    # Since not DefMath!
-
-  // And while we're at it...
-
-  // DefMathLigature("\u{22C5}\u{22C5}\u{22C5}" => "\u{22EF}", role => 'ID', name => 'cdots');
-
-  DefLigature!(r"[.][.][.]", "\u{2026}", fontTest => sub[arg] {arg.get_family() != Some("typewriter".into()) });  // ldots
-
-  DefLigature!(r"--", "\u{2013}",fontTest => sub[arg] {arg.get_family() != Some("typewriter".into()) }); // EN DASH (NOTE: With digits before &
-                                   //, aft => \N{FIGURE DASH})
-  DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] {arg.get_family() != Some("typewriter".into()) }); // EM DASH
-                                    // Ligatures for doubled single left & right quotes to convert to double quotes
-                                    // [should ligatures be part of a font, in the first place? (it is in TeX!)
-  DefLigature!("\u{2018}\u{2018}", "\u{201C}", fontTest => sub[arg] {
-    if arg.get_family() != Some("typewriter".into()) {
-      let encoding = arg.get_encoding().unwrap_or(Cow::Borrowed("OT1"));
-      encoding == "OT1" || encoding == "T1" } else {false} });
-  DefLigature!("\u{2019}\u{2019}", "\u{201D}", fontTest => sub[arg] {
-    if arg.get_family() != Some("typewriter".into()) {
-      let encoding = arg.get_encoding().unwrap_or(Cow::Borrowed("OT1"));
-      encoding == "OT1" || encoding == "T1" } else {false} });
-
-  DefMacroI!(T_CS!("\\TeX"), None, Tokens::new(ExplodeText!("TeX")));
-  DefMacroI!(T_CS!("\\i"), None, T_OTHER!("\u{0131}")); // LATIN SMALL LETTER DOTLESS I
-  DefMacroI!(T_CS!("\\j"), None, T_OTHER!("\u{0237}"));
-
-  // DefMathLigature("..." => "\x{2026}", role => 'ID', name => 'ldots');
-
-  //
   //**********************************************************************
   // Plain;  Extracted from Appendix B.
   //**********************************************************************
@@ -334,6 +267,91 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   Let!(T_ACTIVE!("\r"), "\\par"); // (or is this just LaTeX?)
 
   Let!("\\\t", "\\\r"); // \<tab> == \<space>, also
+
+  //======================================================================
+  // TeX Book, Appendix B, p. 353
+
+  DefPrimitiveI!("\\break", noprimitive!());
+  DefPrimitiveI!("\\nobreak", noprimitive!());
+  DefPrimitiveI!("\\allowbreak", noprimitive!());
+  DefMacro!("\\nobreakspace", "\\ifmmode\\math@nobreakspace\\else\\text@nobreakspace\\fi");
+
+  DefPrimitive!("\\text@nobreakspace", sub[stomach, whatsit, state] {
+    Tbox::new(String::from("\u{00A0}"), None, None, Tokens!(T_CS!("~")), map!("isSpace" => Stored::Bool(true)), state).into()
+  });
+   
+
+// DefConstructor!("\\math@nobreakspace", "<ltx:XMHint name='nobreakspace' width='#width'/>",
+//   properties => { isSpace => 1, width => sub { Dimension('0.333em'); } },
+//   alias => '~');
+DefMacro!("~", "\\nobreakspace{}");
+
+// DefMacroI('\slash', undef, '/');
+// DefPrimitiveI('\filbreak', undef, undef);
+  DefMacro!("\\goodbreak", "\\par");
+  DefMacro!("\\eject", "\\par\\LTX@newpage");
+  Let!("\\newpage", "\\eject");
+  // DefConstructor!("\\LTX@newpage", "^<ltx:pagination role='newpage'/>");
+  DefMacro!("\\supereject", "\\par\\LTX@newpage");
+  DefPrimitiveI!("\\removelastskip", noprimitive!());
+  DefMacro!("\\smallbreak", "\\par");
+  DefMacro!("\\medbreak", "\\par");
+  DefMacro!("\\bigbreak", "\\par");
+  DefMacro!("\\line", "\\hbox to \\hsize");
+// DefConstructor('\leftline{}', sub {
+//     alignLine($_[0], $_[1], 'left'); },
+//   bounded => 1);
+// DefConstructor('\rightline{}', sub {
+//     alignLine($_[0], $_[1], 'right'); },
+//   bounded => 1);
+// DefConstructor('\centerline{}', sub {
+//     alignLine($_[0], $_[1], 'center'); },
+//   bounded => 1);
+
+// sub alignLine {
+//   my ($document, $line, $alignment) = @_;
+//   if ($document->isOpenable('ltx:p')) {
+//     $document->insertElement('ltx:p', $line, class => 'ltx_align_' . $alignment); }
+//   elsif ($document->isOpenable('ltx:text')) {
+//     $document->insertElement('ltx:text', $line, class => 'ltx_align_' . $alignment);
+//     $document->insertElement('ltx:break'); }
+//   else {
+//     $document->absorb($line); }
+//   return; }
+
+// # These should be 0 width, but perhaps also shifted?
+// DefMacro('\llap{}', '\hbox to 0pt{#1}');
+// DefMacro('\rlap{}', '\hbox to 0pt{#1}');
+// DefMacroI('\m@th', undef, '\mathsurround=0pt ');
+
+// # \strutbox
+// DefMacroI('\strut', undef, Tokens());
+// RawTeX('\newbox\strutbox');
+
+// #======================================================================
+// # TeX Book, Appendix B. p. 354
+
+// # TODO: Not yet done!!
+// # tabbing stuff!!!
+
+// DefMacroI('\settabs', undef, undef);
+
+// #======================================================================
+// # TeX Book, Appendix B. p. 355
+
+// DefPrimitive('\hang', undef);
+
+// # TODO: \item, \itemitem not done!
+// # This could probably be adopted from LaTeX, if the <itemize> could auto-open
+// # and close!
+// DefConstructor('\item{}',     '#1');
+// DefConstructor('\itemitem{}', '#1');
+
+// DefMacro('\textindent{}', '#1');
+
+// # Conceivably this should enclose the next para in a block?
+// # Or add attribute to it? Or...
+// DefPrimitiveI('\narrower', undef, undef);
 
   Ok(())
 }

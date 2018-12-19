@@ -9,6 +9,7 @@ pub mod tex_appendix_b_p359;
 pub mod tex_appendix_b_p360;
 pub mod tex_appendix_b_p361;
 pub mod tex_appendix_b_p362;
+pub mod tex_appendix_b_p364;
 pub mod tex_assignment;
 pub mod tex_boxes;
 pub mod tex_ch24_primitives;
