@@ -14,7 +14,7 @@ use std::iter;
 use std::rc::Rc;
 
 use crate::common::error::*;
-use crate::common::font::Font;
+use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::store::Stored;
 use crate::state::State;
 
@@ -130,8 +130,7 @@ impl Document {
   fn finalize_rec(&mut self, node: &mut Node, init_font: &Font, state: &mut State) -> Result<()> {
     let qname = state.model.get_node_qname(node);
     let mut declared_font = init_font.clone();
-    let desired_font;
-    let mut pending_declaration = HashMap::new();
+
     if let Some(_comment) = node.get_attribute("_pre_comment") {
       if let Some(_parent) = node.get_parent() {
         // parent.insert_before(XML::LibXML::Comment.new(comment), node);
@@ -146,24 +145,21 @@ impl Document {
     let mut keys_to_remove: Vec<String> = Vec::new();
     let mut attrs_to_set: Vec<(String, String)> = Vec::new();
 
+    let font = self.get_node_font(node);
+    let mut pending_declaration = font.relative_to(&declared_font);
+    if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some())
+      && !pending_declaration.is_empty()
     {
-      if let Some(font) = self.get_node_font(node) {
-        desired_font = font.clone();
-        pending_declaration = desired_font.relative_to(&declared_font);
-        if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some())
-          && !pending_declaration.is_empty()
-        {
-          for (ref key, &(ref value, ref properties)) in &pending_declaration {
-            if state.model.can_have_attribute(&qname, key) {
-              attrs_to_set.push((key.to_string(), value.to_string()));
-              // Merge to set the font currently in effect
-              declared_font = declared_font.merge(&properties);
-              keys_to_remove.push(key.to_string());
-            }
-          }
+      for (ref key, &(ref value, ref properties)) in &pending_declaration {
+        if state.model.can_have_attribute(&qname, key) {
+          attrs_to_set.push((key.to_string(), value.to_string()));
+          // Merge to set the font currently in effect
+          declared_font = declared_font.merge(&properties);
+          keys_to_remove.push(key.to_string());
         }
       }
     }
+
     for (key, value) in attrs_to_set {
       self.set_attribute(node, &key, &value)?;
     }
@@ -422,7 +418,17 @@ impl Document {
       debug!("Open element {:?} at {:?}", qname, self.node.get_name());
     }
     let point = self.find_insertion_point(qname, state)?;
-    let newnode = self.open_element_at(point, qname, attributes, font_opt, state)?;
+    let font_owned: Option<Font> = match font_opt {
+      Some(f) => Some(f.clone()),
+      None => match self.box_to_absorb {
+        Some(ref bx) => match bx.get_font() {
+          Some(f) => Some((*f).clone()),
+          None => None,
+        },
+        None => None,
+      },
+    };
+    let newnode = self.open_element_at(point, qname, attributes, font_owned, state)?;
     self.set_node(&newnode);
     // Underscore attributes such as _box and _font from LaTeXML-proper are now
     // bookkept in special substructs of Document Connected to the node hash.
@@ -432,11 +438,10 @@ impl Document {
     // TODO: also accept a _box argument eventually? Or store differently?
     // attributes.entry("_box").or_insert(state.locals.box);
     if let Some(box_font) = font_opt {
-      self.set_node_font(&newnode, &box_font);
+      self.set_node_font(&newnode, box_font.clone());
     } else {
       self.set_box_font(&newnode);
     }
-
     Ok(newnode)
   }
 
@@ -908,7 +913,7 @@ impl Document {
     let node = self.open_element(MATH_TOKEN_NAME, Some(attributes), None, state)?;
 
     // let tbox  = attributes.get("_box").or_insert( LateXML::Box ) // ???
-    self.set_node_font(&node, &font);
+    self.set_node_font(&node, font);
     if let Some(ref digested) = self.box_to_absorb {
       self.set_node_box(&node, digested.clone());
     }
@@ -957,7 +962,7 @@ impl Document {
     }
     if node_type != Some(NodeType::DocumentNode) // If not at document begin
       && !(node_type == Some(NodeType::TextNode) // And not appending text in same font.
-      && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
+           && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
     {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal(state)?; // Close text node, if any.
@@ -966,11 +971,8 @@ impl Document {
       let mut closeto: Rc<Node> = rc_node.clone();
       let mut n: Rc<Node> = rc_node.clone();
       while n.get_type() != Some(NodeType::DocumentNode) {
-        let node_font = match self.get_node_font(&n) {
-          Some(f) => f.clone(),
-          None => Font::text_default(),
-        };
-        let d = font.distance(Some(&node_font));
+        let node_font = self.get_node_font(&n);
+        let d = font.distance(&node_font);
         if d < bestdiff {
           bestdiff = d;
           closeto = n.clone();
@@ -1065,14 +1067,12 @@ impl Document {
       let ocontent = content.clone();
       // let fonttest;
       if let Some(Stored::VecDequeStored(ligatures)) = state.lookup_value("TEXT_LIGATURES") {
-        let font_opt = self.get_node_font(&parent);
+        let font = self.get_node_font(&parent);
         for stored_ligature in ligatures.iter() {
           if let Stored::Ligature(ligature) = stored_ligature {
-            if let Some(font) = font_opt {
-              if let Some(ref font_test) = ligature.font_test {
-                if !(font_test)(font) {
-                  continue; // if the font test fails, skip the ligature
-                }
+            if let Some(ref font_test) = ligature.font_test {
+              if !(font_test)(font) {
+                continue; // if the font test fails, skip the ligature
               }
             }
             content = (ligature.code)(&content);
@@ -1241,7 +1241,9 @@ impl Document {
     // that.
     } else if let Some(inter) = self.can_contain_indirect(&cur_qname, qname, state) {
       if (inter != qname) && (inter != cur_qname) {
-        self.open_element(&inter, None, None, state)?; // font => self.getNodeFont(self.node}));
+        // TODO: can we avoid the clone here? there is a mutability conflict...
+        let font_cloned: Font = self.get_node_font(&self.node).clone();
+        self.open_element(&inter, None, Some(&font_cloned), state)?;
         return self.find_insertion_point(qname, state); // And retry insertion (should work now).
       }
     } else {
@@ -1374,9 +1376,9 @@ impl Document {
 
   //**********************************************************************
   /// Record the Font of a node
-  pub fn set_node_font(&mut self, node: &Node, font: &Font) {
+  pub fn set_node_font(&mut self, node: &Node, font: Font) {
     let nodeid = node.to_hashable();
-    self.node_fonts.insert(nodeid, font.clone());
+    self.node_fonts.insert(nodeid, font);
   }
 
   pub fn set_box_font(&mut self, node: &Node) {
@@ -1397,12 +1399,15 @@ impl Document {
     }
   }
 
-  pub fn get_node_font(&self, node: &Node) -> Option<&Font> {
+  pub fn get_node_font(&self, node: &Node) -> &Font {
     if node.get_type() == Some(NodeType::ElementNode) {
       let nodeid = node.to_hashable();
-      self.node_fonts.get(&nodeid)
+      match self.node_fonts.get(&nodeid) {
+        Some(ref f) => f,
+        None => &FONT_TEXT_DEFAULT,
+      }
     } else {
-      None
+      &FONT_TEXT_DEFAULT
     }
   }
 
@@ -1435,16 +1440,11 @@ impl Document {
     mut point: Node,
     qname: &str,
     attributes: Option<HashMap<String, String>>,
-    font_opt: Option<&Font>,
+    mut font_opt: Option<Font>,
     state: &mut State,
   ) -> Result<Node>
   {
     let (decoded_ns, tag) = state.model.decode_qname(qname);
-    let mut font_opt_cloned: Option<Font> = match font_opt {
-      // TODO: lifetime trouble forced me into cloning, there is a better way...
-      Some(f) => Some(f.clone()),
-      None => None,
-    };
     let mut newnode;
     // box = self.node_boxes.get(box);    // may already be the string key
 
@@ -1480,15 +1480,11 @@ impl Document {
       }
       self.record_constructed_node(Some(&newnode));
     } else {
+      newnode = self.open_element_internal(&mut point, decoded_ns, &tag, state)?;
       if font_opt.is_none() {
-        font_opt_cloned = match self.get_node_font(&point) {
-          // TODO: lifetime trouble here...
-          Some(f) => Some(f.clone()),
-          None => None,
-        };
+        font_opt = Some(self.get_node_font(&point).clone());
       }
       // box  = self.get_node_box(point); // unless $box
-      newnode = self.open_element_internal(&mut point, decoded_ns, &tag, state)?;
     }
 
     if let Some(attrs) = attributes {
@@ -1501,8 +1497,8 @@ impl Document {
         self.set_attribute(&mut newnode, key, &attrs[key])?;
       }
     }
-    if let Some(font) = font_opt_cloned {
-      self.set_node_font(&newnode, &font);
+    if let Some(font) = font_opt {
+      self.set_node_font(&newnode, font);
     }
 
     // The .clone on boxes is potentially *VERY SLOW* and a code smell.
