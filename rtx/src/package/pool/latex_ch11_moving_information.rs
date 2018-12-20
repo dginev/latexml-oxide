@@ -19,32 +19,40 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // but only those that have an xml:id (but should this require a refnum and/or title ???)
   // Note that latex essentially allows redundant labels, but we can record only one!!!
   DefConstructor!("\\label Semiverbatim", sub[document, olabel, props, state] {
-    if let Some(savenode) = document.float_to_label() {
-      let mut node = document.get_node();
+    if let Some(savenode) = document.float_to_label(state) {
       let mut labels : HashMap<String,bool> = HashMap::new();
       if let Some(label) = props.get("label") {
         labels.insert(label.to_string(), true);
       }
-      let labels_iter = node.get_attribute("labels").unwrap_or_default().split_whitespace();
-      for label in labels_iter {
+      for label in document.node_get_attribute("labels").unwrap_or_default().split_whitespace() {
         labels.insert(label.to_string(), true);
       }
-      document.set_attribute(&mut node, "labels", labels.keys().collect().join(' '));
+      document.node_set_attribute("labels",
+         &labels.keys().map(|k| k.to_string()).collect::<Vec<_>>().join(" "))?;
       document.set_node(&savenode);
     }
-  }
-  //   reversion   => '',
-  //   properties  => { alignmentSkippable => 1, alignmentPreserve => 1 },
-  //   afterDigest => sub {
-  //     my $label = CleanLabel(ToString($_[1]->getArg(1)));
-  //     $_[1]->setProperty(label => $label);
-  //     my $scope = $label; $scope =~ s/^LABEL:/label:/;
-  //     if (my $ctr = LookupValue('current_counter')) {
-  //       unshift(@{ LookupValue('scopes_for_counter:' . $ctr) }, $scope);
-  //       $STATE->activateScope($scope);
-  //       $_[0]->beginMode('text');
-  //       AssignValue('LABEL@' . $label, Digest(T_CS('\@currentlabel')), 'global');
-  //       $_[0]->endMode('text'); }
+  },
+  // reversion => "",
+  // TODO:
+  // properties  => { alignmentSkippable => 1, alignmentPreserve => 1 },
+  after_digest => afterproc!(stomach, whatsit, state, {
+    let label = match whatsit.get_arg(1) {
+      Some(labeld) => clean_label(&labeld.to_string(), None),
+      None => String::new()
+    };
+    let mut scope = label.replace("LABEL:","label:");
+    let label_key = s!("LABEL@{}", label);
+    whatsit.set_property("label", label);
+    if let Some(ctr) = state.lookup_value("current_counter") {
+      // TODO: is unshifting on lookupValue badly differing from unshiftvalue?
+      let mut scopes = state.unshift_value(&s!("scopes_for_counter:{}", ctr), vec![scope.clone()]);
+    }
+    state.activate_scope(&scope);
+    stomach.begin_mode("text", state)?;
+    let current_label = stomach.digest(Tokens!(T_CS!("\\@currentlabel")), state)?;
+    state.assign_value(&label_key, current_label, Some(Scope::Global));
+    stomach.end_mode("text", state)?;
+   })
   );
 
   // # If a node has been labeled, but still  hasn't yet got an id by afterClose:late,
