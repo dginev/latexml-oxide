@@ -295,80 +295,97 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     Ok(tokens)
   });
 
-  // DefConstructorI('\lx@bibnewblock', undef, "<ltx:bibblock>");
-  // Let('\newblock', '\lx@bibnewblock');
-  // Tag('ltx:bibitem',  autoClose => 1);
-  // Tag('ltx:bibblock', autoClose => 1);
+  DefConstructor!("\\lx@bibnewblock", "<ltx:bibblock>");
+  Let!("\\newblock", "\\lx@bibnewblock");
+  Tag!("ltx:bibitem",  auto_close => true);
+  Tag!("ltx:bibblock", auto_close => true);
 
-  // #----------------------------------------------------------------------
-  // # We've got the same problem as LaTeX: Lather, Rinse, Repeat.
-  // # It would be nice to know the bib info at digestion time
-  // #  * whether author lists will collapse
-  // #  * whether there are "a","b".. extensions on the year.
-  // # We could process the bibliography first, (IF it is a separate *.bib!)
-  // # but won't know which entries are included (and so can't resolve the a/b/c..)
-  // # until we've finished looking at (all of) the source(s) that will refer to them!
-  // #
-  // # We can do this in 2 passes, however
-  // #  (1) convert (latexml) both the source document(s) and the bibliography
-  // #  (2) extract the required bibitems and integrate (latexmlpost) it into the documents.
-  // # [Note that for mult-document sites, step (2) becomes 2 stages: scan and integrate]
-  // #
-  // # Here's the general layout.
-  // #   <ltx:cite> contains everything that the citations produce,
-  // #     including parens, pre-note, punctunation that precede the <ltx:bibcite>
-  // #     and punctuation, post-note, parens, that follow it.
-  // #   <ltx:bibcite show="string" bibrefs="keys" sep="" yysep="">phrases</ltx:bibcite>
-  // #     encodes the actual citation.
-  // #
-  // #     bibrefs : lists the bibliographic keys that will be used
-  // #     show    : gives the pattern for formatting using data from the bibliography
-  // #       It can contain:
-  // #         authors or fullauthors
-  // #         year
-  // #         number
-  // #         phrase1,phrase2,... selects one of the phrases from the content of the <ltx:bibref>
-  // #     This format is used as follows:
-  // #       If author and year is present, and a subset of the citations share the same authors,
-  // #         then the format is used, but the year is repeated for each citation in the subset,
-  // #         as a link to the bib entry.
-  // #       Otherwise, the format is applied to each entry.
-  // #
-  // # The design is intended to support natbib, as well as plain LaTeX.
+  //----------------------------------------------------------------------
+  // We've got the same problem as LaTeX: Lather, Rinse, Repeat.
+  // It would be nice to know the bib info at digestion time
+  //  * whether author lists will collapse
+  //  * whether there are "a","b".. extensions on the year.
+  // We could process the bibliography first, (IF it is a separate *.bib!)
+  // but won't know which entries are included (and so can't resolve the a/b/c..)
+  // until we've finished looking at (all of) the source(s) that will refer to them!
+  //
+  // We can do this in 2 passes, however
+  //  (1) convert (latexml) both the source document(s) and the bibliography
+  //  (2) extract the required bibitems and integrate (latexmlpost) it into the documents.
+  // [Note that for mult-document sites, step (2) becomes 2 stages: scan and integrate]
+  //
+  // Here's the general layout.
+  //   <ltx:cite> contains everything that the citations produce,
+  //     including parens, pre-note, punctunation that precede the <ltx:bibcite>
+  //     and punctuation, post-note, parens, that follow it.
+  //   <ltx:bibcite show="string" bibrefs="keys" sep="" yysep="">phrases</ltx:bibcite>
+  //     encodes the actual citation.
+  //
+  //     bibrefs : lists the bibliographic keys that will be used
+  //     show    : gives the pattern for formatting using data from the bibliography
+  //       It can contain:
+  //         authors or fullauthors
+  //         year
+  //         number
+  //         phrase1,phrase2,... selects one of the phrases from the content of the <ltx:bibref>
+  //     This format is used as follows:
+  //       If author and year is present, and a subset of the citations share the same authors,
+  //         then the format is used, but the year is repeated for each citation in the subset,
+  //         as a link to the bib entry.
+  //       Otherwise, the format is applied to each entry.
+  //
+  // The design is intended to support natbib, as well as plain LaTeX.
 
-  // AssignValue(CITE_STYLE          => 'numbers');
-  // AssignValue(CITE_OPEN           => T_OTHER('['));
-  // AssignValue(CITE_CLOSE          => T_OTHER(']'));
-  // AssignValue(CITE_SEPARATOR      => T_OTHER(','));
-  // AssignValue(CITE_YY_SEPARATOR   => T_OTHER(','));
-  // AssignValue(CITE_NOTE_SEPARATOR => T_OTHER(','));
+  AssignValue!("CITE_STYLE", "numbers");
+  AssignValue!("CITE_OPEN", T_OTHER!("["));
+  AssignValue!("CITE_CLOSE", T_OTHER!("]"));
+  AssignValue!("CITE_SEPARATOR", T_OTHER!(","));
+  AssignValue!("CITE_YY_SEPARATOR", T_OTHER!(","));
+  AssignValue!("CITE_NOTE_SEPARATOR", T_OTHER!(","));
 
-  // DefConstructor('\@@cite []{}', "<ltx:cite ?#1(class='ltx_citemacro_#1')>#2</ltx:cite>",
-  //   mode => 'text');
+  DefConstructor!("\\@@cite[]{}", "<ltx:cite ?#1(class='ltx_citemacro_#1')>#2</ltx:cite>", 
+    mode => Some("text".to_string()));
 
-  // # \@@bibref{what to show}{bibkeys}{phrase1}{phrase2}
-  // DefConstructor('\@@bibref Semiverbatim Semiverbatim {}{}',
-  //   "<ltx:bibref show='#1' bibrefs='#bibrefs'"
-  //     . " separator='#separator' yyseparator='#yyseparator'>#3#4</ltx:bibref>",
-  //   properties => sub { (bibrefs => CleanBibKey($_[2]),
-  //       separator   => ToString(Digest(LookupValue('CITE_SEPARATOR'))),
-  //       yyseparator => ToString(Digest(LookupValue('CITE_YY_SEPARATOR')))); });
+  // \@@bibref{what to show}{bibkeys}{phrase1}{phrase2}
+  DefConstructor!("\\@@bibref Semiverbatim Semiverbatim {}{}",
+    "<ltx:bibref show='#1' bibrefs='#bibrefs' separator='#separator' yyseparator='#yyseparator'>#3#4</ltx:bibref>",
+    properties => properties!(sub[stomach, args, state] {
+      unpack!(args => show, keys, phrase1, phrase2);
+      Ok(map!("bibrefs" => clean_bib_key(&keys.to_string()).into(),
+        "separator" => match state.lookup_tokens("CITE_SEPARATOR") { 
+          Some(sep) => stomach.digest(sep, state)?.to_string().into(),
+          None => String::new().into() },
+        "yyseparator" => match state.lookup_tokens("CITE_YY_SEPARATOR") {
+          Some(yysep) => stomach.digest(yysep, state)?.to_string().into(),
+          None => String::new().into() }
+      ))
+    })
+  );
 
-  // # Simple container for any phrases used in the bibref
-  // DefConstructor('\@@citephrase{}', "<ltx:bibrefphrase>#1</ltx:bibrefphrase>",
-  //   mode => 'text');
+  // Simple container for any phrases used in the bibref
+  DefConstructor!("\\@@citephrase{}", "<ltx:bibrefphrase>#1</ltx:bibrefphrase>", mode => Some("text".to_string()));
 
   DefMacro!("\\cite[] Semiverbatim", sub[gullet, args, state] {
     unpack!(args => post, keys);
-  //     my ($style, $open, $close, $ns)
-  //       = map { LookupValue($_) } qw(CITE_STYLE CITE_OPEN CITE_CLOSE CITE_NOTE_SEPARATOR);
-  //     $post = undef unless $post && $post->unlist;
-  //     Invocation(T_CS('\@@cite'),
-  //       Tokens(Explode('cite')),
-  //       Tokens($open,
-  //         Invocation(T_CS('\@@bibref'), undef, $keys, undef, undef),
-  //         ($post ? ($ns, T_SPACE, $post) : ()), $close)); });
-    Ok(Tokens!())
+    let style = state.lookup_tokens("CITE_STYLE").unwrap_or_else(|| Tokens!());
+    let open = state.lookup_tokens("CITE_OPEN").unwrap_or_else(|| Tokens!());
+    let close = state.lookup_tokens("CITE_CLOSE").unwrap_or_else(|| Tokens!());
+    let mut post_tokens = post.unlist();
+    if !post_tokens.is_empty() {
+      let ns = state.lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or_else(|| Tokens!());
+      let mut post_wrapped = ns.unlist();
+      post_wrapped.push(T_SPACE!());
+      post_wrapped.extend(post_tokens);
+      post_tokens = post_wrapped;
+    }
+    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![Tokens!(), keys, Tokens!(), Tokens!()], gullet, state)?;
+    let mut arg_tokens = open.unlist();
+    arg_tokens.extend(bibref.unlist());
+    arg_tokens.extend(post_tokens);
+    arg_tokens.extend(close.unlist());
+
+    Ok(Invocation!(T_CS!("\\@@cite"), 
+      vec![Tokens::new(Explode!("cite")), Tokens::new(arg_tokens)], gullet, state)?)
   });
 
   // # NOTE: Eventually needs to be recognized by MakeBibliography
