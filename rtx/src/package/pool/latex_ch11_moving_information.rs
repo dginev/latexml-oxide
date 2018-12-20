@@ -19,14 +19,20 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // but only those that have an xml:id (but should this require a refnum and/or title ???)
   // Note that latex essentially allows redundant labels, but we can record only one!!!
   DefConstructor!("\\label Semiverbatim", sub[document, olabel, props, state] {
-
-  });
-  //     my $label = $props{label};
-  //     if (my $savenode = $document->floatToLabel) {
-  //       my $node = $document->getNode;
-  //       my %labels = map { ($_ => 1) } $label, split(/\s+/, $node->getAttribute('labels') || '');
-  //       $document->setAttribute($node, labels => join(' ', sort keys %labels));
-  //       $document->setNode($savenode); } },
+    if let Some(savenode) = document.float_to_label() {
+      let mut node = document.get_node();
+      let mut labels : HashMap<String,bool> = HashMap::new();
+      if let Some(label) = props.get("label") {
+        labels.insert(label.to_string(), true);
+      }
+      let labels_iter = node.get_attribute("labels").unwrap_or_default().split_whitespace();
+      for label in labels_iter {
+        labels.insert(label.to_string(), true);
+      }
+      document.set_attribute(&mut node, "labels", labels.keys().collect().join(' '));
+      document.set_node(&savenode);
+    }
+  }
   //   reversion   => '',
   //   properties  => { alignmentSkippable => 1, alignmentPreserve => 1 },
   //   afterDigest => sub {
@@ -39,6 +45,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //       $_[0]->beginMode('text');
   //       AssignValue('LABEL@' . $label, Digest(T_CS('\@currentlabel')), 'global');
   //       $_[0]->endMode('text'); }
+  );
 
   // # If a node has been labeled, but still  hasn't yet got an id by afterClose:late,
   // # we'd better generate an id for it.

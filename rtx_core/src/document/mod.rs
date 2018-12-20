@@ -1718,6 +1718,9 @@ impl Document {
   // TODO!
   pub fn float_to_element(&mut self, element: &str, flag: bool) -> Option<Node> { None }
 
+  // TODO!
+  pub fn float_to_label(&mut self) -> Option<Node> { None }
+
   pub fn set_box_to_absorb(&mut self, arg: Option<Digested>) {
     self.localized_boxes.push(self.box_to_absorb.take());
     self.box_to_absorb = arg;
