@@ -232,41 +232,53 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // # Hack for abused bibliographies; see below
   DefMacro!("\\bibitem",
     "\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem");
-  // DefConstructor('\lx@bibitem[] Semiverbatim',
-  //   "<ltx:bibitem key='#key' xml:id='#id'>"
-  //     . "#tags"
-  //     . "<ltx:bibblock>",
-  //   afterDigest => sub {
-  //     my $tag = $_[1]->getArg(1);
-  //     my $key = CleanBibKey($_[1]->getArg(2));
-  //     if ($tag) {
-  //       $_[1]->setProperties(key => $key,
-  //         RefStepID('@bibitem'),
-  //         tags => Digest(T_BEGIN,
-  //           T_CS('\def'), T_CS('\the@bibitem'), T_BEGIN, Revert($tag), T_END,
-  //           Invocation(T_CS('\lx@make@tags'), T_OTHER('@bibitem')),
-  //           T_END)); }
-  //     else {
-  //       $_[1]->setProperties(key => $key, RefStepCounter('@bibitem')); }
-  //   });
+  DefConstructor!("\\lx@bibitem[] Semiverbatim", "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
+    after_digest => afterproc!(stomach, whatsit, state, {
+      let tag_opt = whatsit.get_arg(1);
+      let key = clean_bib_key(&match whatsit.get_arg(2) {
+        None => String::new(),
+        Some(key) => key.to_string(),
+      });
+      // if let Some(tag) = tag_opt {
+      //   whatsit.set_properties(
+      //     key => $key,
+      //     RefStepID('@bibitem'),
+      //     tags => Digest(T_BEGIN,
+      //       T_CS('\def'), T_CS('\the@bibitem'), T_BEGIN, Revert($tag), T_END,
+      //       Invocation(T_CS('\lx@make@tags'), T_OTHER('@bibitem')),
+      //       T_END)); }
+      // else {
+      //   whatsit.set_properties(key => $key, RefStepCounter('@bibitem')); 
+      // }
+    })
+  );
 
-  // # This attempts to handle the case where folks put \bibitem's within an enumerate or such.
-  // # We try to close the list and open the bibliography
-  // DefMacro('\lx@mung@bibliography{}', sub {
-  //     my ($gullet, $env) = @_;
-  //     my $tag    = ToString($env);
-  //     my @tokens = ();
-  //     # If we're in some sort of list environment, maybe we can recover
-  //     if (($tag eq 'enumerate') || ($tag eq 'itemize') || ($tag eq 'description')) {
-  //       print STDERR "\nDamn! We're in a list {$tag}; try to close it!\n";
-  //       push(@tokens, Invocation('\end', $env),
-  //         T_CS('\let'), T_CS('\end' . $tag), T_CS('\endthebibliography'),
-  //         T_CS('\let'), T_CS('\end{' . $tag . '}'), T_CS('\end{thebibliography}')); }
-  //     # else ? it probably isn't going to work??
-  //     print STDERR "Now, try to open {thebibliography}\n";
-  //     push(@tokens, Invocation('\begin', Tokenize('thebibliography'), Tokens()));
-  //     print STDERR "PATCHING with " . ToString(Tokens(@tokens)) . "\n";
-  //     return Tokens(@tokens); });
+  // This attempts to handle the case where folks put \bibitem's within an enumerate or such.
+  // We try to close the list and open the bibliography
+  DefMacro!("\\lx@mung@bibliography{}", sub[gullet, args, state] {
+    unpack!(args => env);
+    let tag = env.to_string();
+    let mut tokens = Vec::new();
+    // If we're in some sort of list environment, maybe we can recover
+    if tag == "enumerate" || tag == "itemize" || tag == "description" {
+      info!("\nDamn! We're in a list {}; try to close it!", tag);
+      tokens.extend(Invocation!("\\end", env.unlist(), gullet, state)?.unlist());
+      tokens.extend(vec![
+        T_CS!("\\let"),
+        T_CS!(&format!("\\end{}", tag)),
+        T_CS!("\\endthebibliography"),
+        T_CS!("\\let"),
+        T_CS!(&format!("\\end{{{}}}", tag)),
+        T_CS!("\\end{thebibliography}")
+      ]); 
+    }
+    // else ? it probably isn't going to work??
+    info!("Now, try to open {{thebibliography}}");
+    tokens.extend(Invocation!("\\begin", vec![Tokenize!("thebibliography"), Tokens!()], gullet, state)?.unlist());
+    let tokens = Tokens::new(tokens);
+    info!("PATCHING with {:?}", tokens.to_string());
+    Ok(tokens)
+  });
 
   // DefConstructorI('\lx@bibnewblock', undef, "<ltx:bibblock>");
   // Let('\newblock', '\lx@bibnewblock');
