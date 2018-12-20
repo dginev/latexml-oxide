@@ -283,6 +283,7 @@ lazy_static! {
   static ref SINGLE_CHAR_REGEX: Regex = Regex::new(r"^(\\.)").unwrap();
   static ref ACTIVE_CHAR_REGEX: Regex = Regex::new(r"^(.)").unwrap();
   static ref CONDITIONAL_REGEX: Regex = Regex::new(r"^\\(?:if(.*)|unless)$").unwrap();
+  static ref SPACES: Regex = Regex::new(r"\s+").unwrap();
 }
 
 pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option<Parameters>))> {
@@ -1209,4 +1210,11 @@ pub fn clean_bib_key(key: &str) -> String {
   clean_key = clean_key.trim_end();
   // ??? key =~ s/\s//sg;
   clean_key.to_string()
+}
+
+pub fn clean_label(label: &str, prefix_opt: Option<&str>) -> String {
+  let prefix = prefix_opt.unwrap_or("LABEL");
+  let mut key = label;
+  key = key.trim_start().trim_end(); // Trim leading/trailing, in any case
+  s!("{}:{}",prefix, SPACES.replace(key, "_"))
 }

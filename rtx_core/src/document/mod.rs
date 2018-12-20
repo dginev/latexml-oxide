@@ -109,7 +109,10 @@ impl Document {
   }
 
   pub fn get_node(&self) -> &Node { &self.node }
+  pub fn get_node_mut(&mut self) -> &mut Node { &mut self.node }
+
   pub fn get_document(&self) -> &XmlDoc { &self.document }
+  pub fn get_document_mut(&mut self) -> &mut XmlDoc { &mut self.document }
 
   // **********************************************************************
   // This should be called before returning the final XML::LibXML::Document to the
@@ -1055,6 +1058,11 @@ impl Document {
     state.model.can_contain(tag, child) || self.can_contain_indirect(tag, child, state).is_some()
   }
 
+  pub fn can_node_have_attribute(&mut self, node: &Node, attrib: &str, state: &mut State) -> bool {
+    state
+      .model
+      .can_have_attribute(&state.model.get_node_qname(node), attrib)
+  }
   pub fn can_have_attribute(&mut self, tag: &str, attrib: &str, state: &mut State) -> bool {
     state.model.can_have_attribute(tag, attrib)
   }
@@ -1155,7 +1163,7 @@ impl Document {
   fn apply_math_ligatures(&self, _node: &Node) {
     // my ($self, $node) = @_;
     // if (my $ligatures = $STATE->lookupValue('MATH_LIGATURES')) {
-    //   my @ligatures = @$ligatures;
+    //   let ligatures = @$ligatures;
     //   while (@ligatures) {
     //     my $matched = 0;
     //     foreach my $ligature (@ligatures) {
@@ -1286,6 +1294,122 @@ impl Document {
     Ok(self.node.clone())
   }
 
+  fn get_insertion_candidates(&self, node: &Node) -> Vec<Node> {
+    let mut nodes = Vec::new();
+    let maybe_parent;
+    // Check the current element FIRST, then build list of candidates.
+    let mut first_opt = if node.get_type() == Some(NodeType::TextNode) {
+      match node.get_parent() {
+        Some(p) => {
+          maybe_parent = p;
+          Some(&maybe_parent)
+        },
+        None => None,
+      }
+    } else {
+      Some(node)
+    };
+    let is_capture = if let Some(first) = first_opt {
+      first.get_name() == "_Capture_"
+    } else {
+      false
+    };
+
+    if let Some(first) = first_opt {
+      if first.get_type() != Some(NodeType::DocumentNode) && !is_capture {
+        nodes.push(first);
+      }
+    }
+    // Collect previous siblings, if node is a text node.
+    // if ($node->getType == XML_TEXT_NODE) {
+    //   let n = $node;
+    //   while ($n) {
+    //     if (($n->localname || '') eq '_Capture_') {
+    //       push(@nodes, element_nodes($n)); }
+    //     else {
+    //       push(@nodes, $n); }
+    //     $n = $n->previousSibling; }
+    //   $node = $node->parentNode; }
+    // # Now collect (element) node & ancestors
+    // while ($node && ($node->nodeType != XML_DOCUMENT_NODE)) {
+    //   let n = $node;
+    //   if (($node->localname || '') eq '_Capture_') {
+    //     push(@nodes, element_nodes($node)); }
+    //   else {
+    //     push(@nodes, $node); }
+    //   $node = $node->parentNode; }
+    // push(@nodes, $first) if $isCapture;
+
+    // TODO: Can we NOT clone ?!
+    nodes.iter().map(|n| (*n).clone()).collect()
+  }
+
+  pub fn node_set_attribute(&mut self, key: &str, value: &str) -> Result<()> {
+    // TODO:: THIS IS TERRIBLE! How do we avoin the mutability conflict without this nonsence ????
+    let mut node = &mut self.node;
+    if value.is_empty() {
+      return Ok(()); // skip if empty
+    }
+    if key == "xml:id" {
+      // If it's an ID attribute
+      // value = self.record_id(value, node);    // Do id book keeping
+      // TODO: Need to improve Namespace ergonomics, also in rust-libxml
+      // let node_ns = self
+      //   .document
+      //   .get_root_element()
+      //   .unwrap()
+      //   .get_namespace_declarations()
+      //   .into_iter()
+      //   .find(|ns| ns.get_href() == XML_NS)
+      //   .unwrap_or_else(|| {
+      //     node
+      //       .get_namespace_declarations()
+      //       .into_iter()
+      //       .find(|ns| ns.get_href() == XML_NS)
+      //       .unwrap_or_else(|| {
+      //         Namespace::new(
+      //           "xml",
+      //           &XML_NS.to_string().clone(),
+      //           &mut self.document.get_root_element().unwrap(),
+      //         ).unwrap_or_else(|_| {
+      //           panic!(
+      //             "Could not set NS for {:?}\n\n at \n\n {:?}",
+      //             self.document.node_to_string(node),
+      //             self.document.to_string(true)
+      //           )
+      //         })
+      //       })
+      //   });
+      node.set_attribute("xml:id", value)?; // and bypass all ns stuff
+    } else if !key.contains(':') {
+      // No colon; no namespace (the common case!)
+      // Ignore attributes not allowed by the model,
+      // but accept "internal" attributes.
+      // let model = state.model;
+      // let qname = model.get_node_qname(node);
+      // if key.starts_with("_") || model.can_have_attribute(qname, key) {
+      node.set_attribute(key, value)?;
+      // }
+    }
+    // else {                   // Accept any namespaced attributes
+    //   my ($ns, $name) = state.model}->decodeQName($key);
+    //   if ($ns) {             // If namespaced attribute (must have prefix!
+    // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
+    // declared? if (!$prefix) {                                    // if
+    // namespace not already declared $prefix =
+    // state.model}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
+    // self.getDocument->documentElement->setNamespace($ns, $prefix, 0); }
+    // // and declare it if ($prefix eq '//default') {    // Probably
+    // shouldn't happen...?       node.setAttribute($name => $value); }
+    //     else {
+    //       node.setAttributeNS($ns, "$prefix:$name" => $value); } }
+    //   else {
+    //     node.setAttribute($name => $value); } } }    // redundant case...
+    Ok(())
+  }
+  pub fn node_get_attribute(&mut self, name: &str) -> Option<String> {
+    self.node.get_attribute(name)
+  }
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Document surgery (?)
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1335,19 +1459,19 @@ impl Document {
       // No colon; no namespace (the common case!)
       // Ignore attributes not allowed by the model,
       // but accept "internal" attributes.
-      // let model = self.model;
+      // let model = state.model;
       // let qname = model.get_node_qname(node);
       // if key.starts_with("_") || model.can_have_attribute(qname, key) {
       node.set_attribute(key, value)?;
       // }
     }
     // else {                   // Accept any namespaced attributes
-    //   my ($ns, $name) = self.model}->decodeQName($key);
+    //   my ($ns, $name) = state.model}->decodeQName($key);
     //   if ($ns) {             // If namespaced attribute (must have prefix!
     // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
     // declared? if (!$prefix) {                                    // if
     // namespace not already declared $prefix =
-    // self.model}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
+    // state.model}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
     // self.getDocument->documentElement->setNamespace($ns, $prefix, 0); }
     // // and declare it if ($prefix eq '//default') {    // Probably
     // shouldn't happen...?       node.setAttribute($name => $value); }
@@ -1718,8 +1842,59 @@ impl Document {
   // TODO!
   pub fn float_to_element(&mut self, element: &str, flag: bool) -> Option<Node> { None }
 
-  // TODO!
-  pub fn float_to_label(&mut self) -> Option<Node> { None }
+  // find a node that can accept a label.
+  // A bit more than just whether the element can have the attribute, but
+  // whether it has an id (and ideally either a refnum or title)
+  pub fn float_to_label(&mut self, state: &mut State) -> Option<Node> {
+    let key = "labels";
+    let ancestors: Vec<Node> = self
+      .get_insertion_candidates(&self.node)
+      .into_iter()
+      .filter(|node| node.get_type() == Some(NodeType::ElementNode))
+      .collect();
+    // TODO: Can we NOT clone ?!
+    let mut candidates: VecDeque<Node> = ancestors.clone().into();
+    // Should we only accept a node that already has an id, or should we create an id?
+    while !candidates.is_empty()
+      && !(self.can_node_have_attribute(&candidates[0], key, state)
+        && candidates[0].get_attribute("xml:id").is_some())
+    {
+      candidates.pop_front();
+    }
+    let mut node_opt: Option<Node> = candidates.pop_front();
+    if node_opt.is_none() {
+      // No appropriate ancestor?
+      let sib: Option<Node> = match ancestors.first() {
+        Some(ref n) => n.get_last_child(),
+        None => None,
+      };
+      if let Some(sibling) = sib {
+        if self.can_node_have_attribute(&sibling, key, state)
+          && sibling.get_attribute("xml:id").is_some()
+        {
+          node_opt = Some(sibling);
+        } else if !ancestors.is_empty() {
+          // just take root element?
+          node_opt = Some(ancestors.last().unwrap().clone());
+        }
+      } else if !ancestors.is_empty() {
+        // just take root element?
+        node_opt = Some(ancestors.last().unwrap().clone());
+      }
+    }
+    if let Some(node) = node_opt {
+      let savenode = self.node.clone();
+      self.set_node(&node);
+      Some(savenode)
+    } else {
+      warn!(
+        target: &s!("malformed:{}", key),
+        "No open node with an xml:id can get attribute {:?}", key
+      );
+      //  $self->getInsertionContext());
+      None
+    }
+  }
 
   pub fn set_box_to_absorb(&mut self, arg: Option<Digested>) {
     self.localized_boxes.push(self.box_to_absorb.take());

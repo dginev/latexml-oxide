@@ -82,7 +82,8 @@ impl<'t> Stomach {
   // Digest a list of tokens independent from any current Gullet.
   // Typically used to digest arguments to primitives or constructors.
   // Returns a List containing the digested material.
-  pub fn digest(&mut self, mut tokens: Tokens, state: &mut State) -> Result<Digested> {
+  pub fn digest<T: Into<Tokens>>(&mut self, tokens: T, state: &mut State) -> Result<Digested> {
+    let mut tokens : Tokens = tokens.into();
     self.reading_from_mouth(
       Mouth::default(),
       state,
