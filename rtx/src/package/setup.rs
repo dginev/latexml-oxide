@@ -1782,6 +1782,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   /// Invocation(<list of Token>); builds a representation of a command sequence invoked on its
   /// arguments
   macro_rules! Invocation {
+    ($csname:literal, $args:expr, $gullet:expr) => {
+      Invocation!(T_CS!($csname), $args, $gullet, $state)
+    };
+    ($csname:literal, $args:expr, $gullet:expr, $state_arg:ident) => {
+      Invocation!(T_CS!($csname), $args, $gullet, $state_arg)
+    };
     ($token:expr, $args:expr, $gullet:expr) => {
       Invocation!($token, $args, $gullet, $state)
     };

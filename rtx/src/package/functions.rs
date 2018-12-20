@@ -1202,3 +1202,11 @@ pub fn do_expand<T: Into<Tokens>>(
     ),
   )
 }
+
+pub fn clean_bib_key(key: &str) -> String {
+  // Originally lc() here, but let's preserve case till Postproc.
+  let mut clean_key = key.trim_start();
+  clean_key = clean_key.trim_end();
+  // ??? key =~ s/\s//sg;
+  clean_key.to_string()
+}
