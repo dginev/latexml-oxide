@@ -96,8 +96,10 @@ pub trait Definition: Object {
 
     match *self.get_parameters() {
       None => {},
-      Some(ref params) => for result_token in params.revert_arguments(args, gullet, state)? {
-        invocation_result.append(&mut result_token.unlist());
+      Some(ref params) => {
+        for result_token in params.revert_arguments(args, gullet, state)? {
+          invocation_result.append(&mut result_token.unlist());
+        }
       },
     }
     Ok(Tokens::new(invocation_result))

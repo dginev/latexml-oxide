@@ -76,30 +76,40 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   // "\begin{env}", "\end{env}" control sequences created by DefEnvironment.
 
   AssignValue!("current_environment", String::new(), Some(Scope::Global));
-  // DefMacroI!("\@currenvir", "", Rc::new(move |state| {}), state);
-  // DefPrimitive("\lx@setcurrenvir{}", sub {
-  //     DefMacro("\@currenvir", $_[1]);
-  //     state.assign_value(current_environment => ToString($_[1])); });
-  // Let("\@currenvline", "\@empty");
+  DefMacro!("\\@currenvir", "");
+  DefPrimitive!("\\lx@setcurrenvir{}", sub[stomach, args, state] {
+    unpack!(args => env);
+    let env_string = env.to_string();
+    DefMacroI!(T_CS!("\\@currenvir"), None, env, state);
+    state.assign_value("current_environment", env_string, None);
+    Ok(vec![])
+  });
+  Let!("\\@currenvline", "\\@empty");
 
   DefMacro!("\\begin{}", sub [gullet, args, state] {
-    unpack!(args => name);
+    unpack!(args => env);
+    let name = Expand!(env, gullet, state)?.to_string();
     let begin_name = s!("\\begin{{{}}}", name);
+    let before = state.lookup_value(&s!("@environment@{}@beforebegin", name));
+    let after  = state.lookup_value(&s!("@environment@{}@atbegin", name));
+
     if is_defined(&begin_name, state) {
       Ok(Tokens!(T_CS!(begin_name))) // Magic cs!
     } else {
       let token = T_CS!(s!("\\{}", name));
       if !is_defined_token(&token, state) {
         let undef = s!("{{{}}}", name); // this creates {name} , {{ and }} are escapes in Rust's format!
-        let category_object = s!("undefined:{}", undef);
-        error!(target: &category_object, "The environment is not defined.");
+        error!(target: &s!("undefined:{}", undef), "The environment {} is not defined.", undef);
+        //TODO
         // state.note_status("undefined", undef);
         //   Error("undefined", $undef, $gullet, "The environment " . $undef . " is not defined.");
         // state.install_definition(LaTeXML::Core::Definition::Constructor->new($token, undef,
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
-        //(T_CS!("\begingroup"), Invocation(T_CS!("\lx@setcurrenvir"), $env), $token); } });
       }
-      Ok(Tokens!())
+      let mut out_tokens = vec![T_CS!("\\begingroup")];
+      out_tokens.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), Tokenize!(&name).unlist(), gullet, state)?.unlist());
+      out_tokens.push(token);
+      Ok(Tokens::new(out_tokens))
     }
   });
 
@@ -523,7 +533,6 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   //======================================================================
   Tag!("ltx:item",        auto_close => true, auto_open => true);
   Tag!("ltx:inline-item", auto_close => true, auto_open => true);
-
 
   InnerPool!(latex_verbatim);
 

@@ -153,8 +153,11 @@ impl Definition for Constructor {
     properties
       .entry(s!("font"))
       .or_insert_with(|| Stored::Font(Rc::new(this_font)));
-    // $properties{locator} = $stomach->getGullet->getMouth->getLocator unless defined $properties{locator};
-    properties.entry(s!("isMath")).or_insert_with(|| Stored::Bool(ismath));
+    // $properties{locator} = $stomach->getGullet->getMouth->getLocator unless defined
+    // $properties{locator};
+    properties
+      .entry(s!("isMath"))
+      .or_insert_with(|| Stored::Bool(ismath));
     // $properties{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.
