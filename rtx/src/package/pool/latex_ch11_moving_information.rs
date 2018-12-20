@@ -248,7 +248,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       //       Invocation(T_CS('\lx@make@tags'), T_OTHER('@bibitem')),
       //       T_END)); }
       // else {
-      //   whatsit.set_properties(key => $key, RefStepCounter('@bibitem')); 
+      //   whatsit.set_properties(key => $key, RefStepCounter('@bibitem'));
       // }
     })
   );
@@ -270,7 +270,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         T_CS!("\\let"),
         T_CS!(&format!("\\end{{{}}}", tag)),
         T_CS!("\\end{thebibliography}")
-      ]); 
+      ]);
     }
     // else ? it probably isn't going to work??
     info!("Now, try to open {{thebibliography}}");
