@@ -403,7 +403,7 @@ fn translate_string(mut text: &mut String) -> quote::Tokens {
       }
     })
     .collect::<Vec<_>>();
-  quote!(#(#token_values)+*)
+  quote!(vec![#(#token_values),*].join(""))
 }
 
 fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
