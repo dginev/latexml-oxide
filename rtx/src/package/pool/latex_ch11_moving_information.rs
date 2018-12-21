@@ -352,7 +352,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     properties => properties!(sub[stomach, args, state] {
       unpack!(args => show, keys, phrase1, phrase2);
       Ok(map!("bibrefs" => clean_bib_key(&keys.to_string()).into(),
-        "separator" => match state.lookup_tokens("CITE_SEPARATOR") { 
+        "separator" => match state.lookup_tokens("CITE_SEPARATOR") {
           Some(sep) => stomach.digest(sep, state)?.to_string().into(),
           None => String::new().into() },
         "yyseparator" => match state.lookup_tokens("CITE_YY_SEPARATOR") {
@@ -368,7 +368,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefMacro!("\\cite[] Semiverbatim", sub[gullet, args, state] {
     unpack!(args => post, keys);
     let style = state.lookup_tokens("CITE_STYLE").unwrap_or_else(|| Tokens!());
-    let open = state.lookup_tokens("CITE_OPEN").unwrap_or_else(|| Tokens!());
+    let open = state.lookup_tokens("CITE_OPEN");
+    let open = open.unwrap_or_else(|| Tokens!());
     let close = state.lookup_tokens("CITE_CLOSE").unwrap_or_else(|| Tokens!());
     let mut post_tokens = post.unlist();
     if !post_tokens.is_empty() {
@@ -384,7 +385,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     arg_tokens.extend(post_tokens);
     arg_tokens.extend(close.unlist());
 
-    Ok(Invocation!(T_CS!("\\@@cite"), 
+    Ok(Invocation!(T_CS!("\\@@cite"),
       vec![Tokens::new(Explode!("cite")), Tokens::new(arg_tokens)], gullet, state)?)
   });
 

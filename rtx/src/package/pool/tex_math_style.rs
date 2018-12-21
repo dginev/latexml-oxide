@@ -14,22 +14,22 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // the <ltx:emph> stays open!  Ugh!
   // This could still be made to work, but merge font would
   // need to look at any open <ltx:emph>, and then somehow close it!
-  DefPrimitiveI!("\\em", noprimitive!());
-  // TODO:
-    // beforeDigest => sub {
-    //   my $font  = LookupValue('font');
-    //   my $shape = $font->getShape;
-    //   AssignValue(font => $font->merge(shape => ($shape eq 'italic' ? 'normal' : 'italic')),
-    //     'local'); });
+  DefPrimitiveI!("\\em", noprimitive!(),
+  before_digest => vec!(beforeproc!(_stomach, state, {
+    let font = state.lookup_font().unwrap();
+    let shape = font.get_shape().unwrap_or(Cow::Borrowed(""));
+    let shapevariant = if shape == "italic" { "normal" } else { "italic" };
+    state.assign_value("font", font.merge(&fontmap!(shape => shapevariant)), Some(Scope::Local));
+  })));
 
   // Change math font while still in text!
   DefPrimitiveI!("\\boldmath", noprimitive!());
-    // TODO:
-    // beforeDigest => sub { AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 1), 'local'); },
-    // forbidMath => 1);
+  // TODO:
+  // beforeDigest => sub { AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 1),
+  // 'local'); }, forbidMath => 1);
   DefPrimitiveI!("\\unboldmath", noprimitive!());
-    // TODO:
-    // beforeDigest => sub { AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 0), 'local'); },
-    // forbidMath => 1);
+  // TODO:
+  // beforeDigest => sub { AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 0),
+  // 'local'); }, forbidMath => 1);
   Ok(())
 }

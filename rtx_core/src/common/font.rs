@@ -243,9 +243,17 @@ impl Font {
     s!("Font[{}]", parts.join(", "))
   }
 
-  /// Getter for encoding field
-  pub fn get_encoding(&self) -> Option<Cow<str>> { self.encoding.clone() }
+  // Accessors
   pub fn get_family(&self) -> Option<Cow<str>> { self.family.clone() }
+  pub fn get_series(&self) -> Option<Cow<str>> { self.series.clone() }
+  pub fn get_shape(&self) -> Option<Cow<str>> { self.shape.clone() }
+  pub fn get_size(&self) -> Option<Cow<str>> { self.size.clone() }
+  pub fn get_color(&self) -> Option<Cow<str>> { self.color.clone() }
+  pub fn get_background(&self) -> Option<Cow<str>> { self.bg.clone() }
+  pub fn get_opacity(&self) -> Option<Cow<str>> { self.opacity.clone() }
+  pub fn get_encoding(&self) -> Option<Cow<str>> { self.encoding.clone() }
+  pub fn get_language(&self) -> Option<Cow<str>> { self.language.clone() }
+  pub fn get_mathstyle(&self) -> Option<Cow<str>> { self.mathstyle.clone() }
 
   // NOTE: In math, NORMALLY, setting any one of
   //    family, series or shape
@@ -333,7 +341,7 @@ impl Font {
       // Single Greek character?
       if UPPER_LETTER_RE.is_match(text) {
         // Uppercase
-        if new.family.is_none() || (new.family == Some(Cow::Borrowed("math"))) {
+        if new.family.is_none() || (new.family.as_ref().unwrap() == "math") {
           new.family = Some(deffamily);
           if new.shape.is_some() && (new.shape != Some(DEFSHAPE.into())) {
             new.shape = Some(defshape); // if ANY shape, must be default
@@ -354,7 +362,7 @@ impl Font {
       }
     } else if DIGIT_LETTER_RE.is_match(text) {
       // Digit
-      if new.family.is_none() || (new.family == Some(Cow::Borrowed("math"))) {
+      if new.family.is_none() || (new.family.as_ref().unwrap() == "math") {
         new.family = Some(deffamily);
         new.shape = Some(defshape); // defaults, always.
       }
@@ -362,7 +370,7 @@ impl Font {
       // Other Symbol
       new.family = Some(deffamily);
       new.shape = Some(defshape); // defaults, always.
-      if new.series.is_some() && (new.series != Some(Cow::Borrowed(DEFSERIES))) {
+      if new.series.is_some() && (new.series.as_ref().unwrap() != DEFSERIES) {
         new.series = Some(defseries);
       } // defaults, always.
     }
@@ -439,7 +447,7 @@ impl Font {
   pub fn relative_to(&self, other: &Font) -> HashMap<String, (String, Font)> {
     let family = match self.family {
       Some(ref fam) => {
-        if *fam == Cow::Borrowed("math") {
+        if fam == "math" {
           Some(Cow::Borrowed("serif"))
         } else {
           Some(fam.clone())
