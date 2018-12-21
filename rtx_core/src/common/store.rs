@@ -16,6 +16,7 @@ use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
 use crate::definition::register::{Register, RegisterValue};
 use crate::document::tag::TagData;
+use crate::mouth;
 use crate::parameter::Parameter;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
@@ -370,6 +371,8 @@ impl<'a> From<&'a Stored> for Option<Number> {
 impl<'a> From<&'a Stored> for Option<Tokens> {
   fn from(value: &'a Stored) -> Option<Tokens> {
     match value {
+      Stored::String(ref text) => Some(mouth::tokenize_internal(text, None)),
+      Stored::Token(ref ts) => Some(Tokens::new(vec![ts.clone()])),
       Stored::Tokens(ref ts) => Some(ts.clone()),
       _ => None,
     }
