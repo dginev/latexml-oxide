@@ -1,31 +1,41 @@
 use crate::package::*;
 
+lazy_static! {
+  static ref LEADING_BACKSLASH_RE: Regex = Regex::new(r"^\\").unwrap();
+}
+
 pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
   AssignValue!("BASE_URL", "");
 
   // Ignorable stuff, since we're not doing linebreaks.
-  DefMacro!("\\UrlBreaks",    "");
+  DefMacro!("\\UrlBreaks", "");
   DefMacro!("\\UrlBigBreaks", "");
-  DefMacro!("\\UrlNoBreaks",  "");
-  DefMacro!("\\UrlOrds",      "");
-  DefMacro!("\\UrlSpecials",  "");
+  DefMacro!("\\UrlNoBreaks", "");
+  DefMacro!("\\UrlOrds", "");
+  DefMacro!("\\UrlSpecials", "");
 
   // Font style definitions.
-  DefMacro!("\\urlstyle{}",    "\\expandafter\\protect\\csname url@#1style\\endcsname");
-  DefMacro!("\\url@ttstyle",   "\\def\\UrlFont{\\ttfamily}");
-  DefMacro!("\\url@rmstyle",   "\\def\\UrlFont{\\rmfamily}");
-  DefMacro!("\\url@sfstyle",   "\\def\\UrlFont{\\sffamily}");
+  DefMacro!(
+    "\\urlstyle{}",
+    "\\expandafter\\protect\\csname url@#1style\\endcsname"
+  );
+  DefMacro!("\\url@ttstyle", "\\def\\UrlFont{\\ttfamily}");
+  DefMacro!("\\url@rmstyle", "\\def\\UrlFont{\\rmfamily}");
+  DefMacro!("\\url@sfstyle", "\\def\\UrlFont{\\sffamily}");
   DefMacro!("\\url@samestyle", "");
-  DefMacro!("\\UrlFont",       "\\ttfamily");
+  DefMacro!("\\UrlFont", "\\ttfamily");
 
   // Bracketting.
-  Let!("\\UrlLeft",  "\\@empty");
+  Let!("\\UrlLeft", "\\@empty");
   Let!("\\UrlRight", "\\@empty");
 
   // \DeclareUrlCommand\cmd{settings}
   // Have this expand into \@Url w/ the declared cmd as arg, so it gets reflected in XML.
-  DefMacro!("\\DeclareUrlCommand{}{}", "\\def#1{\\begingroup #2\\@Url#1}");
+  DefMacro!(
+    "\\DeclareUrlCommand{}{}",
+    "\\def#1{\\begingroup #2\\@Url#1}"
+  );
 
   // This is an extended version of \Url that takes an extra token as 1st arg.
   // That token is the cs that invoked it, so that it can be reflected in the generated XML,
@@ -69,12 +79,19 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   // \@@Url cmd {open}{close}{url}{formattedurl}
   DefConstructor!("\\@@Url Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
-    "?#isMath(<ltx:XMWrap href='#href'>#5</ltx:XMWrap>) (<ltx:ref href='#href' class='#class'>#5</ltx:ref>)");
-    // TODO:
-    // properties => sub { (href => ComposeURL(LookupValue('BASE_URL'), $_[4]),
-    //     class => sub { my $c = ToString($_[1]); $c =~ s/^\\//; 'ltx_' . $c; }); },
-    // sizer     => '#5',
-    // reversion => '#1#2#4#3');
+    "?#isMath(<ltx:XMWrap href='#href'>#5</ltx:XMWrap>) (<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
+    properties => properties!(sub[stomach, args, state] {
+      unpack!(args => cmd, open, close, url, formattedurl);
+      let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
+      Ok(map!(
+        "href" => Stored::String(compose_url(&state.lookup_string("BASE_URL"), &url.to_string(), None)),
+        // TODO: why was class a sub {}??
+        "class"=> Stored::String(ltx_cmd)
+      ))
+    })
+        // sizer     => "#5",
+        // reversion => "#1#2#4#3");
+  );
 
   // These are the expansions of \DeclareUrlCommand
   DefMacro!("\\path", "\\begingroup\\urlstyle{tt}\\@Url\\path");

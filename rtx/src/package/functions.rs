@@ -3,6 +3,7 @@ use regex::Regex;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
+use unidecode::unidecode;
 
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
@@ -30,6 +31,24 @@ use rtx_core::BoxOps;
 use rtx_core::{Core, Digested};
 
 use super::pool;
+
+lazy_static! {
+  static ref CSNAME_MACRO_RE: Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
+  static ref CS_RE: Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
+  static ref SINGLE_CHAR_RE: Regex = Regex::new(r"^(\\.)").unwrap();
+  static ref ACTIVE_CHAR_RE: Regex = Regex::new(r"^(.)").unwrap();
+  static ref CONDITIONAL_RE: Regex = Regex::new(r"^\\(?:if(.*)|unless)$").unwrap();
+  static ref LEADING_PROTOCOL_RE: Regex = Regex::new(r"^\w+:").unwrap();
+  static ref TRAILING_SLASH_RE: Regex = Regex::new(r"/$").unwrap();
+  static ref SPACES_RE: Regex = Regex::new(r"\s+").unwrap();
+  static ref DIRTY_ID_IDIOM_RE: Regex = Regex::new(r"\$\{\}\^\{(?P<label>[^\}]*)\}\$").unwrap();
+  static ref NESTED_CHECK_RE: Regex = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
+  static ref OPTIONAL_CHECK_RE: Regex = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
+  static ref DEFAULT_CHECK_RE: Regex = Regex::new(r"^Default:(.*)$").unwrap();
+  static ref PARAMSPECT_CHECK_RE: Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
+  static ref NON_ID_CHARSET_RE: Regex = Regex::new(r"[^\w\_\-.]+").unwrap();
+  static ref TILDE_NOISE_RE: Regex = Regex::new(r"\~\{\}").unwrap();
+}
 
 //**********************************************************************
 //   Initially, I thought LaTeXML Packages should try to be like perl modules:
@@ -277,45 +296,36 @@ pub fn find_file(request: &str, _forbid_ltxml: bool) -> Option<String> {
 
 pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
 
-lazy_static! {
-  static ref CSNAME_MACRO_REGEX: Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
-  static ref CS_REGEX: Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
-  static ref SINGLE_CHAR_REGEX: Regex = Regex::new(r"^(\\.)").unwrap();
-  static ref ACTIVE_CHAR_REGEX: Regex = Regex::new(r"^(.)").unwrap();
-  static ref CONDITIONAL_REGEX: Regex = Regex::new(r"^\\(?:if(.*)|unless)$").unwrap();
-  static ref SPACES: Regex = Regex::new(r"\s+").unwrap();
-}
-
 pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option<Parameters>))> {
   let mut cs = T_CS!(s!("\\")); // Should never happen
-  let mut final_proto = if CSNAME_MACRO_REGEX.is_match(proto) {
-    let captures = CSNAME_MACRO_REGEX.captures(proto).unwrap();
+  let mut final_proto = if CSNAME_MACRO_RE.is_match(proto) {
+    let captures = CSNAME_MACRO_RE.captures(proto).unwrap();
     cs = T_CS!(s!("\\") + captures.get(0).map_or("", |m| m.as_str()));
     // also replace in proto
-    CSNAME_MACRO_REGEX.replace(proto, "").to_string()
-  } else if CS_REGEX.is_match(proto) {
+    CSNAME_MACRO_RE.replace(proto, "").to_string()
+  } else if CS_RE.is_match(proto) {
     // Match a cs
-    let captures = CS_REGEX.captures(proto).unwrap();
+    let captures = CS_RE.captures(proto).unwrap();
     let csname = captures.get(0).map_or("", |m| m.as_str()).to_string();
     cs = T_CS!(csname);
     // also replace in proto
-    CS_REGEX.replace(proto, "").to_string()
-  } else if SINGLE_CHAR_REGEX.is_match(proto) {
+    CS_RE.replace(proto, "").to_string()
+  } else if SINGLE_CHAR_RE.is_match(proto) {
     // Match a single char cs, env name,...
-    let captures = SINGLE_CHAR_REGEX.captures(proto).unwrap();
+    let captures = SINGLE_CHAR_RE.captures(proto).unwrap();
     cs = T_CS!(captures.get(0).map_or("", |m| m.as_str()).to_string());
     // also replace in proto
-    SINGLE_CHAR_REGEX.replace(proto, "").to_string()
-  } else if ACTIVE_CHAR_REGEX.is_match(proto) {
+    SINGLE_CHAR_RE.replace(proto, "").to_string()
+  } else if ACTIVE_CHAR_RE.is_match(proto) {
     // Match an active char
-    let captures = ACTIVE_CHAR_REGEX.captures(proto).unwrap();
+    let captures = ACTIVE_CHAR_RE.captures(proto).unwrap();
     cs = TokenizeInternal!(captures.get(0).map_or("", |m| m.as_str()))
       .unlist()
       .first()
       .unwrap()
       .clone();
     // also replace in proto
-    ACTIVE_CHAR_REGEX.replace(proto, "").to_string()
+    ACTIVE_CHAR_RE.replace(proto, "").to_string()
   } else {
     // Fatal('misdefined', prototype, $STATE->getStomach,
     //   "Definition prototype doesn't have proper control sequence: \"prototype\""); }
@@ -326,12 +336,6 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
   Ok((cs, paramlist))
 }
 
-lazy_static! {
-  static ref NESTED_CHECK: Regex = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
-  static ref OPTIONAL_CHECK: Regex = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
-  static ref DEFAULT_CHECK: Regex = Regex::new(r"^Default:(.*)$").unwrap();
-  static ref PARAMSPECT_CHECK: Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
-}
 pub fn parse_parameters(
   mut prototype: String,
   cs: &Token,
@@ -342,9 +346,9 @@ pub fn parse_parameters(
   while !prototype.is_empty() {
     let mut next_proto: String;
     // Handle possibly nested cases, such as {Number}
-    if NESTED_CHECK.is_match(&prototype) {
-      let captures = NESTED_CHECK.captures(&prototype).unwrap();
-      next_proto = NESTED_CHECK.replace(&prototype, "").to_string();
+    if NESTED_CHECK_RE.is_match(&prototype) {
+      let captures = NESTED_CHECK_RE.captures(&prototype).unwrap();
+      next_proto = NESTED_CHECK_RE.replace(&prototype, "").to_string();
       let spec = captures.get(1).map_or("", |m| m.as_str());
       let inner_spec = captures.get(2).map_or("", |m| m.as_str());
       let inner: Option<Parameters> = if inner_spec.is_empty() {
@@ -361,15 +365,15 @@ pub fn parse_parameters(
         }
         .init(state)?,
       );
-    } else if OPTIONAL_CHECK.is_match(&prototype) {
+    } else if OPTIONAL_CHECK_RE.is_match(&prototype) {
       // Ditto for Optional
-      let captures = OPTIONAL_CHECK.captures(&prototype).unwrap();
-      next_proto = OPTIONAL_CHECK.replace(&prototype, "").to_string();
+      let captures = OPTIONAL_CHECK_RE.captures(&prototype).unwrap();
+      next_proto = OPTIONAL_CHECK_RE.replace(&prototype, "").to_string();
       let spec = captures.get(1).map_or("", |m| m.as_str());
       let inner_spec = captures.get(2).map_or("", |m| m.as_str());
 
-      if DEFAULT_CHECK.is_match(inner_spec) {
-        // let default_captures = DEFAULT_CHECK.captures(&inner_spec).unwrap();
+      if DEFAULT_CHECK_RE.is_match(inner_spec) {
+        // let default_captures = DEFAULT_CHECK_RE.captures(&inner_spec).unwrap();
         parameters.push(
           Parameter {
             name: s!("Optional"),
@@ -405,9 +409,9 @@ pub fn parse_parameters(
           .init(state)?,
         );
       }
-    } else if PARAMSPECT_CHECK.is_match(&prototype) {
-      let captures = PARAMSPECT_CHECK.captures(&prototype).unwrap();
-      next_proto = PARAMSPECT_CHECK.replace(&prototype, "").to_string();
+    } else if PARAMSPECT_CHECK_RE.is_match(&prototype) {
+      let captures = PARAMSPECT_CHECK_RE.captures(&prototype).unwrap();
+      next_proto = PARAMSPECT_CHECK_RE.replace(&prototype, "").to_string();
       let spec = captures.get(1).map_or("", |m| m.as_str()).to_string();
       let name = captures.get(2).map_or("", |m| m.as_str()).to_string();
       let extra_str = captures.get(4).map_or("", |m| m.as_str()).to_string();
@@ -598,8 +602,8 @@ pub fn def_conditional(
       options.scope,
     ),
     custom => {
-      if CONDITIONAL_REGEX.is_match(custom) {
-        let captures = CONDITIONAL_REGEX.captures(custom).unwrap();
+      if CONDITIONAL_RE.is_match(custom) {
+        let captures = CONDITIONAL_RE.captures(custom).unwrap();
         let name = captures.get(1).map_or("", |m| m.as_str()).to_string();
         if !name.is_empty() && name != "case" && test.is_none() {
           // user-defined conditional, like with \newif
@@ -923,8 +927,7 @@ pub fn new_counter(
     } else {
       prefix = state.lookup_string(&s!("@ID@prefix@{}", ctr));
       if prefix.is_empty() {
-        // TODO:
-        prefix = "clean_id(ctr)".to_string();
+        prefix = clean_id(ctr);
       }
     }
     if !prefix.is_empty() {
@@ -1204,6 +1207,32 @@ pub fn do_expand<T: Into<Tokens>>(
   )
 }
 
+//======================================================================
+// Cleaners
+//======================================================================
+
+// Small rust experiment -- type casting into Cow<String> in intermediate steps can become a
+// prolonged compiler negotiation, and can tire one down.
+// Instead, use untyped intermediate variables _1 .. _n , and let the compiler fill in the gaps
+fn clean_id(key: &str) -> String {
+  let mut cleaned = Cow::Borrowed(key.trim_start().trim_end()); // Trim leading/trailing, in any case
+  let cleaned_1 = SPACES_RE.replace_all(&cleaned, ""); // remove all spaces
+                                                       // Remove common idiom:
+  let cleaned_2 = DIRTY_ID_IDIOM_RE.replace_all(&cleaned_1, "$inner");
+  // transform some forbidden chars
+  let cleaned_3 = cleaned_2
+    .replace(':', "..") // No colons!
+    .replace('@', "-at-")
+    .replace('*', "-star-")
+    .replace('$', "-dollar-")
+    .replace(',', "-comma-")
+    .replace('%', "-pct-")
+    .replace('&', "-amp-");
+  let cleaned_4 = unidecode(&cleaned_3);
+  let cleaned_5 = NON_ID_CHARSET_RE.replace_all(&cleaned_4, ""); // remove everything else.
+  cleaned_5.to_string()
+}
+
 pub fn clean_bib_key(key: &str) -> String {
   // Originally lc() here, but let's preserve case till Postproc.
   let mut clean_key = key.trim_start();
@@ -1216,5 +1245,27 @@ pub fn clean_label(label: &str, prefix_opt: Option<&str>) -> String {
   let prefix = prefix_opt.unwrap_or("LABEL");
   let mut key = label;
   key = key.trim_start().trim_end(); // Trim leading/trailing, in any case
-  s!("{}:{}",prefix, SPACES.replace(key, "_"))
+  s!("{}:{}", prefix, SPACES_RE.replace_all(key, "_"))
+}
+
+pub fn clean_url(url: &str) -> String {
+  let cleaned = url.trim_start().trim_end(); // Trim leading/trailing, in any case
+  TILDE_NOISE_RE.replace_all(&cleaned, "~").to_string()
+}
+
+pub fn compose_url(base: &str, url: &str, fragid_opt: Option<&str>) -> String {
+  let mut base = TRAILING_SLASH_RE.replace(url, ""); //  remove trailing /
+  let mut fragid = fragid_opt.unwrap_or("");
+  let base: String = if !base.is_empty() && !LEADING_PROTOCOL_RE.is_match(url) {
+    // already has protocol, so is absolute url
+    base.to_string() + if url.starts_with('/') { "" } else { "/" } // else start w/base, possibly /
+  } else {
+    String::new()
+  };
+  let fragid: String = if !fragid.is_empty() {
+    s!("#{}", clean_id(fragid))
+  } else {
+    String::new()
+  };
+  clean_url(&(base + &url + &fragid))
 }

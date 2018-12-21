@@ -22,6 +22,7 @@ extern crate libxml;
 extern crate rand;
 extern crate regex;
 extern crate time;
+extern crate unidecode;
 
 #[macro_use]
 mod macros;

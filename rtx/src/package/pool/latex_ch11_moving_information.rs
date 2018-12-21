@@ -66,10 +66,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // # * is added to accommodate hyperref
   DefConstructor!(
     "\\ref OptionalMatch:* Semiverbatim",
-    "<ltx:ref labelref='#label' _force_font='true'/>"
+    "<ltx:ref labelref='#label' _force_font='true'/>",
+    properties => properties!(sub[stomach, args, state] {
+      unpack_to_string!(args => mstar, label);
+      Ok(map!("label" => Stored::String(clean_label(&label, None))))
+    })
   );
-  // TODO
-  // properties => sub { (label => CleanLabel($_[2])); });
 
   // DefConstructor('\pageref OptionalMatch:* Semiverbatim', "<ltx:ref labelref='#label'
   // _force_font='true'/>", # Same??   properties => sub { (label => CleanLabel($_[2])); });
