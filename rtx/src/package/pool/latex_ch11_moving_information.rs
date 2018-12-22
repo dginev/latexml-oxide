@@ -84,37 +84,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefMacro!("\\thebibliography@ID", "");
 
-  // # This sub does things that would commonly be needed when starting a bibliography
-  // # setting the ID, etc...
-  // sub beginBibliography {
-  //   my ($whatsit) = @_;
-  //   beginBibliography_clean($whatsit);
-  //   # Fix for missing \bibitems!
-  //   setupPseudoBibitem();
-  //   return; }
-
-  // sub beginBibliography_clean {
-  //   my ($whatsit) = @_;
-  //   # Try to compute a reasonable, but unique ID;
-  //   # relative to the document's ID, if any.
-  //   # But also, if there are multiple bibliographies,
-  //   my $bibnumber = LookupValue('n_bibliographies') || 0;
-  //   AssignValue(n_bibliographies => ++$bibnumber, 'global');
-  //   my $docid = ToString(Expand(T_CS('\thedocument@ID')));
-  //   my $bibid = ($docid ? $docid . '.' : '') . 'bib' . radix_alpha($bibnumber - 1);
-  //   DefMacroI(T_CS('\thebibliography@ID'), undef, T_OTHER($bibid), scope => 'global');
-  //   #  $whatsit->setProperty(id=>ToString(Expand(T_CS('\thebibliography@ID'))));
-  //   $whatsit->setProperty(id => $bibid);
-  //   my $title = DigestIf('\refname') || DigestIf('\bibname');
-  //   $whatsit->setProperty(title     => $title)          if $title;
-  //   $whatsit->setProperty(titlefont => $title->getFont) if $title;
-  //   $whatsit->setProperty(bibstyle  => LookupValue('BIBSTYLE'));
-  //   $whatsit->setProperty(citestyle => LookupValue('CITE_STYLE'));
-  //   #  $whatsit->setProperty(sort=> ???
-  //   # And prepare for the likely nonsense that appears within bibliographies
-  //   ResetCounter('enumiv');
-  //   return; }
-
   // DefMacro('\bibliography Semiverbatim',
   // '\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\@bibliography{#1}}'); DefMacro('\lx@ifusebbl{}{}{}',
   // sub {     my ($gullet, $bib_files, $bbl_clause, $bib_clause) = @_;
@@ -192,10 +161,9 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       if gullet.if_next(T_BEGIN!(), state)? {
         gullet.read_arg(state)?;
       }
-      // TODO:
-      // beginBibliography(whatsit); },
-    })
-  //   locked => 1);
+      begin_bibliography(stomach, whatsit, state);
+    }),
+    locked => true
   );
 
   // Close the bibliography
@@ -211,44 +179,28 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   Tag!("ltx:biblist",      auto_close => true);
   Tag!("ltx:bibliography", auto_close => true);
 
-  // # Since SOME people seem to write bibliographies w/o \bibitem,
-  // # just blank lines between apparent entries,
-  // # Making \par do a \bibitem{} works, but screws up valid
-  // # bibliographies with blank lines!
-  // # So, let's do some redirection!
-  // sub setupPseudoBibitem {
-  //   Let('\save@bibitem', '\bibitem');
-  //   Let('\save@par',     '\par');
-  //   Let('\bibitem',      '\restoring@bibitem');
-  //   Let('\par',          '\par@in@bibliography');
-  //   # Moreover, some people use \item instead of \bibitem
-  //   Let('\item', '\item@in@bibliography');
-  //   # And protect from redefinitions.
-  //   Let('\newblock', '\lx@bibnewblock');
-  //   return; }
-
-  // DefMacroI('\par@in@bibliography', undef, sub {
+  // DefMacroI("\par@in@bibliography", undef, sub {
   //     my ($gullet) = @_;
   //     $gullet->skipSpaces;
   //     my $tok = $gullet->readToken;
   //     # If next token is another \par, or a REAL \bibitem,
-  //     if (Equals($tok, T_CS('\par')) || Equals($tok, T_CS('\bibitem'))) {
+  //     if (Equals($tok, T_CS("\par")) || Equals($tok, T_CS("\bibitem"))) {
   //       ($tok); }    # then this \par expands into what followed
   //     else {         # Else, put it back, and start a bibitem.
   //       $gullet->unread($tok);
-  //       (T_CS('\save@bibitem'), T_BEGIN, T_END); } });
+  //       (T_CS("\save@bibitem"), T_BEGIN, T_END); } });
 
-  // DefMacroI('\item@in@bibliography', undef, '\save@bibitem{}');
+  // DefMacroI("\item@in@bibliography", undef, "\save@bibitem{}");
 
   // # If we hit a real \bibitem, put \par & \bibitem back to correct defn, and then \bibitem.
   // # A bibitem with now key or label...
-  // DefMacro('\restoring@bibitem',
-  //   '\let\bibitem\save@bibitem\let\par\save@par\bibitem');
+  // DefMacro("\restoring@bibitem",
+  //   "\let\bibitem\save@bibitem\let\par\save@par\bibitem");
 
-  // NewCounter('@bibitem', 'bibliography', idprefix => 'bib');
-  // DefMacroI('\the@bibitem', undef, '\arabic{@bibitem}');
-  // DefMacro('\@biblabel{}', '[#1]');
-  // DefMacroI('\fnum@@bibitem', undef, '{\@biblabel{\the@bibitem}}');
+  // NewCounter("@bibitem", "bibliography", idprefix => "bib");
+  // DefMacroI("\the@bibitem", undef, "\arabic{@bibitem}");
+  // DefMacro("\@biblabel{}", "[#1]");
+  // DefMacroI("\fnum@@bibitem", undef, "{\@biblabel{\the@bibitem}}");
   // # Hack for abused bibliographies; see below
   DefMacro!("\\bibitem",
     "\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem");
@@ -665,4 +617,59 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // DefPrimitive('\typein[]{}', undef);
 
   Ok(())
+}
+
+// Since SOME people seem to write bibliographies w/o \bibitem,
+// just blank lines between apparent entries,
+// Making \par do a \bibitem{} works, but screws up valid
+// bibliographies with blank lines!
+// So, let's do some redirection!
+fn setup_pseudo_bibitem(state: &mut State) {
+  SetupBindingMacros!(state);
+  Let!("\\save@bibitem", "\\bibitem");
+  Let!("\\save@par", "\\par");
+  Let!("\\bibitem", "\\restoring@bibitem");
+  Let!("\\par", "\\par@in@bibliography");
+  // Moreover, some people use \item instead of \bibitem
+  Let!("\\item", "\\item@in@bibliography");
+  // And protect from redefinitions.
+  Let!("\\newblock", "\\lx@bibnewblock");
+  return;
+}
+// This sub does things that would commonly be needed when starting a bibliography
+// setting the ID, etc...
+fn begin_bibliography(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) {
+  begin_bibliography_clean(stomach, whatsit);
+  // Fix for missing \bibitems!
+  setup_pseudo_bibitem(state);
+  return;
+}
+
+fn begin_bibliography_clean(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) {
+  SetupBindingMacros!(state);
+  // Try to compute a reasonable, but unique ID;
+  // relative to the document's ID, if any.
+  // But also, if there are multiple bibliographies,
+  let bibnumber = 1 + state.lookup_number("n_bibliographies").unwrap_or(0);
+  state.assign_value("n_bibliographies", bibnumber, Some(Scope::Global));
+  let mut docid = Expand!(T_CS!("\\thedocument@ID"), state);
+  if !docid.is_empty() {
+    docid = docid + ".";
+  }
+  let bibid = s!("{}bib{}", docid, radix::radix_alpha(bibnumber - 1));
+  DefMacroI!(T_CS!("\\thebibliography@ID"), None, T_OTHER!(&bibid), scope => Some(Scope::Global));
+  whatsit.set_property("id", bibid);
+  let title_opt = match DigestIf!("\\refname", stomach) {
+    Some(v) => Some(v),
+    None => DigestIf!("\\bibname", stomach),
+  };
+  if let Some(title) = title_opt {
+    whatsit.set_property("title", title);
+    whatsit.set_property("titlefont", title.get_font());
+  }
+  whatsit.set_property("bibstyle", LookupValue!("BIBSTYLE"));
+  whatsit.set_property("citestyle", LookupValue!("CITE_STYLE"));
+  // And prepare for the likely nonsense that appears within bibliographies
+  ResetCounter!("enumiv", state);
+  return;
 }

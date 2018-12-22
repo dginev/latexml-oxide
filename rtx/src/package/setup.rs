@@ -133,6 +133,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! DigestIf {
+    ($token:literal, $stomach:ident) => (DigestIf!(T_CS!($token), $stomach, $state));
+    ($token:literal, $stomach:ident, $state_arg:ident) => (digest_if(T_CS!($token), $stomach, $state_arg));
     ($token:expr, $stomach:ident) => (DigestIf!($token, $stomach, $state));
     ($token:expr, $stomach:ident, $state_arg: ident) => (digest_if($token, $stomach, $state_arg));
   }
@@ -958,6 +960,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   macro_rules! RefStepCounter {
     ($ctr:expr, $noreset:expr, $gullet:ident) => (RefStepCounter!($ctr, $noreset, $gullet, $state));
     ($ctr:expr, $noreset:expr, $gullet:ident, $state_arg:ident) => (ref_step_counter($ctr, $noreset, $gullet, $state_arg));
+  }
+
+
+  macro_rules! ResetCounter {
+    ($ctr:expr) => (ResetCounter!($ctr, $gullet, $state));
+    ($ctr:expr, $state_arg: ident) => (reset_counter($ctr, $state_arg));
   }
 
   /// Return $tokens with all tokens expanded
