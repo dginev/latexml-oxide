@@ -8,9 +8,9 @@ use crate::common::error::*;
 use crate::common::relaxng::Relaxng;
 use crate::common::xml::{XPath, XML_NS};
 use crate::document::Document;
+use crate::util::pathname;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::Node;
-use crate::util::pathname;
 
 // use common::font::*;
 

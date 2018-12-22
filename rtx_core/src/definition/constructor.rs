@@ -41,7 +41,7 @@ pub struct ConstructorOptions {
   pub after_digest_begin: Vec<DigestionClosure>,
   pub before_digest_end: Vec<BeforeDigestClosure>,
   pub after_digest_body: Vec<DigestionClosure>,
-  // reversion       : 1,
+  pub reversion       : Option<String>,
   // sizer           : 1,
   pub scope: Option<Scope>,
   pub locked: bool,
@@ -69,6 +69,7 @@ impl Default for ConstructorOptions {
       scope: None,
       locked: false,
       alias: None,
+      reversion: None,
     }
   }
 }

@@ -68,10 +68,16 @@ impl Document {
 
   /// Get the element at (or containing) the current insertion point.
   pub fn get_element(&self) -> Option<Node> {
-    match self.node.get_type() {
-      Some(NodeType::TextNode) => self.node.get_parent(),
-      Some(NodeType::DocumentNode) => None,
-      _ => Some(self.node.clone()),
+    let mut node = &self.node;
+    let parent = node.get_parent();
+    if node.get_type() == Some(NodeType::TextNode) {
+      node = parent.as_ref().unwrap();
+    }
+    let final_type = node.get_type();
+    if final_type.is_none() || final_type == Some(NodeType::DocumentNode) {
+      None
+    } else {
+      Some(node.clone())
     }
   }
 
