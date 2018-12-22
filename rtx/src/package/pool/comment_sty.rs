@@ -1,7 +1,7 @@
 use crate::package::*;
 
-pub fn load_definitions(comment_state: &mut State) -> Result<()> {
-  SetupBindingMacros!(comment_state);
+pub fn load_definitions(outer_state: &mut State) -> Result<()> {
+  SetupBindingMacros!(outer_state);
 
   //**********************************************************************
   // Define \name and \begin{name} to start an ignored section
@@ -56,7 +56,7 @@ pub fn load_definitions(comment_state: &mut State) -> Result<()> {
   }
 
   let mut mock_stomach = Stomach::default();
-  define_excluded(&mut mock_stomach, vec![Tokenize!("comment")], comment_state)?;
+  define_excluded(&mut mock_stomach, vec![Tokenize!("comment")], outer_state)?;
 
   DefPrimitiveI!("\\includecomment{}", define_included!());
   DefPrimitiveI!("\\excludecomment{}", define_excluded);
