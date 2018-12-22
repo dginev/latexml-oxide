@@ -8,8 +8,8 @@ use unidecode::unidecode;
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
 use rtx_core::common::number::Number;
-use rtx_core::common::xml::XML_NS;
 use rtx_core::common::store::IntoOption;
+use rtx_core::common::xml::XML_NS;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
 use rtx_core::definition::register::{
@@ -1256,7 +1256,7 @@ pub fn clean_url(url: &str) -> String {
 }
 
 pub fn compose_url(base: &str, url: &str, fragid_opt: Option<&str>) -> String {
-  let mut base = TRAILING_SLASH_RE.replace(url, ""); //  remove trailing /
+  let mut base = TRAILING_SLASH_RE.replace(base, ""); //  remove trailing /
   let mut fragid = fragid_opt.unwrap_or("");
   let base: String = if !base.is_empty() && !LEADING_PROTOCOL_RE.is_match(url) {
     // already has protocol, so is absolute url
@@ -1269,5 +1269,6 @@ pub fn compose_url(base: &str, url: &str, fragid_opt: Option<&str>) -> String {
   } else {
     String::new()
   };
-  clean_url(&(base + &url + &fragid))
+  let clean = clean_url(&(base + &url + &fragid));
+  clean
 }

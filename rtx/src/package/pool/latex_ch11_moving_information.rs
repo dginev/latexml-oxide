@@ -199,14 +199,17 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   );
 
   // Close the bibliography
-  DefConstructor!("\\endthebibliography", "</ltx:biblist></ltx:bibliography>"); //, TODO:
-                                                                                //   afterDigest => sub { my $t = T_CS('\@appendix');
-                                                                                //     Digest($t) if IsDefined($t);
-                                                                                //     return; },
-                                                                                //   locked => 1);
-                                                                                // # auto close the bibliography and contained biblist.
-                                                                                // Tag('ltx:biblist',      autoClose => 1);
-                                                                                // Tag('ltx:bibliography', autoClose => 1);
+  DefConstructor!("\\endthebibliography", "</ltx:biblist></ltx:bibliography>",
+    after_digest => afterproc!(stomach, whatsit, state, {
+      let t = T_CS!("\\@appendix");
+      if IsDefined!(&t, state) {
+        stomach.digest(t, state)?;
+      }
+    }),
+    locked => true);
+  // auto close the bibliography and contained biblist.
+  Tag!("ltx:biblist",      auto_close => true);
+  Tag!("ltx:bibliography", auto_close => true);
 
   // # Since SOME people seem to write bibliographies w/o \bibitem,
   // # just blank lines between apparent entries,
