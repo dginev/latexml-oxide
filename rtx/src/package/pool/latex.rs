@@ -88,7 +88,7 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
 
   DefMacro!("\\begin{}", sub [gullet, args, state] {
     unpack!(args => env);
-    let name = Expand!(env, gullet, state)?.to_string();
+    let name = Expand!(env, gullet, state).to_string();
     let begin_name = s!("\\begin{{{}}}", name);
     let before = state.lookup_value(&s!("@environment@{}@beforebegin", name));
     let after  = state.lookup_value(&s!("@environment@{}@atbegin", name));
@@ -624,7 +624,7 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
 
   DefMacro!("\\value{}", sub[gullet, args, inner_state] {
     unpack!(args => value);
-    let ctr_expansion = Expand!(value, gullet, inner_state)?.to_string();
+    let ctr_expansion = Expand!(value, gullet, inner_state).to_string();
     let ctr_value = CounterValue!(&ctr_expansion, inner_state).value_of();
     Ok(Tokens::new(
       ExplodeText!(ctr_value)
@@ -635,7 +635,7 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   //     ExplodeText(ToString($_[1]->valueOf)); });
   DefMacro!("\\arabic{}", sub[gullet, args, inner_state] {
     unpack!(args => value);
-    let ctr_expansion = Expand!(value, gullet, inner_state)?.to_string();
+    let ctr_expansion = Expand!(value, gullet, inner_state).to_string();
     let ctr_value = CounterValue!(&ctr_expansion, inner_state).value_of();
     Ok(Tokens::new(
       ExplodeText!(ctr_value)
