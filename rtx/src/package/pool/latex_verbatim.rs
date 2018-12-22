@@ -51,7 +51,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
     //       $whatsit->setBody(map { Box($_, $font, $loc, T_OTHER($_)) } @lines, $end);
     //       return; }],
     }),
-    before_construct => construct!(document, whatsit, state, { document.maybe_close_element("ltx:p", state); })
+    before_construct => construct!(document, whatsit, state, { document.maybe_close_element("ltx:p", state)?; })
   );
 
   // DefPrimitiveI('\@vobeyspaces', undef, sub {

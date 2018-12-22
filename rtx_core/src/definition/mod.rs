@@ -36,7 +36,7 @@ pub type PropertiesClosure =
 pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
 pub type ReplacementClosure =
   Rc<Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
-pub type ConstructionClosure = Rc<Fn(&mut Document, &Whatsit, &mut State)>;
+pub type ConstructionClosure = Rc<Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
 
 impl From<Token> for Option<ExpansionClosure> {
   fn from(t: Token) -> Option<ExpansionClosure> { Tokens!(t).into() }
