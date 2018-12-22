@@ -1132,7 +1132,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 //   DefMacroI(T_CS!('\@currentID'), undef, T_CS!("\\the$ctr\@ID"));
 //   return (id => ToString(DigestLiteral(T_CS!("\\the$ctr\@ID")))); }
 
-fn reset_counter(ctr: &str, state: &mut State) {
+pub fn reset_counter(ctr: &str, state: &mut State) {
   state.assign_value(&s!("\\c@{}", ctr), Number!(0), Some(Scope::Global));
   // and reset any within counters!
   let nested = state
