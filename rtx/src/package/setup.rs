@@ -147,7 +147,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($kv:expr) => (MergeFont!($kv, $state));
     ($kv:expr, $state_arg:ident) => (merge_font($kv, $state_arg));
     ($key:ident => $val:expr) => (MergeFont!($key => $val, $state));
-    ($key:ident => $val:expr, $state_arg:ident) => (merge_font(&fontmap!($key => $val), $state));
+    ($key:ident => $val:expr, $state_arg:ident) => (merge_font(&fontmap!($key => $val), $state_arg));
   }
 
   //======================================================================
@@ -503,6 +503,14 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
     });
+    // pre-compiled CS with to-be-compiled replacement (see \begin{verbatim})
+    (cs [ $cs:expr ], $paramlist:expr, $replacement:expr, $options:expr) => (DefConstructorWO!(cs[$cs], $paramlist, $replacement, $options, $state));
+    (cs [ $cs:expr ], $paramlist:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
+      let cs = T_CS!($cs);
+      let compiled_replacement;
+      compile_replacement!(compiled_replacement, $replacement);
+      DefConstructorIWO!(cs, $paramlist, compiled_replacement, $options, $state_arg);
+    })
   );
 
   //=====================================================================
@@ -1116,6 +1124,12 @@ macro_rules! DefConstructor {
   ($cs:expr, $replacement:expr) => (DefConstructorWO!($cs, $replacement, ConstructorOptions::default()));
   ($cs:expr, $replacement:expr, $($key:ident => $val:expr),*) =>
     (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*)));
+  // pre-compiled CS with to-be-compiled replacement, (see \begin{verbatim})
+  (cs [ $cs:expr ], $paramlist:expr, $replacement:expr) =>
+    (DefConstructorWO!(cs[$cs], $paramlist, $replacement, ConstructorOptions::default()));
+  (cs [ $cs:expr ], $paramlist:expr, $replacement:expr, $($key:ident => $val:expr),*) =>
+    (DefConstructorWO!(cs[$cs], $paramlist, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*)));
+
   // with explicit state
   // Closure replacement flavors
   ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $state_arg:ident) => (
@@ -1126,6 +1140,12 @@ macro_rules! DefConstructor {
   ($cs:expr, $replacement:expr, $state_arg:ident) => (DefConstructorWO!($cs, $replacement, ConstructorOptions::default(), $state_arg));
   ($cs:expr, $replacement:expr, $state_arg:ident, $($key:ident=>$val:expr),*) =>
     (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*), $state_arg));
+  // pre-compiled CS with to-be-compiled replacement, (see \begin{verbatim})
+  (cs [ $cs:expr ], $paramlist:expr, $replacement:expr, $state_arg:ident) =>
+    (DefConstructorWO!(cs[$cs], $paramlist, $replacement, ConstructorOptions::default(), $state_arg));
+  (cs [ $cs:expr ], $paramlist:expr, $replacement:expr, $state_arg:ident, $($key:ident => $val:expr),*) =>
+    (DefConstructorWO!(cs[$cs], $paramlist, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*), $state_arg));
+
 }
 
 macro_rules! NewCounter {
