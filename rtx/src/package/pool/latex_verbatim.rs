@@ -16,41 +16,43 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // We're going to sidestep the Gullet for inputting,
   // and also the usual environment capture.
   
-  // DefConstructorI(T_CS('\begin{verbatim}'), undef,
-  //   "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
-  //   beforeDigest => [sub { $_[0]->bgroup;
-  //       my @stuff = ();
-  //       if (my $b = LookupValue('@environment@verbatim@atbegin')) {
-  //         push(@stuff, Digest(@$b)); }
-  //       AssignValue(current_environment => 'verbatim');
-  //       DefMacroI('\@currenvir', undef, 'verbatim');
-  //       MergeFont(family => 'typewriter');
-  //       // Digest(T_CS('\par')); # NO! See beforeConstruct!
-  //       @stuff; }],
-  //   afterDigest => [sub {
-  //       my ($stomach, $whatsit) = @_;
-  //       //      $stomach->egroup;
-  //       my $font   = $whatsit->getFont;
-  //       my $loc    = $whatsit->getLocator;
-  //       my $end    = "\\end{verbatim}";
-  //       my @lines  = ();
-  //       my $gullet = $stomach->getGullet;
-  //       while (defined(my $line = $gullet->readRawLine)) {
-  //         // The raw chars will still have to be decoded (but not space!!)
-  //         $line = join('', map { ($_ eq ' ' ? ' ' : FontDecodeString($_, 'OT1_typewriter')) }
-  //             split(//, $line));
-  //         if ($line =~ /^(.*?)\\end\{verbatim\}(.*?)$/) {
-  //           push(@lines, $1 . "\n"); $gullet->unread(Tokenize($2), T_CR);
-  //           last; }
-  //         push(@lines, $line . "\n"); }
-  //       pop(@lines) if $lines[-1] eq "\n";
-  //       // Note last line ends up as Whatsit's "trailer"
-  //       if (my $b = LookupValue('@environment@verbatim@atend')) {
-  //         push(@lines, ToString(Digest(@$b))); }
-  //       $stomach->egroup;
-  //       $whatsit->setBody(map { Box($_, $font, $loc, T_OTHER($_)) } @lines, $end);
-  //       return; }],
-  //   beforeConstruct => sub { $_[0]->maybeCloseElement('ltx:p'); });
+  // DefConstructor!("\\begin{verbatim}", "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
+  //   before_digest => beforesub!(stomach, inner_state, {
+  //     stomach.bgroup(inner_state);
+  //     let mut stuff = Vec::new();
+  //     if let Some(b) = inner_state.lookup_tokens("@environment@verbatim@atbegin") {
+  //       stuff.push(stomach.digest(b.unlist(), inner_state)?);
+  //     }
+  //     inner_state.assign_value("current_environment", "verbatim", None);
+  //     DefMacro!("\\@currenvir", "verbatim", inner_state);
+  //     MergeFont!(family => "typewriter", inner_state);
+  //     Ok(stuff)
+  //   }),
+  //   after_digest => aftersub!(stomach, whatsit, state, {
+  //   //       my $font   = $whatsit->getFont;
+  //   //       my $loc    = $whatsit->getLocator;
+  //   //       my $end    = "\\end{verbatim}";
+  //   //       my @lines  = ();
+  //   //       my $gullet = $stomach->getGullet;
+  //   //       while (defined(my $line = $gullet->readRawLine)) {
+  //   //         // The raw chars will still have to be decoded (but not space!!)
+  //   //         $line = join('', map { ($_ eq ' ' ? ' ' : FontDecodeString($_, 'OT1_typewriter')) }
+  //   //             split(//, $line));
+  //   //         if ($line =~ /^(.*?)\\end\{verbatim\}(.*?)$/) {
+  //   //           push(@lines, $1 . "\n"); $gullet->unread(Tokenize($2), T_CR);
+  //   //           last; }
+  //   //         push(@lines, $line . "\n"); }
+  //   //       pop(@lines) if $lines[-1] eq "\n";
+  //   //       // Note last line ends up as Whatsit's "trailer"
+  //   //       if (my $b = LookupValue('@environment@verbatim@atend')) {
+  //   //         push(@lines, ToString(Digest(@$b))); }
+  //   //       $stomach->egroup;
+  //   //       $whatsit->setBody(map { Box($_, $font, $loc, T_OTHER($_)) } @lines, $end);
+  //   //       return; }],
+  //         Ok(vec![])
+  //   }),
+  //   before_construct => construct!(document, whatsit, state, { document.maybe_close_element("ltx:p", state); })
+  // );
 
   // DefPrimitiveI('\@vobeyspaces', undef, sub {
   //     AssignCatcode(" " => 13);

@@ -76,6 +76,46 @@ macro_rules! sub {
 }
 
 #[macro_export]
+macro_rules! noprimitive {
+  () => {
+    |stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State| Ok(Vec::new())
+  };
+}
+
+#[macro_export]
+macro_rules! primitivesub {
+  ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
+    |$stomach: &mut Stomach, mut $args: Vec<Tokens>, $inner_state: &mut State| $body
+  };
+}
+#[macro_export]
+macro_rules! primitiveproc {
+  ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => (
+    |$stomach:&mut Stomach, mut $args : Vec<Tokens>, $inner_state:&mut State| {
+      $body
+      Ok(Vec::new())
+    }
+  )
+}
+
+#[macro_export]
+macro_rules! beforesub {
+  ($stomach:ident, $state:ident, $body:block) => {
+    vec![Rc::new(|$stomach: &mut Stomach, $state: &mut State| $body)]
+  };
+}
+#[macro_export]
+macro_rules! beforeproc {
+  // just as beforesub! but with a default return value
+  ($stomach:ident, $state:ident, $body:expr) => {
+    Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
+      $body;
+      Ok(Vec::new())
+    })
+  };
+}
+
+#[macro_export]
 macro_rules! tagsub {
   ($document:ident, $node:ident, $state:ident, $body:expr) => {
     vec![Rc::new(
@@ -104,43 +144,12 @@ macro_rules! replacement {
 }
 
 #[macro_export]
-macro_rules! noprimitive {
-  () => {
-    |stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State| Ok(Vec::new())
-  };
-}
-
-#[macro_export]
-macro_rules! primitivesub {
-  ($stomach:ident, $args:ident, $state:ident, $body:block) => {
-    |$stomach: &mut Stomach, mut $args: Vec<Tokens>, $state: &mut State| $body
-  };
-}
-#[macro_export]
-macro_rules! primitiveproc {
-  ($stomach:ident, $args:ident, $state:ident, $body:block) => (
-    |$stomach:&mut Stomach, mut $args : Vec<Tokens>, $state:&mut State| {
-      $body
-      Ok(Vec::new())
-    }
-  )
-}
-
-#[macro_export]
-macro_rules! beforesub {
-  ($stomach:ident, $state:ident, $body:block) => {
-    vec![Rc::new(|$stomach: &mut Stomach, $state: &mut State| $body)]
-  };
-}
-#[macro_export]
-macro_rules! beforeproc {
-  // just as beforesub! but with a default return value
-  ($stomach:ident, $state:ident, $body:expr) => {
-    Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
-      $body;
-      Ok(Vec::new())
-    })
-  };
+macro_rules! construct {
+  ($doc:ident, $whatsit:ident, $state:ident, $body:expr) => {
+    vec![Rc::new(|$doc:&mut Document, $whatsit:&Whatsit, $state: &mut State| {
+    $body
+    return;
+  })]}
 }
 
 #[macro_export]

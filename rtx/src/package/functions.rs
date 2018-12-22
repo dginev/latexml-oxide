@@ -9,8 +9,9 @@ use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
 use rtx_core::common::number::Number;
 use rtx_core::common::xml::XML_NS;
+use rtx_core::common::store::IntoOption;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
-use rtx_core::definition::expandable::Expandable;
+use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
 use rtx_core::definition::register::{
   Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue,
 };
@@ -524,6 +525,7 @@ pub fn def_macro<T: Into<Option<ExpansionClosure>>>(
   cs: Token,
   paramlist: Option<Parameters>,
   expansion: T,
+  options: Option<ExpandableOptions>,
   state: &mut State,
 )
 {

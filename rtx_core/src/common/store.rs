@@ -18,6 +18,7 @@ use crate::definition::register::{Register, RegisterValue};
 use crate::document::tag::TagData;
 use crate::mouth;
 use crate::parameter::Parameter;
+use crate::state::Scope;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
@@ -464,6 +465,10 @@ pub trait IntoOption<T>: Sized {
 
 impl<'a> IntoOption<Option<String>> for &'a str {
   fn into_option(&self) -> Option<String> { Some(self.to_string()) }
+}
+
+impl<'a> IntoOption<Option<Scope>> for Option<Scope> {
+  fn into_option(&self) -> Option<Scope> { *self }
 }
 
 impl IntoOption<bool> for bool {

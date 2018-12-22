@@ -145,112 +145,20 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   // Merge the current font with the style specifications
   macro_rules! MergeFont {
     ($kv:expr) => (MergeFont!($kv, $state));
-    ($kv:expr, $state_arg:ident) => (merge_font($kv, $state_arg))
+    ($kv:expr, $state_arg:ident) => (merge_font($kv, $state_arg));
+    ($key:ident => $val:expr) => (MergeFont!($key => $val, $state));
+    ($key:ident => $val:expr, $state_arg:ident) => (merge_font(&fontmap!($key => $val), $state));
   }
 
   //======================================================================
   // Defining new Control-sequence Parameter types.
   //======================================================================
-  macro_rules! DefParameterType{
-    ($name:expr) => (DefParameterType!($name, $state));
-    ($name:expr, $key1:ident => $val1:expr)=>(DefParameterType!($name, $key1=>$val1, $state));
-    ($name:expr, $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr)=>(DefParameterType!($name, $key1=>$val1, $key2=>$val2, $state));
-    ($name:expr, $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr)=>(DefParameterType!($name, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
-    ($name:expr, $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr)=>(DefParameterType!($name, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $state));
-    ($name:expr, $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr)=>(DefParameterType!($name, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $state));
-    ($name:expr, $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr,
-      $key6:ident=>$val6:expr)=>(DefParameterType!($name, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $key6=>$val6, $state));
 
-    // Explicit state form
-    ($name:expr, $state_arg:ident) => (DefParameterTypeWO!($name, Parameter::default(), $state_arg));
-
-    ($name:expr,
-     $key1:ident => $val1:expr, $state_arg:ident
-    ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
-     name => $name.to_string(),
-     $key1 => $val1), $state_arg));
-
-    ($name:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr, $state_arg:ident
-    ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
-     name => $name.to_string(),
-     $key1 => $val1,
-     $key2 => $val2
-    ), $state_arg));
-
-    ($name:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr, $state_arg:ident
-    ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
-     name => $name.to_string(),
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3
-    ), $state_arg));
-
-    ($name:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr,
-     $key4:ident => $val4:expr, $state_arg:ident
-    ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
-     name => $name.to_string(),
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3,
-     $key4 => $val4
-    ), $state_arg));
-
-    ($name:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr,
-     $key4:ident => $val4:expr,
-     $key5:ident => $val5:expr, $state_arg:ident
-    ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
-     name => $name.to_string(),
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3,
-     $key4 => $val4,
-     $key5 => $val5,
-    ), $state_arg));
-
-    ($name:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr,
-     $key4:ident => $val4:expr,
-     $key6:ident => $val6:expr, $state_arg:ident
-    ) => (DefParameterTypeWO!($name, NewDefault!(Parameter,
-     name => $name.to_string(),
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3,
-     $key4 => $val4,
-     $key5 => $val5,
-     $key6 => $val6
-    ), $state_arg));
-  }
   macro_rules! DefParameterTypeWO {
+    ($name:expr, $param:expr) => ($state.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter($param))));
     ($name:expr, $param:expr, $state_arg:ident) => ($state_arg.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter($param))))
   }
+
 
   macro_rules! LoadPool {
     ($name:expr) => (LoadPool!($name, $state));
@@ -291,55 +199,20 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($name:expr, $map:expr) => (DeclareFontMap!($name, $map, $state));
   }
 
-  macro_rules! DefMacroI(
-    // With explicit state
-    // TODO: Propagate options, such as "locked", etc
-    // Expansion closure syntax + explicit state
-    ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $state_arg:ident) => {
+  macro_rules! DefMacroIWO {
+    // closure stub
+    ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) =>
+      (DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, $options, $state));
+    // with explicit state
+    ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {
       let expansion_closure : Option<ExpansionClosure> = Some(Rc::new(move |$gullet, $args, $inner_state| $body));
-      def_macro($cs, $paramlist, expansion_closure, $state_arg); };
-    ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $key1:ident=>$val1:expr, $state_arg:ident) => {
-      let expansion_closure : Option<ExpansionClosure> = Some(Rc::new(move |$gullet, $args, $inner_state| $body));
-      def_macro($cs, $paramlist, expansion_closure, $state_arg); };
-    // Without explicit state
-    // Expansion closure syntax
-    ($cs:expr, $paramlist:expr, sub [$gullet:ident, $args:ident, $inner_state:ident ] $body:block) =>
-        (DefMacroI!($cs, $paramlist, sub [$gullet, $args, $inner_state] $body, $state));
-    ($cs:expr, $paramlist:expr, sub [$gullet:ident, $args:ident, $inner_state:ident ] $body:block, $key1:ident=>$val1:expr) =>
-        (DefMacroI!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, $key1=>$val1, $state));
-
-    // With explicit state
-    // TODO: Propagate options, such as "locked", etc
-    // Simple Expression syntax + explicit state
-    ($cs:expr, $paramlist:expr, None, $state_arg:ident) => (def_macro($cs, $paramlist, None, $state_arg));
-    ($cs:expr, $paramlist:expr, $expansion:expr, $state_arg:ident) => (def_macro($cs, $paramlist, $expansion, $state_arg));
-    ($cs:expr, $paramlist:expr, $expansion:expr, $key1:ident=>$val1:expr, $state_arg:ident) => (def_macro($cs, $paramlist, $expansion, $state_arg));
-
-    // Simple Expression syntax
-    ($cs:expr, $paramlist:expr, None) => (DefMacroI!($cs, $paramlist, None, $state));
-    ($cs:expr, $paramlist:expr, $expansion:expr) => (DefMacroI!($cs, $paramlist, $expansion, $state));
-    ($cs:expr, $paramlist:expr, $expansion:expr, $key1:ident=>$val1:expr) => (DefMacroI!($cs, $paramlist, $expansion, $key1=>$val1, $state));
-
-  );
-
-  macro_rules! DefMacro {
-    // Closure form
-    ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block) => (
-      DefMacroWO!($proto, sub [$gullet, $args, $inner_state] $body, ExpandableOptions::default(), $state)
-    );
-    ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $key1:ident=>$val1:expr) => (
-      DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, NewDefault!(ExpandableOptions, $key1=>$val1))
-    );
-    // closure; explicit state
-    ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $state_arg:ident) => (
-      DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, ExpandableOptions::default(), $state_arg);
-    );
-    // String form
-    ($proto:expr, $expansion:expr) => (DefMacroWO!($proto, $expansion, ExpandableOptions::default()));
-    ($proto:expr, $expansion:expr, $key1:ident=>$val1:expr) =>
-      (DefMacroWO!($proto, $expansion, NewDefault!(ExpandableOptions, $key1=>$val1)));
-    // string; explicit state
-    ($proto:expr, $expansion:expr,$state_arg:ident) => (DefMacroWO!($proto, $expansion, ExpandableOptions::default(), $state_arg));
+      def_macro($cs, $paramlist, expansion_closure, $options, $state_arg);
+    };
+    // precompiled
+    ($cs:expr, $paramlist:expr, $expansion:expr, $options:expr) =>
+      (DefMacroIWO!($cs, $paramlist, $expansion, $options, $state));
+    // with explicit state
+    ($cs:expr, $paramlist:expr, $expansion:expr, $options:expr, $state_arg:ident) => (def_macro($cs, $paramlist, $expansion, $options, $state_arg));
   }
 
   macro_rules! DefMacroWO(
@@ -348,7 +221,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       let expansion_closure : Option<ExpansionClosure> = Some(Rc::new(move |$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| $body));
       // TODO: Also pass in options
-      def_macro(cs, paramlist, expansion_closure, $state_arg);
+      def_macro(cs, paramlist, expansion_closure, $options, $state_arg);
     };
     ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) => (
       DefMacroWO!($proto, sub [ $gullet, $args, $inner_state ] $body, $options, $state));
@@ -358,8 +231,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       let expansion;
       compile_expansion!(expansion, $expansion);
-      // TODO: Also pass in options
-      def_macro(cs, paramlist, expansion, $state_arg);
+      def_macro(cs, paramlist, expansion, $options, $state_arg);
     });
   );
 
@@ -433,101 +305,6 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   /// The options are:
   ///    isPrefix  : 1 for things like \global, \long, etc.
   ///    registerType : for parameters (but needs to be worked into `DefParameter`, below).
-  macro_rules! DefPrimitive{
-    ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block) =>
-      (DefPrimitive!($proto, sub[$stomach, $whatsit, $inner_state] $body, $state));
-    ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $key1:ident=>$val1:expr) =>
-      (DefPrimitive!($proto, sub[$stomach, $whatsit, $inner_state] $body, $key1=>$val1, $state));
-
-    ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $state_arg:ident) =>
-      (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {$body}, PrimitiveOptions::default(), $state));
-    ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $key1:ident=>$val1:expr, $state_arg:ident) =>
-      (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {$body}, NewDefault!(PrimitiveOptions, $key1=>$val1), $state));
-
-    ($proto:expr, $replacement:expr, $options:expr) => (DefPrimitive!($proto, $replacement, $options, $state));
-    ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
-      // TODO:
-      // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
-      let compiled_replacement = $replacement;
-      DefPrimitiveIWO!($proto, compiled_replacement, $options, $state_arg);
-    });
-  }
-
-  macro_rules! DefPrimitiveI{
-    ($proto:expr, $compiled_replacement:expr) => (DefPrimitiveI!($proto, $compiled_replacement, $state));
-    ($proto:expr, $compiled_replacement:expr,
-      $key1:ident => $val1:expr)=>(DefPrimitiveI!($proto, $compiled_replacement, $key1=>$val1, $state));
-    ($proto:expr, $compiled_replacement:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr)=>(DefPrimitiveI!($proto, $compiled_replacement, $key1=>$val1, $key2=>$val2, $state));
-    ($proto:expr, $compiled_replacement:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr)=>(DefPrimitiveI!($proto, $compiled_replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
-    ($proto:expr, $compiled_replacement:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr)=>(DefPrimitiveI!($proto, $compiled_replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $state));
-    ($proto:expr, $compiled_replacement:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr)=>(DefPrimitiveI!($proto, $compiled_replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $state));
-
-    ($proto:expr, $compiled_replacement:expr, $state_arg:ident) => (DefPrimitiveIWO!($proto,$compiled_replacement, PrimitiveOptions::default(), $state_arg));
-
-    ($proto:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr, $state_arg:ident
-    ) => (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
-      $key1 => $val1
-    ), $state_arg));
-
-    ($proto:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr, $state_arg:ident
-    ) => (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
-      $key1 => $val1,
-      $key2 => $val2
-    ), $state_arg));
-
-    ($proto:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr, $state_arg:ident
-    ) => (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3
-    ), $state_arg));
-
-    ($proto:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr, $state_arg:ident
-    ) => (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3,
-      $key4 => $val4
-    ), $state_arg));
-
-    ($proto:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr, $state_arg:ident
-    ) => (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3,
-      $key4 => $val4,
-      $key5 => $val5
-    ), $state_arg));
-  }
 
   macro_rules! DefPrimitiveII{
     ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block) =>
@@ -599,6 +376,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! DefPrimitiveIWO(
+    ($proto:expr, $compiled_replacement:expr, $options:expr) => (DefPrimitiveIWO!($proto, $compiled_replacement, $options, $state));
     ($proto:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       DefPrimitiveII!(cs, paramlist, $compiled_replacement, $options, $state_arg);
@@ -614,15 +392,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   //   'LaTeXML::Core::Token'       => 'Token',
   // );
 
-  macro_rules! DefRegister {
-    ($proto:expr, $value:expr, $key1:ident => $val1:expr) => (DefRegister!($proto, $value, $key1=>$val1, $state));
-    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr) => (DefRegister!($proto, $value, $key1=>$val1, $key2=>$val2, $state));
-    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr, $key3:ident => $val3:expr) => (DefRegister!($proto, $value, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
-    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $state_arg:ident) => (DefRegister!($proto, $value, Some(NewDefault!(RegisterOptions, $key1=>$val1)), $state_arg));
-    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr, $state_arg:ident) => (DefRegister!($proto, $value, Some(NewDefault!(RegisterOptions, $key1=>$val1, $key2=>$val2)), $state_arg));
-    ($proto:expr, $value:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr, $key3:ident=>$val3:expr, $state_arg:ident) => (DefRegister!($proto, $value, Some(NewDefault!(RegisterOptions, $key1=>$val1, $key2=>$val2, $key3=>$val3)), $state_arg));
-    ($proto:expr, $value:expr) => (DefRegister!($proto, $value, None, $state));
-    ($proto:expr, $value:expr, $options:expr) => (DefRegister!($proto, $value, $options, $state));
+  macro_rules! DefRegisterWO {
+    ($proto:expr, $value:expr, $options:expr) => (DefRegisterWO!($proto, $value, $options, $state));
     ($proto:expr, $value:expr, $options:expr, $state_arg:ident) => ({
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       DefRegisterI!(cs, paramlist, $value, $options, $state_arg);
@@ -630,8 +401,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! DefRegisterI {
-    ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => (def_register($cs, $paramlist, $value, $options, $state_arg));
     ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => (DefRegisterI!($cs, $paramlist, $value, $options, $state));
+    ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => (def_register($cs, $paramlist, $value, $options, $state_arg));
   }
 
   // sub LookupRegister {
@@ -694,105 +465,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   //   properties      : a hashref listing default values of properties to assign to the Whatsit.
   //                     These properties can be used in the constructor.
 
-  macro_rules! DefConstructorI {
-    ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) => (DefConstructorI!($cs, $paramlist, $compiled_replacement, $state));
-    ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr)=>(DefConstructorI!($cs, $paramlist, sub[$document,$args,$props, $inner_state] $body, $key1=>$val1, $state));
-    ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr)=>(DefConstructorI!($cs, $paramlist, sub[$document,$args,$props, $inner_state] $body, $key1=>$val1, $key2=>$val2, $state));
-    ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr)=>(DefConstructorI!($cs, $paramlist, sub[$document,$args,$props, $inner_state] $body, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
-    ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr)=>(DefConstructorI!($cs, $paramlist, sub[$document,$args,$props, $inner_state] $body, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $state));
-    ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr)=>(DefConstructorI!($cs, $paramlist, sub[$document,$args,$props, $inner_state] $body, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $state));
-    // None replacement
-    ($cs:expr, $paramlist:expr, None) => (DefConstructorI!($cs, $paramlist, None, $state));
-    ($cs:expr, $paramlist:expr, None, $key1:ident=>$val1:expr) => (DefConstructorI!($cs, $paramlist, None, $key1=>$val1, $state));
-    ($cs:expr, $paramlist:expr, None, $key1:ident=>$val1:expr, $key2:ident=>$val2:expr) => (DefConstructorI!($cs, $paramlist, None, $key1=>$val1, $key2=>$val2, $state));
-
-    // with explicit state:
-    ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $state_arg:ident
-    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))), ConstructorOptions::default(), $state_arg));
-    ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr,
-      $state_arg:ident
-    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))), NewDefault!(ConstructorOptions,
-      $key1 => $val1
-    ),$state_arg));
-
-    ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr,
-      $key2:ident => $val2:expr,
-      $state_arg:ident
-    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))), NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2
-    ), $state_arg));
-
-    ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr,
-      $key2:ident => $val2:expr,
-      $key3:ident => $val3:expr,
-      $state_arg:ident
-    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))), NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3
-    ), $state_arg));
-
-    ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $state_arg:ident
-    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))), NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3,
-      $key4 => $val4
-    ), $state_arg));
-
-    ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr,
-      $state_arg:ident
-    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))), NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3,
-      $key4 => $val4,
-      $key5 => $val5
-    ), $state_arg));
-
-    // None replacement
-    ($cs:expr, $paramlist:expr, None, $state_arg:ident) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions), $state_arg));
-    ($cs:expr, $paramlist:expr, None,
-    $key1:ident => $val1:expr,
-    $state_arg:ident
-    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions, $key1=>$val1), $state_arg));
-    ($cs:expr, $paramlist:expr, None,
-    $key1:ident => $val1:expr,
-    $key2:ident => $val2:expr,
-    $state_arg:ident
-    ) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions, $key1=>$val1, $key2=>$val2), $state_arg));
-  }
-
   macro_rules! DefConstructorIWO {
+    ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => (DefConstructorIWO!($cs, $paramlist, $compiled_replacement, $options, $state));
     ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => (
     {
       use rtx_core::definition::constructor::Constructor;
@@ -813,197 +487,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
    })
   }
 
-  macro_rules! DefConstructor (
-    // Code replacement flavors
-   ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $state));
-   ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $key1 => $val1, $state));
-    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr,
-      $key2:ident => $val2:expr) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $key1 => $val1, $key2=>$val2, $state));
-    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr,
-      $key2:ident => $val2:expr,
-      $key3:ident => $val3:expr) => (DefConstructor!($proto, sub [ $document, $args, $props, $inner_state ] $body, $key1 => $val1, $key2=>$val2, $key3=>$val3, $state));
-    // with explicit state
-    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $state_arg:ident) => (
-      DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, ConstructorOptions::default(), $state_arg));
-    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr, $state_arg:ident ) => (
-      DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,$key1=>$val1), $state_arg));
-    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr,
-      $key2:ident => $val2:expr, $state_arg:ident ) => (
-      DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,$key1=>$val1, $key2=>$val2), $state_arg));
-    ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-      $key1:ident => $val1:expr,
-      $key2:ident => $val2:expr,
-      $key3:ident => $val3:expr, $state_arg:ident ) => (
-      DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,$key1=>$val1, $key2=>$val2, $key3=>$val3), $state_arg));
-
-    // String replacement flavors
-    ($cs:expr, $replacement:expr) => (DefConstructor!($cs, $replacement, $state));
-    ($cs:expr, $replacement:expr,
-      $key1:ident => $val1:expr)=>(DefConstructor!($cs, $replacement, $key1=>$val1, $state));
-    ($cs:expr, $replacement:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr)=>(DefConstructor!($cs, $replacement, $key1=>$val1, $key2=>$val2, $state));
-    ($cs:expr, $replacement:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr)=>(DefConstructor!($cs, $replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
-    ($cs:expr, $replacement:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr)=>(DefConstructor!($cs, $replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $state));
-    ($cs:expr, $replacement:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr)=>(DefConstructor!($cs, $replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $state));
-
-    // with explicit state:
-    ($cs:expr, $replacement:expr, $state_arg:ident) => (DefConstructorWO!($cs, $replacement, ConstructorOptions::default(), $state_arg));
-    ($cs:expr, $replacement:expr, $key1:ident=>$val1:expr, $state_arg:ident) =>
-      (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions, $key1 => $val1), $state_arg));
-    ($cs:expr, $replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr, $state_arg:ident
-    ) => (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2
-    ), $state_arg));
-
-    ($cs:expr, $replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr, $state_arg:ident
-    ) => (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3
-    ), $state_arg));
-
-    ($cs:expr, $replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr, $state_arg:ident
-    ) => (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3,
-      $key4 => $val4
-    ), $state_arg));
-
-    ($cs:expr, $replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr, $state_arg:ident
-    ) => (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3,
-      $key4 => $val4,
-      $key5 => $val5
-    ), $state_arg));
-
-    // Closure replacement flavors:
-    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr)=>(
-        DefConstructor!($cs, $document, $args, $props, $inner_state, $body,
-                        $state));
-    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
-      $key1:ident => $val1:expr)=>(
-        DefConstructor!($cs, $document, $args, $props, $inner_state, $body,
-                        $key1=>$val1, $state));
-    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr)=>(
-        DefConstructor!($cs, $document, $args, $props, $inner_state, $body,
-                        $key1=>$val1, $key2=>$val2, $state));
-    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr)=>(
-        DefConstructor!($cs, $document, $args, $props, $inner_state, $body,
-                        $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
-    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr)=>(
-        DefConstructor!($cs, $document, $args, $props, $inner_state, $body,
-                        $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $state));
-    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr)=>(
-        DefConstructor!($cs, $document, $args, $props, $inner_state, $body,
-                        $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $state));
-    // Closure replacement, explicit state
-    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $state_arg:ident) => (
-      DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, ConstructorOptions::default(), $state_arg)
-    );
-    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $key1:ident=>$val1:expr, $state_arg:ident) => (
-      let replacement = replacement!($document, $args, $props, $body);
-      DefConstructorWO!($cs, replacement, NewDefault!(ConstructorOptions, $key1 => $val1), $state_arg)
-    );
-    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr, $state_arg:ident
-    ) => (
-      DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,
-        $key1 => $val1,
-        $key2 => $val2),
-      $state_arg));
-
-    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr, $state_arg:ident
-    ) => (
-      DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,
-        $key1 => $val1,
-        $key2 => $val2,
-        $key3 => $val3
-      ), $state_arg));
-
-    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr, $state_arg:ident
-    ) => (
-      DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3,
-      $key4 => $val4
-    ), $state_arg));
-
-    ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr, $state_arg:ident
-    ) => (
-      DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3,
-      $key4 => $val4,
-      $key5 => $val5
-    ), $state_arg));
-  );
-
   macro_rules! DefConstructorWO(
+    ($proto:expr, $replacement:expr, $options:expr) => (DefConstructorWO!($proto, $replacement, $options, $state));
     ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
       // check_options("DefConstructor (prototype)", $constructor_options, %options);
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
@@ -1011,171 +496,18 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       compile_replacement!(compiled_replacement, $replacement);
       DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
     });
+    ($proto:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:block, $options:expr) =>
+      (DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, $options, $state));
     ($proto:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:block, $options:expr, $state_arg:ident) => ({
       let compiled_replacement : Option<ReplacementClosure> = Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body)));
       let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
       DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
     });
   );
+
   //=====================================================================
   // Define a LaTeX environment
   // Note that the body of the environment is treated is the 'body' parameter in the constructor.
-  macro_rules! DefEnvironment(
-    ($proto_raw:expr, $replacement:expr) => (DefEnvironment!($proto_raw, $replacement, $state));
-    ($proto_raw:expr, $replacement:expr,
-      $key1:ident=>$val1:expr) => (DefEnvironment!($proto_raw, $replacement, $key1=>$val1, $state));
-    ($proto_raw:expr, $replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr) => (DefEnvironment!($proto_raw, $replacement, $key1=>$val1, $key2=>$val2, $state));
-    ($proto_raw:expr, $replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr) => (DefEnvironment!($proto_raw, $replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
-    ($proto_raw:expr, $replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr) => (DefEnvironment!($proto_raw, $replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $state));
-    ($proto_raw:expr, $replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr) => (DefEnvironment!($proto_raw, $replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $state));
-
-    // with explicit state:
-    ($proto_raw:expr, $replacement:expr, $state_arg:ident) => (DefEnvironmentWO!($proto_raw, $replacement, ConstructorOptions::default(), $state_arg));
-
-    ($proto_raw:expr, $replacement:expr,
-     $key1:ident => $val1:expr, $state_arg:ident
-    ) => (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions,
-     $key1 => $val1), $state_arg));
-
-    ($proto_raw:expr, $replacement:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr, $state_arg:ident
-    ) => (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions,
-     $key1 => $val1,
-     $key2 => $val2
-    ), $state_arg));
-
-    ($proto_raw:expr, $replacement:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr, $state_arg:ident
-    ) => (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions,
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3
-    ), $state_arg));
-
-    ($proto_raw:expr, $replacement:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr,
-     $key4:ident => $val4:expr, $state_arg:ident
-    ) => (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions,
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3,
-     $key4 => $val4
-    ), $state_arg));
-
-    ($proto_raw:expr, $replacement:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr,
-     $key4:ident => $val4:expr,
-     $key5:ident => $val5:expr, $state_arg:ident
-    ) => (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions,
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3,
-     $key4 => $val4,
-     $key5 => $val5
-    ), $state_arg));
-  );
-
-  macro_rules! DefEnvironmentC(
-    ($proto_raw:expr, $compiled_replacement:expr) => (DefEnvironmentC!($proto_raw, $compiled_replacement, $state));
-    ($proto_raw:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr) => (DefEnvironmentC!($proto_raw, $compiled_replacement, $key1=>$val1, $state));
-    ($proto_raw:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr) => (DefEnvironmentC!($proto_raw, $compiled_replacement, $key1=>$val1, $key2=>$val2, $state));
-    ($proto_raw:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr) => (DefEnvironmentC!($proto_raw, $compiled_replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
-    ($proto_raw:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr) => (DefEnvironmentC!($proto_raw, $compiled_replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $state));
-    ($proto_raw:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr) => (DefEnvironmentC!($proto_raw, $compiled_replacement, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $state));
-
-    // with explicit state:
-    ($proto_raw:expr, $compiled_replacement:expr, $state_arg:ident) => (DefEnvironmentCWO!($proto_raw, $paramlist, $compiled_replacement, ConstructorOptions::default()));
-    ($proto_raw:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $state_arg:ident
-    ) => (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions,
-      $key1 => $val1
-    ), $state_arg));
-
-    ($proto_raw:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $state_arg:ident
-    ) => (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2
-    ), $state_arg));
-
-    ($proto_raw:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $state_arg:ident
-    ) => (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3
-    ), $state_arg));
-
-    ($proto_raw:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $state_arg:ident
-    ) => (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3,
-      $key4 => $val4
-    ), $state_arg));
-
-    ($proto_raw:expr, $compiled_replacement:expr,
-      $key1:ident=>$val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr,
-      $state_arg:ident
-    ) => (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions,
-      $key1 => $val1,
-      $key2 => $val2,
-      $key3 => $val3,
-      $key4 => $val4,
-      $key5 => $val5
-    ), $state_arg));
-  );
   macro_rules! DefEnvironmentI{
     ($name_raw:expr, $paramlist:expr, $compiled_replacement:expr, $cc_copy:expr, $options:expr) =>
       (DefEnvironmentI!($name_raw, $paramlist, $compiled_replacement, $cc_copy, $options, $state));
@@ -1364,80 +696,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     })
   }
 
-  macro_rules! Tag {
-    ($tag:expr, $key1:ident => $val1:expr)=>(Tag!($tag, $key1=>$val1, $state));
-    ($tag:expr, $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr)=>(Tag!($tag, $key1=>$val1, $key2=>$val2, $state));
-    ($tag:expr, $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr)=>(Tag!($tag, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
-    ($tag:expr, $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr)=>(Tag!($tag, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $state));
-    ($tag:expr, $key1:ident => $val1:expr,
-      $key2:ident=>$val2:expr,
-      $key3:ident=>$val3:expr,
-      $key4:ident=>$val4:expr,
-      $key5:ident=>$val5:expr)=>(Tag!($tag, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $state));
-
-    // with explicit state:
-    ($tag:expr,
-     $key1:ident => $val1:expr,
-     $state_arg:ident
-    ) => (TagWO!($tag, NewDefault!(TagOptions,
-     $key1 => Some($val1)), $state_arg));
-
-    ($tag:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $state_arg:ident
-    ) => (TagWO!($tag, NewDefault!(TagOptions,
-     $key1 => Some($val1),
-     $key2 => Some($val2)
-    ), $state_arg));
-
-    ($tag:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr,
-     $state_arg:ident
-    ) => (TagWO!($tag, NewDefault!(TagOptions,
-     $key1 => Some($val1),
-     $key2 => Some($val2),
-     $key3 => Some($val3)
-    ), $state_arg));
-
-    ($tag:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr,
-     $key4:ident => $val4:expr,
-     $state_arg:ident
-    ) => (TagWO!($tag, NewDefault!(TagOptions,
-     $key1 => Some($val1),
-     $key2 => Some($val2),
-     $key3 => Some($val3),
-     $key4 => Some($val4)
-    ),$state_arg));
-
-    ($tag:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr,
-     $key4:ident => $val4:expr,
-     $key5:ident => $val5:expr,
-     $state_arg:ident
-    ) => (TagWO!($tag, NewDefault!(TagOptions,
-     $key1 => Some($val1),
-     $key2 => Some($val2),
-     $key3 => Some($val3),
-     $key4 => Some($val4),
-     $key5 => Some($val5)
-    ),$state_arg));
-  }
-
   macro_rules! TagWO {
+    ($tag:expr, $properties:expr) => (TagWO!($tag, $properties, $state));
     ($tag:expr, $properties:expr, $state_arg:ident) => (install_tag($tag, $properties, $state_arg))
   }
   // sub DocType {
@@ -1450,6 +710,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
 
   macro_rules! DefEnvironmentWO (
+    ($proto_raw:expr, $replacement:expr, $options:expr) => (DefEnvironmentWO!($proto_raw, $replacement, $options, $state));
     ($proto_raw:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
     use rtx_core::util::text::*;
     let mut proto = $proto_raw.to_string().trim_start().to_string();
@@ -1461,11 +722,11 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     compile_replacement!(cc_copy, $replacement);
 
     let options = $options;
-
     DefEnvironmentI!(name, None, compiled_replacement, cc_copy, options, $state_arg);
   }));
 
   macro_rules! DefEnvironmentCWO (
+    ($proto_raw:expr, $compiled_replacement:expr, $options:expr) => (DefEnvironmentCWO!($proto_raw, $compiled_replacement, $options, $state));
     ($proto_raw:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
     use rtx_core::util::text::*;
     let mut proto = $proto_raw.to_string().trim_start().to_string();
@@ -1499,85 +760,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   //   CheckOptions("DefMath ($proto)", $math_options, %options);
   //   DefMathI(parsePrototype($proto), $presentation, %options);
   //   return; }
-  macro_rules! DefMathI(
-    ($text:expr,$paramlist:expr,$presentation:expr,
-      $key1:ident => $val1:expr)=>(DefMathI!($text, $paramlist, $presentation, $key1=>$val1, $state));
-    ($text:expr,$paramlist:expr,$presentation:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident => $val2:expr)=>(DefMathI!($text, $paramlist, $presentation, $key1=>$val1, $key2=>$val2, $state));
-    ($text:expr,$paramlist:expr,$presentation:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident => $val2:expr,
-      $key3:ident => $val3:expr)=>(DefMathI!($text, $paramlist, $presentation, $key1=>$val1, $key2=>$val2, $key3=>$val3, $state));
-    ($text:expr,$paramlist:expr,$presentation:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident => $val2:expr,
-      $key3:ident => $val3:expr,
-      $key4:ident => $val4:expr)=>(DefMathI!($text, $paramlist, $presentation, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $state));
-    ($text:expr,$paramlist:expr,$presentation:expr,
-      $key1:ident => $val1:expr,
-      $key2:ident => $val2:expr,
-      $key3:ident => $val3:expr,
-      $key4:ident => $val4:expr,
-      $key5:ident => $val5:expr)=>(DefMathI!($text, $paramlist, $presentation, $key1=>$val1, $key2=>$val2, $key3=>$val3, $key4=>$val4, $key5=>$val5, $state));
-
-    // with explicit state:
-    ($text:expr,$paramlist:expr,$presentation:expr,
-     $key1:ident => $val1:expr,
-     $state_arg:ident
-    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions,
-     $key1 => $val1),$state_arg));
-
-    ($text:expr,$paramlist:expr,$presentation:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $state_arg:ident
-    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions,
-     $key1 => $val1,
-     $key2 => $val2
-    ), $state_arg));
-
-    ($text:expr,$paramlist:expr,$presentation:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr,
-     $state_arg:ident
-    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions,
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3
-    ),$state_arg));
-
-    ($text:expr,$paramlist:expr,$presentation:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr,
-     $key4:ident => $val4:expr,
-     $state_arg:ident
-    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions,
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3,
-     $key4 => $val4
-    ), $state_arg));
-
-    ($text:expr,$paramlist:expr,$presentation:expr,
-     $key1:ident => $val1:expr,
-     $key2:ident => $val2:expr,
-     $key3:ident => $val3:expr,
-     $key4:ident => $val4:expr,
-     $key5:ident => $val5:expr,
-     $state_arg:ident
-    ) => (DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions,
-     $key1 => $val1,
-     $key2 => $val2,
-     $key3 => $val3,
-     $key4 => $val4,
-     $key5 => $val5
-    ), $state_arg));
-  );
-
   macro_rules! DefMathWO {
+    ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr) => (DefMathWO!($cstext, $paramlist, $presentation, $options, $state));
     ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr, $state_arg:ident) => ({
       let mut options = $options;
       let cs = T_CS!($cstext.to_string());
@@ -1723,18 +907,11 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   //           NOTE: I'm not sure this is even a sensible implementation,
   //           or why inner should be different than the counters reset by incrementing this counter.
 
-  macro_rules! NewCounter {
-    ($ctr:expr) => (NewCounter!($ctr, "", None, $state));
-    ($ctr:expr, $within:expr) => (NewCounter!($ctr, $within, None, $state));
+  macro_rules! NewCounterWO {
+    ($ctr:expr, $within:expr, None) => (new_counter($ctr, $within, None, $state)?);
     ($ctr:expr, $within:expr, None, $state_arg:ident) => (new_counter($ctr, $within, None, $state_arg)?);
-
-    // with options
-    ($ctr:expr, $within:expr, $key1:ident => $val1:expr) => (NewCounter!($ctr, $within, $key1 => $val1, $state));
-    ($ctr:expr, $within:expr, $key1:ident => $val1:expr, $state_arg: ident) =>
-     (new_counter($ctr, $within, Some(NewDefault!(NewCounterOptions, $key1=>$val1)), $state_arg)?);
-    ($ctr:expr, $within:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr) => (NewCounter!($ctr, $within, $key1=>$val1, $key2=>$val2, $state));
-    ($ctr:expr, $within:expr, $key1:ident => $val1:expr, $key2:ident => $val2:expr, $state_arg: ident) =>
-     (new_counter($ctr, $within, Some(NewDefault!(NewCounterOptions, $key1=>$val1, $key2=>$val2)), $state_arg)?);
+    ($ctr:expr, $within:expr, Some($opts:expr)) => (new_counter($ctr, $within, Some($opts), $state)?);
+    ($ctr:expr, $within:expr, Some($opts:expr), $state_arg:ident) => (new_counter($ctr, $within, Some($opts), $state_arg)?);
   }
 
   macro_rules! CounterValue {
@@ -1852,3 +1029,204 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     });
   }
 )}
+
+//============================================
+// User-facing Argument Parsers, delegating to the stateful *WO variants
+//============================================
+//
+
+macro_rules! DefMacroI(
+  // Expansion closure syntax
+  ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block) =>
+    (DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, None));
+  // With explicit state
+  ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $state_arg:ident) =>
+    (DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, None, $state_arg));
+  ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $state_arg:ident, $(key:ident=>$val:expr),*) =>
+    (DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*)), $state_arg));
+
+  // Simple Expression syntax
+  ($cs:expr, $paramlist:expr, $expansion:expr) => (DefMacroIWO!($cs, $paramlist, $expansion, None));
+  ($cs:expr, $paramlist:expr, $expansion:expr, $($key:ident=>$val:expr),*) =>
+    (DefMacroIWO!($cs, $paramlist, $expansion, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*))));
+  // Explicit state
+  ($cs:expr, $paramlist:expr, $expansion:expr, $state_arg:ident) => (DefMacroIWO!($cs, $paramlist, $expansion, None, $state_arg));
+  ($cs:expr, $paramlist:expr, $expansion:expr, $state_arg:ident, $($key:ident=>$val:expr),*) =>
+    (DefMacroIWO!($cs, $paramlist, $expansion, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*), $state_arg)));
+);
+
+macro_rules! DefMacro {
+  // closure
+  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block) =>
+    (DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, None));
+  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $($key:ident=>$val:expr),*) =>
+    (DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*))));
+  // String form
+  ($proto:expr, $expansion:expr) => (DefMacroWO!($proto, $expansion, None));
+  ($proto:expr, $expansion:expr, $($key:ident=>$val:expr),*) =>
+    (DefMacroWO!($proto, $expansion, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*))));
+
+  // closure; explicit state
+  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $state_arg:ident) =>
+    (DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, None, $state_arg));
+  // string; explicit state
+  ($proto:expr, $expansion:expr, $state_arg:ident) => (DefMacroWO!($proto, $expansion, None, $state_arg));
+  ($proto:expr, $expansion:expr, $state_arg:ident, $($key:ident=>$val:expr),*) =>
+    (DefMacroWO!($proto, $expansion, Some(NewDefault!(ExpandableOptions, $($key=>$val),*), $state_arg)));
+}
+
+macro_rules! DefRegister {
+  ($proto:expr, $value:expr) => (DefRegisterWO!($proto, $value, None));
+  ($proto:expr, $value:expr, $state_arg: ident) => (DefRegisterWO!($proto, $value, None, $state_arg));
+  ($proto:expr, $value:expr, $($key:ident => $val:expr),*) => (DefRegisterWO!($proto, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*))));
+  ($proto:expr, $value:expr, $state_arg:ident, $($key:ident => $val:expr),*) => (DefRegisterWO!($proto, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*)), $state_arg));
+}
+
+macro_rules! DefConstructorI {
+  ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))), ConstructorOptions::default()));
+  ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $($key:ident => $val:expr),*) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))),
+      NewDefault!(ConstructorOptions, $($key=>$val),*)));
+  // None replacement
+  ($cs:expr, $paramlist:expr, None) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions)));
+  ($cs:expr, $paramlist:expr, None, $($key:ident => $val:expr),*) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions, $($key=>$val),*)));
+
+  // with explicit state
+  ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $state_arg:ident) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))), ConstructorOptions::default(), $state_arg));
+  ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $state_arg:ident, $($key:ident => $val:expr),*) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))),
+      NewDefault!(ConstructorOptions, $($key=>$val),*), $state_arg));
+  // None replacement
+  ($cs:expr, $paramlist:expr, None, $state_arg:ident) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions), $state_arg));
+  ($cs:expr, $paramlist:expr, None, $state_arg:ident, $($key:ident => $val:expr),*) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions, $($key=>$val),*), $state_arg))
+}
+
+macro_rules! DefConstructor {
+  // with implicit state
+  // Closure replacement flavors
+  ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) =>
+    (DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, ConstructorOptions::default()));
+  ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $($key:ident => $val:expr),*) =>
+    (DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions, $($key=>$val),*)));
+  // String replacement flavors
+  ($cs:expr, $replacement:expr) => (DefConstructorWO!($cs, $replacement, ConstructorOptions::default()));
+  ($cs:expr, $replacement:expr, $($key:ident => $val:expr),*) =>
+    (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*)));
+  // Closure replacement
+  ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr) =>
+    (DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, ConstructorOptions::default()));
+  ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $($key:ident => $val:expr),*) => (
+    let replacement = replacement!($document, $args, $props, $body);
+    DefConstructorWO!($cs, replacement, NewDefault!(ConstructorOptions, $($key => $val),*))
+  );
+  // with explicit state
+  // Closure replacement flavors
+  ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $state_arg:ident) => (
+    DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, ConstructorOptions::default(), $state_arg));
+  ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $state_arg:ident, $($key:ident => $val:expr),*) =>
+    (DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, NewDefault!(ConstructorOptions, $($key=>$val),*), $state_arg));
+  // String replacement flavors
+  ($cs:expr, $replacement:expr, $state_arg:ident) => (DefConstructorWO!($cs, $replacement, ConstructorOptions::default(), $state_arg));
+  ($cs:expr, $replacement:expr, $state_arg:ident, $($key:ident=>$val:expr),*) =>
+    (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*), $state_arg));
+  // Closure replacement
+  ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $state_arg:ident) =>
+    (DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, ConstructorOptions::default(), $state_arg));
+  ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $state_arg:ident, $($key:ident=>$val:expr),*) => (
+    let replacement = replacement!($document, $args, $props, $body);
+    DefConstructorWO!($cs, replacement, NewDefault!(ConstructorOptions, $($key => $val),*), $state_arg)
+  );
+}
+
+macro_rules! NewCounter {
+  ($ctr:expr) => (NewCounterWO!($ctr, "", None));
+  ($ctr:expr, $within:expr) => (NewCounterWO!($ctr, $within, None));
+  ($ctr:expr, $within:expr, $($key:ident => $val:expr),*) => (NewCounterWO!($ctr, $within, Some(NewDefault!(NewCounterOptions, $($key=>$val),*))));
+  // with state
+  ($ctr:expr, $state_arg:ident) => (NewCounterWO!($ctr, "", None, $state_arg));
+  ($ctr:expr, $within:expr, $state_arg:ident) => (NewCounterWO!($ctr, $within, None, $state_arg));
+  ($ctr:expr, $within:expr, $($key:ident => $val:expr),*, $state_arg:ident) => (NewCounterWO!($ctr, $within, Some(NewDefault!(NewCounterOptions, $($key=>$val),*)), $state_arg))
+}
+
+macro_rules! DefEnvironment(
+  // implicit state
+  ($proto_raw:expr, $replacement:expr) => (DefEnvironmentWO!($proto_raw, $replacement, ConstructorOptions::default()));
+  ($proto_raw:expr, $replacement:expr, $($key:ident => $val:expr),*) =>
+    (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*)));
+  // explicit state
+  ($proto_raw:expr, $replacement:expr, $state_arg:ident) => (DefEnvironmentWO!($proto_raw, $replacement, ConstructorOptions::default(), $state_arg));
+  ($proto_raw:expr, $replacement:expr, $($key:ident => $val:expr),*, $state_arg:ident) =>
+    (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*, $state_arg)));
+);
+
+macro_rules! DefEnvironmentC(
+  // implicit state
+  ($proto_raw:expr, $compiled_replacement:expr) => (DefEnvironmentCWO!($proto_raw, $paramlist, $compiled_replacement, ConstructorOptions::default()));
+  ($proto_raw:expr, $compiled_replacement:expr, $($key:ident=>$val:expr),*) =>
+    (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions, $($key => $val),*)));
+  // explicit state
+  ($proto_raw:expr, $compiled_replacement:expr, $state_arg:ident) => (DefEnvironmentCWO!($proto_raw, $paramlist, $compiled_replacement, ConstructorOptions::default(), $state_arg));
+  ($proto_raw:expr, $compiled_replacement:expr, $($key:ident=>$val:expr),*, $state_arg:ident) =>
+    (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions, $($key => $val),*), $state_arg));
+);
+
+macro_rules! DefPrimitive{
+  ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block) =>
+    (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {$body}, PrimitiveOptions::default()));
+  ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $($key:ident=>$val:expr),*) =>
+    (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {$body}, NewDefault!(PrimitiveOptions, $($key=>$val),*)));
+  ($proto:expr, $replacement:expr, $options:expr) => ({
+    // TODO:
+    // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
+    let compiled_replacement = $replacement;
+    DefPrimitiveIWO!($proto, compiled_replacement, $options);
+  });
+
+  // explicit state
+  ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $state_arg:ident) =>
+    (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {$body}, PrimitiveOptions::default(), $state_arg));
+  ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $state_arg:ident, $($key:ident=>$val:expr),*) =>
+    (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {$body}, NewDefault!(PrimitiveOptions, $($key=>$val),*), $state_arg));
+
+  ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
+    // TODO:
+    // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
+    let compiled_replacement = $replacement;
+    DefPrimitiveIWO!($proto, compiled_replacement, $options, $state_arg);
+  });
+}
+
+macro_rules! DefPrimitiveI{
+  ($proto:expr, $compiled_replacement:expr) => (DefPrimitiveIWO!($proto, $compiled_replacement, PrimitiveOptions::default()));
+  ($proto:expr, $compiled_replacement:expr, $($key:ident=>$val:expr),*) =>
+    (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions, $($key => $val),*)));
+  // explicit state
+  ($proto:expr, $compiled_replacement:expr, $state_arg:ident) => (DefPrimitiveIWO!($proto,$compiled_replacement, PrimitiveOptions::default(), $state_arg));
+  ($proto:expr, $compiled_replacement:expr, $state_arg:ident, $($key:ident=>$val:expr),*) =>
+    (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions, $($key => $val),*), $state_arg));
+}
+
+macro_rules! Tag(
+  ($tag:expr,$($key:ident => $val:expr),*) =>
+    (TagWO!($tag, NewDefault!(TagOptions, $($key => Some($val)),*)));
+  ($tag:expr,$($key:ident => $val:expr),*, $state_arg:ident) =>
+    (TagWO!($tag, NewDefault!(TagOptions, $($key => Some($val)),*), $state_arg));
+);
+
+macro_rules! DefMathI(
+  ($text:expr,$paramlist:expr,$presentation:expr, $($key:ident => $val:expr),*) => (
+    DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions, $($key => $val),*)));
+  ($text:expr,$paramlist:expr,$presentation:expr, $($key:ident => $val:expr),*, $state_arg:ident) => (
+    DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions, $($key => $val),*,$state_arg)));
+);
+
+macro_rules! DefParameterType {
+  ($name:literal) => (DefParameterTypeWO!($name, Parameter::default()));
+  ($name:literal, $state_arg:ident) => (DefParameterTypeWO!($name, Parameter::default(), $state_arg));
+  ($name:literal, $($key:ident => $value:expr),*)=>(DefParameterTypeWO!($name, NewDefault!(Parameter, name => $name.to_string(), $($key=>$value),*)));
+  ($name:literal, $($key:ident => $value:expr),*, $state_arg:ident)=>(DefParameterTypeWO!($name, NewDefault!(Parameter, name => $name.to_string(), $($key=>$value),*), $state_arg));
+}

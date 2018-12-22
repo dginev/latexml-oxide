@@ -120,10 +120,9 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
     unpack_to_token!(args => cs, num);
     let count = s!("\\count{}", num.to_number().value_of());
     let setter_count = count.clone();
-    DefRegister!(&cs.get_cs_name(), Number::new(0),
+    DefRegister!(&cs.get_cs_name(), Number::new(0), inner_state,
       getter => Some(Rc::new(move |args, state| { Some(state.lookup_number(&count).unwrap_or_default().into()) })),
-      setter => Some(Rc::new(move |value, args, state| { state.assign_value(&setter_count, value, None); })),
-      inner_state);
+      setter => Some(Rc::new(move |value, args, state| { state.assign_value(&setter_count, value, None); })));
     AfterAssignment!(inner_state); 
     Ok(vec![])
   });

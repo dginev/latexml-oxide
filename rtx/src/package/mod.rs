@@ -9,19 +9,19 @@ pub use std::rc::Rc;
 pub use rtx_core::common::error::*;
 pub use rtx_core::common::font;
 pub use rtx_core::common::font::Font;
-pub use rtx_core::common::ligature::{Ligature, FontTestClosure};
+pub use rtx_core::common::ligature::{FontTestClosure, Ligature};
 pub use rtx_core::common::number::Number;
 pub use rtx_core::common::store::IntoOption;
 pub use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 pub use rtx_core::definition::constructor::ConstructorOptions;
-pub use rtx_core::definition::expandable::Expandable;
+pub use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
 pub use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 pub use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
 pub use rtx_core::definition::register::{Register, RegisterType, RegisterValue};
 pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionClosure,
-  ReplacementClosure,
+  PrimitiveClosure, PrimitiveFn, ReplacementClosure,
 };
 pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptionName, TagOptions};
