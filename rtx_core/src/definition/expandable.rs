@@ -18,13 +18,17 @@ use crate::Digested;
 #[derive(Clone)]
 pub struct ExpandableOptions {
   pub locked: bool,
+  pub protected: bool,
   pub scope: Option<Scope>,
+  pub alias: Option<String>,
 }
 impl Default for ExpandableOptions {
   fn default() -> Self {
     ExpandableOptions {
       locked: false,
       scope: None,
+      protected: false,
+      alias: None,
     }
   }
 }

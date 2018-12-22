@@ -394,12 +394,12 @@ fn decode_math_char(n: u8) -> (Option<String>, Option<char>) { // TODO
       glyph_props.insert(s!("glyph"), glyph_str.into());
       // TODO:
       // glyph_props.insert(s!("font"), |state| state.lookup_font().unwrap().specialize(glyph)); 
-      DefConstructor!(&internalcs.get_cs_name(), "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
-      // TODO
+      DefConstructor!(&internalcs.get_cs_name(), "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>", state,
+        // TODO
         // sizer => "#1", 
-        properties => properties!(glyph_props),
+        properties => properties!(glyph_props)
         // reversion => (ord($glyph) < 128 ? $glyph : '\mathchar' . $value.valueOf . '\relax'),
-      state);
+      );
       state.install_definition(Register::new_chardef(newcs,Some(value.into()),Some(internalcs)), None);
       AfterAssignment!(state);
     }
