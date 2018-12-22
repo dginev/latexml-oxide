@@ -146,11 +146,13 @@ macro_rules! replacement {
 #[macro_export]
 macro_rules! construct {
   ($doc:ident, $whatsit:ident, $state:ident, $body:expr) => {
-    vec![Rc::new(|$doc:&mut Document, $whatsit:&Whatsit, $state: &mut State| {
-    $body
-    return;
-  })]}
-}
+  vec![Rc::new(
+    move |$doc: &mut Document, $whatsit: &Whatsit, $state: &mut State| -> Result<()> {
+      $body
+      Ok(())
+    }
+  )]
+}}
 
 #[macro_export]
 macro_rules! properties {

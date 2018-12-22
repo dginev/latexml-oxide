@@ -213,7 +213,7 @@ impl Definition for Constructor {
   ) -> Result<()>
   {
     for pre_closure in &self.options.before_construct {
-      pre_closure(document, whatsit, state);
+      pre_closure(document, whatsit, state)?;
     }
 
     match self.replacement {
@@ -232,7 +232,7 @@ impl Definition for Constructor {
     };
 
     for post_closure in &self.options.after_construct {
-      post_closure(document, whatsit, state);
+      post_closure(document, whatsit, state)?;
     }
     Ok(())
   }

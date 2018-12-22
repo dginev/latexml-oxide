@@ -573,6 +573,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
       let push_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
         state.push_frame();
+        Ok(())
       });
       let mut before_construct_with_frame : Vec<ConstructionClosure> = vec![push_frame_closure];
       before_construct_with_frame.extend(options.before_construct);
@@ -581,6 +582,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
 
       let pop_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
         state.pop_frame();
+        Ok(())
       });
       after_construct_with_frame.push(pop_frame_closure);
 
