@@ -1116,13 +1116,6 @@ macro_rules! DefConstructor {
   ($cs:expr, $replacement:expr) => (DefConstructorWO!($cs, $replacement, ConstructorOptions::default()));
   ($cs:expr, $replacement:expr, $($key:ident => $val:expr),*) =>
     (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*)));
-  // Closure replacement
-  ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr) =>
-    (DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, ConstructorOptions::default()));
-  ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $($key:ident => $val:expr),*) => (
-    let replacement = replacement!($document, $args, $props, $body);
-    DefConstructorWO!($cs, replacement, NewDefault!(ConstructorOptions, $($key => $val),*))
-  );
   // with explicit state
   // Closure replacement flavors
   ($proto:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $state_arg:ident) => (
@@ -1133,13 +1126,6 @@ macro_rules! DefConstructor {
   ($cs:expr, $replacement:expr, $state_arg:ident) => (DefConstructorWO!($cs, $replacement, ConstructorOptions::default(), $state_arg));
   ($cs:expr, $replacement:expr, $state_arg:ident, $($key:ident=>$val:expr),*) =>
     (DefConstructorWO!($cs, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*), $state_arg));
-  // Closure replacement
-  ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $state_arg:ident) =>
-    (DefConstructorWO!($cs, $document, $args, $props, $inner_state, $body, ConstructorOptions::default(), $state_arg));
-  ($cs:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:expr, $state_arg:ident, $($key:ident=>$val:expr),*) => (
-    let replacement = replacement!($document, $args, $props, $body);
-    DefConstructorWO!($cs, replacement, NewDefault!(ConstructorOptions, $($key => $val),*), $state_arg)
-  );
 }
 
 macro_rules! NewCounter {
