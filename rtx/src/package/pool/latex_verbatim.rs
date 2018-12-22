@@ -81,18 +81,20 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
     }
   });
 
-  DefConstructor!(
-    "\\@text@verb{}{}",
-    "<ltx:verbatim font='#font'>#2</ltx:verbatim>"
+  DefConstructor!("\\@text@verb{}{}", "<ltx:verbatim font='#font'>#2</ltx:verbatim>",
+    before_digest => vec![beforeproc!(stomach, state, {
+      stomach.bgroup(state);
+      MergeFont!(family => "typewriter", state);
+    })],
+    after_digest => afterproc!(stomach,whatsit,state, { stomach.egroup(state)?; }),
+    // Since ltx:verbatim is both inline & block, we have to fudge inline mode
+    before_construct => construct!(document, args, state, {
+      let element = document.get_element();
+      if element.is_none() || !document.can_contain(&element.unwrap(), "#PCDATA", state) {
+        document.open_element("ltx:p", None, None, state)?;
+      }}),
+    reversion => "\\verb#1#2#1".into_option()
   );
-  // TODO:
-  // beforeDigest => [sub { $_[0]->bgroup; MergeFont(family => 'typewriter'); }],
-  // afterDigest  => sub { $_[0]->egroup; },
-  // # Since ltx:verbatim is both inline & block, we have to fudge inline mode
-  // beforeConstruct => sub {
-  //   $_[0]->canContain($_[0]->getElement, '#PCDATA')
-  //     || $_[0]->openElement('ltx:p'); },
-  // reversion => '\verb#1#2#1');
   DefConstructor!("\\@math@verb{}{}", "#2"); // Will already end up wrapped as XMTok!
                                              // TODO:
                                              // beforeDigest => [sub { $_[0]->bgroup; MergeFont(family => 'typewriter'); }],
