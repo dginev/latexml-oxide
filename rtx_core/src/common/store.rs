@@ -247,6 +247,10 @@ impl From<Font> for Stored {
   fn from(value: Font) -> Self { Rc::new(value).into() }
 }
 
+impl<'a> From<Cow<'a, Font>> for Stored {
+  fn from(value: Cow<Font>) -> Self { Rc::new((*value).clone()).into() }
+}
+
 impl From<Number> for Stored {
   fn from(value: Number) -> Self { Stored::Number(value) }
 }
@@ -319,6 +323,15 @@ impl From<Box<Ligature>> for Stored {
 
 impl From<Ligature> for Stored {
   fn from(lig: Ligature) -> Stored { Box::new(lig).into() }
+}
+
+impl From<Option<&Stored>> for Stored {
+  fn from(stored_opt: Option<&Stored>) -> Stored {
+    match stored_opt {
+      Some(ref val) => (*val).clone(),
+      None => Stored::Bool(false),
+    }
+  }
 }
 
 // Reverse direction -- cast Stored back into concrete types, with meaningfull fallbacks where

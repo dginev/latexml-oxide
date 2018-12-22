@@ -161,7 +161,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       if gullet.if_next(T_BEGIN!(), state)? {
         gullet.read_arg(state)?;
       }
-      begin_bibliography(stomach, whatsit, state);
+      begin_bibliography(stomach, whatsit, state)?;
     }),
     locked => true
   );
@@ -638,38 +638,49 @@ fn setup_pseudo_bibitem(state: &mut State) {
 }
 // This sub does things that would commonly be needed when starting a bibliography
 // setting the ID, etc...
-fn begin_bibliography(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) {
-  begin_bibliography_clean(stomach, whatsit);
+fn begin_bibliography(
+  stomach: &mut Stomach,
+  whatsit: &mut Whatsit,
+  state: &mut State,
+) -> Result<()>
+{
+  begin_bibliography_clean(stomach, whatsit, state)?;
   // Fix for missing \bibitems!
   setup_pseudo_bibitem(state);
-  return;
+  Ok(())
 }
 
-fn begin_bibliography_clean(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) {
+fn begin_bibliography_clean(
+  stomach: &mut Stomach,
+  whatsit: &mut Whatsit,
+  state: &mut State,
+) -> Result<()>
+{
   SetupBindingMacros!(state);
   // Try to compute a reasonable, but unique ID;
   // relative to the document's ID, if any.
   // But also, if there are multiple bibliographies,
-  let bibnumber = 1 + state.lookup_number("n_bibliographies").unwrap_or(0);
+  let bibnumber = 1 + state.lookup_int("n_bibliographies");
   state.assign_value("n_bibliographies", bibnumber, Some(Scope::Global));
-  let mut docid = Expand!(T_CS!("\\thedocument@ID"), state);
+  let mut gullet = stomach.get_gullet_mut();
+  let mut docid: String = Expand!(T_CS!("\\thedocument@ID"), gullet, state).to_string();
   if !docid.is_empty() {
     docid = docid + ".";
   }
   let bibid = s!("{}bib{}", docid, radix::radix_alpha(bibnumber - 1));
   DefMacroI!(T_CS!("\\thebibliography@ID"), None, T_OTHER!(&bibid), scope => Some(Scope::Global));
   whatsit.set_property("id", bibid);
-  let title_opt = match DigestIf!("\\refname", stomach) {
+  let title_opt = match DigestIf!("\\refname", stomach)? {
     Some(v) => Some(v),
-    None => DigestIf!("\\bibname", stomach),
+    None => DigestIf!("\\bibname", stomach)?,
   };
   if let Some(title) = title_opt {
+    whatsit.set_property("titlefont", title.get_font().unwrap());
     whatsit.set_property("title", title);
-    whatsit.set_property("titlefont", title.get_font());
   }
   whatsit.set_property("bibstyle", LookupValue!("BIBSTYLE"));
   whatsit.set_property("citestyle", LookupValue!("CITE_STYLE"));
   // And prepare for the likely nonsense that appears within bibliographies
   ResetCounter!("enumiv", state);
-  return;
+  Ok(())
 }

@@ -971,7 +971,7 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   /// Return $tokens with all tokens expanded
   macro_rules! Expand {
     ($tokens:expr, $gullet:ident) => (Expand!($tokens, $gullet, $state));
-    ($tokens:expr, $gullet:ident, $state_arg:ident) => (do_expand($tokens, $gullet, $state_arg));
+    ($tokens:expr, $gullet:ident, $state_arg:ident) => (do_expand($tokens, $gullet, $state_arg)?);
   }
 
   /// Invocation(<list of Token>); builds a representation of a command sequence invoked on its

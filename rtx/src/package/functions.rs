@@ -817,14 +817,19 @@ pub fn digest_literal(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -
   value
 }
 
-pub fn digest_if(token: Token, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
+pub fn digest_if(
+  token: Token,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Result<Option<Digested>>
+{
   if let Some(defn) = state.lookup_definition(&token) {
     match stomach.digest(Tokens!(token), state) {
-      Ok(t) => Ok(vec![t]),
+      Ok(t) => Ok(Some(t)),
       Err(e) => Err(e),
     }
   } else {
-    Ok(Vec::new())
+    Ok(None)
   }
 }
 

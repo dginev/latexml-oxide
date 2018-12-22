@@ -23,20 +23,20 @@
 // or even approach "z";  However, this is an automaton, and things happen.
 //======================================================================
 
-const letters: &[char] = &[
+const LETTERS: &[char] = &[
   'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
   't', 'u', 'v', 'w', 'x', 'y', 'z',
 ];
-const Letters: &[char] = &[
+const UP_LETTERS: &[char] = &[
   'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
   'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
 ];
-const greek: &[char] = &[
+const GREEK: &[char] = &[
   '\u{03B1}', '\u{03B2}', '\u{03B3}', '\u{03B4}', '\u{03B5}', '\u{03B6}', '\u{03B7}', '\u{03B8}',
   '\u{03B9}', '\u{03BA}', '\u{03BB}', '\u{03BC}', '\u{03BD}', '\u{03BE}', '\u{03BF}', '\u{03C0}',
   '\u{03C1}', '\u{03C3}', '\u{03C4}', '\u{03C5}', '\u{03C6}', '\u{03C7}', '\u{03C8}', '\u{03C9}',
 ];
-const Greek: &[char] = &[
+const UP_GREEK: &[char] = &[
   '\u{0391}', '\u{0392}', '\u{0393}', '\u{0394}', '\u{0395}', '\u{0396}', '\u{0397}', '\u{0398}',
   '\u{0399}', '\u{039A}', '\u{039B}', '\u{039C}', '\u{039D}', '\u{039E}', '\u{039F}', '\u{03A0}',
   '\u{03A1}', '\u{03A3}', '\u{03A4}', '\u{03A5}', '\u{03A6}', '\u{03A7}', '\u{03A8}', '\u{03A9}',
@@ -53,18 +53,18 @@ pub fn radix_format(number: i32, symbols: &[char]) -> String {
   text
 }
 
-pub fn radix_alpha(n: i32) -> String { radix_format(n, &letters) }
+pub fn radix_alpha(n: i32) -> String { radix_format(n, &LETTERS) }
 
-pub fn radix_Alpha(n: i32) -> String { radix_format(n, &Letters) }
+pub fn radix_up_alpha(n: i32) -> String { radix_format(n, &UP_LETTERS) }
 
-pub fn radix_greek(n: i32) -> String { radix_format(n, &greek) }
+pub fn radix_greek(n: i32) -> String { radix_format(n, &GREEK) }
 
-pub fn radix_Greek(n: i32) -> String { radix_format(n, &Greek) }
+pub fn radix_up_greek(n: i32) -> String { radix_format(n, &UP_GREEK) }
 
 // Dumb place for this, but where else...
 // Note: This is one 'The TeX Way'! (bah!! hint: try a large number)
 // namely, it's very limited.... what happened to my much-improved version?
-const rmletters: &[char] = &['i', 'v', 'x', 'l', 'c', 'd', 'm']; // [CONSTANT]
+const RMLETTERS: &[char] = &['i', 'v', 'x', 'l', 'c', 'd', 'm']; // [CONSTANT]
 
 pub fn radix_roman(n: i32) -> String {
   let mut s = String::new();
@@ -84,4 +84,4 @@ pub fn radix_roman(n: i32) -> String {
 }
 
 /// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token
-pub fn radix_Roman(n: i32) -> String { radix_roman(n).to_uppercase() }
+pub fn radix_up_roman(n: i32) -> String { radix_roman(n).to_uppercase() }
