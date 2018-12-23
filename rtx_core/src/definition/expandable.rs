@@ -42,7 +42,6 @@ pub struct Expandable {
   pub paramlist: Option<Parameters>,
   pub expansion: Option<ExpansionClosure>,
   pub trivial_expansion: Option<Tokens>,
-  pub options: ExpandableOptions,
 }
 impl Default for Expandable {
   fn default() -> Self {
@@ -54,7 +53,6 @@ impl Default for Expandable {
       cs: T_CS!("Expandable"),
       paramlist: None,
       expansion: None,
-      options: ExpandableOptions::default(),
     }
   }
 }

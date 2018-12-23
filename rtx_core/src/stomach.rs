@@ -83,7 +83,7 @@ impl<'t> Stomach {
   // Typically used to digest arguments to primitives or constructors.
   // Returns a List containing the digested material.
   pub fn digest<T: Into<Tokens>>(&mut self, tokens: T, state: &mut State) -> Result<Digested> {
-    let mut tokens : Tokens = tokens.into();
+    let mut tokens: Tokens = tokens.into();
     self.reading_from_mouth(
       Mouth::default(),
       state,

@@ -3,8 +3,8 @@ use crate::package::*;
 //**********************************************************************
 // C.11 Moving Information Around
 //**********************************************************************
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
+pub fn load_definitions(outer_state: &mut State) -> Result<()> {
+  SetupBindingMacros!(outer_state);
 
   //======================================================================
   // C.11.1 Files
@@ -190,14 +190,16 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //       $gullet->unread($tok);
   //       (T_CS("\save@bibitem"), T_BEGIN, T_END); } });
 
-  // DefMacroI("\item@in@bibliography", undef, "\save@bibitem{}");
+  DefMacro!("\\item@in@bibliography", "\\save@bibitem{}");
 
-  // # If we hit a real \bibitem, put \par & \bibitem back to correct defn, and then \bibitem.
-  // # A bibitem with now key or label...
-  // DefMacro("\restoring@bibitem",
-  //   "\let\bibitem\save@bibitem\let\par\save@par\bibitem");
+  // If we hit a real \bibitem, put \par & \bibitem back to correct defn, and then \bibitem.
+  // A bibitem with now key or label...
+  DefMacro!(
+    "\\restoring@bibitem",
+    "\\let\\bibitem\\save@bibitem\\let\\par\\save@par\\bibitem"
+  );
 
-  // NewCounter("@bibitem", "bibliography", idprefix => "bib");
+  // NewCounter!("@bibitem", "bibliography", idprefix => "bib");
   // DefMacroI("\the@bibitem", undef, "\arabic{@bibitem}");
   // DefMacro("\@biblabel{}", "[#1]");
   // DefMacroI("\fnum@@bibitem", undef, "{\@biblabel{\the@bibitem}}");

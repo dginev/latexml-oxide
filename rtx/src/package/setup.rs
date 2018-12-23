@@ -475,17 +475,22 @@ macro_rules! SetupBindingMacros {($state:ident) => (
       let options = $options;
       // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
       //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
-      if options.locked {
-        $state_arg.assign_value(&s!("{}:locked",$cs.get_cs_name()), true, None)
-      }
       let scope = options.scope.clone();
+      let is_locked = options.locked.clone();
+      let locked_key = if is_locked {
+        s!("{}:locked",$cs.get_cs_name())
+      } else { String::new() };
+
       let constructor = Constructor {
         cs: $cs,
         paramlist: $paramlist,
         replacement: $compiled_replacement,
         options: options};
-
       $state_arg.install_definition(constructor, scope);
+
+      if is_locked {
+        $state_arg.assign_value(&locked_key, true, None);
+      }
    })
   }
 

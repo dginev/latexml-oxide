@@ -70,7 +70,8 @@ pub fn is_defined(name: &str, state: &mut State) -> bool {
 }
 
 pub fn is_defined_token(cs: &Token, state: &mut State) -> bool {
-  match state.lookup_meaning(cs) {
+  let meaning = state.lookup_meaning(cs);
+  match meaning {
     Some(store) => match store {
       Stored::Token(ref m) => true,
       Stored::Expandable(ref m) => m.get_cs_name() != "\\relax",
@@ -525,19 +526,18 @@ pub fn def_macro<T: Into<Option<ExpansionClosure>>>(
   cs: Token,
   paramlist: Option<Parameters>,
   expansion: T,
-  options: Option<ExpandableOptions>,
+  options_opt: Option<ExpandableOptions>,
   state: &mut State,
 )
 {
-  //       // Optimization: Defer till macro actually used
-  //       // if !$cs.is_empty() { // && $options{mathactive}
-  //         // $state.assign_mathcode($cs, 0x8000, $options{scope}); }
-  // $state.install_definition(Expandable{ cs: coerce_cs( $cs ), paramlist: $paramlist,
-  // expansion: $expansion});//, %options), $options{scope});       // if $options{locked} {
-  //       //   $state.assign_value(ToString($cs)+":locked", true, "global")
-  //       // }
   let expansion = expansion.into();
-
+  let options = options_opt.unwrap_or_default();
+  let options_locked = options.locked;
+  let locked_key = if options_locked {
+    s!("{}:locked", cs)
+  } else {
+    String::new()
+  };
   state.install_definition(
     Expandable {
       cs,
@@ -545,8 +545,11 @@ pub fn def_macro<T: Into<Option<ExpansionClosure>>>(
       expansion,
       ..Expandable::default()
     },
-    None,
+    options.scope,
   );
+  if options_locked {
+    state.assign_value(&locked_key, true, Some(Scope::Global));
+  }
 }
 
 pub struct RegisterOptions {
