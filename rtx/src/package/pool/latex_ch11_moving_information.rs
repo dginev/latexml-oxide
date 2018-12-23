@@ -179,17 +179,22 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   Tag!("ltx:biblist",      auto_close => true);
   Tag!("ltx:bibliography", auto_close => true);
 
-  // DefMacroI("\par@in@bibliography", undef, sub {
-  //     my ($gullet) = @_;
-  //     $gullet->skipSpaces;
-  //     my $tok = $gullet->readToken;
-  //     # If next token is another \par, or a REAL \bibitem,
-  //     if (Equals($tok, T_CS("\par")) || Equals($tok, T_CS("\bibitem"))) {
-  //       ($tok); }    # then this \par expands into what followed
-  //     else {         # Else, put it back, and start a bibitem.
-  //       $gullet->unread($tok);
-  //       (T_CS("\save@bibitem"), T_BEGIN, T_END); } });
-
+  DefMacro!("\\par@in@bibliography", sub[gullet, args, state] {
+      gullet.skip_spaces(state);
+      if let Some(tok) = gullet.read_token(state) {
+        // If next token is another \par, or a REAL \bibitem,
+        // then this \par expands into what followed
+        // Else, put it back, and start a bibitem.
+        if tok == T_CS!("\\par") || tok == T_CS!("\\bibitem") {
+          Ok(Tokens!(tok))
+        } else {
+          gullet.unread(&Tokens!(tok));
+          Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
+        }
+      } else {
+        Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
+      }
+  });
   DefMacro!("\\item@in@bibliography", "\\save@bibitem{}");
 
   // If we hit a real \bibitem, put \par & \bibitem back to correct defn, and then \bibitem.
@@ -200,10 +205,10 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   );
 
   // NewCounter!("@bibitem", "bibliography", idprefix => "bib");
-  // DefMacroI("\the@bibitem", undef, "\arabic{@bibitem}");
-  // DefMacro("\@biblabel{}", "[#1]");
-  // DefMacroI("\fnum@@bibitem", undef, "{\@biblabel{\the@bibitem}}");
-  // # Hack for abused bibliographies; see below
+  DefMacro!("\\the@bibitem", "\\arabic{@bibitem}");
+  DefMacro!("\\@biblabel{}", "[#1]");
+  DefMacro!("\\fnum@@bibitem", "{\\@biblabel{\\the@bibitem}}");
+  // Hack for abused bibliographies; see below
   DefMacro!("\\bibitem",
     "\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem");
   DefConstructor!("\\lx@bibitem[] Semiverbatim", "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
@@ -213,17 +218,19 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
         None => String::new(),
         Some(key) => key.to_string(),
       });
-      // if let Some(tag) = tag_opt {
-      //   whatsit.set_properties(
-      //     key => $key,
-      //     RefStepID('@bibitem'),
-      //     tags => Digest(T_BEGIN,
-      //       T_CS('\def'), T_CS('\the@bibitem'), T_BEGIN, Revert($tag), T_END,
-      //       Invocation(T_CS('\lx@make@tags'), T_OTHER('@bibitem')),
-      //       T_END)); }
-      // else {
-      //   whatsit.set_properties(key => $key, RefStepCounter('@bibitem'));
-      // }
+      if let Some(tag) = tag_opt {
+        // whatsit.set_properties(
+        //   key => $key,
+        //   RefStepID('@bibitem'),
+        //   tags => Digest(T_BEGIN,
+        //     T_CS('\def'), T_CS('\the@bibitem'), T_BEGIN, Revert($tag), T_END,
+        //     Invocation(T_CS('\lx@make@tags'), T_OTHER('@bibitem')),
+        //     T_END)); }
+      } else {
+        let mut properties = RefStepCounter!("@bibitem", false, stomach, state)?;
+        properties.insert("key".to_string(), key.into());
+        whatsit.set_properties(properties);
+      }
     })
   );
 

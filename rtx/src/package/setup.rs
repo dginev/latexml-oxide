@@ -963,8 +963,8 @@ macro_rules! SetupBindingMacros {($state:ident) => (
   }
 
   macro_rules! RefStepCounter {
-    ($ctr:expr, $noreset:expr, $gullet:ident) => (RefStepCounter!($ctr, $noreset, $gullet, $state));
-    ($ctr:expr, $noreset:expr, $gullet:ident, $state_arg:ident) => (ref_step_counter($ctr, $noreset, $gullet, $state_arg));
+    ($ctr:expr, $noreset:expr, $stomach:ident) => (RefStepCounter!($ctr, $noreset, $stomach, $state));
+    ($ctr:expr, $noreset:expr, $stomach:ident, $state_arg:ident) => (ref_step_counter($ctr, $noreset, $stomach, $state_arg));
   }
 
 
