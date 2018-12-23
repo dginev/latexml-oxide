@@ -41,7 +41,7 @@ pub struct ConstructorOptions {
   pub after_digest_begin: Vec<DigestionClosure>,
   pub before_digest_end: Vec<BeforeDigestClosure>,
   pub after_digest_body: Vec<DigestionClosure>,
-  pub reversion       : Option<String>,
+  pub reversion: Option<String>,
   // sizer           : 1,
   pub scope: Option<Scope>,
   pub locked: bool,

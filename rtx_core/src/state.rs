@@ -27,13 +27,13 @@ lazy_static! {
   static ref TEX_OR_BIB_EXT_RE: Regex = Regex::new(r"\.(tex|bib)$").unwrap();
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Scope {
   Global,
   Local,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum TableName {
   Meaning,
   Value,
@@ -1038,20 +1038,18 @@ impl State {
     // Locked definitions!!! (or should this test be in assignMeaning?)
     // Ignore attempts to (re)define $cs from tex sources
     let cs;
-    {
-      let token = match definition {
-        Stored::Expandable(ref defn) => defn.get_cs(),
-        Stored::Conditional(ref defn) => defn.get_cs(),
-        Stored::Constructor(ref defn) => defn.get_cs(),
-        Stored::Primitive(ref defn) => defn.get_cs(),
-        Stored::MathPrimitive(ref defn) => defn.get_cs(),
-        Stored::Register(ref defn) => defn.get_cs(),
-        Stored::Token(ref token) => Cow::Borrowed(token),
-        _ => panic!(s!("_wrong_argument_for_install_definition")),
-      };
-      cs = token.get_cs_name().to_owned();
-      // info!("-- installing definition for: {:?}", token);
-    }
+    let token = match definition {
+      Stored::Expandable(ref defn) => defn.get_cs(),
+      Stored::Conditional(ref defn) => defn.get_cs(),
+      Stored::Constructor(ref defn) => defn.get_cs(),
+      Stored::Primitive(ref defn) => defn.get_cs(),
+      Stored::MathPrimitive(ref defn) => defn.get_cs(),
+      Stored::Register(ref defn) => defn.get_cs(),
+      Stored::Token(ref token) => Cow::Borrowed(token),
+      _ => panic!(s!("_wrong_argument_for_install_definition")),
+    };
+    cs = token.get_cs_name().to_owned();
+    // info!("-- installing definition for: {:?}", token);
 
     let cs_locked = s!("{}:locked", cs);
     // TODO, .is_none() should be a real false check
@@ -1070,7 +1068,6 @@ impl State {
       }
     }
     self.assign_internal(TableName::Meaning, &cs, definition, scope);
-    return;
   }
 
   // NOTE: Common usage patterns seem to be to lookup
