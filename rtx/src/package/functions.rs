@@ -802,7 +802,13 @@ pub fn digest_text(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> R
   value
 }
 
-pub fn digest_literal(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
+pub fn digest_literal<T: Into<Tokens>>(
+  stuff: T,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Result<Digested>
+{
+  let stuff: Tokens = stuff.into();
   // Perhaps should do StartSemiverbatim, but is it safe to push a frame? (we might cover over
   // valid changes of state!)
   stomach.begin_mode("text", state)?;
@@ -1128,17 +1134,28 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   return;
 }
 
-//   // For UN-numbered units
-//   #[macro_export]
-//   macro_rules! RefStepID {
-//   my ($ctr) = @_;
-//   my $unctr = "UN$ctr";
-//   StepCounter($unctr);
-//   DefMacroI(T_CS!("\\\@$ctr\@ID"), undef,
-//     Tokens(T_OTHER('x'), Explode(LookupValue('\c@' . $unctr)->valueOf)),
-//     scope => Some(Scope::Global));
-//   DefMacroI(T_CS!('\@currentID'), undef, T_CS!("\\the$ctr\@ID"));
-//   return (id => ToString(DigestLiteral(T_CS!("\\the$ctr\@ID")))); }
+// For UN-numbered units
+pub fn ref_step_id(
+  ctype: &str,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Result<HashMap<String, Stored>>
+{
+  SetupBindingMacros!(state);
+  let ctr = match state.lookup_mapping("counter_for_type", ctype) {
+    Some(map) => map.to_string(),
+    None => ctype.to_string(),
+  };
+  let unctr = s!("UN{}", ctr);
+  step_counter(&unctr, false, stomach, state)?;
+  DefMacroI!(T_CS!(&s!("\\@{}@ID",ctr)), None,
+    Tokens!(T_OTHER!("x"), Explode!(state.lookup_number(&s!("\\c@{}", unctr)).unwrap().value_of())),
+    scope => Some(Scope::Global));
+  DefMacroI!(T_CS!("\\@currentID"), None, T_CS!(&s!("\\the{}@ID", ctr)));
+  Ok(
+    map!("id".to_string() => digest_literal(T_CS!(&s!("\\the{}@ID", ctr)), stomach, state)?.into()),
+  )
+}
 
 pub fn reset_counter(ctr: &str, state: &mut State) {
   state.assign_value(&s!("\\c@{}", ctr), Number!(0), Some(Scope::Global));

@@ -1489,6 +1489,26 @@ impl Document {
   }
 
   //**********************************************************************
+  // Association of nodes and ids (xml:id)
+  // sub recordID {
+  // my ($self, $id, $node) = @_;
+  // if (my $prev = $$self{idstore}{$id}) {    # Whoops! Already assigned!!!
+  //                                           # Can we recover?
+  //   if (!$node->isSameNode($prev)) {
+  //     my $badid = $id;
+  //     $id = $self->modifyID($id);
+  //     Info('malformed', 'id', $node, "Duplicated attribute xml:id",
+  //       "Using id='$id' on " . Stringify($node),
+  //       "id='$badid' already set on " . Stringify($prev)); } }
+  // $$self{idstore}{$id} = $node;
+  // return $id; }
+
+  fn unrecord_id(&mut self, id: &str) {
+    //my ($self, $id) = @_;
+    //delete $$self{idstore}{$id};
+  }
+
+  //**********************************************************************
   /// Record the Box that created this node.
   pub fn set_node_box(&mut self, node: &Node, digested: Digested) {
     let nodeid = node.to_hashable();
@@ -1539,6 +1559,55 @@ impl Document {
     } else {
       &FONT_TEXT_DEFAULT
     }
+  }
+
+  // sub getNodeLanguage {
+  //   my ($self, $node) = @_;
+  //   my ($font, $lang);
+  //   while ($node && ($node->nodeType == XML_ELEMENT_NODE)
+  //     && !(($lang = $node->getAttribute('xml:lang'))
+  //       || (($font = $$self{node_fonts}{ $node->getAttribute('_font') })
+  //         && ($lang = $font->getLanguage)))) {
+  //     $node = $node->parentNode; }
+  //   return $lang || 'en'; }
+
+  // sub decodeFont {
+  //   my ($self, $fontid) = @_;
+  //   return $$self{node_fonts}{$fontid} || LaTeXML::Common::Font->textDefault(); }
+
+  // Remove a node from the document (from it's parent)
+  pub fn remove_node(&mut self, mut node: Node) -> Node {
+    let mut chopped: bool = self.node == node; // Note if we're removing insertion point
+    if node.get_type() == Some(NodeType::ElementNode) {
+      // If an element, do ID bookkeeping.
+      if let Some(id) = node.get_attribute("xml:id") {
+        self.unrecord_id(&id);
+      }
+      for child in node.get_child_nodes() {
+        chopped = chopped || self.remove_node_aux(child);
+      }
+    }
+    let parent = node.get_parent().unwrap();
+    if chopped {
+      // Don't remove insertion point!
+      self.set_node(&parent);
+    }
+    node.unlink(); // TODO: How is this different from parent.remove_child(node) ???
+    node
+  }
+
+  fn remove_node_aux(&mut self, node: Node) -> bool {
+    let mut chopped = self.node == node;
+    if node.get_type() == Some(NodeType::ElementNode) {
+      // If an element, do ID bookkeeping.
+      if let Some(id) = node.get_attribute("xml:id") {
+        self.unrecord_id(&id);
+      }
+      for child in node.get_child_nodes() {
+        chopped = chopped || self.remove_node_aux(child);
+      }
+    }
+    chopped
   }
 
   //**********************************************************************

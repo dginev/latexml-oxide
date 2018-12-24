@@ -204,7 +204,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
     "\\let\\bibitem\\save@bibitem\\let\\par\\save@par\\bibitem"
   );
 
-  // NewCounter!("@bibitem", "bibliography", idprefix => "bib");
+  NewCounter!("@bibitem", "bibliography", idprefix => "bib");
   DefMacro!("\\the@bibitem", "\\arabic{@bibitem}");
   DefMacro!("\\@biblabel{}", "[#1]");
   DefMacro!("\\fnum@@bibitem", "{\\@biblabel{\\the@bibitem}}");
@@ -219,13 +219,17 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
         Some(key) => key.to_string(),
       });
       if let Some(tag) = tag_opt {
-        // whatsit.set_properties(
-        //   key => $key,
-        //   RefStepID('@bibitem'),
-        //   tags => Digest(T_BEGIN,
-        //     T_CS('\def'), T_CS('\the@bibitem'), T_BEGIN, Revert($tag), T_END,
-        //     Invocation(T_CS('\lx@make@tags'), T_OTHER('@bibitem')),
-        //     T_END)); }
+        let mut properties = RefStepID!("@bibitem", stomach, state)?;
+        properties.insert("key".to_string(), key.into());
+        let gullet = stomach.get_gullet_mut();
+        let mut tag_tokens = vec![
+            T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
+        tag_tokens.extend(Revert!(tag));
+        tag_tokens.push(T_END!());
+        tag_tokens.extend(Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")], gullet, state)?.unlist());
+        tag_tokens.push(T_END!());
+        properties.insert("tags".to_string(),
+          stomach.digest(tag_tokens, state)?.into());
       } else {
         let mut properties = RefStepCounter!("@bibitem", false, stomach, state)?;
         properties.insert("key".to_string(), key.into());
