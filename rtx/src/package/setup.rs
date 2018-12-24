@@ -967,8 +967,12 @@ macro_rules! SetupBindingMacros {($state:ident) => (
     ($ctr:expr, $noreset:expr, $stomach:ident, $state_arg:ident) => (ref_step_counter($ctr, $noreset, $stomach, $state_arg));
   }
 
+  macro_rules! RefStepID {
+    ($ctr:expr, $stomach:ident) => (RefStepID!($ctr, $stomach, $state));
+    ($ctr:expr, $stomach:ident, $state_arg:ident) => (ref_step_id($ctr, $stomach, $state_arg));
+  }
 
-  macro_rules! ResetCounter {
+    macro_rules! ResetCounter {
     ($ctr:expr) => (ResetCounter!($ctr, $gullet, $state));
     ($ctr:expr, $state_arg: ident) => (reset_counter($ctr, $state_arg));
   }
@@ -1250,4 +1254,15 @@ macro_rules! DefParameterType {
   ($name:literal, $state_arg:ident) => (DefParameterTypeWO!($name, Parameter::default(), $state_arg));
   ($name:literal, $($key:ident => $value:expr),*)=>(DefParameterTypeWO!($name, NewDefault!(Parameter, name => $name.to_string(), $($key=>$value),*)));
   ($name:literal, $($key:ident => $value:expr),*, $state_arg:ident)=>(DefParameterTypeWO!($name, NewDefault!(Parameter, name => $name.to_string(), $($key=>$value),*), $state_arg));
+}
+
+// Reverts an object into TeX code, as a Tokens list, that would create it.
+// Note that this is not necessarily the original TeX.
+macro_rules! Revert {
+  ($thing:literal) => {
+    Explode!($thing)
+  };
+  ($thing:expr) => {
+    $thing.revert().unlist()
+  };
 }
