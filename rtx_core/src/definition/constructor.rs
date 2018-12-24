@@ -172,7 +172,7 @@ impl Definition for Constructor {
     let mut post = self.execute_after_digest(stomach, &mut whatsit, state)?;
 
     if self.options.capture_body {
-      let captured = stomach.digest_next_body(false, state)?;
+      let captured = stomach.digest_next_body(None, state)?;
       // info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
       post.extend(captured);
 

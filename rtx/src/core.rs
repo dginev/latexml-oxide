@@ -154,7 +154,7 @@ impl DigestionAPI for Core {
         if let Some(&Stored::Bool(ico_flag)) = state.lookup_value("INCLUDE_COMMENTS") {
           if ico_flag {
             let paths_string = search_paths.as_ref().unwrap().join(",");
-            let attributes = map!{s!("paths") => paths_string};
+            let attributes = map! {s!("paths") => paths_string};
             document.insert_pi("latexml", Some(attributes))?;
           }
         }
@@ -172,11 +172,11 @@ impl DigestionAPI for Core {
       });
       if preload.ends_with(".cls") {
         CLS_EXT_REGEX.replace_all(preload, "");
-        let attributes = map!{s!("class") => preload.to_string()};
+        let attributes = map! {s!("class") => preload.to_string()};
         document.insert_pi("latexml", Some(attributes))?;
       } else {
         STY_EXT_REGEX.replace_all(preload, "");
-        let attributes = map!{s!("package") => preload.to_string()};
+        let attributes = map! {s!("package") => preload.to_string()};
         document.insert_pi("latexml", Some(attributes))?;
       }
     }
@@ -206,7 +206,7 @@ impl DigestionAPI for Core {
 
     while self.stomach.borrow().get_gullet().has_more_input() {
       let mut next_bodies: Vec<Digested> =
-        self.stomach.borrow_mut().digest_next_body(false, state)?;
+        self.stomach.borrow_mut().digest_next_body(None, state)?;
       // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
       boxes.extend(next_bodies);
     }
@@ -260,9 +260,7 @@ impl DigestionAPI for Core {
       } else {
         error!(
           target: &s!("Fatal:missing_file:{}", request_base),
-          "Can't find {} file {} ",
-          mode,
-          request
+          "Can't find {} file {} ", mode, request
         );
       }
     }

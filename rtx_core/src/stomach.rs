@@ -45,20 +45,27 @@ impl<'t> Stomach {
   // **********************************************************************
   // NOTE: Worry about whether the $autoflush thing is right?
   // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
-  pub fn digest_next_body(&mut self, terminal: bool, state: &mut State) -> Result<Vec<Digested>> {
-    if terminal {
-      unimplemented!("TODO: Add logic for terminal=true case in digest_next_body")
-    }
-    let _start_location = self.get_locator();
+  pub fn digest_next_body(
+    &mut self,
+    terminal_opt: Option<Token>,
+    state: &mut State,
+  ) -> Result<Vec<Digested>>
+  {
+    let start_location = self.get_locator();
     let init_depth = self.boxing.len();
+    let mut found_terminal = false;
     let mut box_list: Vec<Digested> = Vec::new();
 
     // try reading a executable token
     while let Some(token) = self.get_gullet_mut().read_x_token(true, true, state)? {
       // info!(target:"stomach:digest_next:invoke_token","{:?}", token);
       box_list.extend(self.invoke_token(&token, state)?);
-      // TODO:
-      // if terminal.is_some() && Equals(token, terminal)
+      if let Some(ref terminal) = terminal_opt {
+        if &token == terminal {
+          found_terminal = true;
+          break;
+        }
+      }
       if init_depth > self.boxing.len() {
         // info!(target:"digest_next_body","init_depth");
         break;
@@ -72,10 +79,12 @@ impl<'t> Stomach {
       // info!(target:"digest_next_body","no_token");
     }
 
-    // Warn('expected', $terminal, self, "body should have ended with '" . ToString($terminal) .
-    // "'", "current body started at " . ToString($startloc))
-    // if $terminal && !Equals($token, $terminal);
-
+    if let Some(ref terminal) = terminal_opt {
+      if !found_terminal {
+        warn!(target: &s!("expected:{}", terminal), "body should have ended with {:?}. current body started at {:?}", terminal, start_location);
+      }
+    }
+  
     Ok(box_list)
   }
 
