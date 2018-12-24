@@ -33,7 +33,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
       } else {
         Some(TexMode::Text)
       };
-      let body = stomach.digest_next_body(false, state)?;
+      let body = stomach.digest_next_body(None, state)?;
       let mut boxes = vec![Digested::TBox(Rc::new(open))];
       boxes.extend(body);
       let return_list = List {

@@ -48,7 +48,7 @@ lazy_static! {
   static ref DEFAULT_CHECK_RE: Regex = Regex::new(r"^Default:(.*)$").unwrap();
   static ref PARAMSPECT_CHECK_RE: Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
   static ref NON_ID_CHARSET_RE: Regex = Regex::new(r"[^\w\_\-.]+").unwrap();
-  static ref TILDE_NOISE_RE: Regex = Regex::new(r"\~\{\}").unwrap();
+  static ref TILDE_NOISE_RE: Regex = Regex::new(r"\\~\{\}").unwrap();
 }
 
 //**********************************************************************
