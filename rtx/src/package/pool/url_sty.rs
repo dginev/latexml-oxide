@@ -16,10 +16,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefMacro!("\\UrlSpecials", "");
 
   // Font style definitions.
-  DefMacro!(
-    "\\urlstyle{}",
-    "\\expandafter\\protect\\csname url@#1style\\endcsname"
-  );
+  DefMacro!("\\urlstyle{}", "\\expandafter\\protect\\csname url@#1style\\endcsname");
   DefMacro!("\\url@ttstyle", "\\def\\UrlFont{\\ttfamily}");
   DefMacro!("\\url@rmstyle", "\\def\\UrlFont{\\rmfamily}");
   DefMacro!("\\url@sfstyle", "\\def\\UrlFont{\\sffamily}");
@@ -32,10 +29,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   // \DeclareUrlCommand\cmd{settings}
   // Have this expand into \@Url w/ the declared cmd as arg, so it gets reflected in XML.
-  DefMacro!(
-    "\\DeclareUrlCommand{}{}",
-    "\\def#1{\\begingroup #2\\@Url#1}"
-  );
+  DefMacro!("\\DeclareUrlCommand{}{}", "\\def#1{\\begingroup #2\\@Url#1}");
 
   // This is an extended version of \Url that takes an extra token as 1st arg.
   // That token is the cs that invoked it, so that it can be reflected in the generated XML,

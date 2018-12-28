@@ -43,9 +43,9 @@ use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
+use crate::common::locator::Locator;
 use crate::common::model::Model;
 use crate::common::store::Stored;
-use crate::common::locator::Locator;
 use crate::document::Document;
 use crate::list::List;
 use crate::state::{State, StateOptions};
@@ -129,11 +129,7 @@ impl Core {
     let mut state = State::new(state_options);
     state.stomach = stomach.clone();
 
-    Core {
-      state,
-      preload,
-      stomach,
-    }
+    Core { state, preload, stomach }
   }
 
   pub fn get_state(&self) -> &State { &self.state }
@@ -192,6 +188,10 @@ impl<'a> From<&'a String> for Digested {
   }
 }
 
+impl From<Tbox> for Digested {
+  fn from(value: Tbox) -> Digested { Digested::TBox(Rc::new(value)) }
+}
+
 impl<'a> From<&'a Digested> for Option<crate::Digested> {
   fn from(value: &'a Digested) -> Option<crate::Digested> { Some(value.clone()) }
 }
@@ -245,12 +245,8 @@ impl BoxOps for Digested {
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     match *self {
-      Digested::TBox(ref b) => {
-        error!(target: "digested:set_property", "Called set_property on Box: {:?}", b)
-      },
-      Digested::List(ref l) => {
-        error!(target: "digested:set_property", "Called set_property on List: {:?}", l)
-      },
+      Digested::TBox(ref b) => error!(target: "digested:set_property", "Called set_property on Box: {:?}", b),
+      Digested::List(ref l) => error!(target: "digested:set_property", "Called set_property on List: {:?}", l),
       Digested::Whatsit(ref w) => w.borrow_mut().set_property(key, value), // TODO
       Digested::Postponed(ref _t) => unimplemented!(),
     }

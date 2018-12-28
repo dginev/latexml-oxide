@@ -82,7 +82,7 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   // lines 5611-5691
   InnerPool!(tex_appendix_b_p360);
   InnerPool!(tex_appendix_b_p361);
-    
+
   // lines 5691-5750
   InnerPool!(latex_loglike_functions);
 

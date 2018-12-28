@@ -24,14 +24,7 @@ pub enum TagOptionName {
 impl TagOptionName {
   pub fn all() -> Vec<TagOptionName> {
     use self::TagOptionName::*;
-    vec![
-      AfterOpen,
-      AfterOpenEarly,
-      AfterOpenLate,
-      AfterClose,
-      AfterCloseEarly,
-      AfterCloseLate,
-    ]
+    vec![AfterOpen, AfterOpenEarly, AfterOpenLate, AfterClose, AfterCloseEarly, AfterCloseLate]
   }
   pub fn is_prepend(&self) -> bool {
     use self::TagOptionName::*;

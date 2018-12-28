@@ -16,11 +16,7 @@ use std::collections::HashSet;
 pub fn load_definitions(state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
 
-  AssignValue!(
-    "frontmatter",
-    Stored::HashTagData(HashMap::new()),
-    Some(Scope::Global)
-  );
+  AssignValue!("frontmatter", Stored::HashTagData(HashMap::new()), Some(Scope::Global));
 
   // // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // // The content is the result of digesting $tokens.
@@ -59,11 +55,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         let entry = (tag.to_string(), None, digested_tokens);
         let frontmatter = match state.lookup_value_mut("frontmatter") {
           Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-          _ => fatal!(
-            TexPool,
-            Expected,
-            "Global TeX Frontmatter hash was not available, should never happen"
-          ),
+          _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
         };
         let f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
         f_entry.push(entry);
@@ -121,17 +113,9 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
     let mut frontmatter = match state.remove_value("frontmatter") {
       Some(Stored::HashTagData(frnt)) => frnt,
-      _ => fatal!(
-        TexPool,
-        Expected,
-        "Global TeX Frontmatter hash was not available, should never happen"
-      ),
+      _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
     };
-    state.assign_value(
-      "frontmatter",
-      Stored::HashTagData(HashMap::new()),
-      Some(Scope::Global),
-    );
+    state.assign_value("frontmatter", Stored::HashTagData(HashMap::new()), Some(Scope::Global));
     let state_keys: HashSet<String> = frontmatter.keys().cloned().collect();
     let mut all_keys: HashSet<String> = frontmatter_elements.union(&state_keys).cloned().collect();
     for key in &all_keys {
@@ -139,17 +123,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         // Dubious, but assures that frontmatter appears in text mode...
         // TODO:
         //local $LaTeXML::BOX = Box('', $STATE->lookupValue('font'), '', T_SPACE);
-        document.set_box_to_absorb(
-          Tbox::new(
-            String::new(),
-            state.lookup_font(),
-            None,
-            Tokens!(T_SPACE!()),
-            HashMap::new(),
-            state,
-          )
-          .into(),
-        );
+        document.set_box_to_absorb(Tbox::new(String::new(), state.lookup_font(), None, Tokens!(T_SPACE!()), HashMap::new(), state).into());
         for (tag, attr, stuff) in list {
           document.open_element(&tag, attr, None, state)?; // TODO:  (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
                                                            //        ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
@@ -283,20 +257,11 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       ctr_type.into()
     }
   });
-  DefMacro!(
-    "\\lx@the@@{}",
-    "\\expandafter\\lx@@the@@\\expandafter{\\lx@counterfor{#1}}"
-  );
+  DefMacro!("\\lx@the@@{}", "\\expandafter\\lx@@the@@\\expandafter{\\lx@counterfor{#1}}");
   DefMacro!("\\lx@@the@@{}", "\\csname the#1\\endcsname");
 
-  DefMacro!(
-    "\\lx@therefnum@@{}",
-    "\\expandafter\\lx@@therefnum@@\\expandafter{\\lx@counterfor{#1}}"
-  );
-  DefMacro!(
-    "\\lx@@therefnum@@{}",
-    "{\\normalfont\\csname p@#1\\endcsname\\csname the#1\\endcsname}"
-  );
+  DefMacro!("\\lx@therefnum@@{}", "\\expandafter\\lx@@therefnum@@\\expandafter{\\lx@counterfor{#1}}");
+  DefMacro!("\\lx@@therefnum@@{}", "{\\normalfont\\csname p@#1\\endcsname\\csname the#1\\endcsname}");
 
   AssignMapping!("type_tag_formatter", "refnum" => "\\lx@therefnum@@");
 
@@ -305,20 +270,19 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Customize by defining \fnum@<type> or \<type>name and \fnum@font@<type>
   // Default uses \fnum@font@<type> \<type>name prefix + space (if any) and \the<counter>.
 
+  DefMacro!("\\lx@refnum@compose{}{}", "\\expandafter\\lx@refnum@compose@\\expandafter{#2}{#1}");
+  DefMacro!("\\lx@refnum@compose@{}{}", "\\if.#1.#2\\else#2\\space#1\\fi");
+
   DefMacro!(
-    "\\lx@refnum@compose{}{}",
-    "\\expandafter\\lx@refnum@compose@\\expandafter{#2}{#1}"
-  );
-  DefMacro!(
-    "\\lx@refnum@compose@{}{}",
-    "\\if.#1.#2\\else#2\\space#1\\fi"
+    "\\lx@fnum@@{}",
+    "{\\normalfont\\@ifundefined{fnum@font@#1}{}{\\csname fnum@font@#1\\endcsname}\
+     \\@ifundefined{fnum@#1}{\\lx@@fnum@@{#1}}{\\csname fnum@#1\\endcsname}}"
   );
 
-  DefMacro!("\\lx@fnum@@{}",
-    "{\\normalfont\\@ifundefined{fnum@font@#1}{}{\\csname fnum@font@#1\\endcsname}\\@ifundefined{fnum@#1}{\\lx@@fnum@@{#1}}{\\csname fnum@#1\\endcsname}}");
-
-  DefMacro!("\\lx@@fnum@@ {}",
-  "\\@ifundefined{#1name}{\\lx@the@@{#1}}{\\lx@refnum@compose{\\csname #1name\\endcsname}{\\lx@the@@{#1}}}");
+  DefMacro!(
+    "\\lx@@fnum@@ {}",
+    "\\@ifundefined{#1name}{\\lx@the@@{#1}}{\\lx@refnum@compose{\\csname #1name\\endcsname}{\\lx@the@@{#1}}}"
+  );
 
   AssignMapping!("type_tag_formatter", "" => "\\lx@fnum@@"); // Default!
 
@@ -326,19 +290,30 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // \\lx@fnum@toc@{type} is similar, but formats the number for use within \\toctitle
   // Customize by defining \\fnum@toc@<type> or \\fnum@tocfont@<type>
   // Default uses just \\the<counter>, else composes using \\lx@@fnum@@{type}
-  DefMacro!("\\lx@fnum@toc@@{}",
-    "{\\normalfont\\@ifundefined{fnum@tocfont@#1}{}{\\csname fnum@tocfont@#1\\endcsname}\\@ifundefined{fnum@toc@#1}{\\lx@the@@{#1}}{\\csname fnum@toc@#1\\endcsname}}");
+  DefMacro!(
+    "\\lx@fnum@toc@@{}",
+    "{\\normalfont\\@ifundefined{fnum@tocfont@#1}{}{\\csname fnum@tocfont@#1\\endcsname}\
+     \\@ifundefined{fnum@toc@#1}{\\lx@the@@{#1}}{\\csname fnum@toc@#1\\endcsname}}"
+  );
 
   //----------------------------------------------------------------------
   // "typerefnum" form is used by automatic cross-references, typically "type number" or similar.
   // Customize by defining \\typerefnum@<type> or \\typerefnum@font@<type>
   // Default uses either \\<type>typerefname or \\<type>name (if any, followed by space, then
   // \\the<counter>
-  DefMacro!("\\lx@typerefnum@@{}",
-    "{\\normalfont\\@ifundefined{typerefnum@font@#1}{}{\\csname typerefnum@font@#1\\endcsname}\\@ifundefined{typerefnum@#1}{\\lx@@typerefnum@@{#1}}{\\csname typerefnum@#1\\endcsname}}");
+  DefMacro!(
+    "\\lx@typerefnum@@{}",
+    "{\\normalfont\\@ifundefined{typerefnum@font@#1}{}\
+     {\\csname typerefnum@font@#1\\endcsname}\\@ifundefined{typerefnum@#1}\
+     {\\lx@@typerefnum@@{#1}}{\\csname typerefnum@#1\\endcsname}}"
+  );
 
-  DefMacro!("\\lx@@typerefnum@@{}",
-    "\\@ifundefined{#1typerefname}{\\@ifundefined{#1name}{}{\\lx@refnum@compose{\\csname #1name\\endcsname}{\\lx@the@@{#1}}}}{\\lx@refnum@compose{\\csname #1typerefname\\endcsname}{\\lx@the@@{#1}}}");
+  DefMacro!(
+    "\\lx@@typerefnum@@{}",
+    "\\@ifundefined{#1typerefname}{\\@ifundefined{#1name}{}{\
+     \\lx@refnum@compose{\\csname #1name\\endcsname}{\\lx@the@@{#1}}}}\
+     {\\lx@refnum@compose{\\csname #1typerefname\\endcsname}{\\lx@the@@{#1}}}"
+  );
 
   AssignMapping!("type_tag_formatter", "typerefnum" => "\\lx@typerefnum@@");
 
@@ -352,20 +327,28 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Format a title (or caption) appropriately for type.
   // Customize by defining \format@title@type{title}
   // Default composes \lx@fnum@@{type} space title.
-  DefMacro!("\\lx@format@title@@{}{}",
-    "\\lx@@format@title@@{#1}{{\\@ifundefined{format@title@font@#1}{}{\\csname format@title@font@#1\\endcsname}#2}}");
-  DefMacro!("\\lx@@format@title@@{}{}",
-    "{\\@ifundefined{format@title@#1}{\\lx@@compose@title{\\lx@fnum@@{#1}}{#2}}{\\csname format@title@#1\\endcsname{#2}}}");
+  DefMacro!(
+    "\\lx@format@title@@{}{}",
+    "\\lx@@format@title@@{#1}{{\\@ifundefined{format@title@font@#1}{}{\\csname format@title@font@#1\\endcsname}#2}}"
+  );
+  DefMacro!(
+    "\\lx@@format@title@@{}{}",
+    "{\\@ifundefined{format@title@#1}{\\lx@@compose@title{\\lx@fnum@@{#1}}{#2}}{\\csname format@title@#1\\endcsname{#2}}}"
+  );
 
   // \\lx@format@toctitle@@{type}{toctitle}
   // Similar for toctitle, typically briefer
   // Customize by defining \\format@toctitle@type{title}
   // Default composes \\lx@fnum@toc@@{type} space title.
-  DefMacro!("\\lx@format@toctitle@@{}{}",
-    "\\lx@@format@toctitle@@{#1}{{\\@ifundefined{format@toctitle@font@#1}{}{\\csname format@toctitle@font@#1\\endcsname}#2}}");
+  DefMacro!(
+    "\\lx@format@toctitle@@{}{}",
+    "\\lx@@format@toctitle@@{#1}{{\\@ifundefined{format@toctitle@font@#1}{}{\\csname format@toctitle@font@#1\\endcsname}#2}}"
+  );
 
-  DefMacro!("\\lx@@format@toctitle@@{}{}",
-    "{\\@ifundefined{format@toctitle@#1}{\\lx@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}{\\csname format@toctitle@#1\\endcsname{#2}}}");
+  DefMacro!(
+    "\\lx@@format@toctitle@@{}{}",
+    "{\\@ifundefined{format@toctitle@#1}{\\lx@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}{\\csname format@toctitle@#1\\endcsname{#2}}}"
+  );
 
   DefMacro!("\\lx@@compose@title{}{}", "\\lx@tag[][ ]{#1}#2");
 

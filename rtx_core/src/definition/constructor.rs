@@ -8,10 +8,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
-use crate::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure,
-  ReplacementClosure,
-};
+use crate::definition::{BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure, ReplacementClosure};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -99,20 +96,12 @@ impl Object for Constructor {}
 impl Definition for Constructor {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }
-  fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> {
-    Some(&self.options.after_digest_body)
-  }
+  fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest_body) }
   fn capture_body(&self) -> bool { self.options.capture_body }
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
-  fn invoke_primitive(
-    &self,
-    stomach: &mut Stomach,
-    caller: Rc<Definition>,
-    state: &mut State,
-  ) -> Result<Vec<Digested>>
-  {
+  fn invoke_primitive(&self, stomach: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
     debug!(target: "constructor", "invoke for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing
@@ -151,14 +140,10 @@ impl Definition for Constructor {
       },
     };
 
-    properties
-      .entry(s!("font"))
-      .or_insert_with(|| Stored::Font(Rc::new(this_font)));
+    properties.entry(s!("font")).or_insert_with(|| Stored::Font(Rc::new(this_font)));
     // $properties{locator} = $stomach->getGullet->getMouth->getLocator unless defined
     // $properties{locator};
-    properties
-      .entry(s!("isMath"))
-      .or_insert_with(|| Stored::Bool(ismath));
+    properties.entry(s!("isMath")).or_insert_with(|| Stored::Bool(ismath));
     // $properties{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.
@@ -206,13 +191,7 @@ impl Definition for Constructor {
     // self.nargs = Some(nargs);
   }
 
-  fn do_absorbtion(
-    &self,
-    document: &mut Document,
-    whatsit: &Whatsit,
-    state: &mut State,
-  ) -> Result<()>
-  {
+  fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) -> Result<()> {
     for pre_closure in &self.options.before_construct {
       pre_closure(document, whatsit, state)?;
     }
@@ -223,12 +202,7 @@ impl Definition for Constructor {
       },
       Some(ref main_closure) => {
         // info!(target:"constructor:replacement", "invoked for {:?}", self.get_cs_name());
-        main_closure(
-          document,
-          whatsit.get_args(),
-          whatsit.get_properties(),
-          state,
-        )?
+        main_closure(document, whatsit.get_args(), whatsit.get_properties(), state)?
       },
     };
 

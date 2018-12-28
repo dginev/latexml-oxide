@@ -38,8 +38,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "\\begin",
     "\\listfiles",
   ]
-    .iter()
-    .map(|s| s.to_string())
+  .iter()
+  .map(|s| s.to_string())
   {
     let inner_ltxtrigger = ltxtrigger.clone();
     DefMacroI!(T_CS!(ltxtrigger), None, sub[ _gullet, _args, state] {

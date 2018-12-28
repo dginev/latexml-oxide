@@ -45,12 +45,7 @@ impl<'t> Stomach {
   // **********************************************************************
   // NOTE: Worry about whether the $autoflush thing is right?
   // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
-  pub fn digest_next_body(
-    &mut self,
-    terminal_opt: Option<Token>,
-    state: &mut State,
-  ) -> Result<Vec<Digested>>
-  {
+  pub fn digest_next_body(&mut self, terminal_opt: Option<Token>, state: &mut State) -> Result<Vec<Digested>> {
     let start_location = self.get_locator();
     let init_depth = self.boxing.len();
     let mut found_terminal = false;
@@ -83,9 +78,7 @@ impl<'t> Stomach {
       if !found_terminal {
         warn!(
           target: &s!("expected:{}", terminal),
-          "body should have ended with {:?}. current body started at {:?}",
-          terminal,
-          start_location
+          "body should have ended with {:?}. current body started at {:?}", terminal, start_location
         );
       }
     }
@@ -104,11 +97,7 @@ impl<'t> Stomach {
       Box::new(move |stomach, state| {
         stomach.get_gullet_mut().unread(&tokens);
         state.clear_prefixes(); // prefixes shouldn't apply here.
-        let mode = if state.lookup_bool("IN_MATH") {
-          TexMode::Math
-        } else {
-          TexMode::Text
-        };
+        let mode = if state.lookup_bool("IN_MATH") { TexMode::Math } else { TexMode::Text };
         let initdepth = stomach.boxing.len();
         let depth = initdepth;
         // {
@@ -155,13 +144,7 @@ impl<'t> Stomach {
     state.assign_catcode('@', Catcode::LETTER, None);
     let raw_tex_mouth;
     {
-      raw_tex_mouth = Mouth::new(
-        text,
-        Some(MouthOptions {
-          fordefinitions: true,
-        }),
-        state,
-      );
+      raw_tex_mouth = Mouth::new(text, Some(MouthOptions { fordefinitions: true }), state);
     }
     self.reading_from_mouth(
       raw_tex_mouth,
@@ -188,12 +171,7 @@ impl<'t> Stomach {
   /// possibly arguments will be parsed from the Gullet.
   /// Otherwise, the token is simply digested: turned into an appropriate box.
   /// Returns a list of boxes/whatsits.
-  pub fn invoke_token<'a>(
-    &mut self,
-    input_token: &'a Token,
-    state: &mut State,
-  ) -> Result<Vec<Digested>>
-  {
+  pub fn invoke_token<'a>(&mut self, input_token: &'a Token, state: &mut State) -> Result<Vec<Digested>> {
     let mut maybe_token: Option<Cow<'a, Token>> = Some(Cow::Borrowed(input_token));
 
     // Overly complex, but want to avoid recursion/stack
@@ -205,14 +183,7 @@ impl<'t> Stomach {
       state.current_token = Some(Rc::clone(&token));
       self.token_stack.push(Rc::clone(&token));
       if self.token_stack.len() > MAXSTACK {
-        fatal!(
-          Stomach,
-          Recursion,
-          s!(
-            "Excessive recursion(?): Tokens on stack: {:?}",
-            self.token_stack
-          )
-        );
+        fatal!(Stomach, Recursion, s!("Excessive recursion(?): Tokens on stack: {:?}", self.token_stack));
       }
       result = Vec::new();
 
@@ -298,11 +269,7 @@ impl<'t> Stomach {
           }
         },
         meaning => {
-          fatal!(
-            Stomach,
-            Misdefined,
-            s!("The object {:?} should never reach Stomach!", meaning)
-          );
+          fatal!(Stomach, Misdefined, s!("The object {:?} should never reach Stomach!", meaning));
         },
       }
       break;
@@ -312,12 +279,7 @@ impl<'t> Stomach {
     Ok(result)
   }
 
-  fn invoke_token_undefined(
-    &mut self,
-    token: &'t Token,
-    state: &mut State,
-  ) -> Result<Vec<Digested>>
-  {
+  fn invoke_token_undefined(&mut self, token: &'t Token, state: &mut State) -> Result<Vec<Digested>> {
     let cs = token.get_cs_name().to_owned(); // TODO: use the Cow directly
                                              // TODO: state.note_status("undefined", cs);
 
@@ -431,13 +393,7 @@ impl<'t> Stomach {
   // Do something, while reading stuff from a specific Mouth.
   // This reads ONLY from that mouth (or any mouth openned by code in that source),
   // and the mouth should end up empty afterwards, and only be closed here.
-  pub fn reading_from_mouth<R>(
-    &mut self,
-    mouth: Mouth,
-    state: &mut State,
-    mut reader: Box<FnMut(&mut Stomach, &mut State) -> R>,
-  ) -> R
-  {
+  pub fn reading_from_mouth<R>(&mut self, mouth: Mouth, state: &mut State, mut reader: Box<FnMut(&mut Stomach, &mut State) -> R>) -> R {
     let mouth_source = mouth.source.clone();
     {
       let gullet = self.get_gullet_mut();
@@ -470,8 +426,7 @@ impl<'t> Stomach {
         let mut ready_to_read = false;
         {
           if let Some(ref mut runtime) = gullet.mouth {
-            if !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input()
-            {
+            if !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input() {
               ready_to_read = true;
             }
           }
@@ -513,24 +468,12 @@ impl<'t> Stomach {
     };
 
     state.push_frame();
-    state.assign_value(
-      "beforeAfterGroup",
-      Stored::VecDigested(Vec::new()),
-      Some(Scope::Local),
-    ); // ALWAYS bind this!
-    state.assign_value(
-      "afterGroup",
-      Stored::VecDigested(Vec::new()),
-      Some(Scope::Local),
-    ); // ALWAYS bind this!
-    state.assign_value(
-      "afterAssignment",
-      Stored::VecDigested(Vec::new()),
-      Some(Scope::Local),
-    ); // ALWAYS bind this!
+    state.assign_value("beforeAfterGroup", Stored::VecDigested(Vec::new()), Some(Scope::Local)); // ALWAYS bind this!
+    state.assign_value("afterGroup", Stored::VecDigested(Vec::new()), Some(Scope::Local)); // ALWAYS bind this!
+    state.assign_value("afterAssignment", Stored::VecDigested(Vec::new()), Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
-    // state.assign_value("groupInitiatorLocator" , self.getLocator,       Scope::Local);
+    state.assign_value("groupInitiatorLocator", self.get_locator(), Some(Scope::Local));
     if !nobox {
       self.boxing.push(current_token) // For begingroup/endgroup
     }
@@ -539,10 +482,7 @@ impl<'t> Stomach {
   pub fn pop_stack_frame(&mut self, nobox: bool, state: &mut State) -> Result<()> {
     if let Some(Stored::VecToken(beforeafter)) = state.remove_value("beforeAfterGroup") {
       if !beforeafter.is_empty() {
-        let _result = beforeafter
-          .into_iter()
-          .map(|t| t.be_digested(self, state))
-          .collect::<Vec<_>>();
+        let _result = beforeafter.into_iter().map(|t| t.be_digested(self, state)).collect::<Vec<_>>();
         // if (my ($x) = grep { !$_->isaBox } @result) {
         // Fatal('misdefined', $x, $self, "Expected a Box|List|Whatsit, but got '" .
         // Stringify($x) . "'"); } push(@LaTeXML::LIST, @result); }
@@ -580,15 +520,17 @@ impl<'t> Stomach {
   pub fn bgroup(&mut self, state: &mut State) { self.push_stack_frame(false, state); }
 
   pub fn egroup(&mut self, state: &mut State) -> Result<()> {
-    // if state.is_value_bound("MODE", Some(0))   // Last stack frame was a mode switch!?!?!
-    //   || state.lookup_value("groupNonBoxing") {    // or group was opened with \begingroup
-    // error!("unexpected:{:?}: Attempt to close boxing group",
-    // state.lookup_value("CURRENT_TOKEN")); // Error('unexpected', $LaTeXML::CURRENT_TOKEN,
-    // self, "Attempt to close boxing group",   //   self.currentFrameMessage); }
-    // }
-    // else {    // Don't pop if there's an error; maybe we'll recover?
-    self.pop_stack_frame(false, state)
-    // }
+    if state.lookup_bool("groupNonBoxing") {
+      // or group was opened with \begingroup
+      error!(
+        target: &s!("unexpected:{}", state.current_token.as_ref().unwrap()),
+        "Attempt to close boxing group"
+      );
+    } else {
+      // Don't pop if there's an error; maybe we'll recover?
+      self.pop_stack_frame(false, state)?;
+    }
+    Ok(())
   }
 
   pub fn begingroup(&mut self, state: &mut State) { self.push_stack_frame(true, state); }
@@ -627,19 +569,14 @@ impl<'t> Stomach {
           color: cf.color.clone(),
           bg: cf.bg.clone(),
           size: cf.size.clone(),
-          mathstyle: if isdisplay {
-            Some("display".into())
-          } else {
-            Some("text".into())
-          },
+          mathstyle: if isdisplay { Some("display".into()) } else { Some("text".into()) },
           ..Font::default()
         });
         state.assign_value("font", new_font, Some(Scope::Local));
       } else {
         // When entering text mode, we should set the font to the text font in use before the math
         // but inherit color and size
-        let new_font = if let Some(&Stored::Font(ref saved_font)) = state.lookup_value("savedfont")
-        {
+        let new_font = if let Some(&Stored::Font(ref saved_font)) = state.lookup_value("savedfont") {
           Some(saved_font.merge(&Font {
             color: cf.color.clone(),
             bg: cf.bg.clone(),
@@ -658,20 +595,13 @@ impl<'t> Stomach {
   }
 
   pub fn end_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
-    if !state.is_value_bound("MODE", Some(0))    // Last stack frame was NOT a mode switch!?!?!
-      || (state.lookup_string("MODE") != mode)
-    {
+    // Last stack frame was NOT a mode switch!?!?!
+    if !state.is_value_bound("MODE", Some(0)) || (state.lookup_string("MODE") != mode) {
       // Or was a mode switch to a different mode
       if let Some(ref token) = state.current_token {
-        error!(
-          target: &s!("unexpected:{}", token),
-          "Attempt to end mode {}", mode
-        ); // self.currentFrameMessage);
+        error!(target: &s!("unexpected:{}", token), "Attempt to end mode {}", mode); // self.currentFrameMessage);
       } else {
-        error!(
-          target: &s!("unexpected:mode"),
-          "Attempt to end mode {}", mode
-        );
+        error!(target: &s!("unexpected:mode"), "Attempt to end mode {}", mode);
       }
     } else {
       // Don"t pop if there"s an error; maybe we'll recover?

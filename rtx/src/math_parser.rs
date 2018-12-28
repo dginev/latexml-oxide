@@ -128,11 +128,8 @@ impl MathParser {
   pub fn parse_math(&mut self, document: &mut Document, state: &mut State) -> Result<()> {
     self.clear();
     self.cleanup_scripts(document);
-    let xmath_nodes = document.findnodes(
-      "descendant-or-self::ltx:XMath[not(ancestor::ltx:XMath)]",
-      None,
-      state,
-    ); // descendant-or-self::ltx:XMath[not(ancestor::ltx:XMath)]
+    let xmath_selector = "descendant-or-self::ltx:XMath[not(ancestor::ltx:XMath)]";
+    let xmath_nodes = document.findnodes(xmath_selector, None, state); // descendant-or-self::ltx:XMath[not(ancestor::ltx:XMath)]
 
     if !xmath_nodes.is_empty() {
       note_begin("Math Parsing");
@@ -332,11 +329,7 @@ impl MathParser {
         if child_nodes.len() == 1 {
           p = child_nodes[0].clone();
         } else {
-          fatal!(
-            XMath,
-            Malformed,
-            "XMath node has DOCUMENT_FRAGMENT for parent!"
-          ); // xnode,
+          fatal!(XMath, Malformed, "XMath node has DOCUMENT_FRAGMENT for parent!"); // xnode,
         }
       }
       // HACK: replace XMRef's to stray trailing punctution
@@ -367,14 +360,7 @@ impl MathParser {
   // my %TAG_FEEDBACK = ('ltx:XMArg' => 'a', 'ltx:XMWrap' => 'w');    # [CONSTANT]
   // Recursively parse a node with some internal structure
   // by first parsing any structured children, then it's content.
-  fn parse_rec(
-    &mut self,
-    node: &mut Node,
-    rule_opt: &str,
-    document: &mut Document,
-    state: &mut State,
-  ) -> Result<Option<Node>>
-  {
+  fn parse_rec(&mut self, node: &mut Node, rule_opt: &str, document: &mut Document, state: &mut State) -> Result<Option<Node>> {
     self.parse_children(node, document, state)?;
     // This will only handle 1 layer nesting (successfully?)
     // Note that this would have been found by the top level xpath,
@@ -458,13 +444,7 @@ impl MathParser {
   }
 
   // Depth first parsing of XMArg nodes.
-  fn parse_children(
-    &mut self,
-    node: &mut Node,
-    document: &mut Document,
-    state: &mut State,
-  ) -> Result<()>
-  {
+  fn parse_children(&mut self, node: &mut Node, document: &mut Document, state: &mut State) -> Result<()> {
     for mut child in element_nodes(node) {
       let tag = document.get_node_qname(&child, state);
       match tag.as_str() {
@@ -474,9 +454,7 @@ impl MathParser {
         "ltx:XMWrap" => {
           self.parse_rec(&mut child, "Anything", document, state)?;
         },
-        "ltx:XMApp" | "ltx:XMArray" | "ltx:XMRow" | "ltx:XMCell" => {
-          self.parse_children(&mut child, document, state)?
-        },
+        "ltx:XMApp" | "ltx:XMArray" | "ltx:XMRow" | "ltx:XMCell" => self.parse_children(&mut child, document, state)?,
         "ltx:XMDual" => self.parse_children(&mut child, document, state)?,
         _ => {},
       };
@@ -715,14 +693,7 @@ impl MathParser {
   // Low-level Parser: parse a single expression
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Convert to textual form for processing by MathGrammar
-  fn parse_single(
-    &self,
-    mathnode: &mut Node,
-    document: &mut Document,
-    rule: &str,
-    state: &mut State,
-  ) -> Result<Option<Node>>
-  {
+  fn parse_single(&self, mathnode: &mut Node, document: &mut Document, rule: &str, state: &mut State) -> Result<Option<Node>> {
     //   my @nodes = $self->filter_hints($document, $mathnode->childNodes);
     let nodes = mathnode.get_child_nodes();
     // let mut result;
@@ -785,13 +756,7 @@ impl MathParser {
     Ok(result)
   }
 
-  fn parse_internal(
-    &self,
-    rule: &str,
-    nodes: Vec<Node>,
-    document: &mut Document,
-  ) -> Result<(Option<Node>, Option<Node>)>
-  {
+  fn parse_internal(&self, rule: &str, nodes: Vec<Node>, document: &mut Document) -> Result<(Option<Node>, Option<Node>)> {
     // Generate a textual token for each node; The parser operates on this encoded
     // string.   local $LaTeXML::MathParser::LEXEMES = {};
     //   my $i       = 0;
@@ -963,7 +928,8 @@ impl MathParser {
       "minus" => "-",
       "divide" => "/",
       other => other,
-    }.to_owned()
+    }
+    .to_owned()
   }
 
   // Put infix, along with `binding power'
@@ -972,15 +938,7 @@ impl MathParser {
   //   ADDOP         => 10,   MULOP       => 100, FRACOP => 100,
   //   SUPERSCRIPTOP => 1000, SUBSCRIPTOP => 1000);
 
-  fn textrec(
-    &self,
-    node_opt: &Node,
-    outer_bp_opt: Option<usize>,
-    outer_name_opt: Option<&str>,
-    document: &Document,
-    state: &mut State,
-  ) -> String
-  {
+  fn textrec(&self, node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<&str>, document: &Document, state: &mut State) -> String {
     let node = self.realize_xmnode(node_opt, document);
     let tag = document.get_node_qname(&node, state);
     let outer_bp = match outer_bp_opt {
@@ -1055,15 +1013,7 @@ impl MathParser {
     }
   }
 
-  fn textrec_apply(
-    &self,
-    name: &str,
-    op: &Node,
-    args: Vec<Node>,
-    document: &Document,
-    state: &mut State,
-  ) -> (usize, String)
-  {
+  fn textrec_apply(&self, name: &str, op: &Node, args: Vec<Node>, document: &Document, state: &mut State) -> (usize, String) {
     let role = op.get_attribute("role").unwrap_or_else(|| s!("Unknown"));
     // if (($role =~ /^(SUB|SUPER)SCRIPTOP$/) && (($op->getAttribute('scriptpos')
     // || '') =~ /^pre\d+$/)) { # Note that this will likely get
@@ -1083,10 +1033,7 @@ impl MathParser {
         ),
       )
     } else {
-      let args_rec: Vec<String> = args
-        .iter()
-        .map(|arg| self.textrec(arg, Some(bp), Some(name), document, state))
-        .collect();
+      let args_rec: Vec<String> = args.iter().map(|arg| self.textrec(arg, Some(bp), Some(name), document, state)).collect();
       let op_string: String = s!(" {} ", self.textrec(&op, None, None, document, state));
       let apply_string: String = args_rec.join(&op_string);
       (bp, apply_string)
@@ -1152,11 +1099,7 @@ impl MathParser {
   // The following accessors work on both the LibXML and ARRAY representations
   // but they do NOT automatically dereference XMRef!
   fn p_get_value(&self, node: &Node) -> String {
-    info!(
-      "p_get_value for {} : {}",
-      node.get_name(),
-      node.get_content()
-    );
+    info!("p_get_value for {} : {}", node.get_name(), node.get_content());
     let node_type = node.get_type();
     if node_type == Some(NodeType::ElementNode) {
       let x = node.get_content();
@@ -1257,9 +1200,7 @@ impl MathParser {
   // sub Absent {
   //   return New('absent'); }
 
-  fn invisible_times(&self) -> NodeTuple {
-    NodeTuple::new("times", "\u{2062}", string_map!("role" => "MULOP"))
-  }
+  fn invisible_times(&self) -> NodeTuple { NodeTuple::new("times", "\u{2062}", string_map!("role" => "MULOP")) }
 
   // sub InvisibleComma {
   // return New(undef, "\x{2063}", role => 'PUNCT', font =>
@@ -1443,14 +1384,8 @@ impl MathParser {
   //   my $c  = p_get_value($close);
   //   my $n  = int(($nargs - 2 + 1) / 2);
   // my @p  = map { p_get_value(self.realize_xmnode(@stuff[2 * $_])) } 1 .. $n
-  // - 1;   my $op = ($n == 0
-  //     ? 'list'                                    # ?
-  //     : ($n == 1
-  //       ? $enclose1{ $o . '@' . $c }
-  //       : ($n == 2
-  //         ? ($enclose2{ $o . '@' . $p[0] . '@' . $c } || 'list')
-  //         : ($encloseN{ $o . '@' . $p[0] . '@' . $c } || 'list'))));
-  //   $op = 'delimited-' . $o . $c unless defined $op;
+  // - 1;   my $op = ($n == 0 ? 'list'                                    # ? : ($n == 1 ? $enclose1{ $o . '@' . $c } : ($n == 2 ? ($enclose2{ $o . '@'
+  //   . $p[0] . '@' . $c } || 'list') : ($encloseN{ $o . '@' . $p[0] . '@' . $c } || 'list')))); $op = 'delimited-' . $o . $c unless defined $op;
   // if (($n == 1) && ($op eq 'delimited-()')) {    # Hopefully, can just
   // ignore the parens?     return ['ltx:XMDual', {},
   // LaTeXML::Package::createXMRefs($LaTeXML::MathParser::DOCUMENT,

@@ -12,9 +12,7 @@ use rtx_core::common::store::IntoOption;
 use rtx_core::common::xml::XML_NS;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
-use rtx_core::definition::register::{
-  Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue,
-};
+use rtx_core::definition::register::{Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue};
 use rtx_core::definition::{ConditionalClosure, Definition, ExpansionClosure};
 use rtx_core::document::resource::*;
 use rtx_core::document::tag::{TagOptionName, TagOptions};
@@ -84,12 +82,7 @@ pub fn is_defined_token(cs: &Token, state: &mut State) -> bool {
 }
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
-pub fn input_definitions(
-  raw_file: &str,
-  options: InputDefinitionOptions,
-  mut state: &mut State,
-) -> Result<()>
-{
+pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut state: &mut State) -> Result<()> {
   let mut file: String = raw_file.trim().to_string();
 
   // let prevname = if options.handleoptions {
@@ -129,11 +122,7 @@ pub fn input_definitions(
     "alltt.sty" => pool::alltt_sty::load_definitions(&mut state)?,
     "comment.sty" => pool::comment_sty::load_definitions(&mut state)?,
     "url.sty" => pool::url_sty::load_definitions(&mut state)?,
-    other => fatal!(
-      Package,
-      Unknown,
-      s!("TODO: unknown binding {:?}, can't load", other)
-    ),
+    other => fatal!(Package, Unknown, s!("TODO: unknown binding {:?}, can't load", other)),
   };
   note_end(&s!("Loading {:?} definitions", file));
   Ok(())
@@ -168,11 +157,7 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
   // content => LookupValue($pathname . '_contents')
 
   // Open a mouth for that TeX content
-  core
-    .stomach
-    .borrow_mut()
-    .get_gullet_mut()
-    .open_mouth(mouth, true);
+  core.stomach.borrow_mut().get_gullet_mut().open_mouth(mouth, true);
   Ok(())
 }
 
@@ -255,13 +240,7 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
   // }
 }
 
-pub fn load_class(
-  name: &str,
-  options: Vec<String>,
-  after: Tokens,
-  state: &mut State,
-) -> Result<()>
-{
+pub fn load_class(name: &str, options: Vec<String>, after: Tokens, state: &mut State) -> Result<()> {
   input_definitions(
     name,
     InputDefinitionOptions {
@@ -338,12 +317,7 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
   Ok((cs, paramlist))
 }
 
-pub fn parse_parameters(
-  mut prototype: String,
-  cs: &Token,
-  state: &mut State,
-) -> Result<Option<Parameters>>
-{
+pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) -> Result<Option<Parameters>> {
   let mut parameters = Vec::new();
   while !prototype.is_empty() {
     let mut next_proto: String;
@@ -434,10 +408,7 @@ pub fn parse_parameters(
       );
     } else {
       // Fatal('misdefined', cs, undef, "Unrecognized parameter specification at \"prototype\""); }
-      panic!(
-        "Fatal:misdefined:{:?} Unrecognized parameter specification at \"prototype\"",
-        cs
-      );
+      panic!("Fatal:misdefined:{:?} Unrecognized parameter specification at \"prototype\"", cs);
     }
     prototype = next_proto.to_string();
   }
@@ -455,10 +426,7 @@ pub fn revert(_arg: &[Token]) -> Tokens { Tokens!() }
 //======================================================================
 
 pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
-  let mut options = state
-    .tag_properties
-    .entry(tag.to_string())
-    .or_insert_with(TagOptions::default);
+  let mut options = state.tag_properties.entry(tag.to_string()).or_insert_with(TagOptions::default);
   if properties.auto_open.is_some() {
     options.auto_open = properties.auto_open;
   }
@@ -505,12 +473,7 @@ impl Default for InputDefinitionOptions {
 }
 
 // Selects the RelaxNG schema defining the XML output language
-pub fn select_relaxng_schema(
-  schema: String,
-  namespaces: Option<HashMap<String, String>>,
-  state: &mut State,
-)
-{
+pub fn select_relaxng_schema(schema: String, namespaces: Option<HashMap<String, String>>, state: &mut State) {
   // What verb here? Set, Choose,...
   let model = &mut state.model;
   model.set_relaxng_schema(schema);
@@ -533,11 +496,7 @@ pub fn def_macro<T: Into<Option<ExpansionClosure>>>(
   let expansion = expansion.into();
   let options = options_opt.unwrap_or_default();
   let options_locked = options.locked;
-  let locked_key = if options_locked {
-    s!("{}:locked", cs)
-  } else {
-    String::new()
-  };
+  let locked_key = if options_locked { s!("{}:locked", cs) } else { String::new() };
   state.install_definition(
     Expandable {
       cs,
@@ -580,14 +539,7 @@ impl Default for RegisterOptions {
 // If you supply a skipper instead of a test, it is also applied to the arguments
 // and should skip to the right place in the following \or, \else, \fi.
 
-pub fn def_conditional(
-  cs: Token,
-  paramlist: Option<Parameters>,
-  test: Option<ConditionalClosure>,
-  options: ConditionalOptions,
-  state: &mut State,
-)
-{
+pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<ConditionalClosure>, options: ConditionalOptions, state: &mut State) {
   let cs_name = cs.get_cs_name();
   let locked_key = if let Some(true) = options.locked {
     s!("{}:locked", cs_name)
@@ -619,11 +571,7 @@ pub fn def_conditional(
           //       first, we want to capture a cloned value of cs, to be able to keep using cs here.
           // second, each invocation of the conditional macro needs to create new tokens to
           // return,       hence a clone is required on each call.
-          DefMacroI!(
-            T_CS!(s!("\\{}true", name)),
-            None,
-            Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iftrue"))
-          );
+          DefMacroI!(T_CS!(s!("\\{}true", name)), None, Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iftrue")));
           DefMacroI!(
             T_CS!(s!("\\{}false", name)),
             None,
@@ -659,14 +607,7 @@ pub fn def_conditional(
   return;
 }
 
-pub fn def_register<T: Into<RegisterValue>>(
-  cs: Token,
-  parameters: Option<Parameters>,
-  value: T,
-  options: Option<RegisterOptions>,
-  state: &mut State,
-)
-{
+pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parameters>, value: T, options: Option<RegisterOptions>, state: &mut State) {
   let options: RegisterOptions = options.unwrap_or_else(RegisterOptions::default);
   let value: RegisterValue = value.into();
   let name = cs.to_string();
@@ -677,19 +618,13 @@ pub fn def_register<T: Into<RegisterValue>>(
 
   let getter: RegisterGetterClosure = match options.getter {
     Some(getter) => getter.clone(),
-    None => Rc::new(
-      move |args: Vec<Token>, state: &State| -> Option<RegisterValue> {
-        let args_string: String = args
-          .iter()
-          .map(|arg: &Token| arg.to_string())
-          .collect::<Vec<String>>()
-          .join("");
-        match state.lookup_value(&(name.clone() + &args_string)) {
-          None => Some(getter_value.clone()),
-          Some(v) => v.into(),
-        }
-      },
-    ),
+    None => Rc::new(move |args: Vec<Token>, state: &State| -> Option<RegisterValue> {
+      let args_string: String = args.iter().map(|arg: &Token| arg.to_string()).collect::<Vec<String>>().join("");
+      match state.lookup_value(&(name.clone() + &args_string)) {
+        None => Some(getter_value.clone()),
+        Some(v) => v.into(),
+      }
+    }),
   };
   let readonly = options.readonly;
 
@@ -698,18 +633,11 @@ pub fn def_register<T: Into<RegisterValue>>(
     None => {
       if readonly {
         Rc::new(move |value, args, state| {
-          warn!(
-            target: &s!("unexpected:{}", setter_name),
-            "Can't assign to register {}", setter_name
-          );
+          warn!(target: &s!("unexpected:{}", setter_name), "Can't assign to register {}", setter_name);
         })
       } else {
         Rc::new(move |value, args, state| {
-          let args_string: String = args
-            .iter()
-            .map(|arg: &Tokens| arg.to_string())
-            .collect::<Vec<String>>()
-            .join("");
+          let args_string: String = args.iter().map(|arg: &Tokens| arg.to_string()).collect::<Vec<String>>().join("");
 
           state.assign_value(&(setter_name.clone() + &args_string), value, None);
         })
@@ -743,19 +671,11 @@ pub fn def_register<T: Into<RegisterValue>>(
 /// The parent node (the one with ID=<parentid>) also maintains a counter
 /// stored in an attribute `_ID_counter_<prefix>` recording the last used
 /// <number> for <prefix> amongst its descendents.
-pub fn generate_id(
-  document: &mut Document,
-  mut node: &mut Node,
-  mut prefix: &str,
-  state: &mut State,
-) -> Result<()>
-{
+pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &str, state: &mut State) -> Result<()> {
   // If node doesn't already have an id, and can
   let node_qname = document.get_node_qname(node, state);
-  if node.get_attribute("xml:id").is_none() && document.can_have_attribute(&node_qname, "xml:id", state)
-    // but isn't a _Capture_ node (which ultimately should disappear)
-    && (node_qname != "ltx:_Capture_")
-  {
+  // but isn't a _Capture_ node (which ultimately should disappear)
+  if node.get_attribute("xml:id").is_none() && document.can_have_attribute(&node_qname, "xml:id", state) && (node_qname != "ltx:_Capture_") {
     let mut ancestor = document
       .findnode("ancestor::*[@xml:id][1]", Some(node), state)
       .unwrap_or_else(|| document.get_document().get_root_element().unwrap());
@@ -802,23 +722,14 @@ pub fn digest_text(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> R
   value
 }
 
-pub fn digest_literal<T: Into<Tokens>>(
-  stuff: T,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<Digested>
-{
+pub fn digest_literal<T: Into<Tokens>>(stuff: T, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
   let stuff: Tokens = stuff.into();
   // Perhaps should do StartSemiverbatim, but is it safe to push a frame? (we might cover over
   // valid changes of state!)
   stomach.begin_mode("text", state)?;
 
   let font = state.lookup_font().unwrap(); // TODO: raise error if font missing
-  state.assign_value(
-    "font",
-    font.merge(&fontmap!(encoding => "ASCII")),
-    Some(Scope::Local),
-  ); // try to stay as ASCII as possible
+  state.assign_value("font", font.merge(&fontmap!(encoding => "ASCII")), Some(Scope::Local)); // try to stay as ASCII as possible
 
   let value = stomach.digest(stuff, state);
   state.assign_value("font", font, None); // TODO: maybe we need .assign_font ?
@@ -826,12 +737,7 @@ pub fn digest_literal<T: Into<Tokens>>(
   value
 }
 
-pub fn digest_if(
-  token: Token,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<Option<Digested>>
-{
+pub fn digest_if(token: Token, stomach: &mut Stomach, state: &mut State) -> Result<Option<Digested>> {
   if let Some(defn) = state.lookup_definition(&token) {
     match stomach.digest(Tokens!(token), state) {
       Ok(t) => Ok(Some(t)),
@@ -857,13 +763,7 @@ impl<'ct> Default for NewCounterOptions<'ct> {
   }
 }
 
-pub fn new_counter(
-  ctr: &str,
-  within: &str,
-  options_opt: Option<NewCounterOptions>,
-  state: &mut State,
-) -> Result<()>
-{
+pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOptions>, state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
   let unctr = s!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
   let cctr = s!("\\c@{}", ctr);
@@ -894,11 +794,7 @@ pub fn new_counter(
     };
     let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(unctr)];
     clwithin_tokens.append(&mut x);
-    state.assign_value(
-      &clwithin,
-      Stored::Tokens(Tokens::new(clwithin_tokens)),
-      Some(Scope::Global),
-    );
+    state.assign_value(&clwithin, Stored::Tokens(Tokens::new(clwithin_tokens)), Some(Scope::Global));
 
     let mut unx = if let Some(Stored::Tokens(clun)) = state.lookup_value(&clunwithin) {
       clun.unlist()
@@ -908,20 +804,12 @@ pub fn new_counter(
     let mut clunwithin_tokens = vec![T_CS!(unctr)];
     clunwithin_tokens.append(&mut unx);
 
-    state.assign_value(
-      &clunwithin,
-      Stored::Tokens(Tokens::new(clunwithin_tokens)),
-      Some(Scope::Global),
-    )
+    state.assign_value(&clunwithin, Stored::Tokens(Tokens::new(clunwithin_tokens)), Some(Scope::Global))
   }
 
   if let Some(ref options) = options_opt {
     if !options.nested.is_empty() {
-      state.assign_value(
-        &s!("nested_counters_{}", ctr),
-        options.nested.clone(),
-        Some(Scope::Global),
-      )
+      state.assign_value(&s!("nested_counters_{}", ctr), options.nested.clone(), Some(Scope::Global))
     }
   }
 
@@ -935,11 +823,7 @@ pub fn new_counter(
   if let Some(options) = options_opt {
     let mut prefix = options.idprefix.to_string();
     if !prefix.is_empty() {
-      state.assign_value(
-        &s!("@ID@prefix@{}", ctr),
-        prefix.clone(),
-        Some(Scope::Global),
-      );
+      state.assign_value(&s!("@ID@prefix@{}", ctr), prefix.clone(), Some(Scope::Global));
     } else {
       prefix = state.lookup_string(&s!("@ID@prefix@{}", ctr));
       if prefix.is_empty() {
@@ -979,10 +863,7 @@ pub fn new_counter(
 pub fn counter_value(ctr: &str, state: &mut State) -> Number {
   match state.lookup_number(&s!("\\c@{}", ctr)) {
     None => {
-      warn!(
-        target: &s!("undefined:{:?}", ctr),
-        "Counter {} was not defined; assuming 0", ctr
-      );
+      warn!(target: &s!("undefined:{:?}", ctr), "Counter {} was not defined; assuming 0", ctr);
       Number!(0)
     },
     Some(value) => value,
@@ -999,23 +880,13 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
     scope => Some(Scope::Global));
 }
 
-pub fn step_counter(
-  ctr: &str,
-  noreset: bool,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<()>
-{
+pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
   let value = counter_value(ctr, state);
-  state.assign_value(
-    &s!("\\c@{}", ctr),
-    value.add(Number!(1)),
-    Some(Scope::Global),
-  );
+  state.assign_value(&s!("\\c@{}", ctr), value.add(Number!(1)), Some(Scope::Global));
   state.after_assignment();
   let token_value = Tokens::new(Explode!(counter_value(ctr, state).value_of()));
-  DefMacroI!(T_CS!(s!("\\@{}@ID",ctr)), None, 
+  DefMacroI!(T_CS!(s!("\\@{}@ID",ctr)), None,
               token_value.clone(), scope => Some(Scope::Global));
 
   // and reset any within counters!
@@ -1035,13 +906,7 @@ pub struct RefStepValue {
   pub tags: Option<Tokens>,
 }
 
-pub fn ref_step_counter(
-  ctype: &str,
-  noreset: bool,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<HashMap<String, Stored>>
-{
+pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(Stored::String(ctr)) => ctr.to_string(),
     _ => ctype.to_string(),
@@ -1076,12 +941,7 @@ pub fn ref_step_counter(
   let invocation;
   {
     let gullet = stomach.get_gullet_mut();
-    invocation = Invocation!(
-      T_CS!("\\lx@make@tags"),
-      vec![Tokens!(T_OTHER!(ctype))],
-      gullet,
-      state
-    )?;
+    invocation = Invocation!(T_CS!("\\lx@make@tags"), vec![Tokens!(T_OTHER!(ctype))], gullet, state)?;
   }
 
   let tags = stomach.digest(invocation, state)?;
@@ -1094,11 +954,7 @@ pub fn ref_step_counter(
   state.assign_value("current_counter", ctr.to_string(), Some(Scope::Local));
 
   let scope = s!("{}:{}", ctr, refnum.to_string());
-  state.assign_value(
-    &s!("scopes_for_counter:{}", ctr),
-    vec![scope.clone()],
-    Some(Scope::Local),
-  );
+  state.assign_value(&s!("scopes_for_counter:{}", ctr), vec![scope.clone()], Some(Scope::Local));
   state.activate_scope(&scope);
 
   Ok(map!(
@@ -1109,9 +965,7 @@ pub fn ref_step_counter(
 
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   //  print STDERR "Unusing scopes for $ctr\n";
-  let scopes = if let Some(Stored::VecString(stored_scopes)) =
-    state.lookup_value(&s!("scopes_for_counter:{}", ctr))
-  {
+  let scopes = if let Some(Stored::VecString(stored_scopes)) = state.lookup_value(&s!("scopes_for_counter:{}", ctr)) {
     stored_scopes.clone()
   } else {
     Vec::new()
@@ -1120,9 +974,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
     state.deactivate_scope(scope);
   }
 
-  let counters = if let Some(Stored::VecString(stored_counters)) =
-    state.lookup_value(&s!("nested_counters_{}", ctr))
-  {
+  let counters = if let Some(Stored::VecString(stored_counters)) = state.lookup_value(&s!("nested_counters_{}", ctr)) {
     stored_counters.clone()
   } else {
     Vec::new()
@@ -1135,12 +987,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 }
 
 // For UN-numbered units
-pub fn ref_step_id(
-  ctype: &str,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<HashMap<String, Stored>>
-{
+pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
   SetupBindingMacros!(state);
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(map) => map.to_string(),
@@ -1152,17 +999,13 @@ pub fn ref_step_id(
     Tokens!(T_OTHER!("x"), Explode!(state.lookup_number(&s!("\\c@{}", unctr)).unwrap().value_of())),
     scope => Some(Scope::Global));
   DefMacroI!(T_CS!("\\@currentID"), None, T_CS!(&s!("\\the{}@ID", ctr)));
-  Ok(
-    map!("id".to_string() => digest_literal(T_CS!(&s!("\\the{}@ID", ctr)), stomach, state)?.into()),
-  )
+  Ok(map!("id".to_string() => digest_literal(T_CS!(&s!("\\the{}@ID", ctr)), stomach, state)?.into()))
 }
 
 pub fn reset_counter(ctr: &str, state: &mut State) {
   state.assign_value(&s!("\\c@{}", ctr), Number!(0), Some(Scope::Global));
   // and reset any within counters!
-  let nested = state
-    .lookup_tokens(&s!("\\cl@{}", ctr))
-    .unwrap_or_else(|| Tokens!());
+  let nested = state.lookup_tokens(&s!("\\cl@{}", ctr)).unwrap_or_else(|| Tokens!());
 
   for c in &(nested.unlist()) {
     reset_counter(&c.to_string(), state);
@@ -1171,13 +1014,7 @@ pub fn reset_counter(ctr: &str, state: &mut State) {
   return;
 }
 
-pub fn build_invocation<T: Into<Token>>(
-  token: T,
-  args: Vec<Tokens>,
-  gullet: &mut Gullet,
-  state: &mut State,
-) -> Result<Tokens>
-{
+pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Tokens>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
   let token: Token = token.into();
   // Note: token may have been \let to another defn!
   if let Some(defn) = state.lookup_definition(&token) {
@@ -1211,26 +1048,19 @@ pub fn build_invocation<T: Into<Token>>(
   }
 }
 
-pub fn do_expand<T: Into<Tokens>>(
-  mut tokens: T,
-  outer_gullet: &mut Gullet,
-  outer_state: &mut State,
-) -> Result<Tokens>
-{
+pub fn do_expand<T: Into<Tokens>>(mut tokens: T, outer_gullet: &mut Gullet, outer_state: &mut State) -> Result<Tokens> {
   let mut tokens: Tokens = tokens.into();
   outer_gullet.reading_from_mouth(
     Mouth::default(),
     outer_state,
-    Box::new(
-      move |expand_gullet: &mut Gullet, expand_state: &mut State| -> Result<Tokens> {
-        expand_gullet.unread(&tokens);
-        let mut expanded = Vec::new();
-        while let Some(t) = expand_gullet.read_x_token(false, false, expand_state)? {
-          expanded.push(t);
-        }
-        Ok(Tokens::new(expanded))
-      },
-    ),
+    Box::new(move |expand_gullet: &mut Gullet, expand_state: &mut State| -> Result<Tokens> {
+      expand_gullet.unread(&tokens);
+      let mut expanded = Vec::new();
+      while let Some(t) = expand_gullet.read_x_token(false, false, expand_state)? {
+        expanded.push(t);
+      }
+      Ok(Tokens::new(expanded))
+    }),
   )
 }
 

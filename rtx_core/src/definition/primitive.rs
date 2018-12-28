@@ -77,13 +77,7 @@ impl Definition for Primitive {
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }
 
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
-  fn invoke_primitive(
-    &self,
-    stomach: &mut Stomach,
-    _caller: Rc<Definition>,
-    state: &mut State,
-  ) -> Result<Vec<Digested>>
-  {
+  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
     debug!(target:"primitive", "invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
@@ -105,18 +99,8 @@ impl Definition for Primitive {
     Ok(result)
   }
 
-  fn do_absorbtion(
-    &self,
-    _document: &mut Document,
-    _whatsit: &Whatsit,
-    _state: &mut State,
-  ) -> Result<()>
-  {
-    fatal!(
-      Definition,
-      Unexpected,
-      "do_absorbtion on Primitive should never be called!"
-    );
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
+    fatal!(Definition, Unexpected, "do_absorbtion on Primitive should never be called!");
   }
 
   fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }

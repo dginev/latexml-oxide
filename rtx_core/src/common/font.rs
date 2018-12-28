@@ -516,9 +516,7 @@ impl Font {
   }
 }
 
-fn is_diff(x: &Option<Cow<str>>, y: &Option<Cow<str>>) -> bool {
-  x.is_some() && (y.is_none() || (x != y))
-}
+fn is_diff(x: &Option<Cow<str>>, y: &Option<Cow<str>>) -> bool { x.is_some() && (y.is_none() || (x != y)) }
 
 /// Decode a codepoint using the fontmap for a given font and/or fontencoding.
 /// If `encoding` not provided, then lookup according to the current font's
@@ -531,13 +529,7 @@ fn is_diff(x: &Option<Cow<str>>, y: &Option<Cow<str>>) -> bool {
 /// so that if anything above 128 comes in, it must already be Unicode!.
 /// The lower half plane still needs to go through decoding, though, to deal
 /// with TeX's rearrangement of ASCII...
-pub fn decode(
-  code: u8,
-  encoding_opt: Option<String>,
-  implicit: bool,
-  state: &mut State,
-) -> Option<char>
-{
+pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, state: &mut State) -> Option<char> {
   let mut font = None;
   let encoding = match encoding_opt {
     None => {
@@ -589,13 +581,7 @@ pub fn decode(
   }
 }
 
-pub fn decode_string(
-  string: &str,
-  encoding_opt: Option<&str>,
-  implicit: bool,
-  state: &mut State,
-) -> String
-{
+pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, state: &mut State) -> String {
   if string.is_empty() {
     return String::new();
   }

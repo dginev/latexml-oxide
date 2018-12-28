@@ -4,13 +4,13 @@ pub mod dimension;
 pub mod font;
 pub mod glue;
 pub mod ligature;
+pub mod locator;
 pub mod model;
 pub mod number;
 pub mod object;
 pub mod relaxng;
 pub mod store;
 pub mod xml;
-pub mod locator;
 
 use crate::fmt;
 
@@ -60,7 +60,8 @@ impl DigestionMode {
     match *self {
       DigestionMode::TeX | DigestionMode::LaTeX | DigestionMode::AmSTeX => "tex",
       DigestionMode::BibTeX => "bib",
-    }.to_string()
+    }
+    .to_string()
   }
 }
 #[derive(Clone)]

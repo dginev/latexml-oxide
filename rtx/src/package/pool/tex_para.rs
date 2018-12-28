@@ -50,25 +50,18 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     properties => properties!(skippable_props),
     alias => Some(s!("\\par"))
   );
-  Let!("\\par","\\normal@par");
+  Let!("\\par", "\\normal@par");
 
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
   DefConstructor!("\\inner@par", sub[document, args, props, state] {
-      if document.maybe_close_element("ltx:p", state)?.is_some() {
-      } else if document.can_contain(document.get_node(), "ltx:break", state) {
-        document.insert_element("ltx:break", Vec::new(), None, state)?;
-      }
-    });
+    if document.maybe_close_element("ltx:p", state)?.is_some() {
+    } else if document.can_contain(document.get_node(), "ltx:break", state) {
+      document.insert_element("ltx:break", Vec::new(), None, state)?;
+    }
+  });
 
-  fn do_def(
-    globally: bool,
-    expanded: bool,
-    stomach: &mut Stomach,
-    args: Vec<Tokens>,
-    state: &mut State,
-  ) -> Result<Vec<Digested>>
-  {
+  fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State) -> Result<Vec<Digested>> {
     // params = parseDefParameters(cs, params);
     if expanded {
       state.noexpand_the = true;
@@ -83,11 +76,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
     let cs = match token_args.pop_front() {
       Some(cs) => cs,
-      None => fatal!(
-        Macro,
-        Expected,
-        "Bad definition macro - no arguments, when some were expected."
-      ),
+      None => fatal!(Macro, Expected, "Bad definition macro - no arguments, when some were expected."),
     };
     // is there a more idiomatic way to downgrade a VecDeque into a Vec?
     let def_body = token_args.into_iter().collect::<Vec<Token>>();

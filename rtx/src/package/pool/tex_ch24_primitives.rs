@@ -20,14 +20,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
     "{",
     primitivesub!(stomach, _args, state, {
       stomach.bgroup(state);
-      let open = Tbox::new(
-        String::new(),
-        None,
-        None,
-        Tokens!(T_BEGIN!()),
-        HashMap::new(),
-        state,
-      );
+      let open = Tbox::new(String::new(), None, None, Tokens!(T_BEGIN!()), HashMap::new(), state);
       let mode = if state.lookup_bool("IN_MATH") {
         Some(TexMode::Math)
       } else {
@@ -36,11 +29,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
       let body = stomach.digest_next_body(None, state)?;
       let mut boxes = vec![Digested::TBox(Rc::new(open))];
       boxes.extend(body);
-      let return_list = List {
-        boxes,
-        mode,
-        font: None,
-      };
+      let return_list = List { boxes, mode, font: None };
 
       Ok(vec![Digested::List(Box::new(return_list))])
     })
@@ -51,14 +40,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
     primitivesub!(stomach, _args, state, {
       let f = state.lookup_font();
       stomach.egroup(state)?;
-      let return_box = Tbox::new(
-        String::new(),
-        f,
-        None,
-        Tokens!(T_END!()),
-        HashMap::new(),
-        state,
-      );
+      let return_box = Tbox::new(String::new(), f, None, Tokens!(T_END!()), HashMap::new(), state);
       return_box.into()
     })
   );

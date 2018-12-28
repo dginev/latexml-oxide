@@ -174,20 +174,14 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   Let!("\\sp", T_SUPER!());
   Let!("\\sb", T_SUB!());
 
-  DefMacro!(
-    "\\,",
-    "\\ifmmode\\@math@thinmuskip\\else\\@text@thinmuskip\\fi"
-  );
+  DefMacro!("\\,", "\\ifmmode\\@math@thinmuskip\\else\\@text@thinmuskip\\fi");
   // DefConstructor!("\\@math@thinmuskip",
   //   "<ltx:XMHint name='thinspace' width='#width'/>",
   //   alias => '\,',
   //   properties => { isSpace => 1, width => sub { LookupValue('\thinmuskip'); } });
   // DefPrimitiveI('\@text@thinmuskip', undef, "\x{2009}", alias => '\,');
 
-  DefMacro!(
-    "\\!",
-    "\\ifmmode\\@math@negthinmuskip\\else\\@text@negthinmuskip\\fi"
-  );
+  DefMacro!("\\!", "\\ifmmode\\@math@negthinmuskip\\else\\@text@negthinmuskip\\fi");
   // DefConstructorI('\@math@negthinmuskip', undef,
   //   "<ltx:XMHint name='negthinspace' width='#width'/>",
   //   alias => '\!',
@@ -195,10 +189,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   //     width => sub { LookupValue('\thinmuskip')->negate; } });
   // DefPrimitiveI('\@text@negthinmuskip', undef, "", alias => '\!');
 
-  DefMacro!(
-    "\\>",
-    "\\ifmmode\\@math@medmuskip\\else\\@text@medmuskip\\fi"
-  );
+  DefMacro!("\\>", "\\ifmmode\\@math@medmuskip\\else\\@text@medmuskip\\fi");
   // DefConstructorI('\@math@medmuskip', undef,
   //   "<ltx:XMHint name='medspace' width='#width'/>",
   //   alias => '\>',
@@ -206,10 +197,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   //     width => sub { LookupValue('\medmuskip'); } });
   // DefPrimitiveI('\@text@medmuskip', undef, "", alias => '\>');
 
-  DefMacro!(
-    "\\;",
-    "\\ifmmode\\@math@thickmuskip\\else\\@text@thickmuskip\\fi"
-  );
+  DefMacro!("\\;", "\\ifmmode\\@math@thickmuskip\\else\\@text@thickmuskip\\fi");
   // DefConstructorI('\@math@thickmuskip', undef,
   //   "<ltx:XMHint name='thickspace' width='#width'/>",
   //   alias => '\;',
@@ -234,10 +222,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   //     width => sub { Dimension('1em'); } });
   // DefPrimitiveI('\@text@tab', undef, UTF(0xA0), alias => "\\\t");    # TAB!!! What else?
 
-  DefMacro!(
-    "\\/",
-    "\\ifmmode\\@math@italiccorr\\else\\@text@italiccorr\\fi"
-  );
+  DefMacro!("\\/", "\\ifmmode\\@math@italiccorr\\else\\@text@italiccorr\\fi");
   // DefConstructorI("\@math@italiccorr", undef,
   //   "<ltx:XMHint name='italiccorr'/>",
   //   alias => '\/',

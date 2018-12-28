@@ -1,5 +1,9 @@
 use crate::package::*;
 
+lazy_static! {
+  static ref END_VERBATIM_RE: Regex = Regex::new(r"^(.*?)\\end\{verbatim\}(.*?)$").unwrap();
+}
+
 //**********************************************************************
 // C.6.4 Verbatim
 //**********************************************************************
@@ -30,34 +34,54 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
       Ok(stuff)
     }),
     after_digest => afterproc!(stomach, whatsit, state, {
-    //       my $font   = $whatsit->getFont;
-    //       my $loc    = $whatsit->getLocator;
-    //       my $end    = "\\end{verbatim}";
-    //       my @lines  = ();
-    //       my $gullet = $stomach->getGullet;
-    //       while (defined(my $line = $gullet->readRawLine)) {
-    //         // The raw chars will still have to be decoded (but not space!!)
-    //         $line = join('', map { ($_ eq ' ' ? ' ' : FontDecodeString($_, 'OT1_typewriter')) }
-    //             split(//, $line));
-    //         if ($line =~ /^(.*?)\\end\{verbatim\}(.*?)$/) {
-    //           push(@lines, $1 . "\n"); $gullet->unread(Tokenize($2), T_CR);
-    //           last; }
-    //         push(@lines, $line . "\n"); }
-    //       pop(@lines) if $lines[-1] eq "\n";
-    //       // Note last line ends up as Whatsit's "trailer"
-    //       if (my $b = LookupValue('@environment@verbatim@atend')) {
-    //         push(@lines, ToString(Digest(@$b))); }
-    //       $stomach->egroup;
-    //       $whatsit->setBody(map { Box($_, $font, $loc, T_OTHER($_)) } @lines, $end);
-    //       return; }],
+      let font : Option<Rc<Font>> = match whatsit.get_font() {
+        None => None,
+        Some(ft) => Some(Rc::new((*ft).to_owned()))
+      };
+      let loc = whatsit.get_locator();
+      let mut lines : Vec<String> = Vec::new();
+      let gullet = stomach.get_gullet_mut();
+      while let Some(line) = gullet.read_raw_line() {
+        // The raw chars will still have to be decoded (but not space!!)
+        let decoded_line : String = line.chars()
+          .map(|c| if c == ' ' {" ".to_string() } else {
+             font::decode_string(&c.to_string(), Some("OT1_typewriter"), true, state) })
+          .collect::<Vec<String>>().join("");
+        if let Some(caps) = END_VERBATIM_RE.captures(&decoded_line) {
+          let pre = s!("{}\n", caps.get(1).map_or("", |m| m.as_str()));
+          let post = caps.get(2).map_or("", |m| m.as_str());
+          lines.push(pre);
+          let mut post_tokens = Tokenize!(post, state).unlist();
+          post_tokens.push(T_CR!());
+          gullet.unread(&Tokens::new(post_tokens));
+          break;
+        } else {
+          lines.push(s!("{}\n", line));
+        }
+      }
+      if let Some(last_line) = lines.last() {
+        if last_line == "\n" {
+          lines.pop();
+        }
+      }
+      // Note last line ends up as Whatsit's "trailer"
+      if let Some(b) = state.lookup_tokens("@environment@verbatim@atend") {
+        lines.push(stomach.digest(b, state)?.to_string());
+      }
+      stomach.egroup(state)?;
+      lines.push("\\end{verbatim}".to_string());
+      whatsit.set_body(lines.into_iter().map(|line|
+        Tbox::new(line.clone(), font.clone(), loc.clone(), T_OTHER!(line).into(), HashMap::new(), state).into()
+      ).collect());
     }),
     before_construct => construct!(document, whatsit, state, { document.maybe_close_element("ltx:p", state)?; })
   );
 
-  // DefPrimitiveI('\@vobeyspaces', undef, sub {
-  //     AssignCatcode(" " => 13);
-  //     Let(T_ACTIVE(" "), '\nobreakspace');
-  //     return });
+  DefPrimitiveI!("\\@vobeyspaces", |stomach, args, state| {
+    state.assign_catcode(' ', Catcode::ACTIVE, None);
+    LetI!(&T_ACTIVE!(" "), T_CS!("\\nobreakspace"), state);
+    Ok(vec![])
+  });
 
   // WARNING: Need to be careful about what catcodes are active here
   DefMacro!("\\verb", sub[gullet, args, state] {
@@ -82,10 +106,10 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   });
 
   DefConstructor!("\\@text@verb{}{}", "<ltx:verbatim font='#font'>#2</ltx:verbatim>",
-    before_digest => vec![beforeproc!(stomach, state, {
+    before_digest => beforeproc!(stomach, state, {
       stomach.bgroup(state);
       MergeFont!(family => "typewriter", state);
-    })],
+    }),
     after_digest => afterproc!(stomach,whatsit,state, { stomach.egroup(state)?; }),
     // Since ltx:verbatim is both inline & block, we have to fudge inline mode
     before_construct => construct!(document, args, state, {

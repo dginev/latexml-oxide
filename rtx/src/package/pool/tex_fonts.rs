@@ -7,16 +7,13 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DeclareFontMap!(
     "ASCII",
     mixvec![
-      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-      None, None, ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
-      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', '@', 'A',
-      'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
-      'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_', '`', 'a', 'b', 'c', 'd', 'e',
-      'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
-      'x', 'y', 'z', '{', '|', '}', '~', None
+      None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+      None, None, None, None, None, None, None, None, ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2',
+      '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+      'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',
+      'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', None
     ]
-  ); 
+  );
 
   // Note that several entries are used for accents, and in practice will actually
   // be used in something like an m:mover; thus they needn't (shouldn't?) be "small"
@@ -35,33 +32,26 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DeclareFontMap!(
     "OT1",
     mixvec![
-      '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
-      '\u{03A5}', '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{FB00}', '\u{FB01}', '\u{FB02}',
-      '\u{FB03}', '\u{FB04}', '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', '\u{02C7}',
-      '\u{02D8}', '\u{00AF}', '\u{02DA}', '\u{00B8}', '\u{00DF}', '\u{00E6}', '\u{0153}',
-      '\u{00F8}', '\u{00C6}', '\u{0152}', '\u{00D8}', '\u{0335}', '!', '\u{201D}', '#', '$', '%',
-      '&', '\u{2019}', '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6',
-      '7', '8', '9', ':', ';', '\u{00A1}', '=', '\u{00BF}', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F',
-      'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-      'Y', 'Z', '[', '\u{201C}', ']', '^', '\u{02D9}', '\u{2018}', 'a', 'b', 'c', 'd', 'e', 'f',
-      'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
-      'y', 'z', '\u{2013}', '\u{2014}', '\u{02DD}', '\u{007E}', '\u{00A8}'
+      '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}', '\u{03A5}', '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{FB00}',
+      '\u{FB01}', '\u{FB02}', '\u{FB03}', '\u{FB04}', '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', '\u{02C7}', '\u{02D8}', '\u{00AF}', '\u{02DA}',
+      '\u{00B8}', '\u{00DF}', '\u{00E6}', '\u{0153}', '\u{00F8}', '\u{00C6}', '\u{0152}', '\u{00D8}', '\u{0335}', '!', '\u{201D}', '#', '$', '%', '&',
+      '\u{2019}', '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '\u{00A1}', '=', '\u{00BF}',
+      '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[',
+      '\u{201C}', ']', '^', '\u{02D9}', '\u{2018}', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
+      't', 'u', 'v', 'w', 'x', 'y', 'z', '\u{2013}', '\u{2014}', '\u{02DD}', '\u{007E}', '\u{00A8}'
     ]
   ); // TODO: do we really need '\u{00A0}'\x{0335} as a single entry?
 
   DeclareFontMap!(
     "OT1",
     mixvec![
-      '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
-      '\u{03A5}', '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{2191}', '\u{2193}', '\'', '\u{00A1}',
-      '\u{00BF}', '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', '\u{02C7}', '\u{02D8}',
-      '\u{00AF}', '\u{02DA}', '\u{00B8}', '\u{00DF}', '\u{00E6}', '\u{0153}', '\u{00F8}',
-      '\u{00C6}', '\u{152}', '\u{00D8}', '\u{2423}', '!', '\'', '#', '$', '%', '&', '\u{2019}',
-      '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-      ':', ';', '<', '=', '>', '?', '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
-      'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']',
-      '^', '_', '\u{2018}', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
-      'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', '\u{00A8}'
+      '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}', '\u{03A5}', '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{2191}',
+      '\u{2193}', '\'', '\u{00A1}', '\u{00BF}', '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', '\u{02C7}', '\u{02D8}', '\u{00AF}', '\u{02DA}',
+      '\u{00B8}', '\u{00DF}', '\u{00E6}', '\u{0153}', '\u{00F8}', '\u{00C6}', '\u{152}', '\u{00D8}', '\u{2423}', '!', '\'', '#', '$', '%', '&',
+      '\u{2019}', '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', '@', 'A',
+      'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']',
+      '^', '_', '\u{2018}', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
+      'y', 'z', '{', '|', '}', '~', '\u{00A8}'
     ],
     "typewriter"
   );
@@ -70,43 +60,30 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "OML",
     mixvec![
       // \Gamma     \Delta      \Theta      \Lambda      \Xi         \Pi         \Sigma \Upsilon
-      '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
-      '\u{03A5}',
+      '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}', '\u{03A5}',
       // \Phi       \Psi        \Omega      alpha        beta gamma       delta       epsilon
       '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{03B1}', '\u{03B2}', '\u{03B3}', '\u{03B4}',
-      '\u{03F5}',
-      // zeta       eta         theta iota         kappa      lambda       mu nu
+      '\u{03F5}', // zeta       eta         theta iota         kappa      lambda       mu nu
       '\u{03B6}', '\u{03B7}', '\u{03B8}', '\u{03B9}', '\u{03BA}', '\u{03BB}', '\u{03BC}',
-      '\u{03BD}',
-      // xi         pi          rho         sigma       tau         upsilon     phi chi
-      '\u{03BE}', '\u{03C0}', '\u{03C1}', '\u{03C3}', '\u{03C4}', '\u{03C5}', '\u{03D5}',
-      '\u{03C7}',
+      '\u{03BD}', // xi         pi          rho         sigma       tau         upsilon     phi chi
+      '\u{03BE}', '\u{03C0}', '\u{03C1}', '\u{03C3}', '\u{03C4}', '\u{03C5}', '\u{03D5}', '\u{03C7}',
       // psi        omega       varepsilon  vartheta    varpi       varrho  varsigma    varphi
-      '\u{03C8}', '\u{03C9}', '\u{03B5}', '\u{03D1}', '\u{03D6}', '\u{03F1}', '\u{03C2}',
-      '\u{03C6}',
+      '\u{03C8}', '\u{03C9}', '\u{03B5}', '\u{03D1}', '\u{03D6}', '\u{03F1}', '\u{03C2}', '\u{03C6}',
       // l.harp.up  l.harp.dn   r.harp.up   r.harp.dnlhook       rhook       rt.tri     lf.tri
-      '\u{21BC}', '\u{21BD}', '\u{21C0}', '\u{21C1}', '\u{2E26}', '\u{2E27}', '\u{25B7}',
-      '\u{25C1}',
+      '\u{21BC}', '\u{21BD}', '\u{21C0}', '\u{21C1}', '\u{2E26}', '\u{2E27}', '\u{25B7}', '\u{25C1}',
       // old style numerals! (no separate codepoints ?)
       // 0          1           2           3             4           5          6           7
-      '0', '1', '2', '3', '4', '5', '6', '7',
-      // 8          9           .           ,             <           /          >           star
-      '8', '9', '.', ',', '\u{003C}', '\u{002F}', '\u{003E}', '\u{22C6}',
-      // partial    A           B           C             D           E          F           G
-      '\u{2202}', 'A', 'B', 'C', 'D', 'E', 'F', 'G',
-      // H          I           J           K             L           M          N           O
-      'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
-      // P          Q           R           S             T           U          V           W
-      'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',
-      // X          Y           Z           flat          natural     sharp      smile       frown
-      'X', 'Y', 'Z', '\u{266D}', '\u{266E}', '\u{266F}', '\u{2323}', '\u{2322}',
-      // ell        a           b           c             d           e          f           g
-      '\u{2113}', 'a', 'b', 'c', 'd', 'e', 'f', 'g',
-      // h          i           j           k             l           m          n           o
-      'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
-      // p          q           r           s             t           u          v           w
-      'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
-      // x          y           z           dotless i    dotless j    weier-p    arrow
+      '0', '1', '2', '3', '4', '5', '6', '7', // 8          9           .           ,             <           /          >           star
+      '8', '9', '.', ',', '\u{003C}', '\u{002F}', '\u{003E}',
+      '\u{22C6}', // partial    A           B           C             D           E          F           G
+      '\u{2202}', 'A', 'B', 'C', 'D', 'E', 'F', 'G', // H          I           J           K             L           M          N           O
+      'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', // P          Q           R           S             T           U          V           W
+      'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', // X          Y           Z           flat          natural     sharp      smile       frown
+      'X', 'Y', 'Z', '\u{266D}', '\u{266E}', '\u{266F}', '\u{2323}',
+      '\u{2322}', // ell        a           b           c             d           e          f           g
+      '\u{2113}', 'a', 'b', 'c', 'd', 'e', 'f', 'g', // h          i           j           k             l           m          n           o
+      'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', // p          q           r           s             t           u          v           w
+      'p', 'q', 'r', 's', 't', 'u', 'v', 'w', // x          y           z           dotless i    dotless j    weier-p    arrow
       // acc.inv.breve
       'x', 'y', 'z', '\u{0131}', 'j', '\u{2118}', '\u{2192}', '\u{0311}'
     ]
@@ -269,11 +246,10 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "OMX",
     mixvec![
       // (          )           [           ]             lfloor      rfloor      lceil rceil
-      '(', ')', '[', ']', '\u{230A}', '\u{230B}', '\u{2308}', '\u{2309}',
-      //lbrace      rbrace      langle      rangle        |           ||          /           \
-      '{', '}', '\u{27E8}', '\u{27E9}', '|', '\u{2225}', '/', '\u{005C}', '(', ')', '(', ')', '[',
-      ']', '\u{230A}', '\u{230B}', '\u{2308}', '\u{2309}', '{', '}', '\u{27E8}', '\u{27E9}', '/',
-      '\u{005C}', '(', ')', '[', ']', '\u{230A}', '\u{230B}', '\u{2308}', '\u{2309}', '{', '}',
+      '(', ')', '[', ']', '\u{230A}', '\u{230B}', '\u{2308}',
+      '\u{2309}', //lbrace      rbrace      langle      rangle        |           ||          /           \
+      '{', '}', '\u{27E8}', '\u{27E9}', '|', '\u{2225}', '/', '\u{005C}', '(', ')', '(', ')', '[', ']', '\u{230A}', '\u{230B}', '\u{2308}',
+      '\u{2309}', '{', '}', '\u{27E8}', '\u{27E9}', '/', '\u{005C}', '(', ')', '[', ']', '\u{230A}', '\u{230B}', '\u{2308}', '\u{2309}', '{', '}',
       '\u{27E8}', '\u{27E9}', '/', '\u{005C}', '/', '\u{005C}',
       // next two rows are just fragments
       // l.up.paren r.up.paren  l.up.brak   r.up.brak    l.bot.brak  r.bot.brak  l.brak.ext
@@ -283,16 +259,13 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
                    * brace.ext  v.arrow.ext */
       '\u{23A7}', '\u{23AB}', '\u{23A9}', '\u{23AD}', '\u{23A8}', '\u{23AC}', '\u{23AA}',
       '\u{23D0}', // l.bot.paren r.bot.paren l.paren.ext     r.paren.ext
-      '\u{239D}', '\u{23A0}', '\u{239C}', '\u{239F}', '\u{27E8}', '\u{27E9}', '\u{2294}',
-      '\u{2294}', '\u{222E}', '\u{222E}', '\u{2299}', '\u{2299}', '\u{2295}', '\u{2295}',
-      '\u{2297}', '\u{2297}', '\u{2211}', '\u{220F}', '\u{222B}', '\u{22C3}', '\u{22C2}',
-      '\u{228C}', '\u{2227}', '\u{2228}', '\u{2211}', '\u{220F}', '\u{222B}', '\u{22C3}',
-      '\u{22C2}', '\u{228C}', '\u{2227}', '\u{2228}', '\u{2210}', '\u{2210}', '\u{005E}',
-      '\u{005E}', '\u{005E}', '\u{007E}', '\u{007E}', '\u{007E}', '[', ']', '\u{230A}', '\u{230B}',
-      '\u{2308}', '\u{2309}', '{', '}',
+      '\u{239D}', '\u{23A0}', '\u{239C}', '\u{239F}', '\u{27E8}', '\u{27E9}', '\u{2294}', '\u{2294}', '\u{222E}', '\u{222E}', '\u{2299}', '\u{2299}',
+      '\u{2295}', '\u{2295}', '\u{2297}', '\u{2297}', '\u{2211}', '\u{220F}', '\u{222B}', '\u{22C3}', '\u{22C2}', '\u{228C}', '\u{2227}', '\u{2228}',
+      '\u{2211}', '\u{220F}', '\u{222B}', '\u{22C3}', '\u{22C2}', '\u{228C}', '\u{2227}', '\u{2228}', '\u{2210}', '\u{2210}', '\u{005E}', '\u{005E}',
+      '\u{005E}', '\u{007E}', '\u{007E}', '\u{007E}', '[', ']', '\u{230A}', '\u{230B}', '\u{2308}', '\u{2309}', '{', '}',
       // [missing rad frags]     double arrow ext.
-      '\u{23B7}', '\u{23B7}', '\u{23B7}', '\u{23B7}', '\u{23B7}', None, None, None,
-      //                        [missing tips for horizontal curly braces]
+      '\u{23B7}', '\u{23B7}', '\u{23B7}', '\u{23B7}', '\u{23B7}', None, None,
+      None, //                        [missing tips for horizontal curly braces]
       '\u{2191}', '\u{2193}', None, None, None, None, '\u{21D1}', '\u{21D3}'
     ]
   );
@@ -311,7 +284,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
      None,
      None,
      invoked,
-     HashMap::new(), 
+     HashMap::new(),
      p_state).into()
   });
 
@@ -328,51 +301,51 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         None => String::new(),
         Some(c) => c.to_string()
       };
-      Tbox::new(decoded, 
+      Tbox::new(decoded,
         None,
         None,
-        Invocation!(T_CS!("\\char"), vec![value.clone()], gullet, i_state)?, 
+        Invocation!(T_CS!("\\char"), vec![value.clone()], gullet, i_state)?,
         HashMap::new(),
         i_state).into()
-    }, p_state); 
+    }, p_state);
 
     p_state.install_definition(Register::new_chardef(newcs, Some(chardef_value.into()), Some(internalcs)), None);
     AfterAssignment!(p_state);
     Ok(vec![])
   });
 
+  // our @mathclassrole = (undef, 'BIGOP', 'BINOP', 'RELOP', 'OPEN', 'CLOSE', 'PUNCT', undef);
+  // Is this "fontinfo" stuff sufficient to maintain a math font "family" ??
+  // What we're really after is a connectio nto a font encoding mapping.
+  fn decode_math_char(n: u8) -> (Option<String>, Option<char>) {
+    // TODO
+    // my $class = int($n / (16 * 256)); $n = $n % (16 * 256);
+    // my $fam   = int($n / 256);        $n = $n % 256;
+    // my $font  = LookupValue('fontinfo_' . $fam . '_text')
+    //   || LookupValue('fontinfo_' . $fam . '_script')
+    //   || LookupValue('fontinfo_' . $fam . '_scriptscript');
+    // my $char = chr($n);
+    // // If no specific class, Lookup properties from a DefMath?
+    // my $charinfo = LookupValue('math_token_attributes_' . $char);
+    // my $fontinfo = LookupValue('fontinfo_' . ToString($font));
+    // my $role     = $mathclassrole[$class];
+    // $role = $$charinfo{role} if (!defined $role) && $charinfo;
+    // return ($role,
+    //   ($fontinfo && $$fontinfo{encoding} ? FontDecode($n, $$fontinfo{encoding}) : $char));
+    (None, None)
+  }
 
-// our @mathclassrole = (undef, 'BIGOP', 'BINOP', 'RELOP', 'OPEN', 'CLOSE', 'PUNCT', undef);
-// Is this "fontinfo" stuff sufficient to maintain a math font "family" ??
-// What we're really after is a connectio nto a font encoding mapping.
-fn decode_math_char(n: u8) -> (Option<String>, Option<char>) { // TODO
-  // my $class = int($n / (16 * 256)); $n = $n % (16 * 256);
-  // my $fam   = int($n / 256);        $n = $n % 256;
-  // my $font  = LookupValue('fontinfo_' . $fam . '_text')
-  //   || LookupValue('fontinfo_' . $fam . '_script')
-  //   || LookupValue('fontinfo_' . $fam . '_scriptscript');
-  // my $char = chr($n);
-  // // If no specific class, Lookup properties from a DefMath?
-  // my $charinfo = LookupValue('math_token_attributes_' . $char);
-  // my $fontinfo = LookupValue('fontinfo_' . ToString($font));
-  // my $role     = $mathclassrole[$class];
-  // $role = $$charinfo{role} if (!defined $role) && $charinfo;
-  // return ($role,
-  //   ($fontinfo && $$fontinfo{encoding} ? FontDecode($n, $$fontinfo{encoding}) : $char)); 
-  (None, None)
-}
-
-// DefConstructor('\mathchar Number',
-//   "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",
-//   sizer       => '#1',
-//   afterDigest => sub {
-//     my ($stomach, $whatsit) = @_;
-//     my $n = $whatsit->getArg(1)->valueOf;
-//     my ($role, $glyph) = decodeMathChar($n);
-//     $whatsit->setProperty(glyph => $glyph)                                  if $glyph;
-//     $whatsit->setProperty(role  => $role)                                   if defined $role;
-//     $whatsit->setProperty(font  => LookupValue('font')->specialize($glyph)) if $glyph;
-//     return; });
+  // DefConstructor('\mathchar Number',
+  //   "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",
+  //   sizer       => '#1',
+  //   afterDigest => sub {
+  //     my ($stomach, $whatsit) = @_;
+  //     my $n = $whatsit->getArg(1)->valueOf;
+  //     my ($role, $glyph) = decodeMathChar($n);
+  //     $whatsit->setProperty(glyph => $glyph)                                  if $glyph;
+  //     $whatsit->setProperty(role  => $role)                                   if defined $role;
+  //     $whatsit->setProperty(font  => LookupValue('font')->specialize($glyph)) if $glyph;
+  //     return; });
 
   // Almost like a register, but different...
   DefPrimitive!("\\mathchardef Token SkipMatch:= Number", sub[stomach, args, state] {
@@ -393,10 +366,10 @@ fn decode_math_char(n: u8) -> (Option<String>, Option<char>) { // TODO
       };
       glyph_props.insert(s!("glyph"), glyph_str.into());
       // TODO:
-      // glyph_props.insert(s!("font"), |state| state.lookup_font().unwrap().specialize(glyph)); 
+      // glyph_props.insert(s!("font"), |state| state.lookup_font().unwrap().specialize(glyph));
       DefConstructor!(&internalcs.get_cs_name(), "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>", state,
         // TODO
-        // sizer => "#1", 
+        // sizer => "#1",
         properties => properties!(glyph_props)
         // reversion => (ord($glyph) < 128 ? $glyph : '\mathchar' . $value.valueOf . '\relax'),
       );
@@ -408,4 +381,3 @@ fn decode_math_char(n: u8) -> (Option<String>, Option<char>) { // TODO
 
   Ok(())
 }
- 

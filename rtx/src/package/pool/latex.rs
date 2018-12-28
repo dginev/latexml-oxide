@@ -160,7 +160,7 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
       }
       Ok(())
     })),
-    before_digest => vec!(beforeproc!(_stomach, state, { state.assign_value("inPreamble", false, None); })),
+    before_digest => beforeproc!(_stomach, state, { state.assign_value("inPreamble", false, None); }),
     // after_digest_begin => vec![|stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
@@ -207,21 +207,10 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   DefMacro!("\\part", "\\@startsection{part}{-1}{}{}{}{}"); // not locked since sometimes redefined as partition?
   DefMacro!("\\section", "\\@startsection{section}{1}{}{}{}{}"); // TODO: locked => true);
   DefMacro!("\\subsection", "\\@startsection{subsection}{2}{}{}{}{}"); // TODO: locked => true);
-  DefMacro!(
-    "\\subsubsection",
-    "\\@startsection{subsubsection}{3}{}{}{}{}"
-  ); // TODO: locked => true);
+  DefMacro!("\\subsubsection", "\\@startsection{subsubsection}{3}{}{}{}{}"); // TODO: locked => true);
   DefMacro!("\\paragraph", "\\@startsection{paragraph}{4}{}{}{}{}"); // TODO: locked => true);
   DefMacro!("\\subparagraph", "\\@startsection{subparagraph}{5}{}{}{}{}"); // TODO: locked => true);
-  for tag in &[
-    "part",
-    "chapter",
-    "section",
-    "subsection",
-    "subsubsection",
-    "paragraph",
-    "subparagraph",
-  ] {
+  for tag in &["part", "chapter", "section", "subsection", "subsubsection", "paragraph", "subparagraph"] {
     Tag!(&s!("ltx:{}",tag), auto_close => true);
   }
 
@@ -463,16 +452,13 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   fn only_preamble(cs: &str, state: &mut State) {
     if !state.lookup_bool("inPreamble") {
       let category_object = s!("unexpected:{}", cs);
-      error!(
-        target: &category_object,
-        "The current command can only appear in the preamble"
-      );
+      error!(target: &category_object, "The current command can only appear in the preamble");
     }
   }
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
-      before_digest => vec!(beforeproc!(_stomach, state, { only_preamble("\\usepackage", state); })),
+      before_digest => beforeproc!(_stomach, state, { only_preamble("\\usepackage", state); }),
       after_digest => sub!(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Result<Vec<Digested>> {
         let options: Option<&Digested> = whatsit.get_arg(1);
         let packages: Option<&Digested> = whatsit.get_arg(2);
@@ -705,26 +691,11 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   DefMacro!("\\appendixname", "Appendix");
   // These aren"t defined in LaTeX,
   // these definitions will give us more meaningful typerefnum"s
-  DefMacro!(
-    "\\sectiontyperefname",
-    "\\lx@sectionsign\\lx@ignorehardspaces"
-  );
-  DefMacro!(
-    "\\subsectiontyperefname",
-    "\\lx@sectionsign\\lx@ignorehardspaces"
-  );
-  DefMacro!(
-    "\\subsubsectiontyperefname",
-    "\\lx@sectionsign\\lx@ignorehardspaces"
-  );
-  DefMacro!(
-    "\\paragraphtyperefname",
-    "\\lx@paragraphsign\\lx@ignorehardspaces"
-  );
-  DefMacro!(
-    "\\subparagraphtyperefname",
-    "\\lx@paragraphsign\\lx@ignorehardspaces"
-  );
+  DefMacro!("\\sectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
+  DefMacro!("\\subsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
+  DefMacro!("\\subsubsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
+  DefMacro!("\\paragraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
+  DefMacro!("\\subparagraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
 
   Ok(())
 }

@@ -49,17 +49,7 @@ pub enum TableName {
 impl TableName {
   pub fn variants() -> Vec<TableName> {
     use self::TableName::*;
-    vec![
-      Meaning,
-      Value,
-      Catcode,
-      Sfcode,
-      Lccode,
-      Uccode,
-      Delcode,
-      Stash,
-      StashActive,
-    ]
+    vec![Meaning, Value, Catcode, Sfcode, Lccode, Uccode, Delcode, Stash, StashActive]
   }
 }
 
@@ -361,9 +351,7 @@ impl State {
 
     let mut value_table = HashMap::new();
     let mut specials_vdq = VecDeque::new();
-    specials_vdq.push_front(Stored::VecChar(vec![
-      '^', '_', '@', '~', '&', '$', '#', '\'',
-    ]));
+    specials_vdq.push_front(Stored::VecChar(vec!['^', '_', '@', '~', '&', '$', '#', '\'']));
     value_table.insert(s!("SPECIALS"), specials_vdq);
 
     let mut catcodes_typed: Table = HashMap::new();
@@ -405,17 +393,11 @@ impl State {
     };
     let search_paths = match options.search_paths {
       None => VecDeque::new(),
-      Some(paths) => paths
-        .iter()
-        .map(|p| pathname::absolute(&pathname::canonical(p)))
-        .collect(),
+      Some(paths) => paths.iter().map(|p| pathname::absolute(&pathname::canonical(p))).collect(),
     };
     let graphics_paths = match options.graphics_paths {
       None => VecDeque::new(),
-      Some(paths) => paths
-        .iter()
-        .map(|p| pathname::absolute(&pathname::canonical(p)))
-        .collect(),
+      Some(paths) => paths.iter().map(|p| pathname::absolute(&pathname::canonical(p))).collect(),
     };
 
     State {
@@ -466,14 +448,7 @@ impl State {
     }
   }
 
-  pub fn assign_internal(
-    &mut self,
-    table_name: TableName,
-    key: &str,
-    value: Stored,
-    scope_opt: Option<Scope>,
-  )
-  {
+  pub fn assign_internal(&mut self, table_name: TableName, key: &str, value: Stored, scope_opt: Option<Scope>) {
     let scope = match scope_opt {
       Some(s) => s,
       None => {
@@ -516,9 +491,7 @@ impl State {
           }
         }
 
-        let table_entry = state_table
-          .entry(key.to_string())
-          .or_insert_with(VecDeque::new);
+        let table_entry = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
         table_entry.push_front(value);
       }
     } else if scope == Scope::Local {
@@ -543,9 +516,7 @@ impl State {
       {
         // 2. State table mutable logic
         let state_table = self.table_mut(table_name);
-        let defs = state_table
-          .entry(key.to_string())
-          .or_insert_with(VecDeque::new);
+        let defs = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
         if is_replace {
           // Replace the value
           defs.pop_front();
@@ -579,13 +550,7 @@ impl State {
     }
   }
 
-  pub fn assign_value<'av, T: Into<Stored>>(
-    &'av mut self,
-    key: &'av str,
-    value: T,
-    scope: Option<Scope>,
-  )
-  {
+  pub fn assign_value<'av, T: Into<Stored>>(&'av mut self, key: &'av str, value: T, scope: Option<Scope>) {
     let value = value.into();
     self.assign_internal(TableName::Value, key, value, scope);
   }
@@ -594,16 +559,9 @@ impl State {
   pub fn push_value<T: Into<Stored>>(&mut self, key: &str, value: T) {
     let value = value.into();
     if self.value.get(key).is_none() {
-      self.assign_internal(
-        TableName::Value,
-        key,
-        Stored::VecDequeStored(VecDeque::new()),
-        Some(Scope::Global),
-      );
+      self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
     }
-    if let Some(&mut Stored::VecDequeStored(ref mut front)) =
-      self.value.get_mut(key).unwrap().front_mut()
-    {
+    if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
       front.push_back(value);
     } else {
       error!(target: "state:Stored", "BUG: Tried to push_value into a non-vecdeque value key!");
@@ -612,16 +570,9 @@ impl State {
 
   pub fn pop_value(&mut self, key: &str) -> Option<Stored> {
     if self.value.get(key).is_none() {
-      self.assign_internal(
-        TableName::Value,
-        key,
-        Stored::VecDequeStored(VecDeque::new()),
-        Some(Scope::Global),
-      );
+      self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
     }
-    if let Some(&mut Stored::VecDequeStored(ref mut front)) =
-      self.value.get_mut(key).unwrap().front_mut()
-    {
+    if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
       front.pop_back()
     } else {
       error!(target: "state:Stored", "BUG: Tried to pop_value from a non-vecdeque value key!");
@@ -734,16 +685,9 @@ impl State {
   pub fn unshift_value<T: Into<Stored>>(&mut self, key: &str, values: Vec<T>) {
     let values: Vec<Stored> = values.into_iter().map(|v: T| v.into()).collect();
     if self.value.get(key).is_none() {
-      self.assign_internal(
-        TableName::Value,
-        key,
-        Stored::VecDequeStored(VecDeque::new()),
-        Some(Scope::Global),
-      )
+      self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global))
     }
-    if let Some(&mut Stored::VecDequeStored(ref mut front)) =
-      self.value.get_mut(key).unwrap().front_mut()
-    {
+    if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
       for value in values.into_iter().rev() {
         // preserving order unshift, as Perl's
         front.push_front(value)
@@ -753,16 +697,9 @@ impl State {
 
   pub fn shift_value(&mut self, key: &str) -> Option<Stored> {
     if self.value.get(key).is_none() {
-      self.assign_internal(
-        TableName::Value,
-        key,
-        Stored::VecDequeStored(VecDeque::new()),
-        Some(Scope::Global),
-      )
+      self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global))
     }
-    if let Some(&mut Stored::VecDequeStored(ref mut front)) =
-      self.value.get_mut(key).unwrap().front_mut()
-    {
+    if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
       front.pop_front()
     } else {
       error!(target: "state:Stored", "BUG: Tried to shift_value from a non-vecdeque value key!");
@@ -783,12 +720,7 @@ impl State {
 
   pub fn assign_mapping<T: Into<Stored>>(&mut self, map: &str, key: &str, value: Option<T>) {
     if self.value.get(map).is_none() || self.value[map].is_empty() {
-      self.assign_internal(
-        TableName::Value,
-        map,
-        Stored::HashStored(HashMap::new()),
-        Some(Scope::Global),
-      );
+      self.assign_internal(TableName::Value, map, Stored::HashStored(HashMap::new()), Some(Scope::Global));
     }
     let map_store = self.value.get_mut(map).unwrap();
     let mut stub_hash = HashMap::new(); // TODO: What is the right abstraction here? this is hacky
@@ -819,20 +751,8 @@ impl State {
   /// that frame (0 is the topmost).
   pub fn is_value_bound(&self, key: &str, frame_opt: Option<usize>) -> bool {
     match frame_opt {
-      Some(frame) => self
-        .undo
-        .get(frame)
-        .as_ref()
-        .unwrap()
-        .table(TableName::Value)
-        .get(key)
-        .is_some(),
-      None => self
-        .value
-        .get(key)
-        .unwrap_or(&VecDeque::new())
-        .front()
-        .is_some(),
+      Some(frame) => self.undo.get(frame).as_ref().unwrap().table(TableName::Value).get(key).is_some(),
+      None => self.value.get(key).unwrap_or(&VecDeque::new()).front().is_some(),
     }
   }
 
@@ -843,13 +763,7 @@ impl State {
     };
     let mut p = 0;
     for f in 0..=frame {
-      let val_opt = self
-        .undo
-        .get(f)
-        .as_ref()
-        .unwrap()
-        .table(TableName::Value)
-        .get(key);
+      let val_opt = self.undo.get(f).as_ref().unwrap().table(TableName::Value).get(key);
       let value = match val_opt {
         Some(v) => *v,
         _ => 0,
@@ -872,12 +786,7 @@ impl State {
   }
 
   pub fn assign_catcode(&mut self, key: char, value: Catcode, scope: Option<Scope>) {
-    self.assign_internal(
-      TableName::Catcode,
-      &key.to_string(),
-      Stored::Catcode(value),
-      scope,
-    );
+    self.assign_internal(TableName::Catcode, &key.to_string(), Stored::Catcode(value), scope);
   }
 
   pub fn lookup_mathcode(&self, key: &str) -> Option<usize> {
@@ -891,12 +800,7 @@ impl State {
   }
 
   pub fn assign_mathcode(&mut self, key: char, value: usize, scope: Option<Scope>) {
-    self.assign_internal(
-      TableName::Mathcode,
-      &key.to_string(),
-      Stored::Mathcode(value),
-      scope,
-    );
+    self.assign_internal(TableName::Mathcode, &key.to_string(), Stored::Mathcode(value), scope);
   }
 
   /// Get the `Meaning' of a token.  For active control sequence's
@@ -918,22 +822,12 @@ impl State {
 
   /// $meaning should be a definition (for defining active control sequences)
   /// or another token, for \let
-  pub fn assign_meaning<T: Into<Stored>>(
-    &mut self,
-    token: &Token,
-    meaning: T,
-    scope: Option<Scope>,
-  )
-  {
+  pub fn assign_meaning<T: Into<Stored>>(&mut self, token: &Token, meaning: T, scope: Option<Scope>) {
     let meaning = meaning.into();
     self.assign_internal(TableName::Meaning, &token.get_cs_name(), meaning, scope);
   }
 
-  pub fn lookup_definition_internal<'def>(
-    &'def self,
-    key: &'def Token,
-  ) -> Option<&VecDeque<Stored>>
-  {
+  pub fn lookup_definition_internal<'def>(&'def self, key: &'def Token) -> Option<&VecDeque<Stored>> {
     let cc = &key.code;
     let name = &key.text;
     let lookupname: &str = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) {
@@ -970,11 +864,7 @@ impl State {
 
   /// A specialized version of `lookup_definition` for registers, since we can't adequately perform
   /// multi-dispatch when we have a "Self: Sized" for the Definition trait object.
-  pub fn lookup_register_definition<'def>(
-    &self,
-    key: &'def Token,
-  ) -> Option<Rc<RefCell<Register>>>
-  {
+  pub fn lookup_register_definition<'def>(&self, key: &'def Token) -> Option<Rc<RefCell<Register>>> {
     match self.lookup_definition_internal(key) {
       Some(defs) => match defs.front() {
         Some(Stored::Register(entry)) => Some(entry.clone()),
@@ -989,10 +879,7 @@ impl State {
     let name = token.get_string();
     let lookupname = if (cc == Catcode::ACTIVE)
       || (cc == Catcode::CS)
-      || ((cc == Catcode::LETTER)
-        || (cc == Catcode::OTHER)
-          && self.lookup_bool("IN_MATH")
-          && ((self.lookup_mathcode(name).unwrap_or(0)) == 0x8000))
+      || ((cc == Catcode::LETTER) || (cc == Catcode::OTHER) && self.lookup_bool("IN_MATH") && ((self.lookup_mathcode(name).unwrap_or(0)) == 0x8000))
     {
       name
     } else {
@@ -1022,14 +909,7 @@ impl State {
     }
   }
 
-  pub fn assign_definition<'def, T: Definition + Hash>(
-    &'def mut self,
-    _key: &'def Token,
-    _definition: T,
-  )
-  {
-    unimplemented!()
-  }
+  pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, _key: &'def Token, _definition: T) { unimplemented!() }
 
   /// And a shorthand for installing definitions
   pub fn install_definition<T: Into<Stored>>(&mut self, definition: T, scope: Option<Scope>) {
@@ -1059,9 +939,7 @@ impl State {
     if is_cs_locked && !is_state_unlocked {
       if let Some(&Stored::String(ref s)) = self.lookup_value("SOURCEFILE") {
         // report if the redefinition seems to come from document source
-        if ((s == "Anonymous String") || TEX_OR_BIB_EXT_RE.is_match(s))
-          && (!s.ends_with(CODE_TEX_EXT))
-        {
+        if ((s == "Anonymous String") || TEX_OR_BIB_EXT_RE.is_match(s)) && (!s.ends_with(CODE_TEX_EXT)) {
           //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
         }
         return;
@@ -1135,11 +1013,7 @@ impl State {
       None
     };
     if let Some(local_font) = new_font {
-      self.assign_value(
-        "font",
-        Stored::Font(Rc::new(local_font)),
-        Some(Scope::Local),
-      );
+      self.assign_value("font", Stored::Font(Rc::new(local_font)), Some(Scope::Local));
     }
   }
 
@@ -1422,36 +1296,19 @@ impl State {
     // A bit tricky here, we need to release the state.model borrow immediately, which is why we
     // move ownership of the tag strings into the tag_contents vector.
     // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-    let tag_contents: Vec<String> = self
-      .model
-      .get_tag_contents(tag)
-      .iter()
-      .map(|t| t.to_string())
-      .collect();
+    let tag_contents: Vec<String> = self.model.get_tag_contents(tag).iter().map(|t| t.to_string()).collect();
 
     for kid in tag_contents {
-      if desc
-        .entry(kid.clone())
-        .or_insert_with(HashMap::new)
-        .get(&start)
-        .is_some()
-      {
+      if desc.entry(kid.clone()).or_insert_with(HashMap::new).get(&start).is_some() {
         continue;
       } // Already solved
 
       if !start.is_empty() {
-        desc
-          .entry(kid.clone())
-          .or_insert_with(HashMap::new)
-          .insert(start.clone(), desirability);
+        desc.entry(kid.clone()).or_insert_with(HashMap::new).insert(start.clone(), desirability);
       }
 
       if kid != "#PCDATA" && openable.contains(&kid) {
-        let inner = if !start.is_empty() {
-          start.clone()
-        } else {
-          kid.to_string()
-        };
+        let inner = if !start.is_empty() { start.clone() } else { kid.to_string() };
 
         self.compute_indirect_model_aux(&kid, Some(inner), desirability, openable, desc);
       }
@@ -1463,32 +1320,12 @@ impl State {
     self.assign_value("MODE", Stored::String(s!("text")), Some(Scope::Global));
     self.assign_value("IN_MATH", Stored::Bool(false), Some(Scope::Global));
     self.assign_value("PRESERVE_NEWLINES", Stored::Bool(true), Some(Scope::Global));
-    self.assign_value(
-      "afterGroup",
-      Stored::VecDigested(Vec::new()),
-      Some(Scope::Global),
-    );
-    self.assign_value(
-      "afterAssignment",
-      Stored::VecDigested(Vec::new()),
-      Some(Scope::Global),
-    ); // undef ???
-    self.assign_value(
-      "groupInitiator",
-      Stored::String(s!("Initialization")),
-      Some(Scope::Global),
-    );
+    self.assign_value("afterGroup", Stored::VecDigested(Vec::new()), Some(Scope::Global));
+    self.assign_value("afterAssignment", Stored::VecDigested(Vec::new()), Some(Scope::Global)); // undef ???
+    self.assign_value("groupInitiator", Stored::String(s!("Initialization")), Some(Scope::Global));
     // Setup default fonts.
-    self.assign_value(
-      "font",
-      Stored::Font(Rc::new(Font::text_default())),
-      Some(Scope::Global),
-    );
-    self.assign_value(
-      "mathfont",
-      Stored::Font(Rc::new(Font::math_default())),
-      Some(Scope::Global),
-    );
+    self.assign_value("font", Stored::Font(Rc::new(Font::text_default())), Some(Scope::Global));
+    self.assign_value("mathfont", Stored::Font(Rc::new(Font::math_default())), Some(Scope::Global));
   }
 
   // Package helpers used in core need to be localized here -- as State methods

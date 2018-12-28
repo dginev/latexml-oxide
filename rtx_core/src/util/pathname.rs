@@ -114,11 +114,7 @@ pub fn concat(dir: &str, file: &str) -> String {
 /// and this simplifies overall.
 pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> {
   let mut dirs: Vec<String> = Vec::new();
-  let canonical_pathname = if pathname != "*" {
-    canonical(pathname)
-  } else {
-    pathname.to_owned()
-  };
+  let canonical_pathname = if pathname != "*" { canonical(pathname) } else { pathname.to_owned() };
   let canonical_path = Path::new(&canonical_pathname);
   let pathdir = match canonical_path.parent() {
     Some(dir) => dir.to_string_lossy().to_string(),
@@ -131,7 +127,8 @@ pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> 
   let pathname_ext = match canonical_path.extension() {
     Some(e) => e.to_string_lossy().to_string(),
     None => String::new(),
-  }.to_lowercase();
+  }
+  .to_lowercase();
 
   let cwd = env::current_dir().unwrap().to_string_lossy().to_string();
 
@@ -141,11 +138,7 @@ pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> 
   } else if let Some(paths) = options.paths {
     for p in paths {
       // Complete the search paths by prepending current dir to relative paths,
-      let pp_base = if is_absolute(&p) {
-        canonical(&p)
-      } else {
-        concat(&cwd, &p)
-      };
+      let pp_base = if is_absolute(&p) { canonical(&p) } else { concat(&cwd, &p) };
       let pp = concat(&pp_base, &pathdir);
       // but only include each dir ONCE
       if !dirs.contains(&pp) {
@@ -240,7 +233,8 @@ pub fn file_name(pathname: &str) -> String {
   match canonical_path.file_name() {
     Some(e) => e.to_string_lossy().to_string(),
     None => String::new(),
-  }.to_lowercase()
+  }
+  .to_lowercase()
 }
 
 pub fn file_stem(pathname: &str) -> String {
@@ -249,7 +243,8 @@ pub fn file_stem(pathname: &str) -> String {
   match canonical_path.file_stem() {
     Some(e) => e.to_string_lossy().to_string(),
     None => String::new(),
-  }.to_lowercase()
+  }
+  .to_lowercase()
 }
 
 pub fn directory(pathname: &str) -> String {
@@ -258,7 +253,8 @@ pub fn directory(pathname: &str) -> String {
   match canonical_path.parent() {
     Some(e) => e.to_string_lossy().to_string(),
     None => String::new(),
-  }.to_lowercase()
+  }
+  .to_lowercase()
 }
 
 pub fn extension(pathname: &str) -> String {
@@ -267,5 +263,6 @@ pub fn extension(pathname: &str) -> String {
   match canonical_path.extension() {
     Some(e) => e.to_string_lossy().to_string(),
     None => String::new(),
-  }.to_lowercase()
+  }
+  .to_lowercase()
 }

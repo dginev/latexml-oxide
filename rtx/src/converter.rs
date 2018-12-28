@@ -154,13 +154,9 @@ impl Converter {
     // "Conversion timed out after " . $$opts{timeout} . " seconds!\n"); };
     // alarm($$opts{timeout});
     // my $mode = ($$opts{type} eq 'auto') ? 'TeX' : $$opts{type};
-    let digest_result = self.core.digest(
-      source,
-      current_preamble,
-      current_postamble,
-      self.opts.mode.clone(),
-      true,
-    );
+    let digest_result = self
+      .core
+      .digest(source, current_preamble, current_postamble, self.opts.mode.clone(), true);
     let digested = match digest_result {
       Err(e) => {
         // TODO digestion failed, report
@@ -306,11 +302,7 @@ impl Converter {
     }
   }
 
-  pub fn prepare_session<'preplifetime>(
-    &'preplifetime mut self,
-    _opts: &'preplifetime Config,
-  ) -> Result<()>
-  {
+  pub fn prepare_session<'preplifetime>(&'preplifetime mut self, _opts: &'preplifetime Config) -> Result<()> {
     if !self.ready {
       self.initialize_session()?
     }

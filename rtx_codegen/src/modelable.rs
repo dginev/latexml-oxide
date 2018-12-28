@@ -40,10 +40,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
 
   let path = match pathname_opt {
     Some(n) => n,
-    None => panic!(
-      "Model {:?} not found, required to load a compiled model!",
-      name
-    ),
+    None => panic!("Model {:?} not found, required to load a compiled model!", name),
   };
 
   let mut operations = Vec::new();
@@ -74,10 +71,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
       } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
         let classname = caps.get(1).map_or("", |m| m.as_str()).to_string();
         let elements = caps.get(2).map_or("", |m| m.as_str()).to_string();
-        let elements_vec = elements
-          .split(',')
-          .map(|t| t.to_string())
-          .collect::<Vec<String>>();
+        let elements_vec = elements.split(',').map(|t| t.to_string()).collect::<Vec<String>>();
 
         operations.push(quote!(
           model.set_schema_class(#classname,
@@ -90,11 +84,7 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
           model.register_document_namespace(#prefix, Some(#namespace.to_owned()));
         ));
       } else {
-        fatal!(
-          Codegen,
-          Malformed,
-          s!(" Loaded model '{}' is malformatted at \"{}\"", path, line)
-        );
+        fatal!(Codegen, Malformed, s!(" Loaded model '{}' is malformatted at \"{}\"", path, line));
       }
     }
   }
@@ -136,9 +126,7 @@ pub fn load_indirect_model(input: syn::MacroInput) -> quote::Tokens {
   operations.push(quote!(let mut im : IndirectModel = HashMap::new();));
   for (key, sub_model) in indirect_model {
     for (sub_key, value) in sub_model {
-      operations.push(
-        quote!(im.entry(#key).or_insert_with(HashMap::new).entry(#sub_key).or_insert(#value)),
-      );
+      operations.push(quote!(im.entry(#key).or_insert_with(HashMap::new).entry(#sub_key).or_insert(#value)));
     }
   }
   operations.push(quote!(return im));

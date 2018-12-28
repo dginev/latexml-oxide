@@ -24,5 +24,6 @@ pub fn resource_type(abbrev: &str) -> String {
     "css" => "text/css",
     "js" => "text/javascript",
     _ => "",
-  }.to_string()
+  }
+  .to_string()
 }

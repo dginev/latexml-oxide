@@ -182,7 +182,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Read a matching keyword, eg. Match:=
   DefParameterType!("Match",
     reader => reader!(gullet, _inner, extra, state, {
-      let extra_tokens : Vec<Token> = extra.into_iter().filter(|e| 
+      let extra_tokens : Vec<Token> = extra.into_iter().filter(|e|
       if let ParameterExtra::Token(t) = e {
           true
         } else {
@@ -190,10 +190,10 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         }
       ).map(|x| x.into()).collect();
       match gullet.read_match(&extra_tokens, state)? {
-        Some(t) => Ok(Tokens!(t)), 
+        Some(t) => Ok(Tokens!(t)),
         None => Ok(Tokens!())
       }
-    }) 
+    })
   );
 
   // Read a keyword; eg. Keyword:to
@@ -226,7 +226,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
           };
           read_tokens.append(&mut reverted_inner);
         }
-        
       } else {
         let mut reverted_arg = arg.iter().map(|t| t.revert()).collect();
         read_tokens.append(&mut reverted_arg);
@@ -244,7 +243,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     reversion => reversion!(gullet, arg, inner, state, {
      if !arg.is_empty() {
        let mut read_tokens = vec![T_OTHER!(s!("["))];
-       let mut reverted_arg = arg.iter().map(|a| a.revert()).collect();   
+       let mut reverted_arg = arg.iter().map(|a| a.revert()).collect();
        read_tokens.append(&mut reverted_arg);
        read_tokens.push(T_OTHER!(s!("]")));
        Ok(Tokens::new(read_tokens))
@@ -258,7 +257,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefParameterType!("Undigested",
   reader => reader!(gullet, inner, _extra, state, { gullet.read_arg(state)}),
   reader_predigest => undigested!(),
-  reversion => reversion!(gullet, arg, inner, state, {  
+  reversion => reversion!(gullet, arg, inner, state, {
     let mut read_tokens = vec!(T_BEGIN!());
     let mut reverted_arg = arg.iter().map(|a| a.revert()).collect();
     read_tokens.append(&mut reverted_arg);
@@ -267,7 +266,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   }));
 
   // Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
-  DefParameterType!("OptionalUndigested", 
+  DefParameterType!("OptionalUndigested",
   reader => reader!(gullet, inner, _extra, state, { gullet.read_optional(state) }),
   reader_predigest => undigested!(),
   optional => true,
@@ -312,7 +311,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       // my ($var) = @_;
       // my ($defn, @args) = @$var;
       // my $params = $defn->getParameters;
-      // return Tokens($defn->getCS, ($params ? $params->revertArguments(@args) : ())); 
+      // return Tokens($defn->getCS, ($params ? $params->revertArguments(@args) : ()));
       Ok(Tokens!())
     })
   );
@@ -388,30 +387,28 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     })
   );
 
+  //**********************************************************************
+  // LaTeX has a very particular notion of "Undefined",
+  // so let's get that squared away at the outset; it's useful for TeX, too!
+  // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as \relax
+  DefMacro!("\\@ifundefined{}{}{}", sub[gullet, args, inner_state] {
+    unpack!(args=>name, if_token, else_token);
+    let cs = T_CS!(&s!("\\{}", Expand!(name,gullet,inner_state).to_string()));
+    if IsDefined!(&cs, inner_state) {
+      Ok(else_token)
+    } else {
+      Let!(cs, "\\relax", inner_state); // Yuck, but traditional!
+      Ok(if_token)
+    }
+  });
 
-//**********************************************************************
-// LaTeX has a very particular notion of "Undefined",
-// so let's get that squared away at the outset; it's useful for TeX, too!
-// Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as \relax
-DefMacro!("\\@ifundefined{}{}{}", sub[gullet, args, inner_state] {
-  unpack!(args=>name, if_token, else_token);
-  let cs = T_CS!(&s!("\\{}", Expand!(name,gullet,inner_state).to_string()));
-  if IsDefined!(&cs, inner_state) {
-    Ok(else_token)
-  } else {
-    Let!(cs, "\\relax", inner_state); // Yuck, but traditional!
-    Ok(if_token)
-  }
-});
-
-// sub isDefinable {
-//   my ($token) = @_;
-//   return unless $token;
-//   my $meaning = LookupMeaning($token);
-//   my $name = $token->getString; $name =~ s/^\\//;
-//   return (((!defined $meaning) || ($meaning eq LookupMeaning(T_CS('\relax'))))
-//       && (($name ne 'relax') && ($name !~ /^end/))); }
-
+  // sub isDefinable {
+  //   my ($token) = @_;
+  //   return unless $token;
+  //   my $meaning = LookupMeaning($token);
+  //   my $name = $token->getString; $name =~ s/^\\//;
+  //   return (((!defined $meaning) || ($meaning eq LookupMeaning(T_CS('\relax'))))
+  //       && (($name ne 'relax') && ($name !~ /^end/))); }
 
   Ok(())
 }

@@ -76,7 +76,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     ("showboxdepth", 3),
     ("errorcontextlines", 5),
   ]
-    .iter()
+  .iter()
   {
     DefRegister!(&s!("\\{}", key), Number::new(*val));
   }
