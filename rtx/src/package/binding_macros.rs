@@ -210,6 +210,15 @@ macro_rules! reader {
 }
 
 #[macro_export]
+macro_rules! reader_predigest {
+  ($stomach:ident, $arg:ident, $state:ident, $body:block) => {
+    Some(Rc::new(
+      |$stomach: &mut Stomach, $arg: Tokens, $state: &mut State| -> Result<Digested> { $body },
+    ))
+  };
+}
+
+#[macro_export]
 macro_rules! reversion {
   ($gullet:ident, $arg:ident, $inner:ident, $state:ident, $body:block) => {
     Some(Rc::new(

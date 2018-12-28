@@ -81,10 +81,15 @@ impl<'t> Stomach {
 
     if let Some(ref terminal) = terminal_opt {
       if !found_terminal {
-        warn!(target: &s!("expected:{}", terminal), "body should have ended with {:?}. current body started at {:?}", terminal, start_location);
+        warn!(
+          target: &s!("expected:{}", terminal),
+          "body should have ended with {:?}. current body started at {:?}",
+          terminal,
+          start_location
+        );
       }
     }
-  
+
     Ok(box_list)
   }
 
