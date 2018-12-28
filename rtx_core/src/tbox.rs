@@ -68,13 +68,9 @@ impl Tbox {
     if state.lookup_bool("IN_MATH") {
       properties.insert(s!("mode"), String::from("math").into());
       if !text.is_empty() {
-        if let Some(&Stored::HashStr(ref attr)) =
-          state.lookup_value(&s!("math_token_attributes_{}", text))
-        {
+        if let Some(&Stored::HashStr(ref attr)) = state.lookup_value(&s!("math_token_attributes_{}", text)) {
           for (key, value) in attr.iter() {
-            properties
-              .entry(key.to_string())
-              .or_insert_with(|| Stored::String(value.to_owned()));
+            properties.entry(key.to_string()).or_insert_with(|| Stored::String(value.to_owned()));
           }
         }
       }
@@ -112,12 +108,7 @@ impl BoxOps for Tbox {
 
     if !text.is_empty() {
       if mode == "math" {
-        document.insert_math_token(
-          text,
-          Stored::cast_to_string_hash(&self.properties),
-          Some(&self.font),
-          state,
-        )?;
+        document.insert_math_token(text, Stored::cast_to_string_hash(&self.properties), Some(&self.font), state)?;
       } else {
         document.open_text(text, font, state)?;
       }
@@ -161,7 +152,5 @@ impl From<Tbox> for Option<Digested> {
   fn from(tbox: Tbox) -> Option<Digested> { Some(Digested::TBox(Rc::new(tbox))) }
 }
 impl From<Tbox> for Option<Rc<RefCell<Digested>>> {
-  fn from(tbox: Tbox) -> Option<Rc<RefCell<Digested>>> {
-    Some(Rc::new(RefCell::new(Digested::TBox(Rc::new(tbox)))))
-  }
+  fn from(tbox: Tbox) -> Option<Rc<RefCell<Digested>>> { Some(Rc::new(RefCell::new(Digested::TBox(Rc::new(tbox))))) }
 }

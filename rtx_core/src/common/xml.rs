@@ -19,9 +19,7 @@ impl XPath {
   pub fn register_namespace(&mut self, codeprefix: &str, namespace: &str) {
     match self.context.register_namespace(codeprefix, namespace) {
       Ok(()) => {},
-      Err(_) => {
-        error!(target: "expected:XPath", "Failed to register an XPath namespace: prefix {:?} and href {:?}", codeprefix, namespace)
-      },
+      Err(_) => error!(target: "expected:XPath", "Failed to register an XPath namespace: prefix {:?} and href {:?}", codeprefix, namespace),
     };
   }
 

@@ -16,13 +16,11 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-pub type ReaderFn =
-  Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>;
+pub type ReaderFn = Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>;
 pub type ReaderPredigestFn = Fn(&mut Stomach, Tokens, &mut State) -> Result<Digested>;
 pub type ReaderPredigestClosure = Rc<ReaderPredigestFn>;
 pub type ReaderClosure = Rc<ReaderFn>;
-pub type ReversionClosure =
-  Rc<Fn(&mut Gullet, Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
+pub type ReversionClosure = Rc<Fn(&mut Gullet, Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
 
 #[derive(Clone, Debug)]
 pub enum ParameterExtra {
@@ -90,16 +88,21 @@ impl Default for Parameter {
 }
 impl fmt::Debug for Parameter {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "Parameter(\n\t name: {:?}, novalue:{:?}, semiverbatim:{:?},\n\t optional:{:?}, spec:{:?}\n\t extra: {:?}\n\t reversion: {:?}, before_digest: {:?}, after_digest: {:?} )", 
-    self.name,
-    self.novalue,
-    self.semiverbatim,
-    self.optional,
-    self.spec,
-    self.extra,
-    self.reversion.is_some(),
-    self.before_digest.is_some(),
-    self.after_digest.is_some())
+    writeln!(
+      f,
+      "Parameter(\n\t name:{:?}, novalue:{:?}, semiverbatim:{:?},",
+      self.name, self.novalue, self.semiverbatim,
+    )?;
+    writeln!(
+      f,
+      "\t optional:{:?}, spec:{:?}\n\t extra: {:?}\n\t reversion: {:?}, before_digest: {:?}, after_digest: {:?} )",
+      self.optional,
+      self.spec,
+      self.extra,
+      self.reversion.is_some(),
+      self.before_digest.is_some(),
+      self.after_digest.is_some()
+    )
   }
 }
 impl PartialEq for Parameter {
@@ -138,11 +141,7 @@ impl Parameter {
               novalue: true,
               ..Parameter::default()
             }),
-            None => fatal!(
-              Parameter,
-              Init,
-              s!("Can't initialize parameter {:?}, unknown?", self.name)
-            ),
+            None => fatal!(Parameter, Init, s!("Can't initialize parameter {:?}, unknown?", self.name)),
           },
         },
       };
@@ -213,13 +212,7 @@ impl Parameter {
     None
   }
 
-  pub fn read(
-    &self,
-    gullet: &mut Gullet,
-    fordefn: &Definition,
-    state: &mut State,
-  ) -> Result<Tokens>
-  {
+  pub fn read(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Result<Tokens> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
@@ -244,10 +237,7 @@ impl Parameter {
     }
 
     if !self.optional && !self.novalue && (value.is_empty() && self.reader_predigest.is_none()) {
-      error!(
-        target: &s!("expected:{:?}", self),
-        "Missing argument for TODO:fordefn"
-      );
+      error!(target: &s!("expected:{:?}", self), "Missing argument for TODO:fordefn");
       //     $gullet->showUnexpected);
       value = Tokens!(T_OTHER!("missing"));
     }
@@ -255,14 +245,7 @@ impl Parameter {
     Ok(value)
   }
 
-  pub fn digest(
-    &self,
-    stomach: &mut Stomach,
-    mut value: Tokens,
-    _fordefn: &Constructor,
-    state: &mut State,
-  ) -> Result<Option<Digested>>
-  {
+  pub fn digest(&self, stomach: &mut Stomach, mut value: Tokens, _fordefn: &Constructor, state: &mut State) -> Result<Option<Digested>> {
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     let value_to_digest = value.clone();
     if self.semiverbatim {
@@ -332,13 +315,7 @@ pub struct Parameters {
 impl Parameters {
   pub fn get_num_args(&self) -> usize { self.params.iter().filter(|&p| !p.novalue).count() }
 
-  pub fn revert_arguments(
-    &self,
-    args: Vec<Tokens>,
-    gullet: &mut Gullet,
-    state: &mut State,
-  ) -> Result<Vec<Token>>
-  {
+  pub fn revert_arguments(&self, args: Vec<Tokens>, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     for (parameter, arg) in self.params.iter().zip(args.into_iter()) {
       if !parameter.novalue {
@@ -348,13 +325,7 @@ impl Parameters {
     Ok(tokens)
   }
 
-  pub fn read_arguments(
-    &self,
-    gullet: &mut Gullet,
-    fordefn: &Definition,
-    state: &mut State,
-  ) -> Result<Vec<Tokens>>
-  {
+  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Result<Vec<Tokens>> {
     let mut args = Vec::new();
     for parameter in &self.params {
       let values = parameter.read(gullet, fordefn, state)?;
@@ -365,13 +336,7 @@ impl Parameters {
     Ok(args)
   }
 
-  pub fn read_arguments_and_digest(
-    &self,
-    stomach: &mut Stomach,
-    fordefn: &Constructor,
-    state: &mut State,
-  ) -> Result<Vec<Option<Digested>>>
-  {
+  pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Result<Vec<Option<Digested>>> {
     let mut args = Vec::new();
     for parameter in &self.params {
       let value = parameter.read(&mut stomach.gullet, fordefn, state)?;
@@ -383,13 +348,5 @@ impl Parameters {
     Ok(args)
   }
 
-  pub fn reparse_argument(
-    &self,
-    _gullet: &mut Gullet,
-    _value: Tokens,
-    _state: &mut State,
-  ) -> Tokens
-  {
-    Tokens!()
-  }
+  pub fn reparse_argument(&self, _gullet: &mut Gullet, _value: Tokens, _state: &mut State) -> Tokens { Tokens!() }
 }

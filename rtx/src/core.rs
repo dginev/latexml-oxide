@@ -52,15 +52,11 @@ impl DigestionAPI for Core {
   fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()> {
     self.state.initialize_stomach();
     // let paths = state.lookup_value("SEARCHPATHS");
-    self
-      .state
-      .assign_value("InitialPreloads", true, Some(Scope::Global));
+    self.state.assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
       input_definitions(&preload, InputDefinitionOptions::default(), &mut self.state)?;
     }
-    self
-      .state
-      .assign_value("InitialPreloads", false, Some(Scope::Global));
+    self.state.assign_value("InitialPreloads", false, Some(Scope::Global));
     Ok(())
   }
 
@@ -205,8 +201,7 @@ impl DigestionAPI for Core {
     let mut state = &mut self.state;
 
     while self.stomach.borrow().get_gullet().has_more_input() {
-      let mut next_bodies: Vec<Digested> =
-        self.stomach.borrow_mut().digest_next_body(None, state)?;
+      let mut next_bodies: Vec<Digested> = self.stomach.borrow_mut().digest_next_body(None, state)?;
       // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
       boxes.extend(next_bodies);
     }
@@ -278,9 +273,7 @@ impl DigestionAPI for Core {
       self.state.assign_value("SOURCEFILE", request.clone(), None);
     }
     if !dir.is_empty() {
-      self
-        .state
-        .assign_value("SOURCEDIRECTORY", dir.clone(), None);
+      self.state.assign_value("SOURCEDIRECTORY", dir.clone(), None);
     }
     self.state.search_paths.push_front(dir.clone());
     self.state.graphics_paths.push_front(dir.clone());

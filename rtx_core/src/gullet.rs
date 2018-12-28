@@ -197,13 +197,7 @@ impl Gullet {
   // `Toplevel' processing, (if $toplevel is true), used at the toplevel processing by Stomach,
   //  will step to the next input stream (Mouth) if one is available,
   // If $commentsok is true, will also pass comments.
-  pub fn read_x_token(
-    &mut self,
-    toplevel: bool,
-    commentsok: bool,
-    state: &mut State,
-  ) -> Result<Option<Token>>
-  {
+  pub fn read_x_token(&mut self, toplevel: bool, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
     // toplevel should be true by default
     if commentsok && !self.pending_comments.is_empty() {
       return Ok(self.pending_comments.pop_front());
@@ -251,8 +245,7 @@ impl Gullet {
                 //   LaTeXML::Definition::stopProfiling($token, 'expand'); }
                 // }
                 _ => {
-                  let looked_up_definition: Option<Rc<Definition>> =
-                    state.lookup_definition(&token);
+                  let looked_up_definition: Option<Rc<Definition>> = state.lookup_definition(&token);
                   if let Some(defn) = looked_up_definition {
                     if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
                       // is this the right logic here? don't expand unless digesting?
@@ -324,9 +317,7 @@ impl Gullet {
       // If we still have peeked tokens, we ONLY want to combine it with the remainder
       // of the current line from the Mouth (NOT reading a new line)
       if !tokens.is_empty() {
-        Some(
-          Tokens::new(tokens).to_string() + &runtime.mouth.read_raw_line(true).unwrap_or_default(),
-        )
+        Some(Tokens::new(tokens).to_string() + &runtime.mouth.read_raw_line(true).unwrap_or_default())
       } else {
         // Otherwise, read the next line from the Mouth.
         runtime.mouth.read_raw_line(false)
@@ -549,12 +540,7 @@ impl Gullet {
   // See TeXBook, Ch.24, pp.269-271.
   //**********************************************************************
 
-  pub fn read_value(
-    &mut self,
-    value_type: RegisterType,
-    state: &mut State,
-  ) -> Result<RegisterValue>
-  {
+  pub fn read_value(&mut self, value_type: RegisterType, state: &mut State) -> Result<RegisterValue> {
     match value_type {
       RegisterType::Number => Ok(self.read_number(state)?.into()),
       RegisterType::Dimension => Ok(self.read_dimension(state)?.into()),
@@ -568,12 +554,7 @@ impl Gullet {
     }
   }
 
-  pub fn read_register_value(
-    &mut self,
-    value_type: RegisterType,
-    state: &mut State,
-  ) -> Result<Option<RegisterValue>>
-  {
+  pub fn read_register_value(&mut self, value_type: RegisterType, state: &mut State) -> Result<Option<RegisterValue>> {
     match self.read_x_token(false, false, state)? {
       None => Ok(None),
       Some(token) => {
@@ -584,11 +565,7 @@ impl Gullet {
               register_type = RegisterType::Number;
             }
             if register_type == value_type {
-              let args: Vec<Token> = defn
-                .read_arguments(self, state)?
-                .iter()
-                .map(|ts| ts.into())
-                .collect();
+              let args: Vec<Token> = defn.read_arguments(self, state)?.iter().map(|ts| ts.into()).collect();
               Ok(defn.value_of(args, state))
             } else {
               self.unread(&Tokens!(token)); // Unread
@@ -699,16 +676,10 @@ impl Gullet {
           Ok(Some(Number::new(text.parse::<i32>()?)))
         } else if token == T_OTHER!("'") {
           // Read Octal literal
-          Ok(Some(Number::new(i32::from_str_radix(
-            &self.read_digits(&OCT_RE, true, state)?,
-            8,
-          )?)))
+          Ok(Some(Number::new(i32::from_str_radix(&self.read_digits(&OCT_RE, true, state)?, 8)?)))
         } else if token == T_OTHER!("\"") {
           //  Read Hex literal
-          Ok(Some(Number::new(i32::from_str_radix(
-            &self.read_digits(&HEX_RE, true, state)?,
-            16,
-          )?)))
+          Ok(Some(Number::new(i32::from_str_radix(&self.read_digits(&HEX_RE, true, state)?, 16)?)))
         } else if token == T_OTHER!("`") {
           //  Read Charcode
           let mut s = match self.read_token(state) {
@@ -760,13 +731,7 @@ impl Gullet {
     return;
   }
 
-  pub fn reading_from_mouth<R>(
-    &mut self,
-    mouth: Mouth,
-    state: &mut State,
-    mut reader: Box<FnMut(&mut Gullet, &mut State) -> R>,
-  ) -> R
-  {
+  pub fn reading_from_mouth<R>(&mut self, mouth: Mouth, state: &mut State, mut reader: Box<FnMut(&mut Gullet, &mut State) -> R>) -> R {
     let mouth_source = mouth.source.clone();
     {
       self.open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
@@ -797,8 +762,7 @@ impl Gullet {
         let mut ready_to_read = false;
         {
           if let Some(ref mut runtime) = self.mouth {
-            if !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input()
-            {
+            if !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input() {
               ready_to_read = true;
             }
           }

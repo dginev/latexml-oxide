@@ -271,9 +271,7 @@ impl From<Vec<String>> for Stored {
 }
 
 impl<'a> From<Vec<&'a str>> for Stored {
-  fn from(value: Vec<&'a str>) -> Self {
-    Stored::VecString(value.iter().map(|x| x.to_string()).collect::<Vec<String>>())
-  }
+  fn from(value: Vec<&'a str>) -> Self { Stored::VecString(value.iter().map(|x| x.to_string()).collect::<Vec<String>>()) }
 }
 
 impl From<Vec<Token>> for Stored {

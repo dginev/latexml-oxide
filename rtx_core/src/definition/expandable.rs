@@ -90,40 +90,16 @@ impl Definition for Expandable {
   }
 
   // Not implemented for expandable
-  fn invoke_primitive(
-    &self,
-    _gullet: &mut Stomach,
-    _caller: Rc<Definition>,
-    _state: &mut State,
-  ) -> Result<Vec<Digested>>
-  {
-    Ok(Vec::new())
-  }
+  fn invoke_primitive(&self, _gullet: &mut Stomach, _caller: Rc<Definition>, _state: &mut State) -> Result<Vec<Digested>> { Ok(Vec::new()) }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn do_absorbtion(
-    &self,
-    _document: &mut Document,
-    _whatsit: &Whatsit,
-    _state: &mut State,
-  ) -> Result<()>
-  {
-    fatal!(
-      Definition,
-      Unexpected,
-      "do_absorbtion on Expandable should never be called!"
-    );
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
+    fatal!(Definition, Unexpected, "do_absorbtion on Expandable should never be called!");
   }
 }
 
 impl Expandable {
-  fn do_invocation(
-    &self,
-    gullet: &mut Gullet,
-    args: Vec<Tokens>,
-    state: &mut State,
-  ) -> Result<Tokens>
-  {
+  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Result<Tokens> {
     if let Some(ref closure) = self.expansion {
       closure(gullet, args.to_owned(), state)
     } else {

@@ -279,15 +279,14 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   DefPrimitive!("\\text@nobreakspace", sub[stomach, whatsit, state] {
     Tbox::new(String::from("\u{00A0}"), None, None, Tokens!(T_CS!("~")), map!("isSpace" => Stored::Bool(true)), state).into()
   });
-   
 
-// DefConstructor!("\\math@nobreakspace", "<ltx:XMHint name='nobreakspace' width='#width'/>",
-//   properties => { isSpace => 1, width => sub { Dimension('0.333em'); } },
-//   alias => '~');
-DefMacro!("~", "\\nobreakspace{}");
+  // DefConstructor!("\\math@nobreakspace", "<ltx:XMHint name='nobreakspace' width='#width'/>",
+  //   properties => { isSpace => 1, width => sub { Dimension('0.333em'); } },
+  //   alias => '~');
+  DefMacro!("~", "\\nobreakspace{}");
 
-// DefMacroI('\slash', undef, '/');
-// DefPrimitiveI('\filbreak', undef, undef);
+  // DefMacroI('\slash', undef, '/');
+  // DefPrimitiveI('\filbreak', undef, undef);
   DefMacro!("\\goodbreak", "\\par");
   DefMacro!("\\eject", "\\par\\LTX@newpage");
   Let!("\\newpage", "\\eject");
@@ -298,60 +297,60 @@ DefMacro!("~", "\\nobreakspace{}");
   DefMacro!("\\medbreak", "\\par");
   DefMacro!("\\bigbreak", "\\par");
   DefMacro!("\\line", "\\hbox to \\hsize");
-// DefConstructor('\leftline{}', sub {
-//     alignLine($_[0], $_[1], 'left'); },
-//   bounded => 1);
-// DefConstructor('\rightline{}', sub {
-//     alignLine($_[0], $_[1], 'right'); },
-//   bounded => 1);
-// DefConstructor('\centerline{}', sub {
-//     alignLine($_[0], $_[1], 'center'); },
-//   bounded => 1);
+  // DefConstructor('\leftline{}', sub {
+  //     alignLine($_[0], $_[1], 'left'); },
+  //   bounded => 1);
+  // DefConstructor('\rightline{}', sub {
+  //     alignLine($_[0], $_[1], 'right'); },
+  //   bounded => 1);
+  // DefConstructor('\centerline{}', sub {
+  //     alignLine($_[0], $_[1], 'center'); },
+  //   bounded => 1);
 
-// sub alignLine {
-//   my ($document, $line, $alignment) = @_;
-//   if ($document->isOpenable('ltx:p')) {
-//     $document->insertElement('ltx:p', $line, class => 'ltx_align_' . $alignment); }
-//   elsif ($document->isOpenable('ltx:text')) {
-//     $document->insertElement('ltx:text', $line, class => 'ltx_align_' . $alignment);
-//     $document->insertElement('ltx:break'); }
-//   else {
-//     $document->absorb($line); }
-//   return; }
+  // sub alignLine {
+  //   my ($document, $line, $alignment) = @_;
+  //   if ($document->isOpenable('ltx:p')) {
+  //     $document->insertElement('ltx:p', $line, class => 'ltx_align_' . $alignment); }
+  //   elsif ($document->isOpenable('ltx:text')) {
+  //     $document->insertElement('ltx:text', $line, class => 'ltx_align_' . $alignment);
+  //     $document->insertElement('ltx:break'); }
+  //   else {
+  //     $document->absorb($line); }
+  //   return; }
 
-// # These should be 0 width, but perhaps also shifted?
-// DefMacro('\llap{}', '\hbox to 0pt{#1}');
-// DefMacro('\rlap{}', '\hbox to 0pt{#1}');
-// DefMacroI('\m@th', undef, '\mathsurround=0pt ');
+  // # These should be 0 width, but perhaps also shifted?
+  // DefMacro('\llap{}', '\hbox to 0pt{#1}');
+  // DefMacro('\rlap{}', '\hbox to 0pt{#1}');
+  // DefMacroI('\m@th', undef, '\mathsurround=0pt ');
 
-// # \strutbox
-// DefMacroI('\strut', undef, Tokens());
-// RawTeX('\newbox\strutbox');
+  // # \strutbox
+  // DefMacroI('\strut', undef, Tokens());
+  // RawTeX('\newbox\strutbox');
 
-// #======================================================================
-// # TeX Book, Appendix B. p. 354
+  // #======================================================================
+  // # TeX Book, Appendix B. p. 354
 
-// # TODO: Not yet done!!
-// # tabbing stuff!!!
+  // # TODO: Not yet done!!
+  // # tabbing stuff!!!
 
-// DefMacroI('\settabs', undef, undef);
+  // DefMacroI('\settabs', undef, undef);
 
-// #======================================================================
-// # TeX Book, Appendix B. p. 355
+  // #======================================================================
+  // # TeX Book, Appendix B. p. 355
 
-// DefPrimitive('\hang', undef);
+  // DefPrimitive('\hang', undef);
 
-// # TODO: \item, \itemitem not done!
-// # This could probably be adopted from LaTeX, if the <itemize> could auto-open
-// # and close!
-// DefConstructor('\item{}',     '#1');
-// DefConstructor('\itemitem{}', '#1');
+  // # TODO: \item, \itemitem not done!
+  // # This could probably be adopted from LaTeX, if the <itemize> could auto-open
+  // # and close!
+  // DefConstructor('\item{}',     '#1');
+  // DefConstructor('\itemitem{}', '#1');
 
-// DefMacro('\textindent{}', '#1');
+  // DefMacro('\textindent{}', '#1');
 
-// # Conceivably this should enclose the next para in a block?
-// # Or add attribute to it? Or...
-// DefPrimitiveI('\narrower', undef, undef);
+  // # Conceivably this should enclose the next para in a block?
+  // # Or add attribute to it? Or...
+  // DefPrimitiveI('\narrower', undef, undef);
 
   Ok(())
 }

@@ -20,8 +20,7 @@ pub use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
 pub use rtx_core::definition::register::{Register, RegisterType, RegisterValue};
 pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionClosure,
-  PrimitiveClosure, PrimitiveFn, ReplacementClosure,
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionClosure, PrimitiveClosure, PrimitiveFn, ReplacementClosure,
 };
 pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptionName, TagOptions};
@@ -29,9 +28,7 @@ pub use rtx_core::document::Document;
 pub use rtx_core::gullet::Gullet;
 pub use rtx_core::mouth;
 pub use rtx_core::mouth::Mouth;
-pub use rtx_core::parameter::{
-  Parameter, ParameterExtra, Parameters, ReaderClosure, ReversionClosure,
-};
+pub use rtx_core::parameter::{Parameter, ParameterExtra, Parameters, ReaderClosure, ReversionClosure};
 pub use rtx_core::state::{Scope, State, Stored};
 pub use rtx_core::stomach::Stomach;
 pub use rtx_core::tbox::Tbox;

@@ -9,15 +9,9 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Try to give them some sense in math...
   DefMacro!("\\#", "\\ifmmode\\lx@math@hash\\else\\lx@text@hash\\fi");
   DefMacro!("\\&", "\\ifmmode\\lx@math@amp\\else\\lx@text@amp\\fi");
-  DefMacro!(
-    "\\%",
-    "\\ifmmode\\lx@math@percent\\else\\lx@text@percent\\fi"
-  );
+  DefMacro!("\\%", "\\ifmmode\\lx@math@percent\\else\\lx@text@percent\\fi");
   DefMacro!("\\$", "\\ifmmode\\lx@math@dollar\\else\\lx@text@dollar\\fi");
-  DefMacro!(
-    "\\_",
-    "\\ifmmode\\lx@math@underscore\\else\\lx@text@underscore\\fi"
-  );
+  DefMacro!("\\_", "\\ifmmode\\lx@math@underscore\\else\\lx@text@underscore\\fi");
   DefMacroI!(T_CS!("\\lx@text@hash"), None, T_OTHER!("#"),  alias => "\\#");
   DefMacroI!(T_CS!("\\lx@text@amp"), None, T_OTHER!("&"),  alias => "\\&");
   DefMacroI!(T_CS!("\\lx@text@percent"), None, T_OTHER!("%"),  alias => "\\%");

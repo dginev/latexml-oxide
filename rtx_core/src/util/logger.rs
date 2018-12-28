@@ -71,7 +71,9 @@ impl log::Log for RtxLogger {
         Level::Error => Red.paint(message),
         Level::Debug => Green.paint(message),
         _ => White.paint(message),
-      }.to_string() + &details.to_string();
+      }
+      .to_string()
+        + &details.to_string();
 
       println_stderr!("\r{}", painted_message);
     }

@@ -69,42 +69,25 @@ impl Whatsit {
 
   pub fn set_body(&mut self, mut body: Vec<Digested>) {
     let trailer_opt = body.pop();
-    let mode = if self.is_math() {
-      TexMode::Math
-    } else {
-      TexMode::Text
-    };
+    let mode = if self.is_math() { TexMode::Math } else { TexMode::Text };
 
     let mut list = List::new(body);
     if self.is_math() {
       list.mode = Some(mode);
     }
-    self
-      .properties
-      .insert(s!("body"), Digested::List(Box::new(list)).into());
+    self.properties.insert(s!("body"), Digested::List(Box::new(list)).into());
     if let Some(Digested::Whatsit(ref trailer)) = trailer_opt {
       // And copy any otherwise undefined properties from the trailer
       for (prop, value) in trailer.borrow().get_properties() {
-        self
-          .properties
-          .entry(prop.to_string())
-          .or_insert_with(|| value.clone());
+        self.properties.entry(prop.to_string()).or_insert_with(|| value.clone());
       }
-      self
-        .properties
-        .insert(s!("trailer"), trailer_opt.as_ref().unwrap().clone().into());
+      self.properties.insert(s!("trailer"), trailer_opt.as_ref().unwrap().clone().into());
     }
   }
 }
 
 impl fmt::Debug for Whatsit {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(
-      f,
-      "Whatsit {{ args: {:?}, properties: {:?} }}",
-      self.args, self.properties
-    )
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "Whatsit {{ args: {:?}, properties: {:?} }}", self.args, self.properties) }
 }
 
 impl BoxOps for Whatsit {
@@ -135,9 +118,7 @@ impl BoxOps for Whatsit {
     }
   }
 
-  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
-    self.properties.insert(key.to_string(), value.into());
-  }
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
 
   fn get_body(&self) -> Option<Digested> {
     match self.properties.get("body") {

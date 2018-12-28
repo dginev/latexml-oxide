@@ -28,14 +28,7 @@ pub fn apply_accent(
   //     ? $standalonechar
   //     : NFC($letters[0] . $combiningchar . join('', @letters[1 .. $//letters]))),
   //   $font, $locator, $reversion); }
-  Ok(Tbox::new(
-    string,
-    font,
-    locator,
-    reversion.unwrap_or(Tokens!()),
-    HashMap::new(),
-    state,
-  ))
+  Ok(Tbox::new(string, font, locator, reversion.unwrap_or(Tokens!()), HashMap::new(), state))
 }
 
 pub fn load_definitions(state: &mut State) -> Result<()> {
@@ -75,9 +68,12 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefAccent!("\\@text@baccent", "\u{0331}", "\u{00AF}", below => true); // COMBINING MACRON BELOW  & MACRON
   DefAccent!("\\t", "\u{0361}", "-"); // COMBINING DOUBLE INVERTED BREVE & ???? What????
                                       // this one"s actually defined in mathscinet.sty, but just stick it here!
-  DefAccent!("\\lfhook", "\u{0326}", ",", below => true); // COMBINING COMMA BELOW
-                                                          // I doubt that latter covers multiple chars...? DefAccent("\\bar","\u{0304}", ?);  // COMBINING
-                                                          // MACRON or is this the longer overbar?
+
+  // COMBINING COMMA BELOW
+  DefAccent!("\\lfhook", "\u{0326}", ",", below => true);
+
+  // I doubt that latter covers multiple chars...? DefAccent("\\bar","\u{0304}", ?);  // COMBINING
+  // MACRON or is this the longer overbar?
 
   // This will fail if there really are "assignments" after the number!
   // We're given a number pointing into the font, from which we can derive the standalone char.

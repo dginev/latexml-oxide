@@ -3,9 +3,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::common::error::*;
+use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::locator::Locator;
 use crate::definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -107,8 +107,7 @@ impl Definition for Conditional {
       _ => {
         error!(
           target: &s!("unexpected:{}", self.cs), //$gullet,
-          "Unknown conditional control sequence {:?}",
-          state.current_token
+          "Unknown conditional control sequence {:?}", state.current_token
         );
         Ok(Tokens!())
       },
@@ -123,29 +122,11 @@ impl Definition for Conditional {
   fn get_locator(&self) -> String { String::from("Locator is TODO") }
 
   // Not implemented for expandable
-  fn invoke_primitive(
-    &self,
-    _gullet: &mut Stomach,
-    _caller: Rc<Definition>,
-    _state: &mut State,
-  ) -> Result<Vec<Digested>>
-  {
-    unimplemented!()
-  }
+  fn invoke_primitive(&self, _gullet: &mut Stomach, _caller: Rc<Definition>, _state: &mut State) -> Result<Vec<Digested>> { unimplemented!() }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn do_absorbtion(
-    &self,
-    _document: &mut Document,
-    _whatsit: &Whatsit,
-    _state: &mut State,
-  ) -> Result<()>
-  {
-    fatal!(
-      Definition,
-      Unexpected,
-      "do_absorbtion on Conditional should never be called!"
-    );
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
+    fatal!(Definition, Unexpected, "do_absorbtion on Conditional should never be called!");
   }
 }
 
@@ -295,16 +276,15 @@ impl Conditional {
 
   pub fn invoke_else(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     let local_token = state.current_token.as_ref().unwrap().clone();
-    let stack_frame_opt =
-      if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
-        if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
-          Some(stack_frame.clone())
-        } else {
-          None
-        }
+    let stack_frame_opt = if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
+      if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
+        Some(stack_frame.clone())
       } else {
         None
-      };
+      }
+    } else {
+      None
+    };
 
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {
@@ -334,8 +314,7 @@ impl Conditional {
       // No if stack entry ?
       error!(
         target: &s!("unexpected:{:?}", local_token),
-        "Didn't expect a {:?} since we seem not to be in a conditional",
-        local_token
+        "Didn't expect a {:?} since we seem not to be in a conditional", local_token
       );
       Ok(Tokens!())
     }
@@ -343,16 +322,15 @@ impl Conditional {
 
   pub fn invoke_fi(&self, _gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     let local_token = state.current_token.as_ref().unwrap().clone();
-    let stack_frame_opt: Option<Rc<RefCell<IfFrame>>> =
-      if let Some(Stored::VecDequeStored(ref stack)) = state.lookup_value("if_stack") {
-        if let Some(Stored::IfFrame(frame)) = stack.front() {
-          Some(frame.clone())
-        } else {
-          None
-        }
+    let stack_frame_opt: Option<Rc<RefCell<IfFrame>>> = if let Some(Stored::VecDequeStored(ref stack)) = state.lookup_value("if_stack") {
+      if let Some(Stored::IfFrame(frame)) = stack.front() {
+        Some(frame.clone())
       } else {
         None
-      };
+      }
+    } else {
+      None
+    };
 
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {

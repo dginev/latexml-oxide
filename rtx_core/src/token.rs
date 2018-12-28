@@ -198,8 +198,7 @@ impl Catcode {
       // Executable
       BEGIN | END | MATH | ALIGN | SUPER | SUB | ACTIVE | CS => true,
       // Non-executable
-      EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | NOTEXPANDED
-      | MARKER => false,
+      EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | NOTEXPANDED | MARKER => false,
     }
   }
 
@@ -209,8 +208,7 @@ impl Catcode {
       // Neutralizable
       MATH | ALIGN | PARAM | SUPER | SUB | ACTIVE => true,
       // Non-neutralizable
-      ESCAPE | BEGIN | END | EOL | IGNORE | SPACE | LETTER | OTHER | COMMENT | INVALID | CS
-      | NOTEXPANDED | MARKER => false,
+      ESCAPE | BEGIN | END | EOL | IGNORE | SPACE | LETTER | OTHER | COMMENT | INVALID | CS | NOTEXPANDED | MARKER => false,
     }
   }
 
@@ -485,17 +483,12 @@ pub fn untex(digested: &Digested, state: &State) -> String {
       // Insert a (virtual) space before a letter if previous token was a CS w/letters
       // This is required for letters, but just aesthetic for digits (to me?)
       // Of course, use a newline if we're already at end
-      let space = if (length > 0) && (length + l > UNTEX_LINELENGTH) {
-        '\n'
-      } else {
-        ' '
-      };
+      let space = if (length > 0) && (length + l > UNTEX_LINELENGTH) { '\n' } else { ' ' };
       tex_string.push(space);
       tex_string.push_str(&token_string);
       length += 1 + l;
-    } else if (length > 0) && (length + l > UNTEX_LINELENGTH)    // linebreak before this token?
-      && (tokens.len() > 1)
-    {
+    } else if (length > 0) && (length + l > UNTEX_LINELENGTH) && (tokens.len() > 1) {
+      // linebreak before this token?
       // and not at end! Or even within an arg!
       tex_string.push_str("%\n");
       tex_string.push_str(&token_string);
@@ -553,10 +546,7 @@ impl<'a> Token {
   pub fn get_executable_name(&self) -> String {
     let cc = self.code;
     if cc.is_executable() {
-      self
-        .get_primitive_name()
-        .unwrap_or_else(|| &self.text)
-        .to_string()
+      self.get_primitive_name().unwrap_or_else(|| &self.text).to_string()
     } else {
       String::new()
     }
@@ -635,9 +625,7 @@ impl<'a> Token {
 
   pub fn as_str(&self) -> &str { &self.text }
 
-  pub fn to_register(&self, state: &State) -> Option<Rc<RefCell<Register>>> {
-    state.lookup_register_definition(self)
-  }
+  pub fn to_register(&self, state: &State) -> Option<Rc<RefCell<Register>>> { state.lookup_register_definition(self) }
 
   pub fn to_number(&self) -> Number { Number::new(self.text.parse::<i32>().unwrap_or(0)) }
 
@@ -648,7 +636,5 @@ impl<'a> Token {
     }
   }
 
-  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
-    stomach.digest(Tokens { tokens: vec![self] }, state)
-  }
+  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> { stomach.digest(Tokens { tokens: vec![self] }, state) }
 }

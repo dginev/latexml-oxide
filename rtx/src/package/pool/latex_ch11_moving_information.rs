@@ -199,18 +199,17 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
 
   // If we hit a real \bibitem, put \par & \bibitem back to correct defn, and then \bibitem.
   // A bibitem with now key or label...
-  DefMacro!(
-    "\\restoring@bibitem",
-    "\\let\\bibitem\\save@bibitem\\let\\par\\save@par\\bibitem"
-  );
+  DefMacro!("\\restoring@bibitem", "\\let\\bibitem\\save@bibitem\\let\\par\\save@par\\bibitem");
 
   NewCounter!("@bibitem", "bibliography", idprefix => "bib");
   DefMacro!("\\the@bibitem", "\\arabic{@bibitem}");
   DefMacro!("\\@biblabel{}", "[#1]");
   DefMacro!("\\fnum@@bibitem", "{\\@biblabel{\\the@bibitem}}");
   // Hack for abused bibliographies; see below
-  DefMacro!("\\bibitem",
-    "\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem");
+  DefMacro!(
+    "\\bibitem",
+    "\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem"
+  );
   DefConstructor!("\\lx@bibitem[] Semiverbatim", "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
     after_digest => afterproc!(stomach, whatsit, state, {
       let tag_opt = whatsit.get_arg(1);
@@ -313,7 +312,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   AssignValue!("CITE_YY_SEPARATOR", T_OTHER!(","));
   AssignValue!("CITE_NOTE_SEPARATOR", T_OTHER!(","));
 
-  DefConstructor!("\\@@cite[]{}", "<ltx:cite ?#1(class='ltx_citemacro_#1')>#2</ltx:cite>", 
+  DefConstructor!("\\@@cite[]{}", "<ltx:cite ?#1(class='ltx_citemacro_#1')>#2</ltx:cite>",
     mode => Some("text".to_string()));
 
   // \@@bibref{what to show}{bibkeys}{phrase1}{phrase2}
@@ -651,24 +650,14 @@ fn setup_pseudo_bibitem(state: &mut State) {
 }
 // This sub does things that would commonly be needed when starting a bibliography
 // setting the ID, etc...
-fn begin_bibliography(
-  stomach: &mut Stomach,
-  whatsit: &mut Whatsit,
-  state: &mut State,
-) -> Result<()>
-{
+fn begin_bibliography(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<()> {
   begin_bibliography_clean(stomach, whatsit, state)?;
   // Fix for missing \bibitems!
   setup_pseudo_bibitem(state);
   Ok(())
 }
 
-fn begin_bibliography_clean(
-  stomach: &mut Stomach,
-  whatsit: &mut Whatsit,
-  state: &mut State,
-) -> Result<()>
-{
+fn begin_bibliography_clean(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<()> {
   SetupBindingMacros!(state);
   // Try to compute a reasonable, but unique ID;
   // relative to the document's ID, if any.

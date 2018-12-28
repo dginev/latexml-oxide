@@ -132,34 +132,18 @@ impl Tokens {
   // should we unify the interfaces so that Options are always used? Could be cumbursome...
   pub fn unwrap_or_default(self) -> Tokens { self }
 
-  pub fn stringify(&self) -> String {
-    s!(
-      "Tokens[{}]",
-      &self
-        .tokens
-        .iter()
-        .map(|t| t.to_string())
-        .collect::<Vec<_>>()
-        .join(",")
-    )
-  }
+  pub fn stringify(&self) -> String { s!("Tokens[{}]", &self.tokens.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(",")) }
 
   pub fn value_of(&self, args: Vec<Token>, state: &mut State) -> Option<RegisterValue> {
     let token: &Token = &self.tokens[0];
     token.value_of(args, state)
   }
 
-  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
-    stomach.digest(self, state)
-  }
+  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> { stomach.digest(self, state) }
 
   pub fn neutralize(self, extraspecials: &[Token], state: &State) -> Tokens {
     Tokens {
-      tokens: self
-        .tokens
-        .into_iter()
-        .map(|t| t.neutralize(extraspecials, state))
-        .collect::<Vec<_>>(),
+      tokens: self.tokens.into_iter().map(|t| t.neutralize(extraspecials, state)).collect::<Vec<_>>(),
     }
   }
 
@@ -241,26 +225,19 @@ impl Tokens {
           false
         };
 
-        if (cc == Catcode::LETTER
-          || (cc == Catcode::OTHER && s.chars().next().unwrap_or('_').is_alphanumeric()))
+        if (cc == Catcode::LETTER || (cc == Catcode::OTHER && s.chars().next().unwrap_or('_').is_alphanumeric()))
           && prevcc == Catcode::CS
           && prev_is_letter
         {
           // Insert a (virtual) space before a letter if previous token was a CS w/letters
           // This is required for letters, but just aesthetic for digits (to me?)
           // Of course, use a newline if we're already at end
-          let space = if length > 0 && length + l > UNTEX_LINELENGTH {
-            '\n'
-          } else {
-            ' '
-          };
+          let space = if length > 0 && length + l > UNTEX_LINELENGTH { '\n' } else { ' ' };
           result.push(space);
           result.push_str(&s);
           length += 1 + l;
-        } else if length > 0 && (length + l > UNTEX_LINELENGTH) // linebreak before this token?
-            && tokens.len() > 1
-        // and not at end!
-        {
+        } else if length > 0 && (length + l > UNTEX_LINELENGTH) && tokens.len() > 1 {
+          // linebreak before this token? and not at end!
           // Or even within an arg!
           result.push_str("%\n");
           result.push_str(&s);

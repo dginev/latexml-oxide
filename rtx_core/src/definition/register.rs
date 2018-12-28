@@ -165,13 +165,7 @@ impl Definition for RefCell<Register> {
 
   // No before/after daemons ???
   // (other than afterassign)
-  fn invoke_primitive(
-    &self,
-    stomach: &mut Stomach,
-    _caller: Rc<Definition>,
-    state: &mut State,
-  ) -> Result<Vec<Digested>>
-  {
+  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
     // CharDef case
     if self.borrow().register_type == RegisterType::CharDef {
       return match self.borrow().internalcs {
@@ -209,18 +203,8 @@ impl Definition for RefCell<Register> {
     }
   }
 
-  fn do_absorbtion(
-    &self,
-    _document: &mut Document,
-    _whatsit: &Whatsit,
-    _state: &mut State,
-  ) -> Result<()>
-  {
-    fatal!(
-      Definition,
-      Unexpected,
-      "do_absorbtion on Primitive should never be called!"
-    );
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
+    fatal!(Definition, Unexpected, "do_absorbtion on Primitive should never be called!");
   }
   fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> {
     if self.borrow().register_type == RegisterType::CharDef {
@@ -242,12 +226,7 @@ impl Register {
     }
   }
 
-  pub fn new_chardef(
-    cs: Token,
-    internalvalue: Option<RegisterValue>,
-    internalcs: Option<Token>,
-  ) -> Self
-  {
+  pub fn new_chardef(cs: Token, internalvalue: Option<RegisterValue>, internalcs: Option<Token>) -> Self {
     Register {
       cs,
       parameters: None,

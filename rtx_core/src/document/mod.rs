@@ -85,10 +85,7 @@ impl Document {
   /// the xpath is relative to $node (if given), otherwise to the document node.
   pub fn findnodes(&self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<Node> {
     match node_opt {
-      Some(node) => state
-        .model
-        .get_xpath(&self.document)
-        .findnodes(xpath, Some(node)),
+      Some(node) => state.model.get_xpath(&self.document).findnodes(xpath, Some(node)),
       None => state
         .model
         .get_xpath(&self.document)
@@ -110,9 +107,7 @@ impl Document {
   /// Ie. using the registered prefix for that namespace.
   /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
   /// NOTE: Should Deprecate! (use model)
-  pub fn get_node_qname(&self, node: &Node, state: &mut State) -> String {
-    state.model.get_node_qname(node)
-  }
+  pub fn get_node_qname(&self, node: &Node, state: &mut State) -> String { state.model.get_node_qname(node) }
 
   pub fn get_node(&self) -> &Node { &self.node }
   pub fn get_node_mut(&mut self) -> &mut Node { &mut self.node }
@@ -156,9 +151,7 @@ impl Document {
 
     let font = self.get_node_font(node);
     let mut pending_declaration = font.relative_to(&declared_font);
-    if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some())
-      && !pending_declaration.is_empty()
-    {
+    if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some()) && !pending_declaration.is_empty() {
       for (ref key, &(ref value, ref properties)) in &pending_declaration {
         if state.model.can_have_attribute(&qname, key) {
           attrs_to_set.push((key.to_string(), value.to_string()));
@@ -184,10 +177,7 @@ impl Document {
         self.finalize_rec(&mut child, new_init_font, state)?;
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
-        if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME)
-          && !was_forcefont
-          && child.get_attributes().is_empty()
-        {
+        if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME) && !was_forcefont && child.get_attributes().is_empty() {
           let grandchildren = child.get_child_nodes();
           if grandchildren
             .iter()
@@ -298,13 +288,7 @@ impl Document {
 
   /// This is a refactored `else` cases from the main absorb routine, to allow for better type
   /// hygiene
-  pub fn absorb_string(
-    &mut self,
-    object: &str,
-    props: &HashMap<String, Stored>,
-    state: &mut State,
-  ) -> Result<()>
-  {
+  pub fn absorb_string(&mut self, object: &str, props: &HashMap<String, Stored>, state: &mut State) -> Result<()> {
     // Else, plain string in text mode.
     let ismath: bool = match props.get("isMath") {
       Some(v) => v.into(),
@@ -340,14 +324,7 @@ impl Document {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   /// Shorthand for open,absorb,close, but returns the new node.
-  pub fn insert_element(
-    &mut self,
-    qname: &str,
-    content: Vec<Digested>,
-    attrib: Option<HashMap<String, String>>,
-    state: &mut State,
-  ) -> Result<Node>
-  {
+  pub fn insert_element(&mut self, qname: &str, content: Vec<Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone()
     // calls removed
     let node = self.open_element(qname, attrib, None, state)?;
@@ -365,10 +342,7 @@ impl Document {
       let self_node = self.node.get_parent().unwrap();
       let mut c = Some(self_node);
 
-      while c.is_some()
-        && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode)
-        && c.as_ref().unwrap() != &node
-      {
+      while c.is_some() && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode) && c.as_ref().unwrap() != &node {
         let parent = c.unwrap().get_parent().unwrap();
         if parent.get_type() != Some(NodeType::DocumentNode) {
           c = Some(parent);
@@ -402,10 +376,7 @@ impl Document {
       attr_data.push('"');
     }
     // self.close_text_internal();  // Close any open text node
-    let mut pi_node = self
-      .document
-      .create_processing_instruction(op, &attr_data)
-      .unwrap();
+    let mut pi_node = self.document.create_processing_instruction(op, &attr_data).unwrap();
     if self.node.get_type() == Some(NodeType::DocumentNode) {
       self.pending.push(pi_node);
     } else {
@@ -652,13 +623,7 @@ impl Document {
   pub fn can_auto_close(&self, _node: &Node) -> bool { true }
 
   /// get the actions that should be performed on afterOpen or afterClose
-  pub fn get_tag_action_list(
-    &self,
-    tag: &str,
-    when: TagOptionName,
-    state: &mut State,
-  ) -> Vec<TagConstructionClosure>
-  {
+  pub fn get_tag_action_list(&self, tag: &str, when: TagOptionName, state: &mut State) -> Vec<TagConstructionClosure> {
     use self::tag::TagOptionName::*;
     // my ($p, $n) = (undef, $tag);
     // if ($tag =~ /^([^:]+):(.+)$/) {
@@ -678,18 +643,10 @@ impl Document {
       _ => {},
     };
 
-    let tag_hash = state
-      .tag_properties
-      .entry(tag.to_string())
-      .or_insert_with(TagOptions::default)
-      .clone();
+    let tag_hash = state.tag_properties.entry(tag.to_string()).or_insert_with(TagOptions::default).clone();
     // let ns_hash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p .
     // ':*')) || {};
-    let all_hash = state
-      .tag_properties
-      .entry(s!("ltx:*"))
-      .or_insert_with(TagOptions::default)
-      .clone();
+    let all_hash = state.tag_properties.entry(s!("ltx:*")).or_insert_with(TagOptions::default).clone();
 
     let mut actions = Vec::new();
     // we have Rc<> around the closures, so cloning them is cheap - just another
@@ -736,15 +693,7 @@ impl Document {
 
   /// We ought to try for something close to C14N (http://www.w3.org/TR/xml-c14n),
   /// but keep XML declaration, comments and don't convert empty elements.
-  pub fn serialize_aux(
-    &self,
-    node: &Node,
-    depth: usize,
-    noindent: bool,
-    heuristic: bool,
-    state: &mut State,
-  ) -> String
-  {
+  pub fn serialize_aux(&self, node: &Node, depth: usize, noindent: bool, heuristic: bool, state: &mut State) -> String {
     let indent = iter::repeat("  ").take(depth).collect::<String>();
     let mut serialized = String::new();
 
@@ -756,8 +705,7 @@ impl Document {
           serialized.push_str(&child_serialized);
           let mut current_child = child;
           while let Some(sibling) = current_child.get_next_sibling() {
-            let sibling_serialized =
-              self.serialize_aux(&sibling, depth, noindent, heuristic, state);
+            let sibling_serialized = self.serialize_aux(&sibling, depth, noindent, heuristic, state);
             serialized.push_str(&sibling_serialized);
             current_child = sibling;
           }
@@ -773,11 +721,7 @@ impl Document {
         let nsnodes = node.get_namespace_declarations();
         for ns in nsnodes {
           let prefix = ns.get_prefix();
-          let prefix_declaration = if prefix.is_empty() {
-            s!("xmlns")
-          } else {
-            s!("xmlns:{}", prefix)
-          };
+          let prefix_declaration = if prefix.is_empty() { s!("xmlns") } else { s!("xmlns:{}", prefix) };
           let href = ns.get_href();
           open_tag.push_str(&s!(" {}=\"{}\"", prefix_declaration, href));
         }
@@ -789,9 +733,7 @@ impl Document {
           if key == "id" {
             continue;
           } // HACK for xml:id
-          let key_serialized = state
-            .model
-            .get_node_document_qname(&node.get_attribute_node(key).unwrap());
+          let key_serialized = state.model.get_node_document_qname(&node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
           open_tag.push_str(&s!(" {}=\"{}\"", key_serialized, val_serialized));
         }
@@ -803,10 +745,7 @@ impl Document {
 
         let noindent_children: bool = if heuristic {
           // This emulates libxml2"s heuristic
-          noindent
-            || children
-              .iter()
-              .any(|e| e.get_type() == Some(NodeType::TextNode))
+          noindent || children.iter().any(|e| e.get_type() == Some(NodeType::TextNode))
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = self.get_node_qname(node, state);
@@ -824,13 +763,7 @@ impl Document {
             serialized.push_str("\n");
           }
           for child in children {
-            serialized.push_str(&self.serialize_aux(
-              &child,
-              depth + 1,
-              noindent_children,
-              heuristic,
-              state,
-            ));
+            serialized.push_str(&self.serialize_aux(&child, depth + 1, noindent_children, heuristic, state));
           }
           if !noindent_children {
             serialized.push_str(&indent)
@@ -903,9 +836,7 @@ impl Document {
   ) -> Result<Node>
   {
     // info!(target:"document:insert" ,"insert math token: {:?}", text);
-    attributes
-      .entry(s!("role"))
-      .or_insert_with(|| s!("UNKNOWN"));
+    attributes.entry(s!("role")).or_insert_with(|| s!("UNKNOWN"));
 
     let font = match font_opt {
       Some(f) => f.clone(),
@@ -952,9 +883,7 @@ impl Document {
     {
       // Ignore initial whitespace
       if ONLY_SPACE_RE.is_match(text)
-        && (node_type == Some(NodeType::DocumentNode)
-          || (node_type == Some(NodeType::ElementNode)
-            && !self.can_contain(&self.node, "#PCDATA", state)))
+        && (node_type == Some(NodeType::DocumentNode) || (node_type == Some(NodeType::ElementNode) && !self.can_contain(&self.node, "#PCDATA", state)))
       {
         return Ok(None);
       }
@@ -963,15 +892,11 @@ impl Document {
       return Ok(None);
     }
     if self.debug {
-      debug!(
-        "Insert text {:?} at {:?}",
-        text,
-        self.document.node_to_string(&self.node)
-      );
+      debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
     }
-    if node_type != Some(NodeType::DocumentNode) // If not at document begin
-      && !(node_type == Some(NodeType::TextNode) // And not appending text in same font.
-           && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
+    // If not at document begin And not appending text in same font.
+    if node_type != Some(NodeType::DocumentNode)
+      && !(node_type == Some(NodeType::TextNode) && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
     {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal(state)?; // Close text node, if any.
@@ -985,10 +910,7 @@ impl Document {
         if d < bestdiff {
           bestdiff = d;
           closeto = n.clone();
-          if d == 0
-            || state.model.get_node_qname(&n) != FONT_ELEMENT_NAME
-            || n.get_attribute("_noautoclose").is_some()
-          {
+          if d == 0 || state.model.get_node_qname(&n) != FONT_ELEMENT_NAME || n.get_attribute("_noautoclose").is_some() {
             break;
           }
         }
@@ -1003,12 +925,7 @@ impl Document {
         self.close_to_node(&*closeto, false, state)?;
       }
       if bestdiff > 0 {
-        self.open_element(
-          FONT_ELEMENT_NAME,
-          Some(string_map!("_fontswitch" => "true")),
-          Some(font),
-          state,
-        )?; // Open if needed.
+        self.open_element(FONT_ELEMENT_NAME, Some(string_map!("_fontswitch" => "true")), Some(font), state)?; // Open if needed.
       }
     }
 
@@ -1033,13 +950,7 @@ impl Document {
   /// Can an element with (qualified name) $tag contain a $childtag element indirectly?
   /// That is, by openning some number of autoOpen'able tags?
   /// And if so, return the tag to open.
-  pub fn can_contain_indirect(
-    &mut self,
-    tag: &str,
-    child: &str,
-    state: &mut State,
-  ) -> Option<String>
-  {
+  pub fn can_contain_indirect(&mut self, tag: &str, child: &str, state: &mut State) -> Option<String> {
     // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
     // node. $child = $model->getNodeQName($child) if ref $child;    // In case
     // child is a node.
@@ -1065,13 +976,9 @@ impl Document {
   }
 
   pub fn can_node_have_attribute(&mut self, node: &Node, attrib: &str, state: &mut State) -> bool {
-    state
-      .model
-      .can_have_attribute(&state.model.get_node_qname(node), attrib)
+    state.model.can_have_attribute(&state.model.get_node_qname(node), attrib)
   }
-  pub fn can_have_attribute(&mut self, tag: &str, attrib: &str, state: &mut State) -> bool {
-    state.model.can_have_attribute(tag, attrib)
-  }
+  pub fn can_have_attribute(&mut self, tag: &str, attrib: &str, state: &mut State) -> bool { state.model.can_have_attribute(tag, attrib) }
 
   pub fn close_text_internal(&mut self, state: &State) -> Result<Node> {
     if self.node.get_type() == Some(NodeType::TextNode) {
@@ -1136,11 +1043,7 @@ impl Document {
       let mut point = self.find_insertion_point("#PCDATA", state)?;
       let mut node = Node::new_text(text, &self.document).unwrap();
       if self.debug {
-        debug!(
-          "Inserting text node for {:?} into {:?}",
-          text,
-          self.document.node_to_string(&point)
-        );
+        debug!("Inserting text node for {:?} into {:?}", text, self.document.node_to_string(&point));
       }
       point.add_child(&mut node)?;
       self.set_node(&node);
@@ -1219,10 +1122,7 @@ impl Document {
     };
     let mut node = self.node.clone();
     let node_type = node.get_type();
-    if node_type != Some(NodeType::TextNode)
-      && node_type != Some(NodeType::ElementNode)
-      && node_type != Some(NodeType::DocumentNode)
-    {
+    if node_type != Some(NodeType::TextNode) && node_type != Some(NodeType::ElementNode) && node_type != Some(NodeType::DocumentNode) {
       error!(target: "internal:context", "Insertion point is not an element, document or text: {:?}", self.document.node_to_string(&node));
       return String::new();
     }
@@ -1285,10 +1185,7 @@ impl Document {
         return self.find_insertion_point(qname, state); // Then retry, possibly w/auto open's
       } else {
         // Didn't find a legit place.
-        error!(
-          target: &s!("malformed:{}", qname),
-          "{:?} isn't allowed in <{}>", qname, cur_qname
-        );
+        error!(target: &s!("malformed:{}", qname), "{:?} isn't allowed in <{}>", qname, cur_qname);
         // ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed
         // in <$cur_qname>", "Currently in " .
         // self.getInsertionContext()); return self.node}; } } }
@@ -1413,9 +1310,7 @@ impl Document {
     //     node.setAttribute($name => $value); } } }    // redundant case...
     Ok(())
   }
-  pub fn node_get_attribute(&mut self, name: &str) -> Option<String> {
-    self.node.get_attribute(name)
-  }
+  pub fn node_get_attribute(&mut self, name: &str) -> Option<String> { self.node.get_attribute(name) }
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Document surgery (?)
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1533,19 +1428,11 @@ impl Document {
 
   pub fn set_box_font(&mut self, node: &Node) {
     let nodeid = node.to_hashable();
-    let has_box_font =
-      self.box_to_absorb.is_some() && self.box_to_absorb.as_ref().unwrap().get_font().is_some();
+    let has_box_font = self.box_to_absorb.is_some() && self.box_to_absorb.as_ref().unwrap().get_font().is_some();
     if has_box_font {
-      self.node_fonts.insert(
-        nodeid,
-        self
-          .box_to_absorb
-          .as_ref()
-          .unwrap()
-          .get_font()
-          .unwrap()
-          .into_owned(),
-      );
+      self
+        .node_fonts
+        .insert(nodeid, self.box_to_absorb.as_ref().unwrap().get_font().unwrap().into_owned());
     }
   }
 
@@ -1709,11 +1596,7 @@ impl Document {
     }
 
     if self.debug {
-      debug!(
-        "Inserting {:?} into {:?}",
-        newnode.get_name(),
-        point.get_name()
-      ); // if $LaTeXML::Core::Document::DEBUG;
+      debug!("Inserting {:?} into {:?}", newnode.get_name(), point.get_name()); // if $LaTeXML::Core::Document::DEBUG;
     }
 
     // Run afterOpen operations
@@ -1722,14 +1605,7 @@ impl Document {
     Ok(newnode)
   }
 
-  fn open_element_internal(
-    &mut self,
-    point: &mut Node,
-    ns_opt: Option<String>,
-    tag: &str,
-    state: &mut State,
-  ) -> Result<Node>
-  {
+  fn open_element_internal(&mut self, point: &mut Node, ns_opt: Option<String>, tag: &str, state: &mut State) -> Result<Node> {
     // TODO:
     //
     // I am seriously irritated by the XML namespace and the confusion of the "default#"
@@ -1743,10 +1619,7 @@ impl Document {
         match point.lookup_namespace_prefix(&ns_uri) {
           // namespace not already declared?
           None => {
-            if let Some(prefix) = state
-              .model
-              .get_document_namespace_prefix(&ns_uri, false, false)
-            {
+            if let Some(prefix) = state.model.get_document_namespace_prefix(&ns_uri, false, false) {
               if !prefix.is_empty() {
                 let mut root = self.document.get_root_element().unwrap();
                 match Namespace::new(&prefix, &ns_uri, &mut root) {
@@ -1801,9 +1674,7 @@ impl Document {
   /// Whenever a node has been created using openElementAt,
   /// closeElementAt ought to be used to close it, when you're finished inserting into $node.
   /// Basically, this just runs any afterClose operations.
-  pub fn close_element_at(&mut self, mut node: &mut Node, state: &mut State) -> Result<()> {
-    self.after_close(&mut node, state)
-  }
+  pub fn close_element_at(&mut self, mut node: &mut Node, state: &mut State) -> Result<()> { self.after_close(&mut node, state) }
 
   pub fn after_open(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Set current point to this node, just in case the afterOpen's use it.
@@ -1901,12 +1772,7 @@ impl Document {
     } else {
       None
     };
-    self.open_element(
-      "ltx:ERROR",
-      Some(string_map!("class"=>error_class)),
-      None,
-      state,
-    )?;
+    self.open_element("ltx:ERROR", Some(string_map!("class"=>error_class)), None, state)?;
     self.close_element("ltx:ERROR", state)?;
     if let Some(savenode) = savenode_opt {
       self.set_node(&savenode);
@@ -1930,10 +1796,7 @@ impl Document {
     // TODO: Can we NOT clone ?!
     let mut candidates: VecDeque<Node> = ancestors.clone().into();
     // Should we only accept a node that already has an id, or should we create an id?
-    while !candidates.is_empty()
-      && !(self.can_node_have_attribute(&candidates[0], key, state)
-        && candidates[0].get_attribute("xml:id").is_some())
-    {
+    while !candidates.is_empty() && !(self.can_node_have_attribute(&candidates[0], key, state) && candidates[0].get_attribute("xml:id").is_some()) {
       candidates.pop_front();
     }
     let mut node_opt: Option<Node> = candidates.pop_front();
@@ -1944,9 +1807,7 @@ impl Document {
         None => None,
       };
       if let Some(sibling) = sib {
-        if self.can_node_have_attribute(&sibling, key, state)
-          && sibling.get_attribute("xml:id").is_some()
-        {
+        if self.can_node_have_attribute(&sibling, key, state) && sibling.get_attribute("xml:id").is_some() {
           node_opt = Some(sibling);
         } else if !ancestors.is_empty() {
           // just take root element?
@@ -1975,9 +1836,7 @@ impl Document {
     self.localized_boxes.push(self.box_to_absorb.take());
     self.box_to_absorb = arg;
   }
-  pub fn localize_box_to_absorb(&mut self) {
-    self.box_to_absorb = self.localized_boxes.pop().unwrap();
-  }
+  pub fn localize_box_to_absorb(&mut self) { self.box_to_absorb = self.localized_boxes.pop().unwrap(); }
 }
 
 // Auxiliary

@@ -75,11 +75,7 @@ pub struct MouthOptions {
   pub fordefinitions: bool,
 }
 impl Default for MouthOptions {
-  fn default() -> Self {
-    MouthOptions {
-      fordefinitions: false,
-    }
-  }
+  fn default() -> Self { MouthOptions { fordefinitions: false } }
 }
 
 impl Mouth {
@@ -187,10 +183,7 @@ impl Mouth {
   /// into "lines" ending with CRLF, CR or LF (DOS, Mac or Unix).
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
   fn split_lines(lines: &str) -> VecDeque<String> {
-    LINEBREAK_REGEX
-      .split(lines)
-      .map(|s| s.to_string())
-      .collect() // And split.
+    LINEBREAK_REGEX.split(lines).map(|s| s.to_string()).collect() // And split.
   }
 
   /// Original LaTeXML:
@@ -236,13 +229,14 @@ impl Mouth {
       Some(ch) => {
         let mut cc: Option<Catcode> = state.lookup_catcode(*ch);
         let next_ch = self.chars.get(self.colno);
-        if cc == Some(Catcode::SUPER) && // Possible convert ^^x
-          next_ch.is_some() && (ch == next_ch.unwrap())
-        {
+        // Possible convert ^^x
+        if cc == Some(Catcode::SUPER) && next_ch.is_some() && (ch == next_ch.unwrap()) {
           let c1: Option<&char> = self.chars.get(self.colno + 1);
           let c2: Option<&char> = self.chars.get(self.colno + 2);
-          if (self.colno + 2 < self.nchars) &&   // ^^ followed by TWO LOWERCASE Hex digits???
-            c1.is_some() && c2.is_some()
+          // ^^ followed by TWO LOWERCASE Hex digits???
+          if (self.colno + 2 < self.nchars)
+            && c1.is_some()
+            && c2.is_some()
             && LOWERHEX_REGEX.is_match(&c1.unwrap().to_string())
             && LOWERHEX_REGEX.is_match(&c2.unwrap().to_string())
           {
@@ -325,11 +319,7 @@ impl Mouth {
               let include_comments: Option<&Stored> = state.lookup_value("INCLUDE_COMMENTS");
               if let Some(&Stored::Bool(ref x)) = include_comments {
                 if *x {
-                  return Some(T_COMMENT!(s!(
-                    "**** {} Line {} ****",
-                    &self.shortsource,
-                    &self.lineno.to_string()
-                  )));
+                  return Some(T_COMMENT!(s!("**** {} Line {} ****", &self.shortsource, &self.lineno.to_string())));
                 }
               }
             }
@@ -395,10 +385,11 @@ impl Mouth {
     } else {
       match self.get_next_line() {
         None => {
-          line = String::new();
+          // We've exhausted this mouth
           self.chars = VecDeque::new();
           self.nchars = 0;
           self.colno = 0;
+          return None;
         },
         Some(next_line) => {
           line = next_line;
@@ -409,12 +400,8 @@ impl Mouth {
         },
       }
     }
-    line = line.trim_end().to_owned(); // Is this right?
-    if line.is_empty() {
-      None
-    } else {
-      Some(line)
-    }
+    line = line.trim_end().to_owned(); // Even empty lines are valid here
+    Some(line)
   }
 
   fn dispatch_char(&mut self, ch: char, cc: Catcode, state: &mut State) -> Option<Token> {

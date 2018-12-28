@@ -85,11 +85,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
 
   DefMacroI!(T_CS!("\\jobname"), None, Tokens!()); // Set to the filename by initialization
 
-  DefMacroI!(
-    T_CS!("\\fontname"),
-    None,
-    Tokens::new(Explode!("fontname not implemented"))
-  );
+  DefMacroI!(T_CS!("\\fontname"), None, Tokens::new(Explode!("fontname not implemented")));
 
   DefMacro!("\\meaning Token", sub[gullet, args, state] {
     unpack!(args => token);

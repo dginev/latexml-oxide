@@ -2,12 +2,7 @@ use crate::package::*;
 
 // Risky: I think this needs to be digested as a body to work like TeX (?)
 // but parameter think's it's just parsing from gullet...
-fn read_box_contents(
-  gullet: &mut Gullet,
-  everybox_opt: Option<Tokens>,
-  state: &mut State,
-) -> Result<Tokens>
-{
+fn read_box_contents(gullet: &mut Gullet, everybox_opt: Option<Tokens>, state: &mut State) -> Result<Tokens> {
   while let Some(t) = gullet.read_token(state) {
     if t == T_BEGIN!() {
       break;
@@ -25,12 +20,7 @@ fn read_box_contents(
   Ok(Tokens!())
 }
 
-fn predigest_box_contents(
-  stomach: &mut Stomach,
-  _tokens: Tokens,
-  state: &mut State,
-) -> Result<Digested>
-{
+fn predigest_box_contents(stomach: &mut Stomach, _tokens: Tokens, state: &mut State) -> Result<Digested> {
   let mut contents = stomach.invoke_token(&T_BEGIN!(), state)?;
   Ok(contents.remove(0))
 }
@@ -83,7 +73,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       // TODO
       // let keyvals = KeyVals::new(None, None, skipMissing => 1);
       // keyvals.set_value(key, gullet.read_dimension);
-      // keyvals 
+      // keyvals
       Ok(Tokens!())
     }), optional => true);
 

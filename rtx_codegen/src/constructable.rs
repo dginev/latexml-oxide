@@ -246,11 +246,9 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
         if has_floats {
           let float_type = floats.len();
           if float_type == 1 {
-            operations
-              .push(quote!(savenode = Some(document.float_to_element(#current_tag, false));));
+            operations.push(quote!(savenode = Some(document.float_to_element(#current_tag, false));));
           } else if float_type == 2 {
-            operations
-              .push(quote!(savenode = Some(document.float_to_element(#current_tag, true));));
+            operations.push(quote!(savenode = Some(document.float_to_element(#current_tag, true));));
           }
           has_floats = false;
           floats = String::new();
@@ -534,8 +532,7 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
   }
   if !is_match {
     // Build the exclusion regex
-    let mut exclusion_str: String =
-      concat!(r"^((?:", QUOTED_SPECIALS!(), r"|[^", SPECIALS!()).to_owned();
+    let mut exclusion_str: String = concat!(r"^((?:", QUOTED_SPECIALS!(), r"|[^", SPECIALS!()).to_owned();
     exclusion_str = exclusion_str + exclude_chars + r"])+)";
     let exclusion_re: Regex = Regex::new(&exclusion_str).unwrap();
 
@@ -558,9 +555,7 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
 fn parse_conditional(text: &mut String) -> (quote::Tokens, String, String) {
   // Remove leading "?"
   // println!("-- cond before: {:?}", text);
-  *text = LEAD_QMARK
-    .replace(text, |_: &Captures| String::new())
-    .to_string();
+  *text = LEAD_QMARK.replace(text, |_: &Captures| String::new()).to_string();
   let translated_bool = translate_value("(", text);
   let bool_branch = quote!(  #translated_bool );
   let if_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis));

@@ -32,12 +32,7 @@ impl fmt::Debug for List {
 impl BoxOps for List {
   fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
 
-  fn to_string(&self) -> String {
-    self
-      .boxes
-      .iter()
-      .fold(String::new(), |joined, x| joined + &x.to_string())
-  }
+  fn to_string(&self) -> String { self.boxes.iter().fold(String::new(), |joined, x| joined + &x.to_string()) }
 
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
@@ -49,11 +44,7 @@ impl BoxOps for List {
   }
 
   fn revert(&self) -> Tokens {
-    let reverted = self
-      .boxes
-      .iter()
-      .flat_map(|tbox| tbox.revert().unlist())
-      .collect::<Vec<Token>>();
+    let reverted = self.boxes.iter().flat_map(|tbox| tbox.revert().unlist()).collect::<Vec<Token>>();
     Tokens::new(reverted)
   }
 
@@ -84,11 +75,7 @@ impl List {
         break;
       }
     }
-    List {
-      boxes,
-      font,
-      mode: None,
-    }
+    List { boxes, font, mode: None }
   }
 }
 

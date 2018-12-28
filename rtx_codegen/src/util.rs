@@ -5,19 +5,11 @@ use syn::*;
 pub fn str_value_of_meta_item<'a>(item: &'a MetaItem, name: &str) -> &'a str {
   match *item {
     MetaItem::NameValue(_, Lit::Str(ref value, _)) => &*value,
-    _ => panic!(
-      r#"`{}` must be in the form `#[{}="something"]`"#,
-      name, name
-    ),
+    _ => panic!(r#"`{}` must be in the form `#[{}="something"]`"#, name, name),
   }
 }
 
-pub fn get_options_from_input(
-  name: &str,
-  attrs: &[Attribute],
-  on_bug: fn() -> !,
-) -> Option<Vec<MetaItem>>
-{
+pub fn get_options_from_input(name: &str, attrs: &[Attribute], on_bug: fn() -> !) -> Option<Vec<MetaItem>> {
   let options = attrs.iter().find(|a| a.name() == name).map(|a| &a.value);
   match options {
     Some(&MetaItem::List(_, ref options)) => Some(options.clone()),

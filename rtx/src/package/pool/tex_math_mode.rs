@@ -66,22 +66,22 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     </ltx:Math>
   </ltx:equation>",
     alias         => Some(s!("$$")),
-    before_digest => vec!(beforeproc!(stomach, state, { stomach.begin_mode("display_math", state)?; })),
+    before_digest => beforeproc!(stomach, state, { stomach.begin_mode("display_math", state)?; }),
     capture_body  => true
   );
 
   DefConstructorI!(T_CS!("\\@@ENDDISPLAYMATH"), None, None, alias => Some(s!("$$")),
-    before_digest => vec!(beforeproc!(stomach, state, { stomach.end_mode("display_math", state)?; })));
+    before_digest => beforeproc!(stomach, state, { stomach.end_mode("display_math", state)?; }));
 
   DefConstructor!("\\@@BEGININLINEMATH",
     "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
     alias => Some(s!("$")),
-    before_digest => vec![beforeproc!(stomach, state, { 
-      stomach.begin_mode("inline_math", state)?; })],
+    before_digest => beforeproc!(stomach, state, {
+      stomach.begin_mode("inline_math", state)?; }),
     capture_body => true);
 
   DefConstructorI!(T_CS!("\\@@ENDINLINEMATH"), None, None, alias => Some(s!("$")),
-    before_digest => vec![beforeproc!(stomach, state, { stomach.end_mode("inline_math", state)?; })]);
+    before_digest => beforeproc!(stomach, state, { stomach.end_mode("inline_math", state)?; }));
 
   // Same as add_TeX, but add the code from the body of the object.
   let add_body_tex_closure: Vec<TagConstructionClosure> = tagsub!(document, node, state, {

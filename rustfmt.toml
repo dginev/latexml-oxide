@@ -1,15 +1,12 @@
 # Detailed instructions at: https://github.com/rust-lang-nursery/rustfmt/blob/master/Configurations.md
-max_width = 150
+max_width = 151
 comment_width = 150
-ideal_width = 100
-fn_call_width = 100
-error_on_line_overflow = false
 match_block_trailing_comma = true
-fn_args_layout = "Block"
-closure_block_indent_threshold = 0
-fn_return_indent = "WithWhereClause"
 wrap_comments = true
 fn_single_line = true
 where_single_line = true
 tab_spaces = 2
-cyclomatic-complexity-threshold = 100
+error_on_line_overflow = true
+error_on_unformatted = true
+version = "Two"
+edition = "2018"

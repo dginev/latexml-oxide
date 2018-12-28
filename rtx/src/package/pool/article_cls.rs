@@ -27,8 +27,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     "notitlepage",
     "titlepage",
   ]
-    .iter()
-    .map(|s| s.to_string())
+  .iter()
+  .map(|s| s.to_string())
   {
     // DeclareOption!(option, None);
   }
@@ -73,10 +73,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefMacro!("\\thepart", "\\Roman{part}");
   DefMacro!("\\thesection", "\\arabic{section}");
   DefMacro!("\\thesubsection", "\\thesection.\\arabic{subsection}");
-  DefMacro!(
-    "\\thesubsubsection",
-    "\\thesubsection.\\arabic{subsubsection}"
-  );
+  DefMacro!("\\thesubsubsection", "\\thesubsection.\\arabic{subsubsection}");
   DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");
   DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
   SetCounter!("tocdepth", Number!(3), None);

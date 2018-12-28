@@ -31,11 +31,9 @@ pub type ConditionalClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Res
 pub type PrimitiveFn = Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<Digested>>;
 pub type PrimitiveClosure = Rc<PrimitiveFn>;
 pub type BeforeDigestClosure = Rc<Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
-pub type PropertiesClosure =
-  Rc<Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
+pub type PropertiesClosure = Rc<Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
 pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
-pub type ReplacementClosure =
-  Rc<Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
+pub type ReplacementClosure = Rc<Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
 pub type ConstructionClosure = Rc<Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
 
 impl From<Token> for Option<ExpansionClosure> {
@@ -43,19 +41,12 @@ impl From<Token> for Option<ExpansionClosure> {
 }
 
 impl From<Tokens> for Option<ExpansionClosure> {
-  fn from(t: Tokens) -> Option<ExpansionClosure> {
-    Some(Rc::new(move |gullet, args, state| Ok(t.clone())))
-  }
+  fn from(t: Tokens) -> Option<ExpansionClosure> { Some(Rc::new(move |gullet, args, state| Ok(t.clone()))) }
 }
 
 pub trait Definition: Object {
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens>;
-  fn invoke_primitive(
-    &self,
-    gullet: &mut Stomach,
-    caller: Rc<Definition>,
-    state: &mut State,
-  ) -> Result<Vec<Digested>>;
+  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>>;
 
   /// We can almost always return the CS by reference, except in a Register's RefCell, where we are
   /// forced to clone
@@ -84,13 +75,7 @@ pub trait Definition: Object {
   fn to_string(&self) -> String { unimplemented!() }
 
   // Return the Tokens that would invoke the given definition with arguments.
-  fn invocation(
-    &mut self,
-    args: Vec<Tokens>,
-    gullet: &mut Gullet,
-    state: &mut State,
-  ) -> Result<Tokens>
-  {
+  fn invocation(&mut self, args: Vec<Tokens>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     let mut invocation_result: Vec<Token> = Vec::new();
     invocation_result.push(self.get_cs().into_owned());
 
@@ -107,23 +92,13 @@ pub trait Definition: Object {
 
   fn get_num_args(&self) -> usize { 0 }
 
-  fn do_absorbtion(
-    &self,
-    _document: &mut Document,
-    _whatsit: &Whatsit,
-    _state: &mut State,
-  ) -> Result<()>;
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()>;
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn capture_body(&self) -> bool { false }
 
-  fn execute_before_digest(
-    &self,
-    stomach: &mut Stomach,
-    state: &mut State,
-  ) -> Result<Vec<Digested>>
-  {
+  fn execute_before_digest(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
     state.unlocked = true;
     let mut before_digested = Vec::new();
     if let Some(pre_list) = self.before_digest() {
@@ -134,13 +109,7 @@ pub trait Definition: Object {
     }
     Ok(before_digested)
   }
-  fn execute_after_digest(
-    &self,
-    stomach: &mut Stomach,
-    whatsit: &mut Whatsit,
-    state: &mut State,
-  ) -> Result<Vec<Digested>>
-  {
+  fn execute_after_digest(&self, stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<Vec<Digested>> {
     state.unlocked = true;
     let mut after_digested = Vec::new();
     if let Some(post_list) = self.after_digest() {
@@ -152,13 +121,7 @@ pub trait Definition: Object {
     Ok(after_digested)
   }
 
-  fn execute_after_digest_body(
-    &self,
-    stomach: &mut Stomach,
-    whatsit: &mut Whatsit,
-    state: &mut State,
-  ) -> Result<Vec<Digested>>
-  {
+  fn execute_after_digest_body(&self, stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<Vec<Digested>> {
     state.unlocked = true;
     let mut after_body_digested = Vec::new();
     if let Some(post_list) = self.after_digest_body() {

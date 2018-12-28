@@ -94,14 +94,13 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   DefPrimitive!("\\long",  sub[stomach, args, state] { state.set_prefix("long");    Ok(vec![])}, is_prefix => true);
   DefPrimitive!("\\outer", sub[stomach, args, state] { state.set_prefix("outer");   Ok(vec![])}, is_prefix => true);
 
-
   // <let assignment> = \futurelet <control sequence><token><token>
   //  | \let<control sequence><equals><one optional space><token>
   DefPrimitive!("\\let Token SkipMatch:= Skip1Space Token", sub[stomach, args, state] {
-    unpack_to_token!(args => token1, token2);
-    state.let_i(&token1, token2, None); 
-    Ok(Vec::new())
-   });
+   unpack_to_token!(args => token1, token2);
+   state.let_i(&token1, token2, None);
+   Ok(Vec::new())
+  });
 
   DefMacro!("\\futurelet Token Token Token", sub[gullet, args, state] {
       unpack_to_token!(args => cs, token1, token2);
@@ -123,10 +122,9 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
     DefRegister!(&cs.get_cs_name(), Number::new(0), inner_state,
       getter => Some(Rc::new(move |args, state| { Some(state.lookup_number(&count).unwrap_or_default().into()) })),
       setter => Some(Rc::new(move |value, args, state| { state.assign_value(&setter_count, value, None); })));
-    AfterAssignment!(inner_state); 
+    AfterAssignment!(inner_state);
     Ok(vec![])
   });
-
 
   DefRegister!("\\catcode Number", Number::new(0),
     getter => Some(Rc::new(|args, state| {
