@@ -16,8 +16,11 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-pub type ReaderClosure =
-  Rc<Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
+pub type ReaderFn =
+  Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>;
+pub type ReaderPredigestFn = Fn(&mut Stomach, Tokens, &mut State) -> Result<Digested>;
+pub type ReaderPredigestClosure = Rc<ReaderPredigestFn>;
+pub type ReaderClosure = Rc<ReaderFn>;
 pub type ReversionClosure =
   Rc<Fn(&mut Gullet, Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
 
@@ -56,11 +59,11 @@ pub struct Parameter {
   pub novalue: bool,
   pub semiverbatim: bool,
   pub optional: bool,
-  pub undigested: bool,
   pub name: String,
   pub spec: String,
   pub extra: Vec<ParameterExtra>,
   pub reader: ReaderClosure,
+  pub reader_predigest: Option<ReaderPredigestClosure>,
   pub reversion: Option<ReversionClosure>,
   pub before_digest: Option<BeforeDigestClosure>,
   pub after_digest: Option<DigestionClosure>,
@@ -71,7 +74,6 @@ impl Default for Parameter {
       novalue: false,
       semiverbatim: false,
       optional: false,
-      undigested: false,
       name: s!("parameter_default"),
       spec: String::new(),
       extra: Vec::new(),
@@ -79,6 +81,7 @@ impl Default for Parameter {
         warn!("-- Warning: please define a real reader, this is a mock fallback!");
         Ok(Tokens!())
       }),
+      reader_predigest: None,
       reversion: None,
       before_digest: None,
       after_digest: None,
@@ -87,12 +90,11 @@ impl Default for Parameter {
 }
 impl fmt::Debug for Parameter {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "Parameter(\n\t name: {:?}, novalue:{:?}, semiverbatim:{:?},\n\t optional:{:?}, undigested:{:?}, spec:{:?}\n\t extra: {:?}\n\t reversion: {:?}, before_digest: {:?}, after_digest: {:?} )", 
+    write!(f, "Parameter(\n\t name: {:?}, novalue:{:?}, semiverbatim:{:?},\n\t optional:{:?}, spec:{:?}\n\t extra: {:?}\n\t reversion: {:?}, before_digest: {:?}, after_digest: {:?} )", 
     self.name,
     self.novalue,
     self.semiverbatim,
     self.optional,
-    self.undigested,
     self.spec,
     self.extra,
     self.reversion.is_some(),
@@ -191,10 +193,10 @@ impl Parameter {
         self.novalue = descriptor.novalue;
         self.semiverbatim = descriptor.semiverbatim;
         self.optional = descriptor.optional;
-        self.undigested = descriptor.undigested;
         self.reversion = descriptor.reversion;
         self.before_digest = descriptor.before_digest;
         self.after_digest = descriptor.after_digest;
+        self.reader_predigest = descriptor.reader_predigest;
       },
       None => panic!("Unrecognized parameter type in {:?}", self.spec),
     }
@@ -232,7 +234,7 @@ impl Parameter {
       };
       state.begin_semiverbatim(None);
     }
-    let closure: &ReaderClosure = &self.reader;
+    let closure = &self.reader;
     let mut value = closure(gullet, vec![], self.extra.clone(), state)?;
     // TODO:
     // $value = $value->neutralize if $$self{semiverbatim} && (ref $value)
@@ -293,10 +295,10 @@ impl Parameter {
     }
 
     let digested_value = if !value_to_digest.is_empty() {
-      if !self.undigested {
-        Some(value_to_digest.be_digested(stomach, state)?)
+      if let Some(ref closure) = &self.reader_predigest {
+        Some(closure(stomach, value_to_digest, state)?)
       } else {
-        Some(Digested::Postponed(Rc::new(value_to_digest)))
+        Some(value_to_digest.be_digested(stomach, state)?)
       }
     } else {
       None
