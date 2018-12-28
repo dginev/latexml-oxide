@@ -257,7 +257,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Read an argument that will not be digested.
   DefParameterType!("Undigested",
   reader => reader!(gullet, inner, _extra, state, { gullet.read_arg(state)}),
-  // TODO! undigested => true,
+  reader_predigest => undigested!(),
   reversion => reversion!(gullet, arg, inner, state, {  
     let mut read_tokens = vec!(T_BEGIN!());
     let mut reverted_arg = arg.iter().map(|a| a.revert()).collect();
@@ -269,7 +269,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
   DefParameterType!("OptionalUndigested", 
   reader => reader!(gullet, inner, _extra, state, { gullet.read_optional(state) }),
-  // TODO! undigested => true,
+  reader_predigest => undigested!(),
   optional => true,
   reversion => reversion!(gullet, arg, inner, state, {
     if arg.is_empty() {
@@ -339,8 +339,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         Some(t) => Ok(Tokens!(t)),
         None => Ok(Tokens!())
       }
-    })
-    // TODO! undigested => true,
+    }),
+    reader_predigest => undigested!()
   );
 
   // Read the next token

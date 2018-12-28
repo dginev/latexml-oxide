@@ -3,8 +3,8 @@
 ## [0.1.8] (in active development)
 
   - work on passing `tokenize/verb` test
-  - `DefParameter` has an `untokenized` flag that acts as a type designator. Unrealistic ergonomics in Rust. Instead, augment the `reader` paradigm with an optional follow-up closure called `predigest`, which has access to the stomach and can be ran immediately after a `read` is completed.
-   
+  - `DefParameter` has an `untokenized` flag that acts as a type designator. Unrealistic ergonomics in Rust. Instead, augment the `reader` paradigm with an optional follow-up closure called `reader_predigest`, which has access to the stomach and can be ran immediately after a `read` is completed. One can still use an `reader_predigest => undigested!()` macro call to allow arguments to pass through digestion untouched.
+
 
 ## [0.1.7] 2018-24-12
   - pass `tokenize/percent` and `tokenize/url` test 
