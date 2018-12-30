@@ -95,7 +95,7 @@ fn scoped_assign_lookup_value() {
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 
-  state.pop_frame();
+  assert!(state.pop_frame().is_ok());
 
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
@@ -312,5 +312,5 @@ fn semiverbatim() {
 
   state.begin_semiverbatim(None);
 
-  state.end_semiverbatim();
+  assert!(state.end_semiverbatim().is_ok());
 }

@@ -30,6 +30,7 @@ pub enum ErrorTarget {
   Definition,
   TexPool,
   Internal,
+  TargetUnexpected,
 }
 
 #[derive(Debug)]
@@ -46,6 +47,7 @@ pub enum ErrorCategory {
   Libxml,
   Recursion,
   EoF,
+  Endgroup,
   Generic(Box<ErrorTrait>),
 }
 
@@ -85,6 +87,7 @@ impl fmt::Display for Error {
       Libxml => write!(f, "libxml error"),
       Recursion => write!(f, "<recursion>"),
       EoF => write!(f, "<EOF>"),
+      Endgroup => write!(f, "<endgroup>"),
       Generic(ref err) => err.fmt(f),
     }
   }
@@ -106,6 +109,7 @@ impl ErrorTrait for Error {
       Libxml => "libxml error",
       Recursion => "<recursion>",
       EoF => "<EOF>",
+      Endgroup => "<endgroup>",
       Generic(ref err) => err.description(),
     }
   }

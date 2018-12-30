@@ -95,12 +95,12 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
     }
     if let Some(ref init_token) = init {
       let body = mouth.read_tokens(Some(init_token), state);
-      state.end_semiverbatim();
+      state.end_semiverbatim()?;
       let cs = if state.lookup_bool("IN_MATH") { T_CS!("\\@math@verb") } else { T_CS!("\\@text@verb") };
       Ok(Invocation!(cs, vec![Tokens!(init.unwrap()), body], gullet, state)?)
     } else { // typically something read too far got \verb and the content is somewhere else..?
       error!(target: "expected:delimiter", "Verbatim argument lost\n Bindings for preceding code is probably broken");
-      state.end_semiverbatim();
+      state.end_semiverbatim()?;
       Ok(Tokens!())
     }
   });

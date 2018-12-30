@@ -502,8 +502,7 @@ macro_rules! SetupBindingMacros {
             stomach.begin_mode(&mode_clone, state)?;
           });
           before_digest_env.push(begin_mode_closure);
-        }
-        if options.bounded {
+        } else if options.bounded {
           let bgroup_closure = beforeproc_single!(stomach, state, {
             stomach.bgroup(state);
           });
@@ -525,8 +524,7 @@ macro_rules! SetupBindingMacros {
             stomach.end_mode(&mode_clone, state)?;
           });
           after_digest_env.extend(end_mode_closure);
-        }
-        if options.bounded {
+        } else if options.bounded {
           let egroup_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
             stomach.egroup(state)?;
           });
@@ -559,15 +557,6 @@ macro_rules! SetupBindingMacros {
         DefPrimitiveII!(cs, paramlist, $compiled_replacement, $options, $state_arg);
       })
     );
-
-    // my %register_types = (      # [CONSTANT]
-    //   'LaTeXML::Common::Number'    => 'Number',
-    //   'LaTeXML::Common::Dimension' => 'Dimension',
-    //   'LaTeXML::Common::Glue'      => 'Glue',
-    //   'LaTeXML::Core::MuGlue'      => 'MuGlue',
-    //   'LaTeXML::Core::Tokens'      => 'Tokens',
-    //   'LaTeXML::Core::Token'       => 'Token',
-    // );
 
     macro_rules! DefRegisterWO {
       ($proto:expr, $value:expr, $options:expr) => {
@@ -661,11 +650,69 @@ macro_rules! SetupBindingMacros {
         let is_locked = options.locked.clone();
         let locked_key = if is_locked { s!("{}:locked", $cs.get_cs_name()) } else { String::new() };
 
+        let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
+
+        if options.require_math {
+          let cs_name = $cs.get_cs_name().to_owned();
+          let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(cs_name, state) });
+          before_digest_closures.push(require_math_closure);
+        }
+        if options.forbid_math {
+          let cs_name = $cs.get_cs_name().to_owned();
+          let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(cs_name, state) });
+          before_digest_closures.push(forbid_math_closure);
+        }
+        if let Some(ref mode) = options.mode {
+          let mode_clone = mode.clone();
+          let begin_mode_closure = beforeproc_single!(stomach, state, {
+            stomach.begin_mode(&mode_clone, state)?;
+          });
+          before_digest_closures.push(begin_mode_closure);
+        } else if options.bounded {
+          let bgroup_closure = beforeproc_single!(stomach, state, {
+            stomach.bgroup(state);
+          });
+          before_digest_closures.push(bgroup_closure);
+        }
+        if let Some(chosen_font) = options.font {
+          let merge_font_closure = beforeproc_single!(stomach, state, {
+            MergeFont!(&chosen_font, state);
+          });
+          before_digest_closures.push(merge_font_closure);
+        }
+        before_digest_closures.extend(options.before_digest);
+
+        let mut after_digest_closures: Vec<DigestionClosure> = Vec::new();
+        after_digest_closures.extend(options.after_digest);
+        if let Some(ref mode) = options.mode {
+          let mode_clone = mode.clone();
+          let end_mode_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
+            stomach.end_mode(&mode_clone, state)?;
+          });
+          after_digest_closures.extend(end_mode_closure);
+        } else if options.bounded {
+          let egroup_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
+            stomach.egroup(state)?;
+          });
+          after_digest_closures.extend(egroup_closure);
+        }
+
         let constructor = Constructor {
           cs: $cs,
           paramlist: $paramlist,
           replacement: $compiled_replacement,
-          options: options,
+          before_digest: before_digest_closures,
+          after_digest: after_digest_closures,
+          after_construct: options.after_construct,
+          nargs: options.nargs,
+          alias: options.alias,
+          reversion: options.reversion,
+          // sizer
+          capture_body: options.capture_body,
+          properties: options.properties,
+          // outer
+          // long
+          .. Constructor::default()
         };
         $state_arg.install_definition(constructor, scope);
 
@@ -772,7 +819,7 @@ macro_rules! SetupBindingMacros {
         let mut after_construct_with_frame: Vec<ConstructionClosure> = options.after_construct;
 
         let pop_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
-          state.pop_frame();
+          state.pop_frame()?;
           Ok(())
         });
         after_construct_with_frame.push(pop_frame_closure);
@@ -781,21 +828,21 @@ macro_rules! SetupBindingMacros {
           cs: T_CS!(begin_name),
           paramlist: $paramlist,
           replacement: $compiled_replacement,
-          options: ConstructorOptions {
-            nargs: options.nargs,
-            before_digest: before_digest_env,
-            after_digest: options.after_digest_begin,
-            after_digest_body: options.after_digest_body,
-            before_construct: before_construct_with_frame,
-            // Curiously, it's the \begin whose afterConstruct gets called.
-            after_construct: after_construct_with_frame,
-            capture_body: true,
-            properties: options.properties.clone(),
-            // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
-            // (defined $sizer ? (sizer => $sizer) : ()),
-            // ), $options{scope});
-            ..ConstructorOptions::default()
-          },
+          nargs: options.nargs,
+          before_digest: before_digest_env,
+          after_digest: options.after_digest_begin,
+          after_digest_body: options.after_digest_body,
+          before_construct: before_construct_with_frame,
+          // Curiously, it's the \begin whose afterConstruct gets called.
+          after_construct: after_construct_with_frame,
+          capture_body: true,
+          properties: options.properties.clone(),
+          // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
+          // (defined $sizer ? (sizer => $sizer) : ()),
+          // ), $options{scope});
+          reversion: options.reversion,
+          alias: options.alias,
+          .. Constructor::default()
         });
         $state_arg.install_definition(begin_name_constructor, options.scope.clone());
 
@@ -834,11 +881,9 @@ macro_rules! SetupBindingMacros {
           cs: T_CS!(end_name),
           replacement: None,
           paramlist: None,
-          options: ConstructorOptions {
-            before_digest: options.before_digest_end,
-            after_digest: after_digest_env,
-            ..ConstructorOptions::default()
-          },
+          before_digest: options.before_digest_end,
+          after_digest: after_digest_env,
+          .. Constructor::default() // TODO ? fill in missing ones
         });
         $state_arg.install_definition(end_envname_constructor, options.scope.clone());
 
@@ -857,15 +902,13 @@ macro_rules! SetupBindingMacros {
           // beforeConstruct => flatten(sub { state->pushFrame; }, $options{beforeConstruct}),
           // Curiously, it's the \begin whose afterConstruct gets called.
           // afterConstruct => flatten($options{afterConstruct}, sub { state->popFrame; }),
-          options: ConstructorOptions {
             nargs: options.nargs,
             capture_body: true,
             properties: options.properties.clone(),
             // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
             // (defined $sizer ? (sizer => $sizer) : ()),
             // ), $options{scope});
-            ..ConstructorOptions::default()
-          },
+            .. Constructor::default()
         });
         $state_arg.install_definition(name_constructor, options.scope.clone());
 
@@ -885,7 +928,7 @@ macro_rules! SetupBindingMacros {
           // afterDigest  => flatten($options{afterDigest},
           //   ($mode ? (sub { $_[0]->endMode($mode); }) : ())),
           // ), $options{scope});
-          options: ConstructorOptions::default(),
+          .. Constructor::default()
         });
         $state_arg.install_definition(end_name_constructor, options.scope);
 

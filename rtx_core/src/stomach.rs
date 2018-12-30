@@ -6,7 +6,7 @@ use crate::common::error::*;
 use crate::common::font;
 use crate::common::font::Font;
 use crate::common::store::Stored;
-use crate::definition::constructor::{Constructor, ConstructorOptions};
+use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::Definition;
 use crate::gullet::Gullet;
@@ -333,7 +333,7 @@ impl<'t> Stomach {
           replacement: Some(Rc::new(move |document, _args, _props, state| {
             document.make_error("undefined", &closure_cs, state)
           })),
-          options: ConstructorOptions::default(),
+          ..Constructor::default()
         },
         Some(Scope::Global),
       );
@@ -489,7 +489,7 @@ impl<'t> Stomach {
       }
     }
     let after = state.remove_value("afterGroup");
-    state.pop_frame();
+    state.pop_frame()?;
     if !nobox {
       self.boxing.pop(); // For begingroup/endgroup
     }
