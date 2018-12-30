@@ -388,7 +388,7 @@ impl Gullet {
   /// Match the input against a set of keywords; Similar to readMatch, but the keywords are strings,
   /// and Case and catcodes are ignored; additionally, leading spaces are skipped.
   /// AND, macros are expanded.
-  pub fn read_keyword(&mut self, keywords: &[&str], state: &mut State) -> Result<Tokens> {
+  pub fn read_keyword(&mut self, keywords: &[&str], state: &mut State) -> Result<Option<Tokens>> {
     self.skip_spaces(state);
     for keyword in keywords.iter() {
       let mut to_match: VecDeque<char> = keyword.to_uppercase().chars().collect();
@@ -408,12 +408,12 @@ impl Gullet {
       }
       if to_match.is_empty() {
         // All matched!!!
-        return Ok(T_OTHER!(keyword.to_string()).into());
+        return Ok(Some(T_OTHER!(keyword.to_string()).into()));
       } else {
         self.unread(&matched.into()); // Put 'em back and try next!
       }
     }
-    Ok(Tokens!())
+    Ok(None)
   }
 
   /// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
@@ -657,7 +657,7 @@ impl Gullet {
       if let Some(next) = next {
         self.unread(&Tokens!(next));
       }
-      Ok(Number::new(0))
+      Ok(Number::new(0.0))
     }
   }
 
@@ -673,13 +673,15 @@ impl Gullet {
         if cc == Catcode::OTHER && text.chars().all(|c| c.is_digit(10)) {
           // Read decimal literal
           text.push_str(&self.read_digits(&DIGIT_RE, true, state)?);
-          Ok(Some(Number::new(text.parse::<i32>()?)))
+          Ok(Some(Number::new(text.parse::<f32>()?)))
         } else if token == T_OTHER!("'") {
           // Read Octal literal
-          Ok(Some(Number::new(i32::from_str_radix(&self.read_digits(&OCT_RE, true, state)?, 8)?)))
+          let decimal = i32::from_str_radix(&self.read_digits(&OCT_RE, true, state)?, 8)?;
+          Ok(Some(Number::new(decimal as f32)))
         } else if token == T_OTHER!("\"") {
           //  Read Hex literal
-          Ok(Some(Number::new(i32::from_str_radix(&self.read_digits(&HEX_RE, true, state)?, 16)?)))
+          let decimal = i32::from_str_radix(&self.read_digits(&HEX_RE, true, state)?, 16)?;
+          Ok(Some(Number::new(decimal as f32)))
         } else if token == T_OTHER!("`") {
           //  Read Charcode
           let mut s = match self.read_token(state) {
@@ -691,7 +693,7 @@ impl Gullet {
           }
           let s_char = s.chars().next().unwrap();
           let s_char = s_char as u8;
-          let s_char = i32::from(s_char);
+          let s_char = f32::from(s_char);
           Ok(Some(Number::new(s_char))) //  Only a character token!!! NOT expanded!!!!
         } else {
           self.unread(&Tokens!(token)); // Unread
@@ -702,13 +704,81 @@ impl Gullet {
   }
 
   fn read_internal_integer(&mut self, state: &mut State) -> Result<Option<Number>> {
-    match self.read_register_value(RegisterType::Number, state) {
-      Err(e) => Err(e),
-      Ok(None) => Ok(None),
-      Ok(Some(val)) => Ok(Some(val.into())),
+    match self.read_register_value(RegisterType::Number, state)? {
+      None => Ok(None),
+      Some(val) => Ok(Some(val.into())),
     }
   }
-  pub fn read_dimension(&mut self, _state: &mut State) -> Result<Dimension> { unimplemented!() }
+  fn read_internal_dimension(&mut self, state: &mut State) -> Result<Option<Dimension>> {
+    match self.read_register_value(RegisterType::Dimension, state)? {
+      None => Ok(None),
+      Some(val) => Ok(Some(val.into())),
+    }
+  }
+  fn read_internal_glue(&mut self, state: &mut State) -> Result<Option<Glue>> {
+    match self.read_register_value(RegisterType::Glue, state)? {
+      None => Ok(None),
+      Some(val) => Ok(Some(val.into())),
+    }
+  }
+
+  //======================================================================
+  // Dimensions
+  //======================================================================
+  // <dimen> = <optional signs><unsigned dimen>
+  // <unsigned dimen> = <normal dimen> | <coerced dimen>
+  // <coerced dimen> = <internal glue>
+  pub fn read_dimension(&mut self, state: &mut State) -> Result<Dimension> {
+    let is_negative = self.read_optional_signs(state)?;
+    let s = if is_negative { -1.0 } else { 1.0 };
+    if let Some(d) = self.read_internal_dimension(state)? {
+      Ok(if is_negative { d.negate() } else { d })
+    } else if let Some(d) = self.read_internal_glue(state)? {
+      Ok(Dimension::new(s * d.value_of()))
+    } else if let Some(d) = self.read_factor(state)? {
+      let unit = match self.read_unit(state)? {
+        Some(u) => u,
+        None => {
+          warn!(target:"expected:<unit>", "Illegal unit of measure (pt inserted).");
+          65536.0
+        },
+      };
+      Ok(Dimension::new(s * d * unit))
+    } else {
+      warn!(target: "expected:<number>", "Missing number, treated as zero. while processing {:?}", state.current_token);
+      Ok(Dimension::new(0.0))
+    }
+  }
+
+  // <unit of measure> = <optional spaces><internal unit>
+  //     | <optional true><physical unit><one optional space>
+  // <internal unit> = em <one optional space> | ex <one optional space>
+  //     | <internal integer> | <internal dimen> | <internal glue>
+  // <physical unit> = pt | pc | in | bp | cm | mm | dd | cc | sp
+
+  /// Read a unit, returning the equivalent number of scaled points,
+  fn read_unit(&mut self, state: &mut State) -> Result<Option<f32>> {
+    let unit_opt = if let Some(u) = self.read_keyword(&["ex", "em"], state)? {
+      self.skip_one_space(state);
+      Some(state.convert_unit(u))
+    } else if let Some(u) = self.read_internal_integer(state)? {
+      Some(u.value_of()) // These are coerced to number=>sp
+    } else if let Some(u) = self.read_internal_dimension(state)? {
+      Some(u.value_of())
+    } else if let Some(u) = self.read_internal_glue(state)? {
+      Some(u.value_of())
+    } else {
+      self.read_keyword(&["true"], state)?; // But ignore, we're not bothering with mag...
+      if let Some(u) = self.read_keyword(&["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp"], state)? {
+        self.skip_one_space(state);
+        Some(state.convert_unit(u))
+      } else {
+        None
+      }
+    };
+    Ok(unit_opt)
+  }
+
   pub fn read_glue(&mut self, _state: &mut State) -> Result<Glue> { unimplemented!() }
   pub fn read_muglue(&mut self, _state: &mut State) -> Result<MuGlue> { unimplemented!() }
   pub fn read_tokens_value(&mut self, _state: &mut State) -> Result<MuGlue> { unimplemented!() }
@@ -728,7 +798,6 @@ impl Gullet {
         self.unread(&Tokens!(token));
       }
     }
-    return;
   }
 
   pub fn reading_from_mouth<R>(&mut self, mouth: Mouth, state: &mut State, mut reader: Box<FnMut(&mut Gullet, &mut State) -> R>) -> R {
@@ -821,5 +890,38 @@ impl Gullet {
       }
     }
     Ok(result)
+  }
+
+  // <factor> = <normal integer> | <decimal constant>
+  // <decimal constant> = . | , | <digit><decimal constant> | <decimal constant><digit>
+  // Return a number (perl number)
+  fn read_factor(&mut self, state: &mut State) -> Result<Option<f32>> {
+    let mut factor = self.read_digits(&DIGIT_RE, false, state)?;
+    let mut token_opt = self.read_x_token(false, false, state)?;
+    if let Some(ref token) = token_opt {
+      let token_string = token.get_string();
+      if token_string == "." || token_string == "," {
+        factor = s!("{}.{}", factor, self.read_digits(&DIGIT_RE, false, state)?);
+        token_opt = self.read_x_token(false, false, state)?;
+      }
+    }
+
+    let factor: f32 = factor.parse::<f32>().unwrap_or(0.0);
+    if factor > 0.0 {
+      if let Some(token) = token_opt {
+        if token.get_catcode() == Catcode::SPACE {
+          self.unread(&Tokens!(token));
+        }
+      }
+      Ok(Some(factor))
+    } else {
+      if let Some(token) = token_opt {
+        self.unread(&Tokens!(token));
+      }
+      match self.read_normal_integer(state)? {
+        None => Ok(None),
+        Some(n) => Ok(Some(n.value_of())),
+      }
+    }
   }
 }

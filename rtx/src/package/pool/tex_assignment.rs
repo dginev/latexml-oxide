@@ -119,19 +119,19 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
     unpack_to_token!(args => cs, num);
     let count = s!("\\count{}", num.to_number().value_of());
     let setter_count = count.clone();
-    DefRegister!(&cs.get_cs_name(), Number::new(0), inner_state,
+    DefRegister!(&cs.get_cs_name(), Number::new(0.0), inner_state,
       getter => Some(Rc::new(move |args, state| { Some(state.lookup_number(&count).unwrap_or_default().into()) })),
       setter => Some(Rc::new(move |value, args, state| { state.assign_value(&setter_count, value, None); })));
     AfterAssignment!(inner_state);
     Ok(vec![])
   });
 
-  DefRegister!("\\catcode Number", Number::new(0),
+  DefRegister!("\\catcode Number", Number::new(0.0),
     getter => Some(Rc::new(|args, state| {
-      let num : i32 = args[0].to_number().value_of();
+      let num : f32 = args[0].to_number().value_of();
       let code : Catcode = state.lookup_catcode((num as u8) as char).unwrap_or(Catcode::OTHER);
       let code : u8 = code.into();
-      Number::new(code.into()).into()
+      Number::new(code).into()
     })),
     setter => Some(Rc::new(|value, args, state| {
       let c_char = (args[0].to_number().value_of() as u8) as char;
@@ -141,7 +141,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   );
 
   // Only used for active math characters, so far
-  DefRegister!("\\mathcode Number", Number::new(0),
+  DefRegister!("\\mathcode Number", Number::new(0.0),
     getter => Some(Rc::new(|args, state| {
       let ch_code   = args[0].to_number().value_of() as u8;
       let ch : char = ch_code as char;
@@ -149,7 +149,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
         None => ch_code,
         Some(code) => code as u8
       };
-      Some(Number::new(i32::from(code)).into())
+      Some(Number::new(f32::from(code)).into())
     })),    // defaults to the char's code itself(?)
     setter => Some(Rc::new(|value, args, state| {
       let ch = args[0].to_number().value_of() as u8;

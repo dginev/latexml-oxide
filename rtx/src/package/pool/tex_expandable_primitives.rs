@@ -2,8 +2,8 @@ use crate::package::*;
 
 // Hmm... I wonder, should getString itself be dealing with escapechar?
 fn escapechar(state: &State) -> String {
-  let code = match state.lookup_register("\\escapechar", Vec::new()) {
-    Some(RegisterValue::Number(v)) => v.value_of(),
+  let code: i32 = match state.lookup_register("\\escapechar", Vec::new()) {
+    Some(RegisterValue::Number(v)) => v.value_of() as i32,
     _ => -1,
   };
   if code >= 0 && code <= 255 {

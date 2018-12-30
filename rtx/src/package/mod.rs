@@ -56,4 +56,5 @@ pub use self::functions::*;
 // def_macro, InputDefinitionOptions, RequireOptions};
 
 // At the very end, declare the pool
+pub use self::pool::tex_functions::*;
 pub mod pool;

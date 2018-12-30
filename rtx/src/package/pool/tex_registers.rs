@@ -78,7 +78,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   ]
   .iter()
   {
-    DefRegister!(&s!("\\{}", key), Number::new(*val));
+    DefRegister!(&s!("\\{}", key), Number!(*val));
   }
 
   // # Most of these are ignored, but...
