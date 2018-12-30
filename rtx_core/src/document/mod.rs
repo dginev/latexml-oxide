@@ -181,9 +181,7 @@ impl Document {
           let grandchildren = child.get_child_nodes();
           if grandchildren
             .iter()
-            .filter(|gchild| !self.can_contain(node, &gchild.get_name(), state))
-            .count()
-            == 0
+            .all(|gchild| self.can_contain_qname(&qname, &state.model.get_node_qname(gchild), state))
           {
             self.replace_node(child, grandchildren)?;
           }
@@ -939,12 +937,7 @@ impl Document {
     state.model.can_contain(&tag, child)
   }
 
-  pub fn can_contain_qname(&self, tag: &str, child: &str, state: &mut State) -> bool {
-    // $tag   = $model->getNodeQName($tag)   if ref $tag;      # In case tag is a
-    // node. $child = $model->getNodeQName($child) if ref $child;    # In case
-    // child is a node.
-    state.model.can_contain(tag, child)
-  }
+  pub fn can_contain_qname(&self, tag: &str, child: &str, state: &mut State) -> bool { state.model.can_contain(tag, child) }
 
   /// Can an element with (qualified name) $tag contain a $childtag element indirectly?
   /// That is, by openning some number of autoOpen'able tags?
@@ -1788,19 +1781,21 @@ impl Document {
 
   // Replace $node by `nodes` (presumably descendants of some kind?)
   fn replace_node(&mut self, mut node: Node, with: Vec<Node>) -> Result<Node> {
-    let parent = node.get_parent().unwrap();
-    let mut c0_opt: Option<Node> = None;
-    for mut with_node in with.into_iter() {
-      if let Some(mut c0) = c0_opt {
-        c0.add_next_sibling(&mut with_node)?;
-      } else {
-        // first node, swap in
-        node.add_next_sibling(&mut with_node)?;
-        node.unlink();
+    if let Some(parent) = node.get_parent() {
+      let mut c0_opt: Option<Node> = None;
+      for mut with_node in with.into_iter() {
+        if let Some(mut c0) = c0_opt {
+          c0.add_next_sibling(&mut with_node)?;
+        } else {
+          // first node, swap in
+          node.add_next_sibling(&mut with_node)?;
+        }
+        c0_opt = Some(with_node);
       }
-      c0_opt = Some(with_node);
+      Ok(self.remove_node(node))
+    } else {
+      Ok(node)
     }
-    Ok(self.remove_node(node))
   }
 
   pub fn trim_node_whitespace(&mut self, node: &mut Node) -> Result<()> {
