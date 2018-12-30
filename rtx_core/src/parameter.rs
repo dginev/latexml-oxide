@@ -233,7 +233,7 @@ impl Parameter {
     // $value = $value->neutralize if $$self{semiverbatim} && (ref $value)
     //   && $value->can('neutralize');
     if self.semiverbatim {
-      state.end_semiverbatim();
+      state.end_semiverbatim()?;
     }
 
     if !self.optional && !self.novalue && (value.is_empty() && self.reader_predigest.is_none()) {
@@ -292,7 +292,7 @@ impl Parameter {
       post(stomach, &mut w, state)?; // maybe pass extras?
     }
     if self.semiverbatim {
-      state.end_semiverbatim() // Corner case?
+      state.end_semiverbatim()?; // Corner case?
     }
 
     Ok(digested_value)

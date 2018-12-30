@@ -74,17 +74,36 @@ impl Default for ConstructorOptions {
 #[derive(Clone)]
 pub struct Constructor {
   pub cs: Token,
+  pub nargs: Option<usize>,
   pub paramlist: Option<Parameters>,
   pub replacement: Option<ReplacementClosure>,
-  pub options: ConstructorOptions,
+  pub before_digest: Vec<BeforeDigestClosure>,
+  pub after_digest: Vec<DigestionClosure>,
+  pub before_construct: Vec<ConstructionClosure>,
+  pub after_construct: Vec<ConstructionClosure>,
+  pub properties: PropertiesClosure,
+  pub capture_body: bool,
+  // environment-specific
+  pub after_digest_body: Vec<DigestionClosure>,
+  pub reversion: Option<String>,
+  pub alias: Option<String>,
 }
 impl Default for Constructor {
   fn default() -> Self {
     Constructor {
       cs: T_CS!("Constructor"),
+      nargs: None,
       paramlist: None,
       replacement: None,
-      options: ConstructorOptions::default(),
+      before_digest: vec![],
+      after_digest: vec![],
+      before_construct: vec![],
+      after_construct: vec![],
+      properties: Rc::new(|stomach, whatsit, state| Ok(HashMap::new())),
+      capture_body: false,
+      after_digest_body: vec![],
+      reversion: None,
+      alias: None,
     }
   }
 }
@@ -94,10 +113,10 @@ impl PartialEq for Constructor {
 
 impl Object for Constructor {}
 impl Definition for Constructor {
-  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }
-  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }
-  fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest_body) }
-  fn capture_body(&self) -> bool { self.options.capture_body }
+  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
+  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
+  fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest_body) }
+  fn capture_body(&self) -> bool { self.capture_body }
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
@@ -127,14 +146,14 @@ impl Definition for Constructor {
 
     // Compute any extra Whatsit properties (many end up as element attributes)
 
-    let mut properties = (self.options.properties)(stomach, &args, state)?;
+    let mut properties = (self.properties)(stomach, &args, state)?;
     // for (key, value) in properties.iter() {
     //   if (ref $value eq 'CODE') {
     //     $properties{$key} = &$value($stomach, @args); } }
 
-    let this_font = match self.options.font {
-      Some(ref f) => f.clone(),
-      None => match state.lookup_font() {
+    let this_font = match properties.get("font") {
+      Some(Stored::Font(ref f)) => (**f).clone(),
+      _ => match state.lookup_font() {
         Some(f) => (*f).clone(),
         None => Font::text_default(), // should never happen?
       },
@@ -156,7 +175,7 @@ impl Definition for Constructor {
     // Call any 'After' code.
     let mut post = self.execute_after_digest(stomach, &mut whatsit, state)?;
 
-    if self.options.capture_body {
+    if self.capture_body {
       let captured = stomach.digest_next_body(None, state)?;
       // info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
       post.extend(captured);
@@ -181,7 +200,7 @@ impl Definition for Constructor {
   fn get_locator(&self) -> String { unimplemented!() }
   fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
   fn get_num_args(&self) -> usize {
-    match self.options.nargs {
+    match self.nargs {
       Some(n) => n,
       None => match self.paramlist {
         Some(ref params) => params.get_num_args(),
@@ -192,7 +211,7 @@ impl Definition for Constructor {
   }
 
   fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) -> Result<()> {
-    for pre_closure in &self.options.before_construct {
+    for pre_closure in &self.before_construct {
       pre_closure(document, whatsit, state)?;
     }
 
@@ -206,7 +225,7 @@ impl Definition for Constructor {
       },
     };
 
-    for post_closure in &self.options.after_construct {
+    for post_closure in &self.after_construct {
       post_closure(document, whatsit, state)?;
     }
     Ok(())

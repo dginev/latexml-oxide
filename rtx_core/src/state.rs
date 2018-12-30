@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 use std::rc::Rc;
 
+use crate::common::error::*;
 use crate::common::font::{Font, Fontmap};
 use crate::common::model::{IndirectModel, Model};
 use crate::common::number::Number;
@@ -970,9 +971,9 @@ impl State {
     self.undo.push_front(UndoFrame::default());
   }
 
-  pub fn pop_frame(&mut self) {
+  pub fn pop_frame(&mut self) -> Result<()> {
     if self.undo.front().as_ref().unwrap().locked {
-      panic!("Fatal:unexpected:<endgroup> attempt to pop last locked stack frame");
+      fatal!(TargetUnexpected, Endgroup, "attempt to pop last locked stack frame");
     // Fatal('unexpected', '<endgroup>', $self->getStomach,
     // "Attempt to pop last locked stack frame"); }
     } else {
@@ -988,6 +989,7 @@ impl State {
         }
       }
     }
+    Ok(())
   }
 
   pub fn begin_semiverbatim(&mut self, extraspecials: Option<Vec<char>>) {
@@ -1023,7 +1025,7 @@ impl State {
     }
   }
 
-  pub fn end_semiverbatim(&mut self) { self.pop_frame(); }
+  pub fn end_semiverbatim(&mut self) -> Result<()> { self.pop_frame() }
 
   //   #======================================================================
 

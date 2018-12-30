@@ -69,13 +69,16 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //   return ($value ? (Explode($keyword), Revert($value)) : ()); }
 
   DefParameterType!("BoxSpecification",  reader => reader!(gullet, inner, extra, state, {
-      let key = gullet.read_keyword(&["to", "spread"], state)?;
-      // TODO
-      // let keyvals = KeyVals::new(None, None, skipMissing => 1);
-      let dim = gullet.read_dimension(state);
-      // keyvals.set_value(key, dim);
-      // keyvals
-      Ok(Tokens!())
+      if let Some(key) = gullet.read_keyword(&["to", "spread"], state)? {
+        // TODO
+        // let keyvals = KeyVals::new(None, None, skipMissing => 1);
+        let dim = gullet.read_dimension(state);
+        // keyvals.set_value(key, dim);
+        // keyvals
+        Ok(Tokens!())
+      } else {
+        Ok(Tokens!())
+      }
     }), optional => true);
 
   DefParameterType!("HBoxContents", reader => reader!(gullet, inner, extra, state, {
@@ -115,6 +118,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props, state] {
     // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
     unpack!(args => spec, contents);
+    println!("-- spec: {:?}", spec);
+    println!("-- contents: {:?}", contents);
     //     my $model   = $document->getModel;
     //     my $context = $document->getElement;
     //     my $current = $context;

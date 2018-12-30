@@ -49,7 +49,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       close = open.clone();
       gullet.get_mouth_mut().unwrap().read_tokens(Some(&close), state)
     };
-    state.end_semiverbatim();
+    state.end_semiverbatim()?;
 
     let toks : Vec<Token> = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE).map(|t| T_OTHER!(t.get_string())).collect();
     let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
