@@ -137,12 +137,12 @@ impl Document {
 
     if let Some(_comment) = node.get_attribute("_pre_comment") {
       if let Some(_parent) = node.get_parent() {
-        // parent.insert_before(XML::LibXML::Comment.new(comment), node);
+        // parent.: Option<Node> insert_before(XML::LibXML::Comment.new(comment), node);
       }
     }
     if let Some(_comment) = node.get_attribute("_comment") {
       if let Some(_parent) = node.get_parent() {
-        // parent.insert_after(XML::LibXML::Comment.new(comment), node);
+        // parent.add_next_sibling(XML::c0.:(omment.new(comment), );
       }
     }
 
@@ -185,8 +185,7 @@ impl Document {
             .count()
             == 0
           {
-            error!(target: "TODO", "replace_node");
-            // self.replace_node(child, grandchildren);
+            self.replace_node(child, grandchildren)?;
           }
         }
       }
@@ -1697,6 +1696,111 @@ impl Document {
     }
     self.set_node(&savenode);
     Ok(())
+  }
+
+  //**********************************************************************
+  // Appending clones of nodes
+
+  // Inserting clones of nodes into the document.
+  // Nodes that exist in some other part of the document (or some other document)
+  // will need to be cloned so that they can be part of the new document;
+  // otherwise, they would be removed from thier previous document.
+  // Also, we want to have a clean namespace node structure
+  // (otherwise, libxml2 has a tendency to introduce annoying "default" namespace prefix declarations)
+  // And, finally, we need to modify any id's present in the old nodes,
+  // since otherwise they may be duplicated.
+
+  // # Should have variants here for prepend, insert before, insert after.... ???
+  // sub appendClone {
+  //   my ($self, $node, @newchildren) = @_;
+  //   # Expand any document fragments
+  //   @newchildren = map { ($_->nodeType == XML_DOCUMENT_FRAG_NODE ? $_->childNodes : $_) } @newchildren;
+  //   # Now find all xml:id's in the newchildren and record replacement id's for them
+  //   local %LaTeXML::Core::Document::IDMAP = ();
+  //   # Find all id's defined in the copy and change the id.
+  //   foreach my $child (@newchildren) {
+  //     foreach my $idnode ($self->findnodes('.//@xml:id', $child)) {
+  //       my $id = $idnode->getValue;
+  //       $LaTeXML::Core::Document::IDMAP{$id} = $self->modifyID($id); } }
+  //   # Now do the cloning (actually copying) and insertion.
+  //   $self->appendClone_aux($node, @newchildren);
+  //   return $node; }
+
+  // sub appendClone_aux {
+  //   my ($self, $node, @newchildren) = @_;
+  //   foreach my $child (@newchildren) {
+  //     my $type = $child->nodeType;
+  //     if ($type == XML_ELEMENT_NODE) {
+  //       my $new = $self->openElement_internal($node, $child->namespaceURI, $child->localname);
+  //       foreach my $attr ($child->attributes) {
+  //         if ($attr->nodeType == XML_ATTRIBUTE_NODE) {
+  //           my $key = $attr->nodeName;
+  //           if ($key eq 'xml:id') {    # Use the replacement id
+  //             my $newid = $LaTeXML::Core::Document::IDMAP{ $attr->getValue };
+  //             $newid = $self->recordID($newid, $new);
+  //             $new->setAttribute($key, $newid); }
+  //           elsif ($key eq 'idref') {    # Refer to the replacement id if it was replaced
+  //             my $id = $attr->getValue;
+  //             $new->setAttribute($key, $LaTeXML::Core::Document::IDMAP{$id} || $id); }
+  //           elsif (my $ns = $attr->namespaceURI) {
+  //             $new->setAttributeNS($ns, $attr->name, $attr->getValue); }
+  //           else {
+  //             $new->setAttribute($attr->localname, $attr->getValue); } }
+  //       }
+  //       $self->afterOpen($new);
+  //       $self->appendClone_aux($new, $child->childNodes);
+  //       $self->afterClose($new); }
+  //     elsif ($type == XML_TEXT_NODE) {
+  //       $node->appendTextNode($child->textContent); } }
+  //   return $node; }
+
+  // #**********************************************************************
+  // # Wrapping & Unwrapping nodes by another element.
+
+  // # Wrap @nodes with an element named $qname, making the new element replace the first $node,
+  // # and all @nodes becomes the child of the new node.
+  // # [this makes most sense if @nodes are a sequence of siblings]
+  // # Returns undef if $qname isn't allowed in the parent, or if @nodes aren't allowed in $qname,
+  // # otherwise, returns the newly created $qname.
+  // sub wrapNodes {
+  //   my ($self, $qname, @nodes) = @_;
+  //   return unless @nodes;
+  //   my $model  = $$self{model};
+  //   my $parent = $nodes[0]->parentNode;
+  //   my ($ns, $tag) = $model->decodeQName($qname);
+  //   my $new = $self->openElement_internal($parent, $ns, $tag);
+  //   $self->afterOpen($new);
+  //   $parent->replaceChild($new, $nodes[0]);
+
+  //   if (my $font = $self->getNodeFont($parent)) {
+  //     $self->setNodeFont($new, $font); }
+  //   if (my $box = $self->getNodeBox($parent)) {
+  //     $self->setNodeBox($new, $box); }
+  //   foreach my $node (@nodes) {
+  //     $new->appendChild($node); }
+  //   $self->afterClose($new);
+  //   return $new; }
+
+  // # Unwrap the children of $node, by replacing $node by its children.
+  // sub unwrapNodes {
+  //   my ($self, $node) = @_;
+  //   return $self->replaceNode($node, $node->childNodes); }
+
+  // Replace $node by `nodes` (presumably descendants of some kind?)
+  fn replace_node(&mut self, mut node: Node, with: Vec<Node>) -> Result<Node> {
+    let parent = node.get_parent().unwrap();
+    let mut c0_opt: Option<Node> = None;
+    for mut with_node in with.into_iter() {
+      if let Some(mut c0) = c0_opt {
+        c0.add_next_sibling(&mut with_node)?;
+      } else {
+        // first node, swap in
+        node.add_next_sibling(&mut with_node)?;
+        node.unlink();
+      }
+      c0_opt = Some(with_node);
+    }
+    Ok(self.remove_node(node))
   }
 
   pub fn trim_node_whitespace(&mut self, node: &mut Node) -> Result<()> {

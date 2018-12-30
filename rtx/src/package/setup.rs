@@ -703,6 +703,7 @@ macro_rules! SetupBindingMacros {
           replacement: $compiled_replacement,
           before_digest: before_digest_closures,
           after_digest: after_digest_closures,
+          before_construct: options.before_construct,
           after_construct: options.after_construct,
           nargs: options.nargs,
           alias: options.alias,

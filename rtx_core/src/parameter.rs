@@ -241,7 +241,6 @@ impl Parameter {
       //     $gullet->showUnexpected);
       value = Tokens!(T_OTHER!("missing"));
     }
-
     Ok(value)
   }
 
@@ -250,6 +249,9 @@ impl Parameter {
     let value_to_digest = value.clone();
     if self.semiverbatim {
       state.begin_semiverbatim(None);
+    }
+
+    if self.semiverbatim && !value.is_empty() {
       stomach.reading_from_mouth(
         Mouth::default(),
         state,
@@ -277,12 +279,10 @@ impl Parameter {
       pre(stomach, state)?; // maybe pass extras?
     }
 
-    let digested_value = if !value_to_digest.is_empty() {
-      if let Some(ref closure) = &self.reader_predigest {
-        Some(closure(stomach, value_to_digest, state)?)
-      } else {
-        Some(value_to_digest.be_digested(stomach, state)?)
-      }
+    let digested_value = if let Some(ref closure) = &self.reader_predigest {
+      Some(closure(stomach, value_to_digest, state)?)
+    } else if !value_to_digest.is_empty() {
+      Some(value_to_digest.be_digested(stomach, state)?)
     } else {
       None
     };

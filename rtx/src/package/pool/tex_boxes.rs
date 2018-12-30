@@ -79,15 +79,15 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       } else {
         Ok(Tokens!())
       }
-    }), optional => true);
+    }),
+    reader_predigest => undigested!(),
+    optional => true);
 
   DefParameterType!("HBoxContents", reader => reader!(gullet, inner, extra, state, {
       read_box_contents(gullet, state.lookup_tokens("\\everyhbox"), state)
     }),
-    reader_predigest=>reader_predigest!(stomach, arg, state, {
-      predigest_box_contents(stomach, arg, state)
-    })
-  ); // Cause it already is digested!
+    reader_predigest=>reader_predigest!(stomach, arg, state, { predigest_box_contents(stomach, arg, state) })
+  );
 
   // DefParameterType('VBoxContents', sub {
   //     read_box_contents($_[0], LookupValue('\everyvbox')); },
@@ -116,22 +116,29 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //   return $thing && $$thing{$key}; }
 
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props, state] {
-    // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
-    unpack!(args => spec, contents);
-    println!("-- spec: {:?}", spec);
-    println!("-- contents: {:?}", contents);
-    //     my $model   = $document->getModel;
-    //     my $context = $document->getElement;
-    //     my $current = $context;
+      // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
+      unpack!(args => spec, contents);
+      let current = document.get_element();
 
-    //     # What is the CORRECT (& general) way to ask whether we're in "vertical mode"??
-    //     #  my $vmode = $tag eq 'ltx:inline-block'; # ie, explicitly \vbox !?!?!?!
-    //     my $vmode = $current && $current->getAttribute('_vertical_mode_');
-    //     my $newtag = ($vmode ? 'ltx:p' : 'ltx:text');
-    //     my $node = $document->openElement($newtag, _noautoclose => 1,
-    //       width => $props{width});
-    //     $document->absorb($contents);
-    //     $document->closeNode($node);
+      // What is the CORRECT (& general) way to ask whether we're in "vertical mode"??
+      //  my $vmode = $tag eq 'ltx:inline-block'; # ie, explicitly \vbox !?!?!?!
+      let vmode = match current {
+        None => false,
+        Some(node) => node.get_attribute("_vertical_mode_").is_some()
+      };
+      let newtag = if vmode {
+        "ltx:p"
+      } else {
+        "ltx:text"
+      };
+      let width : String = if let Some(w) = props.get("width") {
+        w.into()
+      } else {
+        String::new()
+      };
+      let node = document.open_element(newtag, Some(string_map!("_noautoclose" => "true", "width" => width)), None, state)?;
+      document.absorb(contents,state)?;
+      document.close_node(&node, state);
     },
     mode => "text".into_option(),
     bounded => true,

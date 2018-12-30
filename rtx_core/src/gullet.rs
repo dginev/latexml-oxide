@@ -395,11 +395,11 @@ impl Gullet {
       let mut matched = Vec::new();
       while !to_match.is_empty() {
         if let Some(tok) = self.read_x_token(false, false, state)? {
-          if tok.get_string().to_uppercase() == to_match[0].to_string() {
+          let cmp_tok = tok.get_string().to_uppercase();
+          matched.push(tok);
+          if cmp_tok == to_match[0].to_string() {
             to_match.pop_front();
-            matched.push(tok);
           } else {
-            matched.push(tok);
             break;
           }
         } else {
