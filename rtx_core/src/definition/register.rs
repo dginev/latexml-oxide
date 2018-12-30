@@ -62,7 +62,7 @@ impl<'a> From<&'a RegisterValue> for RegisterType {
 }
 
 impl Default for RegisterValue {
-  fn default() -> Self { RegisterValue::Number(Number::new(0)) }
+  fn default() -> Self { RegisterValue::Number(Number::new(0.0)) }
 }
 
 impl<'a> From<&'a RegisterValue> for Number {
@@ -75,7 +75,7 @@ impl<'a> From<&'a RegisterValue> for Number {
       RegisterValue::Token(other) => other.to_number(),
       RegisterValue::Tokens(other) => {
         error!(target:"expected:number", "Token register can not be cast into a number: {:?}", other);
-        Number::new(0)
+        Number::new(0.0)
       },
     }
   }
@@ -83,9 +83,53 @@ impl<'a> From<&'a RegisterValue> for Number {
 impl From<RegisterValue> for Number {
   fn from(v: RegisterValue) -> Number { (&v).into() }
 }
+impl From<RegisterValue> for Dimension {
+  fn from(v: RegisterValue) -> Dimension { (&v).into() }
+}
+impl From<RegisterValue> for Glue {
+  fn from(v: RegisterValue) -> Glue { (&v).into() }
+}
+
+impl From<Number> for Dimension {
+  fn from(n: Number) -> Dimension { Dimension::new(n.value_of()) }
+}
+impl From<Number> for Glue {
+  fn from(n: Number) -> Glue { Glue::new(n.value_of()) }
+}
+
+impl<'a> From<&'a RegisterValue> for Dimension {
+  fn from(v: &RegisterValue) -> Dimension {
+    match v {
+      RegisterValue::Dimension(n) => *n,
+      RegisterValue::Number(other) => Dimension::new(other.value_of()),
+      RegisterValue::Glue(other) => Dimension::new(other.value_of()),
+      RegisterValue::MuGlue(other) => Dimension::new(other.value_of()),
+      RegisterValue::Token(other) => other.to_number().into(),
+      RegisterValue::Tokens(other) => {
+        error!(target:"expected:dimension", "Token register can not be cast into a dimension: {:?}", other);
+        Dimension::new(0.0)
+      },
+    }
+  }
+}
+impl<'a> From<&'a RegisterValue> for Glue {
+  fn from(v: &RegisterValue) -> Glue {
+    match v {
+      RegisterValue::Glue(n) => *n,
+      RegisterValue::Number(other) => Glue::new(other.value_of()),
+      RegisterValue::Dimension(other) => Glue::new(other.value_of()),
+      RegisterValue::MuGlue(other) => Glue::new(other.value_of()),
+      RegisterValue::Token(other) => other.to_number().into(),
+      RegisterValue::Tokens(other) => {
+        error!(target:"expected:dimension", "Token register can not be cast into a Glue: {:?}", other);
+        Glue::new(0.0)
+      },
+    }
+  }
+}
 
 impl RegisterValue {
-  pub fn value_of(&self) -> i32 {
+  pub fn value_of(&self) -> f32 {
     match self {
       RegisterValue::Number(v) => v.value_of(),
       RegisterValue::Dimension(v) => v.value_of(),
@@ -93,11 +137,11 @@ impl RegisterValue {
       RegisterValue::MuGlue(v) => v.value_of(),
       RegisterValue::Token(v) => {
         warn!(target: "register:value_of", ".value_of called on Token {:?}", v);
-        -1
+        -1.0
       },
       RegisterValue::Tokens(v) => {
         warn!(target: "register:value_of", ".value_of called on Tokens {:?}", v);
-        -1
+        -1.0
       },
     }
   }
@@ -138,7 +182,7 @@ impl Default for Register {
       cs: T_CS!("Register"),
       parameters: None,
       register_type: RegisterType::Number,
-      getter: Rc::new(|_: Vec<Token>, _: &State| Some(RegisterValue::Number(Number::new(0)))),
+      getter: Rc::new(|_: Vec<Token>, _: &State| Some(RegisterValue::Number(Number::new(0.0)))),
       setter: Rc::new(|_: RegisterValue, _: Vec<Tokens>, _: &mut State| {}),
       readonly: false,
       internalcs: None,

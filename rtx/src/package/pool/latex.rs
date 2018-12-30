@@ -250,7 +250,7 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
         tokens.append(&mut type_tokens.unlist());
         tokens.append(&mut vec![T_END!(), T_BEGIN!(), T_END!()]);
       } else if !level.is_empty()
-        && (level.parse::<i32>().unwrap() > CounterValue!("secnumdepth", state).value_of())
+        && (level.parse::<f32>().unwrap() > CounterValue!("secnumdepth", state).value_of())
         || LookupBool!("no_number_sections", state)
       {
         // No number, but in TOC

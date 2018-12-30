@@ -17,6 +17,7 @@ pub mod tex_ch25_primitives;
 pub mod tex_expandable_primitives;
 pub mod tex_fonts;
 pub mod tex_frontmatter;
+pub mod tex_functions; // auxiliary functions
 pub mod tex_math_accents;
 pub mod tex_math_mode;
 pub mod tex_math_style;

@@ -1,17 +1,18 @@
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Glue {
-  number: i32,
+  number: f32,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct MuGlue {
-  number: i32,
+  number: f32,
 }
 
 impl Glue {
-  pub fn value_of(self) -> i32 { self.number }
+  pub fn value_of(self) -> f32 { self.number }
+  pub fn new(number: f32) -> Self { Glue { number } }
 }
 
 impl MuGlue {
-  pub fn value_of(self) -> i32 { self.number }
+  pub fn value_of(self) -> f32 { self.number }
 }

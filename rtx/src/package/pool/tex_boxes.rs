@@ -72,7 +72,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       let key = gullet.read_keyword(&["to", "spread"], state)?;
       // TODO
       // let keyvals = KeyVals::new(None, None, skipMissing => 1);
-      // keyvals.set_value(key, gullet.read_dimension);
+      let dim = gullet.read_dimension(state);
+      // keyvals.set_value(key, dim);
       // keyvals
       Ok(Tokens!())
     }), optional => true);
@@ -107,13 +108,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // PushValue(VTEXT_MODE_BINDINGS => [T_MATH, T_CS('\@dollar@in@normalmode')]);
   // ###PushValue(TEXT_MODE_BINDINGS => [T_CS('\centerline'), T_CS('\relax')]);
 
-  // sub reenterTextMode {
-  //   my ($verticalmode) = @_;
-  //   map { Let($$_[0], $$_[1]) }
-  //     @{ LookupValue(($verticalmode ? 'VTEXT_MODE_BINDINGS' : 'HTEXT_MODE_BINDINGS')) },
-  //     @{ LookupValue('TEXT_MODE_BINDINGS') };
-  //   return }
-
   // sub REF {
   //   my ($thing, $key) = @_;
   //   return $thing && $$thing{$key}; }
@@ -121,36 +115,35 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props, state] {
     // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
     unpack!(args => spec, contents);
-  //     my ($document, $spec, $contents, %props) = @_;
-  //     my $model   = $document->getModel;
-  //     my $context = $document->getElement;
-  //     my $current = $context;
+    //     my $model   = $document->getModel;
+    //     my $context = $document->getElement;
+    //     my $current = $context;
 
-  //     # What is the CORRECT (& general) way to ask whether we're in "vertical mode"??
-  //     #  my $vmode = $tag eq 'ltx:inline-block'; # ie, explicitly \vbox !?!?!?!
-  //     my $vmode = $current && $current->getAttribute('_vertical_mode_');
-  //     my $newtag = ($vmode ? 'ltx:p' : 'ltx:text');
-  //     my $node = $document->openElement($newtag, _noautoclose => 1,
-  //       width => $props{width});
-  //     $document->absorb($contents);
-  //     $document->closeNode($node); },
-
-  //   mode => 'text', bounded => 1,
-  //   sizer => '#2',
-  //   # Workaround for $ in alignment; an explicit \hbox gives us a normal $.
-  //   # And also things like \centerline that will end up bumping up to block level!
-  //   beforeDigest => sub { reenterTextMode(); },
-
-  //   afterDigest => sub {
-  //     my ($stomach, $whatsit) = @_;
-  //     my $spec = $whatsit->getArg(1);
-  //     my $box  = $whatsit->getArg(2);
-  //     if (my $w = GetKeyVal($spec, 'to')) {
-  //       $whatsit->setWidth($w); }
-  //     elsif (my $s = GetKeyVal($spec, 'spread')) {
-  //       $whatsit->setWidth($box->getWidth->add($s)); }
-
-  });
+    //     # What is the CORRECT (& general) way to ask whether we're in "vertical mode"??
+    //     #  my $vmode = $tag eq 'ltx:inline-block'; # ie, explicitly \vbox !?!?!?!
+    //     my $vmode = $current && $current->getAttribute('_vertical_mode_');
+    //     my $newtag = ($vmode ? 'ltx:p' : 'ltx:text');
+    //     my $node = $document->openElement($newtag, _noautoclose => 1,
+    //       width => $props{width});
+    //     $document->absorb($contents);
+    //     $document->closeNode($node);
+    },
+    mode => "text".into_option(),
+    bounded => true,
+    // sizer => "#2",
+    //   # Workaround for $ in alignment; an explicit \hbox gives us a normal $.
+    //   # And also things like \centerline that will end up bumping up to block level!
+    before_digest => beforeproc!(stomach, state, {reenter_text_mode(false, state)}),
+    after_digest => afterproc!(stomach, whatsit, state, {
+      let spec = whatsit.get_arg(1);
+      let tbox = whatsit.get_arg(2);
+      // TODO:
+      // if let Some(w) = GetKeyVal($spec, 'to')) {
+      //       $whatsit->setWidth($w); }
+      //     elsif (my $s = GetKeyVal($spec, 'spread')) {
+      //       $whatsit->setWidth($box->getWidth->add($s)); }
+    })
+  );
 
   Ok(())
 }

@@ -25,6 +25,12 @@ static CODE_TEX_EXT: &'static str = ".code.tex";
 
 lazy_static! {
   static ref TEX_OR_BIB_EXT_RE: Regex = Regex::new(r"\.(tex|bib)$").unwrap();
+  // Conversion to scaled points
+  static ref UNITS: HashMap<String, f32> = map!(
+    "pt" => 65536.0, "pc" => 12.0 * 65536.0, "in" => 72.27 * 65536.0, "bp" => 72.27 * 65536.0 / 72.0,
+    "cm" => 72.27 * 65536.0 / 2.54, "mm" => 72.27 * 65536.0 / 2.54 / 10.0, "dd" => 1238.0 * 65536.0 / 1157.0,
+    "cc" => 12.0 * 1238.0 * 65536.0 / 1157.0, "sp" => 1.0);
+
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -1139,29 +1145,26 @@ impl State {
   //   my @scopes = sort keys %{ $$self{stash_active} };
   //   return @scopes; }
 
-  // #======================================================================
-  // # Units.
-  // #   Put here since it could concievably evolve to depend on the current font.
+  //======================================================================
+  // Units.
+  // Put here since it could concievably evolve to depend on the current font.
 
-  // # Conversion to scaled points
-  // my %UNITS = (    # [CONSTANT]
-  //   pt => 65536, pc => 12 * 65536, in => 72.27 * 65536, bp => 72.27 * 65536 / 72,
-  //   cm => 72.27 * 65536 / 2.54, mm => 72.27 * 65536 / 2.54 / 10, dd => 1238 * 65536 / 1157,
-  //   cc => 12 * 1238 * 65536 / 1157, sp => 1);
-
-  // sub convertUnit {
-  //   my ($self, $unit) = @_;
-  //   $unit = lc($unit);
-  //   # Eventually try to track font size?
-  //   if    ($unit eq 'em') { return 10.0 * 65536; }
-  //   elsif ($unit eq 'ex') { return 4.3 * 65536; }
-  //   elsif ($unit eq 'mu') { return 10.0 * 65536 / 18; }
-  //   else {
-  //     my $sp = $UNITS{$unit};
-  //     if (!$sp) {
-  //       Warn('expected', '<unit>', undef, "Illegal unit of measure '$unit', assuming pt.");
-  //       $sp = $UNITS{'pt'}; }
-  //     return $sp; } }
+  pub fn convert_unit<T: ToString>(&self, unit: T) -> f32 {
+    let unit = unit.to_string().to_lowercase();
+    // Eventually try to track font size?
+    match unit.as_str() {
+      "em" => 10.0 * 65536.0,
+      "ex" => 4.3 * 65536.0,
+      "mu" => 10.0 * 65536.0 / 18.0,
+      u => match UNITS.get(u) {
+        Some(sp) => *sp,
+        None => {
+          warn!(target:"expected:<unit>", "Illegal unit of measure {:?}, assuming pt.", u);
+          *UNITS.get("pt").unwrap()
+        },
+      },
+    }
+  }
 
   // #======================================================================
 

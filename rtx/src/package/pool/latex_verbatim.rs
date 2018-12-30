@@ -119,16 +119,25 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
       }}),
     reversion => "\\verb#1#2#1".into_option()
   );
-  DefConstructor!("\\@math@verb{}{}", "#2"); // Will already end up wrapped as XMTok!
-                                             // TODO:
-                                             // beforeDigest => [sub { $_[0]->bgroup; MergeFont(family => 'typewriter'); }],
-                                             // afterDigest  => sub { $_[0]->egroup; },
-                                             // reversion    => '\verb#1#2#1');
+  DefConstructor!("\\@math@verb{}{}", "#2",
+   before_digest => beforeproc!(stomach, state, {
+     stomach.bgroup(state);
+     MergeFont!(family => "typewriter", state);
+   }),
+   after_digest => afterproc!(stomach,whatsit,state, { stomach.egroup(state)?; }),
+   reversion => "\\verb#1#2#1".into_option()
+  );
 
-  // // Actually, latex sets catcode to 13 ... is this close enough?
-  // DefPrimitiveI('\obeycr',    undef, sub { AssignValue('PRESERVE_NEWLINES' => 1); });
-  // DefPrimitiveI('\restorecr', undef, sub { AssignValue('PRESERVE_NEWLINES' => 0); });
+  // Actually, latex sets catcode to 13 ... is this close enough?
+  DefPrimitiveI!("\\obeycr", |stomach, whatsit, state| {
+    state.assign_value("PRESERVE_NEWLINES", true, None);
+    Ok(vec![])
+  });
+  DefPrimitiveI!("\\restorecr", |stomach, whatsit, state| {
+    state.assign_value("PRESERVE_NEWLINES", false, None);
+    Ok(vec![])
+  });
+  DefMacroI!(T_CS!("\\normalsfcodes"), None, Tokens!());
 
-  // DefMacroI('\normalsfcodes', undef, Tokens());
   Ok(())
 }

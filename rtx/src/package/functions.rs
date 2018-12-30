@@ -771,14 +771,14 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   let cunctr = s!("\\c@{}", unctr);
   let clunctr = s!("\\cl@{}", unctr);
 
-  DefRegisterI!(T_CS!(cctr), None, Number::new(0), None);
+  DefRegisterI!(T_CS!(cctr), None, Number::new(0.0), None);
   state.assign_value(&cctr, Number!(0), Some(Scope::Global));
   AfterAssignment!();
   if !state.lookup_bool(&clctr) {
     state.assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
 
-  DefRegisterI!(T_CS!(cunctr), None, Number::new(0), None);
+  DefRegisterI!(T_CS!(cunctr), None, Number::new(0.0), None);
   state.assign_value(&cunctr, Number!(0), Some(Scope::Global));
   if !state.lookup_bool(&clunctr) {
     state.assign_value(&clunctr, Tokens!(), Some(Scope::Global));
