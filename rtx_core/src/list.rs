@@ -1,9 +1,11 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fmt;
 
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
+use crate::common::store::Stored;
 use crate::document::Document;
 use crate::state::State;
 
@@ -31,6 +33,7 @@ impl fmt::Debug for List {
 
 impl BoxOps for List {
   fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
 
   fn to_string(&self) -> String { self.boxes.iter().fold(String::new(), |joined, x| joined + &x.to_string()) }
 

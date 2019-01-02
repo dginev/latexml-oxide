@@ -1579,3 +1579,21 @@ macro_rules! Revert {
     $thing.revert().unlist()
   };
 }
+
+macro_rules! GetKeyVal {
+  ($keyval_opt:expr, $key:expr) => {
+    match $keyval_opt {
+      Some(Digested::KeyVals(keyval)) => keyval.get_value($key),
+      _ => None,
+    }
+  };
+}
+
+macro_rules! GetKeyVals {
+  ($keyval:expr) => {
+    match $keyval_opt {
+      Some(Digested::KeyVals(keyval)) => keyval..get_key_vals(),
+      _ => None,
+    }
+  };
+}

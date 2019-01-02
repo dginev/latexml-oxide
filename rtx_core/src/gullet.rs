@@ -10,7 +10,7 @@ use crate::common::locator::Locator;
 use crate::common::number::Number;
 
 use crate::definition::conditional::ConditionalType;
-use crate::definition::register::{RegisterType, RegisterValue};
+use crate::definition::register::{NumericOps, RegisterType, RegisterValue};
 use crate::definition::Definition;
 use crate::mouth::Mouth;
 use crate::state::State;

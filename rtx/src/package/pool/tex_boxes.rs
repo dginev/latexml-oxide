@@ -126,11 +126,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         None => false,
         Some(node) => node.get_attribute("_vertical_mode_").is_some()
       };
-      let newtag = if vmode {
-        "ltx:p"
-      } else {
-        "ltx:text"
-      };
+      let newtag = if vmode { "ltx:p" } else { "ltx:text" };
       let width : String = if let Some(w) = props.get("width") {
         w.into()
       } else {
@@ -147,13 +143,21 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     //   # And also things like \centerline that will end up bumping up to block level!
     before_digest => beforeproc!(stomach, state, {reenter_text_mode(false, state)}),
     after_digest => afterproc!(stomach, whatsit, state, {
-      let spec = whatsit.get_arg(1);
-      let tbox = whatsit.get_arg(2);
-      // TODO:
-      // if let Some(w) = GetKeyVal($spec, 'to')) {
-      //       $whatsit->setWidth($w); }
-      //     elsif (my $s = GetKeyVal($spec, 'spread')) {
-      //       $whatsit->setWidth($box->getWidth->add($s)); }
+      let mut width = None;
+      {
+        let spec = whatsit.get_arg(1);
+        let tbox = whatsit.get_arg(2).unwrap();
+        if let Some(w) = GetKeyVal!(spec, "to") {
+          width = Some( RegisterValue::new(w.parse::<f32>()?));
+        } else if let Some(s) = GetKeyVal!(spec, "spread") {
+          let s_num = Number::new(s.parse::<f32>()?);
+          width = Some( tbox.get_width(state).unwrap().add(s_num) );
+        }
+      }
+      if let Some(w) = width {
+        whatsit.set_width(w);
+      }
+
     })
   );
 

@@ -91,6 +91,7 @@ impl fmt::Debug for Whatsit {
 }
 
 impl BoxOps for Whatsit {
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
   fn to_string(&self) -> String {
     self.revert().to_string() // What else??
   }
