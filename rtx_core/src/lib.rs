@@ -27,6 +27,7 @@ pub mod tokens;
 pub mod definition;
 pub mod document;
 pub mod gullet;
+pub mod keyval;
 pub mod keyvals;
 pub mod list;
 pub mod mouth;

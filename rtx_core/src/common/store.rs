@@ -254,6 +254,9 @@ impl<'a> From<Cow<'a, Font>> for Stored {
 impl From<Number> for Stored {
   fn from(value: Number) -> Self { Stored::Number(value) }
 }
+impl From<Dimension> for Stored {
+  fn from(value: Dimension) -> Self { Stored::Dimension(value) }
+}
 
 impl<'a> From<&'a Token> for Stored {
   fn from(value: &'a Token) -> Self { Stored::Token(value.clone()) }

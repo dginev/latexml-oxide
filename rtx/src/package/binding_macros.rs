@@ -198,18 +198,18 @@ macro_rules! reader {
 #[macro_export]
 macro_rules! reader_predigest {
   ($stomach:ident, $arg:ident, $state:ident, $body:block) => {
-    Some(Rc::new(|$stomach: &mut Stomach, $arg: Tokens, $state: &mut State| -> Result<Digested> {
-      $body
-    }))
+    Some(Rc::new(
+      |$stomach: &mut Stomach, $arg: Tokens, $state: &mut State| -> Result<Option<Digested>> { $body },
+    ))
   };
 }
 
 #[macro_export]
 macro_rules! undigested {
   () => {
-    Some(Rc::new(|stomach: &mut Stomach, arg: Tokens, state: &mut State| -> Result<Digested> {
-      Ok(Digested::Postponed(Rc::new(arg)))
-    }))
+    Some(Rc::new(
+      |stomach: &mut Stomach, arg: Tokens, state: &mut State| -> Result<Option<Digested>> { Ok(Some(Digested::Postponed(Rc::new(arg)))) },
+    ))
   };
 }
 

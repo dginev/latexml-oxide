@@ -909,7 +909,7 @@ impl Gullet {
     let factor: f32 = factor.parse::<f32>().unwrap_or(0.0);
     if factor > 0.0 {
       if let Some(token) = token_opt {
-        if token.get_catcode() == Catcode::SPACE {
+        if token.get_catcode() != Catcode::SPACE {
           self.unread(&Tokens!(token));
         }
       }

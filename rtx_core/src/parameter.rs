@@ -17,7 +17,7 @@ use crate::whatsit::Whatsit;
 use crate::Digested;
 
 pub type ReaderFn = Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>;
-pub type ReaderPredigestFn = Fn(&mut Stomach, Tokens, &mut State) -> Result<Digested>;
+pub type ReaderPredigestFn = Fn(&mut Stomach, Tokens, &mut State) -> Result<Option<Digested>>;
 pub type ReaderPredigestClosure = Rc<ReaderPredigestFn>;
 pub type ReaderClosure = Rc<ReaderFn>;
 pub type ReversionClosure = Rc<Fn(&mut Gullet, Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
@@ -280,7 +280,7 @@ impl Parameter {
     }
 
     let digested_value = if let Some(ref closure) = &self.reader_predigest {
-      Some(closure(stomach, value_to_digest, state)?)
+      closure(stomach, value_to_digest, state)?
     } else if !value_to_digest.is_empty() {
       Some(value_to_digest.be_digested(stomach, state)?)
     } else {
@@ -329,6 +329,12 @@ impl Parameters {
     let mut args = Vec::new();
     for parameter in &self.params {
       let values = parameter.read(gullet, fordefn, state)?;
+      if parameter.reader_predigest.is_some() {
+        error!(
+          target: &s!("parameter:{}", parameter.name),
+          "parameter with predigest closure was invoked in an expandable context. Parameter digestion won't execute."
+        );
+      }
       if !parameter.novalue {
         args.push(values);
       }
