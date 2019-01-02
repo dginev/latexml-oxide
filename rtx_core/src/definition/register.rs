@@ -18,7 +18,7 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum RegisterValue {
   Number(Number),
   Dimension(Dimension),

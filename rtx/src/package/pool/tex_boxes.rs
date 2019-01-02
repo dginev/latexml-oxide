@@ -20,9 +20,9 @@ fn read_box_contents(gullet: &mut Gullet, everybox_opt: Option<Tokens>, state: &
   Ok(Tokens!())
 }
 
-fn predigest_box_contents(stomach: &mut Stomach, _tokens: Tokens, state: &mut State) -> Result<Digested> {
+fn predigest_box_contents(stomach: &mut Stomach, _tokens: Tokens, state: &mut State) -> Result<Option<Digested>> {
   let mut contents = stomach.invoke_token(&T_BEGIN!(), state)?;
-  Ok(contents.remove(0))
+  Ok(Some(contents.remove(0)))
 }
 
 pub fn load_definitions(state: &mut State) -> Result<()> {
@@ -70,17 +70,29 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   DefParameterType!("BoxSpecification",  reader => reader!(gullet, inner, extra, state, {
       if let Some(key) = gullet.read_keyword(&["to", "spread"], state)? {
-        // TODO
-        // let keyvals = KeyVals::new(None, None, skipMissing => 1);
-        let dim = gullet.read_dimension(state);
-        // keyvals.set_value(key, dim);
-        // keyvals
-        Ok(Tokens!())
+        Ok(key)
       } else {
         Ok(Tokens!())
       }
     }),
-    reader_predigest => undigested!(),
+    // The predigest closure is new for rtx, as it was a single closure in the latexml implementation
+    // The key problem is that in rtx the parameter type interfaces are well-typed, so it is not possible 
+    // to remain elegant while at the same time have access to the stomach AND digest.
+    // Hence, the `reader` is exclusively responsible for using the gullet to obtain tokens,
+    // while early/immediate digestion via the stomach can be achieved by using the separate `reader_predigest` interface
+    // Importantly, reader_predigest forces the parameter to be usable only for stomach-capable bindings,
+    // namely DefConstructor, DefPrimitive or DefEnvironment
+    reader_predigest => reader_predigest!(stomach, key, state, {
+      if !key.is_empty() {
+        let mut keyvals = KeyVals::new(None, None, map!("skipMissing" => true), state);
+        let dim = stomach.get_gullet_mut().read_dimension(state)?;
+        println!("dim: {:?}", dim);
+        keyvals.set_value(&key.to_string(), dim.into(), false, state);
+        Ok(Some(Digested::KeyVals(keyvals)))
+      } else {
+        Ok(None)
+      }
+    }),
     optional => true);
 
   DefParameterType!("HBoxContents", reader => reader!(gullet, inner, extra, state, {
@@ -155,6 +167,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         }
       }
       if let Some(w) = width {
+        println!("\n\n --- width: {:?}", w);
         whatsit.set_width(w);
       }
 
