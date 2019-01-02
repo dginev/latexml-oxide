@@ -65,6 +65,63 @@ impl Default for RegisterValue {
   fn default() -> Self { RegisterValue::Number(Number::new(0.0)) }
 }
 
+pub trait NumericOps {
+  fn new<T: Into<f32>>(number: T) -> Self;
+  fn value_of(self) -> f32;
+  fn add<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    Self::new(self.value_of() + other.value_of())
+  }
+  fn negate(self) -> Self
+  where Self: Sized {
+    let value = self.value_of();
+    if value > 0.0 {
+      Self::new(-value)
+    } else {
+      Self::new(value)
+    }
+  }
+}
+impl NumericOps for RegisterValue {
+  fn new<T: Into<f32>>(number: T) -> Self { RegisterValue::Number(Number::new(number)) }
+  fn value_of(self) -> f32 {
+    match self {
+      RegisterValue::Number(v) => v.value_of(),
+      RegisterValue::Dimension(v) => v.value_of(),
+      RegisterValue::Glue(v) => v.value_of(),
+      RegisterValue::MuGlue(v) => v.value_of(),
+      RegisterValue::Token(v) => {
+        warn!(target: "register:value_of", ".value_of called on Token {:?}", v);
+        -1.0
+      },
+      RegisterValue::Tokens(v) => {
+        warn!(target: "register:value_of", ".value_of called on Tokens {:?}", v);
+        -1.0
+      },
+    }
+  }
+  fn add<T: NumericOps>(self, other: T) -> Self {
+    match self {
+      RegisterValue::Number(v) => RegisterValue::Number(v.add(other)),
+      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.add(other)),
+      RegisterValue::Glue(v) => RegisterValue::Glue(v.add(other)),
+      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.add(other)),
+      RegisterValue::Token(v) => unimplemented!(),
+      RegisterValue::Tokens(v) => unimplemented!(),
+    }
+  }
+  fn negate(self) -> Self {
+    match self {
+      RegisterValue::Number(v) => RegisterValue::Number(v.negate()),
+      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.negate()),
+      RegisterValue::Glue(v) => RegisterValue::Glue(v.negate()),
+      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.negate()),
+      RegisterValue::Token(v) => unimplemented!(),
+      RegisterValue::Tokens(v) => unimplemented!(),
+    }
+  }
+}
+
 impl<'a> From<&'a RegisterValue> for Number {
   fn from(v: &RegisterValue) -> Number {
     match v {
@@ -129,24 +186,7 @@ impl<'a> From<&'a RegisterValue> for Glue {
 }
 
 impl RegisterValue {
-  pub fn value_of(&self) -> f32 {
-    match self {
-      RegisterValue::Number(v) => v.value_of(),
-      RegisterValue::Dimension(v) => v.value_of(),
-      RegisterValue::Glue(v) => v.value_of(),
-      RegisterValue::MuGlue(v) => v.value_of(),
-      RegisterValue::Token(v) => {
-        warn!(target: "register:value_of", ".value_of called on Token {:?}", v);
-        -1.0
-      },
-      RegisterValue::Tokens(v) => {
-        warn!(target: "register:value_of", ".value_of called on Tokens {:?}", v);
-        -1.0
-      },
-    }
-  }
-
-  pub fn to_string(&self) -> String { self.value_of().to_string() }
+  pub fn to_string(self) -> String { self.value_of().to_string() }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

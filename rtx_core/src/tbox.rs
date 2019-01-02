@@ -97,6 +97,7 @@ impl Tbox {
 impl BoxOps for Tbox {
   fn to_string(&self) -> String { self.text.clone() }
   fn unlist(&self) -> Vec<Digested> { Vec::new() }
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
     let text = &self.text;

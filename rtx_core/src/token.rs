@@ -9,6 +9,7 @@ use std::rc::Rc;
 use crate::common::error::*;
 use crate::common::number::Number;
 use crate::common::store::Stored;
+use crate::definition::register::NumericOps;
 use crate::definition::register::{Register, RegisterValue};
 use crate::definition::Definition;
 use crate::state::State;

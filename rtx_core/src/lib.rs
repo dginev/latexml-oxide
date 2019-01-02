@@ -27,6 +27,7 @@ pub mod tokens;
 pub mod definition;
 pub mod document;
 pub mod gullet;
+pub mod keyvals;
 pub mod list;
 pub mod mouth;
 pub mod parameter;
@@ -38,6 +39,7 @@ pub mod whatsit;
 
 use std::borrow::Cow;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
@@ -45,8 +47,11 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::model::Model;
+use crate::common::number::Number;
 use crate::common::store::Stored;
+use crate::definition::register::{NumericOps, RegisterValue};
 use crate::document::Document;
+use crate::keyvals::KeyVals;
 use crate::list::List;
 use crate::state::{State, StateOptions};
 use crate::stomach::Stomach;
@@ -141,7 +146,11 @@ pub trait BoxOps {
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()>;
   fn to_string(&self) -> String;
   fn stringify(&self) -> String { s!("Vec<Tbox> for now ") }
-  fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {}
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored>;
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    let mut props = self.get_properties_mut();
+    props.insert(key.to_string(), value.into());
+  }
   fn get_property(&self, _key: &str, _state: &mut State) -> Option<Cow<Stored>> {
     error!(target: "boxops:get_property", "Generic BoxOps::get_property should never be called!");
     None
@@ -153,6 +162,17 @@ pub trait BoxOps {
   fn get_font(&self) -> Option<Cow<Font>>;
   fn get_locator(&self) -> Option<Locator>;
   fn revert(&self) -> Tokens;
+
+  fn set_width<T: Into<Stored>>(&mut self, width: T) {
+    let mut props = self.get_properties_mut();
+    props.insert("width".to_string(), width.into());
+  }
+  fn get_width(&self, state: &mut State) -> Option<RegisterValue> {
+    match self.get_property("width", state) {
+      None => Some(Number::new(0.0).into()),
+      Some(val) => (&(*val)).into(),
+    }
+  }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -161,22 +181,13 @@ pub enum TexMode {
   Text,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Digested {
   TBox(Rc<Tbox>),
   Whatsit(Rc<RefCell<Whatsit>>),
   List(Box<List>),
   Postponed(Rc<Tokens>),
-}
-impl fmt::Debug for Digested {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    match *self {
-      Digested::TBox(ref v) => write!(f, "{:?}", v),
-      Digested::List(ref v) => write!(f, "{:?}", v),
-      Digested::Whatsit(ref v) => write!(f, "{:?}", v),
-      Digested::Postponed(ref v) => write!(f, "{:?}", v),
-    }
-  }
+  KeyVals(KeyVals),
 }
 
 impl<'a> From<&'a String> for Digested {
@@ -212,6 +223,7 @@ impl BoxOps for Digested {
       Digested::TBox(ref b) => b.unlist(),
       Digested::List(ref l) => l.unlist(),
       Digested::Whatsit(ref w) => w.borrow().unlist(),
+      Digested::KeyVals(ref kvs) => kvs.unlist(),
       Digested::Postponed(ref _t) => unimplemented!(),
     }
   }
@@ -221,8 +233,20 @@ impl BoxOps for Digested {
       Digested::TBox(b) => b.be_absorbed(document, state),
       Digested::List(l) => l.be_absorbed(document, state),
       Digested::Whatsit(w) => w.borrow().be_absorbed(document, state),
+      Digested::KeyVals(kvs) => kvs.be_absorbed(document, state),
       Digested::Postponed(_) => unimplemented!(),
     }
+  }
+
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> {
+    unimplemented!()
+    // match self {
+    //   Digested::TBox(ref mut b) => b.get_properties_mut(),
+    //   Digested::List(ref mut l) => l.get_properties_mut(),
+    //   Digested::Whatsit(ref mut w) => unimplemented!(), //w.borrow_mut().get_properties_mut(),
+    //   Digested::KeyVals(ref mut kvs) => kvs.get_properties_mut(),
+    //   Digested::Postponed(_) => unimplemented!(),
+    // }
   }
 
   fn to_string(&self) -> String {
@@ -231,6 +255,7 @@ impl BoxOps for Digested {
       Digested::List(ref l) => l.to_string(),
       Digested::Whatsit(ref w) => w.borrow().to_string(),
       Digested::Postponed(ref t) => t.to_string(),
+      Digested::KeyVals(ref kvs) => kvs.to_string(),
     }
   }
 
@@ -240,6 +265,7 @@ impl BoxOps for Digested {
       Digested::List(ref l) => l.stringify(),
       Digested::Whatsit(ref w) => w.borrow().stringify(),
       Digested::Postponed(ref t) => (*t).stringify(),
+      Digested::KeyVals(ref kvs) => kvs.stringify(),
     }
   }
 
@@ -248,7 +274,7 @@ impl BoxOps for Digested {
       Digested::TBox(ref b) => error!(target: "digested:set_property", "Called set_property on Box: {:?}", b),
       Digested::List(ref l) => error!(target: "digested:set_property", "Called set_property on List: {:?}", l),
       Digested::Whatsit(ref w) => w.borrow_mut().set_property(key, value), // TODO
-      Digested::Postponed(ref _t) => unimplemented!(),
+      _ => unimplemented!(),
     }
   }
 
@@ -263,7 +289,7 @@ impl BoxOps for Digested {
         None => None,
         Some(v) => Some(Cow::Owned(v.into_owned())),
       },
-      Digested::Postponed(ref _t) => unimplemented!(),
+      _ => unimplemented!(),
     }
   }
   fn get_body(&self) -> Option<Digested> {
@@ -277,7 +303,7 @@ impl BoxOps for Digested {
         None
       },
       Digested::Whatsit(ref w) => w.borrow().get_body(),
-      Digested::Postponed(ref _t) => unimplemented!(),
+      _ => unimplemented!(),
     }
   }
 
@@ -289,7 +315,7 @@ impl BoxOps for Digested {
         None => None,
         Some(t) => Some(Cow::Owned(t.into_owned())),
       },
-      Digested::Postponed(ref _t) => unimplemented!(),
+      _ => unimplemented!(),
     }
   }
 
@@ -298,7 +324,7 @@ impl BoxOps for Digested {
       Digested::TBox(ref b) => b.get_locator(),
       Digested::List(ref l) => l.get_locator(),
       Digested::Whatsit(ref w) => w.borrow().get_locator(),
-      Digested::Postponed(ref _t) => unimplemented!(),
+      _ => unimplemented!(),
     }
   }
 
@@ -308,6 +334,7 @@ impl BoxOps for Digested {
       Digested::List(ref l) => l.revert(),
       Digested::Whatsit(ref w) => w.borrow().revert(),
       Digested::Postponed(ref t) => (**t).clone(),
+      Digested::KeyVals(ref kvs) => kvs.revert(),
     }
   }
 }

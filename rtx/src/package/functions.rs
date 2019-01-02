@@ -12,7 +12,7 @@ use rtx_core::common::store::IntoOption;
 use rtx_core::common::xml::XML_NS;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
-use rtx_core::definition::register::{Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue};
+use rtx_core::definition::register::{NumericOps, Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue};
 use rtx_core::definition::{ConditionalClosure, Definition, ExpansionClosure};
 use rtx_core::document::resource::*;
 use rtx_core::document::tag::{TagOptionName, TagOptions};
