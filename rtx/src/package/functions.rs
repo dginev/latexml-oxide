@@ -1,4 +1,5 @@
 use libxml::tree::Node;
+use log::{error, warn};
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::HashMap;

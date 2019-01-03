@@ -1,4 +1,5 @@
 pub use libxml::tree::{Namespace, Node};
+pub use log::{debug, error, info, warn};
 pub use regex::Regex;
 pub use std::borrow::Cow;
 pub use std::cell::RefCell;

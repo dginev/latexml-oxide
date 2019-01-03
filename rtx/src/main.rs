@@ -1,8 +1,4 @@
-#[macro_use]
-extern crate log;
-extern crate rtx;
-extern crate rtx_core;
-
+use log::{error, info};
 use rtx::converter::Converter;
 use rtx_core::common::{Config, DataSize, OutputFormat};
 use std::env;

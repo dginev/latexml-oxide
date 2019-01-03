@@ -1,4 +1,3 @@
-extern crate log;
 extern crate rtx_core;
 
 use glob::glob;
@@ -13,7 +12,7 @@ use rtx_core::{Core, CoreOptions};
 use crate::core::DigestionAPI;
 
 pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) {
-  assert!(rtx_core::util::logger::init(log::LevelFilter::Info).is_ok());
+  assert!(rtx_core::util::logger::init(log::LevelFilter::Trace).is_ok());
 
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.

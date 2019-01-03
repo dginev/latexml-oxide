@@ -86,7 +86,6 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       if !key.is_empty() {
         let mut keyvals = KeyVals::new(None, None, map!("skipMissing" => true), state);
         let dim = stomach.get_gullet_mut().read_dimension(state)?;
-        println!("dim: {:?}", dim);
         keyvals.set_value(&key.to_string(), dim.into(), false, state);
         Ok(Some(Digested::KeyVals(keyvals)))
       } else {
@@ -139,8 +138,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         Some(node) => node.get_attribute("_vertical_mode_").is_some()
       };
       let newtag = if vmode { "ltx:p" } else { "ltx:text" };
-      let width : String = if let Some(w) = props.get("width") {
-        w.into()
+      let width : String = if let Some(Stored::Dimension(ref w)) = props.get("width") {
+        w.to_attribute()
       } else {
         String::new()
       };
@@ -155,19 +154,19 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     //   # And also things like \centerline that will end up bumping up to block level!
     before_digest => beforeproc!(stomach, state, {reenter_text_mode(false, state)}),
     after_digest => afterproc!(stomach, whatsit, state, {
-      let mut width = None;
+      let mut width : Option<RegisterValue>= None;
       {
         let spec = whatsit.get_arg(1);
         let tbox = whatsit.get_arg(2).unwrap();
         if let Some(w) = GetKeyVal!(spec, "to") {
-          width = Some( RegisterValue::new(w.parse::<f32>()?));
+          width = w.into();
         } else if let Some(s) = GetKeyVal!(spec, "spread") {
-          let s_num = Number::new(s.parse::<f32>()?);
+          let s_num_opt : Option<RegisterValue> = s.into();
+          let s_num = s_num_opt.unwrap_or_else(|| Number::new(0.0).into());
           width = Some( tbox.get_width(state).unwrap().add(s_num) );
         }
       }
       if let Some(w) = width {
-        println!("\n\n --- width: {:?}", w);
         whatsit.set_width(w);
       }
 

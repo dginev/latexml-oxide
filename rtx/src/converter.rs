@@ -1,4 +1,5 @@
 use crate::core::DigestionAPI;
+use log::{error, info};
 use rtx_core::common::error::*;
 use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_core::document::Document;

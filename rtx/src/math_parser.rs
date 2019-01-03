@@ -22,6 +22,7 @@
 // use LaTeXML::Common::XML;
 // use List::Util qw(min max);
 use libxml::tree::{Node, NodeType};
+use log::info;
 use rtx_core::common::error::*;
 use rtx_core::common::xml::*;
 use rtx_core::document::Document;

@@ -1,3 +1,4 @@
+use log::error;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;

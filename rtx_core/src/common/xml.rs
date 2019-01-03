@@ -1,5 +1,6 @@
 use libxml::tree::{Document, Node, NodeType};
 use libxml::xpath::Context;
+use log::error;
 use std::collections::HashMap;
 
 pub const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";

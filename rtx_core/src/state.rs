@@ -1,3 +1,4 @@
+use log::{debug, error, warn};
 use regex::Regex;
 use std::borrow::Cow;
 use std::cell::RefCell;
