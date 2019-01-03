@@ -145,7 +145,8 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
       };
       let node = document.open_element(newtag, Some(string_map!("_noautoclose" => "true", "width" => width)), None, state)?;
       document.absorb(contents,state)?;
-      document.close_node(&node, state);
+      document.close_node(&node, state)?;
+      debug!("FINAL DOC: {:?}", document.document.node_to_string(&document.get_element().unwrap()));
     },
     mode => "text".into_option(),
     bounded => true,

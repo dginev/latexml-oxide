@@ -264,7 +264,7 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
 
   // Use \r for the newline from TeX!!!
   DefMacroI!(T_CS!("\\\r"), None, T_CS!("\\ ")); // \<cr> == \<space> Interesting (see latex.ltx)
-  Let!(T_ACTIVE!("\r"), "\\par"); // (or is this just LaTeX?)
+  LetI!(&T_ACTIVE!("\r"), T_CS!("\\par")); // (or is this just LaTeX?)
 
   Let!("\\\t", "\\\r"); // \<tab> == \<space>, also
 

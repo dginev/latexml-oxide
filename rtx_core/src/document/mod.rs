@@ -182,6 +182,7 @@ impl Document {
             .iter()
             .all(|gchild| self.can_contain_qname(&qname, &state.model.get_node_qname(gchild), state))
           {
+            debug!("will replace {} grandchildren nodes in finalize_rec", grandchildren.len());
             self.replace_node(child, grandchildren)?;
           }
         }
@@ -388,8 +389,8 @@ impl Document {
   ) -> Result<Node>
   {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
-    debug!("Open element {:?} at {:?}", qname, self.node.get_name());
-    let point = self.find_insertion_point(qname, state)?;
+    debug!("Open element {:?} at {:?}", qname, self.get_node_qname(&self.node, state));
+    let point = self.find_insertion_point(qname, None, state)?;
     let font_owned: Option<Font> = match font_opt {
       Some(f) => Some(f.clone()),
       None => match self.box_to_absorb {
@@ -423,7 +424,7 @@ impl Document {
   /// ie. we're automatically closing them, even if they're the same type as we're asking to
   /// close!!! This is kinda risky! Maybe we should try to request closing of specific nodes.
   pub fn close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
-    debug!("Close element {:?} at {:?}", qname, self.node.get_name());
+    debug!("Close element {:?} at {:?}", qname, self.document.node_to_string(&self.node));
     self.close_text_internal(state)?;
     let mut node = self.node.clone();
     let mut cant_close = Vec::new();
@@ -437,10 +438,7 @@ impl Document {
       if !self.can_auto_close(&node, state) {
         cant_close.push(node.clone());
       }
-      match node.get_parent() {
-        Some(p) => node = p,
-        None => break,
-      };
+      node = node.get_parent().unwrap();
     }
 
     if node.get_type() == Some(NodeType::DocumentNode) {
@@ -501,20 +499,21 @@ impl Document {
       Some(self.node.clone())
     };
     while let Some(qname) = tags.pop_front() {
-      loop {
-        if node_opt.is_none() {
-          break;
-        }
-        let node = node_opt.as_ref().unwrap().clone();
-
-        if node.get_type() == Some(NodeType::DocumentNode) || node.get_type() == None {
+      'inner: loop {
+        let node: &Node = match node_opt {
+          None => break,
+          Some(ref n) => n,
+        };
+        let node_type = node.get_type();
+        if node_type == Some(NodeType::DocumentNode) || node_type == None {
           return None;
         }
         let this_qname = state.model.get_node_qname(&node);
         if this_qname == qname {
-          break;
+          break 'inner;
         }
-        if !self.can_auto_close(&node, state) {
+        if !self.can_auto_close(node, state) {
+          debug!("It was impossible to autoclose node: {:?}", self.document.node_to_string(node));
           return None;
         }
         node_opt = node.get_parent();
@@ -587,25 +586,43 @@ impl Document {
   }
 
   // Closes all nodes until $node is closed.
-  pub fn close_node(&mut self, _node: &Node, _state: &mut State) {
-    // my $model = $$self{model};
+  pub fn close_node(&mut self, node: &Node, state: &mut State) -> Result<()> {
     // my ($t, @cant_close) = ();
-    // my $n = $$self{node};
-    // while ((($t = $n->getType) != XML_DOCUMENT_NODE) && !$n->isSameNode($node)) {
-    //   push(@cant_close, $n) unless $self->canAutoClose($n);
-    //   $n = $n->parentNode; }
-    // if ($t == XML_DOCUMENT_NODE) {    # Didn't find $qname at all!!
-    //   Error('malformed', $model->getNodeQName($node), $self,
-    //     "Attempt to close " . Stringify($node) . ", which isn't open",
-    //     "Currently in " . $self->getInsertionContext()); }
-    // else {                            # Found node.
-    //                                   # Intervening non-auto-closeable nodes!!
-    //   Error('malformed', $model->getNodeQName($node), $self,
-    // "Closing " . Stringify($node) . " whose open descendents do not
-    // auto-close", "Descendents are " . join(', ', map { Stringify($_) }
-    // @cant_close))     if @cant_close;
-    //   $self->closeNode_internal($node); }
-    return;
+    let mut cant_close: Vec<Node> = Vec::new();
+    let mut n = self.node.clone();
+    let mut t = node.get_type();
+    while t.is_some() && t != Some(NodeType::DocumentNode) && &n != node {
+      if !self.can_auto_close(&n, state) {
+        cant_close.push(n.clone());
+      }
+      n = n.get_parent().unwrap();
+      t = node.get_type();
+    }
+
+    if t == Some(NodeType::DocumentNode) {
+      // Didn't find $qname at all!!
+      let qname = state.model.get_node_qname(&node);
+      error!(
+        target: &s!("malformed:{}", qname),
+        "Attempt to close {}, which isn't open. Currently in {:?}",
+        qname,
+        self.get_insertion_context(None, state)
+      )
+    } else {
+      // Found node.
+      // Intervening non-auto-closeable nodes!!
+      if !cant_close.is_empty() {
+        let qname = state.model.get_node_qname(&node);
+        error!(
+          target: &s!("malformed:{}", qname),
+          "Closing {} whose open descendents do not auto-close. Descendents are {}",
+          qname,
+          cant_close.iter().map(|x| x.get_name()).collect::<Vec<String>>().join(", ")
+        )
+      }
+      self.close_node_internal(node, state)?;
+    }
+    Ok(())
   }
 
   // Dirty little secrets:
@@ -1031,25 +1048,96 @@ impl Document {
     let mut n = self.close_text_internal(state)?; // Close any open text node.
     while n.get_type() == Some(NodeType::ElementNode) {
       self.close_element_at(&mut n, state)?;
-      // self.auto_collapse_children(n);
+      self.auto_collapse_children(&mut n, state)?;
       if *node == n {
         break;
       }
       n = n.get_parent().unwrap();
     }
-
     self.set_node(&closeto);
+    Ok(())
+  }
+
+  /// Avoid redundant nesting of font switching elements:
+  /// If we're closing a node that can take font switches and it contains
+  /// a single FONT_ELEMENT_NAME node; pull it up.
+  fn auto_collapse_children(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
+    let qname = state.model.get_node_qname(&node);
+    if qname != "ltx:_Capture_" {
+      let mut c = node.get_child_nodes();
+      // with single child, AND, $node can have all the attributes that the child has (but at least "font")
+      // BUT, it isn"t being forced somehow
+      if c.len() == 1
+        && (state.model.get_node_qname(&c[0]) == FONT_ELEMENT_NAME)
+        && state.model.can_have_attribute(&qname, "font")
+        && c[0]
+          .get_attributes()
+          .keys()
+          .map(|x| x)
+          .filter(|x| !x.starts_with("_"))
+          .all(|n| state.model.can_have_attribute(&qname, n))
+        && !c[0].get_attribute("_force_font").is_some()
+      {
+        let c_first = c.remove(0);
+        self.set_node_font(&node, self.get_node_font(&c_first).clone());
+        let c_first = self.remove_node(c_first);
+        for mut gc in c_first.get_child_nodes().into_iter() {
+          gc.unlink();
+          node.add_child(&mut gc)?;
+          // self.record_node_ids(&node); // TODO
+        }
+        // Merge the attributes from the child onto $node
+        for (key, val) in c_first.get_attributes().iter() {
+          // Special case attributes
+          match key.as_str() {
+            "xml:id" => {
+              // Use the replacement id
+              if node.get_attribute(key).is_none() {
+                // val = self.record_id(val, node); // TODO
+                node.set_attribute(key, val)?;
+              }
+            },
+            "class" => {
+              // combine $class
+              if let Some(class) = node.get_attribute(key) {
+                node.set_attribute(key, &s!("{} {}", class, val))?;
+              } else {
+                node.set_attribute(key, val)?;
+              }
+            },
+            // xoffset, yoffset should sum up, if present on both.
+            "xoffset" | "yoffset" => {
+              if let Some(val2) = node.get_attribute(key) {
+                // TODO
+                unimplemented!();
+              // let v1 = $val =~ /^([\+\-\d\.]*)pt$/  && $1;
+              // let v2 = $val2 =~ /^([\+\-\d\.]*)pt$/ && $1;
+              // node.set_attribute($key => ($v1 + $v2) . "pt"); }
+              } else {
+                node.set_attribute(key, val)?;
+              }
+            },
+            // Remaining attributes should prefer the inner (child"s) values, if any
+            // (font, size, color, framed)
+            // (width,height, depth, align, vattach, float)
+            _ => {
+              node.set_attribute(key, val)?; // attr.localname ???
+            },
+          }
+        }
+      }
+    }
     Ok(())
   }
 
   pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Result<()> {
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
-      debug!("Appending text \"{:?}\" to {:?}", text, self.document.node_to_string(&self.node));
+      debug!("Appending text {:?} to {:?}", text, self.document.node_to_string(&self.node));
       self.node.append_text(text)?;
     } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
       // or text allowed here
-      let mut point = self.find_insertion_point("#PCDATA", state)?;
+      let mut point = self.find_insertion_point("#PCDATA", None, state)?;
       let mut node = Node::new_text(text, &self.document).unwrap();
       debug!("Inserting text node for {:?} into {:?}", text, self.document.node_to_string(&point));
       point.add_child(&mut node)?;
@@ -1151,10 +1239,9 @@ impl Document {
   /// Find the node where an element with qualified name $qname can be inserted.
   /// This will move up the tree (closing auto-closable elements),
   /// or down (inserting auto-openable elements), as needed.
-  pub fn find_insertion_point(&mut self, qname: &str, state: &mut State) -> Result<Node> {
+  pub fn find_insertion_point(&mut self, qname: &str, has_opened_opt: Option<String>, state: &mut State) -> Result<Node> {
     self.close_text_internal(state)?; // Close any current text node.
     let cur_qname = state.model.get_node_qname(&self.node);
-    // let inter;
     // If `qname` is allowed at the current point, we're done.
     if self.can_contain_qname(&cur_qname, qname, state) {
       return Ok(self.node.clone());
@@ -1165,8 +1252,20 @@ impl Document {
         // TODO: can we avoid the clone here? there is a mutability conflict...
         let font_cloned: Font = self.get_node_font(&self.node).clone();
         self.open_element(&inter, None, Some(&font_cloned), state)?;
-        return self.find_insertion_point(qname, state); // And retry insertion (should work now).
+        return self.find_insertion_point(qname, Some(inter), state); // And retry insertion (should work now).
       }
+    }
+
+    if let Some(has_opened) = has_opened_opt {
+      // out of options if already inside an auto-open chain
+      error!(
+        target: &s!("malformed:{}", qname),
+        " failed auto-open through <{}> at inadmissible <{}>. Currently in {}",
+        has_opened,
+        cur_qname,
+        self.get_insertion_context(None, state)
+      );
+      return Ok(self.node.clone()); // But we'll do it anyway, unless Error => Fatal.
     } else {
       // Now we're getting more desparate...
       // Check if we can auto close some nodes, and _then_ insert the `qname`.
@@ -1189,7 +1288,7 @@ impl Document {
       }
       if let Some(close_to_node) = close_to {
         self.close_node_internal(&close_to_node, state)?; // Close the auto closeable nodes.
-        return self.find_insertion_point(qname, state); // Then retry, possibly w/auto open's
+        self.find_insertion_point(qname, None, state) // Then retry, possibly w/auto open's
       } else {
         // Didn't find a legit place.
         error!(target: &s!("malformed:{}", qname), "{:?} isn't allowed in <{}>", qname, cur_qname);
@@ -1198,10 +1297,9 @@ impl Document {
         // self.getInsertionContext()); return self.node}; } } }
 
         // But we'll do it anyway, unless Error => Fatal.
-        return Ok(self.node.clone());
+        Ok(self.node.clone())
       }
     }
-    Ok(self.node.clone())
   }
 
   fn get_insertion_candidates(&self, node: &Node) -> Vec<Node> {
@@ -1602,7 +1700,11 @@ impl Document {
       self.set_node_box(&newnode, digested.clone());
     }
 
-    debug!("Inserting {:?} into {:?}", newnode.get_name(), point.get_name()); // if $LaTeXML::Core::Document::DEBUG;
+    debug!(
+      "Inserting {:?} into {:?}",
+      self.get_node_qname(&newnode, state),
+      self.get_node_qname(&point, state)
+    );
 
     // Run afterOpen operations
     self.after_open(&mut newnode, state)?;
