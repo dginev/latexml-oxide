@@ -1,8 +1,6 @@
-extern crate ansi_term;
-extern crate log;
-
 use ansi_term::Colour::{Green, Red, White, Yellow};
 use ansi_term::Style;
+use log::max_level;
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
 
 struct RtxLogger;
@@ -31,7 +29,7 @@ macro_rules! print_stderr(
 );
 
 impl log::Log for RtxLogger {
-  fn enabled(&self, metadata: &Metadata) -> bool { metadata.level() <= Level::Info }
+  fn enabled(&self, metadata: &Metadata) -> bool { metadata.level() <= max_level() }
 
   fn log(&self, record: &Record) {
     if self.enabled(record.metadata()) {
@@ -56,7 +54,7 @@ impl log::Log for RtxLogger {
           Level::Warn => "Warn",
           Level::Error => "Error",
           Level::Debug => "Debug",
-          _ => "",
+          Level::Trace => "Trace",
         }
       };
 

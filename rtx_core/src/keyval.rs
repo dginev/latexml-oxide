@@ -1,20 +1,19 @@
-use std::borrow::Cow;
-use std::collections::HashMap;
+// use std::borrow::Cow;
+// use std::collections::HashMap;
 // use std::fmt;
 // use std::rc::Rc;
 
-use crate::common::error::*;
-use crate::common::font::Font;
-use crate::common::locator::Locator;
+// use crate::common::error::*;
+// use crate::common::font::Font;
+// use crate::common::locator::Locator;
 use crate::common::store::Stored;
 // use crate::definition::expandable::Expandable;
 // use crate::definition::Definition;
-use crate::document::Document;
+// use crate::document::Document;
 // use crate::list::List;
 use crate::state::State;
-use crate::token::Token;
-use crate::tokens::Tokens;
-use crate::{BoxOps, Digested};
+// use crate::token::Token;
+// use crate::tokens::Tokens;
 
 #[derive(Debug, Clone)]
 pub struct KeyVal {

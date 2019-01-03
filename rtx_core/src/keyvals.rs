@@ -17,6 +17,8 @@ use crate::token::Token;
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
 
+type KVTuple = (String, Stored, bool, Vec<KeyVal>, KeyVal);
+
 #[derive(Debug, Clone)]
 pub struct KeyVals {
   // which KeyVals are we parsing and how do we behave?
@@ -28,9 +30,9 @@ pub struct KeyVals {
   skip_missing: bool,
   hook_missing: Option<Token>,
   // all the internal representations
-  tuples: Vec<(String, Stored, bool, Vec<KeyVal>, KeyVal)>,
-  cached_pairs: Vec<(String, String)>,
-  cached_hash: HashMap<String, Vec<String>>,
+  tuples: Vec<KVTuple>,
+  cached_pairs: Vec<(String, Stored)>,
+  cached_hash: HashMap<String, Vec<Stored>>,
   // all the character tokens we used
   punct: Vec<char>,
   assign: Vec<char>,
@@ -150,7 +152,7 @@ impl KeyVals {
   // Note: The API of this need to be stable, as people may be using it
 
   /// return the value of a given key. If multiple values are given, return the last one.
-  pub fn get_value(&self, key: &str) -> Option<&String> {
+  pub fn get_value(&self, key: &str) -> Option<&Stored> {
     // Since we (by default) accumulate lists of values when repeated,
     // we need to provide the "common" thing: return the last value given.
     match self.cached_hash.get(key) {
@@ -189,39 +191,39 @@ impl KeyVals {
     self.add_value(key, value, use_default, false, state);
   }
 
-  fn rebuild(&mut self, skip: Option<&str>) {
-
+  fn rebuild(&mut self, skip_opt: Option<&str>) {
     // the new data structures to create
-    // my @newtuples = ();
-    // my @pairs     = ();
-    // my %hash      = ();
+    let mut newtuples: Vec<KVTuple> = Vec::new();
+    let mut pairs = Vec::new();
+    let mut hash: HashMap<String, Vec<Stored>> = HashMap::new();
 
-    // foreach my $tuple (@{ $$self{tuples} }) {
-    //   # take all the elements we need from the stack
-    //   my ($key, $value, $useDefault, $resolution, $keyval) = @$tuple;
+    for tuple in &self.tuples {
+      // take all the elements we need from the stack
+      let (key, value, use_default, resolution, keyval) = tuple;
+      // if we want to skip some values, we need to store new tuples
+      if let Some(skip) = skip_opt {
+        if key == skip {
+          continue;
+        }
+        newtuples.push((key.to_string(), value.clone(), *use_default, resolution.to_vec(), keyval.clone()));
+      }
+      // push key / value into the pair
+      pairs.push((key.to_string(), value.clone()));
 
-    //   # if we want to skip some values, we need to store new tuples
-    //   if (defined($skip)) {
-    //     next if $key eq $skip;
-    //     push(@newtuples, [$key, $value, $useDefault, $resolution, $keyval]) if defined($skip); }
+      // if we do not have a value yet, set it
+      let mut entry = hash.entry(key.to_string()).or_insert(Vec::new());
 
-    //   # push key / value into the pair
-    //   push(@pairs, $key, $value);
+      // If we get a third value, push into an array
+      // This is unlikely to be what the caller expects!! But what else?
+      entry.push(value.clone());
+    }
 
-    //   # if we do not have a value yet, set it
-    //   if (!defined $hash{$key}) { $hash{$key} = $value; }
-
-    //   # If we get a third value, push into an array
-    //   # This is unlikely to be what the caller expects!! But what else?
-    //   elsif (ref $hash{$key} eq 'ARRAY') { push(@{ $hash{$key} }, $value); }
-
-    //   # If we get a second value, make an array
-    //   else { $hash{$key} = [$hash{$key}, $value]; } }
-
-    // # store all of the values
-    // $$self{cachedPairs} = [@pairs];
-    // $$self{cachedHash}  = \%hash;
-    // $$self{tuples}      = [@newtuples] if defined($skip);
+    // store all of the values
+    self.cached_pairs = pairs;
+    self.cached_hash = hash;
+    if skip_opt.is_some() {
+      self.tuples = newtuples;
+    }
   }
 }
 

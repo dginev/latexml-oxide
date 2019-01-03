@@ -1,5 +1,6 @@
 ///! Token List constructors.
 use crate::fmt;
+use log::warn;
 use std::collections::VecDeque;
 use std::fmt::Display;
 
