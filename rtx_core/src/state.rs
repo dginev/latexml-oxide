@@ -11,6 +11,7 @@ use crate::common::font::{Font, Fontmap};
 use crate::common::model::{IndirectModel, Model};
 use crate::common::number::Number;
 pub use crate::common::store::Stored; // reexport for convenience
+use crate::common::BindingDispatcher;
 use crate::definition::conditional::{ConditionalType, IfFrame};
 use crate::definition::register::{Register, RegisterValue};
 use crate::definition::Definition;
@@ -231,6 +232,9 @@ pub struct State {
   pub graphics_paths: VecDeque<String>,
   pub include_styles: bool,
   pub nomathparse: bool,
+  // Auxiliary convenience -- extra dispatch
+  // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
+  pub extra_bindings_dispatch: Option<BindingDispatcher>,
   // Circular dependency and global $STATE in Perl requires a bad
   // style use of interior mutability...
   pub stomach: Rc<RefCell<Stomach>>,
@@ -283,6 +287,7 @@ impl Default for State {
       graphics_paths: VecDeque::new(),
       include_styles: false,
       nomathparse: false,
+      extra_bindings_dispatch: None,
       // interiorly mutable
       stomach: Rc::new(RefCell::new(Stomach::default())),
     }

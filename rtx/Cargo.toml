@@ -25,3 +25,5 @@ libxml = "0.2.6"
 unidecode = "0.3.0"
 rtx_codegen = {path = "../rtx_codegen"}
 rtx_core = {path = "../rtx_core"}
+rtx_package = {path = "../rtx_package"}
+rtx_contrib = {path = "../rtx_contrib"}

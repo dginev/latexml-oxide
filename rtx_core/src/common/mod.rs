@@ -12,7 +12,10 @@ pub mod relaxng;
 pub mod store;
 pub mod xml;
 
+use crate::common::error::*;
 use crate::fmt;
+use crate::state::State;
+use std::rc::Rc;
 
 #[derive(Clone, Debug)]
 pub enum InputFormat {
@@ -64,6 +67,9 @@ impl DigestionMode {
     .to_string()
   }
 }
+
+pub type BindingDispatcher = Rc<Fn(&str, &mut State) -> Option<Result<()>>>;
+
 #[derive(Clone)]
 pub struct Config {
   pub verbosity: i32,
@@ -73,6 +79,7 @@ pub struct Config {
   pub preamble: Option<String>,
   pub postamble: Option<String>,
   pub mode: Option<DigestionMode>,
+  pub extra_bindings_dispatch: Option<BindingDispatcher>,
 }
 impl Default for Config {
   fn default() -> Self {
@@ -84,6 +91,7 @@ impl Default for Config {
       preamble: None,
       postamble: None,
       mode: Some(DigestionMode::LaTeX),
+      extra_bindings_dispatch: None,
     }
   }
 }
