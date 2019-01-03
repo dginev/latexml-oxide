@@ -113,8 +113,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
     after_digest => afterproc!(stomach,whatsit,state, { stomach.egroup(state)?; }),
     // Since ltx:verbatim is both inline & block, we have to fudge inline mode
     before_construct => construct!(document, args, state, {
-      let element = document.get_element();
-      if element.is_none() || !document.can_contain(&element.unwrap(), "#PCDATA", state) {
+      if !document.can_contain(&document.get_element().unwrap(), "#PCDATA", state) {
         document.open_element("ltx:p", None, None, state)?;
       }}),
     reversion => "\\verb#1#2#1".into_option()

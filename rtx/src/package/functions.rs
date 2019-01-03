@@ -123,6 +123,7 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
     "alltt.sty" => pool::alltt_sty::load_definitions(&mut state)?,
     "comment.sty" => pool::comment_sty::load_definitions(&mut state)?,
     "url.sty" => pool::url_sty::load_definitions(&mut state)?,
+    "verbatim.sty" => pool::verbatim_sty::load_definitions(&mut state)?,
     other => fatal!(Package, Unknown, s!("TODO: unknown binding {:?}, can't load", other)),
   };
   note_end(&s!("Loading {:?} definitions", file));

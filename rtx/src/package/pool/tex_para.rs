@@ -40,6 +40,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
         whatsit.set_property("inPreamble", true);
       } else if let Some(c) = state.remove_value("next_para_class") {
           whatsit.set_property("class", c);
+          // TODO
         // Digest!(Tokens!(
         //     T_CS("\\LTX@vadjust@afterpar"),
         //     T_CS("\\LTX@clear@vadjust@afterpar")
@@ -55,6 +56,7 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
   DefConstructor!("\\inner@par", sub[document, args, props, state] {
+    debug!("inner@par invoked!\n");
     if document.maybe_close_element("ltx:p", state)?.is_some() {
     } else if document.can_contain(document.get_node(), "ltx:break", state) {
       document.insert_element("ltx:break", Vec::new(), None, state)?;

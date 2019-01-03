@@ -51,3 +51,4 @@ pub mod alltt_sty;
 pub mod article_cls;
 pub mod comment_sty;
 pub mod url_sty;
+pub mod verbatim_sty;
