@@ -357,21 +357,18 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
         }
         .init(state)?,
       );
-    } else if OPTIONAL_CHECK_RE.is_match(&prototype) {
+    } else if let Some(captures) = OPTIONAL_CHECK_RE.captures(&prototype) {
       // Ditto for Optional
-      let captures = OPTIONAL_CHECK_RE.captures(&prototype).unwrap();
-      next_proto = OPTIONAL_CHECK_RE.replace(&prototype, "").to_string();
       let spec = captures.get(1).map_or("", |m| m.as_str());
       let inner_spec = captures.get(2).map_or("", |m| m.as_str());
-
-      if DEFAULT_CHECK_RE.is_match(inner_spec) {
-        // let default_captures = DEFAULT_CHECK_RE.captures(&inner_spec).unwrap();
+      next_proto = OPTIONAL_CHECK_RE.replace(&prototype, "").to_string();
+      if let Some(default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
+        // TODO: Add the defaults !
         parameters.push(
           Parameter {
             name: s!("Optional"),
             spec: spec.to_string(),
-            // extra: vec![TokenizeInternal(default_captures.get(0).map_or("", |m| m.as_str())),
-            // None]});
+            // extra: vec![TokenizeInternal!(default_captures.get(0).map_or("", |m| m.as_str())), None]});
             extra: Vec::new(),
             ..Parameter::default()
           }
@@ -401,12 +398,11 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
           .init(state)?,
         );
       }
-    } else if PARAMSPECT_CHECK_RE.is_match(&prototype) {
-      let captures = PARAMSPECT_CHECK_RE.captures(&prototype).unwrap();
-      next_proto = PARAMSPECT_CHECK_RE.replace(&prototype, "").to_string();
+    } else if let Some(captures) = PARAMSPECT_CHECK_RE.captures(&prototype) {
       let spec = captures.get(1).map_or("", |m| m.as_str()).to_string();
       let name = captures.get(2).map_or("", |m| m.as_str()).to_string();
       let extra_str = captures.get(4).map_or("", |m| m.as_str()).to_string();
+      next_proto = PARAMSPECT_CHECK_RE.replace(&prototype, "").to_string();
       // TODO: Ask Bruce about the "extra" functionality and its types
       let extra = extra_str
         .split('|')
@@ -423,8 +419,11 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
         .init(state)?,
       );
     } else {
-      // Fatal('misdefined', cs, undef, "Unrecognized parameter specification at \"prototype\""); }
-      panic!("Fatal:misdefined:{:?} Unrecognized parameter specification at \"prototype\"", cs);
+      fatal!(
+        Parameter,
+        Misdefined,
+        s!("Unrecognized parameter specification at \"prototype\" {:?}", cs)
+      );
     }
     prototype = next_proto.to_string();
   }
@@ -1078,6 +1077,41 @@ pub fn do_expand<T: Into<Tokens>>(mut tokens: T, outer_gullet: &mut Gullet, oute
       Ok(Tokens::new(expanded))
     }),
   )
+}
+
+/// Convert a LaTeX-style argument spec to our Package form.
+/// Ie. given $nargs and $optional, being the two optional arguments to
+/// something like \newcommand, convert it to the form we use
+pub fn convert_latex_args(mut nargs: usize, optional: Option<Tokens>, state: &mut State) -> Result<Option<Parameters>> {
+  let mut params = Vec::new();
+  if let Some(tks) = optional {
+    params.push(
+      Parameter {
+        name: s!("Optional"),
+        spec: s!("[Default:{}]", tks.untex(state)),
+        extra: vec![ParameterExtra::Token(tks.into()), ParameterExtra::ParametersOption(None)],
+        ..Parameter::default()
+      }
+      .init(state)?,
+    );
+    nargs -= 1;
+  }
+
+  for _ in 1..=nargs {
+    params.push(
+      Parameter {
+        name: s!("Plain"),
+        spec: "{}".to_string(),
+        ..Parameter::default()
+      }
+      .init(state)?,
+    );
+  }
+  if params.is_empty() {
+    Ok(None)
+  } else {
+    Ok(Some(Parameters { params }))
+  }
 }
 
 //======================================================================

@@ -18,23 +18,6 @@ pub struct Error {
 }
 
 #[derive(Debug)]
-pub enum ErrorTarget {
-  Package,
-  Parameter,
-  Converter,
-  Mouth,
-  Stomach,
-  Codegen,
-  Macro,
-  XMath,
-  Document,
-  Definition,
-  TexPool,
-  Internal,
-  TargetUnexpected,
-}
-
-#[derive(Debug)]
 pub enum ErrorCategory {
   Init,
   Io(io::Error),
@@ -50,6 +33,23 @@ pub enum ErrorCategory {
   EoF,
   Endgroup,
   Generic(Box<ErrorTrait>),
+}
+
+#[derive(Debug)]
+pub enum ErrorTarget {
+  Package,
+  Parameter,
+  Converter,
+  Mouth,
+  Stomach,
+  Codegen,
+  Macro,
+  XMath,
+  Document,
+  Definition,
+  TexPool,
+  Internal,
+  TargetUnexpected,
 }
 
 #[macro_export]

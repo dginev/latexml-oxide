@@ -484,8 +484,6 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   // STUBS:
   for ltxtrigger in [
     "\\renewcommand",
-    "\\newenvironment",
-    "\\renewenvironment",
     "\\NeedsTeXFormat",
     "\\ProvidesPackage",
     "\\RequirePackage",
@@ -569,6 +567,9 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
       DefMacroI!(cs.clone(), None, body, state);
     })
   );
+
+  // Lines 2512-2536
+  InnerPool!(latex_defining_environments);
 
   //======================================================================
   // C.8.4 Numbering
