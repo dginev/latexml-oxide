@@ -269,6 +269,86 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   Let!("\\\t", "\\\r"); // \<tab> == \<space>, also
 
   //======================================================================
+  // TeX Book, Appendix B, p. 352
+
+  DefPrimitive!("\\obeyspaces", sub[stomach, whatsit, state] {
+     state.assign_catcode(' ', Catcode::ACTIVE, None);
+     state.let_i(&T_ACTIVE!(" "), T_CS!("\\space"), None);
+     Ok(vec![])
+  });
+  // Curiously enough, " " (a space) is ALREADY defined to be the same as "\space"
+  // EVEN before it is made active. (see p.380)
+  LetI!(&T_ACTIVE!(" "), T_CS!("\\space"));
+
+  DefPrimitive!("\\obeylines", sub[stomach, whatsit, state] {
+      state.assign_catcode('\r', Catcode::ACTIVE, None);
+      state.let_i(&T_ACTIVE!("\r"), T_CS!("\\@break"), None); // More appropriate than \par, I think?
+      Ok(vec![])
+  });
+
+  DefConstructor!("\\@break", "<ltx:break/>");
+
+  // RawTeX(<<'EoTeX');
+  // \def\loop#1\repeat{\def\body{#1}\iterate}
+  // \def\iterate{\body \let\next=\iterate \else\let\next=\relax\fi \next}
+  // \let\repeat=\fi
+  // EoTeX
+
+  DefMacro!("\\enskip", "\\ifmmode\\@math@enskip\\else\\@text@enskip\\fi");
+  // DefConstructorI('\@math@enskip', undef,
+  //   "<ltx:XMHint name='enskip' width='#width'/>",
+  //   alias => '\enskip',
+  //   properties => { isSpace => 1, width => sub { Dimension('0.5em'); } });
+  // DefPrimitiveI('\@text@enskip', undef, "\x{2002}", alias => '\enskip');
+
+  DefMacro!("\\enspace", "\\ifmmode\\@math@enspace\\else\\@text@enspace\\fi");
+  // DefConstructorI('\@math@enspace', undef,
+  //   "<ltx:XMHint name='enskip' width='#width'/>",
+  //   alias => '\enspace',
+  //   properties => { isSpace => 1, width => sub { Dimension('0.5em'); } });
+  // DefPrimitiveI('\@text@enspace', undef, "\x{2002}", alias => '\enspace');
+
+  DefMacro!("\\quad", "\\ifmmode\\@math@quad\\else\\@text@quad\\fi");
+  // DefConstructorI('\@math@quad', undef,
+  //   "<ltx:XMHint name='quad' width='#width'/>",
+  //   alias => '\quad',
+  //   properties => { isSpace => 1, width => sub { Dimension('1em'); } });
+  // DefPrimitiveI('\@text@quad', undef, "\x{2003}", alias => '\quad');
+
+  // # Conceivably should be treated as punctuation! (but maybe even \quad should !?!)
+  DefMacro!("\\qquad", "\\ifmmode\\@math@qquad\\else\\@text@qquad\\fi");
+  // DefConstructorI('\@math@qquad', undef,
+  //   "<ltx:XMHint name='qquad' width='#width'/>",
+  //   alias => '\qquad',
+  //   properties => { isSpace => 1, width => sub { Dimension('2em'); } });
+  // DefPrimitiveI('\@text@qquad', undef, "\x{2003}\x{2003}", alias => '\qquad');
+
+  DefMacro!("\\thinspace", "\\ifmmode\\@math@thinspace\\else\\@text@thinspace\\fi");
+  // DefConstructorI('\@math@thinspace', undef,
+  //   "<ltx:XMHint name='thinspace' width='#width'/>",
+  //   alias => '\thinspace',
+  //   properties => { isSpace => 1, width => sub { Dimension('0.16667em'); } });
+  // DefPrimitiveI('\@text@thinspace', undef, "\x{2009}", alias => '\thinspace');
+
+  DefMacro!("\\negthinspace", "\\ifmmode\\@math@negthinspace\\else\\@text@negthinspace\\fi");
+  // DefConstructorI('\@math@negthinspace', undef,
+  //   "<ltx:XMHint name='negthinspace' width='#width'/>",
+  //   alias => '\negthinspace',
+  //   properties => { isSpace => 1, width => sub { Dimension('-0.16667em'); } });
+  // DefPrimitiveI('\@text@negthinspace', undef, "", alias => '\negthinspace');
+
+  // DefConstructor('\hglue Glue', "?#isMath(<ltx:XMHint name='hglue' width='#width'/>)(\x{2003})",
+  //   properties => sub { (isSpace => 1, width => $_[1]); });
+  DefPrimitiveI!("\\vglue Glue", noprimitive!());
+  DefPrimitiveI!("\\topglue", noprimitive!());
+  DefPrimitiveI!("\\nointerlineskip", noprimitive!());
+  DefPrimitiveI!("\\offinterlineskip", noprimitive!());
+
+  DefMacro!("\\smallskip", "\\vskip\\smallskipamount");
+  DefMacro!("\\medskip", "\\vskip\\medskipamount");
+  DefMacro!("\\bigskip", "\\vskip\\bigskipamount");
+
+  //======================================================================
   // TeX Book, Appendix B, p. 353
 
   DefPrimitiveI!("\\break", noprimitive!());

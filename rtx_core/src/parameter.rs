@@ -124,18 +124,17 @@ impl Parameter {
     let mut descriptor: Option<Parameter>;
     if let Some(&Stored::Parameter(ref d_lookup)) = looked_up_mapping {
       descriptor = Some((*d_lookup).clone());
-    } else if OPTIONAL_REGEX.is_match(&self.name) {
-      let captures = OPTIONAL_REGEX.captures(&self.name).unwrap();
+    } else if let Some(captures) = OPTIONAL_REGEX.captures(&self.name) {
       let basetype = captures.get(1).map_or("", |m| m.as_str());
       descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
         Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
-        _ => match Parameter::check_reader_function(s!("Read{}", &self.name)) {
+        _ => match Parameter::check_reader_function(&s!("Read{}", &self.name), state) {
           Some(reader) => Some(Parameter {
             reader,
             optional: true,
             ..Parameter::default()
           }),
-          None => match Parameter::check_reader_function(s!("Read{}", basetype)) {
+          None => match Parameter::check_reader_function(&s!("Read{}", basetype), state) {
             Some(reader) => Some(Parameter {
               reader,
               optional: true,
@@ -147,20 +146,18 @@ impl Parameter {
         },
       };
       descriptor.as_mut().unwrap().optional = true;
-    } else if SKIP_REGEX.is_match(&self.name) {
-      let captures = SKIP_REGEX.captures(&self.name).unwrap();
+    } else if let Some(captures) = SKIP_REGEX.captures(&self.name) {
       let basetype = captures.get(1).map_or("", |m| m.as_str());
-
       descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
         Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
-        _ => match Parameter::check_reader_function(self.name.clone()) {
+        _ => match Parameter::check_reader_function(&self.name, state) {
           Some(reader) => Some(Parameter {
             reader,
             optional: true,
             novalue: true,
             ..Parameter::default()
           }),
-          None => match Parameter::check_reader_function(s!("Read{}", basetype)) {
+          None => match Parameter::check_reader_function(&s!("Read{}", basetype), state) {
             Some(reader) => Some(Parameter {
               reader,
               optional: true,
@@ -176,7 +173,7 @@ impl Parameter {
         desc.optional = true;
       }
     } else {
-      descriptor = match Parameter::check_reader_function(s!("Read{}", &self.name)) {
+      descriptor = match Parameter::check_reader_function(&s!("Read{}", &self.name), state) {
         Some(reader) => Some(Parameter {
           reader,
           ..Parameter::default()
@@ -198,19 +195,24 @@ impl Parameter {
         self.after_digest = descriptor.after_digest;
         self.reader_predigest = descriptor.reader_predigest;
       },
-      None => panic!("Unrecognized parameter type in {:?}", self.spec),
+      None => fatal!(
+        Parameter,
+        Unknown,
+        s!("Unrecognized parameter type with name {:?}, spec {:?}", self.name, self.spec)
+      ),
     }
     Ok(self)
   }
 
-  // TODO: This meta-programming approach won't fly in Rust, need an alternative.
-  /// Check whether a reader function is accessible within LaTeXML::Package::Pool
-  pub fn check_reader_function(_function: String) -> Option<ReaderClosure> {
-    // if (defined $LaTeXML::Package::Pool::{$function}) {
-    //   local *reader = $LaTeXML::Package::Pool::{$function};
-    //   if (defined &reader) {
-    //     return \&reader; } }
-    None
+  /// Obtain the reader of a given parameter name, if available
+  pub fn check_reader_function(name: &str, state: &State) -> Option<ReaderClosure> {
+    // TODO: This function doesn't have a direct Rust equivalent, since the metaprogramming isn't possible
+    // But what is the exact purpose of seeking through the pool namespace? Wouldn't any parameter be already assigned in the state?
+    if let Some(Stored::Parameter(param)) = state.lookup_mapping("PARAMETER_TYPES", name) {
+      Some(param.reader.clone())
+    } else {
+      None
+    }
   }
 
   pub fn read(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Result<Tokens> {

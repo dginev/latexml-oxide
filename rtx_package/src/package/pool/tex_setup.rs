@@ -371,13 +371,19 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     })
   );
 
-  // // Read a floating point number
-  // DefParameterType!("Float",Parameter{
-  // reader: reader!(gullet, inner, _extra, state, {
-  // state: &mut State| {     gullet.read_float()
-  //   }),
-  //   ..Parameter::default()
-  // }, state);
+  // Read a floating point number
+  // DefParameterType!("Float",
+  //   reader => reader!(gullet, inner, _extra, state, {
+  //     gullet.read_float(state)?.to_token().into()
+  //   })
+  // );
+
+  // Read a Glue (aka skip)
+  DefParameterType!("Glue",
+    reader => reader!(gullet, inner, _extra, state, {
+      gullet.read_glue(state)?.to_token().into()
+    })
+  );
 
   // Read until the next (balanced) open brace {
   // used for the last TeX-style delimited argument

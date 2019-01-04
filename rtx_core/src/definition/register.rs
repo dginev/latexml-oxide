@@ -82,6 +82,10 @@ pub trait NumericOps {
       Self::new(value)
     }
   }
+  fn to_token(self) -> Token
+  where Self: Sized {
+    T_OTHER!(self.value_of().to_string())
+  }
 }
 impl NumericOps for RegisterValue {
   fn new<T: Into<f32>>(number: T) -> Self { RegisterValue::Number(Number::new(number)) }

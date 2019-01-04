@@ -1,6 +1,4 @@
 use crate::definition::register::NumericOps;
-use crate::token::{Catcode, Token};
-use std::borrow::Cow;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Number {
@@ -24,8 +22,6 @@ const SCALES: &'static [f32] = &[1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0];
 const EPSILON: f32 = 0.00000011920929;
 
 impl Number {
-  pub fn to_token(self) -> Token { T_OTHER!(self.number.to_string()) }
-
   /// Round $number to $prec decimals (0...6) attempting to do so portably.
   pub fn round_to(number: f32, prec_opt: Option<usize>) -> f32 {
     let mut prec = prec_opt.unwrap_or(2);
