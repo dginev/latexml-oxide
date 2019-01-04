@@ -31,9 +31,7 @@ pub fn apply_accent(
   Ok(Tbox::new(string, font, locator, reversion.unwrap_or(Tokens!()), HashMap::new(), state))
 }
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   //----------------------------------------------------------------------
   // Accents.  LaTeX Table 3.1, p.38
   //----------------------------------------------------------------------
@@ -79,6 +77,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // We're given a number pointing into the font, from which we can derive the standalone char.
   // From that, we want to figure out the combining character, but there could be one for
   // both the above & below cases!  We'll prefer the above case.
-
-  Ok(())
-}
+});

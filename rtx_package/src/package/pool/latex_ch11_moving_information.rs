@@ -3,9 +3,7 @@ use crate::package::*;
 //**********************************************************************
 // C.11 Moving Information Around
 //**********************************************************************
-pub fn load_definitions(outer_state: &mut State) -> Result<()> {
-  SetupBindingMacros!(outer_state);
-
+LoadDefinitions!(state, {
   //======================================================================
   // C.11.1 Files
   //======================================================================
@@ -627,9 +625,7 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   //     return; });
 
   // DefPrimitive('\typein[]{}', undef);
-
-  Ok(())
-}
+});
 
 // Since SOME people seem to write bibliographies w/o \bibitem,
 // just blank lines between apparent entries,

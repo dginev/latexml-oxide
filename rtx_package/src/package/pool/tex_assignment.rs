@@ -1,8 +1,6 @@
 use crate::package::*;
 
-pub fn load_definitions(core_state: &mut State) -> Result<()> {
-  SetupBindingMacros!(core_state);
-
+LoadDefinitions!(state, {
   //======================================================================
   // Assignment, TeXBook Ch.24, p.275
   //======================================================================
@@ -157,6 +155,4 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
       state.assign_mathcode(ch, value.value_of() as usize, None);
     }))
   );
-
-  Ok(())
-}
+});

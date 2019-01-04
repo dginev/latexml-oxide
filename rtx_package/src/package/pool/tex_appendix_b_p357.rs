@@ -1,8 +1,6 @@
 use crate::package::*;
 
-pub fn load_definitions(core_state: &mut State) -> Result<()> {
-  SetupBindingMacros!(core_state);
-
+LoadDefinitions!(state, {
   //// NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the
   //// type. This would be useful for the titles in links; thus can be plain (unicode) text.
 
@@ -233,6 +231,4 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   // DefRegister!("\\thinmuskip"  , MuGlue::new("3mu"));
   // DefRegister!("\\medmuskip"   , MuGlue::new("4mu plus 2mu minus 4mu"));
   // DefRegister!("\\thickmuskip" , MuGlue::new("5mu plus 5mu"));
-
-  Ok(())
-}
+});

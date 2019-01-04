@@ -3,9 +3,7 @@ use rtx_core::list::List;
 use rtx_core::tbox::Tbox;
 use rtx_core::TexMode;
 
-pub fn load_definitions(outer_state: &mut State) -> Result<()> {
-  SetupBindingMacros!(outer_state);
-
+LoadDefinitions!(state, {
   //======================================================================
   // Remaining Mode independent primitives in Ch.24, pp.279-280
   // \relax was done as expandable (isn't that right?)
@@ -143,6 +141,4 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   //     my ($stomach, $stuff) = @_;
   // print STDERR ToString(Expand($stuff)) . ": " . ToString(Expand(Tokens(T_CS('\the'),
   // T_CS('\errhelp')))) . "\n";     return; });
-
-  Ok(())
-}
+});

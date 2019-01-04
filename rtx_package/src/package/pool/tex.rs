@@ -1,9 +1,7 @@
 use crate::package::*;
 use rtx_core::state::State;
 
-pub fn load_definitions(mut state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   // TeX.pool.ltxml
   //   commit 73f27e8ca8a4179fd3d37744141647d1e604cc97
   //   Author: Bruce Miller <bruce.miller@nist.gov>
@@ -105,6 +103,4 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   // lines 6433-END
   LoadPool!("eTeX");
   LoadPool!("pdfTeX");
-
-  Ok(())
-}
+});

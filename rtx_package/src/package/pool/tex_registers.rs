@@ -1,15 +1,12 @@
 use crate::package::*;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
-  //======================================================================
-  // Registers & Parameters
-  // See Chapter 24, Summary of Vertical Mode
-  // Define a whole mess of useless registers here ...
-  // Values are from Appendix B, pp. 348-349 (for whatever its worth)
-  //======================================================================
-
+//======================================================================
+// Registers & Parameters
+// See Chapter 24, Summary of Vertical Mode
+// Define a whole mess of useless registers here ...
+// Values are from Appendix B, pp. 348-349 (for whatever its worth)
+//======================================================================
+LoadDefinitions!(state, {
   //======================================================================
   // Integer registers; TeXBook p. 272-273
 
@@ -118,6 +115,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //   foreach my $p (keys %sp_iparms) {
   //     DefRegister("\\$p", Number($sp_iparms{$p})); }
   // }
-
-  Ok(())
-}
+});

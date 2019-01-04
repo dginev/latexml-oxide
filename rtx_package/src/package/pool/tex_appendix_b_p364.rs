@@ -2,9 +2,7 @@ use crate::package::*;
 
 //======================================================================
 // TeX Book, Appendix B. p. 364
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   // Let's hope nobody is messing with the output routine...
   // DefPrimitiveI('\footnoterule', undef, undef);
 
@@ -139,6 +137,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //     . "<ltx:XMArg>#1</ltx:XMArg>"
   //     . "</ltx:XMApp>",
   //   properties => { scriptpos => sub { "mid" . $_[0]->getBoxingLevel; } });
-
-  Ok(())
-}
+});

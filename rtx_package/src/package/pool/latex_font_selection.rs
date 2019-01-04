@@ -1,8 +1,6 @@
 use crate::package::*;
 
-pub fn load_definitions(outer_state: &mut State) -> Result<()> {
-  SetupBindingMacros!(outer_state);
-
+LoadDefinitions!(outer_state, {
   //**********************************************************************
   // C.15 Font Selection
   //**********************************************************************
@@ -138,6 +136,4 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   DefMacro!("\\textsl{}",     "\\ifmmode\\textsl@math{#1}\\else{\\slshape #1}\\fi",        protected => true);
   DefMacro!("\\textsc{}",     "\\ifmmode\\textsc@math{#1}\\else{\\scshape #1}\\fi",        protected => true);
   DefMacro!("\\textnormal{}", "\\ifmmode\\textnormal@math{#1}\\else{\\normalfont #1}\\fi", protected => true);
-
-  Ok(())
-}
+});

@@ -1,7 +1,5 @@
 use crate::package::*;
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   RegisterNamespace!("ltx", "http://dlmf.nist.gov/LaTeXML");
   RegisterNamespace!("svg", "http://www.w3.org/2000/svg");
   RegisterNamespace!("xlink", "http://www.w3.org/1999/xlink"); // Needed for SVG
@@ -415,6 +413,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //   my $name = $token->getString; $name =~ s/^\\//;
   //   return (((!defined $meaning) || ($meaning eq LookupMeaning(T_CS('\relax'))))
   //       && (($name ne 'relax') && ($name !~ /^end/))); }
-
-  Ok(())
-}
+});

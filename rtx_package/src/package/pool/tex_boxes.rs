@@ -25,9 +25,7 @@ fn predigest_box_contents(stomach: &mut Stomach, _tokens: Tokens, state: &mut St
   Ok(Some(contents.remove(0)))
 }
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   // <box> = \box <8bit> | \copy <8bit> | \lastbox | \vsplit <8bit> to <dimen>
   //   | \hbox <box specification>{<horizontal mode material>}
   //   | \vbox <box specification>{<vertical mode material>}
@@ -174,5 +172,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     })
   );
 
-  Ok(())
-}
+});

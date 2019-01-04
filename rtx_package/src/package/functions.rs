@@ -98,7 +98,7 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
     None => file,
     Some(ext) => file + "." + &ext,
   };
-
+  let mut with_stomach = options.with_stomach;
   let loaded_flag = file.clone() + "_loaded";
   {
     // Only load definitions once
@@ -115,12 +115,18 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
   state.assign_value(&loaded_flag, true, Some(Scope::Global));
   let taken_dispatcher = state.extra_bindings_dispatch.take();
   let is_contrib: bool = match taken_dispatcher {
-    Some(ref dispatcher) => match dispatcher(&file, state) {
-      Some(result) => match result {
-        Ok(()) => true,
-        Err(e) => return Err(e),
-      },
-      None => false,
+    Some(ref dispatcher) => {
+      let result_opt = match with_stomach {
+        None => dispatcher(&file, state, None),
+        Some(ref mut st) => dispatcher(&file, state, Some(st)),
+      };
+      match result_opt {
+        Some(result) => match result {
+          Ok(()) => true,
+          Err(e) => return Err(e),
+        },
+        None => false,
+      }
     },
     None => false,
   };
@@ -128,15 +134,15 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
 
   if !is_contrib {
     match file.as_ref() {
-      "TeX.pool" => pool::tex::load_definitions(&mut state)?,
-      "LaTeX.pool" => pool::latex::load_definitions(&mut state)?,
-      "eTeX.pool" => pool::etex::load_definitions(&mut state)?,
-      "pdfTeX.pool" => pool::pdftex::load_definitions(&mut state)?,
-      "article.cls" => pool::article_cls::load_definitions(&mut state)?,
-      "alltt.sty" => pool::alltt_sty::load_definitions(&mut state)?,
-      "comment.sty" => pool::comment_sty::load_definitions(&mut state)?,
-      "url.sty" => pool::url_sty::load_definitions(&mut state)?,
-      "verbatim.sty" => pool::verbatim_sty::load_definitions(&mut state)?,
+      "TeX.pool" => pool::tex::load_definitions(&mut state, with_stomach)?,
+      "LaTeX.pool" => pool::latex::load_definitions(&mut state, with_stomach)?,
+      "eTeX.pool" => pool::etex::load_definitions(&mut state, with_stomach)?,
+      "pdfTeX.pool" => pool::pdftex::load_definitions(&mut state, with_stomach)?,
+      "article.cls" => pool::article_cls::load_definitions(&mut state, with_stomach)?,
+      "alltt.sty" => pool::alltt_sty::load_definitions(&mut state, with_stomach)?,
+      "comment.sty" => pool::comment_sty::load_definitions(&mut state, with_stomach)?,
+      "url.sty" => pool::url_sty::load_definitions(&mut state, with_stomach)?,
+      "verbatim.sty" => pool::verbatim_sty::load_definitions(&mut state, with_stomach)?,
       other => fatal!(Package, Unknown, s!("TODO: unknown binding {:?}, can't load", other)),
     };
   }
@@ -177,7 +183,7 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
   Ok(())
 }
 
-pub struct RequireOptions {
+pub struct RequireOptions<'a> {
   pub options: Vec<String>,
   pub withoptions: bool,
   pub extension: Option<String>,
@@ -186,8 +192,9 @@ pub struct RequireOptions {
   pub notex: bool,
   pub raw: bool,
   pub after: bool,
+  pub with_stomach: Option<&'a mut Stomach>,
 }
-impl Default for RequireOptions {
+impl<'a> Default for RequireOptions<'a> {
   fn default() -> Self {
     RequireOptions {
       options: Vec::new(),
@@ -198,6 +205,7 @@ impl Default for RequireOptions {
       notex: true,
       raw: false,
       after: false,
+      with_stomach: None,
     }
   }
 }
@@ -226,6 +234,7 @@ pub fn require_package(name: &str, mut options: RequireOptions, state: &mut Stat
     InputDefinitionOptions {
       extension: options.extension,
       handleoptions: true,
+      with_stomach: options.with_stomach,
       // Pass classes options if we have NONE!
       withoptions: options.options,
       ..InputDefinitionOptions::default()
@@ -256,7 +265,7 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
   // }
 }
 
-pub fn load_class(name: &str, options: Vec<String>, after: Tokens, state: &mut State) -> Result<()> {
+pub fn load_class(name: &str, options: Vec<String>, after: Tokens, with_stomach: Option<&mut Stomach>, state: &mut State) -> Result<()> {
   input_definitions(
     name,
     InputDefinitionOptions {
@@ -265,6 +274,7 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens, state: &mut S
       notex: true,
       handleoptions: true,
       noerror: true,
+      with_stomach,
       ..InputDefinitionOptions::default()
     },
     state,
@@ -460,7 +470,7 @@ pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
   }
 }
 
-pub struct InputDefinitionOptions {
+pub struct InputDefinitionOptions<'a> {
   pub extension: Option<String>,
   pub options: Vec<String>,
   pub after: Tokens,
@@ -470,8 +480,9 @@ pub struct InputDefinitionOptions {
   pub withoptions: Vec<String>,
   pub handleoptions: bool,
   pub as_class: bool,
+  pub with_stomach: Option<&'a mut Stomach>,
 }
-impl Default for InputDefinitionOptions {
+impl<'a> Default for InputDefinitionOptions<'a> {
   fn default() -> Self {
     InputDefinitionOptions {
       extension: None,
@@ -483,6 +494,7 @@ impl Default for InputDefinitionOptions {
       withoptions: Vec::new(),
       handleoptions: false,
       as_class: false,
+      with_stomach: None,
     }
   }
 }

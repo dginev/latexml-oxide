@@ -14,9 +14,7 @@ fn escapechar(state: &State) -> String {
   }
 }
 
-pub fn load_definitions(core_state: &mut State) -> Result<()> {
-  SetupBindingMacros!(core_state);
-
+LoadDefinitions!(state, {
   // DefConditional('\ifnum Number Token Number',       sub { compare($_[1], $_[2], $_[3]); });
   // DefConditional('\ifdim Dimension Token Dimension', sub { compare($_[1], $_[2], $_[3]); });
   // DefConditional('\ifodd Number',                    sub { $_[1]->valueOf % 2; });
@@ -277,6 +275,4 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   DefConditional!("\\or");
   DefConditional!("\\fi");
   DefConditional!("\\ifcase Number");
-
-  Ok(())
-}
+});

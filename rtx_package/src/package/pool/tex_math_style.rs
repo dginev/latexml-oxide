@@ -1,8 +1,6 @@
 use crate::package::*;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   //======================================================================
   DefPrimitiveI!("\\cal", noprimitive!());
   // TODO:  font => { family => 'caligraphic', series => 'medium', shape => 'upright' });
@@ -31,5 +29,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // TODO:
   // beforeDigest => sub { AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 0),
   // 'local'); }, forbidMath => 1);
-  Ok(())
-}
+});

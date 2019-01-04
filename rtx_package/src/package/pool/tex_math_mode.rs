@@ -2,9 +2,7 @@ use crate::package::*;
 use rtx_core::document::tag::TagConstructionClosure;
 use rtx_core::BoxOps;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   //======================================================================
   // Math mode stuff
   // See TeXBook Ch.26
@@ -136,6 +134,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   Tag!("ltx:Math", after_close => add_body_tex_closure);
   // Tag!("ltx:Math", after_close => vec![cleanup_math_closure]);
-
-  Ok(())
-}
+});

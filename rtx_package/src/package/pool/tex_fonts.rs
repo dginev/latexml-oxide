@@ -1,8 +1,6 @@
 use crate::package::*;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   // Used for SemiVerbatim text
   DeclareFontMap!(
     "ASCII",
@@ -378,6 +376,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     }
     Ok(vec![])
   });
-
-  Ok(())
-}
+});

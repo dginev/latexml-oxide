@@ -4,8 +4,7 @@ lazy_static! {
   static ref LEADING_BACKSLASH_RE: Regex = Regex::new(r"^\\").unwrap();
 }
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
+LoadDefinitions!(state, {
   AssignValue!("BASE_URL", "");
 
   // Ignorable stuff, since we're not doing linebreaks.
@@ -101,6 +100,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     DefPrimitiveI!(&cmd, primitivesub!(stomach, args, inner_state, { Ok(expansion.clone()) }), url_state);
     Ok(vec![])
   });
-
-  Ok(())
-}
+});
