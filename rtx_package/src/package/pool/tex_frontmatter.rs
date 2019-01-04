@@ -13,9 +13,7 @@
 use crate::package::*;
 use rtx_core::document::tag::TagConstructionClosure;
 use std::collections::HashSet;
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   AssignValue!("frontmatter", Stored::HashTagData(HashMap::new()), Some(Scope::Global));
 
   // // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
@@ -354,6 +352,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
 
   // NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the type.
   // This would be useful for the titles in links; thus can be plain (unicode) text.
-
-  Ok(())
-}
+});

@@ -7,9 +7,7 @@ lazy_static! {
 //**********************************************************************
 // C.6.4 Verbatim
 //**********************************************************************
-pub fn load_definitions(outer_state: &mut State) -> Result<()> {
-  SetupBindingMacros!(outer_state);
-
+LoadDefinitions!(outer_state, {
   // NOTE: how's the best way to get verbatim material through?
   DefEnvironment!("{verbatim}", "<ltx:verbatim>#body</ltx:verbatim>");
   DefEnvironment!("{verbatim*}", "<ltx:verbatim>#body</ltx:verbatim>");
@@ -137,6 +135,4 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
     Ok(vec![])
   });
   DefMacroI!(T_CS!("\\normalsfcodes"), None, Tokens!());
-
-  Ok(())
-}
+});

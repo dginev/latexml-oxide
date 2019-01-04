@@ -1,7 +1,7 @@
 use crate::package::*;
 use rtx_core::state::State;
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
+
+LoadDefinitions!(state, {
   LoadPool!("LaTeX");
   //**********************************************************************
   // Option handling
@@ -104,6 +104,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   // Actually we should be using section counter
   // TODO:
   // DefPrimitive!("\\@appendix", sub { startAppendices("section"); });
-
-  Ok(())
-}
+});

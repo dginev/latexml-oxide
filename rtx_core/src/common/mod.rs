@@ -15,6 +15,7 @@ pub mod xml;
 use crate::common::error::*;
 use crate::fmt;
 use crate::state::State;
+use crate::stomach::Stomach;
 use std::rc::Rc;
 
 #[derive(Clone, Debug)]
@@ -68,7 +69,7 @@ impl DigestionMode {
   }
 }
 
-pub type BindingDispatcher = Rc<Fn(&str, &mut State) -> Option<Result<()>>>;
+pub type BindingDispatcher = Rc<Fn(&str, &mut State, Option<&mut Stomach>) -> Option<Result<()>>>;
 
 #[derive(Clone)]
 pub struct Config {

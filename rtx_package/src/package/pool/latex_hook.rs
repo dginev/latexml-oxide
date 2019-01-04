@@ -1,8 +1,6 @@
 use crate::package::*;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   //**********************************************************************
   // LaTeX Hook
   //**********************************************************************
@@ -42,18 +40,22 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   .map(|s| s.to_string())
   {
     let inner_ltxtrigger = ltxtrigger.clone();
-    DefMacroI!(T_CS!(ltxtrigger), None, sub[ _gullet, _args, state] {
-      input_definitions(
-        "LaTeX",
-        InputDefinitionOptions {
-          extension: Some(String::from("pool")),
-          ..InputDefinitionOptions::default()
-        },
-        state,
-      )?;
-      Ok(Tokens!(T_CS!(inner_ltxtrigger)))
+    DefMacroI!(T_CS!(ltxtrigger), None, sub[ _gullet, _args, inner_state] {
+      Ok(Tokens!(T_CS!("\\@load@latex@pool"), T_CS!(inner_ltxtrigger)))
     });
   }
 
-  Ok(())
-}
+  DefPrimitive!("\\@load@latex@pool", sub[stomach, args, state] {
+    input_definitions(
+      "LaTeX",
+      InputDefinitionOptions {
+        extension: Some(String::from("pool")),
+        with_stomach: Some(stomach), // crucial, or we won't be able to invoke any RawTeX/Digest-like macros in the pool due to multiple mutable borrows of stomach!
+        ..InputDefinitionOptions::default()
+      },
+      state,
+    )?;
+    Ok(vec![])
+  });
+
+});

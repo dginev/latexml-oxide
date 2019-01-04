@@ -1,8 +1,6 @@
 use crate::package::*;
 
-pub fn load_definitions(outer_state: &mut State) -> Result<()> {
-  SetupBindingMacros!(outer_state);
-
+LoadDefinitions!(outer_state, {
   //**********************************************************************
   // Define \name and \begin{name} to start an ignored section
   // until \endname or \end{name}, respectively
@@ -62,6 +60,4 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   DefPrimitiveI!("\\excludecomment{}", define_excluded);
   DefPrimitiveI!("\\specialcomment{}{}{}", define_included!());
   DefPrimitiveI!("\\processcomment{}{}{}{}", noprimitive!());
-
-  Ok(())
-}
+});

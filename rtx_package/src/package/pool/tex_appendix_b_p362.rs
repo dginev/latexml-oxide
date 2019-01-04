@@ -1,8 +1,6 @@
 use crate::package::*;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   //======================================================================
 
   // Special Characters.
@@ -24,6 +22,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   DefMathI!("\\lx@math@dollar", None, "\\$", role => "OPERATOR", meaning => "currency-dollar",
     alias => "\\$");
   DefMathI!("\\lx@math@underscore", None, "_", alias => "\\_");
-
-  Ok(())
-}
+});

@@ -14,8 +14,7 @@ lazy_static! {
   static ref OPTS_REGEX: Regex = Regex::new(r",\s*").unwrap();
 }
 
-pub fn load_definitions(mut state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
+LoadDefinitions!(state, {
   //**********************************************************************
   // Organized following
   //  "LaTeX: A Document Preparation System"
@@ -47,7 +46,7 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
-    after_digest => afterproc!(_stomach, whatsit, state, {
+    after_digest => afterproc!(stomach, whatsit, state, {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
         Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
@@ -56,6 +55,7 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
       load_class(&(whatsit.get_arg(2).unwrap().to_string()),
                 class_opts,
                 Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")),
+                Some(stomach),
                 state)?;
     })
   );
@@ -449,13 +449,6 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   Let!("\\@currext", "\\@empty");
   Let!("\\@currname", "\\@empty");
 
-  fn only_preamble(cs: &str, state: &mut State) {
-    if !state.lookup_bool("inPreamble") {
-      let category_object = s!("unexpected:{}", cs);
-      error!(target: &category_object, "The current command can only appear in the preamble");
-    }
-  }
-
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
       before_digest => beforeproc!(_stomach, state, { only_preamble("\\usepackage", state); }),
@@ -661,6 +654,9 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   // lines 4413-4563
   InnerPool!(latex_font_selection);
 
+  // lines 4666-5121
+  InnerPool!(latex_other_in_appendices);
+
   //======================================================================
   // Hair
   DefPrimitive!("\\makeatletter", sub[stomach, whatsit, state] { state.assign_catcode('@', Catcode::LETTER, Some(Scope::Local)); Ok(vec![]) });
@@ -697,6 +693,4 @@ pub fn load_definitions(mut state: &mut State) -> Result<()> {
   DefMacro!("\\subsubsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
   DefMacro!("\\paragraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
   DefMacro!("\\subparagraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
-
-  Ok(())
-}
+});

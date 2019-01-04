@@ -12,13 +12,27 @@
 // only create new names for new macro functions.
 
 #[macro_export]
+macro_rules! LoadDefinitions {
+  ($state:ident, $body:block) => {
+    pub fn load_definitions($state: &mut State, mut outer_stomach: Option<&mut Stomach>) -> Result<()> {
+      SetupBindingMacros!($state, outer_stomach);
+      {
+        $body
+      }
+      Ok(())
+    }
+  };
+}
+
+#[macro_export]
 macro_rules! SetupBindingMacros {
-  ($state:ident) => {
-    let state_stomach = $state.stomach.clone();
+  ($state:ident) => (SetupBindingMacros!($state, None));
+  ($state:ident, $outer_stomach: expr) => {
     #[allow(unused_macros)]
     //============================================
     // Convenience macros for writing definitions.
     //============================================
+    let state_stomach = $state.stomach.clone();
     macro_rules! LookupValue {
       ($name:expr) => {
         LookupValue!($name, $state)
@@ -221,18 +235,24 @@ macro_rules! SetupBindingMacros {
       };
     }
     macro_rules! Digest {
-      ($tokens:expr) => {
-        state_stomach.borrow_mut().digest($tokens, $state)
-      };
-      ($tokens:expr, $state_arg:ident) => {
-        state_stomach.borrow_mut().digest($tokens, $state_arg)
-      };
+      ($tokens:expr) => {{
+        Digest!($tokens, $state)
+      }};
+      ($tokens:expr, $state_arg:ident) => {{
+        match $outer_stomach.as_mut() {
+          Some(st) => (*st).digest($tokens, $state_arg),
+          None => state_stomach.borrow_mut().digest($tokens, $state_arg),
+      }}};
     }
 
     macro_rules! DigestText {
-      ($stuff:expr) => {
-        state_stomach.borrow_mut().digest_text($stuff, $state)
-      };
+      ($stuff:expr) => {{
+        digest_text($stuff, $state)
+        match $outer_stomach.as_mut() {
+          Some(st) => (*st).digest_text($stuff, $state_arg),
+          None => state_stomach.borrow_mut().digest_text($stuff, $state_arg),
+        }
+      }};
       ($stuff:expr, $stomach:ident) => {
         DigestText!($stuff, $stomach, $state)
       };
@@ -298,25 +318,35 @@ macro_rules! SetupBindingMacros {
       ($name:expr) => {
         LoadPool!($name, $state)
       };
-      ($name:expr, $state_arg:ident) => {
+      ($name:expr, $state_arg:ident) => {{
         input_definitions(
           $name,
           InputDefinitionOptions {
             extension: Some(String::from("pool")),
+            with_stomach: match $outer_stomach.as_mut() {
+              None => None,
+              Some(st) => Some(st),
+            },
             ..InputDefinitionOptions::default()
           },
           $state_arg,
         )?
-      };
+      }};
     }
     /// Loader shorthand for pool dependencies
     macro_rules! InnerPool {
       ($name:ident) => {
-        InnerPool!($name, $state)
+        InnerPool!($name, $state, $outer_stomach)
       };
       ($name:ident, $state_arg:ident) => {
-        pool::$name::load_definitions(&mut $state_arg)?
+        InnerPool!($name, $state_arg, $outer_stomach)
       };
+      ($name:ident, $state_arg:ident, $stomach:expr) => {{
+        match $stomach.as_mut() {
+          None => pool::$name::load_definitions($state_arg, None)?,
+          Some(st) => pool::$name::load_definitions($state_arg, Some(st))?,
+        }
+      }};
     }
 
     macro_rules! RequirePackage {
@@ -1115,7 +1145,7 @@ macro_rules! SetupBindingMacros {
               //   my $value = $properties{$key};
               //   if (ref $value eq 'CODE') {
               //     $properties{$key} = &$value(); } }
-              info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
+              // info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
               Ok(vec![Digested::TBox(Rc::new(
                 // TODO: Can we reduce boilerplate?
                 Tbox {
@@ -1351,11 +1381,12 @@ macro_rules! SetupBindingMacros {
                       }
 
     macro_rules! RawTeX {
-      ($text:expr) => {
-        RawTeX!($text, $state)
-      };
+      ($text:expr) => (RawTeX!($text, $state));
       ($text:expr, $state_arg:ident) => {{
-        state_stomach.borrow_mut().raw_tex($text, $state_arg)?
+         match $outer_stomach.as_mut() {
+          Some(st) => (*st).raw_tex($text, $state_arg)?,
+          None => state_stomach.borrow_mut().raw_tex($text, $state_arg)?
+        }
       }};
     }
   };

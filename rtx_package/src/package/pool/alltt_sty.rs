@@ -1,8 +1,6 @@
 use crate::package::*;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   DefEnvironment!("{alltt}", "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
   font => Font!(family => "typewriter", series => "medium", shape => "upright"),
   before_digest => sub!(|stomach, state| {
@@ -14,6 +12,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     AssignValue!("PRESERVE_NEWLINES", true, None, state);
     Ok(Vec::new())
   }));
-
-  Ok(())
-}
+});

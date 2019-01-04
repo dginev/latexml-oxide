@@ -1,7 +1,5 @@
 use crate::package::*;
-pub fn load_definitions(core_state: &mut State) -> Result<()> {
-  SetupBindingMacros!(core_state);
-
+LoadDefinitions!(state, {
   //**********************************************************************
   // Plain;  Extracted from Appendix B.
   //**********************************************************************
@@ -73,14 +71,14 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
 
   // #======================================================================
   // # TeX Book, Appendix B, p. 346
-
-  // RawTeX(<<'EoTeX');
-  //   \countdef\count@=255
-  //   \toksdef\toks@=0
-  //   \skipdef\skip@=0
-  //   \dimendef\dimen@=0
-  //   \dimendef\dimen@i=1
-  //   \dimendef\dimen@ii=2
+  // RawTeX!(
+  //   r###"
+  // \countdef\count@=255
+  // \toksdef\toks@=0
+  // \skipdef\skip@=0
+  // \dimendef\dimen@=0
+  // \dimendef\dimen@i=1
+  // \dimendef\dimen@ii=2
   // \count10=22 % allocates \count registers 23, 24, ...
   // \count11=9 % allocates \dimen registers 10, 11, ...
   // \count12=9 % allocates \skip registers 10, 11, ...
@@ -95,7 +93,8 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   // \countdef\insc@unt=20
   // \countdef\allocationnumber=21
   // \countdef\m@ne=22 \m@ne=-1
-  // EoTeX
+  // "###
+  // );
   // # Various \count's are set; should we?
 
   // #======================================================================
@@ -431,6 +430,4 @@ pub fn load_definitions(core_state: &mut State) -> Result<()> {
   // # Conceivably this should enclose the next para in a block?
   // # Or add attribute to it? Or...
   // DefPrimitiveI('\narrower', undef, undef);
-
-  Ok(())
-}
+});

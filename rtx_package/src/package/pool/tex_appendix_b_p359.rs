@@ -1,8 +1,6 @@
 use crate::package::*;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
-
+LoadDefinitions!(state, {
   //======================================================================
   // TeX Book, Appendix B. p. 359
 
@@ -66,6 +64,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
     if arg.get_family() != Some("typewriter".into()) {
       let encoding = arg.get_encoding().unwrap_or(Cow::Borrowed("OT1"));
       encoding == "OT1" || encoding == "T1" } else {false} });
-
-  Ok(())
-}
+});

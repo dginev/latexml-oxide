@@ -5,8 +5,7 @@ use crate::package::*;
 //**********************************************************************
 // Note that \env & \endenv defined by \newenvironment CAN be
 // invoked directly.
-pub fn load_definitions(outer_state: &mut State) -> Result<()> {
-  SetupBindingMacros!(outer_state);
+LoadDefinitions!(state, {
   DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}", sub[stomach, args, state] {
     unpack!(args => star, name, nargs, opt, begin, end);
     let name = stomach.digest(name, state)?.to_string();
@@ -32,6 +31,4 @@ pub fn load_definitions(outer_state: &mut State) -> Result<()> {
   //     $name = ToString(Digest($name));
   //     DefMacroI(T_CS("\\$name"), convertLaTeXArgs($nargs, $opt), $begin);
   //     DefMacroI(T_CS("\\end$name"), undef, $end); });
-
-  Ok(())
-}
+});

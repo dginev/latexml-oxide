@@ -1,7 +1,6 @@
 use crate::package::*;
 
-pub fn load_definitions(state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
+LoadDefinitions!(state, {
   //======================================================================
   // Note that we CAN process the verbatim.sty file and that works,
   // although the xml it generates is pretty pointless
@@ -146,5 +145,4 @@ pub fn load_definitions(state: &mut State) -> Result<()> {
   //     return; });
 
   //**********************************************************************
-  Ok(())
-}
+});

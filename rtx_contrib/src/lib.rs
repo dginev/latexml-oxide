@@ -6,6 +6,7 @@ extern crate rtx_codegen;
 
 use rtx_core::common::error::*;
 use rtx_core::state::State;
+use rtx_core::stomach::Stomach;
 
 // =======================
 // Adding custom bindings:
@@ -14,10 +15,10 @@ use rtx_core::state::State;
 // I. Add your custom binding definition as a module delcaration here
 pub mod mytemplate_sty;
 
-pub fn dispatch(filename: &str, state: &mut State) -> Option<Result<()>> {
+pub fn dispatch(filename: &str, state: &mut State, stomach: Option<&mut Stomach>) -> Option<Result<()>> {
   let loaded = match filename {
     // II. Connect the filename to the `load_definitions` function of your .rs binding:
-    "mytemplate.sty" => Some(mytemplate_sty::load_definitions(state)),
+    "mytemplate.sty" => Some(mytemplate_sty::load_definitions(state, stomach)),
     _ => None,
   };
 
