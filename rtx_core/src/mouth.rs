@@ -1,3 +1,5 @@
+use core::ops::RangeBounds;
+use log::info;
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::VecDeque;
@@ -227,12 +229,14 @@ impl Mouth {
     match ch_opt {
       None => None,
       Some(ch) => {
-        let mut cc: Option<Catcode> = state.lookup_catcode(*ch);
+        let mut ch = *ch;
+        let mut cc: Option<Catcode> = state.lookup_catcode(ch);
         let next_ch = self.chars.get(self.colno);
         // Possible convert ^^x
-        if cc == Some(Catcode::SUPER) && next_ch.is_some() && (ch == next_ch.unwrap()) {
-          let c1: Option<&char> = self.chars.get(self.colno + 1);
-          let c2: Option<&char> = self.chars.get(self.colno + 2);
+        if cc == Some(Catcode::SUPER) && Some(&ch) == next_ch {
+          info!("-- super! case");
+          let c1 = self.chars.get(self.colno + 1);
+          let c2 = self.chars.get(self.colno + 2);
           // ^^ followed by TWO LOWERCASE Hex digits???
           if (self.colno + 2 < self.nchars)
             && c1.is_some()
@@ -240,25 +244,27 @@ impl Mouth {
             && LOWERHEX_REGEX.is_match(&c1.unwrap().to_string())
             && LOWERHEX_REGEX.is_match(&c2.unwrap().to_string())
           {
-            // TODO
-            // ch = chr(hex($c1 . $c2));
-            // splice(@{ self.chars }, self.colno - 1, 4, $ch);
-            // self.nchars -= 3;
-          } // else {
+            info!("-- two lowercase hex");
+            let hex = u8::from_str_radix(&s!("{}{}", c1.unwrap(), c2.unwrap()), 16).unwrap(); // TODO: Maybe Result type warranted here?
+            ch = hex as char;
+            self.splice(self.colno - 1..self.colno + 3, &[ch]);
+            self.nchars -= 3;
+          } else {
             // OR ^^ followed by a SINGLE Control char type code???
-            // TODO:
-            // let mut c  = self.chars.get(self.colno + 1);
-            // let mut cn = ord($c);
-            // $ch = chr($cn + ($cn > 64 ? -64 : 64));
-            // splice(@{ self.chars }, self.colno - 1, 3, $ch);
-            // self.nchars -= 2;
-            // }
-          cc = state.lookup_catcode(*ch);
+            info!("-- single control char");
+            let mut c = self.chars.get(self.colno + 1).unwrap();
+            let mut cn = *c as i32;
+
+            ch = (cn + if cn > 64 { -64 } else { 64 }) as u8 as char;
+            self.splice(self.colno - 1..self.colno + 2, &[ch]);
+            self.nchars -= 2;
+          }
+          cc = state.lookup_catcode(ch);
         }
         if cc.is_none() {
           cc = Some(Catcode::OTHER);
         }
-        Some((*ch, cc.unwrap()))
+        Some((ch, cc.unwrap()))
       },
     }
   }
@@ -614,6 +620,14 @@ impl Mouth {
       },
     };
     Some(T_CS!(cs))
+  }
+
+  /// TODO: Can we use/build a generic that does this reliably for VecDeque
+  fn splice<R>(&mut self, range: R, with: &[char])
+  where R: RangeBounds<usize> {
+    let mut v: Vec<char> = self.chars.drain(..).collect();
+    v.splice(range, with.into_iter().cloned());
+    self.chars = v.into_iter().collect();
   }
 
   fn gid() -> String {
