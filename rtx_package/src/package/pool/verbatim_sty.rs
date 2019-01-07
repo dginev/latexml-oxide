@@ -24,7 +24,7 @@ LoadDefinitions!(state, {
   //======================================================================
   // Mostly simplified versions of what"s in verbatim....
   DefMacro!("\\verbatim@startline", "\\verbatim@line{}");
-  DefMacro!("\\verbatim@addtoline{}", "\\verbatim@line\\expandafter{\\the\\verbatim@line#1}");
+  DefMacro!("\\verbatim@addtoline {}", "\\verbatim@line\\expandafter{\\the\\verbatim@line#1}");
   DefMacro!("\\verbatim@processline", "\\the\\verbatim@line\\par");
 
   DefMacro!("\\verbatim@font", "\\normalfont\\ttfamily\\hyphenchar\\font\\m@ne\\@noligs");
@@ -79,16 +79,12 @@ LoadDefinitions!(state, {
     let mut lines = Vec::new();
     // TODO: UGH!!! Isn't there a better way to approximate the Perl simplicity of writing an inline regex?
     // the escaping is very easy to get wrong!
-    info!("env: {}", env);
     let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{}\\}}(.*)$", env)).unwrap();
 
     while let Some(line) = gullet.read_raw_line() {
       if let Some(caps) = env_re.captures(&line) {
         let pre = caps.get(1).map_or("", |m| m.as_str()).to_string();
         let post = caps.get(2).map_or("", |m| m.as_str()).to_string();
-        info!("-- regex {:?} matched line: {:?}", env, line);
-        info!("-- pre: {:?}", pre);
-        info!("-- post: {:?}", post);
         lines.push(pre);
         if !post.is_empty() {
           info!(target: "unexpected:stuff", "Characters dropped after '\\end{{{}}}'", env);
@@ -103,7 +99,6 @@ LoadDefinitions!(state, {
     }
     let mut tokens = Vec::new();
     for line in &lines {
-      info!("-- line in verb: {:?}", line);
       tokens.push(T_CS!("\\verbatim@startline"));
       tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"), vec![Tokens::new(ExplodeText!(line))], gullet, state)?.unlist());
       tokens.push(T_CS!("\\verbatim@processline"));
