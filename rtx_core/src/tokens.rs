@@ -44,6 +44,7 @@ macro_rules! Tokens(
 impl From<Vec<Token>> for Tokens {
   fn from(ts: Vec<Token>) -> Tokens { Tokens::new(ts) }
 }
+
 impl From<Token> for Tokens {
   fn from(t: Token) -> Tokens { Tokens!(t) }
 }

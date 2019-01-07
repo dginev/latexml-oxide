@@ -28,12 +28,12 @@ LoadDefinitions!(state, {
   DefMacro!("\\verbatim@processline", "\\the\\verbatim@line\\par");
 
   DefMacro!("\\verbatim@font", "\\normalfont\\ttfamily\\hyphenchar\\font\\m@ne\\@noligs");
-
   DefMacro!(
     "\\@verbatim",
     "\\the\\every@verbatim\
      \\obeylines\
-     \\let\\do\\@makeother \\dospecials\
+     \\let\\do\\@makeother\
+     \\dospecials\
      \\verbatim@font"
   );
 

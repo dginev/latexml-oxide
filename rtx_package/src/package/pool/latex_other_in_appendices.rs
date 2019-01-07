@@ -79,7 +79,7 @@ LoadDefinitions!(state, {
   // DefMacro('\@makeother{}', sub { AssignCatcode($_[1] => CC_OTHER, 'local'); });
 
   // TODO: Stubs until we can deal with the rawtex fully
-  DefMacro!("\\dospecials{}", "");
+  DefMacro!("\\dospecials", "");
   //   RawTeX!(
   //     r###"
   //  {\catcode`\^^M=13 \gdef\obeycr{\catcode`\^^M13 \def^^M{\\\relax}%

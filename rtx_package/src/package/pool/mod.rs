@@ -33,6 +33,7 @@ pub mod tex_stray_math_style;
 // LaTeX Pool
 pub mod latex;
 pub mod latex_ch11_moving_information;
+pub mod latex_ch3_sentences_and_paragraphs;
 pub mod latex_defining_environments;
 pub mod latex_delimiters;
 pub mod latex_font_selection;

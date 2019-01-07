@@ -782,7 +782,43 @@ impl Gullet {
 
   pub fn read_glue(&mut self, _state: &mut State) -> Result<Glue> { unimplemented!() }
   pub fn read_muglue(&mut self, _state: &mut State) -> Result<MuGlue> { unimplemented!() }
-  pub fn read_tokens_value(&mut self, _state: &mut State) -> Result<MuGlue> { unimplemented!() }
+  /// Apparent behaviour of a token value (ie \toks#=<arg>)
+  pub fn read_tokens_value(&mut self, state: &mut State) -> Result<Tokens> {
+    match self.read_non_space(state) {
+      None => Ok(Tokens!()),
+      Some(token) => {
+        if token.get_catcode() == Catcode::BEGIN {
+          self.read_balanced(state)
+        } else if let Some(defn) = state.lookup_register_definition(&token) {
+          match defn.register_type() {
+            Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
+              // TODO: The mismatch between Vec<Tokens> for read_arguments and Vec<Token> for value_of feels incorrect
+              //       but in which direction should it be resolved?
+              let args: Vec<Token> = defn.read_arguments(self, state)?.iter().map(|ts| ts.into()).collect();
+              match defn.value_of(args, state) {
+                None => Ok(Tokens!()),
+                Some(v) => Ok(v.into()),
+              }
+            },
+            _ => Ok(Tokens!(token)),
+          }
+        } else if let Some(defn) = state.lookup_definition(&token) {
+          // TODO: we are doing two lookups to avoid the type restriction of .read_arguments, any way to circumvent? Is it slow in the first place?
+          if defn.is_expandable() {
+            let x = defn.invoke(self, state)?;
+            if !x.is_empty() {
+              self.unread(&x)
+            }
+            self.read_tokens_value(state)
+          } else {
+            Ok(Tokens!(token))
+          }
+        } else {
+          Ok(Tokens!(token))
+        }
+      },
+    }
+  }
 
   pub fn skip_spaces(&mut self, state: &mut State) {
     match self.read_non_space(state) {

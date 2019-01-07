@@ -159,6 +159,12 @@ impl From<Number> for Glue {
   fn from(n: Number) -> Glue { Glue::new(n.value_of()) }
 }
 
+// TODO: Does this successfully emulate the behavior in latexml?
+//   see example use in gullet::read_tokens_value
+impl From<RegisterValue> for Tokens {
+  fn from(v: RegisterValue) -> Tokens { Tokens!(T_OTHER!(v.value_of())) }
+}
+
 impl<'a> From<&'a RegisterValue> for Dimension {
   fn from(v: &RegisterValue) -> Dimension {
     match v {

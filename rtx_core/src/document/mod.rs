@@ -1488,6 +1488,31 @@ impl Document {
     Ok(())
   }
 
+  fn add_ss_values(&mut self, node: &mut Node, key: &str, values_str: &str) -> Result<()> {
+    // $values = $values->toAttribute if ref $values;
+    if !values_str.is_empty() {
+      // Skip if `empty'; but 0 is OK!
+      let mut values: Vec<&str> = values_str.split_whitespace().collect();
+      if let Some(oldvalues) = node.get_attribute(key) {
+        // previous values?
+        let mut old: Vec<&str> = oldvalues.split_whitespace().collect();
+        for new in values {
+          if old.iter().all(|v| *v != new) {
+            old.push(new);
+          }
+        }
+        old.sort();
+        self.set_attribute(node, key, &old.join(" "))?;
+      } else {
+        values.sort();
+        self.set_attribute(node, key, &values.join(" "))?;
+      }
+    }
+    Ok(())
+  }
+
+  pub fn add_class(&mut self, node: &mut Node, class: &str) -> Result<()> { self.add_ss_values(node, "class", class) }
+
   //**********************************************************************
   // Association of nodes and ids (xml:id)
   // sub recordID {

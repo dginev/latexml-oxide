@@ -155,4 +155,8 @@ LoadDefinitions!(state, {
       state.assign_mathcode(ch, value.value_of() as usize, None);
     }))
   );
+
+  // Stub definitions ???
+  DefRegister!("\\hyphenchar{}", Number!(('-' as u8)));
+  DefRegister!("\\skewchar{}", Number::new(0.0)); // no idea what the default is here
 });
