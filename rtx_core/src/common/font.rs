@@ -133,6 +133,7 @@ pub struct Font {
   pub encoding: Option<Cow<'static, str>>,
   pub language: Option<Cow<'static, str>>,
   pub mathstyle: Option<Cow<'static, str>>,
+  pub emph: Option<bool>,
   pub forceseries: Option<bool>,
   pub forcefamily: Option<bool>,
   pub forceshape: Option<bool>,
@@ -153,6 +154,7 @@ impl Default for Font {
       encoding: None,
       language: None,
       mathstyle: None,
+      emph: None,
       forceseries: None,
       forcefamily: None,
       forceshape: None,
@@ -177,6 +179,7 @@ impl Font {
       encoding: Some(Cow::Borrowed(DEFENCODING)),
       language: Some(Cow::Borrowed(DEFLANGUAGE)),
       mathstyle: None,
+      emph: None,
       forceseries: None,
       forcefamily: None,
       forceshape: None,
@@ -194,6 +197,7 @@ impl Font {
       encoding: None,
       language: Some(Cow::Borrowed(DEFLANGUAGE)),
       mathstyle: Some(Cow::Borrowed("text")),
+      emph: None,
       forceseries: None,
       forcefamily: None,
       forceshape: None,
@@ -269,6 +273,13 @@ impl Font {
     }
     if let Some(ref value) = other.shape {
       newfont.shape = Some(value.clone());
+    }
+    if other.emph == Some(true) {
+      newfont.shape = if newfont.shape.unwrap_or(Cow::Borrowed("")) == "italic" {
+        Some(Cow::Borrowed("upright"))
+      } else {
+        Some(Cow::Borrowed("italic"))
+      };
     }
     if let Some(ref value) = other.size {
       newfont.size = Some(value.clone());

@@ -182,6 +182,8 @@ LoadDefinitions!(state, {
     mode => Some(s!("text"))
   );
 
+  InnerPool!(latex_ch3_sentences_and_paragraphs);
+
   //**********************************************************************
   // C.4 Sectioning and Table of Contents
   //**********************************************************************

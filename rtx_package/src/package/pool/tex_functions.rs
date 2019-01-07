@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 use rtx_core::common::store::Stored;
+use rtx_core::definition::register::NumericOps;
 use rtx_core::state::State;
 
 pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
@@ -31,4 +32,25 @@ pub fn only_preamble(cs: &str, state: &mut State) {
     let category_object = s!("unexpected:{}", cs);
     error!(target: &category_object, "The current command can only appear in the preamble");
   }
+}
+
+pub fn today(state: &State) -> String {
+  let month_names = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  let month = month_names[state.lookup_register("\\month", vec![]).unwrap().value_of() as usize - 1];
+  let day = state.lookup_register("\\day", vec![]).unwrap().value_of();
+  let year = state.lookup_register("\\year", vec![]).unwrap().value_of();
+  s!("{} {}, {}", month, day, year)
 }

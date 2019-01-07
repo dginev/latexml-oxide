@@ -40,5 +40,5 @@ macro_rules! mixvec {
 #[macro_export]
 macro_rules! fontmap {
   ($($key:ident => $value:expr),*) => (
-    Font { $($key: Some($value.to_string().into()),)* .. Font::default() })
+    Font { $($key: Some($value.into()),)* .. Font::default() })
 }
