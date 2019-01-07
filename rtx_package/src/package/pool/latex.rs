@@ -77,7 +77,16 @@ LoadDefinitions!(state, {
 
   AssignValue!("current_environment", String::new(), Some(Scope::Global));
   DefMacro!("\\@currenvir", "");
-  DefPrimitive!("\\lx@setcurrenvir{}", sub[stomach, args, state] {
+  DefPrimitive!("\\f{}", sub[stomach, args, state] {
+    unpack!(args => env);
+    let env_string = env.to_string();
+    DefMacroI!(T_CS!("\\@currenvir"), None, env, state);
+    state.assign_value("current_environment", env_string, None);
+    Ok(vec![])
+  });
+
+  DefPrimitive!(
+  "\\lx@setcurrenvir{}", sub[stomach, args, state] {
     unpack!(args => env);
     let env_string = env.to_string();
     DefMacroI!(T_CS!("\\@currenvir"), None, env, state);
@@ -107,7 +116,7 @@ LoadDefinitions!(state, {
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
       }
       let mut out_tokens = vec![T_CS!("\\begingroup")];
-      out_tokens.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), Tokenize!(&name).unlist(), gullet, state)?.unlist());
+      out_tokens.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![Tokenize!(&name)], gullet, state)?.unlist());
       out_tokens.push(token);
       Ok(Tokens::new(out_tokens))
     }
