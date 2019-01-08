@@ -1,4 +1,5 @@
 use core::ops::RangeBounds;
+use log::*;
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::VecDeque;
@@ -117,7 +118,7 @@ impl Mouth {
   //
   // DG: For now we are using a `foodtype` field instead of subclassing mouth, as it feels more compact in this particular application
   //     we're really looking at a unified Mouth application logic, with a capacity of reading different kinds of sources
-  pub fn create(source: &str, mut options: MouthOptions, state: &mut State) -> Self {
+  pub fn create(source: &str, mut options: MouthOptions, state: &mut State) -> Result<Self> {
     if let Some(content) = options.content.clone() {
       // we've cached the content of this source
       let (dir, name, ext) = pathname::split(source);
@@ -132,26 +133,27 @@ impl Mouth {
     } else if source.is_empty() {
       Mouth::new("", Some(options), state)
     } else {
+      info!("protocol: {:?}", pathname::protocol(source));
       options.foodtype = FoodType::from_str(&pathname::protocol(source));
       Mouth::new(source, Some(options), state)
     }
   }
 
-  pub fn new(text: &str, options: Option<MouthOptions>, state: &mut State) -> Self {
+  pub fn new(text: &str, options: Option<MouthOptions>, state: &mut State) -> Result<Self> {
     let mut mouth = match options {
       None => Mouth {
         foodtype: FoodType::Literal,
         ..Mouth::default()
       },
       Some(opts) => Mouth {
-        foodtype: FoodType::Literal,
+        foodtype: opts.foodtype.unwrap_or(FoodType::Literal),
         fordefinitions: opts.fordefinitions,
         ..Mouth::default()
       },
     };
-    mouth.open_literal(text);
-    mouth.initialize(state);
-    mouth
+
+    mouth.open(text, state)?;
+    Ok(mouth)
   }
 
   pub fn open<'open>(&'open mut self, content: &str, mut state: &mut State) -> Result<()> {
@@ -705,9 +707,9 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
         catcodes: Some(Catcodes::Standard),
         ..StateOptions::default()
       });
-      Mouth::new(text, None, &mut std_state).read_tokens(None, &mut std_state)
+      Mouth::new(text, None, &mut std_state).unwrap().read_tokens(None, &mut std_state)
     },
-    Some(s) => Mouth::new(&text, None, s).read_tokens(None, s),
+    Some(s) => Mouth::new(&text, None, s).unwrap().read_tokens(None, s),
   }
 }
 pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
@@ -717,8 +719,8 @@ pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
         catcodes: Some(Catcodes::Style),
         ..StateOptions::default()
       });
-      Mouth::new(text, None, &mut sty_state).read_tokens(None, &mut sty_state)
+      Mouth::new(text, None, &mut sty_state).unwrap().read_tokens(None, &mut sty_state)
     },
-    Some(s) => Mouth::new(&text, None, s).read_tokens(None, s),
+    Some(s) => Mouth::new(&text, None, s).unwrap().read_tokens(None, s),
   }
 }

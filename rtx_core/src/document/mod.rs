@@ -83,12 +83,13 @@ impl Document {
   /// Find the nodes according to the given $xpath expression,
   /// the xpath is relative to $node (if given), otherwise to the document node.
   pub fn findnodes(&self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<Node> {
-    match node_opt {
-      Some(node) => state.model.get_xpath(&self.document).findnodes(xpath, Some(node)),
-      None => state
-        .model
-        .get_xpath(&self.document)
-        .findnodes(xpath, Some(&self.document.get_root_element().unwrap())),
+    if let Some(root) = self.document.get_root_element() {
+      match node_opt {
+        Some(node) => state.model.get_xpath(&self.document).findnodes(xpath, Some(node)),
+        None => state.model.get_xpath(&self.document).findnodes(xpath, Some(&root)),
+      }
+    } else {
+      vec![]
     }
   }
 
@@ -121,11 +122,12 @@ impl Document {
   // box, etc.
   pub fn finalize(&mut self, state: &mut State) -> Result<()> {
     self.prune_xmduals();
-    let mut root = self.document.get_root_element().unwrap();
-    let init_font = Font::text_default();
-    self.finalize_rec(&mut root, &init_font, state)?;
-    if let Some(&Stored::String(ref prefixes)) = state.lookup_value("RDFa_prefixes") {
-      self.set_rdfa_prefixes(Some(prefixes.clone()));
+    if let Some(mut root) = self.document.get_root_element() {
+      let init_font = Font::text_default();
+      self.finalize_rec(&mut root, &init_font, state)?;
+      if let Some(&Stored::String(ref prefixes)) = state.lookup_value("RDFa_prefixes") {
+        self.set_rdfa_prefixes(Some(prefixes.clone()));
+      }
     }
     Ok(())
   }

@@ -146,7 +146,7 @@ impl Model {
     if !self.no_compiled {
       let pathname_opt = pathname::find(
         &name,
-        pathname::FindOptions {
+        pathname::PathnameFindOptions {
           paths: search_paths,
           types: Some(vec![s!("model")]),
           installation_subdir: Some(s!("resources/{}", schema_type)),

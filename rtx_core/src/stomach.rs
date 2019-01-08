@@ -152,7 +152,7 @@ impl<'t> Stomach {
           ..MouthOptions::default()
         }),
         state,
-      );
+      )?;
     }
     self.reading_from_mouth(
       raw_tex_mouth,

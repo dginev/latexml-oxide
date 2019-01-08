@@ -4,14 +4,14 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
-pub struct FindOptions {
+pub struct PathnameFindOptions {
   pub paths: Option<Vec<String>>,
   pub types: Option<Vec<String>>,
   pub installation_subdir: Option<String>,
 }
-impl Default for FindOptions {
+impl Default for PathnameFindOptions {
   fn default() -> Self {
-    FindOptions {
+    PathnameFindOptions {
       paths: None,
       types: None,
       installation_subdir: None,
@@ -145,13 +145,13 @@ pub fn concat(dir: &str, file: &str) -> String {
 /// It's presumably cheep to concatinate all the pathnames,
 /// relative to the cost of testing for files,
 /// and this simplifies overall.
-pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> {
+pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<String> {
   let mut dirs: Vec<String> = Vec::new();
   let canonical_pathname = if pathname != "*" { canonical(pathname) } else { pathname.to_owned() };
 
   let (pathdir, name, pathname_ext) = split(&canonical_pathname);
 
-  let cwd = env::current_dir().unwrap().to_string_lossy().to_string();
+  let cwd = cwd();
 
   // generate the set of search paths we'll use.
   if is_absolute(&canonical_pathname) {
@@ -167,9 +167,10 @@ pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> 
       }
     }
   }
-  // At least have the current directory!
-  if dirs.is_empty() {
-    dirs.push(concat(&cwd, &pathdir));
+  // Always have the current directory!
+  let from_cwd = concat(&cwd, &pathdir);
+  if !dirs.contains(&from_cwd) {
+    dirs.push(from_cwd);
   }
 
   // TODO: The use of INSTALLDIRS should be rethought entirely, as Rust currently doesn't have a
@@ -236,7 +237,7 @@ pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> 
   paths
 }
 
-pub fn find(pathname: &str, options: FindOptions) -> Option<String> {
+pub fn find(pathname: &str, options: PathnameFindOptions) -> Option<String> {
   if !pathname.is_empty() {
     let paths = candidate_pathnames(pathname, options);
     for path in paths {
@@ -289,3 +290,5 @@ pub fn extension(pathname: &str) -> String {
 }
 
 pub fn is_nasty(file: &str) -> bool { PATHNAME_IS_NASTY_RE.is_match(file) }
+
+pub fn cwd() -> String { env::current_dir().unwrap().to_string_lossy().to_string() }

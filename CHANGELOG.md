@@ -4,6 +4,8 @@
 
   - work on passing `tokenize/verb` test
   - `DefParameter` has an `untokenized` flag that acts as a type designator. Unrealistic ergonomics in Rust. Instead, augment the `reader` paradigm with an optional follow-up closure called `reader_predigest`, which has access to the stomach and can be ran immediately after a `read` is completed. One can still use an `reader_predigest => undigested!()` macro call to allow arguments to pass through digestion untouched.
+  - Note: "SEARCHPATHS" no longer needs to be looked up, it's in `state.search_paths`
+  
 
 
 ## [0.1.7] 2018-24-12
