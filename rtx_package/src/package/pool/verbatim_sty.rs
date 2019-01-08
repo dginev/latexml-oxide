@@ -32,8 +32,7 @@ LoadDefinitions!(state, {
     "\\@verbatim",
     "\\the\\every@verbatim\
      \\obeylines\
-     \\let\\do\\@makeother\
-     \\dospecials\
+     \\let\\do\\@makeother \\dospecials\
      \\verbatim@font"
   );
 
@@ -109,19 +108,35 @@ LoadDefinitions!(state, {
 
   // //======================================================================
   // // Read verbatim material from file.
-  // DefMacro!("\\verbatiminput {}", sub[gullet, args, state] {
-  //     my ($gullet, $file) = @_;
-  //     my $path = FindFile($file);
-  //     $gullet->readingFromMouth(LaTeXML::Core::Mouth->create(ToString($path)), sub {
-  //         my ($igullet) = @_;
-  //         my @tokens;
-  //         while (defined(my $line = $igullet->getMouth->readRawLine)) {
-  //           push(@tokens,
-  //             T_CS("\\verbatim@startline"),
-  //             Invocation(T_CS("\\verbatim@addtoline"), Tokens(ExplodeText($line))),
-  //             T_CS("\\verbatim@processline")); }
-  //         (T_CS("\\begingroup"), T_CS("\\@verbatim"), T_CS("\\frenchspacing"), T_CS("\\@vobeyspaces"),
-  //           T_CS("\\lx@verbatim@"), @tokens, T_CS("\\lx@end@verbatim@"), T_CS("\\endgroup")); }); });
+  DefMacro!("\\verbatiminput {}", sub[gullet, args, state] {
+    unpack!(args => file);
+    if let Some(path) = find_file(&file.to_string(), None, state) {
+      gullet.reading_from_mouth(Mouth::create(&path, MouthOptions::default(), state),
+        state,
+        Box::new(|igullet, istate| -> Result<Tokens> {
+          let mut lines = Vec::new();
+          if let Some(mut mouth) = igullet.get_mouth_mut() {
+            while let Some(line) = mouth.read_raw_line(false) {
+              lines.push(line);
+            }
+          }
+          let mut tokens = Vec::new();
+          for line in lines.into_iter() {
+            tokens.push(T_CS!("\\verbatim@startline"));
+            tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"), vec![Tokens::new(ExplodeText!(line))], igullet, istate)?.unlist());
+            tokens.push(T_CS!("\\verbatim@processline"));
+          }
+          Ok(Tokens!(
+            T_CS!("\\begingroup"), T_CS!("\\@verbatim"), T_CS!("\\frenchspacing"), T_CS!("\\@vobeyspaces"),
+            T_CS!("\\lx@verbatim@"), tokens, T_CS!("\\lx@end@verbatim@"), T_CS!("\\endgroup"))
+          )
+        }),
+      )
+    } else {
+      error!("\\verbatiminput found no file for {:?}, output may be incomplete", file);
+      Ok(Tokens!())
+    }
+  });
 
   // //======================================================================
   // // Getting verbatim text into arguments

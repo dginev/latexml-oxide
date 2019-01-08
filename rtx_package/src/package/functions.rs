@@ -1,8 +1,9 @@
 use libxml::tree::Node;
-use log::{error, warn};
+use log::*;
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::path::Path;
 use std::rc::Rc;
 use unidecode::unidecode;
 
@@ -151,7 +152,7 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
 }
 
 pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
-  match find_file(request, false) {
+  match find_file(request, None, &mut core.state) {
     // TODO: type => $options{type}, noltxml => 1
     Some(path) => load_tex_content(core, &path),
     None => fatal!(Package, MissingFile, request),
@@ -296,9 +297,115 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens, with_stomach:
   //     return; } } }
 }
 
-pub fn find_file(request: &str, _forbid_ltxml: bool) -> Option<String> {
-  // TODO: Actually find it!
-  Some(request.to_string())
+pub struct FindFileOptions {
+  forbid_ltxml: bool,
+  raw: bool,
+  notex: bool,
+  ext_type: Option<String>,
+}
+
+impl Default for FindFileOptions {
+  fn default() -> Self {
+    FindFileOptions {
+      forbid_ltxml: false,
+      raw: false,
+      notex: false,
+      ext_type: None,
+    }
+  }
+}
+
+pub fn find_file(file: &str, options: Option<FindFileOptions>, state: &mut State) -> Option<String> {
+  let mut options = options.unwrap_or_else(|| FindFileOptions::default());
+  if options.raw {
+    options.raw = false;
+    warn!(target: "deprecated:raw", "FindFile option raw is deprecated; it is not needed");
+  }
+
+  if pathname::is_literaldata(file) {
+    // If literal protocol return immediately (unless notex!)
+    if options.notex {
+      None
+    } else {
+      Some(file.to_string())
+    }
+  } else if pathname::is_literaldata(file) || pathname::is_url(file) {
+    // If a known special protocol return immediately
+    Some(file.to_string())
+  } else if let Some(ref ext) = options.ext_type {
+    // Otherwise, it's some kind of "real" file, and we might have to search for it
+    // Specific type requested? Search for it.
+    // Add the extension, if it isn't already there.
+    let aux_file = if file.ends_with(ext) { file.to_string() } else { s!("{}.{}", file, ext) };
+    find_file_aux(&aux_file, &options, state)
+  } else if file.ends_with(".tex") {
+    // If no type given, we MAY expect .tex, or maybe NOT!!
+    // No requested type, then .tex; Of course, it may already have it!
+    find_file_aux(file, &options, state)
+  } else {
+    match find_file_aux(&s!("{}.tex", file), &options, state) {
+      None => find_file_aux(file, &options, state),
+      Some(f) => Some(f),
+    }
+  }
+}
+
+pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -> Option<String> {
+  // If cached, return simple path (it's a key into the cache)
+  let cached = state.lookup_string(&s!("{}_contents", file));
+  if !cached.is_empty() {
+    Some(file.to_string())
+  } else if pathname::is_absolute(file) {
+    // And if we've got an absolute path,
+    if !options.forbid_ltxml && Path::new(&s!("{}.ltxml", file)).exists() {
+      // No need to search, just check if it exists.
+      Some(s!("{}.ltxml", file))
+    } else if Path::new(file).exists() {
+      // No need to search, just check if it exists.
+      Some(file.to_string())
+    } else {
+      // otherwise we're never going to find it.
+      None
+    }
+  } else if pathname::is_nasty(file) {
+    // If it is a nasty filename, we won't touch it.
+    // we DO NOT want to pass this to kpathse or such!
+    None
+  } else {
+    // Note that the strategy is complicated by the fact that
+    // (1) we prefer .ltxml bindings, if present
+    // (2) those MAY be present in kpsewhich's DB (although our searchpaths take precedence!)
+    // (3) BUT we want to avoid kpsewhich if we can, since it's slower
+    // (4) depending on switches we may EXCLUDE .ltxml OR raw tex OR allow both.
+    // my $paths       = LookupValue('SEARCHPATHS');
+    // my $urlbase     = LookupValue('URLBASE');
+    // my $nopaths     = LookupValue('REMOTE_REQUEST');
+    // my $ltxml_paths = $nopaths ? [] : $paths;
+    // // If we're looking for ltxml, look within our paths & installation first (faster than kpse)
+    // if (!$options{noltxml}
+    //   && ($path = pathname::find("$file.ltxml", paths => $ltxml_paths, installation_subdir => 'Package'))) {
+    //   return $path; }
+    // // If we're looking for TeX, look within our paths & installation first (faster than kpse)
+    // if (!$options{notex}
+    //   && ($path = pathname::find($file, paths => $paths))) {
+    //   return $path; }
+    // // Otherwise, pass on to kpsewhich
+    // // Depending on flags, maybe search for ltxml in texmf or for plain tex in ours!
+    // // The main point, though, is to we make only ONE (more) call.
+    // return if grep { pathname::is_nasty($_) } @$paths;    // SECURITY! No nasty paths in cmdline
+    //       // Do we need to sanitize these environment variables?
+    // my $kpsewhich = which($ENV{LATEXML_KPSEWHICH} || 'kpsewhich');
+    // local $ENV{TEXINPUTS} = join($Config::Config{'path_sep'},
+    //   @$paths, $ENV{TEXINPUTS} || $Config::Config{'path_sep'});
+    // my @candidates = (((!$options{noltxml} && !$nopaths) ? ("$file.ltxml") : ()),
+    //   (!$options{notex} ? ($file) : ()));
+    // if (my $result = pathname::kpsewhich(@candidates)) {
+    //   return (-f $result ? $result : undef); }
+    // if ($urlbase && ($path = url_find($file, urlbase => $urlbase))) {
+    //   return $path; }
+    // return; }
+    Some(file.to_string())
+  }
 }
 
 pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }

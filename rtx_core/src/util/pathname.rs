@@ -1,7 +1,7 @@
 use dirs;
+use regex::Regex;
 use std::env;
 use std::path::{Path, PathBuf};
-// use regex::Regex;
 
 #[derive(Debug, Clone)]
 pub struct FindOptions {
@@ -26,7 +26,8 @@ lazy_static! {
     Some(val) => val.to_string_lossy().to_string(),
     _ => s!("~"),
   };
-  // static ref PROTOCOL_RE : Regex = Regex::new(r"(https|http|ftp):").unwrap();
+  static ref PROTOCOL_RE : Regex = Regex::new(r"(https|http|ftp):").unwrap();
+  static ref PATHNAME_IS_NASTY_RE: Regex = Regex::new(r"[^\w\-_+=/\\\.~\s:]").unwrap();
   // static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
   //     Ok(exe_path) => {
   //       match exe_path.as_path().parent() {
@@ -66,6 +67,27 @@ pub fn absolute(path: &str) -> String {
   path.to_string()
 }
 
+// Split the pathname into components (dir,name,type).
+// If pathname is absolute, dir starts with volume or '/'
+pub fn split(pathname: &str) -> (String, String, String) {
+  let canonical_pathname = canonical(pathname);
+  let canonical_path = Path::new(&canonical_pathname);
+  let pathdir = match canonical_path.parent() {
+    Some(dir) => dir.to_string_lossy().to_string(),
+    None => String::new(),
+  };
+  let name = match canonical_path.file_name() {
+    Some(n) => n.to_string_lossy().to_string(),
+    None => String::new(),
+  };
+  let pathname_ext = match canonical_path.extension() {
+    Some(e) => e.to_string_lossy().to_string(),
+    None => String::new(),
+  }
+  .to_lowercase();
+  (pathdir, name, pathname_ext)
+}
+
 /// This likely needs portability work!!! (particularly regarding urls, separators, ...)
 /// AND, care about symbolic links and collapsing ../ !!!
 pub fn canonical(pathname: &str) -> String {
@@ -97,6 +119,17 @@ pub fn canonical(pathname: &str) -> String {
   // return (defined $urlprefix ? $urlprefix . $pathname : $pathname); }
 }
 
+/// Note that this returns ONLY recognized protocols!
+pub fn protocol(pathname: &str) -> String {
+  if let Some(cap) = PROTOCOL_RE.captures(pathname) {
+    cap.get(1).map_or(String::new(), |m| m.as_str().to_string())
+  } else if pathname.starts_with("literal:") {
+    "literal".to_string()
+  } else {
+    "file".to_string()
+  }
+}
+
 pub fn concat(dir: &str, file: &str) -> String {
   if dir.is_empty() {
     file.to_owned()
@@ -115,20 +148,8 @@ pub fn concat(dir: &str, file: &str) -> String {
 pub fn candidate_pathnames(pathname: &str, options: FindOptions) -> Vec<String> {
   let mut dirs: Vec<String> = Vec::new();
   let canonical_pathname = if pathname != "*" { canonical(pathname) } else { pathname.to_owned() };
-  let canonical_path = Path::new(&canonical_pathname);
-  let pathdir = match canonical_path.parent() {
-    Some(dir) => dir.to_string_lossy().to_string(),
-    None => String::new(),
-  };
-  let name = match canonical_path.file_name() {
-    Some(n) => n.to_string_lossy().to_string(),
-    None => String::new(),
-  };
-  let pathname_ext = match canonical_path.extension() {
-    Some(e) => e.to_string_lossy().to_string(),
-    None => String::new(),
-  }
-  .to_lowercase();
+
+  let (pathdir, name, pathname_ext) = split(&canonical_pathname);
 
   let cwd = env::current_dir().unwrap().to_string_lossy().to_string();
 
@@ -266,3 +287,5 @@ pub fn extension(pathname: &str) -> String {
   }
   .to_lowercase()
 }
+
+pub fn is_nasty(file: &str) -> bool { PATHNAME_IS_NASTY_RE.is_match(file) }

@@ -13,6 +13,7 @@ use crate::common::number::Number;
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
 use crate::definition::conditional::{ConditionalType, IfFrame};
+use crate::definition::expandable::Expandable;
 use crate::definition::register::{Register, RegisterValue};
 use crate::definition::Definition;
 use crate::document::resource::Resource;
@@ -869,7 +870,20 @@ impl State {
         Some(Stored::MathPrimitive(entry)) => Some(entry.clone()),
         Some(Stored::Primitive(entry)) => Some(entry.clone()),
         Some(Stored::Register(entry)) => Some(entry.clone()),
-        _ => None,
+        // TODO: Is this take on reframing a Token definition as an Expandable acceptable?
+        //      Does it have unintended side-effects? Are we missing useful code paths that specifically deal with a Token
+        //      in Gullet, etc?
+        Some(Stored::Token(entry)) => Some(Rc::new(Expandable {
+          cs: T_CS!(key),
+          paramlist: None,
+          expansion: entry.clone().into(),
+          ..Expandable::default()
+        })),
+        Some(v) => {
+          error!("Unexpected value in lookup_definition for {:?}. Value was: {:?}", key, v);
+          None
+        },
+        None => None,
       },
       _ => None,
     }

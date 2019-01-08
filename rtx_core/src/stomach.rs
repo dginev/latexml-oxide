@@ -145,7 +145,14 @@ impl<'t> Stomach {
     state.assign_catcode('@', Catcode::LETTER, None);
     let raw_tex_mouth;
     {
-      raw_tex_mouth = Mouth::new(text, Some(MouthOptions { fordefinitions: true }), state);
+      raw_tex_mouth = Mouth::new(
+        text,
+        Some(MouthOptions {
+          fordefinitions: true,
+          ..MouthOptions::default()
+        }),
+        state,
+      );
     }
     self.reading_from_mouth(
       raw_tex_mouth,
