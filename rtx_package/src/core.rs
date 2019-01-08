@@ -9,7 +9,7 @@ use rtx_core::document::Document;
 use rtx_core::list::List;
 use rtx_core::state::{Scope, Stored}; // State
 use rtx_core::util::pathname;
-use rtx_core::util::pathname::FindOptions;
+use rtx_core::util::pathname::PathnameFindOptions;
 use rtx_core::{Core, Digested};
 
 use crate::math_parser::MathParser;
@@ -51,7 +51,7 @@ pub trait DigestionAPI {
 impl DigestionAPI for Core {
   fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()> {
     self.state.initialize_stomach();
-    // let paths = state.lookup_value("SEARCHPATHS");
+    // let paths = state.search_paths;
     self.state.assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
       input_definitions(&preload, InputDefinitionOptions::default(), &mut self.state)?;
@@ -65,26 +65,27 @@ impl DigestionAPI for Core {
     request: String,
     _preamble: Option<String>,
     _postamble: Option<String>,
-    _mode: Option<DigestionMode>,
+    mode: Option<DigestionMode>,
     _no_init: bool,
   ) -> Result<Digested>
   {
-    // let mut ext = match mode {
-    //   Some(m) => Some(m.extension()),
-    //   None => Some(DigestionMode::TeX.extension()),
-    // };
-    // let mut dir = None;
+    let mut _ext = match mode {
+      Some(m) => Some(m.extension()),
+      None => Some(DigestionMode::TeX.extension()),
+    };
+    let mut dir_opt = None;
+
     let name = if pathname::is_literaldata(&request) {
       Some(s!("Anonymous String"))
     } else if pathname::is_url(&request) {
       Some(request.clone())
     } else {
       let path = Path::new(&request);
-      // ext = match path.extension() {
+      // _ext = match path.extension() {
       //   Some(pe) => Some(pe.to_str().unwrap().to_string()),
       //   None => None,
       // };
-      // dir = path.parent();
+      dir_opt = path.parent();
       match path.file_stem() {
         None => Some(s!("missing_name")),
         Some(pf) => Some(pf.to_str().unwrap().to_string()),
@@ -98,8 +99,12 @@ impl DigestionAPI for Core {
     note_begin(&digestion_note);
     // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless
     // $options{noinitialize}; $state->assignValue(SOURCEFILE      => $request) if
-    // (!pathname::is_literaldata($request)); $state->assignValue(SOURCEDIRECTORY => $dir)
-    // if defined $dir; $state->unshiftValue(SEARCHPATHS => $dir)
+    // (!pathname::is_literaldata($request));
+    if let Some(dir) = dir_opt {
+      let dir = dir.to_str().unwrap_or(".");
+      self.state.assign_value("SOURCEDIRECTORY", dir, None);
+      self.state.search_paths.push_front(dir.to_string());
+    }
     //   if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('SEARCHPATHS') };
     // $state->unshiftValue(GRAPHICSPATHS => $dir)
 
@@ -135,21 +140,17 @@ impl DigestionAPI for Core {
     note_begin("Building");
 
     let mut state = &mut self.state;
-    let search_paths = match state.lookup_value("SEARCHPATHS") {
-      Some(&Stored::VecString(ref paths)) => Some(paths.clone()),
-      _ => None,
-    };
     // Compile-time load of model AND indirect model
     load_model!(&mut state, "LaTeXML");
     // Was:
     // state.model.load_schema(search_paths.clone()); // If needed?
 
     let mut document = Document::new();
-    if search_paths.is_none() || !search_paths.as_ref().unwrap().is_empty() {
+    if !state.search_paths.is_empty() {
       {
         if let Some(&Stored::Bool(ico_flag)) = state.lookup_value("INCLUDE_COMMENTS") {
           if ico_flag {
-            let paths_string = search_paths.as_ref().unwrap().join(",");
+            let paths_string = state.search_paths.iter().map(|x| x.as_str()).collect::<Vec<&str>>().join(",");
             let attributes = map! {s!("paths") => paths_string};
             document.insert_pi("latexml", Some(attributes))?;
           }
@@ -244,9 +245,9 @@ impl DigestionAPI for Core {
 
       if let Some(pathname) = pathname::find(
         &request_base,
-        FindOptions {
+        PathnameFindOptions {
           types: Some(vec![mode.extension(), String::new()]),
-          ..FindOptions::default()
+          ..PathnameFindOptions::default()
         },
       ) {
         request = pathname;

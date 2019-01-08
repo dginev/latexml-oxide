@@ -111,7 +111,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\verbatiminput {}", sub[gullet, args, state] {
     unpack!(args => file);
     if let Some(path) = find_file(&file.to_string(), None, state) {
-      gullet.reading_from_mouth(Mouth::create(&path, MouthOptions::default(), state),
+      gullet.reading_from_mouth(Mouth::create(&path, MouthOptions::default(), state)?,
         state,
         Box::new(|igullet, istate| -> Result<Tokens> {
           let mut lines = Vec::new();

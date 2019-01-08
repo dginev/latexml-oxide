@@ -28,6 +28,7 @@ use rtx_core::stomach::Stomach;
 use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
+use rtx_core::util::pathname::PathnameFindOptions;
 use rtx_core::BoxOps;
 use rtx_core::{Core, Digested};
 
@@ -377,21 +378,29 @@ pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -
     // (2) those MAY be present in kpsewhich's DB (although our searchpaths take precedence!)
     // (3) BUT we want to avoid kpsewhich if we can, since it's slower
     // (4) depending on switches we may EXCLUDE .ltxml OR raw tex OR allow both.
-    // my $paths       = LookupValue('SEARCHPATHS');
-    // my $urlbase     = LookupValue('URLBASE');
-    // my $nopaths     = LookupValue('REMOTE_REQUEST');
-    // my $ltxml_paths = $nopaths ? [] : $paths;
-    // // If we're looking for ltxml, look within our paths & installation first (faster than kpse)
-    // if (!$options{noltxml}
-    //   && ($path = pathname::find("$file.ltxml", paths => $ltxml_paths, installation_subdir => 'Package'))) {
-    //   return $path; }
-    // // If we're looking for TeX, look within our paths & installation first (faster than kpse)
-    // if (!$options{notex}
-    //   && ($path = pathname::find($file, paths => $paths))) {
-    //   return $path; }
-    // // Otherwise, pass on to kpsewhich
-    // // Depending on flags, maybe search for ltxml in texmf or for plain tex in ours!
-    // // The main point, though, is to we make only ONE (more) call.
+    let paths: Vec<String> = state.search_paths.iter().map(|v| v.clone()).collect();
+    let urlbase = state.lookup_value("URLBASE");
+    let nopaths = state.lookup_bool("REMOTE_REQUEST");
+    let ltxml_paths: Vec<String> = if nopaths { vec![] } else { paths.clone() };
+
+    // If we're looking for ltxml, look within our paths & installation first (faster than kpse)
+    if !options.forbid_ltxml {
+      if let Some(path) = pathname::find(
+        &s!("{}.ltxml", file),
+        NewDefaultV!(PathnameFindOptions, paths => ltxml_paths, installation_subdir => "Package"),
+      ) {
+        return Some(path);
+      }
+    }
+    // If we're looking for TeX, look within our paths & installation first (faster than kpse)
+    if !options.notex {
+      if let Some(path) = pathname::find(file, NewDefaultV!(PathnameFindOptions, paths => paths)) {
+        return Some(path);
+      }
+    }
+    // Otherwise, pass on to kpsewhich
+    // Depending on flags, maybe search for ltxml in texmf or for plain tex in ours!
+    // The main point, though, is to we make only ONE (more) call.
     // return if grep { pathname::is_nasty($_) } @$paths;    // SECURITY! No nasty paths in cmdline
     //       // Do we need to sanitize these environment variables?
     // my $kpsewhich = which($ENV{LATEXML_KPSEWHICH} || 'kpsewhich');
@@ -404,7 +413,8 @@ pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -
     // if ($urlbase && ($path = url_find($file, urlbase => $urlbase))) {
     //   return $path; }
     // return; }
-    Some(file.to_string())
+    info!("No path found for: {:?}", file);
+    None
   }
 }
 

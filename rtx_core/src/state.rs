@@ -616,6 +616,13 @@ impl State {
     }
   }
 
+  pub fn lookup_vec_string<'lvec>(&'lvec self, key: &'lvec str) -> Option<&Vec<String>> {
+    match self.lookup_value(key) {
+      Some(Stored::VecString(v)) => Some(v),
+      _ => None,
+    }
+  }
+
   pub fn lookup_vecdeque<'lvdq>(&'lvdq self, key: &'lvdq str) -> Option<&VecDeque<Stored>> {
     match self.lookup_value(key) {
       Some(v) => v.into(),

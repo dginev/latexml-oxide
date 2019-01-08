@@ -38,6 +38,7 @@ macro_rules! NewDefault {
   })
 }
 
+// Just like NewDefault, but adds a mandatory .into_option to all values
 #[macro_export]
 macro_rules! NewDefaultV {
   ($name:ident, $($key:ident => $value:expr),*) => ($name {

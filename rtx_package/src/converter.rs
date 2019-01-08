@@ -49,6 +49,7 @@ impl Converter {
     self.ready = true;
     Ok(())
   }
+
   pub fn state_mut(&mut self) -> &mut State { self.core.get_state_mut() }
   pub fn bind_log(&mut self) {
     // TODO
@@ -165,6 +166,7 @@ impl Converter {
     let digested = match digest_result {
       Err(e) => {
         // TODO digestion failed, report
+        self.core.state.status_code = 3;
         e.log_fatal();
         Digested::List(Box::new(List::new(Vec::new())))
       },
