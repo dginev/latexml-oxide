@@ -1,5 +1,4 @@
 use core::ops::RangeBounds;
-use log::info;
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::VecDeque;
@@ -13,6 +12,7 @@ use crate::common::store::Stored;
 use crate::state::{Catcodes, Scope, State, StateOptions};
 use crate::token::*;
 use crate::tokens::Tokens;
+use crate::util::pathname;
 
 #[derive(PartialEq, Clone)]
 pub enum FoodType {
@@ -21,6 +21,21 @@ pub enum FoodType {
   HTTP,
   HTTPS,
   Literal,
+}
+
+impl FoodType {
+  /// TODO: Should be a From trait implementation, but am not allowed due to both &str and Option being external. Argh.
+  pub fn from_str(text: &str) -> Option<FoodType> {
+    use self::FoodType::*;
+    match text.to_lowercase().as_str() {
+      "file" => Some(File),
+      "binding" => Some(Binding),
+      "http" => Some(HTTP),
+      "https" => Some(HTTPS),
+      "literal" => Some(Literal),
+      _ => None,
+    }
+  }
 }
 
 lazy_static! {
@@ -75,12 +90,53 @@ impl Default for Mouth {
 
 pub struct MouthOptions {
   pub fordefinitions: bool,
+  pub content: Option<String>,
+  pub foodtype: Option<FoodType>,
+  pub source: Option<String>,
+  pub shortsource: Option<String>,
 }
 impl Default for MouthOptions {
-  fn default() -> Self { MouthOptions { fordefinitions: false } }
+  fn default() -> Self {
+    MouthOptions {
+      fordefinitions: false,
+      content: None,
+      foodtype: None,
+      source: None,
+      shortsource: None,
+    }
+  }
 }
 
 impl Mouth {
+  // Factory method;
+  // Create an appropriate Mouth
+  // options are
+  //  quiet,
+  //  atletter,
+  //  content
+  //
+  // DG: For now we are using a `foodtype` field instead of subclassing mouth, as it feels more compact in this particular application
+  //     we're really looking at a unified Mouth application logic, with a capacity of reading different kinds of sources
+  pub fn create(source: &str, mut options: MouthOptions, state: &mut State) -> Self {
+    if let Some(content) = options.content.clone() {
+      // we've cached the content of this source
+      let (dir, name, ext) = pathname::split(source);
+      options.source = Some(source.to_string());
+      options.shortsource = Some(s!("{}.{}", name, ext));
+      Mouth::new(&content, Some(options), state)
+    } else if source.starts_with("literal:") {
+      // we've supplied literal data
+      options.source = None; // the source does not have a corresponding file name
+      options.foodtype = FoodType::from_str("literal");
+      Mouth::new(source, Some(options), state)
+    } else if source.is_empty() {
+      Mouth::new("", Some(options), state)
+    } else {
+      options.foodtype = FoodType::from_str(&pathname::protocol(source));
+      Mouth::new(source, Some(options), state)
+    }
+  }
+
   pub fn new(text: &str, options: Option<MouthOptions>, state: &mut State) -> Self {
     let mut mouth = match options {
       None => Mouth {
@@ -234,7 +290,6 @@ impl Mouth {
         let next_ch = self.chars.get(self.colno);
         // Possible convert ^^x
         if cc == Some(Catcode::SUPER) && Some(&ch) == next_ch {
-          info!("-- super! case");
           let c1 = self.chars.get(self.colno + 1);
           let c2 = self.chars.get(self.colno + 2);
           // ^^ followed by TWO LOWERCASE Hex digits???
@@ -244,14 +299,12 @@ impl Mouth {
             && LOWERHEX_REGEX.is_match(&c1.unwrap().to_string())
             && LOWERHEX_REGEX.is_match(&c2.unwrap().to_string())
           {
-            info!("-- two lowercase hex");
             let hex = u8::from_str_radix(&s!("{}{}", c1.unwrap(), c2.unwrap()), 16).unwrap(); // TODO: Maybe Result type warranted here?
             ch = hex as char;
             self.splice(self.colno - 1..self.colno + 3, &[ch]);
             self.nchars -= 3;
           } else {
             // OR ^^ followed by a SINGLE Control char type code???
-            info!("-- single control char");
             let mut c = self.chars.get(self.colno + 1).unwrap();
             let mut cn = *c as i32;
 

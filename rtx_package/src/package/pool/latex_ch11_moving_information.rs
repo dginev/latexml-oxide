@@ -244,7 +244,7 @@ LoadDefinitions!(state, {
     // If we're in some sort of list environment, maybe we can recover
     if tag == "enumerate" || tag == "itemize" || tag == "description" {
       info!("\nDamn! We're in a list {}; try to close it!", tag);
-      tokens.extend(Invocation!("\\end", env.unlist(), gullet, state)?.unlist());
+      tokens.extend(Invocation!("\\end", vec![env], gullet, state)?.unlist());
       tokens.extend(vec![
         T_CS!("\\let"),
         T_CS!(&format!("\\end{}", tag)),
