@@ -133,7 +133,6 @@ impl Mouth {
     } else if source.is_empty() {
       Mouth::new("", Some(options), state)
     } else {
-      info!("protocol: {:?}", pathname::protocol(source));
       options.foodtype = FoodType::from_str(&pathname::protocol(source));
       Mouth::new(source, Some(options), state)
     }
