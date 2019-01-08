@@ -117,7 +117,7 @@ impl BoxOps for Tbox {
     Ok(())
   }
 
-  fn revert(&self) -> Tokens { self.tokens.clone() }
+  fn revert(&self) -> Result<Tokens> { Ok(self.tokens.clone()) }
 
   fn get_font(&self) -> Option<Cow<Font>> { Some(Cow::Borrowed(&self.font)) }
 

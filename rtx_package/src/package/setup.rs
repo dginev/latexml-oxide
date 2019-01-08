@@ -1597,6 +1597,8 @@ macro_rules! Tag(
 
 #[macro_export]
 macro_rules! DefMathI(
+  ($text:expr,$paramlist:expr,$presentation:expr) => (
+    DefMathWO!($text,$paramlist, $presentation, MathPrimitiveOptions::default()));
   ($text:expr,$paramlist:expr,$presentation:expr, $($key:ident => $val:expr),*) => (
     DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions, $($key => $val),*)));
   ($text:expr,$paramlist:expr,$presentation:expr, $($key:ident => $val:expr),*, $state_arg:ident) => (
@@ -1620,7 +1622,7 @@ macro_rules! Revert {
     Explode!($thing)
   };
   ($thing:expr) => {
-    $thing.revert().unlist()
+    $thing.revert()?.unlist()
   };
 }
 

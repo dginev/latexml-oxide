@@ -196,12 +196,14 @@ LoadDefinitions!(state, {
   // DefPrimitiveI('\@text@medmuskip', undef, "", alias => '\>');
 
   DefMacro!("\\;", "\\ifmmode\\@math@thickmuskip\\else\\@text@thickmuskip\\fi");
-  // DefConstructorI('\@math@thickmuskip', undef,
-  //   "<ltx:XMHint name='thickspace' width='#width'/>",
-  //   alias => '\;',
-  //   properties => { isSpace => 1,
-  //     width => sub { LookupValue('\thickmuskip'); } });
-  // DefPrimitiveI('\@text@thickmuskip', undef, "\x{2004}", alias => '\;');
+  DefConstructor!("\\@math@thickmuskip",
+    "<ltx:XMHint name='thickspace' width='#width'/>",
+    alias => "\\;".into_option()
+    // TODO:
+    // properties => properties!(map!(isSpace => true,
+    //   width => sub { LookupValue('\thickmuskip'); }
+  );
+  // DefPrimitiveI!("\\@text@thickmuskip", "\u{2004}", alias => "\\;".into_option());
 
   Let!("\\:", "\\>");
   DefMacro!("\\ ", "\\ifmmode\\@math@nbspace\\else\\@text@nbspace\\fi");

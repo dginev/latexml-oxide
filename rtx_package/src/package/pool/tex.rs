@@ -63,10 +63,9 @@ LoadDefinitions!(state, {
 
   // lines 4801-4920
   InnerPool!(tex_appendix_b_p357);
-  InnerPool!(tex_appendix_b_p358);
 
-  // lines 4920-5321
-  InnerPool!(latex_tables_3);
+  // lines,v2 5162-5609
+  InnerPool!(tex_appendix_b_p358);
 
   // lines 5321-5367
   InnerPool!(tex_appendix_b_p359);

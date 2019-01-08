@@ -175,7 +175,17 @@ impl Converter {
     // 2.1 Now, convert to DOM and output, if desired.
     let dom_result: Result<Document>;
     let serialized = match self.opts.format {
-      OutputFormat::TeX => token::untex(&digested, &self.core.state),
+      OutputFormat::TeX => match token::untex(&digested, &self.core.state) {
+        Ok(tex) => tex,
+        Err(e) => {
+          return ConversionResponse {
+            result: None,
+            log: self.flush_log(),
+            status: s!("fatal:untex:{:?}", e),
+            status_code: 3,
+          };
+        },
+      },
       OutputFormat::Box => {
         if self.opts.verbosity > 0 {
           digested.stringify()

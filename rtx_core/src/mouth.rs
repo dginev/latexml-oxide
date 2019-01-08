@@ -1,5 +1,4 @@
 use core::ops::RangeBounds;
-use log::*;
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::VecDeque;

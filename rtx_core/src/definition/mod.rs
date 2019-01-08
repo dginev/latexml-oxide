@@ -14,17 +14,17 @@ use crate::common::error::*;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 
+use self::register::{RegisterType, RegisterValue};
+use crate::document::Document;
 use crate::gullet::Gullet;
+use crate::mouth;
+use crate::parameter::Parameters;
+use crate::state::State;
 use crate::stomach::Stomach;
 use crate::token::Token;
 use crate::tokens::Tokens;
-use crate::Digested;
-// use tbox::Tbox;
-use crate::definition::register::{RegisterType, RegisterValue};
-use crate::document::Document;
-use crate::parameter::Parameters;
-use crate::state::State;
 use crate::whatsit::Whatsit;
+use crate::Digested;
 
 pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Tokens>>;
 pub type ConditionalClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<bool>>;
@@ -35,6 +35,17 @@ pub type PropertiesClosure = Rc<Fn(&mut Stomach, &Vec<Option<Digested>>, &mut St
 pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
 pub type ReplacementClosure = Rc<Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
 pub type ConstructionClosure = Rc<Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
+pub type DigestedReversionClosure = Rc<Fn(&Whatsit, &Vec<Option<Digested>>) -> Result<Tokens>>;
+
+#[derive(Clone)]
+pub enum Reversion {
+  Closure(DigestedReversionClosure),
+  Tokens(Tokens),
+}
+
+impl From<&str> for Reversion {
+  fn from(t: &str) -> Reversion { Reversion::Tokens(mouth::tokenize_internal(t, None)) }
+}
 
 impl From<Token> for Option<ExpansionClosure> {
   fn from(t: Token) -> Option<ExpansionClosure> { Tokens!(t).into() }
@@ -137,4 +148,5 @@ pub trait Definition: Object {
 
   fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> { unimplemented!() }
   fn register_type(&self) -> Option<RegisterType> { None }
+  fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
 }

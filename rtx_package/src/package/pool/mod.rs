@@ -39,6 +39,8 @@ pub mod latex_delimiters;
 pub mod latex_font_selection;
 pub mod latex_hook;
 pub mod latex_loglike_functions;
+pub mod latex_math_mode_changing_style;
+pub mod latex_math_mode_environments;
 pub mod latex_other_in_appendices;
 pub mod latex_tables_3;
 pub mod latex_verbatim;

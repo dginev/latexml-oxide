@@ -9,7 +9,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure, ReplacementClosure};
+use crate::definition::{BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure, ReplacementClosure, Reversion};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -39,7 +39,7 @@ pub struct ConstructorOptions {
   pub after_digest_begin: Vec<DigestionClosure>,
   pub before_digest_end: Vec<BeforeDigestClosure>,
   pub after_digest_body: Vec<DigestionClosure>,
-  pub reversion: Option<String>,
+  pub reversion: Option<Reversion>,
   // sizer           : 1,
   pub scope: Option<Scope>,
   pub locked: bool,
@@ -86,7 +86,7 @@ pub struct Constructor {
   pub capture_body: bool,
   // environment-specific
   pub after_digest_body: Vec<DigestionClosure>,
-  pub reversion: Option<String>,
+  pub reversion: Option<Reversion>,
   pub alias: Option<String>,
 }
 impl Default for Constructor {
@@ -171,6 +171,7 @@ impl Definition for Constructor {
       definition: caller,
       args,
       properties,
+      ..Whatsit::default()
     };
 
     // Call any 'After' code.
@@ -231,4 +232,5 @@ impl Definition for Constructor {
     }
     Ok(())
   }
+  fn get_reversion_spec(&self) -> Option<Reversion> { self.reversion.clone() }
 }
