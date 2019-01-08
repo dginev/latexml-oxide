@@ -9,7 +9,6 @@ use crate::common::store::Stored;
 use crate::document::Document;
 use crate::state::State;
 
-use crate::token::Token;
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, TexMode};
 
@@ -46,9 +45,12 @@ impl BoxOps for List {
     // Ok(())
   }
 
-  fn revert(&self) -> Tokens {
-    let reverted = self.boxes.iter().flat_map(|tbox| tbox.revert().unlist()).collect::<Vec<Token>>();
-    Tokens::new(reverted)
+  fn revert(&self) -> Result<Tokens> {
+    let mut reverted = Vec::new();
+    for tbox in self.boxes.iter() {
+      reverted.extend(tbox.revert()?.unlist());
+    }
+    Ok(Tokens::new(reverted))
   }
 
   fn get_font(&self) -> Option<Cow<Font>> {

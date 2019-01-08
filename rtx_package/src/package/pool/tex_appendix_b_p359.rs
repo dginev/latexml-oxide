@@ -27,7 +27,7 @@ LoadDefinitions!(state, {
   //           series => 'medium', shape => 'upright')->specialize("\x{22EE}"))
   //       : ()); });    # Since not DefMath!
   //                     # But not these!
-  // DefMathI('\cdots', undef, "\x{22EF}", role => 'ID');    # MIDLINE HORIZONTAL ELLIPSIS
+  DefMathI!("\\cdots", None, "\u{22EF}", role => "ID"); // MIDLINE HORIZONTAL ELLIPSIS
 
   // DefMathI('\ddots', undef, "\x{22F1}", role => 'ID');           # DOWN RIGHT DIAGONAL ELLIPSIS
   // DefMathI('\colon', undef, ':',        role => 'METARELOP');    # Seems like good default role

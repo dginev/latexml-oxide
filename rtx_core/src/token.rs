@@ -440,9 +440,9 @@ macro_rules! ExplodeText(($text:expr) => (
 ));
 
 static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
-pub fn untex(digested: &Digested, state: &State) -> String {
+pub fn untex(digested: &Digested, state: &State) -> Result<String> {
   use crate::token::Catcode::*;
-  let mut tokens = VecDeque::from_iter(digested.revert().unlist().into_iter());
+  let mut tokens = VecDeque::from_iter(digested.revert()?.unlist().into_iter());
   let mut tex_string = String::new();
   let mut length = 0;
   let mut level: i32 = 0;
@@ -515,7 +515,7 @@ pub fn untex(digested: &Digested, state: &State) -> String {
     tex_string = open_brace_string + &tex_string;
   }
 
-  tex_string
+  Ok(tex_string)
 }
 
 // TODO: Skipped ...

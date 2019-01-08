@@ -232,7 +232,7 @@ impl BoxOps for KeyVals {
   fn to_string(&self) -> String { String::new() } // TODO
   fn unlist(&self) -> Vec<Digested> { Vec::new() } // TODO
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { Ok(()) } // TODO
-  fn revert(&self) -> Tokens { Tokens::new(Vec::new()) } // TODO
+  fn revert(&self) -> Result<Tokens> { unimplemented!() } // TODO
   fn get_locator(&self) -> Option<Locator> {
     // TODO
     None

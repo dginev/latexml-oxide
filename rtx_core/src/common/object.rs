@@ -27,10 +27,6 @@ pub trait Object {
     unimplemented!()
   }
 
-  // Reverts an object into TeX code, as a Tokens list, that would create it.
-  // Note that this is not necessarily the original TeX.
-  fn revert(&self) -> String { unimplemented!() }
-
   fn to_attribute(&self) -> String { unimplemented!() }
 
   fn notequals<T>(&self, other: &T) -> bool

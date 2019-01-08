@@ -114,7 +114,7 @@ LoadDefinitions!(outer_state, {
       if !document.can_contain(&document.get_element().unwrap(), "#PCDATA", state) {
         document.open_element("ltx:p", None, None, state)?;
       }}),
-    reversion => "\\verb#1#2#1".into_option()
+    reversion => Some("\\verb#1#2#1".into())
   );
   DefConstructor!("\\@math@verb{}{}", "#2",
    before_digest => beforeproc!(stomach, state, {
@@ -122,7 +122,7 @@ LoadDefinitions!(outer_state, {
      MergeFont!(family => "typewriter", state);
    }),
    after_digest => afterproc!(stomach,whatsit,state, { stomach.egroup(state)?; }),
-   reversion => "\\verb#1#2#1".into_option()
+   reversion => Some("\\verb#1#2#1".into())
   );
 
   // Actually, latex sets catcode to 13 ... is this close enough?

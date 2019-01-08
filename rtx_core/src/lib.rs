@@ -161,7 +161,7 @@ pub trait BoxOps {
   }
   fn get_font(&self) -> Option<Cow<Font>>;
   fn get_locator(&self) -> Option<Locator>;
-  fn revert(&self) -> Tokens;
+  fn revert(&self) -> Result<Tokens>;
 
   fn set_width<T: Into<Stored>>(&mut self, width: T) {
     let mut props = self.get_properties_mut();
@@ -207,10 +207,10 @@ impl<'a> From<&'a Digested> for Option<crate::Digested> {
   fn from(value: &'a Digested) -> Option<crate::Digested> { Some(value.clone()) }
 }
 impl<'a> From<&'a Digested> for Tokens {
-  fn from(value: &'a Digested) -> Tokens { value.revert() }
+  fn from(value: &'a Digested) -> Tokens { value.revert().unwrap() }
 }
 impl<'a> From<Digested> for Tokens {
-  fn from(value: Digested) -> Tokens { value.revert() }
+  fn from(value: Digested) -> Tokens { value.revert().unwrap() }
 }
 
 impl Default for Digested {
@@ -328,12 +328,12 @@ impl BoxOps for Digested {
     }
   }
 
-  fn revert(&self) -> Tokens {
+  fn revert(&self) -> Result<Tokens> {
     match *self {
       Digested::TBox(ref b) => b.revert(),
       Digested::List(ref l) => l.revert(),
       Digested::Whatsit(ref w) => w.borrow().revert(),
-      Digested::Postponed(ref t) => (**t).clone(),
+      Digested::Postponed(ref t) => Ok((**t).clone()),
       Digested::KeyVals(ref kvs) => kvs.revert(),
     }
   }

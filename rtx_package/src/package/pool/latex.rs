@@ -528,18 +528,9 @@ LoadDefinitions!(state, {
   // C.7 Mathematical Formulas
   //**********************************************************************
 
-  //======================================================================
-  // C.7.1 Math Mode Environments
-  //======================================================================
-
-  // TODO: Implement environment modes properly, some work still to go
-  // TODO: Re-add ltx: namespace when compiler can parse it
-  DefEnvironment!("{math}",
-    "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
-    mode => Some(s!("inline_math"))
-  );
-  // My first inclination is to Lock {math}, but it is surprisingly common to redefine it in silly
-  // ways... So...?
+  // lines 1650-2164?
+  InnerPool!(latex_math_mode_environments);
+  InnerPool!(latex_math_mode_changing_style);
 
   //**********************************************************************
   // C.8 Definitions, Numbering and Programming

@@ -561,7 +561,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
   }
 }
 
-pub fn revert(_arg: &[Token]) -> Tokens { Tokens!() }
+pub fn revert(_arg: &[Token]) -> Tokens { unimplemented!() }
 
 //======================================================================
 // Declaring and Adjusting the Document Model.
@@ -1143,7 +1143,7 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
     Tokens!(T_OTHER!("x"), Explode!(state.lookup_number(&s!("\\c@{}", unctr)).unwrap().value_of())),
     scope => Some(Scope::Global));
   DefMacroI!(T_CS!("\\@currentID"), None, T_CS!(&s!("\\the{}@ID", ctr)));
-  Ok(map!("id".to_string() => digest_literal(T_CS!(&s!("\\the{}@ID", ctr)), stomach, state)?.into()))
+  Ok(map!("id".to_string() => digest_literal(T_CS!(&s!("\\the{}@ID", ctr)), stomach, state)?.to_string().into()))
 }
 
 pub fn reset_counter(ctr: &str, state: &mut State) {
