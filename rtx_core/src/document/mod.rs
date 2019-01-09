@@ -643,12 +643,10 @@ impl Document {
         if node.get_attribute("_noautoclose").is_none() {
           if node.get_attribute("_autoclose").is_some() {
             true
+          } else if let Some(props) = state.tag_properties.get(&self.get_node_qname(node, state)) {
+            props.auto_close.unwrap_or(false)
           } else {
-            if let Some(props) = state.tag_properties.get(&self.get_node_qname(node, state)) {
-              props.auto_close.unwrap_or(false)
-            } else {
-              false
-            }
+            false
           }
         } else {
           false
@@ -1076,9 +1074,9 @@ impl Document {
           .get_attributes()
           .keys()
           .map(|x| x)
-          .filter(|x| !x.starts_with("_"))
+          .filter(|x| !x.starts_with('_'))
           .all(|n| state.model.can_have_attribute(&qname, n))
-        && !c[0].get_attribute("_force_font").is_some()
+        && c[0].get_attribute("_force_font").is_none()
       {
         let c_first = c.remove(0);
         self.set_node_font(&node, self.get_node_font(&c_first).clone());

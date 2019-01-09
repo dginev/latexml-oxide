@@ -40,13 +40,12 @@ const UP_GREEK: &[char] = &[
 
 pub fn radix_format(number: i32, symbols: &[char]) -> String {
   // TODO
-  let text = String::new();
-  // my $string = '';
+  // let mut text = String::new();
   // my $max    = scalar(@symbols);
   // while ($number > 0) {
   //   $string = $symbols[($number - 1) % $max] . $string;
   //   $number = int(($number - 1) / $max); }
-  text
+  String::new()
 }
 
 pub fn radix_alpha(n: i32) -> String { radix_format(n, &LETTERS) }
@@ -63,7 +62,7 @@ pub fn radix_up_greek(n: i32) -> String { radix_format(n, &UP_GREEK) }
 const RMLETTERS: &[char] = &['i', 'v', 'x', 'l', 'c', 'd', 'm']; // [CONSTANT]
 
 pub fn radix_roman(n: i32) -> String {
-  let mut s = String::new();
+  // let mut s = String::new();
   // TODO:
   // my ($n) = @_;
   // my $div = 1000;
@@ -76,7 +75,7 @@ pub fn radix_roman(n: i32) -> String {
   //   if ($d > 4) { $s .= $rmletters[$p + int($d / 5)]; $d %= 5; }
   //   if ($d) { $s .= $rmletters[$p] x $d; }
   //   $p -= 2; }
-  s
+  String::new()
 }
 
 /// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token

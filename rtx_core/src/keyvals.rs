@@ -96,11 +96,10 @@ impl KeyVals {
     //   // may be a string (= store all the missing keys there)
     //   else { $skipMissing = T_CS($skipMissing); } }
     // my %hash = ();
-    let kv = KeyVals {
+    KeyVals {
       prefix,
       ..KeyVals::default()
-    };
-
+    }
     // keysets     => $keysets,
     // skip        => $skip,        setAll      => $setAll, setInternals => $setInternals,
     // skipMissing => $skipMissing, hookMissing => $hookMissing,
@@ -108,8 +107,6 @@ impl KeyVals {
     // tuples => [], cachedPairs => [()], cachedHash => \%hash,
     // // all the character tokens we used
     // punct => $options{punct}, assign => $options{assign} },
-
-    kv
   }
 
   //======================================================================
@@ -118,7 +115,7 @@ impl KeyVals {
   fn resolve_key_val_for(&self, key: &str) -> Vec<KeyVal> {
     // my $prefix  = $self->getPrefix;
     // my @keysets = $self->getKeySets;
-    let sets = Vec::new();
+    // let sets = Vec::new();
 
     // // iterate over the keysets
     // foreach my $keyset (@keysets) {
@@ -135,10 +132,10 @@ impl KeyVals {
 
     // // return either the first or all of the elements
     // return ($sets[0]) unless $self->getSetAll;
-    sets
+    Vec::new()
   }
 
-  fn get_primary_key_val_of(&self, key: &str, keysets: &Vec<KeyVal>) -> KeyVal {
+  fn get_primary_key_val_of(&self, key: &str, keysets: &[KeyVal]) -> KeyVal {
     if keysets.is_empty() {
       KeyVal::new(Some(self.prefix.clone()), self.keysets[0].clone(), key.to_string())
     } else {
@@ -211,7 +208,7 @@ impl KeyVals {
       pairs.push((key.to_string(), value.clone()));
 
       // if we do not have a value yet, set it
-      let mut entry = hash.entry(key.to_string()).or_insert(Vec::new());
+      let mut entry = hash.entry(key.to_string()).or_insert_with(Vec::new);
 
       // If we get a third value, push into an array
       // This is unlikely to be what the caller expects!! But what else?

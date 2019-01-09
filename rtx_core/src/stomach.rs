@@ -379,13 +379,12 @@ impl<'t> Stomach {
       // $comment =~ s/\Q$badspace\E/ /g;
       // return LaTeXML::Comment->new($comment); }
       Ok(None)
-    }
     // TODO
     // else if ($forbidden_cc[meaning.code]) {
     // Fatal('misdefined', $token, self,
     //   "The token " . Stringify($token) . " should never reach Stomach!");
     // return; }
-    else {
+    } else {
       let text = font::decode_string(meaning.get_string(), None, true, state);
       Ok(Some(Digested::TBox(Rc::new(Tbox::new(
         text,

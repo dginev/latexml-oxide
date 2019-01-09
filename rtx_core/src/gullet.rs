@@ -498,8 +498,7 @@ impl Gullet {
         match token.code {
           Catcode::BEGIN => {
             // Inline ->getCatcode!
-            let readin = self.read_balanced(state);
-            readin
+            self.read_balanced(state)
           },
           _ => Ok(Tokens!(token)),
         }
