@@ -15,7 +15,7 @@
 macro_rules! LoadDefinitions {
   ($state:ident, $body:block) => {
     pub fn load_definitions($state: &mut State, mut outer_stomach: Option<&mut Stomach>) -> Result<()> {
-      SetupBindingMacros!($state, outer_stomach);
+      BindState!($state, outer_stomach);
       {
         $body
       }
@@ -24,1371 +24,1557 @@ macro_rules! LoadDefinitions {
   };
 }
 
+//=================================================
+// Variable capture games -- capture a given $state
+//    into a set of convenience macros for brief syntax
+//
+//=================================================
 #[macro_export]
-macro_rules! SetupBindingMacros {
-  ($state:ident) => (SetupBindingMacros!($state, None));
+macro_rules! BindState {
+  ($state:ident) => {
+    BindState!($state, None)
+  };
   ($state:ident, $outer_stomach: expr) => {
     #[allow(unused_macros)]
-    //============================================
-    // Convenience macros for writing definitions.
-    //============================================
     let state_stomach = $state.stomach.clone();
-    macro_rules! LookupValue {
-      ($name:expr) => {
-        LookupValue!($name, $state)
-      };
-      ($name:expr, $state_arg:ident) => {
-        $state_arg.lookup_value($name)
+    macro_rules! state {
+      () => {
+        $state
       };
     }
-    macro_rules! LookupBool {
-      ($name:expr) => {
-        LookupBool!($name, $state)
-      };
-      ($name:expr, $state_arg:ident) => {
-        $state_arg.lookup_bool($name)
-      };
-    }
-    macro_rules! LookupString {
-      ($name:expr) => {
-        LookupString!($name, $state)
-      };
-      ($name:expr, $state_arg:ident) => {
-        $state_arg.lookup_string($name)
-      };
-    }
-    macro_rules! LookupNumber {
-      ($name:expr) => {
-        LookupNumber!($name, $state)
-      };
-      ($name:expr, $state_arg:ident) => {
-        $state_arg.lookup_number($name)
-      };
-    }
-    macro_rules! LookupTokens {
-      ($name:expr) => {
-        LookupTokens!($name, $state)
-      };
-      ($name:expr, $state_arg:ident) => {
-        $state_arg.lookup_tokens($name)
-      };
-    }
-    macro_rules! AssignValue {
-      ($name:expr, $value:expr) => {
-        AssignValue!($name, $value, None, $state)
-      };
-      ($name:expr, $value:expr, $scope:expr) => {
-        AssignValue!($name, $value, $scope, $state)
-      };
-      ($name:expr, $value:expr, $scope:expr, $state_arg:ident) => {
-        $state_arg.assign_value($name, $value, $scope)
-      };
-    }
-    macro_rules! RemoveValue {
-      ($name:expr) => {
-        RemoveValue!($name, $state)
-      };
-      ($name:expr, $state_arg:ident) => {
-        $state_arg.remove_value($name)
-      };
-    }
-    macro_rules! PushValue {
-      ($name:expr, $values:expr) => {
-        PushValue!($name, $values, $state)
-      };
-      ($name:expr, $values:expr, $state_arg:ident) => {
-        $state_arg.push_value($name, $values)
-      };
-    }
-    macro_rules! PopValue {
-      ($name:expr) => {
-        PopValue!($name, $state)
-      };
-      ($name:expr, $state_arg:ident) => {
-        $state_arg.pop_value($name)
-      };
-    }
-    macro_rules! UnshiftValue {
-      ($name:expr, $values:expr) => {
-        UnshiftValue!($name, $values, $state)
-      };
-      ($name:expr, $values:expr,$state_arg:ident) => {
-        $state_arg.unshift_value($name, $values)
-      };
-    }
-    macro_rules! ShiftValue {
-      ($name:expr) => {
-        ShiftValue!($name, $state)
-      };
-      ($name:expr,$state_arg:ident) => {
-        $state_arg.shift_value($name)
-      };
-    }
-    macro_rules! LookupMapping {
-      ($map:expr, $key:expr) => {
-        LookupValue!($map, $key, $state)
-      };
-      ($map:expr, $key:expr, $state_arg:ident) => {
-        $state_arg.lookup_mapping($map, $key)
-      };
-    }
-    macro_rules! AssignMapping {
-      ($map:expr, $key:expr => $value:expr) => {
-        AssignMapping!($map, $key => $value, $state)
-      };
-      ($map:expr, $key:expr => $value:expr, $state_arg:ident) => {
-        $state_arg.assign_mapping($map, $key, $value.into())
-      };
-    }
-    macro_rules! LookupMappingKeys {
-      ($map:expr) => {
-        LookupMappingKeys!($map, $state)
-      };
-      ($map:expr, $state_arg:ident) => {
-        $state_arg.lookup_mapping_keys($map)
-      };
-    }
-    macro_rules! LookupCatcode {
-      ($char:expr) => {
-        LookupCatcode!($char, $state)
-      };
-      ($char:expr, $state_arg:ident) => {
-        $state_arg.lookup_catcode($char)
-      };
-    }
-    macro_rules! AssignCatcode {
-      ($char:expr, $catcode:expr, $scope:expr) => {
-        AssignCatcode!($char, $catcode, $scope, $state)
-      };
-      ($char:expr, $catcode:expr, $scope:expr, $state_arg:ident) => {
-        $state_arg.assign_catcode($char, $catcode, $scope)
-      };
-    }
-    macro_rules! LookupMeaning {
-      ($name:expr) => {
-        LookupMeaning!($name, $state)
-      };
-      ($name:expr, $state_arg:ident) => {
-        $state_arg.lookup_meaning($name)
-      };
-    }
-    macro_rules! LookupDefinition {
-      ($name:expr) => {
-        LookupDefinition!($name, $state)
-      };
-      ($name:expr, $state_arg:ident) => {
-        $state_arg.lookup_definition($name)
+    macro_rules! outer_stomach {
+      () => {
+        $outer_stomach
       };
     }
 
-    macro_rules! InstallDefinition {
-      ($name:expr, $definition:expr, $scope:expr) => {
-        InstallDefinition!($name, $definition, $scope, $state)
-      };
-      ($name:expr, $definition:expr, $scope:expr, $state_arg:ident) => {
-        $state_arg.install_definition($name, $definition, $scope)
-      };
-    }
-
-    macro_rules! XEquals {
-      ($token1:expr, $token2:expr) => {
-        XEquals!($token1, $token2, $state)
-      };
-      ($token1:expr, $token2:expr, $state_arg:ident) => {
-        $state_arg.x_equals($token1, $token2)
-      };
-    }
-
-    macro_rules! IsDefined {
-      ($name:expr) => {
-        IsDefined!($name, $state)
-      };
-      ($name:expr, $state_arg:ident) => {
-        is_defined_token($name, $state_arg)
-      };
-    }
-    macro_rules! IsDefinedToken {
-      ($name:expr) => {
-        IsDefinedToken!($name, $state)
-      };
-    }
-    macro_rules! Let {
-      ($token1:expr, $token2:expr) => {
-        Let!($token1, $token2, $state)
-      };
-      ($token1:expr, $token2:expr, $state_arg:ident) => {{
-        LetI!(&T_CS!($token1), T_CS!($token2), $state_arg)
-      }};
-      ($token1:expr, $token2:expr, $scope:expr, $state_arg:ident) => {{
-        LetI!(&T_CS!($token1), T_CS!($token2), $scope, $state_arg)
-      }};
-    }
-    macro_rules! LetI {
-      ($token1:expr, $token2:expr) => {
-        LetI!($token1, $token2, $state)
-      };
-      ($token1:expr, $token2:expr, $state_arg:ident) => {
-        $state_arg.let_i($token1, $token2, None)
-      };
-      ($token1:expr, $token2:expr, $scope:expr, $state_arg:ident) => {
-        $state_arg.let_i($token1, $token2, $scope)
-      };
-    }
     macro_rules! Digest {
       ($tokens:expr) => {{
-        Digest!($tokens, $state)
+        let st: &mut State = state!();
+        Digest!($tokens, st)
       }};
       ($tokens:expr, $state_arg:ident) => {{
         match $outer_stomach.as_mut() {
           Some(st) => (*st).digest($tokens, $state_arg),
           None => state_stomach.borrow_mut().digest($tokens, $state_arg),
-      }}};
+        }
+      }};
     }
 
     macro_rules! DigestText {
-      ($stuff:expr) => {{
-        digest_text($stuff, $state)
-        match $outer_stomach.as_mut() {
-          Some(st) => (*st).digest_text($stuff, $state_arg),
-          None => state_stomach.borrow_mut().digest_text($stuff, $state_arg),
-        }
-      }};
-      ($stuff:expr, $stomach:ident) => {
-        DigestText!($stuff, $stomach, $state)
-      };
-      ($stuff:expr, $stomach:ident, $state_arg:ident) => {
-        digest_text($stuff, $stomach, $state_arg)
-      };
-    }
-
-    macro_rules! DigestIf {
-      ($token:literal, $stomach:ident) => {
-        DigestIf!(T_CS!($token), $stomach, $state)
-      };
-      ($token:literal, $stomach:ident, $state_arg:ident) => {
-        digest_if(T_CS!($token), $stomach, $state_arg)
-      };
-      ($token:expr, $stomach:ident) => {
-        DigestIf!($token, $stomach, $state)
-      };
-      ($token:expr, $stomach:ident, $state_arg: ident) => {
-        digest_if($token, $stomach, $state_arg)
-      };
-    }
-
-    macro_rules! AfterAssignment {
-      () => {
-        AfterAssignment!($state)
-      };
-      ($state_arg: ident) => {
-        $state_arg.after_assignment()
-      };
-    }
-
-    // Merge the current font with the style specifications
-    macro_rules! MergeFont {
-      ($kv:expr) => {
-        MergeFont!($kv, $state)
-      };
-      ($kv:expr, $state_arg:ident) => {
-        merge_font($kv, $state_arg)
-      };
-      ($key:ident => $val:expr) => {
-        MergeFont!($key => $val, $state)
-      };
-      ($key:ident => $val:expr, $state_arg:ident) => {
-        merge_font(&fontmap!($key => $val), $state_arg)
-      };
-    }
-
-    //======================================================================
-    // Defining new Control-sequence Parameter types.
-    //======================================================================
-
-    macro_rules! DefParameterTypeWO {
-      ($name:expr, $param:expr) => {
-        $state.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter($param)))
-      };
-      ($name:expr, $param:expr, $state_arg:ident) => {
-        $state_arg.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter($param)))
-      };
-    }
-
-    macro_rules! LoadPool {
-      ($name:expr) => {
-        LoadPool!($name, $state)
-      };
-      ($name:expr, $state_arg:ident) => {{
-        input_definitions(
-          $name,
-          InputDefinitionOptions {
-            extension: Some(String::from("pool")),
-            with_stomach: match $outer_stomach.as_mut() {
-              None => None,
-              Some(st) => Some(st),
-            },
-            ..InputDefinitionOptions::default()
-          },
-          $state_arg,
-        )?
-      }};
-    }
-    /// Loader shorthand for pool dependencies
-    macro_rules! InnerPool {
-      ($name:ident) => {
-        InnerPool!($name, $state, $outer_stomach)
-      };
-      ($name:ident, $state_arg:ident) => {
-        InnerPool!($name, $state_arg, $outer_stomach)
-      };
-      ($name:ident, $state_arg:ident, $stomach:expr) => {{
-        match $stomach.as_mut() {
-          None => pool::$name::load_definitions($state_arg, None)?,
-          Some(st) => pool::$name::load_definitions($state_arg, Some(st))?,
-        }
-      }};
-    }
-
-    macro_rules! RequirePackage {
-      ($package:expr, $options:expr) => {
-        RequirePackage!($package, $options, $state)
-      };
-      ($package:expr, $options:expr, $state_arg:ident) => {
-        require_package($package, $options, $state_arg)
-      };
-    }
-    macro_rules! LoadClass {
-      ($class:expr, $options:expr, $after:expr) => {
-        LoadClass!($class, $options, $after, $state)
-      };
-      ($class:expr, $options:expr, $after:expr, $state_arg:ident) => {
-        load_class($class, $options, $after, $state_arg)
-      };
-    }
-
-    macro_rules! DeclareFontMap {
-      ($name:expr, $map:expr, $family:expr, $state_arg: ident) => {
-        let mapname = s!("{}_{}_fontmap", $name, $family);
-        let map: Vec<Option<char>> = $map;
-        $state_arg.assign_value(&mapname, map, Some(Scope::Global));
-      };
-      ($name:expr, $map:expr, $state_arg: ident) => {
-        let mapname = s!("{}_fontmap", $name);
-        let map: Vec<Option<char>> = $map;
-        $state_arg.assign_value(&mapname, map, Some(Scope::Global));
-      };
-
-      ($name:expr, $map:expr, $family:expr) => {
-        DeclareFontMap!($name, $map, $family, $state)
-      };
-      ($name:expr, $map:expr) => {
-        DeclareFontMap!($name, $map, $state)
-      };
-    }
-
-    macro_rules! DefMacroIWO {
-      // closure stub
-      ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) => {
-        DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, $options, $state)
-      };
-      // with explicit state
-      ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {
-        let expansion_closure: Option<ExpansionClosure> = Some(Rc::new(move |$gullet, $args, $inner_state| $body));
-        def_macro($cs, $paramlist, expansion_closure, $options, $state_arg);
-      };
-      // precompiled
-      ($cs:expr, $paramlist:expr, $expansion:expr, $options:expr) => {
-        DefMacroIWO!($cs, $paramlist, $expansion, $options, $state)
-      };
-      // with explicit state
-      ($cs:expr, $paramlist:expr, $expansion:expr, $options:expr, $state_arg:ident) => {
-        def_macro($cs, $paramlist, $expansion, $options, $state_arg)
-      };
-    }
-
-    macro_rules! DefMacroWO(
-      // Rust closure expansion form
-      ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {
-        let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-        let expansion_closure : Option<ExpansionClosure> =
-          Some(Rc::new(move |$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| $body));
-        // TODO: Also pass in options
-        def_macro(cs, paramlist, expansion_closure, $options, $state_arg);
-      };
-      ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) => (
-        DefMacroWO!($proto, sub [ $gullet, $args, $inner_state ] $body, $options, $state));
-      // String expansion forms
-      ($proto:expr, $expansion:expr, $options:expr) => (DefMacroWO!($proto, $expansion, $options, $state));
-      ($proto:expr, $expansion:expr, $options:expr, $state_arg:ident) => ({
-        let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-        let expansion;
-        compile_expansion!(expansion, $expansion);
-        def_macro(cs, paramlist, expansion, $options, $state_arg);
-      });
-    );
-
-    macro_rules! DefConditional(
-      // test is always a rust closure
-      ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block) =>
-        (DefConditional!($proto, sub[$gullet, $args, $inner_state] $body, $state));
-      ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
-        let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-        DefConditionalI!(cs, paramlist, sub[$gullet, $args, $inner_state] $body, $state_arg)
-      });
-      // or None
-      ($proto:expr) => (DefConditional!($proto, None, $state));
-      ($proto:expr, None) => (DefConditional!($proto, None, $state));
-      ($proto:expr, None, $state_arg:ident) => ({
-        let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-        DefConditionalI!(cs, paramlist, None, $state_arg)
-      });
-    );
-
-    macro_rules! DefConditionalI(
-      // test is always a rust closure
-      ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block) =>
-        (DefConditionalI!($cs, $paramlist, $gullet, $args, $inner_state, $body, $state));
-      ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
-        let test : ConditionalClosure = Rc::new(move |$gullet, $args, $inner_state| {$body});
-        def_conditional($cs, $paramlist, Some(test), ConditionalOptions::default(), $state_arg);
-      });
-      // or None
-      ($cs:expr, $paramlist:expr, None) =>
-        (DefConditionalI!($cs, $paramlist, None, $state));
-      ($cs:expr, $paramlist:expr, None, $state_arg:ident) => ({
-        def_conditional($cs, $paramlist, None, ConditionalOptions::default(), $state_arg);
-      });
-    );
-
-    // sub IfCondition {
-    //   my ($if, @args) = @_;
-    //   my $gullet = $STATE->getStomach->getGullet;
-    //   $if = coerceCS($if);
-    //   my ($defn, $test);
-    //   if (($defn = $STATE->lookupDefinition($if))
-    //     && (($$defn{conditional_type} || '') eq 'if') && ($test = $defn->getTest)) {
-    //     return &$test($gullet, @args); }
-    //   elsif (XEquals($if, T_CS('\iftrue'))) {
-    //     return 1; }
-    //   elsif (XEquals($if, T_CS('\iffalse'))) {
-    //     return 0; }
-    //   else {
-    //     Error('expected', 'conditional', $gullet,
-    //       "Expected a conditional, got '" . ToString($if) . "'");
-    //     return; } }
-
-    // # Used only for regular \newif type conditions
-    // sub SetCondition {
-    //   my ($if, $value, $scope) = @_;
-    //   my ($defn, $test);
-    //   # We'll accept any conditional \ifxxx, providing it takes no arguments
-    //   if (($defn = $STATE->lookupDefinition($if)) && (($$defn{conditional_type} || '') eq 'if')
-    //     && !$defn->getParameters) {
-    //     Let($if, ($value ? T_CS('\iftrue') : T_CS('\iffalse')), $scope) }
-    //   else {
-    //     Error('expected', 'conditional', $STATE->getStomach,
-    //       "Expected a conditional defined by \\newif, got '" . ToString($if) . "'"); }
-    //   return; }
-
-    ///======================================================================
-    /// Define a primitive control sequence.
-    ///======================================================================
-    /// Primitives are executed in the Stomach.
-    /// The $replacement should be a sub which returns nothing, or a list of `Box`'s or `Whatsit`'s.
-    /// The options are:
-    ///    isPrefix  : 1 for things like \global, \long, etc.
-    ///    registerType : for parameters (but needs to be worked into `DefParameter`, below).
-
-    macro_rules! DefPrimitiveII {
-      ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block) => {
-        DefPrimitiveII!($cs, $paramlist, sub[$stomach, $args, $inner_state] $body, $state)
-      };
-      ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block, $state_arg:ident) => {
-        DefPrimitiveII!($cs, $paramlist, move |$stomach, $args, $inner_state| $body, PrimitiveOptions::default(), $state_arg)
-      };
-      ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => {
-        DefPrimitiveII!($cs, $paramlist, $compiled_replacement, $options, $state)
-      };
-      ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
-        let options = $options;
-        let options_locked = options.locked;
-        let scope = options.scope.clone();
-        let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
-
-        if options.require_math {
-          let cs_name = $cs.get_cs_name().to_owned();
-          let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(cs_name, state) });
-          before_digest_env.push(require_math_closure);
-        }
-
-        if options.forbid_math {
-          let cs_name = $cs.get_cs_name().to_owned();
-          let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(cs_name, state) });
-          before_digest_env.push(forbid_math_closure);
-        }
-        if let Some(ref mode) = options.mode {
-          let mode_clone = mode.clone();
-          let begin_mode_closure = beforeproc_single!(stomach, state, {
-            stomach.begin_mode(&mode_clone, state)?;
-          });
-          before_digest_env.push(begin_mode_closure);
-        } else if options.bounded {
-          let bgroup_closure = beforeproc_single!(stomach, state, {
-            stomach.bgroup(state);
-          });
-          before_digest_env.push(bgroup_closure);
-        }
-        if let Some(chosen_font) = options.font {
-          let merge_font_closure = beforeproc_single!(stomach, state, {
-            MergeFont!(&chosen_font, state);
-          });
-          before_digest_env.push(merge_font_closure);
-        }
-        before_digest_env.extend(options.before_digest);
-
-        let mut after_digest_env: Vec<DigestionClosure> = Vec::new();
-        after_digest_env.extend(options.after_digest);
-        if let Some(ref mode) = options.mode {
-          let mode_clone = mode.clone();
-          let end_mode_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
-            stomach.end_mode(&mode_clone, state)?;
-          });
-          after_digest_env.extend(end_mode_closure);
-        } else if options.bounded {
-          let egroup_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
-            stomach.egroup(state)?;
-          });
-          after_digest_env.extend(egroup_closure);
-        }
-
-        $state_arg.install_definition(
-          Primitive {
-            cs: $cs.clone(),
-            paramlist: $paramlist,
-            replacement: Some(Rc::new($compiled_replacement)),
-            options: PrimitiveOptions {
-              before_digest: before_digest_env,
-              after_digest: after_digest_env,
-              ..PrimitiveOptions::default()
-            },
-          },
-          scope,
-        );
-        if options_locked {
-          AssignValue!(&s!("{}:locked", $cs.get_cs_name()), true, None, $state_arg);
-        }
-      }};
-    }
-
-    macro_rules! DefPrimitiveIWO(
-      ($proto:expr, $compiled_replacement:expr, $options:expr) => (DefPrimitiveIWO!($proto, $compiled_replacement, $options, $state));
-      ($proto:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
-        let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-        DefPrimitiveII!(cs, paramlist, $compiled_replacement, $options, $state_arg);
-      })
-    );
-
-    macro_rules! DefRegisterWO {
-      ($proto:expr, $value:expr, $options:expr) => {
-        DefRegisterWO!($proto, $value, $options, $state)
-      };
-      ($proto:expr, $value:expr, $options:expr, $state_arg:ident) => {{
-        let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-        DefRegisterI!(cs, paramlist, $value, $options, $state_arg);
-      }};
-    }
-
-    macro_rules! DefRegisterI {
-      ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {
-        DefRegisterI!($cs, $paramlist, $value, $options, $state)
-      };
-      ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => {
-        def_register($cs, $paramlist, $value, $options, $state_arg)
-      };
-    }
-
-    // sub LookupRegister {
-    //   my ($cs, @parameters) = @_;
-    //   my $defn;
-    //   $cs = T_CS($cs) unless ref $cs;
-    //   if (($defn = $STATE->lookupDefinition($cs)) && $defn->isRegister) {
-    //     return $defn->valueOf(@parameters); }
-    //   else {
-    //     Warn('expected', 'register', $STATE->getStomach,
-    //       "The control sequence " . ToString($cs) . " is not a register"); }
-    //   return; }
-
-    // sub LookupDimension {
-    //   my ($cs) = @_;
-    //   my $defn;
-    //   $cs = T_CS($cs) unless ref $cs;
-    //   if (my $defn = $STATE->lookupDefinition($cs)) {
-    //     if ($defn->isRegister) {    # Easy (and proper) case.
-    //       return $defn->valueOf; }
-    //     else {
-    //       $STATE->getStomach->getGullet->readingFromMouth(LaTeXML::Core::Mouth->new(), sub { # start with empty mouth
-    //           my ($gullet) = @_;
-    //           $gullet->unread($cs);    # but put back tokens to be read
-    //           return $gullet->readDimension; }); } }
-    //   else {
-    //     Warn('expected', 'register', $STATE->getStomach,
-    //       "The control sequence " . ToString($cs) . " is not a register"); }
-    //   return Dimension(0); }
-
-    // sub AssignRegister {
-    //   my ($cs, $value, @parameters) = @_;
-    //   my $defn;
-    //   $cs = T_CS($cs) unless ref $cs;
-    //   if (($defn = $STATE->lookupDefinition($cs)) && $defn->isRegister) {
-    //     return $defn->setValue($value, @parameters); }
-    //   else {
-    //     Warn('expected', 'register', $STATE->getStomach,
-    //       "The control sequence " . ToString($cs) . " is not a register");
-    //     return; } }
-
-    //======================================================================
-    // Define a constructor control sequence.
-    //======================================================================
-    // The arguments, if any, will be collected and processed in the Stomach, and
-    // a Whatsit will be constructed.
-    // It is the Whatsit that will be processed in the Document: It is responsible
-    // for constructing XML Nodes.  The $replacement should be a sub which inserts nodes,
-    // or a string specifying a constructor pattern (See somewhere).
-    //
-    // Options are:
-    //   bounded         : any side effects of before/after daemans are bounded; they are
-    //                     automatically enclosed by bgroup/egroup pair.
-    //   mode            : causes a switch into the given mode during the Whatsit building in the stomach.
-    //   reversion       : a string representing the preferred TeX form of the invocation.
-    //   beforeDigest    : code to be executed (in the stomach) before parsing & constructing the Whatsit.
-    //                     Can be used for changing modes, beginning groups, etc.
-    //   afterDigest     : code to be executed (in the stomach) after parsing & constructing the Whatsit.
-    //                     useful for setting Whatsit properties,
-    //   properties      : a hashref listing default values of properties to assign to the Whatsit.
-    //                     These properties can be used in the constructor.
-
-    macro_rules! DefConstructorIWO {
-      ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => {
-        DefConstructorIWO!($cs, $paramlist, $compiled_replacement, $options, $state)
-      };
-      ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
-        use rtx_core::definition::constructor::Constructor;
-        let options = $options;
-        // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
-        //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
-        let scope = options.scope.clone();
-        let is_locked = options.locked.clone();
-        let locked_key = if is_locked { s!("{}:locked", $cs.get_cs_name()) } else { String::new() };
-
-        let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
-
-        if options.require_math {
-          let cs_name = $cs.get_cs_name().to_owned();
-          let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(cs_name, state) });
-          before_digest_closures.push(require_math_closure);
-        }
-        if options.forbid_math {
-          let cs_name = $cs.get_cs_name().to_owned();
-          let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(cs_name, state) });
-          before_digest_closures.push(forbid_math_closure);
-        }
-        if let Some(ref mode) = options.mode {
-          let mode_clone = mode.clone();
-          let begin_mode_closure = beforeproc_single!(stomach, state, {
-            stomach.begin_mode(&mode_clone, state)?;
-          });
-          before_digest_closures.push(begin_mode_closure);
-        } else if options.bounded {
-          let bgroup_closure = beforeproc_single!(stomach, state, {
-            stomach.bgroup(state);
-          });
-          before_digest_closures.push(bgroup_closure);
-        }
-        if let Some(chosen_font) = options.font {
-          let merge_font_closure = beforeproc_single!(stomach, state, {
-            MergeFont!(&chosen_font, state);
-          });
-          before_digest_closures.push(merge_font_closure);
-        }
-        before_digest_closures.extend(options.before_digest);
-
-        let mut after_digest_closures: Vec<DigestionClosure> = Vec::new();
-        after_digest_closures.extend(options.after_digest);
-        if let Some(ref mode) = options.mode {
-          let mode_clone = mode.clone();
-          let end_mode_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
-            stomach.end_mode(&mode_clone, state)?;
-          });
-          after_digest_closures.extend(end_mode_closure);
-        } else if options.bounded {
-          let egroup_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
-            stomach.egroup(state)?;
-          });
-          after_digest_closures.extend(egroup_closure);
-        }
-
-        let constructor = Constructor {
-          cs: $cs,
-          paramlist: $paramlist,
-          replacement: $compiled_replacement,
-          before_digest: before_digest_closures,
-          after_digest: after_digest_closures,
-          before_construct: options.before_construct,
-          after_construct: options.after_construct,
-          nargs: options.nargs,
-          alias: options.alias,
-          reversion: options.reversion,
-          // sizer
-          capture_body: options.capture_body,
-          properties: options.properties,
-          // outer
-          // long
-          .. Constructor::default()
-        };
-        $state_arg.install_definition(constructor, scope);
-
-        if is_locked {
-          $state_arg.assign_value(&locked_key, true, None);
-        }
-      }};
-    }
-
-    macro_rules! DefConstructorWO(
-      ($proto:expr, $replacement:expr, $options:expr) => (DefConstructorWO!($proto, $replacement, $options, $state));
-      ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
-        // check_options("DefConstructor (prototype)", $constructor_options, %options);
-        let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-        let compiled_replacement;
-        compile_replacement!(compiled_replacement, $replacement);
-        DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
-      });
-      ($proto:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:block, $options:expr) =>
-        (DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, $options, $state));
-      ($proto:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:block, $options:expr, $state_arg:ident) => ({
-        let compiled_replacement : Option<ReplacementClosure> = Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body)));
-        let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-        DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
-      });
-      // pre-compiled CS with to-be-compiled replacement (see \begin{verbatim})
-      (cs [ $cs:expr ], $paramlist:expr, $replacement:expr, $options:expr) => (DefConstructorWO!(cs[$cs], $paramlist, $replacement, $options, $state));
-      (cs [ $cs:expr ], $paramlist:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
-        let cs = T_CS!($cs);
-        let compiled_replacement;
-        compile_replacement!(compiled_replacement, $replacement);
-        DefConstructorIWO!(cs, $paramlist, compiled_replacement, $options, $state_arg);
-      })
-    );
-
-    //=====================================================================
-    // Define a LaTeX environment
-    // Note that the body of the environment is treated is the 'body' parameter in the constructor.
-    macro_rules! DefEnvironmentI {
-      ($name_raw:expr, $paramlist:expr, $compiled_replacement:expr, $cc_copy:expr, $options:expr) => {
-        DefEnvironmentI!($name_raw, $paramlist, $compiled_replacement, $cc_copy, $options, $state)
-      };
-      ($name_raw:expr, $paramlist:expr, $compiled_replacement:expr, $cc_copy:expr, $options:expr, $state_arg:ident) => {{
-        use rtx_core::definition::constructor::Constructor;
-        use rtx_core::stomach::Stomach;
-        use rtx_core::whatsit::Whatsit;
-        let name = $name_raw.to_string();
-        let options = $options;
-        let begin_name = s!("\\begin{{{}}}", &name);
-        let end_name = s!("\\end{{{}}}", &name);
-        // This is for the common case where the environment is opened by \begin{env}
-        // let sizer = inferSizer($options.sizer, $options.reversion);
-        let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
-        match &options.mode {
-          Some(ref mode) => {
-            let bmode = mode.clone();
-            let mode_closure = Rc::new(move |stomach: &mut Stomach, state: &mut State| {
-              stomach.begin_mode(&bmode, state)?;
-              Ok(Vec::new())
-            });
-            before_digest_env.push(mode_closure);
-          },
-          None => {
-            let bgroup_closure = beforeproc_single!(stomach, state, {
-              stomach.bgroup(state);
-            });
-            before_digest_env.push(bgroup_closure);
-          },
-        };
-        if options.require_math {
-          let require_name = begin_name.clone();
-          let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(require_name, state) });
-          before_digest_env.push(require_math_closure);
-        }
-        if options.forbid_math {
-          let forbid_name = begin_name.clone();
-          let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(forbid_name, state) });
-          before_digest_env.push(forbid_math_closure);
-        }
-
-        let env_name = name.clone();
-        let current_environment_closure = beforeproc_single!(stomach, state, {
-          AssignValue!("current_environment", env_name.clone(), None, state);
-          let body = T_LETTER!(env_name.clone());
-          DefMacroI!(T_CS!("\\@currenvir"), None, body.clone(), state);
-        });
-        before_digest_env.push(current_environment_closure);
-
-        if let Some(chosen_font) = options.font {
-          let merge_font_closure = beforeproc_single!(stomach, state, {
-            MergeFont!(&chosen_font.clone(), state);
-          });
-          before_digest_env.push(merge_font_closure);
-        }
-        before_digest_env.extend(options.before_digest);
-
-        let push_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
-          state.push_frame();
-          Ok(())
-        });
-        let mut before_construct_with_frame: Vec<ConstructionClosure> = vec![push_frame_closure];
-        before_construct_with_frame.extend(options.before_construct);
-
-        let mut after_construct_with_frame: Vec<ConstructionClosure> = options.after_construct;
-
-        let pop_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
-          state.pop_frame()?;
-          Ok(())
-        });
-        after_construct_with_frame.push(pop_frame_closure);
-
-        let begin_name_constructor = Rc::new(Constructor {
-          cs: T_CS!(begin_name),
-          paramlist: $paramlist,
-          replacement: $compiled_replacement,
-          nargs: options.nargs,
-          before_digest: before_digest_env,
-          after_digest: options.after_digest_begin,
-          after_digest_body: options.after_digest_body,
-          before_construct: before_construct_with_frame,
-          // Curiously, it's the \begin whose afterConstruct gets called.
-          after_construct: after_construct_with_frame,
-          capture_body: true,
-          properties: options.properties.clone(),
-          // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
-          // (defined $sizer ? (sizer => $sizer) : ()),
-          // ), $options{scope});
-          reversion: options.reversion,
-          alias: options.alias,
-          .. Constructor::default()
-        });
-        $state_arg.install_definition(begin_name_constructor, options.scope.clone());
-
-        let mut after_digest_env = options.after_digest;
-        let unexpected_end_closure = Rc::new(|_stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-          // let env = LookupValue!("current_environment", $state_arg);
-          //     Error('unexpected', "\\end{$name}", $_[0],
-          //       "Can't close environment $name",
-          //       "Current are "
-          //         . join(', ', state->lookupStackedValues('current_environment')))
-          //       unless $env && $name eq $env;
-          //     return; },
-          Ok(Vec::new())
-        });
-        after_digest_env.push(unexpected_end_closure);
-
-        match options.mode {
-          Some(mode) => {
-            let emode = mode.clone();
-            let emode_closure = Rc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-              stomach.end_mode(&emode, state)?;
-              Ok(Vec::new())
-            });
-            after_digest_env.push(emode_closure);
-          },
-          None => {
-            let egroup_closure = Rc::new(|stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-              stomach.egroup(state)?;
-              Ok(Vec::new())
-            });
-            after_digest_env.push(egroup_closure);
-          },
-        };
-
-        let end_envname_constructor = Rc::new(Constructor {
-          cs: T_CS!(end_name),
-          replacement: None,
-          paramlist: None,
-          before_digest: options.before_digest_end,
-          after_digest: after_digest_env,
-          .. Constructor::default() // TODO ? fill in missing ones
-        });
-        $state_arg.install_definition(end_envname_constructor, options.scope.clone());
-
-        // For the uncommon case opened by \csname env\endcsname
-        let name_constructor = Rc::new(Constructor {
-          cs: T_CS!(s!("\\{}", &name)),
-          paramlist: $paramlist,
-          replacement: $cc_copy,
-          // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
-          //   ($options{forbidMath} ? (sub { forbidMath($name); })              : ()),
-          //   ($mode                ? (sub { $_[0]->beginMode($mode); })        : ()),
-          //   ($options{font}       ? (sub { MergeFont(%{ $options{font} }); }) : ()),
-          //   $options{beforeDigest}),
-          // afterDigest     => flatten($options{afterDigestBegin}),
-          // afterDigestBody => flatten($options{afterDigestBody}),
-          // beforeConstruct => flatten(sub { state->pushFrame; }, $options{beforeConstruct}),
-          // Curiously, it's the \begin whose afterConstruct gets called.
-          // afterConstruct => flatten($options{afterConstruct}, sub { state->popFrame; }),
-            nargs: options.nargs,
-            capture_body: true,
-            properties: options.properties.clone(),
-            // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
-            // (defined $sizer ? (sizer => $sizer) : ()),
-            // ), $options{scope});
-            .. Constructor::default()
-        });
-        $state_arg.install_definition(name_constructor, options.scope.clone());
-
-        let end_name_constructor = Rc::new(Constructor {
-          cs: T_CS!(s!("\\end{}", &name)),
-          paramlist: None,
-          replacement: Some(Rc::new(|document, whatsit, properties, state| {
-            let env = state.lookup_value("current_environment");
-            // Error('unexpected', "\\end{$name}", $_[0],
-            //   "Can't close environment $name",
-            //   "Current are "
-            //     . join(', ', state->lookupStackedValues('current_environment')))
-            //   unless $env && $name eq $env;
-            Ok(())
-          })),
-          // beforeDigest => flatten($options{beforeDigestEnd}),
-          // afterDigest  => flatten($options{afterDigest},
-          //   ($mode ? (sub { $_[0]->endMode($mode); }) : ())),
-          // ), $options{scope});
-          .. Constructor::default()
-        });
-        $state_arg.install_definition(end_name_constructor, options.scope);
-
-        if options.locked {
-          AssignValue!(&s!("\\begin{{{}}}:locked", &name), true, None, $state_arg);
-          AssignValue!(&s!("\\end{{{}}}:locked", &name), true, None, $state_arg);
-          AssignValue!(&s!("\\{}:locked", &name), true, None, $state_arg);
-          AssignValue!(&s!("\\end{}:locked", &name), true, None, $state_arg);
-        }
-      }};
-    }
-
-    macro_rules! TagWO {
-      ($tag:expr, $properties:expr) => {
-        TagWO!($tag, $properties, $state)
-      };
-      ($tag:expr, $properties:expr, $state_arg:ident) => {
-        install_tag($tag, $properties, $state_arg)
-      };
-    }
-    // sub DocType {
-    //   my ($rootelement, $pubid, $sysid, %namespaces) = @_;
-    //   let model = state->getModel;
-    //   $model->setDocType($rootelement, $pubid, $sysid);
-    //   foreach let prefix (keys %namespaces) {
-    //     $model->registerDocumentNamespace($prefix => $namespaces{$prefix}); }
-    //   return; }
-
-    macro_rules! DefEnvironmentWO (
-      ($proto_raw:expr, $replacement:expr, $options:expr) => (DefEnvironmentWO!($proto_raw, $replacement, $options, $state));
-      ($proto_raw:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
-      use rtx_core::util::text::*;
-      let mut proto = $proto_raw.to_string().trim_start().to_string();
-      let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace));
-
-      let compiled_replacement;
-      compile_replacement!(compiled_replacement, $replacement);
-      let cc_copy;
-      compile_replacement!(cc_copy, $replacement);
-
-      let options = $options;
-      DefEnvironmentI!(name, None, compiled_replacement, cc_copy, options, $state_arg);
-    }));
-
-    macro_rules! DefEnvironmentCWO (
-      ($proto_raw:expr, $compiled_replacement:expr, $options:expr) => (DefEnvironmentCWO!($proto_raw, $compiled_replacement, $options, $state));
-      ($proto_raw:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
-      use rtx_core::util::text::*;
-      let mut proto = $proto_raw.to_string().trim_start().to_string();
-      let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace));
-      // TODO: What do we do with param lists?
-      //let paramlist_str = proto.trim_start().to_string();
-      DefEnvironmentI!(name, None, $compiled_replacement, $compiled_replacement, $options, $state_arg);
-    }));
-
-    macro_rules! RelaxNGSchema {
-      ($name:expr) => {
-        RelaxNGSchema!($name, $state)
-      };
-      ($name:expr,$state_arg:ident) => {
-        select_relaxng_schema($name.to_string(), None, $state_arg)
-      };
-    }
-    macro_rules! RegisterNamespace(
-      ($prefix:expr, $namespace:expr) => (RegisterNamespace!($prefix, $namespace, $state));
-      ($prefix:expr, $namespace:expr,$state_arg:ident) =>
-        ($state_arg.model.register_namespace($prefix, Some($namespace.to_string())))
-    );
-    macro_rules! RegisterDocumentNamespace(
-      ($prefix:expr, $namespace:expr) => (RegisterDocumentNamespace!($prefix, $namespace, $state));
-      ($prefix:expr, $namespace:expr,$state_arg:ident) =>
-        ($state_arg.model.register_document_namespace($prefix, Some($namespace.to_string())))
-    );
-    macro_rules! RequireResource(
-      ($resource:expr) => (RequireResource!($resource, $state));
-      ($resource:expr,$state_arg:ident) =>
-        (require_resource(Resource{name: $resource.to_string(), ..Resource::default()}, $state_arg))
-    );
-
-    // sub DefMath {
-    //   my ($proto,
-    //     $presentation, %options) = @_;
-    //   CheckOptions("DefMath ($proto)", $math_options, %options);
-    //   DefMathI(parsePrototype($proto), $presentation, %options);
-    //   return; }
-    macro_rules! DefMathWO {
-      ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr) => {
-        DefMathWO!($cstext, $paramlist, $presentation, $options, $state)
-      };
-      ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr, $state_arg:ident) => {{
-        let mut options = $options;
-        let cs = T_CS!($cstext.to_string());
-        let presentation = $presentation.to_string();
-        // Can't defer parsing parameters since we need to know number of args!
-        // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
-        let paramlist: Option<Parameters> = $paramlist;
-        let nargs = match paramlist {
-          Some(plist) => plist.get_num_args(),
-          None => 0,
-        };
-        let csname = cs.get_string().to_string();
-        let mut name = options.alias.clone().unwrap_or_else(|| csname.clone());
-        if name.starts_with('\\') {
-          name = name.replacen('\\', "", 1)
-        }
-        if let Some(options_name) = options.name {
-          name = options_name;
-        }
-        let name_opt = if (name == presentation) || (name.is_empty()) || (options.meaning == Some(name.clone())) {
-          None
-        } else {
-          Some(name)
-        };
-        options.name = name_opt;
-        if nargs == 0 && options.role.is_none() {
-          options.role = Some(s!("UNKNOWN"))
-        }
-        if nargs > 0 && options.operator_role.is_none() {
-          options.operator_role = Some(s!("UNKNOWN"))
-        }
-
-        // Store some data for introspection
-        // defmath_introspective(cs, $paramlist, presentation, %options);
-
-        // If single character, handle with a rewrite rule
-        if csname.len() == 1 {
-          // WAS: defmath_rewrite!($cs, options);
-          // No, do NOT make mathactive; screws up things like babel french, or... ?
-          // EXPERIMENT: store XMTok attributes for if this char ends up a Math Token.
-          // But only some DefMath options make sense!
-          // let rw_options = { name => 1, meaning => 1, omcd => 1, role => 1, mathstyle => 1, stretchy => 1 }; # (well, mathstyle?)
-          // CheckOptions("DefMath reimplemented as DefRewrite ($csname)", $rw_options, %options);
-          let mut math_attr_hash: HashMap<String, String> = HashMap::new();
-          transfer_opt_default!(name, options, math_attr_hash);
-          transfer_opt_default!(meaning, options, math_attr_hash);
-          transfer_opt_default!(omcd, options, math_attr_hash);
-          transfer_opt_default!(role, options, math_attr_hash);
-          transfer_opt_default!(mathstyle, options, math_attr_hash);
-          transfer_default!(stretchy, options, math_attr_hash);
-          $state_arg.assign_value(&s!("math_token_attributes_{}", csname), math_attr_hash, Some(Scope::Global));
-        }
-        // TODO:
-        // // If the presentation is complex, and involves arguments,
-        // // we will create an XMDual to separate content & presentation.
-        // elsif ((ref presentation eq "CODE")
-        //   || ((ref presentation) && grep { $_->equals(T_PARAM) } presentation->unlist)
-        //   || (!(ref presentation) && (presentation =~ /\//\d|\\./))
-        //   || ((ref presentation) && (grep { $_->isExecutable } presentation->unlist))) {
-        //   defmath_dual($cs, $paramlist, presentation, %options); }
-
-        // EXPERIMENT: Introduce an intermediate case for simple symbols
-        // Define a primitive that will create a Box with the appropriate set of XMTok attributes.
-        if nargs == 0 {
-          // && !grep { !$$simpletoken_options{$_} } keys %options) {
-          defmath_prim!(cs, paramlist, $presentation.to_string(), options, $state_arg);
-        }
-
-        // else {
-        //   defmath_cons($cs, $paramlist, $presentation, %options); }
-        // AssignValue($csname . ":locked" => 1) if $options{locked};
-      }};
-    }
-
-    macro_rules! defmath_prim {
-      ($cs:expr, $_paramlist:expr, $presentation:expr, $options:expr, $state_arg:ident) => {{
-        let mut prim_options = $options;
-        prim_options.locked = false;
-        prim_options.font = None;
-        let scope = prim_options.scope.clone();
-        let reqfont = prim_options.font.clone().unwrap_or_else(Font::default);
-        $state_arg.install_definition(
-          MathPrimitive {
-            cs: $cs.clone(),
-            paramlist: None, // never any parameters, this is intentional
-            replacement: Some(Rc::new(move |stomach, args, state| {
-              // let locator    = $stomach->getGullet->getLocator;
-              let mut properties = HashMap::new(); // TODO: sync with perl master here
-              properties.insert(s!("mode"), Stored::String(String::from("math")));
-              // TODO: Improve font precision here, the defaults may not belong in this lookup
-              let font = state.lookup_font().unwrap_or_else(|| Rc::new(Font::default())).merge(&reqfont).specialize(&$presentation);
-              let font = Rc::new(font);
-              // foreach my $key (keys %properties) {
-              //   my $value = $properties{$key};
-              //   if (ref $value eq 'CODE') {
-              //     $properties{$key} = &$value(); } }
-              // info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
-              Ok(vec![Digested::TBox(Rc::new(
-                // TODO: Can we reduce boilerplate?
-                Tbox {
-                  text: $presentation,
-                  tokens: Tokens!($cs.clone()),
-                  font,
-                  properties,
-                  ..Tbox::default()
-                },
-              ))])
-            })),
-            options: prim_options,
-            ..MathPrimitive::default()
-          },
-          scope,
-        );
-      }};
-    }
-
-    macro_rules! requireMath {
-                        ($cs_name:expr, $state_arg:ident) => (
-                          if !LookupBool!("IN_MATH", $state_arg) {
-                            warn!(target: "unexpected", "{} should only appear in math mode",$cs_name);
-                          }
-                        )
-                      }
-    macro_rules! forbidMath {
-                        ($cs_name:expr) => (forbidMath!($cs_name, $state));
-                        ($cs_name:expr, $state_arg:ident) => (
-                          if LookupBool!("IN_MATH", $state_arg) {
-                            warn!(target: "unexpected", "{} should not appear in math mode",$cs_name);
-                          }
-                        )
-                      }
-
-    //======================================================================
-    // Counters
-    //======================================================================
-    // This is modelled on LaTeX's counter mechanisms, but since it also
-    // provides support for ID's, even where there is no visible reference number,
-    // it is defined in genera.
-    // These id's should be both unique, and parallel the visible reference numbers
-    // (as much as possible).  Also, for consistency, we add id's to unnumbered
-    // document elements (eg from \section*); this requires an additional counter
-    // (eg. UNsection) and  mechanisms to track it.
-
-    // Defines a new counter named $ctr.
-    // If $within is defined, $ctr will be reset whenever $within is incremented.
-    // Keywords:
-    //  idprefix : specifies a prefix to be used in sting ID's for document structure elements
-    //           counted by this counter.  Ie. subsection 3 in section 2 might get: id="S2.SS3"
-    //  idwithin : specifies that the ID is composed from $idwithin's ID,, even though
-    //           the counter isn't numbered within it.  (mainly to avoid duplicated ids)
-    //   nested : a list of counters that correspond to scopes which are "inside" this one.
-    //           Whenever any definitions scoped to this counter are deactivated,
-    //           the inner counter's scopes are also deactivated.
-    //           NOTE: I'm not sure this is even a sensible implementation,
-    //           or why inner should be different than the counters reset by incrementing this counter.
-
-    macro_rules! NewCounterWO {
-      ($ctr:expr, $within:expr, None) => {
-        new_counter($ctr, $within, None, $state)?
-      };
-      ($ctr:expr, $within:expr, None, $state_arg:ident) => {
-        new_counter($ctr, $within, None, $state_arg)?
-      };
-      ($ctr:expr, $within:expr, Some($opts:expr)) => {
-        new_counter($ctr, $within, Some($opts), $state)?
-      };
-      ($ctr:expr, $within:expr, Some($opts:expr), $state_arg:ident) => {
-        new_counter($ctr, $within, Some($opts), $state_arg)?
-      };
-    }
-
-    macro_rules! CounterValue {
-      ($ctr:expr) => {
-        counter_value($ctr, $state)
-      };
-      ($ctr:expr, $state_arg:ident) => {
-        counter_value($ctr, $state_arg)
-      };
-    }
-
-    macro_rules! SetCounter {
-                        ($ctr:expr, $value:expr, None) => {
-                          AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
-                          DefMacroI!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
-                                      scope => Some(Scope::Global)
-                          );
-                        };
-                        ($ctr:expr, $value:expr, $gullet:ident) => {
-                          AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
-                          AfterAssignment!();
-                          DefMacroI!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
-                                      scope => Some(Scope::Global)
-                          );
+                          ($stuff:expr) => {{
+                            digest_text($stuff, $state)
+                            match $outer_stomach.as_mut() {
+                              Some(st) => (*st).digest_text($stuff, $state_arg),
+                              None => state_stomach.borrow_mut().digest_text($stuff, $state_arg),
+                            }
+                          }};
+                          ($stuff:expr, $stomach:ident) => {{
+                            DigestText!($stuff, $stomach, $state)
+                          }};
+                          ($stuff:expr, $stomach:ident, $state_arg:ident) => {{
+                            digest_text($stuff, $stomach, $state_arg)
+                          }};
                         }
-                      }
-
-    macro_rules! AddToCounter {
-      ($ctr:expr, $value:expr, $gullet:ident) => {
-        AddToCounter!($ctr, $value, $gullet, $state)
-      };
-      ($ctr:expr, $value:expr, $gullet:ident, $state_arg:ident) => {
-        add_to_counter($ctr, $value, $gullet, $state_arg)
-      };
-    }
-
-    macro_rules! StepCounter {
-      ($ctr:expr, $noreset:expr, $gullet:ident) => {
-        StepCounter!($ctr, $noreset, $gullet, $state)
-      };
-      ($ctr:expr, $noreset:expr, $gullet:ident, $state_arg:ident) => {
-        step_counter($ctr, $noreset, $gullet, $state_arg)
-      };
-    }
-
-    macro_rules! RefStepCounter {
-      ($ctr:expr, $noreset:expr, $stomach:ident) => {
-        RefStepCounter!($ctr, $noreset, $stomach, $state)
-      };
-      ($ctr:expr, $noreset:expr, $stomach:ident, $state_arg:ident) => {
-        ref_step_counter($ctr, $noreset, $stomach, $state_arg)
-      };
-    }
-
-    macro_rules! RefStepID {
-      ($ctr:expr, $stomach:ident) => {
-        RefStepID!($ctr, $stomach, $state)
-      };
-      ($ctr:expr, $stomach:ident, $state_arg:ident) => {
-        ref_step_id($ctr, $stomach, $state_arg)
-      };
-    }
-
-    macro_rules! ResetCounter {
-      ($ctr:expr) => {
-        ResetCounter!($ctr, $gullet, $state)
-      };
-      ($ctr:expr, $state_arg: ident) => {
-        reset_counter($ctr, $state_arg)
-      };
-    }
-
-    /// Return $tokens with all tokens expanded
-    macro_rules! Expand {
-      ($tokens:expr, $gullet:ident) => {
-        Expand!($tokens, $gullet, $state)
-      };
-      ($tokens:expr, $gullet:ident, $state_arg:ident) => {
-        do_expand($tokens, $gullet, $state_arg)?
-      };
-    }
-
-    /// Invocation(<list of Token>); builds a representation of a command sequence invoked on its
-    /// arguments
-    macro_rules! Invocation {
-      ($csname:literal, $args:expr, $gullet:expr) => {
-        Invocation!(T_CS!($csname), $args, $gullet, $state)
-      };
-      ($csname:literal, $args:expr, $gullet:expr, $state_arg:ident) => {
-        Invocation!(T_CS!($csname), $args, $gullet, $state_arg)
-      };
-      ($token:expr, $args:expr, $gullet:expr) => {
-        Invocation!($token, $args, $gullet, $state)
-      };
-      ($token:expr, $args:expr, $gullet:expr, $state_arg:ident) => {
-        build_invocation($token, $args.into_iter().map(|arg| arg.into()).collect(), $gullet, $state_arg)
-      };
-    }
-
-    macro_rules! DefLigature {
-      ($regex:expr, $replacement:expr, fontTest => sub[$font:ident] $body:block) => {
-        DefLigature!($regex, $replacement, fontTest => sub[$font]{$body}, $state)
-      };
-      ($regex:expr, $replacement:expr, fontTest => sub[$font:ident] $body:block, $state_arg:ident) => {
-        let regex_compiled = Regex::new($regex).unwrap();
-        let test_closure: Option<FontTestClosure> = Some(Rc::new(move |$font| $body));
-        $state_arg.unshift_value(
-          "TEXT_LIGATURES",
-          vec![Ligature {
-            regex: $regex.to_string(),
-            code: Rc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string()),
-            font_test: test_closure,
-          }],
-        );
-      };
-      ($regex:expr, $replacement:expr) => {
-        DefLigature!($regex, $replacement, $state)
-      };
-      ($regex:expr, $replacement:expr, $state_arg:ident) => {
-        let regex_compiled = Regex::new($regex).unwrap();
-        $state_arg.unshift_value(
-          "TEXT_LIGATURES",
-          vec![Ligature {
-            regex: $regex.to_string(),
-            code: Rc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string()),
-            font_test: None,
-          }],
-        );
-      };
-    }
-
-    // Defines an accent command using a combining char that follows the
-    // 1st char of the argument.  In cases where there is no argument, $standalonechar is used.
-    macro_rules! DefAccent {
-                        ($accent:expr, $combiningchar:expr, $standalonechar:expr) => {
-                          let mut empty_opts : HashMap<String, Stored> = HashMap::new();
-                          DefAccent!($accent, $combiningchar, $standalonechar, empty_opts, $state);
-                        };
-                        ($accent:expr, $combiningchar:expr, $standalonechar:expr, below => true) =>
-                          (DefAccent!($accent, $combiningchar, $standalonechar, map!("below"=>Stored::Bool(true)), $state));
-                        ($accent:expr, $combiningchar:expr, $standalonechar:expr, $options:expr) =>
-                          (DefAccent!($accent, $combiningchar, $standalonechar, $options, $state));
-                        ($accent:expr, $combiningchar:expr, $standalonechar:expr, $options:expr, $state_arg: ident) => {
-                          if $options.get("below").is_none() {
-                            $options.entry(String::from("above")).or_insert(Stored::Bool(true));
-                          }
-                          // Used for converting a char used as an above-accent to a combining char (See \accent)
-                          if $options.get("above").is_some() {
-                            $state_arg.assign_mapping("accent_combiner_above", $standalonechar, Some($combiningchar));
-                          } else {
-                            $state_arg.assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
-                          }
-                          DefPrimitive!(&format!("{}{{}}",$accent), sub[stomach, letter, inner_state] {
-                            let invoked = Invocation!(T_CS!($accent), letter.clone(), stomach.get_gullet_mut(), inner_state)?;
-                            // TODO: check if letter.to_string has artefacts
-                            crate::package::pool::tex_accents::apply_accent(
-                              stomach, &letter[0].to_string(), $combiningchar, $standalonechar, Some(invoked), inner_state)?;
-                            Ok(vec![])
-                          }, mode => Some(String::from("text")));
-                        }
-                      }
 
     macro_rules! RawTeX {
-      ($text:expr) => (RawTeX!($text, $state));
+      ($text:expr) => {
+        RawTeX!($text, $state)
+      };
       ($text:expr, $state_arg:ident) => {{
-         match $outer_stomach.as_mut() {
+        match $outer_stomach.as_mut() {
           Some(st) => (*st).raw_tex($text, $state_arg)?,
-          None => state_stomach.borrow_mut().raw_tex($text, $state_arg)?
+          None => state_stomach.borrow_mut().raw_tex($text, $state_arg)?,
         }
       }};
     }
+  };
+}
+
+//======================================================================
+// Defining new Control-sequence Parameter types.
+//======================================================================
+#[macro_export]
+macro_rules! DefParameterTypeWO {
+  ($name:expr, $param:expr) => {
+    state!().assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter($param)))
+  };
+  ($name:expr, $param:expr, $state_arg:ident) => {
+    $state_arg.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter($param)))
+  };
+}
+
+#[macro_export]
+macro_rules! LoadPool {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    LoadPool!($name, st)
+  }};
+  ($name:expr, $state_arg:ident) => {{
+    input_definitions(
+      $name,
+      InputDefinitionOptions {
+        extension: Some(String::from("pool")),
+        with_stomach: match outer_stomach!().as_mut() {
+          None => None,
+          Some(st) => Some(st),
+        },
+        ..InputDefinitionOptions::default()
+      },
+      $state_arg,
+    )?
+  }};
+}
+
+/// Loader shorthand for pool dependencies
+#[macro_export]
+macro_rules! InnerPool {
+  ($name:ident) => {{
+    let st: &mut State = state!();
+    InnerPool!($name, st, outer_stomach!())
+  }};
+  ($name:ident, $state_arg:ident) => {
+    InnerPool!($name, $state_arg, outer_stomach!())
+  };
+  ($name:ident, $state_arg:ident, $stomach:expr) => {{
+    match $stomach.as_mut() {
+      None => pool::$name::load_definitions($state_arg, None)?,
+      Some(st) => pool::$name::load_definitions($state_arg, Some(st))?,
+    }
+  }};
+}
+
+#[macro_export]
+macro_rules! RequirePackage {
+  ($package:expr, $options:expr) => {{
+    let st: &mut State = state!();
+    RequirePackage!($package, $options, st)
+  }};
+  ($package:expr, $options:expr, $state_arg:ident) => {
+    require_package($package, $options, $state_arg)
+  };
+}
+macro_rules! LoadClass {
+  ($class:expr, $options:expr, $after:expr) => {
+    load_class($class, $options, $after, state!())
+  };
+  ($class:expr, $options:expr, $after:expr, $state_arg:ident) => {
+    load_class($class, $options, $after, $state_arg)
+  };
+}
+
+#[macro_export]
+macro_rules! DeclareFontMap {
+  ($name:expr, $map:expr, $family:expr, $state_arg: ident) => {{
+    let mapname = s!("{}_{}_fontmap", $name, $family);
+    let map: Vec<Option<char>> = $map;
+    $state_arg.assign_value(&mapname, map, Some(Scope::Global));
+  }};
+  ($name:expr, $map:expr, $state_arg: ident) => {{
+    let mapname = s!("{}_fontmap", $name);
+    let map: Vec<Option<char>> = $map;
+    $state_arg.assign_value(&mapname, map, Some(Scope::Global));
+  }};
+  ($name:expr, $map:expr, $family:expr) => {{
+    let st: &mut State = state!();
+    DeclareFontMap!($name, $map, $family, st)
+  }};
+  ($name:expr, $map:expr) => {{
+    let st: &mut State = state!();
+    DeclareFontMap!($name, $map, st)
+  }};
+}
+
+#[macro_export]
+macro_rules! DefMacroIWO {
+  // closure stub
+  ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) => {{
+    let st : &mut State = state!();
+    DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, $options, st)
+  }};
+  // with explicit state
+  ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {{
+    let expansion_closure: Option<ExpansionClosure> = Some(Rc::new(move |$gullet, $args, $inner_state| $body));
+    def_macro($cs, $paramlist, expansion_closure, $options, $state_arg);
+  }};
+  // precompiled
+  ($cs:expr, $paramlist:expr, $expansion:expr, $options:expr) => {{
+    def_macro($cs, $paramlist, $expansion, $options, state!())
+  }};
+  // with explicit state
+  ($cs:expr, $paramlist:expr, $expansion:expr, $options:expr, $state_arg:ident) => {{
+    def_macro($cs, $paramlist, $expansion, $options, $state_arg)
+  }};
+}
+
+#[macro_export]
+macro_rules! DefMacroWO {
+  // Rust closure expansion form
+  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {{
+    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
+    let expansion_closure : Option<ExpansionClosure> =
+      Some(Rc::new(move |$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| $body));
+    // TODO: Also pass in options
+    def_macro(cs, paramlist, expansion_closure, $options, $state_arg);
+  }};
+  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) => ({
+    let st : &mut State = state!();
+    DefMacroWO!($proto, sub [ $gullet, $args, $inner_state ] $body, $options, st)
+  });
+  // String expansion forms
+  ($proto:expr, $expansion:expr, $options:expr) => {{
+    let st : &mut State = state!();
+    DefMacroWO!($proto, $expansion, $options, st);
+  }};
+  ($proto:expr, $expansion:expr, $options:expr, $state_arg:ident) => ({
+    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
+    let expansion;
+    compile_expansion!(expansion, $expansion);
+    def_macro(cs, paramlist, expansion, $options, $state_arg);
+  });
+}
+
+#[macro_export]
+macro_rules! DefConditional(
+  // test is always a rust closure
+  ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block) => {{
+    let st : &mut State = state!();
+    DefConditional!($proto, sub[$gullet, $args, $inner_state] $body, st);
+  }};
+  ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
+    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
+    DefConditionalI!(cs, paramlist, sub[$gullet, $args, $inner_state] $body, $state_arg)
+  });
+  // or None
+  ($proto:expr) => {{
+    let st : &mut State = state!();
+    DefConditional!($proto, None, st)
+  }};
+  ($proto:expr, None) => ({
+    let st : &mut State = state!();
+    DefConditional!($proto, None, st)
+  });
+  ($proto:expr, None, $state_arg:ident) => ({
+    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
+    DefConditionalI!(cs, paramlist, None, $state_arg)
+  });
+);
+
+#[macro_export]
+macro_rules! DefConditionalI(
+  // test is always a rust closure
+  ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block) => {{
+    let st : &mut State = state!();
+    DefConditionalI!($cs, $paramlist, $gullet, $args, $inner_state, $body, st)
+  }};
+  ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
+    let test : ConditionalClosure = Rc::new(move |$gullet, $args, $inner_state| {$body});
+    def_conditional($cs, $paramlist, Some(test), ConditionalOptions::default(), $state_arg);
+  });
+  // or None
+  ($cs:expr, $paramlist:expr, None) => {{
+    let st : &mut State = state!();
+    DefConditionalI!($cs, $paramlist, None, st)
+  }};
+  ($cs:expr, $paramlist:expr, None, $state_arg:ident) => ({
+    def_conditional($cs, $paramlist, None, ConditionalOptions::default(), $state_arg);
+  });
+);
+
+// sub IfCondition {
+//   my ($if, @args) = @_;
+//   my $gullet = $STATE->getStomach->getGullet;
+//   $if = coerceCS($if);
+//   my ($defn, $test);
+//   if (($defn = $STATE->lookupDefinition($if))
+//     && (($$defn{conditional_type} || '') eq 'if') && ($test = $defn->getTest)) {
+//     return &$test($gullet, @args); }
+//   elsif (XEquals($if, T_CS('\iftrue'))) {
+//     return 1; }
+//   elsif (XEquals($if, T_CS('\iffalse'))) {
+//     return 0; }
+//   else {
+//     Error('expected', 'conditional', $gullet,
+//       "Expected a conditional, got '" . ToString($if) . "'");
+//     return; } }
+
+// # Used only for regular \newif type conditions
+// sub SetCondition {
+//   my ($if, $value, $scope) = @_;
+//   my ($defn, $test);
+//   # We'll accept any conditional \ifxxx, providing it takes no arguments
+//   if (($defn = $STATE->lookupDefinition($if)) && (($$defn{conditional_type} || '') eq 'if')
+//     && !$defn->getParameters) {
+//     Let($if, ($value ? T_CS('\iftrue') : T_CS('\iffalse')), $scope) }
+//   else {
+//     Error('expected', 'conditional', $STATE->getStomach,
+//       "Expected a conditional defined by \\newif, got '" . ToString($if) . "'"); }
+//   return; }
+
+///======================================================================
+/// Define a primitive control sequence.
+///======================================================================
+/// Primitives are executed in the Stomach.
+/// The $replacement should be a sub which returns nothing, or a list of `Box`'s or `Whatsit`'s.
+/// The options are:
+///    isPrefix  : 1 for things like \global, \long, etc.
+///    registerType : for parameters (but needs to be worked into `DefParameter`, below).
+
+#[macro_export]
+macro_rules! DefPrimitiveII {
+  ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block) => {{
+    let st : &mut State = state!();
+    DefPrimitiveII!($cs, $paramlist, sub[$stomach, $args, $inner_state] $body, st)
+  }};
+  ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block, $state_arg:ident) => {
+    DefPrimitiveII!($cs, $paramlist, move |$stomach, $args, $inner_state| $body, PrimitiveOptions::default(), $state_arg)
+  };
+  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => {{
+    let st : &mut State = state!();
+    DefPrimitiveII!($cs, $paramlist, $compiled_replacement, $options, st)
+  }};
+  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
+    let options = $options;
+    let options_locked = options.locked;
+    let scope = options.scope.clone();
+    let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
+
+    if options.require_math {
+      let cs_name = $cs.get_cs_name().to_owned();
+      let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(cs_name, state) });
+      before_digest_env.push(require_math_closure);
+    }
+
+    if options.forbid_math {
+      let cs_name = $cs.get_cs_name().to_owned();
+      let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(cs_name, state) });
+      before_digest_env.push(forbid_math_closure);
+    }
+    if let Some(ref mode) = options.mode {
+      let mode_clone = mode.clone();
+      let begin_mode_closure = beforeproc_single!(stomach, state, {
+        stomach.begin_mode(&mode_clone, state)?;
+      });
+      before_digest_env.push(begin_mode_closure);
+    } else if options.bounded {
+      let bgroup_closure = beforeproc_single!(stomach, state, {
+        stomach.bgroup(state);
+      });
+      before_digest_env.push(bgroup_closure);
+    }
+    if let Some(chosen_font) = options.font {
+      let merge_font_closure = beforeproc_single!(stomach, state, {
+        MergeFont!(&chosen_font, state);
+      });
+      before_digest_env.push(merge_font_closure);
+    }
+    before_digest_env.extend(options.before_digest);
+
+    let mut after_digest_env: Vec<DigestionClosure> = Vec::new();
+    after_digest_env.extend(options.after_digest);
+    if let Some(ref mode) = options.mode {
+      let mode_clone = mode.clone();
+      let end_mode_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
+        stomach.end_mode(&mode_clone, state)?;
+      });
+      after_digest_env.extend(end_mode_closure);
+    } else if options.bounded {
+      let egroup_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
+        stomach.egroup(state)?;
+      });
+      after_digest_env.extend(egroup_closure);
+    }
+
+    $state_arg.install_definition(
+      Primitive {
+        cs: $cs.clone(),
+        paramlist: $paramlist,
+        replacement: Some(Rc::new($compiled_replacement)),
+        options: PrimitiveOptions {
+          before_digest: before_digest_env,
+          after_digest: after_digest_env,
+          ..PrimitiveOptions::default()
+        },
+      },
+      scope,
+    );
+    if options_locked {
+      AssignValue!(&s!("{}:locked", $cs.get_cs_name()), true, None, $state_arg);
+    }
+  }};
+}
+
+#[macro_export]
+macro_rules! DefPrimitiveIWO(
+  ($proto:expr, $compiled_replacement:expr, $options:expr) => ({
+    let st : &mut State = state!();
+    DefPrimitiveIWO!($proto, $compiled_replacement, $options, st)
+  });
+  ($proto:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
+    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
+    DefPrimitiveII!(cs, paramlist, $compiled_replacement, $options, $state_arg);
+  })
+);
+
+#[macro_export]
+macro_rules! DefRegisterWO {
+  ($proto:expr, $value:expr, $options:expr) => {{
+    let st: &mut State = state!();
+    DefRegisterWO!($proto, $value, $options, st)
+  }};
+  ($proto:expr, $value:expr, $options:expr, $state_arg:ident) => {{
+    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
+    DefRegisterI!(cs, paramlist, $value, $options, $state_arg);
+  }};
+}
+
+#[macro_export]
+macro_rules! DefRegisterI {
+  ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {{
+    let st: &mut State = state!();
+    DefRegisterI!($cs, $paramlist, $value, $options, st)
+  }};
+  ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => {
+    def_register($cs, $paramlist, $value, $options, $state_arg)
+  };
+}
+
+// sub LookupRegister {
+//   my ($cs, @parameters) = @_;
+//   my $defn;
+//   $cs = T_CS($cs) unless ref $cs;
+//   if (($defn = $STATE->lookupDefinition($cs)) && $defn->isRegister) {
+//     return $defn->valueOf(@parameters); }
+//   else {
+//     Warn('expected', 'register', $STATE->getStomach,
+//       "The control sequence " . ToString($cs) . " is not a register"); }
+//   return; }
+
+// sub LookupDimension {
+//   my ($cs) = @_;
+//   my $defn;
+//   $cs = T_CS($cs) unless ref $cs;
+//   if (my $defn = $STATE->lookupDefinition($cs)) {
+//     if ($defn->isRegister) {    # Easy (and proper) case.
+//       return $defn->valueOf; }
+//     else {
+//       $STATE->getStomach->getGullet->readingFromMouth(LaTeXML::Core::Mouth->new(), sub { # start with empty mouth
+//           my ($gullet) = @_;
+//           $gullet->unread($cs);    # but put back tokens to be read
+//           return $gullet->readDimension; }); } }
+//   else {
+//     Warn('expected', 'register', $STATE->getStomach,
+//       "The control sequence " . ToString($cs) . " is not a register"); }
+//   return Dimension(0); }
+
+// sub AssignRegister {
+//   my ($cs, $value, @parameters) = @_;
+//   my $defn;
+//   $cs = T_CS($cs) unless ref $cs;
+//   if (($defn = $STATE->lookupDefinition($cs)) && $defn->isRegister) {
+//     return $defn->setValue($value, @parameters); }
+//   else {
+//     Warn('expected', 'register', $STATE->getStomach,
+//       "The control sequence " . ToString($cs) . " is not a register");
+//     return; } }
+
+//======================================================================
+// Define a constructor control sequence.
+//======================================================================
+// The arguments, if any, will be collected and processed in the Stomach, and
+// a Whatsit will be constructed.
+// It is the Whatsit that will be processed in the Document: It is responsible
+// for constructing XML Nodes.  The $replacement should be a sub which inserts nodes,
+// or a string specifying a constructor pattern (See somewhere).
+//
+// Options are:
+//   bounded         : any side effects of before/after daemans are bounded; they are
+//                     automatically enclosed by bgroup/egroup pair.
+//   mode            : causes a switch into the given mode during the Whatsit building in the stomach.
+//   reversion       : a string representing the preferred TeX form of the invocation.
+//   beforeDigest    : code to be executed (in the stomach) before parsing & constructing the Whatsit.
+//                     Can be used for changing modes, beginning groups, etc.
+//   afterDigest     : code to be executed (in the stomach) after parsing & constructing the Whatsit.
+//                     useful for setting Whatsit properties,
+//   properties      : a hashref listing default values of properties to assign to the Whatsit.
+//                     These properties can be used in the constructor.
+
+#[macro_export]
+macro_rules! DefConstructorIWO {
+  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => {{
+    let st: &mut State = state!();
+    DefConstructorIWO!($cs, $paramlist, $compiled_replacement, $options, st)
+  }};
+  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
+    use rtx_core::definition::constructor::Constructor;
+    let options = $options;
+    // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
+    //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
+    let scope = options.scope.clone();
+    let is_locked = options.locked.clone();
+    let locked_key = if is_locked { s!("{}:locked", $cs.get_cs_name()) } else { String::new() };
+
+    let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
+
+    if options.require_math {
+      let cs_name = $cs.get_cs_name().to_owned();
+      let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(cs_name, state) });
+      before_digest_closures.push(require_math_closure);
+    }
+    if options.forbid_math {
+      let cs_name = $cs.get_cs_name().to_owned();
+      let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(cs_name, state) });
+      before_digest_closures.push(forbid_math_closure);
+    }
+    if let Some(ref mode) = options.mode {
+      let mode_clone = mode.clone();
+      let begin_mode_closure = beforeproc_single!(stomach, state, {
+        stomach.begin_mode(&mode_clone, state)?;
+      });
+      before_digest_closures.push(begin_mode_closure);
+    } else if options.bounded {
+      let bgroup_closure = beforeproc_single!(stomach, state, {
+        stomach.bgroup(state);
+      });
+      before_digest_closures.push(bgroup_closure);
+    }
+    if let Some(chosen_font) = options.font {
+      let merge_font_closure = beforeproc_single!(stomach, state, {
+        MergeFont!(&chosen_font, state);
+      });
+      before_digest_closures.push(merge_font_closure);
+    }
+    before_digest_closures.extend(options.before_digest);
+
+    let mut after_digest_closures: Vec<DigestionClosure> = Vec::new();
+    after_digest_closures.extend(options.after_digest);
+    if let Some(ref mode) = options.mode {
+      let mode_clone = mode.clone();
+      let end_mode_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
+        stomach.end_mode(&mode_clone, state)?;
+      });
+      after_digest_closures.extend(end_mode_closure);
+    } else if options.bounded {
+      let egroup_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
+        stomach.egroup(state)?;
+      });
+      after_digest_closures.extend(egroup_closure);
+    }
+
+    let constructor = Constructor {
+      cs: $cs,
+      paramlist: $paramlist,
+      replacement: $compiled_replacement,
+      before_digest: before_digest_closures,
+      after_digest: after_digest_closures,
+      before_construct: options.before_construct,
+      after_construct: options.after_construct,
+      nargs: options.nargs,
+      alias: options.alias,
+      reversion: options.reversion,
+      // sizer
+      capture_body: options.capture_body,
+      properties: options.properties,
+      // outer
+      // long
+      ..Constructor::default()
+    };
+    $state_arg.install_definition(constructor, scope);
+
+    if is_locked {
+      $state_arg.assign_value(&locked_key, true, None);
+    }
+  }};
+}
+
+#[macro_export]
+macro_rules! DefConstructorWO(
+  ($proto:expr, $replacement:expr, $options:expr) => ({
+    let st : &mut State = state!();
+    DefConstructorWO!($proto, $replacement, $options, st)
+  });
+  ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
+    // check_options("DefConstructor (prototype)", $constructor_options, %options);
+    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
+    let compiled_replacement;
+    compile_replacement!(compiled_replacement, $replacement);
+    DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
+  });
+  ($proto:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:block, $options:expr) => {{
+    let st : &mut State = state!();
+    DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, $options, st)
+  }};
+
+  ($proto:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:block, $options:expr, $state_arg:ident) => ({
+    let compiled_replacement : Option<ReplacementClosure> = Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body)));
+    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
+    DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
+  });
+  // pre-compiled CS with to-be-compiled replacement (see \begin{verbatim})
+  (cs [ $cs:expr ], $paramlist:expr, $replacement:expr, $options:expr) => {{
+    let st : &mut State = state!();
+    DefConstructorWO!(cs[$cs], $paramlist, $replacement, $options, st)
+  }};
+  (cs [ $cs:expr ], $paramlist:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
+    let cs = T_CS!($cs);
+    let compiled_replacement;
+    compile_replacement!(compiled_replacement, $replacement);
+    DefConstructorIWO!(cs, $paramlist, compiled_replacement, $options, $state_arg);
+  })
+);
+
+//=====================================================================
+// Define a LaTeX environment
+// Note that the body of the environment is treated is the 'body' parameter in the constructor.
+#[macro_export]
+macro_rules! DefEnvironmentI {
+  ($name_raw:expr, $paramlist:expr, $compiled_replacement:expr, $cc_copy:expr, $options:expr) => {{
+    let st: &mut State = state!();
+    DefEnvironmentI!($name_raw, $paramlist, $compiled_replacement, $cc_copy, $options, st)
+  }};
+  ($name_raw:expr, $paramlist:expr, $compiled_replacement:expr, $cc_copy:expr, $options:expr, $state_arg:ident) => {{
+    use rtx_core::definition::constructor::Constructor;
+    use rtx_core::stomach::Stomach;
+    use rtx_core::whatsit::Whatsit;
+    let name = $name_raw.to_string();
+    let options = $options;
+    let begin_name = s!("\\begin{{{}}}", &name);
+    let end_name = s!("\\end{{{}}}", &name);
+    // This is for the common case where the environment is opened by \begin{env}
+    // let sizer = inferSizer($options.sizer, $options.reversion);
+    let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
+    match &options.mode {
+      Some(ref mode) => {
+        let bmode = mode.clone();
+        let mode_closure = Rc::new(move |stomach: &mut Stomach, state: &mut State| {
+          stomach.begin_mode(&bmode, state)?;
+          Ok(Vec::new())
+        });
+        before_digest_env.push(mode_closure);
+      },
+      None => {
+        let bgroup_closure = beforeproc_single!(stomach, state, {
+          stomach.bgroup(state);
+        });
+        before_digest_env.push(bgroup_closure);
+      },
+    };
+    if options.require_math {
+      let require_name = begin_name.clone();
+      let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(require_name, state) });
+      before_digest_env.push(require_math_closure);
+    }
+    if options.forbid_math {
+      let forbid_name = begin_name.clone();
+      let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(forbid_name, state) });
+      before_digest_env.push(forbid_math_closure);
+    }
+
+    let env_name = name.clone();
+    let current_environment_closure = beforeproc_single!(stomach, state, {
+      AssignValue!("current_environment", env_name.clone(), None, state);
+      let body = T_LETTER!(env_name.clone());
+      DefMacroI!(T_CS!("\\@currenvir"), None, body.clone(), state);
+    });
+    before_digest_env.push(current_environment_closure);
+
+    if let Some(chosen_font) = options.font {
+      let merge_font_closure = beforeproc_single!(stomach, state, {
+        MergeFont!(&chosen_font.clone(), state);
+      });
+      before_digest_env.push(merge_font_closure);
+    }
+    before_digest_env.extend(options.before_digest);
+
+    let push_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
+      state.push_frame();
+      Ok(())
+    });
+    let mut before_construct_with_frame: Vec<ConstructionClosure> = vec![push_frame_closure];
+    before_construct_with_frame.extend(options.before_construct);
+
+    let mut after_construct_with_frame: Vec<ConstructionClosure> = options.after_construct;
+
+    let pop_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
+      state.pop_frame()?;
+      Ok(())
+    });
+    after_construct_with_frame.push(pop_frame_closure);
+
+    let begin_name_constructor = Rc::new(Constructor {
+      cs: T_CS!(begin_name),
+      paramlist: $paramlist,
+      replacement: $compiled_replacement,
+      nargs: options.nargs,
+      before_digest: before_digest_env,
+      after_digest: options.after_digest_begin,
+      after_digest_body: options.after_digest_body,
+      before_construct: before_construct_with_frame,
+      // Curiously, it's the \begin whose afterConstruct gets called.
+      after_construct: after_construct_with_frame,
+      capture_body: true,
+      properties: options.properties.clone(),
+      // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
+      // (defined $sizer ? (sizer => $sizer) : ()),
+      // ), $options{scope});
+      reversion: options.reversion,
+      alias: options.alias,
+      ..Constructor::default()
+    });
+    $state_arg.install_definition(begin_name_constructor, options.scope.clone());
+
+    let mut after_digest_env = options.after_digest;
+    let unexpected_end_closure = Rc::new(|_stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+      // let env = LookupValue!("current_environment", $state_arg);
+      //     Error('unexpected', "\\end{$name}", $_[0],
+      //       "Can't close environment $name",
+      //       "Current are "
+      //         . join(', ', state->lookupStackedValues('current_environment')))
+      //       unless $env && $name eq $env;
+      //     return; },
+      Ok(Vec::new())
+    });
+    after_digest_env.push(unexpected_end_closure);
+
+    match options.mode {
+      Some(mode) => {
+        let emode = mode.clone();
+        let emode_closure = Rc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+          stomach.end_mode(&emode, state)?;
+          Ok(Vec::new())
+        });
+        after_digest_env.push(emode_closure);
+      },
+      None => {
+        let egroup_closure = Rc::new(|stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+          stomach.egroup(state)?;
+          Ok(Vec::new())
+        });
+        after_digest_env.push(egroup_closure);
+      },
+    };
+
+    let end_envname_constructor = Rc::new(Constructor {
+      cs: T_CS!(end_name),
+      replacement: None,
+      paramlist: None,
+      before_digest: options.before_digest_end,
+      after_digest: after_digest_env,
+      ..Constructor::default() // TODO ? fill in missing ones
+    });
+    $state_arg.install_definition(end_envname_constructor, options.scope.clone());
+
+    // For the uncommon case opened by \csname env\endcsname
+    let name_constructor = Rc::new(Constructor {
+      cs: T_CS!(s!("\\{}", &name)),
+      paramlist: $paramlist,
+      replacement: $cc_copy,
+      // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
+      //   ($options{forbidMath} ? (sub { forbidMath($name); })              : ()),
+      //   ($mode                ? (sub { $_[0]->beginMode($mode); })        : ()),
+      //   ($options{font}       ? (sub { MergeFont(%{ $options{font} }); }) : ()),
+      //   $options{beforeDigest}),
+      // afterDigest     => flatten($options{afterDigestBegin}),
+      // afterDigestBody => flatten($options{afterDigestBody}),
+      // beforeConstruct => flatten(sub { state->pushFrame; }, $options{beforeConstruct}),
+      // Curiously, it's the \begin whose afterConstruct gets called.
+      // afterConstruct => flatten($options{afterConstruct}, sub { state->popFrame; }),
+      nargs: options.nargs,
+      capture_body: true,
+      properties: options.properties.clone(),
+      // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
+      // (defined $sizer ? (sizer => $sizer) : ()),
+      // ), $options{scope});
+      ..Constructor::default()
+    });
+    $state_arg.install_definition(name_constructor, options.scope.clone());
+
+    let end_name_constructor = Rc::new(Constructor {
+      cs: T_CS!(s!("\\end{}", &name)),
+      paramlist: None,
+      replacement: Some(Rc::new(|document, whatsit, properties, state| {
+        let env = state.lookup_value("current_environment");
+        // Error('unexpected', "\\end{$name}", $_[0],
+        //   "Can't close environment $name",
+        //   "Current are "
+        //     . join(', ', state->lookupStackedValues('current_environment')))
+        //   unless $env && $name eq $env;
+        Ok(())
+      })),
+      // beforeDigest => flatten($options{beforeDigestEnd}),
+      // afterDigest  => flatten($options{afterDigest},
+      //   ($mode ? (sub { $_[0]->endMode($mode); }) : ())),
+      // ), $options{scope});
+      ..Constructor::default()
+    });
+    $state_arg.install_definition(end_name_constructor, options.scope);
+
+    if options.locked {
+      AssignValue!(&s!("\\begin{{{}}}:locked", &name), true, None, $state_arg);
+      AssignValue!(&s!("\\end{{{}}}:locked", &name), true, None, $state_arg);
+      AssignValue!(&s!("\\{}:locked", &name), true, None, $state_arg);
+      AssignValue!(&s!("\\end{}:locked", &name), true, None, $state_arg);
+    }
+  }};
+}
+
+#[macro_export]
+macro_rules! TagWO {
+  ($tag:expr, $properties:expr) => {{
+    let st: &mut State = state!();
+    TagWO!($tag, $properties, st)
+  }};
+  ($tag:expr, $properties:expr, $state_arg:ident) => {
+    install_tag($tag, $properties, $state_arg)
+  };
+}
+// sub DocType {
+//   my ($rootelement, $pubid, $sysid, %namespaces) = @_;
+//   let model = state->getModel;
+//   $model->setDocType($rootelement, $pubid, $sysid);
+//   foreach let prefix (keys %namespaces) {
+//     $model->registerDocumentNamespace($prefix => $namespaces{$prefix}); }
+//   return; }
+
+#[macro_export]
+macro_rules! DefEnvironmentWO (
+  ($proto_raw:expr, $replacement:expr, $options:expr) => {{
+    let st : &mut State = state!();
+    DefEnvironmentWO!($proto_raw, $replacement, $options, st)
+  }};
+  ($proto_raw:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
+  use rtx_core::util::text::*;
+  let mut proto = $proto_raw.to_string().trim_start().to_string();
+  let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace));
+
+  let compiled_replacement;
+  compile_replacement!(compiled_replacement, $replacement);
+  let cc_copy;
+  compile_replacement!(cc_copy, $replacement);
+
+  let options = $options;
+  DefEnvironmentI!(name, None, compiled_replacement, cc_copy, options, $state_arg);
+}));
+
+#[macro_export]
+macro_rules! DefEnvironmentCWO (
+  ($proto_raw:expr, $compiled_replacement:expr, $options:expr) => {{
+    let st : &mut State = state!();
+    DefEnvironmentCWO!($proto_raw, $compiled_replacement, $options, st)
+  }};
+  ($proto_raw:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
+  use rtx_core::util::text::*;
+  let mut proto = $proto_raw.to_string().trim_start().to_string();
+  let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace));
+  // TODO: What do we do with param lists?
+  //let paramlist_str = proto.trim_start().to_string();
+  DefEnvironmentI!(name, None, $compiled_replacement, $compiled_replacement, $options, $state_arg);
+}));
+
+#[macro_export]
+macro_rules! RelaxNGSchema {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    RelaxNGSchema!($name, st)
+  }};
+  ($name:expr,$state_arg:ident) => {
+    select_relaxng_schema($name.to_string(), None, $state_arg)
+  };
+}
+
+#[macro_export]
+macro_rules! RegisterNamespace(
+  ($prefix:expr, $namespace:expr) => {{
+    let st : &mut State = state!();
+    RegisterNamespace!($prefix, $namespace, st)
+  }};
+  ($prefix:expr, $namespace:expr,$state_arg:ident) =>
+    ($state_arg.model.register_namespace($prefix, Some($namespace.to_string())))
+);
+#[macro_export]
+macro_rules! RegisterDocumentNamespace(
+  ($prefix:expr, $namespace:expr) => {{
+    let st : &mut State = state!();
+    RegisterDocumentNamespace!($prefix, $namespace, st)
+  }};
+  ($prefix:expr, $namespace:expr,$state_arg:ident) =>
+    ($state_arg.model.register_document_namespace($prefix, Some($namespace.to_string())))
+);
+#[macro_export]
+macro_rules! RequireResource(
+  ($resource:expr) => {{
+    let st : &mut State = state!();
+    RequireResource!($resource, st)
+  }};
+  ($resource:expr,$state_arg:ident) =>
+    (require_resource(Resource{name: $resource.to_string(), ..Resource::default()}, $state_arg))
+);
+
+// sub DefMath {
+//   my ($proto,
+//     $presentation, %options) = @_;
+//   CheckOptions("DefMath ($proto)", $math_options, %options);
+//   DefMathI(parsePrototype($proto), $presentation, %options);
+//   return; }
+#[macro_export]
+macro_rules! DefMathWO {
+  ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr) => {{
+    let st: &mut State = state!();
+    DefMathWO!($cstext, $paramlist, $presentation, $options, st)
+  }};
+  ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr, $state_arg:ident) => {{
+    let mut options = $options;
+    let cs = T_CS!($cstext.to_string());
+    let presentation = $presentation.to_string();
+    // Can't defer parsing parameters since we need to know number of args!
+    // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
+    let paramlist: Option<Parameters> = $paramlist;
+    let nargs = match paramlist {
+      Some(plist) => plist.get_num_args(),
+      None => 0,
+    };
+    let csname = cs.get_string().to_string();
+    let mut name = options.alias.clone().unwrap_or_else(|| csname.clone());
+    if name.starts_with('\\') {
+      name = name.replacen('\\', "", 1)
+    }
+    if let Some(options_name) = options.name {
+      name = options_name;
+    }
+    let name_opt = if (name == presentation) || (name.is_empty()) || (options.meaning == Some(name.clone())) {
+      None
+    } else {
+      Some(name)
+    };
+    options.name = name_opt;
+    if nargs == 0 && options.role.is_none() {
+      options.role = Some(s!("UNKNOWN"))
+    }
+    if nargs > 0 && options.operator_role.is_none() {
+      options.operator_role = Some(s!("UNKNOWN"))
+    }
+
+    // Store some data for introspection
+    // defmath_introspective(cs, $paramlist, presentation, %options);
+
+    // If single character, handle with a rewrite rule
+    if csname.len() == 1 {
+      // WAS: defmath_rewrite!($cs, options);
+      // No, do NOT make mathactive; screws up things like babel french, or... ?
+      // EXPERIMENT: store XMTok attributes for if this char ends up a Math Token.
+      // But only some DefMath options make sense!
+      // let rw_options = { name => 1, meaning => 1, omcd => 1, role => 1, mathstyle => 1, stretchy => 1 }; # (well, mathstyle?)
+      // CheckOptions("DefMath reimplemented as DefRewrite ($csname)", $rw_options, %options);
+      let mut math_attr_hash: HashMap<String, String> = HashMap::new();
+      transfer_opt_default!(name, options, math_attr_hash);
+      transfer_opt_default!(meaning, options, math_attr_hash);
+      transfer_opt_default!(omcd, options, math_attr_hash);
+      transfer_opt_default!(role, options, math_attr_hash);
+      transfer_opt_default!(mathstyle, options, math_attr_hash);
+      transfer_default!(stretchy, options, math_attr_hash);
+      $state_arg.assign_value(&s!("math_token_attributes_{}", csname), math_attr_hash, Some(Scope::Global));
+    }
+    // TODO:
+    // // If the presentation is complex, and involves arguments,
+    // // we will create an XMDual to separate content & presentation.
+    // elsif ((ref presentation eq "CODE")
+    //   || ((ref presentation) && grep { $_->equals(T_PARAM) } presentation->unlist)
+    //   || (!(ref presentation) && (presentation =~ /\//\d|\\./))
+    //   || ((ref presentation) && (grep { $_->isExecutable } presentation->unlist))) {
+    //   defmath_dual($cs, $paramlist, presentation, %options); }
+
+    // EXPERIMENT: Introduce an intermediate case for simple symbols
+    // Define a primitive that will create a Box with the appropriate set of XMTok attributes.
+    if nargs == 0 {
+      // && !grep { !$$simpletoken_options{$_} } keys %options) {
+      defmath_prim!(cs, paramlist, $presentation.to_string(), options, $state_arg);
+    }
+
+    // else {
+    //   defmath_cons($cs, $paramlist, $presentation, %options); }
+    // AssignValue($csname . ":locked" => 1) if $options{locked};
+  }};
+}
+
+#[macro_export]
+macro_rules! defmath_prim {
+  ($cs:expr, $_paramlist:expr, $presentation:expr, $options:expr, $state_arg:ident) => {{
+    let mut prim_options = $options;
+    prim_options.locked = false;
+    prim_options.font = None;
+    let scope = prim_options.scope.clone();
+    let reqfont = prim_options.font.clone().unwrap_or_else(Font::default);
+    $state_arg.install_definition(
+      MathPrimitive {
+        cs: $cs.clone(),
+        paramlist: None, // never any parameters, this is intentional
+        replacement: Some(Rc::new(move |stomach, args, state| {
+          // let locator    = $stomach->getGullet->getLocator;
+          let mut properties = HashMap::new(); // TODO: sync with perl master here
+          properties.insert(s!("mode"), Stored::String(String::from("math")));
+          // TODO: Improve font precision here, the defaults may not belong in this lookup
+          let font = state
+            .lookup_font()
+            .unwrap_or_else(|| Rc::new(Font::default()))
+            .merge(&reqfont)
+            .specialize(&$presentation);
+          let font = Rc::new(font);
+          // foreach my $key (keys %properties) {
+          //   my $value = $properties{$key};
+          //   if (ref $value eq 'CODE') {
+          //     $properties{$key} = &$value(); } }
+          // info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
+          Ok(vec![Digested::TBox(Rc::new(
+            // TODO: Can we reduce boilerplate?
+            Tbox {
+              text: $presentation,
+              tokens: Tokens!($cs.clone()),
+              font,
+              properties,
+              ..Tbox::default()
+            },
+          ))])
+        })),
+        options: prim_options,
+        ..MathPrimitive::default()
+      },
+      scope,
+    );
+  }};
+}
+#[macro_export]
+macro_rules! requireMath {
+  ($cs_name:expr) => {{
+    let st : &mut State = state!();
+    requireMath!($cs_name, st)
+  }};
+  ($cs_name:expr, $state_arg:ident) => (
+    if !LookupBool!("IN_MATH", $state_arg) {
+      warn!(target: "unexpected", "{} should only appear in math mode",$cs_name);
+    }
+  )
+}
+#[macro_export]
+macro_rules! forbidMath {
+  ($cs_name:expr) => ({
+    let st : &mut State = state!();
+    forbidMath!($cs_name, st)
+  });
+  ($cs_name:expr, $state_arg:ident) => (
+    if LookupBool!("IN_MATH", $state_arg) {
+      warn!(target: "unexpected", "{} should not appear in math mode",$cs_name);
+    }
+  )
+}
+
+//======================================================================
+// Counters
+//======================================================================
+// This is modelled on LaTeX's counter mechanisms, but since it also
+// provides support for ID's, even where there is no visible reference number,
+// it is defined in genera.
+// These id's should be both unique, and parallel the visible reference numbers
+// (as much as possible).  Also, for consistency, we add id's to unnumbered
+// document elements (eg from \section*); this requires an additional counter
+// (eg. UNsection) and  mechanisms to track it.
+
+// Defines a new counter named $ctr.
+// If $within is defined, $ctr will be reset whenever $within is incremented.
+// Keywords:
+//  idprefix : specifies a prefix to be used in sting ID's for document structure elements
+//           counted by this counter.  Ie. subsection 3 in section 2 might get: id="S2.SS3"
+//  idwithin : specifies that the ID is composed from $idwithin's ID,, even though
+//           the counter isn't numbered within it.  (mainly to avoid duplicated ids)
+//   nested : a list of counters that correspond to scopes which are "inside" this one.
+//           Whenever any definitions scoped to this counter are deactivated,
+//           the inner counter's scopes are also deactivated.
+//           NOTE: I'm not sure this is even a sensible implementation,
+//           or why inner should be different than the counters reset by incrementing this counter.
+#[macro_export]
+macro_rules! NewCounterWO {
+  ($ctr:expr, $within:expr, None) => {
+    new_counter($ctr, $within, None, state!())?
+  };
+  ($ctr:expr, $within:expr, None, $state_arg:ident) => {
+    new_counter($ctr, $within, None, $state_arg)?
+  };
+  ($ctr:expr, $within:expr, Some($opts:expr)) => {
+    new_counter($ctr, $within, Some($opts), state!())?
+  };
+  ($ctr:expr, $within:expr, Some($opts:expr), $state_arg:ident) => {
+    new_counter($ctr, $within, Some($opts), $state_arg)?
+  };
+}
+#[macro_export]
+macro_rules! CounterValue {
+  ($ctr:expr) => {
+    counter_value($ctr, state!())
+  };
+  ($ctr:expr, $state_arg:ident) => {
+    counter_value($ctr, $state_arg)
+  };
+}
+#[macro_export]
+macro_rules! SetCounter {
+  ($ctr:expr, $value:expr, None) => {
+    AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
+    DefMacroI!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+                scope => Some(Scope::Global)
+    );
+  };
+  ($ctr:expr, $value:expr, $gullet:ident) => {
+    AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
+    AfterAssignment!();
+    DefMacroI!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+                scope => Some(Scope::Global)
+    );
+  }
+}
+#[macro_export]
+macro_rules! AddToCounter {
+  ($ctr:expr, $value:expr, $gullet:ident) => {
+    add_to_counter($ctr, $value, $gullet, state!())
+  };
+  ($ctr:expr, $value:expr, $gullet:ident, $state_arg:ident) => {
+    add_to_counter($ctr, $value, $gullet, $state_arg)
+  };
+}
+#[macro_export]
+macro_rules! StepCounter {
+  ($ctr:expr, $noreset:expr, $gullet:ident) => {
+    step_counter($ctr, $noreset, $gullet, state!())
+  };
+  ($ctr:expr, $noreset:expr, $gullet:ident, $state_arg:ident) => {
+    step_counter($ctr, $noreset, $gullet, $state_arg)
+  };
+}
+#[macro_export]
+macro_rules! RefStepCounter {
+  ($ctr:expr, $noreset:expr, $stomach:ident) => {
+    ref_step_counter($ctr, $noreset, $stomach, state!())
+  };
+  ($ctr:expr, $noreset:expr, $stomach:ident, $state_arg:ident) => {
+    ref_step_counter($ctr, $noreset, $stomach, $state_arg)
+  };
+}
+#[macro_export]
+macro_rules! RefStepID {
+  ($ctr:expr, $stomach:ident) => {
+    ref_step_id($ctr, $stomach, state!())
+  };
+  ($ctr:expr, $stomach:ident, $state_arg:ident) => {
+    ref_step_id($ctr, $stomach, $state_arg)
+  };
+}
+#[macro_export]
+macro_rules! ResetCounter {
+  ($ctr:expr) => {
+    reset_counter($ctr, state!())
+  };
+  ($ctr:expr, $state_arg: ident) => {
+    reset_counter($ctr, $state_arg)
+  };
+}
+
+/// Return $tokens with all tokens expanded
+#[macro_export]
+macro_rules! Expand {
+  ($tokens:expr, $gullet:ident) => {
+    do_expand($tokens, $gullet, state!())?
+  };
+  ($tokens:expr, $gullet:ident, $state_arg:ident) => {
+    do_expand($tokens, $gullet, $state_arg)?
+  };
+}
+
+/// Invocation(<list of Token>); builds a representation of a command sequence invoked on its
+/// arguments
+#[macro_export]
+macro_rules! Invocation {
+  ($csname:literal, $args:expr, $gullet:expr) => {
+    let st: &mut State = state!();
+    Invocation!(T_CS!($csname), $args, $gullet, st)
+  };
+  ($csname:literal, $args:expr, $gullet:expr, $state_arg:ident) => {
+    Invocation!(T_CS!($csname), $args, $gullet, $state_arg)
+  };
+  ($token:expr, $args:expr, $gullet:expr) => {
+    let st: &mut State = state!();
+    Invocation!($token, $args, $gullet, st)
+  };
+  ($token:expr, $args:expr, $gullet:expr, $state_arg:ident) => {
+    build_invocation($token, $args.into_iter().map(|arg| arg.into()).collect(), $gullet, $state_arg)
+  };
+}
+#[macro_export]
+macro_rules! DefLigature {
+  ($regex:expr, $replacement:expr, fontTest => sub[$font:ident] $body:block) => {
+    let st : &mut State = state!();
+    DefLigature!($regex, $replacement, fontTest => sub[$font]{$body}, st)
+  };
+  ($regex:expr, $replacement:expr, fontTest => sub[$font:ident] $body:block, $state_arg:ident) => {
+    let regex_compiled = Regex::new($regex).unwrap();
+    let test_closure: Option<FontTestClosure> = Some(Rc::new(move |$font| $body));
+    $state_arg.unshift_value(
+      "TEXT_LIGATURES",
+      vec![Ligature {
+        regex: $regex.to_string(),
+        code: Rc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string()),
+        font_test: test_closure,
+      }],
+    );
+  };
+  ($regex:expr, $replacement:expr) => {{
+    let st : &mut State = state!();
+    DefLigature!($regex, $replacement, st)
+  }};
+  ($regex:expr, $replacement:expr, $state_arg:ident) => {
+    let regex_compiled = Regex::new($regex).unwrap();
+    $state_arg.unshift_value(
+      "TEXT_LIGATURES",
+      vec![Ligature {
+        regex: $regex.to_string(),
+        code: Rc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string()),
+        font_test: None,
+      }],
+    );
+  };
+}
+
+// Defines an accent command using a combining char that follows the
+// 1st char of the argument.  In cases where there is no argument, $standalonechar is used.
+#[macro_export]
+macro_rules! DefAccent {
+  ($accent:expr, $combiningchar:expr, $standalonechar:expr) => {
+    let mut empty_opts : HashMap<String, Stored> = HashMap::new();
+    let st : &mut State = state!();
+    DefAccent!($accent, $combiningchar, $standalonechar, empty_opts, st)
+  };
+  ($accent:expr, $combiningchar:expr, $standalonechar:expr, below => true) => {{
+    let st : &mut State = state!();
+    DefAccent!($accent, $combiningchar, $standalonechar, map!("below"=>Stored::Bool(true)), st)
+  }};
+  ($accent:expr, $combiningchar:expr, $standalonechar:expr, $options:expr) => {{
+    let st : &mut State = state!();
+    DefAccent!($accent, $combiningchar, $standalonechar, $options, st)
+  }};
+  ($accent:expr, $combiningchar:expr, $standalonechar:expr, $options:expr, $state_arg: ident) => {{
+    if $options.get("below").is_none() {
+      $options.entry(String::from("above")).or_insert(Stored::Bool(true));
+    }
+    // Used for converting a char used as an above-accent to a combining char (See \accent)
+    if $options.get("above").is_some() {
+      $state_arg.assign_mapping("accent_combiner_above", $standalonechar, Some($combiningchar));
+    } else {
+      $state_arg.assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
+    }
+    DefPrimitive!(&format!("{}{{}}",$accent), sub[stomach, letter, inner_state] {
+      let invoked = Invocation!(T_CS!($accent), letter.clone(), stomach.get_gullet_mut(), inner_state)?;
+      // TODO: check if letter.to_string has artefacts
+      crate::package::pool::tex_accents::apply_accent(
+        stomach, &letter[0].to_string(), $combiningchar, $standalonechar, Some(invoked), inner_state)?;
+      Ok(vec![])
+    }, mode => Some(String::from("text")));
+  }}
+}
+
+//============================================
+// User-facing Macros
+//============================================
+//
+#[macro_export]
+macro_rules! LookupValue {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    LookupValue!($name, st)
+  }};
+  ($name:expr, $state_arg:ident) => {
+    $state_arg.lookup_value($name)
+  };
+}
+#[macro_export]
+macro_rules! LookupBool {
+  ($name:expr) => {{
+    {
+      let st: &mut State = state!();
+      LookupBool!($name, st)
+    }
+  }};
+  ($name:expr, $state_arg:ident) => {
+    $state_arg.lookup_bool($name)
+  };
+}
+#[macro_export]
+macro_rules! LookupString {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    LookupString!($name, st)
+  }};
+  ($name:expr, $state_arg:ident) => {
+    $state_arg.lookup_string($name)
+  };
+}
+#[macro_export]
+macro_rules! LookupNumber {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    LookupNumber!($name, st)
+  }};
+  ($name:expr, $state_arg:ident) => {
+    $state_arg.lookup_number($name)
+  };
+}
+#[macro_export]
+macro_rules! LookupTokens {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    LookupTokens!($name, st)
+  }};
+  ($name:expr, $state_arg:ident) => {
+    $state_arg.lookup_tokens($name)
+  };
+}
+#[macro_export]
+macro_rules! AssignValue {
+  ($name:expr, $value:expr) => {{
+    let st: &mut State = state!();
+    AssignValue!($name, $value, None, st)
+  }};
+  ($name:expr, $value:expr, $scope:expr) => {{
+    let st: &mut State = state!();
+    AssignValue!($name, $value, $scope, st)
+  }};
+  ($name:expr, $value:expr, $scope:expr, $state_arg:ident) => {
+    $state_arg.assign_value($name, $value, $scope)
+  };
+}
+#[macro_export]
+macro_rules! RemoveValue {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    RemoveValue!($name, st)
+  }};
+  ($name:expr, $state_arg:ident) => {
+    $state_arg.remove_value($name)
+  };
+}
+#[macro_export]
+macro_rules! PushValue {
+  ($name:expr, $values:expr) => {{
+    let st: &mut State = state!();
+    PushValue!($name, $values, st)
+  }};
+  ($name:expr, $values:expr, $state_arg:ident) => {
+    $state_arg.push_value($name, $values)
+  };
+}
+#[macro_export]
+macro_rules! PopValue {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    PopValue!($name, st)
+  }};
+  ($name:expr, $state_arg:ident) => {
+    $state_arg.pop_value($name)
+  };
+}
+#[macro_export]
+macro_rules! UnshiftValue {
+  ($name:expr, $values:expr) => {{
+    let st: &mut State = state!();
+    UnshiftValue!($name, $values, st)
+  }};
+  ($name:expr, $values:expr,$state_arg:ident) => {
+    $state_arg.unshift_value($name, $values)
+  };
+}
+#[macro_export]
+macro_rules! ShiftValue {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    ShiftValue!($name, st)
+  }};
+  ($name:expr,$state_arg:ident) => {
+    $state_arg.shift_value($name)
+  };
+}
+#[macro_export]
+macro_rules! LookupMapping {
+  ($map:expr, $key:expr) => {{
+    let st: &mut State = state!();
+    LookupValue!($map, $key, st)
+  }};
+  ($map:expr, $key:expr, $state_arg:ident) => {
+    $state_arg.lookup_mapping($map, $key)
+  };
+}
+#[macro_export]
+macro_rules! AssignMapping {
+  ($map:expr, $key:expr => $value:expr) => {{
+    let st : &mut State = state!();
+    AssignMapping!($map, $key => $value, st)
+  }};
+  ($map:expr, $key:expr => $value:expr, $state_arg:ident) => {
+    $state_arg.assign_mapping($map, $key, $value.into())
+  };
+}
+#[macro_export]
+macro_rules! LookupMappingKeys {
+  ($map:expr) => {{
+    let st: &mut State = state!();
+    LookupMappingKeys!($map, st)
+  }};
+  ($map:expr, $state_arg:ident) => {
+    $state_arg.lookup_mapping_keys($map)
+  };
+}
+#[macro_export]
+macro_rules! LookupCatcode {
+  ($char:expr) => {{
+    let st: &mut State = state!();
+    LookupCatcode!($char, st)
+  }};
+  ($char:expr, $state_arg:ident) => {
+    $state_arg.lookup_catcode($char)
+  };
+}
+#[macro_export]
+macro_rules! AssignCatcode {
+  ($char:expr, $catcode:expr, $scope:expr) => {{
+    let st: &mut State = state!();
+    AssignCatcode!($char, $catcode, $scope, st)
+  }};
+  ($char:expr, $catcode:expr, $scope:expr, $state_arg:ident) => {
+    $state_arg.assign_catcode($char, $catcode, $scope)
+  };
+}
+#[macro_export]
+macro_rules! LookupMeaning {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    LookupMeaning!($name, st)
+  }};
+  ($name:expr, $state_arg:ident) => {
+    $state_arg.lookup_meaning($name)
+  };
+}
+#[macro_export]
+macro_rules! LookupDefinition {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    LookupDefinition!($name, st)
+  }};
+  ($name:expr, $state_arg:ident) => {
+    $state_arg.lookup_definition($name)
+  };
+}
+#[macro_export]
+macro_rules! InstallDefinition {
+  ($name:expr, $definition:expr, $scope:expr) => {{
+    let st: &mut State = state!();
+    InstallDefinition!($name, $definition, $scope, st)
+  }};
+  ($name:expr, $definition:expr, $scope:expr, $state_arg:ident) => {
+    $state_arg.install_definition($name, $definition, $scope)
+  };
+}
+#[macro_export]
+macro_rules! XEquals {
+  ($token1:expr, $token2:expr) => {{
+    let st: &mut State = state!();
+    XEquals!($token1, $token2, st)
+  }};
+  ($token1:expr, $token2:expr, $state_arg:ident) => {
+    $state_arg.x_equals($token1, $token2)
+  };
+}
+#[macro_export]
+macro_rules! IsDefined {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    IsDefined!($name, st)
+  }};
+  ($name:expr, $state_arg:ident) => {
+    is_defined_token($name, $state_arg)
+  };
+}
+#[macro_export]
+macro_rules! IsDefinedToken {
+  ($name:expr) => {{
+    let st: &mut State = state!();
+    is_defined_token($name, st)
+  }};
+}
+#[macro_export]
+macro_rules! Let {
+  ($token1:expr, $token2:expr) => {{
+    let st: &mut State = state!();
+    Let!($token1, $token2, st)
+  }};
+  ($token1:expr, $token2:expr, $state_arg:ident) => {{
+    LetI!(&T_CS!($token1), T_CS!($token2), $state_arg)
+  }};
+  ($token1:expr, $token2:expr, $scope:expr, $state_arg:ident) => {{
+    LetI!(&T_CS!($token1), T_CS!($token2), $scope, $state_arg)
+  }};
+}
+#[macro_export]
+macro_rules! LetI {
+  ($token1:expr, $token2:expr) => {{
+    let st: &mut State = state!();
+    LetI!($token1, $token2, st)
+  }};
+  ($token1:expr, $token2:expr, $state_arg:ident) => {
+    $state_arg.let_i($token1, $token2, None)
+  };
+  ($token1:expr, $token2:expr, $scope:expr, $state_arg:ident) => {
+    $state_arg.let_i($token1, $token2, $scope)
+  };
+}
+#[macro_export]
+macro_rules! DigestIf {
+  ($token:literal, $stomach:ident) => {{
+    let st: &mut State = state!();
+    DigestIf!(T_CS!($token), $stomach, st)
+  }};
+  ($token:literal, $stomach:ident, $state_arg:ident) => {
+    digest_if(T_CS!($token), $stomach, $state_arg)
+  };
+  ($token:expr, $stomach:ident) => {{
+    let st: &mut State = state!();
+    DigestIf!($token, $stomach, st)
+  }};
+  ($token:expr, $stomach:ident, $state_arg: ident) => {
+    digest_if($token, $stomach, $state_arg)
+  };
+}
+#[macro_export]
+macro_rules! AfterAssignment {
+  () => {{
+    let st: &mut State = state!();
+    AfterAssignment!(st)
+  }};
+  ($state_arg: ident) => {
+    $state_arg.after_assignment()
+  };
+}
+
+// Merge the current font with the style specifications
+#[macro_export]
+macro_rules! MergeFont {
+  ($kv:expr) => {{
+    let st : &mut State = state!();
+    MergeFont!($kv, st)
+  }};
+  ($kv:expr, $state_arg:ident) => {
+    merge_font($kv, $state_arg)
+  };
+  ($key:ident => $val:expr) => {{
+    let st : &mut State = state!();
+    MergeFont!($key => $val, st)
+  }};
+  ($key:ident => $val:expr, $state_arg:ident) => {
+    merge_font(&fontmap!($key => $val), $state_arg)
   };
 }
 
