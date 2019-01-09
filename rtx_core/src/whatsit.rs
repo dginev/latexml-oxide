@@ -149,14 +149,12 @@ impl BoxOps for Whatsit {
     // (2) caching the reversion (which is a big performance boost)
     let saved_opt = if REVERT_RAW {
       None
+    } else if DUAL_BRANCH {
+      // TODO
+      // self.dual_reversion.get(DUAL_BRANCH)
+      None
     } else {
-      if DUAL_BRANCH {
-        // TODO
-        // self.dual_reversion.get(DUAL_BRANCH)
-        None
-      } else {
-        self.reversion.clone()
-      }
+      self.reversion.clone()
     };
     if let Some(saved) = saved_opt {
       Ok(saved)
@@ -186,7 +184,7 @@ impl BoxOps for Whatsit {
           }
         },
         None => {
-          let alias_opt: Option<String> = if REVERT_RAW { None } else { None }; //TODO: defn.get_alias() };
+          let alias_opt: Option<String> = None; //if REVERT_RAW { None } else { None }; //TODO: defn.get_alias() };
           if let Some(alias) = alias_opt {
             if !alias.is_empty() {
               tokens.push(T_CS!(alias));

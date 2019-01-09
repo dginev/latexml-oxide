@@ -187,7 +187,7 @@ pub enum Digested {
   Whatsit(Rc<RefCell<Whatsit>>),
   List(Box<List>),
   Postponed(Rc<Tokens>),
-  KeyVals(KeyVals),
+  KeyVals(Box<KeyVals>),
 }
 
 impl<'a> From<&'a String> for Digested {

@@ -25,7 +25,7 @@ pub enum FoodType {
 
 impl FoodType {
   /// TODO: Should be a From trait implementation, but am not allowed due to both &str and Option being external. Argh.
-  pub fn from_str(text: &str) -> Option<FoodType> {
+  pub fn opt_from_str(text: &str) -> Option<FoodType> {
     use self::FoodType::*;
     match text.to_lowercase().as_str() {
       "file" => Some(File),
@@ -127,12 +127,12 @@ impl Mouth {
     } else if source.starts_with("literal:") {
       // we've supplied literal data
       options.source = None; // the source does not have a corresponding file name
-      options.foodtype = FoodType::from_str("literal");
+      options.foodtype = FoodType::opt_from_str("literal");
       Mouth::new(source, Some(options), state)
     } else if source.is_empty() {
       Mouth::new("", Some(options), state)
     } else {
-      options.foodtype = FoodType::from_str(&pathname::protocol(source));
+      options.foodtype = FoodType::opt_from_str(&pathname::protocol(source));
       Mouth::new(source, Some(options), state)
     }
   }
@@ -305,8 +305,8 @@ impl Mouth {
             self.nchars -= 3;
           } else {
             // OR ^^ followed by a SINGLE Control char type code???
-            let mut c = self.chars.get(self.colno + 1).unwrap();
-            let mut cn = *c as i32;
+            let mut c = self.chars[self.colno + 1];
+            let mut cn = c as i32;
 
             ch = (cn + if cn > 64 { -64 } else { 64 }) as u8 as char;
             self.splice(self.colno - 1..self.colno + 2, &[ch]);
@@ -679,7 +679,7 @@ impl Mouth {
   fn splice<R>(&mut self, range: R, with: &[char])
   where R: RangeBounds<usize> {
     let mut v: Vec<char> = self.chars.drain(..).collect();
-    v.splice(range, with.into_iter().cloned());
+    v.splice(range, with.iter().cloned());
     self.chars = v.into_iter().collect();
   }
 
