@@ -710,7 +710,7 @@ pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<Co
           // user-defined conditional, like with \newif
           // Note: setting up these macros is compile-time expensive, maybe there is some way to
           // avoid...
-          SetupBindingMacros!(state);
+          BindState!(state);
           // Note: the double clones are technically correct Rust if annoying to write and read.
           //       first, we want to capture a cloned value of cs, to be able to keep using cs here.
           // second, each invocation of the conditional macro needs to create new tokens to
@@ -908,7 +908,7 @@ impl<'ct> Default for NewCounterOptions<'ct> {
 }
 
 pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOptions>, state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
+  BindState!(state);
   let unctr = s!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
   let cctr = s!("\\c@{}", ctr);
   let clctr = s!("\\cl@{}", ctr);
@@ -1018,14 +1018,14 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
   let v = counter_value(ctr, state).add(value);
   state.assign_value(&s!("\\c@{}", ctr), v, Some(Scope::Global));
   state.after_assignment();
-  SetupBindingMacros!(state);
+  BindState!(state);
   let id_cs = T_CS!(s!("\\@{}@ID", ctr));
   DefMacroI!(id_cs.clone(), None, Tokens::new(Explode!(v.value_of())),
     scope => Some(Scope::Global));
 }
 
 pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
+  BindState!(state);
   let value = counter_value(ctr, state);
   state.assign_value(&s!("\\c@{}", ctr), value.add(Number!(1)), Some(Scope::Global));
   state.after_assignment();
@@ -1067,7 +1067,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
     false
   };
 
-  SetupBindingMacros!(state);
+  BindState!(state);
   let the_cs = T_CS!(s!("\\the{}", ctr));
   let the_id_cs = T_CS!(s!("\\the{}@ID", ctr));
   DefMacroI!(T_CS!("\\@currentlabel"), None, the_cs.clone(), scope => Some(Scope::Global));
@@ -1132,16 +1132,17 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 
 // For UN-numbered units
 pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
-  SetupBindingMacros!(state);
+  BindState!(state, stomach);
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(map) => map.to_string(),
     None => ctype.to_string(),
   };
   let unctr = s!("UN{}", ctr);
   step_counter(&unctr, false, stomach, state)?;
-  DefMacroI!(T_CS!(&s!("\\@{}@ID",ctr)), None,
-    Tokens!(T_OTHER!("x"), Explode!(state.lookup_number(&s!("\\c@{}", unctr)).unwrap().value_of())),
-    scope => Some(Scope::Global));
+
+  let cunctr_val = state.lookup_number(&s!("\\c@{}", unctr)).unwrap().value_of();
+  DefMacroI!(T_CS!(&s!("\\@{}@ID",ctr)), None, Tokens!(T_OTHER!("x"), Explode!(cunctr_val)), scope => Some(Scope::Global));
+
   DefMacroI!(T_CS!("\\@currentID"), None, T_CS!(&s!("\\the{}@ID", ctr)));
   Ok(map!("id".to_string() => digest_literal(T_CS!(&s!("\\the{}@ID", ctr)), stomach, state)?.to_string().into()))
 }

@@ -5,7 +5,7 @@ use rtx_core::definition::register::NumericOps;
 use rtx_core::state::State;
 
 pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
-  SetupBindingMacros!(state);
+  BindState!(state);
   let bindings_val = if vertical_mode {
     LookupValue!("VTEXT_MODE_BINDINGS")
   } else {

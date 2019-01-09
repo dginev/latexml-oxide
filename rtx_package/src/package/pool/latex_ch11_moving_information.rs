@@ -633,7 +633,7 @@ LoadDefinitions!(state, {
 // bibliographies with blank lines!
 // So, let's do some redirection!
 fn setup_pseudo_bibitem(state: &mut State) {
-  SetupBindingMacros!(state);
+  BindState!(state);
   Let!("\\save@bibitem", "\\bibitem");
   Let!("\\save@par", "\\par");
   Let!("\\bibitem", "\\restoring@bibitem");
@@ -654,7 +654,7 @@ fn begin_bibliography(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut 
 }
 
 fn begin_bibliography_clean(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<()> {
-  SetupBindingMacros!(state);
+  BindState!(state);
   // Try to compute a reasonable, but unique ID;
   // relative to the document's ID, if any.
   // But also, if there are multiple bibliographies,
