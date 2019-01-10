@@ -47,7 +47,6 @@ macro_rules! BindState {
         $outer_stomach
       };
     }
-
     macro_rules! Digest {
       ($tokens:expr) => {{
         let st: &mut State = state!();
@@ -62,20 +61,19 @@ macro_rules! BindState {
     }
 
     macro_rules! DigestText {
-                          ($stuff:expr) => {{
-                            digest_text($stuff, $state)
-                            match $outer_stomach.as_mut() {
-                              Some(st) => (*st).digest_text($stuff, $state_arg),
-                              None => state_stomach.borrow_mut().digest_text($stuff, $state_arg),
-                            }
-                          }};
-                          ($stuff:expr, $stomach:ident) => {{
-                            DigestText!($stuff, $stomach, $state)
-                          }};
-                          ($stuff:expr, $stomach:ident, $state_arg:ident) => {{
-                            digest_text($stuff, $stomach, $state_arg)
-                          }};
-                        }
+      ($tokens:expr) => {
+        match $outer_stomach.as_mut() {
+          Some(st) => digest_text($tokens, *st, $state),
+          None => digest_text($tokens, state_stomach.borrow_mut(), $state),
+        }
+      };
+      ($tokens:expr, $stomach:ident) => {
+        DigestText!($tokens, $stomach, $state)
+      };
+      ($tokens:expr, $stomach:ident, $state_arg:ident) => {
+        digest_text($tokens, $stomach, $state_arg)
+      };
+    }
 
     macro_rules! RawTeX {
       ($text:expr) => {
@@ -334,73 +332,7 @@ macro_rules! DefPrimitiveII {
     DefPrimitiveII!($cs, $paramlist, $compiled_replacement, $options, st)
   }};
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
-    let options = $options;
-    let options_locked = options.locked;
-    let scope = options.scope.clone();
-    let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
-
-    if options.require_math {
-      let cs_name = $cs.get_cs_name().to_owned();
-      let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(cs_name, state) });
-      before_digest_env.push(require_math_closure);
-    }
-
-    if options.forbid_math {
-      let cs_name = $cs.get_cs_name().to_owned();
-      let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(cs_name, state) });
-      before_digest_env.push(forbid_math_closure);
-    }
-    if let Some(ref mode) = options.mode {
-      let mode_clone = mode.clone();
-      let begin_mode_closure = beforeproc_single!(stomach, state, {
-        stomach.begin_mode(&mode_clone, state)?;
-      });
-      before_digest_env.push(begin_mode_closure);
-    } else if options.bounded {
-      let bgroup_closure = beforeproc_single!(stomach, state, {
-        stomach.bgroup(state);
-      });
-      before_digest_env.push(bgroup_closure);
-    }
-    if let Some(chosen_font) = options.font {
-      let merge_font_closure = beforeproc_single!(stomach, state, {
-        MergeFont!(&chosen_font, state);
-      });
-      before_digest_env.push(merge_font_closure);
-    }
-    before_digest_env.extend(options.before_digest);
-
-    let mut after_digest_env: Vec<DigestionClosure> = Vec::new();
-    after_digest_env.extend(options.after_digest);
-    if let Some(ref mode) = options.mode {
-      let mode_clone = mode.clone();
-      let end_mode_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
-        stomach.end_mode(&mode_clone, state)?;
-      });
-      after_digest_env.extend(end_mode_closure);
-    } else if options.bounded {
-      let egroup_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
-        stomach.egroup(state)?;
-      });
-      after_digest_env.extend(egroup_closure);
-    }
-
-    $state_arg.install_definition(
-      Primitive {
-        cs: $cs.clone(),
-        paramlist: $paramlist,
-        replacement: Some(Rc::new($compiled_replacement)),
-        options: PrimitiveOptions {
-          before_digest: before_digest_env,
-          after_digest: after_digest_env,
-          ..PrimitiveOptions::default()
-        },
-      },
-      scope,
-    );
-    if options_locked {
-      AssignValue!(&s!("{}:locked", $cs.get_cs_name()), true, None, $state_arg);
-    }
+    def_primitive($cs, $paramlist, Rc::new($compiled_replacement), $options, $state_arg);
   }};
 }
 
@@ -506,84 +438,7 @@ macro_rules! DefConstructorIWO {
     DefConstructorIWO!($cs, $paramlist, $compiled_replacement, $options, st)
   }};
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
-    use rtx_core::definition::constructor::Constructor;
-    let options = $options;
-    // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
-    //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
-    let scope = options.scope.clone();
-    let is_locked = options.locked.clone();
-    let locked_key = if is_locked { s!("{}:locked", $cs.get_cs_name()) } else { String::new() };
-
-    let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
-
-    if options.require_math {
-      let cs_name = $cs.get_cs_name().to_owned();
-      let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(cs_name, state) });
-      before_digest_closures.push(require_math_closure);
-    }
-    if options.forbid_math {
-      let cs_name = $cs.get_cs_name().to_owned();
-      let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(cs_name, state) });
-      before_digest_closures.push(forbid_math_closure);
-    }
-    if let Some(ref mode) = options.mode {
-      let mode_clone = mode.clone();
-      let begin_mode_closure = beforeproc_single!(stomach, state, {
-        stomach.begin_mode(&mode_clone, state)?;
-      });
-      before_digest_closures.push(begin_mode_closure);
-    } else if options.bounded {
-      let bgroup_closure = beforeproc_single!(stomach, state, {
-        stomach.bgroup(state);
-      });
-      before_digest_closures.push(bgroup_closure);
-    }
-    if let Some(chosen_font) = options.font {
-      let merge_font_closure = beforeproc_single!(stomach, state, {
-        MergeFont!(&chosen_font, state);
-      });
-      before_digest_closures.push(merge_font_closure);
-    }
-    before_digest_closures.extend(options.before_digest);
-
-    let mut after_digest_closures: Vec<DigestionClosure> = Vec::new();
-    after_digest_closures.extend(options.after_digest);
-    if let Some(ref mode) = options.mode {
-      let mode_clone = mode.clone();
-      let end_mode_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
-        stomach.end_mode(&mode_clone, state)?;
-      });
-      after_digest_closures.extend(end_mode_closure);
-    } else if options.bounded {
-      let egroup_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
-        stomach.egroup(state)?;
-      });
-      after_digest_closures.extend(egroup_closure);
-    }
-
-    let constructor = Constructor {
-      cs: $cs,
-      paramlist: $paramlist,
-      replacement: $compiled_replacement,
-      before_digest: before_digest_closures,
-      after_digest: after_digest_closures,
-      before_construct: options.before_construct,
-      after_construct: options.after_construct,
-      nargs: options.nargs,
-      alias: options.alias,
-      reversion: options.reversion,
-      // sizer
-      capture_body: options.capture_body,
-      properties: options.properties,
-      // outer
-      // long
-      ..Constructor::default()
-    };
-    $state_arg.install_definition(constructor, scope);
-
-    if is_locked {
-      $state_arg.assign_value(&locked_key, true, None);
-    }
+    def_constructor($cs, $paramlist, $compiled_replacement, $options, $state_arg);
   }};
 }
 
@@ -623,201 +478,6 @@ macro_rules! DefConstructorWO(
   })
 );
 
-//=====================================================================
-// Define a LaTeX environment
-// Note that the body of the environment is treated is the 'body' parameter in the constructor.
-#[macro_export]
-macro_rules! DefEnvironmentI {
-  ($name_raw:expr, $paramlist:expr, $compiled_replacement:expr, $cc_copy:expr, $options:expr) => {{
-    let st: &mut State = state!();
-    DefEnvironmentI!($name_raw, $paramlist, $compiled_replacement, $cc_copy, $options, st)
-  }};
-  ($name_raw:expr, $paramlist:expr, $compiled_replacement:expr, $cc_copy:expr, $options:expr, $state_arg:ident) => {{
-    use rtx_core::definition::constructor::Constructor;
-    use rtx_core::stomach::Stomach;
-    use rtx_core::whatsit::Whatsit;
-    let name = $name_raw.to_string();
-    let options = $options;
-    let begin_name = s!("\\begin{{{}}}", &name);
-    let end_name = s!("\\end{{{}}}", &name);
-    // This is for the common case where the environment is opened by \begin{env}
-    // let sizer = inferSizer($options.sizer, $options.reversion);
-    let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
-    match &options.mode {
-      Some(ref mode) => {
-        let bmode = mode.clone();
-        let mode_closure = Rc::new(move |stomach: &mut Stomach, state: &mut State| {
-          stomach.begin_mode(&bmode, state)?;
-          Ok(Vec::new())
-        });
-        before_digest_env.push(mode_closure);
-      },
-      None => {
-        let bgroup_closure = beforeproc_single!(stomach, state, {
-          stomach.bgroup(state);
-        });
-        before_digest_env.push(bgroup_closure);
-      },
-    };
-    if options.require_math {
-      let require_name = begin_name.clone();
-      let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(require_name, state) });
-      before_digest_env.push(require_math_closure);
-    }
-    if options.forbid_math {
-      let forbid_name = begin_name.clone();
-      let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(forbid_name, state) });
-      before_digest_env.push(forbid_math_closure);
-    }
-
-    let env_name = name.clone();
-    let current_environment_closure = beforeproc_single!(stomach, state, {
-      AssignValue!("current_environment", env_name.clone(), None, state);
-      let body = T_LETTER!(env_name.clone());
-      DefMacroI!(T_CS!("\\@currenvir"), None, body.clone(), state);
-    });
-    before_digest_env.push(current_environment_closure);
-
-    if let Some(chosen_font) = options.font {
-      let merge_font_closure = beforeproc_single!(stomach, state, {
-        MergeFont!(&chosen_font.clone(), state);
-      });
-      before_digest_env.push(merge_font_closure);
-    }
-    before_digest_env.extend(options.before_digest);
-
-    let push_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
-      state.push_frame();
-      Ok(())
-    });
-    let mut before_construct_with_frame: Vec<ConstructionClosure> = vec![push_frame_closure];
-    before_construct_with_frame.extend(options.before_construct);
-
-    let mut after_construct_with_frame: Vec<ConstructionClosure> = options.after_construct;
-
-    let pop_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
-      state.pop_frame()?;
-      Ok(())
-    });
-    after_construct_with_frame.push(pop_frame_closure);
-
-    let begin_name_constructor = Rc::new(Constructor {
-      cs: T_CS!(begin_name),
-      paramlist: $paramlist,
-      replacement: $compiled_replacement,
-      nargs: options.nargs,
-      before_digest: before_digest_env,
-      after_digest: options.after_digest_begin,
-      after_digest_body: options.after_digest_body,
-      before_construct: before_construct_with_frame,
-      // Curiously, it's the \begin whose afterConstruct gets called.
-      after_construct: after_construct_with_frame,
-      capture_body: true,
-      properties: options.properties.clone(),
-      // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
-      // (defined $sizer ? (sizer => $sizer) : ()),
-      // ), $options{scope});
-      reversion: options.reversion,
-      alias: options.alias,
-      ..Constructor::default()
-    });
-    $state_arg.install_definition(begin_name_constructor, options.scope.clone());
-
-    let mut after_digest_env = options.after_digest;
-    let unexpected_end_closure = Rc::new(|_stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-      // let env = LookupValue!("current_environment", $state_arg);
-      //     Error('unexpected', "\\end{$name}", $_[0],
-      //       "Can't close environment $name",
-      //       "Current are "
-      //         . join(', ', state->lookupStackedValues('current_environment')))
-      //       unless $env && $name eq $env;
-      //     return; },
-      Ok(Vec::new())
-    });
-    after_digest_env.push(unexpected_end_closure);
-
-    match options.mode {
-      Some(mode) => {
-        let emode = mode.clone();
-        let emode_closure = Rc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-          stomach.end_mode(&emode, state)?;
-          Ok(Vec::new())
-        });
-        after_digest_env.push(emode_closure);
-      },
-      None => {
-        let egroup_closure = Rc::new(|stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-          stomach.egroup(state)?;
-          Ok(Vec::new())
-        });
-        after_digest_env.push(egroup_closure);
-      },
-    };
-
-    let end_envname_constructor = Rc::new(Constructor {
-      cs: T_CS!(end_name),
-      replacement: None,
-      paramlist: None,
-      before_digest: options.before_digest_end,
-      after_digest: after_digest_env,
-      ..Constructor::default() // TODO ? fill in missing ones
-    });
-    $state_arg.install_definition(end_envname_constructor, options.scope.clone());
-
-    // For the uncommon case opened by \csname env\endcsname
-    let name_constructor = Rc::new(Constructor {
-      cs: T_CS!(s!("\\{}", &name)),
-      paramlist: $paramlist,
-      replacement: $cc_copy,
-      // beforeDigest => flatten(($options{requireMath} ? (sub { requireMath($name); }) : ()),
-      //   ($options{forbidMath} ? (sub { forbidMath($name); })              : ()),
-      //   ($mode                ? (sub { $_[0]->beginMode($mode); })        : ()),
-      //   ($options{font}       ? (sub { MergeFont(%{ $options{font} }); }) : ()),
-      //   $options{beforeDigest}),
-      // afterDigest     => flatten($options{afterDigestBegin}),
-      // afterDigestBody => flatten($options{afterDigestBody}),
-      // beforeConstruct => flatten(sub { state->pushFrame; }, $options{beforeConstruct}),
-      // Curiously, it's the \begin whose afterConstruct gets called.
-      // afterConstruct => flatten($options{afterConstruct}, sub { state->popFrame; }),
-      nargs: options.nargs,
-      capture_body: true,
-      properties: options.properties.clone(),
-      // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
-      // (defined $sizer ? (sizer => $sizer) : ()),
-      // ), $options{scope});
-      ..Constructor::default()
-    });
-    $state_arg.install_definition(name_constructor, options.scope.clone());
-
-    let end_name_constructor = Rc::new(Constructor {
-      cs: T_CS!(s!("\\end{}", &name)),
-      paramlist: None,
-      replacement: Some(Rc::new(|document, whatsit, properties, state| {
-        let env = state.lookup_value("current_environment");
-        // Error('unexpected', "\\end{$name}", $_[0],
-        //   "Can't close environment $name",
-        //   "Current are "
-        //     . join(', ', state->lookupStackedValues('current_environment')))
-        //   unless $env && $name eq $env;
-        Ok(())
-      })),
-      // beforeDigest => flatten($options{beforeDigestEnd}),
-      // afterDigest  => flatten($options{afterDigest},
-      //   ($mode ? (sub { $_[0]->endMode($mode); }) : ())),
-      // ), $options{scope});
-      ..Constructor::default()
-    });
-    $state_arg.install_definition(end_name_constructor, options.scope);
-
-    if options.locked {
-      AssignValue!(&s!("\\begin{{{}}}:locked", &name), true, None, $state_arg);
-      AssignValue!(&s!("\\end{{{}}}:locked", &name), true, None, $state_arg);
-      AssignValue!(&s!("\\{}:locked", &name), true, None, $state_arg);
-      AssignValue!(&s!("\\end{}:locked", &name), true, None, $state_arg);
-    }
-  }};
-}
-
 #[macro_export]
 macro_rules! TagWO {
   ($tag:expr, $properties:expr) => {{
@@ -849,11 +509,9 @@ macro_rules! DefEnvironmentWO (
 
   let compiled_replacement;
   compile_replacement!(compiled_replacement, $replacement);
-  let cc_copy;
-  compile_replacement!(cc_copy, $replacement);
 
   let options = $options;
-  DefEnvironmentI!(name, None, compiled_replacement, cc_copy, options, $state_arg);
+  def_environment(name, None, compiled_replacement, options, $state_arg);
 }));
 
 #[macro_export]
@@ -868,7 +526,7 @@ macro_rules! DefEnvironmentCWO (
   let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace));
   // TODO: What do we do with param lists?
   //let paramlist_str = proto.trim_start().to_string();
-  DefEnvironmentI!(name, None, $compiled_replacement, $compiled_replacement, $options, $state_arg);
+  def_environment(name, None, $compiled_replacement, $options, $state_arg);
 }));
 
 #[macro_export]
@@ -930,7 +588,7 @@ macro_rules! DefMathWO {
     // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
     let paramlist: Option<Parameters> = $paramlist;
     let nargs = match paramlist {
-      Some(plist) => plist.get_num_args(),
+      Some(ref plist) => plist.get_num_args(),
       None => 0,
     };
     let csname = cs.get_string().to_string();
@@ -987,7 +645,7 @@ macro_rules! DefMathWO {
     // Define a primitive that will create a Box with the appropriate set of XMTok attributes.
     if nargs == 0 {
       // && !grep { !$$simpletoken_options{$_} } keys %options) {
-      defmath_prim!(cs, paramlist, $presentation.to_string(), options, $state_arg);
+      def_math_primitive(cs, paramlist, $presentation.to_string(), options, $state_arg);
     }
 
     // else {
@@ -996,52 +654,6 @@ macro_rules! DefMathWO {
   }};
 }
 
-#[macro_export]
-macro_rules! defmath_prim {
-  ($cs:expr, $_paramlist:expr, $presentation:expr, $options:expr, $state_arg:ident) => {{
-    let mut prim_options = $options;
-    prim_options.locked = false;
-    prim_options.font = None;
-    let scope = prim_options.scope.clone();
-    let reqfont = prim_options.font.clone().unwrap_or_else(Font::default);
-    $state_arg.install_definition(
-      MathPrimitive {
-        cs: $cs.clone(),
-        paramlist: None, // never any parameters, this is intentional
-        replacement: Some(Rc::new(move |stomach, args, state| {
-          // let locator    = $stomach->getGullet->getLocator;
-          let mut properties = HashMap::new(); // TODO: sync with perl master here
-          properties.insert(s!("mode"), Stored::String(String::from("math")));
-          // TODO: Improve font precision here, the defaults may not belong in this lookup
-          let font = state
-            .lookup_font()
-            .unwrap_or_else(|| Rc::new(Font::default()))
-            .merge(&reqfont)
-            .specialize(&$presentation);
-          let font = Rc::new(font);
-          // foreach my $key (keys %properties) {
-          //   my $value = $properties{$key};
-          //   if (ref $value eq 'CODE') {
-          //     $properties{$key} = &$value(); } }
-          // info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
-          Ok(vec![Digested::TBox(Rc::new(
-            // TODO: Can we reduce boilerplate?
-            Tbox {
-              text: $presentation,
-              tokens: Tokens!($cs.clone()),
-              font,
-              properties,
-              ..Tbox::default()
-            },
-          ))])
-        })),
-        options: prim_options,
-        ..MathPrimitive::default()
-      },
-      scope,
-    );
-  }};
-}
 #[macro_export]
 macro_rules! requireMath {
   ($cs_name:expr) => {{
@@ -1709,6 +1321,9 @@ macro_rules! NewCounter {
     (NewCounterWO!($ctr, $within, Some(NewDefault!(NewCounterOptions, $($key=>$val),*)), $state_arg))
 }
 
+//=====================================================================
+// Define a LaTeX environment
+// Note that the body of the environment is treated is the 'body' parameter in the constructor.
 #[macro_export]
 macro_rules! DefEnvironment(
   // implicit state
