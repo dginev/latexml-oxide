@@ -293,7 +293,7 @@ LoadDefinitions!(state, {
     let number = value.to_number();
     let chardef_value = value.clone();
     let internalcs = T_CS!(&s!("\\@chardef@{}", csname));
-    DefPrimitiveII!(internalcs, None, sub[stomach,args,i_state] {
+    DefPrimitiveII!(internalcs.clone(), None, sub[stomach,args,i_state] {
       let gullet = stomach.get_gullet_mut();
       let decoded = match font::decode(number.value_of() as u8, None, false, i_state) {
         None => String::new(),
