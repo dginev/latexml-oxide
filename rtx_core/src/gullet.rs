@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use crate::common::dimension::Dimension;
+use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
 use crate::common::glue::{Glue, MuGlue};
 use crate::common::locator::Locator;
@@ -703,6 +703,46 @@ impl Gullet {
     }
   }
 
+  ///======================================================================
+  /// Float, a floating point number.
+  /// Similar to factor, but does NOT accept comma!
+  /// This is NOT part of TeX, but is convenient.
+  pub fn read_float(&mut self, state: &mut State) -> Result<Number> {
+    let is_negative = self.read_optional_signs(state)?;
+    let s = if is_negative { -1.0 } else { 1.0 };
+    let mut string = self.read_digits(&DIGIT_RE, true, state)?;
+    match self.read_x_token(false, false, state)? {
+      None => {
+        warn!(target:"expected:<float>", "Missing number, treated as zero while processing {:?}", state.current_token);
+        Ok(Number::new(0.0))
+      },
+      Some(mut token) => {
+        if token.get_string() == "." {
+          string = s!("{}.{}", string, self.read_digits(&DIGIT_RE, true, state)?);
+          token = self.read_x_token(false, false, state)?.unwrap();
+        }
+
+        let mut n_opt: Option<Number>;
+        if !string.is_empty() {
+          if token.get_catcode() != Catcode::SPACE {
+            // Inline ->getCatcode, unread
+            self.unread(&Tokens!(token));
+          }
+          n_opt = Some(string.into());
+        } else {
+          self.unread(&Tokens!(token)); // Unread
+          n_opt = self.read_normal_integer(state)?;
+        }
+        if let Some(n) = n_opt {
+          Ok(Number::new(s * n.value_of()))
+        } else {
+          warn!(target:"expected:<float>", "Missing number, treated as zero while processing {:?}", state.current_token);
+          Ok(Number::new(0.0))
+        }
+      },
+    }
+  }
+
   fn read_internal_integer(&mut self, state: &mut State) -> Result<Option<Number>> {
     match self.read_register_value(RegisterType::Number, state)? {
       None => Ok(None),
@@ -781,6 +821,7 @@ impl Gullet {
 
   pub fn read_glue(&mut self, _state: &mut State) -> Result<Glue> { unimplemented!() }
   pub fn read_muglue(&mut self, _state: &mut State) -> Result<MuGlue> { unimplemented!() }
+  pub fn read_mudimension(&mut self, _state: &mut State) -> Result<MuDimension> { unimplemented!() }
   /// Apparent behaviour of a token value (ie \toks#=<arg>)
   pub fn read_tokens_value(&mut self, state: &mut State) -> Result<Tokens> {
     match self.read_non_space(state) {
