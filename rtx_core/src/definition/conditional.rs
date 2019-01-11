@@ -209,7 +209,7 @@ impl Conditional {
   // # Return the token we've skipped to, and the frame that this applies to.
   fn skip_conditional_body(&self, nskips: f32, gullet: &mut Gullet, state: &mut State) -> Tokens {
     let mut level = 1;
-    let mut n_ors: f32 = 0.0;
+    let mut n_ors = 0;
     let _start = gullet.get_locator();
     // NOTE: Open-coded manipulation of if_stack!
     // [we're only reading tokens & looking up, so State shouldn't change behind our backs]
@@ -248,8 +248,8 @@ impl Conditional {
           if level <= 1 {
             // Ignore \else,\or nested in the body.
             if cond_type == Some(ConditionalType::Or) {
-              n_ors += 1.0;
-              if n_ors == nskips {
+              n_ors += 1;
+              if n_ors == nskips as i32 {
                 return t;
               }
             } else if cond_type == Some(ConditionalType::Else) && nskips != 0.0 {
