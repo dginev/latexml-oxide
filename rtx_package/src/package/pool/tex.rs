@@ -7,18 +7,21 @@ LoadDefinitions!(state, {
   //   Author: Bruce Miller <bruce.miller@nist.gov>
   //   Date:   Mon Jul 17 16:34:13 2017 -0400
 
-  // lines 1-604
+  // lines 1-695
   // XML language, DefParameterType
   InnerPool!(tex_setup);
 
-  // lines 604-912
+  // lines 695-949
   InnerPool!(tex_expandable_primitives);
 
-  // lines 912-979
+  //**********************************************************************
+  // Primitives
+
+  // lines 950-1102
   // Dimen registers; TeXBook p. 274
   InnerPool!(tex_registers);
-
-  // lines 979-1278
+  // <--- updated upto here --->
+  // lines 1102-1278
   InnerPool!(tex_assignment);
 
   // lines 1278-1649

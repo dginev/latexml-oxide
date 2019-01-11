@@ -49,3 +49,11 @@ macro_rules! Number {
     ::rtx_core::common::number::Number::new($number as f32)
   }};
 }
+
+impl From<String> for Number {
+  fn from(s: String) -> Number {
+    Number {
+      number: s.parse::<f32>().unwrap(),
+    }
+  }
+}
