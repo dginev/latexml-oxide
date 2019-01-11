@@ -91,6 +91,7 @@ macro_rules! primitivesub {
 macro_rules! primitiveproc {
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => (
     |$stomach:&mut Stomach, mut $args : Vec<Tokens>, $inner_state:&mut State| {
+      // BindState!($inner_state, $stomach);
       $body
       Ok(Vec::new())
     }

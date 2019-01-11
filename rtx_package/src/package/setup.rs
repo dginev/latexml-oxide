@@ -13,9 +13,9 @@
 
 #[macro_export]
 macro_rules! LoadDefinitions {
-  ($state:ident, $body:block) => {
-    pub fn load_definitions($state: &mut State, mut outer_stomach: Option<&mut Stomach>) -> Result<()> {
-      BindState!($state, outer_stomach);
+  ($outer_state:ident, $body:block) => {
+    pub fn load_definitions($outer_state: &mut State, mut outer_stomach: Option<&mut Stomach>) -> Result<()> {
+      BindState!($outer_state, outer_stomach);
       {
         $body
       }
@@ -29,17 +29,16 @@ macro_rules! LoadDefinitions {
 //    into a set of convenience macros for brief syntax
 //
 //=================================================
+
 #[macro_export]
 macro_rules! BindState {
   ($state:ident) => {
     BindState!($state, None)
   };
-  ($state:ident, $outer_stomach: expr) => {
-    #[allow(unused_macros)]
-    let state_stomach = $state.stomach.clone();
-    macro_rules! state {
+  ($outer_state:ident, $outer_stomach: expr) => {
+    macro_rules! outer_state {
       () => {
-        $state
+        $outer_state
       };
     }
     macro_rules! outer_stomach {
@@ -47,45 +46,42 @@ macro_rules! BindState {
         $outer_stomach
       };
     }
-    macro_rules! Digest {
-      ($tokens:expr) => {{
-        let st: &mut State = state!();
-        Digest!($tokens, st)
-      }};
-      ($tokens:expr, $state_arg:ident) => {{
-        match $outer_stomach.as_mut() {
-          Some(st) => (*st).digest($tokens, $state_arg),
-          None => state_stomach.borrow_mut().digest($tokens, $state_arg),
-        }
-      }};
-    }
+  };
+}
 
-    macro_rules! DigestText {
-      ($tokens:expr) => {
-        match $outer_stomach.as_mut() {
-          Some(st) => digest_text($tokens, *st, $state),
-          None => digest_text($tokens, state_stomach.borrow_mut(), $state),
-        }
-      };
-      ($tokens:expr, $stomach:ident) => {
-        DigestText!($tokens, $stomach, $state)
-      };
-      ($tokens:expr, $stomach:ident, $state_arg:ident) => {
-        digest_text($tokens, $stomach, $state_arg)
+#[macro_export]
+macro_rules! BindInnerState {
+  ($state:ident) => {
+    BindInnerState!($state, None)
+  };
+  ($inner_state:ident, $inner_stomach: expr) => {
+    macro_rules! inner_state {
+      () => {
+        $inner_state
       };
     }
+    macro_rules! inner_stomach {
+      () => {
+        $inner_stomach
+      };
+    }
+  };
+}
 
-    macro_rules! RawTeX {
-      ($text:expr) => {
-        RawTeX!($text, $state)
-      };
-      ($text:expr, $state_arg:ident) => {{
-        match $outer_stomach.as_mut() {
-          Some(st) => (*st).raw_tex($text, $state_arg)?,
-          None => state_stomach.borrow_mut().raw_tex($text, $state_arg)?,
-        }
-      }};
-    }
+#[macro_export]
+macro_rules! bind_state {
+  ($st:ident) => {
+    let $st: &mut State = {
+      // TODO: If we can manage to make this attribute visible from **outside**,
+      // in particular in macros such as beforeproc!() and beforesub!(), we can automate the inner state use
+      // entirely
+      //
+      // #[bound_options(location = "inner")]
+      //
+      #[derive(BoundState)]
+      struct _Bound;
+      state!()
+    };
   };
 }
 
@@ -95,7 +91,8 @@ macro_rules! BindState {
 #[macro_export]
 macro_rules! DefParameterTypeWO {
   ($name:expr, $param:expr) => {
-    state!().assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter($param)))
+    bind_state!(st);
+    st.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter($param)))
   };
   ($name:expr, $param:expr, $state_arg:ident) => {
     $state_arg.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter($param)))
@@ -105,7 +102,7 @@ macro_rules! DefParameterTypeWO {
 #[macro_export]
 macro_rules! LoadPool {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     LoadPool!($name, st)
   }};
   ($name:expr, $state_arg:ident) => {{
@@ -128,7 +125,7 @@ macro_rules! LoadPool {
 #[macro_export]
 macro_rules! InnerPool {
   ($name:ident) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     InnerPool!($name, st, outer_stomach!())
   }};
   ($name:ident, $state_arg:ident) => {
@@ -145,7 +142,7 @@ macro_rules! InnerPool {
 #[macro_export]
 macro_rules! RequirePackage {
   ($package:expr, $options:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     RequirePackage!($package, $options, st)
   }};
   ($package:expr, $options:expr, $state_arg:ident) => {
@@ -174,11 +171,11 @@ macro_rules! DeclareFontMap {
     $state_arg.assign_value(&mapname, map, Some(Scope::Global));
   }};
   ($name:expr, $map:expr, $family:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     DeclareFontMap!($name, $map, $family, st)
   }};
   ($name:expr, $map:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     DeclareFontMap!($name, $map, st)
   }};
 }
@@ -187,7 +184,8 @@ macro_rules! DeclareFontMap {
 macro_rules! DefMacroIWO {
   // closure stub
   ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) => {{
-    let st : &mut State = state!();
+
+    bind_state!(st);
     DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, $options, st)
   }};
   // with explicit state
@@ -197,7 +195,8 @@ macro_rules! DefMacroIWO {
   }};
   // precompiled
   ($cs:expr, $paramlist:expr, $expansion:expr, $options:expr) => {{
-    def_macro($cs, $paramlist, $expansion, $options, state!())
+    bind_state!(st);
+    def_macro($cs, $paramlist, $expansion, $options, st)
   }};
   // with explicit state
   ($cs:expr, $paramlist:expr, $expansion:expr, $options:expr, $state_arg:ident) => {{
@@ -216,12 +215,12 @@ macro_rules! DefMacroWO {
     def_macro(cs, paramlist, expansion_closure, $options, $state_arg);
   }};
   ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) => ({
-    let st : &mut State = state!();
+    bind_state!(st);
     DefMacroWO!($proto, sub [ $gullet, $args, $inner_state ] $body, $options, st)
   });
   // String expansion forms
   ($proto:expr, $expansion:expr, $options:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefMacroWO!($proto, $expansion, $options, st);
   }};
   ($proto:expr, $expansion:expr, $options:expr, $state_arg:ident) => ({
@@ -236,7 +235,7 @@ macro_rules! DefMacroWO {
 macro_rules! DefConditional(
   // test is always a rust closure
   ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefConditional!($proto, sub[$gullet, $args, $inner_state] $body, st);
   }};
   ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
@@ -245,11 +244,11 @@ macro_rules! DefConditional(
   });
   // or None
   ($proto:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefConditional!($proto, None, st)
   }};
   ($proto:expr, None) => ({
-    let st : &mut State = state!();
+    bind_state!(st);
     DefConditional!($proto, None, st)
   });
   ($proto:expr, None, $state_arg:ident) => ({
@@ -262,7 +261,7 @@ macro_rules! DefConditional(
 macro_rules! DefConditionalI(
   // test is always a rust closure
   ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefConditionalI!($cs, $paramlist, $gullet, $args, $inner_state, $body, st)
   }};
   ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
@@ -271,7 +270,7 @@ macro_rules! DefConditionalI(
   });
   // or None
   ($cs:expr, $paramlist:expr, None) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefConditionalI!($cs, $paramlist, None, st)
   }};
   ($cs:expr, $paramlist:expr, None, $state_arg:ident) => ({
@@ -321,14 +320,14 @@ macro_rules! DefConditionalI(
 #[macro_export]
 macro_rules! DefPrimitiveII {
   ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefPrimitiveII!($cs, $paramlist, sub[$stomach, $args, $inner_state] $body, st)
   }};
   ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block, $state_arg:ident) => {
     DefPrimitiveII!($cs, $paramlist, move |$stomach, $args, $inner_state| $body, PrimitiveOptions::default(), $state_arg)
   };
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefPrimitiveII!($cs, $paramlist, $compiled_replacement, $options, st)
   }};
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
@@ -339,7 +338,7 @@ macro_rules! DefPrimitiveII {
 #[macro_export]
 macro_rules! DefPrimitiveIWO(
   ($proto:expr, $compiled_replacement:expr, $options:expr) => ({
-    let st : &mut State = state!();
+    bind_state!(st);
     DefPrimitiveIWO!($proto, $compiled_replacement, $options, st)
   });
   ($proto:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
@@ -351,7 +350,7 @@ macro_rules! DefPrimitiveIWO(
 #[macro_export]
 macro_rules! DefRegisterWO {
   ($proto:expr, $value:expr, $options:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     DefRegisterWO!($proto, $value, $options, st)
   }};
   ($proto:expr, $value:expr, $options:expr, $state_arg:ident) => {{
@@ -363,7 +362,7 @@ macro_rules! DefRegisterWO {
 #[macro_export]
 macro_rules! DefRegisterI {
   ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     DefRegisterI!($cs, $paramlist, $value, $options, st)
   }};
   ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => {
@@ -434,7 +433,7 @@ macro_rules! DefRegisterI {
 #[macro_export]
 macro_rules! DefConstructorIWO {
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     DefConstructorIWO!($cs, $paramlist, $compiled_replacement, $options, st)
   }};
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
@@ -445,7 +444,7 @@ macro_rules! DefConstructorIWO {
 #[macro_export]
 macro_rules! DefConstructorWO(
   ($proto:expr, $replacement:expr, $options:expr) => ({
-    let st : &mut State = state!();
+    bind_state!(st);
     DefConstructorWO!($proto, $replacement, $options, st)
   });
   ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
@@ -456,7 +455,7 @@ macro_rules! DefConstructorWO(
     DefConstructorIWO!(cs, paramlist, compiled_replacement, $options, $state_arg);
   });
   ($proto:expr, $document:ident, $args:ident, $props:ident, $inner_state:ident, $body:block, $options:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, $options, st)
   }};
 
@@ -467,7 +466,7 @@ macro_rules! DefConstructorWO(
   });
   // pre-compiled CS with to-be-compiled replacement (see \begin{verbatim})
   (cs [ $cs:expr ], $paramlist:expr, $replacement:expr, $options:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefConstructorWO!(cs[$cs], $paramlist, $replacement, $options, st)
   }};
   (cs [ $cs:expr ], $paramlist:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
@@ -481,7 +480,7 @@ macro_rules! DefConstructorWO(
 #[macro_export]
 macro_rules! TagWO {
   ($tag:expr, $properties:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     TagWO!($tag, $properties, st)
   }};
   ($tag:expr, $properties:expr, $state_arg:ident) => {
@@ -499,7 +498,7 @@ macro_rules! TagWO {
 #[macro_export]
 macro_rules! DefEnvironmentWO (
   ($proto_raw:expr, $replacement:expr, $options:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefEnvironmentWO!($proto_raw, $replacement, $options, st)
   }};
   ($proto_raw:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
@@ -517,7 +516,7 @@ macro_rules! DefEnvironmentWO (
 #[macro_export]
 macro_rules! DefEnvironmentCWO (
   ($proto_raw:expr, $compiled_replacement:expr, $options:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefEnvironmentCWO!($proto_raw, $compiled_replacement, $options, st)
   }};
   ($proto_raw:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
@@ -532,7 +531,7 @@ macro_rules! DefEnvironmentCWO (
 #[macro_export]
 macro_rules! RelaxNGSchema {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     RelaxNGSchema!($name, st)
   }};
   ($name:expr,$state_arg:ident) => {
@@ -543,7 +542,7 @@ macro_rules! RelaxNGSchema {
 #[macro_export]
 macro_rules! RegisterNamespace(
   ($prefix:expr, $namespace:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     RegisterNamespace!($prefix, $namespace, st)
   }};
   ($prefix:expr, $namespace:expr,$state_arg:ident) =>
@@ -552,7 +551,7 @@ macro_rules! RegisterNamespace(
 #[macro_export]
 macro_rules! RegisterDocumentNamespace(
   ($prefix:expr, $namespace:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     RegisterDocumentNamespace!($prefix, $namespace, st)
   }};
   ($prefix:expr, $namespace:expr,$state_arg:ident) =>
@@ -561,7 +560,7 @@ macro_rules! RegisterDocumentNamespace(
 #[macro_export]
 macro_rules! RequireResource(
   ($resource:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     RequireResource!($resource, st)
   }};
   ($resource:expr,$state_arg:ident) =>
@@ -577,7 +576,7 @@ macro_rules! RequireResource(
 #[macro_export]
 macro_rules! DefMathWO {
   ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     DefMathWO!($cstext, $paramlist, $presentation, $options, st)
   }};
   ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr, $state_arg:ident) => {{
@@ -657,7 +656,7 @@ macro_rules! DefMathWO {
 #[macro_export]
 macro_rules! requireMath {
   ($cs_name:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     requireMath!($cs_name, st)
   }};
   ($cs_name:expr, $state_arg:ident) => (
@@ -669,7 +668,7 @@ macro_rules! requireMath {
 #[macro_export]
 macro_rules! forbidMath {
   ($cs_name:expr) => ({
-    let st : &mut State = state!();
+    bind_state!(st);
     forbidMath!($cs_name, st)
   });
   ($cs_name:expr, $state_arg:ident) => (
@@ -705,13 +704,15 @@ macro_rules! forbidMath {
 #[macro_export]
 macro_rules! NewCounterWO {
   ($ctr:expr, $within:expr, None) => {
-    new_counter($ctr, $within, None, state!())?
+    bind_state!(st);
+    new_counter($ctr, $within, None, st)?
   };
   ($ctr:expr, $within:expr, None, $state_arg:ident) => {
     new_counter($ctr, $within, None, $state_arg)?
   };
   ($ctr:expr, $within:expr, Some($opts:expr)) => {
-    new_counter($ctr, $within, Some($opts), state!())?
+    bind_state!(st);
+    new_counter($ctr, $within, Some($opts), st)?
   };
   ($ctr:expr, $within:expr, Some($opts:expr), $state_arg:ident) => {
     new_counter($ctr, $within, Some($opts), $state_arg)?
@@ -720,7 +721,8 @@ macro_rules! NewCounterWO {
 #[macro_export]
 macro_rules! CounterValue {
   ($ctr:expr) => {
-    counter_value($ctr, state!())
+    bind_state!(st);
+    counter_value($ctr, st)
   };
   ($ctr:expr, $state_arg:ident) => {
     counter_value($ctr, $state_arg)
@@ -745,7 +747,8 @@ macro_rules! SetCounter {
 #[macro_export]
 macro_rules! AddToCounter {
   ($ctr:expr, $value:expr, $gullet:ident) => {
-    add_to_counter($ctr, $value, $gullet, state!())
+    bind_state!(st);
+    add_to_counter($ctr, $value, $gullet, st)
   };
   ($ctr:expr, $value:expr, $gullet:ident, $state_arg:ident) => {
     add_to_counter($ctr, $value, $gullet, $state_arg)
@@ -754,7 +757,8 @@ macro_rules! AddToCounter {
 #[macro_export]
 macro_rules! StepCounter {
   ($ctr:expr, $noreset:expr, $gullet:ident) => {
-    step_counter($ctr, $noreset, $gullet, state!())
+    bind_state!(st);
+    step_counter($ctr, $noreset, $gullet, st)
   };
   ($ctr:expr, $noreset:expr, $gullet:ident, $state_arg:ident) => {
     step_counter($ctr, $noreset, $gullet, $state_arg)
@@ -804,14 +808,14 @@ macro_rules! Expand {
 #[macro_export]
 macro_rules! Invocation {
   ($csname:literal, $args:expr, $gullet:expr) => {
-    let st: &mut State = state!();
+    bind_state!(st);
     Invocation!(T_CS!($csname), $args, $gullet, st)
   };
   ($csname:literal, $args:expr, $gullet:expr, $state_arg:ident) => {
     Invocation!(T_CS!($csname), $args, $gullet, $state_arg)
   };
   ($token:expr, $args:expr, $gullet:expr) => {
-    let st: &mut State = state!();
+    bind_state!(st);
     Invocation!($token, $args, $gullet, st)
   };
   ($token:expr, $args:expr, $gullet:expr, $state_arg:ident) => {
@@ -821,7 +825,7 @@ macro_rules! Invocation {
 #[macro_export]
 macro_rules! DefLigature {
   ($regex:expr, $replacement:expr, fontTest => sub[$font:ident] $body:block) => {
-    let st : &mut State = state!();
+    bind_state!(st);
     DefLigature!($regex, $replacement, fontTest => sub[$font]{$body}, st)
   };
   ($regex:expr, $replacement:expr, fontTest => sub[$font:ident] $body:block, $state_arg:ident) => {
@@ -837,7 +841,7 @@ macro_rules! DefLigature {
     );
   };
   ($regex:expr, $replacement:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefLigature!($regex, $replacement, st)
   }};
   ($regex:expr, $replacement:expr, $state_arg:ident) => {
@@ -859,15 +863,15 @@ macro_rules! DefLigature {
 macro_rules! DefAccent {
   ($accent:expr, $combiningchar:expr, $standalonechar:expr) => {
     let mut empty_opts : HashMap<String, Stored> = HashMap::new();
-    let st : &mut State = state!();
+    bind_state!(st);
     DefAccent!($accent, $combiningchar, $standalonechar, empty_opts, st)
   };
   ($accent:expr, $combiningchar:expr, $standalonechar:expr, below => true) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefAccent!($accent, $combiningchar, $standalonechar, map!("below"=>Stored::Bool(true)), st)
   }};
   ($accent:expr, $combiningchar:expr, $standalonechar:expr, $options:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     DefAccent!($accent, $combiningchar, $standalonechar, $options, st)
   }};
   ($accent:expr, $combiningchar:expr, $standalonechar:expr, $options:expr, $state_arg: ident) => {{
@@ -897,7 +901,7 @@ macro_rules! DefAccent {
 #[macro_export]
 macro_rules! LookupValue {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     LookupValue!($name, st)
   }};
   ($name:expr, $state_arg:ident) => {
@@ -908,7 +912,7 @@ macro_rules! LookupValue {
 macro_rules! LookupBool {
   ($name:expr) => {{
     {
-      let st: &mut State = state!();
+      bind_state!(st);
       LookupBool!($name, st)
     }
   }};
@@ -919,7 +923,7 @@ macro_rules! LookupBool {
 #[macro_export]
 macro_rules! LookupString {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     LookupString!($name, st)
   }};
   ($name:expr, $state_arg:ident) => {
@@ -929,7 +933,7 @@ macro_rules! LookupString {
 #[macro_export]
 macro_rules! LookupNumber {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     LookupNumber!($name, st)
   }};
   ($name:expr, $state_arg:ident) => {
@@ -939,7 +943,7 @@ macro_rules! LookupNumber {
 #[macro_export]
 macro_rules! LookupTokens {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     LookupTokens!($name, st)
   }};
   ($name:expr, $state_arg:ident) => {
@@ -948,14 +952,14 @@ macro_rules! LookupTokens {
 }
 #[macro_export]
 macro_rules! AssignValue {
-  ($name:expr, $value:expr) => {{
-    let st: &mut State = state!();
+  ($name:expr, $value:expr) => {
+    bind_state!(st);
     AssignValue!($name, $value, None, st)
-  }};
-  ($name:expr, $value:expr, $scope:expr) => {{
-    let st: &mut State = state!();
+  };
+  ($name:expr, $value:expr, $scope:expr) => {
+    bind_state!(st);
     AssignValue!($name, $value, $scope, st)
-  }};
+  };
   ($name:expr, $value:expr, $scope:expr, $state_arg:ident) => {
     $state_arg.assign_value($name, $value, $scope)
   };
@@ -963,7 +967,7 @@ macro_rules! AssignValue {
 #[macro_export]
 macro_rules! RemoveValue {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     RemoveValue!($name, st)
   }};
   ($name:expr, $state_arg:ident) => {
@@ -973,7 +977,7 @@ macro_rules! RemoveValue {
 #[macro_export]
 macro_rules! PushValue {
   ($name:expr, $values:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     PushValue!($name, $values, st)
   }};
   ($name:expr, $values:expr, $state_arg:ident) => {
@@ -983,7 +987,7 @@ macro_rules! PushValue {
 #[macro_export]
 macro_rules! PopValue {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     PopValue!($name, st)
   }};
   ($name:expr, $state_arg:ident) => {
@@ -993,7 +997,7 @@ macro_rules! PopValue {
 #[macro_export]
 macro_rules! UnshiftValue {
   ($name:expr, $values:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     UnshiftValue!($name, $values, st)
   }};
   ($name:expr, $values:expr,$state_arg:ident) => {
@@ -1003,7 +1007,7 @@ macro_rules! UnshiftValue {
 #[macro_export]
 macro_rules! ShiftValue {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     ShiftValue!($name, st)
   }};
   ($name:expr,$state_arg:ident) => {
@@ -1013,7 +1017,7 @@ macro_rules! ShiftValue {
 #[macro_export]
 macro_rules! LookupMapping {
   ($map:expr, $key:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     LookupValue!($map, $key, st)
   }};
   ($map:expr, $key:expr, $state_arg:ident) => {
@@ -1023,7 +1027,7 @@ macro_rules! LookupMapping {
 #[macro_export]
 macro_rules! AssignMapping {
   ($map:expr, $key:expr => $value:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     AssignMapping!($map, $key => $value, st)
   }};
   ($map:expr, $key:expr => $value:expr, $state_arg:ident) => {
@@ -1033,7 +1037,7 @@ macro_rules! AssignMapping {
 #[macro_export]
 macro_rules! LookupMappingKeys {
   ($map:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     LookupMappingKeys!($map, st)
   }};
   ($map:expr, $state_arg:ident) => {
@@ -1043,7 +1047,7 @@ macro_rules! LookupMappingKeys {
 #[macro_export]
 macro_rules! LookupCatcode {
   ($char:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     LookupCatcode!($char, st)
   }};
   ($char:expr, $state_arg:ident) => {
@@ -1053,7 +1057,7 @@ macro_rules! LookupCatcode {
 #[macro_export]
 macro_rules! AssignCatcode {
   ($char:expr, $catcode:expr, $scope:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     AssignCatcode!($char, $catcode, $scope, st)
   }};
   ($char:expr, $catcode:expr, $scope:expr, $state_arg:ident) => {
@@ -1063,7 +1067,7 @@ macro_rules! AssignCatcode {
 #[macro_export]
 macro_rules! LookupMeaning {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     LookupMeaning!($name, st)
   }};
   ($name:expr, $state_arg:ident) => {
@@ -1073,7 +1077,7 @@ macro_rules! LookupMeaning {
 #[macro_export]
 macro_rules! LookupDefinition {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     LookupDefinition!($name, st)
   }};
   ($name:expr, $state_arg:ident) => {
@@ -1083,7 +1087,7 @@ macro_rules! LookupDefinition {
 #[macro_export]
 macro_rules! InstallDefinition {
   ($name:expr, $definition:expr, $scope:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     InstallDefinition!($name, $definition, $scope, st)
   }};
   ($name:expr, $definition:expr, $scope:expr, $state_arg:ident) => {
@@ -1093,7 +1097,7 @@ macro_rules! InstallDefinition {
 #[macro_export]
 macro_rules! XEquals {
   ($token1:expr, $token2:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     XEquals!($token1, $token2, st)
   }};
   ($token1:expr, $token2:expr, $state_arg:ident) => {
@@ -1103,7 +1107,7 @@ macro_rules! XEquals {
 #[macro_export]
 macro_rules! IsDefined {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     IsDefined!($name, st)
   }};
   ($name:expr, $state_arg:ident) => {
@@ -1113,14 +1117,14 @@ macro_rules! IsDefined {
 #[macro_export]
 macro_rules! IsDefinedToken {
   ($name:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     is_defined_token($name, st)
   }};
 }
 #[macro_export]
 macro_rules! Let {
   ($token1:expr, $token2:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     Let!($token1, $token2, st)
   }};
   ($token1:expr, $token2:expr, $state_arg:ident) => {{
@@ -1133,7 +1137,7 @@ macro_rules! Let {
 #[macro_export]
 macro_rules! LetI {
   ($token1:expr, $token2:expr) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     LetI!($token1, $token2, st)
   }};
   ($token1:expr, $token2:expr, $state_arg:ident) => {
@@ -1146,14 +1150,14 @@ macro_rules! LetI {
 #[macro_export]
 macro_rules! DigestIf {
   ($token:literal, $stomach:ident) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     DigestIf!(T_CS!($token), $stomach, st)
   }};
   ($token:literal, $stomach:ident, $state_arg:ident) => {
     digest_if(T_CS!($token), $stomach, $state_arg)
   };
   ($token:expr, $stomach:ident) => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     DigestIf!($token, $stomach, st)
   }};
   ($token:expr, $stomach:ident, $state_arg: ident) => {
@@ -1163,7 +1167,7 @@ macro_rules! DigestIf {
 #[macro_export]
 macro_rules! AfterAssignment {
   () => {{
-    let st: &mut State = state!();
+    bind_state!(st);
     AfterAssignment!(st)
   }};
   ($state_arg: ident) => {
@@ -1175,14 +1179,14 @@ macro_rules! AfterAssignment {
 #[macro_export]
 macro_rules! MergeFont {
   ($kv:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     MergeFont!($kv, st)
   }};
   ($kv:expr, $state_arg:ident) => {
     merge_font($kv, $state_arg)
   };
   ($key:ident => $val:expr) => {{
-    let st : &mut State = state!();
+    bind_state!(st);
     MergeFont!($key => $val, st)
   }};
   ($key:ident => $val:expr, $state_arg:ident) => {
@@ -1352,9 +1356,11 @@ macro_rules! DefEnvironmentC(
 #[macro_export]
 macro_rules! DefPrimitive{
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block) =>
-    (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {$body}, PrimitiveOptions::default()));
+    (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {
+      BindInnerState!($inner_state, $stomach); $body}, PrimitiveOptions::default()));
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $($key:ident=>$val:expr),*) =>
-    (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {$body}, NewDefault!(PrimitiveOptions, $($key=>$val),*)));
+    (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {
+      BindInnerState!($inner_state, $stomach); $body}, NewDefault!(PrimitiveOptions, $($key=>$val),*)));
   ($proto:expr, $replacement:expr, $options:expr) => ({
     // TODO:
     // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
@@ -1445,4 +1451,50 @@ macro_rules! GetKeyVals {
       _ => None,
     }
   };
+}
+
+macro_rules! Digest {
+  ($tokens:expr) => {{
+    bind_state!(st);
+    Digest!($tokens, st)
+  }};
+  ($tokens:expr, $state_arg:ident) => {{
+    let mut state_stomach = $state_arg.stomach.clone();
+    match outer_stomach!().as_mut() {
+      Some(st) => (*st).digest($tokens, $state_arg),
+      None => state_stomach.borrow_mut().digest($tokens, $state_arg),
+    }
+  }};
+}
+
+macro_rules! DigestText {
+  ($tokens:expr) => {
+    bind_state!(st);
+    let mut state_stomach = st.stomach.clone();
+    match outer_stomach!().as_mut() {
+      Some(st) => digest_text($tokens, *st, st),
+      None => digest_text($tokens, state_stomach.borrow_mut(), st),
+    }
+  };
+  ($tokens:expr, $stomach:ident) => {
+    bind_state!(st);
+    DigestText!($tokens, $stomach, st)
+  };
+  ($tokens:expr, $stomach:ident, $state_arg:ident) => {
+    digest_text($tokens, $stomach, $state_arg)
+  };
+}
+
+macro_rules! RawTeX {
+  ($text:expr) => {
+    bind_state!(st);
+    RawTeX!($text, st)
+  };
+  ($text:expr, $state_arg:ident) => {{
+    let mut state_stomach = $state_arg.stomach.clone();
+    match outer_stomach!().as_mut() {
+      Some(st) => (*st).raw_tex($text, $state_arg)?,
+      None => state_stomach.borrow_mut().raw_tex($text, $state_arg)?,
+    }
+  }};
 }
