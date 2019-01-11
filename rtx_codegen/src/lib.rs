@@ -87,10 +87,7 @@ pub fn bound_state(input: TokenStream) -> TokenStream {
       let options = get_options_from_input("bound_options", &item.attrs, bug);
       let location_opt = options.as_ref().map(|o| get_option(&o, "location", bug));
       let location = match location_opt {
-        Some(n) => {
-          println!("loc opt: {:?}", location_opt);
-          n
-        },
+        Some(n) => n,
         None => "outer",
       };
 
