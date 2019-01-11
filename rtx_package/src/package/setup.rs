@@ -71,6 +71,9 @@ macro_rules! BindInnerState {
 #[macro_export]
 macro_rules! bind_state {
   ($st:ident) => {
+    bind_state!($st, "outer")
+  };
+  ($st:ident, $location:expr) => {
     let $st: &mut State = {
       // TODO: If we can manage to make this attribute visible from **outside**,
       // in particular in macros such as beforeproc!() and beforesub!(), we can automate the inner state use
