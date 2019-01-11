@@ -1,6 +1,6 @@
 [package]
 name = "rtx_package"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2018"
 license = "CC0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
