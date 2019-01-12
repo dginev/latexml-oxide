@@ -1417,11 +1417,20 @@ macro_rules! DefMathI(
 
 #[macro_export]
 macro_rules! DefParameterType {
-  ($name:literal) => (DefParameterTypeWO!($name, Parameter::default()));
-  ($name:literal, $state_arg:ident) => (DefParameterTypeWO!($name, Parameter::default(), $state_arg));
+  ($name:literal) => (DefParameterTypeWO!($name, NewDefault!(Parameter, name => $name.to_string())));
+  ($name:literal, $state_arg:ident) => (DefParameterTypeWO!($name, NewDefault!(Parameter, name => $name.to_string()), $state_arg));
   ($name:literal, $($key:ident => $value:expr),*)=>(DefParameterTypeWO!($name, NewDefault!(Parameter, name => $name.to_string(), $($key=>$value),*)));
   ($name:literal, $($key:ident => $value:expr),*, $state_arg:ident)=>
     (DefParameterTypeWO!($name, NewDefault!(Parameter, name => $name.to_string(), $($key=>$value),*), $state_arg));
+  // with reader as explicit sub
+  ($name:literal, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block) => (
+    DefParameterTypeWO!($name, NewDefault!(Parameter, reader => reader!($gullet, $inner, $extra, $inner_state, $body))));
+  ($name:literal, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block, $($key:ident => $value:expr),*) => (
+    DefParameterTypeWO!($name, NewDefault!(Parameter, reader => reader!($gullet, $inner, $extra, $inner_state, $body),
+      name => $name.to_string(),  $($key=>$value),*)));
+  ($name:literal, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block, $($key:ident => $value:expr),*) => (
+    DefParameterTypeWO!($name, NewDefault!(Parameter, reader => reader!($gullet, $inner, $extra, $inner_state, $body),
+      name => $name.to_string(),  $($key=>$value),*), $state_arg));
 }
 
 // Reverts an object into TeX code, as a Tokens list, that would create it.
