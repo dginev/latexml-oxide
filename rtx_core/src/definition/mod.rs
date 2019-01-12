@@ -67,6 +67,7 @@ pub trait Definition: Object {
   fn is_protected(&self) -> bool { false }
   fn is_register(&self) -> bool { false }
   fn is_prefix(&self) -> bool { false }
+  fn is_readonly(&self) -> bool { false }
 
   fn get_locator(&self) -> String;
 

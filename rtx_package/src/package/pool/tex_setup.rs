@@ -344,26 +344,43 @@ LoadDefinitions!(state, {
   // This is sorta like readbalanced, but expands as it goes.
   // This appears to be needed by certain primitives (eg. \noalign ?)
   // and maybe what we should be using for some Digested ??
-  // DefParameterType('Expanded', sub {
-  //     my ($gullet) = @_;
-  //     my $token    = $gullet->readXToken(0);
-  //     my @tokens   = ();
-  //     if ($token->getCatcode == Catcode::BEGIN {
-  //       my $level = 1;
-  //       while ($token = $gullet->readXToken(0)) {
-  //         my $cc = $$token[1];
-  //         if ($cc == CC_END) {
-  //           $level--;
-  //           last unless $level; }
-  //         else if ($cc == Catcode::BEGIN {
-  //           $level++; }
-  //         push(@tokens, $token); }
-  //       return Tokens(@tokens); }
-  //     else {
-  //       return $token; } },
-  //   reversion => sub {
-  //     my ($arg) = @_;
-  //     (T_BEGIN,Revert($arg), T_END); });
+  DefParameterType!("Expanded",
+    reader => reader!(gullet, inner, untils, state, {
+      if let Some(token) = gullet.read_x_token(false, false, state)? {
+        let mut tokens   = Vec::new();
+        if token.get_catcode() == Catcode::BEGIN {
+          let mut level = 1;
+          while let Some(token) = gullet.read_x_token(false, false, state)? {
+            match token.get_catcode() {
+            Catcode::END => {
+              level-=1;
+              if level <=0 {
+                break;
+              }
+            },
+            Catcode::BEGIN => level +=1,
+            _ => {}
+            };
+            tokens.push(token);
+          }
+          Ok(Tokens::new(tokens))
+        } else {
+          Ok(Tokens!(token))
+        }
+      } else {
+        error!(target:"expected:Expanded", "was expecting an Expanded parameter value, found nothing.");
+        Ok(Tokens!())
+      }
+    }),
+    reversion => reversion!(gullet, arg, inner, state, {
+      let arg_rev : Vec<Token> = arg.iter().map(|t| t.revert()).collect();
+      let mut tks = Vec::new();
+      tks.push(T_BEGIN!());
+      tks.extend(arg_rev);
+      tks.push(T_END!());
+      Ok(Tokens::new(tks))
+    })
+  );
 
   // Read a matching keyword, eg. Match:=
   DefParameterType!("Match",
@@ -384,12 +401,22 @@ LoadDefinitions!(state, {
 
   // Read a keyword; eg. Keyword:to
   // (like Match, but ignores catcodes)
-  // DefParameterType!("Keyword",
-  //   Parameter {
-  //     reader: reader!(gullet, inner, _extra, state, {
-  //       gullet.read_keyword(state);
-  //     }), ..Parameter::default()
-  //   }, state);
+  DefParameterType!("Keyword",
+    reader => reader!(gullet, _inner, extra, state, {
+      let extra_tokens : Vec<Token> = extra.into_iter().filter(|e|
+      if let ParameterExtra::Token(t) = e {
+          true
+        } else {
+          false
+        }
+      ).map(|x| x.into()).collect();
+      let extra_strings: Vec<&str> = extra_tokens.iter().map(|x| x.get_string()).collect();
+      match gullet.read_keyword(extra_strings.as_slice(), state)? {
+        Some(t) => Ok(t),
+        None => Ok(Tokens!())
+      }
+    })
+  );
 
   // Read balanced material (?)
   DefParameterType!("Balanced",
@@ -439,6 +466,32 @@ LoadDefinitions!(state, {
     })
   );
 
+  // Be careful here: if % appears before the initial {, it's still a comment!
+  // Also, note that non-typewriter fonts will mess up some chars on digestion!
+  DefParameterType!("Verbatim",
+    reader => reader!(gullet, inner, _extra, state, {
+      gullet.read_until(vec![T_BEGIN!()], state)?;
+      state.begin_semiverbatim(Some(vec!['%', '\\']));
+      let arg = gullet.read_balanced(state)?;
+      state.end_semiverbatim()?;
+      Ok(arg)
+    }),
+    before_digest => beforeproc!(stomach, state, {
+      stomach.bgroup(state);
+      MergeFont!(family => "typewriter", state);
+    }),
+    after_digest => afterproc!(stomach, args, state, {
+      stomach.egroup(state)?;
+    }),
+    reversion => reversion!(gullet, arg, inner, state, {
+      let mut reverted = vec![T_BEGIN!()];
+      let reverted_arg : Vec<Token> = arg.iter().map(|a| a.revert()).collect();
+      reverted.extend(reverted_arg);
+      reverted.push(T_END!());
+      Ok(Tokens::new(reverted))
+    })
+  );
+
   // Read an argument that will not be digested.
   DefParameterType!("Undigested",
   reader => reader!(gullet, inner, _extra, state, { gullet.read_arg(state)}),
@@ -467,6 +520,70 @@ LoadDefinitions!(state, {
       Ok(Tokens::new(read_tokens))
     }
   }));
+
+  // Read a keyword value (KeyVals), that will not be digested.
+  DefParameterType!("UndigestedKey",
+    reader => reader!(gullet, inner, _extra, state, { gullet.read_arg(state) }),
+    reader_predigest => undigested!()
+  );
+
+  // Read a token as used when defining it, ie. it may be enclosed in braces.
+  DefParameterType!("DefToken",
+    reader => reader!(gullet, inner, _extra, state, {
+      let mut token_opt = gullet.read_token(state);
+      while token_opt.is_some() && token_opt != Some(T_BEGIN!()) {
+        let mut toks : Vec<Token> = gullet.read_balanced(state)?.unlist()
+          .into_iter().filter(|t| *t != T_SPACE!()).collect();
+        token_opt = Some(toks.remove(0));
+        gullet.unread(&Tokens::new(toks));
+      }
+      match token_opt {
+        Some(t) => Ok(Tokens!(t)),
+        None => {
+          error!(target:"expected:DefToken", "Expected a DefToken parameter, found nothing.");
+          Ok(Tokens!())
+        }
+      }
+    }),
+    reader_predigest => undigested!()
+  );
+
+  // Read a variable, ie. a token (after expansion) that is a writable register.
+  DefParameterType!("Variable",
+    reader => reader!(gullet, inner, _extra, state, {
+      let token_opt = gullet.read_x_token(false, false, state)?;
+      let defn_opt = match token_opt {
+        Some(ref token) => state.lookup_definition(token),
+        None => None
+      };
+      if let Some(defn) = defn_opt {
+         if defn.is_register() && !defn.is_readonly() {
+           unimplemented!() // TODO
+          // Ok(Tokens!(defn, defn.read_arguments(gullet, state)?))
+         } else {
+            error!(target:"expected:<variable>", "A <variable> was supposed to be here\n Got {:?}", token_opt);
+            Ok(Tokens!())
+         }
+      } else {
+        error!(target:"expected:<variable>", "A <variable> was supposed to be here\n Got {:?}", token_opt);
+        Ok(Tokens!())
+      }
+    }),
+    reversion => reversion!(gullet,args, inner, state, {
+      let defn = args.remove(0);
+      // my ($defn, @args) = @$var;
+      unimplemented!()
+      // TODO: What is defn here? what is the intent?
+      // let mut reverted = vec![defn.get_cs()];
+      // let reverted_args = if let Some(params) = defn.get_parameters() {
+      //   params.revert_arguments(args);
+      // } else {
+      //   Vec::new()
+      // };
+      // reverted.extend(reverted_args);
+      // Ok(Tokens::new(reverted))
+    })
+  );
 
   // Same, but not necessarily writable
   DefParameterType!("Register", reader => reader!(gullet, inner, _extra, state, {

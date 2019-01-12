@@ -64,8 +64,8 @@ pub struct Parameter {
   pub reader: ReaderClosure,
   pub reader_predigest: Option<ReaderPredigestClosure>,
   pub reversion: Option<ReversionClosure>,
-  pub before_digest: Option<BeforeDigestClosure>,
-  pub after_digest: Option<DigestionClosure>,
+  pub before_digest: Vec<BeforeDigestClosure>,
+  pub after_digest: Vec<DigestionClosure>,
 }
 impl Default for Parameter {
   fn default() -> Self {
@@ -82,8 +82,8 @@ impl Default for Parameter {
       }),
       reader_predigest: None,
       reversion: None,
-      before_digest: None,
-      after_digest: None,
+      before_digest: Vec::new(),
+      after_digest: Vec::new(),
     }
   }
 }
@@ -101,8 +101,8 @@ impl fmt::Debug for Parameter {
       self.spec,
       self.extra,
       self.reversion.is_some(),
-      self.before_digest.is_some(),
-      self.after_digest.is_some()
+      self.before_digest.len(),
+      self.after_digest.len()
     )
   }
 }
@@ -277,7 +277,7 @@ impl Parameter {
       )?;
     }
 
-    if let Some(ref pre) = self.before_digest {
+    for pre in self.before_digest.iter() {
       // Done for effect only.
       pre(stomach, state)?; // maybe pass extras?
     }
@@ -289,7 +289,7 @@ impl Parameter {
     } else {
       None
     };
-    if let Some(ref post) = self.after_digest {
+    for post in self.after_digest.iter() {
       // Done for effect only.
       let mut w = Whatsit::default();
       post(stomach, &mut w, state)?; // maybe pass extras?
