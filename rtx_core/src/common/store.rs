@@ -6,6 +6,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::common::dimension::Dimension;
+use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::glue::{Glue, MuGlue};
 use crate::common::ligature::Ligature;
@@ -17,8 +18,10 @@ use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
 use crate::definition::register::{Register, RegisterValue};
 use crate::document::tag::TagData;
+use crate::gullet::Gullet;
 use crate::mouth;
 use crate::parameter::Parameter;
+use crate::state::State;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
@@ -137,6 +140,20 @@ impl Stored {
       out_map.insert(key.to_owned(), val.to_string());
     }
     out_map
+  }
+  /// Dynamic dispatch for Definition's `read_arguments`,
+  /// to circumvent the limitations of using trait objects with `Rc<Definition>`
+  pub fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Tokens>> {
+    use crate::definition::Definition;
+    match self {
+      Stored::Conditional(ref entry) => entry.read_arguments(gullet, state),
+      Stored::Constructor(ref entry) => entry.read_arguments(gullet, state),
+      Stored::Expandable(ref entry) => entry.read_arguments(gullet, state),
+      Stored::MathPrimitive(ref entry) => entry.read_arguments(gullet, state),
+      Stored::Primitive(ref entry) => entry.read_arguments(gullet, state),
+      Stored::Register(ref entry) => entry.read_arguments(gullet, state),
+      e => Err(s!(".read_arguments not defined for stored variant {:?}", e).into()),
+    }
   }
 }
 

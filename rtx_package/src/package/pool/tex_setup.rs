@@ -299,50 +299,63 @@ LoadDefinitions!(state, {
     })
   );
 
-  // # Read until the next (balanced) open brace {
-  // # used for the last TeX-style delimited argument
+  // Read until the next (balanced) open brace {
+  // used for the last TeX-style delimited argument
   // DefParameterType('UntilBrace', sub {
   //     my ($gullet) = @_;
   //     $gullet->readUntilBrace; });
 
-  // # Yet another special case: Require a { but do not read it!!!
-  // DefParameterType('RequireBrace', sub {
-  //     my ($gullet) = @_;
-  //     if (!$gullet->ifNext(T_BEGIN)) {
-  //       Error('expected', '{', $gullet, "Expected a { here"); }
-  //     T_BEGIN; },
-  //   novalue => 1);
+  // Yet another special case: Require a { but do not read it!!!
+  DefParameterType!("RequireBrace",
+    reader => reader!(gullet, inner, _extra, state, {
+      if !gullet.if_next(T_BEGIN!(), state)? {
+        error!(target:"expected:{", "Expected a {{ here");
+      }
+      T_BEGIN!().into()
+    }),
+    novalue => true
+  );
 
-  // DefParameterType('XUntil', sub {
-  //     my ($gullet, $until) = @_;
-  //     ($until) = $until->unlist;    # Make sure it's a single token!!!
-  //     my ($token, @tokens) = ();
-  //     while ($token = $gullet->readXToken(0)) {
-  //       if ($token->equals($until)) {
-  //         last; }
-  //       elsif ($token->getCatcode == CC_BEGIN) {
-  //         push(@tokens, $token, $gullet->readBalanced->unlist, T_END); }
-  //       elsif (my $defn = LookupDefinition($token)) {
-  //         push(@tokens, Invocation($token, $defn->readArguments($gullet))); }
-  //       else {
-  //         push(@tokens, $token); } }
-  //     Tokens(@tokens); });
+  DefParameterType!("XUntil",
+    reader => reader!(gullet, inner, untils, state, {
+      let until : Token = match untils[0] {
+        ParameterExtra::Token(ref t) => t.clone(),
+        _ => T_OTHER!("")
+      }; // Make sure it's a single token!!!
+      let mut tokens : Vec<Token> = Vec::new();
+      while let Some(token) = gullet.read_x_token(false, false, state)? {
+        if token == until {
+          break;
+        } else if token.get_catcode() == Catcode::BEGIN {
+          tokens.push(token);
+          tokens.extend(gullet.read_balanced(state)?.unlist());
+          tokens.push(T_END!());
+        } else if let Some(defn) = state.lookup_definition_stored(&token) {
+          let args = defn.read_arguments(gullet, state)?;
+          tokens.extend(Invocation!(token, args, gullet, state)?.unlist());
+        } else {
+          tokens.push(token);
+        }
+      }
+      Ok(Tokens::new(tokens))
+    })
+  );
 
-  // # This is sorta like readbalanced, but expands as it goes.
-  // # This appears to be needed by certain primitives (eg. \noalign ?)
-  // # and maybe what we should be using for some Digested ??
+  // This is sorta like readbalanced, but expands as it goes.
+  // This appears to be needed by certain primitives (eg. \noalign ?)
+  // and maybe what we should be using for some Digested ??
   // DefParameterType('Expanded', sub {
   //     my ($gullet) = @_;
   //     my $token    = $gullet->readXToken(0);
   //     my @tokens   = ();
-  //     if ($token->getCatcode == CC_BEGIN) {
+  //     if ($token->getCatcode == Catcode::BEGIN {
   //       my $level = 1;
   //       while ($token = $gullet->readXToken(0)) {
   //         my $cc = $$token[1];
   //         if ($cc == CC_END) {
   //           $level--;
   //           last unless $level; }
-  //         elsif ($cc == CC_BEGIN) {
+  //         else if ($cc == Catcode::BEGIN {
   //           $level++; }
   //         push(@tokens, $token); }
   //       return Tokens(@tokens); }
