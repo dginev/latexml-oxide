@@ -887,7 +887,36 @@ impl State {
           ..Expandable::default()
         })),
         Some(v) => {
-          error!("Unexpected value in lookup_definition for {:?}. Value was: {:?}", key, v);
+          error!(target:"unexpected:value", "in lookup_definition for {:?}. Value was: {:?}", key, v);
+          None
+        },
+        None => None,
+      },
+      _ => None,
+    }
+  }
+
+  /// Returns a definition as `Stored` so that one can call `.read_arguments`,
+  /// which can't be specialized during compile-time over a trait object
+  /// Instead we'll dispatch via `Stored` at runtime, to allow generic calls
+  pub fn lookup_definition_stored<'def>(&'def self, key: &'def Token) -> Option<Stored> {
+    match self.lookup_definition_internal(key) {
+      Some(defs) => match defs.front() {
+        // Still, good time to handle the Token case and catch weird storage errors
+        Some(Stored::Conditional(entry)) => Some(Stored::Conditional(entry.clone())),
+        Some(Stored::Constructor(entry)) => Some(Stored::Constructor(entry.clone())),
+        Some(Stored::Expandable(entry)) => Some(Stored::Expandable(entry.clone())),
+        Some(Stored::MathPrimitive(entry)) => Some(Stored::MathPrimitive(entry.clone())),
+        Some(Stored::Primitive(entry)) => Some(Stored::Primitive(entry.clone())),
+        Some(Stored::Register(entry)) => Some(Stored::Register(entry.clone())),
+        Some(Stored::Token(entry)) => Some(Stored::Expandable(Rc::new(Expandable {
+          cs: T_CS!(key),
+          paramlist: None,
+          expansion: entry.clone().into(),
+          ..Expandable::default()
+        }))),
+        Some(v) => {
+          error!(target:"unexpected:value", "in lookup_definition for {:?}. Value was: {:?}", key, v);
           None
         },
         None => None,
