@@ -232,7 +232,7 @@ impl Catcode {
   }
 }
 
-#[derive(Clone, Hash, PartialEq)]
+#[derive(Clone, Hash)]
 pub struct Token {
   pub text: Cow<'static, str>,
   pub code: Catcode,
@@ -254,6 +254,14 @@ impl fmt::Debug for Token {
 
 impl Display for Token {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.text) }
+}
+
+/// Compare two tokens; They are equal if they both have same catcode & string
+// [We pretend all SPACE's are the same, since we'd like to hide newline's in there!]
+// NOTE: That another popular equality checks whether the "meaning" (defn) are the same.
+// That is NOT done here; see Equals(x,y) and XEquals(x,y)
+impl PartialEq for Token {
+  fn eq(&self, other: &Token) -> bool { (self.code == other.code) && (self.code == Catcode::SPACE || self.text == other.text) }
 }
 
 #[macro_export]
