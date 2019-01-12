@@ -14,10 +14,42 @@ fn escapechar(state: &State) -> String {
   }
 }
 
+fn compare(u: Token, rel: Token, v: Token) -> Result<bool> {
+  let u = u.to_number().value_of();
+  let v = v.to_number().value_of();
+  match rel {
+    T_OTHER!("<") | T_CS!("\\@@<") => Ok(u < v),
+    T_OTHER!("=") => Ok(u == v),
+    T_OTHER!(">") | T_CS!("\\@@>") => Ok(u > v),
+    _ => {
+      error!(target:"expected:<relationaltoken>", "Expected a relational token for comparision. Got {:?}", rel);
+      Ok(false)
+    },
+  }
+}
+
+//=======================
+// -- Main Definitions --
+//=======================
 LoadDefinitions!(state, {
-  // DefConditional('\ifnum Number Token Number',       sub { compare($_[1], $_[2], $_[3]); });
-  // DefConditional('\ifdim Dimension Token Dimension', sub { compare($_[1], $_[2], $_[3]); });
-  // DefConditional('\ifodd Number',                    sub { $_[1]->valueOf % 2; });
+  // The following special cases are built-in to Definition
+  DefConditional!("\\else");
+  DefConditional!("\\or");
+  DefConditional!("\\fi");
+  DefConditional!("\\ifcase Number");
+
+  DefConditional!("\\ifnum Number Token Number", sub[gullet, args, state] {
+    unpack_to_token!(args =>u,rel,v);
+    compare(u, rel, v)
+  });
+  DefConditional!("\\ifdim Dimension Token Dimension", sub[gullet, args, state] {
+    unpack_to_token!(args =>u,rel,v);
+    compare(u, rel, v)
+  });
+  DefConditional!("\\ifodd Number", sub[gullet, args, state] {
+    unimplemented!();
+    // $_[1]->valueOf % 2
+  });
 
   // NOTE: We don't KNOW if we're in vertical, horizontal or inner mode!!!!!!!
   DefConditional!("\\ifvmode", sub[gullet,args,state] {Ok(false)});
@@ -269,10 +301,4 @@ LoadDefinitions!(state, {
       }
     }
   });
-
-  // The following special cases are built-in to Definition
-  DefConditional!("\\else");
-  DefConditional!("\\or");
-  DefConditional!("\\fi");
-  DefConditional!("\\ifcase Number");
 });
