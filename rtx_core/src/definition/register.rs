@@ -249,6 +249,7 @@ impl Object for RefCell<Register> {}
 impl Definition for RefCell<Register> {
   fn is_register(&self) -> bool { true }
   fn is_prefix(&self) -> bool { false }
+  fn is_readonly(&self) -> bool { self.borrow().readonly }
   // not implemented for primitives
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> { unimplemented!() }
   fn get_parameters(&self) -> &Option<Parameters> { unimplemented!() } // TODO: How do we do this with a RefCell ?!
