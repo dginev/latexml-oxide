@@ -61,31 +61,82 @@ LoadDefinitions!(state, {
     }
   });
 
+  //======================================================================
+  // Macros
+  // See Chapter 24, p.275-276
+  // <macro assignment> = <definition> | <prefix><macro assignment>
+  // <definition> = <def><control sequence><definition text>
+  // <def> = \def | \gdef | \edef | \xdef
+  // <definition text> = <register text><left brace><balanced text><right brace>
+
+  fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Option<Parameters> {
+    // TODO !!!
+    // let mut tokens = params_in.unlist();
+    // // Now, recognize parameters and delimiters.
+    // let mut params = ();
+    // let mut n      = 0;
+    // while !tokens.is_empty() {
+    //   let t = tokens.pop_front();
+    //   if ($t->getCatcode == CC_PARAM) {
+    //     if (!@tokens) {    // Special case: lone # NOT following a numbered parameter
+    //                       // Note that we require a { to appear next, but do NOT read it!
+    //       push(@params, LaTeXML::Core::Parameter->new('RequireBrace', 'RequireBrace')); }
+    //     else {
+    //       $n++; $t = shift(@tokens);
+    //       Fatal('expected', "#$n", $STATE->getStomach,
+    //         "Parameters for '" . ToString($cs) . "' not in order in " . ToString($params))
+    //         unless (defined $t) && ($n == (ord($t->getString) - ord('0')));
+    //       // Check for delimiting text following the parameter #n
+    //       my @delim = ();
+    //       my ($pc, $cc) = (-1, 0);
+    //       while (@tokens && (($cc = $tokens[0]->getCatcode) != CC_PARAM)) {
+    //         let d = shift(@tokens);
+    //         push(@delim, $d) unless $cc == $pc && $cc == CC_SPACE;    # BUT collapse whitespace!
+    //         $pc = $cc; }
+    //       // Found text that marks the end of the parameter
+    //       if (@delim) {
+    //         let expected = Tokens(@delim);
+    //         push(@params, LaTeXML::Core::Parameter->new('Until',
+    //             'Until:' . ToString($expected),
+    //             extra => [$expected])); }
+    //       // Special case: trailing sole # => delimited by next opening brace.
+    //       elsif ((scalar(@tokens) == 1) && ($tokens[0]->getCatcode == CC_PARAM)) {
+    //         shift(@tokens);
+    //         push(@params, LaTeXML::Core::Parameter->new('UntilBrace', 'UntilBrace')); }
+    //       // Nothing? Just a plain parameter.
+    //       else {
+    //         push(@params, LaTeXML::Core::Parameter->new('Plain', '{}')); } } }
+    //   else {
+    //     // Initial delimiting text is required.
+    //     my @lit = ($t);
+    //     while (@tokens && ($tokens[0]->getCatcode != CC_PARAM)) {
+    //       push(@lit, shift(@tokens)); }
+    //     let expected = Tokens(@lit);
+    //     push(@params, LaTeXML::Core::Parameter->new('Match',
+    //         'Match:' . ToString($expected),
+    //         extra   => [$expected],
+    //         novalue => 1)); }
+    // }
+    // return (@params ? LaTeXML::Core::Parameters->new(@params) : undef);
+    None
+  }
+
   fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State) -> Result<Vec<Digested>> {
-    // params = parseDefParameters(cs, params);
+    unpack!(args => cs, params, body);
+    let cs: Token = cs.into();
+    let paramlist = parse_def_parameters(&cs, params);
     if expanded {
       state.noexpand_the = true;
-      // body = Expand!(body);
+      let gullet = stomach.get_gullet_mut();
+      body = Expand!(body, gullet, state);
     }
-
     let scope = if globally { Some(Scope::Global) } else { None };
-    // switch args from a Vec<Tokens> into a Vec<Token>
-    let mut token_args: VecDeque<Token> = VecDeque::new();
-    for arg in args {
-      token_args.extend(arg.unlist().into_iter());
-    }
-    let cs = match token_args.pop_front() {
-      Some(cs) => cs,
-      None => fatal!(Macro, Expected, "Bad definition macro - no arguments, when some were expected."),
-    };
-    // is there a more idiomatic way to downgrade a VecDeque into a Vec?
-    let def_body = token_args.into_iter().collect::<Vec<Token>>();
-    let paramlist = None;
+    info!(target:"\\def","defining cs: {:?}, params {:?}, as {:?}", cs, paramlist, body);
     state.install_definition(
       Expandable {
         cs,
         paramlist,
-        expansion: SimpleExpansion!(Tokens::new(def_body.clone())),
+        expansion: SimpleExpansion!(body.clone()),
         ..Expandable::default()
       },
       scope,
