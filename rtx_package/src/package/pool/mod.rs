@@ -54,7 +54,10 @@ pub mod pdftex;
 
 // Supported package bindings
 pub mod alltt_sty;
+pub mod amsmath_sty;
+pub mod amsthm_sty;
 pub mod article_cls;
 pub mod comment_sty;
+pub mod ieeetran_cls;
 pub mod url_sty;
 pub mod verbatim_sty;

@@ -149,9 +149,13 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
       "pdfTeX.pool" => pool::pdftex::load_definitions(&mut state, with_stomach)?,
       "article.cls" => pool::article_cls::load_definitions(&mut state, with_stomach)?,
       "alltt.sty" => pool::alltt_sty::load_definitions(&mut state, with_stomach)?,
+      "amsmath.sty" => pool::amsmath_sty::load_definitions(&mut state, with_stomach)?,
+      "amsthm.sty" => pool::amsthm_sty::load_definitions(&mut state, with_stomach)?,
       "comment.sty" => pool::comment_sty::load_definitions(&mut state, with_stomach)?,
+      "IEEEtran.cls" => pool::ieeetran_cls::load_definitions(&mut state, with_stomach)?,
       "url.sty" => pool::url_sty::load_definitions(&mut state, with_stomach)?,
       "verbatim.sty" => pool::verbatim_sty::load_definitions(&mut state, with_stomach)?,
+
       other => fatal!(Package, Unknown, s!("TODO: unknown binding {:?}, can't load", other)),
     };
   }
