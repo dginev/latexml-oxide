@@ -1,5 +1,3 @@
-extern crate rtx_core;
-
 use glob::glob;
 use libxml::parser::Parser;
 use std::collections::HashMap;

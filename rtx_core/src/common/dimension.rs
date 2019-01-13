@@ -1,5 +1,9 @@
+use regex::Regex;
+
+use crate::common::error::*;
 use crate::common::number::Number;
 use crate::definition::register::NumericOps;
+use crate::state::State;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Dimension {
@@ -20,7 +24,26 @@ impl NumericOps for MuDimension {
   fn new<T: Into<f32>>(number: T) -> Self { MuDimension { number: number.into() } }
 }
 
+lazy_static! {
+  static ref DIMENSION_RE: Regex = Regex::new(r"^(-?\d*\.?\d*)([a-zA-Z][a-zA-Z])$").unwrap();
+}
+
 impl Dimension {
+  pub fn new_str(mut sp: &str, state: &mut State) -> Result<Self> {
+    let sp_num: f32 = if sp.is_empty() {
+      0.0
+    } else if let Some(cap) = DIMENSION_RE.captures(sp) {
+      // Dimensions given.
+      let num_str = cap.get(1).map_or(String::new(), |m| m.as_str().to_string());
+      let num: f32 = num_str.parse::<f32>()?;
+      let unit = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
+      num * state.convert_unit(unit)
+    } else {
+      0.0
+    };
+    Ok(Dimension::new(sp_num))
+  }
+
   /// Utility for formatting scaled points sanely.
   fn point_format(self) -> String {
     // As much as I'd like to make this more friendly & readable
@@ -45,3 +68,5 @@ impl Dimension {
 
   pub fn to_attribute(self) -> String { self.attribute_format() }
 }
+
+// Dimension!() macro is in setup.rs, since it binds state

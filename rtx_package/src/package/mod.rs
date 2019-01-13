@@ -7,9 +7,11 @@ pub use std::collections::HashMap;
 pub use std::collections::VecDeque;
 pub use std::rc::Rc;
 
+pub use rtx_core::common::dimension::{Dimension, MuDimension};
 pub use rtx_core::common::error::*;
 pub use rtx_core::common::font;
 pub use rtx_core::common::font::Font;
+pub use rtx_core::common::glue::{Glue, MuGlue};
 pub use rtx_core::common::ligature::{FontTestClosure, Ligature};
 pub use rtx_core::common::number::Number;
 pub use rtx_core::common::store::IntoOption;
