@@ -653,6 +653,9 @@ LoadDefinitions!(state, {
   // lines 3230-3830
   InnerPool!(latex_ch11_moving_information);
 
+  // lines 3866-4124
+  InnerPool!(latex_ch13_boxes);
+
   // lines 4413-4563
   InnerPool!(latex_font_selection);
 

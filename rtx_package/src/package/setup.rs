@@ -1510,3 +1510,14 @@ macro_rules! RawTeX {
     }
   }};
 }
+
+#[macro_export]
+macro_rules! Dimension {
+  ($number:expr) => {{
+    bind_state!(st);
+    Dimension!($number, st)
+  }};
+  ($number:expr, $state_arg:ident) => {
+    ::rtx_core::common::dimension::Dimension::new_str($number, $state_arg)?
+  };
+}
