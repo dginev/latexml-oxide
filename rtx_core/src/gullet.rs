@@ -4,9 +4,9 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use crate::common::dimension::{Dimension, MuDimension};
+use crate::common::dimension::Dimension;
 use crate::common::error::*;
-use crate::common::glue::{Glue, MuGlue};
+use crate::common::glue::Glue;
 use crate::common::locator::Locator;
 use crate::common::number::Number;
 
@@ -544,7 +544,7 @@ impl Gullet {
       RegisterType::Number => Ok(self.read_number(state)?.into()),
       RegisterType::Dimension => Ok(self.read_dimension(state)?.into()),
       RegisterType::Glue => Ok(self.read_glue(state)?.into()),
-      RegisterType::MuGlue => Ok(self.read_muglue(state)?.into()),
+      RegisterType::MuGlue => Ok(self.read_mu_glue(state)?.into()),
       RegisterType::Tokens => Ok(self.read_tokens_value(state)?.into()),
       // TODO: unwrap should be a proper error, value is expected
       RegisterType::Token => Ok(self.read_token(state).unwrap().into()),
@@ -818,9 +818,92 @@ impl Gullet {
     Ok(unit_opt)
   }
 
-  pub fn read_glue(&mut self, _state: &mut State) -> Result<Glue> { unimplemented!() }
-  pub fn read_muglue(&mut self, _state: &mut State) -> Result<MuGlue> { unimplemented!() }
-  pub fn read_mudimension(&mut self, _state: &mut State) -> Result<MuDimension> { unimplemented!() }
+  //======================================================================
+  // Glue
+  //======================================================================
+  // <glue> = <optional signs><internal glue> | <dimen><stretch><shrink>
+  // <stretch> = plus <dimen> | plus <fil dimen> | <optional spaces>
+  // <shrink>  = minus <dimen> | minus <fil dimen> | <optional spaces>
+  pub fn read_glue(&mut self, state: &mut State) -> Result<Glue> {
+    let is_negative = self.read_optional_signs(state)?;
+    if let Some(n) = self.read_internal_glue(state)? {
+      if is_negative {
+        Ok(n.negate())
+      } else {
+        Ok(n)
+      }
+    } else {
+      let mut d = self.read_dimension(state)?;
+      if is_negative {
+        d = d.negate();
+      }
+      let (r1, f1) = match self.read_keyword(&["plus"], state)? {
+        Some(v) => self.read_rubber(false, state)?,
+        None => (0.0, 0.0),
+      };
+      let (r2, f2) = match self.read_keyword(&["minus"], state)? {
+        Some(v) => self.read_rubber(false, state)?,
+        None => (0.0, 0.0),
+      };
+
+      Ok(Glue::new(d.value_of())) //TODO:, $r1, $f1, $r2, $f2); } }
+    }
+  }
+
+  pub fn read_rubber(&mut self, mu: bool, state: &mut State) -> Result<(f32, f32)> {
+    let is_negative = self.read_optional_signs(state)?;
+    let s = if is_negative { -1.0 } else { 1.0 };
+    match self.read_factor(state)? {
+      None => {
+        let f = if mu {
+          self.read_mu_dimension(state)?
+        } else {
+          self.read_dimension(state)?
+        };
+        Ok((f.value_of() * s, 0.0))
+      },
+      Some(f) => {
+        match self.read_keyword(&["filll", "fill", "fil"], state)? {
+          Some(fil) => Ok((s * f, 0.0)), // TODO: $FILLS{$fil}),
+          None => {
+            let u = if mu {
+              match self.read_mu_unit(state)? {
+                None => {
+                  warn!(target:"expected<unit>", "Illegal unit of measure (mu inserted).");
+                  state.convert_unit("mu")
+                },
+                Some(v) => v,
+              }
+            } else {
+              match self.read_unit(state)? {
+                None => {
+                  warn!(target:"expected<unit>", "Illegal unit of measure (pt inserted).");
+                  65536.0
+                },
+                Some(v) => v,
+              }
+            };
+            Ok((s * f * u, 0.0))
+          },
+        }
+      },
+    }
+  }
+
+  pub fn read_mu_glue(&mut self, _state: &mut State) -> Result<Glue> { unimplemented!() }
+  pub fn read_mu_dimension(&mut self, _state: &mut State) -> Result<Dimension> { unimplemented!() }
+  pub fn read_mu_unit(&mut self, state: &mut State) -> Result<Option<f32>> {
+    if let Some(m) = self.read_keyword(&["mu"], state)? {
+      self.skip_one_space(state);
+      Ok(Some(state.convert_unit(m)))
+    } else if let Some(m) = self.read_internal_mu_glue(state)? {
+      Ok(Some(m.value_of()))
+    } else {
+      Ok(None)
+    }
+  }
+  fn read_internal_mu_glue(&mut self, state: &mut State) -> Result<Option<Glue>> { unimplemented!() }
+
   /// Apparent behaviour of a token value (ie \toks#=<arg>)
   pub fn read_tokens_value(&mut self, state: &mut State) -> Result<Tokens> {
     match self.read_non_space(state) {

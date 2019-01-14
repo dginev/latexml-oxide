@@ -186,7 +186,7 @@ LoadDefinitions!(state, {
   });
 
   DefParameterType!("Until", sub[gullet, _inner, until, state] {
-    info!("Start reader for Until !");
+    info!("-- Until invoked on |{:?}|", until);
     let until = until.into_iter().map(|x| if let ParameterExtra::Token(t) = x {
       t
     } else {
@@ -263,12 +263,12 @@ LoadDefinitions!(state, {
 
   // Read a MuDimension (math)
   DefParameterType!("MuDimension", sub[gullet, inner, _extra, state] {
-    gullet.read_mudimension(state)?.to_token().into()
+    gullet.read_mu_dimension(state)?.to_token().into()
   });
 
   // Read a MuGlue (math)
   DefParameterType!("MuGlue", sub[gullet, inner, _extra, state] {
-    gullet.read_muglue(state)?.to_token().into()
+    gullet.read_mu_glue(state)?.to_token().into()
   });
 
   // Read until the next (balanced) open brace {
