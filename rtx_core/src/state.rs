@@ -1382,7 +1382,7 @@ impl State {
     self.assign_value("IN_MATH", Stored::Bool(false), Some(Scope::Global));
     self.assign_value("PRESERVE_NEWLINES", Stored::Bool(true), Some(Scope::Global));
     self.assign_value("afterGroup", Stored::VecDigested(Vec::new()), Some(Scope::Global));
-    self.assign_value("afterAssignment", Stored::VecDigested(Vec::new()), Some(Scope::Global)); // undef ???
+    self.assign_value("afterAssignment", Stored::Tokens(Tokens!()), Some(Scope::Global)); // undef ???
     self.assign_value("groupInitiator", Stored::String(s!("Initialization")), Some(Scope::Global));
     // Setup default fonts.
     self.assign_value("font", Stored::Font(Rc::new(Font::text_default())), Some(Scope::Global));

@@ -173,7 +173,7 @@ LoadDefinitions!(state, {
     unpack_to_token!(args => cs, num);
     let count = s!("\\count{}", num.to_number().value_of());
     let setter_count = count.clone();
-    DefRegister!(&cs.get_cs_name(), Number::new(0.0), inner_state,
+    DefRegisterI!(cs, None, Number::new(0.0), inner_state,
       getter => Some(Rc::new(move |args, state| { Some(state.lookup_number(&count).unwrap_or_default().into()) })),
       setter => Some(Rc::new(move |value, args, state| { state.assign_value(&setter_count, value, None); })));
     AfterAssignment!(inner_state);
@@ -184,17 +184,13 @@ LoadDefinitions!(state, {
     getter => Some(Rc::new(|args, state| {
       let num : f32 = args[0].to_number().value_of();
       let refchar = (num as u8) as char;
-      info!("-- looking up {:?}", refchar);
       let code : Catcode = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       let code : u8 = code.into();
-      info!("-- code is: {:?}", code);
       Number::new(code).into()
     })),
     setter => Some(Rc::new(|value, args, state| {
       let c_char = (args[0].to_number().value_of() as u8) as char;
-      info!("-- c_char: {:?}", c_char);
       let c_code = From::from(value.value_of() as u8);
-      info!("-- c_code: {:?}", c_code);
       state.assign_catcode(c_char, c_code, None);
     }))
   );

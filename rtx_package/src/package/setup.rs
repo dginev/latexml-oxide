@@ -364,6 +364,8 @@ macro_rules! DefRegisterWO {
 
 #[macro_export]
 macro_rules! DefRegisterI {
+  ($cs:expr, $paramlist:expr, $value:expr, $($key:ident => $val:expr),*) => (DefRegisterI!($cs, $paramlist, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*))));
+  ($cs:expr, $paramlist:expr, $value:expr, $state_arg:ident, $($key:ident => $val:expr),*) => (DefRegisterI!($cs, $paramlist, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*)), $state_arg));
   ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {{
     bind_state!(st);
     DefRegisterI!($cs, $paramlist, $value, $options, st)
