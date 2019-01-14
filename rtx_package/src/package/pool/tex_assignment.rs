@@ -14,77 +14,133 @@ LoadDefinitions!(state, {
   // <def> = \def | \gdef | \edef | \xdef
   // <definition text> = <register text><left brace><balanced text><right brace>
 
-  // sub parseDefParameters {
-  //   my ($cs, $params) = @_;
-  //   my @tokens = $params->unlist;
-  //   // Now, recognize parameters and delimiters.
-  //   my @params = ();
-  //   my $n      = 0;
-  //   while (@tokens) {
-  //     my $t = shift(@tokens);
-  //     if ($t->getCatcode == CC_PARAM) {
-  //       if (!@tokens) {    // Special case: lone // NOT following a numbered parameter
-  //                         // Note that we require a { to appear next, but do NOT read it!
-  //         push(@params, LaTeXML::Core::Parameter->new('RequireBrace', 'RequireBrace')); }
-  //       else {
-  //         $n++; $t = shift(@tokens);
-  //         Fatal('expected', "#$n", $STATE->getStomach,
-  //           "Parameters for '" . ToString($cs) . "' not in order in " . ToString($params))
-  //           unless (defined $t) && ($n == (ord($t->getString) - ord('0')));
-  //         // Check for delimiting text following the parameter //n
-  //         my @delim = ();
-  //         my ($pc, $cc) = (-1, 0);
-  //         while (@tokens && (($cc = $tokens[0]->getCatcode) != CC_PARAM)) {
-  //           my $d = shift(@tokens);
-  //           push(@delim, $d) unless $cc == $pc && $cc == CC_SPACE;    // BUT collapse whitespace!
-  //           $pc = $cc; }
-  //         // Found text that marks the end of the parameter
-  //         if (@delim) {
-  //           my $expected = Tokens(@delim);
-  //           push(@params, LaTeXML::Core::Parameter->new('Until',
-  //               'Until:' . ToString($expected),
-  //               extra => [$expected])); }
-  //         // Special case: trailing sole // => delimited by next opening brace.
-  //         elsif ((scalar(@tokens) == 1) && ($tokens[0]->getCatcode == CC_PARAM)) {
-  //           shift(@tokens);
-  //           push(@params, LaTeXML::Core::Parameter->new('UntilBrace', 'UntilBrace')); }
-  //         // Nothing? Just a plain parameter.
-  //         else {
-  //           push(@params, LaTeXML::Core::Parameter->new('Plain', '{}')); } } }
-  //     else {
-  //       // Initial delimiting text is required.
-  //       my @lit = ($t);
-  //       while (@tokens && ($tokens[0]->getCatcode != CC_PARAM)) {
-  //         push(@lit, shift(@tokens)); }
-  //       my $expected = Tokens(@lit);
-  //       push(@params, LaTeXML::Core::Parameter->new('Match',
-  //           'Match:' . ToString($expected),
-  //           extra   => [$expected],
-  //           novalue => 1)); }
-  //   }
-  //   return (@params ? LaTeXML::Core::Parameters->new(@params) : undef); }
+  fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) -> Result<Option<Parameters>> {
+    let mut tokens: VecDeque<Token> = VecDeque::from(params_in.unlist());
+    // Now, recognize parameters and delimiters.
+    let mut params = Vec::new();
+    let mut n = 0;
+    while let Some(mut t) = tokens.pop_front() {
+      if t.get_catcode() == Catcode::PARAM {
+        if tokens.is_empty() {
+          // Special case: lone # NOT following a numbered parameter
+          // Note that we require a { to appear next, but do NOT read it!
+          params.push(Parameter::new("RequireBrace", "RequireBrace", state)?);
+        } else {
+          n += 1;
+          t = tokens.pop_front().unwrap();
+          // TODO: Double-check we're not missing cases from the original:
+          //       ($n == (ord($t->getString) - ord('0'))
+          let t_num = t.get_string().parse::<i32>().unwrap_or(-1);
+          if t_num != n {
+            fatal!(ParamSpec, Expected, s!("Parameters for {:?} not in order in {:?}", cs, params));
+          }
+          // Check for delimiting text following the parameter #n
+          let mut delim = Vec::new();
+          let mut pc = Catcode::MARKER; // throwaway initial val
+          let mut cc;
+          while !tokens.is_empty() && (tokens.front().unwrap().get_catcode() != Catcode::PARAM) {
+            let d = tokens.pop_front().unwrap();
+            cc = d.get_catcode();
+            if !(cc == pc && cc == Catcode::SPACE) {
+              // BUT collapse whitespace!
+              delim.push(d);
+            }
+            pc = cc;
+          }
+          // Found text that marks the end of the parameter
+          if !delim.is_empty() {
+            let expected = Tokens::new(delim);
+            params.push(
+              Parameter {
+                name: s!("Until"),
+                spec: s!("Until:{}", expected),
+                extra: expected.into(),
+                ..Parameter::default()
+              }
+              .init(state)?,
+            );
+          } else if tokens.len() == 1 && tokens.front().unwrap().get_catcode() == Catcode::PARAM {
+            // Special case: trailing sole # => delimited by next opening brace.
+            tokens.pop_front();
+            params.push(Parameter::new("UntilBrace", "UntilBrace", state)?);
+          } else {
+            // Nothing? Just a plain parameter.
+            params.push(Parameter::new("Plain", "{}", state)?);
+          }
+        }
+      } else {
+        // Initial delimiting text is required.
+        let mut lit: Vec<Token> = vec![t];
+        while !tokens.is_empty() && (tokens.front().unwrap().get_catcode() != Catcode::PARAM) {
+          lit.push(tokens.pop_front().unwrap());
+        }
+        let expected = Tokens::new(lit);
+        params.push(
+          Parameter {
+            name: s!("Match"),
+            spec: s!("Match:{}", expected),
+            extra: expected.into(),
+            novalue: true,
+            ..Parameter::default()
+          }
+          .init(state)?,
+        );
+      }
+    }
+    // return (@params ? LaTeXML::Core::Parameters->new(@params) : undef);
+    if params.is_empty() {
+      Ok(None)
+    } else {
+      Ok(Some(Parameters { params }))
+    }
+  }
 
-  // sub do_def {
-  //   my ($globally, $expanded, $gullet, $cs, $params, $body) = @_;
-  //   if (!$cs) {
-  //     Error('expected', 'Token', $gullet, "Expected definition token");
-  //     return; }
-  //   elsif (!$params) {
-  //     Error('misdefined', $cs, $gullet, "Expected definition parameter list");
-  //     return; }
-  //   $params = parseDefParameters($cs, $params);
-  //   if ($expanded) {
-  //     local $LaTeXML::NOEXPAND_THE = 1;
-  //     $body = Expand($body); }
-  //   $STATE->installDefinition(LaTeXML::Core::Definition::Expandable->new($cs, $params, $body),
-  //     ($globally ? 'global' : undef));
-  //   AfterAssignment();
-  //   return; }
+  fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State) -> Result<Vec<Digested>> {
+    unpack!(args => cs, params, body);
+    // ensure params is empty if it contains only the default token
+    // TODO: is this a flaw of parameter parsing?
+    let params = if params.tokens == MOCK_TOKENS.tokens { Tokens!() } else { params };
+    let cs: Token = cs.into();
+    let paramlist = parse_def_parameters(&cs, params, state)?;
+    if expanded {
+      state.noexpand_the = true;
+      let gullet = stomach.get_gullet_mut();
+      body = Expand!(body, gullet, state);
+    }
+    let scope = if globally { Some(Scope::Global) } else { None };
+    state.install_definition(
+      Expandable {
+        cs,
+        paramlist,
+        expansion: body.into(),
+        ..Expandable::default()
+      },
+      scope,
+    );
+    AfterAssignment!(state);
+    Ok(Vec::new())
+  }
 
-  // DefPrimitive('\def  SkipSpaces Token UntilBrace {}', sub { do_def(0, 0, @_); }, locked => 1);
-  // DefPrimitive('\gdef SkipSpaces Token UntilBrace {}', sub { do_def(1, 0, @_); }, locked => 1);
-  // DefPrimitive('\edef SkipSpaces Token UntilBrace {}', sub { do_def(0, 1, @_); }, locked => 1);
-  // DefPrimitive('\xdef SkipSpaces Token UntilBrace {}', sub { do_def(1, 1, @_); }, locked => 1);
+  DefPrimitiveI!("\\def SkipSpaces Token UntilBrace {}", |stomach, args, state| {
+      do_def(false, false, stomach, args, state)
+    },
+    locked => true
+  );
+  DefPrimitiveI!("\\gdef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
+      do_def(true, false, stomach, args, state)
+    },
+    locked => true
+  );
+  DefPrimitiveI!("\\edef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
+      do_def(false, true, stomach, args, state)
+    },
+      locked => true
+  );
+  DefPrimitiveI!("\\xdef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
+      do_def(true, true, stomach, args, state)
+    },
+    locked => true
+  );
 
   // <prefix> = \global | \long | \outer
   // See Stomach.pm & Stomach.pm
@@ -128,17 +184,17 @@ LoadDefinitions!(state, {
     getter => Some(Rc::new(|args, state| {
       let num : f32 = args[0].to_number().value_of();
       let refchar = (num as u8) as char;
-      // info!("-- looking up {:?}", refchar);
+      info!("-- looking up {:?}", refchar);
       let code : Catcode = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       let code : u8 = code.into();
-      // info!("-- code is: {:?}", code);
+      info!("-- code is: {:?}", code);
       Number::new(code).into()
     })),
     setter => Some(Rc::new(|value, args, state| {
       let c_char = (args[0].to_number().value_of() as u8) as char;
-      // info!("-- c_char: {:?}", c_char);
+      info!("-- c_char: {:?}", c_char);
       let c_code = From::from(value.value_of() as u8);
-      // info!("-- c_code: {:?}", c_code);
+      info!("-- c_code: {:?}", c_code);
       state.assign_catcode(c_char, c_code, None);
     }))
   );

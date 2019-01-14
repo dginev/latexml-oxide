@@ -39,6 +39,7 @@ pub enum ErrorCategory {
 pub enum ErrorTarget {
   Package,
   Parameter,
+  ParamSpec,
   Converter,
   Mouth,
   Stomach,

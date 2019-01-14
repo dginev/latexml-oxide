@@ -53,6 +53,10 @@ impl From<ParameterExtra> for Option<Parameters> {
   }
 }
 
+impl From<Tokens> for Vec<ParameterExtra> {
+  fn from(tks: Tokens) -> Vec<ParameterExtra> { tks.unlist().into_iter().map(|t| t.into()).collect() }
+}
+
 #[derive(Clone)]
 pub struct Parameter {
   pub novalue: bool,
@@ -116,6 +120,14 @@ lazy_static! {
 }
 
 impl Parameter {
+  pub fn new(name: &str, spec: &str, state: &mut State) -> Result<Self> {
+    Parameter {
+      name: name.to_string(),
+      spec: spec.to_string(),
+      ..Parameter::default()
+    }
+    .init(state)
+  }
   pub fn init(mut self, state: &mut State) -> Result<Self> {
     // Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool

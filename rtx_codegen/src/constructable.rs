@@ -126,7 +126,7 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
   }
   let options = get_options_from_input("compile_expansion_options", &input.attrs, bug);
   let expansion_opt = options.as_ref().map(|o| get_option(&o, "expansion", bug));
-  let compiled_expansion_closure = match expansion_opt {
+  let compiled_expansion = match expansion_opt {
     None => quote!(None),
     Some("") => quote!(None),
     Some(expansion) => {
@@ -138,14 +138,9 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
       // can easily pre-compile all of texlive (or the ~200 supported sty and cls
       // files in the ecosystem) once and have all expansions handled by
       // this code snippet.
-      let precompiled_expansion = quote!(
-        Some(Rc::new(
-        |gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State| -> Result<Tokens> {
-          let substituted_result = Tokens{tokens: vec!#performed_expansion}.substitute_parameters(args);
-          Ok(substituted_result)
-        }))
-      );
-      precompiled_expansion
+      quote!(
+        Some(ExpansionBody::Tokens(Tokens {tokens: vec!#performed_expansion}))
+      )
     },
   };
   // We have to jump an extra hoop, since we are forcing the struct-derive
@@ -153,8 +148,8 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
   // refactored.
   quote!(
   impl _DummyE {
-    fn expansion() -> Option<ExpansionClosure> {
-      #compiled_expansion_closure
+    fn expansion() -> Option<ExpansionBody> {
+      #compiled_expansion
     }
   })
 }

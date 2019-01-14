@@ -84,6 +84,10 @@ impl Display for Tokens {
   }
 }
 
+lazy_static! {
+  pub static ref MOCK_TOKENS: Tokens = Tokens!(vec![Token::default()]);
+}
+
 impl Tokens {
   pub fn new(tokens: Vec<Token>) -> Self { Tokens { tokens } }
 
@@ -92,6 +96,9 @@ impl Tokens {
 
   /// Checks if there are tokens present
   pub fn is_empty(&self) -> bool { self.tokens.is_empty() }
+
+  /// Number of contained Token entries
+  pub fn len(&self) -> usize { self.tokens.len() }
 
   /// Return a string containing the TeX form of the Tokens
   pub fn revert(self) -> Vec<Token> { self.tokens }
@@ -163,13 +170,13 @@ impl Tokens {
 
   // NOTE: Assumes each arg either undef or also Tokens
   // Using inline accessors on those assumptions
-  pub fn substitute_parameters(self, args: Vec<Tokens>) -> Self {
+  pub fn substitute_parameters(&self, args: Vec<Tokens>) -> Self {
     let mut result = Vec::new();
-    let mut in_tokens = self.tokens.into_iter();
+    let mut in_tokens = self.tokens.iter();
     while let Some(token) = in_tokens.next() {
       if token.code != Catcode::PARAM {
         // Non '#'; copy it
-        result.push(token);
+        result.push(token.clone());
       } else if let Some(token2) = in_tokens.next() {
         if token2.code != Catcode::PARAM {
           // Not multiple '#'; read arg.
@@ -178,7 +185,7 @@ impl Tokens {
           result.extend(arg.unlist());
         } else {
           // Duplicated '#', copy 2nd '#'
-          result.push(token2);
+          result.push(token2.clone());
         }
       }
     }

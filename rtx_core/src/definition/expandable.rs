@@ -5,7 +5,7 @@ use crate::common::error::*;
 use crate::common::object::Object;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionClosure};
+use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -19,6 +19,8 @@ use crate::Digested;
 pub struct ExpandableOptions {
   pub locked: bool,
   pub protected: bool,
+  pub outer: bool,
+  pub long: bool,
   pub scope: Option<Scope>,
   pub alias: Option<String>,
 }
@@ -28,6 +30,8 @@ impl Default for ExpandableOptions {
       locked: false,
       scope: None,
       protected: false,
+      outer: false,
+      long: false,
       alias: None,
     }
   }
@@ -36,17 +40,21 @@ impl Default for ExpandableOptions {
 #[derive(Clone)]
 pub struct Expandable {
   pub is_protected: bool,
+  pub is_long: bool,
+  pub is_outer: bool,
   pub alias: Option<String>,
   pub locator: String,
   pub cs: Token,
   pub paramlist: Option<Parameters>,
-  pub expansion: Option<ExpansionClosure>,
+  pub expansion: Option<ExpansionBody>,
   pub trivial_expansion: Option<Tokens>,
 }
 impl Default for Expandable {
   fn default() -> Self {
     Expandable {
       is_protected: false,
+      is_long: false,
+      is_outer: false,
       trivial_expansion: None,
       alias: None,
       locator: String::new(),
@@ -99,18 +107,51 @@ impl Definition for Expandable {
 }
 
 impl Expandable {
-  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Result<Tokens> {
-    if let Some(ref closure) = self.expansion {
-      closure(gullet, args.to_owned(), state)
+  pub fn new<T: Into<ExpansionBody>>(
+    cs: Token,
+    paramlist: Option<Parameters>,
+    expansion: T,
+    traits: Option<ExpandableOptions>,
+    state: &State,
+  ) -> Self
+  {
+    let expansion: ExpansionBody = expansion.into();
+    let traits = traits.unwrap_or_else(ExpandableOptions::default);
+    // let source = $STATE->getStomach->getGullet->getMouth;
+    // if (ref $expansion eq 'LaTeXML::Core::Tokens') {
+    //   Fatal('misdefined', $cs, $source, "Expansion of '" . ToString($cs) . "' has unbalanced {}",
+    //     "Expansion is " . ToString($expansion)) unless $expansion->isBalanced;
+    //   # If expansion is Tokens, and no arguments, we're a "trivial macro"
+    let trivial_expansion = if let ExpansionBody::Tokens(ref tks) = expansion {
+      if paramlist.is_none() && !tks.is_empty() {
+        Some(tks.substitute_parameters(Vec::new()))
+      } else {
+        None
+      }
     } else {
+      None
+    };
+
+    Expandable {
+      cs,
+      paramlist,
+      expansion: Some(expansion),
+      trivial_expansion,
+      // locator           => $source->getLocator,
+      is_protected: traits.protected || state.get_prefix("protected"),
+      is_outer: traits.outer || state.get_prefix("outer"),
+      is_long: traits.long || state.get_prefix("long"),
+      ..Expandable::default()
+    }
+  }
+
+  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Result<Tokens> {
+    match self.expansion {
+      Some(ExpansionBody::Closure(ref closure)) => closure(gullet, args.to_owned(), state),
+      // but for tokens, make sure args are proper Tokens (lists)
+      Some(ExpansionBody::Tokens(ref tks)) => Ok(tks.substitute_parameters(args)),
       // empty if no expansion
-      Ok(Tokens!())
+      None => Ok(Tokens!()),
     }
   }
 }
-
-#[macro_export]
-macro_rules! SimpleExpansion(($tokens:expr ) => ({
-  use std::rc::Rc;
-  Some(Rc::new(move |_gullet, _args, _state| Ok($tokens)))
-}));

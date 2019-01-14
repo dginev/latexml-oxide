@@ -302,25 +302,23 @@ impl<'t> Stomach {
       // install stub definitions for new conditional
       let cs_clone = cs.clone();
       state.install_definition(
-        Expandable {
-          cs: T_CS!(s!("\\{}true", name)),
-          paramlist: None,
-          expansion: Some(Rc::new(move |_gullet, _args, _state| {
-            Ok(Tokens!(T_CS!("\\let"), T_CS!(cs_clone), T_CS!("\\iftrue")))
-          })),
-          ..Expandable::default()
-        },
+        Expandable::new(
+          T_CS!(s!("\\{}true", name)),
+          None,
+          Tokens!(T_CS!("\\let"), T_CS!(cs_clone), T_CS!("\\iftrue")),
+          None,
+          state,
+        ),
         None,
       );
       state.install_definition(
-        Expandable {
-          cs: T_CS!(s!("\\{}false", name)),
-          paramlist: None,
-          expansion: Some(Rc::new(move |_gullet, _args, _state| {
-            Ok(Tokens!(T_CS!("\\let"), T_CS!(cs), T_CS!("\\iffalse")))
-          })),
-          ..Expandable::default()
-        },
+        Expandable::new(
+          T_CS!(s!("\\{}false", name)),
+          None,
+          Tokens!(T_CS!("\\let"), T_CS!(cs), T_CS!("\\iffalse")),
+          None,
+          state,
+        ),
         None,
       );
 

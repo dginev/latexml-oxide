@@ -285,7 +285,7 @@ impl DigestionAPI for Core {
       Stored::Expandable(Rc::new(Expandable {
         cs: T_CS!("\\jobname"),
         paramlist: None,
-        expansion: SimpleExpansion!(Tokens::new(Explode!(name_copy))),
+        expansion: Tokens::new(Explode!(name_copy)).into(),
         ..Expandable::default()
       })),
       None,

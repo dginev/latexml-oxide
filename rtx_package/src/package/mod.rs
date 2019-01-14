@@ -23,7 +23,8 @@ pub use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
 pub use rtx_core::definition::register::{NumericOps, Register, RegisterType, RegisterValue};
 pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionClosure, PrimitiveClosure, PrimitiveFn, ReplacementClosure,
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, ExpansionClosure, PrimitiveClosure, PrimitiveFn,
+  ReplacementClosure,
 };
 pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptionName, TagOptions};
@@ -38,7 +39,7 @@ pub use rtx_core::stomach::Stomach;
 pub use rtx_core::tbox::Tbox;
 pub use rtx_core::token::Token;
 pub use rtx_core::token::*;
-pub use rtx_core::tokens::Tokens;
+pub use rtx_core::tokens::{Tokens, MOCK_TOKENS};
 pub use rtx_core::util::pathname;
 pub use rtx_core::util::radix;
 pub use rtx_core::whatsit::Whatsit;
