@@ -1,0 +1,4 @@
+#Document{}(song)
+song{}(verse)
+verse{}(line)
+line{}(#PCDATA)

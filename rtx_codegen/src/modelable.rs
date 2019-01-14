@@ -118,7 +118,7 @@ pub fn load_indirect_model(input: syn::MacroInput) -> quote::Tokens {
 
   let mut state = State::default();
   state.model.set_relaxng_schema(name.to_string());
-  state.model.load_schema(None);
+  state.model.load_schema(&[]);
 
   let indirect_model = state.compute_indirect_model();
 

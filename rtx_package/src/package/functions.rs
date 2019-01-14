@@ -91,6 +91,48 @@ pub fn is_defined_token(cs: &Token, state: &mut State) -> bool {
   }
 }
 
+pub fn load_external_binding(file: &str, state: &mut State, mut with_stomach: Option<&mut Stomach>) -> Result<bool> {
+  let taken_dispatcher = state.extra_bindings_dispatch.take();
+  match taken_dispatcher {
+    Some(ref dispatcher) => {
+      let result_opt = match with_stomach {
+        None => dispatcher(&file, state, None),
+        Some(ref mut st) => dispatcher(&file, state, Some(st)),
+      };
+      match result_opt {
+        Some(result) => match result {
+          Ok(()) => true,
+          Err(e) => return Err(e),
+        },
+        None => false,
+      }
+    },
+    None => false,
+  };
+
+  let is_contrib: bool = match taken_dispatcher {
+    Some(ref dispatcher) => {
+      note_begin(&s!("Loading {:?} definitions", file));
+      let result_opt = match with_stomach {
+        None => dispatcher(&file, state, None),
+        Some(ref mut st) => dispatcher(&file, state, Some(st)),
+      };
+      note_end(&s!("Loading {:?} definitions", file));
+      match result_opt {
+        Some(result) => match result {
+          Ok(()) => true,
+          Err(e) => return Err(e),
+        },
+        None => false,
+      }
+    },
+    None => false,
+  };
+  state.extra_bindings_dispatch = taken_dispatcher;
+
+  Ok(is_contrib)
+}
+
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
 pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut state: &mut State) -> Result<()> {
   let mut file: String = raw_file.trim().to_string();
@@ -122,24 +164,11 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
   // Mark as loaded, then process the definitions
   note_begin(&s!("Loading {:?} definitions", file));
   state.assign_value(&loaded_flag, true, Some(Scope::Global));
-  let taken_dispatcher = state.extra_bindings_dispatch.take();
-  let is_contrib: bool = match taken_dispatcher {
-    Some(ref dispatcher) => {
-      let result_opt = match with_stomach {
-        None => dispatcher(&file, state, None),
-        Some(ref mut st) => dispatcher(&file, state, Some(st)),
-      };
-      match result_opt {
-        Some(result) => match result {
-          Ok(()) => true,
-          Err(e) => return Err(e),
-        },
-        None => false,
-      }
-    },
-    None => false,
+
+  let is_contrib = match with_stomach {
+    None => load_external_binding(&file, state, None)?,
+    Some(ref mut stomach_mut) => load_external_binding(&file, state, Some(stomach_mut))?,
   };
-  state.extra_bindings_dispatch = taken_dispatcher;
 
   if !is_contrib {
     match file.as_ref() {
@@ -180,14 +209,13 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
     ..Mouth::default()
   };
   mouth.open(path, &mut core.state)?;
-  // TODO:
-  // If there is a file-specific declaration file (name.latexml), load it first!
-  // let file = path;
-  // file =~ s/\.tex//;
-  // if (let conf = !pathname_is_literaldata($pathname)
-  //   && pathname_find("$file.latexml", paths => LookupValue('SEARCHPATHS'))) {
-  //   loadLTXML($conf, $conf); }
-
+  // If there is a file-specific declaration file (name_tex.rs), load it first!
+  // let namespace = path;
+  // state.extra_bindings_dispatch
+  if !pathname::is_literaldata(path) {
+    let (dir, base, ext) = pathname::split(path);
+    load_external_binding(&base, &mut core.state, Some(&mut core.stomach.borrow_mut()))?;
+  }
   // TODO: Caching
   // content => LookupValue($pathname . '_contents')
 

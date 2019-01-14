@@ -1,6 +1,5 @@
 ///! Token List constructors.
 use crate::fmt;
-use log::warn;
 use log::*;
 use std::collections::VecDeque;
 use std::fmt::Display;
@@ -172,7 +171,6 @@ impl Tokens {
   // Using inline accessors on those assumptions
   pub fn substitute_parameters(&self, args: Vec<Tokens>) -> Self {
     let mut result = Vec::new();
-    info!("tokens pre-sub: {:?}", self.tokens);
     let mut in_tokens = self.tokens.iter();
     while let Some(token) = in_tokens.next() {
       if token.code != Catcode::PARAM {
@@ -190,7 +188,6 @@ impl Tokens {
         }
       }
     }
-    info!("tokens post-sub: {:?}", result);
     Tokens::new(result)
   }
 
