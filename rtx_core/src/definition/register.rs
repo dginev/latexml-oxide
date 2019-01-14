@@ -1,4 +1,4 @@
-use log::{error, warn};
+use log::*;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -275,9 +275,12 @@ impl Definition for RefCell<Register> {
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
 
     let gullet = stomach.get_gullet_mut();
+    info!("Invoking register {:?} ", self.borrow().cs.get_cs_name());
     let args = self.read_arguments(gullet, state)?;
-    gullet.read_keyword(&["="], state)?; // Ignore
+    info!("ARGS: {:?}", args);
+    info!("KW: {:?}", gullet.read_keyword(&["="], state)?); // Ignore
     let value = gullet.read_value(self.register_type().unwrap(), state)?;
+    info!("VAL: {:?}", value);
 
     self.borrow_mut().set_value(value, args, state);
 

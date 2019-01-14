@@ -183,7 +183,7 @@ fn install_definition_and_meaning() {
     cs: T_CS!("\\jobname"),
     paramlist: None,
     //       expansion: SimpleExpansion!(Tokens::new(Explode!("name"))),
-    expansion: SimpleExpansion!(Tokens::new(Explode!("name"))),
+    expansion: Tokens::new(Explode!("name")).into(),
     locator: s!("from unit test, line 99"),
     is_protected: state.get_prefix("protected"),
     ..Expandable::default()

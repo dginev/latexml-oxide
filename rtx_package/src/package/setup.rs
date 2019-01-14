@@ -193,7 +193,7 @@ macro_rules! DefMacroIWO {
   }};
   // with explicit state
   ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {{
-    let expansion_closure: Option<ExpansionClosure> = Some(Rc::new(move |$gullet, $args, $inner_state| $body));
+    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(move |$gullet, $args, $inner_state| $body)));
     def_macro($cs, $paramlist, expansion_closure, $options, $state_arg);
   }};
   // precompiled
@@ -212,10 +212,10 @@ macro_rules! DefMacroWO {
   // Rust closure expansion form
   ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {{
     let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-    let expansion_closure : Option<ExpansionClosure> =
-      Some(Rc::new(move |$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| $body));
+    let expansion_body : Option<ExpansionBody> =
+      Some(ExpansionBody::Closure(Rc::new(move |$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| $body)));
     // TODO: Also pass in options
-    def_macro(cs, paramlist, expansion_closure, $options, $state_arg);
+    def_macro(cs, paramlist, expansion_body, $options, $state_arg);
   }};
   ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) => ({
     bind_state!(st);

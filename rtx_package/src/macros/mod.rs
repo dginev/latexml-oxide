@@ -20,7 +20,7 @@ macro_rules! compile_replacement {
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_expansion {
   ($var:ident, $expansion:expr) => {{
-    use rtx_core::definition::ExpansionClosure;
+    use rtx_core::definition::ExpansionBody;
     #[allow(unused_imports)]
     use rtx_core::token::Catcode;
     #[derive(CompileExpansion)]

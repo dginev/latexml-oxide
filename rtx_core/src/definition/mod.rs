@@ -38,6 +38,12 @@ pub type ConstructionClosure = Rc<Fn(&mut Document, &Whatsit, &mut State) -> Res
 pub type DigestedReversionClosure = Rc<Fn(&Whatsit, &Vec<Option<Digested>>) -> Result<Tokens>>;
 
 #[derive(Clone)]
+pub enum ExpansionBody {
+  Closure(ExpansionClosure),
+  Tokens(Tokens),
+}
+
+#[derive(Clone)]
 pub enum Reversion {
   Closure(DigestedReversionClosure),
   Tokens(Tokens),
@@ -47,12 +53,16 @@ impl From<&str> for Reversion {
   fn from(t: &str) -> Reversion { Reversion::Tokens(mouth::tokenize_internal(t, None)) }
 }
 
-impl From<Token> for Option<ExpansionClosure> {
-  fn from(t: Token) -> Option<ExpansionClosure> { Tokens!(t).into() }
+impl From<Token> for Option<ExpansionBody> {
+  fn from(t: Token) -> Option<ExpansionBody> { Tokens!(t).into() }
 }
 
-impl From<Tokens> for Option<ExpansionClosure> {
-  fn from(t: Tokens) -> Option<ExpansionClosure> { Some(Rc::new(move |gullet, args, state| Ok(t.clone()))) }
+impl From<Tokens> for ExpansionBody {
+  fn from(t: Tokens) -> ExpansionBody { ExpansionBody::Tokens(t) }
+}
+
+impl From<Tokens> for Option<ExpansionBody> {
+  fn from(t: Tokens) -> Option<ExpansionBody> { Some(t.into()) }
 }
 
 pub trait Definition: Object {

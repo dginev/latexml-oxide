@@ -19,7 +19,7 @@ use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
 use rtx_core::definition::register::{NumericOps, Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue};
 use rtx_core::definition::{
-  BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionClosure, PrimitiveClosure, ReplacementClosure,
+  BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, PrimitiveClosure, ReplacementClosure,
 };
 use rtx_core::document::resource::*;
 use rtx_core::document::tag::{TagOptionName, TagOptions};
@@ -640,7 +640,7 @@ pub fn select_relaxng_schema(schema: String, namespaces: Option<HashMap<String, 
   return;
 }
 
-pub fn def_macro<T: Into<Option<ExpansionClosure>>>(
+pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   cs: Token,
   paramlist: Option<Parameters>,
   expansion: T,
