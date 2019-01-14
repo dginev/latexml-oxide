@@ -1533,3 +1533,19 @@ macro_rules! Dimension {
     ::rtx_core::common::dimension::Dimension::new_str($number, $state_arg)?
   };
 }
+
+#[macro_export]
+macro_rules! DocType {
+  ($rootelement:expr, $pubid:expr, $sysid:expr) => {
+    bind_state!(st);
+    let mut namespaces : HashMap<String, String> = HashMap::new();
+    DocType!($rootelement, $pubid, $sysid, namespaces, st)  
+  };
+  ($rootelement:expr, $pubid:expr, $sysid:expr, $namespaces:expr, $state_arg:ident) => {{
+    let mut model = &mut $state_arg.model;
+    model.set_doc_type($rootelement.to_string(), $pubid.to_string(), $sysid.to_string());
+    for (prefix, value) in $namespaces.iter() {
+      model.register_document_namespace(prefix, Some(value.to_string()));
+    }
+  }};
+}

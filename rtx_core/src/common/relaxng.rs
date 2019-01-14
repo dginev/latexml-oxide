@@ -25,8 +25,11 @@ impl Default for Relaxng {
 impl Relaxng {
   pub fn add_schema_declaration(&self, document: &mut Document) {
     let mut attributes = HashMap::new();
-    attributes.insert(s!("RelaxNGSchema"), self.name.clone());
-    document.insert_pi("latexml", Some(attributes)).unwrap(); // should never fail, or will be a very early panic
+    if self.name != "DTD" {
+      // provisions for phasing out DTD
+      attributes.insert(s!("RelaxNGSchema"), self.name.clone());
+      document.insert_pi("latexml", Some(attributes)).unwrap(); // should never fail, or will be a very early panic
+    }
   }
 
   pub fn load_schema(&self) {}

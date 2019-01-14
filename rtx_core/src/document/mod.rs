@@ -1796,7 +1796,9 @@ impl Document {
     if no_ns {
       // without this explicit set call, an XPath for things such as "ltx:XMath"
       // fails ???
-      newnode.set_namespace(&point.get_namespace().unwrap())?;
+      if let Some(ns) = point.get_namespace() {
+        newnode.set_namespace(&ns)?;
+      }
     }
 
     self.record_constructed_node(Some(&newnode));

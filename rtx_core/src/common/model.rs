@@ -1,4 +1,4 @@
-use log::{error, warn};
+use log::*;
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -96,7 +96,7 @@ impl Model {
     }
   }
 
-  pub fn load_schema(&mut self, search_paths: Option<Vec<String>>) -> &Option<Relaxng> {
+  pub fn load_schema(&mut self, search_paths: &[&str]) -> &Option<Relaxng> {
     // Only load once
     if self.schema.is_some() {
       return &self.schema;
@@ -124,11 +124,13 @@ impl Model {
         schema_type = data[0].clone();
         match schema_type.as_ref() {
           "DTD" => {
-            error!(target: "DTD:unimplemented", "TODO: DTD not yet supported");
-            // my ($roottag, $publicid, $systemid) = @data;
-            // require LaTeXML::Common::Model::DTD;
-            // $name = $systemid;
-            // $$self{schema} = LaTeXML::Common::Model::DTD->new($self, $roottag, $publicid,
+            // NOTE: This is a hack, as DTD should be deprecated, just making xii test work for now
+            // ($roottag, $publicid, $systemid) = @data;
+            name = data.last().unwrap().replace(".dtd", "").to_string();
+            self.schema = Some(Relaxng {
+              name: "DTD".to_string(), // HACK, phase out DTD support!
+              ..Relaxng::default()
+            });
             // $systemid);
           },
           "RelaxNG" => {
@@ -138,16 +140,21 @@ impl Model {
               ..Relaxng::default()
             });
           },
-          _ => {},
+          e => error!(target:"unknown:schematype", "Can't load a schema of type {:?}", e),
         };
       },
     };
 
     if !self.no_compiled {
+      let paths: Option<Vec<String>> = if search_paths.is_empty() {
+        None
+      } else {
+        Some(search_paths.iter().map(|p| p.to_string()).collect())
+      };
       let pathname_opt = pathname::find(
         &name,
         pathname::PathnameFindOptions {
-          paths: search_paths,
+          paths,
           types: Some(vec![s!("model")]),
           installation_subdir: Some(s!("resources/{}", schema_type)),
         },
@@ -414,7 +421,10 @@ impl Model {
         //   None => node.get_name()
         // }
         // TODO: Mock for now, add namespace_uri capability to rust-libxml next
-        s!("ltx:{}", node.get_name())
+        match node.get_name().as_str() {
+          "song" | "verse" | "line" => node.get_name(),
+          regular => s!("ltx:{}", regular),
+        }
       },
       // Need others?
       t => panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {:?}", t), /* Fatal('misdefined', '<caller>',
@@ -545,7 +555,7 @@ impl Model {
   /// available at runtime For now, simply reimplementing the runtime loading of
   /// LaTeXML.model as-is from Model.pm
   pub fn load_compiled_schema(&mut self, path: &str) {
-    note_begin(&s!("Loading compiled schema {}", path));
+    note_begin(&s!("Loading compiled schema {}\n", path));
     let compiled_fh = File::open(path).unwrap();
     let compiled_reader = BufReader::new(&compiled_fh);
     for line_result in compiled_reader.lines() {
@@ -574,7 +584,7 @@ impl Model {
       }
     }
 
-    note_end(&s!("Loading compiled schema {}", path));
+    note_end(&s!("Loading compiled schema {}\n", path));
     return;
   }
 

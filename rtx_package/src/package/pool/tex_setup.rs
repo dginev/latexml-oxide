@@ -186,7 +186,6 @@ LoadDefinitions!(state, {
   });
 
   DefParameterType!("Until", sub[gullet, _inner, until, state] {
-    info!("-- Until invoked on |{:?}|", until);
     let until = until.into_iter().map(|x| if let ParameterExtra::Token(t) = x {
       t
     } else {

@@ -140,10 +140,18 @@ impl DigestionAPI for Core {
     note_begin("Building");
 
     let mut state = &mut self.state;
-    // Compile-time load of model AND indirect model
-    load_model!(&mut state, "LaTeXML");
-    // Was:
-    // state.model.load_schema(search_paths.clone()); // If needed?
+    let schema_paths = state.search_paths.iter().map(|x| x.as_str()).collect::<Vec<&str>>();
+    let default_model_load = match state.model.schema_data {
+      None => true,
+      Some(ref v) => v.last() == Some(&String::from("LaTeXML")),
+    };
+    if default_model_load {
+      // Compile-time load of model AND indirect model
+      load_model!(&mut state, "LaTeXML");
+    } else {
+      // Eager-load at runtime
+      state.model.load_schema(schema_paths.as_slice()); // If needed?
+    }
 
     let mut document = Document::new();
     if !state.search_paths.is_empty() {
