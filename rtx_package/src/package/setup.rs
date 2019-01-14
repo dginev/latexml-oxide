@@ -353,8 +353,9 @@ macro_rules! DefPrimitiveIWO(
 #[macro_export]
 macro_rules! DefRegisterWO {
   ($proto:expr, $value:expr, $options:expr) => {{
+    let value = { $value }; // allow to re-borrow state in value macros
     bind_state!(st);
-    DefRegisterWO!($proto, $value, $options, st)
+    DefRegisterWO!($proto, value, $options, st)
   }};
   ($proto:expr, $value:expr, $options:expr, $state_arg:ident) => {{
     let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
@@ -367,24 +368,33 @@ macro_rules! DefRegisterI {
   ($cs:expr, $paramlist:expr, $value:expr, $($key:ident => $val:expr),*) => (DefRegisterI!($cs, $paramlist, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*))));
   ($cs:expr, $paramlist:expr, $value:expr, $state_arg:ident, $($key:ident => $val:expr),*) => (DefRegisterI!($cs, $paramlist, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*)), $state_arg));
   ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {{
+    let value = { $value };
     bind_state!(st);
-    DefRegisterI!($cs, $paramlist, $value, $options, st)
+    DefRegisterI!($cs, $paramlist, value, $options, st)
   }};
   ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => {
     def_register($cs, $paramlist, $value, $options, $state_arg)
   };
 }
 
-// sub LookupRegister {
-//   my ($cs, @parameters) = @_;
-//   my $defn;
-//   $cs = T_CS($cs) unless ref $cs;
-//   if (($defn = $STATE->lookupDefinition($cs)) && $defn->isRegister) {
-//     return $defn->valueOf(@parameters); }
-//   else {
-//     Warn('expected', 'register', $STATE->getStomach,
-//       "The control sequence " . ToString($cs) . " is not a register"); }
-//   return; }
+#[macro_export]
+macro_rules! LookupRegister {
+  ($cs:expr) => {
+    LookupRegister!($cs, Vec::new())
+  };
+  ($cs:expr, $parameters:expr) => {{
+    bind_state!(st);
+    LookupRegister!($cs, $parameters, st)
+  }};
+  ($cs:expr, $parameters:expr, $state_arg: ident) => {
+    if let Some(defn) = $state_arg.lookup_register_definition(&T_CS!($cs)) {
+      defn.value_of($parameters, $state_arg).unwrap_or_default()
+    } else {
+      warn!(target:"expected:register", "The control sequence {:?} is not a register", $cs); 
+      RegisterValue::default()
+    }
+  }
+}
 
 // sub LookupDimension {
 //   my ($cs) = @_;

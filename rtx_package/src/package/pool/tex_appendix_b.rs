@@ -103,7 +103,7 @@ LoadDefinitions!(state, {
   // # From plain.tex
   // DefPrimitive('\newcount  Token', sub { DefRegisterI($_[1], undef, Number(0)); });
   // DefPrimitive('\newdimen  Token', sub { DefRegisterI($_[1], undef, Dimension(0)); });
-  // DefPrimitive('\newskip   Token', sub { DefRegisterI($_[1], undef, Glue(0)); });
+  // DefPrimitive('\newskip   Token', sub { DefRegisterI($_[1], undef, Glue!(0)); });
   // DefPrimitive('\newmuskip Token', sub { DefRegisterI($_[1], undef, MuGlue(0)); });
   // AssignValue(allocated_boxes => 0);
   // DefPrimitive('\newbox    Token', sub {
@@ -156,21 +156,31 @@ LoadDefinitions!(state, {
   // # TeX Book, Appendix B, p. 349
   // # See the section Registers & Parameters, above for setting default values.
 
-  // # These are originally defined with \newskip, etc
-  // DefRegister('\smallskipamount'          => Glue('3pt plus1pt minus1pt'));
-  // DefRegister('\medskipamount'            => Glue('6pt plus2pt minus2pt'));
-  // DefRegister('\bigskipamount'            => Glue('12pt plus4pt minus4pt'));
-  // DefRegister('\normalbaselineskip'       => Glue('12pt'));
-  // DefRegister('\normallineskip'           => Glue('1pt'));
-  // DefRegister('\normallineskiplimit'      => Dimension('0pt'));
-  // DefRegister('\jot'                      => Dimension('3pt'));
-  // DefRegister('\lx@default@jot'           => LookupRegister('\jot'));
-  // DefRegister('\interdisplaylinepenalty'  => Number(100));
-  // DefRegister('\interfootnotelinepenalty' => Number(100));
+  // These are originally defined with \newskip, etc
+  DefRegister!("\\smallskipamount", Glue!("3pt plus1pt minus1pt"));
+  DefRegister!("\\medskipamount", Glue!("6pt plus2pt minus2pt"));
+  DefRegister!("\\bigskipamount", Glue!("12pt plus4pt minus4pt"));
+  DefRegister!("\\normalbaselineskip", Glue!("12pt"));
+  DefRegister!("\\normallineskip", Glue!("1pt"));
+  DefRegister!("\\normallineskiplimit", Dimension!("0pt"));
+  DefRegister!("\\jot", Dimension!("3pt"));
+  DefRegister!("\\lx@default@jot", LookupRegister!("\\jot"));
+  DefRegister!("\\interdisplaylinepenalty", Number!(100));
+  DefRegister!("\\interfootnotelinepenalty", Number!(100));
 
-  // DefMacroI('\magstephalf', undef, '1095');
-  // our @mags = (1000, 1200, 1440, 1728, 2074, 2488);
-  // DefMacro('\magstep{}', sub { Explode($mags[ToString($_[1])]); });
+  DefMacro!("\\magstephalf", "1095");
+  DefMacro!("\\magstep{}", sub[gullet, args, state] {
+    unpack_to_string!(args => mag);
+    Ok(Tokens::new(Explode!(match mag.as_str() {
+      "0" => "1000",
+      "1" => "1200",
+      "2" => "1440",
+      "3" => "1728",
+      "4" => "2074",
+      "5" => "2488",
+      _ => ""
+    })))
+  });
 
   // #======================================================================
   // # TeX Book, Appendix B, p. 350
