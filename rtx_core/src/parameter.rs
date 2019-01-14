@@ -252,7 +252,7 @@ impl Parameter {
     }
 
     if !self.optional && !self.novalue && (value.is_empty() && self.reader_predigest.is_none()) {
-      error!(target: &s!("expected:{:?}", self), "Missing argument for TODO:fordefn");
+      error!(target: &s!("expected:{:?}", self.name), "Missing argument for TODO:fordefn {:?}", self);
       //     $gullet->showUnexpected);
       value = Tokens!(T_OTHER!("missing"));
     }

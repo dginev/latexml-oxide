@@ -8,6 +8,7 @@ use crate::common::error::*;
 use crate::common::glue::{Glue, MuGlue};
 use crate::common::number::Number;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -275,18 +276,20 @@ impl Definition for RefCell<Register> {
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
 
     let gullet = stomach.get_gullet_mut();
-    info!("Invoking register {:?} ", self.borrow().cs.get_cs_name());
     let args = self.read_arguments(gullet, state)?;
-    info!("ARGS: {:?}", args);
-    info!("KW: {:?}", gullet.read_keyword(&["="], state)?); // Ignore
+    gullet.read_keyword(&["="], state)?;
     let value = gullet.read_value(self.register_type().unwrap(), state)?;
-    info!("VAL: {:?}", value);
 
     self.borrow_mut().set_value(value, args, state);
 
-    // if (my $after = $STATE->lookupValue('afterAssignment')) {
-    //   $STATE->assignValue(afterAssignment => undef, 'global');
-    //   $gullet->unread($after); }    # primitive returns boxes, so these need to be digested!
+    if let Some(after) = state.remove_value("afterAssignment") {
+      match after {
+        // primitive returns boxes, so these need to be digested!
+        Stored::Token(t) => gullet.unread(&Tokens!(t)),
+        Stored::Tokens(tks) => gullet.unread(&tks),
+        other => error!(target:"unexpected:afterassignment", "expected tokens, found: {:?}", other),
+      };
+    }
     // # Tracing ?
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 

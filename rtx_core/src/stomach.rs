@@ -475,7 +475,7 @@ impl<'t> Stomach {
     state.push_frame();
     state.assign_value("beforeAfterGroup", Stored::VecDigested(Vec::new()), Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("afterGroup", Stored::VecDigested(Vec::new()), Some(Scope::Local)); // ALWAYS bind this!
-    state.assign_value("afterAssignment", Stored::VecDigested(Vec::new()), Some(Scope::Local)); // ALWAYS bind this!
+    state.assign_value("afterAssignment", Stored::Tokens(Tokens!()), Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
     state.assign_value("groupInitiatorLocator", self.get_locator(), Some(Scope::Local));
