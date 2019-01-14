@@ -29,7 +29,7 @@ lazy_static! {
 }
 
 impl Dimension {
-  pub fn new_str(mut sp: &str, state: &mut State) -> Result<Self> {
+  pub fn new_str(mut sp: &str, state: &State) -> Result<Self> {
     let sp_num: f32 = if sp.is_empty() {
       0.0
     } else if let Some(cap) = DIMENSION_RE.captures(sp) {

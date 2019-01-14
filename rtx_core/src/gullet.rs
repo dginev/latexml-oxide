@@ -423,7 +423,6 @@ impl Gullet {
     let mut n = 0;
     let mut found;
     let mut tokens: Vec<Token> = Vec::new();
-
     loop {
       found = self.read_match(&delims, state)?;
       if found.is_some() {
