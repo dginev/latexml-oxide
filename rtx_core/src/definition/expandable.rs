@@ -123,7 +123,7 @@ impl Expandable {
     //     "Expansion is " . ToString($expansion)) unless $expansion->isBalanced;
     //   # If expansion is Tokens, and no arguments, we're a "trivial macro"
     let trivial_expansion = if let ExpansionBody::Tokens(ref tks) = expansion {
-      if paramlist.is_none() && !tks.is_empty() {
+      if paramlist.is_none() && !tks.is_stub() {
         Some(tks.substitute_parameters(Vec::new()))
       } else {
         None
@@ -149,7 +149,13 @@ impl Expandable {
     match self.expansion {
       Some(ExpansionBody::Closure(ref closure)) => closure(gullet, args.to_owned(), state),
       // but for tokens, make sure args are proper Tokens (lists)
-      Some(ExpansionBody::Tokens(ref tks)) => Ok(tks.substitute_parameters(args)),
+      Some(ExpansionBody::Tokens(ref tks)) => {
+        if !tks.is_stub() {
+          Ok(tks.substitute_parameters(args))
+        } else {
+          Ok(Tokens!())
+        }
+      },
       // empty if no expansion
       None => Ok(Tokens!()),
     }

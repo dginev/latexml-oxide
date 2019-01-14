@@ -15,7 +15,11 @@ LoadDefinitions!(state, {
   // <definition text> = <register text><left brace><balanced text><right brace>
 
   fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) -> Result<Option<Parameters>> {
-    let mut tokens: VecDeque<Token> = VecDeque::from(params_in.unlist());
+    let mut tokens: VecDeque<Token> = if params_in.is_stub() {
+      VecDeque::new() // handle default tokens making their way into here, they are ignorable
+    } else {
+      VecDeque::from(params_in.unlist())
+    };
     // Now, recognize parameters and delimiters.
     let mut params = Vec::new();
     let mut n = 0;
@@ -99,7 +103,7 @@ LoadDefinitions!(state, {
     unpack!(args => cs, params, body);
     // ensure params is empty if it contains only the default token
     // TODO: is this a flaw of parameter parsing?
-    let params = if params.tokens == MOCK_TOKENS.tokens { Tokens!() } else { params };
+    let params = if params.is_stub() { Tokens!() } else { params };
     let cs: Token = cs.into();
     let paramlist = parse_def_parameters(&cs, params, state)?;
     if expanded {

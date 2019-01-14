@@ -1,6 +1,7 @@
 ///! Token List constructors.
 use crate::fmt;
 use log::warn;
+use log::*;
 use std::collections::VecDeque;
 use std::fmt::Display;
 
@@ -64,7 +65,7 @@ impl From<Tokens> for Token {
 
 impl<'a> From<&'a Tokens> for Token {
   fn from(ts: &'a Tokens) -> Token {
-    if ts.tokens.is_empty() {
+    if ts.is_stub() {
       Token::default()
     } else if ts.tokens.len() == 1 {
       ts.tokens.first().unwrap().clone()
@@ -84,18 +85,17 @@ impl Display for Tokens {
   }
 }
 
-lazy_static! {
-  pub static ref MOCK_TOKENS: Tokens = Tokens!(vec![Token::default()]);
-}
-
 impl Tokens {
   pub fn new(tokens: Vec<Token>) -> Self { Tokens { tokens } }
 
   /// Return a list of the tokens making up this Tokens
   pub fn unlist(&self) -> Vec<Token> { self.tokens.clone() }
 
-  /// Checks if there are tokens present
+  /// Are there any tokens at all contained in this Tokens object
   pub fn is_empty(&self) -> bool { self.tokens.is_empty() }
+
+  /// Are there any non-stub tokens contained in this Tokens object?
+  pub fn is_stub(&self) -> bool { self.is_empty() || self.tokens.iter().all(|t| *t == *MOCK_TOKEN) }
 
   /// Number of contained Token entries
   pub fn len(&self) -> usize { self.tokens.len() }
@@ -172,6 +172,7 @@ impl Tokens {
   // Using inline accessors on those assumptions
   pub fn substitute_parameters(&self, args: Vec<Tokens>) -> Self {
     let mut result = Vec::new();
+    info!("tokens pre-sub: {:?}", self.tokens);
     let mut in_tokens = self.tokens.iter();
     while let Some(token) = in_tokens.next() {
       if token.code != Catcode::PARAM {
@@ -189,6 +190,7 @@ impl Tokens {
         }
       }
     }
+    info!("tokens post-sub: {:?}", result);
     Tokens::new(result)
   }
 

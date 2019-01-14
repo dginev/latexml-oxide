@@ -18,6 +18,10 @@ use crate::stomach::Stomach;
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
 
+lazy_static! {
+  pub static ref MOCK_TOKEN: Token = Token::default();
+}
+
 #[derive(PartialEq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
   ESCAPE,
