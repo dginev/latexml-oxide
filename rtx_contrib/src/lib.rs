@@ -1,4 +1,3 @@
-#![feature(custom_attribute)]
 #[macro_use]
 extern crate rtx_package;
 #[macro_use]

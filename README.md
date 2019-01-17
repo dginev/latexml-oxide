@@ -37,3 +37,7 @@ There is demonstrable need for LaTeXML in the domain of academic writing, as wel
   LcYlaDLbJsW,SWXJW ree @rzchLhzsW,;WERcesInW qt.'oL.Rtrul;e
   doTsW,Wk;Rri@stW aHAHHFndZPpqar.tridgeLinZpe.LtYer.W,:
   ```
+
+### Installation
+
+Requires Rust `stable` v1.32, and newer.

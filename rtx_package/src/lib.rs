@@ -3,8 +3,6 @@
 //
 
 //! Binding infrastructure for the `LaTeXML` converter, reimplemented in Rust
-#![feature(custom_attribute)]
-#![feature(stmt_expr_attributes)]
 #![allow(dead_code, unused_variables, unused_mut, unused_macros)]
 
 #[macro_use]

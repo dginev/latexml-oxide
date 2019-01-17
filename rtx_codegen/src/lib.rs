@@ -1,5 +1,3 @@
-#![feature(proc_macro_hygiene)]
-#![feature(proc_macro_quote)]
 #![recursion_limit = "100"]
 #[macro_use]
 extern crate lazy_static;
