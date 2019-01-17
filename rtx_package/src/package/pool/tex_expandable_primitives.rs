@@ -1,33 +1,5 @@
 use crate::package::*;
 
-// Hmm... I wonder, should getString itself be dealing with escapechar?
-fn escapechar(state: &State) -> String {
-  let code: i32 = match state.lookup_register("\\escapechar", Vec::new()) {
-    Some(RegisterValue::Number(v)) => v.value_of() as i32,
-    _ => -1,
-  };
-  if code >= 0 && code <= 255 {
-    let char_code = (code as u8) as char;
-    char_code.to_string()
-  } else {
-    String::new()
-  }
-}
-
-fn compare(u: Token, rel: Token, v: Token) -> Result<bool> {
-  let u = u.to_number().value_of();
-  let v = v.to_number().value_of();
-  match rel {
-    T_OTHER!("<") | T_CS!("\\@@<") => Ok(u < v),
-    T_OTHER!("=") => Ok(u == v),
-    T_OTHER!(">") | T_CS!("\\@@>") => Ok(u > v),
-    _ => {
-      error!(target:"expected:<relationaltoken>", "Expected a relational token for comparision. Got {:?}", rel);
-      Ok(false)
-    },
-  }
-}
-
 //=======================
 // -- Main Definitions --
 //=======================
@@ -302,3 +274,31 @@ LoadDefinitions!(state, {
     }
   });
 });
+
+// Hmm... I wonder, should getString itself be dealing with escapechar?
+fn escapechar(state: &State) -> String {
+  let code: i32 = match state.lookup_register("\\escapechar", Vec::new()) {
+    Some(RegisterValue::Number(v)) => v.value_of() as i32,
+    _ => -1,
+  };
+  if code >= 0 && code <= 255 {
+    let char_code = (code as u8) as char;
+    char_code.to_string()
+  } else {
+    String::new()
+  }
+}
+
+fn compare(u: Token, rel: Token, v: Token) -> Result<bool> {
+  let u = u.to_number().value_of();
+  let v = v.to_number().value_of();
+  match rel {
+    T_OTHER!("<") | T_CS!("\\@@<") => Ok(u < v),
+    T_OTHER!("=") => Ok(u == v),
+    T_OTHER!(">") | T_CS!("\\@@>") => Ok(u > v),
+    _ => {
+      error!(target:"expected:<relationaltoken>", "Expected a relational token for comparision. Got {:?}", rel);
+      Ok(false)
+    },
+  }
+}
