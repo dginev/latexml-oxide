@@ -1,13 +1,17 @@
-use crate::util::{get_option, get_options_from_input};
-use regex::Regex;
-use syn;
-
-use rtx_core::common::error::*;
-use rtx_core::state::State;
-use rtx_core::util::pathname;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+
+use lazy_static::lazy_static;
+use quote::*;
+use regex::Regex;
+use syn;
+
+use crate::util::{get_option, get_options_from_input};
+use rtx_core::common::error::*;
+use rtx_core::state::State;
+use rtx_core::util::pathname;
+use rtx_core::{fatal, s};
 
 lazy_static! {
   static ref TAG_MODEL_LINE: Regex = Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap();

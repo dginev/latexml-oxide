@@ -365,8 +365,10 @@ macro_rules! DefRegisterWO {
 
 #[macro_export]
 macro_rules! DefRegisterI {
-  ($cs:expr, $paramlist:expr, $value:expr, $($key:ident => $val:expr),*) => (DefRegisterI!($cs, $paramlist, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*))));
-  ($cs:expr, $paramlist:expr, $value:expr, $state_arg:ident, $($key:ident => $val:expr),*) => (DefRegisterI!($cs, $paramlist, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*)), $state_arg));
+  ($cs:expr, $paramlist:expr, $value:expr, $($key:ident => $val:expr),*) =>
+    (DefRegisterI!($cs, $paramlist, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*))));
+  ($cs:expr, $paramlist:expr, $value:expr, $state_arg:ident, $($key:ident => $val:expr),*) =>
+    (DefRegisterI!($cs, $paramlist, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*)), $state_arg));
   ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {{
     let value = { $value };
     bind_state!(st);
@@ -390,7 +392,7 @@ macro_rules! LookupRegister {
     if let Some(defn) = $state_arg.lookup_register_definition(&T_CS!($cs)) {
       defn.value_of($parameters, $state_arg).unwrap_or_default()
     } else {
-      warn!(target:"expected:register", "The control sequence {:?} is not a register", $cs); 
+      warn!(target:"expected:register", "The control sequence {:?} is not a register", $cs);
       RegisterValue::default()
     }
   }
@@ -1538,8 +1540,8 @@ macro_rules! Dimension {
 macro_rules! DocType {
   ($rootelement:expr, $pubid:expr, $sysid:expr) => {
     bind_state!(st);
-    let mut namespaces : HashMap<String, String> = HashMap::new();
-    DocType!($rootelement, $pubid, $sysid, namespaces, st)  
+    let mut namespaces: HashMap<String, String> = HashMap::new();
+    DocType!($rootelement, $pubid, $sysid, namespaces, st)
   };
   ($rootelement:expr, $pubid:expr, $sysid:expr, $namespaces:expr, $state_arg:ident) => {{
     let mut model = &mut $state_arg.model;

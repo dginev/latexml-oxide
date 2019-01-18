@@ -1,3 +1,4 @@
+pub use lazy_static::lazy_static;
 pub use libxml::tree::{Namespace, Node};
 pub use log::{debug, error, info, warn};
 pub use regex::Regex;
@@ -37,7 +38,6 @@ pub use rtx_core::parameter::{Parameter, ParameterExtra, Parameters, ReaderClosu
 pub use rtx_core::state::{Scope, State, Stored};
 pub use rtx_core::stomach::Stomach;
 pub use rtx_core::tbox::Tbox;
-pub use rtx_core::token::Token;
 pub use rtx_core::token::*;
 pub use rtx_core::tokens::Tokens;
 pub use rtx_core::util::pathname;

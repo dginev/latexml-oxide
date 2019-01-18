@@ -1,3 +1,4 @@
+use lazy_static::lazy_static;
 use libxml::tree::Node;
 use log::*;
 use regex::Regex;
@@ -31,7 +32,7 @@ use rtx_core::parameter::{Parameter, ParameterExtra, Parameters};
 use rtx_core::state::{Scope, State, Stored};
 use rtx_core::stomach::Stomach;
 use rtx_core::tbox::Tbox;
-use rtx_core::token::{Catcode, Token};
+use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;

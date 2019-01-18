@@ -1,18 +1,6 @@
 #![allow(dead_code, unused_variables, unused_mut, unused_macros)]
 
-#[macro_use]
-extern crate lazy_static;
 use log::error;
-
-extern crate ansi_term;
-extern crate dirs;
-extern crate glob;
-extern crate libxml;
-extern crate proc_macro;
-extern crate quote;
-extern crate rand;
-extern crate regex;
-extern crate time;
 
 #[macro_use]
 pub mod aux_macros;

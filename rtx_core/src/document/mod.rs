@@ -1,9 +1,7 @@
 pub mod resource;
 pub mod tag;
 
-extern crate libxml;
-extern crate regex;
-
+use lazy_static::lazy_static;
 use libxml::tree::set_node_rc_guard;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Namespace, Node, NodeType};

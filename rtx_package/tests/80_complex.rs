@@ -1,7 +1,7 @@
 #[macro_use]
-extern crate rtx_package;
+pub extern crate rtx_codegen;
 #[macro_use]
-extern crate rtx_codegen;
+pub extern crate rtx_package;
 
 mod helpers;
 

@@ -1,14 +1,9 @@
 #![recursion_limit = "100"]
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate rtx_core;
-extern crate proc_macro;
-#[macro_use]
-extern crate quote;
+extern crate proc_macro; // workaround until proc_macro becomes available normally
 
 use crate::util::{get_option, get_options_from_input};
 use proc_macro::TokenStream;
+use quote::*;
 use syn::parse_macro_input;
 
 mod ast_builder;

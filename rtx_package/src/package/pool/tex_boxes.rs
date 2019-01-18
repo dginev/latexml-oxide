@@ -74,7 +74,7 @@ LoadDefinitions!(state, {
       }
     }),
     // The predigest closure is new for rtx, as it was a single closure in the latexml implementation
-    // The key problem is that in rtx the parameter type interfaces are well-typed, so it is not possible 
+    // The key problem is that in rtx the parameter type interfaces are well-typed, so it is not possible
     // to remain elegant while at the same time have access to the stomach AND digest.
     // Hence, the `reader` is exclusively responsible for using the gullet to obtain tokens,
     // while early/immediate digestion via the stomach can be achieved by using the separate `reader_predigest` interface
@@ -171,5 +171,4 @@ LoadDefinitions!(state, {
 
     })
   );
-
 });

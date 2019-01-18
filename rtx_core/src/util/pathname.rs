@@ -1,5 +1,7 @@
 use dirs;
+use lazy_static::lazy_static;
 use regex::Regex;
+
 use std::env;
 use std::path::{Path, PathBuf};
 

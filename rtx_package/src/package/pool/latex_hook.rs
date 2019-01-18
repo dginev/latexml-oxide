@@ -50,12 +50,11 @@ LoadDefinitions!(state, {
       "LaTeX",
       InputDefinitionOptions {
         extension: Some(String::from("pool")),
-        with_stomach: Some(stomach), // crucial, or we won't be able to invoke any RawTeX/Digest-like macros in the pool due to multiple mutable borrows of stomach!
+        with_stomach: Some(stomach), // crucial, or we can't invoke any RawTeX-like macros in the pool due to multiple mutable borrows of stomach!
         ..InputDefinitionOptions::default()
       },
       state,
     )?;
     Ok(vec![])
   });
-
 });

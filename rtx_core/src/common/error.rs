@@ -1,3 +1,4 @@
+use lazy_static::lazy_static;
 use log::{debug, error, info};
 use std::collections::HashMap;
 use std::error::Error as ErrorTrait;

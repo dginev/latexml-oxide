@@ -1,5 +1,3 @@
-extern crate rtx_core;
-
 use rtx_core::common::{Config, OutputFormat};
 use rtx_package::converter::Converter;
 #[test]

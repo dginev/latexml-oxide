@@ -1,3 +1,4 @@
+use lazy_static::lazy_static;
 use log::{debug, error, warn};
 use regex::Regex;
 use std::borrow::Cow;

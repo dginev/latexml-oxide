@@ -8,28 +8,26 @@ use crate::package::*;
 // Apparently, with the normal TeX setup, these fonts don't really merge,
 // rather they override all of family, series and shape.
 LoadDefinitions!(state, {
+  DefConstructor!("\\mathrm{}", "#1", bounded => true, require_math => true,
+    font => Font!(family => "serif", series => "medium", shape => "upright" ));
+  DefConstructor!("\\mathit{}", "#1", bounded => true, require_math => true,
+    font => Font!(shape => "italic", family => "serif", series => "medium" ));
+  DefConstructor!("\\mathbf{}", "#1", bounded => true, require_math => true,
+    font => Font!(series => "bold", family => "serif", shape => "upright" ));
+  DefConstructor!("\\mathsf{}", "#1", bounded => true, require_math => true,
+    font => Font!(family => "sansserif", series => "medium", shape => "upright" ));
+  DefConstructor!("\\mathtt{}", "#1", bounded => true, require_math => true,
+    font => Font!(family => "typewriter", series => "medium", shape => "upright" ));
+  DefConstructor!("\\mathcal{}", "#1", bounded => true, require_math => true,
+    font => Font!(family => "caligraphic", series => "medium", shape => "upright" ));
+  DefConstructor!("\\mathscr{}", "#1", bounded => true, require_math => true,
+    font => Font!(family => "script", series => "medium", shape => "upright" ));
+  DefConstructor!("\\mathnormal{}", "#1", bounded => true, require_math => true,
+    font => Font!(family => "math", shape => "italic", series => "medium" ));
 
-DefConstructor!("\\mathrm{}", "#1", bounded => true, require_math => true,
-  font => Font!(family => "serif", series => "medium", shape => "upright" ));
-DefConstructor!("\\mathit{}", "#1", bounded => true, require_math => true,
-  font => Font!(shape => "italic", family => "serif", series => "medium" ));
-DefConstructor!("\\mathbf{}", "#1", bounded => true, require_math => true,
-  font => Font!(series => "bold", family => "serif", shape => "upright" ));
-DefConstructor!("\\mathsf{}", "#1", bounded => true, require_math => true,
-  font => Font!(family => "sansserif", series => "medium", shape => "upright" ));
-DefConstructor!("\\mathtt{}", "#1", bounded => true, require_math => true,
-  font => Font!(family => "typewriter", series => "medium", shape => "upright" ));
-DefConstructor!("\\mathcal{}", "#1", bounded => true, require_math => true,
-  font => Font!(family => "caligraphic", series => "medium", shape => "upright" ));
-DefConstructor!("\\mathscr{}", "#1", bounded => true, require_math => true,
-  font => Font!(family => "script", series => "medium", shape => "upright" ));
-DefConstructor!("\\mathnormal{}", "#1", bounded => true, require_math => true,
-  font => Font!(family => "math", shape => "italic", series => "medium" ));
+  DefMacro!("\\fontsubfuzz", ".4pt");
+  DefMacro!("\\oldstylenums", "");
 
-DefMacro!("\\fontsubfuzz",".4pt");
-DefMacro!("\\oldstylenums", "");
-
-DefPrimitiveI!("\\operator@font", noprimitive!(), 
-  font => Font!(family => "serif", series => "medium", shape => "upright"));
-
+  DefPrimitiveI!("\\operator@font", noprimitive!(),
+    font => Font!(family => "serif", series => "medium", shape => "upright"));
 });

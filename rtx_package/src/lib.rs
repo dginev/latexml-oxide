@@ -6,16 +6,15 @@
 #![allow(dead_code, unused_variables, unused_mut, unused_macros)]
 
 #[macro_use]
-extern crate lazy_static;
+pub extern crate rtx_core;
 #[macro_use]
-extern crate rtx_codegen;
-#[macro_use]
-extern crate rtx_core;
+pub extern crate rtx_codegen;
 
 #[macro_use]
-mod macros;
+pub mod macros;
 pub mod converter;
 pub mod core;
 pub mod math_parser;
+#[macro_use]
 pub mod package;
 pub mod util;
