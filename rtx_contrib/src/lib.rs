@@ -1,8 +1,5 @@
 #[macro_use]
 extern crate rtx_codegen;
-#[macro_use]
-extern crate rtx_package;
-
 use rtx_core::common::error::*;
 use rtx_core::state::State;
 use rtx_core::stomach::Stomach;

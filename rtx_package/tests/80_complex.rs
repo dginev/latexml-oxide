@@ -1,7 +1,7 @@
 #[macro_use]
-pub extern crate rtx_codegen;
+extern crate rtx_codegen;
 #[macro_use]
-pub extern crate rtx_package;
+extern crate rtx_package;
 
 mod helpers;
 
@@ -22,7 +22,9 @@ fn can_complex() {
 
 #[test]
 #[ignore]
-fn can_complex_todo() { rtx_tests("tests/complex_todo", None); }
+fn can_complex_todo() {
+  rtx_tests("tests/complex_todo", None);
+}
 
 pub fn complex_tests_dispatch(filename: &str, state: &mut State, stomach: Option<&mut Stomach>) -> Option<Result<()>> {
   match filename {

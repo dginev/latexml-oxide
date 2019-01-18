@@ -6,9 +6,9 @@
 #![allow(dead_code, unused_variables, unused_mut, unused_macros)]
 
 #[macro_use]
-pub extern crate rtx_core;
+extern crate rtx_core;
 #[macro_use]
-pub extern crate rtx_codegen;
+extern crate rtx_codegen;
 
 #[macro_use]
 pub mod macros;
@@ -18,3 +18,7 @@ pub mod math_parser;
 #[macro_use]
 pub mod package;
 pub mod util;
+
+// allow external crates to be have the full binding infra via a simple
+//  use rtx_package::*;
+pub use package::*;

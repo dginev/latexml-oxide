@@ -50,15 +50,13 @@ pub use rtx_core::{BoxOps, Core, Digested};
 
 #[macro_use]
 pub mod binding_macros;
-#[macro_use] // Re-export the main binding macros
-pub mod setup;
+#[macro_use]
+pub mod setup; // Re-export the main binding macros
 
 // Next, import the functions and
 pub mod functions;
 // Re-export the public API
 pub use self::functions::*;
-// pub use self::functions::{input_definitions, input_content, parse_prototype, merge_font,
-// def_macro, InputDefinitionOptions, RequireOptions};
 
 // At the very end, declare the pool
 pub use self::pool::tex_functions::*;
