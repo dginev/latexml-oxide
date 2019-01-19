@@ -65,7 +65,9 @@ pub struct Mouth {
 }
 
 impl PartialEq for Mouth {
-  fn eq(&self, other: &Mouth) -> bool { self.source == other.source }
+  fn eq(&self, other: &Mouth) -> bool {
+    self.source == other.source
+  }
 }
 
 impl Default for Mouth {
@@ -91,6 +93,7 @@ impl Default for Mouth {
 
 pub struct MouthOptions {
   pub fordefinitions: bool,
+  pub notes: bool,
   pub content: Option<String>,
   pub foodtype: Option<FoodType>,
   pub source: Option<String>,
@@ -100,6 +103,7 @@ impl Default for MouthOptions {
   fn default() -> Self {
     MouthOptions {
       fordefinitions: false,
+      notes: false,
       content: None,
       foodtype: None,
       source: None,
@@ -126,10 +130,11 @@ impl Mouth {
       options.shortsource = Some(s!("{}.{}", name, ext));
       Mouth::new(&content, Some(options), state)
     } else if source.starts_with("literal:") {
+      let source = source.replacen("literal:", "", 1);
       // we've supplied literal data
       options.source = None; // the source does not have a corresponding file name
       options.foodtype = FoodType::opt_from_str("literal");
-      Mouth::new(source, Some(options), state)
+      Mouth::new(&source, Some(options), state)
     } else if source.is_empty() {
       Mouth::new("", Some(options), state)
     } else {
@@ -147,6 +152,7 @@ impl Mouth {
       Some(opts) => Mouth {
         foodtype: opts.foodtype.unwrap_or(FoodType::Literal),
         fordefinitions: opts.fordefinitions,
+        notes: opts.notes,
         ..Mouth::default()
       },
     };
@@ -182,7 +188,7 @@ impl Mouth {
           } else {
             return Err(e.into());
           }
-        },
+        }
       };
       let mut content = String::new();
       f.read_to_string(&mut content)?;
@@ -190,7 +196,9 @@ impl Mouth {
     }
     Ok(())
   }
-  fn open_literal(&mut self, content: &str) { self.buffer = Mouth::split_lines(content); }
+  fn open_literal(&mut self, content: &str) {
+    self.buffer = Mouth::split_lines(content);
+  }
   fn open_http(&mut self, _content: &str) {}
   fn open_https(&mut self, _content: &str) {}
   // fn open_binding(&mut self, _content: &str) {}
@@ -268,7 +276,7 @@ impl Mouth {
         } else {
           Some(line.to_string())
         }
-      },
+      }
       None => None,
     }
   }
@@ -319,10 +327,12 @@ impl Mouth {
           cc = Some(Catcode::OTHER);
         }
         Some((ch, cc.unwrap()))
-      },
+      }
     }
   }
-  pub fn has_more_input(&self) -> bool { self.colno < self.nchars || !self.buffer.is_empty() }
+  pub fn has_more_input(&self) -> bool {
+    self.colno < self.nchars || !self.buffer.is_empty()
+  }
   // fn stringify(&self) -> String {
   //   // TODO
   //   s!("mouth stringify")
@@ -352,7 +362,7 @@ impl Mouth {
             self.chars = VecDeque::new();
             self.nchars = 0;
             return None;
-          },
+          }
           Some(line) => {
             // Remove trailing space, but NOT a control space!  End with CR (not \n) since this
             // gets tokenized!
@@ -383,17 +393,17 @@ impl Mouth {
                 }
               }
             }
-          },
+          }
         };
       }
       // ==== Extract next token from line.
       match self.get_next_char(state) {
-        None => {},
+        None => {}
         Some((ch, cc)) => {
           if let Some(token) = Mouth::dispatch_char(self, ch, cc, state) {
             return Some(token);
           } // Else, repeat till we get something or run out.
-        },
+        }
       }
     }
   }
@@ -450,14 +460,14 @@ impl Mouth {
           self.nchars = 0;
           self.colno = 0;
           return None;
-        },
+        }
         Some(next_line) => {
           line = next_line;
           self.lineno += 1;
           self.chars = line.chars().collect();
           self.nchars = self.chars.len();
           self.colno = self.nchars;
-        },
+        }
       }
     }
     line = line.trim_end().to_owned(); // Even empty lines are valid here
@@ -479,7 +489,7 @@ impl Mouth {
             code: BEGIN,
           })
         }
-      }, // T_BEGIN
+      } // T_BEGIN
       END => {
         if ch == '}' {
           Some(T_END!())
@@ -489,7 +499,7 @@ impl Mouth {
             code: END,
           })
         }
-      }, // T_END
+      } // T_END
       MATH => {
         if ch == '$' {
           Some(T_MATH!())
@@ -499,7 +509,7 @@ impl Mouth {
             code: MATH,
           })
         }
-      }, // T_MATH
+      } // T_MATH
       ALIGN => {
         if ch == '&' {
           Some(T_ALIGN!())
@@ -509,7 +519,7 @@ impl Mouth {
             code: ALIGN,
           })
         }
-      }, // T_ALIGN
+      } // T_ALIGN
       EOL => self.handle_end_of_line(ch, state), // T_EOL
       PARAM => {
         if ch == '#' {
@@ -520,7 +530,7 @@ impl Mouth {
             code: PARAM,
           })
         }
-      }, // T_PARAM
+      } // T_PARAM
       SUPER => {
         if ch == '^' {
           Some(T_SUPER!())
@@ -530,7 +540,7 @@ impl Mouth {
             code: SUPER,
           })
         }
-      }, // T_SUPER
+      } // T_SUPER
       SUB => {
         if ch == '_' {
           Some(T_SUB!())
@@ -540,7 +550,7 @@ impl Mouth {
             code: SUB,
           })
         }
-      }, // T_SUB
+      } // T_SUB
       SPACE => self.handle_space(ch, state),
       LETTER => Some(T_LETTER!(ch.to_string())),
       OTHER => Some(T_OTHER!(ch.to_string())),
@@ -574,7 +584,7 @@ impl Mouth {
           if (cc != Catcode::SPACE) && (cc != Catcode::EOL) {
             break;
           }
-        },
+        }
       }
     }
     if self.colno < self.nchars {
@@ -591,7 +601,7 @@ impl Mouth {
     for c in n..self.nchars {
       // warning: .. range is half-open in rust
       match self.chars.get(c) {
-        None => {},
+        None => {}
         Some(c) => comment.push(*c),
       };
     }
@@ -617,7 +627,7 @@ impl Mouth {
     // NOTE: We're using control sequences WITH the \ prepended!!!
     let mut cs = s!("\\"); // I need this standardized to be able to lookup tokens (A better way???)
     match self.get_next_char(state) {
-      None => {},
+      None => {}
       Some((ch, cc)) => {
         // Knuth, p.46 says that Newlines are converted to spaces,
         // Bit I believe that he does NOT mean within control sequences
@@ -635,7 +645,7 @@ impl Mouth {
                   cc_after_letter = Some(cc);
                   break;
                 }
-              },
+              }
             };
           }
           self.colno -= 1;
@@ -651,7 +661,7 @@ impl Mouth {
                   cc_after_letter = Some(cc);
                   break;
                 }
-              },
+              }
             };
           }
           if self.colno < self.nchars {
@@ -671,14 +681,16 @@ impl Mouth {
           }
           // }
         }
-      },
+      }
     };
     Some(T_CS!(cs))
   }
 
   /// TODO: Can we use/build a generic that does this reliably for VecDeque
   fn splice<R>(&mut self, range: R, with: &[char])
-  where R: RangeBounds<usize> {
+  where
+    R: RangeBounds<usize>,
+  {
     let mut v: Vec<char> = self.chars.drain(..).collect();
     v.splice(range, with.iter().cloned());
     self.chars = v.into_iter().collect();
@@ -707,7 +719,7 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
         ..StateOptions::default()
       });
       Mouth::new(text, None, &mut std_state).unwrap().read_tokens(None, &mut std_state)
-    },
+    }
     Some(s) => Mouth::new(&text, None, s).unwrap().read_tokens(None, s),
   }
 }
@@ -719,7 +731,7 @@ pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
         ..StateOptions::default()
       });
       Mouth::new(text, None, &mut sty_state).unwrap().read_tokens(None, &mut sty_state)
-    },
+    }
     Some(s) => Mouth::new(&text, None, s).unwrap().read_tokens(None, s),
   }
 }

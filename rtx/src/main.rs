@@ -1,4 +1,4 @@
-use log::{error, info};
+use log::*;
 use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_package::converter::Converter;
 use std::env;
@@ -11,7 +11,6 @@ fn main() {
   }
   let mut argv = env::args();
   argv.next();
-  info!("Welcome to rtx -- a Rust implementation for LaTeXML");
 
   let source = match argv.next() {
     Some(s) => s,
@@ -33,7 +32,8 @@ fn main() {
   };
   let mut converter = Converter::from_config(opts.clone());
   if let Err(e) = converter.prepare_session(&opts) {
-    panic!(format!("Could not prepare converter session! : {}", e));
+    error!("Could not prepare converter session! : {}", e);
+    process::exit(1);
   }
   // Perform the conversion:
   let response = converter.convert(source);

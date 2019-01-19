@@ -21,7 +21,7 @@ impl Default for PathnameFindOptions {
   }
 }
 
-static LITERAL: &'static str = "literal:";
+static LITERAL_PROTOCOL: &'static str = "literal:";
 static HOME_TILDE: &'static str = "~";
 lazy_static! {
   static ref HOME_PATH : String = match dirs::home_dir() {
@@ -57,17 +57,11 @@ pub fn is_url(_path: &str) -> bool {
   false
 }
 
-pub fn is_literaldata(_data: &str) -> bool {
-  // TODO
-  false
-}
+pub fn is_literaldata(data: &str) -> bool { data.starts_with(LITERAL_PROTOCOL) }
 
 pub fn is_absolute(path: &str) -> bool { Path::new(&canonical(path)).is_absolute() }
 
-pub fn absolute(path: &str) -> String {
-  // TODO, just a mock now
-  path.to_string()
-}
+pub fn absolute(path: &str) -> String { Path::new(path).canonicalize().unwrap().to_string_lossy().to_string() }
 
 // Split the pathname into components (dir,name,type).
 // If pathname is absolute, dir starts with volume or '/'
@@ -93,11 +87,13 @@ pub fn split(pathname: &str) -> (String, String, String) {
 /// This likely needs portability work!!! (particularly regarding urls, separators, ...)
 /// AND, care about symbolic links and collapsing ../ !!!
 pub fn canonical(pathname: &str) -> String {
-  if pathname.starts_with(LITERAL) {
+  if is_literaldata(pathname) {
     return pathname.to_owned();
   }
   // Don't call is_absolute, etc, here, cause THEY call US!
   let home_path: &str = &*HOME_PATH;
+
+  // TODO: consider using Path's .canonicalize()
 
   // TODO: Finish fleshing out, just a mock for now
   if pathname.starts_with(HOME_TILDE) {
@@ -125,7 +121,7 @@ pub fn canonical(pathname: &str) -> String {
 pub fn protocol(pathname: &str) -> String {
   if let Some(cap) = PROTOCOL_RE.captures(pathname) {
     cap.get(1).map_or(String::new(), |m| m.as_str().to_string())
-  } else if pathname.starts_with("literal:") {
+  } else if is_literaldata(pathname) {
     "literal".to_string()
   } else {
     "file".to_string()
