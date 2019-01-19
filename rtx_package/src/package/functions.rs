@@ -107,7 +107,7 @@ pub fn load_external_binding(file: &str, state: &mut State, mut with_stomach: Op
         },
         None => false,
       }
-    }
+    },
     None => false,
   };
 
@@ -126,7 +126,7 @@ pub fn load_external_binding(file: &str, state: &mut State, mut with_stomach: Op
         },
         None => false,
       }
-    }
+    },
     None => false,
   };
   state.extra_bindings_dispatch = taken_dispatcher;
@@ -464,9 +464,7 @@ pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -
   }
 }
 
-pub fn coerce_cs(t: &str) -> Token {
-  T_CS!(t)
-}
+pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
 
 pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option<Parameters>))> {
   let mut cs = T_CS!(s!("\\")); // Should never happen
@@ -609,9 +607,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
   }
 }
 
-pub fn revert(_arg: &[Token]) -> Tokens {
-  unimplemented!()
-}
+pub fn revert(_arg: &[Token]) -> Tokens { unimplemented!() }
 
 //======================================================================
 // Declaring and Adjusting the Document Model.
@@ -685,7 +681,8 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   expansion: T,
   options_opt: Option<ExpandableOptions>,
   state: &mut State,
-) {
+)
+{
   let expansion = expansion.into();
   let options = options_opt.unwrap_or_default();
   let options_locked = options.locked;
@@ -791,7 +788,7 @@ pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<Co
           "The conditional {} is being defined but doesn't start with \\if", cs
         );
       }
-    }
+    },
   }
 
   if let Some(true) = options.locked {
@@ -835,7 +832,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
           state.assign_value(&(setter_name.clone() + &args_string), value, None);
         })
       }
-    }
+    },
   };
 
   // Not really right to set the value!
@@ -975,7 +972,8 @@ pub fn def_constructor(
   compiled_replacement: Option<ReplacementClosure>,
   options: ConstructorOptions,
   state: &mut State,
-) {
+)
+{
   // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
   //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
   let scope = options.scope.clone();
@@ -1061,7 +1059,8 @@ pub fn def_environment(
   compiled_replacement: Option<ReplacementClosure>,
   options: ConstructorOptions,
   state: &mut State,
-) {
+)
+{
   let begin_name = s!("\\begin{{{}}}", &name);
   let end_name = s!("\\end{{{}}}", &name);
   // This is for the common case where the environment is opened by \begin{env}
@@ -1075,13 +1074,13 @@ pub fn def_environment(
         Ok(Vec::new())
       });
       before_digest_env.push(mode_closure);
-    }
+    },
     None => {
       let bgroup_closure = beforeproc_single!(stomach, state, {
         stomach.bgroup(state);
       });
       before_digest_env.push(bgroup_closure);
-    }
+    },
   };
   if options.require_math {
     let require_name = begin_name.clone();
@@ -1168,14 +1167,14 @@ pub fn def_environment(
         Ok(Vec::new())
       });
       after_digest_env.push(emode_closure);
-    }
+    },
     None => {
       let egroup_closure = Rc::new(|stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
         stomach.egroup(state)?;
         Ok(Vec::new())
       });
       after_digest_env.push(egroup_closure);
-    }
+    },
   };
 
   let end_envname_constructor = Rc::new(Constructor {
@@ -1443,7 +1442,7 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
     None => {
       warn!(target: &s!("undefined:{:?}", ctr), "Counter {} was not defined; assuming 0", ctr);
       Number!(0)
-    }
+    },
     Some(value) => value,
   }
 }
