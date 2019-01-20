@@ -547,7 +547,7 @@ LoadDefinitions!(state, {
     primitiveproc!(stomach, args, state, {
       // my ($stomach, $star, $cs, $nargs, $opt, $body) = @_;
       let star = &args[0];
-      let cs = &args[1].tokens[0];
+      let cs: Token = (&args[1]).into();
       let nargs = &args[2];
       let opt = &args[3];
       let body = args[4].clone();

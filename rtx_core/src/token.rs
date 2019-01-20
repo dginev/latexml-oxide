@@ -651,5 +651,5 @@ impl<'a> Token {
     }
   }
 
-  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> { stomach.digest(Tokens { tokens: vec![self] }, state) }
+  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> { stomach.digest(Tokens::new(vec![self]), state) }
 }

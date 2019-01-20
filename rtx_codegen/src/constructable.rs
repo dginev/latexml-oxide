@@ -141,7 +141,7 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
       // files in the ecosystem) once and have all expansions handled by
       // this code snippet.
       quote!(
-        Some(ExpansionBody::Tokens(Tokens {tokens: vec!#performed_expansion}))
+        Some(ExpansionBody::Tokens(Tokens::new(vec!#performed_expansion)))
       )
     },
   };
