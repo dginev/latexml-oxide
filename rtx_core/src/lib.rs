@@ -190,6 +190,15 @@ impl<'a> From<&'a String> for Digested {
 impl From<Tbox> for Digested {
   fn from(value: Tbox) -> Digested { Digested::TBox(Rc::new(value)) }
 }
+impl From<List> for Digested {
+  fn from(value: List) -> Digested { Digested::List(Rc::new(value)) }
+}
+impl From<Whatsit> for Digested {
+  fn from(value: Whatsit) -> Digested { Digested::Whatsit(Rc::new(RefCell::new(value))) }
+}
+impl From<KeyVals> for Digested {
+  fn from(value: KeyVals) -> Digested { Digested::KeyVals(Rc::new(value)) }
+}
 
 impl<'a> From<&'a Digested> for Option<crate::Digested> {
   fn from(value: &'a Digested) -> Option<crate::Digested> { Some(value.clone()) }
@@ -197,8 +206,17 @@ impl<'a> From<&'a Digested> for Option<crate::Digested> {
 impl<'a> From<&'a Digested> for Tokens {
   fn from(value: &'a Digested) -> Tokens { value.revert().unwrap() }
 }
-impl<'a> From<Digested> for Tokens {
+impl From<Digested> for Tokens {
   fn from(value: Digested) -> Tokens { value.revert().unwrap() }
+}
+impl From<Digested> for Result<Digested> {
+  fn from(value: Digested) -> Result<Digested> { Ok(value) }
+}
+impl From<Digested> for Result<Vec<Digested>> {
+  fn from(value: Digested) -> Result<Vec<Digested>> { Ok(vec![value]) }
+}
+impl From<Digested> for Result<Option<Digested>> {
+  fn from(value: Digested) -> Result<Option<Digested>> { Ok(Some(value)) }
 }
 
 impl Default for Digested {

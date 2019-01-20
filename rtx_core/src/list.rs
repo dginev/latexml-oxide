@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
-use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -86,9 +85,15 @@ impl List {
 }
 
 impl From<List> for Result<Vec<Digested>> {
-  fn from(list: List) -> Result<Vec<Digested>> { Ok(vec![Digested::List(Rc::new(list))]) }
+  fn from(list: List) -> Result<Vec<Digested>> {
+    let tmp: Digested = list.into();
+    tmp.into()
+  }
 }
 
 impl From<List> for Result<Digested> {
-  fn from(list: List) -> Result<Digested> { Ok(Digested::List(Rc::new(list))) }
+  fn from(list: List) -> Result<Digested> {
+    let tmp: Digested = list.into();
+    tmp.into()
+  }
 }

@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::cell::RefCell;
+// use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
@@ -241,8 +241,4 @@ impl BoxOps for Whatsit {
     // TODO
     None
   }
-}
-
-impl From<Whatsit> for Digested {
-  fn from(w: Whatsit) -> Digested { Digested::Whatsit(Rc::new(RefCell::new(w))) }
 }
