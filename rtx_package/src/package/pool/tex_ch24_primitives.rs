@@ -29,7 +29,7 @@ LoadDefinitions!(state, {
       boxes.extend(body);
       let return_list = List { boxes, mode, font: None };
 
-      Ok(vec![Digested::List(Box::new(return_list))])
+      return_list.into()
     })
   );
 

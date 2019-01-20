@@ -173,9 +173,9 @@ pub enum TexMode {
 pub enum Digested {
   TBox(Rc<Tbox>),
   Whatsit(Rc<RefCell<Whatsit>>),
-  List(Box<List>),
+  List(Rc<List>),
   Postponed(Rc<Tokens>),
-  KeyVals(Box<KeyVals>),
+  KeyVals(Rc<KeyVals>),
 }
 
 impl<'a> From<&'a String> for Digested {

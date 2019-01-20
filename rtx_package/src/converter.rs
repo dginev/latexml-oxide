@@ -7,6 +7,7 @@ use rtx_core::list::List;
 use rtx_core::state::State;
 use rtx_core::token;
 use rtx_core::{BoxOps, Core, Digested};
+use std::rc::Rc;
 
 const CONVERTER_IDENTITY: &str = "rtx (v0.1.12)";
 
@@ -168,7 +169,7 @@ impl Converter {
         // TODO digestion failed, report
         self.core.state.status_code = 3;
         e.log_fatal();
-        Digested::List(Box::new(List::new(Vec::new())))
+        Digested::List(Rc::new(List::new(Vec::new())))
       },
       Ok(d) => d,
     };

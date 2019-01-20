@@ -89,7 +89,7 @@ impl Whatsit {
     if self.is_math() {
       list.mode = Some(mode);
     }
-    self.properties.insert(s!("body"), Digested::List(Box::new(list)).into());
+    self.properties.insert(s!("body"), Digested::List(Rc::new(list)).into());
     if let Some(Digested::Whatsit(ref trailer)) = trailer_opt {
       // And copy any otherwise undefined properties from the trailer
       for (prop, value) in trailer.borrow().get_properties() {

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 // use std::fmt;
 use std::collections::HashMap;
-// use std::rc::Rc;
+use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -235,4 +235,8 @@ impl BoxOps for KeyVals {
     None
   }
   fn get_font(&self) -> Option<Cow<Font>> { None } // TODO
+}
+
+impl From<KeyVals> for Result<Option<Digested>> {
+  fn from(kv: KeyVals) -> Result<Option<Digested>> { Ok(Some(Digested::KeyVals(Rc::new(kv)))) }
 }

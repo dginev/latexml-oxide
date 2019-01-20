@@ -85,7 +85,7 @@ LoadDefinitions!(state, {
         let mut keyvals = KeyVals::new(None, None, map!("skipMissing" => true), state);
         let dim = stomach.get_gullet_mut().read_dimension(state)?;
         keyvals.set_value(&key.to_string(), dim.into(), false, state);
-        Ok(Some(Digested::KeyVals(Box::new(keyvals)))) // TODO: add .into() convenience
+        keyvals.into()
       } else {
         Ok(None)
       }
