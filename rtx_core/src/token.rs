@@ -237,7 +237,7 @@ impl Catcode {
   }
 }
 
-#[derive(Clone, Hash)]
+#[derive(Clone)]
 pub struct Token {
   pub text: Cow<'static, str>,
   pub code: Catcode,

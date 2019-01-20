@@ -147,9 +147,9 @@ impl BoxOps for Whatsit {
     // (1) provide a means to get the RAW, internal markup that can (hopefully) be RE-digested
     //     this is needed for getting the numerator of \over into textstyle!
     // (2) caching the reversion (which is a big performance boost)
-    let saved_opt = if REVERT_RAW {
-      None
-    } else if DUAL_BRANCH {
+    let saved_opt = if REVERT_RAW || DUAL_BRANCH {
+      // None
+      // } else if DUAL_BRANCH {
       // TODO
       // self.dual_reversion.get(DUAL_BRANCH)
       None
