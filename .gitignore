@@ -15,3 +15,10 @@
 
 # Rls auxiliaries
 rls/*
+
+# VSCode
+*.code-workspace
+
+# Profiling
+*.dot
+profs/*

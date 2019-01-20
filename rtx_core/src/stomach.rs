@@ -38,12 +38,8 @@ impl Default for Stomach {
 }
 
 impl<'t> Stomach {
-  pub fn get_gullet_mut(&mut self) -> &mut Gullet {
-    &mut self.gullet
-  }
-  pub fn get_gullet(&self) -> &Gullet {
-    &self.gullet
-  }
+  pub fn get_gullet_mut(&mut self) -> &mut Gullet { &mut self.gullet }
+  pub fn get_gullet(&self) -> &Gullet { &self.gullet }
 
   // **********************************************************************
   // Digestion
@@ -176,9 +172,7 @@ impl<'t> Stomach {
     Ok(())
   }
 
-  pub fn get_locator(&self) -> String {
-    s!("fake stomach locator")
-  }
+  pub fn get_locator(&self) -> String { s!("fake stomach locator") }
 
   /// Invoke a token;
   /// If it is a primitive or constructor, the definition will be invoked,
@@ -226,7 +220,7 @@ impl<'t> Stomach {
               result.push(digested);
             }
           }
-        }
+        },
         Stored::Expandable(meaning) => {
           // A math-active character will (typically) be a macro,
           // but it isn't expanded in the gullet, but later when digesting, in math mode
@@ -240,7 +234,7 @@ impl<'t> Stomach {
           };
           self.token_stack.pop();
           continue;
-        }
+        },
         Stored::Conditional(meaning) => {
           // Conditionals are "expandable", use the regular invoke.
           let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
@@ -252,21 +246,21 @@ impl<'t> Stomach {
           };
           self.token_stack.pop();
           continue;
-        }
+        },
         Stored::Constructor(meaning) => {
           // Otherwise, a normal primitive or constructor
           result = meaning.invoke_primitive(self, meaning.clone(), state)?;
           if !meaning.is_prefix() {
             state.clear_prefixes(); // Clear prefixes unless we just set one.
           }
-        }
+        },
         Stored::Primitive(meaning) => {
           // Otherwise, a normal primitive or constructor
           result = meaning.invoke_primitive(self, meaning.clone(), state)?;
           if !meaning.is_prefix() {
             state.clear_prefixes(); // Clear prefixes unless we just set one.
           }
-        }
+        },
         Stored::MathPrimitive(meaning) => {
           // Copy of regular Primitive
           // Otherwise, a normal primitive or constructor
@@ -274,17 +268,17 @@ impl<'t> Stomach {
           if !meaning.is_prefix() {
             state.clear_prefixes(); // Clear prefixes unless we just set one.
           }
-        }
+        },
         Stored::Register(meaning) => {
           // Registers are special primitives
           result = meaning.invoke_primitive(self, meaning.clone(), state)?;
           if !meaning.is_prefix() {
             state.clear_prefixes(); // Clear prefixes unless we just set one.
           }
-        }
+        },
         meaning => {
           fatal!(Stomach, Misdefined, s!("The object {:?} should never reach Stomach!", meaning));
-        }
+        },
       }
       break;
     }
@@ -528,9 +522,7 @@ impl<'t> Stomach {
   //======================================================================
 
   /// if $nobox is true, inhibit incrementing the boxingLevel
-  pub fn bgroup(&mut self, state: &mut State) {
-    self.push_stack_frame(false, state);
-  }
+  pub fn bgroup(&mut self, state: &mut State) { self.push_stack_frame(false, state); }
 
   pub fn egroup(&mut self, state: &mut State) -> Result<()> {
     if state.lookup_bool("groupNonBoxing") {
@@ -546,9 +538,7 @@ impl<'t> Stomach {
     Ok(())
   }
 
-  pub fn begingroup(&mut self, state: &mut State) {
-    self.push_stack_frame(true, state);
-  }
+  pub fn begingroup(&mut self, state: &mut State) { self.push_stack_frame(true, state); }
 
   pub fn endgroup(&mut self, state: &mut State) -> Result<()> {
     // if state.is_value_bound("MODE", Some(0))    // Last stack frame was a mode switch!?!?!
