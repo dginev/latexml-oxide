@@ -182,8 +182,8 @@ LoadDefinitions!(state, {
     // }],
     before_digest_end => sub!(|stomach, state| {
       stomach.get_gullet_mut().flush(state);
-      if let Some(Stored::VecToken(ops)) = RemoveValue!("@at@end@document", state) {
-        Ok(vec![stomach.digest(Tokens::new(ops.to_vec()), state)?]) // TODO: Can we improve to the regular Digest!(ops) syntax?
+      if let Some(Stored::Tokens(ops)) = RemoveValue!("@at@end@document", state) {
+        Ok(vec![stomach.digest(ops, state)?]) // TODO: Can we improve to the regular Digest!(ops) syntax?
       } else {
         Ok(Vec::new())
       }

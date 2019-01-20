@@ -20,8 +20,9 @@ pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
     bindings.extend(text_mode_bindings.clone());
   }
   for binding in bindings {
-    if let Stored::VecToken(vt) = binding {
-      LetI!(&vt[0], vt[1].clone());
+    if let Stored::Tokens(tks) = binding {
+      let vec = tks.unlist();
+      LetI!(&vec[0], vec[1].clone());
     }
   }
   return;

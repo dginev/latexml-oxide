@@ -60,7 +60,6 @@ pub enum Stored {
   VecChar(Vec<char>),
   VecOptionChar(Vec<Option<char>>),
   VecString(Vec<String>),
-  VecToken(Vec<Token>),
   VecDigested(Vec<crate::Digested>),
   HashStr(HashMap<String, String>),
   VecDequeStored(VecDeque<Stored>),
@@ -119,7 +118,6 @@ impl fmt::Debug for Stored {
       Glue(ref glue) => write!(f, "Stored::Glue[{:?}]", glue),
       MuGlue(ref glue) => write!(f, "Stored::MuGlue[{:?}]", glue),
       Dimension(ref dimension) => write!(f, "Stored::Dimension[{:?}]", dimension),
-      VecToken(ref token_vec) => write!(f, "VecToken[{:?}]", token_vec),
       VecDigested(ref digested_vec) => write!(f, "VecDigested[{:?}]", digested_vec),
       VecDequeStored(ref vec) => write!(f, "VecDequeStored[{:?}]", vec),
       HashStored(ref hos) => write!(f, "HashStored[{:?}]", hos),
@@ -130,7 +128,9 @@ impl fmt::Debug for Stored {
   }
 }
 impl fmt::Display for Stored {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{:?}", self) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{:?}", self)
+  }
 }
 
 impl Stored {
@@ -158,7 +158,9 @@ impl Stored {
 }
 
 impl From<bool> for Stored {
-  fn from(value: bool) -> Self { Stored::Bool(value) }
+  fn from(value: bool) -> Self {
+    Stored::Bool(value)
+  }
 }
 
 impl<'a> From<bool> for &'a Stored {
@@ -172,150 +174,226 @@ impl<'a> From<bool> for &'a Stored {
 }
 
 impl From<String> for Stored {
-  fn from(value: String) -> Self { Stored::String(value) }
+  fn from(value: String) -> Self {
+    Stored::String(value)
+  }
 }
 
 impl<'a> From<&'a String> for Stored {
-  fn from(value: &'a String) -> Self { Stored::String(value.clone()) }
+  fn from(value: &'a String) -> Self {
+    Stored::String(value.clone())
+  }
 }
 
 impl<'a> From<&'a str> for Stored {
-  fn from(value: &'a str) -> Self { value.to_owned().into() }
+  fn from(value: &'a str) -> Self {
+    value.to_owned().into()
+  }
 }
 
 impl From<i32> for Stored {
-  fn from(value: i32) -> Self { Stored::Int(value) }
+  fn from(value: i32) -> Self {
+    Stored::Int(value)
+  }
 }
 
 impl From<Catcode> for Stored {
-  fn from(value: Catcode) -> Self { Stored::Catcode(value) }
+  fn from(value: Catcode) -> Self {
+    Stored::Catcode(value)
+  }
 }
 
 impl From<Token> for Stored {
-  fn from(value: Token) -> Self { Stored::Token(value) }
+  fn from(value: Token) -> Self {
+    Stored::Token(value)
+  }
 }
 
 // Storing all definitions is expected - Rc<Expandable> case
 
 impl From<Tokens> for Stored {
-  fn from(value: Tokens) -> Self { Stored::Tokens(value) }
+  fn from(value: Tokens) -> Self {
+    Stored::Tokens(value)
+  }
 }
 
 impl From<Rc<Expandable>> for Stored {
-  fn from(definition: Rc<Expandable>) -> Self { Stored::Expandable(definition) }
+  fn from(definition: Rc<Expandable>) -> Self {
+    Stored::Expandable(definition)
+  }
 }
 /// Storing all definitions is expected - Expandable case
 impl From<Expandable> for Stored {
-  fn from(definition: Expandable) -> Self { Rc::new(definition).into() }
+  fn from(definition: Expandable) -> Self {
+    Rc::new(definition).into()
+  }
 }
 
 impl From<Rc<Conditional>> for Stored {
-  fn from(definition: Rc<Conditional>) -> Self { Stored::Conditional(definition) }
+  fn from(definition: Rc<Conditional>) -> Self {
+    Stored::Conditional(definition)
+  }
 }
 impl From<Conditional> for Stored {
-  fn from(value: Conditional) -> Self { Rc::new(value).into() }
+  fn from(value: Conditional) -> Self {
+    Rc::new(value).into()
+  }
 }
 
 impl From<Rc<Primitive>> for Stored {
-  fn from(definition: Rc<Primitive>) -> Self { Stored::Primitive(definition) }
+  fn from(definition: Rc<Primitive>) -> Self {
+    Stored::Primitive(definition)
+  }
 }
 impl From<Primitive> for Stored {
-  fn from(value: Primitive) -> Self { Rc::new(value).into() }
+  fn from(value: Primitive) -> Self {
+    Rc::new(value).into()
+  }
 }
 
 impl From<Rc<MathPrimitive>> for Stored {
-  fn from(definition: Rc<MathPrimitive>) -> Self { Stored::MathPrimitive(definition) }
+  fn from(definition: Rc<MathPrimitive>) -> Self {
+    Stored::MathPrimitive(definition)
+  }
 }
 impl From<MathPrimitive> for Stored {
-  fn from(value: MathPrimitive) -> Self { Rc::new(value).into() }
+  fn from(value: MathPrimitive) -> Self {
+    Rc::new(value).into()
+  }
 }
 
 impl From<Rc<Constructor>> for Stored {
-  fn from(definition: Rc<Constructor>) -> Self { Stored::Constructor(definition) }
+  fn from(definition: Rc<Constructor>) -> Self {
+    Stored::Constructor(definition)
+  }
 }
 impl From<Constructor> for Stored {
-  fn from(value: Constructor) -> Self { Rc::new(value).into() }
+  fn from(value: Constructor) -> Self {
+    Rc::new(value).into()
+  }
 }
 
 impl From<crate::Digested> for Stored {
-  fn from(value: crate::Digested) -> Self { Box::new(value).into() }
+  fn from(value: crate::Digested) -> Self {
+    Box::new(value).into()
+  }
 }
 
 impl From<Box<crate::Digested>> for Stored {
-  fn from(value: Box<crate::Digested>) -> Self { Stored::Digested(value) }
+  fn from(value: Box<crate::Digested>) -> Self {
+    Stored::Digested(value)
+  }
 }
 
 impl From<Parameter> for Stored {
-  fn from(value: Parameter) -> Self { Stored::Parameter(value) }
+  fn from(value: Parameter) -> Self {
+    Stored::Parameter(value)
+  }
 }
 
 impl From<Rc<Font>> for Stored {
-  fn from(font: Rc<Font>) -> Self { Stored::Font(font) }
+  fn from(font: Rc<Font>) -> Self {
+    Stored::Font(font)
+  }
 }
 
 impl From<Rc<RefCell<Register>>> for Stored {
-  fn from(register: Rc<RefCell<Register>>) -> Self { Stored::Register(register) }
+  fn from(register: Rc<RefCell<Register>>) -> Self {
+    Stored::Register(register)
+  }
 }
 impl From<Register> for Stored {
-  fn from(register: Register) -> Self { Rc::new(RefCell::new(register)).into() }
+  fn from(register: Register) -> Self {
+    Rc::new(RefCell::new(register)).into()
+  }
 }
 
 impl From<Font> for Stored {
-  fn from(value: Font) -> Self { Rc::new(value).into() }
+  fn from(value: Font) -> Self {
+    Rc::new(value).into()
+  }
 }
 
 impl<'a> From<Cow<'a, Font>> for Stored {
-  fn from(value: Cow<Font>) -> Self { Rc::new((*value).clone()).into() }
+  fn from(value: Cow<Font>) -> Self {
+    Rc::new((*value).clone()).into()
+  }
 }
 
 impl From<Number> for Stored {
-  fn from(value: Number) -> Self { Stored::Number(value) }
+  fn from(value: Number) -> Self {
+    Stored::Number(value)
+  }
 }
 impl From<Dimension> for Stored {
-  fn from(value: Dimension) -> Self { Stored::Dimension(value) }
+  fn from(value: Dimension) -> Self {
+    Stored::Dimension(value)
+  }
 }
 
 impl<'a> From<&'a Token> for Stored {
-  fn from(value: &'a Token) -> Self { Stored::Token(value.clone()) }
+  fn from(value: &'a Token) -> Self {
+    Stored::Token(value.clone())
+  }
 }
 
 impl From<Vec<char>> for Stored {
-  fn from(value: Vec<char>) -> Self { Stored::VecChar(value) }
+  fn from(value: Vec<char>) -> Self {
+    Stored::VecChar(value)
+  }
 }
 impl From<Vec<Option<char>>> for Stored {
-  fn from(value: Vec<Option<char>>) -> Self { Stored::VecOptionChar(value) }
+  fn from(value: Vec<Option<char>>) -> Self {
+    Stored::VecOptionChar(value)
+  }
 }
 
 impl From<Vec<String>> for Stored {
-  fn from(value: Vec<String>) -> Self { Stored::VecString(value) }
+  fn from(value: Vec<String>) -> Self {
+    Stored::VecString(value)
+  }
 }
 
 impl<'a> From<Vec<&'a str>> for Stored {
-  fn from(value: Vec<&'a str>) -> Self { Stored::VecString(value.iter().map(|x| x.to_string()).collect::<Vec<String>>()) }
+  fn from(value: Vec<&'a str>) -> Self {
+    Stored::VecString(value.iter().map(|x| x.to_string()).collect::<Vec<String>>())
+  }
 }
 
 impl From<Vec<Token>> for Stored {
-  fn from(value: Vec<Token>) -> Self { Stored::VecToken(value) }
+  fn from(value: Vec<Token>) -> Self {
+    Stored::Tokens(Tokens::new(value))
+  }
 }
 
 impl From<Vec<crate::Digested>> for Stored {
-  fn from(value: Vec<crate::Digested>) -> Self { Stored::VecDigested(value) }
+  fn from(value: Vec<crate::Digested>) -> Self {
+    Stored::VecDigested(value)
+  }
 }
 
 impl From<HashMap<String, String>> for Stored {
-  fn from(value: HashMap<String, String>) -> Self { Stored::HashStr(value) }
+  fn from(value: HashMap<String, String>) -> Self {
+    Stored::HashStr(value)
+  }
 }
 
 impl From<VecDeque<Stored>> for Stored {
-  fn from(value: VecDeque<Stored>) -> Self { Stored::VecDequeStored(value) }
+  fn from(value: VecDeque<Stored>) -> Self {
+    Stored::VecDequeStored(value)
+  }
 }
 
 impl From<HashMap<String, Stored>> for Stored {
-  fn from(value: HashMap<String, Stored>) -> Self { Stored::HashStored(value) }
+  fn from(value: HashMap<String, Stored>) -> Self {
+    Stored::HashStored(value)
+  }
 }
 
 impl From<HashMap<String, Vec<TagData>>> for Stored {
-  fn from(value: HashMap<String, Vec<TagData>>) -> Self { Stored::HashTagData(value) }
+  fn from(value: HashMap<String, Vec<TagData>>) -> Self {
+    Stored::HashTagData(value)
+  }
 }
 
 impl From<RegisterValue> for Stored {
@@ -332,15 +410,21 @@ impl From<RegisterValue> for Stored {
 }
 
 impl From<Rc<RefCell<IfFrame>>> for Stored {
-  fn from(frame: Rc<RefCell<IfFrame>>) -> Stored { Stored::IfFrame(frame) }
+  fn from(frame: Rc<RefCell<IfFrame>>) -> Stored {
+    Stored::IfFrame(frame)
+  }
 }
 
 impl From<Box<Ligature>> for Stored {
-  fn from(lig: Box<Ligature>) -> Stored { Stored::Ligature(lig) }
+  fn from(lig: Box<Ligature>) -> Stored {
+    Stored::Ligature(lig)
+  }
 }
 
 impl From<Ligature> for Stored {
-  fn from(lig: Ligature) -> Stored { Box::new(lig).into() }
+  fn from(lig: Ligature) -> Stored {
+    Box::new(lig).into()
+  }
 }
 
 impl From<Option<&Stored>> for Stored {
@@ -471,7 +555,9 @@ impl<'a> From<&'a Stored> for Option<crate::Digested> {
 }
 
 impl<'a, 'b> From<&'a &'b Stored> for Option<crate::Digested> {
-  fn from(value: &'a &'b Stored) -> Option<crate::Digested> { (*value).into() }
+  fn from(value: &'a &'b Stored) -> Option<crate::Digested> {
+    (*value).into()
+  }
 }
 
 impl<'a> From<&'a Stored> for Token {
@@ -483,8 +569,8 @@ impl<'a> From<&'a Stored> for Token {
       t => {
         warn!(target:"Stored:cast", "dangerous cast to CS for {:?}", t);
         T_CS!(t.to_string())
-      }, /* TODO, is this the right place to default to CS? Do we need a
-          * custom method instead? */
+      } /* TODO, is this the right place to default to CS? Do we need a
+         * custom method instead? */
     }
   }
 }
@@ -495,21 +581,31 @@ pub trait IntoOption<T>: Sized {
 }
 
 impl<'a> IntoOption<Option<String>> for &'a str {
-  fn into_option(self) -> Option<String> { Some(self.to_string()) }
+  fn into_option(self) -> Option<String> {
+    Some(self.to_string())
+  }
 }
 
 impl<T> IntoOption<Option<T>> for Option<T> {
-  fn into_option(self) -> Option<T> { self }
+  fn into_option(self) -> Option<T> {
+    self
+  }
 }
 
 impl IntoOption<bool> for bool {
-  fn into_option(self) -> bool { self }
+  fn into_option(self) -> bool {
+    self
+  }
 }
 
 impl<T> IntoOption<Option<Vec<T>>> for Vec<T> {
-  fn into_option(self) -> Option<Vec<T>> { Some(self) }
+  fn into_option(self) -> Option<Vec<T>> {
+    Some(self)
+  }
 }
 
 impl<T> IntoOption<Option<VecDeque<T>>> for VecDeque<T> {
-  fn into_option(self) -> Option<VecDeque<T>> { Some(self) }
+  fn into_option(self) -> Option<VecDeque<T>> {
+    Some(self)
+  }
 }
