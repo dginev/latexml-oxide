@@ -124,6 +124,13 @@ impl Gullet {
     Locator::default()
   }
 
+  pub fn get_mouth(&self) -> Option<&Mouth> {
+    match self.mouth {
+      None => None,
+      Some(ref runtime) => Some(&runtime.mouth),
+    }
+  }
+
   pub fn get_mouth_mut(&mut self) -> Option<&mut Mouth> {
     match self.mouth {
       None => None,

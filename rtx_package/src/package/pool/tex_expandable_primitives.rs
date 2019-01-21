@@ -230,19 +230,21 @@ LoadDefinitions!(state, {
 
   // DefMacro('\input TeXFileName', sub { Input($_[1]); });
 
-  // # Note that TeX doesn't actually close the mouth;
-  // # it just flushes it so that it will close the next time it's read!
-  // DefMacroI('\endinput', undef, sub {
-  //     my ($gullet) = @_;
-  //     my $mouth = $gullet->getMouth;
-  //     my $line;
-  //     if (!$mouth->isEOL) {
-  //       $line = $gullet->readRawLine; }
-  //     $gullet->flushMouth;
-  //     if ($line) {
-  //       $gullet->unread(Tokenize($line)); }
-  //     return;
-  // });
+  // Note that TeX doesn't actually close the mouth;
+  // it just flushes it so that it will close the next time it's read!
+  DefMacroI!(T_CS!("\\endinput"), None, sub[gullet, _args, state] {
+    let mouth = gullet.get_mouth().unwrap();
+    let line_opt = if !mouth.is_eol() {
+      gullet.read_raw_line()
+    } else {
+      None
+    };
+    gullet.flush_mouth(state);
+    if let Some(line) = line_opt {
+      gullet.unread(&Tokenize!(&line));
+    }
+    Ok(Tokens!())
+  });
 
   // \the<internal quantity>
   DefMacro!("\\the Register", sub[gullet, args, state] {

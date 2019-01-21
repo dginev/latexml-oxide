@@ -693,6 +693,8 @@ impl Mouth {
     *lastid += 1;
     lastid.to_string()
   }
+
+  pub fn is_eol(&self) -> bool { self.colno >= self.nchars }
 }
 
 // WARNING: These two utilities bind $STATE to simple State objects with known fixed catcodes.

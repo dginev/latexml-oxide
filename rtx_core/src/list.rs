@@ -92,8 +92,8 @@ impl From<List> for Result<Vec<Digested>> {
 }
 
 impl From<List> for Result<Digested> {
-  fn from(list: List) -> Result<Digested> {
-    let tmp: Digested = list.into();
+  fn from(value: List) -> Result<Digested> {
+    let tmp: Digested = value.into();
     tmp.into()
   }
 }
