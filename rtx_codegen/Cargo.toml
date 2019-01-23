@@ -11,8 +11,9 @@ name = "rtx_codegen"
 proc-macro = true
 
 [dependencies]
-syn = "0.8.5"
-quote = "0.3.15"
+syn = "0.15"
+proc-macro2 = "0.4"
+quote = "0.6"
 lazy_static = "1.0.0"
 regex = "0.2.5"
 rtx_core= { path = "../rtx_core" }

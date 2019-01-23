@@ -3,11 +3,12 @@ use std::io::BufRead;
 use std::io::BufReader;
 
 use lazy_static::lazy_static;
-use quote::*;
 use regex::Regex;
-use syn;
 
-use crate::util::{get_option, get_options_from_input};
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::{DeriveInput, Lit, Meta};
+
 use rtx_core::common::error::*;
 use rtx_core::state::State;
 use rtx_core::util::pathname;
@@ -19,18 +20,13 @@ lazy_static! {
   static ref NAMESPACE_MODEL_LINE: Regex = Regex::new(r"^([^=]+)=(.*?)$").unwrap();
 }
 
-pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
-  fn bug() -> ! {
-    panic!(
-      "This is a bug. Please open a Github issue \
-       with your load_model invocation"
-    );
-  }
-  let options = get_options_from_input("load_model_options", &input.attrs, bug);
-  let name_opt = options.as_ref().map(|o| get_option(&o, "name", bug));
-  let name = match name_opt {
-    Some(n) => n,
-    None => panic!("Model name is required to load a compiled model!"),
+pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
+  let name: String = match input.attrs[0].parse_meta().unwrap() {
+    Meta::NameValue(v) => match v.lit {
+      Lit::Str(v) => v.value().to_string(),
+      _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"),
+    },
+    _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"),
   };
 
   let pathname_opt = pathname::find(
@@ -96,29 +92,19 @@ pub fn load_model(input: syn::MacroInput) -> Result<quote::Tokens> {
   operations.push(quote!(return;));
   // note_end(&(s!("Compiling .model file: {}", path)));
 
-  Ok(quote!(
+  Ok(TokenStream::from(quote!(
     impl _ModelLoader {
       fn model(model : &mut Model) {
         #(#operations)*
       }
     }
-  ))
+  )))
 }
 
-pub fn load_indirect_model(input: syn::MacroInput) -> quote::Tokens {
+pub fn load_indirect_model(input: DeriveInput) -> TokenStream {
   // Load the model as one would at runtime
-  fn bug() -> ! {
-    panic!(
-      "This is a bug. Please open a Github issue \
-       with your load_model invocation"
-    );
-  }
-  let options = get_options_from_input("load_indirect_model_options", &input.attrs, bug);
-  let name_opt = options.as_ref().map(|o| get_option(&o, "name", bug));
-  let name = match name_opt {
-    Some(n) => n,
-    None => panic!("Model name is required to load a compiled model!"),
-  };
+  let name = quote!(#input).to_string();
+  dbg!(&name);
 
   let mut state = State::default();
   state.model.set_relaxng_schema(name.to_string());
@@ -142,4 +128,5 @@ pub fn load_indirect_model(input: syn::MacroInput) -> quote::Tokens {
       }
     }
   )
+  .into()
 }

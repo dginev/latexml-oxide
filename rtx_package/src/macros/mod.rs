@@ -4,12 +4,9 @@
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_replacement {
   ($var:ident, $replacement:expr) => {{
-    use libxml::tree::Node;
     use rtx_core::definition::ReplacementClosure;
-    use rtx_core::document::Document;
-    use rtx_core::Digested;
     #[derive(CompileReplacement)]
-    #[compile_replacement_options(replacement=$replacement)]
+    #[replacement=$replacement]
     struct _Dummy;
     $var = _Dummy::replacement();
   }};
@@ -24,7 +21,7 @@ macro_rules! compile_expansion {
     #[allow(unused_imports)]
     use rtx_core::token::Catcode;
     #[derive(CompileExpansion)]
-    #[compile_expansion_options(expansion=$expansion)]
+    #[expansion=$expansion]
     struct _DummyE;
     $var = _DummyE::expansion();
   }};
@@ -38,9 +35,8 @@ macro_rules! load_model {
     use std::collections::HashSet;
     use std::iter::FromIterator;
     // use rtx_core::common::model::IndirectModel;
-    #[allow(unused_attributes)]
     #[derive(LoadModel)]
-    #[load_model_options(name=$name)]
+    #[name=$name]
     struct _ModelLoader;
     {
       // compute the model
