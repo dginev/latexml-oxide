@@ -107,8 +107,7 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
       }
       Ok(())
     })))
-  }
-  .into();
+  };
   // We have to jump an extra hoop, since we are forcing the struct-derive
   // mechanism. Once the new procedural macro scheme lands, this begs to be
   // refactored.

@@ -3,7 +3,7 @@ extern crate proc_macro; // workaround until proc_macro becomes available normal
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{parse_macro_input, DeriveInput, Lit, Meta};
 
 mod ast_builder;
 mod constructable;
@@ -51,9 +51,14 @@ pub fn derive_load_indirect_model(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(BoundState, attributes(location))]
 pub fn bound_state(input: TokenStream) -> TokenStream {
-  // let item = parse_macro_input!(input as DeriveInput);
-  let location = "outer"; // todo
-
+  let item = parse_macro_input!(input as DeriveInput);
+  let location: String = match item.attrs[0].parse_meta().unwrap() {
+    Meta::NameValue(v) => match v.lit {
+      Lit::Str(v) => v.value().to_string(),
+      _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"),
+    },
+    _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"),
+  };
   let state_declaration = if location == "outer" {
     quote!(
       macro_rules! state {

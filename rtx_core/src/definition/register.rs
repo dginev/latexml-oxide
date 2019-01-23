@@ -198,6 +198,7 @@ impl<'a> From<&'a RegisterValue> for Glue {
 }
 
 impl RegisterValue {
+  #[allow(clippy::wrong_self_convention)]
   pub fn to_string(self) -> String { self.value_of().to_string() }
 }
 

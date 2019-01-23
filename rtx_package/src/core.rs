@@ -16,6 +16,7 @@ use rtx_core::{Core, Digested};
 use crate::math_parser::MathParser;
 use crate::package::*;
 
+#[allow(clippy::trivial_regex)]
 lazy_static! {
   static ref CLS_EXT_REGEX: Regex = Regex::new(r"\.cls$").unwrap();
   static ref STY_EXT_REGEX: Regex = Regex::new(r"\.sty$").unwrap();

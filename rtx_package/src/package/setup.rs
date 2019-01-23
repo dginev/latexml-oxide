@@ -844,6 +844,7 @@ macro_rules! DefLigature {
     DefLigature!($regex, $replacement, fontTest => sub[$font]{$body}, st)
   };
   ($regex:expr, $replacement:expr, fontTest => sub[$font:ident] $body:block, $state_arg:ident) => {
+    #[allow(clippy::trivial_regex)]
     let regex_compiled = Regex::new($regex).unwrap();
     let test_closure: Option<FontTestClosure> = Some(Rc::new(move |$font| $body));
     $state_arg.unshift_value(

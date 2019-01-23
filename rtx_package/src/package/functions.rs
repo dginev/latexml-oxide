@@ -42,6 +42,7 @@ use rtx_core::{Core, Digested};
 
 use super::pool;
 
+#[allow(clippy::trivial_regex)]
 lazy_static! {
   static ref CSNAME_MACRO_RE: Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
   static ref CS_RE: Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
@@ -56,7 +57,7 @@ lazy_static! {
   static ref OPTIONAL_CHECK_RE: Regex = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
   static ref DEFAULT_CHECK_RE: Regex = Regex::new(r"^Default:(.*)$").unwrap();
   static ref PARAMSPECT_CHECK_RE: Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
-  static ref NON_ID_CHARSET_RE: Regex = Regex::new(r"[^\w\_\-.]+").unwrap();
+  static ref NON_ID_CHARSET_RE: Regex = Regex::new(r"[^\w_\-.]+").unwrap();
   static ref TILDE_NOISE_RE: Regex = Regex::new(r"\\~\{\}").unwrap();
 }
 
@@ -362,7 +363,7 @@ impl Default for FindFileOptions {
 }
 
 pub fn find_file(file: &str, options: Option<FindFileOptions>, state: &mut State) -> Option<String> {
-  let mut options = options.unwrap_or_else(|| FindFileOptions::default());
+  let mut options = options.unwrap_or_default();
   if options.raw {
     options.raw = false;
     warn!(target: "deprecated:raw", "FindFile option raw is deprecated; it is not needed");
@@ -424,7 +425,7 @@ pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -
     // (2) those MAY be present in kpsewhich's DB (although our searchpaths take precedence!)
     // (3) BUT we want to avoid kpsewhich if we can, since it's slower
     // (4) depending on switches we may EXCLUDE .ltxml OR raw tex OR allow both.
-    let paths: Vec<String> = state.search_paths.iter().map(|v| v.clone()).collect();
+    let paths: Vec<String> = state.search_paths.iter().cloned().collect();
     let urlbase = state.lookup_value("URLBASE");
     let nopaths = state.lookup_bool("REMOTE_REQUEST");
     let ltxml_paths: Vec<String> = if nopaths { vec![] } else { paths.clone() };
@@ -772,7 +773,7 @@ pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<Co
           //  For \ifcase, the parameter list better be a single Number !!
           state.install_definition(
             Conditional {
-              cs: cs,
+              cs,
               paramlist,
               test,
               conditional_type: ConditionalType::If,
@@ -855,7 +856,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
 
 pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacement: PrimitiveClosure, options: PrimitiveOptions, state: &mut State) {
   let options_locked = options.locked;
-  let scope = options.scope.clone();
+  let scope = options.scope;
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
   let cs_name = cs.get_cs_name().to_owned();
 
@@ -926,7 +927,7 @@ pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacem
 pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
   options.locked = false;
   options.font = None;
-  let scope = options.scope.clone();
+  let scope = options.scope;
   let reqfont = options.font.clone().unwrap_or_else(Font::default);
   state.install_definition(
     MathPrimitive {
@@ -976,8 +977,8 @@ pub fn def_constructor(
 {
   // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
   //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
-  let scope = options.scope.clone();
-  let is_locked = options.locked.clone();
+  let scope = options.scope;
+  let is_locked = options.locked;
   let cs_name = cs.get_cs_name().to_owned();
   let locked_key = if is_locked { s!("{}:locked", cs_name) } else { String::new() };
 
@@ -1142,9 +1143,8 @@ pub fn def_environment(
     // ), $options{scope});
     reversion: options.reversion,
     alias: options.alias,
-    ..Constructor::default()
   });
-  state.install_definition(begin_name_constructor, options.scope.clone());
+  state.install_definition(begin_name_constructor, options.scope);
 
   let mut after_digest_env = options.after_digest;
   let unexpected_end_closure = Rc::new(|_stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
@@ -1185,7 +1185,7 @@ pub fn def_environment(
     after_digest: after_digest_env,
     ..Constructor::default() // TODO ? fill in missing ones
   });
-  state.install_definition(end_envname_constructor, options.scope.clone());
+  state.install_definition(end_envname_constructor, options.scope);
 
   // For the uncommon case opened by \csname env\endcsname
   let name_constructor = Rc::new(Constructor {
@@ -1210,7 +1210,7 @@ pub fn def_environment(
     // ), $options{scope});
     ..Constructor::default()
   });
-  state.install_definition(name_constructor, options.scope.clone());
+  state.install_definition(name_constructor, options.scope);
 
   let end_name_constructor = Rc::new(Constructor {
     cs: T_CS!(s!("\\end{}", &name)),
@@ -1737,6 +1737,5 @@ pub fn compose_url(base: &str, url: &str, fragid_opt: Option<&str>) -> String {
   } else {
     String::new()
   };
-  let clean = clean_url(&(base + &url + &fragid));
-  clean
+  clean_url(&(base + url + &fragid))
 }

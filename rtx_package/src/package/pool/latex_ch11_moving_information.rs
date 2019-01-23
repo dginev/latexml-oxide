@@ -43,7 +43,7 @@ LoadDefinitions!(state, {
     whatsit.set_property("label", label);
     if let Some(ctr) = state.lookup_value("current_counter") {
       // TODO: is unshifting on lookupValue badly differing from unshiftvalue?
-      let mut scopes = state.unshift_value(&s!("scopes_for_counter:{}", ctr), vec![scope.clone()]);
+      state.unshift_value(&s!("scopes_for_counter:{}", ctr), vec![scope.clone()]);
     }
     state.activate_scope(&scope);
     stomach.begin_mode("text", state)?;
@@ -663,7 +663,7 @@ fn begin_bibliography_clean(stomach: &mut Stomach, whatsit: &mut Whatsit, state:
   let mut gullet = stomach.get_gullet_mut();
   let mut docid: String = Expand!(T_CS!("\\thedocument@ID"), gullet, state).to_string();
   if !docid.is_empty() {
-    docid = docid + ".";
+    docid += ".";
   }
   let bibid = s!("{}bib{}", docid, radix::radix_alpha(bibnumber - 1));
   DefMacroI!(T_CS!("\\thebibliography@ID"), None, T_OTHER!(&bibid), scope => Some(Scope::Global));
