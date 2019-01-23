@@ -78,10 +78,8 @@ macro_rules! bind_state {
       // TODO: If we can manage to make this attribute visible from **outside**,
       // in particular in macros such as beforeproc!() and beforesub!(), we can automate the inner state use
       // entirely
-      //
-      // #[bound_options(location = "inner")]
-      //
       #[derive(BoundState)]
+      #[location = $location]
       struct _Bound;
       state!()
     };

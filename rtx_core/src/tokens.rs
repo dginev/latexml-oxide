@@ -1,6 +1,9 @@
 ///! Token List constructors.
 use crate::fmt;
 use log::*;
+use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span};
+use quote::{ToTokens, TokenStreamExt};
+
 use std::collections::VecDeque;
 use std::fmt::Display;
 
@@ -11,22 +14,14 @@ use crate::state::State;
 use crate::stomach::Stomach;
 use crate::token::*;
 use crate::Digested;
-use quote::ToTokens;
 
 const UNTEX_LINELENGTH: usize = 78;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Tokens(Vec<Token>);
+pub struct Tokens(pub Vec<Token>);
 
 impl Default for Tokens {
   fn default() -> Self { Tokens(Vec::new()) }
-}
-impl ToTokens for Tokens {
-  fn to_tokens(&self, tokens: &mut quote::Tokens) {
-    tokens.append("Tokens {tokens: vec!");
-    self.0.to_tokens(tokens);
-    tokens.append("}");
-  }
 }
 
 #[macro_export]
@@ -269,5 +264,94 @@ impl Tokens {
       }
     }
     result
+  }
+}
+
+impl ToTokens for Tokens {
+  fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
+    stream.append(Ident::new("Tokens", Span::call_site()));
+    let mut body_stream = proc_macro2::TokenStream::new();
+    let mut vec_op_stream = proc_macro2::TokenStream::new();
+    let mut usize_stream = proc_macro2::TokenStream::new();
+    usize_stream.append(Ident::new("Token", Span::call_site()));
+    vec_op_stream.append(Punct::new('<', Spacing::Alone));
+    vec_op_stream.append(Group::new(Delimiter::Bracket, usize_stream));
+    vec_op_stream.append(Punct::new('>', Spacing::Alone));
+    body_stream.append(Group::new(Delimiter::None, vec_op_stream));
+    body_stream.append(Punct::new(':', Spacing::Joint));
+    body_stream.append(Punct::new(':', Spacing::Alone));
+    body_stream.append(Ident::new("into_vec", Span::call_site()));
+    let mut box_stream = proc_macro2::TokenStream::new();
+    box_stream.append(Ident::new("Box", Span::call_site()));
+    box_stream.append(Punct::new(':', Spacing::Joint));
+    box_stream.append(Punct::new(':', Spacing::Alone));
+    box_stream.append(Ident::new("new", Span::call_site()));
+    let mut vec_arg_stream = proc_macro2::TokenStream::new();
+    let mut arg_array_stream = proc_macro2::TokenStream::new();
+    for (i, t) in self.0.iter().enumerate() {
+      if i > 0 {
+        arg_array_stream.append(Punct::new(',', Spacing::Alone));
+      }
+      t.to_tokens(&mut arg_array_stream);
+    }
+    vec_arg_stream.append(Group::new(Delimiter::Bracket, arg_array_stream));
+    box_stream.append(Group::new(Delimiter::Parenthesis, vec_arg_stream));
+    body_stream.append(Group::new(Delimiter::Parenthesis, box_stream));
+
+    let group = Group::new(Delimiter::Parenthesis, body_stream);
+    stream.append(group);
+  }
+}
+
+impl ToTokens for Catcode {
+  fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    use crate::token::Catcode::*;
+    let verbatim = match *self {
+      ESCAPE => "ESCAPE",
+      BEGIN => "BEGIN",
+      END => "END",
+      MATH => "MATH",
+      ALIGN => "ALIGN",
+      EOL => "EOL",
+      PARAM => "PARAM",
+      SUPER => "SUPER",
+      SUB => "SUB",
+      SPACE => "SPACE",
+      NOTEXPANDED => "NOTEXPANDED",
+      // Non-primitive
+      IGNORE => "IGNORE",
+      LETTER => "LETTER",
+      OTHER => "OTHER",
+      ACTIVE => "ACTIVE",
+      COMMENT => "COMMENT",
+      INVALID => "INVALID",
+      CS => "CS",
+      MARKER => "MARKER",
+    };
+    tokens.append(Ident::new("Catcode", Span::call_site()));
+    tokens.append(Punct::new(':', Spacing::Joint));
+    tokens.append(Punct::new(':', Spacing::Alone));
+    tokens.append(Ident::new(verbatim, Span::call_site()));
+  }
+}
+
+impl ToTokens for Token {
+  fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
+    stream.append(Ident::new("Token", Span::call_site()));
+    let mut body_stream = proc_macro2::TokenStream::new();
+
+    body_stream.append(Ident::new("text", Span::call_site()));
+    body_stream.append(Punct::new(':', Spacing::Alone));
+    self.text.to_tokens(&mut body_stream);
+    body_stream.append(Punct::new('.', Spacing::Alone));
+    body_stream.append(Ident::new("into", Span::call_site()));
+    body_stream.append(Group::new(Delimiter::Parenthesis, proc_macro2::TokenStream::new()));
+    body_stream.append(Punct::new(',', Spacing::Alone));
+    body_stream.append(Ident::new("code", Span::call_site()));
+    body_stream.append(Punct::new(':', Spacing::Alone));
+    self.code.to_tokens(&mut body_stream);
+
+    let group = Group::new(Delimiter::Brace, body_stream);
+    stream.append(group);
   }
 }

@@ -45,36 +45,6 @@ pub enum Catcode {
   NOTEXPANDED,
   MARKER,
 }
-impl quote::ToTokens for Catcode {
-  fn to_tokens(&self, tokens: &mut quote::Tokens) {
-    use crate::token::Catcode::*;
-    let verbatim = match *self {
-      ESCAPE => "ESCAPE",
-      BEGIN => "BEGIN",
-      END => "END",
-      MATH => "MATH",
-      ALIGN => "ALIGN",
-      EOL => "EOL",
-      PARAM => "PARAM",
-      SUPER => "SUPER",
-      SUB => "SUB",
-      SPACE => "SPACE",
-      NOTEXPANDED => "NOTEXPANDED",
-      // Non-primitive
-      IGNORE => "IGNORE",
-      LETTER => "LETTER",
-      OTHER => "OTHER",
-      ACTIVE => "ACTIVE",
-      COMMENT => "COMMENT",
-      INVALID => "INVALID",
-      CS => "CS",
-      MARKER => "MARKER",
-    };
-    tokens.append("Catcode");
-    tokens.append("::");
-    tokens.append(verbatim);
-  }
-}
 
 impl From<u8> for Catcode {
   fn from(num: u8) -> Catcode {
@@ -242,17 +212,7 @@ pub struct Token {
   pub text: Cow<'static, str>,
   pub code: Catcode,
 }
-impl quote::ToTokens for Token {
-  fn to_tokens(&self, tokens: &mut quote::Tokens) {
-    tokens.append("Token");
-    tokens.append("{");
-    tokens.append("text:");
-    self.text.to_tokens(tokens);
-    tokens.append(".into(), code: ");
-    self.code.to_tokens(tokens);
-    tokens.append("}")
-  }
-}
+
 impl fmt::Debug for Token {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{:?}", self.text) }
 }

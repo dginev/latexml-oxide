@@ -1,9 +1,10 @@
 use lazy_static::lazy_static;
-use quote::*;
 use regex::{Captures, Regex};
-use syn;
 
-use crate::util::{get_option, get_options_from_input};
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::{DeriveInput, Lit, Meta};
+
 use rtx_core::mouth;
 use rtx_core::util::text::*;
 
@@ -61,53 +62,53 @@ lazy_static! {
   static ref ESCAPED_OP : Regex = Regex::new(r"\\[#\?(&,<>\\%]").unwrap();
 }
 
-pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
-  fn bug() -> ! {
-    panic!(
-      "This is a bug. Please open a Github issue \
-       with your DefConstructor invocation"
-    );
-  }
-  let options = get_options_from_input("compile_replacement_options", &input.attrs, bug);
-  let replacement_opt = options.as_ref().map(|o| get_option(&o, "replacement", bug));
-  let compiled_replacement_closure = match replacement_opt {
-    None => quote!(None),
-    Some(replacement) => {
-      // Following the original LaTeXML Compiler, we'll mutate this string in place,
-      // cloning for safety. since this is all happening in Rust's compilation
-      // step, the clone causes no major overhead. If we refactor away the
-      // mutable borrows we do for in-place modification, we can avoid a lot of the
-      // cloning, and stay conservative in memory. For now it shouldn't matter.
-
-      // println!("Compiling: \n{:?}", &replacement);
-      let mut operations = Vec::new();
-
-      operations.extend(compile_replacement_tokens(replacement.to_owned()));
-
-      // println!(
-      //   "Into: \n{}",
-      //   operations
-      //     .iter()
-      //     .map(|x| x.to_string())
-      //     .collect::<Vec<_>>()
-      //     .join("\n")
-      // );
-
-      quote!(
-        Some(Rc::new(
-        |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, Stored>, state: &mut State| {
-          let mut savenode : Option<Node> = None;
-
-          #(#operations)*
-
-          if let Some(snode) = savenode {
-            document.set_node(&snode);
-          }
-          Ok(())
-        }))
-      )
+pub fn compile_replacement(input: DeriveInput) -> TokenStream {
+  let replacement: String = match input.attrs[0].parse_meta().unwrap() {
+    Meta::NameValue(v) => match v.lit {
+      Lit::Str(v) => v.value().to_string(),
+      _ => panic!("only accepts #[replacement = \"value\"] attribute syntax, mandatory double-quotes (Lit)"),
     },
+    _ => panic!("only accepts #[replacement = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"),
   };
+  // dbg!(&replacement);
+
+  let compiled_replacement_closure: proc_macro2::TokenStream = if replacement.is_empty() {
+    quote!(None)
+  } else {
+    // Following the original LaTeXML Compiler, we'll mutate this string in place,
+    // cloning for safety. since this is all happening in Rust's compilation
+    // step, the clone causes no major overhead. If we refactor away the
+    // mutable borrows we do for in-place modification, we can avoid a lot of the
+    // cloning, and stay conservative in memory. For now it shouldn't matter.
+
+    // println!("Compiling: \n{:?}", &replacement);
+    let mut operations = Vec::new();
+
+    operations.extend(compile_replacement_tokens(replacement.to_owned()));
+
+    // println!(
+    //   "Into: \n{}",
+    //   operations
+    //     .iter()
+    //     .map(|x| x.to_string())
+    //     .collect::<Vec<_>>()
+    //     .join("\n")
+    // );
+
+    quote!(
+    Some(Rc::new(
+    |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, Stored>, state: &mut State| {
+      let mut savenode : Option<Node> = None;
+
+      #(#operations)*
+
+      if let Some(snode) = savenode {
+        document.set_node(&snode);
+      }
+      Ok(())
+    })))
+  }
+  .into();
   // We have to jump an extra hoop, since we are forcing the struct-derive
   // mechanism. Once the new procedural macro scheme lands, this begs to be
   // refactored.
@@ -117,33 +118,34 @@ pub fn compile_replacement(input: syn::MacroInput) -> quote::Tokens {
       #compiled_replacement_closure
     }
   })
+  .into()
 }
 
-pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
-  fn bug() -> ! {
-    panic!(
-      "This is a bug. Please open a Github issue \
-       with your DefConstructor invocation"
-    );
-  }
-  let options = get_options_from_input("compile_expansion_options", &input.attrs, bug);
-  let expansion_opt = options.as_ref().map(|o| get_option(&o, "expansion", bug));
-  let compiled_expansion = match expansion_opt {
-    None => quote!(None),
-    Some("") => quote!(None),
-    Some(expansion) => {
-      let performed_expansion = mouth::tokenize_internal(expansion, None).unlist();
-      // println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(),
-      // performed_expansion); TODO: Should "substitute_parameters" be
-      // specially performed for runtime-read expansions (via RawTeX?), e.g. when
-      // reading external style files? should that even be allowed? We
-      // can easily pre-compile all of texlive (or the ~200 supported sty and cls
-      // files in the ecosystem) once and have all expansions handled by
-      // this code snippet.
-      quote!(
-        Some(ExpansionBody::Tokens(Tokens::new(vec!#performed_expansion)))
-      )
+pub fn compile_expansion(input: DeriveInput) -> TokenStream {
+  let expansion: String = match input.attrs[0].parse_meta().unwrap() {
+    Meta::NameValue(v) => match v.lit {
+      Lit::Str(v) => v.value().to_string(),
+      _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"),
     },
+    _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"),
+  };
+
+  let compiled_expansion = if expansion.is_empty() {
+    quote!(None)
+  } else {
+    // dbg!(&expansion);
+    let performed_expansion = mouth::tokenize_internal(&expansion, None);
+
+    // println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(),
+    // performed_expansion); TODO: Should "substitute_parameters" be
+    // specially performed for runtime-read expansions (via RawTeX?), e.g. when
+    // reading external style files? should that even be allowed? We
+    // can easily pre-compile all of texlive (or the ~200 supported sty and cls
+    // files in the ecosystem) once and have all expansions handled by
+    // this code snippet.
+    quote!(
+      Some(ExpansionBody::Tokens(#performed_expansion))
+    )
   };
   // We have to jump an extra hoop, since we are forcing the struct-derive
   // mechanism. Once the new procedural macro scheme lands, this begs to be
@@ -154,9 +156,10 @@ pub fn compile_expansion(input: syn::MacroInput) -> quote::Tokens {
       #compiled_expansion
     }
   })
+  .into()
 }
 
-fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
+fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::TokenStream> {
   let mut floats: String = String::new();
   let mut has_floats: bool = false;
   replacement = FLOAT_RE
@@ -336,9 +339,9 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<quote::Tokens> {
 // object. This is (hopefully) temporary to handle font objects as attributes.
 // The DOM holds the font objects, rather than strings,
 // to resolve relative fonts on output.
-fn translate_string(mut text: &mut String) -> quote::Tokens {
+fn translate_string(mut text: &mut String) -> proc_macro2::TokenStream {
   // println!("-- ts before: {:?}", text);
-  let mut values: Vec<quote::Tokens> = Vec::new();
+  let mut values: Vec<proc_macro2::TokenStream> = Vec::new();
   *text = text.trim_start().to_owned();
   if text.starts_with('\'') || text.starts_with('"') {
     let quote = text.remove(0);
@@ -401,10 +404,10 @@ fn translate_string(mut text: &mut String) -> quote::Tokens {
   quote!(vec![#(#token_values),*].join(""))
 }
 
-fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
+fn translate_avpairs(mut text: &mut String) -> Vec<proc_macro2::TokenStream> {
   // Parse a set of attribute value pairs from a constructor pattern,
   // substituting argument and property values from the whatsit.
-  let mut avs: Vec<quote::Tokens> = Vec::new();
+  let mut avs: Vec<proc_macro2::TokenStream> = Vec::new();
   *text = text.trim_start().to_owned();
   while !text.is_empty() {
     let mut is_match = false;
@@ -450,7 +453,7 @@ fn translate_avpairs(mut text: &mut String) -> Vec<quote::Tokens> {
 /// Parse a substitutable value from the constructor (in $_)
 /// Recognizes the #1, #prop, and also &function(args,...)
 /// Note: signals an error if no recognizable value was found!
-fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens {
+fn translate_value(exclude_chars: &str, mut text: &mut String) -> proc_macro2::TokenStream {
   let mut val = quote!("");
   let mut is_match = false;
   let mut fcn = String::new();
@@ -549,7 +552,7 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> quote::Tokens 
   val
 }
 
-fn parse_conditional(text: &mut String) -> (quote::Tokens, String, String) {
+fn parse_conditional(text: &mut String) -> (proc_macro2::TokenStream, String, String) {
   // Remove leading "?"
   // println!("-- cond before: {:?}", text);
   *text = LEAD_QMARK.replace(text, |_: &Captures| String::new()).to_string();
