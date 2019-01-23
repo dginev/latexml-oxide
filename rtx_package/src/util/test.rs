@@ -10,7 +10,9 @@ use rtx_core::{Core, CoreOptions};
 
 use crate::core::DigestionAPI;
 
+#[allow(clippy::implicit_hasher)]
 pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) { rtx_tests_internal(dirpath, requires, None) }
+#[allow(clippy::implicit_hasher)]
 pub fn rtx_tests_internal(dirpath: &str, requires: Option<HashMap<&str, &str>>, extra_bindings_dispatcher: Option<BindingDispatcher>) {
   assert!(rtx_core::util::logger::init(log::LevelFilter::Info).is_ok());
 
@@ -45,9 +47,7 @@ fn rtx_ok_internal(tex_path: &str, xml_path: &str, name: &str, extra_bindings_di
   if !tex_strings.is_empty() {
     let xml_strings = process_xmlfile(xml_path, name);
     if !xml_strings.is_empty() {
-      let mut lineno = 0;
-      for (tex_line, xml_line) in tex_strings.iter().zip(xml_strings.iter()) {
-        lineno += 1;
+      for (lineno, (tex_line, xml_line)) in tex_strings.iter().zip(xml_strings.iter()).enumerate() {
         assert_eq!(tex_line, xml_line, "rtx result (left) differs from expected XML (right), line {}", lineno);
       }
       assert_eq!(

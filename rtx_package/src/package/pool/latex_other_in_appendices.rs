@@ -71,9 +71,9 @@ LoadDefinitions!(state, {
   DefMacro!("\\@gobblefour{}{}{}{}", "");
   DefMacro!("\\@firstofone{}",       sub[gullet, args, state] { Ok(args[0].clone()) });
   Let!("\\@iden", "\\@firstofone");
-  DefMacro!("\\@firstoftwo{}{}",     sub[gullet, args, state] { unpack!(args=>one,two); Ok(one.into()) });
-  DefMacro!("\\@secondoftwo{}{}",    sub[gullet, args, state] { unpack!(args=>one,two); Ok(two.into()) });
-  DefMacro!("\\@thirdofthree{}{}{}", sub[gullet, args, state] { unpack!(args=>one,two, three); Ok(three.into()) });
+  DefMacro!("\\@firstoftwo{}{}",     sub[gullet, args, state] { unpack!(args=>one,two); Ok(one) });
+  DefMacro!("\\@secondoftwo{}{}",    sub[gullet, args, state] { unpack!(args=>one,two); Ok(two) });
+  DefMacro!("\\@thirdofthree{}{}{}", sub[gullet, args, state] { unpack!(args=>one,two, three); Ok(three) });
   // DefMacro('\@expandtwoargs{}{}{}', sub {
   //     ($_[1]->unlist, T_BEGIN, Expand($_[2])->unlist, T_END, T_BEGIN, Expand($_[3])->unlist, T_END); });
   // DefMacro('\@makeother{}', sub { AssignCatcode($_[1] => CC_OTHER, 'local'); });

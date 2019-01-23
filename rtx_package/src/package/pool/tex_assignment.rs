@@ -218,6 +218,6 @@ LoadDefinitions!(state, {
   );
 
   // Stub definitions ???
-  DefRegister!("\\hyphenchar{}", Number!(('-' as u8)));
+  DefRegister!("\\hyphenchar{}", Number!((b'-')));
   DefRegister!("\\skewchar{}", Number::new(0.0)); // no idea what the default is here
 });

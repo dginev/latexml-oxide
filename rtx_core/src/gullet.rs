@@ -729,17 +729,17 @@ impl Gullet {
           token = self.read_x_token(false, false, state)?.unwrap();
         }
 
-        let mut n_opt: Option<Number>;
-        if !string.is_empty() {
+        let n_opt: Option<Number> = if !string.is_empty() {
           if token.get_catcode() != Catcode::SPACE {
             // Inline ->getCatcode, unread
             self.unread(&Tokens!(token));
           }
-          n_opt = Some(string.into());
+          Some(string.into())
         } else {
           self.unread(&Tokens!(token)); // Unread
-          n_opt = self.read_normal_integer(state)?;
-        }
+          self.read_normal_integer(state)?
+        };
+
         if let Some(n) = n_opt {
           Ok(Number::new(s * n.value_of()))
         } else {

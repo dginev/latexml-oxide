@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_variables, unused_mut, unused_macros)]
+#![allow(dead_code, unused_variables, unused_mut, unused_macros, clippy::trivial_regex)]
 
 use log::error;
 

@@ -123,7 +123,7 @@ macro_rules! beforeproc_single {
   ($stomach:ident, $state:ident, $body:expr) => {
     Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
       BindInnerState!($state, $stomach);
-      $body;
+      $body
       Ok(Vec::new())
     })
   };
@@ -135,7 +135,7 @@ macro_rules! tagsub {
     vec![Rc::new(
       |$document: &mut Document, mut $node: &mut Node, $state: &mut State| -> Result<()> {
         BindInnerState!($state);
-        $body;
+        $body
         Ok(())
       },
     )]

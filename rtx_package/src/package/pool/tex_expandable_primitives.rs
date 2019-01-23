@@ -296,7 +296,7 @@ fn compare(u: Token, rel: Token, v: Token) -> Result<bool> {
   let v = v.to_number().value_of();
   match rel {
     T_OTHER!("<") | T_CS!("\\@@<") => Ok(u < v),
-    T_OTHER!("=") => Ok(u == v),
+    T_OTHER!("=") => Ok(u as i64 == v as i64),
     T_OTHER!(">") | T_CS!("\\@@>") => Ok(u > v),
     _ => {
       error!(target:"expected:<relationaltoken>", "Expected a relational token for comparision. Got {:?}", rel);

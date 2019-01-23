@@ -1,5 +1,6 @@
 use crate::package::*;
 
+#[allow(clippy::trivial_regex)]
 lazy_static! {
   static ref LEADING_BACKSLASH_RE: Regex = Regex::new(r"^\\").unwrap();
 }

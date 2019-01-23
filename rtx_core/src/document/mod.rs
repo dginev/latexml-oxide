@@ -473,6 +473,7 @@ impl Document {
 
   // Check whether it is possible to open $qname at this point,
   // possibly by autoOpen'ing & autoClosing other tags.
+  #[allow(clippy::wrong_self_convention)]
   pub fn is_openable(&mut self, qname: &str, state: &mut State) -> bool {
     let mut node_opt = Some(self.node.clone());
     while let Some(node) = node_opt {
@@ -492,6 +493,7 @@ impl Document {
   // any intervening nodes must be autocloseable.
   // returning the last node that would be closed if it is possible,
   // otherwise undef.
+  #[allow(clippy::wrong_self_convention)]
   pub fn is_closeable(&mut self, mut tags: VecDeque<String>, state: &mut State) -> Option<Node> {
     let mut node_opt = if self.node.get_type() == Some(NodeType::TextNode) {
       self.node.get_parent()
@@ -2019,12 +2021,12 @@ impl Document {
     Ok(())
   }
 
-  // TODO!
   pub fn float_to_element(&mut self, element: &str, flag: bool) -> Option<Node> { None }
 
   // find a node that can accept a label.
   // A bit more than just whether the element can have the attribute, but
   // whether it has an id (and ideally either a refnum or title)
+  #[allow(clippy::nonminimal_bool)]
   pub fn float_to_label(&mut self, state: &mut State) -> Option<Node> {
     let key = "labels";
     let ancestors: Vec<Node> = self
