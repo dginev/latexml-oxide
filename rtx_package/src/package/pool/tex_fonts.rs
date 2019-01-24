@@ -283,7 +283,7 @@ LoadDefinitions!(state, {
      None,
      invoked,
      HashMap::new(),
-     p_state).into()
+     p_state)
   });
 
   // Almost like a register, but different...

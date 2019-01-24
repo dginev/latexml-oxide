@@ -86,12 +86,16 @@ impl<T> IntoOption<Option<VecDeque<T>>> for VecDeque<T> {
 }
 
 pub trait IntoTokensResult<T>: Sized {
-  /// Performs the conversion.
+  /// Performs the conversion, used for DefMacro return values etc
   fn into_tokens_result(self) -> Result<Tokens>;
 }
 
 impl IntoTokensResult<Result<Tokens>> for Token {
   fn into_tokens_result(self) -> Result<Tokens> { Ok(Tokens!(self)) }
+}
+
+impl IntoTokensResult<Result<Tokens>> for Vec<Token> {
+  fn into_tokens_result(self) -> Result<Tokens> { Ok(Tokens(self)) }
 }
 
 impl IntoTokensResult<Result<Tokens>> for Tokens {
@@ -105,6 +109,37 @@ impl IntoTokensResult<Result<Tokens>> for Result<Tokens> {
 impl IntoTokensResult<Result<Tokens>> for () {
   fn into_tokens_result(self) -> Result<Tokens> { Ok(Tokens!()) }
 }
+
+pub trait IntoBoolResult<T>:Sized {
+  /// Performs the conversion, used for DefConditional return values etc
+  fn into_bool_result(self) -> Result<bool>;
+}
+impl IntoBoolResult<Result<bool>> for bool {
+  fn into_bool_result(self) -> Result<bool> { Ok(self) }
+}
+impl IntoBoolResult<Result<bool>> for Result<bool> {
+  fn into_bool_result(self) -> Result<bool> { self }
+}
+
+pub trait IntoDigestedResult<T>: Sized {
+  /// Performs the conversion, used for DefPrimitive return values etc
+  fn into_digested_result(self) -> Result<Vec<Digested>>;
+}
+impl IntoDigestedResult<Result<Vec<Digested>>> for () {
+  fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(Vec::new()) }
+}
+impl IntoDigestedResult<Result<Vec<Digested>>> for Tbox {
+  fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(vec![self.into()]) }
+}
+
+impl IntoDigestedResult<Result<Vec<Digested>>> for Digested {
+  fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(vec![self]) }
+}
+
+impl IntoDigestedResult<Result<Vec<Digested>>> for Result<Vec<Digested>> {
+  fn into_digested_result(self) -> Result<Vec<Digested>> { self }
+}
+
 
 //**********************************************************************
 //   Initially, I thought LaTeXML Packages should try to be like perl modules:

@@ -82,7 +82,6 @@ LoadDefinitions!(state, {
     let env_string = env.to_string();
     DefMacroI!(T_CS!("\\@currenvir"), None, env);
     AssignValue!("current_environment", env_string);
-    Ok(vec![])
   });
 
   DefPrimitive!(
@@ -91,11 +90,10 @@ LoadDefinitions!(state, {
     let env_string = env.to_string();
     DefMacroI!(T_CS!("\\@currenvir"), None, env);
     AssignValue!("current_environment", env_string);
-    Ok(vec![])
   });
   Let!("\\@currenvline", "\\@empty");
 
-  DefMacro!("\\begin{}", sub [gullet, args, state] {
+  DefMacro!("\\begin{}", sub[gullet, args, state] {
     unpack!(args => env);
     let name = Expand!(env, gullet).to_string();
     let begin_name = s!("\\begin{{{}}}", name);
@@ -608,9 +606,7 @@ LoadDefinitions!(state, {
     unpack!(args => value);
     let ctr_expansion = Expand!(value, gullet, inner_state).to_string();
     let ctr_value = CounterValue!(&ctr_expansion, inner_state).value_of();
-    Ok(Tokens::new(
-      ExplodeText!(ctr_value)
-    ))
+    ExplodeText!(ctr_value)
   });
 
   // DefMacro('\@arabic{Number}', sub {
@@ -619,9 +615,7 @@ LoadDefinitions!(state, {
     unpack!(args => value);
     let ctr_expansion = Expand!(value, gullet, inner_state).to_string();
     let ctr_value = CounterValue!(&ctr_expansion, inner_state).value_of();
-    Ok(Tokens::new(
-      ExplodeText!(ctr_value)
-    ))
+    ExplodeText!(ctr_value)
   });
 
   // DefMacro('\@roman{Number}', sub {
@@ -664,8 +658,8 @@ LoadDefinitions!(state, {
 
   //======================================================================
   // Hair
-  DefPrimitive!("\\makeatletter", sub[stomach, whatsit, state] { state.assign_catcode('@', Catcode::LETTER, Some(Scope::Local)); Ok(vec![]) });
-  DefPrimitive!("\\makeatother",  sub[stomach, whatsit, state] { state.assign_catcode('@', Catcode::OTHER, Some(Scope::Local)); Ok(vec![]) });
+  DefPrimitive!("\\makeatletter", sub { AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local)); });
+  DefPrimitive!("\\makeatother",  sub { AssignCatcode!('@', Catcode::OTHER, Some(Scope::Local)); });
 
   //**********************************************************************
   // Sundry (is this ams ?)

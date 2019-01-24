@@ -40,8 +40,8 @@ LoadDefinitions!(state, {
   .map(|s| s.to_string())
   {
     let inner_ltxtrigger = ltxtrigger.clone();
-    DefMacroI!(T_CS!(ltxtrigger), None, sub[ _gullet, _args, inner_state] {
-      Ok(Tokens!(T_CS!("\\@load@latex@pool"), T_CS!(inner_ltxtrigger)))
+    DefMacroI!(T_CS!(ltxtrigger), None, sub {
+       Tokens!(T_CS!("\\@load@latex@pool"), T_CS!(inner_ltxtrigger))
     });
   }
 
@@ -55,6 +55,5 @@ LoadDefinitions!(state, {
       },
       state,
     )?;
-    Ok(vec![])
   });
 });
