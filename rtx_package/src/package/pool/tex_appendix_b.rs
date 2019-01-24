@@ -171,7 +171,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\magstephalf", "1095");
   DefMacro!("\\magstep{}", sub[gullet, args, state] {
     unpack_to_string!(args => mag);
-    Ok(Tokens::new(Explode!(match mag.as_str() {
+    Explode!(match mag.as_str() {
       "0" => "1000",
       "1" => "1200",
       "2" => "1440",
@@ -179,7 +179,7 @@ LoadDefinitions!(state, {
       "4" => "2074",
       "5" => "2488",
       _ => ""
-    })))
+    })
   });
 
   // #======================================================================
@@ -280,19 +280,17 @@ LoadDefinitions!(state, {
   //======================================================================
   // TeX Book, Appendix B, p. 352
 
-  DefPrimitive!("\\obeyspaces", sub[stomach, whatsit, state] {
+  DefPrimitive!("\\obeyspaces", sub {
      AssignCatcode!(' ', Catcode::ACTIVE);
      LetI!(&T_ACTIVE!(" "), T_CS!("\\space"));
-     Ok(vec![])
   });
   // Curiously enough, " " (a space) is ALREADY defined to be the same as "\space"
   // EVEN before it is made active. (see p.380)
   LetI!(&T_ACTIVE!(" "), T_CS!("\\space"));
 
-  DefPrimitive!("\\obeylines", sub[stomach, whatsit, state] {
+  DefPrimitive!("\\obeylines", sub {
       AssignCatcode!('\r', Catcode::ACTIVE);
       LetI!(&T_ACTIVE!("\r"), T_CS!("\\@break")); // More appropriate than \par, I think?
-      Ok(vec![])
   });
 
   DefConstructor!("\\@break", "<ltx:break/>");
@@ -366,7 +364,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\nobreakspace", "\\ifmmode\\math@nobreakspace\\else\\text@nobreakspace\\fi");
 
   DefPrimitive!("\\text@nobreakspace", sub[stomach, whatsit, state] {
-    Tbox::new(String::from("\u{00A0}"), None, None, Tokens!(T_CS!("~")), map!("isSpace" => Stored::Bool(true)), state).into()
+    Tbox::new(String::from("\u{00A0}"), None, None, Tokens!(T_CS!("~")), map!("isSpace" => Stored::Bool(true)), state)
   });
 
   // DefConstructor!("\\math@nobreakspace", "<ltx:XMHint name='nobreakspace' width='#width'/>",

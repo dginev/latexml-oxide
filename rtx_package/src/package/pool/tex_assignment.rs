@@ -37,9 +37,9 @@ LoadDefinitions!(state, {
   
   // <prefix> = \global | \long | \outer
   // See Stomach.pm & Stomach.pm
-  DefPrimitive!("\\global",sub[stomach, args, state] { state.set_prefix("global");  Ok(vec![])}, is_prefix => true);
-  DefPrimitive!("\\long",  sub[stomach, args, state] { state.set_prefix("long");    Ok(vec![])}, is_prefix => true);
-  DefPrimitive!("\\outer", sub[stomach, args, state] { state.set_prefix("outer");   Ok(vec![])}, is_prefix => true);
+  DefPrimitive!("\\global",sub { SetPrefix!("global"); }, is_prefix => true);
+  DefPrimitive!("\\long",  sub { SetPrefix!("long");   }, is_prefix => true);
+  DefPrimitive!("\\outer", sub { SetPrefix!("outer");  }, is_prefix => true);
 
   // <let assignment> = \futurelet <control sequence><token><token>
   //  | \let<control sequence><equals><one optional space><token>

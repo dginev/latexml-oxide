@@ -69,7 +69,7 @@ LoadDefinitions!(state, {
   Tag!("ltx:p", auto_close => true, auto_open => true, after_close => trim_node_whitespace_closure);
 
   // \dump ???
-  DefPrimitive!("\\end", sub[stomach, args, state] { stomach.get_gullet_mut().flush(state); Ok(vec![]) });
+  DefPrimitive!("\\end", sub[stomach, args, state] { stomach.get_gullet_mut().flush(state); });
 
   // TODO: Move to the right place in the pool definitions (maybe split out individual sub-pools by
   // chapter?)

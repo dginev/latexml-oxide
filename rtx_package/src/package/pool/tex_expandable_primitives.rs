@@ -20,15 +20,15 @@ LoadDefinitions!(outer_state, {
   });
   DefConditional!("\\ifodd Number", sub[gullet, args, state] {
     unimplemented!();
+    false
     // $_[1]->valueOf % 2
   });
 
   // NOTE: We don't KNOW if we're in vertical, horizontal or inner mode!!!!!!!
-  DefConditional!("\\ifvmode", sub[gullet,args,state] {Ok(false)});
-  DefConditional!("\\ifhmode", sub[gullet,args,state] {Ok(false)});
-  DefConditional!("\\ifinner", sub[gullet,args,state] {Ok(false)});
-
-  DefConditional!("\\ifmmode", sub[gullet,args,state] {Ok(LookupBool!("IN_MATH"))});
+  DefConditional!("\\ifvmode", sub { false });
+  DefConditional!("\\ifhmode", sub { false });
+  DefConditional!("\\ifinner", sub { false });
+  DefConditional!("\\ifmmode", sub { LookupBool!("IN_MATH") });
 
   DefConditional!("\\if XToken XToken", sub[gullet, args, state] {
     unpack!(args=>tokens1, tokens2);
@@ -45,8 +45,8 @@ LoadDefinitions!(outer_state, {
     Ok(xequals)
   });
 
-  DefConditional!("\\iftrue",  sub[gullet, args, state] { Ok(true) });
-  DefConditional!("\\iffalse", sub[gullet, args, state] { Ok(false) });
+  DefConditional!("\\iftrue",  sub { true });
+  DefConditional!("\\iffalse", sub { false });
 
   //======================================================================
   // This makes \relax disappear completely after digestion
@@ -195,9 +195,8 @@ LoadDefinitions!(outer_state, {
     token
   });
 
-  DefPrimitive!("\\endcsname", sub[stomach, whatsit, state] {
+  DefPrimitive!("\\endcsname", sub {
     error!(target: "unexpected:\\endcsname", "Extra \\endcsname");
-    Ok(Vec::new())
   });
 
   DefMacro!("\\expandafter Token Token", sub[gullet, args, state] {
@@ -239,7 +238,6 @@ LoadDefinitions!(outer_state, {
     if let Some(line) = line_opt {
       gullet.unread(&Tokenize!(&line));
     }
-    Ok(Tokens!())
   });
 
   // \the<internal quantity>
@@ -247,28 +245,25 @@ LoadDefinitions!(outer_state, {
     unpack!(args => variable);
     let mut args = variable.unlist();
     let defn = args.remove(0).to_register(state);
-    match defn {
-      None => {
-        error!(target:"expected:<register>", "a register was expected to be here");
-        Ok(Tokens!())
-      },
-      Some(defn) => {
-        let register_type = defn.borrow().register_type;
-        //     if (!$type) {
-        //       my $cs = ToString($defn->getCS);
-        //       Error('unexpected', "\\the$cs", $gullet, "You can't use $cs after \\the"); return (); }
-        let value = defn.value_of(args, state).unwrap_or_else(|| RegisterValue::Tokens(Tokens!()));
-        // In all cases, these should be OTHER, except for space. (!?)
-        let mut tokens : Vec<Token> = match value {
-          RegisterValue::Tokens(ts) => ts.unlist(),
-          RegisterValue::Token(t) => vec![t],
-          rv => Explode!(rv.to_string()),
-        };
-        if state.noexpand_the { // See \the for the sense in this.
-          tokens = gullet.neutralize_tokens(&tokens, state);
-        }
-        Ok(Tokens::new(tokens))
+    if let Some(defn) = defn {
+      let register_type = defn.borrow().register_type;
+      //     if (!$type) {
+      //       my $cs = ToString($defn->getCS);
+      //       Error('unexpected', "\\the$cs", $gullet, "You can't use $cs after \\the"); return (); }
+      let value = defn.value_of(args, state).unwrap_or_else(|| RegisterValue::Tokens(Tokens!()));
+      // In all cases, these should be OTHER, except for space. (!?)
+      let mut tokens : Vec<Token> = match value {
+        RegisterValue::Tokens(ts) => ts.unlist(),
+        RegisterValue::Token(t) => vec![t],
+        rv => Explode!(rv.to_string()),
+      };
+      if state.noexpand_the { // See \the for the sense in this.
+        tokens = gullet.neutralize_tokens(&tokens, state);
       }
+      tokens
+    } else {
+      error!(target:"expected:<register>", "a register was expected to be here");
+      Vec::new()
     }
   });
 });

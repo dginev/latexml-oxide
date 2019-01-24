@@ -254,6 +254,10 @@ macro_rules! DefConditional(
     bind_state!(st);
     DefConditional!($proto, sub[$gullet, $args, $inner_state] $body, st);
   }};
+  ($proto:expr, sub $body:block) => {{
+    bind_state!(st);
+    DefConditional!($proto, sub[gullet, args, inner_state] $body, st);
+  }};
   ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
     let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
     DefConditionalI!(cs, paramlist, sub[$gullet, $args, $inner_state] $body, $state_arg)
@@ -281,7 +285,7 @@ macro_rules! DefConditionalI(
     DefConditionalI!($cs, $paramlist, $gullet, $args, $inner_state, $body, st)
   }};
   ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
-    let test : ConditionalClosure = Rc::new(move |$gullet, $args, $inner_state| { WithInnerState!($body, $inner_state) });
+    let test : ConditionalClosure = Rc::new(move |$gullet, $args, $inner_state| { WithInnerState!($body, $inner_state).into_bool_result() });
     def_conditional($cs, $paramlist, Some(test), ConditionalOptions::default(), $state_arg);
   });
   // or None
@@ -342,6 +346,10 @@ macro_rules! DefPrimitiveII {
   ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block, $state_arg:ident) => {
     DefPrimitiveII!($cs, $paramlist, move |$stomach, $args, $inner_state| {WithInnerState!($body, $inner_state, $stomach)}, PrimitiveOptions::default(), $state_arg)
   };
+  ($cs:expr, $paramlist:expr, sub $body:block) => {{
+    bind_state!(st);
+    DefPrimitiveII!($cs, $paramlist, sub[stomach, args, inner_state] $body, st)
+  }};
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => {{
     bind_state!(st);
     DefPrimitiveII!($cs, $paramlist, $compiled_replacement, $options, st)
@@ -1271,6 +1279,8 @@ macro_rules! DefMacroI(
   // Expansion closure syntax
   ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block) =>
     (DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, None));
+  ($cs:expr, $paramlist:expr, sub $body:block) =>
+    (DefMacroIWO!($cs, $paramlist, sub [ gullet, args, inner_state ] $body, None));
   // With explicit state
   ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $state_arg:ident) =>
     (DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, None, $state_arg));
@@ -1426,10 +1436,17 @@ macro_rules! DefEnvironmentC(
 macro_rules! DefPrimitive{
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block) =>
     (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {
-      WithInnerState!($body, $inner_state, $stomach) }, PrimitiveOptions::default())); 
+      WithInnerState!($body, $inner_state, $stomach).into_digested_result() }, PrimitiveOptions::default())); 
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $($key:ident=>$val:expr),*) =>
     (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {
-      WithInnerState!($body, $inner_state, $stomach) }, NewDefault!(PrimitiveOptions, $($key=>$val),*))); 
+      WithInnerState!($body, $inner_state, $stomach).into_digested_result() }, NewDefault!(PrimitiveOptions, $($key=>$val),*))); 
+  ($proto:expr, sub $body:block) =>
+    (DefPrimitiveIWO!($proto, |stomach, whatsit, inner_state| {
+      WithInnerState!($body, inner_state, stomach).into_digested_result() }, PrimitiveOptions::default())); 
+  ($proto:expr, sub $body:block, $($key:ident=>$val:expr),*) =>
+    (DefPrimitiveIWO!($proto, |stomach, whatsit, inner_state| {
+      WithInnerState!($body, inner_state, stomach).into_digested_result() }, NewDefault!(PrimitiveOptions, $($key=>$val),*))); 
+
   ($proto:expr, $replacement:expr, $options:expr) => ({
     // TODO:
     // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
@@ -1439,9 +1456,9 @@ macro_rules! DefPrimitive{
 
   // explicit state
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $state_arg:ident) =>
-    (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {WithInnerState!($body, $inner_state, $stomach)}, PrimitiveOptions::default(), $state_arg));
+    (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {WithInnerState!($body, $inner_state, $stomach).into_digested_result()}, PrimitiveOptions::default(), $state_arg));
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $state_arg:ident, $($key:ident=>$val:expr),*) =>
-    (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {WithInnerState!($body, $inner_state, $stomach)}, NewDefault!(PrimitiveOptions, $($key=>$val),*), $state_arg));
+    (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {WithInnerState!($body, $inner_state, $stomach).into_digested_result()}, NewDefault!(PrimitiveOptions, $($key=>$val),*), $state_arg));
 
   ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
     // TODO:
@@ -1636,4 +1653,20 @@ macro_rules! DocType {
       model.register_document_namespace(prefix, Some(value.to_string()));
     }
   }};
+}
+
+#[macro_export]
+macro_rules! Today {
+  () => {{
+    bind_state!(st);
+    today(st)
+  }};
+}
+
+#[macro_export]
+macro_rules! SetPrefix {
+  ($prefix:literal) => {{
+    bind_state!(st);
+    st.set_prefix($prefix);
+  }}
 }

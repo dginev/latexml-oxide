@@ -25,7 +25,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\fmtname", "LaTeX2e");
   DefMacro!("\\fmtversion", "XXXX/XX/XX");
 
-  DefMacro!("\\today", sub[gullet,args,state] { Ok(Tokens::new(ExplodeText!(today(state)))) });
+  DefMacro!("\\today", sub { ExplodeText!(Today!()) });
 
   // Previously, we used ltx:emph, to preserve the semantic intent,
   // but some folks wrap it around arbitrary blocks of material,
