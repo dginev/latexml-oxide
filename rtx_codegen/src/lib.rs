@@ -3,11 +3,13 @@ extern crate proc_macro; // workaround until proc_macro becomes available normal
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Lit, Meta};
+use syn::{parse_macro_input, DeriveInput};
 
 mod ast_builder;
 mod constructable;
 mod modelable;
+
+static mut CONTEXT_DEPTH: u32 = 0;
 
 #[proc_macro_derive(CompileReplacement, attributes(replacement))]
 pub fn derive_compile_replacement(input: TokenStream) -> TokenStream {
@@ -49,17 +51,9 @@ pub fn derive_load_indirect_model(input: TokenStream) -> TokenStream {
 //
 //    making it possible to use the simple DefMacro("\\a","\\b") form in any context, while auto-binding the nearest state
 
-#[proc_macro_derive(BoundState, attributes(location))]
-pub fn bound_state(input: TokenStream) -> TokenStream {
-  let item = parse_macro_input!(input as DeriveInput);
-  let location: String = match item.attrs[0].parse_meta().unwrap() {
-    Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value().to_string(),
-      _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"),
-    },
-    _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"),
-  };
-  let state_declaration = if location == "outer" {
+#[proc_macro_derive(BoundState)]
+pub fn bound_state(_input: TokenStream) -> TokenStream {
+  let state_declaration = if unsafe {CONTEXT_DEPTH == 0} {
     quote!(
       macro_rules! state {
         () => {
@@ -67,7 +61,7 @@ pub fn bound_state(input: TokenStream) -> TokenStream {
         };
       }
     )
-  } else if location == "inner" {
+  } else {
     quote!(
       macro_rules! state {
         () => {
@@ -75,9 +69,19 @@ pub fn bound_state(input: TokenStream) -> TokenStream {
         };
       }
     )
-  } else {
-    panic!("Unsupported bound state location: {:?}", location);
   };
+  state_declaration.into()
+}
 
-  state_declaration.to_string().parse().unwrap()
+
+#[proc_macro_derive(StartStateFrame)]
+pub fn start_state_frame(_input: TokenStream) -> TokenStream {
+  unsafe { CONTEXT_DEPTH +=1 };
+  TokenStream::new()
+}
+
+#[proc_macro_derive(EndStateFrame)]
+pub fn end_state_frame(_input: TokenStream) -> TokenStream {
+  unsafe { CONTEXT_DEPTH -=1 };
+  TokenStream::new()
 }

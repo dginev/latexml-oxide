@@ -256,7 +256,7 @@ LoadDefinitions!(state, {
     }
     // else ? it probably isn't going to work??
     info!("Now, try to open {{thebibliography}}");
-    tokens.extend(Invocation!("\\begin", vec![Tokenize!("thebibliography"), Tokens!()], gullet, state)?.unlist());
+    tokens.extend(Invocation!("\\begin", vec![Tokenize!("thebibliography", state), Tokens!()], gullet, state)?.unlist());
     let tokens = Tokens::new(tokens);
     info!("PATCHING with {:?}", tokens.to_string());
     Ok(tokens)

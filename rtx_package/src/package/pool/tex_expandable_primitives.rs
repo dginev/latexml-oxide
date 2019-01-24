@@ -3,7 +3,7 @@ use crate::package::*;
 //=======================
 // -- Main Definitions --
 //=======================
-LoadDefinitions!(state, {
+LoadDefinitions!(outer_state, {
   // The following special cases are built-in to Definition
   DefConditional!("\\else");
   DefConditional!("\\or");
@@ -67,11 +67,7 @@ LoadDefinitions!(state, {
   // define it here (only approxmiately), since it's already useful.
   Let!("\\protect", "\\relax");
 
-  // DefMacro('\romannumeral Number', sub { roman($_[1]->valueOf); });
-  // # Hmm... I wonder, should getString itself be dealing with escapechar?
-  // sub escapechar {
-  //   my $code = LookupRegister('\escapechar')->valueOf;
-  //   return (($code >= 0) && ($code <= 255) ? chr($code) : ''); }
+  DefMacro!("\\romannumeral Number", sub[gullet, args, state] { roman!(args[0].to_number().value_of()).into() });
 
   // # 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
   // # suggests all characters except spaces are returned in category code Other, i.e. Explode()
@@ -241,7 +237,7 @@ LoadDefinitions!(state, {
     };
     gullet.flush_mouth(state);
     if let Some(line) = line_opt {
-      gullet.unread(&Tokenize!(&line));
+      gullet.unread(&Tokenize!(&line, state));
     }
     Ok(Tokens!())
   });

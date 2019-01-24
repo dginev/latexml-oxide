@@ -1,27 +1,3 @@
-/// Tokenize($string); Tokenizes the string using the standard cattable, returning a
-/// LaTeXML::Core::Tokens
-#[macro_export]
-macro_rules! Tokenize {
-  ($string:expr) => {
-    mouth::tokenize($string, None)
-  };
-  ($string:expr, $state:ident) => {
-    mouth::tokenize($string, Some($state))
-  };
-}
-
-/// TokenizeInternal($string); Tokenizes the string using the internal cattable, returning a
-/// LaTeXML::Core::Tokens
-#[macro_export]
-macro_rules! TokenizeInternal {
-  ($string:expr) => {
-    mouth::tokenize_internal($string, None)
-  };
-  ($string:expr, $state:ident) => {
-    mouth::tokenize_internal($string, Some($state))
-  };
-}
-
 // Macros requiring repetitions need to be handled outside of the main setup macro, as nested
 // macros currently don't support repetition Details at: https://github.com/rust-lang/rust/issues/35853
 #[macro_export]
@@ -86,7 +62,9 @@ macro_rules! primitivesub {
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
     move |$stomach: &mut Stomach, mut $args: Vec<Tokens>, $inner_state: &mut State| {
       BindInnerState!($inner_state, $stomach);
-      $body
+      let macro_out = $body;
+      end_state_frame!();
+      macro_out
     }
   };
 }
@@ -96,6 +74,7 @@ macro_rules! primitiveproc {
     |$stomach:&mut Stomach, mut $args : Vec<Tokens>, $inner_state:&mut State| {
       BindInnerState!($inner_state, $stomach);
       $body
+      end_state_frame!();
       Ok(Vec::new())
     }
   )
@@ -106,7 +85,9 @@ macro_rules! beforesub {
   ($stomach:ident, $state:ident, $body:block) => {
     vec![Rc::new(|$stomach: &mut Stomach, $state: &mut State| {
       BindInnerState!($state, $stomach);
-      $body
+      let macro_out = $body;
+      end_state_frame!();
+      macro_out
     })]
   };
 }
@@ -124,6 +105,7 @@ macro_rules! beforeproc_single {
     Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
       BindInnerState!($state, $stomach);
       $body
+      end_state_frame!();
       Ok(Vec::new())
     })
   };
@@ -136,6 +118,7 @@ macro_rules! tagsub {
       |$document: &mut Document, mut $node: &mut Node, $state: &mut State| -> Result<()> {
         BindInnerState!($state);
         $body
+        end_state_frame!();
         Ok(())
       },
     )]
@@ -155,6 +138,7 @@ macro_rules! replacement {
     |$doc:&mut Document,$args: &Vec<Option<Digested>>,$props: &HashMap<String, Stored>, $state: &mut State| -> Result<()> {
     BindInnerState!($state);
     $body
+    end_state_frame!();
     Ok(())
   })
 }
@@ -166,6 +150,7 @@ macro_rules! construct {
     move |$doc: &mut Document, $whatsit: &Whatsit, $state: &mut State| -> Result<()> {
       BindInnerState!($state);
       $body
+      end_state_frame!();
       Ok(())
     }
   )]
@@ -177,7 +162,9 @@ macro_rules! properties {
     Rc::new(
       move |$stomach: &mut Stomach, mut $args: &Vec<Option<Digested>>, $inner_state: &mut State| -> Result<HashMap<String, Stored>> {
         BindInnerState!($inner_state, $stomach);
-        $body
+        let macro_out = $body;
+        end_state_frame!();
+        macro_out
       },
     )
   };
@@ -188,11 +175,10 @@ macro_rules! properties {
 
 #[macro_export]
 macro_rules! aftersub {
-  ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => {
+  ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
     vec![Rc::new(
       move |$stomach: &mut Stomach, $whatsit: &mut Whatsit, $state: &mut State| -> Result<Vec<Digested>> {
-        BindInnerState!($state, $stomach);
-        $body
+        WithInnerState!($body, $state, $stomach)
       },
     )]
   };
@@ -200,10 +186,11 @@ macro_rules! aftersub {
 
 #[macro_export]
 macro_rules! afterproc {
-  ($stomach:ident, $whatsit:ident, $state:ident, $body:expr) => (
+  ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => (
     vec![Rc::new(move |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $state:&mut State| -> Result<Vec<Digested>> {
       BindInnerState!($state, $stomach);
       $body
+      end_state_frame!();
       Ok(Vec::new())
     }
   )])
@@ -215,7 +202,9 @@ macro_rules! reader {
     Rc::new(
       |$gullet: &mut Gullet, $inner: Vec<Option<Parameters>>, $extra: Vec<ParameterExtra>, $state: &mut State| -> Result<Tokens> {
         BindInnerState!($state);
-        $body
+        let macro_out = $body;
+        end_state_frame!();
+        macro_out
       },
     )
   };
@@ -227,7 +216,9 @@ macro_rules! reader_predigest {
     Some(Rc::new(
       |$stomach: &mut Stomach, $arg: Tokens, $state: &mut State| -> Result<Option<Digested>> {
         BindInnerState!($state, $stomach);
-        $body
+        let macro_out = $body;
+        end_state_frame!();
+        macro_out
       },
     ))
   };
@@ -248,7 +239,9 @@ macro_rules! reversion {
     Some(Rc::new(
       |$gullet: &mut Gullet, mut $arg: Vec<Token>, $inner: Vec<ParameterExtra>, $state: &mut State| -> Result<Tokens> {
         BindInnerState!($state);
-        $body
+        let macro_out = $body;
+        end_state_frame!();
+        macro_out
       },
     ))
   };
@@ -366,4 +359,20 @@ macro_rules! count_unpack {
     count_unpack!($index,$args => $var);
     count_unpack!(1usize+$index, $args => $($tail),*)
   }
+}
+
+/// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token
+#[macro_export]
+macro_rules! roman {
+  ($stuff:expr) => (Tokens(ExplodeText!(roman_aux($stuff as i32))))
+}
+/// Convert the number to upper case roman numerals, returning a list of LaTeXML::Core::Token
+#[macro_export]
+macro_rules! Roman {
+  ($stuff:expr) => (Tokens(ExplodeText!(roman_aux($stuff as i32).to_ascii_uppercase())))
+}
+
+#[macro_export]
+macro_rules! empty {
+  () => ()
 }
