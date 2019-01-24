@@ -3,13 +3,16 @@ use crate::package::*;
 LoadDefinitions!(state, {
   DefEnvironment!("{alltt}", "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
   font => Font!(family => "typewriter", series => "medium", shape => "upright"),
-  before_digest => sub!(|stomach, state| {
+  before_digest => beforeproc!(stomach, inner_state, {
     for c in &['$', '&', '#', '^', '_', '%', '~'] {
-     AssignCatcode!(*c, Catcode::OTHER, None, state);
+     AssignCatcode!(*c, Catcode::OTHER);
     }
-    AssignCatcode!(' ', Catcode::ACTIVE, None, state);
-    LetI!(&T_ACTIVE!(" "), T_CS!("\\space"), None, state);
-    AssignValue!("PRESERVE_NEWLINES", true, None, state);
-    Ok(Vec::new())
+    AssignCatcode!(' ', Catcode::ACTIVE);
+    LetI!(&T_ACTIVE!(" "), T_CS!("\\space"));
+    AssignCatcode!('\r' => Catcode::ACTIVE);    // Variant of \obeylines
+    LetI!(&T_ACTIVE!("\r"), T_SPACE!("\n"));    // More appropriate than \par, I think?
+    AssignValue!("PRESERVE_NEWLINES", true);
+    // \@noligs: This SHOULD inhibit ligature substitution! (eg quotes, dots, etc!!!)
+    // \frenchspacing\@vobeyspaces1
   }));
 });

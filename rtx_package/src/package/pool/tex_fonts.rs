@@ -276,7 +276,7 @@ LoadDefinitions!(state, {
       None => String::new(),
       Some(c) => c.to_string()
     };
-    let invoked = Invocation!(T_CS!("\\char"), vec![token], gullet, p_state)?;
+    let invoked = Invocation!(T_CS!("\\char"), vec![token], gullet)?;
     Tbox::new(
      decoded,
      None,
@@ -302,13 +302,16 @@ LoadDefinitions!(state, {
       Tbox::new(decoded,
         None,
         None,
+        // Note: curious case, since this is 2-levels in, we can't infer the "i_state"
+        // in the Invocation!() call, so we provide it explicitly instead.
+        // if this becomes a common problem, we would have to improve the infrastructure
         Invocation!(T_CS!("\\char"), vec![value.clone()], gullet, i_state)?,
         HashMap::new(),
         i_state).into()
     }, p_state);
 
     p_state.install_definition(Register::new_chardef(newcs, Some(chardef_value.into()), Some(internalcs)), None);
-    AfterAssignment!(p_state);
+    AfterAssignment!();
     Ok(vec![])
   });
 
@@ -365,14 +368,14 @@ LoadDefinitions!(state, {
       glyph_props.insert(s!("glyph"), glyph_str.into());
       // TODO:
       // glyph_props.insert(s!("font"), |state| state.lookup_font().unwrap().specialize(glyph));
-      DefConstructor!(&internalcs.get_cs_name(), "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>", state,
+      DefConstructor!(&internalcs.get_cs_name(), "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
         // TODO
         // sizer => "#1",
         properties => properties!(glyph_props)
         // reversion => (ord($glyph) < 128 ? $glyph : '\mathchar' . $value.valueOf . '\relax'),
       );
       state.install_definition(Register::new_chardef(newcs,Some(value.into()),Some(internalcs)), None);
-      AfterAssignment!(state);
+      AfterAssignment!();
     }
     Ok(vec![])
   });

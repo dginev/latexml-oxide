@@ -17,11 +17,11 @@ LoadDefinitions!(state, {
   DefPrimitiveII!(
     T_MATH!(),
     None,
-    |stomach: &mut Stomach, tokens: Vec<Tokens>, state: &mut State| {
+    primitivesub!(stomach, tokens, state, {
       let mut op = "\\@@BEGININLINEMATH";
       {
         let mut gullet = stomach.get_gullet_mut();
-        let mode = LookupString!("MODE", state);
+        let mode = LookupString!("MODE");
         debug!("T_MATH primitive current mode: {:?}", mode);
         if mode == "display_math" {
           if gullet.if_next(T_MATH!(), state)? {
@@ -48,7 +48,7 @@ LoadDefinitions!(state, {
       } else {
         Ok(Vec::new())
       }
-    },
+    }),
     PrimitiveOptions::default()
   );
   // Let this be the default, conventional $

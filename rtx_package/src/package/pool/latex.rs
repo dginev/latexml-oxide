@@ -42,7 +42,7 @@ LoadDefinitions!(state, {
   // Let('\@currentlabel', '\@empty');
 
   // Let's try just starting with this set (since we've loaded LaTeX)
-  state.assign_value("inPreamble", true, None); // \begin{document} will clear this.
+  AssignValue!("inPreamble", true); // \begin{document} will clear this.
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
@@ -81,7 +81,7 @@ LoadDefinitions!(state, {
     unpack!(args => env);
     let env_string = env.to_string();
     DefMacroI!(T_CS!("\\@currenvir"), None, env);
-    state.assign_value("current_environment", env_string, None);
+    AssignValue!("current_environment", env_string);
     Ok(vec![])
   });
 
@@ -90,17 +90,17 @@ LoadDefinitions!(state, {
     unpack!(args => env);
     let env_string = env.to_string();
     DefMacroI!(T_CS!("\\@currenvir"), None, env);
-    state.assign_value("current_environment", env_string, None);
+    AssignValue!("current_environment", env_string);
     Ok(vec![])
   });
   Let!("\\@currenvline", "\\@empty");
 
   DefMacro!("\\begin{}", sub [gullet, args, state] {
     unpack!(args => env);
-    let name = Expand!(env, gullet, state).to_string();
+    let name = Expand!(env, gullet).to_string();
     let begin_name = s!("\\begin{{{}}}", name);
-    let before = state.lookup_value(&s!("@environment@{}@beforebegin", name));
-    let after  = state.lookup_value(&s!("@environment@{}@atbegin", name));
+    let before = LookupValue!(&s!("@environment@{}@beforebegin", name));
+    let after  = LookupValue!(&s!("@environment@{}@atbegin", name));
 
     if is_defined(&begin_name, state) {
       Ok(Tokens!(T_CS!(begin_name))) // Magic cs!
@@ -116,7 +116,7 @@ LoadDefinitions!(state, {
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
       }
       let mut out_tokens = vec![T_CS!("\\begingroup")];
-      out_tokens.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![Tokenize!(&name, state)], gullet, state)?.unlist());
+      out_tokens.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![Tokenize!(&name)], gullet)?.unlist());
       out_tokens.push(token);
       Ok(Tokens::new(out_tokens))
     }
@@ -169,7 +169,7 @@ LoadDefinitions!(state, {
       }
       Ok(())
     })),
-    before_digest => beforeproc!(_stomach, state, { state.assign_value("inPreamble", false, None); }),
+    before_digest => beforeproc!(_stomach, state, { AssignValue!("inPreamble", false); }),
     // after_digest_begin => vec![|stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
@@ -180,9 +180,9 @@ LoadDefinitions!(state, {
     //     return Vec::new()
     //   }
     // }],
-    before_digest_end => sub!(|stomach, state| {
+    before_digest_end => beforesub!(stomach, state, {
       stomach.get_gullet_mut().flush(state);
-      if let Some(Stored::Tokens(ops)) = RemoveValue!("@at@end@document", state) {
+      if let Some(Stored::Tokens(ops)) = RemoveValue!("@at@end@document") {
         Ok(vec![stomach.digest(ops, state)?]) // TODO: Can we improve to the regular Digest!(ops) syntax?
       } else {
         Ok(Vec::new())
@@ -261,8 +261,8 @@ LoadDefinitions!(state, {
         tokens.append(&mut type_tokens.unlist());
         tokens.append(&mut vec![T_END!(), T_BEGIN!(), T_END!()]);
       } else if !level.is_empty()
-        && (level.parse::<f32>().unwrap() > CounterValue!("secnumdepth", state).value_of())
-        || LookupBool!("no_number_sections", state)
+        && (level.parse::<f32>().unwrap() > CounterValue!("secnumdepth").value_of())
+        || LookupBool!("no_number_sections")
       {
         // No number, but in TOC
         tokens = vec![
@@ -335,7 +335,7 @@ LoadDefinitions!(state, {
        let invoked_title;
        {
          let gullet = stomach.get_gullet_mut();
-         invoked_title = Invocation!(T_CS!("\\lx@format@title@@"), vec![&stype, &title], gullet, state)?;
+         invoked_title = Invocation!(T_CS!("\\lx@format@title@@"), vec![&stype, &title], gullet)?;
        }
        let xtitle    = stomach.digest(invoked_title, state)?;
        props.insert(s!("title"), xtitle.into());

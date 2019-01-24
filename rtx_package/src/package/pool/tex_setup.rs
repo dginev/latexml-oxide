@@ -33,7 +33,7 @@ LoadDefinitions!(state, {
     let tag = document.get_node_qname(&node, state);
     if tag != "ltx:document"
       && tag != "ltx:XMWrap"    // No auto-generated id on wrap???
-      && state.lookup_bool("GENERATE_IDS") {
+      && LookupBool!("GENERATE_IDS") {
         generate_id(document, node, "", state)?;
     }
   }));

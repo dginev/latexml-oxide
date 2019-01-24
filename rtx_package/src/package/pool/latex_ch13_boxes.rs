@@ -38,7 +38,7 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\newlength DefToken", sub[stomach, args, inner_state] {
     unpack_to_token!(args => cs);
-    DefRegisterI!(cs, None, Glue::new(0.0), None, inner_state);
+    DefRegisterI!(cs, None, Glue::new(0.0));
     Ok(vec![])
   });
   DefMacro!("\\setlength{}{}", "\\@check@length{#1}#1#2\\relax");

@@ -33,8 +33,8 @@ LoadDefinitions!(state, {
       // unpack!(args => keys, tag, attr, tokens);
 
       // Digest this as if we're already in the document body!
-      let inpreamble = state.lookup_bool("inPreamble");
-      state.assign_value("inPreamble", false, None);
+      let inpreamble = LookupBool!("inPreamble");
+      AssignValue!("inPreamble", false);
       {
         // Be careful since the contents may also want to add frontmatter
         // (which should be inside or after this one!)
@@ -58,7 +58,7 @@ LoadDefinitions!(state, {
         let f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
         f_entry.push(entry);
       }
-      state.assign_value("inPreamble", inpreamble, None);
+      AssignValue!("inPreamble", inpreamble);
     })
   );
 
@@ -182,7 +182,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\lx@make@tags {}", sub[gullet, args, state] {
     unpack!(args => ttype);
 
-    let formatters = if let Some(Stored::HashStored(formatters)) = state.lookup_value("type_tag_formatter") {
+    let formatters = if let Some(Stored::HashStored(formatters)) = LookupValue!("type_tag_formatter") {
       Some(formatters.clone())
     } else {
       None
@@ -194,7 +194,9 @@ LoadDefinitions!(state, {
       sorted_keys.sort();
       for role in sorted_keys.iter() {
         let formatter = &formatters[*role];
-
+        // Note: Another curious mutability issue here if we leave ",state" out of the Invocation!()
+        // call. We'd need to assign each invocation piece in a separate variable, to avoid Rust getting
+        // confused about mutability conflicts in borrowing. The explicit invocation seems clear enough.
         tags.push(Invocation!(T_CS!("\\lx@tag@intags"),
           vec![
             Tokens!(T_OTHER!(role)),
@@ -248,7 +250,7 @@ LoadDefinitions!(state, {
   // You'll typically customize this by defining \the<counter> (and \p@<counter) as in LaTeX.
   DefMacro!("\\lx@counterfor{}", sub[gullet, args, state] {
     unpack!(args => ctr_type);
-    let ctr_opt = LookupMapping!("counter_for_type", &ctr_type.to_string(), state);
+    let ctr_opt = LookupMapping!("counter_for_type", &ctr_type.to_string());
     if let Some(ctr) = ctr_opt {
       T_OTHER!(ctr).into()
     } else {

@@ -33,10 +33,10 @@ LoadDefinitions!(state, {
       }
     },
     after_digest => aftersub!(stomach, whatsit, state, {
-      let in_preamble = state.lookup_bool("inPreamble");
+      let in_preamble = LookupBool!("inPreamble");
       if in_preamble {
         whatsit.set_property("inPreamble", true);
-      } else if let Some(c) = state.remove_value("next_para_class") {
+      } else if let Some(c) = RemoveValue!("next_para_class") {
           whatsit.set_property("class", c);
           // TODO
         // Digest!(Tokens!(

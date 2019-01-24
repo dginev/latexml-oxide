@@ -281,8 +281,8 @@ LoadDefinitions!(state, {
   // TeX Book, Appendix B, p. 352
 
   DefPrimitive!("\\obeyspaces", sub[stomach, whatsit, state] {
-     state.assign_catcode(' ', Catcode::ACTIVE, None);
-     state.let_i(&T_ACTIVE!(" "), T_CS!("\\space"), None);
+     AssignCatcode!(' ', Catcode::ACTIVE);
+     LetI!(&T_ACTIVE!(" "), T_CS!("\\space"));
      Ok(vec![])
   });
   // Curiously enough, " " (a space) is ALREADY defined to be the same as "\space"
@@ -290,8 +290,8 @@ LoadDefinitions!(state, {
   LetI!(&T_ACTIVE!(" "), T_CS!("\\space"));
 
   DefPrimitive!("\\obeylines", sub[stomach, whatsit, state] {
-      state.assign_catcode('\r', Catcode::ACTIVE, None);
-      state.let_i(&T_ACTIVE!("\r"), T_CS!("\\@break"), None); // More appropriate than \par, I think?
+      AssignCatcode!('\r', Catcode::ACTIVE);
+      LetI!(&T_ACTIVE!("\r"), T_CS!("\\@break")); // More appropriate than \par, I think?
       Ok(vec![])
   });
 

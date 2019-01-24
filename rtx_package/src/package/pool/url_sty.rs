@@ -60,7 +60,7 @@ LoadDefinitions!(state, {
         Tokens!(open),
         Tokens!(close),
         Tokens::new(toks),
-        Tokens::new(url_wrapped)], gullet, state)?.unlist();
+        Tokens::new(url_wrapped)], gullet)?.unlist();
     invocation_tokens.push(T_CS!("\\endgroup"));
     Ok(Tokens::new(invocation_tokens))
   });
@@ -98,7 +98,7 @@ LoadDefinitions!(state, {
     unpack_to_string!(args => cmd);
     let expansion : Vec<Digested> = stomach.digest_next_body(Some(T_CS!("\\endgroup")), url_state)?;
     let gullet = stomach.get_gullet_mut();
-    DefPrimitiveI!(&cmd, primitivesub!(stomach, args, inner_state, { Ok(expansion.clone()) }), url_state);
+    DefPrimitiveI!(&cmd, primitivesub!(stomach, args, inner_state, { Ok(expansion.clone()) }));
     Ok(vec![])
   });
 });

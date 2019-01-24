@@ -12,7 +12,7 @@ pub fn apply_accent(
   state: &mut State,
 ) -> Result<Tbox>
 {
-  let letter_box = stomach.digest(TokenizeInternal!(letter, state), state)?;
+  let letter_box = stomach.digest(TokenizeInternal!(letter), state)?;
   let locator = letter_box.get_locator();
   let font = match letter_box.get_font() {
     Some(f) => Some(Rc::new((*f).clone())),

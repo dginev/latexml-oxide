@@ -1,7 +1,7 @@
 # rtx
 A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
-[![Build Status](https://travis-ci.com/dginev/rtx.svg?token=JKuszfgzJQJUFzH9JaLd&branch=master)](https://travis-ci.com/dginev/rtx#) ![version](https://img.shields.io/badge/version-0.1.12-orange.svg)
+[![Build Status](https://travis-ci.com/dginev/rtx.svg?token=JKuszfgzJQJUFzH9JaLd&branch=master)](https://travis-ci.com/dginev/rtx#) ![version](https://img.shields.io/badge/version-0.1.13-orange.svg)
 
 ### Why?
 

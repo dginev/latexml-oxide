@@ -41,15 +41,21 @@ LoadDefinitions!(state, {
     let mut scope = label.replace("LABEL:","label:");
     let label_key = s!("LABEL@{}", label);
     whatsit.set_property("label", label);
-    if let Some(ctr) = state.lookup_value("current_counter") {
+    let scopes_key = if let Some(ctr) = LookupValue!("current_counter") {
+      s!("scopes_for_counter:{}", ctr)
+    } else {
+      String::new()
+    };
+    if !scopes_key.is_empty() {
       // TODO: is unshifting on lookupValue badly differing from unshiftvalue?
-      state.unshift_value(&s!("scopes_for_counter:{}", ctr), vec![scope.clone()]);
+      UnshiftValue!(&scopes_key, vec![scope.clone()]);
+
+      state.activate_scope(&scope);
+      stomach.begin_mode("text", state)?;
+      let current_label = stomach.digest(Tokens!(T_CS!("\\@currentlabel")), state)?;
+      state.assign_value(&label_key, current_label, Some(Scope::Global));
+      stomach.end_mode("text", state)?;
     }
-    state.activate_scope(&scope);
-    stomach.begin_mode("text", state)?;
-    let current_label = stomach.digest(Tokens!(T_CS!("\\@currentlabel")), state)?;
-    state.assign_value(&label_key, current_label, Some(Scope::Global));
-    stomach.end_mode("text", state)?;
    })
   );
 
@@ -147,7 +153,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\thebibliography",
     "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title><ltx:biblist>",
      before_digest => beforesub!(stomach, state, {
-        state.assign_value("inPreamble", false, None);
+        AssignValue!("inPreamble", false);
         Ok(vec![stomach.digest(Tokens!(T_CS!("\\@lx@inbibliographytrue")), state)?])
     }),
     after_digest => afterproc!(stomach, whatsit, state, {
@@ -168,7 +174,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\endthebibliography", "</ltx:biblist></ltx:bibliography>",
     after_digest => afterproc!(stomach, whatsit, state, {
       let t = T_CS!("\\@appendix");
-      if IsDefined!(&t, state) {
+      if IsDefined!(&t) {
         stomach.digest(t, state)?;
       }
     }),
@@ -216,19 +222,19 @@ LoadDefinitions!(state, {
         Some(key) => key.to_string(),
       });
       if let Some(tag) = tag_opt {
-        let mut properties = RefStepID!("@bibitem", stomach, state)?;
+        let mut properties = RefStepID!("@bibitem", stomach)?;
         properties.insert("key".to_string(), key.into());
         let gullet = stomach.get_gullet_mut();
         let mut tag_tokens = vec![
             T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
         tag_tokens.extend(Revert!(tag));
         tag_tokens.push(T_END!());
-        tag_tokens.extend(Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")], gullet, state)?.unlist());
+        tag_tokens.extend(Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")], gullet)?.unlist());
         tag_tokens.push(T_END!());
         properties.insert("tags".to_string(),
           stomach.digest(tag_tokens, state)?.into());
       } else {
-        let mut properties = RefStepCounter!("@bibitem", false, stomach, state)?;
+        let mut properties = RefStepCounter!("@bibitem", false, stomach)?;
         properties.insert("key".to_string(), key.into());
         whatsit.set_properties(properties);
       }
@@ -244,7 +250,7 @@ LoadDefinitions!(state, {
     // If we're in some sort of list environment, maybe we can recover
     if tag == "enumerate" || tag == "itemize" || tag == "description" {
       info!("\nDamn! We're in a list {}; try to close it!", tag);
-      tokens.extend(Invocation!("\\end", vec![env], gullet, state)?.unlist());
+      tokens.extend(Invocation!("\\end", vec![env], gullet)?.unlist());
       tokens.extend(vec![
         T_CS!("\\let"),
         T_CS!(&format!("\\end{}", tag)),
@@ -256,7 +262,7 @@ LoadDefinitions!(state, {
     }
     // else ? it probably isn't going to work??
     info!("Now, try to open {{thebibliography}}");
-    tokens.extend(Invocation!("\\begin", vec![Tokenize!("thebibliography", state), Tokens!()], gullet, state)?.unlist());
+    tokens.extend(Invocation!("\\begin", vec![Tokenize!("thebibliography"), Tokens!()], gullet)?.unlist());
     let tokens = Tokens::new(tokens);
     info!("PATCHING with {:?}", tokens.to_string());
     Ok(tokens)
@@ -346,14 +352,14 @@ LoadDefinitions!(state, {
       post_wrapped.extend(post_tokens);
       post_tokens = post_wrapped;
     }
-    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![Tokens!(), keys, Tokens!(), Tokens!()], gullet, state)?;
+    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![Tokens!(), keys, Tokens!(), Tokens!()], gullet)?;
     let mut arg_tokens = open.unlist();
     arg_tokens.extend(bibref.unlist());
     arg_tokens.extend(post_tokens);
     arg_tokens.extend(close.unlist());
 
     Ok(Invocation!(T_CS!("\\@@cite"),
-      vec![Tokens::new(Explode!("cite")), Tokens::new(arg_tokens)], gullet, state)?)
+      vec![Tokens::new(Explode!("cite")), Tokens::new(arg_tokens)], gullet)?)
   });
 
   // # NOTE: Eventually needs to be recognized by MakeBibliography
@@ -679,6 +685,6 @@ fn begin_bibliography_clean(stomach: &mut Stomach, whatsit: &mut Whatsit, state:
   whatsit.set_property("bibstyle", LookupValue!("BIBSTYLE"));
   whatsit.set_property("citestyle", LookupValue!("CITE_STYLE"));
   // And prepare for the likely nonsense that appears within bibliographies
-  ResetCounter!("enumiv", state);
+  ResetCounter!("enumiv");
   Ok(())
 }

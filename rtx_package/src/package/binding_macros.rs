@@ -186,9 +186,9 @@ macro_rules! aftersub {
 
 #[macro_export]
 macro_rules! afterproc {
-  ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => (
-    vec![Rc::new(move |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $state:&mut State| -> Result<Vec<Digested>> {
-      BindInnerState!($state, $stomach);
+  ($stomach:ident, $whatsit:ident, $inner_state:ident, $body:block) => (
+    vec![Rc::new(move |$stomach:&mut Stomach, $whatsit:&mut Whatsit, $inner_state:&mut State| -> Result<Vec<Digested>> {
+      BindInnerState!($inner_state, $stomach);
       $body
       end_state_frame!();
       Ok(Vec::new())

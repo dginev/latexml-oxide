@@ -28,7 +28,7 @@ LoadDefinitions!(outer_state, {
   DefConditional!("\\ifhmode", sub[gullet,args,state] {Ok(false)});
   DefConditional!("\\ifinner", sub[gullet,args,state] {Ok(false)});
 
-  DefConditional!("\\ifmmode", sub[gullet,args,state] {Ok(state.lookup_bool("IN_MATH"))});
+  DefConditional!("\\ifmmode", sub[gullet,args,state] {Ok(LookupBool!("IN_MATH"))});
 
   DefConditional!("\\if XToken XToken", sub[gullet, args, state] {
     unpack!(args=>tokens1, tokens2);
@@ -41,7 +41,7 @@ LoadDefinitions!(outer_state, {
     unpack!(args => tokens1, tokens2);
     let token1 : Token = tokens1.into();
     let token2 : Token = tokens2.into();
-    let xequals = XEquals!(&token1, &token2, state);
+    let xequals = XEquals!(&token1, &token2);
     Ok(xequals)
   });
 
@@ -189,8 +189,8 @@ LoadDefinitions!(outer_state, {
   DefMacro!("\\csname CSName", sub[gullet, args, state] {
     unpack!(args => token);
     let token : Token = token.into();
-    if state.lookup_meaning(&token).is_none() {
-      Let!(token, "\\relax", state);
+    if LookupMeaning!(&token).is_none() {
+      Let!(token, "\\relax");
     }
     token.into()
   });
@@ -237,7 +237,7 @@ LoadDefinitions!(outer_state, {
     };
     gullet.flush_mouth(state);
     if let Some(line) = line_opt {
-      gullet.unread(&Tokenize!(&line, state));
+      gullet.unread(&Tokenize!(&line));
     }
     Ok(Tokens!())
   });

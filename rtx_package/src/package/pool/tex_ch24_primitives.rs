@@ -19,7 +19,7 @@ LoadDefinitions!(state, {
     primitivesub!(stomach, _args, state, {
       stomach.bgroup(state);
       let open = Tbox::new(String::new(), None, None, Tokens!(T_BEGIN!()), HashMap::new(), state);
-      let mode = if state.lookup_bool("IN_MATH") {
+      let mode = if LookupBool!("IN_MATH") {
         Some(TexMode::Math)
       } else {
         Some(TexMode::Text)
@@ -36,7 +36,7 @@ LoadDefinitions!(state, {
   DefPrimitiveI!(
     "}",
     primitivesub!(stomach, _args, state, {
-      let f = state.lookup_font();
+      let f = LookupFont!();
       stomach.egroup(state)?;
       let return_box = Tbox::new(String::new(), f, None, Tokens!(T_END!()), HashMap::new(), state);
       return_box.into()

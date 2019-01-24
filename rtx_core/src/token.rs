@@ -261,6 +261,9 @@ macro_rules! T_SUB(() => {
 #[macro_export]
 macro_rules! T_SPACE(() => {
   Token { text: Cow::Borrowed(" "), code: Catcode::SPACE }
+};
+($text:literal) => {
+  Token { text: Cow::Borrowed($text), code: Catcode::SPACE }
 });
 #[macro_export]
 macro_rules! T_CR(() => (
