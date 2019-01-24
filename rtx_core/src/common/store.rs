@@ -486,28 +486,3 @@ impl<'a> From<&'a Stored> for Token {
     }
   }
 }
-
-pub trait IntoOption<T>: Sized {
-  /// Performs the conversion.
-  fn into_option(self) -> T;
-}
-
-impl<'a> IntoOption<Option<String>> for &'a str {
-  fn into_option(self) -> Option<String> { Some(self.to_string()) }
-}
-
-impl<T> IntoOption<Option<T>> for Option<T> {
-  fn into_option(self) -> Option<T> { self }
-}
-
-impl IntoOption<bool> for bool {
-  fn into_option(self) -> bool { self }
-}
-
-impl<T> IntoOption<Option<Vec<T>>> for Vec<T> {
-  fn into_option(self) -> Option<Vec<T>> { Some(self) }
-}
-
-impl<T> IntoOption<Option<VecDeque<T>>> for VecDeque<T> {
-  fn into_option(self) -> Option<VecDeque<T>> { Some(self) }
-}

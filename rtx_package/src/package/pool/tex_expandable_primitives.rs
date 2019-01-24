@@ -67,7 +67,7 @@ LoadDefinitions!(outer_state, {
   // define it here (only approxmiately), since it's already useful.
   Let!("\\protect", "\\relax");
 
-  DefMacro!("\\romannumeral Number", sub[gullet, args, state] { roman!(args[0].to_number().value_of()).into() });
+  DefMacro!("\\romannumeral Number", sub[gullet, args, state] { roman!(args[0].to_number().value_of()) });
 
   // # 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
   // # suggests all characters except spaces are returned in category code Other, i.e. Explode()
@@ -192,7 +192,7 @@ LoadDefinitions!(outer_state, {
     if LookupMeaning!(&token).is_none() {
       Let!(token, "\\relax");
     }
-    token.into()
+    token
   });
 
   DefPrimitive!("\\endcsname", sub[stomach, whatsit, state] {
