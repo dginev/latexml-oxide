@@ -3,7 +3,7 @@ use libxml::tree::Node;
 use log::*;
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{VecDeque, HashMap};
 use std::path::Path;
 use std::rc::Rc;
 use unidecode::unidecode;
@@ -11,7 +11,6 @@ use unidecode::unidecode;
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
 use rtx_core::common::number::Number;
-use rtx_core::common::store::IntoOption;
 use rtx_core::common::xml::XML_NS;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::constructor::{Constructor, ConstructorOptions};
@@ -59,6 +58,52 @@ lazy_static! {
   static ref PARAMSPECT_CHECK_RE: Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
   static ref NON_ID_CHARSET_RE: Regex = Regex::new(r"[^\w_\-.]+").unwrap();
   static ref TILDE_NOISE_RE: Regex = Regex::new(r"\\~\{\}").unwrap();
+}
+
+pub trait IntoOption<T>: Sized {
+  /// Performs the conversion.
+  fn into_option(self) -> T;
+}
+
+impl<'a> IntoOption<Option<String>> for &'a str {
+  fn into_option(self) -> Option<String> { Some(self.to_string()) }
+}
+
+impl<T> IntoOption<Option<T>> for Option<T> {
+  fn into_option(self) -> Option<T> { self }
+}
+
+impl IntoOption<bool> for bool {
+  fn into_option(self) -> bool { self }
+}
+
+impl<T> IntoOption<Option<Vec<T>>> for Vec<T> {
+  fn into_option(self) -> Option<Vec<T>> { Some(self) }
+}
+
+impl<T> IntoOption<Option<VecDeque<T>>> for VecDeque<T> {
+  fn into_option(self) -> Option<VecDeque<T>> { Some(self) }
+}
+
+pub trait IntoTokensResult<T>: Sized {
+  /// Performs the conversion.
+  fn into_tokens_result(self) -> Result<Tokens>;
+}
+
+impl IntoTokensResult<Result<Tokens>> for Token {
+  fn into_tokens_result(self) -> Result<Tokens> { Ok(Tokens!(self)) }
+}
+
+impl IntoTokensResult<Result<Tokens>> for Tokens {
+  fn into_tokens_result(self) -> Result<Tokens> { Ok(self) }
+}
+
+impl IntoTokensResult<Result<Tokens>> for Result<Tokens> {
+  fn into_tokens_result(self) -> Result<Tokens> { self }
+}
+
+impl IntoTokensResult<Result<Tokens>> for () {
+  fn into_tokens_result(self) -> Result<Tokens> { Ok(Tokens!()) }
 }
 
 //**********************************************************************

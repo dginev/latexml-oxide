@@ -80,7 +80,7 @@ macro_rules! WithInnerState {
     BindInnerState!($inner_state, $stomach);
     let macro_out = $body;
     end_state_frame!();
-    return macro_out;
+    macro_out
   }}
 }
 
@@ -201,7 +201,7 @@ macro_rules! DefMacroIWO {
   // with explicit state
   ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {{
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
-      move |$gullet, $args, $inner_state| WithInnerState!($body, $inner_state)
+      move |$gullet, $args, $inner_state| WithInnerState!($body, $inner_state).into_tokens_result()
     )));
     def_macro($cs, $paramlist, expansion_closure, $options, $state_arg);
   }};
@@ -225,7 +225,7 @@ macro_rules! DefMacroWO {
     let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
     let expansion_body : Option<ExpansionBody> =
       Some(ExpansionBody::Closure(Rc::new(
-        move |$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| WithInnerState!($body, $inner_state)
+        move |$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| WithInnerState!($body, $inner_state).into_tokens_result()
       )));
     // TODO: Also pass in options
     def_macro(cs, paramlist, expansion_body, $options, $state_arg);
@@ -1294,6 +1294,8 @@ macro_rules! DefMacro {
     (DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, None));
   ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $($key:ident=>$val:expr),*) =>
     (DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*))));
+  ($proto:expr, sub $body:block) =>
+    (DefMacroWO!($proto, sub[gullet, args, inner_state] $body, None));
   // String form
   ($proto:expr, $expansion:expr) => (DefMacroWO!($proto, $expansion, None));
   ($proto:expr, $expansion:expr, $($key:ident=>$val:expr),*) =>

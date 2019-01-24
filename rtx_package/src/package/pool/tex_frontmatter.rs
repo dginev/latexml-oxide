@@ -252,9 +252,9 @@ LoadDefinitions!(state, {
     unpack!(args => ctr_type);
     let ctr_opt = LookupMapping!("counter_for_type", &ctr_type.to_string());
     if let Some(ctr) = ctr_opt {
-      T_OTHER!(ctr).into()
+      Tokens!(T_OTHER!(ctr))
     } else {
-      ctr_type.into()
+      ctr_type
     }
   });
   DefMacro!("\\lx@the@@{}", "\\expandafter\\lx@@the@@\\expandafter{\\lx@counterfor{#1}}");
