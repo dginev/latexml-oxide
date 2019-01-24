@@ -32,13 +32,13 @@ macro_rules! LoadDefinitions {
 
 #[macro_export]
 macro_rules! BindState {
-  ($state:ident) => {
-    BindState!($state, None)
+  ($state_arg:ident) => {
+    BindState!($state_arg, None)
   };
-  ($outer_state:ident, $outer_stomach: expr) => {
+  ($state_arg:ident, $outer_stomach: expr) => {
     macro_rules! outer_state {
       () => {
-        $outer_state
+        $state_arg
       };
     }
     macro_rules! outer_stomach {
@@ -51,8 +51,8 @@ macro_rules! BindState {
 
 #[macro_export]
 macro_rules! BindInnerState {
-  ($state:ident) => {
-    BindInnerState!($state, None)
+  ($inner_state:ident) => {
+    BindInnerState!($inner_state, None)
   };
   ($inner_state:ident, $inner_stomach: expr) => {
     macro_rules! inner_state {
@@ -65,21 +65,41 @@ macro_rules! BindInnerState {
         $inner_stomach
       };
     }
+    start_state_frame!();
   };
+}
+
+#[macro_export]
+macro_rules! start_state_frame {
+  () => {{
+    #[derive(StartStateFrame)]
+    struct _SFrame;
+  }}
+}
+#[macro_export]
+macro_rules! end_state_frame {
+  () => {{
+    #[derive(EndStateFrame)]
+    struct _EFrame;
+  }}
+}
+
+#[macro_export]
+macro_rules! WithInnerState {
+  ($body: block, $inner_state:ident) => { WithInnerState!($body, $inner_state, None); };
+  ($body: block, $inner_state:ident, $stomach:expr) => {{
+    BindInnerState!($inner_state, $stomach);
+    let macro_out = $body;
+    end_state_frame!();
+    return macro_out;
+  }}
 }
 
 #[macro_export]
 macro_rules! bind_state {
   ($st:ident) => {
-    bind_state!($st, "outer")
-  };
-  ($st:ident, $location:expr) => {
     let $st: &mut State = {
-      // TODO: If we can manage to make this attribute visible from **outside**,
-      // in particular in macros such as beforeproc!() and beforesub!(), we can automate the inner state use
-      // entirely
       #[derive(BoundState)]
-      #[location = $location]
       struct _Bound;
       state!()
     };
@@ -151,9 +171,10 @@ macro_rules! RequirePackage {
   };
 }
 macro_rules! LoadClass {
-  ($class:expr, $options:expr, $after:expr) => {
-    load_class($class, $options, $after, state!())
-  };
+  ($class:expr, $options:expr, $after:expr) => {{
+    bind_state!(st);
+    load_class($class, $options, $after, st)
+  }};
   ($class:expr, $options:expr, $after:expr, $state_arg:ident) => {
     load_class($class, $options, $after, $state_arg)
   };
@@ -191,17 +212,21 @@ macro_rules! DefMacroIWO {
   }};
   // with explicit state
   ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {{
-    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(move |$gullet, $args, $inner_state| $body)));
+    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |$gullet, $args, $inner_state| WithInnerState!($body, $inner_state)
+    )));
     def_macro($cs, $paramlist, expansion_closure, $options, $state_arg);
   }};
   // precompiled
   ($cs:expr, $paramlist:expr, $expansion:expr, $options:expr) => {{
+    let expansion = { $expansion };
     bind_state!(st);
-    def_macro($cs, $paramlist, $expansion, $options, st)
+    def_macro($cs, $paramlist, expansion, $options, st)
   }};
   // with explicit state
   ($cs:expr, $paramlist:expr, $expansion:expr, $options:expr, $state_arg:ident) => {{
-    def_macro($cs, $paramlist, $expansion, $options, $state_arg)
+    let expansion = { $expansion };
+    def_macro($cs, $paramlist, expansion, $options, $state_arg)
   }};
 }
 
@@ -211,7 +236,9 @@ macro_rules! DefMacroWO {
   ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {{
     let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
     let expansion_body : Option<ExpansionBody> =
-      Some(ExpansionBody::Closure(Rc::new(move |$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| $body)));
+      Some(ExpansionBody::Closure(Rc::new(
+        move |$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| WithInnerState!($body, $inner_state)
+      )));
     // TODO: Also pass in options
     def_macro(cs, paramlist, expansion_body, $options, $state_arg);
   }};
@@ -781,27 +808,30 @@ macro_rules! StepCounter {
 }
 #[macro_export]
 macro_rules! RefStepCounter {
-  ($ctr:expr, $noreset:expr, $stomach:ident) => {
-    ref_step_counter($ctr, $noreset, $stomach, state!())
-  };
+  ($ctr:expr, $noreset:expr, $stomach:ident) => {{
+    bind_state!(st);
+    ref_step_counter($ctr, $noreset, $stomach, st)
+  }};
   ($ctr:expr, $noreset:expr, $stomach:ident, $state_arg:ident) => {
     ref_step_counter($ctr, $noreset, $stomach, $state_arg)
   };
 }
 #[macro_export]
 macro_rules! RefStepID {
-  ($ctr:expr, $stomach:ident) => {
-    ref_step_id($ctr, $stomach, state!())
-  };
+  ($ctr:expr, $stomach:ident) => {{
+    bind_state!(st);
+    ref_step_id($ctr, $stomach, st)
+  }};
   ($ctr:expr, $stomach:ident, $state_arg:ident) => {
     ref_step_id($ctr, $stomach, $state_arg)
   };
 }
 #[macro_export]
 macro_rules! ResetCounter {
-  ($ctr:expr) => {
-    reset_counter($ctr, state!())
-  };
+  ($ctr:expr) => {{
+    bind_state!(st);
+    reset_counter($ctr, st)
+  }};
   ($ctr:expr, $state_arg: ident) => {
     reset_counter($ctr, $state_arg)
   };
@@ -810,9 +840,10 @@ macro_rules! ResetCounter {
 /// Return $tokens with all tokens expanded
 #[macro_export]
 macro_rules! Expand {
-  ($tokens:expr, $gullet:ident) => {
-    do_expand($tokens, $gullet, state!())?
-  };
+  ($tokens:expr, $gullet:ident) => {{
+    bind_state!(st);
+    do_expand($tokens, $gullet, st)?
+  }};
   ($tokens:expr, $gullet:ident, $state_arg:ident) => {
     do_expand($tokens, $gullet, $state_arg)?
   };
@@ -1191,7 +1222,7 @@ macro_rules! AfterAssignment {
   };
 }
 
-// Merge the current font with the style specifications
+/// Merge the current font with the style specifications
 #[macro_export]
 macro_rules! MergeFont {
   ($kv:expr) => {{
@@ -1373,10 +1404,10 @@ macro_rules! DefEnvironmentC(
 macro_rules! DefPrimitive{
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block) =>
     (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {
-      BindInnerState!($inner_state, $stomach); $body}, PrimitiveOptions::default()));
+      WithInnerState!($body, $inner_state, $stomach) }, PrimitiveOptions::default())); 
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $($key:ident=>$val:expr),*) =>
     (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {
-      BindInnerState!($inner_state, $stomach); $body}, NewDefault!(PrimitiveOptions, $($key=>$val),*)));
+      WithInnerState!($body, $inner_state, $stomach) }, NewDefault!(PrimitiveOptions, $($key=>$val),*))); 
   ($proto:expr, $replacement:expr, $options:expr) => ({
     // TODO:
     // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
@@ -1478,6 +1509,7 @@ macro_rules! GetKeyVals {
   };
 }
 
+#[macro_export]
 macro_rules! Digest {
   ($tokens:expr) => {{
     bind_state!(st);
@@ -1492,6 +1524,7 @@ macro_rules! Digest {
   }};
 }
 
+#[macro_export]
 macro_rules! DigestText {
   ($tokens:expr) => {
     bind_state!(st);
@@ -1510,6 +1543,40 @@ macro_rules! DigestText {
   };
 }
 
+/// Tokenize($string); Tokenizes the string using the standard cattable, returning a
+/// LaTeXML::Core::Tokens
+#[macro_export]
+macro_rules! Tokenize {
+  ($string:expr) => {{
+    bind_state!(st);
+    mouth::tokenize($string, Some(st))
+  }};
+  ($string:expr, None) => {
+    mouth::tokenize($string, None)
+  };
+  ($string:expr, $state_arg:ident) => {
+    mouth::tokenize($string, Some($state_arg))
+  };
+}
+
+/// TokenizeInternal($string); Tokenizes the string using the internal cattable, returning a
+/// LaTeXML::Core::Tokens
+#[macro_export]
+macro_rules! TokenizeInternal {
+  ($string:expr) => {{
+    bind_state!(st);
+    mouth::tokenize_internal($string, Some(st))
+  }};
+  ($string:expr, None) => {
+    mouth::tokenize_internal($string, None)
+  };
+  ($string:expr, $state_arg:ident) => {
+    mouth::tokenize_internal($string, Some($state_arg))
+  };
+}
+
+
+#[macro_export]
 macro_rules! RawTeX {
   ($text:expr) => {
     bind_state!(st);

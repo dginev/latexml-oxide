@@ -490,7 +490,7 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
   } else if ACTIVE_CHAR_RE.is_match(proto) {
     // Match an active char
     let captures = ACTIVE_CHAR_RE.captures(proto).unwrap();
-    cs = TokenizeInternal!(captures.get(0).map_or("", |m| m.as_str()))
+    cs = TokenizeInternal!(captures.get(0).map_or("", |m| m.as_str()), state)
       .unlist()
       .first()
       .unwrap()
@@ -1418,7 +1418,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
         DefMacro!(&s!("\\the{}@ID",ctr), sub[gullet, args, inner_state] {
           Ok(TokenizeInternal!(
             &s!("\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
-          idwithin,idwithin,prefix,ctr_string)
+          idwithin,idwithin,prefix,ctr_string), None
           ))
         },
         scope => Some(Scope::Global));
@@ -1426,7 +1426,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
         let ctr_string = ctr.to_string();
         DefMacro!(&s!("\\the{}@ID",ctr), sub[gullet,args, inner_state] {
           Ok(TokenizeInternal!(
-              &s!("{}\\csname @{}@ID\\endcsname",prefix,ctr_string)
+              &s!("{}\\csname @{}@ID\\endcsname",prefix,ctr_string), None
           ))},
           scope => Some(Scope::Global));
       }
@@ -1675,6 +1675,33 @@ pub fn convert_latex_args(mut nargs: usize, optional: Option<Tokens>, state: &mu
   } else {
     Ok(Some(Parameters { params }))
   }
+}
+
+static RMLETTERS : [char; 7]= ['i', 'v', 'x', 'l', 'c', 'd', 'm'];
+pub fn roman_aux<T: Into<i32>>(stuff: T) -> String {
+  // let mut n = stuff.into();
+  // let mut div = 1000;
+  // let mut s : String = if n > div {  String::from_utf8(vec![b'm'; n/div]) } else { String::new() };
+  // let mut p = 4;
+  // while n %= div {
+  //   div /= 10;
+  //   let d = n / div;
+  //   if d % 5 == 4 {
+  //     s += RMLETTERS[p];
+  //     d+=1;
+  //   }
+  //   if d > 4 {
+  //     s += RMLETTERS[p + (d / 5)];
+  //     d %= 5; 
+  //   }
+  //   if d!=0 {
+  //     s += String::from_utf8(vec![RMLETTERS[p], d]);
+  //   }
+  //   p -= 2; 
+  // }
+  // s
+  // TODO!
+  unimplemented!()
 }
 
 //======================================================================

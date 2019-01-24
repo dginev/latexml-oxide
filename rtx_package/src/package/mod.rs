@@ -1,3 +1,4 @@
+#![allow(unreachable_code)]
 pub use lazy_static::lazy_static;
 pub use libxml::tree::{Namespace, Node};
 pub use log::{debug, error, info, warn};
