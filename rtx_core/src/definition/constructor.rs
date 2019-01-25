@@ -137,7 +137,7 @@ impl Definition for Constructor {
     let ismath = state.lookup_bool("IN_MATH");
     // info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
     // Parse AND digest the arguments to the Constructor
-    let mut args: Vec<Option<Digested>> = match *self.get_parameters() {
+    let mut args: Vec<Option<Digested>> = match self.get_parameters() {
       None => Vec::new(),
       Some(ref params) => params.read_arguments_and_digest(stomach, self, state)?,
     };
@@ -201,7 +201,12 @@ impl Definition for Constructor {
   fn get_cs_name(&self) -> Cow<str> { Cow::Borrowed(self.cs.get_cs_name()) }
   fn get_alias(&self) -> Option<String> { self.alias.clone() }
   fn get_locator(&self) -> String { unimplemented!() }
-  fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
+  fn get_parameters(&self) -> Option<&Parameters> {
+    match self.paramlist {
+      None => None,
+      Some(ref ps) => Some(ps)
+    }
+  }
   fn get_num_args(&self) -> usize {
     match self.nargs {
       Some(n) => n,

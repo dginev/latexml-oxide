@@ -102,47 +102,54 @@ LoadDefinitions!(outer_state, {
     };
     if let Some(definition) = definition_opt {
        // First, if this definition is a primitive or constructor, check to see if it has an alias, which would allow us to work with a token
-     //         $definition = $definition->getCSorAlias;
-      //         $type       = ref $definition;
-      //         $type =~ s/^LaTeXML:://; }
-      //       if ($type =~ /con(ditional|structor)/i) {
-      //         $definition = $definition->getCSorAlias;
-      //         $type       = ref $definition;
-      //         $type =~ s/^LaTeXML:://; }
+       let definition = match definition {
+         Stored::Primitive(primitive) => Stored::Token(primitive.get_cs_or_alias().into_owned()),
+         Stored::Constructor(constructor) => Stored::Token(constructor.get_cs_or_alias().into_owned()),
+         other => other
+       };
+      // Now that we've tried to obtain an expandable definition, do the TeX dance:
       match definition {
         Stored::Token(t) => {
           let cc = t.get_catcode();
           let text = if cc == Catcode::SPACE {
             " "
-          }else {
+          } else {
             t.get_string()
           };
           meaning = s!("{} {}", cc.meaning(), text);
         },
         Stored::Register(register) => {      
-          //         my $value = $definition->valueOf;
-          //         my $register_type = lc(ref $value);
-          //         my $prefix = '\count';
-          //         if ($register_type && $register_type =~ /glue/) {
-          //             $prefix = '\skip'; }
-          //         elsif ($register_type && $register_type =~ /dimension/) {
-          //             $prefix = '\dimen'; }
-          //         my $literal_value = $value->valueOf if $register_type;
-          //         # Should we be more careful to distinguish between latex and tex counters?
-          //         $meaning = $prefix . $literal_value; }
+          let value = register.value_of(vec![],state);
+          let register_type = register.register_type().unwrap();
+          let prefix = match register_type {
+            RegisterType::Glue | RegisterType::MuGlue =>  "\\skip",
+            RegisterType::Dimension => "\\dimen",
+            _ => "\\count"
+          };
+          let literal_value : String = if register_type != RegisterType::Any {
+            if let Some(v) = value {
+              v.value_of().to_string()
+            } else {
+              String::new()
+            }
+          } else {
+            String::new()
+          };
+          // Should we be more careful to distinguish between latex and tex counters?
+          meaning = s!("{}{}",prefix, literal_value);
         },
         Stored::Expandable(expandable) => {
-          //         my $expansion = $definition->getExpansion;
-          //         my $ltxps     = $definition->getParameters;
-          //         my @params;
-          //         my $argcount = 0;
+          let expansion = expandable.get_expansion();
+          let ltxps     = expandable.get_parameters();
+          // let mut params = Vec::new();
+          let mut argcount = 0;
           //         if (defined $ltxps) {
           //           @params   = $ltxps->getParameters;
           //           $argcount = $ltxps->getNumArgs;
           //         }
-          //         my $sp;
+          // let sp;
           //         my @specparts = map { (($sp = $_->{spec}) =~ s/^(\w+):// ? $sp : $sp) } @params;
-          //         my $arg = 1;
+          // let arg = 1;
           //         foreach (@specparts) {
           //           last if ($arg > $argcount);
           //           $_ .= "#$arg";
@@ -150,12 +157,22 @@ LoadDefinitions!(outer_state, {
           //         my $spec = join("", @specparts);
           //         $spec =~ s/\{\}//g;
           //         $spec =~ s/Token//g;
-          //         my $prefixes = join('',
-          //           ($definition->isProtected ? '\protected' : ()),
-          //           ($definition->isLong      ? '\long'      : ()),
-          //           ($definition->isOuter     ? '\outer'     : ()),
-          //         );
-          //         $meaning = ($prefixes ? $prefixes . ' ' : '') . "macro:" . ToString($spec) . "->" . ToString($expansion); 
+          let mut prefixes = String::new();
+          if expandable.is_protected {
+            prefixes.push_str("\\protected");
+          }
+          if expandable.is_long {
+            prefixes.push_str("\\long");
+          }
+          if expandable.is_outer {
+            prefixes.push_str("\\outer");
+          }
+          if !prefixes.is_empty() {
+            prefixes.push(' ');
+          }
+          let spec_str = String::new(); // spec.to_string();
+          let expandable_str = expandable.to_string();
+          meaning = s!("{}macro:{}->{}",prefixes, spec_str, expandable_str); 
         },
         _ => {}
       }
