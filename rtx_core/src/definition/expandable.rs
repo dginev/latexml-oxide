@@ -88,7 +88,6 @@ impl Definition for Expandable {
     })
   }
   fn get_alias(&self) -> Option<String> { self.alias.clone() }
-
   fn get_locator(&self) -> String { self.locator.clone() }
 
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {

@@ -1,5 +1,7 @@
 use crate::package::*;
-
+lazy_static! {
+  static ref LEAD_W_COLON_RE : Regex = Regex::new(r"^(\w+):").unwrap();
+}
 //=======================
 // -- Main Definitions --
 //=======================
@@ -102,7 +104,7 @@ LoadDefinitions!(outer_state, {
     };
     if let Some(definition) = definition_opt {
        // First, if this definition is a primitive or constructor, check to see if it has an alias, which would allow us to work with a token
-       let definition = match definition {
+       let definition : Stored = match definition {
          Stored::Primitive(primitive) => Stored::Token(primitive.get_cs_or_alias().into_owned()),
          Stored::Constructor(constructor) => Stored::Token(constructor.get_cs_or_alias().into_owned()),
          other => other
@@ -139,24 +141,22 @@ LoadDefinitions!(outer_state, {
           meaning = s!("{}{}",prefix, literal_value);
         },
         Stored::Expandable(expandable) => {
-          let expansion = expandable.get_expansion();
-          let ltxps     = expandable.get_parameters();
-          // let mut params = Vec::new();
+          let mut params = Vec::new();
           let mut argcount = 0;
-          //         if (defined $ltxps) {
-          //           @params   = $ltxps->getParameters;
-          //           $argcount = $ltxps->getNumArgs;
-          //         }
-          // let sp;
-          //         my @specparts = map { (($sp = $_->{spec}) =~ s/^(\w+):// ? $sp : $sp) } @params;
-          // let arg = 1;
-          //         foreach (@specparts) {
-          //           last if ($arg > $argcount);
-          //           $_ .= "#$arg";
-          //           $arg++; }
-          //         my $spec = join("", @specparts);
-          //         $spec =~ s/\{\}//g;
-          //         $spec =~ s/Token//g;
+          
+          if let Some(ltxps) = expandable.get_parameters() {
+            params   = ltxps.get_parameters();
+            argcount = ltxps.get_num_args();
+          }
+          let specparts : Vec<Cow<str>> = params.iter().map(|param| LEAD_W_COLON_RE.replace(&param.spec,"") ).collect();
+          let mut spec = String::new();  
+          for (index, part) in specparts.iter().take(argcount).enumerate() {
+            spec.push_str(part);
+            spec.push('#');
+            spec.push_str(&(index+1).to_string());
+            spec = spec.replace("{}","");
+            spec = spec.replace("Token",""); 
+          }
           let mut prefixes = String::new();
           if expandable.is_protected {
             prefixes.push_str("\\protected");
@@ -170,11 +170,16 @@ LoadDefinitions!(outer_state, {
           if !prefixes.is_empty() {
             prefixes.push(' ');
           }
-          let spec_str = String::new(); // spec.to_string();
-          let expandable_str = expandable.to_string();
-          meaning = s!("{}macro:{}->{}",prefixes, spec_str, expandable_str); 
+          let expansion = match expandable.get_expansion() {
+            None => String::new(),
+            Some(exp) => exp.to_string()
+          };
+          meaning = s!("{}macro:{}->{}",prefixes, spec, expansion); 
         },
-        _ => {}
+        e => { // are there other cases that could occur here? should we handle them?
+          dbg!(e);
+          unimplemented!();
+        }
       }
     }
     Explode!(meaning)

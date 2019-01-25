@@ -24,6 +24,11 @@ pub type ReaderPredigestClosure = Rc<ReaderPredigestFn>;
 pub type ReaderClosure = Rc<ReaderFn>;
 pub type ReversionClosure = Rc<Fn(&mut Gullet, Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
 
+lazy_static! {
+  static ref LAST_WCHAR_RE : Regex = Regex::new(r"\w$").unwrap();
+  static ref FIRST_WCHAR_RE : Regex = Regex::new(r"^\w").unwrap();
+}
+
 #[derive(Clone, Debug)]
 pub enum ParameterExtra {
   Token(Token),
@@ -325,6 +330,10 @@ impl Parameter {
       Ok(Tokens::new(value.revert()))
     }
   }
+
+  pub fn to_string(&self) -> String {
+    self.spec.clone()
+  }
 }
 
 #[derive(Clone, Debug)]
@@ -334,7 +343,7 @@ pub struct Parameters {
 
 impl Parameters {
   pub fn get_num_args(&self) -> usize { self.params.iter().filter(|&p| !p.novalue).count() }
-
+  pub fn get_parameters(&self) -> Vec<&Parameter> { self.params.iter().map(|p| p).collect() }
   pub fn revert_arguments(&self, args: Vec<Tokens>, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     for (parameter, arg) in self.params.iter().zip(args.into_iter()) {
@@ -375,4 +384,15 @@ impl Parameters {
   }
 
   pub fn reparse_argument(&self, _gullet: &mut Gullet, _value: Tokens, _state: &mut State) -> Tokens { Tokens!() }
+  pub fn to_string(&self) -> String {
+    let mut content = String::new();
+    for parameter in &self.params {
+      let param_content = parameter.to_string();
+      if LAST_WCHAR_RE.is_match(&content) && FIRST_WCHAR_RE.is_match(&param_content) {
+        content.push(' '); 
+      }
+      content.push_str(&param_content);
+    }
+    content
+  }
 }

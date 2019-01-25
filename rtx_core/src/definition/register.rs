@@ -258,7 +258,6 @@ impl Definition for RefCell<Register> {
   fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.borrow().cs.clone()) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.borrow().cs.get_cs_name().to_owned()) }
   fn get_alias(&self) -> Option<String> { None }
-
   fn get_locator(&self) -> String { String::from("Locator is TODO") }
 
   // No before/after daemons ???
