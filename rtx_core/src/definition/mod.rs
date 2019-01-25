@@ -100,7 +100,13 @@ pub trait Definition: Object {
   // Overriding methods
   fn stringify(&self) -> String { unimplemented!() }
 
-  fn to_string(&self) -> String { unimplemented!() }
+  fn to_string(&self) -> String {
+    if let Some(params) = self.get_parameters() {
+      s!("{} {}", self.get_cs_name(), params.to_string())
+    } else {
+      self.get_cs_name().to_string()
+    }
+  }
 
   // Return the Tokens that would invoke the given definition with arguments.
   fn invocation(&mut self, args: Vec<Tokens>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
@@ -166,4 +172,13 @@ pub trait Definition: Object {
   fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> { unimplemented!() }
   fn register_type(&self) -> Option<RegisterType> { None }
   fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
+}
+
+impl ExpansionBody {
+  pub fn to_string(&self) -> String {
+    match self {
+      ExpansionBody::Tokens(ref t) => t.to_string(),
+      ExpansionBody::Closure(_) => unimplemented!(), // what is the right way to serialize this, e.g. for the \meaning macro
+    }
+  }
 }
