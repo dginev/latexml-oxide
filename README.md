@@ -38,6 +38,18 @@ There is demonstrable need for LaTeXML in the domain of academic writing, as wel
   doTsW,Wk;Rri@stW aHAHHFndZPpqar.tridgeLinZpe.LtYer.W,:
   ```
 
+### Fake Benchmark
+ These are the times of different TeX-like engines ran over the `xii.tex` example above. That is not representative to all of TeX, but gives a good early feeling:
+ 
+| executable | time      |
+|------------|-----------|
+| tralics    |  0.011s   |
+| rtx        |  0.033s   |
+| tex        | 	0.067s   |
+| pdftex     |  0.125s   |
+| xetex      |  0.310s   |
+| latexml    |  0.562s   |
+
 ### Installation
 
 Requires Rust `stable` v1.32, and newer.
