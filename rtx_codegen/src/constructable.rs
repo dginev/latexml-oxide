@@ -112,11 +112,10 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
   // mechanism. Once the new procedural macro scheme lands, this begs to be
   // refactored.
   quote!(
-  impl _Dummy {
-    fn replacement() -> Option<ReplacementClosure> {
-      #compiled_replacement_closure
+    macro_rules! this_replacement {
+      () => {#compiled_replacement_closure}
     }
-  })
+  )
   .into()
 }
 
@@ -150,11 +149,10 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
   // mechanism. Once the new procedural macro scheme lands, this begs to be
   // refactored.
   quote!(
-  impl _DummyE {
-    fn expansion() -> Option<ExpansionBody> {
-      #compiled_expansion
+    macro_rules! this_expansion {
+      () => {#compiled_expansion}
     }
-  })
+  )
   .into()
 }
 

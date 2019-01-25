@@ -21,7 +21,7 @@ use crate::mouth;
 use crate::parameter::Parameters;
 use crate::state::State;
 use crate::stomach::Stomach;
-use crate::token::Token;
+use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
@@ -73,7 +73,13 @@ pub trait Definition: Object {
   /// forced to clone
   fn get_cs(&self) -> Cow<Token>;
   fn get_cs_name(&self) -> Cow<str>;
-
+  fn get_cs_or_alias(&self) -> Cow<Token> {
+    match self.get_alias() {
+      Some(alias) => Cow::Owned(T_CS!(alias)),
+      None => self.get_cs()
+    }
+  }
+  fn get_alias(&self) -> Option<String>;
   fn is_protected(&self) -> bool { false }
   fn is_register(&self) -> bool { false }
   fn is_prefix(&self) -> bool { false }

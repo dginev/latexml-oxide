@@ -991,11 +991,10 @@ pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacem
       cs: cs.clone(),
       paramlist,
       replacement: Some(compiled_replacement),
-      options: PrimitiveOptions {
-        before_digest: before_digest_env,
-        after_digest: after_digest_env,
-        ..PrimitiveOptions::default()
-      },
+      before_digest: before_digest_env,
+      after_digest: after_digest_env,
+      alias: options.alias,
+      nargs: options.nargs,
     },
     scope,
   );

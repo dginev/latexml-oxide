@@ -199,6 +199,7 @@ impl Definition for Constructor {
 
   fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Borrowed(self.cs.get_cs_name()) }
+  fn get_alias(&self) -> Option<String> { self.alias.clone() }
   fn get_locator(&self) -> String { unimplemented!() }
   fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
   fn get_num_args(&self) -> usize {
