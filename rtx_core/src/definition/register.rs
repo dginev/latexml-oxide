@@ -254,7 +254,7 @@ impl Definition for RefCell<Register> {
   fn is_readonly(&self) -> bool { self.borrow().readonly }
   // not implemented for primitives
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> { unimplemented!() }
-  fn get_parameters(&self) -> &Option<Parameters> { unimplemented!() } // TODO: How do we do this with a RefCell ?!
+  fn get_parameters(&self) -> Option<&Parameters> { unimplemented!() } // TODO: How do we do this with a RefCell ?!
   fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.borrow().cs.clone()) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.borrow().cs.get_cs_name().to_owned()) }
   fn get_alias(&self) -> Option<String> { None }

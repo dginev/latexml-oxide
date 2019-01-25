@@ -94,7 +94,7 @@ pub trait Definition: Object {
       Some(ref params) => params.read_arguments(gullet, self, state),
     }
   }
-  fn get_parameters(&self) -> &Option<Parameters>;
+  fn get_parameters(&self) -> Option<&Parameters>;
 
   // ======================================================================
   // Overriding methods
@@ -107,7 +107,7 @@ pub trait Definition: Object {
     let mut invocation_result: Vec<Token> = Vec::new();
     invocation_result.push(self.get_cs().into_owned());
 
-    match *self.get_parameters() {
+    match self.get_parameters() {
       None => {},
       Some(ref params) => {
         for result_token in params.revert_arguments(args, gullet, state)? {

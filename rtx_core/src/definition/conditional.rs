@@ -116,7 +116,12 @@ impl Definition for Conditional {
     }
   }
 
-  fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
+  fn get_parameters(&self) -> Option<&Parameters> {
+    match self.paramlist {
+      None => None,
+      Some(ref ps) => Some(ps)
+    }
+  }
   fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Borrowed(self.cs.get_cs_name()) }
   fn get_alias(&self) -> Option<String> { None }
