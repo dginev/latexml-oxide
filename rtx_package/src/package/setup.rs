@@ -545,7 +545,6 @@ macro_rules! DefEnvironmentWO (
   use rtx_core::util::text::*;
   let mut proto = $proto_raw.to_string().trim_start().to_string();
   let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace));
-
   let compiled_replacement;
   compile_replacement!(compiled_replacement, $replacement);
 

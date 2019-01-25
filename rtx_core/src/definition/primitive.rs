@@ -56,7 +56,10 @@ pub struct Primitive {
   pub cs: Token,
   pub paramlist: Option<Parameters>,
   pub replacement: Option<PrimitiveClosure>,
-  pub options: PrimitiveOptions,
+  pub before_digest: Vec<BeforeDigestClosure>,
+  pub after_digest: Vec<DigestionClosure>,
+  pub alias: Option<String>,
+  pub nargs: Option<usize>,
 }
 impl Default for Primitive {
   fn default() -> Self {
@@ -64,7 +67,10 @@ impl Default for Primitive {
       cs: T_CS!("Primitive"),
       paramlist: None,
       replacement: None,
-      options: PrimitiveOptions::default(),
+      alias: None,
+      before_digest: Vec::new(),
+      after_digest: Vec::new(),
+      nargs: None,
     }
   }
 }
@@ -74,8 +80,8 @@ impl PartialEq for Primitive {
 
 impl Object for Primitive {}
 impl Definition for Primitive {
-  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }
-  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }
+  fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
+  fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
 
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
@@ -106,10 +112,11 @@ impl Definition for Primitive {
 
   fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Borrowed(self.cs.get_cs_name()) }
+  fn get_alias(&self) -> Option<String> { self.alias.clone() }
   fn get_locator(&self) -> String { unimplemented!() }
   fn get_parameters(&self) -> &Option<Parameters> { &self.paramlist }
   fn get_num_args(&self) -> usize {
-    match self.options.nargs {
+    match self.nargs {
       Some(n) => n,
       None => match self.paramlist {
         Some(ref params) => params.get_num_args(),

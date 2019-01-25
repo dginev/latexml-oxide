@@ -19,9 +19,9 @@ LoadDefinitions!(outer_state, {
     compare(u, rel, v)
   });
   DefConditional!("\\ifodd Number", sub[gullet, args, state] {
-    unimplemented!();
-    false
-    // $_[1]->valueOf % 2
+    unpack_to_token!(args => u);
+    let uint = u.to_number().value_of() as i64;
+    uint % 2 == 1
   });
 
   // NOTE: We don't KNOW if we're in vertical, horizontal or inner mode!!!!!!!
@@ -31,10 +31,13 @@ LoadDefinitions!(outer_state, {
   DefConditional!("\\ifmmode", sub { LookupBool!("IN_MATH") });
 
   DefConditional!("\\if XToken XToken", sub[gullet, args, state] {
-    unpack!(args=>tokens1, tokens2);
-    let token1 : Token = tokens1.into();
-    let token2 : Token = tokens2.into();
-    Ok(token1.get_charcode() == token2.get_charcode())
+    unpack_to_token!(args=>token1, token2);
+    token1.get_charcode() == token2.get_charcode()
+  });
+
+  DefConditional!("\\ifcat XToken XToken", sub[gullet, args, state] {
+    unpack_to_token!(args=>token1, token2);
+    token1.get_catcode() == token2.get_catcode()
   });
 
   DefConditional!("\\ifx Token Token", sub[gullet, args, state] {
@@ -44,6 +47,10 @@ LoadDefinitions!(outer_state, {
     let xequals = XEquals!(&token1, &token2);
     Ok(xequals)
   });
+
+  DefConditional!("\\ifvoid Number", sub[_g, args, state] {unpack_to_token!(args=>arg); classify_box(arg, state).is_empty() });
+  DefConditional!("\\ifhbox Number", sub[_g, args, state] {unpack_to_token!(args=>arg); classify_box(arg, state) == "hbox" });
+  DefConditional!("\\ifvbox Number", sub[_g, args, state] {unpack_to_token!(args=>arg); classify_box(arg, state) == "vbox" });
 
   DefConditional!("\\iftrue",  sub { true });
   DefConditional!("\\iffalse", sub { false });
@@ -86,12 +93,22 @@ LoadDefinitions!(outer_state, {
   DefMacroI!(T_CS!("\\fontname"), None, Tokens::new(Explode!("fontname not implemented")));
 
   DefMacro!("\\meaning Token", sub[gullet, args, state] {
-    unpack!(args => token);
-    let token : Token = token.into();
+    unpack_to_token!(args => token);
     let mut meaning = String::from("undefined");
-
-    if let Some(definition) = state.lookup_meaning(&token) {
-      //     if (my $definition = (Equals($tok, T_ALIGN) ? $tok : LookupMeaning($tok))) {
+    let definition_opt = if token == T_ALIGN!() {
+      Some(Stored::Token(token))
+    } else {
+      state.lookup_meaning(&token)
+    };
+    if let Some(definition) = definition_opt {
+       // First, if this definition is a primitive or constructor, check to see if it has an alias, which would allow us to work with a token
+     //         $definition = $definition->getCSorAlias;
+      //         $type       = ref $definition;
+      //         $type =~ s/^LaTeXML:://; }
+      //       if ($type =~ /con(ditional|structor)/i) {
+      //         $definition = $definition->getCSorAlias;
+      //         $type       = ref $definition;
+      //         $type =~ s/^LaTeXML:://; }
       match definition {
         Stored::Token(t) => {
           let cc = t.get_catcode();
@@ -100,64 +117,50 @@ LoadDefinitions!(outer_state, {
           }else {
             t.get_string()
           };
-          let meaning = s!("{} {}", cc.meaning(), text);
-          Ok(Explode!(meaning).into())
+          meaning = s!("{} {}", cc.meaning(), text);
         },
-        _ => Ok(Explode!("meaning").into())
-        // TODO: Continue implementing ...
-      // Stored::Expandable(meaning)
-      // Stored::Conditional(meaning)
-      // }
-      //       if ($type =~ /primitive/i) {
-      //         $definition = $definition->getCSorAlias;
-      //         $type       = ref $definition;
-      //         $type =~ s/^LaTeXML:://; }
-      //       if ($type =~ /con(ditional|structor)/i) {
-      //         $definition = $definition->getCSorAlias;
-      //         $type       = ref $definition;
-      //         $type =~ s/^LaTeXML:://; }
-
-      //       elsif ($type =~ /register/i) {
-      //         my $value = $definition->valueOf;
-      //         my $register_type = lc(ref $value);
-      //         my $prefix = '\count';
-      //         if ($register_type && $register_type =~ /glue/) {
-      //             $prefix = '\skip'; }
-      //         elsif ($register_type && $register_type =~ /dimension/) {
-      //             $prefix = '\dimen'; }
-      //         my $literal_value = $value->valueOf if $register_type;
-      //         # Should we be more careful to distinguish between latex and tex counters?
-      //         $meaning = $prefix . $literal_value; }
-      //       elsif ($type =~ /expandable/i) {
-      //         my $expansion = $definition->getExpansion;
-      //         my $ltxps     = $definition->getParameters;
-      //         my @params;
-      //         my $argcount = 0;
-      //         if (defined $ltxps) {
-      //           @params   = $ltxps->getParameters;
-      //           $argcount = $ltxps->getNumArgs;
-      //         }
-      //         my $sp;
-      //         my @specparts = map { (($sp = $_->{spec}) =~ s/^(\w+):// ? $sp : $sp) } @params;
-      //         my $arg = 1;
-      //         foreach (@specparts) {
-      //           last if ($arg > $argcount);
-      //           $_ .= "#$arg";
-      //           $arg++; }
-      //         my $spec = join("", @specparts);
-      //         $spec =~ s/\{\}//g;
-      //         $spec =~ s/Token//g;
-      //         my $prefixes = join('',
-      //           ($definition->isProtected ? '\protected' : ()),
-      //           ($definition->isLong      ? '\long'      : ()),
-      //           ($definition->isOuter     ? '\outer'     : ()),
-      //         );
-      //         $meaning = ($prefixes ? $prefixes . ' ' : '') . "macro:" . ToString($spec) . "->" . ToString($expansion); }
-      //       Explode($meaning); }
+        Stored::Register(register) => {      
+          //         my $value = $definition->valueOf;
+          //         my $register_type = lc(ref $value);
+          //         my $prefix = '\count';
+          //         if ($register_type && $register_type =~ /glue/) {
+          //             $prefix = '\skip'; }
+          //         elsif ($register_type && $register_type =~ /dimension/) {
+          //             $prefix = '\dimen'; }
+          //         my $literal_value = $value->valueOf if $register_type;
+          //         # Should we be more careful to distinguish between latex and tex counters?
+          //         $meaning = $prefix . $literal_value; }
+        },
+        Stored::Expandable(expandable) => {
+          //         my $expansion = $definition->getExpansion;
+          //         my $ltxps     = $definition->getParameters;
+          //         my @params;
+          //         my $argcount = 0;
+          //         if (defined $ltxps) {
+          //           @params   = $ltxps->getParameters;
+          //           $argcount = $ltxps->getNumArgs;
+          //         }
+          //         my $sp;
+          //         my @specparts = map { (($sp = $_->{spec}) =~ s/^(\w+):// ? $sp : $sp) } @params;
+          //         my $arg = 1;
+          //         foreach (@specparts) {
+          //           last if ($arg > $argcount);
+          //           $_ .= "#$arg";
+          //           $arg++; }
+          //         my $spec = join("", @specparts);
+          //         $spec =~ s/\{\}//g;
+          //         $spec =~ s/Token//g;
+          //         my $prefixes = join('',
+          //           ($definition->isProtected ? '\protected' : ()),
+          //           ($definition->isLong      ? '\long'      : ()),
+          //           ($definition->isOuter     ? '\outer'     : ()),
+          //         );
+          //         $meaning = ($prefixes ? $prefixes . ' ' : '') . "macro:" . ToString($spec) . "->" . ToString($expansion); 
+        },
+        _ => {}
       }
-    } else {
-      Ok(Explode!("undefined").into())
     }
+    Explode!(meaning)
   });
 
   //======================================================================

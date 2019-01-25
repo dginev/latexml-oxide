@@ -8,7 +8,8 @@ macro_rules! compile_replacement {
     #[derive(CompileReplacement)]
     #[replacement=$replacement]
     struct _Dummy;
-    $var = _Dummy::replacement();
+    let tmp : Option<ReplacementClosure> = this_replacement!();
+    $var = tmp;
   }};
 }
 
@@ -23,7 +24,8 @@ macro_rules! compile_expansion {
     #[derive(CompileExpansion)]
     #[expansion=$expansion]
     struct _DummyE;
-    $var = _DummyE::expansion();
+    let tmp : Option<ExpansionBody> = this_expansion!();
+    $var = tmp;
   }};
 }
 
