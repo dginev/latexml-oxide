@@ -85,7 +85,7 @@ LoadDefinitions!(state, {
   );
   // TODO: Caution -- very strange 30+ min infinite loop in rustc if used as-is
   // mode => Some(s!("display_math")),
-  // before_digest => beforeproc!(stomach, state, {
+  // before_digest => before_digest!(stomach, state, {
   //   prepare_equation_counter(map!(numbered => true, preset => true).into(), state);
   //   before_equation(state);
   // }),
@@ -105,10 +105,10 @@ LoadDefinitions!(state, {
     </ltx:XMath>\
     </ltx:Math>\
     </ltx:equation>",
-  before_digest => beforeproc!(stomach, state, {stomach.begin_mode("display_math", state)?; }),
+  before_digest => before_digest!(stomach, state, {stomach.begin_mode("display_math", state)?; }),
   capture_body  => true,
   properties   => properties!(sub[stomach, args, state] { ref_step_id("equation", stomach, state) })
   );
 
-  DefConstructor!("\\]", "", before_digest => beforeproc!(gullet, state, { gullet.end_mode("display_math", state)?; }));
+  DefConstructor!("\\]", "", before_digest => before_digest!(gullet, state, { gullet.end_mode("display_math", state)?; }));
 });

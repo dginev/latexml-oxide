@@ -32,7 +32,7 @@ LoadDefinitions!(state, {
   // more like a font switch.
   DefConstructor!("\\emph{}", "#1", mode => "text".into_option(),
     bounded        => true, font=>Some(fontmap!(emph => true)), alias => "\\emph".into_option(),
-    before_digest   => beforeproc!(stomach, inner_state, { DefMacroI!(T_CS!("\\f@shape"), None, T_LETTER!("i")); }),
+    before_digest   => before_digest!(stomach, inner_state, { DefMacroI!(T_CS!("\\f@shape"), None, T_LETTER!("i")); }),
     after_construct => construct!(doc,args,inner_state, { doc.add_class(&mut doc.get_element().unwrap(), "ltx_emph")?; })
   );
 

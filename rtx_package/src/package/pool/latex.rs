@@ -167,7 +167,7 @@ LoadDefinitions!(state, {
       }
       Ok(())
     })),
-    before_digest => beforeproc!(_stomach, state, { AssignValue!("inPreamble", false); }),
+    before_digest => before_digest!(_stomach, state, { AssignValue!("inPreamble", false); }),
     // after_digest_begin => vec![|stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
@@ -178,7 +178,7 @@ LoadDefinitions!(state, {
     //     return Vec::new()
     //   }
     // }],
-    before_digest_end => beforesub!(stomach, state, {
+    before_digest_end => before_digest!(stomach, state, {
       stomach.get_gullet_mut().flush(state);
       if let Some(Stored::Tokens(ops)) = RemoveValue!("@at@end@document") {
         Ok(vec![stomach.digest(ops, state)?]) // TODO: Can we improve to the regular Digest!(ops) syntax?
@@ -460,7 +460,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
-      before_digest => beforeproc!(_stomach, state, { only_preamble("\\usepackage", state); }),
+      before_digest => before_digest!(_stomach, state, { only_preamble("\\usepackage", state); }),
       after_digest => sub!(|_stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Result<Vec<Digested>> {
         let options: Option<&Digested> = whatsit.get_arg(1);
         let packages: Option<&Digested> = whatsit.get_arg(2);

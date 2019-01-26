@@ -20,7 +20,7 @@ LoadDefinitions!(outer_state, {
   // and also the usual environment capture.
 
   DefConstructor!(cs["\\begin{verbatim}"], None, "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
-    before_digest => beforesub!(stomach, state, {
+    before_digest => before_digest!(stomach, state, {
       stomach.bgroup(state);
       let mut stuff = Vec::new();
       if let Some(b) = state.lookup_tokens("@environment@verbatim@atbegin") {
@@ -103,7 +103,7 @@ LoadDefinitions!(outer_state, {
   });
 
   DefConstructor!("\\@text@verb{}{}", "<ltx:verbatim font='#font'>#2</ltx:verbatim>",
-    before_digest => beforeproc!(stomach, state, {
+    before_digest => before_digest!(stomach, state, {
       stomach.bgroup(state);
       MergeFont!(family => "typewriter");
     }),
@@ -116,7 +116,7 @@ LoadDefinitions!(outer_state, {
     reversion => Some("\\verb#1#2#1".into())
   );
   DefConstructor!("\\@math@verb{}{}", "#2",
-   before_digest => beforeproc!(stomach, state, {
+   before_digest => before_digest!(stomach, state, {
      stomach.bgroup(state);
      MergeFont!(family => "typewriter");
    }),
