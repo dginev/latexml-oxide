@@ -152,7 +152,7 @@ LoadDefinitions!(state, {
   //     AssignValue('@at@end@document', []) unless LookupValue('@at@end@document');
   //     PushValue('@at@end@document', $_[1]->unlist); });
 
-  DefEnvironmentC!("{document}",
+  DefEnvironmentI!("{document}",
     Some(Rc::new(|document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, Stored>, state: &mut State| {
       let id = prop_str!(props,"id");
       let body = prop_whatsit!(props,"body");
