@@ -81,32 +81,21 @@ macro_rules! primitiveproc {
 }
 
 #[macro_export]
-macro_rules! beforesub {
+macro_rules! before_digest {
   ($stomach:ident, $state:ident, $body:block) => {
-    vec![Rc::new(|$stomach: &mut Stomach, $state: &mut State| {
+    vec![before_digest_single!($stomach, $state, $body)]
+  };
+}
+
+
+#[macro_export]
+macro_rules! before_digest_single {
+  ($stomach:ident, $state:ident, $body:block) => {
+    Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
       BindInnerState!($state, $stomach);
       let macro_out = $body;
       end_state_frame!();
-      macro_out
-    })]
-  };
-}
-#[macro_export]
-macro_rules! beforeproc {
-  // just as beforesub! but with a default return value
-  ($stomach:ident, $state:ident, $body:expr) => {
-    vec![beforeproc_single!($stomach, $state, $body)]
-  };
-}
-#[macro_export]
-macro_rules! beforeproc_single {
-  // just as beforesub! but with a default return value
-  ($stomach:ident, $state:ident, $body:expr) => {
-    Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
-      BindInnerState!($state, $stomach);
-      $body
-      end_state_frame!();
-      Ok(Vec::new())
+      macro_out.into_digested_result()
     })
   };
 }

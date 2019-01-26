@@ -435,7 +435,7 @@ LoadDefinitions!(state, {
       state.end_semiverbatim()?;
       Ok(arg)
     },
-    before_digest => beforeproc!(stomach, state, {
+    before_digest => before_digest!(stomach, state, {
       stomach.bgroup(state);
       MergeFont!(family => "typewriter", state);
     }),

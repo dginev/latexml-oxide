@@ -3,7 +3,7 @@ use crate::package::*;
 LoadDefinitions!(state, {
   DefEnvironment!("{alltt}", "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
   font => Font!(family => "typewriter", series => "medium", shape => "upright"),
-  before_digest => beforeproc!(stomach, inner_state, {
+  before_digest => before_digest!(stomach, inner_state, {
     for c in &['$', '&', '#', '^', '_', '%', '~'] {
      AssignCatcode!(*c, Catcode::OTHER);
     }

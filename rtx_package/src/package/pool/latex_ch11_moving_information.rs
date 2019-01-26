@@ -152,7 +152,7 @@ LoadDefinitions!(state, {
   // Should be an environment, but people seem to want to misuse it.
   DefConstructor!("\\thebibliography",
     "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title><ltx:biblist>",
-     before_digest => beforesub!(stomach, state, {
+     before_digest => before_digest!(stomach, state, {
         AssignValue!("inPreamble", false);
         Ok(vec![stomach.digest(Tokens!(T_CS!("\\@lx@inbibliographytrue")), state)?])
     }),

@@ -85,3 +85,10 @@ pub fn end_state_frame(_input: TokenStream) -> TokenStream {
   unsafe { CONTEXT_DEPTH -=1 };
   TokenStream::new()
 }
+
+
+#[proc_macro]
+pub fn def_environment(input: TokenStream) -> TokenStream {
+  dbg!(input);
+  TokenStream::new()
+}

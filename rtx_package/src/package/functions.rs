@@ -942,29 +942,29 @@ pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacem
 
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
-    let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(cs_name_cloned, state) });
+    let require_math_closure = before_digest_single!(stomach, state, { requireMath!(cs_name_cloned, state) });
     before_digest_env.push(require_math_closure);
   }
 
   if options.forbid_math {
     let cs_name_cloned = cs_name.clone();
-    let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(cs_name_cloned, state) });
+    let forbid_math_closure = before_digest_single!(stomach, state, { forbidMath!(cs_name_cloned, state) });
     before_digest_env.push(forbid_math_closure);
   }
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let begin_mode_closure = beforeproc_single!(stomach, state, {
+    let begin_mode_closure = before_digest_single!(stomach, state, {
       stomach.begin_mode(&mode_clone, state)?;
     });
     before_digest_env.push(begin_mode_closure);
   } else if options.bounded {
-    let bgroup_closure = beforeproc_single!(stomach, state, {
+    let bgroup_closure = before_digest_single!(stomach, state, {
       stomach.bgroup(state);
     });
     before_digest_env.push(bgroup_closure);
   }
   if let Some(chosen_font) = options.font {
-    let merge_font_closure = beforeproc_single!(stomach, state, {
+    let merge_font_closure = before_digest_single!(stomach, state, {
       MergeFont!(&chosen_font, state);
     });
     before_digest_env.push(merge_font_closure);
@@ -1065,28 +1065,28 @@ pub fn def_constructor(
 
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
-    let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(cs_name_cloned, state) });
+    let require_math_closure = before_digest_single!(stomach, state, { requireMath!(cs_name_cloned, state) });
     before_digest_closures.push(require_math_closure);
   }
   if options.forbid_math {
     let cs_name_cloned = cs_name.clone();
-    let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(cs_name_cloned, state) });
+    let forbid_math_closure = before_digest_single!(stomach, state, { forbidMath!(cs_name_cloned, state) });
     before_digest_closures.push(forbid_math_closure);
   }
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let begin_mode_closure = beforeproc_single!(stomach, state, {
+    let begin_mode_closure = before_digest_single!(stomach, state, {
       stomach.begin_mode(&mode_clone, state)?;
     });
     before_digest_closures.push(begin_mode_closure);
   } else if options.bounded {
-    let bgroup_closure = beforeproc_single!(stomach, state, {
+    let bgroup_closure = before_digest_single!(stomach, state, {
       stomach.bgroup(state);
     });
     before_digest_closures.push(bgroup_closure);
   }
   if let Some(chosen_font) = options.font {
-    let merge_font_closure = beforeproc_single!(stomach, state, {
+    let merge_font_closure = before_digest_single!(stomach, state, {
       MergeFont!(&chosen_font, state);
     });
     before_digest_closures.push(merge_font_closure);
@@ -1156,7 +1156,7 @@ pub fn def_environment(
       before_digest_env.push(mode_closure);
     },
     None => {
-      let bgroup_closure = beforeproc_single!(stomach, state, {
+      let bgroup_closure = before_digest_single!(stomach, state, {
         stomach.bgroup(state);
       });
       before_digest_env.push(bgroup_closure);
@@ -1164,17 +1164,17 @@ pub fn def_environment(
   };
   if options.require_math {
     let require_name = begin_name.clone();
-    let require_math_closure = beforeproc_single!(stomach, state, { requireMath!(require_name, state) });
+    let require_math_closure = before_digest_single!(stomach, state, { requireMath!(require_name, state) });
     before_digest_env.push(require_math_closure);
   }
   if options.forbid_math {
     let forbid_name = begin_name.clone();
-    let forbid_math_closure = beforeproc_single!(stomach, state, { forbidMath!(forbid_name, state) });
+    let forbid_math_closure = before_digest_single!(stomach, state, { forbidMath!(forbid_name, state) });
     before_digest_env.push(forbid_math_closure);
   }
 
   let env_name = name.clone();
-  let current_environment_closure = beforeproc_single!(stomach, state, {
+  let current_environment_closure = before_digest_single!(stomach, state, {
     AssignValue!("current_environment", env_name.clone(), None, state);
     let body = T_LETTER!(env_name.clone());
     DefMacroI!(T_CS!("\\@currenvir"), None, body.clone(), state);
@@ -1182,7 +1182,7 @@ pub fn def_environment(
   before_digest_env.push(current_environment_closure);
 
   if let Some(chosen_font) = options.font {
-    let merge_font_closure = beforeproc_single!(stomach, state, {
+    let merge_font_closure = before_digest_single!(stomach, state, {
       MergeFont!(&chosen_font.clone(), state);
     });
     before_digest_env.push(merge_font_closure);

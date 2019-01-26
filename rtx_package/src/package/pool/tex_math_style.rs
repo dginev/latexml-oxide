@@ -13,7 +13,7 @@ LoadDefinitions!(state, {
   // This could still be made to work, but merge font would
   // need to look at any open <ltx:emph>, and then somehow close it!
   DefPrimitiveI!("\\em", noprimitive!(),
-  before_digest => beforeproc!(_stomach, state, {
+  before_digest => before_digest!(_stomach, state, {
     let font = LookupFont!().unwrap();
     let shape = font.get_shape().unwrap_or(Cow::Borrowed(""));
     let shapevariant = if shape == "italic" { "normal" } else { "italic" };

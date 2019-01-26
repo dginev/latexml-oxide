@@ -108,7 +108,7 @@ LoadDefinitions!(state, {
     mode => "text".into_option(),
     bounded => true,
     // sizer => "#1", // TODO
-    before_digest => beforeproc!(stomach, state, { reenter_text_mode(false, state); })
+    before_digest => before_digest!(stomach, state, { reenter_text_mode(false, state); })
   );
 
   // our %makebox_alignment = (l => 'left', r => 'right', s => 'justified');

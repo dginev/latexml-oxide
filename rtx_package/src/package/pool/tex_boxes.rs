@@ -151,7 +151,7 @@ LoadDefinitions!(state, {
     // sizer => "#2",
     //   # Workaround for $ in alignment; an explicit \hbox gives us a normal $.
     //   # And also things like \centerline that will end up bumping up to block level!
-    before_digest => beforeproc!(stomach, state, {reenter_text_mode(false, state)}),
+    before_digest => before_digest!(stomach, state, {reenter_text_mode(false, state)}),
     after_digest => afterproc!(stomach, whatsit, state, {
       let mut width : Option<RegisterValue>= None;
       {
