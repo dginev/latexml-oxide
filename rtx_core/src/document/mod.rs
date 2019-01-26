@@ -330,28 +330,20 @@ impl Document {
       self.absorb(digested, state)?;
     }
 
-    let mut needs_close = self.node == node;
-    {
-      // In obscure situations, `node` may have already gotten closed?
-      // close it if it is still open.
-      let self_node = self.node.get_parent().unwrap();
-      let mut c = Some(self_node);
-
-      while c.is_some() && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode) && c.as_ref().unwrap() != &node {
-        let parent = c.unwrap().get_parent().unwrap();
-        if parent.get_type() != Some(NodeType::DocumentNode) {
-          c = Some(parent);
-        } else {
-          c = None;
-        }
-      }
-      if let Some(ref c_node) = c {
-        if c_node == &node {
-          needs_close = true;
-        }
-      }
+    let self_node = self.node.get_parent().unwrap();
+    let mut c = Some(self_node);
+    while c.is_some() && c.as_ref() != Some(&node) && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode) {
+      let parent = c.unwrap().get_parent().unwrap();
+      c = match parent.get_type() {
+        Some(NodeType::DocumentNode) => None,
+        None => None,
+        Some(_) => Some(parent),
+      };
     }
-    if needs_close {
+
+    // In obscure situations, `node` may have already gotten closed?
+    // close it if it is still open.    
+    if (self.node == node) || (c.as_ref() == Some(&node)) {
       self.close_element(qname, state)?;
     }
     Ok(node)
