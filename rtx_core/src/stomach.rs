@@ -143,17 +143,14 @@ impl<'t> Stomach {
     //  Digest(TokenizeInternal($text));
     let savedcc = state.lookup_catcode('@').unwrap_or(Catcode::OTHER);
     state.assign_catcode('@', Catcode::LETTER, None);
-    let raw_tex_mouth;
-    {
-      raw_tex_mouth = Mouth::new(
-        text,
-        Some(MouthOptions {
-          fordefinitions: true,
-          ..MouthOptions::default()
-        }),
-        state,
-      )?;
-    }
+    let raw_tex_mouth = Mouth::new(
+      text,
+      Some(MouthOptions {
+        fordefinitions: true,
+        ..MouthOptions::default()
+      }),
+      state,
+    )?;
     self.reading_from_mouth(
       raw_tex_mouth,
       state,

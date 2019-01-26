@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use log::{debug, error, warn};
+use log::*;
 use regex::Regex;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -479,65 +479,57 @@ impl State {
       // We are going to change the model, where we first count the total number of definitions to
       // pop, and then pop them, in order to never mutably morrow more than once at a time.
       let mut undo_count = 0;
-      {
-        // Remove bindings made in all frames down-to & including the next lower locked frame
-        let mut frame_table: &mut AssignmentCount = &mut HashMap::new();
 
-        for frame in &mut self.undo {
-          let is_locked = frame.locked;
-          frame_table = frame.table_mut(table_name);
-          if let Some(n) = frame_table.remove(key) {
-            undo_count += n;
-          }
+      // Remove bindings made in all frames down-to & including the next lower locked frame
+      let mut frame_table: &mut AssignmentCount = &mut HashMap::new();
 
-          if is_locked {
-            break;
-          }
+      for frame in &mut self.undo {
+        let is_locked = frame.locked;
+        frame_table = frame.table_mut(table_name);
+        if let Some(n) = frame_table.remove(key) {
+          undo_count += n;
         }
-        // whatever is left -- if anything -- should be bindings below the locked frame.
-        frame_table.insert(key.to_string(), 1); // Note that there's only one value in the stack, now
-      }
-      {
-        // Undo the bindings, if `key` was bound in this frame
-        let state_table = self.table_mut(table_name);
-        if let Some(defs) = state_table.get_mut(key) {
-          for _ in 1..=undo_count {
-            defs.pop_front();
-          }
+        if is_locked {
+          break;
         }
-
-        let table_entry = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
-        table_entry.push_front(value);
       }
+      // whatever is left -- if anything -- should be bindings below the locked frame.
+      frame_table.insert(key.to_string(), 1); // Note that there's only one value in the stack, now
+
+      // Undo the bindings, if `key` was bound in this frame
+      let state_table = self.table_mut(table_name);
+      if let Some(defs) = state_table.get_mut(key) {
+        for _ in 1..=undo_count {
+          defs.pop_front();
+        }
+      }
+
+      let table_entry = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
+      table_entry.push_front(value);
     } else if scope == Scope::Local {
       // Again, split the logic as 1) bookkeeping in undo, then 2) operations in state tables
       let mut is_replace = false;
-      {
-        // 1. Undo mutable logic
-        if let Some(current_frame) = self.undo.front_mut() {
-          let current_frame_table = current_frame.table_mut(table_name);
-
-          // If the value was previously assigned in this frame
-          if current_frame_table.get(key).is_some() {
-            is_replace = true;
-          } else {
-            // Otherwise, push new value & set 1 to be undone
-            current_frame_table.insert(key.to_string(), 1);
-            //  And push new binding.
-            is_replace = false;
-          }
+      // 1. Undo mutable logic
+      if let Some(current_frame) = self.undo.front_mut() {
+        let current_frame_table = current_frame.table_mut(table_name);
+        // If the value was previously assigned in this frame
+        if current_frame_table.get(key).is_some() {
+          is_replace = true;
+        } else {
+          // Otherwise, push new value & set 1 to be undone
+          current_frame_table.insert(key.to_string(), 1);
+          //  And push new binding.
+          is_replace = false;
         }
       }
-      {
-        // 2. State table mutable logic
-        let state_table = self.table_mut(table_name);
-        let defs = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
-        if is_replace {
-          // Replace the value
-          defs.pop_front();
-        }
-        defs.push_front(value)
+      // 2. State table mutable logic
+      let state_table = self.table_mut(table_name);
+      let defs = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
+      if is_replace {
+        // Replace the value
+        defs.pop_front();
       }
+      defs.push_front(value)
     }
     // TODO: stash cases
   }
@@ -1156,30 +1148,38 @@ impl State {
 
   // #======================================================================
 
-  pub fn activate_scope(&mut self, scope: &str) {}
-  //   if (!$$self{stash_active}{$scope}[0]) {
-  //     assign_internal($self, 'stash_active', $scope, 1, 'local');
-  //     if (defined(my $defns = $$self{stash}{$scope}[0])) {
-  //       # Now make local assignments for all those in the stash.
-  //       my $frame = $$self{undo}[0];
-  //       foreach my $entry (@$defns) {
-  //         # Here we ALWAYS push the stashed values into the table
-  //         # since they may be popped off by deactivateScope
-  //         my ($table, $key, $value) = @$entry;
-  //         $$frame{$table}{$key}++;    # Note that this many values must be undone
-  //         unshift(@{ $$self{$table}{$key} }, $value); } } }    # And push new binding.
-  //   return; }
+  pub fn activate_scope(&mut self, scope: &str) {
+    info!("TODO: implement State::activate_scope");
+    if let Some(scope_entry) = self.stash_active.get(scope) {
+      if let Some(count) = scope_entry.front() {
+        self.assign_internal(TableName::StashActive, scope, Stored::Bool(true), Some(Scope::Local));
+        if let Some(stash_entry) = self.stash.get(scope) {
+          // if let Some(defns) = stash_entry.front() {
+            // Now make local assignments for all those in the stash.
+            // let frame = self.undo.front();
+            
+            // for entry in defns.iter() {
+              // Here we ALWAYS push the stashed values into the table
+              // since they may be popped off by deactivateScope
+              //         my ($table, $key, $value) = @$entry;
+              //         $$frame{$table}{$key}++;    # Note that this many values must be undone
+              //         unshift(@{ $$self{$table}{$key} }, $value); } } }    # And push new binding.
+            // }
+          // }
+        }
+      }
+    }
+  }
 
   // # Probably, in most cases, the assignments made by activateScope
   // # will be undone by egroup or popping frames.
   // # But they can also be undone explicitly
 
-  pub fn deactivate_scope(&mut self, scope: &str) {}
-  //   my ($self, $scope) = @_;
-  //   if ($$self{stash_active}{$scope}[0]) {
+  pub fn deactivate_scope(&self, scope: &str) {  info!("TODO: implement State::deactivate_scope"); }
+    // if self{stash_active}{$scope}[0]) {
   //     assign_internal($self, 'stash_active', $scope, 0, 'global');
   //     if (defined(my $defns = $$self{stash}{$scope}[0])) {
-  //       my $frame = $$self{undo}[0];
+  //       let frame = $$self{undo}[0];
   //       foreach my $entry (@$defns) {
   //         my ($table, $key, $value) = @$entry;
   //         if ($$self{$table}{$key}[0] eq $value) {
@@ -1192,8 +1192,7 @@ impl State {
   //             "Unassigning wrong value for $key from table $table in deactivateScope",
   //             "value is $value but stack is " . join(', ', @{ $$self{$table}{$key} })); } } } }
   //   return; }
-  pub fn deactivate_counter_scope(&mut self, scope: &str) {} // ???
-
+  
   // sub getKnownScopes {
   //   my ($self) = @_;
   //   my @scopes = sort keys %{ $$self{stash} };
@@ -1403,39 +1402,19 @@ impl State {
   }
   /// `XEquals` check for two token arguments
   pub fn x_equals(&mut self, token1: &Token, token2: &Token) -> bool {
-    let def1_opt: Option<Stored>;
-    {
-      // mutability guard
-      def1_opt = match self.lookup_meaning(token1) {
-        // token, definition object or undef
-        None => None,
-        Some(ref obj) => Some((*obj).clone()), /* TODO: Can this code pattern be reworked
-                                                * without a clone? What is the idiomatic Rust
-                                                * for this? */
-      };
-    }
+    let def1_opt = self.lookup_meaning(token1);
     let def2_opt = self.lookup_meaning(token2); // ditto
-    if def1_opt.is_none() && def2_opt.is_none() {
-      // true if both undefined
-      true
-    } else if let Some(def1) = def1_opt {
-      if let Some(def2) = def2_opt {
-        def1 == def2 // If both have defns, must be same defn!
-      } else {
-        // False, if only one has 'meaning'
-        false
-      }
-    } else {
-      false // False, if only one has 'meaning'
+    match (def1_opt, def2_opt) {
+      (None, None) => true, // true if both undefined
+      (Some(def1), Some(def2)) => def1 == def2, // If both have defns, must be same defn!
+      _ => false // False, if only one has 'meaning'
     }
   }
 
   pub fn load_font_map(&self, encoding: &str) -> Option<&Fontmap> {
     let fontmap_key = s!("{}_fontmap", encoding);
-    {
-      if let Some(map) = self.lookup_value(&fontmap_key) {
-        return map.into();
-      }
+    if let Some(map) = self.lookup_value(&fontmap_key) {
+      return map.into();
     }
 
     // TODO: Once we try to load font maps via require package we will have some serious mutability
