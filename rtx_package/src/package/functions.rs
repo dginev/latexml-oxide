@@ -1621,25 +1621,17 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
 
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   //  print STDERR "Unusing scopes for $ctr\n";
-  let scopes = if let Some(Stored::VecString(stored_scopes)) = state.lookup_value(&s!("scopes_for_counter:{}", ctr)) {
-    stored_scopes.clone()
-  } else {
-    Vec::new()
-  };
-  for scope in &scopes {
-    state.deactivate_scope(scope);
+  if let Some(Stored::VecString(stored_scopes)) = state.lookup_value(&s!("scopes_for_counter:{}", ctr)) {
+    for scope in stored_scopes.clone() {
+      state.deactivate_scope(&scope);
+    }
   }
 
-  let counters = if let Some(Stored::VecString(stored_counters)) = state.lookup_value(&s!("nested_counters_{}", ctr)) {
-    stored_counters.clone()
-  } else {
-    Vec::new()
-  };
-  for inner_ctr in &counters {
-    state.deactivate_counter_scope(inner_ctr);
+  if let Some(Stored::VecString(stored_counters)) = state.lookup_value(&s!("nested_counters_{}", ctr)) {
+    for inner_ctr in stored_counters.clone() {
+      deactivate_counter_scope(&inner_ctr, state);
+    }
   }
-
-  return;
 }
 
 // For UN-numbered units
