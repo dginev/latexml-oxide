@@ -553,10 +553,10 @@ macro_rules! DefEnvironmentWO (
 }));
 
 #[macro_export]
-macro_rules! DefEnvironmentCWO (
+macro_rules! DefEnvironmentIWO (
   ($proto_raw:expr, $compiled_replacement:expr, $options:expr) => {{
     bind_state!(st);
-    DefEnvironmentCWO!($proto_raw, $compiled_replacement, $options, st)
+    DefEnvironmentIWO!($proto_raw, $compiled_replacement, $options, st)
   }};
   ($proto_raw:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
   use rtx_core::util::text::*;
@@ -1413,22 +1413,22 @@ macro_rules! DefEnvironment(
   ($proto_raw:expr, $replacement:expr, $($key:ident => $val:expr),*) =>
     (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*)));
   // explicit state
-  ($proto_raw:expr, $replacement:expr, $state_arg:ident) => (DefEnvironmentWO!($proto_raw, $replacement, ConstructorOptions::default(), $state_arg));
-  ($proto_raw:expr, $replacement:expr, $($key:ident => $val:expr),*, $state_arg:ident) =>
-    (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*, $state_arg)));
+  // ($proto_raw:expr, $replacement:expr, $state_arg:ident) => (DefEnvironmentWO!($proto_raw, $replacement, ConstructorOptions::default(), $state_arg));
+  // ($proto_raw:expr, $replacement:expr, $($key:ident => $val:expr),*, $state_arg:ident) =>
+  //   (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*, $state_arg)));
 );
 
 #[macro_export]
-macro_rules! DefEnvironmentC(
+macro_rules! DefEnvironmentI(
   // implicit state
-  ($proto_raw:expr, $compiled_replacement:expr) => (DefEnvironmentCWO!($proto_raw, $paramlist, $compiled_replacement, ConstructorOptions::default()));
+  ($proto_raw:expr, $compiled_replacement:expr) => (DefEnvironmentIWO!($proto_raw, $paramlist, $compiled_replacement, ConstructorOptions::default()));
   ($proto_raw:expr, $compiled_replacement:expr, $($key:ident=>$val:expr),*) =>
-    (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions, $($key => $val),*)));
+    (DefEnvironmentIWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions, $($key => $val),*)));
   // explicit state
-  ($proto_raw:expr, $compiled_replacement:expr, $state_arg:ident) =>
-    (DefEnvironmentCWO!($proto_raw, $paramlist, $compiled_replacement, ConstructorOptions::default(), $state_arg));
-  ($proto_raw:expr, $compiled_replacement:expr, $($key:ident=>$val:expr),*, $state_arg:ident) =>
-    (DefEnvironmentCWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions, $($key => $val),*), $state_arg));
+  // ($proto_raw:expr, $compiled_replacement:expr, $state_arg:ident) =>
+  //   (DefEnvironmentIWO!($proto_raw, $paramlist, $compiled_replacement, ConstructorOptions::default(), $state_arg));
+  // ($proto_raw:expr, $compiled_replacement:expr, $($key:ident=>$val:expr),*, $state_arg:ident) =>
+  //   (DefEnvironmentIWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions, $($key => $val),*), $state_arg));
 );
 
 #[macro_export]
