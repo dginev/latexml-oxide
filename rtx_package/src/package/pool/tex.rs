@@ -21,7 +21,7 @@ LoadDefinitions!(state, {
   // Parsing of basic types (pp.268--271) is (mostly) handled in Gullet.pm
   //**********************************************************************
 
-  // lines 960-1102
+  // lines 950-1102
   // Dimen registers; TeXBook p. 274
   InnerPool!(tex_registers);
   

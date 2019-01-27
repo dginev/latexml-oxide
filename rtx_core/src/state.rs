@@ -551,8 +551,9 @@ impl State {
     }
   }
 
-  pub fn assign_value<'av, T: Into<Stored>>(&'av mut self, key: &'av str, value: T, scope: Option<Scope>) {
+  pub fn assign_value<'av, T: Into<Stored>, S: Into<Option<Scope>>>(&'av mut self, key: &'av str, value: T, scope: S) {
     let value = value.into();
+    let scope = scope.into();
     self.assign_internal(TableName::Value, key, value, scope);
   }
 
