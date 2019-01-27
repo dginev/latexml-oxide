@@ -67,43 +67,43 @@ LoadDefinitions!(state, {
     let count = s!("\\count{}", num.to_number().value_of());
     let setter_count = count.clone();
     DefRegisterI!(cs, None, Number::new(0.0),
-      getter => Some(Rc::new(move |args, state| { Some(state.lookup_number(&count).unwrap_or_default().into()) })),
-      setter => Some(Rc::new(move |value, args, state| { state.assign_value(&setter_count, value, None); })));
+      getter => getter!(args, state, { state.lookup_number(&count).unwrap_or_default() }),
+      setter => setter!(value, args, state, { state.assign_value(&setter_count, value, None); }));
     AfterAssignment!();
     Ok(vec![])
   });
 
   DefRegister!("\\catcode Number", Number::new(0.0),
-    getter => Some(Rc::new(|args, state| {
+    getter => getter!(args, state, {
       let num : f32 = args[0].to_number().value_of();
       let refchar = (num as u8) as char;
       let code : Catcode = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       let code : u8 = code.into();
-      Number::new(code).into()
-    })),
-    setter => Some(Rc::new(|value, args, state| {
+      Number::new(code)
+    }),
+    setter => setter!(value, args, state, {
       let c_char = (args[0].to_number().value_of() as u8) as char;
       let c_code = From::from(value.value_of() as u8);
       state.assign_catcode(c_char, c_code, None);
-    }))
+    })
   );
 
   // Only used for active math characters, so far
   DefRegister!("\\mathcode Number", Number::new(0.0),
-    getter => Some(Rc::new(|args, state| {
+    getter => getter!(args, state, {
       let ch_code   = args[0].to_number().value_of() as u8;
       let ch : char = ch_code as char;
       let code = match state.lookup_mathcode(&ch.to_string()) {
         None => ch_code,
         Some(code) => code as u8
       };
-      Some(Number::new(f32::from(code)).into())
-    })),    // defaults to the char's code itself(?)
-    setter => Some(Rc::new(|value, args, state| {
+      Number::new(f32::from(code))
+    }),    // defaults to the char's code itself(?)
+    setter => setter!(value, args, state, {
       let ch = args[0].to_number().value_of() as u8;
       let ch : char = ch as char;
       state.assign_mathcode(ch, value.value_of() as usize, None);
-    }))
+    })
   );
 
   // Stub definitions ???

@@ -140,6 +140,28 @@ impl IntoDigestedResult<Result<Vec<Digested>>> for Result<Vec<Digested>> {
   fn into_digested_result(self) -> Result<Vec<Digested>> { self }
 }
 
+pub trait IntoRegisterValueOption<T>: Sized {
+  fn into_register_value_option(self) -> Option<RegisterValue>;
+}
+impl IntoRegisterValueOption<Option<RegisterValue>> for () {
+  fn into_register_value_option(self) -> Option<RegisterValue> { None }
+}
+impl IntoRegisterValueOption<Option<RegisterValue>> for Option<RegisterValue> {
+  fn into_register_value_option(self) -> Option<RegisterValue> { self }
+}
+impl IntoRegisterValueOption<Option<RegisterValue>> for Number {
+  fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Number(self)) }
+}
+
+impl IntoRegisterValueOption<Option<RegisterValue>> for Option<Number> {
+  fn into_register_value_option(self) -> Option<RegisterValue> { 
+    match self {
+      Some(n) => Some(RegisterValue::Number(n)),
+      None => None
+    }
+  }
+}
+
 
 //**********************************************************************
 //   Initially, I thought LaTeXML Packages should try to be like perl modules:
@@ -283,6 +305,10 @@ pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
      * Error("missing_file", request, state.get_stomach().get_gullet(),
      * "Can't find TeX file "+request, maybeReportSearchPaths(state))) */
   }
+}
+
+pub fn input(file: String, gullet: &mut Gullet, state: &mut State) {
+  unimplemented!();
 }
 
 pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {

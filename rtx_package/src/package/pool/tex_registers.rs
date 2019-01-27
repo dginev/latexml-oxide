@@ -10,12 +10,12 @@ LoadDefinitions!(state, {
   //======================================================================
   // Integer registers; TeXBook p. 272-273
 
-  // DefRegister('\tracingmacros', Number(0),
-  //   getter => sub { Number(LookupValue('TRACINGMACROS') || 0); },
-  //   setter => sub { AssignValue(TRACINGMACROS => $_[0]->valueOf); });
-  // DefRegister('\tracingcommands', Number(0),
-  //   getter => sub { Number(LookupValue('TRACINGCOMMANDS')); },
-  //   setter => sub { AssignValue(TRACINGCOMMANDS => $_[0]->valueOf); });
+  DefRegister!("\\tracingmacros", Number!(0.0),
+    getter => getter!({ LookupNumber!("TRACINGMACROS") }),
+    setter => setter!(value, args, state, { AssignValue!("TRACINGMACROS" => value.value_of()); }));
+  DefRegister!("\\tracingcommands", Number!(0.0),
+    getter => getter!({ LookupNumber!("TRACINGCOMMANDS") }),
+    setter => setter!(value, args, state, { AssignValue!("TRACINGCOMMANDS" => value.value_of()); }));
 
   for (key, val) in [
     ("pretolerance", 100),
