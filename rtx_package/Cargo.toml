@@ -19,6 +19,6 @@ regex = "0.2.5"
 log = "0.4"
 libxml = "0.2.6"
 unidecode = "0.3.0"
-chrono="*"
+chrono = "0.4.6"
 rtx_codegen = {path = "../rtx_codegen"}
 rtx_core = {path = "../rtx_core"}

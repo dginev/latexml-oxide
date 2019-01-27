@@ -1017,6 +1017,7 @@ macro_rules! LookupTokens {
 #[macro_export]
 macro_rules! AssignValue {
   ($name:expr => $value:expr) => {AssignValue!($name, $value)};
+  ($name:expr => $value:expr, $scope:expr) => {AssignValue!($name, $value, $scope)};
   ($name:expr, $value:expr) => {{
     bind_state_mut!(st);
     st.assign_value($name, $value, None)
