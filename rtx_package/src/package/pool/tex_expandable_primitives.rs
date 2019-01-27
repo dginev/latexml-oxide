@@ -248,7 +248,7 @@ LoadDefinitions!(outer_state, {
   DefMacroI!(T_CS!("\\splitfirstmark"), None, Tokens!());
   DefMacroI!(T_CS!("\\splitbotmark"), None, Tokens!());
 
-  // DefMacro('\input TeXFileName', sub { Input($_[1]); });
+  DefMacro!("\\input TeXFileName", sub[gullet,args,state] { input(args[0].to_string(), gullet, state); });
 
   // Note that TeX doesn't actually close the mouth;
   // it just flushes it so that it will close the next time it's read!

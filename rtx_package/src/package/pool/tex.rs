@@ -16,11 +16,19 @@ LoadDefinitions!(state, {
 
   //**********************************************************************
   // Primitives
+  // See The TeXBook, Chapter 24, Summary of Vertical Mode
+  //  and Chapter 25, Summary of Horizontal Mode.
+  // Parsing of basic types (pp.268--271) is (mostly) handled in Gullet.pm
+  //**********************************************************************
 
-  // lines 950-1102
+  // lines 960-1102
   // Dimen registers; TeXBook p. 274
   InnerPool!(tex_registers);
-  // <--- updated upto here --->
+  
+  // <----------------------------------------->
+  // <--- updated upto (and including) here --->
+  // <----------------------------------------->
+
   // lines 1102-1278
   InnerPool!(tex_assignment);
 
