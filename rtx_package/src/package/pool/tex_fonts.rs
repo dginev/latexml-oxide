@@ -79,7 +79,7 @@ LoadDefinitions!(state, {
   DefParameterType!("FontToken", reader => reader!(gullet, inner, extra, state, {
     let token = gullet.read_token(state).unwrap();
     if FONT_TOKEN_RE.is_match(&token.to_string()) {
-      gullet.read_number(state);
+      gullet.read_number(state)?;
     }
     token 
   }));    // ?
