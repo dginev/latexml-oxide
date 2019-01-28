@@ -1666,7 +1666,7 @@ macro_rules! Dimension {
     Dimension!($number, st)
   }};
   ($number:expr, $state_arg:ident) => {
-    ::rtx_core::common::dimension::Dimension::new_str($number, $state_arg)?
+    Dimension::new(Dimension::spec_to_f32($number, $state_arg)?)
   };
 }
 
@@ -1674,7 +1674,7 @@ macro_rules! Dimension {
 macro_rules! Glue {
   ($spec:expr) => {{
     bind_state!(st);
-    Glue::new_str($spec, st)
+    Glue::new(Glue::spec_to_f32($spec, st)?)
   }};
 }
 
@@ -1682,7 +1682,7 @@ macro_rules! Glue {
 macro_rules! MuGlue {
   ($spec:expr) => {{
     bind_state!(st);
-    MuGlue::new_str($spec, None)
+    MuGlue::new(MuGlue::spec_to_f32($spec, None)?)
   }};
 }
 

@@ -2,6 +2,8 @@ use log::*;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
+use regex::Regex;
+use lazy_static::lazy_static;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -19,6 +21,11 @@ use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
+
+lazy_static! {
+  static ref SPEC_RE: Regex = Regex::new(r"^(-?\d*\.?\d*)([a-zA-Z][a-zA-Z])$").unwrap();
+}
+
 
 #[derive(Debug, Clone)]
 pub enum RegisterValue {
@@ -81,6 +88,19 @@ pub trait NumericOps {
       Self::new(-value)
     } else {
       Self::new(value)
+    }
+  }
+  fn spec_to_f32(spec: &str, state: &State) -> Result<f32> {
+    if spec.is_empty() {
+      Ok(0.0)
+    } else if let Some(cap) = SPEC_RE.captures(spec) {
+      // Dimensions given.
+      let num_str = cap.get(1).map_or(String::new(), |m| m.as_str().to_string());
+      let num: f32 = num_str.parse::<f32>()?;
+      let unit = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
+      Ok(num * state.convert_unit(unit))
+    } else {
+      Ok(0.0)
     }
   }
   fn to_token(self) -> Token
