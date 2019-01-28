@@ -744,13 +744,13 @@ impl State {
     };
   }
 
-  // sub lookupMappingKeys {
+  // pub fn lookup_MappingKeys {
   //   my ($self, $map) = @_;
   //   my $vtable  = $$self{value};
   //   my $mapping = $$vtable{$map}[0];
   //   return ($mapping ? sort keys %$mapping : ()); }
 
-  // sub lookupStackedValues {
+  // pub fn lookup_StackedValues {
   //   my ($self, $key) = @_;
   //   my $stack = $$self{value}{$key};
   //   return ($stack ? @$stack : ()); }
@@ -793,24 +793,85 @@ impl State {
       },
     }
   }
-
   pub fn assign_catcode(&mut self, key: char, value: Catcode, scope: Option<Scope>) {
     self.assign_internal(TableName::Catcode, &key.to_string(), Stored::Catcode(value), scope);
   }
 
-  pub fn lookup_mathcode(&self, key: &str) -> Option<usize> {
+  pub fn lookup_mathcode(&self, key: &str) -> Option<u16> {
     match self.mathcode.get(&key.to_string()) {
       Some(c) => match c.front() {
-        Some(&Stored::Mathcode(ref codeval)) => Some(*codeval),
+        Some(&Stored::Charcode(ref codeval)) => Some(*codeval),
         _ => None,
       },
       None => None,
     }
   }
-
-  pub fn assign_mathcode(&mut self, key: char, value: usize, scope: Option<Scope>) {
-    self.assign_internal(TableName::Mathcode, &key.to_string(), Stored::Mathcode(value), scope);
+  pub fn assign_mathcode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
+    let key : char = key.into();
+    let scope : Option<Scope> = scope.into();
+    self.assign_internal(TableName::Mathcode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
+
+  pub fn lookup_sfcode(&self, key: char) -> Option<u16> {
+    match self.sfcode.get(&key.to_string()) {
+      Some(c) => match c.front() {
+        Some(&Stored::Charcode(ref codeval)) => Some(*codeval),
+        _ => None,
+      },
+      None => None,
+    }
+  }
+  pub fn assign_sfcode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
+    let key : char = key.into();
+    let scope : Option<Scope> = scope.into();
+    self.assign_internal(TableName::Sfcode, &key.to_string(), Stored::Charcode(value.into()), scope);
+  }
+
+  pub fn lookup_lccode(&self, key: char) -> Option<u16> {
+    match self.lccode.get(&key.to_string()) {
+      Some(c) => match c.front() {
+        Some(&Stored::Charcode(ref codeval)) => Some(*codeval),
+        _ => None,
+      },
+      None => None,
+    }
+  }
+  pub fn assign_lccode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
+    let key : char = key.into();
+    let scope : Option<Scope> = scope.into();
+    self.assign_internal(TableName::Lccode, &key.to_string(), Stored::Charcode(value.into()), scope);
+  }
+
+  pub fn lookup_uccode(&self, key: char) -> Option<u16> {
+    match self.uccode.get(&key.to_string()) {
+      Some(c) => match c.front() {
+        Some(&Stored::Charcode(ref codeval)) => Some(*codeval),
+        _ => None,
+      },
+      None => None,
+    }
+  }
+  pub fn assign_uccode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
+    let key : char = key.into();
+    let scope : Option<Scope> = scope.into();
+    self.assign_internal(TableName::Uccode, &key.to_string(), Stored::Charcode(value.into()), scope);
+  }
+
+  pub fn lookup_delcode(&self, key: char) -> Option<u16> {
+    match self.delcode.get(&key.to_string()) {
+      Some(c) => match c.front() {
+        Some(&Stored::Charcode(ref codeval)) => Some(*codeval),
+        _ => None,
+      },
+      None => None,
+    }
+  }
+  pub fn assign_delcode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
+    let key : char = key.into();
+    let scope : Option<Scope> = scope.into();
+    self.assign_internal(TableName::Delcode, &key.to_string(), Stored::Charcode(value.into()), scope);
+  }
+
 
   /// Get the `Meaning' of a token.  For active control sequence's
   /// this may give the definition object (if defined) or another token (if \let) or undef

@@ -55,7 +55,7 @@ pub enum Stored {
   // Primitives (Copy types, or cheap Clone)
   Bool(bool),
   String(String),
-  Mathcode(usize),
+  Charcode(u16),
   Int(i32),
   // Collections (boxed)
   VecChar(Vec<char>),
@@ -84,10 +84,10 @@ pub enum Stored {
   IfFrame(Rc<RefCell<IfFrame>>),
   /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Rc<Constructor>),
-  Digested(Box<crate::Digested>),
+  Digested(Box<crate::Digested>), // todo: should this be an Rc<> to make it shareable?
   Parameter(Parameter),
   Font(Rc<Font>),
-  Ligature(Box<Ligature>),
+  Ligature(Box<Ligature>), // todo: should this be an Rc<> to make it shareable?
 }
 
 impl fmt::Debug for Stored {
@@ -103,7 +103,7 @@ impl fmt::Debug for Stored {
       Token(ref t) => write!(f, "Stored::Token[{:?}]", t),
       Tokens(ref t) => write!(f, "Stored::Tokens[{:?}]", t),
       Catcode(ref cc) => write!(f, "Stored::Catcode[{:?}]", cc),
-      Mathcode(ref cc) => write!(f, "Stored::Mathcode[{:?}]", cc),
+      Charcode(ref cc) => write!(f, "Stored::Charcode[{:?}]", cc),
       IfFrame(ref fr) => write!(f, "Stored::IfFrame[{:?}]", fr),
       Expandable(ref _expandable) => write!(f, "Stored::Expandable[]"),
       Conditional(ref _conditional) => write!(f, "Stored::Conditional[]"),

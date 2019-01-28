@@ -1,4 +1,6 @@
+use log::*;
 use crate::definition::register::NumericOps;
+use crate::state::State;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Glue {
@@ -21,7 +23,9 @@ impl NumericOps for MuGlue {
 }
 
 impl Glue {
-  pub fn new_str(spec: &str, plus: Option<&str>, pfill: Option<&str>, minus: Option<&str>, mfill: Option<&str>) -> Self {
+  // pub fn new_str(spec: &str, plus: Option<&str>, pfill: Option<&str>, minus: Option<&str>, mfill: Option<&str>) -> Self {
+  pub fn new_str(mut sp: &str, state: &State) -> Self {
+    warn!("TODO: Glue::new_str is a stub.");
     // let spec = if spec.is_empty() {
     //   "0"
     // } else {
@@ -53,9 +57,9 @@ impl Glue {
   }
 }
 
-#[macro_export]
-macro_rules! Glue {
-  ($spec:expr) => {
-    Glue::new_str($spec, None, None, None, None)
-  };
+impl MuGlue {
+  pub fn new_str(spec: &str, state:&State) -> Self {
+    warn!("TODO: MuGlue::new_str is a stub.");
+    MuGlue { number : 0.0 }
+  }
 }

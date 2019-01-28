@@ -351,23 +351,37 @@ macro_rules! DefConditionalI(
 
 #[macro_export]
 macro_rules! DefPrimitiveII {
-  ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block) => {{
-    bind_state_mut!(st);
-    DefPrimitiveII!($cs, $paramlist, sub[$stomach, $args, $inner_state] $body, st)
-  }};
+  // explicit state
   ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block, $state_arg:ident) => {
     DefPrimitiveII!($cs, $paramlist, move |$stomach, $args, $inner_state| {WithInnerState!($body, $inner_state, $stomach)}, PrimitiveOptions::default(), $state_arg)
   };
+  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
+    def_primitive($cs, $paramlist, Rc::new($compiled_replacement), $options, $state_arg);
+  }};
+  // implicit state
+  ($cs:expr, $paramlist:expr, sub[$stomach:ident, $args:ident, $inner_state:ident] $body:block) => {{
+    bind_state_mut!(st);
+    DefPrimitiveII!($cs, $paramlist, sub[$stomach, $args, $inner_state] $body, st)
+  }};
   ($cs:expr, $paramlist:expr, sub $body:block) => {{
     bind_state_mut!(st);
     DefPrimitiveII!($cs, $paramlist, sub[stomach, args, inner_state] $body, st)
   }};
+  ($cs:expr, $paramlist:expr, None) => {{
+    bind_state_mut!(st);
+    DefPrimitiveII!($cs, $paramlist, noprimitive!(), PrimitiveOptions::default(), st)
+  }};
+  ($cs:expr, $paramlist:expr, None, $($key:ident => $value:expr)*) => {{
+    bind_state_mut!(st);
+    DefPrimitiveII!($cs, $paramlist, noprimitive!(), NewDefault!(PrimitiveOptions, $($key => $value),*), st)
+  }};
+  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $($key:ident => $value:expr)*) => {{
+    bind_state_mut!(st);
+    DefPrimitiveII!($cs, $paramlist, $compiled_replacement, NewDefault!(PrimitiveOptions, $($key => $value),*), st)
+  }};
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => {{
     bind_state_mut!(st);
     DefPrimitiveII!($cs, $paramlist, $compiled_replacement, $options, st)
-  }};
-  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
-    def_primitive($cs, $paramlist, Rc::new($compiled_replacement), $options, $state_arg);
   }};
 }
 
@@ -1334,6 +1348,7 @@ macro_rules! DefMacro {
 
 #[macro_export]
 macro_rules! DefRegister {
+  ($proto:expr => $value:expr) => (DefRegisterWO!($proto, $value, None)); // allow for => style?
   ($proto:expr, $value:expr) => (DefRegisterWO!($proto, $value, None));
   ($proto:expr, $value:expr, $state_arg: ident) => (DefRegisterWO!($proto, $value, None, $state_arg));
   ($proto:expr, $value:expr, $($key:ident => $val:expr),*) => (DefRegisterWO!($proto, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*))));
@@ -1458,6 +1473,10 @@ macro_rules! DefPrimitive{
   ($proto:expr, sub $body:block, $($key:ident=>$val:expr),*) =>
     (DefPrimitiveIWO!($proto, |stomach, whatsit, inner_state| {
       WithInnerState!($body, inner_state, stomach).into_digested_result() }, NewDefault!(PrimitiveOptions, $($key=>$val),*))); 
+  ($proto:expr, None) =>
+    (DefPrimitiveIWO!($proto, noprimitive!(), PrimitiveOptions::default())); 
+  ($proto:expr, None, $($key:ident=>$val:expr),*) =>
+    (DefPrimitiveIWO!($proto, noprimitive!(), NewDefault!(PrimitiveOptions, $($key=>$val),*))); 
 
   ($proto:expr, $replacement:expr, $options:expr) => ({
     // TODO:
@@ -1643,13 +1662,30 @@ macro_rules! RawTeX {
 #[macro_export]
 macro_rules! Dimension {
   ($number:expr) => {{
-    bind_state_mut!(st);
+    bind_state!(st);
     Dimension!($number, st)
   }};
   ($number:expr, $state_arg:ident) => {
     ::rtx_core::common::dimension::Dimension::new_str($number, $state_arg)?
   };
 }
+
+#[macro_export]
+macro_rules! Glue {
+  ($spec:expr) => {{
+    bind_state!(st);
+    Glue::new_str($spec, st)
+  }};
+}
+
+#[macro_export]
+macro_rules! MuGlue {
+  ($spec:expr) => {{
+    bind_state!(st);
+    MuGlue::new_str($spec, None)
+  }};
+}
+
 
 #[macro_export]
 macro_rules! DocType {

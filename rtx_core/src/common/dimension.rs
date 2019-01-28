@@ -65,6 +65,8 @@ impl Dimension {
 
   fn attribute_format(self) -> String { s!("{:.1}pt", Number::round_to(self.value_of() / 65536.0, Some(1))) }
 
+  pub fn pt_value(&self) -> f32 { unimplemented!() }
+
   pub fn to_string(self) -> String { self.point_format() }
 
   pub fn to_attribute(self) -> String { self.attribute_format() }

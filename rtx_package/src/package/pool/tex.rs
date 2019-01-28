@@ -29,10 +29,10 @@ LoadDefinitions!(state, {
   // <--- updated upto (and including) here --->
   // <----------------------------------------->
 
-  // lines 1102-1278
+  // lines 1102-1408
   InnerPool!(tex_assignment);
 
-  // lines 1278-1649
+  // lines 1408-1649
   InnerPool!(tex_fonts);
 
   // lines 1649-1954
