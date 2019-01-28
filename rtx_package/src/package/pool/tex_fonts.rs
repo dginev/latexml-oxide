@@ -1,6 +1,139 @@
 use crate::package::*;
 
+lazy_static! {
+  static ref FONT_TOKEN_RE : Regex = Regex::new(r"^\\(?:text|script|scriptscript)font$").unwrap();
+}
+
 LoadDefinitions!(state, {
+  // <font> = <fontdef token> | \font | <family member>
+  // <family member> = <font range><4bit>
+  // <font range> = \textfont | \scriptfont | \scriptscriptfont
+
+  // Doubtful that we can do anything useful with these.
+  // These look essentially like Registers, although Knuth doesn't call them that.
+  // DefRegister('\textfont Number' => T_CS('\tenrm'),
+  //   getter => sub {
+  //     my ($fam) = @_;
+  //     LookupValue('fontinfo_' . $fam->valueOf . '_text'); },
+  //   setter => sub {
+  //     my ($font, $fam) = @_;
+  //     AssignValue('fontinfo_' . $fam->valueOf . '_text' => $font, 'global'); });
+
+  // DefRegister('\scriptfont Number' => T_CS('\sevenrm'),
+  //   getter => sub {
+  //     my ($fam) = @_;
+  //     LookupValue('fontinfo_' . $fam->valueOf . '_script'); },
+  //   setter => sub {
+  //     my ($font, $fam) = @_;
+  //     AssignValue('fontinfo_' . $fam->valueOf . '_script' => $font, 'global'); });
+
+  // DefRegister('\scriptscriptfont Number' => T_CS('\fiverm'),
+  //   getter => sub {
+  //     my ($fam) = @_;
+  //     LookupValue('fontinfo_' . $fam->valueOf . '_scriptscript'); },
+  //   setter => sub {
+  //     my ($font, $fam) = @_;
+  //     AssignValue('fontinfo_' . $fam->valueOf . '_scriptscript' => $font, 'global'); });
+
+  // # <internal dimen> = <dimen parameter> | <special dimen> | \lastkern
+  // #    | <dimendef token> | \dimen<8bit> | <box dimension><8bit> | \fontdimen<number><font>
+
+  // DefRegister('\lastkern' => Dimension(0), readonly => 1);
+
+  // # <box dimension> = \ht | \wd | \dp
+  // DefRegister('\ht Number', Dimension(0),
+  //   getter => sub {
+  //     my ($n) = @_;
+  //     my $stuff = $n && LookupValue('box' . $n->valueOf);
+  //     return ($stuff ? $stuff->getHeight : Dimension(0)); },
+  //   setter => sub {
+  //     my ($value, $n) = @_;
+  //     my $stuff = $n && LookupValue('box' . $n->valueOf);
+  //     $stuff->setHeight($value) if $stuff;
+  //     return; });
+  // DefRegister('\wd Number', Dimension(0),
+  //   getter => sub {
+  //     my ($n) = @_;
+  //     my $stuff = $n && LookupValue('box' . $n->valueOf);
+  //     return ($stuff ? $stuff->getWidth : Dimension(0)); },
+  //   setter => sub {
+  //     my ($value, $n) = @_;
+  //     my $stuff = $n && LookupValue('box' . $n->valueOf);
+  //     $stuff->setWidth($value) if $stuff;
+  //     return; });
+
+  // DefRegister('\dp Number', Dimension(0),
+  //   getter => sub {
+  //     my ($n) = @_;
+  //     my $stuff = $n && LookupValue('box' . $n->valueOf);
+  //     return ($stuff ? $stuff->getDepth : Dimension(0)); },
+  //   setter => sub {
+  //     my ($value, $n) = @_;
+  //     my $stuff = $n && LookupValue('box' . $n->valueOf);
+  //     $stuff->setDepth($value) if $stuff;
+  //     return; });
+
+  // # 2nd arg is <font> = <fontdef token> | \font | <family member>
+  // #  <family member> = <font range><4bit number>
+  // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
+  DefParameterType!("FontToken", reader => reader!(gullet, inner, extra, state, {
+    let token = gullet.read_token(state).unwrap();
+    if FONT_TOKEN_RE.is_match(&token.to_string()) {
+      gullet.read_number(state);
+    }
+    token 
+  }));    // ?
+  DefRegister!("\\fontdimen Number FontToken", Dimension::new(0.0),
+    getter => getter!({unimplemented!(); () })
+    // my $p = ToString($_[0]);
+  //     if    ($p == 2) { Dimension('0.5em'); }    # interword space
+  //     elsif ($p == 5) { Dimension('1ex'); }      # x-height
+  //     elsif ($p == 6) { Dimension('1em'); }      # quad width
+  //     else { Dimension(0); }
+  );
+
+  //   Could be handled by setting dimensions whenever the box itself is set?
+
+  // <internal glue> = <glue parameter> | \lastskip | <skipdef token> | \skip<8bit>
+
+  DefRegister!("\\lastskip", Glue::new(0.0), readonly => true);
+
+  // # <internal muglue> = <muglue parameter> | \lastskip | <muskipdef token> | \muskip<8bit>
+
+  // # <family assignment> = <family member><equals><font>
+  // # <shape assignment> = \parshape<equals><number><shape dimensions>
+  // #  <shape dimensions> is 2n <dimen>
+
+  // # <global assignment> = <font assignment> | <hyphenation assignment>
+  // #   | <box size assignment> | <interaction mode assignment>
+  // #   | <intimate assignment>
+  // # <font assignment> = \fontdimen <number><font><equals><dimen>
+  // #   | \hyphenchar<font><equals><number> | \skewchar<font><equals><number>
+  // # <hyphenation assignment> = \hyphenation<general text>
+  // #   | \patterns<general text>
+  // # <box size assignment> = <box dimension><8bit><equals><dimen>
+  // # <interaction mode assignment> = \errorstopmode | \scrollmode | \nonstopmode | \batchmode
+  // # These are no-ops; Basically, LaTeXML runs in scrollmode
+  // DefPrimitiveI('\errorstopmode', undef, undef);
+  // DefPrimitiveI('\scrollmode',    undef, undef);
+  // DefPrimitiveI('\nonstopmode',   undef, undef);
+  // DefPrimitiveI('\batchmode',     undef, undef);
+
+  // # <intimate assignment> = <special integer><equals><number>
+  // #   | <special dimension><equals><dimen>
+
+  // DefMacro('\fontencoding{}', '\@@@fontencoding{#1}');
+
+  // DefPrimitive('\@@@fontencoding{}', sub {
+  //     my ($stomach, $encoding) = @_;
+  //     $encoding = ToString(Expand($encoding));
+  //     if (LoadFontMap($encoding)) {
+  //       MergeFont(encoding => $encoding); }
+  //     return; });
+
+  DefMacro!("\\f@encoding",  sub { ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap()) });
+  DefMacro!("\\cf@encoding", sub { ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap()) });
+
   // Used for SemiVerbatim text
   DeclareFontMap!(
     "ASCII",

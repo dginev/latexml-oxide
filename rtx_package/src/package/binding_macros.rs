@@ -190,10 +190,7 @@ macro_rules! reader {
   ($gullet:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
     Rc::new(
       |$gullet: &mut Gullet, $inner: Vec<Option<Parameters>>, $extra: Vec<ParameterExtra>, $state: &mut State| -> Result<Tokens> {
-        BindInnerState!($state);
-        let macro_out = $body;
-        end_state_frame!();
-        macro_out
+        WithInnerState!($body, $state).into_tokens_result()
       },
     )
   };
@@ -204,10 +201,7 @@ macro_rules! reader_predigest {
   ($stomach:ident, $arg:ident, $state:ident, $body:block) => {
     Some(Rc::new(
       |$stomach: &mut Stomach, $arg: Tokens, $state: &mut State| -> Result<Option<Digested>> {
-        BindInnerState!($state, $stomach);
-        let macro_out = $body;
-        end_state_frame!();
-        macro_out
+        WithInnerState!($body, $state, $stomach)
       },
     ))
   };

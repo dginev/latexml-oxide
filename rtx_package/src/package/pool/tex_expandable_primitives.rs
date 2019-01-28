@@ -208,7 +208,7 @@ LoadDefinitions!(outer_state, {
         cs.push_str(s);
       }
     }
-    T_CS!(cs).into()
+    T_CS!(cs)
   }));
 
   DefMacro!("\\csname CSName", sub[gullet, args, state] {

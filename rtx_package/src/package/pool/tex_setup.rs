@@ -236,12 +236,11 @@ LoadDefinitions!(state, {
 
   // Read a number
   DefParameterType!("Number", sub[gullet, inner, _extra, state] {
-    gullet.read_number(state)?.to_token().into()
-  });
+    gullet.read_number(state)?.to_token()  });
 
   // Read a floating point number
   DefParameterType!("Float", sub[gullet, inner, _extra, state] {
-    gullet.read_float(state)?.to_token().into()
+    gullet.read_float(state)?.to_token()
   });
 
   // ???
@@ -252,22 +251,22 @@ LoadDefinitions!(state, {
 
   // Read a dimension
   DefParameterType!("Dimension", sub[gullet, inner, _extra, state] {
-    gullet.read_dimension(state)?.to_token().into()
+    gullet.read_dimension(state)?.to_token()
   });
 
   // Read a Glue (aka skip)
   DefParameterType!("Glue", sub[gullet, inner, _extra, state] {
-    gullet.read_glue(state)?.to_token().into()
+    gullet.read_glue(state)?.to_token()
   });
 
   // Read a MuDimension (math)
   DefParameterType!("MuDimension", sub[gullet, inner, _extra, state] {
-    gullet.read_mu_dimension(state)?.to_token().into()
+    gullet.read_mu_dimension(state)?.to_token()
   });
 
   // Read a MuGlue (math)
   DefParameterType!("MuGlue", sub[gullet, inner, _extra, state] {
-    gullet.read_mu_glue(state)?.to_token().into()
+    gullet.read_mu_glue(state)?.to_token()
   });
 
   // Read until the next (balanced) open brace {
@@ -281,7 +280,7 @@ LoadDefinitions!(state, {
     if !gullet.if_next(T_BEGIN!(), state)? {
       error!(target:"expected:{", "Expected a {{ here");
     }
-    T_BEGIN!().into()
+    T_BEGIN!()
   },
   novalue => true);
 
@@ -596,7 +595,8 @@ LoadDefinitions!(state, {
       //     if (!LookupValue('LaTeX.pool_loaded')) {    # if already loaded, DONT redefine!
       //       LoadPool("LaTeX"); } } }
       // Tokens(@tokens); });
-      unimplemented!()
+      unimplemented!();
+      Ok(Tokens!())
   });
 
   // A LaTeX style directory List
@@ -621,7 +621,8 @@ LoadDefinitions!(state, {
       //     values => [@dirs]); }
       // else {
       //   Error('expected', 'DirectoryList', $gullet, "A DirectoryList was supposed to be here"); } });
-      unimplemented!()
+      unimplemented!();
+      Ok(Tokens!())
   });
 
   // This reads a Box as needed by \raise, \lower, \moveleft, \moveright.
@@ -636,7 +637,8 @@ LoadDefinitions!(state, {
       //   unless $box && $box->isa('LaTeXML::Core::Whatsit')
       //   && ($box->getDefinition->getCSName =~ /^(\\hbox|\\vbox||\\vtop)$/);
       // $box; });
-      unimplemented!();
+      unimplemented!();;
+      Ok(Tokens!())
   });
 
   // Read a parenthesis delimited argument.
@@ -651,7 +653,8 @@ LoadDefinitions!(state, {
     //     undef; } },
     // reversion => sub {
     //   (T_OTHER('('), Revert($_[0]), T_OTHER(')')); });
-    unimplemented!();
+    unimplemented!();;
+    Ok(Tokens!())
   });
 
   // Read a digested argument.
@@ -680,7 +683,8 @@ LoadDefinitions!(state, {
     //   List(@list, mode => ($ismath ? 'math' : 'text')); },
     // undigested => 1,                                          # since _already_ digested.
     // reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-    unimplemented!();
+    unimplemented!();;
+    Ok(Tokens!())
   });
 
   // A variation: Digest until we encounter a given token!
@@ -694,7 +698,8 @@ LoadDefinitions!(state, {
     //   List(@list, mode => ($ismath ? 'math' : 'text')); },
     // undigested => 1,                                          # since _already_ digested.
     // reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-    unimplemented!();
+    unimplemented!();;
+    Ok(Tokens!())
   });
 
   // Reads until the current group has ended.
@@ -710,7 +715,8 @@ LoadDefinitions!(state, {
     //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
     //   List(@list, mode => ($ismath ? 'math' : 'text')); },
     // undigested => 1);
-    unimplemented!();
+    unimplemented!();;
+    Ok(Tokens!())
   });
 
   // In addition to the standard TeX Dimension, there are various LaTeX constructs
@@ -754,7 +760,8 @@ LoadDefinitions!(state, {
       //       : ($gullet->readToken))); }
       // LaTeXML::Core::Array->new(open => T_BEGIN, close => T_END, type => $typedef,
       //   values => [@items]); });
-      unimplemented!();
+      unimplemented!();;
+      Ok(Tokens!())
   });
 
   // Support for Key / Value arguments.
@@ -835,19 +842,19 @@ LoadDefinitions!(state, {
 
   //   return (KeyVals_aux($gullet, $until, [$star, $plus, @keyspec])); }
 
-  DefParameterType!("RequiredKeyVals", sub[gullet, inner, _extra, state] {unimplemented!();
+  DefParameterType!("RequiredKeyVals", sub[gullet, inner, _extra, state] {unimplemented!(); ()
     // RequiredKeyVals(0, 0, @_); },
   });
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  DefParameterType!("RequiredKeyVals", sub[gullet, inner, _extra, state] {unimplemented!();
+  DefParameterType!("RequiredKeyVals", sub[gullet, inner, _extra, state] {unimplemented!(); ()
     // RequiredKeyVals(1, 0, @_); },
   });
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  DefParameterType!("RequiredKeyVals", sub[gullet, inner, _extra, state] {unimplemented!();
+  DefParameterType!("RequiredKeyVals", sub[gullet, inner, _extra, state] {unimplemented!(); ()
     // RequiredKeyVals(0, 1, @_); },
   });
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  DefParameterType!("RequiredKeyVals", sub[gullet, inner, _extra, state] {unimplemented!();
+  DefParameterType!("RequiredKeyVals", sub[gullet, inner, _extra, state] {unimplemented!(); ()
     // RequiredKeyVals(1, 1, @_); },
   });
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
@@ -858,26 +865,26 @@ LoadDefinitions!(state, {
   //     return (KeyVals_aux($gullet, T_OTHER(']'), [$star, $plus, @keyspec])); }
   //   else { return (undef); } }
 
-  DefParameterType!("OptionalKeyVals", sub[gullet, inner, _extra, state] {unimplemented!();
+  DefParameterType!("OptionalKeyVals", sub[gullet, inner, _extra, state] {unimplemented!(); ()
   //  OptionalKeyVals(0, 0, @_); },
   });
   //   optional => 1, reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
-  DefParameterType!("OptionalKeyVals", sub[gullet, inner, _extra, state] {unimplemented!();
+  DefParameterType!("OptionalKeyVals", sub[gullet, inner, _extra, state] {unimplemented!(); ()
   //  OptionalKeyVals(1, 0, @_); },
   });
   //   optional => 1, reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
-  DefParameterType!("OptionalKeyVals", sub[gullet, inner, _extra, state] {unimplemented!();
+  DefParameterType!("OptionalKeyVals", sub[gullet, inner, _extra, state] {unimplemented!(); ()
   //  OptionalKeyVals(0, 1, @_); },
   });
   //   optional => 1, reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
-  DefParameterType!("OptionalKeyVals", sub[gullet, inner, _extra, state] {unimplemented!();
+  DefParameterType!("OptionalKeyVals", sub[gullet, inner, _extra, state] {unimplemented!(); ()
   //  OptionalKeyVals(1, 1, @_); },
   });
   //   optional => 1, reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
 
   // # Not sure that this is the most elegant solution, but...
   // # What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
-  DefParameterType!("DisplayStyle", sub[gullet, inner, _extra, state] {unimplemented!(); });
+  DefParameterType!("DisplayStyle", sub[gullet, inner, _extra, state] {unimplemented!(); () });
   //     $_[0]->readArg; },
   //   beforeDigest => sub {
   //     $_[0]->bgroup;
@@ -885,7 +892,7 @@ LoadDefinitions!(state, {
   //   afterDigest => sub {
   //     $_[0]->egroup; },
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  DefParameterType!("TextStyle", sub[gullet, inner, _extra, state] {unimplemented!(); });
+  DefParameterType!("TextStyle", sub[gullet, inner, _extra, state] {unimplemented!(); () });
   //     $_[0]->readArg; },
   //   beforeDigest => sub {
   //     $_[0]->bgroup;
@@ -893,7 +900,7 @@ LoadDefinitions!(state, {
   //   afterDigest => sub {
   //     $_[0]->egroup; },
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  DefParameterType!("ScriptStyle", sub[gullet, inner, _extra, state] {unimplemented!(); });
+  DefParameterType!("ScriptStyle", sub[gullet, inner, _extra, state] {unimplemented!(); () });
   //     $_[0]->readArg; },
   //   beforeDigest => sub {
   //     $_[0]->bgroup;
@@ -901,7 +908,7 @@ LoadDefinitions!(state, {
   //   afterDigest => sub {
   //     $_[0]->egroup; },
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  DefParameterType!("ScriptscriptStyle", sub[gullet, inner, _extra, state] {unimplemented!(); });
+  DefParameterType!("ScriptscriptStyle", sub[gullet, inner, _extra, state] {unimplemented!(); () });
   //     $_[0]->readArg; },
   //   beforeDigest => sub {
   //     $_[0]->bgroup;
@@ -910,7 +917,7 @@ LoadDefinitions!(state, {
   //     $_[0]->egroup; },
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
   // # Perverse naming convention: not script style, but in the style of a script relative to current.
-  DefParameterType!("InScriptStyle", sub[gullet, inner, _extra, state] {unimplemented!(); });
+  DefParameterType!("InScriptStyle", sub[gullet, inner, _extra, state] {unimplemented!(); () });
   //     $_[0]->readArg; },
   //   beforeDigest => sub {
   //     $_[0]->bgroup;
@@ -921,7 +928,7 @@ LoadDefinitions!(state, {
   // # NOTE: the various parameter features don't combine easily!!
   // # I need a ScriptStyleUntil for \root!!!
   // # I also need to redo fractions using these new types....
-  DefParameterType!("OptionalInScriptStyle", sub[gullet, inner, _extra, state] {unimplemented!(); });
+  DefParameterType!("OptionalInScriptStyle", sub[gullet, inner, _extra, state] {unimplemented!(); () });
   //     $_[0]->readOptional; },
   //   beforeDigest => sub {
   //     $_[0]->bgroup;
@@ -930,7 +937,7 @@ LoadDefinitions!(state, {
   //     $_[0]->egroup; },
   //   optional => 1,
   //   reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
-  DefParameterType!("InFractionStyle", sub[gullet, inner, _extra, state] {unimplemented!(); });
+  DefParameterType!("InFractionStyle", sub[gullet, inner, _extra, state] {unimplemented!(); () });
   //     $_[0]->readArg; },
   //   beforeDigest => sub {
   //     $_[0]->bgroup;

@@ -3,9 +3,10 @@ use rtx_core::state::State;
 
 LoadDefinitions!(state, {
   // TeX.pool.ltxml
-  //   commit 73f27e8ca8a4179fd3d37744141647d1e604cc97
-  //   Author: Bruce Miller <bruce.miller@nist.gov>
-  //   Date:   Mon Jul 17 16:34:13 2017 -0400
+  //   commit 22db863d7358d56e197a3845375775714577cc82
+  //   Author: bruce miller <bruce.miller@nist.gov>
+  //   Date:   Wed Nov 28 10:47:09 2018 -0500
+
 
   // lines 1-695
   // XML language, DefParameterType
@@ -25,12 +26,13 @@ LoadDefinitions!(state, {
   // Dimen registers; TeXBook p. 274
   InnerPool!(tex_registers);
   
-  // <----------------------------------------->
-  // <--- updated upto (and including) here --->
-  // <----------------------------------------->
-
   // lines 1102-1408
   InnerPool!(tex_assignment);
+
+  // -----------------------------------------
+  //  28.01.2019:
+  //  updated upto (and including) here
+  // -----------------------------------------
 
   // lines 1408-1649
   InnerPool!(tex_fonts);
