@@ -46,7 +46,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
-    after_digest => afterproc!(stomach, whatsit, state, {
+    after_digest => after_digest!(stomach, whatsit, state, {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
         Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),

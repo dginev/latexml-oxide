@@ -62,7 +62,7 @@ pub enum Stored {
   VecOptionChar(Vec<Option<char>>),
   VecString(Vec<String>),
   VecDigested(Vec<crate::Digested>),
-  HashStr(HashMap<String, String>),
+  HashString(HashMap<String, String>),
   VecDequeStored(VecDeque<Stored>),
   HashStored(HashMap<String, Stored>),
   HashTagData(HashMap<String, Vec<TagData>>),
@@ -123,7 +123,7 @@ impl fmt::Debug for Stored {
       VecDequeStored(ref vec) => write!(f, "VecDequeStored[{:?}]", vec),
       HashStored(ref hos) => write!(f, "HashStored[{:?}]", hos),
       HashTagData(ref htd) => write!(f, "HashTagData[{:?}]", htd),
-      HashStr(ref hstr) => write!(f, "HashStr[{:?}]", hstr),
+      HashString(ref hstr) => write!(f, "HashStr[{:?}]", hstr),
       Ligature(ref lig) => write!(f, "Ligature[{:?}]", lig),
     }
   }
@@ -307,7 +307,7 @@ impl From<Vec<crate::Digested>> for Stored {
 }
 
 impl From<HashMap<String, String>> for Stored {
-  fn from(value: HashMap<String, String>) -> Self { Stored::HashStr(value) }
+  fn from(value: HashMap<String, String>) -> Self { Stored::HashString(value) }
 }
 
 impl From<VecDeque<Stored>> for Stored {

@@ -180,3 +180,44 @@ pub fn classify_box(boxnum: Token, state: &State) -> &'static str {
     _ => "",
   }
 }
+
+const MATH_CLASS_ROLE : [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLOSE", "PUNCT", ""];
+// Is this "fontinfo" stuff sufficient to maintain a math font "family" ??
+// What we're really after is a connectio nto a font encoding mapping.
+pub fn decode_math_char(mut n: u16, state: &State) -> (Option<String>, Option<char>) {
+  let class : u16 = n / (16 * 256);
+  n = n % (16 * 256);
+  let fam : u16  = n / 256;
+  n = n % 256;
+  let font  = state.lookup_value(&s!("fontinfo_{}_text",fam)).unwrap_or_else(||
+    state.lookup_value(&s!("fontinfo_{}_script",fam)).unwrap_or_else(|| 
+      state.lookup_value(&s!("fontinfo_{}_scriptscript",fam)).unwrap_or(&Stored::Bool(false))
+    )
+  );
+  // TODO: This function is called with n=20,000, how is the char cast sensible here? Consult Bruce.
+  let c = n as u8 as char; // TODO: confusing types, the 256 arithmetic implies larger than u8 inputs, what for?
+  // // If no specific class, Lookup properties from a DefMath?
+  let charinfo = state.lookup_value(&s!("math_token_attributes_{}",c));
+  let fontinfo = state.lookup_value(&s!("fontinfo_{}", font.to_string()));
+  let mut role = MATH_CLASS_ROLE[class as usize];
+  
+  if role.is_empty() {
+    if let Some(Stored::HashString(ref info)) = charinfo {
+      role = &info[role];
+    }
+  }
+  let role_opt = if role.is_empty() {
+    None
+  } else {
+    Some(role.to_string())
+  };
+  let font_opt = if let Some(Stored::Font(ref info)) = fontinfo {
+    if let Some(ref data) = info.encoding {
+      font::decode(n as u8, Some(data.to_string()), false, state)
+    } else {
+      Some(c)
+    }
+  } else { None };
+  
+  (role_opt,font_opt)
+}

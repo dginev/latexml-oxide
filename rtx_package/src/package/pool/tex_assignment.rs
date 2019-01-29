@@ -315,4 +315,6 @@ LoadDefinitions!(state, {
   // Stub definitions ???
   DefRegister!("\\hyphenchar{}", Number!((b'-')));
   DefRegister!("\\skewchar{}", Number::new(0.0)); // no idea what the default is here
+
+  DefMacro!("\\hyphenation GeneralText", "");
 });

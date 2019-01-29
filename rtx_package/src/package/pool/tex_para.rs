@@ -32,7 +32,7 @@ LoadDefinitions!(state, {
         document.maybe_close_element("ltx:para", state)?;
       }
     },
-    after_digest => aftersub!(stomach, whatsit, state, {
+    after_digest => after_digest!(stomach, whatsit, state, {
       let in_preamble = LookupBool!("inPreamble");
       if in_preamble {
         whatsit.set_property("inPreamble", true);

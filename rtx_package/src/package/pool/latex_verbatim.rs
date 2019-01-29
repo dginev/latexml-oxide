@@ -31,7 +31,7 @@ LoadDefinitions!(outer_state, {
       MergeFont!(family => "typewriter");
       Ok(stuff)
     }),
-    after_digest => afterproc!(stomach, whatsit, state, {
+    after_digest => after_digest!(stomach, whatsit, state, {
       let font : Option<Rc<Font>> = match whatsit.get_font() {
         None => None,
         Some(ft) => Some(Rc::new((*ft).to_owned()))
@@ -107,7 +107,7 @@ LoadDefinitions!(outer_state, {
       stomach.bgroup(state);
       MergeFont!(family => "typewriter");
     }),
-    after_digest => afterproc!(stomach,whatsit,state, { stomach.egroup(state)?; }),
+    after_digest => after_digest!(stomach,whatsit,state, { stomach.egroup(state)?; }),
     // Since ltx:verbatim is both inline & block, we have to fudge inline mode
     before_construct => construct!(document, args, state, {
       if !document.can_contain(&document.get_element().unwrap(), "#PCDATA", state) {
@@ -120,7 +120,7 @@ LoadDefinitions!(outer_state, {
      stomach.bgroup(state);
      MergeFont!(family => "typewriter");
    }),
-   after_digest => afterproc!(stomach,whatsit,state, { stomach.egroup(state)?; }),
+   after_digest => after_digest!(stomach,whatsit,state, { stomach.egroup(state)?; }),
    reversion => Some("\\verb#1#2#1".into())
   );
 

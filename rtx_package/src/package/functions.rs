@@ -1001,12 +1001,12 @@ pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacem
   after_digest_env.extend(options.after_digest);
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let end_mode_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
+    let end_mode_closure: Vec<DigestionClosure> = after_digest!(stomach, whatsit, state, {
       stomach.end_mode(&mode_clone, state)?;
     });
     after_digest_env.extend(end_mode_closure);
   } else if options.bounded {
-    let egroup_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
+    let egroup_closure: Vec<DigestionClosure> = after_digest!(stomach, whatsit, state, {
       stomach.egroup(state)?;
     });
     after_digest_env.extend(egroup_closure);
@@ -1123,12 +1123,12 @@ pub fn def_constructor(
   after_digest_closures.extend(options.after_digest);
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let end_mode_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
+    let end_mode_closure: Vec<DigestionClosure> = after_digest!(stomach, whatsit, state, {
       stomach.end_mode(&mode_clone, state)?;
     });
     after_digest_closures.extend(end_mode_closure);
   } else if options.bounded {
-    let egroup_closure: Vec<DigestionClosure> = afterproc!(stomach, whatsit, state, {
+    let egroup_closure: Vec<DigestionClosure> = after_digest!(stomach, whatsit, state, {
       stomach.egroup(state)?;
     });
     after_digest_closures.extend(egroup_closure);

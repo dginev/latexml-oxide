@@ -438,7 +438,7 @@ LoadDefinitions!(state, {
       stomach.bgroup(state);
       MergeFont!(family => "typewriter", state);
     }),
-    after_digest => afterproc!(stomach, args, state, {
+    after_digest => after_digest!(stomach, args, state, {
       stomach.egroup(state)?;
     }),
     reversion => reversion!(gullet, arg, inner, state, {

@@ -29,15 +29,15 @@ LoadDefinitions!(state, {
   // lines 1102-1408
   InnerPool!(tex_assignment);
 
+  // lines 1408-1773
+  InnerPool!(tex_fonts);
+
   // -----------------------------------------
   //  28.01.2019:
   //  updated upto (and including) here
   // -----------------------------------------
 
-  // lines 1408-1649
-  InnerPool!(tex_fonts);
-
-  // lines 1649-1954
+  // lines 1773-1954
   InnerPool!(tex_boxes);
 
   // lines 1954-2192

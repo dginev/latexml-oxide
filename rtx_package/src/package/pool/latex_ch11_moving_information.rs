@@ -33,7 +33,7 @@ LoadDefinitions!(state, {
   // reversion => "",
   // TODO:
   // properties  => { alignmentSkippable => 1, alignmentPreserve => 1 },
-  after_digest => afterproc!(stomach, whatsit, state, {
+  after_digest => after_digest!(stomach, whatsit, state, {
     let label = match whatsit.get_arg(1) {
       Some(labeld) => clean_label(&labeld.to_string(), None),
       None => String::new()
@@ -156,7 +156,7 @@ LoadDefinitions!(state, {
         AssignValue!("inPreamble", false);
         Ok(vec![stomach.digest(Tokens!(T_CS!("\\@lx@inbibliographytrue")), state)?])
     }),
-    after_digest => afterproc!(stomach, whatsit, state, {
+    after_digest => after_digest!(stomach, whatsit, state, {
       // NOTE that in some perverse situations (revtex?)
       // it seems to be allowable to omit the argument
       // It's ignorable for latexml anyway, so we'll just read it if its there.
@@ -172,7 +172,7 @@ LoadDefinitions!(state, {
 
   // Close the bibliography
   DefConstructor!("\\endthebibliography", "</ltx:biblist></ltx:bibliography>",
-    after_digest => afterproc!(stomach, whatsit, state, {
+    after_digest => after_digest!(stomach, whatsit, state, {
       let t = T_CS!("\\@appendix");
       if IsDefined!(&t) {
         stomach.digest(t, state)?;
@@ -215,7 +215,7 @@ LoadDefinitions!(state, {
     "\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem"
   );
   DefConstructor!("\\lx@bibitem[] Semiverbatim", "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
-    after_digest => afterproc!(stomach, whatsit, state, {
+    after_digest => after_digest!(stomach, whatsit, state, {
       let tag_opt = whatsit.get_arg(1);
       let key = clean_bib_key(&match whatsit.get_arg(2) {
         None => String::new(),

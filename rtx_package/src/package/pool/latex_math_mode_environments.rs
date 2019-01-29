@@ -89,7 +89,7 @@ LoadDefinitions!(state, {
   //   prepare_equation_counter(map!(numbered => true, preset => true).into(), state);
   //   before_equation(state);
   // }),
-  // after_digest_body => afterproc!(stomach, args, state, {
+  // after_digest_body => after_digest!(stomach, args, state, {
   //   after_equation(args, state);
   // }),
   // locked => true);

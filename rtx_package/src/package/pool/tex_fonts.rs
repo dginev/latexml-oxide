@@ -11,37 +11,46 @@ LoadDefinitions!(state, {
 
   // Doubtful that we can do anything useful with these.
   // These look essentially like Registers, although Knuth doesn't call them that.
-  // DefRegister('\textfont Number' => T_CS('\tenrm'),
-  //   getter => sub {
-  //     my ($fam) = @_;
-  //     LookupValue('fontinfo_' . $fam->valueOf . '_text'); },
-  //   setter => sub {
-  //     my ($font, $fam) = @_;
-  //     AssignValue('fontinfo_' . $fam->valueOf . '_text' => $font, 'global'); });
+  DefRegister!("\\textfont Number", T_CS!("\\tenrm"),
+    getter => getter!({unimplemented!(); () }),
+      // my ($fam) = @_;
+      // LookupValue('fontinfo_' . $fam->valueOf . '_text'); },
+    setter => setter!({unimplemented!(); () })
+      // my ($font, $fam) = @_;
+      // AssignValue('fontinfo_' . $fam->valueOf . '_text' => $font, 'global'); }
+  );
 
-  // DefRegister('\scriptfont Number' => T_CS('\sevenrm'),
+  DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
+    getter => getter!({unimplemented!(); () }),
+    setter => setter!({unimplemented!(); () })
   //   getter => sub {
   //     my ($fam) = @_;
   //     LookupValue('fontinfo_' . $fam->valueOf . '_script'); },
   //   setter => sub {
   //     my ($font, $fam) = @_;
-  //     AssignValue('fontinfo_' . $fam->valueOf . '_script' => $font, 'global'); });
+  //     AssignValue('fontinfo_' . $fam->valueOf . '_script' => $font, 'global'); }
+  );
 
-  // DefRegister('\scriptscriptfont Number' => T_CS('\fiverm'),
+  DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
+    getter => getter!({unimplemented!(); () }),
+    setter => setter!({unimplemented!(); () })  
   //   getter => sub {
   //     my ($fam) = @_;
   //     LookupValue('fontinfo_' . $fam->valueOf . '_scriptscript'); },
   //   setter => sub {
   //     my ($font, $fam) = @_;
-  //     AssignValue('fontinfo_' . $fam->valueOf . '_scriptscript' => $font, 'global'); });
+  //     AssignValue('fontinfo_' . $fam->valueOf . '_scriptscript' => $font, 'global'); }
+  );
 
   // # <internal dimen> = <dimen parameter> | <special dimen> | \lastkern
   // #    | <dimendef token> | \dimen<8bit> | <box dimension><8bit> | \fontdimen<number><font>
 
-  // DefRegister('\lastkern' => Dimension(0), readonly => 1);
+  DefRegister!("\\lastkern" => Dimension::new(0.0), readonly => true);
 
   // # <box dimension> = \ht | \wd | \dp
-  // DefRegister('\ht Number', Dimension(0),
+  DefRegister!("\\ht Number", Dimension::new(0.0),
+    getter => getter!({unimplemented!(); () }),
+    setter => setter!({unimplemented!(); () })
   //   getter => sub {
   //     my ($n) = @_;
   //     my $stuff = $n && LookupValue('box' . $n->valueOf);
@@ -50,8 +59,12 @@ LoadDefinitions!(state, {
   //     my ($value, $n) = @_;
   //     my $stuff = $n && LookupValue('box' . $n->valueOf);
   //     $stuff->setHeight($value) if $stuff;
-  //     return; });
-  // DefRegister('\wd Number', Dimension(0),
+  //     return; }
+  );
+
+  DefRegister!("\\wd Number", Dimension::new(0.0),
+    getter => getter!({unimplemented!(); () }),
+    setter => setter!({unimplemented!(); () })
   //   getter => sub {
   //     my ($n) = @_;
   //     my $stuff = $n && LookupValue('box' . $n->valueOf);
@@ -60,9 +73,12 @@ LoadDefinitions!(state, {
   //     my ($value, $n) = @_;
   //     my $stuff = $n && LookupValue('box' . $n->valueOf);
   //     $stuff->setWidth($value) if $stuff;
-  //     return; });
+  //     return; }
+  );
 
-  // DefRegister('\dp Number', Dimension(0),
+  DefRegister!("\\dp Number", Dimension::new(0.0),
+    getter => getter!({unimplemented!(); () }),
+    setter => setter!({unimplemented!(); () })
   //   getter => sub {
   //     my ($n) = @_;
   //     my $stuff = $n && LookupValue('box' . $n->valueOf);
@@ -71,7 +87,8 @@ LoadDefinitions!(state, {
   //     my ($value, $n) = @_;
   //     my $stuff = $n && LookupValue('box' . $n->valueOf);
   //     $stuff->setDepth($value) if $stuff;
-  //     return; });
+  //     return; }
+  );
 
   // # 2nd arg is <font> = <fontdef token> | \font | <family member>
   // #  <family member> = <font range><4bit number>
@@ -114,22 +131,24 @@ LoadDefinitions!(state, {
   // # <box size assignment> = <box dimension><8bit><equals><dimen>
   // # <interaction mode assignment> = \errorstopmode | \scrollmode | \nonstopmode | \batchmode
   // # These are no-ops; Basically, LaTeXML runs in scrollmode
-  // DefPrimitiveI('\errorstopmode', undef, undef);
-  // DefPrimitiveI('\scrollmode',    undef, undef);
-  // DefPrimitiveI('\nonstopmode',   undef, undef);
-  // DefPrimitiveI('\batchmode',     undef, undef);
+  DefPrimitiveII!(T_CS!("\\errorstopmode"), None, None);
+  DefPrimitiveII!(T_CS!("\\scrollmode"),    None, None);
+  DefPrimitiveII!(T_CS!("\\nonstopmode"),   None, None);
+  DefPrimitiveII!(T_CS!("\\batchmode"),     None, None);
 
   // # <intimate assignment> = <special integer><equals><number>
   // #   | <special dimension><equals><dimen>
 
-  // DefMacro('\fontencoding{}', '\@@@fontencoding{#1}');
+  DefMacro!("\\fontencoding{}", "\\@@@fontencoding{#1}");
 
-  // DefPrimitive('\@@@fontencoding{}', sub {
-  //     my ($stomach, $encoding) = @_;
-  //     $encoding = ToString(Expand($encoding));
-  //     if (LoadFontMap($encoding)) {
-  //       MergeFont(encoding => $encoding); }
-  //     return; });
+  DefPrimitive!("\\@@@fontencoding{}", sub[stomach, args, state] {
+    unpack_to_token!(args => encoding);
+    let gullet = stomach.get_gullet_mut();
+    let encoding = Expand!(encoding, gullet).to_string();
+    if LoadFontMap!(&encoding).is_some() {
+      MergeFont!(encoding => encoding); 
+    }
+  });
 
   DefMacro!("\\f@encoding",  sub { ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap()) });
   DefMacro!("\\cf@encoding", sub { ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap()) });
@@ -448,45 +467,24 @@ LoadDefinitions!(state, {
     Ok(vec![])
   });
 
-  // our @mathclassrole = (undef, 'BIGOP', 'BINOP', 'RELOP', 'OPEN', 'CLOSE', 'PUNCT', undef);
-  // Is this "fontinfo" stuff sufficient to maintain a math font "family" ??
-  // What we're really after is a connectio nto a font encoding mapping.
-  fn decode_math_char(n: u8) -> (Option<String>, Option<char>) {
-    // TODO
-    // my $class = int($n / (16 * 256)); $n = $n % (16 * 256);
-    // my $fam   = int($n / 256);        $n = $n % 256;
-    // my $font  = LookupValue('fontinfo_' . $fam . '_text')
-    //   || LookupValue('fontinfo_' . $fam . '_script')
-    //   || LookupValue('fontinfo_' . $fam . '_scriptscript');
-    // my $char = chr($n);
-    // // If no specific class, Lookup properties from a DefMath?
-    // my $charinfo = LookupValue('math_token_attributes_' . $char);
-    // my $fontinfo = LookupValue('fontinfo_' . ToString($font));
-    // my $role     = $mathclassrole[$class];
-    // $role = $$charinfo{role} if (!defined $role) && $charinfo;
-    // return ($role,
-    //   ($fontinfo && $$fontinfo{encoding} ? FontDecode($n, $$fontinfo{encoding}) : $char));
-    (None, None)
-  }
-
-  // DefConstructor('\mathchar Number',
-  //   "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",
-  //   sizer       => '#1',
-  //   afterDigest => sub {
-  //     my ($stomach, $whatsit) = @_;
-  //     my $n = $whatsit->getArg(1)->valueOf;
-  //     my ($role, $glyph) = decodeMathChar($n);
-  //     $whatsit->setProperty(glyph => $glyph)                                  if $glyph;
-  //     $whatsit->setProperty(role  => $role)                                   if defined $role;
-  //     $whatsit->setProperty(font  => LookupValue('font')->specialize($glyph)) if $glyph;
-  //     return; });
+  DefConstructor!("\\mathchar Number", "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",
+    //   sizer       => '#1',
+    after_digest => after_digest!(stomach, whatsit, state, { unimplemented!(); () })
+    //     my ($stomach, $whatsit) = @_;
+    //     my $n = $whatsit->getArg(1)->valueOf;
+    //     my ($role, $glyph) = decodeMathChar($n);
+    //     $whatsit->setProperty(glyph => $glyph)                                  if $glyph;
+    //     $whatsit->setProperty(role  => $role)                                   if defined $role;
+    //     $whatsit->setProperty(font  => LookupValue('font')->specialize($glyph)) if $glyph;
+    //     return; }
+  );
 
   // Almost like a register, but different...
   DefPrimitive!("\\mathchardef Token SkipMatch:= Number", sub[stomach, args, state] {
     unpack!(args => newcs, value);
     let newcs : Token = newcs.into();
     let csname = newcs.get_cs_name().to_owned();
-    let (role, glyph) = decode_math_char(value.to_number().value_of() as u8);
+    let (role, glyph) = decode_math_char(value.to_number().value_of() as u16, state);
     let internalcs = match glyph {
       Some(_) => Some(T_CS!(&s!("\\@mathchardef@{}", csname))),
       None => None
@@ -512,4 +510,17 @@ LoadDefinitions!(state, {
     }
     Ok(vec![])
   });
+
+  DefConstructor!("\\mathaccent Number Digested",
+  "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
+  // sizer       => '#1',    # Close enough?
+  after_digest => after_digest!(stomach, whatsit, state, {
+    unimplemented!(); ()
+      // my ($stomach, $whatsit) = @_;
+      // my $n = $whatsit->getArg(1)->valueOf;
+      // my ($role, $glyph) = decodeMathChar($n);
+      // $whatsit->setProperty(glyph => $glyph) if $glyph;
+      // $whatsit->setProperty(font => LookupValue('font')->specialize($glyph)) if $glyph;
+  })
+  );
 });

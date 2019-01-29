@@ -204,6 +204,14 @@ macro_rules! DeclareFontMap {
 }
 
 #[macro_export]
+macro_rules! LoadFontMap {
+  ($encoding: expr) => {{
+    bind_state!(st);
+    st.load_font_map($encoding)
+  }}
+}
+
+#[macro_export]
 macro_rules! DefMacroIWO {
   // closure stub
   ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) => {{
@@ -1351,6 +1359,7 @@ macro_rules! DefRegister {
   ($proto:expr => $value:expr) => (DefRegisterWO!($proto, $value, None)); // allow for => style?
   ($proto:expr, $value:expr) => (DefRegisterWO!($proto, $value, None));
   ($proto:expr, $value:expr, $state_arg: ident) => (DefRegisterWO!($proto, $value, None, $state_arg));
+  ($proto:expr => $value:expr, $($key:ident => $val:expr),*) => (DefRegister!($proto, $value, $($key => $val),*));
   ($proto:expr, $value:expr, $($key:ident => $val:expr),*) => (DefRegisterWO!($proto, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*))));
   ($proto:expr, $value:expr, $state_arg:ident, $($key:ident => $val:expr),*) =>
     (DefRegisterWO!($proto, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*)), $state_arg));
