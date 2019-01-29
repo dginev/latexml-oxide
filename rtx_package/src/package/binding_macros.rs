@@ -189,7 +189,7 @@ macro_rules! reader_predigest {
   ($stomach:ident, $arg:ident, $state:ident, $body:block) => {
     Some(Rc::new(
       |$stomach: &mut Stomach, $arg: Tokens, $state: &mut State| -> Result<Option<Digested>> {
-        WithInnerState!($body, $state, $stomach)
+        WithInnerState!($body, $state, $stomach).into_digested_option_result()
       },
     ))
   };

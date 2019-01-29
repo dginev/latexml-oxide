@@ -551,6 +551,7 @@ impl Gullet {
     match value_type {
       RegisterType::Number => Ok(self.read_number(state)?.into()),
       RegisterType::Dimension => Ok(self.read_dimension(state)?.into()),
+      RegisterType::MuDimension => Ok(self.read_mu_dimension(state)?.into()),
       RegisterType::Glue => Ok(self.read_glue(state)?.into()),
       RegisterType::MuGlue => Ok(self.read_mu_glue(state)?.into()),
       RegisterType::Tokens => Ok(self.read_tokens_value(state)?.into()),
@@ -853,7 +854,7 @@ impl Gullet {
         Some(v) => self.read_rubber(false, state)?,
         None => (0.0, 0.0),
       };
-
+      
       Ok(Glue::new(d.value_of())) //TODO:, $r1, $f1, $r2, $f2); } }
     }
   }

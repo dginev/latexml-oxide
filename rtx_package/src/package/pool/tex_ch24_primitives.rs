@@ -301,14 +301,16 @@ LoadDefinitions!(state, {
   // If this is the right solution...
   // then we also should put the desired spacing on a style attribute?!?!?!
   DefConstructor!("\\vskip Glue", sub[document, args, props, state] {
-    // $length = $length->ptValue;
-    // if ($length > 10) {    # Or what!?!?!?!
-    //   if ($document->isCloseable('ltx:para')) {
-    //     $document->closeElement('ltx:para'); }
-    //   elsif ($document->isOpenable('ltx:break')) {
-    //     $document->insertElement('ltx:break'); } }
-    // return; },
-    unimplemented!(); ()
-  });
-  // properties => { isSpace => 1, isVerticalSpace => 1 });
+    unpack!(args => length);
+    let length = length.pt_value(None);
+    
+    if length > 10.0 {    // Or what!?!?!?!
+      if document.is_closeable("ltx:para", state).is_some() {
+        document.close_element("ltx:para", state)?;
+      } else if document.is_openable("ltx:break", state) {
+        document.insert_element("ltx:break", Vec::new(), None, state)?;
+      }
+    }},
+    properties => properties!(map!("isSpace" => true.into(), "isVerticalSpace" => true.into()))
+  );
 });

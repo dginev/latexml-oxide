@@ -237,12 +237,21 @@ LoadDefinitions!(state, {
 
   // Read a number
   DefParameterType!("Number", sub[gullet, inner, _extra, state] {
-    gullet.read_number(state)?.to_token()  });
+      gullet.read_number(state)?.to_token() 
+    },
+    reader_predigest => reader_predigest!(stomach, arg, state, { 
+      Number(arg.to_number().value_of())
+    })
+  );
 
   // Read a floating point number
   DefParameterType!("Float", sub[gullet, inner, _extra, state] {
-    gullet.read_float(state)?.to_token()
-  });
+      gullet.read_float(state)?.to_token()
+    },
+    reader_predigest => reader_predigest!(stomach, arg, state, { 
+      Number(arg.to_number().value_of())
+    })
+  );
 
   // ???
   // sub ReadFloat {
@@ -252,23 +261,39 @@ LoadDefinitions!(state, {
 
   // Read a dimension
   DefParameterType!("Dimension", sub[gullet, inner, _extra, state] {
-    gullet.read_dimension(state)?.to_token()
-  });
+      gullet.read_dimension(state)?.to_token()
+    },
+    reader_predigest => reader_predigest!(stomach, arg, state, { 
+      Dimension(arg.to_number().value_of())
+    })
+  );
 
   // Read a Glue (aka skip)
   DefParameterType!("Glue", sub[gullet, inner, _extra, state] {
-    gullet.read_glue(state)?.to_token()
-  });
+      gullet.read_glue(state)?.to_token()
+    },
+    reader_predigest => reader_predigest!(stomach, arg, state, { 
+      Glue(arg.to_number().value_of())
+    })
+  );
 
   // Read a MuDimension (math)
   DefParameterType!("MuDimension", sub[gullet, inner, _extra, state] {
-    gullet.read_mu_dimension(state)?.to_token()
-  });
+      gullet.read_mu_dimension(state)?.to_token()
+    },
+    reader_predigest => reader_predigest!(stomach, arg, state, { 
+      MuDimension(arg.to_number().value_of())
+    })
+  );
 
   // Read a MuGlue (math)
   DefParameterType!("MuGlue", sub[gullet, inner, _extra, state] {
-    gullet.read_mu_glue(state)?.to_token()
-  });
+      gullet.read_mu_glue(state)?.to_token()
+    },
+    reader_predigest => reader_predigest!(stomach, arg, state, { 
+      MuGlue(arg.to_number().value_of())
+    })
+  );
 
   // Read until the next (balanced) open brace {
   // used for the last TeX-style delimited argument

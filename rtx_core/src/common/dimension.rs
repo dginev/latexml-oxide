@@ -1,23 +1,20 @@
-use crate::common::number::Number;
 use crate::definition::register::NumericOps;
+use crate::definition::register;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Dimension {
-  number: f32,
-}
+pub struct Dimension(pub f32);
+
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct MuDimension {
-  number: f32,
-}
+pub struct MuDimension(pub f32);
 
 impl NumericOps for Dimension {
-  fn value_of(self) -> f32 { self.number }
-  fn new<T: Into<f32>>(number: T) -> Self { Dimension { number: number.into() } }
+  fn value_of(self) -> f32 { self.0 }
+  fn new<T: Into<f32>>(number: T) -> Self { Dimension(number.into()) }
 }
 
 impl NumericOps for MuDimension {
-  fn value_of(self) -> f32 { self.number }
-  fn new<T: Into<f32>>(number: T) -> Self { MuDimension { number: number.into() } }
+  fn value_of(self) -> f32 { self.0 }
+  fn new<T: Into<f32>>(number: T) -> Self { MuDimension(number.into()) }
 }
 
 impl Dimension {
@@ -29,7 +26,7 @@ impl Dimension {
     // But see toAttribute for friendlier forms....
     // [do we need the juggling in attributeFormat to be reproducible?]
 
-    let mut s = s!("{:.6}", self.number / 65536.0);
+    let mut s = s!("{:.6}", self.0 / 65536.0);
     if s.contains('.') {
       s = s.trim_end_matches('0').to_string();
     }
@@ -39,9 +36,7 @@ impl Dimension {
     s!("{}pt", s)
   }
 
-  fn attribute_format(self) -> String { s!("{:.1}pt", Number::round_to(self.value_of() / 65536.0, Some(1))) }
-
-  pub fn pt_value(&self) -> f32 { unimplemented!() }
+  fn attribute_format(self) -> String { s!("{:.1}pt", register::round_to(self.value_of() / 65536.0, Some(1))) }
 
   pub fn to_string(self) -> String { self.point_format() }
 

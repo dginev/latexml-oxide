@@ -359,10 +359,12 @@ impl Parameters {
     for parameter in &self.params {
       let values = parameter.read(gullet, fordefn, state)?;
       if parameter.reader_predigest.is_some() {
-        error!(
-          target: &s!("parameter:{}", parameter.name),
-          "parameter with predigest closure was invoked in an expandable context. Parameter digestion won't execute."
-        );
+        // TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest closure... 
+        // so this shouldn't be an error, not even an info -- but leaving it here if something changes in the future.
+        // error!(
+        //   target: &s!("parameter:{}", parameter.name),
+        //   "parameter with predigest closure was invoked in an expandable context. Parameter digestion won't execute."
+        // );
       }
       if !parameter.novalue {
         args.push(values);

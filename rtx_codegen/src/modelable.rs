@@ -104,8 +104,6 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
 pub fn load_indirect_model(input: DeriveInput) -> TokenStream {
   // Load the model as one would at runtime
   let name = quote!(#input).to_string();
-  dbg!(&name);
-
   let mut state = State::default();
   state.model.set_relaxng_schema(name.to_string());
   state.model.load_schema(&[]);

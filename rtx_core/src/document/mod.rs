@@ -481,12 +481,13 @@ impl Document {
     false
   }
 
-  // Check whether it is possible to close each element in @tags,
-  // any intervening nodes must be autocloseable.
-  // returning the last node that would be closed if it is possible,
-  // otherwise undef.
+  /// Check whether it is possible to close each element in @tags,
+  /// any intervening nodes must be autocloseable.
+  /// returning the last Some(node) that would be closed if it is possible,
+  /// otherwise None
   #[allow(clippy::wrong_self_convention)]
-  pub fn is_closeable(&mut self, mut tags: VecDeque<String>, state: &mut State) -> Option<Node> {
+  pub fn is_closeable<T : IntoVDQS>(&mut self, tags: T, state: &mut State) -> Option<Node> {
+    let mut tags : VecDeque<String> = tags.into_vdqs();
     let mut node_opt = if self.node.get_type() == Some(NodeType::TextNode) {
       self.node.get_parent()
     } else {
@@ -523,9 +524,7 @@ impl Document {
 
   // Close $qname, if it is closeable.
   pub fn maybe_close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
-    let mut qname_vdq = VecDeque::new();
-    qname_vdq.push_front(qname.to_string());
-    if let Some(node) = self.is_closeable(qname_vdq, state) {
+    if let Some(node) = self.is_closeable(qname.to_string(), state) {
       self.close_node_internal(&node, state)?;
       Ok(Some(node))
     } else {
@@ -2095,4 +2094,25 @@ fn serialize_attr(string: &str) -> String {
   serialized = serialized.replace("\n", "&#10;");
   serialized = serialized.replace("\t", "&#9;");
   serialized
+}
+
+pub trait IntoVDQS {
+  fn into_vdqs(self) -> VecDeque<String> where Self:Sized;
+}
+impl IntoVDQS for String {
+  fn into_vdqs(self) -> VecDeque<String> {
+    let mut vdq = VecDeque::new();
+    vdq.push_front(self);
+    vdq
+  }
+}
+impl IntoVDQS for &str {
+  fn into_vdqs(self) -> VecDeque<String> {
+    self.to_string().into_vdqs()
+  }
+}
+impl IntoVDQS for VecDeque<String> {
+  fn into_vdqs(self) -> VecDeque<String> {
+    self
+  }
 }

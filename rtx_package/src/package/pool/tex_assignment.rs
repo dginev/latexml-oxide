@@ -68,7 +68,7 @@ LoadDefinitions!(state, {
     let gullet = stomach.get_gullet_mut();
     let name = name.to_string();
     if let Some(props) = font::decode_fontname(&name,
-         gullet.read_keyword(&["at"], state)?.map(|_| gullet.read_dimension(state).unwrap().pt_value()),
+         gullet.read_keyword(&["at"], state)?.map(|_| gullet.read_dimension(state).unwrap().pt_value(None)),
          gullet.read_keyword(&["scaled"], state)?.map(|_| gullet.read_number(state).unwrap().value_of() / 1000.0)) {
     
       gullet.skip_spaces(state);

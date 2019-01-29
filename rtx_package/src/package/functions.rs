@@ -18,6 +18,8 @@ use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
 use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
 use rtx_core::definition::register::{NumericOps, Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue};
+use rtx_core::common::glue::{Glue, MuGlue};
+use rtx_core::common::dimension::{Dimension, MuDimension};
 use rtx_core::definition::{
   BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, PrimitiveClosure, ReplacementClosure,
 };
@@ -160,6 +162,37 @@ impl IntoRegisterValueOption<Option<RegisterValue>> for Option<Number> {
       None => None
     }
   }
+}
+
+// Convenience methods for predigest closures that require Result<Option<Digested>>
+pub trait IntoDigestedOptionResult<T>: Sized {
+  fn into_digested_option_result(self) -> Result<Option<Digested>>;
+}
+
+impl IntoDigestedOptionResult<Result<Option<Digested>>> for Glue {
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { RegisterValue::Glue(self).into_digested_option_result() }
+}
+impl IntoDigestedOptionResult<Result<Option<Digested>>> for MuGlue {
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { RegisterValue::MuGlue(self).into_digested_option_result() }
+}
+impl IntoDigestedOptionResult<Result<Option<Digested>>> for Dimension {
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { RegisterValue::Dimension(self).into_digested_option_result() }
+}
+impl IntoDigestedOptionResult<Result<Option<Digested>>> for MuDimension {
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { RegisterValue::MuDimension(self).into_digested_option_result() }
+}
+
+impl IntoDigestedOptionResult<Result<Option<Digested>>> for Number {
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { RegisterValue::Number(self).into_digested_option_result() }
+}
+
+
+
+impl IntoDigestedOptionResult<Result<Option<Digested>>> for RegisterValue {
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(self.into())) }
+}
+impl IntoDigestedOptionResult<Result<Option<Digested>>> for Result<Option<Digested>> {
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { self }
 }
 
 

@@ -5,7 +5,7 @@ use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::rc::Rc;
 
-use crate::common::dimension::Dimension;
+use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::glue::{Glue, MuGlue};
@@ -74,6 +74,7 @@ pub enum Stored {
   Glue(Glue),
   MuGlue(MuGlue),
   Dimension(Dimension),
+  MuDimension(MuDimension),
   // LaTeXML objects (Rc-wrapped)
   Expandable(Rc<Expandable>),
   Conditional(Rc<Conditional>),
@@ -119,6 +120,7 @@ impl fmt::Debug for Stored {
       Glue(ref glue) => write!(f, "Stored::Glue[{:?}]", glue),
       MuGlue(ref glue) => write!(f, "Stored::MuGlue[{:?}]", glue),
       Dimension(ref dimension) => write!(f, "Stored::Dimension[{:?}]", dimension),
+      MuDimension(ref dimension) => write!(f, "Stored::MuDimension[{:?}]", dimension),
       VecDigested(ref digested_vec) => write!(f, "VecDigested[{:?}]", digested_vec),
       VecDequeStored(ref vec) => write!(f, "VecDequeStored[{:?}]", vec),
       HashStored(ref hos) => write!(f, "HashStored[{:?}]", hos),
@@ -327,6 +329,7 @@ impl From<RegisterValue> for Stored {
     match rv {
       RegisterValue::Number(v) => Stored::Number(v),
       RegisterValue::Dimension(v) => Stored::Dimension(v),
+      RegisterValue::MuDimension(v) => Stored::MuDimension(v),
       RegisterValue::Glue(v) => Stored::Glue(v),
       RegisterValue::MuGlue(v) => Stored::MuGlue(v),
       RegisterValue::Token(v) => Stored::Token(v),
