@@ -8,17 +8,9 @@ LoadDefinitions!(state, {
   //   Date:   Wed Nov 28 10:47:09 2018 -0500
 
   // lines 1-695
-  // XML language, DefParameterType
   InnerPool!(tex_setup);
   // lines 695-949
   InnerPool!(tex_expandable_primitives);
-
-  //**********************************************************************
-  // Primitives
-  // See The TeXBook, Chapter 24, Summary of Vertical Mode
-  //  and Chapter 25, Summary of Horizontal Mode.
-  // Parsing of basic types (pp.268--271) is (mostly) handled in Gullet.pm
-  //**********************************************************************
   // lines 950-1102
   InnerPool!(tex_registers);
   // lines 1102-1408
@@ -32,80 +24,68 @@ LoadDefinitions!(state, {
   //  29.01.2019:
   //  updated upto (and including) here
   // -----------------------------------------
-
-  // lines 2086-2192
+  
+  // lines 2086-2335
   InnerPool!(tex_ch24_primitives);
-
-  // lines 2192-2840
+  // lines 2335-2985
   InnerPool!(tex_alignment);
-
-  // lines 2840-2918
+  // lines 2985-3070
   InnerPool!(tex_para);
-
-  // lines 2918-3009
+  // lines 3070-3158
   InnerPool!(tex_ch25_primitives);
-
-  // lines 3009-3474
+  // lines 3158-3625
   InnerPool!(tex_math_mode);
-
-  // lines 3474-3751
+  // lines 3625-3905
   InnerPool!(tex_scripts);
-
-  // lines 3751-3938
+  // lines 3905-4090
   InnerPool!(tex_math_style);
-
-  // lines 3938-4490
-  InnerPool!(tex_appendix_b);
-
-  // lines 4490-4606
-  // General support for Front Matter.
+  // lines 4090-4401
+  InnerPool!(tex_appendix_b_to_p349);
+  // lines 4401-4660
+  InnerPool!(tex_appendix_b_p350_to_p355);
+  // lines 4660-4932
   InnerPool!(tex_frontmatter);
-
-  // lines 4606-4648
-  InnerPool!(tex_references);
-
-  // lines 4648-4801
+  // lines 4932-4965
+  InnerPool!(tex_appendix_b_p356);
+  // lines 4965-5086
   InnerPool!(tex_accents);
-
-  // lines 4801-4920
+  // lines 5086-5159
   InnerPool!(tex_appendix_b_p357);
-
-  // lines,v2 5162-5609
+  // lines 5159-5607
   InnerPool!(tex_appendix_b_p358);
-
-  // lines 5321-5367
+  // lines 5607-5653
   InnerPool!(tex_appendix_b_p359);
-
-  // lines 5367-5414
+  // lines 5653-5701
   InnerPool!(tex_math_accents);
-
-  // lines 5414-5611
+  // lines 5701-5898
   InnerPool!(latex_delimiters);
-
-  // lines 5611-5691
+  // lines 5898-5952
   InnerPool!(tex_appendix_b_p360);
+  // lines 5952-6037
   InnerPool!(tex_appendix_b_p361);
-
-  // lines 5691-5750
-  InnerPool!(latex_loglike_functions);
-
-  // lines 5750-5976
-  InnerPool!(tex_appendix_b_p362); // includes 363?
+  // lines 6037-6225
+  InnerPool!(tex_appendix_b_p362);
+  // lines 6225-6254
+  InnerPool!(tex_appendix_b_p363);
+  // lines 6254-6261
   InnerPool!(tex_appendix_b_p364);
 
-  // lines 5976-6005
+  //======================================================================
+  // End of TeX Book definitions.
+  //======================================================================
+
+  //**********************************************************************
+  // Stray stuff .... where to ?
+  //**********************************************************************
+  // lines 6269-6291
   InnerPool!(tex_stray_math_style);
-
-  // lines 6005-6103
+  // lines 6005-6392
   InnerPool!(tex_special_chars);
-
-  // lines 6103-6144
+  // lines 6392-6434
   InnerPool!(latex_hook);
-
-  // lines 6144-6433
+  // lines 6434-6752
   InnerPool!(tex_rtx_specific);
-
-  // lines 6433-END
-  LoadPool!("eTeX");
-  LoadPool!("pdfTeX");
+  // lines 6753-END
+  LoadPool!("eTeX"); // unless... ?
+  LoadPool!("pdfTeX"); // unless... ?
 });

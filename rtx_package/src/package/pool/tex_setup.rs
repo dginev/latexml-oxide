@@ -1,4 +1,5 @@
 use crate::package::*;
+
 LoadDefinitions!(state, {
   RegisterNamespace!("ltx", "http://dlmf.nist.gov/LaTeXML");
   RegisterNamespace!("svg", "http://www.w3.org/2000/svg");

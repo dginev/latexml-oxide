@@ -4,8 +4,8 @@ LoadDefinitions!(state, {
   //----------------------------------------------------------------------
   // These determine whether the _next_ paragraph gets indented!
   // thus it needs \par to check whether such indentation has been set.
-  // DefPrimitiveI!("\indent",   None, |state| AssignValue(next_para_class => 'ltx_indent'); });
-  // DefPrimitiveI!("\noindent", None, || AssignValue(next_para_class => 'ltx_noindent'); });
+  DefPrimitive!("\\indent",  sub { AssignValue!("next_para_class" => "ltx_indent"); });
+  DefPrimitive!("\\noindent", sub { AssignValue!("next_para_class" => "ltx_noindent"); });
 
   // <ltx:para> represents a Logical Paragraph, whereas <ltx:p> is a `physical paragraph'.
   // A para can contain both p and displayed equations and such.
@@ -70,8 +70,4 @@ LoadDefinitions!(state, {
 
   // \dump ???
   DefPrimitive!("\\end", sub[stomach, args, state] { stomach.get_gullet_mut().flush(state); });
-
-  // TODO: Move to the right place in the pool definitions (maybe split out individual sub-pools by
-  // chapter?)
-  DefMacroI!(T_CS!("\\space"), None, T_SPACE!());
 });
