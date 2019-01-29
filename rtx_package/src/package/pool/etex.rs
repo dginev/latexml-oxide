@@ -1,3 +1,202 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {});
+LoadDefinitions!(state, {
+// # See http://tex.loria.fr/moteurs/etex_ref.html
+// # Section 3. The new features
+
+// #======================================================================
+// # 3.1 Additional control over expansion
+// # \protected associates with the next defn
+// # (note that it isn't actually used anywhere).
+// DefPrimitiveI('\protected', undef, sub {
+//     $STATE->setPrefix('protected'); return; }, isPrefix => 1);
+
+// # \detokenize
+// DefMacro('\detokenize GeneralText', sub { Explode(UnTeX($_[1])); });
+
+// # \unexpanded
+// # This is like \noexpand, but acts on <general text>
+// # with the peculiarity of how <filler> is expanded beforehand!
+// DefMacro('\unexpanded GeneralText', sub {
+//     my ($gullet, $tokens) = @_;
+//     return $gullet->neutralizeTokens($tokens->unlist); });
+// #======================================================================
+// # 3.2. Provision for re-scanning already read text
+
+// # \readline; like \read, but only spaces & other
+// DefMacro('\readline Number SkipKeyword:to SkipSpaces Token', sub {
+//     my ($gullet, $port, $token) = @_;
+//     $port = ToString($port);
+//     if (my $mouth = LookupValue('input_file:' . $port)) {
+//       DefMacroI($token, undef, Tokens(Explode(($mouth->readRawLine || '') . "\r"))); }
+//     return; });
+
+// DefMacro('\scantokens GeneralText', sub {
+//     LaTeXML::Core::Mouth->new(UnTeX($_[1]))->readTokens; });
+
+// #======================================================================
+// # 3.3 Environmental enquiries
+
+// our @ETEX_VERSION = (qw(2 .2));
+// DefMacro('\eTeXrevision', sub { Explode($ETEX_VERSION[1]); });
+// DefRegister('\eTeXversion' => Number($ETEX_VERSION[0]));
+
+// # \currentgrouplevel
+// DefRegister('\currentgrouplevel', Number(0),
+//   readonly => 1,
+//   getter => sub { $STATE->getFrameDepth; });
+
+// # \currentgrouptype returns group types from 0..16 ; but what IS a "group type"?
+// DefRegister('\currentgrouptype', Number(0), readonly => 1);
+
+// # \ifcsname stuff \endcsname
+// DefConditional('\ifcsname CSName', sub { defined LookupMeaning($_[1]); });
+
+// # \ifdefined <token>
+// DefConditional('\ifdefined Token', sub { defined LookupMeaning($_[1]); });
+
+// # ???
+// DefRegister('\lastnodetype', Number(0));
+
+// #======================================================================
+// # 3.4 Generalization of the \mark concept: a class of \marks
+// # but since we don't manage Pages...
+
+// DefPrimitive('\marks Number GeneralText', undef);
+// DefMacroI('\topmarks Number',        undef, Tokens());
+// DefMacroI('\firstmarks Number',      undef, Tokens());
+// DefMacroI('\botmarks Number',        undef, Tokens());
+// DefMacroI('\splitfirstmarks Number', undef, Tokens());
+// DefMacroI('\splitbotmarks Number',   undef, Tokens());
+
+// #======================================================================
+// # 3.5 Bi-directional typesetting: the TeX--XeT primitives
+
+// # Should these simply ouput some unicode direction changers,
+// # [Things like:
+// #  202A;LEFT-TO-RIGHT EMBEDDING;Cf;0;LRE;;;;;N;;;;;
+// #  202B;RIGHT-TO-LEFT EMBEDDING;Cf;0;RLE;;;;;N;;;;;
+// #  202C;POP DIRECTIONAL FORMATTING;Cf;0;PDF;;;;;N;;;;;
+// #  202D;LEFT-TO-RIGHT OVERRIDE;Cf;0;LRO;;;;;N;;;;;
+// #  202E;RIGHT-TO-LEFT OVERRIDE;Cf;0;RLO;;;;;N;;;;;
+// # ]
+// # or do we need to do some more intelligent tracking of modes
+// # and directionality?
+// # Presumably we can't rely on the material itself being directional.
+
+// # By leaving this 0, we're saying "Don't use these features"!
+// DefRegister('\TeXXeTstate' => Number(0));
+
+// DefMacroI('\beginL', undef, '');
+// DefMacroI('\beginR', undef, '');
+// DefMacroI('\endL',   undef, '');
+// DefMacroI('\endR',   undef, '');
+
+// DefRegister('\predisplaydirection' => Number(0));    # ???
+
+// #======================================================================
+// # 3.6 Additional debugging features
+// DefRegister('\interactionmode' => Number(0));
+
+// # Should show all open groups & their type.
+// DefPrimitive('\showgroups', undef);
+
+// # \showtokens <generaltext>
+// # NOTE Debugging aids are currently IGNORED!
+// DefPrimitive('\showtokens GeneralText', undef);
+
+// DefRegister('\tracingassigns'    => Number(0));    # ???
+// DefRegister('\tracinggroups'     => Number(0));
+// DefRegister('\tracingifs'        => Number(0));    # ???
+// DefRegister('\tracingscantokens' => Number(0));
+
+// #======================================================================
+// # 3.7 Miscellaneous primitives
+
+// # \everyeof
+// # NOTE: These tokens are NOT used anywhere (yet?)
+// DefRegister('\everyeof', Tokens());
+
+// DefConstructor('\middle Token', '#1',
+//   afterConstruct => sub {
+//     my ($document) = @_;
+//     my $current = $document->getNode;
+//     my $delim = $document->getLastChildElement($current) || $current;
+//     $document->setAttribute($delim, role     => 'MIDDLE');
+//     $document->setAttribute($delim, stretchy => 'true');
+//     return; });
+
+// # \unless someif
+// DefConditional('\unless Token', sub {
+//     my ($gullet, $if) = @_;
+//     my ($defn, $test);
+//     if (($defn = LookupDefinition($if)) && (($$defn{conditional_type} || '') eq 'if')
+//       && ($test = $defn->getTest)) {
+//       # Invert the if's test!
+//       !&$test($gullet, $defn->readArguments($gullet)); }
+//     else {
+//       Error('unexpected', $if, "\\unless should not be followed by " . Stringify($if)); } });
+
+// #======================================================================
+// # \numexpr, \dimexpr, \gluexpr, \muexpr
+// # These read tokens doing simple parsing until \relax or the parse fails.
+// # since we don't know where it ends, we can't easily use Parse::RecDescent.
+// # They also act like a Register!
+// # $type is one of Number, Dimension, Glue or MuGlue
+// sub etex_readexpr {
+//   my ($gullet, $type) = @_;
+//   my $value = etex_readexpr_i($gullet, $type, 0);
+//   if (my $token = $gullet->readToken) {    # Skip \relax
+//     $gullet->unread($token) unless $token->equals(T_CS('\relax')); }
+//   return $value; }
+
+// sub etex_readexpr_i {
+//   my ($gullet, $type, $prec) = @_;
+//   # Read a first value
+//   my $value;
+//   my $token = $gullet->readXNonSpace;
+//   if (!$token) {
+//     return; }
+//   elsif ($token->equals(T_OTHER('('))) {
+//     $value = etex_readexpr_i($gullet, $type, 0);
+//     my $close = $gullet->readXToken;    # close parenthesis should have terminated recursive call
+//     if (!$close || !$close->equals(T_OTHER(')'))) {
+//       Error('expected', ')', $gullet,
+//         "Missing close parenthesis in $type expr.", "Got " . ToString($close)); } }
+//   else {                                # Read core TeX value/register
+//     $gullet->unread($token);
+//     $value = $gullet->readValue($type); }
+
+//   # Now check for a following operator(s) & operand(s) (respecting precedence)
+//   while (my $next = $gullet->readXNonSpace) {
+//     if ($next->equals(T_CS('\relax'))) {
+//       $gullet->unread($next);           # leave the \relax for top-level to strip off.
+//       last; }
+//     elsif ($next->equals(T_OTHER('+')) && ($prec < 1)) {
+//       $value = $value->add(etex_readexpr_i($gullet, $type, 1)); }
+//     elsif ($next->equals(T_OTHER('-')) && ($prec < 1)) {
+//       $value = $value->subtract(etex_readexpr_i($gullet, $type, 1)); }
+//     elsif ($next->equals(T_OTHER('*')) && ($prec < 2)) {    # multiplier should be pure number
+//       $value = $value->multiply(etex_readexpr_i($gullet, 'Number', 2)); }
+//     elsif ($next->equals(T_OTHER('/')) && ($prec < 2)) {    # denominator should be pure number
+//       $value = $value->divideround(etex_readexpr_i($gullet, 'Number', 2)); }
+//     else {                                                  # anything else, we're done.
+//       $gullet->unread($next);
+//       last; } }
+//   return $value; }
+
+// DefParameterType('NumExpr',  sub { etex_readexpr($_[0], 'Number'); });
+// DefParameterType('DimExpr',  sub { etex_readexpr($_[0], 'Dimension'); });
+// DefParameterType('GlueExpr', sub { etex_readexpr($_[0], 'Glue'); });
+// DefParameterType('MuExpr',   sub { etex_readexpr($_[0], 'MuGlue'); });
+
+// DefRegister('\numexpr NumExpr',   Number(0),    getter => sub { $_[0]; });
+// DefRegister('\dimexpr DimExpr',   Dimension(0), getter => sub { $_[0]; });
+// DefRegister('\glueexpr GlueExpr', Glue(0),      getter => sub { $_[0]; });
+// DefRegister('\muexpr MuExpr',     MuGlue(0),    getter => sub { $_[0]; });
+
+// # Not really sure where this comes from; pdftex?
+// DefRegister('\synctex', Number(0));
+// #======================================================================
+
+});
