@@ -1,30 +1,5 @@
 use crate::package::*;
 
-// Risky: I think this needs to be digested as a body to work like TeX (?)
-// but parameter think's it's just parsing from gullet...
-fn read_box_contents(gullet: &mut Gullet, everybox_opt: Option<Tokens>, state: &mut State) -> Result<Tokens> {
-  while let Some(t) = gullet.read_token(state) {
-    if t == T_BEGIN!() {
-      break;
-    } // Skip till { or \bgroup
-  }
-  // Now, insert some extra tokens, if any, possibly from \afterassignment
-  if let Some(ref token) = state.lookup_tokens("BeforeNextBox") {
-    state.assign_value("BeforeNextBox", None, Some(Scope::Global));
-    gullet.unread(token);
-  }
-  // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
-  if let Some(everybox) = everybox_opt {
-    gullet.unread(&everybox);
-  }
-  Ok(Tokens!())
-}
-
-fn predigest_box_contents(stomach: &mut Stomach, _tokens: Tokens, state: &mut State) -> Result<Option<Digested>> {
-  let mut contents = stomach.invoke_token(&T_BEGIN!(), state)?;
-  Ok(Some(contents.remove(0)))
-}
-
 LoadDefinitions!(state, {
   // <box> = \box <8bit> | \copy <8bit> | \lastbox | \vsplit <8bit> to <dimen>
   //   | \hbox <box specification>{<horizontal mode material>}
@@ -34,7 +9,7 @@ LoadDefinitions!(state, {
 
   // \setbox<number>=\hbox to <dimen>{<horizontal mode material>}
 
-  // DefPrimitive('\setbox Number SkipMatch:=', sub {
+  DefPrimitive!("\\setbox Number SkipMatch:=", sub[stomach, args, state] {
   //     my ($stomach) = @_;
   //     no warnings 'recursion';
   //     my $box = 'box' . $_[1]->valueOf;
@@ -49,22 +24,23 @@ LoadDefinitions!(state, {
   // (global)     my ($stuff, @rest) = $stomach->invokeToken($stomach->getGullet->readXToken);
   //     AssignValue('box' . $_[1]->valueOf => $stuff, $scope);
   //     @rest; });
+    unimplemented!(); ()
+  });
 
-  // DefPrimitive('\box Number', sub {
+  DefPrimitive!("\\box Number", sub[stomach, args, state] {
   //     my $box   = 'box' . $_[1]->valueOf;
   //     my $stuff = LookupValue($box);
   //     AssignValue($box, undef);
-  //     ($stuff ? $stuff->unlist : ()); });
+  //     ($stuff ? $stuff->unlist : ()); 
+    unimplemented!(); ()
+  });
 
-  // DefPrimitive('\copy Number', sub {
+  DefPrimitive!("\\copy Number", sub[stomach, args, state] {
   //     my $box   = 'box' . $_[1]->valueOf;
   //     my $stuff = LookupValue($box);
-  //     ($stuff ? $stuff->unlist : ()); });
-
-  // sub revert_spec {
-  //   my ($whatsit, $keyword) = @_;
-  //   my $value = $whatsit->getProperty($keyword);
-  //   return ($value ? (Explode($keyword), Revert($value)) : ()); }
+  //     ($stuff ? $stuff->unlist : ()); 
+    unimplemented!(); ()
+  });
 
   DefParameterType!("BoxSpecification",  reader => reader!(gullet, inner, extra, state, {
       if let Some(key) = gullet.read_keyword(&["to", "spread"], state)? {
@@ -98,31 +74,20 @@ LoadDefinitions!(state, {
     reader_predigest=>reader_predigest!(stomach, arg, state, { predigest_box_contents(stomach, arg, state) })
   );
 
-  // DefParameterType('VBoxContents', sub {
-  //     read_box_contents($_[0], LookupValue('\everyvbox')); },
-  //   undigested => 1);    # Cause it already is digested!
+  DefParameterType!("VBoxContents", reader=>reader!(gullet, inner, extra, state, {
+      read_box_contents(gullet, state.lookup_tokens("\\everyvbox"), state)
+    }),
+    reader_predigest => undigested!() // Cause it already is digested!
+  );
 
-  // # DefParameterType('BoxContents',sub {
-  // #   my($gullet)=@_;
-  // #   my $t;
-  // #   while(($t=$gullet->readToken) && !Equals($t,T_BEGIN)){} # Skip till { or \bgroup
-  // #   my($contents,@stuff) = $STATE->getStomach->invokeToken(T_BEGIN);
-  // #   $contents; },
-  // #        undigested=>1); # Cause it already is digested!
-
-  // # This re-binds a number of important control sequences to their default text binding.
-  // # This is useful within common boxing or footnote macros that can appear within
-  // # alignments or special environments that have redefined many of these.
-  // AssignValue(TEXT_MODE_BINDINGS  => []);
-  // AssignValue(HTEXT_MODE_BINDINGS => []);
-  // AssignValue(VTEXT_MODE_BINDINGS => []);
-  // PushValue(HTEXT_MODE_BINDINGS => [T_MATH, T_CS('\@dollar@in@textmode')]);
-  // PushValue(VTEXT_MODE_BINDINGS => [T_MATH, T_CS('\@dollar@in@normalmode')]);
-  // ###PushValue(TEXT_MODE_BINDINGS => [T_CS('\centerline'), T_CS('\relax')]);
-
-  // sub REF {
-  //   my ($thing, $key) = @_;
-  //   return $thing && $$thing{$key}; }
+  // This re-binds a number of important control sequences to their default text binding.
+  // This is useful within common boxing or footnote macros that can appear within
+  // alignments or special environments that have redefined many of these.
+  AssignValue!("TEXT_MODE_BINDINGS"  => Stored::VecDequeStored(VecDeque::new()));
+  AssignValue!("HTEXT_MODE_BINDINGS" => Stored::VecDequeStored(VecDeque::new()));
+  AssignValue!("VTEXT_MODE_BINDINGS" => Stored::VecDequeStored(VecDeque::new()));
+  PushValue!("HTEXT_MODE_BINDINGS" => Tokens!(T_MATH!(), T_CS!("\\@dollar@in@textmode")));
+  PushValue!("VTEXT_MODE_BINDINGS" => Tokens!(T_MATH!(), T_CS!("\\@dollar@in@normalmode")));
 
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props, state] {
       // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
@@ -171,4 +136,118 @@ LoadDefinitions!(state, {
 
     })
   );
+
+
+  DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, props, state] {
+    unimplemented!(); ()
+    // my ($document, $spec, $contents, %props) = @_;
+    // my @block = insertBlock($document, $contents, vattach => 'bottom'); },
+    // sizer       => '#2',
+    // mode        => 'text',
+    // afterDigest => sub {
+    //   my ($stomach, $whatsit) = @_;
+    //   my $spec = $whatsit->getArg(1);
+    //   my $box  = $whatsit->getArg(2);
+    //   if (my $h = GetKeyVal($spec, 'to')) {
+    //     $whatsit->setHeight($h); }
+    //   elsif (my $s = GetKeyVal($spec, 'spread')) {
+    //     $whatsit->setHeight($box->getHeight->add($s)); }
+    //   return; 
+  });
+
+  DefConstructor!("\\vtop BoxSpecification VBoxContents", sub[document, args, props, state] {
+    unimplemented!(); ()
+  //   my ($document, $spec, $contents, %props) = @_;
+  //   insertBlock($document, $contents, vattach => 'top'); },
+  // sizer       => '#2',
+  // mode        => 'text',
+  // afterDigest => sub {
+  //   my ($stomach, $whatsit) = @_;
+  //   my $spec = $whatsit->getArg(1);
+  //   my $box  = $whatsit->getArg(2);
+  //   if (my $h = GetKeyVal($spec, 'to')) {
+  //     $whatsit->setHeight($h); }
+  //   elsif (my $s = GetKeyVal($spec, 'spread')) {
+  //     $whatsit->setHeight($box->getHeight->add($s)); }
+  //   return; });
+  });
+
+  DefParameterType!("RuleSpecification", reader=>reader!(gullet, inner, extra, state, {
+    unimplemented!(); ()
+    // my $keyvals = LaTeXML::Core::KeyVals->new(undef, undef, skipMissing => 1);
+    // while (my $key = $gullet->readKeyword('width', 'height', 'depth')) {
+    //   $keyvals->setValue($key, $gullet->readDimension); }
+    // $keyvals; 
+    }),
+    optional => true,
+    reader_predigest => undigested!() 
+  );
+
+DefConstructor!("\\vrule RuleSpecification","",
+  // "?#invisible()(?#isVerticalRule()\
+  //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)' \
+  //    width='&GetKeyVal(#1,width)' color='#color'/>))",
+  after_digest=>after_digest!(stomach, whatsit, state, {unimplemented!(); ()}));
+  // afterDigest => sub {
+  //   my ($stomach, $whatsit) = @_;
+  //   my $dims   = $whatsit->getArg(1);
+  //   my $width  = GetKeyVal($dims, 'width');
+  //   my $height = GetKeyVal($dims, 'height');
+  //   my $depth  = GetKeyVal($dims, 'depth');
+  //   $whatsit->setProperty(width  => $width)  if $width;
+  //   $whatsit->setProperty(height => $height) if $height;
+  //   $whatsit->setProperty(depth  => $depth)  if $depth;
+  //   my $w = ($width  ? $width->ptValue  : undef);
+  //   my $h = ($height ? $height->ptValue : undef);
+  //   my $d = ($depth  ? $depth->ptValue  : undef);
+  //   $h -= $d if $h && $d;    # - ??
+
+  //   if (my $alignment = LookupValue('Alignment')) {
+  //     if (((!defined $h) && (!defined $w)) || ((defined $h) && ($h > 20))
+  //       || ((defined $h) && (defined $w) && ($h > 3 * $w))) {
+  //       # This isXxxxRule property is to determine if it is used for separating rules within alignments
+  //       $whatsit->setProperty(isVerticalRule => 1) } }
+  //   elsif ((defined $w) && ($w == 0)) {
+  //     $whatsit->setProperty(invisible => 1); }
+  //   else {
+  //     $dims->setValue(width => '1px') unless defined $w; }
+  //   if (my $color = LookupValue('font')->getColor) {
+  //     if ($color ne 'black') {
+  //       $whatsit->setProperty(color => $color); } }
+  //   return; }
+
+DefConstructor!("\\hrule RuleSpecification","",
+  // "?#isHorizontalRule()\
+  //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)'\
+  //    width='&GetKeyVal(#1,width)' color='#color'/>)",
+  after_digest=>after_digest!(stomach, whatsit, state, {unimplemented!(); ()}));
+  // afterDigest => sub {
+  //   my ($stomach, $whatsit) = @_;
+  //   my $dims   = $whatsit->getArg(1);
+  //   my $width  = GetKeyVal($dims, 'width');
+  //   my $height = GetKeyVal($dims, 'height');
+  //   my $depth  = GetKeyVal($dims, 'depth');
+  //   $whatsit->setProperty(width  => $width)  if $width;
+  //   $whatsit->setProperty(height => $height) if $height;
+  //   $whatsit->setProperty(depth  => $depth)  if $depth;
+  //   my $w = ($width  ? $width->ptValue  : undef);
+  //   my $h = ($height ? $height->ptValue : undef);
+  //   my $d = ($depth  ? $depth->ptValue  : undef);
+  //   $h -= $d if $h && $d;    # - ??
+
+  //   if (my $alignment = LookupValue('Alignment')) {
+  //     # What is the intended logic here?
+  //     if (((!defined $h) && (!defined $w)) || ((defined $w) && ($w > 20))
+  //       || ((defined $h) && (defined $w) && ($w > 3 * $h))) {
+  //       # This isXxxxRule property is to determine if it is used for separating rules within alignments
+  //       $alignment->addLine('t');
+  //       $whatsit->setProperty(isHorizontalRule => 1) } }
+  //   else {
+  //     $dims->setValue(width  => '100%') unless defined $w;
+  //     $dims->setValue(height => '1px')  unless defined $h; }
+  //   if (my $color = LookupValue('font')->getColor) {
+  //     if ($color ne 'black') {
+  //       $whatsit->setProperty(color => $color); } }
+  //   return; });
+
 });

@@ -578,7 +578,7 @@ macro_rules! DefEnvironmentWO (
   ($proto_raw:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
   use rtx_core::util::text::*;
   let mut proto = $proto_raw.to_string().trim_start().to_string();
-  let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace));
+  let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace)).unwrap_or_default();
   let compiled_replacement;
   compile_replacement!(compiled_replacement, $replacement);
 
@@ -595,7 +595,7 @@ macro_rules! DefEnvironmentIWO (
   ($proto_raw:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => ({
   use rtx_core::util::text::*;
   let mut proto = $proto_raw.to_string().trim_start().to_string();
-  let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace));
+  let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace)).unwrap_or_default();
   // TODO: What do we do with param lists?
   //let paramlist_str = proto.trim_start().to_string();
   def_environment(name, None, $compiled_replacement, $options, $state_arg);
@@ -1064,6 +1064,10 @@ macro_rules! RemoveValue {
 }
 #[macro_export]
 macro_rules! PushValue {
+  ($name:expr => $values:expr) => {{
+    bind_state_mut!(st);
+    st.push_value($name, $values)
+  }};
   ($name:expr, $values:expr) => {{
     bind_state_mut!(st);
     st.push_value($name, $values)

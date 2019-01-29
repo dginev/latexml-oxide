@@ -7,11 +7,9 @@ LoadDefinitions!(state, {
   //   Author: bruce miller <bruce.miller@nist.gov>
   //   Date:   Wed Nov 28 10:47:09 2018 -0500
 
-
   // lines 1-695
   // XML language, DefParameterType
   InnerPool!(tex_setup);
-
   // lines 695-949
   InnerPool!(tex_expandable_primitives);
 
@@ -21,26 +19,21 @@ LoadDefinitions!(state, {
   //  and Chapter 25, Summary of Horizontal Mode.
   // Parsing of basic types (pp.268--271) is (mostly) handled in Gullet.pm
   //**********************************************************************
-
   // lines 950-1102
-  // Dimen registers; TeXBook p. 274
   InnerPool!(tex_registers);
-  
   // lines 1102-1408
   InnerPool!(tex_assignment);
-
   // lines 1408-1773
   InnerPool!(tex_fonts);
+  // lines 1773-2085
+  InnerPool!(tex_boxes);
 
   // -----------------------------------------
-  //  28.01.2019:
+  //  29.01.2019:
   //  updated upto (and including) here
   // -----------------------------------------
 
-  // lines 1773-1954
-  InnerPool!(tex_boxes);
-
-  // lines 1954-2192
+  // lines 2086-2192
   InnerPool!(tex_ch24_primitives);
 
   // lines 2192-2840

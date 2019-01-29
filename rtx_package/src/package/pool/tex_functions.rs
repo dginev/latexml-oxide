@@ -221,3 +221,114 @@ pub fn decode_math_char(mut n: u16, state: &State) -> (Option<String>, Option<ch
   
   (role_opt,font_opt)
 }
+
+// Risky: I think this needs to be digested as a body to work like TeX (?)
+// but parameter think's it's just parsing from gullet...
+pub fn read_box_contents(gullet: &mut Gullet, everybox_opt: Option<Tokens>, state: &mut State) -> Result<Tokens> {
+  while let Some(t) = gullet.read_token(state) {
+    if t == T_BEGIN!() {
+      break;
+    } // Skip till { or \bgroup
+  }
+  // Now, insert some extra tokens, if any, possibly from \afterassignment
+  if let Some(ref token) = state.lookup_tokens("BeforeNextBox") {
+    state.assign_value("BeforeNextBox", None, Some(Scope::Global));
+    gullet.unread(token);
+  }
+  // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
+  if let Some(everybox) = everybox_opt {
+    gullet.unread(&everybox);
+  }
+  Ok(Tokens!())
+}
+
+pub fn predigest_box_contents(stomach: &mut Stomach, _tokens: Tokens, state: &mut State) -> Result<Option<Digested>> {
+  let mut contents = stomach.invoke_token(&T_BEGIN!(), state)?;
+  Ok(Some(contents.remove(0)))
+}
+
+pub fn revert_spec(whatsit: &mut Whatsit, keyword: &str, state: &mut State) -> Vec<Token> {
+  //   my ($whatsit, $keyword) = @_;
+  //   my $value = $whatsit->getProperty($keyword);
+  //   return ($value ? (Explode($keyword), Revert($value)) : ()); }
+  unimplemented!()
+}
+
+/// This attempts to be a generalize vbox construction;
+/// It tries to figure out whether an ltx:inline-block or ltx:para is needed,
+/// and attempts to figure out whether sequences of the inserted content
+/// need to be explicitly wrapped in some kind of block element (presumably ltx:p).
+/// It returns the inserted inner blocks,
+/// whether or not they got wrapped by that ltx:inline-block; which it DOESN'T TELL YOU ABOUT!
+pub fn insert_block(document: &mut Document, contents: Tokens, blockattr: HashMap<String, String>) -> Result<()> {
+  unimplemented!();
+  // my ($document, $contents, %blockattr) = @_;
+  // # Create something like:
+  // # "<ltx:inline-block vattach='$vattach' height='#height'>#2</ltx:inline-block>"
+  // my $model   = $document->getModel;
+  // my $context = $document->getElement;    # Where we originally start inserting.
+
+  // my $blocktag  = 'ltx:block';
+  // my $iblocktag = 'ltx:inline-block';
+  // if ($blockattr{para}) {
+  //   $blocktag  = 'ltx:para';
+  //   $iblocktag = 'ltx:inline-para';
+  //   delete $blockattr{para}; }
+  // # Generally, we're going to need some sort of container to hold the contents of the block.
+  // # Particularly if we're: setting various size & positioning attributes;
+  // # or can't currently open an ltx:p; or if the current point accepts plain text (#PCDATA).
+  // # If we're in an inline context, we'll need a ltx:inline-block,  otherwise ltx:block.
+  // # [Or maybe an ltx:para... when does that happen?]
+  // my $newblock = undef;
+  // my $unwrap   = 0;
+  // map { ($blockattr{$_} || delete $blockattr{$_}) } keys %blockattr;
+  // my $hasattr = scalar(keys %blockattr);
+  // if ($hasattr || !$document->canContainSomehow($context, 'ltx:p') || $document->canContain($context, '#PCDATA')) {
+  //   my $tag = ($document->canContain($context, $blocktag)
+  //     ? $blocktag
+  //     : $iblocktag);
+  //   $newblock = $document->openElement($tag, '_autoclose' => 1, %blockattr); }
+  // ## I think this option isn't really needed.... try to simplify
+  // ## elsif ($document->canContainSomehow($context, 'ltx:para')) {
+  // ## $newblock = $document->openElement('ltx:para', '_autoclose' => 1, %blockattr); }
+  // # Insert the content for the block, and reduce
+
+  // $document->setAttribute($document->getElement, '_vertical_mode_' => 1);    # HACK!!!! (see \hbox)
+  // my @nodes = $document->filterChildren($document->filterDeletions($document->absorb($contents)));
+
+  // # Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
+  // my @newnodes = ();
+  // while (@nodes) {
+  //   if ($model->getNodeQName($nodes[0]) eq 'ltx:break') {    # ltx:break are superflous, now.
+  //     $document->removeNode(shift(@nodes));
+  //     next; }
+  //   my @n;                                                   # Collect up sequences of Inline
+  //   while (@nodes && ($model->isInSchemaClass('Inline', $nodes[0]))) {
+  //     push(@n, shift(@nodes)); }
+  //   if (@n) {
+  //     push(@newnodes, $document->wrapNodes('ltx:p', @n)); }
+  //   else {
+  //     push(@newnodes, shift(@nodes)); } }
+
+  // # If we've inserted a wrapper element, close all open elements up to it's parent
+  // # It may have auto-opened some element to contain it, but leave that open for following material
+  // # Otherwise, close everything back up to the originally open element (but only if still open!)
+  // if ($newblock) {
+  //   $document->closeToNode($newblock->parentNode, 1); }
+  // else {
+  //   $document->closeToNode($context, 1); }
+  // # Check if the ltx:inline-block container is really needed.
+  // if ($newblock) {
+  //   my @rows = $newblock->childNodes;
+  //   if (scalar(@rows) < 1) {    # Insertion came up empty?
+  //     $document->removeNode($newblock); }    # then remove the new block entirely
+  //   elsif ($unwrap ||
+  //     ((scalar(@rows) == 1)                  # Else only 1 item inside, then flatten
+  //       && $document->canContain($newblock->parentNode, $rows[0])    # if allowed.
+  //       && (!$hasattr || !grep { !$document->canHaveAttribute($rows[0], $_) } keys %blockattr))) {
+  //     map { $document->setAttribute($rows[0], $_ => $blockattr{$_}) } keys %blockattr;
+  //     $document->unwrapNodes($newblock); } }
+
+  // # And return the list of "rows" in the box (in case they need attributes....)
+  // return @newnodes; }
+}

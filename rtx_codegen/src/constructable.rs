@@ -466,10 +466,10 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> proc_macro2::T
     let mut args = Vec::new();
     while !LEAD_CPAREN_RE.is_match(text) {
       let quoted_follows;
-      {
-        let ttl = text.trim_start(); // need an immutable borrow of text, so wrapping in a block
-        quoted_follows = ttl.starts_with('\'') || ttl.starts_with('\"');
-      }
+
+      let ttl = text.trim_start();
+      quoted_follows = ttl.starts_with('\'') || ttl.starts_with('\"');
+
       let arg = if quoted_follows {
         translate_string(&mut text)
       } else {
@@ -555,13 +555,14 @@ fn parse_conditional(text: &mut String) -> (proc_macro2::TokenStream, String, St
   *text = LEAD_QMARK.replace(text, |_: &Captures| String::new()).to_string();
   let translated_bool = translate_value("(", text);
   let bool_branch = quote!(  #translated_bool );
-  let if_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis));
-  if !if_branch.is_empty() {
-    let else_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis));
-    // println!("-- cond after: {:?}", text);
+  let if_branch_opt = extract_bracketed(text, Some(&Delimiter::Parenthesis));
+  if let Some(if_branch) = if_branch_opt {
+    let else_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis)).unwrap_or_default();
+    // println!("-- cond after with else: {:?}", text);
     (bool_branch, if_branch, else_branch)
   } else {
-    panic!("Missing if clause at '{:?}'\n", text);
+    // println!("-- cond after malformed: {:?}", text);
+    (bool_branch, String::new(), String::new())
   }
 }
 
