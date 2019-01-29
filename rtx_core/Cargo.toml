@@ -8,7 +8,7 @@ description = "Core conversion capabilities of rtx"
 
 [lib]
 name = "rtx_core"
-crate-type = ["rlib", "dylib", "staticlib"]
+crate-type = ["lib"]
 
 [dependencies]
 rustc-serialize = "0.3"

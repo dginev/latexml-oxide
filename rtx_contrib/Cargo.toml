@@ -7,7 +7,7 @@ authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 description = "User-contributed bindings for personal use"
 
 [lib]
-crate-type = ["rlib", "dylib", "staticlib"]
+crate-type = ["lib"]
 
 [dependencies]
 rustc-serialize = "0.3"

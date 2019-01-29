@@ -7,7 +7,7 @@ authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 description = "Bindings and related infrastructure for core processing"
 
 [lib]
-crate-type = ["rlib", "dylib", "staticlib"]
+crate-type = ["lib"]
 
 [dependencies]
 rustc-serialize = "0.3"
