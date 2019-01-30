@@ -655,17 +655,32 @@ LoadDefinitions!(state, {
   // Hopefully there are no issues with the box being digested
   // as part of the reader???
   DefParameterType!("MoveableBox", sub[gullet, inner, _extra, state] {
-      // my ($gullet) = @_;
-      // $gullet->skipSpaces;
-      // my ($box, @stuff) = $STATE->getStomach->invokeToken($gullet->readXToken);
-      // Error('expected', '<box>', $gullet,
-      //   "A <box> was supposed to be here", "Got " . Stringify($box))
-      //   unless $box && $box->isa('LaTeXML::Core::Whatsit')
-      //   && ($box->getDefinition->getCSName =~ /^(\\hbox|\\vbox||\\vtop)$/);
-      // $box; });
-      unimplemented!();;
-      Ok(Tokens!())
-  });
+    gullet.skip_spaces(state);
+    if let Some(xtoken) = gullet.read_x_token(false, false, state)? {
+      Tokens!(xtoken)
+    } else {
+      Tokens!()
+    }
+  }, reader_predigest => reader_predigest!(stomach, arg, state, { 
+    let token = arg.unlist().remove(0);
+    let mut stuff = stomach.invoke_token(&token, state)?;
+    if !stuff.is_empty() {
+      let tbox = stuff.remove(0);
+      let csname = match tbox {
+        Digested::Whatsit(ref w) => w.borrow().definition.get_cs_name().to_string(),
+        _ => tbox.to_string()
+      };
+      if csname != "\\hbox" && csname != "\\vbox" && csname != "\\vtop" {
+        error!(target: "expected:<box>", "A <box> was supposed to be here.\nGot {}", csname);  
+        None
+      } else {
+        Some(tbox)
+      }
+    } else {
+      error!(target: "expected:<box>", "A <box> was supposed to be here.\nGot none.");
+      None
+    }
+  }));
 
   // Read a parenthesis delimited argument.
   // Note that this does NOT balance () within the argument.

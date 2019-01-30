@@ -10,29 +10,36 @@ LoadDefinitions!(state, {
   // \setbox<number>=\hbox to <dimen>{<horizontal mode material>}
 
   DefPrimitive!("\\setbox Number SkipMatch:=", sub[stomach, args, state] {
-  //     my ($stomach) = @_;
-  //     no warnings 'recursion';
-  //     my $box = 'box' . $_[1]->valueOf;
-  //     # If there is any afterAssignment tokens, move them over so BoxContents parameter will use
-  // them     if (my $token = LookupValue('afterAssignment')) {
-  //       AssignValue('afterAssignment' => undef, 'global');
-  //       AssignValue('BeforeNextBox' => $token); }
-  //     # Save global flag, since we're digesting to get the box content, which resets the flag!
-  //     # Should afterDigest be responsible for resetting flags?
-  //     my $scope = $STATE->getPrefix('global') && 'global';
-  //     $STATE->clearPrefixes;    # before invoke, below; we've saved the only relevant one
-  // (global)     my ($stuff, @rest) = $stomach->invokeToken($stomach->getGullet->readXToken);
-  //     AssignValue('box' . $_[1]->valueOf => $stuff, $scope);
-  //     @rest; });
-    unimplemented!(); ()
+    unpack_to_token!(args => token);
+    let tbox = s!("box{}", token.to_number().value_of() as u8);
+    // If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
+    if let Some(token) = state.remove_value("afterAssignment") {
+      state.assign_value("BeforeNextBox", token, None); 
+    }
+    // Save global flag, since we're digesting to get the box content, which resets the flag!
+    // Should afterDigest be responsible for resetting flags?
+    let scope = if state.get_prefix("global") {
+      Some(Scope::Global) 
+    } else {
+      None
+    };
+    state.clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
+    let mut rest = if let Some(xtoken) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
+      stomach.invoke_token(&xtoken, state)?
+    } else { vec![] };
+    let stuff = rest.remove(0);
+    state.assign_value(&tbox, stuff, scope);
+    rest
   });
 
-  DefPrimitive!("\\box Number", sub[stomach, args, state] {
-  //     my $box   = 'box' . $_[1]->valueOf;
-  //     my $stuff = LookupValue($box);
-  //     AssignValue($box, undef);
-  //     ($stuff ? $stuff->unlist : ()); 
-    unimplemented!(); ()
+  DefMacro!("\\box Number", sub[gullet, args, state] {
+    unpack_to_token!(args => token);
+    let tbox = s!("box{}", token.to_number().value_of() as u8);
+    if let Some(Stored::Tokens(stuff)) = state.remove_value(&tbox) {
+      stuff
+    } else {
+      Tokens!()
+    }    
   });
 
   DefPrimitive!("\\copy Number", sub[stomach, args, state] {
