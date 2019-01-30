@@ -138,6 +138,10 @@ impl IntoDigestedResult<Result<Vec<Digested>>> for Digested {
   fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(vec![self]) }
 }
 
+impl IntoDigestedResult<Result<Vec<Digested>>> for Vec<Digested> {
+  fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(self) }
+}
+
 impl IntoDigestedResult<Result<Vec<Digested>>> for Result<Vec<Digested>> {
   fn into_digested_result(self) -> Result<Vec<Digested>> { self }
 }
@@ -190,6 +194,9 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for Number {
 
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for RegisterValue {
   fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(self.into())) }
+}
+impl IntoDigestedOptionResult<Result<Option<Digested>>> for Option<Digested> {
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(self) }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for Result<Option<Digested>> {
   fn into_digested_option_result(self) -> Result<Option<Digested>> { self }

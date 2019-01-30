@@ -54,15 +54,17 @@ LoadDefinitions!(state, {
 //   properties => { isSpace => 1, isFill => 1 });
 // DefPrimitiveI('\hfilneg', undef, undef);
 
-// # \lower <dimen> <box>
-// # \raise <dimen> <box>
-// # But <box> apparently must really explicitly be an \hbox, \vbox or \vtop (?)
-// # OR something that expands into one!!
+// \lower <dimen> <box>
+// \raise <dimen> <box>
+// But <box> apparently must really explicitly be an \hbox, \vbox or \vtop (?)
+// OR something that expands into one!!
 
-// DefConstructor('\lower Dimension MoveableBox',
-//   "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
-//   afterDigest => sub {
-//     $_[1]->setProperty(y => $_[1]->getArg(1)->multiply(-1)); });
+DefConstructor!("\\lower Dimension MoveableBox",
+  "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
+  after_digest => after_digest!(stomach, whatsit, state, {
+    whatsit.set_property("y", Number(whatsit.get_arg(1).unwrap().value_of() * -1.0));
+  })
+);
 // DefConstructor('\raise Dimension MoveableBox',
 //   "<ltx:text yoffset='#y' _noautoclose='1'>#2</ltx:text>",
 //   afterDigest => sub {
