@@ -10,14 +10,6 @@ description = "User-contributed bindings for personal use"
 crate-type = ["lib"]
 
 [dependencies]
-rustc-serialize = "0.3"
-glob = "0.2"
-rand = "0.4"
-time = "0.1"
-lazy_static = "1.0.0"
-log = "0.4"
-libxml = "0.2.6"
-unidecode = "0.3.0"
 rtx_core = {path = "../rtx_core"}
 rtx_codegen = {path = "../rtx_codegen"}
 rtx_package = {path = "../rtx_package"}

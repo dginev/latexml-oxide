@@ -11,7 +11,6 @@ name = "rtx_core"
 crate-type = ["lib"]
 
 [dependencies]
-rustc-serialize = "0.3"
 glob = "0.2"
 rand = "0.4"
 time = "0.1"
