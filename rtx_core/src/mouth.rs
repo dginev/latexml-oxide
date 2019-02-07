@@ -599,7 +599,7 @@ impl Mouth {
         Some(c) => comment.push(*c),
       };
     }
-    comment.trim();
+    let comment = comment.trim();
     // TODO: Handle properly
     let include_comments: bool = match state.lookup_value("INCLUDE_COMMENTS") {
       Some(&Stored::Bool(x)) => x,

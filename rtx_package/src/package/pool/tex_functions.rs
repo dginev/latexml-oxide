@@ -186,9 +186,9 @@ const MATH_CLASS_ROLE : [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLO
 // What we're really after is a connectio nto a font encoding mapping.
 pub fn decode_math_char(mut n: u16, state: &State) -> (Option<String>, Option<char>) {
   let class : u16 = n / (16 * 256);
-  n = n % (16 * 256);
+  n %= 16 * 256;
   let fam : u16  = n / 256;
-  n = n % 256;
+  n %= 256;
   let font  = state.lookup_value(&s!("fontinfo_{}_text",fam)).unwrap_or_else(||
     state.lookup_value(&s!("fontinfo_{}_script",fam)).unwrap_or_else(|| 
       state.lookup_value(&s!("fontinfo_{}_scriptscript",fam)).unwrap_or(&Stored::Bool(false))
