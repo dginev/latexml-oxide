@@ -34,7 +34,7 @@ LoadDefinitions!(outer_state, {
     after_digest => after_digest!(stomach, whatsit, state, {
       let font : Option<Rc<Font>> = match whatsit.get_font() {
         None => None,
-        Some(ft) => Some(Rc::new((*ft).to_owned()))
+        Some(ft) => Some(Rc::new((*ft).to_owned())) // makes you wonder if the `get_font` API should be working with Rc<Font> in the first place...
       };
       let loc = whatsit.get_locator();
       let mut lines : Vec<String> = Vec::new();

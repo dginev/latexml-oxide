@@ -16,7 +16,6 @@ use crate::{BoxOps, Digested};
 /// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tbox {
-  // TODO
   pub text: String,
   pub font: Rc<Font>,
   pub locator: Locator,
