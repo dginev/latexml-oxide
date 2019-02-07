@@ -2,7 +2,7 @@ use rtx_core::common::{Config, OutputFormat};
 use rtx_package::converter::Converter;
 #[test]
 fn can_convert_hello() {
-  assert!(rtx_core::util::logger::init(log::LevelFilter::Info).is_ok());
+  assert!(rtx_core::util::logger::init(log::LevelFilter::Warn).is_ok());
   let hello_source = "tests/hello/hello.tex";
   // let hello_expected = "tests/hello.html";
   let html_config = Config {

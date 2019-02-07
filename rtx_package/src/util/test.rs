@@ -1,8 +1,8 @@
+use std::collections::HashMap;
 use glob::glob;
 use libxml::parser::Parser;
-use std::collections::HashMap;
-
 use libxml::tree::Document as XmlDoc;
+
 use rtx_core::common::BindingDispatcher;
 use rtx_core::document::Document;
 use rtx_core::state::State;
@@ -14,7 +14,7 @@ use crate::core::DigestionAPI;
 pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) { rtx_tests_internal(dirpath, requires, None) }
 #[allow(clippy::implicit_hasher)]
 pub fn rtx_tests_internal(dirpath: &str, requires: Option<HashMap<&str, &str>>, extra_bindings_dispatcher: Option<BindingDispatcher>) {
-  assert!(rtx_core::util::logger::init(log::LevelFilter::Info).is_ok());
+  assert!(rtx_core::util::logger::init(log::LevelFilter::Warn).is_ok());
 
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
