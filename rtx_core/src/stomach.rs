@@ -567,7 +567,7 @@ impl<'t> Stomach {
         // When entering math mode, we set the font to the default math font,
         // and save the text font for any embedded text.
         state.assign_value("savedfont", cf.clone(), Some(Scope::Local));
-        let new_font = state.lookup_mathfont().unwrap().merge(&Font {
+        let new_font = state.lookup_mathfont().unwrap().merge(Font {
           color: cf.color.clone(),
           bg: cf.bg.clone(),
           size: cf.size.clone(),
@@ -579,7 +579,7 @@ impl<'t> Stomach {
         // When entering text mode, we should set the font to the text font in use before the math
         // but inherit color and size
         let new_font = if let Some(&Stored::Font(ref saved_font)) = state.lookup_value("savedfont") {
-          Some(saved_font.merge(&Font {
+          Some(saved_font.merge(Font {
             color: cf.color.clone(),
             bg: cf.bg.clone(),
             size: cf.size.clone(),

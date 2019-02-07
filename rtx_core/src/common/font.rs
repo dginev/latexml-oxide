@@ -269,16 +269,16 @@ impl Font {
   //    family, series or shape
   // will, usually, automatically reset the others to thier defaults!
   // You must arrange this in the calls....
-  pub fn merge(&self, other: &Font) -> Self {
+  pub fn merge(&self, other: Font) -> Self {
     let mut newfont = self.clone();
-    if let Some(ref value) = other.family {
-      newfont.family = Some(value.clone());
+    if let Some(value) = other.family {
+      newfont.family = Some(value);
     }
-    if let Some(ref value) = other.series {
-      newfont.series = Some(value.clone());
+    if let Some(value) = other.series {
+      newfont.series = Some(value);
     }
-    if let Some(ref value) = other.shape {
-      newfont.shape = Some(value.clone());
+    if let Some(value) = other.shape {
+      newfont.shape = Some(value);
     }
     if other.emph == Some(true) {
       newfont.shape = if newfont.shape.unwrap_or(Cow::Borrowed("")) == "italic" {
@@ -287,26 +287,26 @@ impl Font {
         Some(Cow::Borrowed("italic"))
       };
     }
-    if let Some(ref value) = other.size {
-      newfont.size = Some(value.clone());
+    if let Some(value) = other.size {
+      newfont.size = Some(value);
     }
-    if let Some(ref value) = other.color {
-      newfont.color = Some(value.clone());
+    if let Some(value) = other.color {
+      newfont.color = Some(value);
     }
-    if let Some(ref value) = other.bg {
-      newfont.bg = Some(value.clone());
+    if let Some(value) = other.bg {
+      newfont.bg = Some(value);
     }
-    if let Some(ref value) = other.opacity {
-      newfont.opacity = Some(value.clone());
+    if let Some(value) = other.opacity {
+      newfont.opacity = Some(value);
     }
-    if let Some(ref value) = other.encoding {
-      newfont.encoding = Some(value.clone());
+    if let Some(value) = other.encoding {
+      newfont.encoding = Some(value);
     }
-    if let Some(ref value) = other.language {
-      newfont.language = Some(value.clone());
+    if let Some(value) = other.language {
+      newfont.language = Some(value);
     }
-    if let Some(ref value) = other.mathstyle {
-      newfont.mathstyle = Some(value.clone());
+    if let Some(value) = other.mathstyle {
+      newfont.mathstyle = Some(value);
     }
     if let Some(value) = other.forceseries {
       newfont.forceseries = Some(value);

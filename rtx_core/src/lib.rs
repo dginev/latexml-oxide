@@ -89,7 +89,7 @@ impl Default for Core {
   fn default() -> Self {
     let stomach = Rc::new(RefCell::new(Stomach::default()));
     let mut state = State::new(StateOptions::default());
-    state.stomach = stomach.clone();
+    state.stomach = Rc::clone(&stomach);
     Core {
       preload: Vec::new(),
       stomach,
@@ -120,7 +120,7 @@ impl Core {
     };
     let stomach = Rc::new(RefCell::new(Stomach::default()));
     let mut state = State::new(state_options);
-    state.stomach = stomach.clone();
+    state.stomach = Rc::clone(&stomach);
 
     Core { state, preload, stomach }
   }

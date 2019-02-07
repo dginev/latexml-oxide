@@ -283,7 +283,7 @@ LoadDefinitions!(outer_state, {
         rv => Explode!(rv.to_string()),
       };
       if state.noexpand_the { // See \the for the sense in this.
-        tokens = gullet.neutralize_tokens(&tokens, state);
+        tokens = gullet.neutralize_tokens(tokens, state);
       }
       tokens
     } else {

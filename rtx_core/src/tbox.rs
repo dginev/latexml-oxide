@@ -52,7 +52,7 @@ impl Tbox {
     let font = match font_opt {
       Some(f) => f,
       None => match state.lookup_font() {
-        Some(state_font) => state_font.clone(),
+        Some(state_font) => Rc::clone(&state_font),
         None => Rc::new(Font::text_default()), // should never happen
       },
     };

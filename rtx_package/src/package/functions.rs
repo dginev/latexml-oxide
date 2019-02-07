@@ -1031,7 +1031,7 @@ pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacem
   }
   if let Some(chosen_font) = options.font {
     let merge_font_closure = before_digest_single!(stomach, state, {
-      MergeFont!(&chosen_font, state);
+      MergeFont!(chosen_font.clone(), state);
     });
     before_digest_env.push(merge_font_closure);
   }
@@ -1073,7 +1073,10 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
   options.locked = false;
   options.font = None;
   let scope = options.scope;
-  let reqfont = options.font.clone().unwrap_or_else(Font::default);
+  let reqfont = match options.font {
+    Some(ref fnt) => fnt.clone(),
+    None => Font::default()
+  };
   state.install_definition(
     MathPrimitive {
       cs: cs.clone(),
@@ -1086,7 +1089,7 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
         let font = state
           .lookup_font()
           .unwrap_or_else(|| Rc::new(Font::default()))
-          .merge(&reqfont)
+          .merge(reqfont.clone())
           .specialize(&presentation);
         let font = Rc::new(font);
         // foreach my $key (keys %properties) {
@@ -1153,7 +1156,7 @@ pub fn def_constructor(
   }
   if let Some(chosen_font) = options.font {
     let merge_font_closure = before_digest_single!(stomach, state, {
-      MergeFont!(&chosen_font, state);
+      MergeFont!(chosen_font.clone(), state);
     });
     before_digest_closures.push(merge_font_closure);
   }
@@ -1249,7 +1252,7 @@ pub fn def_environment(
 
   if let Some(chosen_font) = options.font {
     let merge_font_closure = before_digest_single!(stomach, state, {
-      MergeFont!(&chosen_font.clone(), state);
+      MergeFont!(chosen_font.clone(), state);
     });
     before_digest_env.push(merge_font_closure);
   }
@@ -1429,7 +1432,7 @@ pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &st
   Ok(())
 }
 
-pub fn merge_font(font: &Font, state: &mut State) {
+pub fn merge_font(font: Font, state: &mut State) {
   let new_font = match state.lookup_font() {
     Some(ref f) => f.merge(font),
     _ => Font::text_default().merge(font),
@@ -1451,7 +1454,7 @@ pub fn digest_literal<T: Into<Tokens>>(stuff: T, stomach: &mut Stomach, state: &
   stomach.begin_mode("text", state)?;
 
   let font = state.lookup_font().unwrap(); // TODO: raise error if font missing
-  state.assign_value("font", font.merge(&fontmap!(encoding => "ASCII")), Some(Scope::Local)); // try to stay as ASCII as possible
+  state.assign_value("font", font.merge(fontmap!(encoding => "ASCII")), Some(Scope::Local)); // try to stay as ASCII as possible
 
   let value = stomach.digest(stuff, state);
   state.assign_value("font", font, None); // TODO: maybe we need .assign_font ?

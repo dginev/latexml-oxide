@@ -153,14 +153,14 @@ impl Definition for Constructor {
     //     $properties{$key} = &$value($stomach, @args); } }
 
     let this_font = match properties.get("font") {
-      Some(Stored::Font(ref f)) => (**f).clone(),
+      Some(Stored::Font(ref f)) => Rc::clone(f),
       _ => match state.lookup_font() {
-        Some(f) => (*f).clone(),
-        None => Font::text_default(), // should never happen?
+        Some(f) => Rc::clone(&f),
+        None => Rc::new(Font::text_default()), // should never happen?
       },
     };
 
-    properties.entry(s!("font")).or_insert_with(|| Stored::Font(Rc::new(this_font)));
+    properties.entry(s!("font")).or_insert_with(|| Stored::Font(this_font));
     // $properties{locator} = $stomach->getGullet->getMouth->getLocator unless defined
     // $properties{locator};
     properties.entry(s!("isMath")).or_insert_with(|| Stored::Bool(ismath));
