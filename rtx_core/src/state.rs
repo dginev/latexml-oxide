@@ -880,7 +880,8 @@ impl State {
     if token.get_catcode().is_active_or_cs() && !token.get_string().is_empty() {
       match self.meaning.get(&token.get_cs_name().to_owned()) {
         Some(entry) => match entry.front() {
-          Some(v) => Some(v.clone()),
+          // TODO: can we avoid cloning an arbitrary Stored, or is this a non-issue give that all heavy data types are in Rc<> wrappers?
+          Some(v) => Some(v.clone()), 
           None => None,
         },
         None => None,
@@ -952,12 +953,12 @@ impl State {
     match self.lookup_definition_internal(key) {
       Some(defs) => match defs.front() {
         // Still, good time to handle the Token case and catch weird storage errors
-        Some(Stored::Conditional(entry)) => Some(Stored::Conditional(entry.clone())),
-        Some(Stored::Constructor(entry)) => Some(Stored::Constructor(entry.clone())),
-        Some(Stored::Expandable(entry)) => Some(Stored::Expandable(entry.clone())),
-        Some(Stored::MathPrimitive(entry)) => Some(Stored::MathPrimitive(entry.clone())),
-        Some(Stored::Primitive(entry)) => Some(Stored::Primitive(entry.clone())),
-        Some(Stored::Register(entry)) => Some(Stored::Register(entry.clone())),
+        Some(Stored::Conditional(entry)) => Some(Stored::Conditional(Rc::clone(entry))),
+        Some(Stored::Constructor(entry)) => Some(Stored::Constructor(Rc::clone(entry))),
+        Some(Stored::Expandable(entry)) => Some(Stored::Expandable(Rc::clone(entry))),
+        Some(Stored::MathPrimitive(entry)) => Some(Stored::MathPrimitive(Rc::clone(entry))),
+        Some(Stored::Primitive(entry)) => Some(Stored::Primitive(Rc::clone(entry))),
+        Some(Stored::Register(entry)) => Some(Stored::Register(Rc::clone(entry))),
         Some(Stored::Token(entry)) => Some(Stored::Expandable(Rc::new(Expandable {
           cs: T_CS!(key),
           paramlist: None,
@@ -979,7 +980,7 @@ impl State {
   pub fn lookup_register_definition<'def>(&self, key: &'def Token) -> Option<Rc<RefCell<Register>>> {
     match self.lookup_definition_internal(key) {
       Some(defs) => match defs.front() {
-        Some(Stored::Register(entry)) => Some(entry.clone()),
+        Some(Stored::Register(entry)) => Some(Rc::clone(entry)),
         _ => None,
       },
       _ => None,
@@ -1121,7 +1122,7 @@ impl State {
     // self.assign_mathcode('\'' => 0x8000, Some(Scope::Local));
     // try to stay as ASCII as possible
     let new_font = if let Some(&Stored::Font(ref current_font)) = self.lookup_value("font") {
-      Some(current_font.merge(&fontmap!(encoding => "ASCII")))
+      Some(current_font.merge(fontmap!(encoding => "ASCII")))
     } else {
       None
     };

@@ -156,8 +156,8 @@ impl Conditional {
       elses: false,
       ifid,
     }));
-    state.if_frame = Some(if_frame.clone());
-    state.unshift_value("if_stack", vec![if_frame.clone()]);
+    state.if_frame = Some(Rc::clone(&if_frame));
+    state.unshift_value("if_stack", vec![Rc::clone(&if_frame)]);
 
     let args = self.read_arguments(gullet, state)?;
 
@@ -278,21 +278,20 @@ impl Conditional {
   }
 
   pub fn invoke_else(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
-    let local_token = state.current_token.as_ref().unwrap().clone();
     let stack_frame_opt = if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
       if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
-        Some(stack_frame.clone())
+        Some(Rc::clone(stack_frame))
       } else {
         None
       }
     } else {
       None
     };
-
+    let local_token = state.current_token.as_ref().unwrap();
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {
         // Defer expanding the \else if we're still parsing the test
-        Ok(Tokens!(T_CS!("\\relax"), (*local_token).clone()))
+        Ok(Tokens!(T_CS!("\\relax"), (**local_token).clone()))
       } else if stack_frame.borrow().elses {
         // Already seen an \else's at this level?
         error!(
@@ -305,7 +304,7 @@ impl Conditional {
         );
         Ok(Tokens!())
       } else {
-        state.if_frame = Some(stack_frame.clone());
+        state.if_frame = Some(Rc::clone(&stack_frame));
         let t = self.skip_conditional_body(0.0, gullet, state);
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         //       . " [for " . ToString($$LaTeXML::IFFRAME{token}) . " #" .
@@ -324,10 +323,10 @@ impl Conditional {
   }
 
   pub fn invoke_fi(&self, _gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
-    let local_token = state.current_token.as_ref().unwrap().clone();
+    let local_token = state.current_token.as_ref().unwrap();
     let stack_frame_opt: Option<Rc<RefCell<IfFrame>>> = if let Some(Stored::VecDequeStored(ref stack)) = state.lookup_value("if_stack") {
       if let Some(Stored::IfFrame(frame)) = stack.front() {
-        Some(frame.clone())
+        Some(Rc::clone(frame))
       } else {
         None
       }
@@ -338,7 +337,7 @@ impl Conditional {
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {
         // Defer expanding the \else if we're still parsing the test
-        Ok(Tokens!(T_CS!("\\relax"), (*local_token).clone()))
+        Ok(Tokens!(T_CS!("\\relax"), (**local_token).clone()))
       } else {
         // "expand" by removing the stack entry for this level
         state.if_frame = Some(stack_frame);

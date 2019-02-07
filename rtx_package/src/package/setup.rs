@@ -1303,7 +1303,7 @@ macro_rules! MergeFont {
     MergeFont!($key => $val, st)
   }};
   ($key:ident => $val:expr, $state_arg:ident) => {
-    merge_font(&fontmap!($key => $val), $state_arg)
+    merge_font(fontmap!($key => $val), $state_arg)
   };
 }
 

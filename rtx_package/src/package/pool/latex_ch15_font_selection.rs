@@ -75,11 +75,11 @@ LoadDefinitions!(outer_state, {
     let family = Expand!(T_CS!("\\f@family"), gullet).to_string();
     let series = Expand!(T_CS!("\\f@series"),gullet).to_string();
     let shape  = Expand!(T_CS!("\\f@shape"), gullet).to_string();
-    if let Some(sh) = font::lookup_font_family(&family) { MergeFont!(sh); }
+    if let Some(sh) = font::lookup_font_family(&family) { MergeFont!(sh.clone()); }
     else { info!(target: &s!("unexpected:{}", family), "Unrecognized font family {:?}.", family); }
-    if let Some(sh) = font::lookup_font_series(&series) { MergeFont!(sh); }
+    if let Some(sh) = font::lookup_font_series(&series) { MergeFont!(sh.clone()); }
     else { info!(target: &s!("unexpected:{}", series), "Unrecognized font series {:?}.", series); }
-    if let Some(sh) = font::lookup_font_shape(&shape) { MergeFont!(sh); }
+    if let Some(sh) = font::lookup_font_shape(&shape) { MergeFont!(sh.clone()); }
     else { info!(target: &s!("unexpected:{}",shape), "Unrecognized font shape {:?}.", shape); }
     Ok(vec![])
   });
