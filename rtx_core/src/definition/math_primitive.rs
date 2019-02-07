@@ -176,10 +176,7 @@ impl Definition for MathPrimitive {
   fn get_alias(&self) -> Option<String> { self.alias.clone() }
   fn get_locator(&self) -> String { unimplemented!() }
   fn get_parameters(&self) -> Option<&Parameters> {
-    match self.paramlist {
-      None => None,
-      Some(ref ps) => Some(ps)
-    }
+    self.paramlist.as_ref()
   }
   fn get_num_args(&self) -> usize {
     match self.nargs {

@@ -58,12 +58,10 @@ pub fn extract_bracketed(text: &mut String, delimiter: Option<&Delimiter>) -> Op
       c => {
         if level > 0 { // if we are inside the parens, record the char
           extracted.push(c)
-        } else {
-          if !c.is_whitespace() { // whitespaces are neutral even outside of the delim blocks
-            // regular chars out of () body should terminate the expression
-            *text = c.to_string() + text;
-            break;    
-          }
+        } else if !c.is_whitespace() { // whitespaces are neutral even outside of the delim blocks
+          // regular chars out of () body should terminate the expression
+          *text = c.to_string() + text;
+          break;    
         }
       }
     }
