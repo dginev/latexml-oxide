@@ -52,33 +52,28 @@ LoadDefinitions!(state, {
   DefMacro!("\\settodepth", "\\@settodim\\dp");
   DefMacro!("\\settowidth", "\\@settodim\\wd");
 
-  // // Assuming noone tries to get clever with figuring out the allocation of
-  // // numbers, these become simple DefRegister's
-  // DefPrimitive!("\\newcount DefToken",  sub[stomach, args, state] {
-  //   unpack_to_token!(args => name);
-  //   DefRegisterI!(name, None, Number::new(0.0));
-  //   Ok(vec![])
-  // });
-  // DefPrimitive!("\\newdimen DefToken",  sub[stomach, args, state] {
-  //   unpack_to_token!(args => name);
-  //   DefRegisterI!(name, None, Dimension::new(0.0));
-  //   Ok(vec![])
-  // });
-  // DefPrimitive!("\\newskip DefToken",   sub[stomach, args, state] {
-  //   unpack_to_token!(args => name);
-  //   DefRegisterI!(name, None, Glue::new(0.0));
-  //   Ok(vec![])
-  // });
-  // DefPrimitive!("\\newmuskip DefToken", sub[stomach, args, state] {
-  //   unpack_to_token!(args => name);
-  //   DefRegisterI!(name, None, MuGlue::new(0.0));
-  //   Ok(vec![])
-  // });
-  // DefPrimitive!("\\newtoks DefToken", sub[stomach, args, state] {
-  //   unpack_to_token!(args => name);
-  //   DefRegisterI!(name, None, Tokens!());
-  //   Ok(vec![])
-  // });
+  // Assuming noone tries to get clever with figuring out the allocation of
+  // numbers, these become simple DefRegister's
+  DefPrimitive!("\\newcount DefToken", sub[stomach, args, state] {
+    unpack_to_token!(args => name);
+    DefRegisterI!(name, None, Number::new(0.0));
+  });
+  DefPrimitive!("\\newdimen DefToken", sub[stomach, args, state] {
+    unpack_to_token!(args => name);
+    DefRegisterI!(name, None, Dimension::new(0.0));
+  });
+  DefPrimitive!("\\newskip DefToken", sub[stomach, args, state] {
+    unpack_to_token!(args => name);
+    DefRegisterI!(name, None, Glue::new(0.0));
+  });
+  DefPrimitive!("\\newmuskip DefToken", sub[stomach, args, state] {
+    unpack_to_token!(args => name);
+    DefRegisterI!(name, None, MuGlue::new(0.0));
+  });
+  DefPrimitive!("\\newtoks DefToken", sub[stomach, args, state] {
+    unpack_to_token!(args => name);
+    DefRegisterI!(name, None, Tokens!());
+  });
 
   // DefRegister!("\\fill", Glue(0, "1fill"));
 

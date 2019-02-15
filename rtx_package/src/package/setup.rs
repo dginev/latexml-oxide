@@ -309,6 +309,10 @@ macro_rules! DefConditionalI(
     def_conditional($cs, $paramlist, Some(test), ConditionalOptions::default(), $state_arg);
   });
   // or None
+  ($cs:expr, $paramlist:expr) => {{
+    bind_state_mut!(st);
+    DefConditionalI!($cs, $paramlist, None, st)
+  }};
   ($cs:expr, $paramlist:expr, None) => {{
     bind_state_mut!(st);
     DefConditionalI!($cs, $paramlist, None, st)

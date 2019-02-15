@@ -105,12 +105,18 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\advance Variable SkipKeyword:by", sub[stomach, args, state] {
     unpack!(args => var);
     // TODO: Variable type unpacking seems to require special INFRA again...
-    // let (defn, @args) = @$var;
-    // return () if !$defn || $defn eq "missing";
-    // local $LaTeXML::CURRENT_TOKEN = $defn;
-    // $defn->setValue($defn->valueOf(@args)->add($stomach->getGullet->readValue($defn->isRegister)), @args); });
-    unimplemented!();
-    ()
+    let mut var_tokens = var.unlist();
+    if !var_tokens.is_empty() {
+      let defn = var_tokens.remove(0);
+      if defn.to_string() != "missing" {
+        let defn_rc = Rc::new(defn);
+        state.current_token = Some(Rc::clone(&defn_rc));
+        unimplemented!();
+        ()
+        // TODO: We need an extension here, as it seems that 
+        // $defn->setValue($defn->valueOf(@args)->add($stomach->getGullet->readValue($defn->isRegister)), @args); });
+      }
+    }
   });
 
   DefPrimitive!("\\multiply Variable SkipKeyword:by Number", sub[stomach, args, state] {
