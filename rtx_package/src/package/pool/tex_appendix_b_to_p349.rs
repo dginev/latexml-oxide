@@ -101,11 +101,23 @@ LoadDefinitions!(state, {
   // # TeX Book, Appendix B, p. 347
   // # \wlog ??
   // # From plain.tex
-  // DefPrimitive('\newcount  Token', sub { DefRegisterI($_[1], undef, Number(0)); });
-  // DefPrimitive('\newdimen  Token', sub { DefRegisterI($_[1], undef, Dimension(0)); });
-  // DefPrimitive('\newskip   Token', sub { DefRegisterI($_[1], undef, Glue!(0)); });
-  // DefPrimitive('\newmuskip Token', sub { DefRegisterI($_[1], undef, MuGlue(0)); });
-  // AssignValue(allocated_boxes => 0);
+  DefPrimitive!("\\newcount Token", sub[stomach, args, state] {
+    unpack_to_token!(args => name);
+    DefRegisterI!(name, None, Number::new(0.0));
+  });
+  DefPrimitive!("\\newdimen Token", sub[stomach, args, state] {
+    unpack_to_token!(args => name);
+    DefRegisterI!(name, None, Dimension::new(0.0));
+  });
+  DefPrimitive!("\\newskip Token", sub[stomach, args, state] {
+    unpack_to_token!(args => name);
+    DefRegisterI!(name, None, Glue::new(0.0));
+  });
+  DefPrimitive!("\\newmuskip Token", sub[stomach, args, state] {
+    unpack_to_token!(args => name);
+    DefRegisterI!(name, None, MuGlue::new(0.0));
+  });
+  AssignValue!("allocated_boxes" => false);
   // DefPrimitive('\newbox    Token', sub {
   //     my $n = LookupValue('allocated_boxes');
   //     AssignValue(allocated_boxes => $n + 1, 'global');
@@ -146,10 +158,10 @@ LoadDefinitions!(state, {
   // #======================================================================
   // # TeX Book, Appendix B, p. 348
 
-  // DefMacro('\newif DefToken', sub {
-  //     my ($ignore, $cs) = @_;
-  //     DefConditionalI($cs, undef);
-  //     return; });
+  DefMacro!("\\newif DefToken", sub[gullet, args, state] {
+    unpack_to_token!(args => cs);
+    DefConditionalI!(cs, None);
+  });
 
   // # See the section Registers & Parameters, above for setting default values.
   // #======================================================================

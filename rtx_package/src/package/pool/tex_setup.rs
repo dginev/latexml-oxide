@@ -539,13 +539,19 @@ LoadDefinitions!(state, {
   DefParameterType!("Variable", sub[gullet, inner, _extra, state] {
     let token_opt = gullet.read_x_token(false, false, state)?;
     let defn_opt = match token_opt {
-      Some(ref token) => state.lookup_definition(token),
+      Some(ref token) => state.lookup_register_definition(token),
       None => None
     };
     if let Some(defn) = defn_opt {
         if defn.is_register() && !defn.is_readonly() {
-          unimplemented!() // TODO
-        // Ok(Tokens!(defn, defn.read_arguments(gullet, state)?))
+          let mut invoked = vec![token_opt.unwrap()];
+          for arg in defn.read_arguments(gullet, state)? {
+            invoked.append(&mut arg.unlist());
+          }
+          // TODO: What is this datatype ? How does it fit the rtx typed interfaces for parameter types?
+          // An extension seems required, also due to the Register parameter type right under.
+          // Ok(Tokens!(defn_tok, defn_args))          
+          Ok(Tokens::new(invoked))
         } else {
           error!(target:"expected:<variable>", "A <variable> was supposed to be here\n Got {:?}", token_opt);
           Ok(Tokens!())
