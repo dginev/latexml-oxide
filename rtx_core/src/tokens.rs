@@ -9,6 +9,8 @@ use std::fmt::Display;
 
 use crate::common::error::*;
 use crate::common::number::Number;
+use crate::common::dimension::{MuDimension,Dimension};
+use crate::common::glue::{Glue, MuGlue};
 use crate::definition::register::RegisterValue;
 use crate::state::State;
 use crate::stomach::Stomach;
@@ -111,6 +113,34 @@ impl Tokens {
   pub fn to_number(&self) -> Number {
     let token: Token = self.into();
     token.to_number()
+  }
+
+  /// to_dimension casts back to a parsed Dimension (usually via gullet.read_dimension)
+  /// which had to be re-converted to a Tokens for reentering the expansion flow
+  pub fn to_dimension(&self) -> Dimension {
+    let token: Token = self.into();
+    token.to_dimension()
+  }
+
+  /// to_glue casts back to a parsed Glue (usually via gullet.read_glue)
+  /// which had to be re-converted to a Tokens for reentering the expansion flow
+  pub fn to_glue(&self) -> Glue {
+    let token: Token = self.into();
+    token.to_glue()
+  }
+
+  /// to_mu_glue casts back to a parsed MuGlue (usually via gullet.read_mu_glue)
+  /// which had to be re-converted to a Tokens for reentering the expansion flow
+  pub fn to_mu_glue(&self) -> MuGlue {
+    let token: Token = self.into();
+    token.to_mu_glue()
+  }
+
+  /// to_mu_dimension casts back to a parsed MuGlue (usually via gullet.read_mu_glue)
+  /// which had to be re-converted to a Tokens for reentering the expansion flow
+  pub fn to_mu_dimension(&self) -> MuDimension {
+    let token: Token = self.into();
+    token.to_mu_dimension()
   }
 
   /// Methods for overloaded ops.

@@ -240,7 +240,7 @@ LoadDefinitions!(state, {
       gullet.read_number(state)?.to_token() 
     },
     reader_predigest => reader_predigest!(stomach, arg, state, { 
-      Number(arg.to_number().value_of())
+      arg.to_number()
     })
   );
 
@@ -249,7 +249,7 @@ LoadDefinitions!(state, {
       gullet.read_float(state)?.to_token()
     },
     reader_predigest => reader_predigest!(stomach, arg, state, { 
-      Number(arg.to_number().value_of())
+      arg.to_number()
     })
   );
 
@@ -264,7 +264,7 @@ LoadDefinitions!(state, {
       gullet.read_dimension(state)?.to_token()
     },
     reader_predigest => reader_predigest!(stomach, arg, state, { 
-      Dimension(arg.to_number().value_of())
+      arg.to_dimension()
     })
   );
 
@@ -273,7 +273,7 @@ LoadDefinitions!(state, {
       gullet.read_glue(state)?.to_token()
     },
     reader_predigest => reader_predigest!(stomach, arg, state, { 
-      Glue(arg.to_number().value_of())
+      arg.to_glue()
     })
   );
 
@@ -282,7 +282,7 @@ LoadDefinitions!(state, {
       gullet.read_mu_dimension(state)?.to_token()
     },
     reader_predigest => reader_predigest!(stomach, arg, state, { 
-      MuDimension(arg.to_number().value_of())
+      arg.to_mu_dimension()
     })
   );
 
@@ -291,7 +291,7 @@ LoadDefinitions!(state, {
       gullet.read_mu_glue(state)?.to_token()
     },
     reader_predigest => reader_predigest!(stomach, arg, state, { 
-      MuGlue(arg.to_number().value_of())
+      arg.to_mu_glue()
     })
   );
 

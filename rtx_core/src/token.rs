@@ -10,6 +10,8 @@ use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::number::Number;
+use crate::common::dimension::{MuDimension,Dimension};
+use crate::common::glue::{Glue, MuGlue};
 use crate::common::store::Stored;
 use crate::definition::register::NumericOps;
 use crate::definition::register::{Register, RegisterValue};
@@ -606,6 +608,16 @@ impl<'a> Token {
   pub fn to_register(&self, state: &State) -> Option<Rc<RefCell<Register>>> { state.lookup_register_definition(self) }
 
   pub fn to_number(&self) -> Number { Number::new(self.text.parse::<f32>().unwrap_or(0.0)) }
+
+  pub fn to_dimension(&self) -> Dimension { Dimension::new(self.text.parse::<f32>().unwrap_or(0.0)) }
+
+  pub fn to_mu_dimension(&self) -> MuDimension { MuDimension::new(self.text.parse::<f32>().unwrap_or(0.0)) }
+
+  pub fn to_glue(&self) -> Glue { Glue::new(self.text.parse::<f32>().unwrap_or(0.0)) }
+
+  pub fn to_mu_glue(&self) -> MuGlue { MuGlue::new(self.text.parse::<f32>().unwrap_or(0.0)) }
+
+
 
   pub fn value_of(&self, args: Vec<Token>, state: &mut State) -> Option<RegisterValue> {
     match self.to_register(state) {

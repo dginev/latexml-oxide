@@ -199,10 +199,7 @@ impl<'a> From<&'a RegisterValue> for Number {
       RegisterValue::Glue(other) => Number::new(other.value_of()),
       RegisterValue::MuGlue(other) => Number::new(other.value_of()),
       RegisterValue::Token(other) => other.to_number(),
-      RegisterValue::Tokens(other) => {
-        error!(target:"expected:number", "Token register can not be cast into a number: {:?}", other);
-        Number::new(0.0)
-      },
+      RegisterValue::Tokens(other) => other.to_number(),
     }
   }
 }
