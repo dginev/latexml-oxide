@@ -34,19 +34,26 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\box Number", sub[gullet, args, state] {
     unpack_to_token!(args => token);
-    let tbox = s!("box{}", token.to_number().value_of() as u8);
-    if let Some(Stored::Tokens(stuff)) = state.remove_value(&tbox) {
+    let box_key = s!("box{}", token.to_number().value_of() as u8);
+    if let Some(Stored::Tokens(stuff)) = state.remove_value(&box_key) {
       stuff
     } else {
       Tokens!()
     }    
   });
 
-  DefPrimitive!("\\copy Number", sub[stomach, args, state] {
-  //     my $box   = 'box' . $_[1]->valueOf;
-  //     my $stuff = LookupValue($box);
-  //     ($stuff ? $stuff->unlist : ()); 
-    unimplemented!(); ()
+  // TODO: \box and \copy need to be tested, as they were originally DefPrimitive()s
+  //       I can either reconstruct the values in an expansion, as shown here,
+  //       or refactor back to DefPrimitive, where I'd need to repackage the box tokens into a Digested ???
+  //       example use would be great...
+  DefMacro!("\\copy Number", sub[stomach, args, state] {
+    unpack_to_token!(args => token);
+    let box_key = s!("box{}", token.to_number().value_of() as u8);
+    if let Some(Stored::Tokens(stuff)) = state.lookup_value(&box_key) {
+      stuff.clone()
+    } else {
+      Tokens!()
+    }
   });
 
   DefParameterType!("BoxSpecification",  reader => reader!(gullet, inner, extra, state, {
