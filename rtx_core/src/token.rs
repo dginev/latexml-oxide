@@ -228,7 +228,7 @@ impl Display for Token {
 // NOTE: That another popular equality checks whether the "meaning" (defn) are the same.
 // That is NOT done here; see Equals(x,y) and XEquals(x,y)
 impl PartialEq for Token {
-  fn eq(&self, other: &Token) -> bool { (self.code == other.code) && (self.code == Catcode::SPACE || self.text == other.text) }
+  fn eq(&self, other: &Token) -> bool { (self.code == other.code) && (self.code == Catcode::SPACE || *self.text == *other.text) }
 }
 
 #[macro_export]

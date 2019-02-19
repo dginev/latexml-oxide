@@ -67,7 +67,7 @@ LoadDefinitions!(state, {
 
   // Define \Url, in case its used; won't be represented as nicely
   DefMacro!("\\Url", sub[gullet, args, state] {
-    gullet.unread(&Tokens!(T_OTHER!("\\Url")));
+    gullet.unread(Tokens!(T_OTHER!("\\Url")));
     Ok(Tokens!(T_CS!("\\@Url")))
   });
 

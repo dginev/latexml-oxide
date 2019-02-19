@@ -1512,7 +1512,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   if !within.is_empty() {
     let clwithin = s!("\\cl@{}", within);
     let clunwithin = s!("\\cl@UN{}", within);
-    let mut x = if let Some(Stored::Tokens(cl)) = state.lookup_value(&clwithin) {
+    let mut x = if let Some(cl) = state.lookup_tokens(&clwithin) {
       cl.unlist()
     } else {
       Vec::new()
@@ -1521,7 +1521,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     clwithin_tokens.append(&mut x);
     state.assign_value(&clwithin, Stored::Tokens(Tokens::new(clwithin_tokens)), Some(Scope::Global));
 
-    let mut unx = if let Some(Stored::Tokens(clun)) = state.lookup_value(&clunwithin) {
+    let mut unx = if let Some(clun) = state.lookup_tokens(&clunwithin) {
       clun.unlist()
     } else {
       Vec::new()
@@ -1771,14 +1771,14 @@ pub fn do_expand<T: Into<Tokens>>(mut tokens: T, outer_gullet: &mut Gullet, oute
   outer_gullet.reading_from_mouth(
     Mouth::default(),
     outer_state,
-    Box::new(move |expand_gullet: &mut Gullet, expand_state: &mut State| -> Result<Tokens> {
-      expand_gullet.unread(&tokens);
+    move |expand_gullet: &mut Gullet, expand_state: &mut State| -> Result<Tokens> {
+      expand_gullet.unread(tokens);
       let mut expanded = Vec::new();
       while let Some(t) = expand_gullet.read_x_token(false, false, expand_state)? {
         expanded.push(t);
       }
       Ok(Tokens::new(expanded))
-    }),
+    },
   )
 }
 

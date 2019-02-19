@@ -95,8 +95,8 @@ impl<'t> Stomach {
     self.reading_from_mouth(
       Mouth::default(),
       state,
-      Box::new(move |stomach, state| {
-        stomach.get_gullet_mut().unread(&tokens);
+      move |stomach, state| {
+        stomach.get_gullet_mut().unread(tokens);
         state.clear_prefixes(); // prefixes shouldn't apply here.
         let mode = if state.lookup_bool("IN_MATH") { TexMode::Math } else { TexMode::Text };
         let initdepth = stomach.boxing.len();
@@ -134,7 +134,7 @@ impl<'t> Stomach {
         let mut digested_list = List::new(digested_boxes);
         digested_list.mode = Some(mode);
         digested_list.into()
-      }),
+      },
     )
   }
 
@@ -154,7 +154,7 @@ impl<'t> Stomach {
     self.reading_from_mouth(
       raw_tex_mouth,
       state,
-      Box::new(move |stomach, state| -> Result<()> {
+      move |stomach, state| -> Result<()> {
         while let Some(token) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
           if token != T_SPACE!() {
             // info!(target:"raw_tex:invoke_token","{:?}", token);
@@ -162,7 +162,7 @@ impl<'t> Stomach {
           }
         }
         Ok(())
-      }),
+      },
     )?;
 
     state.assign_catcode('@', savedcc, None);
@@ -223,7 +223,7 @@ impl<'t> Stomach {
           // but it isn't expanded in the gullet, but later when digesting, in math mode
           // (? I think)
           let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
-          self.gullet.unread(&invoked_meaning);
+          self.gullet.unread(invoked_meaning);
           maybe_token = match self.gullet.read_x_token(true, false, state)? {
             // replace the token by it's expansion!!!
             None => None,
@@ -235,7 +235,7 @@ impl<'t> Stomach {
         Stored::Conditional(meaning) => {
           // Conditionals are "expandable", use the regular invoke.
           let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
-          self.gullet.unread(&invoked_meaning);
+          self.gullet.unread(invoked_meaning);
           maybe_token = match self.gullet.read_x_token(true, false, state)? {
             // replace the token by it's expansion!!!
             None => None,
@@ -321,7 +321,7 @@ impl<'t> Stomach {
 
       let gullet = self.get_gullet_mut();
       state.let_i(token, T_CS!("\\iffalse"), None);
-      gullet.unread(&Tokens!(token.clone())); // Retry
+      gullet.unread(Tokens!(token.clone())); // Retry
       Ok(Vec::new())
     } else {
       error!(
@@ -395,7 +395,8 @@ impl<'t> Stomach {
   // Do something, while reading stuff from a specific Mouth.
   // This reads ONLY from that mouth (or any mouth openned by code in that source),
   // and the mouth should end up empty afterwards, and only be closed here.
-  pub fn reading_from_mouth<R>(&mut self, mouth: Mouth, state: &mut State, mut reader: Box<FnMut(&mut Stomach, &mut State) -> R>) -> R {
+  pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, mut reader: FnR) -> R
+  where FnR: FnOnce(&mut Stomach, &mut State) -> R {
     let mouth_source = mouth.source.clone();
     {
       let gullet = self.get_gullet_mut();
@@ -497,7 +498,7 @@ impl<'t> Stomach {
     }
     if let Some(Stored::Tokens(after)) = after {
       if !after.is_empty() {
-        self.gullet.unread(&after);
+        self.gullet.unread(after);
       }
     }
     Ok(())

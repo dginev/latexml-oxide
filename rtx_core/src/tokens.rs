@@ -42,13 +42,13 @@ impl From<Vec<Token>> for Tokens {
 }
 
 impl From<Token> for Tokens {
-  fn from(t: Token) -> Tokens { Tokens!(t) }
+  fn from(t: Token) -> Tokens { Tokens::new(vec![t]) }
 }
 impl From<Tokens> for Result<Tokens> {
   fn from(t: Tokens) -> Result<Tokens> { Ok(t) }
 }
 impl From<Token> for Result<Tokens> {
-  fn from(t: Token) -> Result<Tokens> { Ok(Tokens!(t)) }
+  fn from(t: Token) -> Result<Tokens> { Ok(t.into()) }
 }
 impl From<Token> for Vec<Token> {
   fn from(t: Token) -> Vec<Token> { vec![t] }
@@ -84,7 +84,7 @@ impl Tokens {
   pub fn new(tokens: Vec<Token>) -> Self { Tokens(tokens) }
 
   /// Return a list of the tokens making up this Tokens
-  pub fn unlist(&self) -> Vec<Token> { self.0.clone() }
+  pub fn unlist(self) -> Vec<Token> { self.0 }
 
   /// Are there any tokens at all contained in this Tokens object
   pub fn is_empty(&self) -> bool { self.0.is_empty() }
@@ -203,7 +203,7 @@ impl Tokens {
           // Not multiple '#'; read arg.
           let arg_number = token2.text.parse::<usize>().unwrap();
           let arg = &args[arg_number - 1];
-          result.extend(arg.unlist());
+          result.extend(arg.clone().unlist());
         } else {
           // Duplicated '#', copy 2nd '#'
           result.push(token2.clone());
