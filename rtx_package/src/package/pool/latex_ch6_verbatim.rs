@@ -51,7 +51,7 @@ LoadDefinitions!(outer_state, {
           lines.push(pre);
           let mut post_tokens = Tokenize!(post).unlist();
           post_tokens.push(T_CR!());
-          gullet.unread(&Tokens::new(post_tokens));
+          gullet.unread(Tokens::new(post_tokens));
           break;
         } else {
           lines.push(s!("{}\n", line));

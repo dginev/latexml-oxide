@@ -113,7 +113,7 @@ LoadDefinitions!(state, {
     if let Some(path) = find_file(&file.to_string(), None, state) {
       gullet.reading_from_mouth(Mouth::create(&path, MouthOptions::default(), state)?,
         state,
-        Box::new(|igullet, istate| -> Result<Tokens> {
+        |igullet, istate| -> Result<Tokens> {
           let mut lines = Vec::new();
           if let Some(mut mouth) = igullet.get_mouth_mut() {
             while let Some(line) = mouth.read_raw_line(false) {
@@ -130,7 +130,7 @@ LoadDefinitions!(state, {
             T_CS!("\\begingroup"), T_CS!("\\@verbatim"), T_CS!("\\frenchspacing"), T_CS!("\\@vobeyspaces"),
             T_CS!("\\lx@verbatim@"), tokens, T_CS!("\\lx@end@verbatim@"), T_CS!("\\endgroup"))
           )
-        }),
+        },
       )
     } else {
       error!("\\verbatiminput found no file for {:?}, output may be incomplete", file);

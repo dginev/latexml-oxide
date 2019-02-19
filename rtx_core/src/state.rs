@@ -1543,7 +1543,7 @@ impl State {
   pub fn after_assignment(&mut self) {
     if let Some(Stored::Tokens(after)) = self.remove_value("afterAssignment") {
       if !after.is_empty() {
-        self.stomach.borrow_mut().get_gullet_mut().unread(&after); // primitive returns boxes, so these need to be digested!
+        self.stomach.borrow_mut().get_gullet_mut().unread(after); // primitive returns boxes, so these need to be digested!
       }
     }
   }

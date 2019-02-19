@@ -231,13 +231,13 @@ pub fn read_box_contents(gullet: &mut Gullet, everybox_opt: Option<Tokens>, stat
     } // Skip till { or \bgroup
   }
   // Now, insert some extra tokens, if any, possibly from \afterassignment
-  if let Some(ref token) = state.lookup_tokens("BeforeNextBox") {
+  if let Some(token) = state.lookup_tokens("BeforeNextBox") {
     state.assign_value("BeforeNextBox", None, Some(Scope::Global));
     gullet.unread(token);
   }
   // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
   if let Some(everybox) = everybox_opt {
-    gullet.unread(&everybox);
+    gullet.unread(everybox);
   }
   Ok(Tokens!())
 }

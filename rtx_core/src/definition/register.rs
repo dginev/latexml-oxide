@@ -349,8 +349,8 @@ impl Definition for RefCell<Register> {
     if let Some(after) = state.remove_value("afterAssignment") {
       match after {
         // primitive returns boxes, so these need to be digested!
-        Stored::Token(t) => gullet.unread(&Tokens!(t)),
-        Stored::Tokens(tks) => gullet.unread(&tks),
+        Stored::Token(t) => gullet.unread(Tokens!(t)),
+        Stored::Tokens(tks) => gullet.unread(tks),
         other => error!(target:"unexpected:afterassignment", "expected tokens, found: {:?}", other),
       };
     }

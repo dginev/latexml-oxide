@@ -340,7 +340,7 @@ impl Gullet {
     }
   }
 
-  pub fn unread(&mut self, tokens: &Tokens) {
+  pub fn unread(&mut self, tokens: Tokens) {
     if let Some(ref mut runtime) = self.mouth {
       for token in tokens.unlist().into_iter().rev() {
         runtime.pushback.push_front(token);
@@ -423,7 +423,7 @@ impl Gullet {
         // All matched!!!
         return Ok(Some(T_OTHER!(keyword.to_string()).into()));
       } else {
-        self.unread(&matched.into()); // Put 'em back and try next!
+        self.unread(matched.into()); // Put 'em back and try next!
       }
     }
     Ok(None)
@@ -526,7 +526,7 @@ impl Gullet {
         if t.code == Catcode::OTHER && t.text == "[" {
           self.read_until(vec![T_OTHER!("]")], state)
         } else {
-          self.unread(&Tokens!(t));
+          self.unread(Tokens!(t));
           Ok(Tokens!()) // TODO: default
         }
       },
@@ -580,15 +580,15 @@ impl Gullet {
               let args: Vec<Token> = defn.read_arguments(self, state)?.iter().map(|ts| ts.into()).collect();
               Ok(defn.value_of(args, state))
             } else {
-              self.unread(&Tokens!(token)); // Unread
+              self.unread(Tokens!(token)); // Unread
               Ok(None)
             }
           } else {
-            self.unread(&Tokens!(token)); // Unread
+            self.unread(Tokens!(token)); // Unread
             Ok(None)
           }
         } else {
-          self.unread(&Tokens!(token)); // Unread
+          self.unread(Tokens!(token)); // Unread
           Ok(None)
         }
       },
@@ -667,7 +667,7 @@ impl Gullet {
       let next = self.read_token(state);
       warn!(target:"expected:<number>", "Missing number, treated as zero while processing {:?}, next token is {:?}", state.current_token, next);
       if let Some(next) = next {
-        self.unread(&Tokens!(next));
+        self.unread(Tokens!(next));
       }
       Ok(Number::new(0.0))
     }
@@ -708,7 +708,7 @@ impl Gullet {
           let s_char = f32::from(s_char);
           Ok(Some(Number::new(s_char))) //  Only a character token!!! NOT expanded!!!!
         } else {
-          self.unread(&Tokens!(token)); // Unread
+          self.unread(Tokens!(token)); // Unread
           self.read_internal_integer(state)
         }
       },
@@ -737,11 +737,11 @@ impl Gullet {
         let n_opt: Option<Number> = if !string.is_empty() {
           if token.get_catcode() != Catcode::SPACE {
             // Inline ->getCatcode, unread
-            self.unread(&Tokens!(token));
+            self.unread(Tokens!(token));
           }
           Some(string.into())
         } else {
-          self.unread(&Tokens!(token)); // Unread
+          self.unread(Tokens!(token)); // Unread
           self.read_normal_integer(state)?
         };
 
@@ -942,7 +942,7 @@ impl Gullet {
           if defn.is_expandable() {
             let x = defn.invoke(self, state)?;
             if !x.is_empty() {
-              self.unread(&x)
+              self.unread(x)
             }
             self.read_tokens_value(state)
           } else {
@@ -959,7 +959,7 @@ impl Gullet {
     match self.read_non_space(state) {
       None => {},
       Some(t) => {
-        self.unread(&Tokens!(t));
+        self.unread(Tokens!(t));
       },
     }
   }
@@ -967,12 +967,13 @@ impl Gullet {
   pub fn skip_one_space(&mut self, state: &mut State) {
     if let Some(token) = self.read_token(state) {
       if token.get_catcode() != Catcode::SPACE {
-        self.unread(&Tokens!(token));
+        self.unread(Tokens!(token));
       }
     }
   }
 
-  pub fn reading_from_mouth<R>(&mut self, mouth: Mouth, state: &mut State, mut reader: Box<FnMut(&mut Gullet, &mut State) -> R>) -> R {
+  pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, mut reader: FnR) -> R 
+  where FnR: FnOnce(&mut Gullet, &mut State) -> R {
     let mouth_source = mouth.source.clone();
     self.open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
     let results: R = reader(self, state);
@@ -1034,7 +1035,7 @@ impl Gullet {
       if token_text == "-" {
         sign = true;
       } else if (token_text != "+") && t.get_catcode() != Catcode::SPACE {
-        self.unread(&Tokens!(t)); // Unread and end
+        self.unread(Tokens!(t)); // Unread and end
         break;
       }
     }
@@ -1049,7 +1050,7 @@ impl Gullet {
         result.push_str(&digit);
       } else {
         if !(skip && token.get_catcode() == Catcode::SPACE) {
-          self.unread(&Tokens!(token));
+          self.unread(Tokens!(token));
         }
         break;
       }
@@ -1075,13 +1076,13 @@ impl Gullet {
     if factor > 0.0 {
       if let Some(token) = token_opt {
         if token.get_catcode() != Catcode::SPACE {
-          self.unread(&Tokens!(token));
+          self.unread(Tokens!(token));
         }
       }
       Ok(Some(factor))
     } else {
       if let Some(token) = token_opt {
-        self.unread(&Tokens!(token));
+        self.unread(Tokens!(token));
       }
       match self.read_normal_integer(state)? {
         None => Ok(None),

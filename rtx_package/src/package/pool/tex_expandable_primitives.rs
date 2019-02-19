@@ -261,7 +261,7 @@ LoadDefinitions!(outer_state, {
     };
     gullet.flush_mouth(state);
     if let Some(line) = line_opt {
-      gullet.unread(&Tokenize!(&line));
+      gullet.unread(Tokenize!(&line));
     }
   });
 
