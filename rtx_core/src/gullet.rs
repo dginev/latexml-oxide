@@ -165,40 +165,42 @@ impl Gullet {
   /// So, be Fast & Clean!  This method only reads from the current input stream (Mouth).
   pub fn read_token(&mut self, state: &mut State) -> Option<Token> {
     let mut next_token: Option<Token> = None;
+    // If we're without a runtime, bail
+    let mut runtime = match self.mouth {
+      None => return None,
+      Some(ref mut runtime) => runtime 
+    };
     // Check in pushback first....
-    if let Some(ref mut runtime) = self.mouth {
-      while let Some(pushback_token) = runtime.pushback.pop_front() {
-        match pushback_token.code {
-          Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
+    while let Some(pushback_token) = runtime.pushback.pop_front() {
+      match pushback_token.code {
+        Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
+        Catcode::MARKER => {
+          // TODO:
+          // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
+        },
+        _ => {
+          next_token = Some(pushback_token);
+          break;
+        },
+      };
+    }
+    // Not in pushback, read from the current Mouth
+    if next_token.is_none() {
+      while let Some(token) = runtime.mouth.read_token(state) {
+        match token.code {
+          Catcode::COMMENT => self.pending_comments.push_back(token),
           Catcode::MARKER => {
             // TODO:
             // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
           },
           _ => {
-            next_token = Some(pushback_token);
+            next_token = Some(token);
             break;
           },
         };
       }
-      if next_token.is_none() {
-        while let Some(token) = runtime.mouth.read_token(state) {
-          match token.code {
-            Catcode::COMMENT => self.pending_comments.push_back(token),
-            Catcode::MARKER => {
-              // TODO:
-              // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
-            },
-            _ => {
-              next_token = Some(token);
-              break;
-            },
-          };
-        }
-      }
-      next_token
-    } else {
-      None
     }
+    next_token
   }
 
   // Read the next non-expandable token (expanding tokens until there's a non-expandable one).
@@ -208,8 +210,10 @@ impl Gullet {
   // If $commentsok is true, will also pass comments.
   pub fn read_x_token(&mut self, toplevel: bool, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
     // toplevel should be true by default
-    if commentsok && !self.pending_comments.is_empty() {
-      return Ok(self.pending_comments.pop_front());
+    if commentsok {
+      if let Some(pending_comment_token) = self.pending_comments.pop_front() {
+        return Ok(Some(pending_comment_token))
+      }
     }
 
     loop {
