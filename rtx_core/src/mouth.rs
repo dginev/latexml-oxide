@@ -15,7 +15,7 @@ use crate::token::*;
 use crate::tokens::Tokens;
 use crate::util::pathname;
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub enum FoodType {
   File,
   Binding,
@@ -46,7 +46,7 @@ lazy_static! {
   static ref SANITIZE_LINE_REGEX: Regex = Regex::new(r"((\\ )*)\s*$").unwrap();
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Mouth {
   pub fordefinitions: bool,
   pub notes: bool,
@@ -89,6 +89,7 @@ impl Default for Mouth {
   }
 }
 
+#[derive(Debug)]
 pub struct MouthOptions {
   pub fordefinitions: bool,
   pub notes: bool,
@@ -121,7 +122,7 @@ impl Mouth {
   // DG: For now we are using a `foodtype` field instead of subclassing mouth, as it feels more compact in this particular application
   //     we're really looking at a unified Mouth application logic, with a capacity of reading different kinds of sources
   pub fn create(source: &str, mut options: MouthOptions, state: &mut State) -> Result<Self> {
-    if let Some(content) = options.content.clone() {
+    if let Some(content) = options.content.take() {
       // we've cached the content of this source
       let (dir, name, ext) = pathname::split(source);
       options.source = Some(source.to_string());

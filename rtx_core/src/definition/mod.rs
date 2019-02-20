@@ -79,7 +79,7 @@ pub trait Definition: Object {
       None => self.get_cs(),
     }
   }
-  fn get_alias(&self) -> Option<String>;
+  fn get_alias(&self) -> Option<&String>;
   fn is_protected(&self) -> bool { false }
   fn is_register(&self) -> bool { false }
   fn is_prefix(&self) -> bool { false }

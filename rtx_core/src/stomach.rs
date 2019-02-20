@@ -459,7 +459,7 @@ impl<'t> Stomach {
   pub fn push_stack_frame(&mut self, nobox: bool, state: &mut State) {
     let current_token = match &state.current_token {
       Some(t) => (**t).clone(),
-      _ => T_OTHER!(String::new()),
+      _ => Token::default(),
     };
 
     state.push_frame();
