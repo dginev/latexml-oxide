@@ -119,9 +119,7 @@ pub fn lookup_font_series(code: &str) -> Option<&Font> { FONT_SERIES.get(code) }
 pub fn lookup_font_shape(code: &str) -> Option<&Font> { FONT_SHAPE.get(code) }
 
 /// ???
-pub fn decode_fontname(name: &str, at:Option<f32>, scaled: Option<f32>) -> Option<Font> {
-  unimplemented!()
-}
+pub fn decode_fontname(name: &str, at: Option<f32>, scaled: Option<f32>) -> Option<Font> { unimplemented!() }
 
 /// This struct is a little interesting, as we want to pass overrides that partially modify (via a
 /// merge) the current font, in each definitional binding. To accommodate that with this struct,

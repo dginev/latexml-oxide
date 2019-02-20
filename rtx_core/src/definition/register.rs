@@ -1,9 +1,9 @@
+use lazy_static::lazy_static;
 use log::*;
+use regex::Regex;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
-use regex::Regex;
-use lazy_static::lazy_static;
 
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
@@ -25,7 +25,6 @@ use crate::Digested;
 lazy_static! {
   static ref SPEC_RE: Regex = Regex::new(r"^(-?\d*\.?\d*)([a-zA-Z][a-zA-Z])$").unwrap();
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RegisterValue {
@@ -124,7 +123,7 @@ pub trait NumericOps {
   }
   fn multiply<T: Into<f32>>(self, other: T) -> Self
   where Self: Sized {
-    let other : f32 = other.into();
+    let other: f32 = other.into();
     Self::new((self.value_of() * other).floor())
   }
 
@@ -262,7 +261,7 @@ impl<'a> From<&'a RegisterValue> for Glue {
 impl RegisterValue {
   #[allow(clippy::wrong_self_convention)]
   pub fn to_string(&self) -> String { (*self).clone().value_of().to_string() }
-  pub fn stringify(&self) -> String { s!("RegisterValue[{}]", self.to_string())}
+  pub fn stringify(&self) -> String { s!("RegisterValue[{}]", self.to_string()) }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

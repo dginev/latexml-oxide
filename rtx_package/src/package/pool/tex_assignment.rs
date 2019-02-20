@@ -32,7 +32,7 @@ LoadDefinitions!(state, {
     },
     locked => true
   );
-  
+
   // <prefix> = \global | \long | \outer
   // See Stomach.pm & Stomach.pm
   DefPrimitive!("\\global",sub { SetPrefix!("global"); }, is_prefix => true);
@@ -70,17 +70,16 @@ LoadDefinitions!(state, {
     if let Some(props) = font::decode_fontname(&name,
          gullet.read_keyword(&["at"], state)?.map(|_| gullet.read_dimension(state).unwrap().pt_value(None)),
          gullet.read_keyword(&["scaled"], state)?.map(|_| gullet.read_number(state).unwrap().value_of() / 1000.0)) {
-    
+
       gullet.skip_spaces(state);
       AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
       DefPrimitiveII!(cs, None, None, font => Some(props));
     } else {    // Failed?
-      info!(target: &s!("unexpected:{}", name), 
+      info!(target: &s!("unexpected:{}", name),
         "Unrecognized font name {:?} Font switch macro {:?} will have no effect", name, cs.to_string());
     }
   });
 
-  
   // Not sure what this should be...
   DefPrimitive!("\\nullfont", None, font => Font!(family => "nullfont"));
 
@@ -113,7 +112,7 @@ LoadDefinitions!(state, {
         state.current_token = Some(Rc::clone(&defn_rc));
         unimplemented!();
         ()
-        // TODO: We need an extension here, as it seems that 
+        // TODO: We need an extension here, as it seems that
         // $defn->setValue($defn->valueOf(@args)->add($stomach->getGullet->readValue($defn->isRegister)), @args); });
       }
     }
@@ -201,7 +200,7 @@ LoadDefinitions!(state, {
     // DefRegisterI($cs, undef, MuGlue(0),
     //   getter => sub { LookupValue($muglue) || MuGlue(0); },
     //   setter => sub { AssignValue($muglue => $_[0]); });
-    AfterAssignment!(); 
+    AfterAssignment!();
     unimplemented!();
     ()
   });
@@ -212,7 +211,7 @@ LoadDefinitions!(state, {
     // DefRegisterI($cs, undef, Tokens(),
     //   getter => sub { LookupValue($toks) || Tokens(); },
     //   setter => sub { AssignValue($toks => $_[0]); });
-    AfterAssignment!(); 
+    AfterAssignment!();
     unimplemented!();
     ()
   });
@@ -281,24 +280,24 @@ LoadDefinitions!(state, {
     getter=>getter!(args, state, { unimplemented!(); () }),
     // my $code = $STATE->lookupSFcode(chr($_[0]->valueOf));
     //  Number(defined $code ? $code : 0); },
-    setter => setter!(value, args, state, { unimplemented!(); () 
-      //$STATE->assignSFcode(chr($_[1]->valueOf) => $_[0]->valueOf); 
+    setter => setter!(value, args, state, { unimplemented!(); ()
+      //$STATE->assignSFcode(chr($_[1]->valueOf) => $_[0]->valueOf);
       })
   );
   DefRegister!("\\lccode Number", Number::new(0.0),
     getter=>getter!(args, state, { unimplemented!(); () }),
       // my $code = $STATE->lookupLCcode(chr($_[0]->valueOf));
       // Number(defined $code ? $code : 0); },
-    setter => setter!(value, args, state, { unimplemented!(); () 
-      //$STATE->assignLCcode(chr($_[1]->valueOf) => $_[0]->valueOf); 
+    setter => setter!(value, args, state, { unimplemented!(); ()
+      //$STATE->assignLCcode(chr($_[1]->valueOf) => $_[0]->valueOf);
       })
   );
   DefRegister!("\\uccode Number", Number::new(0.0),
     getter=>getter!(args, state, { unimplemented!(); () }),
       // my $code = $STATE->lookupUCcode(chr($_[0]->valueOf));
       // Number(defined $code ? $code : 0); },
-    setter => setter!(value, args, state, { unimplemented!(); () 
-      //$STATE->assignUCcode(chr($_[1]->valueOf) => $_[0]->valueOf); 
+    setter => setter!(value, args, state, { unimplemented!(); ()
+      //$STATE->assignUCcode(chr($_[1]->valueOf) => $_[0]->valueOf);
     })
   );
   // Not used anywhere (yet)
@@ -306,8 +305,8 @@ LoadDefinitions!(state, {
     getter=>getter!(args, state, { unimplemented!(); () }),
       // my $code = $STATE->lookupDelcode(chr($_[0]->valueOf));
       // Number(defined $code ? $code : 0); },
-    setter => setter!(value, args, state, { unimplemented!(); () 
-      //$STATE->assignDelcode(chr($_[1]->valueOf) => $_[0]->valueOf); 
+    setter => setter!(value, args, state, { unimplemented!(); ()
+      //$STATE->assignDelcode(chr($_[1]->valueOf) => $_[0]->valueOf);
     })
   );
 
@@ -316,7 +315,8 @@ LoadDefinitions!(state, {
     state.assign_lccode(letter, letter + 20, Scope::Global);
     state.assign_uccode(letter, letter, Scope::Global);
     state.assign_lccode(letter + 20, letter + 20, Scope::Global);
-    state.assign_uccode(letter + 20, letter, Scope::Global); }
+    state.assign_uccode(letter + 20, letter, Scope::Global);
+  }
 
   // Stub definitions ???
   DefRegister!("\\hyphenchar{}", Number!((b'-')));

@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use glob::glob;
 use libxml::parser::Parser;
 use libxml::tree::Document as XmlDoc;
+use std::collections::HashMap;
 
 use rtx_core::common::BindingDispatcher;
 use rtx_core::document::Document;

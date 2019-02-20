@@ -1,6 +1,6 @@
 use crate::package::*;
 lazy_static! {
-  static ref LEAD_W_COLON_RE : Regex = Regex::new(r"^(\w+):").unwrap();
+  static ref LEAD_W_COLON_RE: Regex = Regex::new(r"^(\w+):").unwrap();
 }
 //=======================
 // -- Main Definitions --
@@ -120,7 +120,7 @@ LoadDefinitions!(outer_state, {
           };
           meaning = s!("{} {}", cc.meaning(), text);
         },
-        Stored::Register(register) => {      
+        Stored::Register(register) => {
           let value = register.value_of(vec![],state);
           let register_type = register.register_type().unwrap();
           let prefix = match register_type {
@@ -143,19 +143,19 @@ LoadDefinitions!(outer_state, {
         Stored::Expandable(expandable) => {
           let mut params = Vec::new();
           let mut argcount = 0;
-          
+
           if let Some(ltxps) = expandable.get_parameters() {
             params   = ltxps.get_parameters();
             argcount = ltxps.get_num_args();
           }
           let specparts : Vec<Cow<str>> = params.iter().map(|param| LEAD_W_COLON_RE.replace(&param.spec,"") ).collect();
-          let mut spec = String::new();  
+          let mut spec = String::new();
           for (index, part) in specparts.iter().take(argcount).enumerate() {
             spec.push_str(part);
             spec.push('#');
             spec.push_str(&(index+1).to_string());
             spec = spec.replace("{}","");
-            spec = spec.replace("Token",""); 
+            spec = spec.replace("Token","");
           }
           let mut prefixes = String::new();
           if expandable.is_protected {
@@ -174,7 +174,7 @@ LoadDefinitions!(outer_state, {
             None => String::new(),
             Some(exp) => exp.to_string()
           };
-          meaning = s!("{}macro:{}->{}",prefixes, spec, expansion); 
+          meaning = s!("{}macro:{}->{}",prefixes, spec, expansion);
         },
         e => { // are there other cases that could occur here? should we handle them?
           dbg!(e);

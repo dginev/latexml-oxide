@@ -77,5 +77,4 @@ LoadDefinitions!(state, {
   //     ExplodeText(radix_format($_[1]->valueOf, @fnsymbols)); });
   // DefMacro('\fnsymbol{}', sub {
   //     ExplodeText(radix_format(CounterValue(ToString(Expand($_[1])))->valueOf, @fnsymbols)); });
-
 });

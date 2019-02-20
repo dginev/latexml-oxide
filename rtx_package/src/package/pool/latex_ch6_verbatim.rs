@@ -75,10 +75,13 @@ LoadDefinitions!(outer_state, {
     before_construct => construct!(document, whatsit, state, { document.maybe_close_element("ltx:p", state)?; })
   );
 
-  DefPrimitiveI!("\\@vobeyspaces", primitiveproc!(stomach, args, state, {
-    AssignCatcode!(' ', Catcode::ACTIVE);
-    LetI!(&T_ACTIVE!(" "), T_CS!("\\nobreakspace"));
-  }));
+  DefPrimitiveI!(
+    "\\@vobeyspaces",
+    primitiveproc!(stomach, args, state, {
+      AssignCatcode!(' ', Catcode::ACTIVE);
+      LetI!(&T_ACTIVE!(" "), T_CS!("\\nobreakspace"));
+    })
+  );
 
   // WARNING: Need to be careful about what catcodes are active here
   DefMacro!("\\verb", sub[gullet, args, state] {
@@ -125,11 +128,17 @@ LoadDefinitions!(outer_state, {
   );
 
   // Actually, latex sets catcode to 13 ... is this close enough?
-  DefPrimitiveI!("\\obeycr", primitiveproc!(stomach, whatsit, state, {
-    AssignValue!("PRESERVE_NEWLINES", true);
-  }));
-  DefPrimitiveI!("\\restorecr", primitiveproc!(stomach, whatsit, state, {
-    AssignValue!("PRESERVE_NEWLINES", false);
-  }));
+  DefPrimitiveI!(
+    "\\obeycr",
+    primitiveproc!(stomach, whatsit, state, {
+      AssignValue!("PRESERVE_NEWLINES", true);
+    })
+  );
+  DefPrimitiveI!(
+    "\\restorecr",
+    primitiveproc!(stomach, whatsit, state, {
+      AssignValue!("PRESERVE_NEWLINES", false);
+    })
+  );
   DefMacroI!(T_CS!("\\normalsfcodes"), None, Tokens!());
 });

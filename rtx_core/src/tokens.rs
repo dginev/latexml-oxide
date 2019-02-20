@@ -1,16 +1,16 @@
 ///! Token List constructors.
 use crate::fmt;
 use log::*;
-use proc_macro2::{Ident, Punct, Span, Spacing};
-use quote::{ToTokens, TokenStreamExt, quote};
+use proc_macro2::{Ident, Punct, Spacing, Span};
+use quote::{quote, ToTokens, TokenStreamExt};
 
 use std::collections::VecDeque;
 use std::fmt::Display;
 
+use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
-use crate::common::number::Number;
-use crate::common::dimension::{MuDimension,Dimension};
 use crate::common::glue::{Glue, MuGlue};
+use crate::common::number::Number;
 use crate::definition::register::RegisterValue;
 use crate::state::State;
 use crate::stomach::Stomach;
@@ -20,7 +20,7 @@ use crate::Digested;
 const UNTEX_LINELENGTH: usize = 78;
 
 /// Tokens are a thin wrapper over a vector of Token objects
-/// usually read from a `Mouth`. 
+/// usually read from a `Mouth`.
 /// They are usually treated as an immutable interface, an have to be consumed via `.unlist()`
 /// for access to the underlying data.
 #[derive(Debug, Clone, PartialEq)]

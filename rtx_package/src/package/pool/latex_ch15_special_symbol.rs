@@ -1,4 +1,2 @@
 use crate::package::*;
-LoadDefinitions!(state, {
-
-});
+LoadDefinitions!(state, {});

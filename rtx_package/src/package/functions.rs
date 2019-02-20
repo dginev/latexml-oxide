@@ -3,13 +3,15 @@ use libxml::tree::Node;
 use log::*;
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::{VecDeque, HashMap};
+use std::collections::{HashMap, VecDeque};
 use std::path::Path;
 use std::rc::Rc;
 use unidecode::unidecode;
 
+use rtx_core::common::dimension::{Dimension, MuDimension};
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
+use rtx_core::common::glue::{Glue, MuGlue};
 use rtx_core::common::number::Number;
 use rtx_core::common::xml::XML_NS;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
@@ -18,8 +20,6 @@ use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
 use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
 use rtx_core::definition::register::{NumericOps, Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue};
-use rtx_core::common::glue::{Glue, MuGlue};
-use rtx_core::common::dimension::{Dimension, MuDimension};
 use rtx_core::definition::{
   BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, PrimitiveClosure, ReplacementClosure,
 };
@@ -112,7 +112,7 @@ impl IntoTokensResult<Result<Tokens>> for () {
   fn into_tokens_result(self) -> Result<Tokens> { Ok(Tokens!()) }
 }
 
-pub trait IntoBoolResult<T>:Sized {
+pub trait IntoBoolResult<T>: Sized {
   /// Performs the conversion, used for DefConditional return values etc
   fn into_bool_result(self) -> Result<bool>;
 }
@@ -160,10 +160,10 @@ impl IntoRegisterValueOption<Option<RegisterValue>> for Number {
 }
 
 impl IntoRegisterValueOption<Option<RegisterValue>> for Option<Number> {
-  fn into_register_value_option(self) -> Option<RegisterValue> { 
+  fn into_register_value_option(self) -> Option<RegisterValue> {
     match self {
       Some(n) => Some(RegisterValue::Number(n)),
-      None => None
+      None => None,
     }
   }
 }
@@ -190,8 +190,6 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for Number {
   fn into_digested_option_result(self) -> Result<Option<Digested>> { RegisterValue::Number(self).into_digested_option_result() }
 }
 
-
-
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for RegisterValue {
   fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(self.into())) }
 }
@@ -201,7 +199,6 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for Option<Digested> {
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for Result<Option<Digested>> {
   fn into_digested_option_result(self) -> Result<Option<Digested>> { self }
 }
-
 
 //**********************************************************************
 //   Initially, I thought LaTeXML Packages should try to be like perl modules:
@@ -1075,7 +1072,7 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
   let scope = options.scope;
   let reqfont = match options.font {
     Some(ref fnt) => fnt.clone(),
-    None => Font::default()
+    None => Font::default(),
   };
   state.install_definition(
     MathPrimitive {
@@ -1817,7 +1814,7 @@ pub fn convert_latex_args(mut nargs: usize, optional: Option<Tokens>, state: &mu
   }
 }
 
-static RMLETTERS : [char; 7]= ['i', 'v', 'x', 'l', 'c', 'd', 'm'];
+static RMLETTERS: [char; 7] = ['i', 'v', 'x', 'l', 'c', 'd', 'm'];
 pub fn roman_aux<T: Into<i32>>(stuff: T) -> String {
   // let mut n = stuff.into();
   // let mut div = 1000;
@@ -1832,12 +1829,12 @@ pub fn roman_aux<T: Into<i32>>(stuff: T) -> String {
   //   }
   //   if d > 4 {
   //     s += RMLETTERS[p + (d / 5)];
-  //     d %= 5; 
+  //     d %= 5;
   //   }
   //   if d!=0 {
   //     s += String::from_utf8(vec![RMLETTERS[p], d]);
   //   }
-  //   p -= 2; 
+  //   p -= 2;
   // }
   // s
   // TODO!

@@ -12,7 +12,7 @@ LoadDefinitions!(state, {
 
   //AssignValue('2.09_COMPATIBILITY'=>0);
   // DefConditionalI('\if@compatibility', undef, sub { LookupValue('2.09_COMPATIBILITY'); });
-  DefMacro!("\\@compatibilitytrue",  "");
+  DefMacro!("\\@compatibilitytrue", "");
   DefMacro!("\\@compatibilityfalse", "");
 
   Let!("\\@currentlabel", "\\@empty");

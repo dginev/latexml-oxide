@@ -53,7 +53,7 @@ pub fn derive_load_indirect_model(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(BoundState)]
 pub fn bound_state(_input: TokenStream) -> TokenStream {
-  let state_declaration = if unsafe {CONTEXT_DEPTH == 0} {
+  let state_declaration = if unsafe { CONTEXT_DEPTH == 0 } {
     quote!(
       macro_rules! state {
         () => {
@@ -73,15 +73,14 @@ pub fn bound_state(_input: TokenStream) -> TokenStream {
   state_declaration.into()
 }
 
-
 #[proc_macro_derive(StartStateFrame)]
 pub fn start_state_frame(_input: TokenStream) -> TokenStream {
-  unsafe { CONTEXT_DEPTH +=1 };
+  unsafe { CONTEXT_DEPTH += 1 };
   TokenStream::new()
 }
 
 #[proc_macro_derive(EndStateFrame)]
 pub fn end_state_frame(_input: TokenStream) -> TokenStream {
-  unsafe { CONTEXT_DEPTH -=1 };
+  unsafe { CONTEXT_DEPTH -= 1 };
   TokenStream::new()
 }

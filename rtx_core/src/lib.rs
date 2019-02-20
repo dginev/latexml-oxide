@@ -176,7 +176,7 @@ pub enum Digested {
   List(Rc<List>),
   Postponed(Rc<Tokens>),
   KeyVals(Rc<KeyVals>),
-  RegisterValue(Rc<RegisterValue>)
+  RegisterValue(Rc<RegisterValue>),
 }
 
 impl<'a> From<&'a String> for Digested {
@@ -199,7 +199,7 @@ impl From<Whatsit> for Digested {
 impl From<KeyVals> for Digested {
   fn from(value: KeyVals) -> Digested { Digested::KeyVals(Rc::new(value)) }
 }
-impl From<RegisterValue> for Digested { 
+impl From<RegisterValue> for Digested {
   fn from(value: RegisterValue) -> Digested { Digested::RegisterValue(Rc::new(value)) }
 }
 
@@ -234,7 +234,7 @@ impl BoxOps for Digested {
       Digested::Whatsit(ref w) => w.borrow().unlist(),
       Digested::KeyVals(ref kvs) => kvs.unlist(),
       Digested::Postponed(ref _t) => unimplemented!(),
-      Digested::RegisterValue(ref _rv)=> unimplemented!(),
+      Digested::RegisterValue(ref _rv) => unimplemented!(),
     }
   }
 
@@ -245,7 +245,7 @@ impl BoxOps for Digested {
       Digested::Whatsit(w) => w.borrow().be_absorbed(document, state),
       Digested::KeyVals(kvs) => kvs.be_absorbed(document, state),
       Digested::Postponed(_) => unimplemented!(),
-      Digested::RegisterValue(ref _rv)=> unimplemented!(),
+      Digested::RegisterValue(ref _rv) => unimplemented!(),
     }
   }
 
@@ -267,7 +267,7 @@ impl BoxOps for Digested {
       Digested::Whatsit(ref w) => w.borrow().to_string(),
       Digested::Postponed(ref t) => t.to_string(),
       Digested::KeyVals(ref kvs) => kvs.to_string(),
-      Digested::RegisterValue(ref rv)=> rv.to_string(),
+      Digested::RegisterValue(ref rv) => rv.to_string(),
     }
   }
 
@@ -278,7 +278,7 @@ impl BoxOps for Digested {
       Digested::Whatsit(ref w) => w.borrow().stringify(),
       Digested::Postponed(ref t) => (*t).stringify(),
       Digested::KeyVals(ref kvs) => kvs.stringify(),
-      Digested::RegisterValue(ref rv)=> rv.stringify(),
+      Digested::RegisterValue(ref rv) => rv.stringify(),
     }
   }
 
@@ -348,7 +348,7 @@ impl BoxOps for Digested {
       Digested::Whatsit(ref w) => w.borrow().revert(),
       Digested::Postponed(ref t) => Ok((**t).clone()),
       Digested::KeyVals(ref kvs) => kvs.revert(),
-      Digested::RegisterValue(ref _rv)=> unimplemented!(),
+      Digested::RegisterValue(ref _rv) => unimplemented!(),
     }
   }
 }
@@ -358,13 +358,13 @@ impl Digested {
   pub fn value_of(&self) -> f32 {
     match self {
       Digested::RegisterValue(rv) => (**rv).clone().value_of(),
-      _ => 0.0
+      _ => 0.0,
     }
   }
   pub fn pt_value(&self, prec: Option<u8>) -> f32 {
     match self {
       Digested::RegisterValue(rv) => (**rv).clone().pt_value(prec),
-      _ => 0.0
+      _ => 0.0,
     }
   }
 }

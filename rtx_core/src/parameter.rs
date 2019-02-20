@@ -25,8 +25,8 @@ pub type ReaderClosure = Rc<ReaderFn>;
 pub type ReversionClosure = Rc<Fn(&mut Gullet, Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
 
 lazy_static! {
-  static ref LAST_WCHAR_RE : Regex = Regex::new(r"\w$").unwrap();
-  static ref FIRST_WCHAR_RE : Regex = Regex::new(r"^\w").unwrap();
+  static ref LAST_WCHAR_RE: Regex = Regex::new(r"\w$").unwrap();
+  static ref FIRST_WCHAR_RE: Regex = Regex::new(r"^\w").unwrap();
 }
 
 #[derive(Clone, Debug)]
@@ -277,26 +277,22 @@ impl Parameter {
     }
 
     if self.semiverbatim && !value.is_empty() {
-      stomach.reading_from_mouth(
-        Mouth::default(),
-        state,
-        move |stomach: &mut Stomach, state: &mut State| {
-          let gullet = stomach.get_gullet_mut();
-          gullet.unread(value.clone());
-          let mut tokens = Vec::new();
-          loop {
-            match gullet.read_x_token(true, true, state) {
-              Ok(token_opt) => match token_opt {
-                Some(token) => tokens.push(token),
-                None => break,
-              },
-              Err(x) => return Err(x),
-            }
+      stomach.reading_from_mouth(Mouth::default(), state, move |stomach: &mut Stomach, state: &mut State| {
+        let gullet = stomach.get_gullet_mut();
+        gullet.unread(value.clone());
+        let mut tokens = Vec::new();
+        loop {
+          match gullet.read_x_token(true, true, state) {
+            Ok(token_opt) => match token_opt {
+              Some(token) => tokens.push(token),
+              None => break,
+            },
+            Err(x) => return Err(x),
           }
-          let evec = Vec::new();
-          Ok(Tokens::new(tokens).neutralize(&evec, state).unlist())
-        },
-      )?;
+        }
+        let evec = Vec::new();
+        Ok(Tokens::new(tokens).neutralize(&evec, state).unlist())
+      })?;
     }
 
     for pre in self.before_digest.iter() {
@@ -331,9 +327,7 @@ impl Parameter {
     }
   }
 
-  pub fn to_string(&self) -> String {
-    self.spec.clone()
-  }
+  pub fn to_string(&self) -> String { self.spec.clone() }
 }
 
 #[derive(Clone, Debug)]
@@ -359,7 +353,7 @@ impl Parameters {
     for parameter in &self.params {
       let values = parameter.read(gullet, fordefn, state)?;
       if parameter.reader_predigest.is_some() {
-        // TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest closure... 
+        // TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest closure...
         // so this shouldn't be an error, not even an info -- but leaving it here if something changes in the future.
         // error!(
         //   target: &s!("parameter:{}", parameter.name),
@@ -391,7 +385,7 @@ impl Parameters {
     for parameter in &self.params {
       let param_content = parameter.to_string();
       if LAST_WCHAR_RE.is_match(&content) && FIRST_WCHAR_RE.is_match(&param_content) {
-        content.push(' '); 
+        content.push(' ');
       }
       content.push_str(&param_content);
     }

@@ -1,7 +1,6 @@
 use crate::package::*;
 
 LoadDefinitions!(state, {
-
   //======================================================================
   // C.1.4 Declarations
   //======================================================================
@@ -21,8 +20,10 @@ LoadDefinitions!(state, {
   // PushValue(TEXT_MODE_BINDINGS => [T_CS("\\\\"), T_CS('\@normalcr')]);
 
   DefMacro!("\\@nolnerr", "");
-  DefMacro!("\\@centercr", "\\ifhmode\\unskip\\else\\@nolnerr\\fi\\par\\@ifstar{\\nobreak\\@xcentercr}\\@xcentercr");
+  DefMacro!(
+    "\\@centercr",
+    "\\ifhmode\\unskip\\else\\@nolnerr\\fi\\par\\@ifstar{\\nobreak\\@xcentercr}\\@xcentercr"
+  );
   DefMacro!("\\@xcentercr", "\\addvspace{-\\parskip}\\@ifnextchar[\\@icentercr\\ignorespaces");
   DefMacro!("\\@icentercr[]", "\\vskip #1\\ignorespaces");
-
 });

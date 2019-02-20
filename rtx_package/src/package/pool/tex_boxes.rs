@@ -14,12 +14,12 @@ LoadDefinitions!(state, {
     let tbox = s!("box{}", token.to_number().value_of() as u8);
     // If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
     if let Some(token) = state.remove_value("afterAssignment") {
-      state.assign_value("BeforeNextBox", token, None); 
+      state.assign_value("BeforeNextBox", token, None);
     }
     // Save global flag, since we're digesting to get the box content, which resets the flag!
     // Should afterDigest be responsible for resetting flags?
     let scope = if state.get_prefix("global") {
-      Some(Scope::Global) 
+      Some(Scope::Global)
     } else {
       None
     };
@@ -39,7 +39,7 @@ LoadDefinitions!(state, {
       stuff
     } else {
       Tokens!()
-    }    
+    }
   });
 
   // TODO: \box and \copy need to be tested, as they were originally DefPrimitive()s
@@ -151,7 +151,6 @@ LoadDefinitions!(state, {
     })
   );
 
-
   DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, props, state] {
     unimplemented!(); ()
     // my ($document, $spec, $contents, %props) = @_;
@@ -166,7 +165,7 @@ LoadDefinitions!(state, {
     //     $whatsit->setHeight($h); }
     //   elsif (my $s = GetKeyVal($spec, 'spread')) {
     //     $whatsit->setHeight($box->getHeight->add($s)); }
-    //   return; 
+    //   return;
   });
 
   DefConstructor!("\\vtop BoxSpecification VBoxContents", sub[document, args, props, state] {
@@ -191,13 +190,13 @@ LoadDefinitions!(state, {
     // my $keyvals = LaTeXML::Core::KeyVals->new(undef, undef, skipMissing => 1);
     // while (my $key = $gullet->readKeyword('width', 'height', 'depth')) {
     //   $keyvals->setValue($key, $gullet->readDimension); }
-    // $keyvals; 
+    // $keyvals;
     }),
     optional => true,
-    reader_predigest => undigested!() 
+    reader_predigest => undigested!()
   );
 
-DefConstructor!("\\vrule RuleSpecification","",
+  DefConstructor!("\\vrule RuleSpecification","",
   // "?#invisible()(?#isVerticalRule()\
   //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)' \
   //    width='&GetKeyVal(#1,width)' color='#color'/>))",
@@ -230,7 +229,7 @@ DefConstructor!("\\vrule RuleSpecification","",
   //       $whatsit->setProperty(color => $color); } }
   //   return; }
 
-DefConstructor!("\\hrule RuleSpecification","",
+  DefConstructor!("\\hrule RuleSpecification","",
   // "?#isHorizontalRule()\
   //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)'\
   //    width='&GetKeyVal(#1,width)' color='#color'/>)",
@@ -263,5 +262,4 @@ DefConstructor!("\\hrule RuleSpecification","",
   //     if ($color ne 'black') {
   //       $whatsit->setProperty(color => $color); } }
   //   return; });
-
 });

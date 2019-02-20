@@ -342,7 +342,7 @@ impl Document {
     }
 
     // In obscure situations, `node` may have already gotten closed?
-    // close it if it is still open.    
+    // close it if it is still open.
     if (self.node == node) || (c.as_ref() == Some(&node)) {
       self.close_element(qname, state)?;
     }
@@ -486,8 +486,8 @@ impl Document {
   /// returning the last Some(node) that would be closed if it is possible,
   /// otherwise None
   #[allow(clippy::wrong_self_convention)]
-  pub fn is_closeable<T : IntoVDQS>(&mut self, tags: T, state: &mut State) -> Option<Node> {
-    let mut tags : VecDeque<String> = tags.into_vdqs();
+  pub fn is_closeable<T: IntoVDQS>(&mut self, tags: T, state: &mut State) -> Option<Node> {
+    let mut tags: VecDeque<String> = tags.into_vdqs();
     let mut node_opt = if self.node.get_type() == Some(NodeType::TextNode) {
       self.node.get_parent()
     } else {
@@ -2097,7 +2097,8 @@ fn serialize_attr(string: &str) -> String {
 }
 
 pub trait IntoVDQS {
-  fn into_vdqs(self) -> VecDeque<String> where Self:Sized;
+  fn into_vdqs(self) -> VecDeque<String>
+  where Self: Sized;
 }
 impl IntoVDQS for String {
   fn into_vdqs(self) -> VecDeque<String> {
@@ -2107,12 +2108,8 @@ impl IntoVDQS for String {
   }
 }
 impl IntoVDQS for &str {
-  fn into_vdqs(self) -> VecDeque<String> {
-    self.to_string().into_vdqs()
-  }
+  fn into_vdqs(self) -> VecDeque<String> { self.to_string().into_vdqs() }
 }
 impl IntoVDQS for VecDeque<String> {
-  fn into_vdqs(self) -> VecDeque<String> {
-    self
-  }
+  fn into_vdqs(self) -> VecDeque<String> { self }
 }

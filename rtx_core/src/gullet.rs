@@ -168,7 +168,7 @@ impl Gullet {
     // If we're without a runtime, bail
     let mut runtime = match self.mouth {
       None => return None,
-      Some(ref mut runtime) => runtime 
+      Some(ref mut runtime) => runtime,
     };
     // Check in pushback first....
     while let Some(pushback_token) = runtime.pushback.pop_front() {
@@ -212,7 +212,7 @@ impl Gullet {
     // toplevel should be true by default
     if commentsok {
       if let Some(pending_comment_token) = self.pending_comments.pop_front() {
-        return Ok(Some(pending_comment_token))
+        return Ok(Some(pending_comment_token));
       }
     }
 
@@ -858,7 +858,7 @@ impl Gullet {
         Some(v) => self.read_rubber(false, state)?,
         None => (0.0, 0.0),
       };
-      
+
       Ok(Glue::new(d.value_of())) //TODO:, $r1, $f1, $r2, $f2); } }
     }
   }
@@ -972,7 +972,7 @@ impl Gullet {
     }
   }
 
-  pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, mut reader: FnR) -> R 
+  pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, mut reader: FnR) -> R
   where FnR: FnOnce(&mut Gullet, &mut State) -> R {
     let mouth_source = mouth.source.clone();
     self.open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
@@ -983,7 +983,7 @@ impl Gullet {
       if let Some(ref mut runtime) = self.mouth {
         if runtime.mouth.source == mouth_source {
           self.close_mouth(true, state);
-          break;  
+          break;
         } else if self.mouthstack.is_empty() {
           error!(target: "unexpected:<closed>", "TODO: Mouth is unexpectedly already closed");
           // Error('unexpected', '<closed>', $gullet, "Mouth is unexpectedly already closed",
