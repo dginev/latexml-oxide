@@ -19,8 +19,12 @@ use crate::Digested;
 
 const UNTEX_LINELENGTH: usize = 78;
 
+/// Tokens are a thin wrapper over a vector of Token objects
+/// usually read from a `Mouth`. 
+/// They are usually treated as an immutable interface, an have to be consumed via `.unlist()`
+/// for access to the underlying data.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Tokens(pub Vec<Token>);
+pub struct Tokens(Vec<Token>);
 
 impl Default for Tokens {
   fn default() -> Self { Tokens(Vec::new()) }
@@ -203,6 +207,9 @@ impl Tokens {
           // Not multiple '#'; read arg.
           let arg_number = token2.text.parse::<usize>().unwrap();
           let arg = &args[arg_number - 1];
+          // Note: there is no way to optimize away the `.clone` call here,
+          // as the same argument number #i could be repeated in the expanded body,
+          // hence needing to unlist the same saved Tokens multiple times
           result.extend(arg.clone().unlist());
         } else {
           // Duplicated '#', copy 2nd '#'
@@ -301,7 +308,7 @@ impl ToTokens for Tokens {
   fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
     let d = &self.0;
     stream.extend(quote! {
-        Tokens(<[Token]>::into_vec(Box::new([ #(#d),* ])))
+        Tokens::new(<[Token]>::into_vec(Box::new([ #(#d),* ])))
     });
   }
 }
