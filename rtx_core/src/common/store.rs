@@ -20,6 +20,7 @@ use crate::definition::register::NumericOps;
 use crate::definition::register::{Register, RegisterValue};
 use crate::document::tag::TagData;
 use crate::gullet::Gullet;
+use crate::list::List;
 use crate::mouth;
 use crate::parameter::Parameter;
 use crate::state::State;
@@ -240,6 +241,10 @@ impl From<Rc<Constructor>> for Stored {
 }
 impl From<Constructor> for Stored {
   fn from(value: Constructor) -> Self { Rc::new(value).into() }
+}
+
+impl From<List> for Stored {
+  fn from(value: List) -> Self { crate::Digested::List(Rc::new(value)).into() }
 }
 
 impl From<crate::Digested> for Stored {

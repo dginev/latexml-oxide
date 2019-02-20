@@ -269,174 +269,174 @@ LoadDefinitions!(state, {
   // DefMacroI('\@tempc',  undef, '');
   // DefMacroI('\@gtempa', undef, '');
 
-  //   RawTeX!(
-  //     r###"
-  //   \long\def \loop #1\repeat{%
-  //     \def\iterate{#1\relax  % Extra \relax
-  //                  \expandafter\iterate\fi
-  //                  }%
-  //     \iterate
-  //     \let\iterate\relax
-  //   }
-  //   \newdimen\@ydim
-  //   \let\@@hyph=\-
-  //   \newbox\@arstrutbox
-  //   \newbox\@begindvibox
-  //   \newcount\@botnum
-  //   \newdimen\@botroom
-  //   \newcount\@chclass
-  //   \newcount\@chnum
-  //   \newdimen\@clnht
-  //   \newdimen\@clnwd
-  //   \newdimen\@colht
-  //   \newcount\@colnum
-  //   \newdimen\@colroom
-  //   \newbox\@curfield
-  //   \newbox\@curline
-  //   \newcount\@currtype
-  //   \newcount\@curtab
-  //   \newcount\@curtabmar
-  //   \newbox\@dashbox
-  //   \newcount\@dashcnt
-  //   \newdimen\@dashdim
-  //   \newcount\@dbltopnum
-  //   \newdimen\@dbltoproom
-  //   \let\@dischyph=\-
-  //   \newcount\@enumdepth
-  //   \newcount\@floatpenalty
-  //   \newdimen\@fpmin
-  //   \newcount \@fpstype
-  //   \newcount\@highpenalty
-  //   \newcount\@hightab
-  //   \newbox\@holdpg
-  //   \newinsert \@kludgeins
-  //   \newcount\@lastchclass
-  //   \newbox\@leftcolumn
-  //   \newbox\@linechar
-  //   \newdimen\@linelen
-  //   \newcount\@lowpenalty
-  //   \newdimen\@maxdepth
-  //   \newcount\@medpenalty
-  //   \newdimen\@mparbottom \@mparbottom\z@
-  //   \newinsert\@mpfootins
-  //   \newcount\@mplistdepth
-  //   \newcount\@multicnt
-  //   \newcount\@nxttabmar
-  //   \newbox\@outputbox
-  //   \newdimen\@pagedp
-  //   \newdimen\@pageht
-  //   \newbox\@picbox
-  //   \newdimen\@picht
-  //   \newdimen \@reqcolroom
-  //   \newskip\@rightskip \@rightskip \z@skip
-  //   \newcount\@savsf
-  //   \newdimen\@savsk
-  //   \newcount\@secpenalty
-  //   \def\@sqrt[#1]{\root #1\of}
-  //   \newbox\@tabfbox
-  //   \newcount\@tabpush
-  //   \newdimen \@textfloatsheight
-  //   \newdimen\@textmin
-  //   \newcount\@topnum
-  //   \newdimen\@toproom
-  //   \newcount\@xarg
-  //   \newdimen\@xdim
-  //   \newcount\@yarg
-  //   \newdimen\@ydim
-  //   \newcount\@yyarg
-  //   \newtoks\every@math@size
-  //   \newif \if@fcolmade
-  //   \newdimen\lower@bound
-  //   \newcount\par@deathcycles
-  //   \newdimen\upper@bound
-  //   \newif\if@insert
-  //   \newif\if@colmade
-  //   \newif\if@specialpage   \@specialpagefalse
-  //   \newif\if@firstcolumn   \@firstcolumntrue
-  //   \newif\if@twocolumn     \@twocolumnfalse
-  //   \newif\if@twoside       \@twosidefalse
-  //   \newif\if@reversemargin \@reversemarginfalse
-  //   \newif\if@mparswitch    \@mparswitchfalse
-  //   \newcount\col@number    \@ne
-  //   \newread\@inputcheck
-  //   \newwrite\@unused
-  //   \newwrite\@mainaux
-  //   \newwrite\@partaux
-  //   \let\@auxout=\@mainaux
-  //   \openout\@mainaux\jobname.aux
-  //   \newcount\@clubpenalty
-  //   \@clubpenalty \clubpenalty
-  //   \newif\if@filesw \@fileswtrue
-  //   \newif\if@partsw \@partswfalse
-  //   \def\@tempswafalse{\let\if@tempswa\iffalse}
-  //   \def\@tempswatrue{\let\if@tempswa\iftrue}
-  //   \let\if@tempswa\iffalse
-  //   \newcount\@tempcnta
-  //   \newcount\@tempcntb
-  //   \newif\if@tempswa
-  //   \newdimen\@tempdima
-  //   \newdimen\@tempdimb
-  //   \newdimen\@tempdimc
-  //   \newbox\@tempboxa
-  //   \newskip\@tempskipa
-  //   \newskip\@tempskipb
-  //   \newtoks\@temptokena
-  //   \newskip\@flushglue \@flushglue = 0pt plus 1fil
-  //   \newif\if@afterindent\@afterindenttrue
-  //   \newbox\rootbox
+  RawTeX!(
+    r###"
+    \long\def \loop #1\repeat{%
+      \def\iterate{#1\relax  % Extra \relax
+                   \expandafter\iterate\fi
+                   }%
+      \iterate
+      \let\iterate\relax
+    }
+    \newdimen\@ydim
+    \let\@@hyph=\-
+    \newbox\@arstrutbox
+    \newbox\@begindvibox
+    \newcount\@botnum
+    \newdimen\@botroom
+    \newcount\@chclass
+    \newcount\@chnum
+    \newdimen\@clnht
+    \newdimen\@clnwd
+    \newdimen\@colht
+    \newcount\@colnum
+    \newdimen\@colroom
+    \newbox\@curfield
+    \newbox\@curline
+    \newcount\@currtype
+    \newcount\@curtab
+    \newcount\@curtabmar
+    \newbox\@dashbox
+    \newcount\@dashcnt
+    \newdimen\@dashdim
+    \newcount\@dbltopnum
+    \newdimen\@dbltoproom
+    \let\@dischyph=\-
+    \newcount\@enumdepth
+    \newcount\@floatpenalty
+    \newdimen\@fpmin
+    \newcount \@fpstype
+    \newcount\@highpenalty
+    \newcount\@hightab
+    \newbox\@holdpg
+    \newinsert \@kludgeins
+    \newcount\@lastchclass
+    \newbox\@leftcolumn
+    \newbox\@linechar
+    \newdimen\@linelen
+    \newcount\@lowpenalty
+    \newdimen\@maxdepth
+    \newcount\@medpenalty
+    \newdimen\@mparbottom \@mparbottom\z@
+    \newinsert\@mpfootins
+    \newcount\@mplistdepth
+    \newcount\@multicnt
+    \newcount\@nxttabmar
+    \newbox\@outputbox
+    \newdimen\@pagedp
+    \newdimen\@pageht
+    \newbox\@picbox
+    \newdimen\@picht
+    \newdimen \@reqcolroom
+    \newskip\@rightskip \@rightskip \z@skip
+    \newcount\@savsf
+    \newdimen\@savsk
+    \newcount\@secpenalty
+    \def\@sqrt[#1]{\root #1\of}
+    \newbox\@tabfbox
+    \newcount\@tabpush
+    \newdimen \@textfloatsheight
+    \newdimen\@textmin
+    \newcount\@topnum
+    \newdimen\@toproom
+    \newcount\@xarg
+    \newdimen\@xdim
+    \newcount\@yarg
+    \newdimen\@ydim
+    \newcount\@yyarg
+    \newtoks\every@math@size
+    \newif \if@fcolmade
+    \newdimen\lower@bound
+    \newcount\par@deathcycles
+    \newdimen\upper@bound
+    \newif\if@insert
+    \newif\if@colmade
+    \newif\if@specialpage   \@specialpagefalse
+    \newif\if@firstcolumn   \@firstcolumntrue
+    \newif\if@twocolumn     \@twocolumnfalse
+    \newif\if@twoside       \@twosidefalse
+    \newif\if@reversemargin \@reversemarginfalse
+    \newif\if@mparswitch    \@mparswitchfalse
+    \newcount\col@number    \@ne
+    \newread\@inputcheck
+    \newwrite\@unused
+    \newwrite\@mainaux
+    \newwrite\@partaux
+    \let\@auxout=\@mainaux
+    \openout\@mainaux\jobname.aux
+    \newcount\@clubpenalty
+    \@clubpenalty \clubpenalty
+    \newif\if@filesw \@fileswtrue
+    \newif\if@partsw \@partswfalse
+    \def\@tempswafalse{\let\if@tempswa\iffalse}
+    \def\@tempswatrue{\let\if@tempswa\iftrue}
+    \let\if@tempswa\iffalse
+    \newcount\@tempcnta
+    \newcount\@tempcntb
+    \newif\if@tempswa
+    \newdimen\@tempdima
+    \newdimen\@tempdimb
+    \newdimen\@tempdimc
+    \newbox\@tempboxa
+    \newskip\@tempskipa
+    \newskip\@tempskipb
+    \newtoks\@temptokena
+    \newskip\@flushglue \@flushglue = 0pt plus 1fil
+    \newif\if@afterindent\@afterindenttrue
+    \newbox\rootbox
 
-  //   \newcount\@eqcnt
-  //   \newcount\@eqpen
-  //   \newif\if@eqnsw\@eqnswtrue
-  //   \newskip\@centering
-  //   \@centering = 0pt plus 1000pt
-  //   \let\@eqnsel=\relax
+    \newcount\@eqcnt
+    \newcount\@eqpen
+    \newif\if@eqnsw\@eqnswtrue
+    \newskip\@centering
+    \@centering = 0pt plus 1000pt
+    \let\@eqnsel=\relax
 
-  //    \long\def\@whilenum#1\do #2{\ifnum #1\relax #2\relax\@iwhilenum{#1\relax
-  //         #2\relax}\fi}
-  //    \long\def\@iwhilenum#1{\ifnum #1\expandafter\@iwhilenum
-  //             \else\expandafter\@gobble\fi{#1}}
-  //    \long\def\@whiledim#1\do #2{\ifdim #1\relax#2\@iwhiledim{#1\relax#2}\fi}
-  //    \long\def\@iwhiledim#1{\ifdim #1\expandafter\@iwhiledim
-  //            \else\expandafter\@gobble\fi{#1}}
-  //    \long\def\@whilesw#1\fi#2{#1#2\@iwhilesw{#1#2}\fi\fi}
-  //    \long\def\@iwhilesw#1\fi{#1\expandafter\@iwhilesw
-  //             \else\@gobbletwo\fi{#1}\fi}
-  //   \def\@nnil{\@nil}
-  //   \def\@fornoop#1\@@#2#3{}
-  //   \long\def\@for#1:=#2\do#3{%
-  //     \expandafter\def\expandafter\@fortmp\expandafter{#2}%
-  //     \ifx\@fortmp\@empty \else
-  //       \expandafter\@forloop#2,\@nil,\@nil\@@#1{#3}\fi}
-  //   \long\def\@forloop#1,#2,#3\@@#4#5{\def#4{#1}\ifx #4\@nnil \else
-  //          #5\def#4{#2}\ifx #4\@nnil \else#5\@iforloop #3\@@#4{#5}\fi\fi}
-  //   \long\def\@iforloop#1,#2\@@#3#4{\def#3{#1}\ifx #3\@nnil
-  //          \expandafter\@fornoop \else
-  //         #4\relax\expandafter\@iforloop\fi#2\@@#3{#4}}
-  //   \def\@tfor#1:={\@tf@r#1 }
-  //   \long\def\@tf@r#1#2\do#3{\def\@fortmp{#2}\ifx\@fortmp\space\else
-  //       \@tforloop#2\@nil\@nil\@@#1{#3}\fi}
-  //   \long\def\@tforloop#1#2\@@#3#4{\def#3{#1}\ifx #3\@nnil
-  //          \expandafter\@fornoop \else
-  //         #4\relax\expandafter\@tforloop\fi#2\@@#3{#4}}
-  //   \long\def\@break@tfor#1\@@#2#3{\fi\fi}
-  //   \def\remove@to@nnil#1\@nnil{}
-  //   \def\remove@angles#1>{\set@simple@size@args}
-  //   \def\remove@star#1*{#1}
-  //   \def\@defaultunits{\afterassignment\remove@to@nnil}
+     \long\def\@whilenum#1\do #2{\ifnum #1\relax #2\relax\@iwhilenum{#1\relax
+          #2\relax}\fi}
+     \long\def\@iwhilenum#1{\ifnum #1\expandafter\@iwhilenum
+              \else\expandafter\@gobble\fi{#1}}
+     \long\def\@whiledim#1\do #2{\ifdim #1\relax#2\@iwhiledim{#1\relax#2}\fi}
+     \long\def\@iwhiledim#1{\ifdim #1\expandafter\@iwhiledim
+             \else\expandafter\@gobble\fi{#1}}
+     \long\def\@whilesw#1\fi#2{#1#2\@iwhilesw{#1#2}\fi\fi}
+     \long\def\@iwhilesw#1\fi{#1\expandafter\@iwhilesw
+              \else\@gobbletwo\fi{#1}\fi}
+    \def\@nnil{\@nil}
+    \def\@fornoop#1\@@#2#3{}
+    \long\def\@for#1:=#2\do#3{%
+      \expandafter\def\expandafter\@fortmp\expandafter{#2}%
+      \ifx\@fortmp\@empty \else
+        \expandafter\@forloop#2,\@nil,\@nil\@@#1{#3}\fi}
+    \long\def\@forloop#1,#2,#3\@@#4#5{\def#4{#1}\ifx #4\@nnil \else
+           #5\def#4{#2}\ifx #4\@nnil \else#5\@iforloop #3\@@#4{#5}\fi\fi}
+    \long\def\@iforloop#1,#2\@@#3#4{\def#3{#1}\ifx #3\@nnil
+           \expandafter\@fornoop \else
+          #4\relax\expandafter\@iforloop\fi#2\@@#3{#4}}
+    \def\@tfor#1:={\@tf@r#1 }
+    \long\def\@tf@r#1#2\do#3{\def\@fortmp{#2}\ifx\@fortmp\space\else
+        \@tforloop#2\@nil\@nil\@@#1{#3}\fi}
+    \long\def\@tforloop#1#2\@@#3#4{\def#3{#1}\ifx #3\@nnil
+           \expandafter\@fornoop \else
+          #4\relax\expandafter\@tforloop\fi#2\@@#3{#4}}
+    \long\def\@break@tfor#1\@@#2#3{\fi\fi}
+    \def\remove@to@nnil#1\@nnil{}
+    \def\remove@angles#1>{\set@simple@size@args}
+    \def\remove@star#1*{#1}
+    \def\@defaultunits{\afterassignment\remove@to@nnil}
 
-  //   \newif\ifmath@fonts \math@fontstrue
-  //   \newbox\@labels
-  //   \newif\if@inlabel \@inlabelfalse
-  //   \newif\if@newlist   \@newlistfalse
-  //   \newif\if@noparitem \@noparitemfalse
-  //   \newif\if@noparlist \@noparlistfalse
-  //   \newif\if@noitemarg \@noitemargfalse
-  //   \newif\if@nmbrlist  \@nmbrlistfalse
+    \newif\ifmath@fonts \math@fontstrue
+    \newbox\@labels
+    \newif\if@inlabel \@inlabelfalse
+    \newif\if@newlist   \@newlistfalse
+    \newif\if@noparitem \@noparitemfalse
+    \newif\if@noparlist \@noparlistfalse
+    \newif\if@noitemarg \@noitemargfalse
+    \newif\if@nmbrlist  \@nmbrlistfalse
 
-  //   \def\glb@settings{}%
-  //   "###
-  //   );
+    \def\glb@settings{}%
+    "###
+  );
 
   // DefMacroI('\@height', undef, 'height');
   // DefMacroI('\@width',  undef, 'width');

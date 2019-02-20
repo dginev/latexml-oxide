@@ -462,6 +462,26 @@ macro_rules! LookupRegister {
   }
 }
 
+
+#[macro_export]
+macro_rules! LookupRegisterOrDefault {
+  ($cs:expr) => {
+    LookupRegisterOrDefault!($cs, Vec::new())
+  };
+  ($cs:expr, $parameters:expr) => {{
+    bind_state_mut!(st);
+    LookupRegisterOrDefault!($cs, $parameters, st)
+  }};
+  ($cs:expr, $parameters:expr, $state_arg: ident) => {
+    if let Some(defn) = $state_arg.lookup_register_definition(&T_CS!($cs)) {
+      defn.value_of($parameters, $state_arg).unwrap_or_default()
+    } else {
+      RegisterValue::default()
+    }
+  }
+}
+
+
 // sub LookupDimension {
 //   my ($cs) = @_;
 //   my $defn;

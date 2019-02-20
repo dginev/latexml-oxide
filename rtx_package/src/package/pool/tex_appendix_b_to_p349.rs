@@ -118,40 +118,45 @@ LoadDefinitions!(state, {
     DefRegisterI!(name, None, MuGlue::new(0.0));
   });
   AssignValue!("allocated_boxes" => false);
-  // DefPrimitive('\newbox    Token', sub {
-  //     my $n = LookupValue('allocated_boxes');
-  //     AssignValue(allocated_boxes => $n + 1, 'global');
-  //     AssignValue("box$n", List());
-  //     DefRegisterI($_[1], undef, Number($n)); });
+  DefPrimitive!("\\newbox Token", sub[stomach, args, state] {
+    unpack_to_token!(args => t);
+    let n = state.lookup_int("allocated_boxes");
+    AssignValue!("allocated_boxes" => n + 1, Some(Scope::Global));
+    AssignValue!(&s!("box{}",n), List::new(Vec::new()));
+    DefRegisterI!(t, None, Number(n as f32));
+  });
   // DefPrimitive('\newhelp Token {}', sub { AssignValue(ToString($_[1]) => $_[2]); });
   // DefPrimitive('\newtoks Token', sub { DefRegisterI($_[1], undef, Tokens()); });
   // # the next 4 actually work by doing a \chardef instead of \countdef, etc.
   // # which means they actually work quite differently
-  // DefRegister('\allocationnumber' => Number(0));
-  // DefMacro('\alloc@@ {}', sub {
-  //     my ($gullet, $type) = @_;
-  //     my $c = 'allocation @' . ToString($type);
-  //     my $n = LookupValue($c) || '0';
-  //     $n = $n->valueOf if ref $n;
-  //     AssignValue($c                  => $n + 1,     'global');
-  //     AssignValue('\allocationnumber' => Number($n), 'global'); });
-  // DefMacro('\newread Token',     '\alloc@@{read}\global\chardef#1=\allocationnumber');
-  // DefMacro('\newwrite Token',    '\alloc@@{write}\global\chardef#1=\allocationnumber');
-  // DefMacro('\newfam Token',      '\alloc@@{fam}\global\chardef#1=\allocationnumber');
-  // DefMacro('\newlanguage Token', '\alloc@@{language}\global\chardef#1=\allocationnumber');
+  DefRegister!("\\allocationnumber" => Number::new(0.0));
+  DefMacro!("\\alloc@@ {}", sub[gullet, args, state] {
+    unpack_to_token!(args => atype);
+    let c = s!("allocation @{}", atype);
+    let n = LookupRegisterOrDefault!(c).value_of();
+    AssignValue!(&c                  => n + 1.0,     Some(Scope::Global));
+    AssignValue!("\\allocationnumber" => Number::new(n), Some(Scope::Global));
+  });
+  DefMacro!("\\newread Token", "\\alloc@@{read}\\global\\chardef#1=\\allocationnumber");
+  DefMacro!("\\newwrite Token", "\\alloc@@{write}\\global\\chardef#1=\\allocationnumber");
+  DefMacro!("\\newfam Token", "\\alloc@@{fam}\\global\\chardef#1=\\allocationnumber");
+  DefMacro!("\\newlanguage Token", "\\alloc@@{language}\\global\\chardef#1=\\allocationnumber");
 
   // # This implementation is quite wrong
-  // DefPrimitive('\newinsert Token', sub { DefRegisterI($_[1], undef, Number(0)); });
+  DefPrimitive!("\\newinsert Token", sub[stomach, args, state] {
+    unpack_to_token!(args => t);
+    DefRegisterI!(t, None, Number::new(0.0));
+  });
   // # \alloc@, \ch@ck
 
-  // # TeX plain uses \newdimen, etc. for these.
-  // # Is there any advantage to that?
-  // DefRegister('\maxdimen',  Dimension(16383.99999 * 65536));
-  // DefRegister('\hideskip',  Glue(-1000 * 65536, '1fill'));
-  // DefRegister('\centering', Glue('0pt plus 1000pt minus 1000pt'));
-  // DefRegister('\p@',        Dimension(65536));
-  // DefRegister('\z@',        Dimension(0));
-  // DefRegister('\z@skip',    Glue(0, 0, 0));
+  // TeX plain uses \newdimen, etc. for these.
+  // Is there any advantage to that?
+  DefRegister!("\\maxdimen", Dimension::new(16383.99999 * 65536.0));
+  // DefRegister!("\\hideskip", Glue!(-1000 * 65536, "1fill"));
+  DefRegister!("\\centering", Glue!("0pt plus 1000pt minus 1000pt"));
+  DefRegister!("\\p@", Dimension::new(65536.0));
+  DefRegister!("\\z@", Dimension::new(0.0));
+  DefRegister!("\\z@skip", Glue::new(0.0));
 
   // # First approximation. till I figure out \newbox
   // RawTeX('\newbox\voidb@x');
