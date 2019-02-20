@@ -15,7 +15,7 @@ LoadDefinitions!(state, {
   DefPrimitiveI!("\\em", noprimitive!(),
   before_digest => before_digest!(_stomach, state, {
     let font = LookupFont!().unwrap();
-    let shape = font.get_shape().unwrap_or(Cow::Borrowed(""));
+    let shape = font.get_shape().unwrap_or(&Cow::Borrowed(""));
     let shapevariant = if shape == "italic" { "normal" } else { "italic" };
     AssignValue!("font", font.merge(fontmap!(shape => shapevariant)), Some(Scope::Local));
   }));
