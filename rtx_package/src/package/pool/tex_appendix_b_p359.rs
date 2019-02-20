@@ -45,23 +45,25 @@ LoadDefinitions!(state, {
 
   // DefMathLigature("\u{22C5}\u{22C5}\u{22C5}" => "\u{22EF}", role => 'ID', name => 'cdots');
 
-  DefLigature!(r"[.][.][.]", "\u{2026}", fontTest => sub[arg] {arg.get_family() != Some("typewriter".into()) }); // ldots
+  DefLigature!(r"[.][.][.]", "\u{2026}", fontTest => sub[arg] {arg.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter" }); // ldots
 
   // TODO:
   // DefMathLigature("..." => "\x{2026}", role => 'ID', name => 'ldots');
-  DefLigature!(r"--", "\u{2013}",fontTest => sub[arg] {arg.get_family() != Some("typewriter".into()) }); // EN DASH (NOTE: With digits before &
+  DefLigature!(r"--", "\u{2013}",fontTest => sub[arg] {arg.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter" }); // EN DASH (NOTE: With digits before &
                                                                                                          //, aft => \N{FIGURE DASH})
 
   // EM DASH
-  DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] {arg.get_family() != Some("typewriter".into()) });
+  DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] {arg.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter" });
   // Ligatures for doubled single left & right quotes to convert to double quotes
   // [should ligatures be part of a font, in the first place? (it is in TeX!)
   DefLigature!("\u{2018}\u{2018}", "\u{201C}", fontTest => sub[arg] {
-    if arg.get_family() != Some("typewriter".into()) {
-      let encoding = arg.get_encoding().unwrap_or(Cow::Borrowed("OT1"));
+    let family = arg.get_family().unwrap_or(&Cow::Borrowed(""));
+    if family != "typewriter" {
+      let encoding = arg.get_encoding().unwrap_or(&Cow::Borrowed("OT1"));
       encoding == "OT1" || encoding == "T1" } else {false} });
   DefLigature!("\u{2019}\u{2019}", "\u{201D}", fontTest => sub[arg] {
-    if arg.get_family() != Some("typewriter".into()) {
-      let encoding = arg.get_encoding().unwrap_or(Cow::Borrowed("OT1"));
+    let family = arg.get_family().unwrap_or(&Cow::Borrowed(""));
+    if family != "typewriter" {
+      let encoding = arg.get_encoding().unwrap_or(&Cow::Borrowed("OT1"));
       encoding == "OT1" || encoding == "T1" } else {false} });
 });

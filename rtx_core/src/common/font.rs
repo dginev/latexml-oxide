@@ -252,16 +252,16 @@ impl Font {
   }
 
   // Accessors
-  pub fn get_family(&self) -> Option<Cow<str>> { self.family.clone() }
-  pub fn get_series(&self) -> Option<Cow<str>> { self.series.clone() }
-  pub fn get_shape(&self) -> Option<Cow<str>> { self.shape.clone() }
-  pub fn get_size(&self) -> Option<Cow<str>> { self.size.clone() }
-  pub fn get_color(&self) -> Option<Cow<str>> { self.color.clone() }
-  pub fn get_background(&self) -> Option<Cow<str>> { self.bg.clone() }
-  pub fn get_opacity(&self) -> Option<Cow<str>> { self.opacity.clone() }
-  pub fn get_encoding(&self) -> Option<Cow<str>> { self.encoding.clone() }
-  pub fn get_language(&self) -> Option<Cow<str>> { self.language.clone() }
-  pub fn get_mathstyle(&self) -> Option<Cow<str>> { self.mathstyle.clone() }
+  pub fn get_family(&self) -> Option<&Cow<str>> { self.family.as_ref() }
+  pub fn get_series(&self) -> Option<&Cow<str>> { self.series.as_ref() }
+  pub fn get_shape(&self) -> Option<&Cow<str>> { self.shape.as_ref() }
+  pub fn get_size(&self) -> Option<&Cow<str>> { self.size.as_ref() }
+  pub fn get_color(&self) -> Option<&Cow<str>> { self.color.as_ref() }
+  pub fn get_background(&self) -> Option<&Cow<str>> { self.bg.as_ref() }
+  pub fn get_opacity(&self) -> Option<&Cow<str>> { self.opacity.as_ref() }
+  pub fn get_encoding(&self) -> Option<&Cow<str>> { self.encoding.as_ref() }
+  pub fn get_language(&self) -> Option<&Cow<str>> { self.language.as_ref() }
+  pub fn get_mathstyle(&self) -> Option<&Cow<str>> { self.mathstyle.as_ref() }
 
   // NOTE: In math, NORMALLY, setting any one of
   //    family, series or shape
@@ -550,7 +550,10 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, state: &St
     None => {
       font = state.lookup_font();
       if let Some(ref font) = font {
-        font.get_encoding().unwrap_or_default().into_owned()
+        match font.get_encoding() {
+          None => String::new(),
+          Some(encoding) => encoding.to_owned().into_owned(),
+        }
       } else {
         String::new()
       }
@@ -607,13 +610,13 @@ pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, s
       if let Some(ref font) = font {
         match font.get_encoding() {
           Some(s) => s,
-          None => Cow::Borrowed(""),
+          None => "",
         }
       } else {
-        Cow::Borrowed("")
+        ""
       }
     },
-    Some(encoding) => Cow::Borrowed(encoding),
+    Some(encoding) => encoding,
   };
 
   let mut map: Option<&Fontmap> = None;
