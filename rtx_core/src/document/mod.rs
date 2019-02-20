@@ -1544,6 +1544,8 @@ impl Document {
   /// Record the Font of a node
   pub fn set_node_font(&mut self, node: &Node, font: Font) {
     let nodeid = node.to_hashable();
+    // TODO: If we can accept an Rc<Font> or &Font, we could avoid a lot of seemingly
+    //       over-aggressive Font object .clone calls in e.g. open_element
     self.node_fonts.insert(nodeid, font);
   }
 
