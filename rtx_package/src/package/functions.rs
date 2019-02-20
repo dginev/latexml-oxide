@@ -97,7 +97,7 @@ impl IntoTokensResult<Result<Tokens>> for Token {
 }
 
 impl IntoTokensResult<Result<Tokens>> for Vec<Token> {
-  fn into_tokens_result(self) -> Result<Tokens> { Ok(Tokens(self)) }
+  fn into_tokens_result(self) -> Result<Tokens> { Ok(Tokens::new(self)) }
 }
 
 impl IntoTokensResult<Result<Tokens>> for Tokens {

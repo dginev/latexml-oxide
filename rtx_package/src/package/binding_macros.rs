@@ -361,12 +361,12 @@ macro_rules! count_unpack {
 /// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token
 #[macro_export]
 macro_rules! roman {
-  ($stuff:expr) => (Tokens(ExplodeText!(roman_aux($stuff as i32))))
+  ($stuff:expr) => (Tokens::new(ExplodeText!(roman_aux($stuff as i32))))
 }
 /// Convert the number to upper case roman numerals, returning a list of LaTeXML::Core::Token
 #[macro_export]
 macro_rules! Roman {
-  ($stuff:expr) => (Tokens(ExplodeText!(roman_aux($stuff as i32).to_ascii_uppercase())))
+  ($stuff:expr) => (Tokens::new(ExplodeText!(roman_aux($stuff as i32).to_ascii_uppercase())))
 }
 
 #[macro_export]
