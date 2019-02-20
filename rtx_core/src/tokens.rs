@@ -1,9 +1,10 @@
 ///! Token List constructors.
 use crate::fmt;
-use log::*;
+// use log::*;
 use proc_macro2::{Ident, Punct, Spacing, Span};
 use quote::{quote, ToTokens, TokenStreamExt};
 
+use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt::Display;
 
@@ -69,8 +70,13 @@ impl<'a> From<&'a Tokens> for Token {
     } else if ts.0.len() == 1 {
       ts.0.first().unwrap().clone()
     } else {
-      warn!(target: "expected:token", "multiple Tokens cast into a single Token");
-      ts.0.first().unwrap().clone()
+      let code = ts.0.first().unwrap().get_catcode();
+      Token {
+        code,
+        text: Cow::Owned(ts.to_string()),
+      }
+      // warn!(target: "expected:token", "multiple Tokens {:?} cast into a single Token: {:?}", ts, single);
+      // single
     }
   }
 }
@@ -206,6 +212,8 @@ impl Tokens {
         if token2.code != Catcode::PARAM {
           // Not multiple '#'; read arg.
           let arg_number = token2.text.parse::<usize>().unwrap();
+          // TODO: Should we explicitly handle the error where arg_number is higher than the available `args` entries? Or catch it higher at the caller
+          // level?
           let arg = &args[arg_number - 1];
           // Note: there is no way to optimize away the `.clone` call here,
           // as the same argument number #i could be repeated in the expanded body,

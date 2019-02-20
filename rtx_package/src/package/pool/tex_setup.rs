@@ -610,25 +610,45 @@ LoadDefinitions!(state, {
   }));
 
   DefParameterType!("TeXFileName", sub[gullet, inner, _extra, state] {
-      // my ($gullet) = @_;
-      // my ($token, $cc, @tokens) = ();
-      // while (($token = $gullet->readXToken(0))
-      //   && (($cc = $token->getCatcode) != CC_SPACE) && ($cc != CC_EOL) && ($cc != CC_COMMENT) && ($cc != CC_CS)) {
-      //   push(@tokens, $token); }
-      // $gullet->unread($token) unless ($cc == CC_SPACE) || ($cc == CC_EOL) || ($cc == CC_COMMENT);
-      // my $lead_cc = @tokens && $tokens[0]->getCatcode();
-      // if ($lead_cc == CC_BEGIN) {
-      //   my $trail_cc = @tokens && $tokens[-1]->getCatcode();
-      //   if ($trail_cc == CC_END) {
-      //     # A begin-end wrapper indicates latex style {filename} use,
-      //     # so first unwrap,
-      //     @tokens = @tokens[1 .. $#tokens - 1];
-      //     # then load latex, and proceed
-      //     if (!LookupValue('LaTeX.pool_loaded')) {    # if already loaded, DONT redefine!
-      //       LoadPool("LaTeX"); } } }
-      // Tokens(@tokens); });
-      unimplemented!();
-      Ok(Tokens!())
+      let mut tokens : Vec<Token> = Vec::new();
+      while let Some(token) = gullet.read_x_token(false, false, state)? {
+        let cc = token.get_catcode();
+        if cc != Catcode::SPACE && cc != Catcode::EOL && cc != Catcode::COMMENT && cc != Catcode::CS {
+          tokens.push(token);
+        } else {
+          if cc != Catcode::SPACE && cc != Catcode::EOL && cc != Catcode::COMMENT {
+            gullet.unread(Tokens!(token));
+          }
+          break;
+        }
+      }
+      let lead_cc = match tokens.first() {
+        Some(t) => Some(t.get_catcode()),
+        None => None,
+      };
+      if lead_cc == Some(Catcode::BEGIN) {
+        let trail_cc = tokens.last().unwrap().get_catcode();
+        if trail_cc == Catcode::END {
+          // A begin-end wrapper indicates latex style {filename} use,
+          // so first unwrap,
+          tokens.remove(0);
+          tokens.pop();
+          // then load latex, and proceed
+          if !LookupBool!("LaTeX.pool_loaded") {    // if already loaded, DONT redefine!
+            // LoadPool!("LaTeX");
+            input_definitions(
+              "LaTeX",
+              InputDefinitionOptions {
+                extension: Some(String::from("pool")),
+                with_stomach: None,
+                ..InputDefinitionOptions::default()
+              },
+              state
+            )?
+          }
+        }
+      }
+      tokens
   });
 
   // A LaTeX style directory List

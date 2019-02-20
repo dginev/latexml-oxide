@@ -162,7 +162,7 @@ pub fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach, args: Vec<T
     },
     scope,
   );
-  AfterAssignment!(state);
+  AfterAssignment!();
   Ok(Vec::new())
 }
 

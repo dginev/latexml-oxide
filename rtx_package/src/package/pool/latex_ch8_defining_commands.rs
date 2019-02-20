@@ -13,21 +13,18 @@ LoadDefinitions!(state, {
   DefPrimitiveI!(
     "\\newcommand OptionalMatch:* DefToken [Number][]{}",
     primitiveproc!(stomach, args, state, {
-      // my ($stomach, $star, $cs, $nargs, $opt, $body) = @_;
-      let star = &args[0];
-      let cs: Token = (&args[1]).into();
-      let nargs = &args[2];
-      let opt = &args[3];
-      let body = args[4].clone();
-
+      unpack!(args => star, cs, nargs, opt, body);
+      let cs_token: Token = cs.into();
+      let nargs_token: Token = nargs.into();
+      let nargs = nargs_token.to_number().value_of() as usize;
       // if (!isDefinable(cs)) {
       //   Info('ignore', $cs, $stomach,
       //     "Ignoring redefinition (\\newcommand) of '" . Stringify($cs) . "'")
       //     unless LookupValue(ToString($cs) . ':locked');
       //   return; }
-
-      // TODO: convertLaTeXArgs($nargs, $opt)
-      DefMacroI!(cs.clone(), None, body, state);
+      let opt = if opt.is_empty() { None } else { Some(opt) };
+      let macro_args = convert_latex_args(nargs, opt, state)?;
+      DefMacroI!(cs_token, macro_args, body);
     })
   );
 });

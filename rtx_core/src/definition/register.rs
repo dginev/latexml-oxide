@@ -260,7 +260,12 @@ impl<'a> From<&'a RegisterValue> for Glue {
 
 impl RegisterValue {
   #[allow(clippy::wrong_self_convention)]
-  pub fn to_string(&self) -> String { self.clone().value_of().to_string() }
+  pub fn to_string(&self) -> String {
+    match self {
+      RegisterValue::Dimension(d) => d.to_string(),
+      other => self.clone().value_of().to_string(),
+    }
+  }
   pub fn stringify(&self) -> String { s!("RegisterValue[{}]", self.to_string()) }
 }
 
@@ -337,7 +342,6 @@ impl Definition for RefCell<Register> {
 
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
-
     let gullet = stomach.get_gullet_mut();
     let args = self.read_arguments(gullet, state)?;
     gullet.read_keyword(&["="], state)?;

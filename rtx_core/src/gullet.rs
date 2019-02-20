@@ -654,16 +654,18 @@ impl Gullet {
   /// <coerced integer> = <internal dimen> | <internal glue>
   pub fn read_number(&mut self, state: &mut State) -> Result<Number> {
     let is_negative = self.read_optional_signs(state)?;
+    let s = if is_negative { -1.0 } else { 1.0 };
     if let Some(n) = self.read_normal_integer(state)? {
       if is_negative {
         Ok(n.negate())
       } else {
         Ok(n)
       }
+    } else if let Some(n) = self.read_internal_dimension(state)? {
+      Ok(Number::new(s * n.value_of()))
+    } else if let Some(n) = self.read_internal_glue(state)? {
+      Ok(Number::new(s * n.value_of()))
     } else {
-      // elsif (defined($n = self.readInternalDimension)) { return Number($s * $n->valueOf); }
-      // elsif (defined($n = self.readInternalGlue))      { return Number($s * $n->valueOf); }
-      // else {
       let next = self.read_token(state);
       warn!(target:"expected:<number>", "Missing number, treated as zero while processing {:?}, next token is {:?}", state.current_token, next);
       if let Some(next) = next {
@@ -725,7 +727,7 @@ impl Gullet {
     let mut string = self.read_digits(&DIGIT_RE, true, state)?;
     match self.read_x_token(false, false, state)? {
       None => {
-        warn!(target:"expected:<float>", "Missing number, treated as zero while processing {:?}", state.current_token);
+        warn!(target:"expected:<float>", "Missing number, treated as zero while processing {:?}", state.current_token.as_ref().unwrap());
         Ok(Number::new(0.0))
       },
       Some(mut token) => {
@@ -748,7 +750,7 @@ impl Gullet {
         if let Some(n) = n_opt {
           Ok(Number::new(s * n.value_of()))
         } else {
-          warn!(target:"expected:<float>", "Missing number, treated as zero while processing {:?}", state.current_token);
+          warn!(target:"expected:<float>", "Missing number, treated as zero while processing {:?}", state.current_token.as_ref().unwrap());
           Ok(Number::new(0.0))
         }
       },
@@ -797,7 +799,7 @@ impl Gullet {
       };
       Ok(Dimension::new(s * d * unit))
     } else {
-      warn!(target: "expected:<number>", "Missing number, treated as zero. while processing {:?}", state.current_token);
+      warn!(target: "expected:<number>", "Missing number, treated as zero. while processing {:?}", state.current_token.as_ref().unwrap());
       Ok(Dimension::new(0.0))
     }
   }
@@ -1072,14 +1074,15 @@ impl Gullet {
       }
     }
 
-    let factor: f32 = factor.parse::<f32>().unwrap_or(0.0);
-    if factor > 0.0 {
+    // Note: zero is an edge case with the unwrap_or fallback, handle it
+    if !factor.is_empty() {
+      let factor_f32: f32 = factor.parse::<f32>().unwrap_or(0.0);
       if let Some(token) = token_opt {
         if token.get_catcode() != Catcode::SPACE {
           self.unread(Tokens!(token));
         }
       }
-      Ok(Some(factor))
+      Ok(Some(factor_f32))
     } else {
       if let Some(token) = token_opt {
         self.unread(Tokens!(token));

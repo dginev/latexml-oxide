@@ -112,12 +112,14 @@ LoadDefinitions!(state, {
     Ok(boxes)
   });
 
-  // // \afterassignment saves ONE token (globally!) to execute after the next assignment
-  // DefPrimitive('\afterassignment Token', sub { AssignValue(afterAssignment => $_[1], 'global');
-  // });
-  // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the
-  // next egroup or }
-  // DefPrimitive('\aftergroup Token', sub { PushValue(afterGroup => $_[1]); });
+  // \afterassignment saves ONE token (globally!) to execute after the next assignment
+  DefPrimitive!("\\afterassignment Token", sub[stomach, args, state] {
+    unpack_to_token!(args => t);
+    AssignValue!("afterAssignment" => t, Some(Scope::Global)); });
+  // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next egroup or }
+  DefPrimitive!("\\aftergroup Token", sub[stomach, args, state] { 
+    unpack_to_token!(args => t);
+    PushValue!("afterGroup" => t); });
 
   // // \uppercase<general text>, \lowercase<general text>
   // sub ucToken {
@@ -200,15 +202,14 @@ LoadDefinitions!(state, {
   //     else {
   //       return 1; } });
 
-  // # For output files, we'll write the data to a cached internal copy
-  // # rather than to the actual file system.
-  // DefPrimitive('\openout Number SkipMatch:= SkipSpaces TeXFileName', sub {
-  //     my ($stomach, $port, $filename) = @_;
-  //     $port     = ToString($port);
-  //     $filename = ToString($filename);
-  //     AssignValue('output_file:' . $port  => $filename, 'global');
-  //     AssignValue($filename . '_contents' => "",        'global');
-  //     return; });
+  // For output files, we'll write the data to a cached internal copy
+  // rather than to the actual file system.
+  DefPrimitive!("\\openout Number SkipMatch:= SkipSpaces TeXFileName", sub[stomach, args, state] {
+    unpack_to_string!(args => port, filename);
+    let contents_key = &s!("{}_contents",filename);
+    AssignValue!(&s!("output_file:{}",port)  => filename,  Some(Scope::Global));
+    AssignValue!(contents_key => "",        Some(Scope::Global));
+  });
 
   // DefPrimitive('\closeout Number', sub {
   //     my ($stomach, $port) = @_;
