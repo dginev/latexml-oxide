@@ -42,9 +42,7 @@ impl Default for Whatsit {
 }
 impl PartialEq for Whatsit {
   fn eq(&self, other: &Whatsit) -> bool {
-    Rc::ptr_eq(&self.definition, &other.definition) &&
-    self.args == other.args && 
-    self.properties == other.properties
+    Rc::ptr_eq(&self.definition, &other.definition) && self.args == other.args && self.properties == other.properties
   }
 }
 

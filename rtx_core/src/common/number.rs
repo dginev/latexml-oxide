@@ -21,7 +21,5 @@ macro_rules! Number {
 }
 
 impl From<String> for Number {
-  fn from(s: String) -> Number {
-    Number(s.parse::<f32>().unwrap())
-  }
+  fn from(s: String) -> Number { Number(s.parse::<f32>().unwrap()) }
 }

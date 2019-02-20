@@ -37,9 +37,7 @@ impl BoxOps for List {
   fn to_string(&self) -> String { self.boxes.iter().fold(String::new(), |joined, x| joined + &x.to_string()) }
 
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
-    unimplemented!()
-  }
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { unimplemented!() }
 
   fn revert(&self) -> Result<Tokens> {
     let mut reverted = Vec::new();

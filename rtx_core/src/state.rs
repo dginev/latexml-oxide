@@ -807,8 +807,8 @@ impl State {
     }
   }
   pub fn assign_mathcode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
-    let key : char = key.into();
-    let scope : Option<Scope> = scope.into();
+    let key: char = key.into();
+    let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Mathcode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
 
@@ -822,8 +822,8 @@ impl State {
     }
   }
   pub fn assign_sfcode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
-    let key : char = key.into();
-    let scope : Option<Scope> = scope.into();
+    let key: char = key.into();
+    let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Sfcode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
 
@@ -837,8 +837,8 @@ impl State {
     }
   }
   pub fn assign_lccode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
-    let key : char = key.into();
-    let scope : Option<Scope> = scope.into();
+    let key: char = key.into();
+    let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Lccode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
 
@@ -852,8 +852,8 @@ impl State {
     }
   }
   pub fn assign_uccode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
-    let key : char = key.into();
-    let scope : Option<Scope> = scope.into();
+    let key: char = key.into();
+    let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Uccode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
 
@@ -867,11 +867,10 @@ impl State {
     }
   }
   pub fn assign_delcode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
-    let key : char = key.into();
-    let scope : Option<Scope> = scope.into();
+    let key: char = key.into();
+    let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Delcode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
-
 
   /// Get the `Meaning' of a token.  For active control sequence's
   /// this may give the definition object (if defined) or another token (if \let) or undef
@@ -881,7 +880,7 @@ impl State {
       match self.meaning.get(&token.get_cs_name().to_owned()) {
         Some(entry) => match entry.front() {
           // TODO: can we avoid cloning an arbitrary Stored, or is this a non-issue give that all heavy data types are in Rc<> wrappers?
-          Some(v) => Some(v.clone()), 
+          Some(v) => Some(v.clone()),
           None => None,
         },
         None => None,
@@ -1217,12 +1216,15 @@ impl State {
         // defns = $$self{stash}{$scope}
 
         // Also, we need to take ownership of the stashed data, so that we can assign it. TODO: Potential to optimize?
-        let defns : Vec<(TableName, String, Stored)> = if let Some(defns) = self.stash.get(scope) {
-          defns.iter().map(|(table_name, key, value)| (*table_name, key.to_string(), value.clone())).collect()
+        let defns: Vec<(TableName, String, Stored)> = if let Some(defns) = self.stash.get(scope) {
+          defns
+            .iter()
+            .map(|(table_name, key, value)| (*table_name, key.to_string(), value.clone()))
+            .collect()
         } else {
           Vec::new()
         };
-         
+
         // Now make local assignments for all those in the stash.
         if let Some(frame) = self.undo.front_mut() {
           for (table_name, key, _value) in defns.iter() {
@@ -1230,10 +1232,11 @@ impl State {
             // since they may be popped off by deactivateScope
             let mut frame_table = frame.table_mut(*table_name);
             let mut frame_count = frame_table.entry(key.to_string()).or_default();
-            *frame_count += 1;  // Note that this many values must be undone
+            *frame_count += 1; // Note that this many values must be undone
           }
         }
-        if !self.undo.is_empty() { // avoid borrowing mutably twice, by iterating a separate time for inserting the defs
+        if !self.undo.is_empty() {
+          // avoid borrowing mutably twice, by iterating a separate time for inserting the defs
           for (table_name, key, value) in defns.iter() {
             let mut table_entry = self.table_mut(*table_name).entry(key.to_string()).or_insert_with(VecDeque::new);
             table_entry.push_front(value.clone()); // And push new binding.
@@ -1247,15 +1250,18 @@ impl State {
   // # will be undone by egroup or popping frames.
   // # But they can also be undone explicitly
 
-  pub fn deactivate_scope(&mut self, scope: &str) {  
+  pub fn deactivate_scope(&mut self, scope: &str) {
     if let Some(scope_entry) = self.stash_active.get(scope) {
       self.assign_internal(TableName::StashActive, scope, Stored::Bool(false), Some(Scope::Global));
-      let defns : Vec<(TableName, String, Stored)> = if let Some(defns) = self.stash.get(scope) {
-        defns.iter().map(|(table_name, key, value)| (*table_name, key.to_string(), value.clone())).collect()
+      let defns: Vec<(TableName, String, Stored)> = if let Some(defns) = self.stash.get(scope) {
+        defns
+          .iter()
+          .map(|(table_name, key, value)| (*table_name, key.to_string(), value.clone()))
+          .collect()
       } else {
         Vec::new()
       };
-      
+
       let mut countdown_keys = Vec::new();
       for (table_name, key, value) in defns.iter() {
         let table_entry = self.table_mut(*table_name).entry(key.to_string()).or_default();
@@ -1265,9 +1271,13 @@ impl State {
           (*table_entry).pop_front();
           countdown_keys.push((table_name, key));
         } else {
-          warn!(target: &s!("internal:{}",key),// $self->getStomach,
+          warn!(
+            target: &s!("internal:{}", key), // $self->getStomach,
             "Unassigning wrong value for $key from table $table in deactivateScope\
-            value is {:?} but stack is {:?}",value, table_entry.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", "));
+             value is {:?} but stack is {:?}",
+            value,
+            table_entry.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")
+          );
         }
       }
 
@@ -1275,12 +1285,12 @@ impl State {
         for (table_name, key) in countdown_keys {
           let mut frame_table = frame.table_mut(*table_name);
           let mut frame_count = frame_table.entry(key.to_string()).or_default();
-          *frame_count -= 1;  
+          *frame_count -= 1;
         }
       }
     }
   }
-  
+
   // sub getKnownScopes {
   //   my ($self) = @_;
   //   my @scopes = sort keys %{ $$self{stash} };
@@ -1493,9 +1503,9 @@ impl State {
     let def1_opt = self.lookup_meaning(token1);
     let def2_opt = self.lookup_meaning(token2); // ditto
     match (def1_opt, def2_opt) {
-      (None, None) => true, // true if both undefined
+      (None, None) => true,                     // true if both undefined
       (Some(def1), Some(def2)) => def1 == def2, // If both have defns, must be same defn!
-      _ => false // False, if only one has 'meaning'
+      _ => false,                               // False, if only one has 'meaning'
     }
   }
 

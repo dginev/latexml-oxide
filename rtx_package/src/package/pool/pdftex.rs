@@ -1,114 +1,114 @@
 use crate::package::*;
 
 LoadDefinitions!(state, {
-// A rough initial draft of the extra commands & registers defined in pdfTeX.
+  // A rough initial draft of the extra commands & registers defined in pdfTeX.
 
-// See the pdfTeX User's Manual
+  // See the pdfTeX User's Manual
 
-// Integer Registers
-DefRegister!("\\pdfoutput"                => Number::new(0.0));
-DefRegister!("\\pdfminorversion"          => Number::new(4.0));
-DefRegister!("\\pdfoptionpdfminorversion" => Number::new(4.0));    // obsolete name
-DefRegister!("\\pdfcompresslevel"         => Number::new(9.0));
-DefRegister!("\\pdfobjcompresslevel"      => Number::new(0.0));
-DefRegister!("\\pdfdecimaldigits"         => Number::new(4.0));
-DefRegister!("\\pdfimageresolution"       => Number::new(72.0));
-DefRegister!("\\pdfpkresolution"          => Number::new(0.0));
-DefRegister!("\\pdftracingfonts"          => Number::new(0.0));
-DefRegister!("\\pdfuniqueresname"         => Number::new(0.0));
-DefRegister!("\\pdfadjustspacing"         => Number::new(0.0));
-DefRegister!("\\pdfprotrudechars"         => Number::new(0.0));
-// \efcode <font> <8bitnumber>  => <integer>
-// \lpfcode <font> <8bitnumber> => <integer>
-// \rpfcode <font> <8bitnumber> => <integer>
-DefRegister!("\\efcode Token Number", Number::new(0.0));
-DefRegister!("\\lpcode Token Number", Number::new(0.0));
-DefRegister!("\\rpcode Token Number", Number::new(0.0));
+  // Integer Registers
+  DefRegister!("\\pdfoutput"                => Number::new(0.0));
+  DefRegister!("\\pdfminorversion"          => Number::new(4.0));
+  DefRegister!("\\pdfoptionpdfminorversion" => Number::new(4.0)); // obsolete name
+  DefRegister!("\\pdfcompresslevel"         => Number::new(9.0));
+  DefRegister!("\\pdfobjcompresslevel"      => Number::new(0.0));
+  DefRegister!("\\pdfdecimaldigits"         => Number::new(4.0));
+  DefRegister!("\\pdfimageresolution"       => Number::new(72.0));
+  DefRegister!("\\pdfpkresolution"          => Number::new(0.0));
+  DefRegister!("\\pdftracingfonts"          => Number::new(0.0));
+  DefRegister!("\\pdfuniqueresname"         => Number::new(0.0));
+  DefRegister!("\\pdfadjustspacing"         => Number::new(0.0));
+  DefRegister!("\\pdfprotrudechars"         => Number::new(0.0));
+  // \efcode <font> <8bitnumber>  => <integer>
+  // \lpfcode <font> <8bitnumber> => <integer>
+  // \rpfcode <font> <8bitnumber> => <integer>
+  DefRegister!("\\efcode Token Number", Number::new(0.0));
+  DefRegister!("\\lpcode Token Number", Number::new(0.0));
+  DefRegister!("\\rpcode Token Number", Number::new(0.0));
 
-DefRegister!("\\pdfforcepagebox"                => Number::new(0.0));
-DefRegister!("\\pdfoptionalwaysusepdfpagebox"   => Number::new(0.0));
-DefRegister!("\\pdfinclusionerrorlevel"         => Number::new(0.0));
-DefRegister!("\\pdfoptionalinclusionerrorlevel" => Number::new(0.0));
-DefRegister!("\\pdfimagehicolor"                => Number::new(0.0));
-DefRegister!("\\pdfimageapplygamma"             => Number::new(0.0));
-DefRegister!("\\pdfgamma"                       => Number::new(0.0));
-DefRegister!("\\pdfimagegamma"                  => Number::new(0.0));
-DefRegister!("\\pdfdraftmode"                   => Number::new(0.0));
+  DefRegister!("\\pdfforcepagebox"                => Number::new(0.0));
+  DefRegister!("\\pdfoptionalwaysusepdfpagebox"   => Number::new(0.0));
+  DefRegister!("\\pdfinclusionerrorlevel"         => Number::new(0.0));
+  DefRegister!("\\pdfoptionalinclusionerrorlevel" => Number::new(0.0));
+  DefRegister!("\\pdfimagehicolor"                => Number::new(0.0));
+  DefRegister!("\\pdfimageapplygamma"             => Number::new(0.0));
+  DefRegister!("\\pdfgamma"                       => Number::new(0.0));
+  DefRegister!("\\pdfimagegamma"                  => Number::new(0.0));
+  DefRegister!("\\pdfdraftmode"                   => Number::new(0.0));
 
-// Dimen Registers
-DefRegister!("\\pdfhorigin"      => Dimension!("1in"));
-DefRegister!("\\pdfvorigin"      => Dimension!("1in"));
-DefRegister!("\\pdfpagewidth"    => Dimension!("0pt"));
-DefRegister!("\\pdfpageheight"   => Dimension!("0pt"));
-DefRegister!("\\pdflinkmargin"   => Dimension!("0pt"));
-DefRegister!("\\pdfdestmargin"   => Dimension!("0pt"));
-DefRegister!("\\pdfthreadmargin" => Dimension!("0pt"));
-DefRegister!("\\pdfpxdimen"      => Dimension!("0pt"));
+  // Dimen Registers
+  DefRegister!("\\pdfhorigin"      => Dimension!("1in"));
+  DefRegister!("\\pdfvorigin"      => Dimension!("1in"));
+  DefRegister!("\\pdfpagewidth"    => Dimension!("0pt"));
+  DefRegister!("\\pdfpageheight"   => Dimension!("0pt"));
+  DefRegister!("\\pdflinkmargin"   => Dimension!("0pt"));
+  DefRegister!("\\pdfdestmargin"   => Dimension!("0pt"));
+  DefRegister!("\\pdfthreadmargin" => Dimension!("0pt"));
+  DefRegister!("\\pdfpxdimen"      => Dimension!("0pt"));
 
-// Token Registers
-DefRegister!("\\pdfpagesattr"     => Tokens!());
-DefRegister!("\\pdfpageattr"      => Tokens!());
-DefRegister!("\\pdfpageresources" => Tokens!());
-DefRegister!("\\pdfpkmode"        => Tokens!());
+  // Token Registers
+  DefRegister!("\\pdfpagesattr"     => Tokens!());
+  DefRegister!("\\pdfpageattr"      => Tokens!());
+  DefRegister!("\\pdfpageresources" => Tokens!());
+  DefRegister!("\\pdfpkmode"        => Tokens!());
 
-// Expandable Commands
-DefMacro!("\\pdftexrevision",           "");
-DefMacro!("\\pdftexbanner",             "");
-DefMacro!("\\pdfcreationdate",          "");
-DefMacro!("\\pdfpageref Number",        "");
-DefMacro!("\\pdfxformname Number",      "");
-DefMacro!("\\pdffontname Token",        "");
-DefMacro!("\\pdffontobjnum Token",      "");
-DefMacro!("\\pdffontsize Token",        "");
-DefMacro!("\\pdfincludechars Token {}", "");
-DefMacro!("\\leftmarginkern Number",    "");
-DefMacro!("\\rightmarginkern Number",   "");
-DefMacro!("\\pdfescapestring {}",       "");
-DefMacro!("\\pdfescapename {}",         "");
-DefMacro!("\\pdfescapehex {}",          "");
-DefMacro!("\\pdfunescapehex {}",        "");
-// DefMacro!("\\ifpdfprimitive {}","");
-// DefMacro!("\\ifpdfabsnum Number"","");
-// DefMacro!("\\ifpdfabsdim Dimension"","");
-DefMacro!("\\pdfuniformdeviate Number Token", "");
-DefMacro!("\\pdfnormaldeviate Token",         "");
-DefMacro!("\\pdfmdfivesum Number {}",         "");
-DefMacro!("\\pdffilemoddate {}",              "");
-// DefMacro(""\pdffiledump {}","");
-// DefMacro(""\pdfcolorstackinit {}","");
+  // Expandable Commands
+  DefMacro!("\\pdftexrevision", "");
+  DefMacro!("\\pdftexbanner", "");
+  DefMacro!("\\pdfcreationdate", "");
+  DefMacro!("\\pdfpageref Number", "");
+  DefMacro!("\\pdfxformname Number", "");
+  DefMacro!("\\pdffontname Token", "");
+  DefMacro!("\\pdffontobjnum Token", "");
+  DefMacro!("\\pdffontsize Token", "");
+  DefMacro!("\\pdfincludechars Token {}", "");
+  DefMacro!("\\leftmarginkern Number", "");
+  DefMacro!("\\rightmarginkern Number", "");
+  DefMacro!("\\pdfescapestring {}", "");
+  DefMacro!("\\pdfescapename {}", "");
+  DefMacro!("\\pdfescapehex {}", "");
+  DefMacro!("\\pdfunescapehex {}", "");
+  // DefMacro!("\\ifpdfprimitive {}","");
+  // DefMacro!("\\ifpdfabsnum Number"","");
+  // DefMacro!("\\ifpdfabsdim Dimension"","");
+  DefMacro!("\\pdfuniformdeviate Number Token", "");
+  DefMacro!("\\pdfnormaldeviate Token", "");
+  DefMacro!("\\pdfmdfivesum Number {}", "");
+  DefMacro!("\\pdffilemoddate {}", "");
+  // DefMacro(""\pdffiledump {}","");
+  // DefMacro(""\pdfcolorstackinit {}","");
 
-// Read-only registers
-DefRegister!("\\pdftexversion"      => Number::new(0.0));
-DefRegister!("\\pdflastobj"         => Number::new(0.0));
-DefRegister!("\\pdflastxform"       => Number::new(0.0));
-DefRegister!("\\pdflastximage"      => Number::new(0.0));
-DefRegister!("\\pdflastximagepages" => Number::new(0.0));
-DefRegister!("\\pdflastannot"       => Number::new(0.0));
-DefRegister!("\\pdflastlink"        => Number::new(0.0));
-DefRegister!("\\pdflastxpos"        => Number::new(0.0));
-DefRegister!("\\pdflastypos"        => Number::new(0.0));
-DefRegister!("\\pdflastdemerits"    => Number::new(0.0));
-DefRegister!("\\pdfelapsedtime"     => Number::new(0.0));
-DefRegister!("\\pdfrandomseed"      => Number::new(0.0));
-DefRegister!("\\pdfshellescape"     => Number::new(0.0));
+  // Read-only registers
+  DefRegister!("\\pdftexversion"      => Number::new(0.0));
+  DefRegister!("\\pdflastobj"         => Number::new(0.0));
+  DefRegister!("\\pdflastxform"       => Number::new(0.0));
+  DefRegister!("\\pdflastximage"      => Number::new(0.0));
+  DefRegister!("\\pdflastximagepages" => Number::new(0.0));
+  DefRegister!("\\pdflastannot"       => Number::new(0.0));
+  DefRegister!("\\pdflastlink"        => Number::new(0.0));
+  DefRegister!("\\pdflastxpos"        => Number::new(0.0));
+  DefRegister!("\\pdflastypos"        => Number::new(0.0));
+  DefRegister!("\\pdflastdemerits"    => Number::new(0.0));
+  DefRegister!("\\pdfelapsedtime"     => Number::new(0.0));
+  DefRegister!("\\pdfrandomseed"      => Number::new(0.0));
+  DefRegister!("\\pdfshellescape"     => Number::new(0.0));
 
-// \pdfximage [ image attr spec ] general text (h, v, m)
-// \pdfrefximage object number (h, v, m)
-// \pdfannot annot type spec (h, v, m)
-// \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
-// \pdfendlink (h, m)
-// \pdfoutline outline spec (h, v, m)
-// \pdfdest dest spec (h, v, m)
-// \pdfthread thread spec (h, v, m)
-// \pdfstartthread thread spec (v, m)
-// \pdfendthread (v, m)
-// \pdfsavepos (h, v, m)
+  // \pdfximage [ image attr spec ] general text (h, v, m)
+  // \pdfrefximage object number (h, v, m)
+  // \pdfannot annot type spec (h, v, m)
+  // \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
+  // \pdfendlink (h, m)
+  // \pdfoutline outline spec (h, v, m)
+  // \pdfdest dest spec (h, v, m)
+  // \pdfthread thread spec (h, v, m)
+  // \pdfstartthread thread spec (v, m)
+  // \pdfendthread (v, m)
+  // \pdfsavepos (h, v, m)
 
-// See lxRDFa for ideas how this info might be used!
-DefMacro!("\\pdfinfo{}", "");
+  // See lxRDFa for ideas how this info might be used!
+  DefMacro!("\\pdfinfo{}", "");
 
-// Ugh, what a mess of ugly syntax....
-DefParameterType!("OpenActionSpecification", reader => reader!(gullet, args, extra, state, {
+  // Ugh, what a mess of ugly syntax....
+  DefParameterType!("OpenActionSpecification", reader => reader!(gullet, args, extra, state, {
   unimplemented!(); ()
   //   my ($gullet) = @_;
   //   if (my $key = $gullet->readKeyword('openaction')) {
@@ -118,72 +118,71 @@ DefParameterType!("OpenActionSpecification", reader => reader!(gullet, args, ext
   // optional => 1, undigested => 1);
 }), optional => true);
 
-DefMacro!("\\pdfcatalog{} OpenActionSpecification", "");
-DefMacro!("\\pdfnames{}",   "");
-DefMacro!("\\pdftrailer{}", "");
-DefMacro!("\\pdfmapfile{}", "");
-DefMacro!("\\pdfmapline{}", "");
-// \pdffontattr font general text
-// \pdffontexpand font expand spec
-// \vadjust [ pre spec ] filler { vertical mode material } (h, m)
-DefMacro!("\\quitvmode", "");
-// \pdfliteral [ pdfliteral spec ] general text (h, v, m)
-// \special pdfspecial spec
-// \pdfresettimer
-// \pdfsetrandomseed number
-// \pdfnoligatures font
-// \pdfprimitive control sequence
-// \pdfcolorstack stack number stack action general text
-DefMacro!("\\pdfsetmatrix", "");
-DefMacro!("\\pdfsave",      "");
-DefMacro!("\\pdfrestore",   "");
+  DefMacro!("\\pdfcatalog{} OpenActionSpecification", "");
+  DefMacro!("\\pdfnames{}", "");
+  DefMacro!("\\pdftrailer{}", "");
+  DefMacro!("\\pdfmapfile{}", "");
+  DefMacro!("\\pdfmapline{}", "");
+  // \pdffontattr font general text
+  // \pdffontexpand font expand spec
+  // \vadjust [ pre spec ] filler { vertical mode material } (h, m)
+  DefMacro!("\\quitvmode", "");
+  // \pdfliteral [ pdfliteral spec ] general text (h, v, m)
+  // \special pdfspecial spec
+  // \pdfresettimer
+  // \pdfsetrandomseed number
+  // \pdfnoligatures font
+  // \pdfprimitive control sequence
+  // \pdfcolorstack stack number stack action general text
+  DefMacro!("\\pdfsetmatrix", "");
+  DefMacro!("\\pdfsave", "");
+  DefMacro!("\\pdfrestore", "");
 
-// general text → { balanced text }
-// attr spec → attr general text
-// resources spec → resources general text
-// rule spec → ( width | height | depth ) dimension [ rule spec ]
-// object type spec → reserveobjnum |
-// [ useobjnum number ]
-// [ stream [ attr spec ] ] object contents
-// annot type spec → reserveobjnum |
-// [ useobjnum number ] [ rule spec ] general text
-// object contents → file spec | general text
-// xform attr spec → [ attr spec ] [ resources spec ]
-// image attr spec → [ rule spec ] [ attr spec ] [ page spec ] [ colorspace spec ] [ pdf box spec ]
-// outline spec → [ attr spec ] action spec [ count number ] general text
-// action spec → user user-action spec | goto goto-action spec |
-// thread thread-action spec
-// user-action spec → general text
-// goto-action spec → numid |
-// [ file spec ] nameid |
-// [ file spec ] [ page spec ] general text |
-// file spec nameid newwindow spec |
-// file spec [ page spec ] general text newwindow spec
-// thread-action spec → [ file spec ] numid | [ file spec ] nameid
-// open-action spec → openaction action spec
-// colorspace spec → colorspace number
-// pdf box spec → mediabox | cropbox | bleedbox | trimbox | artbox
-// map spec → { [ map modifier ] balanced text }
-// map modifier → + | = | -
-// numid → num number
-// nameid → name general text
-// newwindow spec → newwindow | nonewwindow
-// dest spec → numid dest type | nameid dest type
-// dest type → xyz [ zoom number ] | fitr rule spec |
-// fitbh | fitbv | fitb | fith | fitv | fit
-// thread spec → [ rule spec ] [ attr spec ] id spec
-// id spec → numid | nameid
-// file spec → file general text
-// page spec → page number
-// expand spec → stretch shrink step [ autoexpand ]
-// stretch → number
-// shrink → number
-// step → number
-// pre spec → pre
-// pdfliteral spec → direct | page
-// pdfspecial spec → { [ pdfspecial id [ pdfspecial modifier ] ] balanced text }
-// pdfspecial id → pdf: | PDF:
-// pdfspecial modifier → direct:
-// stack action → set | push | pop | current
-
+  // general text → { balanced text }
+  // attr spec → attr general text
+  // resources spec → resources general text
+  // rule spec → ( width | height | depth ) dimension [ rule spec ]
+  // object type spec → reserveobjnum |
+  // [ useobjnum number ]
+  // [ stream [ attr spec ] ] object contents
+  // annot type spec → reserveobjnum |
+  // [ useobjnum number ] [ rule spec ] general text
+  // object contents → file spec | general text
+  // xform attr spec → [ attr spec ] [ resources spec ]
+  // image attr spec → [ rule spec ] [ attr spec ] [ page spec ] [ colorspace spec ] [ pdf box spec ]
+  // outline spec → [ attr spec ] action spec [ count number ] general text
+  // action spec → user user-action spec | goto goto-action spec |
+  // thread thread-action spec
+  // user-action spec → general text
+  // goto-action spec → numid |
+  // [ file spec ] nameid |
+  // [ file spec ] [ page spec ] general text |
+  // file spec nameid newwindow spec |
+  // file spec [ page spec ] general text newwindow spec
+  // thread-action spec → [ file spec ] numid | [ file spec ] nameid
+  // open-action spec → openaction action spec
+  // colorspace spec → colorspace number
+  // pdf box spec → mediabox | cropbox | bleedbox | trimbox | artbox
+  // map spec → { [ map modifier ] balanced text }
+  // map modifier → + | = | -
+  // numid → num number
+  // nameid → name general text
+  // newwindow spec → newwindow | nonewwindow
+  // dest spec → numid dest type | nameid dest type
+  // dest type → xyz [ zoom number ] | fitr rule spec |
+  // fitbh | fitbv | fitb | fith | fitv | fit
+  // thread spec → [ rule spec ] [ attr spec ] id spec
+  // id spec → numid | nameid
+  // file spec → file general text
+  // page spec → page number
+  // expand spec → stretch shrink step [ autoexpand ]
+  // stretch → number
+  // shrink → number
+  // step → number
+  // pre spec → pre
+  // pdfliteral spec → direct | page
+  // pdfspecial spec → { [ pdfspecial id [ pdfspecial modifier ] ] balanced text }
+  // pdfspecial id → pdf: | PDF:
+  // pdfspecial modifier → direct:
+  // stack action → set | push | pop | current
 });

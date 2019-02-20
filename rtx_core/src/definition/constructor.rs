@@ -201,9 +201,7 @@ impl Definition for Constructor {
   fn get_cs_name(&self) -> Cow<str> { Cow::Borrowed(self.cs.get_cs_name()) }
   fn get_alias(&self) -> Option<String> { self.alias.clone() }
   fn get_locator(&self) -> String { unimplemented!() }
-  fn get_parameters(&self) -> Option<&Parameters> {
-    self.paramlist.as_ref()
-  }
+  fn get_parameters(&self) -> Option<&Parameters> { self.paramlist.as_ref() }
   fn get_num_args(&self) -> usize {
     match self.nargs {
       Some(n) => n,
@@ -214,7 +212,7 @@ impl Definition for Constructor {
     }
     // self.nargs = Some(nargs);
   }
-  
+
   fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) -> Result<()> {
     for pre_closure in &self.before_construct {
       pre_closure(document, whatsit, state)?;

@@ -1,5 +1,5 @@
-use crate::definition::register::NumericOps;
 use crate::definition::register;
+use crate::definition::register::NumericOps;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Dimension(pub f32);

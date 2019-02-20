@@ -24,7 +24,7 @@ LoadDefinitions!(state, {
   //  29.01.2019:
   //  updated upto (and including) here
   // -----------------------------------------
-  
+
   // lines 2086-2335
   InnerPool!(tex_ch24_primitives);
   // lines 2335-2985

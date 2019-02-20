@@ -11,12 +11,12 @@ use crate::common::font::Font;
 use crate::common::glue::{Glue, MuGlue};
 use crate::common::ligature::Ligature;
 use crate::common::number::Number;
-use crate::definition::register::NumericOps;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
+use crate::definition::register::NumericOps;
 use crate::definition::register::{Register, RegisterValue};
 use crate::document::tag::TagData;
 use crate::gullet::Gullet;
@@ -191,7 +191,6 @@ impl From<i32> for Stored {
 impl From<f32> for Stored {
   fn from(value: f32) -> Self { Stored::Number(Number::new(value)) }
 }
-
 
 impl From<Catcode> for Stored {
   fn from(value: Catcode) -> Self { Stored::Catcode(value) }

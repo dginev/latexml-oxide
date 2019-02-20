@@ -72,10 +72,10 @@ LoadDefinitions!(state, {
   );
 
   // // Debugging aids; Ignored!
-  DefPrimitive!("\\show Token",     None);
+  DefPrimitive!("\\show Token", None);
   DefPrimitive!("\\showbox Number", None);
-  DefPrimitive!("\\showlists",      None);
-  DefPrimitive!("\\showthe Token",  None);
+  DefPrimitive!("\\showlists", None);
+  DefPrimitive!("\\showthe Token", None);
 
   // // DefPrimitive('\shipout ??
   DefPrimitiveI!("\\ignorespaces SkipSpaces", noprimitive!());
@@ -114,9 +114,9 @@ LoadDefinitions!(state, {
 
   // // \afterassignment saves ONE token (globally!) to execute after the next assignment
   // DefPrimitive('\afterassignment Token', sub { AssignValue(afterAssignment => $_[1], 'global');
-  // }); 
+  // });
   // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the
-  // next egroup or } 
+  // next egroup or }
   // DefPrimitive('\aftergroup Token', sub { PushValue(afterGroup => $_[1]); });
 
   // // \uppercase<general text>, \lowercase<general text>
@@ -303,7 +303,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\vskip Glue", sub[document, args, props, state] {
     unpack!(args => length);
     let length = length.pt_value(None);
-    
+
     if length > 10.0 {    // Or what!?!?!?!
       if document.is_closeable("ltx:para", state).is_some() {
         document.close_element("ltx:para", state)?;

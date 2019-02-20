@@ -121,7 +121,7 @@ pub struct MathPrimitive {
   pub nargs: Option<usize>,
   pub replacement: Option<PrimitiveClosure>,
   pub options: MathPrimitiveOptions,
-  pub alias: Option<String>
+  pub alias: Option<String>,
 }
 impl Default for MathPrimitive {
   fn default() -> Self {
@@ -131,7 +131,7 @@ impl Default for MathPrimitive {
       nargs: None,
       replacement: None,
       options: MathPrimitiveOptions::default(),
-      alias:None,
+      alias: None,
     }
   }
 }
@@ -175,9 +175,7 @@ impl Definition for MathPrimitive {
   fn get_cs_name(&self) -> Cow<str> { Cow::Borrowed(self.cs.get_cs_name()) }
   fn get_alias(&self) -> Option<String> { self.alias.clone() }
   fn get_locator(&self) -> String { unimplemented!() }
-  fn get_parameters(&self) -> Option<&Parameters> {
-    self.paramlist.as_ref()
-  }
+  fn get_parameters(&self) -> Option<&Parameters> { self.paramlist.as_ref() }
   fn get_num_args(&self) -> usize {
     match self.nargs {
       Some(n) => n,

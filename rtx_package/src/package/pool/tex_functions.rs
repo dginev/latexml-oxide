@@ -1,5 +1,5 @@
-use std::collections::VecDeque;
 use crate::package::*;
+use std::collections::VecDeque;
 
 pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
   BindState!(state);
@@ -166,60 +166,57 @@ pub fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach, args: Vec<T
   Ok(Vec::new())
 }
 
-
 // Kinda rough: We don't really keep track of modes as carefully as TeX does.
 // We'll assume that a box is horizontal if there's anything at all,
 // but it's not a vbox (!?!?)
 pub fn classify_box(boxnum: Token, state: &State) -> &'static str {
-  let boxnum : Number = boxnum.to_number();
+  let boxnum: Number = boxnum.to_number();
   match state.lookup_value(&s!("box{}", boxnum.value_of())) {
     Some(Stored::Digested(ref d)) => match **d {
-      Digested::Whatsit(ref w) if Rc::ptr_eq(&w.borrow().definition, &state.lookup_definition(&T_CS!("\\vbox")).unwrap()) => "vbox" ,
-      _ => "hbox"
+      Digested::Whatsit(ref w) if Rc::ptr_eq(&w.borrow().definition, &state.lookup_definition(&T_CS!("\\vbox")).unwrap()) => "vbox",
+      _ => "hbox",
     },
     _ => "",
   }
 }
 
-const MATH_CLASS_ROLE : [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLOSE", "PUNCT", ""];
+const MATH_CLASS_ROLE: [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLOSE", "PUNCT", ""];
 // Is this "fontinfo" stuff sufficient to maintain a math font "family" ??
 // What we're really after is a connectio nto a font encoding mapping.
 pub fn decode_math_char(mut n: u16, state: &State) -> (Option<String>, Option<char>) {
-  let class : u16 = n / (16 * 256);
+  let class: u16 = n / (16 * 256);
   n %= 16 * 256;
-  let fam : u16  = n / 256;
+  let fam: u16 = n / 256;
   n %= 256;
-  let font  = state.lookup_value(&s!("fontinfo_{}_text",fam)).unwrap_or_else(||
-    state.lookup_value(&s!("fontinfo_{}_script",fam)).unwrap_or_else(|| 
-      state.lookup_value(&s!("fontinfo_{}_scriptscript",fam)).unwrap_or(&Stored::Bool(false))
-    )
-  );
+  let font = state.lookup_value(&s!("fontinfo_{}_text", fam)).unwrap_or_else(|| {
+    state
+      .lookup_value(&s!("fontinfo_{}_script", fam))
+      .unwrap_or_else(|| state.lookup_value(&s!("fontinfo_{}_scriptscript", fam)).unwrap_or(&Stored::Bool(false)))
+  });
   // TODO: This function is called with n=20,000, how is the char cast sensible here? Consult Bruce.
   let c = n as u8 as char; // TODO: confusing types, the 256 arithmetic implies larger than u8 inputs, what for?
-  // // If no specific class, Lookup properties from a DefMath?
-  let charinfo = state.lookup_value(&s!("math_token_attributes_{}",c));
+                           // // If no specific class, Lookup properties from a DefMath?
+  let charinfo = state.lookup_value(&s!("math_token_attributes_{}", c));
   let fontinfo = state.lookup_value(&s!("fontinfo_{}", font.to_string()));
   let mut role = MATH_CLASS_ROLE[class as usize];
-  
+
   if role.is_empty() {
     if let Some(Stored::HashString(ref info)) = charinfo {
       role = &info[role];
     }
   }
-  let role_opt = if role.is_empty() {
-    None
-  } else {
-    Some(role.to_string())
-  };
+  let role_opt = if role.is_empty() { None } else { Some(role.to_string()) };
   let font_opt = if let Some(Stored::Font(ref info)) = fontinfo {
     if let Some(ref data) = info.encoding {
       font::decode(n as u8, Some(data.to_string()), false, state)
     } else {
       Some(c)
     }
-  } else { None };
-  
-  (role_opt,font_opt)
+  } else {
+    None
+  };
+
+  (role_opt, font_opt)
 }
 
 // Risky: I think this needs to be digested as a body to work like TeX (?)

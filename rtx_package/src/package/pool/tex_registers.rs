@@ -72,35 +72,37 @@ LoadDefinitions!(state, {
     ("showboxbreadth", 5),
     ("showboxdepth", 3),
     ("errorcontextlines", 5),
-  ].iter()
+  ]
+  .iter()
   {
     DefRegister!(&s!("\\{}", key), Number!(*val));
   }
 
   // Most of these are ignored, but...
-  DefMacro!("\\tracingall",
+  DefMacro!(
+    "\\tracingall",
     "\\tracingonline=1 \\tracingcommands=2 \\tracingstats=2\
-    \\tracingpages=1 \\tracingoutput=1 \\tracinglostchars=1\
-    \\tracingmacros=2 \\tracingparagraphs=1 \\tracingrestores=1\
-    \\showboxbreadth=\\maxdimen \\showboxdepth=\\maxdimen \\errorstopmode");
+     \\tracingpages=1 \\tracingoutput=1 \\tracinglostchars=1\
+     \\tracingmacros=2 \\tracingparagraphs=1 \\tracingrestores=1\
+     \\showboxbreadth=\\maxdimen \\showboxdepth=\\maxdimen \\errorstopmode"
+  );
 
   let dt = Local::now();
 
-  AssignValue!("\\day"  , Number!(dt.day()),            Scope::Global);
-  AssignValue!("\\month", Number!(dt.month()),          Scope::Global);
-  AssignValue!("\\year" , Number!(dt.year()),           Scope::Global);
-  AssignValue!("\\time" , Number!(60*dt.hour() + dt.minute()), Scope::Global);
+  AssignValue!("\\day", Number!(dt.day()), Scope::Global);
+  AssignValue!("\\month", Number!(dt.month()), Scope::Global);
+  AssignValue!("\\year", Number!(dt.year()), Scope::Global);
+  AssignValue!("\\time", Number!(60 * dt.hour() + dt.minute()), Scope::Global);
 
-  
   // Read-only Integer registers
   for name in &["lastpenalty", "inputlineno", "badness"] {
-    DefRegister!(&s!("\\{}",name), Number!(0.0), readonly => true); 
+    DefRegister!(&s!("\\{}",name), Number!(0.0), readonly => true);
   }
-  
+
   // Special integer registers (?)
   // <special integer> = \spacefactor | \prevgraf | \deadcycles | \insertpenalties
   for name in &["spacefactor", "prevgraf", "deadcycles", "insertpenalties"] {
-    DefRegister!(&s!("\\{}",name), Number!(0.0)); 
+    DefRegister!(&s!("\\{}", name), Number!(0.0));
   }
 
   // ======================================================================
@@ -126,7 +128,7 @@ LoadDefinitions!(state, {
     ("parindent", "20pt"),
     ("hangindent", "0"),
     ("hoffset", "0"),
-    ("voffset", "0")
+    ("voffset", "0"),
   ];
   for (name, value) in &dparms {
     DefRegister!(&s!("\\{}", name), Dimension!(value));
@@ -138,8 +140,17 @@ LoadDefinitions!(state, {
   // Special dimension registers (?)
   // <special dimen> = \prevdepth | \pagegoal | \pagetotal | \pagestretch | \pagefilstretch
   //    | \pagefillstretch | \pagefilllstretch | pageshrink | \pagedepth
-  for name in &["prevdepth", "pagegoal", "pagetotal", "pagestretch", "pagefilstretch", 
-                "pagefillstretch", "pagefilllstretch", "pageshrink", "pagedepth"] {
+  for name in &[
+    "prevdepth",
+    "pagegoal",
+    "pagetotal",
+    "pagestretch",
+    "pagefilstretch",
+    "pagefillstretch",
+    "pagefilllstretch",
+    "pageshrink",
+    "pagedepth",
+  ] {
     DefRegister!(&s!("\\{}", name), Dimension::new(0.0));
   }
 
@@ -160,28 +171,39 @@ LoadDefinitions!(state, {
     ("tabskip", "0"),
     ("spaceskip", "0"),
     ("xspaceskip", "0"),
-    ("parfillskip", "0pt plus 1fil")
+    ("parfillskip", "0pt plus 1fil"),
   ];
   for (name, value) in gparms {
-    DefRegister!(&s!("\\{}",name), Glue!(value));
+    DefRegister!(&s!("\\{}", name), Glue!(value));
   }
 
   //======================================================================
   // MuGlue registers; TeXBook p.274
 
   let mparms = &[
-    ("thinmuskip","3mu"),
-    ("medmuskip","4mu plus 2mu minus 4mu"),
-    ("thickmuskip","5mu plus 5mu") ];
+    ("thinmuskip", "3mu"),
+    ("medmuskip", "4mu plus 2mu minus 4mu"),
+    ("thickmuskip", "5mu plus 5mu"),
+  ];
   for (name, value) in mparms {
-    DefRegister!(&s!("\\{}",name), Glue!(value));
+    DefRegister!(&s!("\\{}", name), Glue!(value));
   }
 
   //======================================================================
   // Token registers; TeXBook p.275
 
-  let tparms = &["output", "everypar", "everymath", "everydisplay", "everyhbox", "everyvbox", "everyjob", "everycr", "everyhelp"];
+  let tparms = &[
+    "output",
+    "everypar",
+    "everymath",
+    "everydisplay",
+    "everyhbox",
+    "everyvbox",
+    "everyjob",
+    "everycr",
+    "everyhelp",
+  ];
   for name in tparms {
-    DefRegister!(&s!("\\{}",name), Tokens!());
+    DefRegister!(&s!("\\{}", name), Tokens!());
   }
 });

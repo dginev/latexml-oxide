@@ -1,7 +1,7 @@
 use crate::package::*;
 
 lazy_static! {
-  static ref FONT_TOKEN_RE : Regex = Regex::new(r"^\\(?:text|script|scriptscript)font$").unwrap();
+  static ref FONT_TOKEN_RE: Regex = Regex::new(r"^\\(?:text|script|scriptscript)font$").unwrap();
 }
 
 LoadDefinitions!(state, {
@@ -33,7 +33,7 @@ LoadDefinitions!(state, {
 
   DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
     getter => getter!({unimplemented!(); () }),
-    setter => setter!({unimplemented!(); () })  
+    setter => setter!({unimplemented!(); () })
   //   getter => sub {
   //     my ($fam) = @_;
   //     LookupValue('fontinfo_' . $fam->valueOf . '_scriptscript'); },
@@ -98,8 +98,8 @@ LoadDefinitions!(state, {
     if FONT_TOKEN_RE.is_match(&token.to_string()) {
       gullet.read_number(state)?;
     }
-    token 
-  }));    // ?
+    token
+  })); // ?
   DefRegister!("\\fontdimen Number FontToken", Dimension::new(0.0),
     getter => getter!({unimplemented!(); () })
     // my $p = ToString($_[0]);
@@ -132,9 +132,9 @@ LoadDefinitions!(state, {
   // # <interaction mode assignment> = \errorstopmode | \scrollmode | \nonstopmode | \batchmode
   // # These are no-ops; Basically, LaTeXML runs in scrollmode
   DefPrimitiveII!(T_CS!("\\errorstopmode"), None, None);
-  DefPrimitiveII!(T_CS!("\\scrollmode"),    None, None);
-  DefPrimitiveII!(T_CS!("\\nonstopmode"),   None, None);
-  DefPrimitiveII!(T_CS!("\\batchmode"),     None, None);
+  DefPrimitiveII!(T_CS!("\\scrollmode"), None, None);
+  DefPrimitiveII!(T_CS!("\\nonstopmode"), None, None);
+  DefPrimitiveII!(T_CS!("\\batchmode"), None, None);
 
   // # <intimate assignment> = <special integer><equals><number>
   // #   | <special dimension><equals><dimen>
@@ -146,7 +146,7 @@ LoadDefinitions!(state, {
     let gullet = stomach.get_gullet_mut();
     let encoding = Expand!(encoding, gullet).to_string();
     if LoadFontMap!(&encoding).is_some() {
-      MergeFont!(encoding => encoding); 
+      MergeFont!(encoding => encoding);
     }
   });
 

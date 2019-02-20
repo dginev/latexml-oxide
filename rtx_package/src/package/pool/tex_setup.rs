@@ -237,9 +237,9 @@ LoadDefinitions!(state, {
 
   // Read a number
   DefParameterType!("Number", sub[gullet, inner, _extra, state] {
-      gullet.read_number(state)?.to_token() 
+      gullet.read_number(state)?.to_token()
     },
-    reader_predigest => reader_predigest!(stomach, arg, state, { 
+    reader_predigest => reader_predigest!(stomach, arg, state, {
       arg.to_number()
     })
   );
@@ -248,7 +248,7 @@ LoadDefinitions!(state, {
   DefParameterType!("Float", sub[gullet, inner, _extra, state] {
       gullet.read_float(state)?.to_token()
     },
-    reader_predigest => reader_predigest!(stomach, arg, state, { 
+    reader_predigest => reader_predigest!(stomach, arg, state, {
       arg.to_number()
     })
   );
@@ -263,7 +263,7 @@ LoadDefinitions!(state, {
   DefParameterType!("Dimension", sub[gullet, inner, _extra, state] {
       gullet.read_dimension(state)?.to_token()
     },
-    reader_predigest => reader_predigest!(stomach, arg, state, { 
+    reader_predigest => reader_predigest!(stomach, arg, state, {
       arg.to_dimension()
     })
   );
@@ -272,7 +272,7 @@ LoadDefinitions!(state, {
   DefParameterType!("Glue", sub[gullet, inner, _extra, state] {
       gullet.read_glue(state)?.to_token()
     },
-    reader_predigest => reader_predigest!(stomach, arg, state, { 
+    reader_predigest => reader_predigest!(stomach, arg, state, {
       arg.to_glue()
     })
   );
@@ -281,7 +281,7 @@ LoadDefinitions!(state, {
   DefParameterType!("MuDimension", sub[gullet, inner, _extra, state] {
       gullet.read_mu_dimension(state)?.to_token()
     },
-    reader_predigest => reader_predigest!(stomach, arg, state, { 
+    reader_predigest => reader_predigest!(stomach, arg, state, {
       arg.to_mu_dimension()
     })
   );
@@ -290,7 +290,7 @@ LoadDefinitions!(state, {
   DefParameterType!("MuGlue", sub[gullet, inner, _extra, state] {
       gullet.read_mu_glue(state)?.to_token()
     },
-    reader_predigest => reader_predigest!(stomach, arg, state, { 
+    reader_predigest => reader_predigest!(stomach, arg, state, {
       arg.to_mu_glue()
     })
   );
@@ -550,7 +550,7 @@ LoadDefinitions!(state, {
           }
           // TODO: What is this datatype ? How does it fit the rtx typed interfaces for parameter types?
           // An extension seems required, also due to the Register parameter type right under.
-          // Ok(Tokens!(defn_tok, defn_args))          
+          // Ok(Tokens!(defn_tok, defn_args))
           Ok(Tokens::new(invoked))
         } else {
           error!(target:"expected:<variable>", "A <variable> was supposed to be here\n Got {:?}", token_opt);
@@ -667,7 +667,7 @@ LoadDefinitions!(state, {
     } else {
       Tokens!()
     }
-  }, reader_predigest => reader_predigest!(stomach, arg, state, { 
+  }, reader_predigest => reader_predigest!(stomach, arg, state, {
     let token = arg.unlist().remove(0);
     let mut stuff = stomach.invoke_token(&token, state)?;
     if !stuff.is_empty() {
@@ -677,7 +677,7 @@ LoadDefinitions!(state, {
         _ => tbox.to_string()
       };
       if csname != "\\hbox" && csname != "\\vbox" && csname != "\\vtop" {
-        error!(target: "expected:<box>", "A <box> was supposed to be here.\nGot {}", csname);  
+        error!(target: "expected:<box>", "A <box> was supposed to be here.\nGot {}", csname);
         None
       } else {
         Some(tbox)

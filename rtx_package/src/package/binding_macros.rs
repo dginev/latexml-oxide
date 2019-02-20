@@ -87,7 +87,6 @@ macro_rules! before_digest {
   };
 }
 
-
 #[macro_export]
 macro_rules! before_digest_single {
   ($stomach:ident, $state:ident, $body:block) => {
@@ -197,27 +196,31 @@ macro_rules! reader_predigest {
 
 #[macro_export]
 macro_rules! getter {
-  ($body:block) => { getter!(args, state, $body) };
-  ($args: ident, $body:block) => { getter!($args, state, $body) };
+  ($body:block) => {
+    getter!(args, state, $body)
+  };
+  ($args: ident, $body:block) => {
+    getter!($args, state, $body)
+  };
   ($args: ident, $state:ident, $body:block) => {
-    Some(Rc::new(
-      move |$args: Vec<Token>, $state: &State| -> Option<RegisterValue> {
-        WithInnerState!($body, $state).into_register_value_option()
-      },
-    ))
+    Some(Rc::new(move |$args: Vec<Token>, $state: &State| -> Option<RegisterValue> {
+      WithInnerState!($body, $state).into_register_value_option()
+    }))
   };
 }
 
 #[macro_export]
 macro_rules! setter {
-  ($body:block) => { setter!(value, args, state, $body) };
-  ($value:ident, $args: ident, $body:block) => { setter!($value, $args, state, $body) };
+  ($body:block) => {
+    setter!(value, args, state, $body)
+  };
+  ($value:ident, $args: ident, $body:block) => {
+    setter!($value, $args, state, $body)
+  };
   ($value:ident, $args: ident, $state:ident, $body:block) => {
-    Some(Rc::new(
-      move |$value: RegisterValue, $args: Vec<Tokens>, $state: &mut State| {
-        WithInnerState!($body, $state)
-      },
-    ))
+    Some(Rc::new(move |$value: RegisterValue, $args: Vec<Tokens>, $state: &mut State| {
+      WithInnerState!($body, $state)
+    }))
   };
 }
 
@@ -361,15 +364,19 @@ macro_rules! count_unpack {
 /// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token
 #[macro_export]
 macro_rules! roman {
-  ($stuff:expr) => (Tokens::new(ExplodeText!(roman_aux($stuff as i32))))
+  ($stuff:expr) => {
+    Tokens::new(ExplodeText!(roman_aux($stuff as i32)))
+  };
 }
 /// Convert the number to upper case roman numerals, returning a list of LaTeXML::Core::Token
 #[macro_export]
 macro_rules! Roman {
-  ($stuff:expr) => (Tokens::new(ExplodeText!(roman_aux($stuff as i32).to_ascii_uppercase())))
+  ($stuff:expr) => {
+    Tokens::new(ExplodeText!(roman_aux($stuff as i32).to_ascii_uppercase()))
+  };
 }
 
 #[macro_export]
 macro_rules! empty {
-  () => ()
+  () => {};
 }

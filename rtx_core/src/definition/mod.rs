@@ -76,7 +76,7 @@ pub trait Definition: Object {
   fn get_cs_or_alias(&self) -> Cow<Token> {
     match self.get_alias() {
       Some(alias) => Cow::Owned(T_CS!(alias)),
-      None => self.get_cs()
+      None => self.get_cs(),
     }
   }
   fn get_alias(&self) -> Option<String>;

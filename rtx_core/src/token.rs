@@ -8,10 +8,10 @@ use std::fmt::Display;
 use std::iter::FromIterator;
 use std::rc::Rc;
 
+use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
-use crate::common::number::Number;
-use crate::common::dimension::{MuDimension,Dimension};
 use crate::common::glue::{Glue, MuGlue};
+use crate::common::number::Number;
 use crate::common::store::Stored;
 use crate::definition::register::NumericOps;
 use crate::definition::register::{Register, RegisterValue};
@@ -616,8 +616,6 @@ impl<'a> Token {
   pub fn to_glue(&self) -> Glue { Glue::new(self.text.parse::<f32>().unwrap_or(0.0)) }
 
   pub fn to_mu_glue(&self) -> MuGlue { MuGlue::new(self.text.parse::<f32>().unwrap_or(0.0)) }
-
-
 
   pub fn value_of(&self, args: Vec<Token>, state: &mut State) -> Option<RegisterValue> {
     match self.to_register(state) {
