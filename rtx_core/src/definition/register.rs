@@ -211,6 +211,9 @@ impl From<RegisterValue> for Dimension {
 impl From<RegisterValue> for Glue {
   fn from(v: RegisterValue) -> Glue { (&v).into() }
 }
+impl From<RegisterValue> for f32 {
+  fn from(v: RegisterValue) -> f32 { v.value_of() }
+}
 
 impl From<Number> for Dimension {
   fn from(n: Number) -> Dimension { Dimension::new(n.value_of()) }

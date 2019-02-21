@@ -106,14 +106,19 @@ LoadDefinitions!(state, {
     // TODO: Variable type unpacking seems to require special INFRA again...
     let mut var_tokens = var.unlist();
     if !var_tokens.is_empty() {
-      let defn = var_tokens.remove(0);
-      if defn.to_string() != "missing" {
-        let defn_rc = Rc::new(defn);
-        state.current_token = Some(Rc::clone(&defn_rc));
-        unimplemented!();
-        ()
-        // TODO: We need an extension here, as it seems that
-        // $defn->setValue($defn->valueOf(@args)->add($stomach->getGullet->readValue($defn->isRegister)), @args); });
+      let defn_token = var_tokens.remove(0);
+      if defn_token.to_string() != "missing" {
+        let defn_opt = state.lookup_register_definition(&defn_token);
+        let defn_token_rc = Rc::new(defn_token);
+        state.current_token = Some(Rc::clone(&defn_token_rc));
+        if let Some(defn) = defn_opt {
+          let summand = stomach.get_gullet_mut().read_value(defn.register_type().unwrap(), state)?;
+          let defn_args : Vec<Tokens> = var_tokens.iter().map(|a| Tokens!(a.clone())).collect();
+          let defn_value = defn.value_of(var_tokens, state).unwrap_or_default();
+          defn.borrow_mut().set_value(defn_value.add(summand), defn_args, state);
+        } else {
+          error!(target: "expected:definition", "\\advance expected a defined variable for {:?}, found no definition", defn_token_rc);
+        }
       }
     }
   });
@@ -122,12 +127,19 @@ LoadDefinitions!(state, {
     unpack!(args => var, scale);
     if !var.is_empty() {
       let mut args = var.unlist();
-      let defn = args.remove(0);
-      // TODO: We need a strategy for obtaining the Variable here, to be able to perform the primitive operations
-      // defn.set_value(defn.value_of(args).multiply(scale.value_of()), args);
+      let varname = args.remove(0);
+      // TODO: Why are the arguments used twice here? Is there a way to avoid cloning them?
+      let defn_args : Vec<Tokens> = args.iter().map(|a| Tokens!(a.clone())).collect();
+      if let Some(defn) = state.lookup_register_definition(&varname) {
+        // TODO: We need a strategy for obtaining the Variable here, to be able to perform the primitive operations
+        let defn_value = defn.value_of(args, state).unwrap_or_default();
+        defn.borrow_mut().set_value(defn_value.multiply(scale.value_of(Vec::new(), state).unwrap_or_default()), defn_args, state);
+      } else {
+        error!(target: "expected:definition", "\\multiply expected a defined variable for {:?}, found no definition", varname);
+      }
+    } else {
+      error!(target: "expected:variable", "\\multiply expected a Variable argument, but got nothing.");
     }
-    unimplemented!();
-    Ok(vec![])
   });
 
   DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[stomach, args, state] {
@@ -177,24 +189,24 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\dimendef Token SkipMatch:= Number", sub[stomach,args,state] {
     unpack_to_token!(args=> cs, num);
-    // my $dimen = '\dimen' . $num->valueOf;
-    // DefRegisterI($cs, undef, Dimension(0),
-    //   getter => sub { LookupValue($dimen) || Dimension(0); },
-    //   setter => sub { AssignValue($dimen => $_[0]); });
+    let dimen = s!("\\dimen{}", num.to_number().value_of());
+    let dimen2 = dimen.clone();
+    DefRegisterI!(cs, None, Dimension::new(0.0),
+      getter => getter!(args, state, { state.lookup_dimension(&dimen).unwrap_or_default() }),
+      setter => setter!(value, args, state, { state.assign_value(&dimen2, value, None); })
+    );
     AfterAssignment!();
-    unimplemented!();
-    ()
   });
 
   DefPrimitive!("\\skipdef Token SkipMatch:= Number", sub[stomach,args,state] {
     unpack_to_token!(args=> cs, num);
-    // my $glue = '\skip' . $num->valueOf;
-    // DefRegisterI($cs, undef, Glue(0),
-    //   getter => sub { LookupValue($glue) || Glue(0); },
-    //   setter => sub { AssignValue($glue => $_[0]); });
+    let skip = s!("\\skip{}", num.to_number().value_of());
+    let skip2 = skip.clone();
+    DefRegisterI!(cs, None, Glue::new(0.0),
+      getter => getter!(args, state, { state.lookup_glue(&skip).unwrap_or_default() }),
+      setter => setter!(value, args, state, { state.assign_value(&skip2, value, None); })
+    );
     AfterAssignment!();
-    unimplemented!();
-    ()
   });
 
   DefPrimitive!("\\muskipdef Token SkipMatch:= Number", sub[stomach,args,state] {

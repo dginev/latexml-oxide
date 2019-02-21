@@ -158,6 +158,18 @@ impl IntoRegisterValueOption<Option<RegisterValue>> for Option<RegisterValue> {
 impl IntoRegisterValueOption<Option<RegisterValue>> for Number {
   fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Number(self)) }
 }
+impl IntoRegisterValueOption<Option<RegisterValue>> for Dimension {
+  fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Dimension(self)) }
+}
+impl IntoRegisterValueOption<Option<RegisterValue>> for MuDimension {
+  fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::MuDimension(self)) }
+}
+impl IntoRegisterValueOption<Option<RegisterValue>> for Glue {
+  fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Glue(self)) }
+}
+impl IntoRegisterValueOption<Option<RegisterValue>> for MuGlue {
+  fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::MuGlue(self)) }
+}
 
 impl IntoRegisterValueOption<Option<RegisterValue>> for Option<Number> {
   fn into_register_value_option(self) -> Option<RegisterValue> {
