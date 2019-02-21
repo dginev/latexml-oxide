@@ -517,14 +517,14 @@ LoadDefinitions!(state, {
 
     while token == begin_token {
       let mut toks : Vec<Token> = gullet.read_balanced(state)?.unlist().into_iter().filter(|t| *t != space_token).collect();
-      let mut new_tokens = toks.split_off(1);
-      gullet.unread(Tokens::new(toks));
-
-      token = if new_tokens.is_empty() {
-        None
+      if !toks.is_empty() {
+        token = Some(toks.remove(0));
+        if !toks.is_empty() {
+          gullet.unread(Tokens::new(toks));
+        }
       } else {
-        new_tokens.pop()
-      };
+        token = None;
+      }
     }
     match token {
       Some(t) => Ok(Tokens!(t)),

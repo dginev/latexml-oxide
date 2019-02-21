@@ -120,11 +120,14 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\multiply Variable SkipKeyword:by Number", sub[stomach, args, state] {
     unpack!(args => var, scale);
-    // return () unless $var;
-    // let (defn, @args) = @$var;
-    // $defn->setValue($defn->valueOf(@args)->multiply($scale->valueOf), @args); });
+    if !var.is_empty() {
+      let mut args = var.unlist();
+      let defn = args.remove(0);
+      // TODO: We need a strategy for obtaining the Variable here, to be able to perform the primitive operations
+      // defn.set_value(defn.value_of(args).multiply(scale.value_of()), args);
+    }
     unimplemented!();
-    ()
+    Ok(vec![])
   });
 
   DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[stomach, args, state] {
