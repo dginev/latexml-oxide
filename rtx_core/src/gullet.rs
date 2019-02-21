@@ -25,13 +25,14 @@ lazy_static! {
   static ref HEX_RE: Regex = Regex::new(r"[0-9A-F]").unwrap();
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct MouthRuntime {
   pub autoclose: bool,
   pub mouth: Mouth,
   pub pushback: VecDeque<Token>,
 }
 
+#[derive(Debug)]
 pub struct Gullet {
   pub mouth: Option<MouthRuntime>,
   pub mouthstack: VecDeque<MouthRuntime>,

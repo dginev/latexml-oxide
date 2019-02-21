@@ -37,9 +37,8 @@ LoadDefinitions!(state, {
     "\\listfiles",
   ]
   .iter()
-  .map(|s| s.to_string())
   {
-    let inner_ltxtrigger = ltxtrigger.clone();
+    let inner_ltxtrigger = ltxtrigger.to_string();
     DefMacroI!(T_CS!(ltxtrigger), None, sub {
        Tokens!(T_CS!("\\@load@latex@pool"), T_CS!(inner_ltxtrigger))
     });

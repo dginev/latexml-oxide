@@ -38,14 +38,25 @@ const UP_GREEK: &[char] = &[
   '\u{039D}', '\u{039E}', '\u{039F}', '\u{03A0}', '\u{03A1}', '\u{03A3}', '\u{03A4}', '\u{03A5}', '\u{03A6}', '\u{03A7}', '\u{03A8}', '\u{03A9}',
 ];
 
-pub fn radix_format(number: i32, symbols: &[char]) -> String {
-  // TODO
-  // let mut text = String::new();
-  // my $max    = scalar(@symbols);
-  // while ($number > 0) {
-  //   $string = $symbols[($number - 1) % $max] . $string;
-  //   $number = int(($number - 1) / $max); }
-  String::new()
+pub fn radix_format(mut number: i32, symbols: &[char]) -> String {
+  let mut text = String::new();
+  let max = symbols.len();
+  while number > 0 {
+    let index = (number - 1) % (max as i32);
+    text = symbols[index as usize].to_string() + &text;
+    number = (number - 1) / (max as i32);
+  }
+  text
+}
+pub fn radix_format_str(mut number: i32, symbols: &[&str]) -> String {
+  let mut text = String::new();
+  let max = symbols.len();
+  while number > 0 {
+    let index = (number - 1) % (max as i32);
+    text = symbols[index as usize].to_string() + &text;
+    number = (number - 1) / (max as i32);
+  }
+  text
 }
 
 pub fn radix_alpha(n: i32) -> String { radix_format(n, &LETTERS) }
@@ -61,21 +72,41 @@ pub fn radix_up_greek(n: i32) -> String { radix_format(n, &UP_GREEK) }
 // namely, it's very limited.... what happened to my much-improved version?
 const RMLETTERS: &[char] = &['i', 'v', 'x', 'l', 'c', 'd', 'm']; // [CONSTANT]
 
-pub fn radix_roman(n: i32) -> String {
-  // let mut s = String::new();
-  // TODO:
-  // my ($n) = @_;
-  // my $div = 1000;
-  // my $s = ($n > $div ? ('m' x int($n / $div)) : '');
-  // my $p = 4;
-  // while ($n %= $div) {
-  //   $div /= 10;
-  //   my $d = int($n / $div);
-  //   if ($d % 5 == 4) { $s .= $rmletters[$p]; $d++; }
-  //   if ($d > 4) { $s .= $rmletters[$p + int($d / 5)]; $d %= 5; }
-  //   if ($d) { $s .= $rmletters[$p] x $d; }
-  //   $p -= 2; }
-  String::new()
+pub fn radix_roman(mut n: i32) -> String {
+  let mut s = String::new();
+  let mut div = 1000;
+  if n > div {
+    s = (0..(n / div)).map(|_| 'm').collect::<String>();
+  }
+
+  let mut p = 4;
+  loop {
+    n %= div;
+    if n == 0 {
+      break;
+    }
+    div /= 10;
+    let mut d: i32 = n / div;
+    if d % 5 == 4 {
+      s.push(RMLETTERS[p]);
+      d += 1;
+    }
+    if d > 4 {
+      let index: usize = p + (d / 5) as usize;
+      s.push(RMLETTERS[index]);
+      d %= 5;
+    }
+    if d != 0 {
+      let ps = (0..d).map(|_| RMLETTERS[p]).collect::<String>();
+      s.push_str(&ps);
+    }
+    if p > 1 {
+      p -= 2;
+    } else {
+      p = 0;
+    }
+  }
+  s
 }
 
 /// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token

@@ -462,7 +462,6 @@ macro_rules! LookupRegister {
   }
 }
 
-
 #[macro_export]
 macro_rules! LookupRegisterOrDefault {
   ($cs:expr) => {
@@ -478,9 +477,8 @@ macro_rules! LookupRegisterOrDefault {
     } else {
       RegisterValue::default()
     }
-  }
+  };
 }
-
 
 // sub LookupDimension {
 //   my ($cs) = @_;
@@ -846,22 +844,22 @@ macro_rules! SetCounter {
 }
 #[macro_export]
 macro_rules! AddToCounter {
-  ($ctr:expr, $value:expr, $gullet:ident) => {
+  ($ctr:expr, $value:expr, $gullet:ident) => {{
     bind_state_mut!(st);
     add_to_counter($ctr, $value, $gullet, st)
-  };
+  }};
   ($ctr:expr, $value:expr, $gullet:ident, $state_arg:ident) => {
     add_to_counter($ctr, $value, $gullet, $state_arg)
   };
 }
 #[macro_export]
 macro_rules! StepCounter {
-  ($ctr:expr, $noreset:expr, $gullet:ident) => {
+  ($ctr:expr, $noreset:expr, $stomach:ident) => {{
     bind_state_mut!(st);
-    step_counter($ctr, $noreset, $gullet, st)
-  };
-  ($ctr:expr, $noreset:expr, $gullet:ident, $state_arg:ident) => {
-    step_counter($ctr, $noreset, $gullet, $state_arg)
+    step_counter($ctr, $noreset, $stomach, st)
+  }};
+  ($ctr:expr, $noreset:expr, $stomach:ident, $state_arg:ident) => {
+    step_counter($ctr, $noreset, $stomach, $state_arg)
   };
 }
 #[macro_export]

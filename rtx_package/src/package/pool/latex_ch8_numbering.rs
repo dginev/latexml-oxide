@@ -1,4 +1,16 @@
 use crate::package::*;
+const FNSYMBOLS: &[&str] = &[
+  "*",
+  "\u{2020}",
+  "\u{2021}",
+  "\u{00A7}",
+  "\u{00B6}",
+  "\u{2225}",
+  "**",
+  "\u{2020}\u{2020}",
+  "\u{2021}\u{2021}",
+];
+
 LoadDefinitions!(state, {
   //======================================================================
   // C.8.4 Numbering
@@ -10,13 +22,46 @@ LoadDefinitions!(state, {
     generate_id(document, node, "p", state)?;
   }));
 
-  // DefPrimitive('\newcounter{}[]', sub {
-  //     NewCounter(ToString(Expand($_[1])), $_[2] && ToString(Expand($_[2])));
-  //     return; });
-  // DefPrimitive('\setcounter{}{Number}', sub { SetCounter(ToString(Expand($_[1])), $_[2]); });
-  // DefPrimitive('\addtocounter{}{Number}', sub { AddToCounter(ToString(Expand($_[1])), $_[2]); });
-  // DefPrimitive('\stepcounter{}',    sub { StepCounter(ToString(Expand($_[1])));    return; });
-  // DefPrimitive('\refstepcounter{}', sub { RefStepCounter(ToString(Expand($_[1]))); return; });
+  DefPrimitive!("\\newcounter{}[]", sub[stomach, args, state] {
+    unpack!(args => cs, default);
+    let gullet = stomach.get_gullet_mut();
+    let default = if !default.is_empty() {
+      Expand!(default, gullet)
+    } else {
+      default
+    };
+    let cs_expanded = &Expand!(cs, gullet).to_string();
+    NewCounter!(cs_expanded, &default.to_string());
+  });
+  DefPrimitive!("\\setcounter{}{Number}", sub[stomach, args, state] {
+    unpack!(args=>cs, default);
+    let gullet = stomach.get_gullet_mut();
+    let cs_expanded = &Expand!(cs, gullet).to_string();
+    let default = default.to_number();
+    SetCounter!(cs_expanded, default, gullet);
+  });
+  DefPrimitive!("\\addtocounter{}{Number}", sub[stomach, args, state] {
+    unpack!(args=>cs, default);
+    let gullet = stomach.get_gullet_mut();
+    let cs_expanded = &Expand!(cs, gullet).to_string();
+    // TODO: Continue here: The {Number} parameter type should be expanded already,
+    //       I need to carefully study the differences with LaTeXML and smooth the edges
+    //
+    let default = Expand!(default, gullet).to_number();
+    AddToCounter!(cs_expanded, default, gullet);
+  });
+  DefPrimitive!("\\stepcounter{}",    sub[stomach, args, state] {
+    unpack!(args=>cs);
+    let gullet = stomach.get_gullet_mut();
+    let cs_expanded = &Expand!(cs, gullet).to_string();
+    StepCounter!(cs_expanded, false, stomach)?;
+  });
+  DefPrimitive!("\\refstepcounter{}", sub[stomach, args, state] {
+    unpack!(args=>cs);
+    let gullet = stomach.get_gullet_mut();
+    let cs_expanded = &Expand!(cs, gullet).to_string();
+    RefStepCounter!(cs_expanded, false, stomach)?;
+  });
 
   // DefPrimitive('\@addtoreset{}{}', sub {
   //     my ($stomach, $ctr, $within) = @_;
@@ -45,8 +90,11 @@ LoadDefinitions!(state, {
     ExplodeText!(ctr_value)
   });
 
-  // DefMacro('\@arabic{Number}', sub {
-  //     ExplodeText(ToString($_[1]->valueOf)); });
+  DefMacro!("\\@arabic{Number}", sub[gullet, args, state] {
+    unpack_to_token!(args => token);
+    let value = token.to_number().value_of();
+    ExplodeText!(value.to_string())
+  });
   DefMacro!("\\arabic{}", sub[gullet, args, inner_state] {
     unpack!(args => value);
     let ctr_expansion = Expand!(value, gullet, inner_state).to_string();
@@ -54,27 +102,54 @@ LoadDefinitions!(state, {
     ExplodeText!(ctr_value)
   });
 
-  // DefMacro('\@roman{Number}', sub {
-  //     ExplodeText(radix_roman(ToString($_[1]->valueOf))); });
-  // DefMacro('\roman{}', sub {
-  //     ExplodeText(radix_roman(CounterValue(ToString(Expand($_[1])))->valueOf)); });
-  // DefMacro('\@Roman{Number}', sub {
-  //     ExplodeText(radix_Roman(ToString($_[1]->valueOf))); });
-  // DefMacro('\Roman{}', sub {
-  //     ExplodeText(radix_Roman(CounterValue(ToString(Expand($_[1])))->valueOf)); });
-  // DefMacro('\@alph{Number}', sub {
-  //     ExplodeText(radix_alpha($_[1]->valueOf)); });
-  // DefMacro('\alph{}', sub {
-  //     ExplodeText(radix_alpha(CounterValue(ToString(Expand($_[1])))->valueOf)); });
-  // DefMacro('\@Alph{Number}', sub {
-  //     ExplodeText(radix_Alpha($_[1]->valueOf)); });
-  // DefMacro('\Alph{}', sub {
-  //     ExplodeText(radix_Alpha(CounterValue(ToString(Expand($_[1])))->valueOf)); });
+  DefMacro!("\\@roman{Number}", sub[gullet, args, state] {
+    unpack_to_token!(args => token);
+    let value = token.to_number().value_of() as i32;
+    ExplodeText!(radix::radix_roman(value))
+  });
+  DefMacro!("\\roman{}", sub[gullet, args, state] {
+    unpack!(args => token);
+    let ctr = Expand!(token, gullet).to_string();
+    ExplodeText!(radix::radix_roman(CounterValue!(&ctr).value_of() as i32))
+  });
+  DefMacro!("\\@Roman{Number}", sub[gullet, args, state] {
+    unpack_to_token!(args => token);
+    let value = token.to_number().value_of() as i32;
+    ExplodeText!(radix::radix_up_roman(value))
+  });
+  DefMacro!("\\Roman{}", sub[gullet, args, state] {
+    unpack!(args => token);
+    let ctr = Expand!(token, gullet).to_string();
+    ExplodeText!(radix::radix_up_roman(CounterValue!(&ctr).value_of() as i32))
+  });
+  DefMacro!("\\@alph{Number}", sub[gullet, args, state] {
+    unpack_to_token!(args => token);
+    let value = token.to_number().value_of() as i32;
+    ExplodeText!(radix::radix_alpha(value))
+  });
+  DefMacro!("\\alph{}", sub[gullet, args, state] {
+    unpack!(args => token);
+    let ctr = Expand!(token, gullet).to_string();
+    ExplodeText!(radix::radix_alpha(CounterValue!(&ctr).value_of() as i32))
+  });
+  DefMacro!("\\@Alph{Number}", sub[gullet, args, state] {
+    unpack_to_token!(args => token);
+    let value = token.to_number().value_of() as i32;
+    ExplodeText!(radix::radix_up_alpha(value))
+  });
+  DefMacro!("\\Alph{}", sub[gullet, args, state] {
+    unpack!(args => token);
+    let ctr = Expand!(token, gullet).to_string();
+    ExplodeText!(radix::radix_up_alpha(CounterValue!(&ctr).value_of() as i32))
+  });
 
-  // our @fnsymbols = ("*", "\x{2020}", "\x{2021}", UTF(0xA7), UTF(0xB6),
-  //   "\x{2225}", "**", "\x{2020}\x{2020}", "\x{2021}\x{2021}");
-  // DefMacro('\@fnsymbol{Number}', sub {
-  //     ExplodeText(radix_format($_[1]->valueOf, @fnsymbols)); });
-  // DefMacro('\fnsymbol{}', sub {
-  //     ExplodeText(radix_format(CounterValue(ToString(Expand($_[1])))->valueOf, @fnsymbols)); });
+  DefMacro!("\\@fnsymbol{Number}", sub[gullet, args, state] {
+    unpack!(args => token);
+    ExplodeText!(radix::radix_format_str(token.to_number().value_of() as i32, FNSYMBOLS))
+  });
+  DefMacro!("\\fnsymbol{}", sub[gullet, args, state] {
+    unpack!(args => token);
+    let ctr = Expand!(token, gullet).to_string();
+    ExplodeText!(radix::radix_format_str(CounterValue!(&ctr).value_of() as i32, FNSYMBOLS))
+  });
 });
