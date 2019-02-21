@@ -17,6 +17,13 @@ impl NumericOps for MuDimension {
   fn new<T: Into<f32>>(number: T) -> Self { MuDimension(number.into()) }
 }
 
+impl Default for Dimension {
+  fn default() -> Self { Dimension(0.0) }
+}
+impl Default for MuDimension {
+  fn default() -> Self { MuDimension(0.0) }
+}
+
 impl Dimension {
   /// Utility for formatting scaled points sanely.
   fn point_format(self) -> String {

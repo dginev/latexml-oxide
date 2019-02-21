@@ -3,8 +3,16 @@ use crate::definition::register::NumericOps;
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Glue(pub f32);
 
+impl Default for Glue {
+  fn default() -> Self { Glue(0.0) }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct MuGlue(pub f32);
+
+impl Default for MuGlue {
+  fn default() -> Self { MuGlue(0.0) }
+}
 
 impl NumericOps for Glue {
   fn value_of(self) -> f32 { self.0 }

@@ -4,7 +4,7 @@ use crate::definition::register::NumericOps;
 pub struct Number(pub f32);
 
 impl Default for Number {
-  fn default() -> Self { Number::new(0.0) }
+  fn default() -> Self { Number(0.0) }
 }
 
 impl NumericOps for Number {

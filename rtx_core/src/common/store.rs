@@ -411,6 +411,24 @@ impl<'a> From<&'a Stored> for Option<Number> {
   }
 }
 
+impl<'a> From<&'a Stored> for Option<Dimension> {
+  fn from(value: &'a Stored) -> Option<Dimension> {
+    match value {
+      Stored::Dimension(ref n) => Some(*n),
+      _ => None,
+    }
+  }
+}
+
+impl<'a> From<&'a Stored> for Option<Glue> {
+  fn from(value: &'a Stored) -> Option<Glue> {
+    match value {
+      Stored::Glue(ref n) => Some(*n),
+      _ => None,
+    }
+  }
+}
+
 impl<'a> From<&'a Stored> for Option<Tokens> {
   fn from(value: &'a Stored) -> Option<Tokens> {
     match value {

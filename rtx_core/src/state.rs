@@ -7,8 +7,10 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 use std::rc::Rc;
 
+use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::{Font, Fontmap};
+use crate::common::glue::Glue;
 use crate::common::model::{IndirectModel, Model};
 use crate::common::number::Number;
 pub use crate::common::store::Stored; // reexport for convenience
@@ -633,6 +635,18 @@ impl State {
   }
 
   pub fn lookup_number(&self, key: &str) -> Option<Number> {
+    match self.lookup_value(key) {
+      Some(v) => v.into(),
+      _ => None,
+    }
+  }
+  pub fn lookup_dimension(&self, key: &str) -> Option<Dimension> {
+    match self.lookup_value(key) {
+      Some(v) => v.into(),
+      _ => None,
+    }
+  }
+  pub fn lookup_glue(&self, key: &str) -> Option<Glue> {
     match self.lookup_value(key) {
       Some(v) => v.into(),
       _ => None,
