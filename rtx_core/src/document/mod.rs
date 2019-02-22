@@ -860,7 +860,7 @@ impl Document {
     state: &mut State,
   ) -> Result<Node>
   {
-    // info!(target:"document:insert" ,"insert math token: {:?}", text);
+    // debug!(target:"document:insert" ,"insert math token: {:?}", text);
     attributes.entry(s!("role")).or_insert_with(|| s!("UNKNOWN"));
 
     let font = match font_opt {

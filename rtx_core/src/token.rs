@@ -412,8 +412,8 @@ macro_rules! Explode(($text:expr) => (
 macro_rules! ExplodeText(($text:expr) => (
   $text.to_string().as_str().chars().map(|c|
     if c==' ' { T_SPACE!() }
-    else if c.is_alphabetic() { T_LETTER!(c.to_string()) }
-    else { T_OTHER!(c.to_string()) }
+    else if c.is_alphabetic() { T_LETTER!(c) }
+    else { T_OTHER!(c) }
   ).collect::<Vec<Token>>()
 ));
 
