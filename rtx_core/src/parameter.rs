@@ -60,7 +60,7 @@ impl From<ParameterExtra> for Option<Parameters> {
 }
 
 impl From<Tokens> for Vec<ParameterExtra> {
-  fn from(tks: Tokens) -> Vec<ParameterExtra> { tks.unlist().into_iter().map(|t| t.into()).collect() }
+  fn from(tks: Tokens) -> Vec<ParameterExtra> { tks.unlist().into_iter().map(Into::into).collect() }
 }
 
 #[derive(Clone)]

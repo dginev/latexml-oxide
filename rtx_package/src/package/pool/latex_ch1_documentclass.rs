@@ -25,7 +25,7 @@ LoadDefinitions!(state, {
     after_digest => after_digest!(stomach, whatsit, state, {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
-        Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
+        Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
         None => Vec::new(),
       };
       load_class(&(whatsit.get_arg(2).unwrap().to_string()),

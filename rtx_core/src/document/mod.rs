@@ -610,7 +610,7 @@ impl Document {
           target: &s!("malformed:{}", qname),
           "Closing {} whose open descendents do not auto-close. Descendents are {}",
           qname,
-          cant_close.iter().map(|x| x.get_name()).collect::<Vec<String>>().join(", ")
+          cant_close.iter().map(Node::get_name).collect::<Vec<String>>().join(", ")
         )
       }
       self.close_node_internal(node, state)?;
@@ -1697,7 +1697,7 @@ impl Document {
     }
 
     if let Some(attrs) = attributes {
-      let mut sorted_keys = attrs.keys().map(|k| k.to_string()).collect::<Vec<_>>();
+      let mut sorted_keys = attrs.keys().map(ToString::to_string).collect::<Vec<_>>();
       sorted_keys.sort();
       for key in &sorted_keys {
         if key == "font" || key == "locator" {

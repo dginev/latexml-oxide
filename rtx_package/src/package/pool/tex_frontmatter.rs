@@ -106,7 +106,7 @@ LoadDefinitions!(state, {
       "ltx:acknowledgements",
     ]
     .iter()
-    .map(|s| s.to_string())
+    .map(ToString::to_string)
     .collect();
 
     let mut frontmatter = match state.remove_value("frontmatter") {

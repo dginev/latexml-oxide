@@ -142,7 +142,7 @@ impl DigestionAPI for Core {
     note_begin("Building");
 
     let mut state = &mut self.state;
-    let schema_paths = state.search_paths.iter().map(|x| x.as_str()).collect::<Vec<&str>>();
+    let schema_paths = state.search_paths.iter().map(String::as_str).collect::<Vec<&str>>();
     let default_model_load = match state.model.schema_data {
       None => true,
       Some(ref v) => v.last() == Some(&String::from("LaTeXML")),
@@ -160,7 +160,7 @@ impl DigestionAPI for Core {
       {
         if let Some(&Stored::Bool(ico_flag)) = state.lookup_value("INCLUDE_COMMENTS") {
           if ico_flag {
-            let paths_string = state.search_paths.iter().map(|x| x.as_str()).collect::<Vec<&str>>().join(",");
+            let paths_string = state.search_paths.iter().map(String::as_str).collect::<Vec<&str>>().join(",");
             let attributes = map! {s!("paths") => paths_string};
             document.insert_pi("latexml", Some(attributes))?;
           }

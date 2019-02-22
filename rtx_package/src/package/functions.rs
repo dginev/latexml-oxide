@@ -736,7 +736,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
       let extra = extra_str
         .split('|')
         .flat_map(|t| mouth::tokenize_internal(t, None).unlist())
-        .map(|t| t.into())
+        .map(Into::into)
         .collect::<Vec<ParameterExtra>>();
       parameters.push(
         Parameter {
@@ -965,7 +965,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
   let getter: RegisterGetterClosure = match options.getter {
     Some(getter) => getter.clone(),
     None => Rc::new(move |args: Vec<Token>, state: &State| -> Option<RegisterValue> {
-      let args_string: String = args.iter().map(|arg: &Token| arg.to_string()).collect::<Vec<String>>().join("");
+      let args_string: String = args.iter().map(ToString::to_string).collect::<Vec<String>>().join("");
       match state.lookup_value(&(name.clone() + &args_string)) {
         None => Some(getter_value.clone()),
         Some(v) => v.into(),
@@ -983,7 +983,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
         })
       } else {
         Rc::new(move |value, args, state| {
-          let args_string: String = args.iter().map(|arg: &Tokens| arg.to_string()).collect::<Vec<String>>().join("");
+          let args_string: String = args.iter().map(ToString::to_string).collect::<Vec<String>>().join("");
 
           state.assign_value(&(setter_name.clone() + &args_string), value, None);
         })

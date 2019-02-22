@@ -921,7 +921,7 @@ macro_rules! Invocation {
     Invocation!($token, $args, $gullet, st)
   }};
   ($token:expr, $args:expr, $gullet:expr, $state_arg:ident) => {
-    build_invocation($token, $args.into_iter().map(|arg| arg.into()).collect(), $gullet, $state_arg)
+    build_invocation($token, $args.into_iter().map(Into::into).collect(), $gullet, $state_arg)
   };
 }
 #[macro_export]
