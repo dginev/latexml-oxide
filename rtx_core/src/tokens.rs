@@ -97,6 +97,9 @@ impl Tokens {
   /// Return a list of the tokens making up this Tokens
   pub fn unlist(self) -> Vec<Token> { self.0 }
 
+  /// Return a reference to the tokens making up this Tokens
+  pub fn as_ref_unlist(&self) -> &Vec<Token> { &self.0 }
+
   /// Are there any tokens at all contained in this Tokens object
   pub fn is_empty(&self) -> bool { self.0.is_empty() }
 
