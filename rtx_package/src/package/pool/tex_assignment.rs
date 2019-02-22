@@ -128,12 +128,12 @@ LoadDefinitions!(state, {
     if !var.is_empty() {
       let mut args = var.unlist();
       let varname = args.remove(0);
-      // TODO: Why are the arguments used twice here? Is there a way to avoid cloning them?
+      // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       let defn_args : Vec<Tokens> = args.iter().map(|a| Tokens!(a.clone())).collect();
       if let Some(defn) = state.lookup_register_definition(&varname) {
-        // TODO: We need a strategy for obtaining the Variable here, to be able to perform the primitive operations
         let defn_value = defn.value_of(args, state).unwrap_or_default();
-        defn.borrow_mut().set_value(defn_value.multiply(scale.value_of(Vec::new(), state).unwrap_or_default()), defn_args, state);
+        let scale_value = scale.to_number().value_of();
+        defn.borrow_mut().set_value(defn_value.multiply(scale_value), defn_args, state);
       } else {
         error!(target: "expected:definition", "\\multiply expected a defined variable for {:?}, found no definition", varname);
       }
