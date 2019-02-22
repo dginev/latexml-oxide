@@ -479,40 +479,28 @@ impl Mouth {
         if ch == '{' {
           Some(T_BEGIN!())
         } else {
-          Some(Token {
-            text: ch.to_string().into(),
-            code: BEGIN,
-          })
+          Some(Token::new(ch.to_string().into(), BEGIN))
         }
       }, // T_BEGIN
       END => {
         if ch == '}' {
           Some(T_END!())
         } else {
-          Some(Token {
-            text: ch.to_string().into(),
-            code: END,
-          })
+          Some(Token::new(ch.to_string().into(), END))
         }
       }, // T_END
       MATH => {
         if ch == '$' {
           Some(T_MATH!())
         } else {
-          Some(Token {
-            text: ch.to_string().into(),
-            code: MATH,
-          })
+          Some(Token::new(ch.to_string().into(), MATH))
         }
       }, // T_MATH
       ALIGN => {
         if ch == '&' {
           Some(T_ALIGN!())
         } else {
-          Some(Token {
-            text: ch.to_string().into(),
-            code: ALIGN,
-          })
+          Some(Token::new(ch.to_string().into(), ALIGN))
         }
       }, // T_ALIGN
       EOL => self.handle_end_of_line(ch, state), // T_EOL
@@ -520,30 +508,21 @@ impl Mouth {
         if ch == '#' {
           Some(T_PARAM!())
         } else {
-          Some(Token {
-            text: ch.to_string().into(),
-            code: PARAM,
-          })
+          Some(Token::new(ch.to_string().into(), PARAM))
         }
       }, // T_PARAM
       SUPER => {
         if ch == '^' {
           Some(T_SUPER!())
         } else {
-          Some(Token {
-            text: ch.to_string().into(),
-            code: SUPER,
-          })
+          Some(Token::new(ch.to_string().into(), SUPER))
         }
       }, // T_SUPER
       SUB => {
         if ch == '_' {
           Some(T_SUB!())
         } else {
-          Some(Token {
-            text: ch.to_string().into(),
-            code: SUB,
-          })
+          Some(Token::new(ch.to_string().into(), SUB))
         }
       }, // T_SUB
       SPACE => self.handle_space(ch, state),

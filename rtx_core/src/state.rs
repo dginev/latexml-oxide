@@ -912,8 +912,8 @@ impl State {
   }
 
   pub fn lookup_definition_internal<'def>(&'def self, key: &'def Token) -> Option<&VecDeque<Stored>> {
-    let cc = &key.code;
-    let name = &key.text;
+    let cc = &key.get_catcode();
+    let name = &key.get_string();
     let lookupname: &str = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) {
       name
     } else {

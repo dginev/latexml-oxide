@@ -72,10 +72,7 @@ impl<'a> From<&'a Tokens> for Token {
       ts.0.first().unwrap().clone()
     } else {
       let code = ts.0.first().unwrap().get_catcode();
-      Token {
-        code,
-        text: Cow::Owned(ts.to_string()),
-      }
+      Token::new(Cow::Owned(ts.to_string()), code)
       // warn!(target: "expected:token", "multiple Tokens {:?} cast into a single Token: {:?}", ts, single);
       // single
     }
@@ -117,7 +114,7 @@ impl Tokens {
   pub fn to_string(&self) -> String {
     let mut result = String::new();
     for t in self.0.iter() {
-      result.push_str(&t.text);
+      result.push_str(t.get_string());
     }
     result
   }
@@ -194,7 +191,7 @@ impl Tokens {
   pub fn is_balanced(&self) -> bool {
     let mut level = 0;
     for t in &self.0 {
-      level += match t.code {
+      level += match t.get_catcode() {
         Catcode::BEGIN => 1,
         Catcode::END => -1,
         _ => 0,
@@ -209,13 +206,13 @@ impl Tokens {
     let mut result = Vec::new();
     let mut in_tokens = self.0.iter();
     while let Some(token) = in_tokens.next() {
-      if token.code != Catcode::PARAM {
+      if token.get_catcode() != Catcode::PARAM {
         // Non '#'; copy it
         result.push(token.clone());
       } else if let Some(token2) = in_tokens.next() {
-        if token2.code != Catcode::PARAM {
+        if token2.get_catcode() != Catcode::PARAM {
           // Not multiple '#'; read arg.
-          let arg_number = token2.text.parse::<usize>().unwrap();
+          let arg_number = token2.get_string().parse::<usize>().unwrap();
           // TODO: Should we explicitly handle the error where arg_number is higher than the available `args` entries? Or catch it higher at the caller
           // level?
           let arg = &args[arg_number - 1];
@@ -359,8 +356,8 @@ impl ToTokens for Catcode {
 
 impl ToTokens for Token {
   fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
-    let text = &self.text;
-    let code = &self.code;
+    let text = self.get_string();
+    let code = self.get_catcode();
     stream.extend(quote! {
       Token {
         text: Cow::Borrowed(#text),

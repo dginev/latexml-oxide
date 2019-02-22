@@ -342,7 +342,7 @@ impl<'t> Stomach {
     let font = state.lookup_font();
     state.clear_prefixes(); // prefixes shouldn't apply here.
 
-    if meaning.code == Catcode::SPACE {
+    if meaning.get_catcode() == Catcode::SPACE {
       let in_math = state.lookup_bool("IN_MATH");
       let in_preamble = state.lookup_bool("inPreamble");
       if in_math || in_preamble {
@@ -357,7 +357,7 @@ impl<'t> Stomach {
           state,
         )))))
       }
-    } else if meaning.code == Catcode::COMMENT {
+    } else if meaning.get_catcode() == Catcode::COMMENT {
       // TODO
       // Note: Comments need char decoding as well!
       //  let comment = LaTeXML::Package::FontDecodeString($meaning->getString, undef, 1);
@@ -367,7 +367,7 @@ impl<'t> Stomach {
       // return LaTeXML::Comment->new($comment); }
       Ok(None)
     // TODO
-    // else if ($forbidden_cc[meaning.code]) {
+    // else if ($forbidden_cc[meaning.get_catcode()]) {
     // Fatal('misdefined', $token, self,
     //   "The token " . Stringify($token) . " should never reach Stomach!");
     // return; }
