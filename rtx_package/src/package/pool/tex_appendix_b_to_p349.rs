@@ -151,7 +151,8 @@ LoadDefinitions!(state, {
 
   // TeX plain uses \newdimen, etc. for these.
   // Is there any advantage to that?
-  DefRegister!("\\maxdimen", Dimension::new(16383.99999 * 65536.0));
+  // note: rust complains about the 16_383.99999 having excessive precision, hence simplifying
+  DefRegister!("\\maxdimen", Dimension::new(16_384.0 * 65536.0));
   // DefRegister!("\\hideskip", Glue!(-1000 * 65536, "1fill"));
   DefRegister!("\\centering", Glue!("0pt plus 1000pt minus 1000pt"));
   DefRegister!("\\p@", Dimension::new(65536.0));

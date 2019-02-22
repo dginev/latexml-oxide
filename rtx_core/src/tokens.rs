@@ -7,6 +7,7 @@ use quote::{quote, ToTokens, TokenStreamExt};
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt::Display;
+use std::string::ToString;
 
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
@@ -174,7 +175,7 @@ impl Tokens {
   // should we unify the interfaces so that Options are always used? Could be cumbursome...
   pub fn unwrap_or_default(self) -> Tokens { self }
 
-  pub fn stringify(&self) -> String { s!("Tokens[{}]", &self.0.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(",")) }
+  pub fn stringify(&self) -> String { s!("Tokens[{}]", &self.0.iter().map(ToString::to_string).collect::<Vec<_>>().join(",")) }
 
   pub fn value_of(&self, args: Vec<Token>, state: &mut State) -> Option<RegisterValue> {
     let token: &Token = &self.0[0];

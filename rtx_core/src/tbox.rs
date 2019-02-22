@@ -132,7 +132,7 @@ impl BoxOps for Tbox {
         Some(value) => Some(Cow::Borrowed(value)),
         None => {
           let tex = self.tokens.untex(state); // !
-          let property_bool = !tex.is_empty() && tex.chars().all(|c| c.is_whitespace()); // Check the TeX code, not (just) the string!
+          let property_bool = !tex.is_empty() && tex.chars().all(char::is_whitespace); // Check the TeX code, not (just) the string!
           Some(Cow::Borrowed(property_bool.into()))
         },
       }

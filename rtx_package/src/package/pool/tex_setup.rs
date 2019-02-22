@@ -115,12 +115,12 @@ LoadDefinitions!(state, {
       for inner_opt in inner.into_iter() {
         let mut reverted_inner = match inner_opt {
           ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
-          _ => arg.iter().map(|t| t.revert()).collect()
+          _ => arg.iter().map(Token::revert).collect()
         };
         read_tokens.append(&mut reverted_inner);
       }
      } else {
-       let mut arg_reverted = arg.iter().map(|a| a.revert()).collect();
+       let mut arg_reverted = arg.iter().map(Token::revert).collect();
        read_tokens.append(&mut arg_reverted);
      }
      read_tokens.push(T_END!());
@@ -148,13 +148,13 @@ LoadDefinitions!(state, {
       if !arg.is_empty() {
         let mut read_tokens: Vec<Token> = vec![T_OTHER!(s!("["))];
         let mut reverted_arg = if inner.is_empty() {
-            arg.iter().map(|t| t.revert()).collect()
+            arg.iter().map(Token::revert).collect()
         } else {
           let mut value = Vec::new();
           for inner_opt in inner.iter() {
             value = match inner_opt {
               ParameterExtra::ParametersOption(Some(inner)) => inner.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
-              _ => arg.iter().map(|t| t.revert()).collect()
+              _ => arg.iter().map(Token::revert).collect()
             }
           }
           value
@@ -364,7 +364,7 @@ LoadDefinitions!(state, {
     }
   },
   reversion => reversion!(gullet, arg, inner, state, {
-    let arg_rev : Vec<Token> = arg.iter().map(|t| t.revert()).collect();
+    let arg_rev : Vec<Token> = arg.iter().map(Token::revert).collect();
     let mut tks = Vec::new();
     tks.push(T_BEGIN!());
     tks.extend(arg_rev);
@@ -381,7 +381,7 @@ LoadDefinitions!(state, {
       } else {
         false
       }
-    ).map(|x| x.into()).collect();
+    ).map(Into::into).collect();
     match gullet.read_match(&extra_tokens, state)? {
       Some(t) => Ok(Tokens!(t)),
       None => Ok(Tokens!())
@@ -397,8 +397,8 @@ LoadDefinitions!(state, {
       } else {
         false
       }
-    ).map(|x| x.into()).collect();
-    let extra_strings: Vec<&str> = extra_tokens.iter().map(|x| x.get_string()).collect();
+    ).map(Into::into).collect();
+    let extra_strings: Vec<&str> = extra_tokens.iter().map(Token::get_string).collect();
     match gullet.read_keyword(extra_strings.as_slice(), state)? {
       Some(t) => Ok(t),
       None => Ok(Tokens!())
@@ -420,12 +420,12 @@ LoadDefinitions!(state, {
         for inner_opt in inner.into_iter() {
           let mut reverted_inner = match inner_opt { // TODO: the revert_arguments arg type is confusing me!
             ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
-            _ => arg.iter().map(|t| t.revert()).collect()
+            _ => arg.iter().map(Token::revert).collect()
           };
           read_tokens.append(&mut reverted_inner);
         }
       } else {
-        let mut reverted_arg = arg.iter().map(|t| t.revert()).collect();
+        let mut reverted_arg = arg.iter().map(Token::revert).collect();
         read_tokens.append(&mut reverted_arg);
       }
       read_tokens.push(T_END!());
@@ -441,7 +441,7 @@ LoadDefinitions!(state, {
     reversion => reversion!(gullet, arg, inner, state, {
      if !arg.is_empty() {
        let mut read_tokens = vec![T_OTHER!(s!("["))];
-       let mut reverted_arg = arg.iter().map(|a| a.revert()).collect();
+       let mut reverted_arg = arg.iter().map(Token::revert).collect();
        read_tokens.append(&mut reverted_arg);
        read_tokens.push(T_OTHER!(s!("]")));
        Ok(Tokens::new(read_tokens))
@@ -469,7 +469,7 @@ LoadDefinitions!(state, {
     }),
     reversion => reversion!(gullet, arg, inner, state, {
       let mut reverted = vec![T_BEGIN!()];
-      let reverted_arg : Vec<Token> = arg.iter().map(|a| a.revert()).collect();
+      let reverted_arg : Vec<Token> = arg.iter().map(Token::revert).collect();
       reverted.extend(reverted_arg);
       reverted.push(T_END!());
       Ok(Tokens::new(reverted))
@@ -481,7 +481,7 @@ LoadDefinitions!(state, {
   reader_predigest => undigested!(),
   reversion => reversion!(gullet, arg, inner, state, {
     let mut read_tokens = vec!(T_BEGIN!());
-    let mut reverted_arg = arg.iter().map(|a| a.revert()).collect();
+    let mut reverted_arg = arg.iter().map(Token::revert).collect();
     read_tokens.append(&mut reverted_arg);
     read_tokens.push(T_END!());
     Ok(Tokens::new(read_tokens))
@@ -496,7 +496,7 @@ LoadDefinitions!(state, {
       Ok(Tokens!())
     } else {
       let mut read_tokens = vec!(T_OTHER!("["));
-      let mut reverted_arg = arg.iter().map(|a| a.revert()).collect();
+      let mut reverted_arg = arg.iter().map(Token::revert).collect();
       read_tokens.append(&mut reverted_arg);
       read_tokens.push(T_OTHER!("]"));
       Ok(Tokens::new(read_tokens))

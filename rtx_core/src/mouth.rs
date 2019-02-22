@@ -247,7 +247,7 @@ impl Mouth {
   /// into "lines" ending with CRLF, CR or LF (DOS, Mac or Unix).
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
   fn split_lines(lines: &str) -> VecDeque<String> {
-    LINEBREAK_REGEX.split(lines).map(|s| s.to_string()).collect() // And split.
+    LINEBREAK_REGEX.split(lines).map(ToString::to_string).collect() // And split.
   }
 
   /// Original LaTeXML:

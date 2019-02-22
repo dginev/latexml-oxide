@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::string::ToString;
 
 use crate::common::error::*;
 use crate::common::relaxng::Relaxng;
@@ -150,7 +151,7 @@ impl Model {
       let paths: Option<Vec<String>> = if search_paths.is_empty() {
         None
       } else {
-        Some(search_paths.iter().map(|p| p.to_string()).collect())
+        Some(search_paths.iter().map(ToString::to_string).collect())
       };
       let pathname_opt = pathname::find(
         &name,
@@ -594,7 +595,7 @@ impl Model {
   //**********************************************************************
 
   pub fn get_tags(&self) -> Vec<String> {
-    let mut keys: Vec<String> = self.tagprop.keys().map(|k| k.as_str().to_owned()).collect();
+    let mut keys: Vec<String> = self.tagprop.keys().map(String::as_str).map(str::to_owned).collect();
     keys.sort();
     keys
   }
@@ -602,7 +603,7 @@ impl Model {
   pub fn get_tag_contents(&self, tag: &str) -> Vec<&str> {
     match self.tagprop.get(tag) {
       Some(h) => {
-        let mut keys: Vec<&str> = h.model.iter().map(|k| k.as_str()).collect();
+        let mut keys: Vec<&str> = h.model.iter().map(String::as_str).collect();
         keys.sort();
         keys
       },
@@ -621,7 +622,7 @@ impl Model {
   pub fn get_tag_attributes(&self, tag: &str) -> Vec<&str> {
     match self.tagprop.get(tag) {
       Some(h) => {
-        let mut keys: Vec<&str> = h.attributes.iter().map(|k| k.as_str()).collect();
+        let mut keys: Vec<&str> = h.attributes.iter().map(String::as_str).collect();
         keys.sort();
         keys
       },

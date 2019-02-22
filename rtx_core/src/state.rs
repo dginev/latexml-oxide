@@ -706,7 +706,7 @@ impl State {
   }
 
   pub fn unshift_value<T: Into<Stored>>(&mut self, key: &str, values: Vec<T>) {
-    let values: Vec<Stored> = values.into_iter().map(|v: T| v.into()).collect();
+    let values: Vec<Stored> = values.into_iter().map(Into::into).collect();
     if self.value.get(key).is_none() {
       self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global))
     }
@@ -1290,7 +1290,7 @@ impl State {
             "Unassigning wrong value for $key from table $table in deactivateScope\
              value is {:?} but stack is {:?}",
             value,
-            table_entry.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")
+            table_entry.iter().map(ToString::to_string).collect::<Vec<String>>().join(", ")
           );
         }
       }
@@ -1412,7 +1412,7 @@ impl State {
         self.compute_indirect_model_aux(&tag, None, 1, &mut openable, &mut desc);
       }
 
-      let mut desc_keys: Vec<String> = desc.keys().map(|k| k.to_string()).collect();
+      let mut desc_keys: Vec<String> = desc.keys().map(ToString::to_string).collect();
       desc_keys.sort();
       for kid in desc_keys {
         let mut best = 0; // Find best path to $kid.
@@ -1420,7 +1420,7 @@ impl State {
           .entry(kid.to_owned())
           .or_insert_with(HashMap::new)
           .keys()
-          .map(|k| k.to_string())
+          .map(ToString::to_string)
           .collect();
         desc_kid_keys.sort();
         for start in desc_kid_keys {
@@ -1469,7 +1469,7 @@ impl State {
     // A bit tricky here, we need to release the state.model borrow immediately, which is why we
     // move ownership of the tag strings into the tag_contents vector.
     // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-    let tag_contents: Vec<String> = self.model.get_tag_contents(tag).iter().map(|t| t.to_string()).collect();
+    let tag_contents: Vec<String> = self.model.get_tag_contents(tag).iter().map(ToString::to_string).collect();
 
     for kid in tag_contents {
       if desc.entry(kid.clone()).or_insert_with(HashMap::new).get(&start).is_some() {

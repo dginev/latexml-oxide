@@ -28,7 +28,7 @@ LoadDefinitions!(state, {
     "titlepage",
   ]
   .iter()
-  .map(|s| s.to_string())
+  .map(ToString::to_string)
   {
     // DeclareOption!(option, None);
   }

@@ -25,11 +25,11 @@ LoadDefinitions!(state, {
         let options: Option<&Digested> = whatsit.get_arg(1);
         let packages: Option<&Digested> = whatsit.get_arg(2);
         let package_list = match packages {
-          Some(value) => OPTS_REGEX.split(&value.to_string()).map(|s| s.to_string()).filter(|s| !s.starts_with('%')).collect(),
+          Some(value) => OPTS_REGEX.split(&value.to_string()).map(ToString::to_string).filter(|s| !s.starts_with('%')).collect(),
           None => Vec::new(),
         };
         let options_list = match options {
-          Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(|s| s.to_string()).collect(),
+          Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
           None => Vec::new(),
         };
 
@@ -56,7 +56,7 @@ LoadDefinitions!(state, {
     "\\listfiles",
   ]
   .iter()
-  .map(|s| s.to_string())
+  .map(ToString::to_string)
   {
     DefMacroI!(T_CS!(ltxtrigger), None, Tokens!());
   }

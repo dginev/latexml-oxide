@@ -61,8 +61,8 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
         let attr = caps.get(2).map_or("", |m| m.as_str()).to_string();
         let children = caps.get(3).map_or("", |m| m.as_str()).to_string();
 
-        let attr_vec: Vec<String> = attr.split(',').map(|t| t.to_string()).collect();
-        let child_vec: Vec<String> = children.split(',').map(|t| t.to_string()).collect();
+        let attr_vec: Vec<String> = attr.split(',').map(ToString::to_string).collect();
+        let child_vec: Vec<String> = children.split(',').map(ToString::to_string).collect();
 
         operations.push(quote!(
           model.add_tag_attribute(#tag, vec![#(#attr_vec),*]);
@@ -71,11 +71,11 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
       } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
         let classname = caps.get(1).map_or("", |m| m.as_str()).to_string();
         let elements = caps.get(2).map_or("", |m| m.as_str()).to_string();
-        let elements_vec = elements.split(',').map(|t| t.to_string()).collect::<Vec<String>>();
+        let elements_vec = elements.split(',').map(ToString::to_string).collect::<Vec<String>>();
 
         operations.push(quote!(
           model.set_schema_class(#classname,
-            HashSet::from_iter(vec![#(#elements_vec),*].iter().map(|t| t.to_string())));
+            HashSet::from_iter(vec![#(#elements_vec),*].iter().map(ToString::to_string)));
         ));
       } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
         let prefix = caps.get(1).map_or("", |m| m.as_str()).to_string();
