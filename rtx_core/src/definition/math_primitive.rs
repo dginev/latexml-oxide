@@ -1,10 +1,12 @@
 use log::info;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure};
@@ -112,6 +114,42 @@ impl Default for MathPrimitiveOptions {
 }
 impl PartialEq for MathPrimitiveOptions {
   fn eq(&self, other: &MathPrimitiveOptions) -> bool { self.name == other.name && self.meaning == other.meaning && self.role == other.role }
+}
+
+impl MathPrimitiveOptions {
+  pub fn to_hash_stored(&self) -> HashMap<String, Stored> {
+    let mut h = HashMap::new();
+    if let Some(ref meaning) = self.meaning {
+      h.insert("meaning".to_string(), meaning.into());
+    }
+    if let Some(ref name) = self.name {
+      h.insert("name".to_string(), name.into());
+    }
+    if let Some(ref omcd) = self.omcd {
+      h.insert("omcd".to_string(), omcd.into());
+    }
+    if let Some(ref role) = self.role {
+      h.insert("role".to_string(), role.into());
+    }
+    if let Some(ref operator_role) = self.operator_role {
+      h.insert("operator_role".to_string(), operator_role.into());
+    }
+    if let Some(ref mathstyle) = self.mathstyle {
+      h.insert("mathstyle".to_string(), mathstyle.into());
+    }
+    if let Some(ref scriptpos) = self.scriptpos {
+      h.insert("scriptpos".to_string(), Stored::Int(*scriptpos as i32));
+    }
+    if let Some(ref operator_scriptpos) = self.operator_scriptpos {
+      h.insert("operator_scriptpos".to_string(), operator_scriptpos.into());
+    }
+    if let Some(ref mode) = self.mode {
+      h.insert("mode".to_string(), mode.into());
+    }
+    // TODO: add more of the fields to the hash?
+
+    h
+  }
 }
 
 #[derive(Clone)]

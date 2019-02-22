@@ -1079,21 +1079,21 @@ pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacem
 }
 
 pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
-  options.locked = false;
-  options.font = None;
   let scope = options.scope;
   let reqfont = match options.font {
     Some(ref fnt) => fnt.clone(),
     None => Font::default(),
   };
+  let moved_options = options.clone();
+
   state.install_definition(
     MathPrimitive {
       cs: cs.clone(),
       paramlist: None, // never any parameters, this is intentional
       replacement: Some(Rc::new(move |stomach, args, state| {
         // let locator    = $stomach->getGullet->getLocator;
-        let mut properties = HashMap::new(); // TODO: sync with perl master here
-        properties.insert(s!("mode"), Stored::String(String::from("math")));
+        let mut properties = moved_options.clone();
+        properties.mode = Some(String::from("math"));
         // TODO: Improve font precision here, the defaults may not belong in this lookup
         let font = state
           .lookup_font()
@@ -1106,16 +1106,13 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
         //   if (ref $value eq 'CODE') {
         //     $properties{$key} = &$value(); } }
         // info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
-        Ok(vec![Digested::TBox(Rc::new(
-          // TODO: Can we reduce boilerplate?
-          Tbox {
-            text: presentation.clone(),
-            tokens: Tokens!(cs.clone()),
-            font,
-            properties,
-            ..Tbox::default()
-          },
-        ))])
+        Ok(vec![Digested::TBox(Rc::new(Tbox {
+          text: presentation.clone(),
+          tokens: Tokens!(cs.clone()),
+          font,
+          properties: properties.to_hash_stored(),
+          ..Tbox::default()
+        }))])
       })),
       options,
       ..MathPrimitive::default()
