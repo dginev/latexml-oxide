@@ -40,21 +40,21 @@ const UP_GREEK: &[char] = &[
 
 pub fn radix_format(mut number: i32, symbols: &[char]) -> String {
   let mut text = String::new();
-  let max = symbols.len();
+  let max = symbols.len() as i32;
   while number > 0 {
-    let index = (number - 1) % (max as i32);
+    let index = (number - 1) % max;
     text = symbols[index as usize].to_string() + &text;
-    number = (number - 1) / (max as i32);
+    number = (number - 1) / max;
   }
   text
 }
 pub fn radix_format_str(mut number: i32, symbols: &[&str]) -> String {
   let mut text = String::new();
-  let max = symbols.len();
+  let max = symbols.len() as i32;
   while number > 0 {
-    let index = (number - 1) % (max as i32);
+    let index = (number - 1) % max;
     text = symbols[index as usize].to_string() + &text;
-    number = (number - 1) / (max as i32);
+    number = (number - 1) / max;
   }
   text
 }

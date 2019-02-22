@@ -638,7 +638,7 @@ pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, s
   for c in string.chars() {
     if implicit {
       if let Some(map) = map {
-        let code = c as u8;
+        let code = c as u16; // u16, so that Unicode chars get cast correctly
         if code < 128 {
           if let Some(mapc) = map.get(code as usize) {
             if let Some(mapc_val) = mapc {
