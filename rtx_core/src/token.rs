@@ -209,6 +209,13 @@ impl Catcode {
   }
 }
 
+/// The core immutable syntactic primitive resulting from TeX's read-in and expansion process
+/// We allow the fields to be public, so that we can use destructuring patterns over token builder macros
+/// such as
+/// ```
+///   match token {
+///     T_SPACE!() | T_COMMENT!() => {...}
+/// ```
 #[derive(Clone)]
 pub struct Token {
   pub text: Cow<'static, str>,
@@ -233,43 +240,43 @@ impl PartialEq for Token {
 
 #[macro_export]
 macro_rules! T_BEGIN(() => {
-  Token { text: Cow::Borrowed("{"), code: Catcode::BEGIN }
+  Token { text: Cow::Borrowed("{"),code: Catcode::BEGIN}
 });
 
 #[macro_export]
 macro_rules! T_END(() => {
-  Token { text: Cow::Borrowed("}"), code: Catcode::END }
+  Token { text: Cow::Borrowed("}"),code: Catcode::END}
 });
 #[macro_export]
 macro_rules! T_MATH(() => {
-  Token { text: Cow::Borrowed("$"), code: Catcode::MATH }
+  Token { text: Cow::Borrowed("$"),code: Catcode::MATH}
 });
 #[macro_export]
 macro_rules! T_ALIGN(() => {
-  Token { text: Cow::Borrowed("&"), code: Catcode::ALIGN }
+  Token { text: Cow::Borrowed("&"),code: Catcode::ALIGN}
 });
 #[macro_export]
 macro_rules! T_PARAM(() => {
-  Token { text: Cow::Borrowed("#"), code: Catcode::PARAM }
+  Token { text: Cow::Borrowed("#"),code: Catcode::PARAM}
 });
 #[macro_export]
 macro_rules! T_SUPER(() => {
- Token { text: Cow::Borrowed("^"), code: Catcode::SUPER }
+ Token { text: Cow::Borrowed("^"),code: Catcode::SUPER}
 });
 #[macro_export]
 macro_rules! T_SUB(() => {
-  Token { text: Cow::Borrowed("_"), code: Catcode::SUB }
+  Token { text: Cow::Borrowed("_"),code: Catcode::SUB}
 });
 #[macro_export]
 macro_rules! T_SPACE(() => {
-  Token { text: Cow::Borrowed(" "), code: Catcode::SPACE }
+  Token { text: Cow::Borrowed(" "),code: Catcode::SPACE}
 };
 ($text:literal) => {
-  Token { text: Cow::Borrowed($text), code: Catcode::SPACE }
+  Token { text: Cow::Borrowed($text),code: Catcode::SPACE}
 });
 #[macro_export]
 macro_rules! T_CR(() => (
-  Token { text: Cow::Borrowed("\n"), code: Catcode::SPACE }
+  Token { text: Cow::Borrowed("\n"),code: Catcode::SPACE}
 ));
 #[macro_export]
 macro_rules! T_LETTER {
@@ -367,8 +374,8 @@ macro_rules! T_NOTEXPANDED(
   () => {
     Token { text: Cow::Borrowed(""), code: Catcode::NOTEXPANDED }
   };
-  ($text:literal) => { Token { text : Cow::Borrowed($text), code: Catcode::NOTEXPANDED } };
-  ($text:expr) => { Token { text : Cow::Owned($text.to_string()), code: Catcode::NOTEXPANDED } };
+  ($text:literal) => { Token { text: Cow::Borrowed($text), code: Catcode::NOTEXPANDED } };
+  ($text:expr) => { Token { text: Cow::Owned($text.to_string()), code: Catcode::NOTEXPANDED } }
 );
 
 #[macro_export]
@@ -501,6 +508,7 @@ pub fn untex(digested: &Digested, state: &State) -> Result<String> {
 ///======================================================================
 /// Accessors.
 impl<'a> Token {
+  pub fn new(text: Cow<'static, str>, code: Catcode) -> Self { Token { text, code } }
   pub fn isa_token(&self) -> bool { true }
 
   /// Get the CS Name of the token. This is the name that definitions will be

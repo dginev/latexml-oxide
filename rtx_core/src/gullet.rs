@@ -173,7 +173,7 @@ impl Gullet {
     };
     // Check in pushback first....
     while let Some(pushback_token) = runtime.pushback.pop_front() {
-      match pushback_token.code {
+      match pushback_token.get_catcode() {
         Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
         Catcode::MARKER => {
           // TODO:
@@ -188,7 +188,7 @@ impl Gullet {
     // Not in pushback, read from the current Mouth
     if next_token.is_none() {
       while let Some(token) = runtime.mouth.read_token(state) {
-        match token.code {
+        match token.get_catcode() {
           Catcode::COMMENT => self.pending_comments.push_back(token),
           Catcode::MARKER => {
             // TODO:
@@ -241,7 +241,7 @@ impl Gullet {
             },
             Some(token) => {
               // info!(target:"read_x_token", "at: {:?}", token);
-              match token.code {
+              match token.get_catcode() {
                 Catcode::NOTEXPANDED => {
                   // NOTE: Inlined ->getCatcode
                   // Should only occur IMMEDIATELY after expanding \noexpand (by readXToken),
@@ -358,7 +358,7 @@ impl Gullet {
       match self.read_token(state) {
         None => return None,
         Some(t) => {
-          if t.code != Catcode::SPACE {
+          if t.get_catcode() != Catcode::SPACE {
             return Some(t);
           }
         },
@@ -374,7 +374,7 @@ impl Gullet {
     let mut level = 1;
     while let Some(t) = self.read_token(state) {
       // TODO: add $expanded flag for read_x_token(0,1) alternative read
-      match t.code {
+      match t.get_catcode() {
         // Inline ->getCatcode!
         Catcode::BEGIN => level += 1,
         Catcode::END => {
@@ -472,7 +472,7 @@ impl Gullet {
   pub fn read_until_brace(&mut self, state: &mut State) -> Result<Tokens> {
     let mut tokens = Vec::new();
     while let Some(token) = self.read_token(state) {
-      if token.code == Catcode::BEGIN {
+      if token.get_catcode() == Catcode::BEGIN {
         // INLINE Catcode
         if let Some(mouth) = self.mouth.as_mut() {
           mouth.pushback.push_front(token); // Unread
@@ -509,7 +509,7 @@ impl Gullet {
     match self.read_non_space(state) {
       None => Ok(Tokens!()),
       Some(token) => {
-        match token.code {
+        match token.get_catcode() {
           Catcode::BEGIN => {
             // Inline ->getCatcode!
             self.read_balanced(state)
@@ -526,7 +526,7 @@ impl Gullet {
     match self.read_non_space(state) {
       None => Ok(Tokens!()),
       Some(t) => {
-        if t.code == Catcode::OTHER && t.text == "[" {
+        if t.get_catcode() == Catcode::OTHER && t.get_string() == "[" {
           self.read_until(vec![Tokens!(vec![T_OTHER!("]")])], state)
         } else {
           self.unread(Tokens!(t));
@@ -620,7 +620,7 @@ impl Gullet {
             if cc == Catcode::SPACE {
               // If this was space, SKIP any following!!!
               while let Some(space_token) = self.read_token(state) {
-                if space_token.code != Catcode::SPACE {
+                if space_token.get_catcode() != Catcode::SPACE {
                   // Unread non-space and end
                   match self.mouth.as_mut() {
                     Some(mouth) => mouth.pushback.push_front(space_token),
@@ -864,7 +864,7 @@ impl Gullet {
         None => (0.0, 0.0),
       };
 
-      Ok(Glue::new(d.value_of())) //TODO:, $r1, $f1, $r2, $f2); } }
+      Ok(Glue::spec_new(d.value_of(), Some(r1), Some(f1), Some(r2), Some(f2)))
     }
   }
 
