@@ -432,13 +432,15 @@ impl Gullet {
 
   /// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
   /// In list context, also returns the found delimiter.
-  pub fn read_until(&mut self, delims: Vec<Token>, state: &mut State) -> Result<Tokens> {
+  pub fn read_until(&mut self, delims: Vec<Tokens>, state: &mut State) -> Result<Tokens> {
+    // warn!("read_until delims: {:?}", delims);
     let mut n = 0;
     let mut found;
     let mut tokens: Vec<Token> = Vec::new();
     loop {
       found = self.read_match(&delims, state)?;
       if found.is_some() {
+        // warn!("found read_match: {:?}", found);
         break;
       } else {
         match self.read_token(state) {
@@ -525,7 +527,7 @@ impl Gullet {
       None => Ok(Tokens!()),
       Some(t) => {
         if t.code == Catcode::OTHER && t.text == "[" {
-          self.read_until(vec![T_OTHER!("]")], state)
+          self.read_until(vec![Tokens!(vec![T_OTHER!("]")])], state)
         } else {
           self.unread(Tokens!(t));
           Ok(Tokens!()) // TODO: default
@@ -598,20 +600,20 @@ impl Gullet {
 
   /// Match the input against one of the Token or Tokens in @choices; return the matching one or
   /// undef.
-  pub fn read_match(&mut self, choices: &[Token], state: &mut State) -> Result<Option<Token>> {
+  pub fn read_match(&mut self, choices: &[Tokens], state: &mut State) -> Result<Option<Tokens>> {
     for choice in choices {
-      let mut to_match: Vec<Token> = choice.unlist().into_iter().rev().collect();
+      let mut to_match: Vec<&Token> = choice.as_ref_unlist().iter().rev().collect();
       let mut matched = Vec::new();
       while !to_match.is_empty() {
         match self.read_token(state) {
           None => break,
           Some(token) => {
-            let is_to_match: bool = Some(&token) == to_match.last();
             let cc = token.get_catcode();
-            matched.push(token);
-            if is_to_match {
+            if Some(&&token) == to_match.last() {
+              matched.push(token);
               to_match.pop();
             } else {
+              matched.push(token);
               break;
             }
 

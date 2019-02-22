@@ -192,7 +192,7 @@ LoadDefinitions!(state, {
     } else {
       T_OTHER!("")
     }).collect();
-    gullet.read_until(until, state)
+    gullet.read_until(vec![Tokens::new(until)], state)
   },
   reversion => reversion!(gullet, arg, until, state, {
     let mut rev = Vec::new();
@@ -382,8 +382,8 @@ LoadDefinitions!(state, {
         false
       }
     ).map(Into::into).collect();
-    match gullet.read_match(&extra_tokens, state)? {
-      Some(t) => Ok(Tokens!(t)),
+    match gullet.read_match(&[Tokens::new(extra_tokens)], state)? {
+      Some(t) => Ok(t),
       None => Ok(Tokens!())
     }
   });
@@ -454,7 +454,7 @@ LoadDefinitions!(state, {
   // Be careful here: if % appears before the initial {, it's still a comment!
   // Also, note that non-typewriter fonts will mess up some chars on digestion!
   DefParameterType!("Verbatim", sub[gullet, inner, _extra, state] {
-      gullet.read_until(vec![T_BEGIN!()], state)?;
+      gullet.read_until(vec![Tokens!(T_BEGIN!())], state)?;
       state.begin_semiverbatim(Some(vec!['%', '\\']));
       let arg = gullet.read_balanced(state)?;
       state.end_semiverbatim()?;
