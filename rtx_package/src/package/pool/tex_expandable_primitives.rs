@@ -310,13 +310,19 @@ fn escapechar(state: &State) -> String {
 fn compare(u: Token, rel: Token, v: Token) -> Result<bool> {
   let u = u.to_number().value_of();
   let v = v.to_number().value_of();
-  match rel {
-    T_OTHER!("<") | T_CS!("\\@@<") => Ok(u < v),
-    T_OTHER!("=") => Ok(u as i64 == v as i64),
-    T_OTHER!(">") | T_CS!("\\@@>") => Ok(u > v),
-    _ => {
-      error!(target:"expected:<relationaltoken>", "Expected a relational token for comparision. Got {:?}", rel);
-      Ok(false)
-    },
+  // NOTE: One would expect this to be best written as an advanced match statement
+  // however, due to the shallow comparison of Cow<str> the Cow::Borrowed("<") and
+  // Cow::Owned("<") variants will NOT be equal via a destructuring match.
+  // However, since we've defined our own PartialEq trait over Token, an equality comparison
+  // will produce the right behavior
+  if rel == T_OTHER!("<") || rel == T_CS!("\\@@<") {
+    Ok(u < v)
+  } else if rel == T_OTHER!("=") {
+    Ok(u as i64 == v as i64)
+  } else if rel == T_OTHER!(">") || rel == T_CS!("\\@@>") {
+    Ok(u > v)
+  } else {
+    error!(target:"expected:<relationaltoken>", "Expected a relational token for comparision. Got {:?} (cc {:?})", rel, rel.get_catcode());
+    Ok(false)
   }
 }
