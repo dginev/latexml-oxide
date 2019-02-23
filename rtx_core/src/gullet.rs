@@ -267,11 +267,9 @@ impl Gullet {
                       defn_next = Some(defn);
                       expand_next = true;
                     } else {
-                      // info!(target:"read_x_token", "returning x {:?}", token);
                       return Ok(Some(token));
                     }
                   } else {
-                    // info!(target:"read_x_token", "returning non-def {:?}", token);
                     return Ok(Some(token));
                   }
                 },
@@ -281,13 +279,10 @@ impl Gullet {
         },
       };
       if needs_close {
-        // info!(target:"read_x_token", "needs_close");
         self.close_mouth(false, state); // Next input stream.
       } else if return_next {
-        // info!(target:"read_x_token", "return_next");
         return Ok(self.read_token(state)); // Just return the next token.
       } else if expand_next {
-        // info!(target:"read_x_token", "expand_next");
         // Do the check here, to be more forgiving and more informative
         let expansion = match defn_next {
           Some(defn) => defn.invoke(self, state)?,
@@ -433,14 +428,12 @@ impl Gullet {
   /// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
   /// In list context, also returns the found delimiter.
   pub fn read_until(&mut self, delims: Vec<Tokens>, state: &mut State) -> Result<Tokens> {
-    // warn!("read_until delims: {:?}", delims);
     let mut n = 0;
     let mut found;
     let mut tokens: Vec<Token> = Vec::new();
     loop {
       found = self.read_match(&delims, state)?;
       if found.is_some() {
-        // warn!("found read_match: {:?}", found);
         break;
       } else {
         match self.read_token(state) {
@@ -491,7 +484,6 @@ impl Gullet {
     Ok(Tokens::new(tokens))
   }
 
-  /// Skipping over conditional branches is used heavily when processing raw TeX (eg. tikz).
   pub fn read_next_conditional(&mut self, state: &mut State) -> Option<(Token, ConditionalType)> {
     while let Some(token) = self.read_token(state) {
       if let Some(cond_type) = state.lookup_conditional(&token) {
@@ -1048,7 +1040,7 @@ impl Gullet {
   fn read_digits(&mut self, range_regex: &Regex, skip: bool, state: &mut State) -> Result<String> {
     let mut result = String::new();
     while let Some(token) = self.read_x_token(false, false, state)? {
-      let digit = token.get_string().to_string();
+      let digit = token.get_string();
       if digit.len() == 1 && range_regex.is_match(&digit) {
         result.push_str(&digit);
       } else {

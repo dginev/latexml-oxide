@@ -210,11 +210,11 @@ impl Catcode {
 }
 
 /// The core immutable syntactic primitive resulting from TeX's read-in and expansion process
-/// We allow the fields to be public, so that we can use destructuring patterns over token builder macros
-/// such as
+/// We allow the fields to be public, so that we can use builder macros such as
 /// ```
-///   match token {
-///     T_SPACE!() | T_COMMENT!() => {...}
+/// macro_rules! T_SPACE(() => {
+///     Token { text: Cow::Borrowed(" "),code: Catcode::SPACE}
+///   });
 /// ```
 #[derive(Clone)]
 pub struct Token {
