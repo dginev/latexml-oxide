@@ -86,7 +86,9 @@ impl PartialEq for Conditional {
   fn eq(&self, other: &Conditional) -> bool { self.cs == other.cs }
 }
 
-impl Object for Conditional {}
+impl Object for Conditional {
+  fn is_expandable(&self) -> bool { true }
+}
 impl Definition for Conditional {
   // sub new {
   //   my ($class, $cs, $parameters, $test, %traits) = @_;

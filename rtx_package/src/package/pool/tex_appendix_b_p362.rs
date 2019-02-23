@@ -13,7 +13,7 @@ LoadDefinitions!(state, {
   DefMacroI!(T_CS!("\\lx@text@hash"), None, T_OTHER!("#"),  alias => "\\#");
   DefMacroI!(T_CS!("\\lx@text@amp"), None, T_OTHER!("&"),  alias => "\\&");
   DefMacroI!(T_CS!("\\lx@text@percent"), None, T_OTHER!("%"),  alias => "\\%");
-  DefMacroI!(T_CS!("\\lx@text@dollar"), None,  T_OTHER!("\\$"), alias => "\\$");
+  DefMacroI!(T_CS!("\\lx@text@dollar"), None,  T_OTHER!("$"), alias => "\\$");
   DefMacroI!(T_CS!("\\lx@text@underscore"), None, T_OTHER!("_"),  alias => "\\_");
 
   DefMathI!("\\lx@math@hash",  None, "#", alias => "\\#");
