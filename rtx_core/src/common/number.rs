@@ -1,4 +1,4 @@
-use crate::definition::register::NumericOps;
+use crate::definition::register::{NumericOps, RegisterType};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Number(pub f32);
@@ -10,6 +10,7 @@ impl Default for Number {
 impl NumericOps for Number {
   fn new<T: Into<f32>>(number: T) -> Self { Number(number.into()) }
   fn value_of(self) -> f32 { self.0 }
+  fn register_type(&self) -> RegisterType { RegisterType::Number }
 }
 
 #[macro_export]

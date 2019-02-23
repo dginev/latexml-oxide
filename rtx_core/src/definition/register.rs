@@ -144,6 +144,12 @@ pub trait NumericOps {
   where Self: Sized {
     T_OTHER!(self.value_of().to_string())
   }
+  // dancing around meta-programming in the Glue case... is there a better way?
+  fn to_glue_type(self) -> Glue
+  where Self: Sized {
+    unimplemented!()
+  }
+  fn register_type(&self) -> RegisterType;
 }
 
 impl NumericOps for RegisterValue {
@@ -185,6 +191,25 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.negate()),
       RegisterValue::Token(v) => unimplemented!(),
       RegisterValue::Tokens(v) => unimplemented!(),
+    }
+  }
+  fn register_type(&self) -> RegisterType {
+    match self {
+      RegisterValue::Number(v) => RegisterType::Number,
+      RegisterValue::Dimension(v) => RegisterType::Dimension,
+      RegisterValue::MuDimension(v) => RegisterType::MuDimension,
+      RegisterValue::Glue(v) => RegisterType::Glue,
+      RegisterValue::MuGlue(v) => RegisterType::MuGlue,
+      RegisterValue::Token(v) => RegisterType::Token,
+      RegisterValue::Tokens(v) => RegisterType::Tokens,
+    }
+  }
+  /// For now only meant as a type cast, unimplemented in other cases
+  /// DO NOT use this method to cast into a Glue object, define a `.to_glue()` instead
+  fn to_glue_type(self) -> Glue {
+    match self {
+      RegisterValue::Glue(v) => v,
+      _ => unimplemented!(),
     }
   }
 }
@@ -266,6 +291,7 @@ impl RegisterValue {
   pub fn to_string(&self) -> String {
     match self {
       RegisterValue::Dimension(d) => d.to_string(),
+      RegisterValue::Glue(g) => g.to_string(),
       other => self.clone().value_of().to_string(),
     }
   }
