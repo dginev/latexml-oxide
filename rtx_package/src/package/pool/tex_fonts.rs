@@ -489,7 +489,7 @@ LoadDefinitions!(state, {
       Some(_) => Some(T_CS!(&s!("\\@mathchardef@{}", csname))),
       None => None
     };
-    if let Some(internalcs) = internalcs {
+    if let Some(ref internalcs) = internalcs {
       let mut glyph_props: HashMap<String, Stored> = HashMap::new();
       glyph_props.insert(s!("role"), role.unwrap_or_default().into());
       let glyph_str = match glyph {
@@ -499,15 +499,16 @@ LoadDefinitions!(state, {
       glyph_props.insert(s!("glyph"), glyph_str.into());
       // TODO:
       // glyph_props.insert(s!("font"), |state| state.lookup_font().unwrap().specialize(glyph));
-      DefConstructor!(&internalcs.get_cs_name(), "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
+      DefConstructor!(internalcs.get_cs_name(), "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
         // TODO
         // sizer => "#1",
         properties => properties!(glyph_props)
         // reversion => (ord($glyph) < 128 ? $glyph : '\mathchar' . $value.valueOf . '\relax'),
       );
-      state.install_definition(Register::new_chardef(newcs,Some(value.into()),Some(internalcs)), None);
-      AfterAssignment!();
     }
+    state.install_definition(Register::new_chardef(newcs,Some(value.into()), internalcs), None);
+    AfterAssignment!();
+
     Ok(vec![])
   });
 

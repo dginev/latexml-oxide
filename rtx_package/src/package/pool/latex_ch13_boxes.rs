@@ -25,16 +25,18 @@ LoadDefinitions!(state, {
   // \fill
   DefMacro!("\\stretch{}", "0pt plus #1fill\\relax");
 
-  // DefPrimitive!("\\@check@length DefToken", sub {
-  //     my ($stomach, $cs) = @_;
-  //     my $defn = LookupDefinition($cs);
-  //     if (!$defn) {
-  //       Warn('undefined', $cs, $stomach, "'" . ToString($cs) . "' is not a length; defining it now");
-  //       DefRegisterI($cs, undef, Dimension(0)); }
-  //     elsif (!$defn->isRegister) {
-  //       Error('misdefined', $cs, $stomach, "'" . ToString($cs) . "' length was expected, got " . ref($defn) . " instead of register.");
-  //     }
-  //     return; });
+  DefPrimitive!("\\@check@length DefToken", sub[stomach, args, state] {
+    unpack_to_token!(args => cs);
+    match state.lookup_definition(&cs) {
+      None => {
+        warn!(target: &s!("undefined:{:?}", cs), "'{}' is not a length; defining it now", cs.to_string());
+        DefRegisterI!(cs, None, Dimension::new(0.0));
+      },
+      Some(defn) => if !defn.is_register() {
+        error!(target: &s!("misdefined:{:?}", cs),"'{}' length was expected, got {:?} instead of register.", cs.to_string(), defn.register_type());
+      }
+    };
+  });
 
   DefPrimitive!("\\newlength DefToken", sub[stomach, args, inner_state] {
     unpack_to_token!(args => cs);
