@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
-use crate::common::glue::Glue;
+use crate::common::glue::{FillCode, Glue};
 use crate::common::locator::Locator;
 use crate::common::number::Number;
 
@@ -857,18 +857,18 @@ impl Gullet {
       }
       let (r1, f1) = match self.read_keyword(&["plus"], state)? {
         Some(v) => self.read_rubber(false, state)?,
-        None => (0.0, 0.0),
+        None => (0.0, None),
       };
       let (r2, f2) = match self.read_keyword(&["minus"], state)? {
         Some(v) => self.read_rubber(false, state)?,
-        None => (0.0, 0.0),
+        None => (0.0, None),
       };
 
-      Ok(Glue::spec_new(d.value_of(), Some(r1), Some(f1), Some(r2), Some(f2)))
+      Ok(Glue::spec_new(&d.value_of().to_string(), Some(r1), f1, Some(r2), f2, state))
     }
   }
 
-  pub fn read_rubber(&mut self, mu: bool, state: &mut State) -> Result<(f32, f32)> {
+  pub fn read_rubber(&mut self, mu: bool, state: &mut State) -> Result<(f32, Option<FillCode>)> {
     let is_negative = self.read_optional_signs(state)?;
     let s = if is_negative { -1.0 } else { 1.0 };
     match self.read_factor(state)? {
@@ -878,32 +878,30 @@ impl Gullet {
         } else {
           self.read_dimension(state)?
         };
-        Ok((f.value_of() * s, 0.0))
+        Ok((f.value_of() * s, None))
       },
-      Some(f) => {
-        match self.read_keyword(&["filll", "fill", "fil"], state)? {
-          Some(fil) => Ok((s * f, 0.0)), // TODO: $FILLS{$fil}),
-          None => {
-            let u = if mu {
-              match self.read_mu_unit(state)? {
-                None => {
-                  warn!(target:"expected<unit>", "Illegal unit of measure (mu inserted).");
-                  state.convert_unit("mu")
-                },
-                Some(v) => v,
-              }
-            } else {
-              match self.read_unit(state)? {
-                None => {
-                  warn!(target:"expected<unit>", "Illegal unit of measure (pt inserted).");
-                  65536.0
-                },
-                Some(v) => v,
-              }
-            };
-            Ok((s * f * u, 0.0))
-          },
-        }
+      Some(f) => match self.read_keyword(&["filll", "fill", "fil"], state)? {
+        Some(fil) => Ok((s * f, FillCode::from(&fil.to_string()))),
+        None => {
+          let u = if mu {
+            match self.read_mu_unit(state)? {
+              None => {
+                warn!(target:"expected<unit>", "Illegal unit of measure (mu inserted).");
+                state.convert_unit("mu")
+              },
+              Some(v) => v,
+            }
+          } else {
+            match self.read_unit(state)? {
+              None => {
+                warn!(target:"expected<unit>", "Illegal unit of measure (pt inserted).");
+                65536.0
+              },
+              Some(v) => v,
+            }
+          };
+          Ok((s * f * u, None))
+        },
       },
     }
   }

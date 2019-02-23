@@ -1,35 +1,110 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::definition::register::NumericOps;
+use crate::common::dimension::Dimension;
+use crate::definition::register::{NumericOps, RegisterType};
+use crate::state::State;
 
-fn fillcode(ftype: &str) -> u8 {
-  match ftype {
-    "fil" => 1,
-    "fill" => 2,
-    "filll" => 3,
-    _ => 0,
+/// Positively silly enum, but it solves all kinds of issues with the Glue struct
+/// most importantly allows us to keep deriving the Copy trait, and avoids storing
+/// strings in Glue objects
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
+pub enum FillCode {
+  Fil,
+  Fill,
+  Filll,
+}
+
+impl ToString for FillCode {
+  fn to_string(&self) -> String {
+    match self {
+      FillCode::Fil => "fil",
+      FillCode::Fill => "fill",
+      FillCode::Filll => "filll",
+    }
+    .to_string()
   }
 }
 
-static FILL: &[&str] = &["", "fil", "fill", "filll"];
+impl FillCode {
+  pub fn new(index: usize) -> Option<FillCode> {
+    match index {
+      1 => Some(FillCode::Fil),
+      2 => Some(FillCode::Fill),
+      3 => Some(FillCode::Filll),
+      _ => None,
+    }
+  }
+  pub fn from(ftype: &str) -> Option<FillCode> {
+    match ftype {
+      "fil" => Some(FillCode::Fil),
+      "fill" => Some(FillCode::Fill),
+      "filll" => Some(FillCode::Filll),
+      _ => None,
+    }
+  }
+}
+
+// Note: Regexes are not first-level objects in Rust, and neither are Strings
+//       yet we would like to have some efficient
+macro_rules! num_re_str {
+  () => {
+    r"\d*\.?\d*"
+  };
+}
+macro_rules! unit_re_str {
+  () => {
+    r"[a-zA-Z][a-zA-Z]"
+  };
+}
+macro_rules! fill_re_str {
+  () => {
+    r"fil|fill|filll|[a-zA-Z][a-zA-Z]"
+  };
+}
+
+static NUM_EXACT_STR: &str = concat!(r"^", num_re_str!(), r"$");
+
+macro_rules! plus_re_str {
+  () => {
+    concat!(r"\s+plus\s*($1)(", fill_re_str!(), r")")
+  };
+}
+macro_rules! minus_re_str {
+  () => {
+    concat!(r"\s+minus\s*(", num_re_str!(), r")(", fill_re_str!(), r")")
+  };
+}
+
+static GLUE_RE_STR: &str = concat!(
+  r"^(\+?\-?",
+  num_re_str!(),
+  r")(",
+  unit_re_str!(),
+  r")(",
+  plus_re_str!(),
+  r")?(",
+  minus_re_str!(),
+  r")?$"
+);
 
 lazy_static! {
-  static ref NUM_RE: Regex = Regex::new(r"\d*\.?\d*").unwrap();
-  static ref UNIT_RE: Regex = Regex::new(r"[a-zA-Z][a-zA-Z]").unwrap();
-  static ref FILL_RE: Regex = Regex::new(r"fil|fill|filll|[a-zA-Z][a-zA-Z]").unwrap();
-  static ref PLUS_RE: Regex = Regex::new(r"\s+plus\s*($1)($fill_re)").unwrap();
-  static ref MINUS_RE: Regex = Regex::new(r"\s+minus\s*($num_re)($fill_re)").unwrap();
-  static ref GLUE_RE: Regex = Regex::new(r"(\+?\-?$num_re)($unit_re)($plus_re)?($minus_re)?").unwrap();
+  static ref NUM_RE: Regex = Regex::new(num_re_str!()).unwrap();
+  static ref NUM_EXACT_RE: Regex = Regex::new(NUM_EXACT_STR).unwrap();
+  static ref UNIT_RE: Regex = Regex::new(unit_re_str!()).unwrap();
+  static ref FILL_RE: Regex = Regex::new(fill_re_str!()).unwrap();
+  static ref PLUS_RE: Regex = Regex::new(plus_re_str!()).unwrap();
+  static ref MINUS_RE: Regex = Regex::new(minus_re_str!()).unwrap();
+  static ref GLUE_RE: Regex = Regex::new(GLUE_RE_STR).unwrap();
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Glue {
   skip: f32,
   plus: Option<f32>,
-  pfill: Option<f32>,
+  pfill: Option<FillCode>,
   minus: Option<f32>,
-  mfill: Option<f32>,
+  mfill: Option<FillCode>,
 }
 
 impl Default for Glue {
@@ -59,15 +134,148 @@ impl NumericOps for Glue {
       ..Glue::default()
     }
   }
+  fn register_type(&self) -> RegisterType { RegisterType::Glue }
+  fn add<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    if other.register_type() != RegisterType::Glue {
+      Glue {
+        skip: self.skip + other.value_of(),
+        plus: self.plus,
+        pfill: self.pfill,
+        minus: self.minus,
+        mfill: self.mfill,
+      }
+    } else {
+      // Both glues, add
+      self.add_glue(other.to_glue_type())
+    }
+  }
+  // identity, used to type cast in runtime
+  fn to_glue_type(self) -> Glue { self }
 }
 
 impl NumericOps for MuGlue {
   fn new<T: Into<f32>>(number: T) -> Self { MuGlue(number.into()) }
   fn value_of(self) -> f32 { self.0 }
+  fn register_type(&self) -> RegisterType { RegisterType::MuGlue }
+}
+
+impl ToString for Glue {
+  fn to_string(&self) -> String {
+    // my ($sp, $plus, $pfill, $minus, $mfill) = @$self;
+    let mut formatted = Dimension::point_format(self.skip);
+    if let Some(plus) = self.plus {
+      if plus != 0.0 {
+        formatted += " plus ";
+        formatted += &(if let Some(pfill) = self.pfill {
+          plus.to_string() + &pfill.to_string()
+        } else {
+          Dimension::point_format(plus)
+        });
+      }
+    }
+    if let Some(minus) = self.minus {
+      if minus != 0.0 {
+        formatted += " minus ";
+        formatted += &(if let Some(mfill) = self.mfill {
+          minus.to_string() + &mfill.to_string()
+        } else {
+          Dimension::point_format(minus)
+        })
+      }
+    }
+
+    formatted
+  }
 }
 
 impl Glue {
-  pub fn spec_new(skip: f32, plus: Option<f32>, pfill: Option<f32>, minus: Option<f32>, mfill: Option<f32>) -> Self {
+  pub fn add_glue(self, other: Glue) -> Glue {
+    // (pts, p, pf, m, mf) = @$self;
+    // if (ref $other eq 'LaTeXML::Common::Glue') {
+    // my ($pts2, $p2, $pf2, $m2, $mf2) = @$other;
+    let mut skip = self.skip + other.skip;
+    let mut plus = self.plus;
+    let mut minus = self.minus;
+    let mut pfill = self.pfill;
+    let mut mfill = self.mfill;
+
+    if self.pfill == other.pfill {
+      if let Some(oplus) = other.plus {
+        plus = match plus {
+          Some(splus) => Some(splus + oplus),
+          None => Some(oplus),
+        };
+      }
+    } else if self.pfill < other.pfill {
+      plus = other.plus;
+      pfill = other.pfill;
+    }
+    if self.mfill == other.mfill {
+      if let Some(ominus) = other.minus {
+        minus = match minus {
+          Some(sminus) => Some(sminus + ominus),
+          None => Some(ominus),
+        };
+      }
+    } else if self.mfill < other.mfill {
+      minus = other.minus;
+      mfill = other.mfill;
+    }
+
+    Glue {
+      skip,
+      plus,
+      pfill,
+      minus,
+      mfill,
+    }
+    // else {
+    // return (ref $self)->new($pts + $other->valueOf, $p, $pf, $m, $mf); }
+  }
+
+  pub fn spec_new(
+    mut spec: &str,
+    mut plus: Option<f32>,
+    mut pfill: Option<FillCode>,
+    mut minus: Option<f32>,
+    mut mfill: Option<FillCode>,
+    state: &State,
+  ) -> Self
+  {
+    let mut skip: f32 = spec.parse::<f32>().unwrap_or_default();
+    if plus.is_none() && pfill.is_none() && minus.is_none() && mfill.is_none() {
+      if NUM_EXACT_RE.is_match(spec) {
+        // nothing to do in the simple numeric case
+      } else if let Some(cs) = GLUE_RE.captures(spec) {
+        let (f, u, p, pu, m, mu) = (
+          cs.get(1).unwrap().as_str().parse::<f32>().unwrap_or_default(),
+          cs.get(2).unwrap().as_str(),
+          cs.get(4).unwrap().as_str().parse::<f32>().unwrap_or_default(),
+          cs.get(5).unwrap().as_str(),
+          cs.get(7).unwrap().as_str().parse::<f32>().unwrap_or_default(),
+          cs.get(8).unwrap().as_str(),
+        );
+        skip = f * state.convert_unit(u);
+        if pu.is_empty() {
+        } else if let Some(pfcode) = FillCode::from(pu) {
+          plus = Some(p);
+          pfill = Some(pfcode);
+        } else {
+          plus = Some(p * state.convert_unit(pu));
+          pfill = None;
+        }
+        if mu.is_empty() {
+        } else if let Some(mfcode) = FillCode::from(mu) {
+          minus = Some(m);
+          mfill = Some(mfcode);
+        } else {
+          minus = Some(m * state.convert_unit(mu));
+          mfill = None;
+        }
+      }
+    }
+
     Glue {
       skip,
       plus,
