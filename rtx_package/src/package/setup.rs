@@ -359,7 +359,7 @@ macro_rules! DefConditionalI(
 /// Primitives are executed in the Stomach.
 /// The $replacement should be a sub which returns nothing, or a list of `Box`'s or `Whatsit`'s.
 /// The options are:
-///    isPrefix  : 1 for things like \global, \long, etc.
+///    is_prefix  : 1 for things like \global, \long, etc.
 ///    registerType : for parameters (but needs to be worked into `DefParameter`, below).
 
 #[macro_export]

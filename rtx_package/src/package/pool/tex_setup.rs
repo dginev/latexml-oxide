@@ -391,15 +391,15 @@ LoadDefinitions!(state, {
   // Read a keyword; eg. Keyword:to
   // (like Match, but ignores catcodes)
   DefParameterType!("Keyword", sub[gullet, _inner, extra, state] {
-    let extra_tokens : Vec<Token> = extra.into_iter().filter(|e|
+    let extra_string : String = extra.into_iter().map(|e|
     if let ParameterExtra::Token(t) = e {
-        true
+        t.get_string().to_string()
       } else {
-        false
+        String::new()
       }
-    ).map(Into::into).collect();
-    let extra_strings: Vec<&str> = extra_tokens.iter().map(Token::get_string).collect();
-    match gullet.read_keyword(extra_strings.as_slice(), state)? {
+    ).collect::<Vec<String>>().join("");
+
+    match gullet.read_keyword(&[&extra_string], state)? {
       Some(t) => Ok(t),
       None => Ok(Tokens!())
     }

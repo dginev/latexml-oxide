@@ -60,6 +60,7 @@ pub struct Primitive {
   pub after_digest: Vec<DigestionClosure>,
   pub alias: Option<String>,
   pub nargs: Option<usize>,
+  pub is_prefix: bool,
 }
 impl Default for Primitive {
   fn default() -> Self {
@@ -71,6 +72,7 @@ impl Default for Primitive {
       before_digest: Vec::new(),
       after_digest: Vec::new(),
       nargs: None,
+      is_prefix: false
     }
   }
 }
@@ -82,6 +84,7 @@ impl Object for Primitive {}
 impl Definition for Primitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
+  fn is_prefix(&self) -> bool { self.is_prefix }
 
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {

@@ -67,10 +67,9 @@ LoadDefinitions!(outer_state, {
   //// shouldn't be a box; See the isRelax code in handleScripts, below
 
   DefMacro!("\\number Number", sub[gullet, args, state] {
-    unpack!(args=>vals);
-    let mut args = vals.unlist();
-    let num = args.remove(0);
-    Ok(Explode!(num.value_of(args, state).unwrap_or_default().to_string()).into())
+    unpack_to_token!(args=>num);
+    let num_str = num.to_number().value_of();
+    Explode!(num_str)
   });
 
   // define it here (only approxmiately), since it's already useful.
