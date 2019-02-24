@@ -144,15 +144,25 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[stomach, args, state] {
     unpack!(args => var, scale);
-    // return () unless $var;
-    // let (defn, @args) = @$var;
-    // my $denom = $scale->valueOf;
-    // if ($denom == 0) {
-    //   Error('misdefined', $scale, $stomach, "Illegal \\divide by 0; assuming 1");
-    //   $denom = 1; }
-    // $defn->setValue($defn->valueOf(@args)->divide($denom), @args); });
-    unimplemented!();
-    ()
+    if !var.is_empty() {
+      let mut args = var.unlist();
+      let varname = args.remove(0);
+      // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
+      let defn_args : Vec<Tokens> = args.iter().map(|a| Tokens!(a.clone())).collect();
+      if let Some(defn) = state.lookup_register_definition(&varname) {
+        let defn_value = defn.value_of(args, state).unwrap_or_default();
+        let mut denominator = scale.to_number().value_of();
+        if denominator == 0.0 {
+          error!(target: &s!("misdefined:{:?}", scale), "Illegal \\divide by 0; assuming 1");
+          denominator = 1.0;
+        }
+        defn.borrow_mut().set_value(defn_value.divide(denominator), defn_args, state);
+      } else {
+        error!(target: "expected:definition", "\\divide expected a defined variable for {:?}, found no definition", varname);
+      }
+    } else {
+      error!(target: "expected:variable", "\\divide expected a Variable argument, but got nothing.");
+    }
   });
 
   // <let assignment> = \futurelet <control sequence><token><token>
@@ -222,13 +232,11 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\toksdef Token SkipMatch:= Number", sub[stomach,args,state] {
     unpack_to_token!(args=> cs, num);
-    // my $toks = '\toks' . $num->valueOf;
-    // DefRegisterI($cs, undef, Tokens(),
-    //   getter => sub { LookupValue($toks) || Tokens(); },
-    //   setter => sub { AssignValue($toks => $_[0]); });
-    AfterAssignment!();
-    unimplemented!();
-    ()
+    let toks = s!("\\toks{}", num.to_number().value_of() as usize);
+    let toks_setter = toks.clone();
+    DefRegisterI!(cs, None, Tokens!(),
+      getter => getter!(args, state, { state.lookup_tokens(&toks).unwrap_or_default() }),
+      setter => setter!(value, args, state, { state.assign_value(&toks_setter, value, None); }));
   });
 
   // NOTE: Get all these handled as registers

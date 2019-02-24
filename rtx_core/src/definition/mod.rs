@@ -65,6 +65,10 @@ impl From<Tokens> for Option<ExpansionBody> {
   fn from(t: Tokens) -> Option<ExpansionBody> { Some(t.into()) }
 }
 
+impl From<&str> for ExpansionBody {
+  fn from(s: &str) -> ExpansionBody { mouth::tokenize_internal(s, None).into() }
+}
+
 pub trait Definition: Object {
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens>;
   fn invoke_primitive(&self, gullet: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>>;

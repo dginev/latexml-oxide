@@ -170,6 +170,9 @@ impl IntoRegisterValueOption<Option<RegisterValue>> for Glue {
 impl IntoRegisterValueOption<Option<RegisterValue>> for MuGlue {
   fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::MuGlue(self)) }
 }
+impl IntoRegisterValueOption<Option<RegisterValue>> for Tokens {
+  fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Tokens(self)) }
+}
 
 impl IntoRegisterValueOption<Option<RegisterValue>> for Option<Number> {
   fn into_register_value_option(self) -> Option<RegisterValue> {
@@ -1070,6 +1073,7 @@ pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacem
       after_digest: after_digest_env,
       alias: options.alias,
       nargs: options.nargs,
+      is_prefix: options.is_prefix,
     },
     scope,
   );

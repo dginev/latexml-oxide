@@ -126,6 +126,11 @@ pub trait NumericOps {
     let other: f32 = other.into();
     Self::new((self.value_of() * other).floor())
   }
+  fn divide<T: Into<f32>>(self, other: T) -> Self
+  where Self: Sized {
+    let other: f32 = other.into();
+    Self::new((self.value_of() / other).floor())
+  }
 
   fn spec_to_f32(spec: &str, state: &State) -> Result<f32> {
     if spec.is_empty() {

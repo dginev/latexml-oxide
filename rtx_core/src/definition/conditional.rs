@@ -1,4 +1,4 @@
-use log::error;
+use log::*;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -162,16 +162,19 @@ impl Conditional {
     let args = self.read_arguments(gullet, state)?;
 
     if_frame.borrow_mut().parsing = false;
-    //   my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
+    let tracing = state.lookup_bool("TRACINGCOMMANDS");
     //   print STDERR '{' . $self->tracingCSName . "} [#$ifid]\n" if $tracing;
     //   print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
     if let Some(ref test) = self.test {
       if (test)(gullet, args, state)? {
-
-        // print STDERR "{true}\n" if $tracing;
+        if tracing {
+          debug!("{{true}}\n");
+        }
       } else {
-        let _to = self.skip_conditional_body(-1.0, gullet, state);
-        // print STDERR "{false} [skipped to " . ToString($to) . "]\n" if $tracing;
+        let to = self.skip_conditional_body(-1.0, gullet, state);
+        if tracing { 
+          debug!("{{false}} [skipped to {:?}]\n", to);
+        }
       }
     } else {
       // If there's no test, it must be the Special Case, \ifcase
@@ -323,7 +326,6 @@ impl Conditional {
   }
 
   pub fn invoke_fi(&self, _gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
-    let local_token = state.current_token.as_ref().unwrap();
     let stack_frame_opt: Option<Rc<RefCell<IfFrame>>> = if let Some(Stored::VecDequeStored(ref stack)) = state.lookup_value("if_stack") {
       if let Some(Stored::IfFrame(frame)) = stack.front() {
         Some(Rc::clone(frame))
@@ -333,10 +335,10 @@ impl Conditional {
     } else {
       None
     };
-
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {
         // Defer expanding the \else if we're still parsing the test
+        let local_token = state.current_token.as_ref().unwrap();
         Ok(Tokens!(T_CS!("\\relax"), (**local_token).clone()))
       } else {
         // "expand" by removing the stack entry for this level

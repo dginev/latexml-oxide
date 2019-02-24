@@ -251,23 +251,23 @@ LoadDefinitions!(state, {
     \mathchardef\@Miv=10004
   "###
   );
-  // DefMacroI('\@vpt',    undef, '5');
-  // DefMacroI('\@vipt',   undef, '6');
-  // DefMacroI('\@viipt',  undef, '7');
-  // DefMacroI('\@viiipt', undef, '8');
-  // DefMacroI('\@ixpt',   undef, '9');
-  // DefMacroI('\@xpt',    undef, '10');
-  // DefMacroI('\@xipt',   undef, '10.95');
-  // DefMacroI('\@xiipt',  undef, '12');
-  // DefMacroI('\@xivpt',  undef, '14.4');
-  // DefMacroI('\@xviipt', undef, '17.28');
-  // DefMacroI('\@xxpt',   undef, '20.74');
-  // DefMacroI('\@xxvpt',  undef, '24.88');
 
-  // DefMacroI('\@tempa',  undef, '');
-  // DefMacroI('\@tempb',  undef, '');
-  // DefMacroI('\@tempc',  undef, '');
-  // DefMacroI('\@gtempa', undef, '');
+  DefMacro!("\\@vpt", "5");
+  DefMacro!("\\@vipt", "6");
+  DefMacro!("\\@viipt", "7");
+  DefMacro!("\\@viiipt", "8");
+  DefMacro!("\\@ixpt", "9");
+  DefMacro!("\\@xpt", "10");
+  DefMacro!("\\@xipt", "10.95");
+  DefMacro!("\\@xiipt", "12");
+  DefMacro!("\\@xivpt", "14.4");
+  DefMacro!("\\@xviipt", "17.28");
+  DefMacro!("\\@xxpt", "20.74");
+  DefMacro!("\\@xxvpt", "24.88");
+  DefMacro!("\\@tempa", "");
+  DefMacro!("\\@tempb", "");
+  DefMacro!("\\@tempc", "");
+  DefMacro!("\\@gtempa", "");
 
   RawTeX!(
     r###"

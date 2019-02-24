@@ -69,33 +69,33 @@ LoadDefinitions!(state, {
   "###
   );
 
-  // #======================================================================
-  // # TeX Book, Appendix B, p. 346
-  // RawTeX!(
-  //   r###"
-  // \countdef\count@=255
-  // \toksdef\toks@=0
-  // \skipdef\skip@=0
-  // \dimendef\dimen@=0
-  // \dimendef\dimen@i=1
-  // \dimendef\dimen@ii=2
-  // \count10=22 % allocates \count registers 23, 24, ...
-  // \count11=9 % allocates \dimen registers 10, 11, ...
-  // \count12=9 % allocates \skip registers 10, 11, ...
-  // \count13=9 % allocates \muskip registers 10, 11, ...
-  // \count14=9 % allocates \box registers 10, 11, ...
-  // \count15=9 % allocates \toks registers 10, 11, ...
-  // \count16=-1 % allocates input streams 0, 1, ...
-  // \count17=-1 % allocates output streams 0, 1, ...
-  // \count18=3 % allocates math families 4, 5, ...
-  // \count19=0 % allocates \language codes 1, 2, ...
-  // \count20=255 % allocates insertions 254, 253, ...
-  // \countdef\insc@unt=20
-  // \countdef\allocationnumber=21
-  // \countdef\m@ne=22 \m@ne=-1
-  // "###
-  // );
-  // # Various \count's are set; should we?
+  //======================================================================
+  // TeX Book, Appendix B, p. 346
+  RawTeX!(
+    r###"
+  \countdef\count@=255
+  \toksdef\toks@=0
+  \skipdef\skip@=0
+  \dimendef\dimen@=0
+  \dimendef\dimen@i=1
+  \dimendef\dimen@ii=2
+  \count10=22 % allocates \count registers 23, 24, ...
+  \count11=9 % allocates \dimen registers 10, 11, ...
+  \count12=9 % allocates \skip registers 10, 11, ...
+  \count13=9 % allocates \muskip registers 10, 11, ...
+  \count14=9 % allocates \box registers 10, 11, ...
+  \count15=9 % allocates \toks registers 10, 11, ...
+  \count16=-1 % allocates input streams 0, 1, ...
+  \count17=-1 % allocates output streams 0, 1, ...
+  \count18=3 % allocates math families 4, 5, ...
+  \count19=0 % allocates \language codes 1, 2, ...
+  \count20=255 % allocates insertions 254, 253, ...
+  \countdef\insc@unt=20
+  \countdef\allocationnumber=21
+  \countdef\m@ne=22 \m@ne=-1
+  "###
+  );
+  // Various \count's are set; should we?
 
   // #======================================================================
   // # TeX Book, Appendix B, p. 347
@@ -313,11 +313,13 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\@break", "<ltx:break/>");
 
-  // RawTeX(<<'EoTeX');
-  // \def\loop#1\repeat{\def\body{#1}\iterate}
-  // \def\iterate{\body \let\next=\iterate \else\let\next=\relax\fi \next}
-  // \let\repeat=\fi
-  // EoTeX
+  RawTeX!(
+    r###"
+  \def\loop#1\repeat{\def\body{#1}\iterate}
+  \def\iterate{\body \let\next=\iterate \else\let\next=\relax\fi \next}
+  \let\repeat=\fi
+  "###
+  );
 
   DefMacro!("\\enskip", "\\ifmmode\\@math@enskip\\else\\@text@enskip\\fi");
   // DefConstructorI('\@math@enskip', undef,
