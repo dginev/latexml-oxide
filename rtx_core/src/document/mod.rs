@@ -243,13 +243,12 @@ impl Document {
   /// font, mode, etc, are in %props.
   pub fn absorb(&mut self, object: Digested, state: &mut State) -> Result<()> {
     // let mut results = Vec::new();
-    let mut boxes = VecDeque::new();
-    boxes.push_front(object);
-    while let Some(front_box) = boxes.pop_front() {
+    let mut boxes = vec![object];
+    while let Some(front_box) = boxes.pop() {
       if let Digested::List(ref list) = front_box {
         // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
         for tbox in list.unlist().into_iter().rev() {
-          boxes.push_front(tbox);
+          boxes.push(tbox);
         }
       } else {
         // info!(target: "document:absorb", "front box: {:?}", front_box);
