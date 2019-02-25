@@ -25,6 +25,9 @@ lazy_static! {
   pub static ref MOCK_TOKEN: Token = Token::default();
 }
 
+static CONTROLNAME : &[&str] = &["NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL", "BS", "HT", "LF", "VT", "FF", "CR", "SO", "SI", "DLE", "DC1", "DC2", "DC3", "DC4", "NAK", "SYN", "ETB", "CAN", "EM", "SUB", "ESC", "FS", "GS", "RS", "US"];
+
+
 #[derive(PartialEq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
   ESCAPE,
@@ -154,6 +157,31 @@ impl Catcode {
       COMMENT => "comment character",
       INVALID => "invalid character",
       _ => "",
+    }
+  }
+
+  pub fn short_name(&self) -> &'static str {
+    use crate::token::Catcode::*;
+    match self {
+      ESCAPE => "T_ESCAPE",
+      BEGIN => "T_BEGIN",
+      END => "T_END",
+      MATH => "T_MATH",
+      ALIGN => "T_ALIGN",
+      EOL => "T_EOL",
+      PARAM => "T_PARAM",
+      SUPER => "T_SUPER",
+      SUB => "T_SUB",
+      IGNORE => "T_IGNORE",
+      SPACE => "T_SPACE",
+      LETTER => "T_LETTER",
+      OTHER => "T_OTHER",
+      ACTIVE => "T_ACTIVE",
+      COMMENT => "T_COMMENT",
+      INVALID => "T_INVALID",
+      CS => "T_CS",
+      NOTEXPANDED => "T_NOTEXPANDED",
+      MARKER => "T_MARKER"
     }
   }
 
@@ -612,6 +640,19 @@ impl<'a> Token {
   pub fn revert(&self) -> Token { self.clone() }
 
   pub fn as_str(&self) -> &str { &self.text }
+
+  pub fn stringify(&self) -> String {
+    let mut string = self.text.to_string();
+    // Make the token's char content more printable, since this is for error messages.
+    if string.len() == 1 {
+      let c = string.chars().next().unwrap() as u16;
+      if c < 0x020 {
+        // TODO: sprintf("%04x", c)
+        string = s!("U+{}/{}",c, CONTROLNAME[c as usize]); 
+      }
+    }
+    s!("{}[{}]", self.code.short_name(), string)
+  }
 
   pub fn to_register(&self, state: &State) -> Option<Rc<RefCell<Register>>> { state.lookup_register_definition(self) }
 
