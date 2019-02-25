@@ -135,7 +135,7 @@ impl Definition for Conditional {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfFrame {
-  pub token: Token,
+  pub token: Rc<Token>,
   pub start: Locator,
   pub parsing: bool,
   pub elses: bool,
@@ -150,7 +150,7 @@ impl Conditional {
     ifid += 1;
     state.assign_value("if_count", ifid, Some(Scope::Global));
     let if_frame = Rc::new(RefCell::new(IfFrame {
-      token: (**state.current_token.as_ref().unwrap()).clone(),
+      token: Rc::clone(state.current_token.as_ref().unwrap()),
       start: gullet.get_locator(),
       parsing: true,
       elses: false,
