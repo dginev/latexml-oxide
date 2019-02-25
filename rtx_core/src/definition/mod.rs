@@ -141,8 +141,7 @@ pub trait Definition: Object {
     let mut before_digested = Vec::new();
     if let Some(pre_list) = self.before_digest() {
       for pre in pre_list.iter() {
-        let before_digest_result = pre(stomach, state)?;
-        before_digested.extend(before_digest_result);
+        before_digested.extend(pre(stomach, state)?);
       }
     }
     Ok(before_digested)
@@ -152,8 +151,7 @@ pub trait Definition: Object {
     let mut after_digested = Vec::new();
     if let Some(post_list) = self.after_digest() {
       for post in post_list.iter() {
-        let after_digest_result = post(stomach, whatsit, state)?;
-        after_digested.extend(after_digest_result);
+        after_digested.extend(post(stomach, whatsit, state)?);
       }
     }
     Ok(after_digested)

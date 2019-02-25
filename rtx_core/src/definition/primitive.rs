@@ -93,20 +93,20 @@ impl Definition for Primitive {
     // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
     // print STDERR '{' . $self->tracingCSName . "}\n" if $tracing;
-    let mut result: Vec<Digested> = self.execute_before_digest(stomach, state)?;
+    let mut invoked_boxes: Vec<Digested> = self.execute_before_digest(stomach, state)?;
     let args = self.read_arguments(stomach.get_gullet_mut(), state)?;
     // print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
-    let replacement_result = match self.replacement {
-      None => Vec::new(),
-      Some(ref closure) => closure(stomach, args, state)?,
-    };
-    result.extend(replacement_result);
-    let mut w = Whatsit::default();
-    let after_result = self.execute_after_digest(stomach, &mut w, state)?;
-    result.extend(after_result);
+    if let Some(ref closure) = self.replacement {
+      invoked_boxes.extend(closure(stomach, args, state)?);
+    }    
+    if !self.after_digest.is_empty() { // optimize to avoid needless generation of whatsits
+      let mut w = Whatsit::default();
+      let after_boxes = self.execute_after_digest(stomach, &mut w, state)?;
+      invoked_boxes.extend(after_boxes);
+    }
 
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
-    Ok(result)
+    Ok(invoked_boxes)
   }
 
   fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
