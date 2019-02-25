@@ -4,7 +4,6 @@ use rtx_package::converter::Converter;
 fn can_convert_hello() {
   assert!(rtx_core::util::logger::init(log::LevelFilter::Warn).is_ok());
   let hello_source = "tests/hello/hello.tex";
-  // let hello_expected = "tests/hello.html";
   let html_config = Config {
     format: OutputFormat::HTML5,
     ..Config::default()
