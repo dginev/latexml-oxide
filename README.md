@@ -13,6 +13,7 @@ The two main reasons:
 
   * LaTeXML is **too slow** for large-scale production use.
   * Perl 5 has **no street cred** anymore.
+  * LaTeXML is **badly needed** for transporting technical writing to the web and e-printing media.
 
 Design goals:
 
