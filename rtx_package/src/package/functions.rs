@@ -303,7 +303,7 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
   // Compute the exact name based on the type
   file = match options.extension {
     None => file,
-    Some(ext) => file + "." + &ext,
+    Some(ext) => file + "." + ext,
   };
   let mut with_stomach = options.with_stomach;
   let loaded_flag = file.clone() + "_loaded";
@@ -340,7 +340,8 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
       "IEEEtran.cls" => pool::ieeetran_cls::load_definitions(&mut state, with_stomach)?,
       "url.sty" => pool::url_sty::load_definitions(&mut state, with_stomach)?,
       "verbatim.sty" => pool::verbatim_sty::load_definitions(&mut state, with_stomach)?,
-
+      "fontenc.sty"  => pool::fontenc_sty::load_definitions(&mut state, with_stomach)?,
+      "inputenc.sty"  => pool::inputenc_sty::load_definitions(&mut state, with_stomach)?,
       other => fatal!(Package, Unknown, s!("TODO: unknown binding {:?}, can't load", other)),
     };
   }
@@ -392,7 +393,7 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
 pub struct RequireOptions<'a> {
   pub options: Vec<String>,
   pub withoptions: bool,
-  pub extension: Option<String>,
+  pub extension: Option<&'static str>,
   pub as_class: bool,
   pub noltxml: bool,
   pub notex: bool,
@@ -431,7 +432,7 @@ pub fn require_package(name: &str, mut options: RequireOptions, state: &mut Stat
   // $options{notex} = 1
   //   if !defined $options{notex} && !LookupValue('INCLUDE_STYLES') && !$options{noltxml};
   if options.extension.is_none() {
-    options.extension = Some(String::from("sty"));
+    options.extension = Some("sty");
   }
   // TODO: Ideally we want to use the same struct for the RequirePackage options as for the
   // InputDefinitions options
@@ -475,7 +476,7 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens, with_stomach:
   input_definitions(
     name,
     InputDefinitionOptions {
-      extension: Some(String::from("cls")),
+      extension: Some("cls"),
       after,
       notex: true,
       handleoptions: true,
@@ -793,7 +794,7 @@ pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
 }
 
 pub struct InputDefinitionOptions<'a> {
-  pub extension: Option<String>,
+  pub extension: Option<&'static str>,
   pub options: Vec<String>,
   pub after: Tokens,
   pub notex: bool,

@@ -39,7 +39,7 @@ LoadDefinitions!(outer_state, {
       let loc = whatsit.get_locator();
       let mut lines : Vec<String> = Vec::new();
       let gullet = stomach.get_gullet_mut();
-      while let Some(line) = gullet.read_raw_line() {
+      while let Some(line) = gullet.read_raw_line(state) {
         // The raw chars will still have to be decoded (but not space!!)
         let decoded_line : String = line.chars()
           .map(|c| if c == ' ' {" ".to_string() } else {

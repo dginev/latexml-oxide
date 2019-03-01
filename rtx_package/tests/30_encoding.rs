@@ -5,7 +5,6 @@ use rtx_package::util::test::*;
 use std::collections::HashMap;
 
 #[test]
-#[ignore]
 fn can_encode() {
   let mut requires = HashMap::new();
   requires.insert("ansinew", "ansinew.def");

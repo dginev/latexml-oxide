@@ -212,7 +212,7 @@ impl DigestionAPI for Core {
     let mut boxes = Vec::new();
     let mut state = &mut self.state;
 
-    while self.stomach.borrow().get_gullet().has_more_input() {
+    while self.stomach.borrow_mut().get_gullet_mut().has_more_input() {
       let mut next_bodies: Vec<Digested> = self.stomach.borrow_mut().digest_next_body(None, state)?;
       // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
       boxes.extend(next_bodies);

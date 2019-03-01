@@ -9,11 +9,11 @@ LoadDefinitions!(outer_state, {
     let begin_mark = s!("\\begin{{{}}}", name);
     let end_mark = s!("\\end{{{}}}", name);
     DefConstructorI!(T_CS!(begin_mark), None, None,
-    after_digest => sub!(move |stomach: &mut Stomach, whatsit: &mut Whatsit, _state: &mut State| {
+    after_digest => sub!(move |stomach: &mut Stomach, whatsit: &mut Whatsit, after_digest_state: &mut State| {
       let mut nlines = 0;
       let gullet = &mut stomach.gullet;
-      gullet.read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
-      while let Some(line) = gullet.read_raw_line() {
+      gullet.read_raw_line(after_digest_state);    // IGNORE 1st line (after the \begin{$name} !!!
+      while let Some(line) = gullet.read_raw_line(after_digest_state) {
         if line == end_mark {
           break;
         }
@@ -39,8 +39,8 @@ LoadDefinitions!(outer_state, {
         // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
         DefMacroI!(T_CS!(s!("\\begin{{{}}}", name)),
           None,
-          sub[gullet, _args, _inner_state] {
-            gullet.read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
+          sub[gullet, _args, macro_state] {
+            gullet.read_raw_line(macro_state); // IGNORE 1st line (after the \begin{$name} !!!
             Ok(before_tokens.clone().into())
           });
         DefMacroI!(T_CS!(s!("\\end{{{}}}", name)),

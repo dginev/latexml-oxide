@@ -80,7 +80,7 @@ LoadDefinitions!(state, {
     // the escaping is very easy to get wrong!
     let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{}\\}}(.*)$", env)).unwrap();
 
-    while let Some(line) = gullet.read_raw_line() {
+    while let Some(line) = gullet.read_raw_line(state) {
       if let Some(caps) = env_re.captures(&line) {
         let pre = caps.get(1).map_or("", |m| m.as_str()).to_string();
         let post = caps.get(2).map_or("", |m| m.as_str()).to_string();
@@ -116,7 +116,7 @@ LoadDefinitions!(state, {
         |igullet, istate| -> Result<Tokens> {
           let mut lines = Vec::new();
           if let Some(mut mouth) = igullet.get_mouth_mut() {
-            while let Some(line) = mouth.read_raw_line(false) {
+            while let Some(line) = mouth.read_raw_line(false, istate) {
               lines.push(line);
             }
           }
