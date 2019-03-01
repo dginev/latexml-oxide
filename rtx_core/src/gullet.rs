@@ -25,7 +25,7 @@ lazy_static! {
   static ref HEX_RE: Regex = Regex::new(r"[0-9A-F]").unwrap();
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Debug)]
 pub struct MouthRuntime {
   pub autoclose: bool,
   pub mouth: Mouth,
@@ -80,9 +80,9 @@ impl Gullet {
     self.mouthstack = VecDeque::new();
   }
 
-  pub fn has_more_input(&self) -> bool {
+  pub fn has_more_input(&mut self) -> bool {
     match self.mouth {
-      Some(ref runtime) => runtime.mouth.has_more_input(),
+      Some(ref mut runtime) => runtime.mouth.has_more_input(),
       None => false,
     }
   }
@@ -309,7 +309,7 @@ impl Gullet {
 
   /// Read the next raw line (string);
   /// primarily to read from the Mouth, but keep any unread input!
-  pub fn read_raw_line(&mut self) -> Option<String> {
+  pub fn read_raw_line(&mut self, state: &State) -> Option<String> {
     // If we've got unread tokens, they presumably should come before the Mouth's raw data
     // but we'll convert them back to string.
     if let Some(ref mut runtime) = self.mouth {
@@ -326,10 +326,10 @@ impl Gullet {
       // If we still have peeked tokens, we ONLY want to combine it with the remainder
       // of the current line from the Mouth (NOT reading a new line)
       if !tokens.is_empty() {
-        Some(Tokens::new(tokens).to_string() + &runtime.mouth.read_raw_line(true).unwrap_or_default())
+        Some(Tokens::new(tokens).to_string() + &runtime.mouth.read_raw_line(true, state).unwrap_or_default())
       } else {
         // Otherwise, read the next line from the Mouth.
-        runtime.mouth.read_raw_line(false)
+        runtime.mouth.read_raw_line(false, state)
       }
     } else {
       None
@@ -969,14 +969,14 @@ impl Gullet {
 
   pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, mut reader: FnR) -> R
   where FnR: FnOnce(&mut Gullet, &mut State) -> R {
-    let mouth_source = mouth.source.clone();
+    let mouth_source = mouth.get_source().to_string();
     self.open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
     let results: R = reader(self, state);
     // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
     loop {
       let mut is_mouth = false;
       if let Some(ref mut runtime) = self.mouth {
-        if runtime.mouth.source == mouth_source {
+        if runtime.mouth.get_source() == mouth_source {
           self.close_mouth(true, state);
           break;
         } else if self.mouthstack.is_empty() {

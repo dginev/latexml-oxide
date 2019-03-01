@@ -1,12 +1,18 @@
-use core::ops::RangeBounds;
-use lazy_static::lazy_static;
-use regex::Regex;
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io;
+use std::str;
 use std::io::prelude::*;
+use std::io::{BufReader, Read};
 use std::sync::Mutex;
+
+use encoding::{Encoding, EncoderTrap};
+use encoding::all::ISO_8859_1;
+use core::ops::RangeBounds;
+use lazy_static::lazy_static;
+use regex::Regex;
+use log::*;
 
 use crate::common::error::*;
 use crate::common::store::Stored;
@@ -18,7 +24,7 @@ use crate::util::pathname;
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum FoodType {
   File,
-  Binding,
+  // Binding,
   HTTP,
   HTTPS,
   Literal,
@@ -30,7 +36,7 @@ impl FoodType {
     use self::FoodType::*;
     match text.to_lowercase().as_str() {
       "file" => Some(File),
-      "binding" => Some(Binding),
+      // "binding" => Some(Binding),
       "http" => Some(HTTP),
       "https" => Some(HTTPS),
       "literal" => Some(Literal),
@@ -46,22 +52,45 @@ lazy_static! {
   static ref SANITIZE_LINE_REGEX: Regex = Regex::new(r"((\\ )*)\s*$").unwrap();
 }
 
-#[derive(Debug, Clone)]
-pub struct Mouth {
+#[derive(Debug)]
+pub struct MouthOptions {
   pub fordefinitions: bool,
   pub notes: bool,
-  pub nchars: usize,
-  pub colno: usize,
-  pub lineno: usize,
-  pub foodtype: FoodType,
-  pub saved_at_cc: Option<Catcode>,
-  pub saved_include_comments: Option<bool>,
-  pub note_message: Option<String>,
-  pub source: String,
-  pub shortsource: String,
+  pub content: Option<String>,
+  pub foodtype: Option<FoodType>,
+  pub source: Option<String>,
+  pub shortsource: Option<String>,
+}
+impl Default for MouthOptions {
+  fn default() -> Self {
+    MouthOptions {
+      fordefinitions: false,
+      notes: false,
+      content: None,
+      foodtype: None,
+      source: None,
+      shortsource: None,
+    }
+  }
+}
+
+#[derive(Debug)]
+pub struct Mouth {
+  fordefinitions: bool,
+  notes: bool,
+  nchars: usize,
+  colno: usize,
+  lineno: usize,
+  foodtype: FoodType,
+  saved_at_cc: Option<Catcode>,
+  saved_include_comments: Option<bool>,
+  note_message: Option<String>,
+  source: String,
+  shortsource: String,
   // pub handle : Option<File>,
-  pub chars: VecDeque<char>,
-  pub buffer: VecDeque<String>,
+  chars: VecDeque<char>,
+  buffer: VecDeque<String>,
+  reader: Option<BufReader<File>>,
 }
 
 impl PartialEq for Mouth {
@@ -85,28 +114,7 @@ impl Default for Mouth {
       saved_at_cc: None,
       saved_include_comments: None,
       buffer: VecDeque::new(),
-    }
-  }
-}
-
-#[derive(Debug)]
-pub struct MouthOptions {
-  pub fordefinitions: bool,
-  pub notes: bool,
-  pub content: Option<String>,
-  pub foodtype: Option<FoodType>,
-  pub source: Option<String>,
-  pub shortsource: Option<String>,
-}
-impl Default for MouthOptions {
-  fn default() -> Self {
-    MouthOptions {
-      fordefinitions: false,
-      notes: false,
-      content: None,
-      foodtype: None,
-      source: None,
-      shortsource: None,
+      reader: None,
     }
   }
 }
@@ -160,9 +168,11 @@ impl Mouth {
     Ok(mouth)
   }
 
+  pub fn get_source(&self) -> &str { &self.source }
+
   pub fn open<'open>(&'open mut self, content: &str, mut state: &mut State) -> Result<()> {
     match self.foodtype {
-      FoodType::File | FoodType::Binding => self.open_file(content)?,
+      FoodType::File => self.open_file(content)?,
       FoodType::Literal => self.open_literal(content),
       FoodType::HTTP => self.open_http(content),
       FoodType::HTTPS => self.open_https(content),
@@ -170,6 +180,7 @@ impl Mouth {
     self.initialize(&mut state);
     Ok(())
   }
+
   fn open_file(&mut self, pathname: &str) -> Result<()> {
     if self.foodtype == FoodType::File {
       // TODO: Handle errors
@@ -178,7 +189,6 @@ impl Mouth {
       //   Fatal('I/O', $pathname, $self, "Input file $pathname appears to be binary."); }
       // open($IN, '<', $pathname)
       //   || Fatal('I/O', $pathname, $self, "Can't open $pathname for reading", $!);
-
       let mut f = match File::open(pathname) {
         Ok(handle) => handle,
         Err(e) => {
@@ -189,15 +199,16 @@ impl Mouth {
           }
         },
       };
-      let mut content = String::new();
-      f.read_to_string(&mut content)?;
-      self.open_literal(&content);
+      
+      let reader = BufReader::new(f);
+      self.reader = Some(reader);
+      self.buffer = VecDeque::new();
     }
     Ok(())
   }
   fn open_literal(&mut self, content: &str) { self.buffer = Mouth::split_lines(content); }
-  fn open_http(&mut self, _content: &str) {}
-  fn open_https(&mut self, _content: &str) {}
+  fn open_http(&mut self, _content: &str) { unimplemented!(); }
+  fn open_https(&mut self, _content: &str) { unimplemented!(); }
   // fn open_binding(&mut self, _content: &str) {}
 
   fn initialize(&mut self, state: &mut State) {
@@ -240,6 +251,7 @@ impl Mouth {
         note_end(msg);
       }
     }
+    self.reader.take(); // if we have a reader, this will force a Drop at the end of finish(), which will close the file handle
   }
   // Auxiliaries
 
@@ -264,7 +276,7 @@ impl Mouth {
   //   // I am wondering if this is still needed or we can use a Rust iterator?
   // }
 
-  fn get_next_line(&mut self) -> Option<String> {
+  fn get_next_line(&mut self, state:&State) -> Option<String> {
     match self.buffer.pop_front() {
       Some(line) => {
         // No CR on last line!
@@ -274,7 +286,53 @@ impl Mouth {
           Some(line.to_string())
         }
       },
-      None => None,
+      None => if let Some(ref mut reader) = self.reader {
+        // file mouth case
+        let mut line_bytes = Vec::new();
+        let num_bytes = match reader.read_until(b'\n', &mut line_bytes) {
+          Ok(count) => count,
+          Err(e) => {
+            warn!(target: "mouth:io", "BufReader::read_until returned an error: {:?}", e);
+            0
+          }
+        };
+        if num_bytes == 0 || line_bytes.is_empty() { // double-check to be safe
+          self.reader.take(); // remove the now exhausted reader
+          None
+        } else {
+          // we read a line!
+          let mut line = String::new();
+          //
+          // Note 1: the original latexml code first split the perl string into lines, and only THEN decoded it
+          // however, executing a rust regex on a Vec<u8> is just not going to be a sane way forward.
+          // we will first decode the read-in bytes to the right String form, and THEN split lines.
+          // as such, decoding is the first action taken on bytes read in from a file.
+          //
+          // Note 2: again, the original latexml code only runs this decode logic for file reads,
+          //         implying that any string/http/https mouths are always expected in Unicode
+          if let Some(ref encoding) = state.input_encoding {
+            // TODO: What are characters that fail to decode replaced by in Rust?
+            // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable chars in to space(?).
+            // line = encoding, line_bytes
+            warn!("ENCODING TIME: {}", encoding);
+      
+            // Just remove the replacement chars, and warn (or Info?)
+            info!(target: &s!("misdefined:{}", encoding), "input isn't valid under encoding {}", encoding); 
+          } else {
+            // no encoding, interpret as unicode! 
+            match str::from_utf8(&line_bytes) {
+              Ok(line_str) => line = line_str.to_string(),
+              Err(e) => {
+                info!(target: "misdefined:utf8", "input isn't valid under encoding utf8: {:?}", e); 
+                line = unsafe { str::from_utf8_unchecked(&line_bytes).to_string() };
+              }
+            }
+          }
+          Some(line)
+        }
+      } else {
+        None
+      },
     }
   }
 
@@ -327,7 +385,8 @@ impl Mouth {
       },
     }
   }
-  pub fn has_more_input(&self) -> bool { self.colno < self.nchars || !self.buffer.is_empty() }
+  pub fn has_more_input(&mut self) -> bool { self.colno < self.nchars || !self.buffer.is_empty() || 
+    (self.reader.is_some() && !self.reader.as_mut().unwrap().fill_buf().unwrap().is_empty()) }
   // fn stringify(&self) -> String {
   //   // TODO
   //   s!("mouth stringify")
@@ -335,9 +394,6 @@ impl Mouth {
   // fn get_locator(&self, length: usize) -> String {
   //   // TODO
   //   s!("mouth locator")
-  // }
-  // fn get_source(&self) -> String {
-  //   self.source.to_string()
   // }
 
   /// Read the next token, or undef if exhausted.
@@ -351,7 +407,7 @@ impl Mouth {
       if self.colno >= self.nchars {
         self.lineno += 1;
         self.colno = 0;
-        match self.get_next_line() {
+        match self.get_next_line(state) {
           None => {
             // Exhausted the input.
             self.chars = VecDeque::new();
@@ -433,7 +489,7 @@ impl Mouth {
   // Alas: $noread true means NOT to read a new line, but only return
   // the remainder of the current line, if any. This is useful when combining
   // with previously peeked tokens from the Gullet.
-  pub fn read_raw_line(&mut self, noread: bool) -> Option<String> {
+  pub fn read_raw_line(&mut self, noread: bool, state: &State) -> Option<String> {
     let mut line = String::new();
     if self.colno < self.nchars {
       // DG: Can't slice a VecDeque really? Oh well...
@@ -448,7 +504,7 @@ impl Mouth {
     } else if noread {
       line = String::new();
     } else {
-      match self.get_next_line() {
+      match self.get_next_line(state) {
         None => {
           // We've exhausted this mouth
           self.chars = VecDeque::new();

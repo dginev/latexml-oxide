@@ -389,7 +389,7 @@ impl<'t> Stomach {
   // and the mouth should end up empty afterwards, and only be closed here.
   pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, mut reader: FnR) -> R
   where FnR: FnOnce(&mut Stomach, &mut State) -> R {
-    let mouth_source = mouth.source.clone();
+    let mouth_source = mouth.get_source().to_string();
     {
       let gullet = self.get_gullet_mut();
       gullet.open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
@@ -401,7 +401,7 @@ impl<'t> Stomach {
       let mut is_mouth = false;
       {
         if let Some(ref mut runtime) = gullet.mouth {
-          if runtime.mouth.source == mouth_source {
+          if runtime.mouth.get_source() == mouth_source {
             is_mouth = true;
           }
         } else {
