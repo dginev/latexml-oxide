@@ -639,7 +639,7 @@ LoadDefinitions!(state, {
             input_definitions(
               "LaTeX",
               InputDefinitionOptions {
-                extension: Some(String::from("pool")),
+                extension: Some("pool"),
                 with_stomach: None,
                 ..InputDefinitionOptions::default()
               },

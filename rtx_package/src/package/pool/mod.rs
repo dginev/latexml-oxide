@@ -91,3 +91,5 @@ pub mod comment_sty;
 pub mod ieeetran_cls;
 pub mod url_sty;
 pub mod verbatim_sty;
+pub mod fontenc_sty;
+pub mod inputenc_sty;

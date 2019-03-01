@@ -254,7 +254,7 @@ LoadDefinitions!(outer_state, {
   DefMacroI!(T_CS!("\\endinput"), None, sub[gullet, _args, state] {
     let mouth = gullet.get_mouth().unwrap();
     let line_opt = if !mouth.is_eol() {
-      gullet.read_raw_line()
+      gullet.read_raw_line(state)
     } else {
       None
     };

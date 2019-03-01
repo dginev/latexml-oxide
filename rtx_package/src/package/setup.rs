@@ -132,7 +132,7 @@ macro_rules! LoadPool {
     input_definitions(
       $name,
       InputDefinitionOptions {
-        extension: Some(String::from("pool")),
+        extension: Some("pool"),
         with_stomach: match outer_stomach!().as_mut() {
           None => None,
           Some(st) => Some(st),
@@ -142,6 +142,18 @@ macro_rules! LoadPool {
       $state_arg,
     )?
   }};
+}
+
+#[macro_export]
+macro_rules! InputDefinitions {
+  ($name:expr) => {{
+    bind_state_mut!(st);
+    input_definitions($name, InputDefinitionOptions::default(), st)?
+  }};
+  ($name: expr, $($key:ident => $value:expr)*) => {
+    bind_state_mut!(st);
+    input_definitions($name, NewDefault!(InputDefinitionOptions, $($key => $value),*), st)?
+  }
 }
 
 /// Loader shorthand for pool dependencies
@@ -1766,4 +1778,15 @@ macro_rules! SetPrefix {
     bind_state_mut!(st);
     st.set_prefix($prefix);
   }};
+}
+
+#[macro_export]
+macro_rules! DeclareOption {
+  (None, sub $body:block) => { unimplemented!(); };
+  (None, sub[$state:ident] $body:block) => { unimplemented!(); }
+}
+
+#[macro_export]
+macro_rules! ProcessOptions {
+  () => { unimplemented!(); }
 }
