@@ -14,6 +14,7 @@ fn set_input_encoding(encoding: &str, state: &mut State) -> Result<()> {
   state.input_encoding = None; // Disable the state-level decoding, if any.
 
   // Then load TeX's input encoding definitions.
+  warn!("InputDefinitions! {}", encoding);
   InputDefinitions!(encoding, extension => Some("def"));
   // NOTE: INPUT_ENCODING is never actually used anywhere!
   // So, presumably either Perl is magically converting to utf8
@@ -25,7 +26,7 @@ fn set_input_encoding(encoding: &str, state: &mut State) -> Result<()> {
   Ok(())
 }
 
-LoadDefinitions!(state, {
+LoadDefinitions!(state, outer_stomach, {
 
   //**********************************************************************
   DefPrimitive!("\\DeclareInputMath {Number} {}", sub[stomach, args, state] {
@@ -53,9 +54,13 @@ LoadDefinitions!(state, {
     set_input_encoding(&Expand!(encoding, gullet).to_string(), state)?;
   });
 
-  DeclareOption!(None, sub[state] { set_input_encoding(Expand!(T_CS!("\\CurrentOption")).to_string(), state)?; });
+  DeclareOption!(None, sub[stomach, state] {
+    let gullet = stomach.get_gullet_mut();
+    set_input_encoding(&Expand!(T_CS!("\\CurrentOption"), gullet).to_string(), state)?; 
+  });
 
-  ProcessOptions!();
+  let mut gullet = outer_stomach.as_mut().unwrap().get_gullet_mut();
+  ProcessOptions!(gullet);
 
   //**********************************************************************
 

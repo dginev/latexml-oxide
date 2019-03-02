@@ -292,12 +292,11 @@ pub fn load_external_binding(file: &str, state: &mut State, mut with_stomach: Op
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
 pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut state: &mut State) -> Result<()> {
   let mut file: String = raw_file.trim().to_string();
-
   // let prevname = if options.handleoptions {
   //   match state.lookup_definition(T_CS!("\@currname")) {
   //     Some(Stored::Expandable(name)) => Digest!(T_CS!("\@currname")).to_string()
   // }
-  // let prevext = options.handleoptions && $state->lookupDefinition(T_CS!('\@currext')) &&
+  // let prevext = options.handleoptions && state.lookup_definition(T_CS!('\@currext')) &&
   // ToString(Digest(T_CS!('\@currext')));
 
   // Compute the exact name based on the type
@@ -342,6 +341,7 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
       "verbatim.sty" => pool::verbatim_sty::load_definitions(&mut state, with_stomach)?,
       "fontenc.sty"  => pool::fontenc_sty::load_definitions(&mut state, with_stomach)?,
       "inputenc.sty"  => pool::inputenc_sty::load_definitions(&mut state, with_stomach)?,
+      "textcomp.sty"  => pool::textcomp_sty::load_definitions(&mut state, with_stomach)?,
       other => fatal!(Package, Unknown, s!("TODO: unknown binding {:?}, can't load", other)),
     };
   }
@@ -389,6 +389,74 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
   );
   Ok(())
 }
+
+pub fn process_options(gullet: &mut Gullet, state: &mut State) -> Result<()> {
+  let currname_token = T_CS!("\\@currname");
+  let currext_token = T_CS!("\\@currext");
+  let name = if state.lookup_definition(&currname_token).is_some() {
+    do_expand(currname_token, gullet, state)?.to_string()
+  } else { 
+    String::new()
+  };
+  let ext  = if state.lookup_definition(&currext_token).is_some() {
+    do_expand(currext_token, gullet, state)?.to_string()
+  } else { 
+    String::new()
+  };
+
+  // let declaredoptions = @{ LookupValue('@declaredoptions') };
+  // let curroptions = @{ (defined($name) && defined($ext)
+  //       && LookupValue('opt@' . $name . '.' . $ext)) || [] };
+  // let classoptions = @{ LookupValue('class_options') || [] };
+
+  // let defaultcs = T_CS!("\\default@ds");
+  // # Execute options in declared order (unless \ProcessOptions*)
+
+  // if ($options{inorder}) {    # Execute options in the order passed in (eg. \ProcessOptions*)
+  //   foreach my $option (@classoptions) {    # process global options, but no error
+  //     if    (executeOption_internal($option))        { }
+  //     elsif (executeDefaultOption_internal($option)) { } }
+
+  //   foreach my $option (@curroptions) {
+  //     if    (executeOption_internal($option))        { }
+  //     elsif (executeDefaultOption_internal($option)) { } } }
+  // else {                                    # Execute options in declared order (eg. \ProcessOptions)
+  //   foreach my $option (@declaredoptions) {
+  //     if (grep { $option eq $_ } @curroptions, @classoptions) {
+  //       @curroptions = grep { $option ne $_ } @curroptions;    # Remove it, since it's been handled.
+  //       executeOption_internal($option); } }
+  //   # Now handle any remaining options (eg. default options), in the given order.
+  //   foreach my $option (@curroptions) {
+  //     executeDefaultOption_internal($option); } }
+  // # Now, undefine the handlers?
+  // foreach my $option (@declaredoptions) {
+  //   Let('\ds@' . $option, '\relax'); }
+  // }
+  Ok(())
+}
+
+
+// sub executeOption_internal {
+//   my ($option) = @_;
+//   my $cs = T_CS('\ds@' . $option);
+//   if ($STATE->lookupDefinition($cs)) {
+//     # print STDERR "\nPROCESS OPTION $option\n";
+//     DefMacroI('\CurrentOption', undef, $option);
+//     AssignValue('@unusedoptionlist',
+//       [grep { $_ ne $option } @{ LookupValue('@unusedoptionlist') || [] }]);
+//     Digest($cs);
+//     return 1; }
+//   else {
+//     return; } }
+
+// sub executeDefaultOption_internal {
+//   my ($option) = @_;
+//   # print STDERR "\nPROCESS DEFAULT OPTION $option\n";
+//   # presumably should NOT remove from @unusedoptionlist ?
+//   DefMacroI('\CurrentOption', undef, $option);
+//   Digest(T_CS('\default@ds'));
+//   return 1; }
+
 
 pub struct RequireOptions<'a> {
   pub options: Vec<String>,

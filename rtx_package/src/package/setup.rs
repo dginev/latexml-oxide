@@ -3,8 +3,11 @@
 #[macro_export]
 macro_rules! LoadDefinitions {
   ($outer_state:ident, $body:block) => {
-    pub fn load_definitions($outer_state: &mut State, mut outer_stomach: Option<&mut Stomach>) -> Result<()> {
-      BindState!($outer_state, outer_stomach);
+    LoadDefinitions!($outer_state, outer_stomach, $body);
+  };
+  ($outer_state:ident, $outer_stomach:ident, $body:block) => {
+    pub fn load_definitions($outer_state: &mut State, mut $outer_stomach: Option<&mut Stomach>) -> Result<()> {
+      BindState!($outer_state, $outer_stomach);
       {
         $body
       }
@@ -1782,11 +1785,53 @@ macro_rules! SetPrefix {
 
 #[macro_export]
 macro_rules! DeclareOption {
-  (None, sub $body:block) => { unimplemented!(); };
-  (None, sub[$state:ident] $body:block) => { unimplemented!(); }
+  (None, sub $body:block) => { 
+    bind_state_mut!(st);
+    DeclareOption!(None, sub[stomach, state] $body, st)
+  };
+  (None, sub[$state:ident] $body:block) => {
+    bind_state_mut!(st);
+    DeclareOption!(None, sub[stomach, $state] $body, st)
+  };
+  (None, sub[$stomach:ident, $state:ident] $body:block) => { 
+    bind_state_mut!(st);
+    DeclareOption!(None, sub[$stomach, $state] $body, st)    
+  };
+  ($option:expr, sub $body:block) => { 
+    bind_state_mut!(st);
+    DeclareOption!($option, sub[stomach, state] $body, st)
+  };
+  ($option:expr, sub[$state:ident] $body:block) => { 
+    bind_state_mut!(st);
+    DeclareOption!($option, sub[stomach, $state] $body, st)
+  };
+  ($option:expr, sub[$stomach:ident, $state:ident] $body:block) => { 
+    bind_state_mut!(st);
+    DeclareOption!($option, sub[$stomach, $state] $body, st)
+  };
+  (None, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => { 
+    let cs = String::from("\\default@ds");
+    // block case, create a primitive
+   let code: PrimitiveClosure = Rc::new(move |$stomach, _args, $inner_state|
+      WithInnerState!($body, $inner_state, $stomach).into_digested_result()
+   );
+   def_primitive(T_CS!(cs), None, code, PrimitiveOptions::default(), $outer_state);
+  };
+  ($option:expr, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => { 
+    $outer_state.push_value("@declareoptions", $option);
+    let cs = s!("\\ds@{}", $option);
+    // block case, create a primitive
+   let code: PrimitiveClosure = Rc::new(move |$stomach, _args, $inner_state|
+      WithInnerState!($body, $inner_state, $stomach).into_digested_result()
+   );
+    def_primitive(T_CS!(cs), None, code, PrimitiveOptions::default(), $outer_state);
+  }
 }
 
 #[macro_export]
 macro_rules! ProcessOptions {
-  () => { unimplemented!(); }
+  ($gullet:ident) => {{
+      bind_state_mut!(st);
+      process_options($gullet, st)?;
+  }}
 }
