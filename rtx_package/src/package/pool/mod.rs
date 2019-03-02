@@ -93,3 +93,4 @@ pub mod url_sty;
 pub mod verbatim_sty;
 pub mod fontenc_sty;
 pub mod inputenc_sty;
+pub mod textcomp_sty;

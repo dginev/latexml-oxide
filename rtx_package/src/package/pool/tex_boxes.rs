@@ -28,17 +28,17 @@ LoadDefinitions!(state, {
       stomach.invoke_token(&xtoken, state)?
     } else { vec![] };
     let stuff = rest.remove(0);
-    state.assign_value(&tbox, stuff, scope);
+    state.assign_value(&tbox, Stored::Digested(Box::new(stuff)), scope);
     rest
   });
 
-  DefMacro!("\\box Number", sub[gullet, args, state] {
+  DefPrimitive!("\\box Number", sub[gullet, args, state] {
     unpack_to_token!(args => token);
     let box_key = s!("box{}", token.to_number().value_of() as u8);
-    if let Some(Stored::Tokens(stuff)) = state.remove_value(&box_key) {
-      stuff
+    if let Some(Stored::Digested(stuff)) = state.remove_value(&box_key) {
+      Ok(vec![*stuff])
     } else {
-      Tokens!()
+      Ok(vec![])
     }
   });
 
@@ -46,13 +46,14 @@ LoadDefinitions!(state, {
   //       I can either reconstruct the values in an expansion, as shown here,
   //       or refactor back to DefPrimitive, where I'd need to repackage the box tokens into a Digested ???
   //       example use would be great...
-  DefMacro!("\\copy Number", sub[stomach, args, state] {
+  DefPrimitive!("\\copy Number", sub[stomach, args, state] {
     unpack_to_token!(args => token);
     let box_key = s!("box{}", token.to_number().value_of() as u8);
-    if let Some(Stored::Tokens(stuff)) = state.lookup_value(&box_key) {
-      stuff.clone()
+    if let Some(Stored::Digested(stuff)) = state.lookup_value(&box_key) {
+      let cloned_stuff : Digested = (**stuff).clone();
+      Ok(vec![cloned_stuff])
     } else {
-      Tokens!()
+      Ok(vec![])
     }
   });
 

@@ -101,23 +101,27 @@ fn setup_cyrillic(state: &mut State) -> Result<()> {
   Ok(())
 }
 
-LoadDefinitions!(state, {
+LoadDefinitions!(state, outer_stomach, {
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Font Encoding
   // We ALSO need to read in or set the char=>unicode mapping.
 
-  DeclareOption!(None, sub {
-    UnshiftValue!("font_encodings", Expand!(T_CS!("\\CurrentOption")).to_string());
+  DeclareOption!(None, sub[stomach, state] {
+    let gullet = stomach.get_gullet_mut();
+    let current_option = Expand!(T_CS!("\\CurrentOption"), gullet).to_string();
+    UnshiftValue!("font_encodings", vec![Stored::String(current_option)]);
   });
 
   // WELL... Actually, some "encodings" map the normal 7bit (or 8)
   // apparently ASCII input characters to a completely different font.
   // EG. OT2 maps to cyrillic.
 
-  ProcessOptions!();
+  let mut gullet = outer_stomach.as_mut().unwrap().get_gullet_mut();
+  ProcessOptions!(gullet);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  if let Some(font_encodings) = state.lookup_vecdeque("font_encodings") {
+  if let Some(font_encodings_ref) = state.lookup_vecdeque("font_encodings") {
+    let font_encodings : VecDeque<Stored> = font_encodings_ref.clone();
     if !font_encodings.is_empty() {
       setup_cyrillic(state)?;
       for encoding_stored in font_encodings.into_iter() {
@@ -128,7 +132,7 @@ LoadDefinitions!(state, {
           DefMacro!("\\encodingdefault", sub[gullet, args, state] { Ok(enc_tokens.clone()) }, scope => Some(Scope::Global));
           let encfile = encoding.to_lowercase() + "enc";
           InputDefinitions!(&encfile, extension => Some("def"));
-          if LoadFontMap!(encoding).is_some() {
+          if LoadFontMap!(&encoding).is_some() {
             MergeFont!(encoding => encoding.to_string());
           }
         } else {
