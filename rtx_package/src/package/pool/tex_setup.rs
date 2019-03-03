@@ -633,19 +633,24 @@ LoadDefinitions!(state, {
           // so first unwrap,
           tokens.remove(0);
           tokens.pop();
-          // then load latex, and proceed
-          if !LookupBool!("LaTeX.pool_loaded") {    // if already loaded, DONT redefine!
-            // LoadPool!("LaTeX");
-            input_definitions(
-              "LaTeX",
-              InputDefinitionOptions {
-                extension: Some("pool"),
-                with_stomach: None,
-                ..InputDefinitionOptions::default()
-              },
-              state
-            )?
-          }
+          // Deyan:
+          // 
+          // Come on. Is this really the right place to be loading latex? Let's not be this careful.
+          // it requires access to a stomach, which really shouldn't be necessary in an arbitrary parameter type
+          // ---
+          // // then load latex, and proceed
+          // if !state.lookup_bool("LaTeX.pool_loaded") {    // if already loaded, DONT redefine!
+          //   // LoadPool!("LaTeX");
+          //   input_definitions(
+          //     "LaTeX",
+          //     InputDefinitionOptions {
+          //       extension: Some("pool"),
+          //       ..InputDefinitionOptions::default()
+          //     },
+          //     stomach,
+          //     state
+          //   )?
+          // }
         }
       }
       tokens

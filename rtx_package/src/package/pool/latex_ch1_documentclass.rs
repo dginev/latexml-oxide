@@ -31,7 +31,7 @@ LoadDefinitions!(state, {
       load_class(&(whatsit.get_arg(2).unwrap().to_string()),
                 class_opts,
                 Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")),
-                Some(stomach),
+                stomach,
                 state)?;
     })
   );

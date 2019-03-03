@@ -11,10 +11,10 @@ use rtx_core::stomach::Stomach;
 // I. Add your custom binding definition as a module delcaration here
 pub mod mytemplate_sty;
 
-pub fn dispatch(filename: &str, state: &mut State, stomach: Option<&mut Stomach>) -> Option<Result<()>> {
+pub fn dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Option<Result<()>> {
   match filename {
     // II. Connect the filename to the `load_definitions` function of your .rs binding:
-    "mytemplate.sty" => Some(mytemplate_sty::load_definitions(state, stomach)),
+    "mytemplate.sty" => Some(mytemplate_sty::load_definitions(stomach, state)),
     _ => None,
   }
 }

@@ -2,24 +2,23 @@ use crate::package::*;
 use std::collections::VecDeque;
 
 pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
-  BindState!(state);
   let bindings_val = if vertical_mode {
-    LookupValue!("VTEXT_MODE_BINDINGS")
+    state.lookup_value("VTEXT_MODE_BINDINGS")
   } else {
-    LookupValue!("HTEXT_MODE_BINDINGS")
+    state.lookup_value("HTEXT_MODE_BINDINGS")
   };
 
   let mut bindings: VecDeque<Stored> = match bindings_val {
     Some(Stored::VecDequeStored(ref vdq)) => vdq.clone(),
     _ => VecDeque::new(),
   };
-  if let Some(Stored::VecDequeStored(ref text_mode_bindings)) = LookupValue!("TEXT_MODE_BINDINGS") {
+  if let Some(Stored::VecDequeStored(ref text_mode_bindings)) = state.lookup_value("TEXT_MODE_BINDINGS") {
     bindings.extend(text_mode_bindings.clone());
   }
   for binding in bindings {
     if let Stored::Tokens(tks) = binding {
       let vec = tks.unlist();
-      LetI!(&vec[0], vec[1].clone());
+      state.let_i(&vec[0], vec[1].clone(), None);
     }
   }
   return;
@@ -54,7 +53,6 @@ pub fn today(state: &State) -> String {
 }
 
 pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) -> Result<Option<Parameters>> {
-  BindState!(state);
   let mut tokens: VecDeque<Token> = if params_in.is_stub() {
     VecDeque::new() // handle default tokens making their way into here, they are ignorable
   } else {
@@ -140,7 +138,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
 }
 
 pub fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State) -> Result<Vec<Digested>> {
-  BindState!(state);
+  BindState!(stomach, state);
   unpack!(args => cs, params, body);
   // ensure params is empty if it contains only the default token
   // TODO: is this a flaw of parameter parsing?

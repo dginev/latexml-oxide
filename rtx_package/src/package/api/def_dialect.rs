@@ -234,16 +234,17 @@ pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<Co
           // user-defined conditional, like with \newif
           // Note: setting up these macros is compile-time expensive, maybe there is some way to
           // avoid...
-          BindState!(state);
           // Note: the double clones are technically correct Rust if annoying to write and read.
           //       first, we want to capture a cloned value of cs, to be able to keep using cs here.
           // second, each invocation of the conditional macro needs to create new tokens to
           // return,       hence a clone is required on each call.
-          DefMacroI!(T_CS!(s!("\\{}true", name)), None, Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iftrue")));
-          DefMacroI!(
+          def_macro(T_CS!(s!("\\{}true", name)), None, Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iftrue")), None, state);
+          def_macro(
             T_CS!(s!("\\{}false", name)),
             None,
-            Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iffalse"))
+            Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iffalse")),
+            None,
+            state
           );
           state.let_i(&cs, T_CS!("\\iffalse"), None);
         } else {

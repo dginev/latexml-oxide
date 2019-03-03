@@ -1,8 +1,8 @@
 use crate::package::*;
 use rtx_core::state::State;
 
-fn setup_cyrillic(state: &mut State) -> Result<()> {
-  BindState!(state, None);
+fn setup_cyrillic(stomach: &mut Stomach, state: &mut State) -> Result<()> {
+  BindState!(stomach, state);
   DefMacro!("\\cyra", "\u{0430}");
   DefMacro!("\\cyrb", "\u{0431}");
   DefMacro!("\\cyrv", "\u{0432}");
@@ -101,7 +101,7 @@ fn setup_cyrillic(state: &mut State) -> Result<()> {
   Ok(())
 }
 
-LoadDefinitions!(state, outer_stomach, {
+LoadDefinitions!(outer_stomach, state, {
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Font Encoding
@@ -118,14 +118,12 @@ LoadDefinitions!(state, outer_stomach, {
   // apparently ASCII input characters to a completely different font.
   // EG. OT2 maps to cyrillic.
 
-  // TODO: Should we always require a stomach passed in, and avoid the option unwrap?
-  let mut stomach = outer_stomach.as_mut().unwrap();
-  ProcessOptions!(stomach);
+  ProcessOptions!(outer_stomach);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   if let Some(font_encodings_ref) = state.lookup_vecdeque("font_encodings") {
     let font_encodings : VecDeque<Stored> = font_encodings_ref.clone();
     if !font_encodings.is_empty() {
-      setup_cyrillic(state)?;
+      setup_cyrillic(outer_stomach, state)?;
       for encoding_stored in font_encodings.into_iter() {
         if let Stored::String(encoding) = encoding_stored {
           let enc_tokens = Tokens!(Explode!(encoding));

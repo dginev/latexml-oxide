@@ -61,7 +61,7 @@ macro_rules! noprimitive {
 macro_rules! primitivesub {
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
     move |$stomach: &mut Stomach, mut $args: Vec<Tokens>, $inner_state: &mut State| {
-      BindInnerState!($inner_state, $stomach);
+      BindInnerState!($stomach, $inner_state);
       let macro_out = $body;
       end_state_frame!();
       macro_out
@@ -72,7 +72,7 @@ macro_rules! primitivesub {
 macro_rules! primitiveproc {
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => (
     |$stomach:&mut Stomach, mut $args : Vec<Tokens>, $inner_state:&mut State| {
-      BindInnerState!($inner_state, $stomach);
+      BindInnerState!($stomach, $inner_state);
       $body
       end_state_frame!();
       Ok(Vec::new())
@@ -91,7 +91,7 @@ macro_rules! before_digest {
 macro_rules! before_digest_single {
   ($stomach:ident, $state:ident, $body:block) => {
     Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
-      BindInnerState!($state, $stomach);
+      BindInnerState!($stomach, $state);
       let macro_out = $body;
       end_state_frame!();
       macro_out.into_digested_result()
@@ -149,7 +149,7 @@ macro_rules! properties {
   (sub [ $stomach:ident, $args:ident, $inner_state:ident ] $body:block) => {
     Rc::new(
       move |$stomach: &mut Stomach, mut $args: &Vec<Option<Digested>>, $inner_state: &mut State| -> Result<HashMap<String, Stored>> {
-        BindInnerState!($inner_state, $stomach);
+        BindInnerState!($stomach, $inner_state);
         let macro_out = $body;
         end_state_frame!();
         macro_out
@@ -166,7 +166,7 @@ macro_rules! after_digest {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
     vec![Rc::new(
       move |$stomach: &mut Stomach, $whatsit: &mut Whatsit, $state: &mut State| -> Result<Vec<Digested>> {
-        WithInnerState!($body, $state, $stomach).into_digested_result()
+        WithInnerState!($body, $stomach, $state).into_digested_result()
       },
     )]
   };
@@ -188,7 +188,7 @@ macro_rules! reader_predigest {
   ($stomach:ident, $arg:ident, $state:ident, $body:block) => {
     Some(Rc::new(
       |$stomach: &mut Stomach, $arg: Tokens, $state: &mut State| -> Result<Option<Digested>> {
-        WithInnerState!($body, $state, $stomach).into_digested_option_result()
+        WithInnerState!($body, $stomach, $state).into_digested_option_result()
       },
     ))
   };

@@ -36,9 +36,8 @@ LoadDefinitions!(state, {
         for package in package_list {
           require_package(&package, RequireOptions {
             options: options_list.clone(),
-            with_stomach: Some(stomach),
             ..RequireOptions::default()
-          }, state)?
+          }, stomach, state)?
         }
         Ok(Vec::new())
       })

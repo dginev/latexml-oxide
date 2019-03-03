@@ -3,7 +3,7 @@ use crate::package::*;
 //**********************************************************************
 // C.11 Moving Information Around
 //**********************************************************************
-LoadDefinitions!(state, {
+LoadDefinitions!(outer_stomach, state, {
   //======================================================================
   // C.11.1 Files
   //======================================================================
@@ -639,15 +639,14 @@ LoadDefinitions!(state, {
 // bibliographies with blank lines!
 // So, let's do some redirection!
 fn setup_pseudo_bibitem(state: &mut State) {
-  BindState!(state);
-  Let!("\\save@bibitem", "\\bibitem");
-  Let!("\\save@par", "\\par");
-  Let!("\\bibitem", "\\restoring@bibitem");
-  Let!("\\par", "\\par@in@bibliography");
-  // Moreover, some people use \item instead of \bibitem
-  Let!("\\item", "\\item@in@bibliography");
+  state.let_i(&T_CS!("\\save@bibitem"), T_CS!("\\bibitem"), None);
+  state.let_i(&T_CS!("\\save@par"), T_CS!("\\par"), None);
+  state.let_i(&T_CS!("\\bibitem"), T_CS!("\\restoring@bibitem"), None);
+  state.let_i(&T_CS!("\\par"), T_CS!("\\par@in@bibliography"), None);
+  // Moreover some people use \item instead of \bibitem
+  state.let_i(&T_CS!("\\item"), T_CS!("\\item@in@bibliography"), None);
   // And protect from redefinitions.
-  Let!("\\newblock", "\\lx@bibnewblock");
+  state.let_i(&T_CS!("\\newblock"), T_CS!("\\lx@bibnewblock"), None);
   return;
 }
 // This sub does things that would commonly be needed when starting a bibliography
@@ -660,7 +659,7 @@ fn begin_bibliography(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut 
 }
 
 fn begin_bibliography_clean(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<()> {
-  BindState!(state);
+  BindState!(stomach, state);
   // Try to compute a reasonable, but unique ID;
   // relative to the document's ID, if any.
   // But also, if there are multiple bibliographies,
