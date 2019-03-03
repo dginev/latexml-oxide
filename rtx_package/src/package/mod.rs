@@ -49,15 +49,20 @@ pub use rtx_core::{BoxOps, Core, Digested};
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 
+// First, re-export the main binding macros
 #[macro_use]
-pub mod binding_macros;
-#[macro_use]
-pub mod setup; // Re-export the main binding macros
+pub mod setup_binding_language;
 
-// Next, import the functions and
-pub mod functions;
+// Second, declare the rust boilerplate and
+#[macro_use]
+pub mod api_macros;
+pub mod api;
 // Re-export the public API
-pub use self::functions::*;
+pub use self::api::*;
+pub use self::api::content::*;
+pub use self::api::def_dialect::*;
+pub use self::api::counter_dialect::*;
+pub use self::api::cleaners::*;
 
 // At the very end, declare the pool
 pub use self::pool::tex_functions::*;
