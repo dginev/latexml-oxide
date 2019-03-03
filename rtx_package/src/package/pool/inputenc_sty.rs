@@ -59,8 +59,9 @@ LoadDefinitions!(state, outer_stomach, {
     set_input_encoding(&Expand!(T_CS!("\\CurrentOption"), gullet).to_string(), state)?; 
   });
 
-  let mut gullet = outer_stomach.as_mut().unwrap().get_gullet_mut();
-  ProcessOptions!(gullet);
+  // TODO: Should we always require a stomach passed in, and avoid the option unwrap?
+  let mut stomach = outer_stomach.as_mut().unwrap();
+  ProcessOptions!(stomach);
 
   //**********************************************************************
 

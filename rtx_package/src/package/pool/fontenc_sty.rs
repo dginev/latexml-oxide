@@ -110,6 +110,7 @@ LoadDefinitions!(state, outer_stomach, {
   DeclareOption!(None, sub[stomach, state] {
     let gullet = stomach.get_gullet_mut();
     let current_option = Expand!(T_CS!("\\CurrentOption"), gullet).to_string();
+    warn!("Hellooooo from default option of fontenc, current_option is : {}", current_option);
     UnshiftValue!("font_encodings", vec![Stored::String(current_option)]);
   });
 
@@ -117,8 +118,9 @@ LoadDefinitions!(state, outer_stomach, {
   // apparently ASCII input characters to a completely different font.
   // EG. OT2 maps to cyrillic.
 
-  let mut gullet = outer_stomach.as_mut().unwrap().get_gullet_mut();
-  ProcessOptions!(gullet);
+  // TODO: Should we always require a stomach passed in, and avoid the option unwrap?
+  let mut stomach = outer_stomach.as_mut().unwrap();
+  ProcessOptions!(stomach);
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   if let Some(font_encodings_ref) = state.lookup_vecdeque("font_encodings") {
     let font_encodings : VecDeque<Stored> = font_encodings_ref.clone();
