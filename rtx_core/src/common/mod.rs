@@ -69,7 +69,7 @@ impl DigestionMode {
   }
 }
 
-pub type BindingDispatcher = Rc<Fn(&str, &mut State, Option<&mut Stomach>) -> Option<Result<()>>>;
+pub type BindingDispatcher = Rc<Fn(&str, &mut Stomach, &mut State) -> Option<Result<()>>>;
 
 #[derive(Clone)]
 pub struct Config {

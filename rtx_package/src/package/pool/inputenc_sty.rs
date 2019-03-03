@@ -1,9 +1,7 @@
 use crate::package::*;
-use rtx_core::state::State;
 
 //**********************************************************************
-fn set_input_encoding(encoding: &str, state: &mut State) -> Result<()> {
-  BindState!(state);
+fn set_input_encoding(encoding: &str, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   // Initially disable all odd & upper half-plane chars
   // TODO:
   // for code in ((0 .. 8), 0xB, (0xE .. 0x1E), (128 .. 255)) {
@@ -15,18 +13,20 @@ fn set_input_encoding(encoding: &str, state: &mut State) -> Result<()> {
 
   // Then load TeX's input encoding definitions.
   warn!("InputDefinitions! {}", encoding);
-  InputDefinitions!(encoding, extension => Some("def"));
+  input_definitions(encoding,
+    InputDefinitionOptions { extension: Some("def"), ..InputDefinitionOptions::default() },
+    stomach, state)?;
   // NOTE: INPUT_ENCODING is never actually used anywhere!
   // So, presumably either Perl is magically converting to utf8
   // or more likely, treating the bytes as (misinterpreted?) utf8?
   // In latter case, perhaps it doesn't matter as long as we end up with the same bytes in/out???
   state.input_encoding = Some(encoding.to_string());
   let encoding_tokenized = TokenizeInternal!(encoding);
-  DefMacroI!(T_CS!("\\inputencodingname"), None, encoding_tokenized);
+  def_macro(T_CS!("\\inputencodingname"), None, encoding_tokenized, None, state);
   Ok(())
 }
 
-LoadDefinitions!(state, outer_stomach, {
+LoadDefinitions!(outer_stomach, state, {
 
   //**********************************************************************
   DefPrimitive!("\\DeclareInputMath {Number} {}", sub[stomach, args, state] {
@@ -49,19 +49,18 @@ LoadDefinitions!(state, outer_stomach, {
     error!(target:"unexpected:<char>", "Keyboard character used is undefined in inputencoding {}", state.input_encoding.as_ref().unwrap());
   });
 
-  DefMacro!("\\inputencoding{}", sub[gullet, args, state] {
+  DefPrimitive!("\\inputencoding{}", sub[stomach, args, state] {
     unpack_to_token!(args => encoding);
-    set_input_encoding(&Expand!(encoding, gullet).to_string(), state)?;
+    let gullet = stomach.get_gullet_mut();
+    set_input_encoding(&Expand!(encoding, gullet).to_string(), stomach, state)?;
   });
 
   DeclareOption!(None, sub[stomach, state] {
     let gullet = stomach.get_gullet_mut();
-    set_input_encoding(&Expand!(T_CS!("\\CurrentOption"), gullet).to_string(), state)?; 
+    set_input_encoding(&Expand!(T_CS!("\\CurrentOption"), gullet).to_string(), stomach, state)?; 
   });
 
-  // TODO: Should we always require a stomach passed in, and avoid the option unwrap?
-  let mut stomach = outer_stomach.as_mut().unwrap();
-  ProcessOptions!(stomach);
+  ProcessOptions!(outer_stomach);
 
   //**********************************************************************
 

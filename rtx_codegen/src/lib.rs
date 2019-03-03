@@ -60,6 +60,11 @@ pub fn bound_state(_input: TokenStream) -> TokenStream {
           outer_state!()
         };
       }
+      macro_rules! stomach {
+        () => {
+          outer_stomach!()
+        };
+      }
     )
   } else {
     quote!(
@@ -68,6 +73,12 @@ pub fn bound_state(_input: TokenStream) -> TokenStream {
           inner_state!()
         };
       }
+      macro_rules! stomach {
+        () => {
+          inner_stomach!()
+        };
+      }
+
     )
   };
   state_declaration.into()

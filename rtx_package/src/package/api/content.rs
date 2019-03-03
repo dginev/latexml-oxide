@@ -22,14 +22,11 @@ use crate::package::pool;
 use super::*;
 use super::def_dialect::def_macro;
 
-pub fn load_external_binding(file: &str, state: &mut State, mut with_stomach: Option<&mut Stomach>) -> Result<bool> {
+pub fn load_external_binding(file: &str, state: &mut State, mut stomach: &mut Stomach) -> Result<bool> {
   let taken_dispatcher = state.extra_bindings_dispatch.take();
   match taken_dispatcher {
     Some(ref dispatcher) => {
-      let result_opt = match with_stomach {
-        None => dispatcher(&file, state, None),
-        Some(ref mut st) => dispatcher(&file, state, Some(st)),
-      };
+      let result_opt = dispatcher(&file, stomach, state);
       match result_opt {
         Some(result) => match result {
           Ok(()) => true,
@@ -44,10 +41,7 @@ pub fn load_external_binding(file: &str, state: &mut State, mut with_stomach: Op
   let is_contrib: bool = match taken_dispatcher {
     Some(ref dispatcher) => {
       note_begin(&s!("Loading {:?} definitions", file));
-      let result_opt = match with_stomach {
-        None => dispatcher(&file, state, None),
-        Some(ref mut st) => dispatcher(&file, state, Some(st)),
-      };
+      let result_opt = dispatcher(&file, stomach, state);
       note_end(&s!("Loading {:?} definitions", file));
       match result_opt {
         Some(result) => match result {
@@ -65,14 +59,21 @@ pub fn load_external_binding(file: &str, state: &mut State, mut with_stomach: Op
 }
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
-pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut state: &mut State) -> Result<()> {
+pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut stomach: &mut Stomach, mut state: &mut State) -> Result<()> {
   let name = raw_file.trim();
-  // let prevname = if options.handleoptions {
-  //   if let state.lookup_definition(&T_CS!("\\@currname")).is_some() {
-  //     Digest!(T_CS!("\@currname")).to_string()
-  //   }
-  // let prevext = options.handleoptions && state.lookup_definition(T_CS!('\@currext')) &&
-  // ToString(Digest(T_CS!('\@currext')));
+  // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions... so let's make stomach a mandatory option.
+  let prevname = if options.handleoptions && state.lookup_definition(&T_CS!("\\@currname")).is_some() {
+    let gullet = stomach.get_gullet_mut();
+    do_expand(T_CS!("\\@currname"), gullet, state)?.to_string()
+  } else {
+    String::new()
+  };
+  let prevext = if options.handleoptions && state.lookup_definition(&T_CS!("\\@currext")).is_some() {
+    let gullet = stomach.get_gullet_mut();
+    do_expand(T_CS!("\\@currext"), gullet, state)?.to_string()
+  } else {
+    String::new()
+  };
 
   // Compute the exact name based on the type
   let filename = match options.extension {
@@ -81,7 +82,6 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
   };
   let as_type = if options.as_class { "cls" } else { options.extension.unwrap_or("") };
 
-  let mut with_stomach = options.with_stomach;
   let loaded_flag = filename.clone() + "_loaded";
   {
     // Only load definitions once
@@ -99,28 +99,25 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
   def_macro(T_CS!("\\@currname"),None, Tokens!(Explode!(name)), None, state);
   def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None, state);
 
-  let is_contrib = match with_stomach {
-    None => load_external_binding(&filename, state, None)?,
-    Some(ref mut stomach_mut) => load_external_binding(&filename, state, Some(stomach_mut))?,
-  };
+  let is_contrib = load_external_binding(&filename, state, stomach)?;
 
   if !is_contrib {
     match filename.as_ref() {
-      "TeX.pool" => pool::tex::load_definitions(&mut state, with_stomach)?,
-      "LaTeX.pool" => pool::latex::load_definitions(&mut state, with_stomach)?,
-      "eTeX.pool" => pool::etex::load_definitions(&mut state, with_stomach)?,
-      "pdfTeX.pool" => pool::pdftex::load_definitions(&mut state, with_stomach)?,
-      "article.cls" => pool::article_cls::load_definitions(&mut state, with_stomach)?,
-      "alltt.sty" => pool::alltt_sty::load_definitions(&mut state, with_stomach)?,
-      "amsmath.sty" => pool::amsmath_sty::load_definitions(&mut state, with_stomach)?,
-      "amsthm.sty" => pool::amsthm_sty::load_definitions(&mut state, with_stomach)?,
-      "comment.sty" => pool::comment_sty::load_definitions(&mut state, with_stomach)?,
-      "IEEEtran.cls" => pool::ieeetran_cls::load_definitions(&mut state, with_stomach)?,
-      "url.sty" => pool::url_sty::load_definitions(&mut state, with_stomach)?,
-      "verbatim.sty" => pool::verbatim_sty::load_definitions(&mut state, with_stomach)?,
-      "fontenc.sty"  => pool::fontenc_sty::load_definitions(&mut state, with_stomach)?,
-      "inputenc.sty"  => pool::inputenc_sty::load_definitions(&mut state, with_stomach)?,
-      "textcomp.sty"  => pool::textcomp_sty::load_definitions(&mut state, with_stomach)?,
+      "TeX.pool" => pool::tex::load_definitions(&mut stomach, &mut state)?,
+      "LaTeX.pool" => pool::latex::load_definitions(&mut stomach, &mut state)?,
+      "eTeX.pool" => pool::etex::load_definitions(&mut stomach, &mut state)?,
+      "pdfTeX.pool" => pool::pdftex::load_definitions(&mut stomach, &mut state)?,
+      "article.cls" => pool::article_cls::load_definitions(&mut stomach, &mut state)?,
+      "alltt.sty" => pool::alltt_sty::load_definitions(&mut stomach, &mut state)?,
+      "amsmath.sty" => pool::amsmath_sty::load_definitions(&mut stomach, &mut state)?,
+      "amsthm.sty" => pool::amsthm_sty::load_definitions(&mut stomach, &mut state)?,
+      "comment.sty" => pool::comment_sty::load_definitions(&mut stomach, &mut state)?,
+      "IEEEtran.cls" => pool::ieeetran_cls::load_definitions(&mut stomach, &mut state)?,
+      "url.sty" => pool::url_sty::load_definitions(&mut stomach, &mut state)?,
+      "verbatim.sty" => pool::verbatim_sty::load_definitions(&mut stomach, &mut state)?,
+      "fontenc.sty"  => pool::fontenc_sty::load_definitions(&mut stomach, &mut state)?,
+      "inputenc.sty"  => pool::inputenc_sty::load_definitions(&mut stomach, &mut state)?,
+      "textcomp.sty"  => pool::textcomp_sty::load_definitions(&mut stomach, &mut state)?,
       other => fatal!(Package, Unknown, s!("TODO: unknown binding {:?}, can't load", other)),
     };
   }
@@ -149,7 +146,7 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
   // state.extra_bindings_dispatch
   if !pathname::is_literaldata(path) {
     let (dir, base, ext) = pathname::split(path);
-    load_external_binding(&base, &mut core.state, Some(&mut core.stomach.borrow_mut()))?;
+    load_external_binding(&base, &mut core.state, &mut core.stomach.borrow_mut())?;
   }
   // TODO: Caching
   // content => LookupValue($pathname . '_contents')
@@ -260,7 +257,7 @@ fn execute_default_option_internal(option: &str, stomach: &mut Stomach, state: &
 }
 
 
-pub struct RequireOptions<'a> {
+pub struct RequireOptions {
   pub options: Vec<String>,
   pub withoptions: bool,
   pub extension: Option<&'static str>,
@@ -269,9 +266,8 @@ pub struct RequireOptions<'a> {
   pub notex: bool,
   pub raw: bool,
   pub after: bool,
-  pub with_stomach: Option<&'a mut Stomach>,
 }
-impl<'a> Default for RequireOptions<'a> {
+impl Default for RequireOptions {
   fn default() -> Self {
     RequireOptions {
       options: Vec::new(),
@@ -282,7 +278,6 @@ impl<'a> Default for RequireOptions<'a> {
       notex: true,
       raw: false,
       after: false,
-      with_stomach: None,
     }
   }
 }
@@ -291,7 +286,7 @@ impl<'a> Default for RequireOptions<'a> {
 /// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of `pathname_find`
 /// ???) Another potentially useful option might be that if we are reading a raw file,
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
-pub fn require_package(name: &str, mut options: RequireOptions, state: &mut State) -> Result<()> {
+pub fn require_package(name: &str, mut options: RequireOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   if options.raw {
     options.raw = false;
     // Warn('deprecated', 'raw', $STATE->getStomach->getGullet,
@@ -311,11 +306,11 @@ pub fn require_package(name: &str, mut options: RequireOptions, state: &mut Stat
     InputDefinitionOptions {
       extension: options.extension,
       handleoptions: true,
-      with_stomach: options.with_stomach,
       // Pass classes options if we have NONE!
       withoptions: options.options,
       ..InputDefinitionOptions::default()
     },
+    stomach,
     state,
   )
 }
@@ -342,7 +337,7 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
   // }
 }
 
-pub fn load_class(name: &str, options: Vec<String>, after: Tokens, with_stomach: Option<&mut Stomach>, state: &mut State) -> Result<()> {
+pub fn load_class(name: &str, options: Vec<String>, after: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   input_definitions(
     name,
     InputDefinitionOptions {
@@ -351,9 +346,9 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens, with_stomach:
       notex: true,
       handleoptions: true,
       noerror: true,
-      with_stomach,
       ..InputDefinitionOptions::default()
     },
+    stomach,
     state,
   )
   // if (let success = InputDefinitions($class, type => 'cls', notex => 1, handleoptions => 1,
@@ -518,7 +513,7 @@ pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
   }
 }
 
-pub struct InputDefinitionOptions<'a> {
+pub struct InputDefinitionOptions {
   pub extension: Option<&'static str>,
   pub options: Vec<String>,
   pub after: Tokens,
@@ -528,9 +523,8 @@ pub struct InputDefinitionOptions<'a> {
   pub withoptions: Vec<String>,
   pub handleoptions: bool,
   pub as_class: bool,
-  pub with_stomach: Option<&'a mut Stomach>,
 }
-impl<'a> Default for InputDefinitionOptions<'a> {
+impl Default for InputDefinitionOptions {
   fn default() -> Self {
     InputDefinitionOptions {
       extension: None,
@@ -542,7 +536,6 @@ impl<'a> Default for InputDefinitionOptions<'a> {
       withoptions: Vec::new(),
       handleoptions: false,
       as_class: false,
-      with_stomach: None,
     }
   }
 }

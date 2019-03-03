@@ -56,7 +56,7 @@ impl DigestionAPI for Core {
     // let paths = state.search_paths;
     self.state.assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
-      input_definitions(&preload, InputDefinitionOptions::default(), &mut self.state)?;
+      input_definitions(&preload, InputDefinitionOptions::default(), &mut self.stomach.borrow_mut(), &mut self.state)?;
     }
     self.state.assign_value("InitialPreloads", false, Some(Scope::Global));
     Ok(())

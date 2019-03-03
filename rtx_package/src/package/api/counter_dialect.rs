@@ -83,8 +83,8 @@ impl<'ct> Default for NewCounterOptions<'ct> {
   }
 }
 
-pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOptions>, state: &mut State) -> Result<()> {
-  BindState!(state);
+pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOptions>, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+  BindState!(stomach, state);
   let unctr = s!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
   let cctr = s!("\\c@{}", ctr);
   let clctr = s!("\\cl@{}", ctr);
@@ -194,14 +194,14 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
   let v = counter_value(ctr, state).add(value);
   state.assign_value(&s!("\\c@{}", ctr), v, Some(Scope::Global));
   state.after_assignment();
-  BindState!(state);
   let id_cs = T_CS!(s!("\\@{}@ID", ctr));
-  DefMacroI!(id_cs.clone(), None, Tokens::new(Explode!(v.value_of())),
-    scope => Some(Scope::Global));
+  def_macro(id_cs.clone(), None, Tokens::new(Explode!(v.value_of())), 
+    Some(ExpandableOptions{scope: Some(Scope::Global), ..ExpandableOptions::default()}),
+    state);
 }
 
 pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
-  BindState!(state);
+  BindState!(stomach, state);
   let value = counter_value(ctr, state);
   state.assign_value(&s!("\\c@{}", ctr), value.add(Number!(1)), Some(Scope::Global));
   state.after_assignment();
@@ -243,7 +243,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
     false
   };
 
-  BindState!(state);
+  BindState!(stomach, state);
   let the_cs = T_CS!(s!("\\the{}", ctr));
   let the_id_cs = T_CS!(s!("\\the{}@ID", ctr));
   DefMacroI!(T_CS!("\\@currentlabel"), None, the_cs.clone(), scope => Some(Scope::Global));
@@ -300,7 +300,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 
 // For UN-numbered units
 pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
-  BindState!(state, stomach);
+  BindState!(stomach, state);
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(map) => map.to_string(),
     None => ctype.to_string(),

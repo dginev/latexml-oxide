@@ -1,11 +1,11 @@
 #[macro_export]
 macro_rules! LoadDefinitions {
   ($outer_state:ident, $body:block) => {
-    LoadDefinitions!($outer_state, outer_stomach, $body);
+    LoadDefinitions!(outer_stomach, $outer_state, $body);
   };
-  ($outer_state:ident, $outer_stomach:ident, $body:block) => {
-    pub fn load_definitions($outer_state: &mut State, mut $outer_stomach: Option<&mut Stomach>) -> Result<()> {
-      BindState!($outer_state, $outer_stomach);
+  ($outer_stomach:ident, $outer_state:ident, $body:block) => {
+    pub fn load_definitions($outer_stomach: &mut Stomach, $outer_state: &mut State) -> Result<()> {
+      BindState!($outer_stomach, $outer_state);
       {
         $body
       }
@@ -23,17 +23,21 @@ macro_rules! LoadDefinitions {
 #[macro_export]
 macro_rules! BindState {
   ($state_arg:ident) => {
-    BindState!($state_arg, None)
-  };
-  ($state_arg:ident, $outer_stomach: expr) => {
     macro_rules! outer_state {
       () => {
         $state_arg
       };
     }
+  };
+  ($outer_stomach:ident, $state_arg:ident) => {
     macro_rules! outer_stomach {
       () => {
         $outer_stomach
+      };
+    }
+    macro_rules! outer_state {
+      () => {
+        $state_arg
       };
     }
   };
@@ -42,17 +46,22 @@ macro_rules! BindState {
 #[macro_export]
 macro_rules! BindInnerState {
   ($inner_state:ident) => {
-    BindInnerState!($inner_state, None)
-  };
-  ($inner_state:ident, $inner_stomach: expr) => {
     macro_rules! inner_state {
       () => {
         $inner_state
       };
     }
+    start_state_frame!();
+  };
+  ($inner_stomach:ident, $inner_state:ident) => {
     macro_rules! inner_stomach {
       () => {
         $inner_stomach
+      };
+    }
+    macro_rules! inner_state {
+      () => {
+        $inner_state
       };
     }
     start_state_frame!();
@@ -76,11 +85,14 @@ macro_rules! end_state_frame {
 
 #[macro_export]
 macro_rules! WithInnerState {
-  ($body: block, $inner_state:ident) => {
-    WithInnerState!($body, $inner_state, None);
-  };
-  ($body: block, $inner_state:ident, $stomach:expr) => {{
-    BindInnerState!($inner_state, $stomach);
+  ($body: block, $inner_state:ident) => {{
+    BindInnerState!($inner_state);
+    let macro_out = $body;
+    end_state_frame!();
+    macro_out
+  }};
+  ($body: block, $stomach:ident, $inner_state:ident) => {{
+    BindInnerState!($stomach, $inner_state);
     let macro_out = $body;
     end_state_frame!();
     macro_out
@@ -96,11 +108,35 @@ macro_rules! bind_state {
       state!()
     };
   };
+  ($stmch:ident, $st:ident) => {
+    let $stmch: &Stomach = {
+      #[derive(BoundState)]
+      struct _Bound;
+      stomach!()
+    };
+    let $st: &State = {
+      #[derive(BoundState)]
+      struct _Bound;
+      state!()
+    };
+  };
 }
 
 #[macro_export]
 macro_rules! bind_state_mut {
   ($st:ident) => {
+    let $st: &mut State = {
+      #[derive(BoundState)]
+      struct _Bound;
+      state!()
+    };
+  };
+  ($stmch:ident, $st:ident) => {
+    let $stmch: &mut Stomach = {
+      #[derive(BoundState)]
+      struct _Bound;
+      stomach!()
+    };
     let $st: &mut State = {
       #[derive(BoundState)]
       struct _Bound;
@@ -126,20 +162,17 @@ macro_rules! DefParameterTypeWO {
 #[macro_export]
 macro_rules! LoadPool {
   ($name:expr) => {{
-    bind_state_mut!(st);
-    LoadPool!($name, st)
+    bind_state_mut!(stmch, st);
+    LoadPool!($name, stmch, st)
   }};
-  ($name:expr, $state_arg:ident) => {{
+  ($name:expr, $stomach_arg:ident, $state_arg:ident) => {{
     input_definitions(
       $name,
       InputDefinitionOptions {
         extension: Some("pool"),
-        with_stomach: match outer_stomach!().as_mut() {
-          None => None,
-          Some(st) => Some(st),
-        },
         ..InputDefinitionOptions::default()
       },
+      $stomach_arg,
       $state_arg,
     )?
   }};
@@ -152,8 +185,8 @@ macro_rules! InputDefinitions {
     input_definitions($name, InputDefinitionOptions::default(), st)?
   }};
   ($name: expr, $($key:ident => $value:expr)*) => {
-    bind_state_mut!(st);
-    input_definitions($name, NewDefault!(InputDefinitionOptions, $($key => $value),*), st)?
+    bind_state_mut!(stmch, st);
+    input_definitions($name, NewDefault!(InputDefinitionOptions, $($key => $value),*), stmch, st)?
   }
 }
 
@@ -161,17 +194,14 @@ macro_rules! InputDefinitions {
 #[macro_export]
 macro_rules! InnerPool {
   ($name:ident) => {{
-    bind_state_mut!(st);
-    InnerPool!($name, st, outer_stomach!())
+    bind_state_mut!(stmch,st);
+    InnerPool!($name, stmch, st)
   }};
   ($name:ident, $state_arg:ident) => {
-    InnerPool!($name, $state_arg, outer_stomach!())
+    InnerPool!($name, stomach!(), $state_arg)
   };
-  ($name:ident, $state_arg:ident, $stomach:expr) => {{
-    match $stomach.as_mut() {
-      None => pool::$name::load_definitions($state_arg, None)?,
-      Some(st) => pool::$name::load_definitions($state_arg, Some(st))?,
-    }
+  ($name:ident, $stomach_arg:ident, $state_arg:ident) => {{
+    pool::$name::load_definitions($stomach_arg, $state_arg)?
   }};
 }
 
@@ -380,7 +410,7 @@ macro_rules! DefPrimitiveII {
   // explicit state
   ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block, $state_arg:ident) => {
     DefPrimitiveII!($cs, $paramlist, move |$stomach, $args, $inner_state| {
-      WithInnerState!($body, $inner_state, $stomach)
+      WithInnerState!($body, $stomach, $inner_state)
     }, PrimitiveOptions::default(), $state_arg)
   };
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
@@ -815,18 +845,18 @@ macro_rules! forbidMath {
 #[macro_export]
 macro_rules! NewCounterWO {
   ($ctr:expr, $within:expr, None) => {
-    bind_state_mut!(st);
-    new_counter($ctr, $within, None, st)?
+    bind_state_mut!(stmch, st);
+    new_counter($ctr, $within, None, stmch, st)?
   };
   ($ctr:expr, $within:expr, None, $state_arg:ident) => {
     new_counter($ctr, $within, None, $state_arg)?
   };
   ($ctr:expr, $within:expr, Some($opts:expr)) => {
-    bind_state_mut!(st);
-    new_counter($ctr, $within, Some($opts), st)?
+    bind_state_mut!(stmch, st);
+    new_counter($ctr, $within, Some($opts), stmch, st)?
   };
-  ($ctr:expr, $within:expr, Some($opts:expr), $state_arg:ident) => {
-    new_counter($ctr, $within, Some($opts), $state_arg)?
+  ($ctr:expr, $within:expr, Some($opts:expr), $stomach_arg:ident, $state_arg:ident) => {
+    new_counter($ctr, $within, Some($opts), $stomach_arg, $state_arg)?
   };
 }
 #[macro_export]
@@ -1523,16 +1553,16 @@ macro_rules! DefEnvironmentI(
 macro_rules! DefPrimitive{
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block) =>
     (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {
-      WithInnerState!($body, $inner_state, $stomach).into_digested_result() }, PrimitiveOptions::default()));
+      WithInnerState!($body, $stomach, $inner_state).into_digested_result() }, PrimitiveOptions::default()));
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $($key:ident=>$val:expr),*) =>
     (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {
-      WithInnerState!($body, $inner_state, $stomach).into_digested_result() }, NewDefault!(PrimitiveOptions, $($key=>$val),*)));
+      WithInnerState!($body, $stomach, $inner_state).into_digested_result() }, NewDefault!(PrimitiveOptions, $($key=>$val),*)));
   ($proto:expr, sub $body:block) =>
     (DefPrimitiveIWO!($proto, |stomach, whatsit, inner_state| {
-      WithInnerState!($body, inner_state, stomach).into_digested_result() }, PrimitiveOptions::default()));
+      WithInnerState!($body, stomach, inner_state).into_digested_result() }, PrimitiveOptions::default()));
   ($proto:expr, sub $body:block, $($key:ident=>$val:expr),*) =>
     (DefPrimitiveIWO!($proto, |stomach, whatsit, inner_state| {
-      WithInnerState!($body, inner_state, stomach).into_digested_result() }, NewDefault!(PrimitiveOptions, $($key=>$val),*)));
+      WithInnerState!($body, stomach, inner_state).into_digested_result() }, NewDefault!(PrimitiveOptions, $($key=>$val),*)));
   ($proto:expr, None) =>
     (DefPrimitiveIWO!($proto, noprimitive!(), PrimitiveOptions::default()));
   ($proto:expr, None, $($key:ident=>$val:expr),*) =>
@@ -1548,11 +1578,11 @@ macro_rules! DefPrimitive{
   // explicit state
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $state_arg:ident) =>
     (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {
-      WithInnerState!($body, $inner_state, $stomach).into_digested_result()
+      WithInnerState!($body, $stomach, $inner_state).into_digested_result()
     }, PrimitiveOptions::default(), $state_arg));
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block, $state_arg:ident, $($key:ident=>$val:expr),*) =>
     (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {
-      WithInnerState!($body, $inner_state, $stomach).into_digested_result()
+      WithInnerState!($body, $stomach, $inner_state).into_digested_result()
     }, NewDefault!(PrimitiveOptions, $($key=>$val),*), $state_arg));
 
   ($proto:expr, $replacement:expr, $options:expr, $state_arg:ident) => ({
@@ -1651,10 +1681,7 @@ macro_rules! Digest {
   }};
   ($tokens:expr, $state_arg:ident) => {{
     let mut state_stomach = $state_arg.stomach.clone();
-    match outer_stomach!().as_mut() {
-      Some(st) => (*st).digest($tokens, $state_arg),
-      None => state_stomach.borrow_mut().digest($tokens, $state_arg),
-    }
+    outer_stomach!().digest($tokens, $state_arg)
   }};
 }
 
@@ -1662,11 +1689,7 @@ macro_rules! Digest {
 macro_rules! DigestText {
   ($tokens:expr) => {
     bind_state_mut!(st);
-    let mut state_stomach = st.stomach.clone();
-    match outer_stomach!().as_mut() {
-      Some(st) => digest_text($tokens, *st, st),
-      None => digest_text($tokens, state_stomach.borrow_mut(), st),
-    }
+    digest_text($tokens, outer_stomach!(), st),
   };
   ($tokens:expr, $stomach:ident) => {
     bind_state_mut!(st);
@@ -1715,10 +1738,7 @@ macro_rules! RawTeX {
   };
   ($text:expr, $state_arg:ident) => {{
     let mut state_stomach = $state_arg.stomach.clone();
-    match outer_stomach!().as_mut() {
-      Some(st) => (*st).raw_tex($text, $state_arg)?,
-      None => state_stomach.borrow_mut().raw_tex($text, $state_arg)?,
-    }
+    outer_stomach!().raw_tex($text, $state_arg)?;
   }};
 }
 
@@ -1811,7 +1831,7 @@ macro_rules! DeclareOption {
     let cs = String::from("\\default@ds");
     // block case, create a primitive
    let code: PrimitiveClosure = Rc::new(move |$stomach, _args, $inner_state|
-      WithInnerState!($body, $inner_state, $stomach).into_digested_result()
+      WithInnerState!($body, $stomach, $inner_state).into_digested_result()
    );
    def_primitive(T_CS!(cs), None, code, PrimitiveOptions::default(), $outer_state);
   };
@@ -1820,7 +1840,7 @@ macro_rules! DeclareOption {
     let cs = s!("\\ds@{}", $option);
     // block case, create a primitive
    let code: PrimitiveClosure = Rc::new(move |$stomach, _args, $inner_state|
-      WithInnerState!($body, $inner_state, $stomach).into_digested_result()
+      WithInnerState!($body, $stomach, $inner_state).into_digested_result()
    );
     def_primitive(T_CS!(cs), None, code, PrimitiveOptions::default(), $outer_state);
   }
