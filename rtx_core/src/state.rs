@@ -619,6 +619,13 @@ impl State {
       _ => None,
     }
   }
+  
+  pub fn remove_vecdeque<'lvdq>(&'lvdq mut self, key: &'lvdq str) -> Option<VecDeque<Stored>> {
+    match self.remove_value(key) {
+      Some(Stored::VecDequeStored(v)) => Some(v),
+      _ => None,
+    }
+  }
 
   pub fn lookup_font(&self) -> Option<Rc<Font>> {
     match self.lookup_value("font") {

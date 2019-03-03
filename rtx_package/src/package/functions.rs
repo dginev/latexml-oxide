@@ -3,7 +3,7 @@ use libxml::tree::Node;
 use log::*;
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;
 use std::rc::Rc;
 use unidecode::unidecode;
@@ -291,21 +291,23 @@ pub fn load_external_binding(file: &str, state: &mut State, mut with_stomach: Op
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
 pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut state: &mut State) -> Result<()> {
-  let mut file: String = raw_file.trim().to_string();
+  let name = raw_file.trim();
   // let prevname = if options.handleoptions {
-  //   match state.lookup_definition(T_CS!("\@currname")) {
-  //     Some(Stored::Expandable(name)) => Digest!(T_CS!("\@currname")).to_string()
-  // }
+  //   if let state.lookup_definition(&T_CS!("\\@currname")).is_some() {
+  //     Digest!(T_CS!("\@currname")).to_string()
+  //   }
   // let prevext = options.handleoptions && state.lookup_definition(T_CS!('\@currext')) &&
   // ToString(Digest(T_CS!('\@currext')));
 
   // Compute the exact name based on the type
-  file = match options.extension {
-    None => file,
-    Some(ext) => file + "." + ext,
+  let filename = match options.extension {
+    None => name.to_string(),
+    Some(ext) => s!("{}.{}",name, ext),
   };
+  let as_type = if options.as_class { "cls" } else { options.extension.unwrap_or("") };
+
   let mut with_stomach = options.with_stomach;
-  let loaded_flag = file.clone() + "_loaded";
+  let loaded_flag = filename.clone() + "_loaded";
   {
     // Only load definitions once
     if let Some(&Stored::Bool(flag)) = state.lookup_value(&loaded_flag) {
@@ -317,16 +319,18 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
   }
 
   // Mark as loaded, then process the definitions
-  note_begin(&s!("Loading {:?} definitions", file));
+  note_begin(&s!("Loading {:?} definitions", filename));
   state.assign_value(&loaded_flag, true, Some(Scope::Global));
+  def_macro(T_CS!("\\@currname"),None, Tokens!(Explode!(name)), None, state);
+  def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None, state);
 
   let is_contrib = match with_stomach {
-    None => load_external_binding(&file, state, None)?,
-    Some(ref mut stomach_mut) => load_external_binding(&file, state, Some(stomach_mut))?,
+    None => load_external_binding(&filename, state, None)?,
+    Some(ref mut stomach_mut) => load_external_binding(&filename, state, Some(stomach_mut))?,
   };
 
   if !is_contrib {
-    match file.as_ref() {
+    match filename.as_ref() {
       "TeX.pool" => pool::tex::load_definitions(&mut state, with_stomach)?,
       "LaTeX.pool" => pool::latex::load_definitions(&mut state, with_stomach)?,
       "eTeX.pool" => pool::etex::load_definitions(&mut state, with_stomach)?,
@@ -345,7 +349,7 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
       other => fatal!(Package, Unknown, s!("TODO: unknown binding {:?}, can't load", other)),
     };
   }
-  note_end(&s!("Loading {:?} definitions", file));
+  note_end(&s!("Loading {:?} definitions", filename));
   Ok(())
 }
 
@@ -390,9 +394,10 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
   Ok(())
 }
 
-pub fn process_options(gullet: &mut Gullet, state: &mut State) -> Result<()> {
+pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let currname_token = T_CS!("\\@currname");
   let currext_token = T_CS!("\\@currext");
+  let gullet = stomach.get_gullet_mut();
   let name = if state.lookup_definition(&currname_token).is_some() {
     do_expand(currname_token, gullet, state)?.to_string()
   } else { 
@@ -403,59 +408,81 @@ pub fn process_options(gullet: &mut Gullet, state: &mut State) -> Result<()> {
   } else { 
     String::new()
   };
+  let empty_vdq = VecDeque::new(); // convenience for unwrapping empty
 
-  // let declaredoptions = @{ LookupValue('@declaredoptions') };
-  // let curroptions = @{ (defined($name) && defined($ext)
-  //       && LookupValue('opt@' . $name . '.' . $ext)) || [] };
-  // let classoptions = @{ LookupValue('class_options') || [] };
+  let declared_options : VecDeque<Stored> = state.lookup_vecdeque("@declaredoptions").unwrap_or(&empty_vdq).clone();
+  let opt_key = dbg!(s!("opt@{}.{}", name, ext));
+  let current_options =state.lookup_vecdeque(&opt_key).unwrap_or(&empty_vdq);
+  let class_options = state.lookup_vecdeque("class_options").unwrap_or(&empty_vdq);
+  // Execute options in declared order (unless \ProcessOptions*)
 
-  // let defaultcs = T_CS!("\\default@ds");
-  // # Execute options in declared order (unless \ProcessOptions*)
-
+  // TODO: processing options, not yet supported
   // if ($options{inorder}) {    # Execute options in the order passed in (eg. \ProcessOptions*)
-  //   foreach my $option (@classoptions) {    # process global options, but no error
+  //   foreach my $option (@class_options) {    # process global options, but no error
   //     if    (executeOption_internal($option))        { }
   //     elsif (executeDefaultOption_internal($option)) { } }
+  // for option in current_options.iter() {
+  //   if execute_option_internal(option)        { }
+  //   else if execute_default_option_internal(option)) { } 
+  // } }
+  // else {                                    
+  let mut requested_options : HashSet<String> = HashSet::new();
+  for option in current_options.iter() {
+    if let Stored::String(content) = option {
+      requested_options.insert(content.to_string());
+    }
+  }
+  for option in class_options.iter() {
+    if let Stored::String(content) = option {
+      requested_options.insert(content.to_string());
+    }
+  }
+  dbg!(&requested_options);
+  dbg!(&declared_options);
 
-  //   foreach my $option (@curroptions) {
-  //     if    (executeOption_internal($option))        { }
-  //     elsif (executeDefaultOption_internal($option)) { } } }
-  // else {                                    # Execute options in declared order (eg. \ProcessOptions)
-  //   foreach my $option (@declaredoptions) {
-  //     if (grep { $option eq $_ } @curroptions, @classoptions) {
-  //       @curroptions = grep { $option ne $_ } @curroptions;    # Remove it, since it's been handled.
-  //       executeOption_internal($option); } }
-  //   # Now handle any remaining options (eg. default options), in the given order.
-  //   foreach my $option (@curroptions) {
-  //     executeDefaultOption_internal($option); } }
-  // # Now, undefine the handlers?
-  // foreach my $option (@declaredoptions) {
-  //   Let('\ds@' . $option, '\relax'); }
-  // }
+  // Execute options in declared order (eg. \ProcessOptions)
+  for option in declared_options.iter() {
+    if let Stored::String(content) = option {
+      if requested_options.contains(content)  {
+        requested_options.remove(content); // Remove it, since it's been handled.
+        execute_option_internal(content, stomach, state)?; 
+      }
+    }
+  }
+  // Now handle any remaining options (eg. default options), in the given order.
+  for option in requested_options.iter() {
+    execute_default_option_internal(option, stomach, state)?; 
+  }
+  // Now, undefine the handlers?
+  for option in declared_options.iter() {
+    state.let_i(&T_CS!(&s!("\\ds@{}", option)), T_CS!("\\relax"), None);
+  }
   Ok(())
 }
 
 
-// sub executeOption_internal {
-//   my ($option) = @_;
-//   my $cs = T_CS('\ds@' . $option);
-//   if ($STATE->lookupDefinition($cs)) {
-//     # print STDERR "\nPROCESS OPTION $option\n";
-//     DefMacroI('\CurrentOption', undef, $option);
-//     AssignValue('@unusedoptionlist',
-//       [grep { $_ ne $option } @{ LookupValue('@unusedoptionlist') || [] }]);
-//     Digest($cs);
-//     return 1; }
-//   else {
-//     return; } }
+fn execute_option_internal(option: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> {
+  let cs = T_CS!(&s!("\\ds@{}",option));
+  if state.lookup_definition(&cs).is_some() {
+    def_macro(T_CS!("\\CurrentOption"), None, Tokens!(T_OTHER!(option)), None, state);
+    
+    let unused = match state.remove_vecdeque("@unusedoptionlist") {
+      Some(list) => list.into_iter().filter(|item| if let Stored::String(content) = item { content != option} else { false }).collect(),
+      None => VecDeque::new()
+    };
+    state.assign_value("@unusedoptionlist", Stored::VecDequeStored(unused), None);
+    stomach.digest(cs, state)?;
+    Ok(true)
+  } else {
+    Ok(false)
+  }
+}
 
-// sub executeDefaultOption_internal {
-//   my ($option) = @_;
-//   # print STDERR "\nPROCESS DEFAULT OPTION $option\n";
-//   # presumably should NOT remove from @unusedoptionlist ?
-//   DefMacroI('\CurrentOption', undef, $option);
-//   Digest(T_CS('\default@ds'));
-//   return 1; }
+fn execute_default_option_internal(option: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> {
+  def_macro(T_CS!("\\CurrentOption"), None, Tokens!(T_OTHER!(option)), None, state);
+  stomach.digest(T_CS!("\\default@ds"), state)?;
+  Ok(true)
+}
 
 
 pub struct RequireOptions<'a> {
