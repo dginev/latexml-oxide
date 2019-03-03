@@ -1,5 +1,3 @@
-/// Macros and pool come at the end, so that they load seamlessly
-
 #[macro_export]
 macro_rules! LoadDefinitions {
   ($outer_state:ident, $body:block) => {
