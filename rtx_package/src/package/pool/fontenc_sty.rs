@@ -110,7 +110,6 @@ LoadDefinitions!(outer_stomach, state, {
   DeclareOption!(None, sub[stomach, state] {
     let gullet = stomach.get_gullet_mut();
     let current_option = Expand!(T_CS!("\\CurrentOption"), gullet).to_string();
-    warn!("Hellooooo from default option of fontenc, current_option is : {}", current_option);
     UnshiftValue!("font_encodings", vec![Stored::String(current_option)]);
   });
 
@@ -131,7 +130,8 @@ LoadDefinitions!(outer_stomach, state, {
           // explicit sub[] {} closure annotation?
           DefMacro!("\\encodingdefault", sub[gullet, args, state] { Ok(enc_tokens.clone()) }, scope => Some(Scope::Global));
           let encfile = encoding.to_lowercase() + "enc";
-          InputDefinitions!(&encfile, extension => Some("def"));
+          warn!(target:"TODO", "add the InputDefinitions! call for loading encoding file {:?}", encfile);
+          // InputDefinitions!(&encfile, extension => Some("def"));
           if LoadFontMap!(&encoding).is_some() {
             MergeFont!(encoding => encoding.to_string());
           }
