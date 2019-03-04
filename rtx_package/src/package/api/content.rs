@@ -59,7 +59,7 @@ pub fn load_external_binding(file: &str, state: &mut State, mut stomach: &mut St
 }
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
-pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut stomach: &mut Stomach, mut state: &mut State) -> Result<()> {
+pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mut stomach: &mut Stomach, mut state: &mut State) -> Result<()> {
   let name = raw_file.trim();
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions... so let's make stomach a mandatory option.
   let prevname = if options.handleoptions && state.lookup_definition(&T_CS!("\\@currname")).is_some() {
@@ -74,13 +74,41 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
   } else {
     String::new()
   };
+  // This file will be treated somewhat as if it were a class
+  // IF as_class is true
+  // OR if it is loaded by such a class, and has withoptions true!!! (yikes)
+  if options.handleoptions && options.withoptions.is_some() {
+    if let Some(vdq) = state.lookup_vecdeque("@masquerading@as@class") {
+      if vdq.iter().any(|x| 
+        if let Stored::String(ref v) = x {
+          v == &prevname
+        } else {
+          false
+        }
+      ) {
+        options.as_class = true;
+      }
+    }
+  }
+  if options.noltxml {
+    options.raw = true;// so it will be read as raw by Gullet.
+  }
+  let as_type = if options.as_class { "cls" } else { options.extension.unwrap_or("") };
 
   // Compute the exact name based on the type
   let filename = match options.extension {
     None => name.to_string(),
     Some(ext) => s!("{}.{}",name, ext),
   };
-  let as_type = if options.as_class { "cls" } else { options.extension.unwrap_or("") };
+  let current_options = options.options.join(",");
+  if !options.options.is_empty() {
+    if let Some(Stored::String(prevoptions)) = state.lookup_value(&s!("{}_loaded_with_options",filename)) {
+      if &current_options != prevoptions {
+        info!(target: "unexpected:options", //$STATE->getStomach->getGullet,
+          "Option clash for file {} with options {:?}, previously loaded with {:?}", filename, current_options, prevoptions);
+      }
+    }
+  }
 
   let loaded_flag = filename.clone() + "_loaded";
   {
@@ -98,6 +126,51 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions, mut st
   state.assign_value(&loaded_flag, true, Some(Scope::Global));
   def_macro(T_CS!("\\@currname"),None, Tokens!(Explode!(name)), None, state);
   def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None, state);
+
+  // TODO: Is this inaccurate with latexml? It only sets the macros if the file is found, we set them *always*, as a matter of course
+  if options.handleoptions {
+    // For \RequirePackageWithOptions, pass the options from the outer class/style to the inner one.
+    if let Some(with_options_to_pass) = options.withoptions {
+      if !prevname.is_empty() && state.lookup_value(&s!("opt@{}.{}", prevname, prevext)).is_some() {
+        // Only pass those class options that are declared by the package!
+        if let Some(declared_options) = state.lookup_vecdeque("@declaredoptions") {
+          let mut topass          = Vec::new();
+          for op in with_options_to_pass.into_iter() {
+            if declared_options.iter().any(|x| if let Stored::String(val) = x {
+              val == &op 
+            } else {
+              false
+            }) {
+              topass.push(op)
+            }
+          }
+          if !topass.is_empty() {
+            pass_options(name, as_type, topass, state)
+          }
+        }
+      }
+    }
+    def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None, state);
+    def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None, state);
+    // reset options (Note reset & pass were in opposite order in LoadClass ????)
+    let gullet = stomach.get_gullet_mut();
+    reset_options(gullet, state)?;
+    pass_options(name, as_type, options.options.clone(), state); // passed explicit options.
+    // Note which packages are pretending to be classes.
+    if options.as_class {
+      state.push_value("@masquerading@as@class", name);
+    }
+    def_macro(T_CS!(&s!("\\{}.{}-h@@k",name, as_type)), None, options.after.unwrap_or_default(), None, state);
+    let current_opt_val = match state.lookup_vecdeque(&s!("opt@{}.{}", name, as_type)) {
+      Some(vdq) => vdq.iter().map(|x| if let Stored::String(val) = x { val } else { "" })
+      .collect::<Vec<&str>>().join(","), // this is so painful, why can't we .join on a VecDeque?
+      None => String::new()
+    };
+    def_macro(T_CS!(&s!("\\opt@{}.{}",name, as_type)), None, Tokens!(Explode!(current_opt_val)), None, state);
+  }
+  if !current_options.is_empty() {
+    state.assign_value(&s!("{}_loaded_with_options",filename), current_options, Some(Scope::Global));
+  }
 
   let is_contrib = load_external_binding(&filename, state, stomach)?;
 
@@ -165,6 +238,13 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
   );
   Ok(())
 }
+
+/// Pass the sequence of @options to the package $name (if $ext is 'sty'),
+/// or class $name (if $ext is 'cls').
+fn pass_options(name: &str, ext: &str, options: Vec<String>, state: &mut State) {
+  state.push_value(&s!("opt@{}.{}", name, ext), options);
+}
+
 
 pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let currname_token = T_CS!("\\@currname");
@@ -256,10 +336,21 @@ fn execute_default_option_internal(option: &str, stomach: &mut Stomach, state: &
   Ok(true)
 }
 
+fn reset_options(gullet: &mut Gullet, state: &mut State) -> Result<()> {
+  state.assign_value("@declaredoptions", Stored::VecDequeStored(VecDeque::new()), None);
+  let opt_unused_cs = if do_expand(T_CS!("\\@currext"), gullet, state)?.to_string()  == "cls" {
+    "\\OptionNotUsed"
+  } else {
+    "\\@unknownoptionerror"
+  };
+  state.let_i(&T_CS!("\\default@ds"), T_CS!(opt_unused_cs), None);
+  Ok(())
+}
+
 
 pub struct RequireOptions {
   pub options: Vec<String>,
-  pub withoptions: bool,
+  pub withoptions: Option<Vec<String>>,
   pub extension: Option<&'static str>,
   pub as_class: bool,
   pub noltxml: bool,
@@ -271,7 +362,7 @@ impl Default for RequireOptions {
   fn default() -> Self {
     RequireOptions {
       options: Vec::new(),
-      withoptions: false,
+      withoptions: None,
       extension: None,
       as_class: false,
       noltxml: false,
@@ -307,7 +398,7 @@ pub fn require_package(name: &str, mut options: RequireOptions, stomach: &mut St
       extension: options.extension,
       handleoptions: true,
       // Pass classes options if we have NONE!
-      withoptions: options.options,
+      withoptions: if options.options.is_empty() { Some(Vec::new()} else {None}, // fake boolean use, multi-type in latexml... refactor?
       ..InputDefinitionOptions::default()
     },
     stomach,
@@ -520,9 +611,10 @@ pub struct InputDefinitionOptions {
   pub notex: bool,
   pub noerror: bool,
   pub noltxml: bool,
-  pub withoptions: Vec<String>,
+  pub withoptions: Option<Vec<String>>,
   pub handleoptions: bool,
   pub as_class: bool,
+  pub raw: bool,
 }
 impl Default for InputDefinitionOptions {
   fn default() -> Self {
@@ -533,7 +625,8 @@ impl Default for InputDefinitionOptions {
       notex: false,
       noerror: false,
       noltxml: false,
-      withoptions: Vec::new(),
+      raw: false,
+      withoptions: None,
       handleoptions: false,
       as_class: false,
     }
