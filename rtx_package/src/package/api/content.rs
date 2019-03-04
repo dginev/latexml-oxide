@@ -173,7 +173,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   }
 
   let is_contrib = load_external_binding(&filename, state, stomach)?;
-
+  let mut is_binding = true;
   if !is_contrib {
     match filename.as_ref() {
       "TeX.pool" => pool::tex::load_definitions(&mut stomach, &mut state)?,
@@ -191,9 +191,22 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
       "fontenc.sty"  => pool::fontenc_sty::load_definitions(&mut stomach, &mut state)?,
       "inputenc.sty"  => pool::inputenc_sty::load_definitions(&mut stomach, &mut state)?,
       "textcomp.sty"  => pool::textcomp_sty::load_definitions(&mut stomach, &mut state)?,
-      other => fatal!(Package, Unknown, s!("TODO: unknown binding {:?}, can't load", other)),
+      other => {is_binding = false},
     };
   }
+  if !is_binding {
+    // We're inverting the control flow, because it is near-instant to check whether we have an available
+    // binding dispatcher, in both contributed and core binding names
+    // Now that we have ensured there is no compiled target of this name, we can start the file system search dance,
+    // call to kpsewhich, etc.
+    //
+    if let Some(absolute_filename) = pathname::kpsewhich(&[&filename]) {
+      warn!("Hey! Found with kpsewhich: {:?}", absolute_filename);
+    } else {
+      fatal!(Package, Unknown, s!("TODO: unknown binding {:?}, can't load", filename))
+    }
+  }
+
   note_end(&s!("Loading {:?} definitions", filename));
   Ok(())
 }
@@ -419,7 +432,7 @@ pub fn require_package(name: &str, mut options: RequireOptions, stomach: &mut St
       extension: options.extension,
       handleoptions: true,
       // Pass classes options if we have NONE!
-      withoptions: if options.options.is_empty() { Some(Vec::new()} else {None}, // fake boolean use, multi-type in latexml... refactor?
+      withoptions: if options.options.is_empty() { Some(Vec::new()) } else {None}, // fake boolean use, multi-type in latexml... refactor?
       options: options.options,
       as_class: options.as_class,
       noltxml: options.noltxml,

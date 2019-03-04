@@ -527,7 +527,6 @@ pub fn untex(digested: &Digested, state: &State) -> Result<String> {
     let open_brace_string = String::from_utf8(vec![b'{'; level.abs() as usize]).unwrap();
     tex_string = open_brace_string + &tex_string;
   }
-
   Ok(tex_string)
 }
 
