@@ -32,7 +32,6 @@ LoadDefinitions!(state, {
           Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
           None => Vec::new(),
         };
-
         for package in package_list {
           require_package(&package, RequireOptions {
             options: options_list.clone(),

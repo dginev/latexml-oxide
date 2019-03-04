@@ -101,7 +101,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
     Some(ext) => s!("{}.{}",name, ext),
   };
   let current_options = options.options.join(",");
-  if !options.options.is_empty() {
+  if !current_options.is_empty() {
     if let Some(Stored::String(prevoptions)) = state.lookup_value(&s!("{}_loaded_with_options",filename)) {
       if &current_options != prevoptions {
         info!(target: "unexpected:options", //$STATE->getStomach->getGullet,
@@ -263,7 +263,7 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let empty_vdq = VecDeque::new(); // convenience for unwrapping empty
 
   let declared_options : VecDeque<Stored> = state.lookup_vecdeque("@declaredoptions").unwrap_or(&empty_vdq).clone();
-  let opt_key = dbg!(s!("opt@{}.{}", name, ext));
+  let opt_key = s!("opt@{}.{}", name, ext);
   let current_options =state.lookup_vecdeque(&opt_key).unwrap_or(&empty_vdq);
   let class_options = state.lookup_vecdeque("class_options").unwrap_or(&empty_vdq);
   // Execute options in declared order (unless \ProcessOptions*)
@@ -280,25 +280,46 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   // else {                                    
   let mut requested_options : HashSet<String> = HashSet::new();
   for option in current_options.iter() {
-    if let Stored::String(content) = option {
-      requested_options.insert(content.to_string());
+    match option {
+      Stored::String(content) => {requested_options.insert(content.to_string());},
+      Stored::VecString(contents) => {
+        for content in contents.iter() {
+          requested_options.insert(content.to_string());
+        }
+      },
+      _ => {}
     }
   }
   for option in class_options.iter() {
-    if let Stored::String(content) = option {
-      requested_options.insert(content.to_string());
+    match option {
+      Stored::String(content) => {requested_options.insert(content.to_string());},
+      Stored::VecString(contents) => {
+        for content in contents.iter() {
+          requested_options.insert(content.to_string());
+        }
+      },
+      _ => {}
     }
   }
-  dbg!(&requested_options);
-  dbg!(&declared_options);
 
   // Execute options in declared order (eg. \ProcessOptions)
   for option in declared_options.iter() {
-    if let Stored::String(content) = option {
-      if requested_options.contains(content)  {
-        requested_options.remove(content); // Remove it, since it's been handled.
-        execute_option_internal(content, stomach, state)?; 
-      }
+    match option {
+      Stored::String(content) => {
+        if requested_options.contains(content)  {
+          requested_options.remove(content); // Remove it, since it's been handled.
+          execute_option_internal(content, stomach, state)?; 
+        }
+      },
+      Stored::VecString(contents) => {
+        for content in contents.iter() {
+          if requested_options.contains(content)  {
+            requested_options.remove(content); // Remove it, since it's been handled.
+            execute_option_internal(content, stomach, state)?; 
+          }
+        }
+      },
+      _ => {}
     }
   }
   // Now handle any remaining options (eg. default options), in the given order.
@@ -356,7 +377,7 @@ pub struct RequireOptions {
   pub noltxml: bool,
   pub notex: bool,
   pub raw: bool,
-  pub after: bool,
+  pub after: Tokens,
 }
 impl Default for RequireOptions {
   fn default() -> Self {
@@ -368,7 +389,7 @@ impl Default for RequireOptions {
       noltxml: false,
       notex: true,
       raw: false,
-      after: false,
+      after: Tokens!(),
     }
   }
 }
@@ -380,8 +401,8 @@ impl Default for RequireOptions {
 pub fn require_package(name: &str, mut options: RequireOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   if options.raw {
     options.raw = false;
-    // Warn('deprecated', 'raw', $STATE->getStomach->getGullet,
-    //   "RequirePackage option raw is obsolete; it is not needed");
+    warn!(target: "deprecated:raw",// $STATE->getStomach->getGullet,
+      "RequirePackage option raw is obsolete; it is not needed");
   }
 
   // We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
@@ -399,6 +420,12 @@ pub fn require_package(name: &str, mut options: RequireOptions, stomach: &mut St
       handleoptions: true,
       // Pass classes options if we have NONE!
       withoptions: if options.options.is_empty() { Some(Vec::new()} else {None}, // fake boolean use, multi-type in latexml... refactor?
+      options: options.options,
+      as_class: options.as_class,
+      noltxml: options.noltxml,
+      notex: options.notex,
+      raw: options.raw,
+      after: options.after,
       ..InputDefinitionOptions::default()
     },
     stomach,

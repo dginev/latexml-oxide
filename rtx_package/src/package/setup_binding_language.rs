@@ -1830,18 +1830,18 @@ macro_rules! DeclareOption {
   (None, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => { 
     let cs = String::from("\\default@ds");
     // block case, create a primitive
-   let code: PrimitiveClosure = Rc::new(move |$stomach, _args, $inner_state|
+    let code: PrimitiveClosure = Rc::new(move |$stomach, _args, $inner_state|
       WithInnerState!($body, $stomach, $inner_state).into_digested_result()
-   );
-   def_primitive(T_CS!(cs), None, code, PrimitiveOptions::default(), $outer_state);
+    );
+    def_primitive(T_CS!(cs), None, code, PrimitiveOptions::default(), $outer_state);
   };
   ($option:expr, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => { 
-    $outer_state.push_value("@declareoptions", $option);
+    $outer_state.push_value("@declaredoptions", $option);
     let cs = s!("\\ds@{}", $option);
     // block case, create a primitive
-   let code: PrimitiveClosure = Rc::new(move |$stomach, _args, $inner_state|
+    let code: PrimitiveClosure = Rc::new(move |$stomach, _args, $inner_state|
       WithInnerState!($body, $stomach, $inner_state).into_digested_result()
-   );
+    );
     def_primitive(T_CS!(cs), None, code, PrimitiveOptions::default(), $outer_state);
   }
 }
