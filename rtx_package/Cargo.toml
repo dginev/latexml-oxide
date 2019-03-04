@@ -10,12 +10,12 @@ description = "Bindings and related infrastructure for core processing"
 crate-type = ["lib"]
 
 [dependencies]
-glob = "0.2"
-rand = "0.4"
-time = "0.1"
+glob = "0.2.0"
+rand = "0.4.0"
+time = "0.1.0"
 lazy_static = "1.0.0"
 regex = "1.1.0"
-log = "0.4"
+log = "0.4.0"
 libxml = "0.2.6"
 unidecode = "0.3.0"
 chrono = "0.4.6"

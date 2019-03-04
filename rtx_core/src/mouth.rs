@@ -301,7 +301,6 @@ impl Mouth {
           None
         } else {
           // we read a line!
-          let line;
           //
           // Note 1: the original latexml code first split the perl string into lines, and only THEN decoded it
           // however, executing a rust regex on a Vec<u8> is just not going to be a sane way forward.
@@ -310,25 +309,25 @@ impl Mouth {
           //
           // Note 2: again, the original latexml code only runs this decode logic for file reads,
           //         implying that any string/http/https mouths are always expected in Unicode
-          if let Some(ref encoding) = state.input_encoding {
+          let mut line = if let Some(ref encoding) = state.input_encoding {
             // TODO: What are characters that fail to decode replaced by in Rust?
             // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable chars in to space(?).
             // line = encoding, line_bytes
-            warn!("ENCODING TIME: {}", encoding);
       
             // Just remove the replacement chars, and warn (or Info?)
             info!(target: &s!("misdefined:{}", encoding), "input isn't valid under encoding {}", encoding); 
-            line = unsafe { str::from_utf8_unchecked(&line_bytes).to_string() };
+            unsafe { str::from_utf8_unchecked(&line_bytes).to_string() }
           } else {
             // no encoding, interpret as unicode! 
             match str::from_utf8(&line_bytes) {
-              Ok(line_str) => line = line_str.to_string(),
+              Ok(line_str) => line_str.to_string(),
               Err(e) => {
                 info!(target: "misdefined:utf8", "input isn't valid under encoding utf8: {:?}", e); 
-                line = unsafe { str::from_utf8_unchecked(&line_bytes).to_string() };
+                unsafe { str::from_utf8_unchecked(&line_bytes).to_string() }
               }
             }
-          }
+          };
+          line.push('\r');
           Some(line)
         }
       } else {

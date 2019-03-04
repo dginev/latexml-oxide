@@ -1,6 +1,7 @@
 use dirs;
 use lazy_static::lazy_static;
 use regex::Regex;
+use kpathsea::Kpaths;
 
 use std::env;
 use std::path::{Path, PathBuf};
@@ -285,6 +286,16 @@ pub fn extension(pathname: &str) -> String {
     None => String::new(),
   }
   .to_lowercase()
+}
+
+pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
+  let kpse = Kpaths::new();
+  for candidate in candidates {
+    if let Some(path) = kpse.find_file(candidate) {
+      return Some(path);
+    }
+  }
+  None
 }
 
 pub fn is_nasty(file: &str) -> bool { PATHNAME_IS_NASTY_RE.is_match(file) }

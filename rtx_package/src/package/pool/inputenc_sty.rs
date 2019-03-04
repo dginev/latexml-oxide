@@ -12,15 +12,14 @@ fn set_input_encoding(encoding: &str, stomach: &mut Stomach, state: &mut State) 
   state.input_encoding = None; // Disable the state-level decoding, if any.
 
   // Then load TeX's input encoding definitions.
-  warn!(target:"TODO", "add the InputDefinitions! call for loading encoding file {:?}", encoding);
-  // input_definitions(encoding,
-  //   InputDefinitionOptions { extension: Some("def"), ..InputDefinitionOptions::default() },
-  //   stomach, state)?;
+  input_definitions(encoding,
+    InputDefinitionOptions { extension: Some("def"), ..InputDefinitionOptions::default() },
+    stomach, state)?;
   // NOTE: INPUT_ENCODING is never actually used anywhere!
   // So, presumably either Perl is magically converting to utf8
   // or more likely, treating the bytes as (misinterpreted?) utf8?
   // In latter case, perhaps it doesn't matter as long as we end up with the same bytes in/out???
-  state.input_encoding = Some(encoding.to_string());
+  state.assign_value("INPUT_ENCODING", encoding.to_string(), None);
   let encoding_tokenized = TokenizeInternal!(encoding);
   def_macro(T_CS!("\\inputencodingname"), None, encoding_tokenized, None, state);
   Ok(())
