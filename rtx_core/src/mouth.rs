@@ -301,7 +301,7 @@ impl Mouth {
           None
         } else {
           // we read a line!
-          let mut line = String::new();
+          let line;
           //
           // Note 1: the original latexml code first split the perl string into lines, and only THEN decoded it
           // however, executing a rust regex on a Vec<u8> is just not going to be a sane way forward.
@@ -318,6 +318,7 @@ impl Mouth {
       
             // Just remove the replacement chars, and warn (or Info?)
             info!(target: &s!("misdefined:{}", encoding), "input isn't valid under encoding {}", encoding); 
+            line = unsafe { str::from_utf8_unchecked(&line_bytes).to_string() };
           } else {
             // no encoding, interpret as unicode! 
             match str::from_utf8(&line_bytes) {

@@ -353,16 +353,25 @@ impl Document {
   /// but may move up past a text node.
   // Rust note: attrib would have been best as Vec<(String,String)> but
   // currently quote!() doesn't work out of the box on them
-  pub fn insert_pi(&mut self, op: &str, attributes: Option<HashMap<String, String>>) -> Result<()> {
-    let mut attr_data = String::new();
-    for (key, value) in &attributes.unwrap_or_default() {
-      attr_data.push_str(key);
-      attr_data.push_str("=\"");
-      attr_data.push_str(value);
-      attr_data.push('"');
+  pub fn insert_pi(&mut self, op: &str, attributes_opt: Option<HashMap<String, String>>) -> Result<()> {
+    let mut attr_data = Vec::new();
+    if let Some(attributes) = attributes_opt {
+      // TODO: This was a portion of late-night code, can we rewrite it so that we work entirely with &str,
+      //       and no allocations get done? It's a trivial overhead in practice, but still...
+      let mut keys : Vec<String> = ["class","package","options"].iter()
+        .map(|opt| opt.to_string()).collect();
+      let mut other_keys = attributes.keys()
+        .filter(|k| k.as_str() != "class" && k.as_str() != "package" && k.as_str() != "options")
+        .map(|k| k.to_string()).collect();
+      keys.append(&mut other_keys);
+      for key in keys {
+        if let Some(value) = attributes.get(&key) {
+          attr_data.push(s!("{}=\"{}\"",key,value));
+        }
+      }
     }
     // self.close_text_internal();  // Close any open text node
-    let mut pi_node = self.document.create_processing_instruction(op, &attr_data).unwrap();
+    let mut pi_node = self.document.create_processing_instruction(op, &attr_data.join(" ")).unwrap();
     if self.node.get_type() == Some(NodeType::DocumentNode) {
       self.pending.push(pi_node);
     } else {
