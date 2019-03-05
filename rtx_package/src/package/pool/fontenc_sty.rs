@@ -130,8 +130,7 @@ LoadDefinitions!(outer_stomach, state, {
           // explicit sub[] {} closure annotation?
           DefMacro!("\\encodingdefault", sub[gullet, args, state] { Ok(enc_tokens.clone()) }, scope => Some(Scope::Global));
           let encfile = encoding.to_lowercase() + "enc";
-          warn!(target:"TODO", "add the InputDefinitions! call for loading encoding file {:?}", encfile);
-          // InputDefinitions!(&encfile, extension => Some("def"));
+          InputDefinitions!(&encfile, extension => Some("def"));
           if LoadFontMap!(&encoding).is_some() {
             MergeFont!(encoding => encoding.to_string());
           }
