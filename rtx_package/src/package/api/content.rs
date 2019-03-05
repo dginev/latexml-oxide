@@ -123,7 +123,6 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
 
   // Mark as loaded, then process the definitions
   note_begin(&s!("Loading {:?} definitions", filename));
-  state.assign_value(&loaded_flag, true, Some(Scope::Global));
   def_macro(T_CS!("\\@currname"),None, Tokens!(Explode!(name)), None, state);
   def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None, state);
 
@@ -194,14 +193,17 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
       other => {is_binding = false},
     };
   }
-  if !is_binding {
+  if is_binding {
+    // We found and loaded a binding successfully, mark it as such.
+    state.assign_value(&loaded_flag, true, Some(Scope::Global));
+  } else {
     // We're inverting the control flow, because it is near-instant to check whether we have an available
     // binding dispatcher, in both contributed and core binding names
     // Now that we have ensured there is no compiled target of this name, we can start the file system search dance,
     // call to kpsewhich, etc.
     //
     if let Some(absolute_filename) = pathname::kpsewhich(&[&filename]) {
-      warn!("Hey! Found with kpsewhich: {:?}", absolute_filename);
+      load_tex_definitions(&filename, &absolute_filename, stomach, state)?;
     } else {
       fatal!(Package, Unknown, s!("TODO: unknown binding {:?}, can't load", filename))
     }
@@ -224,6 +226,63 @@ pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
 
 pub fn input(file: String, gullet: &mut Gullet, state: &mut State) {
   unimplemented!();
+}
+
+
+fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+  if !pathname::is_literaldata(pathname) { // We can't analyze literal data's pathnames!
+    let (dir, name, extension) = pathname::split(pathname);
+    // Don't load if we've already loaded it before.
+    // Note that we'll still load it if we've already loaded only the ltxml version
+    // since someone's presumably asking _explicitly_ for the raw TeX version.
+    // It's probably even the ltxml version is asking for it!!
+    // Of course, now it will be marked and wont get reloaded!
+    if state.lookup_bool(&s!("{}_loaded",request)) {
+      return Ok(());
+    }
+    state.assign_value(&s!("{}_loaded",request), true, Some(Scope::Global)); 
+  }
+
+  // Note that we are reading definitions (and recursive input is assumed also definitions)
+  let was_interpreting = state.lookup_bool("INTERPRETING_DEFINITIONS");
+  // And that if we're interpreting this TeX file of definitions,
+  // we probably should interpret any TeX files IT loads.
+  let was_including_styles = state.lookup_bool("INCLUDE_STYLES");
+  state.assign_value("INTERPRETING_DEFINITIONS", true, None);
+  // If we're reading in these definitions, probaly will accept included ones?
+  // (but not forbid ltxml ?)
+  state.assign_value("INCLUDE_STYLES", true, None);
+  // When set, this variable allows redefinitions of locked defns.
+  // It is set in before/after methods to allow local rebinding of commands
+  // but loading of sources & bindings is typically done in before/after methods of constructors!
+  // This re-locks defns during reading of TeX packages.
+  state.unlocked = false;
+  let content_str = state.lookup_string(&s!("{}_contents",pathname));
+  let content = if content_str.is_empty() {
+    None
+  } else {
+    Some(content_str)
+  };
+  let mut pathname_mouth = Mouth::create(pathname,
+    MouthOptions{
+      fordefinitions: true,
+      notes: true,
+      content,
+      .. MouthOptions::default()
+    }, state)?;
+       
+  stomach.reading_from_mouth(pathname_mouth, state, move |stomach, state| -> Result<()> {
+    while let Some(token) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
+      if token != T_SPACE!() {
+        stomach.invoke_token(&token, state)?;
+      }
+    }
+    Ok(())
+  })?;   
+      
+  state.assign_value("INTERPRETING_DEFINITIONS", was_interpreting, None);
+  state.assign_value("INCLUDE_STYLES", was_including_styles, None);
+  Ok(())
 }
 
 pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
