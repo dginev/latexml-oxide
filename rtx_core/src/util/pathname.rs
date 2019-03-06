@@ -2,6 +2,7 @@ use dirs;
 use lazy_static::lazy_static;
 use regex::Regex;
 use kpathsea::Kpaths;
+use log::*;
 
 use std::env;
 use std::path::{Path, PathBuf};
@@ -31,6 +32,8 @@ lazy_static! {
   };
   static ref PROTOCOL_RE : Regex = Regex::new(r"(https|http|ftp):").unwrap();
   static ref PATHNAME_IS_NASTY_RE: Regex = Regex::new(r"[^\w\-_+=/\\\.~\s:]").unwrap();
+  // TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
+  static ref URL_RE: Regex = Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap();
   // static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
   //     Ok(exe_path) => {
   //       match exe_path.as_path().parent() {
@@ -53,9 +56,8 @@ lazy_static! {
 
 }
 
-pub fn is_url(_path: &str) -> bool {
-  // TODO
-  false
+pub fn is_url(path: &str) -> bool {
+  URL_RE.is_match(path)
 }
 
 pub fn is_literaldata(data: &str) -> bool { data.starts_with(LITERAL_PROTOCOL) }
@@ -64,8 +66,8 @@ pub fn is_absolute(path: &str) -> bool { Path::new(&canonical(path)).is_absolute
 
 pub fn absolute(path: &str) -> String { Path::new(path).canonicalize().unwrap().to_string_lossy().to_string() }
 
-// Split the pathname into components (dir,name,type).
-// If pathname is absolute, dir starts with volume or '/'
+/// Split the pathname into components (dir,name,type).
+/// If pathname is absolute, dir starts with volume or '/'
 pub fn split(pathname: &str) -> (String, String, String) {
   let canonical_pathname = canonical(pathname);
   let canonical_path = Path::new(&canonical_pathname);
@@ -83,6 +85,15 @@ pub fn split(pathname: &str) -> (String, String, String) {
   }
   .to_lowercase();
   (pathdir, name, pathname_ext)
+}
+
+///  Simple logic for splitting a URL into protocol://base/path
+pub fn url_split(url: &str) -> (&str, &str) {
+  if let Some(caps) = URL_RE.captures(url) {
+    (caps.get(1).map_or("", |m| m.as_str()), caps.get(2).map_or("", |m| m.as_str()))
+  } else { 
+    (url, "index.tex")   // Well, what other default makes sense?
+  }
 }
 
 /// This likely needs portability work!!! (particularly regarding urls, separators, ...)
