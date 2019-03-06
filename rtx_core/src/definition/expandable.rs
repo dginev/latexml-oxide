@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::object::Object;
+use crate::common::locator::Locator;
 use crate::state::{Scope, State};
 
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
@@ -43,7 +44,7 @@ pub struct Expandable {
   pub is_long: bool,
   pub is_outer: bool,
   pub alias: Option<String>,
-  pub locator: String,
+  pub locator: Locator,
   pub cs: Token,
   pub paramlist: Option<Parameters>,
   pub expansion: Option<ExpansionBody>,
@@ -57,7 +58,7 @@ impl Default for Expandable {
       is_outer: false,
       trivial_expansion: None,
       alias: None,
-      locator: String::new(),
+      locator: Locator::default(),
       cs: T_CS!("Expandable"),
       paramlist: None,
       expansion: None,
@@ -71,6 +72,7 @@ impl PartialEq for Expandable {
 impl Object for Expandable {
   fn is_definition(&self) -> bool { true }
   fn is_expandable(&self) -> bool { true }
+  fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
 }
 impl Definition for Expandable {
   fn is_protected(&self) -> bool { self.is_protected }
@@ -83,8 +85,6 @@ impl Definition for Expandable {
     })
   }
   fn get_alias(&self) -> Option<&String> { self.alias.as_ref() }
-  fn get_locator(&self) -> String { self.locator.clone() }
-
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     // Expand the expandable control sequence. This should be carried out by the Gullet.
     // log!("-- expandable invoke for {:?}", self.get_cs());

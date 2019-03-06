@@ -7,6 +7,7 @@ use crate::common::error::*;
 use crate::common::font;
 use crate::common::font::Font;
 use crate::common::store::Stored;
+use crate::common::locator::Locator;
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::Definition;
@@ -161,7 +162,7 @@ impl<'t> Stomach {
     Ok(())
   }
 
-  pub fn get_locator(&self) -> String { s!("fake stomach locator") }
+  pub fn get_locator(&self) -> Locator { self.get_gullet().get_locator() }
 
   /// Invoke a token;
   /// If it is a primitive or constructor, the definition will be invoked,
