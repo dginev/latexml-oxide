@@ -48,7 +48,7 @@ impl<'t> Stomach {
   // NOTE: Worry about whether the $autoflush thing is right?
   // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
   pub fn digest_next_body(&mut self, terminal_opt: Option<Token>, state: &mut State) -> Result<Vec<Digested>> {
-    let start_location = self.get_locator();
+    let start_location = self.get_locator().into_owned();
     let init_depth = self.boxing.len();
     let mut found_terminal = false;
     let mut box_list: Vec<Digested> = Vec::new();
@@ -162,7 +162,7 @@ impl<'t> Stomach {
     Ok(())
   }
 
-  pub fn get_locator(&self) -> Locator { self.get_gullet().get_locator() }
+  pub fn get_locator(&self) -> Cow<Locator> { self.get_gullet().get_locator() }
 
   /// Invoke a token;
   /// If it is a primitive or constructor, the definition will be invoked,
@@ -352,7 +352,7 @@ impl<'t> Stomach {
         Ok(Some(Digested::TBox(Rc::new(Tbox::new(
           meaning.get_string().to_string(), //text
           font,
-          Some(self.gullet.get_locator()), //locator
+          Some(self.gullet.get_locator().into_owned()), //locator
           Tokens!(meaning),                // tokens
           HashMap::new(),                  // properties
           state,
@@ -469,7 +469,7 @@ impl<'t> Stomach {
     state.assign_value("afterAssignment", Stored::Tokens(Tokens!()), Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
-    state.assign_value("groupInitiatorLocator", self.get_locator(), Some(Scope::Local));
+    state.assign_value("groupInitiatorLocator", self.get_locator().into_owned(), Some(Scope::Local));
     if !nobox {
       self.boxing.push(current_token) // For begingroup/endgroup
     }

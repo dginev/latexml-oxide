@@ -16,6 +16,8 @@ pub use rtx_core::common::font::Font;
 pub use rtx_core::common::glue::{Glue, MuGlue};
 pub use rtx_core::common::ligature::{FontTestClosure, Ligature};
 pub use rtx_core::common::number::Number;
+pub use rtx_core::common::object::Object;
+pub use rtx_core::common::locator::Locator;
 pub use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 pub use rtx_core::definition::constructor::ConstructorOptions;
 pub use rtx_core::definition::expandable::{Expandable, ExpandableOptions};

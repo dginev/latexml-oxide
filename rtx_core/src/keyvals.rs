@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-// use std::fmt;
+use std::fmt;
 use std::collections::HashMap;
 // use std::rc::Rc;
 
@@ -7,6 +7,7 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::store::Stored;
+use crate::common::object::Object;
 // use crate::definition::expandable::Expandable;
 // use crate::definition::Definition;
 use crate::document::Document;
@@ -62,6 +63,27 @@ impl PartialEq for KeyVals {
     false // TODO ?
   }
 }
+
+impl fmt::Display for KeyVals {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    unimplemented!();
+  }
+}
+
+impl Object for KeyVals {
+  fn get_locator(&self) -> Cow<Locator> {
+    unimplemented!(); 
+  }
+  fn stringify(&self) -> String { unimplemented!(); }
+}
+impl BoxOps for KeyVals {
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
+  fn unlist(&self) -> Vec<Digested> { Vec::new() } // TODO
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { Ok(()) } // TODO
+  fn revert(&self) -> Result<Tokens> { unimplemented!() } // TODO
+  fn get_font(&self) -> Option<Cow<Font>> { None } // TODO
+}
+
 
 impl KeyVals {
   ///======================================================================
@@ -222,19 +244,6 @@ impl KeyVals {
       self.tuples = newtuples;
     }
   }
-}
-
-impl BoxOps for KeyVals {
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
-  fn to_string(&self) -> String { String::new() } // TODO
-  fn unlist(&self) -> Vec<Digested> { Vec::new() } // TODO
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { Ok(()) } // TODO
-  fn revert(&self) -> Result<Tokens> { unimplemented!() } // TODO
-  fn get_locator(&self) -> Option<Locator> {
-    // TODO
-    None
-  }
-  fn get_font(&self) -> Option<Cow<Font>> { None } // TODO
 }
 
 impl From<KeyVals> for Result<Option<Digested>> {

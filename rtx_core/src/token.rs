@@ -1,7 +1,6 @@
 use lazy_static::lazy_static;
 use log::warn;
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Display;
@@ -14,7 +13,7 @@ use crate::common::glue::{Glue, MuGlue};
 use crate::common::number::Number;
 use crate::common::store::Stored;
 use crate::definition::register::NumericOps;
-use crate::definition::register::{Register, RegisterValue};
+use crate::definition::register::{RegisterValue, RegisterCell};
 use crate::definition::Definition;
 use crate::state::State;
 use crate::stomach::Stomach;
@@ -653,7 +652,7 @@ impl<'a> Token {
     s!("{}[{}]", self.code.short_name(), string)
   }
 
-  pub fn to_register(&self, state: &State) -> Option<Rc<RefCell<Register>>> { state.lookup_register_definition(self) }
+  pub fn to_register(&self, state: &State) -> Option<Rc<RegisterCell>> { state.lookup_register_definition(self) }
 
   pub fn to_number(&self) -> Number { Number::new(self.text.parse::<f32>().unwrap_or(0.0)) }
 

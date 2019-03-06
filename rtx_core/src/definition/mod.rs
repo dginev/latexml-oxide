@@ -9,6 +9,7 @@ pub mod register;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::fmt;
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -99,17 +100,6 @@ pub trait Definition: Object {
   fn get_parameters(&self) -> Option<&Parameters>;
 
   // ======================================================================
-  // Overriding methods
-  fn stringify(&self) -> String { unimplemented!() }
-
-  fn to_string(&self) -> String {
-    if let Some(params) = self.get_parameters() {
-      s!("{} {}", self.get_cs_name(), params.to_string())
-    } else {
-      self.get_cs_name().to_string()
-    }
-  }
-
   // Return the Tokens that would invoke the given definition with arguments.
   fn invocation(&mut self, args: Vec<Tokens>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     let mut invocation_result: Vec<Token> = Vec::new();
@@ -173,6 +163,17 @@ pub trait Definition: Object {
   fn register_type(&self) -> Option<RegisterType> { None }
   fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
 }
+
+impl fmt::Display for Definition {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    if let Some(params) = self.get_parameters() {
+      write!(f, "{} {}", self.get_cs_name(), params.to_string())
+    } else {
+      write!(f, "{}", self.get_cs_name())
+    }
+  }
+}
+
 
 impl ExpansionBody {
   pub fn to_string(&self) -> String {

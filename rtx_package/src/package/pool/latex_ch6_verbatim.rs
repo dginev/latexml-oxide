@@ -69,7 +69,7 @@ LoadDefinitions!(outer_state, {
       stomach.egroup(state)?;
       lines.push("\\end{verbatim}".to_string());
       whatsit.set_body(lines.into_iter().map(|line|
-        Tbox::new(line.clone(), font.clone(), loc.clone(), T_OTHER!(line).into(), HashMap::new(), state).into()
+        Tbox::new(line.clone(), font.clone(), Some(loc.clone().into_owned()), T_OTHER!(line).into(), HashMap::new(), state).into()
       ).collect());
     }),
     before_construct => construct!(document, whatsit, state, { document.maybe_close_element("ltx:p", state)?; })

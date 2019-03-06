@@ -37,6 +37,7 @@ use crate::common::locator::Locator;
 use crate::common::model::Model;
 use crate::common::number::Number;
 use crate::common::store::Stored;
+use crate::common::object::Object;
 use crate::definition::register::{NumericOps, RegisterValue};
 use crate::document::Document;
 use crate::keyvals::KeyVals;
@@ -129,11 +130,9 @@ impl Core {
   pub fn get_state_mut(&mut self) -> &mut State { &mut self.state }
 }
 
-pub trait BoxOps {
+pub trait BoxOps: Object {
   fn unlist(&self) -> Vec<Digested>;
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()>;
-  fn to_string(&self) -> String;
-  fn stringify(&self) -> String { s!("Vec<Tbox> for now ") }
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored>;
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     let mut props = self.get_properties_mut();
@@ -148,7 +147,6 @@ pub trait BoxOps {
     None
   }
   fn get_font(&self) -> Option<Cow<Font>>;
-  fn get_locator(&self) -> Option<Locator>;
   fn revert(&self) -> Result<Tokens>;
 
   fn set_width<T: Into<Stored>>(&mut self, width: T) {
@@ -226,6 +224,39 @@ impl Default for Digested {
   fn default() -> Self { Digested::TBox(Rc::new(Tbox::default())) }
 }
 
+impl fmt::Display for Digested {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match *self {
+      Digested::TBox(ref b) => write!(f, "{}", b),
+      Digested::List(ref l) => write!(f, "{}", l),
+      Digested::Whatsit(ref w) => write!(f, "{}", w.borrow()),
+      Digested::Postponed(ref t) => write!(f, "{}", t),
+      Digested::KeyVals(ref kvs) => write!(f, "{}", kvs),
+      Digested::RegisterValue(ref rv) => write!(f, "{}", rv),
+    }
+  }
+}
+impl Object for Digested {
+  fn stringify(&self) -> String {
+    match *self {
+      Digested::TBox(ref b) => b.stringify(),
+      Digested::List(ref l) => l.stringify(),
+      Digested::Whatsit(ref w) => w.borrow().stringify(),
+      Digested::Postponed(ref t) => (*t).stringify(),
+      Digested::KeyVals(ref kvs) => kvs.stringify(),
+      Digested::RegisterValue(ref rv) => (*rv).stringify(),
+    }
+  }
+
+  fn get_locator(&self) -> Cow<Locator> {
+    match *self {
+      Digested::TBox(ref b) => b.get_locator(),
+      Digested::List(ref l) => l.get_locator(),
+      Digested::Whatsit(ref w) => Cow::Owned(w.borrow().get_locator().into_owned()),
+      _ => unimplemented!(),
+    }
+  }
+}
 impl BoxOps for Digested {
   fn unlist(&self) -> Vec<Digested> {
     match self {
@@ -258,28 +289,6 @@ impl BoxOps for Digested {
     //   Digested::KeyVals(ref mut kvs) => kvs.get_properties_mut(),
     //   Digested::Postponed(_) => unimplemented!(),
     // }
-  }
-
-  fn to_string(&self) -> String {
-    match *self {
-      Digested::TBox(ref b) => b.to_string(),
-      Digested::List(ref l) => l.to_string(),
-      Digested::Whatsit(ref w) => w.borrow().to_string(),
-      Digested::Postponed(ref t) => t.to_string(),
-      Digested::KeyVals(ref kvs) => kvs.to_string(),
-      Digested::RegisterValue(ref rv) => rv.to_string(),
-    }
-  }
-
-  fn stringify(&self) -> String {
-    match *self {
-      Digested::TBox(ref b) => b.stringify(),
-      Digested::List(ref l) => l.stringify(),
-      Digested::Whatsit(ref w) => w.borrow().stringify(),
-      Digested::Postponed(ref t) => (*t).stringify(),
-      Digested::KeyVals(ref kvs) => kvs.stringify(),
-      Digested::RegisterValue(ref rv) => rv.stringify(),
-    }
   }
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
@@ -328,15 +337,6 @@ impl BoxOps for Digested {
         None => None,
         Some(t) => Some(Cow::Owned(t.into_owned())),
       },
-      _ => unimplemented!(),
-    }
-  }
-
-  fn get_locator(&self) -> Option<Locator> {
-    match *self {
-      Digested::TBox(ref b) => b.get_locator(),
-      Digested::List(ref l) => l.get_locator(),
-      Digested::Whatsit(ref w) => w.borrow().get_locator(),
       _ => unimplemented!(),
     }
   }

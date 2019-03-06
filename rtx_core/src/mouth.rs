@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fs::File;
+use std::fmt;
 use std::io;
 use std::str;
 use std::io::prelude::*;
@@ -121,13 +122,18 @@ impl Default for Mouth {
   }
 }
 
+impl fmt::Display for Mouth {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
+    write!(f, "Mouth[{}]", self.source)
+  }
+}
 impl Object for Mouth {
   fn stringify(&self) -> String {
     s!("Mouth[<string>{}x{}]", self.lineno, self.colno)
   }
   fn get_locator(&self) -> Cow<Locator> {
     let (to_line, to_column) = (self.lineno, self.colno);
-    let max_col = self.nchars - 1; // There is always a trailing EOL char
+    let max_col = if self.nchars > 0 { self.nchars - 1 } else { self.nchars }; // There is always a trailing EOL char, if any
     let (from_line, from_column) = if to_column > 0 && to_column >= max_col {
       (to_line, 0)
     } else {

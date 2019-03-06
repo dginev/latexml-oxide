@@ -2,6 +2,7 @@ use log::info;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::fmt;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -177,7 +178,12 @@ impl PartialEq for MathPrimitive {
   fn eq(&self, other: &MathPrimitive) -> bool { self.cs == other.cs }
 }
 
-impl Object for MathPrimitive {}
+impl fmt::Display for MathPrimitive {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { unimplemented!(); }
+}
+impl Object for MathPrimitive {
+  fn stringify(&self) -> String { unimplemented!(); }
+}
 impl Definition for MathPrimitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }

@@ -2,8 +2,9 @@ use lazy_static::lazy_static;
 use log::*;
 use regex::Regex;
 use std::borrow::Cow;
-use std::cell::RefCell;
+use std::cell::{Ref, RefMut, RefCell};
 use std::rc::Rc;
+use std::fmt;
 
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
@@ -73,6 +74,9 @@ impl<'a> From<&'a RegisterValue> for RegisterType {
 
 impl Default for RegisterValue {
   fn default() -> Self { RegisterValue::Number(Number::new(0.0)) }
+}
+impl Object for RegisterValue {
+  fn stringify(&self) -> String { s!("RegisterValue[{}]", self) }
 }
 
 const SCALES: &[f32] = &[1.0, 10.0, 100.0, 1000.0, 10000.0, 100_000.0];
@@ -291,16 +295,14 @@ impl<'a> From<&'a RegisterValue> for Glue {
   }
 }
 
-impl RegisterValue {
-  #[allow(clippy::wrong_self_convention)]
-  pub fn to_string(&self) -> String {
+impl fmt::Display for RegisterValue {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      RegisterValue::Dimension(d) => d.to_string(),
-      RegisterValue::Glue(g) => g.to_string(),
-      other => self.clone().value_of().to_string(),
+      RegisterValue::Dimension(d) => write!(f,"{}", d),
+      RegisterValue::Glue(g) => write!(f,"{}", g),
+      other => write!(f,"{}", self.clone().value_of()),
     }
   }
-  pub fn stringify(&self) -> String { s!("RegisterValue[{}]", self.to_string()) }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -349,8 +351,24 @@ impl PartialEq for Register {
   fn eq(&self, other: &Register) -> bool { self.cs == other.cs }
 }
 
-impl Object for RefCell<Register> {}
-impl Definition for RefCell<Register> {
+/// The only purpose of RegisterCell is to provide us with a place to implement fmt::Display over
+/// a `RefCell<Register>`.
+#[derive(PartialEq)]
+pub struct RegisterCell(RefCell<Register>);
+impl fmt::Display for RegisterCell {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    unimplemented!();
+  }
+}
+impl Object for RegisterCell {
+  fn stringify(&self) -> String { unimplemented!(); }
+}
+impl RegisterCell {
+pub fn new(cell: RefCell<Register>) -> Self { RegisterCell(cell) }
+  pub fn borrow(&self) -> Ref<Register> { self.0.borrow() }
+  pub fn borrow_mut(&self) -> RefMut<Register> { self.0.borrow_mut() }
+}
+impl Definition for RegisterCell {
   fn is_register(&self) -> bool { true }
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { self.borrow().readonly }

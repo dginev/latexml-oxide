@@ -17,7 +17,6 @@ use rtx_core::state::{Scope, State, Stored};
 use rtx_core::stomach::Stomach;
 use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
-use rtx_core::BoxOps;
 
 use super::*;
 use super::cleaners::clean_id;

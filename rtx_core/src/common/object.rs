@@ -4,7 +4,6 @@
 use std::borrow::Cow;
 use crate::common::error::*;
 use crate::common::locator::Locator;
-use crate::document::Document;
 use crate::tbox::Tbox;
 
 // ======================================================================
@@ -16,9 +15,7 @@ use crate::tbox::Tbox;
 // try to have stringify do too much.
 // ======================================================================
 pub trait Object {
-  fn stringify(&self) -> String { unimplemented!() }
-
-  fn to_string(&self) -> String { unimplemented!() }
+  fn stringify(&self) -> String;
 
   // Since the next two are used in debugging and error messages,
   // be careful to avoid recursive errors
@@ -46,11 +43,11 @@ pub trait Object {
   // Defaults (probably poor)
   fn be_digested(&self) -> Result<Tbox> { Ok(Tbox::default()) }
 
-  fn be_absorbed(&self, _document: Document) { unimplemented!() }
+  // fn be_absorbed(&self, _document: Document) { unimplemented!() }
   fn get_locator(&self) -> Cow<Locator> { unimplemented!(); }
 
-  fn unlist<T>(&self) -> Vec<T>
-  where Self: Sized {
-    unimplemented!()
-  }
+  // fn unlist<T>(&self) -> Vec<T>
+  // where Self: Sized {
+  //   unimplemented!()
+  // }
 }

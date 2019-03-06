@@ -10,6 +10,7 @@ use crate::common::error::*;
 use crate::common::glue::{FillCode, Glue};
 use crate::common::locator::Locator;
 use crate::common::number::Number;
+use crate::common::object::Object;
 
 use crate::definition::conditional::ConditionalType;
 use crate::definition::register::{NumericOps, RegisterType, RegisterValue};
@@ -121,19 +122,22 @@ impl Gullet {
   }
 
   /// User feedback for where something (error?) occurred.
-  pub fn get_locator(&self) -> Locator {
-    // TODO:
-  //   let mouth = self.mouth.unwrap().mouth; // assume runtime exists, can make more robust if it ends up troublesome (when?)
-  //   let mut i = 0;
-  // while ((defined $mouth) && (!defined $$mouth{source})
-  //   && ($i < scalar(@{ $$self{mouthstack} }))) {
-  //   $mouth = $$self{mouthstack}[$i++][0]; }
-  // my $loc = (defined $mouth ? $mouth->getLocator : undef);
-  // return $loc if defined $loc;
-  // foreach my $frame (@{ $$self{mouthstack} }) {
-  //   my $ml = $$frame[0]->getLocator;
-  //   return $ml if defined $ml; }
-    Locator::default()
+  pub fn get_locator(&self) -> Cow<Locator> {
+    let mut runtime_opt = self.mouth.as_ref();
+    let mut mouthstack_iter = self.mouthstack.iter();
+    while runtime_opt.is_some() && runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
+      runtime_opt = mouthstack_iter.next();
+    }
+    if let Some(runtime) = runtime_opt {
+      // First exit condition: we found a mouth with a source, and asked it for a locator
+      runtime.mouth.get_locator()
+    } else if let Some(runtime) = self.mouthstack.front() {
+      // Backup strategy: return the first locator in the mouthstack:
+      runtime.mouth.get_locator()
+    } else {
+      // Final backup -- the default locator
+      Cow::Owned(Locator::default())
+    }
   }
 
   pub fn get_mouth(&self) -> Option<&Mouth> {

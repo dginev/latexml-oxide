@@ -1,6 +1,17 @@
+use std::fmt;
 use std::borrow::Cow;
 use crate::util::pathname;
 use crate::common::object::Object;
+
+// TODO: This will require a large refactor, but 
+// switching the source from an owned String to a &str reference
+// could provide a noticeable performance (and memory allocation) boost
+// (and especially if we also start adding locators to tokens)
+// my current thoughts are that we can have the core/gullet own the sources of all mouths
+// so that we can borrow them with the lifetime of the main convert_document loop... 
+// that's harder than it sounds, I've already tried unsuccessfully with the Token contents,
+// but the mouth sources should be easier to manage.
+// definitely something that can be tried after test milestone is achieved.
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Locator {
@@ -23,22 +34,22 @@ impl Default for Locator {
   }
 }
 
-impl ToString for Locator {
-  fn to_string(&self) -> String {
-    let mut loc = self.get_short_source("");
+impl fmt::Display for Locator {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", self.get_short_source(""))?;
     if self.from_line > 0 {
-      loc.push_str(&s!("; line {}", self.from_line));
+      write!(f, "; line {}", self.from_line)?;
       if self.from_column > 0 {
-        loc.push_str(&s!(" col {}",self.from_column));
+        write!(f, " col {}",self.from_column)?;
       }
     }
     if self.to_line > 0 {
-      loc.push_str(&s!(" - line {}", self.to_line));
+      write!(f, " - line {}", self.to_line)?;
       if self.to_column > 0 {
-        loc.push_str(&s!(" col {}", self.to_column));
+        write!(f, " col {}", self.to_column)?;
       }
     }
-    loc
+    Ok(())
   }
 }
 

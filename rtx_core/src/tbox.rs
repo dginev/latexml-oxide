@@ -2,11 +2,13 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::fmt;
 
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::store::Stored;
+use crate::common::object::Object;
 use crate::document::Document;
 use crate::state::State;
 use crate::token::{Catcode, Token};
@@ -37,7 +39,17 @@ impl Default for Tbox {
 
 //======================================================================
 // Exported constructors
-
+impl fmt::Display for Tbox {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", self.text)
+  }
+}
+impl Object for Tbox {
+  fn get_locator(&self) -> Cow<Locator> {
+    Cow::Borrowed(&self.locator)
+  }
+  fn stringify(&self) -> String { unimplemented!(); }
+}
 impl Tbox {
   pub fn new(
     text: String,
@@ -94,7 +106,6 @@ impl Tbox {
 }
 
 impl BoxOps for Tbox {
-  fn to_string(&self) -> String { self.text.clone() }
   fn unlist(&self) -> Vec<Digested> { Vec::new() }
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
 
@@ -119,12 +130,6 @@ impl BoxOps for Tbox {
   fn revert(&self) -> Result<Tokens> { Ok(self.tokens.clone()) }
 
   fn get_font(&self) -> Option<Cow<Font>> { Some(Cow::Borrowed(&self.font)) }
-
-  fn get_locator(&self) -> Option<Locator> {
-    // TODO
-    // return $$self{properties}{locator};
-    None
-  }
 
   fn get_property(&self, key: &str, state: &mut State) -> Option<Cow<Stored>> {
     if key == "isSpace" {
