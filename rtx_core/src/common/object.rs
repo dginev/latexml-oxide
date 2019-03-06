@@ -2,6 +2,7 @@
 /// Exported generic functions for dealing with `LaTeXML`'s objects
 ///======================================================================
 use crate::common::error::*;
+use crate::common::locator::Locator;
 use crate::document::Document;
 use crate::tbox::Tbox;
 
@@ -45,6 +46,7 @@ pub trait Object {
   fn be_digested(&self) -> Result<Tbox> { Ok(Tbox::default()) }
 
   fn be_absorbed(&self, _document: Document) { unimplemented!() }
+  fn get_locator(&self) -> &Locator { unimplemented!(); }
 
   fn unlist<T>(&self) -> Vec<T>
   where Self: Sized {
