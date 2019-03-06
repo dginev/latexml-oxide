@@ -16,6 +16,8 @@ use log::*;
 
 use crate::common::error::*;
 use crate::common::store::Stored;
+use crate::common::locator::Locator;
+use crate::common::object::Object;
 use crate::state::{Catcodes, Scope, State, StateOptions};
 use crate::token::*;
 use crate::tokens::Tokens;
@@ -116,6 +118,22 @@ impl Default for Mouth {
       buffer: VecDeque::new(),
       reader: None,
     }
+  }
+}
+
+impl Object for Mouth {
+  fn stringify(&self) -> String {
+    s!("Mouth[<string>{}x{}]", self.lineno, self.colno)
+  }
+  fn get_locator(&self) -> Cow<Locator> {
+    let (to_line, to_column) = (self.lineno, self.colno);
+    let max_col = self.nchars - 1; // There is always a trailing EOL char
+    let (from_line, from_column) = if to_column > 0 && to_column >= max_col {
+      (to_line, 0)
+    } else {
+      (to_line, to_column)
+    };
+    Cow::Owned(Locator::new(self.source.clone(), from_line, from_column, to_line, to_column))
   }
 }
 
@@ -387,14 +405,6 @@ impl Mouth {
   }
   pub fn has_more_input(&mut self) -> bool { self.colno < self.nchars || !self.buffer.is_empty() || 
     (self.reader.is_some() && !self.reader.as_mut().unwrap().fill_buf().unwrap().is_empty()) }
-  // fn stringify(&self) -> String {
-  //   // TODO
-  //   s!("mouth stringify")
-  // } // This should be an implementation of Debug?
-  // fn get_locator(&self, length: usize) -> String {
-  //   // TODO
-  //   s!("mouth locator")
-  // }
 
   /// Read the next token, or undef if exhausted.
   /// Note that this also returns COMMENT tokens containing source comments,

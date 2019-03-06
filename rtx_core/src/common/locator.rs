@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use crate::util::pathname;
 use crate::common::object::Object;
 
@@ -166,7 +167,7 @@ impl Object for Locator {
   }
 
   /// getting the locator of a locator should return itself
-  fn get_locator(&self) -> &Locator {
-    &self
+  fn get_locator(&self) -> Cow<Locator> {
+    Cow::Borrowed(self)
   }
 }

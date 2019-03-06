@@ -89,8 +89,6 @@ pub trait Definition: Object {
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { false }
 
-  fn get_locator(&self) -> String;
-
   fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Tokens>>
   where Self: Sized {
     match self.get_parameters() {

@@ -11,6 +11,7 @@ use crate::common::font::Font;
 use crate::common::glue::{Glue, MuGlue};
 use crate::common::ligature::Ligature;
 use crate::common::number::Number;
+use crate::common::locator::Locator;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
@@ -76,6 +77,7 @@ pub enum Stored {
   MuGlue(MuGlue),
   Dimension(Dimension),
   MuDimension(MuDimension),
+  Locator(Locator),
   // LaTeXML objects (Rc-wrapped)
   Expandable(Rc<Expandable>),
   Conditional(Rc<Conditional>),
@@ -104,6 +106,7 @@ impl fmt::Debug for Stored {
       Bool(ref b) => write!(f, "Stored::Bool[{:?}]", b),
       Token(ref t) => write!(f, "Stored::Token[{:?}]", t),
       Tokens(ref t) => write!(f, "Stored::Tokens[{:?}]", t),
+      Locator(ref t) => write!(f, "Stored::Locator[{:?}]", t),
       Catcode(ref cc) => write!(f, "Stored::Catcode[{:?}]", cc),
       Charcode(ref cc) => write!(f, "Stored::Charcode[{:?}]", cc),
       IfFrame(ref fr) => write!(f, "Stored::IfFrame[{:?}]", fr),
@@ -205,6 +208,10 @@ impl From<Token> for Stored {
 
 impl From<Tokens> for Stored {
   fn from(value: Tokens) -> Self { Stored::Tokens(value) }
+}
+
+impl From<Locator> for Stored {
+  fn from(value: Locator) -> Self { Stored::Locator(value) }
 }
 
 impl From<Rc<Expandable>> for Stored {

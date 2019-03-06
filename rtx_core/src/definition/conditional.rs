@@ -122,7 +122,6 @@ impl Definition for Conditional {
   fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Borrowed(self.cs.get_cs_name()) }
   fn get_alias(&self) -> Option<&String> { None }
-  fn get_locator(&self) -> String { String::from("Locator is TODO") }
 
   // Not implemented for expandable
   fn invoke_primitive(&self, _gullet: &mut Stomach, _caller: Rc<Definition>, _state: &mut State) -> Result<Vec<Digested>> { unimplemented!() }

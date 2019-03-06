@@ -120,8 +120,19 @@ impl Gullet {
     return;
   }
 
+  /// User feedback for where something (error?) occurred.
   pub fn get_locator(&self) -> Locator {
-    // TODO
+    // TODO:
+  //   let mouth = self.mouth.unwrap().mouth; // assume runtime exists, can make more robust if it ends up troublesome (when?)
+  //   let mut i = 0;
+  // while ((defined $mouth) && (!defined $$mouth{source})
+  //   && ($i < scalar(@{ $$self{mouthstack} }))) {
+  //   $mouth = $$self{mouthstack}[$i++][0]; }
+  // my $loc = (defined $mouth ? $mouth->getLocator : undef);
+  // return $loc if defined $loc;
+  // foreach my $frame (@{ $$self{mouthstack} }) {
+  //   my $ml = $$frame[0]->getLocator;
+  //   return $ml if defined $ml; }
     Locator::default()
   }
 
