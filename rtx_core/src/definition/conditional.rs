@@ -2,6 +2,7 @@ use log::*;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::fmt;
 
 use crate::common::error::*;
 use crate::common::locator::Locator;
@@ -86,8 +87,12 @@ impl PartialEq for Conditional {
   fn eq(&self, other: &Conditional) -> bool { self.cs == other.cs }
 }
 
+impl fmt::Display for Conditional {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { unimplemented!(); }
+}
 impl Object for Conditional {
   fn is_expandable(&self) -> bool { true }
+  fn stringify(&self) -> String { unimplemented!(); }
 }
 impl Definition for Conditional {
   // sub new {
@@ -150,7 +155,7 @@ impl Conditional {
     state.assign_value("if_count", ifid, Some(Scope::Global));
     let if_frame = Rc::new(RefCell::new(IfFrame {
       token: Rc::clone(state.current_token.as_ref().unwrap()),
-      start: gullet.get_locator(),
+      start: gullet.get_locator().into_owned(),
       parsing: true,
       elses: false,
       ifid,

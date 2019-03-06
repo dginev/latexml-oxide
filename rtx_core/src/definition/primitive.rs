@@ -1,6 +1,7 @@
 use log::debug;
 use std::borrow::Cow;
 use std::rc::Rc;
+use std::fmt;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -80,7 +81,12 @@ impl PartialEq for Primitive {
   fn eq(&self, other: &Primitive) -> bool { self.cs == other.cs }
 }
 
-impl Object for Primitive {}
+impl fmt::Display for Primitive {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { unimplemented!(); }
+}
+impl Object for Primitive {
+  fn stringify(&self) -> String { unimplemented!(); }
+}
 impl Definition for Primitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }

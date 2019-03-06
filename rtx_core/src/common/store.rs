@@ -18,7 +18,7 @@ use crate::definition::expandable::Expandable;
 use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
 use crate::definition::register::NumericOps;
-use crate::definition::register::{Register, RegisterValue};
+use crate::definition::register::{Register, RegisterValue, RegisterCell};
 use crate::document::tag::TagData;
 use crate::gullet::Gullet;
 use crate::list::List;
@@ -84,7 +84,7 @@ pub enum Stored {
   Primitive(Rc<Primitive>),
   MathPrimitive(Rc<MathPrimitive>),
   // WALL OF SHAME (interior mutability)
-  Register(Rc<RefCell<Register>>),
+  Register(Rc<RegisterCell>),
   IfFrame(Rc<RefCell<IfFrame>>),
   /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Rc<Constructor>),
@@ -270,11 +270,11 @@ impl From<Rc<Font>> for Stored {
   fn from(font: Rc<Font>) -> Self { Stored::Font(font) }
 }
 
-impl From<Rc<RefCell<Register>>> for Stored {
-  fn from(register: Rc<RefCell<Register>>) -> Self { Stored::Register(register) }
+impl From<Rc<RegisterCell>> for Stored {
+  fn from(register: Rc<RegisterCell>) -> Self { Stored::Register(register) }
 }
 impl From<Register> for Stored {
-  fn from(register: Register) -> Self { Rc::new(RefCell::new(register)).into() }
+  fn from(register: Register) -> Self { Rc::new(RegisterCell::new(RefCell::new(register))).into() }
 }
 
 impl From<Font> for Stored {
@@ -447,8 +447,8 @@ impl<'a> From<&'a Stored> for Option<Tokens> {
   }
 }
 
-impl<'a> From<&'a Stored> for Option<Rc<RefCell<Register>>> {
-  fn from(value: &'a Stored) -> Option<Rc<RefCell<Register>>> {
+impl<'a> From<&'a Stored> for Option<Rc<RegisterCell>> {
+  fn from(value: &'a Stored) -> Option<Rc<RegisterCell>> {
     match value {
       Stored::Register(ref reg) => Some(reg.clone()),
       _ => None,

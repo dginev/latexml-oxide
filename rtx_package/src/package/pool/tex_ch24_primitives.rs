@@ -34,7 +34,8 @@ LoadDefinitions!(state, {
       let body = stomach.digest_next_body(None, state)?;
       let mut boxes = vec![Digested::TBox(Rc::new(open))];
       boxes.extend(body);
-      let return_list = List { boxes, mode, font: None };
+      // TODO: Locator logic here needs to improve..
+      let return_list = List { boxes, mode, font: None, locator: Locator::default()  };
 
       return_list.into()
     })

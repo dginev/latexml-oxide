@@ -8,6 +8,7 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::store::Stored;
+use crate::common::object::Object;
 use crate::definition::expandable::Expandable;
 use crate::definition::{Definition, Reversion};
 use crate::document::Document;
@@ -27,6 +28,7 @@ pub struct Whatsit {
   pub definition: Rc<Definition>,
   pub reversion: Option<Tokens>,
   pub dual_reversion: Option<Tokens>,
+  pub locator: Locator,
 }
 
 impl Default for Whatsit {
@@ -37,6 +39,7 @@ impl Default for Whatsit {
       definition: Rc::new(Expandable::default()),
       reversion: None,
       dual_reversion: None,
+      locator: Locator::default()
     }
   }
 }
@@ -104,12 +107,19 @@ impl fmt::Debug for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "Whatsit {{ args: {:?}, properties: {:?} }}", self.args, self.properties) }
 }
 
+impl fmt::Display for Whatsit {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", self.revert().unwrap()) // What else??
+  }
+}
+impl Object for Whatsit {
+  fn get_locator(&self) -> Cow<Locator> {
+    Cow::Borrowed(&self.locator)
+  }
+  fn stringify(&self) -> String { unimplemented!(); }
+}
 impl BoxOps for Whatsit {
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
-  fn to_string(&self) -> String {
-    self.revert().unwrap().to_string() // What else??
-  }
-
   fn unlist(&self) -> Vec<Digested> { Vec::new() }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
@@ -235,10 +245,5 @@ impl BoxOps for Whatsit {
       Some(&Stored::Font(ref font)) => Some(Cow::Owned((**font).clone())),
       _ => None,
     }
-  }
-
-  fn get_locator(&self) -> Option<Locator> {
-    // TODO
-    None
   }
 }

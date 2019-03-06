@@ -1,3 +1,4 @@
+use std::fmt;
 use crate::definition::register;
 use crate::definition::register::{NumericOps, RegisterType};
 
@@ -26,6 +27,18 @@ impl Default for MuDimension {
   fn default() -> Self { MuDimension(0.0) }
 }
 
+impl fmt::Display for Dimension {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", Dimension::point_format(self.0))
+  }
+}
+impl fmt::Display for MuDimension {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", Dimension::point_format(self.0))
+  }
+}
+
+
 impl Dimension {
   /// Utility for formatting scaled points sanely.
   pub fn point_format(num: f32) -> String {
@@ -46,8 +59,6 @@ impl Dimension {
   }
 
   fn attribute_format(self) -> String { s!("{:.1}pt", register::round_to(self.value_of() / 65536.0, Some(1))) }
-
-  pub fn to_string(self) -> String { Dimension::point_format(self.0) }
 
   pub fn to_attribute(self) -> String { self.attribute_format() }
 }

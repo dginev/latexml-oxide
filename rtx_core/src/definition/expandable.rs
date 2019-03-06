@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::rc::Rc;
+use std::fmt;
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -69,10 +70,14 @@ impl PartialEq for Expandable {
   fn eq(&self, other: &Expandable) -> bool { self.cs == other.cs }
 }
 
+impl fmt::Display for Expandable {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { unimplemented!(); }
+}
 impl Object for Expandable {
   fn is_definition(&self) -> bool { true }
   fn is_expandable(&self) -> bool { true }
   fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
+  fn stringify(&self) -> String { unimplemented!(); }
 }
 impl Definition for Expandable {
   fn is_protected(&self) -> bool { self.is_protected }

@@ -1,3 +1,4 @@
+use std::fmt;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -15,14 +16,13 @@ pub enum FillCode {
   Filll,
 }
 
-impl ToString for FillCode {
-  fn to_string(&self) -> String {
+impl fmt::Display for FillCode {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      FillCode::Fil => "fil",
-      FillCode::Fill => "fill",
-      FillCode::Filll => "filll",
+      FillCode::Fil => write!(f, "fil"),
+      FillCode::Fill => write!(f, "fill"),
+      FillCode::Filll => write!(f, "filll"),
     }
-    .to_string()
   }
 }
 
@@ -160,32 +160,31 @@ impl NumericOps for MuGlue {
   fn register_type(&self) -> RegisterType { RegisterType::MuGlue }
 }
 
-impl ToString for Glue {
-  fn to_string(&self) -> String {
+impl fmt::Display for Glue {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     // my ($sp, $plus, $pfill, $minus, $mfill) = @$self;
-    let mut formatted = Dimension::point_format(self.skip);
+    write!(f, "{}", Dimension::point_format(self.skip))?;
     if let Some(plus) = self.plus {
       if plus != 0.0 {
-        formatted += " plus ";
-        formatted += &(if let Some(pfill) = self.pfill {
-          plus.to_string() + &pfill.to_string()
+        write!(f, " plus ")?;
+        if let Some(pfill) = self.pfill {
+          write!(f, "{}{}", plus, pfill)?;
         } else {
-          Dimension::point_format(plus)
-        });
+          write!(f,"{}", Dimension::point_format(plus))?;
+        };
       }
     }
     if let Some(minus) = self.minus {
       if minus != 0.0 {
-        formatted += " minus ";
-        formatted += &(if let Some(mfill) = self.mfill {
-          minus.to_string() + &mfill.to_string()
+        write!(f, " minus ")?;
+        if let Some(mfill) = self.mfill {
+          write!(f,"{}{}", minus, mfill)?;
         } else {
-          Dimension::point_format(minus)
-        })
+          write!(f,"{}",Dimension::point_format(minus))?;
+        }
       }
     }
-
-    formatted
+    Ok(())
   }
 }
 
