@@ -1345,15 +1345,15 @@ impl State {
 
   // #======================================================================
 
-  // sub noteStatus {
-  //   my ($self, $type, @data) = @_;
-  //   if ($type eq 'undefined') {
-  //     map { $$self{status}{undefined}{$_}++ } @data; }
-  //   elsif ($type eq 'missing') {
-  //     map { $$self{status}{missing}{$_}++ } @data; }
-  //   else {
-  //     $$self{status}{$type}++; }
-  //   return; }
+  pub fn note_status(&mut self, category: &str) {
+    // TODO
+    // if ($type eq 'undefined') {
+    //   map { $$self{status}{undefined}{$_}++ } @data; }
+    // elsif ($type eq 'missing') {
+    //   map { $$self{status}{missing}{$_}++ } @data; }
+    // else {
+    //   $$self{status}{$type}++; 
+  }
 
   // sub getStatus {
   //   my ($self, $type) = @_;

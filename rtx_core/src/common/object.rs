@@ -45,6 +45,14 @@ pub trait Object {
 
   // fn be_absorbed(&self, _document: Document) { unimplemented!() }
   fn get_locator(&self) -> Cow<Locator> { unimplemented!(); }
+  fn get_location(&self) -> String {
+    let loc = self.get_locator();
+    if *loc == Locator::default() {
+      String::new() 
+    } else {
+      s!("at {}", loc)
+    }
+  }
 
   // fn unlist<T>(&self) -> Vec<T>
   // where Self: Sized {

@@ -55,6 +55,23 @@ pub enum ErrorTarget {
 }
 
 #[macro_export]
+macro_rules! Info {
+  ($category:literal, $object:expr, $where:ident, $message:literal, $details:expr, $state:ident) => {
+    $state.note_status("info");
+    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $details))
+  }
+}
+
+#[macro_export]
+macro_rules! Error {
+  ($category:literal, $object:expr, $where:ident, $message:expr, $state:ident) => {
+    $state.note_status("error");
+    error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+  }
+}
+
+
+#[macro_export]
 macro_rules! fatal {
   ($target:tt, $category:tt, $message:expr) => {{
     use $crate::common::error::Error as RtxError;
@@ -66,6 +83,16 @@ macro_rules! fatal {
       message: $message.to_string(),
     });
   }};
+}
+
+#[macro_export]
+macro_rules! generate_message {
+  ($where:ident, $message:expr, $level:literal) => {
+    s!("{}\n\t{}\n", $message, &$where.get_location())
+  };
+  ($where:ident, $message:expr, $level:literal, $detail:expr) => {
+    s!("{}\n\t{}\n\t{}\n", $message, &$where.get_location(),$detail)
+  }
 }
 
 pub type Result<T> = result::Result<T, Error>;
