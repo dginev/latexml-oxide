@@ -262,10 +262,8 @@ pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<Co
           );
         }
       } else {
-        error!(
-          target: &s!("misdefined:{}", cs),
-          "The conditional {} is being defined but doesn't start with \\if", cs
-        );
+        let message = s!("The conditional {} is being defined but doesn't start with \\if", cs);
+        Error!("misdefined", cs, None, state, message);
       }
     },
   }

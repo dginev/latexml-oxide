@@ -20,7 +20,10 @@ impl XPath {
   pub fn register_namespace(&mut self, codeprefix: &str, namespace: &str) {
     match self.context.register_namespace(codeprefix, namespace) {
       Ok(()) => {},
-      Err(_) => error!(target: "expected:XPath", "Failed to register an XPath namespace: prefix {:?} and href {:?}", codeprefix, namespace),
+      Err(_) => {
+        let message = s!("Failed to register an XPath namespace: prefix {:?} and href {:?}", codeprefix, namespace);
+        Error!("expected","XPath", None, None, message);
+      },
     };
   }
 
@@ -28,7 +31,8 @@ impl XPath {
     match self.context.findnodes(xpath, node) {
       Ok(nodes) => nodes,
       Err(e) => {
-        error!(target: "xpath:findnodes", "{:?}", e);
+        let message = s!("{:?}",e);
+        Error!("xpath","findnodes", None, None, message);
         Vec::new()
       },
     }

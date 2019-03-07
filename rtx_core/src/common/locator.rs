@@ -1,6 +1,5 @@
 use std::fmt;
 use std::borrow::Cow;
-use log::warn;
 use crate::util::pathname;
 use crate::common::object::Object;
 

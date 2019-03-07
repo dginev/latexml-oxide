@@ -114,10 +114,8 @@ impl Definition for Conditional {
       Or => self.invoke_else(gullet, state),
       Fi => self.invoke_fi(gullet, state),
       _ => {
-        error!(
-          target: &s!("unexpected:{}", self.cs), //$gullet,
-          "Unknown conditional control sequence {:?}", state.current_token
-        );
+        let message = s!("Unknown conditional control sequence {}", state.current_token.as_ref().unwrap().stringify());
+        Error!("unexpected", self.cs, gullet, state, message);
         Ok(Tokens!())
       },
     }
@@ -280,7 +278,7 @@ impl Conditional {
         },
       };
     }
-    error!(target: "expected:\\fi", "Missing \\fi or \\else, conditional fell off end");
+    Error!("expected","\\fi", self, state, "Missing \\fi or \\else, conditional fell off end");
     Tokens!()
   }
 
@@ -301,14 +299,14 @@ impl Conditional {
         Ok(Tokens!(T_CS!("\\relax"), (**local_token).clone()))
       } else if stack_frame.borrow().elses {
         // Already seen an \else's at this level?
-        error!(
-          target: &s!("unexpected:{:?}", local_token),
-          "Extra {:?} already saw \\else for {:?} [{:?}] at {:?}",
-          local_token,
+        let message = s!("Extra {} already saw \\else for {:?} [{:?}] at {:?}",
+          local_token.stringify(),
           stack_frame.borrow().token,
           stack_frame.borrow().ifid,
           stack_frame.borrow().start
         );
+        let local_token_str = local_token.to_string();
+        Error!("unexpected", local_token_str, gullet, state, message);
         Ok(Tokens!())
       } else {
         state.if_frame = Some(Rc::clone(&stack_frame));
@@ -321,15 +319,14 @@ impl Conditional {
       }
     } else {
       // No if stack entry ?
-      error!(
-        target: &s!("unexpected:{:?}", local_token),
-        "Didn't expect a {:?} since we seem not to be in a conditional", local_token
-      );
+      let message = s!("Didn't expect a {:?} since we seem not to be in a conditional", local_token.stringify());
+      let local_token_str = local_token.to_string();
+      Error!("unexpected", local_token_str, gullet, state, message);
       Ok(Tokens!())
     }
   }
 
-  pub fn invoke_fi(&self, _gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+  pub fn invoke_fi(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     let stack_frame_opt: Option<Rc<RefCell<IfFrame>>> = if let Some(Stored::VecDequeStored(ref stack)) = state.lookup_value("if_stack") {
       if let Some(Stored::IfFrame(frame)) = stack.front() {
         Some(Rc::clone(frame))
@@ -355,7 +352,8 @@ impl Conditional {
         Ok(Tokens!())
       }
     } else {
-      error!(target: "unexpected:fi",  "Didn't expect a {:?} since we seem not to be in a conditional", state.current_token);
+      let message = s!("Didn't expect a {:?} since we seem not to be in a conditional", state.current_token.as_ref().unwrap().stringify());
+      Error!("unexpected","fi", gullet, state, message);
       Ok(Tokens!())
     }
   }

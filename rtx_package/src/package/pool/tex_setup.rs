@@ -177,11 +177,11 @@ LoadDefinitions!(state, {
       if open == T_BEGIN!() {
         gullet.read_balanced(state)
       } else {
-        error!(target:"expected:{", "Expected <general text> here");
+        Error!("expected","{", gullet, state, "Expected <general text> here");
         Ok(Tokens!(open))
       }
     } else {
-      error!(target:"expected:{", "Expected <general text> here");
+      Error!("expected","{", gullet, state, "Expected <general text> here");
       Ok(Tokens!())
     }
   });
@@ -219,7 +219,7 @@ LoadDefinitions!(state, {
     match gullet.read_token(state) {
       Some(t) => Ok(Tokens!(t)),
       None => {
-        error!(target:"expected:Token", "Paramater <Token> found None.");
+        Error!("expected", "Token", gullet, state, "Paramater <Token> found None.");
         Ok(Tokens!())
       }
     }
@@ -230,7 +230,7 @@ LoadDefinitions!(state, {
     if let Some(t) = gullet.read_x_token(false, false, state)? {
       Ok(Tokens!(t))
     } else {
-      error!(target:"expected:XToken", "Paramater <XToken> found None.");
+      Error!("expected","XToken", gullet, state, "Paramater <XToken> found None.");
       Ok(Tokens!())
     }
   });
@@ -304,7 +304,7 @@ LoadDefinitions!(state, {
   // Yet another special case: Require a { but do not read it!!!
   DefParameterType!("RequireBrace", sub[gullet, inner, _extra, state] {
     if !gullet.if_next(T_BEGIN!(), state)? {
-      error!(target:"expected:{", "Expected a {{ here");
+      Error!("expected","{", gullet, state, "Expected a {{ here");
     }
     T_BEGIN!()
   },
@@ -359,7 +359,7 @@ LoadDefinitions!(state, {
         Ok(Tokens!(token))
       }
     } else {
-      error!(target:"expected:Expanded", "was expecting an Expanded parameter value, found nothing.");
+      Error!("expected","Expanded", gullet, state, "was expecting an Expanded parameter value, found nothing.");
       Ok(Tokens!())
     }
   },
@@ -529,7 +529,7 @@ LoadDefinitions!(state, {
     match token {
       Some(t) => Ok(Tokens!(t)),
       None => {
-        error!(target:"expected:DefToken", "Expected a DefToken parameter, found nothing.");
+        Error!("expected","DefToken", gullet, state, "Expected a DefToken parameter, found nothing.");
         Ok(Tokens!())
       }
     }
@@ -553,11 +553,13 @@ LoadDefinitions!(state, {
           // Ok(Tokens!(defn_tok, defn_args))
           Ok(Tokens::new(invoked))
         } else {
-          error!(target:"expected:<variable>", "A <variable> was supposed to be here\n Got {:?}", token_opt);
+          let message = s!("A <variable> was supposed to be here\n Got {:?}", token_opt);
+          Error!("expected","<variable>", gullet, state, message);
           Ok(Tokens!())
         }
     } else {
-      error!(target:"expected:<variable>", "A <variable> was supposed to be here\n Got {:?}", token_opt);
+      let message = s!("A <variable> was supposed to be here\n Got {:?}", token_opt);
+      Error!("expected","<variable>", gullet, state, message);
       Ok(Tokens!())
     }
   },
@@ -592,7 +594,8 @@ LoadDefinitions!(state, {
         return Ok(Tokens::new(invoked));
       },
       None => {
-        error!(target:"expected:<register>", "A <register> was supposed to be here. Got {:?}", token);
+        let message = s!("A <register> was supposed to be here. Got {:?}", token);
+        Error!("expected","<register>", gullet, state, message);
         // if isDefinable!(token) {
         //   DefRegisterI!(token, None, Tokens!(), state);
         //   return Tokens!(defn);
@@ -702,13 +705,15 @@ LoadDefinitions!(state, {
         _ => tbox.to_string()
       };
       if csname != "\\hbox" && csname != "\\vbox" && csname != "\\vtop" {
-        error!(target: "expected:<box>", "A <box> was supposed to be here.\nGot {}", csname);
+        let message = s!("A <box> was supposed to be here.\nGot {}", csname);
+        Error!("expected","<box>", stomach, state, message);
         None
       } else {
         Some(tbox)
       }
     } else {
-      error!(target: "expected:<box>", "A <box> was supposed to be here.\nGot none.");
+      let message = s!("A <box> was supposed to be here.\nGot none.");
+      Error!("expected","<box>", stomach, state, message);
       None
     }
   }));

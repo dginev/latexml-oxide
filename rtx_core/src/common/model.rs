@@ -8,6 +8,7 @@ use std::io::BufReader;
 use std::string::ToString;
 
 use crate::common::error::*;
+use crate::common::object::Object;
 use crate::common::relaxng::Relaxng;
 use crate::common::xml::{XPath, XML_NS};
 use crate::document::Document;
@@ -78,6 +79,7 @@ impl Default for Model {
   }
 }
 
+impl Object for Model {}
 impl Model {
   pub fn new() -> Self {
     let mut model = Model::default();
@@ -106,7 +108,7 @@ impl Model {
     let mut name = String::new();
     if self.schema_data.is_none() {
       // TODO: Return this code path to normal once we properly load schemas
-      warn!(target: "expected:<model>", "TODO");
+      Warn!("expected", "<model>", None, None, "TODO");
       // Warn('expected', '<model>', undef, "No Schema Model has been declared; assuming LaTeXML");
       // // article ??? or what ? undef gives problems!
 
@@ -142,7 +144,10 @@ impl Model {
               ..Relaxng::default()
             });
           },
-          e => error!(target:"unknown:schematype", "Can't load a schema of type {:?}", e),
+          e => { 
+            let message = s!("Can't load a schema of type {:?}", e);
+            Error!("unknown", "schematype", self, None, message)
+          }
         };
       },
     };
@@ -278,10 +283,8 @@ impl Model {
       self.namespace_errors += 1;
       docprefix = Some(s!("namespace{}", &self.namespace_errors.to_string()));
       self.register_document_namespace(docprefix.as_ref().unwrap(), Some(namespace.to_string()));
-      warn!(target: &s!("malformed:{}", namespace), "No prefix has been registered for namespace.");
-      // Warn('malformed', $namespace, undef,
-      // "No prefix has been registered for namespace '$namespace' (in document)",
-      // "Using '$docprefix' instead"); }
+      let message2 = if let Some(ref dp) = docprefix { s!("Using '{}' instead", dp) } else { String::from("No prefix to fall back on.") };
+      Warn!("malformed", namespace, self, None, "No prefix has been registered for namespace (in document)", message2);
     }
     match docprefix {
       None => None,
@@ -314,10 +317,9 @@ impl Model {
       self.namespace_errors += 1;
       let ns_error = s!("http://example.com/namespace{}", &self.namespace_errors.to_string());
       self.register_document_namespace(docprefix, Some(ns_error));
-      error!(target: &s!("malformed:{}", docprefix), "No namespace has been registered for prefix.");
-      // Error('malformed', $docprefix, undef,
-      //   "No namespace has been registered for prefix '$docprefix' (in document)",
-      //   "Using '$ns' instead"); }
+      let msg1 = s!("No namespace has been registered for prefix '{}' (in document)", docprefix);
+      let msg2 = s!("Using '{}' instead", ns_str);
+      Error!("malformed", docprefix, self, None, msg1, msg2);
     }
     if ns_str.is_empty() {
       None
@@ -379,9 +381,9 @@ impl Model {
       let example_namespace = s!("http://example.com/namespace{}", &self.namespace_errors.to_string());
       ns = Some(example_namespace.clone());
       self.register_namespace(codeprefix, Some(example_namespace));
-      // Error!('malformed', $codeprefix, undef,
-      //   "No namespace has been registered for prefix '$codeprefix' (in code)",
-      //   "Using '$ns' isntead");
+      Error!("malformed", codeprefix, self, None,
+      "No namespace has been registered for prefix '$codeprefix' (in code)",
+      "Using '$ns' isntead");
     }
     match ns {
       None => None,

@@ -33,7 +33,8 @@ LoadDefinitions!(state, {
         DefRegisterI!(cs, None, Dimension::new(0.0));
       },
       Some(defn) => if !defn.is_register() {
-        error!(target: &s!("misdefined:{:?}", cs),"'{}' length was expected, got {:?} instead of register.", cs.to_string(), defn.register_type());
+        let message = s!("'{}' length was expected, got {:?} instead of register.", cs.to_string(), defn.register_type());
+        Error!("misdefined", cs, stomach, state, message);
       }
     };
   });

@@ -200,8 +200,11 @@ impl Converter {
         match dom_result {
           Ok(dom) => dom.to_string(self.state_mut()),
           Err(e) => {
-            error!(target: "document:convert", "{:?}", e);
-            s!("Fatal: convert document failed")
+            let message = s!("{:?}", e);
+            let error_state = &self.core.state;
+            let error_where = &self.core;
+            Error!("document", "convert", error_where, error_state, message);
+            String::new()
           },
         }
       },

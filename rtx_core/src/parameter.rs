@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::store::Stored;
+use crate::common::object::Object;
 use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::gullet::Gullet;
@@ -116,9 +117,16 @@ impl fmt::Debug for Parameter {
     )
   }
 }
+impl fmt::Display for Parameter {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", self.name)
+  }
+}
+
 impl PartialEq for Parameter {
   fn eq(&self, other: &Parameter) -> bool { self.name == other.name }
 }
+impl Object for Parameter {}
 
 lazy_static! {
   static ref OPTIONAL_REGEX: Regex = Regex::new(r"^Optional(.+)$").unwrap();
@@ -261,8 +269,7 @@ impl Parameter {
       // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens> in the long-run
       //        Until *may* have a value, but it also may *not*, both OK. So... except it from the error message here
       if !self.name.starts_with("Until") {
-        error!(target: &s!("expected:{:?}", self.name), "Missing argument for TODO:fordefn {:?}", self);
-        //     $gullet->showUnexpected);
+        Error!("expected", self, gullet, state, s!("Missing argument {} for {}", self.stringify(), fordefn.stringify()));
         value = Tokens!(T_OTHER!("missing"));
       }
     }

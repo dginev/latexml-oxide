@@ -15,6 +15,7 @@ use std::rc::Rc;
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::store::Stored;
+use crate::common::object::Object;
 use crate::state::State;
 
 use crate::document::resource::Resource;
@@ -43,6 +44,7 @@ pub struct Document {
 impl Default for Document {
   fn default() -> Self { Self::new() }
 }
+impl Object for Document {}
 impl Document {
   pub fn new() -> Self {
     set_node_rc_guard(10); // We will need a high treshold for Node mutability
@@ -202,7 +204,8 @@ impl Document {
         }
         if self.can_contain(node, FONT_ELEMENT_NAME, state) && !pending_declaration.is_empty() {
           // Too late to do wrapNodes?
-          error!(target: "TODO", "too late to wrapNodes? {:?}", pending_declaration);
+          let message = s!("too late to wrapNodes? {:?}", pending_declaration);
+          Error!("TODO", "wrapNodes", self, state, message);
           //   my text = self.wrapNodes(FONT_ELEMENT_NAME, child);
           //   foreach my attr (keys %pending_declaration) {
           //     self.setAttribute(text, attr => pending_declaration{attr}{value}); }
@@ -447,23 +450,19 @@ impl Document {
         "#PCDATA" => qname.to_owned(),
         _ => s!("</{}>", qname),
       };
-      error!(
-        target: &s!("malformed:{:?}", qname),
-        "Attempt to close {}, which isn't open. Currently in {}",
+      let message = s!("Attempt to close {}, which isn't open. Currently in {}",
         qname_msg,
-        self.get_insertion_context(None, state)
-      );
+        self.get_insertion_context(None, state));
+      Error!("malformed", qname, self, state, message);
       Ok(None)
     } else {
       // Found node.
       if !cant_close.is_empty() {
         // Intervening non-auto-closeable nodes!!
-        error!(
-          target: &s!("malformed:{:?}", qname),
-          "Closing tag {:?} whose open descendents do not auto-close. Descendants are {:?}",
+        let message = s!("Closing tag {:?} whose open descendents do not auto-close. Descendants are {:?}",
           qname,
-          cant_close.into_iter().map(|n| n.get_name()).collect::<Vec<String>>().join(",")
-        );
+          cant_close.into_iter().map(|n| n.get_name()).collect::<Vec<String>>().join(","));
+        Error!("malformed", qname, self, state, message);
       }
       // So, now close up to the desired node.
       self.close_node_internal(&node, state)?;
@@ -561,23 +560,18 @@ impl Document {
     }
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
-      error!(
-        target: &s!("malformed:{}", state.model.get_node_qname(node)),
-        "Attempt to close {:?}, which isn't open",
-        node.get_name()
-      );
+      let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
+      Error!("malformed", state.model.get_node_qname(node), self, state, message);
     //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
     } else {
       // Found node.
       if !cant_close.is_empty() {
         // But found has intervening non-auto-closeable nodes!!
         let qname = state.model.get_node_qname(node);
-        error!(
-          target: &s!("malformed:{}", qname),
-          "Closing {:?} whose open descendents do not auto-close. Descendants are: {:?}",
+        let message = s!("Closing {:?} whose open descendents do not auto-close. Descendants are: {:?}",
           qname,
-          cant_close.into_iter().map(|n| n.get_name()).collect::<Vec<String>>().join(",")
-        );
+          cant_close.into_iter().map(|n| n.get_name()).collect::<Vec<String>>().join(","));
+        Error!("malformed", qname, self, state, message);
       }
       if let Some(lastopen_node) = lastopen {
         self.close_node_internal(&lastopen_node, state)?;
@@ -603,23 +597,21 @@ impl Document {
     if t == Some(NodeType::DocumentNode) {
       // Didn't find $qname at all!!
       let qname = state.model.get_node_qname(&node);
-      error!(
-        target: &s!("malformed:{}", qname),
-        "Attempt to close {}, which isn't open. Currently in {:?}",
+      let message = s!("Attempt to close {}, which isn't open. Currently in {:?}",
         qname,
         self.get_insertion_context(None, state)
-      )
+      );
+      Error!("malformed", qname, self, state, message);
     } else {
       // Found node.
       // Intervening non-auto-closeable nodes!!
       if !cant_close.is_empty() {
         let qname = state.model.get_node_qname(&node);
-        error!(
-          target: &s!("malformed:{}", qname),
-          "Closing {} whose open descendents do not auto-close. Descendents are {}",
+        let message = s!("Closing {} whose open descendents do not auto-close. Descendents are {}",
           qname,
           cant_close.iter().map(Node::get_name).collect::<Vec<String>>().join(", ")
-        )
+        );
+        Error!("malformed", qname, self, state, message);
       }
       self.close_node_internal(node, state)?;
     }
@@ -1202,7 +1194,7 @@ impl Document {
 
   /// Return a string indicating the path to the current insertion point in the document.
   /// if $levels is defined, show only that many levels
-  pub fn get_insertion_context(&self, levels_opt: Option<usize>, state: &State) -> String {
+  pub fn get_insertion_context(&self, levels_opt: Option<usize>, state: &mut State) -> String {
     let mut levels = match levels_opt {
       None => {
         // Default depth is based on verbosity
@@ -1217,7 +1209,8 @@ impl Document {
     let mut node = self.node.clone();
     let node_type = node.get_type();
     if node_type != Some(NodeType::TextNode) && node_type != Some(NodeType::ElementNode) && node_type != Some(NodeType::DocumentNode) {
-      error!(target: "internal:context", "Insertion point is not an element, document or text: {:?}", self.document.node_to_string(&node));
+      let message = s!("Insertion point is not an element, document or text: {:?}", self.document.node_to_string(&node));
+      Error!("internal","context", self, state, message);
       return String::new();
     }
     let mut path = s!("TODO"); //TODO: Stringify($node);
@@ -1257,13 +1250,12 @@ impl Document {
 
     if let Some(has_opened) = has_opened_opt {
       // out of options if already inside an auto-open chain
-      error!(
-        target: &s!("malformed:{}", qname),
-        " failed auto-open through <{}> at inadmissible <{}>. Currently in {}",
+      let message = s!("failed auto-open through <{}> at inadmissible <{}>. Currently in {}",
         has_opened,
         cur_qname,
         self.get_insertion_context(None, state)
       );
+      Error!("malformed",qname, self, state,message);
       return Ok(self.node.clone()); // But we'll do it anyway, unless Error => Fatal.
     } else {
       // Now we're getting more desparate...
@@ -1290,10 +1282,11 @@ impl Document {
         self.find_insertion_point(qname, None, state) // Then retry, possibly w/auto open's
       } else {
         // Didn't find a legit place.
-        error!(target: &s!("malformed:{}", qname), "{:?} isn't allowed in <{}>", qname, cur_qname);
+        let message = s!("{:?} isn't allowed in <{}>", qname, cur_qname);
+        Error!("malformed", qname, self, state, message);
         // ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed
         // in <$cur_qname>", "Currently in " .
-        // self.getInsertionContext()); return self.node}; } } }
+        // self.getInsertionContext());
 
         // But we'll do it anyway, unless Error => Fatal.
         Ok(self.node.clone())
@@ -1758,7 +1751,8 @@ impl Document {
                 match Namespace::new(&prefix, &ns_uri, &mut root) {
                   Ok(ns) => Some(ns),
                   Err(_) => {
-                    error!(target: "document:open_element_internal", "failed to create namespace: {:?}", prefix);
+                    let message = s!("failed to create namespace: {:?}", prefix);
+                    Error!("document", "open_element_internal", self, state, message);
                     None
                   },
                 }
@@ -1767,7 +1761,8 @@ impl Document {
                 None
               }
             } else {
-              error!(target: "document:open_element_internal", "no namespace prefix found for {:?}", ns_uri);
+              let message = s!("no namespace prefix found for {:?}", ns_uri);
+              Error!("document", "open_element_internal", self, state, message);
               None
             }
           },
@@ -1777,7 +1772,8 @@ impl Document {
               match Namespace::new(&prefix, &ns_uri, &mut root) {
                 Ok(ns) => Some(ns),
                 Err(_) => {
-                  error!(target: "document:open_element_internal", "failed to create namespace: {:?}", prefix);
+                  let message = s!("failed to create namespace: {:?}", prefix);
+                  Error!("document", "open_element_internal", self, state, message);
                   None
                 },
               }

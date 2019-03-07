@@ -133,7 +133,8 @@ LoadDefinitions!(state, {
         },
       )
     } else {
-      error!("\\verbatiminput found no file for {:?}, output may be incomplete", file);
+      let message = s!("\\verbatiminput found no file for {:?}, output may be incomplete", file);
+      Error!("binding", "missing_file", gullet, state, message);
       Ok(Tokens!())
     }
   });

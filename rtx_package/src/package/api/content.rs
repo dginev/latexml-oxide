@@ -5,6 +5,7 @@ use std::path::Path;
 
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
+use rtx_core::common::object::Object;
 use rtx_core::document::resource::*;
 use rtx_core::document::tag::{TagOptionName, TagOptions};
 use rtx_core::gullet::Gullet;
@@ -799,10 +800,8 @@ pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Tokens>, gullet: &mu
     invoked_tokens.append(&mut reverted_args);
     Ok(Tokens::new(invoked_tokens))
   } else {
-    error!(
-      target: &s!("undefined:{}", token.get_cs_name()),
-      "Can't invoke {:?}; it is undefined", token
-    );
+    let message = s!("Can't invoke {:?}; it is undefined", token.stringify());
+    Error!("undefined", token.get_cs_name(), gullet, state, message);
     let mut invoked_tokens = vec![token];
     // DefConstructorI!(token, convert_latex_args(args.len(), 0),
     // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
