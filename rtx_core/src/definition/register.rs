@@ -1,5 +1,4 @@
 use lazy_static::lazy_static;
-use log::*;
 use regex::Regex;
 use std::borrow::Cow;
 use std::cell::{Ref, RefMut, RefCell};
@@ -171,11 +170,13 @@ impl NumericOps for RegisterValue {
       RegisterValue::Glue(v) => v.value_of(),
       RegisterValue::MuGlue(v) => v.value_of(),
       RegisterValue::Token(v) => {
-        warn!(target: "register:value_of", ".value_of called on Token {:?}", v);
+        let message = s!(".value_of called on Token {:?}", v);
+        Warn!("register","value_of", None, None, message);
         -1.0
       },
       RegisterValue::Tokens(v) => {
-        warn!(target: "register:value_of", ".value_of called on Tokens {:?}", v);
+        let message = s!(".value_of called on Tokens {:?}", v);
+        Warn!("register","value_of", None, None, message);
         -1.0
       },
     }

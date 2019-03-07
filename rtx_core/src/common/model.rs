@@ -1,5 +1,4 @@
 use lazy_static::lazy_static;
-use log::*;
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;

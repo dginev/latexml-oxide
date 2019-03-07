@@ -1,4 +1,3 @@
-use log::*;
 use std::borrow::Cow;
 use std::rc::Rc;
 
@@ -341,7 +340,8 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
     None => {
       if readonly {
         Rc::new(move |value, args, state| {
-          warn!(target: &s!("unexpected:{}", setter_name), "Can't assign to register {}", setter_name);
+          let message = s!("Can't assign to register {}", setter_name);
+          Warn!("unexpected", setter_name, None, state, message);
         })
       } else {
         Rc::new(move |value, args, state| {

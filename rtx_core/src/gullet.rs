@@ -1,5 +1,4 @@
 use lazy_static::lazy_static;
-use log::*;
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::VecDeque;
@@ -685,7 +684,8 @@ impl Gullet {
       Ok(Number::new(s * n.value_of()))
     } else {
       let next = self.read_token(state);
-      warn!(target:"expected:<number>", "Missing number, treated as zero while processing {:?}, next token is {:?}", state.current_token, next);
+      let message = s!("Missing number, treated as zero while processing {:?}, next token is {:?}", state.current_token, next);
+      Warn!("expected","<number>", self, state, message);
       if let Some(next) = next {
         self.unread(Tokens!(next));
       }
@@ -745,7 +745,8 @@ impl Gullet {
     let mut string = self.read_digits(&DIGIT_RE, true, state)?;
     match self.read_x_token(false, false, state)? {
       None => {
-        warn!(target:"expected:<float>", "Missing number, treated as zero while processing {:?}", state.current_token.as_ref().unwrap());
+        let message = s!("Missing number, treated as zero while processing {:?}", state.current_token.as_ref().unwrap());
+        Warn!("expected","<float>", self, state, message);
         Ok(Number::new(0.0))
       },
       Some(mut token) => {
@@ -768,7 +769,8 @@ impl Gullet {
         if let Some(n) = n_opt {
           Ok(Number::new(s * n.value_of()))
         } else {
-          warn!(target:"expected:<float>", "Missing number, treated as zero while processing {:?}", state.current_token.as_ref().unwrap());
+          let message = s!("Missing number, treated as zero while processing {:?}", state.current_token.as_ref().unwrap());
+          Warn!("expected","<float>", self, state, message);
           Ok(Number::new(0.0))
         }
       },
@@ -811,13 +813,14 @@ impl Gullet {
       let unit = match self.read_unit(state)? {
         Some(u) => u,
         None => {
-          warn!(target:"expected:<unit>", "Illegal unit of measure (pt inserted).");
+          Warn!("expected","<unit>", self, state, "Illegal unit of measure (pt inserted).");
           65536.0
         },
       };
       Ok(Dimension::new(s * d * unit))
     } else {
-      warn!(target: "expected:<number>", "Missing number, treated as zero. while processing {:?}", state.current_token.as_ref().unwrap());
+      let message = s!("Missing number, treated as zero. while processing {:?}", state.current_token.as_ref().unwrap());
+      Warn!("expected","<number>", self, state, message);
       Ok(Dimension::new(0.0))
     }
   }
@@ -901,7 +904,7 @@ impl Gullet {
           let u = if mu {
             match self.read_mu_unit(state)? {
               None => {
-                warn!(target:"expected<unit>", "Illegal unit of measure (mu inserted).");
+                Warn!("expected","unit>", self, state, "Illegal unit of measure (mu inserted).");
                 state.convert_unit("mu")
               },
               Some(v) => v,
@@ -909,7 +912,7 @@ impl Gullet {
           } else {
             match self.read_unit(state)? {
               None => {
-                warn!(target:"expected<unit>", "Illegal unit of measure (pt inserted).");
+                Warn!("expected","unit>", self, state, "Illegal unit of measure (pt inserted).");
                 65536.0
               },
               Some(v) => v,

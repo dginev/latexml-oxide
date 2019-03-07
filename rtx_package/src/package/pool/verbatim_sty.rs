@@ -86,7 +86,8 @@ LoadDefinitions!(state, {
         let post = caps.get(2).map_or("", |m| m.as_str()).to_string();
         lines.push(pre);
         if !post.is_empty() {
-          info!(target: "unexpected:stuff", "Characters dropped after '\\end{{{}}}'", env);
+          let message = s!("Characters dropped after '\\end{{{}}}'", env);
+          Info!("unexpected","stuff", gullet, state, message);
         }
         break;
       } else {

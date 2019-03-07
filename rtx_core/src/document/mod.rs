@@ -7,7 +7,6 @@ use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Namespace, Node, NodeType};
 use regex::Regex;
 
-use log::{debug, error, warn};
 use std::collections::{HashMap, VecDeque};
 use std::iter;
 use std::rc::Rc;
@@ -184,7 +183,7 @@ impl Document {
             .iter()
             .all(|gchild| self.can_contain_qname(&qname, &state.model.get_node_qname(gchild), state))
           {
-            debug!("will replace {} grandchildren nodes in finalize_rec", grandchildren.len());
+            Debug!("will replace {} grandchildren nodes in finalize_rec", grandchildren.len());
             self.replace_node(child, grandchildren)?;
           }
         }
@@ -278,7 +277,7 @@ impl Document {
       //   box_node.set_content(&tbox.text);
     }
     // if self.debug {
-    //   debug!("Document absorbed {:?} nodes", results.len());
+    //   Debug!("Document absorbed {:?} nodes", results.len());
     // }
     // Results never used, BUT leak Rc<Node> strong counts!!!
     // Ok(results)
@@ -327,7 +326,7 @@ impl Document {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone()
     // calls removed
     let node = self.open_element(qname, attrib, None, state)?;
-    debug!("Inserting element {:?} with body: {:?}", qname, content);
+    Debug!("Inserting element {:?} with body: {:?}", qname, content);
     for digested in content {
       self.absorb(digested, state)?;
     }
@@ -392,7 +391,7 @@ impl Document {
   ) -> Result<Node>
   {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
-    debug!("Open element {:?} at {:?}", qname, self.get_node_qname(&self.node, state));
+    Debug!("Open element {:?} at {:?}", qname, self.get_node_qname(&self.node, state));
     let point = self.find_insertion_point(qname, None, state)?;
     let font_owned: Option<Font> = match font_opt {
       Some(f) => Some(f.clone()),
@@ -427,7 +426,7 @@ impl Document {
   /// ie. we're automatically closing them, even if they're the same type as we're asking to
   /// close!!! This is kinda risky! Maybe we should try to request closing of specific nodes.
   pub fn close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
-    debug!("Close element {:?} at {:?}", qname, self.document.node_to_string(&self.node));
+    Debug!("Close element {:?} at {:?}", qname, self.document.node_to_string(&self.node));
     self.close_text_internal(state)?;
     let mut node = self.node.clone();
     let mut cant_close = Vec::new();
@@ -515,7 +514,7 @@ impl Document {
           break 'inner;
         }
         if !self.can_auto_close(node, state) {
-          debug!("It was impossible to autoclose node: {:?}", self.document.node_to_string(node));
+          Debug!("It was impossible to autoclose node: {:?}", self.document.node_to_string(node));
           return None;
         }
         node_opt = node.get_parent();
@@ -860,7 +859,7 @@ impl Document {
     state: &mut State,
   ) -> Result<Node>
   {
-    // debug!(target:"document:insert" ,"insert math token: {:?}", text);
+    // Debug!(target:"document:insert" ,"insert math token: {:?}", text);
     attributes.entry(s!("role")).or_insert_with(|| s!("UNKNOWN"));
 
     let font = match font_opt {
@@ -916,7 +915,7 @@ impl Document {
     if font.family == Some("nullfont".into()) {
       return Ok(None);
     }
-    debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
+    Debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
     // If not at document begin And not appending text in same font.
     if node_type != Some(NodeType::DocumentNode)
       && !(node_type == Some(NodeType::TextNode) && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
@@ -1124,13 +1123,13 @@ impl Document {
   pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Result<()> {
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
-      debug!("Appending text {:?} to {:?}", text, self.document.node_to_string(&self.node));
+      Debug!("Appending text {:?} to {:?}", text, self.document.node_to_string(&self.node));
       self.node.append_text(text)?;
     } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", None, state)?;
       let mut node = Node::new_text(text, &self.document).unwrap();
-      debug!("Inserting text node for {:?} into {:?}", text, self.document.node_to_string(&point));
+      Debug!("Inserting text node for {:?} into {:?}", text, self.document.node_to_string(&point));
       point.add_child(&mut node)?;
       self.set_node(&node);
     }
@@ -1661,7 +1660,7 @@ impl Document {
     // If this will be the document root node, things are slightly more involved.
     if point.get_type() == Some(NodeType::DocumentNode) {
       // First node! (?)
-      debug!("adding schema declaration, new node will be : {}", tag);
+      Debug!("adding schema declaration, new node will be : {}", tag);
       state.model.add_schema_declaration(self);
       newnode = Node::new(&tag, None, &self.document).unwrap();
       self.document.set_root_element(&newnode);
@@ -1719,7 +1718,7 @@ impl Document {
       self.set_node_box(&newnode, digested.clone());
     }
 
-    debug!(
+    Debug!(
       "Inserting {:?} into {:?}",
       self.get_node_qname(&newnode, state),
       self.get_node_qname(&point, state)
@@ -2061,10 +2060,8 @@ impl Document {
       self.set_node(&node);
       Some(savenode)
     } else {
-      warn!(
-        target: &s!("malformed:{}", key),
-        "No open node with an xml:id can get attribute {:?}", key
-      );
+      let message = s!("No open node with an xml:id can get attribute {:?}", key);
+      Warn!("malformed", key, self, state, message);
       //  $self->getInsertionContext());
       None
     }

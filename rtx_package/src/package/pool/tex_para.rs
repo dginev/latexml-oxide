@@ -54,7 +54,7 @@ LoadDefinitions!(state, {
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
   DefConstructor!("\\inner@par", sub[document, args, props, state] {
-    debug!("inner@par invoked!\n");
+    Debug!("inner@par invoked!\n");
     if document.maybe_close_element("ltx:p", state)?.is_some() {
     } else if document.can_contain(document.get_node(), "ltx:break", state) {
       document.insert_element("ltx:break", Vec::new(), None, state)?;

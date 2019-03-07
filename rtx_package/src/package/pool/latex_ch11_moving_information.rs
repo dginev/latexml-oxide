@@ -249,7 +249,7 @@ LoadDefinitions!(outer_stomach, state, {
     let mut tokens = Vec::new();
     // If we're in some sort of list environment, maybe we can recover
     if tag == "enumerate" || tag == "itemize" || tag == "description" {
-      info!("\nDamn! We're in a list {}; try to close it!", tag);
+      Info!("\nDamn! We're in a list {}; try to close it!", tag);
       tokens.extend(Invocation!("\\end", vec![env], gullet)?.unlist());
       tokens.extend(vec![
         T_CS!("\\let"),
@@ -261,10 +261,10 @@ LoadDefinitions!(outer_stomach, state, {
       ]);
     }
     // else ? it probably isn't going to work??
-    info!("Now, try to open {{thebibliography}}");
+    Info!("Now, try to open {{thebibliography}}");
     tokens.extend(Invocation!("\\begin", vec![Tokenize!("thebibliography"), Tokens!()], gullet)?.unlist());
     let tokens = Tokens::new(tokens);
-    info!("PATCHING with {:?}", tokens.to_string());
+    Info!("PATCHING with {:?}", tokens.to_string());
     Ok(tokens)
   });
 

@@ -187,7 +187,7 @@ impl DigestionAPI for Core {
         document.insert_pi("latexml", Some(attributes))?;
       }
     }
-    debug!("DOC ABSORB: {:?}", digested);
+    Debug!("Doc absorb: {:?}", digested);
     document.absorb(digested, state)?;
     note_end("Building");
 

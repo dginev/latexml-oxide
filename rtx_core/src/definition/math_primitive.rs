@@ -1,4 +1,3 @@
-use log::info;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -190,7 +189,7 @@ impl Definition for MathPrimitive {
 
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
-    info!("-- Mathprimitive invoke for {:?}", self.cs);
+    Info!("MathPrimitive","invoke",stomach, state, "invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;

@@ -1,5 +1,4 @@
 use libxml::tree::Node;
-use log::*;
 use std::borrow::Cow;
 use std::collections::{HashMap};
 use std::rc::Rc;
@@ -182,7 +181,8 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
 pub fn counter_value(ctr: &str, state: &mut State) -> Number {
   match state.lookup_number(&s!("\\c@{}", ctr)) {
     None => {
-      warn!(target: &s!("undefined:{:?}", ctr), "Counter {} was not defined; assuming 0", ctr);
+      let message = s!("Counter {} was not defined; assuming 0", ctr);
+      Warn!("undefined", ctr, None, state, message);
       Number!(0)
     },
     Some(value) => value,

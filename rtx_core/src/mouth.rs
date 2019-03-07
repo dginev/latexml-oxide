@@ -13,7 +13,6 @@ use encoding::all::ISO_8859_1;
 use core::ops::RangeBounds;
 use lazy_static::lazy_static;
 use regex::Regex;
-use log::*;
 
 use crate::common::error::*;
 use crate::common::store::Stored;
@@ -318,7 +317,8 @@ impl Mouth {
         let num_bytes = match reader.read_until(b'\n', &mut line_bytes) {
           Ok(count) => count,
           Err(e) => {
-            warn!(target: "mouth:io", "BufReader::read_until returned an error: {:?}", e);
+            let message = s!("BufReader::read_until returned an error: {:?}", e);
+            Warn!("mouth","io", self, state, message);
             0
           }
         };
@@ -341,14 +341,16 @@ impl Mouth {
             // line = encoding, line_bytes
       
             // Just remove the replacement chars, and warn (or Info?)
-            info!(target: &s!("misdefined:{}", encoding), "input isn't valid under encoding {}", encoding); 
+            let message = s!("input isn't valid under encoding {}", encoding);
+            Info!("misdefined", encoding, self, state, message); 
             unsafe { str::from_utf8_unchecked(&line_bytes).to_string() }
           } else {
             // no encoding, interpret as unicode! 
             match str::from_utf8(&line_bytes) {
               Ok(line_str) => line_str.to_string(),
               Err(e) => {
-                info!(target: "misdefined:utf8", "input isn't valid under encoding utf8: {:?}", e); 
+                let message = s!("input isn't valid under encoding utf8: {:?}", e);
+                Info!("misdefined", "utf8", self, state, message); 
                 unsafe { str::from_utf8_unchecked(&line_bytes).to_string() }
               }
             }

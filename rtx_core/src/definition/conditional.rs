@@ -1,4 +1,3 @@
-use log::*;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -170,12 +169,12 @@ impl Conditional {
     if let Some(ref test) = self.test {
       if (test)(gullet, args, state)? {
         if tracing {
-          debug!("{{true}}\n");
+          Debug!("{{true}}\n");
         }
       } else {
         let to = self.skip_conditional_body(-1.0, gullet, state);
         if tracing { 
-          debug!("{{false}} [skipped to {:?}]\n", to);
+          Debug!("{{false}} [skipped to {:?}]\n", to);
         }
       }
     } else {

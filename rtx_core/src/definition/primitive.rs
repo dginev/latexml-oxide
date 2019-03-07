@@ -1,4 +1,3 @@
-use log::debug;
 use std::borrow::Cow;
 use std::rc::Rc;
 use std::fmt;
@@ -94,7 +93,7 @@ impl Definition for Primitive {
 
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
-    debug!(target:"primitive", "invoke for {:?}", self.cs);
+    Debug!("primitive invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;

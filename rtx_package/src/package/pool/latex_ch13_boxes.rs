@@ -29,7 +29,8 @@ LoadDefinitions!(state, {
     unpack_to_token!(args => cs);
     match state.lookup_definition(&cs) {
       None => {
-        warn!(target: &s!("undefined:{:?}", cs), "'{}' is not a length; defining it now", cs.to_string());
+        let message = s!("'{}' is not a length; defining it now", cs.stringify());
+        Warn!("undefined", cs, stomach, state, message);
         DefRegisterI!(cs, None, Dimension::new(0.0));
       },
       Some(defn) => if !defn.is_register() {

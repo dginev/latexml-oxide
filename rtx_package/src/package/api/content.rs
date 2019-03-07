@@ -1,4 +1,3 @@
-use log::*;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;
@@ -105,8 +104,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   if !current_options.is_empty() {
     if let Some(Stored::String(prevoptions)) = state.lookup_value(&s!("{}_loaded_with_options",filename)) {
       if &current_options != prevoptions {
-        info!(target: "unexpected:options", //$STATE->getStomach->getGullet,
-          "Option clash for file {} with options {:?}, previously loaded with {:?}", filename, current_options, prevoptions);
+        let message = s!("Option clash for file {} with options {:?}, previously loaded with {:?}", filename, current_options, prevoptions);
+        Info!("unexpected","options", stomach, state, message);
       }
     }
   }
@@ -474,8 +473,7 @@ impl Default for RequireOptions {
 pub fn require_package(name: &str, mut options: RequireOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   if options.raw {
     options.raw = false;
-    warn!(target: "deprecated:raw",// $STATE->getStomach->getGullet,
-      "RequirePackage option raw is obsolete; it is not needed");
+    Warn!("deprecated","raw", stomach, state, "RequirePackage option raw is obsolete; it is not needed");
   }
 
   // We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
@@ -508,7 +506,7 @@ pub fn require_package(name: &str, mut options: RequireOptions, stomach: &mut St
 
 pub fn require_resource(mut resource: Resource, state: &mut State) {
   if resource.name.is_empty() && resource.content.is_empty() {
-    warn!(target: "expected:resource", "Resource must have a resource pathname or content; skipping");
+    Warn!("expected","resource", None, state, "Resource must have a resource pathname or content; skipping");
     return;
   }
   if resource.mimetype.is_empty() && !resource.name.is_empty() {
@@ -516,7 +514,7 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
     resource.mimetype = resource_type(&ext);
   }
   if resource.mimetype.is_empty() {
-    warn!(target: "expected:mime-type", "Resource must have a mime-type; skipping");
+    Warn!("expected","mime-type", None, state, "Resource must have a mime-type; skipping");
     return;
   }
 
@@ -581,7 +579,7 @@ pub fn find_file(file: &str, options: Option<FindFileOptions>, state: &mut State
   let mut options = options.unwrap_or_default();
   if options.raw {
     options.raw = false;
-    warn!(target: "deprecated:raw", "FindFile option raw is deprecated; it is not needed");
+    Warn!("deprecated","raw", None, state, "FindFile option raw is deprecated; it is not needed");
   }
 
   if pathname::is_literaldata(file) {
@@ -675,7 +673,7 @@ pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -
     // if ($urlbase && ($path = url_find($file, urlbase => $urlbase))) {
     //   return $path; }
     // return; }
-    info!("No path found for: {:?}", file);
+    Info!("No path found for: {:?}", file);
     None
   }
 }
