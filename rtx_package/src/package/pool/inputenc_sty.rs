@@ -45,7 +45,8 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\IeC{}", "#1");
 
   DefMacro!("\\@inpenc@undefined", sub[gullet, args, state] {
-    error!(target:"unexpected:<char>", "Keyboard character used is undefined in inputencoding {}", state.input_encoding.as_ref().unwrap());
+    let message = s!("Keyboard character used is undefined in inputencoding {}", state.input_encoding.as_ref().unwrap());
+    Error!("unexpected", "<char>", gullet, state, message);
   });
 
   DefPrimitive!("\\inputencoding{}", sub[stomach, args, state] {

@@ -197,9 +197,11 @@ LoadDefinitions!(outer_state, {
       let cc = token.get_catcode();
       if cc == Catcode::CS {
         if let Some(defn) = state.lookup_definition(&token) {
-          error!(target: &s!("unexpected:{}", token), "The control sequence {:?} should not appear between \\csname and \\endcsname", token);
+          let message = s!("The control sequence {:?} should not appear between \\csname and \\endcsname", token);
+          Error!("unexpected", token, gullet, state, message);
         } else {
-          error!(target: &s!("undefined:{}", token), "The token {:?} is not defined", token);
+          let message = s!("The token {:?} is not defined", token);
+          Error!("undefined", token, gullet, state, message);
         }
       } else if cc == Catcode::SPACE {  // Keep newlines from having \n!
         cs.push(' ');
@@ -219,8 +221,8 @@ LoadDefinitions!(outer_state, {
     token
   });
 
-  DefPrimitive!("\\endcsname", sub {
-    error!(target: "unexpected:\\endcsname", "Extra \\endcsname");
+  DefPrimitive!("\\endcsname", sub[stomach, args, state] {
+    Error!("unexpected" ,"\\endcsname", stomach, state, "Extra \\endcsname");
   });
 
   DefMacro!("\\expandafter Token Token", sub[gullet, args, state] {
@@ -286,7 +288,7 @@ LoadDefinitions!(outer_state, {
       }
       tokens
     } else {
-      error!(target:"expected:<register>", "a register was expected to be here");
+      Error!("expected", "<register>", gullet, state, "a register was expected to be here");
       Vec::new()
     }
   });
@@ -321,7 +323,8 @@ fn compare(u: Token, rel: Token, v: Token) -> Result<bool> {
   } else if rel == T_OTHER!(">") || rel == T_CS!("\\@@>") {
     Ok(u > v)
   } else {
-    error!(target:"expected:<relationaltoken>", "Expected a relational token for comparision. Got {:?} (cc {:?})", rel, rel.get_catcode());
+    let message = s!("Expected a relational token for comparision. Got {:?} (cc {:?})", rel, rel.get_catcode());
+    Error!("expected","<relationaltoken>", None, None, message);
     Ok(false)
   }
 }

@@ -24,10 +24,9 @@ pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
   return;
 }
 
-pub fn only_preamble(cs: &str, state: &mut State) {
+pub fn only_preamble(cs: &str, stomach: &mut Stomach, state: &mut State) {
   if !state.lookup_bool("inPreamble") {
-    let category_object = s!("unexpected:{}", cs);
-    error!(target: &category_object, "The current command can only appear in the preamble");
+    Error!("unexpected", cs, stomach, state, "The current command can only appear in the preamble");
   }
 }
 

@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use std::collections::HashMap;
 use std::error::Error as ErrorTrait;
 use std::fmt;
@@ -10,6 +10,103 @@ use std::result;
 lazy_static! {
   static ref _NOTE_TIMERS: HashMap<String, String> = HashMap::new();
 }
+
+#[macro_export]
+macro_rules! Info {
+  ($category:literal, $object:expr, $where:ident, $state:ident, $message:expr) => {{
+    $state.note_status("info");
+    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+  }};
+  ($category:literal, $object:expr, $where:ident, $state:ident, $message:expr, $($details:expr),*) => {{
+    $state.note_status("info");
+    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+  }}
+}
+
+
+#[macro_export]
+macro_rules! Warn {
+  ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
+    // $state.note_status("error"); // TODO: We're losing the error count this way...
+    warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+  }};
+ ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
+    // $state.note_status("error"); // TODO: We're losing the error count this way...
+    warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+  }};
+  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
+    $state.note_status("error");
+    warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+  }};
+ ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
+    $state.note_status("error");
+    warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+  }}
+}
+
+#[macro_export]
+macro_rules! Error {
+  ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
+    // $state.note_status("error"); // TODO: We're losing the error count this way...
+    error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+  }};
+ ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
+    // $state.note_status("error"); // TODO: We're losing the error count this way...
+    error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+  }};
+  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
+    $state.note_status("error");
+    error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+  }};
+ ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
+    $state.note_status("error");
+    error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+  }}
+}
+
+
+#[macro_export]
+macro_rules! fatal {
+  ($target:tt, $category:tt, $message:expr) => {{
+    use $crate::common::error::Error as RtxError;
+    use $crate::common::error::ErrorCategory::*;
+    use $crate::common::error::ErrorTarget::*;
+    return Err(RtxError {
+      target: $target,
+      category: $category,
+      message: $message.to_string(),
+    });
+  }};
+  ($target:tt, $category:expr, $where: ident, $state: ident, $message:expr) => {{
+    use $crate::common::error::Error as RtxError;
+    use $crate::common::error::ErrorCategory::*;
+    use $crate::common::error::ErrorTarget::*;
+    return Err(RtxError {
+      target: $target,
+      category: $category,
+      message: $message.to_string(),
+    });
+  }};
+
+}
+
+#[macro_export]
+macro_rules! generate_message {
+  (None, $message:expr, $level:literal) => {
+    s!("{}\n\tIn {}:{}:{}\n", $message, file!(), line!(), column!())
+  };
+  (None, $message:expr, $level:literal, $detail:expr) => {
+    s!("{}\n\t{}\n\tIn {}:{}:{}\n", $message, $detail, file!(), line!(), column!())
+  };
+  ($where:ident, $message:expr, $level:literal) => {
+    s!("{}\n\t{}\n\tIn {}:{}:{}\n", $message, &$where.get_location(), file!(), line!(), column!())
+  };
+  ($where:ident, $message:expr, $level:literal, $detail:expr) => {
+    s!("{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n", $message, &$where.get_location(),$detail, file!(), line!(), column!());
+  }
+}
+
+pub type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug)]
 pub struct Error {
@@ -30,10 +127,12 @@ pub enum ErrorCategory {
   MissingFile,
   Malformed,
   Libxml,
+  Convert,
   Recursion,
   EoF,
   Endgroup,
   Generic(Box<ErrorTrait>),
+  Filename(String)
 }
 
 #[derive(Debug)]
@@ -43,6 +142,8 @@ pub enum ErrorTarget {
   ParamSpec,
   Converter,
   Mouth,
+  Core,
+  State,
   Stomach,
   Codegen,
   Macro,
@@ -53,49 +154,6 @@ pub enum ErrorTarget {
   Internal,
   TargetUnexpected,
 }
-
-#[macro_export]
-macro_rules! Info {
-  ($category:literal, $object:expr, $where:ident, $message:literal, $details:expr, $state:ident) => {
-    $state.note_status("info");
-    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $details))
-  }
-}
-
-#[macro_export]
-macro_rules! Error {
-  ($category:literal, $object:expr, $where:ident, $message:expr, $state:ident) => {
-    $state.note_status("error");
-    error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
-  }
-}
-
-
-#[macro_export]
-macro_rules! fatal {
-  ($target:tt, $category:tt, $message:expr) => {{
-    use $crate::common::error::Error as RtxError;
-    use $crate::common::error::ErrorCategory::*;
-    use $crate::common::error::ErrorTarget::*;
-    return Err(RtxError {
-      target: $target,
-      category: $category,
-      message: $message.to_string(),
-    });
-  }};
-}
-
-#[macro_export]
-macro_rules! generate_message {
-  ($where:ident, $message:expr, $level:literal) => {
-    s!("{}\n\t{}\n", $message, &$where.get_location())
-  };
-  ($where:ident, $message:expr, $level:literal, $detail:expr) => {
-    s!("{}\n\t{}\n\t{}\n", $message, &$where.get_location(),$detail)
-  }
-}
-
-pub type Result<T> = result::Result<T, Error>;
 
 impl fmt::Display for Error {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -117,8 +175,10 @@ impl fmt::Display for Error {
       Libxml => write!(f, "libxml error"),
       Recursion => write!(f, "<recursion>"),
       EoF => write!(f, "<EOF>"),
+      Convert => write!(f, "conversion"),
       Endgroup => write!(f, "<endgroup>"),
       Generic(ref err) => err.fmt(f),
+      Filename(ref name) => write!(f, "file:{}", name)
     }
   }
 }
@@ -129,6 +189,7 @@ impl ErrorTrait for Error {
     match self.category {
       Init => "initialization failed",
       Io(ref err) => err.description(),
+      Convert => "conversion",
       MissingFile => "missing file",
       NotFound => "not found",
       Misdefined => "misdefined",
@@ -141,6 +202,7 @@ impl ErrorTrait for Error {
       EoF => "<EOF>",
       Endgroup => "<endgroup>",
       Generic(ref err) => err.description(),
+      Filename(ref name) => name
     }
   }
 

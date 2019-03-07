@@ -50,6 +50,10 @@ impl Default for Gullet {
   }
 }
 
+impl Object for Gullet {
+  fn stringify(&self) -> String {unimplemented!();}
+}
+
 impl Gullet {
   /// This flushes a mouth so that it will be automatically closed, next time it's read
   /// Corresponds (I think) to TeX's \endinput
@@ -101,19 +105,23 @@ impl Gullet {
 
   pub fn close_mouth<'close>(&'close mut self, forced: bool, state: &mut State) {
     let mut shift_from_mouthstack = false;
-    match self.mouth {
-      None => {},
-      Some(ref mut runtime) => {
-        if !forced && (!runtime.pushback.is_empty()) || runtime.mouth.has_more_input() {
-          // TODO:
-          // let next = Stringify(self.read_token());
-          // Error('unexpected', $next, self, "Closing mouth with input remaining '$next'");
-        }
-        runtime.mouth.finish(state);
-        // I think I can refactor from the original state into this simple assignment, because of
-        // the Option type
-        shift_from_mouthstack = true;
-      },
+    let mut error_has_more_input = false;
+    if let Some(ref mut runtime) = self.mouth {
+      if !forced && (!runtime.pushback.is_empty()) || runtime.mouth.has_more_input() {
+        error_has_more_input = true
+      }
+    }
+    if error_has_more_input {
+      let next = match self.read_token(state) {
+        Some(t) => t.stringify(),
+        None => String::from("Empty")
+      };
+      let message = s!("Closing mouth with input remaining '{}'", next);
+      Error!("unexpected", next, self, state, message);
+    }
+    if let Some(ref mut runtime) = self.mouth {
+      runtime.mouth.finish(state);
+      shift_from_mouthstack = true;
     }
     if shift_from_mouthstack {
       self.mouth = self.mouthstack.pop_front();
@@ -399,7 +407,7 @@ impl Gullet {
       tokens.push(t);
     }
     if level > 0 {
-      error!(target: "expected:}", "Gullet->readBalanced ran out of input in an unbalanced state.");
+      Error!("expected","}", self, state, "Gullet->readBalanced ran out of input in an unbalanced state.");
     }
     if tokens.is_empty() {
       // Default to empty token list, to signify success (TODO, or improve to
@@ -995,9 +1003,8 @@ impl Gullet {
           self.close_mouth(true, state);
           break;
         } else if self.mouthstack.is_empty() {
-          error!(target: "unexpected:<closed>", "TODO: Mouth is unexpectedly already closed");
-          // Error('unexpected', '<closed>', $gullet, "Mouth is unexpectedly already closed",
-          //   "Reading from " . Stringify($mouth) . ", but it has already been closed.");
+          let message = s!("Reading from {}, but it has already been closed.", runtime.mouth.stringify());
+          Error!("unexpected", "<closed>", self, state, "Mouth is unexpectedly already closed", message);
           break;
         } else {
           let mut ready_to_read = false;
@@ -1010,7 +1017,7 @@ impl Gullet {
           }
           if ready_to_read {
             let _next = self.read_token(state); // stringify( ?
-            error!(target: "unexpected:next", "TODO: unexpected input remaining");
+            Error!("unexpected", "next", self, state, "TODO: unexpected input remaining");
             // Error('unexpected', $next, $gullet, "Unexpected input remaining: '$next'",
             //   "Finished reading from " . Stringify($mouth) . ", but it still has input.");
             {
@@ -1026,7 +1033,7 @@ impl Gullet {
           }
         }
       } else {
-        error!(target: "unexpected:runtime", "TODO: gullet had no active runtime");
+        Error!("unexpected", "runtime", self, state, "TODO: gullet had no active runtime");
         break;
       }
     }

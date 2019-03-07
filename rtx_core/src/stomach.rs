@@ -8,6 +8,7 @@ use crate::common::font;
 use crate::common::font::Font;
 use crate::common::store::Stored;
 use crate::common::locator::Locator;
+use crate::common::object::Object;
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::Definition;
@@ -36,6 +37,11 @@ impl Default for Stomach {
       boxing: Vec::new(),
     }
   }
+}
+
+impl Object for Stomach {
+  fn get_locator(&self) -> Cow<Locator> { self.get_gullet().get_locator() }
+  fn stringify(&self) -> String { String::from("TODO Stomach") }
 }
 
 impl<'t> Stomach {
@@ -162,16 +168,6 @@ impl<'t> Stomach {
     Ok(())
   }
 
-  pub fn get_locator(&self) -> Cow<Locator> { self.get_gullet().get_locator() }
-  pub fn get_location(&self) -> String { 
-    let loc = self.get_locator();
-    if *loc == Locator::default() {
-      String::new()
-    } else {
-      loc.to_string()
-    }
-  }
-
   /// Invoke a token;
   /// If it is a primitive or constructor, the definition will be invoked,
   /// possibly arguments will be parsed from the Gullet.
@@ -210,10 +206,8 @@ impl<'t> Stomach {
               result.push(digested);
             }
           } else {
-            error!(
-              target: &s!("misdefined:{:?}", &token),
-              "The token {:?} should never reach Stomach!", token
-            );
+            let message = s!("The token {:?} should never reach Stomach!", token);
+            Error!("misdefined", token, self, state, &message);
             if let Some(digested) = self.invoke_token_simple(meaning, state)? {
               result.push(digested);
             }
@@ -293,8 +287,8 @@ impl<'t> Stomach {
     if cs.starts_with("\\if") {
       // Apparently an \ifsomething ???
       let name = cs.replace("\\if", "");
-      let message = s!("The token {} is not defined. Defining it now as with \\newif", cs);
-      Error!("undefined", cs, self, &message, state);
+      let message = s!("The token {} is not defined.", token.stringify());
+      Error!("undefined", token, self, state, &message, "Defining it now as with \\newif");
       // install stub definitions for new conditional
       let cs_clone = cs.clone();
       state.install_definition(
@@ -323,8 +317,8 @@ impl<'t> Stomach {
       gullet.unread(Tokens!(token.clone())); // Retry
       Ok(Vec::new())
     } else {
-      let message = s!("The token {:?} is not defined. Defining it now as <ltx:ERROR/>", cs);
-      Error!("undefined", cs, self, &message, state);
+      let message = s!("The token {} is not defined.", token.stringify());
+      Error!("undefined", token, self, state, &message, "Defining it now as <ltx:ERROR/>");
       let closure_cs = cs.clone();
       state.install_definition(
         Constructor {
@@ -410,7 +404,7 @@ impl<'t> Stomach {
             is_mouth = true;
           }
         } else {
-          Error!("unexpected","runtime", self, "TODO: gullet had no active runtime", state);
+          Error!("unexpected","runtime", self, state, "TODO: gullet had no active runtime");
           break;
         }
       }
@@ -418,24 +412,26 @@ impl<'t> Stomach {
         gullet.close_mouth(true, state);
         break;
       } else if gullet.mouthstack.is_empty() {
-        Error!("unexpected", "<closed>", self, "TODO: Mouth is unexpectedly already closed", state);
+        Error!("unexpected", "<closed>", self, state, "TODO: Mouth is unexpectedly already closed");
         // Error('unexpected', '<closed>', $gullet, "Mouth is unexpectedly already closed",
         //   "Reading from " . Stringify($mouth) . ", but it has already been closed.");
         break;
       } else {
+        let mut stringify_mouth = String::new();
         let mut ready_to_read = false;
         {
           if let Some(ref mut runtime) = gullet.mouth {
             if !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input() {
               ready_to_read = true;
+              stringify_mouth = runtime.mouth.stringify();
             }
           }
         }
         if ready_to_read {
-          let _next = gullet.read_token(state); // stringify( ?
-          error!(target: "unexpected:next", "TODO: unexpected input remaining");
-          // Error('unexpected', $next, $gullet, "Unexpected input remaining: '$next'",
-          //   "Finished reading from " . Stringify($mouth) . ", but it still has input.");
+          let next = gullet.read_token(state);
+          let message = s!("Unexpected input remaining: {:?}", next);
+          let detail = s!("Finished reading from {}, but it still has input.", stringify_mouth);
+          Error!("unexpected","next", gullet, state, message, detail);          
           {
             if let Some(ref mut runtime) = gullet.mouth {
               runtime.mouth.finish(state);
@@ -522,7 +518,7 @@ impl<'t> Stomach {
   pub fn egroup(&mut self, state: &mut State) -> Result<()> {
     if state.lookup_bool("groupNonBoxing") {
       // or group was opened with \begingroup
-      Error!("unexpected", state.current_token.as_ref().unwrap(), self, "Attempt to close boxing group", state);
+      Error!("unexpected", state.current_token.as_ref().unwrap(), self, state, "Attempt to close boxing group");
     } else {
       // Don't pop if there's an error; maybe we'll recover?
       self.pop_stack_frame(false, state)?;
@@ -601,7 +597,7 @@ impl<'t> Stomach {
       } else {
         String::from("mode")
       };
-      Error!("unexpected", category, self, &message, state); // self.currentFrameMessage);      
+      Error!("unexpected", category, self, state, &message); // self.currentFrameMessage);      
     } else {
       // Don"t pop if there"s an error; maybe we'll recover?
       self.pop_stack_frame(false, state)?;

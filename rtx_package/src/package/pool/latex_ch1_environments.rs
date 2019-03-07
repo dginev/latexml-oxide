@@ -45,10 +45,10 @@ LoadDefinitions!(state, {
       let token = T_CS!(s!("\\{}", name));
       if !is_defined_token(&token, state) {
         let undef = s!("{{{}}}", name); // this creates {name} , {{ and }} are escapes in Rust's format!
-        error!(target: &s!("undefined:{}", undef), "The environment {} is not defined.", undef);
-        //TODO
+        let message = s!("The environment {} is not defined.", undef);
+        Error!("undefined", undef, gullet, state, message);
+        // TODO:
         // state.note_status("undefined", undef);
-        //   Error("undefined", $undef, $gullet, "The environment " . $undef . " is not defined.");
         // state.install_definition(LaTeXML::Core::Definition::Constructor->new($token, undef,
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
       }

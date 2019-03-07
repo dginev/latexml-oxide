@@ -272,7 +272,8 @@ impl<'a> From<&'a RegisterValue> for Dimension {
       RegisterValue::MuGlue(other) => Dimension::new(other.value_of()),
       RegisterValue::Token(other) => other.to_number().into(),
       RegisterValue::Tokens(other) => {
-        error!(target:"expected:dimension", "Token register can not be cast into a dimension: {:?}", other);
+        let message = s!("Token register can not be cast into a dimension: {:?}", other);
+        Error!("expected","dimension", None, None, message);
         Dimension::new(0.0)
       },
     }
@@ -288,7 +289,8 @@ impl<'a> From<&'a RegisterValue> for Glue {
       RegisterValue::MuGlue(other) => Glue::new(other.value_of()),
       RegisterValue::Token(other) => other.to_number().into(),
       RegisterValue::Tokens(other) => {
-        error!(target:"expected:dimension", "Token register can not be cast into a Glue: {:?}", other);
+        let message = s!("Token register can not be cast into a Glue: {:?}", other);
+        Error!("expected","dimension", None, None, message);
         Glue::new(0.0)
       },
     }
@@ -405,7 +407,10 @@ impl Definition for RegisterCell {
         // primitive returns boxes, so these need to be digested!
         Stored::Token(t) => gullet.unread(Tokens!(t)),
         Stored::Tokens(tks) => gullet.unread(tks),
-        other => error!(target:"unexpected:afterassignment", "expected tokens, found: {:?}", other),
+        other => {
+          let message = s!("expected tokens, found: {:?}", other);
+          Error!("unexpected","afterassignment", stomach, state, message)
+        }
       };
     }
     // # Tracing ?
@@ -440,7 +445,8 @@ impl Register {
   pub fn is_readonly(&self) -> bool { self.readonly }
   pub fn set_value(&mut self, value: RegisterValue, args: Vec<Tokens>, state: &mut State) {
     if self.register_type == RegisterType::CharDef {
-      error!(target:"unexpected:chardef", "Can't assign to chardef {}",self.cs.get_cs_name());
+      let message = s!("Can't assign to chardef {}", self.cs.get_cs_name());
+      Error!("unexpected","chardef", None, state, message);
     } else {
       (self.setter)(value, args, state);
     }

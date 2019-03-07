@@ -31,9 +31,8 @@ LoadDefinitions!(state, {
             // Avoid a Fatal, but we're likely in trouble.
             // Should we switch to text mode? (LaTeX normally wouldn't)
             // Did we miss something and would should have already been in text mode? Possibly...
-            error!(target: "expected:$",
-          "Missing $ closing display math.\nIgnoring; expect to be in wrong math/text mode.");
-            op = ""
+            Error!("expected", "$", stomach, state, "Missing $ closing display math.\nIgnoring; expect to be in wrong math/text mode.");
+            op = "";
           }
         } else if mode == "inline_math" {
           op = "\\@@ENDINLINEMATH";

@@ -117,7 +117,8 @@ LoadDefinitions!(state, {
           let defn_value = defn.value_of(var_tokens, state).unwrap_or_default();
           defn.borrow_mut().set_value(defn_value.add(summand), defn_args, state);
         } else {
-          error!(target: "expected:definition", "\\advance expected a defined variable for {:?}, found no definition", defn_token_rc);
+          let message = s!("\\advance expected a defined variable for {:?}, found no definition", defn_token_rc);
+          Error!("expected","definition", stomach, state, message);
         }
       }
     }
@@ -135,10 +136,12 @@ LoadDefinitions!(state, {
         let scale_value = scale.to_number().value_of();
         defn.borrow_mut().set_value(defn_value.multiply(scale_value), defn_args, state);
       } else {
-        error!(target: "expected:definition", "\\multiply expected a defined variable for {:?}, found no definition", varname);
+        let message = s!("\\multiply expected a defined variable for {:?}, found no definition", varname);
+        Error!("expected","definition", stomach, state, message);
       }
     } else {
-      error!(target: "expected:variable", "\\multiply expected a Variable argument, but got nothing.");
+      let message = s!("\\multiply expected a Variable argument, but got nothing.");
+      Error!("expected","variable", stomach, state, message);
     }
   });
 
@@ -153,15 +156,17 @@ LoadDefinitions!(state, {
         let defn_value = defn.value_of(args, state).unwrap_or_default();
         let mut denominator = scale.to_number().value_of();
         if denominator == 0.0 {
-          error!(target: &s!("misdefined:{:?}", scale), "Illegal \\divide by 0; assuming 1");
+          Error!("misdefined", scale, stomach, state, "Illegal \\divide by 0; assuming 1");
           denominator = 1.0;
         }
         defn.borrow_mut().set_value(defn_value.divide(denominator), defn_args, state);
       } else {
-        error!(target: "expected:definition", "\\divide expected a defined variable for {:?}, found no definition", varname);
+        let message = s!("\\divide expected a defined variable for {:?}, found no definition", varname);
+        Error!("expected","definition", stomach, state, message);
       }
     } else {
-      error!(target: "expected:variable", "\\divide expected a Variable argument, but got nothing.");
+      let message = s!("\\divide expected a Variable argument, but got nothing.");
+      Error!("expected","variable", stomach, state, message);
     }
   });
 

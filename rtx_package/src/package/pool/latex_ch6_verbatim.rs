@@ -99,7 +99,7 @@ LoadDefinitions!(outer_state, {
       let cs = if state.lookup_bool("IN_MATH") { T_CS!("\\@math@verb") } else { T_CS!("\\@text@verb") };
       Ok(Invocation!(cs, vec![Tokens!(init.unwrap()), body], gullet)?)
     } else { // typically something read too far got \verb and the content is somewhere else..?
-      error!(target: "expected:delimiter", "Verbatim argument lost\n Bindings for preceding code is probably broken");
+      Error!("expected", "delimiter", gullet, state, "Verbatim argument lost\n Bindings for preceding code is probably broken");
       state.end_semiverbatim()?;
       Ok(Tokens!())
     }

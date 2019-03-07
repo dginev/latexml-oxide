@@ -15,7 +15,7 @@ use crate::tbox::Tbox;
 // try to have stringify do too much.
 // ======================================================================
 pub trait Object {
-  fn stringify(&self) -> String;
+  fn stringify(&self) -> String { unimplemented!(); }
 
   // Since the next two are used in debugging and error messages,
   // be careful to avoid recursive errors

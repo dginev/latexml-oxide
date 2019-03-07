@@ -232,7 +232,7 @@ impl DigestionAPI for Core {
 
   fn digest_file(&mut self, mut request: String, options: DigestionOptions) -> Result<Digested> {
     let mut dir = String::new();
-    let mut name = String::new();
+    let mut name;
     // let mut ext = String::new();
     let mode = match options.mode {
       None => DigestionMode::TeX,
@@ -265,10 +265,8 @@ impl DigestionAPI for Core {
         name = pathname::file_name(&request);
       // ext = pathname::extension(&request);
       } else {
-        error!(
-          target: &s!("Fatal:missing_file:{}", request_base),
-          "Can't find {} file {} ", mode, request
-        );
+        let message = s!("Can't find {} file {} ", mode, request);
+        fatal!(Core, MissingFile, self, None, message);
       }
     }
 
