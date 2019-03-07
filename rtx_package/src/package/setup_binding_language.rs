@@ -1405,6 +1405,19 @@ macro_rules! DefMacroI(
     (DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*)), $state_arg));
 
   // Simple Expression syntax
+  ($cs:literal, $paramlist:expr, $expansion:literal) => {
+    let expansion;
+    compile_expansion!(expansion, $expansion);
+    DefMacroIWO!(T_CS!($cs), $paramlist, expansion, None)
+  };
+  ($cs:literal, $paramlist:expr, $expansion:literal, $($key:ident=>$val:expr),*) => {
+    let expansion;
+    compile_expansion!(expansion, $expansion);    
+    DefMacroIWO!(T_CS!($cs), $paramlist, expansion, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*)))
+  };
+  ($cs:literal, $paramlist:expr, $expansion:expr) => (DefMacroIWO!(T_CS!($cs), $paramlist, $expansion, None));
+  ($cs:literal, $paramlist:expr, $expansion:expr, $($key:ident=>$val:expr),*) =>
+    (DefMacroIWO!(T_CS!($cs), $paramlist, $expansion, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*))));
   ($cs:expr, $paramlist:expr, $expansion:expr) => (DefMacroIWO!($cs, $paramlist, $expansion, None));
   ($cs:expr, $paramlist:expr, $expansion:expr, $($key:ident=>$val:expr),*) =>
     (DefMacroIWO!($cs, $paramlist, $expansion, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*))));
@@ -1598,7 +1611,10 @@ macro_rules! DefPrimitive{
 
 #[macro_export]
 macro_rules! DefPrimitiveI{
+  ($proto:expr, None) => (DefPrimitiveIWO!($proto, noprimitive!(), PrimitiveOptions::default()));
   ($proto:expr, $compiled_replacement:expr) => (DefPrimitiveIWO!($proto, $compiled_replacement, PrimitiveOptions::default()));
+  ($proto:expr, None, $($key:ident=>$val:expr),*) =>
+    (DefPrimitiveIWO!($proto, noprimitive!(), NewDefault!(PrimitiveOptions, $($key => $val),*)));
   ($proto:expr, $compiled_replacement:expr, $($key:ident=>$val:expr),*) =>
     (DefPrimitiveIWO!($proto, $compiled_replacement, NewDefault!(PrimitiveOptions, $($key => $val),*)));
   // explicit state
