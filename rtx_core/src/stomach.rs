@@ -163,6 +163,14 @@ impl<'t> Stomach {
   }
 
   pub fn get_locator(&self) -> Cow<Locator> { self.get_gullet().get_locator() }
+  pub fn get_location(&self) -> String { 
+    let loc = self.get_locator();
+    if *loc == Locator::default() {
+      String::new()
+    } else {
+      loc.to_string()
+    }
+  }
 
   /// Invoke a token;
   /// If it is a primitive or constructor, the definition will be invoked,
@@ -285,10 +293,8 @@ impl<'t> Stomach {
     if cs.starts_with("\\if") {
       // Apparently an \ifsomething ???
       let name = cs.replace("\\if", "");
-      error!(
-        target: &s!("undefined:{}", cs),
-        "The token {} is not defined. Defining it now as with \\newif", cs
-      );
+      let message = s!("The token {} is not defined. Defining it now as with \\newif", cs);
+      Error!("undefined", cs, self, &message, state);
       // install stub definitions for new conditional
       let cs_clone = cs.clone();
       state.install_definition(
@@ -317,10 +323,8 @@ impl<'t> Stomach {
       gullet.unread(Tokens!(token.clone())); // Retry
       Ok(Vec::new())
     } else {
-      error!(
-        target: &s!("undefined:{}", cs),
-        "The token {:?} is not defined. Defining it now as <ltx:ERROR/>", cs
-      );
+      let message = s!("The token {:?} is not defined. Defining it now as <ltx:ERROR/>", cs);
+      Error!("undefined", cs, self, &message, state);
       let closure_cs = cs.clone();
       state.install_definition(
         Constructor {
@@ -406,7 +410,7 @@ impl<'t> Stomach {
             is_mouth = true;
           }
         } else {
-          error!(target: "unexpected:runtime", "TODO: gullet had no active runtime");
+          Error!("unexpected","runtime", self, "TODO: gullet had no active runtime", state);
           break;
         }
       }
@@ -414,7 +418,7 @@ impl<'t> Stomach {
         gullet.close_mouth(true, state);
         break;
       } else if gullet.mouthstack.is_empty() {
-        error!(target: "unexpected:<closed>", "TODO: Mouth is unexpectedly already closed");
+        Error!("unexpected", "<closed>", self, "TODO: Mouth is unexpectedly already closed", state);
         // Error('unexpected', '<closed>', $gullet, "Mouth is unexpectedly already closed",
         //   "Reading from " . Stringify($mouth) . ", but it has already been closed.");
         break;
@@ -518,10 +522,7 @@ impl<'t> Stomach {
   pub fn egroup(&mut self, state: &mut State) -> Result<()> {
     if state.lookup_bool("groupNonBoxing") {
       // or group was opened with \begingroup
-      error!(
-        target: &s!("unexpected:{}", state.current_token.as_ref().unwrap()),
-        "Attempt to close boxing group"
-      );
+      Error!("unexpected", state.current_token.as_ref().unwrap(), self, "Attempt to close boxing group", state);
     } else {
       // Don't pop if there's an error; maybe we'll recover?
       self.pop_stack_frame(false, state)?;
@@ -594,11 +595,13 @@ impl<'t> Stomach {
     // Last stack frame was NOT a mode switch!?!?!
     if !state.is_value_bound("MODE", Some(0)) || (state.lookup_string("MODE") != mode) {
       // Or was a mode switch to a different mode
-      if let Some(ref token) = state.current_token {
-        error!(target: &s!("unexpected:{}", token), "Attempt to end mode {}", mode); // self.currentFrameMessage);
+      let message = s!("Attempt to end mode {}", mode);
+      let category = if let Some(ref token) = state.current_token {
+        token.to_string()
       } else {
-        error!(target: &s!("unexpected:mode"), "Attempt to end mode {}", mode);
-      }
+        String::from("mode")
+      };
+      Error!("unexpected", category, self, &message, state); // self.currentFrameMessage);      
     } else {
       // Don"t pop if there"s an error; maybe we'll recover?
       self.pop_stack_frame(false, state)?;

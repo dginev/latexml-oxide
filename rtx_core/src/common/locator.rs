@@ -1,5 +1,6 @@
 use std::fmt;
 use std::borrow::Cow;
+use log::warn;
 use crate::util::pathname;
 use crate::common::object::Object;
 
@@ -97,7 +98,7 @@ impl Locator {
         s!("{}.{}",base,ext)
       } else {
         let (path, base, ext) = pathname::split(&self.source);
-        s!("{}.{}",base,ext)
+        base
       }
     }
   }

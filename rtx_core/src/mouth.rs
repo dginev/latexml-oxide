@@ -170,6 +170,7 @@ impl Mouth {
       Mouth::new("", Some(options), state)
     } else {
       options.foodtype = FoodType::opt_from_str(&pathname::protocol(source));
+      options.source = Some(source.to_string());
       Mouth::new(source, Some(options), state)
     }
   }
@@ -184,6 +185,7 @@ impl Mouth {
         foodtype: opts.foodtype.unwrap_or(FoodType::Literal),
         fordefinitions: opts.fordefinitions,
         notes: opts.notes,
+        source: opts.source.unwrap_or_default(),
         ..Mouth::default()
       },
     };
