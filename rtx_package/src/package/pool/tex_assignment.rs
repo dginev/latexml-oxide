@@ -75,8 +75,8 @@ LoadDefinitions!(state, {
       AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
       DefPrimitiveII!(cs, None, None, font => Some(props));
     } else {    // Failed?
-      info!(target: &s!("unexpected:{}", name),
-        "Unrecognized font name {:?} Font switch macro {:?} will have no effect", name, cs.to_string());
+      let message = s!("Unrecognized font name {:?} Font switch macro {:?} will have no effect", name, cs.stringify());
+      Info!("unexpected", name, stomach, state,message);
     }
   });
 

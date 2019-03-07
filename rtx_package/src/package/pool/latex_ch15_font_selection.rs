@@ -41,7 +41,8 @@ LoadDefinitions!(outer_state, {
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[stomach, args, inner_state] {
     if inner_state.lookup_bool("IN_MATH") {
       unpack_to_string!(args => c);
-      warn!(target: &s!("unexpected:{}", c), "Command {:?} invalid in math mode", c);
+      let message = s!("Command {:?} invalid in math mode", c);
+      Warn!("unexpected", c, stomach, inner_state, message);
     }
     Ok(vec![])
   });
@@ -76,11 +77,17 @@ LoadDefinitions!(outer_state, {
     let series = Expand!(T_CS!("\\f@series"),gullet).to_string();
     let shape  = Expand!(T_CS!("\\f@shape"), gullet).to_string();
     if let Some(sh) = font::lookup_font_family(&family) { MergeFont!(sh.clone()); }
-    else { info!(target: &s!("unexpected:{}", family), "Unrecognized font family {:?}.", family); }
+    else { 
+      let message = s!("Unrecognized font family {:?}.", family);
+      Info!("unexpected", family, stomach, inner_state, message); }
     if let Some(sh) = font::lookup_font_series(&series) { MergeFont!(sh.clone()); }
-    else { info!(target: &s!("unexpected:{}", series), "Unrecognized font series {:?}.", series); }
+    else { 
+      let message = s!("Unrecognized font series {:?}.", series);
+      Info!("unexpected", series, stomach, inner_state, message); }
     if let Some(sh) = font::lookup_font_shape(&shape) { MergeFont!(sh.clone()); }
-    else { info!(target: &s!("unexpected:{}",shape), "Unrecognized font shape {:?}.", shape); }
+    else { 
+      let message = s!("Unrecognized font shape {:?}.", shape);
+      Info!("unexpected",shape, stomach, inner_state, message); }
     Ok(vec![])
   });
 

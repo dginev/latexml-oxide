@@ -22,7 +22,7 @@ LoadDefinitions!(state, {
       {
         let mut gullet = stomach.get_gullet_mut();
         let mode = LookupString!("MODE");
-        debug!("T_MATH primitive current mode: {:?}", mode);
+        Debug!("T_MATH primitive current mode: {:?}", mode);
         if mode == "display_math" {
           if gullet.if_next(T_MATH!(), state)? {
             gullet.read_token(state);

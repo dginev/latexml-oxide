@@ -1,4 +1,5 @@
-use log::*;
+#[macro_use]
+extern crate rtx_core;
 use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_package::converter::Converter;
 use std::env;
@@ -7,7 +8,8 @@ use std::rc::Rc;
 
 fn main() {
   if rtx_core::util::logger::init(log::LevelFilter::Info).is_err() {
-    error!("Failed to load logger, aborting early. Please check rtx_core::util::logger installed correctly.")
+    Error!("rtx", "logger", None, None, 
+      "Failed to load logger, aborting early. Please check rtx_core::util::logger installed correctly.");
   }
   let mut argv = env::args();
   argv.next();
@@ -15,7 +17,7 @@ fn main() {
   let source = match argv.next() {
     Some(s) => s,
     None => {
-      error!("Please provide a source document! Exiting...");
+      Error!("rtx","", None, None, "Please provide a source document! Exiting...");
       process::exit(1);
     },
   };
@@ -32,7 +34,8 @@ fn main() {
   };
   let mut converter = Converter::from_config(opts.clone());
   if let Err(e) = converter.prepare_session(&opts) {
-    error!("Could not prepare converter session! : {}", e);
+    let message = s!("Could not prepare converter session! : {}", e);
+    Error!("rtx","session",None, None, message);
     process::exit(1);
   }
   // Perform the conversion:

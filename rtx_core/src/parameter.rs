@@ -1,5 +1,4 @@
 use lazy_static::lazy_static;
-use log::{error, warn};
 use regex::Regex;
 use std::borrow::Cow;
 use std::fmt;
@@ -88,7 +87,7 @@ impl Default for Parameter {
       spec: String::new(),
       extra: Vec::new(),
       reader: Rc::new(|_gullet, _args, _extra, _state| {
-        warn!("-- Warning: please define a real reader, this is a mock fallback!");
+        Warn!("Parameter","mock_reader", None, None, "Please define a real reader, this is a mock fallback!");
         Ok(Tokens!())
       }),
       reader_predigest: None,

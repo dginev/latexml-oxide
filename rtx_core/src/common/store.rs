@@ -1,4 +1,3 @@
-use log::warn;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
@@ -517,7 +516,8 @@ impl<'a> From<&'a Stored> for Token {
       Stored::Token(t) => (*t).clone(),
       Stored::String(t) => T_CS!(t),
       t => {
-        warn!(target:"Stored:cast", "dangerous cast to CS for {:?}", t);
+        let message = s!("dangerous cast to CS for {:?}", t);
+        Warn!("Stored", "cast", None, None, message);
         T_CS!(t.to_string())
       }, /* TODO, is this the right place to default to CS? Do we need a
           * custom method instead? */

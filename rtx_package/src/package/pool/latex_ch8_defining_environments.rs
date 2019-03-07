@@ -15,7 +15,8 @@ LoadDefinitions!(state, {
     if IsDefined!(&name_cs) {
       let is_locked = LookupValue!(&s!("\\{}:locked",name)).is_some() || LookupValue!(&s!("\\begin{{{}}}:locked",name)).is_some();
       if !is_locked {
-        info!(target:&s!("ignore:{}", name), "Ignoring redefinition (\\newenvironment) of Environment {:?}", name);
+        let message = s!("Ignoring redefinition (\\newenvironment) of Environment {:?}", name);
+        Info!("ignore", name, stomach, state, message);
       }
     } else {
       let opt = if opt.is_empty() { None } else { Some(opt) };

@@ -22,7 +22,6 @@
 // use LaTeXML::Common::XML;
 // use List::Util qw(min max);
 use libxml::tree::{Node, NodeType};
-use log::info;
 use rtx_core::common::error::*;
 use rtx_core::common::xml::*;
 use rtx_core::document::Document;
@@ -954,7 +953,7 @@ impl MathParser {
       "ltx:XMApp" => {
         let app_role = node.get_attribute("role").unwrap_or_else(|| s!("missing_role"));
         let mut all_args = element_nodes(&node);
-        info!("xmapp args : {:?}", all_args.len());
+        Info!("xmapp args : {:?}", all_args.len());
         if all_args.is_empty() {
           String::new()
         } else {
@@ -964,8 +963,8 @@ impl MathParser {
             Some(op_node) => self.realize_xmnode(op_node, document),
             None => panic!("non empty array doesn't have a first element? Looks critical."),
           };
-          info!("first token meaning: {:?}", lead_meaning);
-          info!("remaining xmapp args: {:?}", args.len());
+          Info!("first token meaning: {:?}", lead_meaning);
+          Info!("remaining xmapp args: {:?}", args.len());
           //     if ($app_role && $app_role =~ /^FLOAT(SUB|SUPER)SCRIPT$/) {
           //       return ($1 eq 'SUPER' ? '^' : '_') . textrec($op); }
           //     else {
@@ -1100,7 +1099,7 @@ impl MathParser {
   // The following accessors work on both the LibXML and ARRAY representations
   // but they do NOT automatically dereference XMRef!
   fn p_get_value(&self, node: &Node) -> String {
-    info!("p_get_value for {} : {}", node.get_name(), node.get_content());
+    Info!("p_get_value for {} : {}", node.get_name(), node.get_content());
     let node_type = node.get_type();
     if node_type == Some(NodeType::ElementNode) {
       let x = node.get_content();

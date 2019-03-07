@@ -1,5 +1,4 @@
 use lazy_static::lazy_static;
-use log::{debug, error, info, warn};
 use std::collections::HashMap;
 use std::error::Error as ErrorTrait;
 use std::fmt;
@@ -11,35 +10,86 @@ lazy_static! {
   static ref _NOTE_TIMERS: HashMap<String, String> = HashMap::new();
 }
 
+
 #[macro_export]
-macro_rules! Info {
-  ($category:literal, $object:expr, $where:ident, $state:ident, $message:expr) => {{
-    $state.note_status("info");
-    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+macro_rules! Debug {
+  ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
+    // $state.note_status("debug"); // TODO: We're losing the info count this way...
+    use log::debug;
+    debug!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
-  ($category:literal, $object:expr, $where:ident, $state:ident, $message:expr, $($details:expr),*) => {{
-    $state.note_status("info");
-    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
-  }}
+ ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
+    // $state.note_status("debug"); // TODO: We're losing the debug count this way...
+    use log::debug;
+    debug!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+  }};
+  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
+    use log::debug;
+    $state.note_status("debug");
+    debug!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+  }};
+ ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
+    use log::debug;
+    $state.note_status("debug");
+    debug!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+  }};
+  ($($simple:expr),*) => {{
+    // $state.note_status("debug"); // TODO: We're losing the info count this way...
+    use log::debug;
+    debug!($($simple),*);
+  }};
+
 }
 
+#[macro_export]
+macro_rules! Info {
+  ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
+    use log::info;
+    // $state.note_status("info"); // TODO: We're losing the info count this way...
+    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+  }};
+ ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
+    // $state.note_status("info"); // TODO: We're losing the info count this way...
+    use log::info;
+    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+  }};
+  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
+    $state.note_status("info");
+    use log::info;
+    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+  }};
+ ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
+    $state.note_status("info");
+    use log::info;
+    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+  }};
+  ($($simple:expr),*) => {{
+    // $state.note_status("debug"); // TODO: We're losing the info count this way...
+    use log::info;
+    info!($($simple),*);
+  }};
+}
 
 #[macro_export]
 macro_rules! Warn {
   ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
-    // $state.note_status("error"); // TODO: We're losing the error count this way...
+    // $state.note_status("warn"); // TODO: We're losing the warn count this way...
+    use log::warn;
     warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
-    // $state.note_status("error"); // TODO: We're losing the error count this way...
+    // $state.note_status("warn"); // TODO: We're losing the warn count this way...
+    use log::warn;
     warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }};
   ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
-    $state.note_status("error");
+    $state.note_status("warn");
+    use log::warn;
     warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
-    $state.note_status("error");
+    $state.note_status("warn");
+    use log::warn;
     warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }}
 }
@@ -48,18 +98,22 @@ macro_rules! Warn {
 macro_rules! Error {
   ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
     // $state.note_status("error"); // TODO: We're losing the error count this way...
+    use log::error;
     error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
     // $state.note_status("error"); // TODO: We're losing the error count this way...
+    use log::error;
     error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }};
   ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
     $state.note_status("error");
+    use log::error;
     error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
     $state.note_status("error");
+    use log::error;
     error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }}
 }
@@ -99,10 +153,10 @@ macro_rules! generate_message {
     s!("{}\n\t{}\n\tIn {}:{}:{}\n", $message, $detail, file!(), line!(), column!())
   };
   ($where:ident, $message:expr, $level:literal) => {
-    s!("{}\n\t{}\n\tIn {}:{}:{}\n", $message, &$where.get_location(), file!(), line!(), column!())
+    s!("{}\n\t{}\n\tIn {}:{}:{}\n", $message, $where.get_location(), file!(), line!(), column!())
   };
   ($where:ident, $message:expr, $level:literal, $detail:expr) => {
-    s!("{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n", $message, &$where.get_location(),$detail, file!(), line!(), column!());
+    s!("{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n", $message, $where.get_location(),$detail, file!(), line!(), column!());
   }
 }
 
@@ -220,6 +274,7 @@ impl ErrorTrait for Error {
 impl Error {
   pub fn log_fatal(&self) {
     let target_str = s!("Fatal:{:?}:{:?} ", self.target, self.category);
+    use log::error;
     error!(target: &target_str, "{}", self.message);
   }
 }
@@ -300,16 +355,19 @@ impl From<ParseFloatError> for Error {
 // Progress reporting.
 
 pub fn note_progress(stuff: &str) {
+  use log::info;
   info!(target: "note", "{}", stuff);
 }
 
 // TODO: Rethink this reporting
 pub fn note_progress_detailed(stuff: &str) {
+  use log::debug;
   debug!(target: "note", "{}", stuff);
 }
 
 pub fn note_begin(stage: &str) {
   // $state->assignMapping('NOTE_TIMERS', $stage, [Time::HiRes::gettimeofday]);
+  use log::info;
   info!(target: "note", "\n({}...", stage);
 }
 
@@ -319,5 +377,6 @@ pub fn note_end(_stage: &str) {
 
   // my $elapsed = Time::HiRes::tv_interval($start, [Time::HiRes::gettimeofday]);
   // info!(target: "note", " %.2f sec)", elapsed);
+  use log::info;
   info!(target: "note", " )");
 }

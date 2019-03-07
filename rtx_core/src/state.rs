@@ -1,5 +1,4 @@
 use lazy_static::lazy_static;
-use log::*;
 use regex::Regex;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -673,11 +672,13 @@ impl State {
       if defn.is_register() {
         defn.value_of(parameters, self)
       } else {
-        warn!(target: "expected:register", "The control sequence {:?} is not a register",cs);
+        let message = s!("The control sequence {:?} is not a register",cs);
+        Warn!("expected","register", None, self, message);
         None
       }
     } else {
-      warn!(target: "expected:register", "The control sequence {:?} is not defined",cs);
+      let message = s!("The control sequence {:?} is not defined",cs);
+      Warn!("expected","register", None, self, message);
       None
     }
   }
@@ -1021,11 +1022,11 @@ impl State {
       cc.name()
     };
 
-    debug!("Looking up digestable {:?}", lookupname);
+    Debug!("Looking up digestable {:?}", lookupname);
     let entry = self.meaning.get(lookupname);
 
     if !lookupname.is_empty() && entry.is_some() {
-      debug!("Found definition for: {:?}", lookupname);
+      Debug!("Found definition for: {:?}", lookupname);
       let mut defn = entry.unwrap().front().unwrap().clone();
       if let Stored::Token(ref t) = defn {
         let cc = t.get_catcode();
@@ -1294,13 +1295,13 @@ impl State {
           (*table_entry).pop_front();
           countdown_keys.push((table_name, key));
         } else {
-          warn!(
-            target: &s!("internal:{}", key), // $self->getStomach,
-            "Unassigning wrong value for $key from table $table in deactivateScope\
-             value is {:?} but stack is {:?}",
+          let message = s!("Unassigning wrong value for $key from table $table in deactivateScope\
+            value is {:?} but stack is {:?}",
             value,
-            table_entry.iter().map(ToString::to_string).collect::<Vec<String>>().join(", ")
-          );
+            table_entry.iter().map(ToString::to_string).collect::<Vec<String>>().join(", "));
+          let stomach = self.stomach.borrow();
+          use crate::common::object::Object;
+          Warn!("internal", key, stomach, self, message);
         }
       }
 
@@ -1338,7 +1339,8 @@ impl State {
       u => match UNITS.get(u) {
         Some(sp) => *sp,
         None => {
-          warn!(target:"expected:<unit>", "Illegal unit of measure {:?}, assuming pt.", u);
+          let message = s!("Illegal unit of measure {:?}, assuming pt.", u);
+          Warn!("expected","<unit>", None, self, message);
           *UNITS.get("pt").unwrap()
         },
       },

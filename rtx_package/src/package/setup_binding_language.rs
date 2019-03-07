@@ -499,7 +499,8 @@ macro_rules! LookupRegister {
     if let Some(defn) = $state_arg.lookup_register_definition(&T_CS!($cs)) {
       defn.value_of($parameters, $state_arg).unwrap_or_default()
     } else {
-      warn!(target:"expected:register", "The control sequence {:?} is not a register", $cs);
+      let message = s!("The control sequence {:?} is not a register", $cs);
+      Warn!("expected","register", None, $state_arg, message);
       RegisterValue::default()
     }
   }
@@ -802,7 +803,8 @@ macro_rules! requireMath {
   }};
   ($cs_name:expr, $state_arg:ident) => (
     if !LookupBool!("IN_MATH", $state_arg) {
-      warn!(target: "unexpected", "{} should only appear in math mode",$cs_name);
+      let message = s!("{} should only appear in math mode",$cs_name);
+      Warn!("unexpected", "mode", None, $state_arg, message);
     }
   )
 }
@@ -814,7 +816,8 @@ macro_rules! forbidMath {
   });
   ($cs_name:expr, $state_arg:ident) => (
     if LookupBool!("IN_MATH", $state_arg) {
-      warn!(target: "unexpected", "{} should not appear in math mode",$cs_name);
+      let message = s!("{} should not appear in math mode",$cs_name);
+      Warn!("unexpected", "mode", None, $state_arg, message);
     }
   )
 }

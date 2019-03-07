@@ -1,5 +1,4 @@
 use lazy_static::lazy_static;
-use log::warn;
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt;
@@ -74,7 +73,8 @@ impl From<u8> for Catcode {
       17 => NOTEXPANDED,
       18 => MARKER,
       _ => {
-        warn!(target:"unknown:catcode", "Unrecognized catcode: {:?}", num);
+        // let message = s!("Unrecognized catcode: {:?}", num);
+        // Warn!("unknown", "catcode", None, None, message);
         IGNORE
       },
     }

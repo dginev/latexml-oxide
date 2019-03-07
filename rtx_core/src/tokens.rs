@@ -1,6 +1,5 @@
 ///! Token List constructors.
 use crate::fmt;
-// use log::*;
 use proc_macro2::{Ident, Punct, Spacing, Span};
 use quote::{quote, ToTokens, TokenStreamExt};
 

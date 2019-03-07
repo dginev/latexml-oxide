@@ -1,4 +1,3 @@
-use log::{error, warn};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -84,10 +83,8 @@ impl<'t> Stomach {
 
     if let Some(ref terminal) = terminal_opt {
       if !found_terminal {
-        warn!(
-          target: &s!("expected:{}", terminal),
-          "body should have ended with {:?}. current body started at {:?}", terminal, start_location
-        );
+        let message = s!("body should have ended with {:?}. current body started at {:?}", terminal, start_location);
+        Warn!("expected", terminal, self, state, message);
       }
     }
 
