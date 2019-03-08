@@ -4,11 +4,11 @@ use crate::package::*;
 //======================================================================
 LoadDefinitions!(state, {
 
-  // Tag!("ltx:td", after_close => trim_node_whitespace);
+  Tag!("ltx:td", after_close => tagsub!(doc, node, state, { doc.trim_node_whitespace(node)?; }));
 
-  // #----------------------------------------------------------------------
-  // # Primitive column types;
-  // # This is really LaTeX, but the mechanisms are used behind-the-scenes here, too.
+  //----------------------------------------------------------------------
+  // Primitive column types;
+  // This is really LaTeX, but the mechanisms are used behind-the-scenes here, too.
   // DefColumnType('|', sub {
   //     $LaTeXML::BUILD_TEMPLATE->addBetweenColumn(T_CS('\vrule'), T_CS('\relax')); return; });
   // DefColumnType('l', sub {
@@ -19,14 +19,14 @@ LoadDefinitions!(state, {
   // DefColumnType('r', sub {
   //     $LaTeXML::BUILD_TEMPLATE->addColumn(before => Tokens(T_CS('\hfil'))); return; });
 
-  // # This collects paragraph text, like \hbox, but for use within alignment cells;
-  // # no ltx:text wrapper is needed, since it is within a cell.
-  // # and it handles $ and & appropriately
+  // This collects paragraph text, like \hbox, but for use within alignment cells;
+  // no ltx:text wrapper is needed, since it is within a cell.
+  // and it handles $ and & appropriately
   // DefConstructor('\tabularcell@hbox HBoxContents',
   //   "#1",
   //   mode => 'text', bounded => 1,
-  //   # Workaround for $ in alignment; an explicit \hbox gives us a normal $.
-  //   # And also things like \centerline that will end up bumping up to block level!
+  //   Workaround for $ in alignment; an explicit \hbox gives us a normal $.
+  //   And also things like \centerline that will end up bumping up to block level!
   //   beforeDigest => sub {
   //     ## reenterTextMode();  # BUT NOT \\\\ !!!!!!
   //     Let(T_MATH,        '\@dollar@in@textmode');
