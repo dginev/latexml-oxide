@@ -27,12 +27,12 @@ use super::*;
 use super::content::merge_font;
 
 /// Is defined in the `LaTeX`-y sense of also not being let to \relax.
-pub fn is_defined(name: &str, state: &mut State) -> bool {
+pub fn is_defined(name: &str, state: &State) -> bool {
   let cs = T_CS!(name);
   is_defined_token(&cs, state)
 }
 
-pub fn is_defined_token(cs: &Token, state: &mut State) -> bool {
+pub fn is_defined_token(cs: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(cs);
   match meaning {
     Some(store) => match store {
@@ -46,6 +46,13 @@ pub fn is_defined_token(cs: &Token, state: &mut State) -> bool {
   }
 }
 
+pub fn is_definable(token: &Token, state: &State) -> bool {
+  let meaning = state.lookup_meaning(token);
+  let mut name = token.get_string();
+  (name != "\\relax" && !name.starts_with("\\end"))
+  &&
+  (meaning.is_none() || meaning == state.lookup_meaning(&T_CS!("\\relax")))
+}
 
 pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
 

@@ -897,7 +897,7 @@ impl State {
   /// Get the `Meaning' of a token.  For active control sequence's
   /// this may give the definition object (if defined) or another token (if \let) or undef
   /// Any other token is returned as is.
-  pub fn lookup_meaning(&mut self, token: &Token) -> Option<Stored> {
+  pub fn lookup_meaning(&self, token: &Token) -> Option<Stored> {
     if token.get_catcode().is_active_or_cs() && !token.get_string().is_empty() {
       match self.meaning.get(&token.get_cs_name().to_owned()) {
         Some(entry) => match entry.front() {

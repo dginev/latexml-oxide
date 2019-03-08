@@ -1310,6 +1310,19 @@ macro_rules! IsDefinedToken {
   }};
 }
 #[macro_export]
+macro_rules! IsDefinable {
+  ($token: expr) => {{
+    bind_state_mut!(st);
+    IsDefinable!($token, st)
+  }};
+  ($token: expr, $state_arg: ident) => {
+    is_definable($token, $state_arg)
+  }
+}
+  
+  
+
+#[macro_export]
 macro_rules! Let {
   ($token1:literal, $token2:expr) => {{
     bind_state_mut!(st);
