@@ -50,6 +50,24 @@ impl Default for Gullet {
 }
 
 impl Object for Gullet {
+  /// User feedback for where something (error?) occurred.
+  fn get_locator(&self) -> Cow<Locator> {
+    let mut runtime_opt = self.mouth.as_ref();
+    let mut mouthstack_iter = self.mouthstack.iter();
+    while runtime_opt.is_some() && runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
+      runtime_opt = mouthstack_iter.next();
+    }
+    if let Some(runtime) = runtime_opt {
+      // First exit condition: we found a mouth with a source, and asked it for a locator
+      runtime.mouth.get_locator()
+    } else if let Some(runtime) = self.mouthstack.front() {
+      // Backup strategy: return the first locator in the mouthstack:
+      runtime.mouth.get_locator()
+    } else {
+      // Final backup -- the default locator
+      Cow::Owned(Locator::default())
+    }
+  }
   fn stringify(&self) -> String {unimplemented!();}
 }
 
@@ -126,25 +144,6 @@ impl Gullet {
       self.mouth = self.mouthstack.pop_front();
     }
     return;
-  }
-
-  /// User feedback for where something (error?) occurred.
-  pub fn get_locator(&self) -> Cow<Locator> {
-    let mut runtime_opt = self.mouth.as_ref();
-    let mut mouthstack_iter = self.mouthstack.iter();
-    while runtime_opt.is_some() && runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
-      runtime_opt = mouthstack_iter.next();
-    }
-    if let Some(runtime) = runtime_opt {
-      // First exit condition: we found a mouth with a source, and asked it for a locator
-      runtime.mouth.get_locator()
-    } else if let Some(runtime) = self.mouthstack.front() {
-      // Backup strategy: return the first locator in the mouthstack:
-      runtime.mouth.get_locator()
-    } else {
-      // Final backup -- the default locator
-      Cow::Owned(Locator::default())
-    }
   }
 
   pub fn get_mouth(&self) -> Option<&Mouth> {

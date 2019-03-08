@@ -1037,12 +1037,4 @@ LoadDefinitions!(state, {
       Ok(if_token)
     }
   });
-
-  // sub isDefinable {
-  //   my ($token) = @_;
-  //   return unless $token;
-  //   my $meaning = LookupMeaning($token);
-  //   my $name = $token->getString; $name =~ s/^\\//;
-  //   return (((!defined $meaning) || ($meaning eq LookupMeaning(T_CS('\relax'))))
-  //       && (($name ne 'relax') && ($name !~ /^end/))); }
 });
