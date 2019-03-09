@@ -151,7 +151,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, props, state] {
       unpack!(args => spec, contents);
-      let block = insert_block(document, contents, string_map!("vattach" => "bottom"));
+      let block = insert_block(document, contents, string_map!("vattach" => "bottom"), state);
     },
     // sizer       => "#2",
     mode        => "text".into_option(),

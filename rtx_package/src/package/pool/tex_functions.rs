@@ -1,5 +1,6 @@
-use crate::package::*;
 use std::collections::VecDeque;
+use libxml::tree::Node;
+use crate::package::*;
 
 pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
   let bindings_val = if vertical_mode {
@@ -260,44 +261,53 @@ pub fn revert_spec(whatsit: &mut Whatsit, keyword: &str, state: &mut State) -> V
 /// need to be explicitly wrapped in some kind of block element (presumably ltx:p).
 /// It returns the inserted inner blocks,
 /// whether or not they got wrapped by that ltx:inline-block; which it DOESN'T TELL YOU ABOUT!
-pub fn insert_block(document: &mut Document, contents: Digested, blockattr: HashMap<String, String>) -> Result<()> {
-  unimplemented!();
-  // my ($document, $contents, %blockattr) = @_;
-  // # Create something like:
-  // # "<ltx:inline-block vattach='$vattach' height='#height'>#2</ltx:inline-block>"
-  // my $model   = $document->getModel;
-  // my $context = $document->getElement;    # Where we originally start inserting.
+pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: HashMap<String, String>, state: &mut State) -> Result<Vec<Node>> {
+  // Create something like:
+  // "<ltx:inline-block vattach='$vattach' height='#height'>#2</ltx:inline-block>"
+  let model   = &state.model;
+  let context = document.get_element();    // Where we originally start inserting.
 
-  // my $blocktag  = 'ltx:block';
-  // my $iblocktag = 'ltx:inline-block';
-  // if ($blockattr{para}) {
-  //   $blocktag  = 'ltx:para';
-  //   $iblocktag = 'ltx:inline-para';
-  //   delete $blockattr{para}; }
-  // # Generally, we're going to need some sort of container to hold the contents of the block.
-  // # Particularly if we're: setting various size & positioning attributes;
-  // # or can't currently open an ltx:p; or if the current point accepts plain text (#PCDATA).
-  // # If we're in an inline context, we'll need a ltx:inline-block,  otherwise ltx:block.
-  // # [Or maybe an ltx:para... when does that happen?]
-  // my $newblock = undef;
-  // my $unwrap   = 0;
+  let mut blocktag  = "ltx:block";
+  let mut iblocktag = "ltx:inline-block";
+  if blockattr.get("para").is_some() {
+    blocktag  = "ltx:para";
+    iblocktag = "ltx:inline-para";
+    blockattr.remove("para");
+  }
+  // Generally, we're going to need some sort of container to hold the contents of the block.
+  // Particularly if we're: setting various size & positioning attributes;
+  // or can't currently open an ltx:p; or if the current point accepts plain text (#PCDATA).
+  // If we're in an inline context, we'll need a ltx:inline-block,  otherwise ltx:block.
+  // [Or maybe an ltx:para... when does that happen?]
+  let mut newblock : Option<Node> = None;
+  let mut unwrap   = 0;
+  let mut remove = vec![];
+  // drop all empty values
+  for (key, val) in &blockattr {
+    if val.is_empty() {
+      remove.push(key.to_string())
+    }
+  }
+  for key in remove {
+    blockattr.remove(&key);
+  }
   // map { ($blockattr{$_} || delete $blockattr{$_}) } keys %blockattr;
-  // my $hasattr = scalar(keys %blockattr);
-  // if ($hasattr || !$document->canContainSomehow($context, 'ltx:p') || $document->canContain($context, '#PCDATA')) {
+  
+  // if (blockattr.is_empty() || !$document->canContainSomehow($context, 'ltx:p') || $document->canContain($context, '#PCDATA')) {
   //   my $tag = ($document->canContain($context, $blocktag)
   //     ? $blocktag
   //     : $iblocktag);
   //   $newblock = $document->openElement($tag, '_autoclose' => 1, %blockattr); }
-  // ## I think this option isn't really needed.... try to simplify
-  // ## elsif ($document->canContainSomehow($context, 'ltx:para')) {
-  // ## $newblock = $document->openElement('ltx:para', '_autoclose' => 1, %blockattr); }
-  // # Insert the content for the block, and reduce
+  //# I think this option isn't really needed.... try to simplify
+  //# elsif ($document->canContainSomehow($context, 'ltx:para')) {
+  //# $newblock = $document->openElement('ltx:para', '_autoclose' => 1, %blockattr); }
+  // Insert the content for the block, and reduce
 
   // $document->setAttribute($document->getElement, '_vertical_mode_' => 1);    # HACK!!!! (see \hbox)
   // my @nodes = $document->filterChildren($document->filterDeletions($document->absorb($contents)));
 
-  // # Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
-  // my @newnodes = ();
+  // Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
+  let newnodes = Vec::new();
   // while (@nodes) {
   //   if ($model->getNodeQName($nodes[0]) eq 'ltx:break') {    # ltx:break are superflous, now.
   //     $document->removeNode(shift(@nodes));
@@ -325,10 +335,11 @@ pub fn insert_block(document: &mut Document, contents: Digested, blockattr: Hash
   //   elsif ($unwrap ||
   //     ((scalar(@rows) == 1)                  # Else only 1 item inside, then flatten
   //       && $document->canContain($newblock->parentNode, $rows[0])    # if allowed.
-  //       && (!$hasattr || !grep { !$document->canHaveAttribute($rows[0], $_) } keys %blockattr))) {
+  //       && (!blockattr.is_empty() || !grep { !$document->canHaveAttribute($rows[0], $_) } keys %blockattr))) {
   //     map { $document->setAttribute($rows[0], $_ => $blockattr{$_}) } keys %blockattr;
   //     $document->unwrapNodes($newblock); } }
 
   // # And return the list of "rows" in the box (in case they need attributes....)
-  // return @newnodes; }
+  unimplemented!();
+  Ok(newnodes)
 }
