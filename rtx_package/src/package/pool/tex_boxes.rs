@@ -27,8 +27,10 @@ LoadDefinitions!(state, {
     let mut rest = if let Some(xtoken) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
       stomach.invoke_token(&xtoken, state)?
     } else { vec![] };
-    let stuff = rest.remove(0);
-    state.assign_value(&tbox, Stored::Digested(Box::new(stuff)), scope);
+    if !rest.is_empty() {
+      let stuff = rest.remove(0);
+      state.assign_value(&tbox, Stored::Digested(Box::new(stuff)), scope);
+    }
     rest
   });
 
@@ -42,10 +44,6 @@ LoadDefinitions!(state, {
     }
   });
 
-  // TODO: \box and \copy need to be tested, as they were originally DefPrimitive()s
-  //       I can either reconstruct the values in an expansion, as shown here,
-  //       or refactor back to DefPrimitive, where I'd need to repackage the box tokens into a Digested ???
-  //       example use would be great...
   DefPrimitive!("\\copy Number", sub[stomach, args, state] {
     unpack_to_token!(args => token);
     let box_key = s!("box{}", token.to_number().value_of() as u8);
@@ -92,7 +90,7 @@ LoadDefinitions!(state, {
   DefParameterType!("VBoxContents", reader=>reader!(gullet, inner, extra, state, {
       read_box_contents(gullet, state.lookup_tokens("\\everyvbox"), state)
     }),
-    reader_predigest => undigested!() // Cause it already is digested!
+    reader_predigest=>reader_predigest!(stomach, arg, state, { predigest_box_contents(stomach, arg, state) })
   );
 
   // This re-binds a number of important control sequences to their default text binding.
@@ -148,37 +146,38 @@ LoadDefinitions!(state, {
       if let Some(w) = width {
         whatsit.set_width(w);
       }
-
     })
   );
 
   DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, props, state] {
-    unimplemented!(); ()
-    // my ($document, $spec, $contents, %props) = @_;
-    // my @block = insertBlock($document, $contents, vattach => 'bottom'); },
-    // sizer       => '#2',
-    // mode        => 'text',
-    // afterDigest => sub {
-    //   my ($stomach, $whatsit) = @_;
-    //   my $spec = $whatsit->getArg(1);
-    //   my $box  = $whatsit->getArg(2);
-    //   if (my $h = GetKeyVal($spec, 'to')) {
-    //     $whatsit->setHeight($h); }
-    //   elsif (my $s = GetKeyVal($spec, 'spread')) {
-    //     $whatsit->setHeight($box->getHeight->add($s)); }
-    //   return;
-  });
+      unpack!(args => spec, contents);
+      let block = insert_block(document, contents, string_map!("vattach" => "bottom"));
+    },
+    // sizer       => "#2",
+    mode        => "text".into_option(),
+    after_digest => after_digest!(stomach, whatsit, state, {
+      // TODO: Height arith
+        // let spec = whatsit.get_arg(1);
+        // let tbox  = $whatsit.get_arg(2);
+        // if let Some(h) = GetKeyVal!(spec, "to") {
+        //   whatsit.set_height(h); 
+        // } else if let Some(s) = GetKeyVal!(spec, "spread") {
+        //   whatsit.set_height(tbox.get_height().add(s));
+        // }
+        ()
+    })
+  );
 
   DefConstructor!("\\vtop BoxSpecification VBoxContents", sub[document, args, props, state] {
     unimplemented!(); ()
   //   my ($document, $spec, $contents, %props) = @_;
-  //   insertBlock($document, $contents, vattach => 'top'); },
+  //   insertBlock($document, $contents, vattach => "top"); },
   // sizer       => '#2',
   // mode        => 'text',
   // afterDigest => sub {
   //   my ($stomach, $whatsit) = @_;
-  //   my $spec = $whatsit->getArg(1);
-  //   my $box  = $whatsit->getArg(2);
+  //   my $spec = $whatsit.get_arg(1);
+  //   my $box  = $whatsit.get_arg(2);
   //   if (my $h = GetKeyVal($spec, 'to')) {
   //     $whatsit->setHeight($h); }
   //   elsif (my $s = GetKeyVal($spec, 'spread')) {

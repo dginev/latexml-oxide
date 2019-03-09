@@ -236,9 +236,15 @@ pub fn read_box_contents(gullet: &mut Gullet, everybox_opt: Option<Tokens>, stat
   Ok(Tokens!())
 }
 
+/// Reading a Box's content is crucially dependent on invoking the "{" token and obtaining a digested result
+/// Hence it is *always* needed to pair `read_box_contents` with its stomach-level counterpart, `predigest_box_contents`
 pub fn predigest_box_contents(stomach: &mut Stomach, _tokens: Tokens, state: &mut State) -> Result<Option<Digested>> {
   let mut contents = stomach.invoke_token(&T_BEGIN!(), state)?;
-  Ok(Some(contents.remove(0)))
+  if contents.is_empty() {
+    Ok(None)
+  } else {
+    Ok(Some(contents.remove(0)))
+  }
 }
 
 pub fn revert_spec(whatsit: &mut Whatsit, keyword: &str, state: &mut State) -> Vec<Token> {
@@ -254,7 +260,7 @@ pub fn revert_spec(whatsit: &mut Whatsit, keyword: &str, state: &mut State) -> V
 /// need to be explicitly wrapped in some kind of block element (presumably ltx:p).
 /// It returns the inserted inner blocks,
 /// whether or not they got wrapped by that ltx:inline-block; which it DOESN'T TELL YOU ABOUT!
-pub fn insert_block(document: &mut Document, contents: Tokens, blockattr: HashMap<String, String>) -> Result<()> {
+pub fn insert_block(document: &mut Document, contents: Digested, blockattr: HashMap<String, String>) -> Result<()> {
   unimplemented!();
   // my ($document, $contents, %blockattr) = @_;
   // # Create something like:

@@ -110,5 +110,5 @@ LoadDefinitions!(state, {
   properties   => properties!(sub[stomach, args, state] { ref_step_id("equation", stomach, state) })
   );
 
-  DefConstructor!("\\]", "", before_digest => before_digest!(gullet, state, { gullet.end_mode("display_math", state)?; }));
+  DefConstructor!("\\]", "", before_digest => before_digest!(stomach, state, { stomach.end_mode("display_math", state)?; }));
 });
