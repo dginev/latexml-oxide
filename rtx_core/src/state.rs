@@ -772,11 +772,14 @@ impl State {
   //   my $mapping = $$vtable{$map}[0];
   //   return ($mapping ? sort keys %$mapping : ()); }
 
-  // pub fn lookup_StackedValues {
-  //   my ($self, $key) = @_;
-  //   my $stack = $$self{value}{$key};
-  //   return ($stack ? @$stack : ()); }
-
+  pub fn lookup_stacked_values(&self, key: &str) -> Vec<&Stored> {
+    if let Some(vdq) = self.value.get(key) {
+      vdq.iter().collect::<Vec<&Stored>>()
+    } else {
+      Vec::new()
+    }
+  }
+  
   //======================================================================
   /// Was `name` bound?  If  `frame` is given, check only whether it is bound in
   /// that frame (0 is the topmost).

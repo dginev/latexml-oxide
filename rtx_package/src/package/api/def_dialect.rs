@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
+use rtx_core::common::object::Object;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::constructor::{Constructor, ConstructorOptions};
 use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
@@ -460,7 +461,7 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
       cs: cs.clone(),
       paramlist: None, // never any parameters, this is intentional
       replacement: Some(Rc::new(move |stomach, args, state| {
-        // let locator    = $stomach->getGullet->getLocator;
+        let locator = stomach.get_locator().into_owned();
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
         // TODO: Improve font precision here, the defaults may not belong in this lookup
@@ -480,6 +481,7 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
           tokens: Tokens!(cs.clone()),
           font,
           properties: properties.to_hash_stored(),
+          locator,
           ..Tbox::default()
         }))])
       })),
@@ -669,14 +671,17 @@ pub fn def_environment(
   state.install_definition(begin_name_constructor, options.scope);
 
   let mut after_digest_env = options.after_digest;
-  let unexpected_end_closure = Rc::new(|_stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-    // let env = LookupValue!("current_environment", $state_arg);
-    //     Error('unexpected', "\\end{$name}", $_[0],
-    //       "Can't close environment $name",
-    //       "Current are "
-    //         . join(', ', state->lookupStackedValues('current_environment')))
-    //       unless $env && $name eq $env;
-    //     return; },
+  let name_clone = name.to_string();
+  let end_name_clone = end_name.to_string();
+  let unexpected_end_closure = after_digest_single!(stomach, whatsit, state, {
+    let env = state.lookup_string("current_environment");
+    if env.is_empty() || name_clone != env {
+      let message1 = s!("Can't close environment {}", name_clone);
+      let message2 = s!("Current are {} ",state.lookup_stacked_values("current_environment")
+        .iter().map(|x| s!("{:?}",x))
+        .collect::<Vec<String>>().join(", "));
+      Error!("unexpected", end_name_clone, stomach, state, message1, message2);
+    }     
     Ok(Vec::new())
   });
   after_digest_env.push(unexpected_end_closure);
@@ -733,26 +738,42 @@ pub fn def_environment(
     ..Constructor::default()
   });
   state.install_definition(name_constructor, options.scope);
-
-  let end_name_constructor = Rc::new(Constructor {
-    cs: T_CS!(s!("\\end{}", &name)),
+  let end_name = s!("\\end{}", &name);
+  let name_clone = name.clone(); // for after_digest
+  let end_name_constructor = Constructor {
+    cs: T_CS!(end_name),
     paramlist: None,
-    replacement: Some(Rc::new(|document, whatsit, properties, state| {
-      let env = state.lookup_value("current_environment");
-      // Error('unexpected', "\\end{$name}", $_[0],
-      //   "Can't close environment $name",
-      //   "Current are "
-      //     . join(', ', state->lookupStackedValues('current_environment')))
-      //   unless $env && $name eq $env;
-      Ok(())
-    })),
+    replacement: None,
+    after_digest: vec![
+    after_digest_single!(stomach, whatsit, state, {
+      let env = state.lookup_string("current_environment");
+      if env.is_empty() || name_clone != env {
+        let message1 = s!("Can't close environment {}", name_clone);
+        let message2 = s!("Current are {} ",state.lookup_stacked_values("current_environment")
+          .iter().map(|x| s!("{:?}",x))
+          .collect::<Vec<String>>().join(", "));
+        Error!("unexpected", end_name, stomach, state, message1, message2);
+      }     
+      // let mut lines = Vec::new();
+    // my $nf    = $STATE->getFrameDepth;
+    //   for (my $f = 0 ; $f <= $nf ; $f++) {    # Get currently open environments & locators
+    //     if (my $e = $STATE->isValueBound('current_environment', $f)
+    //       && $STATE->valueInFrame('current_environment', $f)) {
+    //       my $locator = ToString($STATE->valueInFrame('groupInitiatorLocator', $f));
+    //       push(@lines, $e . ' ' . $locator); } }
+    //   Error('unexpected', "\\end{$name}", $_[0],
+    //     "Can't close environment $name;", "Current are:", @lines); }
+    // return; },
+    }),
+    after_digest_single!(stomach, whatsit, state, {
+      stomach.egroup(state)?;
+    })],
     // beforeDigest => flatten($options{beforeDigestEnd}),
-    // afterDigest  => flatten($options{afterDigest},
     //   ($mode ? (sub { $_[0]->endMode($mode); }) : ())),
     // ), $options{scope});
     ..Constructor::default()
-  });
-  state.install_definition(end_name_constructor, options.scope);
+  };
+  state.install_definition(Rc::new(end_name_constructor), options.scope);
 
   if options.locked {
     state.assign_value(&s!("\\begin{{{}}}:locked", &name), true, None);
