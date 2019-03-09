@@ -415,19 +415,18 @@ pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacem
   }
   before_digest_env.extend(options.before_digest);
 
-  let mut after_digest_env: Vec<DigestionClosure> = Vec::new();
-  after_digest_env.extend(options.after_digest);
+  let mut after_digest_env: Vec<DigestionClosure> = options.after_digest;
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let end_mode_closure: Vec<DigestionClosure> = after_digest!(stomach, whatsit, state, {
+    let end_mode_closure: DigestionClosure = after_digest_single!(stomach, whatsit, state, {
       stomach.end_mode(&mode_clone, state)?;
     });
-    after_digest_env.extend(end_mode_closure);
+    after_digest_env.push(end_mode_closure);
   } else if options.bounded {
-    let egroup_closure: Vec<DigestionClosure> = after_digest!(stomach, whatsit, state, {
+    let egroup_closure: DigestionClosure = after_digest_single!(stomach, whatsit, state, {
       stomach.egroup(state)?;
     });
-    after_digest_env.extend(egroup_closure);
+    after_digest_env.push(egroup_closure);
   }
 
   state.install_definition(
@@ -538,19 +537,18 @@ pub fn def_constructor(
   }
   before_digest_closures.extend(options.before_digest);
 
-  let mut after_digest_closures: Vec<DigestionClosure> = Vec::new();
-  after_digest_closures.extend(options.after_digest);
+  let mut after_digest_closures: Vec<DigestionClosure> = options.after_digest;
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let end_mode_closure: Vec<DigestionClosure> = after_digest!(stomach, whatsit, state, {
+    let end_mode_closure: DigestionClosure = after_digest_single!(stomach, whatsit, state, {
       stomach.end_mode(&mode_clone, state)?;
     });
-    after_digest_closures.extend(end_mode_closure);
+    after_digest_closures.push(end_mode_closure);
   } else if options.bounded {
-    let egroup_closure: Vec<DigestionClosure> = after_digest!(stomach, whatsit, state, {
+    let egroup_closure: DigestionClosure = after_digest_single!(stomach, whatsit, state, {
       stomach.egroup(state)?;
     });
-    after_digest_closures.extend(egroup_closure);
+    after_digest_closures.push(egroup_closure);
   }
 
   let constructor = Constructor {

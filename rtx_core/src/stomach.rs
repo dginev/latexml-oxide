@@ -588,11 +588,10 @@ impl<'t> Stomach {
     // Last stack frame was NOT a mode switch!?!?!
     if !state.is_value_bound("MODE", Some(0)) || (state.lookup_string("MODE") != mode) {
       // Or was a mode switch to a different mode
-      let message = s!("Attempt to end mode {}", mode);
-      let category = if let Some(ref token) = state.current_token {
-        token.to_string()
-      } else {
-        String::from("mode")
+      let message = s!("Attempt to end mode {} in {}", mode, state.lookup_string("MODE"));
+      let category = match state.current_token {
+        Some(ref token) => token.to_string(),
+        None => String::from("mode")
       };
       Error!("unexpected", category, self, state, &message); // self.currentFrameMessage);      
     } else {

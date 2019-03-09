@@ -164,13 +164,21 @@ macro_rules! properties {
 #[macro_export]
 macro_rules! after_digest {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
-    vec![Rc::new(
+    vec![after_digest_single!($stomach, $whatsit, $state, $body)]
+  };
+}
+
+#[macro_export]
+macro_rules! after_digest_single {
+  ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
+    Rc::new(
       move |$stomach: &mut Stomach, $whatsit: &mut Whatsit, $state: &mut State| -> Result<Vec<Digested>> {
         WithInnerState!($body, $stomach, $state).into_digested_result()
       },
-    )]
+    )
   };
 }
+
 
 #[macro_export]
 macro_rules! reader {
