@@ -168,11 +168,21 @@ impl Object for Whatsit {
             // but much worse with the expectation of passing in a gullet and state for the parameter reversion
             // for now approximate this with some slight of hand ...
             // tokens.extend(parameters.revert_arguments(self.get_args())?);
+            //
+            // Note 2: I've already had to dance around the T_BEGIN/T_END wrappers with my hacky workaround
+            // so maybe worth taking some time and aligning the idea here with `.revert_arguments` to avoid the insanity?
             for arg_opt in self.get_args() {
               if let Some(arg) = arg_opt {
-                tokens.push(T_BEGIN!());
-                tokens.extend(arg.revert()?.unlist());
-                tokens.push(T_END!());
+                let reverted_arg = arg.revert()?.unlist();
+                if reverted_arg.first() != Some(&T_BEGIN!()) {
+                  tokens.push(T_BEGIN!());
+                }
+                if reverted_arg.last() != Some(&T_END!()) {
+                  tokens.extend(reverted_arg);
+                  tokens.push(T_END!());
+                } else {
+                  tokens.extend(reverted_arg);
+                }
               }
             }
           }
