@@ -166,6 +166,13 @@ pub trait Definition: Object {
   fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> { unimplemented!() }
   fn register_type(&self) -> Option<RegisterType> { None }
   fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
+  fn identifier(&self) -> String;
+}
+impl PartialEq for Definition {
+   fn eq(&self, other: &Definition) -> bool {
+    self.identifier() == other.identifier()
+  }
+ 
 }
 
 impl fmt::Display for Definition {

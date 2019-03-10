@@ -25,6 +25,7 @@ LoadDefinitions!(state, {
     };
     state.clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
     let mut rest = if let Some(xtoken) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
+      let message = s!("{:?}", xtoken);
       stomach.invoke_token(&xtoken, state)?
     } else { vec![] };
     if !rest.is_empty() {
