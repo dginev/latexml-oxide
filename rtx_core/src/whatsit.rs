@@ -171,18 +171,12 @@ impl Object for Whatsit {
             //
             // Note 2: I've already had to dance around the T_BEGIN/T_END wrappers with my hacky workaround
             // so maybe worth taking some time and aligning the idea here with `.revert_arguments` to avoid the insanity?
+            //
+            // GOAL: push(@tokens, $parameters->revertArguments($self->getArgs)); } }
             for arg_opt in self.get_args() {
               if let Some(arg) = arg_opt {
                 let reverted_arg = arg.revert()?.unlist();
-                if reverted_arg.first() != Some(&T_BEGIN!()) {
-                  tokens.push(T_BEGIN!());
-                }
-                if reverted_arg.last() != Some(&T_END!()) {
-                  tokens.extend(reverted_arg);
-                  tokens.push(T_END!());
-                } else {
-                  tokens.extend(reverted_arg);
-                }
+                tokens.extend(reverted_arg);
               }
             }
           }
