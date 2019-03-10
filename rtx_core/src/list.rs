@@ -45,14 +45,6 @@ impl Object for List {
   fn get_locator(&self) -> Cow<Locator> {
     Cow::Borrowed(&self.locator)
   }
-  fn stringify(&self) -> String { unimplemented!(); }
-}
-impl BoxOps for List {
-  fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
-
-  /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { unimplemented!() }
 
   fn revert(&self) -> Result<Tokens> {
     let mut reverted = Vec::new();
@@ -61,6 +53,14 @@ impl BoxOps for List {
     }
     Ok(Tokens::new(reverted))
   }
+
+}
+impl BoxOps for List {
+  fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
+
+  /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { unimplemented!() }
 
   fn get_font(&self) -> Option<Cow<Font>> {
     match self.font {

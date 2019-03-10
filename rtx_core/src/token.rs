@@ -9,6 +9,7 @@ use std::rc::Rc;
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
 use crate::common::glue::{Glue, MuGlue};
+use crate::common::object::Object;
 use crate::common::number::Number;
 use crate::common::store::Stored;
 use crate::definition::register::NumericOps;
@@ -17,7 +18,7 @@ use crate::definition::Definition;
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::tokens::Tokens;
-use crate::{BoxOps, Digested};
+use crate::Digested;
 
 lazy_static! {
   pub static ref MOCK_TOKEN: Token = Token::default();

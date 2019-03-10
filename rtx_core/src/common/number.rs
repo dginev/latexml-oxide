@@ -1,3 +1,4 @@
+use std::fmt;
 use crate::definition::register::{NumericOps, RegisterType};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -23,4 +24,8 @@ macro_rules! Number {
 
 impl From<String> for Number {
   fn from(s: String) -> Number { Number(s.parse::<f32>().unwrap()) }
+}
+
+impl fmt::Display for Number {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0) }
 }

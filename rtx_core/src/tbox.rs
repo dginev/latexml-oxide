@@ -48,7 +48,7 @@ impl Object for Tbox {
   fn get_locator(&self) -> Cow<Locator> {
     Cow::Borrowed(&self.locator)
   }
-  fn stringify(&self) -> String { unimplemented!(); }
+  fn revert(&self) -> Result<Tokens> { Ok(self.tokens.clone()) }
 }
 impl Tbox {
   pub fn new(
@@ -126,8 +126,6 @@ impl BoxOps for Tbox {
     }
     Ok(())
   }
-
-  fn revert(&self) -> Result<Tokens> { Ok(self.tokens.clone()) }
 
   fn get_font(&self) -> Option<Cow<Font>> { Some(Cow::Borrowed(&self.font)) }
 

@@ -76,6 +76,17 @@ impl Default for RegisterValue {
 }
 impl Object for RegisterValue {
   fn stringify(&self) -> String { s!("RegisterValue[{}]", self) }
+  fn revert(&self) -> Result<Tokens> {
+    match self { // ExplodeText($self->toString);
+      RegisterValue::Number(ref value) => Ok(Tokens::new(ExplodeText!(value))),
+      RegisterValue::Dimension(ref value) => Ok(Tokens::new(ExplodeText!(value))),
+      RegisterValue::MuDimension(ref value) => Ok(Tokens::new(ExplodeText!(value))),
+      RegisterValue::Glue(ref value) => Ok(Tokens::new(ExplodeText!(value))),
+      RegisterValue::MuGlue(ref value) => Ok(Tokens::new(ExplodeText!(value))),
+      RegisterValue::Token(ref value) => Ok(Tokens!(value.revert())),
+      RegisterValue::Tokens(ref value) => Ok(Tokens::new(value.clone().revert())), // clone?
+    }
+  }
 }
 
 const SCALES: &[f32] = &[1.0, 10.0, 100.0, 1000.0, 10000.0, 100_000.0];
@@ -367,7 +378,7 @@ impl Object for RegisterCell {
   fn stringify(&self) -> String { unimplemented!(); }
 }
 impl RegisterCell {
-pub fn new(cell: RefCell<Register>) -> Self { RegisterCell(cell) }
+  pub fn new(cell: RefCell<Register>) -> Self { RegisterCell(cell) }
   pub fn borrow(&self) -> Ref<Register> { self.0.borrow() }
   pub fn borrow_mut(&self) -> RefMut<Register> { self.0.borrow_mut() }
 }

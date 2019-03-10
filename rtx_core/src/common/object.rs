@@ -4,6 +4,7 @@
 use std::borrow::Cow;
 use crate::common::error::*;
 use crate::common::locator::Locator;
+use crate::tokens::Tokens;
 use crate::tbox::Tbox;
 
 // ======================================================================
@@ -53,7 +54,7 @@ pub trait Object {
       s!("at {}", loc)
     }
   }
-
+  fn revert(&self) -> Result<Tokens> { unimplemented!(); }
   // fn unlist<T>(&self) -> Vec<T>
   // where Self: Sized {
   //   unimplemented!()

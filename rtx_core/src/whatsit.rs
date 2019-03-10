@@ -59,24 +59,19 @@ impl Whatsit {
 
   pub fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
   pub fn properties(self) -> HashMap<String, Stored> { self.properties }
-
   pub fn set_properties(&mut self, props: HashMap<String, Stored>) {
     for (key, value) in props {
       self.properties.insert(key, value);
     }
   }
-
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
     match self.args.get(n - 1) {
       Some(&Some(ref opt)) => Some(opt),
       _ => None,
     }
   }
-
   pub fn get_args(&self) -> &Vec<Option<Digested>> { &self.args }
-
   pub fn set_args(&mut self, args: Vec<Option<Digested>>) { self.args = args; }
-
   pub fn get_trailer(&self) -> Option<Digested> {
     match self.properties.get("trailer") {
       Some(&Stored::Digested(ref triler)) => Some(*triler.clone()),
@@ -112,44 +107,10 @@ impl fmt::Display for Whatsit {
     write!(f, "{}", self.revert().unwrap()) // What else??
   }
 }
+
 impl Object for Whatsit {
   fn get_locator(&self) -> Cow<Locator> {
     Cow::Borrowed(&self.locator)
-  }
-  fn stringify(&self) -> String { unimplemented!(); }
-}
-impl BoxOps for Whatsit {
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
-  fn unlist(&self) -> Vec<Digested> { Vec::new() }
-
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
-    // Significant time is consumed here, and associated with a specific CS,
-    // so we should be profiling as well!
-    // Hopefully the csname is the same that was charged in the digestioned phase!
-
-    // my $profiled = $STATE->lookupValue('PROFILING') && $defn->getCS;
-    // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
-    // info!(target:"whatsit:be_absorbed", "{:?}", self);
-
-    self.definition.do_absorbtion(document, self, state)?;
-    // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
-    Ok(())
-  }
-
-  fn get_property(&self, key: &str, _state: &mut State) -> Option<Cow<Stored>> {
-    match self.properties.get(key) {
-      None => None,
-      Some(v) => Some(Cow::Borrowed(v)),
-    }
-  }
-
-  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
-
-  fn get_body(&self) -> Option<Digested> {
-    match self.properties.get("body") {
-      Some(&Stored::Digested(ref body)) => Some(*body.clone()),
-      _ => None,
-    }
   }
 
   fn revert(&self) -> Result<Tokens> {
@@ -237,6 +198,41 @@ impl BoxOps for Whatsit {
       //   }
       // }
       Ok(Tokens::new(tokens))
+    }
+  }
+}
+
+impl BoxOps for Whatsit {
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
+  fn unlist(&self) -> Vec<Digested> { Vec::new() }
+
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
+    // Significant time is consumed here, and associated with a specific CS,
+    // so we should be profiling as well!
+    // Hopefully the csname is the same that was charged in the digestioned phase!
+
+    // my $profiled = $STATE->lookupValue('PROFILING') && $defn->getCS;
+    // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
+    // info!(target:"whatsit:be_absorbed", "{:?}", self);
+
+    self.definition.do_absorbtion(document, self, state)?;
+    // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
+    Ok(())
+  }
+
+  fn get_property(&self, key: &str, _state: &mut State) -> Option<Cow<Stored>> {
+    match self.properties.get(key) {
+      None => None,
+      Some(v) => Some(Cow::Borrowed(v)),
+    }
+  }
+
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
+
+  fn get_body(&self) -> Option<Digested> {
+    match self.properties.get("body") {
+      Some(&Stored::Digested(ref body)) => Some(*body.clone()),
+      _ => None,
     }
   }
 

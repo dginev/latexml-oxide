@@ -553,6 +553,18 @@ impl Model {
     attributes.contains(attrib)
   }
 
+  pub fn is_node_in_schema_class(&self, class_name: &str, tag: &Node) -> bool {
+    let tag = self.get_node_qname(tag);
+    self.is_in_schema_class(class_name, &tag)
+  }
+  pub fn is_in_schema_class(&self, class_name: &str, tag: &str) -> bool {
+    if let Some(class) = self.schema_class.get(class_name) {
+      class.get(tag).is_some()
+    } else {
+      false
+    }
+  }
+
   /// TODO: This is another component that would fit perfectly as a compiler plugin,
   /// which generates a rust objects from all available schemas and has them directly
   /// available at runtime For now, simply reimplementing the runtime loading of
