@@ -1971,10 +1971,11 @@ impl Document {
   }
 
   // Replace $node by `nodes` (presumably descendants of some kind?)
-  fn replace_node(&mut self, mut node: Node, with: Vec<Node>) -> Result<Node> {
+  pub fn replace_node(&mut self, mut node: Node, with: Vec<Node>) -> Result<Node> {
     if let Some(parent) = node.get_parent() {
       let mut c0_opt: Option<Node> = None;
       for mut with_node in with.into_iter() {
+        with_node.unlink();
         if let Some(mut c0) = c0_opt {
           c0.add_next_sibling(&mut with_node)?;
         } else {
@@ -1988,6 +1989,42 @@ impl Document {
       Ok(node)
     }
   }
+
+  // initially since $node->setNodeName was broken in XML::LibXML 1.58
+  // but this can provide for more options & correctness?
+  pub fn rename_node(&mut self, node: &mut Node, newname: &str) -> Result<Node> {
+    unimplemented!();
+    // my ($self, $node, $newname) = @_;
+    // my $model = $$self{model};
+    // my ($ns, $tag) = $model->decodeQName($newname);
+    // my $parent = $node->parentNode;
+    // my $new = $self->openElement_internal($parent, $ns, $tag);
+    // my $id;
+    // # Move to the position AFTER $node
+    // $parent->insertAfter($new, $node);
+    // # Copy ALL attributes from $node to $newnode
+    // foreach my $attr ($node->attributes) {
+    //   my $key   = $attr->getName;
+    //   my $value = $node->getAttribute($key);
+    //   $id = $value if $key eq 'xml:id';    # Save to register after removal of old node.
+    //   $new->setAttribute($key, $value); }
+    // # AND move all content from $node to $newnode
+    // foreach my $child ($node->childNodes) {
+    //   $new->appendChild($child); }
+    // ## THEN call afterOpen... ?
+    // # It would normally be called before children added,
+    // # but how can we know if we're duplicated auto-added stuff?
+    // $self->afterOpen($new);
+    // $self->afterClose($new);
+    // # Finally, remove the old node
+    // $self->removeNode($node);
+    // # and FINALLY, we can register the new node under the id.
+    // if ($id) {
+    //   my $newid = $self->recordID($id, $new);
+    //   $new->setAttribute('xml:id' => $newid) if $newid ne $id; }
+    // return $new; }
+  }
+
 
   pub fn trim_node_whitespace(&mut self, node: &mut Node) -> Result<()> {
     self.trim_node_left_whitespace(node)?;

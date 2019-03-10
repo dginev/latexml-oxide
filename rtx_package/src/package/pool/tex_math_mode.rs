@@ -108,29 +108,9 @@ LoadDefinitions!(state, {
     }
   });
 
-  // Cleanup ltx:Math elements; particularly if they aren't "really" math.
-  // But record the oddity with class=ltx_markedasmath
-  // let cleanup_math_closure = Rc::new(|document: &mut Document, node: Node, box_opt:
-  // Option<Digested>, state: &mut State| { // If the Math ONLY contains XMath/XMText, it
-  // apparently isn't math at all!?! let mathy_nodes =
-  // document.findnodes("ltx:XMath/ltx:*[local-name() != 'XMText']", node) if (!mathy_nodes.
-  // is_empty()) {     // So unwrap down to the contents of the XMText's.
-  // let xmtexts = node.get_child_nodes().into_iter().flat_map(|child|
-  // child.get_child_nodes()).flat_map(|grandchild| grandchild.get_child_nodes()); let mut
-  // texts = vec![];     for text in xmtexts {
-  //       if text.get_type() != NodeType::Element {    // Make sure we've got an element
-  //         text = document.wrap_nodes("ltx:text", text);
-  //       }
-  // document.add_class(text, "ltx_markedasmath");   // Now record that it originally was
-  // marked as math       texts.push(text);
-  //     }
-  //     document.replace_node(node, texts); // and replace the whole Math with the pieces
-  //   } else {                                                // Cleanup any remaining XMTexts
-  //     cleanup_XMText_outer($document, $node);
-  //   }
-  //   return;
-  // }
-
   Tag!("ltx:Math", after_close => add_body_tex_closure);
-  // Tag!("ltx:Math", after_close => vec![cleanup_math_closure]);
+  Tag!("ltx:Math", after_close => tagsub!(document, node, state, {
+    cleanup_math(document, node.clone(), state)?;
+  }));
+ 
 });
