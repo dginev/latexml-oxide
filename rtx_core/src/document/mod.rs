@@ -214,12 +214,12 @@ impl Document {
         }
         if self.can_contain(node, FONT_ELEMENT_NAME, state) && !pending_declaration.is_empty() {
           // Too late to do wrapNodes?
-          let message = s!("too late to wrapNodes? {:?}", pending_declaration);
-          Error!("TODO", "wrapNodes", self, state, message);
-          //   my text = self.wrapNodes(FONT_ELEMENT_NAME, child);
-          //   foreach my attr (keys %pending_declaration) {
-          //     self.setAttribute(text, attr => pending_declaration{attr}{value}); }
-          //   self.finalize_rec(text, state);    // Now have to clean up the new node!
+          if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child], state)? {
+            for (ref key, &(ref value, ref properties)) in &pending_declaration {
+              self.set_attribute(&mut text, &key.to_string(), &value.to_string())?;
+            }
+            self.finalize_rec(&mut text, new_init_font, state)?;    // Now have to clean up the new node!
+          }
         }
       }
     }
