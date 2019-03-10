@@ -10,11 +10,14 @@ use regex::Regex;
 use std::collections::{HashMap, VecDeque};
 use std::iter;
 use std::rc::Rc;
+use std::borrow::Cow;
 
 use crate::common::error::*;
+use crate::common::locator::Locator;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::store::Stored;
 use crate::common::object::Object;
+use crate::common::xml;
 use crate::state::State;
 
 use crate::document::resource::Resource;
@@ -34,7 +37,7 @@ pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
   pub node: Node,
-  pub node_boxes: HashMap<usize, Digested>, // used to be _box attribute
+  pub node_boxes: HashMap<usize, Rc<Digested>>, // used to be _box attribute
   pub node_fonts: HashMap<usize, Font>,     // used to be _font attribute
   pub constructed_nodes: Vec<Node>,
   box_to_absorb: Option<Digested>, // local $LaTeXML::BOX;
@@ -43,7 +46,15 @@ pub struct Document {
 impl Default for Document {
   fn default() -> Self { Self::new() }
 }
-impl Object for Document {}
+impl Object for Document {
+  fn get_locator(&self) -> Cow<Locator> {
+    if let Some(tbox) = self.get_node_box(&self.node) {
+      Cow::Owned(tbox.get_locator().into_owned())
+    } else { 
+      Cow::Owned(Locator::default()) // well?
+    }
+  }
+}
 impl Document {
   pub fn new() -> Self {
     set_node_rc_guard(10); // We will need a high treshold for Node mutability
@@ -266,22 +277,20 @@ impl Document {
       }
 
       // TODO: Does the results extension make ANY sense???
+      // ANSWER: Yes, sadly, used in insertBlock in TeX.pool.
       // These were created just now
+      //
+      // we will try to do it separately
       // let newly_created: Vec<Node> = self.constructed_nodes.drain(0..).collect();
-
-      //for node in &newly_created {
-      //   self.record_constructed_node(Some(&node)); // record these for OUTER caller!
-      // }
       // results.extend(newly_created); // but return only the most recent set.
-      //   let mut box_node = self.node.add_child(None, "box").unwrap();
-      //   box_node.set_content(&tbox.text);
     }
-    // if self.debug {
-    //   Debug!("Document absorbed {:?} nodes", results.len());
-    // }
-    // Results never used, BUT leak Rc<Node> strong counts!!!
+    // Debug!("Document absorbed {:?} nodes", results.len());
+    // Results leak Rc<Node> strong counts!!!
     // Ok(results)
     Ok(())
+  }
+  pub fn drain_constructed_nodes(&mut self) -> Vec<Node> {
+    self.constructed_nodes.drain(0..).collect()
   }
 
   /// This is a refactored `else` cases from the main absorb routine, to allow for better type
@@ -879,7 +888,8 @@ impl Document {
     // let tbox  = attributes.get("_box").or_insert( LateXML::Box ) // ???
     self.set_node_font(&node, font);
     if let Some(ref digested) = self.box_to_absorb {
-      self.set_node_box(&node, digested.clone());
+      // TODO: The Rc<Digested> node boxes still have some way to go until they are fully ergonomic...
+      self.set_node_box(&node, Rc::new(digested.clone()));
     }
     self.open_math_text_internal(text, state)?;
     self.close_node_internal(&node, state)?; // Should be safe.
@@ -989,6 +999,10 @@ impl Document {
       },
       None => None,
     }
+  }
+
+  pub fn can_contain_node_somehow(&mut self, tag: &Node, child: &str, state: &mut State) -> bool {
+    self.can_contain_somehow(&state.model.get_node_qname(tag), child, state)
   }
 
   pub fn can_contain_somehow(&mut self, tag: &str, child: &str, state: &mut State) -> bool {
@@ -1187,6 +1201,33 @@ impl Document {
       self.constructed_nodes.push(node.clone());
     }
   }
+
+  pub fn filter_deletions(&self, nodes: Vec<Node>) -> Vec<Node> {
+    // This test seems to successfully determine inclusion,
+    // without requiring the (dangerous? & dubious?) unbindNode to be used.
+    if let Some(root) = self.document.get_root_element() {
+      nodes.into_iter().filter(|node| xml::is_descendant_or_self(node, &root)).collect()
+    } else {
+      Vec::new()
+    }
+  }
+
+  /// Given a list of nodes such as from ->absorb,
+  /// filter out all the nodes that are children of other nodes in the list.
+  pub fn filter_children(&self, mut nodes: Vec<Node>) -> Vec<Node> {
+    if nodes.is_empty() {
+      Vec::new()
+    } else {
+      let mut new = vec![nodes.remove(0)];
+      for node in nodes.iter() {
+        if nodes.iter().all(|other| !xml::is_descendant_or_self(node, other)) {
+          new.push(node.clone())
+        }
+      }
+      new
+    }
+  }
+
 
   //**********************************************************************
   // Low level internal interface
@@ -1526,15 +1567,18 @@ impl Document {
 
   //**********************************************************************
   /// Record the Box that created this node.
-  pub fn set_node_box(&mut self, node: &Node, digested: Digested) {
+  pub fn set_node_box(&mut self, node: &Node, digested: Rc<Digested>) {
     let nodeid = node.to_hashable();
     self.node_boxes.insert(nodeid, digested);
   }
 
-  pub fn get_node_box(&self, node: &Node) -> Option<&Digested> {
+  pub fn get_node_box(&self, node: &Node) -> Option<Rc<Digested>> {
     if node.get_type() == Some(NodeType::ElementNode) {
       let nodeid = node.to_hashable();
-      self.node_boxes.get(&nodeid)
+      match self.node_boxes.get(&nodeid) {
+        Some(v) => Some(v.clone()),
+        None => None
+      }
     } else {
       None
     }
@@ -1710,12 +1754,16 @@ impl Document {
       self.set_node_font(&newnode, font);
     }
 
+    // TODO [new]: Ever more certain there is a refactor waiting to happen with box_to_absorb 
+    //             holding a Rc<Digested> for easy cloning and management.
+    //             Though the question remains how to maintain that, without cloning the box to **make** the Rc<>
+    // Old note:
     // The .clone on boxes is potentially *VERY SLOW* and a code smell.
     // It can be eventually avoided by using a "memory arena" for all intermediate
     // objects - tokens, boxes, etc. and a well-designed referncing scheme into
     // the driver structs, such as Gullet, Stomach and Document
     if let Some(ref digested) = self.box_to_absorb {
-      self.set_node_box(&newnode, digested.clone());
+      self.set_node_box(&newnode, Rc::new(digested.clone()));
     }
 
     Debug!(
@@ -1885,37 +1933,42 @@ impl Document {
   //       $node->appendTextNode($child->textContent); } }
   //   return $node; }
 
-  // #**********************************************************************
-  // # Wrapping & Unwrapping nodes by another element.
+  //**********************************************************************
+  // Wrapping & Unwrapping nodes by another element.
 
-  // # Wrap @nodes with an element named $qname, making the new element replace the first $node,
-  // # and all @nodes becomes the child of the new node.
-  // # [this makes most sense if @nodes are a sequence of siblings]
-  // # Returns undef if $qname isn't allowed in the parent, or if @nodes aren't allowed in $qname,
-  // # otherwise, returns the newly created $qname.
-  // sub wrapNodes {
-  //   my ($self, $qname, @nodes) = @_;
-  //   return unless @nodes;
-  //   my $model  = $$self{model};
-  //   my $parent = $nodes[0]->parentNode;
-  //   my ($ns, $tag) = $model->decodeQName($qname);
-  //   my $new = $self->openElement_internal($parent, $ns, $tag);
-  //   $self->afterOpen($new);
-  //   $parent->replaceChild($new, $nodes[0]);
+  // Wrap `nodes` with an element named `qname`, making the new element replace the first `node`,
+  // and all `nodes` becomes the child of the new node.
+  // [this makes most sense if `nodes` are a sequence of siblings]
+  // Returns undef if $qname isn't allowed in the parent, or if `nodes` aren't allowed in `qname`,
+  // otherwise, returns the newly created `qname`.
+  pub fn wrap_nodes(&mut self, qname: &str, mut nodes: Vec<Node>, state: &mut State) -> Result<Option<Node>> {
+    if nodes.is_empty() { return Ok(None); }
+    let first_node = nodes.remove(0);
+    let mut parent = first_node.get_parent().unwrap();
+    let (ns, tag) = state.model.decode_qname(qname);
+    let mut new = self.open_element_internal(&mut parent, ns, &tag, state)?;
+    self.after_open(&mut new, state)?;
+    let mut old_node = parent.replace_child_node(new.clone(), first_node)?;
 
-  //   if (my $font = $self->getNodeFont($parent)) {
-  //     $self->setNodeFont($new, $font); }
-  //   if (my $box = $self->getNodeBox($parent)) {
-  //     $self->setNodeBox($new, $box); }
-  //   foreach my $node (@nodes) {
-  //     $new->appendChild($node); }
-  //   $self->afterClose($new);
-  //   return $new; }
+    let font = self.get_node_font(&parent);
+    self.set_node_font(&new, font.clone());
 
-  // # Unwrap the children of $node, by replacing $node by its children.
-  // sub unwrapNodes {
-  //   my ($self, $node) = @_;
-  //   return $self->replaceNode($node, $node->childNodes); }
+    if let Some(tbox) = self.get_node_box(&parent) {
+      self.set_node_box(&mut new, tbox); 
+    }
+    new.add_child(&mut old_node)?;
+    for mut node in nodes.into_iter() {
+      new.add_child(&mut node)?; 
+    }
+    self.after_close(&mut new, state)?;
+    Ok(Some(new))
+  }
+
+  /// Unwrap the children of $node, by replacing $node by its children.
+  pub fn unwrap_nodes(&mut self, node: Node) -> Result<Node> {
+    let children = node.get_child_nodes();
+    self.replace_node(node, children)
+  }
 
   // Replace $node by `nodes` (presumably descendants of some kind?)
   fn replace_node(&mut self, mut node: Node, with: Vec<Node>) -> Result<Node> {

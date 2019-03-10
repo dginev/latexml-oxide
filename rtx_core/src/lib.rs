@@ -146,7 +146,6 @@ pub trait BoxOps: Object {
     None
   }
   fn get_font(&self) -> Option<Cow<Font>>;
-  fn revert(&self) -> Result<Tokens>;
 
   fn set_width<T: Into<Stored>>(&mut self, width: T) {
     let mut props = self.get_properties_mut();
@@ -246,7 +245,6 @@ impl Object for Digested {
       Digested::RegisterValue(ref rv) => (*rv).stringify(),
     }
   }
-
   fn get_locator(&self) -> Cow<Locator> {
     match *self {
       Digested::TBox(ref b) => b.get_locator(),
@@ -255,7 +253,18 @@ impl Object for Digested {
       _ => unimplemented!(),
     }
   }
+  fn revert(&self) -> Result<Tokens> {
+    match *self {
+      Digested::TBox(ref b) => b.revert(),
+      Digested::List(ref l) => l.revert(),
+      Digested::Whatsit(ref w) => w.borrow().revert(),
+      Digested::Postponed(ref t) => Ok((**t).clone()),
+      Digested::KeyVals(ref kvs) => kvs.revert(),
+      Digested::RegisterValue(ref rv) => (**rv).revert(),
+    }
+  }
 }
+
 impl BoxOps for Digested {
   fn unlist(&self) -> Vec<Digested> {
     match self {
@@ -337,17 +346,6 @@ impl BoxOps for Digested {
         Some(t) => Some(Cow::Owned(t.into_owned())),
       },
       _ => unimplemented!(),
-    }
-  }
-
-  fn revert(&self) -> Result<Tokens> {
-    match *self {
-      Digested::TBox(ref b) => b.revert(),
-      Digested::List(ref l) => l.revert(),
-      Digested::Whatsit(ref w) => w.borrow().revert(),
-      Digested::Postponed(ref t) => Ok((**t).clone()),
-      Digested::KeyVals(ref kvs) => kvs.revert(),
-      Digested::RegisterValue(ref _rv) => unimplemented!(),
     }
   }
 }

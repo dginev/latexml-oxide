@@ -264,9 +264,8 @@ pub fn revert_spec(whatsit: &mut Whatsit, keyword: &str, state: &mut State) -> V
 pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: HashMap<String, String>, state: &mut State) -> Result<Vec<Node>> {
   // Create something like:
   // "<ltx:inline-block vattach='$vattach' height='#height'>#2</ltx:inline-block>"
-  let model   = &state.model;
-  let context = document.get_element();    // Where we originally start inserting.
-
+  let context = document.get_element().unwrap();    // Where we originally start inserting.
+  
   let mut blocktag  = "ltx:block";
   let mut iblocktag = "ltx:inline-block";
   if blockattr.get("para").is_some() {
@@ -291,55 +290,70 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
   for key in remove {
     blockattr.remove(&key);
   }
-  // map { ($blockattr{$_} || delete $blockattr{$_}) } keys %blockattr;
   
-  // if (blockattr.is_empty() || !$document->canContainSomehow($context, 'ltx:p') || $document->canContain($context, '#PCDATA')) {
-  //   my $tag = ($document->canContain($context, $blocktag)
-  //     ? $blocktag
-  //     : $iblocktag);
-  //   $newblock = $document->openElement($tag, '_autoclose' => 1, %blockattr); }
-  //# I think this option isn't really needed.... try to simplify
-  //# elsif ($document->canContainSomehow($context, 'ltx:para')) {
-  //# $newblock = $document->openElement('ltx:para', '_autoclose' => 1, %blockattr); }
+  if blockattr.is_empty() || !document.can_contain_node_somehow(&context, "ltx:p", state) || document.can_contain(&context, "#PCDATA", state) {
+    let tag =  if document.can_contain(&context, blocktag, state) {
+      blocktag } else { iblocktag };
+    let mut attr_arg = blockattr.clone();
+    attr_arg.insert("_autoclose".to_string(), "true".to_string());
+    newblock = Some(document.open_element(tag, Some(attr_arg), None, state)?); 
+  }
   // Insert the content for the block, and reduce
-
-  // $document->setAttribute($document->getElement, '_vertical_mode_' => 1);    # HACK!!!! (see \hbox)
-  // my @nodes = $document->filterChildren($document->filterDeletions($document->absorb($contents)));
+  document.set_attribute(&mut document.get_element().unwrap(), "_vertical_mode_", "true")?;    // HACK!!!! (see \hbox)
+  
+  document.absorb(contents, state)?;
+  let absorbed = document.drain_constructed_nodes();
+  let mut nodes = document.filter_children(document.filter_deletions(absorbed));
 
   // Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
-  let newnodes = Vec::new();
-  // while (@nodes) {
-  //   if ($model->getNodeQName($nodes[0]) eq 'ltx:break') {    # ltx:break are superflous, now.
-  //     $document->removeNode(shift(@nodes));
-  //     next; }
-  //   my @n;                                                   # Collect up sequences of Inline
-  //   while (@nodes && ($model->isInSchemaClass('Inline', $nodes[0]))) {
-  //     push(@n, shift(@nodes)); }
-  //   if (@n) {
-  //     push(@newnodes, $document->wrapNodes('ltx:p', @n)); }
-  //   else {
-  //     push(@newnodes, shift(@nodes)); } }
+  let mut newnodes = Vec::new();
+  while !nodes.is_empty() {
+    if state.model.get_node_qname(nodes.first().as_ref().unwrap()) == "ltx:break" {    // ltx:break are superflous, now.
+      document.remove_node(nodes.remove(0));
+      continue;
+    }
+    let mut inline = Vec::new(); // Collect up sequences of Inline
+    while !nodes.is_empty() && state.model.is_node_in_schema_class("Inline", nodes.first().unwrap()) {
+      inline.push(nodes.remove(0));
+    }
+    if !inline.is_empty() {
+      if let Some(wrapped) = document.wrap_nodes("ltx:p", inline, state)? {
+        newnodes.push(wrapped);
+      }
+    } else {
+      newnodes.push(nodes.remove(0));
+    }
+  }
 
-  // # If we've inserted a wrapper element, close all open elements up to it's parent
-  // # It may have auto-opened some element to contain it, but leave that open for following material
-  // # Otherwise, close everything back up to the originally open element (but only if still open!)
-  // if ($newblock) {
-  //   $document->closeToNode($newblock->parentNode, 1); }
-  // else {
-  //   $document->closeToNode($context, 1); }
-  // # Check if the ltx:inline-block container is really needed.
-  // if ($newblock) {
-  //   my @rows = $newblock->childNodes;
-  //   if (scalar(@rows) < 1) {    # Insertion came up empty?
-  //     $document->removeNode($newblock); }    # then remove the new block entirely
-  //   elsif ($unwrap ||
-  //     ((scalar(@rows) == 1)                  # Else only 1 item inside, then flatten
-  //       && $document->canContain($newblock->parentNode, $rows[0])    # if allowed.
-  //       && (!blockattr.is_empty() || !grep { !$document->canHaveAttribute($rows[0], $_) } keys %blockattr))) {
-  //     map { $document->setAttribute($rows[0], $_ => $blockattr{$_}) } keys %blockattr;
-  //     $document->unwrapNodes($newblock); } }
+  // If we've inserted a wrapper element, close all open elements up to it's parent
+  // It may have auto-opened some element to contain it, but leave that open for following material
+  // Otherwise, close everything back up to the originally open element (but only if still open!)
+  if let Some(ref blocknode) = newblock {
+    document.close_to_node(blocknode.get_parent().as_ref().unwrap(), true, state)?;
+  } else {
+    document.close_to_node(&context, true, state)?;
+  }
+  // Check if the ltx:inline-block container is really needed.
+  if let Some(blocknode) = newblock {
+    let mut rows = blocknode.get_child_nodes();
+    if rows.is_empty() {    // Insertion came up empty?
+      document.remove_node(blocknode); // then remove the new block entirely
+    } else if rows.len() == 1 {// Else only 1 item inside, then flatten
+      let mut first = rows.pop().unwrap();
+      let first_name = state.model.get_node_qname(&first);
+      if document.can_contain(blocknode.get_parent().as_ref().unwrap(), &first_name, state)    // if allowed.
+        && (!blockattr.is_empty()
+         || !blockattr.keys().any(|attr|
+               document.can_node_have_attribute(rows.first().unwrap(), attr, state)))
+      {
+        for (key,val) in blockattr { 
+          document.set_attribute(&mut first, &key, &val)?;
+        }
+        document.unwrap_nodes(blocknode)?; 
+      }
+    }
+  }
 
-  // # And return the list of "rows" in the box (in case they need attributes....)
-  unimplemented!();
+  // And return the list of "rows" in the box (in case they need attributes....)
   Ok(newnodes)
 }

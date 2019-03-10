@@ -15,7 +15,7 @@ use crate::document::Document;
 use crate::keyval::KeyVal;
 use crate::state::State;
 use crate::token::Token;
-use crate::tokens::Tokens;
+// use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
 
 type KVTuple = (String, Stored, bool, Vec<KeyVal>, KeyVal);
@@ -80,7 +80,6 @@ impl BoxOps for KeyVals {
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
   fn unlist(&self) -> Vec<Digested> { Vec::new() } // TODO
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { Ok(()) } // TODO
-  fn revert(&self) -> Result<Tokens> { unimplemented!() } // TODO
   fn get_font(&self) -> Option<Cow<Font>> { None } // TODO
 }
 

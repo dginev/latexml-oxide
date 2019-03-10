@@ -54,3 +54,23 @@ pub fn element_nodes(node: &Node) -> Vec<Node> {
     .filter(|n| n.get_type() == Some(NodeType::ElementNode))
     .collect()
 }
+
+
+/// Is `child` the same as `parent`, or a descendent of `parent`?
+pub fn is_descendant_or_self(child: &Node, parent: &Node) -> bool {
+  let mut p = Some(child);
+  let mut parent_opt;
+  while let Some(p_node) = p {
+    // if p.is_same_node(parent) {
+    if p_node == parent {
+      return true
+    }
+    if let Some(parent_node) = p_node.get_parent() { 
+      parent_opt = Some(parent_node);
+      p = parent_opt.as_ref();
+    } else {
+      break;
+    }
+  }
+  false 
+}

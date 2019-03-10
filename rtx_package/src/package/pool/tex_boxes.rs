@@ -169,21 +169,23 @@ LoadDefinitions!(state, {
   );
 
   DefConstructor!("\\vtop BoxSpecification VBoxContents", sub[document, args, props, state] {
-    unimplemented!(); ()
-  //   my ($document, $spec, $contents, %props) = @_;
-  //   insertBlock($document, $contents, vattach => "top"); },
-  // sizer       => '#2',
-  // mode        => 'text',
-  // afterDigest => sub {
-  //   my ($stomach, $whatsit) = @_;
-  //   my $spec = $whatsit.get_arg(1);
-  //   my $box  = $whatsit.get_arg(2);
-  //   if (my $h = GetKeyVal($spec, 'to')) {
-  //     $whatsit->setHeight($h); }
-  //   elsif (my $s = GetKeyVal($spec, 'spread')) {
-  //     $whatsit->setHeight($box->getHeight->add($s)); }
-  //   return; });
-  });
+      unpack!(args => spec, contents);
+      insert_block(document, contents, string_map!("vattach" => "top"), state)?;
+    },
+    // sizer       => '#2',
+    mode        => "text".into_option(),
+    after_digest => after_digest!(stomach, whatsit, state, {
+      // TODO: Height arith
+      //   my $spec = $whatsit.get_arg(1);
+      //   my $box  = $whatsit.get_arg(2);
+      //   if (my $h = GetKeyVal($spec, 'to')) {
+      //     $whatsit->setHeight($h); }
+      //   elsif (my $s = GetKeyVal($spec, 'spread')) {
+      //     $whatsit->setHeight($box->getHeight->add($s)); }
+      //   return; });
+      ()
+    })
+  );
 
   DefParameterType!("RuleSpecification", reader=>reader!(gullet, inner, extra, state, {
     unimplemented!(); ()

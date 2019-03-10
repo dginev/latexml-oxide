@@ -125,6 +125,23 @@ pub struct MuGlue(pub f32);
 impl Default for MuGlue {
   fn default() -> Self { MuGlue(0.0) }
 }
+impl fmt::Display for MuGlue {
+   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
+     unimplemented!();
+   }
+  // sub toString {
+  // my ($self) = @_;
+  // my ($sp, $plus, $pfill, $minus, $mfill) = @$self;
+  // my $string = LaTeXML::Common::Float::floatformat($sp / 65536 * 1.8) . 'mu ';
+  // $string .= 'plus ' . ($pfill
+  //   ? $plus . $LaTeXML::Common::Glue::FILL[$pfill]
+  //   : LaTeXML::Common::Float::floatformat($plus / 65536 * 1.8) . 'mu ') if $plus != 0;
+  // $string .= 'minus ' . ($mfill
+  //   ? $minus . $LaTeXML::Common::Glue::FILL[$mfill]
+  //   : LaTeXML::Common::Float::floatformat($minus / 65536 * 1.8) . 'mu ') if $minus != 0;
+  // return $string; }
+
+}
 
 impl NumericOps for Glue {
   fn value_of(self) -> f32 { self.skip }
