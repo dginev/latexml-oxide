@@ -168,6 +168,14 @@ pub trait Definition: Object {
   fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
   fn identifier(&self) -> String;
 }
+
+// We need to compare definitions for the internal TeX logic to make sense, but we don't have Perl's level of meta-programming,
+// since cloning an `Rc<Definition>` for storage makes it impossible to compare with the old `Rc<Definition>`. 
+// Hence, we need our own meta-programming "hack", via an `identifier` method that is different for each 
+// `definition` implementation (`Primitive`/`Constructor`/etc)
+// and each control sequence
+//
+// This could evolve if Rust comes up with a best practice for implementing `PartialEq` on trait objects.
 impl PartialEq for Definition {
    fn eq(&self, other: &Definition) -> bool {
     self.identifier() == other.identifier()
