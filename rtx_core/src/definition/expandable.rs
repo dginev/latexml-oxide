@@ -90,6 +90,7 @@ impl Definition for Expandable {
     })
   }
   fn get_alias(&self) -> Option<&String> { self.alias.as_ref() }
+  fn identifier(&self) -> String { s!("Expandable[{}]",self.cs.stringify()) }
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     // Expand the expandable control sequence. This should be carried out by the Gullet.
     // log!("-- expandable invoke for {:?}", self.get_cs());

@@ -392,7 +392,7 @@ impl Definition for RegisterCell {
   fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.borrow().cs.clone()) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.borrow().cs.get_cs_name().to_owned()) }
   fn get_alias(&self) -> Option<&String> { None }
-
+  fn identifier(&self) -> String { s!("RegisterCell[{}]",self.get_cs().stringify()) }
   // No before/after daemons ???
   // (other than afterassign)
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
