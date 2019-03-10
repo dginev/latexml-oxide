@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use libxml::tree::Node;
+use libxml::tree::{Node, NodeType};
 use crate::package::*;
 
 pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
@@ -291,8 +291,10 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
   for key in remove {
     blockattr.remove(&key);
   }
-  
-  if blockattr.is_empty() || !document.can_contain_node_somehow(&context, "ltx:p", state) || document.can_contain(&context, "#PCDATA", state) {
+  let hasattr = !blockattr.is_empty();
+  if hasattr ||
+   !document.can_contain_node_somehow(&context, "ltx:p", state) ||
+    document.can_contain(&context, "#PCDATA", state) {
     let tag =  if document.can_contain(&context, blocktag, state) {
       blocktag } else { iblocktag };
     let mut attr_arg = blockattr.clone();
@@ -330,7 +332,8 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
   // It may have auto-opened some element to contain it, but leave that open for following material
   // Otherwise, close everything back up to the originally open element (but only if still open!)
   if let Some(ref blocknode) = newblock {
-    document.close_to_node(blocknode.get_parent().as_ref().unwrap(), true, state)?;
+    let block_parent = blocknode.get_parent();
+    document.close_to_node(block_parent.as_ref().unwrap(), true, state)?;
   } else {
     document.close_to_node(&context, true, state)?;
   }
@@ -341,11 +344,13 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
       document.remove_node(blocknode); // then remove the new block entirely
     } else if rows.len() == 1 {// Else only 1 item inside, then flatten
       let mut first = rows.pop().unwrap();
-      let first_name = state.model.get_node_qname(&first);
-      if document.can_contain(blocknode.get_parent().as_ref().unwrap(), &first_name, state)    // if allowed.
-        && (!blockattr.is_empty()
-         || !blockattr.keys().any(|attr|
-               document.can_node_have_attribute(rows.first().unwrap(), attr, state)))
+      let first_name = dbg!(state.model.get_node_qname(&first));
+      let block_parent = blocknode.get_parent();
+      
+      
+      if document.can_contain(block_parent.as_ref().unwrap(), &first_name, state)    // if allowed.
+        && (!hasattr ||
+           !blockattr.keys().any(|attr| document.can_node_have_attribute(rows.first().unwrap(), attr, state)) )
       {
         for (key,val) in blockattr { 
           document.set_attribute(&mut first, &key, &val)?;
@@ -357,4 +362,130 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
 
   // And return the list of "rows" in the box (in case they need attributes....)
   Ok(newnodes)
+}
+
+pub fn cleanup_math(document: &mut Document, mathnode: Node, state: &mut State) -> Result<()> {
+  // Cleanup ltx:Math elements; particularly if they aren't "really" math.
+  // But record the oddity with class=ltx_markedasmath
+    
+  // If the Math ONLY contains XMath/XMText, it apparently isn't math at all!?!
+  if document.findnodes("ltx:XMath/ltx:*[local-name() != 'XMText']", Some(&mathnode), state).is_empty() {
+      // So unwrap down to the contents of the XMText's.
+      let xmtexts = mathnode.get_child_nodes().into_iter()
+        .flat_map(|child| child.get_child_nodes().into_iter()
+          .flat_map(|grandhcild| grandhcild.get_child_nodes()));
+      let mut texts = vec![];
+      for mut text in xmtexts {
+        text = if text.get_type() == Some(NodeType::ElementNode) {    // Make sure we've got an element
+          text 
+        } else {
+          document.wrap_nodes("ltx:text", vec![text], state)?.unwrap()
+        };
+        document.add_class(&mut text, "ltx_markedasmath")?;   // Now record that it originally was marked as math
+        texts.push(text) 
+      }
+      document.replace_node(mathnode, texts)?; // and replace the whole Math with the pieces
+    } else {                                                // Cleanup any remaining XMTexts
+      cleanup_xmtext_outer(document, &mathnode, state)?; 
+    }
+  Ok(())
+}
+
+// Here's for an inverse case: when an XMText isn't "really" just text
+// if it only contains an Math  ORR, a tabular with only Math in the cells?
+// First case: pull it back into the math, but in an XMWrap to isolate it for parsing.
+// Should we just pull any mixed text math up or only a single Math?
+// For the tabular case, convert it to an XMArray.
+
+// Note that normally, we'd do afterClose on ltx:XMText,
+// but since the ltx:XMText closes before the outer ltx:Math,
+// we would keep cleanup_Math from recognizing the trivial case of
+// a single ltx:tabular in an equation (perverse, but people do that).
+// So, we put this one on ltx:Math also, and scan for any contained XMText to fixup.
+
+fn cleanup_xmtext_outer(document: &mut Document, math_node: &Node, state: &mut State) -> Result<()> {
+  for text_node in document.findnodes("descendant::ltx:XMText", Some(&math_node), state) {
+    cleanup_xmtext(document, text_node, state)?;
+  }
+  Ok(())
+}
+
+fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut State) -> Result<()> {
+  // We're really only interested in reducing nested math, right?
+  // But actually also collapsing ltx:XMText/ltx:text
+  // Apply "outer" simplifications: remove ltx:text or ltx:p wrappings.
+  
+  // A single "simple" element, with a single child
+  let mut children;
+  loop {
+    children = text_node.get_child_nodes();
+    if (children.len() != 1) || document.findnodes("ltx:text | ltx:inline-block[count(*)=1] | ltx:p", Some(&text_node), state).is_empty() {
+      break;
+    }
+    let child = children.pop().unwrap();
+    document.set_node_font(&text_node, document.get_node_font(&child).clone());
+    for (key, value) in child.get_attributes() {    // Copy the child's attributes (should Merge!!)
+      if key != "xml:id" {
+        text_node.set_attribute(&key, &value)?;
+      }
+    }
+    document.unwrap_nodes(child)?;
+  }
+
+  // Now apply a simplifying rule for nested Math
+  // If the XMText contains a single Math, pull it's content up in
+  if children.len() == 1 && !document.findnodes("ltx:Math", Some(&text_node), state).is_empty() {
+    // Replace XMText by XMWrap/*  (this should preserve the parse?)
+    document.rename_node(&mut text_node, "ltx:XMWrap")?; // text_node = 
+    let mut first_child = children.pop().unwrap();
+    let mut first_granchildren = first_child.get_child_nodes();
+    document.replace_node(first_child, first_granchildren.into_iter().flat_map(|grandchild| grandchild.get_child_nodes()).collect())?;
+    // # # RISKY!!!! If SOME nodes are math...
+    // # # pull the whole sequence up, unwrap the math and putting the rest back in XMText.
+    // # # Even with the XMWrap, this seems to wreak havoc on parsing and structure?
+    // # if(document.findnodes('ltx:Math',$text_node)){
+    // #   # Replace XMText by XMWrap/*  (this should preserve the parse?)
+    // #   $text_node=document.renameNode($text_node,'ltx:XMWrap');
+    // #   foreach my $child (@children){
+    // #     if($model->getNodeQName($child) eq 'ltx:Math'){
+    // #       document.replaceNode($child,map($_->childNodes,$child->childNodes)); }
+    // #     else {
+    // #       document.wrapNodes('ltx:XMText',$child); }}}
+    // If a single tabular that ONLY(?) contains Math, turn into an XMArray
+    // Well, a tabular REALLY shouldn't be in math;
+    // How much math should determine the switch?
+    // [will alignment attributes be lost?]
+  }  else if children.len() == 1 && state.model.get_node_qname(children.first().as_ref().unwrap()) == "ltx:tabular"
+  //// Should we ALWAYS do this, or just for some minimal amount of math???
+  ////        && !document.findnodes('ltx:tabular/ltx:tr/ltx:td/text()'
+  ////                                 .' | ltx:tabular/ltx:tbody/ltx:tr/ltx:td/text()'
+  ////                                 .' | ltx:tabular/ltx:tr/ltx:td[not(ltx:Math)]'
+  ////                                 .' | ltx:tabular/ltx:tbody/ltx:tr/ltx:td[not(ltx:Math)]',
+  ////                                 $text_node)
+  {
+    unimplemented!(); // TODO
+    // // First step is remove any ltx:tbody from the tabular!
+    // foreach my $tb (document.findnodes('ltx:tabular/ltx:tbody', $text_node)) {
+    //   document.unwrapNodes($tb); }
+    // // Now, we can start replacing tabular=>XMArray, tr=>XMRow, td=>XMCell
+    // my $table = document.renameNode($children[0], 'ltx:XMArray');
+    // foreach my $row ($table->childNodes) {
+    //   $row = document.renameNode($row, 'ltx:XMRow');
+    //   foreach my $cell ($row->childNodes) {
+    //     $cell = document.renameNode($cell, 'ltx:XMCell');
+    //     foreach my $m ($cell->childNodes) {
+    //       if ($model->getNodeQName($m) eq 'ltx:Math') {    // Math cell, unwrap the Math/XMath layer
+    //         document.replaceNode($m, map { $_->childNodes } $m->childNodes); }
+    //       else {                                           // Otherwise, wrap whatever it is in an XMText
+    //         document.wrapNodes('ltx:XMText', $m); }
+    // } } }
+    // And now we don't need the XMText any more.
+    // foreach my $attr ($text_node->attributes) {    // Copy the child's attributes (should Merge!!)
+    //   $table->setAttribute($attr->nodeName => $attr->getValue); }
+    // my $newtable = document.unwrapNodes($text_node);
+    // if (my $id = $text_node->getAttribute('xml:id')) {
+    //   document.unRecordID($id);
+    //   document.recordID($id, $newtable); } }
+  }
+  Ok(())
 }
