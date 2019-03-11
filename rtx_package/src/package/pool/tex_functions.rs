@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use libxml::tree::{Node, NodeType};
+use rtx_core::keyvals::KeyValsOptions;
 use crate::package::*;
 
 pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
@@ -641,26 +642,38 @@ impl Default for KVSpec {
     }
   }
 }
-pub fn key_vals_aux(gullet: &mut Gullet, until: Token, spec: KVSpec, state: &mut State) -> KeyVals {
-  // // support both "keysets" and "prefix|keysets"
+pub fn key_vals_aux(gullet: &mut Gullet, until: Option<Token>, mut spec: KVSpec, state: &mut State) -> KeyVals {
+  // support both "keysets" and "prefix|keysets"
   // unless (defined($keysets)) {
   //   $keysets = $prefix;
   //   $prefix  = undef;
 
-  //   // to emulate old behaviour, throw no errors
-  //   // when we have a single keyset and no prefix (or no keyset at all)
-  //   $star = 1 if (!defined($keysets) || index(',', $keysets) == -1); }
+  // to emulate old behaviour, throw no errors
+  // when we have a single keyset and no prefix (or no keyset at all)
+  if spec.keysets.is_empty() {
+    spec.star = true;
+  } else if let Some(ref prefix) = spec.prefix{
+    if prefix.find(',').is_none() {
+      spec.star = true;
+    }
+  }
+  
+  // create a new set of Key-Value arguments
+  let mut keyvals = KeyVals::new(KeyValsOptions {
+    prefix: spec.prefix,
+    // keysets: spec.keysets, // TODO!
+    keysets: Vec::new(),
+    set_all: spec.plus,
+    set_internals: true,
+    skip: spec.skip,
+    skip_missing : spec.star
+  }, state);
 
-  // // create a new set of Key-Value arguments
-  // my $keyvals = LaTeXML::Core::KeyVals->new(
-  //   $prefix, $keysets,
-  //   setAll => $plus, setInternals => 1,
-  //   skip   => $skip, skipMissing  => $star);
+  // and read it from the gullet
+  if let Some(until_token) = until {
+    keyvals.read_from(gullet, until_token);
+  }
 
-  // // and read it from the gullet
-  // $keyvals->readFrom($gullet, $until) if defined($until);
-
-  // // we still want to make use of the hash
-  // return $keyvals; 
-  unimplemented!();
+  // we still want to make use of the hash
+  keyvals
 }

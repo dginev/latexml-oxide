@@ -32,7 +32,7 @@ pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptionName, TagOptions};
 pub use rtx_core::document::Document;
 pub use rtx_core::gullet::Gullet;
-pub use rtx_core::keyvals::KeyVals;
+pub use rtx_core::keyvals::{KeyVals, KeyValsOptions};
 pub use rtx_core::list::List;
 pub use rtx_core::mouth;
 pub use rtx_core::mouth::{Mouth, MouthOptions};

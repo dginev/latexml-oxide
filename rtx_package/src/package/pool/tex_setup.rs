@@ -938,7 +938,7 @@ LoadDefinitions!(state, {
 
   pub fn optional_key_vals(star: bool, plus: bool, keysets: Vec<Option<Parameters>>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     if gullet.if_next(T_OTHER!("["), state)? {
-      let todo : Result<KeyVals> = Ok(key_vals_aux(gullet, T_OTHER!("]"), KVSpec {
+      let todo : Result<KeyVals> = Ok(key_vals_aux(gullet, Some(T_OTHER!("]")), KVSpec {
         star, plus, keysets, 
         .. KVSpec::default()
       }, state));

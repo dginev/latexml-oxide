@@ -72,7 +72,7 @@ LoadDefinitions!(state, {
     // namely DefConstructor, DefPrimitive or DefEnvironment
     reader_predigest => reader_predigest!(stomach, key, state, {
       if !key.is_empty() {
-        let mut keyvals = KeyVals::new(None, None, map!("skipMissing" => true), state);
+        let mut keyvals = KeyVals::new(KeyValsOptions{skip_missing: true, ..KeyValsOptions::default()}, state);
         let dim = stomach.get_gullet_mut().read_dimension(state)?;
         keyvals.set_value(&key.to_string(), dim.into(), false, state);
         keyvals.into()
