@@ -133,7 +133,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
      properties => properties!(sub[stomach, args, state] {
        unpack!(args => stype, inlist, toctitle_arg, title);
        let mut props = ref_step_counter(&stype.to_string(), false, stomach, state)?;
-       let toctitle = if toctitle_arg.to_string().is_empty() {
+       let toctitle = if !toctitle_arg.to_string().is_empty() {
          toctitle_arg
        } else {
          title.clone()
@@ -163,22 +163,46 @@ LoadDefinitions!(outer_stomach, outer_state, {
      })
   );
 
-  // # No tags, at all? Consider...
-  // DefConstructor('\@@unnumbered@section{} Undigested OptionalUndigested Undigested', sub {
-  //     my ($document, $type, $inlist, $toctitle, $title, %props) = @_;
-  //     my $id = $props{id};
-  //     $document->openElement("ltx:" . ToString($type),
-  //       'xml:id' => CleanID($id),
-  //       inlist   => ToString($inlist));
-  //     $document->insertElement('ltx:title', $props{title});
-  //     $document->insertElement('ltx:toctitle', $props{toctitle}) if $props{toctitle}; },
-  //   properties => sub {
-  //     my ($stomach, $type, $inlist, $toctitle, $title) = @_;
-  //     my %props = RefStepID(ToString($type));
-  //     $props{title} = Digest(T_CS('\@hidden@bgroup'), $title, T_CS('\@hidden@egroup'));
-  //     $props{toctitle} = $toctitle
-  //       && Digest(T_CS('\@hidden@bgroup'), $toctitle, T_CS('\@hidden@egroup'));
-  //     return %props; });
+  // No tags, at all? Consider...
+  DefConstructor!("\\@@unnumbered@section{} Undigested OptionalUndigested Undigested", sub[document, args, props, state] {
+      unpack!( args => stype, inlist, toctitle, title);
+      let id = props.get("id").unwrap().to_string();
+      document.open_element(&s!("ltx:{}", stype),
+        Some(string_map!(
+          "xml:id" => clean_id(&id),
+          "inlist"  => inlist.to_string()
+        )), None, state
+      )?;
+      let title = prop_digested!(props, "title");
+      document.insert_element("ltx:title", title, None, state)?;
+      
+      let toctitle = prop_digested!(props, "toctitle");
+      if !toctitle.is_empty() {
+        document.insert_element("ltx:toctitle", toctitle, None, state)?;
+      }
+    },
+    properties => properties!(sub[stomach, args, state] {
+      unpack!(args => stype, inlist, toctitle, title);
+      let mut props = RefStepID!(&stype.to_string())?;
+      let title_digested = if let Digested::Postponed(tokens) = title {
+        // TODO: tokens.clone().unlist() looks like a code smell.
+        // Should Digested::Postponed() hold a Tokens directly instead?
+        stomach.digest(Tokens!(T_CS!("\\@hidden@bgroup"), (*tokens).clone().unlist(), T_CS!("\\@hidden@egroup")), state)?
+      } else {
+        title
+      };
+      props.insert("title".to_string(), title_digested.into());
+
+      if let Digested::Postponed(toctokens) = toctitle {
+        if !toctokens.is_empty() {
+          let toctitle_digested = stomach.digest(Tokens!(T_CS!("\\@hidden@bgroup"), (*toctokens).clone().unlist(), T_CS!("\\@hidden@egroup")), state)?;
+          props.insert("toctitle".to_string(), toctitle_digested.into());
+        }
+      }
+
+      Ok(props)
+    })
+  );
 
   //----------------------------------------------------------------------
   // The following macros provide a few layers of customization

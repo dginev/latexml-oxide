@@ -22,6 +22,7 @@ use crate::document::tag::TagData;
 use crate::gullet::Gullet;
 use crate::list::List;
 use crate::mouth;
+use crate::mouth::Mouth;
 use crate::parameter::Parameter;
 use crate::state::State;
 use crate::token::{Catcode, Token};
@@ -83,6 +84,7 @@ pub enum Stored {
   Primitive(Rc<Primitive>),
   MathPrimitive(Rc<MathPrimitive>),
   // WALL OF SHAME (interior mutability)
+  Mouth(Rc<RefCell<Mouth>>),
   Register(Rc<RegisterCell>),
   IfFrame(Rc<RefCell<IfFrame>>),
   /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
@@ -118,6 +120,7 @@ impl fmt::Debug for Stored {
       Digested(ref digested) => write!(f, "Stored::Digested[{:?}]", digested),
       Parameter(ref parameter) => write!(f, "Stored::Parameter[{:?}]", parameter),
       Register(ref register) => write!(f, "Stored::Register[{:?}]", register.borrow().cs),
+      Mouth(ref mouth) =>  write!(f, "Stored::Mouth[{:?}]", mouth.borrow().get_source()),
       Font(ref font) => write!(f, "Stored::Font[{:?}]", font),
       Number(ref number) => write!(f, "Stored::Number[{:?}]", number),
       Glue(ref glue) => write!(f, "Stored::Glue[{:?}]", glue),
@@ -211,6 +214,10 @@ impl From<Tokens> for Stored {
 
 impl From<Locator> for Stored {
   fn from(value: Locator) -> Self { Stored::Locator(value) }
+}
+
+impl From<Mouth> for Stored {
+  fn from(value: Mouth) -> Self { Stored::Mouth(Rc::new(RefCell::new(value))) }
 }
 
 impl From<Rc<Expandable>> for Stored {

@@ -14,10 +14,12 @@ LoadDefinitions!(state, {
   // C.1.6 The \\ Command
   //======================================================================
   // In math, \\ is just a formatting hint, unless within an array, cases, .. environment.
-  // DefConstructor("\\\\ OptionalMatch:* [Glue]", "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
-  //   reversion => Tokens(T_CS("\\\\"), T_CR));
-  Let!("\\@normalcr", "\\\\");
-  // PushValue(TEXT_MODE_BINDINGS => [T_CS("\\\\"), T_CS('\@normalcr')]);
+  DefConstructor!("\\\\ OptionalMatch:* [Glue]",
+  "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
+  reversion => Some(Tokens!(T_CS!("\\\\"), T_CR!()).into()));
+
+  LetI!(&T_CS!("\\@normalcr"), T_CS!("\\\\"));
+  PushValue!("TEXT_MODE_BINDINGS" => Tokens!(T_CS!("\\\\"), T_CS!("\\@normalcr")));
 
   DefMacro!("\\@nolnerr", "");
   DefMacro!(

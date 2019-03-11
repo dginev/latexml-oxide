@@ -54,10 +54,14 @@ LoadDefinitions!(state, {
   // // These are for those screwy cases where you need to create a group like box,
   // // more than just bgroup, egroup,
   // // BUT you DON'T want extra {, } showing up in any untex-ing.
-  // DefConstructor('\@hidden@bgroup', '//body', beforeDigest => sub { $_[0]->bgroup; },
-  // captureBody => 1,   reversion => sub { Revert($_[0]->getProperty('body')); });
-  // DefConstructor('\@hidden@egroup', '', afterDigest => sub { $_[0]->egroup; },
-  //   reversion => '');
+  DefConstructor!("\\@hidden@bgroup", "#body", 
+    before_digest => before_digest!(stomach,state, { stomach.bgroup(state); }),
+    capture_body => true
+    // TODO: // reversion => sub { Revert($_[0]->getProperty("body")); }
+  );
+  DefConstructor!("\\@hidden@egroup", "",
+    after_digest => after_digest!(stomach,args,state, { stomach.egroup(state)?; }),
+    reversion => None);
 
   DefPrimitiveI!(
     "\\begingroup",
@@ -152,56 +156,92 @@ LoadDefinitions!(state, {
   // print STDERR ToString(Expand($stuff)) . ": " . ToString(Expand(Tokens(T_CS('\the'),
   // T_CS('\errhelp')))) . "\n";     return; });
 
-  // # TeX I/O primitives
-  // DefPrimitive('\openin Number SkipMatch:= SkipSpaces TeXFileName', sub {
-  //     my ($stomach, $port, $filename) = @_;
-  //     # possibly should close $port if it's already been opened?
-  //     $port     = ToString($port);
-  //     $filename = ToString($filename);
-  //     # Rely on FindFile to enforce any access restrictions
-  //     if (my $path = FindFile($filename)) {
-  //       my $mouth = LaTeXML::Core::Mouth->create($path,
-  //         content => LookupValue($path . '_contents'));
-  //       AssignValue('input_file:' . $port => $mouth, 'global'); }
-  //     return; });
+  // TeX I/O primitives
+  DefPrimitive!("\\openin Number SkipMatch:= SkipSpaces TeXFileName", sub[stomach, args, state] {
+    unpack!(args => port, filename);
+    // possibly should close $port if it's already been opened?
+    let port = port.to_string();
+    let filename = filename.to_string();
+    // Rely on FindFile to enforce any access restrictions
+    if let Some(path) = find_file(&filename, None, state) {
+      let content_str = LookupString!(&s!("{}_contents",path));
+      let content = if content_str.is_empty() {
+        None 
+      } else {
+        Some(content_str)
+      };
+      let mouth = Mouth::create(&path, MouthOptions {
+        content,
+        .. MouthOptions::default()
+      }, state)?;
+      AssignValue!(&s!("input_file:{}", port), mouth, Some(Scope::Global)); 
+    }
+  });
 
-  // DefPrimitive('\closein Number', sub {
-  //     my ($stomach, $port, $filename) = @_;
-  //     #   close the mouth (if any) and clear the variable
-  //     $port = ToString($port);
-  //     if (my $mouth = LookupValue('input_file:' . $port)) {
-  //       $mouth->finish;
-  //       AssignValue('input_file:' . $port => undef, 'global'); }
-  //     return; });
+  DefPrimitive!("\\closein Number", sub[stomach, args, state] {
+    unpack!(args => port);
+    // Clone the Rc<> for mouth out of state, since we'll be mutating.
+    let mouth_opt = if let Some(Stored::Mouth(ref mouth)) = LookupValue!(&s!("input_file:{}", port)) {
+      Some(Rc::clone(mouth))
+    } else {
+      None
+    };
+    //   close the mouth (if any) and clear the variable
+    if let Some(mouth) = mouth_opt {
+      mouth.borrow_mut().finish(state);
+      AssignValue!(&s!("input_file:{}", port), false, Some(Scope::Global));
+    }
+  });
 
-  // DefPrimitive('\read Number SkipKeyword:to SkipSpaces Token', sub {
-  //     my ($stomach, $port, $token) = @_;
-  //     $port = ToString($port);
-  //     if (my $mouth = LookupValue('input_file:' . $port)) {
-  //       $stomach->bgroup;
-  //       AssignValue(PRESERVE_NEWLINES => 2);
-  //       my @tokens = ();
-  //       my ($t, $level) = (undef, 0);
-  //       while ($t = $mouth->readToken) {
-  //         my $cc = $t->getCatcode;
-  //         push(@tokens, $t);
-  //         $level++ if $cc == CC_BEGIN;
-  //         $level-- if $cc == CC_END;
-  //         last if ((($cc == CC_SPACE) && ($t->getString eq "\n"))
-  //           || ($cc == CC_COMMENT)
-  //           || ($t->equals(T_CS('\par')))) && !$level; }
-  //       $stomach->egroup;
-  //       @tokens = (T_CS('\par')) unless @tokens;    # trailing blank line
-  //       DefMacroI($token, undef, Tokens(@tokens)); }
-  //     return; });
+  DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token", sub[stomach, args, state] {
+    unpack!(args => port, token);
+    let token: Token = token.into(); // downcast from Tokens
+    let port = port.to_number();
+    let mouth_opt = if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}",port)) {
+      Some(Rc::clone(mouth))
+    } else {
+      None
+    }; // need to move out the Rc<RefCell<Mouth>> to reuse state later.
+    if let Some(mouth) = mouth_opt {
+      stomach.bgroup(state);
+      AssignValue!("PRESERVE_NEWLINES", 2);
+      let mut tokens = Vec::new();
+      let mut level = 0;
+      while let Some(t) = mouth.borrow_mut().read_token(state) {
+        let cc = t.get_catcode();
+        level += match cc {
+          Catcode::BEGIN => 1,
+          Catcode::END => -1,
+          _ => 0
+        };
+        if level == 0 && (
+          (cc == Catcode::SPACE && t.get_string() == "\n")
+          || cc == Catcode::COMMENT
+          || t == T_CS!("\\par")
+        ) {
+          tokens.push(t);
+          break;
+        } else {
+          tokens.push(t);
+        }
+      }
+      stomach.egroup(state)?;
+      if tokens.is_empty() {
+        tokens = vec![T_CS!("\\par")]; // trailing blank line
+      }
+      DefMacroI!(token, None, Tokens::new(tokens)); 
+    }
+  });
 
-  // DefConditional('\ifeof Number', sub {
-  //     my ($gullet, $port) = @_;
-  //     $port = ToString($port);
-  //     if (my $mouth = LookupValue('input_file:' . $port)) {
-  //       return $$mouth{at_eof}; }
-  //     else {
-  //       return 1; } });
+  DefConditional!("\\ifeof Number", sub[gullet, args, state] {
+    unpack_to_token!(args => port);
+    let port = port.to_number();
+    if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}", port)) {
+      mouth.borrow().at_eof()
+    } else {
+      true 
+    }
+  });
 
   // For output files, we'll write the data to a cached internal copy
   // rather than to the actual file system.
@@ -209,56 +249,57 @@ LoadDefinitions!(state, {
     unpack_to_string!(args => port, filename);
     let contents_key = &s!("{}_contents",filename);
     AssignValue!(&s!("output_file:{}",port)  => filename,  Some(Scope::Global));
-    AssignValue!(contents_key => "",        Some(Scope::Global));
+    AssignValue!(contents_key => "",  Some(Scope::Global));
   });
 
-  // DefPrimitive('\closeout Number', sub {
-  //     my ($stomach, $port) = @_;
-  //     $port = ToString($port);
-  //     AssignValue('output_file:' . $port => undef, 'global');
-  //     return; });
+  DefPrimitive!("\\closeout Number", sub[stomach, args, state] {
+    unpack!(args => port);
+    AssignValue!(&s!("output_file:{}",port), false, Some(Scope::Global));
+  });
 
-  // DefPrimitive('\write Number {}', sub {
-  //     my ($stomach, $port, $tokens) = @_;
-  //     $port = ToString($port);
-  //     if (my $filename = LookupValue('output_file:' . $port)) {
-  //       my $handle   = $filename . '_contents';
-  //       my $contents = LookupValue($handle);
-  //       AssignValue($handle => $contents . UnTeX($tokens) . "\n", 'global'); }
-  //     else {
-  //       print STDERR UnTeX(Expand($tokens)) . "\n"; }
-  //     return; });
+  DefPrimitive!("\\write Number {}", sub[stomach, args, state] {
+    unpack!(args => port, tokens);
+    let port = port.to_number();
+    if let Some(filename) = LookupValue!(&s!("output_file:{}", port)) {
+      let handle   = s!("{}_contents",filename);
+      let contents = LookupString!(&handle);
+      AssignValue!(&handle => s!("{}{}\n", contents, tokens), Some(Scope::Global));
+    } else {
+      let gullet = stomach.get_gullet_mut();
+      println_stderr!("{}\n", Expand!(tokens, gullet));
+    }
+  });
 
   // # Since we don't paginate, we're effectively always "shipping out",
   // # so all operations are \immediate
-  // DefPrimitive('\immediate', undef);
+  DefPrimitive!("\\immediate", None);
 
   // #======================================================================
   // # Remaining semi- Vertical Mode primitives in Ch.24, pp.280--281
 
-  // DefPrimitive('\special {}',     undef);
-  // DefPrimitive('\penalty Number', undef);
-  // DefPrimitive('\kern Dimension', undef);
-  // DefMacro('\mkern MuGlue', '\ifmmode\@math@mskip #1\relax\else\@text@mskip #1\relax\fi');
-  // DefPrimitiveI('\unpenalty', undef, undef);
-  // DefPrimitiveI('\unkern',    undef, undef);
+  DefPrimitive!("\\special {}",     None);
+  DefPrimitive!("\\penalty Number", None);
+  DefPrimitive!("\\kern Dimension", None);
+  DefMacro!("\\mkern MuGlue", "\\ifmmode\\@math@mskip #1\\relax\\else\\@text@mskip #1\\relax\\fi");
+  DefPrimitive!("\\unpenalty", None);
+  DefPrimitive!("\\unkern",    None);
   // ## Worrisome, but...
-  // DefPrimitiveI('\unskip', undef, sub {
+  // DefPrimitiveI("\unskip", None, sub {
   //     my ($stomach) = @_;
   //     my $box;
   //     while (($box = $LaTeXML::LIST[-1]) && IsEmpty($box)) {
   //       pop(@LaTeXML::LIST); }
   //     return; });
 
-  // DefPrimitive('\mark{}', undef);
+  // DefPrimitive!("\\mark{}", None);
   // # \insert<8bit><filler>{<vertical mode material>}
-  // DefPrimitive('\insert Number', undef);    # Just let the insertion get processed(?)
-  //                                           # \vadjust<filler>{<vertical mode material>}
-  //                                           # Note: \vadjust ignores in vertical mode...
-  //     # is it sufficient to just clear the macro to avoid recursion?
-  //     # (we don't track horizontal/vertical mode)
-  // DefMacroI('\LTX@vadjust@afterpar', undef, '\def\LTX@vadjust@afterpar{}');
-  // DefMacroI('\LTX@clear@vadjust@afterpar', undef, '\def\LTX@vadjust@afterpar{\def\LTX@vadjust@afterpar{}}');
+  DefPrimitive!("\\insert Number", None);    // Just let the insertion get processed(?)
+                                             // \vadjust<filler>{<vertical mode material>}
+                                             // Note: \vadjust ignores in vertical mode...
+  // is it sufficient to just clear the macro to avoid recursion?
+  // (we don't track horizontal/vertical mode)
+  DefMacro!("\\LTX@vadjust@afterpar", "\\def\\LTX@vadjust@afterpar{}");
+  DefMacro!("\\LTX@clear@vadjust@afterpar", "\\def\\LTX@vadjust@afterpar{\\def\\LTX@vadjust@afterpar{}}");
   // DefPrimitive('\vadjust {}', sub {
   //     AddToMacro('\LTX@vadjust@afterpar', $_[1]->unlist);
   //     return; });

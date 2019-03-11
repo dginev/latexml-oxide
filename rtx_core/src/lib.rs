@@ -183,6 +183,15 @@ impl<'a> From<&'a String> for Digested {
     }))
   }
 }
+impl From<String> for Digested {
+  fn from(value: String) -> Digested {
+    Digested::TBox(Rc::new(Tbox {
+      text: value,
+      ..Tbox::default()
+    }))
+  }
+}
+
 impl From<Tbox> for Digested {
   fn from(value: Tbox) -> Digested { Digested::TBox(Rc::new(value)) }
 }
