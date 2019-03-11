@@ -89,6 +89,7 @@ impl Definition for Expandable {
       None => self.cs.get_cs_name(),
     })
   }
+  fn get_expansion(&self) -> Option<&ExpansionBody> { self.expansion.as_ref() }
   fn get_alias(&self) -> Option<&String> { self.alias.as_ref() }
   fn identifier(&self) -> String { s!("Expandable[{}]",self.cs.stringify()) }
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
@@ -109,6 +110,7 @@ impl Definition for Expandable {
   fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
     fatal!(Definition, Unexpected, "do_absorbtion on Expandable should never be called!");
   }
+  
 }
 
 impl Expandable {
@@ -165,6 +167,4 @@ impl Expandable {
       None => Ok(Tokens!()),
     }
   }
-
-  pub fn get_expansion(&self) -> Option<&ExpansionBody> { self.expansion.as_ref() }
 }
