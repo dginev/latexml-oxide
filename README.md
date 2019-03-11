@@ -1,11 +1,11 @@
 # rtx
 A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
-[![Build Status](https://travis-ci.com/dginev/rtx.svg?token=JKuszfgzJQJUFzH9JaLd&branch=master)](https://travis-ci.com/dginev/rtx#) ![version](https://img.shields.io/badge/version-0.1.18-orange.svg)
+[![Build Status](https://travis-ci.com/dginev/rtx.svg?token=JKuszfgzJQJUFzH9JaLd&branch=master)](https://travis-ci.com/dginev/rtx#) ![version](https://img.shields.io/badge/version-0.1.19-orange.svg)
 
 ## Progress 
 
-[![test porting progress](http://progressed.io/bar/7)](https://github.com/dginev/rtx/issues/30) | 15 of 207 core LaTeXML tests PASS
+[![test porting progress](http://progressed.io/bar/8)](https://github.com/dginev/rtx/issues/30) | 17 of 207 core LaTeXML tests PASS
 
 ### Why?
 
