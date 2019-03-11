@@ -25,7 +25,7 @@ lazy_static! {
   static ref CS_RE: Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
   static ref SINGLE_CHAR_RE: Regex = Regex::new(r"^(\\.)").unwrap();
   static ref ACTIVE_CHAR_RE: Regex = Regex::new(r"^(.)").unwrap();
-  static ref CONDITIONAL_RE: Regex = Regex::new(r"^\\(?:if(.*)|unless)$").unwrap();
+  static ref CONDITIONAL_CS_RE: Regex = Regex::new(r"^\\(?:if(.*)|unless)$").unwrap();
   static ref LEADING_PROTOCOL_RE: Regex = Regex::new(r"^\w+:").unwrap();
   static ref TRAILING_SLASH_RE: Regex = Regex::new(r"/$").unwrap();
   static ref SPACES_RE: Regex = Regex::new(r"\s+").unwrap();

@@ -52,11 +52,11 @@ LoadDefinitions!(stomach, state, {
   AddToMacro!("\\maketitle", "\\ltx@authors@oneline");
 
   DefMacro!("\\@ptsize", "0");    // should depend on options...
-  RawTeX!(r"###
+  RawTeX!(r###"
   \newif\if@restonecol
   \newif\if@titlepage
   \@titlepagefalse
-  ###");
+  "###);
 
   //**********************************************************************
   // The core sectioning commands are defined in LaTeX.pm

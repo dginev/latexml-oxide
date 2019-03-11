@@ -864,6 +864,6 @@ pub fn convert_latex_args(mut nargs: usize, optional: Option<Tokens>, state: &mu
   if params.is_empty() {
     Ok(None)
   } else {
-    Ok(Some(Parameters { params }))
+    Ok(Some(Parameters::new(params)))
   }
 }

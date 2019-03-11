@@ -158,16 +158,16 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
         let ctr_string = ctr.to_string();
         DefMacro!(&s!("\\the{}@ID",ctr), sub[gullet, args, inner_state] {
           Ok(TokenizeInternal!(
-            &s!("\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
-          idwithin,idwithin,prefix,ctr_string), None
-          ))
+            &s!("\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\
+                 \\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
+                 idwithin,idwithin,prefix,ctr_string)))
         },
         scope => Some(Scope::Global));
       } else {
         let ctr_string = ctr.to_string();
         DefMacro!(&s!("\\the{}@ID",ctr), sub[gullet,args, inner_state] {
           Ok(TokenizeInternal!(
-              &s!("{}\\csname @{}@ID\\endcsname",prefix,ctr_string), None
+            &s!("{}\\csname @{}@ID\\endcsname",prefix,ctr_string)
           ))},
           scope => Some(Scope::Global));
       }
