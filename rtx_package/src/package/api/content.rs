@@ -673,7 +673,7 @@ pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -
     // if ($urlbase && ($path = url_find($file, urlbase => $urlbase))) {
     //   return $path; }
     // return; }
-    Info!("No path found for: {:?}", file);
+    // Info!("No path found for: {:?}", file);
     None
   }
 }

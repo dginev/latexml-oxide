@@ -80,6 +80,7 @@ impl Default for MouthOptions {
 pub struct Mouth {
   fordefinitions: bool,
   notes: bool,
+  at_eof: bool,
   nchars: usize,
   colno: usize,
   lineno: usize,
@@ -105,6 +106,7 @@ impl Default for Mouth {
       notes: false,
       note_message: None,
       fordefinitions: false,
+      at_eof: false,
       lineno: 0,
       colno: 0,
       chars: VecDeque::new(),
@@ -430,6 +432,7 @@ impl Mouth {
         match self.get_next_line(state) {
           None => {
             // Exhausted the input.
+            self.at_eof = true;
             self.chars = VecDeque::new();
             self.nchars = 0;
             return None;
@@ -527,6 +530,7 @@ impl Mouth {
       match self.get_next_line(state) {
         None => {
           // We've exhausted this mouth
+          self.at_eof = true;
           self.chars = VecDeque::new();
           self.nchars = 0;
           self.colno = 0;
@@ -722,14 +726,14 @@ impl Mouth {
         if cc_after_letter == Some(Catcode::EOL) {
           // If we've got an EOL
           // if in \read mode, leave the EOL to be turned into a T_SPACE
-          // TODO: preserve_newlines NYI
-          // if state.lookup_value("PRESERVE_NEWLINES") > 1 {
-          // else skip it.
-          self.get_next_char(state);
-          if self.colno < self.nchars {
-            self.colno -= 1;
+          if state.lookup_int("PRESERVE_NEWLINES") > 1 { }
+          else {
+            // else skip it.
+            self.get_next_char(state);
+            if self.colno < self.nchars {
+              self.colno -= 1;
+            }
           }
-          // }
         }
       },
     };
@@ -751,6 +755,7 @@ impl Mouth {
   }
 
   pub fn is_eol(&self) -> bool { self.colno >= self.nchars }
+  pub fn at_eof(&self) -> bool { self.at_eof }
 }
 
 // WARNING: These two utilities bind $STATE to simple State objects with known fixed catcodes.

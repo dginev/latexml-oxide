@@ -344,7 +344,7 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
       document.remove_node(blocknode); // then remove the new block entirely
     } else if rows.len() == 1 {// Else only 1 item inside, then flatten
       let mut first = rows.pop().unwrap();
-      let first_name = dbg!(state.model.get_node_qname(&first));
+      let first_name = state.model.get_node_qname(&first);
       let block_parent = blocknode.get_parent();
       
       

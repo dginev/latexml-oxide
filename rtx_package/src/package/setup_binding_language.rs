@@ -920,6 +920,10 @@ macro_rules! RefStepCounter {
 }
 #[macro_export]
 macro_rules! RefStepID {
+  ($ctr:expr) => {{
+    bind_state_mut!(stmch,st);
+    ref_step_id($ctr, stmch, st)
+  }};
   ($ctr:expr, $stomach:ident) => {{
     bind_state_mut!(st);
     ref_step_id($ctr, $stomach, st)

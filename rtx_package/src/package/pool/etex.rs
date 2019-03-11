@@ -23,23 +23,30 @@ LoadDefinitions!(state, {
   // #======================================================================
   // # 3.2. Provision for re-scanning already read text
 
-  // # \readline; like \read, but only spaces & other
-  // DefMacro('\readline Number SkipKeyword:to SkipSpaces Token', sub {
-  //     my ($gullet, $port, $token) = @_;
-  //     $port = ToString($port);
-  //     if (my $mouth = LookupValue('input_file:' . $port)) {
-  //       DefMacroI($token, undef, Tokens(Explode(($mouth->readRawLine || '') . "\r"))); }
-  //     return; });
+  // \readline; like \read, but only spaces & other
+  DefMacro!("\\readline Number SkipKeyword:to SkipSpaces Token", sub[gullet, args, state] {
+    unpack_to_token!(args => port, token);
+    let port = port.to_number();
+    let mouth_opt = if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}",port)) {
+      Some(Rc::clone(mouth))
+    } else {
+      None
+    };
+    if let Some(mouth) = mouth_opt {
+      let raw_line = s!("{}\r", mouth.borrow_mut().read_raw_line(false, state).unwrap_or_else(String::new));
+      DefMacroI!(token, None, Tokens!(Explode!(raw_line)));
+    }
+  });
 
-  // DefMacro('\scantokens GeneralText', sub {
+  // DefMacro("\scantokens GeneralText", sub {
   //     LaTeXML::Core::Mouth->new(UnTeX($_[1]))->readTokens; });
 
   // #======================================================================
   // # 3.3 Environmental enquiries
 
   // our @ETEX_VERSION = (qw(2 .2));
-  // DefMacro('\eTeXrevision', sub { Explode($ETEX_VERSION[1]); });
-  // DefRegister('\eTeXversion' => Number($ETEX_VERSION[0]));
+  // DefMacro("\eTeXrevision", sub { Explode($ETEX_VERSION[1]); });
+  // DefRegister("\eTeXversion" => Number($ETEX_VERSION[0]));
 
   // # \currentgrouplevel
   // DefRegister('\currentgrouplevel', Number(0),
@@ -56,18 +63,18 @@ LoadDefinitions!(state, {
   // DefConditional('\ifdefined Token', sub { defined LookupMeaning($_[1]); });
 
   // # ???
-  // DefRegister('\lastnodetype', Number(0));
+  DefRegister!("\\lastnodetype", Number::new(0.0));
 
   // #======================================================================
   // # 3.4 Generalization of the \mark concept: a class of \marks
   // # but since we don't manage Pages...
 
-  // DefPrimitive('\marks Number GeneralText', undef);
-  // DefMacroI('\topmarks Number',        undef, Tokens());
-  // DefMacroI('\firstmarks Number',      undef, Tokens());
-  // DefMacroI('\botmarks Number',        undef, Tokens());
-  // DefMacroI('\splitfirstmarks Number', undef, Tokens());
-  // DefMacroI('\splitbotmarks Number',   undef, Tokens());
+  DefPrimitive!("\\marks Number GeneralText", None);
+  DefMacro!("\\topmarks Number",        "");
+  DefMacro!("\\firstmarks Number",      "");
+  DefMacro!("\\botmarks Number",        "");
+  DefMacro!("\\splitfirstmarks Number", "");
+  DefMacro!("\\splitbotmarks Number",   "");
 
   // #======================================================================
   // # 3.5 Bi-directional typesetting: the TeX--XeT primitives
@@ -84,15 +91,15 @@ LoadDefinitions!(state, {
   // # and directionality?
   // # Presumably we can't rely on the material itself being directional.
 
-  // # By leaving this 0, we're saying "Don't use these features"!
-  // DefRegister('\TeXXeTstate' => Number(0));
+  // By leaving this 0, we're saying "Don't use these features"!
+  DefRegister!("\\TeXXeTstate" => Number::new(0.0));
 
-  // DefMacroI('\beginL', undef, '');
-  // DefMacroI('\beginR', undef, '');
-  // DefMacroI('\endL',   undef, '');
-  // DefMacroI('\endR',   undef, '');
+  DefMacro!("\\beginL", "");
+  DefMacro!("\\beginR", "");
+  DefMacro!("\\endL", "");
+  DefMacro!("\\endR", "");
 
-  // DefRegister('\predisplaydirection' => Number(0));    # ???
+  DefRegister!("\\predisplaydirection" => Number::new(0.0));    // ???
 
   // #======================================================================
   // # 3.6 Additional debugging features

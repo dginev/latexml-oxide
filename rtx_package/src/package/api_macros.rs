@@ -123,7 +123,7 @@ macro_rules! noreplacement {
 #[macro_export]
 macro_rules! replacement {
   ($doc:ident, $args:ident, $props:ident, $state:ident, $body:expr) => (
-    |$doc:&mut Document,$args: &Vec<Option<Digested>>,$props: &HashMap<String, Stored>, $state: &mut State| -> Result<()> {
+    move |$doc:&mut Document,$args: &Vec<Option<Digested>>, $props: &HashMap<String, Stored>, $state: &mut State| -> Result<()> {
     BindInnerState!($state);
     $body
     end_state_frame!();
@@ -255,14 +255,10 @@ macro_rules! reversion {
   };
 }
 
-// Discussion: It is unclear what the best authoring syntax is for our family of latexml binding
-// macros. One idea is to keep them very close to the Rust internals, but we suffer from a variety
-// of boilerplate, such as needing to spell out `key => Some(value.to_string())`, rather than a
-// direct `key => value`.
-//
-// For now I am making the decision to keep writing out the verbose form,
-// and will refactor at a later date, when the trade-offs become more clear. Smart use of the Cow
-// struct is another idea. I will use a helper though:
+// TODO: These .clone calls are silly... can we either
+// 1) Document::insert_element work with a &Vec<Digested>? or 
+// 2) we can use mutable Whatsit properties in replacements, where we remove Vec<Digested> instances for cases that will be absorbed?
+// or something else that is lighter on memory allocations?
 
 #[macro_export]
 macro_rules! prop_digested {
@@ -275,6 +271,15 @@ macro_rules! prop_digested {
     }
   };
 }
+
+// Discussion: It is unclear what the best authoring syntax is for our family of latexml binding
+// macros. One idea is to keep them very close to the Rust internals, but we suffer from a variety
+// of boilerplate, such as needing to spell out `key => Some(value.to_string())`, rather than a
+// direct `key => value`.
+//
+// For now I am making the decision to keep writing out the verbose form,
+// and will refactor at a later date, when the trade-offs become more clear. Smart use of the Cow
+// struct is another idea. I will use a helper though:
 
 #[macro_export]
 macro_rules! prop_str {
