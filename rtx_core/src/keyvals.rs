@@ -74,7 +74,7 @@ impl Object for KeyVals {
   fn get_locator(&self) -> Cow<Locator> {
     unimplemented!(); 
   }
-  fn stringify(&self) -> String { unimplemented!(); }
+  fn stringify(&self) -> String { "KeyVals:TODO".to_string() }
 }
 impl BoxOps for KeyVals {
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }

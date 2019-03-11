@@ -19,7 +19,7 @@ use self::register::{RegisterType, RegisterValue};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::mouth;
-use crate::parameter::Parameters;
+use crate::parameter::{Parameter, Parameters};
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::token::{Catcode, Token};
@@ -171,19 +171,30 @@ pub trait Definition: Object {
   fn register_type(&self) -> Option<RegisterType> { None }
   fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
   fn get_expansion(&self) -> Option<&ExpansionBody> { None }
-  fn identifier(&self) -> String;
+
+  fn stringify_type(&self, deftype: &str) -> String {
+    let name = match self.get_alias() {
+      Some(alias) => alias.to_string(),
+      None => self.get_cs().get_cs_name().to_string()
+    };
+    if let Some(parameters) = self.get_parameters() {
+      s!("{}[{} {}]", deftype, name, parameters.stringify())
+    } else {
+      s!("{}[{}]", deftype, name)
+    }
+  }
 }
 
 // We need to compare definitions for the internal TeX logic to make sense, but we don't have Perl's level of meta-programming,
 // since cloning an `Rc<Definition>` for storage makes it impossible to compare with the old `Rc<Definition>`. 
-// Hence, we need our own meta-programming "hack", via an `identifier` method that is different for each 
+// Hence, we need our own meta-programming "hack", via the `stringify` method that is different for each 
 // `definition` implementation (`Primitive`/`Constructor`/etc)
 // and each control sequence
 //
 // This could evolve if Rust comes up with a best practice for implementing `PartialEq` on trait objects.
 impl PartialEq for Definition {
    fn eq(&self, other: &Definition) -> bool {
-    self.identifier() == other.identifier()
+    self.stringify() == other.stringify()
   }
  
 }
