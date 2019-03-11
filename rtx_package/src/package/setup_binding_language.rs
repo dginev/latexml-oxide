@@ -1717,7 +1717,8 @@ macro_rules! Digest {
   }};
   ($tokens:expr, $state_arg:ident) => {{
     let mut state_stomach = $state_arg.stomach.clone();
-    outer_stomach!().digest($tokens, $state_arg)
+    let mut state_stomach_mut = state_stomach.borrow_mut();
+    state_stomach_mut.digest($tokens, $state_arg)
   }};
 }
 
@@ -1839,6 +1840,10 @@ macro_rules! SetPrefix {
 
 #[macro_export]
 macro_rules! DeclareOption {
+  ($option:expr, None) => { 
+    bind_state_mut!(st);
+    DeclareOption!($option, sub[stomach, state] {}, st)
+  };
   (None, sub $body:block) => { 
     bind_state_mut!(st);
     DeclareOption!(None, sub[stomach, state] $body, st)
