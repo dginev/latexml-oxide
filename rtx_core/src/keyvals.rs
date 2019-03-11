@@ -8,6 +8,7 @@ use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::store::Stored;
 use crate::common::object::Object;
+use crate::gullet::Gullet;
 // use crate::definition::expandable::Expandable;
 // use crate::definition::Definition;
 use crate::document::Document;
@@ -83,6 +84,26 @@ impl BoxOps for KeyVals {
   fn get_font(&self) -> Option<Cow<Font>> { None } // TODO
 }
 
+pub struct KeyValsOptions {
+  pub prefix: Option<String>,
+  pub keysets: Vec<String>,
+  pub set_all: bool,
+  pub set_internals: bool,
+  pub skip: bool,
+  pub skip_missing: bool
+}
+impl Default for KeyValsOptions {
+  fn default() -> Self {
+    KeyValsOptions {
+      prefix: None,
+      keysets: Vec::new(),
+      set_all: false,
+      set_internals: false,
+      skip: false,
+      skip_missing: false,
+    }
+  }
+}
 
 impl KeyVals {
   ///======================================================================
@@ -93,9 +114,9 @@ impl KeyVals {
   /// Thus it has to be digestible, however we may not want to digest it more
   /// than once.
   ///**********************************************************************
-  pub fn new(prefix_opt: Option<String>, keysets: Option<Vec<String>>, options: HashMap<String, bool>, state: &State) -> Self {
+  pub fn new(options: KeyValsOptions, state: &State) -> Self {
     // parse all the arguments
-    let prefix = prefix_opt.unwrap_or_else(|| String::from("KV"));
+    let prefix = options.prefix.unwrap_or_else(|| String::from("KV"));
     // $keysets = [split(',', ToString(defined($keysets) ? $keysets : '_anonymous_'))] unless (ref($keysets) eq 'ARRAY');
     // let skip = options.get("skip").unwrap_or(false);
     // $skip = [split(',', ToString(defined($options{skip}) ? $options{skip} : ''))] unless (ref($options{skip}) eq 'ARRAY');
@@ -242,6 +263,106 @@ impl KeyVals {
     if skip_opt.is_some() {
       self.tuples = newtuples;
     }
+  }
+
+  //======================================================================
+  // parsing values from a gullet
+  //======================================================================
+
+  // A KeyVal argument MUST be delimited by either braces or brackets (if optional)
+  // This method reads the keyval pairs INCLUDING the delimiters, (rather than
+  // parsing after the fact), since some values may have special catcode needs.
+
+  pub fn read_from(&mut self, gullet: &mut Gullet, until: Token) {
+    // TODO
+
+    // # if we want to force skipMissing keys, we set it up here
+    // my $silenceMissing = $options{silenceMissing} ? 1 : 0;
+
+    // my $skipMissing = $self->getSkipMissing;
+    // my $hookMissing = $self->getHookMissing;
+
+    // # if we want to silence all missing errors, store them in a hook
+    // if ($silenceMissing) {
+    //   $$self{skipMissing} = 1;
+    //   $$self{hookMissing} = undef; }
+
+    // # read the opening token and figure out where we are
+    // my $startloc = $gullet->getLocator;
+
+    // # set and read tokens
+    // my $open = $gullet->readToken;
+    // $$self{assign} = T_OTHER('=');
+    // $$self{punct}  = T_OTHER(',');
+    // my ($punct, $assign) = ($$self{punct}, $$self{assign});
+
+    // # create arrays for key-value pairs and explicit values
+    // my @kv        = ();
+    // my @explicits = ();
+
+    // # iterate over all the key-value pairs to read
+    // while (1) {
+
+    //   # gobble spaces
+    //   $gullet->skipSpaces;
+
+    //   # Read a single keyword, get a delimiter and a set of keyword tokens
+    //   my ($ktoks, $delim) = $self->readKeyWordFrom($gullet, $until);
+
+    //   # if there was no delimiter at the end, we throw an error
+    //   Error('expected', $until, $gullet,
+    //     "Fell off end expecting " . Stringify($until) . " while reading KeyVal key",
+    //     "key started at " . ToString($startloc))
+    //     unless $delim;
+
+    //   # turn the key tokens into a string and normalize
+    //   my $key = ToString($ktoks); $key =~ s/\s//g;
+
+    //   # if we have a non-empty key
+    //   if ($key) {
+
+    //     my $value;
+    //     my $isDefault;
+
+    //     # if we have an '=', we explcity assign a value
+    //     if ($delim->equals($assign)) {
+    //       $isDefault = 0;
+
+    //       # setup the key-codes to properly read
+    //       my $keyval = $self->getPrimaryKeyValOf($key, $self->resolveKeyValFor($key));
+    //       my $keydef = $keyval->getType();
+    //       $keydef->setupCatcodes if $keydef;
+
+    //       # read until $punct
+    //       my ($tok, @toks) = ();
+    //       while ((!defined($delim = $gullet->readMatch($punct, $until)))
+    //         && (defined($tok = $gullet->readToken()))) {    # Copy next token to args
+    //         push(@toks, $tok,
+    //           ($tok->getCatcode == CC_BEGIN ? ($gullet->readBalanced->unlist, T_END) : ())); }
+
+    //       # reparse (and expand) the tokens representing the value
+    //       $value = Tokens(@toks);
+    //       $value = $keydef->reparse($gullet, $value) if $keydef && $value;
+
+    //       # and cleanup
+    //       $keydef->revertCatcodes if $keydef; }
+
+    //     # we did not get an '=', and thus need to read the default value
+    //     else { $isDefault = 1; }
+
+    //     # and store our value please
+    //     $self->addValue($key, $value, $isDefault, 0) if (!$silenceMissing || $self->canResolveKeyValFor($key)); }
+
+    //   # we finish if we have the last element
+    //   last if $delim->equals($until); }
+
+    // # rebuild and return nothing
+    // $self->rebuild;
+
+    // # restore all settings if we silenced the missing keys
+    // if ($silenceMissing) {
+    //   $$self{skipMissing} = $skipMissing;
+    //   $$self{hookMissing} = $hookMissing; }
   }
 }
 

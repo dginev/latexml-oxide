@@ -19,7 +19,7 @@ use self::register::{RegisterType, RegisterValue};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::mouth;
-use crate::parameter::{Parameter, Parameters};
+use crate::parameter::Parameters;
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::token::{Catcode, Token};
