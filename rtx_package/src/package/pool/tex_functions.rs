@@ -133,7 +133,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
   if params.is_empty() {
     Ok(None)
   } else {
-    Ok(Some(Parameters { params }))
+    Ok(Some(Parameters::new(params)))
   }
 }
 
@@ -488,4 +488,179 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut Stat
     //   document.recordID($id, $newtable); } }
   }
   Ok(())
+}
+
+
+//======================================================================
+// A random collection of utility functions.
+// [maybe need to do some reorganization?]
+// Since this is used for textual tokens, typically to split author lists,
+// we don't split within braces or math
+
+pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
+  let mut items = Vec::new();
+  let mut toks = Vec::new();
+  if !tokens.is_empty() {
+    let tokens = tokens.unlist();
+    let mut tokens_iter = tokens.into_iter();
+    while let Some(t) = tokens_iter.next() {
+      if delims.iter().any(|d| d == &t) {
+        items.push(Tokens::new(toks.drain(..).collect()));
+      } else if t == T_BEGIN!() {
+        toks.push(t);
+        let mut level = 1;
+        while let Some(t) = tokens_iter.next() {
+          match t.get_catcode() { 
+            Catcode::BEGIN => level +=1,
+            Catcode::END => level -= 1,
+            _ => {}
+          }
+          toks.push(t);
+          if level < 1 { // done if balanced.
+            break;
+          }
+        }
+      } else if t == T_MATH!() {
+        toks.push(t);
+        while let Some(t) = tokens_iter.next() {
+          let is_math = t.get_catcode() == Catcode::MATH;
+          toks.push(t);
+          if is_math {
+            break;
+          }
+        }
+      } else {
+        toks.push(t);
+      }
+    }
+    // last author is in toks, add to items
+    items.push(Tokens::new(toks));
+  }
+  items
+}
+
+pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
+  split_tokens(tokens, vec![T_CS!("\\and")])
+    .into_iter()
+    .flat_map(|t| {
+      let mut with_cs = vec![cs.clone(), T_BEGIN!()];
+      with_cs.extend(t.unlist());
+      with_cs.push(T_END!());
+      with_cs 
+    }).collect()
+}
+
+  // sub orNull {
+  //   return (grep { defined } @_) ? @_ : undef; }
+
+  // # Should be a general utility?
+  // sub stripBraces {
+  //   my ($tokens) = @_;
+  //   my @tokens = ($tokens ? $tokens->unlist : ());
+  //   my @t = ();
+  //   while (@tokens && ($tokens[0]->getCatcode == CC_SPACE)) {    # Skip leading whitespace
+  //     shift(@tokens); }
+  //   # Balanced tokens until $delim
+  //   my $ntopbraces = 0;
+  //   while (@tokens) {
+  //     if (Equals($tokens[0], T_BEGIN)) {                         # If top-level brace
+  //       $ntopbraces++;
+  //       my ($level, $t) = (0, undef);
+  //       while (defined($t = shift(@tokens))) {                   # Read balanced
+  //         my $cc = $t->getCatcode;
+  //         $level++ if $cc == CC_BEGIN;
+  //         $level-- if $cc == CC_END;
+  //         push(@t, $t);
+  //         last unless $level; } }
+  //     else {
+  //       push(@t, shift(@tokens)); } }
+  //   while (@t && ($t[-1]->getCatcode == CC_SPACE)) {             # pop off trailing spaces
+  //     pop(@t); }
+  //   # Strip outer braces if a single set encloses entire value and not just {}
+  //   if ($ntopbraces == 1) {
+  //     shift(@t); pop(@t); }
+  //   return Tokens(@t); }
+
+/// Support for Key / Value arguments.
+// The very basic form is
+//   RequiredKeyVals: $keyset
+//   OptionalKeyVals: $keyset
+// to parse Key-Value pairs from a given keyset (see the 'keyval' package
+// documentation for more information). These types of KeyVal
+// parameters will return a LaTeXML::Core::KeyVals object, which can then be
+// used to access the values of the individual items.
+// The difference between the two forms is that RequiredKeyVals expects a set of
+// key-value pairs wrapped in T_BEGIN T_END, where as OptionalKeyVals optionally
+// expects a set of KeyValue pairs wrapped in T_OTHER('[') T_OTHER(']')
+//
+// Several extension of the keyval package exist, the most common one we support
+// is the xkeyval package. This introduces further variations on the keyval
+// arguments parsing, in particular it allows to read keys from more than one
+// keyset at once. These can be specified by giving comma-seperated values in
+// the keyset argument. By default, a key will only be set in the **first**
+// keyset it occurs in. By using
+//   RequiredKeyVals+: $keysets
+//   OptionalKeyVals+: $keysets
+// the key will be set in all keysets instead.
+//
+// All keys to be parsed with these arguments should be declared using
+// DefKeyVal in LaTeXML::Package. By default, an error is thrown if an unknown
+// key is encountered. To surpress this behaviour, and instead store all
+// undefined keys, use
+//   RequiredKeyVals*: $keysets
+//   OptionalKeyVals*: $keysets
+// instead. The '*' and '+' modifiers can be combined by using:
+//   RequiredKeyVals*+: $keysets
+//   OptionalKeyVals*+: $keysets
+//
+// Furthermore, the xkeyval package supports giving prefixes to keys,
+//   RequiredKeyVals[*][+]: $prefix|$keysets
+//   OptionalKeyVals[*][+]: $prefix|$keysets
+//
+// Finally, it is possible to specify specific keys to skip when digesting the
+// object. This can be achieved using comma-seperated key values in
+//   RequiredKeyVals[*][+]: $prefix|$keysets|$skip
+//   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
+
+// function to handle all the
+pub struct KVSpec {
+  pub star: bool,
+  pub plus: bool,
+  pub prefix: Option<String>,
+  pub keysets: Vec<Option<Parameters>>,
+  pub skip: bool
+}
+impl Default for KVSpec {
+  fn default() -> Self {
+    KVSpec {
+      star: false,
+      plus: false,
+      prefix: None,
+      keysets: Vec::new(),
+      skip: false
+    }
+  }
+}
+pub fn key_vals_aux(gullet: &mut Gullet, until: Token, spec: KVSpec, state: &mut State) -> KeyVals {
+  // // support both "keysets" and "prefix|keysets"
+  // unless (defined($keysets)) {
+  //   $keysets = $prefix;
+  //   $prefix  = undef;
+
+  //   // to emulate old behaviour, throw no errors
+  //   // when we have a single keyset and no prefix (or no keyset at all)
+  //   $star = 1 if (!defined($keysets) || index(',', $keysets) == -1); }
+
+  // // create a new set of Key-Value arguments
+  // my $keyvals = LaTeXML::Core::KeyVals->new(
+  //   $prefix, $keysets,
+  //   setAll => $plus, setInternals => 1,
+  //   skip   => $skip, skipMissing  => $star);
+
+  // // and read it from the gullet
+  // $keyvals->readFrom($gullet, $until) if defined($until);
+
+  // // we still want to make use of the hash
+  // return $keyvals; 
+  unimplemented!();
 }

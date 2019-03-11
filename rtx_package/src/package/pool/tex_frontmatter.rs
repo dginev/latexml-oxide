@@ -23,44 +23,36 @@ LoadDefinitions!(state, {
   // //   replace (to replace the current entry, if any)
   // //   ifnew   (only add if no previous entry)//
 
-  // TODO: Real signature when we have KeyVals
-  // DefPrimitiveI!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
-  DefPrimitiveI!(
-    "\\@add@frontmatter{}{}",
-    primitiveproc!(stomach, args, state, {
-      unpack!(args => tag, tokens);
-      // TODO: Real args when we have KeyVals
-      // unpack!(args => keys, tag, attr, tokens);
+  DefPrimitive!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}", sub[stomach, args, state] {
+    unpack!(args => keys, tag, attr, tokens);
+    // Digest this as if we're already in the document body!
+    let inpreamble = LookupBool!("inPreamble");
+    AssignValue!("inPreamble", false);
 
-      // Digest this as if we're already in the document body!
-      let inpreamble = LookupBool!("inPreamble");
-      AssignValue!("inPreamble", false);
-      {
-        // Be careful since the contents may also want to add frontmatter
-        // (which should be inside or after this one!)
-        // So, we append this entry before digesting
-        // if ($keys && $keys->hasKey('replace') && $$frontmatter{$tag}) {    // if replace and
-        // previous entries $$frontmatter{$tag} = []; }
-        // // Remove previous entries if ($keys && $keys->hasKey('ifnew') &&
-        // $$frontmatter{$tag}) {      // if ifnew and previous entries return; }
-        // // Skip this one.   if ($attr) {
-        //     $$entry[1] = { $attr->beDigested($stomach)->getHash }; }
-        //   $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
-        let mut wrapped_tokens = vec![T_BEGIN!()];
-        wrapped_tokens.extend(tokens.unlist());
-        wrapped_tokens.push(T_END!());
-        let digested_tokens = stomach.digest(Tokens::new(wrapped_tokens), state)?;
-        let entry = (tag.to_string(), None, digested_tokens);
-        let frontmatter = match state.lookup_value_mut("frontmatter") {
-          Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-          _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
-        };
-        let f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
-        f_entry.push(entry);
-      }
-      AssignValue!("inPreamble", inpreamble);
-    })
-  );
+    // Be careful since the contents may also want to add frontmatter
+    // (which should be inside or after this one!)
+    // So, we append this entry before digesting
+    // if ($keys && $keys->hasKey('replace') && $$frontmatter{$tag}) {    // if replace and
+    // previous entries $$frontmatter{$tag} = []; }
+    // // Remove previous entries if ($keys && $keys->hasKey('ifnew') &&
+    // $$frontmatter{$tag}) {      // if ifnew and previous entries return; }
+    // // Skip this one.   if ($attr) {
+    //     $$entry[1] = { $attr->beDigested($stomach)->getHash }; }
+    //   $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
+    let mut wrapped_tokens = vec![T_BEGIN!()];
+    wrapped_tokens.extend(tokens.unlist());
+    wrapped_tokens.push(T_END!());
+    let digested_tokens = stomach.digest(Tokens::new(wrapped_tokens), state)?;
+    let entry = (tag.to_string(), None, digested_tokens);
+    let frontmatter = match state.lookup_value_mut("frontmatter") {
+      Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
+      _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
+    };
+    let f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
+    f_entry.push(entry);
+    
+    AssignValue!("inPreamble", inpreamble);
+  });
 
   // // Append a piece of data to an existing frontmatter item that is contained in <$tag>
   // // If $label is given, look for an item which has label=>$label,
@@ -136,15 +128,17 @@ LoadDefinitions!(state, {
 
   Tag!("ltx:document", after_open_late => insert_frontmatter);
 
-  // // Maintain a list of classes that apply to the document root.
-  // // This might involve global style options, like leqno.
-  // Tag('ltx:document', 'afterOpen:late' => sub {
-  //     my ($document, $root) = @_;
-  //     if (my $classes = join(' ', LookupMappingKeys('DOCUMENT_CLASSES'))) {
-  //       $document->addClass($root, $classes); } });
+  // Maintain a list of classes that apply to the document root.
+  // This might involve global style options, like leqno.
+  Tag!("ltx:document", after_open_late => tagsub!(document, root, state, {
+    let classes = LookupMappingKeys!("DOCUMENT_CLASSES").join(" ");
+    if !classes.is_empty()  {
+      document.add_class(root, &classes)?;
+    }
+  }));
 
-  // DefConstructor('\beginsection Until:\par',
-  //   "<ltx:section><ltx:title>#1</ltx:title>");
+  DefConstructor!("\\beginsection Until:\\par",
+    "<ltx:section><ltx:title>#1</ltx:title>");
 
   // // POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
   // //  If so, how do know when the theorem ends?

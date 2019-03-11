@@ -58,41 +58,33 @@ pub fn is_definable(token: &Token, state: &State) -> bool {
 pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
 
 pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option<Parameters>))> {
-  let mut cs = T_CS!(s!("\\")); // Should never happen
-  let mut final_proto = if CSNAME_MACRO_RE.is_match(proto) {
-    let captures = CSNAME_MACRO_RE.captures(proto).unwrap();
-    cs = T_CS!(s!("\\") + captures.get(0).map_or("", |m| m.as_str()));
+  let cs;
+  let mut final_proto = if let Some(captures) = CSNAME_MACRO_RE.captures(proto) {
+    cs = T_CS!(s!("\\{}", captures.get(1).map_or("", |m| m.as_str())));
     // also replace in proto
     CSNAME_MACRO_RE.replace(proto, "").to_string()
-  } else if CS_RE.is_match(proto) {
+  } else if let Some(captures) = CS_RE.captures(proto) {
     // Match a cs
-    let captures = CS_RE.captures(proto).unwrap();
-    let csname = captures.get(0).map_or("", |m| m.as_str()).to_string();
+    let csname = captures.get(1).map_or("", |m| m.as_str()).to_string();
     cs = T_CS!(csname);
     // also replace in proto
     CS_RE.replace(proto, "").to_string()
-  } else if SINGLE_CHAR_RE.is_match(proto) {
+  } else if let Some(captures) = SINGLE_CHAR_RE.captures(proto) {
     // Match a single char cs, env name,...
-    let captures = SINGLE_CHAR_RE.captures(proto).unwrap();
-    cs = T_CS!(captures.get(0).map_or("", |m| m.as_str()).to_string());
+    cs = T_CS!(captures.get(1).map_or("", |m| m.as_str()).to_string());
     // also replace in proto
     SINGLE_CHAR_RE.replace(proto, "").to_string()
-  } else if ACTIVE_CHAR_RE.is_match(proto) {
-    // Match an active char
-    let captures = ACTIVE_CHAR_RE.captures(proto).unwrap();
-    cs = TokenizeInternal!(captures.get(0).map_or("", |m| m.as_str()), state)
+  } else if let Some(captures) = ACTIVE_CHAR_RE.captures(proto) {
+    // Match an active char    
+    cs = mouth::tokenize_internal(captures.get(1).map_or("", |m| m.as_str()), None)
       .unlist()
-      .first()
-      .unwrap()
-      .clone();
+      .remove(0);
     // also replace in proto
     ACTIVE_CHAR_RE.replace(proto, "").to_string()
   } else {
-    // Fatal('misdefined', prototype, $STATE->getStomach,
-    //   "Definition prototype doesn't have proper control sequence: \"prototype\""); }
-    proto.to_string()
-  };
-  final_proto = final_proto.trim_start().to_string();
+    let message = s!("Definition prototype doesn't have proper control sequence: \"{}\"", proto);
+    fatal!(Prototype, Misdefined, None, state, message);
+  }.trim().to_string();
   let paramlist = parse_parameters(final_proto, &cs, state)?;
   Ok((cs, paramlist))
 }
@@ -194,7 +186,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
   if parameters.is_empty() {
     Ok(None)
   } else {
-    Ok(Some(Parameters { params: parameters }))
+    Ok(Some(Parameters::new(parameters)))
   }
 }
 
@@ -234,8 +226,7 @@ pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<Co
       options.scope,
     ),
     custom => {
-      if CONDITIONAL_RE.is_match(custom) {
-        let captures = CONDITIONAL_RE.captures(custom).unwrap();
+      if let Some(captures) = CONDITIONAL_CS_RE.captures(custom) {
         let name = captures.get(1).map_or("", |m| m.as_str()).to_string();
         if !name.is_empty() && name != "case" && test.is_none() {
           // user-defined conditional, like with \newif

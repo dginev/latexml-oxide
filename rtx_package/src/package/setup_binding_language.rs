@@ -1759,12 +1759,6 @@ macro_rules! TokenizeInternal {
   ($string:expr) => {
     mouth::tokenize_internal($string, None)
   };
-  ($string:expr, None) => {
-    mouth::tokenize_internal($string, None)
-  };
-  ($string:expr, $state_arg:ident) => {
-    mouth::tokenize_internal($string, Some($state_arg))
-  };
 }
 
 #[macro_export]
@@ -1900,7 +1894,7 @@ macro_rules! AddToMacro {
   ($cs:literal, $tokens:literal) => {{
     bind_state_mut!(stmch,st);
     let cs = T_CS!($cs);
-    let tokens = TokenizeInternal!($tokens, st);
+    let tokens = mouth::tokenize_internal($tokens, None);
     // Needs error checking!
     let defn = st.lookup_definition(&cs);
     if defn.is_none() || !defn.as_ref().unwrap().is_expandable() {

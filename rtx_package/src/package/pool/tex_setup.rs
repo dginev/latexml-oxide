@@ -936,28 +936,34 @@ LoadDefinitions!(state, {
   });
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
 
-  // sub OptionalKeyVals {
-  //   my ($star, $plus, $gullet, @keyspec) = @_;
-  //   if ($gullet->ifNext(T_OTHER('['))) {
-  //     return (KeyVals_aux($gullet, T_OTHER(']'), [$star, $plus, @keyspec])); }
-  //   else { return (undef); } }
+  pub fn optional_key_vals(star: bool, plus: bool, keysets: Vec<Option<Parameters>>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+    if gullet.if_next(T_OTHER!("["), state)? {
+      let todo : Result<KeyVals> = Ok(key_vals_aux(gullet, T_OTHER!("]"), KVSpec {
+        star, plus, keysets, 
+        .. KVSpec::default()
+      }, state));
+      Ok(Tokens!())
+    } else {
+      Ok(Tokens!())
+    }
+  }
 
-  DefParameterType!("OptionalKeyVals", sub[gullet, inner, _extra, state] {unimplemented!(); ()
-  //  OptionalKeyVals(0, 0, @_); },
-  });
-  //   optional => 1, reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
-  DefParameterType!("OptionalKeyVals", sub[gullet, inner, _extra, state] {unimplemented!(); ()
-  //  OptionalKeyVals(1, 0, @_); },
-  });
-  //   optional => 1, reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
-  DefParameterType!("OptionalKeyVals", sub[gullet, inner, _extra, state] {unimplemented!(); ()
-  //  OptionalKeyVals(0, 1, @_); },
-  });
-  //   optional => 1, reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
-  DefParameterType!("OptionalKeyVals", sub[gullet, inner, _extra, state] {unimplemented!(); ()
-  //  OptionalKeyVals(1, 1, @_); },
-  });
-  //   optional => 1, reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
+  DefParameterType!("OptionalKeyVals", sub[gullet, inner, extra, state] {
+    optional_key_vals(false, false, inner, gullet, state)
+  }, optional=>true);
+  // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
+  DefParameterType!("OptionalKeyVals*", sub[gullet, inner, extra, state] {
+    optional_key_vals(true, false, inner, gullet, state)
+  }, optional=>true);
+  // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
+  DefParameterType!("OptionalKeyVals+", sub[gullet, inner, extra, state] {
+    optional_key_vals(false, true, inner, gullet, state)
+  }, optional=>true);
+  // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
+  DefParameterType!("OptionalKeyVals*+", sub[gullet, inner, extra, state] {
+    optional_key_vals(true, true, inner, gullet, state)
+  }, optional=>true);
+  // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
 
   // # Not sure that this is the most elegant solution, but...
   // # What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
