@@ -125,7 +125,11 @@ impl fmt::Display for Parameter {
 impl PartialEq for Parameter {
   fn eq(&self, other: &Parameter) -> bool { self.name == other.name }
 }
-impl Object for Parameter {}
+impl Object for Parameter {
+  fn stringify(&self) -> String {
+    self.spec.to_string()
+  }
+}
 
 lazy_static! {
   static ref OPTIONAL_REGEX: Regex = Regex::new(r"^Optional(.+)$").unwrap();
@@ -337,16 +341,37 @@ impl Parameter {
 }
 
 #[derive(Clone, Debug)]
-pub struct Parameters {
-  pub params: Vec<Parameter>,
+pub struct Parameters(Vec<Parameter>);
+
+impl Object for Parameters {
+  fn stringify(&self) -> String {
+    let mut result = String::new();
+    for parameter in self.0.iter() {
+      let s = parameter.stringify();
+      let lead_letter = match s.chars().next() {
+          Some(c) => c.is_alphanumeric(),
+          None => false,
+      };
+      let trail_letter = match result.chars().last() {
+        Some(c) => c.is_alphanumeric(),
+        None => false
+      };
+      if lead_letter && trail_letter {
+        result.push(' ');
+      }
+      result.push_str(&s);
+    }
+    result
+  }
 }
 
 impl Parameters {
-  pub fn get_num_args(&self) -> usize { self.params.iter().filter(|&p| !p.novalue).count() }
-  pub fn get_parameters(&self) -> Vec<&Parameter> { self.params.iter().map(|p| p).collect() }
+  pub fn new(params: Vec<Parameter>) -> Self { Parameters(params) }
+  pub fn get_num_args(&self) -> usize { self.0.iter().filter(|&p| !p.novalue).count() }
+  pub fn get_parameters(&self) -> Vec<&Parameter> { self.0.iter().map(|p| p).collect() }
   pub fn revert_arguments(&self, args: Vec<Tokens>, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
-    for (parameter, arg) in self.params.iter().zip(args.into_iter()) {
+    for (parameter, arg) in self.0.iter().zip(args.into_iter()) {
       if !parameter.novalue {
         tokens.append(&mut parameter.revert(arg, gullet, state)?.unlist());
       }
@@ -356,7 +381,7 @@ impl Parameters {
 
   pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Result<Vec<Tokens>> {
     let mut args = Vec::new();
-    for parameter in &self.params {
+    for parameter in &self.0 {
       let values = parameter.read(gullet, fordefn, state)?;
       if parameter.reader_predigest.is_some() {
         // TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest closure...
@@ -375,7 +400,7 @@ impl Parameters {
 
   pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Result<Vec<Option<Digested>>> {
     let mut args = Vec::new();
-    for parameter in &self.params {
+    for parameter in &self.0 {
       let value = parameter.read(&mut stomach.gullet, fordefn, state)?;
       if !parameter.novalue {
         let digested_value = parameter.digest(stomach, value, fordefn, state)?;
@@ -388,7 +413,7 @@ impl Parameters {
   pub fn reparse_argument(&self, _gullet: &mut Gullet, _value: Tokens, _state: &mut State) -> Tokens { Tokens!() }
   pub fn to_string(&self) -> String {
     let mut content = String::new();
-    for parameter in &self.params {
+    for parameter in &self.0 {
       let param_content = parameter.to_string();
       if LAST_WCHAR_RE.is_match(&content) && FIRST_WCHAR_RE.is_match(&param_content) {
         content.push(' ');

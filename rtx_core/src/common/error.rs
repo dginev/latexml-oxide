@@ -194,6 +194,7 @@ pub enum ErrorTarget {
   Package,
   Parameter,
   ParamSpec,
+  Prototype,
   Converter,
   Mouth,
   Core,

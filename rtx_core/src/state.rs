@@ -767,11 +767,15 @@ impl State {
     };
   }
 
-  // pub fn lookup_MappingKeys {
-  //   my ($self, $map) = @_;
-  //   my $vtable  = $$self{value};
-  //   my $mapping = $$vtable{$map}[0];
-  //   return ($mapping ? sort keys %$mapping : ()); }
+  pub fn lookup_mapping_keys(&self, map: &str) -> Vec<&str> {
+    match self.value.get(map) {
+      None => Vec::new(),
+      Some(map_vec) => match map_vec.front() {
+        Some(&Stored::HashStored(ref h)) => h.keys().map(|k| k.as_str()).collect(),
+        _ => Vec::new()
+      }
+    }
+  }
 
   pub fn lookup_stacked_values(&self, key: &str) -> Vec<&Stored> {
     if let Some(vdq) = self.value.get(key) {

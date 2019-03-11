@@ -84,13 +84,14 @@ impl fmt::Display for Primitive {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { unimplemented!(); }
 }
 impl Object for Primitive {
-  fn stringify(&self) -> String { unimplemented!(); }
+  fn stringify(&self) -> String {
+    <Self as Definition>::stringify_type(&self, "Primitive")
+  }
 }
 impl Definition for Primitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn is_prefix(&self) -> bool { self.is_prefix }
-  fn identifier(&self) -> String { s!("Primitive[{}]",self.cs.stringify()) }
 
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {

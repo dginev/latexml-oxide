@@ -181,12 +181,13 @@ impl fmt::Display for MathPrimitive {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { unimplemented!(); }
 }
 impl Object for MathPrimitive {
-  fn stringify(&self) -> String { unimplemented!(); }
+  fn stringify(&self) -> String {
+    <Self as Definition>::stringify_type(&self, "MathPrimitive")
+  }
 }
 impl Definition for MathPrimitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }
-  fn identifier(&self) -> String { s!("MathPrimitive[{}]",self.cs.stringify()) }
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
     Info!("MathPrimitive","invoke",stomach, state, "invoke for {:?}", self.cs);

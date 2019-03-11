@@ -766,6 +766,12 @@ impl Mouth {
 // We also allow for explicitly passing the state in, so that one could memoize state creation
 // using lazy_static doesnt work here as State is too complex an object
 
+// Rust note: 1) can we avoid reinitializing a state for each tokenize call? I am not sure if that is actually slow in practice,
+// but it ought to be at least suboptimal.
+// 2) If we move the $literal argument Tokenize/TokenizeInternal calls into rtx_codegen at compile_time, 
+// we can bunch them together as a global object in codegen maybe? Then at least we can optimize the compile pass
+// + avoid runtime tokenization in the literal binding definitions.
+
 pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
   match state_opt {
     None => {

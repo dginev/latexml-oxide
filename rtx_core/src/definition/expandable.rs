@@ -77,7 +77,9 @@ impl Object for Expandable {
   fn is_definition(&self) -> bool { true }
   fn is_expandable(&self) -> bool { true }
   fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
-  fn stringify(&self) -> String { unimplemented!(); }
+  fn stringify(&self) -> String {
+    <Self as Definition>::stringify_type(&self, "Expandable")
+  }
 }
 impl Definition for Expandable {
   fn is_protected(&self) -> bool { self.is_protected }
@@ -91,7 +93,6 @@ impl Definition for Expandable {
   }
   fn get_expansion(&self) -> Option<&ExpansionBody> { self.expansion.as_ref() }
   fn get_alias(&self) -> Option<&String> { self.alias.as_ref() }
-  fn identifier(&self) -> String { s!("Expandable[{}]",self.cs.stringify()) }
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     // Expand the expandable control sequence. This should be carried out by the Gullet.
     // log!("-- expandable invoke for {:?}", self.get_cs());
