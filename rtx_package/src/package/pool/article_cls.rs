@@ -46,18 +46,17 @@ LoadDefinitions!(state, {
   RelaxNGSchema!("LaTeXML");
   RequireResource!("ltx-article.css");
 
-  // TODO:
-  // # This makes the authors appear on 1 line;
-  // # for derived classes with multiple lines, map this to undef and add ltx_authors_multiline
+  // This makes the authors appear on 1 line;
+  // for derived classes with multiple lines, map this to undef and add ltx_authors_multiline
 
-  // AddToMacro(T_CS('\maketitle'), T_CS('\ltx@authors@oneline'));
+  AddToMacro!("\\maketitle", "\\ltx@authors@oneline");
 
-  // DefMacro('\@ptsize', '0');    # should depend on options...
-  // RawTeX(<<'EOTeX');
-  // \newif\if@restonecol
-  // \newif\if@titlepage
-  // \@titlepagefalse
-  // EOTeX
+  DefMacro!("\\@ptsize", "0");    // should depend on options...
+  RawTeX!(r"###
+  \newif\if@restonecol
+  \newif\if@titlepage
+  \@titlepagefalse
+  ###");
 
   //**********************************************************************
   // The core sectioning commands are defined in LaTeX.pm

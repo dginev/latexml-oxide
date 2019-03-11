@@ -170,6 +170,7 @@ pub trait Definition: Object {
   fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> { unimplemented!() }
   fn register_type(&self) -> Option<RegisterType> { None }
   fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
+  fn get_expansion(&self) -> Option<&ExpansionBody> { None }
   fn identifier(&self) -> String;
 }
 
