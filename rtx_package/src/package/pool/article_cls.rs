@@ -1,11 +1,11 @@
 use crate::package::*;
 use rtx_core::state::State;
 
-LoadDefinitions!(state, {
+LoadDefinitions!(stomach, state, {
   LoadPool!("LaTeX");
   //**********************************************************************
   // Option handling
-  for _option in [
+  for option in [
     "10pt",
     "11pt",
     "12pt",
@@ -26,20 +26,20 @@ LoadDefinitions!(state, {
     "twocolumn",
     "notitlepage",
     "titlepage",
-  ]
+  ]  
   .iter()
-  .map(ToString::to_string)
   {
-    // DeclareOption!(option, None);
+    DeclareOption!(option.to_string(), None);
   }
 
+  // TODO:
   // DeclareOption!("openbib",
   // || { RequireResource!(None, type: "text/css", content: ".ltx_bibblock{display:block;}");
   // }); DeclareOption!("leqno", || { state.assign_mapping("DOCUMENT_CLASSES", "ltx_leqno": 1);
   // }); DeclareOption!("fleqn", || { state.assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn": 1);
   // });
 
-  // ProcessOptions!();
+  ProcessOptions!(stomach);
 
   //**********************************************************************
   // Document structure.
@@ -97,7 +97,6 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\refname", "References");
 
-  // TODO:
   Tag!("ltx:appendix", auto_close => true);
   DefMacro!("\\appendix", "\\@appendix");
   // Actually we should be using section counter
