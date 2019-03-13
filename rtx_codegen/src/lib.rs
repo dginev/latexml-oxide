@@ -8,8 +8,7 @@ use syn::{parse_macro_input, DeriveInput};
 mod ast_builder;
 mod constructable;
 mod modelable;
-
-static mut CONTEXT_DEPTH: u32 = 0;
+mod tokenizeable;
 
 #[proc_macro_derive(CompileReplacement, attributes(replacement))]
 pub fn derive_compile_replacement(input: TokenStream) -> TokenStream {
@@ -20,7 +19,7 @@ pub fn derive_compile_replacement(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(CompileExpansion, attributes(expansion))]
 pub fn derive_compile_expansion(input: TokenStream) -> TokenStream {
   let item = parse_macro_input!(input as DeriveInput);
-  constructable::compile_expansion(item)
+  tokenizeable::compile_expansion(item)
 }
 
 #[proc_macro_derive(LoadModel, attributes(name))]
@@ -38,6 +37,26 @@ pub fn derive_load_indirect_model(input: TokenStream) -> TokenStream {
   modelable::load_indirect_model(item)
 }
 
+#[proc_macro_derive(CompileTokens, attributes(literal))]
+pub fn derive_compile_tokenize(input: TokenStream) -> TokenStream {
+  let item = parse_macro_input!(input as DeriveInput);
+  tokenizeable::compile_tokenize(item)
+}
+
+#[proc_macro_derive(CompileTokensInternal, attributes(literal))]
+pub fn derive_compile_tokenize_internal(input: TokenStream) -> TokenStream {
+  let item = parse_macro_input!(input as DeriveInput);
+  tokenizeable::compile_tokenize_internal(item)
+}
+
+static mut CONTEXT_DEPTH: u32 = 0;
+// Update: still good to track the rust GH issue, but we have already found a solution,
+//         just one that the Rust team would certainly frown upon. 
+//         In essence the `BoundState` proc derive uses a mutable singleton depth meter
+//         which gets switched up/down via our custom `start_state_frame!`/`end_state_frame!` macro switches
+//         this effectively allows us to do context-sensitive macro definition of `state!`,
+//         binding it locally to `outer_state!` in the initial context, and to `inner_state!` in all others.
+//
 // May be good to track: https://github.com/rust-lang/rust/issues/54727
 // to see if it becomes possible one day to use this type of technique,
 // which would allow declarations such as:
