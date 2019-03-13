@@ -5,7 +5,6 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, Lit, Meta};
 
-use rtx_core::mouth;
 use rtx_core::util::text::*;
 
 // We recognize several special operators:
@@ -114,43 +113,6 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
   quote!(
     macro_rules! this_replacement {
       () => {#compiled_replacement_closure}
-    }
-  )
-  .into()
-}
-
-pub fn compile_expansion(input: DeriveInput) -> TokenStream {
-  let expansion: String = match input.attrs[0].parse_meta().unwrap() {
-    Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value().to_string(),
-      _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"),
-    },
-    _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"),
-  };
-
-  let compiled_expansion = if expansion.is_empty() {
-    quote!(None)
-  } else {
-    // dbg!(&expansion);
-    let performed_expansion = mouth::tokenize_internal(&expansion, None);
-
-    // println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(),
-    // performed_expansion); TODO: Should "substitute_parameters" be
-    // specially performed for runtime-read expansions (via RawTeX?), e.g. when
-    // reading external style files? should that even be allowed? We
-    // can easily pre-compile all of texlive (or the ~200 supported sty and cls
-    // files in the ecosystem) once and have all expansions handled by
-    // this code snippet.
-    quote!(
-      Some(ExpansionBody::Tokens(#performed_expansion))
-    )
-  };
-  // We have to jump an extra hoop, since we are forcing the struct-derive
-  // mechanism. Once the new procedural macro scheme lands, this begs to be
-  // refactored.
-  quote!(
-    macro_rules! this_expansion {
-      () => {#compiled_expansion}
     }
   )
   .into()

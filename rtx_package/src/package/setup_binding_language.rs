@@ -1741,6 +1741,11 @@ macro_rules! DigestText {
 /// LaTeXML::Core::Tokens
 #[macro_export]
 macro_rules! Tokenize {
+  ($string:literal) => {{
+    let tokenized;
+    compile_tokenize!(tokenized, $string);
+    tokenized
+  }};
   ($string:expr) => {
     mouth::tokenize($string, None)
   };
@@ -1756,6 +1761,11 @@ macro_rules! Tokenize {
 /// LaTeXML::Core::Tokens
 #[macro_export]
 macro_rules! TokenizeInternal {
+  ($string:literal) => {{
+    let tokenized;
+    compile_tokenize_internal!(tokenized, $string);
+    tokenized
+  }};
   ($string:expr) => {
     mouth::tokenize_internal($string, None)
   };
@@ -1894,7 +1904,7 @@ macro_rules! AddToMacro {
   ($cs:literal, $tokens:literal) => {{
     bind_state_mut!(stmch,st);
     let cs = T_CS!($cs);
-    let tokens = mouth::tokenize_internal($tokens, None);
+    let tokens = TokenizeInternal!($tokens);
     // Needs error checking!
     let defn = st.lookup_definition(&cs);
     if defn.is_none() || !defn.as_ref().unwrap().is_expandable() {

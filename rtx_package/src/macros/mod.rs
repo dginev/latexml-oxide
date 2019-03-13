@@ -56,3 +56,29 @@ macro_rules! load_model {
     // $var.indirect_model = Some(indirect_model);
   }};
 }
+
+#[macro_export]
+/// Macro for compiling string literal tokens into their usual Tokens representation
+macro_rules! compile_tokenize {
+  ($var:ident, $literal:expr) => {{
+    #[derive(CompileTokens)]
+    #[literal=$literal]
+    struct _Dummy;
+    let tmp: Tokens = these_tokens!();
+    $var = tmp;
+  }};
+}
+
+
+#[macro_export]
+/// Macro for compiling string literal tokens into their preamble Tokens representation
+macro_rules! compile_tokenize_internal {
+  ($var:ident, $literal:expr) => {{
+    #[derive(CompileTokensInternal)]
+    #[literal=$literal]
+    struct _Dummy;
+    let tmp: Tokens = these_internal_tokens!();
+    $var = tmp;
+  }};
+}
+
