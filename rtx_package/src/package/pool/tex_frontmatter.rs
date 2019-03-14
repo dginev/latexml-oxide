@@ -13,6 +13,18 @@
 use crate::package::*;
 use rtx_core::document::tag::TagConstructionClosure;
 use std::collections::HashSet;
+const FRONTMATTER_ELEMENTS : &[&str]= &[
+  "ltx:title",
+  "ltx:toctitle",
+  "ltx:subtitle",
+  "ltx:creator",
+  "ltx:date",
+  "ltx:abstract",
+  "ltx:keywords",
+  "ltx:classification",
+  "ltx:acknowledgements",
+];
+
 LoadDefinitions!(state, {
   AssignValue!("frontmatter", Stored::HashTagData(HashMap::new()), Some(Scope::Global));
 
@@ -93,17 +105,9 @@ LoadDefinitions!(state, {
   // output any frontmatter that was accumulated.
 
   let insert_frontmatter: Vec<TagConstructionClosure> = tagsub!(document, node, state, {
-    let frontmatter_elements: HashSet<String> = [
-      "ltx:title",
-      "ltx:toctitle",
-      "ltx:subtitle",
-      "ltx:creator",
-      "ltx:date",
-      "ltx:abstract",
-      "ltx:keywords",
-      "ltx:classification",
-      "ltx:acknowledgements",
-    ]
+    // this happens only once, not a big deal to skip the lazy_static! and keep it in the closure
+    let frontmatter_elements_set: HashSet<String> = 
+    FRONTMATTER_ELEMENTS
     .iter()
     .map(ToString::to_string)
     .collect();
@@ -113,8 +117,13 @@ LoadDefinitions!(state, {
       _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
     };
     state.assign_value("frontmatter", Stored::HashTagData(HashMap::new()), Some(Scope::Global));
-    let state_keys: HashSet<String> = frontmatter.keys().cloned().collect();
-    let mut all_keys: HashSet<String> = frontmatter_elements.union(&state_keys).cloned().collect();
+
+    // order is important here, first go through frontmatter_elements, then any leftover keys.
+    let custom_keys : Vec<String> = frontmatter.keys().filter(|key| !frontmatter_elements_set.contains(key.as_str()))
+      .map(ToString::to_string).collect();
+    let mut all_keys : Vec<String> = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
+    all_keys.extend(custom_keys);
+    
     for key in &all_keys {
       if let Some(list) = frontmatter.remove(key) {
         // Dubious, but assures that frontmatter appears in text mode...

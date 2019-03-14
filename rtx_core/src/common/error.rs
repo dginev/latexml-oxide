@@ -118,6 +118,15 @@ macro_rules! Error {
   }}
 }
 
+// TODO: flehs out the messages
+#[macro_export]
+macro_rules! Fatal {
+  ($target:tt, $category:tt, $where:expr, $state: expr, $message:expr) => {{
+    fatal!($target, $category, $message); 
+  }};
+
+}
+
 
 #[macro_export]
 macro_rules! fatal {
