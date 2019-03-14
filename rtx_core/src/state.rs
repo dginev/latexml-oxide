@@ -927,19 +927,19 @@ impl State {
     self.assign_internal(TableName::Meaning, &token.get_cs_name(), meaning, scope);
   }
 
-  pub fn lookup_definition_internal<'def>(&'def self, key: &'def Token) -> Option<&VecDeque<Stored>> {
-    let cc = &key.get_catcode();
-    let name = &key.get_string();
-    let lookupname: &str = if (cc == &Catcode::ACTIVE) || (cc == &Catcode::CS) {
+  fn lookup_definition_internal<'def>(&'def self, key: &'def Token) -> Option<&VecDeque<Stored>> {
+    let cc = key.get_catcode();
+    let name = key.get_string();
+    let lookupname: &str = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
       name
     } else {
       cc.name()
     };
 
-    if lookupname.is_empty() {
-      None
-    } else {
+    if !lookupname.is_empty() {
       self.meaning.get(lookupname)
+    } else {
+      None
     }
   }
 
@@ -948,8 +948,8 @@ impl State {
   /// nor cs let to executable tokens
   /// This returns a definition object, or undef
   pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Rc<Definition>> {
-    match self.lookup_definition_internal(key) {
-      Some(defs) => match defs.front() {
+    if let Some(defs) = self.lookup_definition_internal(key) {
+      match defs.front() {
         Some(Stored::Conditional(entry)) => Some(entry.clone()),
         Some(Stored::Constructor(entry)) => Some(entry.clone()),
         Some(Stored::Expandable(entry)) => Some(entry.clone()),
@@ -971,8 +971,9 @@ impl State {
           None
         },
         None => None,
-      },
-      _ => None,
+      }
+    } else {
+      None
     }
   }
 
