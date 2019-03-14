@@ -32,6 +32,8 @@ LoadDefinitions!(state, {
     // Be careful since the contents may also want to add frontmatter
     // (which should be inside or after this one!)
     // So, we append this entry before digesting
+    println!("Adding frontmatter: ");
+    dbg!(keys);
     // if ($keys && $keys->hasKey('replace') && $$frontmatter{$tag}) {    // if replace and
     // previous entries $$frontmatter{$tag} = []; }
     // // Remove previous entries if ($keys && $keys->hasKey('ifnew') &&

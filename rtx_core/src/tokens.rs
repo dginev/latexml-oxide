@@ -12,6 +12,7 @@ use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
 use crate::common::glue::{Glue, MuGlue};
 use crate::common::number::Number;
+use crate::keyvals::KeyVals;
 use crate::definition::register::RegisterValue;
 use crate::state::State;
 use crate::stomach::Stomach;
@@ -151,6 +152,17 @@ impl Tokens {
   pub fn to_mu_dimension(&self) -> MuDimension {
     let token: Token = self.into();
     token.to_mu_dimension()
+  }
+
+  /// to_keyvals casts back to a parsed KeyVals (usually via a KeyVals parameter type)
+  /// which had to be re-converted to a Tokens for reentering the expansion flow
+  pub fn to_keyvals(&self) -> KeyVals {
+    let mut toks_iter = self.as_ref_unlist().iter();
+    while let Some(key) = toks_iter.next() {
+      let value = toks_iter.next();
+      dbg!((key, value)); // TODO
+    }
+    KeyVals::default()
   }
 
   /// Methods for overloaded ops.

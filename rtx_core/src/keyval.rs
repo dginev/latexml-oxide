@@ -52,4 +52,10 @@ impl KeyVal {
       Some(v) => Some((*v).clone()),
     }
   }
+  pub fn get_type<'a>(&'a self, state: &'a State) -> Option<String> {
+    match self.get_prop("type", state) {
+      None => None,
+      Some(v) => Some(v.to_string())
+    }
+  }
 }

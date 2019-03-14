@@ -192,7 +192,7 @@ LoadDefinitions!(state, {
     } else {
       T_OTHER!("")
     }).collect();
-    gullet.read_until(vec![Tokens::new(until)], state)
+    gullet.read_until(&[&Tokens::new(until)], state)
   },
   reversion => reversion!(gullet, arg, until, state, {
     let mut rev = Vec::new();
@@ -382,7 +382,7 @@ LoadDefinitions!(state, {
         false
       }
     ).map(Into::into).collect();
-    match gullet.read_match(&[Tokens::new(extra_tokens)], state)? {
+    match gullet.read_match(&[&Tokens::new(extra_tokens)], state)? {
       Some(t) => Ok(t),
       None => Ok(Tokens!())
     }
@@ -454,7 +454,7 @@ LoadDefinitions!(state, {
   // Be careful here: if % appears before the initial {, it's still a comment!
   // Also, note that non-typewriter fonts will mess up some chars on digestion!
   DefParameterType!("Verbatim", sub[gullet, inner, _extra, state] {
-      gullet.read_until(vec![Tokens!(T_BEGIN!())], state)?;
+      gullet.read_until(&[&Tokens!(T_BEGIN!())], state)?;
       state.begin_semiverbatim(Some(vec!['%', '\\']));
       let arg = gullet.read_balanced(state)?;
       state.end_semiverbatim()?;
@@ -938,10 +938,10 @@ LoadDefinitions!(state, {
 
   pub fn optional_key_vals(star: bool, plus: bool, keysets: Vec<Option<Parameters>>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     if gullet.if_next(T_OTHER!("["), state)? {
-      let todo : Result<KeyVals> = Ok(key_vals_aux(gullet, Some(T_OTHER!("]")), KVSpec {
+      let todo : Result<KeyVals> = key_vals_aux(gullet, Some(T_OTHER!("]")), KVSpec {
         star, plus, keysets, 
         .. KVSpec::default()
-      }, state));
+      }, state);
       Ok(Tokens!())
     } else {
       Ok(Tokens!())
@@ -949,20 +949,36 @@ LoadDefinitions!(state, {
   }
 
   DefParameterType!("OptionalKeyVals", sub[gullet, inner, extra, state] {
-    optional_key_vals(false, false, inner, gullet, state)
-  }, optional=>true);
+      optional_key_vals(false, false, inner, gullet, state)
+    },
+    reader_predigest => reader_predigest!(stomach, arg, state, {
+      arg.to_keyvals()
+    }),
+   optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
   DefParameterType!("OptionalKeyVals*", sub[gullet, inner, extra, state] {
-    optional_key_vals(true, false, inner, gullet, state)
-  }, optional=>true);
+      optional_key_vals(true, false, inner, gullet, state)
+    },
+    reader_predigest => reader_predigest!(stomach, arg, state, {
+      arg.to_keyvals()
+    }),
+   optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
   DefParameterType!("OptionalKeyVals+", sub[gullet, inner, extra, state] {
-    optional_key_vals(false, true, inner, gullet, state)
-  }, optional=>true);
+      optional_key_vals(false, true, inner, gullet, state)
+    },
+    reader_predigest => reader_predigest!(stomach, arg, state, {
+      arg.to_keyvals()
+    }),
+   optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
   DefParameterType!("OptionalKeyVals*+", sub[gullet, inner, extra, state] {
-    optional_key_vals(true, true, inner, gullet, state)
-  }, optional=>true);
+      optional_key_vals(true, true, inner, gullet, state)
+    },
+    reader_predigest => reader_predigest!(stomach, arg, state, {
+      arg.to_keyvals()
+    }),
+   optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
 
   // # Not sure that this is the most elegant solution, but...

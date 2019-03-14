@@ -15,8 +15,8 @@ use crate::document::Document;
 // use crate::list::List;
 use crate::keyval::KeyVal;
 use crate::state::State;
-use crate::token::Token;
-// use crate::tokens::Tokens;
+use crate::token::{Catcode, Token};
+use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
 
 type KVTuple = (String, Stored, bool, Vec<KeyVal>, KeyVal);
@@ -154,7 +154,7 @@ impl KeyVals {
   //======================================================================
   // Resolution to KeySets
   //======================================================================
-  fn resolve_key_val_for(&self, key: &str) -> Vec<KeyVal> {
+  fn resolve_keyval_for(&self, key: &str) -> Vec<KeyVal> {
     // my $prefix  = $self->getPrefix;
     // my @keysets = $self->getKeySets;
     // let sets = Vec::new();
@@ -177,13 +177,46 @@ impl KeyVals {
     Vec::new()
   }
 
-  fn get_primary_key_val_of(&self, key: &str, keysets: &[KeyVal]) -> KeyVal {
+  fn get_primary_keyval_of(&self, key: &str, keysets: &[KeyVal]) -> KeyVal {
     if keysets.is_empty() {
       KeyVal::new(Some(self.prefix.clone()), self.keysets[0].clone(), key.to_string())
     } else {
       keysets[0].clone()
     }
   }
+
+  fn read_keyword_from(&self, gullet: &mut Gullet, ignore: &[&Token], state: &mut State) -> Result<(Vec<Token>, Option<Token>)> {
+    // set of tokens we will expand
+    let mut tokens = Vec::new();
+
+    // we do not want any spaces
+    gullet.skip_spaces(state);
+
+    // read tokens one-by-one
+    let mut last_token = None;
+    while let Some(token) = gullet.read_x_token(false, false, state)? {
+      // skip to the next iteration if we have a paragraph
+      if token == T_CS!("\\par") {
+        continue;
+      }
+
+      // if we have one of out delimiters, we end
+      if ignore.iter().any(|delim| token == **delim) {
+        last_token = Some(token);
+        break;
+      }
+
+      // push a token unless we have a space
+      // TODO: remove or normalize
+      if token.get_catcode() != Catcode::SPACE {
+        tokens.push(token);
+      }
+    }
+
+    // return the tokens and the last token
+    Ok((tokens, last_token))
+  }
+
 
   //======================================================================
   // Public accessors of all the values
@@ -206,8 +239,8 @@ impl KeyVals {
 
   pub fn add_value(&mut self, key: &str, value: Stored, use_default: bool, no_rebuild: bool, state: &State) {
     // figure out the keyset(s) for the key to be added
-    let keysets = self.resolve_key_val_for(key);
-    let headset = self.get_primary_key_val_of(key, &keysets);
+    let keysets = self.resolve_keyval_for(key);
+    let headset = self.get_primary_keyval_of(key, &keysets);
 
     // and add the new tuple to the set of tuples
     let value = if use_default {
@@ -273,9 +306,8 @@ impl KeyVals {
   // This method reads the keyval pairs INCLUDING the delimiters, (rather than
   // parsing after the fact), since some values may have special catcode needs.
 
-  pub fn read_from(&mut self, gullet: &mut Gullet, until: Token) {
+  pub fn read_from(&mut self, gullet: &mut Gullet, until: Token, state: &mut State) -> Result<()> {
     // TODO
-
     // # if we want to force skipMissing keys, we set it up here
     // my $silenceMissing = $options{silenceMissing} ? 1 : 0;
 
@@ -287,82 +319,111 @@ impl KeyVals {
     //   $$self{skipMissing} = 1;
     //   $$self{hookMissing} = undef; }
 
-    // # read the opening token and figure out where we are
-    // my $startloc = $gullet->getLocator;
+    // read the opening token and figure out where we are
+    let startloc = gullet.get_locator().into_owned();
 
-    // # set and read tokens
-    // my $open = $gullet->readToken;
-    // $$self{assign} = T_OTHER('=');
-    // $$self{punct}  = T_OTHER(',');
+    // set and read tokens
+    let open = gullet.read_token(state);
+    let assign = T_OTHER!("=");
+    let punct  = T_OTHER!(",");
+    let punct_tks = Tokens!(T_OTHER!(","));
+    let until_tks = Tokens!(until.clone());
     // my ($punct, $assign) = ($$self{punct}, $$self{assign});
 
-    // # create arrays for key-value pairs and explicit values
-    // my @kv        = ();
-    // my @explicits = ();
+    // create arrays for key-value pairs and explicit values
+    // TODO:
+    // let mut kv        = Vec::new();
+    // let mut explicits = Vec::new();
 
-    // # iterate over all the key-value pairs to read
-    // while (1) {
+    // iterate over all the key-value pairs to read
+    loop {
 
-    //   # gobble spaces
-    //   $gullet->skipSpaces;
+      // gobble spaces
+      gullet.skip_spaces(state);
 
-    //   # Read a single keyword, get a delimiter and a set of keyword tokens
-    //   my ($ktoks, $delim) = $self->readKeyWordFrom($gullet, $until);
+      // Read a single keyword, get a delimiter and a set of keyword tokens
+      let (ktoks, delim) = self.read_keyword_from(gullet, &[&until, &assign, &punct], state)?;
 
-    //   # if there was no delimiter at the end, we throw an error
-    //   Error('expected', $until, $gullet,
-    //     "Fell off end expecting " . Stringify($until) . " while reading KeyVal key",
-    //     "key started at " . ToString($startloc))
-    //     unless $delim;
+      // if there was no delimiter at the end, we throw an error
+      if delim.is_none() {
+        let message = s!("Fell off end expecting {} while reading KeyVal key", until.stringify());
+        let message2 = s!("key started at {}", startloc.to_string());
+        Error!("expected", until, gullet, state, message, message2);
+      }
 
-    //   # turn the key tokens into a string and normalize
-    //   my $key = ToString($ktoks); $key =~ s/\s//g;
+      // turn the key tokens into a string and normalize
+      let mut key = Tokens!(ktoks).to_string();
+      key = key.split_whitespace().collect::<Vec<&str>>().join("");
 
-    //   # if we have a non-empty key
-    //   if ($key) {
+      // if we have a non-empty key
+      if !key.is_empty() {
+        let mut value = Tokens!();
+        let is_default : bool = delim.is_none() || delim.as_ref().unwrap() != &assign;
 
-    //     my $value;
-    //     my $isDefault;
+        // if we have an '=', we explcity assign a value
+        if !is_default {
+          // setup the key-codes to properly read
+          let keyval = self.get_primary_keyval_of(&key, &self.resolve_keyval_for(&key));
+          let keydef_opt = keyval.get_type(state);
+          if let Some(ref keydef) = keydef_opt {
+            // TODO:
+            // keydef.setup_catcodes();
+          }
 
-    //     # if we have an '=', we explcity assign a value
-    //     if ($delim->equals($assign)) {
-    //       $isDefault = 0;
+          // read until $punct
+          let mut toks = Vec::new();
+          let mut delim_opt = None;
+          loop {
+            delim_opt = gullet.read_match(&[&punct_tks, &until_tks], state)?;
+            if delim_opt.is_some() {
+              break; // only until we hit a delim.
+            }
+            if let Some(tok) = gullet.read_token(state) { // Copy next token to args
+              let mut rest = Vec::new();
+              if tok.get_catcode() == Catcode::BEGIN {
+                rest.append(&mut gullet.read_balanced(state)?.unlist());
+                rest.push(T_END!());
+              }
+              // record for keyvals
+              toks.push(tok);
+              toks.append(&mut rest);
+            } else { break; }
+          }
+          // reparse (and expand) the tokens representing the value
+          if !toks.is_empty() {            
+            value = Tokens::new(toks);
+            if let Some(ref keydef) = keydef_opt {
+              // TODO:
+              // value = keydef.reparse(gullet, value)
+            }
+          }
+          // and cleanup
+          if let Some(ref keydef) = keydef_opt {
+            // TODO:
+            // keydef.revert_catcodes()
+          }
+        }
+      
+        // and store our value please
+        // if !silence_missing || self.can_resolve_keyval_for(key) {
+          self.add_value(&key, Stored::Tokens(value), is_default, false, state);
+        // }
+      }
 
-    //       # setup the key-codes to properly read
-    //       my $keyval = $self->getPrimaryKeyValOf($key, $self->resolveKeyValFor($key));
-    //       my $keydef = $keyval->getType();
-    //       $keydef->setupCatcodes if $keydef;
+      // we finish if we have the last element
+      if delim.is_some() && delim.as_ref().unwrap() == &until {
+        break;
+      }
+    }
 
-    //       # read until $punct
-    //       my ($tok, @toks) = ();
-    //       while ((!defined($delim = $gullet->readMatch($punct, $until)))
-    //         && (defined($tok = $gullet->readToken()))) {    # Copy next token to args
-    //         push(@toks, $tok,
-    //           ($tok->getCatcode == CC_BEGIN ? ($gullet->readBalanced->unlist, T_END) : ())); }
-
-    //       # reparse (and expand) the tokens representing the value
-    //       $value = Tokens(@toks);
-    //       $value = $keydef->reparse($gullet, $value) if $keydef && $value;
-
-    //       # and cleanup
-    //       $keydef->revertCatcodes if $keydef; }
-
-    //     # we did not get an '=', and thus need to read the default value
-    //     else { $isDefault = 1; }
-
-    //     # and store our value please
-    //     $self->addValue($key, $value, $isDefault, 0) if (!$silenceMissing || $self->canResolveKeyValFor($key)); }
-
-    //   # we finish if we have the last element
-    //   last if $delim->equals($until); }
-
-    // # rebuild and return nothing
+    // rebuild and return nothing
     // $self->rebuild;
 
     // # restore all settings if we silenced the missing keys
     // if ($silenceMissing) {
     //   $$self{skipMissing} = $skipMissing;
     //   $$self{hookMissing} = $hookMissing; }
+    Ok(())
   }
 }
 
