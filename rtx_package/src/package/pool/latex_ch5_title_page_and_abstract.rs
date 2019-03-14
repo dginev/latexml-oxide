@@ -132,11 +132,7 @@ LoadDefinitions!(state, {
   },
   locked => true);
   DefMacro!("\\abstract@onearg{}", "\\begin{abstract}#1\\end{abstract}");
-
-  DefMacro!("\\maybe@end@abstract", sub[gullet,args,state] {
-   T_CS!("\\endabstract")
-  });
-
+  DefMacro!("\\maybe@end@abstract", "\\endabstract");
   DefMacro!("\\abstractname", "Abstract");
   DefMacro!("\\format@title@abstract{}", "#1");
 
