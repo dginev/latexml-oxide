@@ -4,6 +4,7 @@ pub mod def_dialect;
 pub mod cleaners;
 
 use std::collections::VecDeque;
+use std::rc::Rc;
 use regex::Regex;
 use lazy_static::lazy_static;
 
@@ -16,6 +17,7 @@ use rtx_core::tokens::Tokens;
 use rtx_core::token::*;
 use rtx_core::definition::register::*;
 use rtx_core::tbox::Tbox;
+use rtx_core::keyvals::KeyVals;
 
 // Constants for the API functions stay here as well
 
@@ -193,4 +195,8 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for Option<Digested> {
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for Result<Option<Digested>> {
   fn into_digested_option_result(self) -> Result<Option<Digested>> { self }
 }
-
+impl IntoDigestedOptionResult<Result<Option<Digested>>> for KeyVals {
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { 
+    Ok(Some(Digested::KeyVals(Rc::new(self))))
+  }
+}
