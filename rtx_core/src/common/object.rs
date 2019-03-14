@@ -5,7 +5,9 @@ use std::borrow::Cow;
 use crate::common::error::*;
 use crate::common::locator::Locator;
 use crate::tokens::Tokens;
-use crate::tbox::Tbox;
+use crate::stomach::Stomach;
+use crate::state::State;
+use crate::Digested;
 
 // ======================================================================
 // LaTeXML Object
@@ -41,8 +43,8 @@ pub trait Object {
 
   // These should really only make sense for Data objects within the
   // processing stream.
-  // Defaults (probably poor)
-  fn be_digested(&self) -> Result<Tbox> { Ok(Tbox::default()) }
+  fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> 
+  where Self: Sized { unimplemented!() }
 
   // fn be_absorbed(&self, _document: Document) { unimplemented!() }
   fn get_locator(&self) -> Cow<Locator> { unimplemented!(); }

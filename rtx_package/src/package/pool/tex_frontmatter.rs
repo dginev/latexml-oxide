@@ -24,7 +24,7 @@ LoadDefinitions!(state, {
   // //   ifnew   (only add if no previous entry)//
 
   DefPrimitive!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}", sub[stomach, args, state] {
-    unpack!(args => keys, tag, attr, tokens);
+    unpack!(args => keys, tag, attrs, tokens);
     // Digest this as if we're already in the document body!
     let inpreamble = LookupBool!("inPreamble");
     AssignValue!("inPreamble", false);
@@ -32,20 +32,25 @@ LoadDefinitions!(state, {
     // Be careful since the contents may also want to add frontmatter
     // (which should be inside or after this one!)
     // So, we append this entry before digesting
-    println!("Adding frontmatter: ");
-    dbg!(keys);
-    // if ($keys && $keys->hasKey('replace') && $$frontmatter{$tag}) {    // if replace and
-    // previous entries $$frontmatter{$tag} = []; }
-    // // Remove previous entries if ($keys && $keys->hasKey('ifnew') &&
-    // $$frontmatter{$tag}) {      // if ifnew and previous entries return; }
-    // // Skip this one.   if ($attr) {
-    //     $$entry[1] = { $attr->beDigested($stomach)->getHash }; }
-    //   $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
+    
+    // TODO: Port over keys handling from TeX.pool
+    let attrs_digested = if attrs.is_empty() {
+      None 
+    } else {
+      // WAS: $$entry[1] = { $attr->beDigested($stomach)->getHash };
+      let attr_kvs = attrs.to_keyvals(state);
+      if let Digested::KeyVals(digested) = attr_kvs.be_digested(stomach, state)? {
+        Some(digested.get_hash())
+      } else {
+        None
+      }
+    };
+    // WAS:  $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
     let mut wrapped_tokens = vec![T_BEGIN!()];
     wrapped_tokens.extend(tokens.unlist());
     wrapped_tokens.push(T_END!());
     let digested_tokens = stomach.digest(Tokens::new(wrapped_tokens), state)?;
-    let entry = (tag.to_string(), None, digested_tokens);
+    let entry = (tag.to_string(), attrs_digested, digested_tokens);
     let frontmatter = match state.lookup_value_mut("frontmatter") {
       Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
       _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),

@@ -1,12 +1,13 @@
 // use std::borrow::Cow;
 // use std::collections::HashMap;
 // use std::fmt;
-// use std::rc::Rc;
+use std::rc::Rc;
 
 // use crate::common::error::*;
 // use crate::common::font::Font;
 // use crate::common::locator::Locator;
 use crate::common::store::Stored;
+use crate::parameter::Parameter;
 // use crate::definition::expandable::Expandable;
 // use crate::definition::Definition;
 // use crate::document::Document;
@@ -52,10 +53,10 @@ impl KeyVal {
       Some(v) => Some((*v).clone()),
     }
   }
-  pub fn get_type<'a>(&'a self, state: &'a State) -> Option<String> {
+  pub fn get_type<'a>(&'a self, state: &'a State) -> Option<Rc<Parameter>> {
     match self.get_prop("type", state) {
-      None => None,
-      Some(v) => Some(v.to_string())
+      Some(Stored::Parameter(p)) => Some(Rc::clone(p)),
+      _ => None,
     }
   }
 }

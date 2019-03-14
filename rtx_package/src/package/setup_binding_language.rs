@@ -152,10 +152,10 @@ macro_rules! bind_state_mut {
 macro_rules! DefParameterTypeWO {
   ($name:expr, $param:expr) => {
     bind_state_mut!(st);
-    st.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter($param)))
+    st.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter(Rc::new($param))))
   };
   ($name:expr, $param:expr, $state_arg:ident) => {
-    $state_arg.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter($param)))
+    $state_arg.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter(Rc::new($param))))
   };
 }
 

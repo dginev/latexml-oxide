@@ -642,12 +642,11 @@ impl Default for KVSpec {
     }
   }
 }
-pub fn key_vals_aux(gullet: &mut Gullet, until: Option<Token>, mut spec: KVSpec, state: &mut State) -> Result<KeyVals> {
+pub fn keyvals_aux(gullet: &mut Gullet, until: Option<Token>, mut spec: KVSpec, state: &mut State) -> Result<KeyVals> {
   // support both "keysets" and "prefix|keysets"
   // unless (defined($keysets)) {
   //   $keysets = $prefix;
   //   $prefix  = undef;
-
   // to emulate old behaviour, throw no errors
   // when we have a single keyset and no prefix (or no keyset at all)
   if spec.keysets.is_empty() {
@@ -668,12 +667,10 @@ pub fn key_vals_aux(gullet: &mut Gullet, until: Option<Token>, mut spec: KVSpec,
     skip: spec.skip,
     skip_missing : spec.star
   }, state);
-
   // and read it from the gullet
   if let Some(until_token) = until {
     keyvals.read_from(gullet, until_token, state)?;
   }
-
   // we still want to make use of the hash
   Ok(keyvals)
 }

@@ -938,11 +938,14 @@ LoadDefinitions!(state, {
 
   pub fn optional_key_vals(star: bool, plus: bool, keysets: Vec<Option<Parameters>>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     if gullet.if_next(T_OTHER!("["), state)? {
-      let todo : Result<KeyVals> = key_vals_aux(gullet, Some(T_OTHER!("]")), KVSpec {
-        star, plus, keysets, 
-        .. KVSpec::default()
-      }, state);
-      Ok(Tokens!())
+      println!("Hello hello.");
+      let todo : KeyVals = keyvals_aux(gullet, Some(T_OTHER!("]")), 
+        KVSpec {
+          star, plus, keysets, 
+          .. KVSpec::default()
+        },
+        state)?;
+      Ok(todo.to_tokens())
     } else {
       Ok(Tokens!())
     }
@@ -952,7 +955,11 @@ LoadDefinitions!(state, {
       optional_key_vals(false, false, inner, gullet, state)
     },
     reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_keyvals()
+      if !arg.is_empty() {
+        Some(arg.to_keyvals(state))
+      } else {
+        None
+      }
     }),
    optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
@@ -960,7 +967,7 @@ LoadDefinitions!(state, {
       optional_key_vals(true, false, inner, gullet, state)
     },
     reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_keyvals()
+      arg.to_keyvals(state)
     }),
    optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
@@ -968,7 +975,7 @@ LoadDefinitions!(state, {
       optional_key_vals(false, true, inner, gullet, state)
     },
     reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_keyvals()
+      arg.to_keyvals(state)
     }),
    optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
@@ -976,7 +983,7 @@ LoadDefinitions!(state, {
       optional_key_vals(true, true, inner, gullet, state)
     },
     reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_keyvals()
+      arg.to_keyvals(state)
     }),
    optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
