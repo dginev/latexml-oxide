@@ -90,7 +90,7 @@ pub enum Stored {
   /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Rc<Constructor>),
   Digested(Box<crate::Digested>), // todo: should this be an Rc<> to make it shareable?
-  Parameter(Parameter),
+  Parameter(Rc<Parameter>),
   Font(Rc<Font>),
   Ligature(Box<Ligature>), // todo: should this be an Rc<> to make it shareable?
 }
@@ -137,7 +137,13 @@ impl fmt::Debug for Stored {
   }
 }
 impl fmt::Display for Stored {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{:?}", self) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    use crate::Stored::*;
+    match *self {
+      Digested(ref digested) => write!(f, "{}", digested),
+      _ => write!(f, "{:?}", self) // TODO
+    }
+  }
 }
 
 impl Stored {
@@ -269,7 +275,7 @@ impl From<Box<crate::Digested>> for Stored {
 }
 
 impl From<Parameter> for Stored {
-  fn from(value: Parameter) -> Self { Stored::Parameter(value) }
+  fn from(value: Parameter) -> Self { Stored::Parameter(Rc::new(value)) }
 }
 
 impl From<Rc<Font>> for Stored {

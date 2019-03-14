@@ -200,3 +200,11 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for KeyVals {
     Ok(Some(Digested::KeyVals(Rc::new(self))))
   }
 }
+impl IntoDigestedOptionResult<Result<Option<Digested>>> for Option<KeyVals> {
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { 
+    match self {
+      None => Ok(None),
+      Some(kv) => kv.into()
+    }
+  }
+}

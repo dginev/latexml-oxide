@@ -12,6 +12,7 @@ use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
 use crate::common::glue::{Glue, MuGlue};
 use crate::common::number::Number;
+use crate::common::store::Stored;
 use crate::keyvals::KeyVals;
 use crate::definition::register::RegisterValue;
 use crate::state::State;
@@ -156,13 +157,17 @@ impl Tokens {
 
   /// to_keyvals casts back to a parsed KeyVals (usually via a KeyVals parameter type)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
-  pub fn to_keyvals(&self) -> KeyVals {
+  pub fn to_keyvals(&self, state: &State) -> KeyVals {
     let mut toks_iter = self.as_ref_unlist().iter();
+    let mut kvs = KeyVals::default();
     while let Some(key) = toks_iter.next() {
-      let value = toks_iter.next();
-      dbg!((key, value)); // TODO
+      if let Some(value) = toks_iter.next() {
+        kvs.add_value(&key.to_string(), Stored::Token(value.clone()), false, false, state);
+      } else {
+        kvs.add_value(&key.to_string(), Stored::Tokens(Tokens!()), false, false, state);
+      }
     }
-    KeyVals::default()
+    kvs
   }
 
   /// Methods for overloaded ops.

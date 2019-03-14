@@ -150,79 +150,84 @@ impl Parameter {
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
     let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
-    let mut descriptor: Option<Parameter>;
+    let mut descriptor: Option<Rc<Parameter>>;
     if let Some(&Stored::Parameter(ref d_lookup)) = looked_up_mapping {
-      descriptor = Some((*d_lookup).clone());
+      descriptor = Some(Rc::clone(d_lookup));
     } else if let Some(captures) = OPTIONAL_REGEX.captures(&self.name) {
       let basetype = captures.get(1).map_or("", |m| m.as_str());
       descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
         Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
         _ => match Parameter::check_reader_function(&s!("Read{}", &self.name), state) {
-          Some(reader) => Some(Parameter {
+          Some(reader) => Some(Rc::new(Parameter {
             reader,
             optional: true,
             ..Parameter::default()
-          }),
+          })),
           None => match Parameter::check_reader_function(&s!("Read{}", basetype), state) {
-            Some(reader) => Some(Parameter {
+            Some(reader) => Some(Rc::new(Parameter {
               reader,
               optional: true,
               novalue: true,
               ..Parameter::default()
-            }),
+            })),
             None => fatal!(Parameter, Init, s!("Can't initialize parameter {:?}, unknown?", self.name)),
           },
         },
       };
-      descriptor.as_mut().unwrap().optional = true;
+      self.optional = true;
     } else if let Some(captures) = SKIP_REGEX.captures(&self.name) {
       let basetype = captures.get(1).map_or("", |m| m.as_str());
       descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
         Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
         _ => match Parameter::check_reader_function(&self.name, state) {
-          Some(reader) => Some(Parameter {
+          Some(reader) => Some(Rc::new(Parameter {
             reader,
             optional: true,
             novalue: true,
             ..Parameter::default()
-          }),
+          })),
           None => match Parameter::check_reader_function(&s!("Read{}", basetype), state) {
-            Some(reader) => Some(Parameter {
+            Some(reader) => Some(Rc::new(Parameter {
               reader,
               optional: true,
               novalue: true,
               ..Parameter::default()
-            }),
+            })),
             None => None,
           },
         },
       };
       if let Some(ref mut desc) = descriptor {
-        desc.novalue = true;
-        desc.optional = true;
+        self.novalue = true;
+        self.optional = true;
       }
     } else {
       descriptor = match Parameter::check_reader_function(&s!("Read{}", &self.name), state) {
-        Some(reader) => Some(Parameter {
+        Some(reader) => Some(Rc::new(Parameter {
           reader,
           ..Parameter::default()
-        }),
+        })),
         None => None,
       };
     }
-
     match descriptor {
       Some(descriptor) => {
         // descriptor needs to get integrated into Self
         //  except `spec` and `name` which are always preserved!
-        self.reader = descriptor.reader; // What else?
-        self.novalue = descriptor.novalue;
+        self.reader = descriptor.reader.clone(); // What else?
+        if descriptor.novalue {
+          self.novalue = true;
+        }
         self.semiverbatim = descriptor.semiverbatim;
-        self.optional = descriptor.optional;
-        self.reversion = descriptor.reversion;
-        self.before_digest = descriptor.before_digest;
-        self.after_digest = descriptor.after_digest;
-        self.reader_predigest = descriptor.reader_predigest;
+        // Also doing optional setting on the fly, so don't override unless true
+        // self.optional = descriptor.optional;
+        if descriptor.optional {
+          self.optional = true;
+        }
+        self.reversion = descriptor.reversion.clone();
+        self.before_digest = descriptor.before_digest.clone();
+        self.after_digest = descriptor.after_digest.clone();
+        self.reader_predigest = descriptor.reader_predigest.clone();
       },
       None => fatal!(
         Parameter,
@@ -279,7 +284,7 @@ impl Parameter {
     Ok(value)
   }
 
-  pub fn digest(&self, stomach: &mut Stomach, mut value: Tokens, _fordefn: &Constructor, state: &mut State) -> Result<Option<Digested>> {
+  pub fn digest(&self, stomach: &mut Stomach, mut value: Tokens, _fordefn: Option<&Constructor>, state: &mut State) -> Result<Option<Digested>> {
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     let value_to_digest = value.clone();
     if self.semiverbatim {
@@ -403,7 +408,7 @@ impl Parameters {
     for parameter in &self.0 {
       let value = parameter.read(&mut stomach.gullet, fordefn, state)?;
       if !parameter.novalue {
-        let digested_value = parameter.digest(stomach, value, fordefn, state)?;
+        let digested_value = parameter.digest(stomach, value, Some(fordefn), state)?;
         args.push(digested_value);
       }
     }
