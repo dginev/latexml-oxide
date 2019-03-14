@@ -661,7 +661,7 @@ pub fn def_environment(
   });
   state.install_definition(begin_name_constructor, options.scope);
 
-  let mut after_digest_env = options.after_digest;
+  let mut after_digest_env = options.after_digest.clone();
   let name_clone = name.to_string();
   let end_name_clone = end_name.to_string();
   let unexpected_end_closure = after_digest_single!(stomach, whatsit, state, {
@@ -731,34 +731,16 @@ pub fn def_environment(
   state.install_definition(name_constructor, options.scope);
   let end_name = s!("\\end{}", &name);
   let name_clone = name.clone(); // for after_digest
+  let mut after_digest_end = options.after_digest;
+  after_digest_end.push(after_digest_single!(stomach, whatsit, state, {
+    stomach.egroup(state)?;
+  }));
+
   let end_name_constructor = Constructor {
     cs: T_CS!(end_name),
     paramlist: None,
     replacement: None,
-    after_digest: vec![
-    after_digest_single!(stomach, whatsit, state, {
-      let env = state.lookup_string("current_environment");
-      if env.is_empty() || name_clone != env {
-        let message1 = s!("Can't close environment {}", name_clone);
-        let message2 = s!("Current are {} ",state.lookup_stacked_values("current_environment")
-          .iter().map(|x| s!("{:?}",x))
-          .collect::<Vec<String>>().join(", "));
-        Error!("unexpected", end_name, stomach, state, message1, message2);
-      }     
-      // let mut lines = Vec::new();
-    // my $nf    = $STATE->getFrameDepth;
-    //   for (my $f = 0 ; $f <= $nf ; $f++) {    # Get currently open environments & locators
-    //     if (my $e = $STATE->isValueBound('current_environment', $f)
-    //       && $STATE->valueInFrame('current_environment', $f)) {
-    //       my $locator = ToString($STATE->valueInFrame('groupInitiatorLocator', $f));
-    //       push(@lines, $e . ' ' . $locator); } }
-    //   Error('unexpected', "\\end{$name}", $_[0],
-    //     "Can't close environment $name;", "Current are:", @lines); }
-    // return; },
-    }),
-    after_digest_single!(stomach, whatsit, state, {
-      stomach.egroup(state)?;
-    })],
+    after_digest: after_digest_end,
     // beforeDigest => flatten($options{beforeDigestEnd}),
     //   ($mode ? (sub { $_[0]->endMode($mode); }) : ())),
     // ), $options{scope});
