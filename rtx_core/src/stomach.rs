@@ -26,6 +26,7 @@ pub struct Stomach {
   pub gullet: Gullet,
   pub token_stack: Vec<Rc<Token>>,
   pub boxing: Vec<Token>,
+  pub box_list: Vec<Digested>,
 }
 
 impl Default for Stomach {
@@ -34,6 +35,7 @@ impl Default for Stomach {
       gullet: Gullet::default(),
       token_stack: Vec::new(),
       boxing: Vec::new(),
+      box_list: Vec::new(),
     }
   }
 }
@@ -46,7 +48,7 @@ impl Object for Stomach {
 impl<'t> Stomach {
   pub fn get_gullet_mut(&mut self) -> &mut Gullet { &mut self.gullet }
   pub fn get_gullet(&self) -> &Gullet { &self.gullet }
-
+  pub fn regurgitate(&mut self) -> Vec<Digested> { self.box_list.drain(..).collect() }
   // **********************************************************************
   // Digestion
   // **********************************************************************
@@ -56,12 +58,13 @@ impl<'t> Stomach {
     let start_location = self.get_locator().into_owned();
     let init_depth = self.boxing.len();
     let mut found_terminal = false;
-    let mut box_list: Vec<Digested> = Vec::new();
+    let local_box_list = self.regurgitate(); // grab the current boxes to emulate local frame;
 
     // try reading a executable token
     while let Some(token) = self.get_gullet_mut().read_x_token(true, true, state)? {
       // info!(target:"stomach:digest_next:invoke_token","{:?}", token);
-      box_list.extend(self.invoke_token(&token, state)?);
+      let invoked = self.invoke_token(&token, state)?;
+      self.box_list.extend(invoked);
       if let Some(ref terminal) = terminal_opt {
         if &token == terminal {
           found_terminal = true;
@@ -77,7 +80,7 @@ impl<'t> Stomach {
     // We ran out, terminate,
     // and add a Dummy `trailer' if none explicit.
     if init_depth <= self.boxing.len() {
-      box_list.push(Digested::TBox(Rc::new(Tbox::default())));
+      self.box_list.push(Digested::TBox(Rc::new(Tbox::default())));
       // info!(target:"digest_next_body","no_token");
     }
 
@@ -88,7 +91,9 @@ impl<'t> Stomach {
       }
     }
 
-    Ok(box_list)
+    let final_box_list = self.regurgitate(); // grab the local boxes and return
+    self.box_list = local_box_list; // swap back in the boxes of the initial local frame
+    Ok(final_box_list)
   }
 
   // Digest a list of tokens independent from any current Gullet.
@@ -96,23 +101,23 @@ impl<'t> Stomach {
   // Returns a List containing the digested material.
   pub fn digest<T: Into<Tokens>>(&mut self, tokens: T, state: &mut State) -> Result<Digested> {
     let mut tokens: Tokens = tokens.into();
+
     self.reading_from_mouth(Mouth::default(), state, move |stomach, state| {
+      let local_box_list = stomach.regurgitate(); // grab the current boxes to emulate local frame;
+
       stomach.get_gullet_mut().unread(tokens);
       state.clear_prefixes(); // prefixes shouldn't apply here.
       let mode = if state.lookup_bool("IN_MATH") { TexMode::Math } else { TexMode::Text };
       let initdepth = stomach.boxing.len();
       let depth = initdepth;
-      // {
-      //   let list = STOMACH_LIST.lock()
-      //   *list = Rc::new(Vec::new());
-      // }
-      let mut digested_boxes = Vec::new();
+
       while let Some(token) = stomach.get_gullet_mut().read_x_token(true, true, state)? {
         // Done if we run out of tokens
         // {
         //   let list = STOMACH_LIST.lock()
         // info!(target:"stomach:digest:invoke_token","{:?}", token);
-        digested_boxes.extend(stomach.invoke_token(&token, state)?);
+        let mut invoked = stomach.invoke_token(&token, state)?;
+        stomach.box_list.extend(invoked);
         // }
 
         if initdepth > stomach.boxing.len() {
@@ -131,8 +136,10 @@ impl<'t> Stomach {
         }
       }
 
-      // let list = STOMACH_LIST.lock()
-      let mut digested_list = List::new(digested_boxes);
+      let final_box_list = stomach.regurgitate(); // grab the local boxes and return
+      stomach.box_list = local_box_list; // swap back in the boxes of the initial local frame
+
+      let mut digested_list = List::new(final_box_list);
       digested_list.mode = Some(mode);
       digested_list.into()
     })
@@ -475,10 +482,14 @@ impl<'t> Stomach {
   pub fn pop_stack_frame(&mut self, nobox: bool, state: &mut State) -> Result<()> {
     if let Some(Stored::Tokens(beforeafter)) = state.remove_value("beforeAfterGroup") {
       if !beforeafter.is_empty() {
-        let _result = beforeafter.unlist().into_iter().map(|t| t.be_digested(self, state)).collect::<Vec<_>>();
+        let mut result = Vec::new();
+        for frametok in beforeafter.unlist().into_iter() {
+          result.push(frametok.be_digested(self, state)?);
+        }
         // if (my ($x) = grep { !$_->isaBox } @result) {
         // Fatal('misdefined', $x, $self, "Expected a Box|List|Whatsit, but got '" .
-        // Stringify($x) . "'"); } push(@LaTeXML::LIST, @result); }
+        // Stringify($x) . "'"); }
+        self.box_list.extend(result);
       }
     }
     let after = state.remove_value("afterGroup");

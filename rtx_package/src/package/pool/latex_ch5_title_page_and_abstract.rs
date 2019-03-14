@@ -103,20 +103,23 @@ LoadDefinitions!(state, {
   // Probably there are other places (eg in titlepage?) that should force the close??
 
   DefEnvironment!("{abstract}", "",
-  // TODO
-  // after_digest_begin => sub {
-  //   AssignValue(inPreamble => 0);
-  //   AddToMacro(T_CS('\@startsection@hook'), T_CS('\maybe@end@abstract')); },
-  // afterDigest => sub {
-  //   my $frontmatter = LookupValue('frontmatter');
-  //   push(@{ $$frontmatter{'ltx:abstract'} },
-  //     ['ltx:abstract',
-  //       { name => Digest(Tokens(T_CS('\format@title@abstract'),
-  //             T_BEGIN, T_CS('\abstractname'), T_END)) },
-  //       @LaTeXML::LIST]);
-  //   DefMacroI('\maybe@end@abstract', undef, Tokens(), scope => 'global');
-  //   return; },
-    locked => true, mode => "text".into_option()
+    after_digest_begin => after_digest!(stomach, args, state, {
+      AssignValue!("inPreamble" => false);
+      AddToMacro!("\\@startsection@hook", "\\maybe@end@abstract"); 
+    }),
+    after_digest => after_digest!(stomach, args, state, {
+      let abstract_title = stomach.digest(Tokens!(T_CS!("\\format@title@abstract"),T_BEGIN!(), T_CS!("\\abstractname"), T_END!()), state)?;
+
+      let mut frontmatter = match state.lookup_value_mut("frontmatter") {
+        Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
+        _ => Fatal!(TexPool, Expected, stomach, state, "Global TeX Frontmatter hash was not available, should never happen"),
+      };
+      let mut abstr = frontmatter.entry("ltx:abstract".to_string()).or_insert(Vec::new());
+      abstr.push(("ltx:abstract".to_string(), Some(string_map!("name" => abstract_title)), List::new(stomach.regurgitate()).into()));
+      DefMacro!("\\maybe@end@abstract", "", scope => Some(Scope::Global));
+    }),
+    locked => true,
+    mode => "text".into_option()
   );
   // If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
   AssignValue!("\\abstract:locked" => false);    // REDEFINE the above locked definition!
