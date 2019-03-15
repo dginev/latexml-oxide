@@ -7,29 +7,33 @@ use unidecode::unidecode;
 
 static RMLETTERS: [char; 7] = ['i', 'v', 'x', 'l', 'c', 'd', 'm'];
 pub fn roman_aux<T: Into<i32>>(stuff: T) -> String {
-  // let mut n = stuff.into();
-  // let mut div = 1000;
-  // let mut s : String = if n > div {  String::from_utf8(vec![b'm'; n/div]) } else { String::new() };
-  // let mut p = 4;
-  // while n %= div {
-  //   div /= 10;
-  //   let d = n / div;
-  //   if d % 5 == 4 {
-  //     s += RMLETTERS[p];
-  //     d+=1;
-  //   }
-  //   if d > 4 {
-  //     s += RMLETTERS[p + (d / 5)];
-  //     d %= 5;
-  //   }
-  //   if d!=0 {
-  //     s += String::from_utf8(vec![RMLETTERS[p], d]);
-  //   }
-  //   p -= 2;
-  // }
-  // s
-  // TODO!
-  unimplemented!()
+  let mut n : i32 = stuff.into();
+  let mut div = 1000;
+  let mut s : String = if n > div {  String::from_utf8(vec![b'm'; (n/div) as usize]).unwrap() } else { String::new() };
+  let mut p = 4;
+  while n % div != 0 {
+    n %= div;
+    div /= 10;
+    let mut d = n / div;
+    if d % 5 == 4 {
+      s.push(RMLETTERS[p]);
+      d+=1;
+    }
+    if d > 4 {
+      s.push(RMLETTERS[p + (d / 5)  as usize]);
+      d %= 5;
+    }
+    if d!=0 {
+      s.push_str(&String::from_utf8(vec![RMLETTERS[p] as u8; d as usize]).unwrap());
+    }
+    // silly, but i'm postponing rewriting the entire method for now, just porting over from Perl
+    if p > 2 {
+      p -= 2;
+    } else {
+      p = 0;
+    }
+  }
+  s
 }
 
 // Small rust experiment -- type casting into Cow<String> in intermediate steps can become a

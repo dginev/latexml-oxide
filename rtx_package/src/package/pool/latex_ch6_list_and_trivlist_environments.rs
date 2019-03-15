@@ -11,12 +11,17 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\usecounter{}", sub[stomach, args, state] {
     unpack_to_token!(args => counter);
     let gullet = stomach.get_gullet_mut();
-    let counter = Expand!(counter, gullet);
-    begin_itemize("list", Some(&counter.to_string()), !counter.is_empty(), state)?;
+    let counter = Expand!(counter, gullet).to_string();
+    if counter.is_empty() {
+      begin_itemize("list", None, false, stomach, state)?;
+    } else {
+      begin_itemize("list", Some(&counter), true, stomach, state)?;
+    }
   });
 
-  DefMacro!("\\list{}{}",
-  "\\let\\@listctr\\@empty#2\\ifx\\@listctr\\@empty\\usecounter{}\\fi\\expandafter\\def\\csname fnum@\\@listctr\\endcsname{#1}\\lx@list");
+  DefMacro!("\\list{}{}",r###"
+  \let\@listctr\@empty#2\ifx\@listctr\@empty\usecounter{}\fi\expandafter\def\csname fnum@\@listctr\endcsname{#1}\lx@list
+  "###);
   DefMacro!("\\endlist", "\\endlx@list");
 
   DefConstructor!("\\lx@list DigestedBody",
@@ -41,7 +46,7 @@ LoadDefinitions!(state, {
 
   DefEnvironment!("{trivlist}",
     "<ltx:itemize>#body</ltx:itemize>",
-    properties      => properties!(stomach, args, state, { begin_itemize("trivlist", None, false, state) }),
+    properties      => properties!(stomach, args, state, { begin_itemize("trivlist", None, false, stomach, state) }),
     before_digest_end => before_digest!({ Digest!("\\par")?; })
   );
 

@@ -17,7 +17,7 @@ use rtx_core::stomach::Stomach;
 use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 
-use super::cleaners::clean_id;
+use super::cleaners::{roman_aux,clean_id};
 use super::content::{build_invocation, digest_if, digest_literal, digest_text};
 use super::def_dialect::{def_macro, def_register, parse_prototype};
 use super::*;
@@ -335,55 +335,85 @@ pub fn reset_counter(ctr: &str, state: &mut State) {
 
 /// Create id, and tags for an itemize type \item
 pub fn ref_step_item_counter(tag: &str, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
-  // my ($tag)   = @_;
-  // my $counter = LookupValue('itemcounter');
-  // my $n       = LookupValue('itemization_items');
-  // AssignValue(itemization_items => $n + 1);
-  // my %attr = ();
-  // my $sep  = LookupDimension('\itemsep');
-  // if (($n > 0) && $sep && ($sep->valueOf != LookupDimension('\lx@default@itemsep')->valueOf)) {
-  //   $attr{itemsep} = $sep; }
-  // if (defined $tag) {
-  //   my @props = RefStepID($counter);
-  //   if ((ref $tag) && !scalar($tag->unlist)) {    # empty tag?
-  //     return (@props); }
-  //   else {
-  //     my $ttag      = (ref $tag              ? $tag                      : T_OTHER($tag));
-  //     my $formatter = ($counter =~ /^\@desc/ ? T_CS('\descriptionlabel') : T_CS('\makelabel'));
-  //     my $tags      = Digest(T_BEGIN,
-  //       T_CS('\let'), T_CS('\the' . $counter), T_CS('\@empty'),
-  //       T_CS('\def'), T_CS('\fnum@' . $counter), T_BEGIN, $formatter, T_BEGIN, Revert($tag), T_END, T_END,
-  //       T_CS('\def'), T_CS('\typerefnum@' . $counter),
-  //       T_BEGIN, T_CS('\itemtyperefname'), T_SPACE, Revert($tag), T_END,
-  //       Invocation(T_CS('\lx@make@tags'), T_OTHER($counter)),
-  //       T_END);
+  let counter = state.lookup_string("itemcounter");
+  let n       = state.lookup_int("itemization_items");
+  state.assign_value("itemization_items", n + 1, None);
+  let mut attr : HashMap<String, Stored> = HashMap::new();
+  if n > 0 {
+    if let Some(sep) = state.lookup_dimension("\\itemsep") {
+    if let Some(default) = state.lookup_dimension("\\lx@default@itemsep") {
+      if sep.value_of() != default.value_of() {
+        attr.insert("itemsep".to_string(), sep.into());
+      }
+    }}
+  }
+  let mut stepped = if !tag.is_empty() {
+    let mut props = ref_step_id(&counter, stomach, state)?;
+    if tag.is_empty() { //empty tag?
+      props
+    } else {
+      let formatter = if counter.starts_with("\\@desc") { T_CS!("\\descriptionlabel") } else { T_CS!("\\makelabel") };
+      let gullet = stomach.get_gullet_mut();
+      let mut tag_tokens = vec![
+        T_BEGIN!(),
+        T_CS!("\\let"), 
+        T_CS!(&s!("\\the{}",counter)), T_CS!("\\@empty"),
+        T_CS!("\\def"),
+        T_CS!(&s!("\\fnum@{}",counter)), 
+        T_BEGIN!(), 
+          formatter, 
+          T_BEGIN!(), T_OTHER!(tag), T_END!(), 
+        T_END!(),
+        T_CS!("\\def"), T_CS!(&s!("\\typerefnum@{}",counter)),
+        T_BEGIN!(),
+          T_CS!("\\itemtyperefname"), T_SPACE!(), T_OTHER!(tag), 
+        T_END!()];
+        tag_tokens.extend(
+          build_invocation(T_CS!("\\lx@make@tags"), vec![Tokens!(T_OTHER!(counter))], gullet, state)?.unlist()
+        );
+        tag_tokens.push(T_END!());
+      
+      let tags = stomach.digest(tag_tokens, state)?;
+      if let Digested::List(l) = tags {
+        if !l.is_empty() {
+          props.insert("tags".to_string(), l.into());
+        }
+      } else {
+          props.insert("tags".to_string(), tags.into());
+      }
+      props
+    }
+  } else {
+    ref_step_counter(&counter, false, stomach, state)?
+  };
 
-  //     return (@props,
-  //       ($tags ? (tags => $tags) : ()),
-  //       %attr); } }
-  // else {
-    // return (RefStepCounter($counter), %attr); } }
-    Ok(HashMap::new())
+  for (k,v) in attr.into_iter() {
+    stepped.insert(k, v);
+  }
+  Ok(stepped)
 }
 
 /// Prepare for an list (itemize/enumerate/description/etc)
 /// by determining the right counter (level)
 /// and binding the right \item ( \$type@item, if $type is defined)
-pub fn begin_itemize(itype: &str, counter: Option<&str>, nolevel: bool, state: &mut State)  -> Result<HashMap<String, Stored>> {
-//   let counter = counter.unwrap_or("@item");
-//   let level = state.lookup_int(&s!("{}level",counter)) + 1;
-//   state.assign_register("\\itemsep", state.lookup_dimension("\\lx@default@itemsep"));
-//   state.assign_value(s!("{}level",counter), level, None);
-//   state.assign_value("itemization_items", 0, None);
-//   let postfix = Tokens!(roman(level)).to_string();
-//   let usecounter = ($nolevel ? $counter : $counter . $postfix);
-//   Let('\item' => "\\" . $type . '@item') if defined $type;
-//   Let('\par', '\normal@par');    # In case within odd environment.
-//   DefMacroI('\@listctr', undef, Tokens(Explode($usecounter)));
-// ##  if(! LookupDefinition(T_CS('\@listcontext'))){
-// ##    Let(T_CS('\@listcontext'), T_CS('\@currentlabel')); }
-//   state.assign_value(itemcounter => $usecounter);
-//   ResetCounter($usecounter);
-//   return RefStepCounter('@itemize' . $postfix); }
-    Ok(HashMap::new())
+pub fn begin_itemize(itype: &str, counter: Option<&str>, nolevel: bool, stomach: &mut Stomach, state: &mut State)  -> Result<HashMap<String, Stored>> {
+  let counter = counter.unwrap_or("@item");
+  let level = state.lookup_int(&s!("{}level",counter)) + 1;
+  AssignRegister!("\\itemsep", state.lookup_dimension("\\lx@default@itemsep").unwrap_or_default().into(), Vec::new(), state);
+  state.assign_value(&s!("{}level",counter), level, None);
+  state.assign_value("itemization_items", 0, None);
+  let postfix = roman!(level).to_string();
+  let mut usecounter = counter.to_string();
+  if !nolevel {
+    usecounter.push_str(&postfix);
+  }
+  if !itype.is_empty() {
+    let itype_cs = T_CS!(s!("\\{}@item",itype));
+    state.let_i(&T_CS!("\\item"), itype_cs, None);
+  }
+  state.let_i(&T_CS!("\\par"), T_CS!("\\normal@par"), None); // In case within odd environment.
+ def_macro(T_CS!("\\@listctr"), None, Tokens!(Explode!(usecounter)), None, state);
+ state.assign_value("itemcounter", usecounter.clone(), None);
+ reset_counter(&usecounter, state);
+ ref_step_counter(&s!("@itemize{}",postfix), false, stomach, state)
 }

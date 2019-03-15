@@ -266,6 +266,11 @@ impl From<List> for Stored {
   fn from(value: List) -> Self { crate::Digested::List(Rc::new(value)).into() }
 }
 
+impl From<Rc<List>> for Stored {
+  fn from(value: Rc<List>) -> Self { crate::Digested::List(value).into() }
+}
+
+
 impl From<crate::Digested> for Stored {
   fn from(value: crate::Digested) -> Self { Box::new(value).into() }
 }
