@@ -332,3 +332,58 @@ pub fn reset_counter(ctr: &str, state: &mut State) {
 
   return;
 }
+
+/// Create id, and tags for an itemize type \item
+pub fn ref_step_item_counter(tag: &str, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
+  // my ($tag)   = @_;
+  // my $counter = LookupValue('itemcounter');
+  // my $n       = LookupValue('itemization_items');
+  // AssignValue(itemization_items => $n + 1);
+  // my %attr = ();
+  // my $sep  = LookupDimension('\itemsep');
+  // if (($n > 0) && $sep && ($sep->valueOf != LookupDimension('\lx@default@itemsep')->valueOf)) {
+  //   $attr{itemsep} = $sep; }
+  // if (defined $tag) {
+  //   my @props = RefStepID($counter);
+  //   if ((ref $tag) && !scalar($tag->unlist)) {    # empty tag?
+  //     return (@props); }
+  //   else {
+  //     my $ttag      = (ref $tag              ? $tag                      : T_OTHER($tag));
+  //     my $formatter = ($counter =~ /^\@desc/ ? T_CS('\descriptionlabel') : T_CS('\makelabel'));
+  //     my $tags      = Digest(T_BEGIN,
+  //       T_CS('\let'), T_CS('\the' . $counter), T_CS('\@empty'),
+  //       T_CS('\def'), T_CS('\fnum@' . $counter), T_BEGIN, $formatter, T_BEGIN, Revert($tag), T_END, T_END,
+  //       T_CS('\def'), T_CS('\typerefnum@' . $counter),
+  //       T_BEGIN, T_CS('\itemtyperefname'), T_SPACE, Revert($tag), T_END,
+  //       Invocation(T_CS('\lx@make@tags'), T_OTHER($counter)),
+  //       T_END);
+
+  //     return (@props,
+  //       ($tags ? (tags => $tags) : ()),
+  //       %attr); } }
+  // else {
+    // return (RefStepCounter($counter), %attr); } }
+    Ok(HashMap::new())
+}
+
+/// Prepare for an list (itemize/enumerate/description/etc)
+/// by determining the right counter (level)
+/// and binding the right \item ( \$type@item, if $type is defined)
+pub fn begin_itemize(itype: &str, counter: Option<&str>, nolevel: bool, state: &mut State)  -> Result<HashMap<String, Stored>> {
+//   let counter = counter.unwrap_or("@item");
+//   let level = state.lookup_int(&s!("{}level",counter)) + 1;
+//   state.assign_register("\\itemsep", state.lookup_dimension("\\lx@default@itemsep"));
+//   state.assign_value(s!("{}level",counter), level, None);
+//   state.assign_value("itemization_items", 0, None);
+//   let postfix = Tokens!(roman(level)).to_string();
+//   let usecounter = ($nolevel ? $counter : $counter . $postfix);
+//   Let('\item' => "\\" . $type . '@item') if defined $type;
+//   Let('\par', '\normal@par');    # In case within odd environment.
+//   DefMacroI('\@listctr', undef, Tokens(Explode($usecounter)));
+// ##  if(! LookupDefinition(T_CS('\@listcontext'))){
+// ##    Let(T_CS('\@listcontext'), T_CS('\@currentlabel')); }
+//   state.assign_value(itemcounter => $usecounter);
+//   ResetCounter($usecounter);
+//   return RefStepCounter('@itemize' . $postfix); }
+    Ok(HashMap::new())
+}

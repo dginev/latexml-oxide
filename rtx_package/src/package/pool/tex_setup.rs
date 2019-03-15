@@ -730,7 +730,7 @@ LoadDefinitions!(state, {
     //     undef; } },
     // reversion => sub {
     //   (T_OTHER('('), Revert($_[0]), T_OTHER(')')); });
-    unimplemented!();;
+    unimplemented!();
     Ok(Tokens!())
   });
 
@@ -760,7 +760,7 @@ LoadDefinitions!(state, {
     //   List(@list, mode => ($ismath ? 'math' : 'text')); },
     // undigested => 1,                                          # since _already_ digested.
     // reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-    unimplemented!();;
+    unimplemented!();
     Ok(Tokens!())
   });
 
@@ -775,7 +775,7 @@ LoadDefinitions!(state, {
     //   List(@list, mode => ($ismath ? 'math' : 'text')); },
     // undigested => 1,                                          # since _already_ digested.
     // reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-    unimplemented!();;
+    unimplemented!();
     Ok(Tokens!())
   });
 
@@ -784,17 +784,19 @@ LoadDefinitions!(state, {
   // particularly alignments (which may or may not be actual environments),
   // but which need special treatment of some of their content
   // as the expansion is carried out.
-  DefParameterType!("DigestedBody", sub[gullet, inner, _extra, state] {
-    //   my ($gullet) = @_;
-    //   my $ismath   = $STATE->lookupValue('IN_MATH');
-    //   my @list     = $STATE->getStomach->digestNextBody();
-    //   # In most (all?) cases, we're really looking for a single Whatsit here...
-    //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
-    //   List(@list, mode => ($ismath ? 'math' : 'text')); },
-    // undigested => 1);
-    unimplemented!();;
-    Ok(Tokens!())
-  });
+  DefParameterType!("DigestedBody", reader => reader!(gullet, inner, extra, state, {
+      Ok(Tokens!()) // all done in predigestion
+    }),
+    reader_predigest => reader_predigest!(stomach, arg, state, {
+      let ismath   = state.lookup_bool("IN_MATH");
+      let mut list     = stomach.digest_next_body(None, state)?;
+      // In most (all?) cases, we're really looking for a single Whatsit here...
+      list = list.into_iter().filter(|tbox| !tbox.is_comment()).collect();
+      let mut digested = List::new(list);
+      digested.mode = if ismath { Some(TexMode::Math) } else { Some(TexMode::Text) };
+      digested
+    })
+  );
 
   // In addition to the standard TeX Dimension, there are various LaTeX constructs
   // (particularly, the LaTeX picture environment, and the various pstricks packages)
@@ -837,7 +839,7 @@ LoadDefinitions!(state, {
       //       : ($gullet->readToken))); }
       // LaTeXML::Core::Array->new(open => T_BEGIN, close => T_END, type => $typedef,
       //   values => [@items]); });
-      unimplemented!();;
+      unimplemented!();
       Ok(Tokens!())
   });
 

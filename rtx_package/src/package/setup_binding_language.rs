@@ -1709,9 +1709,16 @@ macro_rules! GetKeyVals {
 
 #[macro_export]
 macro_rules! Digest {
+  ($string:literal) => {{
+    bind_state_mut!(stmch, st);
+    let tokenized;
+    compile_tokenize_internal!(tokenized, $string);
+    stmch.digest(tokenized, st)
+  }};
+
   ($tokens:expr) => {{
-    bind_state_mut!(st);
-    Digest!($tokens, st)
+    bind_state_mut!(stmch, st);
+    stmch.digest($tokens, st)
   }};
   ($tokens:expr, $state_arg:ident) => {{
     let mut state_stomach = $state_arg.stomach.clone();
@@ -1948,4 +1955,12 @@ macro_rules! AddToMacro {
       );
     }
   }};
+}
+
+#[macro_export]
+macro_rules! BeginItemize {
+  ($itype:literal, $counter:literal) => {{
+    bind_state_mut!(stmch, st);
+    begin_itemize($itype, Some($counter), false, st)
+  }}
 }

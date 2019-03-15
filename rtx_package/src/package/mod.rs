@@ -45,7 +45,7 @@ pub use rtx_core::tokens::Tokens;
 pub use rtx_core::util::pathname;
 pub use rtx_core::util::radix;
 pub use rtx_core::whatsit::Whatsit;
-pub use rtx_core::{BoxOps, Core, Digested};
+pub use rtx_core::{BoxOps, Core, Digested, TexMode};
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
