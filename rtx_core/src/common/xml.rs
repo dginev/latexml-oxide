@@ -21,7 +21,7 @@ impl XPath {
       Ok(()) => {},
       Err(_) => {
         let message = s!("Failed to register an XPath namespace: prefix {:?} and href {:?}", codeprefix, namespace);
-        Error!("expected","XPath", None, None, message);
+        Error!("expected", "XPath", None, None, message);
       },
     };
   }
@@ -30,8 +30,8 @@ impl XPath {
     match self.context.findnodes(xpath, node) {
       Ok(nodes) => nodes,
       Err(e) => {
-        let message = s!("{:?}",e);
-        Error!("xpath","findnodes", None, None, message);
+        let message = s!("{:?}", e);
+        Error!("xpath", "findnodes", None, None, message);
         Vec::new()
       },
     }
@@ -55,7 +55,6 @@ pub fn element_nodes(node: &Node) -> Vec<Node> {
     .collect()
 }
 
-
 /// Is `child` the same as `parent`, or a descendent of `parent`?
 pub fn is_descendant_or_self(child: &Node, parent: &Node) -> bool {
   let mut p = Some(child);
@@ -63,14 +62,14 @@ pub fn is_descendant_or_self(child: &Node, parent: &Node) -> bool {
   while let Some(p_node) = p {
     // if p.is_same_node(parent) {
     if p_node == parent {
-      return true
+      return true;
     }
-    if let Some(parent_node) = p_node.get_parent() { 
+    if let Some(parent_node) = p_node.get_parent() {
       parent_opt = Some(parent_node);
       p = parent_opt.as_ref();
     } else {
       break;
     }
   }
-  false 
+  false
 }

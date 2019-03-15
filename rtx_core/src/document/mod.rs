@@ -7,16 +7,16 @@ use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Namespace, Node, NodeType};
 use regex::Regex;
 
+use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::iter;
 use std::rc::Rc;
-use std::borrow::Cow;
 
 use crate::common::error::*;
-use crate::common::locator::Locator;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
-use crate::common::store::Stored;
+use crate::common::locator::Locator;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::common::xml;
 use crate::state::State;
 
@@ -38,7 +38,7 @@ pub struct Document {
   pub pending: Vec<Node>,
   pub node: Node,
   pub node_boxes: HashMap<usize, Rc<Digested>>, // used to be _box attribute
-  pub node_fonts: HashMap<usize, Font>,     // used to be _font attribute
+  pub node_fonts: HashMap<usize, Font>,         // used to be _font attribute
   pub constructed_nodes: Vec<Node>,
   box_to_absorb: Option<Digested>, // local $LaTeXML::BOX;
   localized_boxes: Vec<Option<Digested>>,
@@ -50,7 +50,7 @@ impl Object for Document {
   fn get_locator(&self) -> Cow<Locator> {
     if let Some(tbox) = self.get_node_box(&self.node) {
       Cow::Owned(tbox.get_locator().into_owned())
-    } else { 
+    } else {
       Cow::Owned(Locator::default()) // well?
     }
   }
@@ -218,7 +218,7 @@ impl Document {
             for (ref key, &(ref value, ref properties)) in &pending_declaration {
               self.set_attribute(&mut text, &key.to_string(), &value.to_string())?;
             }
-            self.finalize_rec(&mut text, new_init_font, state)?;    // Now have to clean up the new node!
+            self.finalize_rec(&mut text, new_init_font, state)?; // Now have to clean up the new node!
           }
         }
       }
@@ -289,9 +289,7 @@ impl Document {
     // Ok(results)
     Ok(())
   }
-  pub fn drain_constructed_nodes(&mut self) -> Vec<Node> {
-    self.constructed_nodes.drain(0..).collect()
-  }
+  pub fn drain_constructed_nodes(&mut self) -> Vec<Node> { self.constructed_nodes.drain(0..).collect() }
 
   /// This is a refactored `else` cases from the main absorb routine, to allow for better type
   /// hygiene
@@ -369,15 +367,16 @@ impl Document {
     if let Some(attributes) = attributes_opt {
       // TODO: This was a portion of late-night code, can we rewrite it so that we work entirely with &str,
       //       and no allocations get done? It's a trivial overhead in practice, but still...
-      let mut keys : Vec<String> = ["class","package","options"].iter()
-        .map(|opt| opt.to_string()).collect();
-      let mut other_keys = attributes.keys()
+      let mut keys: Vec<String> = ["class", "package", "options"].iter().map(|opt| opt.to_string()).collect();
+      let mut other_keys = attributes
+        .keys()
         .filter(|k| k.as_str() != "class" && k.as_str() != "package" && k.as_str() != "options")
-        .map(|k| k.to_string()).collect();
+        .map(|k| k.to_string())
+        .collect();
       keys.append(&mut other_keys);
       for key in keys {
         if let Some(value) = attributes.get(&key) {
-          attr_data.push(s!("{}=\"{}\"",key,value));
+          attr_data.push(s!("{}=\"{}\"", key, value));
         }
       }
     }
@@ -458,18 +457,22 @@ impl Document {
         "#PCDATA" => qname.to_owned(),
         _ => s!("</{}>", qname),
       };
-      let message = s!("Attempt to close {}, which isn't open. Currently in {}",
+      let message = s!(
+        "Attempt to close {}, which isn't open. Currently in {}",
         qname_msg,
-        self.get_insertion_context(None, state));
+        self.get_insertion_context(None, state)
+      );
       Error!("malformed", qname, self, state, message);
       Ok(None)
     } else {
       // Found node.
       if !cant_close.is_empty() {
         // Intervening non-auto-closeable nodes!!
-        let message = s!("Closing tag {:?} whose open descendents do not auto-close. Descendants are {:?}",
+        let message = s!(
+          "Closing tag {:?} whose open descendents do not auto-close. Descendants are {:?}",
           qname,
-          cant_close.into_iter().map(|n| n.get_name()).collect::<Vec<String>>().join(","));
+          cant_close.into_iter().map(|n| n.get_name()).collect::<Vec<String>>().join(",")
+        );
         Error!("malformed", qname, self, state, message);
       }
       // So, now close up to the desired node.
@@ -576,9 +579,11 @@ impl Document {
       if !cant_close.is_empty() {
         // But found has intervening non-auto-closeable nodes!!
         let qname = state.model.get_node_qname(node);
-        let message = s!("Closing {:?} whose open descendents do not auto-close. Descendants are: {:?}",
+        let message = s!(
+          "Closing {:?} whose open descendents do not auto-close. Descendants are: {:?}",
           qname,
-          cant_close.into_iter().map(|n| n.get_name()).collect::<Vec<String>>().join(","));
+          cant_close.into_iter().map(|n| n.get_name()).collect::<Vec<String>>().join(",")
+        );
         Error!("malformed", qname, self, state, message);
       }
       if let Some(lastopen_node) = lastopen {
@@ -605,7 +610,8 @@ impl Document {
     if t == Some(NodeType::DocumentNode) {
       // Didn't find $qname at all!!
       let qname = state.model.get_node_qname(&node);
-      let message = s!("Attempt to close {}, which isn't open. Currently in {:?}",
+      let message = s!(
+        "Attempt to close {}, which isn't open. Currently in {:?}",
         qname,
         self.get_insertion_context(None, state)
       );
@@ -615,7 +621,8 @@ impl Document {
       // Intervening non-auto-closeable nodes!!
       if !cant_close.is_empty() {
         let qname = state.model.get_node_qname(&node);
-        let message = s!("Closing {} whose open descendents do not auto-close. Descendents are {}",
+        let message = s!(
+          "Closing {} whose open descendents do not auto-close. Descendents are {}",
           qname,
           cant_close.iter().map(Node::get_name).collect::<Vec<String>>().join(", ")
         );
@@ -1228,7 +1235,6 @@ impl Document {
     }
   }
 
-
   //**********************************************************************
   // Low level internal interface
 
@@ -1249,8 +1255,11 @@ impl Document {
     let mut node = self.node.clone();
     let node_type = node.get_type();
     if node_type != Some(NodeType::TextNode) && node_type != Some(NodeType::ElementNode) && node_type != Some(NodeType::DocumentNode) {
-      let message = s!("Insertion point is not an element, document or text: {:?}", self.document.node_to_string(&node));
-      Error!("internal","context", self, state, message);
+      let message = s!(
+        "Insertion point is not an element, document or text: {:?}",
+        self.document.node_to_string(&node)
+      );
+      Error!("internal", "context", self, state, message);
       return String::new();
     }
     let mut path = s!("TODO"); //TODO: Stringify($node);
@@ -1290,12 +1299,13 @@ impl Document {
 
     if let Some(has_opened) = has_opened_opt {
       // out of options if already inside an auto-open chain
-      let message = s!("failed auto-open through <{}> at inadmissible <{}>. Currently in {}",
+      let message = s!(
+        "failed auto-open through <{}> at inadmissible <{}>. Currently in {}",
         has_opened,
         cur_qname,
         self.get_insertion_context(None, state)
       );
-      Error!("malformed",qname, self, state,message);
+      Error!("malformed", qname, self, state, message);
       return Ok(self.node.clone()); // But we'll do it anyway, unless Error => Fatal.
     } else {
       // Now we're getting more desparate...
@@ -1577,7 +1587,7 @@ impl Document {
       let nodeid = node.to_hashable();
       match self.node_boxes.get(&nodeid) {
         Some(v) => Some(v.clone()),
-        None => None
+        None => None,
       }
     } else {
       None
@@ -1754,7 +1764,7 @@ impl Document {
       self.set_node_font(&newnode, font);
     }
 
-    // TODO [new]: Ever more certain there is a refactor waiting to happen with box_to_absorb 
+    // TODO [new]: Ever more certain there is a refactor waiting to happen with box_to_absorb
     //             holding a Rc<Digested> for easy cloning and management.
     //             Though the question remains how to maintain that, without cloning the box to **make** the Rc<>
     // Old note:
@@ -1942,7 +1952,9 @@ impl Document {
   // Returns undef if $qname isn't allowed in the parent, or if `nodes` aren't allowed in `qname`,
   // otherwise, returns the newly created `qname`.
   pub fn wrap_nodes(&mut self, qname: &str, mut nodes: Vec<Node>, state: &mut State) -> Result<Option<Node>> {
-    if nodes.is_empty() { return Ok(None); }
+    if nodes.is_empty() {
+      return Ok(None);
+    }
     let first_node = nodes.remove(0);
     let mut parent = first_node.get_parent().unwrap();
     let (ns, tag) = state.model.decode_qname(qname);
@@ -1954,11 +1966,11 @@ impl Document {
     self.set_node_font(&new, font.clone());
 
     if let Some(tbox) = self.get_node_box(&parent) {
-      self.set_node_box(&mut new, tbox); 
+      self.set_node_box(&mut new, tbox);
     }
     new.add_child(&mut old_node)?;
     for mut node in nodes.into_iter() {
-      new.add_child(&mut node)?; 
+      new.add_child(&mut node)?;
     }
     self.after_close(&mut new, state)?;
     Ok(Some(new))
@@ -2024,7 +2036,6 @@ impl Document {
     //   $new->setAttribute('xml:id' => $newid) if $newid ne $id; }
     // return $new; }
   }
-
 
   pub fn trim_node_whitespace(&mut self, node: &mut Node) -> Result<()> {
     self.trim_node_left_whitespace(node)?;

@@ -1,26 +1,26 @@
 use libxml::tree::Node;
 use std::borrow::Cow;
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use rtx_core::common::error::*;
 use rtx_core::common::number::Number;
 use rtx_core::common::xml::XML_NS;
-use rtx_core::definition::expandable::{ExpandableOptions};
-use rtx_core::definition::register::{NumericOps};
-use rtx_core::definition::{ExpansionBody};
+use rtx_core::definition::expandable::ExpandableOptions;
+use rtx_core::definition::register::NumericOps;
+use rtx_core::definition::ExpansionBody;
 use rtx_core::document::Document;
-use rtx_core::mouth;
 use rtx_core::gullet::Gullet;
+use rtx_core::mouth;
 use rtx_core::state::{Scope, State, Stored};
 use rtx_core::stomach::Stomach;
 use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 
-use super::*;
 use super::cleaners::clean_id;
-use super::content::{digest_if, digest_literal, digest_text, build_invocation};
-use super::def_dialect::{def_macro, parse_prototype, def_register};
+use super::content::{build_invocation, digest_if, digest_literal, digest_text};
+use super::def_dialect::{def_macro, def_register, parse_prototype};
+use super::*;
 
 //**********************************************************************
 /// This function computes an xml:id for a node, if it hasn't already got one.
@@ -194,9 +194,16 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
   state.assign_value(&s!("\\c@{}", ctr), v, Some(Scope::Global));
   state.after_assignment();
   let id_cs = T_CS!(s!("\\@{}@ID", ctr));
-  def_macro(id_cs.clone(), None, Tokens::new(Explode!(v.value_of())), 
-    Some(ExpandableOptions{scope: Some(Scope::Global), ..ExpandableOptions::default()}),
-    state);
+  def_macro(
+    id_cs.clone(),
+    None,
+    Tokens::new(Explode!(v.value_of())),
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    }),
+    state,
+  );
 }
 
 pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {

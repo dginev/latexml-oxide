@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::fmt;
+use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::locator::Locator;
@@ -87,13 +87,13 @@ impl PartialEq for Conditional {
 }
 
 impl fmt::Display for Conditional {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { unimplemented!(); }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    unimplemented!();
+  }
 }
 impl Object for Conditional {
   fn is_expandable(&self) -> bool { true }
-  fn stringify(&self) -> String { 
-    self.stringify_type("Conditional")
-  }
+  fn stringify(&self) -> String { self.stringify_type("Conditional") }
 }
 impl Definition for Conditional {
   // sub new {
@@ -115,7 +115,10 @@ impl Definition for Conditional {
       Or => self.invoke_else(gullet, state),
       Fi => self.invoke_fi(gullet, state),
       _ => {
-        let message = s!("Unknown conditional control sequence {}", state.current_token.as_ref().unwrap().stringify());
+        let message = s!(
+          "Unknown conditional control sequence {}",
+          state.current_token.as_ref().unwrap().stringify()
+        );
         Error!("unexpected", self.cs, gullet, state, message);
         Ok(Tokens!())
       },
@@ -174,7 +177,7 @@ impl Conditional {
         }
       } else {
         let to = self.skip_conditional_body(-1.0, gullet, state);
-        if tracing { 
+        if tracing {
           Debug!("{{false}} [skipped to {:?}]\n", to);
         }
       }
@@ -278,7 +281,7 @@ impl Conditional {
         },
       };
     }
-    Error!("expected","\\fi", self, state, "Missing \\fi or \\else, conditional fell off end");
+    Error!("expected", "\\fi", self, state, "Missing \\fi or \\else, conditional fell off end");
     Tokens!()
   }
 
@@ -299,7 +302,8 @@ impl Conditional {
         Ok(Tokens!(T_CS!("\\relax"), (**local_token).clone()))
       } else if stack_frame.borrow().elses {
         // Already seen an \else's at this level?
-        let message = s!("Extra {} already saw \\else for {:?} [{:?}] at {:?}",
+        let message = s!(
+          "Extra {} already saw \\else for {:?} [{:?}] at {:?}",
           local_token.stringify(),
           stack_frame.borrow().token,
           stack_frame.borrow().ifid,
@@ -352,8 +356,11 @@ impl Conditional {
         Ok(Tokens!())
       }
     } else {
-      let message = s!("Didn't expect a {:?} since we seem not to be in a conditional", state.current_token.as_ref().unwrap().stringify());
-      Error!("unexpected","fi", gullet, state, message);
+      let message = s!(
+        "Didn't expect a {:?} since we seem not to be in a conditional",
+        state.current_token.as_ref().unwrap().stringify()
+      );
+      Error!("unexpected", "fi", gullet, state, message);
       Ok(Tokens!())
     }
   }

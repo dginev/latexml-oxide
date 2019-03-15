@@ -1,23 +1,23 @@
+pub mod cleaners;
 pub mod content;
 pub mod counter_dialect;
 pub mod def_dialect;
-pub mod cleaners;
 
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::collections::VecDeque;
 use std::rc::Rc;
-use regex::Regex;
-use lazy_static::lazy_static;
 
-use rtx_core::{Digested};
-use rtx_core::common::error::*;
-use rtx_core::common::number::Number;
 use rtx_core::common::dimension::{Dimension, MuDimension};
+use rtx_core::common::error::*;
 use rtx_core::common::glue::{Glue, MuGlue};
-use rtx_core::tokens::Tokens;
-use rtx_core::token::*;
+use rtx_core::common::number::Number;
 use rtx_core::definition::register::*;
-use rtx_core::tbox::Tbox;
 use rtx_core::keyvals::KeyVals;
+use rtx_core::tbox::Tbox;
+use rtx_core::token::*;
+use rtx_core::tokens::Tokens;
+use rtx_core::Digested;
 
 // Constants for the API functions stay here as well
 
@@ -39,7 +39,6 @@ lazy_static! {
   static ref NON_ID_CHARSET_RE: Regex = Regex::new(r"[^\w_\-.]+").unwrap();
   static ref TILDE_NOISE_RE: Regex = Regex::new(r"\\~\{\}").unwrap();
 }
-
 
 // Rust-specific type wrangling stays in the main mod file for convenience
 
@@ -196,15 +195,13 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for Result<Option<Digest
   fn into_digested_option_result(self) -> Result<Option<Digested>> { self }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for KeyVals {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { 
-    Ok(Some(Digested::KeyVals(Rc::new(self))))
-  }
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::KeyVals(Rc::new(self)))) }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for Option<KeyVals> {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { 
+  fn into_digested_option_result(self) -> Result<Option<Digested>> {
     match self {
       None => Ok(None),
-      Some(kv) => kv.into()
+      Some(kv) => kv.into(),
     }
   }
 }

@@ -1,9 +1,9 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
-use std::cell::{Ref, RefMut, RefCell};
-use std::rc::Rc;
+use std::cell::{Ref, RefCell, RefMut};
 use std::fmt;
+use std::rc::Rc;
 
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
@@ -77,7 +77,8 @@ impl Default for RegisterValue {
 impl Object for RegisterValue {
   fn stringify(&self) -> String { s!("RegisterValue[{}]", self) }
   fn revert(&self) -> Result<Tokens> {
-    match self { // ExplodeText($self->toString);
+    match self {
+      // ExplodeText($self->toString);
       RegisterValue::Number(ref value) => Ok(Tokens::new(ExplodeText!(value))),
       RegisterValue::Dimension(ref value) => Ok(Tokens::new(ExplodeText!(value))),
       RegisterValue::MuDimension(ref value) => Ok(Tokens::new(ExplodeText!(value))),
@@ -182,12 +183,12 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuGlue(v) => v.value_of(),
       RegisterValue::Token(v) => {
         let message = s!(".value_of called on Token {:?}", v);
-        Warn!("register","value_of", None, None, message);
+        Warn!("register", "value_of", None, None, message);
         -1.0
       },
       RegisterValue::Tokens(v) => {
         let message = s!(".value_of called on Tokens {:?}", v);
-        Warn!("register","value_of", None, None, message);
+        Warn!("register", "value_of", None, None, message);
         -1.0
       },
     }
@@ -285,7 +286,7 @@ impl<'a> From<&'a RegisterValue> for Dimension {
       RegisterValue::Token(other) => other.to_number().into(),
       RegisterValue::Tokens(other) => {
         let message = s!("Token register can not be cast into a dimension: {:?}", other);
-        Error!("expected","dimension", None, None, message);
+        Error!("expected", "dimension", None, None, message);
         Dimension::new(0.0)
       },
     }
@@ -302,7 +303,7 @@ impl<'a> From<&'a RegisterValue> for Glue {
       RegisterValue::Token(other) => other.to_number().into(),
       RegisterValue::Tokens(other) => {
         let message = s!("Token register can not be cast into a Glue: {:?}", other);
-        Error!("expected","dimension", None, None, message);
+        Error!("expected", "dimension", None, None, message);
         Glue::new(0.0)
       },
     }
@@ -312,9 +313,9 @@ impl<'a> From<&'a RegisterValue> for Glue {
 impl fmt::Display for RegisterValue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      RegisterValue::Dimension(d) => write!(f,"{}", d),
-      RegisterValue::Glue(g) => write!(f,"{}", g),
-      other => write!(f,"{}", self.clone().value_of()),
+      RegisterValue::Dimension(d) => write!(f, "{}", d),
+      RegisterValue::Glue(g) => write!(f, "{}", g),
+      other => write!(f, "{}", self.clone().value_of()),
     }
   }
 }
@@ -420,8 +421,8 @@ impl Definition for RegisterCell {
         Stored::Tokens(tks) => gullet.unread(tks),
         other => {
           let message = s!("expected tokens, found: {:?}", other);
-          Error!("unexpected","afterassignment", stomach, state, message)
-        }
+          Error!("unexpected", "afterassignment", stomach, state, message)
+        },
       };
     }
     // # Tracing ?
@@ -457,7 +458,7 @@ impl Register {
   pub fn set_value(&mut self, value: RegisterValue, args: Vec<Tokens>, state: &mut State) {
     if self.register_type == RegisterType::CharDef {
       let message = s!("Can't assign to chardef {}", self.cs.get_cs_name());
-      Error!("unexpected","chardef", None, state, message);
+      Error!("unexpected", "chardef", None, state, message);
     } else {
       (self.setter)(value, args, state);
     }

@@ -13,7 +13,7 @@
 use crate::package::*;
 use rtx_core::document::tag::TagConstructionClosure;
 use std::collections::HashSet;
-const FRONTMATTER_ELEMENTS : &[&str]= &[
+const FRONTMATTER_ELEMENTS: &[&str] = &[
   "ltx:title",
   "ltx:toctitle",
   "ltx:subtitle",
@@ -44,10 +44,10 @@ LoadDefinitions!(state, {
     // Be careful since the contents may also want to add frontmatter
     // (which should be inside or after this one!)
     // So, we append this entry before digesting
-    
+
     // TODO: Port over keys handling from TeX.pool
     let attrs_digested = if attrs.is_empty() {
-      None 
+      None
     } else {
       // WAS: $$entry[1] = { $attr->beDigested($stomach)->getHash };
       let attr_kvs = attrs.to_keyvals(state);
@@ -69,7 +69,7 @@ LoadDefinitions!(state, {
     };
     let f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
     f_entry.push(entry);
-    
+
     AssignValue!("inPreamble", inpreamble);
   });
 
@@ -106,11 +106,7 @@ LoadDefinitions!(state, {
 
   let insert_frontmatter: Vec<TagConstructionClosure> = tagsub!(document, node, state, {
     // this happens only once, not a big deal to skip the lazy_static! and keep it in the closure
-    let frontmatter_elements_set: HashSet<String> = 
-    FRONTMATTER_ELEMENTS
-    .iter()
-    .map(ToString::to_string)
-    .collect();
+    let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
 
     let mut frontmatter = match state.remove_value("frontmatter") {
       Some(Stored::HashTagData(frnt)) => frnt,
@@ -119,11 +115,14 @@ LoadDefinitions!(state, {
     state.assign_value("frontmatter", Stored::HashTagData(HashMap::new()), Some(Scope::Global));
 
     // order is important here, first go through frontmatter_elements, then any leftover keys.
-    let custom_keys : Vec<String> = frontmatter.keys().filter(|key| !frontmatter_elements_set.contains(key.as_str()))
-      .map(ToString::to_string).collect();
-    let mut all_keys : Vec<String> = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
+    let custom_keys: Vec<String> = frontmatter
+      .keys()
+      .filter(|key| !frontmatter_elements_set.contains(key.as_str()))
+      .map(ToString::to_string)
+      .collect();
+    let mut all_keys: Vec<String> = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
     all_keys.extend(custom_keys);
-    
+
     for key in &all_keys {
       if let Some(list) = frontmatter.remove(key) {
         // Dubious, but assures that frontmatter appears in text mode...
@@ -153,8 +152,7 @@ LoadDefinitions!(state, {
     }
   }));
 
-  DefConstructor!("\\beginsection Until:\\par",
-    "<ltx:section><ltx:title>#1</ltx:title>");
+  DefConstructor!("\\beginsection Until:\\par", "<ltx:section><ltx:title>#1</ltx:title>");
 
   // // POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
   // //  If so, how do know when the theorem ends?

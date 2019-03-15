@@ -637,7 +637,7 @@ LoadDefinitions!(state, {
           tokens.remove(0);
           tokens.pop();
           // Deyan:
-          // 
+          //
           // Come on. Is this really the right place to be loading latex? Let's not be this careful.
           // it requires access to a stomach, which really shouldn't be necessary in an arbitrary parameter type
           // ---
@@ -938,12 +938,17 @@ LoadDefinitions!(state, {
 
   pub fn optional_key_vals(star: bool, plus: bool, keysets: Vec<Option<Parameters>>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     if gullet.if_next(T_OTHER!("["), state)? {
-      let kvs : KeyVals = keyvals_aux(gullet, Some(T_OTHER!("]")), 
+      let kvs: KeyVals = keyvals_aux(
+        gullet,
+        Some(T_OTHER!("]")),
         KVSpec {
-          star, plus, keysets, 
-          .. KVSpec::default()
+          star,
+          plus,
+          keysets,
+          ..KVSpec::default()
         },
-        state)?;
+        state,
+      )?;
       Ok(kvs.to_tokens())
     } else {
       Ok(Tokens!())

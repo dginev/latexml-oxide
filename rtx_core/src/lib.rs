@@ -34,8 +34,8 @@ use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::model::Model;
 use crate::common::number::Number;
-use crate::common::store::Stored;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::definition::register::{NumericOps, RegisterValue};
 use crate::document::Document;
 use crate::keyvals::KeyVals;
@@ -138,11 +138,17 @@ pub trait BoxOps: Object {
     props.insert(key.to_string(), value.into());
   }
   fn get_property(&self, _key: &str, state: &mut State) -> Option<Cow<Stored>> {
-    Error!("boxops","get_property", self, state, "Generic BoxOps::get_property should never be called!");
+    Error!(
+      "boxops",
+      "get_property",
+      self,
+      state,
+      "Generic BoxOps::get_property should never be called!"
+    );
     None
   }
   fn get_body(&self) -> Option<Digested> {
-    Error!("boxops","get_body", self, None, "Generic BoxOps::get_body should never be called!");
+    Error!("boxops", "get_body", self, None, "Generic BoxOps::get_body should never be called!");
     None
   }
   fn get_font(&self) -> Option<Cow<Font>>;
@@ -310,8 +316,8 @@ impl BoxOps for Digested {
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     match *self {
-      Digested::TBox(ref b) => Error!("digested","set_property", self, None, s!("Called set_property on Box: {:?}", b)),
-      Digested::List(ref l) => Error!("digested","set_property", self, None, s!("Called set_property on List: {:?}", l)),
+      Digested::TBox(ref b) => Error!("digested", "set_property", self, None, s!("Called set_property on Box: {:?}", b)),
+      Digested::List(ref l) => Error!("digested", "set_property", self, None, s!("Called set_property on List: {:?}", l)),
       Digested::Whatsit(ref w) => w.borrow_mut().set_property(key, value), // TODO
       _ => unimplemented!(),
     }
@@ -321,7 +327,7 @@ impl BoxOps for Digested {
     match *self {
       Digested::TBox(ref b) => b.get_property(key, state),
       Digested::List(ref l) => {
-        Error!("digested","get_property", self, state, "Called get_property on List: {:?}", l);
+        Error!("digested", "get_property", self, state, "Called get_property on List: {:?}", l);
         None
       },
       Digested::Whatsit(ref w) => match w.borrow().get_property(key, state) {
@@ -334,11 +340,11 @@ impl BoxOps for Digested {
   fn get_body(&self) -> Option<Digested> {
     match *self {
       Digested::TBox(ref b) => {
-        Error!("digested","get_body", self, None, s!("Called get_body on Box: {:?}", b));
+        Error!("digested", "get_body", self, None, s!("Called get_body on Box: {:?}", b));
         None
       },
       Digested::List(ref l) => {
-        Error!("digested","get_body", self, None, s!("Called get_body on List: {:?}", l));
+        Error!("digested", "get_body", self, None, s!("Called get_body on List: {:?}", l));
         None
       },
       Digested::Whatsit(ref w) => w.borrow().get_body(),

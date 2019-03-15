@@ -1,8 +1,8 @@
 use crate::core::DigestionAPI;
 use rtx_core::common::error::*;
+use rtx_core::common::object::Object;
 use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_core::document::Document;
-use rtx_core::common::object::Object;
 use rtx_core::list::List;
 use rtx_core::state::State;
 use rtx_core::token;
@@ -81,7 +81,7 @@ impl Converter {
     self.bind_log();
     // 1.2 Inform of identity, increase conversion counter
     if self.opts.verbosity >= 0 {
-      Info!("{}",CONVERTER_IDENTITY);
+      Info!("{}", CONVERTER_IDENTITY);
       // info!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} >= 1;
       // info!("processing started " . localtime() . "\n"; )
     }

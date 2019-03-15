@@ -1,7 +1,7 @@
-use std::collections::VecDeque;
+use crate::package::*;
 use libxml::tree::{Node, NodeType};
 use rtx_core::keyvals::KeyValsOptions;
-use crate::package::*;
+use std::collections::VecDeque;
 
 pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
   let bindings_val = if vertical_mode {
@@ -172,9 +172,8 @@ pub fn classify_box(boxnum: Token, state: &State) -> &'static str {
   let boxnum: Number = boxnum.to_number();
   match state.lookup_value(&s!("box{}", boxnum.value_of())) {
     Some(Stored::Digested(ref d)) => match **d {
-      Digested::Whatsit(ref w) if w.borrow().definition == state.lookup_definition(&T_CS!("\\vbox")).unwrap() 
-        => "vbox",
-      _ => "hbox"
+      Digested::Whatsit(ref w) if w.borrow().definition == state.lookup_definition(&T_CS!("\\vbox")).unwrap() => "vbox",
+      _ => "hbox",
     },
     _ => "",
   }
@@ -266,12 +265,12 @@ pub fn revert_spec(whatsit: &mut Whatsit, keyword: &str, state: &mut State) -> V
 pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: HashMap<String, String>, state: &mut State) -> Result<Vec<Node>> {
   // Create something like:
   // "<ltx:inline-block vattach='$vattach' height='#height'>#2</ltx:inline-block>"
-  let context = document.get_element().unwrap();    // Where we originally start inserting.
-  
-  let mut blocktag  = "ltx:block";
+  let context = document.get_element().unwrap(); // Where we originally start inserting.
+
+  let mut blocktag = "ltx:block";
   let mut iblocktag = "ltx:inline-block";
   if blockattr.get("para").is_some() {
-    blocktag  = "ltx:para";
+    blocktag = "ltx:para";
     iblocktag = "ltx:inline-para";
     blockattr.remove("para");
   }
@@ -280,8 +279,8 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
   // or can't currently open an ltx:p; or if the current point accepts plain text (#PCDATA).
   // If we're in an inline context, we'll need a ltx:inline-block,  otherwise ltx:block.
   // [Or maybe an ltx:para... when does that happen?]
-  let mut newblock : Option<Node> = None;
-  let mut unwrap   = 0;
+  let mut newblock: Option<Node> = None;
+  let mut unwrap = 0;
   let mut remove = vec![];
   // drop all empty values
   for (key, val) in &blockattr {
@@ -293,18 +292,19 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
     blockattr.remove(&key);
   }
   let hasattr = !blockattr.is_empty();
-  if hasattr ||
-   !document.can_contain_node_somehow(&context, "ltx:p", state) ||
-    document.can_contain(&context, "#PCDATA", state) {
-    let tag =  if document.can_contain(&context, blocktag, state) {
-      blocktag } else { iblocktag };
+  if hasattr || !document.can_contain_node_somehow(&context, "ltx:p", state) || document.can_contain(&context, "#PCDATA", state) {
+    let tag = if document.can_contain(&context, blocktag, state) {
+      blocktag
+    } else {
+      iblocktag
+    };
     let mut attr_arg = blockattr.clone();
     attr_arg.insert("_autoclose".to_string(), "true".to_string());
-    newblock = Some(document.open_element(tag, Some(attr_arg), None, state)?); 
+    newblock = Some(document.open_element(tag, Some(attr_arg), None, state)?);
   }
   // Insert the content for the block, and reduce
-  document.set_attribute(&mut document.get_element().unwrap(), "_vertical_mode_", "true")?;    // HACK!!!! (see \hbox)
-  
+  document.set_attribute(&mut document.get_element().unwrap(), "_vertical_mode_", "true")?; // HACK!!!! (see \hbox)
+
   document.absorb(contents, state)?;
   let absorbed = document.drain_constructed_nodes();
   let mut nodes = document.filter_children(document.filter_deletions(absorbed));
@@ -312,7 +312,8 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
   // Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
   let mut newnodes = Vec::new();
   while !nodes.is_empty() {
-    if state.model.get_node_qname(nodes.first().as_ref().unwrap()) == "ltx:break" {    // ltx:break are superflous, now.
+    if state.model.get_node_qname(nodes.first().as_ref().unwrap()) == "ltx:break" {
+      // ltx:break are superflous, now.
       document.remove_node(nodes.remove(0));
       continue;
     }
@@ -341,22 +342,25 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
   // Check if the ltx:inline-block container is really needed.
   if let Some(blocknode) = newblock {
     let mut rows = blocknode.get_child_nodes();
-    if rows.is_empty() {    // Insertion came up empty?
+    if rows.is_empty() {
+      // Insertion came up empty?
       document.remove_node(blocknode); // then remove the new block entirely
-    } else if rows.len() == 1 {// Else only 1 item inside, then flatten
+    } else if rows.len() == 1 {
+      // Else only 1 item inside, then flatten
       let mut first = rows.pop().unwrap();
       let first_name = state.model.get_node_qname(&first);
       let block_parent = blocknode.get_parent();
-      
-      
-      if document.can_contain(block_parent.as_ref().unwrap(), &first_name, state)    // if allowed.
-        && (!hasattr ||
-           !blockattr.keys().any(|attr| document.can_node_have_attribute(rows.first().unwrap(), attr, state)) )
+
+      if document.can_contain(block_parent.as_ref().unwrap(), &first_name, state)
+        && (!hasattr
+          || !blockattr
+            .keys()
+            .any(|attr| document.can_node_have_attribute(rows.first().unwrap(), attr, state)))
       {
-        for (key,val) in blockattr { 
+        for (key, val) in blockattr {
           document.set_attribute(&mut first, &key, &val)?;
         }
-        document.unwrap_nodes(blocknode)?; 
+        document.unwrap_nodes(blocknode)?;
       }
     }
   }
@@ -368,27 +372,33 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
 pub fn cleanup_math(document: &mut Document, mathnode: Node, state: &mut State) -> Result<()> {
   // Cleanup ltx:Math elements; particularly if they aren't "really" math.
   // But record the oddity with class=ltx_markedasmath
-    
+
   // If the Math ONLY contains XMath/XMText, it apparently isn't math at all!?!
-  if document.findnodes("ltx:XMath/ltx:*[local-name() != 'XMText']", Some(&mathnode), state).is_empty() {
-      // So unwrap down to the contents of the XMText's.
-      let xmtexts = mathnode.get_child_nodes().into_iter()
-        .flat_map(|child| child.get_child_nodes().into_iter()
-          .flat_map(|grandhcild| grandhcild.get_child_nodes()));
-      let mut texts = vec![];
-      for mut text in xmtexts {
-        text = if text.get_type() == Some(NodeType::ElementNode) {    // Make sure we've got an element
-          text 
-        } else {
-          document.wrap_nodes("ltx:text", vec![text], state)?.unwrap()
-        };
-        document.add_class(&mut text, "ltx_markedasmath")?;   // Now record that it originally was marked as math
-        texts.push(text) 
-      }
-      document.replace_node(mathnode, texts)?; // and replace the whole Math with the pieces
-    } else {                                                // Cleanup any remaining XMTexts
-      cleanup_xmtext_outer(document, &mathnode, state)?; 
+  if document
+    .findnodes("ltx:XMath/ltx:*[local-name() != 'XMText']", Some(&mathnode), state)
+    .is_empty()
+  {
+    // So unwrap down to the contents of the XMText's.
+    let xmtexts = mathnode
+      .get_child_nodes()
+      .into_iter()
+      .flat_map(|child| child.get_child_nodes().into_iter().flat_map(|grandhcild| grandhcild.get_child_nodes()));
+    let mut texts = vec![];
+    for mut text in xmtexts {
+      text = if text.get_type() == Some(NodeType::ElementNode) {
+        // Make sure we've got an element
+        text
+      } else {
+        document.wrap_nodes("ltx:text", vec![text], state)?.unwrap()
+      };
+      document.add_class(&mut text, "ltx_markedasmath")?; // Now record that it originally was marked as math
+      texts.push(text)
     }
+    document.replace_node(mathnode, texts)?; // and replace the whole Math with the pieces
+  } else {
+    // Cleanup any remaining XMTexts
+    cleanup_xmtext_outer(document, &mathnode, state)?;
+  }
   Ok(())
 }
 
@@ -415,17 +425,22 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut Stat
   // We're really only interested in reducing nested math, right?
   // But actually also collapsing ltx:XMText/ltx:text
   // Apply "outer" simplifications: remove ltx:text or ltx:p wrappings.
-  
+
   // A single "simple" element, with a single child
   let mut children;
   loop {
     children = text_node.get_child_nodes();
-    if (children.len() != 1) || document.findnodes("ltx:text | ltx:inline-block[count(*)=1] | ltx:p", Some(&text_node), state).is_empty() {
+    if (children.len() != 1)
+      || document
+        .findnodes("ltx:text | ltx:inline-block[count(*)=1] | ltx:p", Some(&text_node), state)
+        .is_empty()
+    {
       break;
     }
     let child = children.pop().unwrap();
     document.set_node_font(&text_node, document.get_node_font(&child).clone());
-    for (key, value) in child.get_attributes() {    // Copy the child's attributes (should Merge!!)
+    for (key, value) in child.get_attributes() {
+      // Copy the child's attributes (should Merge!!)
       if key != "xml:id" {
         text_node.set_attribute(&key, &value)?;
       }
@@ -437,26 +452,32 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut Stat
   // If the XMText contains a single Math, pull it's content up in
   if children.len() == 1 && !document.findnodes("ltx:Math", Some(&text_node), state).is_empty() {
     // Replace XMText by XMWrap/*  (this should preserve the parse?)
-    document.rename_node(&mut text_node, "ltx:XMWrap")?; // text_node = 
+    document.rename_node(&mut text_node, "ltx:XMWrap")?; // text_node =
     let mut first_child = children.pop().unwrap();
     let mut first_granchildren = first_child.get_child_nodes();
-    document.replace_node(first_child, first_granchildren.into_iter().flat_map(|grandchild| grandchild.get_child_nodes()).collect())?;
-    // # # RISKY!!!! If SOME nodes are math...
-    // # # pull the whole sequence up, unwrap the math and putting the rest back in XMText.
-    // # # Even with the XMWrap, this seems to wreak havoc on parsing and structure?
-    // # if(document.findnodes('ltx:Math',$text_node)){
-    // #   # Replace XMText by XMWrap/*  (this should preserve the parse?)
-    // #   $text_node=document.renameNode($text_node,'ltx:XMWrap');
-    // #   foreach my $child (@children){
-    // #     if($model->getNodeQName($child) eq 'ltx:Math'){
-    // #       document.replaceNode($child,map($_->childNodes,$child->childNodes)); }
-    // #     else {
-    // #       document.wrapNodes('ltx:XMText',$child); }}}
-    // If a single tabular that ONLY(?) contains Math, turn into an XMArray
-    // Well, a tabular REALLY shouldn't be in math;
-    // How much math should determine the switch?
-    // [will alignment attributes be lost?]
-  }  else if children.len() == 1 && state.model.get_node_qname(children.first().as_ref().unwrap()) == "ltx:tabular"
+    document.replace_node(
+      first_child,
+      first_granchildren
+        .into_iter()
+        .flat_map(|grandchild| grandchild.get_child_nodes())
+        .collect(),
+    )?;
+  // # # RISKY!!!! If SOME nodes are math...
+  // # # pull the whole sequence up, unwrap the math and putting the rest back in XMText.
+  // # # Even with the XMWrap, this seems to wreak havoc on parsing and structure?
+  // # if(document.findnodes('ltx:Math',$text_node)){
+  // #   # Replace XMText by XMWrap/*  (this should preserve the parse?)
+  // #   $text_node=document.renameNode($text_node,'ltx:XMWrap');
+  // #   foreach my $child (@children){
+  // #     if($model->getNodeQName($child) eq 'ltx:Math'){
+  // #       document.replaceNode($child,map($_->childNodes,$child->childNodes)); }
+  // #     else {
+  // #       document.wrapNodes('ltx:XMText',$child); }}}
+  // If a single tabular that ONLY(?) contains Math, turn into an XMArray
+  // Well, a tabular REALLY shouldn't be in math;
+  // How much math should determine the switch?
+  // [will alignment attributes be lost?]
+  } else if children.len() == 1 && state.model.get_node_qname(children.first().as_ref().unwrap()) == "ltx:tabular"
   //// Should we ALWAYS do this, or just for some minimal amount of math???
   ////        && !document.findnodes('ltx:tabular/ltx:tr/ltx:td/text()'
   ////                                 .' | ltx:tabular/ltx:tbody/ltx:tr/ltx:td/text()'
@@ -465,32 +486,31 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut Stat
   ////                                 $text_node)
   {
     unimplemented!(); // TODO
-    // // First step is remove any ltx:tbody from the tabular!
-    // foreach my $tb (document.findnodes('ltx:tabular/ltx:tbody', $text_node)) {
-    //   document.unwrapNodes($tb); }
-    // // Now, we can start replacing tabular=>XMArray, tr=>XMRow, td=>XMCell
-    // my $table = document.renameNode($children[0], 'ltx:XMArray');
-    // foreach my $row ($table->childNodes) {
-    //   $row = document.renameNode($row, 'ltx:XMRow');
-    //   foreach my $cell ($row->childNodes) {
-    //     $cell = document.renameNode($cell, 'ltx:XMCell');
-    //     foreach my $m ($cell->childNodes) {
-    //       if ($model->getNodeQName($m) eq 'ltx:Math') {    // Math cell, unwrap the Math/XMath layer
-    //         document.replaceNode($m, map { $_->childNodes } $m->childNodes); }
-    //       else {                                           // Otherwise, wrap whatever it is in an XMText
-    //         document.wrapNodes('ltx:XMText', $m); }
-    // } } }
-    // And now we don't need the XMText any more.
-    // foreach my $attr ($text_node->attributes) {    // Copy the child's attributes (should Merge!!)
-    //   $table->setAttribute($attr->nodeName => $attr->getValue); }
-    // my $newtable = document.unwrapNodes($text_node);
-    // if (my $id = $text_node->getAttribute('xml:id')) {
-    //   document.unRecordID($id);
-    //   document.recordID($id, $newtable); } }
+                      // // First step is remove any ltx:tbody from the tabular!
+                      // foreach my $tb (document.findnodes('ltx:tabular/ltx:tbody', $text_node)) {
+                      //   document.unwrapNodes($tb); }
+                      // // Now, we can start replacing tabular=>XMArray, tr=>XMRow, td=>XMCell
+                      // my $table = document.renameNode($children[0], 'ltx:XMArray');
+                      // foreach my $row ($table->childNodes) {
+                      //   $row = document.renameNode($row, 'ltx:XMRow');
+                      //   foreach my $cell ($row->childNodes) {
+                      //     $cell = document.renameNode($cell, 'ltx:XMCell');
+                      //     foreach my $m ($cell->childNodes) {
+                      //       if ($model->getNodeQName($m) eq 'ltx:Math') {    // Math cell, unwrap the Math/XMath layer
+                      //         document.replaceNode($m, map { $_->childNodes } $m->childNodes); }
+                      //       else {                                           // Otherwise, wrap whatever it is in an XMText
+                      //         document.wrapNodes('ltx:XMText', $m); }
+                      // } } }
+                      // And now we don't need the XMText any more.
+                      // foreach my $attr ($text_node->attributes) {    // Copy the child's attributes (should Merge!!)
+                      //   $table->setAttribute($attr->nodeName => $attr->getValue); }
+                      // my $newtable = document.unwrapNodes($text_node);
+                      // if (my $id = $text_node->getAttribute('xml:id')) {
+                      //   document.unRecordID($id);
+                      //   document.recordID($id, $newtable); } }
   }
   Ok(())
 }
-
 
 //======================================================================
 // A random collection of utility functions.
@@ -511,13 +531,14 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
         toks.push(t);
         let mut level = 1;
         while let Some(t) = tokens_iter.next() {
-          match t.get_catcode() { 
-            Catcode::BEGIN => level +=1,
+          match t.get_catcode() {
+            Catcode::BEGIN => level += 1,
             Catcode::END => level -= 1,
-            _ => {}
+            _ => {},
           }
           toks.push(t);
-          if level < 1 { // done if balanced.
+          if level < 1 {
+            // done if balanced.
             break;
           }
         }
@@ -547,40 +568,41 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
       let mut with_cs = vec![cs.clone(), T_BEGIN!()];
       with_cs.extend(t.unlist());
       with_cs.push(T_END!());
-      with_cs 
-    }).collect()
+      with_cs
+    })
+    .collect()
 }
 
-  // sub orNull {
-  //   return (grep { defined } @_) ? @_ : undef; }
+// sub orNull {
+//   return (grep { defined } @_) ? @_ : undef; }
 
-  // # Should be a general utility?
-  // sub stripBraces {
-  //   my ($tokens) = @_;
-  //   my @tokens = ($tokens ? $tokens->unlist : ());
-  //   my @t = ();
-  //   while (@tokens && ($tokens[0]->getCatcode == CC_SPACE)) {    # Skip leading whitespace
-  //     shift(@tokens); }
-  //   # Balanced tokens until $delim
-  //   my $ntopbraces = 0;
-  //   while (@tokens) {
-  //     if (Equals($tokens[0], T_BEGIN)) {                         # If top-level brace
-  //       $ntopbraces++;
-  //       my ($level, $t) = (0, undef);
-  //       while (defined($t = shift(@tokens))) {                   # Read balanced
-  //         my $cc = $t->getCatcode;
-  //         $level++ if $cc == CC_BEGIN;
-  //         $level-- if $cc == CC_END;
-  //         push(@t, $t);
-  //         last unless $level; } }
-  //     else {
-  //       push(@t, shift(@tokens)); } }
-  //   while (@t && ($t[-1]->getCatcode == CC_SPACE)) {             # pop off trailing spaces
-  //     pop(@t); }
-  //   # Strip outer braces if a single set encloses entire value and not just {}
-  //   if ($ntopbraces == 1) {
-  //     shift(@t); pop(@t); }
-  //   return Tokens(@t); }
+// # Should be a general utility?
+// sub stripBraces {
+//   my ($tokens) = @_;
+//   my @tokens = ($tokens ? $tokens->unlist : ());
+//   my @t = ();
+//   while (@tokens && ($tokens[0]->getCatcode == CC_SPACE)) {    # Skip leading whitespace
+//     shift(@tokens); }
+//   # Balanced tokens until $delim
+//   my $ntopbraces = 0;
+//   while (@tokens) {
+//     if (Equals($tokens[0], T_BEGIN)) {                         # If top-level brace
+//       $ntopbraces++;
+//       my ($level, $t) = (0, undef);
+//       while (defined($t = shift(@tokens))) {                   # Read balanced
+//         my $cc = $t->getCatcode;
+//         $level++ if $cc == CC_BEGIN;
+//         $level-- if $cc == CC_END;
+//         push(@t, $t);
+//         last unless $level; } }
+//     else {
+//       push(@t, shift(@tokens)); } }
+//   while (@t && ($t[-1]->getCatcode == CC_SPACE)) {             # pop off trailing spaces
+//     pop(@t); }
+//   # Strip outer braces if a single set encloses entire value and not just {}
+//   if ($ntopbraces == 1) {
+//     shift(@t); pop(@t); }
+//   return Tokens(@t); }
 
 /// Support for Key / Value arguments.
 // The very basic form is
@@ -629,7 +651,7 @@ pub struct KVSpec {
   pub plus: bool,
   pub prefix: Option<String>,
   pub keysets: Vec<Option<Parameters>>,
-  pub skip: bool
+  pub skip: bool,
 }
 impl Default for KVSpec {
   fn default() -> Self {
@@ -638,7 +660,7 @@ impl Default for KVSpec {
       plus: false,
       prefix: None,
       keysets: Vec::new(),
-      skip: false
+      skip: false,
     }
   }
 }
@@ -651,22 +673,25 @@ pub fn keyvals_aux(gullet: &mut Gullet, until: Option<Token>, mut spec: KVSpec, 
   // when we have a single keyset and no prefix (or no keyset at all)
   if spec.keysets.is_empty() {
     spec.star = true;
-  } else if let Some(ref prefix) = spec.prefix{
+  } else if let Some(ref prefix) = spec.prefix {
     if prefix.find(',').is_none() {
       spec.star = true;
     }
   }
-  
+
   // create a new set of Key-Value arguments
-  let mut keyvals = KeyVals::new(KeyValsOptions {
-    prefix: spec.prefix,
-    // keysets: spec.keysets, // TODO!
-    keysets: Vec::new(),
-    set_all: spec.plus,
-    set_internals: true,
-    skip: spec.skip,
-    skip_missing : spec.star
-  }, state);
+  let mut keyvals = KeyVals::new(
+    KeyValsOptions {
+      prefix: spec.prefix,
+      // keysets: spec.keysets, // TODO!
+      keysets: Vec::new(),
+      set_all: spec.plus,
+      set_internals: true,
+      skip: spec.skip,
+      skip_missing: spec.star,
+    },
+    state,
+  );
   // and read it from the gullet
   if let Some(until_token) = until {
     keyvals.read_from(gullet, until_token, state)?;

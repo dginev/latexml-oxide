@@ -1,23 +1,23 @@
 use std::borrow::Cow;
 use std::collections::VecDeque;
-use std::fs::File;
 use std::fmt;
+use std::fs::File;
 use std::io;
-use std::str;
 use std::io::prelude::*;
 use std::io::{BufReader, Read};
+use std::str;
 use std::sync::Mutex;
 
-use encoding::{Encoding, EncoderTrap};
-use encoding::all::ISO_8859_1;
 use core::ops::RangeBounds;
+use encoding::all::ISO_8859_1;
+use encoding::{EncoderTrap, Encoding};
 use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::common::error::*;
-use crate::common::store::Stored;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::state::{Catcodes, Scope, State, StateOptions};
 use crate::token::*;
 use crate::tokens::Tokens;
@@ -124,14 +124,10 @@ impl Default for Mouth {
 }
 
 impl fmt::Display for Mouth {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
-    write!(f, "Mouth[{}]", self.source)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "Mouth[{}]", self.source) }
 }
 impl Object for Mouth {
-  fn stringify(&self) -> String {
-    s!("Mouth[<string>{}x{}]", self.lineno, self.colno)
-  }
+  fn stringify(&self) -> String { s!("Mouth[<string>{}x{}]", self.lineno, self.colno) }
   fn get_locator(&self) -> Cow<Locator> {
     let (to_line, to_column) = (self.lineno, self.colno);
     let max_col = if self.nchars > 0 { self.nchars - 1 } else { self.nchars }; // There is always a trailing EOL char, if any
@@ -226,7 +222,7 @@ impl Mouth {
           }
         },
       };
-      
+
       let reader = BufReader::new(f);
       self.reader = Some(reader);
       self.buffer = VecDeque::new();
@@ -234,8 +230,12 @@ impl Mouth {
     Ok(())
   }
   fn open_literal(&mut self, content: &str) { self.buffer = Mouth::split_lines(content); }
-  fn open_http(&mut self, _content: &str) { unimplemented!(); }
-  fn open_https(&mut self, _content: &str) { unimplemented!(); }
+  fn open_http(&mut self, _content: &str) {
+    unimplemented!();
+  }
+  fn open_https(&mut self, _content: &str) {
+    unimplemented!();
+  }
   // fn open_binding(&mut self, _content: &str) {}
 
   fn initialize(&mut self, state: &mut State) {
@@ -303,7 +303,7 @@ impl Mouth {
   //   // I am wondering if this is still needed or we can use a Rust iterator?
   // }
 
-  fn get_next_line(&mut self, state:&State) -> Option<String> {
+  fn get_next_line(&mut self, state: &State) -> Option<String> {
     match self.buffer.pop_front() {
       Some(line) => {
         // No CR on last line!
@@ -313,55 +313,58 @@ impl Mouth {
           Some(line.to_string())
         }
       },
-      None => if let Some(ref mut reader) = self.reader {
-        // file mouth case
-        let mut line_bytes = Vec::new();
-        let num_bytes = match reader.read_until(b'\n', &mut line_bytes) {
-          Ok(count) => count,
-          Err(e) => {
-            let message = s!("BufReader::read_until returned an error: {:?}", e);
-            Warn!("mouth","io", self, state, message);
-            0
-          }
-        };
-        if num_bytes == 0 || line_bytes.is_empty() { // double-check to be safe
-          self.reader.take(); // remove the now exhausted reader
-          None
-        } else {
-          // we read a line!
-          //
-          // Note 1: the original latexml code first split the perl string into lines, and only THEN decoded it
-          // however, executing a rust regex on a Vec<u8> is just not going to be a sane way forward.
-          // we will first decode the read-in bytes to the right String form, and THEN split lines.
-          // as such, decoding is the first action taken on bytes read in from a file.
-          //
-          // Note 2: again, the original latexml code only runs this decode logic for file reads,
-          //         implying that any string/http/https mouths are always expected in Unicode
-          let mut line = if let Some(ref encoding) = state.input_encoding {
-            // TODO: What are characters that fail to decode replaced by in Rust?
-            // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable chars in to space(?).
-            // line = encoding, line_bytes
-      
-            // Just remove the replacement chars, and warn (or Info?)
-            let message = s!("input isn't valid under encoding {}", encoding);
-            Info!("misdefined", encoding, self, state, message); 
-            unsafe { str::from_utf8_unchecked(&line_bytes).to_string() }
-          } else {
-            // no encoding, interpret as unicode! 
-            match str::from_utf8(&line_bytes) {
-              Ok(line_str) => line_str.to_string(),
-              Err(e) => {
-                let message = s!("input isn't valid under encoding utf8: {:?}", e);
-                Info!("misdefined", "utf8", self, state, message); 
-                unsafe { str::from_utf8_unchecked(&line_bytes).to_string() }
-              }
-            }
+      None => {
+        if let Some(ref mut reader) = self.reader {
+          // file mouth case
+          let mut line_bytes = Vec::new();
+          let num_bytes = match reader.read_until(b'\n', &mut line_bytes) {
+            Ok(count) => count,
+            Err(e) => {
+              let message = s!("BufReader::read_until returned an error: {:?}", e);
+              Warn!("mouth", "io", self, state, message);
+              0
+            },
           };
-          line.push('\r');
-          Some(line)
+          if num_bytes == 0 || line_bytes.is_empty() {
+            // double-check to be safe
+            self.reader.take(); // remove the now exhausted reader
+            None
+          } else {
+            // we read a line!
+            //
+            // Note 1: the original latexml code first split the perl string into lines, and only THEN decoded it
+            // however, executing a rust regex on a Vec<u8> is just not going to be a sane way forward.
+            // we will first decode the read-in bytes to the right String form, and THEN split lines.
+            // as such, decoding is the first action taken on bytes read in from a file.
+            //
+            // Note 2: again, the original latexml code only runs this decode logic for file reads,
+            //         implying that any string/http/https mouths are always expected in Unicode
+            let mut line = if let Some(ref encoding) = state.input_encoding {
+              // TODO: What are characters that fail to decode replaced by in Rust?
+              // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable chars in to space(?).
+              // line = encoding, line_bytes
+
+              // Just remove the replacement chars, and warn (or Info?)
+              let message = s!("input isn't valid under encoding {}", encoding);
+              Info!("misdefined", encoding, self, state, message);
+              unsafe { str::from_utf8_unchecked(&line_bytes).to_string() }
+            } else {
+              // no encoding, interpret as unicode!
+              match str::from_utf8(&line_bytes) {
+                Ok(line_str) => line_str.to_string(),
+                Err(e) => {
+                  let message = s!("input isn't valid under encoding utf8: {:?}", e);
+                  Info!("misdefined", "utf8", self, state, message);
+                  unsafe { str::from_utf8_unchecked(&line_bytes).to_string() }
+                },
+              }
+            };
+            line.push('\r');
+            Some(line)
+          }
+        } else {
+          None
         }
-      } else {
-        None
       },
     }
   }
@@ -415,8 +418,9 @@ impl Mouth {
       },
     }
   }
-  pub fn has_more_input(&mut self) -> bool { self.colno < self.nchars || !self.buffer.is_empty() || 
-    (self.reader.is_some() && !self.reader.as_mut().unwrap().fill_buf().unwrap().is_empty()) }
+  pub fn has_more_input(&mut self) -> bool {
+    self.colno < self.nchars || !self.buffer.is_empty() || (self.reader.is_some() && !self.reader.as_mut().unwrap().fill_buf().unwrap().is_empty())
+  }
 
   /// Read the next token, or undef if exhausted.
   /// Note that this also returns COMMENT tokens containing source comments,
@@ -726,8 +730,8 @@ impl Mouth {
         if cc_after_letter == Some(Catcode::EOL) {
           // If we've got an EOL
           // if in \read mode, leave the EOL to be turned into a T_SPACE
-          if state.lookup_int("PRESERVE_NEWLINES") > 1 { }
-          else {
+          if state.lookup_int("PRESERVE_NEWLINES") > 1 {
+          } else {
             // else skip it.
             self.get_next_char(state);
             if self.colno < self.nchars {
@@ -768,7 +772,7 @@ impl Mouth {
 
 // Rust note: 1) can we avoid reinitializing a state for each tokenize call? I am not sure if that is actually slow in practice,
 // but it ought to be at least suboptimal.
-// 2) If we move the $literal argument Tokenize/TokenizeInternal calls into rtx_codegen at compile_time, 
+// 2) If we move the $literal argument Tokenize/TokenizeInternal calls into rtx_codegen at compile_time,
 // we can bunch them together as a global object in codegen maybe? Then at least we can optimize the compile pass
 // + avoid runtime tokenization in the literal binding definitions.
 

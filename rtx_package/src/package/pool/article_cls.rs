@@ -26,7 +26,7 @@ LoadDefinitions!(stomach, state, {
     "twocolumn",
     "notitlepage",
     "titlepage",
-  ]  
+  ]
   .iter()
   {
     DeclareOption!(option.to_string(), None);
@@ -51,12 +51,14 @@ LoadDefinitions!(stomach, state, {
 
   AddToMacro!("\\maketitle", "\\ltx@authors@oneline");
 
-  DefMacro!("\\@ptsize", "0");    // should depend on options...
-  RawTeX!(r###"
+  DefMacro!("\\@ptsize", "0"); // should depend on options...
+  RawTeX!(
+    r###"
   \newif\if@restonecol
   \newif\if@titlepage
   \@titlepagefalse
-  "###);
+  "###
+  );
 
   //**********************************************************************
   // The core sectioning commands are defined in LaTeX.pm

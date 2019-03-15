@@ -9,15 +9,15 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::glue::{Glue, MuGlue};
 use crate::common::ligature::Ligature;
-use crate::common::number::Number;
 use crate::common::locator::Locator;
+use crate::common::number::Number;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
 use crate::definition::register::NumericOps;
-use crate::definition::register::{Register, RegisterValue, RegisterCell};
+use crate::definition::register::{Register, RegisterCell, RegisterValue};
 use crate::document::tag::TagData;
 use crate::gullet::Gullet;
 use crate::list::List;
@@ -120,7 +120,7 @@ impl fmt::Debug for Stored {
       Digested(ref digested) => write!(f, "Stored::Digested[{:?}]", digested),
       Parameter(ref parameter) => write!(f, "Stored::Parameter[{:?}]", parameter),
       Register(ref register) => write!(f, "Stored::Register[{:?}]", register.borrow().cs),
-      Mouth(ref mouth) =>  write!(f, "Stored::Mouth[{:?}]", mouth.borrow().get_source()),
+      Mouth(ref mouth) => write!(f, "Stored::Mouth[{:?}]", mouth.borrow().get_source()),
       Font(ref font) => write!(f, "Stored::Font[{:?}]", font),
       Number(ref number) => write!(f, "Stored::Number[{:?}]", number),
       Glue(ref glue) => write!(f, "Stored::Glue[{:?}]", glue),
@@ -141,7 +141,7 @@ impl fmt::Display for Stored {
     use crate::Stored::*;
     match *self {
       Digested(ref digested) => write!(f, "{}", digested),
-      _ => write!(f, "{:?}", self) // TODO
+      _ => write!(f, "{:?}", self), // TODO
     }
   }
 }

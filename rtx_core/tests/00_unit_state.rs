@@ -1,8 +1,8 @@
+use rtx_core::common::locator::Locator;
 use rtx_core::definition::expandable::Expandable;
 use rtx_core::state::*;
 use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
-use rtx_core::common::locator::Locator;
 use rtx_core::{s, Explode, T_CS, T_OTHER, T_SPACE};
 use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
@@ -183,7 +183,7 @@ fn install_definition_and_meaning() {
     paramlist: None,
     //       expansion: SimpleExpansion!(Tokens::new(Explode!("name"))),
     expansion: Tokens::new(Explode!("name")).into(),
-    locator: Locator::new("00_unit_test.rs".to_string(), 180,1, 188, 5),
+    locator: Locator::new("00_unit_test.rs".to_string(), 180, 1, 188, 5),
     is_protected: state.get_prefix("protected"),
     ..Expandable::default()
   };

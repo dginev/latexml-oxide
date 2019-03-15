@@ -1,5 +1,5 @@
-use std::fmt;
 use crate::definition::register::{NumericOps, RegisterType};
+use std::fmt;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Number(pub f32);

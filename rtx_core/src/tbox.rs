@@ -1,14 +1,14 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::fmt;
+use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
-use crate::common::store::Stored;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::document::Document;
 use crate::state::State;
 use crate::token::{Catcode, Token};
@@ -40,14 +40,10 @@ impl Default for Tbox {
 //======================================================================
 // Exported constructors
 impl fmt::Display for Tbox {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", self.text)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.text) }
 }
 impl Object for Tbox {
-  fn get_locator(&self) -> Cow<Locator> {
-    Cow::Borrowed(&self.locator)
-  }
+  fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
   fn revert(&self) -> Result<Tokens> { Ok(self.tokens.clone()) }
 }
 impl Tbox {

@@ -6,13 +6,13 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 use std::rc::Rc;
 
-pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::{Font, Fontmap};
 use crate::common::glue::Glue;
 use crate::common::model::{IndirectModel, Model};
 use crate::common::number::Number;
+pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
 use crate::definition::conditional::{ConditionalType, IfFrame};
 use crate::definition::expandable::Expandable;
@@ -210,9 +210,9 @@ pub struct State {
   // Stateful runtime - data structures
   pub model: Model,
   pub document: Option<Document>,
-  pub prefixes: HashMap<String, bool>, // ?
-  pub status: RefCell<HashMap<String, bool>>,   // ?
-  pub map: Vec<String>,                // ?
+  pub prefixes: HashMap<String, bool>,        // ?
+  pub status: RefCell<HashMap<String, bool>>, // ?
+  pub map: Vec<String>,                       // ?
   pub tag_properties: HashMap<String, TagOptions>,
   pub indirect_model: Option<IndirectModel>,
   pub pending_resources: Vec<Resource>,
@@ -567,7 +567,7 @@ impl State {
     if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
       front.push_back(value);
     } else {
-      Error!("state","Stored", None, self, "BUG: Tried to push_value into a non-vecdeque value key!");
+      Error!("state", "Stored", None, self, "BUG: Tried to push_value into a non-vecdeque value key!");
     }
   }
 
@@ -578,7 +578,7 @@ impl State {
     if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
       front.pop_back()
     } else {
-      Error!("state","Stored", None, self, "BUG: Tried to pop_value from a non-vecdeque value key!");
+      Error!("state", "Stored", None, self, "BUG: Tried to pop_value from a non-vecdeque value key!");
       None
     }
   }
@@ -619,7 +619,7 @@ impl State {
       _ => None,
     }
   }
-  
+
   pub fn remove_vecdeque<'lvdq>(&'lvdq mut self, key: &'lvdq str) -> Option<VecDeque<Stored>> {
     match self.remove_value(key) {
       Some(Stored::VecDequeStored(v)) => Some(v),
@@ -673,13 +673,13 @@ impl State {
       if defn.is_register() {
         defn.value_of(parameters, self)
       } else {
-        let message = s!("The control sequence {:?} is not a register",cs);
-        Warn!("expected","register", None, self, message);
+        let message = s!("The control sequence {:?} is not a register", cs);
+        Warn!("expected", "register", None, self, message);
         None
       }
     } else {
-      let message = s!("The control sequence {:?} is not defined",cs);
-      Warn!("expected","register", None, self, message);
+      let message = s!("The control sequence {:?} is not defined", cs);
+      Warn!("expected", "register", None, self, message);
       None
     }
   }
@@ -734,7 +734,7 @@ impl State {
     if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
       front.pop_front()
     } else {
-      Error!("state","Stored", None, self, "BUG: Tried to shift_value from a non-vecdeque value key!");
+      Error!("state", "Stored", None, self, "BUG: Tried to shift_value from a non-vecdeque value key!");
       None
     }
   }
@@ -772,8 +772,8 @@ impl State {
       None => Vec::new(),
       Some(map_vec) => match map_vec.front() {
         Some(&Stored::HashStored(ref h)) => h.keys().map(|k| k.as_str()).collect(),
-        _ => Vec::new()
-      }
+        _ => Vec::new(),
+      },
     }
   }
 
@@ -784,7 +784,7 @@ impl State {
       Vec::new()
     }
   }
-  
+
   //======================================================================
   /// Was `name` bound?  If  `frame` is given, check only whether it is bound in
   /// that frame (0 is the topmost).
@@ -967,7 +967,7 @@ impl State {
         })),
         Some(v) => {
           let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
-          Error!("unexpected","value", None, self, message);
+          Error!("unexpected", "value", None, self, message);
           None
         },
         None => None,
@@ -998,7 +998,7 @@ impl State {
         }))),
         Some(v) => {
           let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
-          Error!("unexpected","value", None, self, message);
+          Error!("unexpected", "value", None, self, message);
           None
         },
         None => None,
@@ -1304,10 +1304,12 @@ impl State {
           (*table_entry).pop_front();
           countdown_keys.push((table_name, key));
         } else {
-          let message = s!("Unassigning wrong value for $key from table $table in deactivateScope\
-            value is {:?} but stack is {:?}",
+          let message = s!(
+            "Unassigning wrong value for $key from table $table in deactivateScope\
+             value is {:?} but stack is {:?}",
             value,
-            table_entry.iter().map(ToString::to_string).collect::<Vec<String>>().join(", "));
+            table_entry.iter().map(ToString::to_string).collect::<Vec<String>>().join(", ")
+          );
           let stomach = self.stomach.borrow();
           use crate::common::object::Object;
           Warn!("internal", key, stomach, self, message);
@@ -1349,7 +1351,7 @@ impl State {
         Some(sp) => *sp,
         None => {
           let message = s!("Illegal unit of measure {:?}, assuming pt.", u);
-          Warn!("expected","<unit>", None, self, message);
+          Warn!("expected", "<unit>", None, self, message);
           *UNITS.get("pt").unwrap()
         },
       },
@@ -1360,10 +1362,10 @@ impl State {
 
   pub fn note_status(&self, category: &str) {
     // Ok, note status is *EXTREMELY* localized
-    // it only touches the status field of state, 
+    // it only touches the status field of state,
     // and has NO side-effects to any of the other stateful machinery.
     // So. Let's make it possible to call it from any context, including immutable state borrows,
-    // by using interiror mutability. 
+    // by using interiror mutability.
     // "Proof by commenting intent"
 
     // if ($type eq 'undefined') {
@@ -1371,7 +1373,7 @@ impl State {
     // elsif ($type eq 'missing') {
     //   map { $$self{status}{missing}{$_}++ } @data; }
     // else {
-    //   $$self{status}{$type}++; 
+    //   $$self{status}{$type}++;
   }
 
   // sub getStatus {

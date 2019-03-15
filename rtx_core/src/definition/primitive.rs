@@ -1,6 +1,6 @@
 use std::borrow::Cow;
-use std::rc::Rc;
 use std::fmt;
+use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -72,7 +72,7 @@ impl Default for Primitive {
       before_digest: Vec::new(),
       after_digest: Vec::new(),
       nargs: None,
-      is_prefix: false
+      is_prefix: false,
     }
   }
 }
@@ -81,12 +81,12 @@ impl PartialEq for Primitive {
 }
 
 impl fmt::Display for Primitive {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { unimplemented!(); }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    unimplemented!();
+  }
 }
 impl Object for Primitive {
-  fn stringify(&self) -> String {
-    <Self as Definition>::stringify_type(&self, "Primitive")
-  }
+  fn stringify(&self) -> String { <Self as Definition>::stringify_type(&self, "Primitive") }
 }
 impl Definition for Primitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
@@ -105,8 +105,9 @@ impl Definition for Primitive {
     // print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
     if let Some(ref closure) = self.replacement {
       invoked_boxes.extend(closure(stomach, args, state)?);
-    }    
-    if !self.after_digest.is_empty() { // optimize to avoid needless generation of whatsits
+    }
+    if !self.after_digest.is_empty() {
+      // optimize to avoid needless generation of whatsits
       let mut w = Whatsit::default();
       let after_boxes = self.execute_after_digest(stomach, &mut w, state)?;
       invoked_boxes.extend(after_boxes);

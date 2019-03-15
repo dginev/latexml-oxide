@@ -175,7 +175,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
       )?;
       let title = prop_digested!(props, "title");
       document.insert_element("ltx:title", title, None, state)?;
-      
+
       let toctitle = prop_digested!(props, "toctitle");
       if !toctitle.is_empty() {
         document.insert_element("ltx:toctitle", toctitle, None, state)?;

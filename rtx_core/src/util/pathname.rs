@@ -1,7 +1,7 @@
 use dirs;
+use kpathsea::Kpaths;
 use lazy_static::lazy_static;
 use regex::Regex;
-use kpathsea::Kpaths;
 
 use std::env;
 use std::path::{Path, PathBuf};
@@ -55,9 +55,7 @@ lazy_static! {
 
 }
 
-pub fn is_url(path: &str) -> bool {
-  URL_RE.is_match(path)
-}
+pub fn is_url(path: &str) -> bool { URL_RE.is_match(path) }
 
 pub fn is_literaldata(data: &str) -> bool { data.starts_with(LITERAL_PROTOCOL) }
 
@@ -90,8 +88,8 @@ pub fn split(pathname: &str) -> (String, String, String) {
 pub fn url_split(url: &str) -> (&str, &str) {
   if let Some(caps) = URL_RE.captures(url) {
     (caps.get(1).map_or("", |m| m.as_str()), caps.get(2).map_or("", |m| m.as_str()))
-  } else { 
-    (url, "index.tex")   // Well, what other default makes sense?
+  } else {
+    (url, "index.tex") // Well, what other default makes sense?
   }
 }
 

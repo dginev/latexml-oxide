@@ -18,9 +18,9 @@ use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;
 use rtx_core::{Core, Digested};
 
-use crate::package::pool;
-use super::*;
 use super::def_dialect::def_macro;
+use super::*;
+use crate::package::pool;
 
 pub fn load_external_binding(file: &str, state: &mut State, mut stomach: &mut Stomach) -> Result<bool> {
   let taken_dispatcher = state.extra_bindings_dispatch.take();
@@ -79,33 +79,32 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   // OR if it is loaded by such a class, and has withoptions true!!! (yikes)
   if options.handleoptions && options.withoptions.is_some() {
     if let Some(vdq) = state.lookup_vecdeque("@masquerading@as@class") {
-      if vdq.iter().any(|x| 
-        if let Stored::String(ref v) = x {
-          v == &prevname
-        } else {
-          false
-        }
-      ) {
+      if vdq.iter().any(|x| if let Stored::String(ref v) = x { v == &prevname } else { false }) {
         options.as_class = true;
       }
     }
   }
   if options.noltxml {
-    options.raw = true;// so it will be read as raw by Gullet.
+    options.raw = true; // so it will be read as raw by Gullet.
   }
   let as_type = if options.as_class { "cls" } else { options.extension.unwrap_or("") };
 
   // Compute the exact name based on the type
   let filename = match options.extension {
     None => name.to_string(),
-    Some(ext) => s!("{}.{}",name, ext),
+    Some(ext) => s!("{}.{}", name, ext),
   };
   let current_options = options.options.join(",");
   if !current_options.is_empty() {
-    if let Some(Stored::String(prevoptions)) = state.lookup_value(&s!("{}_loaded_with_options",filename)) {
+    if let Some(Stored::String(prevoptions)) = state.lookup_value(&s!("{}_loaded_with_options", filename)) {
       if &current_options != prevoptions {
-        let message = s!("Option clash for file {} with options {:?}, previously loaded with {:?}", filename, current_options, prevoptions);
-        Info!("unexpected","options", stomach, state, message);
+        let message = s!(
+          "Option clash for file {} with options {:?}, previously loaded with {:?}",
+          filename,
+          current_options,
+          prevoptions
+        );
+        Info!("unexpected", "options", stomach, state, message);
       }
     }
   }
@@ -123,7 +122,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
 
   // Mark as loaded, then process the definitions
   note_begin(&s!("Loading {:?} definitions", filename));
-  def_macro(T_CS!("\\@currname"),None, Tokens!(Explode!(name)), None, state);
+  def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None, state);
   def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None, state);
 
   // TODO: Is this inaccurate with latexml? It only sets the macros if the file is found, we set them *always*, as a matter of course
@@ -133,13 +132,12 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
       if !prevname.is_empty() && state.lookup_value(&s!("opt@{}.{}", prevname, prevext)).is_some() {
         // Only pass those class options that are declared by the package!
         if let Some(declared_options) = state.lookup_vecdeque("@declaredoptions") {
-          let mut topass          = Vec::new();
+          let mut topass = Vec::new();
           for op in with_options_to_pass.into_iter() {
-            if declared_options.iter().any(|x| if let Stored::String(val) = x {
-              val == &op 
-            } else {
-              false
-            }) {
+            if declared_options
+              .iter()
+              .any(|x| if let Stored::String(val) = x { val == &op } else { false })
+            {
               topass.push(op)
             }
           }
@@ -155,20 +153,35 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
     let gullet = stomach.get_gullet_mut();
     reset_options(gullet, state)?;
     pass_options(name, as_type, options.options.clone(), state); // passed explicit options.
-    // Note which packages are pretending to be classes.
+                                                                 // Note which packages are pretending to be classes.
     if options.as_class {
       state.push_value("@masquerading@as@class", name);
     }
-    def_macro(T_CS!(&s!("\\{}.{}-h@@k",name, as_type)), None, options.after.unwrap_or_default(), None, state);
+    def_macro(
+      T_CS!(&s!("\\{}.{}-h@@k", name, as_type)),
+      None,
+      options.after.unwrap_or_default(),
+      None,
+      state,
+    );
     let current_opt_val = match state.lookup_vecdeque(&s!("opt@{}.{}", name, as_type)) {
-      Some(vdq) => vdq.iter().map(|x| if let Stored::String(val) = x { val } else { "" })
-      .collect::<Vec<&str>>().join(","), // this is so painful, why can't we .join on a VecDeque?
-      None => String::new()
+      Some(vdq) => vdq
+        .iter()
+        .map(|x| if let Stored::String(val) = x { val } else { "" })
+        .collect::<Vec<&str>>()
+        .join(","), // this is so painful, why can't we .join on a VecDeque?
+      None => String::new(),
     };
-    def_macro(T_CS!(&s!("\\opt@{}.{}",name, as_type)), None, Tokens!(Explode!(current_opt_val)), None, state);
+    def_macro(
+      T_CS!(&s!("\\opt@{}.{}", name, as_type)),
+      None,
+      Tokens!(Explode!(current_opt_val)),
+      None,
+      state,
+    );
   }
   if !current_options.is_empty() {
-    state.assign_value(&s!("{}_loaded_with_options",filename), current_options, Some(Scope::Global));
+    state.assign_value(&s!("{}_loaded_with_options", filename), current_options, Some(Scope::Global));
   }
 
   let is_contrib = load_external_binding(&filename, state, stomach)?;
@@ -187,10 +200,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
       "IEEEtran.cls" => pool::ieeetran_cls::load_definitions(&mut stomach, &mut state)?,
       "url.sty" => pool::url_sty::load_definitions(&mut stomach, &mut state)?,
       "verbatim.sty" => pool::verbatim_sty::load_definitions(&mut stomach, &mut state)?,
-      "fontenc.sty"  => pool::fontenc_sty::load_definitions(&mut stomach, &mut state)?,
-      "inputenc.sty"  => pool::inputenc_sty::load_definitions(&mut stomach, &mut state)?,
-      "textcomp.sty"  => pool::textcomp_sty::load_definitions(&mut stomach, &mut state)?,
-      other => {is_binding = false},
+      "fontenc.sty" => pool::fontenc_sty::load_definitions(&mut stomach, &mut state)?,
+      "inputenc.sty" => pool::inputenc_sty::load_definitions(&mut stomach, &mut state)?,
+      "textcomp.sty" => pool::textcomp_sty::load_definitions(&mut stomach, &mut state)?,
+      other => is_binding = false,
     };
   }
   if is_binding {
@@ -228,19 +241,19 @@ pub fn input(file: String, gullet: &mut Gullet, state: &mut State) {
   unimplemented!();
 }
 
-
 fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, state: &mut State) -> Result<()> {
-  if !pathname::is_literaldata(pathname) { // We can't analyze literal data's pathnames!
+  if !pathname::is_literaldata(pathname) {
+    // We can't analyze literal data's pathnames!
     let (dir, name, extension) = pathname::split(pathname);
     // Don't load if we've already loaded it before.
     // Note that we'll still load it if we've already loaded only the ltxml version
     // since someone's presumably asking _explicitly_ for the raw TeX version.
     // It's probably even the ltxml version is asking for it!!
     // Of course, now it will be marked and wont get reloaded!
-    if state.lookup_bool(&s!("{}_loaded",request)) {
+    if state.lookup_bool(&s!("{}_loaded", request)) {
       return Ok(());
     }
-    state.assign_value(&s!("{}_loaded",request), true, Some(Scope::Global)); 
+    state.assign_value(&s!("{}_loaded", request), true, Some(Scope::Global));
   }
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)
@@ -257,20 +270,19 @@ fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, st
   // but loading of sources & bindings is typically done in before/after methods of constructors!
   // This re-locks defns during reading of TeX packages.
   state.unlocked = false;
-  let content_str = state.lookup_string(&s!("{}_contents",pathname));
-  let content = if content_str.is_empty() {
-    None
-  } else {
-    Some(content_str)
-  };
-  let mut pathname_mouth = Mouth::create(pathname,
-    MouthOptions{
+  let content_str = state.lookup_string(&s!("{}_contents", pathname));
+  let content = if content_str.is_empty() { None } else { Some(content_str) };
+  let mut pathname_mouth = Mouth::create(
+    pathname,
+    MouthOptions {
       fordefinitions: true,
       notes: true,
       content,
-      .. MouthOptions::default()
-    }, state)?;
-       
+      ..MouthOptions::default()
+    },
+    state,
+  )?;
+
   stomach.reading_from_mouth(pathname_mouth, state, move |stomach, state| -> Result<()> {
     while let Some(token) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
       if token != T_SPACE!() {
@@ -278,8 +290,8 @@ fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, st
       }
     }
     Ok(())
-  })?;   
-      
+  })?;
+
   state.assign_value("INTERPRETING_DEFINITIONS", was_interpreting, None);
   state.assign_value("INCLUDE_STYLES", was_including_styles, None);
   Ok(())
@@ -313,10 +325,7 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
 
 /// Pass the sequence of @options to the package $name (if $ext is 'sty'),
 /// or class $name (if $ext is 'cls').
-fn pass_options(name: &str, ext: &str, options: Vec<String>, state: &mut State) {
-  state.push_value(&s!("opt@{}.{}", name, ext), options);
-}
-
+fn pass_options(name: &str, ext: &str, options: Vec<String>, state: &mut State) { state.push_value(&s!("opt@{}.{}", name, ext), options); }
 
 pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let currname_token = T_CS!("\\@currname");
@@ -324,19 +333,19 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let gullet = stomach.get_gullet_mut();
   let name = if state.lookup_definition(&currname_token).is_some() {
     do_expand(currname_token, gullet, state)?.to_string()
-  } else { 
+  } else {
     String::new()
   };
-  let ext  = if state.lookup_definition(&currext_token).is_some() {
+  let ext = if state.lookup_definition(&currext_token).is_some() {
     do_expand(currext_token, gullet, state)?.to_string()
-  } else { 
+  } else {
     String::new()
   };
   let empty_vdq = VecDeque::new(); // convenience for unwrapping empty
 
-  let declared_options : VecDeque<Stored> = state.lookup_vecdeque("@declaredoptions").unwrap_or(&empty_vdq).clone();
+  let declared_options: VecDeque<Stored> = state.lookup_vecdeque("@declaredoptions").unwrap_or(&empty_vdq).clone();
   let opt_key = s!("opt@{}.{}", name, ext);
-  let current_options =state.lookup_vecdeque(&opt_key).unwrap_or(&empty_vdq);
+  let current_options = state.lookup_vecdeque(&opt_key).unwrap_or(&empty_vdq);
   let class_options = state.lookup_vecdeque("class_options").unwrap_or(&empty_vdq);
   // Execute options in declared order (unless \ProcessOptions*)
 
@@ -347,30 +356,34 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   //     elsif (executeDefaultOption_internal($option)) { } }
   // for option in current_options.iter() {
   //   if execute_option_internal(option)        { }
-  //   else if execute_default_option_internal(option)) { } 
+  //   else if execute_default_option_internal(option)) { }
   // } }
-  // else {                                    
-  let mut requested_options : HashSet<String> = HashSet::new();
+  // else {
+  let mut requested_options: HashSet<String> = HashSet::new();
   for option in current_options.iter() {
     match option {
-      Stored::String(content) => {requested_options.insert(content.to_string());},
+      Stored::String(content) => {
+        requested_options.insert(content.to_string());
+      },
       Stored::VecString(contents) => {
         for content in contents.iter() {
           requested_options.insert(content.to_string());
         }
       },
-      _ => {}
+      _ => {},
     }
   }
   for option in class_options.iter() {
     match option {
-      Stored::String(content) => {requested_options.insert(content.to_string());},
+      Stored::String(content) => {
+        requested_options.insert(content.to_string());
+      },
       Stored::VecString(contents) => {
         for content in contents.iter() {
           requested_options.insert(content.to_string());
         }
       },
-      _ => {}
+      _ => {},
     }
   }
 
@@ -378,25 +391,25 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   for option in declared_options.iter() {
     match option {
       Stored::String(content) => {
-        if requested_options.contains(content)  {
+        if requested_options.contains(content) {
           requested_options.remove(content); // Remove it, since it's been handled.
-          execute_option_internal(content, stomach, state)?; 
+          execute_option_internal(content, stomach, state)?;
         }
       },
       Stored::VecString(contents) => {
         for content in contents.iter() {
-          if requested_options.contains(content)  {
+          if requested_options.contains(content) {
             requested_options.remove(content); // Remove it, since it's been handled.
-            execute_option_internal(content, stomach, state)?; 
+            execute_option_internal(content, stomach, state)?;
           }
         }
       },
-      _ => {}
+      _ => {},
     }
   }
   // Now handle any remaining options (eg. default options), in the given order.
   for option in requested_options.iter() {
-    execute_default_option_internal(option, stomach, state)?; 
+    execute_default_option_internal(option, stomach, state)?;
   }
   // Now, undefine the handlers?
   for option in declared_options.iter() {
@@ -405,15 +418,17 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   Ok(())
 }
 
-
 fn execute_option_internal(option: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> {
-  let cs = T_CS!(&s!("\\ds@{}",option));
+  let cs = T_CS!(&s!("\\ds@{}", option));
   if state.lookup_definition(&cs).is_some() {
     def_macro(T_CS!("\\CurrentOption"), None, Tokens!(T_OTHER!(option)), None, state);
-    
+
     let unused = match state.remove_vecdeque("@unusedoptionlist") {
-      Some(list) => list.into_iter().filter(|item| if let Stored::String(content) = item { content != option} else { false }).collect(),
-      None => VecDeque::new()
+      Some(list) => list
+        .into_iter()
+        .filter(|item| if let Stored::String(content) = item { content != option } else { false })
+        .collect(),
+      None => VecDeque::new(),
     };
     state.assign_value("@unusedoptionlist", Stored::VecDequeStored(unused), None);
     stomach.digest(cs, state)?;
@@ -431,7 +446,7 @@ fn execute_default_option_internal(option: &str, stomach: &mut Stomach, state: &
 
 fn reset_options(gullet: &mut Gullet, state: &mut State) -> Result<()> {
   state.assign_value("@declaredoptions", Stored::VecDequeStored(VecDeque::new()), None);
-  let opt_unused_cs = if do_expand(T_CS!("\\@currext"), gullet, state)?.to_string()  == "cls" {
+  let opt_unused_cs = if do_expand(T_CS!("\\@currext"), gullet, state)?.to_string() == "cls" {
     "\\OptionNotUsed"
   } else {
     "\\@unknownoptionerror"
@@ -439,7 +454,6 @@ fn reset_options(gullet: &mut Gullet, state: &mut State) -> Result<()> {
   state.let_i(&T_CS!("\\default@ds"), T_CS!(opt_unused_cs), None);
   Ok(())
 }
-
 
 pub struct RequireOptions {
   pub options: Vec<String>,
@@ -473,7 +487,13 @@ impl Default for RequireOptions {
 pub fn require_package(name: &str, mut options: RequireOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   if options.raw {
     options.raw = false;
-    Warn!("deprecated","raw", stomach, state, "RequirePackage option raw is obsolete; it is not needed");
+    Warn!(
+      "deprecated",
+      "raw",
+      stomach,
+      state,
+      "RequirePackage option raw is obsolete; it is not needed"
+    );
   }
 
   // We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
@@ -490,7 +510,7 @@ pub fn require_package(name: &str, mut options: RequireOptions, stomach: &mut St
       extension: options.extension,
       handleoptions: true,
       // Pass classes options if we have NONE!
-      withoptions: if options.options.is_empty() { Some(Vec::new()) } else {None}, // fake boolean use, multi-type in latexml... refactor?
+      withoptions: if options.options.is_empty() { Some(Vec::new()) } else { None }, // fake boolean use, multi-type in latexml... refactor?
       options: options.options,
       as_class: options.as_class,
       noltxml: options.noltxml,
@@ -506,7 +526,13 @@ pub fn require_package(name: &str, mut options: RequireOptions, stomach: &mut St
 
 pub fn require_resource(mut resource: Resource, state: &mut State) {
   if resource.name.is_empty() && resource.content.is_empty() {
-    Warn!("expected","resource", None, state, "Resource must have a resource pathname or content; skipping");
+    Warn!(
+      "expected",
+      "resource",
+      None,
+      state,
+      "Resource must have a resource pathname or content; skipping"
+    );
     return;
   }
   if resource.mimetype.is_empty() && !resource.name.is_empty() {
@@ -514,7 +540,7 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
     resource.mimetype = resource_type(&ext);
   }
   if resource.mimetype.is_empty() {
-    Warn!("expected","mime-type", None, state, "Resource must have a mime-type; skipping");
+    Warn!("expected", "mime-type", None, state, "Resource must have a mime-type; skipping");
     return;
   }
 
@@ -579,7 +605,7 @@ pub fn find_file(file: &str, options: Option<FindFileOptions>, state: &mut State
   let mut options = options.unwrap_or_default();
   if options.raw {
     options.raw = false;
-    Warn!("deprecated","raw", None, state, "FindFile option raw is deprecated; it is not needed");
+    Warn!("deprecated", "raw", None, state, "FindFile option raw is deprecated; it is not needed");
   }
 
   if pathname::is_literaldata(file) {

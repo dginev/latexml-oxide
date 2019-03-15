@@ -1,6 +1,6 @@
-use std::fmt;
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::fmt;
 
 use crate::common::dimension::Dimension;
 use crate::definition::register::{NumericOps, RegisterType};
@@ -126,9 +126,9 @@ impl Default for MuGlue {
   fn default() -> Self { MuGlue(0.0) }
 }
 impl fmt::Display for MuGlue {
-   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
-     unimplemented!();
-   }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    unimplemented!();
+  }
   // sub toString {
   // my ($self) = @_;
   // my ($sp, $plus, $pfill, $minus, $mfill) = @$self;
@@ -140,7 +140,6 @@ impl fmt::Display for MuGlue {
   //   ? $minus . $LaTeXML::Common::Glue::FILL[$mfill]
   //   : LaTeXML::Common::Float::floatformat($minus / 65536 * 1.8) . 'mu ') if $minus != 0;
   // return $string; }
-
 }
 
 impl NumericOps for Glue {
@@ -187,7 +186,7 @@ impl fmt::Display for Glue {
         if let Some(pfill) = self.pfill {
           write!(f, "{}{}", plus, pfill)?;
         } else {
-          write!(f,"{}", Dimension::point_format(plus))?;
+          write!(f, "{}", Dimension::point_format(plus))?;
         };
       }
     }
@@ -195,9 +194,9 @@ impl fmt::Display for Glue {
       if minus != 0.0 {
         write!(f, " minus ")?;
         if let Some(mfill) = self.mfill {
-          write!(f,"{}{}", minus, mfill)?;
+          write!(f, "{}{}", minus, mfill)?;
         } else {
-          write!(f,"{}",Dimension::point_format(minus))?;
+          write!(f, "{}", Dimension::point_format(minus))?;
         }
       }
     }

@@ -1,13 +1,13 @@
+use crate::common::error::*;
+use crate::common::locator::Locator;
+use crate::state::State;
+use crate::stomach::Stomach;
+use crate::tokens::Tokens;
+use crate::Digested;
 ///======================================================================
 /// Exported generic functions for dealing with `LaTeXML`'s objects
 ///======================================================================
 use std::borrow::Cow;
-use crate::common::error::*;
-use crate::common::locator::Locator;
-use crate::tokens::Tokens;
-use crate::stomach::Stomach;
-use crate::state::State;
-use crate::Digested;
 
 // ======================================================================
 // LaTeXML Object
@@ -18,7 +18,9 @@ use crate::Digested;
 // try to have stringify do too much.
 // ======================================================================
 pub trait Object {
-  fn stringify(&self) -> String { unimplemented!(); }
+  fn stringify(&self) -> String {
+    unimplemented!();
+  }
 
   // Since the next two are used in debugging and error messages,
   // be careful to avoid recursive errors
@@ -43,20 +45,26 @@ pub trait Object {
 
   // These should really only make sense for Data objects within the
   // processing stream.
-  fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> 
-  where Self: Sized { unimplemented!() }
+  fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested>
+  where Self: Sized {
+    unimplemented!()
+  }
 
   // fn be_absorbed(&self, _document: Document) { unimplemented!() }
-  fn get_locator(&self) -> Cow<Locator> { unimplemented!(); }
+  fn get_locator(&self) -> Cow<Locator> {
+    unimplemented!();
+  }
   fn get_location(&self) -> String {
     let loc = self.get_locator();
     if *loc == Locator::default() {
-      String::new() 
+      String::new()
     } else {
       s!("at {}", loc)
     }
   }
-  fn revert(&self) -> Result<Tokens> { unimplemented!(); }
+  fn revert(&self) -> Result<Tokens> {
+    unimplemented!();
+  }
   // fn unlist<T>(&self) -> Vec<T>
   // where Self: Sized {
   //   unimplemented!()

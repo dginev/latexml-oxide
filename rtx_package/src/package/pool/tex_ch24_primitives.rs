@@ -35,7 +35,12 @@ LoadDefinitions!(state, {
       let mut boxes = vec![Digested::TBox(Rc::new(open))];
       boxes.extend(body);
       // TODO: Locator logic here needs to improve..
-      let return_list = List { boxes, mode, font: None, locator: Locator::default()  };
+      let return_list = List {
+        boxes,
+        mode,
+        font: None,
+        locator: Locator::default(),
+      };
 
       return_list.into()
     })
@@ -54,7 +59,7 @@ LoadDefinitions!(state, {
   // // These are for those screwy cases where you need to create a group like box,
   // // more than just bgroup, egroup,
   // // BUT you DON'T want extra {, } showing up in any untex-ing.
-  DefConstructor!("\\@hidden@bgroup", "#body", 
+  DefConstructor!("\\@hidden@bgroup", "#body",
     before_digest => before_digest!(stomach,state, { stomach.bgroup(state); }),
     capture_body => true
     // TODO: // reversion => sub { Revert($_[0]->getProperty("body")); }
@@ -122,7 +127,7 @@ LoadDefinitions!(state, {
     unpack_to_token!(args => t);
     AssignValue!("afterAssignment" => t, Some(Scope::Global)); });
   // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next egroup or }
-  DefPrimitive!("\\aftergroup Token", sub[stomach, args, state] { 
+  DefPrimitive!("\\aftergroup Token", sub[stomach, args, state] {
     unpack_to_token!(args => t);
     PushValue!("afterGroup" => t); });
 
@@ -166,7 +171,7 @@ LoadDefinitions!(state, {
     if let Some(path) = find_file(&filename, None, state) {
       let content_str = LookupString!(&s!("{}_contents",path));
       let content = if content_str.is_empty() {
-        None 
+        None
       } else {
         Some(content_str)
       };
@@ -174,7 +179,7 @@ LoadDefinitions!(state, {
         content,
         .. MouthOptions::default()
       }, state)?;
-      AssignValue!(&s!("input_file:{}", port), mouth, Some(Scope::Global)); 
+      AssignValue!(&s!("input_file:{}", port), mouth, Some(Scope::Global));
     }
   });
 
@@ -229,7 +234,7 @@ LoadDefinitions!(state, {
       if tokens.is_empty() {
         tokens = vec![T_CS!("\\par")]; // trailing blank line
       }
-      DefMacroI!(token, None, Tokens::new(tokens)); 
+      DefMacroI!(token, None, Tokens::new(tokens));
     }
   });
 
@@ -239,7 +244,7 @@ LoadDefinitions!(state, {
     if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}", port)) {
       mouth.borrow().at_eof()
     } else {
-      true 
+      true
     }
   });
 
@@ -277,12 +282,12 @@ LoadDefinitions!(state, {
   // #======================================================================
   // # Remaining semi- Vertical Mode primitives in Ch.24, pp.280--281
 
-  DefPrimitive!("\\special {}",     None);
+  DefPrimitive!("\\special {}", None);
   DefPrimitive!("\\penalty Number", None);
   DefPrimitive!("\\kern Dimension", None);
   DefMacro!("\\mkern MuGlue", "\\ifmmode\\@math@mskip #1\\relax\\else\\@text@mskip #1\\relax\\fi");
   DefPrimitive!("\\unpenalty", None);
-  DefPrimitive!("\\unkern",    None);
+  DefPrimitive!("\\unkern", None);
   // ## Worrisome, but...
   // DefPrimitiveI("\unskip", None, sub {
   //     my ($stomach) = @_;
@@ -293,13 +298,16 @@ LoadDefinitions!(state, {
 
   // DefPrimitive!("\\mark{}", None);
   // # \insert<8bit><filler>{<vertical mode material>}
-  DefPrimitive!("\\insert Number", None);    // Just let the insertion get processed(?)
-                                             // \vadjust<filler>{<vertical mode material>}
-                                             // Note: \vadjust ignores in vertical mode...
-  // is it sufficient to just clear the macro to avoid recursion?
-  // (we don't track horizontal/vertical mode)
+  DefPrimitive!("\\insert Number", None); // Just let the insertion get processed(?)
+                                          // \vadjust<filler>{<vertical mode material>}
+                                          // Note: \vadjust ignores in vertical mode...
+                                          // is it sufficient to just clear the macro to avoid recursion?
+                                          // (we don't track horizontal/vertical mode)
   DefMacro!("\\LTX@vadjust@afterpar", "\\def\\LTX@vadjust@afterpar{}");
-  DefMacro!("\\LTX@clear@vadjust@afterpar", "\\def\\LTX@vadjust@afterpar{\\def\\LTX@vadjust@afterpar{}}");
+  DefMacro!(
+    "\\LTX@clear@vadjust@afterpar",
+    "\\def\\LTX@vadjust@afterpar{\\def\\LTX@vadjust@afterpar{}}"
+  );
   // DefPrimitive('\vadjust {}', sub {
   //     AddToMacro('\LTX@vadjust@afterpar', $_[1]->unlist);
   //     return; });

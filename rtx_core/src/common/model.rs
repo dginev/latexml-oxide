@@ -143,10 +143,10 @@ impl Model {
               ..Relaxng::default()
             });
           },
-          e => { 
+          e => {
             let message = s!("Can't load a schema of type {:?}", e);
             Error!("unknown", "schematype", self, None, message)
-          }
+          },
         };
       },
     };
@@ -282,8 +282,19 @@ impl Model {
       self.namespace_errors += 1;
       docprefix = Some(s!("namespace{}", &self.namespace_errors.to_string()));
       self.register_document_namespace(docprefix.as_ref().unwrap(), Some(namespace.to_string()));
-      let message2 = if let Some(ref dp) = docprefix { s!("Using '{}' instead", dp) } else { String::from("No prefix to fall back on.") };
-      Warn!("malformed", namespace, self, None, "No prefix has been registered for namespace (in document)", message2);
+      let message2 = if let Some(ref dp) = docprefix {
+        s!("Using '{}' instead", dp)
+      } else {
+        String::from("No prefix to fall back on.")
+      };
+      Warn!(
+        "malformed",
+        namespace,
+        self,
+        None,
+        "No prefix has been registered for namespace (in document)",
+        message2
+      );
     }
     match docprefix {
       None => None,
@@ -380,9 +391,14 @@ impl Model {
       let example_namespace = s!("http://example.com/namespace{}", &self.namespace_errors.to_string());
       ns = Some(example_namespace.clone());
       self.register_namespace(codeprefix, Some(example_namespace));
-      Error!("malformed", codeprefix, self, None,
-      "No namespace has been registered for prefix '$codeprefix' (in code)",
-      "Using '$ns' isntead");
+      Error!(
+        "malformed",
+        codeprefix,
+        self,
+        None,
+        "No namespace has been registered for prefix '$codeprefix' (in code)",
+        "Using '$ns' isntead"
+      );
     }
     match ns {
       None => None,

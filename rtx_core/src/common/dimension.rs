@@ -1,6 +1,6 @@
-use std::fmt;
 use crate::definition::register;
 use crate::definition::register::{NumericOps, RegisterType};
+use std::fmt;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Dimension(pub f32);
@@ -28,16 +28,11 @@ impl Default for MuDimension {
 }
 
 impl fmt::Display for Dimension {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", Dimension::point_format(self.0))
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", Dimension::point_format(self.0)) }
 }
 impl fmt::Display for MuDimension {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", Dimension::point_format(self.0))
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", Dimension::point_format(self.0)) }
 }
-
 
 impl Dimension {
   /// Utility for formatting scaled points sanely.

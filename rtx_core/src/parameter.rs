@@ -5,8 +5,8 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::common::error::*;
-use crate::common::store::Stored;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::gullet::Gullet;
@@ -87,7 +87,13 @@ impl Default for Parameter {
       spec: String::new(),
       extra: Vec::new(),
       reader: Rc::new(|_gullet, _args, _extra, _state| {
-        Warn!("Parameter","mock_reader", None, None, "Please define a real reader, this is a mock fallback!");
+        Warn!(
+          "Parameter",
+          "mock_reader",
+          None,
+          None,
+          "Please define a real reader, this is a mock fallback!"
+        );
         Ok(Tokens!())
       }),
       reader_predigest: None,
@@ -117,18 +123,14 @@ impl fmt::Debug for Parameter {
   }
 }
 impl fmt::Display for Parameter {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", self.name)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.name) }
 }
 
 impl PartialEq for Parameter {
   fn eq(&self, other: &Parameter) -> bool { self.name == other.name }
 }
 impl Object for Parameter {
-  fn stringify(&self) -> String {
-    self.spec.to_string()
-  }
+  fn stringify(&self) -> String { self.spec.to_string() }
 }
 
 lazy_static! {
@@ -277,7 +279,13 @@ impl Parameter {
       // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens> in the long-run
       //        Until *may* have a value, but it also may *not*, both OK. So... except it from the error message here
       if !self.name.starts_with("Until") {
-        Error!("expected", self, gullet, state, s!("Missing argument {} for {}", self.stringify(), fordefn.stringify()));
+        Error!(
+          "expected",
+          self,
+          gullet,
+          state,
+          s!("Missing argument {} for {}", self.stringify(), fordefn.stringify())
+        );
         value = Tokens!(T_OTHER!("missing"));
       }
     }
@@ -354,12 +362,12 @@ impl Object for Parameters {
     for parameter in self.0.iter() {
       let s = parameter.stringify();
       let lead_letter = match s.chars().next() {
-          Some(c) => c.is_alphanumeric(),
-          None => false,
+        Some(c) => c.is_alphanumeric(),
+        None => false,
       };
       let trail_letter = match result.chars().last() {
         Some(c) => c.is_alphanumeric(),
-        None => false
+        None => false,
       };
       if lead_letter && trail_letter {
         result.push(' ');

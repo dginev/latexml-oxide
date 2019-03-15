@@ -1,5 +1,5 @@
-use std::borrow::Cow;
 use super::*;
+use std::borrow::Cow;
 use unidecode::unidecode;
 //======================================================================
 // Cleaners

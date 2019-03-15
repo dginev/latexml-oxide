@@ -28,7 +28,14 @@ pub fn apply_accent(
   //     ? $standalonechar
   //     : NFC($letters[0] . $combiningchar . join('', @letters[1 .. $//letters]))),
   //   $font, $locator, $reversion); }
-  Ok(Tbox::new(string, font, Some(locator.into_owned()), reversion.unwrap_or(Tokens!()), HashMap::new(), state))
+  Ok(Tbox::new(
+    string,
+    font,
+    Some(locator.into_owned()),
+    reversion.unwrap_or(Tokens!()),
+    HashMap::new(),
+    state,
+  ))
 }
 
 LoadDefinitions!(state, {

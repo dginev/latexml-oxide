@@ -22,10 +22,10 @@ use rtx_core::tbox::Tbox;
 use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::whatsit::Whatsit;
-use rtx_core::{Digested};
+use rtx_core::Digested;
 
-use super::*;
 use super::content::merge_font;
+use super::*;
 
 /// Is defined in the `LaTeX`-y sense of also not being let to \relax.
 pub fn is_defined(name: &str, state: &State) -> bool {
@@ -50,9 +50,7 @@ pub fn is_defined_token(cs: &Token, state: &State) -> bool {
 pub fn is_definable(token: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(token);
   let mut name = token.get_string();
-  (name != "\\relax" && !name.starts_with("\\end"))
-  &&
-  (meaning.is_none() || meaning == state.lookup_meaning(&T_CS!("\\relax")))
+  (name != "\\relax" && !name.starts_with("\\end")) && (meaning.is_none() || meaning == state.lookup_meaning(&T_CS!("\\relax")))
 }
 
 pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
@@ -75,7 +73,7 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
     // also replace in proto
     SINGLE_CHAR_RE.replace(proto, "").to_string()
   } else if let Some(captures) = ACTIVE_CHAR_RE.captures(proto) {
-    // Match an active char    
+    // Match an active char
     cs = mouth::tokenize_internal(captures.get(1).map_or("", |m| m.as_str()), None)
       .unlist()
       .remove(0);
@@ -84,7 +82,9 @@ pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option
   } else {
     let message = s!("Definition prototype doesn't have proper control sequence: \"{}\"", proto);
     fatal!(Prototype, Misdefined, None, state, message);
-  }.trim().to_string();
+  }
+  .trim()
+  .to_string();
   let paramlist = parse_parameters(final_proto, &cs, state)?;
   Ok((cs, paramlist))
 }
@@ -192,7 +192,6 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, state: &mut State) ->
 
 pub fn revert(_arg: &[Token]) -> Tokens { unimplemented!() }
 
-
 //======================================================================
 // Defining Conditional Control Sequences.
 //======================================================================
@@ -236,13 +235,19 @@ pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<Co
           //       first, we want to capture a cloned value of cs, to be able to keep using cs here.
           // second, each invocation of the conditional macro needs to create new tokens to
           // return,       hence a clone is required on each call.
-          def_macro(T_CS!(s!("\\{}true", name)), None, Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iftrue")), None, state);
+          def_macro(
+            T_CS!(s!("\\{}true", name)),
+            None,
+            Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iftrue")),
+            None,
+            state,
+          );
           def_macro(
             T_CS!(s!("\\{}false", name)),
             None,
             Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iffalse")),
             None,
-            state
+            state,
           );
           state.let_i(&cs, T_CS!("\\iffalse"), None);
         } else {
@@ -668,11 +673,17 @@ pub fn def_environment(
     let env = state.lookup_string("current_environment");
     if env.is_empty() || name_clone != env {
       let message1 = s!("Can't close environment {}", name_clone);
-      let message2 = s!("Current are {} ",state.lookup_stacked_values("current_environment")
-        .iter().map(|x| s!("{:?}",x))
-        .collect::<Vec<String>>().join(", "));
+      let message2 = s!(
+        "Current are {} ",
+        state
+          .lookup_stacked_values("current_environment")
+          .iter()
+          .map(|x| s!("{:?}", x))
+          .collect::<Vec<String>>()
+          .join(", ")
+      );
       Error!("unexpected", end_name_clone, stomach, state, message1, message2);
-    }     
+    }
     Ok(Vec::new())
   });
   after_digest_env.push(unexpected_end_closure);

@@ -1,14 +1,14 @@
-use std::fmt;
-use std::borrow::Cow;
-use crate::util::pathname;
 use crate::common::object::Object;
+use crate::util::pathname;
+use std::borrow::Cow;
+use std::fmt;
 
-// TODO: This will require a large refactor, but 
+// TODO: This will require a large refactor, but
 // switching the source from an owned String to a &str reference
 // could provide a noticeable performance (and memory allocation) boost
 // (and especially if we also start adding locators to tokens)
 // my current thoughts are that we can have the core/gullet own the sources of all mouths
-// so that we can borrow them with the lifetime of the main convert_document loop... 
+// so that we can borrow them with the lifetime of the main convert_document loop...
 // that's harder than it sounds, I've already tried unsuccessfully with the Token contents,
 // but the mouth sources should be easier to manage.
 // definitely something that can be tried after test milestone is achieved.
@@ -19,7 +19,7 @@ pub struct Locator {
   from_line: usize,
   to_line: usize,
   from_column: usize,
-  to_column: usize
+  to_column: usize,
 }
 
 impl Default for Locator {
@@ -40,7 +40,7 @@ impl fmt::Display for Locator {
     if self.from_line > 0 {
       write!(f, "; line {}", self.from_line)?;
       if self.from_column > 0 {
-        write!(f, " col {}",self.from_column)?;
+        write!(f, " col {}", self.from_column)?;
       }
     }
     if self.to_line > 0 {
@@ -72,7 +72,7 @@ impl Locator {
       return None;
     }
     // the end coordinates depend on
-    let (to_line,to_column) = if to.is_range() {
+    let (to_line, to_column) = if to.is_range() {
       (to.to_line, to.to_column)
     } else {
       (to.from_line, to.from_column)
@@ -80,9 +80,7 @@ impl Locator {
     Some(Locator::new(from.source, from.from_line, from.from_column, to_line, to_column))
   }
 
-  pub fn is_range(&self) -> bool {
-    self.to_line > 0 || self.to_column > 0
-  }
+  pub fn is_range(&self) -> bool { self.to_line > 0 || self.to_column > 0 }
 
   pub fn get_short_source(&self, string_source: &str) -> String {
     if self.source.is_empty() {
@@ -94,27 +92,25 @@ impl Locator {
     } else {
       if self.source.contains(":") {
         let (base, ext) = pathname::url_split(&self.source);
-        s!("{}.{}",base,ext)
+        s!("{}.{}", base, ext)
       } else {
         let (path, base, ext) = pathname::split(&self.source);
         base
       }
     }
   }
-  pub fn get_source(&self) -> &str {
-    &self.source
-  }
+  pub fn get_source(&self) -> &str { &self.source }
 
-  pub fn get_from_locator(&self) -> Locator { 
+  pub fn get_from_locator(&self) -> Locator {
     Locator {
       source: self.source.clone(),
       from_line: self.from_line,
       from_column: self.from_column,
-      .. Locator::default()
+      ..Locator::default()
     }
   }
 
-  pub fn get_to_locator(&self) -> Locator { 
+  pub fn get_to_locator(&self) -> Locator {
     Locator {
       source: self.source.clone(),
       from_line: self.to_line,
@@ -124,10 +120,13 @@ impl Locator {
   }
 }
 impl Object for Locator {
-
   fn stringify(&self) -> String {
-    let mut loc = if self.source.is_empty() { "Anonymous String".to_string() } else { self.source.to_string() };
-    let range_from = if self.is_range() {" from"} else {""};
+    let mut loc = if self.source.is_empty() {
+      "Anonymous String".to_string()
+    } else {
+      self.source.to_string()
+    };
+    let range_from = if self.is_range() { " from" } else { "" };
     if self.from_line > 0 {
       loc.push_str(&s!(";{} line {}", range_from, self.from_line));
       if self.from_column > 0 {
@@ -148,22 +147,22 @@ impl Object for Locator {
     if self.is_range() {
       loc.push_str(&s!("range(from='"));
       // if self.from_line > 0 {
-        loc.push_str(&self.from_line.to_string());
+      loc.push_str(&self.from_line.to_string());
       // }
       // if self.from_column > 0 {
-        loc.push(';');
-        loc.push_str(&self.from_column.to_string());
+      loc.push(';');
+      loc.push_str(&self.from_column.to_string());
       // }
       loc.push_str(",to='");
       // if self.to_line > 0 {
-        loc.push_str(&self.to_line.to_string());
+      loc.push_str(&self.to_line.to_string());
       // }
       // if self.to_column > 0 {
-        loc.push(';');
-        loc.push_str(&self.to_column.to_string());
+      loc.push(';');
+      loc.push_str(&self.to_column.to_string());
       // }
       loc.push_str(")'");
-   } else {
+    } else {
       loc.push_str("point('");
       // if self.from_line > 0 {
       loc.push_str(&self.from_line.to_string());
@@ -173,12 +172,10 @@ impl Object for Locator {
       loc.push_str(&self.from_column.to_string());
       // }
       loc.push_str(")'");
-   }
-   loc
+    }
+    loc
   }
 
   /// getting the locator of a locator should return itself
-  fn get_locator(&self) -> Cow<Locator> {
-    Cow::Borrowed(self)
-  }
+  fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(self) }
 }

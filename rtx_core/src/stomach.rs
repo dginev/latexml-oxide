@@ -5,9 +5,9 @@ use std::rc::Rc;
 use crate::common::error::*;
 use crate::common::font;
 use crate::common::font::Font;
-use crate::common::store::Stored;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::Definition;
@@ -355,8 +355,8 @@ impl<'t> Stomach {
           meaning.get_string().to_string(), //text
           font,
           Some(self.gullet.get_locator().into_owned()), //locator
-          Tokens!(meaning),                // tokens
-          HashMap::new(),                  // properties
+          Tokens!(meaning),                             // tokens
+          HashMap::new(),                               // properties
           state,
         )))))
       }
@@ -408,7 +408,7 @@ impl<'t> Stomach {
             is_mouth = true;
           }
         } else {
-          Error!("unexpected","runtime", self, state, "TODO: gullet had no active runtime");
+          Error!("unexpected", "runtime", self, state, "TODO: gullet had no active runtime");
           break;
         }
       }
@@ -435,7 +435,7 @@ impl<'t> Stomach {
           let next = gullet.read_token(state);
           let message = s!("Unexpected input remaining: {:?}", next);
           let detail = s!("Finished reading from {}, but it still has input.", stringify_mouth);
-          Error!("unexpected","next", gullet, state, message, detail);          
+          Error!("unexpected", "next", gullet, state, message, detail);
           {
             if let Some(ref mut runtime) = gullet.mouth {
               runtime.mouth.finish(state);
@@ -526,7 +526,13 @@ impl<'t> Stomach {
   pub fn egroup(&mut self, state: &mut State) -> Result<()> {
     if state.lookup_bool("groupNonBoxing") {
       // or group was opened with \begingroup
-      Error!("unexpected", state.current_token.as_ref().unwrap(), self, state, "Attempt to close boxing group");
+      Error!(
+        "unexpected",
+        state.current_token.as_ref().unwrap(),
+        self,
+        state,
+        "Attempt to close boxing group"
+      );
     } else {
       // Don't pop if there's an error; maybe we'll recover?
       self.pop_stack_frame(false, state)?;
@@ -602,9 +608,9 @@ impl<'t> Stomach {
       let message = s!("Attempt to end mode {} in {}", mode, state.lookup_string("MODE"));
       let category = match state.current_token {
         Some(ref token) => token.to_string(),
-        None => String::from("mode")
+        None => String::from("mode"),
       };
-      Error!("unexpected", category, self, state, &message); // self.currentFrameMessage);      
+      Error!("unexpected", category, self, state, &message); // self.currentFrameMessage);
     } else {
       // Don"t pop if there"s an error; maybe we'll recover?
       self.pop_stack_frame(false, state)?;

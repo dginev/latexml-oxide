@@ -9,11 +9,11 @@ use std::rc::Rc;
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
 use crate::common::glue::{Glue, MuGlue};
-use crate::common::object::Object;
 use crate::common::number::Number;
+use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::definition::register::NumericOps;
-use crate::definition::register::{RegisterValue, RegisterCell};
+use crate::definition::register::{RegisterCell, RegisterValue};
 use crate::definition::Definition;
 use crate::state::State;
 use crate::stomach::Stomach;
@@ -24,8 +24,10 @@ lazy_static! {
   pub static ref MOCK_TOKEN: Token = Token::default();
 }
 
-static CONTROLNAME : &[&str] = &["NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL", "BS", "HT", "LF", "VT", "FF", "CR", "SO", "SI", "DLE", "DC1", "DC2", "DC3", "DC4", "NAK", "SYN", "ETB", "CAN", "EM", "SUB", "ESC", "FS", "GS", "RS", "US"];
-
+static CONTROLNAME: &[&str] = &[
+  "NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL", "BS", "HT", "LF", "VT", "FF", "CR", "SO", "SI", "DLE", "DC1", "DC2", "DC3", "DC4", "NAK",
+  "SYN", "ETB", "CAN", "EM", "SUB", "ESC", "FS", "GS", "RS", "US",
+];
 
 #[derive(PartialEq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
@@ -181,7 +183,7 @@ impl Catcode {
       INVALID => "T_INVALID",
       CS => "T_CS",
       NOTEXPANDED => "T_NOTEXPANDED",
-      MARKER => "T_MARKER"
+      MARKER => "T_MARKER",
     }
   }
 
@@ -647,7 +649,7 @@ impl<'a> Token {
       let c = string.chars().next().unwrap() as u16;
       if c < 0x020 {
         // TODO: sprintf("%04x", c)
-        string = s!("U+{}/{}",c, CONTROLNAME[c as usize]); 
+        string = s!("U+{}/{}", c, CONTROLNAME[c as usize]);
       }
     }
     s!("{}[{}]", self.code.short_name(), string)

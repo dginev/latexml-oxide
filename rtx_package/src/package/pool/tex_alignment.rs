@@ -3,7 +3,6 @@ use crate::package::*;
 // Basic alignment support needed by most environments & commands.
 //======================================================================
 LoadDefinitions!(state, {
-
   Tag!("ltx:td", after_close => tagsub!(doc, node, state, { doc.trim_node_whitespace(node)?; }));
 
   //----------------------------------------------------------------------
@@ -648,5 +647,4 @@ LoadDefinitions!(state, {
   //   '#1',
   //   reversion    => '\ooalign{#1}', bounded => 1, mode => 'text',
   //   beforeDigest => sub { alignmentBindings('l'); });
-
 });

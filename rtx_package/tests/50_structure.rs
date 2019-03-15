@@ -1,8 +1,8 @@
+use rtx_package::util::test::*;
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
 use std::collections::HashMap;
-use rtx_package::util::test::*;
 
 #[test]
 fn can_structure() {

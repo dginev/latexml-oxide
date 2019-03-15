@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::fmt;
+use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -178,19 +178,19 @@ impl PartialEq for MathPrimitive {
 }
 
 impl fmt::Display for MathPrimitive {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { unimplemented!(); }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    unimplemented!();
+  }
 }
 impl Object for MathPrimitive {
-  fn stringify(&self) -> String {
-    <Self as Definition>::stringify_type(&self, "MathPrimitive")
-  }
+  fn stringify(&self) -> String { <Self as Definition>::stringify_type(&self, "MathPrimitive") }
 }
 impl Definition for MathPrimitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
-    Info!("MathPrimitive","invoke",stomach, state, "invoke for {:?}", self.cs);
+    Info!("MathPrimitive", "invoke", stomach, state, "invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;

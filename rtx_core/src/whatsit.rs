@@ -7,8 +7,8 @@ use std::rc::Rc;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
-use crate::common::store::Stored;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::definition::expandable::Expandable;
 use crate::definition::{Definition, Reversion};
 use crate::document::Document;
@@ -39,14 +39,12 @@ impl Default for Whatsit {
       definition: Rc::new(Expandable::default()),
       reversion: None,
       dual_reversion: None,
-      locator: Locator::default()
+      locator: Locator::default(),
     }
   }
 }
 impl PartialEq for Whatsit {
-  fn eq(&self, other: &Whatsit) -> bool {
-    *self.definition == *other.definition && self.args == other.args && self.properties == other.properties
-  }
+  fn eq(&self, other: &Whatsit) -> bool { *self.definition == *other.definition && self.args == other.args && self.properties == other.properties }
 }
 
 impl Whatsit {
@@ -109,9 +107,7 @@ impl fmt::Display for Whatsit {
 }
 
 impl Object for Whatsit {
-  fn get_locator(&self) -> Cow<Locator> {
-    Cow::Borrowed(&self.locator)
-  }
+  fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
 
   fn revert(&self) -> Result<Tokens> {
     // WARNING: Forbidden knowledge?

@@ -70,11 +70,11 @@ LoadDefinitions!(state, {
   // # but since we don't manage Pages...
 
   DefPrimitive!("\\marks Number GeneralText", None);
-  DefMacro!("\\topmarks Number",        "");
-  DefMacro!("\\firstmarks Number",      "");
-  DefMacro!("\\botmarks Number",        "");
+  DefMacro!("\\topmarks Number", "");
+  DefMacro!("\\firstmarks Number", "");
+  DefMacro!("\\botmarks Number", "");
   DefMacro!("\\splitfirstmarks Number", "");
-  DefMacro!("\\splitbotmarks Number",   "");
+  DefMacro!("\\splitbotmarks Number", "");
 
   // #======================================================================
   // # 3.5 Bi-directional typesetting: the TeX--XeT primitives
@@ -99,7 +99,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\endL", "");
   DefMacro!("\\endR", "");
 
-  DefRegister!("\\predisplaydirection" => Number::new(0.0));    // ???
+  DefRegister!("\\predisplaydirection" => Number::new(0.0)); // ???
 
   // #======================================================================
   // # 3.6 Additional debugging features
@@ -205,5 +205,4 @@ LoadDefinitions!(state, {
   // # Not really sure where this comes from; pdftex?
   // DefRegister('\synctex', Number(0));
   // #======================================================================
-
 });

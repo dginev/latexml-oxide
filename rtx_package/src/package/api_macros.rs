@@ -179,7 +179,6 @@ macro_rules! after_digest_single {
   };
 }
 
-
 #[macro_export]
 macro_rules! reader {
   ($gullet:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
@@ -256,7 +255,7 @@ macro_rules! reversion {
 }
 
 // TODO: These .clone calls are silly... can we either
-// 1) Document::insert_element work with a &Vec<Digested>? or 
+// 1) Document::insert_element work with a &Vec<Digested>? or
 // 2) we can use mutable Whatsit properties in replacements, where we remove Vec<Digested> instances for cases that will be absorbed?
 // or something else that is lighter on memory allocations?
 

@@ -194,7 +194,7 @@ macro_rules! InputDefinitions {
 #[macro_export]
 macro_rules! InnerPool {
   ($name:ident) => {{
-    bind_state_mut!(stmch,st);
+    bind_state_mut!(stmch, st);
     InnerPool!($name, stmch, st)
   }};
   ($name:ident, $state_arg:ident) => {
@@ -500,10 +500,10 @@ macro_rules! LookupRegister {
       defn.value_of($parameters, $state_arg).unwrap_or_default()
     } else {
       let message = s!("The control sequence {:?} is not a register", $cs);
-      Warn!("expected","register", None, $state_arg, message);
+      Warn!("expected", "register", None, $state_arg, message);
       RegisterValue::default()
     }
-  }
+  };
 }
 
 #[macro_export]
@@ -801,25 +801,25 @@ macro_rules! requireMath {
     bind_state_mut!(st);
     requireMath!($cs_name, st)
   }};
-  ($cs_name:expr, $state_arg:ident) => (
+  ($cs_name:expr, $state_arg:ident) => {
     if !LookupBool!("IN_MATH", $state_arg) {
-      let message = s!("{} should only appear in math mode",$cs_name);
+      let message = s!("{} should only appear in math mode", $cs_name);
       Warn!("unexpected", "mode", None, $state_arg, message);
     }
-  )
+  };
 }
 #[macro_export]
 macro_rules! forbidMath {
-  ($cs_name:expr) => ({
+  ($cs_name:expr) => {{
     bind_state_mut!(st);
     forbidMath!($cs_name, st)
-  });
-  ($cs_name:expr, $state_arg:ident) => (
+  }};
+  ($cs_name:expr, $state_arg:ident) => {
     if LookupBool!("IN_MATH", $state_arg) {
-      let message = s!("{} should not appear in math mode",$cs_name);
+      let message = s!("{} should not appear in math mode", $cs_name);
       Warn!("unexpected", "mode", None, $state_arg, message);
     }
-  )
+  };
 }
 
 //======================================================================
@@ -921,7 +921,7 @@ macro_rules! RefStepCounter {
 #[macro_export]
 macro_rules! RefStepID {
   ($ctr:expr) => {{
-    bind_state_mut!(stmch,st);
+    bind_state_mut!(stmch, st);
     ref_step_id($ctr, stmch, st)
   }};
   ($ctr:expr, $stomach:ident) => {{
@@ -1321,10 +1321,8 @@ macro_rules! IsDefinable {
   }};
   ($token: expr, $state_arg: ident) => {
     is_definable($token, $state_arg)
-  }
+  };
 }
-  
-  
 
 #[macro_export]
 macro_rules! Let {
@@ -1429,7 +1427,7 @@ macro_rules! DefMacroI(
   };
   ($cs:literal, $paramlist:expr, $expansion:literal, $($key:ident=>$val:expr),*) => {
     let expansion;
-    compile_expansion!(expansion, $expansion);    
+    compile_expansion!(expansion, $expansion);
     DefMacroIWO!(T_CS!($cs), $paramlist, expansion, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*)))
   };
   ($cs:literal, $paramlist:expr, $expansion:expr) => (DefMacroIWO!(T_CS!($cs), $paramlist, $expansion, None));
@@ -1774,7 +1772,7 @@ macro_rules! TokenizeInternal {
 #[macro_export]
 macro_rules! RawTeX {
   ($text:literal) => {
-    bind_state_mut!(stmch,st);
+    bind_state_mut!(stmch, st);
     let tokenized: Tokens;
     compile_tokenize_internal!(tokenized, $text);
     stmch.digest(tokenized, st)?;
@@ -1855,11 +1853,11 @@ macro_rules! SetPrefix {
 
 #[macro_export]
 macro_rules! DeclareOption {
-  ($option:expr, None) => { 
+  ($option:expr, None) => {
     bind_state_mut!(st);
     DeclareOption!($option, sub[stomach, state] {}, st)
   };
-  (None, sub $body:block) => { 
+  (None, sub $body:block) => {
     bind_state_mut!(st);
     DeclareOption!(None, sub[stomach, state] $body, st)
   };
@@ -1867,23 +1865,23 @@ macro_rules! DeclareOption {
     bind_state_mut!(st);
     DeclareOption!(None, sub[stomach, $state] $body, st)
   };
-  (None, sub[$stomach:ident, $state:ident] $body:block) => { 
+  (None, sub[$stomach:ident, $state:ident] $body:block) => {
     bind_state_mut!(st);
-    DeclareOption!(None, sub[$stomach, $state] $body, st)    
+    DeclareOption!(None, sub[$stomach, $state] $body, st)
   };
-  ($option:expr, sub $body:block) => { 
+  ($option:expr, sub $body:block) => {
     bind_state_mut!(st);
     DeclareOption!($option, sub[stomach, state] $body, st)
   };
-  ($option:expr, sub[$state:ident] $body:block) => { 
+  ($option:expr, sub[$state:ident] $body:block) => {
     bind_state_mut!(st);
     DeclareOption!($option, sub[stomach, $state] $body, st)
   };
-  ($option:expr, sub[$stomach:ident, $state:ident] $body:block) => { 
+  ($option:expr, sub[$stomach:ident, $state:ident] $body:block) => {
     bind_state_mut!(st);
     DeclareOption!($option, sub[$stomach, $state] $body, st)
   };
-  (None, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => { 
+  (None, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => {
     let cs = String::from("\\default@ds");
     // block case, create a primitive
     let code: PrimitiveClosure = Rc::new(move |$stomach, _args, $inner_state|
@@ -1891,7 +1889,7 @@ macro_rules! DeclareOption {
     );
     def_primitive(T_CS!(cs), None, code, PrimitiveOptions::default(), $outer_state);
   };
-  ($option:expr, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => { 
+  ($option:expr, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => {
     $outer_state.push_value("@declaredoptions", $option);
     let cs = s!("\\ds@{}", $option);
     // block case, create a primitive
@@ -1905,15 +1903,15 @@ macro_rules! DeclareOption {
 #[macro_export]
 macro_rules! ProcessOptions {
   ($gullet:ident) => {{
-      bind_state_mut!(st);
-      process_options($gullet, st)?;
-  }}
+    bind_state_mut!(st);
+    process_options($gullet, st)?;
+  }};
 }
 
 #[macro_export]
 macro_rules! AddToMacro {
   ($cs:literal, $tokens:literal) => {{
-    bind_state_mut!(stmch,st);
+    bind_state_mut!(stmch, st);
     let cs = T_CS!($cs);
     let tokens = TokenizeInternal!($tokens);
     // Needs error checking!
@@ -1921,24 +1919,33 @@ macro_rules! AddToMacro {
     if defn.is_none() || !defn.as_ref().unwrap().is_expandable() {
       let message = s!("{} is not an expandable control sequence", cs);
       let message2 = "Ignoring addition";
-      Warn!("unexpected", cs, stmch, st, message, message2); 
+      Warn!("unexpected", cs, stmch, st, message, message2);
     } else {
       let mut expansion = match defn.unwrap().get_expansion() {
         // the .clone() call is again avoidable with a careful refactor via e.g. using `.remove_definition` from state
         // (as we're redefining the macro again), and then use a `.remove_expansion` call on defn?
         Some(ExpansionBody::Tokens(tokens)) => tokens.clone().unlist(),
         Some(ExpansionBody::Closure(_)) => {
-          let message = s!("{} has a closure body, AddToMacro will *override* with an ExpandableBody::Tokens ! This is usually in error!", cs);
+          let message = s!(
+            "{} has a closure body, AddToMacro will *override* with an ExpandableBody::Tokens ! This is usually in error!",
+            cs
+          );
           Warn!("unexpected", "ExpandableBody::Closure", stmch, st, message);
           Vec::new()
         },
-        None => Vec::new()
+        None => Vec::new(),
       };
       expansion.extend(tokens.unlist());
-      def_macro(cs, None, ExpansionBody::Tokens(Tokens!(expansion)), 
-        Some(ExpandableOptions {scope: Some(Scope::Global), ..ExpandableOptions::default()}),
-        st
-       );
+      def_macro(
+        cs,
+        None,
+        ExpansionBody::Tokens(Tokens!(expansion)),
+        Some(ExpandableOptions {
+          scope: Some(Scope::Global),
+          ..ExpandableOptions::default()
+        }),
+        st,
+      );
     }
-  }}
+  }};
 }

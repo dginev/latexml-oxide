@@ -324,7 +324,7 @@ fn compare(u: Token, rel: Token, v: Token) -> Result<bool> {
     Ok(u > v)
   } else {
     let message = s!("Expected a relational token for comparision. Got {:?} (cc {:?})", rel, rel.get_catcode());
-    Error!("expected","<relationaltoken>", None, None, message);
+    Error!("expected", "<relationaltoken>", None, None, message);
     Ok(false)
   }
 }

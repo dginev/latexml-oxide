@@ -49,8 +49,10 @@ LoadDefinitions!(state, {
 
   // TODO:
   // DefMathLigature("..." => "\x{2026}", role => 'ID', name => 'ldots');
-  DefLigature!(r"--", "\u{2013}",fontTest => sub[arg] {arg.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter" }); // EN DASH (NOTE: With digits before &
-                                                                                                         //, aft => \N{FIGURE DASH})
+  DefLigature!(r"--", "\u{2013}", // EN DASH (NOTE: With digits before &
+    fontTest => sub[arg] { arg.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter" });
+  // TODO
+  //, aft => \N{FIGURE DASH})
 
   // EM DASH
   DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] {arg.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter" });

@@ -69,7 +69,6 @@ macro_rules! compile_tokenize {
   }};
 }
 
-
 #[macro_export]
 /// Macro for compiling string literal tokens into their preamble Tokens representation
 macro_rules! compile_tokenize_internal {
@@ -81,4 +80,3 @@ macro_rules! compile_tokenize_internal {
     $var = tmp;
   }};
 }
-

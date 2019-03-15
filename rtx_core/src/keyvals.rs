@@ -1,13 +1,13 @@
 use std::borrow::Cow;
-use std::fmt;
 use std::collections::HashMap;
+use std::fmt;
 // use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
-use crate::common::store::Stored;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::gullet::Gullet;
 use crate::stomach::Stomach;
 // use crate::definition::expandable::Expandable;
@@ -76,28 +76,33 @@ impl fmt::Display for KeyVals {
 
 impl Object for KeyVals {
   fn get_locator(&self) -> Cow<Locator> {
-    unimplemented!(); 
+    unimplemented!();
   }
   fn stringify(&self) -> String { "KeyVals:TODO".to_string() }
 
   fn be_digested(mut self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
     if self.was_digested {
-      Info!("ignore", "keyvals", stomach, state,
-        "Skipping digestion of \\setkeys as requested (did you digest a KeyVals twice?) "); 
+      Info!(
+        "ignore",
+        "keyvals",
+        stomach,
+        state,
+        "Skipping digestion of \\setkeys as requested (did you digest a KeyVals twice?) "
+      );
     } else {
-     stomach.digest(self.set_keys_expansion(), state)?;
+      stomach.digest(self.set_keys_expansion(), state)?;
     }
 
     // new tuples we want to create
-    let mut new_tuples : Vec<KVTuple> = Vec::new();
+    let mut new_tuples: Vec<KVTuple> = Vec::new();
 
     // iterate over them
     for tuple in self.tuples.drain(..) {
       let (key, value, use_default, resolution, keyval) = tuple;
       // digest a single token
-      let value_tokens_opt : Option<Tokens> = (&value).into();
+      let value_tokens_opt: Option<Tokens> = (&value).into();
       let value_tokens = value_tokens_opt.unwrap_or_default();
-      let digested_value : Digested = if let Some(keydef) = keyval.get_type(state) {
+      let digested_value: Digested = if let Some(keydef) = keyval.get_type(state) {
         // keydefs are actual Parameter objects, which should be able to digest their own values!
         // Hmmm, so we need to add Parameter to Store
         // This comes together with the DefKeyVal infrastructure, which assigns keydef parameters to keyval specifications.
@@ -140,7 +145,7 @@ pub struct KeyValsOptions {
   pub set_all: bool,
   pub set_internals: bool,
   pub skip: bool,
-  pub skip_missing: bool
+  pub skip_missing: bool,
 }
 impl Default for KeyValsOptions {
   fn default() -> Self {
@@ -267,7 +272,6 @@ impl KeyVals {
     Ok((tokens, last_token))
   }
 
-
   //======================================================================
   // Public accessors of all the values
   //======================================================================
@@ -312,7 +316,7 @@ impl KeyVals {
     // // iterate over the key-value pairs
     // for tuple in &self.tuples {
     //   let (key, value, useDefault, keyvals, keyval) = tuple;
-      
+
     //   // we might want to skip to the next iteration if key is to be omitted
     //   next if (grep { $_ eq $key } @skip);
 
@@ -359,7 +363,6 @@ impl KeyVals {
 
   //   # and return the list of tokens
   //   return Tokens(@tokens); }
-
 
   //======================================================================
   // Changing contained values
@@ -459,7 +462,7 @@ impl KeyVals {
     // set and read tokens
     let open = gullet.read_token(state);
     let assign = T_OTHER!("=");
-    let punct  = T_OTHER!(",");
+    let punct = T_OTHER!(",");
     let punct_tks = Tokens!(T_OTHER!(","));
     let until_tks = Tokens!(until.clone());
     // my ($punct, $assign) = ($$self{punct}, $$self{assign});
@@ -487,7 +490,7 @@ impl KeyVals {
       // if we have a non-empty key
       if !key.is_empty() {
         let mut value = Tokens!();
-        let is_default : bool = delim_opt.is_none() || delim_opt.as_ref().unwrap() != &assign;
+        let is_default: bool = delim_opt.is_none() || delim_opt.as_ref().unwrap() != &assign;
 
         // if we have an '=', we explcity assign a value
         if !is_default {
@@ -504,12 +507,13 @@ impl KeyVals {
           loop {
             delim_opt = match gullet.read_match(&[&punct_tks, &until_tks], state)? {
               Some(tks) => Some(tks.into()), // Tokens reader, but we look for single Token delim
-              None => None
+              None => None,
             };
             if delim_opt.is_some() {
               break; // only until we hit a delim.
             }
-            if let Some(tok) = gullet.read_token(state) { // Copy next token to args
+            if let Some(tok) = gullet.read_token(state) {
+              // Copy next token to args
               let mut rest = Vec::new();
               if tok.get_catcode() == Catcode::BEGIN {
                 rest.append(&mut gullet.read_balanced(state)?.unlist());
@@ -518,10 +522,12 @@ impl KeyVals {
               // record for keyvals
               toks.push(tok);
               toks.append(&mut rest);
-            } else { break; }
+            } else {
+              break;
+            }
           }
           // reparse (and expand) the tokens representing the value
-          if !toks.is_empty() {            
+          if !toks.is_empty() {
             value = Tokens::new(toks);
             if let Some(ref keydef) = keydef_opt {
               // TODO:
@@ -534,10 +540,10 @@ impl KeyVals {
             // keydef.revert_catcodes()
           }
         }
-      
+
         // and store our value please
         // if !silence_missing || self.can_resolve_keyval_for(key) {
-          self.add_value(&key, Stored::Tokens(value), is_default, false, state);
+        self.add_value(&key, Stored::Tokens(value), is_default, false, state);
         // }
       }
 
@@ -560,7 +566,7 @@ impl KeyVals {
   // returns a key => ToString(value)
   pub fn get_hash(&self) -> HashMap<String, String> {
     let mut hashed = HashMap::new();
-    for (k,v) in &self.cached_hash {
+    for (k, v) in &self.cached_hash {
       hashed.insert(k.to_string(), v.iter().map(|vv| vv.to_string()).collect::<Vec<String>>().join(""));
     }
     hashed
@@ -572,14 +578,14 @@ impl KeyVals {
   ///       potentially? On the other hand, we can also put the extra effort of *postponing* the build of KV metadata until digestion,
   ///       this way not losing any time reserializing metadata
   pub fn to_tokens(self) -> Tokens {
-    let mut tks : Vec<Token> = Vec::new();
-    for (k,v) in self.cached_pairs.into_iter() {
+    let mut tks: Vec<Token> = Vec::new();
+    for (k, v) in self.cached_pairs.into_iter() {
       tks.push(T_OTHER!(k));
-      tks.push( match v {
+      tks.push(match v {
         Stored::Tokens(vtks) => vtks.into(),
         Stored::Token(vtk) => vtk,
         Stored::String(vstr) => T_OTHER!(vstr),
-        _ => Token::default()
+        _ => Token::default(),
       });
     }
     Tokens::new(tks)

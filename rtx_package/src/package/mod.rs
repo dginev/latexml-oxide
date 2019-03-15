@@ -14,9 +14,9 @@ pub use rtx_core::common::font;
 pub use rtx_core::common::font::Font;
 pub use rtx_core::common::glue::{Glue, MuGlue};
 pub use rtx_core::common::ligature::{FontTestClosure, Ligature};
+pub use rtx_core::common::locator::Locator;
 pub use rtx_core::common::number::Number;
 pub use rtx_core::common::object::Object;
-pub use rtx_core::common::locator::Locator;
 pub use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 pub use rtx_core::definition::constructor::ConstructorOptions;
 pub use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
@@ -59,11 +59,11 @@ pub mod setup_binding_language;
 pub mod api_macros;
 pub mod api;
 // Re-export the public API
-pub use self::api::*;
-pub use self::api::content::*;
-pub use self::api::def_dialect::*;
-pub use self::api::counter_dialect::*;
 pub use self::api::cleaners::*;
+pub use self::api::content::*;
+pub use self::api::counter_dialect::*;
+pub use self::api::def_dialect::*;
+pub use self::api::*;
 
 // At the very end, declare the pool
 pub use self::pool::tex_functions::*;

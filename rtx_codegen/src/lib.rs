@@ -51,7 +51,7 @@ pub fn derive_compile_tokenize_internal(input: TokenStream) -> TokenStream {
 
 static mut CONTEXT_DEPTH: u32 = 0;
 // Update: still good to track the rust GH issue, but we have already found a solution,
-//         just one that the Rust team would certainly frown upon. 
+//         just one that the Rust team would certainly frown upon.
 //         In essence the `BoundState` proc derive uses a mutable singleton depth meter
 //         which gets switched up/down via our custom `start_state_frame!`/`end_state_frame!` macro switches
 //         this effectively allows us to do context-sensitive macro definition of `state!`,
@@ -97,7 +97,6 @@ pub fn bound_state(_input: TokenStream) -> TokenStream {
           inner_stomach!()
         };
       }
-
     )
   };
   state_declaration.into()

@@ -1,10 +1,10 @@
 use std::borrow::Cow;
-use std::rc::Rc;
 use std::fmt;
+use std::rc::Rc;
 
 use crate::common::error::*;
-use crate::common::object::Object;
 use crate::common::locator::Locator;
+use crate::common::object::Object;
 use crate::state::{Scope, State};
 
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
@@ -71,15 +71,15 @@ impl PartialEq for Expandable {
 }
 
 impl fmt::Display for Expandable {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { unimplemented!(); }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    unimplemented!();
+  }
 }
 impl Object for Expandable {
   fn is_definition(&self) -> bool { true }
   fn is_expandable(&self) -> bool { true }
   fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
-  fn stringify(&self) -> String {
-    <Self as Definition>::stringify_type(&self, "Expandable")
-  }
+  fn stringify(&self) -> String { <Self as Definition>::stringify_type(&self, "Expandable") }
 }
 impl Definition for Expandable {
   fn is_protected(&self) -> bool { self.is_protected }
@@ -111,7 +111,6 @@ impl Definition for Expandable {
   fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
     fatal!(Definition, Unexpected, "do_absorbtion on Expandable should never be called!");
   }
-  
 }
 
 impl Expandable {

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::fmt;
+use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -113,12 +113,12 @@ impl PartialEq for Constructor {
 }
 
 impl fmt::Display for Constructor {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { unimplemented!(); }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    unimplemented!();
+  }
 }
 impl Object for Constructor {
-  fn stringify(&self) -> String {
-    <Self as Definition>::stringify_type(&self, "Constructor")
-  }
+  fn stringify(&self) -> String { <Self as Definition>::stringify_type(&self, "Constructor") }
 }
 impl Definition for Constructor {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }

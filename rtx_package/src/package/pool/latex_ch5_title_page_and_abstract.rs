@@ -8,16 +8,19 @@ LoadDefinitions!(state, {
   Let!("\\@title", "\\@empty");
   DefMacro!("\\title{}", "\\def\\@title{#1}\\@add@frontmatter{ltx:title}{#1}", locked => true);
   DefMacro!("\\@date", "\\@empty");
-  DefMacro!("\\date{}", "\\def\\@date{#1}\
-    \\@add@frontmatter{ltx:date}[role=creation,\
-    name={\\@ifundefined{datename}{}{\\datename}}]{#1}");
+  DefMacro!(
+    "\\date{}",
+    "\\def\\@date{#1}\
+     \\@add@frontmatter{ltx:date}[role=creation,\
+     name={\\@ifundefined{datename}{}{\\datename}}]{#1}"
+  );
 
   // TODO: ^
   // DefConstructor!("\\person@thanks{}", "^ <ltx:contact role='thanks'>#1</ltx:contact>",
   //   alias => "\\thanks".into_option(), mode => "text".into_option());
   DefConstructor!("\\@personname{}", "<ltx:personname>#1</ltx:personname>",
     before_digest => before_digest!(stomach, state, { Let!("\\thanks", "\\person@thanks"); }),
-    bounded => true, 
+    bounded => true,
     mode => "text".into_option());
 
   DefConstructor!("\\and", " and ");
@@ -27,9 +30,12 @@ LoadDefinitions!(state, {
     let current = state.lookup_int("NUMBER_OF_AUTHORS");
     AssignValue!("NUMBER_OF_AUTHORS" => current + 1, Some(Scope::Global));
   });
-  DefMacro!("\\lx@author{}", "\\lx@count@author\
-    \\@add@frontmatter{ltx:creator}[role=author]{\\lx@author@prefix\\@personname{#1}}");
-  DefMacro!("\\lx@author@sep",  "\\qquad");
+  DefMacro!(
+    "\\lx@author{}",
+    "\\lx@count@author\
+     \\@add@frontmatter{ltx:creator}[role=author]{\\lx@author@prefix\\@personname{#1}}"
+  );
+  DefMacro!("\\lx@author@sep", "\\qquad");
   DefMacro!("\\lx@author@conj", "\\qquad");
   DefConstructor!("\\lx@author@prefix", sub[document, args, props, state] {
     let mut node       = document.get_element().unwrap();
@@ -62,26 +68,29 @@ LoadDefinitions!(state, {
 
   // Doesn"t produce anything (we're already inserting frontmatter),
   // But, it does make the various frontmatter macros into no-ops.
-  DefMacro!("\\maketitle", "\\@startsection@hook\
-      \\global\\let\\thanks\\relax\
-      \\global\\let\\maketitle\\relax\
-      \\global\\let\\@maketitle\\relax\
-      \\global\\let\\@thanks\\@empty\
-      \\global\\let\\@author\\@empty\
-      \\global\\let\\@date\\@empty\
-      \\global\\let\\@title\\@empty\
-      \\global\\let\\title\\relax\
-      \\global\\let\\author\\relax\
-      \\global\\let\\date\\relax\
-      \\global\\let\\and\\relax");
+  DefMacro!(
+    "\\maketitle",
+    "\\@startsection@hook\
+     \\global\\let\\thanks\\relax\
+     \\global\\let\\maketitle\\relax\
+     \\global\\let\\@maketitle\\relax\
+     \\global\\let\\@thanks\\@empty\
+     \\global\\let\\@author\\@empty\
+     \\global\\let\\@date\\@empty\
+     \\global\\let\\@title\\@empty\
+     \\global\\let\\title\\relax\
+     \\global\\let\\author\\relax\
+     \\global\\let\\date\\relax\
+     \\global\\let\\and\\relax"
+  );
 
-  DefMacro!("\\@thanks",  "\\@empty");
+  DefMacro!("\\@thanks", "\\@empty");
   DefMacro!("\\thanks{}", "\\def\\@thanks{#1}\\lx@make@thanks{#1}");
   DefConstructor!("\\lx@make@thanks{}", "<ltx:note role='thanks'>#1</ltx:note>");
 
   // Abstract SHOULD have been so simple, but seems to be a magnet for abuse.
   // For one thing, we'd like to just write
-    //   DefEnvironment('{abstract}','<ltx:abstract>//body</ltx:abstract>');
+  //   DefEnvironment('{abstract}','<ltx:abstract>//body</ltx:abstract>');
   // However, we don't want to place the <ltx:abstract> environment directly where
   // we found it, but we want to add it to frontmatter. This requires capturing the
   // recently digested list and storing it in the frontmatter structure.
@@ -105,7 +114,7 @@ LoadDefinitions!(state, {
   DefEnvironment!("{abstract}", "",
     after_digest_begin => after_digest!(stomach, args, state, {
       AssignValue!("inPreamble" => false);
-      AddToMacro!("\\@startsection@hook", "\\maybe@end@abstract"); 
+      AddToMacro!("\\@startsection@hook", "\\maybe@end@abstract");
     }),
     after_digest => after_digest!(stomach, args, state, {
       let abstract_title = stomach.digest(Tokens!(T_CS!("\\format@title@abstract"),T_BEGIN!(), T_CS!("\\abstractname"), T_END!()), state)?;
@@ -122,7 +131,7 @@ LoadDefinitions!(state, {
     mode => "text".into_option()
   );
   // If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
-  AssignValue!("\\abstract:locked" => false);    // REDEFINE the above locked definition!
+  AssignValue!("\\abstract:locked" => false); // REDEFINE the above locked definition!
   DefMacro!("\\abstract", sub[gullet, args, state] {
     if gullet.if_next(T_BEGIN!(), state)? {
       T_CS!("\\abstract@onearg")
@@ -173,7 +182,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\maybe@end@title", sub[document,args,props,state] {
     if document.is_closeable("ltx:titlepage", state).is_some() {
-      document.close_element("ltx:titlepage", state)?; 
+      document.close_element("ltx:titlepage", state)?;
     }
   });
 

@@ -10,7 +10,6 @@ lazy_static! {
   static ref _NOTE_TIMERS: HashMap<String, String> = HashMap::new();
 }
 
-
 #[macro_export]
 macro_rules! Debug {
   ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
@@ -122,11 +121,9 @@ macro_rules! Error {
 #[macro_export]
 macro_rules! Fatal {
   ($target:tt, $category:tt, $where:expr, $state: expr, $message:expr) => {{
-    fatal!($target, $category, $message); 
+    fatal!($target, $category, $message);
   }};
-
 }
-
 
 #[macro_export]
 macro_rules! fatal {
@@ -150,7 +147,6 @@ macro_rules! fatal {
       message: $message.to_string(),
     });
   }};
-
 }
 
 #[macro_export]
@@ -165,8 +161,16 @@ macro_rules! generate_message {
     s!("{}\n\t{}\n\tIn {}:{}:{}\n", $message, $where.get_location(), file!(), line!(), column!())
   };
   ($where:ident, $message:expr, $level:literal, $detail:expr) => {
-    s!("{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n", $message, $where.get_location(),$detail, file!(), line!(), column!());
-  }
+    s!(
+      "{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
+      $message,
+      $where.get_location(),
+      $detail,
+      file!(),
+      line!(),
+      column!()
+    );
+  };
 }
 
 pub type Result<T> = result::Result<T, Error>;
@@ -195,7 +199,7 @@ pub enum ErrorCategory {
   EoF,
   Endgroup,
   Generic(Box<ErrorTrait>),
-  Filename(String)
+  Filename(String),
 }
 
 #[derive(Debug)]
@@ -242,7 +246,7 @@ impl fmt::Display for Error {
       Convert => write!(f, "conversion"),
       Endgroup => write!(f, "<endgroup>"),
       Generic(ref err) => err.fmt(f),
-      Filename(ref name) => write!(f, "file:{}", name)
+      Filename(ref name) => write!(f, "file:{}", name),
     }
   }
 }
@@ -266,7 +270,7 @@ impl ErrorTrait for Error {
       EoF => "<EOF>",
       Endgroup => "<endgroup>",
       Generic(ref err) => err.description(),
-      Filename(ref name) => name
+      Filename(ref name) => name,
     }
   }
 

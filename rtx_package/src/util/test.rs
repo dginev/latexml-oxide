@@ -48,7 +48,11 @@ fn rtx_ok_internal(tex_path: &str, xml_path: &str, name: &str, extra_bindings_di
     let xml_strings = process_xmlfile(xml_path, name);
     if !xml_strings.is_empty() {
       for (lineno, (tex_line, xml_line)) in tex_strings.iter().zip(xml_strings.iter()).enumerate() {
-        assert_eq!(tex_line, xml_line, "rtx result (left) differs from expected XML (right), file {}; line {}", xml_path, lineno);
+        assert_eq!(
+          tex_line, xml_line,
+          "rtx result (left) differs from expected XML (right), file {}; line {}",
+          xml_path, lineno
+        );
       }
       assert_eq!(
         tex_strings.len() - xml_strings.len(),

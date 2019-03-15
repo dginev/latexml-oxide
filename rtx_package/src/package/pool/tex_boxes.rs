@@ -161,7 +161,7 @@ LoadDefinitions!(state, {
         // let spec = whatsit.get_arg(1);
         // let tbox  = $whatsit.get_arg(2);
         // if let Some(h) = GetKeyVal!(spec, "to") {
-        //   whatsit.set_height(h); 
+        //   whatsit.set_height(h);
         // } else if let Some(s) = GetKeyVal!(spec, "spread") {
         //   whatsit.set_height(tbox.get_height().add(s));
         // }

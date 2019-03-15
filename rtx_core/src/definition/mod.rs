@@ -8,8 +8,8 @@ pub mod register;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::fmt;
+use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -56,7 +56,6 @@ impl From<&str> for Reversion {
 impl From<Tokens> for Reversion {
   fn from(ts: Tokens) -> Reversion { Reversion::Tokens(ts) }
 }
-
 
 impl From<Token> for Option<ExpansionBody> {
   fn from(t: Token) -> Option<ExpansionBody> { Tokens!(t).into() }
@@ -175,7 +174,7 @@ pub trait Definition: Object {
   fn stringify_type(&self, deftype: &str) -> String {
     let name = match self.get_alias() {
       Some(alias) => alias.to_string(),
-      None => self.get_cs().get_cs_name().to_string()
+      None => self.get_cs().get_cs_name().to_string(),
     };
     if let Some(parameters) = self.get_parameters() {
       s!("{}[{} {}]", deftype, name, parameters.stringify())
@@ -186,17 +185,14 @@ pub trait Definition: Object {
 }
 
 // We need to compare definitions for the internal TeX logic to make sense, but we don't have Perl's level of meta-programming,
-// since cloning an `Rc<Definition>` for storage makes it impossible to compare with the old `Rc<Definition>`. 
-// Hence, we need our own meta-programming "hack", via the `stringify` method that is different for each 
+// since cloning an `Rc<Definition>` for storage makes it impossible to compare with the old `Rc<Definition>`.
+// Hence, we need our own meta-programming "hack", via the `stringify` method that is different for each
 // `definition` implementation (`Primitive`/`Constructor`/etc)
 // and each control sequence
 //
 // This could evolve if Rust comes up with a best practice for implementing `PartialEq` on trait objects.
 impl PartialEq for Definition {
-   fn eq(&self, other: &Definition) -> bool {
-    self.stringify() == other.stringify()
-  }
- 
+  fn eq(&self, other: &Definition) -> bool { self.stringify() == other.stringify() }
 }
 
 impl fmt::Display for Definition {
@@ -208,7 +204,6 @@ impl fmt::Display for Definition {
     }
   }
 }
-
 
 impl ExpansionBody {
   pub fn to_string(&self) -> String {

@@ -20,7 +20,7 @@ LoadDefinitions!(state, {
         let message = s!("Ignoring redefinition (\\newcommand) of {}", cs_token.stringify());
         Info!("ignore", cs_token, stomach, state, message);
       }
-      return Ok(vec![]); 
+      return Ok(vec![]);
     }
     let opt = if opt.is_empty() { None } else { Some(opt) };
     let macro_args = convert_latex_args(nargs, opt, state)?;
@@ -36,7 +36,6 @@ LoadDefinitions!(state, {
     let macro_args = convert_latex_args(nargs, opt, state)?;
     DefMacroI!(cs_token, macro_args, body);
   });
-
 
   // low-level implementation of both \newcommand and \renewcommand depends on \@argdef
   // and robustness upgrades are often realized via redefining \l@ngrel@x
@@ -73,11 +72,11 @@ LoadDefinitions!(state, {
     let mungedcs2 = mungedcs.clone();
     let cs_args = convert_latex_args(nargs, opts, state)?;
     DefMacroI!(mungedcs, cs_args, body);
-    DefMacroI!(cs, None, Tokens!(T_CS!("\\protect"), mungedcs2)); 
+    DefMacroI!(cs, None, Tokens!(T_CS!("\\protect"), mungedcs2));
   });
 
   DefPrimitive!("\\MakeRobust DefToken", sub[stomach, args, state] {
-    unpack_to_token!(args => cs);  
+    unpack_to_token!(args => cs);
     let mungedcs = T_CS!(s!("{} ",cs.get_string()));
     if LookupDefinition!(&cs).is_none()      { }    // Not defined
     else if LookupDefinition!(&mungedcs).is_some() { }    // Already robust
@@ -134,7 +133,7 @@ LoadDefinitions!(state, {
       DefMacroI!(cs, None, Some(s!(r#"""
         \expandafter\ifx\csname\cf@encoding\string{}\endcsname\relax\csname?\string{}\endcsname
         \else\csname\cf@encoding\string{}\endcsname\fi
-      """#, cs_str, cs_str, cs_str).into())); 
+      """#, cs_str, cs_str, cs_str).into()));
     }
     let ecs = T_CS!(s!("\\{}{}", encoding, cs_str));
     if !IsDefined!(&ecs) { // If not already defined...
@@ -160,7 +159,6 @@ LoadDefinitions!(state, {
     //     my $ecs = T_CS('\\' . $encoding . $css);
     //     DefPrimitiveI($ecs, undef, FontDecode($code, $encoding));
   });
-      
 
   // hmmm... what needs doing here; basically it means use this encoding as the default for the symbol
   DefMacro!("\\DeclareTextSymbolDefault DefToken {}", "");
@@ -171,9 +169,9 @@ LoadDefinitions!(state, {
 
   // #------------------------------------------------------------
   DefPrimitive!("\\DeclareTextComposite{}{}{}{}", None);
-    // sub { ignoredDefinition("DeclareTextComposite", $_[1]); });
+  // sub { ignoredDefinition("DeclareTextComposite", $_[1]); });
   DefPrimitive!("\\DeclareTextCompositeCommand{}{}{}{}", None);
-    // sub { ignoredDefinition("DeclareTextCompositeCommand", $_[1]); });
+  // sub { ignoredDefinition("DeclareTextCompositeCommand", $_[1]); });
 
   DefPrimitive!("\\UndeclareTextCommand{}{}", None);
   DefMacro!("\\UseTextSymbol{}{}", "{\\fontencoding{#1}#2}");
@@ -188,10 +186,10 @@ LoadDefinitions!(state, {
   //     return; });
 
   DefPrimitive!("\\DeclareMathDelimiter{}{}{}{}", None);
-    // sub { ignoredDefinition("DeclareMathAccent", $_[1]); });
+  // sub { ignoredDefinition("DeclareMathAccent", $_[1]); });
   DefPrimitive!("\\DeclareMathRadical{}{}{}{}{}", None);
-    // sub { ignoredDefinition("DeclareMathAccent", $_[1]); });
-  DefPrimitive!("\\DeclareMathVersion{}",          None);
+  // sub { ignoredDefinition("DeclareMathAccent", $_[1]); });
+  DefPrimitive!("\\DeclareMathVersion{}", None);
   DefPrimitive!("\\DeclarePreloadSizes{}{}{}{}{}", None);
 
   // The next font declaration commands are based on
@@ -243,17 +241,19 @@ LoadDefinitions!(state, {
   DefPrimitiveI!("\\DeclareFontEncodingDefaults{}{}", None);
   DefMacroI!("\\LastDeclaredEncoding", None, "");
 
-  DefPrimitiveI!("\\SetSymbolFont{}{}{}{}{}{}",   None);
+  DefPrimitiveI!("\\SetSymbolFont{}{}{}{}{}{}", None);
   DefPrimitiveI!("\\SetMathAlphabet{}{}{}{}{}{}", None);
-  DefPrimitiveI!("\\addtoversion{}{}",            None);
-  DefPrimitiveI!("\\TextSymbolUnavailable{}",     None);
+  DefPrimitiveI!("\\addtoversion{}{}", None);
+  DefPrimitiveI!("\\TextSymbolUnavailable{}", None);
 
-  RawTeX!(r#"""
+  RawTeX!(
+    r#"""
   \DeclareSymbolFont{operators}   {OT1}{cmr} {m}{n}
   \DeclareSymbolFont{letters}     {OML}{cmm} {m}{it}
   \DeclareSymbolFont{symbols}     {OMS}{cmsy}{m}{n}
   \DeclareSymbolFont{largesymbols}{OMX}{cmex}{m}{n}
-  """#);
+  """#
+  );
   // At least all things on uclclist need to be macros
   DefMacroI!("\\lx@utf@OE", None, "\u{0152}", alias => "\\OE"); // LATIN CAPITAL LIGATURE OE
   DefMacroI!("\\lx@utf@oe", None, "\u{0153}", alias => "\\oe"); // LATIN SMALL LIGATURE OE
@@ -261,10 +261,10 @@ LoadDefinitions!(state, {
   DefMacroI!("\\lx@utf@ae", None, "\u{00E6}", alias => "\\ae"); // LATIN SMALL LETTER AE
   DefMacroI!("\\lx@utf@AA", None, "\u{00C5}", alias => "\\AA"); // LATIN CAPITAL LETTER A WITH RING ABOVE
   DefMacroI!("\\lx@utf@aa", None, "\u{00E5}", alias => "\\aa"); // LATIN SMALL LETTER A WITH RING ABOVE
-  DefMacroI!("\\lx@utf@O",  None, "\u{00D8}", alias => "\\O");  // LATIN CAPITAL LETTER O WITH STROKE
-  DefMacroI!("\\lx@utf@o",  None, "\u{00F8}", alias => "\\o");  // LATIN SMALL LETTER O WITH STROKE
-  DefMacroI!("\\lx@utf@L",  None, "\u{0141}", alias => "\\L");  // LATIN CAPITAL LETTER L WITH STROKE
-  DefMacroI!("\\lx@utf@l",  None, "\u{0142}", alias => "\\l");  // LATIN SMALL LETTER L WITH STROKE
+  DefMacroI!("\\lx@utf@O",  None, "\u{00D8}", alias => "\\O"); // LATIN CAPITAL LETTER O WITH STROKE
+  DefMacroI!("\\lx@utf@o",  None, "\u{00F8}", alias => "\\o"); // LATIN SMALL LETTER O WITH STROKE
+  DefMacroI!("\\lx@utf@L",  None, "\u{0141}", alias => "\\L"); // LATIN CAPITAL LETTER L WITH STROKE
+  DefMacroI!("\\lx@utf@l",  None, "\u{0142}", alias => "\\l"); // LATIN SMALL LETTER L WITH STROKE
   DefMacroI!("\\lx@utf@ss", None, "\u{00DF}", alias => "\\ss"); // LATIN SMALL LETTER SHARP S
   DefMacroI!("\\lx@utf@dh", None, "\u{00f0}", alias => "\\dh"); // eth
   DefMacroI!("\\lx@utf@DH", None, "\u{00d0}", alias => "\\DH"); // Eth (looks same as \DJ!)
@@ -281,10 +281,10 @@ LoadDefinitions!(state, {
   DefMacroI!("\\ae", None, "\\lx@utf@ae");
   DefMacroI!("\\AA", None, "\\lx@utf@AA");
   DefMacroI!("\\aa", None, "\\lx@utf@aa");
-  DefMacroI!("\\O",  None, "\\lx@utf@O");
-  DefMacroI!("\\o",  None, "\\lx@utf@o");
-  DefMacroI!("\\L",  None, "\\lx@utf@L");
-  DefMacroI!("\\l",  None, "\\lx@utf@l");
+  DefMacroI!("\\O", None, "\\lx@utf@O");
+  DefMacroI!("\\o", None, "\\lx@utf@o");
+  DefMacroI!("\\L", None, "\\lx@utf@L");
+  DefMacroI!("\\l", None, "\\lx@utf@l");
   DefMacroI!("\\ss", None, "\\lx@utf@ss");
   DefMacroI!("\\dh", None, "\\lx@utf@dh"); // in latex?
   DefMacroI!("\\DH", None, "\\lx@utf@DH");

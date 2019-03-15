@@ -27,8 +27,8 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
     // performed_expansion);
     //
     // TODO: Should "substitute_parameters" be specially performed for runtime-read expansions (via RawTeX?), e.g. when
-    // reading external style files? should that even be allowed? We can easily pre-compile all of texlive 
-    // (or the ~200 supported sty and cls files in the ecosystem) once 
+    // reading external style files? should that even be allowed? We can easily pre-compile all of texlive
+    // (or the ~200 supported sty and cls files in the ecosystem) once
     // and have all expansions handled by this code snippet. Hmmm... arguable benefit at this early stage, maybe something beyond 1.0
     quote!(
       Some(ExpansionBody::Tokens(#performed_expansion))
@@ -59,7 +59,7 @@ pub fn compile_tokenize(input: DeriveInput) -> TokenStream {
   } else {
     mouth::tokenize(&literal, None)
   };
-    
+
   quote!(
     macro_rules! these_tokens {
       () => {#tokenized}

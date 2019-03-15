@@ -5,8 +5,8 @@ use std::fmt;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
-use crate::common::store::Stored;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::document::Document;
 use crate::state::State;
 
@@ -42,9 +42,7 @@ impl fmt::Display for List {
 }
 
 impl Object for List {
-  fn get_locator(&self) -> Cow<Locator> {
-    Cow::Borrowed(&self.locator)
-  }
+  fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
 
   fn revert(&self) -> Result<Tokens> {
     let mut reverted = Vec::new();
@@ -53,7 +51,6 @@ impl Object for List {
     }
     Ok(Tokens::new(reverted))
   }
-
 }
 impl BoxOps for List {
   fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
@@ -78,7 +75,8 @@ impl List {
     let mut locator: Locator = Locator::default();
     for bx in boxes.iter().rev() {
       let bx_locator = bx.get_locator();
-      if *bx_locator != locator { // not the default!
+      if *bx_locator != locator {
+        // not the default!
         locator = bx_locator.into_owned();
         break;
       }
@@ -92,7 +90,12 @@ impl List {
         break;
       }
     }
-    List { boxes, font, mode: None, locator }
+    List {
+      boxes,
+      font,
+      mode: None,
+      locator,
+    }
   }
 }
 
