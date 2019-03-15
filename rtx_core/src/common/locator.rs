@@ -89,14 +89,12 @@ impl Locator {
       } else {
         string_source.to_string()
       }
+    } else if self.source.contains(':') {
+      let (base, ext) = pathname::url_split(&self.source);
+      s!("{}.{}", base, ext)
     } else {
-      if self.source.contains(":") {
-        let (base, ext) = pathname::url_split(&self.source);
-        s!("{}.{}", base, ext)
-      } else {
-        let (path, base, ext) = pathname::split(&self.source);
-        base
-      }
+      let (path, base, ext) = pathname::split(&self.source);
+      base
     }
   }
   pub fn get_source(&self) -> &str { &self.source }

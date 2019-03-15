@@ -162,7 +162,7 @@ impl Catcode {
     }
   }
 
-  pub fn short_name(&self) -> &'static str {
+  pub fn short_name(self) -> &'static str {
     use crate::token::Catcode::*;
     match self {
       ESCAPE => "T_ESCAPE",

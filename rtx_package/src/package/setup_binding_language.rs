@@ -410,7 +410,7 @@ macro_rules! DefPrimitiveII {
   // explicit state
   ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block, $state_arg:ident) => {
     DefPrimitiveII!($cs, $paramlist, move |$stomach, $args, $inner_state| {
-      WithInnerState!($body, $stomach, $inner_state)
+      WithInnerState!($body, $stomach, $inner_state).into_digested_result()
     }, PrimitiveOptions::default(), $state_arg)
   };
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{

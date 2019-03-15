@@ -567,7 +567,7 @@ impl KeyVals {
   pub fn get_hash(&self) -> HashMap<String, String> {
     let mut hashed = HashMap::new();
     for (k, v) in &self.cached_hash {
-      hashed.insert(k.to_string(), v.iter().map(|vv| vv.to_string()).collect::<Vec<String>>().join(""));
+      hashed.insert(k.to_string(), v.iter().map(ToString::to_string).collect::<Vec<String>>().join(""));
     }
     hashed
   }

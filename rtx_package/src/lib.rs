@@ -3,7 +3,8 @@
 //
 
 //! Binding infrastructure for the `LaTeXML` converter, reimplemented in Rust
-#![allow(dead_code, unused_variables, unused_mut, unused_macros, clippy::implicit_hasher, clippy::trivial_regex)]
+#![allow(dead_code, unused_variables, unused_mut, unused_macros)]
+#![allow(clippy::unused_unit, clippy::implicit_hasher, clippy::trivial_regex)]
 
 #[macro_use]
 extern crate rtx_core;
