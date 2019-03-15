@@ -30,9 +30,8 @@ LoadDefinitions!(outer_stomach, state, {
       document.set_node(&savenode);
     }
   },
-  // reversion => "",
-  // TODO:
-  // properties  => { alignmentSkippable => 1, alignmentPreserve => 1 },
+  reversion => None,
+  properties => properties!(map!("alignmentSkippable" => true.into(), "alignmentPreserve" => true.into())),
   after_digest => after_digest!(stomach, whatsit, state, {
     let label = match whatsit.get_arg(1) {
       Some(labeld) => clean_label(&labeld.to_string(), None),

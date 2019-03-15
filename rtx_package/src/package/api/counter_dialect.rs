@@ -19,7 +19,7 @@ use rtx_core::tokens::Tokens;
 
 use super::cleaners::{roman_aux,clean_id};
 use super::content::{build_invocation, digest_if, digest_literal, digest_text};
-use super::def_dialect::{def_macro, def_register, parse_prototype};
+use super::def_dialect::{def_macro, def_register};
 use super::*;
 
 //**********************************************************************
@@ -82,21 +82,20 @@ impl<'ct> Default for NewCounterOptions<'ct> {
 }
 
 pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOptions>, stomach: &mut Stomach, state: &mut State) -> Result<()> {
-  BindState!(stomach, state);
   let unctr = s!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
   let cctr = s!("\\c@{}", ctr);
   let clctr = s!("\\cl@{}", ctr);
   let cunctr = s!("\\c@{}", unctr);
   let clunctr = s!("\\cl@{}", unctr);
 
-  DefRegisterI!(T_CS!(cctr), None, Number::new(0.0), None);
+  def_register(T_CS!(cctr), None, Number::new(0.0), None, state);
   state.assign_value(&cctr, Number!(0), Some(Scope::Global));
-  AfterAssignment!();
+  state.after_assignment();
   if !state.lookup_bool(&clctr) {
     state.assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
 
-  DefRegisterI!(T_CS!(cunctr), None, Number::new(0.0), None);
+  def_register(T_CS!(cunctr), None, Number::new(0.0), None, state);
   state.assign_value(&cunctr, Number!(0), Some(Scope::Global));
   if !state.lookup_bool(&clunctr) {
     state.assign_value(&clunctr, Tokens!(), Some(Scope::Global));
@@ -133,10 +132,13 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
 
   // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
   let ctr_string = ctr.to_string();
-  DefMacro!(&s!("\\the{}",ctr), sub[gullet, args, inner_state] {
-    let counter_value = CounterValue!(&ctr_string, inner_state).value_of();
-    Ok(Tokens::new(ExplodeText!(counter_value)))
-  }, scope => Some(Scope::Global));
+  def_macro(T_CS!(s!("\\the{}",ctr)), None, Some(ExpansionBody::Closure(Rc::new(
+      move |gullet, args, inner_state| {
+      let counter_value = CounterValue!(&ctr_string, inner_state).value_of();
+      Ok(Tokens::new(ExplodeText!(counter_value)))
+    }))),
+    Some(ExpandableOptions{scope: Some(Scope::Global), ..ExpandableOptions::default()}),
+    state);
 
   if let Some(options) = options_opt {
     let mut prefix = options.idprefix.to_string();
@@ -156,22 +158,29 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       };
       if !idwithin.is_empty() {
         let ctr_string = ctr.to_string();
-        DefMacro!(&s!("\\the{}@ID",ctr), sub[gullet, args, inner_state] {
+        def_macro(T_CS!(s!("\\the{}@ID",ctr)), None, Some(ExpansionBody::Closure(Rc::new(
+          move |gullet, args, inner_state| {
           Ok(TokenizeInternal!(
             &s!("\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\
                  \\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
                  idwithin,idwithin,prefix,ctr_string)))
-        },
-        scope => Some(Scope::Global));
+        }))),
+        Some(ExpandableOptions{scope: Some(Scope::Global), ..ExpandableOptions::default() }),
+        state)
       } else {
         let ctr_string = ctr.to_string();
-        DefMacro!(&s!("\\the{}@ID",ctr), sub[gullet,args, inner_state] {
-          Ok(TokenizeInternal!(
-            &s!("{}\\csname @{}@ID\\endcsname",prefix,ctr_string)
-          ))},
-          scope => Some(Scope::Global));
+        def_macro(T_CS!(s!("\\the{}@ID",ctr)), None, Some(ExpansionBody::Closure(Rc::new(
+          move |gullet,args, inner_state| {
+            Ok(TokenizeInternal!(
+              &s!("{}\\csname @{}@ID\\endcsname",prefix,ctr_string)
+            ))
+          }))),
+          Some(ExpandableOptions{scope: Some(Scope::Global), ..ExpandableOptions::default() }),
+          state);
       }
-      DefMacro!(&s!("\\@{}@ID",ctr), "0", scope => Some(Scope::Global));
+      def_macro(T_CS!(s!("\\@{}@ID",ctr)), None, Some(ExpansionBody::Tokens(Tokens!(T_OTHER!("0")))), 
+        Some(ExpandableOptions{ scope: Some(Scope::Global), ..ExpandableOptions::default() }),
+        state);
     }
   }
 
@@ -207,13 +216,14 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
 }
 
 pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
-  BindState!(stomach, state);
   let value = counter_value(ctr, state);
   state.assign_value(&s!("\\c@{}", ctr), value.add(Number!(1)), Some(Scope::Global));
   state.after_assignment();
   let token_value = Tokens::new(Explode!(counter_value(ctr, state).value_of()));
-  DefMacroI!(T_CS!(s!("\\@{}@ID",ctr)), None,
-              token_value.clone(), scope => Some(Scope::Global));
+  def_macro(T_CS!(s!("\\@{}@ID",ctr)), None,
+            token_value.clone(),
+            Some(ExpandableOptions{scope: Some(Scope::Global), ..ExpandableOptions::default() }),
+            state);
 
   // and reset any within counters!
   if !noreset {
@@ -249,12 +259,21 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
     false
   };
 
-  BindState!(stomach, state);
   let the_cs = T_CS!(s!("\\the{}", ctr));
   let the_id_cs = T_CS!(s!("\\the{}@ID", ctr));
-  DefMacroI!(T_CS!("\\@currentlabel"), None, the_cs.clone(), scope => Some(Scope::Global));
+  def_macro(T_CS!("\\@currentlabel"), None, the_cs.clone(), 
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    }),
+    state);
   if has_id {
-    DefMacroI!(T_CS!("\\@currentID"), None, the_id_cs.clone(), scope => Some(Scope::Global))
+    def_macro(T_CS!("\\@currentID"), None, the_id_cs.clone(),
+      Some(ExpandableOptions {
+        scope: Some(Scope::Global),
+        ..ExpandableOptions::default()
+      }),
+      state);
   }
 
   let id = if has_id {
@@ -267,7 +286,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   let invocation;
   {
     let gullet = stomach.get_gullet_mut();
-    invocation = Invocation!(T_CS!("\\lx@make@tags"), vec![Tokens!(T_OTHER!(ctype))], gullet, state)?;
+    invocation = build_invocation(T_CS!("\\lx@make@tags"), vec![Tokens!(T_OTHER!(ctype))], gullet, state)?;
   }
 
   let tags = stomach.digest(invocation, state)?;
@@ -306,7 +325,6 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 
 // For UN-numbered units
 pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
-  BindState!(stomach, state);
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(map) => map.to_string(),
     None => ctype.to_string(),
@@ -315,9 +333,10 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
   step_counter(&unctr, false, stomach, state)?;
 
   let cunctr_val = state.lookup_number(&s!("\\c@{}", unctr)).unwrap().value_of();
-  DefMacroI!(T_CS!(&s!("\\@{}@ID",ctr)), None, Tokens!(T_OTHER!("x"), Explode!(cunctr_val)), scope => Some(Scope::Global));
-
-  DefMacroI!(T_CS!("\\@currentID"), None, T_CS!(&s!("\\the{}@ID", ctr)));
+  def_macro(T_CS!(&s!("\\@{}@ID",ctr)), None, Tokens!(T_OTHER!("x"), Explode!(cunctr_val)), 
+    Some(ExpandableOptions{ scope: Some(Scope::Global), ..ExpandableOptions::default()}),
+    state);
+  def_macro(T_CS!("\\@currentID"), None, T_CS!(&s!("\\the{}@ID", ctr)), None, state);
   Ok(map!("id".to_string() => digest_literal(T_CS!(&s!("\\the{}@ID", ctr)), stomach, state)?.to_string().into()))
 }
 
