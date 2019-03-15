@@ -78,9 +78,9 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\MakeRobust DefToken", sub[stomach, args, state] {
     unpack_to_token!(args => cs);
     let mungedcs = T_CS!(s!("{} ",cs.get_string()));
-    if LookupDefinition!(&cs).is_none()      { }    // Not defined
-    else if LookupDefinition!(&mungedcs).is_some() { }    // Already robust
-    else {
+    // only if defined but not yet robust
+    if LookupDefinition!(&cs).is_some() &&    
+       LookupDefinition!(&mungedcs).is_none() {
       Let!(mungedcs, cs);
       DefMacroI!(cs, None, Tokens!(T_CS!("\\protect"),mungedcs));
     }

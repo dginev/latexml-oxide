@@ -371,7 +371,7 @@ impl Document {
       let mut other_keys = attributes
         .keys()
         .filter(|k| k.as_str() != "class" && k.as_str() != "package" && k.as_str() != "options")
-        .map(|k| k.to_string())
+        .map(ToString::to_string)
         .collect();
       keys.append(&mut other_keys);
       for key in keys {

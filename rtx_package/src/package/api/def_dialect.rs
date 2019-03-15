@@ -477,8 +477,7 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
           tokens: Tokens!(cs.clone()),
           font,
           properties: properties.to_hash_stored(),
-          locator,
-          ..Tbox::default()
+          locator
         }))])
       })),
       options,

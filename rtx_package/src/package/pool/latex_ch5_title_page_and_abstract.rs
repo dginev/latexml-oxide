@@ -123,7 +123,7 @@ LoadDefinitions!(state, {
         Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
         _ => Fatal!(TexPool, Expected, stomach, state, "Global TeX Frontmatter hash was not available, should never happen"),
       };
-      let mut abstr = frontmatter.entry("ltx:abstract".to_string()).or_insert(Vec::new());
+      let mut abstr = frontmatter.entry("ltx:abstract".to_string()).or_insert_with(Vec::new);
       abstr.push(("ltx:abstract".to_string(), Some(string_map!("name" => abstract_title)), List::new(stomach.regurgitate()).into()));
       DefMacro!("\\maybe@end@abstract", "", scope => Some(Scope::Global));
     }),

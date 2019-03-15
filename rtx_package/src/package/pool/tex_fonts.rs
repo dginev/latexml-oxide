@@ -459,7 +459,7 @@ LoadDefinitions!(state, {
         // if this becomes a common problem, we would have to improve the infrastructure
         Invocation!(T_CS!("\\char"), vec![value.clone()], gullet, i_state)?,
         HashMap::new(),
-        i_state).into()
+        i_state)
     }, p_state);
 
     p_state.install_definition(Register::new_chardef(newcs, Some(chardef_value.into()), Some(internalcs)), None);
