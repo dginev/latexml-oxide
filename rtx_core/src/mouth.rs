@@ -4,13 +4,14 @@ use std::fmt;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
-use std::io::{BufReader, Read};
+use std::io::BufReader;
 use std::str;
 use std::sync::Mutex;
 
 use core::ops::RangeBounds;
-use encoding::all::ISO_8859_1;
-use encoding::{EncoderTrap, Encoding};
+// TODO:
+// use encoding::all::ISO_8859_1;
+// use encoding::{EncoderTrap, Encoding};
 use lazy_static::lazy_static;
 use regex::Regex;
 

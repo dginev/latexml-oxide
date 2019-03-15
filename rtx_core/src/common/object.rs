@@ -42,6 +42,7 @@ pub trait Object {
   fn isa_box(&self) -> bool { false }
   fn is_expandable(&self) -> bool { false }
   fn is_definition(&self) -> bool { false }
+  fn is_comment(&self) -> bool { false }
 
   // These should really only make sense for Data objects within the
   // processing stream.

@@ -43,6 +43,9 @@ macro_rules! transfer_opt_default {
   };
 }
 
+// Discussion: Ideally we wouldn't need any of these closure macros, just the way latexml proper doesn't.
+// In latexml, you could say: 
+
 #[macro_export]
 macro_rules! sub {
   ($body:expr) => {
@@ -82,6 +85,12 @@ macro_rules! primitiveproc {
 
 #[macro_export]
 macro_rules! before_digest {
+  (sub $body:block) => {
+    before_digest!($body)
+  };
+  ($body:block) => {
+    vec![before_digest_single!(stomach, state, $body)]
+  };
   ($stomach:ident, $state:ident, $body:block) => {
     vec![before_digest_single!($stomach, $state, $body)]
   };
@@ -146,15 +155,18 @@ macro_rules! construct {
 
 #[macro_export]
 macro_rules! properties {
-  (sub [ $stomach:ident, $args:ident, $inner_state:ident ] $body:block) => {
+  (sub [ $stomach:ident, $args:ident, $inner_state:ident ] $body:block) => { properties!($stomach, $args, $inner_state, $body) };
+  ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
     Rc::new(
       move |$stomach: &mut Stomach, mut $args: &Vec<Option<Digested>>, $inner_state: &mut State| -> Result<HashMap<String, Stored>> {
-        BindInnerState!($stomach, $inner_state);
-        let macro_out = $body;
-        end_state_frame!();
-        macro_out
+        WithInnerState!($body, $stomach, $inner_state)
       },
     )
+  };
+  (sub $body:block) => {
+    Rc::new(move |stomach: &mut Stomach, args: &Vec<Option<Digested>>, state: &mut State| -> Result<HashMap<String, Stored>> { 
+      WithInnerState!($body, stomach, state)
+    })
   };
   ($value:expr) => {
     Rc::new(move |_stomach: &mut Stomach, _args: &Vec<Option<Digested>>, _state: &mut State| -> Result<HashMap<String, Stored>> { Ok($value.clone()) })
@@ -163,6 +175,10 @@ macro_rules! properties {
 
 #[macro_export]
 macro_rules! after_digest {
+  (sub $body:block) => { after_digest!($body) };
+  ($body:block) => {
+    vec![after_digest_single!(stomach, whatsit, state, $body)]
+  };
   ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
     vec![after_digest_single!($stomach, $whatsit, $state, $body)]
   };

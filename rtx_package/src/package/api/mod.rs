@@ -18,6 +18,7 @@ use rtx_core::tbox::Tbox;
 use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::Digested;
+use rtx_core::list::List;
 
 // Constants for the API functions stay here as well
 
@@ -205,3 +206,7 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for Option<KeyVals> {
     }
   }
 }
+impl IntoDigestedOptionResult<Result<Option<Digested>>> for List {
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::List(Rc::new(self)))) }
+}
+
