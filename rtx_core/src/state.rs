@@ -1032,26 +1032,29 @@ impl State {
     };
 
     Debug!("Looking up digestable {:?}", lookupname);
-    let entry = self.meaning.get(lookupname);
+    let entry_opt = self.meaning.get(lookupname);
 
-    if !lookupname.is_empty() && entry.is_some() {
+    if !lookupname.is_empty() && entry_opt.is_some() {
       Debug!("Found definition for: {:?}", lookupname);
-      let mut defn = entry.unwrap().front().unwrap().clone();
-      if let Stored::Token(ref t) = defn {
-        let cc = t.get_catcode();
-        if let Some(lookupname) = t.get_primitive_name() {
-          if let Some(retry_entry) = self.meaning.get(lookupname) {
-            // special case,
-            // If a cs has been let to an executable token, lookup ITS defn.
-            return retry_entry.front().unwrap().clone();
+      if let Some(entry) = entry_opt {
+        if let Some(front) = entry.front() {
+          if let Stored::Token(ref t) = front {
+            let cc = t.get_catcode();
+            if let Some(lookupname) = t.get_primitive_name() {
+              if let Some(retry_entry) = self.meaning.get(lookupname) {
+                // special case,
+                // If a cs has been let to an executable token, lookup ITS defn.
+                return retry_entry.front().unwrap().clone();
+              }
+            }
           }
+          // if a regular definition, just return.
+          return front.clone();
         }
       }
-      // if a regular definition, just return.
-      defn
-    } else {
-      token.into()
     }
+    // Default return:
+    token.into()
   }
 
   pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, _key: &'def Token, _definition: T) { unimplemented!() }

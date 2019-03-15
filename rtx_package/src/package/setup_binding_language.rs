@@ -541,16 +541,21 @@ macro_rules! LookupRegisterOrDefault {
 //       "The control sequence " . ToString($cs) . " is not a register"); }
 //   return Dimension(0); }
 
-// sub AssignRegister {
-//   my ($cs, $value, @parameters) = @_;
-//   my $defn;
-//   $cs = T_CS($cs) unless ref $cs;
-//   if (($defn = $STATE->lookupDefinition($cs)) && $defn->isRegister) {
-//     return $defn->setValue($value, @parameters); }
-//   else {
-//     Warn('expected', 'register', $STATE->getStomach,
-//       "The control sequence " . ToString($cs) . " is not a register");
-//     return; } }
+#[macro_export]
+macro_rules! AssignRegister {
+  ($cs:literal, $value:expr) => {{
+    bind_state!(stmch, st);
+    AssignRegister!($cs, $value, Vec::new(), st);
+  }};
+  ($cs:literal, $value:expr, $args:expr, $state_arg: ident) => {{
+    if let Some(defn) = $state_arg.lookup_register_definition(&T_CS!($cs)) {
+      defn.borrow_mut().set_value($value, $args, $state_arg);
+    } else {
+      let message = s!("The control sequence {} is not a register", $cs);
+      Warn!("expected", "register", None, $state_arg, message);
+    }
+  }}
+}
 
 //======================================================================
 // Define a constructor control sequence.
@@ -1581,7 +1586,7 @@ macro_rules! DefEnvironmentI(
 );
 
 #[macro_export]
-macro_rules! DefPrimitive{
+macro_rules! DefPrimitive {
   ($proto:expr, sub[$stomach:ident, $whatsit:ident, $inner_state:ident] $body:block) =>
     (DefPrimitiveIWO!($proto, |$stomach, $whatsit, $inner_state| {
       WithInnerState!($body, $stomach, $inner_state).into_digested_result() }, PrimitiveOptions::default()));
@@ -1599,9 +1604,13 @@ macro_rules! DefPrimitive{
   ($proto:expr, None, $($key:ident=>$val:expr),*) =>
     (DefPrimitiveIWO!($proto, noprimitive!(), NewDefault!(PrimitiveOptions, $($key=>$val),*)));
 
+  ($proto:expr, $replacement:literal) => ({
+    DefPrimitiveIWO!($proto,
+    |stomach, whatsit, inner_state| {
+      Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::new(), inner_state).into_digested_result() }, 
+    PrimitiveOptions::default());
+  });
   ($proto:expr, $replacement:expr, $options:expr) => ({
-    // TODO:
-    // let compiled_replacement = || Tbox{text: $replacement, Invocation($options{alias} || $cs, @_[1 .. $#_])); }
     let compiled_replacement = $replacement;
     DefPrimitiveIWO!($proto, compiled_replacement, $options);
   });
@@ -1961,6 +1970,6 @@ macro_rules! AddToMacro {
 macro_rules! BeginItemize {
   ($itype:literal, $counter:literal) => {{
     bind_state_mut!(stmch, st);
-    begin_itemize($itype, Some($counter), false, st)
+    begin_itemize($itype, Some($counter), false, stmch, st)
   }}
 }

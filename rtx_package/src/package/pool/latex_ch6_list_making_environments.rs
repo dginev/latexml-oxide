@@ -29,6 +29,13 @@ LoadDefinitions!(state, {
   DefMacro!("\\@item",      "\\item");   // Hopefully no circles...
   DefMacro!("\\@itemlabel", "");         // Maybe needs to be same as \item will be using?
 
+  // These counters are only used for id's of the various itemize, enumerate, etc elements
+  NewCounter!("@itemizei",   "section",      idprefix => "I");
+  NewCounter!("@itemizeii",  "@itemizei",   idprefix => "I");
+  NewCounter!("@itemizeiii", "@itemizeii",  idprefix => "I");
+  NewCounter!("@itemizeiv",  "@itemizeiii", idprefix => "I");
+  NewCounter!("@itemizev",   "@itemizeiv",  idprefix => "I");
+  NewCounter!("@itemizevi",  "@itemizev",   idprefix => "I");
 
   // id, but NO refnum (et.al) attributes on itemize \\item ...
   // unless the optional tag argument was given!
@@ -125,14 +132,16 @@ LoadDefinitions!(state, {
 
   // These define the typerefnum form, for out-of-context \ref"s
   // Better would language sensitive!
-  // TODO:
-  // DefMacro!("\\lx@poormans@ordinal{}", sub[gullet, args, state] {
-  //     unpack_to_token!(args => ctr);
-  //     let pm_ordinal_suffices = ("th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th");
-  //     let mut ctr_str      = CounterValue!(ctr).value_of().to_string();
-  //     if (ctr_str =~ /.*?(\d)$/) {
-  //       ctr_str .= $pm_ordinal_suffices[$1]; }
-  //     T_OTHER(ctr_str); });
+  DefMacro!("\\lx@poormans@ordinal{}", sub[gullet, args, state] {
+    unpack_to_token!(args => ctr);
+    let pm_ordinal_suffices = ["th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"];
+    let mut ctr_str      = CounterValue!(ctr.get_string()).value_of().to_string();
+    let last_char = ctr_str.chars().last().unwrap_or('.');
+    if last_char.is_ascii_digit() {
+      ctr_str.push_str(pm_ordinal_suffices[last_char.to_digit(10).unwrap() as usize]); 
+    }
+    T_OTHER!(ctr_str); 
+  });
   DefMacro!("\\itemtyperefname", "item");
   DefMacro!("\\itemcontext",     "\\space in \\@listcontext");
   DefMacro!("\\itemcontext",     "");
@@ -149,6 +158,7 @@ LoadDefinitions!(state, {
   //  define \labelenumi,... and probably \p@enumii...
 
   // How the refnums look... (probably should be in class file, but already here)
+  DefMacro!("\\p@enumi",  "");
   DefMacro!("\\p@enumii",  "\\theenumi");
   DefMacro!("\\p@enumiii", "\\theenumi(\\theenumii)");
   DefMacro!("\\p@enumiv",  "\\p@enumii\\theenumiii");
