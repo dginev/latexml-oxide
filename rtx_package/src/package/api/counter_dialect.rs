@@ -15,7 +15,9 @@ use rtx_core::mouth;
 use rtx_core::state::{Scope, State, Stored};
 use rtx_core::stomach::Stomach;
 use rtx_core::token::*;
+use rtx_core::BoxOps;
 use rtx_core::tokens::Tokens;
+use rtx_core::whatsit::Whatsit;
 
 use super::cleaners::{roman_aux,clean_id};
 use super::content::{build_invocation, digest_if, digest_literal, digest_text};
@@ -161,7 +163,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       None => "",
       Some(ref opt) => opt.idwithin
     };
-    
+
     if !prefix.is_empty() {
       let mut idwithin = if !opts_idwithin.is_empty() {
         opts_idwithin
@@ -192,7 +194,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
           Some(ExpandableOptions{scope: Some(Scope::Global), ..ExpandableOptions::default() }),
           state);
       }
-      def_macro(T_CS!(s!("\\@{}@ID",ctr)), None, Some(ExpansionBody::Tokens(Tokens!(T_OTHER!("0")))), 
+      def_macro(T_CS!(s!("\\@{}@ID",ctr)), None, Some(ExpansionBody::Tokens(Tokens!(T_OTHER!("0")))),
         Some(ExpandableOptions{ scope: Some(Scope::Global), ..ExpandableOptions::default() }),
         state);
     }
@@ -274,7 +276,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
 
   let the_cs = T_CS!(s!("\\the{}", ctr));
   let the_id_cs = T_CS!(s!("\\the{}@ID", ctr));
-  def_macro(T_CS!("\\@currentlabel"), None, the_cs.clone(), 
+  def_macro(T_CS!("\\@currentlabel"), None, the_cs.clone(),
     Some(ExpandableOptions {
       scope: Some(Scope::Global),
       ..ExpandableOptions::default()
@@ -346,10 +348,10 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
   step_counter(&unctr, false, stomach, state)?;
 
   let cunctr_val = state.lookup_number(&s!("\\c@{}", unctr)).unwrap().value_of();
-  def_macro(T_CS!(&s!("\\@{}@ID",ctr)), None, Tokens!(T_OTHER!("x"), Explode!(cunctr_val)), 
+  def_macro(T_CS!(&s!("\\@{}@ID",ctr)), None, Tokens!(T_OTHER!("x"), Explode!(cunctr_val)),
     Some(ExpandableOptions{ scope: Some(Scope::Global), ..ExpandableOptions::default()}),
     state);
-  
+
   let thectr = s!("\\the{}@ID", ctr);
   def_macro(T_CS!("\\@currentID"), None, T_CS!(&thectr), None, state);
   Ok(map!("id".to_string() => digest_literal(T_CS!(&thectr), stomach, state)?.to_string().into()))
@@ -390,23 +392,23 @@ pub fn ref_step_item_counter(tag: &str, stomach: &mut Stomach, state: &mut State
       let gullet = stomach.get_gullet_mut();
       let mut tag_tokens = vec![
         T_BEGIN!(),
-        T_CS!("\\let"), 
+        T_CS!("\\let"),
         T_CS!(&s!("\\the{}",counter)), T_CS!("\\@empty"),
         T_CS!("\\def"),
-        T_CS!(&s!("\\fnum@{}",counter)), 
-        T_BEGIN!(), 
-          formatter, 
-          T_BEGIN!(), T_OTHER!(tag), T_END!(), 
+        T_CS!(&s!("\\fnum@{}",counter)),
+        T_BEGIN!(),
+          formatter,
+          T_BEGIN!(), T_OTHER!(tag), T_END!(),
         T_END!(),
         T_CS!("\\def"), T_CS!(&s!("\\typerefnum@{}",counter)),
         T_BEGIN!(),
-          T_CS!("\\itemtyperefname"), T_SPACE!(), T_OTHER!(tag), 
+          T_CS!("\\itemtyperefname"), T_SPACE!(), T_OTHER!(tag),
         T_END!()];
         tag_tokens.extend(
           build_invocation(T_CS!("\\lx@make@tags"), vec![Tokens!(T_OTHER!(counter))], gullet, state)?.unlist()
         );
         tag_tokens.push(T_END!());
-      
+
       let tags = stomach.digest(tag_tokens, state)?;
       if let Digested::List(l) = tags {
         if !l.is_empty() {
@@ -450,4 +452,22 @@ pub fn begin_itemize(itype: &str, counter: Option<&str>, nolevel: bool, stomach:
  state.assign_value("itemcounter", usecounter.clone(), None);
  reset_counter(&usecounter, state);
  ref_step_counter(&s!("@itemize{}",postfix), false, stomach, state)
+}
+
+pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit, stomach: &mut Stomach, state: &mut State) {
+  let tagskey = &s!("{}_tags",captype);
+  if let Some(tags) = state.remove_value(&tagskey) {
+    state.assign_value(&tagskey, false, Some(Scope::Global));
+    whatsit.set_property("tags", tags);
+  }
+  let idkey = s!("{}_id",captype);
+  if let Some(id) = state.remove_value(&idkey) {
+    state.assign_value(&idkey, false, Some(Scope::Global));
+    whatsit.set_property("id", id);
+  }
+  let inlistkey = s!("{}_inlist",captype);
+  if let Some(inlist) = state.remove_value(&inlistkey) {
+    state.assign_value(&inlistkey, false, Some(Scope::Global));
+    whatsit.set_property("inlist", inlist);
+  }
 }
