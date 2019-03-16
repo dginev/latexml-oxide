@@ -251,29 +251,41 @@ impl Parameter {
     }
   }
 
+  fn setup_catcodes(&self, state: &mut State) {
+    if self.semiverbatim {
+      // // Nasty Hack: If immediately followed by %, should discard the comment
+      // // EVEN if semiverbatim makes % into other!
+      // let peek = gullet.read_token(state);
+      // match peek {
+      //   None => {},
+      //   Some(tokens) => gullet.unread(Tokens!(tokens)),
+      // };
+        state.begin_semiverbatim(None);
+    }
+  }
+
+  fn revert_catcodes(&self, state: &mut State) -> Result<()> {
+    if self.semiverbatim {
+      state.end_semiverbatim()?;
+    }
+    Ok(())
+  }
+
   pub fn read(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Result<Tokens> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
     // Hmmm, seem to still need it...
-    if self.semiverbatim {
-      // Nasty Hack: If immediately followed by %, should discard the comment
-      // EVEN if semiverbatim makes % into other!
-      let peek = gullet.read_token(state);
-      match peek {
-        None => {},
-        Some(tokens) => gullet.unread(Tokens!(tokens)),
-      };
-      state.begin_semiverbatim(None);
-    }
+    self.setup_catcodes(state);
+    
     let closure = &self.reader;
     let mut value = closure(gullet, vec![], self.extra.clone(), state)?;
-    // TODO:
+    if self.semiverbatim && !value.is_empty() {
+      value = value.neutralize(&[], state);
+    }
     // $value = $value->neutralize if $$self{semiverbatim} && (ref $value)
     //   && $value->can('neutralize');
-    if self.semiverbatim {
-      state.end_semiverbatim()?;
-    }
+    self.revert_catcodes(state)?;
 
     if !self.optional && !self.novalue && (value.is_empty() && self.reader_predigest.is_none()) {
       // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens> in the long-run
