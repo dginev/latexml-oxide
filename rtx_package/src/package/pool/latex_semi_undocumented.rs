@@ -1,5 +1,30 @@
 use crate::package::*;
+//**********************************************************************
+// Semi-Undocumented stuff
+//**********************************************************************
+
 LoadDefinitions!(state, {
+  DefMacro!("\\@ifnextchar DefToken {}{}", sub[gullet, args, state] {
+    unpack!(args => token, t_if, t_else);
+    let token : Token = token.into();
+    let next = gullet.read_non_space(state);
+    // NOTE: Not actually substituting, but collapsing ## pairs!!!!
+    // use \egroup for $next, if we've fallen off end?
+    let next_test = next.as_ref().unwrap_or(&T_END!());
+    let which = if XEquals!(&token, &next_test) {
+      t_if
+    } else {
+      t_else
+    };
+    let mut result = which.substitute_parameters(Vec::new()).unlist();
+    if let Some(t_next) = next {
+      result.push(t_next);
+    }
+    result
+  });
+  Let!("\\kernel@ifnextchar", "\\@ifnextchar");
+  Let!("\\@ifnext",           "\\@ifnextchar");    // ????
+
   //======================================================================
   // Hair
   DefPrimitive!("\\makeatletter", sub { AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local)); });

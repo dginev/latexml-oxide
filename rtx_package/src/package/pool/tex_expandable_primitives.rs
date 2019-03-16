@@ -43,9 +43,7 @@ LoadDefinitions!(outer_state, {
   });
 
   DefConditional!("\\ifx Token Token", sub[gullet, args, state] {
-    unpack!(args => tokens1, tokens2);
-    let token1 : Token = tokens1.into();
-    let token2 : Token = tokens2.into();
+    unpack_to_token!(args => token1, token2);
     let xequals = XEquals!(&token1, &token2);
     Ok(xequals)
   });

@@ -350,12 +350,15 @@ LoadDefinitions!(state, {
   // Default composes \\lx@fnum@toc@@{type} space title.
   DefMacro!(
     "\\lx@format@toctitle@@{}{}",
-    "\\lx@@format@toctitle@@{#1}{{\\@ifundefined{format@toctitle@font@#1}{}{\\csname format@toctitle@font@#1\\endcsname}#2}}"
+    "\\lx@@format@toctitle@@{#1}\
+    {{\\@ifundefined{format@toctitle@font@#1}{}{\\csname format@toctitle@font@#1\\endcsname}#2}}"
   );
 
   DefMacro!(
     "\\lx@@format@toctitle@@{}{}",
-    "{\\@ifundefined{format@toctitle@#1}{\\lx@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}{\\csname format@toctitle@#1\\endcsname{#2}}}"
+    "{\\@ifundefined{format@toctitle@#1}\
+       {\\lx@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}\
+       {\\csname format@toctitle@#1\\endcsname{#2}}}"
   );
 
   DefMacro!("\\lx@@compose@title{}{}", "\\lx@tag[][ ]{#1}#2");
