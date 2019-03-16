@@ -392,11 +392,12 @@ LoadDefinitions!(state, {
   //   alias => '~');
   DefMacro!("~", "\\nobreakspace{}");
 
-  // DefMacroI('\slash', undef, '/');
-  // DefPrimitiveI('\filbreak', undef, undef);
+  DefMacro!("\\slash", "/");
+  DefPrimitive!("\\filbreak", None);
   DefMacro!("\\goodbreak", "\\par");
   DefMacro!("\\eject", "\\par\\LTX@newpage");
   Let!("\\newpage", "\\eject");
+  // TODO:
   // DefConstructor!("\\LTX@newpage", "^<ltx:pagination role='newpage'/>");
   DefMacro!("\\supereject", "\\par\\LTX@newpage");
   DefPrimitiveI!("\\removelastskip", noprimitive!());
@@ -426,13 +427,13 @@ LoadDefinitions!(state, {
   //   return; }
 
   // # These should be 0 width, but perhaps also shifted?
-  // DefMacro('\llap{}', '\hbox to 0pt{#1}');
-  // DefMacro('\rlap{}', '\hbox to 0pt{#1}');
-  // DefMacroI('\m@th', undef, '\mathsurround=0pt ');
+  DefMacro!("\\llap{}", "\\hbox to 0pt{#1}");
+  DefMacro!("\\rlap{}", "\\hbox to 0pt{#1}");
+  DefMacro!("\\m@th", "\\mathsurround=0pt ");
 
   // # \strutbox
-  // DefMacroI('\strut', undef, Tokens());
-  // RawTeX('\newbox\strutbox');
+  DefMacro!("\\strut", "");
+  RawTeX!("\\newbox\\strutbox");
 
   // #======================================================================
   // # TeX Book, Appendix B. p. 354
@@ -440,18 +441,18 @@ LoadDefinitions!(state, {
   // # TODO: Not yet done!!
   // # tabbing stuff!!!
 
-  // DefMacroI('\settabs', undef, undef);
+  DefMacro!("\\settabs", "");
 
   // #======================================================================
   // # TeX Book, Appendix B. p. 355
 
-  // DefPrimitive('\hang', undef);
+  DefPrimitive!("\\hang", None);
 
   // # TODO: \item, \itemitem not done!
   // # This could probably be adopted from LaTeX, if the <itemize> could auto-open
   // # and close!
-  // DefConstructor('\item{}',     '#1');
-  // DefConstructor('\itemitem{}', '#1');
+  DefConstructor!("\\item{}",     "#1");
+  DefConstructor!("\\itemitem{}", "#1");
 
   // DefMacro('\textindent{}', '#1');
 

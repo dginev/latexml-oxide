@@ -190,7 +190,7 @@ impl Definition for MathPrimitive {
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
-    Info!("MathPrimitive", "invoke", stomach, state, "invoke for {:?}", self.cs);
+    // Info!("MathPrimitive", "invoke", stomach, state, "invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;

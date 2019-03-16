@@ -141,6 +141,11 @@ impl fmt::Display for Stored {
     use crate::Stored::*;
     match *self {
       Digested(ref digested) => write!(f, "{}", digested),
+      Dimension(ref v) => write!(f, "{}", v),
+      Number(ref v) => write!(f, "{}", v),
+      Glue(ref v) => write!(f, "{}", v),
+      MuGlue(ref v) => write!(f, "{}", v),
+      MuDimension(ref v) => write!(f, "{}", v),
       _ => write!(f, "{:?}", self), // TODO
     }
   }
@@ -430,6 +435,10 @@ impl<'a> From<&'a Stored> for Option<Number> {
   fn from(value: &'a Stored) -> Option<Number> {
     match value {
       Stored::Number(ref n) => Some(*n),
+      Stored::Dimension(ref n) => Some(Number::new(n.value_of())),
+      Stored::Glue(ref n) => Some(Number::new(n.value_of())),
+      Stored::MuDimension(ref n) => Some(Number::new(n.value_of())),
+      Stored::MuGlue(ref n) => Some(Number::new(n.value_of())),
       _ => None,
     }
   }
@@ -439,6 +448,10 @@ impl<'a> From<&'a Stored> for Option<Dimension> {
   fn from(value: &'a Stored) -> Option<Dimension> {
     match value {
       Stored::Dimension(ref n) => Some(*n),
+      Stored::Number(ref n) => Some(Dimension::new(n.value_of())),
+      Stored::Glue(ref n) => Some(Dimension::new(n.value_of())),
+      Stored::MuDimension(ref n) => Some(Dimension::new(n.value_of())),
+      Stored::MuGlue(ref n) => Some(Dimension::new(n.value_of())),
       _ => None,
     }
   }
@@ -447,6 +460,10 @@ impl<'a> From<&'a Stored> for Option<Dimension> {
 impl<'a> From<&'a Stored> for Option<Glue> {
   fn from(value: &'a Stored) -> Option<Glue> {
     match value {
+      Stored::Dimension(ref n) => Some(Glue::new(n.value_of())),
+      Stored::Number(ref n) => Some(Glue::new(n.value_of())),
+      Stored::MuDimension(ref n) => Some(Glue::new(n.value_of())),
+      Stored::MuGlue(ref n) => Some(Glue::new(n.value_of())),
       Stored::Glue(ref n) => Some(*n),
       _ => None,
     }

@@ -34,7 +34,7 @@ pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &st
   // If node doesn't already have an id, and can
   let node_qname = document.get_node_qname(node, state);
   // but isn't a _Capture_ node (which ultimately should disappear)
-  if node.get_attribute("xml:id").is_none() && document.can_have_attribute(&node_qname, "xml:id", state) && (node_qname != "ltx:_Capture_") {
+  if node.get_attribute_ns("id",XML_NS).is_none() && document.can_have_attribute(&node_qname, "xml:id", state) && (node_qname != "ltx:_Capture_") {
     let mut ancestor = document
       .findnode("ancestor::*[@xml:id][1]", Some(node), state)
       .unwrap_or_else(|| document.get_document().get_root_element().unwrap());
@@ -140,25 +140,38 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     Some(ExpandableOptions{scope: Some(Scope::Global), ..ExpandableOptions::default()}),
     state);
 
-  if let Some(options) = options_opt {
-    let mut prefix = options.idprefix.to_string();
+    let mut prefix = match options_opt {
+      None => String::new(),
+      Some(ref opt) => opt.idprefix.to_string()
+    };
     if !prefix.is_empty() {
-      state.assign_value(&s!("@ID@prefix@{}", ctr), prefix.clone(), Some(Scope::Global));
+      state.assign_value(&s!("@ID@prefix@{}", ctr), prefix.to_string(), Some(Scope::Global));
     } else {
       prefix = state.lookup_string(&s!("@ID@prefix@{}", ctr));
       if prefix.is_empty() {
-        prefix = clean_id(ctr);
+        prefix = ctr.to_string();
       }
     }
+    prefix = clean_id(&prefix);
+    let opts_idwithin = match options_opt {
+      None => "",
+      Some(ref opt) => opt.idwithin
+    };
+    let opts_idwithin = match options_opt {
+      None => "",
+      Some(ref opt) => opt.idwithin
+    };
+    
     if !prefix.is_empty() {
-      let mut idwithin = if !options.idwithin.is_empty() {
-        options.idwithin.to_string()
+      let mut idwithin = if !opts_idwithin.is_empty() {
+        opts_idwithin
       } else {
-        within.to_string()
-      };
+        within
+      }.to_string();
       if !idwithin.is_empty() {
         let ctr_string = ctr.to_string();
-        def_macro(T_CS!(s!("\\the{}@ID",ctr)), None, Some(ExpansionBody::Closure(Rc::new(
+        let thectrid = s!("\\the{}@ID",ctr);
+        def_macro(T_CS!(thectrid), None, Some(ExpansionBody::Closure(Rc::new(
           move |gullet, args, inner_state| {
           Ok(TokenizeInternal!(
             &s!("\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\
@@ -169,7 +182,8 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
         state)
       } else {
         let ctr_string = ctr.to_string();
-        def_macro(T_CS!(s!("\\the{}@ID",ctr)), None, Some(ExpansionBody::Closure(Rc::new(
+        let thectrid = s!("\\the{}@ID",ctr);
+        def_macro(T_CS!(thectrid), None, Some(ExpansionBody::Closure(Rc::new(
           move |gullet,args, inner_state| {
             Ok(TokenizeInternal!(
               &s!("{}\\csname @{}@ID\\endcsname",prefix,ctr_string)
@@ -182,7 +196,6 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
         Some(ExpandableOptions{ scope: Some(Scope::Global), ..ExpandableOptions::default() }),
         state);
     }
-  }
 
   Ok(())
 }
@@ -336,8 +349,10 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
   def_macro(T_CS!(&s!("\\@{}@ID",ctr)), None, Tokens!(T_OTHER!("x"), Explode!(cunctr_val)), 
     Some(ExpandableOptions{ scope: Some(Scope::Global), ..ExpandableOptions::default()}),
     state);
-  def_macro(T_CS!("\\@currentID"), None, T_CS!(&s!("\\the{}@ID", ctr)), None, state);
-  Ok(map!("id".to_string() => digest_literal(T_CS!(&s!("\\the{}@ID", ctr)), stomach, state)?.to_string().into()))
+  
+  let thectr = dbg!(s!("\\the{}@ID", ctr));
+  def_macro(T_CS!("\\@currentID"), None, T_CS!(&thectr), None, state);
+  Ok(map!("id".to_string() => digest_literal(T_CS!(&thectr), stomach, state)?.to_string().into()))
 }
 
 pub fn reset_counter(ctr: &str, state: &mut State) {

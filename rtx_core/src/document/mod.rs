@@ -40,6 +40,7 @@ pub struct Document {
   pub node_boxes: HashMap<usize, Rc<Digested>>, // used to be _box attribute
   pub node_fonts: HashMap<usize, Font>,         // used to be _font attribute
   pub constructed_nodes: Vec<Node>,
+  pub idstore: HashMap<String, Node>,
   box_to_absorb: Option<Digested>, // local $LaTeXML::BOX;
   localized_boxes: Vec<Option<Digested>>,
 }
@@ -68,6 +69,7 @@ impl Document {
       node: root,
       node_boxes: HashMap::new(),
       node_fonts: HashMap::new(),
+      idstore: HashMap::new(),
       pending: Vec::new(),
       constructed_nodes: Vec::new(),
       box_to_absorb: None,
@@ -1345,64 +1347,70 @@ impl Document {
   }
 
   fn get_insertion_candidates(&self, node: &Node) -> Vec<Node> {
-    let mut nodes = Vec::new();
-    let maybe_parent;
+    let mut nodes : Vec<Node> = Vec::new();
     // Check the current element FIRST, then build list of candidates.
-    let mut first_opt = if node.get_type() == Some(NodeType::TextNode) {
+    let mut first = if node.get_type() == Some(NodeType::TextNode) {
+      Cow::Owned(node.get_parent().unwrap())
+    } else {
+      Cow::Borrowed(node)
+    };
+    let is_capture = first.get_name() == "_Capture_";
+
+    if first.get_type() != Some(NodeType::DocumentNode) && !is_capture {
+      nodes.push(first.clone().into_owned());
+    }
+
+    // Collect previous siblings, if node is a text node.
+    let mut element_node_opt : Option<Cow<Node>> = if node.get_type() == Some(NodeType::TextNode) {
+      let mut current_opt = Some(Cow::Borrowed(node));
+      while let Some(current) = current_opt {
+        current_opt = match current.get_prev_sibling() {
+          None => None,
+          Some(s) => Some(Cow::Owned(s))
+        };
+        if current.get_name() == "_Capture_" {
+          nodes.extend(xml::element_nodes(&current));
+        } else {
+          nodes.push(current.into_owned());
+        }
+      }
       match node.get_parent() {
-        Some(p) => {
-          maybe_parent = p;
-          Some(&maybe_parent)
-        },
         None => None,
+        Some(p) => Some(Cow::Owned(p))
       }
     } else {
-      Some(node)
+      Some(Cow::Borrowed(node))
     };
-    let is_capture = if let Some(first) = first_opt {
-      first.get_name() == "_Capture_"
-    } else {
-      false
-    };
-
-    if let Some(first) = first_opt {
-      if first.get_type() != Some(NodeType::DocumentNode) && !is_capture {
-        nodes.push(first);
+    // Now collect (element) node & ancestors
+    while let Some(element_node) = element_node_opt {
+      element_node_opt = match element_node.get_parent() {
+        None => None,
+        Some(p) => Some(Cow::Owned(p))
+      };
+      let node_type = element_node.get_type();
+      if node_type.is_none() || node_type == Some(NodeType::DocumentNode) {
+        break;
+      }
+      if node.get_name() == "_Capture_" {
+        nodes.extend(xml::element_nodes(&element_node));
+      } else {
+        nodes.push(element_node.into_owned());
       }
     }
-    // Collect previous siblings, if node is a text node.
-    // if ($node->getType == XML_TEXT_NODE) {
-    //   let n = $node;
-    //   while ($n) {
-    //     if (($n->localname || '') eq '_Capture_') {
-    //       push(@nodes, element_nodes($n)); }
-    //     else {
-    //       push(@nodes, $n); }
-    //     $n = $n->previousSibling; }
-    //   $node = $node->parentNode; }
-    // # Now collect (element) node & ancestors
-    // while ($node && ($node->nodeType != XML_DOCUMENT_NODE)) {
-    //   let n = $node;
-    //   if (($node->localname || '') eq '_Capture_') {
-    //     push(@nodes, element_nodes($node)); }
-    //   else {
-    //     push(@nodes, $node); }
-    //   $node = $node->parentNode; }
-    // push(@nodes, $first) if $isCapture;
+    if is_capture {
+      nodes.push(first.into_owned());
+    }
 
-    // TODO: Can we NOT clone ?!
-    nodes.iter().map(|n| (*n).clone()).collect()
+    nodes
   }
 
-  pub fn node_set_attribute(&mut self, key: &str, value: &str) -> Result<()> {
-    // TODO:: THIS IS TERRIBLE! How do we avoin the mutability conflict without this nonsence ????
-    let mut node = &mut self.node;
+  pub fn node_set_attribute(&mut self, key: &str, value: &str, state: &mut State) -> Result<()> {
     if value.is_empty() {
       return Ok(()); // skip if empty
     }
     if key == "xml:id" {
       // If it's an ID attribute
-      // value = self.record_id(value, node);    // Do id book keeping
+      let recorded = self.record_id(value);    // Do id book keeping
       // TODO: Need to improve Namespace ergonomics, also in rust-libxml
       // let node_ns = self
       //   .document
@@ -1430,18 +1438,17 @@ impl Document {
       //         })
       //       })
       //   });
-      node.set_attribute("xml:id", value)?; // and bypass all ns stuff
+      self.node.set_attribute("xml:id", &recorded)?; // and bypass all ns stuff
     } else if !key.contains(':') {
       // No colon; no namespace (the common case!)
       // Ignore attributes not allowed by the model,
       // but accept "internal" attributes.
-      // let model = state.model;
-      // let qname = model.get_node_qname(node);
-      // if key.starts_with("_") || model.can_have_attribute(qname, key) {
-      node.set_attribute(key, value)?;
-      // }
-    }
-    // else {                   // Accept any namespaced attributes
+      let qname = state.model.get_node_qname(&self.node);
+      if key.starts_with("_") || state.model.can_have_attribute(&qname, key) {
+        self.node.set_attribute(key, value)?;
+      }
+    } else {                   // Accept any namespaced attributes
+      unimplemented!();
     //   my ($ns, $name) = state.model}->decodeQName($key);
     //   if ($ns) {             // If namespaced attribute (must have prefix!
     // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
@@ -1454,7 +1461,8 @@ impl Document {
     //     else {
     //       node.setAttributeNS($ns, "$prefix:$name" => $value); } }
     //   else {
-    //     node.setAttribute($name => $value); } } }    // redundant case...
+    //     node.setAttribute($name => $value); } } 
+    }    // redundant case...
     Ok(())
   }
   pub fn node_get_attribute(&mut self, name: &str) -> Option<String> { self.node.get_attribute(name) }
@@ -1557,18 +1565,21 @@ impl Document {
 
   //**********************************************************************
   // Association of nodes and ids (xml:id)
-  // sub recordID {
-  // my ($self, $id, $node) = @_;
-  // if (my $prev = $$self{idstore}{$id}) {    # Whoops! Already assigned!!!
-  //                                           # Can we recover?
-  //   if (!$node->isSameNode($prev)) {
-  //     my $badid = $id;
-  //     $id = $self->modifyID($id);
-  //     Info('malformed', 'id', $node, "Duplicated attribute xml:id",
-  //       "Using id='$id' on " . Stringify($node),
-  //       "id='$badid' already set on " . Stringify($prev)); } }
-  // $$self{idstore}{$id} = $node;
-  // return $id; }
+  fn record_id(&mut self, id: &str) -> String {
+    if let Some(prev) = self.idstore.get(id) { // Whoops! Already assigned!!!
+                                               // Can we recover?
+      unimplemented!();
+      // if ! self.node.is_same_node(prev) {
+      //   let badid = id.to_string();
+      //   let id = self.modify_id(id);
+      //   Info!("malformed", "id", node, "Duplicated attribute xml:id",
+      //     "Using id='$id' on " . Stringify($node),
+      //     "id='$badid' already set on " . Stringify($prev)); 
+      // } 
+    }
+    self.idstore.insert(id.to_string(), self.node.clone());
+    id.to_string()
+  }
 
   fn unrecord_id(&mut self, id: &str) {
     //my ($self, $id) = @_;
@@ -1644,7 +1655,7 @@ impl Document {
     let mut chopped: bool = self.node == node; // Note if we're removing insertion point
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
-      if let Some(id) = node.get_attribute("xml:id") {
+      if let Some(id) = node.get_attribute_ns("id",xml::XML_NS) {
         self.unrecord_id(&id);
       }
       for child in node.get_child_nodes() {
@@ -1664,7 +1675,7 @@ impl Document {
     let mut chopped = self.node == node;
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
-      if let Some(id) = node.get_attribute("xml:id") {
+      if let Some(id) = node.get_attribute_ns("id",xml::XML_NS) {
         self.unrecord_id(&id);
       }
       for child in node.get_child_nodes() {
@@ -2118,7 +2129,9 @@ impl Document {
     Ok(())
   }
 
-  pub fn float_to_element(&mut self, element: &str, flag: bool) -> Option<Node> { None }
+  pub fn float_to_element(&mut self, element: &str, flag: bool) -> Option<Node> { 
+    unimplemented!();
+  }
 
   // find a node that can accept a label.
   // A bit more than just whether the element can have the attribute, but
@@ -2131,13 +2144,16 @@ impl Document {
       .into_iter()
       .filter(|node| node.get_type() == Some(NodeType::ElementNode))
       .collect();
-    // TODO: Can we NOT clone ?!
-    let mut candidates: VecDeque<Node> = ancestors.clone().into();
+    let mut candidates: VecDeque<&Node> = ancestors.iter().collect();
     // Should we only accept a node that already has an id, or should we create an id?
-    while !candidates.is_empty() && !(self.can_node_have_attribute(&candidates[0], key, state) && candidates[0].get_attribute("xml:id").is_some()) {
-      candidates.pop_front();
+    let mut node_opt: Option<Cow<Node>> = None;
+    while let Some(candidate) = candidates.pop_front() {
+      if self.can_node_have_attribute(&candidate, key, state) && candidate.get_attribute_ns("id",xml::XML_NS).is_some() {
+        node_opt = Some(Cow::Borrowed(candidate));
+        break;
+      }
     }
-    let mut node_opt: Option<Node> = candidates.pop_front();
+     
     if node_opt.is_none() {
       // No appropriate ancestor?
       let sib: Option<Node> = match ancestors.first() {
@@ -2145,15 +2161,15 @@ impl Document {
         None => None,
       };
       if let Some(sibling) = sib {
-        if self.can_node_have_attribute(&sibling, key, state) && sibling.get_attribute("xml:id").is_some() {
-          node_opt = Some(sibling);
+        if self.can_node_have_attribute(&sibling, key, state) && sibling.get_attribute_ns("id",xml::XML_NS).is_some() {
+          node_opt = Some(Cow::Owned(sibling));
         } else if !ancestors.is_empty() {
           // just take root element?
-          node_opt = Some(ancestors.last().unwrap().clone());
+          node_opt = Some(Cow::Borrowed(ancestors.last().as_ref().unwrap()));
         }
       } else if !ancestors.is_empty() {
         // just take root element?
-        node_opt = Some(ancestors.last().unwrap().clone());
+        node_opt = Some(Cow::Borrowed(ancestors.last().as_ref().unwrap()));
       }
     }
     if let Some(node) = node_opt {
