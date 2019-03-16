@@ -210,7 +210,7 @@ impl<'t> Stomach {
               result.push(digested);
             }
           } else {
-            let message = s!("The token {:?} should never reach Stomach!", token);
+            let message = s!("The token {:?} (catcode {:?}) should never reach Stomach!", token, cc);
             Error!("misdefined", token, self, state, &message);
             if let Some(digested) = self.invoke_token_simple(meaning, state)? {
               result.push(digested);
