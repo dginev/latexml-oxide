@@ -1,6 +1,6 @@
 [package]
 name = "rtx_core"
-version = "0.1.14"
+version = "0.1.15"
 edition = "2018"
 license = "CC0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]

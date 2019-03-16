@@ -1,11 +1,11 @@
 # rtx
 A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
-[![Build Status](https://travis-ci.com/dginev/rtx.svg?token=JKuszfgzJQJUFzH9JaLd&branch=master)](https://travis-ci.com/dginev/rtx#) ![version](https://img.shields.io/badge/version-0.1.19-orange.svg)
+[![Build Status](https://travis-ci.com/dginev/rtx.svg?token=JKuszfgzJQJUFzH9JaLd&branch=master)](https://travis-ci.com/dginev/rtx#) ![version](https://img.shields.io/badge/version-0.1.20-orange.svg)
 
-## Progress 
+## Progress
 
-[![test porting progress](http://progressed.io/bar/9)](https://github.com/dginev/rtx/issues/30) | 20 of 207 core LaTeXML tests PASS
+[![test porting progress](http://progressed.io/bar/10)](https://github.com/dginev/rtx/issues/30) | 21 of 207 core LaTeXML tests PASS
 
 ### Why?
 
@@ -24,7 +24,7 @@ Design goals:
 There is demonstrable need for LaTeXML in the domain of academic writing, as well as various research areas on math-heavy documents. So here is a fast, safe, hip reimplementation that can usher LaTeXML uses in the 2020s.
 
 ### Updates
- 
+
  * `v0.1.12` is now capable of passing the `complex/xii.tex` test, which accurately converts the [infamous snippet](http://ctan.org/pkg/xii):
 
   ```
