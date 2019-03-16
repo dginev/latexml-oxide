@@ -202,6 +202,18 @@ impl Gullet {
           // TODO:
           // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
         },
+        Catcode::OTHER => { // TODO: Underwater rocky territory...
+          // survey all uses of Token::default() in the code base, to see where they come up as "fillers"
+          // in the token stream.
+          // read_token should **IGNORE** these fillers, because this method is intended to return a "real" TeX token back
+          // this may still lead to unexpected crashes, as the reasons I needed the Token::default() were misalignment of the
+          // type interface for arguments with LaTeXML's untyped lenience... If that is understood better,
+          // maybe we can move away from using a filler token entirely, and avoid this nonsence.
+          if !pushback_token.get_string().is_empty() {
+            next_token = Some(pushback_token);
+            break;
+          }
+        },
         _ => {
           next_token = Some(pushback_token);
           break;
@@ -216,6 +228,12 @@ impl Gullet {
           Catcode::MARKER => {
             // TODO:
             // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
+          },
+          Catcode::OTHER => {
+            if !token.get_string().is_empty() {
+              next_token = Some(token);
+              break;
+            }
           },
           _ => {
             next_token = Some(token);
