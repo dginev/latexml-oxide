@@ -350,7 +350,7 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
     Some(ExpandableOptions{ scope: Some(Scope::Global), ..ExpandableOptions::default()}),
     state);
   
-  let thectr = dbg!(s!("\\the{}@ID", ctr));
+  let thectr = s!("\\the{}@ID", ctr);
   def_macro(T_CS!("\\@currentID"), None, T_CS!(&thectr), None, state);
   Ok(map!("id".to_string() => digest_literal(T_CS!(&thectr), stomach, state)?.to_string().into()))
 }
