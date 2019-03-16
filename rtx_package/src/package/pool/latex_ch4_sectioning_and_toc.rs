@@ -145,19 +145,18 @@ LoadDefinitions!(outer_stomach, outer_state, {
          invoked_title = Invocation!(T_CS!("\\lx@format@title@@"), vec![&stype, &title], gullet)?;
        }
        let xtitle    = stomach.digest(invoked_title, state)?;
-       props.insert(s!("title"), xtitle.into());
 
-       // TODO
-       // let invoked_toctitle;
-       // {
-       //   let gullet = stomach.get_gullet_mut();
-       //   invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"), vec![&stype, &toctitle], gullet, state)?;
-       // }
-       // let xtoctitle = stomach.digest(invoked_toctitle, state)?;
-       //
-       // if xtoctitle.to_string() != xtitle.to_string() {
-       //   props.insert(s!("toctitle"), xtoctitle.into());
-       // }
+       let invoked_toctitle;
+       {
+         let gullet = stomach.get_gullet_mut();
+         invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"), vec![&stype, &toctitle], gullet, state)?;
+       }
+       let xtoctitle = stomach.digest(invoked_toctitle, state)?;
+       
+       if xtoctitle.to_string() != xtitle.to_string() {
+         props.insert(s!("toctitle"), xtoctitle.into());
+       }
+       props.insert(s!("title"), xtitle.into());
 
        Ok(props)
      })
