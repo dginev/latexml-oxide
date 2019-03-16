@@ -140,7 +140,7 @@ LoadDefinitions!(state, {
     if last_char.is_ascii_digit() {
       ctr_str.push_str(pm_ordinal_suffices[last_char.to_digit(10).unwrap() as usize]); 
     }
-    T_OTHER!(ctr_str); 
+    T_OTHER!(ctr_str)
   });
   DefMacro!("\\itemtyperefname", "item");
   DefMacro!("\\itemcontext",     "\\space in \\@listcontext");

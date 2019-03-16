@@ -26,7 +26,8 @@ LoadDefinitions!(outer_stomach, state, {
         labels.insert(label.to_string(), true);
       }
       document.node_set_attribute("labels",
-         &labels.keys().map(ToString::to_string).collect::<Vec<_>>().join(" "))?;
+         &labels.keys().map(ToString::to_string).collect::<Vec<_>>().join(" "),
+         state)?;
       document.set_node(&savenode);
     }
   },
