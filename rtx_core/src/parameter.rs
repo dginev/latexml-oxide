@@ -253,13 +253,6 @@ impl Parameter {
 
   fn setup_catcodes(&self, state: &mut State) {
     if self.semiverbatim {
-      // // Nasty Hack: If immediately followed by %, should discard the comment
-      // // EVEN if semiverbatim makes % into other!
-      // let peek = gullet.read_token(state);
-      // match peek {
-      //   None => {},
-      //   Some(tokens) => gullet.unread(Tokens!(tokens)),
-      // };
         state.begin_semiverbatim(None);
     }
   }
