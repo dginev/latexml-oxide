@@ -71,6 +71,20 @@ impl Default for ConstructorOptions {
     }
   }
 }
+impl fmt::Debug for ConstructorOptions {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "\nConstructorOptions {{nargs:{:?}, bounded:{:?}, mode:{:?}, \n\
+    \tbefore_digest:{:?}, after_digest_begin:{:?}, before_digest_end:{:?},\n\
+    \tafter_digest:{:?}, after_digest_body:{:?}, before_construct:{:?}, after_construct:{:?},\n\
+    \trequire_math:{:?}, forbid_math:{:?}, capture_body:{:?}, scope:{:?},\n\
+    \tlocked:{:?}, alias:{:?} }}\n",
+    self.nargs, self.bounded, self.mode, self.before_digest.len(), self.after_digest_begin.len(),
+    self.before_digest_end.len(), self.after_digest.len(), self.after_digest_body.len(),
+    self.before_construct.len(), self.after_construct.len(), self.require_math, self.forbid_math,
+    self.capture_body, self.scope, self.locked, self.alias)
+  }
+}
+
 
 #[derive(Clone)]
 pub struct Constructor {
