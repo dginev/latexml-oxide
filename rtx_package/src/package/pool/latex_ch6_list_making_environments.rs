@@ -43,55 +43,61 @@ LoadDefinitions!(state, {
   DefMacro!("\\itemize@item", "\\par\\itemize@item@");
   DefConstructor!("\\itemize@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => properties!(sub[stomach, args, state] { 
+    properties => properties!(sub[stomach, args, state] {
       unpack_to_string!(args=>tag);
       ref_step_item_counter(&tag, stomach, state) }));
   DefConstructor!("\\inline@itemize@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
-    properties => properties!(sub[stomach, args, state] { 
+    properties => properties!(sub[stomach, args, state] {
       unpack_to_string!(args=>tag);
       ref_step_item_counter(&tag, stomach, state) }));
 
   DefMacro!("\\enumerate@item", "\\par\\enumerate@item@");
   DefConstructor!("\\enumerate@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => properties!(sub[stomach, args, state] { 
+    properties => properties!(sub[stomach, args, state] {
       unpack_to_string!(args=>tag);
       ref_step_item_counter(&tag, stomach, state) }));
   DefConstructor!("\\inline@enumerate@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
-    properties => properties!(sub[stomach, args, state] { 
+    properties => properties!(sub[stomach, args, state] {
       unpack_to_string!(args=>tag);
       ref_step_item_counter(&tag, stomach, state) }));
 
   DefMacro!("\\description@item", "\\par\\description@item@");
   DefConstructor!("\\description@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => properties!(sub[stomach, args, state] { 
+    properties => properties!(sub[stomach, args, state] {
       unpack_to_string!(args=>tag);
       ref_step_item_counter(&tag, stomach, state) }));
   DefConstructor!("\\inline@description@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
-    properties => properties!(sub[stomach, args, state] { 
+    properties => properties!(sub[stomach, args, state] {
       unpack_to_string!(args=>tag);
       ref_step_item_counter(&tag, stomach, state) }));
 
-  DefEnvironment!("{itemize}",
+  DefEnv!("{itemize}",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
-    properties => properties!(sub { BeginItemize!("itemize", "@item") }),
-    before_digest_end => before_digest!(sub { Digest!("\\par")?; }),
-    locked => true, mode => "text".into_option());
-  DefEnvironment!("{enumerate}",
+    properties: { BeginItemize!("itemize", "@item") },
+    before_digest_end: { Digest!("\\par")?; },
+    locked: true,
+    mode: "text"
+  );
+  DefEnv!("{enumerate}",
     "<ltx:enumerate  xml:id='#id'>#body</ltx:enumerate>",
-    properties => properties!(sub { BeginItemize!("enumerate", "enum") }),
-    before_digest_end => before_digest!(sub { Digest!("\\par")?; }),
-    locked => true, mode => "text".into_option());
-  DefEnvironment!("{description}",
+    properties => { BeginItemize!("enumerate", "enum") },
+    before_digest_end => { Digest!("\\par")?; },
+    locked => true,
+    mode => "text"
+  );
+  DefEnv!("{description}",
     "<ltx:description  xml:id='#id'>#body</ltx:description>",
-    before_digest => before_digest!({ Let!("\\makelabel", "\\descriptionlabel"); }),
-    properties => properties!(sub { BeginItemize!("description", "@desc") }),
-    before_digest_end => before_digest!(sub { Digest!("\\par")?; }),
-    locked => true, mode => "text".into_option());
+    before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
+    properties => { BeginItemize!("description", "@desc") },
+    before_digest_end => { Digest!("\\par")?; },
+    locked => true,
+    mode => "text"
+  );
 
   DefMacro!("\\makelabel{}", "#1");
   //----------------------------------------------------------------------
@@ -138,7 +144,7 @@ LoadDefinitions!(state, {
     let mut ctr_str      = CounterValue!(ctr.get_string()).value_of().to_string();
     let last_char = ctr_str.chars().last().unwrap_or('.');
     if last_char.is_ascii_digit() {
-      ctr_str.push_str(pm_ordinal_suffices[last_char.to_digit(10).unwrap() as usize]); 
+      ctr_str.push_str(pm_ordinal_suffices[last_char.to_digit(10).unwrap() as usize]);
     }
     T_OTHER!(ctr_str)
   });
@@ -213,8 +219,8 @@ LoadDefinitions!(state, {
   DefMacro!("\\desctyperefname", "item");
 
   // Blech
-  for lvl in &["@itemi", "@itemii", "@itemiii", "@itemiv", "@itemv", "@itemvi", "enumi", "enumii", 
+  for lvl in &["@itemi", "@itemii", "@itemiii", "@itemiv", "@itemv", "@itemvi", "enumi", "enumii",
               "enumiii", "enumiv", "@desci", "@descii", "@desciii", "@desciv", "@descv", "@descvi"] {
-    DefMacroI!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\itemtyperefname")); 
+    DefMacroI!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\itemtyperefname"));
   }
 });

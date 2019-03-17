@@ -1563,8 +1563,9 @@ macro_rules! NewCounter {
 macro_rules! DefEnvironment(
   // implicit state
   ($proto_raw:expr, $replacement:expr) => (DefEnvironmentWO!($proto_raw, $replacement, ConstructorOptions::default()));
-  ($proto_raw:expr, $replacement:expr, $($key:ident => $val:expr),*) =>
-    (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*)));
+  ($proto_raw:expr, $replacement:expr, $($key:ident => $val:expr),*) => {
+    DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*))
+  };
   // explicit state
   // ($proto_raw:expr, $replacement:expr, $state_arg:ident) => (DefEnvironmentWO!($proto_raw, $replacement,
   //     ConstructorOptions::default(), $state_arg));
@@ -1607,7 +1608,7 @@ macro_rules! DefPrimitive {
   ($proto:expr, $replacement:literal) => ({
     DefPrimitiveIWO!($proto,
     |stomach, whatsit, inner_state| {
-      Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::new(), inner_state).into_digested_result() }, 
+      Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::new(), inner_state).into_digested_result() },
     PrimitiveOptions::default());
   });
   ($proto:expr, $replacement:expr, $options:expr) => ({
@@ -1972,4 +1973,57 @@ macro_rules! BeginItemize {
     bind_state_mut!(stmch, st);
     begin_itemize($itype, Some($counter), false, stmch, st)
   }}
+}
+
+// Tricks:
+// $(:)?$(=>)?   allow for any of "key:val", "key => val" and even "key :=> val".
+//
+#[macro_export]
+macro_rules! DefEnv {
+  // input is empty: time to output (with optional trailing comma allowed )
+  (@munch ($(,)?) -> { $proto:expr, $replacement:expr, $([$id:ident, $body:expr])*}) => {
+    // let options = ConstructorOptions::default();
+    // { $(options.$id = $body);* };
+    let options = ConstructorOptions {
+      $($id: $body),*,
+      ..ConstructorOptions::default()
+    };
+    DefEnvironmentWO!($proto, $replacement, options);
+  };
+
+  // mode : Option<TexMode>
+  (@munch ( $(,)? mode $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$p:expr, $r:expr, $([$key:ident , $val:expr])*}) => {
+    DefEnv!(@munch () -> {$p, $r, $( [ $key , $val ] )* [ mode , $literal.into_option() ] });
+  };
+  // properties: PropertiesClosure
+  (@munch ( $(,)? properties $(:)?$(=>)? $body:block $($next:tt)*) -> {$p:expr, $r:expr, $([$key:ident , $val:expr])*}) => {
+    DefEnv!(@munch ($($next)*) -> {$p, $r, $( [ $key , $val ] )* [ properties , properties!(sub $body) ] });
+  };
+  // before_digest_end: Vec<BeforeDigestClosure>
+  (@munch ( $(,)? before_digest_end $(:)?$(=>)? $body:block $($next:tt)*) -> {$p:expr, $r:expr, $([$key:ident , $val:expr])*}) => {
+    DefEnv!(@munch ($($next)*) -> {$p, $r, $([$key , $val])* [before_digest_end , before_digest!(sub $body) ]});
+  };
+  // before_digest: Vec<BeforeDigestClosure>
+  (@munch ( $(,)? before_digest $(:)?$(=>)? $body:block $($next:tt)*) -> {$p:expr, $r:expr, $([$key:ident , $val:expr])*}) => {
+    DefEnv!(@munch ($($next)*) -> {$p, $r, $([$key , $val])* [before_digest , before_digest!(sub $body) ]});
+  };
+
+  // misc "id" with literal value
+  (@munch ( $(,)? $id:ident $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$p:expr, $r:expr, $([$key:ident , $val:expr])*}) => {
+    DefEnv!(@munch ($($next)*) -> {$p, $r, $([$key , $val])* [$id , $literal]});
+  };
+  // misc "id" with block value
+  (@munch ( $(,)? $id:ident $(:)?$(=>)? $body:block $($next:tt)*) -> {$p:expr, $r:expr, $([$key:ident , $val:expr])*}) => {
+    DefEnv!(@munch ($($next)*) -> {$p, $r, $([$key , $val])* [$id , $body]});
+  };
+
+  // entry point (this is where a macro call starts)
+  ($proto_raw:expr, $replacement:expr) => {
+    DefEnv!(@munch () -> {$proto_raw , $replacement,});
+  };
+  ($proto_raw:expr, $replacement:expr, $($input:tt)* ) => {
+    DefEnv!(@munch ($($input)*) -> {$proto_raw , $replacement,});
+    //                 ^^^^^^^^^^^^    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    //                     input       output
+  }
 }
