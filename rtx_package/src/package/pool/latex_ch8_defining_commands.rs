@@ -213,7 +213,7 @@ LoadDefinitions!(state, {
     } else {
       None
     };
-    DefPrimitiveI!(cs, None, None, font => font);
+    DefPrimitive!(cs, None, None, font => font);
   });
 
   DefPrimitive!("\\DeclareFixedFont{}{}{}{}{}{}", None);

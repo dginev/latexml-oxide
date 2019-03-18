@@ -131,10 +131,10 @@ LoadDefinitions!(state, {
   // # <box size assignment> = <box dimension><8bit><equals><dimen>
   // # <interaction mode assignment> = \errorstopmode | \scrollmode | \nonstopmode | \batchmode
   // # These are no-ops; Basically, LaTeXML runs in scrollmode
-  DefPrimitiveI!(T_CS!("\\errorstopmode"), None, None);
-  DefPrimitiveI!(T_CS!("\\scrollmode"), None, None);
-  DefPrimitiveI!(T_CS!("\\nonstopmode"), None, None);
-  DefPrimitiveI!(T_CS!("\\batchmode"), None, None);
+  DefPrimitive!(T_CS!("\\errorstopmode"), None, None);
+  DefPrimitive!(T_CS!("\\scrollmode"), None, None);
+  DefPrimitive!(T_CS!("\\nonstopmode"), None, None);
+  DefPrimitive!(T_CS!("\\batchmode"), None, None);
 
   // # <intimate assignment> = <special integer><equals><number>
   // #   | <special dimension><equals><dimen>
@@ -445,7 +445,7 @@ LoadDefinitions!(state, {
     let number = value.to_number();
     let chardef_value = value.clone();
     let internalcs = T_CS!(&s!("\\@chardef@{}", csname));
-    DefPrimitiveI!(internalcs.clone(), None, sub[stomach,args,i_state] {
+    DefPrimitive!(internalcs.clone(), None, sub[stomach,args,i_state] {
       let gullet = stomach.get_gullet_mut();
       let decoded = match font::decode(number.value_of() as u8, None, false, i_state) {
         None => String::new(),
@@ -460,7 +460,7 @@ LoadDefinitions!(state, {
         Invocation!(T_CS!("\\char"), vec![value.clone()], gullet, i_state)?,
         HashMap::new(),
         i_state)
-    }, p_state);
+    });
 
     p_state.install_definition(Register::new_chardef(newcs, Some(chardef_value.into()), Some(internalcs)), None);
     AfterAssignment!();

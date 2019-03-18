@@ -352,118 +352,71 @@ macro_rules! DefConditionalI(
 #[macro_export]
 macro_rules! DefPrimitive {
   // Case: simple literal replacement
-  ($proto:expr, $replacement:literal) => {{
-    DefPrimitiveIWO!($proto,
-    |stomach, whatsit, inner_state| {
-      Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::new(), inner_state).into_digested_result() },
-    PrimitiveOptions::default());
-  }};
-  ($proto:expr, $replacement:literal, $($input:tt)+) => {{
+  ($proto:literal, $replacement:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    DefPrimitiveIWO!($proto,
-    |stomach, whatsit, inner_state| {
-      Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::new(), inner_state).into_digested_result() },
-    options);
+    let (cs, params) = parse_prototype!($proto);
+    let replacement_closure = Rc::new(|stomach: &mut Stomach, args: Vec<Tokens>, inner_state: &mut State| {
+      Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::new(), inner_state).into_digested_result()
+    });
+    defi_primitive!(cs, params, replacement_closure, options);
   }};
   // Case: closure pattern replacement
-  ($proto:literal, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block, $($input:tt)+) => {{
+  ($proto:expr, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    DefPrimitiveIWO!($proto, move |$stomach_arg: &mut Stomach, $args: Vec<Tokens>, $state_arg: &mut State| {
-      WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result() },
-      options);
+    let (cs, params) = parse_prototype!($proto);
+    let replacement_closure = Rc::new(move |$stomach_arg: &mut Stomach, $args: Vec<Tokens>, $state_arg: &mut State| {
+      WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
+    });
+    defi_primitive!(cs, params, replacement_closure, options);
   }};
-  ($proto:literal, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block) => {{
-    DefPrimitiveIWO!($proto, move |$stomach_arg: &mut Stomach, $args: Vec<Tokens>, $state_arg: &mut State| {
-      WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result() },
-      PrimitiveOptions::default());
+  // Case: cs-noparams with closure pattern replacement
+  ($cs:expr, None, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
+    let replacement_closure = Rc::new(move |$stomach_arg: &mut Stomach, $args: Vec<Tokens>, $state_arg: &mut State| {
+      WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
+    });
+    defi_primitive!($cs, None, replacement_closure, options);
   }};
   // Case: no replacement
-  ($proto:literal, None, $($input:tt)+) => {{
+  ($proto:literal, None $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    DefPrimitiveIWO!($proto, noprimitive!(), options);
+    let (cs, params) = parse_prototype!($proto);
+    defi_primitive!(cs, params, Rc::new(noprimitive!()), options);
   }};
-  ($proto:literal, None) => {{
-    (DefPrimitiveIWO!($proto, noprimitive!(), PrimitiveOptions::default()));
+  // Case: no params, no replacement
+  ($cs:expr, None, None $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
+    defi_primitive!($cs, None, Rc::new(noprimitive!()), options);
   }};
+
   // Case: closure block with implicit arguments
-  ($proto:expr, $body:block, $($input:tt)+) => {{
+  ($proto:expr, $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    DefPrimitiveIWO!($proto, move |stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State| {
-      WithInnerState!($body, stomach, state).into_digested_result() },
-      options);
-  }};
-  ($proto:expr, $body:block) => {{
-    DefPrimitiveIWO!($proto, move |stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State| {
-      WithInnerState!($body, stomach, state).into_digested_result() },
-      PrimitiveOptions::default());
-  }};
-  // Case: direct, with explicit state passed in, e.g. DefAccent! -> DefPrimitive! nesting
-  ($proto:expr, $compiled_replacement:expr, $state_arg:ident, $($input:tt)+) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    DefPrimitiveIWO!($proto, $compiled_replacement, options, $state_arg);
-  }};
-  ($proto:expr, $compiled_replacement:expr, $state_arg: ident) => {{
-    DefPrimitiveIWO!($proto, $compiled_replacement, PrimitiveOptions::default(), $state_arg);
+    let (cs, params) = parse_prototype!($proto);
+    let replacement_closure =  Rc::new(move |stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State| {
+      WithInnerState!($body, stomach, state).into_digested_result()
+    });
+    defi_primitive!(cs, params, replacement_closure, options);
   }};
   // Case: direct closure provided (for reasons of reusing the same closure in several definitions)
-  ($proto:expr, $compiled_replacement:expr, $($input:tt)*) => {{
+  ($proto:expr, $replacement_closure:expr, $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    DefPrimitiveIWO!($proto, $compiled_replacement, options);
+    defi_primitive!($proto, $replacement_closure, options);
   }};
-  ($proto:expr, $compiled_replacement:expr) => {{
-    DefPrimitiveIWO!($proto, $compiled_replacement, PrimitiveOptions::default());
-  }};
-}
-
-/// Useful when you want to provide directly the cs:paramlist pair and want to avoid confusion with DefPrimitive -- which always has its prototype parsed.
-/// TODO: Not yet refactored for maximum ergonomics
-#[macro_export]
-macro_rules! DefPrimitiveI {
-  // explicit state
-  ($cs:expr, $paramlist:expr, sub[$stomach:ident,$args:ident,$inner_state:ident] $body:block, $state_arg:ident) => {
-    DefPrimitiveI!($cs, $paramlist, move |$stomach, $args, $inner_state| {
-      WithInnerState!($body, $stomach, $inner_state).into_digested_result()
-    }, PrimitiveOptions::default(), $state_arg)
-  };
-  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
-    def_primitive($cs, $paramlist, Rc::new($compiled_replacement), $options, $state_arg);
-  }};
-  // implicit state
-  ($cs:expr, $paramlist:expr, sub[$stomach:ident, $args:ident, $inner_state:ident] $body:block) => {{
-    bind_state_mut!(st);
-    DefPrimitiveI!($cs, $paramlist, sub[$stomach, $args, $inner_state] $body, st)
-  }};
-  ($cs:expr, $paramlist:expr, sub $body:block) => {{
-    bind_state_mut!(st);
-    DefPrimitiveI!($cs, $paramlist, sub[stomach, args, inner_state] $body, st)
-  }};
-  ($cs:expr, $paramlist:expr, None) => {{
-    bind_state_mut!(st);
-    DefPrimitiveI!($cs, $paramlist, noprimitive!(), PrimitiveOptions::default(), st)
-  }};
-  ($cs:expr, $paramlist:expr, None, $($key:ident => $value:expr)*) => {{
-    bind_state_mut!(st);
-    DefPrimitiveI!($cs, $paramlist, noprimitive!(), NewDefault!(PrimitiveOptions, $($key => $value),*), st)
-  }};
-  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $($key:ident => $value:expr)*) => {{
-    bind_state_mut!(st);
-    DefPrimitiveI!($cs, $paramlist, $compiled_replacement, NewDefault!(PrimitiveOptions, $($key => $value),*), st)
-  }};
-  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => {{
-    bind_state_mut!(st);
-    DefPrimitiveI!($cs, $paramlist, $compiled_replacement, $options, st)
+  ($proto:expr, $replacement_closure:expr) => {{
+    let (cs, params) = parse_prototype!($proto);
+    defi_primitive!(cs, params, $replacement_closure, PrimitiveOptions::default());
   }};
 }
 
 #[macro_export]
-macro_rules! DefPrimitiveIWO(
-  ($proto:expr, $compiled_replacement:expr, $options:expr) => {{
+macro_rules! defi_primitive(
+  ($cs:expr, $params:expr, $compiled_replacement:expr, $options:expr) => {{
     bind_state_mut!(st);
-    DefPrimitiveIWO!($proto, $compiled_replacement, $options, st)
+    defi_primitive!($cs, $params, $compiled_replacement, $options, st)
   }};
-  ($proto:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
-    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-    DefPrimitiveI!(cs, paramlist, $compiled_replacement, $options, $state_arg);
+  ($cs:expr, $params:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
+    def_primitive($cs, $params, $compiled_replacement, $options, $state_arg);
   }};
 );
 
@@ -1025,11 +978,11 @@ macro_rules! DefLigature {
 // 1st char of the argument.  In cases where there is no argument, $standalonechar is used.
 #[macro_export]
 macro_rules! DefAccent {
-  ($accent:expr, $combiningchar:expr, $standalonechar:expr) => {
+  ($accent:expr, $combiningchar:expr, $standalonechar:expr) => {{
     let mut empty_opts : HashMap<String, Stored> = HashMap::new();
     bind_state_mut!(st);
     DefAccent!($accent, $combiningchar, $standalonechar, empty_opts, st)
-  };
+  }};
   ($accent:expr, $combiningchar:expr, $standalonechar:expr, below => true) => {{
     bind_state_mut!(st);
     DefAccent!($accent, $combiningchar, $standalonechar, map!("below"=>Stored::Bool(true)), st)
@@ -1048,16 +1001,16 @@ macro_rules! DefAccent {
     } else {
       $state_arg.assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
     }
-    let accent_cs = format!("{}{{}}",$accent);
+    let accent_proto = format!("{}{{}}",$accent);
 
-    DefPrimitive!(&accent_cs, |stomach, letter, inner_state| {
+    DefPrimitive!(&accent_proto, sub[stomach, letter, inner_state] {
       let invoked = Invocation!(T_CS!($accent), letter.clone(), stomach.get_gullet_mut(), inner_state)?;
       // TODO: check if letter.to_string has artefacts
       crate::package::pool::tex_accents::apply_accent(
         stomach, &letter[0].to_string(), $combiningchar, $standalonechar, Some(invoked), inner_state)?;
       Ok(vec![])
-    }, $state_arg, mode => "text");
-  }}
+    }, mode => "text");
+  }};
 }
 
 //============================================
@@ -1521,12 +1474,12 @@ macro_rules! defi_macro {
 #[macro_export]
 macro_rules! DefRegister {
   ($proto:expr => $value:expr) => {{
-    let (cs, proto) = parse_prototype!($proto);
-    defi_register!(cs, proto, $value, None);
+    let (cs, params) = parse_prototype!($proto);
+    defi_register!(cs, params, $value, None);
   }};
   ($proto:expr, $value:expr) => {{
-    let (cs, proto) = parse_prototype!($proto);
-    defi_register!(cs, proto, $value, None);
+    let (cs, params) = parse_prototype!($proto);
+    defi_register!(cs, params, $value, None);
   }};
   ($cs:expr, None, $value:expr) => {{
     defi_register!($cs, None, $value, None);
@@ -1537,14 +1490,14 @@ macro_rules! DefRegister {
     defi_register!($cs, None, $value, Some(options));
   }};
   ($proto:expr, $value:expr, $($input:tt)+) => {{
-    let (cs, proto) = parse_prototype!($proto);
+    let (cs, params) = parse_prototype!($proto);
     let options = defi_opts!(@munch ($($input)*) -> {RegisterOptions,});
-    defi_register!(cs, proto, $value, Some(options));
+    defi_register!(cs, params, $value, Some(options));
   }};
   ($proto:expr => $value:expr, $($input:tt)+) => {{
-    let (cs, proto) = parse_prototype!($proto);
+    let (cs, params) = parse_prototype!($proto);
     let options = defi_opts!(@munch ($($input)*) -> {RegisterOptions,});
-    defi_register!(cs, proto, $value, Some(options));
+    defi_register!(cs, params, $value, Some(options));
   }};
 }
 
@@ -1970,6 +1923,10 @@ macro_rules! defi_opts {
   (@munch ( $(,)? font $(:)?$(=>)? { $($fkey:ident => $fvalue:literal),* } $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ Font!($($fkey => $fvalue),*) ] });
   };
+  (@munch ( $(,)? font $(:)?$(=>)? $props:ident $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ $props ] });
+  };
+
   // properties: PropertiesClosure
   (@munch ( $(,)? properties $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($body) ] });
