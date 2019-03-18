@@ -1,6 +1,4 @@
 use crate::package::*;
-use rtx_core::document::tag::TagConstructionClosure;
-use rtx_core::BoxOps;
 
 LoadDefinitions!(state, {
   //======================================================================
@@ -10,9 +8,9 @@ LoadDefinitions!(state, {
   // Decide whether we're going into or out of math, inline or display.
   Tag!("ltx:XMText", auto_open => true, auto_close => true);
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
-  Tag!("ltx:Math", after_open => tagsub!(document, node, state, {
+  Tag!("ltx:Math", after_open => sub[document, node, state] {
     generate_id(document, node, "m", state)?;
-  }));
+  });
 
   DefPrimitiveI!(
     T_MATH!(),
@@ -88,7 +86,7 @@ LoadDefinitions!(state, {
     before_digest => sub[stomach, state] { stomach.end_mode("inline_math", state)?; });
 
   // Same as add_TeX, but add the code from the body of the object.
-  let add_body_tex_closure: Vec<TagConstructionClosure> = tagsub!(document, node, state, {
+  Tag!("ltx:Math", after_close => sub[document, node, state] {
     if node.get_attribute("tex").is_none() {
       // only do this once.
 
@@ -115,8 +113,7 @@ LoadDefinitions!(state, {
     }
   });
 
-  Tag!("ltx:Math", after_close => add_body_tex_closure);
-  Tag!("ltx:Math", after_close => tagsub!(document, node, state, {
+  Tag!("ltx:Math", after_close => sub[document, node, state] {
     cleanup_math(document, node.clone(), state)?;
-  }));
+  });
 });

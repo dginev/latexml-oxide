@@ -28,7 +28,7 @@ LoadDefinitions!(state, {
   // By default, this is OFF;
   // Set to 1 (or \usepackage[ids]{latexml}) to enable.
   // Set to 0 (or \usepackage[noids]{latexml}) to disable.
-  Tag!("ltx:*", after_open => tagsub!(document, node, state, {
+  Tag!("ltx:*", after_open => sub[document, node, state] {
     // If GENERATE_IDS is true, we'll assign an ID to EVERY element,
     // EXCEPT ltx:document which only gets an id from an EXPLICIT \thedocument@id.
     let tag = document.get_node_qname(&node, state);
@@ -37,14 +37,13 @@ LoadDefinitions!(state, {
       && LookupBool!("GENERATE_IDS") {
         generate_id(document, node, "", state)?;
     }
-  }));
+  });
 
   //======================================================================
   Tag!("ltx:document",
-    after_open => tagsub!(document, node, state, {
+    after_open => sub[document, node, state] {
       document.process_pending_resources(state)?;
-    })
-  );
+    });
   RequireResource!("LaTeXML.css");
 
   //======================================================================

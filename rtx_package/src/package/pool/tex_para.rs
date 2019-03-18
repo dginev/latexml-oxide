@@ -62,11 +62,10 @@ LoadDefinitions!(state, {
   });
 
   Tag!("ltx:para", auto_close => true, auto_open => true);
-  use rtx_core::document::tag::TagConstructionClosure;
-  let trim_node_whitespace_closure: Vec<TagConstructionClosure> = tagsub!(document, node, state, {
-    document.trim_node_whitespace(node)?;
+  Tag!("ltx:p", auto_close => true, auto_open => true,
+    after_close => sub[document, node, state] {
+      document.trim_node_whitespace(node)?;
   });
-  Tag!("ltx:p", auto_close => true, auto_open => true, after_close => trim_node_whitespace_closure);
 
   // \dump ???
   DefPrimitive!("\\end", sub[stomach, args, state] { stomach.get_gullet_mut().flush(state); });

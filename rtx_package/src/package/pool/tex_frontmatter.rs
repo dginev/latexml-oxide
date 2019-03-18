@@ -11,7 +11,6 @@
 // (ie. frontmatter for each sectional unit)
 
 use crate::package::*;
-use rtx_core::document::tag::TagConstructionClosure;
 use std::collections::HashSet;
 const FRONTMATTER_ELEMENTS: &[&str] = &[
   "ltx:title",
@@ -104,7 +103,7 @@ LoadDefinitions!(state, {
   // This is called by afterOpen (by default on <ltx:document>) to
   // output any frontmatter that was accumulated.
 
-  let insert_frontmatter: Vec<TagConstructionClosure> = tagsub!(document, node, state, {
+  Tag!("ltx:document", after_open_late => sub[document, node, state] {
     // this happens only once, not a big deal to skip the lazy_static! and keep it in the closure
     let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
 
@@ -141,16 +140,14 @@ LoadDefinitions!(state, {
     }
   });
 
-  Tag!("ltx:document", after_open_late => insert_frontmatter);
-
   // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
-  Tag!("ltx:document", after_open_late => tagsub!(document, root, state, {
+  Tag!("ltx:document", after_open_late => sub[document, root, state] {
     let classes = LookupMappingKeys!("DOCUMENT_CLASSES").join(" ");
     if !classes.is_empty()  {
       document.add_class(root, &classes)?;
     }
-  }));
+  });
 
   DefConstructor!("\\beginsection Until:\\par", "<ltx:section><ltx:title>#1</ltx:title>");
 
