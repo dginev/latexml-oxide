@@ -44,14 +44,7 @@ macro_rules! transfer_opt_default {
 }
 
 // Discussion: Ideally we wouldn't need any of these closure macros, just the way latexml proper doesn't.
-// In latexml, you could say: 
-
-#[macro_export]
-macro_rules! sub {
-  ($body:expr) => {
-    vec![Rc::new($body)]
-  };
-}
+// In latexml, you could say:
 
 #[macro_export]
 macro_rules! noprimitive {
@@ -85,10 +78,7 @@ macro_rules! primitiveproc {
 
 #[macro_export]
 macro_rules! before_digest {
-  (sub $body:block) => {
-    before_digest!($body)
-  };
-  ($body:block) => {
+  ($(sub)? $body:block) => {
     vec![before_digest_single!(stomach, state, $body)]
   };
   ($stomach:ident, $state:ident, $body:block) => {
@@ -163,9 +153,9 @@ macro_rules! properties {
       },
     )
   };
-  (sub $body:block) => {
-    Rc::new(move |stomach: &mut Stomach, args: &Vec<Option<Digested>>, state: &mut State| -> Result<HashMap<String, Stored>> { 
-      WithInnerState!($body, stomach, state)
+  ($(sub)? $body:block) => {
+    Rc::new(move |stomach: &mut Stomach, args: &Vec<Option<Digested>>, state: &mut State| -> Result<HashMap<String, Stored>> {
+      WithInnerState!($body, stomach, state).into_properties_result()
     })
   };
   ($value:expr) => {
@@ -175,8 +165,7 @@ macro_rules! properties {
 
 #[macro_export]
 macro_rules! after_digest {
-  (sub $body:block) => { after_digest!($body) };
-  ($body:block) => {
+  ($(sub)? $body:block) => {
     vec![after_digest_single!(stomach, whatsit, state, $body)]
   };
   ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {

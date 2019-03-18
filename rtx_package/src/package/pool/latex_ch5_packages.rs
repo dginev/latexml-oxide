@@ -21,7 +21,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
       before_digest => before_digest!(stomach, state, { only_preamble("\\usepackage", stomach, state); }),
-      after_digest => sub!(|stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State| -> Result<Vec<Digested>> {
+      after_digest => after_digest!(stomach, whatsit, state, {
         let options: Option<&Digested> = whatsit.get_arg(1);
         let packages: Option<&Digested> = whatsit.get_arg(2);
         let package_list = match packages {

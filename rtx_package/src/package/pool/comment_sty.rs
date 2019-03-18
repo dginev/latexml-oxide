@@ -9,7 +9,7 @@ LoadDefinitions!(outer_state, {
     let begin_mark = s!("\\begin{{{}}}", name);
     let end_mark = s!("\\end{{{}}}", name);
     DefConstructorI!(T_CS!(begin_mark), None, None,
-    after_digest => sub!(move |stomach: &mut Stomach, whatsit: &mut Whatsit, after_digest_state: &mut State| {
+    after_digest => after_digest!(stomach, whatsit, after_digest_state, {
       let mut nlines = 0;
       let gullet = &mut stomach.gullet;
       gullet.read_raw_line(after_digest_state);    // IGNORE 1st line (after the \begin{$name} !!!
