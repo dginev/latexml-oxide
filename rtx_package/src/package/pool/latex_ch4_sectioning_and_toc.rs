@@ -238,7 +238,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
   //// around....
   // \@@section{type}{id}{refnum}{formattedrefnum}{toctitle}{title}
 
-  // DefConstructorI!(
+  // DefConstructor!(
   //   "\\@@section{}{}{}{}{}{}",
   //   replacement!(document, args, props, inner_state, {
   //     unpack!(args => stype, id, refnum_arg, frefnum_arg, toctitle, title);

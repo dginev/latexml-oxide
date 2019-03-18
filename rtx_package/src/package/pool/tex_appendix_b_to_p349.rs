@@ -322,21 +322,21 @@ LoadDefinitions!(state, {
   );
 
   DefMacro!("\\enskip", "\\ifmmode\\@math@enskip\\else\\@text@enskip\\fi");
-  // DefConstructorI('\@math@enskip', undef,
+  // DefConstructor('\@math@enskip', undef,
   //   "<ltx:XMHint name='enskip' width='#width'/>",
   //   alias => '\enskip',
   //   properties => { isSpace => 1, width => sub { Dimension('0.5em'); } });
   // DefPrimitiveI('\@text@enskip', undef, "\x{2002}", alias => '\enskip');
 
   DefMacro!("\\enspace", "\\ifmmode\\@math@enspace\\else\\@text@enspace\\fi");
-  // DefConstructorI('\@math@enspace', undef,
+  // DefConstructor('\@math@enspace', undef,
   //   "<ltx:XMHint name='enskip' width='#width'/>",
   //   alias => '\enspace',
   //   properties => { isSpace => 1, width => sub { Dimension('0.5em'); } });
   // DefPrimitiveI('\@text@enspace', undef, "\x{2002}", alias => '\enspace');
 
   DefMacro!("\\quad", "\\ifmmode\\@math@quad\\else\\@text@quad\\fi");
-  // DefConstructorI('\@math@quad', undef,
+  // DefConstructor('\@math@quad', undef,
   //   "<ltx:XMHint name='quad' width='#width'/>",
   //   alias => '\quad',
   //   properties => { isSpace => 1, width => sub { Dimension('1em'); } });
@@ -344,21 +344,21 @@ LoadDefinitions!(state, {
 
   // # Conceivably should be treated as punctuation! (but maybe even \quad should !?!)
   DefMacro!("\\qquad", "\\ifmmode\\@math@qquad\\else\\@text@qquad\\fi");
-  // DefConstructorI('\@math@qquad', undef,
+  // DefConstructor('\@math@qquad', undef,
   //   "<ltx:XMHint name='qquad' width='#width'/>",
   //   alias => '\qquad',
   //   properties => { isSpace => 1, width => sub { Dimension('2em'); } });
   // DefPrimitiveI('\@text@qquad', undef, "\x{2003}\x{2003}", alias => '\qquad');
 
   DefMacro!("\\thinspace", "\\ifmmode\\@math@thinspace\\else\\@text@thinspace\\fi");
-  // DefConstructorI('\@math@thinspace', undef,
+  // DefConstructor('\@math@thinspace', undef,
   //   "<ltx:XMHint name='thinspace' width='#width'/>",
   //   alias => '\thinspace',
   //   properties => { isSpace => 1, width => sub { Dimension('0.16667em'); } });
   // DefPrimitiveI('\@text@thinspace', undef, "\x{2009}", alias => '\thinspace');
 
   DefMacro!("\\negthinspace", "\\ifmmode\\@math@negthinspace\\else\\@text@negthinspace\\fi");
-  // DefConstructorI('\@math@negthinspace', undef,
+  // DefConstructor('\@math@negthinspace', undef,
   //   "<ltx:XMHint name='negthinspace' width='#width'/>",
   //   alias => '\negthinspace',
   //   properties => { isSpace => 1, width => sub { Dimension('-0.16667em'); } });

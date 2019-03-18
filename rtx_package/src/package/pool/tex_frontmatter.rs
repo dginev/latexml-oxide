@@ -156,7 +156,7 @@ LoadDefinitions!(state, {
 
   // // POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
   // //  If so, how do know when the theorem ends?
-  // DefConstructorI('\proclaim', parseDefParameters('\proclaim', Tokenize('#1. #2\par')),
+  // DefConstructor('\proclaim', parseDefParameters('\proclaim', Tokenize('#1. #2\par')),
   //   "<ltx:theorem>"
   //     . "<ltx:title font='#titlefont' _force_font='true' >#title</ltx:title>"
   //     . "#2"

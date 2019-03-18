@@ -8,8 +8,8 @@ LoadDefinitions!(outer_state, {
     unpack_to_string!(args => name);
     let begin_mark = s!("\\begin{{{}}}", name);
     let end_mark = s!("\\end{{{}}}", name);
-    DefConstructorI!(T_CS!(begin_mark), None, None,
-    after_digest => after_digest!(stomach, whatsit, after_digest_state, {
+    DefConstructor!(T_CS!(begin_mark), None, None,
+    after_digest => sub[stomach, whatsit, after_digest_state] {
       let mut nlines = 0;
       let gullet = &mut stomach.gullet;
       gullet.read_raw_line(after_digest_state);    // IGNORE 1st line (after the \begin{$name} !!!
@@ -21,7 +21,7 @@ LoadDefinitions!(outer_state, {
       }
       note_progress(&s!("[Skipped {} ({} lines)]",name,nlines));
       Ok(Vec::new())
-    }));
+    });
   });
 
   // I don't understand Rust closures enough to figure out how to clone one, so instantiating it

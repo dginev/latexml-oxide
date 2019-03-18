@@ -48,9 +48,9 @@ LoadDefinitions!(state, {
   //   alias => '\mskip');
 
   // DefPrimitiveI('\hss', undef, undef);
-  // DefConstructorI('\hfil', undef, "?#isMath(<ltx:XMHint name='hfil'/>)( )",
+  // DefConstructor('\hfil', undef, "?#isMath(<ltx:XMHint name='hfil'/>)( )",
   //   properties => { isSpace => 1, isFill => 1 });
-  // DefConstructorI('\hfill', undef, "?#isMath(<ltx:XMHint name='hfill'/>)( )",
+  // DefConstructor('\hfill', undef, "?#isMath(<ltx:XMHint name='hfill'/>)( )",
   //   properties => { isSpace => 1, isFill => 1 });
   // DefPrimitiveI('\hfilneg', undef, undef);
 

@@ -63,17 +63,17 @@ LoadDefinitions!(state, {
   //   '\@close@inner@column\@close@column'
   //     . '\@alignment@align@marker'
   //     . '\@open@column\@open@inner@column');
-  // DefConstructorI('\@alignment@align@marker', undef, '', reversion => '&');
+  // DefConstructor('\@alignment@align@marker', undef, '', reversion => '&');
 
   // #DefMacro('\@alignment@span',
   // DefMacroI('\span', undef,
   //   '\@close@inner@column'
   //     . '\@alignment@span@marker'
   //     . '\@open@inner@column');
-  // DefConstructorI('\@alignment@span@marker', undef, '', reversion => '\span',
+  // DefConstructor('\@alignment@span@marker', undef, '', reversion => '\span',
   //   sizer => 0,
   //   properties => { alignmentSkippable => 1 });
-  // DefConstructorI('\omit', undef, '', properties => { alignmentSkippable => 1 });
+  // DefConstructor('\omit', undef, '', properties => { alignmentSkippable => 1 });
 
   // DefMacroI('\@alignment@cr', undef, sub {
   //     my ($gullet) = @_;
@@ -88,8 +88,8 @@ LoadDefinitions!(state, {
   //         T_CS('\@alignment@cr@marker'),
   //         T_CS('\@open@row'), T_CS('\@open@column'), T_CS('\@open@inner@column')); } });
 
-  // DefConstructorI('\@alignment@cr@marker', undef, '', reversion => '\cr');
-  // DefConstructorI('\default@cr', undef, "\n");                   # Default binding.
+  // DefConstructor('\@alignment@cr@marker', undef, '', reversion => '\cr');
+  // DefConstructor('\default@cr', undef, "\n");                   # Default binding.
   // Let('\cr',   '\default@cr');
   // Let('\crcr', '\cr');
 
@@ -127,9 +127,9 @@ LoadDefinitions!(state, {
   //       T_CS('\@alignment@newline@marker'),
   //       T_CS('\@open@row'), T_CS('\@open@column'), T_CS('\@open@inner@column')); });
 
-  // DefConstructorI('\@alignment@newline@marker', undef, '', reversion => Tokens(T_CS("\\\\"), T_CR));
+  // DefConstructor('\@alignment@newline@marker', undef, '', reversion => Tokens(T_CS("\\\\"), T_CR));
 
-  // DefConstructorI('\@alignment@hline', undef, '',
+  // DefConstructor('\@alignment@hline', undef, '',
   //   afterDigest => sub {
   //     if (my $alignment = LookupValue('Alignment')) {
   //       $alignment->addLine('t'); } },
@@ -175,12 +175,12 @@ LoadDefinitions!(state, {
   //       else {
   //         $stomach->invokeToken(T_CS('\@@BEGININLINEMATH')); } } });
 
-  // DefConstructorI('\@@BEGININLINETEXT', undef,
+  // DefConstructor('\@@BEGININLINETEXT', undef,
   //   "<ltx:XMText>"
   //     . "#body"
   //     . "</ltx:XMText>",
   //   alias => '$', beforeDigest => sub { $_[0]->beginMode('text'); }, captureBody => 1);
-  // DefConstructorI('\@@ENDINLINETEXT', undef, "", alias => '$',
+  // DefConstructor('\@@ENDINLINETEXT', undef, "", alias => '$',
   //   beforeDigest => sub { $_[0]->endMode('text'); });
 
   // DefPrimitiveI('\@LTX@nonumber', undef, sub { AssignValue(EQUATIONROW_NUMBER => 0, 'global'); });
