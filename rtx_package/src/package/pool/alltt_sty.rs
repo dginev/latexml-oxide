@@ -1,7 +1,7 @@
 use crate::package::*;
 
 LoadDefinitions!(state, {
-  DefEnv!("{alltt}", "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
+  DefEnvironment!("{alltt}", "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
   font => {family => "typewriter", series => "medium", shape => "upright"},
   before_digest => sub[stomach, inner_state] {
     for c in &['$', '&', '#', '^', '_', '%', '~'] {

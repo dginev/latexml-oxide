@@ -1560,31 +1560,26 @@ macro_rules! NewCounter {
 // Define a LaTeX environment
 // Note that the body of the environment is treated is the 'body' parameter in the constructor.
 #[macro_export]
-macro_rules! DefEnvironment(
-  // implicit state
-  ($proto_raw:expr, $replacement:expr) => (DefEnvironmentWO!($proto_raw, $replacement, ConstructorOptions::default()));
-  ($proto_raw:expr, $replacement:expr, $($key:ident => $val:expr),*) => {
-    DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*))
+macro_rules! DefEnvironment {
+  // entry points (this is where a macro call starts):
+  ($proto:literal, sub[$document:ident, $args:ident, $props:ident, $state_arg:ident] $body:block, $($input:tt)* ) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {});
+    DefEnvironmentIWO!($proto,
+      Some(Rc::new(|$document: &mut Document, $args: &Vec<Option<Digested>>, $props: &HashMap<String, Stored>, $state_arg: &mut State|
+        { $body }
+      )),
+      options);
+  }};
+  ($proto:literal, $replacement:expr) => {
+    DefEnvironmentWO!($proto, $replacement, ConstructorOptions::default());
   };
-  // explicit state
-  // ($proto_raw:expr, $replacement:expr, $state_arg:ident) => (DefEnvironmentWO!($proto_raw, $replacement,
-  //     ConstructorOptions::default(), $state_arg));
-  // ($proto_raw:expr, $replacement:expr, $($key:ident => $val:expr),*, $state_arg:ident) =>
-  //   (DefEnvironmentWO!($proto_raw, $replacement, NewDefault!(ConstructorOptions, $($key => $val),*, $state_arg)));
-);
-
-#[macro_export]
-macro_rules! DefEnvironmentI(
-  // implicit state
-  ($proto_raw:expr, $compiled_replacement:expr) => (DefEnvironmentIWO!($proto_raw, $paramlist, $compiled_replacement, ConstructorOptions::default()));
-  ($proto_raw:expr, $compiled_replacement:expr, $($key:ident=>$val:expr),*) =>
-    (DefEnvironmentIWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions, $($key => $val),*)));
-  // explicit state
-  // ($proto_raw:expr, $compiled_replacement:expr, $state_arg:ident) =>
-  //   (DefEnvironmentIWO!($proto_raw, $paramlist, $compiled_replacement, ConstructorOptions::default(), $state_arg));
-  // ($proto_raw:expr, $compiled_replacement:expr, $($key:ident=>$val:expr),*, $state_arg:ident) =>
-  //   (DefEnvironmentIWO!($proto_raw, $compiled_replacement, NewDefault!(ConstructorOptions, $($key => $val),*), $state_arg));
-);
+  ($proto:literal, $replacement:expr, $($input:tt)* ) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {});
+    //                              ^^^^^^^^^^^^    ^^
+    //                                 input       output
+    DefEnvironmentWO!($proto, $replacement, options);
+  }};
+}
 
 #[macro_export]
 macro_rules! DefPrimitive {
@@ -1980,28 +1975,6 @@ macro_rules! BeginItemize {
 // $(:)?$(=>)?   allow for any of "key:val", "key => val" and even "key :=> val".
 //
 #[macro_export]
-macro_rules! DefEnv {
-  // entry points (this is where a macro call starts):
-  ($proto:literal, sub[$document:ident, $args:ident, $props:ident, $state_arg:ident] $body:block, $($input:tt)* ) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {});
-    DefEnvironmentIWO!($proto,
-      Some(Rc::new(|$document: &mut Document, $args: &Vec<Option<Digested>>, $props: &HashMap<String, Stored>, $state_arg: &mut State|
-        { $body }
-      )),
-      options);
-  }};
-  ($proto:literal, $replacement:expr) => {
-    DefEnvironmentWO!($proto, $replacement, ConstructorOptions::default());
-  };
-  ($proto:literal, $replacement:expr, $($input:tt)* ) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {});
-    //                              ^^^^^^^^^^^^    ^^
-    //                                 input       output
-    DefEnvironmentWO!($proto, $replacement, options);
-  }};
-}
-
-#[macro_export]
 macro_rules! defi_opts {
   // input is empty: time to output (with optional trailing comma allowed )
   (@munch ($(,)?) -> { $([$id:ident @ $body:expr])+ } ) => {
@@ -2022,6 +1995,10 @@ macro_rules! defi_opts {
   (@munch ( $(,)? properties $(:)?$(=>)? $body:block $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$( [ $key @ $val ] )* [ properties @ properties!($body) ] });
   };
+  (@munch ( $(,)? properties $(:)?$(=>)? sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$( [ $key @ $val ] )* [ properties @ properties!($stomach_arg, $args, $state_arg, $body) ] });
+  };
+
   // before_digest_end: Vec<BeforeDigestClosure>
   (@munch ( $(,)? before_digest_end $(:)?$(=>)? sub $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
     defi_opts!(@before_digest_end (sub $($next)*) -> {$( [ $key @ $val ] )*});
