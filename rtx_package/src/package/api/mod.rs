@@ -19,6 +19,7 @@ use rtx_core::tbox::Tbox;
 use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::Digested;
+use rtx_core::whatsit::Whatsit;
 use rtx_core::list::List;
 
 // Constants for the API functions stay here as well
@@ -113,6 +114,14 @@ impl IntoDigestedResult<Result<Vec<Digested>>> for () {
   fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(Vec::new()) }
 }
 impl IntoDigestedResult<Result<Vec<Digested>>> for Tbox {
+  fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(vec![self.into()]) }
+}
+
+impl IntoDigestedResult<Result<Vec<Digested>>> for Whatsit {
+  fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(vec![self.into()]) }
+}
+
+impl IntoDigestedResult<Result<Vec<Digested>>> for List {
   fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(vec![self.into()]) }
 }
 

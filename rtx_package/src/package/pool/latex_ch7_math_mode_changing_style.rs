@@ -28,6 +28,6 @@ LoadDefinitions!(state, {
   DefMacro!("\\fontsubfuzz", ".4pt");
   DefMacro!("\\oldstylenums", "");
 
-  DefPrimitiveI!("\\operator@font", noprimitive!(),
-    font => Font!(family => "serif", series => "medium", shape => "upright"));
+  DefPrimitive!("\\operator@font", None,
+    font => {family => "serif", series => "medium", shape => "upright"});
 });

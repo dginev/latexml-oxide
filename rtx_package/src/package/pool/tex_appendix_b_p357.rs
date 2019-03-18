@@ -203,7 +203,7 @@ LoadDefinitions!(state, {
     // properties => properties!(map!(isSpace => true,
     //   width => sub { LookupValue('\thickmuskip'); }
   );
-  // DefPrimitiveI!("\\@text@thickmuskip", "\u{2004}", alias => "\\;".into_option());
+  // DefPrimitive!("\\@text@thickmuskip", "\u{2004}", alias => "\\;".into_option());
 
   Let!("\\:", "\\>");
   DefMacro!("\\ ", "\\ifmmode\\@math@nbspace\\else\\@text@nbspace\\fi");

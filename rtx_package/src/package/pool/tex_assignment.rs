@@ -12,22 +12,22 @@ LoadDefinitions!(state, {
   // <definition> = <def><control sequence><definition text>
   // <def> = \def | \gdef | \edef | \xdef
   // <definition text> = <register text><left brace><balanced text><right brace>
-  DefPrimitiveI!("\\def SkipSpaces Token UntilBrace {}", |stomach, args, state| {
+  DefPrimitive!("\\def SkipSpaces Token UntilBrace {}", sub[stomach, args, state] {
       do_def(false, false, stomach, args, state)
     },
     locked => true
   );
-  DefPrimitiveI!("\\gdef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
+  DefPrimitive!("\\gdef SkipSpaces Token UntilBrace {}", sub[stomach, args, state] {
       do_def(true, false, stomach, args, state)
     },
     locked => true
   );
-  DefPrimitiveI!("\\edef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
+  DefPrimitive!("\\edef SkipSpaces Token UntilBrace {}", sub[stomach, args, state] {
       do_def(false, true, stomach, args, state)
     },
     locked => true
   );
-  DefPrimitiveI!("\\xdef SkipSpaces Token UntilBrace {}", |stomach, args, state| {
+  DefPrimitive!("\\xdef SkipSpaces Token UntilBrace {}", sub[stomach, args, state] {
       do_def(true, true, stomach, args, state)
     },
     locked => true
@@ -35,9 +35,9 @@ LoadDefinitions!(state, {
 
   // <prefix> = \global | \long | \outer
   // See Stomach.pm & Stomach.pm
-  DefPrimitive!("\\global",sub { SetPrefix!("global"); }, is_prefix => true);
-  DefPrimitive!("\\long",  sub { SetPrefix!("long");   }, is_prefix => true);
-  DefPrimitive!("\\outer", sub { SetPrefix!("outer");  }, is_prefix => true);
+  DefPrimitive!("\\global",{ SetPrefix!("global"); }, is_prefix => true);
+  DefPrimitive!("\\long",  { SetPrefix!("long");   }, is_prefix => true);
+  DefPrimitive!("\\outer", { SetPrefix!("outer");  }, is_prefix => true);
 
   //======================================================================
   // Non-Macro assignments; TeXBook Ch.24, pp 276--277
@@ -73,7 +73,7 @@ LoadDefinitions!(state, {
 
       gullet.skip_spaces(state);
       AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
-      DefPrimitiveII!(cs, None, None, font => Some(props));
+      DefPrimitiveI!(cs, None, None, font => Some(props));
     } else {    // Failed?
       let message = s!("Unrecognized font name {:?} Font switch macro {:?} will have no effect", name, cs.stringify());
       Info!("unexpected", name, stomach, state,message);
@@ -81,7 +81,7 @@ LoadDefinitions!(state, {
   });
 
   // Not sure what this should be...
-  DefPrimitive!("\\nullfont", None, font => Font!(family => "nullfont"));
+  DefPrimitive!("\\nullfont", None, font => {family => "nullfont"});
 
   DefRegister!("\\count Number"  => Number::new(0.0));
   DefRegister!("\\dimen Number"  => Dimension::new(0.0));

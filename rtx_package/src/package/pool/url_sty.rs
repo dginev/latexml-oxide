@@ -98,7 +98,7 @@ LoadDefinitions!(state, {
     unpack_to_string!(args => cmd);
     let expansion : Vec<Digested> = stomach.digest_next_body(Some(T_CS!("\\endgroup")), url_state)?;
     let gullet = stomach.get_gullet_mut();
-    DefPrimitiveI!(&cmd, primitivesub!(stomach, args, inner_state, { Ok(expansion.clone()) }));
+    DefPrimitive!(&cmd, { Ok(expansion.clone()) });
     Ok(vec![])
   });
 });

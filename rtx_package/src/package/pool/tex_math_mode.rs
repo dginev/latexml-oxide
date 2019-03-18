@@ -14,7 +14,7 @@ LoadDefinitions!(state, {
     generate_id(document, node, "m", state)?;
   }));
 
-  DefPrimitiveII!(
+  DefPrimitiveI!(
     T_MATH!(),
     None,
     primitivesub!(stomach, tokens, state, {

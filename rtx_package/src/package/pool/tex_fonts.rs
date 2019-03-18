@@ -131,10 +131,10 @@ LoadDefinitions!(state, {
   // # <box size assignment> = <box dimension><8bit><equals><dimen>
   // # <interaction mode assignment> = \errorstopmode | \scrollmode | \nonstopmode | \batchmode
   // # These are no-ops; Basically, LaTeXML runs in scrollmode
-  DefPrimitiveII!(T_CS!("\\errorstopmode"), None, None);
-  DefPrimitiveII!(T_CS!("\\scrollmode"), None, None);
-  DefPrimitiveII!(T_CS!("\\nonstopmode"), None, None);
-  DefPrimitiveII!(T_CS!("\\batchmode"), None, None);
+  DefPrimitiveI!(T_CS!("\\errorstopmode"), None, None);
+  DefPrimitiveI!(T_CS!("\\scrollmode"), None, None);
+  DefPrimitiveI!(T_CS!("\\nonstopmode"), None, None);
+  DefPrimitiveI!(T_CS!("\\batchmode"), None, None);
 
   // # <intimate assignment> = <special integer><equals><number>
   // #   | <special dimension><equals><dimen>
@@ -445,7 +445,7 @@ LoadDefinitions!(state, {
     let number = value.to_number();
     let chardef_value = value.clone();
     let internalcs = T_CS!(&s!("\\@chardef@{}", csname));
-    DefPrimitiveII!(internalcs.clone(), None, sub[stomach,args,i_state] {
+    DefPrimitiveI!(internalcs.clone(), None, sub[stomach,args,i_state] {
       let gullet = stomach.get_gullet_mut();
       let decoded = match font::decode(number.value_of() as u8, None, false, i_state) {
         None => String::new(),
