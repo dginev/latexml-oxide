@@ -242,39 +242,39 @@ LoadDefinitions!(state, {
   Tag!("ltx:text", auto_open => true, auto_close => true);
 
   // Note that these, unlike \rmfamily, should set the other attributes to the defaults!
-  DefPrimitiveI!("\\rm", noprimitive!(),
-    font => Font!(family => "serif", series => "medium", shape => "upright"));
-  DefPrimitiveI!("\\sf", noprimitive!(),
-    font => Font!(family => "sansserif", series => "medium", shape => "upright"));
-  DefPrimitiveI!("\\bf", noprimitive!(),
-    font => Font!(series => "bold", family => "serif", shape => "upright"));
-  DefPrimitiveI!("\\it", noprimitive!(),
-    font => Font!(shape => "italic", family => "serif", series => "medium" ));
-  DefPrimitiveI!("\\tt", noprimitive!(),
-    font => Font!(family => "typewriter", series => "medium", shape => "upright" ));
+  DefPrimitive!("\\rm", None,
+    font => {family => "serif", series => "medium", shape => "upright"});
+  DefPrimitive!("\\sf", None,
+    font => {family => "sansserif", series => "medium", shape => "upright"});
+  DefPrimitive!("\\bf", None,
+    font => {series => "bold", family => "serif", shape => "upright"});
+  DefPrimitive!("\\it", None,
+    font => {shape => "italic", family => "serif", series => "medium" });
+  DefPrimitive!("\\tt", None,
+    font => {family => "typewriter", series => "medium", shape => "upright" });
   // No effect in math for the following 2 ?
-  DefPrimitiveI!("\\sl", noprimitive!(),
-    font => Font!(shape => "slanted", family => "serif", series => "medium" ));
-  DefPrimitiveI!("\\sc", noprimitive!(),
-    font => Font!(shape => "smallcaps", family => "serif", series => "medium" ));
+  DefPrimitive!("\\sl", None,
+    font => {shape => "slanted", family => "serif", series => "medium" });
+  DefPrimitive!("\\sc", None,
+    font => {shape => "smallcaps", family => "serif", series => "medium" });
 
   // Ideally, we should set these sizes from class files
   AssignValue!("NOMINAL_FONT_SIZE", 10);
-  DefPrimitiveI!("\\tiny",         noprimitive!(), font => Font!(size => 5 ));
-  DefPrimitiveI!("\\scriptsize",   noprimitive!(), font => Font!(size => 7 ));
-  DefPrimitiveI!("\\footnotesize", noprimitive!(), font => Font!(size => 8 ));
-  DefPrimitiveI!("\\small",        noprimitive!(), font => Font!(size => 9 ));
-  DefPrimitiveI!("\\normalsize",   noprimitive!(), font => Font!(size => 10 ));
-  DefPrimitiveI!("\\large",        noprimitive!(), font => Font!(size => 12 ));
-  DefPrimitiveI!("\\Large",        noprimitive!(), font => Font!(size => 14.4 ));
-  DefPrimitiveI!("\\LARGE",        noprimitive!(), font => Font!(size => 17.28 ));
-  DefPrimitiveI!("\\huge",         noprimitive!(), font => Font!(size => 20.74 ));
-  DefPrimitiveI!("\\Huge",         noprimitive!(), font => Font!(size => 29.8 ));
+  DefPrimitive!("\\tiny",         None, font => {size => 5 });
+  DefPrimitive!("\\scriptsize",   None, font => {size => 7 });
+  DefPrimitive!("\\footnotesize", None, font => {size => 8 });
+  DefPrimitive!("\\small",        None, font => {size => 9 });
+  DefPrimitive!("\\normalsize",   None, font => {size => 10 });
+  DefPrimitive!("\\large",        None, font => {size => 12 });
+  DefPrimitive!("\\Large",        None, font => {size => 14.4 });
+  DefPrimitive!("\\LARGE",        None, font => {size => 17.28 });
+  DefPrimitive!("\\huge",         None, font => {size => 20.74 });
+  DefPrimitive!("\\Huge",         None, font => {size => 29.8 });
 
-  DefPrimitiveI!("\\mit", noprimitive!(), require_math => true, font => Font!(family => "italic"));
+  DefPrimitive!("\\mit", None, require_math => true, font => {family => "italic"});
 
-  DefPrimitiveI!("\\frenchspacing", noprimitive!());
-  DefPrimitiveI!("\\nonfrenchspacing", noprimitive!());
+  DefPrimitive!("\\frenchspacing", None);
+  DefPrimitive!("\\nonfrenchspacing", None);
   // DefMacroI!("\\normalbaselines", undef,
   //   '\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\normallineskiplimit');
   DefMacroI!(T_CS!("\\space"), None, T_SPACE!());
@@ -287,7 +287,7 @@ LoadDefinitions!(state, {
   Let!("\\endgraf", "\\par");
   Let!("\\endline", "\\cr");
 
-  DefPrimitiveI!("\\endline", noprimitive!());
+  DefPrimitive!("\\endline", None);
 
   // Use \r for the newline from TeX!!!
   DefMacroI!(T_CS!("\\\r"), None, T_CS!("\\ ")); // \<cr> == \<space> Interesting (see latex.ltx)
@@ -298,7 +298,7 @@ LoadDefinitions!(state, {
   //======================================================================
   // TeX Book, Appendix B, p. 352
 
-  DefPrimitive!("\\obeyspaces", sub {
+  DefPrimitive!("\\obeyspaces", {
      AssignCatcode!(' ', Catcode::ACTIVE);
      LetI!(&T_ACTIVE!(" "), T_CS!("\\space"));
   });
@@ -306,7 +306,7 @@ LoadDefinitions!(state, {
   // EVEN before it is made active. (see p.380)
   LetI!(&T_ACTIVE!(" "), T_CS!("\\space"));
 
-  DefPrimitive!("\\obeylines", sub {
+  DefPrimitive!("\\obeylines", {
       AssignCatcode!('\r', Catcode::ACTIVE);
       LetI!(&T_ACTIVE!("\r"), T_CS!("\\@break")); // More appropriate than \par, I think?
   });
@@ -366,10 +366,10 @@ LoadDefinitions!(state, {
 
   // DefConstructor('\hglue Glue', "?#isMath(<ltx:XMHint name='hglue' width='#width'/>)(\x{2003})",
   //   properties => sub { (isSpace => 1, width => $_[1]); });
-  DefPrimitiveI!("\\vglue Glue", noprimitive!());
-  DefPrimitiveI!("\\topglue", noprimitive!());
-  DefPrimitiveI!("\\nointerlineskip", noprimitive!());
-  DefPrimitiveI!("\\offinterlineskip", noprimitive!());
+  DefPrimitive!("\\vglue Glue", None);
+  DefPrimitive!("\\topglue", None);
+  DefPrimitive!("\\nointerlineskip", None);
+  DefPrimitive!("\\offinterlineskip", None);
 
   DefMacro!("\\smallskip", "\\vskip\\smallskipamount");
   DefMacro!("\\medskip", "\\vskip\\medskipamount");
@@ -378,9 +378,9 @@ LoadDefinitions!(state, {
   //======================================================================
   // TeX Book, Appendix B, p. 353
 
-  DefPrimitiveI!("\\break", noprimitive!());
-  DefPrimitiveI!("\\nobreak", noprimitive!());
-  DefPrimitiveI!("\\allowbreak", noprimitive!());
+  DefPrimitive!("\\break", None);
+  DefPrimitive!("\\nobreak", None);
+  DefPrimitive!("\\allowbreak", None);
   DefMacro!("\\nobreakspace", "\\ifmmode\\math@nobreakspace\\else\\text@nobreakspace\\fi");
 
   DefPrimitive!("\\text@nobreakspace", sub[stomach, whatsit, state] {
@@ -400,7 +400,7 @@ LoadDefinitions!(state, {
   // TODO:
   // DefConstructor!("\\LTX@newpage", "^<ltx:pagination role='newpage'/>");
   DefMacro!("\\supereject", "\\par\\LTX@newpage");
-  DefPrimitiveI!("\\removelastskip", noprimitive!());
+  DefPrimitive!("\\removelastskip", None);
   DefMacro!("\\smallbreak", "\\par");
   DefMacro!("\\medbreak", "\\par");
   DefMacro!("\\bigbreak", "\\par");

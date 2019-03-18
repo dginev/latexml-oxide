@@ -58,7 +58,7 @@ LoadDefinitions!(outer_state, {
   //======================================================================
   // This makes \relax disappear completely after digestion
   // (which seems most TeX like).
-  DefPrimitiveI!("\\relax", noprimitive!());
+  DefPrimitive!("\\relax", None);
   //// However, this keeps a box, so it can appear in UnTeX
   ////// DefPrimitive('\relax',undef);
   //// But if you do that, you've got to watch out since it usually

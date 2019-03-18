@@ -89,9 +89,9 @@ LoadDefinitions!(state, {
     "\\ifmmode\\@math@hskip #2\\relax\\else\\@text@hskip #2\\relax\\fi"
   );
 
-  DefPrimitiveI!("\\vspace OptionalMatch:* {}", noprimitive!());
-  DefPrimitiveI!("\\addvspace {}", noprimitive!());
-  DefPrimitiveI!("\\addpenalty {}", noprimitive!());
+  DefPrimitive!("\\vspace OptionalMatch:* {}", None);
+  DefPrimitive!("\\addvspace {}", None);
+  DefPrimitive!("\\addpenalty {}", None);
   // \hfill, \vfill
 
   //======================================================================

@@ -21,9 +21,9 @@ LoadDefinitions!(state, {
 
   // These are actually TeX primitives, but we treat them as a Whatsit so they
   // remain in the constructed tree.
-  DefPrimitiveI!(
+  DefPrimitive!(
     "{",
-    primitivesub!(stomach, _args, state, {
+    sub[stomach, args, state] {
       stomach.bgroup(state);
       let open = Tbox::new(String::new(), None, None, Tokens!(T_BEGIN!()), HashMap::new(), state);
       let mode = if LookupBool!("IN_MATH") {
@@ -42,18 +42,18 @@ LoadDefinitions!(state, {
         locator: Locator::default(),
       };
 
-      return_list.into()
-    })
+      return_list
+    }
   );
 
-  DefPrimitiveI!(
+  DefPrimitive!(
     "}",
-    primitivesub!(stomach, _args, state, {
+    sub[stomach, args, state] {
       let f = LookupFont!();
       stomach.egroup(state)?;
       let return_box = Tbox::new(String::new(), f, None, Tokens!(T_END!()), HashMap::new(), state);
-      return_box.into()
-    })
+      return_box
+    }
   );
 
   // // These are for those screwy cases where you need to create a group like box,
@@ -68,13 +68,13 @@ LoadDefinitions!(state, {
     after_digest => after_digest!(stomach,args,state, { stomach.egroup(state)?; }),
     reversion => None);
 
-  DefPrimitiveI!(
+  DefPrimitive!(
     "\\begingroup",
     primitiveproc!(stomach, _args, state, {
       stomach.begingroup(state);
     })
   );
-  DefPrimitiveI!(
+  DefPrimitive!(
     "\\endgroup",
     primitiveproc!(stomach, _args, state, {
       stomach.endgroup(state)?;
@@ -87,8 +87,8 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\showlists", None);
   DefPrimitive!("\\showthe Token", None);
 
-  // // DefPrimitive('\shipout ??
-  DefPrimitiveI!("\\ignorespaces SkipSpaces", noprimitive!());
+  // DefPrimitive('\shipout ??
+  DefPrimitive!("\\ignorespaces SkipSpaces", None);
 
   DefPrimitive!("\\lx@ignorehardspaces", sub[stomach, whatsit, state] {
     let mut boxes = Vec::new();

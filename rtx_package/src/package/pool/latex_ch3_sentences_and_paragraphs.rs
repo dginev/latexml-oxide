@@ -45,7 +45,7 @@ LoadDefinitions!(state, {
   // Style parameters
   // \parindent, \baselineskip, \parskip alreadin in TeX.pool.ltxml
 
-  DefPrimitiveI!("\\linespread{}", noprimitive!());
+  DefPrimitive!("\\linespread{}", None);
 
   // ?
   DefMacro!("\\@noligs", "");

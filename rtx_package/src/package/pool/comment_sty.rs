@@ -54,8 +54,8 @@ LoadDefinitions!(outer_state, {
   let mut mock_stomach = Stomach::default();
   define_excluded(&mut mock_stomach, vec![Tokenize!("comment", None)], outer_state)?;
 
-  DefPrimitiveI!("\\includecomment{}", define_included!());
-  DefPrimitiveI!("\\excludecomment{}", define_excluded);
-  DefPrimitiveI!("\\specialcomment{}{}{}", define_included!());
-  DefPrimitiveI!("\\processcomment{}{}{}{}", noprimitive!());
+  DefPrimitive!("\\includecomment{}", define_included!());
+  DefPrimitive!("\\excludecomment{}", define_excluded);
+  DefPrimitive!("\\specialcomment{}{}{}", define_included!());
+  DefPrimitive!("\\processcomment{}{}{}{}", noprimitive!());
 });

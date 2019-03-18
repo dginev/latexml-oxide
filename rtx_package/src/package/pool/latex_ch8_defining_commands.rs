@@ -79,7 +79,7 @@ LoadDefinitions!(state, {
     unpack_to_token!(args => cs);
     let mungedcs = T_CS!(s!("{} ",cs.get_string()));
     // only if defined but not yet robust
-    if LookupDefinition!(&cs).is_some() &&    
+    if LookupDefinition!(&cs).is_some() &&
        LookupDefinition!(&mungedcs).is_none() {
       Let!(mungedcs, cs);
       DefMacroI!(cs, None, Tokens!(T_CS!("\\protect"),mungedcs));
@@ -213,11 +213,11 @@ LoadDefinitions!(state, {
     } else {
       None
     };
-    DefPrimitiveII!(cs, None, None, font => font);
+    DefPrimitiveI!(cs, None, None, font => font);
   });
 
-  DefPrimitiveI!("\\DeclareFixedFont{}{}{}{}{}{}", None);
-  DefPrimitiveI!("\\DeclareErrorFont{}{}{}{}{}", None);
+  DefPrimitive!("\\DeclareFixedFont{}{}{}{}{}{}", None);
+  DefPrimitive!("\\DeclareErrorFont{}{}{}{}{}", None);
 
   DefMacro!("\\cdp@list", "\\@empty");
   Let!("\\cdp@elt", "\\relax");
@@ -237,14 +237,14 @@ LoadDefinitions!(state, {
   });
 
   DefMacroI!("\\LastDeclaredEncoding", None, "");
-  DefPrimitiveI!("\\DeclareFontSubstitution{}{}{}{}", None);
-  DefPrimitiveI!("\\DeclareFontEncodingDefaults{}{}", None);
+  DefPrimitive!("\\DeclareFontSubstitution{}{}{}{}", None);
+  DefPrimitive!("\\DeclareFontEncodingDefaults{}{}", None);
   DefMacroI!("\\LastDeclaredEncoding", None, "");
 
-  DefPrimitiveI!("\\SetSymbolFont{}{}{}{}{}{}", None);
-  DefPrimitiveI!("\\SetMathAlphabet{}{}{}{}{}{}", None);
-  DefPrimitiveI!("\\addtoversion{}{}", None);
-  DefPrimitiveI!("\\TextSymbolUnavailable{}", None);
+  DefPrimitive!("\\SetSymbolFont{}{}{}{}{}{}", None);
+  DefPrimitive!("\\SetMathAlphabet{}{}{}{}{}{}", None);
+  DefPrimitive!("\\addtoversion{}{}", None);
+  DefPrimitive!("\\TextSymbolUnavailable{}", None);
 
   RawTeX!(
     r#"""
