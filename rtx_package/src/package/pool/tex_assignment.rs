@@ -73,7 +73,8 @@ LoadDefinitions!(state, {
 
       gullet.skip_spaces(state);
       AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
-      DefPrimitiveI!(cs, None, None, font => Some(props));
+      let props_opt = Some(props); // TODO: the macro api can be even smoother here... auto cast Font -> Option<Font>
+      DefPrimitive!(cs, None, None, font => props_opt);
     } else {    // Failed?
       let message = s!("Unrecognized font name {:?} Font switch macro {:?} will have no effect", name, cs.stringify());
       Info!("unexpected", name, stomach, state,message);

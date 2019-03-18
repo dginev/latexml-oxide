@@ -12,10 +12,10 @@ LoadDefinitions!(state, {
     generate_id(document, node, "m", state)?;
   });
 
-  DefPrimitiveI!(
+  DefPrimitive!(
     T_MATH!(),
     None,
-    primitivesub!(stomach, tokens, state, {
+    sub[stomach, tokens, state] {
       let mut op = "\\@@BEGININLINEMATH";
       {
         let mut gullet = stomach.get_gullet_mut();
@@ -51,8 +51,7 @@ LoadDefinitions!(state, {
       } else {
         Ok(Vec::new())
       }
-    }),
-    PrimitiveOptions::default()
+    }
   );
   // Let this be the default, conventional $
   LetI!(&T_CS!("\\@dollar@in@normalmode"), T_MATH!());

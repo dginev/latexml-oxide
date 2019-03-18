@@ -70,17 +70,13 @@ LoadDefinitions!(state, {
   );
 
   DefPrimitive!(
-    "\\begingroup",
-    primitiveproc!(stomach, _args, state, {
+    "\\begingroup", sub[stomach, _args, state] {
       stomach.begingroup(state);
-    })
-  );
+    });
   DefPrimitive!(
-    "\\endgroup",
-    primitiveproc!(stomach, _args, state, {
+    "\\endgroup", sub[stomach, _args, state] {
       stomach.endgroup(state)?;
-    })
-  );
+    });
 
   // // Debugging aids; Ignored!
   DefPrimitive!("\\show Token", None);
