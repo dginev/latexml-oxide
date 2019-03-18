@@ -17,7 +17,7 @@ LoadDefinitions!(state, {
   //     AssignValue('@at@end@document', []) unless LookupValue('@at@end@document');
   //     PushValue('@at@end@document', $_[1]->unlist); });
 
-  DefEnv!("{document}", sub[document, args, props, state] {
+  DefEnvironment!("{document}", sub[document, args, props, state] {
       let id = prop_str!(props,"id");
       let body = prop_whatsit!(props,"body");
       if let Some(mut docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?

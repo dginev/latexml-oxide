@@ -75,7 +75,7 @@ DefConstructor!("\\@@toccaption{}", "<ltx:toccaption>#1</ltx:toccaption>"
 );
 
 // TODO: implement optional argument {figure}[]
-DefEnv!("{figure}",r###"
+DefEnvironment!("{figure}",r###"
   <ltx:figure xml:id='#id' inlist='#inlist'>
     #tags
     #body

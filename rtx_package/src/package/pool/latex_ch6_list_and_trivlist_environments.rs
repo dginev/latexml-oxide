@@ -46,8 +46,8 @@ LoadDefinitions!(state, {
 
   DefEnvironment!("{trivlist}",
     "<ltx:itemize>#body</ltx:itemize>",
-    properties      => properties!(stomach, args, state, { begin_itemize("trivlist", None, false, stomach, state) }),
-    before_digest_end => before_digest!({ Digest!("\\par")?; })
+    properties => sub[stomach, args, state] { begin_itemize("trivlist", None, false, stomach, state) },
+    before_digest_end => { Digest!("\\par")?; }
   );
 
   DefMacro!("\\trivlist@item", "\\par\\trivlist@item@");

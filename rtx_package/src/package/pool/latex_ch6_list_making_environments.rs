@@ -76,21 +76,21 @@ LoadDefinitions!(state, {
       unpack_to_string!(args=>tag);
       ref_step_item_counter(&tag, stomach, state) }));
 
-  DefEnv!("{itemize}",
+  DefEnvironment!("{itemize}",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
     properties => { BeginItemize!("itemize", "@item") },
     before_digest_end => { Digest!("\\par")?; },
     locked => true,
     mode => "text"
   );
-  DefEnv!("{enumerate}",
+  DefEnvironment!("{enumerate}",
     "<ltx:enumerate  xml:id='#id'>#body</ltx:enumerate>",
     properties => { BeginItemize!("enumerate", "enum") },
     before_digest_end => { Digest!("\\par")?; },
     locked => true,
     mode => "text"
   );
-  DefEnv!("{description}",
+  DefEnvironment!("{description}",
     "<ltx:description  xml:id='#id'>#body</ltx:description>",
     before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
     properties => { BeginItemize!("description", "@desc") },

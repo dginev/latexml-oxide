@@ -111,7 +111,7 @@ LoadDefinitions!(state, {
   //
   // Probably there are other places (eg in titlepage?) that should force the close??
 
-  DefEnv!("{abstract}", "",
+  DefEnvironment!("{abstract}", "",
     after_digest_begin => sub[stomach, args, state] {
       AssignValue!("inPreamble" => false);
       AddToMacro!("\\@startsection@hook", "\\maybe@end@abstract");
@@ -167,7 +167,7 @@ LoadDefinitions!(state, {
   // Presumably the earlier, larger one is title, rest are authors/affiliations...
   // Particularly, if they start with a pseudo superscript or other "marker", they're probably affil!
   // For now, we just give an info message
-  DefEnv!("{titlepage}", "<ltx:titlepage>#body",
+  DefEnvironment!("{titlepage}", "<ltx:titlepage>#body",
     // TODO
     // before_digest => sub { Let('\centering', '\relax');
     //   DefEnvironment('{abstract}',
