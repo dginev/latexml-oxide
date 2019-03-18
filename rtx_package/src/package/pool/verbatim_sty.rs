@@ -48,9 +48,9 @@ LoadDefinitions!(state, {
   //       the current DefMacroI can not accept a string expansion, hence TokenizeInternal!() the RHS
   //
   DefMacro!("\\verbatim", "\\begingroup\\@verbatim\\frenchspacing\\@vobeyspaces\\verbatim@start");
-  DefMacroI!(T_CS!("\\verbatim*"), None, TokenizeInternal!("\\begingroup\\@verbatim\\verbatim@start"));
+  DefMacro!(T_CS!("\\verbatim*"), None, TokenizeInternal!("\\begingroup\\@verbatim\\verbatim@start"));
   DefMacro!("\\endverbatim", "\\lx@end@verbatim@\\endgroup");
-  DefMacroI!(T_CS!("\\endverbatim*"), None, TokenizeInternal!("\\lx@end@verbatim@\\endgroup"));
+  DefMacro!(T_CS!("\\endverbatim*"), None, TokenizeInternal!("\\lx@end@verbatim@\\endgroup"));
 
   DefMacro!(
     "\\comment",

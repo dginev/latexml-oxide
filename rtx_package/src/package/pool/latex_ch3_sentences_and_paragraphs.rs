@@ -35,7 +35,7 @@ LoadDefinitions!(state, {
     bounded        => true,
     font=> { emph => true },
     alias => "\\emph",
-    before_digest   => { DefMacroI!(T_CS!("\\f@shape"), None, T_LETTER!("i")); },
+    before_digest   => { DefMacro!(T_CS!("\\f@shape"), None, T_LETTER!("i")); },
     after_construct => sub[doc,args,inner_state] { doc.add_class(&mut doc.get_element().unwrap(), "ltx_emph")?; }
   );
 

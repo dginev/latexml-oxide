@@ -212,7 +212,7 @@ LoadDefinitions!(state, {
   //   alias => '\ ',
   //   properties => { isSpace => 1,
   //     width => sub { Dimension('0.5em'); } });
-  DefMacroI!(T_CS!("\\@text@nbspace"), None, T_OTHER!("\u{00A0}"), alias => "\\ ");
+  DefMacro!(T_CS!("\\@text@nbspace"), None, T_OTHER!("\u{00A0}"), alias => "\\ ");
 
   DefMacro!("\\\t", "\\ifmmode\\@math@tab\\else\\@text@tab\\fi");
   // DefConstructor('\@math@tab', undef,    # Tab!!

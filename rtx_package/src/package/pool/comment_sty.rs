@@ -37,13 +37,13 @@ LoadDefinitions!(outer_state, {
         after_tokens.push(T_CS!("\\ignorespaces"));
         // Note that we define the `magic' environment control sequences,
         // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
-        DefMacroI!(T_CS!(s!("\\begin{{{}}}", name)),
+        DefMacro!(T_CS!(s!("\\begin{{{}}}", name)),
           None,
           sub[gullet, _args, macro_state] {
             gullet.read_raw_line(macro_state); // IGNORE 1st line (after the \begin{$name} !!!
             Ok(before_tokens.clone().into())
           });
-        DefMacroI!(T_CS!(s!("\\end{{{}}}", name)),
+        DefMacro!(T_CS!(s!("\\end{{{}}}", name)),
           None,
           Tokens::new(after_tokens)
         );

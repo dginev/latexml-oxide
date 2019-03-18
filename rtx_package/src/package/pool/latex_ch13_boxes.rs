@@ -215,7 +215,7 @@ LoadDefinitions!(state, {
   //     #    AssignValue('box' . $value, Digest($_[4])); return; });
   //     AssignValue('box' . $value, $contents); return; });
 
-  // DefMacroI!(T_CS!("\\begin{lrbox}"), '{Token}', "\@begin@lrbox #1");
+  // DefMacro!(T_CS!("\\begin{lrbox}"), '{Token}', "\@begin@lrbox #1");
   // DefPrimitive!("\\end{lrbox}", primtiveproc!(stomach, args, state, {stomach.egroup(state)?; }));
   // DefPrimitive!("\\@begin@lrbox Token", sub {
   //     my ($stomach, $token) = @_;

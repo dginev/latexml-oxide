@@ -669,7 +669,7 @@ fn begin_bibliography_clean(stomach: &mut Stomach, whatsit: &mut Whatsit, state:
     docid += ".";
   }
   let bibid = s!("{}bib{}", docid, radix::radix_alpha(bibnumber - 1));
-  DefMacroI!(T_CS!("\\thebibliography@ID"), None, T_OTHER!(&bibid), scope => Some(Scope::Global));
+  DefMacro!(T_CS!("\\thebibliography@ID"), None, T_OTHER!(&bibid), scope => Some(Scope::Global));
   whatsit.set_property("id", bibid);
   let title_opt = match DigestIf!("\\refname", stomach)? {
     Some(v) => Some(v),

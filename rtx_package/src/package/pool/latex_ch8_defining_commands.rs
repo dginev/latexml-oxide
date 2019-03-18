@@ -24,7 +24,7 @@ LoadDefinitions!(state, {
     }
     let opt = if opt.is_empty() { None } else { Some(opt) };
     let macro_args = convert_latex_args(nargs, opt, state)?;
-    DefMacroI!(cs_token, macro_args, body);
+    DefMacro!(cs_token, macro_args, body);
   });
 
   DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, args, state] {
@@ -34,7 +34,7 @@ LoadDefinitions!(state, {
     let nargs = nargs_token.to_number().value_of() as usize;
     let opt = if opt.is_empty() { None } else { Some(opt) };
     let macro_args = convert_latex_args(nargs, opt, state)?;
-    DefMacroI!(cs_token, macro_args, body);
+    DefMacro!(cs_token, macro_args, body);
   });
 
   // low-level implementation of both \newcommand and \renewcommand depends on \@argdef
@@ -54,7 +54,7 @@ LoadDefinitions!(state, {
     if IsDefinable!(&cs) {
       let nargs = nargs.to_number().value_of() as usize;
       let cs_args = convert_latex_args(nargs, opts, state)?;
-      DefMacroI!(cs, cs_args, body);
+      DefMacro!(cs, cs_args, body);
     }
   });
 
@@ -71,8 +71,8 @@ LoadDefinitions!(state, {
     let mungedcs = T_CS!(s!("{} ", cs.get_string()));
     let mungedcs2 = mungedcs.clone();
     let cs_args = convert_latex_args(nargs, opts, state)?;
-    DefMacroI!(mungedcs, cs_args, body);
-    DefMacroI!(cs, None, Tokens!(T_CS!("\\protect"), mungedcs2));
+    DefMacro!(mungedcs, cs_args, body);
+    DefMacro!(cs, None, Tokens!(T_CS!("\\protect"), mungedcs2));
   });
 
   DefPrimitive!("\\MakeRobust DefToken", sub[stomach, args, state] {
@@ -82,7 +82,7 @@ LoadDefinitions!(state, {
     if LookupDefinition!(&cs).is_some() &&
        LookupDefinition!(&mungedcs).is_none() {
       Let!(mungedcs, cs);
-      DefMacroI!(cs, None, Tokens!(T_CS!("\\protect"),mungedcs));
+      DefMacro!(cs, None, Tokens!(T_CS!("\\protect"),mungedcs));
     }
   });
 
@@ -107,14 +107,14 @@ LoadDefinitions!(state, {
     let gullet = stomach.get_gullet_mut();
     let encoding = Expand!(encoding, gullet, state);
     if !IsDefined!(&cs) {    // If not already defined...
-      DefMacroI!(cs, None, Some(s!(r#"""
+      DefMacro!(cs, None, Some(s!(r#"""
       \expandafter\ifx\csname\cf@encoding\string{}\endcsname\relax\csname?\string{}\endcsname\else
       \csname\cf@encoding\string{}\endcsname\fi
       """#, cs_str, cs_str, cs_str).into()));
     }
      let ecs = T_CS!(s!("\\{}{}", encoding, cs_str));
      let ecs_args = convert_latex_args(nargs, opts, state)?;
-     DefMacroI!(ecs, ecs_args, expansion);
+     DefMacro!(ecs, ecs_args, expansion);
   });
 
   DefMacro!("\\DeclareTextCommandDefault DefToken", "\\DeclareTextCommand{#1}{?}");
@@ -130,7 +130,7 @@ LoadDefinitions!(state, {
     };
     let nargs = nargs.to_number().value_of() as usize;
     if IsDefinable!(&cs) { // If not already defined...
-      DefMacroI!(cs, None, Some(s!(r#"""
+      DefMacro!(cs, None, Some(s!(r#"""
         \expandafter\ifx\csname\cf@encoding\string{}\endcsname\relax\csname?\string{}\endcsname
         \else\csname\cf@encoding\string{}\endcsname\fi
       """#, cs_str, cs_str, cs_str).into()));
@@ -138,7 +138,7 @@ LoadDefinitions!(state, {
     let ecs = T_CS!(s!("\\{}{}", encoding, cs_str));
     if !IsDefined!(&ecs) { // If not already defined...
       let ecs_args = convert_latex_args(nargs, opts, state)?;
-      DefMacroI!(ecs, ecs_args, expansion);
+      DefMacro!(ecs, ecs_args, expansion);
     }
   });
 
@@ -231,15 +231,15 @@ LoadDefinitions!(state, {
     //   T_BEGIN!(), T_CS!("\\default@shape"),  T_END!());
     let gullet = stomach.get_gullet_mut();
     let e = Expand!(encoding, gullet, state);
-    DefMacroI!(T_CS!("\\LastDeclaredEncoding"), None, e.clone());
-    DefMacroI!(T_CS!(s!("\\T@{}", e)), None, x);
-    DefMacroI!(T_CS!(s!("\\M@{}", e)), None, Tokens!(T_CS!("\\default@M"), y.unlist()));
+    DefMacro!(T_CS!("\\LastDeclaredEncoding"), None, e.clone());
+    DefMacro!(T_CS!(s!("\\T@{}", e)), None, x);
+    DefMacro!(T_CS!(s!("\\M@{}", e)), None, Tokens!(T_CS!("\\default@M"), y.unlist()));
   });
 
-  DefMacroI!("\\LastDeclaredEncoding", None, "");
+  DefMacro!("\\LastDeclaredEncoding", None, "");
   DefPrimitive!("\\DeclareFontSubstitution{}{}{}{}", None);
   DefPrimitive!("\\DeclareFontEncodingDefaults{}{}", None);
-  DefMacroI!("\\LastDeclaredEncoding", None, "");
+  DefMacro!("\\LastDeclaredEncoding", None, "");
 
   DefPrimitive!("\\SetSymbolFont{}{}{}{}{}{}", None);
   DefPrimitive!("\\SetMathAlphabet{}{}{}{}{}{}", None);
@@ -255,43 +255,43 @@ LoadDefinitions!(state, {
   """#
   );
   // At least all things on uclclist need to be macros
-  DefMacroI!("\\lx@utf@OE", None, "\u{0152}", alias => "\\OE"); // LATIN CAPITAL LIGATURE OE
-  DefMacroI!("\\lx@utf@oe", None, "\u{0153}", alias => "\\oe"); // LATIN SMALL LIGATURE OE
-  DefMacroI!("\\lx@utf@AE", None, "\u{00C6}", alias => "\\AE"); // LATIN CAPITAL LETTER AE
-  DefMacroI!("\\lx@utf@ae", None, "\u{00E6}", alias => "\\ae"); // LATIN SMALL LETTER AE
-  DefMacroI!("\\lx@utf@AA", None, "\u{00C5}", alias => "\\AA"); // LATIN CAPITAL LETTER A WITH RING ABOVE
-  DefMacroI!("\\lx@utf@aa", None, "\u{00E5}", alias => "\\aa"); // LATIN SMALL LETTER A WITH RING ABOVE
-  DefMacroI!("\\lx@utf@O",  None, "\u{00D8}", alias => "\\O"); // LATIN CAPITAL LETTER O WITH STROKE
-  DefMacroI!("\\lx@utf@o",  None, "\u{00F8}", alias => "\\o"); // LATIN SMALL LETTER O WITH STROKE
-  DefMacroI!("\\lx@utf@L",  None, "\u{0141}", alias => "\\L"); // LATIN CAPITAL LETTER L WITH STROKE
-  DefMacroI!("\\lx@utf@l",  None, "\u{0142}", alias => "\\l"); // LATIN SMALL LETTER L WITH STROKE
-  DefMacroI!("\\lx@utf@ss", None, "\u{00DF}", alias => "\\ss"); // LATIN SMALL LETTER SHARP S
-  DefMacroI!("\\lx@utf@dh", None, "\u{00f0}", alias => "\\dh"); // eth
-  DefMacroI!("\\lx@utf@DH", None, "\u{00d0}", alias => "\\DH"); // Eth (looks same as \DJ!)
-  DefMacroI!("\\lx@utf@dj", None, "\u{0111}", alias => "\\dj"); // d with stroke
-  DefMacroI!("\\lx@utf@DJ", None, "\u{0110}", alias => "\\DJ"); // D with stroke (looks sames as \DH!)
-  DefMacroI!("\\lx@utf@ng", None, "\u{014B}", alias => "\\ng");
-  DefMacroI!("\\lx@utf@NG", None, "\u{014A}", alias => "\\NG");
-  DefMacroI!("\\lx@utf@th", None, "\u{00FE}", alias => "\\th");
-  DefMacroI!("\\lx@utf@TH", None, "\u{00DE}", alias => "\\TH");
-  DefMacroI!("\\OE", None, "\\lx@utf@OE");
-  DefMacroI!("\\oe", None, "\\lx@utf@oe");
-  DefMacroI!("\\AE", None, "\\lx@utf@AE");
-  DefMacroI!("\\ae", None, "\\lx@utf@ae");
-  DefMacroI!("\\ae", None, "\\lx@utf@ae");
-  DefMacroI!("\\AA", None, "\\lx@utf@AA");
-  DefMacroI!("\\aa", None, "\\lx@utf@aa");
-  DefMacroI!("\\O", None, "\\lx@utf@O");
-  DefMacroI!("\\o", None, "\\lx@utf@o");
-  DefMacroI!("\\L", None, "\\lx@utf@L");
-  DefMacroI!("\\l", None, "\\lx@utf@l");
-  DefMacroI!("\\ss", None, "\\lx@utf@ss");
-  DefMacroI!("\\dh", None, "\\lx@utf@dh"); // in latex?
-  DefMacroI!("\\DH", None, "\\lx@utf@DH");
-  DefMacroI!("\\dj", None, "\\lx@utf@dj");
-  DefMacroI!("\\DJ", None, "\\lx@utf@DJ");
-  DefMacroI!("\\ng", None, "\\lx@utf@ng");
-  DefMacroI!("\\NG", None, "\\lx@utf@NG");
-  DefMacroI!("\\th", None, "\\lx@utf@th");
-  DefMacroI!("\\TH", None, "\\lx@utf@TH");
+  DefMacro!("\\lx@utf@OE", None, "\u{0152}", alias => "\\OE"); // LATIN CAPITAL LIGATURE OE
+  DefMacro!("\\lx@utf@oe", None, "\u{0153}", alias => "\\oe"); // LATIN SMALL LIGATURE OE
+  DefMacro!("\\lx@utf@AE", None, "\u{00C6}", alias => "\\AE"); // LATIN CAPITAL LETTER AE
+  DefMacro!("\\lx@utf@ae", None, "\u{00E6}", alias => "\\ae"); // LATIN SMALL LETTER AE
+  DefMacro!("\\lx@utf@AA", None, "\u{00C5}", alias => "\\AA"); // LATIN CAPITAL LETTER A WITH RING ABOVE
+  DefMacro!("\\lx@utf@aa", None, "\u{00E5}", alias => "\\aa"); // LATIN SMALL LETTER A WITH RING ABOVE
+  DefMacro!("\\lx@utf@O",  None, "\u{00D8}", alias => "\\O"); // LATIN CAPITAL LETTER O WITH STROKE
+  DefMacro!("\\lx@utf@o",  None, "\u{00F8}", alias => "\\o"); // LATIN SMALL LETTER O WITH STROKE
+  DefMacro!("\\lx@utf@L",  None, "\u{0141}", alias => "\\L"); // LATIN CAPITAL LETTER L WITH STROKE
+  DefMacro!("\\lx@utf@l",  None, "\u{0142}", alias => "\\l"); // LATIN SMALL LETTER L WITH STROKE
+  DefMacro!("\\lx@utf@ss", None, "\u{00DF}", alias => "\\ss"); // LATIN SMALL LETTER SHARP S
+  DefMacro!("\\lx@utf@dh", None, "\u{00f0}", alias => "\\dh"); // eth
+  DefMacro!("\\lx@utf@DH", None, "\u{00d0}", alias => "\\DH"); // Eth (looks same as \DJ!)
+  DefMacro!("\\lx@utf@dj", None, "\u{0111}", alias => "\\dj"); // d with stroke
+  DefMacro!("\\lx@utf@DJ", None, "\u{0110}", alias => "\\DJ"); // D with stroke (looks sames as \DH!)
+  DefMacro!("\\lx@utf@ng", None, "\u{014B}", alias => "\\ng");
+  DefMacro!("\\lx@utf@NG", None, "\u{014A}", alias => "\\NG");
+  DefMacro!("\\lx@utf@th", None, "\u{00FE}", alias => "\\th");
+  DefMacro!("\\lx@utf@TH", None, "\u{00DE}", alias => "\\TH");
+  DefMacro!("\\OE", None, "\\lx@utf@OE");
+  DefMacro!("\\oe", None, "\\lx@utf@oe");
+  DefMacro!("\\AE", None, "\\lx@utf@AE");
+  DefMacro!("\\ae", None, "\\lx@utf@ae");
+  DefMacro!("\\ae", None, "\\lx@utf@ae");
+  DefMacro!("\\AA", None, "\\lx@utf@AA");
+  DefMacro!("\\aa", None, "\\lx@utf@aa");
+  DefMacro!("\\O", None, "\\lx@utf@O");
+  DefMacro!("\\o", None, "\\lx@utf@o");
+  DefMacro!("\\L", None, "\\lx@utf@L");
+  DefMacro!("\\l", None, "\\lx@utf@l");
+  DefMacro!("\\ss", None, "\\lx@utf@ss");
+  DefMacro!("\\dh", None, "\\lx@utf@dh"); // in latex?
+  DefMacro!("\\DH", None, "\\lx@utf@DH");
+  DefMacro!("\\dj", None, "\\lx@utf@dj");
+  DefMacro!("\\DJ", None, "\\lx@utf@DJ");
+  DefMacro!("\\ng", None, "\\lx@utf@ng");
+  DefMacro!("\\NG", None, "\\lx@utf@NG");
+  DefMacro!("\\th", None, "\\lx@utf@th");
+  DefMacro!("\\TH", None, "\\lx@utf@TH");
 });

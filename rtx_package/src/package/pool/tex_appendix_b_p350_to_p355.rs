@@ -1,7 +1,7 @@
 use crate::package::*;
 
 LoadDefinitions!(state, {
-  DefMacroI!(T_CS!("\\space"), None, T_SPACE!());
+  DefMacro!(T_CS!("\\space"), None, T_SPACE!());
 
   // ... TODO middle content port ... //
   // These should be 0 width, but perhaps also shifted?

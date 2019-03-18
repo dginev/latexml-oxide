@@ -87,9 +87,9 @@ LoadDefinitions!(outer_state, {
     Ok(Explode!(s).into())
   });
 
-  DefMacroI!(T_CS!("\\jobname"), None, Tokens!()); // Set to the filename by initialization
+  DefMacro!(T_CS!("\\jobname"), None, Tokens!()); // Set to the filename by initialization
 
-  DefMacroI!(T_CS!("\\fontname"), None, Tokens::new(Explode!("fontname not implemented")));
+  DefMacro!(T_CS!("\\fontname"), None, Tokens::new(Explode!("fontname not implemented")));
 
   DefMacro!("\\meaning Token", sub[gullet, args, state] {
     unpack_to_token!(args => token);
@@ -239,19 +239,19 @@ LoadDefinitions!(outer_state, {
   });
 
   // Insert magic token that Gullet knows not to expand the next one.
-  DefMacroI!(T_CS!("\\noexpand"), None, T_NOTEXPANDED!());
+  DefMacro!(T_CS!("\\noexpand"), None, T_NOTEXPANDED!());
 
-  DefMacroI!(T_CS!("\\topmark"), None, Tokens!());
-  DefMacroI!(T_CS!("\\firstmark"), None, Tokens!());
-  DefMacroI!(T_CS!("\\botmark"), None, Tokens!());
-  DefMacroI!(T_CS!("\\splitfirstmark"), None, Tokens!());
-  DefMacroI!(T_CS!("\\splitbotmark"), None, Tokens!());
+  DefMacro!(T_CS!("\\topmark"), None, Tokens!());
+  DefMacro!(T_CS!("\\firstmark"), None, Tokens!());
+  DefMacro!(T_CS!("\\botmark"), None, Tokens!());
+  DefMacro!(T_CS!("\\splitfirstmark"), None, Tokens!());
+  DefMacro!(T_CS!("\\splitbotmark"), None, Tokens!());
 
   DefMacro!("\\input TeXFileName", sub[gullet,args,state] { input(args[0].to_string(), gullet, state); });
 
   // Note that TeX doesn't actually close the mouth;
   // it just flushes it so that it will close the next time it's read!
-  DefMacroI!(T_CS!("\\endinput"), None, sub[gullet, _args, state] {
+  DefMacro!(T_CS!("\\endinput"), None, sub[gullet, _args, state] {
     let mouth = gullet.get_mouth().unwrap();
     let line_opt = if !mouth.is_eol() {
       gullet.read_raw_line(state)

@@ -275,11 +275,11 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\frenchspacing", None);
   DefPrimitive!("\\nonfrenchspacing", None);
-  // DefMacroI!("\\normalbaselines", undef,
+  // DefMacro!("\\normalbaselines", undef,
   //   '\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\normallineskiplimit');
-  DefMacroI!(T_CS!("\\space"), None, T_SPACE!());
-  DefMacroI!(T_CS!("\\lq"), None, T_OTHER!("`"));
-  DefMacroI!(T_CS!("\\rq"), None, T_OTHER!("'"));
+  DefMacro!(T_CS!("\\space"), None, T_SPACE!());
+  DefMacro!(T_CS!("\\lq"), None, T_OTHER!("`"));
+  DefMacro!(T_CS!("\\rq"), None, T_OTHER!("'"));
   Let!("\\empty", "\\@empty");
   //DefMacro!("\\null", "\hbox{}");
   Let!("\\bgroup", T_BEGIN!());
@@ -290,7 +290,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\endline", None);
 
   // Use \r for the newline from TeX!!!
-  DefMacroI!(T_CS!("\\\r"), None, T_CS!("\\ ")); // \<cr> == \<space> Interesting (see latex.ltx)
+  DefMacro!(T_CS!("\\\r"), None, T_CS!("\\ ")); // \<cr> == \<space> Interesting (see latex.ltx)
   LetI!(&T_ACTIVE!("\r"), T_CS!("\\par")); // (or is this just LaTeX?)
 
   Let!("\\\t", "\\\r"); // \<tab> == \<space>, also

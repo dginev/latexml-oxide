@@ -256,62 +256,6 @@ macro_rules! LoadFontMap {
 }
 
 #[macro_export]
-macro_rules! DefMacroIWO {
-  // closure stub
-  ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) => {{
-    bind_state_mut!(st);
-    DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, $options, st)
-  }};
-  // with explicit state
-  ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {{
-    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
-      move |$gullet, $args, $inner_state| WithInnerState!($body, $inner_state).into_tokens_result()
-    )));
-    def_macro($cs, $paramlist, expansion_closure, $options, $state_arg);
-  }};
-  // precompiled
-  ($cs:expr, $paramlist:expr, $expansion:expr, $options:expr) => {{
-    let expansion = {{ $expansion }}; // ensure we can do multiple mutable borrows of state
-    bind_state_mut!(st);
-    def_macro($cs, $paramlist, expansion, $options, st)
-  }};
-  // with explicit state
-  ($cs:expr, $paramlist:expr, $expansion:expr, $options:expr, $state_arg:ident) => {{
-    let expansion = {{ $expansion }}; // ensure we can do multiple mutable borrows of state
-    def_macro($cs, $paramlist, expansion, $options, $state_arg)
-  }};
-}
-
-#[macro_export]
-macro_rules! DefMacroWO {
-  // Rust closure expansion form
-  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr, $state_arg:ident) => {{
-    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-    let expansion_body : Option<ExpansionBody> =
-      Some(ExpansionBody::Closure(Rc::new(
-        move |$gullet: &mut Gullet, $args: Vec<Tokens>, $inner_state:&mut State| WithInnerState!($body, $inner_state).into_tokens_result()
-      )));
-    // TODO: Also pass in options
-    def_macro(cs, paramlist, expansion_body, $options, $state_arg);
-  }};
-  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $options:expr) => {{
-    bind_state_mut!(st);
-    DefMacroWO!($proto, sub [ $gullet, $args, $inner_state ] $body, $options, st)
-  }};
-  // String expansion forms
-  ($proto:expr, $expansion:expr, $options:expr) => {{
-    bind_state_mut!(st);
-    DefMacroWO!($proto, $expansion, $options, st);
-  }};
-  ($proto:expr, $expansion:expr, $options:expr, $state_arg:ident) => ({
-    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-    let expansion;
-    compile_expansion!(expansion, $expansion);
-    def_macro(cs, paramlist, expansion, $options, $state_arg);
-  });
-}
-
-#[macro_export]
 macro_rules! DefConditional(
   // test is always a rust closure
   ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block) => {{
@@ -702,6 +646,8 @@ macro_rules! DefConstructor {
   }};
 }
 
+/// Internal auxiliary, only purpose is to bind state, then call the api::def_constructor
+/// function, where the interior construction logic resides.
 #[macro_export]
 macro_rules! defi_constr {
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => {{
@@ -713,6 +659,8 @@ macro_rules! defi_constr {
   };
 }
 
+/// Internal auxiliary, taking a prototype string (possibly through a variable) and
+/// invoking the state
 #[macro_export]
 macro_rules! parse_prototype(
   ($proto:expr) => {{
@@ -980,14 +928,14 @@ macro_rules! CounterValue {
 macro_rules! SetCounter {
   ($ctr:expr, $value:expr, None) => {
     AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
-    DefMacroI!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+    DefMacro!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
                 scope => Some(Scope::Global)
     );
   };
   ($ctr:expr, $value:expr, $gullet:ident) => {
     AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
     AfterAssignment!();
-    DefMacroI!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+    DefMacro!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
                 scope => Some(Scope::Global)
     );
   }
@@ -1508,75 +1456,109 @@ macro_rules! MergeFont {
 }
 
 //============================================
-// User-facing Argument Parsers, delegating to the stateful *WO variants
+// User-facing Argument Parsers
 //============================================
 //
-
-#[macro_export]
-macro_rules! DefMacroI(
-  // Expansion closure syntax
-  ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block) =>
-    (DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, None));
-  ($cs:expr, $paramlist:expr, sub $body:block) =>
-    (DefMacroIWO!($cs, $paramlist, sub [ gullet, args, inner_state ] $body, None));
-  // With explicit state
-  ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $state_arg:ident) =>
-    (DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, None, $state_arg));
-  ($cs:expr, $paramlist:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $state_arg:ident, $(key:ident=>$val:expr),*) =>
-    (DefMacroIWO!($cs, $paramlist, sub [ $gullet, $args, $inner_state ] $body, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*)), $state_arg));
-
-  // Simple Expression syntax
-  ($cs:literal, $paramlist:expr, $expansion:literal) => {
-    let expansion;
-    compile_expansion!(expansion, $expansion);
-    DefMacroIWO!(T_CS!($cs), $paramlist, expansion, None)
-  };
-  ($cs:literal, $paramlist:expr, $expansion:literal, $($key:ident=>$val:expr),*) => {
-    let expansion;
-    compile_expansion!(expansion, $expansion);
-    DefMacroIWO!(T_CS!($cs), $paramlist, expansion, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*)))
-  };
-  ($cs:literal, $paramlist:expr, $expansion:expr) => (DefMacroIWO!(T_CS!($cs), $paramlist, $expansion, None));
-  ($cs:literal, $paramlist:expr, $expansion:expr, $($key:ident=>$val:expr),*) =>
-    (DefMacroIWO!(T_CS!($cs), $paramlist, $expansion, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*))));
-  ($cs:expr, $paramlist:expr, $expansion:expr) => (DefMacroIWO!($cs, $paramlist, $expansion, None));
-  ($cs:expr, $paramlist:expr, $expansion:expr, $($key:ident=>$val:expr),*) =>
-    (DefMacroIWO!($cs, $paramlist, $expansion, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*))));
-  // Explicit state
-  ($cs:expr, $paramlist:expr, $expansion:expr, $state_arg:ident) => (DefMacroIWO!($cs, $paramlist, $expansion, None, $state_arg));
-  ($cs:expr, $paramlist:expr, $expansion:expr, $state_arg:ident, $($key:ident=>$val:expr),*) =>
-    (DefMacroIWO!($cs, $paramlist, $expansion, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*), $state_arg)));
-);
-
+// There is a lot of "Do What I Mean" logic going on here, to allow binding writers to thoughtlessly use a single DefMacro!()
+// and have:
+// - the macro machinery auto-wrap the correct union type containers,
+// - auto-compile the various string replacements and prototypes into their rust data structures
+// - auto-build the ExpansionOptions data structure from a Perl-like syntax, and validate it along the way
+//  we're taking things a few pegs further than LaTeXML, as DefMacroI syntax is *included* in DefMacro,
+//  and we have a several places where we get compile-time speedups by pre-tokenizing into Rust Tokens objects / Replacement closures
 #[macro_export]
 macro_rules! DefMacro {
   // closure
-  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $($input:tt)*) => {{
+  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
-    DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, Some(options));
+    let (cs, params) = parse_prototype!($proto);
+    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |$gullet, $args, $inner_state| WithInnerState!($body, $inner_state).into_tokens_result()
+    )));
+    defi_macro!(cs, params, expansion_closure, Some(options));
   }};
-  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block) => {
-    DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, None);
-  };
-  ($proto:expr, $body:block) => {
-    DefMacroWO!($proto, sub[gullet, args, inner_state] $body, None);
-  };
-  // closure; explicit state
-  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $state_arg:ident) =>
-    (DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, None, $state_arg));
-  // string; explicit state
-  ($proto:expr, $expansion:expr, $state_arg:ident) => (DefMacroWO!($proto, $expansion, None, $state_arg));
-  ($proto:expr, $expansion:expr, $state_arg:ident, $($input:tt)*) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
-    DefMacroWO!($proto, $expansion, Some(options), $state_arg);
+  ($proto:expr, $body:block) => {{
+    let (cs, params) = parse_prototype!($proto);
+    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |gullet, args, inner_state| WithInnerState!($body, inner_state).into_tokens_result()
+    )));
+    defi_macro!(cs, params, expansion_closure, None);
   }};
   // String; implicit state
-  ($proto:expr, $expansion:expr) => (DefMacroWO!($proto, $expansion, None));
-  ($proto:expr, $expansion:expr, $($input:tt)*) => {{
+  ($proto:literal, $expansion:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
-    DefMacroWO!($proto, $expansion, Some(options));
+    let (cs, params) = parse_prototype!($proto);
+    let compiled_expansion;
+    compile_expansion!(compiled_expansion, $expansion);
+    defi_macro!(cs, params, compiled_expansion, Some(options));
   }};
+  // Internal-level use
+  ($cs:expr, $parameters:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |$gullet, $args, $inner_state| WithInnerState!($body, $inner_state).into_tokens_result()
+    )));
+    defi_macro!($cs, $parameters, expansion_closure, Some(options));
+  }};
+  ($cs:literal, None, $expansion:literal) => {{
+    let compiled_expansion;
+    compile_expansion!(compiled_expansion, $expansion);
+    defi_macro!(T_CS!($cs), None, compiled_expansion, None);
+  }};
+  ($cs:literal, None, $expansion:literal, $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    let compiled_expansion;
+    compile_expansion!(compiled_expansion, $expansion);
+    defi_macro!(T_CS!($cs), None, compiled_expansion, None);
+  }};
+  ($cs:expr, None, $expansion:literal) => {{
+    let compiled_expansion;
+    compile_expansion!(compiled_expansion, $expansion);
+    defi_macro!($cs, None, compiled_expansion, None);
+  }};
+  ($cs:expr, None, $expansion:expr) => {{
+    defi_macro!($cs, None, $expansion, None);
+  }};
+  ($cs:expr, None, $expansion:expr, $state_arg:ident) => {{ // explicit state, for nested macro factories
+    def_macro($cs, None, $expansion, None, $state_arg);
+  }};
+  ($cs:expr, None, $expansion:literal, $($input:tt)+) => {{
+    let compiled_expansion;
+    compile_expansion!(compiled_expansion, $expansion);
+    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    defi_macro!($cs, None, compiled_expansion, Some(options));
+  }};
+  ($cs:expr, None, $expansion:expr, $($input:tt)+) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    defi_macro!($cs, None, $expansion, Some(options));
+  }};
+  // the triple expr case should be near the end, as it matches too many cases.
+  // It's an internal use of DefMacro e.g. with 3 variable name arguments
+  ($cs:expr, $replacement:expr, $expansion:expr) => {{
+    defi_macro!($cs, $replacement, $expansion, None);
+  }};
+
+  // The least-specified option-parsing cases come last due to the TT munchers accepting any inputs
+  ($proto:literal, None $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    let (cs, params) = parse_prototype!($proto);
+    defi_macro!(cs, params, None, Some(options));
+  }};
+
 }
+/// Internal auxiliary, only purpose is to bind state, then call the api::def_macro
+/// function, where the interior macro installation logic resides.
+#[macro_export]
+macro_rules! defi_macro {
+  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => {{
+    bind_state_mut!(st);
+    defi_macro!($cs, $paramlist, $compiled_replacement, $options, st);
+  }};
+  ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {
+    def_macro($cs, $paramlist, $compiled_replacement, $options, $state_arg);
+  };
+}
+
 
 #[macro_export]
 macro_rules! DefRegister {
