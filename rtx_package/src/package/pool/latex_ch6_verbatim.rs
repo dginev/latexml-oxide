@@ -77,7 +77,7 @@ LoadDefinitions!(outer_state, {
 
   DefPrimitive!("\\@vobeyspaces", sub[stomach, args, state] {
     AssignCatcode!(' ', Catcode::ACTIVE);
-    LetI!(&T_ACTIVE!(" "), T_CS!("\\nobreakspace"));
+    Let!(&T_ACTIVE!(" "), T_CS!("\\nobreakspace"));
   });
 
   // WARNING: Need to be careful about what catcodes are active here

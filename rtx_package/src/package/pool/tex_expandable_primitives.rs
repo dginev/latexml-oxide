@@ -27,10 +27,10 @@ LoadDefinitions!(outer_state, {
   });
 
   // NOTE: We don't KNOW if we're in vertical, horizontal or inner mode!!!!!!!
-  DefConditional!("\\ifvmode", sub { false });
-  DefConditional!("\\ifhmode", sub { false });
-  DefConditional!("\\ifinner", sub { false });
-  DefConditional!("\\ifmmode", sub { LookupBool!("IN_MATH") });
+  DefConditional!("\\ifvmode", { false });
+  DefConditional!("\\ifhmode", { false });
+  DefConditional!("\\ifinner", { false });
+  DefConditional!("\\ifmmode", { LookupBool!("IN_MATH") });
 
   DefConditional!("\\if XToken XToken", sub[gullet, args, state] {
     unpack_to_token!(args=>token1, token2);
@@ -52,8 +52,8 @@ LoadDefinitions!(outer_state, {
   DefConditional!("\\ifhbox Number", sub[_g, args, state] {unpack_to_token!(args=>arg); classify_box(arg, state) == "hbox" });
   DefConditional!("\\ifvbox Number", sub[_g, args, state] {unpack_to_token!(args=>arg); classify_box(arg, state) == "vbox" });
 
-  DefConditional!("\\iftrue",  sub { true });
-  DefConditional!("\\iffalse", sub { false });
+  DefConditional!("\\iftrue",  { true });
+  DefConditional!("\\iffalse", { false });
 
   //======================================================================
   // This makes \relax disappear completely after digestion
@@ -214,7 +214,7 @@ LoadDefinitions!(outer_state, {
     unpack!(args => token);
     let token : Token = token.into();
     if LookupMeaning!(&token).is_none() {
-      Let!(token, "\\relax");
+      Let!(&token, "\\relax");
     }
     token
   });

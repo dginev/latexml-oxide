@@ -81,7 +81,7 @@ LoadDefinitions!(state, {
     // only if defined but not yet robust
     if LookupDefinition!(&cs).is_some() &&
        LookupDefinition!(&mungedcs).is_none() {
-      Let!(mungedcs, cs);
+      Let!(&mungedcs, cs.clone());
       DefMacro!(cs, None, Tokens!(T_CS!("\\protect"),mungedcs));
     }
   });

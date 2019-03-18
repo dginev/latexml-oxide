@@ -31,23 +31,23 @@ LoadDefinitions!(state, {
   //======================================================================
   // Properties for plain characters.
   // These are allowed in plain text, but need to act a bit special in math.
-  DefMathI!('=', None, '=', role => "RELOP",   meaning  => "equals");
-  DefMathI!('+', None, '+', role => "ADDOP",   meaning  => "plus");
-  DefMathI!('-', None, '-', role => "ADDOP",   meaning  => "minus");
-  DefMathI!('*', None, '*', role => "MULOP",   meaning  => "times");
-  DefMathI!('/', None, '/', role => "MULOP",   meaning  => "divide");
-  DefMathI!('!', None, '!', role => "POSTFIX", meaning  => "factorial");
-  DefMathI!(',', None, ',', role => "PUNCT");
-  DefMathI!('.', None, '.', role => "PERIOD");
-  DefMathI!(';', None, ';', role => "PUNCT");
-  DefMathI!('(', None, '(', role => "OPEN",    stretchy => false);
-  DefMathI!(')', None, ')', role => "CLOSE",   stretchy => false);
-  DefMathI!('[', None, '[', role => "OPEN",    stretchy => false);
-  DefMathI!(']', None, ']', role => "CLOSE",   stretchy => false);
-  DefMathI!('|', None, '|', role => "VERTBAR", stretchy => false);
-  DefMathI!(':', None, ':', role => "METARELOP", name => "colon"); // Seems like good default role
-  DefMathI!('<', None, '<', role => "RELOP", meaning => "less-han");
-  DefMathI!('>', None, '>', role => "RELOP", meaning => "greater-han");
+  DefMath!('=', None, '=', role => "RELOP",   meaning  => "equals");
+  DefMath!('+', None, '+', role => "ADDOP",   meaning  => "plus");
+  DefMath!('-', None, '-', role => "ADDOP",   meaning  => "minus");
+  DefMath!('*', None, '*', role => "MULOP",   meaning  => "times");
+  DefMath!('/', None, '/', role => "MULOP",   meaning  => "divide");
+  DefMath!('!', None, '!', role => "POSTFIX", meaning  => "factorial");
+  DefMath!(',', None, ',', role => "PUNCT");
+  DefMath!('.', None, '.', role => "PERIOD");
+  DefMath!(';', None, ';', role => "PUNCT");
+  DefMath!('(', None, '(', role => "OPEN",    stretchy => false);
+  DefMath!(')', None, ')', role => "CLOSE",   stretchy => false);
+  DefMath!('[', None, '[', role => "OPEN",    stretchy => false);
+  DefMath!(']', None, ']', role => "CLOSE",   stretchy => false);
+  DefMath!('|', None, '|', role => "VERTBAR", stretchy => false);
+  DefMath!(':', None, ':', role => "METARELOP", name => "colon"); // Seems like good default role
+  DefMath!('<', None, '<', role => "RELOP", meaning => "less-han");
+  DefMath!('>', None, '>', role => "RELOP", meaning => "greater-han");
 
   //======================================================================
   // TeX Book, Appendix B, p. 345
@@ -166,7 +166,7 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\newif DefToken", sub[gullet, args, state] {
     unpack_to_token!(args => cs);
-    DefConditionalI!(cs, None);
+    DefConditional!(cs, None);
   });
 
   // # See the section Registers & Parameters, above for setting default values.
@@ -291,7 +291,7 @@ LoadDefinitions!(state, {
 
   // Use \r for the newline from TeX!!!
   DefMacro!(T_CS!("\\\r"), None, T_CS!("\\ ")); // \<cr> == \<space> Interesting (see latex.ltx)
-  LetI!(&T_ACTIVE!("\r"), T_CS!("\\par")); // (or is this just LaTeX?)
+  Let!(&T_ACTIVE!("\r"), T_CS!("\\par")); // (or is this just LaTeX?)
 
   Let!("\\\t", "\\\r"); // \<tab> == \<space>, also
 
@@ -300,15 +300,15 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\obeyspaces", {
      AssignCatcode!(' ', Catcode::ACTIVE);
-     LetI!(&T_ACTIVE!(" "), T_CS!("\\space"));
+     Let!(&T_ACTIVE!(" "), T_CS!("\\space"));
   });
   // Curiously enough, " " (a space) is ALREADY defined to be the same as "\space"
   // EVEN before it is made active. (see p.380)
-  LetI!(&T_ACTIVE!(" "), T_CS!("\\space"));
+  Let!(&T_ACTIVE!(" "), T_CS!("\\space"));
 
   DefPrimitive!("\\obeylines", {
       AssignCatcode!('\r', Catcode::ACTIVE);
-      LetI!(&T_ACTIVE!("\r"), T_CS!("\\@break")); // More appropriate than \par, I think?
+      Let!(&T_ACTIVE!("\r"), T_CS!("\\@break")); // More appropriate than \par, I think?
   });
 
   DefConstructor!("\\@break", "<ltx:break/>");

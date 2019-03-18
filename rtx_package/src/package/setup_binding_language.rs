@@ -258,57 +258,40 @@ macro_rules! LoadFontMap {
 #[macro_export]
 macro_rules! DefConditional(
   // test is always a rust closure
-  ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block) => {{
-    bind_state_mut!(st);
-    DefConditional!($proto, sub[$gullet, $args, $inner_state] $body, st);
+  ($proto:literal, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
+    let (cs, paramlist) = parse_prototype!($proto);
+    let test : ConditionalClosure = Rc::new(move |$gullet, $args, $inner_state| { WithInnerState!($body, $inner_state).into_bool_result() });
+    defi_conditional!(cs, paramlist, Some(test), options);
   }};
-  ($proto:expr, sub $body:block) => {{
-    bind_state_mut!(st);
-    DefConditional!($proto, sub[gullet, args, inner_state] $body, st);
+  ($proto:literal, $body:block $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
+    let (cs, paramlist) = parse_prototype!($proto);
+    let test : ConditionalClosure = Rc::new(move |gullet, args, inner_state| { WithInnerState!($body, inner_state).into_bool_result() });
+    defi_conditional!(cs, paramlist, Some(test), options);
   }};
-  ($proto:expr, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
-    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-    DefConditionalI!(cs, paramlist, sub[$gullet, $args, $inner_state] $body, $state_arg)
-  });
-  // or None
-  ($proto:expr) => {{
-    bind_state_mut!(st);
-    DefConditional!($proto, None, st)
+  ($proto:literal $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
+    let (cs, paramlist) = parse_prototype!($proto);
+    defi_conditional!(cs, paramlist, None, options);
   }};
-  ($proto:expr, None) => ({
-    bind_state_mut!(st);
-    DefConditional!($proto, None, st)
-  });
-  ($proto:expr, None, $state_arg:ident) => ({
-    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-    DefConditionalI!(cs, paramlist, None, $state_arg)
-  });
+  // internal, just declare CS
+  ($cs:ident, None  $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
+    defi_conditional!($cs, None, None, options);
+  }}
 );
 
 #[macro_export]
-macro_rules! DefConditionalI(
-  // test is always a rust closure
-  ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block) => {{
+macro_rules! defi_conditional {
+  ($cs:expr, $paramlist:expr, $test:expr, $options:expr) => {{
     bind_state_mut!(st);
-    DefConditionalI!($cs, $paramlist, $gullet, $args, $inner_state, $body, st)
+    defi_conditional!($cs, $paramlist, $test, $options, st);
   }};
-  ($cs:expr, $paramlist:expr, sub[$gullet:ident, $args:ident, $inner_state:ident] $body:block, $state_arg:ident) => ({
-    let test : ConditionalClosure = Rc::new(move |$gullet, $args, $inner_state| { WithInnerState!($body, $inner_state).into_bool_result() });
-    def_conditional($cs, $paramlist, Some(test), ConditionalOptions::default(), $state_arg);
-  });
-  // or None
-  ($cs:expr, $paramlist:expr) => {{
-    bind_state_mut!(st);
-    DefConditionalI!($cs, $paramlist, None, st)
+  ($cs:expr, $paramlist:expr, $test:expr, $options:expr, $state_arg:ident) => {{
+    def_conditional($cs, $paramlist, $test, $options, $state_arg);
   }};
-  ($cs:expr, $paramlist:expr, None) => {{
-    bind_state_mut!(st);
-    DefConditionalI!($cs, $paramlist, None, st)
-  }};
-  ($cs:expr, $paramlist:expr, None, $state_arg:ident) => ({
-    def_conditional($cs, $paramlist, None, ConditionalOptions::default(), $state_arg);
-  });
-);
+}
 
 // sub IfCondition {
 //   my ($if, @args) = @_;
@@ -673,17 +656,11 @@ macro_rules! RequireResource(
     (require_resource(Resource{name: $resource.to_string(), ..Resource::default()}, $state_arg))
 );
 
-// sub DefMath {
-//   my ($proto,
-//     $presentation, %options) = @_;
-//   CheckOptions("DefMath ($proto)", $math_options, %options);
-//   DefMathI(parsePrototype($proto), $presentation, %options);
-//   return; }
 #[macro_export]
-macro_rules! DefMathWO {
+macro_rules! defi_math {
   ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr) => {{
     bind_state_mut!(st);
-    DefMathWO!($cstext, $paramlist, $presentation, $options, st)
+    defi_math!($cstext, $paramlist, $presentation, $options, st)
   }};
   ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr, $state_arg:ident) => {{
     let mut options = $options;
@@ -1292,34 +1269,30 @@ macro_rules! IsDefinable {
 
 #[macro_export]
 macro_rules! Let {
+  ($token1:literal, $token2:literal) => {{
+    bind_state_mut!(st);
+    st.let_i(&T_CS!($token1), T_CS!($token2), None);
+  }};
+  // half-packaged args
   ($token1:literal, $token2:expr) => {{
     bind_state_mut!(st);
-    Let!($token1, $token2, st)
+    st.let_i(&T_CS!($token1), $token2, None);
   }};
-  ($token1:ident, $token2:expr) => {{
+  ($token1:expr, $token2:literal) => {{
     bind_state_mut!(st);
-    Let!($token1, $token2, st)
+    st.let_i($token1, T_CS!($token2), None);
   }};
-  ($token1:expr, $token2:expr, $state_arg:ident) => {{
-    LetI!(&T_CS!($token1), T_CS!($token2), $state_arg)
-  }};
-  ($token1:expr, $token2:expr, $scope:expr, $state_arg:ident) => {{
-    LetI!(&T_CS!($token1), T_CS!($token2), $scope, $state_arg)
-  }};
-}
-#[macro_export]
-macro_rules! LetI {
+  // internal form, pre-packaged arguments
   ($token1:expr, $token2:expr) => {{
     bind_state_mut!(st);
-    LetI!($token1, $token2, st)
+    st.let_i($token1, $token2, None);
   }};
-  ($token1:expr, $token2:expr, $state_arg:ident) => {
-    $state_arg.let_i($token1, $token2, None)
-  };
-  ($token1:expr, $token2:expr, $scope:expr, $state_arg:ident) => {
-    $state_arg.let_i($token1, $token2, $scope)
-  };
+  ($token1:expr, $token2:expr, $scope:expr) => {{
+    bind_state_mut!(st);
+    st.let_i($token1, $token2, $scope);
+  }};
 }
+
 #[macro_export]
 macro_rules! DigestIf {
   ($token:literal, $stomach:ident) => {{
@@ -1563,13 +1536,13 @@ macro_rules! Tag {
 }
 
 #[macro_export]
-macro_rules! DefMathI(
+macro_rules! DefMath(
   ($text:expr,$paramlist:expr,$presentation:expr) => (
-    DefMathWO!($text,$paramlist, $presentation, MathPrimitiveOptions::default()));
+    defi_math!($text,$paramlist, $presentation, MathPrimitiveOptions::default()));
   ($text:expr,$paramlist:expr,$presentation:expr, $($key:ident => $val:expr),*) => (
-    DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions, $($key => $val),*)));
+    defi_math!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions, $($key => $val),*)));
   ($text:expr,$paramlist:expr,$presentation:expr, $($key:ident => $val:expr),*, $state_arg:ident) => (
-    DefMathWO!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions, $($key => $val),*,$state_arg)));
+    defi_math!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions, $($key => $val),*,$state_arg)));
 );
 
 #[macro_export]
