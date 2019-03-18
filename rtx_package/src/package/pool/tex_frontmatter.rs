@@ -223,33 +223,31 @@ LoadDefinitions!(state, {
   });
 
   // Remove the last closed node, if it's empty.
-  macro_rules! remove_empty_element {
-    () => {
-      construct!(document, whatsit, state, {
-        if let Some(node) = document.get_node().get_last_child() {
-          // This should be the wrapper just added.
-          if node.get_child_nodes().is_empty() {
-            document.remove_node(node);
-          }
-        }
-      })
-    };
-  }
+  let remove_empty_element : Vec<ConstructionClosure> = construct!(document, whatsit, state, {
+    if let Some(node) = document.get_node().get_last_child() {
+      // This should be the wrapper just added.
+      if node.get_child_nodes().is_empty() {
+        document.remove_node(node);
+      }
+    }
+  });
 
   // \lx@tag[open][close]{stuff}
+  let remove_empty_element_1 = remove_empty_element.clone();
   DefConstructor!("\\lx@tag[][][]{}", "<ltx:tag open='#1' close='#2'>#4</ltx:tag>",
     bounded => true,
-    mode => Some(s!("text")),
-    after_construct => remove_empty_element!()
+    mode => "text",
+    after_construct => remove_empty_element_1
   );
 
   // \lx@tag@intags{role}{stuff}
+  let remove_empty_element_2 = remove_empty_element.clone();
   DefConstructor!("\\lx@tag@intags[]{}", "<ltx:tag role='#1'>#2</ltx:tag>",
-    bounded => true, mode => Some(s!("text")),
-    after_construct => remove_empty_element!()
+    bounded => true, mode => "text",
+    after_construct => remove_empty_element_2
   );
   DefConstructor!("\\lx@tags{}","<ltx:tags>#1</ltx:tags>",
-    after_construct => remove_empty_element!()
+    after_construct => remove_empty_element
   );
 
   //----------------------------------------------------------------------

@@ -20,26 +20,26 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
-      before_digest => before_digest!(stomach, state, { only_preamble("\\usepackage", stomach, state); }),
-      after_digest => after_digest!(stomach, whatsit, state, {
-        let options: Option<&Digested> = whatsit.get_arg(1);
-        let packages: Option<&Digested> = whatsit.get_arg(2);
-        let package_list = match packages {
-          Some(value) => OPTS_REGEX.split(&value.to_string()).map(ToString::to_string).filter(|s| !s.starts_with('%')).collect(),
-          None => Vec::new(),
-        };
-        let options_list = match options {
-          Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
-          None => Vec::new(),
-        };
-        for package in package_list {
-          require_package(&package, RequireOptions {
-            options: options_list.clone(),
-            ..RequireOptions::default()
-          }, stomach, state)?
-        }
-        Ok(Vec::new())
-      })
+    before_digest => sub[stomach, state] { only_preamble("\\usepackage", stomach, state); },
+    after_digest => sub[stomach, whatsit, state] {
+      let options: Option<&Digested> = whatsit.get_arg(1);
+      let packages: Option<&Digested> = whatsit.get_arg(2);
+      let package_list = match packages {
+        Some(value) => OPTS_REGEX.split(&value.to_string()).map(ToString::to_string).filter(|s| !s.starts_with('%')).collect(),
+        None => Vec::new(),
+      };
+      let options_list = match options {
+        Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
+        None => Vec::new(),
+      };
+      for package in package_list {
+        require_package(&package, RequireOptions {
+          options: options_list.clone(),
+          ..RequireOptions::default()
+        }, stomach, state)?
+      }
+      Ok(Vec::new())
+    }
   );
 
   // STUBS:

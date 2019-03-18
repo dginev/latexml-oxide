@@ -19,8 +19,8 @@ LoadDefinitions!(outer_state, {
   // We're going to sidestep the Gullet for inputting,
   // and also the usual environment capture.
 
-  DefConstructor!(cs["\\begin{verbatim}"], None, "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
-    before_digest => before_digest!(stomach, state, {
+  DefConstructorI!(T_CS!("\\begin{verbatim}"), None, "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
+    before_digest => sub[stomach, state] {
       stomach.bgroup(state);
       let mut stuff = Vec::new();
       if let Some(b) = state.lookup_tokens("@environment@verbatim@atbegin") {
@@ -30,8 +30,8 @@ LoadDefinitions!(outer_state, {
       DefMacro!("\\@currenvir", "verbatim");
       MergeFont!(family => "typewriter");
       Ok(stuff)
-    }),
-    after_digest => after_digest!(stomach, whatsit, state, {
+    },
+    after_digest => sub[stomach, whatsit, state] {
       let font : Option<Rc<Font>> = match whatsit.get_font() {
         None => None,
         Some(ft) => Some(Rc::new((*ft).to_owned())) // makes you wonder if the `get_font` API should be working with Rc<Font> in the first place...
@@ -71,8 +71,8 @@ LoadDefinitions!(outer_state, {
       whatsit.set_body(lines.into_iter().map(|line|
         Tbox::new(line.clone(), font.clone(), Some(loc.clone().into_owned()), T_OTHER!(line).into(), HashMap::new(), state).into()
       ).collect());
-    }),
-    before_construct => construct!(document, whatsit, state, { document.maybe_close_element("ltx:p", state)?; })
+    },
+    before_construct => sub[document, whatsit, state] { document.maybe_close_element("ltx:p", state)?; }
   );
 
   DefPrimitive!("\\@vobeyspaces", sub[stomach, args, state] {
@@ -103,25 +103,25 @@ LoadDefinitions!(outer_state, {
   });
 
   DefConstructor!("\\@text@verb{}{}", "<ltx:verbatim font='#font'>#2</ltx:verbatim>",
-    before_digest => before_digest!(stomach, state, {
+    before_digest => sub[stomach, state] {
       stomach.bgroup(state);
       MergeFont!(family => "typewriter");
-    }),
-    after_digest => after_digest!(stomach,whatsit,state, { stomach.egroup(state)?; }),
+    },
+    after_digest => sub[stomach,whatsit,state] { stomach.egroup(state)?; },
     // Since ltx:verbatim is both inline & block, we have to fudge inline mode
-    before_construct => construct!(document, args, state, {
+    before_construct => sub[document, args, state] {
       if !document.can_contain(&document.get_element().unwrap(), "#PCDATA", state) {
         document.open_element("ltx:p", None, None, state)?;
-      }}),
-    reversion => Some("\\verb#1#2#1".into())
+      }},
+    reversion => "\\verb#1#2#1"
   );
   DefConstructor!("\\@math@verb{}{}", "#2",
-   before_digest => before_digest!(stomach, state, {
+   before_digest => sub[stomach, state] {
      stomach.bgroup(state);
      MergeFont!(family => "typewriter");
-   }),
-   after_digest => after_digest!(stomach,whatsit,state, { stomach.egroup(state)?; }),
-   reversion => Some("\\verb#1#2#1".into())
+   },
+   after_digest => sub[stomach,whatsit,state] { stomach.egroup(state)?; },
+   reversion => "\\verb#1#2#1"
   );
 
   // Actually, latex sets catcode to 13 ... is this close enough?

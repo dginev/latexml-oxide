@@ -19,9 +19,10 @@ LoadDefinitions!(state, {
   // DefConstructor!("\\person@thanks{}", "^ <ltx:contact role='thanks'>#1</ltx:contact>",
   //   alias => "\\thanks".into_option(), mode => "text".into_option());
   DefConstructor!("\\@personname{}", "<ltx:personname>#1</ltx:personname>",
-    before_digest => before_digest!(stomach, state, { Let!("\\thanks", "\\person@thanks"); }),
+    before_digest => { Let!("\\thanks", "\\person@thanks"); },
     bounded => true,
-    mode => "text".into_option());
+    mode => "text"
+  );
 
   DefConstructor!("\\and", " and ");
 
@@ -38,7 +39,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\lx@author@sep", "\\qquad");
   DefMacro!("\\lx@author@conj", "\\qquad");
   DefConstructor!("\\lx@author@prefix", sub[document, args, props, state] {
-    let mut node       = document.get_element().unwrap();
+    let mut node   = document.get_element().unwrap();
     let nauthors   = state.lookup_int("NUMBER_OF_AUTHORS");
     let i          = document.findnodes("//ltx:creator[@role='author']", None, state).len() as i32;
     if i <= 1 { }

@@ -68,19 +68,20 @@ LoadDefinitions!(state, {
     </ltx:XMath>
     </ltx:Math>
   </ltx:equation>",
-    alias         => Some(s!("$$")),
-    before_digest => before_digest!(stomach, state, { stomach.begin_mode("display_math", state)?; }),
+    alias         => "$$",
+    before_digest => sub[stomach, state] { stomach.begin_mode("display_math", state)?; },
     capture_body  => true
   );
 
-  DefConstructorI!(T_CS!("\\@@ENDDISPLAYMATH"), None, None, alias => Some(s!("$$")),
+  DefConstructorI!(T_CS!("\\@@ENDDISPLAYMATH"), None, None, alias => Some(String::from("$$")),
     before_digest => before_digest!(stomach, state, { stomach.end_mode("display_math", state)?; }));
 
   DefConstructor!("\\@@BEGININLINEMATH",
     "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
-    alias => Some(s!("$")),
-    before_digest => before_digest!(stomach, state, {
-      stomach.begin_mode("inline_math", state)?; }),
+    alias => "$",
+    before_digest => sub[stomach, state] {
+      stomach.begin_mode("inline_math", state)?;
+    },
     capture_body => true);
 
   DefConstructorI!(T_CS!("\\@@ENDINLINEMATH"), None, None, alias => Some(s!("$")),

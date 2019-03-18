@@ -469,7 +469,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\mathchar Number", "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",
     //   sizer       => '#1',
-    after_digest => after_digest!(stomach, whatsit, state, { unimplemented!(); () })
+    after_digest => { unimplemented!(); () }
     //     my ($stomach, $whatsit) = @_;
     //     my $n = $whatsit->getArg(1)->valueOf;
     //     my ($role, $glyph) = decodeMathChar($n);
@@ -502,7 +502,7 @@ LoadDefinitions!(state, {
       DefConstructor!(internalcs.get_cs_name(), "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
         // TODO
         // sizer => "#1",
-        properties => properties!(glyph_props)
+        properties => glyph_props
         // reversion => (ord($glyph) < 128 ? $glyph : '\mathchar' . $value.valueOf . '\relax'),
       );
     }
@@ -515,13 +515,12 @@ LoadDefinitions!(state, {
   DefConstructor!("\\mathaccent Number Digested",
   "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
   // sizer       => '#1',    # Close enough?
-  after_digest => after_digest!(stomach, whatsit, state, {
+  after_digest => sub[stomach, whatsit, state] {
     unimplemented!(); ()
       // my ($stomach, $whatsit) = @_;
       // my $n = $whatsit->getArg(1)->valueOf;
       // my ($role, $glyph) = decodeMathChar($n);
       // $whatsit->setProperty(glyph => $glyph) if $glyph;
       // $whatsit->setProperty(font => LookupValue('font')->specialize($glyph)) if $glyph;
-  })
-  );
+  });
 });

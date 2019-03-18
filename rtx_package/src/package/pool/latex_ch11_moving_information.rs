@@ -32,8 +32,8 @@ LoadDefinitions!(outer_stomach, state, {
     }
   },
   reversion => None,
-  properties => properties!(map!("alignmentSkippable" => true.into(), "alignmentPreserve" => true.into())),
-  after_digest => after_digest!(stomach, whatsit, state, {
+  properties => { map!("alignmentSkippable" => true.into(), "alignmentPreserve" => true.into()) },
+  after_digest => sub[stomach, whatsit, state] {
     let label = match whatsit.get_arg(1) {
       Some(labeld) => clean_label(&labeld.to_string(), None),
       None => String::new()
@@ -56,7 +56,7 @@ LoadDefinitions!(outer_stomach, state, {
       state.assign_value(&label_key, current_label, Some(Scope::Global));
       stomach.end_mode("text", state)?;
     }
-   })
+  }
   );
 
   // # If a node has been labeled, but still  hasn't yet got an id by afterClose:late,
@@ -68,14 +68,12 @@ LoadDefinitions!(outer_stomach, state, {
 
   // # These will get filled in during postprocessing.
   // # * is added to accommodate hyperref
-  DefConstructor!(
-    "\\ref OptionalMatch:* Semiverbatim",
+  DefConstructor!("\\ref OptionalMatch:* Semiverbatim",
     "<ltx:ref labelref='#label' _force_font='true'/>",
-    properties => properties!(sub[stomach, args, state] {
+    properties => sub[stomach, args, state] {
       unpack_to_string!(args => mstar, label);
       Ok(map!("label" => Stored::String(clean_label(&label, None))))
-    })
-  );
+  });
 
   // DefConstructor('\pageref OptionalMatch:* Semiverbatim', "<ltx:ref labelref='#label'
   // _force_font='true'/>", # Same??   properties => sub { (label => CleanLabel($_[2])); });
@@ -152,11 +150,11 @@ LoadDefinitions!(outer_stomach, state, {
   // Should be an environment, but people seem to want to misuse it.
   DefConstructor!("\\thebibliography",
     "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title><ltx:biblist>",
-     before_digest => before_digest!(stomach, state, {
+     before_digest => sub[stomach, state] {
         AssignValue!("inPreamble", false);
         Ok(vec![stomach.digest(Tokens!(T_CS!("\\@lx@inbibliographytrue")), state)?])
-    }),
-    after_digest => after_digest!(stomach, whatsit, state, {
+    },
+    after_digest => sub[stomach, whatsit, state] {
       // NOTE that in some perverse situations (revtex?)
       // it seems to be allowable to omit the argument
       // It's ignorable for latexml anyway, so we'll just read it if its there.
@@ -166,18 +164,18 @@ LoadDefinitions!(outer_stomach, state, {
         gullet.read_arg(state)?;
       }
       begin_bibliography(stomach, whatsit, state)?;
-    }),
+    },
     locked => true
   );
 
   // Close the bibliography
   DefConstructor!("\\endthebibliography", "</ltx:biblist></ltx:bibliography>",
-    after_digest => after_digest!(stomach, whatsit, state, {
+    after_digest => sub[stomach, whatsit, state] {
       let t = T_CS!("\\@appendix");
       if IsDefined!(&t) {
         stomach.digest(t, state)?;
       }
-    }),
+    },
     locked => true);
   // auto close the bibliography and contained biblist.
   Tag!("ltx:biblist",      auto_close => true);
@@ -215,7 +213,7 @@ LoadDefinitions!(outer_stomach, state, {
     "\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem"
   );
   DefConstructor!("\\lx@bibitem[] Semiverbatim", "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
-    after_digest => after_digest!(stomach, whatsit, state, {
+    after_digest => sub[stomach, whatsit, state] {
       let tag_opt = whatsit.get_arg(1);
       let key = clean_bib_key(&match whatsit.get_arg(2) {
         None => String::new(),
@@ -238,7 +236,7 @@ LoadDefinitions!(outer_stomach, state, {
         properties.insert("key".to_string(), key.into());
         whatsit.set_properties(properties);
       }
-    })
+    }
   );
 
   // This attempts to handle the case where folks put \bibitem's within an enumerate or such.
@@ -317,12 +315,12 @@ LoadDefinitions!(outer_stomach, state, {
   AssignValue!("CITE_NOTE_SEPARATOR", T_OTHER!(","));
 
   DefConstructor!("\\@@cite[]{}", "<ltx:cite ?#1(class='ltx_citemacro_#1')>#2</ltx:cite>",
-    mode => Some("text".to_string()));
+    mode => "text");
 
   // \@@bibref{what to show}{bibkeys}{phrase1}{phrase2}
   DefConstructor!("\\@@bibref Semiverbatim Semiverbatim {}{}",
     "<ltx:bibref show='#1' bibrefs='#bibrefs' separator='#separator' yyseparator='#yyseparator'>#3#4</ltx:bibref>",
-    properties => properties!(sub[stomach, args, state] {
+    properties => sub[stomach, args, state] {
       unpack!(args => show, keys, phrase1, phrase2);
       Ok(map!("bibrefs" => clean_bib_key(&keys.to_string()).into(),
         "separator" => match state.lookup_tokens("CITE_SEPARATOR") {
@@ -332,11 +330,11 @@ LoadDefinitions!(outer_stomach, state, {
           Some(yysep) => stomach.digest(yysep, state)?.to_string().into(),
           None => String::new().into() }
       ))
-    })
+    }
   );
 
   // Simple container for any phrases used in the bibref
-  DefConstructor!("\\@@citephrase{}", "<ltx:bibrefphrase>#1</ltx:bibrefphrase>", mode => Some("text".to_string()));
+  DefConstructor!("\\@@citephrase{}", "<ltx:bibrefphrase>#1</ltx:bibrefphrase>", mode => "text");
 
   DefMacro!("\\cite[] Semiverbatim", sub[gullet, args, state] {
     unpack!(args => post, keys);

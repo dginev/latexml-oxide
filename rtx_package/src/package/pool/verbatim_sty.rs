@@ -37,8 +37,8 @@ LoadDefinitions!(state, {
   );
 
   DefConstructor!("\\lx@verbatim@", "<ltx:verbatim font='#font'>",
-    before_digest => before_digest!(stomach, inner_state, { LetI!(&T_CS!("\\par"), T_CR!()); }),
-    before_construct => construct!(document, whatsit, inner_state, { document.maybe_close_element("ltx:p", inner_state)?; })
+    before_digest => { LetI!(&T_CS!("\\par"), T_CR!()); },
+    before_construct => sub[document, whatsit, inner_state] { document.maybe_close_element("ltx:p", inner_state)?; }
   );
 
   // We HAVE to get this guy in, to close the <ltx:verbatim>"

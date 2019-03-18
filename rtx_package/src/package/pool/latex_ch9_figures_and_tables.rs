@@ -57,9 +57,9 @@ DefPrimitive!("\\@@add@caption@counters", sub[stomach, args, state] {
 });
 
 DefConstructor!("\\@@generic@caption[]{}", "<ltx:text class='ltx_caption'>#2</ltx:text>",
-  before_digest => before_digest!(stomach, state, {
+  before_digest => sub[stomach, state] {
     Error!("unexpected", "\\caption", stomach, state,
-      "Use of \\caption outside any known float"); }));
+      "Use of \\caption outside any known float"); });
 
 // Note that even without \caption, we'd probably like to have xml:id.
 Tag!("ltx:figure", after_close => tagsub!(document, node, state, { generate_id(document, node, "fig", state)?; }));

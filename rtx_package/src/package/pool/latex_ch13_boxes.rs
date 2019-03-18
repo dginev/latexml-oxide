@@ -104,10 +104,10 @@ LoadDefinitions!(state, {
   DefMacro!("\\width", "0pt");
 
   DefConstructor!("\\mbox {}", "<ltx:text _noautoclose='1'>#1</ltx:text>",
-    mode => "text".into_option(),
+    mode => "text",
     bounded => true,
     // sizer => "#1", // TODO
-    before_digest => before_digest!(stomach, state, { reenter_text_mode(false, state); })
+    before_digest => sub[stomach, state] { reenter_text_mode(false, state); }
   );
 
   // our %makebox_alignment = (l => 'left', r => 'right', s => 'justified');

@@ -198,9 +198,9 @@ LoadDefinitions!(state, {
   DefMacro!("\\;", "\\ifmmode\\@math@thickmuskip\\else\\@text@thickmuskip\\fi");
   DefConstructor!("\\@math@thickmuskip",
     "<ltx:XMHint name='thickspace' width='#width'/>",
-    alias => "\\;".into_option()
+    alias => "\\;"
+    properties => { map!("isSpace" => true.into() ) }
     // TODO:
-    // properties => properties!(map!(isSpace => true,
     //   width => sub { LookupValue('\thickmuskip'); }
   );
   // DefPrimitive!("\\@text@thickmuskip", "\u{2004}", alias => "\\;".into_option());

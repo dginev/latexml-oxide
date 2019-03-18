@@ -827,7 +827,7 @@ pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Tokens>, gullet: &mu
     let message = s!("Can't invoke {:?}; it is undefined", token.stringify());
     Error!("undefined", token.get_cs_name(), gullet, state, message);
     let mut invoked_tokens = vec![token];
-    // DefConstructorI!(token, convert_latex_args(args.len(), 0),
+    // DefConstructor!(token, convert_latex_args(args.len(), 0),
     // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
     let mut wrapped_args: Vec<Token> = args
       .into_iter()
