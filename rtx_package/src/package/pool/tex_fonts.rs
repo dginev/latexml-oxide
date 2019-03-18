@@ -12,17 +12,17 @@ LoadDefinitions!(state, {
   // Doubtful that we can do anything useful with these.
   // These look essentially like Registers, although Knuth doesn't call them that.
   DefRegister!("\\textfont Number", T_CS!("\\tenrm"),
-    getter => getter!({unimplemented!(); () }),
+    getter => {unimplemented!(); () },
       // my ($fam) = @_;
       // LookupValue('fontinfo_' . $fam->valueOf . '_text'); },
-    setter => setter!({unimplemented!(); () })
+    setter => {unimplemented!(); () }
       // my ($font, $fam) = @_;
       // AssignValue('fontinfo_' . $fam->valueOf . '_text' => $font, 'global'); }
   );
 
   DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
-    getter => getter!({unimplemented!(); () }),
-    setter => setter!({unimplemented!(); () })
+    getter => {unimplemented!(); () },
+    setter => {unimplemented!(); () }
   //   getter => sub {
   //     my ($fam) = @_;
   //     LookupValue('fontinfo_' . $fam->valueOf . '_script'); },
@@ -32,8 +32,8 @@ LoadDefinitions!(state, {
   );
 
   DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
-    getter => getter!({unimplemented!(); () }),
-    setter => setter!({unimplemented!(); () })
+    getter => {unimplemented!(); () },
+    setter => {unimplemented!(); () }
   //   getter => sub {
   //     my ($fam) = @_;
   //     LookupValue('fontinfo_' . $fam->valueOf . '_scriptscript'); },
@@ -49,8 +49,8 @@ LoadDefinitions!(state, {
 
   // # <box dimension> = \ht | \wd | \dp
   DefRegister!("\\ht Number", Dimension::new(0.0),
-    getter => getter!({unimplemented!(); () }),
-    setter => setter!({unimplemented!(); () })
+    getter => {unimplemented!(); () },
+    setter => {unimplemented!(); () }
   //   getter => sub {
   //     my ($n) = @_;
   //     my $stuff = $n && LookupValue('box' . $n->valueOf);
@@ -63,8 +63,8 @@ LoadDefinitions!(state, {
   );
 
   DefRegister!("\\wd Number", Dimension::new(0.0),
-    getter => getter!({unimplemented!(); () }),
-    setter => setter!({unimplemented!(); () })
+    getter => {unimplemented!(); () },
+    setter => {unimplemented!(); () }
   //   getter => sub {
   //     my ($n) = @_;
   //     my $stuff = $n && LookupValue('box' . $n->valueOf);
@@ -77,8 +77,8 @@ LoadDefinitions!(state, {
   );
 
   DefRegister!("\\dp Number", Dimension::new(0.0),
-    getter => getter!({unimplemented!(); () }),
-    setter => setter!({unimplemented!(); () })
+    getter => {unimplemented!(); () },
+    setter => {unimplemented!(); () }
   //   getter => sub {
   //     my ($n) = @_;
   //     my $stuff = $n && LookupValue('box' . $n->valueOf);
@@ -101,7 +101,7 @@ LoadDefinitions!(state, {
     token
   })); // ?
   DefRegister!("\\fontdimen Number FontToken", Dimension::new(0.0),
-    getter => getter!({unimplemented!(); () })
+    getter => {unimplemented!(); () }
     // my $p = ToString($_[0]);
   //     if    ($p == 2) { Dimension('0.5em'); }    # interword space
   //     elsif ($p == 5) { Dimension('1ex'); }      # x-height

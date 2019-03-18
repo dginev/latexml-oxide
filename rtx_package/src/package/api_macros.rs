@@ -208,12 +208,6 @@ macro_rules! reader_predigest {
 
 #[macro_export]
 macro_rules! getter {
-  ($body:block) => {
-    getter!(args, state, $body)
-  };
-  ($args: ident, $body:block) => {
-    getter!($args, state, $body)
-  };
   ($args: ident, $state:ident, $body:block) => {
     Some(Rc::new(move |$args: Vec<Token>, $state: &State| -> Option<RegisterValue> {
       WithInnerState!($body, $state).into_register_value_option()
@@ -223,12 +217,6 @@ macro_rules! getter {
 
 #[macro_export]
 macro_rules! setter {
-  ($body:block) => {
-    setter!(value, args, state, $body)
-  };
-  ($value:ident, $args: ident, $body:block) => {
-    setter!($value, $args, state, $body)
-  };
   ($value:ident, $args: ident, $state:ident, $body:block) => {
     Some(Rc::new(move |$value: RegisterValue, $args: Vec<Tokens>, $state: &mut State| {
       WithInnerState!($body, $state)

@@ -468,37 +468,6 @@ macro_rules! DefPrimitiveIWO(
 );
 
 #[macro_export]
-macro_rules! DefRegisterWO {
-  ($proto:expr, $value:expr, $options:expr) => {{
-    let value = { $value }; // allow to re-borrow state in value macros
-    bind_state_mut!(st);
-    DefRegisterWO!($proto, value, $options, st)
-  }};
-  ($proto:expr, $value:expr, $options:expr, $state_arg:ident) => {{
-    let (cs, paramlist) = parse_prototype($proto, $state_arg)?;
-    DefRegisterI!(cs, paramlist, $value, $options, $state_arg);
-  }};
-}
-
-#[macro_export]
-macro_rules! DefRegisterI {
-  ($cs:expr, $paramlist:expr, $value:expr) =>
-    (DefRegisterI!($cs, $paramlist, $value, None));
-  ($cs:expr, $paramlist:expr, $value:expr, $($key:ident => $val:expr),*) =>
-    (DefRegisterI!($cs, $paramlist, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*))));
-  ($cs:expr, $paramlist:expr, $value:expr, $state_arg:ident, $($key:ident => $val:expr),*) =>
-    (DefRegisterI!($cs, $paramlist, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*)), $state_arg));
-  ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {{
-    let value = { $value };
-    bind_state_mut!(st);
-    DefRegisterI!($cs, $paramlist, value, $options, st)
-  }};
-  ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => {
-    def_register($cs, $paramlist, $value, $options, $state_arg)
-  };
-}
-
-#[macro_export]
 macro_rules! LookupRegister {
   ($cs:expr) => {
     LookupRegister!($cs, Vec::new())
@@ -1559,16 +1528,49 @@ macro_rules! defi_macro {
   };
 }
 
-
 #[macro_export]
 macro_rules! DefRegister {
-  ($proto:expr => $value:expr) => (DefRegisterWO!($proto, $value, None)); // allow for => style?
-  ($proto:expr, $value:expr) => (DefRegisterWO!($proto, $value, None));
-  ($proto:expr, $value:expr, $state_arg: ident) => (DefRegisterWO!($proto, $value, None, $state_arg));
-  ($proto:expr => $value:expr, $($key:ident => $val:expr),*) => (DefRegister!($proto, $value, $($key => $val),*));
-  ($proto:expr, $value:expr, $($key:ident => $val:expr),*) => (DefRegisterWO!($proto, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*))));
-  ($proto:expr, $value:expr, $state_arg:ident, $($key:ident => $val:expr),*) =>
-    (DefRegisterWO!($proto, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*)), $state_arg));
+  ($proto:expr => $value:expr) => {{
+    let (cs, proto) = parse_prototype!($proto);
+    defi_register!(cs, proto, $value, None);
+  }};
+  ($proto:expr, $value:expr) => {{
+    let (cs, proto) = parse_prototype!($proto);
+    defi_register!(cs, proto, $value, None);
+  }};
+  ($cs:expr, None, $value:expr) => {{
+    defi_register!($cs, None, $value, None);
+  }};
+  // Option parsers are more lenient, should be at the end of the list of patterns
+  ($cs:expr, None, $value:expr, $($input:tt)+) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {RegisterOptions,});
+    defi_register!($cs, None, $value, Some(options));
+  }};
+  ($proto:expr, $value:expr, $($input:tt)+) => {{
+    let (cs, proto) = parse_prototype!($proto);
+    let options = defi_opts!(@munch ($($input)*) -> {RegisterOptions,});
+    defi_register!(cs, proto, $value, Some(options));
+  }};
+  ($proto:expr => $value:expr, $($input:tt)+) => {{
+    let (cs, proto) = parse_prototype!($proto);
+    let options = defi_opts!(@munch ($($input)*) -> {RegisterOptions,});
+    defi_register!(cs, proto, $value, Some(options));
+  }};
+}
+
+/// Internal auxiliary, only purpose is to bind state, then call the api::def_macro
+/// function, where the interior macro installation logic resides.
+#[macro_export]
+macro_rules! defi_register {
+  ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {{
+    let value = {{ $value }}; // allow to reborrow state.
+    bind_state_mut!(st);
+    def_register($cs, $paramlist, value, $options, st)
+  }};
+  ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => {
+    let value = {{ $value }}; // allow to reborrow state.
+    def_register($cs, $paramlist, value, $options, $state_arg)
+  };
 }
 
 #[macro_export]
@@ -1988,7 +1990,6 @@ macro_rules! defi_opts {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($var) ] });
   };
 
-
   // before_digest_end: Vec<BeforeDigestClosure>
   (@munch ( $(,)? before_digest_end $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@before_digest_end (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
@@ -2040,6 +2041,21 @@ macro_rules! defi_opts {
   };
   (@munch ( $(,)? after_construct $(:)?$(=>)? $var:ident $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_construct @ $var]});
+  };
+
+  // getter: RegisterGetterClosure
+  (@munch ( $(,)? getter $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@getter (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+  };
+  (@munch ( $(,)? getter $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@getter ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+  };
+  // setter: RegisterSetterClosure
+  (@munch ( $(,)? setter $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@setter (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+  };
+  (@munch ( $(,)? setter $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@setter ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
   };
 
 
@@ -2105,5 +2121,23 @@ macro_rules! defi_opts {
   (@after_construct (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_construct @ construct!(document, whatsit, state, $body)]});
+  };
+
+  (@getter (
+    sub[$args:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [getter @ getter!($args, $state_arg, $body)]});
+  };
+  (@getter (
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [getter @ getter!(args, state, $body)]});
+  };
+
+  (@setter (
+    sub[$value:ident, $args:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [setter @ setter!($value, $args, $state_arg, $body)]});
+  };
+  (@setter (
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [setter @ setter!(value, args, state, $body)]});
   };
 }

@@ -103,19 +103,19 @@ LoadDefinitions!(state, {
   // # From plain.tex
   DefPrimitive!("\\newcount Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
-    DefRegisterI!(name, None, Number::new(0.0));
+    DefRegister!(name, None, Number::new(0.0));
   });
   DefPrimitive!("\\newdimen Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
-    DefRegisterI!(name, None, Dimension::new(0.0));
+    DefRegister!(name, None, Dimension::new(0.0));
   });
   DefPrimitive!("\\newskip Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
-    DefRegisterI!(name, None, Glue::new(0.0));
+    DefRegister!(name, None, Glue::new(0.0));
   });
   DefPrimitive!("\\newmuskip Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
-    DefRegisterI!(name, None, MuGlue::new(0.0));
+    DefRegister!(name, None, MuGlue::new(0.0));
   });
   AssignValue!("allocated_boxes" => false);
   DefPrimitive!("\\newbox Token", sub[stomach, args, state] {
@@ -123,7 +123,7 @@ LoadDefinitions!(state, {
     let n = state.lookup_int("allocated_boxes");
     AssignValue!("allocated_boxes" => n + 1, Some(Scope::Global));
     AssignValue!(&s!("box{}",n), List::new(Vec::new()));
-    DefRegisterI!(t, None, Number(n as f32));
+    DefRegister!(t, None, Number(n as f32));
   });
   // DefPrimitive('\newhelp Token {}', sub { AssignValue(ToString($_[1]) => $_[2]); });
   // DefPrimitive('\newtoks Token', sub { DefRegisterI($_[1], undef, Tokens()); });
@@ -145,7 +145,7 @@ LoadDefinitions!(state, {
   // # This implementation is quite wrong
   DefPrimitive!("\\newinsert Token", sub[stomach, args, state] {
     unpack_to_token!(args => t);
-    DefRegisterI!(t, None, Number::new(0.0));
+    DefRegister!(t, None, Number::new(0.0));
   });
   // # \alloc@, \ch@ck
 
