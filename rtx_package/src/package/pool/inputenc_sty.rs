@@ -7,7 +7,7 @@ fn set_input_encoding(encoding: &str, stomach: &mut Stomach, state: &mut State) 
   // for code in ((0 .. 8), 0xB, (0xE .. 0x1E), (128 .. 255)) {
   //   let ch : char = code as char;
   //   AssignCatcode!(ch, Catcode::ACTIVE);
-  //   LetI!(&T_ACTIVE!(ch), T_CS!("\\@inpenc@undefined"));
+  //   Let!(&T_ACTIVE!(ch), T_CS!("\\@inpenc@undefined"));
   // }
   state.input_encoding = None; // Disable the state-level decoding, if any.
 

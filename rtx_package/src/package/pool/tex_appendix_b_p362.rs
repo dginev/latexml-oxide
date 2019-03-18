@@ -16,10 +16,10 @@ LoadDefinitions!(state, {
   DefMacro!(T_CS!("\\lx@text@dollar"), None,  T_OTHER!("$"), alias => "\\$");
   DefMacro!(T_CS!("\\lx@text@underscore"), None, T_OTHER!("_"),  alias => "\\_");
 
-  DefMathI!("\\lx@math@hash",  None, "#", alias => "\\#");
-  DefMathI!("\\lx@math@amp",   None, "&", role  => "ADDOP", meaning => "and", alias => "\\&");
-  DefMathI!("\\lx@math@percent", None, "%", role  => "POSTFIX", meaning => "percent", alias => "\\%");
-  DefMathI!("\\lx@math@dollar", None, "\\$", role => "OPERATOR", meaning => "currency-dollar",
+  DefMath!("\\lx@math@hash",  None, "#", alias => "\\#");
+  DefMath!("\\lx@math@amp",   None, "&", role  => "ADDOP", meaning => "and", alias => "\\&");
+  DefMath!("\\lx@math@percent", None, "%", role  => "POSTFIX", meaning => "percent", alias => "\\%");
+  DefMath!("\\lx@math@dollar", None, "\\$", role => "OPERATOR", meaning => "currency-dollar",
     alias => "\\$");
-  DefMathI!("\\lx@math@underscore", None, "_", alias => "\\_");
+  DefMath!("\\lx@math@underscore", None, "_", alias => "\\_");
 });

@@ -175,13 +175,13 @@ LoadDefinitions!(state, {
   //  | \let<control sequence><equals><one optional space><token>
   DefPrimitive!("\\let Token SkipMatch:= Skip1Space Token", sub[stomach, args, state] {
    unpack_to_token!(args => token1, token2);
-   LetI!(&token1, token2);
+   Let!(&token1, token2);
    Ok(Vec::new())
   });
 
   DefMacro!("\\futurelet Token Token Token", sub[gullet, args, state] {
       unpack_to_token!(args => cs, token1, token2);
-      LetI!(&cs, token2.clone());
+      Let!(&cs, token2.clone());
       Ok(Tokens!(token1, token2))
   });
 

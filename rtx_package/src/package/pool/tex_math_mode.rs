@@ -54,7 +54,7 @@ LoadDefinitions!(state, {
     }
   );
   // Let this be the default, conventional $
-  LetI!(&T_CS!("\\@dollar@in@normalmode"), T_MATH!());
+  Let!(&T_CS!("\\@dollar@in@normalmode"), T_MATH!());
 
   // Effectively these are the math hooks, redefine these to do what you want with math?
   DefConstructor!("\\@@BEGINDISPLAYMATH",

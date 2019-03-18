@@ -19,7 +19,7 @@ LoadDefinitions!(state, {
     reversion => Tokens!(T_CS!("\\\\"), T_CR!())
   );
 
-  LetI!(&T_CS!("\\@normalcr"), T_CS!("\\\\"));
+  Let!(&T_CS!("\\@normalcr"), T_CS!("\\\\"));
   PushValue!("TEXT_MODE_BINDINGS" => Tokens!(T_CS!("\\\\"), T_CS!("\\@normalcr")));
 
   DefMacro!("\\@nolnerr", "");

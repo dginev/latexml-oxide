@@ -1067,7 +1067,7 @@ LoadDefinitions!(state, {
     if IsDefined!(&cs, inner_state) {
       Ok(else_token)
     } else {
-      Let!(cs, "\\relax", inner_state); // Yuck, but traditional!
+      Let!(&cs, "\\relax"); // Yuck, but traditional!
       Ok(if_token)
     }
   });

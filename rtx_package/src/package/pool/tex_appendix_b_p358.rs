@@ -6,94 +6,94 @@ LoadDefinitions!(state, {
   //----------------------------------------------------------------------
   //  Actually from LaTeX; Table 3.3, Greek, p.41
   //----------------------------------------------------------------------
-  DefMathI!("\\alpha", None, "\u{03B1}");
-  DefMathI!("\\beta", None, "\u{03B2}");
-  DefMathI!("\\gamma", None, "\u{03B3}");
-  DefMathI!("\\delta", None, "\u{03B4}");
-  DefMathI!("\\epsilon", None, "\u{03F5}");
-  DefMathI!("\\varepsilon", None, "\u{03B5}");
-  DefMathI!("\\zeta", None, "\u{03B6}");
-  DefMathI!("\\eta", None, "\u{03B7}");
-  DefMathI!("\\theta", None, "\u{03B8}");
-  DefMathI!("\\vartheta", None, "\u{03D1}");
-  DefMathI!("\\iota", None, "\u{03B9}");
-  DefMathI!("\\kappa", None, "\u{03BA}");
-  DefMathI!("\\lambda", None, "\u{03BB}");
-  DefMathI!("\\mu", None, "\u{03BC}");
-  DefMathI!("\\nu", None, "\u{03BD}");
-  DefMathI!("\\xi", None, "\u{03BE}");
-  DefMathI!("\\pi", None, "\u{03C0}");
-  DefMathI!("\\varpi", None, "\u{03D6}");
-  DefMathI!("\\rho", None, "\u{03C1}");
-  DefMathI!("\\varrho", None, "\u{03F1}");
-  DefMathI!("\\sigma", None, "\u{03C3}");
-  DefMathI!("\\varsigma", None, "\u{03C2}");
-  DefMathI!("\\tau", None, "\u{03C4}");
-  DefMathI!("\\upsilon", None, "\u{03C5}");
-  DefMathI!("\\phi", None, "\u{03D5}");
-  DefMathI!("\\varphi", None, "\u{03C6}");
-  DefMathI!("\\chi", None, "\u{03C7}");
-  DefMathI!("\\psi", None, "\u{03C8}");
-  DefMathI!("\\omega", None, "\u{03C9}");
-  DefMathI!("\\Gamma", None, "\u{0393}");
-  DefMathI!("\\Delta", None, "\u{0394}");
-  DefMathI!("\\Theta", None, "\u{0398}");
-  DefMathI!("\\Lambda", None, "\u{039B}");
-  DefMathI!("\\Xi", None, "\u{039E}");
-  DefMathI!("\\Pi", None, "\u{03A0}");
-  DefMathI!("\\Sigma", None, "\u{03A3}");
-  DefMathI!("\\Upsilon", None, "\u{03A5}");
-  DefMathI!("\\Phi", None, "\u{03A6}");
-  DefMathI!("\\Psi", None, "\u{03A8}");
-  DefMathI!("\\Omega", None, "\u{03A9}");
+  DefMath!("\\alpha", None, "\u{03B1}");
+  DefMath!("\\beta", None, "\u{03B2}");
+  DefMath!("\\gamma", None, "\u{03B3}");
+  DefMath!("\\delta", None, "\u{03B4}");
+  DefMath!("\\epsilon", None, "\u{03F5}");
+  DefMath!("\\varepsilon", None, "\u{03B5}");
+  DefMath!("\\zeta", None, "\u{03B6}");
+  DefMath!("\\eta", None, "\u{03B7}");
+  DefMath!("\\theta", None, "\u{03B8}");
+  DefMath!("\\vartheta", None, "\u{03D1}");
+  DefMath!("\\iota", None, "\u{03B9}");
+  DefMath!("\\kappa", None, "\u{03BA}");
+  DefMath!("\\lambda", None, "\u{03BB}");
+  DefMath!("\\mu", None, "\u{03BC}");
+  DefMath!("\\nu", None, "\u{03BD}");
+  DefMath!("\\xi", None, "\u{03BE}");
+  DefMath!("\\pi", None, "\u{03C0}");
+  DefMath!("\\varpi", None, "\u{03D6}");
+  DefMath!("\\rho", None, "\u{03C1}");
+  DefMath!("\\varrho", None, "\u{03F1}");
+  DefMath!("\\sigma", None, "\u{03C3}");
+  DefMath!("\\varsigma", None, "\u{03C2}");
+  DefMath!("\\tau", None, "\u{03C4}");
+  DefMath!("\\upsilon", None, "\u{03C5}");
+  DefMath!("\\phi", None, "\u{03D5}");
+  DefMath!("\\varphi", None, "\u{03C6}");
+  DefMath!("\\chi", None, "\u{03C7}");
+  DefMath!("\\psi", None, "\u{03C8}");
+  DefMath!("\\omega", None, "\u{03C9}");
+  DefMath!("\\Gamma", None, "\u{0393}");
+  DefMath!("\\Delta", None, "\u{0394}");
+  DefMath!("\\Theta", None, "\u{0398}");
+  DefMath!("\\Lambda", None, "\u{039B}");
+  DefMath!("\\Xi", None, "\u{039E}");
+  DefMath!("\\Pi", None, "\u{03A0}");
+  DefMath!("\\Sigma", None, "\u{03A3}");
+  DefMath!("\\Upsilon", None, "\u{03A5}");
+  DefMath!("\\Phi", None, "\u{03A6}");
+  DefMath!("\\Psi", None, "\u{03A8}");
+  DefMath!("\\Omega", None, "\u{03A9}");
 
   //----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.7. Miscellaneous Symbols, p.43
   //----------------------------------------------------------------------
   // Some should be differential operators, qualifiers, ...
-  DefMathI!("\\aleph", None, "\u{2135}");
-  DefMathI!("\\hbar",  None, "\u{210F}", role => "ID", meaning => "Planck-constant-over-2-pi");
-  DefMathI!("\\imath", None, "\u{0131}");
-  DefMathI!("\\jmath", None, "\u{0237}");
-  DefMathI!("\\ell", None, "\u{2113}");
-  DefMathI!("\\wp", None, "\u{2118}", meaning => "Weierstrass-p");
-  DefMathI!("\\Re", None, "\u{211C}", role    => "OPFUNCTION", meaning => "real-part");
-  DefMathI!("\\Im", None, "\u{2111}", role    => "OPFUNCTION", meaning => "imaginary-part");
-  DefMathI!("\\mho", None, "\u{2127}");
+  DefMath!("\\aleph", None, "\u{2135}");
+  DefMath!("\\hbar",  None, "\u{210F}", role => "ID", meaning => "Planck-constant-over-2-pi");
+  DefMath!("\\imath", None, "\u{0131}");
+  DefMath!("\\jmath", None, "\u{0237}");
+  DefMath!("\\ell", None, "\u{2113}");
+  DefMath!("\\wp", None, "\u{2118}", meaning => "Weierstrass-p");
+  DefMath!("\\Re", None, "\u{211C}", role    => "OPFUNCTION", meaning => "real-part");
+  DefMath!("\\Im", None, "\u{2111}", role    => "OPFUNCTION", meaning => "imaginary-part");
+  DefMath!("\\mho", None, "\u{2127}");
 
-  DefMathI!("\\prime",    None, "\u{2032}", role => "SUPOP",    locked  => true);
-  DefMathI!("\\emptyset", None, "\u{2205}", role => "ID",       meaning => "empty-set");
-  DefMathI!("\\nabla",    None, "\u{2207}", role => "OPERATOR");
-  DefMathI!("\\surd",     None, "\u{221A}", role => "OPERATOR", meaning => "square-root");
-  DefMathI!("\\top",      None, "\u{22A4}", role => "ADDOP",    meaning => "top");
-  DefMathI!("\\bot",      None, "\u{22A5}", role => "ADDOP",    meaning => "bottom");
-  DefMathI!("\\|", None, "\u{2225}", role => "VERTBAR", name => "||", meaning => "parallel-to");
-  DefMathI!("\\angle", None, "\u{2220}");
+  DefMath!("\\prime",    None, "\u{2032}", role => "SUPOP",    locked  => true);
+  DefMath!("\\emptyset", None, "\u{2205}", role => "ID",       meaning => "empty-set");
+  DefMath!("\\nabla",    None, "\u{2207}", role => "OPERATOR");
+  DefMath!("\\surd",     None, "\u{221A}", role => "OPERATOR", meaning => "square-root");
+  DefMath!("\\top",      None, "\u{22A4}", role => "ADDOP",    meaning => "top");
+  DefMath!("\\bot",      None, "\u{22A5}", role => "ADDOP",    meaning => "bottom");
+  DefMath!("\\|", None, "\u{2225}", role => "VERTBAR", name => "||", meaning => "parallel-to");
+  DefMath!("\\angle", None, "\u{2220}");
 
   // NOTE: This is probably the wrong role.
   // Also, should probably carry info about Binding for OpenMath
-  DefMathI!("\\forall", None, "\u{2200}", role => "BIGOP",    meaning => "for-all");
-  DefMathI!("\\exists", None, "\u{2203}", role => "BIGOP",    meaning => "exists");
-  DefMathI!("\\neg",    None, "\u{00AC}",  role => "FUNCTION", meaning => "not");
-  DefMathI!("\\lnot",   None, "\u{00AC}",  role => "FUNCTION", meaning => "not");
-  DefMathI!("\\flat", None, "\u{266D}");
-  DefMathI!("\\natural", None, "\u{266E}");
-  DefMathI!("\\sharp", None, "\u{266F}");
-  DefMathI!("\\backslash", None, "\u{005C}", role => "MULOP");
-  DefMathI!("\\partial",   None, "\u{2202}", role => "OPERATOR", meaning => "partial-differential");
+  DefMath!("\\forall", None, "\u{2200}", role => "BIGOP",    meaning => "for-all");
+  DefMath!("\\exists", None, "\u{2203}", role => "BIGOP",    meaning => "exists");
+  DefMath!("\\neg",    None, "\u{00AC}",  role => "FUNCTION", meaning => "not");
+  DefMath!("\\lnot",   None, "\u{00AC}",  role => "FUNCTION", meaning => "not");
+  DefMath!("\\flat", None, "\u{266D}");
+  DefMath!("\\natural", None, "\u{266E}");
+  DefMath!("\\sharp", None, "\u{266F}");
+  DefMath!("\\backslash", None, "\u{005C}", role => "MULOP");
+  DefMath!("\\partial",   None, "\u{2202}", role => "OPERATOR", meaning => "partial-differential");
 
-  DefMathI!("\\infty", None, "\u{221E}", role => "ID", meaning => "infinity");
-  DefMathI!("\\Box", None, "\u{25A1}");
-  DefMathI!("\\Diamond", None, "\u{25C7}");
-  DefMathI!("\\triangle", None, "\u{25B3}");
-  DefMathI!("\\clubsuit", None, "\u{2663}");
-  DefMathI!("\\diamondsuit", None, "\u{2662}");
-  DefMathI!("\\heartsuit", None, "\u{2661}");
-  DefMathI!("\\spadesuit", None, "\u{2660}");
+  DefMath!("\\infty", None, "\u{221E}", role => "ID", meaning => "infinity");
+  DefMath!("\\Box", None, "\u{25A1}");
+  DefMath!("\\Diamond", None, "\u{25C7}");
+  DefMath!("\\triangle", None, "\u{25B3}");
+  DefMath!("\\clubsuit", None, "\u{2663}");
+  DefMath!("\\diamondsuit", None, "\u{2662}");
+  DefMath!("\\heartsuit", None, "\u{2661}");
+  DefMath!("\\spadesuit", None, "\u{2660}");
 
   //----------------------------------------------------------------------
   // TODO:
-  // DefMathI!("\\smallint", None, "\u{222B}", meaning => "integral", role => "INTOP",
+  // DefMath!("\\smallint", None, "\u{222B}", meaning => "integral", role => "INTOP",
   //   font => { size => 9 }, scriptpos => \&doScriptpos, mathstyle => "text");    // INTEGRAL
   // #----------------------------------------------------------------------
   // # Actually LaTeX; Table 3.8. Variable-sized Symbols, p.44.
@@ -200,98 +200,98 @@ LoadDefinitions!(state, {
   //----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.4. Binary Operation Symbols, p.42
   //----------------------------------------------------------------------
-  DefMathI!("\\pm",    None, "\u{00B1}",  role => "ADDOP", meaning => "plus-or-minus");
-  DefMathI!("\\mp",    None, "\u{2213}", role => "ADDOP", meaning => "minus-or-plus");
-  DefMathI!("\\times", None, "\u{00D7}",  role => "MULOP", meaning => "times");
-  DefMathI!("\\div",   None, "\u{00F7}",  role => "MULOP", meaning => "divide");
-  DefMathI!("\\ast",   None, "\u{2217}", role => "MULOP");
-  DefMathI!("\\star",  None, "\u{22C6}", role => "MULOP");
-  DefMathI!("\\circ",  None, "\u{2218}", role => "MULOP", meaning => "compose");
-  DefMathI!("\\bullet", None, "\u{2219}", role => "MULOP");
-  DefMathI!("\\cdot",   None, "\u{22C5}", role => "MULOP");
+  DefMath!("\\pm",    None, "\u{00B1}",  role => "ADDOP", meaning => "plus-or-minus");
+  DefMath!("\\mp",    None, "\u{2213}", role => "ADDOP", meaning => "minus-or-plus");
+  DefMath!("\\times", None, "\u{00D7}",  role => "MULOP", meaning => "times");
+  DefMath!("\\div",   None, "\u{00F7}",  role => "MULOP", meaning => "divide");
+  DefMath!("\\ast",   None, "\u{2217}", role => "MULOP");
+  DefMath!("\\star",  None, "\u{22C6}", role => "MULOP");
+  DefMath!("\\circ",  None, "\u{2218}", role => "MULOP", meaning => "compose");
+  DefMath!("\\bullet", None, "\u{2219}", role => "MULOP");
+  DefMath!("\\cdot",   None, "\u{22C5}", role => "MULOP");
   ////  , meaning=>"inner-product");  that"s pushing it a bit far...
 
   // Need to classify set operations more carefully....
-  DefMathI!("\\cap", None, "\u{2229}", role => "ADDOP", meaning => "intersection");
-  DefMathI!("\\cup", None, "\u{222A}", role => "ADDOP", meaning => "union");
-  DefMathI!("\\uplus",    None, "\u{228E}", role => "ADDOP");
-  DefMathI!("\\sqcap",    None, "\u{2293}", role => "ADDOP", meaning => "square-intersection");
-  DefMathI!("\\sqcup",    None, "\u{2294}", role => "ADDOP", meaning => "square-union");
-  DefMathI!("\\vee",      None, "\u{2228}", role => "ADDOP", meaning => "or");
-  DefMathI!("\\lor",      None, "\u{2228}", role => "ADDOP", meaning => "or");
-  DefMathI!("\\wedge",    None, "\u{2227}", role => "ADDOP", meaning => "and");
-  DefMathI!("\\land",     None, "\u{2227}", role => "ADDOP", meaning => "and");
-  DefMathI!("\\setminus", None, "\u{2216}", role => "ADDOP", meaning => "set-minus");
-  DefMathI!("\\wr",       None, "\u{2240}", role => "MULOP");
+  DefMath!("\\cap", None, "\u{2229}", role => "ADDOP", meaning => "intersection");
+  DefMath!("\\cup", None, "\u{222A}", role => "ADDOP", meaning => "union");
+  DefMath!("\\uplus",    None, "\u{228E}", role => "ADDOP");
+  DefMath!("\\sqcap",    None, "\u{2293}", role => "ADDOP", meaning => "square-intersection");
+  DefMath!("\\sqcup",    None, "\u{2294}", role => "ADDOP", meaning => "square-union");
+  DefMath!("\\vee",      None, "\u{2228}", role => "ADDOP", meaning => "or");
+  DefMath!("\\lor",      None, "\u{2228}", role => "ADDOP", meaning => "or");
+  DefMath!("\\wedge",    None, "\u{2227}", role => "ADDOP", meaning => "and");
+  DefMath!("\\land",     None, "\u{2227}", role => "ADDOP", meaning => "and");
+  DefMath!("\\setminus", None, "\u{2216}", role => "ADDOP", meaning => "set-minus");
+  DefMath!("\\wr",       None, "\u{2240}", role => "MULOP");
 
   // Should this block be ADDOP or something else?
-  DefMathI!("\\diamond",         None, "\u{22C4}", role => "ADDOP");
-  DefMathI!("\\bigtriangleup",   None, "\u{25B3}", role => "ADDOP");
-  DefMathI!("\\bigtriangledown", None, "\u{25BD}", role => "ADDOP");
-  DefMathI!("\\triangleleft",    None, "\u{25C1}", role => "ADDOP");
-  DefMathI!("\\triangleright",   None, "\u{25B7}", role => "ADDOP");
-  DefMathI!("\\lhd",             None, "\u{22B2}", role => "ADDOP", meaning => "subgroup-of");
-  DefMathI!("\\rhd",             None, "\u{22B3}", role => "ADDOP", meaning => "contains-as-subgroup");
-  DefMathI!("\\unlhd", None, "\u{22B4}", role => "ADDOP", meaning => "subgroup-of-or-equals");
-  DefMathI!("\\unrhd", None, "\u{22B5}", role => "ADDOP", meaning => "contains-as-subgroup-or-equals");
+  DefMath!("\\diamond",         None, "\u{22C4}", role => "ADDOP");
+  DefMath!("\\bigtriangleup",   None, "\u{25B3}", role => "ADDOP");
+  DefMath!("\\bigtriangledown", None, "\u{25BD}", role => "ADDOP");
+  DefMath!("\\triangleleft",    None, "\u{25C1}", role => "ADDOP");
+  DefMath!("\\triangleright",   None, "\u{25B7}", role => "ADDOP");
+  DefMath!("\\lhd",             None, "\u{22B2}", role => "ADDOP", meaning => "subgroup-of");
+  DefMath!("\\rhd",             None, "\u{22B3}", role => "ADDOP", meaning => "contains-as-subgroup");
+  DefMath!("\\unlhd", None, "\u{22B4}", role => "ADDOP", meaning => "subgroup-of-or-equals");
+  DefMath!("\\unrhd", None, "\u{22B5}", role => "ADDOP", meaning => "contains-as-subgroup-or-equals");
 
-  DefMathI!("\\oplus",  None, "\u{2295}", role => "ADDOP", meaning => "direct-sum");
-  DefMathI!("\\ominus", None, "\u{2296}", role => "ADDOP", meaning => "symmetric-difference");
-  DefMathI!("\\otimes", None, "\u{2297}", role => "MULOP", meaning => "tensor-product");
-  DefMathI!("\\oslash", None, "\u{2298}", role => "MULOP");
-  DefMathI!("\\odot",   None, "\u{2299}", role => "MULOP", meaning => "direct-product");
-  DefMathI!("\\bigcirc", None, "\u{25CB}", role => "MULOP");
-  DefMathI!("\\dagger",  None, "\u{2020}", role => "MULOP");
-  DefMathI!("\\ddagger", None, "\u{2021}", role => "MULOP");
-  DefMathI!("\\amalg",   None, "\u{2210}", role => "MULOP", meaning => "coproduct");
+  DefMath!("\\oplus",  None, "\u{2295}", role => "ADDOP", meaning => "direct-sum");
+  DefMath!("\\ominus", None, "\u{2296}", role => "ADDOP", meaning => "symmetric-difference");
+  DefMath!("\\otimes", None, "\u{2297}", role => "MULOP", meaning => "tensor-product");
+  DefMath!("\\oslash", None, "\u{2298}", role => "MULOP");
+  DefMath!("\\odot",   None, "\u{2299}", role => "MULOP", meaning => "direct-product");
+  DefMath!("\\bigcirc", None, "\u{25CB}", role => "MULOP");
+  DefMath!("\\dagger",  None, "\u{2020}", role => "MULOP");
+  DefMath!("\\ddagger", None, "\u{2021}", role => "MULOP");
+  DefMath!("\\amalg",   None, "\u{2210}", role => "MULOP", meaning => "coproduct");
 
   //----------------------------------------------------------------------
   // LaTeX; Table 3.5. Relation Symbols, p.43
   //----------------------------------------------------------------------
-  DefMathI!("\\leq",        None, "\u{2264}", role => "RELOP", meaning => "less-than-or-equals");
-  DefMathI!("\\prec",       None, "\u{227A}", role => "RELOP", meaning => "precedes");
-  DefMathI!("\\preceq",     None, "\u{2AAF}", role => "RELOP", meaning => "precedes-or-equals");
-  DefMathI!("\\ll",         None, "\u{226A}", role => "RELOP", meaning => "much-less-than");
-  DefMathI!("\\subset",     None, "\u{2282}", role => "RELOP", meaning => "subset-of");
-  DefMathI!("\\subseteq",   None, "\u{2286}", role => "RELOP", meaning => "subset-of-or-equals");
-  DefMathI!("\\sqsubset",   None, "\u{228F}", role => "RELOP", meaning => "square-image-of");
-  DefMathI!("\\sqsubseteq", None, "\u{2291}", role => "RELOP", meaning => "square-image-of-or-equals");
-  DefMathI!("\\in",         None, "\u{2208}", role => "RELOP", meaning => "element-of");
-  DefMathI!("\\vdash", None, "\u{22A2}", role => "METARELOP", meaning => "proves");
+  DefMath!("\\leq",        None, "\u{2264}", role => "RELOP", meaning => "less-than-or-equals");
+  DefMath!("\\prec",       None, "\u{227A}", role => "RELOP", meaning => "precedes");
+  DefMath!("\\preceq",     None, "\u{2AAF}", role => "RELOP", meaning => "precedes-or-equals");
+  DefMath!("\\ll",         None, "\u{226A}", role => "RELOP", meaning => "much-less-than");
+  DefMath!("\\subset",     None, "\u{2282}", role => "RELOP", meaning => "subset-of");
+  DefMath!("\\subseteq",   None, "\u{2286}", role => "RELOP", meaning => "subset-of-or-equals");
+  DefMath!("\\sqsubset",   None, "\u{228F}", role => "RELOP", meaning => "square-image-of");
+  DefMath!("\\sqsubseteq", None, "\u{2291}", role => "RELOP", meaning => "square-image-of-or-equals");
+  DefMath!("\\in",         None, "\u{2208}", role => "RELOP", meaning => "element-of");
+  DefMath!("\\vdash", None, "\u{22A2}", role => "METARELOP", meaning => "proves");
 
-  DefMathI!("\\geq",      None, "\u{2265}", role => "RELOP", meaning => "greater-than-or-equals");
-  DefMathI!("\\succ",     None, "\u{227B}", role => "RELOP", meaning => "succeeds");
-  DefMathI!("\\succeq",   None, "\u{2AB0}", role => "RELOP", meaning => "succeeds-or-equals");
-  DefMathI!("\\gg",       None, "\u{226B}", role => "RELOP", meaning => "much-greater-than");
-  DefMathI!("\\supset",   None, "\u{2283}", role => "RELOP", meaning => "superset-of");
-  DefMathI!("\\supseteq", None, "\u{2287}", role => "RELOP", meaning => "superset-of-or-equals");
-  DefMathI!("\\sqsupset", None, "\u{2290}", role => "RELOP", meaning => "square-original-of");
-  DefMathI!("\\sqsupseteq", None, "\u{2292}", role => "RELOP", meaning => "square-original-of-or-equals");
-  DefMathI!("\\ni",    None, "\u{220B}", role => "RELOP",     meaning => "contains");
-  DefMathI!("\\dashv", None, "\u{22A3}", role => "METARELOP", meaning => "does-not-prove");
+  DefMath!("\\geq",      None, "\u{2265}", role => "RELOP", meaning => "greater-than-or-equals");
+  DefMath!("\\succ",     None, "\u{227B}", role => "RELOP", meaning => "succeeds");
+  DefMath!("\\succeq",   None, "\u{2AB0}", role => "RELOP", meaning => "succeeds-or-equals");
+  DefMath!("\\gg",       None, "\u{226B}", role => "RELOP", meaning => "much-greater-than");
+  DefMath!("\\supset",   None, "\u{2283}", role => "RELOP", meaning => "superset-of");
+  DefMath!("\\supseteq", None, "\u{2287}", role => "RELOP", meaning => "superset-of-or-equals");
+  DefMath!("\\sqsupset", None, "\u{2290}", role => "RELOP", meaning => "square-original-of");
+  DefMath!("\\sqsupseteq", None, "\u{2292}", role => "RELOP", meaning => "square-original-of-or-equals");
+  DefMath!("\\ni",    None, "\u{220B}", role => "RELOP",     meaning => "contains");
+  DefMath!("\\dashv", None, "\u{22A3}", role => "METARELOP", meaning => "does-not-prove");
 
   // I have the impression think that "identical" is a stronger notion than "equivalence"
   // Note that the unicode here is called "Identical To",
   // and that the notion of "equivalent to" usually involves the tilde operator.
-  DefMathI!("\\equiv",  None, "\u{2261}", role => "RELOP", meaning => "equivalent-to");
-  DefMathI!("\\sim",    None, "\u{223C}", role => "RELOP", meaning => "similar-to");
-  DefMathI!("\\simeq",  None, "\u{2243}", role => "RELOP", meaning => "similar-to-or-equals");
-  DefMathI!("\\asymp",  None, "\u{224D}", role => "RELOP", meaning => "asymptotically-equals");
-  DefMathI!("\\approx", None, "\u{2248}", role => "RELOP", meaning => "approximately-equals");
-  DefMathI!("\\cong",   None, "\u{2245}", role => "RELOP", meaning => "approximately-equals");
-  DefMathI!("\\neq",    None, "\u{2260}", role => "RELOP", meaning => "not-equals");
-  DefMathI!("\\doteq",  None, "\u{2250}", role => "RELOP", meaning => "approaches-limit");
-  DefMathI!("\\notin",  None, "\u{2209}", role => "RELOP", meaning => "not-element-of");
+  DefMath!("\\equiv",  None, "\u{2261}", role => "RELOP", meaning => "equivalent-to");
+  DefMath!("\\sim",    None, "\u{223C}", role => "RELOP", meaning => "similar-to");
+  DefMath!("\\simeq",  None, "\u{2243}", role => "RELOP", meaning => "similar-to-or-equals");
+  DefMath!("\\asymp",  None, "\u{224D}", role => "RELOP", meaning => "asymptotically-equals");
+  DefMath!("\\approx", None, "\u{2248}", role => "RELOP", meaning => "approximately-equals");
+  DefMath!("\\cong",   None, "\u{2245}", role => "RELOP", meaning => "approximately-equals");
+  DefMath!("\\neq",    None, "\u{2260}", role => "RELOP", meaning => "not-equals");
+  DefMath!("\\doteq",  None, "\u{2250}", role => "RELOP", meaning => "approaches-limit");
+  DefMath!("\\notin",  None, "\u{2209}", role => "RELOP", meaning => "not-element-of");
 
-  DefMathI!("\\models", None, "\u{22A7}", role => "RELOP", meaning => "models");
-  DefMathI!("\\perp",   None, "\u{27C2}", role => "RELOP", meaning => "perpendicular-to");
-  DefMathI!("\\mid", None, "\u{2223}", role => "VERTBAR"); // DIVIDES (RELOP?) ?? well, sometimes...
-  DefMathI!("\\parallel", None, "\u{2225}", role => "VERTBAR", meaning => "parallel-to");
-  DefMathI!("\\bowtie",   None, "\u{22C8}", role => "RELOP"); // BOWTIE
-  DefMathI!("\\Join", None, "\u{2A1D}", role => "RELOP", meaning => "join");
-  DefMathI!("\\smile",  None, "\u{2323}", role => "RELOP"); // SMILE
-  DefMathI!("\\frown",  None, "\u{2322}", role => "RELOP"); // FROWN
-  DefMathI!("\\propto", None, "\u{221D}", role => "RELOP", meaning => "proportional-to");
+  DefMath!("\\models", None, "\u{22A7}", role => "RELOP", meaning => "models");
+  DefMath!("\\perp",   None, "\u{27C2}", role => "RELOP", meaning => "perpendicular-to");
+  DefMath!("\\mid", None, "\u{2223}", role => "VERTBAR"); // DIVIDES (RELOP?) ?? well, sometimes...
+  DefMath!("\\parallel", None, "\u{2225}", role => "VERTBAR", meaning => "parallel-to");
+  DefMath!("\\bowtie",   None, "\u{22C8}", role => "RELOP"); // BOWTIE
+  DefMath!("\\Join", None, "\u{2A1D}", role => "RELOP", meaning => "join");
+  DefMath!("\\smile",  None, "\u{2323}", role => "RELOP"); // SMILE
+  DefMath!("\\frown",  None, "\u{2322}", role => "RELOP"); // FROWN
+  DefMath!("\\propto", None, "\u{221D}", role => "RELOP", meaning => "proportional-to");
 
   // TeX defines these as alternate names...
   Let!("\\le", "\\leq");
@@ -302,5 +302,5 @@ LoadDefinitions!(state, {
 
   //----------------------------------------------------------------------
   // Not;  (Is fullwidth solidus appropriate for when \not appears in isolation?)
-  DefMathI!("\\not", None, "\u{FF0F}", role => "OPFUNCTION", meaning => "not");
+  DefMath!("\\not", None, "\u{FF0F}", role => "OPFUNCTION", meaning => "not");
 });
