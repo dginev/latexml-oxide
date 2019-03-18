@@ -60,13 +60,14 @@ LoadDefinitions!(state, {
   // // more than just bgroup, egroup,
   // // BUT you DON'T want extra {, } showing up in any untex-ing.
   DefConstructor!("\\@hidden@bgroup", "#body",
-    before_digest => before_digest!(stomach,state, { stomach.bgroup(state); }),
+    before_digest => sub[stomach,state] { stomach.bgroup(state); },
     capture_body => true
     // TODO: // reversion => sub { Revert($_[0]->getProperty("body")); }
   );
   DefConstructor!("\\@hidden@egroup", "",
-    after_digest => after_digest!(stomach,args,state, { stomach.egroup(state)?; }),
-    reversion => None);
+    after_digest => sub[stomach,args,state] { stomach.egroup(state)?; },
+    reversion => None
+  );
 
   DefPrimitive!(
     "\\begingroup",
@@ -362,6 +363,6 @@ LoadDefinitions!(state, {
         document.insert_element("ltx:break", Vec::new(), None, state)?;
       }
     }},
-    properties => properties!(map!("isSpace" => true.into(), "isVerticalSpace" => true.into()))
+    properties => {map!("isSpace" => true.into(), "isVerticalSpace" => true.into())}
   );
 });

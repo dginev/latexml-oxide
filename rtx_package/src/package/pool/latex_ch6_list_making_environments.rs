@@ -9,11 +9,11 @@ LoadDefinitions!(state, {
 
   // These are for the (not quite legit) case where \item appears outside
   // of an itemize, enumerate, etc, environment.
-  // DefConstructor('\item[]',
+  // DefCon('\item[]',
   //   "<ltx:item>?&defined(#1)(<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>)");
-  // DefConstructor('\subitem[]',
+  // DefCon('\subitem[]',
   //   "<ltx:item>?&defined(#1)(<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>)");
-  // DefConstructor('\subsubitem[]',
+  // DefCon('\subsubitem[]',
   //   "<ltx:item>?&defined(#1)(<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>)");
 
   // Or maybe best just to do \par ?
@@ -43,38 +43,38 @@ LoadDefinitions!(state, {
   DefMacro!("\\itemize@item", "\\par\\itemize@item@");
   DefConstructor!("\\itemize@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => properties!(sub[stomach, args, state] {
+    properties => sub[stomach, args, state] {
       unpack_to_string!(args=>tag);
-      ref_step_item_counter(&tag, stomach, state) }));
+      ref_step_item_counter(&tag, stomach, state) });
   DefConstructor!("\\inline@itemize@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
-    properties => properties!(sub[stomach, args, state] {
+    properties => sub[stomach, args, state] {
       unpack_to_string!(args=>tag);
-      ref_step_item_counter(&tag, stomach, state) }));
+      ref_step_item_counter(&tag, stomach, state) });
 
   DefMacro!("\\enumerate@item", "\\par\\enumerate@item@");
   DefConstructor!("\\enumerate@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => properties!(sub[stomach, args, state] {
+    properties => sub[stomach, args, state] {
       unpack_to_string!(args=>tag);
-      ref_step_item_counter(&tag, stomach, state) }));
+      ref_step_item_counter(&tag, stomach, state) });
   DefConstructor!("\\inline@enumerate@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
-    properties => properties!(sub[stomach, args, state] {
+    properties => sub[stomach, args, state] {
       unpack_to_string!(args=>tag);
-      ref_step_item_counter(&tag, stomach, state) }));
+      ref_step_item_counter(&tag, stomach, state) });
 
   DefMacro!("\\description@item", "\\par\\description@item@");
   DefConstructor!("\\description@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => properties!(sub[stomach, args, state] {
+    properties => sub[stomach, args, state] {
       unpack_to_string!(args=>tag);
-      ref_step_item_counter(&tag, stomach, state) }));
+      ref_step_item_counter(&tag, stomach, state) });
   DefConstructor!("\\inline@description@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
-    properties => properties!(sub[stomach, args, state] {
+    properties => sub[stomach, args, state] {
       unpack_to_string!(args=>tag);
-      ref_step_item_counter(&tag, stomach, state) }));
+      ref_step_item_counter(&tag, stomach, state) });
 
   DefEnvironment!("{itemize}",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",

@@ -61,12 +61,12 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\lower Dimension MoveableBox",
     "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
-    after_digest => after_digest!(stomach, whatsit, state, {
+    after_digest => sub[stomach, whatsit, state] {
       whatsit.set_property("y",
       // can the ergonomics of this Dimension cast be improved?
         Dimension(whatsit.get_arg(1).unwrap().value_of() * -1.0).to_string()
       );
-    })
+    }
   );
   // DefConstructor('\raise Dimension MoveableBox',
   //   "<ltx:text yoffset='#y' _noautoclose='1'>#2</ltx:text>",

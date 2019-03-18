@@ -74,7 +74,7 @@ LoadDefinitions!(state, {
   // \@@Url cmd {open}{close}{url}{formattedurl}
   DefConstructor!("\\@@Url Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
     "?#isMath(<ltx:XMWrap href='#href'>#5</ltx:XMWrap>) (<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
-    properties => properties!(sub[stomach, args, state] {
+    properties => sub[stomach, args, state] {
       unpack!(args => cmd, open, close, url, formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
       Ok(map!(
@@ -82,7 +82,7 @@ LoadDefinitions!(state, {
         // TODO: why was class a sub {}??
         "class"=> Stored::String(ltx_cmd)
       ))
-    })
+    }
         // sizer     => "#5",
         // reversion => "#1#2#4#3");
   );

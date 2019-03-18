@@ -94,72 +94,72 @@ LoadDefinitions!(outer_stomach, outer_state, {
   );
 
   DefConstructor!(
-     "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
-      sub[document, args, props, state] {
-       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
-       // intuitive level of:       let (x,y,z, ...) = @args;
-       unpack_to_string!(args => stype, inlist, toctitle, title);
-       let clean_id = prop_str!(props,"id"); // TODO: CleanID($id);
-       document.open_element(&s!("ltx:{}", stype),
-         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
-         None,
-         state,
-       )?;
-       // TODO: Another instance where the immutability of props causes endless cloning
-       //       which is slow and wasteful.
-       // The big problem is that for props to be mutable, the entire parent whatsit needs to
-       // be mutable, and Rust hits a mutability conflict between the parent, and the
-       // "args" and "props" children ... will come back here after performance becomes
-       // an issue again
-       //
-       // Part 2: I have now, with great attention and profiling, solidified the position that Whatsits are immutable
-       // during the absorbtion phase -- and hense the args and props passed in here will remain immutable in rtx.
-       // Hence, for this absorb call to run correctly, it must either:
-       // 1) Accept a cloned value as currently, paying with performance
-       // 2) Accept immutable references to digested objects, which may lead to far-reaching borrowing constraints
-       //   e.g. unlist()-ing a digested List will have to produce box references, rather than provide the owned boxes directly.
-       //   would have to experiment with this - as it is of course much lighter on performance
-       if let Some(Stored::Digested(tags)) = props.get("tags") {
-         document.absorb((**tags).clone(), state)?;
-       }
-       let title = prop_digested!(props, "title");
-       document.insert_element("ltx:title", title, None, state)?;
+    "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
+    sub[document, args, props, state] {
+      // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
+      // intuitive level of:       let (x,y,z, ...) = @args;
+      unpack_to_string!(args => stype, inlist, toctitle, title);
+      let clean_id = prop_str!(props,"id"); // TODO: CleanID($id);
+      document.open_element(&s!("ltx:{}", stype),
+        Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
+        None,
+        state,
+      )?;
+      // TODO: Another instance where the immutability of props causes endless cloning
+      //       which is slow and wasteful.
+      // The big problem is that for props to be mutable, the entire parent whatsit needs to
+      // be mutable, and Rust hits a mutability conflict between the parent, and the
+      // "args" and "props" children ... will come back here after performance becomes
+      // an issue again
+      //
+      // Part 2: I have now, with great attention and profiling, solidified the position that Whatsits are immutable
+      // during the absorbtion phase -- and hense the args and props passed in here will remain immutable in rtx.
+      // Hence, for this absorb call to run correctly, it must either:
+      // 1) Accept a cloned value as currently, paying with performance
+      // 2) Accept immutable references to digested objects, which may lead to far-reaching borrowing constraints
+      //   e.g. unlist()-ing a digested List will have to produce box references, rather than provide the owned boxes directly.
+      //   would have to experiment with this - as it is of course much lighter on performance
+      if let Some(Stored::Digested(tags)) = props.get("tags") {
+        document.absorb((**tags).clone(), state)?;
+      }
+      let title = prop_digested!(props, "title");
+      document.insert_element("ltx:title", title, None, state)?;
 
-       let toctitle = prop_digested!(props, "toctitle");
-       if !toctitle.is_empty() {
-         document.insert_element("ltx:toctitle", toctitle, None, state)?;
-       }
-     },
-     properties => properties!(sub[stomach, args, state] {
-       unpack!(args => stype, inlist, toctitle_arg, title);
-       let mut props = ref_step_counter(&stype.to_string(), false, stomach, state)?;
-       let toctitle = if !toctitle_arg.to_string().is_empty() {
-         toctitle_arg
-       } else {
-         title.clone()
-       };
+      let toctitle = prop_digested!(props, "toctitle");
+      if !toctitle.is_empty() {
+        document.insert_element("ltx:toctitle", toctitle, None, state)?;
+      }
+    },
+    properties => sub[stomach, args, state] {
+      unpack!(args => stype, inlist, toctitle_arg, title);
+      let mut props = ref_step_counter(&stype.to_string(), false, stomach, state)?;
+      let toctitle = if !toctitle_arg.to_string().is_empty() {
+        toctitle_arg
+      } else {
+        title.clone()
+      };
 
-       let invoked_title;
-       {
-         let gullet = stomach.get_gullet_mut();
-         invoked_title = Invocation!(T_CS!("\\lx@format@title@@"), vec![&stype, &title], gullet)?;
-       }
-       let xtitle    = stomach.digest(invoked_title, state)?;
+      let invoked_title;
+      {
+        let gullet = stomach.get_gullet_mut();
+        invoked_title = Invocation!(T_CS!("\\lx@format@title@@"), vec![&stype, &title], gullet)?;
+      }
+      let xtitle    = stomach.digest(invoked_title, state)?;
 
-       let invoked_toctitle;
-       {
-         let gullet = stomach.get_gullet_mut();
-         invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"), vec![&stype, &toctitle], gullet, state)?;
-       }
-       let xtoctitle = stomach.digest(invoked_toctitle, state)?;
-       
-       if xtoctitle.to_string() != xtitle.to_string() {
-         props.insert(s!("toctitle"), xtoctitle.into());
-       }
-       props.insert(s!("title"), xtitle.into());
+      let invoked_toctitle;
+      {
+        let gullet = stomach.get_gullet_mut();
+        invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"), vec![&stype, &toctitle], gullet, state)?;
+      }
+      let xtoctitle = stomach.digest(invoked_toctitle, state)?;
 
-       Ok(props)
-     })
+      if xtoctitle.to_string() != xtitle.to_string() {
+        props.insert(s!("toctitle"), xtoctitle.into());
+      }
+      props.insert(s!("title"), xtitle.into());
+
+      Ok(props)
+    }
   );
 
   // No tags, at all? Consider...
@@ -180,7 +180,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
         document.insert_element("ltx:toctitle", toctitle, None, state)?;
       }
     },
-    properties => properties!(sub[stomach, args, state] {
+    properties => sub[stomach, args, state] {
       unpack!(args => stype, inlist, toctitle, title);
       let mut props = RefStepID!(&stype.to_string())?;
       let title_digested = if let Digested::Postponed(tokens) = title {
@@ -198,9 +198,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
           props.insert("toctitle".to_string(), toctitle_digested.into());
         }
       }
-
       Ok(props)
-    })
+    }
   );
 
   //----------------------------------------------------------------------
@@ -230,8 +229,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
   // DefMacro!("\\format@toctitle@{}{}",
   // "{\\@ifundefined{format@toctitle@#1}{\\@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}{\\csname
   // format@toctitle@#1\\endcsname{#2}}}"); DefMacro!("\\@@compose@title{}{}", "\\@tag[][
-  // ]{#1}#2"); DefConstructor!("\\@tag[][]{}", "?#3(<ltx:tag open='#1'
-  // close='#2'>#3</ltx:tag>)()");
+  // ]{#1}#2");
+  // DefConstructor!("\\@tag[][]{}", "?#3(<ltx:tag open='#1' close='#2'>#3</ltx:tag>)()");
 
   //// NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the
   //// type. This would be useful for the titles in links; thus can be plain (unicode) text.

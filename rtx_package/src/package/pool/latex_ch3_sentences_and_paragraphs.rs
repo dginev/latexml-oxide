@@ -30,10 +30,13 @@ LoadDefinitions!(state, {
   // Previously, we used ltx:emph, to preserve the semantic intent,
   // but some folks wrap it around arbitrary blocks of material,
   // more like a font switch.
-  DefConstructor!("\\emph{}", "#1", mode => "text".into_option(),
-    bounded        => true, font=>Some(fontmap!(emph => true)), alias => "\\emph".into_option(),
-    before_digest   => before_digest!(stomach, inner_state, { DefMacroI!(T_CS!("\\f@shape"), None, T_LETTER!("i")); }),
-    after_construct => construct!(doc,args,inner_state, { doc.add_class(&mut doc.get_element().unwrap(), "ltx_emph")?; })
+  DefConstructor!("\\emph{}", "#1",
+    mode => "text",
+    bounded        => true,
+    font=> { emph => true },
+    alias => "\\emph",
+    before_digest   => { DefMacroI!(T_CS!("\\f@shape"), None, T_LETTER!("i")); },
+    after_construct => sub[doc,args,inner_state] { doc.add_class(&mut doc.get_element().unwrap(), "ltx_emph")?; }
   );
 
   //======================================================================

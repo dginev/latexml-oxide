@@ -32,7 +32,7 @@ LoadDefinitions!(state, {
         document.maybe_close_element("ltx:para", state)?;
       }
     },
-    after_digest => after_digest!(stomach, whatsit, state, {
+    after_digest => sub[stomach, whatsit, state] {
       let in_preamble = LookupBool!("inPreamble");
       if in_preamble {
         whatsit.set_property("inPreamble", true);
@@ -45,9 +45,9 @@ LoadDefinitions!(state, {
         // ));
       }
       Ok(Vec::new())
-    }),
-    properties => properties!(skippable_props),
-    alias => Some(s!("\\par"))
+    },
+    properties => skippable_props,
+    alias => "\\par"
   );
   Let!("\\par", "\\normal@par");
 

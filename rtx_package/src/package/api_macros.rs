@@ -3,7 +3,7 @@
 #[macro_export]
 macro_rules! Font {
   ($($key:ident => $value:expr),*) => (
-    Some(Font { $($key: Some($value.to_string().into()),)* .. Font::default() })
+    Some(Font { $($key: $value.into_font_field(),)* .. Font::default() })
 )}
 
 #[macro_export]

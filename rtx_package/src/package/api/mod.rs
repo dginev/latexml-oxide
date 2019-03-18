@@ -7,12 +7,14 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
+use std::borrow::Cow;
 
 use rtx_core::common::dimension::{Dimension, MuDimension};
 use rtx_core::common::error::*;
 use rtx_core::common::glue::{Glue, MuGlue};
 use rtx_core::common::number::Number;
 use rtx_core::common::store::Stored;
+use rtx_core::definition::Reversion;
 use rtx_core::definition::register::*;
 use rtx_core::keyvals::KeyVals;
 use rtx_core::tbox::Tbox;
@@ -21,6 +23,7 @@ use rtx_core::tokens::Tokens;
 use rtx_core::Digested;
 use rtx_core::whatsit::Whatsit;
 use rtx_core::list::List;
+use rtx_core::mouth;
 
 // Constants for the API functions stay here as well
 
@@ -69,6 +72,26 @@ impl<T> IntoOption<Option<Vec<T>>> for Vec<T> {
 impl<T> IntoOption<Option<VecDeque<T>>> for VecDeque<T> {
   fn into_option(self) -> Option<VecDeque<T>> { Some(self) }
 }
+
+impl IntoOption<Option<Reversion>> for Tokens {
+  fn into_option(self) -> Option<Reversion> {
+    if self.is_empty() {
+      None
+    } else {
+      Some(Reversion::Tokens(self))
+    }
+  }
+}
+impl IntoOption<Option<Reversion>> for &str {
+  fn into_option(self) -> Option<Reversion> {
+    if self.is_empty() {
+      None
+    } else {
+      Some(Reversion::Tokens(TokenizeInternal!(self)))
+    }
+  }
+}
+
 
 pub trait IntoTokensResult<T>: Sized {
   /// Performs the conversion, used for DefMacro return values etc
@@ -232,5 +255,35 @@ impl IntoPropertiesResult for HashMap<String,Stored> {
 impl IntoPropertiesResult for Result<HashMap<String,Stored>> {
   fn into_properties_result(self) -> Result<HashMap<String,Stored>> {
     self
+  }
+}
+
+
+pub trait IntoFontField<T>:Sized {
+  fn into_font_field(self) -> T;
+}
+
+impl IntoFontField<Option<bool>> for bool {
+  fn into_font_field(self) -> Option<bool> { Some(self) }
+}
+
+impl IntoFontField<bool> for bool {
+  fn into_font_field(self) -> bool { self }
+}
+
+
+impl IntoFontField<Option<Cow<'static, str>>> for &'static str {
+  fn into_font_field(self) -> Option<Cow<'static, str>> {
+    Some(Cow::Borrowed(self))
+  }
+}
+impl IntoFontField<Option<Cow<'static, str>>> for f32 {
+  fn into_font_field(self) -> Option<Cow<'static, str>> {
+    Some(Cow::Owned(self.to_string()))
+  }
+}
+impl IntoFontField<Option<Cow<'static, str>>> for i32 {
+  fn into_font_field(self) -> Option<Cow<'static, str>> {
+    Some(Cow::Owned(self.to_string()))
   }
 }

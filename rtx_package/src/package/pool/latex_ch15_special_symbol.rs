@@ -42,11 +42,11 @@ DefPrimitive!("\\textellipsis", "\u{2026}");   // HORIZONTAL ELLIPSIS
 DefPrimitive!("\\textregistered", "\u{00AE}");    // REGISTERED SIGN
 DefPrimitive!("\\texttrademark", "\u{2122}");   // TRADE MARK SIGN
 DefConstructor!("\\textsuperscript{}", "<ltx:sup>#1</ltx:sup>",
-  mode => "text".into_option());
+  mode => "text");
 // This is something coming from xetex/xelatex ? Why define this way?
 //DefConstructor!("\\realsuperscript{}', "<ltx:text yoffset='0.5em' _noautoclose='1'>#1</ltx:text>");
 DefConstructor!("\\realsuperscript{}", "<ltx:sup>#1</ltx:sup>",
-  mode => "text".into_option());
+  mode => "text");
 DefPrimitive!("\\textordfeminine", "\u{00AA}");    // FEMININE ORDINAL INDICATOR
 DefPrimitive!("\\textordmasculine", "\u{00BA}");    // MASCULINE ORDINAL INDICATOR
 DefPrimitive!("\\SS", "SS");         // ?

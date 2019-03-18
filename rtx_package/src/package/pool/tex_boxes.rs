@@ -125,13 +125,13 @@ LoadDefinitions!(state, {
       document.close_node(&node, state)?;
       Debug!("FINAL DOC: {:?}", document.document.node_to_string(&document.get_element().unwrap()));
     },
-    mode => "text".into_option(),
+    mode => "text",
     bounded => true,
     // sizer => "#2",
     //   # Workaround for $ in alignment; an explicit \hbox gives us a normal $.
     //   # And also things like \centerline that will end up bumping up to block level!
-    before_digest => before_digest!(stomach, state, {reenter_text_mode(false, state)}),
-    after_digest => after_digest!(stomach, whatsit, state, {
+    before_digest => sub[stomach, state] {reenter_text_mode(false, state)},
+    after_digest => sub[stomach, whatsit, state] {
       let mut width : Option<RegisterValue>= None;
       {
         let spec = whatsit.get_arg(1);
@@ -147,7 +147,7 @@ LoadDefinitions!(state, {
       if let Some(w) = width {
         whatsit.set_width(w);
       }
-    })
+    }
   );
 
   DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, props, state] {
@@ -155,8 +155,8 @@ LoadDefinitions!(state, {
       let block = insert_block(document, contents, string_map!("vattach" => "bottom"), state);
     },
     // sizer       => "#2",
-    mode        => "text".into_option(),
-    after_digest => after_digest!(stomach, whatsit, state, {
+    mode        => "text",
+    after_digest => sub[stomach, whatsit, state] {
       // TODO: Height arith
         // let spec = whatsit.get_arg(1);
         // let tbox  = $whatsit.get_arg(2);
@@ -166,7 +166,7 @@ LoadDefinitions!(state, {
         //   whatsit.set_height(tbox.get_height().add(s));
         // }
         ()
-    })
+    }
   );
 
   DefConstructor!("\\vtop BoxSpecification VBoxContents", sub[document, args, props, state] {
@@ -174,8 +174,8 @@ LoadDefinitions!(state, {
       insert_block(document, contents, string_map!("vattach" => "top"), state)?;
     },
     // sizer       => '#2',
-    mode        => "text".into_option(),
-    after_digest => after_digest!(stomach, whatsit, state, {
+    mode        => "text",
+    after_digest => sub[stomach, whatsit, state] {
       // TODO: Height arith
       //   my $spec = $whatsit.get_arg(1);
       //   my $box  = $whatsit.get_arg(2);
@@ -185,7 +185,7 @@ LoadDefinitions!(state, {
       //     $whatsit->setHeight($box->getHeight->add($s)); }
       //   return; });
       ()
-    })
+    }
   );
 
   DefParameterType!("RuleSpecification", reader=>reader!(gullet, inner, extra, state, {
@@ -203,7 +203,7 @@ LoadDefinitions!(state, {
   // "?#invisible()(?#isVerticalRule()\
   //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)' \
   //    width='&GetKeyVal(#1,width)' color='#color'/>))",
-  after_digest=>after_digest!(stomach, whatsit, state, {unimplemented!(); ()}));
+  after_digest=> {unimplemented!(); ()});
   // afterDigest => sub {
   //   my ($stomach, $whatsit) = @_;
   //   my $dims   = $whatsit->getArg(1);
@@ -236,7 +236,7 @@ LoadDefinitions!(state, {
   // "?#isHorizontalRule()\
   //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)'\
   //    width='&GetKeyVal(#1,width)' color='#color'/>)",
-  after_digest=>after_digest!(stomach, whatsit, state, {unimplemented!(); ()}));
+  after_digest=> {unimplemented!(); ()});
   // afterDigest => sub {
   //   my ($stomach, $whatsit) = @_;
   //   my $dims   = $whatsit->getArg(1);

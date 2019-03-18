@@ -26,14 +26,14 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\lx@list DigestedBody",
     "<ltx:itemize>#1</ltx:itemize>",
-    before_digest => before_digest!(stomach, state, { stomach.bgroup(state); }));
+    before_digest => sub[stomach, state] { stomach.bgroup(state); });
   DefPrimitive!("\\endlx@list", sub[stomach, args, state] { stomach.egroup(state)?; });
 
   DefConstructor!("\\list@item OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => properties!(sub[stomach, args, state] {
+    properties => sub[stomach, args, state] {
       unpack!(args => tag);
-      ref_step_item_counter(&tag.to_string(), stomach, state) })
+      ref_step_item_counter(&tag.to_string(), stomach, state) }
   );
 
   // This isn't quite right, although it seems right for deep, internal uses with a single \item.
@@ -54,7 +54,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>\
       <ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",    // At least an empty tag! ?
-    properties => properties!(stomach, args, state, {
+    properties => sub[stomach, args, state] {
       // TODO: So, I hear you like boilerplate...
       // in Perl this was the super simple:
       // Digest(Expand($_[1]))
@@ -66,7 +66,7 @@ LoadDefinitions!(state, {
       } else {
         Ok(HashMap::new())
       }
-    })
+    }
   );
 
   DefRegister!("\\topsep"             => Glue::new(0.0));
