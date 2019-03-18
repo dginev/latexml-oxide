@@ -19,7 +19,7 @@ LoadDefinitions!(outer_state, {
   // We're going to sidestep the Gullet for inputting,
   // and also the usual environment capture.
 
-  DefConstructorI!(T_CS!("\\begin{verbatim}"), None, "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
+  DefConstructor!(T_CS!("\\begin{verbatim}"), None, "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
     before_digest => sub[stomach, state] {
       stomach.bgroup(state);
       let mut stuff = Vec::new();

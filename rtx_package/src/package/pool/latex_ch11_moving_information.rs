@@ -395,7 +395,7 @@ LoadDefinitions!(outer_stomach, state, {
 
   // # NOTE: In the long run, we want to SAVE the contents and associate them with the given file
   // name #  AND, arrange so that when a file is read, we'll use the contents!
-  // DefConstructorI(T_CS("\\begin{filecontents}"), "Semiverbatim",
+  // DefConstructor(T_CS("\\begin{filecontents}"), "Semiverbatim",
   //   '',
   //   reversion   => '',
   //   afterDigest => [sub {
@@ -408,7 +408,7 @@ LoadDefinitions!(outer_stomach, state, {
   //         push(@lines, $line); }
   //       AssignValue($filename . '_contents' => join("\n", @lines), 'global');
   //       NoteProgress("[Cached filecontents for $filename (" . scalar(@lines) . " lines)]"); }]);
-  // DefConstructorI(T_CS("\\begin{filecontents*}"), "Semiverbatim",
+  // DefConstructor(T_CS("\\begin{filecontents*}"), "Semiverbatim",
   //   '',
   //   reversion   => '',
   //   afterDigest => [sub {
@@ -587,14 +587,14 @@ LoadDefinitions!(outer_stomach, state, {
   //     $document->openElement('ltx:indexphrase'); }
   //   return; }
 
-  // DefConstructorI('\index@dotfill', undef, sub {
+  // DefConstructor('\index@dotfill', undef, sub {
   //     my ($document) = @_;
   //     closeIndexPhrase($document);
   //     $document->openElement('ltx:indexrefs'); });
-  // DefConstructorI('\index@item',       undef, sub { doIndexItem($_[0], 1); });
-  // DefConstructorI('\index@subitem',    undef, sub { doIndexItem($_[0], 2); });
-  // DefConstructorI('\index@subsubitem', undef, sub { doIndexItem($_[0], 3); });
-  // DefConstructorI('\index@done',       undef, sub { doIndexItem($_[0], 0); });
+  // DefConstructor('\index@item',       undef, sub { doIndexItem($_[0], 1); });
+  // DefConstructor('\index@subitem',    undef, sub { doIndexItem($_[0], 2); });
+  // DefConstructor('\index@subsubitem', undef, sub { doIndexItem($_[0], 3); });
+  // DefConstructor('\index@done',       undef, sub { doIndexItem($_[0], 0); });
 
   // DefMacroI('\indexname', undef, 'Index');
   // DefEnvironment('{theindex}',

@@ -73,8 +73,8 @@ LoadDefinitions!(state, {
     capture_body  => true
   );
 
-  DefConstructorI!(T_CS!("\\@@ENDDISPLAYMATH"), None, None, alias => Some(String::from("$$")),
-    before_digest => before_digest!(stomach, state, { stomach.end_mode("display_math", state)?; }));
+  DefConstructor!(T_CS!("\\@@ENDDISPLAYMATH"), None, None, alias => "$$",
+    before_digest => sub[stomach, state] { stomach.end_mode("display_math", state)?; });
 
   DefConstructor!("\\@@BEGININLINEMATH",
     "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
@@ -84,8 +84,8 @@ LoadDefinitions!(state, {
     },
     capture_body => true);
 
-  DefConstructorI!(T_CS!("\\@@ENDINLINEMATH"), None, None, alias => Some(s!("$")),
-    before_digest => before_digest!(stomach, state, { stomach.end_mode("inline_math", state)?; }));
+  DefConstructor!(T_CS!("\\@@ENDINLINEMATH"), None, None, alias => "$",
+    before_digest => sub[stomach, state] { stomach.end_mode("inline_math", state)?; });
 
   // Same as add_TeX, but add the code from the body of the object.
   let add_body_tex_closure: Vec<TagConstructionClosure> = tagsub!(document, node, state, {

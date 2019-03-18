@@ -180,7 +180,7 @@ LoadDefinitions!(state, {
   // DefPrimitiveI('\@text@thinmuskip', undef, "\x{2009}", alias => '\,');
 
   DefMacro!("\\!", "\\ifmmode\\@math@negthinmuskip\\else\\@text@negthinmuskip\\fi");
-  // DefConstructorI('\@math@negthinmuskip', undef,
+  // DefConstructor('\@math@negthinmuskip', undef,
   //   "<ltx:XMHint name='negthinspace' width='#width'/>",
   //   alias => '\!',
   //   properties => { isSpace => 1,
@@ -188,7 +188,7 @@ LoadDefinitions!(state, {
   // DefPrimitiveI('\@text@negthinmuskip', undef, "", alias => '\!');
 
   DefMacro!("\\>", "\\ifmmode\\@math@medmuskip\\else\\@text@medmuskip\\fi");
-  // DefConstructorI('\@math@medmuskip', undef,
+  // DefConstructor('\@math@medmuskip', undef,
   //   "<ltx:XMHint name='medspace' width='#width'/>",
   //   alias => '\>',
   //   properties => { isSpace => 1,
@@ -207,7 +207,7 @@ LoadDefinitions!(state, {
 
   Let!("\\:", "\\>");
   DefMacro!("\\ ", "\\ifmmode\\@math@nbspace\\else\\@text@nbspace\\fi");
-  // DefConstructorI('\@math@nbspace', undef,
+  // DefConstructor('\@math@nbspace', undef,
   //   "<ltx:XMHint name='medspace' width='#width'/>",
   //   alias => '\ ',
   //   properties => { isSpace => 1,
@@ -215,7 +215,7 @@ LoadDefinitions!(state, {
   DefMacroI!(T_CS!("\\@text@nbspace"), None, T_OTHER!("\u{00A0}"), alias => "\\ ");
 
   DefMacro!("\\\t", "\\ifmmode\\@math@tab\\else\\@text@tab\\fi");
-  // DefConstructorI('\@math@tab', undef,    # Tab!!
+  // DefConstructor('\@math@tab', undef,    # Tab!!
   //   "<ltx:XMHint name='medspace' width='#width'/>",
   //   alias => "\\\t",                      # TAB
   //   properties => { isSpace => 1,
@@ -223,7 +223,7 @@ LoadDefinitions!(state, {
   // DefPrimitiveI('\@text@tab', undef, UTF(0xA0), alias => "\\\t");    # TAB!!! What else?
 
   DefMacro!("\\/", "\\ifmmode\\@math@italiccorr\\else\\@text@italiccorr\\fi");
-  // DefConstructorI("\@math@italiccorr", undef,
+  // DefConstructor("\@math@italiccorr", undef,
   //   "<ltx:XMHint name='italiccorr'/>",
   //   alias => '\/',
   //   properties => { isSpace => 1 });

@@ -180,14 +180,14 @@ LoadDefinitions!(state, {
   //   meaning   => 'symmetric-difference',
   //   mathstyle => \&doVariablesizeOp,
   //   font      => { size => 'Big' });
-  // DefConstructorI('\limits', undef, sub {
+  // DefConstructor('\limits', undef, sub {
   //     my $node = $_[0]->getElement;
   //     $_[0]->setAttribute($_[0]->getLastChildElement($node) || $node, scriptpos => 'mid'); });
-  // DefConstructorI('\nolimits', undef, sub {
+  // DefConstructor('\nolimits', undef, sub {
   //     my $node = $_[0]->getElement;
   //     $node = $_[0]->getLastChildElement($node) || $node;
   //     $node->removeAttribute('scriptpos'); });    # default is 'post', so we can just remove the attrib.
-  // DefConstructorI('\displaylimits', undef, sub {
+  // DefConstructor('\displaylimits', undef, sub {
   //     my ($document, %props) = @_;
   //     my $node = $_[0]->getElement;
   //     $node = $_[0]->getLastChildElement($node) || $node;

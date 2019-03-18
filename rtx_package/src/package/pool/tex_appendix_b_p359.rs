@@ -19,7 +19,7 @@ LoadDefinitions!(state, {
   // Since not DefMath!
 
   // And so can \vdots
-  // DefConstructorI('\vdots', undef,
+  // DefConstructor('\vdots', undef,
   //   "?#isMath(<ltx:XMTok name='vdots' font='#font' role='ID'>\x{22EE}</ltx:XMTok>)(\x{22EE})",
   //   properties => sub {
   //     (LookupValue('IN_MATH')
@@ -33,7 +33,7 @@ LoadDefinitions!(state, {
   // DefMathI('\colon', undef, ':',        role => 'METARELOP');    # Seems like good default role
   //         # Note that amsmath redefines \dots to be `smart'.
   //         # Aha, also can be in text...
-  // DefConstructorI('\dots', undef,
+  // DefConstructor('\dots', undef,
   //   "?#isMath(<ltx:XMTok name='dots' font='#font' role='ID'>\x{2026}</ltx:XMTok>)(\x{2026})",
   //   properties => sub {
   //     (LookupValue('IN_MATH')
