@@ -20,9 +20,9 @@ LoadDefinitions!(state, {
       }
     } else {
       let opt = if opt.is_empty() { None } else { Some(opt) };
-      let converted_args = convert_latex_args(nargs, opt, state)?; // TODO: can we convince DefMacroI! this is not a second mutable borrow of state?
-      DefMacroI!(name_cs, converted_args, begin);
-      DefMacroI!(end_name_cs, None, end);
+      let converted_args = convert_latex_args(nargs, opt, state)?; // TODO: can we convince DefMacro! this is not a second mutable borrow of state?
+      DefMacro!(name_cs, converted_args, begin);
+      DefMacro!(end_name_cs, None, end);
     }
     Ok(vec![])
   });

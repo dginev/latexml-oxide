@@ -57,6 +57,6 @@ LoadDefinitions!(state, {
   .iter()
   .map(ToString::to_string)
   {
-    DefMacroI!(T_CS!(ltxtrigger), None, Tokens!());
+    DefMacro!(T_CS!(ltxtrigger), None, Tokens!());
   }
 });

@@ -10,11 +10,11 @@ LoadDefinitions!(state, {
   DefMacro!("\\%", "\\ifmmode\\lx@math@percent\\else\\lx@text@percent\\fi");
   DefMacro!("\\$", "\\ifmmode\\lx@math@dollar\\else\\lx@text@dollar\\fi");
   DefMacro!("\\_", "\\ifmmode\\lx@math@underscore\\else\\lx@text@underscore\\fi");
-  DefMacroI!(T_CS!("\\lx@text@hash"), None, T_OTHER!("#"),  alias => "\\#");
-  DefMacroI!(T_CS!("\\lx@text@amp"), None, T_OTHER!("&"),  alias => "\\&");
-  DefMacroI!(T_CS!("\\lx@text@percent"), None, T_OTHER!("%"),  alias => "\\%");
-  DefMacroI!(T_CS!("\\lx@text@dollar"), None,  T_OTHER!("$"), alias => "\\$");
-  DefMacroI!(T_CS!("\\lx@text@underscore"), None, T_OTHER!("_"),  alias => "\\_");
+  DefMacro!(T_CS!("\\lx@text@hash"), None, T_OTHER!("#"),  alias => "\\#");
+  DefMacro!(T_CS!("\\lx@text@amp"), None, T_OTHER!("&"),  alias => "\\&");
+  DefMacro!(T_CS!("\\lx@text@percent"), None, T_OTHER!("%"),  alias => "\\%");
+  DefMacro!(T_CS!("\\lx@text@dollar"), None,  T_OTHER!("$"), alias => "\\$");
+  DefMacro!(T_CS!("\\lx@text@underscore"), None, T_OTHER!("_"),  alias => "\\_");
 
   DefMathI!("\\lx@math@hash",  None, "#", alias => "\\#");
   DefMathI!("\\lx@math@amp",   None, "&", role  => "ADDOP", meaning => "and", alias => "\\&");

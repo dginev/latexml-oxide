@@ -19,7 +19,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\f{}", sub[stomach, args, state] {
     unpack!(args => env);
     let env_string = env.to_string();
-    DefMacroI!(T_CS!("\\@currenvir"), None, env);
+    DefMacro!(T_CS!("\\@currenvir"), None, env);
     AssignValue!("current_environment", env_string);
   });
 
@@ -27,7 +27,7 @@ LoadDefinitions!(state, {
   "\\lx@setcurrenvir{}", sub[stomach, args, state] {
     unpack!(args => env);
     let env_string = env.to_string();
-    DefMacroI!(T_CS!("\\@currenvir"), None, env);
+    DefMacro!(T_CS!("\\@currenvir"), None, env);
     AssignValue!("current_environment", env_string);
   });
   Let!("\\@currenvline", "\\@empty");

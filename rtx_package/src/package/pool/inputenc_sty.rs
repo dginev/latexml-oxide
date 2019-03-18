@@ -37,14 +37,14 @@ LoadDefinitions!(outer_stomach, state, {
     unpack_to_token!(args => code, expansion);
     let ch = code.to_number().value_of() as u8 as char;
     AssignCatcode!(ch, Catcode::ACTIVE);
-    DefMacroI!(T_ACTIVE!(ch), None, expansion);
+    DefMacro!(T_ACTIVE!(ch), None, expansion);
   });
 
   DefPrimitive!("\\DeclareInputText {Number} {}", sub[stomach, args, state] {
     unpack_to_token!(args => code, expansion);
     let ch = code.to_number().value_of() as u8 as char;
     AssignCatcode!(ch, Catcode::ACTIVE);
-    DefMacroI!(T_ACTIVE!(ch), None, expansion);
+    DefMacro!(T_ACTIVE!(ch), None, expansion);
   });
 
   DefMacro!("\\IeC{}", "#1");

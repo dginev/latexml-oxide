@@ -39,7 +39,7 @@ LoadDefinitions!(state, {
   .iter()
   {
     let inner_ltxtrigger = ltxtrigger.to_string();
-    DefMacroI!(T_CS!(ltxtrigger), None, sub {
+    DefMacro!(T_CS!(ltxtrigger), None, {
        Tokens!(T_CS!("\\@load@latex@pool"), T_CS!(inner_ltxtrigger))
     });
   }

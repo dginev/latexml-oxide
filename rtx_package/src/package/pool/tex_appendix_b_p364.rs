@@ -126,9 +126,9 @@ LoadDefinitions!(state, {
   //   fontTest => sub { ($_[0]->getFamily ne 'typewriter')
   //       && (($_[0]->getEncoding || 'OT1') =~ /^(OT1|T1)$/); });
 
-  DefMacroI!(T_CS!("\\TeX"), None, Tokens::new(ExplodeText!("TeX")));
-  DefMacroI!(T_CS!("\\i"), None, T_OTHER!("\u{0131}")); // LATIN SMALL LETTER DOTLESS I
-  DefMacroI!(T_CS!("\\j"), None, T_OTHER!("\u{0237}"));
+  DefMacro!(T_CS!("\\TeX"), None, Tokens::new(ExplodeText!("TeX")));
+  DefMacro!(T_CS!("\\i"), None, T_OTHER!("\u{0131}")); // LATIN SMALL LETTER DOTLESS I
+  DefMacro!(T_CS!("\\j"), None, T_OTHER!("\u{0237}"));
 
   // DefConstructor('\buildrel Until:\over {}',
   //   "<ltx:XMApp role='RELOP'>"

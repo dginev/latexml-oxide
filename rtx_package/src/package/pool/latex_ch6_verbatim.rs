@@ -127,5 +127,5 @@ LoadDefinitions!(outer_state, {
   // Actually, latex sets catcode to 13 ... is this close enough?
   DefPrimitive!("\\obeycr", { AssignValue!("PRESERVE_NEWLINES", true); });
   DefPrimitive!("\\restorecr", { AssignValue!("PRESERVE_NEWLINES", false); });
-  DefMacroI!(T_CS!("\\normalsfcodes"), None, Tokens!());
+  DefMacro!(T_CS!("\\normalsfcodes"), None, Tokens!());
 });

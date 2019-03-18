@@ -235,7 +235,7 @@ LoadDefinitions!(state, {
       if tokens.is_empty() {
         tokens = vec![T_CS!("\\par")]; // trailing blank line
       }
-      DefMacroI!(token, None, Tokens::new(tokens));
+      DefMacro!(token, None, Tokens::new(tokens));
     }
   });
 

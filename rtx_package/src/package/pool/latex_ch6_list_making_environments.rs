@@ -221,6 +221,6 @@ LoadDefinitions!(state, {
   // Blech
   for lvl in &["@itemi", "@itemii", "@itemiii", "@itemiv", "@itemv", "@itemvi", "enumi", "enumii",
               "enumiii", "enumiv", "@desci", "@descii", "@desciii", "@desciv", "@descv", "@descvi"] {
-    DefMacroI!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\itemtyperefname"));
+    DefMacro!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\itemtyperefname"));
   }
 });

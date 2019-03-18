@@ -18,7 +18,7 @@ LoadDefinitions!(state, {
   if !state.documentid.is_empty() {
     let docid = state.documentid.clone();
     // Wrap in T_OTHER so funny chars don't screw up (no space!)
-    DefMacroI!(T_CS!("\\thedocument@ID"), None, T_OTHER!(docid));
+    DefMacro!(T_CS!("\\thedocument@ID"), None, T_OTHER!(docid));
   } else {
     Let!("\\thedocument@ID", "\\@empty");
   }

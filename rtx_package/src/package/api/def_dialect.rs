@@ -617,7 +617,7 @@ pub fn def_environment(
   let current_environment_closure = before_digest_single!(stomach, state, {
     AssignValue!("current_environment", env_name.clone(), None, state);
     let body = T_LETTER!(env_name.clone());
-    DefMacroI!(T_CS!("\\@currenvir"), None, body.clone(), state);
+    DefMacro!(T_CS!("\\@currenvir"), None, body.clone(), state);
   });
   before_digest_env.push(current_environment_closure);
 
