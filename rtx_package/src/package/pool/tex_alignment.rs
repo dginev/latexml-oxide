@@ -3,7 +3,7 @@ use crate::package::*;
 // Basic alignment support needed by most environments & commands.
 //======================================================================
 LoadDefinitions!(state, {
-  Tag!("ltx:td", after_close => tagsub!(doc, node, state, { doc.trim_node_whitespace(node)?; }));
+  Tag!("ltx:td", after_close => sub[doc, node, state] { doc.trim_node_whitespace(node)?; });
 
   //----------------------------------------------------------------------
   // Primitive column types;

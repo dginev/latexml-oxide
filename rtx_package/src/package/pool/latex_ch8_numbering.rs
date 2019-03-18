@@ -18,9 +18,9 @@ LoadDefinitions!(state, {
   // For LaTeX documents, We want id's on para, as well as sectional units.
   // However, para get created implicitly on Document construction, rather than
   // explicitly during digestion (via a whatsit), we can't use the usual LaTeX counter mechanism.
-  Tag!("ltx:para", after_open => tagsub!(document, node, state, {
+  Tag!("ltx:para", after_open => sub[document, node, state] {
     generate_id(document, node, "p", state)?;
-  }));
+  });
 
   DefPrimitive!("\\newcounter{}[]", sub[stomach, args, state] {
     unpack!(args => cs, default);
