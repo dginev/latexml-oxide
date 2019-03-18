@@ -195,9 +195,9 @@ LoadDefinitions!(state, {
     unpack_to_token!(args => cs, num);
     let count = s!("\\count{}", num.to_number().value_of());
     let setter_count = count.clone();
-    DefRegisterI!(cs, None, Number::new(0.0),
-      getter => getter!(args, state, { state.lookup_number(&count).unwrap_or_default() }),
-      setter => setter!(value, args, state, { state.assign_value(&setter_count, value, None); }));
+    DefRegister!(cs, None, Number::new(0.0),
+      getter => sub[args, state] { state.lookup_number(&count).unwrap_or_default() },
+      setter => sub[value, args, state] { state.assign_value(&setter_count, value, None); });
     AfterAssignment!();
     Ok(vec![])
   });
@@ -206,9 +206,9 @@ LoadDefinitions!(state, {
     unpack_to_token!(args=> cs, num);
     let dimen = s!("\\dimen{}", num.to_number().value_of());
     let dimen2 = dimen.clone();
-    DefRegisterI!(cs, None, Dimension::new(0.0),
-      getter => getter!(args, state, { state.lookup_dimension(&dimen).unwrap_or_default() }),
-      setter => setter!(value, args, state, { state.assign_value(&dimen2, value, None); })
+    DefRegister!(cs, None, Dimension::new(0.0),
+      getter => sub[args, state] { state.lookup_dimension(&dimen).unwrap_or_default() },
+      setter => sub[value, args, state] { state.assign_value(&dimen2, value, None); }
     );
     AfterAssignment!();
   });
@@ -217,9 +217,9 @@ LoadDefinitions!(state, {
     unpack_to_token!(args=> cs, num);
     let skip = s!("\\skip{}", num.to_number().value_of());
     let skip2 = skip.clone();
-    DefRegisterI!(cs, None, Glue::new(0.0),
-      getter => getter!(args, state, { state.lookup_glue(&skip).unwrap_or_default() }),
-      setter => setter!(value, args, state, { state.assign_value(&skip2, value, None); })
+    DefRegister!(cs, None, Glue::new(0.0),
+      getter => sub[args, state] { state.lookup_glue(&skip).unwrap_or_default() },
+      setter => sub[value, args, state] { state.assign_value(&skip2, value, None); }
     );
     AfterAssignment!();
   });
@@ -239,9 +239,10 @@ LoadDefinitions!(state, {
     unpack_to_token!(args=> cs, num);
     let toks = s!("\\toks{}", num.to_number().value_of() as usize);
     let toks_setter = toks.clone();
-    DefRegisterI!(cs, None, Tokens!(),
-      getter => getter!(args, state, { state.lookup_tokens(&toks).unwrap_or_default() }),
-      setter => setter!(value, args, state, { state.assign_value(&toks_setter, value, None); }));
+    DefRegister!(cs, None, Tokens!(),
+      getter => sub[args, state] { state.lookup_tokens(&toks).unwrap_or_default() },
+      setter => sub[value, args, state] { state.assign_value(&toks_setter, value, None); }
+    );
   });
 
   // NOTE: Get all these handled as registers
@@ -272,23 +273,23 @@ LoadDefinitions!(state, {
 
   // <codename> = \catcode | \mathcode | \lccode | \uccode | \sfcode | \delcode
   DefRegister!("\\catcode Number", Number::new(0.0),
-    getter => getter!(args, state, {
+    getter => sub[args, state] {
       let num : f32 = args[0].to_number().value_of();
       let refchar = (num as u8) as char;
       let code : Catcode = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       let code : u8 = code.into();
       Number::new(code)
-    }),
-    setter => setter!(value, args, state, {
+    },
+    setter => sub[value, args, state] {
       let c_char = (args[0].to_number().value_of() as u8) as char;
       let c_code = From::from(value.value_of() as u8);
       state.assign_catcode(c_char, c_code, None);
-    })
+    }
   );
 
   // Only used for active math characters, so far
   DefRegister!("\\mathcode Number", Number::new(0.0),
-    getter => getter!(args, state, {
+    getter => sub[args, state] {
       let ch_code   = args[0].to_number().value_of() as u8;
       let ch : char = ch_code as char;
       let code = match state.lookup_mathcode(&ch.to_string()) {
@@ -296,46 +297,46 @@ LoadDefinitions!(state, {
         Some(code) => code as u8
       };
       Number::new(f32::from(code))
-    }),    // defaults to the char's code itself(?)
-    setter => setter!(value, args, state, {
+    },    // defaults to the char's code itself(?)
+    setter => sub[value, args, state] {
       let ch = args[0].to_number().value_of() as u8;
       let ch : char = ch as char;
       state.assign_mathcode(ch, value.value_of() as u16, None);
-    })
+    }
   );
 
   DefRegister!("\\sfcode Number", Number::new(0.0),
-    getter=>getter!(args, state, { unimplemented!(); () }),
+    getter=> sub[args, state] { unimplemented!(); () },
     // my $code = $STATE->lookupSFcode(chr($_[0]->valueOf));
     //  Number(defined $code ? $code : 0); },
-    setter => setter!(value, args, state, { unimplemented!(); ()
+    setter => sub[value, args, state] { unimplemented!(); ()
       //$STATE->assignSFcode(chr($_[1]->valueOf) => $_[0]->valueOf);
-      })
+    }
   );
   DefRegister!("\\lccode Number", Number::new(0.0),
-    getter=>getter!(args, state, { unimplemented!(); () }),
+    getter=> sub[args, state] { unimplemented!(); () },
       // my $code = $STATE->lookupLCcode(chr($_[0]->valueOf));
       // Number(defined $code ? $code : 0); },
-    setter => setter!(value, args, state, { unimplemented!(); ()
+    setter => sub[value, args, state] { unimplemented!(); ()
       //$STATE->assignLCcode(chr($_[1]->valueOf) => $_[0]->valueOf);
-      })
+    }
   );
   DefRegister!("\\uccode Number", Number::new(0.0),
-    getter=>getter!(args, state, { unimplemented!(); () }),
+    getter=> sub[args, state] { unimplemented!(); () },
       // my $code = $STATE->lookupUCcode(chr($_[0]->valueOf));
       // Number(defined $code ? $code : 0); },
-    setter => setter!(value, args, state, { unimplemented!(); ()
+    setter => sub[value, args, state] { unimplemented!(); ()
       //$STATE->assignUCcode(chr($_[1]->valueOf) => $_[0]->valueOf);
-    })
+    }
   );
   // Not used anywhere (yet)
   DefRegister!("\\delcode Number", Number::new(0.0),
-    getter=>getter!(args, state, { unimplemented!(); () }),
+    getter=> sub[args, state] { unimplemented!(); () },
       // my $code = $STATE->lookupDelcode(chr($_[0]->valueOf));
       // Number(defined $code ? $code : 0); },
-    setter => setter!(value, args, state, { unimplemented!(); ()
+    setter => sub[value, args, state] { unimplemented!(); ()
       //$STATE->assignDelcode(chr($_[1]->valueOf) => $_[0]->valueOf);
-    })
+    }
   );
 
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!

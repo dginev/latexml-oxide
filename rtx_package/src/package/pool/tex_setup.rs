@@ -597,7 +597,7 @@ LoadDefinitions!(state, {
         let message = s!("A <register> was supposed to be here. Got {:?}", token);
         Error!("expected","<register>", gullet, state, message);
         // if isDefinable!(token) {
-        //   DefRegisterI!(token, None, Tokens!(), state);
+        //   DefRegister!(token, None, Tokens!(), state);
         //   return Tokens!(defn);
         // }
       }
