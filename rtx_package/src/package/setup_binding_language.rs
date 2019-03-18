@@ -1975,55 +1975,132 @@ macro_rules! BeginItemize {
   }}
 }
 
+//
 // Tricks:
 // $(:)?$(=>)?   allow for any of "key:val", "key => val" and even "key :=> val".
 //
 #[macro_export]
 macro_rules! DefEnv {
+  // entry points (this is where a macro call starts):
+  ($proto:literal, sub[$document:ident, $args:ident, $props:ident, $state_arg:ident] $body:block, $($input:tt)* ) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {});
+    DefEnvironmentIWO!($proto,
+      Some(Rc::new(|$document: &mut Document, $args: &Vec<Option<Digested>>, $props: &HashMap<String, Stored>, $state_arg: &mut State|
+        { $body }
+      )),
+      options);
+  }};
+  ($proto:literal, $replacement:expr) => {
+    DefEnvironmentWO!($proto, $replacement, ConstructorOptions::default());
+  };
+  ($proto:literal, $replacement:expr, $($input:tt)* ) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {});
+    //                              ^^^^^^^^^^^^    ^^
+    //                                 input       output
+    DefEnvironmentWO!($proto, $replacement, options);
+  }};
+}
+
+#[macro_export]
+macro_rules! defi_opts {
   // input is empty: time to output (with optional trailing comma allowed )
-  (@munch ($(,)?) -> { $proto:expr, $replacement:expr, $([$id:ident, $body:expr])*}) => {
-    // let options = ConstructorOptions::default();
-    // { $(options.$id = $body);* };
-    let options = ConstructorOptions {
+  (@munch ($(,)?) -> { $([$id:ident @ $body:expr])+ } ) => {
+    ConstructorOptions {
       $($id: $body),*,
       ..ConstructorOptions::default()
-    };
-    DefEnvironmentWO!($proto, $replacement, options);
+    }
   };
-
   // mode : Option<TexMode>
-  (@munch ( $(,)? mode $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$p:expr, $r:expr, $([$key:ident , $val:expr])*}) => {
-    DefEnv!(@munch () -> {$p, $r, $( [ $key , $val ] )* [ mode , $literal.into_option() ] });
+  (@munch ( $(,)? mode $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$( [ $key @ $val ] )* [ mode @ $literal.into_option() ] });
+  };
+  // font: Font
+  (@munch ( $(,)? font $(:)?$(=>)? { $($fkey:ident => $fvalue:literal),* } $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$( [ $key @ $val ] )* [ font @ Font!($($fkey => $fvalue),*) ] });
   };
   // properties: PropertiesClosure
-  (@munch ( $(,)? properties $(:)?$(=>)? $body:block $($next:tt)*) -> {$p:expr, $r:expr, $([$key:ident , $val:expr])*}) => {
-    DefEnv!(@munch ($($next)*) -> {$p, $r, $( [ $key , $val ] )* [ properties , properties!(sub $body) ] });
+  (@munch ( $(,)? properties $(:)?$(=>)? $body:block $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$( [ $key @ $val ] )* [ properties @ properties!($body) ] });
   };
   // before_digest_end: Vec<BeforeDigestClosure>
-  (@munch ( $(,)? before_digest_end $(:)?$(=>)? $body:block $($next:tt)*) -> {$p:expr, $r:expr, $([$key:ident , $val:expr])*}) => {
-    DefEnv!(@munch ($($next)*) -> {$p, $r, $([$key , $val])* [before_digest_end , before_digest!(sub $body) ]});
+  (@munch ( $(,)? before_digest_end $(:)?$(=>)? sub $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@before_digest_end (sub $($next)*) -> {$( [ $key @ $val ] )*});
   };
+  (@munch ( $(,)? before_digest_end $(:)?$(=>)? $body:block $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@before_digest_end ($body $($next)*) -> {$( [ $key @ $val ] )*});
+  };
+
+
   // before_digest: Vec<BeforeDigestClosure>
-  (@munch ( $(,)? before_digest $(:)?$(=>)? $body:block $($next:tt)*) -> {$p:expr, $r:expr, $([$key:ident , $val:expr])*}) => {
-    DefEnv!(@munch ($($next)*) -> {$p, $r, $([$key , $val])* [before_digest , before_digest!(sub $body) ]});
+  (@munch ( $(,)? before_digest $(:)?$(=>)? sub $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@before_digest (sub $($next)*) -> {$( [ $key @ $val ] )*});
   };
+  (@munch ( $(,)? before_digest $(:)?$(=>)? $body:block $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@before_digest ($body $($next)*) -> {$( [ $key @ $val ] )*});
+  };
+
+  // after_digest: Vec<DigestionClosure>
+  (@munch ( $(,)? after_digest $(:)?$(=>)? sub $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@after_digest (sub $($next)*) -> {$( [ $key @ $val ] )*});
+  };
+  (@munch ( $(,)? after_digest $(:)?$(=>)? $body:block $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@after_digest ($body $($next)*) -> {$( [ $key @ $val ] )*});
+  };
+
+  // after_digest_begin: Vec<DigestionClosure>
+  (@munch ( $(,)? after_digest_begin $(:)?$(=>)? sub $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@after_digest_begin (sub $($next)*) -> {$( [ $key @ $val ] )*});
+  };
+  (@munch ( $(,)? after_digest_begin $(:)?$(=>)? $body:block $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@after_digest_begin ($body $($next)*) -> {$( [ $key @ $val ] )*});
+  };
+
 
   // misc "id" with literal value
-  (@munch ( $(,)? $id:ident $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$p:expr, $r:expr, $([$key:ident , $val:expr])*}) => {
-    DefEnv!(@munch ($($next)*) -> {$p, $r, $([$key , $val])* [$id , $literal]});
+  (@munch ( $(,)? $id:ident $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$([$key @ $val])* [$id @ $literal]});
   };
   // misc "id" with block value
-  (@munch ( $(,)? $id:ident $(:)?$(=>)? $body:block $($next:tt)*) -> {$p:expr, $r:expr, $([$key:ident , $val:expr])*}) => {
-    DefEnv!(@munch ($($next)*) -> {$p, $r, $([$key , $val])* [$id , $body]});
+  (@munch ( $(,)? $id:ident $(:)?$(=>)? $body:block $($next:tt)*) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$([$key @ $val])* [$id @ $body]});
   };
 
-  // entry point (this is where a macro call starts)
-  ($proto_raw:expr, $replacement:expr) => {
-    DefEnv!(@munch () -> {$proto_raw , $replacement,});
+  //-- aux
+  // Closure parsers
+
+  (@before_digest_end ($body:block $($next:tt)* )
+                  -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$([$key @ $val])* [before_digest_end @ before_digest!($body)]});
   };
-  ($proto_raw:expr, $replacement:expr, $($input:tt)* ) => {
-    DefEnv!(@munch ($($input)*) -> {$proto_raw , $replacement,});
-    //                 ^^^^^^^^^^^^    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    //                     input       output
-  }
+  (@before_digest_end (sub [$stomach_arg:ident, $state_arg: ident] $body:block $($next:tt)* )
+                  -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$([$key @ $val])* [before_digest_end @ before_digest!($stomach_arg, $state_arg, $body)]});
+  };
+
+  (@before_digest (sub [$stomach_arg:ident, $state_arg: ident] $body:block $($next:tt)* )
+                  -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$([$key @ $val])* [before_digest @ before_digest!($stomach_arg, $state_arg, $body)]});
+  };
+  (@before_digest ($body:block $($next:tt)* ) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$([$key @ $val])* [before_digest @ before_digest!($body)]});
+  };
+
+  (@after_digest (
+    sub[$stomach_arg:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$([$key @ $val])* [after_digest @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]});
+  };
+  (@after_digest (
+    $body:block $($next:tt)* ) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$([$key @ $val])* [after_digest @ after_digest!(stomach, whatsit, state, $body)]});
+  };
+
+  (@after_digest_begin (
+    sub[$stomach_arg:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$([$key @ $val])* [after_digest_begin @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]});
+  };
+  (@after_digest_begin (
+    $body:block $($next:tt)* ) -> {$([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$([$key @ $val])* [after_digest_begin @ after_digest!(stomach, whatsit, state, $body)]});
+  };
+
 }

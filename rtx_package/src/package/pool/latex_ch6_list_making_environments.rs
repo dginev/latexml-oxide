@@ -78,10 +78,10 @@ LoadDefinitions!(state, {
 
   DefEnv!("{itemize}",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
-    properties: { BeginItemize!("itemize", "@item") },
-    before_digest_end: { Digest!("\\par")?; },
-    locked: true,
-    mode: "text"
+    properties => { BeginItemize!("itemize", "@item") },
+    before_digest_end => { Digest!("\\par")?; },
+    locked => true,
+    mode => "text"
   );
   DefEnv!("{enumerate}",
     "<ltx:enumerate  xml:id='#id'>#body</ltx:enumerate>",

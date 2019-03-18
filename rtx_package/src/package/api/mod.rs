@@ -5,13 +5,14 @@ pub mod def_dialect;
 
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
 use rtx_core::common::dimension::{Dimension, MuDimension};
 use rtx_core::common::error::*;
 use rtx_core::common::glue::{Glue, MuGlue};
 use rtx_core::common::number::Number;
+use rtx_core::common::store::Stored;
 use rtx_core::definition::register::*;
 use rtx_core::keyvals::KeyVals;
 use rtx_core::tbox::Tbox;
@@ -210,3 +211,17 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for List {
   fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::List(Rc::new(self)))) }
 }
 
+
+pub trait IntoPropertiesResult {
+  fn into_properties_result(self) -> Result<HashMap<String,Stored>>;
+}
+impl IntoPropertiesResult for HashMap<String,Stored> {
+  fn into_properties_result(self) -> Result<HashMap<String,Stored>> {
+    Ok(self)
+  }
+}
+impl IntoPropertiesResult for Result<HashMap<String,Stored>> {
+  fn into_properties_result(self) -> Result<HashMap<String,Stored>> {
+    self
+  }
+}

@@ -111,12 +111,12 @@ LoadDefinitions!(state, {
   //
   // Probably there are other places (eg in titlepage?) that should force the close??
 
-  DefEnvironment!("{abstract}", "",
-    after_digest_begin => after_digest!(stomach, args, state, {
+  DefEnv!("{abstract}", "",
+    after_digest_begin => sub[stomach, args, state] {
       AssignValue!("inPreamble" => false);
       AddToMacro!("\\@startsection@hook", "\\maybe@end@abstract");
-    }),
-    after_digest => after_digest!(stomach, args, state, {
+    },
+    after_digest => sub[stomach, args, state] {
       let abstract_title = stomach.digest(Tokens!(T_CS!("\\format@title@abstract"),T_BEGIN!(), T_CS!("\\abstractname"), T_END!()), state)?;
 
       let mut frontmatter = match state.lookup_value_mut("frontmatter") {
@@ -126,9 +126,9 @@ LoadDefinitions!(state, {
       let mut abstr = frontmatter.entry("ltx:abstract".to_string()).or_insert_with(Vec::new);
       abstr.push(("ltx:abstract".to_string(), Some(string_map!("name" => abstract_title)), List::new(stomach.regurgitate()).into()));
       DefMacro!("\\maybe@end@abstract", "", scope => Some(Scope::Global));
-    }),
+    },
     locked => true,
-    mode => "text".into_option()
+    mode => "text"
   );
   // If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
   AssignValue!("\\abstract:locked" => false); // REDEFINE the above locked definition!
@@ -167,7 +167,7 @@ LoadDefinitions!(state, {
   // Presumably the earlier, larger one is title, rest are authors/affiliations...
   // Particularly, if they start with a pseudo superscript or other "marker", they're probably affil!
   // For now, we just give an info message
-  DefEnvironment!("{titlepage}", "<ltx:titlepage>#body",
+  DefEnv!("{titlepage}", "<ltx:titlepage>#body",
     // TODO
     // before_digest => sub { Let('\centering', '\relax');
     //   DefEnvironment('{abstract}',
@@ -177,7 +177,7 @@ LoadDefinitions!(state, {
     //   return; },
     // beforeDigestEnd => sub { Digest(T_CS('\maybe@end@title')); },
     locked => true,
-    mode => "text".into_option()
+    mode => "text"
   );
 
   DefConstructor!("\\maybe@end@title", sub[document,args,props,state] {

@@ -54,7 +54,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>\
       <ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",    // At least an empty tag! ?
-    properties => properties!(stomach, args, state, { 
+    properties => properties!(stomach, args, state, {
       // TODO: So, I hear you like boilerplate...
       // in Perl this was the super simple:
       // Digest(Expand($_[1]))

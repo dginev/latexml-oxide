@@ -17,8 +17,7 @@ LoadDefinitions!(state, {
   //     AssignValue('@at@end@document', []) unless LookupValue('@at@end@document');
   //     PushValue('@at@end@document', $_[1]->unlist); });
 
-  DefEnvironmentI!("{document}",
-    Some(Rc::new(|document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, Stored>, state: &mut State| {
+  DefEnv!("{document}", sub[document, args, props, state] {
       let id = prop_str!(props,"id");
       let body = prop_whatsit!(props,"body");
       if let Some(mut docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
@@ -31,8 +30,8 @@ LoadDefinitions!(state, {
         document.insert_element("ltx:document", vec![body], Some(attrib), state)?;
       }
       Ok(())
-    })),
-    before_digest => before_digest!(_stomach, state, { AssignValue!("inPreamble", false); }),
+    },
+    before_digest => { AssignValue!("inPreamble", false); },
     // after_digest_begin => vec![|stomach, whatsit, state| {
     //   whatsit.set_property("id", Expand!(T_CS!("\\thedocument@ID"), state));
     //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
@@ -43,14 +42,14 @@ LoadDefinitions!(state, {
     //     return Vec::new()
     //   }
     // }],
-    before_digest_end => before_digest!(stomach, state, {
-      stomach.get_gullet_mut().flush(state);
+    before_digest_end => sub[stomach, inner_state] {
+      stomach.get_gullet_mut().flush(inner_state);
       if let Some(Stored::Tokens(ops)) = RemoveValue!("@at@end@document") {
-        Ok(vec![stomach.digest(ops, state)?]) // TODO: Can we improve to the regular Digest!(ops) syntax?
+        Ok(vec![stomach.digest(ops, inner_state)?]) // TODO: Can we improve to the regular Digest!(ops) syntax?
       } else {
         Ok(Vec::new())
       }
-    }),
-    mode => Some(s!("text"))
+    },
+    mode => "text"
   );
 });

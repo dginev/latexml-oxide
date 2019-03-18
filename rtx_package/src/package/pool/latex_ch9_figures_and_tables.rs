@@ -53,7 +53,7 @@ DefPrimitive!("\\@@add@caption@counters", sub[stomach, args, state] {
   let inlist  = stomach.digest(vec![T_CS!(s!("\\ext@{}", captype))], state)?.to_string();
   state.assign_value(&s!("{}_tags", captype), props.get("tags"), Some(Scope::Global));
   state.assign_value(&s!("{}_id", captype), props.get("id"),   Some(Scope::Global));
-  state.assign_value(&s!("{}_inlist", captype), inlist,      Some(Scope::Global)); 
+  state.assign_value(&s!("{}_inlist", captype), inlist,      Some(Scope::Global));
 });
 
 DefConstructor!("\\@@generic@caption[]{}", "<ltx:text class='ltx_caption'>#2</ltx:text>",
@@ -74,18 +74,18 @@ DefConstructor!("\\@@toccaption{}", "<ltx:toccaption>#1</ltx:toccaption>"
   // sizer => "0"
 );
 
-// TODO: implement optional argument {figure}[] 
-DefEnvironment!("{figure}",r###"
+// TODO: implement optional argument {figure}[]
+DefEnv!("{figure}",r###"
   <ltx:figure xml:id='#id' inlist='#inlist'>
-    #tags 
+    #tags
     #body
   </ltx:figure>
   "###,
-  properties   => properties!({ map!("layout" => "vertical".into()) }),
-  before_digest => before_digest!({ DefMacro!("\\@captype", "figure"); }),
-  after_digest  => after_digest!(stomach, tag, state, {
+  properties   => { map!("layout" => "vertical".into()) },
+  before_digest => { DefMacro!("\\@captype", "figure"); },
+  after_digest  => sub[stomach, tag, state] {
     rescue_caption_counters("figure", tag, stomach, state);
-  })
+  }
 );
 // DefEnvironment('{figure*}[]',
 //   "<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>"

@@ -1,9 +1,9 @@
 use crate::package::*;
 
 LoadDefinitions!(state, {
-  DefEnvironment!("{alltt}", "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
-  font => Font!(family => "typewriter", series => "medium", shape => "upright"),
-  before_digest => before_digest!(stomach, inner_state, {
+  DefEnv!("{alltt}", "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
+  font => {family => "typewriter", series => "medium", shape => "upright"},
+  before_digest => sub[stomach, inner_state] {
     for c in &['$', '&', '#', '^', '_', '%', '~'] {
      AssignCatcode!(*c, Catcode::OTHER);
     }
@@ -14,5 +14,5 @@ LoadDefinitions!(state, {
     AssignValue!("PRESERVE_NEWLINES", true);
     // \@noligs: This SHOULD inhibit ligature substitution! (eg quotes, dots, etc!!!)
     // \frenchspacing\@vobeyspaces1
-  }));
+  });
 });

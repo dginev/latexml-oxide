@@ -41,8 +41,8 @@ LoadDefinitions!(state, {
 
   //======================================================================
   Tag!("ltx:document",
-    after_open => sub!(|document, node, state| {
-      document.process_pending_resources(state)
+    after_open => tagsub!(document, node, state, {
+      document.process_pending_resources(state)?;
     })
   );
   RequireResource!("LaTeXML.css");
