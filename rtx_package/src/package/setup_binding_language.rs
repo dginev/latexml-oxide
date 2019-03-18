@@ -647,6 +647,62 @@ macro_rules! AssignRegister {
 //                     These properties can be used in the constructor.
 
 #[macro_export]
+macro_rules! DefConstructor {
+  // Closure replacement flavors
+  ($proto:literal, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $($input:tt)+) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, options);
+  }};
+  ($proto:literal, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) => {{
+    DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, ConstructorOptions::default());
+  }};
+  // Literal replacement flavors
+  ($proto:expr, $replacement:literal, $($input:tt)+) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    DefConstructorWO!($proto, $replacement, options);
+  }};
+  ($proto:expr, $replacement:literal) => {{
+    DefConstructorWO!($proto, $replacement, ConstructorOptions::default());
+  }};
+}
+
+// TODO: Internal version not yet refactored
+#[macro_export]
+macro_rules! DefConstructorI {
+  ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))), ConstructorOptions::default()));
+  ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $($key:ident => $val:expr),*) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))),
+      NewDefault!(ConstructorOptions, $($key=>$val),*)));
+  // None replacement
+  ($cs:expr, $paramlist:expr, None) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), ConstructorOptions::default()));
+  ($cs:expr, $paramlist:expr, None, $($key:ident => $val:expr),*) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions, $($key=>$val),*)));
+  // literal replacement to compile
+  ($cs:expr, $paramlist:expr, $replacement: literal, $($input:tt)*) => {{
+    let compiled_replacement;
+    compile_replacement!(compiled_replacement, $replacement);
+    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    DefConstructorIWO!($cs, $paramlist, compiled_replacement, options);
+  }};
+
+  // with explicit state
+  ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+    $state_arg:ident) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))),
+      ConstructorOptions::default(), $state_arg));
+  ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
+    $state_arg:ident, $($key:ident => $val:expr),*) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))),
+      NewDefault!(ConstructorOptions, $($key=>$val),*), $state_arg));
+  // None replacement
+  ($cs:expr, $paramlist:expr, None, $state_arg:ident) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions), $state_arg));
+  ($cs:expr, $paramlist:expr, None, $state_arg:ident, $($key:ident => $val:expr),*) =>
+    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions, $($key=>$val),*), $state_arg))
+}
+
+#[macro_export]
 macro_rules! DefConstructorIWO {
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr) => {{
     bind_state_mut!(st);
@@ -1520,24 +1576,31 @@ macro_rules! DefMacroI(
 #[macro_export]
 macro_rules! DefMacro {
   // closure
-  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block) =>
-    (DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, None));
-  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $($key:ident=>$val:expr),*) =>
-    (DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*))));
-  ($proto:expr, sub $body:block) =>
-    (DefMacroWO!($proto, sub[gullet, args, inner_state] $body, None));
-  // String form
-  ($proto:expr, $expansion:expr) => (DefMacroWO!($proto, $expansion, None));
-  ($proto:expr, $expansion:expr, $($key:ident=>$val:expr),*) =>
-    (DefMacroWO!($proto, $expansion, Some(NewDefaultV!(ExpandableOptions, $($key=>$val),*))));
-
+  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, Some(options));
+  }};
+  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block) => {
+    DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, None);
+  };
+  ($proto:expr, $body:block) => {
+    DefMacroWO!($proto, sub[gullet, args, inner_state] $body, None);
+  };
   // closure; explicit state
   ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block, $state_arg:ident) =>
     (DefMacroWO!($proto, sub[$gullet, $args, $inner_state] $body, None, $state_arg));
   // string; explicit state
   ($proto:expr, $expansion:expr, $state_arg:ident) => (DefMacroWO!($proto, $expansion, None, $state_arg));
-  ($proto:expr, $expansion:expr, $state_arg:ident, $($key:ident=>$val:expr),*) =>
-    (DefMacroWO!($proto, $expansion, Some(NewDefault!(ExpandableOptions, $($key=>$val),*), $state_arg)));
+  ($proto:expr, $expansion:expr, $state_arg:ident, $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    DefMacroWO!($proto, $expansion, Some(options), $state_arg);
+  }};
+  // String; implicit state
+  ($proto:expr, $expansion:expr) => (DefMacroWO!($proto, $expansion, None));
+  ($proto:expr, $expansion:expr, $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    DefMacroWO!($proto, $expansion, Some(options));
+  }};
 }
 
 #[macro_export]
@@ -1549,61 +1612,6 @@ macro_rules! DefRegister {
   ($proto:expr, $value:expr, $($key:ident => $val:expr),*) => (DefRegisterWO!($proto, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*))));
   ($proto:expr, $value:expr, $state_arg:ident, $($key:ident => $val:expr),*) =>
     (DefRegisterWO!($proto, $value, Some(NewDefault!(RegisterOptions, $($key=>$val),*)), $state_arg));
-}
-
-#[macro_export]
-macro_rules! DefConstructorI {
-  ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) =>
-    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))), ConstructorOptions::default()));
-  ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $($key:ident => $val:expr),*) =>
-    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))),
-      NewDefault!(ConstructorOptions, $($key=>$val),*)));
-  // None replacement
-  ($cs:expr, $paramlist:expr, None) => (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), ConstructorOptions::default()));
-  ($cs:expr, $paramlist:expr, None, $($key:ident => $val:expr),*) =>
-    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions, $($key=>$val),*)));
-  // literal replacement to compile
-  ($cs:expr, $paramlist:expr, $replacement: literal, $($input:tt)*) => {{
-    let compiled_replacement;
-    compile_replacement!(compiled_replacement, $replacement);
-    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
-    DefConstructorIWO!($cs, $paramlist, compiled_replacement, options);
-  }};
-
-  // with explicit state
-  ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-    $state_arg:ident) =>
-    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))),
-      ConstructorOptions::default(), $state_arg));
-  ($cs:expr, $paramlist:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block,
-    $state_arg:ident, $($key:ident => $val:expr),*) =>
-    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(replacement!($document, $args, $props, $inner_state, $body))),
-      NewDefault!(ConstructorOptions, $($key=>$val),*), $state_arg));
-  // None replacement
-  ($cs:expr, $paramlist:expr, None, $state_arg:ident) =>
-    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions), $state_arg));
-  ($cs:expr, $paramlist:expr, None, $state_arg:ident, $($key:ident => $val:expr),*) =>
-    (DefConstructorIWO!($cs, $paramlist, Some(Rc::new(noreplacement!())), NewDefault!(ConstructorOptions, $($key=>$val),*), $state_arg))
-}
-
-#[macro_export]
-macro_rules! DefConstructor {
-  // Closure replacement flavors
-  ($proto:literal, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $($input:tt)+) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
-    DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, options);
-  }};
-  ($proto:literal, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) => {{
-    DefConstructorWO!($proto, $document, $args, $props, $inner_state, $body, ConstructorOptions::default());
-  }};
-  // Literal replacement flavors
-  ($proto:expr, $replacement:literal, $($input:tt)+) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
-    DefConstructorWO!($proto, $replacement, options);
-  }};
-  ($proto:expr, $replacement:literal) => {{
-    DefConstructorWO!($proto, $replacement, ConstructorOptions::default());
-  }};
 }
 
 #[macro_export]
@@ -1997,6 +2005,13 @@ macro_rules! defi_opts {
   // alias : Option<String>
   (@munch ( $(,)? alias $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ alias @ $literal.into_option() ] });
+  };
+  // scope: Option<Scope>
+  (@munch ( $(,)? scope $(:)?$(=>)? $scope:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ scope @ $scope.into_option() ] });
+  };
+  (@munch ( $(,)? scope $(:)?$(=>)? $scope:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ scope @ $scope.into_option() ] });
   };
   // font: Font
   (@munch ( $(,)? font $(:)?$(=>)? { $($fkey:ident => $fvalue:literal),* } $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
