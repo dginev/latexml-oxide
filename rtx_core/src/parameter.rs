@@ -253,7 +253,7 @@ impl Parameter {
 
   fn setup_catcodes(&self, state: &mut State) {
     if self.semiverbatim {
-        state.begin_semiverbatim(None);
+      state.begin_semiverbatim(None);
     }
   }
 
@@ -270,7 +270,7 @@ impl Parameter {
     // cleanup after the fact!
     // Hmmm, seem to still need it...
     self.setup_catcodes(state);
-    
+
     let closure = &self.reader;
     let mut value = closure(gullet, vec![], self.extra.clone(), state)?;
     if self.semiverbatim && !value.is_empty() {

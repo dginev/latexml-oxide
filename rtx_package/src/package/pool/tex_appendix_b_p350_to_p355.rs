@@ -7,7 +7,7 @@ LoadDefinitions!(state, {
   // These should be 0 width, but perhaps also shifted?
   DefMacro!("\\llap{}", "\\hbox to 0pt{#1}");
   DefMacro!("\\rlap{}", "\\hbox to 0pt{#1}");
-  DefMacro!("\\m@th",   "\\mathsurround=0pt ");
+  DefMacro!("\\m@th", "\\mathsurround=0pt ");
 
   // \strutbox
   DefMacro!("\\strut", "");
@@ -29,7 +29,7 @@ LoadDefinitions!(state, {
   // TODO: \item, \itemitem not done!
   // This could probably be adopted from LaTeX, if the <itemize> could auto-open
   // and close!
-  DefConstructor!("\\item{}",     "#1");
+  DefConstructor!("\\item{}", "#1");
   DefConstructor!("\\itemitem{}", "#1");
 
   DefMacro!("\\textindent{}", "#1");
@@ -37,5 +37,4 @@ LoadDefinitions!(state, {
   // Conceivably this should enclose the next para in a block?
   // Or add attribute to it? Or...
   DefPrimitive!("\\narrower", None);
-
 });

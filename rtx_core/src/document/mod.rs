@@ -1347,7 +1347,7 @@ impl Document {
   }
 
   fn get_insertion_candidates(&self, node: &Node) -> Vec<Node> {
-    let mut nodes : Vec<Node> = Vec::new();
+    let mut nodes: Vec<Node> = Vec::new();
     // Check the current element FIRST, then build list of candidates.
     let mut first = if node.get_type() == Some(NodeType::TextNode) {
       Cow::Owned(node.get_parent().unwrap())
@@ -1361,12 +1361,12 @@ impl Document {
     }
 
     // Collect previous siblings, if node is a text node.
-    let mut element_node_opt : Option<Cow<Node>> = if node.get_type() == Some(NodeType::TextNode) {
+    let mut element_node_opt: Option<Cow<Node>> = if node.get_type() == Some(NodeType::TextNode) {
       let mut current_opt = Some(Cow::Borrowed(node));
       while let Some(current) = current_opt {
         current_opt = match current.get_prev_sibling() {
           None => None,
-          Some(s) => Some(Cow::Owned(s))
+          Some(s) => Some(Cow::Owned(s)),
         };
         if current.get_name() == "_Capture_" {
           nodes.extend(xml::element_nodes(&current));
@@ -1376,7 +1376,7 @@ impl Document {
       }
       match node.get_parent() {
         None => None,
-        Some(p) => Some(Cow::Owned(p))
+        Some(p) => Some(Cow::Owned(p)),
       }
     } else {
       Some(Cow::Borrowed(node))
@@ -1385,7 +1385,7 @@ impl Document {
     while let Some(element_node) = element_node_opt {
       element_node_opt = match element_node.get_parent() {
         None => None,
-        Some(p) => Some(Cow::Owned(p))
+        Some(p) => Some(Cow::Owned(p)),
       };
       let node_type = element_node.get_type();
       if node_type.is_none() || node_type == Some(NodeType::DocumentNode) {
@@ -1410,59 +1410,60 @@ impl Document {
     }
     if key == "xml:id" {
       // If it's an ID attribute
-      let recorded = self.record_id(value);    // Do id book keeping
-      // TODO: Need to improve Namespace ergonomics, also in rust-libxml
-      // let node_ns = self
-      //   .document
-      //   .get_root_element()
-      //   .unwrap()
-      //   .get_namespace_declarations()
-      //   .into_iter()
-      //   .find(|ns| ns.get_href() == XML_NS)
-      //   .unwrap_or_else(|| {
-      //     node
-      //       .get_namespace_declarations()
-      //       .into_iter()
-      //       .find(|ns| ns.get_href() == XML_NS)
-      //       .unwrap_or_else(|| {
-      //         Namespace::new(
-      //           "xml",
-      //           &XML_NS.to_string().clone(),
-      //           &mut self.document.get_root_element().unwrap(),
-      //         ).unwrap_or_else(|_| {
-      //           panic!(
-      //             "Could not set NS for {:?}\n\n at \n\n {:?}",
-      //             self.document.node_to_string(node),
-      //             self.document.to_string(true)
-      //           )
-      //         })
-      //       })
-      //   });
+      let recorded = self.record_id(value); // Do id book keeping
+                                            // TODO: Need to improve Namespace ergonomics, also in rust-libxml
+                                            // let node_ns = self
+                                            //   .document
+                                            //   .get_root_element()
+                                            //   .unwrap()
+                                            //   .get_namespace_declarations()
+                                            //   .into_iter()
+                                            //   .find(|ns| ns.get_href() == XML_NS)
+                                            //   .unwrap_or_else(|| {
+                                            //     node
+                                            //       .get_namespace_declarations()
+                                            //       .into_iter()
+                                            //       .find(|ns| ns.get_href() == XML_NS)
+                                            //       .unwrap_or_else(|| {
+                                            //         Namespace::new(
+                                            //           "xml",
+                                            //           &XML_NS.to_string().clone(),
+                                            //           &mut self.document.get_root_element().unwrap(),
+                                            //         ).unwrap_or_else(|_| {
+                                            //           panic!(
+                                            //             "Could not set NS for {:?}\n\n at \n\n {:?}",
+                                            //             self.document.node_to_string(node),
+                                            //             self.document.to_string(true)
+                                            //           )
+                                            //         })
+                                            //       })
+                                            //   });
       self.node.set_attribute("xml:id", &recorded)?; // and bypass all ns stuff
     } else if !key.contains(':') {
       // No colon; no namespace (the common case!)
       // Ignore attributes not allowed by the model,
       // but accept "internal" attributes.
       let qname = state.model.get_node_qname(&self.node);
-      if key.starts_with("_") || state.model.can_have_attribute(&qname, key) {
+      if key.starts_with('_') || state.model.can_have_attribute(&qname, key) {
         self.node.set_attribute(key, value)?;
       }
-    } else {                   // Accept any namespaced attributes
+    } else {
+      // Accept any namespaced attributes
       unimplemented!();
-    //   my ($ns, $name) = state.model}->decodeQName($key);
-    //   if ($ns) {             // If namespaced attribute (must have prefix!
-    // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
-    // declared? if (!$prefix) {                                    // if
-    // namespace not already declared $prefix =
-    // state.model}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
-    // self.getDocument->documentElement->setNamespace($ns, $prefix, 0); }
-    // // and declare it if ($prefix eq '//default') {    // Probably
-    // shouldn't happen...?       node.setAttribute($name => $value); }
-    //     else {
-    //       node.setAttributeNS($ns, "$prefix:$name" => $value); } }
-    //   else {
-    //     node.setAttribute($name => $value); } } 
-    }    // redundant case...
+      //   my ($ns, $name) = state.model}->decodeQName($key);
+      //   if ($ns) {             // If namespaced attribute (must have prefix!
+      // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
+      // declared? if (!$prefix) {                                    // if
+      // namespace not already declared $prefix =
+      // state.model}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
+      // self.getDocument->documentElement->setNamespace($ns, $prefix, 0); }
+      // // and declare it if ($prefix eq '//default') {    // Probably
+      // shouldn't happen...?       node.setAttribute($name => $value); }
+      //     else {
+      //       node.setAttributeNS($ns, "$prefix:$name" => $value); } }
+      //   else {
+      //     node.setAttribute($name => $value); } }
+    } // redundant case...
     Ok(())
   }
   pub fn node_get_attribute(&mut self, name: &str) -> Option<String> { self.node.get_attribute(name) }
@@ -1566,16 +1567,17 @@ impl Document {
   //**********************************************************************
   // Association of nodes and ids (xml:id)
   fn record_id(&mut self, id: &str) -> String {
-    if let Some(prev) = self.idstore.get(id) { // Whoops! Already assigned!!!
-                                               // Can we recover?
+    if let Some(prev) = self.idstore.get(id) {
+      // Whoops! Already assigned!!!
+      // Can we recover?
       unimplemented!();
       // if ! self.node.is_same_node(prev) {
       //   let badid = id.to_string();
       //   let id = self.modify_id(id);
       //   Info!("malformed", "id", node, "Duplicated attribute xml:id",
       //     "Using id='$id' on " . Stringify($node),
-      //     "id='$badid' already set on " . Stringify($prev)); 
-      // } 
+      //     "id='$badid' already set on " . Stringify($prev));
+      // }
     }
     self.idstore.insert(id.to_string(), self.node.clone());
     id.to_string()
@@ -1655,7 +1657,7 @@ impl Document {
     let mut chopped: bool = self.node == node; // Note if we're removing insertion point
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
-      if let Some(id) = node.get_attribute_ns("id",xml::XML_NS) {
+      if let Some(id) = node.get_attribute_ns("id", xml::XML_NS) {
         self.unrecord_id(&id);
       }
       for child in node.get_child_nodes() {
@@ -1675,7 +1677,7 @@ impl Document {
     let mut chopped = self.node == node;
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
-      if let Some(id) = node.get_attribute_ns("id",xml::XML_NS) {
+      if let Some(id) = node.get_attribute_ns("id", xml::XML_NS) {
         self.unrecord_id(&id);
       }
       for child in node.get_child_nodes() {
@@ -1977,7 +1979,7 @@ impl Document {
     self.set_node_font(&new, font.clone());
 
     if let Some(tbox) = self.get_node_box(&parent) {
-      self.set_node_box(&mut new, tbox);
+      self.set_node_box(&new, tbox);
     }
     new.add_child(&mut old_node)?;
     for mut node in nodes.into_iter() {
@@ -2129,7 +2131,7 @@ impl Document {
     Ok(())
   }
 
-  pub fn float_to_element(&mut self, element: &str, flag: bool) -> Option<Node> { 
+  pub fn float_to_element(&mut self, element: &str, flag: bool) -> Option<Node> {
     unimplemented!();
   }
 
@@ -2148,12 +2150,12 @@ impl Document {
     // Should we only accept a node that already has an id, or should we create an id?
     let mut node_opt: Option<Cow<Node>> = None;
     while let Some(candidate) = candidates.pop_front() {
-      if self.can_node_have_attribute(&candidate, key, state) && candidate.get_attribute_ns("id",xml::XML_NS).is_some() {
+      if self.can_node_have_attribute(&candidate, key, state) && candidate.get_attribute_ns("id", xml::XML_NS).is_some() {
         node_opt = Some(Cow::Borrowed(candidate));
         break;
       }
     }
-     
+
     if node_opt.is_none() {
       // No appropriate ancestor?
       let sib: Option<Node> = match ancestors.first() {
@@ -2161,7 +2163,7 @@ impl Document {
         None => None,
       };
       if let Some(sibling) = sib {
-        if self.can_node_have_attribute(&sibling, key, state) && sibling.get_attribute_ns("id",xml::XML_NS).is_some() {
+        if self.can_node_have_attribute(&sibling, key, state) && sibling.get_attribute_ns("id", xml::XML_NS).is_some() {
           node_opt = Some(Cow::Owned(sibling));
         } else if !ancestors.is_empty() {
           // just take root element?

@@ -220,7 +220,7 @@ LoadDefinitions!(state, {
   });
 
   // Remove the last closed node, if it's empty.
-  let remove_empty_element : Vec<ConstructionClosure> = construct!(document, whatsit, state, {
+  let remove_empty_element: Vec<ConstructionClosure> = construct!(document, whatsit, state, {
     if let Some(node) = document.get_node().get_last_child() {
       // This should be the wrapper just added.
       if node.get_child_nodes().is_empty() {
@@ -346,14 +346,14 @@ LoadDefinitions!(state, {
   DefMacro!(
     "\\lx@format@toctitle@@{}{}",
     "\\lx@@format@toctitle@@{#1}\
-    {{\\@ifundefined{format@toctitle@font@#1}{}{\\csname format@toctitle@font@#1\\endcsname}#2}}"
+     {{\\@ifundefined{format@toctitle@font@#1}{}{\\csname format@toctitle@font@#1\\endcsname}#2}}"
   );
 
   DefMacro!(
     "\\lx@@format@toctitle@@{}{}",
     "{\\@ifundefined{format@toctitle@#1}\
-       {\\lx@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}\
-       {\\csname format@toctitle@#1\\endcsname{#2}}}"
+     {\\lx@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}\
+     {\\csname format@toctitle@#1\\endcsname{#2}}}"
   );
 
   DefMacro!("\\lx@@compose@title{}{}", "\\lx@tag[][ ]{#1}#2");

@@ -183,8 +183,8 @@ LoadDefinitions!(state, {
   DefRegister!("\\normallineskiplimit", Dimension!("0pt"));
   DefRegister!("\\jot", Dimension!("3pt"));
   DefRegister!("\\lx@default@jot", LookupRegister!("\\jot"));
-  DefRegister!("\\interdisplaylinepenalty", Number!(100));
-  DefRegister!("\\interfootnotelinepenalty", Number!(100));
+  DefRegister!("\\interdisplaylinepenalty", Number::new(100.0));
+  DefRegister!("\\interfootnotelinepenalty", Number::new(100.0));
 
   DefMacro!("\\magstephalf", "1095");
   DefMacro!("\\magstep{}", sub[gullet, args, state] {
@@ -299,16 +299,16 @@ LoadDefinitions!(state, {
   // TeX Book, Appendix B, p. 352
 
   DefPrimitive!("\\obeyspaces", {
-     AssignCatcode!(' ', Catcode::ACTIVE);
-     Let!(&T_ACTIVE!(" "), T_CS!("\\space"));
+    AssignCatcode!(' ', Catcode::ACTIVE);
+    Let!(&T_ACTIVE!(" "), T_CS!("\\space"));
   });
   // Curiously enough, " " (a space) is ALREADY defined to be the same as "\space"
   // EVEN before it is made active. (see p.380)
   Let!(&T_ACTIVE!(" "), T_CS!("\\space"));
 
   DefPrimitive!("\\obeylines", {
-      AssignCatcode!('\r', Catcode::ACTIVE);
-      Let!(&T_ACTIVE!("\r"), T_CS!("\\@break")); // More appropriate than \par, I think?
+    AssignCatcode!('\r', Catcode::ACTIVE);
+    Let!(&T_ACTIVE!("\r"), T_CS!("\\@break")); // More appropriate than \par, I think?
   });
 
   DefConstructor!("\\@break", "<ltx:break/>");
@@ -451,7 +451,7 @@ LoadDefinitions!(state, {
   // # TODO: \item, \itemitem not done!
   // # This could probably be adopted from LaTeX, if the <itemize> could auto-open
   // # and close!
-  DefConstructor!("\\item{}",     "#1");
+  DefConstructor!("\\item{}", "#1");
   DefConstructor!("\\itemitem{}", "#1");
 
   // DefMacro('\textindent{}', '#1');

@@ -41,9 +41,9 @@ LoadDefinitions!(state, {
 
   //======================================================================
   Tag!("ltx:document",
-    after_open => sub[document, node, state] {
-      document.process_pending_resources(state)?;
-    });
+  after_open => sub[document, node, state] {
+    document.process_pending_resources(state)?;
+  });
   RequireResource!("LaTeXML.css");
 
   //======================================================================
@@ -950,7 +950,7 @@ LoadDefinitions!(state, {
         },
         state,
       )?;
-      Ok(kvs.to_tokens())
+      Ok(kvs.into_tokens())
     } else {
       Ok(Tokens!())
     }

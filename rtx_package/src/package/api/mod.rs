@@ -5,25 +5,25 @@ pub mod def_dialect;
 
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
-use std::borrow::Cow;
 
 use rtx_core::common::dimension::{Dimension, MuDimension};
 use rtx_core::common::error::*;
 use rtx_core::common::glue::{Glue, MuGlue};
 use rtx_core::common::number::Number;
 use rtx_core::common::store::Stored;
-use rtx_core::definition::Reversion;
 use rtx_core::definition::register::*;
+use rtx_core::definition::Reversion;
 use rtx_core::keyvals::KeyVals;
+use rtx_core::list::List;
+use rtx_core::mouth;
 use rtx_core::tbox::Tbox;
 use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
-use rtx_core::Digested;
 use rtx_core::whatsit::Whatsit;
-use rtx_core::list::List;
-use rtx_core::mouth;
+use rtx_core::Digested;
 
 // Constants for the API functions stay here as well
 
@@ -91,7 +91,6 @@ impl IntoOption<Option<Reversion>> for &str {
     }
   }
 }
-
 
 pub trait IntoTokensResult<T>: Sized {
   /// Performs the conversion, used for DefMacro return values etc
@@ -243,23 +242,17 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for List {
   fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::List(Rc::new(self)))) }
 }
 
-
 pub trait IntoPropertiesResult {
-  fn into_properties_result(self) -> Result<HashMap<String,Stored>>;
+  fn into_properties_result(self) -> Result<HashMap<String, Stored>>;
 }
-impl IntoPropertiesResult for HashMap<String,Stored> {
-  fn into_properties_result(self) -> Result<HashMap<String,Stored>> {
-    Ok(self)
-  }
+impl IntoPropertiesResult for HashMap<String, Stored> {
+  fn into_properties_result(self) -> Result<HashMap<String, Stored>> { Ok(self) }
 }
-impl IntoPropertiesResult for Result<HashMap<String,Stored>> {
-  fn into_properties_result(self) -> Result<HashMap<String,Stored>> {
-    self
-  }
+impl IntoPropertiesResult for Result<HashMap<String, Stored>> {
+  fn into_properties_result(self) -> Result<HashMap<String, Stored>> { self }
 }
 
-
-pub trait IntoFontField<T>:Sized {
+pub trait IntoFontField<T>: Sized {
   fn into_font_field(self) -> T;
 }
 
@@ -271,19 +264,12 @@ impl IntoFontField<bool> for bool {
   fn into_font_field(self) -> bool { self }
 }
 
-
 impl IntoFontField<Option<Cow<'static, str>>> for &'static str {
-  fn into_font_field(self) -> Option<Cow<'static, str>> {
-    Some(Cow::Borrowed(self))
-  }
+  fn into_font_field(self) -> Option<Cow<'static, str>> { Some(Cow::Borrowed(self)) }
 }
 impl IntoFontField<Option<Cow<'static, str>>> for f32 {
-  fn into_font_field(self) -> Option<Cow<'static, str>> {
-    Some(Cow::Owned(self.to_string()))
-  }
+  fn into_font_field(self) -> Option<Cow<'static, str>> { Some(Cow::Owned(self.to_string())) }
 }
 impl IntoFontField<Option<Cow<'static, str>>> for i32 {
-  fn into_font_field(self) -> Option<Cow<'static, str>> {
-    Some(Cow::Owned(self.to_string()))
-  }
+  fn into_font_field(self) -> Option<Cow<'static, str>> { Some(Cow::Owned(self.to_string())) }
 }

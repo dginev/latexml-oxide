@@ -202,7 +202,8 @@ impl Gullet {
           // TODO:
           // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
         },
-        Catcode::OTHER => { // TODO: Underwater rocky territory...
+        Catcode::OTHER => {
+          // TODO: Underwater rocky territory...
           // survey all uses of Token::default() in the code base, to see where they come up as "fillers"
           // in the token stream.
           // read_token should **IGNORE** these fillers, because this method is intended to return a "real" TeX token back

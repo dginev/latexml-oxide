@@ -23,12 +23,16 @@ LoadDefinitions!(state, {
     result
   });
   Let!("\\kernel@ifnextchar", "\\@ifnextchar");
-  Let!("\\@ifnext",           "\\@ifnextchar");    // ????
+  Let!("\\@ifnext", "\\@ifnextchar"); // ????
 
   //======================================================================
   // Hair
-  DefPrimitive!("\\makeatletter", { AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local)); });
-  DefPrimitive!("\\makeatother",  { AssignCatcode!('@', Catcode::OTHER, Some(Scope::Local)); });
+  DefPrimitive!("\\makeatletter", {
+    AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local));
+  });
+  DefPrimitive!("\\makeatother", {
+    AssignCatcode!('@', Catcode::OTHER, Some(Scope::Local));
+  });
 
   //**********************************************************************
   // Sundry (is this ams ?)

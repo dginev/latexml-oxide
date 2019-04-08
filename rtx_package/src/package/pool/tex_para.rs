@@ -4,8 +4,12 @@ LoadDefinitions!(state, {
   //----------------------------------------------------------------------
   // These determine whether the _next_ paragraph gets indented!
   // thus it needs \par to check whether such indentation has been set.
-  DefPrimitive!("\\indent",  { AssignValue!("next_para_class" => "ltx_indent"); });
-  DefPrimitive!("\\noindent", { AssignValue!("next_para_class" => "ltx_noindent"); });
+  DefPrimitive!("\\indent", {
+    AssignValue!("next_para_class" => "ltx_indent");
+  });
+  DefPrimitive!("\\noindent", {
+    AssignValue!("next_para_class" => "ltx_noindent");
+  });
 
   // <ltx:para> represents a Logical Paragraph, whereas <ltx:p> is a `physical paragraph'.
   // A para can contain both p and displayed equations and such.

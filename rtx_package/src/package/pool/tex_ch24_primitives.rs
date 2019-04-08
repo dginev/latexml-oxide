@@ -21,38 +21,32 @@ LoadDefinitions!(state, {
 
   // These are actually TeX primitives, but we treat them as a Whatsit so they
   // remain in the constructed tree.
-  DefPrimitive!(
-    "{",
-    sub[stomach, args, state] {
-      stomach.bgroup(state);
-      let open = Tbox::new(String::new(), None, None, Tokens!(T_BEGIN!()), HashMap::new(), state);
-      let mode = if LookupBool!("IN_MATH") {
-        Some(TexMode::Math)
-      } else {
-        Some(TexMode::Text)
-      };
-      let body = stomach.digest_next_body(None, state)?;
-      let mut boxes = vec![Digested::TBox(Rc::new(open))];
-      boxes.extend(body);
-      // TODO: Locator logic here needs to improve..
-      let return_list = List {
-        boxes,
-        mode,
-        font: None,
-        locator: Locator::default(),
-      };
-
-      return_list
+  DefPrimitive!("{", sub[stomach, args, state] {
+    stomach.bgroup(state);
+    let open = Tbox::new(String::new(), None, None, Tokens!(T_BEGIN!()), HashMap::new(), state);
+    let mode = if LookupBool!("IN_MATH") {
+      Some(TexMode::Math)
+    } else {
+      Some(TexMode::Text)
+    };
+    let body = stomach.digest_next_body(None, state)?;
+    let mut boxes = vec![Digested::TBox(Rc::new(open))];
+    boxes.extend(body);
+    // TODO: Locator logic here needs to improve..
+    List {
+      boxes,
+      mode,
+      font: None,
+      locator: Locator::default(),
     }
-  );
+  });
 
   DefPrimitive!(
     "}",
     sub[stomach, args, state] {
       let f = LookupFont!();
       stomach.egroup(state)?;
-      let return_box = Tbox::new(String::new(), f, None, Tokens!(T_END!()), HashMap::new(), state);
-      return_box
+      Tbox::new(String::new(), f, None, Tokens!(T_END!()), HashMap::new(), state)
     }
   );
 
@@ -70,13 +64,13 @@ LoadDefinitions!(state, {
   );
 
   DefPrimitive!(
-    "\\begingroup", sub[stomach, _args, state] {
-      stomach.begingroup(state);
-    });
+  "\\begingroup", sub[stomach, _args, state] {
+    stomach.begingroup(state);
+  });
   DefPrimitive!(
-    "\\endgroup", sub[stomach, _args, state] {
-      stomach.endgroup(state)?;
-    });
+  "\\endgroup", sub[stomach, _args, state] {
+    stomach.endgroup(state)?;
+  });
 
   // // Debugging aids; Ignored!
   DefPrimitive!("\\show Token", None);

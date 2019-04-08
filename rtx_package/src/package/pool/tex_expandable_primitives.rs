@@ -52,7 +52,7 @@ LoadDefinitions!(outer_state, {
   DefConditional!("\\ifhbox Number", sub[_g, args, state] {unpack_to_token!(args=>arg); classify_box(arg, state) == "hbox" });
   DefConditional!("\\ifvbox Number", sub[_g, args, state] {unpack_to_token!(args=>arg); classify_box(arg, state) == "vbox" });
 
-  DefConditional!("\\iftrue",  { true });
+  DefConditional!("\\iftrue", { true });
   DefConditional!("\\iffalse", { false });
 
   //======================================================================

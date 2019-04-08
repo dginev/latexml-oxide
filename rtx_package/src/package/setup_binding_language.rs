@@ -471,7 +471,7 @@ macro_rules! AssignRegister {
       let message = s!("The control sequence {} is not a register", $cs);
       Warn!("expected", "register", None, $state_arg, message);
     }
-  }}
+  }};
 }
 
 //======================================================================
@@ -1479,12 +1479,20 @@ macro_rules! DefRegister {
 #[macro_export]
 macro_rules! defi_register {
   ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {{
-    let value = {{ $value }}; // allow to reborrow state.
+    let value = {
+      {
+        $value
+      }
+    }; // allow to reborrow state.
     bind_state_mut!(st);
     def_register($cs, $paramlist, value, $options, st)
   }};
   ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => {
-    let value = {{ $value }}; // allow to reborrow state.
+    let value = {
+      {
+        $value
+      }
+    }; // allow to reborrow state.
     def_register($cs, $paramlist, value, $options, $state_arg)
   };
 }
@@ -1850,7 +1858,7 @@ macro_rules! BeginItemize {
   ($itype:literal, $counter:literal) => {{
     bind_state_mut!(stmch, st);
     begin_itemize($itype, Some($counter), false, stmch, st)
-  }}
+  }};
 }
 
 //
@@ -1904,7 +1912,8 @@ macro_rules! defi_opts {
   (@munch ( $(,)? properties $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($body) ] });
   };
-  (@munch ( $(,)? properties $(:)?$(=>)? sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? properties $(:)?$(=>)?
+      sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($stomach_arg, $args, $state_arg, $body) ] });
   };
   (@munch ( $(,)? properties $(:)?$(=>)? $var:ident $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {

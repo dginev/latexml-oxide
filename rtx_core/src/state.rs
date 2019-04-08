@@ -771,7 +771,7 @@ impl State {
     match self.value.get(map) {
       None => Vec::new(),
       Some(map_vec) => match map_vec.front() {
-        Some(&Stored::HashStored(ref h)) => h.keys().map(|k| k.as_str()).collect(),
+        Some(&Stored::HashStored(ref h)) => h.keys().map(String::as_str).collect(),
         _ => Vec::new(),
       },
     }

@@ -98,9 +98,7 @@ impl List {
     }
   }
 
-  pub fn is_empty(&self) -> bool {
-    self.boxes.is_empty()
-  }
+  pub fn is_empty(&self) -> bool { self.boxes.is_empty() }
 }
 
 impl From<List> for Result<Vec<Digested>> {

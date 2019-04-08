@@ -19,9 +19,12 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefMacro!("\\list{}{}",r###"
+  DefMacro!(
+    "\\list{}{}",
+    r###"
   \let\@listctr\@empty#2\ifx\@listctr\@empty\usecounter{}\fi\expandafter\def\csname fnum@\@listctr\endcsname{#1}\lx@list
-  "###);
+  "###
+  );
   DefMacro!("\\endlist", "\\endlx@list");
 
   DefConstructor!("\\lx@list DigestedBody",
@@ -102,5 +105,4 @@ LoadDefinitions!(state, {
   DefRegister!("\\labelwidthvi"       => Dimension::new(0.0));
 
   DefRegister!("\\@itemdepth" => Number::new(0.0));
-
 });

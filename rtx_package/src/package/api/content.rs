@@ -127,58 +127,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
 
   // TODO: Is this inaccurate with latexml? It only sets the macros if the file is found, we set them *always*, as a matter of course
   if options.handleoptions {
-    // For \RequirePackageWithOptions, pass the options from the outer class/style to the inner one.
-    if let Some(with_options_to_pass) = options.withoptions {
-      if !prevname.is_empty() && state.lookup_value(&s!("opt@{}.{}", prevname, prevext)).is_some() {
-        // Only pass those class options that are declared by the package!
-        if let Some(declared_options) = state.lookup_vecdeque("@declaredoptions") {
-          let mut topass = Vec::new();
-          for op in with_options_to_pass.into_iter() {
-            if declared_options
-              .iter()
-              .any(|x| if let Stored::String(val) = x { val == &op } else { false })
-            {
-              topass.push(op)
-            }
-          }
-          if !topass.is_empty() {
-            pass_options(name, as_type, topass, state)
-          }
-        }
-      }
-    }
-    def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None, state);
-    def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None, state);
-    // reset options (Note reset & pass were in opposite order in LoadClass ????)
-    let gullet = stomach.get_gullet_mut();
-    reset_options(gullet, state)?;
-    pass_options(name, as_type, options.options.clone(), state); // passed explicit options.
-                                                                 // Note which packages are pretending to be classes.
-    if options.as_class {
-      state.push_value("@masquerading@as@class", name);
-    }
-    def_macro(
-      T_CS!(&s!("\\{}.{}-h@@k", name, as_type)),
-      None,
-      options.after.unwrap_or_default(),
-      None,
-      state,
-    );
-    let current_opt_val = match state.lookup_vecdeque(&s!("opt@{}.{}", name, as_type)) {
-      Some(vdq) => vdq
-        .iter()
-        .map(|x| if let Stored::String(val) = x { val } else { "" })
-        .collect::<Vec<&str>>()
-        .join(","), // this is so painful, why can't we .join on a VecDeque?
-      None => String::new(),
-    };
-    def_macro(
-      T_CS!(&s!("\\opt@{}.{}", name, as_type)),
-      None,
-      Tokens!(Explode!(current_opt_val)),
-      None,
-      state,
-    );
+    input_handle_options(&mut options, &prevname, &prevext, name, as_type, stomach, state)?;
+    def_macro(T_CS!(&s!("\\{}.{}-h@@k", name, as_type)), None, options.after, None, state);
   }
   if !current_options.is_empty() {
     state.assign_value(&s!("{}_loaded_with_options", filename), current_options, Some(Scope::Global));
@@ -223,6 +173,66 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   }
 
   note_end(&s!("Loading {:?} definitions", filename));
+  Ok(())
+}
+
+// Factor out handling and passing loading options from input_content,
+// to simplify main routine
+fn input_handle_options(
+  options: &mut InputDefinitionOptions,
+  prevname: &str,
+  prevext: &str,
+  name: &str,
+  as_type: &str,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Result<()>
+{
+  // For \RequirePackageWithOptions, pass the options from the outer class/style to the inner one.
+  if let Some(with_options_to_pass) = options.withoptions.take() {
+    if !prevname.is_empty() && state.lookup_value(&s!("opt@{}.{}", prevname, prevext)).is_some() {
+      // Only pass those class options that are declared by the package!
+      if let Some(declared_options) = state.lookup_vecdeque("@declaredoptions") {
+        let mut topass = Vec::new();
+        for op in with_options_to_pass.into_iter() {
+          if declared_options
+            .iter()
+            .any(|x| if let Stored::String(val) = x { val == &op } else { false })
+          {
+            topass.push(op)
+          }
+        }
+        if !topass.is_empty() {
+          pass_options(name, as_type, topass, state)
+        }
+      }
+    }
+  }
+  def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None, state);
+  def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None, state);
+  // reset options (Note reset & pass were in opposite order in LoadClass ????)
+  let gullet = stomach.get_gullet_mut();
+  reset_options(gullet, state)?;
+  pass_options(name, as_type, options.options.clone(), state); // passed explicit options.
+                                                               // Note which packages are pretending to be classes.
+  if options.as_class {
+    state.push_value("@masquerading@as@class", name);
+  }
+  let current_opt_val = match state.lookup_vecdeque(&s!("opt@{}.{}", name, as_type)) {
+    Some(vdq) => vdq
+      .iter()
+      .map(|x| if let Stored::String(val) = x { val } else { "" })
+      .collect::<Vec<&str>>()
+      .join(","), // this is so painful, why can't we .join on a VecDeque?
+    None => String::new(),
+  };
+  def_macro(
+    T_CS!(&s!("\\opt@{}.{}", name, as_type)),
+    None,
+    Tokens!(Explode!(current_opt_val)),
+    None,
+    state,
+  );
   Ok(())
 }
 

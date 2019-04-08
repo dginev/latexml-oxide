@@ -145,7 +145,9 @@ macro_rules! construct {
 
 #[macro_export]
 macro_rules! properties {
-  (sub [ $stomach:ident, $args:ident, $inner_state:ident ] $body:block) => { properties!($stomach, $args, $inner_state, $body) };
+  (sub [ $stomach:ident, $args:ident, $inner_state:ident ] $body:block) => {
+    properties!($stomach, $args, $inner_state, $body)
+  };
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
     Rc::new(
       move |$stomach: &mut Stomach, mut $args: &Vec<Option<Digested>>, $inner_state: &mut State| -> Result<HashMap<String, Stored>> {
@@ -154,9 +156,11 @@ macro_rules! properties {
     )
   };
   ($(sub)? $body:block) => {
-    Rc::new(move |stomach: &mut Stomach, args: &Vec<Option<Digested>>, state: &mut State| -> Result<HashMap<String, Stored>> {
-      WithInnerState!($body, stomach, state).into_properties_result()
-    })
+    Rc::new(
+      move |stomach: &mut Stomach, args: &Vec<Option<Digested>>, state: &mut State| -> Result<HashMap<String, Stored>> {
+        WithInnerState!($body, stomach, state).into_properties_result()
+      },
+    )
   };
   ($value:expr) => {
     Rc::new(move |_stomach: &mut Stomach, _args: &Vec<Option<Digested>>, _state: &mut State| -> Result<HashMap<String, Stored>> { Ok($value.clone()) })

@@ -577,7 +577,7 @@ impl KeyVals {
   ///       are a vector of a new type ReadValue ::= [Token, KeyVals, RegisterValue]
   ///       potentially? On the other hand, we can also put the extra effort of *postponing* the build of KV metadata until digestion,
   ///       this way not losing any time reserializing metadata
-  pub fn to_tokens(self) -> Tokens {
+  pub fn into_tokens(self) -> Tokens {
     let mut tks: Vec<Token> = Vec::new();
     for (k, v) in self.cached_pairs.into_iter() {
       tks.push(T_OTHER!(k));

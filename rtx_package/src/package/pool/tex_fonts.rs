@@ -151,7 +151,7 @@ LoadDefinitions!(state, {
   });
 
   DefMacro!("\\f@encoding", { ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap()) });
-  DefMacro!("\\cf@encoding",{ ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap()) });
+  DefMacro!("\\cf@encoding", { ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap()) });
 
   // Used for SemiVerbatim text
   DeclareFontMap!(
