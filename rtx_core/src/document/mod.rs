@@ -898,7 +898,8 @@ impl Document {
     self.set_node_font(&node, font);
     if let Some(ref digested) = self.box_to_absorb {
       // TODO: The Rc<Digested> node boxes still have some way to go until they are fully ergonomic...
-      self.set_node_box(&node, Rc::new(digested.clone()));
+      let node_box = Rc::new(digested.clone());
+      self.set_node_box(&node, node_box);
     }
     self.open_math_text_internal(text, state)?;
     self.close_node_internal(&node, state)?; // Should be safe.
@@ -1786,7 +1787,8 @@ impl Document {
     // objects - tokens, boxes, etc. and a well-designed referncing scheme into
     // the driver structs, such as Gullet, Stomach and Document
     if let Some(ref digested) = self.box_to_absorb {
-      self.set_node_box(&newnode, Rc::new(digested.clone()));
+      let node_box = Rc::new(digested.clone());
+      self.set_node_box(&newnode, node_box);
     }
 
     Debug!(
@@ -1976,7 +1978,8 @@ impl Document {
     let mut old_node = parent.replace_child_node(new.clone(), first_node)?;
 
     let font = self.get_node_font(&parent);
-    self.set_node_font(&new, font.clone());
+    let node_font = font.clone();
+    self.set_node_font(&new, node_font);
 
     if let Some(tbox) = self.get_node_box(&parent) {
       self.set_node_box(&new, tbox);

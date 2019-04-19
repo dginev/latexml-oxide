@@ -68,9 +68,10 @@ LoadDefinitions!(outer_state, {
       }
       stomach.egroup(state)?;
       lines.push("\\end{verbatim}".to_string());
-      whatsit.set_body(lines.into_iter().map(|line|
+      let boxes = lines.into_iter().map(|line|
         Tbox::new(line.clone(), font.clone(), Some(loc.clone().into_owned()), T_OTHER!(line).into(), HashMap::new(), state).into()
-      ).collect());
+      ).collect();
+      whatsit.set_body(boxes);
     },
     before_construct => sub[document, whatsit, state] { document.maybe_close_element("ltx:p", state)?; }
   );
