@@ -297,7 +297,7 @@ pub fn extension(pathname: &str) -> String {
 }
 
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
-  let kpse = Kpaths::new();
+  let kpse = Kpaths::new().unwrap();
   for candidate in candidates {
     if let Some(path) = kpse.find_file(candidate) {
       return Some(path);
