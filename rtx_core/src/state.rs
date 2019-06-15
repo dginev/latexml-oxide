@@ -684,7 +684,7 @@ impl State {
     }
   }
 
-  pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Rc<Definition>> {
+  pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Rc<dyn Definition>> {
     if let Some(defn) = self.lookup_definition(&token) {
       // Can only be a token or definition; we want defns!
       if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
@@ -947,7 +947,7 @@ impl State {
   /// Since we're not doing digestion here, we don't need to handle mathactive,
   /// nor cs let to executable tokens
   /// This returns a definition object, or undef
-  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Rc<Definition>> {
+  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Rc<dyn Definition>> {
     if let Some(defs) = self.lookup_definition_internal(key) {
       match defs.front() {
         Some(Stored::Conditional(entry)) => Some(entry.clone()),

@@ -30,8 +30,8 @@ lazy_static! {
   static ref ONLY_SPACE_RE: Regex = Regex::new(r"^\s+$").unwrap();
 }
 
-pub static FONT_ELEMENT_NAME: &'static str = "ltx:text";
-pub static MATH_TOKEN_NAME: &'static str = "ltx:XMTok";
+pub static FONT_ELEMENT_NAME: &str = "ltx:text";
+pub static MATH_TOKEN_NAME: &str = "ltx:XMTok";
 
 pub struct Document {
   pub document: XmlDoc,

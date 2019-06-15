@@ -14,15 +14,15 @@ use crate::state::State;
 
 pub type Fontmap = Vec<Option<char>>;
 
-static DEFFAMILY: &'static str = "serif";
-static DEFSERIES: &'static str = "medium";
-static DEFSHAPE: &'static str = "upright";
-static DEFCOLOR: &'static str = "black";
-static DEFBACKGROUND: &'static str = "white";
-static DEFOPACITY: &'static str = "1";
-static DEFENCODING: &'static str = "OT1";
-static DEFLANGUAGE: &'static str = "en";
-static DEFSIZE: &'static str = "10"; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
+static DEFFAMILY: &str = "serif";
+static DEFSERIES: &str = "medium";
+static DEFSHAPE: &str = "upright";
+static DEFCOLOR: &str = "black";
+static DEFBACKGROUND: &str = "white";
+static DEFOPACITY: &str = "1";
+static DEFENCODING: &str = "OT1";
+static DEFLANGUAGE: &str = "en";
+static DEFSIZE: &str = "10"; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
 
 // static FORCE_FAMILY : i8 = 0x1;
 // static FORCE_SERIES : i8 = 0x2;

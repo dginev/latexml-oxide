@@ -130,7 +130,7 @@ impl Definition for Conditional {
   fn get_cs_name(&self) -> Cow<str> { Cow::Borrowed(self.cs.get_cs_name()) }
   fn get_alias(&self) -> Option<&String> { None }
   // Not implemented for expandable
-  fn invoke_primitive(&self, _gullet: &mut Stomach, _caller: Rc<Definition>, _state: &mut State) -> Result<Vec<Digested>> { unimplemented!() }
+  fn invoke_primitive(&self, _gullet: &mut Stomach, _caller: Rc<dyn Definition>, _state: &mut State) -> Result<Vec<Digested>> { unimplemented!() }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {

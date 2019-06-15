@@ -198,7 +198,7 @@ pub enum ErrorCategory {
   Recursion,
   EoF,
   Endgroup,
-  Generic(Box<ErrorTrait>),
+  Generic(Box<dyn ErrorTrait>),
   Filename(String),
 }
 
@@ -274,7 +274,7 @@ impl ErrorTrait for Error {
     }
   }
 
-  fn cause(&self) -> Option<&ErrorTrait> {
+  fn cause(&self) -> Option<&dyn ErrorTrait> {
     use self::ErrorCategory::*;
     match self.category {
       Io(ref err) => Some(err),
@@ -303,8 +303,8 @@ impl From<io::Error> for Error {
   }
 }
 
-impl From<Box<ErrorTrait>> for Error {
-  fn from(err: Box<ErrorTrait>) -> Error {
+impl From<Box<dyn ErrorTrait>> for Error {
+  fn from(err: Box<dyn ErrorTrait>) -> Error {
     Error {
       target: ErrorTarget::Document,
       message: err.description().to_string(),

@@ -333,8 +333,8 @@ pub enum RegisterType {
   Any, // Placeholder for any argument accepted
 }
 
-pub type RegisterGetterClosure = Rc<Fn(Vec<Token>, &State) -> Option<RegisterValue>>;
-pub type RegisterSetterClosure = Rc<Fn(RegisterValue, Vec<Tokens>, &mut State)>;
+pub type RegisterGetterClosure = Rc<dyn Fn(Vec<Token>, &State) -> Option<RegisterValue>>;
+pub type RegisterSetterClosure = Rc<dyn Fn(RegisterValue, Vec<Tokens>, &mut State)>;
 
 #[derive(Clone)]
 pub struct Register {
@@ -395,7 +395,7 @@ impl Definition for RegisterCell {
   fn get_alias(&self) -> Option<&String> { None }
   // No before/after daemons ???
   // (other than afterassign)
-  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {
     // CharDef case
     if self.borrow().register_type == RegisterType::CharDef {
       return match self.borrow().internalcs {

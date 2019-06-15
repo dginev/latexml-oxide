@@ -25,7 +25,7 @@ const DUAL_BRANCH: bool = false; // TODO: what is this about?
 pub struct Whatsit {
   pub args: Vec<Option<Digested>>,
   pub properties: HashMap<String, Stored>,
-  pub definition: Rc<Definition>,
+  pub definition: Rc<dyn Definition>,
   pub reversion: Option<Tokens>,
   pub dual_reversion: Option<Tokens>,
   pub locator: Locator,

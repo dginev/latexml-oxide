@@ -262,7 +262,7 @@ impl Gullet {
     loop {
       let read_token: Option<Token>;
       let cc: Catcode;
-      let mut defn_next: Option<Rc<Definition>> = None;
+      let mut defn_next: Option<Rc<dyn Definition>> = None;
       let mut needs_close = false;
       let mut return_next = false;
       let mut expand_next = false;
@@ -301,7 +301,7 @@ impl Gullet {
                 //   LaTeXML::Definition::stopProfiling($token, 'expand'); }
                 // }
                 _ => {
-                  let looked_up_definition: Option<Rc<Definition>> = state.lookup_definition(&token);
+                  let looked_up_definition: Option<Rc<dyn Definition>> = state.lookup_definition(&token);
                   if let Some(defn) = looked_up_definition {
                     if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
                       // is this the right logic here? don't expand unless digesting?

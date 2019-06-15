@@ -7,7 +7,7 @@ use crate::document::Document;
 use crate::state::State;
 use crate::Digested;
 
-pub type TagConstructionClosure = Rc<Fn(&mut Document, &mut Node, &mut State) -> Result<()>>;
+pub type TagConstructionClosure = Rc<dyn Fn(&mut Document, &mut Node, &mut State) -> Result<()>>;
 pub type TagData = (String, Option<HashMap<String, String>>, Digested);
 
 // Specify the properties of a Node tag.

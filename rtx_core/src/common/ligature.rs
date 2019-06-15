@@ -2,8 +2,8 @@ use crate::common::font::Font;
 use std::fmt;
 use std::rc::Rc;
 
-pub type LigatureClosure = Rc<Fn(&str) -> String>;
-pub type FontTestClosure = Rc<Fn(&Font) -> bool>;
+pub type LigatureClosure = Rc<dyn Fn(&str) -> String>;
+pub type FontTestClosure = Rc<dyn Fn(&Font) -> bool>;
 
 #[derive(Clone)]
 pub struct Ligature {

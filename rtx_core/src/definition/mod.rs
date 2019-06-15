@@ -27,16 +27,16 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-pub type ExpansionClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Tokens>>;
-pub type ConditionalClosure = Rc<Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<bool>>;
-pub type PrimitiveFn = Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<Digested>>;
+pub type ExpansionClosure = Rc<dyn Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Tokens>>;
+pub type ConditionalClosure = Rc<dyn Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<bool>>;
+pub type PrimitiveFn = dyn Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<Digested>>;
 pub type PrimitiveClosure = Rc<PrimitiveFn>;
-pub type BeforeDigestClosure = Rc<Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
-pub type PropertiesClosure = Rc<Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
-pub type DigestionClosure = Rc<Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
-pub type ReplacementClosure = Rc<Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
-pub type ConstructionClosure = Rc<Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
-pub type DigestedReversionClosure = Rc<Fn(&Whatsit, &Vec<Option<Digested>>) -> Result<Tokens>>;
+pub type BeforeDigestClosure = Rc<dyn Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
+pub type PropertiesClosure = Rc<dyn Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
+pub type DigestionClosure = Rc<dyn Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
+pub type ReplacementClosure = Rc<dyn Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
+pub type ConstructionClosure = Rc<dyn Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
+pub type DigestedReversionClosure = Rc<dyn Fn(&Whatsit, &Vec<Option<Digested>>) -> Result<Tokens>>;
 
 #[derive(Clone)]
 pub enum ExpansionBody {
@@ -79,7 +79,7 @@ impl From<String> for ExpansionBody {
 
 pub trait Definition: Object {
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens>;
-  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Rc<Definition>, state: &mut State) -> Result<Vec<Digested>>;
+  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Rc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>>;
 
   /// We can almost always return the CS by reference, except in a Register's RefCell, where we are
   /// forced to clone
@@ -191,11 +191,11 @@ pub trait Definition: Object {
 // and each control sequence
 //
 // This could evolve if Rust comes up with a best practice for implementing `PartialEq` on trait objects.
-impl PartialEq for Definition {
-  fn eq(&self, other: &Definition) -> bool { self.stringify() == other.stringify() }
+impl PartialEq for dyn Definition {
+  fn eq(&self, other: &dyn Definition) -> bool { self.stringify() == other.stringify() }
 }
 
-impl fmt::Display for Definition {
+impl fmt::Display for dyn Definition {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     if let Some(params) = self.get_parameters() {
       write!(f, "{} {}", self.get_cs_name(), params.to_string())

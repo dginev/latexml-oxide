@@ -18,11 +18,11 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-pub type ReaderFn = Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>;
-pub type ReaderPredigestFn = Fn(&mut Stomach, Tokens, &mut State) -> Result<Option<Digested>>;
+pub type ReaderFn = dyn Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>;
+pub type ReaderPredigestFn = dyn Fn(&mut Stomach, Tokens, &mut State) -> Result<Option<Digested>>;
 pub type ReaderPredigestClosure = Rc<ReaderPredigestFn>;
 pub type ReaderClosure = Rc<ReaderFn>;
-pub type ReversionClosure = Rc<Fn(&mut Gullet, Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
+pub type ReversionClosure = Rc<dyn Fn(&mut Gullet, Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
 
 lazy_static! {
   static ref LAST_WCHAR_RE: Regex = Regex::new(r"\w$").unwrap();
@@ -264,7 +264,7 @@ impl Parameter {
     Ok(())
   }
 
-  pub fn read(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Result<Tokens> {
+  pub fn read(&self, gullet: &mut Gullet, fordefn: &dyn Definition, state: &mut State) -> Result<Tokens> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
@@ -397,7 +397,7 @@ impl Parameters {
     Ok(tokens)
   }
 
-  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &Definition, state: &mut State) -> Result<Vec<Tokens>> {
+  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &dyn Definition, state: &mut State) -> Result<Vec<Tokens>> {
     let mut args = Vec::new();
     for parameter in &self.0 {
       let values = parameter.read(gullet, fordefn, state)?;
