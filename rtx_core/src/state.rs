@@ -27,7 +27,7 @@ use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::util::pathname;
 
-static CODE_TEX_EXT: &'static str = ".code.tex";
+static CODE_TEX_EXT: &str = ".code.tex";
 
 lazy_static! {
   static ref TEX_OR_BIB_EXT_RE: Regex = Regex::new(r"\.(tex|bib)$").unwrap();

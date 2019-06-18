@@ -517,7 +517,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut Stat
 // [maybe need to do some reorganization?]
 // Since this is used for textual tokens, typically to split author lists,
 // we don't split within braces or math
-
+#[allow(clippy::while_let_on_iterator)]
 pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
   let mut items = Vec::new();
   let mut toks = Vec::new();

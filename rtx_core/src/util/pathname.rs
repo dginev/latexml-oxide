@@ -22,8 +22,8 @@ impl Default for PathnameFindOptions {
   }
 }
 
-static LITERAL_PROTOCOL: &'static str = "literal:";
-static HOME_TILDE: &'static str = "~";
+static LITERAL_PROTOCOL: &str = "literal:";
+static HOME_TILDE: &str = "~";
 lazy_static! {
   static ref HOME_PATH : String = match dirs::home_dir() {
     Some(val) => val.to_string_lossy().to_string(),
