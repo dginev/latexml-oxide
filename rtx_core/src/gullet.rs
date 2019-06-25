@@ -82,7 +82,6 @@ impl Gullet {
       runtime.pushback.drain(..); // And don't read anytyhing more from it.
       runtime.autoclose = true;
     }
-    return;
   }
 
   /// Obscure, but the only way I can think of to End!! (see \bye or \end{document})
@@ -145,7 +144,6 @@ impl Gullet {
     if shift_from_mouthstack {
       self.mouth = self.mouthstack.pop_front();
     }
-    return;
   }
 
   pub fn get_mouth(&self) -> Option<&Mouth> {

@@ -258,7 +258,6 @@ impl Mouth {
       state.assign_catcode('@', Catcode::LETTER, None);
       state.assign_value("INCLUDE_COMMENTS", false, Some(Scope::Local));
     }
-    return;
   }
   pub fn finish(&mut self, state: &mut State) {
     self.buffer = VecDeque::new();

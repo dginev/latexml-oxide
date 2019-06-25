@@ -274,7 +274,6 @@ pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<Co
   if let Some(true) = options.locked {
     state.assign_value(&locked_key, true, None);
   }
-  return;
 }
 
 pub fn def_macro<T: Into<Option<ExpansionBody>>>(
@@ -372,7 +371,6 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
     },
     Some(Scope::Global),
   );
-  return;
 }
 
 pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacement: PrimitiveClosure, options: PrimitiveOptions, state: &mut State) {

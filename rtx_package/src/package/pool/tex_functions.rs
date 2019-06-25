@@ -23,7 +23,6 @@ pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
       state.let_i(&vec[0], vec[1].clone(), None);
     }
   }
-  return;
 }
 
 pub fn only_preamble(cs: &str, stomach: &mut Stomach, state: &mut State) {

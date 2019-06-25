@@ -1309,7 +1309,7 @@ impl Document {
         self.get_insertion_context(None, state)
       );
       Error!("malformed", qname, self, state, message);
-      return Ok(self.node.clone()); // But we'll do it anyway, unless Error => Fatal.
+      Ok(self.node.clone()) // But we'll do it anyway, unless Error => Fatal.
     } else {
       // Now we're getting more desparate...
       // Check if we can auto close some nodes, and _then_ insert the `qname`.

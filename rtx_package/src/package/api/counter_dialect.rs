@@ -409,8 +409,6 @@ pub fn reset_counter(ctr: &str, state: &mut State) {
   for c in &(nested.unlist()) {
     reset_counter(&c.to_string(), state);
   }
-
-  return;
 }
 
 #[allow(clippy::float_cmp)]

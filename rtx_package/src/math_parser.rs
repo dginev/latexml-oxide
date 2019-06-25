@@ -431,7 +431,7 @@ impl MathParser {
         // ($document->findnodes("//*[\@idref='$resultid']")) {
         // $ref->setAttribute(idref => $newid); } }
       }
-      return Ok(Some(result));
+      Ok(Some(result))
     } else {
       //     $self->parse_kludge($node, $document);
       //     if ($tag eq 'ltx:XMath') {

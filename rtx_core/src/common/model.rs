@@ -229,7 +229,6 @@ impl Model {
         self.code_namespaces.remove(codeprefix);
       },
     };
-    return;
   }
 
   pub fn register_document_namespace(&mut self, mut docprefix: &str, namespace_opt: Option<String>) {
@@ -256,7 +255,6 @@ impl Model {
         self.document_namespaces.remove(docprefix);
       },
     };
-    return;
   }
 
   pub fn get_document_namespace_prefix(&mut self, namespace: &str, forattribute: bool, probe: bool) -> Option<String> {
@@ -616,7 +614,6 @@ impl Model {
     }
 
     note_end(&s!("Loading compiled schema {}\n", path));
-    return;
   }
 
   //**********************************************************************

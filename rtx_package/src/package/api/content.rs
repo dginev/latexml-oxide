@@ -777,7 +777,6 @@ pub fn select_relaxng_schema(schema: String, namespaces: Option<HashMap<String, 
       model.register_document_namespace(&prefix, Some(value));
     }
   }
-  return;
 }
 
 pub fn merge_font(font: Font, state: &mut State) {

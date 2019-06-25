@@ -645,7 +645,6 @@ fn setup_pseudo_bibitem(state: &mut State) {
   state.let_i(&T_CS!("\\item"), T_CS!("\\item@in@bibliography"), None);
   // And protect from redefinitions.
   state.let_i(&T_CS!("\\newblock"), T_CS!("\\lx@bibnewblock"), None);
-  return;
 }
 // This sub does things that would commonly be needed when starting a bibliography
 // setting the ID, etc...

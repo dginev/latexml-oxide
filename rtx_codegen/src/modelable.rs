@@ -89,7 +89,6 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
     }
   }
 
-  operations.push(quote!(return;));
   // note_end(&(s!("Compiling .model file: {}", path)));
 
   Ok(TokenStream::from(quote!(
