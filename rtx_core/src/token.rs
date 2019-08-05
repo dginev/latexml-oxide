@@ -569,7 +569,8 @@ impl<'a> Token {
     }
   }
 
-  /// Return the string or character part of the token
+  /// Return the the borrowed &str "text" of the token
+  /// use `to_string` instead for an owned String
   pub fn get_string(&self) -> &str { &self.text }
 
   /// Return the character code of  character part of the token, or 256 if it is a control

@@ -352,7 +352,7 @@ impl<'t> Stomach {
         Ok(None)
       } else {
         Ok(Some(Digested::TBox(Rc::new(Tbox::new(
-          meaning.get_string().to_string(), //text
+          meaning.to_string(), //text
           font,
           Some(self.gullet.get_locator().into_owned()), //locator
           Tokens!(meaning),                             // tokens

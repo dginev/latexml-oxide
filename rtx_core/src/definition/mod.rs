@@ -205,10 +205,10 @@ impl fmt::Display for dyn Definition {
   }
 }
 
-impl ExpansionBody {
-  pub fn to_string(&self) -> String {
+impl fmt::Display for ExpansionBody {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      ExpansionBody::Tokens(ref t) => t.to_string(),
+      ExpansionBody::Tokens(ref t) => write!(f, "{}", t),
       ExpansionBody::Closure(_) => unimplemented!(), // what is the right way to serialize this, e.g. for the \meaning macro
     }
   }

@@ -493,7 +493,7 @@ impl Mouth {
     let mut tokens = Vec::new();
     let has_until = until.is_some();
     let until_string = if let Some(until_token) = until {
-      until_token.get_string().to_owned()
+      until_token.to_string()
     } else {
       String::new()
     };

@@ -99,7 +99,7 @@ fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
   }
 }
 fn process_ltx_doc(doc: Document, _name: &str, state: &mut State) -> Vec<String> {
-  doc.to_string(state).split('\n').map(ToString::to_string).collect()
+  doc.serialize_to_string(state).split('\n').map(ToString::to_string).collect()
 }
 
 /// Serializes and splits by line a given `XmlDoc`

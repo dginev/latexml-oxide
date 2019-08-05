@@ -80,7 +80,7 @@ LoadDefinitions!(outer_state, {
   DefMacro!("\\string Token", sub[gullet, args, state] {
     unpack!(args => token);
     let token : Token = token.into();
-    let mut s = token.get_string().to_string();
+    let mut s = token.to_string();
     if s.starts_with('/') {
       s = escapechar(state) + &s;
     }

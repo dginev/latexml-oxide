@@ -169,45 +169,8 @@ impl Default for Font {
 impl fmt::Debug for Font {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.to_string()) }
 }
-
-impl Font {
-  pub fn text_default() -> Self {
-    Font {
-      family: Some(Cow::Borrowed(DEFFAMILY)),
-      series: Some(Cow::Borrowed(DEFSERIES)),
-      shape: Some(Cow::Borrowed(DEFSHAPE)),
-      size: Some(Cow::Borrowed(DEFSIZE)),
-      color: Some(Cow::Borrowed(DEFCOLOR)),
-      bg: Some(Cow::Borrowed(DEFBACKGROUND)),
-      opacity: Some(Cow::Borrowed(DEFOPACITY)),
-      encoding: Some(Cow::Borrowed(DEFENCODING)),
-      language: Some(Cow::Borrowed(DEFLANGUAGE)),
-      mathstyle: None,
-      emph: None,
-      forceseries: None,
-      forcefamily: None,
-      forceshape: None,
-    }
-  }
-  pub fn math_default() -> Self {
-    Font {
-      family: Some(Cow::Borrowed("math")),
-      series: Some(Cow::Borrowed(DEFSERIES)),
-      shape: Some(Cow::Borrowed("italic")),
-      size: Some(Cow::Borrowed(DEFSIZE)),
-      color: Some(Cow::Borrowed(DEFCOLOR)),
-      bg: Some(Cow::Borrowed(DEFBACKGROUND)),
-      opacity: Some(Cow::Borrowed(DEFOPACITY)),
-      encoding: None,
-      language: Some(Cow::Borrowed(DEFLANGUAGE)),
-      mathstyle: Some(Cow::Borrowed("text")),
-      emph: None,
-      forceseries: None,
-      forcefamily: None,
-      forceshape: None,
-    }
-  }
-  pub fn to_string(&self) -> String {
+impl fmt::Display for Font {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut parts = Vec::new();
     if let Some(ref family) = self.family {
       parts.push(s!("family: {:?}", family))
@@ -248,7 +211,46 @@ impl Font {
     if let Some(ref forceshape) = self.forceshape {
       parts.push(s!("forceshape: {:?}", forceshape))
     }
-    s!("Font[{}]", parts.join(", "))
+    write!(f, "Font[{}]", parts.join(", "))
+  }
+}
+
+impl Font {
+  pub fn text_default() -> Self {
+    Font {
+      family: Some(Cow::Borrowed(DEFFAMILY)),
+      series: Some(Cow::Borrowed(DEFSERIES)),
+      shape: Some(Cow::Borrowed(DEFSHAPE)),
+      size: Some(Cow::Borrowed(DEFSIZE)),
+      color: Some(Cow::Borrowed(DEFCOLOR)),
+      bg: Some(Cow::Borrowed(DEFBACKGROUND)),
+      opacity: Some(Cow::Borrowed(DEFOPACITY)),
+      encoding: Some(Cow::Borrowed(DEFENCODING)),
+      language: Some(Cow::Borrowed(DEFLANGUAGE)),
+      mathstyle: None,
+      emph: None,
+      forceseries: None,
+      forcefamily: None,
+      forceshape: None,
+    }
+  }
+  pub fn math_default() -> Self {
+    Font {
+      family: Some(Cow::Borrowed("math")),
+      series: Some(Cow::Borrowed(DEFSERIES)),
+      shape: Some(Cow::Borrowed("italic")),
+      size: Some(Cow::Borrowed(DEFSIZE)),
+      color: Some(Cow::Borrowed(DEFCOLOR)),
+      bg: Some(Cow::Borrowed(DEFBACKGROUND)),
+      opacity: Some(Cow::Borrowed(DEFOPACITY)),
+      encoding: None,
+      language: Some(Cow::Borrowed(DEFLANGUAGE)),
+      mathstyle: Some(Cow::Borrowed("text")),
+      emph: None,
+      forceseries: None,
+      forcefamily: None,
+      forceshape: None,
+    }
   }
 
   // Accessors

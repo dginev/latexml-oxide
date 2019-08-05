@@ -722,7 +722,7 @@ impl Document {
     actions
   }
 
-  pub fn to_string(&self, state: &mut State) -> String {
+  pub fn serialize_to_string(&self, state: &mut State) -> String {
     // This line is to use libxml2's built-in serializer w/indentation heuristic.
     // Apparently, libxml2 is giving us "binary" or byte strings which we'd prefer
     // to have as text. return decode('UTF-8',

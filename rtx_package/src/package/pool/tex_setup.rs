@@ -392,7 +392,7 @@ LoadDefinitions!(state, {
   DefParameterType!("Keyword", sub[gullet, _inner, extra, state] {
     let extra_string : String = extra.into_iter().map(|e|
     if let ParameterExtra::Token(t) = e {
-        t.get_string().to_string()
+        t.to_string()
       } else {
         String::new()
       }

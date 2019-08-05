@@ -197,7 +197,7 @@ impl Converter {
       _ => {
         dom_result = self.core.convert_document(digested);
         match dom_result {
-          Ok(dom) => dom.to_string(self.state_mut()),
+          Ok(dom) => dom.serialize_to_string(self.state_mut()),
           Err(e) => {
             let message = s!("{:?}", e);
             let error_state = &self.core.state;

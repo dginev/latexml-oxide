@@ -729,7 +729,7 @@ impl Gullet {
       None => Ok(None),
       Some(token) => {
         let cc = token.get_catcode();
-        let mut text = token.get_string().to_string();
+        let mut text = token.to_string();
         if cc == Catcode::OTHER && text.chars().all(|c| c.is_digit(10)) {
           // Read decimal literal
           text.push_str(&self.read_digits(&DIGIT_RE, true, state)?);
@@ -746,7 +746,7 @@ impl Gullet {
           //  Read Charcode
           let mut s = match self.read_token(state) {
             None => String::new(),
-            Some(next) => next.get_string().to_string(),
+            Some(next) => next.to_string(),
           };
           if s.starts_with('\\') {
             s.remove(0);
@@ -1088,7 +1088,7 @@ impl Gullet {
   fn read_optional_signs(&mut self, state: &mut State) -> Result<bool> {
     let mut sign = false;
     while let Some(t) = self.read_x_token(false, false, state)? {
-      let token_text = t.get_string().to_owned();
+      let token_text = t.get_string();
       if token_text == "-" {
         sign = true;
       } else if (token_text != "+") && t.get_catcode() != Catcode::SPACE {
@@ -1104,7 +1104,7 @@ impl Gullet {
     while let Some(token) = self.read_x_token(false, false, state)? {
       let digit = token.get_string();
       if digit.len() == 1 && range_regex.is_match(&digit) {
-        result.push_str(&digit);
+        result.push_str(digit);
       } else {
         if !(skip && token.get_catcode() == Catcode::SPACE) {
           self.unread(Tokens!(token));

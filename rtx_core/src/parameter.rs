@@ -354,8 +354,6 @@ impl Parameter {
       Ok(Tokens::new(value.revert()))
     }
   }
-
-  pub fn to_string(&self) -> String { self.spec.clone() }
 }
 
 #[derive(Clone, Debug)]
@@ -429,7 +427,10 @@ impl Parameters {
   }
 
   pub fn reparse_argument(&self, _gullet: &mut Gullet, _value: Tokens, _state: &mut State) -> Tokens { Tokens!() }
-  pub fn to_string(&self) -> String {
+}
+
+impl fmt::Display for Parameters {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut content = String::new();
     for parameter in &self.0 {
       let param_content = parameter.to_string();
@@ -438,6 +439,6 @@ impl Parameters {
       }
       content.push_str(&param_content);
     }
-    content
+    write!(f, "{}", content)
   }
 }

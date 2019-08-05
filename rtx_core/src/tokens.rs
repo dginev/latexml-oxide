@@ -81,6 +81,8 @@ impl<'a> From<&'a Tokens> for Token {
 }
 
 impl Display for Tokens {
+  /// to_string is used often, and for more keyword-like reasons,
+  /// NOT for creating valid TeX (use revert or UnTeX for that!)
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     for t in &self.0 {
       write!(f, "{}", t)?;
@@ -109,16 +111,6 @@ impl Tokens {
 
   /// Return a string containing the TeX form of the Tokens
   pub fn revert(self) -> Vec<Token> { self.0 }
-
-  /// toString is used often, and for more keyword-like reasons,
-  /// NOT for creating valid TeX (use revert or UnTeX for that!)
-  pub fn to_string(&self) -> String {
-    let mut result = String::new();
-    for t in self.0.iter() {
-      result.push_str(t.get_string());
-    }
-    result
-  }
 
   /// to_number casts back to a parsed Number (usually via gullet.read_number)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
@@ -228,7 +220,7 @@ impl Tokens {
       } else if let Some(token2) = in_tokens.next() {
         if token2.get_catcode() != Catcode::PARAM {
           // Not multiple '#'; read arg.
-          let arg_number = token2.get_string().parse::<usize>().unwrap();
+          let arg_number = token2.to_string().parse::<usize>().unwrap();
           // TODO: Should we explicitly handle the error where arg_number is higher than the available `args` entries? Or catch it higher at the caller
           // level?
           let arg = &args[arg_number - 1];
@@ -259,7 +251,7 @@ impl Tokens {
       if cc == Catcode::COMMENT {
         continue;
       }
-      let mut s = token.get_string().to_owned();
+      let mut s = token.to_string();
       if cc == Catcode::LETTER {
         // keep "words" together, just for aesthetics
         while !tokens.is_empty() && tokens[0].get_catcode() == Catcode::LETTER {
@@ -372,7 +364,7 @@ impl ToTokens for Catcode {
 
 impl ToTokens for Token {
   fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
-    let text = self.get_string();
+    let text = self.to_string();
     let code = self.get_catcode();
     stream.extend(quote! {
       Token {
