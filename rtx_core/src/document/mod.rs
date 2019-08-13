@@ -1743,11 +1743,13 @@ impl Document {
         // there is ALSO a prefix associated with that namespace, we have to declare it
         // FIRST due to the (apparently) buggy way that XML::LibXML works with
         // namespaces in setAttributeNS.
-        let prefix = state.model.get_document_namespace_prefix(&ns, false, false);
-        let attprefix = state.model.get_document_namespace_prefix(&ns, true, true);
-        if prefix.is_none() && attprefix.is_some() {
-          let attr_ns_node = Namespace::new(&attprefix.unwrap(), &ns, &mut newnode).unwrap();
-          newnode.set_namespace(&attr_ns_node)?;
+        let prefix_opt = state.model.get_document_namespace_prefix(&ns, false, false);
+        let attprefix_opt = state.model.get_document_namespace_prefix(&ns, true, true);
+        if prefix_opt.is_none() {
+          if let Some(ref attprefix) = attprefix_opt {
+            let attr_ns_node = Namespace::new(attprefix, &ns, &mut newnode).unwrap();
+            newnode.set_namespace(&attr_ns_node)?;
+          }
         }
         // TODO: Figure out a better way to achieve the "activate" effect in
         // XML:LibXML::Element it seems just creating the namespace without
