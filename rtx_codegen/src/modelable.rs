@@ -10,7 +10,6 @@ use quote::quote;
 use syn::{DeriveInput, Lit, Meta};
 
 use rtx_core::common::error::*;
-use rtx_core::state::State;
 use rtx_core::util::pathname;
 use rtx_core::{fatal, s};
 
@@ -98,32 +97,4 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
       }
     }
   )))
-}
-
-pub fn load_indirect_model(input: DeriveInput) -> TokenStream {
-  // Load the model as one would at runtime
-  let name = quote!(#input).to_string();
-  let mut state = State::default();
-  state.model.set_relaxng_schema(name.to_string());
-  state.model.load_schema(&[]);
-
-  let indirect_model = state.compute_indirect_model();
-
-  let mut operations = Vec::new();
-  operations.push(quote!(let mut im : IndirectModel = HashMap::new();));
-  for (key, sub_model) in indirect_model {
-    for (sub_key, value) in sub_model {
-      operations.push(quote!(im.entry(#key).or_insert_with(HashMap::new).entry(#sub_key).or_insert(#value)));
-    }
-  }
-  operations.push(quote!(return im));
-
-  quote!(
-    impl _ModelLoader {
-      fn indirect_model() -> IndirectModel {
-        #(#operations)*
-      }
-    }
-  )
-  .into()
 }

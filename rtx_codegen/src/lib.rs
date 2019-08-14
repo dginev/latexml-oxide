@@ -31,12 +31,6 @@ pub fn derive_load_model(input: TokenStream) -> TokenStream {
   }
 }
 
-#[proc_macro_derive(LoadIndirectModel, attributes(name))]
-pub fn derive_load_indirect_model(input: TokenStream) -> TokenStream {
-  let item = parse_macro_input!(input as DeriveInput);
-  modelable::load_indirect_model(item)
-}
-
 #[proc_macro_derive(CompileTokens, attributes(literal))]
 pub fn derive_compile_tokenize(input: TokenStream) -> TokenStream {
   let item = parse_macro_input!(input as DeriveInput);
