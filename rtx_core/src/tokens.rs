@@ -1,6 +1,6 @@
 ///! Token List constructors.
 use crate::fmt;
-use proc_macro2::{Ident, Punct, Spacing, Span};
+use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
 
 use std::borrow::Cow;
@@ -322,7 +322,7 @@ impl Tokens {
 }
 
 impl ToTokens for Tokens {
-  fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
+  fn to_tokens(&self, stream: &mut TokenStream) {
     let d = &self.0;
     stream.extend(quote! {
         Tokens::new(<[Token]>::into_vec(Box::new([ #(#d),* ])))
@@ -331,7 +331,7 @@ impl ToTokens for Tokens {
 }
 
 impl ToTokens for Catcode {
-  fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
+  fn to_tokens(&self, stream: &mut TokenStream) {
     use crate::token::Catcode::*;
     let kind = match *self {
       ESCAPE => "ESCAPE",
@@ -363,7 +363,7 @@ impl ToTokens for Catcode {
 }
 
 impl ToTokens for Token {
-  fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
+  fn to_tokens(&self, stream: &mut TokenStream) {
     let text = self.to_string();
     let code = self.get_catcode();
     stream.extend(quote! {
