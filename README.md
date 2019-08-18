@@ -10,7 +10,7 @@ A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
 ### Why?
 
-The two main reasons:
+The three main reasons:
 
   * LaTeXML is **too slow** for large-scale production use.
   * Perl 5 has **no street cred** anymore.
