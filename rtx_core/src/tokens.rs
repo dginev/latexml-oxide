@@ -40,7 +40,7 @@ macro_rules! Tokens(
     $(
       let t_vec : Vec<Token> = $tokens.into();
       collected.extend(t_vec);
-    );*;
+    )*
     $crate::tokens::Tokens::new(collected)
   }));
 // We also need convenient auxiliaries, including auto-casting
