@@ -13,6 +13,9 @@ A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 The three main reasons:
 
   * LaTeXML is **too slow** for large-scale production use.
+    - A recent independent quote from a [BIR 2019 paper](http://ceur-ws.org/Vol-2345/paper2.pdf):
+     ![latexml vs tralics](https://i.imgur.com/6iOyCDo.png)
+  
   * Perl 5 has **no street cred** anymore.
   * LaTeXML is **urgently needed** for transporting technical writing to the web and e-printing media.
 
