@@ -102,7 +102,7 @@ impl DigestionAPI for Core {
     //   $self->withState(sub {
     //       Fatal('missing_file', $request, undef, "Can't find $mode file $request"); }); } }
     // };
-    let digestion_note = s!("Digesting {}", &name.clone().unwrap());
+    let digestion_note = s!("Digesting {}", name.as_ref().unwrap());
     note_begin(&digestion_note);
     // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless
     // $options{noinitialize}; $state->assignValue(SOURCEFILE      => $request) if
@@ -291,7 +291,7 @@ impl DigestionAPI for Core {
       self.state.assign_value("SOURCEDIRECTORY", dir.clone(), None);
     }
     self.state.search_paths.push_front(dir.clone());
-    self.state.graphics_paths.push_front(dir.clone());
+    self.state.graphics_paths.push_front(dir);
 
     let name_copy = name.clone();
     self.state.install_definition(

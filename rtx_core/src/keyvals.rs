@@ -126,7 +126,7 @@ impl Object for KeyVals {
     //   skip_missing => $skip_missing, hookMissing => $hookMissing,
     //   was_digested => 1,
     //   punct => $punct, assign => $assign);
-    let mut new = self.clone();
+    let mut new = self;
     new.was_digested = true;
     new.set_tuples(new_tuples);
     Ok(new.into())

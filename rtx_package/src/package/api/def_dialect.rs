@@ -55,7 +55,7 @@ pub fn is_definable(token: &Token, state: &State) -> bool {
 
 pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
 
-pub fn parse_prototype(proto: &str, state: &mut State) -> Result<((Token, Option<Parameters>))> {
+pub fn parse_prototype(proto: &str, state: &mut State) -> Result<(Token, Option<Parameters>)> {
   let cs;
   let mut final_proto = if let Some(captures) = CSNAME_MACRO_RE.captures(proto) {
     cs = T_CS!(s!("\\{}", captures.get(1).map_or("", |m| m.as_str())));
@@ -426,7 +426,7 @@ pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacem
 
   state.install_definition(
     Primitive {
-      cs: cs.clone(),
+      cs,
       paramlist,
       replacement: Some(compiled_replacement),
       before_digest: before_digest_env,
@@ -508,7 +508,7 @@ pub fn def_constructor(
     before_digest_closures.push(require_math_closure);
   }
   if options.forbid_math {
-    let cs_name_cloned = cs_name.clone();
+    let cs_name_cloned = cs_name;
     let forbid_math_closure = before_digest_single!(stomach, state, { forbidMath!(cs_name_cloned, state) });
     before_digest_closures.push(forbid_math_closure);
   }
@@ -615,7 +615,7 @@ pub fn def_environment(
   let current_environment_closure = before_digest_single!(stomach, state, {
     AssignValue!("current_environment", env_name.clone(), None, state);
     let body = T_LETTER!(env_name.clone());
-    DefMacro!(T_CS!("\\@currenvir"), None, body.clone(), state);
+    DefMacro!(T_CS!("\\@currenvir"), None, body, state);
   });
   before_digest_env.push(current_environment_closure);
 
@@ -687,7 +687,7 @@ pub fn def_environment(
 
   match options.mode {
     Some(mode) => {
-      let emode = mode.clone();
+      let emode = mode;
       let emode_closure = Rc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
         stomach.end_mode(&emode, state)?;
         Ok(Vec::new())

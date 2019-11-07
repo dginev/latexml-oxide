@@ -64,7 +64,7 @@ lazy_static! {
 pub fn compile_replacement(input: DeriveInput) -> TokenStream {
   let replacement: String = match input.attrs[0].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value().to_string(),
+      Lit::Str(v) => v.value(),
       _ => panic!("only accepts #[replacement = \"value\"] attribute syntax, mandatory double-quotes (Lit)"),
     },
     _ => panic!("only accepts #[replacement = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"),
@@ -83,7 +83,7 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
     // println!("Compiling: \n{:?}", &replacement);
     let mut operations = Vec::new();
 
-    operations.extend(compile_replacement_tokens(replacement.to_owned()));
+    operations.extend(compile_replacement_tokens(replacement));
 
     // println!(
     //   "Into: \n{}",

@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::cmp::Ordering;
 use std::fmt;
 
 use crate::common::dimension::Dimension;
@@ -215,28 +216,36 @@ impl Glue {
     let mut pfill = self.pfill;
     let mut mfill = self.mfill;
 
-    if self.pfill == other.pfill {
-      if let Some(oplus) = other.plus {
-        plus = match plus {
-          Some(splus) => Some(splus + oplus),
-          None => Some(oplus),
-        };
-      }
-    } else if self.pfill < other.pfill {
-      plus = other.plus;
-      pfill = other.pfill;
-    }
-    if self.mfill == other.mfill {
-      if let Some(ominus) = other.minus {
-        minus = match minus {
-          Some(sminus) => Some(sminus + ominus),
-          None => Some(ominus),
-        };
-      }
-    } else if self.mfill < other.mfill {
-      minus = other.minus;
-      mfill = other.mfill;
-    }
+    match self.pfill.cmp(&other.pfill) {
+      Ordering::Equal => {
+        if let Some(oplus) = other.plus {
+          plus = match plus {
+            Some(splus) => Some(splus + oplus),
+            None => Some(oplus),
+          };
+        }
+      },
+      Ordering::Less => {
+        plus = other.plus;
+        pfill = other.pfill;
+      },
+      _ => {},
+    };
+    match self.mfill.cmp(&other.mfill) {
+      Ordering::Equal => {
+        if let Some(ominus) = other.minus {
+          minus = match minus {
+            Some(sminus) => Some(sminus + ominus),
+            None => Some(ominus),
+          };
+        }
+      },
+      Ordering::Less => {
+        minus = other.minus;
+        mfill = other.mfill;
+      },
+      _ => {},
+    };
 
     Glue {
       skip,

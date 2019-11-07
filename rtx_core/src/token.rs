@@ -522,13 +522,17 @@ pub fn untex(digested: &Digested, state: &State) -> Result<String> {
     prevcc = cc;
   }
   // Patch up nesting for valid TeX !!!
-  if level > 0 {
-    let close_brace_string = String::from_utf8(vec![b'}'; level.abs() as usize]).unwrap();
-    tex_string = tex_string + &close_brace_string;
-  } else if level < 0 {
-    let open_brace_string = String::from_utf8(vec![b'{'; level.abs() as usize]).unwrap();
-    tex_string = open_brace_string + &tex_string;
-  }
+  match level {
+    0 => {},
+    1i32..=std::i32::MAX => {
+      let close_brace_string = String::from_utf8(vec![b'}'; level.abs() as usize]).unwrap();
+      tex_string = tex_string + &close_brace_string;
+    },
+    std::i32::MIN..=-1i32 => {
+      let open_brace_string = String::from_utf8(vec![b'{'; level.abs() as usize]).unwrap();
+      tex_string = open_brace_string + &tex_string;
+    },
+  };
   Ok(tex_string)
 }
 

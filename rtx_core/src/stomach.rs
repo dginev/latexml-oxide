@@ -323,7 +323,7 @@ impl<'t> Stomach {
     } else {
       let message = s!("The token {} is not defined.", token.stringify());
       Error!("undefined", token, self, state, &message, "Defining it now as <ltx:ERROR/>");
-      let closure_cs = cs.clone();
+      let closure_cs = cs;
       state.install_definition(
         Constructor {
           cs: token.clone(),

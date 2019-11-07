@@ -129,7 +129,7 @@ impl Model {
           "DTD" => {
             // NOTE: This is a hack, as DTD should be deprecated, just making xii test work for now
             // ($roottag, $publicid, $systemid) = @data;
-            name = data.last().unwrap().replace(".dtd", "").to_string();
+            name = data.last().unwrap().replace(".dtd", "");
             self.schema = Some(Relaxng {
               name: "DTD".to_string(), // HACK, phase out DTD support!
               ..Relaxng::default()
@@ -219,7 +219,7 @@ impl Model {
     match namespace_opt_checked {
       Some(namespace) => {
         self.code_namespace_prefixes.insert(namespace.clone(), codeprefix.to_string());
-        self.code_namespaces.insert(codeprefix.to_string(), namespace.clone());
+        self.code_namespaces.insert(codeprefix.to_string(), namespace);
       },
       None => {
         match self.code_namespaces.get(codeprefix) {
@@ -332,7 +332,7 @@ impl Model {
     if ns_str.is_empty() {
       None
     } else {
-      Some(ns_str.to_string())
+      Some(ns_str)
     }
   }
 
@@ -375,7 +375,7 @@ impl Model {
 
     match codeprefix {
       None => None,
-      Some(cp) => Some(cp.to_string()),
+      Some(cp) => Some(cp),
     }
   }
 
@@ -400,7 +400,7 @@ impl Model {
     }
     match ns {
       None => None,
-      Some(ns) => Some(ns.to_string()),
+      Some(ns) => Some(ns),
     }
   }
 

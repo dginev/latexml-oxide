@@ -167,10 +167,10 @@ impl Document {
     if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some()) && !pending_declaration.is_empty() {
       for (ref key, &(ref value, ref properties)) in &pending_declaration {
         if state.model.can_have_attribute(&qname, key) {
-          attrs_to_set.push((key.to_string(), value.to_string()));
+          attrs_to_set.push(((*key).to_string(), value.to_string()));
           // Merge to set the font currently in effect
           declared_font = declared_font.merge(properties.clone());
-          keys_to_remove.push(key.to_string());
+          keys_to_remove.push((*key).to_string());
         }
       }
     }
@@ -218,7 +218,7 @@ impl Document {
           // Too late to do wrapNodes?
           if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child], state)? {
             for (ref key, &(ref value, ref properties)) in &pending_declaration {
-              self.set_attribute(&mut text, &key.to_string(), &value.to_string())?;
+              self.set_attribute(&mut text, &key, &value.to_string())?;
             }
             self.finalize_rec(&mut text, new_init_font, state)?; // Now have to clean up the new node!
           }
@@ -367,15 +367,13 @@ impl Document {
   pub fn insert_pi(&mut self, op: &str, attributes_opt: Option<HashMap<String, String>>) -> Result<()> {
     let mut attr_data = Vec::new();
     if let Some(attributes) = attributes_opt {
-      // TODO: This was a portion of late-night code, can we rewrite it so that we work entirely with &str,
-      //       and no allocations get done? It's a trivial overhead in practice, but still...
-      let mut keys: Vec<String> = ["class", "package", "options"].iter().map(|opt| opt.to_string()).collect();
+      let mut keys = vec![String::from("class"), String::from("package"), String::from("options")];
       let mut other_keys = attributes
         .keys()
         .filter(|k| k.as_str() != "class" && k.as_str() != "package" && k.as_str() != "options")
         .map(ToString::to_string)
-        .collect();
-      keys.append(&mut other_keys);
+        .collect::<Vec<String>>();
+      keys.extend(other_keys);
       for key in keys {
         if let Some(value) = attributes.get(&key) {
           attr_data.push(s!("{}=\"{}\"", key, value));

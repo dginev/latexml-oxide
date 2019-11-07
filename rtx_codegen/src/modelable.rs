@@ -22,7 +22,7 @@ lazy_static! {
 pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
   let name: String = match input.attrs[0].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value().to_string(),
+      Lit::Str(v) => v.value(),
       _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"),
     },
     _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"),

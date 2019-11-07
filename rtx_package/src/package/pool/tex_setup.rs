@@ -586,7 +586,7 @@ LoadDefinitions!(state, {
     };
     match defn {
       Some(register) => {
-        let mut invoked = vec![token.clone().unwrap()];
+        let mut invoked = vec![token.unwrap()];
         for arg in register.read_arguments(gullet, state)? {
           invoked.append(&mut arg.unlist());
         }

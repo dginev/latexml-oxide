@@ -11,7 +11,7 @@ use rtx_core::tokens::Tokens;
 pub fn compile_expansion(input: DeriveInput) -> TokenStream {
   let expansion: String = match input.attrs[0].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value().to_string(),
+      Lit::Str(v) => v.value(),
       _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"),
     },
     _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"),
@@ -48,7 +48,7 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
 pub fn compile_tokenize(input: DeriveInput) -> TokenStream {
   let literal: String = match input.attrs[0].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value().to_string(),
+      Lit::Str(v) => v.value(),
       _ => panic!("only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (Lit)"),
     },
     _ => panic!("only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"),
@@ -71,7 +71,7 @@ pub fn compile_tokenize(input: DeriveInput) -> TokenStream {
 pub fn compile_tokenize_internal(input: DeriveInput) -> TokenStream {
   let literal: String = match input.attrs[0].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value().to_string(),
+      Lit::Str(v) => v.value(),
       _ => panic!("only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (Lit)"),
     },
     _ => panic!("only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"),

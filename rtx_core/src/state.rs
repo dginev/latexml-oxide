@@ -1537,7 +1537,7 @@ impl State {
   pub fn let_i(&mut self, token1: &Token, token2: Token, scope: Option<Scope>) {
     // If strings are given, assume CS tokens (most common case)
     let meaning = match self.lookup_meaning(&token2) {
-      Some(m) => m.clone(),
+      Some(m) => m,
       None => Stored::Token(token2),
     };
     self.assign_meaning(token1, meaning, scope);

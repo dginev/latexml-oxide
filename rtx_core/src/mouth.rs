@@ -308,9 +308,9 @@ impl Mouth {
       Some(line) => {
         // No CR on last line!
         if self.buffer.is_empty() {
-          Some(line.to_string() + "\r")
+          Some(line + "\r")
         } else {
-          Some(line.to_string())
+          Some(line)
         }
       },
       None => {
@@ -387,20 +387,21 @@ impl Mouth {
         let next_ch = self.chars.get(self.colno);
         // Possible convert ^^x
         if cc == Some(Catcode::SUPER) && Some(&ch) == next_ch {
-          let c1 = self.chars.get(self.colno + 1);
-          let c2 = self.chars.get(self.colno + 2);
+          let c1_opt = self.chars.get(self.colno + 1);
+          let c2_opt = self.chars.get(self.colno + 2);
+          let mut two_hex = false;
           // ^^ followed by TWO LOWERCASE Hex digits???
-          if (self.colno + 2 < self.nchars)
-            && c1.is_some()
-            && c2.is_some()
-            && LOWERHEX_REGEX.is_match(&c1.unwrap().to_string())
-            && LOWERHEX_REGEX.is_match(&c2.unwrap().to_string())
-          {
-            let hex = u8::from_str_radix(&s!("{}{}", c1.unwrap(), c2.unwrap()), 16).unwrap(); // TODO: Maybe Result type warranted here?
-            ch = hex as char;
-            self.splice(self.colno - 1..self.colno + 3, &[ch]);
-            self.nchars -= 3;
-          } else {
+          if let Some(c1) = c1_opt {
+            if let Some(c2) = c2_opt {
+              if (self.colno + 2 < self.nchars) && LOWERHEX_REGEX.is_match(&c1.to_string()) && LOWERHEX_REGEX.is_match(&c2.to_string()) {
+                let hex = u8::from_str_radix(&s!("{}{}", c1, c2), 16).unwrap(); // TODO: Maybe Result type warranted here?
+                ch = hex as char;
+                self.splice(self.colno - 1..self.colno + 3, &[ch]);
+                self.nchars -= 3;
+              }
+            }
+          }
+          if !two_hex {
             // OR ^^ followed by a SINGLE Control char type code???
             let mut c = self.chars[self.colno + 1];
             let mut cn = c as i32;

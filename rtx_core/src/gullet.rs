@@ -463,7 +463,7 @@ impl Gullet {
       }
       if to_match.is_empty() {
         // All matched!!!
-        return Ok(Some(T_OTHER!(keyword.to_string()).into()));
+        return Ok(Some(T_OTHER!(keyword).into()));
       } else {
         self.unread(matched.into()); // Put 'em back and try next!
       }

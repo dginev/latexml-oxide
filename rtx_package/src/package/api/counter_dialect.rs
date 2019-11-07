@@ -242,7 +242,7 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
   state.after_assignment();
   let id_cs = T_CS!(s!("\\@{}@ID", ctr));
   def_macro(
-    id_cs.clone(),
+    id_cs,
     None,
     Tokens::new(Explode!(v.value_of())),
     Some(ExpandableOptions {
@@ -261,7 +261,7 @@ pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut
   def_macro(
     T_CS!(s!("\\@{}@ID", ctr)),
     None,
-    token_value.clone(),
+    token_value,
     Some(ExpandableOptions {
       scope: Some(Scope::Global),
       ..ExpandableOptions::default()
@@ -308,7 +308,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   def_macro(
     T_CS!("\\@currentlabel"),
     None,
-    the_cs.clone(),
+    the_cs,
     Some(ExpandableOptions {
       scope: Some(Scope::Global),
       ..ExpandableOptions::default()
@@ -319,7 +319,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
     def_macro(
       T_CS!("\\@currentID"),
       None,
-      the_id_cs.clone(),
+      the_id_cs,
       Some(ExpandableOptions {
         scope: Some(Scope::Global),
         ..ExpandableOptions::default()

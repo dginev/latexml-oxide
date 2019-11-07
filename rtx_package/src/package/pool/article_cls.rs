@@ -29,7 +29,7 @@ LoadDefinitions!(stomach, state, {
   ]
   .iter()
   {
-    DeclareOption!(option.to_string(), None);
+    DeclareOption!(*option, None);
   }
 
   // TODO:

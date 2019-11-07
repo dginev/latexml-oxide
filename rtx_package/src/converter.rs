@@ -93,7 +93,7 @@ impl Converter {
     let current_preamble = match self.opts.whatsin {
       DataSize::Math => Some(s!("literal:\\begin{{document}}\\ensuremathfollows")),
       DataSize::Fragment => match self.opts.preamble.clone() {
-        Some(p) => Some(p.clone()),
+        Some(p) => Some(p),
         None => Some(s!("standard_preamble.tex")),
       },
       _ => None,

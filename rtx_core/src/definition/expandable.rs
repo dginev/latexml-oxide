@@ -154,7 +154,7 @@ impl Expandable {
 
   fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Result<Tokens> {
     match self.expansion {
-      Some(ExpansionBody::Closure(ref closure)) => closure(gullet, args.to_owned(), state),
+      Some(ExpansionBody::Closure(ref closure)) => closure(gullet, args, state),
       // but for tokens, make sure args are proper Tokens (lists)
       Some(ExpansionBody::Tokens(ref tks)) => {
         if !tks.is_stub() {

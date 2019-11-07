@@ -307,7 +307,7 @@ impl Parameter {
     if self.semiverbatim && !value.is_empty() {
       stomach.reading_from_mouth(Mouth::default(), state, move |stomach: &mut Stomach, state: &mut State| {
         let gullet = stomach.get_gullet_mut();
-        gullet.unread(value.clone());
+        gullet.unread(value);
         let mut tokens = Vec::new();
         loop {
           match gullet.read_x_token(true, true, state) {

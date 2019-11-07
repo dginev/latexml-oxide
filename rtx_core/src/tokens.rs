@@ -308,14 +308,18 @@ impl Tokens {
       }
     }
     // Patch up nesting for valid TeX !!!
-    if level > 0 {
-      for _ in 0..level {
-        result.push('}');
-      }
-    } else if level < 0 {
-      for _ in 0..(-level) {
-        result = String::from("{") + &result;
-      }
+    match level {
+      1..=std::i32::MAX => {
+        for _ in 0..level {
+          result.push('}');
+        }
+      },
+      std::i32::MIN..=-1 => {
+        for _ in 0..(-level) {
+          result = String::from("{") + &result;
+        }
+      },
+      0 => {},
     }
     result
   }
