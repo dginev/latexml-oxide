@@ -131,13 +131,10 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
   let mut operations = Vec::new();
 
   while !replacement.is_empty() {
-    // TODO: Is there a better way to write code conditional on triggered .replace?
-    let mut is_match = false;
     let mut current_tag = String::new();
 
     // ?test(ifclause)(elseclause)
     if LEAD_COND_RE.is_match(&replacement) {
-      is_match = true;
       // println!("Leading conditional at: {:?}", replacement);
       let (bool_branch, if_branch, else_branch) = parse_conditional(&mut replacement);
       let if_branch_compiled = compile_replacement_tokens(if_branch);
@@ -150,105 +147,103 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
           #(#else_branch_compiled)*
         }
       ));
+      continue;
     }
 
     // Processing instruction: <?name a=v ...?>
-    if !is_match {
-      replacement = PI_RE
-        .replace(&replacement, |refs: &Captures| -> String {
-          current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
-          is_match = true;
+    let mut is_match = false;
+    replacement = PI_RE
+      .replace(&replacement, |refs: &Captures| -> String {
+        current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
+        is_match = true;
+        String::new()
+      })
+      .to_string();
+
+    if is_match {
+      // println!("-- matched a PI ");
+      // this is annoying since we want translate_avpairs to mutate the replacement
+      // string in place, but also want it to run after the replacement...
+      // makes `current_tag` in particular look very misplaced
+      let av = translate_avpairs(&mut replacement);
+      operations.push(quote!(
+        let mut av_props : HashMap<String, String> = HashMap::new();
+        #(#av)*
+        document.insert_pi(#current_tag, Some(av_props))?;
+      ));
+
+      let mut pi_closed = false;
+      replacement = PI_CLOSE_RE
+        .replace(&replacement, |_: &Captures| -> String {
+          pi_closed = true;
           String::new()
         })
         .to_string();
 
-      if is_match {
-        // println!("-- matched a PI ");
-        // this is annoying since we want translate_avpairs to mutate the replacement
-        // string in place, but also want it to run after the replacement...
-        // makes `current_tag` in particular look very misplaced
-        let av = translate_avpairs(&mut replacement);
-        operations.push(quote!(
-          let mut av_props : HashMap<String, String> = HashMap::new();
-          #(#av)*
-          document.insert_pi(#current_tag, Some(av_props))?;
-        ));
-
-        let mut pi_closed = false;
-        replacement = PI_CLOSE_RE
-          .replace(&replacement, |_: &Captures| -> String {
-            pi_closed = true;
-            String::new()
-          })
-          .to_string();
-
-        if !pi_closed {
-          panic!("Missing '?>' at '{:?}'\n", replacement);
-        }
+      if !pi_closed {
+        panic!("Missing '?>' at '{:?}'\n", replacement);
       }
+      continue;
     }
 
     // Open tag: <name a=v ...> or .../> (for empty element)
-    if !is_match {
-      replacement = LEAD_OPEN_TAG_RE
-        .replace(&replacement, |refs: &Captures| -> String {
-          is_match = true;
-          current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
-          // println!("-- open tag {:?}", current_tag);
-          String::new()
-        })
-        .to_string();
+    replacement = LEAD_OPEN_TAG_RE
+      .replace(&replacement, |refs: &Captures| -> String {
+        is_match = true;
+        current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
+        // println!("-- open tag {:?}", current_tag);
+        String::new()
+      })
+      .to_string();
 
-      // handle open tag
-      if is_match {
-        let av = translate_avpairs(&mut replacement);
-        if has_floats {
-          let float_type = floats.len();
-          if float_type == 1 {
-            operations.push(quote!(savenode = Some(document.float_to_element(#current_tag, false));));
-          } else if float_type == 2 {
-            operations.push(quote!(savenode = Some(document.float_to_element(#current_tag, true));));
-          }
-          has_floats = false;
-          floats = String::new();
+    // handle open tag
+    if is_match {
+      let av = translate_avpairs(&mut replacement);
+      if has_floats {
+        let float_type = floats.len();
+        if float_type == 1 {
+          operations.push(quote!(savenode = Some(document.float_to_element(#current_tag, false));));
+        } else if float_type == 2 {
+          operations.push(quote!(savenode = Some(document.float_to_element(#current_tag, true));));
         }
-        operations.push(quote!(
-          let mut av_props : HashMap<String, String> = HashMap::new();
-          #(#av)*
-          document.open_element(#current_tag, Some(av_props), None, state)?;
-        ));
-        // Empty element?
-        if replacement.starts_with('/') {
-          operations.push(quote!(document.close_element(#current_tag, state)?;));
-          replacement = replacement[1..].to_owned();
-        }
-        if replacement.starts_with('>') {
-          replacement = replacement[1..].to_owned();
-        } else {
-          panic!("Missing '>' at '{:?}'", replacement);
-        }
+        has_floats = false;
+        floats = String::new();
       }
+      operations.push(quote!(
+        let mut av_props : HashMap<String, String> = HashMap::new();
+        #(#av)*
+        document.open_element(#current_tag, Some(av_props), None, state)?;
+      ));
+      // Empty element?
+      if replacement.starts_with('/') {
+        operations.push(quote!(document.close_element(#current_tag, state)?;));
+        replacement = replacement[1..].to_owned();
+      }
+      if replacement.starts_with('>') {
+        replacement = replacement[1..].to_owned();
+      } else {
+        panic!("Missing '>' at '{:?}'", replacement);
+      }
+      continue;
     }
 
     // Close tag: </name>
-    if !is_match {
-      replacement = LEAD_CLOSE_TAG_RE
-        .replace(&replacement, |refs: &Captures| -> String {
-          is_match = true;
-          current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
-          // println!("-- close tag {:?}", current_tag);
-          String::new()
-        })
-        .to_string();
-      // handle close tag
-      if is_match {
+    replacement = LEAD_CLOSE_TAG_RE
+      .replace(&replacement, |refs: &Captures| -> String {
+        is_match = true;
+        current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
+        // println!("-- close tag {:?}", current_tag);
+        // handle close tag
         operations.push(quote!(document.close_element(#current_tag, state)?;));
-      }
+        String::new()
+      })
+      .to_string();
+    if is_match {
+      continue;
     }
 
     // Substitutable value: argument, property...
-    if !is_match && LEAD_VALUE_RE.is_match(&replacement) {
-      is_match = true;
+    if LEAD_VALUE_RE.is_match(&replacement) {
       let to_absorb = translate_value("", &mut replacement);
       operations.push(quote!(
         if let Some(ref stored_digested) = #to_absorb {
@@ -258,34 +253,30 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
           }
         }
       ));
+      continue;
     }
 
     // TODO: Still to be implemented cases:
-    if !is_match {
-      // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
-      if let Some(eq_index) = replacement.find('=') {
-        is_match = true;
-        // println!("-- Attribute");
-        let consumed = replacement[0..=eq_index].to_owned();
-        replacement = replacement[consumed.len()..].to_owned();
-      }
+    // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
+    if let Some(eq_index) = replacement.find('=') {
+      // println!("-- Attribute");
+      let consumed = replacement[0..=eq_index].to_owned();
+      replacement = replacement[consumed.len()..].to_owned();
+      continue;
     }
 
     // Else random text
-    if !is_match {
-      replacement = LEAD_RANDOM_TEXT_RE
-        .replace(&replacement, |refs: &Captures| -> String {
-          if let Some(text_match) = refs.get(1) {
-            let escaped_match = &slashify(&unquote(text_match.as_str()));
-            operations.push(quote!(
-              document.absorb_string(#escaped_match, props, state)?;
-            ));
-            is_match = true;
-          }
-          String::new()
-        })
-        .to_string();
-    }
+    replacement = LEAD_RANDOM_TEXT_RE
+      .replace(&replacement, |refs: &Captures| -> String {
+        if let Some(text_match) = refs.get(1) {
+          let escaped_match = &slashify(&unquote(text_match.as_str()));
+          operations.push(quote!(
+            document.absorb_string(#escaped_match, props, state)?;
+          ));
+        }
+        String::new()
+      })
+      .to_string();
   }
 
   operations
