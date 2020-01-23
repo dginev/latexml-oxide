@@ -251,40 +251,6 @@ impl fmt::Display for Error {
   }
 }
 
-impl ErrorTrait for Error {
-  fn description(&self) -> &str {
-    use self::ErrorCategory::*;
-    match self.category {
-      Init => "initialization failed",
-      Io(ref err) => err.description(),
-      Convert => "conversion",
-      MissingFile => "missing file",
-      NotFound => "not found",
-      Misdefined => "misdefined",
-      Unknown => "unknown",
-      Malformed => "malformed",
-      Expected => "expected",
-      Unexpected => "unexpected",
-      Libxml => "libxml error",
-      Recursion => "<recursion>",
-      EoF => "<EOF>",
-      Endgroup => "<endgroup>",
-      Generic(ref err) => err.description(),
-      Filename(ref name) => name,
-    }
-  }
-
-  fn cause(&self) -> Option<&dyn ErrorTrait> {
-    use self::ErrorCategory::*;
-    match self.category {
-      Io(ref err) => Some(err),
-      // Our custom error doesn't have an underlying cause,
-      // but we could modify it so that it does.
-      _ => None,
-    }
-  }
-}
-
 impl Error {
   pub fn log_fatal(&self) {
     let target_str = s!("Fatal:{:?}:{:?} ", self.target, self.category);
@@ -307,7 +273,7 @@ impl From<Box<dyn ErrorTrait>> for Error {
   fn from(err: Box<dyn ErrorTrait>) -> Error {
     Error {
       target: ErrorTarget::Document,
-      message: err.description().to_string(),
+      message: err.to_string(),
       category: ErrorCategory::Generic(err),
     }
   }
@@ -347,7 +313,7 @@ impl From<ParseIntError> for Error {
   fn from(err: ParseIntError) -> Error {
     Error {
       target: ErrorTarget::Document,
-      message: err.description().to_string(),
+      message: err.to_string(),
       category: ErrorCategory::Generic(Box::new(err)),
     }
   }
@@ -357,7 +323,7 @@ impl From<ParseFloatError> for Error {
   fn from(err: ParseFloatError) -> Error {
     Error {
       target: ErrorTarget::Document,
-      message: err.description().to_string(),
+      message: err.to_string(),
       category: ErrorCategory::Generic(Box::new(err)),
     }
   }

@@ -1,6 +1,7 @@
 use glob::glob;
 use libxml::parser::Parser;
 use libxml::tree::Document as XmlDoc;
+use libxml::tree::SaveOptions;
 use std::collections::HashMap;
 
 use rtx_core::common::BindingDispatcher;
@@ -103,4 +104,13 @@ fn process_ltx_doc(doc: Document, _name: &str, state: &mut State) -> Vec<String>
 }
 
 /// Serializes and splits by line a given `XmlDoc`
-fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> { dom.to_string(true).split('\n').map(ToString::to_string).collect() }
+fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {
+  dom
+    .to_string_with_options(SaveOptions {
+      format: true,
+      ..SaveOptions::default()
+    })
+    .split('\n')
+    .map(ToString::to_string)
+    .collect()
+}
