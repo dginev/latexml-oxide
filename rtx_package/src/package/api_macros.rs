@@ -100,7 +100,7 @@ macro_rules! before_digest_single {
 
 #[macro_export]
 macro_rules! tagsub {
-  ($document:ident, $node:ident, $state:ident, $body:expr) => {
+  ($document:ident, $node:ident, $state:ident, $body:block) => {
     vec![Rc::new(
       |$document: &mut Document, mut $node: &mut Node, $state: &mut State| -> Result<()> {
         BindInnerState!($state);
@@ -121,7 +121,7 @@ macro_rules! noreplacement {
 
 #[macro_export]
 macro_rules! replacement {
-  ($doc:ident, $args:ident, $props:ident, $state:ident, $body:expr) => (
+  ($doc:ident, $args:ident, $props:ident, $state:ident, $body:block) => (
     move |$doc:&mut Document,$args: &Vec<Option<Digested>>, $props: &HashMap<String, Stored>, $state: &mut State| -> Result<()> {
     BindInnerState!($state);
     $body
@@ -132,7 +132,7 @@ macro_rules! replacement {
 
 #[macro_export]
 macro_rules! construct {
-  ($doc:ident, $whatsit:ident, $state:ident, $body:expr) => {
+  ($doc:ident, $whatsit:ident, $state:ident, $body:block) => {
   vec![Rc::new(
     move |$doc: &mut Document, $whatsit: &Whatsit, $state: &mut State| -> Result<()> {
       BindInnerState!($state);
