@@ -375,12 +375,7 @@ LoadDefinitions!(state, {
   // Read a matching keyword, eg. Match:=
   DefParameterType!("Match", sub[gullet, _inner, extra, state] {
     let extra_tokens : Vec<Token> = extra.into_iter().filter(|e|
-    if let ParameterExtra::Token(t) = e {
-        true
-      } else {
-        false
-      }
-    ).map(Into::into).collect();
+    matches!(e, ParameterExtra::Token(t))).map(Into::into).collect();
     match gullet.read_match(&[&Tokens::new(extra_tokens)], state)? {
       Some(t) => Ok(t),
       None => Ok(Tokens!())

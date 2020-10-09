@@ -384,7 +384,7 @@ impl Object for Parameters {
 impl Parameters {
   pub fn new(params: Vec<Parameter>) -> Self { Parameters(params) }
   pub fn get_num_args(&self) -> usize { self.0.iter().filter(|&p| !p.novalue).count() }
-  pub fn get_parameters(&self) -> Vec<&Parameter> { self.0.iter().map(|p| p).collect() }
+  pub fn get_parameters(&self) -> Vec<&Parameter> { self.0.iter().collect() }
   pub fn revert_arguments(&self, args: Vec<Tokens>, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     for (parameter, arg) in self.0.iter().zip(args.into_iter()) {

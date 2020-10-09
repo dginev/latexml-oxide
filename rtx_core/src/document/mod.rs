@@ -800,7 +800,7 @@ impl Document {
           // with contents.
           serialized.push('>');
           if !noindent_children {
-            serialized.push_str("\n");
+            serialized.push('\n');
           }
           for child in children {
             serialized.push_str(&self.serialize_aux(&child, depth + 1, noindent_children, heuristic, state));
@@ -810,13 +810,13 @@ impl Document {
           }
           serialized.push_str(&s!("</{}>", tag));
           if !noindent {
-            serialized.push_str("\n");
+            serialized.push('\n');
           }
         } else {
           // empty element.
           serialized.push_str("/>");
           if !noindent {
-            serialized.push_str("\n");
+            serialized.push('\n');
           }
         }
       },
@@ -830,7 +830,7 @@ impl Document {
         }
         serialized.push_str(&self.document.node_to_string(node));
         if !noindent {
-          serialized.push_str("\n");
+          serialized.push('\n');
         }
       },
       Some(NodeType::CommentNode) => {
@@ -1085,7 +1085,6 @@ impl Document {
         && c[0]
           .get_attributes()
           .keys()
-          .map(|x| x)
           .filter(|x| !x.starts_with('_'))
           .all(|n| state.model.can_have_attribute(&qname, n))
         && c[0].get_attribute("_force_font").is_none()
@@ -1551,10 +1550,10 @@ impl Document {
             old.push(new);
           }
         }
-        old.sort();
+        old.sort_unstable();
         self.set_attribute(node, key, &old.join(" "))?;
       } else {
-        values.sort();
+        values.sort_unstable();
         self.set_attribute(node, key, &values.join(" "))?;
       }
     }

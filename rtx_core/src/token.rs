@@ -223,19 +223,13 @@ impl Catcode {
 
   pub fn is_active_or_cs(self) -> bool {
     use crate::token::Catcode::*;
-    match self {
-      ACTIVE | CS => true,
-      _ => false,
-    }
+    matches!(self, ACTIVE | CS)
   }
 
   pub fn is_absorbable(self) -> bool {
     use crate::token::Catcode::*;
-    match self {
-      // Absorbable
-      SPACE | LETTER | OTHER | COMMENT => true,
-      _ => false,
-    }
+    // Absorbable
+    matches!(self, SPACE | LETTER | OTHER | COMMENT)
   }
 }
 
@@ -567,7 +561,7 @@ impl<'a> Token {
   pub fn get_executable_name(&self) -> String {
     let cc = self.code;
     if cc.is_executable() {
-      self.get_primitive_name().unwrap_or_else(|| &self.text).to_string()
+      self.get_primitive_name().unwrap_or(&self.text).to_string()
     } else {
       String::new()
     }

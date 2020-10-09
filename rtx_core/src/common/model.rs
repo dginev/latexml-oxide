@@ -630,7 +630,7 @@ impl Model {
     match self.tagprop.get(tag) {
       Some(h) => {
         let mut keys: Vec<&str> = h.model.iter().map(String::as_str).collect();
-        keys.sort();
+        keys.sort_unstable();
         keys
       },
       None => Vec::new(),
@@ -649,7 +649,7 @@ impl Model {
     match self.tagprop.get(tag) {
       Some(h) => {
         let mut keys: Vec<&str> = h.attributes.iter().map(String::as_str).collect();
-        keys.sort();
+        keys.sort_unstable();
         keys
       },
       None => Vec::new(),

@@ -99,4 +99,5 @@ LoadDefinitions!(state, {
   InnerPool!(latex_other_in_appendices);
   // lines 5200-5366
   InnerPool!(latex_semi_undocumented);
+
 });
