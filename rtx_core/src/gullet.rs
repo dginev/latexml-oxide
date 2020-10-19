@@ -121,7 +121,7 @@ impl Gullet {
     });
   }
 
-  pub fn close_mouth<'close>(&'close mut self, forced: bool, state: &mut State) {
+  pub fn close_mouth(&mut self, forced: bool, state: &mut State) {
     let mut shift_from_mouthstack = false;
     let mut error_has_more_input = false;
     if let Some(ref mut runtime) = self.mouth {
