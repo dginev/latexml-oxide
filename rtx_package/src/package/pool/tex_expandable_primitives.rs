@@ -298,7 +298,7 @@ fn escapechar(state: &State) -> String {
     Some(RegisterValue::Number(v)) => v.value_of() as i32,
     _ => -1,
   };
-  if code >= 0 && code <= 255 {
+  if (0..=255).contains(&code) {
     let char_code = (code as u8) as char;
     char_code.to_string()
   } else {

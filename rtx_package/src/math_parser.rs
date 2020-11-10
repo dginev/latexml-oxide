@@ -941,14 +941,8 @@ impl MathParser {
   fn textrec(&self, node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<&str>, document: &Document, state: &mut State) -> String {
     let node = self.realize_xmnode(node_opt, document);
     let tag = document.get_node_qname(&node, state);
-    let outer_bp = match outer_bp_opt {
-      Some(obp) => obp,
-      None => 0,
-    };
-    let outer_name = match outer_name_opt {
-      Some(oname) => oname,
-      None => "",
-    };
+    let outer_bp = outer_bp_opt.unwrap_or(0);
+    let outer_name = outer_name_opt.unwrap_or("");
     match tag.as_str() {
       "ltx:XMApp" => {
         let app_role = node.get_attribute("role").unwrap_or_else(|| s!("missing_role"));

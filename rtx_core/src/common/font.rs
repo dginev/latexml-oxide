@@ -610,10 +610,7 @@ pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, s
     None => {
       font = state.lookup_font();
       if let Some(ref font) = font {
-        match font.get_encoding() {
-          Some(s) => s,
-          None => "",
-        }
+        font.get_encoding().unwrap_or(&Cow::Borrowed(""))
       } else {
         ""
       }

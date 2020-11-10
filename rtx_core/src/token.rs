@@ -3,7 +3,6 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Display;
-use std::iter::FromIterator;
 use std::rc::Rc;
 
 use crate::common::dimension::{Dimension, MuDimension};
@@ -451,7 +450,7 @@ macro_rules! ExplodeText(($text:expr) => (
 static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
 pub fn untex(digested: &Digested, state: &State) -> Result<String> {
   use crate::token::Catcode::*;
-  let mut tokens = VecDeque::from_iter(digested.revert()?.unlist().into_iter());
+  let mut tokens : VecDeque<Token> = digested.revert()?.unlist().into_iter().collect();
   let mut tex_string = String::new();
   let mut length = 0;
   let mut level: i32 = 0;
@@ -463,10 +462,8 @@ pub fn untex(digested: &Digested, state: &State) -> Result<String> {
       continue;
     }
     let mut token_string = token.get_string().to_owned();
-    let first_char = match token_string.chars().next() {
-      Some(c) => c,
-      None => '\n', // Note: only-used to fail alphanumeric test
-    };
+    // Note: \n only-used to fail alphanumeric test
+    let first_char = token_string.chars().next().unwrap_or('\n');
     if cc == LETTER {
       // keep "words" together, just for aesthetics
       while !tokens.is_empty() && tokens[0].get_catcode() == LETTER {

@@ -378,26 +378,11 @@ impl State {
       None => Model::default(),
       Some(m) => m,
     };
-    let verbosity = match options.verbosity {
-      None => 0,
-      Some(v) => v,
-    };
-    let strict = match options.strict {
-      None => false,
-      Some(s) => s,
-    };
-    let include_comments = match options.include_comments {
-      None => true,
-      Some(ic) => ic,
-    };
-    let include_styles = match options.include_styles {
-      None => false,
-      Some(is) => is,
-    };
-    let nomathparse = match options.nomathparse {
-      None => false,
-      Some(is) => is,
-    };
+    let verbosity = options.verbosity.unwrap_or(0);
+    let strict = options.strict.unwrap_or(false);
+    let include_comments = options.include_comments.unwrap_or(true);
+    let include_styles = options.include_styles.unwrap_or(false);
+    let nomathparse = options.nomathparse.unwrap_or(false);
 
     let documentid = match options.documentid {
       None => String::new(),
@@ -796,10 +781,7 @@ impl State {
   }
 
   pub fn value_in_frame(&self, key: &str, frame_opt: Option<usize>) -> Option<&Stored> {
-    let frame = match frame_opt {
-      None => 0,
-      Some(n) => n,
-    };
+    let frame = frame_opt.unwrap_or(0);
     let mut p = 0;
     for f in 0..=frame {
       let val_opt = self.undo.get(f).as_ref().unwrap().table(TableName::Value).get(key);
