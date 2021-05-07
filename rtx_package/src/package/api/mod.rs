@@ -188,12 +188,7 @@ impl IntoRegisterValueOption<Option<RegisterValue>> for Tokens {
 }
 
 impl IntoRegisterValueOption<Option<RegisterValue>> for Option<Number> {
-  fn into_register_value_option(self) -> Option<RegisterValue> {
-    match self {
-      Some(n) => Some(RegisterValue::Number(n)),
-      None => None,
-    }
-  }
+  fn into_register_value_option(self) -> Option<RegisterValue> { self.map(RegisterValue::Number) }
 }
 
 // Convenience methods for predigest closures that require Result<Option<Digested>>

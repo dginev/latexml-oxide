@@ -59,12 +59,7 @@ impl BoxOps for List {
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { unimplemented!() }
 
-  fn get_font(&self) -> Option<Cow<Font>> {
-    match self.font {
-      None => None,
-      Some(ref f) => Some(Cow::Borrowed(&f)),
-    }
-  }
+  fn get_font(&self) -> Option<Cow<Font>> { self.font.as_ref().map(|f| Cow::Borrowed(f)) }
 }
 
 impl List {

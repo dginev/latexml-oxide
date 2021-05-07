@@ -58,8 +58,8 @@ impl Locator {
     Locator {
       source,
       from_line,
-      from_column,
       to_line,
+      from_column,
       to_column,
     }
   }
@@ -158,8 +158,6 @@ impl Object for Locator {
       // if self.to_column > 0 {
       loc.push(';');
       loc.push_str(&self.to_column.to_string());
-      // }
-      loc.push_str(")'");
     } else {
       loc.push_str("point('");
       // if self.from_line > 0 {
@@ -168,9 +166,9 @@ impl Object for Locator {
       // if self.from_column > 0 {
       loc.push(';');
       loc.push_str(&self.from_column.to_string());
-      // }
-      loc.push_str(")'");
     }
+    // }
+    loc.push_str(")'");
     loc
   }
 

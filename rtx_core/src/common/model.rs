@@ -262,18 +262,15 @@ impl Model {
     // "#default", but for attributes would never be.
     // log!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
     let mut docprefix = if !forattribute {
-      match self.document_namespace_prefixes.get(&s!("DEFAULT#{}", namespace)) {
-        Some(prefix) => Some(prefix.to_string()),
-        None => None,
-      }
+      self
+        .document_namespace_prefixes
+        .get(&s!("DEFAULT#{}", namespace))
+        .map(|prefix| prefix.to_string())
     } else {
       None
     };
     if docprefix.is_none() {
-      docprefix = match self.document_namespace_prefixes.get(namespace) {
-        Some(prefix) => Some(prefix.to_string()),
-        None => None,
-      };
+      docprefix = self.document_namespace_prefixes.get(namespace).map(|prefix| prefix.to_string());
     }
 
     if docprefix.is_none() && !probe {
@@ -345,20 +342,14 @@ impl Model {
     let mut codeprefix: Option<String> = None;
 
     if !namespace.is_empty() {
-      codeprefix = match self.code_namespace_prefixes.get(namespace) {
-        None => None,
-        Some(p) => Some(p.clone()),
-      };
+      codeprefix = self.code_namespace_prefixes.get(namespace).cloned();
 
       if codeprefix.is_some() && !probe {
         {
           let docprefix = self.document_namespace_prefixes.get(namespace);
           // if there's a doc prefix and it's NOT already used in code namespace mapping
           if docprefix.is_some() && self.code_namespaces.get(docprefix.unwrap()).is_none() {
-            codeprefix = match docprefix {
-              None => None,
-              Some(p) => Some(p.to_string()),
-            };
+            codeprefix = docprefix.map(|p| p.to_string());
           }
         }
       } else {
@@ -373,17 +364,11 @@ impl Model {
       //   "Using '$codeprefix' instead"); }
     }
 
-    match codeprefix {
-      None => None,
-      Some(cp) => Some(cp),
-    }
+    codeprefix
   }
 
   pub fn get_namespace(&mut self, codeprefix: &str, probe: bool) -> Option<String> {
-    let mut ns: Option<String> = match self.code_namespaces.get(codeprefix) {
-      None => None,
-      Some(ns) => Some(ns.to_string()),
-    };
+    let mut ns: Option<String> = self.code_namespaces.get(codeprefix).map(|ns| ns.to_string());
     if ns.is_none() && !probe {
       self.namespace_errors += 1;
       let example_namespace = s!("http://example.com/namespace{}", &self.namespace_errors.to_string());
@@ -398,10 +383,7 @@ impl Model {
         "Using '$ns' isntead"
       );
     }
-    match ns {
-      None => None,
-      Some(ns) => Some(ns),
-    }
+    ns
   }
 
   /// Get the node's qualified name in standard form
@@ -587,29 +569,27 @@ impl Model {
     note_begin(&s!("Loading compiled schema {}\n", path));
     let compiled_fh = File::open(path).unwrap();
     let compiled_reader = BufReader::new(&compiled_fh);
-    for line_result in compiled_reader.lines() {
-      if let Ok(line) = line_result {
-        if let Some(caps) = TAG_MODEL_LINE.captures(&line) {
-          let tag = caps.get(1).map_or("", |m| m.as_str());
-          let attr = caps.get(2).map_or("", |m| m.as_str());
-          let children = caps.get(3).map_or("", |m| m.as_str());
-          self.add_tag_attribute(tag, attr.split(',').collect());
-          self.add_tag_content(tag, children.split(',').collect());
-        } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
-          let classname = caps.get(1).map_or("", |m| m.as_str());
-          let elements = caps.get(2).map_or("", |m| m.as_str());
-          let mut class_set = HashSet::new();
-          for set_element in elements.split(',').collect::<Vec<&str>>() {
-            class_set.insert(set_element.to_owned());
-          }
-          self.set_schema_class(classname, class_set);
-        } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
-          let prefix = caps.get(1).map_or("", |m| m.as_str());
-          let namespace = caps.get(2).map_or("", |m| m.as_str());
-          self.register_document_namespace(prefix, Some(namespace.to_owned()));
-        } else {
-          panic!("Fatal:internal:{} Compiled model '{}' is malformatted at \"{}\"", path, path, line);
+    for line in compiled_reader.lines().flatten() {
+      if let Some(caps) = TAG_MODEL_LINE.captures(&line) {
+        let tag = caps.get(1).map_or("", |m| m.as_str());
+        let attr = caps.get(2).map_or("", |m| m.as_str());
+        let children = caps.get(3).map_or("", |m| m.as_str());
+        self.add_tag_attribute(tag, attr.split(',').collect());
+        self.add_tag_content(tag, children.split(',').collect());
+      } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
+        let classname = caps.get(1).map_or("", |m| m.as_str());
+        let elements = caps.get(2).map_or("", |m| m.as_str());
+        let mut class_set = HashSet::new();
+        for set_element in elements.split(',').collect::<Vec<&str>>() {
+          class_set.insert(set_element.to_owned());
         }
+        self.set_schema_class(classname, class_set);
+      } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
+        let prefix = caps.get(1).map_or("", |m| m.as_str());
+        let namespace = caps.get(2).map_or("", |m| m.as_str());
+        self.register_document_namespace(prefix, Some(namespace.to_owned()));
+      } else {
+        panic!("Fatal:internal:{} Compiled model '{}' is malformatted at \"{}\"", path, path, line);
       }
     }
 

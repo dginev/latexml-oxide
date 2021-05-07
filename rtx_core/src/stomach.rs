@@ -223,11 +223,8 @@ impl<'t> Stomach {
           // (? I think)
           let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
           self.gullet.unread(invoked_meaning);
-          maybe_token = match self.gullet.read_x_token(true, false, state)? {
-            // replace the token by it's expansion!!!
-            None => None,
-            Some(t) => Some(Cow::Owned(t)),
-          };
+          // replace the token by it's expansion!!!
+          maybe_token = self.gullet.read_x_token(true, false, state)?.map(Cow::Owned);
           self.token_stack.pop();
           continue;
         },
@@ -235,11 +232,7 @@ impl<'t> Stomach {
           // Conditionals are "expandable", use the regular invoke.
           let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
           self.gullet.unread(invoked_meaning);
-          maybe_token = match self.gullet.read_x_token(true, false, state)? {
-            // replace the token by it's expansion!!!
-            None => None,
-            Some(t) => Some(Cow::Owned(t)),
-          };
+          maybe_token = self.gullet.read_x_token(true, false, state)?.map(Cow::Owned);
           self.token_stack.pop();
           continue;
         },

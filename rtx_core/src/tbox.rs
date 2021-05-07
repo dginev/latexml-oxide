@@ -54,8 +54,7 @@ impl Tbox {
     tokens_opt: Tokens,
     mut properties: HashMap<String, Stored>,
     state: &mut State,
-  ) -> Self
-  {
+  ) -> Self {
     let font = match font_opt {
       Some(f) => f,
       None => match state.lookup_font() {
@@ -85,16 +84,16 @@ impl Tbox {
       Tbox {
         text,
         font, // $locator,
-        tokens,
         properties,
+        tokens,
         ..Tbox::default()
       }
     } else {
       Tbox {
         text,
         font, // $locator,
-        tokens,
         properties,
+        tokens,
         ..Tbox::default()
       }
     }
@@ -136,10 +135,7 @@ impl BoxOps for Tbox {
         },
       }
     } else {
-      match self.properties.get(key) {
-        None => None,
-        Some(v) => Some(Cow::Borrowed(v)),
-      }
+      self.properties.get(key).map(|v| Cow::Borrowed(v))
     }
   }
 }

@@ -165,7 +165,7 @@ pub trait NumericOps {
     T_OTHER!(self.value_of().to_string())
   }
   // dancing around meta-programming in the Glue case... is there a better way?
-  fn to_glue_type(self) -> Glue
+  fn into_glue_type(self) -> Glue
   where Self: Sized {
     unimplemented!()
   }
@@ -228,7 +228,7 @@ impl NumericOps for RegisterValue {
   }
   /// For now only meant as a type cast, unimplemented in other cases
   /// DO NOT use this method to cast into a Glue object, define a `.to_glue()` instead
-  fn to_glue_type(self) -> Glue {
+  fn into_glue_type(self) -> Glue {
     match self {
       RegisterValue::Glue(v) => v,
       _ => unimplemented!(),

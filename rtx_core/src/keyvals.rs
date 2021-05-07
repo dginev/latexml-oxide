@@ -505,10 +505,7 @@ impl KeyVals {
           // read until $punct
           let mut toks = Vec::new();
           loop {
-            delim_opt = match gullet.read_match(&[&punct_tks, &until_tks], state)? {
-              Some(tks) => Some(tks.into()), // Tokens reader, but we look for single Token delim
-              None => None,
-            };
+            delim_opt = gullet.read_match(&[&punct_tks, &until_tks], state)?.map(|tks| tks.into());
             if delim_opt.is_some() {
               break; // only until we hit a delim.
             }

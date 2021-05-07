@@ -20,18 +20,16 @@ pub fn rtx_tests_internal(dirpath: &str, requires: Option<HashMap<&str, &str>>, 
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
   }
-  for tex_file in glob(&s!("{}/*.tex", dirpath)).unwrap() {
-    if let Ok(tex_file) = tex_file {
-      let name = tex_file.file_stem().unwrap().to_str().unwrap();
-      let xml_file = tex_file.with_extension("xml");
+  for tex_file in glob(&s!("{}/*.tex", dirpath)).unwrap().flatten() {
+    let name = tex_file.file_stem().unwrap().to_str().unwrap();
+    let xml_file = tex_file.with_extension("xml");
 
-      let tex_file_string = tex_file.to_str().unwrap();
-      let xml_file_str = xml_file.to_str().unwrap();
-      if xml_file.exists() {
-        rtx_ok_internal(tex_file_string, xml_file_str, name, extra_bindings_dispatcher.clone());
-      } else {
-        // Skip, these could be tex fragment files.
-      }
+    let tex_file_string = tex_file.to_str().unwrap();
+    let xml_file_str = xml_file.to_str().unwrap();
+    if xml_file.exists() {
+      rtx_ok_internal(tex_file_string, xml_file_str, name, extra_bindings_dispatcher.clone());
+    } else {
+      // Skip, these could be tex fragment files.
     }
   }
 }

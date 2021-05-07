@@ -279,10 +279,8 @@ impl MathParser {
       let text_content = node.get_content();
       if !text_content.is_empty() {
         Some(text_content)
-      } else if let Some(x) = self.p_get_attribute(&node, "role") {
-        Some(x)
       } else {
-        None
+        self.p_get_attribute(&node, "role")
       }
     }
   }
@@ -727,11 +725,8 @@ impl MathParser {
 
     let result = if nodes.len() < 2 {
       // Too few nodes? What's to parse?
-      match nodes.first() {
-        // TODO: Absent() constructor ?
-        Some(n) => Some(n.clone()),
-        None => None,
-      }
+      // TODO: Absent() constructor
+      nodes.first().cloned()
     } else {
       // Now do the actual parse.
       let (result_internal, unparsed) = self.parse_internal(rule, nodes, document)?;
@@ -819,12 +814,12 @@ impl MathParser {
         new_app_node.add_child(&mut times_node)?;
         new_app_node.add_child(&mut left_arg)?;
         new_app_node.add_child(&mut infix_op)?;
-        new_app_node.add_child(&mut right_arg)?;
       } else {
         new_app_node.add_child(&mut infix_op)?;
         new_app_node.add_child(&mut left_arg)?;
-        new_app_node.add_child(&mut right_arg)?;
       }
+      // right arg follows in both cases
+      new_app_node.add_child(&mut right_arg)?;
       parent.add_child(&mut new_app_node)?;
 
       Some(new_app_node) // result

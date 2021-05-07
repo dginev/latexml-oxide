@@ -890,11 +890,7 @@ impl State {
   pub fn lookup_meaning(&self, token: &Token) -> Option<Stored> {
     if token.get_catcode().is_active_or_cs() && !token.get_string().is_empty() {
       match self.meaning.get(&token.get_cs_name().to_owned()) {
-        Some(entry) => match entry.front() {
-          // TODO: can we avoid cloning an arbitrary Stored, or is this a non-issue give that all heavy data types are in Rc<> wrappers?
-          Some(v) => Some(v.clone()),
-          None => None,
-        },
+        Some(entry) => entry.front().cloned(),
         None => None,
       }
     } else {
@@ -1056,7 +1052,7 @@ impl State {
       Stored::MathPrimitive(ref defn) => defn.get_cs(),
       Stored::Register(ref defn) => defn.get_cs(),
       Stored::Token(ref token) => Cow::Borrowed(token),
-      _ => panic!(s!("_wrong_argument_for_install_definition")),
+      _ => panic!("_wrong_argument_for_install_definition"),
     };
     cs = token.get_cs_name().to_owned();
     // info!("-- installing definition for: {:?}", token);
@@ -1472,8 +1468,7 @@ impl State {
     desirability: usize,
     openable: &mut HashSet<String>,
     desc: &mut HashMap<String, HashMap<String, usize>>,
-  )
-  {
+  ) {
     let start = match start_opt {
       Some(s) => s,
       None => String::new(),

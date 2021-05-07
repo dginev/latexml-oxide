@@ -122,7 +122,7 @@ impl Core {
     let mut state = State::new(state_options);
     state.stomach = Rc::clone(&stomach);
 
-    Core { state, preload, stomach }
+    Core { state, stomach, preload }
   }
 
   pub fn get_state(&self) -> &State { &self.state }
@@ -330,10 +330,7 @@ impl BoxOps for Digested {
         Error!("digested", "get_property", self, state, "Called get_property on List: {:?}", l);
         None
       },
-      Digested::Whatsit(ref w) => match w.borrow().get_property(key, state) {
-        None => None,
-        Some(v) => Some(Cow::Owned(v.into_owned())),
-      },
+      Digested::Whatsit(ref w) => w.borrow().get_property(key, state).map(|v| Cow::Owned(v.into_owned())),
       _ => unimplemented!(),
     }
   }
@@ -356,10 +353,7 @@ impl BoxOps for Digested {
     match *self {
       Digested::TBox(ref b) => b.get_font(),
       Digested::List(ref l) => l.get_font(),
-      Digested::Whatsit(ref w) => match w.borrow().get_font() {
-        None => None,
-        Some(t) => Some(Cow::Owned(t.into_owned())),
-      },
+      Digested::Whatsit(ref w) => w.borrow().get_font().map(|t| Cow::Owned(t.into_owned())),
       _ => unimplemented!(),
     }
   }

@@ -396,18 +396,14 @@ impl Document {
     attributes: Option<HashMap<String, String>>,
     font_opt: Option<&Font>,
     state: &mut State,
-  ) -> Result<Node>
-  {
+  ) -> Result<Node> {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
     Debug!("Open element {:?} at {:?}", qname, self.get_node_qname(&self.node, state));
     let point = self.find_insertion_point(qname, None, state)?;
     let font_owned: Option<Font> = match font_opt {
       Some(f) => Some(f.clone()),
       None => match self.box_to_absorb {
-        Some(ref bx) => match bx.get_font() {
-          Some(f) => Some((*f).clone()),
-          None => None,
-        },
+        Some(ref bx) => bx.get_font().map(|f| (*f).clone()),
         None => None,
       },
     };
@@ -809,15 +805,12 @@ impl Document {
             serialized.push_str(&indent)
           }
           serialized.push_str(&s!("</{}>", tag));
-          if !noindent {
-            serialized.push('\n');
-          }
         } else {
           // empty element.
           serialized.push_str("/>");
-          if !noindent {
-            serialized.push('\n');
-          }
+        }
+        if !noindent {
+          serialized.push('\n');
         }
       },
       Some(NodeType::TextNode) => {
@@ -873,8 +866,7 @@ impl Document {
     mut attributes: HashMap<String, String>,
     font_opt: Option<&Font>,
     state: &mut State,
-  ) -> Result<Node>
-  {
+  ) -> Result<Node> {
     // Debug!(target:"document:insert" ,"insert math token: {:?}", text);
     attributes.entry(s!("role")).or_insert_with(|| s!("UNKNOWN"));
 
@@ -1001,10 +993,7 @@ impl Document {
     let imodel = state.indirect_model.as_ref().unwrap();
     // returning inner_node
     match imodel.get(tag) {
-      Some(sub_m) => match sub_m.get(child) {
-        Some(node) => Some(node.to_string()),
-        None => None,
-      },
+      Some(sub_m) => sub_m.get(child).map(|node| node.to_string()),
       None => None,
     }
   }
@@ -1362,29 +1351,20 @@ impl Document {
     let mut element_node_opt: Option<Cow<Node>> = if node.get_type() == Some(NodeType::TextNode) {
       let mut current_opt = Some(Cow::Borrowed(node));
       while let Some(current) = current_opt {
-        current_opt = match current.get_prev_sibling() {
-          None => None,
-          Some(s) => Some(Cow::Owned(s)),
-        };
+        current_opt = current.get_prev_sibling().map(Cow::Owned);
         if current.get_name() == "_Capture_" {
           nodes.extend(xml::element_nodes(&current));
         } else {
           nodes.push(current.into_owned());
         }
       }
-      match node.get_parent() {
-        None => None,
-        Some(p) => Some(Cow::Owned(p)),
-      }
+      node.get_parent().map(Cow::Owned)
     } else {
       Some(Cow::Borrowed(node))
     };
     // Now collect (element) node & ancestors
     while let Some(element_node) = element_node_opt {
-      element_node_opt = match element_node.get_parent() {
-        None => None,
-        Some(p) => Some(Cow::Owned(p)),
-      };
+      element_node_opt = element_node.get_parent().map(Cow::Owned);
       let node_type = element_node.get_type();
       if node_type.is_none() || node_type == Some(NodeType::DocumentNode) {
         break;
@@ -1596,10 +1576,7 @@ impl Document {
   pub fn get_node_box(&self, node: &Node) -> Option<Rc<Digested>> {
     if node.get_type() == Some(NodeType::ElementNode) {
       let nodeid = node.to_hashable();
-      match self.node_boxes.get(&nodeid) {
-        Some(v) => Some(v.clone()),
-        None => None,
-      }
+      self.node_boxes.get(&nodeid).cloned()
     } else {
       None
     }
@@ -1716,8 +1693,7 @@ impl Document {
     attributes: Option<HashMap<String, String>>,
     mut font_opt: Option<Font>,
     state: &mut State,
-  ) -> Result<Node>
-  {
+  ) -> Result<Node> {
     let (decoded_ns, tag) = state.model.decode_qname(qname);
     let mut newnode;
     // box = self.node_boxes.get(box);    // may already be the string key

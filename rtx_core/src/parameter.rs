@@ -188,15 +188,14 @@ impl Parameter {
             novalue: true,
             ..Parameter::default()
           })),
-          None => match Parameter::check_reader_function(&s!("Read{}", basetype), state) {
-            Some(reader) => Some(Rc::new(Parameter {
+          None => Parameter::check_reader_function(&s!("Read{}", basetype), state).map(|reader| {
+            Rc::new(Parameter {
               reader,
               optional: true,
               novalue: true,
               ..Parameter::default()
-            })),
-            None => None,
-          },
+            })
+          }),
         },
       };
       if let Some(ref mut desc) = descriptor {
@@ -204,13 +203,12 @@ impl Parameter {
         self.optional = true;
       }
     } else {
-      descriptor = match Parameter::check_reader_function(&s!("Read{}", &self.name), state) {
-        Some(reader) => Some(Rc::new(Parameter {
+      descriptor = Parameter::check_reader_function(&s!("Read{}", &self.name), state).map(|reader| {
+        Rc::new(Parameter {
           reader,
           ..Parameter::default()
-        })),
-        None => None,
-      };
+        })
+      });
     }
     match descriptor {
       Some(descriptor) => {

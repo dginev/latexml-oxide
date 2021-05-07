@@ -169,11 +169,9 @@ impl Object for Whatsit {
             // so maybe worth taking some time and aligning the idea here with `.revert_arguments` to avoid the insanity?
             //
             // GOAL: push(@tokens, $parameters->revertArguments($self->getArgs)); } }
-            for arg_opt in self.get_args() {
-              if let Some(arg) = arg_opt {
-                let reverted_arg = arg.revert()?.unlist();
-                tokens.extend(reverted_arg);
-              }
+            for arg in self.get_args().iter().flatten() {
+              let reverted_arg = arg.revert()?.unlist();
+              tokens.extend(reverted_arg);
             }
           }
         },
@@ -220,12 +218,7 @@ impl BoxOps for Whatsit {
     Ok(())
   }
 
-  fn get_property(&self, key: &str, _state: &mut State) -> Option<Cow<Stored>> {
-    match self.properties.get(key) {
-      None => None,
-      Some(v) => Some(Cow::Borrowed(v)),
-    }
-  }
+  fn get_property(&self, key: &str, _state: &mut State) -> Option<Cow<Stored>> { self.properties.get(key).map(|v| Cow::Borrowed(v)) }
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
 

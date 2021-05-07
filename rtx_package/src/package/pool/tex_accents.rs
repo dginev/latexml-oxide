@@ -10,14 +10,10 @@ pub fn apply_accent(
   standalonechar: &str,
   reversion: Option<Tokens>,
   state: &mut State,
-) -> Result<Tbox>
-{
+) -> Result<Tbox> {
   let letter_box = stomach.digest(TokenizeInternal!(letter), state)?;
   let locator = letter_box.get_locator();
-  let font = match letter_box.get_font() {
-    Some(f) => Some(Rc::new((*f).clone())),
-    None => None,
-  };
+  let font = letter_box.get_font().map(|f| Rc::new((*f).clone()));
 
   let string = letter_box.to_string();
   // TODO:

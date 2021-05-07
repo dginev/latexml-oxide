@@ -485,10 +485,7 @@ LoadDefinitions!(state, {
     let newcs : Token = newcs.into();
     let csname = newcs.get_cs_name().to_owned();
     let (role, glyph) = decode_math_char(value.to_number().value_of() as u16, state);
-    let internalcs = match glyph {
-      Some(_) => Some(T_CS!(&s!("\\@mathchardef@{}", csname))),
-      None => None
-    };
+    let internalcs = glyph.map(|_| T_CS!(&s!("\\@mathchardef@{}", csname)));
     if let Some(ref internalcs) = internalcs {
       let mut glyph_props: HashMap<String, Stored> = HashMap::new();
       glyph_props.insert(s!("role"), role.unwrap_or_default().into());

@@ -100,10 +100,8 @@ LoadDefinitions!(state, {
   // Define parsers for standard parameter types.
   DefParameterType!("Plain", sub[gullet, inner, _extra, state] {
       let mut value: Tokens = gullet.read_arg(state)?;
-      for inner_opt in inner {
-        if let Some(inner_p) = inner_opt {
-          value = inner_p.reparse_argument(gullet, value, state);
-        }
+      for inner_p in inner.into_iter().flatten() {
+        value = inner_p.reparse_argument(gullet, value, state);
       }
       Ok(value)
     },
@@ -133,10 +131,8 @@ LoadDefinitions!(state, {
       // if (!$value && $default) {
       //   $value = $default; }
       if !inner.is_empty() {
-        for inner_opt in inner {
-          if let Some(inner_p) = inner_opt {
-            value = inner_p.reparse_argument(gullet, value, state);
-          }
+        for inner_p in inner.into_iter().flatten() {
+          value = inner_p.reparse_argument(gullet, value, state);
         }
       }
       Ok(value)
@@ -364,8 +360,7 @@ LoadDefinitions!(state, {
   },
   reversion => reversion!(gullet, arg, inner, state, {
     let arg_rev : Vec<Token> = arg.iter().map(Token::revert).collect();
-    let mut tks = Vec::new();
-    tks.push(T_BEGIN!());
+    let mut tks = vec![T_BEGIN!()];
     tks.extend(arg_rev);
     tks.push(T_END!());
     Ok(Tokens::new(tks))
@@ -619,10 +614,7 @@ LoadDefinitions!(state, {
           break;
         }
       }
-      let lead_cc = match tokens.first() {
-        Some(t) => Some(t.get_catcode()),
-        None => None,
-      };
+      let lead_cc = tokens.first().map(|t| t.get_catcode());
       if lead_cc == Some(Catcode::BEGIN) {
         let trail_cc = tokens.last().unwrap().get_catcode();
         if trail_cc == Catcode::END {

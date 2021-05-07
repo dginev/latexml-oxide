@@ -647,11 +647,11 @@ impl Gullet {
           None => break,
           Some(token) => {
             let cc = token.get_catcode();
-            if Some(&&token) == to_match.last() {
-              matched.push(token);
+            let was_last_match = Some(&&token) == to_match.last();
+            matched.push(token);
+            if was_last_match {
               to_match.pop();
             } else {
-              matched.push(token);
               break;
             }
 

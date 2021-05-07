@@ -164,11 +164,11 @@ impl NumericOps for Glue {
       }
     } else {
       // Both glues, add
-      self.add_glue(other.to_glue_type())
+      self.add_glue(other.into_glue_type())
     }
   }
   // identity, used to type cast in runtime
-  fn to_glue_type(self) -> Glue { self }
+  fn into_glue_type(self) -> Glue { self }
 }
 
 impl NumericOps for MuGlue {
@@ -265,8 +265,7 @@ impl Glue {
     mut minus: Option<f32>,
     mut mfill: Option<FillCode>,
     state: &State,
-  ) -> Self
-  {
+  ) -> Self {
     let mut skip: f32 = spec.parse::<f32>().unwrap_or_default();
     if plus.is_none() && pfill.is_none() && minus.is_none() && mfill.is_none() {
       if NUM_EXACT_RE.is_match(spec) {

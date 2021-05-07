@@ -639,10 +639,8 @@ pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, s
       if let Some(map) = map {
         let code = c as u16; // u16, so that Unicode chars get cast correctly
         if code < 128 {
-          if let Some(mapc) = map.get(code as usize) {
-            if let Some(mapc_val) = mapc {
-              result_string.push(*mapc_val);
-            }
+          if let Some(Some(mapc_val)) = map.get(code as usize) {
+            result_string.push(*mapc_val);
           }
         } else {
           result_string.push(c);
@@ -652,10 +650,8 @@ pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, s
       }
     } else if let Some(map) = map {
       let code = c as u8;
-      if let Some(mapc) = map.get(code as usize) {
-        if let Some(mapc_val) = mapc {
-          result_string.push(*mapc_val);
-        }
+      if let Some(Some(mapc_val)) = map.get(code as usize) {
+        result_string.push(*mapc_val);
       }
     }
   }

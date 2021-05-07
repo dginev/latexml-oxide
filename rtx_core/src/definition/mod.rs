@@ -109,8 +109,7 @@ pub trait Definition: Object {
   // ======================================================================
   // Return the Tokens that would invoke the given definition with arguments.
   fn invocation(&mut self, args: Vec<Tokens>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
-    let mut invocation_result: Vec<Token> = Vec::new();
-    invocation_result.push(self.get_cs().into_owned());
+    let mut invocation_result: Vec<Token> = vec![self.get_cs().into_owned()];
 
     match self.get_parameters() {
       None => {},

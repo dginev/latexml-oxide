@@ -172,9 +172,9 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
 
   if !prefix.is_empty() {
     let mut idwithin = if !opts_idwithin.is_empty() { opts_idwithin } else { within }.to_string();
+    let ctr_string = ctr.to_string();
+    let thectrid = s!("\\the{}@ID", ctr);
     if !idwithin.is_empty() {
-      let ctr_string = ctr.to_string();
-      let thectrid = s!("\\the{}@ID", ctr);
       def_macro(
         T_CS!(thectrid),
         None,
@@ -195,8 +195,6 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
         state,
       )
     } else {
-      let ctr_string = ctr.to_string();
-      let thectrid = s!("\\the{}@ID", ctr);
       def_macro(
         T_CS!(thectrid),
         None,
@@ -429,10 +427,7 @@ pub fn ref_step_item_counter(tag: &str, stomach: &mut Stomach, state: &mut State
   }
   let mut stepped = if !tag.is_empty() {
     let mut props = ref_step_id(&counter, stomach, state)?;
-    if tag.is_empty() {
-      //empty tag?
-      props
-    } else {
+    if !tag.is_empty() {
       let formatter = if counter.starts_with("\\@desc") {
         T_CS!("\\descriptionlabel")
       } else {
@@ -471,8 +466,8 @@ pub fn ref_step_item_counter(tag: &str, stomach: &mut Stomach, state: &mut State
       } else {
         props.insert("tags".to_string(), tags.into());
       }
-      props
     }
+    props
   } else {
     ref_step_counter(&counter, false, stomach, state)?
   };

@@ -210,15 +210,13 @@ LoadDefinitions!(state, {
           Catcode::END => -1,
           _ => 0
         };
-        if level == 0 && (
+        let finished = level == 0 && (
           (cc == Catcode::SPACE && t.get_string() == "\n")
           || cc == Catcode::COMMENT
-          || t == T_CS!("\\par")
-        ) {
-          tokens.push(t);
+          || t == T_CS!("\\par"));
+        tokens.push(t);
+        if finished {
           break;
-        } else {
-          tokens.push(t);
         }
       }
       stomach.egroup(state)?;
