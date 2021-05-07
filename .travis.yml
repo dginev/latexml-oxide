@@ -2,9 +2,10 @@ sudo: false
 dist: trusty
 language: rust
 rust:
-  - stable 
+  - stable
   - nightly
 addons:
   apt:
     packages:
-     - libxml2-dev
+      - libxml2-dev
+      - libkpathsea-dev
