@@ -786,7 +786,7 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
       });
       Mouth::new(text, None, &mut std_state).unwrap().read_tokens(None, &mut std_state)
     },
-    Some(s) => Mouth::new(&text, None, s).unwrap().read_tokens(None, s),
+    Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(None, s),
   }
 }
 pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
@@ -798,6 +798,6 @@ pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
       });
       Mouth::new(text, None, &mut sty_state).unwrap().read_tokens(None, &mut sty_state)
     },
-    Some(s) => Mouth::new(&text, None, s).unwrap().read_tokens(None, s),
+    Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(None, s),
   }
 }

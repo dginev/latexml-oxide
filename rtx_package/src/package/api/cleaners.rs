@@ -79,7 +79,7 @@ pub fn clean_label(label: &str, prefix_opt: Option<&str>) -> String {
 
 pub fn clean_url(url: &str) -> String {
   let cleaned = url.trim_start().trim_end(); // Trim leading/trailing, in any case
-  TILDE_NOISE_RE.replace_all(&cleaned, "~").to_string()
+  TILDE_NOISE_RE.replace_all(cleaned, "~").to_string()
 }
 
 pub fn compose_url(base: &str, url: &str, fragid_opt: Option<&str>) -> String {

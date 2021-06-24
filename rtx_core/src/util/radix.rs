@@ -59,13 +59,13 @@ pub fn radix_format_str(mut number: i32, symbols: &[&str]) -> String {
   text
 }
 
-pub fn radix_alpha(n: i32) -> String { radix_format(n, &LETTERS) }
+pub fn radix_alpha(n: i32) -> String { radix_format(n, LETTERS) }
 
-pub fn radix_up_alpha(n: i32) -> String { radix_format(n, &UP_LETTERS) }
+pub fn radix_up_alpha(n: i32) -> String { radix_format(n, UP_LETTERS) }
 
-pub fn radix_greek(n: i32) -> String { radix_format(n, &GREEK) }
+pub fn radix_greek(n: i32) -> String { radix_format(n, GREEK) }
 
-pub fn radix_up_greek(n: i32) -> String { radix_format(n, &UP_GREEK) }
+pub fn radix_up_greek(n: i32) -> String { radix_format(n, UP_GREEK) }
 
 // Dumb place for this, but where else...
 // Note: This is one 'The TeX Way'! (bah!! hint: try a large number)

@@ -86,7 +86,7 @@ impl fmt::Display for Primitive {
   }
 }
 impl Object for Primitive {
-  fn stringify(&self) -> String { <Self as Definition>::stringify_type(&self, "Primitive") }
+  fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Primitive") }
 }
 impl Definition for Primitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }

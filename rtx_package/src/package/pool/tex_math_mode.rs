@@ -89,7 +89,7 @@ LoadDefinitions!(state, {
     if node.get_attribute("tex").is_none() {
       // only do this once.
 
-      let tex_opt = if let Some(ref tbox) = document.get_node_box(&node) {
+      let tex_opt = if let Some(ref tbox) = document.get_node_box(node) {
         if let Some(body) = tbox.get_body() {
           Some(untex(&body, state)?)
         // local $LaTeXML::DUAL_BRANCH = 'presentation';

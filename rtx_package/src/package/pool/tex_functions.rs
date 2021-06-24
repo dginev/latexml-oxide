@@ -414,7 +414,7 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node, state: &mut State) 
 // So, we put this one on ltx:Math also, and scan for any contained XMText to fixup.
 
 fn cleanup_xmtext_outer(document: &mut Document, math_node: &Node, state: &mut State) -> Result<()> {
-  for text_node in document.findnodes("descendant::ltx:XMText", Some(&math_node), state) {
+  for text_node in document.findnodes("descendant::ltx:XMText", Some(math_node), state) {
     cleanup_xmtext(document, text_node, state)?;
   }
   Ok(())

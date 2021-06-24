@@ -670,7 +670,7 @@ impl State {
   }
 
   pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Rc<dyn Definition>> {
-    if let Some(defn) = self.lookup_definition(&token) {
+    if let Some(defn) = self.lookup_definition(token) {
       // Can only be a token or definition; we want defns!
       if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
         // is this the right logic here? don't expand unless digesting?
@@ -902,7 +902,7 @@ impl State {
   /// or another token, for \let
   pub fn assign_meaning<T: Into<Stored>>(&mut self, token: &Token, meaning: T, scope: Option<Scope>) {
     let meaning = meaning.into();
-    self.assign_internal(TableName::Meaning, &token.get_cs_name(), meaning, scope);
+    self.assign_internal(TableName::Meaning, token.get_cs_name(), meaning, scope);
   }
 
   fn lookup_definition_internal<'def>(&'def self, key: &'def Token) -> Option<&VecDeque<Stored>> {
@@ -1279,7 +1279,7 @@ impl State {
       let mut countdown_keys = Vec::new();
       for (table_name, key, value) in defns.iter() {
         let table_entry = self.table_mut(*table_name).entry(key.to_string()).or_default();
-        if (*table_entry).front() == Some(&value) {
+        if (*table_entry).front() == Some(value) {
           // Here we're popping off the values pushed by activateScope
           // to (possibly) reveal a local assignment in the same frame, preceding activateScope.
           (*table_entry).pop_front();

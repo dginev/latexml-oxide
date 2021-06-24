@@ -510,8 +510,8 @@ pub fn begin_itemize(itype: &str, counter: Option<&str>, nolevel: bool, stomach:
 
 pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit, stomach: &mut Stomach, state: &mut State) {
   let tagskey = &s!("{}_tags", captype);
-  if let Some(tags) = state.remove_value(&tagskey) {
-    state.assign_value(&tagskey, false, Some(Scope::Global));
+  if let Some(tags) = state.remove_value(tagskey) {
+    state.assign_value(tagskey, false, Some(Scope::Global));
     whatsit.set_property("tags", tags);
   }
   let idkey = s!("{}_id", captype);

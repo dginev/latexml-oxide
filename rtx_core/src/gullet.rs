@@ -1103,7 +1103,7 @@ impl Gullet {
     let mut result = String::new();
     while let Some(token) = self.read_x_token(false, false, state)? {
       let digit = token.get_string();
-      if digit.len() == 1 && range_regex.is_match(&digit) {
+      if digit.len() == 1 && range_regex.is_match(digit) {
         result.push_str(digit);
       } else {
         if !(skip && token.get_catcode() == Catcode::SPACE) {

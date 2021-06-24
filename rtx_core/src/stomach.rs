@@ -329,7 +329,7 @@ impl<'t> Stomach {
         Some(Scope::Global),
       );
       // and then invoke it.
-      self.invoke_token(&token, state)
+      self.invoke_token(token, state)
     }
   }
 

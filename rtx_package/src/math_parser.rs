@@ -809,7 +809,7 @@ impl MathParser {
       new_app_node.set_namespace(&left_arg.get_namespace().unwrap())?;
       if infix_op.get_content() == "o" {
         // " n o t " case from equality.tex test // HACK HACK
-        let mut times_node = self.invisible_times().to_node(&document)?;
+        let mut times_node = self.invisible_times().to_node(document)?;
         times_node.set_namespace(&left_arg.get_namespace().unwrap())?;
         new_app_node.add_child(&mut times_node)?;
         new_app_node.add_child(&mut left_arg)?;
@@ -946,7 +946,7 @@ impl MathParser {
         if all_args.is_empty() {
           String::new()
         } else {
-          let lead_meaning = self.get_token_meaning(all_args.first().as_ref().unwrap(), &document);
+          let lead_meaning = self.get_token_meaning(all_args.first().as_ref().unwrap(), document);
           let args = all_args.split_off(1);
           let op = match all_args.first() {
             Some(op_node) => self.realize_xmnode(op_node, document),
@@ -1017,13 +1017,13 @@ impl MathParser {
         bp,
         s!(
           "{} {}",
-          self.textrec(&op, None, None, document, state),
+          self.textrec(op, None, None, document, state),
           self.textrec(args.first().unwrap(), Some(bp), Some(name), document, state)
         ),
       )
     } else {
       let args_rec: Vec<String> = args.iter().map(|arg| self.textrec(arg, Some(bp), Some(name), document, state)).collect();
-      let op_string: String = s!(" {} ", self.textrec(&op, None, None, document, state));
+      let op_string: String = s!(" {} ", self.textrec(op, None, None, document, state));
       let apply_string: String = args_rec.join(&op_string);
       (bp, apply_string)
     }

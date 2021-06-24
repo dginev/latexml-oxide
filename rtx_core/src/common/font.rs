@@ -620,7 +620,7 @@ pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, s
 
   let mut map: Option<&Fontmap> = None;
   if !encoding.is_empty() {
-    if let Some(encmap) = state.load_font_map(&encoding) {
+    if let Some(encmap) = state.load_font_map(encoding) {
       // OK got some map.
       map = Some(encmap);
       if let Some(ref font) = font {

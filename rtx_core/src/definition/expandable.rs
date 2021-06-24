@@ -79,7 +79,7 @@ impl Object for Expandable {
   fn is_definition(&self) -> bool { true }
   fn is_expandable(&self) -> bool { true }
   fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
-  fn stringify(&self) -> String { <Self as Definition>::stringify_type(&self, "Expandable") }
+  fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Expandable") }
 }
 impl Definition for Expandable {
   fn is_protected(&self) -> bool { self.is_protected }
@@ -120,8 +120,7 @@ impl Expandable {
     expansion: T,
     traits: Option<ExpandableOptions>,
     state: &State,
-  ) -> Self
-  {
+  ) -> Self {
     let expansion: ExpansionBody = expansion.into();
     let traits = traits.unwrap_or_else(ExpandableOptions::default);
     // let source = $STATE->getStomach->getGullet->getMouth;

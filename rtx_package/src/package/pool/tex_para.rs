@@ -29,7 +29,7 @@ LoadDefinitions!(state, {
           let element = document.get_element();
           if let Some(mut node) = element {
             if document.get_node_qname(&node, state) == "ltx:para" {  // Only set on the para about to close!
-              document.set_attribute(&mut node, "class", &class_str)?;
+              document.set_attribute(&mut node, "class", class_str)?;
             }
           }
         }

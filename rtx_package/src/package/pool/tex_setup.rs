@@ -31,7 +31,7 @@ LoadDefinitions!(state, {
   Tag!("ltx:*", after_open => sub[document, node, state] {
     // If GENERATE_IDS is true, we'll assign an ID to EVERY element,
     // EXCEPT ltx:document which only gets an id from an EXPLICIT \thedocument@id.
-    let tag = document.get_node_qname(&node, state);
+    let tag = document.get_node_qname(node, state);
     if tag != "ltx:document"
       && tag != "ltx:XMWrap"    // No auto-generated id on wrap???
       && LookupBool!("GENERATE_IDS") {

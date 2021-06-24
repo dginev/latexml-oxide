@@ -385,7 +385,7 @@ impl From<Ligature> for Stored {
 impl From<Option<&Stored>> for Stored {
   fn from(stored_opt: Option<&Stored>) -> Stored {
     match stored_opt {
-      Some(ref val) => (*val).clone(),
+      Some(val) => val.clone(),
       None => Stored::Bool(false),
     }
   }

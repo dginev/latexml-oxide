@@ -101,7 +101,7 @@ pub trait Definition: Object {
   where Self: Sized {
     match self.get_parameters() {
       None => Ok(Vec::new()),
-      Some(ref params) => params.read_arguments(gullet, self, state),
+      Some(params) => params.read_arguments(gullet, self, state),
     }
   }
   fn get_parameters(&self) -> Option<&Parameters>;
@@ -113,7 +113,7 @@ pub trait Definition: Object {
 
     match self.get_parameters() {
       None => {},
-      Some(ref params) => {
+      Some(params) => {
         for result_token in params.revert_arguments(args, gullet, state)? {
           invocation_result.append(&mut result_token.unlist());
         }

@@ -146,7 +146,7 @@ impl fmt::Display for Constructor {
   }
 }
 impl Object for Constructor {
-  fn stringify(&self) -> String { <Self as Definition>::stringify_type(&self, "Constructor") }
+  fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Constructor") }
 }
 impl Definition for Constructor {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
@@ -174,7 +174,7 @@ impl Definition for Constructor {
     // Parse AND digest the arguments to the Constructor
     let mut args: Vec<Option<Digested>> = match self.get_parameters() {
       None => Vec::new(),
-      Some(ref params) => params.read_arguments_and_digest(stomach, self, state)?,
+      Some(params) => params.read_arguments_and_digest(stomach, self, state)?,
     };
     // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;
     let nargs = self.get_num_args();

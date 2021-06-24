@@ -218,7 +218,7 @@ pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<Co
         cs: cs.clone(),
         paramlist: None,
         test: None,
-        conditional_type: ConditionalType::from(&cs_name),
+        conditional_type: ConditionalType::from(cs_name),
         locked: options.locked,
         skipper: options.skipper,
       },
@@ -282,8 +282,7 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   expansion: T,
   options_opt: Option<ExpandableOptions>,
   state: &mut State,
-)
-{
+) {
   let expansion = expansion.into();
   let options = options_opt.unwrap_or_default();
   let options_locked = options.locked;
@@ -491,8 +490,7 @@ pub fn def_constructor(
   compiled_replacement: Option<ReplacementClosure>,
   options: ConstructorOptions,
   state: &mut State,
-)
-{
+) {
   // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
   //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
   let scope = options.scope;
@@ -577,8 +575,7 @@ pub fn def_environment(
   compiled_replacement: Option<ReplacementClosure>,
   options: ConstructorOptions,
   state: &mut State,
-)
-{
+) {
   let begin_name = s!("\\begin{{{}}}", &name);
   let end_name = s!("\\end{{{}}}", &name);
   // This is for the common case where the environment is opened by \begin{env}

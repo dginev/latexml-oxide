@@ -9,7 +9,6 @@ use regex::Regex;
 
 use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
-use std::iter;
 use std::rc::Rc;
 
 use crate::common::error::*;
@@ -165,12 +164,12 @@ impl Document {
     let font = self.get_node_font(node);
     let mut pending_declaration = font.relative_to(&declared_font);
     if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some()) && !pending_declaration.is_empty() {
-      for (ref key, &(ref value, ref properties)) in &pending_declaration {
+      for (key, &(ref value, ref properties)) in &pending_declaration {
         if state.model.can_have_attribute(&qname, key) {
-          attrs_to_set.push(((*key).to_string(), value.to_string()));
+          attrs_to_set.push((key.to_string(), value.to_string()));
           // Merge to set the font currently in effect
           declared_font = declared_font.merge(properties.clone());
-          keys_to_remove.push((*key).to_string());
+          keys_to_remove.push(key.to_string());
         }
       }
     }
@@ -217,8 +216,8 @@ impl Document {
         if self.can_contain(node, FONT_ELEMENT_NAME, state) && !pending_declaration.is_empty() {
           // Too late to do wrapNodes?
           if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child], state)? {
-            for (ref key, &(ref value, ref properties)) in &pending_declaration {
-              self.set_attribute(&mut text, &key, &value.to_string())?;
+            for (key, &(ref value, ref properties)) in &pending_declaration {
+              self.set_attribute(&mut text, key, &value.to_string())?;
             }
             self.finalize_rec(&mut text, new_init_font, state)?; // Now have to clean up the new node!
           }
@@ -517,7 +516,7 @@ impl Document {
         if node_type == Some(NodeType::DocumentNode) || node_type == None {
           return None;
         }
-        let this_qname = state.model.get_node_qname(&node);
+        let this_qname = state.model.get_node_qname(node);
         if this_qname == qname {
           break 'inner;
         }
@@ -605,7 +604,7 @@ impl Document {
 
     if t == Some(NodeType::DocumentNode) {
       // Didn't find $qname at all!!
-      let qname = state.model.get_node_qname(&node);
+      let qname = state.model.get_node_qname(node);
       let message = s!(
         "Attempt to close {}, which isn't open. Currently in {:?}",
         qname,
@@ -616,7 +615,7 @@ impl Document {
       // Found node.
       // Intervening non-auto-closeable nodes!!
       if !cant_close.is_empty() {
-        let qname = state.model.get_node_qname(&node);
+        let qname = state.model.get_node_qname(node);
         let message = s!(
           "Closing {} whose open descendents do not auto-close. Descendents are {}",
           qname,
@@ -730,7 +729,7 @@ impl Document {
   /// We ought to try for something close to C14N (http://www.w3.org/TR/xml-c14n),
   /// but keep XML declaration, comments and don't convert empty elements.
   pub fn serialize_aux(&self, node: &Node, depth: usize, noindent: bool, heuristic: bool, state: &mut State) -> String {
-    let indent = iter::repeat("  ").take(depth).collect::<String>();
+    let indent = "  ".repeat(depth);
     let mut serialized = String::new();
 
     match node.get_type() {
@@ -938,7 +937,7 @@ impl Document {
       let mut n: Rc<Node> = rc_node.clone();
       while n.get_type() != Some(NodeType::DocumentNode) {
         let node_font = self.get_node_font(&n);
-        let d = font.distance(&node_font);
+        let d = font.distance(node_font);
         if d < bestdiff {
           bestdiff = d;
           closeto = n.clone();
@@ -1063,7 +1062,7 @@ impl Document {
   /// If we're closing a node that can take font switches and it contains
   /// a single FONT_ELEMENT_NAME node; pull it up.
   fn auto_collapse_children(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
-    let qname = state.model.get_node_qname(&node);
+    let qname = state.model.get_node_qname(node);
     if qname != "ltx:_Capture_" {
       let mut c = node.get_child_nodes();
       // with single child, AND, $node can have all the attributes that the child has (but at least "font")
@@ -1079,7 +1078,7 @@ impl Document {
         && c[0].get_attribute("_force_font").is_none()
       {
         let c_first = c.remove(0);
-        self.set_node_font(&node, self.get_node_font(&c_first).clone());
+        self.set_node_font(node, self.get_node_font(&c_first).clone());
         let c_first = self.remove_node(c_first);
         for mut gc in c_first.get_child_nodes().into_iter() {
           gc.unlink();
@@ -1184,7 +1183,7 @@ impl Document {
   pub fn record_constructed_node(&mut self, node_opt: Option<&Node>) {
     let node = match node_opt {
       None => &self.node,
-      Some(ref n) => n,
+      Some(n) => n,
     };
     // if ((defined $LaTeXML::RECORDING_CONSTRUCTION)    // If we're recording!
     let should_push = match self.constructed_nodes.last() {
@@ -1605,7 +1604,7 @@ impl Document {
     if node.get_type() == Some(NodeType::ElementNode) {
       let nodeid = node.to_hashable();
       match self.node_fonts.get(&nodeid) {
-        Some(ref f) => f,
+        Some(f) => f,
         None => &FONT_TEXT_DEFAULT,
       }
     } else {
@@ -1857,7 +1856,7 @@ impl Document {
   pub fn after_open(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Set current point to this node, just in case the afterOpen's use it.
     let savenode = self.node.clone();
-    self.set_node(&node);
+    self.set_node(node);
     let node_qname = self.get_node_qname(node, state);
     for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterOpen, state) {
       action(self, node, state)?;
@@ -2128,7 +2127,7 @@ impl Document {
     // Should we only accept a node that already has an id, or should we create an id?
     let mut node_opt: Option<Cow<Node>> = None;
     while let Some(candidate) = candidates.pop_front() {
-      if self.can_node_have_attribute(&candidate, key, state) && candidate.get_attribute_ns("id", xml::XML_NS).is_some() {
+      if self.can_node_have_attribute(candidate, key, state) && candidate.get_attribute_ns("id", xml::XML_NS).is_some() {
         node_opt = Some(Cow::Borrowed(candidate));
         break;
       }
@@ -2137,7 +2136,7 @@ impl Document {
     if node_opt.is_none() {
       // No appropriate ancestor?
       let sib: Option<Node> = match ancestors.first() {
-        Some(ref n) => n.get_last_child(),
+        Some(n) => n.get_last_child(),
         None => None,
       };
       if let Some(sibling) = sib {

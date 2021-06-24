@@ -296,7 +296,7 @@ fn translate_string(mut text: &mut String) -> proc_macro2::TokenStream {
   if text.starts_with('\'') || text.starts_with('"') {
     let quote = text.remove(0);
     while !text.is_empty() && !text.starts_with(quote) {
-      if LEAD_COND_RE.is_match(&text) {
+      if LEAD_COND_RE.is_match(text) {
         // inline conditional; branches should be values
         let (bool_branch, mut if_branch, mut else_branch) = parse_conditional(&mut text);
         let if_branch_translated = translate_value("", &mut if_branch);
@@ -362,7 +362,7 @@ fn translate_avpairs(mut text: &mut String) -> Vec<proc_macro2::TokenStream> {
   while !text.is_empty() {
     let mut is_match = false;
     let mut key = String::new();
-    if LEAD_COND_RE.is_match(&text) {
+    if LEAD_COND_RE.is_match(text) {
       is_match = true;
       let (bool_branch, mut if_branch, mut else_branch) = parse_conditional(&mut text);
       let if_branch_translated = translate_avpairs(&mut if_branch);

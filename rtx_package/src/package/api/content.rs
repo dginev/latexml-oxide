@@ -26,7 +26,7 @@ pub fn load_external_binding(file: &str, state: &mut State, mut stomach: &mut St
   let taken_dispatcher = state.extra_bindings_dispatch.take();
   match taken_dispatcher {
     Some(ref dispatcher) => {
-      let result_opt = dispatcher(&file, stomach, state);
+      let result_opt = dispatcher(file, stomach, state);
       match result_opt {
         Some(result) => match result {
           Ok(()) => true,
@@ -41,7 +41,7 @@ pub fn load_external_binding(file: &str, state: &mut State, mut stomach: &mut St
   let is_contrib: bool = match taken_dispatcher {
     Some(ref dispatcher) => {
       note_begin(&s!("Loading {:?} definitions", file));
-      let result_opt = dispatcher(&file, stomach, state);
+      let result_opt = dispatcher(file, stomach, state);
       note_end(&s!("Loading {:?} definitions", file));
       match result_opt {
         Some(result) => match result {
@@ -186,8 +186,7 @@ fn input_handle_options(
   as_type: &str,
   stomach: &mut Stomach,
   state: &mut State,
-) -> Result<()>
-{
+) -> Result<()> {
   // For \RequirePackageWithOptions, pass the options from the outer class/style to the inner one.
   if let Some(with_options_to_pass) = options.withoptions.take() {
     if !prevname.is_empty() && state.lookup_value(&s!("opt@{}.{}", prevname, prevext)).is_some() {
