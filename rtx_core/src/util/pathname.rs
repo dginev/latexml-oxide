@@ -1,4 +1,3 @@
-use kpathsea::Kpaths;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -295,15 +294,62 @@ pub fn extension(pathname: &str) -> String {
   .to_lowercase()
 }
 
-pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
-  let kpse = Kpaths::new().unwrap();
-  for candidate in candidates {
-    if let Some(path) = kpse.find_file(candidate) {
-      return Some(path);
+
+pub use kpsewhichimpl::kpsewhich as kpsewhich;
+
+#[cfg(feature = "native_kpsewhich")]
+mod kpsewhichimpl {
+  use kpathsea::Kpaths;
+  pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
+    let kpse = Kpaths::new().unwrap();
+    for candidate in candidates {
+      if let Some(path) = kpse.find_file(candidate) {
+        return Some(path);
+      }
     }
+    None
   }
-  None
 }
+
+#[cfg(not(feature = "native_kpsewhich"))]
+mod kpsewhichimpl {
+  use std::process::Command;
+  use std::string::String;
+
+  pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
+    for candidate in candidates {
+      if let Some(path) = exec(candidate) {
+        return Some(path);
+      }
+    }
+    None
+  }
+
+  // executable name to be used for kpsewhich
+  static KPSEWHICH_EXECTUABLE: &str = "kpsewhich";
+
+  // runs kpsewhich directly from path, and returns the candidate to be found.
+  // requires the 'kpsewhich' executable at runtime, and will otherwhise return None.
+  fn exec(candidate: &str) -> Option<String> {
+    let output = match Command::new(KPSEWHICH_EXECTUABLE).arg(candidate).output() {
+      Ok(x) => x.stdout,
+      Err(_) => return None,
+    };
+
+    let stdout = match String::from_utf8(output) {
+      Ok(s) => s,
+      Err(_) => return None,
+    };
+
+    for line in stdout.lines() {
+      if !line.is_empty() {
+        return Some(String::from(line));
+      }
+    }
+    None
+  }
+}
+
 
 pub fn is_nasty(file: &str) -> bool { PATHNAME_IS_NASTY_RE.is_match(file) }
 

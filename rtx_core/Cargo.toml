@@ -10,6 +10,9 @@ description = "Core conversion capabilities of rtx"
 name = "rtx_core"
 crate-type = ["lib"]
 
+[features]
+native_kpsewhich = ["kpathsea"]
+
 [dependencies]
 glob = "0.3"
 rand = "0.8"
@@ -23,4 +26,4 @@ ansi_term = "0.12"
 libxml = "0.3.0"
 dirs = "3.0"
 encoding = "0.2"
-kpathsea = "0.2.2"
+kpathsea = { version = "0.2.2", optional = true }
