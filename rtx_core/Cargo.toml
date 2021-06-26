@@ -11,7 +11,8 @@ name = "rtx_core"
 crate-type = ["lib"]
 
 [features]
-native_kpsewhich = ["kpathsea"]
+default = ["kpsewhich_libkpathsea"]
+kpsewhich_libkpathsea = ["kpathsea"]
 
 [dependencies]
 glob = "0.3"

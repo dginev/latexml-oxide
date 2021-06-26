@@ -297,7 +297,7 @@ pub fn extension(pathname: &str) -> String {
 
 pub use kpsewhichimpl::kpsewhich as kpsewhich;
 
-#[cfg(feature = "native_kpsewhich")]
+#[cfg(feature = "kpsewhich_libkpathsea")]
 mod kpsewhichimpl {
   use kpathsea::Kpaths;
   pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
@@ -311,7 +311,7 @@ mod kpsewhichimpl {
   }
 }
 
-#[cfg(not(feature = "native_kpsewhich"))]
+#[cfg(not(feature = "kpsewhich_libkpathsea"))]
 mod kpsewhichimpl {
   use std::process::Command;
   use std::string::String;
