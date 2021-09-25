@@ -304,7 +304,7 @@ macro_rules! prop_whatsit {
       // TODO: Cloning here ought to be terribly inefficient and should be avoided. How?
       Some(&Stored::Digested(ref rc)) => (**rc).clone(),
       _ => Digested::Whatsit(Rc::new(RefCell::new(Whatsit::default()))),
-    };
+    }
   };
 }
 

@@ -1879,151 +1879,151 @@ macro_rules! defi_opts {
   };
   // reversion: Option<Reversion>
   (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ reversion @ $tokens.into_option() ] });
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ reversion @ $tokens.into_option() ] })
   };
   (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ reversion @ $tokens.into_option() ] });
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ reversion @ $tokens.into_option() ] })
   };
 
   // mode : Option<TexMode>
   (@munch ( $(,)? mode $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ mode @ $literal.into_option() ] });
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ mode @ $literal.into_option() ] })
   };
   // alias : Option<String>
   (@munch ( $(,)? alias $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ alias @ $literal.into_option() ] });
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ alias @ $literal.into_option() ] })
   };
   // scope: Option<Scope>
   (@munch ( $(,)? scope $(:)?$(=>)? $scope:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ scope @ $scope.into_option() ] });
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ scope @ $scope.into_option() ] })
   };
   (@munch ( $(,)? scope $(:)?$(=>)? $scope:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ scope @ $scope.into_option() ] });
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ scope @ $scope.into_option() ] })
   };
   // font: Font
   (@munch ( $(,)? font $(:)?$(=>)? { $($fkey:ident => $fvalue:literal),* } $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ Font!($($fkey => $fvalue),*) ] });
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ Font!($($fkey => $fvalue),*) ] })
   };
   (@munch ( $(,)? font $(:)?$(=>)? $props:ident $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ $props ] });
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ $props ] })
   };
 
   // properties: PropertiesClosure
   (@munch ( $(,)? properties $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($body) ] });
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($body) ] })
   };
   (@munch ( $(,)? properties $(:)?$(=>)?
       sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($stomach_arg, $args, $state_arg, $body) ] });
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($stomach_arg, $args, $state_arg, $body) ] })
   };
   (@munch ( $(,)? properties $(:)?$(=>)? $var:ident $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($var) ] });
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($var) ] })
   };
 
   // before_digest_end: Vec<BeforeDigestClosure>
   (@munch ( $(,)? before_digest_end $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@before_digest_end (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@before_digest_end (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? before_digest_end $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@before_digest_end ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@before_digest_end ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
 
   // before_digest: Vec<BeforeDigestClosure>
   (@munch ( $(,)? before_digest $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@before_digest (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@before_digest (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? before_digest $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@before_digest ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@before_digest ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
   // after_digest: Vec<DigestionClosure>
   (@munch ( $(,)? after_digest $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@after_digest (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@after_digest (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_digest $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@after_digest ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@after_digest ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
   // after_digest_begin: Vec<DigestionClosure>
   (@munch ( $(,)? after_digest_begin $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@after_digest_begin (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@after_digest_begin (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_digest_begin $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@after_digest_begin ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@after_digest_begin ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
   // before_construct: Vec<ConstructionClosure>
   (@munch ( $(,)? before_construct $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@before_construct (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@before_construct (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? before_construct $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@before_construct ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@before_construct ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
 
   // after_construct: Vec<ConstructionClosure>
   (@munch ( $(,)? after_construct $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@after_construct (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@after_construct (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_construct $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@after_construct ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@after_construct ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_construct $(:)?$(=>)? $var:ident $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_construct @ $var]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_construct @ $var]})
   };
 
   // getter: RegisterGetterClosure
   (@munch ( $(,)? getter $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@getter (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@getter (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? getter $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@getter ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@getter ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // setter: RegisterSetterClosure
   (@munch ( $(,)? setter $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@setter (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@setter (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? setter $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@setter ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@setter ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // after_open: Option<Vec<TagConstructionClosure>>
   (@munch ( $(,)? after_open $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@after_open (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@after_open (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_open $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@after_open ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@after_open ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // after_open_late: Option<Vec<TagConstructionClosure>>
   (@munch ( $(,)? after_open_late $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@after_open_late (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@after_open_late (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_open_late $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@after_open_late ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@after_open_late ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // after_close: Option<Vec<TagConstructionClosure>>
   (@munch ( $(,)? after_close $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@after_close (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@after_close (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_close $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@after_close ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*});
+    defi_opts!(@after_close ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // auto_open: Option<bool>
   (@munch ( $(,)? auto_open $(:)?$(=>)? $auto:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_open @ $auto.into() ]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_open @ $auto.into() ]})
   };
   // auto_close: Option<bool>
   (@munch ( $(,)? auto_close $(:)?$(=>)? $auto:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_close @ $auto.into() ]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_close @ $auto.into() ]})
   };
 
   // misc "id" with literal value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [$id @ $literal]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [$id @ $literal]})
   };
   // misc "id" with block value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [$id @ $body]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [$id @ $body]})
   };
 
   //-- aux
@@ -2031,95 +2031,95 @@ macro_rules! defi_opts {
 
   (@before_digest_end ($body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_digest_end @ before_digest!($body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_digest_end @ before_digest!($body)]})
   };
   (@before_digest_end (sub [$stomach_arg:ident, $state_arg: ident] $body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_digest_end @ before_digest!($stomach_arg, $state_arg, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_digest_end @ before_digest!($stomach_arg, $state_arg, $body)]})
   };
 
   (@before_digest (sub [$stomach_arg:ident, $state_arg: ident] $body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_digest @ before_digest!($stomach_arg, $state_arg, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_digest @ before_digest!($stomach_arg, $state_arg, $body)]})
   };
   (@before_digest ($body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_digest @ before_digest!($body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_digest @ before_digest!($body)]})
   };
   (@after_digest (
     sub[$stomach_arg:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]})
   };
   (@after_digest (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest @ after_digest!(stomach, whatsit, state, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest @ after_digest!(stomach, whatsit, state, $body)]})
   };
 
   (@after_digest_begin (
     sub[$stomach_arg:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest_begin @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest_begin @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]})
   };
   (@after_digest_begin (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest_begin @ after_digest!(stomach, whatsit, state, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest_begin @ after_digest!(stomach, whatsit, state, $body)]})
   };
 
   (@before_construct (
     sub[$doc:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_construct @ construct!($doc, $whatsit, $state_arg, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_construct @ construct!($doc, $whatsit, $state_arg, $body)]})
   };
   (@before_construct (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_construct @ construct!(document, whatsit, state, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_construct @ construct!(document, whatsit, state, $body)]})
   };
 
   (@after_construct (
     sub[$doc:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_construct @ construct!($doc, $whatsit, $state_arg, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_construct @ construct!($doc, $whatsit, $state_arg, $body)]})
   };
   (@after_construct (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_construct @ construct!(document, whatsit, state, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_construct @ construct!(document, whatsit, state, $body)]})
   };
 
   (@getter (
     sub[$args:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [getter @ getter!($args, $state_arg, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [getter @ getter!($args, $state_arg, $body)]})
   };
   (@getter (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [getter @ getter!(args, state, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [getter @ getter!(args, state, $body)]})
   };
 
   (@setter (
     sub[$value:ident, $args:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [setter @ setter!($value, $args, $state_arg, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [setter @ setter!($value, $args, $state_arg, $body)]})
   };
   (@setter (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [setter @ setter!(value, args, state, $body)]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [setter @ setter!(value, args, state, $body)]})
   };
   (@after_open (
     sub[$document:ident, $node:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_open @ Some(tagsub!($document, $node, $state_arg, $body)) ]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_open @ Some(tagsub!($document, $node, $state_arg, $body)) ]})
   };
   (@after_open (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_open @ Some(tagsub!(document, node, state, $body)) ]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_open @ Some(tagsub!(document, node, state, $body)) ]})
   };
   (@after_open_late (
     sub[$document:ident, $node:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_open_late @ Some(tagsub!($document, $node, $state_arg, $body)) ]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_open_late @ Some(tagsub!($document, $node, $state_arg, $body)) ]})
   };
   (@after_open_late (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_open_late @ Some(tagsub!(document, node, state, $body)) ]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_open_late @ Some(tagsub!(document, node, state, $body)) ]})
   };
   (@after_close (
     sub[$document:ident, $node:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_close @ Some(tagsub!($document, $node, $state_arg, $body)) ]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_close @ Some(tagsub!($document, $node, $state_arg, $body)) ]})
   };
   (@after_close (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_close @ Some(tagsub!(document, node, state, $body)) ]});
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_close @ Some(tagsub!(document, node, state, $body)) ]})
   };
 }

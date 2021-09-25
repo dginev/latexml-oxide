@@ -26,12 +26,8 @@ const UNTEX_LINELENGTH: usize = 78;
 /// usually read from a `Mouth`.
 /// They are usually treated as an immutable interface, an have to be consumed via `.unlist()`
 /// for access to the underlying data.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Tokens(Vec<Token>);
-
-impl Default for Tokens {
-  fn default() -> Self { Tokens(Vec::new()) }
-}
 
 #[macro_export]
 macro_rules! Tokens(

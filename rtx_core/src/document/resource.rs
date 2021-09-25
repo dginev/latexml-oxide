@@ -1,22 +1,11 @@
 //======================================================================
 // Support for requiring "Resources", ie CSS, Javascript, whatever
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Resource {
   pub name: String,
   pub media: String,
   pub mimetype: String,
   pub content: String,
-}
-
-impl Default for Resource {
-  fn default() -> Self {
-    Resource {
-      name: String::new(),
-      media: String::new(),
-      mimetype: String::new(),
-      content: String::new(),
-    }
-  }
 }
 
 pub fn resource_type(abbrev: &str) -> String {

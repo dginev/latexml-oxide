@@ -27,7 +27,6 @@ use rtx_core::Digested;
 
 // Constants for the API functions stay here as well
 
-#[allow(clippy::trivial_regex)]
 lazy_static! {
   static ref CSNAME_MACRO_RE: Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
   static ref CS_RE: Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();

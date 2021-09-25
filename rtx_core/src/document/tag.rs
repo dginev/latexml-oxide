@@ -36,7 +36,7 @@ impl TagOptionName {
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct TagOptions {
   pub auto_open: Option<bool>,
   pub auto_close: Option<bool>,
@@ -47,20 +47,7 @@ pub struct TagOptions {
   pub after_open_late: Option<Vec<TagConstructionClosure>>,
   pub after_close_late: Option<Vec<TagConstructionClosure>>,
 }
-impl Default for TagOptions {
-  fn default() -> Self {
-    TagOptions {
-      auto_open: None,
-      auto_close: None,
-      after_open: None,
-      after_close: None,
-      after_open_early: None,
-      after_open_late: None,
-      after_close_early: None,
-      after_close_late: None,
-    }
-  }
-}
+
 #[allow(dead_code)]
 impl TagOptions {
   pub fn get(&self, name: &TagOptionName) -> &Option<Vec<TagConstructionClosure>> {

@@ -301,23 +301,15 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   }
 }
 
+#[derive(Default)]
 pub struct RegisterOptions {
   pub getter: Option<RegisterGetterClosure>,
   pub setter: Option<RegisterSetterClosure>,
   pub readonly: bool,
 }
-impl Default for RegisterOptions {
-  fn default() -> Self {
-    RegisterOptions {
-      getter: None,
-      setter: None,
-      readonly: false,
-    }
-  }
-}
 
 pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parameters>, value: T, options: Option<RegisterOptions>, state: &mut State) {
-  let options: RegisterOptions = options.unwrap_or_else(RegisterOptions::default);
+  let options: RegisterOptions = options.unwrap_or_default();
   let value: RegisterValue = value.into();
   let name = cs.to_string();
   let register_type: RegisterType = (&value).into();

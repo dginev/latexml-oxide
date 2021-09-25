@@ -139,6 +139,7 @@ impl BoxOps for KeyVals {
   fn get_font(&self) -> Option<Cow<Font>> { None } // TODO
 }
 
+#[derive(Default)]
 pub struct KeyValsOptions {
   pub prefix: Option<String>,
   pub keysets: Vec<String>,
@@ -146,18 +147,6 @@ pub struct KeyValsOptions {
   pub set_internals: bool,
   pub skip: bool,
   pub skip_missing: bool,
-}
-impl Default for KeyValsOptions {
-  fn default() -> Self {
-    KeyValsOptions {
-      prefix: None,
-      keysets: Vec::new(),
-      set_all: false,
-      set_internals: false,
-      skip: false,
-      skip_missing: false,
-    }
-  }
 }
 
 impl KeyVals {

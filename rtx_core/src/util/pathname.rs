@@ -5,20 +5,11 @@ use regex::Regex;
 use std::env;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PathnameFindOptions {
   pub paths: Option<Vec<String>>,
   pub types: Option<Vec<String>>,
   pub installation_subdir: Option<String>,
-}
-impl Default for PathnameFindOptions {
-  fn default() -> Self {
-    PathnameFindOptions {
-      paths: None,
-      types: None,
-      installation_subdir: None,
-    }
-  }
 }
 
 static LITERAL_PROTOCOL: &str = "literal:";

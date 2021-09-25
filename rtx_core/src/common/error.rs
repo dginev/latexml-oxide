@@ -169,7 +169,7 @@ macro_rules! generate_message {
       file!(),
       line!(),
       column!()
-    );
+    )
   };
 }
 

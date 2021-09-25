@@ -46,19 +46,11 @@ impl ConditionalType {
 }
 
 // This is ONLY used for \ifcase.
+#[derive(Default)]
 pub struct ConditionalOptions {
   pub scope: Option<Scope>,
   pub locked: Option<bool>,
   pub skipper: Option<bool>,
-}
-impl Default for ConditionalOptions {
-  fn default() -> Self {
-    ConditionalOptions {
-      scope: None,
-      locked: None,
-      skipper: None,
-    }
-  }
 }
 
 #[derive(Clone)]

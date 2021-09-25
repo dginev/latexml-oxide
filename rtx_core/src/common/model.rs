@@ -29,19 +29,13 @@ lazy_static! {
   static ref NAMESPACE_MODEL_LINE : Regex = Regex::new(r"^([^=]+)=(.*?)$").unwrap();
 }
 
+#[derive(Default)]
 pub struct TagFrame {
   model: HashSet<String>,
   attributes: HashSet<String>,
 }
-impl Default for TagFrame {
-  fn default() -> Self {
-    TagFrame {
-      model: HashSet::new(),
-      attributes: HashSet::new(),
-    }
-  }
-}
 
+#[derive(Default)]
 pub struct Model {
   pub schema: Option<Relaxng>,
   pub schema_data: Option<Vec<String>>,
@@ -57,25 +51,6 @@ pub struct Model {
   pub debug_mode: bool,
   pub namespace_errors: u8,
   pub tagprop: HashMap<String, TagFrame>,
-}
-impl Default for Model {
-  fn default() -> Self {
-    Model {
-      schema: None,
-      schema_data: None,
-      schema_class: HashMap::new(),
-      code_namespace_prefixes: HashMap::new(),
-      code_namespaces: HashMap::new(),
-      document_namespace_prefixes: HashMap::new(),
-      document_namespaces: HashMap::new(),
-      // doctype_namespaces: HashMap::new(),
-      namespace_errors: 0,
-      permissive: false,
-      no_compiled: false,
-      debug_mode: false,
-      tagprop: HashMap::new(),
-    }
-  }
 }
 
 impl Object for Model {}

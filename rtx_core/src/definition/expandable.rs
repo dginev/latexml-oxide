@@ -17,7 +17,7 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ExpandableOptions {
   pub locked: bool,
   pub protected: bool,
@@ -25,18 +25,6 @@ pub struct ExpandableOptions {
   pub long: bool,
   pub scope: Option<Scope>,
   pub alias: Option<String>,
-}
-impl Default for ExpandableOptions {
-  fn default() -> Self {
-    ExpandableOptions {
-      locked: false,
-      scope: None,
-      protected: false,
-      outer: false,
-      long: false,
-      alias: None,
-    }
-  }
 }
 
 #[derive(Clone)]
@@ -122,7 +110,7 @@ impl Expandable {
     state: &State,
   ) -> Self {
     let expansion: ExpansionBody = expansion.into();
-    let traits = traits.unwrap_or_else(ExpandableOptions::default);
+    let traits = traits.unwrap_or_default();
     // let source = $STATE->getStomach->getGullet->getMouth;
     // if (ref $expansion eq 'LaTeXML::Core::Tokens') {
     //   Fatal('misdefined', $cs, $source, "Expansion of '" . ToString($cs) . "' has unbalanced {}",

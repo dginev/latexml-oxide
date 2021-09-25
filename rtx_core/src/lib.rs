@@ -52,6 +52,7 @@ pub struct Core {
   pub preload: Vec<String>,
 }
 impl Object for Core {}
+#[derive(Default)]
 pub struct CoreOptions {
   // First, state-related options:
   pub model: Option<Model>,
@@ -66,23 +67,6 @@ pub struct CoreOptions {
   pub input_encoding: Option<String>,
   // The core-related
   pub preload: Option<Vec<String>>,
-}
-impl Default for CoreOptions {
-  fn default() -> Self {
-    CoreOptions {
-      model: None,
-      verbosity: None,
-      strict: None,
-      include_comments: None,
-      include_styles: None,
-      nomathparse: None,
-      documentid: None,
-      search_paths: None,
-      graphics_paths: None,
-      input_encoding: None,
-      preload: None,
-    }
-  }
 }
 
 impl Default for Core {

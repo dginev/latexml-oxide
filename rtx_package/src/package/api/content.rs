@@ -592,22 +592,12 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens, stomach: &mut
   //     return; } } }
 }
 
+#[derive(Default)]
 pub struct FindFileOptions {
   forbid_ltxml: bool,
   raw: bool,
   notex: bool,
   ext_type: Option<String>,
-}
-
-impl Default for FindFileOptions {
-  fn default() -> Self {
-    FindFileOptions {
-      forbid_ltxml: false,
-      raw: false,
-      notex: false,
-      ext_type: None,
-    }
-  }
 }
 
 pub fn find_file(file: &str, options: Option<FindFileOptions>, state: &mut State) -> Option<String> {

@@ -17,7 +17,7 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct PrimitiveOptions {
   pub bounded: bool,
   pub is_prefix: bool,
@@ -31,24 +31,6 @@ pub struct PrimitiveOptions {
   pub alias: Option<String>,
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
-}
-impl Default for PrimitiveOptions {
-  fn default() -> Self {
-    PrimitiveOptions {
-      bounded: false,
-      before_digest: Vec::new(),
-      after_digest: Vec::new(),
-      mode: None,
-      font: None,
-      is_prefix: false,
-      scope: None,
-      require_math: false,
-      forbid_math: false,
-      locked: false,
-      alias: None,
-      nargs: None,
-    }
-  }
 }
 
 #[derive(Clone)]

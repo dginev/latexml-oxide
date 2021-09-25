@@ -55,7 +55,7 @@ lazy_static! {
   static ref SANITIZE_LINE_REGEX: Regex = Regex::new(r"((\\ )*)\s*$").unwrap();
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MouthOptions {
   pub fordefinitions: bool,
   pub notes: bool,
@@ -63,18 +63,6 @@ pub struct MouthOptions {
   pub foodtype: Option<FoodType>,
   pub source: Option<String>,
   pub shortsource: Option<String>,
-}
-impl Default for MouthOptions {
-  fn default() -> Self {
-    MouthOptions {
-      fordefinitions: false,
-      notes: false,
-      content: None,
-      foodtype: None,
-      source: None,
-      shortsource: None,
-    }
-  }
 }
 
 #[derive(Debug)]

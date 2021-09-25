@@ -32,21 +32,11 @@ pub struct MouthRuntime {
   pub pushback: VecDeque<Token>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Gullet {
   pub mouth: Option<MouthRuntime>,
   pub mouthstack: VecDeque<MouthRuntime>,
   pub pending_comments: VecDeque<Token>,
-}
-
-impl Default for Gullet {
-  fn default() -> Self {
-    Gullet {
-      mouth: None,
-      mouthstack: VecDeque::new(),
-      pending_comments: VecDeque::new(),
-    }
-  }
 }
 
 impl Object for Gullet {

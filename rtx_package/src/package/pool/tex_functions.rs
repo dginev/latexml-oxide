@@ -645,23 +645,13 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
 //   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
 
 // function to handle all the
+#[derive(Default)]
 pub struct KVSpec {
   pub star: bool,
   pub plus: bool,
   pub prefix: Option<String>,
   pub keysets: Vec<Option<Parameters>>,
   pub skip: bool,
-}
-impl Default for KVSpec {
-  fn default() -> Self {
-    KVSpec {
-      star: false,
-      plus: false,
-      prefix: None,
-      keysets: Vec::new(),
-      skip: false,
-    }
-  }
 }
 pub fn keyvals_aux(gullet: &mut Gullet, until: Option<Token>, mut spec: KVSpec, state: &mut State) -> Result<KeyVals> {
   // support both "keysets" and "prefix|keysets"

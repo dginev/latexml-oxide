@@ -68,19 +68,11 @@ pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &st
   Ok(())
 }
 
+#[derive(Default)]
 pub struct NewCounterOptions<'ct> {
   pub idprefix: &'ct str,
   pub idwithin: &'ct str,
   pub nested: Vec<&'ct str>,
-}
-impl<'ct> Default for NewCounterOptions<'ct> {
-  fn default() -> Self {
-    NewCounterOptions {
-      idprefix: "",
-      idwithin: "",
-      nested: Vec::new(),
-    }
-  }
 }
 
 pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOptions>, stomach: &mut Stomach, state: &mut State) -> Result<()> {

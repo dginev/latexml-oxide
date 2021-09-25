@@ -22,22 +22,12 @@ use crate::{Digested, TexMode};
 
 static MAXSTACK: usize = 200;
 
+#[derive(Default)]
 pub struct Stomach {
   pub gullet: Gullet,
   pub token_stack: Vec<Rc<Token>>,
   pub boxing: Vec<Token>,
   pub box_list: Vec<Digested>,
-}
-
-impl Default for Stomach {
-  fn default() -> Self {
-    Stomach {
-      gullet: Gullet::default(),
-      token_stack: Vec::new(),
-      boxing: Vec::new(),
-      box_list: Vec::new(),
-    }
-  }
 }
 
 impl Object for Stomach {

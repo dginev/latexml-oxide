@@ -125,7 +125,7 @@ pub fn decode_fontname(name: &str, at: Option<f32>, scaled: Option<f32>) -> Opti
 /// merge) the current font, in each definitional binding. To accommodate that with this struct,
 /// every single field needs to be an Option, in order to unambiguously tell the "intend" of
 /// override (Some) vs no intent (None).
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Default)]
 pub struct Font {
   pub family: Option<Cow<'static, str>>,
   pub series: Option<Cow<'static, str>>,
@@ -138,34 +138,12 @@ pub struct Font {
   pub language: Option<Cow<'static, str>>,
   pub mathstyle: Option<Cow<'static, str>>,
   pub emph: Option<bool>,
+  // Note: forcefamily, forceseries, forceshape (& forcebold for compatibility)
+  // are only useful for fonts in math; See the specialize method below.
   pub forceseries: Option<bool>,
   pub forcefamily: Option<bool>,
   pub forceshape: Option<bool>,
 }
-
-// Note: forcefamily, forceseries, forceshape (& forcebold for compatibility)
-// are only useful for fonts in math; See the specialize method below.
-impl Default for Font {
-  fn default() -> Self {
-    Font {
-      family: None,
-      series: None,
-      shape: None,
-      size: None,
-      color: None,
-      bg: None,
-      opacity: None,
-      encoding: None,
-      language: None,
-      mathstyle: None,
-      emph: None,
-      forceseries: None,
-      forcefamily: None,
-      forceshape: None,
-    }
-  }
-}
-
 impl fmt::Debug for Font {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.to_string()) }
 }

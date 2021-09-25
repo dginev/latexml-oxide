@@ -75,7 +75,7 @@ pub enum Catcodes {
 /// Ledger for stacked assignments
 pub type AssignmentCount = HashMap<String, usize>;
 pub type StashStore = HashMap<String, Vec<(TableName, String, Stored)>>;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct UndoFrame {
   locked: bool,
   meaning: AssignmentCount,
@@ -89,22 +89,6 @@ pub struct UndoFrame {
   stash_active: AssignmentCount,
 }
 
-impl Default for UndoFrame {
-  fn default() -> Self {
-    UndoFrame {
-      locked: false,
-      meaning: HashMap::new(),
-      value: HashMap::new(),
-      catcode: HashMap::new(),
-      mathcode: HashMap::new(),
-      sfcode: HashMap::new(),
-      lccode: HashMap::new(),
-      uccode: HashMap::new(),
-      delcode: HashMap::new(),
-      stash_active: HashMap::new(),
-    }
-  }
-}
 impl UndoFrame {
   pub fn table(&self, name: TableName) -> &AssignmentCount {
     use self::TableName::*;
@@ -293,6 +277,7 @@ impl Default for State {
   }
 }
 /// State fields allowed for customization during construction
+#[derive(Default)]
 pub struct StateOptions {
   pub model: Option<Model>,
   pub verbosity: Option<i32>,
@@ -305,23 +290,6 @@ pub struct StateOptions {
   pub graphics_paths: Option<Vec<String>>,
   pub catcodes: Option<Catcodes>,
   pub input_encoding: Option<String>,
-}
-impl Default for StateOptions {
-  fn default() -> Self {
-    StateOptions {
-      model: None,
-      verbosity: None,
-      strict: None,
-      include_comments: None,
-      include_styles: None,
-      nomathparse: None,
-      documentid: None,
-      search_paths: None,
-      graphics_paths: None,
-      catcodes: None,
-      input_encoding: None,
-    }
-  }
 }
 
 impl State {
@@ -700,12 +668,12 @@ impl State {
   }
 
   pub fn unshift_value<T: Into<Stored>>(&mut self, key: &str, values: Vec<T>) {
-    let values: Vec<Stored> = values.into_iter().map(Into::into).collect();
+    let values_iter = values.into_iter().map(Into::into);
     if self.value.get(key).is_none() {
       self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global))
     }
     if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
-      for value in values.into_iter().rev() {
+      for value in values_iter.rev() {
         // preserving order unshift, as Perl's
         front.push_front(value)
       }

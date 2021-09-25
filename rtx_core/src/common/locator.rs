@@ -13,25 +13,13 @@ use std::fmt;
 // but the mouth sources should be easier to manage.
 // definitely something that can be tried after test milestone is achieved.
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Locator {
   source: String,
   from_line: usize,
   to_line: usize,
   from_column: usize,
   to_column: usize,
-}
-
-impl Default for Locator {
-  fn default() -> Self {
-    Locator {
-      source: String::new(),
-      from_line: 0,
-      to_line: 0,
-      from_column: 0,
-      to_column: 0,
-    }
-  }
 }
 
 impl fmt::Display for Locator {
