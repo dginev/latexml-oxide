@@ -197,7 +197,7 @@ impl PartialEq for dyn Definition {
 impl fmt::Display for dyn Definition {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     if let Some(params) = self.get_parameters() {
-      write!(f, "{} {}", self.get_cs_name(), params.to_string())
+      write!(f, "{} {}", self.get_cs_name(), params)
     } else {
       write!(f, "{}", self.get_cs_name())
     }

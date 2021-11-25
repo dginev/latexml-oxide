@@ -67,11 +67,13 @@ static mut CONTEXT_DEPTH: u32 = 0;
 pub fn bound_state(_input: TokenStream) -> TokenStream {
   let state_declaration = if unsafe { CONTEXT_DEPTH == 0 } {
     quote!(
+      #[allow(unused_macros)]
       macro_rules! state {
         () => {
           outer_state!()
         };
       }
+      #[allow(unused_macros)]
       macro_rules! stomach {
         () => {
           outer_stomach!()
@@ -80,11 +82,13 @@ pub fn bound_state(_input: TokenStream) -> TokenStream {
     )
   } else {
     quote!(
+      #[allow(unused_macros)]
       macro_rules! state {
         () => {
           inner_state!()
         };
       }
+      #[allow(unused_macros)]
       macro_rules! stomach {
         () => {
           inner_stomach!()

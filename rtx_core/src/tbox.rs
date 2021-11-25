@@ -135,7 +135,7 @@ impl BoxOps for Tbox {
         },
       }
     } else {
-      self.properties.get(key).map(|v| Cow::Borrowed(v))
+      self.properties.get(key).map(Cow::Borrowed)
     }
   }
 }

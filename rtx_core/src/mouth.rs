@@ -182,14 +182,14 @@ impl Mouth {
 
   pub fn get_source(&self) -> &str { &self.source }
 
-  pub fn open<'open>(&'open mut self, content: &str, mut state: &mut State) -> Result<()> {
+  pub fn open<'open>(&'open mut self, content: &str, state: &mut State) -> Result<()> {
     match self.foodtype {
       FoodType::File => self.open_file(content)?,
       FoodType::Literal => self.open_literal(content),
       FoodType::HTTP => self.open_http(content),
       FoodType::HTTPS => self.open_https(content),
     };
-    self.initialize(&mut state);
+    self.initialize(state);
     Ok(())
   }
 
@@ -361,7 +361,7 @@ impl Mouth {
   /// handling TeX's "^^" encoding.
   /// Note that this is the only place where catcode lookup is done,
   /// and that it is somewhat `inlined'.
-  fn get_next_char(&mut self, state: &mut State) -> Option<(char, Catcode)> {
+  fn get_next_char(&mut self, state: &State) -> Option<(char, Catcode)> {
     if self.colno >= self.nchars {
       return None;
     };
@@ -415,7 +415,7 @@ impl Mouth {
   /// Note that this also returns COMMENT tokens containing source comments,
   /// and also locator comments (file, line# info).
   /// LaTeXML::Core::Gullet intercepts them and passes them on at appropriate times.
-  pub fn read_token(&mut self, state: &mut State) -> Option<Token> {
+  pub fn read_token(&mut self, state: &State) -> Option<Token> {
     loop {
       // Iterate till we find a token, or run out. (use return)
       // ===== Get next line, if we need to.
@@ -478,7 +478,7 @@ impl Mouth {
   //**********************************************************************
   /// Read all tokens until a token equal to $until (if given), or until exhausted.
   /// Returns an empty Tokens list, if there is no input
-  pub fn read_tokens(&mut self, until: Option<&Token>, state: &mut State) -> Tokens {
+  pub fn read_tokens(&mut self, until: Option<&Token>, state: &State) -> Tokens {
     let mut tokens = Vec::new();
     let has_until = until.is_some();
     let until_string = if let Some(until_token) = until {
@@ -542,7 +542,7 @@ impl Mouth {
     Some(line)
   }
 
-  fn dispatch_char(&mut self, ch: char, cc: Catcode, state: &mut State) -> Option<Token> {
+  fn dispatch_char(&mut self, ch: char, cc: Catcode, state: &State) -> Option<Token> {
     // Possibly want to think about caching (common) letters, etc to keep from
     // creating tokens like crazy... or making them more compact... or ???
     use crate::token::Catcode::*;
@@ -608,7 +608,7 @@ impl Mouth {
     }
   }
 
-  fn handle_end_of_line(&mut self, _c: char, state: &mut State) -> Option<Token> {
+  fn handle_end_of_line(&mut self, _c: char, state: &State) -> Option<Token> {
     // Note that newines should be converted to space (with " " for content)
     // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
     let token = if self.colno == 1 {
@@ -622,7 +622,7 @@ impl Mouth {
     Some(token)
   }
 
-  fn handle_space(&mut self, _c: char, state: &mut State) -> Option<Token> {
+  fn handle_space(&mut self, _c: char, state: &State) -> Option<Token> {
     // Skip any following spaces!
     loop {
       match self.get_next_char(state) {
@@ -640,7 +640,7 @@ impl Mouth {
     Some(T_SPACE!())
   }
 
-  fn handle_comment(&mut self, _c: char, state: &mut State) -> Option<Token> {
+  fn handle_comment(&mut self, _c: char, state: &State) -> Option<Token> {
     let n = self.colno;
     self.colno = self.nchars;
     let mut comment = String::new();
@@ -670,7 +670,7 @@ impl Mouth {
   //**********************************************************************
 
   /// Read control sequence
-  fn handle_escape(&mut self, _c: char, state: &mut State) -> Option<Token> {
+  fn handle_escape(&mut self, _c: char, state: &State) -> Option<Token> {
     // NOTE: We're using control sequences WITH the \ prepended!!!
     let mut cs = s!("\\"); // I need this standardized to be able to lookup tokens (A better way???)
     match self.get_next_char(state) {
@@ -772,7 +772,7 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
         catcodes: Some(Catcodes::Standard),
         ..StateOptions::default()
       });
-      Mouth::new(text, None, &mut std_state).unwrap().read_tokens(None, &mut std_state)
+      Mouth::new(text, None, &mut std_state).unwrap().read_tokens(None, &std_state)
     },
     Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(None, s),
   }
@@ -784,7 +784,7 @@ pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
         catcodes: Some(Catcodes::Style),
         ..StateOptions::default()
       });
-      Mouth::new(text, None, &mut sty_state).unwrap().read_tokens(None, &mut sty_state)
+      Mouth::new(text, None, &mut sty_state).unwrap().read_tokens(None, &sty_state)
     },
     Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(None, s),
   }

@@ -289,7 +289,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
 // object. This is (hopefully) temporary to handle font objects as attributes.
 // The DOM holds the font objects, rather than strings,
 // to resolve relative fonts on output.
-fn translate_string(mut text: &mut String) -> proc_macro2::TokenStream {
+fn translate_string(text: &mut String) -> proc_macro2::TokenStream {
   // println!("-- ts before: {:?}", text);
   let mut values: Vec<proc_macro2::TokenStream> = Vec::new();
   *text = text.trim_start().to_owned();
@@ -298,7 +298,7 @@ fn translate_string(mut text: &mut String) -> proc_macro2::TokenStream {
     while !text.is_empty() && !text.starts_with(quote) {
       if LEAD_COND_RE.is_match(text) {
         // inline conditional; branches should be values
-        let (bool_branch, mut if_branch, mut else_branch) = parse_conditional(&mut text);
+        let (bool_branch, mut if_branch, mut else_branch) = parse_conditional(text);
         let if_branch_translated = translate_value("", &mut if_branch);
         let else_branch_translated = translate_value("", &mut else_branch);
         let op = quote!(
@@ -310,7 +310,7 @@ fn translate_string(mut text: &mut String) -> proc_macro2::TokenStream {
         );
         values.push(op);
       } else if LEAD_VALUE_RE.is_match(text) {
-        values.push(translate_value(&quote.to_string(), &mut text));
+        values.push(translate_value(&quote.to_string(), text));
       } else {
         let mut is_quoted_match = false;
         let mut quoted_match = String::new();
@@ -354,7 +354,7 @@ fn translate_string(mut text: &mut String) -> proc_macro2::TokenStream {
   quote!(vec![#(#token_values),*].join(""))
 }
 
-fn translate_avpairs(mut text: &mut String) -> Vec<proc_macro2::TokenStream> {
+fn translate_avpairs(text: &mut String) -> Vec<proc_macro2::TokenStream> {
   // Parse a set of attribute value pairs from a constructor pattern,
   // substituting argument and property values from the whatsit.
   let mut avs: Vec<proc_macro2::TokenStream> = Vec::new();
@@ -364,7 +364,7 @@ fn translate_avpairs(mut text: &mut String) -> Vec<proc_macro2::TokenStream> {
     let mut key = String::new();
     if LEAD_COND_RE.is_match(text) {
       is_match = true;
-      let (bool_branch, mut if_branch, mut else_branch) = parse_conditional(&mut text);
+      let (bool_branch, mut if_branch, mut else_branch) = parse_conditional(text);
       let if_branch_translated = translate_avpairs(&mut if_branch);
       let else_branch_translated = translate_avpairs(&mut else_branch);
       let op = quote!(
@@ -388,7 +388,7 @@ fn translate_avpairs(mut text: &mut String) -> Vec<proc_macro2::TokenStream> {
         })
         .to_string();
       if is_match {
-        let val = translate_string(&mut text);
+        let val = translate_string(text);
         avs.push(quote!(av_props.insert(#key.to_string(), #val);));
       }
     }
@@ -403,7 +403,7 @@ fn translate_avpairs(mut text: &mut String) -> Vec<proc_macro2::TokenStream> {
 /// Parse a substitutable value from the constructor (in $_)
 /// Recognizes the #1, #prop, and also &function(args,...)
 /// Note: signals an error if no recognizable value was found!
-fn translate_value(exclude_chars: &str, mut text: &mut String) -> proc_macro2::TokenStream {
+fn translate_value(exclude_chars: &str, text: &mut String) -> proc_macro2::TokenStream {
   let mut val = quote!("");
   let mut is_match = false;
   let mut fcn = String::new();
@@ -424,9 +424,9 @@ fn translate_value(exclude_chars: &str, mut text: &mut String) -> proc_macro2::T
       quoted_follows = ttl.starts_with('\'') || ttl.starts_with('\"');
 
       let arg = if quoted_follows {
-        translate_string(&mut text)
+        translate_string(text)
       } else {
-        translate_value(",)", &mut text)
+        translate_value(",)", text)
       };
       args.push(arg);
       let mut intermediate_kv = false;

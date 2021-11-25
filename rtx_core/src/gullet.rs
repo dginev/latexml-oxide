@@ -175,7 +175,7 @@ impl Gullet {
   ///**********************************************************************
   /// Note that every char (token) comes through here (maybe even twice, through args parsing),
   /// So, be Fast & Clean!  This method only reads from the current input stream (Mouth).
-  pub fn read_token(&mut self, state: &mut State) -> Option<Token> {
+  pub fn read_token(&mut self, state: &State) -> Option<Token> {
     let mut next_token: Option<Token> = None;
     // If we're without a runtime, bail
     let mut runtime = match self.mouth {
@@ -378,7 +378,7 @@ impl Gullet {
   /// Mid-level readers: checking and matching tokens, strings etc.
   ///**********************************************************************
   /// The following higher-level parsing methods are built upon readToken & `.
-  pub fn read_non_space(&mut self, state: &mut State) -> Option<Token> {
+  pub fn read_non_space(&mut self, state: &State) -> Option<Token> {
     loop {
       match self.read_token(state) {
         None => return None,
@@ -394,7 +394,7 @@ impl Gullet {
   /// Read a sequence of tokens balanced in {}
   /// assuming the { has already been read.
   /// Returns a Tokens list of the balanced sequence, omitting the closing }
-  pub fn read_balanced(&mut self, state: &mut State) -> Result<Tokens> {
+  pub fn read_balanced(&mut self, state: &State) -> Result<Tokens> {
     let mut tokens = Vec::new();
     let mut level = 1;
     while let Some(t) = self.read_token(state) {
@@ -463,7 +463,7 @@ impl Gullet {
 
   /// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
   /// In list context, also returns the found delimiter.
-  pub fn read_until(&mut self, delims: &[&Tokens], state: &mut State) -> Result<Tokens> {
+  pub fn read_until(&mut self, delims: &[&Tokens], state: &State) -> Result<Tokens> {
     let mut n = 0;
     let mut found;
     let mut tokens: Vec<Token> = Vec::new();
@@ -498,7 +498,7 @@ impl Gullet {
     Ok(Tokens::new(tokens))
   }
 
-  pub fn read_until_brace(&mut self, state: &mut State) -> Result<Tokens> {
+  pub fn read_until_brace(&mut self, state: &State) -> Result<Tokens> {
     let mut tokens = Vec::new();
     while let Some(token) = self.read_token(state) {
       if token.get_catcode() == Catcode::BEGIN {
@@ -520,7 +520,7 @@ impl Gullet {
     Ok(Tokens::new(tokens))
   }
 
-  pub fn read_next_conditional(&mut self, state: &mut State) -> Option<(Token, ConditionalType)> {
+  pub fn read_next_conditional(&mut self, state: &State) -> Option<(Token, ConditionalType)> {
     while let Some(token) = self.read_token(state) {
       if let Some(cond_type) = state.lookup_conditional(&token) {
         return Some((token, cond_type));
@@ -533,7 +533,7 @@ impl Gullet {
   /// Higher-level readers: Read various types of things from the input:
   ///  tokens, non-expandable tokens, args, Numbers, ...
   ///**********************************************************************
-  pub fn read_arg(&mut self, state: &mut State) -> Result<Tokens> {
+  pub fn read_arg(&mut self, state: &State) -> Result<Tokens> {
     match self.read_non_space(state) {
       None => Ok(Tokens!()),
       Some(token) => {
@@ -549,7 +549,7 @@ impl Gullet {
   }
   // Note that this returns an empty array if [] is present,
   // otherwise $default or undef.
-  pub fn read_optional(&mut self, state: &mut State) -> Result<Tokens> {
+  pub fn read_optional(&mut self, state: &State) -> Result<Tokens> {
     // TODO: default
     match self.read_non_space(state) {
       None => Ok(Tokens!()),
@@ -564,7 +564,7 @@ impl Gullet {
     }
   }
 
-  pub fn if_next(&mut self, token: Token, state: &mut State) -> Result<bool> {
+  pub fn if_next(&mut self, token: Token, state: &State) -> Result<bool> {
     let mut is_next = false;
     if let Some(tok) = self.read_token(state) {
       is_next = tok == token;
@@ -628,7 +628,7 @@ impl Gullet {
 
   /// Match the input against one of the Token or Tokens in @choices; return the matching one or
   /// undef.
-  pub fn read_match(&mut self, choices: &[&Tokens], state: &mut State) -> Result<Option<Tokens>> {
+  pub fn read_match(&mut self, choices: &[&Tokens], state: &State) -> Result<Option<Tokens>> {
     for choice in choices {
       let mut to_match: Vec<&Token> = choice.as_ref_unlist().iter().rev().collect();
       let mut matched = Vec::new();
@@ -1003,7 +1003,7 @@ impl Gullet {
     }
   }
 
-  pub fn skip_spaces(&mut self, state: &mut State) {
+  pub fn skip_spaces(&mut self, state: &State) {
     match self.read_non_space(state) {
       None => {},
       Some(t) => {

@@ -30,6 +30,7 @@ macro_rules! BindState {
     }
   };
   ($outer_stomach:ident, $state_arg:ident) => {
+    #[allow(unused_macros)]
     macro_rules! outer_stomach {
       () => {
         $outer_stomach

@@ -145,7 +145,7 @@ pub struct Font {
   pub forceshape: Option<bool>,
 }
 impl fmt::Debug for Font {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.to_string()) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self) }
 }
 impl fmt::Display for Font {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

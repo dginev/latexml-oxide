@@ -73,8 +73,7 @@ impl DigestionAPI for Core {
     _postamble: Option<String>,
     mode: Option<DigestionMode>,
     _no_init: bool,
-  ) -> Result<Digested>
-  {
+  ) -> Result<Digested> {
     let mut _ext = match mode {
       Some(m) => Some(m.extension()),
       None => Some(DigestionMode::TeX.extension()),
@@ -207,7 +206,7 @@ impl DigestionAPI for Core {
       parser.parse_math(&mut document, state)?;
     }
     note_begin("Finalizing");
-    document.finalize(&mut state)?;
+    document.finalize(state)?;
     note_end("Finalizing");
     Ok(document)
   }

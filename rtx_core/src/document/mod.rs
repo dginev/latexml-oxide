@@ -1705,7 +1705,7 @@ impl Document {
       newnode = Node::new(&tag, None, &self.document).unwrap();
       self.document.set_root_element(&newnode);
       for mut node in &mut self.pending {
-        newnode.add_prev_sibling(&mut node)?; // Add saved comments, PI's
+        newnode.add_prev_sibling(node)?; // Add saved comments, PI's
       }
 
       if let Some(ns) = decoded_ns {
@@ -1851,7 +1851,7 @@ impl Document {
   /// Whenever a node has been created using openElementAt,
   /// closeElementAt ought to be used to close it, when you're finished inserting into $node.
   /// Basically, this just runs any afterClose operations.
-  pub fn close_element_at(&mut self, mut node: &mut Node, state: &mut State) -> Result<()> { self.after_close(&mut node, state) }
+  pub fn close_element_at(&mut self, mut node: &mut Node, state: &mut State) -> Result<()> { self.after_close(node, state) }
 
   pub fn after_open(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Set current point to this node, just in case the afterOpen's use it.
