@@ -33,7 +33,7 @@ LoadDefinitions!(state, {
       None
     };
     if let Some(mouth) = mouth_opt {
-      let raw_line = s!("{}\r", mouth.borrow_mut().read_raw_line(false, state).unwrap_or_else(String::new));
+      let raw_line = s!("{}\r", mouth.borrow_mut().read_raw_line(false, state).unwrap_or_default());
       DefMacro!(token, None, Tokens!(Explode!(raw_line)));
     }
   });

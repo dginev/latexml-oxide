@@ -217,7 +217,7 @@ impl Document {
           // Too late to do wrapNodes?
           if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child], state)? {
             for (key, &(ref value, ref properties)) in &pending_declaration {
-              self.set_attribute(&mut text, key, &value.to_string())?;
+              self.set_attribute(&mut text, key, value)?;
             }
             self.finalize_rec(&mut text, new_init_font, state)?; // Now have to clean up the new node!
           }
@@ -2174,9 +2174,9 @@ impl Document {
 
 fn serialize_string(string: &str) -> String {
   // Basic entities
-  let mut serialized = string.replace("&", "&amp;");
-  serialized = serialized.replace(">", "&gt;");
-  serialized = serialized.replace("<", "&lt;");
+  let mut serialized = string.replace('&', "&amp;");
+  serialized = serialized.replace('>', "&gt;");
+  serialized = serialized.replace('<', "&lt;");
   // Remove dis-allowed code-points.
   // $string =~
   // s/(?:\x{00}-\x{08}|\x{0B}|\x{0C}|\x{0D}-\x{19}|\x{D800}-\x{DFFF}|\x{FFFE}-\x{FFFF})//g;
@@ -2189,9 +2189,9 @@ fn serialize_string(string: &str) -> String {
 fn serialize_attr(string: &str) -> String {
   let mut serialized = serialize_string(string);
   // And escape any remaining special code points
-  serialized = serialized.replace("\"", "&quot;");
-  serialized = serialized.replace("\n", "&#10;");
-  serialized = serialized.replace("\t", "&#9;");
+  serialized = serialized.replace('\"', "&quot;");
+  serialized = serialized.replace('\n', "&#10;");
+  serialized = serialized.replace('\t', "&#9;");
   serialized
 }
 

@@ -152,7 +152,7 @@ impl DigestionAPI for Core {
     };
     if default_model_load {
       // Compile-time load of model AND indirect model
-      load_model!(&mut state, "LaTeXML");
+      load_model!(state, "LaTeXML");
     } else {
       // Eager-load at runtime
       state.model.load_schema(schema_paths.as_slice()); // If needed?

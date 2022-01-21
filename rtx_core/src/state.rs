@@ -1011,7 +1011,6 @@ impl State {
 
     // Locked definitions!!! (or should this test be in assignMeaning?)
     // Ignore attempts to (re)define $cs from tex sources
-    let cs;
     let token = match definition {
       Stored::Expandable(ref defn) => defn.get_cs(),
       Stored::Conditional(ref defn) => defn.get_cs(),
@@ -1022,7 +1021,7 @@ impl State {
       Stored::Token(ref token) => Cow::Borrowed(token),
       _ => panic!("_wrong_argument_for_install_definition"),
     };
-    cs = token.get_cs_name().to_owned();
+    let cs = token.get_cs_name().to_owned();
     // info!("-- installing definition for: {:?}", token);
 
     let cs_locked = s!("{}:locked", cs);

@@ -418,10 +418,8 @@ fn translate_value(exclude_chars: &str, text: &mut String) -> proc_macro2::Token
   if is_match {
     let mut args = Vec::new();
     while !LEAD_CPAREN_RE.is_match(text) {
-      let quoted_follows;
-
       let ttl = text.trim_start();
-      quoted_follows = ttl.starts_with('\'') || ttl.starts_with('\"');
+      let quoted_follows = ttl.starts_with('\'') || ttl.starts_with('\"');
 
       let arg = if quoted_follows {
         translate_string(text)
@@ -519,7 +517,7 @@ fn parse_conditional(text: &mut String) -> (proc_macro2::TokenStream, String, St
   }
 }
 
-fn slashify(text: &str) -> String { text.replace("\\", "\\\\") }
+fn slashify(text: &str) -> String { text.replace('\\', "\\\\") }
 fn unquote(text: &str) -> String {
   ESCAPED_OP
     .replace_all(text, |escaped_refs: &Captures| -> String {

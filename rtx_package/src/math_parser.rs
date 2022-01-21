@@ -903,7 +903,7 @@ impl MathParser {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   fn text_form(&self, node: &Node, document: &mut Document, state: &mut State) -> String {
     let mut text = self.textrec(node, None, None, document, state);
-    text = text.replace("<", "less");
+    text = text.replace('<', "less");
     text
   }
 
