@@ -251,10 +251,10 @@ LoadDefinitions!(outer_stomach, state, {
       tokens.extend(Invocation!("\\end", vec![env], gullet)?.unlist());
       tokens.extend(vec![
         T_CS!("\\let"),
-        T_CS!(&format!("\\end{}", tag)),
+        T_CS!(format!("\\end{}", tag)),
         T_CS!("\\endthebibliography"),
         T_CS!("\\let"),
-        T_CS!(&format!("\\end{{{}}}", tag)),
+        T_CS!(format!("\\end{{{}}}", tag)),
         T_CS!("\\end{thebibliography}")
       ]);
     }
@@ -668,7 +668,7 @@ fn begin_bibliography_clean(stomach: &mut Stomach, whatsit: &mut Whatsit, state:
     docid += ".";
   }
   let bibid = s!("{}bib{}", docid, radix::radix_alpha(bibnumber - 1));
-  DefMacro!(T_CS!("\\thebibliography@ID"), None, T_OTHER!(&bibid), scope => Some(Scope::Global));
+  DefMacro!(T_CS!("\\thebibliography@ID"), None, T_OTHER!(bibid), scope => Some(Scope::Global));
   whatsit.set_property("id", bibid);
   let title_opt = match DigestIf!("\\refname", stomach)? {
     Some(v) => Some(v),

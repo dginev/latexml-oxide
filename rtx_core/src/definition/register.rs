@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt;
 use std::rc::Rc;
+use std::borrow::Borrow;
 
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
@@ -70,6 +71,12 @@ impl<'a> From<&'a RegisterValue> for RegisterType {
     }
   }
 }
+impl From<RegisterValue> for RegisterType {
+  fn from(v: RegisterValue) -> RegisterType {
+    v.borrow().into()
+  }
+}
+
 
 impl Default for RegisterValue {
   fn default() -> Self { RegisterValue::Number(Number::new(0.0)) }
@@ -250,13 +257,13 @@ impl<'a> From<&'a RegisterValue> for Number {
   }
 }
 impl From<RegisterValue> for Number {
-  fn from(v: RegisterValue) -> Number { (&v).into() }
+  fn from(v: RegisterValue) -> Number { v.borrow().into() }
 }
 impl From<RegisterValue> for Dimension {
-  fn from(v: RegisterValue) -> Dimension { (&v).into() }
+  fn from(v: RegisterValue) -> Dimension { v.borrow().into() }
 }
 impl From<RegisterValue> for Glue {
-  fn from(v: RegisterValue) -> Glue { (&v).into() }
+  fn from(v: RegisterValue) -> Glue { v.borrow().into() }
 }
 impl From<RegisterValue> for f32 {
   fn from(v: RegisterValue) -> f32 { v.value_of() }

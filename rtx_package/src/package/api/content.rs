@@ -128,7 +128,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   // TODO: Is this inaccurate with latexml? It only sets the macros if the file is found, we set them *always*, as a matter of course
   if options.handleoptions {
     input_handle_options(&mut options, &prevname, &prevext, name, as_type, stomach, state)?;
-    def_macro(T_CS!(&s!("\\{}.{}-h@@k", name, as_type)), None, options.after, None, state);
+    def_macro(T_CS!(s!("\\{}.{}-h@@k", name, as_type)), None, options.after, None, state);
   }
   if !current_options.is_empty() {
     state.assign_value(&s!("{}_loaded_with_options", filename), current_options, Some(Scope::Global));
@@ -226,7 +226,7 @@ fn input_handle_options(
     None => String::new(),
   };
   def_macro(
-    T_CS!(&s!("\\opt@{}.{}", name, as_type)),
+    T_CS!(s!("\\opt@{}.{}", name, as_type)),
     None,
     Tokens!(Explode!(current_opt_val)),
     None,
@@ -422,13 +422,13 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   }
   // Now, undefine the handlers?
   for option in declared_options.iter() {
-    state.let_i(&T_CS!(&s!("\\ds@{}", option)), T_CS!("\\relax"), None);
+    state.let_i(&T_CS!(s!("\\ds@{}", option)), T_CS!("\\relax"), None);
   }
   Ok(())
 }
 
 fn execute_option_internal(option: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> {
-  let cs = T_CS!(&s!("\\ds@{}", option));
+  let cs = T_CS!(s!("\\ds@{}", option));
   if state.lookup_definition(&cs).is_some() {
     def_macro(T_CS!("\\CurrentOption"), None, Tokens!(T_OTHER!(option)), None, state);
 

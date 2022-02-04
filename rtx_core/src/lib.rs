@@ -142,9 +142,11 @@ pub trait BoxOps: Object {
     props.insert("width".to_string(), width.into());
   }
   fn get_width(&self, state: &mut State) -> Option<RegisterValue> {
+    // why is clippy intent (&*val).into() is needless?
+    #[allow(clippy::needless_borrow)]
     match self.get_property("width", state) {
       None => Some(Number::new(0.0).into()),
-      Some(val) => (&(*val)).into(),
+      Some(val) => (&*val).into(),
     }
   }
 }

@@ -9,8 +9,8 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}", sub[stomach, args, state] {
     unpack!(args => star, name, nargs, opt, begin, end);
     let name = { stomach.digest(name, state)?.to_string() };
-    let name_cs = T_CS!(&s!("\\{}",name));
-    let end_name_cs = T_CS!(&s!("\\end{}",name));
+    let name_cs = T_CS!(s!("\\{}",name));
+    let end_name_cs = T_CS!(s!("\\end{}",name));
     let nargs : usize = nargs.to_string().parse().unwrap_or(0);
     if IsDefined!(&name_cs) {
       let is_locked = LookupValue!(&s!("\\{}:locked",name)).is_some() || LookupValue!(&s!("\\begin{{{}}}:locked",name)).is_some();

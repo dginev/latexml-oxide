@@ -444,7 +444,7 @@ LoadDefinitions!(state, {
     let csname = newcs.get_cs_name().to_owned();
     let number = value.to_number();
     let chardef_value = value.clone();
-    let internalcs = T_CS!(&s!("\\@chardef@{}", csname));
+    let internalcs = T_CS!(s!("\\@chardef@{}", csname));
     DefPrimitive!(internalcs.clone(), None, sub[stomach,args,i_state] {
       let gullet = stomach.get_gullet_mut();
       let decoded = match font::decode(number.value_of() as u8, None, false, i_state) {
@@ -485,7 +485,7 @@ LoadDefinitions!(state, {
     let newcs : Token = newcs.into();
     let csname = newcs.get_cs_name().to_owned();
     let (role, glyph) = decode_math_char(value.to_number().value_of() as u16, state);
-    let internalcs = glyph.map(|_| T_CS!(&s!("\\@mathchardef@{}", csname)));
+    let internalcs = glyph.map(|_| T_CS!(s!("\\@mathchardef@{}", csname)));
     if let Some(ref internalcs) = internalcs {
       let mut glyph_props: HashMap<String, Stored> = HashMap::new();
       glyph_props.insert(s!("role"), role.unwrap_or_default().into());

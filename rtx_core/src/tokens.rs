@@ -3,7 +3,7 @@ use crate::fmt;
 use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
 
-use std::borrow::Cow;
+use std::borrow::{Borrow,Cow};
 use std::collections::VecDeque;
 use std::fmt::Display;
 use std::string::ToString;
@@ -58,7 +58,7 @@ impl From<Token> for Vec<Token> {
 }
 
 impl From<Tokens> for Token {
-  fn from(ts: Tokens) -> Token { (&ts).into() }
+  fn from(ts: Tokens) -> Token { ts.borrow().into() }
 }
 
 impl<'a> From<&'a Tokens> for Token {

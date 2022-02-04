@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
@@ -100,7 +101,7 @@ impl Object for KeyVals {
     for tuple in self.tuples.drain(..) {
       let (key, value, use_default, resolution, keyval) = tuple;
       // digest a single token
-      let value_tokens_opt: Option<Tokens> = (&value).into();
+      let value_tokens_opt: Option<Tokens> = value.borrow().into();
       let value_tokens = value_tokens_opt.unwrap_or_default();
       let digested_value: Digested = if let Some(keydef) = keyval.get_type(state) {
         // keydefs are actual Parameter objects, which should be able to digest their own values!

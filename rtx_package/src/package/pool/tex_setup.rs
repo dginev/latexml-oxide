@@ -1050,7 +1050,7 @@ LoadDefinitions!(state, {
   // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as \relax
   DefMacro!("\\@ifundefined{}{}{}", sub[gullet, args, inner_state] {
     unpack!(args=>name, if_token, else_token);
-    let cs = T_CS!(&s!("\\{}", Expand!(name,gullet).to_string()));
+    let cs = T_CS!(s!("\\{}", Expand!(name,gullet).to_string()));
     if IsDefined!(&cs, inner_state) {
       Ok(else_token)
     } else {

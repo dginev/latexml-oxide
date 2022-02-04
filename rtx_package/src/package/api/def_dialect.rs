@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::borrow::{Borrow, Cow};
 use std::rc::Rc;
 
 use rtx_core::common::error::*;
@@ -312,7 +312,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
   let options: RegisterOptions = options.unwrap_or_default();
   let value: RegisterValue = value.into();
   let name = cs.to_string();
-  let register_type: RegisterType = (&value).into();
+  let register_type: RegisterType = value.borrow().into();
   // Prepare clones to move into closures
   let getter_value = value.clone();
   let setter_name = name.clone();

@@ -376,7 +376,7 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
 
   let cunctr_val = state.lookup_number(&s!("\\c@{}", unctr)).unwrap().value_of();
   def_macro(
-    T_CS!(&s!("\\@{}@ID", ctr)),
+    T_CS!(s!("\\@{}@ID", ctr)),
     None,
     Tokens!(T_OTHER!("x"), Explode!(cunctr_val)),
     Some(ExpandableOptions {
@@ -387,8 +387,8 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
   );
 
   let thectr = s!("\\the{}@ID", ctr);
-  def_macro(T_CS!("\\@currentID"), None, T_CS!(&thectr), None, state);
-  Ok(map!("id".to_string() => digest_literal(T_CS!(&thectr), stomach, state)?.to_string().into()))
+  def_macro(T_CS!("\\@currentID"), None, T_CS!(thectr), None, state);
+  Ok(map!("id".to_string() => digest_literal(T_CS!(thectr), stomach, state)?.to_string().into()))
 }
 
 pub fn reset_counter(ctr: &str, state: &mut State) {
@@ -429,10 +429,10 @@ pub fn ref_step_item_counter(tag: &str, stomach: &mut Stomach, state: &mut State
       let mut tag_tokens = vec![
         T_BEGIN!(),
         T_CS!("\\let"),
-        T_CS!(&s!("\\the{}", counter)),
+        T_CS!(s!("\\the{}", counter)),
         T_CS!("\\@empty"),
         T_CS!("\\def"),
-        T_CS!(&s!("\\fnum@{}", counter)),
+        T_CS!(s!("\\fnum@{}", counter)),
         T_BEGIN!(),
         formatter,
         T_BEGIN!(),
@@ -440,7 +440,7 @@ pub fn ref_step_item_counter(tag: &str, stomach: &mut Stomach, state: &mut State
         T_END!(),
         T_END!(),
         T_CS!("\\def"),
-        T_CS!(&s!("\\typerefnum@{}", counter)),
+        T_CS!(s!("\\typerefnum@{}", counter)),
         T_BEGIN!(),
         T_CS!("\\itemtyperefname"),
         T_SPACE!(),
