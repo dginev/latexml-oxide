@@ -133,10 +133,7 @@ LoadDefinitions!(state, {
   for (name, value) in &dparms {
     DefRegister!(&s!("\\{}", name), Dimension!(value));
   }
-  // Read-only dimension registers.
-  for name in &["lastkern"] {
-    DefRegister!(&s!("\\{}",name), Dimension::new(0.0), readonly => true);
-  }
+
   // Special dimension registers (?)
   // <special dimen> = \prevdepth | \pagegoal | \pagetotal | \pagestretch | \pagefilstretch
   //    | \pagefillstretch | \pagefilllstretch | pageshrink | \pagedepth
