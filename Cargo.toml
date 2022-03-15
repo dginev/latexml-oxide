@@ -2,6 +2,7 @@
 members = [
   "rtx_core",
   "rtx_codegen",
+  "rtx_math_parser",
   "rtx_package",
   "rtx_contrib",
   "rtx"
