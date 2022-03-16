@@ -15,7 +15,12 @@ path = "src/main.rs"
 
 [dependencies]
 log = "0.4"
+libxml = "0.3.0"
+lazy_static = "1.0"
+regex = "1.5.5"
+glob = "0.3"
 rtx_codegen = {path = "../rtx_codegen"}
 rtx_core = {path = "../rtx_core"}
 rtx_package = {path = "../rtx_package"}
 rtx_contrib = {path = "../rtx_contrib"}
+rtx_math_parser = {path = "../rtx_math_parser"}

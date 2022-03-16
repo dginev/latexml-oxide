@@ -1,8 +1,8 @@
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx_package::util::test::*;
+use rtx::util::test::*;
 
 #[test]
 #[ignore]
-fn can_parse() { rtx_tests("tests/parse", None); }
+fn can_group() { rtx_tests("tests/grouping", None); }

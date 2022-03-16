@@ -1,8 +1,8 @@
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx_package::util::test::*;
+use rtx::util::test::*;
 
 #[test]
 #[ignore]
-fn can_group() { rtx_tests("tests/grouping", None); }
+fn can_theorem() { rtx_tests("tests/ams", None); }

@@ -11,7 +11,7 @@ use rtx_core::stomach::Stomach;
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx_package::util::test::*;
+use rtx::util::test::*;
 use std::rc::Rc;
 
 #[test]

@@ -1,14 +1,13 @@
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx_package::util::test::*;
+use rtx::util::test::*;
 use std::collections::HashMap;
 
 #[test]
 #[ignore]
-fn can_graphics() {
+fn can_align() {
   let mut requires = HashMap::new();
-  requires.insert("colors", "dvipsnam.def");
-  requires.insert("xcolors", "dvipsnam.def");
-  rtx_tests("tests/graphics", Some(requires));
+  requires.insert("listing", "listings.cfg");
+  rtx_tests("tests/alignment", Some(requires));
 }

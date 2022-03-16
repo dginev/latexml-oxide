@@ -1,8 +1,8 @@
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx_package::util::test::*;
+use rtx::util::test::*;
 
 #[test]
 #[ignore]
-fn can_namespace() { rtx_tests("tests/structure", None); }
+fn can_parse() { rtx_tests("tests/parse", None); }

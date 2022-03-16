@@ -1,15 +1,14 @@
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx_package::util::test::*;
+use rtx::util::test::*;
 use std::collections::HashMap;
 
 #[test]
 #[ignore]
-fn can_expand() {
+fn can_graphics() {
   let mut requires = HashMap::new();
-  requires.insert("meaning", "t1enc.def");
-  requires.insert("ifthen", "ifthen.sty");
-
-  rtx_tests("tests/expansion", Some(requires));
+  requires.insert("colors", "dvipsnam.def");
+  requires.insert("xcolors", "dvipsnam.def");
+  rtx_tests("tests/graphics", Some(requires));
 }

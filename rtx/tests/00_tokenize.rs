@@ -1,8 +1,10 @@
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx_package::util::test::*;
+use rtx::util::test::*;
 
 #[test]
-#[ignore]
-fn can_group() { rtx_tests("tests/fonts", None); }
+fn can_tokenize() {
+  let requires = None;
+  rtx_tests("tests/tokenize", requires);
+}

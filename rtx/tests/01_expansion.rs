@@ -1,13 +1,15 @@
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx_package::util::test::*;
+use rtx::util::test::*;
 use std::collections::HashMap;
 
 #[test]
 #[ignore]
-fn can_align() {
+fn can_expand() {
   let mut requires = HashMap::new();
-  requires.insert("listing", "listings.cfg");
-  rtx_tests("tests/alignment", Some(requires));
+  requires.insert("meaning", "t1enc.def");
+  requires.insert("ifthen", "ifthen.sty");
+
+  rtx_tests("tests/expansion", Some(requires));
 }
