@@ -1,10 +1,8 @@
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx_package::util::test::*;
+use rtx::util::test::*;
 
 #[test]
-fn can_tokenize() {
-  let requires = None;
-  rtx_tests("tests/tokenize", requires);
-}
+#[ignore]
+fn can_namespace() { rtx_tests("tests/structure", None); }

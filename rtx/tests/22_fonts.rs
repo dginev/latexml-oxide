@@ -1,8 +1,8 @@
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx_package::util::test::*;
+use rtx::util::test::*;
 
 #[test]
 #[ignore]
-fn can_math() { rtx_tests("tests/math", None); }
+fn can_group() { rtx_tests("tests/fonts", None); }

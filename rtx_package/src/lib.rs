@@ -14,12 +14,9 @@ extern crate rtx_codegen;
 
 #[macro_use]
 pub mod macros;
-pub mod converter;
-pub mod core;
 pub mod math_parser;
 #[macro_use]
 pub mod package;
-pub mod util;
 
 // allow external crates to be have the full binding infra via a simple
 //  use rtx_package::*;

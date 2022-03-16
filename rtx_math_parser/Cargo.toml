@@ -1,5 +1,5 @@
 [package]
-name = "rtx-math-parser"
+name = "rtx_math_parser"
 version = "0.1.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 edition = "2021"
@@ -14,3 +14,4 @@ libxml = "0.3.0"
 regex = "1.5.5"
 marpa = { git = "https://github.com/dginev/marpa", branch = "abstract_syntax_forests" }
 lazy_static = "1.4"
+rtx_package = { path= "../rtx_package" }

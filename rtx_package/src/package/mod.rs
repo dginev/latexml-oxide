@@ -9,7 +9,9 @@ pub use std::collections::VecDeque;
 pub use std::rc::Rc;
 
 pub use rtx_core::common::dimension::{Dimension, MuDimension};
+
 pub use rtx_core::common::error::*;
+pub use rtx_core::aux_macros::*;
 pub use rtx_core::common::font;
 pub use rtx_core::common::font::Font;
 pub use rtx_core::common::glue::{Glue, MuGlue};

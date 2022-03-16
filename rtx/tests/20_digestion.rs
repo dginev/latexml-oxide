@@ -1,8 +1,11 @@
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx_package::util::test::*;
+use rtx::util::test::*;
+
+#[test]
+fn can_digest() { rtx_tests("tests/digestion", None); }
 
 #[test]
 #[ignore]
-fn can_theorem() { rtx_tests("tests/ams", None); }
+fn can_digest_todo() { rtx_tests("tests/digestion_todo", None); }
