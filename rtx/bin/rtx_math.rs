@@ -49,7 +49,7 @@ fn main() {
       ..SaveOptions::default()
     }));
   } else {
-    Error!("math", "", None, None, "Failed to parse.");
+    Warn!("math", "parse", None, None, "Grammar did not recognize expression.");
     process::exit(1);
   }
 }

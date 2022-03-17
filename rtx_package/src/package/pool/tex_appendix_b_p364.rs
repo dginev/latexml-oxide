@@ -77,6 +77,10 @@ LoadDefinitions!(state, {
   // DefConstructor('\mathpunct{}', "?#1(<ltx:XMWrap role='PUNCT'>#1</ltx:XMWrap>)()", bounded => 1);
   // DefConstructor('\mathinner{}', "?#1(<ltx:XMWrap role='ATOM'>#1</ltx:XMWrap>)()",  bounded => 1);
 
+  DefMath!(".", None, ".", role => "PERIOD");
+  DefMath!(",", None, ",", role => "PUNCT");
+  DefMath!(";", None, ";", role => "PUNCT");
+  
   // # If an XMWrap (presumably from \mathop, \mathbin, etc)
   // # has multiple children, ALL are XMTok, within a restricted set of roles,
   // # we want to concatenate the text content into a single XMTok.

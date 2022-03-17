@@ -78,31 +78,26 @@ rules!(
     formula = expression
       | formula relop expression => infix_apply;
 
-    // Note that we are _EXTENDING_ the original term_argument declaration,
-    //                  as at the type of definition we couldn't yet discuss 
-    factor += lparen expression rparen          => circumfix_fenced
+    statement = formula
+      | statement metarelop formula => infix_apply;
+
+    statements = statement
+      | statement punct statement => infix_apply;
+
+    // Extensions, now that we have more category variables defined
+    fenced_factor = lparen expression rparen    => circumfix_fenced
            | lbrace expression rbrace           => circumfix_fenced
            | lbracket expression rbracket       => circumfix_fenced
-           | lbrace formula rbrace              => circumfix_fenced;
+           | lbrace formula rbrace              => circumfix_fenced
+           | lparen formula rparen              => circumfix_fenced
+           | lbracket formula rbracket          => circumfix_fenced;
+    factor += fenced_factor;
 
     anyop = addop | mulop | relop | metarelop
       | bigop | sumop | intop
       | limitop | diffop;
 
-    // todotoken = atom | id | array | punct | period  | vertbar
-    // | lbrace | rbrace | lparen | rparen | lbracket | rbracket
-    // | modifierop | modifier | arrow | binop
-    // | postfix | function | opfunction | trigfunction | applyop
-    // | composeop | supop | middle
-    // | operator | postsubscript | postsuperscript
-    // | floatsuperscript | floatsubscript
-    // | langle_open
-    // | rangle_close;
-    // Inaccessible tokens?
-    // | langle | rangle | midbar | open | close | middle_parallel
-    // | singlevertbar | middle_bar |  langle_rel | rangle_rel
-
-    anything = formula | anyop
+    anything = statements | anyop
   );
   // | term_argument postsuperscript tex_argument  => post_script
   // | term_argument postsubscript tex_argument    => post_script
