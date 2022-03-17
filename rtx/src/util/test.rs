@@ -115,7 +115,7 @@ fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {
 
 /// Simple tokenization of a single formula, without any custom preloads
 /// byond latex and amsmath
-pub fn lex_single_tex_formula(tex: &str) -> (Vec<(String, Node)>,Option<Node>,Document) {
+pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node>,Document) {
   let mut latexml = Core::new(CoreOptions {
     verbosity: Some(-2),
     search_paths: None,
@@ -130,7 +130,10 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<(String, Node)>,Option<Node>,Do
   
   // grab the first formula
   match doc.findnode("//*[local-name()='XMath']", None, &mut latexml.state) {
-    Some(math) => (node_to_grammar_lexemes(&math),Some(math),doc),
-    None => (Vec::new(),None,doc)
+    Some(math) => {
+      let (lexemes,nodes) = node_to_grammar_lexemes(&math);
+      (lexemes,nodes,Some(math),doc)
+    },
+    None => (Vec::new(),Vec::new(),None,doc)
   }
 }

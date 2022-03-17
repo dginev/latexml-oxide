@@ -63,15 +63,18 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
 rules!(
     // Factors
-    factor = unknown | number;
+    factor = unknown | number | atom;
     // Terms
-    term = factor
-      | term mulop factor => infix_apply
-      | factor factor => invisible_infix_mulop;
+    tight_term = factor
+      | tight_term factor => invisible_times;
+
+    term = tight_term
+      | term mulop tight_term => infix_apply;
+
     // Expressions
     expression = term
       | expression addop term => infix_apply
-      | addop term => prefix_apply
+      | addop tight_term => prefix_apply
       | factor addop => postfix_apply;
 
     // Formula
@@ -85,17 +88,15 @@ rules!(
       | statement punct statement => infix_apply;
 
     // Extensions, now that we have more category variables defined
-    fenced_factor = lparen expression rparen    => circumfix_fenced
-           | lbrace expression rbrace           => circumfix_fenced
+    fenced_factor = lbrace expression rbrace    => circumfix_fenced
            | lbracket expression rbracket       => circumfix_fenced
-           | lbrace formula rbrace              => circumfix_fenced
-           | lparen formula rparen              => circumfix_fenced
-           | lbracket formula rbracket          => circumfix_fenced;
+           | lparen formula rparen              => circumfix_fenced;
+           
     factor += fenced_factor;
 
     anyop = addop | mulop | relop | metarelop
       | bigop | sumop | intop
-      | limitop | diffop;
+      | limitop | diffop | vertbar;
 
     anything = statements | anyop
   );

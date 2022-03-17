@@ -4,14 +4,8 @@ use rtx_math_parser::MathParser;
 #[test]
 fn basic_1() {
   let tex="1+1=2";
-  let (lexed, xmath_opt, mut doc) = lex_single_tex_formula(tex);
-  assert!(!lexed.is_empty());
-  let mut lexemes = Vec::new();
-  let mut nodes = Vec::new();
-  for (lexeme, node) in lexed.into_iter() {
-    lexemes.push(lexeme);
-    nodes.push(node);
-  }
+  let (lexemes, nodes, _xmath_opt, mut doc) = lex_single_tex_formula(tex);
+  assert!(!lexemes.is_empty());
   let expected_lexemes = &["NUMBER:1:1", "ADDOP:plus:2", "NUMBER:1:3", "RELOP:equals:4", "NUMBER:2:5"];
   assert_eq!(lexemes, expected_lexemes);
   let expected_xmath_before = &[

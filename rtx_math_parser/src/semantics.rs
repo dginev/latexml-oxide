@@ -5,8 +5,9 @@ use marpa::tree_builder::*;
 use std::collections::HashMap;
 use std::error::Error;
 use std::rc::Rc;
+use std::borrow::Cow;
 
-pub use self::tree::{Args, Operator, Tree};
+pub use self::tree::{Args, Operator, Tree, XMTok};
 use crate::pragmatics::ValidationPragmatics;
 
 mod tree;
@@ -66,14 +67,14 @@ impl Actions {
       Node::Token(_ty, ref val) => {
         let token_str = ::std::str::from_utf8(val).unwrap_or("malformed-utf8");
         Ok(Some(
-          Tree::Atom(token_str.to_owned(), Meta::default()).specialize(Meta::default(), pragmas)?,
+          Tree::Lexeme(token_str.to_owned(), Meta::default()).specialize(Meta::default(), pragmas)?,
         ))
       },
-      Node::Leaf(ref tok) => Ok(Some(Tree::Atom(tok.to_string(), Meta::default()))),
+      Node::Leaf(ref tok) => Ok(Some(Tree::Lexeme(tok.to_string(), Meta::default()))),
       Node::Null(_) => {
         // e.g.* argument failed nothing, just skip.
         Ok(None)
-        // Tree::Atom("null".into())
+        // Tree::Lexeme("null".into())
       },
     }
   }
@@ -105,11 +106,31 @@ pub fn post_script(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPr
 }
 // ambiguous and implicit - invisible operations
 pub fn invisible_infix_mulop(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => factor, term_argument);
+  unpack!(args => left, right);
   // Two choices - multiplication or application
   let choices = vec![
-    Tree::Apply(factor.clone().into(), term_argument.clone().into(), Meta::default()),
-    Tree::Apply("implied_op".into(), Args(vec![factor, term_argument]), Meta::default()),
+    Tree::Apply(left.clone().into(), right.clone().into(), Meta::default()),
+    Tree::Apply("times".into(), Args(vec![left, right]), Meta::default()),
   ];
   Ok(Some(Tree::Choices(choices.into_iter().collect())))
+}
+
+pub fn invisible_times(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
+  unpack!(args => left, right);
+  let mut left = left;
+  // left-to-right associative -- if "left" is already a "times", tuck "right" in:
+  if let Some(Tree::Apply(ref op, ref mut left_args, ref _m)) = left {
+    if let Tree::Token(xop, _xmeta) = &*op.0 {
+      match xop.meaning {
+        Some(ref name) if name=="times" => {
+          left_args.0.push(right);
+          return Ok(Some(left.unwrap()))
+        },
+        _ => {}
+      }
+    }
+  }
+  // otherwise create a new one:
+  let times = XMTok { meaning: Some(Cow::Borrowed("times")), role: Some(Cow::Borrowed("MULOP")), content: Some(Cow::Borrowed("\u{2062}")),name: None};
+  Ok(Some(Tree::Apply(times.into(), Args(vec![left, right]), Meta::default())))
 }

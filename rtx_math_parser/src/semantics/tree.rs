@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
+use std::borrow::Cow;
 use libxml::tree::Node;
 use rtx_core::Info;
 use rtx_core::document::Document;
@@ -14,9 +15,26 @@ use crate::pragmatics::ValidationPragmatics;
 pub struct Operator(pub Box<Tree>);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Args(pub Vec<Option<Tree>>);
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct XMTok {
+  pub role: Option<Cow<'static, str>>,
+  pub meaning: Option<Cow<'static, str>>,
+  pub content: Option<Cow<'static, str>>,
+  pub name: Option<Cow<'static, str>>
+}
+impl Display for XMTok {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    // stub with Debug for now
+    writeln!(f, "{:?}", self)
+  }
+}
+
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Tree {
-  Atom(String, Meta),
+  Lexeme(String, Meta),
+  Token(XMTok, Meta), // does this need Meta?
   Apply(Operator, Args, Meta),
   Choices(Vec<Tree>),
 }
@@ -24,6 +42,11 @@ pub enum Tree {
 impl Display for Operator {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     self.fmt_indented(&Vec::new(), f)
+  }
+}
+impl From<XMTok> for Operator {
+  fn from(t: XMTok) -> Self {
+    Operator(Box::new(Tree::Token(t, Meta::default())))
   }
 }
 impl Operator {
@@ -55,7 +78,7 @@ impl Operator {
   }
 
   fn fmt_indented(&self, level: &[bool], f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    if let Tree::Atom(_, _) = &*self.0 {
+    if let Tree::Lexeme(_, _) = &*self.0 {
       self.0.fmt_indented(level, f)
     } else {
       let indent = if level.is_empty() {
@@ -86,7 +109,7 @@ impl Args {
       if peekable.peek().is_some() {
         maybe_arg
           .as_ref()
-          .unwrap_or(&Tree::Atom(
+          .unwrap_or(&Tree::Lexeme(
             String::from("missing_argument"),
             Meta::default(),
           ))
@@ -99,7 +122,7 @@ impl Args {
         }
         maybe_arg
           .as_ref()
-          .unwrap_or(&Tree::Atom(
+          .unwrap_or(&Tree::Lexeme(
             String::from("missing_argument"),
             Meta::default(),
           ))
@@ -153,21 +176,23 @@ impl Args {
 impl Tree {
   pub fn get_meta(&self) -> &Meta {
     match self {
-      Tree::Atom(_, ref meta) => meta,
+      Tree::Lexeme(_, ref meta) => meta,
+      Tree::Token(_, ref meta) => meta,
       Tree::Apply(_, _, ref meta) => meta,
       Tree::Choices(cs) => cs[0].get_meta(), // Should we return a none type instead?
     }
   }
   pub fn get_meta_mut(&mut self) -> &mut Meta {
     match self {
-      Tree::Atom(_, ref mut meta) => meta,
+      Tree::Lexeme(_, ref mut meta) => meta,
+      Tree::Token(_, ref mut meta) => meta,
       Tree::Apply(_, _, ref mut meta) => meta,
       Tree::Choices(cs) => cs[0].get_meta_mut(), // Should we return a none type instead?
     }
   }
   pub fn get_inner_meta(&self) -> Vec<&Meta> {
     match self {
-      Tree::Atom(_atom, meta) => vec![meta],
+      Tree::Lexeme(_atom, meta) => vec![meta],
       Tree::Apply(op, args, _) => vec![op.get_meta()]
         .into_iter()
         .chain(
@@ -187,15 +212,14 @@ impl Tree {
   /// Whenever a contradiction/inconsistency is detected, we return an error
   /// This method should always be called on tree construction, as it also manages the various curry
   /// constraints, keeping the resolution local / fast.
-  pub fn specialize(
-    self,
-    mut into: Meta,
-    pragmas: &[ValidationPragmatics],
-  ) -> Result<Self, Box<dyn Error>> {
+  pub fn specialize(self, mut into: Meta, pragmas: &[ValidationPragmatics]) -> Result<Self, Box<dyn Error>> {
     match self {
-      Tree::Atom(name, meta) => {
+      Tree::Lexeme(name, meta) => {
         let new_meta = meta.with_curry_atom(into, &name)?;
-        Ok(Tree::Atom(name, new_meta))
+        Ok(Tree::Lexeme(name, new_meta))
+      }
+      Tree::Token(t, meta) => {
+        unimplemented!()
       }
       Tree::Apply(mut op, mut args, meta) => {
         // First, if we have a specialize directive, execute it:
@@ -205,7 +229,7 @@ impl Tree {
             // to avoid conflicts with the same atoms *without* the embellishments
             // as often this technique is used to generate new unique names.
             if args.0.len() <= 2 {
-              if let Some(Tree::Atom(_, arg_meta)) = &mut args.0[0] {
+              if let Some(Tree::Lexeme(_, arg_meta)) = &mut args.0[0] {
                 if let Some(CurryTerm::Var(ref mut curry_var)) = arg_meta.curry_level {
                   let mut base_op = op.0.base_operator_name();
                   // fish out a local name to use as an embellishment
@@ -300,14 +324,14 @@ impl Tree {
   /// given a tree, return the base operator name, if any
   pub fn base_operator_name(&self) -> String {
     match self {
-      Tree::Atom(ref name, _) => name.to_string(),
+      Tree::Lexeme(ref name, _) => name.to_string(),
       Tree::Apply(ref op, ref args, _) => {
         match &*op.0 {
-          Tree::Atom(ref name, _) if name == "unknown.subscript" => {
+          Tree::Lexeme(ref name, _) if name == "unknown.subscript" => {
             let arg_base = args.0.first().unwrap().as_ref().unwrap().clone();
             format!("sub__{}", arg_base.base_operator_name())
           }
-          Tree::Atom(ref name, _) if name == "unknown.superscript" => {
+          Tree::Lexeme(ref name, _) if name == "unknown.superscript" => {
             // TODO: Too much datastructure boilerplate with the unwrap incantation
             //       might be better to create some getter methods to explain the intent better
             //       this is meant to do "give me a clone of the first argument to this Tree::Apply"
@@ -315,7 +339,7 @@ impl Tree {
             let arg_base = args.0.first().unwrap().as_ref().unwrap();
             arg_base.base_operator_name()
           }
-          Tree::Atom(other, _) => other.to_string(),
+          Tree::Lexeme(other, _) => other.to_string(),
           Tree::Apply(sub_other, _, _) => format!("reduced__{}", sub_other.0.base_operator_name()),
           _ => String::new(),
         }
@@ -326,9 +350,10 @@ impl Tree {
 
   pub fn get_baseline(&self) -> &Self {
     match self {
-      Tree::Atom(_, _) => self,
+      Tree::Lexeme(_, _) => self,
+      Tree::Token(_, _) => self,
       Tree::Apply(ref op, ref args, _) => {
-        if let Tree::Atom(name, _) = &*op.0 {
+        if let Tree::Lexeme(name, _) = &*op.0 {
           if name == "unknown.subscript" || name == "unknown.superscript" {
             args.trees().first().unwrap().get_baseline()
           } else {
@@ -352,7 +377,10 @@ impl Tree {
   /// Recursively remove constraints
   pub fn unconstrain_recursive(&mut self) {
     match self {
-      Tree::Atom(_, meta) => {
+      Tree::Lexeme(_, meta) => {
+        meta.curry_constraints.drain();
+      },
+      Tree::Token(_, meta) => {
         meta.curry_constraints.drain();
       }
       Tree::Apply(Operator(op), args, meta) => {
@@ -382,7 +410,8 @@ impl Tree {
         op.fmt_indented(level, f)?;
         args.fmt_indented(&arg_level, f)
       }
-      Tree::Atom(name, meta) => writeln!(f, "{}{} {}", indent, name, meta),
+      Tree::Lexeme(name, meta) => writeln!(f, "{}{} {}", indent, name, meta),
+      Tree::Token(t, meta) => writeln!(f, "{}{} {}", indent, t, meta),
       Tree::Choices(args) => {
         writeln!(f, "\n{}Choices", indent)?;
         let mut arg_level: Vec<bool> = level.to_vec();
@@ -405,10 +434,22 @@ impl Tree {
   /// Rebuild a marpa-derived parse tree into an XMath XML tree
   pub fn to_xmath(&self, nodes: &mut [Node], document: &mut Document) -> Result<Node, Box<dyn Error>> {
     match self {
-      Tree::Atom(content, _meta) => {
+      Tree::Lexeme(content, _meta) => {
         let atom_node = &mut nodes[content.split(':').last().unwrap().parse::<usize>().unwrap() -1];
         atom_node.unbind();
         Ok(atom_node.clone()) 
+      },
+      Tree::Token(xmtok, _meta) => {
+        let mut xmtok_node = Node::new("XMTok", None, document.get_document()).unwrap();
+        if let Some(ref meaning) = xmtok.meaning {
+          xmtok_node.set_attribute("meaning", meaning)?; }
+        if let Some(ref name) = xmtok.name {
+          xmtok_node.set_attribute("name", name)?; }
+        if let Some(ref role) = xmtok.role {
+          xmtok_node.set_attribute("role", role)?; }
+        if let Some(ref content) = xmtok.content {
+          xmtok_node.set_content(content)?; }
+        Ok(xmtok_node) 
       },
       Tree::Apply(op, args, _meta) => {
         // first execute all recursive calls on kids, and only *THEN*
@@ -418,11 +459,9 @@ impl Tree {
         let mut op_node = op.0.to_xmath(nodes, document)?;
         apply_node.add_child(&mut op_node)?;
         
-        for arg_opt in args.0.iter() {
-          if let Some(arg) = arg_opt {
-            let mut arg_node = arg.to_xmath(nodes, document)?;
-            apply_node.add_child(&mut arg_node)?;
-          }
+        for arg in args.0.iter().flatten() {
+          let mut arg_node = arg.to_xmath(nodes, document)?;
+          apply_node.add_child(&mut arg_node)?;          
         }
         Ok(apply_node)
       },

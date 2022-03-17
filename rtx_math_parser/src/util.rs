@@ -3,8 +3,9 @@ use crate::data::{get_grammatical_role, get_token_meaning};
 
 /// Generate a textual token for each node; The parser operates on this encoded
 /// string.
-pub fn node_to_grammar_lexemes(mathnode: &Node) -> Vec<(String, Node)> {
+pub fn node_to_grammar_lexemes(mathnode: &Node) -> (Vec<String>, Vec<Node>) {
   let mut lexemes = Vec::new();
+  let mut nodes = Vec::new();
   for (idx, node) in mathnode.get_child_nodes().into_iter().enumerate() {
     let role = get_grammatical_role(&node);
     let mut text = get_token_meaning(&node);
@@ -12,9 +13,10 @@ pub fn node_to_grammar_lexemes(mathnode: &Node) -> Vec<(String, Node)> {
       text = "UNKNOWN".to_string();
     }
     let lexeme = format!("{}:{}:{}", role, text, 1 + idx).replace(' ', "");
-    lexemes.push((lexeme, node));
+    lexemes.push(lexeme);
+    nodes.push(node);
   }
-  lexemes
+  (lexemes,nodes)
 }
 
 /// Auxiliary separator for ROLE:style-lexeme into ("ROLE:style", '-', lexeme)

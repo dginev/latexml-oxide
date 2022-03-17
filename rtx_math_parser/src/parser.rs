@@ -34,6 +34,7 @@ use rtx_core::{string_map,s,map,fatal,Info};
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
 use crate::semantics::*;
+use crate::util::node_to_grammar_lexemes;
 use marpa::lexer::byte_scanner::*;
 use marpa::parser::*;
 use marpa::tree_builder::TreeBuilder;
@@ -712,48 +713,17 @@ impl MathParser {
   // Low-level Parser: parse a single expression
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Convert to textual form for processing by MathGrammar
-  fn parse_single(&self, mathnode: &mut Node, document: &mut Document, rule: &str, state: &mut State) -> Result<Option<Node>> {
-    //   my @nodes = $self->filter_hints($document, $mathnode->childNodes);
-    let nodes = mathnode.get_child_nodes();
-    // let mut result;
-    //   my ($punct, $result, $unparsed);
-    //   my @punct = ();
-    //   # Extract trailing punctuation, if rule allows it.
-    //   if ($rule =~ s/,$//) {
-    //     # Collect ALL trailing PUNCT|PERIOD's...
-    //     my ($x, $r);
-    // while (($x = $nodes[-1]) && ($x = self.realize_xmnode($x)) &&
-    // (getQName($x) eq 'ltx:XMTok') && ($r = $x->getAttribute('role'))
-    // && (($r eq 'PUNCT') || ($r eq 'PERIOD'))) {       my $p = pop(@nodes);
-    //       # Special case hackery, in case this thing is XMRef'd!!!
-    //       # We could just stick it on the end of the presentation,
-    //       # but it doesn't belong in the content at all!?!?
-    //       if (my $id = $p->getAttribute('xml:id')) {
-    //         $$LaTeXML::MathParser::PUNCTUATION{$id} = $p; }
-    //       unshift(@punct, $p); }
-    //   }
-
-    //   if ($LaTeXML::MathParser::DEBUG) {
-    //     $::RD_TRACE = 1;    # Turn on MathGrammar tracing
-    // #    my $box =
-    // $document->getNodeBox($LaTeXML::MathParser::XNODE); my $box =
-    // $document->getNodeBox($mathnode);     print STDERR "\n" . ('=' x 60) .
-    //       "\nParsing formula \"" . ToString($box) . "\""
-    //       . "\n from " . $box->getLocator
-    // . "\n == \"" . join(' ', map { node_string($_, $document) } @nodes) .
-    // "\""       . "\n == " . ToString($mathnode)
-    //       . "\n"; }
-
-    let result = if nodes.len() < 2 {
-      // Too few nodes? What's to parse?
-      // TODO: Absent() constructor
-      nodes.first().cloned()
+  fn parse_single(&mut self, mathnode: &mut Node, document: &mut Document, rule: &str, state: &mut State) -> Result<Option<Node>> {
+    let (lexemes,nodes) = node_to_grammar_lexemes(mathnode);
+    if let Ok(Some(mut parse_tree)) = self.parse_lexemes(lexemes, nodes, document) {
+      for mut node in mathnode.get_child_nodes() {
+        node.unlink();
+      }
+      mathnode.add_child(&mut parse_tree).unwrap();
+      Ok(Some(parse_tree))
     } else {
-      // Now do the actual parse.
-      let (result_internal, unparsed) = self.parse_internal(rule, nodes, document)?;
-      result_internal
-    };
-
+      Ok(None)
+    }
     //   # Failure? No result or uparsed lexemes remain.
     //   # NOTE: Should do script hack??
     //   if ((!defined $result) || $unparsed) {
@@ -768,8 +738,6 @@ impl MathParser {
     // punctuated???     if ($LaTeXML::MathParser::DEBUG) {
     //       print STDERR "\n=>" . printNode($result) . "\n" . ('=' x 60) . "\n"; }
     //     return $result; } }
-
-    Ok(result)
   }
 
   pub fn parse_marpa(&mut self, input: &str) -> Result<Tree> {
