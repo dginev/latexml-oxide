@@ -831,7 +831,11 @@ impl MathParser {
   }
   
   pub fn parse_lexemes(&mut self, lexemes: Vec<String>, mut nodes: Vec<Node>, document: &mut Document) -> Result<Option<Node>> {
-    let input_string: String = lexemes.join(" ");
+    let mut input_string: String = lexemes.join(" ");
+    // Add a trailing space, in an attempt to work with 
+    // a rules!() macro that has a Hard expectation of a space char following EVERY token.
+    // this - counterintuitively- allows a simple macro definition AND a simple parse tree.
+    input_string.push(' '); 
     if let Ok(parse_tree) = self.parse_marpa(&input_string) {
       let xml_tree = parse_tree.to_xmath(&mut nodes, document)?;
       Ok(Some(xml_tree))
