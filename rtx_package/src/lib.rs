@@ -14,7 +14,6 @@ extern crate rtx_codegen;
 
 #[macro_use]
 pub mod macros;
-pub mod math_parser;
 #[macro_use]
 pub mod package;
 

@@ -1,3 +1,22 @@
+use libxml::tree::Node;
+use crate::data::{get_grammatical_role, get_token_meaning};
+
+/// Generate a textual token for each node; The parser operates on this encoded
+/// string.
+pub fn node_to_grammar_lexemes(mathnode: &Node) -> Vec<(String, Node)> {
+  let mut lexemes = Vec::new();
+  for (idx, node) in mathnode.get_child_nodes().into_iter().enumerate() {
+    let role = get_grammatical_role(&node);
+    let mut text = get_token_meaning(&node);
+    if text.is_empty() {
+      text = "UNKNOWN".to_string();
+    }
+    let lexeme = format!("{}:{}:{}", role, text, 1 + idx).replace(' ', "");
+    lexemes.push((lexeme, node));
+  }
+  lexemes
+}
+
 /// Auxiliary separator for ROLE:style-lexeme into ("ROLE:style", '-', lexeme)
 pub fn distill_lexeme(name: &str) -> (&str, &str, &str) {
   // dash separates styles, colons separate grammatical roles, and we are

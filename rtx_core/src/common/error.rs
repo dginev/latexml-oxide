@@ -198,6 +198,7 @@ pub enum ErrorCategory {
   Recursion,
   EoF,
   Endgroup,
+  FailedParse,
   Generic(Box<dyn ErrorTrait>),
   Filename(String),
 }
@@ -216,6 +217,7 @@ pub enum ErrorTarget {
   Codegen,
   Macro,
   XMath,
+  MathParser,
   Document,
   Definition,
   TexPool,
@@ -245,6 +247,7 @@ impl fmt::Display for Error {
       EoF => write!(f, "<EOF>"),
       Convert => write!(f, "conversion"),
       Endgroup => write!(f, "<endgroup>"),
+      FailedParse => write!(f,"failed to parse"),
       Generic(ref err) => err.fmt(f),
       Filename(ref name) => write!(f, "file:{}", name),
     }
@@ -271,6 +274,15 @@ impl From<io::Error> for Error {
 
 impl From<Box<dyn ErrorTrait>> for Error {
   fn from(err: Box<dyn ErrorTrait>) -> Error {
+    Error {
+      target: ErrorTarget::Document,
+      message: err.to_string(),
+      category: ErrorCategory::Generic(err),
+    }
+  }
+}
+impl From<Box<dyn ErrorTrait+Send+Sync>> for Error {
+  fn from(err: Box<dyn ErrorTrait+Send+Sync>) -> Error {
     Error {
       target: ErrorTarget::Document,
       message: err.to_string(),
@@ -325,6 +337,16 @@ impl From<ParseFloatError> for Error {
       target: ErrorTarget::Document,
       message: err.to_string(),
       category: ErrorCategory::Generic(Box::new(err)),
+    }
+  }
+}
+
+impl From<marpa::error::Error> for Error {
+  fn from(err: marpa::error::Error) -> Error {
+    Error {
+      target: ErrorTarget::MathParser,
+      category: ErrorCategory::FailedParse,
+      message: err.to_string(),
     }
   }
 }

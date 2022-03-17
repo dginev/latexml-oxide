@@ -39,7 +39,7 @@ fn validate_requirements(_dirpath: &str, _requires: Option<HashMap<&str, &str>>)
   true
 }
 
-fn rtx_ok(tex_path: &str, xml_path: &str, name: &str) { rtx_ok_internal(tex_path, xml_path, name, None) }
+// fn rtx_ok(tex_path: &str, xml_path: &str, name: &str) { rtx_ok_internal(tex_path, xml_path, name, None) }
 
 fn rtx_ok_internal(tex_path: &str, xml_path: &str, name: &str, extra_bindings_dispatcher: Option<BindingDispatcher>) {
   let tex_strings = process_texfile(tex_path, name, extra_bindings_dispatcher);
@@ -115,7 +115,7 @@ fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {
 
 /// Simple tokenization of a single formula, without any custom preloads
 /// byond latex and amsmath
-pub fn lex_single_tex_formula(tex: &str) -> Vec<(String, Node)> {
+pub fn lex_single_tex_formula(tex: &str) -> (Vec<(String, Node)>,Document) {
   let mut latexml = Core::new(CoreOptions {
     verbosity: Some(-2),
     search_paths: None,
@@ -126,11 +126,11 @@ pub fn lex_single_tex_formula(tex: &str) -> Vec<(String, Node)> {
   });
   let xml_result = latexml.convert_file(format!("literal:\\[ {} \\]",tex));
   assert!(xml_result.is_ok());
-  let xml = xml_result.unwrap();
+  let doc = xml_result.unwrap();
   
   // grab the first formula
-  match xml.findnode("//*[local-name()='XMath']", None, &mut latexml.state) {
-    Some(math) => node_to_grammar_lexemes(&math),
-    None => Vec::new()
-  }  
+  match doc.findnode("//*[local-name()='XMath']", None, &mut latexml.state) {
+    Some(math) => (node_to_grammar_lexemes(&math),doc),
+    None => (Vec::new(),doc)
+  }
 }
