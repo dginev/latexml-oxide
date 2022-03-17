@@ -28,7 +28,7 @@ impl From<Option<Tree>> for Args {
 
 impl From<&str> for Tree {
   fn from(a: &str) -> Tree {
-    Tree::Atom(a.to_string(), Meta::default())
+    Tree::Lexeme(a.to_string(), Meta::default())
   }
 }
 impl From<(&str, &str)> for Tree {
@@ -125,7 +125,7 @@ impl From<[&str; 2]> for Args {
       args
         .iter()
         .map(ToString::to_string)
-        .map(|x| Tree::Atom(x, Meta::default()))
+        .map(|x| Tree::Lexeme(x, Meta::default()))
         .map(Option::Some)
         .collect(),
     )
@@ -137,7 +137,7 @@ impl From<[&str; 3]> for Args {
       args
         .iter()
         .map(ToString::to_string)
-        .map(|x| Tree::Atom(x, Meta::default()))
+        .map(|x| Tree::Lexeme(x, Meta::default()))
         .map(Option::Some)
         .collect(),
     )

@@ -27,17 +27,12 @@ fn main() {
     },
   };
   
-  let (lexed, xmath_opt, mut doc) = lex_single_tex_formula(&source);
-  assert!(!lexed.is_empty());
-  let mut lexemes = Vec::new();
-  let mut nodes = Vec::new();
-  for (lexeme, node) in lexed.into_iter() {
-    lexemes.push(lexeme);
-    nodes.push(node);
-  }
+  let (lexemes, lex_nodes, xmath_opt, mut doc) = lex_single_tex_formula(&source);
+  assert!(!lexemes.is_empty());
+  eprintln!("lexemes: {:?}",lexemes);
 
   let mut parser = MathParser::default(); 
-  if let Ok(Some(mut parse_tree)) = parser.parse_lexemes( lexemes, nodes, &mut doc) {
+  if let Ok(Some(mut parse_tree)) = parser.parse_lexemes( lexemes, lex_nodes, &mut doc) {
     let mut xmath = xmath_opt.unwrap();
     for mut node in xmath.get_child_nodes() {
       node.unlink();

@@ -176,7 +176,7 @@ fn _pragma_letter_case_flat_unstyled(name: &str) -> String {
 
 fn pragma_fenced_atoms_are_not_functions(tree: &Tree) -> Result<(), Box<dyn Error>> {
   if let Tree::Apply(Operator(op), _, _) = tree {
-    if let Tree::Atom(ref _lexeme, ref atom_meta) = **op {
+    if let Tree::Lexeme(ref _lexeme, ref atom_meta) = **op {
       if let Some(ref fences) = atom_meta.fenced {
         if fences.as_str() == "parens" {
           return Err("pruning non-argument parenthetical atom, used as LHS of function application".into());
@@ -190,11 +190,11 @@ fn pragma_fenced_atoms_are_not_functions(tree: &Tree) -> Result<(), Box<dyn Erro
 fn pragma_fenced_letters_are_function_arguments(tree: &Tree) -> Result<(), Box<dyn Error>> {
   if let Tree::Apply(Operator(op), ref args, _) = tree {
     match **op {
-      Tree::Atom(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {
+      Tree::Lexeme(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {
         if let Some(top_lhs) = args.trees().first() {
           if let Some(ref fences) = top_lhs.get_meta().fenced {
             if fences.as_str() == "parens" {
-              if let Tree::Atom(lhs_name, _) = top_lhs.get_baseline() {
+              if let Tree::Lexeme(lhs_name, _) = top_lhs.get_baseline() {
                 if !lhs_name.starts_with("NUMBER") {
                   return Err("pruning non-argument parenthetical atom, used as LHS of invisible times".into());
                 }
@@ -204,7 +204,7 @@ fn pragma_fenced_letters_are_function_arguments(tree: &Tree) -> Result<(), Box<d
 
           // Slightly tricky check -- the top RHS needs to be fenced, but we care about the "baseline" content being a variable - disregarding scripts.
           if let Some(top_rhs) = args.trees().get(1) {
-            if let Tree::Atom(rhs_name, _) = top_rhs.get_baseline() {
+            if let Tree::Lexeme(rhs_name, _) = top_rhs.get_baseline() {
               if let Some(ref fences) = top_rhs.get_meta().fenced {
                 if fences.as_str() == "parens" {
                   // if the RHS is a number, prune unless the LHS is fenced (things like cycle notation)
@@ -212,7 +212,7 @@ fn pragma_fenced_letters_are_function_arguments(tree: &Tree) -> Result<(), Box<d
                     return Err("pruning non-argument parenthetical atom, used as RHS of invisible times".into());
                   } else {
                     match args.trees().first() {
-                      Some(Tree::Atom(_, lhs_meta)) if lhs_meta.fenced.is_none() => {
+                      Some(Tree::Lexeme(_, lhs_meta)) if lhs_meta.fenced.is_none() => {
                         return Err("pruning non-argument parenthetical NUMBER, used as RHS of invisible times".into());
                       },
                       Some(Tree::Apply(_, _, lhs_meta)) if lhs_meta.fenced.is_none() => {
@@ -239,7 +239,7 @@ fn pragma_fenced_letters_are_function_arguments(tree: &Tree) -> Result<(), Box<d
 fn pragma_unfenced_letter_arguments_require_visual_cues(tree: &Tree) -> Result<(), Box<dyn Error>> {
   match *tree {
     Tree::Apply(Operator(ref op), ref args, _) if args.0.len() == 1 => {
-      if let Some(Tree::Atom(ref arg_name, ref atom_meta)) = args.0[0] {
+      if let Some(Tree::Lexeme(ref arg_name, ref atom_meta)) = args.0[0] {
         if atom_meta.fenced.is_none() {
           let (arg_base, _sep, lexeme) = distill_lexeme(arg_name);
           let arg_letter: char = if lexeme.len() == 1 {
@@ -284,7 +284,7 @@ fn pragma_unfenced_letter_arguments_require_visual_cues(tree: &Tree) -> Result<(
 fn pragma_opfunctions_are_rarely_arguments(tree: &Tree) -> Result<(), Box<dyn Error>> {
   match *tree {
     Tree::Apply(_, ref args, _) if args.0.len() == 1 => {
-      if let Some(Tree::Atom(ref arg_name, ref atom_meta)) = args.0[0] {
+      if let Some(Tree::Lexeme(ref arg_name, ref atom_meta)) = args.0[0] {
         if arg_name.starts_with("OPFUNCTION") && atom_meta.fenced.is_none() {
           return Err("OPFUNCTIONs are rarely arguments, prune.".into());
         }
@@ -306,8 +306,8 @@ fn pragma_higher_order_ids_are_exceptions(tree: &Tree) -> Result<(), Box<dyn Err
   if let Tree::Apply(ref op, ref args, _) = &*tree {
     if args.0.len() == 1 {
       match &*op.0 {
-        Tree::Atom(ref op_name, _) if op_name.starts_with("ID:") => match args.0[0] {
-          Some(Tree::Atom(ref rhs_name, ref rhs_meta)) => {
+        Tree::Lexeme(ref op_name, _) if op_name.starts_with("ID:") => match args.0[0] {
+          Some(Tree::Lexeme(ref rhs_name, ref rhs_meta)) => {
             if rhs_name.starts_with("FUNCTION") && rhs_meta.fenced.is_none() {
               return Err("ID of a higher order than a FUNCTION is not allowed.".into());
             }
@@ -334,13 +334,13 @@ fn pragma_higher_order_ids_are_exceptions(tree: &Tree) -> Result<(), Box<dyn Err
 fn pragma_higher_order_invisible_ops_are_exceptions(tree: &Tree) -> Result<(), Box<dyn Error>> {
   if let Tree::Apply(Operator(op), ref args, _) = tree {
     match **op {
-      Tree::Atom(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {
+      Tree::Lexeme(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {
         let trees = args.trees();
         if trees.len() == 2 {
           let lhs = trees[0];
           let rhs = trees[1];
-          if let Tree::Atom(ref lhs_name, _) = lhs.get_baseline() {
-            if let Tree::Atom(ref rhs_name, _) = rhs.get_baseline() {
+          if let Tree::Lexeme(ref lhs_name, _) = lhs.get_baseline() {
+            if let Tree::Lexeme(ref rhs_name, _) = rhs.get_baseline() {
               if name_is_functional_or_id(lhs_name) && name_is_functional(rhs_name) {
                 return Err("Pruning higher order 'FUNCTION x FUNCTION' parse to give precedence to right-associative readings".into());
               }
@@ -360,7 +360,7 @@ fn pragma_higher_order_invisible_ops_are_exceptions(tree: &Tree) -> Result<(), B
 fn pragma_adjacent_numbers_dont_use_invisible_times(tree: &Tree) -> Result<(), Box<dyn Error>> {
   if let Tree::Apply(Operator(op), ref args, _) = tree {
     match **op {
-      Tree::Atom(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {
+      Tree::Lexeme(ref oplexeme, _) if oplexeme == "x.invisible_operator" => {
         let arg_trees = args.trees();
         if arg_trees.len() == 2 {
           if let Some(lhs) = arg_trees.first() {
@@ -386,8 +386,8 @@ fn pragma_adjacent_numbers_dont_use_invisible_times(tree: &Tree) -> Result<(), B
 fn pragma_standalone_diffops_are_not_numerators(tree: &Tree) -> Result<(), Box<dyn Error>> {
   if let Tree::Apply(Operator(op), ref args, _) = tree {
     match **op {
-      Tree::Atom(ref oplexeme, _) if oplexeme.starts_with("MULOP") => {
-        if let Some(Tree::Atom(ref numlexeme, _)) = args.trees().first() {
+      Tree::Lexeme(ref oplexeme, _) if oplexeme.starts_with("MULOP") => {
+        if let Some(Tree::Lexeme(ref numlexeme, _)) = args.trees().first() {
           if numlexeme.starts_with("DIFFOP") {
             return Err("pruning standalone diffops are not numerators".into());
           }
@@ -427,11 +427,11 @@ fn pragma_adjacent_functions_dont_unify_into_op(tree: &Tree) -> Result<(), Box<d
   if let Tree::Apply(Operator(op), _, _) = tree {
     if let Tree::Apply(Operator(inner_op), inner_args, inner_meta) = &**op {
       if inner_meta.fenced.is_none() {
-        if let Tree::Atom(name, _) = inner_op.get_baseline() {
+        if let Tree::Lexeme(name, _) = inner_op.get_baseline() {
           if name_is_functional_or_id(name) {
             let inner_trees = inner_args.trees();
             if inner_trees.len() == 1 {
-              if let Tree::Atom(rhs_name, _) = inner_args.trees().first().unwrap().get_baseline() {
+              if let Tree::Lexeme(rhs_name, _) = inner_args.trees().first().unwrap().get_baseline() {
                 if name_is_functional(rhs_name) {
                   return Err("Two applied FUNCTIONS as operator violates right-associative behavior.".into());
                 }
@@ -470,11 +470,11 @@ fn pragma_postfix_terms_are_fenced_if_single_arg(tree: &Tree) -> Result<(), Box<
 fn pragma_restrict_numeral_fractions(tree: &Tree) -> Result<(), Box<dyn Error>> {
   if let Tree::Apply(Operator(op), ref args, _) = tree {
     match **op {
-      Tree::Atom(ref oplexeme, _) if oplexeme == "arith1.divide" => {
+      Tree::Lexeme(ref oplexeme, _) if oplexeme == "arith1.divide" => {
         let arg_trees = args.trees();
         if arg_trees.len() == 2 {
-          if let Tree::Atom(arg1_name, arg1_meta) = arg_trees[0] {
-            if let Tree::Atom(arg2_name, arg2_meta) = arg_trees[1] {
+          if let Tree::Lexeme(arg1_name, arg1_meta) = arg_trees[0] {
+            if let Tree::Lexeme(arg2_name, arg2_meta) = arg_trees[1] {
               if arg1_name.starts_with("NUMBER") && arg2_name.starts_with("NUMBER") && !arg1_meta.syntax_trace.is_empty()
                 || !arg2_meta.syntax_trace.is_empty()
               {

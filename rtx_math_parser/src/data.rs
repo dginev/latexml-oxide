@@ -1,8 +1,7 @@
-use crate::semantics::Tree;
 use libxml::tree::{Node, NodeType};
 
 pub fn get_grammatical_role(node: &Node) -> String {
-  let role = match p_get_attribute(node, "role") {
+  match p_get_attribute(node, "role") {
     Some(role) => role,
     None => {
       let tag = node.get_name();
@@ -17,8 +16,7 @@ pub fn get_grammatical_role(node: &Node) -> String {
         "ATOM".to_string()
       }
     }
-  };
-  role
+  }
 }
 
 pub fn get_token_meaning(node: &Node) -> String {
