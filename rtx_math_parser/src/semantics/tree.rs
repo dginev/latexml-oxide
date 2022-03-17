@@ -3,6 +3,7 @@ use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
 use libxml::tree::Node;
+use rtx_core::Info;
 use rtx_core::document::Document;
 
 use super::curry::{CurryConstraint, CurryConstraints, CurryTerm};
@@ -425,7 +426,10 @@ impl Tree {
         }
         Ok(apply_node)
       },
-      Tree::Choices(choices) => choices[0].to_xmath(nodes, document)
+      Tree::Choices(choices) => {
+        Info!("to_xmath handler discarded {} parse choices.", choices.len()-1);
+        choices[0].to_xmath(nodes, document)
+      }
     }
   }
 }
