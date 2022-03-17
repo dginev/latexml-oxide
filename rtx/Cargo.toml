@@ -13,6 +13,10 @@ description = "A TeX to XML/HTML/ePub converster: a LaTeXML reimplementation in 
 name = "rtx"
 path = "src/main.rs"
 
+[[bin]]
+name = "rtxmath"
+path = "bin/rtx_math.rs"
+
 [dependencies]
 log = "0.4"
 libxml = "0.3.0"

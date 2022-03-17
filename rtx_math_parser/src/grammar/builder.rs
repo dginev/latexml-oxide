@@ -78,16 +78,16 @@ rules!(
     formula = expression
       | formula relop expression => infix_apply;
 
-    // // Note that we are _EXTENDING_ the original term_argument declaration,
-    // //                  as at the type of definition we couldn't yet discuss "expression" or "tex_argument"
-    // factor += lparen expression rparen          => circumfix_fenced
-    //               | lbrace expression rbrace           => circumfix_fenced
-    //               | lbracket expression rbracket       => circumfix_fenced
-    //               | lbrace formula rbrace              => circumfix_fenced
+    // Note that we are _EXTENDING_ the original term_argument declaration,
+    //                  as at the type of definition we couldn't yet discuss 
+    factor += lparen expression rparen          => circumfix_fenced
+           | lbrace expression rbrace           => circumfix_fenced
+           | lbracket expression rbracket       => circumfix_fenced
+           | lbrace formula rbrace              => circumfix_fenced;
 
-    // anyop = addop | mulop | relop | metarelop
-    //   | bigop | sumop | intop
-    //   | limitop | diffop;
+    anyop = addop | mulop | relop | metarelop
+      | bigop | sumop | intop
+      | limitop | diffop;
 
     // todotoken = atom | id | array | punct | period  | vertbar
     // | lbrace | rbrace | lparen | rparen | lbracket | rbracket
@@ -102,7 +102,7 @@ rules!(
     // | langle | rangle | midbar | open | close | middle_parallel
     // | singlevertbar | middle_bar |  langle_rel | rangle_rel
 
-    anything = formula //| anyop | todotoken
+    anything = formula | anyop
   );
   // | term_argument postsuperscript tex_argument  => post_script
   // | term_argument postsubscript tex_argument    => post_script
