@@ -4,7 +4,7 @@ use rtx_math_parser::MathParser;
 #[test]
 fn basic_1() {
   let tex="1+1=2";
-  let (lexed, mut doc) = lex_single_tex_formula(tex);
+  let (lexed, xmath_opt, mut doc) = lex_single_tex_formula(tex);
   assert!(!lexed.is_empty());
   let mut lexemes = Vec::new();
   let mut nodes = Vec::new();
