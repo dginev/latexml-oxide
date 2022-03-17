@@ -82,7 +82,8 @@ impl Actions {
 // constructors
 pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
   unpack!(args => arg1, infixop, arg2);
-  Ok(Some(Tree::Apply(infixop.into(), Args(vec![arg1, arg2]), Meta::default())))
+  let apply_tree = Tree::Apply(infixop.into(), Args(vec![arg1, arg2]), Meta::default());
+  Ok(Some(apply_tree))
 }
 pub fn prefix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
   unpack!(args => prefixop, arg1);

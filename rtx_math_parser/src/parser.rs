@@ -22,11 +22,22 @@
 // use LaTeXML::Common::XML;
 // use List::Util qw(min max);
 use libxml::tree::{Node, NodeType};
-use rtx_core::common::error::*;
+use std::collections::HashMap;
+use std::io::Cursor;
+
+use rtx_core::common::error::{note_progress,note_begin,note_end,Result};
 use rtx_core::common::xml::*;
 use rtx_core::document::Document;
 use rtx_core::state::State;
-use std::collections::HashMap;
+use rtx_core::{string_map,s,map,fatal,Info};
+
+use crate::grammar::builder::init_grammar;
+use crate::pragmatics::ValidationPragmatics;
+use crate::semantics::*;
+use marpa::lexer::byte_scanner::*;
+use marpa::parser::*;
+use marpa::tree_builder::TreeBuilder;
+
 
 pub struct NodeTuple(String, HashMap<String, String>, String);
 impl NodeTuple {
@@ -79,8 +90,12 @@ impl NodeTuple {
 //       &isMatchingClose &Fence)]);
 
 pub struct MathParser {
-  // TODO: Being wasteful with memory here for now, can switch to borrows later if needed
-  grammar: Option<String>,
+  // grammar: MarpaGrammar,
+  actions: Actions,
+  builder: TreeBuilder,
+  engine: Parser,
+  pub expert_pragmatics: Vec<ValidationPragmatics>,
+  pub student_pragmatics: Vec<ValidationPragmatics>,
   passed: HashMap<String, usize>,
   failed: HashMap<String, usize>,
   unknowns: HashMap<String, usize>,
@@ -95,8 +110,14 @@ pub struct MathParser {
 }
 impl Default for MathParser {
   fn default() -> Self {
+    let (grammar, actions, builder) = init_grammar().unwrap();
+    let engine = Parser::with_grammar(grammar.unwrap());
     MathParser {
-      grammar: None,
+      engine,
+      actions,
+      builder,
+      expert_pragmatics: ValidationPragmatics::expert_defaults(),
+      student_pragmatics: ValidationPragmatics::student_defaults(),
       passed: HashMap::new(),
       failed: HashMap::new(),
       unknowns: HashMap::new(),
@@ -751,6 +772,74 @@ impl MathParser {
     Ok(result)
   }
 
+  pub fn parse_marpa(&mut self, input: &str) -> Result<Tree> {
+    let parse_result = self
+      .engine
+      .run_recognizer(ByteScanner::new(Cursor::new(input)))?;
+    let mut parses = Vec::new();
+    let mut ok_trees = 0;
+    let mut pruned_trees = 0;
+    for val in parse_result {
+      match self
+        .actions
+        .get_tree(self.builder.clone(), val, self.expert_pragmatics.as_slice())
+      {
+        Ok(tree_opt) => {
+          if let Some(tree) = tree_opt {
+            // eprintln!("-- we found a tree: {:?}", tree);
+            ok_trees += 1;
+            // ignore semantically pruned parses
+            parses.push(tree);
+          }
+        }
+        Err(_prune_err) => {
+          pruned_trees += 1;
+        } // bookkeep the prune reasons?
+      }
+    }
+    if ok_trees + pruned_trees > 100 {
+      let warning1 = format!(
+        "WARNING! too many marpa trees: {:?}, accepted as semantic trees: {:?}",
+        ok_trees + pruned_trees,
+        ok_trees
+      );
+      // let warning2 = format!("         on input: {:?}", input);
+      // eprintln!("\n{}", Yellow.bold().paint(warning1));
+      // eprintln!("{}\n", Yellow.paint(warning2));
+    }
+
+    match parses.len() {
+      0 => Err("Failed to find any parse".into()),
+      1 => Ok(parses.into_iter().next().unwrap()),
+      2 | 3 => Ok(Tree::Choices(parses)),
+      _more => {
+        // Loop over the various soft pruning algorithms available, until we are at 3 trees or less
+        let mut reduced_forest = Tree::Choices(parses);
+        for pragma in self.student_pragmatics.iter() {
+          reduced_forest = reduced_forest.soft_prune_choices(*pragma);
+          match reduced_forest {
+            Tree::Choices(ref trees) => match trees.len() {
+              2 | 3 => break, //reduced sufficiently, return
+              _more => {}     // keep trying to reduce
+            },
+            _ => break, // reduced sufficiently, return
+          };
+        }
+        Ok(reduced_forest)
+      }
+    }
+  }
+  
+  pub fn parse_lexemes(&mut self, lexemes: Vec<String>, mut nodes: Vec<Node>, document: &mut Document) -> Result<Option<Node>> {
+    let input_string: String = lexemes.join(" ");
+    if let Ok(parse_tree) = self.parse_marpa(&input_string) {
+      let xml_tree = parse_tree.to_xmath(&mut nodes, document)?;
+      Ok(Some(xml_tree))
+    } else {
+      Ok(None)
+    }
+  }
+  
   fn parse_internal(&self, rule: &str, nodes: Vec<Node>, document: &mut Document) -> Result<(Option<Node>, Option<Node>)> {
     // Generate a textual token for each node; The parser operates on this encoded
     // string.   local $LaTeXML::MathParser::LEXEMES = {};
@@ -765,6 +854,8 @@ impl MathParser {
     //     $$LaTeXML::MathParser::LEXEMES{$lexeme} = $node;
     //     $lexemes .= ' ' . $lexeme; }
 
+    // TODO: use parse_lexemes here
+    
     //   #------------
     //   # apply the parser to the textified sequence.
     //   local $LaTeXML::MathParser::PARSER               = $self;

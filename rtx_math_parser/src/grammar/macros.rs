@@ -37,15 +37,12 @@ macro_rules! registry {
     let lexeme_sep = $grammar.literal_string(None, ":")?;
     // Lexical terminals, to be used as constituents of complex token definitions
     // must not be declared with the TreeBuilder
-    let lower_letter = $grammar.char_range(None, 'a', 'z')?;
-    let upper_letter = $grammar.char_range(None, 'A', 'Z')?;
     let digit = $grammar.char_range(None, '0', '9')?;
-    let times = $grammar.literal_string(None, "*")?;
-    let divide = $grammar.literal_string(None, "/")?;
-    let letter = $grammar.alternative(None, &[lower_letter, upper_letter])?;
-    let S_char = $grammar.inverse_string_set(None, "\t\n\r ")?;
-    let S_plus = $grammar.plus(None, S_char)?;
-    let D_plus = $grammar.plus(None, digit)?;
+    let lex_char = $grammar.inverse_string_set(None, ":\t\n\r ")?;
+    let lex_plus = $grammar.plus(None, lex_char)?;
+    let d_plus = $grammar.plus(None, digit)?;
+    let ws_char = $grammar.string_set(None, "\t\n\r ")?;
+    let ws = $grammar.star(None, ws_char)?;
 
     macro_rules! grammar {
       () => {
@@ -67,14 +64,24 @@ macro_rules! registry {
         lexeme_sep
       };
     }
-    macro_rules! S_plus {
+    macro_rules! lex_plus {
       () => {
-        S_plus
+        lex_plus
       };
     }
-    macro_rules! D_plus {
+    macro_rules! d_plus {
       () => {
-        D_plus
+        d_plus
+      };
+    }
+    macro_rules! ws_char {
+      () => {
+        ws_char
+      };
+    }
+    macro_rules! ws {
+      () => {
+        ws
       };
     }
   };
@@ -117,7 +124,7 @@ macro_rules! register {
 #[macro_export]
 macro_rules! rule {
   ($name:ident = $($parts:ident)+ $(=> $action:block)?$(=> $fn:ident)?) => {
-    let $name = match grammar!().rule(None, &[$($parts),+]) {
+    let $name = match grammar!().rule(None, &[$($parts, ws!()),+]) {
       Ok(r) => r,
       Err(e) => panic!("Failed to instantiate rule \"{} ={}\" ({:?})", stringify!($name), stringify!($($parts),+), e)
     };
@@ -125,7 +132,7 @@ macro_rules! rule {
     register!($name, $($parts)+ $(=> $action)?$(=> $fn)?);
   };
   ($name:ident = $($parts:ident)+ $(=> $action:block)?$(=> $fn:ident)? | $($($moreparts:ident)+ $(=> $moreaction:block)?$(=> $morefn:ident)?)|+) => {
-    let $name = match grammar!().rule(None, &[$($parts),+]) {
+    let $name = match grammar!().rule(None, &[$($parts, ws!()),+]) {
       Ok(r) => r,
       Err(e) => panic!("Failed to instantiate rule \"{} ={}\" ({:?})", stringify!($name), stringify!($($parts),+), e)
     };
@@ -135,7 +142,7 @@ macro_rules! rule {
   };
   // continuations for | clauses
   ($name:ident += $($parts:ident)+$(=> $action:block)?$(=> $fn:ident)?) => {
-    let subrule = match grammar!().rule(Some($name), &[$($parts),+]) {
+    let subrule = match grammar!().rule(Some($name), &[$($parts, ws!()),+]) {
       Ok(r) => r,
       Err(e) => panic!("Failed to instantiate subrule \"{} = {}\" ({:?})", stringify!($name), stringify!($($parts),+), e)
     };
@@ -144,7 +151,7 @@ macro_rules! rule {
   };
   ($name:ident += $($parts:ident)+ $(=> $action:block)?$(=> $fn:ident)? |
     $($($moreparts:ident)+ $(=> $moreaction:block)?$(=> $morefn:ident)?)|+) => {
-    let subrule = match grammar!().rule(Some($name), &[$($parts),+]) {
+    let subrule = match grammar!().rule(Some($name), &[$($parts, ws!()),+]) {
       Ok(r) => r,
       Err(e) => panic!("Failed to instantiate subrule \"{} = {}\" ({:?})", stringify!($name), stringify!($($parts),+), e)
     };
@@ -165,22 +172,18 @@ macro_rules! rules {
 
 #[macro_export]
 macro_rules! token {
-  ($name:ident = $part:ident+) => {
-    let $name = grammar!().rule(None, &[$part, lexeme_sep!(), D_plus!()])?;
-    builder!().token($name.rule());
-  };
   ($name:ident = $literal:literal) => {
     let literal_piece = grammar!().literal_string(None, $literal)?;
-    let $name = grammar!().rule(None, &[literal_piece, lexeme_sep!(), D_plus!()])?;
-    builder!().token($name.rule());
-  };
-  ($name:ident = [ $($part:ident)+ ]) => {
-    let $name = grammar!().alternative(None, &[$($part),+])?;
+    let $name = grammar!().rule(None, &[literal_piece, lexeme_sep!(), d_plus!()])?;
     builder!().token($name.rule());
   };
   ($name:ident ~ $literal:literal) => {
     let literal_piece = grammar!().literal_string(None, $literal)?;
-    let $name = grammar!().rule(None, &[literal_piece, lexeme_sep!(), S_plus!()])?;
+    let $name = grammar!().rule(None, &[literal_piece, lexeme_sep!(), lex_plus!(), lexeme_sep!(), d_plus!()])?;
+    builder!().token($name.rule());
+  };
+  ($name:ident = [ $($part:ident)+ ]) => {
+    let $name = grammar!().alternative(None, &[$($part),+])?;
     builder!().token($name.rule());
   };
 }
@@ -188,12 +191,7 @@ macro_rules! token {
 #[macro_export]
 macro_rules! start {
   ($top:ident) => {
-    let ws_char = grammar!().string_set(None, " \t\n\r")?;
-    builder!().discard(ws_char.rule());
-    start!($top, ws_char);
-  };
-  ($top:ident,$skip:ident) => {
-    let start = grammar!().sequence(None, $top, $skip, false, false)?;
-    grammar!().set_start(start)?;
+    builder!().discard(ws_char!().rule());
+    grammar!().set_start($top)?;
   };
 }

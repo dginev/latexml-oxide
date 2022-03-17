@@ -1,3 +1,3 @@
 #[macro_use]
-mod macros;
-mod builder;
+pub mod macros;
+pub mod builder;

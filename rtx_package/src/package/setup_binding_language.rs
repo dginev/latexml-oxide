@@ -47,6 +47,7 @@ macro_rules! BindState {
 #[macro_export]
 macro_rules! BindInnerState {
   ($inner_state:ident) => {
+    #[allow(unused_macros)]
     macro_rules! inner_state {
       () => {
         $inner_state
@@ -60,6 +61,7 @@ macro_rules! BindInnerState {
         $inner_stomach
       };
     }
+    #[allow(unused_macros)]
     macro_rules! inner_state {
       () => {
         $inner_state

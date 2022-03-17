@@ -18,7 +18,7 @@ use rtx_core::util::pathname::PathnameFindOptions;
 use rtx_core::{fatal, map, s, Core, Debug, Digested, T_CS, Explode, T_OTHER, T_SPACE};
 
 use rtx_codegen::LoadModel;
-use rtx_package::math_parser::MathParser;
+use rtx_math_parser::MathParser;
 use rtx_package::{load_model, input_content, input_definitions, InputDefinitionOptions};
 
 lazy_static! {
@@ -50,8 +50,8 @@ pub trait DigestionAPI {
   fn convert_file(&mut self, filepath: String) -> Result<Document>;
   fn convert_document(&mut self, digested: Digested) -> Result<Document>;
   // Mocks
-  fn load_preamble(&mut self, preamble: String) {}
-  fn load_postamble(&mut self, preamble: String) {}
+  fn load_preamble(&mut self, _preamble: String) {}
+  fn load_postamble(&mut self, _preamble: String) {}
 }
 
 impl DigestionAPI for Core {
@@ -149,7 +149,7 @@ impl DigestionAPI for Core {
   fn convert_document(&mut self, digested: Digested) -> Result<Document> {
     note_begin("Building");
 
-    let mut state = &mut self.state;
+    let state = &mut self.state;
     let schema_paths = state.search_paths.iter().map(String::as_str).collect::<Vec<&str>>();
     let default_model_load = match state.model.schema_data {
       None => true,
@@ -218,10 +218,10 @@ impl DigestionAPI for Core {
 
   fn digest_internal(&mut self) -> Result<Digested> {
     let mut boxes = Vec::new();
-    let mut state = &mut self.state;
+    let state = &mut self.state;
 
     while self.stomach.borrow_mut().get_gullet_mut().has_more_input() {
-      let mut next_bodies: Vec<Digested> = self.stomach.borrow_mut().digest_next_body(None, state)?;
+      let next_bodies: Vec<Digested> = self.stomach.borrow_mut().digest_next_body(None, state)?;
       // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
       boxes.extend(next_bodies);
     }
@@ -240,7 +240,7 @@ impl DigestionAPI for Core {
 
   fn digest_file(&mut self, mut request: String, options: DigestionOptions) -> Result<Digested> {
     let mut dir = String::new();
-    let mut name;
+    let name;
     // let mut ext = String::new();
     let mode = match options.mode {
       None => DigestionMode::TeX,

@@ -24,3 +24,4 @@ libxml = "0.3.0"
 dirs = "4.0"
 encoding = "0.2"
 kpathsea = "0.2.3"
+marpa = { git = "https://github.com/dginev/marpa", branch = "abstract_syntax_forests" }

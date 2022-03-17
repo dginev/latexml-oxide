@@ -2,6 +2,8 @@ use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
+use libxml::tree::Node;
+use rtx_core::document::Document;
 
 use super::curry::{CurryConstraint, CurryConstraints, CurryTerm};
 use super::metadata::Meta;
@@ -396,6 +398,34 @@ impl Tree {
         }
         writeln!(f)
       }
+    }
+  }
+
+  /// Rebuild a marpa-derived parse tree into an XMath XML tree
+  pub fn to_xmath(&self, nodes: &mut [Node], document: &mut Document) -> Result<Node, Box<dyn Error>> {
+    match self {
+      Tree::Atom(content, _meta) => {
+        let atom_node = &mut nodes[content.split(':').last().unwrap().parse::<usize>().unwrap() -1];
+        atom_node.unbind();
+        Ok(atom_node.clone()) 
+      },
+      Tree::Apply(op, args, _meta) => {
+        // first execute all recursive calls on kids, and only *THEN*
+        // create a new apply node, as our libxml wrapper has a weird bug
+        // where two new Nodes of the same name are seen as the same.
+        let mut apply_node = Node::new("XMApp", None, document.get_document()).unwrap();       
+        let mut op_node = op.0.to_xmath(nodes, document)?;
+        apply_node.add_child(&mut op_node)?;
+        
+        for arg_opt in args.0.iter() {
+          if let Some(arg) = arg_opt {
+            let mut arg_node = arg.to_xmath(nodes, document)?;
+            apply_node.add_child(&mut arg_node)?;
+          }
+        }
+        Ok(apply_node)
+      },
+      Tree::Choices(choices) => choices[0].to_xmath(nodes, document)
     }
   }
 }
