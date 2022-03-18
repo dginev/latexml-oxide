@@ -99,7 +99,7 @@ pub fn infix_apply_nary(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[Validat
           && left_op_pieces[0] == infix_op_pieces[0]
           && left_op_pieces[1] == infix_op_pieces[1] {
             left_args.0.push(right);
-            return Ok(Some(left.unwrap()))          
+            return Ok(left)
           }
       }
     }
@@ -127,16 +127,6 @@ pub fn post_script(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPr
   unpack!(args => base, op, annotation);
   Ok(Some(Tree::Apply(op.into(), Args(vec![base, annotation]), Meta::default())))
 }
-// ambiguous and implicit - invisible operations
-pub fn invisible_infix_mulop(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => left, right);
-  // Two choices - multiplication or application
-  let choices = vec![
-    Tree::Apply(left.clone().into(), right.clone().into(), Meta::default()),
-    Tree::Apply("times".into(), Args(vec![left, right]), Meta::default()),
-  ];
-  Ok(Some(Tree::Choices(choices.into_iter().collect())))
-}
 
 pub fn invisible_times(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
   unpack!(args => left, right);
@@ -147,7 +137,7 @@ pub fn invisible_times(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[Validati
       match xop.meaning {
         Some(ref name) if name=="times" => {
           left_args.0.push(right);
-          return Ok(Some(left.unwrap()))
+          return Ok(left)
         },
         _ => {}
       }
