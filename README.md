@@ -68,3 +68,20 @@ There is demonstrable need for LaTeXML in the domain of academic writing, as wel
 ### Installation
 
 Requires Rust `stable` v1.32, and newer.
+
+### Sample use
+
+1. Make sure the tests pass first, via
+    ```bash
+    $ cargo test --release --tests
+    ```
+
+2. convert an example formula:
+    ```bash
+    $ cargo run --release --bin rtxmath '1+1=2'
+    ```
+
+3. convert an example document:
+    ```bash
+    $ cargo run --release --bin rtx rtx/tests/hello/hello.tex
+    ```
