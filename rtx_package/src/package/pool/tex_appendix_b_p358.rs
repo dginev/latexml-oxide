@@ -303,4 +303,60 @@ LoadDefinitions!(state, {
   //----------------------------------------------------------------------
   // Not;  (Is fullwidth solidus appropriate for when \not appears in isolation?)
   DefMath!("\\not", None, "\u{FF0F}", role => "OPFUNCTION", meaning => "not");
+  
+  // Match negations of many operators
+  // our %NOTS
+  let math_char_negations = map!("=" => "\u{2260}", "<" => "\u{226E}", ">" => "\u{226F}",
+  "\u{2208}" => "\u{2209}",                              //\in=>\notin
+  "\u{2264}" => "\u{2270}", "\u{2265}" => "\u{2271}",    // Less eq, greater eq.
+  "\u{227A}" => "\u{2280}", "\u{227B}" => "\u{2281}",    // prec, succ
+  "\u{2AAF}" => "\u{22E0}", "\u{2AB0}" => "\u{22E1}",    // preceq, succeq
+  "\u{2282}" => "\u{2284}", "\u{2283}" => "\u{2285}",    // subset, supset
+  "\u{2286}" => "\u{2288}", "\u{2287}" => "\u{2289}",    // subseteq, supseteq
+  "\u{2291}" => "\u{22E2}", "\u{2290}" => "\u{22E3}",    // sqsubseteq, sqsupseteq
+  "\u{2261}" => "\u{2262}",                              // equiv
+  "\u{224D}" => "\u{226D}", "\u{2248}" => "\u{2249}",    // asymp, approx
+  "\u{22B2}" => "\u{22EA}", "\u{22B3}" => "\u{22EB}",    // lhd, rhd
+  "\u{22B4}" => "\u{22EC}", "\u{22B5}" => "\u{22ED}",    // unlhd, unrhd
+  "\u{2203}" => "\u{2204}"                              // Exists
+);
+
+// For a \not operator that is followed by anything, concoct an appropriate not or cancelation.
+DefRewrite!(select => "descendant-or-self::ltx:XMTok[text()='\u{FF0F}' and @meaning='not'][ following-sibling::*]"// [ , 2]
+  // replace => sub {
+  //   my ($doc, $not, $thing) = @_;
+  //   my $text = ($doc->getModel->getNodeQName($thing) eq 'ltx:XMTok')
+  //     && $thing->textContent;
+
+  //   if ((!defined $text) || (length($text) != 1)) {    # Not simple char token.
+  //     my $box = $doc->getNodeBox($not);
+  //     $doc->openElement('ltx:XMApp', _box => $box);    # Wrap with a cancel op
+  //     my $strike = $doc->insertMathToken(undef, role => 'ENCLOSE', enclose => 'updiagonalstrike',
+  //       meaning => 'not', _box => $box);
+  //     if (my $id = $not->getAttribute('xml:id')) {
+  //       $not->removeAttribute('xml:id');
+  //       $doc->unRecordID($id);
+  //       $doc->setAttribute($strike, 'xml:id' => $id); }
+  //     $doc->getNode->appendChild($thing);
+  //     $doc->closeElement('ltx:XMApp'); }
+  //   else {
+  //     # For simple tokens, we'll modify the relevant content & attributes
+  //     # [children removed, id's presumably ignorable]
+  //     map { $_->unbindNode() } $thing->childNodes;
+  //     my $new = defined $NOTS{$text} ? $NOTS{$text} : $text . "\x{0338}";
+  //     $thing->appendText($new);
+  //     if (my $meaning = $thing->getAttribute('meaning')) {
+  //       $doc->setAttribute($thing, meaning => "not-$meaning"); }
+  //     if (my $name = $thing->getAttribute('name') || $text) {
+  //       $doc->setAttribute($thing, name => "not-$name"); }
+  //     # and put the node back in
+  //     $doc->getNode->appendChild($thing);
+  //     # Since the <not> element is disappearing, if it had an id that was referenced...!?!?
+  //     if (my $id = $not->getAttribute('xml:id')) {
+  //       foreach my $n ($doc->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']")) {
+          // $doc->removeNode($n); } }    # ? Hopefully this is safe.
+  // } });
+);
+
+  
 });

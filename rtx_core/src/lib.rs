@@ -22,6 +22,7 @@ pub mod stomach;
 pub mod tbox;
 pub mod util;
 pub mod whatsit;
+pub mod rewrite;
 
 use std::borrow::Cow;
 use std::cell::RefCell;
