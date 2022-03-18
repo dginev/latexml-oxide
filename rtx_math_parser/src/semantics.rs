@@ -86,6 +86,29 @@ pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPr
   let apply_tree = Tree::Apply(infixop.into(), Args(vec![arg1, arg2]), Meta::default());
   Ok(Some(apply_tree))
 }
+pub fn infix_apply_nary(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
+  unpack!(args => left, infixop, right);
+  let mut left = left;
+  // left-to-right associative -- if "left" is already "infixop", tuck "right" in:
+  if let Some(Tree::Apply(ref left_op, ref mut left_args, ref _m)) = left {
+    if let Tree::Lexeme(left_op_lex, _xmeta) = &*left_op.0 {
+      if let Some(Tree::Lexeme(ref infix_op_lex,_)) = infixop {
+        let left_op_pieces : Vec<_> = left_op_lex.split(':').collect();
+        let infix_op_pieces : Vec<_> = infix_op_lex.split(':').collect();
+        if left_op_pieces.len()==3 && infix_op_pieces.len()==3 
+          && left_op_pieces[0] == infix_op_pieces[0]
+          && left_op_pieces[1] == infix_op_pieces[1] {
+            left_args.0.push(right);
+            return Ok(Some(left.unwrap()))          
+          }
+      }
+    }
+  }
+  // base case: new apply tree
+  let apply_tree = Tree::Apply(infixop.into(), Args(vec![left, right]), Meta::default());
+  Ok(Some(apply_tree))
+}
+
 pub fn prefix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
   unpack!(args => prefixop, arg1);
   Ok(Some(Tree::Apply(prefixop.into(), Args(vec![arg1]), Meta::default())))

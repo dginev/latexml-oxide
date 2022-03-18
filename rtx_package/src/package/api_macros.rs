@@ -241,7 +241,7 @@ macro_rules! undigested {
 macro_rules! reversion {
   ($gullet:ident, $arg:ident, $inner:ident, $state:ident, $body:block) => {
     Some(Rc::new(
-      |$gullet: &mut Gullet, mut $arg: Vec<Token>, $inner: Vec<ParameterExtra>, $state: &mut State| -> Result<Tokens> {
+      |mut $arg: Vec<Token>, $inner: Vec<ParameterExtra>, $state: &mut State| -> Result<Tokens> {
         BindInnerState!($state);
         let macro_out = $body;
         end_state_frame!();

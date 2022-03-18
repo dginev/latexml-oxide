@@ -116,7 +116,7 @@ pub trait Definition: Object {
     match self.get_parameters() {
       None => {},
       Some(params) => {
-        for result_token in params.revert_arguments(args, gullet, state)? {
+        for result_token in params.revert_arguments(args, state)? {
           invocation_result.append(&mut result_token.unlist());
         }
       },

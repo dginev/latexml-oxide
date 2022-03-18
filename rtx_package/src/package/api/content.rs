@@ -815,7 +815,7 @@ pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Tokens>, gullet: &mu
   if let Some(defn) = state.lookup_definition(&token) {
     let mut invoked_tokens = vec![token];
     let mut reverted_args = if let Some(params) = defn.get_parameters() {
-      params.revert_arguments(args, gullet, state)?
+      params.revert_arguments(args, state)?
     } else {
       Vec::new()
     };
