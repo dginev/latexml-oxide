@@ -1581,9 +1581,10 @@ macro_rules! Revert {
   ($thing:literal) => {
     Explode!($thing)
   };
-  ($thing:expr) => {
-    $thing.revert()?.unlist()
-  };
+  ($thing:expr) => {{
+    bind_state_mut!(st);
+    $thing.revert(st)?.unlist()
+  }};
 }
 
 #[macro_export]
@@ -1886,6 +1887,14 @@ macro_rules! defi_opts {
   };
   (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ reversion @ $tokens.into_option() ] })
+  };
+
+  // sizer: Option<SizingClosure>
+  (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ sizer @ $tokens.into_option() ] })
+  };
+  (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ sizer @ $tokens.into_option() ] })
   };
 
   // mode : Option<TexMode>

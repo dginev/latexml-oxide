@@ -44,10 +44,10 @@ impl fmt::Display for List {
 impl Object for List {
   fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
 
-  fn revert(&self) -> Result<Tokens> {
+  fn revert(&self, state: &mut State) -> Result<Tokens> {
     let mut reverted = Vec::new();
     for tbox in self.boxes.iter() {
-      reverted.extend(tbox.revert()?.unlist());
+      reverted.extend(tbox.revert(state)?.unlist());
     }
     Ok(Tokens::new(reverted))
   }

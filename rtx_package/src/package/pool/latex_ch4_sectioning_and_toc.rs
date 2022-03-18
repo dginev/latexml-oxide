@@ -138,18 +138,19 @@ LoadDefinitions!(outer_stomach, outer_state, {
       } else {
         title.clone()
       };
-
+      let stype_tokens = stype.revert(state)?;
+      let title_tokens = title.revert(state)?;
       let invoked_title;
       {
         let gullet = stomach.get_gullet_mut();
-        invoked_title = Invocation!(T_CS!("\\lx@format@title@@"), vec![&stype, &title], gullet)?;
+        invoked_title = Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_tokens, title_tokens], gullet)?;
       }
       let xtitle    = stomach.digest(invoked_title, state)?;
 
       let invoked_toctitle;
       {
         let gullet = stomach.get_gullet_mut();
-        invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"), vec![&stype, &toctitle], gullet, state)?;
+        invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"), vec![stype.revert(state)?, toctitle.revert(state)?], gullet, state)?;
       }
       let xtoctitle = stomach.digest(invoked_toctitle, state)?;
 

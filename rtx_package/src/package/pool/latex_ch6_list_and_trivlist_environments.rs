@@ -61,11 +61,10 @@ LoadDefinitions!(state, {
       // TODO: So, I hear you like boilerplate...
       // in Perl this was the super simple:
       // Digest(Expand($_[1]))
-      if let Some(ref tag) = args[0] {
-        let gullet = stomach.get_gullet_mut();
-        let expanded = Expand!(tag, gullet);
-        let digested = stomach.digest(expanded, state)?;
-        Ok(map!("tag" => Stored::Digested(Box::new(digested))))
+      // WAIT?! but this is in properties -- args are already digested???
+      if let Some(ref tag) = args[0] { 
+        // TODO: MUST WE CLONE?!
+        Ok(map!("tag" => Stored::Digested(Box::new(tag.clone()))))
       } else {
         Ok(HashMap::new())
       }

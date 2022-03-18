@@ -83,7 +83,7 @@ impl Default for RegisterValue {
 }
 impl Object for RegisterValue {
   fn stringify(&self) -> String { s!("RegisterValue[{}]", self) }
-  fn revert(&self) -> Result<Tokens> {
+  fn revert(&self, state:&mut State) -> Result<Tokens> {
     match self {
       // ExplodeText($self->toString);
       RegisterValue::Number(ref value) => Ok(Tokens::new(ExplodeText!(value))),
@@ -91,7 +91,7 @@ impl Object for RegisterValue {
       RegisterValue::MuDimension(ref value) => Ok(Tokens::new(ExplodeText!(value))),
       RegisterValue::Glue(ref value) => Ok(Tokens::new(ExplodeText!(value))),
       RegisterValue::MuGlue(ref value) => Ok(Tokens::new(ExplodeText!(value))),
-      RegisterValue::Token(ref value) => Ok(Tokens!(value.revert())),
+      RegisterValue::Token(ref value) => Ok(Tokens!(value.revert(state))),
       RegisterValue::Tokens(ref value) => Ok(Tokens::new(value.clone().revert())), // clone?
     }
   }

@@ -63,11 +63,8 @@ pub trait Object {
       s!("at {}", loc)
     }
   }
-  fn revert(&self) -> Result<Tokens> {
+  /// each concrete object needs to provide its own path back to tokens
+  fn revert(&self, state: &mut State) -> Result<Tokens> {
     unimplemented!();
   }
-  // fn unlist<T>(&self) -> Vec<T>
-  // where Self: Sized {
-  //   unimplemented!()
-  // }
 }

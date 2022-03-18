@@ -354,7 +354,7 @@ impl Parameter {
   }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Parameters(Vec<Parameter>);
 
 impl Object for Parameters {

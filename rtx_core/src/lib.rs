@@ -203,12 +203,12 @@ impl From<RegisterValue> for Digested {
 impl<'a> From<&'a Digested> for Option<crate::Digested> {
   fn from(value: &'a Digested) -> Option<crate::Digested> { Some(value.clone()) }
 }
-impl<'a> From<&'a Digested> for Tokens {
-  fn from(value: &'a Digested) -> Tokens { value.revert().unwrap() }
-}
-impl From<Digested> for Tokens {
-  fn from(value: Digested) -> Tokens { value.revert().unwrap() }
-}
+// impl<'a> From<&'a Digested> for Tokens {
+//   fn from(value: &'a Digested) -> Tokens { value.revert(state).unwrap() }
+// }
+// impl From<Digested> for Tokens {
+//   fn from(value: Digested) -> Tokens { value.revert(state).unwrap() }
+// }
 impl From<Digested> for Result<Digested> {
   fn from(value: Digested) -> Result<Digested> { Ok(value) }
 }
@@ -254,14 +254,14 @@ impl Object for Digested {
       _ => unimplemented!(),
     }
   }
-  fn revert(&self) -> Result<Tokens> {
+  fn revert(&self, state:&mut State) -> Result<Tokens> {
     match *self {
-      Digested::TBox(ref b) => b.revert(),
-      Digested::List(ref l) => l.revert(),
-      Digested::Whatsit(ref w) => w.borrow().revert(),
+      Digested::TBox(ref b) => b.revert(state),
+      Digested::List(ref l) => l.revert(state),
+      Digested::Whatsit(ref w) => w.borrow().revert(state),
       Digested::Postponed(ref t) => Ok((**t).clone()),
-      Digested::KeyVals(ref kvs) => kvs.revert(),
-      Digested::RegisterValue(ref rv) => (**rv).revert(),
+      Digested::KeyVals(ref kvs) => kvs.revert(state),
+      Digested::RegisterValue(ref rv) => (**rv).revert(state),
     }
   }
 }
@@ -357,6 +357,6 @@ impl Digested {
     match self {
       Digested::RegisterValue(rv) => (**rv).clone().pt_value(prec),
       _ => 0.0,
-    }
+    }   
   }
 }

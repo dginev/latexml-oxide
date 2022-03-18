@@ -15,5 +15,4 @@ regex = "1.5.5"
 log = "0.4"
 marpa = { git = "https://github.com/dginev/marpa", branch = "abstract_syntax_forests" }
 lazy_static = "1.4"
-rtx_package = { path= "../rtx_package" }
 rtx_core = { path= "../rtx_core" }

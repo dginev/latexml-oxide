@@ -4,5 +4,4 @@
 use rtx::util::test::*;
 
 #[test]
-#[ignore]
 fn can_group() { rtx_tests("tests/grouping", None); }

@@ -106,7 +106,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\mbox {}", "<ltx:text _noautoclose='1'>#1</ltx:text>",
     mode => "text",
     bounded => true,
-    // sizer => "#1", // TODO
+    sizer => "#1",
     before_digest => sub[stomach, state] { reenter_text_mode(false, state); }
   );
 
