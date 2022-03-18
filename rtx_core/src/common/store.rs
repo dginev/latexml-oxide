@@ -21,6 +21,7 @@ use crate::definition::register::{Register, RegisterCell, RegisterValue};
 use crate::document::tag::TagData;
 use crate::gullet::Gullet;
 use crate::list::List;
+use crate::rewrite::Rewrite;
 use crate::mouth;
 use crate::mouth::Mouth;
 use crate::parameter::Parameter;
@@ -83,6 +84,7 @@ pub enum Stored {
   Conditional(Rc<Conditional>),
   Primitive(Rc<Primitive>),
   MathPrimitive(Rc<MathPrimitive>),
+  Rewrite(Rc<Rewrite>),
   // WALL OF SHAME (interior mutability)
   Mouth(Rc<RefCell<Mouth>>),
   Register(Rc<RegisterCell>),
@@ -120,6 +122,7 @@ impl fmt::Debug for Stored {
       Digested(ref digested) => write!(f, "Stored::Digested[{:?}]", digested),
       Parameter(ref parameter) => write!(f, "Stored::Parameter[{:?}]", parameter),
       Register(ref register) => write!(f, "Stored::Register[{:?}]", register.borrow().cs),
+      Rewrite(ref rewrite) => write!(f, "Stored::Rewrite[{:?}]", rewrite),
       Mouth(ref mouth) => write!(f, "Stored::Mouth[{:?}]", mouth.borrow().get_source()),
       Font(ref font) => write!(f, "Stored::Font[{:?}]", font),
       Number(ref number) => write!(f, "Stored::Number[{:?}]", number),
@@ -296,6 +299,14 @@ impl From<Rc<RegisterCell>> for Stored {
 }
 impl From<Register> for Stored {
   fn from(register: Register) -> Self { Rc::new(RegisterCell::new(RefCell::new(register))).into() }
+}
+
+impl From<Rc<Rewrite>> for Stored {
+  fn from(value: Rc<Rewrite>) -> Self { Stored::Rewrite(value) }
+}
+
+impl From<Rewrite> for Stored {
+  fn from(value: Rewrite) -> Self { Rc::new(value).into() }
 }
 
 impl From<Font> for Stored {

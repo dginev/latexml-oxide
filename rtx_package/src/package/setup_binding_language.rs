@@ -258,6 +258,135 @@ macro_rules! LoadFontMap {
   }};
 }
 
+// ======================================================================
+// Color
+#[macro_export]
+macro_rules! LookupColor {
+  ($name:expr) => {{
+    bind_state!(st);
+    if let Some(color) = LookupValue!(&s!("color_{}", $name)) {
+      color.to_string()
+    } else {
+      Error!("undefined", $name, s!("color '{}' is undefined...",$name));
+      "Black"; 
+    }
+  }};
+}
+
+// sub DefColor {
+//   my ($name, $color, $scope) = @_;
+//   return unless ref $color;
+//   my ($model, @spec) = @$color;
+//   $scope = 'global' if $STATE->lookupDefinition(T_CS('\ifglobalcolors')) && IfCondition(T_CS('\ifglobalcolors'));
+//   AssignValue('color_' . $name => $color, $scope);
+//   # We could store these pieces separately,or in a list for above,
+//   # so that extract could use them more reasonably?
+//   # This is perhaps too xcolor specific?
+//   DefMacroI('\\\\color@' . $name, undef,
+//     '\relax\relax{' . join(' ', $model, @spec) . '}{' . $model . '}{' . join(',', @spec) . '}',
+//     scope => $scope);
+//   return; }
+
+// # Need 3 things for Derived Models:
+// #   derivedfrom  : the core model that this model is "derived from"
+// #   convertto    : code to convert to the (a) core model
+// #   convertfrom  : code to convert from the core model
+// sub DefColorModel {
+//   my ($model, $coremodel, $tocore, $fromcore) = @_;
+//   AssignValue('derived_color_model_' . $model => [$coremodel, $tocore, $fromcore], 'global');
+//   return; }
+
+
+macro_rules! DefRewrite {
+  (select => $select:literal) => {{
+//   CheckOptions("DefRewrite", $rewrite_options, @specs);
+    bind_state!(st);
+    PushValue!("DOCUMENT_REWRITE_RULES",
+      Rewrite::new("text", RewriteOptions::default()));
+  }};
+}
+
+// sub DefMathRewrite {
+//   my (@specs) = @_;
+//   CheckOptions("DefMathRewrite", $rewrite_options, @specs);
+//   PushValue('DOCUMENT_REWRITE_RULES',
+//     LaTeXML::Core::Rewrite->new('math', processRewriteSpecs(1, @specs)));
+//   return; }
+
+// sub processRewriteSpecs {
+//   my ($math, @specs) = @_;
+//   my @procspecs = ();
+//   my $delimiter = ($math ? '$' : '');
+//   while (@specs) {
+//     my $k = shift(@specs);
+//     my $v = shift(@specs);
+//     # Make sure match & replace are (at least) tokenized
+//     if (($k eq 'match') || ($k eq 'replace')) {
+//       if (ref $v eq 'ARRAY') {
+//         $v = [map { (ref $_ ? $_ : Tokenize($delimiter . $_ . $delimiter)) } @$v]; }
+//       elsif (!ref $v) {
+//         $v = Tokenize($delimiter . $v . $delimiter); } }
+//     push(@procspecs, $k, $v); }
+//   return @procspecs; }
+
+// #======================================================================
+// # Defining "Ligatures" rules that act on the DOM
+// # These are actually a sort of rewrite that is applied while the doom
+// # is being constructed, in particular as each node is closed.
+
+// my $ligature_options = {    # [CONSTANT]
+//   fontTest => 1 };
+
+// sub DefLigature {
+//   my ($regexp, $replacement, %options) = @_;
+//   CheckOptions("DefLigature", $ligature_options, %options);
+//   UnshiftValue('TEXT_LIGATURES',
+//     { regexp => $regexp,
+//       code => sub { $_[0] =~ s/$regexp/$replacement/g; $_[0]; },
+//       %options });
+//   return; }
+
+// my $old_math_ligature_options = {};                                                     # [CONSTANT]
+// my $math_ligature_options     = { matcher => 1, role => 1, name => 1, meaning => 1 };   # [CONSTANT]
+
+// sub DefMathLigature {
+//   if ((scalar(@_) % 2) == 1) {                                                          # Old style!
+//     my ($matcher, %options) = @_;
+//     Info('deprecated', 'ligature', undef, "Old style arguments to DefMathLigature; please update");
+//     CheckOptions("DefMathLigature", $old_math_ligature_options, %options);
+//     UnshiftValue('MATH_LIGATURES', { old_style => 1, matcher => $matcher }); }          # Install it...
+//   else {                                                                                # new style!
+//     my (%options) = @_;
+//     my $matcher = $options{matcher};
+//     delete $options{matcher};
+//     my ($pattern) = grep { !$$math_ligature_options{$_} } keys %options;
+//     my $replacement = $pattern && $options{$pattern};
+//     delete $options{$pattern} if $replacement;
+//     CheckOptions("DefMathLigature", $math_ligature_options, %options);    # Check remaining options
+//     if ($matcher && $pattern) {
+//       Error('misdefined', 'MathLigature', undef,
+//         "DefMathLigature only gets one of matcher or pattern=>replacement keywords");
+//       return; }
+//     elsif ($pattern) {
+//       my @chars    = reverse(split(//, $pattern));
+//       my $ntomatch = scalar(@chars);
+//       my %attr     = %options;
+//       $matcher = sub {
+//         my ($document, $node) = @_;
+//         foreach my $char (@chars) {
+//           return unless
+//             ($node
+//             && ($document->getModel->getNodeQName($node) eq 'ltx:XMTok')
+//             && (($node->textContent || '') eq $char));
+//           $node = $node->previousSibling; }
+//         return ($ntomatch, $replacement, %attr); }; }
+//     elsif (!$matcher) {
+//       Error('misdefined', 'MathLigature', undef,
+//         "DefMathLigature missing matcher or pattern=>replacement keywords");
+//       return; }
+//     UnshiftValue('MATH_LIGATURES', { matcher => $matcher }); }    # Install it...
+//   return; }
+
 #[macro_export]
 macro_rules! DefConditional(
   // test is always a rust closure

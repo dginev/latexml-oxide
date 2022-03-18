@@ -30,6 +30,7 @@ pub use rtx_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, ExpansionClosure, PrimitiveClosure, PrimitiveFn,
   ReplacementClosure,
 };
+pub use rtx_core::rewrite::{Rewrite, RewriteOptions};
 pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptionName, TagOptions};
 pub use rtx_core::document::Document;
