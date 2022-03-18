@@ -111,7 +111,7 @@ LoadDefinitions!(state, {
      if !inner.is_empty() {
       for inner_opt in inner.into_iter() {
         let mut reverted_inner = match inner_opt {
-          ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
+          ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], state)?,
           _ => arg.iter().map(|t| t.revert(state)).collect()
         };
         read_tokens.append(&mut reverted_inner);
@@ -148,7 +148,7 @@ LoadDefinitions!(state, {
           let mut value = Vec::new();
           for inner_opt in inner.iter() {
             value = match inner_opt {
-              ParameterExtra::ParametersOption(Some(inner)) => inner.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
+              ParameterExtra::ParametersOption(Some(inner)) => inner.revert_arguments(vec![Tokens::new(arg.clone())], state)?,
               _ => arg.iter().map(|t| t.revert(state)).collect()
             }
           }
@@ -408,7 +408,7 @@ LoadDefinitions!(state, {
       if !inner.is_empty() {
         for inner_opt in inner.into_iter() {
           let mut reverted_inner = match inner_opt { // TODO: the revert_arguments arg type is confusing me!
-            ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], gullet, state)?,
+            ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], state)?,
             _ => arg.iter().map(|t| t.revert(state)).collect()
           };
           read_tokens.append(&mut reverted_inner);

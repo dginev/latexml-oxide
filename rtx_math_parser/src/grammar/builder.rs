@@ -73,7 +73,7 @@ rules!(
 
     // Expressions
     expression = term
-      | expression addop term => infix_apply
+      | expression addop term => infix_apply_nary
       | addop tight_term => prefix_apply
       | factor addop => postfix_apply;
 

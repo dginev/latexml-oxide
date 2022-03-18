@@ -22,7 +22,16 @@ pub type ReaderFn = dyn Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterEx
 pub type ReaderPredigestFn = dyn Fn(&mut Stomach, Tokens, &mut State) -> Result<Option<Digested>>;
 pub type ReaderPredigestClosure = Rc<ReaderPredigestFn>;
 pub type ReaderClosure = Rc<ReaderFn>;
-pub type ReversionClosure = Rc<dyn Fn(&mut Gullet, Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
+
+// Rust Note:
+// the reversion functions initially had "&mut Gullet" as a parameter.
+// This turned out to be infeasible if we are to maintain the latexml code flow
+// as we have calls into reversions from arbitrary binding closures, at ALL phases.
+// Compromise: use the gated Stomach in state whenever you need gullet in reversion, as in
+// let mut stomach = state.stomach.borrow_mut();
+// let mut gullet = stomach.get_gullet_mut();
+//
+pub type ReversionClosure = Rc<dyn Fn(Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
 
 lazy_static! {
   static ref LAST_WCHAR_RE: Regex = Regex::new(r"\w$").unwrap();
@@ -345,9 +354,9 @@ impl Parameter {
     Ok(digested_value)
   }
 
-  pub fn revert(&self, value: Tokens, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+  pub fn revert(&self, value: Tokens, state: &mut State) -> Result<Tokens> {
     if let Some(ref reverter) = self.reversion {
-      (reverter)(gullet, value.unlist(), self.extra.clone(), state)
+      (reverter)(value.unlist(), self.extra.clone(), state)
     } else {
       Ok(Tokens::new(value.revert()))
     }
@@ -383,11 +392,11 @@ impl Parameters {
   pub fn new(params: Vec<Parameter>) -> Self { Parameters(params) }
   pub fn get_num_args(&self) -> usize { self.0.iter().filter(|&p| !p.novalue).count() }
   pub fn get_parameters(&self) -> Vec<&Parameter> { self.0.iter().collect() }
-  pub fn revert_arguments(&self, args: Vec<Tokens>, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Token>> {
+  pub fn revert_arguments(&self, args: Vec<Tokens>, state: &mut State) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     for (parameter, arg) in self.0.iter().zip(args.into_iter()) {
       if !parameter.novalue {
-        tokens.append(&mut parameter.revert(arg, gullet, state)?.unlist());
+        tokens.append(&mut parameter.revert(arg, state)?.unlist());
       }
     }
     Ok(tokens)
