@@ -102,24 +102,25 @@ impl fmt::Debug for Whatsit {
 
 impl fmt::Display for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", self.revert().unwrap()) // What else??
+    let mut state = State::default();
+    write!(f, "{}", self.revert(&mut state).unwrap()) // What else??
   }
 }
 
 impl Object for Whatsit {
   fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
 
-  fn revert(&self) -> Result<Tokens> {
+  fn revert(&self, state: &mut State) -> Result<Tokens> {
     // WARNING: Forbidden knowledge?
     // (1) provide a means to get the RAW, internal markup that can (hopefully) be RE-digested
     //     this is needed for getting the numerator of \over into textstyle!
     // (2) caching the reversion (which is a big performance boost)
-    let saved_opt = if REVERT_RAW || DUAL_BRANCH {
-      // None
-      // } else if DUAL_BRANCH {
-      // TODO
-      // self.dual_reversion.get(DUAL_BRANCH)
+    let saved_opt = if REVERT_RAW {
       None
+    } else if DUAL_BRANCH {
+      // TODO
+      unimplemented!()
+      // self.dual_reversion.get(DUAL_BRANCH)
     } else {
       self.reversion.clone()
     };
@@ -142,7 +143,7 @@ impl Object for Whatsit {
                   .get_args()
                   .iter()
                   .map(|arg_opt| match arg_opt {
-                    Some(arg) => arg.revert(),
+                    Some(arg) => arg.revert(state),
                     None => Ok(Tokens!()),
                   })
                   .collect::<Result<Vec<Tokens>>>()?,
@@ -170,7 +171,7 @@ impl Object for Whatsit {
             //
             // GOAL: push(@tokens, $parameters->revertArguments($self->getArgs)); } }
             for arg in self.get_args().iter().flatten() {
-              let reverted_arg = arg.revert()?.unlist();
+              let reverted_arg = arg.revert(state)?.unlist();
               tokens.extend(reverted_arg);
             }
           }
@@ -178,9 +179,9 @@ impl Object for Whatsit {
       };
 
       if let Some(mut body) = self.get_body() {
-        tokens.extend(body.revert()?.unlist());
+        tokens.extend(body.revert(state)?.unlist());
         if let Some(mut trailer) = self.get_trailer() {
-          tokens.extend(trailer.revert()?.unlist());
+          tokens.extend(trailer.revert(state)?.unlist());
         }
       }
 

@@ -15,7 +15,7 @@ use rtx_core::common::glue::{Glue, MuGlue};
 use rtx_core::common::number::Number;
 use rtx_core::common::store::Stored;
 use rtx_core::definition::register::*;
-use rtx_core::definition::Reversion;
+use rtx_core::definition::{SizingClosure, Reversion};
 use rtx_core::keyvals::KeyVals;
 use rtx_core::list::List;
 use rtx_core::mouth;
@@ -90,6 +90,19 @@ impl IntoOption<Option<Reversion>> for &str {
     }
   }
 }
+
+impl IntoOption<Option<SizingClosure>> for &str {
+  fn into_option(self) -> Option<SizingClosure> {
+    if self.is_empty() {
+      None
+    } else if self == "#1" {
+      Some(Rc::new(|w| unimplemented!()))
+    } else {
+      unimplemented!()
+    }
+  }
+}
+
 
 pub trait IntoTokensResult<T>: Sized {
   /// Performs the conversion, used for DefMacro return values etc

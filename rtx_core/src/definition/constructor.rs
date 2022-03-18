@@ -9,7 +9,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure, ReplacementClosure, Reversion};
+use crate::definition::{BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure, SizingClosure, ReplacementClosure, Reversion};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -24,6 +24,7 @@ pub struct ConstructorOptions {
   pub nargs: Option<usize>,
   pub bounded: bool,
   pub mode: Option<String>,
+  pub sizer: Option<SizingClosure>,
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
   pub before_construct: Vec<ConstructionClosure>,
@@ -68,6 +69,7 @@ impl Default for ConstructorOptions {
       locked: false,
       alias: None,
       reversion: None,
+      sizer: None
     }
   }
 }

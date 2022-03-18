@@ -448,9 +448,9 @@ macro_rules! ExplodeText(($text:expr) => (
 ));
 
 static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
-pub fn untex(digested: &Digested, state: &State) -> Result<String> {
+pub fn untex(digested: &Digested, state: &mut State) -> Result<String> {
   use crate::token::Catcode::*;
-  let mut tokens : VecDeque<Token> = digested.revert()?.unlist().into_iter().collect();
+  let mut tokens : VecDeque<Token> = digested.revert(state)?.unlist().into_iter().collect();
   let mut tex_string = String::new();
   let mut length = 0;
   let mut level: i32 = 0;
@@ -634,7 +634,7 @@ impl<'a> Token {
   /// Should revert do something with this???
   ///  ($standardchar[$$self[1]] || $$self[0]); }
 
-  pub fn revert(&self) -> Token { self.clone() }
+  pub fn revert(&self, _state: &mut State) -> Token { self.clone() }
 
   pub fn as_str(&self) -> &str { &self.text }
 

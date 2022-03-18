@@ -38,6 +38,8 @@ pub type ReplacementClosure = Rc<dyn Fn(&mut Document, &Vec<Option<Digested>>, &
 pub type ConstructionClosure = Rc<dyn Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
 pub type DigestedReversionClosure = Rc<dyn Fn(&Whatsit, &Vec<Option<Digested>>) -> Result<Tokens>>;
 
+pub type SizingClosure = Rc<dyn Fn(&Whatsit) -> (i32,i32,i32)>;
+
 #[derive(Clone)]
 pub enum ExpansionBody {
   Closure(ExpansionClosure),
