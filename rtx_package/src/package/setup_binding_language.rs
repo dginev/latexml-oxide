@@ -298,11 +298,12 @@ macro_rules! LookupColor {
 
 
 macro_rules! DefRewrite {
-  (select => $select:literal) => {{
+  ($($input:tt)+) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {RewriteOptions,});
 //   CheckOptions("DefRewrite", $rewrite_options, @specs);
     bind_state!(st);
     PushValue!("DOCUMENT_REWRITE_RULES",
-      Rewrite::new("text", RewriteOptions::default()));
+      Rewrite::new("text", options));
   }};
 }
 
@@ -2025,6 +2026,21 @@ macro_rules! defi_opts {
   (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ sizer @ $tokens.into_option() ] })
   };
+  // select: literal string
+  (@munch ( $(,)? select $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ select @ $tokens.into_option() ] })
+  };
+  (@munch ( $(,)? select $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ select @ $tokens.into_option() ] })
+  };
+  // replace: sub
+  (@munch ( $(,)? replace $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@replace (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
+  (@munch ( $(,)? replace $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@replace ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
+
 
   // mode : Option<TexMode>
   (@munch ( $(,)? mode $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
@@ -2263,4 +2279,14 @@ macro_rules! defi_opts {
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_close @ Some(tagsub!(document, node, state, $body)) ]})
   };
+
+  (@replace ($body:block $($next:tt)* )
+                  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [replace @ rewrite_replace_sub!($body)]})
+  };
+  (@replace (sub [$document_arg:ident, $node_arg:ident, $state_arg: ident] $body:block $($next:tt)* )
+                  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [replace @ rewrite_replace_sub!($document_arg, $node_arg, $state_arg, $body)]})
+  };
+
 }
