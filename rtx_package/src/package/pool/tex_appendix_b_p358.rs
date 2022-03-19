@@ -322,8 +322,8 @@ LoadDefinitions!(state, {
 );
 
 // For a \not operator that is followed by anything, concoct an appropriate not or cancelation.
-DefRewrite!(select => "descendant-or-self::ltx:XMTok[text()='\u{FF0F}' and @meaning='not'][ following-sibling::*]"// [ , 2]
-  // replace => sub {
+DefRewrite!(select => "descendant-or-self::ltx:XMTok[text()='\u{FF0F}' and @meaning='not'][following-sibling::*]",
+  replace =>  sub[document, not_node, state] {
   //   my ($doc, $not, $thing) = @_;
   //   my $text = ($doc->getModel->getNodeQName($thing) eq 'ltx:XMTok')
   //     && $thing->textContent;
@@ -356,6 +356,7 @@ DefRewrite!(select => "descendant-or-self::ltx:XMTok[text()='\u{FF0F}' and @mean
   //       foreach my $n ($doc->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']")) {
           // $doc->removeNode($n); } }    # ? Hopefully this is safe.
   // } });
+  }
 );
 
   
