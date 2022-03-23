@@ -79,12 +79,12 @@ pub enum Stored {
   Dimension(Dimension),
   MuDimension(MuDimension),
   Locator(Locator),
+  Rewrite(Rewrite),
   // LaTeXML objects (Rc-wrapped)
   Expandable(Rc<Expandable>),
   Conditional(Rc<Conditional>),
   Primitive(Rc<Primitive>),
   MathPrimitive(Rc<MathPrimitive>),
-  Rewrite(Rc<Rewrite>),
   // WALL OF SHAME (interior mutability)
   Mouth(Rc<RefCell<Mouth>>),
   Register(Rc<RegisterCell>),
@@ -301,12 +301,8 @@ impl From<Register> for Stored {
   fn from(register: Register) -> Self { Rc::new(RegisterCell::new(RefCell::new(register))).into() }
 }
 
-impl From<Rc<Rewrite>> for Stored {
-  fn from(value: Rc<Rewrite>) -> Self { Stored::Rewrite(value) }
-}
-
 impl From<Rewrite> for Stored {
-  fn from(value: Rewrite) -> Self { Rc::new(value).into() }
+  fn from(value: Rewrite) -> Self { Stored::Rewrite(value) }
 }
 
 impl From<Font> for Stored {
