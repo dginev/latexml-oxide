@@ -71,6 +71,9 @@ impl<T> IntoOption<Option<Vec<T>>> for Vec<T> {
 impl<T> IntoOption<Option<VecDeque<T>>> for VecDeque<T> {
   fn into_option(self) -> Option<VecDeque<T>> { Some(self) }
 }
+impl IntoOption<Option<usize>> for usize {
+  fn into_option(self) -> Option<usize> { Some(self) }
+}
 
 impl IntoOption<Option<Reversion>> for Tokens {
   fn into_option(self) -> Option<Reversion> {

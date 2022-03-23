@@ -199,12 +199,30 @@ impl DigestionAPI for Core {
     document.absorb(digested, state)?;
     note_end("Building");
 
-    // if (my $rules = $state->lookupValue('DOCUMENT_REWRITE_RULES')) {
-    //   NoteBegin("Rewriting");
-    //   $document->markXMNodeVisibility;
-    //   foreach my $rule (@$rules) {
-    //     $rule->rewrite($document, $document->getDocument->documentElement); }
-    //   NoteEnd("Rewriting"); }
+    let has_rewrites = state.lookup_value("DOCUMENT_REWRITE_RULES").is_some();
+    if has_rewrites {
+      note_begin("Rewriting");
+      document.mark_xmnode_visibility(state)?;
+      document.load_labels_for_rewrite(state);
+      // TODO: What is the right way to do rewrites in a daemon-safe manner?
+      if let Some(Stored::VecDequeStored(rules)) = state.remove_value("DOCUMENT_REWRITE_RULES") {
+        let root = document.get_document().get_root_element().unwrap();
+        // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable state.
+        // (TODO: obviously, this could be avoided if they never needed mutable state. When do they?)
+        let mut rewrites = Vec::new();
+        for rule in rules {
+          if let Stored::Rewrite(mut rewrite_rule) = rule {
+            rewrite_rule.compile_clauses(&mut document);
+            rewrites.push(rewrite_rule); // clone the Rc
+          }
+        }
+        // Step 2: invoke the rewrite rules
+        for mut rewrite_rule in rewrites {
+          rewrite_rule.invoke(&mut document, &root, state)?;
+        }
+      }
+      note_end("Rewriting");
+    }
 
     if !state.nomathparse {
       let mut parser = MathParser::default();

@@ -114,9 +114,9 @@ macro_rules! tagsub {
 
 #[macro_export]
 macro_rules! rewrite_replace_sub {
-  ($document:ident, $node:ident, $state:ident, $body:block) => {
+  ($document:ident, $nodes:ident, $state:ident, $body:block) => {
   Some(Rc::new(
-    |$document: &mut Document, mut $node: &mut Node, $state: &mut State| -> Result<()> {
+    |$document: &mut Document, mut $nodes: Vec<&mut Node>, $state: &mut State| -> Result<()> {
       BindInnerState!($state);
       $body
       end_state_frame!();

@@ -23,6 +23,7 @@ macro_rules! LoadDefinitions {
 #[macro_export]
 macro_rules! BindState {
   ($state_arg:ident) => {
+    #[allow(unused_macros)]
     macro_rules! outer_state {
       () => {
         $state_arg
@@ -36,6 +37,7 @@ macro_rules! BindState {
         $outer_stomach
       };
     }
+    #[allow(unused_macros)]
     macro_rules! outer_state {
       () => {
         $state_arg
@@ -299,36 +301,22 @@ macro_rules! LookupColor {
 
 macro_rules! DefRewrite {
   ($($input:tt)+) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {RewriteOptions,});
-//   CheckOptions("DefRewrite", $rewrite_options, @specs);
+    let rewrite_options = defi_opts!(@munch ($($input)*) -> {RewriteOptions,});
     bind_state!(st);
     PushValue!("DOCUMENT_REWRITE_RULES",
-      Rewrite::new("text", options));
+      Rewrite::new("text", rewrite_options));
   }};
 }
 
-// sub DefMathRewrite {
-//   my (@specs) = @_;
-//   CheckOptions("DefMathRewrite", $rewrite_options, @specs);
-//   PushValue('DOCUMENT_REWRITE_RULES',
-//     LaTeXML::Core::Rewrite->new('math', processRewriteSpecs(1, @specs)));
-//   return; }
+macro_rules! DefMathRewrite {
+  ($($input:tt)+) => {{
+    let rewrite_options = defi_opts!(@munch ($($input)*) -> {RewriteOptions,});
+    bind_state!(st);
+    PushValue!("DOCUMENT_REWRITE_RULES",
+      Rewrite::new("math", rewrite_options));
+  }};
+}
 
-// sub processRewriteSpecs {
-//   my ($math, @specs) = @_;
-//   my @procspecs = ();
-//   my $delimiter = ($math ? '$' : '');
-//   while (@specs) {
-//     my $k = shift(@specs);
-//     my $v = shift(@specs);
-//     # Make sure match & replace are (at least) tokenized
-//     if (($k eq 'match') || ($k eq 'replace')) {
-//       if (ref $v eq 'ARRAY') {
-//         $v = [map { (ref $_ ? $_ : Tokenize($delimiter . $_ . $delimiter)) } @$v]; }
-//       elsif (!ref $v) {
-//         $v = Tokenize($delimiter . $v . $delimiter); } }
-//     push(@procspecs, $k, $v); }
-//   return @procspecs; }
 
 // #======================================================================
 // # Defining "Ligatures" rules that act on the DOM
@@ -2032,6 +2020,13 @@ macro_rules! defi_opts {
   };
   (@munch ( $(,)? select $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ select @ $tokens.into_option() ] })
+  };
+  // select: literal number
+  (@munch ( $(,)? select_count $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ select_count @ $tokens.into_option() ] })
+  };
+  (@munch ( $(,)? select_count $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ select_count @ $tokens.into_option() ] })
   };
   // replace: sub
   (@munch ( $(,)? replace $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
