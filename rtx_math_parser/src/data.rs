@@ -6,16 +6,16 @@ pub fn get_grammatical_role(node: &Node) -> String {
     None => {
       let tag = node.get_name();
       if tag == "XMTok" {
-        "UNKNOWN".to_string() }
-      else if tag == "XMDual" {
+        "UNKNOWN".to_string()
+      } else if tag == "XMDual" {
         match node.get_first_element_child() {
-          Some(child) => child.get_attribute("role").unwrap_or_else(|| {"UNKNOWN".to_string()}),
-          None => "UNKNOWN".to_string()
+          Some(child) => child.get_attribute("role").unwrap_or_else(|| "UNKNOWN".to_string()),
+          None => "UNKNOWN".to_string(),
         }
       } else {
         "ATOM".to_string()
       }
-    }
+    },
   }
 }
 
@@ -24,14 +24,15 @@ pub fn get_token_meaning(node: &Node) -> String {
     Some(meaning) => meaning,
     None => match p_get_attribute(node, "name") {
       Some(name) => name,
-      None => { let content = node.get_content();
+      None => {
+        let content = node.get_content();
         if !content.is_empty() {
           content
         } else {
           p_get_attribute(node, "role").unwrap_or_default()
         }
-      }
-    }
+      },
+    },
   }
 }
 

@@ -4,12 +4,12 @@ use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, SaveOptions};
 use std::collections::HashMap;
 
+use crate::core::DigestionAPI;
 use rtx_core::common::BindingDispatcher;
 use rtx_core::document::Document;
 use rtx_core::state::State;
 use rtx_core::{s, Core, CoreOptions};
 use rtx_math_parser::node_to_grammar_lexemes;
-use crate::core::DigestionAPI;
 
 #[allow(clippy::implicit_hasher)]
 pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) { rtx_tests_internal(dirpath, requires, None) }
@@ -115,25 +115,25 @@ fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {
 
 /// Simple tokenization of a single formula, without any custom preloads
 /// byond latex and amsmath
-pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node>,Document) {
+pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node>, Document) {
   let mut latexml = Core::new(CoreOptions {
     verbosity: Some(-2),
     search_paths: None,
-    preload: Some(["article.cls","amsmath.sty"].map(|x| x.to_string()).to_vec()),
+    preload: Some(["article.cls", "amsmath.sty"].map(|x| x.to_string()).to_vec()),
     nomathparse: Some(true),
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  let xml_result = latexml.convert_file(format!("literal:\\[ {} \\]",tex));
+  let xml_result = latexml.convert_file(format!("literal:\\[ {} \\]", tex));
   assert!(xml_result.is_ok());
   let doc = xml_result.unwrap();
-  
+
   // grab the first formula
   match doc.findnode("//*[local-name()='XMath']", None, &mut latexml.state) {
     Some(math) => {
-      let (lexemes,nodes) = node_to_grammar_lexemes(&math);
-      (lexemes,nodes,Some(math),doc)
+      let (lexemes, nodes) = node_to_grammar_lexemes(&math);
+      (lexemes, nodes, Some(math), doc)
     },
-    None => (Vec::new(),Vec::new(),None,doc)
+    None => (Vec::new(), Vec::new(), None, doc),
   }
 }

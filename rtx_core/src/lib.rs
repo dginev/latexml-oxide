@@ -17,12 +17,12 @@ pub mod keyvals;
 pub mod list;
 pub mod mouth;
 pub mod parameter;
+pub mod rewrite;
 pub mod state;
 pub mod stomach;
 pub mod tbox;
 pub mod util;
 pub mod whatsit;
-pub mod rewrite;
 
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -255,7 +255,7 @@ impl Object for Digested {
       _ => unimplemented!(),
     }
   }
-  fn revert(&self, state:&mut State) -> Result<Tokens> {
+  fn revert(&self, state: &mut State) -> Result<Tokens> {
     match *self {
       Digested::TBox(ref b) => b.revert(state),
       Digested::List(ref l) => l.revert(state),
@@ -358,6 +358,6 @@ impl Digested {
     match self {
       Digested::RegisterValue(rv) => (**rv).clone().pt_value(prec),
       _ => 0.0,
-    }   
+    }
   }
 }

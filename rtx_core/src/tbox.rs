@@ -44,7 +44,7 @@ impl fmt::Display for Tbox {
 }
 impl Object for Tbox {
   fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
-  fn revert(&self, _state:&mut State) -> Result<Tokens> { Ok(self.tokens.clone()) }
+  fn revert(&self, _state: &mut State) -> Result<Tokens> { Ok(self.tokens.clone()) }
 }
 impl Tbox {
   pub fn new(

@@ -1,8 +1,8 @@
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
+use std::borrow::Cow;
 use std::path::Path;
 use std::rc::Rc;
-use std::borrow::Cow;
 
 use rtx_core::common::error::{note_begin, note_end, Result};
 use rtx_core::common::DigestionMode;
@@ -10,16 +10,16 @@ use rtx_core::definition::expandable::Expandable;
 use rtx_core::document::Document;
 use rtx_core::list::List;
 use rtx_core::state::{Scope, Stored}; // State
-use rtx_core::token::{Catcode,Token};
+use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;
 // TODO: Clean up these imports -- what belongs where?
-use rtx_core::{fatal, map, s, Core, Debug, Digested, T_CS, Explode, T_OTHER, T_SPACE};
+use rtx_core::{fatal, map, s, Core, Debug, Digested, Explode, T_CS, T_OTHER, T_SPACE};
 
 use rtx_codegen::LoadModel;
 use rtx_math_parser::MathParser;
-use rtx_package::{load_model, input_content, input_definitions, InputDefinitionOptions};
+use rtx_package::{input_content, input_definitions, load_model, InputDefinitionOptions};
 
 lazy_static! {
   static ref CLS_EXT_REGEX: Regex = Regex::new(r"\.cls$").unwrap();

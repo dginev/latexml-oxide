@@ -62,7 +62,7 @@ LoadDefinitions!(state, {
       // in Perl this was the super simple:
       // Digest(Expand($_[1]))
       // WAIT?! but this is in properties -- args are already digested???
-      if let Some(ref tag) = args[0] { 
+      if let Some(ref tag) = args[0] {
         // TODO: MUST WE CLONE?!
         Ok(map!("tag" => Stored::Digested(Box::new(tag.clone()))))
       } else {

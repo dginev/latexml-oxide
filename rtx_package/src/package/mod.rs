@@ -10,8 +10,8 @@ pub use std::rc::Rc;
 
 pub use rtx_core::common::dimension::{Dimension, MuDimension};
 
-pub use rtx_core::common::error::*;
 pub use rtx_core::aux_macros::*;
+pub use rtx_core::common::error::*;
 pub use rtx_core::common::font;
 pub use rtx_core::common::font::Font;
 pub use rtx_core::common::glue::{Glue, MuGlue};
@@ -30,7 +30,6 @@ pub use rtx_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, ExpansionClosure, PrimitiveClosure, PrimitiveFn,
   ReplacementClosure,
 };
-pub use rtx_core::rewrite::{Rewrite, RewriteOptions};
 pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptionName, TagOptions};
 pub use rtx_core::document::Document;
@@ -40,6 +39,7 @@ pub use rtx_core::list::List;
 pub use rtx_core::mouth;
 pub use rtx_core::mouth::{Mouth, MouthOptions};
 pub use rtx_core::parameter::{Parameter, ParameterExtra, Parameters, ReaderClosure, ReversionClosure};
+pub use rtx_core::rewrite::{Rewrite, RewriteOptions};
 pub use rtx_core::state::{Scope, State, Stored};
 pub use rtx_core::stomach::Stomach;
 pub use rtx_core::tbox::Tbox;

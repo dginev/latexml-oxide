@@ -335,15 +335,18 @@ LoadDefinitions!(state, {
       _ => String::new()
     };
     if text.len() != 1 { // Not simple char token.
-      document.open_element("ltx:XMApp", Some(map!("_box" => not_node.to_hashable().to_string())), None, state)?; // Wrap with a cancel op
-    }
-    let mut strike = document.insert_math_token("", string_map!("role" => "ENCLOSE", "enclose" => "updiagonalstrike", "meaning" => "not", "_box" => not_node.to_hashable()), None, state)?;
-    if let Some(id) = not_node.get_attribute("xml:id") {
-      not_node.remove_attribute("xml:id")?;
-      document.unrecord_id(&id);
-      document.set_attribute(&mut strike, "xml:id", &id)?;
-      document.get_node_mut().add_child(thing)?;
-      document.close_element("ltx:XMApp", state)?;
+      document.open_element("ltx:XMApp",
+        Some(map!("_box" => not_node.to_hashable().to_string())), None, state)?; // Wrap with a cancel op
+      let mut strike = document.insert_math_token("",
+        string_map!("role" => "ENCLOSE", "enclose" => "updiagonalstrike",
+        "meaning" => "not", "_box" => not_node.to_hashable()), None, state)?;
+      if let Some(id) = not_node.get_attribute("xml:id") {
+        not_node.remove_attribute("xml:id")?;
+        document.unrecord_id(&id);
+        document.set_attribute(&mut strike, "xml:id", &id)?;
+        document.get_node_mut().add_child(thing)?;
+        document.close_element("ltx:XMApp", state)?;
+      }
     } else {
       // For simple tokens, we'll modify the relevant content & attributes
       // [children removed, id's presumably ignorable]
@@ -357,7 +360,7 @@ LoadDefinitions!(state, {
         document.set_attribute(thing, "name", &format!("not-{}",name))?; }
       else if !text.is_empty() {
         document.set_attribute(thing, "name", &format!("not-{}",text))?; }
-      
+
       let known_c = MATH_CHAR_NEGATIONS.get(&text);
       let new : Cow<'_, str> = match known_c {
         Some(c) => Cow::Borrowed(c),
@@ -374,5 +377,4 @@ LoadDefinitions!(state, {
       }   // ? Hopefully this is safe.
     }
   });
-
 });

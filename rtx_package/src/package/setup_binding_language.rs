@@ -269,8 +269,8 @@ macro_rules! LookupColor {
     if let Some(color) = LookupValue!(&s!("color_{}", $name)) {
       color.to_string()
     } else {
-      Error!("undefined", $name, s!("color '{}' is undefined...",$name));
-      "Black"; 
+      Error!("undefined", $name, s!("color '{}' is undefined...", $name));
+      "Black";
     }
   }};
 }
@@ -298,7 +298,6 @@ macro_rules! LookupColor {
 //   AssignValue('derived_color_model_' . $model => [$coremodel, $tocore, $fromcore], 'global');
 //   return; }
 
-
 macro_rules! DefRewrite {
   ($($input:tt)+) => {{
     let rewrite_options = defi_opts!(@munch ($($input)*) -> {RewriteOptions,});
@@ -316,7 +315,6 @@ macro_rules! DefMathRewrite {
       Rewrite::new("math", rewrite_options));
   }};
 }
-
 
 // #======================================================================
 // # Defining "Ligatures" rules that act on the DOM

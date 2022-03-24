@@ -1,6 +1,6 @@
-use std::error::Error;
-use std::collections::HashMap;
 use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::error::Error;
 
 use crate::semantics::{Operator, Tree};
 use crate::util::distill_lexeme;

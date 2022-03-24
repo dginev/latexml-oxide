@@ -7,5 +7,4 @@ LoadDefinitions!(_state, {
   // DefMacro!("\\where", "Labelled subsection", scope => "label:labelled");
   // DefMacro!("\\where", "Section 3",           scope => "section:3");
   // DefMacro!("\\where", "Equation 1",          scope => "equation:1");
-  
 });

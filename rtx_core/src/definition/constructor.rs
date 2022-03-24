@@ -9,7 +9,9 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure, SizingClosure, ReplacementClosure, Reversion};
+use crate::definition::{
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure, ReplacementClosure, Reversion, SizingClosure,
+};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -69,7 +71,7 @@ impl Default for ConstructorOptions {
       locked: false,
       alias: None,
       reversion: None,
-      sizer: None
+      sizer: None,
     }
   }
 }

@@ -1,4 +1,13 @@
 #[macro_export]
+macro_rules! static_map {
+  ($( $key:expr => $val:expr ),*) => {{
+    let mut map : HashMap<&'static str, &'static str> = ::std::collections::HashMap::new();
+    $( map.insert($key, $val); )*
+    map
+  }}
+}
+
+#[macro_export]
 macro_rules! map {
   ($( $key:expr => $val:expr ),*) => {{
     let mut map = ::std::collections::HashMap::new();

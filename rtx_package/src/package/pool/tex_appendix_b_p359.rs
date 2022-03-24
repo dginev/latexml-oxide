@@ -8,7 +8,9 @@ LoadDefinitions!(state, {
 
   DefConstructor!(
     "\\ldots",
-    "?#isMath(<ltx:XMTok name='ldots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})"
+    "?#isMath(<ltx:XMTok name='ldots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})",
+    sizer      => "\u{2026}",
+    reversion  => "\\ldots"
   );
   // TODO
   // properties => properties!(sub[stomach, args, state] {

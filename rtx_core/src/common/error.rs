@@ -247,7 +247,7 @@ impl fmt::Display for Error {
       EoF => write!(f, "<EOF>"),
       Convert => write!(f, "conversion"),
       Endgroup => write!(f, "<endgroup>"),
-      FailedParse => write!(f,"failed to parse"),
+      FailedParse => write!(f, "failed to parse"),
       Generic(ref err) => err.fmt(f),
       Filename(ref name) => write!(f, "file:{}", name),
     }
@@ -281,8 +281,8 @@ impl From<Box<dyn ErrorTrait>> for Error {
     }
   }
 }
-impl From<Box<dyn ErrorTrait+Send+Sync>> for Error {
-  fn from(err: Box<dyn ErrorTrait+Send+Sync>) -> Error {
+impl From<Box<dyn ErrorTrait + Send + Sync>> for Error {
+  fn from(err: Box<dyn ErrorTrait + Send + Sync>) -> Error {
     Error {
       target: ErrorTarget::Document,
       message: err.to_string(),

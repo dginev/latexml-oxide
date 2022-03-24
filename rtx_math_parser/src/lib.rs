@@ -1,11 +1,11 @@
 #[macro_use]
 mod grammar;
-mod syntax;
-mod semantics;
-mod pragmatics;
-mod util;
 mod data;
 mod parser;
+mod pragmatics;
+mod semantics;
+mod syntax;
+mod util;
 
 pub use parser::MathParser;
 pub use util::node_to_grammar_lexemes;

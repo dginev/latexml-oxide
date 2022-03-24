@@ -962,7 +962,8 @@ impl Document {
         self.close_to_node(&*closeto, false, state)?;
       }
       if bestdiff > 0 {
-        self.open_element(FONT_ELEMENT_NAME, Some(string_map!("_fontswitch" => "true")), Some(font), state)?; // Open if needed.
+        self.open_element(FONT_ELEMENT_NAME, Some(string_map!("_fontswitch" => "true")), Some(font), state)?;
+        // Open if needed.
       }
     }
 
@@ -1579,214 +1580,217 @@ impl Document {
     id.to_string()
   }
 
-
   pub fn unrecord_id(&mut self, id: &str) {
     //my ($self, $id) = @_;
     //delete $$self{idstore}{$id};
     unimplemented!();
   }
 
-
-/// These are used to record or unrecord, in bulk, all the ids within a node (tree).
-pub fn record_node_ids(&mut self, node: &Node, state: &mut State) -> Result<()> {
-  for mut idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node), state) {
-    if let Some(id) = idnode.get_attribute("xml:id") {
-      let newid = self.record_id_with_node(&id, &idnode);
-      if newid != id {
-        idnode.set_attribute("xml:id", &newid)?;
+  /// These are used to record or unrecord, in bulk, all the ids within a node (tree).
+  pub fn record_node_ids(&mut self, node: &Node, state: &mut State) -> Result<()> {
+    for mut idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node), state) {
+      if let Some(id) = idnode.get_attribute("xml:id") {
+        let newid = self.record_id_with_node(&id, &idnode);
+        if newid != id {
+          idnode.set_attribute("xml:id", &newid)?;
+        }
       }
     }
+    Ok(())
   }
-  Ok(())
-}
 
-pub fn unrecord_node_ids(&mut self, node: &Node, state: &mut State) {
-  for idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node), state) {
-    if let Some(id) = idnode.get_attribute("xml:id") {
-      self.unrecord_id(&id);
+  pub fn unrecord_node_ids(&mut self, node: &Node, state: &mut State) {
+    for idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node), state) {
+      if let Some(id) = idnode.get_attribute("xml:id") {
+        self.unrecord_id(&id);
+      }
     }
+    return;
   }
-  return;
-}
 
-// # Get a new, related, but unique id
-// # Sneaky option: try $LaTeXML::Core::Document::ID_SUFFIX as a suffix for id, first.
-// sub modifyID {
-//   my ($self, $id) = @_;
-//   if (my $prev = $$self{idstore}{$id}) {    # Whoops! Already assigned!!!
-//                                             # Can we recover?
-//     my $badid = $id;
-//     if (!$LaTeXML::Core::Document::ID_SUFFIX
-//       || $$self{idstore}{ $id = $badid . $LaTeXML::Core::Document::ID_SUFFIX }) {
-//       foreach my $s1 (1 .. 26 * 26 * 26) {    # Gotta give up, eventually; is 3 letters enough?
-//         return $id unless $$self{idstore}{ $id = $badid . radix_alpha($s1) }; }
-//       Error('malformed', 'id', $self, "Automatic incrementing of ID counters failed",
-//         "Last alternative for '$id' is '$badid'"); } }
-//   return $id; }
+  // # Get a new, related, but unique id
+  // # Sneaky option: try $LaTeXML::Core::Document::ID_SUFFIX as a suffix for id, first.
+  // sub modifyID {
+  //   my ($self, $id) = @_;
+  //   if (my $prev = $$self{idstore}{$id}) {    # Whoops! Already assigned!!!
+  //                                             # Can we recover?
+  //     my $badid = $id;
+  //     if (!$LaTeXML::Core::Document::ID_SUFFIX
+  //       || $$self{idstore}{ $id = $badid . $LaTeXML::Core::Document::ID_SUFFIX }) {
+  //       foreach my $s1 (1 .. 26 * 26 * 26) {    # Gotta give up, eventually; is 3 letters enough?
+  //         return $id unless $$self{idstore}{ $id = $badid . radix_alpha($s1) }; }
+  //       Error('malformed', 'id', $self, "Automatic incrementing of ID counters failed",
+  //         "Last alternative for '$id' is '$badid'"); } }
+  //   return $id; }
 
-// sub lookupID {
-//   my ($self, $id) = @_;
-//   return $$self{idstore}{$id}; }
+  // sub lookupID {
+  //   my ($self, $id) = @_;
+  //   return $$self{idstore}{$id}; }
 
-// #======================================================================
-// # Odd bit:
-// # In an XMDual, in each branch (content, presentation) there will be atoms
-// # that correspond to the input (one will be real, the other an XMRef to the first).
-// # But also there will be additional "decoration" (delimiters, punctuation, etc on the presentation
-// # side; other symbols, bindings, whatever, on the content side).
-// # These decorations should NOT be subject to rewrite rules,
-// # and in cross-linked parallel markup, they should be attributed to the
-// # upper containing object's ID, rather than left dangling.
-// #
-// # To determine this, we mark all math nodes as to whether they are "visible" from
-// # presentation, content or both (the default top-level being both).
-// # Decorations are the nodes that are visible to only one mode.
-// # Note that nodes that are not visible at all CAN occur (& do currently when the parser
-// # creates XMDuals), pruneXMDuals (below) gets rid of them.
+  // #======================================================================
+  // # Odd bit:
+  // # In an XMDual, in each branch (content, presentation) there will be atoms
+  // # that correspond to the input (one will be real, the other an XMRef to the first).
+  // # But also there will be additional "decoration" (delimiters, punctuation, etc on the presentation
+  // # side; other symbols, bindings, whatever, on the content side).
+  // # These decorations should NOT be subject to rewrite rules,
+  // # and in cross-linked parallel markup, they should be attributed to the
+  // # upper containing object's ID, rather than left dangling.
+  // #
+  // # To determine this, we mark all math nodes as to whether they are "visible" from
+  // # presentation, content or both (the default top-level being both).
+  // # Decorations are the nodes that are visible to only one mode.
+  // # Note that nodes that are not visible at all CAN occur (& do currently when the parser
+  // # creates XMDuals), pruneXMDuals (below) gets rid of them.
 
-// # NOTE: This should ultimately be in a base Document class,
-// # since it is also needed before conversion to parallel markup!
-pub fn mark_xmnode_visibility(&mut self, state: &mut State) -> Result<()> {
-  let xmath = self.findnodes("//ltx:XMath/*", None, state);
-  for math in xmath.iter() {
-    for mut node in self.findnodes("descendant-or-self::*[@_pvis or @_cvis]", Some(&math), state) {
-    node.remove_attribute("_pvis")?;
-    node.remove_attribute("_cvis")?; }
-  }
-  for math in xmath {
-    self.mark_xmnode_visibility_aux(math, true, true, state)?;
-  }
-  Ok(()) }
-
-fn mark_xmnode_visibility_aux(&self, mut node: Node, cvis: bool, mut pvis:bool, state: &mut State) -> Result<()> {
-  let qname = self.get_node_qname(&node, state);
-  if (!cvis || node.get_attribute("_cvis").is_some()) &&
-     (!pvis || node.get_attribute("_pvis").is_some()) {
-       return Ok(());
-     }
-  // Special case: for XMArg used to wrap "formal" arguments on the content side,
-  // mark them as visible as presentation as well.
-  if cvis && (qname == "ltx:XMArg") {
-    pvis = true;
-  }
-  if cvis { node.set_attribute("_cvis", "true")?; }
-  if pvis { node.set_attribute("_pvis", "true")?; }
-  if qname == "ltx:XMDual" {
-    unimplemented!();
-//     my ($c, $p) = element_nodes($node);
-//     $self->markXMNodeVisibility_aux($c, 1, 0) if $cvis;
-//     $self->markXMNodeVisibility_aux($p, 0, 1) if $pvis; }
-  } else if qname == "ltx:XMRef" {
-    unimplemented!();
-//     #    $self->markXMNodeVisibility_aux($self->realizeXMNode($node),$cvis,$pvis); }
-//     my $id = $node->getAttribute('idref');
-//     if (!$id) {
-//       my $key = $node->getAttribute('_xmkey');
-//       Warn('expected', 'id', $self, "Missing idref on ltx:XMRef",
-//         ($key ? ("_xmkey is $key") : ()));
-//       return; }
-//     my $reffed = $self->lookupID($id);
-//     if (!$reffed) {
-//       Warn('expected', 'node', $self, "No node found with id=$id (referred to from ltx:XMRef)");
-//       return; }
-//     $self->markXMNodeVisibility_aux($reffed, $cvis, $pvis); }
-  } else {
-    for child in xml::element_nodes(&node) {
-      self.mark_xmnode_visibility_aux(child, cvis, pvis, state);
+  // # NOTE: This should ultimately be in a base Document class,
+  // # since it is also needed before conversion to parallel markup!
+  pub fn mark_xmnode_visibility(&mut self, state: &mut State) -> Result<()> {
+    let xmath = self.findnodes("//ltx:XMath/*", None, state);
+    for math in xmath.iter() {
+      for mut node in self.findnodes("descendant-or-self::*[@_pvis or @_cvis]", Some(&math), state) {
+        node.remove_attribute("_pvis")?;
+        node.remove_attribute("_cvis")?;
+      }
     }
+    for math in xmath {
+      self.mark_xmnode_visibility_aux(math, true, true, state)?;
+    }
+    Ok(())
   }
-  Ok(())
-}
 
-// # Reduce any ltx:XMDual's to just the visible branch, if the other is not visible
-// # (according to markXMNodeVisibility)
-// # If we could be 100% sure that the marking had stayed consistent (after various doc surgery)
-// # we could avoid re-marking, but we'd better be sure before removing nodes!
-// sub pruneXMDuals {
-//   my ($self) = @_;
-//   # RE-mark visibility!
-//   $self->markXMNodeVisibility;
-//   # will reversing keep from problems removing nodes from trees that already have been removed?
-//   foreach my $dual (reverse $self->findnodes('descendant-or-self::ltx:XMDual')) {
-//     my ($content, $presentation) = element_nodes($dual);
-//     if (!$self->findnode('descendant-or-self::*[@_pvis or @_cvis]', $content)) {    # content never seen
-//       $self->collapseXMDual($dual, $presentation); }
-//     elsif (!$self->findnode('descendant-or-self::*[@_pvis or @_cvis]', $presentation)) {    # pres.
-//       $self->collapseXMDual($dual, $content); }
-//     else {    # compact aligned structures, where possible
-//       $self->compactXMDual($dual, $content, $presentation); } }
-//   return; }
+  fn mark_xmnode_visibility_aux(&self, mut node: Node, cvis: bool, mut pvis: bool, state: &mut State) -> Result<()> {
+    let qname = self.get_node_qname(&node, state);
+    if (!cvis || node.get_attribute("_cvis").is_some()) && (!pvis || node.get_attribute("_pvis").is_some()) {
+      return Ok(());
+    }
+    // Special case: for XMArg used to wrap "formal" arguments on the content side,
+    // mark them as visible as presentation as well.
+    if cvis && (qname == "ltx:XMArg") {
+      pvis = true;
+    }
+    if cvis {
+      node.set_attribute("_cvis", "true")?;
+    }
+    if pvis {
+      node.set_attribute("_pvis", "true")?;
+    }
+    if qname == "ltx:XMDual" {
+      unimplemented!();
+    //     my ($c, $p) = element_nodes($node);
+    //     $self->markXMNodeVisibility_aux($c, 1, 0) if $cvis;
+    //     $self->markXMNodeVisibility_aux($p, 0, 1) if $pvis; }
+    } else if qname == "ltx:XMRef" {
+      unimplemented!();
+    //     #    $self->markXMNodeVisibility_aux($self->realizeXMNode($node),$cvis,$pvis); }
+    //     my $id = $node->getAttribute('idref');
+    //     if (!$id) {
+    //       my $key = $node->getAttribute('_xmkey');
+    //       Warn('expected', 'id', $self, "Missing idref on ltx:XMRef",
+    //         ($key ? ("_xmkey is $key") : ()));
+    //       return; }
+    //     my $reffed = $self->lookupID($id);
+    //     if (!$reffed) {
+    //       Warn('expected', 'node', $self, "No node found with id=$id (referred to from ltx:XMRef)");
+    //       return; }
+    //     $self->markXMNodeVisibility_aux($reffed, $cvis, $pvis); }
+    } else {
+      for child in xml::element_nodes(&node) {
+        self.mark_xmnode_visibility_aux(child, cvis, pvis, state);
+      }
+    }
+    Ok(())
+  }
 
-// our $content_transfer_overrides = { map { ($_ => 1) } qw(decl_id meaning name omcd) };
-// our $dual_transfer_overrides    = { %$content_transfer_overrides,
-//   map { ($_ => 1) } qw(xml:id role) };
+  // # Reduce any ltx:XMDual's to just the visible branch, if the other is not visible
+  // # (according to markXMNodeVisibility)
+  // # If we could be 100% sure that the marking had stayed consistent (after various doc surgery)
+  // # we could avoid re-marking, but we'd better be sure before removing nodes!
+  // sub pruneXMDuals {
+  //   my ($self) = @_;
+  //   # RE-mark visibility!
+  //   $self->markXMNodeVisibility;
+  //   # will reversing keep from problems removing nodes from trees that already have been removed?
+  //   foreach my $dual (reverse $self->findnodes('descendant-or-self::ltx:XMDual')) {
+  //     my ($content, $presentation) = element_nodes($dual);
+  //     if (!$self->findnode('descendant-or-self::*[@_pvis or @_cvis]', $content)) {    # content never seen
+  //       $self->collapseXMDual($dual, $presentation); }
+  //     elsif (!$self->findnode('descendant-or-self::*[@_pvis or @_cvis]', $presentation)) {    # pres.
+  //       $self->collapseXMDual($dual, $content); }
+  //     else {    # compact aligned structures, where possible
+  //       $self->compactXMDual($dual, $content, $presentation); } }
+  //   return; }
 
-// sub compactXMDual {
-//   my ($self, $dual, $content, $presentation) = @_;
-//   my $c_name = $self->getNodeQName($content);
-//   my $p_name = $self->getNodeQName($presentation);
-//   # 1.Quick fix: merge two tokens
-//   if (($c_name eq 'ltx:XMTok') && ($p_name eq 'ltx:XMTok')) {
-//     $self->mergeAttributes($content, $presentation, $content_transfer_overrides);
-//     $self->mergeAttributes($dual,    $presentation, $dual_transfer_overrides);
-//     $self->replaceNode($dual, $presentation);
-//     return; }
+  // our $content_transfer_overrides = { map { ($_ => 1) } qw(decl_id meaning name omcd) };
+  // our $dual_transfer_overrides    = { %$content_transfer_overrides,
+  //   map { ($_ => 1) } qw(xml:id role) };
 
-//   # 2.For now, only main use case is compacting mirror XMApp nodes
-//   return if ($c_name ne 'ltx:XMApp') || ($p_name ne 'ltx:XMApp');
-//   my @content_args = element_nodes($content);
-//   my @pres_args    = element_nodes($presentation);
-//   return if scalar(@content_args) != scalar(@pres_args);
+  // sub compactXMDual {
+  //   my ($self, $dual, $content, $presentation) = @_;
+  //   my $c_name = $self->getNodeQName($content);
+  //   my $p_name = $self->getNodeQName($presentation);
+  //   # 1.Quick fix: merge two tokens
+  //   if (($c_name eq 'ltx:XMTok') && ($p_name eq 'ltx:XMTok')) {
+  //     $self->mergeAttributes($content, $presentation, $content_transfer_overrides);
+  //     $self->mergeAttributes($dual,    $presentation, $dual_transfer_overrides);
+  //     $self->replaceNode($dual, $presentation);
+  //     return; }
 
-//   my @new_args = ();
-//   # walk the corresponding children, and double-check they are referenced in the same order
-//   while ((my $c_arg = shift(@content_args)) and (my $p_arg = shift(@pres_args))) {
-//     my $c_idref = $c_arg->getAttribute('idref');
-//     if ($c_idref && ($c_idref eq ($p_arg->getAttribute('xml:id') || ''))) {
-//       push @new_args, $p_arg;
-//       next; }    # content-refs-pres, OK
-//     my $p_idref = $p_arg->getAttribute('idref');
-//     if ($p_idref && ($p_idref eq ($c_arg->getAttribute('xml:id') || ''))) {
-//       push @new_args, $c_arg;
-//       next; }    # pres-refs-content, OK
+  //   # 2.For now, only main use case is compacting mirror XMApp nodes
+  //   return if ($c_name ne 'ltx:XMApp') || ($p_name ne 'ltx:XMApp');
+  //   my @content_args = element_nodes($content);
+  //   my @pres_args    = element_nodes($presentation);
+  //   return if scalar(@content_args) != scalar(@pres_args);
 
-//     # we can handle content-side XMToks, to any XM* presentation subtree differing for now.
-//     if ($self->getNodeQName($c_arg) ne 'ltx:XMTok') {
-//       return; }
-//     else { # otherwise we can compact this case. but delay actual libxml changes until we are *sure* the entire tree is compactable
-//       push(@new_args, [$c_arg, $p_arg]); } }
+  //   my @new_args = ();
+  //   # walk the corresponding children, and double-check they are referenced in the same order
+  //   while ((my $c_arg = shift(@content_args)) and (my $p_arg = shift(@pres_args))) {
+  //     my $c_idref = $c_arg->getAttribute('idref');
+  //     if ($c_idref && ($c_idref eq ($p_arg->getAttribute('xml:id') || ''))) {
+  //       push @new_args, $p_arg;
+  //       next; }    # content-refs-pres, OK
+  //     my $p_idref = $p_arg->getAttribute('idref');
+  //     if ($p_idref && ($p_idref eq ($c_arg->getAttribute('xml:id') || ''))) {
+  //       push @new_args, $c_arg;
+  //       next; }    # pres-refs-content, OK
 
-// # If we made it here, this is a dual with two mirrored applications and a single XMTok difference, compact it.
-//   my $compact_apply = $self->openElementAt($dual->parentNode, 'ltx:XMApp');
-//   for my $n_arg (@new_args) {
-//     # one of the args has our dual node that needs compacting
-//     if (ref $n_arg eq 'ARRAY') {
-//       my ($c_arg, $p_arg) = @$n_arg;
-//       $self->mergeAttributes($c_arg, $p_arg, $content_transfer_overrides);
-//       $n_arg = $p_arg; }
-//     $n_arg->unbindNode;
-//     $compact_apply->appendChild($n_arg); }
-//   # if the dual has any attributes migrate them to the new XMApp
-//   $self->mergeAttributes($dual, $compact_apply, $dual_transfer_overrides);
-//   $self->replaceNode($dual, $compact_apply);
-//   $self->closeElementAt($compact_apply);
-//   return; }
+  //     # we can handle content-side XMToks, to any XM* presentation subtree differing for now.
+  //     if ($self->getNodeQName($c_arg) ne 'ltx:XMTok') {
+  //       return; }
+  //     else { # otherwise we can compact this case. but delay actual libxml changes until we are *sure* the entire tree is compactable
+  //       push(@new_args, [$c_arg, $p_arg]); } }
 
-// # Replace an XMDual with one of its branches
-// sub collapseXMDual {
-//   my ($self, $dual, $branch) = @_;
-//   # The other branch is not visible, nor referenced,
-//   # but the dual may have an id and be referenced
-//   if (my $dualid = $dual->getAttribute('xml:id')) {
-//     $self->unRecordID($dualid);    # We'll move or remove the ID from the dual
-//     if (my $branchid = $branch->getAttribute('xml:id')) {    # branch has id too!
-//       foreach my $ref ($self->findnodes("//*[\@idref='$dualid']")) {
-//         $ref->setAttribute(idref => $branchid); } }          # Change dualid refs to branchid
-//     else {
-//       $branch->setAttribute('xml:id' => $dualid);            # Just use same ID on the branch
-//       $self->recordID($dualid => $branch); } }
-//   $self->replaceTree($branch, $dual);
-//   return; }
+  // # If we made it here, this is a dual with two mirrored applications and a single XMTok difference, compact it.
+  //   my $compact_apply = $self->openElementAt($dual->parentNode, 'ltx:XMApp');
+  //   for my $n_arg (@new_args) {
+  //     # one of the args has our dual node that needs compacting
+  //     if (ref $n_arg eq 'ARRAY') {
+  //       my ($c_arg, $p_arg) = @$n_arg;
+  //       $self->mergeAttributes($c_arg, $p_arg, $content_transfer_overrides);
+  //       $n_arg = $p_arg; }
+  //     $n_arg->unbindNode;
+  //     $compact_apply->appendChild($n_arg); }
+  //   # if the dual has any attributes migrate them to the new XMApp
+  //   $self->mergeAttributes($dual, $compact_apply, $dual_transfer_overrides);
+  //   $self->replaceNode($dual, $compact_apply);
+  //   $self->closeElementAt($compact_apply);
+  //   return; }
+
+  // # Replace an XMDual with one of its branches
+  // sub collapseXMDual {
+  //   my ($self, $dual, $branch) = @_;
+  //   # The other branch is not visible, nor referenced,
+  //   # but the dual may have an id and be referenced
+  //   if (my $dualid = $dual->getAttribute('xml:id')) {
+  //     $self->unRecordID($dualid);    # We'll move or remove the ID from the dual
+  //     if (my $branchid = $branch->getAttribute('xml:id')) {    # branch has id too!
+  //       foreach my $ref ($self->findnodes("//*[\@idref='$dualid']")) {
+  //         $ref->setAttribute(idref => $branchid); } }          # Change dualid refs to branchid
+  //     else {
+  //       $branch->setAttribute('xml:id' => $dualid);            # Just use same ID on the branch
+  //       $self->recordID($dualid => $branch); } }
+  //   $self->replaceTree($branch, $dual);
+  //   return; }
 
   //**********************************************************************
   /// Record the Box that created this node.
@@ -2414,7 +2418,13 @@ fn mark_xmnode_visibility_aux(&self, mut node: Node, cvis: bool, mut pvis:bool, 
             self.rewrite_labels.insert(label.to_string(), id.to_string());
           }
         } else {
-          Error!("malformed", "label", None, None, format!("Node {} has labels but no xml:id", node.get_name()));
+          Error!(
+            "malformed",
+            "label",
+            None,
+            None,
+            format!("Node {} has labels but no xml:id", node.get_name())
+          );
         }
       }
     }

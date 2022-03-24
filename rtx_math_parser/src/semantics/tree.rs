@@ -1,11 +1,11 @@
+use libxml::tree::Node;
+use rtx_core::document::Document;
+use rtx_core::Info;
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
-use std::borrow::Cow;
-use libxml::tree::Node;
-use rtx_core::Info;
-use rtx_core::document::Document;
 
 use super::curry::{CurryConstraint, CurryConstraints, CurryTerm};
 use super::metadata::Meta;
@@ -21,7 +21,7 @@ pub struct XMTok {
   pub role: Option<Cow<'static, str>>,
   pub meaning: Option<Cow<'static, str>>,
   pub content: Option<Cow<'static, str>>,
-  pub name: Option<Cow<'static, str>>
+  pub name: Option<Cow<'static, str>>,
 }
 impl Display for XMTok {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -29,7 +29,6 @@ impl Display for XMTok {
     writeln!(f, "{:?}", self)
   }
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Tree {
@@ -40,24 +39,16 @@ pub enum Tree {
 }
 
 impl Display for Operator {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    self.fmt_indented(&Vec::new(), f)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { self.fmt_indented(&Vec::new(), f) }
 }
 impl From<XMTok> for Operator {
-  fn from(t: XMTok) -> Self {
-    Operator(Box::new(Tree::Token(t, Meta::default())))
-  }
+  fn from(t: XMTok) -> Self { Operator(Box::new(Tree::Token(t, Meta::default()))) }
 }
 impl Operator {
   /// obtain a reference to this operator's metadata
-  pub fn get_meta(&self) -> &Meta {
-    (*self.0).get_meta()
-  }
+  pub fn get_meta(&self) -> &Meta { (*self.0).get_meta() }
   /// obtain a reference to this operator's metadata
-  pub fn get_meta_mut(&mut self) -> &mut Meta {
-    (*self.0).get_meta_mut()
-  }
+  pub fn get_meta_mut(&mut self) -> &mut Meta { (*self.0).get_meta_mut() }
 
   /// borrow the constraints and pass them to the outer caller
   pub fn get_constraints(&self) -> Vec<&CurryConstraint> {
@@ -73,9 +64,7 @@ impl Operator {
     meta.curry_constraints.drain().collect()
   }
 
-  pub fn unconstrain_recursive(&mut self) {
-    self.0.unconstrain_recursive();
-  }
+  pub fn unconstrain_recursive(&mut self) { self.0.unconstrain_recursive(); }
 
   fn fmt_indented(&self, level: &[bool], f: &mut fmt::Formatter<'_>) -> fmt::Result {
     if let Tree::Lexeme(_, _) = &*self.0 {
@@ -97,9 +86,7 @@ impl Operator {
   }
 }
 impl Display for Args {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    self.fmt_indented(&Vec::new(), f)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { self.fmt_indented(&Vec::new(), f) }
 }
 
 impl Args {
@@ -109,10 +96,7 @@ impl Args {
       if peekable.peek().is_some() {
         maybe_arg
           .as_ref()
-          .unwrap_or(&Tree::Lexeme(
-            String::from("missing_argument"),
-            Meta::default(),
-          ))
+          .unwrap_or(&Tree::Lexeme(String::from("missing_argument"), Meta::default()))
           .fmt_indented(level, f)?;
       } else {
         let mut last_level: Vec<bool> = level.to_vec();
@@ -122,42 +106,19 @@ impl Args {
         }
         maybe_arg
           .as_ref()
-          .unwrap_or(&Tree::Lexeme(
-            String::from("missing_argument"),
-            Meta::default(),
-          ))
+          .unwrap_or(&Tree::Lexeme(String::from("missing_argument"), Meta::default()))
           .fmt_indented(&last_level, f)?;
       };
     }
     Ok(())
   }
   /// Obtain defined subtrees as a slice, e.g. for consistency validation
-  pub fn trees(&self) -> Vec<&Tree> {
-    self
-      .0
-      .iter()
-      .filter(|x| x.is_some())
-      .map(|x| x.as_ref().unwrap())
-      .collect()
-  }
+  pub fn trees(&self) -> Vec<&Tree> { self.0.iter().filter(|x| x.is_some()).map(|x| x.as_ref().unwrap()).collect() }
   /// Obtain defined subtrees as a mutable slice, e.g. for consistency validation
-  pub fn trees_mut(&mut self) -> Vec<&mut Tree> {
-    self
-      .0
-      .iter_mut()
-      .filter(|x| x.is_some())
-      .map(|x| x.as_mut().unwrap())
-      .collect()
-  }
+  pub fn trees_mut(&mut self) -> Vec<&mut Tree> { self.0.iter_mut().filter(|x| x.is_some()).map(|x| x.as_mut().unwrap()).collect() }
 
   /// borrow the constraints and pass them to the outer caller
-  pub fn get_constraints(&self) -> Vec<&CurryConstraint> {
-    self
-      .trees()
-      .into_iter()
-      .flat_map(|t| t.get_meta().curry_constraints.iter())
-      .collect()
-  }
+  pub fn get_constraints(&self) -> Vec<&CurryConstraint> { self.trees().into_iter().flat_map(|t| t.get_meta().curry_constraints.iter()).collect() }
   /// extract the constraints and pass them to the outer caller
   pub fn drain_constraints(&mut self) -> Vec<CurryConstraint> {
     self
@@ -195,13 +156,7 @@ impl Tree {
       Tree::Lexeme(_atom, meta) => vec![meta],
       Tree::Apply(op, args, _) => vec![op.get_meta()]
         .into_iter()
-        .chain(
-          args
-            .0
-            .iter()
-            .filter(|arg| arg.is_some())
-            .map(|arg| arg.as_ref().unwrap().get_meta()),
-        )
+        .chain(args.0.iter().filter(|arg| arg.is_some()).map(|arg| arg.as_ref().unwrap().get_meta()))
         .collect(),
       _ => Vec::new(),
     }
@@ -217,10 +172,10 @@ impl Tree {
       Tree::Lexeme(name, meta) => {
         let new_meta = meta.with_curry_atom(into, &name)?;
         Ok(Tree::Lexeme(name, new_meta))
-      }
+      },
       Tree::Token(t, meta) => {
         unimplemented!()
-      }
+      },
       Tree::Apply(mut op, mut args, meta) => {
         // First, if we have a specialize directive, execute it:
         match into.specialize {
@@ -247,8 +202,8 @@ impl Tree {
                 into.curry_level = arg_meta.curry_level.clone();
               }
             }
-          }
-          _ => {}
+          },
+          _ => {},
         }
         // Next, we validate the constraints.
         let initial_constraint_count = meta.curry_constraints.len();
@@ -274,13 +229,11 @@ impl Tree {
           if let Some(ref expr) = new_meta.curry_level {
             match expr {
               CurryTerm::Add(_, _) | CurryTerm::Sub(_, _) => {
-                new_meta.curry_constraints.insert(CurryConstraint((
-                  expr.clone(),
-                  Ordering::Greater,
-                  CurryTerm::Literal(0),
-                )));
-              }
-              _ => {}
+                new_meta
+                  .curry_constraints
+                  .insert(CurryConstraint((expr.clone(), Ordering::Greater, CurryTerm::Literal(0))));
+              },
+              _ => {},
             }
           }
         }
@@ -296,7 +249,7 @@ impl Tree {
           pragma.validate(&new_tree)?;
         }
         Ok(new_tree)
-      }
+      },
       Tree::Choices(_) => Err("can not specialize choices".into()),
     }
   }
@@ -308,15 +261,14 @@ impl Tree {
   pub fn soft_prune_choices(self, pragmatics: ValidationPragmatics) -> Self {
     match self {
       Tree::Choices(trees) => {
-        let (consistent_trees, inconsistent_trees): (Vec<Tree>, Vec<Tree>) = trees
-          .into_iter()
-          .partition(|tree| pragmatics.validate_recursive(tree).is_ok());
+        let (consistent_trees, inconsistent_trees): (Vec<Tree>, Vec<Tree>) =
+          trees.into_iter().partition(|tree| pragmatics.validate_recursive(tree).is_ok());
         match consistent_trees.len() {
           0 => Tree::Choices(inconsistent_trees),
           1 => consistent_trees.into_iter().next().unwrap(),
           _more => Tree::Choices(consistent_trees),
         }
-      }
+      },
       other => other,
     }
   }
@@ -330,7 +282,7 @@ impl Tree {
           Tree::Lexeme(ref name, _) if name == "unknown.subscript" => {
             let arg_base = args.0.first().unwrap().as_ref().unwrap().clone();
             format!("sub__{}", arg_base.base_operator_name())
-          }
+          },
           Tree::Lexeme(ref name, _) if name == "unknown.superscript" => {
             // TODO: Too much datastructure boilerplate with the unwrap incantation
             //       might be better to create some getter methods to explain the intent better
@@ -338,12 +290,12 @@ impl Tree {
             //       which happens to be a base of a sub or super-script.
             let arg_base = args.0.first().unwrap().as_ref().unwrap();
             arg_base.base_operator_name()
-          }
+          },
           Tree::Lexeme(other, _) => other.to_string(),
           Tree::Apply(sub_other, _, _) => format!("reduced__{}", sub_other.0.base_operator_name()),
           _ => String::new(),
         }
-      }
+      },
       _ => String::new(),
     }
   }
@@ -362,7 +314,7 @@ impl Tree {
         } else {
           self
         }
-      }
+      },
       Tree::Choices(args) => args.first().unwrap().get_baseline(),
     }
   }
@@ -382,17 +334,17 @@ impl Tree {
       },
       Tree::Token(_, meta) => {
         meta.curry_constraints.drain();
-      }
+      },
       Tree::Apply(Operator(op), args, meta) => {
         meta.curry_constraints.drain();
         op.unconstrain_recursive();
         args.unconstrain_recursive();
-      }
+      },
       Tree::Choices(args) => {
         for tree in args {
           tree.unconstrain_recursive();
         }
-      }
+      },
     };
   }
 
@@ -409,7 +361,7 @@ impl Tree {
         arg_level.push(true);
         op.fmt_indented(level, f)?;
         args.fmt_indented(&arg_level, f)
-      }
+      },
       Tree::Lexeme(name, meta) => writeln!(f, "{}{} {}", indent, name, meta),
       Tree::Token(t, meta) => writeln!(f, "{}{} {}", indent, t, meta),
       Tree::Choices(args) => {
@@ -427,7 +379,7 @@ impl Tree {
           }
         }
         writeln!(f)
-      }
+      },
     }
   }
 
@@ -435,48 +387,50 @@ impl Tree {
   pub fn to_xmath(&self, nodes: &mut [Node], document: &mut Document) -> Result<Node, Box<dyn Error>> {
     match self {
       Tree::Lexeme(content, _meta) => {
-        let atom_node = &mut nodes[content.split(':').last().unwrap().parse::<usize>().unwrap() -1];
+        let atom_node = &mut nodes[content.split(':').last().unwrap().parse::<usize>().unwrap() - 1];
         atom_node.unbind();
-        Ok(atom_node.clone()) 
+        Ok(atom_node.clone())
       },
       Tree::Token(xmtok, _meta) => {
         let mut xmtok_node = Node::new("XMTok", None, document.get_document()).unwrap();
         if let Some(ref meaning) = xmtok.meaning {
-          xmtok_node.set_attribute("meaning", meaning)?; }
+          xmtok_node.set_attribute("meaning", meaning)?;
+        }
         if let Some(ref name) = xmtok.name {
-          xmtok_node.set_attribute("name", name)?; }
+          xmtok_node.set_attribute("name", name)?;
+        }
         if let Some(ref role) = xmtok.role {
-          xmtok_node.set_attribute("role", role)?; }
+          xmtok_node.set_attribute("role", role)?;
+        }
         if let Some(ref content) = xmtok.content {
-          xmtok_node.set_content(content)?; }
-        Ok(xmtok_node) 
+          xmtok_node.set_content(content)?;
+        }
+        Ok(xmtok_node)
       },
       Tree::Apply(op, args, _meta) => {
         // first execute all recursive calls on kids, and only *THEN*
         // create a new apply node, as our libxml wrapper has a weird bug
         // where two new Nodes of the same name are seen as the same.
-        let mut apply_node = Node::new("XMApp", None, document.get_document()).unwrap();       
+        let mut apply_node = Node::new("XMApp", None, document.get_document()).unwrap();
         let mut op_node = op.0.to_xmath(nodes, document)?;
         apply_node.add_child(&mut op_node)?;
-        
+
         for arg in args.0.iter().flatten() {
           let mut arg_node = arg.to_xmath(nodes, document)?;
-          apply_node.add_child(&mut arg_node)?;          
+          apply_node.add_child(&mut arg_node)?;
         }
         Ok(apply_node)
       },
       Tree::Choices(choices) => {
-        Info!("to_xmath handler discarded {} parse choices.", choices.len()-1);
+        Info!("to_xmath handler discarded {} parse choices.", choices.len() - 1);
         choices[0].to_xmath(nodes, document)
-      }
+      },
     }
   }
 }
 
 impl Display for Tree {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    self.fmt_indented(&Vec::new(), f)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { self.fmt_indented(&Vec::new(), f) }
 }
 
 fn aux_generate_indent(level: &[bool], is_base: bool) -> String {

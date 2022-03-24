@@ -1,5 +1,5 @@
-use rtx_core::common::{Config, OutputFormat};
 use rtx::converter::Converter;
+use rtx_core::common::{Config, OutputFormat};
 #[test]
 fn can_convert_hello() {
   assert!(rtx_core::util::logger::init(log::LevelFilter::Warn).is_ok());
