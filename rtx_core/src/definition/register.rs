@@ -1,10 +1,10 @@
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt;
 use std::rc::Rc;
-use std::borrow::Borrow;
 
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
@@ -72,18 +72,15 @@ impl<'a> From<&'a RegisterValue> for RegisterType {
   }
 }
 impl From<RegisterValue> for RegisterType {
-  fn from(v: RegisterValue) -> RegisterType {
-    v.borrow().into()
-  }
+  fn from(v: RegisterValue) -> RegisterType { v.borrow().into() }
 }
-
 
 impl Default for RegisterValue {
   fn default() -> Self { RegisterValue::Number(Number::new(0.0)) }
 }
 impl Object for RegisterValue {
   fn stringify(&self) -> String { s!("RegisterValue[{}]", self) }
-  fn revert(&self, state:&mut State) -> Result<Tokens> {
+  fn revert(&self, state: &mut State) -> Result<Tokens> {
     match self {
       // ExplodeText($self->toString);
       RegisterValue::Number(ref value) => Ok(Tokens::new(ExplodeText!(value))),

@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate rtx_core;
-use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx::converter::Converter;
+use rtx_core::common::{Config, DataSize, OutputFormat};
 use std::env;
 use std::process;
 use std::rc::Rc;

@@ -170,9 +170,13 @@ impl Object for Whatsit {
             // so maybe worth taking some time and aligning the idea here with `.revert_arguments` to avoid the insanity?
             //
             // GOAL: push(@tokens, $parameters->revertArguments($self->getArgs)); } }
-            let args = self.get_args().iter().flatten().map(|arg| arg.revert(state).unwrap_or_default()).collect();
-            tokens.extend(parameters.revert_arguments(args,state)?)
-            
+            let args = self
+              .get_args()
+              .iter()
+              .flatten()
+              .map(|arg| arg.revert(state).unwrap_or_default())
+              .collect();
+            tokens.extend(parameters.revert_arguments(args, state)?)
           }
         },
       };

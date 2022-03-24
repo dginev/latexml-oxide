@@ -6,7 +6,7 @@ use marpa::tree_builder::TreeBuilder;
 #[allow(unused_macros)]
 pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // We create a declarative macro language of our own, in the spirit of the Marpa SLIF
-  default_registry!();  
+  default_registry!();
   // Tokens, to be used in rules directly
   token!(atom ~ "ATOM");
   token!(unknown ~ "UNKNOWN");
@@ -61,9 +61,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(floatsuperscript ~ "FLOATSUPERSCRIPT");
   token!(floatsubscript ~ "FLOATSUBSCRIPT");
 
-rules!(
+  rules!(
     // Factors
-    factor = unknown | number | atom;
+    factor = unknown | number | id | atom;
     // Terms
     tight_term = factor
       | tight_term factor => invisible_times;
@@ -91,7 +91,7 @@ rules!(
     fenced_factor = lbrace expression rbrace    => circumfix_fenced
            | lbracket expression rbracket       => circumfix_fenced
            | lparen formula rparen              => circumfix_fenced;
-           
+
     factor += fenced_factor;
 
     anyop = addop | mulop | relop | metarelop

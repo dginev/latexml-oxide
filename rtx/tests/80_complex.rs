@@ -5,13 +5,13 @@ extern crate rtx_package;
 
 mod helpers;
 
-use rtx_core::common::error::*;
-use rtx_core::state::State;
-use rtx_core::stomach::Stomach;
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
 use rtx::util::test::*;
+use rtx_core::common::error::*;
+use rtx_core::state::State;
+use rtx_core::stomach::Stomach;
 use std::rc::Rc;
 
 #[test]

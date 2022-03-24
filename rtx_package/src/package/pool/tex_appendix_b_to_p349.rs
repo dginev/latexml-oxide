@@ -49,7 +49,6 @@ LoadDefinitions!(state, {
   DefMath!('<', None, '<', role => "RELOP", meaning => "less-han");
   DefMath!('>', None, '>', role => "RELOP", meaning => "greater-han");
 
-  
   //======================================================================
   // Combine digits in math.
 
@@ -63,7 +62,7 @@ LoadDefinitions!(state, {
   DefMath!("7", None, "7", role => "NUMBER", meaning => "7");
   DefMath!("8", None, "8", role => "NUMBER", meaning => "8");
   DefMath!("9", None, "9", role => "NUMBER", meaning => "9");
-  
+
   //======================================================================
   // TeX Book, Appendix B, p. 345
 

@@ -126,7 +126,6 @@ macro_rules! rewrite_replace_sub {
   };
 }
 
-
 #[macro_export]
 macro_rules! noreplacement {
   () => {

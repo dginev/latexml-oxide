@@ -7,7 +7,7 @@ use rtx_core::document::Document;
 use rtx_core::list::List;
 use rtx_core::state::State;
 use rtx_core::token;
-use rtx_core::{Core, Digested, s, Error, Info, generate_message};
+use rtx_core::{generate_message, s, Core, Digested, Error, Info};
 
 use crate::core::DigestionAPI;
 

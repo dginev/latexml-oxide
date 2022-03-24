@@ -3,7 +3,7 @@ use crate::fmt;
 use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
 
-use std::borrow::{Borrow,Cow};
+use std::borrow::{Borrow, Cow};
 use std::collections::VecDeque;
 use std::fmt::Display;
 use std::string::ToString;

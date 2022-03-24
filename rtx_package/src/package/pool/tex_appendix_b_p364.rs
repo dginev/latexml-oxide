@@ -80,7 +80,7 @@ LoadDefinitions!(state, {
   DefMath!(".", None, ".", role => "PERIOD");
   DefMath!(",", None, ",", role => "PUNCT");
   DefMath!(";", None, ";", role => "PUNCT");
-  
+
   // # If an XMWrap (presumably from \mathop, \mathbin, etc)
   // # has multiple children, ALL are XMTok, within a restricted set of roles,
   // # we want to concatenate the text content into a single XMTok.

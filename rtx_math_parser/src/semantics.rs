@@ -2,24 +2,22 @@ use marpa::lexer::token::Token;
 use marpa::stack::*;
 use marpa::thin::Value;
 use marpa::tree_builder::*;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::error::Error;
 use std::rc::Rc;
-use std::borrow::Cow;
 
 pub use self::tree::{Args, Operator, Tree, XMTok};
 use crate::pragmatics::ValidationPragmatics;
 
-mod tree;
-mod metadata;
 mod curry;
 mod from;
+mod metadata;
+mod tree;
 
 use metadata::Meta;
 
-pub type ActionClosure = Rc<
-  dyn Fn(i32, Vec<Option<Tree>>, &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>>,
->;
+pub type ActionClosure = Rc<dyn Fn(i32, Vec<Option<Tree>>, &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>>>;
 
 #[derive(Default)]
 pub struct Actions {
@@ -92,15 +90,17 @@ pub fn infix_apply_nary(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[Validat
   // left-to-right associative -- if "left" is already "infixop", tuck "right" in:
   if let Some(Tree::Apply(ref left_op, ref mut left_args, ref _m)) = left {
     if let Tree::Lexeme(left_op_lex, _xmeta) = &*left_op.0 {
-      if let Some(Tree::Lexeme(ref infix_op_lex,_)) = infixop {
-        let left_op_pieces : Vec<_> = left_op_lex.split(':').collect();
-        let infix_op_pieces : Vec<_> = infix_op_lex.split(':').collect();
-        if left_op_pieces.len()==3 && infix_op_pieces.len()==3 
+      if let Some(Tree::Lexeme(ref infix_op_lex, _)) = infixop {
+        let left_op_pieces: Vec<_> = left_op_lex.split(':').collect();
+        let infix_op_pieces: Vec<_> = infix_op_lex.split(':').collect();
+        if left_op_pieces.len() == 3
+          && infix_op_pieces.len() == 3
           && left_op_pieces[0] == infix_op_pieces[0]
-          && left_op_pieces[1] == infix_op_pieces[1] {
-            left_args.0.push(right);
-            return Ok(left)
-          }
+          && left_op_pieces[1] == infix_op_pieces[1]
+        {
+          left_args.0.push(right);
+          return Ok(left);
+        }
       }
     }
   }
@@ -135,15 +135,20 @@ pub fn invisible_times(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[Validati
   if let Some(Tree::Apply(ref op, ref mut left_args, ref _m)) = left {
     if let Tree::Token(xop, _xmeta) = &*op.0 {
       match xop.meaning {
-        Some(ref name) if name=="times" => {
+        Some(ref name) if name == "times" => {
           left_args.0.push(right);
-          return Ok(left)
+          return Ok(left);
         },
-        _ => {}
+        _ => {},
       }
     }
   }
   // otherwise create a new one:
-  let times = XMTok { meaning: Some(Cow::Borrowed("times")), role: Some(Cow::Borrowed("MULOP")), content: Some(Cow::Borrowed("\u{2062}")),name: None};
+  let times = XMTok {
+    meaning: Some(Cow::Borrowed("times")),
+    role: Some(Cow::Borrowed("MULOP")),
+    content: Some(Cow::Borrowed("\u{2062}")),
+    name: None,
+  };
   Ok(Some(Tree::Apply(times.into(), Args(vec![left, right]), Meta::default())))
 }

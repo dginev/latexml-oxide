@@ -26,23 +26,25 @@ fn main() {
       process::exit(1);
     },
   };
-  
+
   let (lexemes, lex_nodes, xmath_opt, mut doc) = lex_single_tex_formula(&source);
   assert!(!lexemes.is_empty());
-  eprintln!("lexemes: {:?}",lexemes);
+  eprintln!("lexemes: {:?}", lexemes);
 
-  let mut parser = MathParser::default(); 
-  if let Ok(Some(mut parse_tree)) = parser.parse_lexemes( lexemes, lex_nodes, &mut doc) {
+  let mut parser = MathParser::default();
+  if let Ok(Some(mut parse_tree)) = parser.parse_lexemes(lexemes, lex_nodes, &mut doc) {
     let mut xmath = xmath_opt.unwrap();
     for mut node in xmath.get_child_nodes() {
       node.unlink();
     }
     xmath.add_child(&mut parse_tree).unwrap();
-    println!("\n{}",
+    println!(
+      "\n{}",
       doc.get_document().to_string_with_options(SaveOptions {
-      format: true,
-      ..SaveOptions::default()
-    }));
+        format: true,
+        ..SaveOptions::default()
+      })
+    );
   } else {
     Warn!("math", "parse", None, None, "Grammar did not recognize expression.");
     process::exit(1);

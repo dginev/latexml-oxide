@@ -32,7 +32,7 @@ impl TagOptionName {
   }
   pub fn is_append(&self) -> bool {
     use self::TagOptionName::*;
-    matches!(*self,  AfterOpen | AfterClose | AfterOpenLate | AfterCloseLate)
+    matches!(*self, AfterOpen | AfterClose | AfterOpenLate | AfterCloseLate)
   }
 }
 
