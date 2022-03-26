@@ -268,7 +268,7 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
 
   let mut blocktag = "ltx:block";
   let mut iblocktag = "ltx:inline-block";
-  if blockattr.get("para").is_some() {
+  if blockattr.contains_key("para") {
     blocktag = "ltx:para";
     iblocktag = "ltx:inline-para";
     blockattr.remove("para");

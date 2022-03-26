@@ -86,7 +86,7 @@ LoadDefinitions!(state, {
 
   // Same as add_TeX, but add the code from the body of the object.
   Tag!("ltx:Math", after_close => sub[document, node, state] {
-    if node.get_attribute("tex").is_none() {
+    if !node.has_attribute("tex") {
       // only do this once.
 
       let tex_opt = if let Some(ref tbox) = document.get_node_box(node) {

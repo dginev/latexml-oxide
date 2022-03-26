@@ -195,15 +195,12 @@ LoadDefinitions!(state, {
   //     width => sub { LookupValue('\medmuskip'); } });
   // DefPrimitiveI('\@text@medmuskip', undef, "", alias => '\>');
 
-  DefMacro!("\\;", "\\ifmmode\\@math@thickmuskip\\else\\@text@thickmuskip\\fi");
-  DefConstructor!("\\@math@thickmuskip",
-    "<ltx:XMHint name='thickspace' width='#width'/>",
-    alias => "\\;"
-    properties => { map!("isSpace" => true.into() ) }
-    // TODO:
-    //   width => sub { LookupValue('\thickmuskip'); }
-  );
-  // DefPrimitive!("\\@text@thickmuskip", "\u{2004}", alias => "\\;".into_option());
+  DefPrimitive!("\\;", sub[stomach, args, state] {
+    Tbox::new("\u{2004}".to_string(), None, None, Tokens!(T_CS!("\\;")),
+      stored_map!("name"  => "thickspace", "isSpace" => true,
+      "width" => state.lookup_value("\\thickmuskip")), state)
+  });
+
 
   Let!("\\:", "\\>");
   DefMacro!("\\ ", "\\ifmmode\\@math@nbspace\\else\\@text@nbspace\\fi");

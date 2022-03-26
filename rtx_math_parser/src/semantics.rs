@@ -84,6 +84,46 @@ pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPr
   let apply_tree = Tree::Apply(infixop.into(), Args(vec![arg1, arg2]), Meta::default());
   Ok(Some(apply_tree))
 }
+
+// infix_apply in the base case,
+// but when chained, using the flat "multirelation" behavior of latexml
+pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
+  unpack!(args => left, infixop, right);
+  // if left has a "multirelation" already, add right in.
+  // if left applies a relation, flatten it out to infix form.
+  // base case - build a simple infix apply
+  let mut left = left;
+  match left {
+    Some(Tree::Apply(ref op, ref mut left_args,ref _left_meta)) => {
+      if let Tree::Token(ref tok, _) = *op.0 {
+        if tok.meaning == Some(Cow::Borrowed("multirelation")) {
+          left_args.0.push(infixop);
+          left_args.0.push(right);
+          Ok(left)
+        } else {
+           Ok(Some(Tree::Apply(infixop.into(), Args(vec![left, right]), Meta::default() )))
+        }
+      } else if let Tree::Lexeme(ref lex, ref _left_meta) = *op.0 {
+        if lex.split(':').next().unwrap().contains("RELOP") {
+          // first multirelation need is here.
+          let multirel_tok = XMTok { meaning: Some(Cow::Borrowed("multirelation")), ..XMTok::default() };
+          let mut drained_left_args = left_args.0.drain(..).into_iter();
+          let left_1 = drained_left_args.next().unwrap();
+          let left_2 = drained_left_args.next().unwrap();
+          let moved_op = (*op.0).clone();
+          Ok(Some(Tree::Apply(multirel_tok.into(), Args(vec![left_1, Some(moved_op), left_2, infixop, right]), Meta::default() )))
+        } else {
+          Ok(Some(Tree::Apply(infixop.into(), Args(vec![left, right]), Meta::default() )))
+        }
+      } else {
+        Ok(Some(Tree::Apply(infixop.into(), Args(vec![left, right]), Meta::default() )))
+      }
+    }
+    _ => Ok(Some(Tree::Apply(infixop.into(), Args(vec![left, right]), Meta::default())))
+  }
+
+}
+
 pub fn infix_apply_nary(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
   unpack!(args => left, infixop, right);
   let mut left = left;

@@ -30,7 +30,7 @@ fn basic_state_init() {
 fn assign_lookup_value() {
   let mut state = State::new(StateOptions::default());
   // initially missing
-  assert!(state.lookup_value("STRICT").is_none());
+  assert!(!state.has_value("STRICT"));
 
   let strict_value = s!("testing strict");
   state.assign_value("STRICT", strict_value.clone(), None);
@@ -62,7 +62,7 @@ fn assign_lookup_value() {
   };
 
   // missing after removal
-  assert!(state.lookup_value("STRICT").is_none());
+  assert!(!state.has_value("STRICT"));
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn scoped_assign_lookup_value() {
   // Let us try some scoped assignments:
   // First, can we push/pop frames?
   let mut state = State::new(StateOptions::default());
-  assert!(state.lookup_value("foo").is_none());
+  assert!(!state.has_value("foo"));
   state.assign_value("foo", s!("bar"), Some(Scope::Global));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),

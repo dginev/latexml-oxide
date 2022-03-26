@@ -112,7 +112,7 @@ LoadDefinitions!(state, {
       //  my $vmode = $tag eq 'ltx:inline-block'; # ie, explicitly \vbox !?!?!?!
       let vmode = match current {
         None => false,
-        Some(node) => node.get_attribute("_vertical_mode_").is_some()
+        Some(node) => node.has_attribute("_vertical_mode_")
       };
       let newtag = if vmode { "ltx:p" } else { "ltx:text" };
       let width : String = if let Some(Stored::Dimension(ref w)) = props.get("width") {

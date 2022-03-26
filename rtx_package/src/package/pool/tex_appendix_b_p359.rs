@@ -5,22 +5,22 @@ LoadDefinitions!(state, {
   // TeX Book, Appendix B. p. 359
 
   // Ah, since \ldots can appear in text and math....
-
-  DefConstructor!(
-    "\\ldots",
+  DefMacro!("\\ldots", "\\lx@ldots");
+  DefConstructor!("\\lx@ldots",
     "?#isMath(<ltx:XMTok name='ldots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})",
     sizer      => "\u{2026}",
-    reversion  => "\\ldots"
-  );
-  // TODO
-  // properties => properties!(sub[stomach, args, state] {
-  //   if state.lookup_bool("IN_MATH") {
-  //     font => state.lookup_font().merge(family => "serif", series => "medium", shape =>
-  // "upright").specialize("\u{2026}")   }
-  //  })
-  // Since not DefMath!
+    reversion  => "\\ldots",
+    properties => sub[stomach, args, state] {
+      if state.lookup_bool("IN_MATH") {
+        let new_font = state.lookup_font().unwrap().merge(
+          fontmap!(family => "serif", series => "medium", shape => "upright")
+          .specialize("\u{2026}"));
+        Ok(map!("font" => Stored::Font(Rc::new(new_font)))) // Since not DefMath!
+      } else {
+        Ok(HashMap::new())
+      }
+  });
 
-  // And so can \vdots
   // DefConstructor('\vdots', undef,
   //   "?#isMath(<ltx:XMTok name='vdots' font='#font' role='ID'>\x{22EE}</ltx:XMTok>)(\x{22EE})",
   //   properties => sub {

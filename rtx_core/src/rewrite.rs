@@ -3,10 +3,8 @@ use crate::document::Document;
 use crate::state::{Scope, State};
 use crate::tokens::Tokens;
 use libxml::tree::Node;
-use regex::Regex;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{VecDeque};
 use std::fmt;
-use std::hash::Hash;
 use std::rc::Rc;
 
 pub type RewriteReplaceClosure = Rc<dyn Fn(&mut Document, Vec<&mut Node>, &mut State) -> Result<()>>;
@@ -154,7 +152,7 @@ impl Rewrite {
     self.clauses = new_clauses;
   }
 
-  pub fn compile_clause(&self, document: &mut Document, clause: RewriteClause) -> RewriteClause {
+  pub fn compile_clause(&mut self, document: &mut Document, clause: RewriteClause) -> RewriteClause {
     let op = clause.op;
     let pattern = clause.pattern;
     //   my ($oop, $opattern) = ($op, $pattern);
@@ -182,8 +180,14 @@ impl Rewrite {
     //       Error('misdefined', '<rewrite>', undef,
     //         "Unrecognized scope pattern in Rewrite clause: \"$pattern\"; Ignoring it.");
     //       $op = 'ignore'; $pattern = []; } }
-    //   elsif ($op eq 'xpath') {
-    //     $op = 'select'; $pattern = [$pattern, 1]; }
+    if op == RewriteOperator::Xpath {
+      self.options.select_count = Some(1);
+      return RewriteClause {
+        compiled: true,
+        op: RewriteOperator::Select,
+        pattern,
+      }
+    }
     //   elsif ($op eq 'match') {
     //     if (ref $pattern eq 'CODE') {
     //       $op = 'test'; }
@@ -202,8 +206,8 @@ impl Rewrite {
     //     if $LaTeXML::DEBUG{rewrite};
     RewriteClause {
       compiled: true,
-      op: op,
-      pattern: pattern,
+      op,
+      pattern,
     }
   }
 
@@ -253,7 +257,7 @@ impl Rewrite {
             // Debug("Rewrite selecting \"$xpath\" => " . scalar(@matches) . " matches") if $LaTeXML::DEBUG{rewrite};
             for node in matches {
               // next unless node.get_owner_document()->isSameNode($tree->ownerDocument); # If still attached to original document!
-              if node.get_attribute("_matched").is_some() {
+              if node.has_attribute("_matched") {
                 continue;
               }
               // let w = mark_wildcards(node, wilds);

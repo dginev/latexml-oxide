@@ -461,7 +461,7 @@ impl State {
       if let Some(current_frame) = self.undo.front_mut() {
         let current_frame_table = current_frame.table_mut(table_name);
         // If the value was previously assigned in this frame
-        if current_frame_table.get(key).is_some() {
+        if current_frame_table.contains_key(key) {
           is_replace = true;
         } else {
           // Otherwise, push new value & set 1 to be undone
@@ -514,7 +514,7 @@ impl State {
   // manage a (global) list of values
   pub fn push_value<T: Into<Stored>>(&mut self, key: &str, value: T) {
     let value = value.into();
-    if self.value.get(key).is_none() {
+    if !self.value.contains_key(key) {
       self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
     }
     if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
@@ -525,7 +525,7 @@ impl State {
   }
 
   pub fn pop_value(&mut self, key: &str) -> Option<Stored> {
-    if self.value.get(key).is_none() {
+    if !self.value.contains_key(key) {
       self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
     }
     if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
@@ -534,6 +534,11 @@ impl State {
       Error!("state", "Stored", None, self, "BUG: Tried to pop_value from a non-vecdeque value key!");
       None
     }
+  }
+
+  /// Check if the Value table contains a given key
+  pub fn has_value(&self, key: &str) -> bool {
+    self.value.contains_key(key)
   }
 
   /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
@@ -669,7 +674,7 @@ impl State {
 
   pub fn unshift_value<T: Into<Stored>>(&mut self, key: &str, values: Vec<T>) {
     let values_iter = values.into_iter().map(Into::into);
-    if self.value.get(key).is_none() {
+    if !self.value.contains_key(key) {
       self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global))
     }
     if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
@@ -681,7 +686,7 @@ impl State {
   }
 
   pub fn shift_value(&mut self, key: &str) -> Option<Stored> {
-    if self.value.get(key).is_none() {
+    if !self.value.contains_key(key) {
       self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global))
     }
     if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
@@ -704,7 +709,7 @@ impl State {
   }
 
   pub fn assign_mapping<T: Into<Stored>>(&mut self, map: &str, key: &str, value: Option<T>) {
-    if self.value.get(map).is_none() || self.value[map].is_empty() {
+    if !self.value.contains_key(map) || self.value[map].is_empty() {
       self.assign_internal(TableName::Value, map, Stored::HashStored(HashMap::new()), Some(Scope::Global));
     }
     let map_store = self.value.get_mut(map).unwrap();
@@ -743,8 +748,8 @@ impl State {
   /// that frame (0 is the topmost).
   pub fn is_value_bound(&self, key: &str, frame_opt: Option<usize>) -> bool {
     match frame_opt {
-      Some(frame) => self.undo.get(frame).as_ref().unwrap().table(TableName::Value).get(key).is_some(),
-      None => self.value.get(key).unwrap_or(&VecDeque::new()).front().is_some(),
+      Some(frame) => self.undo.get(frame).as_ref().unwrap().table(TableName::Value).contains_key(key),
+      None => !self.value.get(key).unwrap_or(&VecDeque::new()).is_empty(),
     }
   }
 
@@ -1447,7 +1452,7 @@ impl State {
     let tag_contents: Vec<String> = self.model.get_tag_contents(tag).iter().map(ToString::to_string).collect();
 
     for kid in tag_contents {
-      if desc.entry(kid.clone()).or_insert_with(HashMap::new).get(&start).is_some() {
+      if desc.entry(kid.clone()).or_insert_with(HashMap::new).contains_key(&start) {
         continue;
       } // Already solved
 
@@ -1534,6 +1539,12 @@ impl State {
     // } else {
     None
     // }
+  }
+
+  pub fn generate_ligature_id(&mut self) -> usize {
+    let id = 1 + self.lookup_int("autogen_ligature_id");
+    self.assign_value("autogen_ligature_id", Stored::Int(id), Scope::Global);
+    id as usize
   }
 
   // WALL OF SHAME

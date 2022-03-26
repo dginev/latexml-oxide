@@ -1,4 +1,13 @@
+use lazy_static::lazy_static;
 use crate::package::*;
+lazy_static! {
+  static ref NAMED_SPACE_CHARS : HashMap<&'static str, &'static str> =
+    static_map!("negthinspace" => "", "thinspace" => "\u{2009}",
+      "medspace" => "\u{2005}", "thickspace" => "\u{2004}", "space" => " ");
+  static ref DECIMAL_SEP : HashMap<&'static str, &'static str> = static_map!("en" => ".", "de" => ",", "fr" => ",", "nl" => ",", "pt" => ",", "es" => ",");
+  static ref THOUSANDS_SEP : HashMap<&'static str, &'static str> = static_map!("en" => ",", "de" => ".", "fr" => ".", "nl" => ".", "pt" => ".", "es" => ".");
+}
+
 LoadDefinitions!(state, {
   //**********************************************************************
   // Plain;  Extracted from Appendix B.
@@ -23,7 +32,7 @@ LoadDefinitions!(state, {
   //   reversion      => '#2',
   //   afterConstruct => sub {
   //     my ($document, $whatsit) = @_;
-  //     my $node    = $document->getNode;              # This should be the wrapper just added.
+  //     let node    = $document->getNode;              # This should be the wrapper just added.
   //     my $meaning = ToString($whatsit->getArg(1));
   //     addMeaningRec($document, $node, $meaning);
   //     $node; });
@@ -62,6 +71,166 @@ LoadDefinitions!(state, {
   DefMath!("7", None, "7", role => "NUMBER", meaning => "7");
   DefMath!("8", None, "8", role => "NUMBER", meaning => "8");
   DefMath!("9", None, "9", role => "NUMBER", meaning => "9");
+
+// This is getting out-of-hand;
+// (1) this gets done after document build, so we query the document/node for language
+// rather than using something specified during digestion (eg. macros, roles...)
+// (2) the way we've specified the decimal & thousands separators (language dependent)
+// is completely insufficient; should leverage numprint or babel or ... ?
+// (3) the way we're detecting the chars is a mess: a mix of string content & role!
+// If we could accommodate multiple roles, maybe a separate role could be set on the tokens
+// (a period could be a PERIOD or a DECIMAL_SEPARATOR, eg)
+
+DefMathLigature!(matcher => sub[document, node, state] {
+  let lang = document.get_node_language(node);
+  let lang = lang.split('-').next().unwrap(); // strip off region code, if any.
+  let dec     = DECIMAL_SEP.get(lang).unwrap_or(&".");
+  let thou    = THOUSANDS_SEP.get(lang).unwrap_or(&",");
+  let decrole = if dec == &"." { "PERIOD" } else { "" };
+  let mut chars : Vec<char> = Vec::new();
+  let (mut n, mut combined, mut number, w, mut font) = (0, String::new(), String::new(), 0, None);
+  //     NOTE: We're scanning chars from END!
+  let mut node_ref = node;
+  let mut current;
+  loop {
+    let qn = state.model.get_node_qname(node_ref);
+    if qn == "ltx:XMTok" || qn == "ltx:XMWrap" {
+      let r = node_ref.get_attribute("role").unwrap_or_default();
+      let f    = document.get_node_font(node_ref);
+      let text = node_ref.get_content();
+      //  A number in same font?
+      if r=="NUMBER" && (font.is_none() || font.as_ref().unwrap() == &f) {
+        font = Some(f);
+        combined = text + &combined;
+        if let Some(m) = node_ref.get_attribute("meaning") {
+          number = m + &number;
+        }
+      } else if n == 0 { // any following cases are not allowed as LAST char
+        break;
+      }
+
+      // if thousands separator (but NOT simultaneously PUNCT!!!! Be paranoid about lists)
+      else if text.as_str() == *thou && r != "PUNCT" {
+        combined = text + &combined; // Add to string, but omit from number
+      } else if text.as_str() == *dec || r == decrole {
+        // if decimal separator, turn it into "standard" "."
+        combined = node_ref.get_content() + &combined;
+        number = String::from('.') + &number;
+      } else {
+        break;
+      }
+    // OR if XMHint with 0 <= width <= thickmuskip (5mu == ?)
+    } else if qn == "ltx:XMHint" {
+      if let Some(s_name) = node_ref.get_attribute("name") {
+        if let Some(s_char) = NAMED_SPACE_CHARS.get(s_name.as_str()) {
+          combined = s_char.to_string() + &combined;
+        } else {
+          break;
+        }
+      } else {
+         break;
+       }
+    } else {
+      break;
+    }
+    n+=1;
+    if let Some(sibling) = node_ref.get_prev_sibling() {
+      current = sibling;
+      node_ref = &mut current;
+    } else {
+      break;
+    }
+  }
+  if n > 1 && (number.chars().any(|c| c.is_numeric())) {
+    Ok(Some((n, combined, MathLigatureOptions {
+      meaning: Some(number),
+      role: Some("NUMBER".to_string()), .. MathLigatureOptions::default()})))
+    } else {
+      Ok(None)
+    }
+  });
+
+// This needs to be applied AFTER numbers have been resolved!
+// If we have a non-negative integer (no signs, decimals,...)
+// followed by a fraction dividing two non-negative integers,
+// Figure it's a mixed fraction --- ADDING the fraction to the number, not multiplying!
+// DefRewrite(select => ['descendant-or-self::ltx:XMTok[@role="NUMBER" and translate(@meaning,"0123456789","")=""]'
+//       . '[ following-sibling::*[1][self::ltx:XMApp]'
+//       . ' [child::*[1][self::ltx:XMTok[@meaning="divide"]]]'
+//       . ' [child::*[2]['
+//       . 'self::ltx:XMTok[@role="NUMBER" and translate(@meaning,"0123456789","")=""]'
+//       . 'or self::ltx:XMArg[count(child::*)=1]/ltx:XMTok[@role="NUMBER" and translate(@meaning,"0123456789","")=""]'
+//       . ']]'
+//       . ' [child::*[3]['
+//       . 'self::ltx:XMTok[@role="NUMBER" and translate(@meaning,"0123456789","")=""]'
+//       . 'or self::ltx:XMArg[count(child::*)=1]/ltx:XMTok[@role="NUMBER" and translate(@meaning,"0123456789","")=""]'
+//       . ']]'
+//       . ']',
+//     2],
+//   replace => sub { my ($document, $number, $frac) = @_;
+//     my $box = $document->getNodeBox($number);
+//     $document->openElement('ltx:XMApp', _box => $box);
+//     $document->insertMathToken("\x{2064}",    # Invisible Plus!
+//       meaning => 'plus', role => "ADDOP", _box => $box);
+//     $document->getNode->appendChild($number);
+//     $document->getNode->appendChild($frac);
+//     $document->closeElement('ltx:XMApp'); });
+
+  // Recognize !!
+  DefMathLigature!("!!", "!!", role => "POSTFIX", meaning => "double-factorial");
+  // Recognize :=
+  DefMathLigature!(":=", ":=", role => "RELOP", meaning => "assign");
+
+//======================================================================
+// Combine letters, when the fonts are right. (sorta related to mathcode)
+// well, maybe a letter followed by letters & digits?
+  DefMathLigature!(matcher => sub [document,node_opt,state] {
+    let mut chars :Vec<char> = Vec::new();
+    let font  = document.get_node_font(&node_opt);
+    let mut this_node;
+    let mut node_mut = node_opt;
+    if font.is_sticky() {
+      let mut n      = 0;
+      let mut text = String::new();
+      loop {
+        if state.model.get_node_qname(node_mut) != "ltx:XMTok"
+         || document.get_node_font(node_mut) != font
+         || node_mut.has_attribute("name") {
+           break;
+         }
+        match node_mut.get_attribute("role") {
+          Some(role) if role != "UNKNOWN" && role != "NUMBER" => break,
+          _ => {}
+        };
+        let node_text = node_mut.get_content();
+        if !node_text.chars().all(|c| c.is_alphanumeric()) {
+          break;
+        }
+        n+=1;
+        text = node_text + &text;
+        if let Some(sibling) = node_mut.get_prev_sibling() {
+          this_node = sibling;
+          node_mut = &mut this_node;
+        } else {
+          break;
+        }
+      }
+      let has_leading_letter = match text.chars().next() {
+        Some(fc) => fc.is_alphabetic(),
+        None => false
+      };
+      if has_leading_letter && n > 1 {
+        Ok(Some((n, text, MathLigatureOptions {
+          role: Some("UNKNOWN".to_string()),
+          meaning: None,
+          name: None }))) }
+      else {
+        Ok(None)
+      }
+    } else {
+      Ok(None)
+    }
+ });
 
   //======================================================================
   // TeX Book, Appendix B, p. 345

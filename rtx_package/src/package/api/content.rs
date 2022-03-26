@@ -189,7 +189,7 @@ fn input_handle_options(
 ) -> Result<()> {
   // For \RequirePackageWithOptions, pass the options from the outer class/style to the inner one.
   if let Some(with_options_to_pass) = options.withoptions.take() {
-    if !prevname.is_empty() && state.lookup_value(&s!("opt@{}.{}", prevname, prevext)).is_some() {
+    if !prevname.is_empty() && state.has_value(&s!("opt@{}.{}", prevname, prevext)) {
       // Only pass those class options that are declared by the package!
       if let Some(declared_options) = state.lookup_vecdeque("@declaredoptions") {
         let mut topass = Vec::new();

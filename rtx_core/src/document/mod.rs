@@ -18,6 +18,9 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::common::xml;
 use crate::state::State;
+use crate::list::List;
+use crate::ligature::Ligature;
+use crate::TexMode;
 
 use crate::document::resource::Resource;
 use crate::document::tag::{TagConstructionClosure, TagOptionName, TagOptions};
@@ -166,7 +169,7 @@ impl Document {
 
     let font = self.get_node_font(node);
     let mut pending_declaration = font.relative_to(&declared_font);
-    if (!node.get_child_nodes().is_empty() || node.get_attribute("_force_font").is_some()) && !pending_declaration.is_empty() {
+    if (!node.get_child_nodes().is_empty() || node.has_attribute("_force_font")) && !pending_declaration.is_empty() {
       for (key, &(ref value, ref properties)) in &pending_declaration {
         if state.model.can_have_attribute(&qname, key) {
           attrs_to_set.push((key.to_string(), value.to_string()));
@@ -188,7 +191,7 @@ impl Document {
     for mut child in node.get_child_nodes() {
       let child_type = child.get_type();
       if child_type == Some(NodeType::ElementNode) {
-        let was_forcefont = child.get_attribute("_force_font").is_some();
+        let was_forcefont = child.has_attribute("_force_font");
         self.finalize_rec(&mut child, new_init_font, state)?;
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
@@ -440,7 +443,7 @@ impl Document {
       let t = state.model.get_node_qname(&node);
       // autoclose until node of same name BUT also close nodes opened' for font
       // switches!
-      if t == qname && !(t == FONT_ELEMENT_NAME && node.get_attribute("_fontswitch").is_some()) {
+      if t == qname && !(t == FONT_ELEMENT_NAME && node.has_attribute("_fontswitch")) {
         break;
       }
       if !self.can_auto_close(&node, state) {
@@ -644,8 +647,8 @@ impl Document {
     match node.get_type() {
       Some(NodeType::TextNode) | Some(NodeType::CommentNode) => true,
       Some(NodeType::ElementNode) => {
-        if node.get_attribute("_noautoclose").is_none() {
-          if node.get_attribute("_autoclose").is_some() {
+        if !node.has_attribute("_noautoclose") {
+          if node.has_attribute("_autoclose") {
             true
           } else if let Some(props) = state.tag_properties.get(&self.get_node_qname(node, state)) {
             props.auto_close.unwrap_or(false)
@@ -776,7 +779,7 @@ impl Document {
           open_tag.push_str(&s!(" {}=\"{}\"", key_serialized, val_serialized));
         }
         // HACK for xml:id for now, assuming last element
-        if anodes.get("id").is_some() {
+        if anodes.contains_key("id") {
           let val_serialized = serialize_attr(&node.get_property("id").unwrap_or_default());
           open_tag.push_str(&s!(" {}=\"{}\"", "xml:id", val_serialized));
         }
@@ -869,7 +872,6 @@ impl Document {
     font_opt: Option<&Font>,
     state: &mut State,
   ) -> Result<Node> {
-    // Debug!(target:"document:insert" ,"insert math token: {:?}", text);
     attributes.entry(s!("role")).or_insert_with(|| s!("UNKNOWN"));
 
     let font = match font_opt {
@@ -948,7 +950,7 @@ impl Document {
             break;
           }
         }
-        if state.model.get_node_qname(&n) != FONT_ELEMENT_NAME || n.get_attribute("_noautoclose").is_some() {
+        if state.model.get_node_qname(&n) != FONT_ELEMENT_NAME || n.has_attribute("_noautoclose") {
           break;
         }
         match n.get_parent() {
@@ -1030,7 +1032,7 @@ impl Document {
                 continue; // if the font test fails, skip the ligature
               }
             }
-            content = (ligature.code)(&content);
+            content = (ligature.code.as_ref().unwrap())(&content);
           }
         }
       }
@@ -1079,7 +1081,7 @@ impl Document {
           .keys()
           .filter(|x| !x.starts_with('_'))
           .all(|n| state.model.can_have_attribute(&qname, n))
-        && c[0].get_attribute("_force_font").is_none()
+        && !c[0].has_attribute("_force_font")
       {
         let c_first = c.remove(0);
         self.set_node_font(node, self.get_node_font(&c_first).clone());
@@ -1095,7 +1097,7 @@ impl Document {
           match key.as_str() {
             "xml:id" => {
               // Use the replacement id
-              if node.get_attribute(key).is_none() {
+              if !node.has_attribute(key) {
                 // val = self.record_id(val, node); // TODO
                 node.set_attribute(key, val)?;
               }
@@ -1160,25 +1162,72 @@ impl Document {
     node.append_text(text)?;
     // print STDERR "Trying Math Ligatures at \"$string\"\n";
     if !state.nomathparse {
-      self.apply_math_ligatures(&node);
+      self.apply_math_ligatures(&mut node, state)?;
     }
     Ok(node)
   }
 
   // New stategy (but inefficient): apply ligatures until one succeeds,
   // then remove it, and repeat until ALL (remaining) fail.
-  fn apply_math_ligatures(&self, _node: &Node) {
-    // my ($self, $node) = @_;
-    // if (my $ligatures = $STATE->lookupValue('MATH_LIGATURES')) {
-    //   let ligatures = @$ligatures;
-    //   while (@ligatures) {
-    //     my $matched = 0;
-    //     foreach my $ligature (@ligatures) {
-    //       if ($self->applyMathLigature($node, $ligature)) {
-    //         @ligatures = grep { $_ ne $ligature } @ligatures;
-    //         $matched = 1;
-    //         last; } }
-    //     return unless $matched; } }
+  fn apply_math_ligatures(&mut self, node: &mut Node, state: &State) -> Result<()> {
+    if let Some(Stored::VecDequeStored(stored_ligatures)) = state.lookup_value("MATH_LIGATURES") {
+      let mut ligatures = stored_ligatures.iter().collect::<VecDeque<_>>();
+      while !ligatures.is_empty() {
+        let mut matched = false;
+        let mut next_ligatures = VecDeque::new();
+        while !ligatures.is_empty() {
+          let ligature_stored = ligatures.pop_front().unwrap();
+          if let Stored::Ligature(ligature) = ligature_stored {
+            if self.apply_math_ligature(node, ligature, state)? {
+              next_ligatures.extend(ligatures.drain(..));
+              matched = true;
+              break;
+            }
+          } else {
+            next_ligatures.push_back(ligature_stored);
+          }
+        }
+        ligatures = next_ligatures;
+        if !matched {
+          return Ok(());
+        }
+      }
+    }
+    Ok(())
+  }
+
+  /// Apply ligature operation to `node`, presumed the last insertion into it's parent(?)
+  fn apply_math_ligature(&mut self, node: &mut Node, ligature: &Ligature, state: &State) -> Result<bool> {
+    if let Some((nmatched, newstring, attr)) = (ligature.matcher.as_ref().unwrap())(self, node, state)? {
+      let mut boxes = VecDeque::new();
+      boxes.push_front(self.get_node_box(node).unwrap());
+      node.get_first_child().unwrap().set_content(&newstring)?;
+      for idx in 0..nmatched-1 {
+        let remove = node.get_prev_sibling().unwrap();
+        boxes.push_front(self.get_node_box(&remove).unwrap());
+        self.remove_node(remove);
+      }
+    // This fragment replaces the node's box by the composite boxes it replaces
+    // HOWEVER, this gets things out of sync because parent lists of boxes still
+    // have the old ones.  Unless we could recursively replace all of them, we'd better skip it(??)
+      if boxes.len() > 1 {
+        // TODO: Cloning boxes is BAD. What is a better model?
+        let mut list = List::new(boxes.into_iter().map(|b| (*b).clone()).collect::<Vec<_>>());
+        list.mode = Some(TexMode::Math);
+        self.set_node_box(node, Rc::new(list.into()));
+      }
+      for (key,value_opt) in attr.sorted_each() {
+        if let Some(value) = value_opt {
+          node.set_attribute(key, value)?;
+        } else {
+          node.remove_attribute(key)?;
+        }
+      }
+      Ok(true)
+    }
+    else {
+      Ok(false)
+    }
   }
 
   /// Note that a box has been absorbed creating $node;
@@ -1605,7 +1654,6 @@ impl Document {
         self.unrecord_id(&id);
       }
     }
-    return;
   }
 
   // # Get a new, related, but unique id
@@ -1648,7 +1696,7 @@ impl Document {
   pub fn mark_xmnode_visibility(&mut self, state: &mut State) -> Result<()> {
     let xmath = self.findnodes("//ltx:XMath/*", None, state);
     for math in xmath.iter() {
-      for mut node in self.findnodes("descendant-or-self::*[@_pvis or @_cvis]", Some(&math), state) {
+      for mut node in self.findnodes("descendant-or-self::*[@_pvis or @_cvis]", Some(math), state) {
         node.remove_attribute("_pvis")?;
         node.remove_attribute("_cvis")?;
       }
@@ -1661,7 +1709,7 @@ impl Document {
 
   fn mark_xmnode_visibility_aux(&self, mut node: Node, cvis: bool, mut pvis: bool, state: &mut State) -> Result<()> {
     let qname = self.get_node_qname(&node, state);
-    if (!cvis || node.get_attribute("_cvis").is_some()) && (!pvis || node.get_attribute("_pvis").is_some()) {
+    if (!cvis || node.has_attribute("_cvis")) && (!pvis || node.has_attribute("_pvis")) {
       return Ok(());
     }
     // Special case: for XMArg used to wrap "formal" arguments on the content side,
@@ -1696,7 +1744,7 @@ impl Document {
     //     $self->markXMNodeVisibility_aux($reffed, $cvis, $pvis); }
     } else {
       for child in xml::element_nodes(&node) {
-        self.mark_xmnode_visibility_aux(child, cvis, pvis, state);
+        self.mark_xmnode_visibility_aux(child, cvis, pvis, state)?;
       }
     }
     Ok(())
@@ -1828,7 +1876,7 @@ impl Document {
     //     nodes.push(n.get_child_nodes);
     //   }
     // }
-    return;
+
   }
 
   pub fn set_box_font(&mut self, node: &Node) {
@@ -1853,15 +1901,31 @@ impl Document {
     }
   }
 
-  // sub getNodeLanguage {
-  //   my ($self, $node) = @_;
-  //   my ($font, $lang);
-  //   while ($node && ($node->nodeType == XML_ELEMENT_NODE)
-  //     && !(($lang = $node->getAttribute('xml:lang'))
-  //       || (($font = $$self{node_fonts}{ $node->getAttribute('_font') })
-  //         && ($lang = $font->getLanguage)))) {
-  //     $node = $node->parentNode; }
-  //   return $lang || 'en'; }
+  pub fn get_node_language(&self, node: &Node) -> String {
+    let mut node_ref = node;
+    let mut current;
+    loop {
+      if node_ref.get_type() != Some(NodeType::ElementNode) {
+        break;
+      }
+      if let Some(lang) = node_ref.get_attribute("xml:lang") {
+        return lang;
+      }
+      let nodeid = node.to_hashable();
+      if let Some(font) = self.node_fonts.get(&nodeid) {
+        if let Some(lang) = font.get_language() {
+          return lang.to_string();
+        }
+      }
+      if let Some(parent) = node_ref.get_parent() {
+        current = parent;
+        node_ref = &current;
+      } else {
+        break;
+      }
+    }
+    String::from("en")
+  }
 
   // sub decodeFont {
   //   my ($self, $fontid) = @_;
@@ -2368,7 +2432,7 @@ impl Document {
     // Should we only accept a node that already has an id, or should we create an id?
     let mut node_opt: Option<Cow<Node>> = None;
     while let Some(candidate) = candidates.pop_front() {
-      if self.can_node_have_attribute(candidate, key, state) && candidate.get_attribute_ns("id", xml::XML_NS).is_some() {
+      if self.can_node_have_attribute(candidate, key, state) && candidate.has_attribute_ns("id", xml::XML_NS) {
         node_opt = Some(Cow::Borrowed(candidate));
         break;
       }
@@ -2381,7 +2445,7 @@ impl Document {
         None => None,
       };
       if let Some(sibling) = sib {
-        if self.can_node_have_attribute(&sibling, key, state) && sibling.get_attribute_ns("id", xml::XML_NS).is_some() {
+        if self.can_node_have_attribute(&sibling, key, state) && sibling.has_attribute_ns("id", xml::XML_NS) {
           node_opt = Some(Cow::Owned(sibling));
         } else if !ancestors.is_empty() {
           // just take root element?

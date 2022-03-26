@@ -77,34 +77,34 @@ LoadDefinitions!(state, {
   // DefConstructor('\mathpunct{}', "?#1(<ltx:XMWrap role='PUNCT'>#1</ltx:XMWrap>)()", bounded => 1);
   // DefConstructor('\mathinner{}', "?#1(<ltx:XMWrap role='ATOM'>#1</ltx:XMWrap>)()",  bounded => 1);
 
+  // If an XMWrap (presumably from \mathop, \mathbin, etc)
+  // has multiple children, ALL are XMTok, within a restricted set of roles,
+  // we want to concatenate the text content into a single XMTok.
+  DefMathRewrite!(xpath => concat!("descendant-or-self::ltx:XMWrap[",
+    // Only XMWrap's from the above class of operators
+    "(@role='OP' or @role='BIGOP' or @role='RELOP' ",
+    "or @role='ADDOP' or @role='MULOP' or @role='BINOP'",
+    "or @role='OPEN' or @role='CLOSE')",
+    " and count(child::*) > 1 ",
+    // with only XMTok as children with the roles in (roughly) the same set
+    " and not(child::*[local-name() != 'XMTok'])",
+    " and not(ltx:XMTok[",
+    "@role !='OP' and @role!='BIGOP' and @role!='RELOP' and role!='METARELOP'",
+    "and @role!='ADDOP' and @role!='MULOP' and @role!='BINOP'",
+    "and @role!='OPEN' and @role!='CLOSE'",
+    "])]"),
+  replace => sub[document, nodes, state] {
+    let node = nodes.pop().unwrap();
+    let mut replacement = node.clone();
+    let content     = node.get_content();
+    replacement.append_text(&content)?;
+    replacement.set_name("ltx:XMTok")?;
+    document.get_node_mut().add_child(&mut replacement)?;
+  });
+
   DefMath!(".", None, ".", role => "PERIOD");
   DefMath!(",", None, ",", role => "PUNCT");
   DefMath!(";", None, ";", role => "PUNCT");
-
-  // # If an XMWrap (presumably from \mathop, \mathbin, etc)
-  // # has multiple children, ALL are XMTok, within a restricted set of roles,
-  // # we want to concatenate the text content into a single XMTok.
-  // DefMathRewrite(xpath => 'descendant-or-self::ltx:XMWrap['
-  //     # Only XMWrap's from the above class of operators
-  //     . '(@role="OP" or @role="BIGOP" or @role="RELOP" '
-  //     . 'or @role="ADDOP" or @role="MULOP" or @role="BINOP" '
-  //     . 'or @role="OPEN" or @role="CLOSE")'
-  //     . ' and count(child::*) > 1 '
-  //     # with only XMTok as children with the roles in (roughly) the same set
-  //     . ' and not(child::*[local-name() != "XMTok"])'
-  //     . ' and not(ltx:XMTok['
-  //     . '@role !="OP" and @role!="BIGOP" and @role!="RELOP" and @role!="METARELOP" '
-  //     . 'and @role!="ADDOP" and @role!="MULOP" and @role!="BINOP" '
-  //     . 'and @role!="OPEN" and @role!="CLOSE"'
-  //     . '])]',
-  //   replace => sub {
-  //     my ($document, $node) = @_;
-  //     my $replacement = $node->cloneNode(0);
-  //     my $content     = $node->textContent;
-  //     $replacement->appendText($content);
-  //     $replacement->setName('ltx:XMTok');
-  //     $document->getNode->appendChild($replacement);
-  //   });
 
   // DefMacro('\hiderel{}', "#1");    # Just ignore, for now...
 

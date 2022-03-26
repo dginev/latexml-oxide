@@ -36,7 +36,7 @@ pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &st
   // If node doesn't already have an id, and can
   let node_qname = document.get_node_qname(node, state);
   // but isn't a _Capture_ node (which ultimately should disappear)
-  if node.get_attribute_ns("id", XML_NS).is_none() && document.can_have_attribute(&node_qname, "xml:id", state) && (node_qname != "ltx:_Capture_") {
+  if !node.has_attribute_ns("id", XML_NS) && document.can_have_attribute(&node_qname, "xml:id", state) && (node_qname != "ltx:_Capture_") {
     let mut ancestor = document
       .findnode("ancestor::*[@xml:id][1]", Some(node), state)
       .unwrap_or_else(|| document.get_document().get_root_element().unwrap());
