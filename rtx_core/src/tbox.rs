@@ -9,6 +9,7 @@ use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::common::dimension::Dimension;
 use crate::document::Document;
 use crate::state::State;
 use crate::token::{Catcode, Token};
@@ -44,7 +45,8 @@ impl fmt::Display for Tbox {
 }
 impl Object for Tbox {
   fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
-  fn revert(&self, _state: &mut State) -> Result<Tokens> { Ok(self.tokens.clone()) }
+  fn revert(&self, _state: &mut State) -> Result<Tokens> {
+    Ok(self.tokens.clone()) }
 }
 impl Tbox {
   pub fn new(
@@ -71,6 +73,11 @@ impl Tbox {
       tokens_opt
     };
 
+    if properties.contains_key("isSpace") && (properties.contains_key("width")  || properties.contains_key("height") || properties.contains_key("depth")) {
+      properties.entry("width".to_string()).or_insert_with(|| Stored::Dimension(Dimension::default()));
+      properties.entry("height".to_string()).or_insert_with(|| Stored::Dimension(Dimension::default()));
+      properties.entry("depth".to_string()).or_insert_with(|| Stored::Dimension(Dimension::default()));
+    }
     if state.lookup_bool("IN_MATH") {
       properties.insert(s!("mode"), String::from("math").into());
       if !text.is_empty() {
@@ -130,8 +137,11 @@ impl BoxOps for Tbox {
         Some(value) => Some(Cow::Borrowed(value)),
         None => {
           let tex = self.tokens.untex(state); // !
-          let property_bool = !tex.is_empty() && tex.chars().all(char::is_whitespace); // Check the TeX code, not (just) the string!
-          Some(Cow::Borrowed(property_bool.into()))
+          if !tex.is_empty() && tex.chars().all(char::is_whitespace) { // Check the TeX code, not (just) the string!
+            Some(Cow::Owned(Stored::Bool(true)))
+          } else {
+            None
+          }
         },
       }
     } else {

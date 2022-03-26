@@ -199,7 +199,7 @@ impl DigestionAPI for Core {
     document.absorb(digested, state)?;
     note_end("Building");
 
-    let has_rewrites = state.lookup_value("DOCUMENT_REWRITE_RULES").is_some();
+    let has_rewrites = state.has_value("DOCUMENT_REWRITE_RULES");
     if has_rewrites {
       note_begin("Rewriting");
       document.mark_xmnode_visibility(state)?;

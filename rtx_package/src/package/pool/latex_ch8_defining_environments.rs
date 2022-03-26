@@ -13,7 +13,8 @@ LoadDefinitions!(state, {
     let end_name_cs = T_CS!(s!("\\end{}",name));
     let nargs : usize = nargs.to_string().parse().unwrap_or(0);
     if IsDefined!(&name_cs) {
-      let is_locked = LookupValue!(&s!("\\{}:locked",name)).is_some() || LookupValue!(&s!("\\begin{{{}}}:locked",name)).is_some();
+      let is_locked = state.has_value(&s!("\\{}:locked",name)) ||
+       state.has_value(&s!("\\begin{{{}}}:locked",name));
       if !is_locked {
         let message = s!("Ignoring redefinition (\\newenvironment) of Environment {:?}", name);
         Info!("ignore", name, stomach, state, message);

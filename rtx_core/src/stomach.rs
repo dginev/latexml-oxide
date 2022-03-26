@@ -527,7 +527,7 @@ impl<'t> Stomach {
 
   pub fn endgroup(&mut self, state: &mut State) -> Result<()> {
     // if state.is_value_bound("MODE", Some(0))    // Last stack frame was a mode switch!?!?!
-    //   || state.lookup_value("groupNonBoxing").is_none() {    // or group was opened with \bgroup
+    //   || !state.has_value("groupNonBoxing") {    // or group was opened with \bgroup
     // error!("unexpected:{:?}: Attempt to close non-boxing group",
     // state.lookup_value("CURRENT_TOKEN")); // Error('unexpected',
     // $LaTeXML::CURRENT_TOKEN, self, "Attempt to close non-boxing group", // self.

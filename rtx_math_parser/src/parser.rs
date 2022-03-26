@@ -867,22 +867,23 @@ fn textrec_apply(name: &str, op: &Node, args:Vec<Node>, document: &Document, sta
     // if (($role =~ /^(SUB|SUPER)SCRIPTOP$/) && $op.get_attribute("meaning")) {
     //   return (500, textrec($op, 10000, $name) . "@(" . join(", ", map { textrec($_) } @args) . ")") }
     // else {    # Format as infix.
-      let textrec_op = textrec(op, None, None, document, state);
-      let rec_form = if args.len() == 1 { // unless a single arg; then prefix.
-        textrec_op + " " + &textrec(&args[0], Some(*bp), Some(name), document, state)
-      } else {
-        args.iter().map(|a|
-          textrec(a, Some(*bp), Some(name), document, state))
-          .collect::<Vec<_>>()
-          .join(&(" ".to_string() + &textrec_op + " "))
-      };
-      return (*bp, rec_form);
+    let textrec_op = textrec(op, None, None, document, state);
+    let rec_form = if args.len() == 1 { // unless a single arg; then prefix.
+      textrec_op + " " + &textrec(&args[0], Some(*bp), Some(name), document, state)
+    } else {
+      args.iter().map(|a|
+        textrec(a, Some(*bp), Some(name), document, state))
+        .collect::<Vec<_>>()
+        .join(&(" ".to_string() + &textrec_op + " "))
+    };
+    return (*bp, rec_form);
   } else if role == "POSTFIX" {
     (10000, textrec(&args[0], Some(10000), Some(name), document, state) + &textrec(op, None, None, document, state))
   } else if name == "multirelation" {
-    (2, args.iter().map(|a| textrec(a, Some(2), Some(name), document, state)).collect::<Vec<_>>().join(" "))
-  }
-  else {
+    let joined = args.iter().map(|a| textrec(a, Some(2), Some(name), document, state)).collect::<Vec<_>>().join(" ");
+    eprintln!("-- joined: {}", joined);
+    (2, joined)
+  } else {
     (500, textrec(op, Some(10000), Some(name), document, state) + "@(" +
     &args.iter().map(|a|
       textrec(a, None, None, document, state))

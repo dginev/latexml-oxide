@@ -231,6 +231,14 @@ impl Font {
     }
   }
 
+  pub fn is_sticky(&self) -> bool {
+    if let Some(ref family) = self.family {
+      family == "serif" || family == "sansserif" || family == "typewriter"
+    } else {
+      false
+    }
+  }
+
   // Accessors
   pub fn get_family(&self) -> Option<&Cow<str>> { self.family.as_ref() }
   pub fn get_series(&self) -> Option<&Cow<str>> { self.series.as_ref() }

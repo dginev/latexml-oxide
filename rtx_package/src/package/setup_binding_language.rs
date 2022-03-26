@@ -333,46 +333,55 @@ macro_rules! DefMathRewrite {
 //       %options });
 //   return; }
 
-// my $old_math_ligature_options = {};                                                     # [CONSTANT]
-// my $math_ligature_options     = { matcher => 1, role => 1, name => 1, meaning => 1 };   # [CONSTANT]
+macro_rules! DefMathLigature {
+  ($pattern:literal, $replacement:literal, $($input:tt)+) => {{
+    let attr = defi_opts!(@munch ($($input)*) -> {MathLigatureOptions,});
+    let chars    = $pattern.chars().rev().collect::<Vec<_>>();
+    let ntomatch = chars.len();
+    let matcher : Option<LigatureMatcher> = Some(Rc::new(move |document: &mut Document, node_opt: &mut Node, lstate:&State| {
+      let mut node : Node;
+      let mut node_mut = node_opt;
+      for c in chars.iter() {
+        if lstate.model.get_node_qname(node_mut) != "ltx:XMTok" || node_mut.get_content() != c.to_string() {
+          return Ok(None);
+        }
+        if let Some(sibling) = node_mut.get_prev_sibling() {
+          node = sibling;
+          node_mut = &mut node;
+        } else {
+          return Ok(None);
+        }
+      }
+      if ntomatch > 0 {
+        Ok(Some((ntomatch, $replacement.to_string(), attr.clone())))
+      } else {
+        Ok(None)
+      }
+    }));
+    bind_state_mut!(st);
+    let id = st.generate_ligature_id();
+    st.unshift_value("MATH_LIGATURES", vec![Ligature {
+      id,
+      matcher,
+      code: None,
+      font_test: None,
+      regex: None,
+    }]);
+  }};
+  (matcher => sub[$document:ident, $node:ident, $statev:ident] $code:block) => {{
+    bind_state_mut!(st);
+    let id = st.generate_ligature_id();
+    let matcher : Option<LigatureMatcher> = Some(Rc::new(|$document: &mut Document, $node: &mut Node, $statev: &State| $code));
+    st.unshift_value("MATH_LIGATURES", vec![Ligature {
+      id,
+      matcher,
+      code: None,
+      font_test: None,
+      regex: None,
+    }]);
+  }};
+}
 
-// sub DefMathLigature {
-//   if ((scalar(@_) % 2) == 1) {                                                          # Old style!
-//     my ($matcher, %options) = @_;
-//     Info('deprecated', 'ligature', undef, "Old style arguments to DefMathLigature; please update");
-//     CheckOptions("DefMathLigature", $old_math_ligature_options, %options);
-//     UnshiftValue('MATH_LIGATURES', { old_style => 1, matcher => $matcher }); }          # Install it...
-//   else {                                                                                # new style!
-//     my (%options) = @_;
-//     my $matcher = $options{matcher};
-//     delete $options{matcher};
-//     my ($pattern) = grep { !$$math_ligature_options{$_} } keys %options;
-//     my $replacement = $pattern && $options{$pattern};
-//     delete $options{$pattern} if $replacement;
-//     CheckOptions("DefMathLigature", $math_ligature_options, %options);    # Check remaining options
-//     if ($matcher && $pattern) {
-//       Error('misdefined', 'MathLigature', undef,
-//         "DefMathLigature only gets one of matcher or pattern=>replacement keywords");
-//       return; }
-//     elsif ($pattern) {
-//       my @chars    = reverse(split(//, $pattern));
-//       my $ntomatch = scalar(@chars);
-//       my %attr     = %options;
-//       $matcher = sub {
-//         my ($document, $node) = @_;
-//         foreach my $char (@chars) {
-//           return unless
-//             ($node
-//             && ($document->getModel->getNodeQName($node) eq 'ltx:XMTok')
-//             && (($node->textContent || '') eq $char));
-//           $node = $node->previousSibling; }
-//         return ($ntomatch, $replacement, %attr); }; }
-//     elsif (!$matcher) {
-//       Error('misdefined', 'MathLigature', undef,
-//         "DefMathLigature missing matcher or pattern=>replacement keywords");
-//       return; }
-//     UnshiftValue('MATH_LIGATURES', { matcher => $matcher }); }    # Install it...
-//   return; }
 
 #[macro_export]
 macro_rules! DefConditional(
@@ -1044,12 +1053,15 @@ macro_rules! DefLigature {
     #[allow(clippy::trivial_regex)]
     let regex_compiled = Regex::new($regex).unwrap();
     let test_closure: Option<FontTestClosure> = Some(Rc::new(move |$font| $body));
+    let new_ligature_id = $state_arg.generate_ligature_id();
     $state_arg.unshift_value(
       "TEXT_LIGATURES",
       vec![Ligature {
-        regex: $regex.to_string(),
-        code: Rc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string()),
+        id: new_ligature_id,
+        regex: Some($regex.to_string()),
+        code: Some(Rc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string())),
         font_test: test_closure,
+        matcher: None,
       }],
     );
   };
@@ -1059,12 +1071,15 @@ macro_rules! DefLigature {
   }};
   ($regex:expr, $replacement:expr, $state_arg:ident) => {
     let regex_compiled = Regex::new($regex).unwrap();
+    let new_ligature_id = $state_arg.generate_ligature_id();
     $state_arg.unshift_value(
       "TEXT_LIGATURES",
       vec![Ligature {
-        regex: $regex.to_string(),
-        code: Rc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string()),
+        id: new_ligature_id,
+        regex: Some($regex.to_string()),
+        code: Some(Rc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string())),
         font_test: None,
+        matcher: None,
       }],
     );
   };
@@ -1088,11 +1103,11 @@ macro_rules! DefAccent {
     DefAccent!($accent, $combiningchar, $standalonechar, $options, st)
   }};
   ($accent:expr, $combiningchar:expr, $standalonechar:expr, $options:expr, $state_arg: ident) => {{
-    if $options.get("below").is_none() {
+    if $options.contains_key("below") {
       $options.entry(String::from("above")).or_insert(Stored::Bool(true));
     }
     // Used for converting a char used as an above-accent to a combining char (See \accent)
-    if $options.get("above").is_some() {
+    if $options.contains_key("above") {
       $state_arg.assign_mapping("accent_combiner_above", $standalonechar, Some($combiningchar));
     } else {
       $state_arg.assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
@@ -2019,7 +2034,7 @@ macro_rules! defi_opts {
   (@munch ( $(,)? select $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ select @ $tokens.into_option() ] })
   };
-  // select: literal number
+  // select_count: literal number
   (@munch ( $(,)? select_count $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ select_count @ $tokens.into_option() ] })
   };
@@ -2033,7 +2048,13 @@ macro_rules! defi_opts {
   (@munch ( $(,)? replace $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@replace ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-
+  // xpath: literal string
+  (@munch ( $(,)? xpath $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ xpath @ $tokens.into_option() ] })
+  };
+  (@munch ( $(,)? xpath $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ xpath @ $tokens.into_option() ] })
+  };
 
   // mode : Option<TexMode>
   (@munch ( $(,)? mode $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
@@ -2167,11 +2188,34 @@ macro_rules! defi_opts {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_close @ $auto.into() ]})
   };
 
-  // misc "id" with literal value
+  // ligature options
+  // role: literal string
+  (@munch ( $(,)? role $(:)?$(=>)? $literal:literal, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ role @ Some($literal.to_string()) ] })
+  };
+  (@munch ( $(,)? role $(:)?$(=>)? $literal:literal) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ role @ Some($literal.to_string()) ] })
+  };
+  // meaning: literal string
+  (@munch ( $(,)? meaning $(:)?$(=>)? $literal:literal, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ meaning @ Some($literal.to_string()) ] })
+  };
+  (@munch ( $(,)? meaning $(:)?$(=>)? $literal:literal) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ meaning @ Some($literal.to_string()) ] })
+  };
+  // name: literal string
+  (@munch ( $(,)? name $(:)?$(=>)? $literal:literal, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($literal.to_string()) ] })
+  };
+  (@munch ( $(,)? name $(:)?$(=>)? $literal:literal) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($literal.to_string()) ] })
+  };
+
+  // misc ident with literal value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [$id @ $literal]})
   };
-  // misc "id" with block value
+  // misc ident with block value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [$id @ $body]})
   };
@@ -2281,5 +2325,4 @@ macro_rules! defi_opts {
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [replace @ rewrite_replace_sub!($document_arg, $node_arg, $state_arg, $body)]})
   };
-
 }

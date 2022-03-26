@@ -8,7 +8,6 @@ use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::glue::{Glue, MuGlue};
-use crate::common::ligature::Ligature;
 use crate::common::locator::Locator;
 use crate::common::number::Number;
 use crate::definition::conditional::{Conditional, IfFrame};
@@ -25,6 +24,7 @@ use crate::mouth;
 use crate::mouth::Mouth;
 use crate::parameter::Parameter;
 use crate::rewrite::Rewrite;
+use crate::ligature::Ligature;
 use crate::state::State;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
@@ -80,6 +80,7 @@ pub enum Stored {
   MuDimension(MuDimension),
   Locator(Locator),
   Rewrite(Rewrite),
+  Ligature(Ligature),
   // LaTeXML objects (Rc-wrapped)
   Expandable(Rc<Expandable>),
   Conditional(Rc<Conditional>),
@@ -94,7 +95,6 @@ pub enum Stored {
   Digested(Box<crate::Digested>), // todo: should this be an Rc<> to make it shareable?
   Parameter(Rc<Parameter>),
   Font(Rc<Font>),
-  Ligature(Box<Ligature>), // todo: should this be an Rc<> to make it shareable?
 }
 
 impl fmt::Debug for Stored {
@@ -381,12 +381,8 @@ impl From<Rc<RefCell<IfFrame>>> for Stored {
   fn from(frame: Rc<RefCell<IfFrame>>) -> Stored { Stored::IfFrame(frame) }
 }
 
-impl From<Box<Ligature>> for Stored {
-  fn from(lig: Box<Ligature>) -> Stored { Stored::Ligature(lig) }
-}
-
 impl From<Ligature> for Stored {
-  fn from(lig: Ligature) -> Stored { Box::new(lig).into() }
+  fn from(lig: Ligature) -> Stored { Stored::Ligature(lig) }
 }
 
 impl From<Option<&Stored>> for Stored {

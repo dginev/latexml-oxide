@@ -79,10 +79,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     // Formula
     formula = expression
-      | formula relop expression => infix_apply;
+      | formula relop expression => infix_relation;
 
     statement = formula
-      | statement metarelop formula => infix_apply;
+      | statement metarelop formula => infix_relation;
 
     statements = statement
       | statement punct statement => infix_apply;

@@ -323,7 +323,7 @@ impl Model {
         {
           let docprefix = self.document_namespace_prefixes.get(namespace);
           // if there's a doc prefix and it's NOT already used in code namespace mapping
-          if docprefix.is_some() && self.code_namespaces.get(docprefix.unwrap()).is_none() {
+          if docprefix.is_some() && !self.code_namespaces.contains_key(docprefix.unwrap()) {
             codeprefix = docprefix.map(|p| p.to_string());
           }
         }
@@ -530,7 +530,7 @@ impl Model {
   }
   pub fn is_in_schema_class(&self, class_name: &str, tag: &str) -> bool {
     if let Some(class) = self.schema_class.get(class_name) {
-      class.get(tag).is_some()
+      class.contains(tag)
     } else {
       false
     }
