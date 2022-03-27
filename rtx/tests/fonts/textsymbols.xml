@@ -92,7 +92,7 @@
           </tr>
           <tr>
             <td align="left"><verbatim font="typewriter">\textperiodcentered</verbatim></td>
-            <td align="left">⋅</td>
+            <td align="left">·</td>
           </tr>
           <tr>
             <td align="left"><verbatim font="typewriter">\textsection</verbatim></td>
@@ -145,6 +145,10 @@
           <tr>
             <td align="left"><verbatim font="typewriter">\texttrademark</verbatim></td>
             <td align="left">™</td>
+          </tr>
+          <tr>
+            <td align="left"><verbatim font="typewriter">\textsubscript{X}</verbatim></td>
+            <td align="left"><sub>X</sub></td>
           </tr>
           <tr>
             <td align="left"><verbatim font="typewriter">\textsuperscript{X}</verbatim></td>

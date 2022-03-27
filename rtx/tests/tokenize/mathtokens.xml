@@ -40,17 +40,17 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex3">
-      <Math mode="display" tex="a\cdot b\cdot c\cdot\cdot\cdot" text="a cdot b cdot c cdot cdots" xml:id="S0.Ex3.m1">
+      <Math mode="display" tex="a\cdot b\cdot c\cdot\cdot\cdot" text="(a cdot b cdot c) * cdots" xml:id="S0.Ex3.m1">
         <XMath>
           <XMApp>
-            <XMTok name="cdot" role="MULOP">⋅</XMTok>
+            <XMTok meaning="times" role="MULOP">⁢</XMTok>
             <XMApp>
               <XMTok name="cdot" role="MULOP">⋅</XMTok>
               <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN">c</XMTok>
             </XMApp>
-            <XMTok font="italic" role="UNKNOWN">c</XMTok>
-            <XMTok name="cdots" role="ELIDEOP">⋯</XMTok>
+            <XMTok name="cdots" role="ID">⋯</XMTok>
           </XMApp>
         </XMath>
       </Math>

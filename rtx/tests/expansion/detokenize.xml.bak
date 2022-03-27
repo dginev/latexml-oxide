@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <para>
+    <p>0relax</p>
+  </para>
+  <para>
+    <p>11elax</p>
+  </para>
+  <para>
+    <p>0“</p>
+  </para>
+  <para>
+    <p>0“</p>
+  </para>
+  <para>
+    <p>0 .</p>
+  </para>
+  <para>
+    <p>.“relax “sample .</p>
+  </para>
+</document>

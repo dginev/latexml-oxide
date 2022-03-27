@@ -1,0 +1,105 @@
+\documentclass{article}
+
+\def\foo{\textbf{Foo!}}
+
+\def\lineprefix{Line: }
+\def\showline{
+  \lineprefix``\aline''\\}
+
+\newwrite\file
+\def\findfile#1{
+  Checking for file #1:
+  \openin\file = #1
+  \ifeof\file
+    \closein\file
+    {I couldn't find the file #1.}
+  \else
+    \closein\file
+    {I found the file #1.}
+  \fi}
+
+\def\readnext{
+  \ifeof\file
+    \closein\file
+    Closed!
+  \else
+     \read\file to \aline
+     \showline
+     \readnext
+  \fi}
+
+\def\readfile#1{
+  Reading file #1:\\
+ \openin\file = #1
+  \readnext}
+
+\def\Ereadnext{
+  \ifeof\file
+    \closein\file
+    Closed!
+  \else
+     \readline\file to \aline
+     \showline
+     \Ereadnext
+  \fi}
+\def\Ereadfile#1{
+  Reading file #1:\\
+ \openin\file = #1
+  \Ereadnext}
+
+\def\inputfile#1{
+  Inputting file #1:\\
+  \input{#1}
+  Closed!}
+
+\begin{document}
+\paragraph{Checking files}
+
+\findfile{exists.data}
+
+\findfile{missing.data}
+
+\paragraph{Inputting a file}
+
+\inputfile{exists.data}
+
+\paragraph{Reading a file}
+
+\readfile{exists.data}
+
+\paragraph{Reading a file w No EOL}
+\begingroup
+\def\lineprefix{Line (no EOL): }
+\endlinechar-1\relax
+\readfile{exists.data}
+\endgroup
+
+\paragraph{Reading a file w Silly EOL}
+\begingroup
+\def\lineprefix{Line (EOL=0): }
+\endlinechar`\0\relax
+\readfile{exists.data}
+\endgroup
+
+\paragraph{Reading a file w eTeX}
+\begingroup
+\def\lineprefix{Line (eTeX): }
+\Ereadfile{exists.data}
+\endgroup
+
+\paragraph{Writing a file}
+Writing file generated.data
+
+\def\timing{Before}
+\immediate\openout\file = generated.data
+\immediate\write\file {First line}
+\immediate\write\file {Second line}
+\immediate\write\file {Timing \timing.}
+\immediate\write\file {Last line}
+\immediate\closeout\file
+\def\timing{After}
+
+\findfile{generated.data}
+\readfile{generated.data}
+
+\end{document}

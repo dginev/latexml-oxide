@@ -148,7 +148,7 @@ and baz is yellow: <text width="20.0pt"><rule color="#FFFF00" height="6.5pt" wid
 Now, baz is orange again: <text width="20.0pt"><rule color="#FF8000" height="6.5pt" width="20.0pt"/></text>
 but, fuu is still pink: <text width="20.0pt"><rule color="#FFBFBF" height="6.5pt" width="20.0pt"/></text>
 Now, baz is green again: <text width="20.0pt"><rule color="#00FF00" height="6.5pt" width="20.0pt"/></text>
-and, fuu is <text class="ltx_emph" font="italic">still</text> pink: <text width="20.0pt"><rule color="#FFBFBF" height="6.5pt" width="20.0pt"/></text></p>
+and, fuu is <emph font="italic">still</emph> pink: <text width="20.0pt"><rule color="#FFBFBF" height="6.5pt" width="20.0pt"/></text></p>
     </para>
   </section>
   <section inlist="toc" xml:id="S4">
@@ -227,7 +227,7 @@ No blend: <text width="20.0pt"><rule color="#FF0000" height="6.5pt" width="20.0p
       <p><text backgroundcolor="#00FFFF" color="#FFFF00" framecolor="#FF00FF" framed="rectangle">Yellow in Cyan surrounded by Magenta</text></p>
     </para>
     <para xml:id="S7.p5">
-      <p><rule color="white" depth="4.3pt" framecolor="#FF8000" framed="rectangle" height="8.6pt" width="100.0pt"/></p>
+      <p><rule color="#FFFFFF" depth="4.3pt" framecolor="#FF8000" framed="rectangle" height="8.6pt" width="100.0pt"/></p>
     </para>
   </section>
   <section inlist="toc" xml:id="S8">
@@ -281,25 +281,24 @@ A=100*13 = 1300pt;</p>
             <td align="left" border="t"><text backgroundcolor="#FFFF80">row 2</text></td>
           </tr>
           <tr backgroundcolor="#BFBFFF">
-            <td align="left" border="t"><text backgroundcolor="#BFBFFF">
-test</text></td>
+            <td align="left" border="t"><text backgroundcolor="#BFBFFF">test</text></td>
             <td align="left" border="t"><text backgroundcolor="#BFBFFF">row 3</text></td>
           </tr>
           <tr backgroundcolor="#FFFF80">
             <td align="left" border="t"><text backgroundcolor="#FFFF80">test</text></td>
             <td align="left" border="t"><text backgroundcolor="#FFFF80">row 4</text></td>
           </tr>
-          <tr backgroundcolor="#BFFFBF">
-            <td align="left" border="t"><text backgroundcolor="#BFFFBF">test</text></td>
-            <td align="left" border="t"><text backgroundcolor="#BFFFBF">row 5</text></td>
+          <tr>
+            <td align="left" border="t">test</td>
+            <td align="left" border="t">row 5</td>
           </tr>
           <tr>
             <td align="left" border="t">test</td>
             <td align="left" border="t">row 6</td>
           </tr>
-          <tr>
-            <td align="left" border="t">test</td>
-            <td align="left" border="t">row 7</td>
+          <tr backgroundcolor="#BFFFBF">
+            <td align="left" border="t"><text backgroundcolor="#BFFFBF">test</text></td>
+            <td align="left" border="t"><text backgroundcolor="#BFFFBF">row 7</text></td>
           </tr>
           <tr backgroundcolor="#FFFF80">
             <td align="left" border="t"><text backgroundcolor="#FFFF80">test</text></td>

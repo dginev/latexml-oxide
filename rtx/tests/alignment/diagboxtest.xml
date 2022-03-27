@@ -1,0 +1,495 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="xcolor"?>
+<?latexml package="diagbox"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para class="ltx_noindent" xml:id="p1">
+    <tabular class="ltx_guessed_headers" vattach="middle">
+      <thead>
+        <tr>
+          <td align="left" border="r t" thead="column row">NW</td>
+          <td align="center" border="r t" class="ltx_nopad" thead="column"><picture height="18.92" tex="\diagbox[dir={NW}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{}" width="20.76" xml:id="p1.pic1">
+              <line points="0,18.92 20.76,0" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,0)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>A</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(10.96,9.46)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>B</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td align="left" border="r t" thead="row">SE</td>
+          <td align="center" border="r t" class="ltx_nopad"><picture height="18.92" tex="\diagbox[dir={SE}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{}" width="20.76" xml:id="p1.pic2">
+              <line points="0,18.92 20.76,0" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,0)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>A</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(10.96,9.46)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>B</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+        </tr>
+        <tr>
+          <td align="left" border="r t" thead="row">SW</td>
+          <td align="center" border="r t" class="ltx_nopad"><picture height="18.92" tex="\diagbox[dir={SW}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{}" width="20.76" xml:id="p1.pic3">
+              <line points="0,0, 20.76,18.92" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,9.46)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>A</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(10.96,0)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>B</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+        </tr>
+        <tr>
+          <td align="left" border="b r t" thead="row">NE</td>
+          <td align="center" border="b r t" class="ltx_nopad"><picture height="18.92" tex="\diagbox[dir={NE}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{}" width="20.76" xml:id="p1.pic4">
+              <line points="0,0, 20.76,18.92" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,9.46)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>A</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(10.96,0)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>B</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+        </tr>
+      </tbody>
+    </tabular>
+  </para>
+  <para class="ltx_noindent" xml:id="p2">
+    <tabular class="ltx_guessed_headers" vattach="middle">
+      <thead>
+        <tr>
+          <td align="left" border="r t" thead="column row">NW</td>
+          <td align="center" border="r t" class="ltx_nopad" thead="column"><picture height="24.27" tex="\diagbox[dir={NW}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{{\shortstack[l]{M%&#10;}}}" width="28.74" xml:id="p2.pic1">
+              <line points="14.37,24.27 28.74,0" stroke="black" stroke-width="0.4"/>
+              <line points="0,12.135 28.74,0" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,0)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>A</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(18.94,14.81)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>B</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(0,14.81)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>M</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td align="left" border="r t" thead="row">SE</td>
+          <td align="center" border="r t" class="ltx_nopad"><picture height="24.27" tex="\diagbox[dir={SE}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{{\shortstack[r]{M%&#10;}}}" width="28.74" xml:id="p2.pic2">
+              <line points="0,24.27 28.74,12.135" stroke="black" stroke-width="0.4"/>
+              <line points="0,24.27 14.37,0" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,0)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>A</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(18.94,14.81)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>B</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(16.06,0)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>M</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+        </tr>
+        <tr>
+          <td align="left" border="r t" thead="row">SW</td>
+          <td align="center" border="r t" class="ltx_nopad"><picture height="24.27" tex="\diagbox[dir={SW}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{{\shortstack[l]{M%&#10;}}}" width="28.74" xml:id="p2.pic3">
+              <line points="0,12.135 28.74,24.27" stroke="black" stroke-width="0.4"/>
+              <line points="14.37,0 28.74,24.27" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,14.81)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>A</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(18.94,0)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>B</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(0,0)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>M</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+        </tr>
+        <tr>
+          <td align="left" border="b r t" thead="row">NE</td>
+          <td align="center" border="b r t" class="ltx_nopad"><picture height="24.27" tex="\diagbox[dir={NE}]{{\shortstack[l]{A}}}{{\shortstack[r]{B}}}{{\shortstack[r]{M%&#10;}}}" width="28.74" xml:id="p2.pic4">
+              <line points="0,0 14.37,24.27" stroke="black" stroke-width="0.4"/>
+              <line points="0,0 28.74,12.135" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="10.38" transform="translate(0,14.81)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>A</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(18.94,0)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>B</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="9.46" innerwidth="9.8" transform="translate(16.06,14.81)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>M</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+        </tr>
+      </tbody>
+    </tabular>
+  </para>
+  <para class="ltx_noindent" xml:id="p3">
+    <tabular class="ltx_guessed_headers" vattach="middle">
+      <thead>
+        <tr>
+          <td align="left" border="r t" thead="column row">NW</td>
+          <td align="center" border="r t" class="ltx_nopad" thead="column"><picture height="60.79" tex="\diagbox[dir={NW}]{{\shortstack[l]{Word\\&#10;A}}}{{\shortstack[r]{Word\\&#10;B}}}{{\shortstack[l]{Word\\&#10;M}}}" width="86.63" xml:id="p3.pic1">
+              <line points="43.315,60.79 86.63,0" stroke="black" stroke-width="0.4"/>
+              <line points="0,30.395 86.63,0" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="33.09" transform="translate(0,0)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>Word</p>
+                    <p>A</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="33.09" transform="translate(53.54,37.57)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>Word</p>
+                    <p>B</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="33.09" transform="translate(0,37.57)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>Word</p>
+                    <p>M</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td align="left" border="r t" thead="row">SE</td>
+          <td align="center" border="r t" class="ltx_nopad"><picture height="60.79" tex="\diagbox[dir={SE}]{{\shortstack[l]{Word\\&#10;A}}}{{\shortstack[r]{Word\\&#10;B}}}{{\shortstack[r]{Word\\&#10;M}}}" width="86.63" xml:id="p3.pic2">
+              <line points="0,60.79 86.63,30.395" stroke="black" stroke-width="0.4"/>
+              <line points="0,60.79 43.315,0" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="33.09" transform="translate(0,0)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>Word</p>
+                    <p>A</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="33.09" transform="translate(53.54,37.57)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>Word</p>
+                    <p>B</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="33.09" transform="translate(53.54,0)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>Word</p>
+                    <p>M</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+        </tr>
+        <tr>
+          <td align="left" border="r t" thead="row">SW</td>
+          <td align="center" border="r t" class="ltx_nopad"><picture height="60.79" tex="\diagbox[dir={SW}]{{\shortstack[l]{Word\\&#10;A}}}{{\shortstack[r]{Word\\&#10;B}}}{{\shortstack[l]{Word\\&#10;M}}}" width="86.63" xml:id="p3.pic3">
+              <line points="0,30.395 86.63,60.79" stroke="black" stroke-width="0.4"/>
+              <line points="43.315,0 86.63,60.79" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="33.09" transform="translate(0,37.57)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>Word</p>
+                    <p>A</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="33.09" transform="translate(53.54,0)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>Word</p>
+                    <p>B</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="33.09" transform="translate(0,0)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>Word</p>
+                    <p>M</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+        </tr>
+        <tr>
+          <td align="left" border="b r t" thead="row">NE</td>
+          <td align="center" border="b r t" class="ltx_nopad"><picture height="60.79" tex="\diagbox[dir={NE}]{{\shortstack[l]{Word\\&#10;A}}}{{\shortstack[r]{Word\\&#10;B}}}{{\shortstack[r]{Word\\&#10;M}}}" width="86.63" xml:id="p3.pic4">
+              <line points="0,0 43.315,60.79" stroke="black" stroke-width="0.4"/>
+              <line points="0,0 86.63,30.395" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="33.09" transform="translate(0,37.57)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>Word</p>
+                    <p>A</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="33.09" transform="translate(53.54,0)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>Word</p>
+                    <p>B</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="33.09" transform="translate(53.54,37.57)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>Word</p>
+                    <p>M</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+        </tr>
+      </tbody>
+    </tabular>
+  </para>
+  <para xml:id="p4">
+    <p>Slashbox compatibility</p>
+  </para>
+  <para class="ltx_noindent" xml:id="p5">
+    <tabular class="ltx_guessed_headers" vattach="middle">
+      <thead>
+        <tr>
+          <td align="center" border="l r t" class="ltx_nopad" thead="column row"><picture height="18.26" tex="\diagbox[dir={SW},width=56.9055pt]{{\shortstack[l]{num}}}{{\shortstack[r]{%&#10;alpha}}}{}" width="78.74" xml:id="p5.pic1">
+              <line points="0,0, 78.74,18.26" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="5.96" innerwidth="26.52" transform="translate(0,12.3)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>num</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="12.3" innerwidth="33.06" transform="translate(45.68,0)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>alpha</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+          <td align="center" border="r t" thead="column">A</td>
+          <td align="center" border="r t" thead="column">B</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td align="center" border="l r t" thead="row">1</td>
+          <td align="center" border="r t">A1</td>
+          <td align="center" border="r t">B1</td>
+        </tr>
+        <tr>
+          <td align="center" border="b l r t" thead="row">2</td>
+          <td align="center" border="b r t">A2</td>
+          <td align="center" border="b r t">B2</td>
+        </tr>
+      </tbody>
+    </tabular>
+  </para>
+  <para class="ltx_noindent" xml:id="p6">
+    <tabular class="ltx_guessed_headers" vattach="middle">
+      <thead>
+        <tr>
+          <td align="center" border="l r t" class="ltx_nopad" thead="column row"><picture height="18.26" tex="\diagbox[dir={NW},width=56.9055pt]{{\shortstack[l]{num}}}{{\shortstack[r]{%&#10;alpha}}}{}" width="78.74" xml:id="p6.pic1">
+              <line points="0,18.26 78.74,0" stroke="black" stroke-width="0.4"/>
+              <g class="ltx_svg_fog" innerheight="5.96" innerwidth="26.52" transform="translate(0,0)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p>num</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="12.3" innerwidth="33.06" transform="translate(45.68,5.96)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p>alpha</p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+          <td align="center" border="r t" thead="column">A</td>
+          <td align="center" border="r t" thead="column">B</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td align="center" border="l r t" thead="row">1</td>
+          <td align="center" border="r t">A1</td>
+          <td align="center" border="r t">B1</td>
+        </tr>
+        <tr>
+          <td align="center" border="b l r t" thead="row">2</td>
+          <td align="center" border="b r t">A2</td>
+          <td align="center" border="b r t">B2</td>
+        </tr>
+      </tbody>
+    </tabular>
+  </para>
+  <para xml:id="p7">
+    <p>More exotic options</p>
+  </para>
+  <para class="ltx_noindent" xml:id="p8">
+    <tabular vattach="middle">
+      <tbody>
+        <tr>
+          <td align="left" border="r t" class="ltx_nopad"><picture height="100" tex="\diagbox[dir={NW},width=72.26999pt,height=72.26999pt,linewidth={2pt},linecolor%&#10;={blue},font={}]{{\shortstack[l]{Head\\&#10;A}}}{{\shortstack[r]{Head\\&#10;B}}}{}" width="100" xml:id="p8.pic1">
+              <line points="0,100 100,0" stroke="blue" stroke-width="2pt"/>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="31.13" transform="translate(0,0)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p><text font="italic">Head</text></p>
+                    <p><text font="italic">A</text></p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="31.13" transform="translate(68.87,76.78)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p><text font="italic">Head</text></p>
+                    <p><text font="italic">B</text></p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+          <td align="center" border="r t">B</td>
+        </tr>
+        <tr>
+          <td align="left" border="r t">A</td>
+          <td align="center" border="r t">AB</td>
+        </tr>
+      </tbody>
+    </tabular>
+    <tabular vattach="middle">
+      <tbody>
+        <tr>
+          <td align="left" border="r t" class="ltx_nopad"><picture height="46.44" tex="\diagbox[dir={NW},innerwidth=72.26999pt,linewidth={2pt},linecolor={blue},font=%&#10;{}]{{\shortstack[l]{Head\\&#10;A}}}{{\shortstack[r]{Head\\&#10;B}}}{}" width="100" xml:id="p8.pic2">
+              <line points="0,46.44 100,0" stroke="blue" stroke-width="2pt"/>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="31.13" transform="translate(0,0)">
+                <inline-block>
+                  <inline-block align="left">
+                    <p><text font="italic">Head</text></p>
+                    <p><text font="italic">A</text></p>
+                  </inline-block>
+                </inline-block>
+              </g>
+              <g class="ltx_svg_fog" innerheight="23.22" innerwidth="31.13" transform="translate(68.87,23.22)">
+                <inline-block>
+                  <inline-block align="right">
+                    <p><text font="italic">Head</text></p>
+                    <p><text font="italic">B</text></p>
+                  </inline-block>
+                </inline-block>
+              </g>
+            </picture></td>
+          <td align="center" border="r t">B</td>
+        </tr>
+        <tr>
+          <td align="left" border="r t">A</td>
+          <td align="center" border="r t">AB</td>
+        </tr>
+      </tbody>
+    </tabular>
+  </para>
+</document>
