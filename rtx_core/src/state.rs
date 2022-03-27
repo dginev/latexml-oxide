@@ -538,7 +538,10 @@ impl State {
 
   /// Check if the Value table contains a given key
   pub fn has_value(&self, key: &str) -> bool {
-    self.value.contains_key(key)
+    match self.value.get(key) {
+      Some(list) => !list.is_empty(),
+      None => false
+    }
   }
 
   /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup

@@ -78,10 +78,17 @@ impl Actions {
   }
 }
 
-// constructors
+/// standard infix application of an operator
 pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
   unpack!(args => arg1, infixop, arg2);
   let apply_tree = Tree::Apply(infixop.into(), Args(vec![arg1, arg2]), Meta::default());
+  Ok(Some(apply_tree))
+}
+
+/// application with trailing elision, as in `x \cdot y \cdot\cdot\cdot`
+pub fn infix_apply_and_elide(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
+  unpack!(args => arg1, infixop, arg2, elision);
+  let apply_tree = Tree::Apply(infixop.into(), Args(vec![arg1, arg2, elision]), Meta::default());
   Ok(Some(apply_tree))
 }
 
