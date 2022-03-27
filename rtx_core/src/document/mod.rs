@@ -2498,7 +2498,7 @@ impl Document {
   pub fn load_labels_for_rewrite(&mut self, state: &mut State) {
     for node in self.findnodes("//*[@labels]", None, state) {
       if let Some(labels) = node.get_attribute("labels") {
-        if let Some(id) = node.get_attribute("xml:id") {
+        if let Some(id) = node.get_attribute("id") {
           for label in labels.split_whitespace() {
             self.rewrite_labels.insert(label.to_string(), id.to_string());
           }
