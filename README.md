@@ -1,11 +1,11 @@
 # rtx
 A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
-[![CI](https://github.com/dginev/rtx/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/rtx/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.1.21-orange.svg)
+[![CI](https://github.com/dginev/rtx/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/rtx/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.1.25-orange.svg)
 
 ## Progress
 
-[![test porting progress](http://progressed.io/bar/10)](https://github.com/dginev/rtx/issues/30) | 21 of 207 core LaTeXML tests PASS
+[![test porting progress](http://progressed.io/bar/10)](https://github.com/dginev/rtx/issues/30) | 25 of 281 core LaTeXML tests PASS
 
 ### Why?
 
@@ -18,7 +18,7 @@ The three main reasons:
      ![latexml too slow](https://i.imgur.com/lOOtSWa.png)
     - Recent request from a PhD student who maintains a dataset and wrote in for support:
       > With the newer version of LatexML, we are getting lower conversion failures. However, I have to run it on the whole collection and usually the other organizers who are also my advisors blame me for why it is taking so long to convert them!!
-  
+
   * Perl 5 has **no street cred** anymore.
   * LaTeXML is **urgently needed** for transporting technical writing to the web and e-printing media.
 
