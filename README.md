@@ -2,7 +2,6 @@
 A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
 [![CI](https://github.com/dginev/rtx/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/rtx/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.1.21-orange.svg)
- [![Dependabot Status](https://api.dependabot.com/badges/status?host=github&repo=dginev/rtx&identifier=44036543)](https://dependabot.com)
 
 ## Progress
 
