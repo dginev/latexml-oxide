@@ -18,6 +18,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(addop ~ "ADDOP");
   token!(mulop ~ "MULOP");
   token!(relop ~ "RELOP");
+  token!(elideop ~ "ELIDEOP");
   token!(langle_rel = "RELOP:less-than");
   token!(langle_open = "OPEN:langle");
   token!(langle = [langle_rel langle_open]);
@@ -69,11 +70,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | tight_term factor => invisible_times;
 
     term = tight_term
-      | term mulop tight_term => infix_apply;
+      | term mulop tight_term => infix_apply
+      | term mulop tight_term elideop => infix_apply_and_elide;
 
     // Expressions
     expression = term
       | expression addop term => infix_apply_nary
+      | expression addop term elideop => infix_apply_and_elide
       | addop tight_term => prefix_apply
       | factor addop => postfix_apply;
 

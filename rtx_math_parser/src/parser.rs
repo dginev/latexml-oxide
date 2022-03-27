@@ -881,7 +881,6 @@ fn textrec_apply(name: &str, op: &Node, args:Vec<Node>, document: &Document, sta
     (10000, textrec(&args[0], Some(10000), Some(name), document, state) + &textrec(op, None, None, document, state))
   } else if name == "multirelation" {
     let joined = args.iter().map(|a| textrec(a, Some(2), Some(name), document, state)).collect::<Vec<_>>().join(" ");
-    eprintln!("-- joined: {}", joined);
     (2, joined)
   } else {
     (500, textrec(op, Some(10000), Some(name), document, state) + "@(" +

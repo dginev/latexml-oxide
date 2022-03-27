@@ -108,7 +108,6 @@ macro_rules! register {
         $rule.rule(),
         ::std::rc::Rc::new(|rule_id: i32, mut args: Vec<Option<Tree>>| {
           #[allow(unused_variables)]
-          eprintln!("args on action: {:?}", args);
           unpack!(args => $($arg),+);
           Some($body)
         }))

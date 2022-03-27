@@ -34,7 +34,7 @@ lazy_static! {
 
 pub static FONT_ELEMENT_NAME: &str = "ltx:text";
 pub static MATH_TOKEN_NAME: &str = "ltx:XMTok";
-
+pub static MATH_HINT_NAME: &str = "ltx:XMHint";
 pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
@@ -873,30 +873,51 @@ impl Document {
     state: &mut State,
   ) -> Result<Node> {
     attributes.entry(s!("role")).or_insert_with(|| s!("UNKNOWN"));
-
-    let font = match font_opt {
-      Some(f) => f.clone(),
-      None => match self.box_to_absorb {
-        Some(ref tbox) => match tbox.get_font() {
-          Some(f) => f.into_owned(),
-          None => Font::math_default(), // should never happen?
-        },
-        None => Font::math_default(), // should never happen?
-      },
-    };
+    // TODO: This seems ported out of order, where should these attributes be
+    // getting removed?
     attributes.remove("mode");
     attributes.remove("stretchy");
-    let node = self.open_element(MATH_TOKEN_NAME, Some(attributes), None, state)?;
 
-    // let tbox  = attributes.get("_box").or_insert( LateXML::Box ) // ???
-    self.set_node_font(&node, font);
-    if let Some(ref digested) = self.box_to_absorb {
-      // TODO: The Rc<Digested> node boxes still have some way to go until they are fully ergonomic...
-      let node_box = Rc::new(digested.clone());
-      self.set_node_box(&node, node_box);
+    let is_space = attributes.contains_key("isSpace");
+    let qname = if is_space {
+      MATH_HINT_NAME
+    } else {
+      MATH_TOKEN_NAME
+    };
+    let cur_qname = state.model.get_node_qname(&self.node);
+    let text = if is_space && !text.is_empty() && text.chars().all(|c| c.is_whitespace()) {
+      ""  // Make empty hint, of only spaces
+    } else {
+      text
+    };
+    if qname == MATH_TOKEN_NAME && cur_qname == qname { // Already INSIDE a token!
+      if !text.is_empty() {
+        self.open_math_text_internal(text, state)?;
+      }
+    } else {
+      let node = self.open_element(qname, Some(attributes), None, state)?;
+      // let tbox  = $attributes{_box} || $LaTeXML::BOX;
+      let font = match font_opt {
+        Some(f) => f.clone(),
+        None => match self.box_to_absorb {
+          Some(ref tbox) => match tbox.get_font() {
+            Some(f) => f.into_owned(),
+            None => Font::math_default(), // should never happen?
+          },
+          None => Font::math_default(), // should never happen?
+        },
+      };
+      self.set_node_font(&node, font);
+      if let Some(ref digested) = self.box_to_absorb {
+        // TODO: The Rc<Digested> node boxes still have some way to go until they are fully ergonomic...
+        let node_box = Rc::new(digested.clone());
+        self.set_node_box(&node, node_box);
+      }
+      if !text.is_empty() {
+        self.open_math_text_internal(text, state)?;
+      }
+      self.close_node_internal(&node, state)?; // Should be safe.
     }
-    self.open_math_text_internal(text, state)?;
-    self.close_node_internal(&node, state)?; // Should be safe.
     Ok(self.node.clone())
   }
 

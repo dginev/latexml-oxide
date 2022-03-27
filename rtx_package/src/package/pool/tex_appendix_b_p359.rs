@@ -29,7 +29,7 @@ LoadDefinitions!(state, {
   //           series => 'medium', shape => 'upright')->specialize("\x{22EE}"))
   //       : ()); });    # Since not DefMath!
   //                     # But not these!
-  DefMath!("\\cdots", None, "\u{22EF}", role => "ID"); // MIDLINE HORIZONTAL ELLIPSIS
+  DefMath!("\\cdots", None, "\u{22EF}", role => "ELIDEOP"); // MIDLINE HORIZONTAL ELLIPSIS
 
   // DefMathI('\ddots', undef, "\x{22F1}", role => 'ID');           # DOWN RIGHT DIAGONAL ELLIPSIS
   // DefMathI('\colon', undef, ':',        role => 'METARELOP');    # Seems like good default role
@@ -45,12 +45,14 @@ LoadDefinitions!(state, {
 
   // And while we're at it...
 
-  // DefMathLigature("\u{22C5}\u{22C5}\u{22C5}" => "\u{22EF}", role => 'ID', name => 'cdots');
+  // Pretest for XMath to keep from interpreting math that the DOM may not allow!!
+
+  DefMathLigature!("\u{22C5}\u{22C5}\u{22C5}", "\u{22EF}", role => "ELIDEOP", name => "cdots");
 
   DefLigature!(r"[.][.][.]", "\u{2026}", fontTest => sub[arg] {arg.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter" }); // ldots
 
-  // TODO:
-  // DefMathLigature("..." => "\x{2026}", role => 'ID', name => 'ldots');
+  DefMathLigature!("...", "\u{2026}", role => "ID", name => "ldots");
+
   DefLigature!(r"--", "\u{2013}", // EN DASH (NOTE: With digits before &
     fontTest => sub[arg] { arg.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter" });
   // TODO

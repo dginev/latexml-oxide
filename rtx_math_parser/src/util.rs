@@ -6,7 +6,8 @@ use libxml::tree::Node;
 pub fn node_to_grammar_lexemes(mathnode: &Node) -> (Vec<String>, Vec<Node>) {
   let mut lexemes = Vec::new();
   let mut nodes = Vec::new();
-  for (idx, node) in mathnode.get_child_nodes().into_iter().enumerate() {
+  let child_nodes = filter_hints(mathnode.get_child_nodes());
+  for (idx, node) in child_nodes.into_iter().enumerate() {
     let role = get_grammatical_role(&node);
     let mut text = get_token_meaning(&node);
     if text.is_empty() {
@@ -37,4 +38,8 @@ pub fn distill_lexeme(name: &str) -> (&str, &str, &str) {
   } else {
     ("", "", name)
   }
+}
+
+pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
+  nodes
 }
