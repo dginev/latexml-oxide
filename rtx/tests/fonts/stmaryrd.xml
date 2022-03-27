@@ -17,10 +17,7 @@
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex1.m1.1">
-                <XMDual role="RELOP">
-                  <XMTok name="Ydown" role="RELOP"/>
-                  <XMTok class="ltx_nounicode" role="UNKNOWN">\Ydown</XMTok>
-                </XMDual>
+                <XMTok class="ltx_nounicode" name="Ydown" role="RELOP">\Ydown</XMTok>
                 <XMTok font="italic" role="UNKNOWN">a</XMTok>
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
@@ -33,10 +30,7 @@
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S0.Ex1.m1.2.1">
-                    <XMDual role="RELOP">
-                      <XMTok name="Yleft" role="RELOP"/>
-                      <XMTok class="ltx_nounicode" role="UNKNOWN">\Yleft</XMTok>
-                    </XMDual>
+                    <XMTok class="ltx_nounicode" name="Yleft" role="RELOP">\Yleft</XMTok>
                     <XMTok font="italic" role="UNKNOWN">a</XMTok>
                     <XMTok font="italic" role="UNKNOWN">b</XMTok>
                   </XMApp>
@@ -49,10 +43,7 @@
                     </XMApp>
                     <XMWrap>
                       <XMApp xml:id="S0.Ex1.m1.2.2.1">
-                        <XMDual role="RELOP">
-                          <XMTok name="Yright" role="RELOP"/>
-                          <XMTok class="ltx_nounicode" role="UNKNOWN">\Yright</XMTok>
-                        </XMDual>
+                        <XMTok class="ltx_nounicode" name="Yright" role="RELOP">\Yright</XMTok>
                         <XMTok font="italic" role="UNKNOWN">a</XMTok>
                         <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
@@ -222,10 +213,7 @@
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex4.m1.1">
-                <XMDual role="ARROW">
-                  <XMTok name="curlyveedownarrow" role="ARROW"/>
-                  <XMTok class="ltx_nounicode" role="UNKNOWN">\curlyveedownarrow</XMTok>
-                </XMDual>
+                <XMTok class="ltx_nounicode" name="curlyveedownarrow" role="ARROW">\curlyveedownarrow</XMTok>
                 <XMTok font="italic" role="UNKNOWN">a</XMTok>
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
@@ -238,10 +226,7 @@
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S0.Ex4.m1.2.1">
-                    <XMDual role="ARROW">
-                      <XMTok name="curlyveeuparrow" role="ARROW"/>
-                      <XMTok class="ltx_nounicode" role="UNKNOWN">\curlyveeuparrow</XMTok>
-                    </XMDual>
+                    <XMTok class="ltx_nounicode" name="curlyveeuparrow" role="ARROW">\curlyveeuparrow</XMTok>
                     <XMTok font="italic" role="UNKNOWN">a</XMTok>
                     <XMTok font="italic" role="UNKNOWN">b</XMTok>
                   </XMApp>
@@ -254,19 +239,13 @@
                     </XMApp>
                     <XMWrap>
                       <XMApp xml:id="S0.Ex4.m1.2.2.1">
-                        <XMDual role="ARROW">
-                          <XMTok name="curlywedgedownarrow" role="ARROW"/>
-                          <XMTok class="ltx_nounicode" role="UNKNOWN">\curlywedgedownarrow</XMTok>
-                        </XMDual>
+                        <XMTok class="ltx_nounicode" name="curlywedgedownarrow" role="ARROW">\curlywedgedownarrow</XMTok>
                         <XMTok font="italic" role="UNKNOWN">a</XMTok>
                         <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
                       <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
                       <XMApp xml:id="S0.Ex4.m1.2.2.2">
-                        <XMDual role="ARROW">
-                          <XMTok name="curlywedgeuparrow" role="ARROW"/>
-                          <XMTok class="ltx_nounicode" role="UNKNOWN">\curlywedgeuparrow</XMTok>
-                        </XMDual>
+                        <XMTok class="ltx_nounicode" name="curlywedgeuparrow" role="ARROW">\curlywedgeuparrow</XMTok>
                         <XMTok font="italic" role="UNKNOWN">a</XMTok>
                         <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
@@ -290,10 +269,7 @@
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex5.m1.1">
-                <XMDual role="ARROW">
-                  <XMTok name="fatbslash" role="ARROW"/>
-                  <XMTok class="ltx_nounicode" role="UNKNOWN">\fatbslash</XMTok>
-                </XMDual>
+                <XMTok class="ltx_nounicode" name="fatbslash" role="ARROW">\fatbslash</XMTok>
                 <XMTok font="italic" role="UNKNOWN">a</XMTok>
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
@@ -319,10 +295,7 @@
                     </XMApp>
                     <XMWrap>
                       <XMApp xml:id="S0.Ex5.m1.2.2.1">
-                        <XMDual role="ARROW">
-                          <XMTok name="fatslash" role="ARROW"/>
-                          <XMTok class="ltx_nounicode" role="UNKNOWN">\fatslash</XMTok>
-                        </XMDual>
+                        <XMTok class="ltx_nounicode" name="fatslash" role="ARROW">\fatslash</XMTok>
                         <XMTok font="italic" role="UNKNOWN">a</XMTok>
                         <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
@@ -386,10 +359,7 @@
                         <XMApp xml:id="S0.Ex6.m1.3.2.1">
                           <XMTok meaning="times" role="MULOP">⁢</XMTok>
                           <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                          <XMDual role="UNKNOWN">
-                            <XMTok name="moo" role="UNKNOWN"/>
-                            <XMTok class="ltx_nounicode" role="UNKNOWN">\moo</XMTok>
-                          </XMDual>
+                          <XMTok class="ltx_nounicode" name="moo" role="UNKNOWN">\moo</XMTok>
                           <XMTok font="italic" role="UNKNOWN">b</XMTok>
                         </XMApp>
                         <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
@@ -780,29 +750,29 @@
               <XMRef idref="S0.Ex11.m1.9"/>
             </XMApp>
             <XMWrap>
-              <XMTok fontsize="160%" name="bigbox" role="BIGOP" xml:id="S0.Ex11.m1.1">□</XMTok>
+              <XMTok fontsize="160%" mathstyle="display" name="bigbox" role="SUMOP" scriptpos="mid" xml:id="S0.Ex11.m1.1">□</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="bigcurlywedge" role="BIGOP" xml:id="S0.Ex11.m1.2">⋏</XMTok>
+              <XMTok fontsize="160%" mathstyle="display" name="bigcurlywedge" role="SUMOP" scriptpos="mid" xml:id="S0.Ex11.m1.2">⋏</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="bigcurlyvee" role="BIGOP" xml:id="S0.Ex11.m1.3">⋎</XMTok>
+              <XMTok fontsize="160%" mathstyle="display" name="bigcurlyvee" role="SUMOP" scriptpos="mid" xml:id="S0.Ex11.m1.3">⋎</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="biginterleave" role="BIGOP" xml:id="S0.Ex11.m1.4">⫼</XMTok>
+              <XMTok mathstyle="display" name="biginterleave" role="SUMOP" scriptpos="mid" xml:id="S0.Ex11.m1.4">⫼</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
               <XMDual role="ADDOP" xml:id="S0.Ex11.m1.5">
                 <XMTok mathstyle="display" meaning="intersection-plus" name="bignplus" role="ADDOP"/>
                 <XMWrap rule="kludge">
-                  <XMTok fontsize="160%" mathstyle="display" meaning="intersection" name="bigcap" role="SUMOP" scriptpos="mid">⋂</XMTok>
+                  <XMTok mathstyle="display" meaning="intersection" name="bigcap" role="SUMOP" scriptpos="mid">⋂</XMTok>
                   <XMTok meaning="plus" role="ADDOP" width="0pt" xoffset="-1.6em" yoffset="0.2ex">+</XMTok>
                 </XMWrap>
               </XMDual>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="bigparallel" role="BIGOP" xml:id="S0.Ex11.m1.6">‖</XMTok>
+              <XMTok mathstyle="display" name="bigparallel" role="SUMOP" scriptpos="mid" xml:id="S0.Ex11.m1.6">‖</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="bigsqcap" role="BIGOP" xml:id="S0.Ex11.m1.7">⊓</XMTok>
+              <XMTok mathstyle="display" name="bigsqcap" role="SUMOP" scriptpos="mid" xml:id="S0.Ex11.m1.7">⨅</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="bigtriangledown" role="BIGOP" xml:id="S0.Ex11.m1.8">▽</XMTok>
+              <XMTok fontsize="160%" mathstyle="display" name="bigtriangledown" role="SUMOP" scriptpos="mid" xml:id="S0.Ex11.m1.8">▽</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="bigtriangleup" role="BIGOP" xml:id="S0.Ex11.m1.9">△</XMTok>
+              <XMTok fontsize="160%" mathstyle="display" name="bigtriangleup" role="SUMOP" scriptpos="mid" xml:id="S0.Ex11.m1.9">△</XMTok>
             </XMWrap>
           </XMDual>
         </XMath>
@@ -827,29 +797,29 @@
               <XMRef idref="S0.Ex12.m1.9"/>
             </XMApp>
             <XMWrap>
-              <XMTok fontsize="160%" name="bigbox" role="BIGOP" xml:id="S0.Ex12.m1.1">□</XMTok>
+              <XMTok fontsize="160%" mathstyle="text" name="bigbox" role="SUMOP" scriptpos="post" xml:id="S0.Ex12.m1.1">□</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="bigcurlywedge" role="BIGOP" xml:id="S0.Ex12.m1.2">⋏</XMTok>
+              <XMTok fontsize="160%" mathstyle="text" name="bigcurlywedge" role="SUMOP" scriptpos="post" xml:id="S0.Ex12.m1.2">⋏</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="bigcurlyvee" role="BIGOP" xml:id="S0.Ex12.m1.3">⋎</XMTok>
+              <XMTok fontsize="160%" mathstyle="text" name="bigcurlyvee" role="SUMOP" scriptpos="post" xml:id="S0.Ex12.m1.3">⋎</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="biginterleave" role="BIGOP" xml:id="S0.Ex12.m1.4">⫼</XMTok>
+              <XMTok mathstyle="text" name="biginterleave" role="SUMOP" scriptpos="post" xml:id="S0.Ex12.m1.4">⫼</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
               <XMDual role="ADDOP" xml:id="S0.Ex12.m1.5">
                 <XMTok mathstyle="text" meaning="intersection-plus" name="bignplus" role="ADDOP"/>
                 <XMWrap rule="kludge">
-                  <XMTok fontsize="160%" mathstyle="text" meaning="intersection" name="bigcap" role="SUMOP" scriptpos="post">⋂</XMTok>
+                  <XMTok mathstyle="text" meaning="intersection" name="bigcap" role="SUMOP" scriptpos="post">⋂</XMTok>
                   <XMTok meaning="plus" role="ADDOP" width="0pt" xoffset="-1.3em" yoffset="0.2ex">+</XMTok>
                 </XMWrap>
               </XMDual>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="bigparallel" role="BIGOP" xml:id="S0.Ex12.m1.6">‖</XMTok>
+              <XMTok mathstyle="text" name="bigparallel" role="SUMOP" scriptpos="post" xml:id="S0.Ex12.m1.6">‖</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="bigsqcap" role="BIGOP" xml:id="S0.Ex12.m1.7">⊓</XMTok>
+              <XMTok mathstyle="text" name="bigsqcap" role="SUMOP" scriptpos="post" xml:id="S0.Ex12.m1.7">⨅</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="bigtriangledown" role="BIGOP" xml:id="S0.Ex12.m1.8">▽</XMTok>
+              <XMTok fontsize="160%" mathstyle="text" name="bigtriangledown" role="SUMOP" scriptpos="post" xml:id="S0.Ex12.m1.8">▽</XMTok>
               <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
-              <XMTok fontsize="160%" name="bigtriangleup" role="BIGOP" xml:id="S0.Ex12.m1.9">△</XMTok>
+              <XMTok fontsize="160%" mathstyle="text" name="bigtriangleup" role="SUMOP" scriptpos="post" xml:id="S0.Ex12.m1.9">△</XMTok>
             </XMWrap>
           </XMDual>
         </XMath>
@@ -872,7 +842,7 @@
               <XMDual role="ADDOP" xml:id="S0.Ex13.m1.1">
                 <XMTok mathstyle="display" meaning="intersection-plus" name="bignplus" role="ADDOP"/>
                 <XMWrap rule="kludge">
-                  <XMTok fontsize="160%" mathstyle="display" meaning="intersection" name="bigcap" role="SUMOP" scriptpos="mid">⋂</XMTok>
+                  <XMTok mathstyle="display" meaning="intersection" name="bigcap" role="SUMOP" scriptpos="mid">⋂</XMTok>
                   <XMTok meaning="plus" role="ADDOP" width="0pt" xoffset="-1.6em" yoffset="0.2ex">+</XMTok>
                 </XMWrap>
               </XMDual>
@@ -880,7 +850,7 @@
               <XMDual role="ADDOP" xml:id="S0.Ex13.m1.2">
                 <XMTok mathstyle="text" meaning="intersection-plus" name="bignplus" role="ADDOP"/>
                 <XMWrap rule="kludge">
-                  <XMTok fontsize="160%" mathstyle="text" meaning="intersection" name="bigcap" role="SUMOP" scriptpos="post">⋂</XMTok>
+                  <XMTok mathstyle="text" meaning="intersection" name="bigcap" role="SUMOP" scriptpos="post">⋂</XMTok>
                   <XMTok meaning="plus" role="ADDOP" width="0pt" xoffset="-1.3em" yoffset="0.2ex">+</XMTok>
                 </XMWrap>
               </XMDual>
@@ -888,7 +858,7 @@
               <XMDual role="ADDOP" xml:id="S0.Ex13.m1.3">
                 <XMTok mathstyle="text" meaning="intersection-plus" name="bignplus" role="ADDOP"/>
                 <XMWrap rule="kludge">
-                  <XMTok fontsize="160%" mathstyle="text" meaning="intersection" name="bigcap" role="SUMOP" scriptpos="post">⋂</XMTok>
+                  <XMTok fontsize="70%" mathstyle="text" meaning="intersection" name="bigcap" role="SUMOP" scriptpos="post">⋂</XMTok>
                   <XMTok fontsize="70%" meaning="plus" role="ADDOP" width="0pt" xoffset="-1.3em" yoffset="0.2ex">+</XMTok>
                 </XMWrap>
               </XMDual>
@@ -896,7 +866,7 @@
               <XMDual role="ADDOP" xml:id="S0.Ex13.m1.4">
                 <XMTok mathstyle="text" meaning="intersection-plus" name="bignplus" role="ADDOP"/>
                 <XMWrap rule="kludge">
-                  <XMTok fontsize="160%" mathstyle="text" meaning="intersection" name="bigcap" role="SUMOP" scriptpos="post">⋂</XMTok>
+                  <XMTok fontsize="50%" mathstyle="text" meaning="intersection" name="bigcap" role="SUMOP" scriptpos="post">⋂</XMTok>
                   <XMTok fontsize="50%" meaning="plus" role="ADDOP" width="0pt" xoffset="-1.3em" yoffset="0.2ex">+</XMTok>
                 </XMWrap>
               </XMDual>
@@ -1169,10 +1139,7 @@
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex18.m1.1">
-                <XMDual role="ARROW">
-                  <XMTok name="nnearrow" role="ARROW"/>
-                  <XMTok class="ltx_nounicode" role="UNKNOWN">\nnearrow</XMTok>
-                </XMDual>
+                <XMTok class="ltx_nounicode" name="nnearrow" role="ARROW">\nnearrow</XMTok>
                 <XMTok font="italic" role="UNKNOWN">a</XMTok>
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
@@ -1185,10 +1152,7 @@
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S0.Ex18.m1.2.1">
-                    <XMDual role="ARROW">
-                      <XMTok name="nnwarrow" role="ARROW"/>
-                      <XMTok class="ltx_nounicode" role="UNKNOWN">\nnwarrow</XMTok>
-                    </XMDual>
+                    <XMTok class="ltx_nounicode" name="nnwarrow" role="ARROW">\nnwarrow</XMTok>
                     <XMTok font="italic" role="UNKNOWN">a</XMTok>
                     <XMTok font="italic" role="UNKNOWN">b</XMTok>
                   </XMApp>
@@ -1201,19 +1165,13 @@
                     </XMApp>
                     <XMWrap>
                       <XMApp xml:id="S0.Ex18.m1.2.2.1">
-                        <XMDual role="ARROW">
-                          <XMTok name="ssearrow" role="ARROW"/>
-                          <XMTok class="ltx_nounicode" role="UNKNOWN">\ssearrow</XMTok>
-                        </XMDual>
+                        <XMTok class="ltx_nounicode" name="ssearrow" role="ARROW">\ssearrow</XMTok>
                         <XMTok font="italic" role="UNKNOWN">a</XMTok>
                         <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
                       <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
                       <XMApp xml:id="S0.Ex18.m1.2.2.2">
-                        <XMDual role="ARROW">
-                          <XMTok name="sswarrow" role="ARROW"/>
-                          <XMTok class="ltx_nounicode" role="UNKNOWN">\sswarrow</XMTok>
-                        </XMDual>
+                        <XMTok class="ltx_nounicode" name="sswarrow" role="ARROW">\sswarrow</XMTok>
                         <XMTok font="italic" role="UNKNOWN">a</XMTok>
                         <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
@@ -1281,7 +1239,7 @@
                             <XMDual role="ARROW">
                               <XMTok name="leftrightarroweq" role="ARROW"/>
                               <XMApp role="RELOP">
-                                <XMTok role="SUPERSCRIPTOP" scriptpos="mid2"/>
+                                <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
                                 <XMTok meaning="minus" role="ADDOP">-</XMTok>
                                 <XMTok fontsize="70%" name="leftrightarrow" role="METARELOP">↔</XMTok>
                               </XMApp>
@@ -1375,10 +1333,7 @@
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex21.m1.1">
-                <XMDual role="RELOP">
-                  <XMTok name="arrownot" role="RELOP"/>
-                  <XMTok meaning="divide" role="MULOP" width="0pt">/</XMTok>
-                </XMDual>
+                <XMTok meaning="divide" name="arrownot" role="RELOP" width="0pt">/</XMTok>
                 <XMTok font="italic" role="UNKNOWN">a</XMTok>
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
@@ -1391,10 +1346,7 @@
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S0.Ex21.m1.2.1">
-                    <XMDual role="RELOP">
-                      <XMTok name="longarrownot" role="RELOP"/>
-                      <XMTok meaning="divide" role="MULOP" width="0pt">/</XMTok>
-                    </XMDual>
+                    <XMTok meaning="divide" name="longarrownot" role="RELOP" width="0pt">/</XMTok>
                     <XMTok font="italic" role="UNKNOWN">a</XMTok>
                     <XMTok font="italic" role="UNKNOWN">b</XMTok>
                   </XMApp>
@@ -1407,19 +1359,13 @@
                     </XMApp>
                     <XMWrap>
                       <XMApp xml:id="S0.Ex21.m1.2.2.1">
-                        <XMDual role="RELOP">
-                          <XMTok name="Arrownot" role="RELOP"/>
-                          <XMTok meaning="divide" role="MULOP" width="0pt">/</XMTok>
-                        </XMDual>
+                        <XMTok meaning="divide" name="Arrownot" role="RELOP" width="0pt">/</XMTok>
                         <XMTok font="italic" role="UNKNOWN">a</XMTok>
                         <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
                       <XMTok font="italic" name="quad" role="PUNCT"> </XMTok>
                       <XMApp xml:id="S0.Ex21.m1.2.2.2">
-                        <XMDual role="RELOP">
-                          <XMTok name="Longarrownot" role="RELOP"/>
-                          <XMTok meaning="divide" role="MULOP" width="0pt">/</XMTok>
-                        </XMDual>
+                        <XMTok meaning="divide" name="Longarrownot" role="RELOP" width="0pt">/</XMTok>
                         <XMTok font="italic" role="UNKNOWN">a</XMTok>
                         <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>

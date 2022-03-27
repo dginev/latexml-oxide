@@ -3,6 +3,15 @@
 <?latexml package="colortbl"?>
 <?latexml package="dcolumn,longtable,hhline"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
+<?latexml preamble="\newcolumntype{A}{>{\color{white}\columncolor{red}[.5\tabcolsep]\raggedright}p{2cm}}"?>
+<?latexml preamble="\newcolumntype{B}{>{\columncolor{blue}[.5\tabcolsep]\color{yellow}\raggedright}
+p{3cm}}"?>
+<?latexml preamble="\newcolumntype{C}{>{\columncolor{yellow}[.5\tabcolsep]}D{.}{\cdot}{3.3}}"?>
+<?latexml preamble="\newcolumntype{E}{>{\large\bfseries\columncolor{cyan}[.5\tabcolsep]}c}"?>
+<?latexml preamble="\newcolumntype{F}{>{\color{white}\columncolor{magenta}[.5\tabcolsep]}c}"?>
+<?latexml preamble="\newcolumntype{G}{>{\columncolor[gray]{0.8}[.5\tabcolsep][\tabcolsep]}l}"?>
+<?latexml preamble="\newcolumntype{H}{>{\columncolor[gray]{0.8}}l}"?>
+<?latexml preamble="\newcolumntype{I}{>{\columncolor[gray]{0.8}[\tabcolsep][.5\tabcolsep]}D{.}{\cdot}{3.3}}"?>
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
@@ -63,7 +72,7 @@
         </tbody>
       </tabular>
     </para>
-    <table xml:id="S2.T1">
+    <table inlist="lot" xml:id="S2.T1">
       <tags>
         <tag>Table 1</tag>
         <tag role="refnum">1</tag>
@@ -85,8 +94,8 @@
         </thead>
         <tbody>
           <tr>
-            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left ltx_wrap" color="#FFFFFF">P-column</text></td>
-            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left ltx_wrap" color="#FFFF00">and another one</text></td>
+            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left" color="#FFFFFF" vattach="top">P-column</text></td>
+            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left" color="#FFFF00" vattach="top">and another one</text></td>
             <td align="char:⋅" backgroundcolor="#FFFF00"><Math mode="inline" tex="\pagecolor{yellow}12\cdot 34" text="12.34" xml:id="S2.T1.m1">
                 <XMath>
                   <XMTok backgroundcolor="#FFFF00" meaning="12.34" role="NUMBER">12⋅34</XMTok>
@@ -103,8 +112,8 @@
               </Math></td>
           </tr>
           <tr>
-            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left ltx_wrap" color="#FFFFFF">Some long text in the first column</text></td>
-            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left ltx_wrap" color="#FFFF00">bbb</text></td>
+            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left" color="#FFFFFF" vattach="top">Some long text in the first column</text></td>
+            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left" color="#FFFF00" vattach="top">bbb</text></td>
             <td align="char:⋅" backgroundcolor="#FFFF00"><Math mode="inline" tex="\pagecolor{yellow}1\cdot 2" text="1.2" xml:id="S2.T1.m3">
                 <XMath>
                   <XMTok backgroundcolor="#FFFF00" meaning="1.2" role="NUMBER">1⋅2</XMTok>
@@ -112,8 +121,8 @@
               </Math></td>
           </tr>
           <tr>
-            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left ltx_wrap" color="#FFFFFF">aaa</text></td>
-            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left ltx_wrap" color="#FFFF00">and some long text in the second column</text></td>
+            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left" color="#FFFFFF" vattach="top">aaa</text></td>
+            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left" color="#FFFF00" vattach="top">and some long text in the second column</text></td>
             <td align="char:⋅" backgroundcolor="#FFFF00"><Math mode="inline" tex="\pagecolor{yellow}1\cdot 345" text="1.345" xml:id="S2.T1.m4">
                 <XMath>
                   <XMTok backgroundcolor="#FFFF00" meaning="1.345" role="NUMBER">1⋅345</XMTok>
@@ -130,8 +139,8 @@
               </Math></td>
           </tr>
           <tr>
-            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left ltx_wrap" color="#FFFFFF">aaa</text></td>
-            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left ltx_wrap" color="#FFFF00">bbb</text></td>
+            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left" color="#FFFFFF" vattach="top">aaa</text></td>
+            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left" color="#FFFF00" vattach="top">bbb</text></td>
             <td align="char:⋅" backgroundcolor="#FFFF00"><Math mode="inline" tex="\pagecolor{yellow}1\cdot 345" text="1.345" xml:id="S2.T1.m6">
                 <XMath>
                   <XMTok backgroundcolor="#FFFF00" meaning="1.345" role="NUMBER">1⋅345</XMTok>
@@ -139,9 +148,9 @@
               </Math></td>
           </tr>
           <tr>
-            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left ltx_wrap" color="#FFFFFF">Note that the coloured rules in all columns stretch to accomodate
+            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left" color="#FFFFFF" vattach="top">Note that the coloured rules in all columns stretch to accomodate
 large entries in one column.</text></td>
-            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left ltx_wrap" color="#FFFF00">bbb</text></td>
+            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left" color="#FFFF00" vattach="top">bbb</text></td>
             <td align="char:⋅" backgroundcolor="#FFFF00"><Math mode="inline" tex="\pagecolor{yellow}1\cdot 345" text="1.345" xml:id="S2.T1.m7">
                 <XMath>
                   <XMTok backgroundcolor="#FFFF00" meaning="1.345" role="NUMBER">1⋅345</XMTok>
@@ -149,8 +158,8 @@ large entries in one column.</text></td>
               </Math></td>
           </tr>
           <tr>
-            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left ltx_wrap" color="#FFFFFF">aaa</text></td>
-            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left ltx_wrap" color="#FFFF00">bbb</text></td>
+            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left" color="#FFFFFF" vattach="top">aaa</text></td>
+            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left" color="#FFFF00" vattach="top">bbb</text></td>
             <td align="char:⋅" backgroundcolor="#FFFF00"><Math mode="inline" tex="\pagecolor{yellow}100" text="100" xml:id="S2.T1.m8">
                 <XMath>
                   <XMTok backgroundcolor="#FFFF00" meaning="100" role="NUMBER">100</XMTok>
@@ -158,8 +167,8 @@ large entries in one column.</text></td>
               </Math></td>
           </tr>
           <tr>
-            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left ltx_wrap" color="#FFFFFF">aaa</text></td>
-            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left ltx_wrap" color="#FFFF00">Depending on your driver you may get unsightly gaps or lines
+            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left" color="#FFFFFF" vattach="top">aaa</text></td>
+            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left" color="#FFFF00" vattach="top">Depending on your driver you may get unsightly gaps or lines
 where the ‘screens’ used to produce different shapes interact
 badly. You may want to cause adjacent panels of the same colour by
 specifying a larger overhang
@@ -171,8 +180,8 @@ or by adding some negative space (in a ”“noalign” between rows.</text></td
               </Math></td>
           </tr>
           <tr>
-            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left ltx_wrap" color="#FFFFFF">aaa</text></td>
-            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left ltx_wrap" color="#FFFF00">bbb</text></td>
+            <td align="justify" backgroundcolor="#FF0000" width="56.9pt"><text backgroundcolor="#FF0000" class="ltx_align_left" color="#FFFFFF" vattach="top">aaa</text></td>
+            <td align="justify" backgroundcolor="#0000FF" width="85.4pt"><text backgroundcolor="#0000FF" class="ltx_align_left" color="#FFFF00" vattach="top">bbb</text></td>
             <td align="char:⋅" backgroundcolor="#FFFF00"><Math mode="inline" tex="\pagecolor{yellow}45\cdot 3" text="45.3" xml:id="S2.T1.m10">
                 <XMath>
                   <XMTok backgroundcolor="#FFFF00" meaning="45.3" role="NUMBER">45⋅3</XMTok>
@@ -203,8 +212,7 @@ or by adding some negative space (in a ”“noalign” between rows.</text></td
             <td align="center" border="r">two</td>
           </tr>
           <tr backgroundcolor="#FF0000">
-            <td align="left" border="l r" thead="row"><text backgroundcolor="#FF0000">
-three</text></td>
+            <td align="left" border="l r" thead="row"><text backgroundcolor="#FF0000">three</text></td>
             <td align="center" border="r"><text backgroundcolor="#FF0000">four</text></td>
           </tr>
         </tbody>
@@ -232,8 +240,7 @@ three</text></td>
             <td align="center" backgroundcolor="#0000FF" border="r"><text backgroundcolor="#0000FF">two</text></td>
           </tr>
           <tr backgroundcolor="#FF0000">
-            <td align="left" border="l r" thead="row"><text backgroundcolor="#FF0000">
-three</text></td>
+            <td align="left" border="l r" thead="row"><text backgroundcolor="#FF0000">three</text></td>
             <td align="center" border="r"><text backgroundcolor="#FF0000">four</text></td>
           </tr>
         </tbody>
@@ -247,8 +254,7 @@ three</text></td>
             <td align="center" backgroundcolor="#0000FF" border="r"><text backgroundcolor="#0000FF">two</text></td>
           </tr>
           <tr backgroundcolor="#FF0000">
-            <td align="left" border="l r" thead="row"><text backgroundcolor="#FF0000">
-three</text></td>
+            <td align="left" border="l r" thead="row"><text backgroundcolor="#FF0000">three</text></td>
             <td align="center" backgroundcolor="#00FF00" border="r"><text backgroundcolor="#00FF00">four</text></td>
           </tr>
         </tbody>

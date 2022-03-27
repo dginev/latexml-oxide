@@ -60,4 +60,34 @@
       <p><text font="italic">This is a sentence typeset in the theorem environment <text font="typewriter">Def</text>.</text></p>
     </para>
   </theorem>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>Checking Order</title>
+    <theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="S1.Thmtheorem1">
+      <tags>
+        <tag>1.1 Theorem</tag>
+        <tag role="refnum">1.1</tag>
+        <tag role="typerefnum">Theorem 1.1</tag>
+      </tags>
+      <title class="ltx_runin"><tag><text font="smallcaps">1.1 Theorem</text></tag></title>
+      <para xml:id="S1.Thmtheorem1.p1">
+        <p><text font="italic">A theorem</text></p>
+      </para>
+    </theorem>
+    <theorem class="ltx_theorem_definition" inlist="thm theorem:definition" xml:id="S1.Thmdefinition1">
+      <tags>
+        <tag>Definition 1.1</tag>
+        <tag role="refnum">1.1</tag>
+        <tag role="typerefnum">Definition 1.1</tag>
+      </tags>
+      <title class="ltx_runin"><tag><text font="smallcaps">Definition 1.1</text></tag></title>
+      <para xml:id="S1.Thmdefinition1.p1">
+        <p>A definition</p>
+      </para>
+    </theorem>
+  </section>
 </document>

@@ -1,0 +1,57 @@
+\documentclass{article}
+\makeatletter
+\def\a{[expanded a]}
+% Broken version: hash not in horiz mode.
+\def\allowhashBROKEN#1{
+  {\toks@{#1}\the\toks@}
+}
+
+% stack exchange query: Duplicated by \scantokens
+\def\allowhashBAD#1{
+  {\toks@{#1}\catcode`\#11\relax\scantokens\expandafter{\the\toks@}}%
+}
+% David Carlisle's version: Never actually creates T_PARAM!
+\def\allowhashDC{%%%%
+    \bgroup\catcode35=11\relax\afterassignment\egroup\gdef\foo}%
+
+\newwrite\file
+\def\readnext{
+  \ifeof\file
+    \closein\file
+     Full Contents:``\expandafter\detokenize\expandafter{\contents}''\\
+  \else
+     \read\file to \aline
+     Line:``\expandafter\detokenize\expandafter{\aline}''\\
+     \expandafter\g@addto@macro\expandafter\contents\expandafter{\aline}
+     \readnext
+  \fi}
+
+\def\readfile#1{
+  \def\contents{}%
+  Reading file #1:\\
+ \openin\file = #1
+  \readnext}
+
+\makeatother
+\begin{document}
+\section{Testing duplication of \#}
+\message{message: Two hashes: #, not one; \a.}
+
+\detokenize{detokenize: Two hashes: #, not one; \a.}
+
+\allowhashBAD{scantokens: two hashes: #, not one; \a.}
+
+\allowhashDC{Deferred tokenize: One hash: #, not two; \a.}\foo
+
+\section{In definitions}
+\def\foo{Also two hashes##, not one}
+\expandafter\detokenize\expandafter{\foo}
+
+\edef\fufu{\expandafter\detokenize\expandafter{\foo}}
+
+\fufu
+
+\section{File io}
+\readfile{badchars.tex}
+
+\end{document}
