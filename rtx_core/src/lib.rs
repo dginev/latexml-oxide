@@ -26,10 +26,9 @@ pub mod util;
 pub mod whatsit;
 
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::{Arc, RwLock};
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -50,7 +49,7 @@ use crate::whatsit::Whatsit;
 
 pub struct Core {
   pub state: State,
-  pub stomach: Rc<RefCell<Stomach>>,
+  pub stomach: Arc<RwLock<Stomach>>,
   pub preload: Vec<String>,
 }
 impl Object for Core {}
@@ -73,9 +72,9 @@ pub struct CoreOptions {
 
 impl Default for Core {
   fn default() -> Self {
-    let stomach = Rc::new(RefCell::new(Stomach::default()));
+    let stomach = Arc::new(RwLock::new(Stomach::default()));
     let mut state = State::new(StateOptions::default());
-    state.stomach = Rc::clone(&stomach);
+    state.stomach = Arc::clone(&stomach);
     Core {
       preload: Vec::new(),
       stomach,
@@ -104,9 +103,9 @@ impl Core {
       nomathparse: options.nomathparse,
       ..StateOptions::default()
     };
-    let stomach = Rc::new(RefCell::new(Stomach::default()));
+    let stomach = Arc::new(RwLock::new(Stomach::default()));
     let mut state = State::new(state_options);
-    state.stomach = Rc::clone(&stomach);
+    state.stomach = Arc::clone(&stomach);
 
     Core { state, stomach, preload }
   }
@@ -159,19 +158,34 @@ pub enum TexMode {
   Text,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub enum Digested {
-  TBox(Rc<Tbox>),
-  Whatsit(Rc<RefCell<Whatsit>>),
-  List(Rc<List>),
-  Postponed(Rc<Tokens>),
-  KeyVals(Rc<KeyVals>),
-  RegisterValue(Rc<RegisterValue>),
+  TBox(Arc<Tbox>),
+  Whatsit(Arc<RwLock<Whatsit>>),
+  List(Arc<List>),
+  Postponed(Arc<Tokens>),
+  KeyVals(Arc<KeyVals>),
+  RegisterValue(Arc<RegisterValue>),
+}
+
+impl PartialEq for Digested {
+  fn eq(&self, other: &Digested) -> bool {
+    use Digested::*;
+    match self {
+      TBox(ref tb) => if let TBox(tb2) = other { tb == tb2 } else {false},
+      Whatsit(ref tb) => if let Whatsit(tb2) = other {
+        *tb.read().unwrap() == *tb2.read().unwrap() } else {false},
+      List(ref tb) => if let List(tb2) = other { tb == tb2 } else {false},
+      Postponed(ref tb) => if let Postponed(tb2) = other { tb == tb2 } else {false},
+      KeyVals(ref tb) => if let KeyVals(tb2) = other { tb == tb2 } else {false},
+      RegisterValue(ref tb) => if let RegisterValue(tb2) = other { tb == tb2 } else {false},
+    }
+  }
 }
 
 impl<'a> From<&'a String> for Digested {
   fn from(value: &'a String) -> Digested {
-    Digested::TBox(Rc::new(Tbox {
+    Digested::TBox(Arc::new(Tbox {
       text: value.to_string(),
       ..Tbox::default()
     }))
@@ -179,7 +193,7 @@ impl<'a> From<&'a String> for Digested {
 }
 impl From<String> for Digested {
   fn from(value: String) -> Digested {
-    Digested::TBox(Rc::new(Tbox {
+    Digested::TBox(Arc::new(Tbox {
       text: value,
       ..Tbox::default()
     }))
@@ -187,19 +201,19 @@ impl From<String> for Digested {
 }
 
 impl From<Tbox> for Digested {
-  fn from(value: Tbox) -> Digested { Digested::TBox(Rc::new(value)) }
+  fn from(value: Tbox) -> Digested { Digested::TBox(Arc::new(value)) }
 }
 impl From<List> for Digested {
-  fn from(value: List) -> Digested { Digested::List(Rc::new(value)) }
+  fn from(value: List) -> Digested { Digested::List(Arc::new(value)) }
 }
 impl From<Whatsit> for Digested {
-  fn from(value: Whatsit) -> Digested { Digested::Whatsit(Rc::new(RefCell::new(value))) }
+  fn from(value: Whatsit) -> Digested { Digested::Whatsit(Arc::new(RwLock::new(value))) }
 }
 impl From<KeyVals> for Digested {
-  fn from(value: KeyVals) -> Digested { Digested::KeyVals(Rc::new(value)) }
+  fn from(value: KeyVals) -> Digested { Digested::KeyVals(Arc::new(value)) }
 }
 impl From<RegisterValue> for Digested {
-  fn from(value: RegisterValue) -> Digested { Digested::RegisterValue(Rc::new(value)) }
+  fn from(value: RegisterValue) -> Digested { Digested::RegisterValue(Arc::new(value)) }
 }
 
 impl<'a> From<&'a Digested> for Option<crate::Digested> {
@@ -222,7 +236,7 @@ impl From<Digested> for Result<Option<Digested>> {
 }
 
 impl Default for Digested {
-  fn default() -> Self { Digested::TBox(Rc::new(Tbox::default())) }
+  fn default() -> Self { Digested::TBox(Arc::new(Tbox::default())) }
 }
 
 impl fmt::Display for Digested {
@@ -230,7 +244,7 @@ impl fmt::Display for Digested {
     match *self {
       Digested::TBox(ref b) => write!(f, "{}", b),
       Digested::List(ref l) => write!(f, "{}", l),
-      Digested::Whatsit(ref w) => write!(f, "{}", w.borrow()),
+      Digested::Whatsit(ref w) => write!(f, "{}", w.read().unwrap()),
       Digested::Postponed(ref t) => write!(f, "{}", t),
       Digested::KeyVals(ref kvs) => write!(f, "{}", kvs),
       Digested::RegisterValue(ref rv) => write!(f, "{}", rv),
@@ -242,7 +256,7 @@ impl Object for Digested {
     match *self {
       Digested::TBox(ref b) => b.stringify(),
       Digested::List(ref l) => l.stringify(),
-      Digested::Whatsit(ref w) => w.borrow().stringify(),
+      Digested::Whatsit(ref w) => w.read().unwrap().stringify(),
       Digested::Postponed(ref t) => (*t).stringify(),
       Digested::KeyVals(ref kvs) => kvs.stringify(),
       Digested::RegisterValue(ref rv) => (*rv).stringify(),
@@ -252,7 +266,7 @@ impl Object for Digested {
     match *self {
       Digested::TBox(ref b) => b.get_locator(),
       Digested::List(ref l) => l.get_locator(),
-      Digested::Whatsit(ref w) => Cow::Owned(w.borrow().get_locator().into_owned()),
+      Digested::Whatsit(ref w) => Cow::Owned(w.read().unwrap().get_locator().into_owned()),
       _ => unimplemented!(),
     }
   }
@@ -260,7 +274,7 @@ impl Object for Digested {
     match *self {
       Digested::TBox(ref b) => b.revert(state),
       Digested::List(ref l) => l.revert(state),
-      Digested::Whatsit(ref w) => w.borrow().revert(state),
+      Digested::Whatsit(ref w) => w.read().unwrap().revert(state),
       Digested::Postponed(ref t) => Ok((**t).clone()),
       Digested::KeyVals(ref kvs) => kvs.revert(state),
       Digested::RegisterValue(ref rv) => (**rv).revert(state),
@@ -273,7 +287,7 @@ impl BoxOps for Digested {
     match self {
       Digested::TBox(ref b) => b.unlist(),
       Digested::List(ref l) => l.unlist(),
-      Digested::Whatsit(ref w) => w.borrow().unlist(),
+      Digested::Whatsit(ref w) => w.read().unwrap().unlist(),
       Digested::KeyVals(ref kvs) => kvs.unlist(),
       Digested::Postponed(ref _t) => unimplemented!(),
       Digested::RegisterValue(ref _rv) => unimplemented!(),
@@ -284,7 +298,7 @@ impl BoxOps for Digested {
     match self {
       Digested::TBox(b) => b.be_absorbed(document, state),
       Digested::List(l) => l.be_absorbed(document, state),
-      Digested::Whatsit(w) => w.borrow().be_absorbed(document, state),
+      Digested::Whatsit(w) => w.read().unwrap().be_absorbed(document, state),
       Digested::KeyVals(kvs) => kvs.be_absorbed(document, state),
       Digested::Postponed(_) => unimplemented!(),
       Digested::RegisterValue(ref _rv) => unimplemented!(),
@@ -306,7 +320,7 @@ impl BoxOps for Digested {
     match *self {
       Digested::TBox(ref b) => Error!("digested", "set_property", self, None, s!("Called set_property on Box: {:?}", b)),
       Digested::List(ref l) => Error!("digested", "set_property", self, None, s!("Called set_property on List: {:?}", l)),
-      Digested::Whatsit(ref w) => w.borrow_mut().set_property(key, value), // TODO
+      Digested::Whatsit(ref w) => w.write().unwrap().set_property(key, value), // TODO
       _ => unimplemented!(),
     }
   }
@@ -318,7 +332,7 @@ impl BoxOps for Digested {
         Error!("digested", "get_property", self, state, "Called get_property on List: {:?}", l);
         None
       },
-      Digested::Whatsit(ref w) => w.borrow().get_property(key, state).map(|v| Cow::Owned(v.into_owned())),
+      Digested::Whatsit(ref w) => w.read().unwrap().get_property(key, state).map(|v| Cow::Owned(v.into_owned())),
       _ => unimplemented!(),
     }
   }
@@ -332,7 +346,7 @@ impl BoxOps for Digested {
         Error!("digested", "get_body", self, None, s!("Called get_body on List: {:?}", l));
         None
       },
-      Digested::Whatsit(ref w) => w.borrow().get_body(),
+      Digested::Whatsit(ref w) => w.read().unwrap().get_body(),
       _ => unimplemented!(),
     }
   }
@@ -341,7 +355,7 @@ impl BoxOps for Digested {
     match *self {
       Digested::TBox(ref b) => b.get_font(),
       Digested::List(ref l) => l.get_font(),
-      Digested::Whatsit(ref w) => w.borrow().get_font().map(|t| Cow::Owned(t.into_owned())),
+      Digested::Whatsit(ref w) => w.read().unwrap().get_font().map(|t| Cow::Owned(t.into_owned())),
       _ => unimplemented!(),
     }
   }

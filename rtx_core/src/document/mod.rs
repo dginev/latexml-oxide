@@ -9,7 +9,7 @@ use regex::Regex;
 
 use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
@@ -39,7 +39,7 @@ pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
   pub node: Node,
-  pub node_boxes: HashMap<usize, Rc<Digested>>, // used to be _box attribute
+  pub node_boxes: HashMap<usize, Arc<Digested>>, // used to be _box attribute
   pub node_fonts: HashMap<usize, Font>,         // used to be _font attribute
   pub constructed_nodes: Vec<Node>,
   pub idstore: HashMap<String, Node>,
@@ -277,7 +277,7 @@ impl Document {
         match front_box {
           // A Proper Box or Whatsit? Absorb it.
           Digested::TBox(ref digested) => digested.be_absorbed(self, state)?,
-          Digested::Whatsit(ref digested) => digested.borrow().be_absorbed(self, state)?,
+          Digested::Whatsit(ref digested) => digested.read().unwrap().be_absorbed(self, state)?,
           _ => unimplemented!(),
         };
         self.localize_box_to_absorb();
@@ -910,7 +910,7 @@ impl Document {
       self.set_node_font(&node, font);
       if let Some(ref digested) = self.box_to_absorb {
         // TODO: The Rc<Digested> node boxes still have some way to go until they are fully ergonomic...
-        let node_box = Rc::new(digested.clone());
+        let node_box = Arc::new(digested.clone());
         self.set_node_box(&node, node_box);
       }
       if !text.is_empty() {
@@ -958,9 +958,9 @@ impl Document {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal(state)?; // Close text node, if any.
       let mut bestdiff = 99;
-      let rc_node = Rc::new(node);
-      let mut closeto: Rc<Node> = rc_node.clone();
-      let mut n: Rc<Node> = rc_node.clone();
+      let rc_node = Arc::new(node);
+      let mut closeto: Arc<Node> = Arc::clone(&rc_node);
+      let mut n: Arc<Node> = Arc::clone(&rc_node);
       while n.get_type() != Some(NodeType::DocumentNode) {
         let node_font = self.get_node_font(&n);
         let d = font.distance(node_font);
@@ -975,7 +975,7 @@ impl Document {
           break;
         }
         match n.get_parent() {
-          Some(p) => n = Rc::new(p),
+          Some(p) => n = Arc::new(p),
           None => break,
         }
       }
@@ -1235,7 +1235,7 @@ impl Document {
         // TODO: Cloning boxes is BAD. What is a better model?
         let mut list = List::new(boxes.into_iter().map(|b| (*b).clone()).collect::<Vec<_>>());
         list.mode = Some(TexMode::Math);
-        self.set_node_box(node, Rc::new(list.into()));
+        self.set_node_box(node, Arc::new(list.into()));
       }
       for (key,value_opt) in attr.sorted_each() {
         if let Some(value) = value_opt {
@@ -1863,12 +1863,12 @@ impl Document {
 
   //**********************************************************************
   /// Record the Box that created this node.
-  pub fn set_node_box(&mut self, node: &Node, digested: Rc<Digested>) {
+  pub fn set_node_box(&mut self, node: &Node, digested: Arc<Digested>) {
     let nodeid = node.to_hashable();
     self.node_boxes.insert(nodeid, digested);
   }
 
-  pub fn get_node_box(&self, node: &Node) -> Option<Rc<Digested>> {
+  pub fn get_node_box(&self, node: &Node) -> Option<Arc<Digested>> {
     if node.get_type() == Some(NodeType::ElementNode) {
       let nodeid = node.to_hashable();
       self.node_boxes.get(&nodeid).cloned()
@@ -2087,7 +2087,7 @@ impl Document {
     // objects - tokens, boxes, etc. and a well-designed referncing scheme into
     // the driver structs, such as Gullet, Stomach and Document
     if let Some(ref digested) = self.box_to_absorb {
-      let node_box = Rc::new(digested.clone());
+      let node_box = Arc::new(digested.clone());
       self.set_node_box(&newnode, node_box);
     }
 
@@ -2400,7 +2400,7 @@ impl Document {
     attrib.insert(s!("src"), resource.name);
     attrib.insert(s!("type"), resource.mimetype);
     attrib.insert(s!("media"), resource.media);
-    let content_box = Digested::TBox(Rc::new(Tbox {
+    let content_box = Digested::TBox(Arc::new(Tbox {
       text: resource.content,
       ..Tbox::default()
     }));

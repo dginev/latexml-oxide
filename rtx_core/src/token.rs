@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Display;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
@@ -651,7 +651,7 @@ impl<'a> Token {
     s!("{}[{}]", self.code.short_name(), string)
   }
 
-  pub fn to_register(&self, state: &State) -> Option<Rc<RegisterCell>> { state.lookup_register_definition(self) }
+  pub fn to_register(&self, state: &State) -> Option<Arc<RegisterCell>> { state.lookup_register_definition(self) }
 
   pub fn to_number(&self) -> Number { Number::new(self.text.parse::<f32>().unwrap_or(0.0)) }
 

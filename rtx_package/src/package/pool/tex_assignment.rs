@@ -110,8 +110,8 @@ LoadDefinitions!(state, {
       let defn_token = var_tokens.remove(0);
       if defn_token.to_string() != "missing" {
         let defn_opt = state.lookup_register_definition(&defn_token);
-        let defn_token_rc = Rc::new(defn_token);
-        state.current_token = Some(Rc::clone(&defn_token_rc));
+        let defn_token_rc = Arc::new(defn_token);
+        state.current_token = Some(Arc::clone(&defn_token_rc));
         if let Some(defn) = defn_opt {
           let summand = stomach.get_gullet_mut().read_value(defn.register_type().unwrap(), state)?;
           let defn_args : Vec<Tokens> = var_tokens.iter().map(|a| Tokens!(a.clone())).collect();

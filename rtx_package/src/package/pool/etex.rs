@@ -28,12 +28,12 @@ LoadDefinitions!(state, {
     unpack_to_token!(args => port, token);
     let port = port.to_number();
     let mouth_opt = if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}",port)) {
-      Some(Rc::clone(mouth))
+      Some(Arc::clone(mouth))
     } else {
       None
     };
     if let Some(mouth) = mouth_opt {
-      let raw_line = s!("{}\r", mouth.borrow_mut().read_raw_line(false, state).unwrap_or_default());
+      let raw_line = s!("{}\r", mouth.write().unwrap().read_raw_line(false, state).unwrap_or_default());
       DefMacro!(token, None, Tokens!(Explode!(raw_line)));
     }
   });

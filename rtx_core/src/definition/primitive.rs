@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -76,7 +76,7 @@ impl Definition for Primitive {
   fn is_prefix(&self) -> bool { self.is_prefix }
 
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
-  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Arc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {
     Debug!("primitive invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');

@@ -1,8 +1,7 @@
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
-use std::rc::Rc;
+use std::sync::{Arc,RwLock};
 
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
@@ -43,7 +42,7 @@ const STORED_FALSE: Stored = Stored::Bool(false);
 // and shared, and especially so for Font      in which case an Rc<()> may make more sense.
 // 4. API ergonomics - we need From/Into implementations for ALL enum variants, to avoid explicitly
 //    writing a wrapper every time. if there is a primitive p, it should be accepted as an argument,
-//    rather than requiring writing Stored::Primitive(Rc::new(p)) each time
+//    rather than requiring writing Stored::Primitive(Arc::new(p)) each time
 //    and equally importantly for unwrapping.
 
 // Basic principles:
@@ -53,7 +52,7 @@ const STORED_FALSE: Stored = Stored::Bool(false);
 // 3. If the struct is intended for reuse/(mutation?!) in digestion components, store it in an Rc,
 //    e.g. Rc<Font>
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub enum Stored {
   // Primitives (Copy types, or cheap Clone)
   Bool(bool),
@@ -82,19 +81,19 @@ pub enum Stored {
   Rewrite(Rewrite),
   Ligature(Ligature),
   // LaTeXML objects (Rc-wrapped)
-  Expandable(Rc<Expandable>),
-  Conditional(Rc<Conditional>),
-  Primitive(Rc<Primitive>),
-  MathPrimitive(Rc<MathPrimitive>),
+  Expandable(Arc<Expandable>),
+  Conditional(Arc<Conditional>),
+  Primitive(Arc<Primitive>),
+  MathPrimitive(Arc<MathPrimitive>),
   // WALL OF SHAME (interior mutability)
-  Mouth(Rc<RefCell<Mouth>>),
-  Register(Rc<RegisterCell>),
-  IfFrame(Rc<RefCell<IfFrame>>),
+  Mouth(Arc<RwLock<Mouth>>),
+  Register(Arc<RegisterCell>),
+  IfFrame(Arc<RwLock<IfFrame>>),
   /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
-  Constructor(Rc<Constructor>),
-  Digested(Box<crate::Digested>), // todo: should this be an Rc<> to make it shareable?
-  Parameter(Rc<Parameter>),
-  Font(Rc<Font>),
+  Constructor(Arc<Constructor>),
+  Digested(Box<crate::Digested>), // todo: should this be an Arc<> to make it shareable?
+  Parameter(Arc<Parameter>),
+  Font(Arc<Font>),
 }
 
 impl fmt::Debug for Stored {
@@ -123,7 +122,7 @@ impl fmt::Debug for Stored {
       Parameter(ref parameter) => write!(f, "Stored::Parameter[{:?}]", parameter),
       Register(ref register) => write!(f, "Stored::Register[{:?}]", register.borrow().cs),
       Rewrite(ref rewrite) => write!(f, "Stored::Rewrite[{:?}]", rewrite),
-      Mouth(ref mouth) => write!(f, "Stored::Mouth[{:?}]", mouth.borrow().get_source()),
+      Mouth(ref mouth) => write!(f, "Stored::Mouth[{:?}]", mouth.read().unwrap().get_source()),
       Font(ref font) => write!(f, "Stored::Font[{:?}]", font),
       Number(ref number) => write!(f, "Stored::Number[{:?}]", number),
       Glue(ref glue) => write!(f, "Stored::Glue[{:?}]", glue),
@@ -153,6 +152,84 @@ impl fmt::Display for Stored {
     }
   }
 }
+/// We can not simply derive PartialEq since it is not obvious (to rust, or to me)
+/// if it is safe to carelessly lock the RwLock guards of the suspect fields with interior mutability
+impl PartialEq for Stored {
+  fn eq(&self, other: &Stored) -> bool {
+    use crate::Stored::*;
+    match *self {
+      String(ref s) =>
+        if let String(s2) = other {s == s2} else { false },
+      Int(ref num) =>
+        if let Int(num2) = other {num == num2} else { false },
+      VecChar(ref vs) =>
+        if let VecChar(vs2) = other {vs == vs2} else { false },
+      VecOptionChar(ref vs) =>
+        if let VecOptionChar(vs2) = other {vs == vs2} else { false },
+      VecString(ref vs) =>
+        if let VecString(vs2) = other {vs == vs2} else { false },
+      Bool(ref b) =>
+        if let Bool(b2) = other {b == b2} else { false },
+      Token(ref t) =>
+        if let Token(t2) = other {t == t2} else { false },
+      Tokens(ref t) =>
+        if let Tokens(t2) = other {t == t2} else { false },
+      Locator(ref t) =>
+        if let Locator(t2) = other {t == t2} else { false },
+      Catcode(ref cc) =>
+        if let Catcode(cc2) = other {cc == cc2} else { false },
+      Charcode(ref cc) =>
+        if let Charcode(cc2) = other {cc == cc2} else { false },
+      IfFrame(ref fr) =>
+        if let IfFrame(fr2) = other {*fr.read().unwrap() == *fr2.read().unwrap()} else { false },
+      Expandable(ref e) =>
+        if let Expandable(e2) = other {e == e2} else { false },
+      Conditional(ref c) =>
+        if let Conditional(c2) = other {*c == *c2} else { false },
+      Primitive(ref p) =>
+        if let Primitive(p2) = other {p == p2} else { false },
+      MathPrimitive(ref p) =>
+        if let MathPrimitive(p2) = other {p == p2} else { false },
+      // MathPrimitiveOptions(ref _primitive) =>
+      Constructor(ref c) =>
+        if let Constructor(c2) = other {c == c2} else { false },
+      Digested(ref d) =>
+        if let Digested(d2) = other {d == d2} else { false },
+      Parameter(ref p) =>
+        if let Parameter(p2) = other {p == p2} else { false },
+      Register(ref r) =>
+        if let Register(r2) = other {r == r2} else { false },
+      Rewrite(ref r) =>
+        if let Rewrite(r2) = other {r == r2} else { false },
+      Mouth(ref m) =>
+        if let Mouth(m2) = other {*m.read().unwrap() == *m2.read().unwrap()} else { false },
+      Font(ref f) =>
+        if let Font(f2) = other {f == f2} else { false },
+      Number(ref n) =>
+        if let Number(n2) = other {n == n2} else { false },
+      Glue(ref g) =>
+        if let Glue(g2) = other {g == g2} else { false },
+      MuGlue(ref mg) =>
+        if let MuGlue(mg2) = other {mg == mg2} else { false },
+      Dimension(ref d) =>
+        if let Dimension(d2) = other {d == d2} else { false },
+      MuDimension(ref md) =>
+        if let MuDimension(md2) = other {md == md2} else { false },
+      VecDigested(ref vd) =>
+        if let VecDigested(vd2) = other {vd == vd2} else { false },
+      VecDequeStored(ref v) =>
+        if let VecDequeStored(v2) = other {v == v2} else { false },
+      HashStored(ref hs) =>
+        if let HashStored(hs2) = other {hs == hs2} else { false },
+      HashTagData(ref htd) =>
+        if let HashTagData(htd2) = other {htd == htd2} else { false },
+      HashString(ref hstr) =>
+        if let HashString(hstr2) = other {hstr == hstr2} else { false },
+      Ligature(ref lig) =>
+        if let Ligature(lig2) = other {lig == lig2} else { false },
+    }
+  }
+}
 
 impl Stored {
   pub fn cast_to_string_hash(in_map: &HashMap<String, Stored>) -> HashMap<String, String> {
@@ -163,7 +240,7 @@ impl Stored {
     out_map
   }
   /// Dynamic dispatch for Definition's `read_arguments`,
-  /// to circumvent the limitations of using trait objects with `Rc<Definition>`
+  /// to circumvent the limitations of using trait objects with `Arc<Definition>`
   pub fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Tokens>> {
     use crate::definition::Definition;
     match self {
@@ -220,7 +297,7 @@ impl From<Token> for Stored {
   fn from(value: Token) -> Self { Stored::Token(value) }
 }
 
-// Storing all definitions is expected - Rc<Expandable> case
+// Storing all definitions is expected - Arc<Expandable> case
 
 impl From<Tokens> for Stored {
   fn from(value: Tokens) -> Self { Stored::Tokens(value) }
@@ -231,51 +308,51 @@ impl From<Locator> for Stored {
 }
 
 impl From<Mouth> for Stored {
-  fn from(value: Mouth) -> Self { Stored::Mouth(Rc::new(RefCell::new(value))) }
+  fn from(value: Mouth) -> Self { Stored::Mouth(Arc::new(RwLock::new(value))) }
 }
 
-impl From<Rc<Expandable>> for Stored {
-  fn from(definition: Rc<Expandable>) -> Self { Stored::Expandable(definition) }
+impl From<Arc<Expandable>> for Stored {
+  fn from(definition: Arc<Expandable>) -> Self { Stored::Expandable(definition) }
 }
 /// Storing all definitions is expected - Expandable case
 impl From<Expandable> for Stored {
-  fn from(definition: Expandable) -> Self { Rc::new(definition).into() }
+  fn from(definition: Expandable) -> Self { Arc::new(definition).into() }
 }
 
-impl From<Rc<Conditional>> for Stored {
-  fn from(definition: Rc<Conditional>) -> Self { Stored::Conditional(definition) }
+impl From<Arc<Conditional>> for Stored {
+  fn from(definition: Arc<Conditional>) -> Self { Stored::Conditional(definition) }
 }
 impl From<Conditional> for Stored {
-  fn from(value: Conditional) -> Self { Rc::new(value).into() }
+  fn from(value: Conditional) -> Self { Arc::new(value).into() }
 }
 
-impl From<Rc<Primitive>> for Stored {
-  fn from(definition: Rc<Primitive>) -> Self { Stored::Primitive(definition) }
+impl From<Arc<Primitive>> for Stored {
+  fn from(definition: Arc<Primitive>) -> Self { Stored::Primitive(definition) }
 }
 impl From<Primitive> for Stored {
-  fn from(value: Primitive) -> Self { Rc::new(value).into() }
+  fn from(value: Primitive) -> Self { Arc::new(value).into() }
 }
 
-impl From<Rc<MathPrimitive>> for Stored {
-  fn from(definition: Rc<MathPrimitive>) -> Self { Stored::MathPrimitive(definition) }
+impl From<Arc<MathPrimitive>> for Stored {
+  fn from(definition: Arc<MathPrimitive>) -> Self { Stored::MathPrimitive(definition) }
 }
 impl From<MathPrimitive> for Stored {
-  fn from(value: MathPrimitive) -> Self { Rc::new(value).into() }
+  fn from(value: MathPrimitive) -> Self { Arc::new(value).into() }
 }
 
-impl From<Rc<Constructor>> for Stored {
-  fn from(definition: Rc<Constructor>) -> Self { Stored::Constructor(definition) }
+impl From<Arc<Constructor>> for Stored {
+  fn from(definition: Arc<Constructor>) -> Self { Stored::Constructor(definition) }
 }
 impl From<Constructor> for Stored {
-  fn from(value: Constructor) -> Self { Rc::new(value).into() }
+  fn from(value: Constructor) -> Self { Arc::new(value).into() }
 }
 
 impl From<List> for Stored {
-  fn from(value: List) -> Self { crate::Digested::List(Rc::new(value)).into() }
+  fn from(value: List) -> Self { crate::Digested::List(Arc::new(value)).into() }
 }
 
-impl From<Rc<List>> for Stored {
-  fn from(value: Rc<List>) -> Self { crate::Digested::List(value).into() }
+impl From<Arc<List>> for Stored {
+  fn from(value: Arc<List>) -> Self { crate::Digested::List(value).into() }
 }
 
 impl From<crate::Digested> for Stored {
@@ -287,18 +364,18 @@ impl From<Box<crate::Digested>> for Stored {
 }
 
 impl From<Parameter> for Stored {
-  fn from(value: Parameter) -> Self { Stored::Parameter(Rc::new(value)) }
+  fn from(value: Parameter) -> Self { Stored::Parameter(Arc::new(value)) }
 }
 
-impl From<Rc<Font>> for Stored {
-  fn from(font: Rc<Font>) -> Self { Stored::Font(font) }
+impl From<Arc<Font>> for Stored {
+  fn from(font: Arc<Font>) -> Self { Stored::Font(font) }
 }
 
-impl From<Rc<RegisterCell>> for Stored {
-  fn from(register: Rc<RegisterCell>) -> Self { Stored::Register(register) }
+impl From<Arc<RegisterCell>> for Stored {
+  fn from(register: Arc<RegisterCell>) -> Self { Stored::Register(register) }
 }
 impl From<Register> for Stored {
-  fn from(register: Register) -> Self { Rc::new(RegisterCell::new(RefCell::new(register))).into() }
+  fn from(register: Register) -> Self { Arc::new(RegisterCell::new(RwLock::new(register))).into() }
 }
 
 impl From<Rewrite> for Stored {
@@ -306,11 +383,11 @@ impl From<Rewrite> for Stored {
 }
 
 impl From<Font> for Stored {
-  fn from(value: Font) -> Self { Rc::new(value).into() }
+  fn from(value: Font) -> Self { Arc::new(value).into() }
 }
 
 impl<'a> From<Cow<'a, Font>> for Stored {
-  fn from(value: Cow<Font>) -> Self { Rc::new((*value).clone()).into() }
+  fn from(value: Cow<Font>) -> Self { Arc::new((*value).clone()).into() }
 }
 
 impl From<Number> for Stored {
@@ -377,8 +454,8 @@ impl From<RegisterValue> for Stored {
   }
 }
 
-impl From<Rc<RefCell<IfFrame>>> for Stored {
-  fn from(frame: Rc<RefCell<IfFrame>>) -> Stored { Stored::IfFrame(frame) }
+impl From<Arc<RwLock<IfFrame>>> for Stored {
+  fn from(frame: Arc<RwLock<IfFrame>>) -> Stored { Stored::IfFrame(frame) }
 }
 
 impl From<Ligature> for Stored {
@@ -424,10 +501,10 @@ impl<'a> From<&'a Stored> for Option<&'a VecDeque<Stored>> {
   }
 }
 
-impl<'a> From<&'a Stored> for Option<Rc<Font>> {
-  fn from(value: &'a Stored) -> Option<Rc<Font>> {
+impl<'a> From<&'a Stored> for Option<Arc<Font>> {
+  fn from(value: &'a Stored) -> Option<Arc<Font>> {
     match value {
-      Stored::Font(ref f) => Some(f.clone()),
+      Stored::Font(ref f) => Some(Arc::clone(f)),
       _ => None,
     }
   }
@@ -483,10 +560,10 @@ impl<'a> From<&'a Stored> for Option<Tokens> {
   }
 }
 
-impl<'a> From<&'a Stored> for Option<Rc<RegisterCell>> {
-  fn from(value: &'a Stored) -> Option<Rc<RegisterCell>> {
+impl<'a> From<&'a Stored> for Option<Arc<RegisterCell>> {
+  fn from(value: &'a Stored) -> Option<Arc<RegisterCell>> {
     match value {
-      Stored::Register(ref reg) => Some(reg.clone()),
+      Stored::Register(ref reg) => Some(Arc::clone(reg)),
       _ => None,
     }
   }

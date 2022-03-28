@@ -4,7 +4,7 @@ LoadDefinitions!(outer_state, {
   //**********************************************************************
   // Define \name and \begin{name} to start an ignored section
   // until \endname or \end{name}, respectively
-  let define_excluded: PrimitiveClosure = Rc::new(primitiveproc!(stomach, args, state, {
+  let define_excluded: PrimitiveClosure = Arc::new(primitiveproc!(stomach, args, state, {
     unpack_to_string!(args => name);
     let begin_mark = s!("\\begin{{{}}}", name);
     let end_mark = s!("\\end{{{}}}", name);
@@ -26,7 +26,7 @@ LoadDefinitions!(outer_state, {
 
   // I don't understand Rust closures enough to figure out how to clone one, so instantiating it
   // twice instead, via a macro
-  let define_included: PrimitiveClosure = Rc::new(primitiveproc!(stomach, args, inner_state, {
+  let define_included: PrimitiveClosure = Arc::new(primitiveproc!(stomach, args, inner_state, {
     args.reverse(); // we'll be using .pop() from the front
     let name = args.pop().unwrap_or(Tokens!()).to_string();
     let mut before_tokens = args.pop().unwrap_or(Tokens!()).unlist();
@@ -47,7 +47,7 @@ LoadDefinitions!(outer_state, {
   let mut mock_stomach = Stomach::default();
   define_excluded(&mut mock_stomach, vec![Tokenize!("comment", None)], outer_state)?;
 
-  DefPrimitive!("\\includecomment{}", Rc::clone(&define_included));
+  DefPrimitive!("\\includecomment{}", Arc::clone(&define_included));
   DefPrimitive!("\\excludecomment{}", define_excluded);
   DefPrimitive!("\\specialcomment{}{}{}", define_included);
   DefPrimitive!("\\processcomment{}{}{}{}", None);

@@ -1,5 +1,5 @@
 use std::fmt;
-use std::rc::Rc;
+use std::sync::Arc;
 use libxml::tree::Node;
 
 use crate::common::font::Font;
@@ -7,9 +7,9 @@ use crate::common::error::Result;
 use crate::document::Document;
 use crate::state::State;
 
-pub type LigatureClosure = Rc<dyn Fn(&str) -> String>;
-pub type FontTestClosure = Rc<dyn Fn(&Font) -> bool>;
-pub type LigatureMatcher = Rc<dyn Fn(&mut Document, &mut Node, &State) -> Result<Option<(usize, String, MathLigatureOptions)>>>;
+pub type LigatureClosure = Arc<dyn Fn(&str) -> String>;
+pub type FontTestClosure = Arc<dyn Fn(&Font) -> bool>;
+pub type LigatureMatcher = Arc<dyn Fn(&mut Document, &mut Node, &State) -> Result<Option<(usize, String, MathLigatureOptions)>>>;
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct MathLigatureOptions {

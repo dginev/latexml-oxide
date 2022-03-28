@@ -1,5 +1,5 @@
 use std::borrow::{Borrow, Cow};
-use std::rc::Rc;
+use std::sync::Arc;
 
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
@@ -319,7 +319,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
 
   let getter: RegisterGetterClosure = match options.getter {
     Some(getter) => getter.clone(),
-    None => Rc::new(move |args: Vec<Token>, state: &State| -> Option<RegisterValue> {
+    None => Arc::new(move |args: Vec<Token>, state: &State| -> Option<RegisterValue> {
       let args_string: String = args.iter().map(ToString::to_string).collect::<Vec<String>>().join("");
       match state.lookup_value(&(name.clone() + &args_string)) {
         None => Some(getter_value.clone()),
@@ -333,12 +333,12 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
     Some(setter) => setter.clone(),
     None => {
       if readonly {
-        Rc::new(move |value, args, state| {
+        Arc::new(move |value, args, state| {
           let message = s!("Can't assign to register {}", setter_name);
           Warn!("unexpected", setter_name, None, state, message);
         })
       } else {
-        Rc::new(move |value, args, state| {
+        Arc::new(move |value, args, state| {
           let args_string: String = args.iter().map(ToString::to_string).collect::<Vec<String>>().join("");
 
           state.assign_value(&(setter_name.clone() + &args_string), value, None);
@@ -445,23 +445,23 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
     MathPrimitive {
       cs: cs.clone(),
       paramlist: None, // never any parameters, this is intentional
-      replacement: Some(Rc::new(move |stomach, args, state| {
+      replacement: Some(Arc::new(move |stomach, args, state| {
         let locator = stomach.get_locator().into_owned();
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
         // TODO: Improve font precision here, the defaults may not belong in this lookup
         let font = state
           .lookup_font()
-          .unwrap_or_else(|| Rc::new(Font::default()))
+          .unwrap_or_else(|| Arc::new(Font::default()))
           .merge(reqfont.clone())
           .specialize(&presentation);
-        let font = Rc::new(font);
+        let font = Arc::new(font);
         // foreach my $key (keys %properties) {
         //   my $value = $properties{$key};
         //   if (ref $value eq 'CODE') {
         //     $properties{$key} = &$value(); } }
         // info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
-        Ok(vec![Digested::TBox(Rc::new(Tbox {
+        Ok(vec![Digested::TBox(Arc::new(Tbox {
           text: presentation.clone(),
           tokens: Tokens!(cs.clone()),
           font,
@@ -576,7 +576,7 @@ pub fn def_environment(
   match &options.mode {
     Some(ref mode) => {
       let bmode = mode.clone();
-      let mode_closure = Rc::new(move |stomach: &mut Stomach, state: &mut State| {
+      let mode_closure = Arc::new(move |stomach: &mut Stomach, state: &mut State| {
         stomach.begin_mode(&bmode, state)?;
         Ok(Vec::new())
       });
@@ -616,7 +616,7 @@ pub fn def_environment(
   }
   before_digest_env.extend(options.before_digest);
 
-  let push_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
+  let push_frame_closure = Arc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
     state.push_frame();
     Ok(())
   });
@@ -625,13 +625,13 @@ pub fn def_environment(
 
   let mut after_construct_with_frame: Vec<ConstructionClosure> = options.after_construct;
 
-  let pop_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
+  let pop_frame_closure = Arc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
     state.pop_frame()?;
     Ok(())
   });
   after_construct_with_frame.push(pop_frame_closure);
 
-  let begin_name_constructor = Rc::new(Constructor {
+  let begin_name_constructor = Arc::new(Constructor {
     cs: T_CS!(begin_name),
     paramlist: paramlist.clone(),
     replacement: compiled_replacement.clone(),
@@ -677,14 +677,14 @@ pub fn def_environment(
   match options.mode {
     Some(mode) => {
       let emode = mode;
-      let emode_closure = Rc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+      let emode_closure = Arc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
         stomach.end_mode(&emode, state)?;
         Ok(Vec::new())
       });
       after_digest_env.push(emode_closure);
     },
     None => {
-      let egroup_closure = Rc::new(|stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+      let egroup_closure = Arc::new(|stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
         stomach.egroup(state)?;
         Ok(Vec::new())
       });
@@ -692,7 +692,7 @@ pub fn def_environment(
     },
   };
 
-  let end_envname_constructor = Rc::new(Constructor {
+  let end_envname_constructor = Arc::new(Constructor {
     cs: T_CS!(end_name),
     replacement: None,
     paramlist: None,
@@ -703,7 +703,7 @@ pub fn def_environment(
   state.install_definition(end_envname_constructor, options.scope);
 
   // For the uncommon case opened by \csname env\endcsname
-  let name_constructor = Rc::new(Constructor {
+  let name_constructor = Arc::new(Constructor {
     cs: T_CS!(s!("\\{}", &name)),
     paramlist,
     replacement: compiled_replacement,
@@ -743,7 +743,7 @@ pub fn def_environment(
     // ), $options{scope});
     ..Constructor::default()
   };
-  state.install_definition(Rc::new(end_name_constructor), options.scope);
+  state.install_definition(Arc::new(end_name_constructor), options.scope);
 
   if options.locked {
     state.assign_value(&s!("\\begin{{{}}}:locked", &name), true, None);

@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use rtx_core::common::error::*;
 use rtx_core::common::object::Object;
@@ -171,7 +171,7 @@ impl Converter {
         // TODO digestion failed, report
         self.core.state.status_code = 3;
         e.log_fatal();
-        Digested::List(Rc::new(List::new(Vec::new())))
+        Digested::List(Arc::new(List::new(Vec::new())))
       },
       Ok(d) => d,
     };

@@ -1,7 +1,7 @@
 // use std::borrow::Cow;
 // use std::collections::HashMap;
 // use std::fmt;
-use std::rc::Rc;
+use std::sync::Arc;
 
 // use crate::common::error::*;
 // use crate::common::font::Font;
@@ -48,9 +48,9 @@ impl KeyVal {
 
   pub fn get_prop<'a>(&self, key: &str, state: &'a State) -> Option<&'a Stored> { state.lookup_value(&s!("KEYVAL@{}@{}", key, self.get_header())) }
   pub fn get_default(&self, state: &State) -> Option<Stored> { self.get_prop("default", state).map(|v| (*v).clone()) }
-  pub fn get_type<'a>(&'a self, state: &'a State) -> Option<Rc<Parameter>> {
+  pub fn get_type<'a>(&'a self, state: &'a State) -> Option<Arc<Parameter>> {
     match self.get_prop("type", state) {
-      Some(Stored::Parameter(p)) => Some(Rc::clone(p)),
+      Some(Stored::Parameter(p)) => Some(Arc::clone(p)),
       _ => None,
     }
   }

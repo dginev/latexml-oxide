@@ -2,7 +2,7 @@ use std::borrow::Cow;
 // use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -25,7 +25,7 @@ const DUAL_BRANCH: bool = false; // TODO: what is this about?
 pub struct Whatsit {
   pub args: Vec<Option<Digested>>,
   pub properties: HashMap<String, Stored>,
-  pub definition: Rc<dyn Definition>,
+  pub definition: Arc<dyn Definition>,
   pub reversion: Option<Tokens>,
   pub dual_reversion: Option<Tokens>,
   pub locator: Locator,
@@ -36,7 +36,7 @@ impl Default for Whatsit {
     Whatsit {
       args: Vec::new(),
       properties: HashMap::new(),
-      definition: Rc::new(Expandable::default()),
+      definition: Arc::new(Expandable::default()),
       reversion: None,
       dual_reversion: None,
       locator: Locator::default(),
@@ -85,10 +85,10 @@ impl Whatsit {
     if self.is_math() {
       list.mode = Some(mode);
     }
-    self.properties.insert(s!("body"), Digested::List(Rc::new(list)).into());
+    self.properties.insert(s!("body"), Digested::List(Arc::new(list)).into());
     if let Some(Digested::Whatsit(ref trailer)) = trailer_opt {
       // And copy any otherwise undefined properties from the trailer
-      for (prop, value) in trailer.borrow().get_properties() {
+      for (prop, value) in trailer.read().unwrap().get_properties() {
         self.properties.entry(prop.to_string()).or_insert_with(|| value.clone());
       }
       self.properties.insert(s!("trailer"), trailer_opt.as_ref().unwrap().clone().into());

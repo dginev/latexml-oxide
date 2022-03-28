@@ -1,13 +1,13 @@
 use libxml::tree::Node;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::common::error::*;
 use crate::document::Document;
 use crate::state::State;
 use crate::Digested;
 
-pub type TagConstructionClosure = Rc<dyn Fn(&mut Document, &mut Node, &mut State) -> Result<()>>;
+pub type TagConstructionClosure = Arc<dyn Fn(&mut Document, &mut Node, &mut State) -> Result<()>>;
 pub type TagData = (String, Option<HashMap<String, String>>, Digested);
 
 // Specify the properties of a Node tag.

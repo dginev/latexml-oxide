@@ -9,7 +9,7 @@ pub mod register;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -27,18 +27,18 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-pub type ExpansionClosure = Rc<dyn Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Tokens>>;
-pub type ConditionalClosure = Rc<dyn Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<bool>>;
+pub type ExpansionClosure = Arc<dyn Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Tokens>>;
+pub type ConditionalClosure = Arc<dyn Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<bool>>;
 pub type PrimitiveFn = dyn Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<Digested>>;
-pub type PrimitiveClosure = Rc<PrimitiveFn>;
-pub type BeforeDigestClosure = Rc<dyn Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
-pub type PropertiesClosure = Rc<dyn Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
-pub type DigestionClosure = Rc<dyn Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
-pub type ReplacementClosure = Rc<dyn Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
-pub type ConstructionClosure = Rc<dyn Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
-pub type DigestedReversionClosure = Rc<dyn Fn(&Whatsit, &Vec<Option<Digested>>) -> Result<Tokens>>;
+pub type PrimitiveClosure = Arc<PrimitiveFn>;
+pub type BeforeDigestClosure = Arc<dyn Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
+pub type PropertiesClosure = Arc<dyn Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
+pub type DigestionClosure = Arc<dyn Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
+pub type ReplacementClosure = Arc<dyn Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
+pub type ConstructionClosure = Arc<dyn Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
+pub type DigestedReversionClosure = Arc<dyn Fn(&Whatsit, &Vec<Option<Digested>>) -> Result<Tokens>>;
 
-pub type SizingClosure = Rc<dyn Fn(&Whatsit) -> (i32, i32, i32)>;
+pub type SizingClosure = Arc<dyn Fn(&Whatsit) -> (i32, i32, i32)>;
 
 #[derive(Clone)]
 pub enum ExpansionBody {
@@ -81,7 +81,7 @@ impl From<String> for ExpansionBody {
 
 pub trait Definition: Object {
   fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens>;
-  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Rc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>>;
+  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Arc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>>;
 
   /// We can almost always return the CS by reference, except in a Register's RefCell, where we are
   /// forced to clone
@@ -186,7 +186,7 @@ pub trait Definition: Object {
 }
 
 // We need to compare definitions for the internal TeX logic to make sense, but we don't have Perl's level of meta-programming,
-// since cloning an `Rc<Definition>` for storage makes it impossible to compare with the old `Rc<Definition>`.
+// since cloning an `Arc<Definition>` for storage makes it impossible to compare with the old `Arc<Definition>`.
 // Hence, we need our own meta-programming "hack", via the `stringify` method that is different for each
 // `definition` implementation (`Primitive`/`Constructor`/etc)
 // and each control sequence

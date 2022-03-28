@@ -100,13 +100,13 @@ macro_rules! register {
     actions!().register(
         #[allow(unused_variables)]
         $rule.rule(),
-        ::std::rc::Rc::new($call))
+        ::std::sync::Arc::new($call))
   };
   ($rule:ident, $($arg:ident)+ => $body:block) => {
     #[allow(unused_variables)]
     actions!().register(
         $rule.rule(),
-        ::std::rc::Rc::new(|rule_id: i32, mut args: Vec<Option<Tree>>| {
+        ::std::sync::Arc::new(|rule_id: i32, mut args: Vec<Option<Tree>>| {
           #[allow(unused_variables)]
           unpack!(args => $($arg),+);
           Some($body)

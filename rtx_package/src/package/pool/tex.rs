@@ -86,6 +86,6 @@ LoadDefinitions!(state, {
   // lines 6434-6752
   InnerPool!(tex_rtx_specific);
   // lines 6753-END
-  LoadPool!("eTeX"); // unless... ?
-  LoadPool!("pdfTeX"); // unless... ?
+  InnerPool!(etex);
+  InnerPool!(pdftex);
 });

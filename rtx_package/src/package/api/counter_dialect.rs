@@ -1,7 +1,7 @@
 use libxml::tree::Node;
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use rtx_core::common::error::*;
 use rtx_core::common::number::Number;
@@ -129,7 +129,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   def_macro(
     T_CS!(s!("\\the{}", ctr)),
     None,
-    Some(ExpansionBody::Closure(Rc::new(move |gullet, args, inner_state| {
+    Some(ExpansionBody::Closure(Arc::new(move |gullet, args, inner_state| {
       let counter_value = CounterValue!(&ctr_string, inner_state).value_of();
       Ok(Tokens::new(ExplodeText!(counter_value)))
     }))),
@@ -170,7 +170,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Closure(Rc::new(move |gullet, args, inner_state| {
+        Some(ExpansionBody::Closure(Arc::new(move |gullet, args, inner_state| {
           Ok(TokenizeInternal!(&s!(
             "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\
              \\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
@@ -190,7 +190,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Closure(Rc::new(move |gullet, args, inner_state| {
+        Some(ExpansionBody::Closure(Arc::new(move |gullet, args, inner_state| {
           Ok(TokenizeInternal!(&s!("{}\\csname @{}@ID\\endcsname", prefix, ctr_string)))
         }))),
         Some(ExpandableOptions {
