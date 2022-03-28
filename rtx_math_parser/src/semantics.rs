@@ -114,7 +114,7 @@ pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[Validatio
         if lex.split(':').next().unwrap().contains("RELOP") {
           // first multirelation need is here.
           let multirel_tok = XMTok { meaning: Some(Cow::Borrowed("multirelation")), ..XMTok::default() };
-          let mut drained_left_args = left_args.0.drain(..).into_iter();
+          let mut drained_left_args = left_args.0.drain(..);
           let left_1 = drained_left_args.next().unwrap();
           let left_2 = drained_left_args.next().unwrap();
           let moved_op = (*op.0).clone();

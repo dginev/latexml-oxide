@@ -1744,13 +1744,13 @@ impl Document {
     if pvis {
       node.set_attribute("_pvis", "true")?;
     }
-    if qname == "ltx:XMDual" {
+    if qname == "ltx:XMDual" || qname == "ltx:XMRef" {
       unimplemented!();
     //     my ($c, $p) = element_nodes($node);
     //     $self->markXMNodeVisibility_aux($c, 1, 0) if $cvis;
     //     $self->markXMNodeVisibility_aux($p, 0, 1) if $pvis; }
-    } else if qname == "ltx:XMRef" {
-      unimplemented!();
+    // } else if qname == "ltx:XMRef" {
+    //   unimplemented!();
     //     #    $self->markXMNodeVisibility_aux($self->realizeXMNode($node),$cvis,$pvis); }
     //     my $id = $node->getAttribute('idref');
     //     if (!$id) {
