@@ -1,10 +1,9 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
-use std::rc::Rc;
+use std::sync::{Arc,RwLock};
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -195,7 +194,7 @@ pub struct State {
   pub model: Model,
   pub document: Option<Document>,
   pub prefixes: HashMap<String, bool>,        // ?
-  pub status: RefCell<HashMap<String, bool>>, // ?
+  pub status: RwLock<HashMap<String, bool>>, // ?
   pub map: Vec<String>,                       // ?
   pub tag_properties: HashMap<String, TagOptions>,
   pub indirect_model: Option<IndirectModel>,
@@ -204,8 +203,8 @@ pub struct State {
   pub verbosity: i32,
   pub status_code: usize,
   pub unlocked: bool,
-  pub current_token: Option<Rc<Token>>,
-  pub if_frame: Option<Rc<RefCell<IfFrame>>>,
+  pub current_token: Option<Arc<Token>>,
+  pub if_frame: Option<Arc<RwLock<IfFrame>>>,
   pub noexpand_the: bool,
   pub input_encoding: Option<String>,
   pub strict: bool,
@@ -220,7 +219,7 @@ pub struct State {
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
   // Circular dependency and global $STATE in Perl requires a bad
   // style use of interior mutability...
-  pub stomach: Rc<RefCell<Stomach>>,
+  pub stomach: Arc<RwLock<Stomach>>,
 }
 
 impl Default for State {
@@ -250,7 +249,7 @@ impl Default for State {
       model: Model::default(),
       document: None,
       prefixes: HashMap::new(),
-      status: RefCell::new(HashMap::new()),
+      status: RwLock::new(HashMap::new()),
       map: Vec::new(),
       tag_properties: HashMap::new(),
       indirect_model: None,
@@ -272,7 +271,7 @@ impl Default for State {
       nomathparse: false,
       extra_bindings_dispatch: None,
       // interiorly mutable
-      stomach: Rc::new(RefCell::new(Stomach::default())),
+      stomach: Arc::new(RwLock::new(Stomach::default())),
     }
   }
 }
@@ -588,14 +587,14 @@ impl State {
     }
   }
 
-  pub fn lookup_font(&self) -> Option<Rc<Font>> {
+  pub fn lookup_font(&self) -> Option<Arc<Font>> {
     match self.lookup_value("font") {
       Some(f) => f.into(),
       _ => None,
     }
   }
 
-  pub fn lookup_mathfont(&self) -> Option<Rc<Font>> {
+  pub fn lookup_mathfont(&self) -> Option<Arc<Font>> {
     match self.lookup_value("mathfont") {
       Some(v) => v.into(),
       _ => None,
@@ -645,7 +644,7 @@ impl State {
     }
   }
 
-  pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Rc<dyn Definition>> {
+  pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Arc<dyn Definition>> {
     if let Some(defn) = self.lookup_definition(token) {
       // Can only be a token or definition; we want defns!
       if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
@@ -901,7 +900,7 @@ impl State {
   /// Since we're not doing digestion here, we don't need to handle mathactive,
   /// nor cs let to executable tokens
   /// This returns a definition object, or undef
-  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Rc<dyn Definition>> {
+  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Arc<dyn Definition>> {
     if let Some(defs) = self.lookup_definition_internal(key) {
       match defs.front() {
         Some(Stored::Conditional(entry)) => Some(entry.clone()),
@@ -913,7 +912,7 @@ impl State {
         // TODO: Is this take on reframing a Token definition as an Expandable acceptable?
         //      Does it have unintended side-effects? Are we missing useful code paths that specifically deal with a Token
         //      in Gullet, etc?
-        Some(Stored::Token(entry)) => Some(Rc::new(Expandable {
+        Some(Stored::Token(entry)) => Some(Arc::new(Expandable {
           cs: T_CS!(key),
           paramlist: None,
           expansion: entry.clone().into(),
@@ -938,13 +937,13 @@ impl State {
     match self.lookup_definition_internal(key) {
       Some(defs) => match defs.front() {
         // Still, good time to handle the Token case and catch weird storage errors
-        Some(Stored::Conditional(entry)) => Some(Stored::Conditional(Rc::clone(entry))),
-        Some(Stored::Constructor(entry)) => Some(Stored::Constructor(Rc::clone(entry))),
-        Some(Stored::Expandable(entry)) => Some(Stored::Expandable(Rc::clone(entry))),
-        Some(Stored::MathPrimitive(entry)) => Some(Stored::MathPrimitive(Rc::clone(entry))),
-        Some(Stored::Primitive(entry)) => Some(Stored::Primitive(Rc::clone(entry))),
-        Some(Stored::Register(entry)) => Some(Stored::Register(Rc::clone(entry))),
-        Some(Stored::Token(entry)) => Some(Stored::Expandable(Rc::new(Expandable {
+        Some(Stored::Conditional(entry)) => Some(Stored::Conditional(Arc::clone(entry))),
+        Some(Stored::Constructor(entry)) => Some(Stored::Constructor(Arc::clone(entry))),
+        Some(Stored::Expandable(entry)) => Some(Stored::Expandable(Arc::clone(entry))),
+        Some(Stored::MathPrimitive(entry)) => Some(Stored::MathPrimitive(Arc::clone(entry))),
+        Some(Stored::Primitive(entry)) => Some(Stored::Primitive(Arc::clone(entry))),
+        Some(Stored::Register(entry)) => Some(Stored::Register(Arc::clone(entry))),
+        Some(Stored::Token(entry)) => Some(Stored::Expandable(Arc::new(Expandable {
           cs: T_CS!(key),
           paramlist: None,
           expansion: entry.clone().into(),
@@ -963,10 +962,10 @@ impl State {
 
   /// A specialized version of `lookup_definition` for registers, since we can't adequately perform
   /// multi-dispatch when we have a "Self: Sized" for the Definition trait object.
-  pub fn lookup_register_definition(&self, key: &Token) -> Option<Rc<RegisterCell>> {
+  pub fn lookup_register_definition(&self, key: &Token) -> Option<Arc<RegisterCell>> {
     match self.lookup_definition_internal(key) {
       Some(defs) => match defs.front() {
-        Some(Stored::Register(entry)) => Some(Rc::clone(entry)),
+        Some(Stored::Register(entry)) => Some(Arc::clone(entry)),
         _ => None,
       },
       _ => None,
@@ -1115,7 +1114,7 @@ impl State {
       None
     };
     if let Some(local_font) = new_font {
-      self.assign_value("font", Stored::Font(Rc::new(local_font)), Some(Scope::Local));
+      self.assign_value("font", Stored::Font(Arc::new(local_font)), Some(Scope::Local));
     }
   }
 
@@ -1266,7 +1265,7 @@ impl State {
             value,
             table_entry.iter().map(ToString::to_string).collect::<Vec<String>>().join(", ")
           );
-          let stomach = self.stomach.borrow();
+          let stomach = self.stomach.read().unwrap();
           use crate::common::object::Object;
           Warn!("internal", key, stomach, self, message);
         }
@@ -1480,8 +1479,8 @@ impl State {
     self.assign_value("afterAssignment", Stored::Tokens(Tokens!()), Some(Scope::Global)); // undef ???
     self.assign_value("groupInitiator", Stored::String(s!("Initialization")), Some(Scope::Global));
     // Setup default fonts.
-    self.assign_value("font", Stored::Font(Rc::new(Font::text_default())), Some(Scope::Global));
-    self.assign_value("mathfont", Stored::Font(Rc::new(Font::math_default())), Some(Scope::Global));
+    self.assign_value("font", Stored::Font(Arc::new(Font::text_default())), Some(Scope::Global));
+    self.assign_value("mathfont", Stored::Font(Arc::new(Font::math_default())), Some(Scope::Global));
   }
 
   // Package helpers used in core need to be localized here -- as State methods
@@ -1556,7 +1555,7 @@ impl State {
   pub fn after_assignment(&mut self) {
     if let Some(Stored::Tokens(after)) = self.remove_value("afterAssignment") {
       if !after.is_empty() {
-        self.stomach.borrow_mut().get_gullet_mut().unread(after); // primitive returns boxes, so these need to be digested!
+        self.stomach.write().unwrap().get_gullet_mut().unread(after); // primitive returns boxes, so these need to be digested!
       }
     }
   }

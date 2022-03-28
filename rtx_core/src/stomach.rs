@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::common::error::*;
 use crate::common::font;
@@ -25,7 +25,7 @@ static MAXSTACK: usize = 200;
 #[derive(Default)]
 pub struct Stomach {
   pub gullet: Gullet,
-  pub token_stack: Vec<Rc<Token>>,
+  pub token_stack: Vec<Arc<Token>>,
   pub boxing: Vec<Token>,
   pub box_list: Vec<Digested>,
 }
@@ -70,7 +70,7 @@ impl<'t> Stomach {
     // We ran out, terminate,
     // and add a Dummy `trailer' if none explicit.
     if init_depth <= self.boxing.len() {
-      self.box_list.push(Digested::TBox(Rc::new(Tbox::default())));
+      self.box_list.push(Digested::TBox(Arc::new(Tbox::default())));
       // info!(target:"digest_next_body","no_token");
     }
 
@@ -174,10 +174,10 @@ impl<'t> Stomach {
     let mut result: Vec<Digested> = Vec::new();
     // INVOKE:
     while maybe_token.is_some() {
-      let token = Rc::new(maybe_token.take().unwrap().into_owned());
+      let token = Arc::new(maybe_token.take().unwrap().into_owned());
       // info!(target:"invoke_token", "{:?}", token);
-      state.current_token = Some(Rc::clone(&token));
-      self.token_stack.push(Rc::clone(&token));
+      state.current_token = Some(Arc::clone(&token));
+      self.token_stack.push(Arc::clone(&token));
       if self.token_stack.len() > MAXSTACK {
         fatal!(Stomach, Recursion, s!("Excessive recursion(?): Tokens on stack: {:?}", self.token_stack));
       }
@@ -311,7 +311,7 @@ impl<'t> Stomach {
         Constructor {
           cs: token.clone(),
           paramlist: None,
-          replacement: Some(Rc::new(move |document, _args, _props, state| {
+          replacement: Some(Arc::new(move |document, _args, _props, state| {
             document.make_error("undefined", &closure_cs, state)
           })),
           ..Constructor::default()
@@ -334,7 +334,7 @@ impl<'t> Stomach {
       if in_math || in_preamble {
         Ok(None)
       } else {
-        Ok(Some(Digested::TBox(Rc::new(Tbox::new(
+        Ok(Some(Digested::TBox(Arc::new(Tbox::new(
           meaning.to_string(), //text
           font,
           Some(self.gullet.get_locator().into_owned()), //locator
@@ -359,7 +359,7 @@ impl<'t> Stomach {
     // return; }
     } else {
       let text = font::decode_string(meaning.get_string(), None, true, state);
-      Ok(Some(Digested::TBox(Rc::new(Tbox::new(
+      Ok(Some(Digested::TBox(Arc::new(Tbox::new(
         text,
         font,
         None,             // locator

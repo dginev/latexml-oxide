@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 use std::borrow::Cow;
 use std::path::Path;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use rtx_core::common::error::{note_begin, note_end, Result};
 use rtx_core::common::DigestionMode;
@@ -63,7 +63,7 @@ impl DigestionAPI for Core {
       input_definitions(
         &preload,
         InputDefinitionOptions::default(),
-        &mut self.stomach.borrow_mut(),
+        &mut self.stomach.write().unwrap(),
         &mut self.state,
       )?;
     }
@@ -238,12 +238,12 @@ impl DigestionAPI for Core {
     let mut boxes = Vec::new();
     let state = &mut self.state;
 
-    while self.stomach.borrow_mut().get_gullet_mut().has_more_input() {
-      let next_bodies: Vec<Digested> = self.stomach.borrow_mut().digest_next_body(None, state)?;
+    while self.stomach.write().unwrap().get_gullet_mut().has_more_input() {
+      let next_bodies: Vec<Digested> = self.stomach.write().unwrap().digest_next_body(None, state)?;
       // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
       boxes.extend(next_bodies);
     }
-    self.stomach.borrow_mut().get_gullet_mut().flush(state);
+    self.stomach.write().unwrap().get_gullet_mut().flush(state);
     List::new(boxes).into()
   }
 
@@ -316,7 +316,7 @@ impl DigestionAPI for Core {
 
     let name_copy = name.clone();
     self.state.install_definition(
-      Stored::Expandable(Rc::new(Expandable {
+      Stored::Expandable(Arc::new(Expandable {
         cs: T_CS!("\\jobname"),
         paramlist: None,
         expansion: Tokens::new(Explode!(name_copy)).into(),

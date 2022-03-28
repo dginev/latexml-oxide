@@ -30,7 +30,7 @@ LoadDefinitions!(state, {
       Some(TexMode::Text)
     };
     let body = stomach.digest_next_body(None, state)?;
-    let mut boxes = vec![Digested::TBox(Rc::new(open))];
+    let mut boxes = vec![Digested::TBox(Arc::new(open))];
     boxes.extend(body);
     // TODO: Locator logic here needs to improve..
     List {
@@ -178,13 +178,13 @@ LoadDefinitions!(state, {
     unpack!(args => port);
     // Clone the Rc<> for mouth out of state, since we'll be mutating.
     let mouth_opt = if let Some(Stored::Mouth(ref mouth)) = LookupValue!(&s!("input_file:{}", port)) {
-      Some(Rc::clone(mouth))
+      Some(Arc::clone(mouth))
     } else {
       None
     };
     //   close the mouth (if any) and clear the variable
     if let Some(mouth) = mouth_opt {
-      mouth.borrow_mut().finish(state);
+      mouth.write().unwrap().finish(state);
       AssignValue!(&s!("input_file:{}", port), false, Some(Scope::Global));
     }
   });
@@ -194,7 +194,7 @@ LoadDefinitions!(state, {
     let token: Token = token.into(); // downcast from Tokens
     let port = port.to_number();
     let mouth_opt = if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}",port)) {
-      Some(Rc::clone(mouth))
+      Some(Arc::clone(mouth))
     } else {
       None
     }; // need to move out the Rc<RefCell<Mouth>> to reuse state later.
@@ -203,7 +203,7 @@ LoadDefinitions!(state, {
       AssignValue!("PRESERVE_NEWLINES", 2);
       let mut tokens = Vec::new();
       let mut level = 0;
-      while let Some(t) = mouth.borrow_mut().read_token(state) {
+      while let Some(t) = mouth.write().unwrap().read_token(state) {
         let cc = t.get_catcode();
         level += match cc {
           Catcode::BEGIN => 1,
@@ -231,7 +231,7 @@ LoadDefinitions!(state, {
     unpack_to_token!(args => port);
     let port = port.to_number();
     if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}", port)) {
-      mouth.borrow().at_eof()
+      mouth.read().unwrap().at_eof()
     } else {
       true
     }

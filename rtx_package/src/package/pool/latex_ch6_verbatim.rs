@@ -32,8 +32,8 @@ LoadDefinitions!(outer_state, {
       Ok(stuff)
     },
     after_digest => sub[stomach, whatsit, state] {
-      // makes you wonder if the `get_font` API should be working with Rc<Font> in the first place...
-      let font : Option<Rc<Font>> = whatsit.get_font().map(|ft| Rc::new((*ft).to_owned()));
+      // makes you wonder if the `get_font` API should be working with Arc<Font> in the first place...
+      let font : Option<Arc<Font>> = whatsit.get_font().map(|ft| Arc::new((*ft).to_owned()));
       let loc = whatsit.get_locator();
       let mut lines : Vec<String> = Vec::new();
       let gullet = stomach.get_gullet_mut();

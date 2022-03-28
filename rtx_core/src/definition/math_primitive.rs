@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -189,7 +189,7 @@ impl Definition for MathPrimitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
-  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Arc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {
     // Info!("MathPrimitive", "invoke", stomach, state, "invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');

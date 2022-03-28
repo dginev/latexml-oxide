@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::VecDeque;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -250,7 +250,7 @@ impl Gullet {
     loop {
       let read_token: Option<Token>;
       let cc: Catcode;
-      let mut defn_next: Option<Rc<dyn Definition>> = None;
+      let mut defn_next: Option<Arc<dyn Definition>> = None;
       let mut needs_close = false;
       let mut return_next = false;
       let mut expand_next = false;
@@ -289,11 +289,11 @@ impl Gullet {
                 //   LaTeXML::Definition::stopProfiling($token, 'expand'); }
                 // }
                 _ => {
-                  let looked_up_definition: Option<Rc<dyn Definition>> = state.lookup_definition(&token);
+                  let looked_up_definition: Option<Arc<dyn Definition>> = state.lookup_definition(&token);
                   if let Some(defn) = looked_up_definition {
                     if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
                       // is this the right logic here? don't expand unless digesting?
-                      state.current_token = Some(Rc::new(token));
+                      state.current_token = Some(Arc::new(token));
                       defn_next = Some(defn);
                       expand_next = true;
                     } else {

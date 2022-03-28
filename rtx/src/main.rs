@@ -4,7 +4,7 @@ use rtx::converter::Converter;
 use rtx_core::common::{Config, DataSize, OutputFormat};
 use std::env;
 use std::process;
-use std::rc::Rc;
+use std::sync::Arc;
 
 fn main() {
   if rtx_core::util::logger::init(log::LevelFilter::Info).is_err() {
@@ -35,7 +35,7 @@ fn main() {
     preamble: None,
     postamble: None,
     mode: None,
-    extra_bindings_dispatch: Some(Rc::new(rtx_contrib::dispatch)),
+    extra_bindings_dispatch: Some(Arc::new(rtx_contrib::dispatch)),
   };
   let mut converter = Converter::from_config(opts.clone());
   if let Err(e) = converter.prepare_session(&opts) {

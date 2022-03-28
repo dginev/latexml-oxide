@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -20,8 +20,8 @@ use crate::Digested;
 
 pub type ReaderFn = dyn Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>;
 pub type ReaderPredigestFn = dyn Fn(&mut Stomach, Tokens, &mut State) -> Result<Option<Digested>>;
-pub type ReaderPredigestClosure = Rc<ReaderPredigestFn>;
-pub type ReaderClosure = Rc<ReaderFn>;
+pub type ReaderPredigestClosure = Arc<ReaderPredigestFn>;
+pub type ReaderClosure = Arc<ReaderFn>;
 
 // Rust Note:
 // the reversion functions initially had "&mut Gullet" as a parameter.
@@ -31,7 +31,7 @@ pub type ReaderClosure = Rc<ReaderFn>;
 // let mut stomach = state.stomach.borrow_mut();
 // let mut gullet = stomach.get_gullet_mut();
 //
-pub type ReversionClosure = Rc<dyn Fn(Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
+pub type ReversionClosure = Arc<dyn Fn(Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
 
 lazy_static! {
   static ref LAST_WCHAR_RE: Regex = Regex::new(r"\w$").unwrap();
@@ -95,7 +95,7 @@ impl Default for Parameter {
       name: s!("parameter_default"),
       spec: String::new(),
       extra: Vec::new(),
-      reader: Rc::new(|_gullet, _args, _extra, _state| {
+      reader: Arc::new(|_gullet, _args, _extra, _state| {
         Warn!(
           "Parameter",
           "mock_reader",
@@ -161,21 +161,21 @@ impl Parameter {
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
     let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
-    let mut descriptor: Option<Rc<Parameter>>;
+    let mut descriptor: Option<Arc<Parameter>>;
     if let Some(&Stored::Parameter(ref d_lookup)) = looked_up_mapping {
-      descriptor = Some(Rc::clone(d_lookup));
+      descriptor = Some(Arc::clone(d_lookup));
     } else if let Some(captures) = OPTIONAL_REGEX.captures(&self.name) {
       let basetype = captures.get(1).map_or("", |m| m.as_str());
       descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
         Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
         _ => match Parameter::check_reader_function(&s!("Read{}", &self.name), state) {
-          Some(reader) => Some(Rc::new(Parameter {
+          Some(reader) => Some(Arc::new(Parameter {
             reader,
             optional: true,
             ..Parameter::default()
           })),
           None => match Parameter::check_reader_function(&s!("Read{}", basetype), state) {
-            Some(reader) => Some(Rc::new(Parameter {
+            Some(reader) => Some(Arc::new(Parameter {
               reader,
               optional: true,
               novalue: true,
@@ -191,14 +191,14 @@ impl Parameter {
       descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
         Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
         _ => match Parameter::check_reader_function(&self.name, state) {
-          Some(reader) => Some(Rc::new(Parameter {
+          Some(reader) => Some(Arc::new(Parameter {
             reader,
             optional: true,
             novalue: true,
             ..Parameter::default()
           })),
           None => Parameter::check_reader_function(&s!("Read{}", basetype), state).map(|reader| {
-            Rc::new(Parameter {
+            Arc::new(Parameter {
               reader,
               optional: true,
               novalue: true,
@@ -213,7 +213,7 @@ impl Parameter {
       }
     } else {
       descriptor = Parameter::check_reader_function(&s!("Read{}", &self.name), state).map(|reader| {
-        Rc::new(Parameter {
+        Arc::new(Parameter {
           reader,
           ..Parameter::default()
         })

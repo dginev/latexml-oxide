@@ -5,7 +5,7 @@ use marpa::tree_builder::*;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::error::Error;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub use self::tree::{Args, Operator, Tree, XMTok};
 use crate::pragmatics::ValidationPragmatics;
@@ -17,7 +17,7 @@ mod tree;
 
 use metadata::Meta;
 
-pub type ActionClosure = Rc<dyn Fn(i32, Vec<Option<Tree>>, &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>>>;
+pub type ActionClosure = Arc<dyn Fn(i32, Vec<Option<Tree>>, &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>>>;
 
 #[derive(Default)]
 pub struct Actions {

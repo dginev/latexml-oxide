@@ -15,7 +15,7 @@ LoadDefinitions!(state, {
         let new_font = state.lookup_font().unwrap().merge(
           fontmap!(family => "serif", series => "medium", shape => "upright")
           .specialize("\u{2026}"));
-        Ok(map!("font" => Stored::Font(Rc::new(new_font)))) // Since not DefMath!
+        Ok(map!("font" => Stored::Font(Arc::new(new_font)))) // Since not DefMath!
       } else {
         Ok(HashMap::new())
       }

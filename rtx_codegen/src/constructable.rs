@@ -95,7 +95,7 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
     // );
 
     quote!(
-    Some(Rc::new(
+    Some(Arc::new(
     |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, Stored>, state: &mut State| {
       let mut savenode : Option<Node> = None;
 

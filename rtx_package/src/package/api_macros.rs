@@ -89,7 +89,7 @@ macro_rules! before_digest {
 #[macro_export]
 macro_rules! before_digest_single {
   ($stomach:ident, $state:ident, $body:block) => {
-    Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
+    Arc::new(move |$stomach: &mut Stomach, $state: &mut State| {
       BindInnerState!($stomach, $state);
       let macro_out = $body;
       end_state_frame!();
@@ -101,7 +101,7 @@ macro_rules! before_digest_single {
 #[macro_export]
 macro_rules! tagsub {
   ($document:ident, $node:ident, $state:ident, $body:block) => {
-    vec![Rc::new(
+    vec![Arc::new(
       |$document: &mut Document, mut $node: &mut Node, $state: &mut State| -> Result<()> {
         BindInnerState!($state);
         $body
@@ -115,7 +115,7 @@ macro_rules! tagsub {
 #[macro_export]
 macro_rules! rewrite_replace_sub {
   ($document:ident, $nodes:ident, $state:ident, $body:block) => {
-  Some(Rc::new(
+  Some(Arc::new(
     |$document: &mut Document, mut $nodes: Vec<&mut Node>, $state: &mut State| -> Result<()> {
       BindInnerState!($state);
       $body
@@ -147,7 +147,7 @@ macro_rules! replacement {
 #[macro_export]
 macro_rules! construct {
   ($doc:ident, $whatsit:ident, $state:ident, $body:block) => {
-  vec![Rc::new(
+  vec![Arc::new(
     move |$doc: &mut Document, $whatsit: &Whatsit, $state: &mut State| -> Result<()> {
       BindInnerState!($state);
       $body
@@ -163,21 +163,21 @@ macro_rules! properties {
     properties!($stomach, $args, $inner_state, $body)
   };
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
-    Rc::new(
+    Arc::new(
       move |$stomach: &mut Stomach, mut $args: &Vec<Option<Digested>>, $inner_state: &mut State| -> Result<HashMap<String, Stored>> {
         WithInnerState!($body, $stomach, $inner_state)
       },
     )
   };
   ($(sub)? $body:block) => {
-    Rc::new(
+    Arc::new(
       move |stomach: &mut Stomach, args: &Vec<Option<Digested>>, state: &mut State| -> Result<HashMap<String, Stored>> {
         WithInnerState!($body, stomach, state).into_properties_result()
       },
     )
   };
   ($value:expr) => {
-    Rc::new(move |_stomach: &mut Stomach, _args: &Vec<Option<Digested>>, _state: &mut State| -> Result<HashMap<String, Stored>> { Ok($value.clone()) })
+    Arc::new(move |_stomach: &mut Stomach, _args: &Vec<Option<Digested>>, _state: &mut State| -> Result<HashMap<String, Stored>> { Ok($value.clone()) })
   };
 }
 
@@ -194,7 +194,7 @@ macro_rules! after_digest {
 #[macro_export]
 macro_rules! after_digest_single {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
-    Rc::new(
+    Arc::new(
       move |$stomach: &mut Stomach, $whatsit: &mut Whatsit, $state: &mut State| -> Result<Vec<Digested>> {
         WithInnerState!($body, $stomach, $state).into_digested_result()
       },
@@ -205,7 +205,7 @@ macro_rules! after_digest_single {
 #[macro_export]
 macro_rules! reader {
   ($gullet:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
-    Rc::new(
+    Arc::new(
       |$gullet: &mut Gullet, $inner: Vec<Option<Parameters>>, $extra: Vec<ParameterExtra>, $state: &mut State| -> Result<Tokens> {
         WithInnerState!($body, $state).into_tokens_result()
       },
@@ -216,7 +216,7 @@ macro_rules! reader {
 #[macro_export]
 macro_rules! reader_predigest {
   ($stomach:ident, $arg:ident, $state:ident, $body:block) => {
-    Some(Rc::new(
+    Some(Arc::new(
       |$stomach: &mut Stomach, $arg: Tokens, $state: &mut State| -> Result<Option<Digested>> {
         WithInnerState!($body, $stomach, $state).into_digested_option_result()
       },
@@ -227,7 +227,7 @@ macro_rules! reader_predigest {
 #[macro_export]
 macro_rules! getter {
   ($args: ident, $state:ident, $body:block) => {
-    Some(Rc::new(move |$args: Vec<Token>, $state: &State| -> Option<RegisterValue> {
+    Some(Arc::new(move |$args: Vec<Token>, $state: &State| -> Option<RegisterValue> {
       WithInnerState!($body, $state).into_register_value_option()
     }))
   };
@@ -236,7 +236,7 @@ macro_rules! getter {
 #[macro_export]
 macro_rules! setter {
   ($value:ident, $args: ident, $state:ident, $body:block) => {
-    Some(Rc::new(move |$value: RegisterValue, $args: Vec<Tokens>, $state: &mut State| {
+    Some(Arc::new(move |$value: RegisterValue, $args: Vec<Tokens>, $state: &mut State| {
       WithInnerState!($body, $state)
     }))
   };
@@ -245,8 +245,8 @@ macro_rules! setter {
 #[macro_export]
 macro_rules! undigested {
   () => {
-    Some(Rc::new(
-      |stomach: &mut Stomach, arg: Tokens, state: &mut State| -> Result<Option<Digested>> { Ok(Some(Digested::Postponed(Rc::new(arg)))) },
+    Some(Arc::new(
+      |stomach: &mut Stomach, arg: Tokens, state: &mut State| -> Result<Option<Digested>> { Ok(Some(Digested::Postponed(Arc::new(arg)))) },
     ))
   };
 }
@@ -254,7 +254,7 @@ macro_rules! undigested {
 #[macro_export]
 macro_rules! reversion {
   ($gullet:ident, $arg:ident, $inner:ident, $state:ident, $body:block) => {
-    Some(Rc::new(
+    Some(Arc::new(
       |mut $arg: Vec<Token>, $inner: Vec<ParameterExtra>, $state: &mut State| -> Result<Tokens> {
         BindInnerState!($state);
         let macro_out = $body;
@@ -317,7 +317,7 @@ macro_rules! prop_whatsit {
     match $props.get($key) {
       // TODO: Cloning here ought to be terribly inefficient and should be avoided. How?
       Some(&Stored::Digested(ref rc)) => (**rc).clone(),
-      _ => Digested::Whatsit(Rc::new(RefCell::new(Whatsit::default()))),
+      _ => Digested::Whatsit(Arc::new(RwLock::new(Whatsit::default()))),
     }
   };
 }

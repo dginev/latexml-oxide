@@ -1,8 +1,7 @@
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::{Arc, RwLock};
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -20,7 +19,7 @@ use crate::{BoxOps, Digested};
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tbox {
   pub text: String,
-  pub font: Rc<Font>,
+  pub font: Arc<Font>,
   pub locator: Locator,
   pub properties: HashMap<String, Stored>,
   pub tokens: Tokens,
@@ -30,7 +29,7 @@ impl Default for Tbox {
   fn default() -> Self {
     Tbox {
       text: String::new(),
-      font: Rc::new(Font::text_default()),
+      font: Arc::new(Font::text_default()),
       locator: Locator::default(),
       properties: HashMap::new(),
       tokens: Tokens!(),
@@ -51,7 +50,7 @@ impl Object for Tbox {
 impl Tbox {
   pub fn new(
     text: String,
-    font_opt: Option<Rc<Font>>,
+    font_opt: Option<Arc<Font>>,
     locator_opt: Option<Locator>,
     tokens_opt: Tokens,
     mut properties: HashMap<String, Stored>,
@@ -60,8 +59,8 @@ impl Tbox {
     let font = match font_opt {
       Some(f) => f,
       None => match state.lookup_font() {
-        Some(state_font) => Rc::clone(&state_font),
-        None => Rc::new(Font::text_default()), // should never happen
+        Some(state_font) => Arc::clone(&state_font),
+        None => Arc::new(Font::text_default()), // should never happen
       },
     };
     // let locator = $STATE->getStomach->getGullet->getLocator unless defined $locator;
@@ -87,7 +86,7 @@ impl Tbox {
           }
         }
       }
-      let font = Rc::new(font.specialize(&text));
+      let font = Arc::new(font.specialize(&text));
       Tbox {
         text,
         font, // $locator,
@@ -151,11 +150,11 @@ impl BoxOps for Tbox {
 }
 
 impl From<Tbox> for Result<Vec<Digested>> {
-  fn from(tbox: Tbox) -> Result<Vec<Digested>> { Ok(vec![Digested::TBox(Rc::new(tbox))]) }
+  fn from(tbox: Tbox) -> Result<Vec<Digested>> { Ok(vec![Digested::TBox(Arc::new(tbox))]) }
 }
 impl From<Tbox> for Option<Digested> {
-  fn from(tbox: Tbox) -> Option<Digested> { Some(Digested::TBox(Rc::new(tbox))) }
+  fn from(tbox: Tbox) -> Option<Digested> { Some(Digested::TBox(Arc::new(tbox))) }
 }
-impl From<Tbox> for Option<Rc<RefCell<Digested>>> {
-  fn from(tbox: Tbox) -> Option<Rc<RefCell<Digested>>> { Some(Rc::new(RefCell::new(Digested::TBox(Rc::new(tbox))))) }
+impl From<Tbox> for Option<Arc<RwLock<Digested>>> {
+  fn from(tbox: Tbox) -> Option<Arc<RwLock<Digested>>> { Some(Arc::new(RwLock::new(Digested::TBox(Arc::new(tbox))))) }
 }

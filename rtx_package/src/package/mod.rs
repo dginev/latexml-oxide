@@ -3,10 +3,9 @@ pub use lazy_static::lazy_static;
 pub use libxml::tree::{Namespace, Node};
 pub use regex::Regex;
 pub use std::borrow::Cow;
-pub use std::cell::RefCell;
 pub use std::collections::HashMap;
 pub use std::collections::VecDeque;
-pub use std::rc::Rc;
+pub use std::sync::{Arc,RwLock};
 
 pub use rtx_core::common::dimension::{Dimension, MuDimension};
 

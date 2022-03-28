@@ -312,13 +312,13 @@ pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
   // state.extra_bindings_dispatch
   if !pathname::is_literaldata(path) {
     let (dir, base, ext) = pathname::split(path);
-    load_external_binding(&base, &mut core.state, &mut core.stomach.borrow_mut())?;
+    load_external_binding(&base, &mut core.state, &mut core.stomach.write().unwrap())?;
   }
   // TODO: Caching
   // content => LookupValue($pathname . '_contents')
 
   // Open a mouth for that TeX content
-  core.stomach.borrow_mut().get_gullet_mut().open_mouth(
+  core.stomach.write().unwrap().get_gullet_mut().open_mouth(
     Mouth::create(
       path,
       MouthOptions {

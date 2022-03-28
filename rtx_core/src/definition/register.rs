@@ -2,9 +2,8 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Borrow;
 use std::borrow::Cow;
-use std::cell::{Ref, RefCell, RefMut};
 use std::fmt;
-use std::rc::Rc;
+use std::sync::{Arc,RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
@@ -337,8 +336,8 @@ pub enum RegisterType {
   Any, // Placeholder for any argument accepted
 }
 
-pub type RegisterGetterClosure = Rc<dyn Fn(Vec<Token>, &State) -> Option<RegisterValue>>;
-pub type RegisterSetterClosure = Rc<dyn Fn(RegisterValue, Vec<Tokens>, &mut State)>;
+pub type RegisterGetterClosure = Arc<dyn Fn(Vec<Token>, &State) -> Option<RegisterValue>>;
+pub type RegisterSetterClosure = Arc<dyn Fn(RegisterValue, Vec<Tokens>, &mut State)>;
 
 #[derive(Clone)]
 pub struct Register {
@@ -358,8 +357,8 @@ impl Default for Register {
       cs: T_CS!("Register"),
       parameters: None,
       register_type: RegisterType::Number,
-      getter: Rc::new(|_: Vec<Token>, _: &State| Some(RegisterValue::Number(Number::new(0.0)))),
-      setter: Rc::new(|_: RegisterValue, _: Vec<Tokens>, _: &mut State| {}),
+      getter: Arc::new(|_: Vec<Token>, _: &State| Some(RegisterValue::Number(Number::new(0.0)))),
+      setter: Arc::new(|_: RegisterValue, _: Vec<Tokens>, _: &mut State| {}),
       readonly: false,
       internalcs: None,
       internalvalue: None,
@@ -372,8 +371,7 @@ impl PartialEq for Register {
 
 /// The only purpose of RegisterCell is to provide us with a place to implement fmt::Display over
 /// a `RefCell<Register>`.
-#[derive(PartialEq)]
-pub struct RegisterCell(RefCell<Register>);
+pub struct RegisterCell(RwLock<Register>);
 impl fmt::Display for RegisterCell {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     unimplemented!();
@@ -382,10 +380,15 @@ impl fmt::Display for RegisterCell {
 impl Object for RegisterCell {
   fn stringify(&self) -> String { Definition::stringify_type(self, "RegisterCell") }
 }
+impl PartialEq for RegisterCell {
+  fn eq(&self, other: &RegisterCell) -> bool {
+    *self.0.read().unwrap() == *other.0.read().unwrap()
+  }
+}
 impl RegisterCell {
-  pub fn new(cell: RefCell<Register>) -> Self { RegisterCell(cell) }
-  pub fn borrow(&self) -> Ref<Register> { self.0.borrow() }
-  pub fn borrow_mut(&self) -> RefMut<Register> { self.0.borrow_mut() }
+  pub fn new(cell: RwLock<Register>) -> Self { RegisterCell(cell) }
+  pub fn borrow(&self) -> RwLockReadGuard<Register> { self.0.read().unwrap() }
+  pub fn borrow_mut(&self) -> RwLockWriteGuard<Register> { self.0.write().unwrap() }
 }
 impl Definition for RegisterCell {
   fn is_register(&self) -> bool { true }
@@ -399,7 +402,7 @@ impl Definition for RegisterCell {
   fn get_alias(&self) -> Option<&String> { None }
   // No before/after daemons ???
   // (other than afterassign)
-  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Rc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Arc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {
     // CharDef case
     if self.borrow().register_type == RegisterType::CharDef {
       return match self.borrow().internalcs {

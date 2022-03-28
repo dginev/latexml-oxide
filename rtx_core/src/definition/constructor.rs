@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -61,7 +61,7 @@ impl Default for ConstructorOptions {
       // environment-specific
       require_math: false,
       forbid_math: false,
-      properties: Rc::new(|stomach, whatsit, state| Ok(HashMap::new())),
+      properties: Arc::new(|stomach, whatsit, state| Ok(HashMap::new())),
       capture_body: false,
       font: None,
       after_digest_begin: vec![],
@@ -132,7 +132,7 @@ impl Default for Constructor {
       after_digest: vec![],
       before_construct: vec![],
       after_construct: vec![],
-      properties: Rc::new(|stomach, whatsit, state| Ok(HashMap::new())),
+      properties: Arc::new(|stomach, whatsit, state| Ok(HashMap::new())),
       capture_body: false,
       after_digest_body: vec![],
       reversion: None,
@@ -160,7 +160,7 @@ impl Definition for Constructor {
   fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
-  fn invoke_primitive(&self, stomach: &mut Stomach, caller: Rc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(&self, stomach: &mut Stomach, caller: Arc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {
     Debug!("invoke for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing
@@ -192,10 +192,10 @@ impl Definition for Constructor {
     //     $properties{$key} = &$value($stomach, @args); } }
 
     let this_font = match properties.get("font") {
-      Some(Stored::Font(ref f)) => Rc::clone(f),
+      Some(Stored::Font(ref f)) => Arc::clone(f),
       _ => match state.lookup_font() {
-        Some(f) => Rc::clone(&f),
-        None => Rc::new(Font::text_default()), // should never happen?
+        Some(f) => Arc::clone(&f),
+        None => Arc::new(Font::text_default()), // should never happen?
       },
     };
 

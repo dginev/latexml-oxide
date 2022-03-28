@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
-use std::rc::Rc;
+use std::sync::Arc;
 
 use rtx_core::common::dimension::{Dimension, MuDimension};
 use rtx_core::common::error::*;
@@ -99,9 +99,9 @@ impl IntoOption<Option<SizingClosure>> for &str {
     if self.is_empty() {
       None
     } else if self == "#1" {
-      Some(Rc::new(|w| unimplemented!()))
+      Some(Arc::new(|w| unimplemented!()))
     } else {
-      Some(Rc::new(|w| unimplemented!()))
+      Some(Arc::new(|w| unimplemented!()))
     }
   }
 }
@@ -237,7 +237,7 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for Result<Option<Digest
   fn into_digested_option_result(self) -> Result<Option<Digested>> { self }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for KeyVals {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::KeyVals(Rc::new(self)))) }
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::KeyVals(Arc::new(self)))) }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for Option<KeyVals> {
   fn into_digested_option_result(self) -> Result<Option<Digested>> {
@@ -248,7 +248,7 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for Option<KeyVals> {
   }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for List {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::List(Rc::new(self)))) }
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::List(Arc::new(self)))) }
 }
 
 pub trait IntoPropertiesResult {
