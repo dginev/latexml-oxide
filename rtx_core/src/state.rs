@@ -221,6 +221,8 @@ pub struct State {
   // style use of interior mutability...
   pub stomach: Arc<RwLock<Stomach>>,
 }
+unsafe impl Send for State {}
+unsafe impl Sync for State {}
 
 impl Default for State {
   fn default() -> Self {

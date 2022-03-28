@@ -6,7 +6,7 @@ use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::str;
-use std::sync::Mutex;
+use std::sync::{Mutex, RwLock};
 
 use core::ops::RangeBounds;
 // TODO:
@@ -23,6 +23,17 @@ use crate::state::{Catcodes, Scope, State, StateOptions};
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::util::pathname;
+
+lazy_static! {
+  static ref STY_STATE : RwLock<State> = RwLock::new(State::new(StateOptions {
+    catcodes: Some(Catcodes::Style),
+    ..StateOptions::default()
+  }));
+  static ref STD_STATE : RwLock<State> = RwLock::new(State::new(StateOptions {
+    catcodes: Some(Catcodes::Standard),
+    ..StateOptions::default()
+  }));
+}
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum FoodType {
@@ -767,25 +778,19 @@ impl Mouth {
 
 pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
   match state_opt {
-    None => {
-      let mut std_state = State::new(StateOptions {
-        catcodes: Some(Catcodes::Standard),
-        ..StateOptions::default()
-      });
-      Mouth::new(text, None, &mut std_state).unwrap().read_tokens(None, &std_state)
-    },
+    None => {{
+      let mut state = STD_STATE.write().unwrap();
+      Mouth::new(text, None, &mut state).unwrap()
+        .read_tokens(None, &state) }},
     Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(None, s),
   }
 }
 pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
   match state_opt {
-    None => {
-      let mut sty_state = State::new(StateOptions {
-        catcodes: Some(Catcodes::Style),
-        ..StateOptions::default()
-      });
-      Mouth::new(text, None, &mut sty_state).unwrap().read_tokens(None, &sty_state)
-    },
+    None => {{
+      let mut state = STY_STATE.write().unwrap();
+      Mouth::new(text, None, &mut state).unwrap()
+        .read_tokens(None, &state) }},
     Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(None, s),
   }
 }
