@@ -3,7 +3,7 @@ use regex::Regex;
 use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::{Arc,RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
@@ -381,9 +381,7 @@ impl Object for RegisterCell {
   fn stringify(&self) -> String { Definition::stringify_type(self, "RegisterCell") }
 }
 impl PartialEq for RegisterCell {
-  fn eq(&self, other: &RegisterCell) -> bool {
-    *self.0.read().unwrap() == *other.0.read().unwrap()
-  }
+  fn eq(&self, other: &RegisterCell) -> bool { *self.0.read().unwrap() == *other.0.read().unwrap() }
 }
 impl RegisterCell {
   pub fn new(cell: RwLock<Register>) -> Self { RegisterCell(cell) }

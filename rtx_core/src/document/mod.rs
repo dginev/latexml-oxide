@@ -17,9 +17,9 @@ use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::common::xml;
-use crate::state::State;
-use crate::list::List;
 use crate::ligature::Ligature;
+use crate::list::List;
+use crate::state::State;
 use crate::TexMode;
 
 use crate::document::resource::Resource;
@@ -40,7 +40,7 @@ pub struct Document {
   pub pending: Vec<Node>,
   pub node: Node,
   pub node_boxes: HashMap<usize, Arc<Digested>>, // used to be _box attribute
-  pub node_fonts: HashMap<usize, Font>,         // used to be _font attribute
+  pub node_fonts: HashMap<usize, Font>,          // used to be _font attribute
   pub constructed_nodes: Vec<Node>,
   pub idstore: HashMap<String, Node>,
   // the rewrite labels used to be in each rewrite rule, but they make more sense in doc
@@ -879,18 +879,15 @@ impl Document {
     attributes.remove("stretchy");
 
     let is_space = attributes.contains_key("isSpace");
-    let qname = if is_space {
-      MATH_HINT_NAME
-    } else {
-      MATH_TOKEN_NAME
-    };
+    let qname = if is_space { MATH_HINT_NAME } else { MATH_TOKEN_NAME };
     let cur_qname = state.model.get_node_qname(&self.node);
     let text = if is_space && !text.is_empty() && text.chars().all(|c| c.is_whitespace()) {
-      ""  // Make empty hint, of only spaces
+      "" // Make empty hint, of only spaces
     } else {
       text
     };
-    if qname == MATH_TOKEN_NAME && cur_qname == qname { // Already INSIDE a token!
+    if qname == MATH_TOKEN_NAME && cur_qname == qname {
+      // Already INSIDE a token!
       if !text.is_empty() {
         self.open_math_text_internal(text, state)?;
       }
@@ -1223,21 +1220,21 @@ impl Document {
       let mut boxes = VecDeque::new();
       boxes.push_front(self.get_node_box(node).unwrap());
       node.get_first_child().unwrap().set_content(&newstring)?;
-      for idx in 0..nmatched-1 {
+      for idx in 0..nmatched - 1 {
         let remove = node.get_prev_sibling().unwrap();
         boxes.push_front(self.get_node_box(&remove).unwrap());
         self.remove_node(remove);
       }
-    // This fragment replaces the node's box by the composite boxes it replaces
-    // HOWEVER, this gets things out of sync because parent lists of boxes still
-    // have the old ones.  Unless we could recursively replace all of them, we'd better skip it(??)
+      // This fragment replaces the node's box by the composite boxes it replaces
+      // HOWEVER, this gets things out of sync because parent lists of boxes still
+      // have the old ones.  Unless we could recursively replace all of them, we'd better skip it(??)
       if boxes.len() > 1 {
         // TODO: Cloning boxes is BAD. What is a better model?
         let mut list = List::new(boxes.into_iter().map(|b| (*b).clone()).collect::<Vec<_>>());
         list.mode = Some(TexMode::Math);
         self.set_node_box(node, Arc::new(list.into()));
       }
-      for (key,value_opt) in attr.sorted_each() {
+      for (key, value_opt) in attr.sorted_each() {
         if let Some(value) = value_opt {
           node.set_attribute(key, value)?;
         } else {
@@ -1245,8 +1242,7 @@ impl Document {
         }
       }
       Ok(true)
-    }
-    else {
+    } else {
       Ok(false)
     }
   }
@@ -1897,7 +1893,6 @@ impl Document {
     //     nodes.push(n.get_child_nodes);
     //   }
     // }
-
   }
 
   pub fn set_box_font(&mut self, node: &Node) {

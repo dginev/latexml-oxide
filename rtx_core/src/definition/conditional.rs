@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::{Arc,RwLock};
+use std::sync::{Arc, RwLock};
 
 use crate::common::error::*;
 use crate::common::locator::Locator;

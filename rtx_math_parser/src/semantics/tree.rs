@@ -384,7 +384,7 @@ impl Tree {
   }
 
   /// Rebuild a marpa-derived parse tree into an XMath XML tree
-  pub fn to_xmath(&self, nodes: &mut [Node], document: &mut Document) -> Result<Node, Box<dyn Error+Send+Sync>> {
+  pub fn to_xmath(&self, nodes: &mut [Node], document: &mut Document) -> Result<Node, Box<dyn Error + Send + Sync>> {
     match self {
       Tree::Lexeme(content, _meta) => {
         let atom_node = &mut nodes[content.split(':').last().unwrap().parse::<usize>().unwrap() - 1];

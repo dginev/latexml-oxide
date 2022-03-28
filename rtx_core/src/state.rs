@@ -3,7 +3,7 @@ use regex::Regex;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
-use std::sync::{Arc,RwLock};
+use std::sync::{Arc, RwLock};
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -193,9 +193,9 @@ pub struct State {
   // Stateful runtime - data structures
   pub model: Model,
   pub document: Option<Document>,
-  pub prefixes: HashMap<String, bool>,        // ?
+  pub prefixes: HashMap<String, bool>,       // ?
   pub status: RwLock<HashMap<String, bool>>, // ?
-  pub map: Vec<String>,                       // ?
+  pub map: Vec<String>,                      // ?
   pub tag_properties: HashMap<String, TagOptions>,
   pub indirect_model: Option<IndirectModel>,
   pub pending_resources: Vec<Resource>,
@@ -541,7 +541,7 @@ impl State {
   pub fn has_value(&self, key: &str) -> bool {
     match self.value.get(key) {
       Some(list) => !list.is_empty(),
-      None => false
+      None => false,
     }
   }
 

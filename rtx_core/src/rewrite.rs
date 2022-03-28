@@ -3,7 +3,7 @@ use crate::document::Document;
 use crate::state::{Scope, State};
 use crate::tokens::Tokens;
 use libxml::tree::Node;
-use std::collections::{VecDeque};
+use std::collections::VecDeque;
 use std::fmt;
 use std::sync::Arc;
 
@@ -186,7 +186,7 @@ impl Rewrite {
         compiled: true,
         op: RewriteOperator::Select,
         pattern,
-      }
+      };
     }
     //   elsif ($op eq 'match') {
     //     if (ref $pattern eq 'CODE') {
@@ -204,11 +204,7 @@ impl Rewrite {
     //     $pattern = $self->compile_regexp($pattern); }
     //   Debug("Compiled clause $oop=>" . ToString($opattern) . "  ==> $op=>" . ToString($pattern))
     //     if $LaTeXML::DEBUG{rewrite};
-    RewriteClause {
-      compiled: true,
-      op,
-      pattern,
-    }
+    RewriteClause { compiled: true, op, pattern }
   }
 
   pub fn invoke(&mut self, document: &mut Document, root: &Node, state: &mut State) -> Result<()> {

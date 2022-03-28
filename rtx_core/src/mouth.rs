@@ -25,11 +25,11 @@ use crate::tokens::Tokens;
 use crate::util::pathname;
 
 lazy_static! {
-  static ref STY_STATE : RwLock<State> = RwLock::new(State::new(StateOptions {
+  static ref STY_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
     catcodes: Some(Catcodes::Style),
     ..StateOptions::default()
   }));
-  static ref STD_STATE : RwLock<State> = RwLock::new(State::new(StateOptions {
+  static ref STD_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
     catcodes: Some(Catcodes::Standard),
     ..StateOptions::default()
   }));
@@ -778,19 +778,19 @@ impl Mouth {
 
 pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
   match state_opt {
-    None => {{
+    None => {
       let mut state = STD_STATE.write().unwrap();
-      Mouth::new(text, None, &mut state).unwrap()
-        .read_tokens(None, &state) }},
+      Mouth::new(text, None, &mut state).unwrap().read_tokens(None, &state)
+    },
     Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(None, s),
   }
 }
 pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
   match state_opt {
-    None => {{
+    None => {
       let mut state = STY_STATE.write().unwrap();
-      Mouth::new(text, None, &mut state).unwrap()
-        .read_tokens(None, &state) }},
+      Mouth::new(text, None, &mut state).unwrap().read_tokens(None, &state)
+    },
     Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(None, s),
   }
 }

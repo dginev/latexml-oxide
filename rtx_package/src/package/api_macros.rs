@@ -177,7 +177,9 @@ macro_rules! properties {
     )
   };
   ($value:expr) => {
-    Arc::new(move |_stomach: &mut Stomach, _args: &Vec<Option<Digested>>, _state: &mut State| -> Result<HashMap<String, Stored>> { Ok($value.clone()) })
+    Arc::new(
+      move |_stomach: &mut Stomach, _args: &Vec<Option<Digested>>, _state: &mut State| -> Result<HashMap<String, Stored>> { Ok($value.clone()) },
+    )
   };
 }
 
