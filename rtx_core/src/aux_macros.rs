@@ -25,7 +25,6 @@ macro_rules! stored_map {
   }}
 }
 
-
 #[macro_export]
 macro_rules! string_map {
   ($( $key:expr => $val:expr ),*) => {{

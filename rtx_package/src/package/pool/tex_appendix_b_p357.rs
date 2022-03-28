@@ -201,7 +201,6 @@ LoadDefinitions!(state, {
       "width" => state.lookup_value("\\thickmuskip")), state)
   });
 
-
   Let!("\\:", "\\>");
   DefMacro!("\\ ", "\\ifmmode\\@math@nbspace\\else\\@text@nbspace\\fi");
   // DefConstructor('\@math@nbspace', undef,

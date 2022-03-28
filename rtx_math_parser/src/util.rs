@@ -40,6 +40,4 @@ pub fn distill_lexeme(name: &str) -> (&str, &str, &str) {
   }
 }
 
-pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
-  nodes
-}
+pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> { nodes }

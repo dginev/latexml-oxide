@@ -382,7 +382,6 @@ macro_rules! DefMathLigature {
   }};
 }
 
-
 #[macro_export]
 macro_rules! DefConditional(
   // test is always a rust closure

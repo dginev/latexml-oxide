@@ -14,11 +14,11 @@ pub mod document;
 pub mod gullet;
 pub mod keyval;
 pub mod keyvals;
+pub mod ligature;
 pub mod list;
 pub mod mouth;
 pub mod parameter;
 pub mod rewrite;
-pub mod ligature;
 pub mod state;
 pub mod stomach;
 pub mod tbox;
@@ -172,13 +172,48 @@ impl PartialEq for Digested {
   fn eq(&self, other: &Digested) -> bool {
     use Digested::*;
     match self {
-      TBox(ref tb) => if let TBox(tb2) = other { tb == tb2 } else {false},
-      Whatsit(ref tb) => if let Whatsit(tb2) = other {
-        *tb.read().unwrap() == *tb2.read().unwrap() } else {false},
-      List(ref tb) => if let List(tb2) = other { tb == tb2 } else {false},
-      Postponed(ref tb) => if let Postponed(tb2) = other { tb == tb2 } else {false},
-      KeyVals(ref tb) => if let KeyVals(tb2) = other { tb == tb2 } else {false},
-      RegisterValue(ref tb) => if let RegisterValue(tb2) = other { tb == tb2 } else {false},
+      TBox(ref tb) => {
+        if let TBox(tb2) = other {
+          tb == tb2
+        } else {
+          false
+        }
+      },
+      Whatsit(ref tb) => {
+        if let Whatsit(tb2) = other {
+          *tb.read().unwrap() == *tb2.read().unwrap()
+        } else {
+          false
+        }
+      },
+      List(ref tb) => {
+        if let List(tb2) = other {
+          tb == tb2
+        } else {
+          false
+        }
+      },
+      Postponed(ref tb) => {
+        if let Postponed(tb2) = other {
+          tb == tb2
+        } else {
+          false
+        }
+      },
+      KeyVals(ref tb) => {
+        if let KeyVals(tb2) = other {
+          tb == tb2
+        } else {
+          false
+        }
+      },
+      RegisterValue(ref tb) => {
+        if let RegisterValue(tb2) = other {
+          tb == tb2
+        } else {
+          false
+        }
+      },
     }
   }
 }

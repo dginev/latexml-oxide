@@ -5,7 +5,7 @@ pub use regex::Regex;
 pub use std::borrow::Cow;
 pub use std::collections::HashMap;
 pub use std::collections::VecDeque;
-pub use std::sync::{Arc,RwLock};
+pub use std::sync::{Arc, RwLock};
 
 pub use rtx_core::common::dimension::{Dimension, MuDimension};
 
@@ -17,7 +17,6 @@ pub use rtx_core::common::glue::{Glue, MuGlue};
 pub use rtx_core::common::locator::Locator;
 pub use rtx_core::common::number::Number;
 pub use rtx_core::common::object::Object;
-pub use rtx_core::ligature::{FontTestClosure, Ligature, LigatureMatcher, MathLigatureOptions};
 pub use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 pub use rtx_core::definition::constructor::ConstructorOptions;
 pub use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
@@ -34,6 +33,7 @@ pub use rtx_core::document::tag::{TagOptionName, TagOptions};
 pub use rtx_core::document::Document;
 pub use rtx_core::gullet::Gullet;
 pub use rtx_core::keyvals::{KeyVals, KeyValsOptions};
+pub use rtx_core::ligature::{FontTestClosure, Ligature, LigatureMatcher, MathLigatureOptions};
 pub use rtx_core::list::List;
 pub use rtx_core::mouth;
 pub use rtx_core::mouth::{Mouth, MouthOptions};
