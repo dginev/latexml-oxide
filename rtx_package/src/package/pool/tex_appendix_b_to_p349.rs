@@ -186,7 +186,7 @@ DefMathLigature!(matcher => sub[document, node, state] {
 // well, maybe a letter followed by letters & digits?
   DefMathLigature!(matcher => sub [document,node_opt,state] {
     let mut chars :Vec<char> = Vec::new();
-    let font  = document.get_node_font(&node_opt);
+    let font  = document.get_node_font(node_opt);
     let mut this_node;
     let mut node_mut = node_opt;
     if font.is_sticky() {

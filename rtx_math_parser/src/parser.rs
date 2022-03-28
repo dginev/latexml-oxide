@@ -876,7 +876,7 @@ fn textrec_apply(name: &str, op: &Node, args:Vec<Node>, document: &Document, sta
         .collect::<Vec<_>>()
         .join(&(" ".to_string() + &textrec_op + " "))
     };
-    return (*bp, rec_form);
+    (*bp, rec_form)
   } else if role == "POSTFIX" {
     (10000, textrec(&args[0], Some(10000), Some(name), document, state) + &textrec(op, None, None, document, state))
   } else if name == "multirelation" {
