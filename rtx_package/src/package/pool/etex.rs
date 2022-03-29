@@ -134,15 +134,21 @@ LoadDefinitions!(state, {
   //     return; });
 
   // # \unless someif
-  // DefConditional('\unless Token', sub {
-  //     my ($gullet, $if) = @_;
-  //     my ($defn, $test);
-  //     if (($defn = LookupDefinition($if)) && (($$defn{conditional_type} || '') eq 'if')
-  //       && ($test = $defn->getTest)) {
-  //       # Invert the if's test!
-  //       !&$test($gullet, $defn->readArguments($gullet)); }
-  //     else {
-  //       Error('unexpected', $if, "\\unless should not be followed by " . Stringify($if)); } });
+  DefConditional!("\\unless Token", sub [gullet, args, state] {
+    unpack_to_token!(args => if_token);
+    if let Some(Stored::Conditional(defn)) = state.lookup_definition_stored(&if_token) {
+      if defn.conditional_type == ConditionalType::If {
+        if let Some(ref closure) = defn.test {
+          // Invert the if's test!
+          let args = defn.read_arguments(gullet, state)?;
+          return Ok(!(closure(gullet, args, state)?));
+        }
+      }
+    }
+    let msg = s!("\\unless should not be followed by {}",if_token.stringify());
+    Error!("unexpected", if_token, gullet, state, msg);
+    false
+  });
 
   // #======================================================================
   // # \numexpr, \dimexpr, \gluexpr, \muexpr

@@ -25,6 +25,7 @@ use crate::Digested;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ConditionalType {
   If,
+  Unless,
   Else,
   Or,
   Fi,
@@ -36,6 +37,7 @@ impl ConditionalType {
     use self::ConditionalType::*;
     match cs {
       "\\if" => If,
+      "\\unless" => Unless,
       "\\else" => Else,
       "\\or" => Or,
       "\\fi" => Fi,
@@ -101,7 +103,7 @@ impl Definition for Conditional {
     // A real conditional must have condition_type set
     use self::ConditionalType::*;
     match self.conditional_type {
-      If => self.invoke_conditional(gullet, state),
+      If | Unless => self.invoke_conditional(gullet, state),
       Else => self.invoke_else(gullet, state),
       Or => self.invoke_else(gullet, state),
       Fi => self.invoke_fi(gullet, state),
