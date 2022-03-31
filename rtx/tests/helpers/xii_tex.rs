@@ -5,7 +5,7 @@ use rtx_package::package::*;
 //**********************************************************************
 LoadDefinitions!(state, {
   // Don't need to respect source newlines
-  AssignValue!("PRESERVE_NEWLINES", false);
+  AssignValue!("PRESERVE_NEWLINES", 0);
 
   // We'll use a DTD for a (trivial) Song, containing verses with lines.
   DocType!("song", "-//NIST LaTeXML//LaTeXML Poem", "xii.dtd");

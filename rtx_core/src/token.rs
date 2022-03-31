@@ -17,7 +17,7 @@ use crate::definition::Definition;
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::tokens::Tokens;
-use crate::Digested;
+use crate::{Fatal, fatal, Digested};
 
 lazy_static! {
   pub static ref MOCK_TOKEN: Token = Token::default();
@@ -47,8 +47,9 @@ pub enum Catcode {
   COMMENT,
   INVALID,
   CS,
-  NOTEXPANDED,
   MARKER,
+  ARG,
+  SmuggleTHE
 }
 
 impl From<u8> for Catcode {
@@ -72,8 +73,9 @@ impl From<u8> for Catcode {
       14 => COMMENT,
       15 => INVALID,
       16 => CS,
-      17 => NOTEXPANDED,
-      18 => MARKER,
+      17 => MARKER,
+      18 => ARG,
+      19 => SmuggleTHE,
       _ => {
         // let message = s!("Unrecognized catcode: {:?}", num);
         // Warn!("unknown", "catcode", None, None, message);
@@ -104,8 +106,9 @@ impl From<Catcode> for u8 {
       COMMENT => 14,
       INVALID => 15,
       CS => 16,
-      NOTEXPANDED => 17,
-      MARKER => 18,
+      MARKER => 17,
+      ARG => 18,
+      SmuggleTHE => 19
     }
   }
 }
@@ -125,7 +128,6 @@ impl Catcode {
       SUPER => "Superscript",
       SUB => "Subscript",
       SPACE => "Space",
-      NOTEXPANDED => "NotExpanded",
       // Non-primitive
       IGNORE => "Ignore",
       LETTER => "Letter",
@@ -135,6 +137,8 @@ impl Catcode {
       INVALID => "Invalid",
       CS => "ControlSequence",
       MARKER => "Marker",
+      ARG => "Arg",
+      SmuggleTHE => "SmuggleThe"
     }
   }
 
@@ -181,8 +185,9 @@ impl Catcode {
       COMMENT => "T_COMMENT",
       INVALID => "T_INVALID",
       CS => "T_CS",
-      NOTEXPANDED => "T_NOTEXPANDED",
       MARKER => "T_MARKER",
+      ARG => "T_ARG",
+      SmuggleTHE => "T_SMUGGLE_THE"
     }
   }
 
@@ -194,9 +199,9 @@ impl Catcode {
     use crate::token::Catcode::*;
     match self {
       // Primitives
-      ESCAPE | BEGIN | END | MATH | ALIGN | EOL | PARAM | SUPER | SUB | SPACE | NOTEXPANDED => true,
+      ESCAPE | BEGIN | END | MATH | ALIGN | EOL | PARAM | SUPER | SUB | SPACE => true,
       // Non-primitive
-      IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER => false,
+      IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER | ARG | SmuggleTHE => false,
     }
   }
 
@@ -206,7 +211,7 @@ impl Catcode {
       // Executable
       BEGIN | END | MATH | ALIGN | SUPER | SUB | ACTIVE | CS => true,
       // Non-executable
-      EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | NOTEXPANDED | MARKER => false,
+      EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | MARKER | ARG | SmuggleTHE => false,
     }
   }
 
@@ -216,7 +221,7 @@ impl Catcode {
       // Neutralizable
       MATH | ALIGN | PARAM | SUPER | SUB | ACTIVE => true,
       // Non-neutralizable
-      ESCAPE | BEGIN | END | EOL | IGNORE | SPACE | LETTER | OTHER | COMMENT | INVALID | CS | NOTEXPANDED | MARKER => false,
+      ESCAPE | BEGIN | END | EOL | IGNORE | SPACE | LETTER | OTHER | COMMENT | INVALID | CS | MARKER | ARG | SmuggleTHE => false,
     }
   }
 
@@ -229,6 +234,11 @@ impl Catcode {
     use crate::token::Catcode::*;
     // Absorbable
     matches!(self, SPACE | LETTER | OTHER | COMMENT)
+  }
+
+  pub fn is_gullet_holdable(self) -> bool {
+    use crate::token::Catcode::*;
+    matches!(self, COMMENT | MARKER)
   }
 }
 
@@ -243,6 +253,7 @@ impl Catcode {
 pub struct Token {
   pub text: Cow<'static, str>,
   pub code: Catcode,
+  pub smuggled: Option<Box<Token>>
 }
 
 impl fmt::Debug for Token {
@@ -263,43 +274,43 @@ impl PartialEq for Token {
 
 #[macro_export]
 macro_rules! T_BEGIN(() => {
-  Token { text: Cow::Borrowed("{"),code: Catcode::BEGIN}
+  Token { text: Cow::Borrowed("{"),code: Catcode::BEGIN, smuggled: None}
 });
 
 #[macro_export]
 macro_rules! T_END(() => {
-  Token { text: Cow::Borrowed("}"),code: Catcode::END}
+  Token { text: Cow::Borrowed("}"),code: Catcode::END, smuggled: None}
 });
 #[macro_export]
 macro_rules! T_MATH(() => {
-  Token { text: Cow::Borrowed("$"),code: Catcode::MATH}
+  Token { text: Cow::Borrowed("$"),code: Catcode::MATH, smuggled: None}
 });
 #[macro_export]
 macro_rules! T_ALIGN(() => {
-  Token { text: Cow::Borrowed("&"),code: Catcode::ALIGN}
+  Token { text: Cow::Borrowed("&"),code: Catcode::ALIGN, smuggled: None}
 });
 #[macro_export]
 macro_rules! T_PARAM(() => {
-  Token { text: Cow::Borrowed("#"),code: Catcode::PARAM}
+  Token { text: Cow::Borrowed("#"),code: Catcode::PARAM, smuggled: None}
 });
 #[macro_export]
 macro_rules! T_SUPER(() => {
- Token { text: Cow::Borrowed("^"),code: Catcode::SUPER}
+ Token { text: Cow::Borrowed("^"),code: Catcode::SUPER, smuggled: None}
 });
 #[macro_export]
 macro_rules! T_SUB(() => {
-  Token { text: Cow::Borrowed("_"),code: Catcode::SUB}
+  Token { text: Cow::Borrowed("_"),code: Catcode::SUB, smuggled: None}
 });
 #[macro_export]
 macro_rules! T_SPACE(() => {
-  Token { text: Cow::Borrowed(" "),code: Catcode::SPACE}
+  Token { text: Cow::Borrowed(" "),code: Catcode::SPACE, smuggled: None}
 };
 ($text:literal) => {
-  Token { text: Cow::Borrowed($text),code: Catcode::SPACE}
+  Token { text: Cow::Borrowed($text),code: Catcode::SPACE, smuggled: None}
 });
 #[macro_export]
 macro_rules! T_CR(() => (
-  Token { text: Cow::Borrowed("\n"),code: Catcode::SPACE}
+  Token { text: Cow::Borrowed("\n"),code: Catcode::SPACE, smuggled: None}
 ));
 #[macro_export]
 macro_rules! T_LETTER {
@@ -307,12 +318,14 @@ macro_rules! T_LETTER {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::LETTER,
+      smuggled: None
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::LETTER,
+      smuggled: None
     }
   };
 }
@@ -322,12 +335,14 @@ macro_rules! T_OTHER {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::OTHER,
+      smuggled: None
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::OTHER,
+      smuggled: None
     }
   };
 }
@@ -337,12 +352,14 @@ macro_rules! T_ACTIVE {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::ACTIVE,
+      smuggled: None
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::ACTIVE,
+      smuggled: None
     }
   };
 }
@@ -352,12 +369,14 @@ macro_rules! T_COMMENT {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::COMMENT,
+      smuggled: None
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::COMMENT,
+      smuggled: None
     }
   };
 }
@@ -367,12 +386,14 @@ macro_rules! T_CS {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::CS,
+      smuggled: None
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::CS,
+      smuggled: None
     }
   };
 }
@@ -382,43 +403,65 @@ macro_rules! T_MARKER {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::MARKER,
+      smuggled: None
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::MARKER,
+      smuggled: None
     }
   };
 }
 
 #[macro_export]
-macro_rules! T_NOTEXPANDED(
-  () => {
-    Token { text: Cow::Borrowed(""), code: Catcode::NOTEXPANDED }
+macro_rules! T_ARG {
+  ($text:literal) => {
+    Token {
+      text: Cow::Borrowed($text),
+      code: Catcode::ARG,
+      smuggled: None
+    }
   };
-  ($text:literal) => { Token { text: Cow::Borrowed($text), code: Catcode::NOTEXPANDED } };
-  ($text:expr) => { Token { text: Cow::Owned($text.to_string()), code: Catcode::NOTEXPANDED } }
-);
+  ($text:expr) => {
+    Token {
+      text: Cow::Owned($text.to_string()),
+      code: Catcode::ARG,
+      smuggled: None
+    }
+  };
+}
+
 
 #[macro_export]
 macro_rules! Token {
-  ($text:literal, $cc_opt:expr) => {
+  ($text:literal) => {
     Token {
       text: Cow::Borrowed($text),
-      code: match $cc_opt {
-        Some(cc) => cc,
-        None => Catcode::OTHER,
-      },
+      code: Catcode::OTHER,
+      smuggled: None
     }
   };
-  ($text:expr, $cc_opt:expr) => {
+  ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
-      code: match $cc_opt {
-        Some(cc) => cc,
-        None => Catcode::OTHER,
-      },
+      code: Catcode::OTHER,
+      smuggled: None
+    }
+  };
+  ($text:literal, $cc:expr) => {
+    Token {
+      text: Cow::Borrowed($text),
+      code: $cc,
+      smuggled: None
+    }
+  };
+  ($text:expr, $cc:expr) => {
+    Token {
+      text: Cow::Owned($text.to_string()),
+      code: $cc,
+      smuggled: None
     }
   };
 }
@@ -532,7 +575,7 @@ pub fn untex(digested: &Digested, state: &mut State) -> Result<String> {
 ///======================================================================
 /// Accessors.
 impl<'a> Token {
-  pub fn new(text: Cow<'static, str>, code: Catcode) -> Self { Token { text, code } }
+  pub fn new(text: Cow<'static, str>, code: Catcode) -> Self { Token { text, code, smuggled: None } }
   pub fn isa_token(&self) -> bool { true }
 
   /// Get the CS Name of the token. This is the name that definitions will be
@@ -594,34 +637,65 @@ impl<'a> Token {
   /// I'm pretty sure we do NOT want to neutralize comments (turn them into CC_OTHER)
   /// here, since if comments do get into the Tokens, that will introduce weird crap into the
   /// stream.
-  pub fn neutralize(self, extraspecials: &[Token], state: &State) -> Token {
+  pub fn neutralize(self, extraspecials: &[char], state: &State) -> Token {
     let ch = match self.text.chars().next() {
       Some(ch) => ch,
       None => return self,
     };
     let cc = self.code;
     if cc.is_neutralizable() {
-      let mut is_special = false;
-      if let Some(specials_store) = state.lookup_value("SPECIALS") {
-        let evec = Vec::new();
-        let specials_list: &Vec<char> = match *specials_store {
-          Stored::VecChar(ref list) => list,
-          _ => &evec,
-        };
+      for extra in extraspecials {
+        if extra == &ch {
+          return T_OTHER!(ch);
+        }
+      }
+      if let Some(Stored::VecChar(ref specials_list)) = state.lookup_value("SPECIALS") {
         for special in specials_list.iter() {
           if *special == ch {
-            is_special = true;
-            break;
+            return T_OTHER!(ch);
           }
         }
       }
-      if is_special || !extraspecials.is_empty() {
-        T_OTHER!(self.text)
-      } else {
-        self
-      }
+    }
+    self
+  }
+
+  pub fn substitute_parameters(self, args: &[Token]) -> Self {
+    if self.code == Catcode::ARG {
+      args[self.text.parse::<usize>().unwrap() -1].clone()
     } else {
       self
+    }
+  }
+
+  pub fn pack_parameters(self, state: &State) -> Self { self }
+
+  pub fn with_dont_expand(self, state: &State) -> Result<Self> {
+    let cc = self.code;
+    if cc == Catcode::SmuggleTHE {
+      // LaTeXML Bug, we haven't correctly emulated scan_toks! Offending token was:
+      let msg = s!("We are marking as \\noexpand a masked \\the-produced token, this must Never happen. Illegal: {}", &self.stringify());
+      Fatal!(Parameter, Unexpected, None, state, msg);
+    }
+    if (cc == Catcode::CS || cc == Catcode::ACTIVE) && state.is_dont_expandable(&self) {
+      Ok(Token{ text: Cow::Borrowed("\\relax"), code: Catcode::CS, smuggled: Some(Box::new(self)) })
+    } else {
+      Ok(self)
+    }
+  }
+
+  /// Return the original token of a not-expanded token,
+  /// or undef if it isn't marked as such.
+  pub fn get_dont_expand(&self) -> &Option<Box<Token>> {
+    &self.smuggled
+  }
+
+  /// Remove dont_expand flag, remove SMUGGLE_THE wrapper
+  pub fn without_dont_expand(mut self) -> Token {
+    let mut inner = self.smuggled.take();
+    match inner {
+      Some(t) => *t,
+      None => self
     }
   }
 

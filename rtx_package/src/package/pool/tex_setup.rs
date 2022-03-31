@@ -125,6 +125,34 @@ LoadDefinitions!(state, {
     })
   );
 
+  DefParameterType!("DefPlain", sub[gullet, inner, _extra, state] {
+      let mut value: Tokens = gullet.read_arg(state)?;
+      for inner_p in inner.into_iter().flatten() {
+        value = inner_p.reparse_argument(gullet, value, state);
+      }
+      Ok(value)
+    },
+    pack_parameters => true,
+    reversion => reversion!(gullet, arg, inner, state, {
+     // let mut reverted_inner;
+     let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+     if !inner.is_empty() {
+      for inner_opt in inner.into_iter() {
+        let mut reverted_inner = match inner_opt {
+          ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], state)?,
+          _ => arg.iter().map(|t| t.revert(state)).collect()
+        };
+        read_tokens.append(&mut reverted_inner);
+      }
+     } else {
+       let mut arg_reverted = arg.iter().map(|t| t.revert(state)).collect();
+       read_tokens.append(&mut arg_reverted);
+     }
+     read_tokens.push(T_END!());
+     Ok(Tokens::new(read_tokens))
+    })
+  );
+
   DefParameterType!("Optional", sub[gullet, inner, _extra, state] {
       let mut value = gullet.read_optional(state)?;
       // TODO: Default
@@ -170,7 +198,7 @@ LoadDefinitions!(state, {
   DefParameterType!("GeneralText", sub[gullet, inner, _extra, state] {
     if let Some(open) = gullet.read_x_token(false ,false, state)? {
       if open == T_BEGIN!() {
-        gullet.read_balanced(state)
+        gullet.read_balanced(false, state)
       } else {
         Error!("expected","{", gullet, state, "Expected <general text> here");
         Ok(Tokens!(open))
@@ -316,7 +344,7 @@ LoadDefinitions!(state, {
         break;
       } else if token.get_catcode() == Catcode::BEGIN {
         tokens.push(token);
-        tokens.extend(gullet.read_balanced(state)?.unlist());
+        tokens.extend(gullet.read_balanced(false, state)?.unlist());
         tokens.push(T_END!());
       } else if let Some(defn) = state.lookup_definition_stored(&token) {
         let args = defn.read_arguments(gullet, state)?;
@@ -367,6 +395,34 @@ LoadDefinitions!(state, {
   })
   );
 
+  // Set SMUGGLE_THE=1 whenever you want to handle special TeX neutralization of
+  // tokens created by \the-like primitives.
+  //
+  // IMPORTANTLY, call packParameters early on the tokens read from the Gullet
+  // to enact the neutralization and discard the temporary smuggle flag that is required
+  //
+  // Whenever possible, use this `DefExpanded` parameter type directly, rather than hand-crafting a new one.
+  DefParameterType!("DefExpanded", sub[gullet, _inner, _extra, state] {
+      state.smuggle_the = true;
+      let expanded = if let Some(token) = gullet.read_x_token(false, false, state)? {
+        if token.get_catcode() == Catcode::BEGIN {
+          gullet.read_balanced(true, state)?
+        } else {
+          Tokens!(token)
+        }
+      } else {
+        Error!("Expected", "DefExpanded", gullet, state,
+          "Expected <DefExpanded> here");
+        Tokens!()
+      };
+      state.smuggle_the = false;
+      Ok(expanded)
+    },
+    pack_parameters => true,
+    reversion      => reversion!(gullet, arg, inner, state, {
+      Ok(Tokens!(T_BEGIN!(), Tokens!(arg).revert(), T_END!())) })
+  );
+
   // Read a matching keyword, eg. Match:=
   DefParameterType!("Match", sub[gullet, _inner, extra, state] {
     let extra_tokens : Vec<Token> = extra.into_iter().filter(|e|
@@ -396,7 +452,7 @@ LoadDefinitions!(state, {
 
   // Read balanced material (?)
   DefParameterType!("Balanced", sub[gullet, _inner, _extra, state] {
-    gullet.read_balanced(state)
+    gullet.read_balanced(false, state)
   });
 
   // Read a Semiverbatim argument; ie w/ most catcodes neutralized.
@@ -420,12 +476,12 @@ LoadDefinitions!(state, {
       read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))
     }),
-    semiverbatim => true);
+    semiverbatim => Some(Vec::new()));
 
   // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
   DefParameterType!("OptionalSemiverbatim",
     sub[gullet, inner, _extra, state] { gullet.read_optional(state)},
-    semiverbatim => true,
+    semiverbatim => Some(Vec::new()),
     optional => true,
     reversion => reversion!(gullet, arg, inner, state, {
      if !arg.is_empty() {
@@ -444,8 +500,9 @@ LoadDefinitions!(state, {
   // Also, note that non-typewriter fonts will mess up some chars on digestion!
   DefParameterType!("Verbatim", sub[gullet, inner, _extra, state] {
       gullet.read_until(&[&Tokens!(T_BEGIN!())], state)?;
-      state.begin_semiverbatim(Some(vec!['%', '\\']));
-      let arg = gullet.read_balanced(state)?;
+      let verb_chars = vec!['%', '\\'];
+      state.begin_semiverbatim(Some(&verb_chars));
+      let arg = gullet.read_balanced(false, state)?;
       state.end_semiverbatim()?;
       Ok(arg)
     },
@@ -505,7 +562,7 @@ LoadDefinitions!(state, {
     let space_token = T_SPACE!();
 
     while token == begin_token {
-      let mut toks : Vec<Token> = gullet.read_balanced(state)?.unlist().into_iter().filter(|t| *t != space_token).collect();
+      let mut toks : Vec<Token> = gullet.read_balanced(false, state)?.unlist().into_iter().filter(|t| *t != space_token).collect();
       if !toks.is_empty() {
         token = Some(toks.remove(0));
         if !toks.is_empty() {
@@ -609,7 +666,7 @@ LoadDefinitions!(state, {
           tokens.push(token);
         } else {
           if cc != Catcode::SPACE && cc != Catcode::EOL && cc != Catcode::COMMENT {
-            gullet.unread(Tokens!(token));
+            gullet.unread_one(token);
           }
           break;
         }

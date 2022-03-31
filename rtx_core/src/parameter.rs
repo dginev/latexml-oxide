@@ -75,8 +75,9 @@ impl From<Tokens> for Vec<ParameterExtra> {
 #[derive(Clone)]
 pub struct Parameter {
   pub novalue: bool,
-  pub semiverbatim: bool,
+  pub semiverbatim: Option<Vec<char>>,
   pub optional: bool,
+  pub pack_parameters: bool,
   pub name: String,
   pub spec: String,
   pub extra: Vec<ParameterExtra>,
@@ -90,8 +91,9 @@ impl Default for Parameter {
   fn default() -> Self {
     Parameter {
       novalue: false,
-      semiverbatim: false,
+      semiverbatim: None,
       optional: false,
+      pack_parameters: false,
       name: s!("parameter_default"),
       spec: String::new(),
       extra: Vec::new(),
@@ -227,7 +229,7 @@ impl Parameter {
         if descriptor.novalue {
           self.novalue = true;
         }
-        self.semiverbatim = descriptor.semiverbatim;
+        self.semiverbatim = descriptor.semiverbatim.clone();
         // Also doing optional setting on the fly, so don't override unless true
         // self.optional = descriptor.optional;
         if descriptor.optional {
@@ -259,13 +261,13 @@ impl Parameter {
   }
 
   fn setup_catcodes(&self, state: &mut State) {
-    if self.semiverbatim {
-      state.begin_semiverbatim(None);
+    if self.semiverbatim.is_some() {
+      state.begin_semiverbatim(self.semiverbatim.as_ref());
     }
   }
 
   fn revert_catcodes(&self, state: &mut State) -> Result<()> {
-    if self.semiverbatim {
+    if self.semiverbatim.is_some() {
       state.end_semiverbatim()?;
     }
     Ok(())
@@ -280,11 +282,14 @@ impl Parameter {
 
     let closure = &self.reader;
     let mut value = closure(gullet, vec![], self.extra.clone(), state)?;
-    if self.semiverbatim && !value.is_empty() {
-      value = value.neutralize(&[], state);
+    if !value.is_empty() {
+      if let Some(ref semi_chars) = self.semiverbatim {
+        value = value.neutralize(semi_chars, state);
+      }
+      if self.pack_parameters {
+        value = value.pack_parameters(state);
+      }
     }
-    // $value = $value->neutralize if $$self{semiverbatim} && (ref $value)
-    //   && $value->can('neutralize');
     self.revert_catcodes(state)?;
 
     if !self.optional && !self.novalue && (value.is_empty() && self.reader_predigest.is_none()) {
@@ -307,11 +312,9 @@ impl Parameter {
   pub fn digest(&self, stomach: &mut Stomach, mut value: Tokens, _fordefn: Option<&Constructor>, state: &mut State) -> Result<Option<Digested>> {
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     let value_to_digest = value.clone();
-    if self.semiverbatim {
-      state.begin_semiverbatim(None);
-    }
+    self.setup_catcodes(state);
 
-    if self.semiverbatim && !value.is_empty() {
+    if self.semiverbatim.is_some() && !value.is_empty() {
       stomach.reading_from_mouth(Mouth::default(), state, move |stomach: &mut Stomach, state: &mut State| {
         let gullet = stomach.get_gullet_mut();
         gullet.unread(value);
@@ -347,9 +350,8 @@ impl Parameter {
       let mut w = Whatsit::default();
       post(stomach, &mut w, state)?; // maybe pass extras?
     }
-    if self.semiverbatim {
-      state.end_semiverbatim()?; // Corner case?
-    }
+
+    self.revert_catcodes(state)?;
 
     Ok(digested_value)
   }
@@ -404,6 +406,7 @@ impl Parameters {
 
   pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &dyn Definition, state: &mut State) -> Result<Vec<Tokens>> {
     let mut args = Vec::new();
+    gullet.setup_scan();
     for parameter in &self.0 {
       let values = parameter.read(gullet, fordefn, state)?;
       if parameter.reader_predigest.is_some() {
@@ -423,6 +426,7 @@ impl Parameters {
 
   pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Result<Vec<Option<Digested>>> {
     let mut args = Vec::new();
+    stomach.gullet.setup_scan();
     for parameter in &self.0 {
       let value = parameter.read(&mut stomach.gullet, fordefn, state)?;
       if !parameter.novalue {

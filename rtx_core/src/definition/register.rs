@@ -393,7 +393,7 @@ impl Definition for RegisterCell {
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { self.borrow().readonly }
   // not implemented for primitives
-  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> { unimplemented!() }
+  fn invoke(&self, gullet: &mut Gullet, _once_only:bool, state: &mut State) -> Result<Tokens> { unimplemented!() }
   fn get_parameters(&self) -> Option<&Parameters> { unimplemented!() } // TODO: How do we do this with a RefCell ?!
   fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.borrow().cs.clone()) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.borrow().cs.get_cs_name().to_owned()) }
@@ -422,7 +422,7 @@ impl Definition for RegisterCell {
     if let Some(after) = state.remove_value("afterAssignment") {
       match after {
         // primitive returns boxes, so these need to be digested!
-        Stored::Token(t) => gullet.unread(Tokens!(t)),
+        Stored::Token(t) => gullet.unread_one(t),
         Stored::Tokens(tks) => gullet.unread(tks),
         other => {
           let message = s!("expected tokens, found: {:?}", other);

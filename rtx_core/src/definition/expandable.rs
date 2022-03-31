@@ -25,6 +25,9 @@ pub struct ExpandableOptions {
   pub long: bool,
   pub scope: Option<Scope>,
   pub alias: Option<String>,
+  pub mathactive: bool,
+  pub robust: bool,
+  pub nopack_parameters: bool,
 }
 
 #[derive(Clone)]
@@ -37,7 +40,6 @@ pub struct Expandable {
   pub cs: Token,
   pub paramlist: Option<Parameters>,
   pub expansion: Option<ExpansionBody>,
-  pub trivial_expansion: Option<Tokens>,
 }
 impl Default for Expandable {
   fn default() -> Self {
@@ -45,7 +47,6 @@ impl Default for Expandable {
       is_protected: false,
       is_long: false,
       is_outer: false,
-      trivial_expansion: None,
       alias: None,
       locator: Locator::default(),
       cs: T_CS!("Expandable"),
@@ -81,14 +82,86 @@ impl Definition for Expandable {
   }
   fn get_expansion(&self) -> Option<&ExpansionBody> { self.expansion.as_ref() }
   fn get_alias(&self) -> Option<&String> { self.alias.as_ref() }
-  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
-    // Expand the expandable control sequence. This should be carried out by the Gullet.
-    // log!("-- expandable invoke for {:?}", self.get_cs());
-    if let Some(ref trivial_expansion) = self.trivial_expansion {
-      Ok(trivial_expansion.clone())
-    } else {
-      let args = self.read_arguments(gullet, state)?;
-      self.do_invocation(gullet, args, state)
+
+  /// Expand the expandable control sequence. This should be carried out by the Gullet.
+  fn invoke(&self, gullet: &mut Gullet, once_only: bool, state: &mut State) -> Result<Tokens> {
+    // shortcut for "trivial" macros; but only if not tracing & profiling!!!!
+    let tracing   = state.lookup_bool("TRACINGMACROS");
+    let profiled  = state.lookup_bool("PROFILING");
+    match &self.expansion {
+      Some(ExpansionBody::Closure(closure)) => {
+        // Harder to emulate \tracingmacros here.
+        let args = if let Some(ref parms) = self.paramlist {
+          parms.read_arguments(gullet, self, state)?
+        } else { Vec::new() };
+        if profiled {
+          // LaTeXML::Core::Definition::startProfiling($profiled, 'expand')
+          unimplemented!();
+        }
+        let result = closure(gullet, args, state)?;
+        if tracing { //$LaTeXML::DEBUG{tracing}) {    # More involved...
+          unimplemented!();
+          // Debug($self->tracingCSName . ' ==> ' . tracetoString($result));
+          // Debug($self->tracingArgs(@args)) if @args; } }
+        }
+        Ok(result)
+      },
+      Some(ExpansionBody::Tokens(tokens)) => {
+        let result = if self.paramlist.is_none() {
+          if profiled {
+            unimplemented!();
+            // LaTeXML::Core::Definition::startProfiling($profiled, 'expand')
+          }
+          if tracing {
+            unimplemented!();
+            // Debug($self->tracingCSName . ' ->' . tracetoString($expansion))
+            //   if $tracing || $LaTeXML::DEBUG{tracing};
+          }
+          // For trivial expansion, make sure we don't get \cs or \relax\cs direct recursion!
+          let is_recursion = if !once_only {
+            let token_vec = tokens.as_ref_unlist();
+            let t0_opt = token_vec.get(0);
+            let t1_opt = token_vec.get(1);
+            if let Some(t0) = t0_opt {
+              if t0 == &self.cs {
+                true
+              } else if let Some(t1) = t1_opt {
+                t1 == &self.cs && t0 == &T_CS!("\\protect")
+              } else {
+                false
+              }
+            } else { false }
+          } else { false };
+          if is_recursion {
+            Tokens!()
+          } else {
+            tokens.clone()
+          }
+        } else {
+          let args = if let Some(ref parms) = self.paramlist {
+            parms.read_arguments(gullet, self, state)?
+          } else { Vec::new() };
+          // for "real" macros, make sure all args are Tokens
+          // let r;
+          if tracing {// || $LaTeXML::DEBUG{tracing}) {    # More involved...
+            unimplemented!();
+            // Debug($self->tracingCSName . ' ->' . tracetoString($expansion));
+            // Debug($self->tracingArgs(@targs)) if @args;
+          }
+          if profiled {
+            unimplemented!();
+            //LaTeXML::Core::Definition::startProfiling($profiled, 'expand');
+          }
+          tokens.substitute_parameters(args)
+        };
+        // Getting exclusive requires dubious Gullet support!
+        if profiled {
+          unimplemented!();
+          // result = Tokens!(result, T_MARKER!(profiled));
+        }
+        Ok(result)
+      },
+      None => { Ok(Tokens!()) }
     }
   }
 
@@ -109,28 +182,34 @@ impl Expandable {
     traits: Option<ExpandableOptions>,
     state: &State,
   ) -> Self {
-    let expansion: ExpansionBody = expansion.into();
+    let mut expansion: ExpansionBody = expansion.into();
     let traits = traits.unwrap_or_default();
     // let source = $STATE->getStomach->getGullet->getMouth;
     // if (ref $expansion eq 'LaTeXML::Core::Tokens') {
     //   Fatal('misdefined', $cs, $source, "Expansion of '" . ToString($cs) . "' has unbalanced {}",
     //     "Expansion is " . ToString($expansion)) unless $expansion->isBalanced;
-    //   # If expansion is Tokens, and no arguments, we're a "trivial macro"
-    let trivial_expansion = if let ExpansionBody::Tokens(ref tks) = expansion {
-      if paramlist.is_none() && !tks.is_stub() {
-        Some(tks.substitute_parameters(Vec::new()))
-      } else {
-        None
+    if !traits.nopack_parameters {
+      if let ExpansionBody::Tokens(expansion_tokens) = expansion {
+        expansion = ExpansionBody::Tokens(
+          Tokens::pack_parameters(expansion_tokens, state)
+        );
       }
-    } else {
-      None
-    };
+    }
+
+    // let trivial_expansion = if let ExpansionBody::Tokens(ref tks) = expansion {
+    //   if paramlist.is_none() && !tks.is_stub() {
+    //     Some(tks.substitute_parameters(Vec::new()))
+    //   } else {
+    //     None
+    //   }
+    // } else {
+    //   None
+    // };
 
     Expandable {
       cs,
       paramlist,
       expansion: Some(expansion),
-      trivial_expansion,
       // locator           => $source->getLocator,
       is_protected: traits.protected || state.get_prefix("protected"),
       is_outer: traits.outer || state.get_prefix("outer"),

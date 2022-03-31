@@ -193,37 +193,30 @@ LoadDefinitions!(state, {
     unpack!(args => port, token);
     let token: Token = token.into(); // downcast from Tokens
     let port = port.to_number();
-    let mouth_opt = if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}",port)) {
-      Some(Arc::clone(mouth))
-    } else {
-      None
-    }; // need to move out the Rc<RefCell<Mouth>> to reuse state later.
-    if let Some(mouth) = mouth_opt {
+    if let Some(Stored::Mouth(mouth_stored)) = LookupValue!(&s!("input_file:{}",port)) {
+      let mouth_obj = Arc::clone(mouth_stored);
       stomach.bgroup(state);
-      AssignValue!("PRESERVE_NEWLINES", 2);
+      AssignValue!("PRESERVE_NEWLINES", 2); // Special EOL/EOF treatment for \read
+      AssignValue!("INCLUDE_COMMENTS", 0);
       let mut tokens = Vec::new();
       let mut level = 0;
-      while let Some(t) = mouth.write().unwrap().read_token(state) {
+      let mut mouth = mouth_obj.write().unwrap();
+      while let Some(t) = mouth.read_token(state) {
         let cc = t.get_catcode();
-        level += match cc {
-          Catcode::BEGIN => 1,
-          Catcode::END => -1,
-          _ => 0
+        if cc != Catcode::MARKER {
+          tokens.push(t);
+        }
+        match cc {
+          Catcode::BEGIN => {level += 1},
+          Catcode::END => {level -= 1},
+          _ => {}
         };
-        let finished = level == 0 && (
-          (cc == Catcode::SPACE && t.get_string() == "\n")
-          || cc == Catcode::COMMENT
-          || t == T_CS!("\\par"));
-        tokens.push(t);
-        if finished {
+        if level == 0 && mouth.is_eol(state) {
           break;
         }
       }
       stomach.egroup(state)?;
-      if tokens.is_empty() {
-        tokens = vec![T_CS!("\\par")]; // trailing blank line
-      }
-      DefMacro!(token, None, Tokens::new(tokens));
+      DefMacro!(token, None, Tokens::new(tokens), nopack_parameters => true);
     }
   });
 

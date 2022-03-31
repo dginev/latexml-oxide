@@ -2,6 +2,7 @@ use crate::package::*;
 
 lazy_static! {
   static ref END_VERBATIM_RE: Regex = Regex::new(r"^(.*?)\\end\{verbatim\}(.*?)$").unwrap();
+  static ref T_OTHER_STAR : Token = T_OTHER!("*");
 }
 
 //**********************************************************************
@@ -80,20 +81,40 @@ LoadDefinitions!(outer_state, {
   });
 
   // WARNING: Need to be careful about what catcodes are active here
+  // And clearly separate expansion from digestion
   DefMacro!("\\verb", sub[gullet, args, state] {
-    let mouth = gullet.get_mouth_mut().unwrap();
-    state.begin_semiverbatim(Some(vec!['%', '\\', '{', '}']));
-    let mut init = mouth.read_token(state);
+    let active_chars = vec!['%', '\\', '{', '}'];
+    state.begin_semiverbatim(Some(&active_chars));
+    state.assign_catcode(' ', Catcode::ACTIVE, None); // Do NOT (necessarily) skip spaces after \verb!!!
+    let mut init = gullet.read_token(state);
+    let mut starred = false;
     if let Some(ref init_token) = init {
-      if init_token.as_str() == "*" {
-        init = mouth.read_token(state); // Should I bother handling \verb* ?
+      if init_token == &(*T_OTHER_STAR) {
+        starred = true;
+        init = gullet.read_token(state);
       }
     }
-    if let Some(ref init_token) = init {
-      let body = mouth.read_tokens(Some(init_token), state);
+    if let Some(init_token) = init {
+      let init_str = init_token.get_string();
+      let init_ch = init_str.chars().next().unwrap();
+      state.assign_catcode(init_ch, Catcode::ACTIVE, None);
+      let delim = Tokens!(T_ACTIVE!(init_ch));
+      let body = gullet.read_until(&[&delim], state)?;
       state.end_semiverbatim()?;
-      let cs = if state.lookup_bool("IN_MATH") { T_CS!("\\@math@verb") } else { T_CS!("\\@text@verb") };
-      Ok(Invocation!(cs, vec![Tokens!(init.unwrap()), body], gullet)?)
+
+      let mut result = vec![T_CS!("\\@hidden@bgroup")];
+      if starred {
+        result.push(T_CS!("\\lx@use@visiblespace"));
+      }
+      let mut inv_args = Vec::new();
+      if starred {
+        inv_args.push(Tokens!(T_OTHER!("*")));
+      }
+      inv_args.push(Tokens!(init_token));
+      inv_args.push(body);
+      result.extend(Invocation!(T_CS!("\\@internal@verb"), inv_args, gullet, state)?.unlist());
+      result.push(T_CS!("\\@hidden@egroup"));
+      Ok(Tokens!(result))
     } else { // typically something read too far got \verb and the content is somewhere else..?
       Error!("expected", "delimiter", gullet, state, "Verbatim argument lost\n Bindings for preceding code is probably broken");
       state.end_semiverbatim()?;
@@ -125,10 +146,10 @@ LoadDefinitions!(outer_state, {
 
   // Actually, latex sets catcode to 13 ... is this close enough?
   DefPrimitive!("\\obeycr", {
-    AssignValue!("PRESERVE_NEWLINES", true);
+    AssignValue!("PRESERVE_NEWLINES", 1);
   });
   DefPrimitive!("\\restorecr", {
-    AssignValue!("PRESERVE_NEWLINES", false);
+    AssignValue!("PRESERVE_NEWLINES", 0);
   });
   DefMacro!(T_CS!("\\normalsfcodes"), None, Tokens!());
 });

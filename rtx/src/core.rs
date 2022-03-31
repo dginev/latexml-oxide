@@ -166,12 +166,10 @@ impl DigestionAPI for Core {
     let mut document = Document::new();
     if !state.search_paths.is_empty() {
       {
-        if let Some(&Stored::Bool(ico_flag)) = state.lookup_value("INCLUDE_COMMENTS") {
-          if ico_flag {
-            let paths_string = state.search_paths.iter().map(String::as_str).collect::<Vec<&str>>().join(",");
-            let attributes = map! {s!("paths") => paths_string};
-            document.insert_pi("latexml", Some(attributes))?;
-          }
+        if state.lookup_bool("INCLUDE_COMMENTS") {
+          let paths_string = state.search_paths.iter().map(String::as_str).collect::<Vec<&str>>().join(",");
+          let attributes = map! {s!("paths") => paths_string};
+          document.insert_pi("latexml", Some(attributes))?;
         }
       }
     }

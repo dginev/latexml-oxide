@@ -503,7 +503,7 @@ impl KeyVals {
               // Copy next token to args
               let mut rest = Vec::new();
               if tok.get_catcode() == Catcode::BEGIN {
-                rest.append(&mut gullet.read_balanced(state)?.unlist());
+                rest.append(&mut gullet.read_balanced(false, state)?.unlist());
                 rest.push(T_END!());
               }
               // record for keyvals
