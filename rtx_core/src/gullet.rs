@@ -37,6 +37,7 @@ pub struct Gullet {
   pub mouth: Option<MouthRuntime>,
   pub mouthstack: VecDeque<MouthRuntime>,
   pub pending_comments: VecDeque<Token>,
+  pushback_has_smuggled_the: bool,
 }
 
 impl Object for Gullet {
@@ -150,26 +151,6 @@ impl Gullet {
     }
   }
 
-  //**********************************************************************
-  // Not really 100% sure how this is supposed to work
-  // See TeX Ch 20, p216 regarding noexpand, \edef with token list registers, etc.
-  // Solution: Duplicate param tokens, stick NOTEXPANDED infront of expandable tokens.
-  pub fn neutralize_tokens(&mut self, tokens: Vec<Token>, state: &mut State) -> Vec<Token> {
-    let mut result = Vec::new();
-    for token in tokens.into_iter() {
-      match token.get_catcode() {
-        Catcode::PARAM => result.push(token.clone()),
-        _ => {
-          if let Some(defn) = state.lookup_definition(&token) {
-            result.push(T_NOTEXPANDED!("\\noexpand"));
-          }
-        },
-      };
-      result.push(token);
-    }
-    result
-  }
-
   ///**********************************************************************
   /// Low-level readers: read token, read expanded token
   ///**********************************************************************
@@ -182,55 +163,56 @@ impl Gullet {
       None => return None,
       Some(ref mut runtime) => runtime,
     };
-    // Check in pushback first....
-    while let Some(pushback_token) = runtime.pushback.pop_front() {
-      match pushback_token.get_catcode() {
-        Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
-        Catcode::MARKER => {
-          // TODO:
-          // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
-        },
-        Catcode::OTHER => {
-          // TODO: Underwater rocky territory...
-          // survey all uses of Token::default() in the code base, to see where they come up as "fillers"
-          // in the token stream.
-          // read_token should **IGNORE** these fillers, because this method is intended to return a "real" TeX token back
-          // this may still lead to unexpected crashes, as the reasons I needed the Token::default() were misalignment of the
-          // type interface for arguments with LaTeXML's untyped lenience... If that is understood better,
-          // maybe we can move away from using a filler token entirely, and avoid this nonsence.
-          if !pushback_token.get_string().is_empty() {
-            next_token = Some(pushback_token);
-            break;
-          }
-        },
-        _ => {
-          next_token = Some(pushback_token);
-          break;
-        },
-      };
-    }
-    // Not in pushback, read from the current Mouth
-    if next_token.is_none() {
-      while let Some(token) = runtime.mouth.read_token(state) {
-        match token.get_catcode() {
-          Catcode::COMMENT => self.pending_comments.push_back(token),
-          Catcode::MARKER => {
-            // TODO:
-            // LaTeXML::Definition::stopProfiling($token, 'expand'); } }
-          },
-          Catcode::OTHER => {
-            if !token.get_string().is_empty() {
-              next_token = Some(token);
-              break;
-            }
-          },
+    // loop {
+      // Check in pushback first....
+      while let Some(mut pushback_token) = runtime.pushback.pop_front() {
+        if pushback_token.code == Catcode::SmuggleTHE {
+          pushback_token = *pushback_token.smuggled.unwrap();
+        }
+        match pushback_token.get_catcode() {
+          Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
+          Catcode::MARKER => unimplemented!(),
           _ => {
-            next_token = Some(token);
+            next_token = Some(pushback_token);
             break;
           },
         };
       }
-    }
+      // Not in pushback, read from the current Mouth
+      if next_token.is_none() {
+        while let Some(token) = runtime.mouth.read_token(state) {
+          match token.get_catcode() {
+            Catcode::COMMENT => self.pending_comments.push_back(token),
+            Catcode::MARKER => unimplemented!(),
+            _ => {
+              next_token = Some(token);
+              break;
+            },
+          };
+        }
+      }
+      // ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
+
+      // some infinite loops are hard to predict and may be
+      // better guarded against via a global token limit.
+      // if ($LaTeXML::TOKEN_LIMIT and $$self{progress} > $LaTeXML::TOKEN_LIMIT) {
+      // Fatal('timeout', 'token_limit', $self,
+      //   "Token limit of $LaTeXML::TOKEN_LIMIT exceeded, infinite loop?"); }
+      // if ($LaTeXML::PUSHBACK_LIMIT and scalar(@{ $$self{pushback} }) >    $LaTeXML::PUSHBACK_LIMIT) {
+      //   Fatal('timeout', 'pushback_limit', $self,
+      //     "Pushback limit of $LaTeXML::PUSHBACK_LIMIT exceeded, infinite loop?"); }
+
+      // Wow!!!!! See TeX the Program \S 309
+      // if  let Some(token) = next_token {
+      //   if !state.align_state  // SHOULD count nesting of { }!!! when SCANNED (not digested)
+      //     && state.reading_alignment
+      //     &&
+      //   && (($atoken, $atype, $ahidden) = $self->isColumnEnd($token))) {
+      //   $self->handleTemplate($LaTeXML::READING_ALIGNMENT, $token, $atype, $ahidden); }
+      // else {
+      //   break;
+      // }
+    // }
     next_token
   }
 
@@ -248,93 +230,102 @@ impl Gullet {
     }
 
     loop {
-      let read_token: Option<Token>;
       let cc: Catcode;
-      let mut defn_next: Option<Arc<dyn Definition>> = None;
-      let mut needs_close = false;
+      let mut invoked = false;
       let mut return_next = false;
-      let mut expand_next = false;
-      match self.mouth {
+      let runtime = match self.mouth {
         None => return Ok(None),
-        Some(ref mut runtime) => {
-          read_token = if !runtime.pushback.is_empty() {
-            runtime.pushback.pop_front()
-          } else {
-            runtime.mouth.read_token(state)
-          };
-          match read_token {
-            None => {
-              if !(runtime.autoclose && toplevel && !self.mouthstack.is_empty()) {
-                return Ok(None);
-              }
-              needs_close = true; // Close mouth
-            },
-            Some(token) => {
-              // info!(target:"read_x_token", "at: {:?}", token);
-              match token.get_catcode() {
-                Catcode::NOTEXPANDED => {
-                  // NOTE: Inlined ->getCatcode
-                  // Should only occur IMMEDIATELY after expanding \noexpand (by readXToken),
-                  // so this token should never leak out through an EXTERNAL call to readToken.
-                  return_next = true; //just return next token
-                },
-                Catcode::COMMENT => {
-                  if commentsok {
-                    return Ok(Some(token));
-                  } else {
-                    self.pending_comments.push_back(token);
-                  } // What to do with comments???
-                },
-                // Catcode::MARKER => {
-                //   LaTeXML::Definition::stopProfiling($token, 'expand'); }
-                // }
-                _ => {
-                  let looked_up_definition: Option<Arc<dyn Definition>> = state.lookup_definition(&token);
-                  if let Some(defn) = looked_up_definition {
-                    if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
-                      // is this the right logic here? don't expand unless digesting?
-                      state.current_token = Some(Arc::new(token));
-                      defn_next = Some(defn);
-                      expand_next = true;
-                    } else {
-                      return Ok(Some(token));
-                    }
-                  } else {
-                    return Ok(Some(token));
-                  }
-                },
-              };
-            },
-          }
-        },
+        Some(ref mut runtime) => runtime
       };
-      if needs_close {
-        self.close_mouth(false, state); // Next input stream.
-      } else if return_next {
-        return Ok(self.read_token(state)); // Just return the next token.
-      } else if expand_next {
-        // Do the check here, to be more forgiving and more informative
-        let expansion = match defn_next {
-          Some(defn) => defn.invoke(self, state)?,
-          None => Tokens!(),
-        };
-        // _ => Error("misdefined", token, undef,
-        //         "Expected a Token in expansion of " . ToString($token),
-        //         "got " . Stringify($_))
-
-        // already checked tokens, so just push to be re-read (like ->unread(@expansion); )
-        match self.mouth {
-          None => {
-            return Ok(None);
-          },
-          Some(ref mut runtime) => {
-            for expansion_token in expansion.unlist().into_iter().rev() {
-              runtime.pushback.push_front(expansion_token);
+      // NOTE: CC_SMUGGLE_THE should ONLY appear in pushback!
+      let mut next_token = None;
+      while let Some(token) = runtime.pushback.pop_front() {
+        match token.code {
+          Catcode::COMMENT => if commentsok {
+             return Ok(Some(token));
+            } else {
+              self.pending_comments.push_back(token);
+            },
+          Catcode::MARKER => unimplemented!(),
+          _ => {
+            next_token = Some(token);
+            break
+          }
+        }
+      }
+      if next_token.is_none() {  // Else read from current mouth
+        while let Some(token) = runtime.mouth.read_token(state) {
+          match token.code {
+            Catcode::COMMENT => if commentsok {
+             return Ok(Some(token));
+            } else {
+              self.pending_comments.push_back(token);
+            },
+            Catcode::MARKER => unimplemented!(),
+            _ => {
+              next_token = Some(token);
+              break;
             }
-          },
-        };
+          }
+        }
+      }
+      //ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
+      match next_token {
+        None => {
+          if !(runtime.autoclose && toplevel && !self.mouthstack.is_empty()) {
+            return Ok(None);
+          }
+          self.close_mouth(false, state); // Next input stream.
+          continue;
+        },
+        Some(token) => {
+          if token.smuggled.is_some() {
+            if token.code != Catcode::SmuggleTHE || state.smuggle_the {
+              return Ok(Some(token));
+            } else {
+              return Ok(Some(*token.smuggled.unwrap()))
+            }
+          } else {
+            // refactoring a very tricky perl if, so for now this looks awkward
+            // maybe we can refactor?
+            if token.code.is_active_or_cs() {
+              if let Some(defn) = state.lookup_definition(&token) {
+                if (toplevel || !(*defn).is_protected()) && defn.is_expandable() {
+                  // is this the right logic here? don't expand unless digesting?
+                  state.current_token = Some(Arc::new(token));
+                  return self.invoke_and_read_x_token(defn, toplevel, commentsok, state);
+                }
+              }
+            }
+            // TODO: ## Wow!!!!! See TeX the Program \S 309
+            if !invoked {
+              if token.code == Catcode::CS && state.lookup_meaning(&token).is_none() {
+                return Ok(Some(state.generate_error_stub(self, token)?)) // cs SHOULD have defn by now; report early!
+              } else {
+                return Ok(Some(token))
+              }
+            } else {
+
+            }
+          }
+        }
       }
     }
+  }
+
+  /// Separate method that adds a recursive call chain to read_x_token
+  // TODO: linearizing in a single loop{}, as in perl, may be faster
+  //       but it is hard to convince the borrow checker that we can safely
+  //       reborrow gullet mutably.
+  fn invoke_and_read_x_token(&mut self, defn: Arc<dyn Definition>, toplevel: bool, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
+    // TODO: SMUGGLE_THE_COMMANDS
+    let expansion = defn.invoke(self, false, state)?;
+    { let mut runtime = self.mouth.as_mut().unwrap();
+      for token in expansion.unlist().into_iter().rev() {
+        runtime.pushback.push_front(token);
+      }
+    }
+    self.read_x_token(toplevel, commentsok, state)
   }
 
   /// Read the next raw line (string);
@@ -373,6 +364,11 @@ impl Gullet {
       }
     };
   }
+  pub fn unread_one(&mut self, token: Token) {
+    if let Some(ref mut runtime) = self.mouth {
+      runtime.pushback.push_front(token);
+    };
+  }
 
   ///**********************************************************************
   /// Mid-level readers: checking and matching tokens, strings etc.
@@ -394,7 +390,7 @@ impl Gullet {
   /// Read a sequence of tokens balanced in {}
   /// assuming the { has already been read.
   /// Returns a Tokens list of the balanced sequence, omitting the closing }
-  pub fn read_balanced(&mut self, state: &State) -> Result<Tokens> {
+  pub fn read_balanced(&mut self, expanded: bool, state: &State) -> Result<Tokens> {
     let mut tokens = Vec::new();
     let mut level = 1;
     while let Some(t) = self.read_token(state) {
@@ -481,7 +477,7 @@ impl Gullet {
             n += 1;
             if catcode == Catcode::BEGIN {
               // And if it's a BEGIN, copy till balanced END
-              let mut balanced_tokens = self.read_balanced(state)?.unlist();
+              let mut balanced_tokens = self.read_balanced(false, state)?.unlist();
               tokens.append(&mut balanced_tokens);
               tokens.push(T_END!());
             }
@@ -489,13 +485,19 @@ impl Gullet {
         }
       }
     }
-
     // Notice that IFF the arg looks like {balanced}, the outer braces are stripped
     // so that delimited arguments behave more similarly to simple, undelimited arguments.
     if n == 1 && tokens[0].get_catcode() == Catcode::BEGIN {
       tokens = tokens[1..tokens.len() - 1].to_vec();
     }
     Ok(Tokens::new(tokens))
+  }
+
+  /// Convenience method wrapping around `read_until`
+  /// TODO: This seems to be the wrong Rust type interface, we need to rework...
+  pub fn read_until_token(&mut self, t: Token, state: &State) -> Result<Tokens> {
+    let tks = Tokens!(t);
+    self.read_until(&[&tks], state)
   }
 
   pub fn read_until_brace(&mut self, state: &State) -> Result<Tokens> {
@@ -540,7 +542,7 @@ impl Gullet {
         match token.get_catcode() {
           Catcode::BEGIN => {
             // Inline ->getCatcode!
-            self.read_balanced(state)
+            self.read_balanced(false, state)
           },
           _ => Ok(Tokens!(token)),
         }
@@ -557,7 +559,7 @@ impl Gullet {
         if t.get_catcode() == Catcode::OTHER && t.get_string() == "[" {
           self.read_until(&[&Tokens!(T_OTHER!("]"))], state)
         } else {
-          self.unread(Tokens!(t));
+          self.unread_one(t);
           Ok(Tokens!()) // TODO: default
         }
       },
@@ -611,15 +613,15 @@ impl Gullet {
               let args: Vec<Token> = defn.read_arguments(self, state)?.iter().map(|ts| ts.into()).collect();
               Ok(defn.value_of(args, state))
             } else {
-              self.unread(Tokens!(token)); // Unread
+              self.unread_one(token); // Unread
               Ok(None)
             }
           } else {
-            self.unread(Tokens!(token)); // Unread
+            self.unread_one(token); // Unread
             Ok(None)
           }
         } else {
-          self.unread(Tokens!(token)); // Unread
+          self.unread_one(token); // Unread
           Ok(None)
         }
       },
@@ -705,7 +707,7 @@ impl Gullet {
       );
       Warn!("expected", "<number>", self, state, message);
       if let Some(next) = next {
-        self.unread(Tokens!(next));
+        self.unread_one(next);
       }
       Ok(Number::new(0.0))
     }
@@ -746,7 +748,7 @@ impl Gullet {
           let s_char = f32::from(s_char);
           Ok(Some(Number::new(s_char))) //  Only a character token!!! NOT expanded!!!!
         } else {
-          self.unread(Tokens!(token)); // Unread
+          self.unread_one(token); // Unread
           self.read_internal_integer(state)
         }
       },
@@ -779,11 +781,11 @@ impl Gullet {
         let n_opt: Option<Number> = if !string.is_empty() {
           if token.get_catcode() != Catcode::SPACE {
             // Inline ->getCatcode, unread
-            self.unread(Tokens!(token));
+            self.unread_one(token);
           }
           Some(string.into())
         } else {
-          self.unread(Tokens!(token)); // Unread
+          self.unread_one(token); // Unread
           self.read_normal_integer(state)?
         };
 
@@ -971,7 +973,7 @@ impl Gullet {
       None => Ok(Tokens!()),
       Some(token) => {
         if token.get_catcode() == Catcode::BEGIN {
-          self.read_balanced(state)
+          self.read_balanced(false, state)
         } else if let Some(defn) = state.lookup_register_definition(&token) {
           match defn.register_type() {
             Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
@@ -988,7 +990,7 @@ impl Gullet {
         } else if let Some(defn) = state.lookup_definition(&token) {
           // TODO: we are doing two lookups to avoid the type restriction of .read_arguments, any way to circumvent? Is it slow in the first place?
           if defn.is_expandable() {
-            let x = defn.invoke(self, state)?;
+            let x = defn.invoke(self, false, state)?;
             if !x.is_empty() {
               self.unread(x)
             }
@@ -1004,18 +1006,29 @@ impl Gullet {
   }
 
   pub fn skip_spaces(&mut self, state: &State) {
-    match self.read_non_space(state) {
-      None => {},
-      Some(t) => {
-        self.unread(Tokens!(t));
-      },
+    if let Some(t) = self.read_non_space(state) {
+      self.unread_one(t);
     }
   }
 
   pub fn skip_one_space(&mut self, state: &mut State) {
     if let Some(token) = self.read_token(state) {
       if token.get_catcode() != Catcode::SPACE {
-        self.unread(Tokens!(token));
+        self.unread_one(token);
+      }
+    }
+  }
+
+  pub fn setup_scan(&mut self) {
+    if self.pushback_has_smuggled_the {
+      self.pushback_has_smuggled_the = false;
+      // setup new scan by removing any smuggle CCs
+      if let Some(runtime) = &mut self.mouth {
+        for token in runtime.pushback.iter_mut() {
+          if token.code == Catcode::SmuggleTHE {
+            *token = *token.smuggled.take().unwrap();
+          }
+        }
       }
     }
   }
@@ -1082,7 +1095,7 @@ impl Gullet {
       if token_text == "-" {
         sign = true;
       } else if (token_text != "+") && t.get_catcode() != Catcode::SPACE {
-        self.unread(Tokens!(t)); // Unread and end
+        self.unread_one(t); // Unread and end
         break;
       }
     }
@@ -1097,7 +1110,7 @@ impl Gullet {
         result.push_str(digit);
       } else {
         if !(skip && token.get_catcode() == Catcode::SPACE) {
-          self.unread(Tokens!(token));
+          self.unread_one(token);
         }
         break;
       }
@@ -1124,13 +1137,13 @@ impl Gullet {
       let factor_f32: f32 = factor.parse::<f32>().unwrap_or(0.0);
       if let Some(token) = token_opt {
         if token.get_catcode() != Catcode::SPACE {
-          self.unread(Tokens!(token));
+          self.unread_one(token);
         }
       }
       Ok(Some(factor_f32))
     } else {
       if let Some(token) = token_opt {
-        self.unread(Tokens!(token));
+        self.unread_one(token);
       }
       match self.read_normal_integer(state)? {
         None => Ok(None),

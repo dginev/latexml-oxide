@@ -23,6 +23,7 @@ use crate::state::{Catcodes, Scope, State, StateOptions};
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::util::pathname;
+use crate::definition::register::NumericOps;
 
 lazy_static! {
   static ref STY_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
@@ -33,6 +34,7 @@ lazy_static! {
     catcodes: Some(Catcodes::Standard),
     ..StateOptions::default()
   }));
+  static ref CS_ENDLINECHAR : Token = T_CS!("\\endlinechar");
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -90,6 +92,7 @@ pub struct Mouth {
   note_message: Option<String>,
   source: String,
   shortsource: String,
+  skipping_spaces: bool,
   // pub handle : Option<File>,
   chars: VecDeque<char>,
   buffer: VecDeque<String>,
@@ -107,6 +110,7 @@ impl Default for Mouth {
       note_message: None,
       fordefinitions: false,
       at_eof: false,
+      skipping_spaces: false,
       lineno: 0,
       colno: 0,
       chars: VecDeque::new(),
@@ -260,9 +264,9 @@ impl Mouth {
   }
   pub fn finish(&mut self, state: &mut State) {
     self.buffer = VecDeque::new();
+    self.chars = VecDeque::new();
     self.lineno = 0;
     self.colno = 0;
-    self.chars = VecDeque::new();
     self.nchars = 0;
     if self.fordefinitions {
       if let Some(cc) = self.saved_at_cc {
@@ -295,12 +299,6 @@ impl Mouth {
   /// I am thinking that when we deal with unicode this may be the most correct way?
   /// If it's not the way XeTeX does it, perhaps, it must be that ALL combining chars
   /// have to be converted to the proper accent control sequences!
-  // sub splitChars {
-  //   my ($line) = @_;
-  // return $line =~ m/\X/g; }
-  // fn split_chars(line : &str) -> Vec<char> {
-  //   // I am wondering if this is still needed or we can use a Rust iterator?
-  // }
 
   fn get_next_line(&mut self, state: &State) -> Option<String> {
     match self.buffer.pop_front() {
@@ -378,44 +376,39 @@ impl Mouth {
     };
     let ch_opt = self.chars.get(self.colno);
     self.colno += 1;
-    match ch_opt {
-      None => None,
-      Some(ch) => {
-        let mut ch = *ch;
-        let mut cc: Option<Catcode> = state.lookup_catcode(ch);
-        let next_ch = self.chars.get(self.colno);
-        // Possible convert ^^x
-        if cc == Some(Catcode::SUPER) && Some(&ch) == next_ch {
-          let c1_opt = self.chars.get(self.colno + 1);
-          let c2_opt = self.chars.get(self.colno + 2);
-          let mut two_hex = false;
-          // ^^ followed by TWO LOWERCASE Hex digits???
-          if let Some(c1) = c1_opt {
-            if let Some(c2) = c2_opt {
-              if (self.colno + 2 < self.nchars) && LOWERHEX_REGEX.is_match(&c1.to_string()) && LOWERHEX_REGEX.is_match(&c2.to_string()) {
-                let hex = u8::from_str_radix(&s!("{}{}", c1, c2), 16).unwrap(); // TODO: Maybe Result type warranted here?
-                ch = hex as char;
-                self.splice(self.colno - 1..self.colno + 3, &[ch]);
-                self.nchars -= 3;
-              }
+    if let Some(ch) = ch_opt {
+      let mut ch = *ch;
+      let mut cc = state.lookup_catcode(ch).unwrap_or(Catcode::OTHER);
+      // Possible convert ^^x
+      if cc == Catcode::SUPER && Some(&ch) == self.chars.get(self.colno) {
+        let c1_opt = self.chars.get(self.colno + 1);
+        let c2_opt = self.chars.get(self.colno + 2);
+        let mut two_hex = false;
+        // ^^ followed by TWO LOWERCASE Hex digits???
+        if let Some(c1) = c1_opt {
+          if let Some(c2) = c2_opt {
+            if (self.colno + 2 < self.nchars) && LOWERHEX_REGEX.is_match(&c1.to_string()) && LOWERHEX_REGEX.is_match(&c2.to_string()) {
+              let hex = u8::from_str_radix(&s!("{}{}", c1, c2), 16).unwrap(); // TODO: Maybe Result type warranted here?
+              ch = hex as char;
+              self.splice(self.colno - 1..self.colno + 3, &[ch]);
+              self.nchars -= 3;
             }
           }
-          if !two_hex {
-            // OR ^^ followed by a SINGLE Control char type code???
-            let mut c = self.chars[self.colno + 1];
-            let mut cn = c as i32;
+        }
+        if !two_hex {
+          // OR ^^ followed by a SINGLE Control char type code???
+          let mut c = self.chars[self.colno + 1];
+          let mut cn = c as i32;
 
-            ch = (cn + if cn > 64 { -64 } else { 64 }) as u8 as char;
-            self.splice(self.colno - 1..self.colno + 2, &[ch]);
-            self.nchars -= 2;
-          }
-          cc = state.lookup_catcode(ch);
+          ch = (cn + if cn >= 64 { -64 } else { 64 }) as u8 as char;
+          self.splice(self.colno - 1..self.colno + 2, &[ch]);
+          self.nchars -= 2;
         }
-        if cc.is_none() {
-          cc = Some(Catcode::OTHER);
-        }
-        Some((ch, cc.unwrap()))
-      },
+        cc = state.lookup_catcode(ch).unwrap_or(Catcode::OTHER);
+      }
+      Some((ch, cc))
+    } else {
+      None
     }
   }
   pub fn has_more_input(&mut self) -> bool {
@@ -433,55 +426,104 @@ impl Mouth {
       if self.colno >= self.nchars {
         self.lineno += 1;
         self.colno = 0;
-        match self.get_next_line(state) {
-          None => {
-            // Exhausted the input.
-            self.at_eof = true;
-            self.chars = VecDeque::new();
-            self.nchars = 0;
-            return None;
-          },
-          Some(line) => {
-            // Remove trailing space, but NOT a control space!  End with CR (not \n) since this
-            // gets tokenized!
-            let sanitized_line = SANITIZE_LINE_REGEX.replace_all(&line, "$1\r");
-            self.chars = sanitized_line.chars().collect();
-            self.nchars = self.chars.len();
-            while self.colno < self.nchars {
-              let cc_next = match self.chars.get(self.colno) {
-                None => Catcode::OTHER,
-                Some(c) => match state.lookup_catcode(*c) {
-                  Some(cc) => cc,
-                  None => Catcode::OTHER,
-                },
-              };
-              if cc_next == Catcode::SPACE {
-                self.colno += 1;
+        let line_opt = self.get_next_line(state);
+        // For \read, we have to return something for EOL, and handle implicit final newline
+        let read_mode = state.lookup_int("PRESERVE_NEWLINES") > 1;
+        let eolch = if let Some(defn) = state.lookup_definition(&CS_ENDLINECHAR) {
+          if defn.is_register() {
+            if let Some(eol) = defn.value_of(Vec::new(), state) {
+              let eol = eol.value_of() as i16;
+              if eol > 0 && eol <= 255 {
+                let mch = (eol as u8) as char;
+                Some(mch)
               } else {
-                break;
+                None
               }
+            } else {
+              None
             }
-
-            // Sneak a comment out, every so often.
-            if (self.lineno % 25) == 0 {
-              let include_comments: Option<&Stored> = state.lookup_value("INCLUDE_COMMENTS");
-              if let Some(&Stored::Bool(ref x)) = include_comments {
-                if *x {
-                  return Some(T_COMMENT!(s!("**** {} Line {} ****", &self.shortsource, &self.lineno.to_string())));
-                }
-              }
-            }
-          },
+          } else {
+            None
+          }
+        } else {
+          Some('\r')
         };
+        if line_opt.is_none() { // Exhausted the input.
+            let eolcc    = if let Some(ch) = eolch {
+              state.lookup_catcode(ch).unwrap_or(Catcode::OTHER)
+            } else { Catcode::OTHER };
+          let eoftoken = if read_mode && eolch.is_some() && !self.at_eof && !self.source.is_empty() {
+            if eolcc == Catcode::EOL {
+              Some(T_CS!("\\par"))
+            } else {
+              Some(Token!(eolch.unwrap_or_default(), eolcc))
+            }
+          } else { None };
+          self.at_eof = true;
+          self.chars = VecDeque::new();
+          self.nchars = 0;
+          return eoftoken;
+        }
+        // Remove trailing spaces from external sources
+        let mut line = line_opt.unwrap();
+        if !self.source.is_empty() {
+          line = line.trim_end().to_owned();
+        }
+        // Then append the appropriate \endlinechar, or "\r";
+        if let Some(ch) = eolch {
+          line.push(ch);
+        }
+
+        self.chars = line.chars().collect::<VecDeque<char>>();
+        self.nchars = self.chars.len();
+        // In state N, skip spaces
+        while self.colno < self.nchars {
+          let cc_next = match self.chars.get(self.colno) {
+            None => Catcode::OTHER,
+            Some(c) => match state.lookup_catcode(*c) {
+              Some(cc) => cc,
+              None => Catcode::OTHER,
+            },
+          };
+          if cc_next == Catcode::SPACE {
+            self.colno += 1;
+          } else {
+            break;
+          }
+        }
+        // If upcoming line is empty, and there is no recognizable EOL, fake one
+        if read_mode && (self.colno >= self.nchars) && (eolch.is_none() || eolch != Some('\r')) {
+          return Some(T_MARKER!("EOL"));
+        }
+        // Sneak a comment out, every so often.
+        if (self.lineno % 25) == 0 && state.lookup_bool("INCLUDE_COMMENTS") {
+          return Some(T_COMMENT!(s!("**** {} Line {} ****", &self.shortsource, &self.lineno.to_string())));
+        }
+      }
+      if self.skipping_spaces {    // In state S, skip spaces
+        let mut cc = None;
+        while let Some((_, ncc)) = self.get_next_char(state) {
+          cc = Some(ncc);
+          if ncc != Catcode::SPACE {
+            break;
+          }
+        }
+        if self.colno <= self.nchars && cc.is_some() && cc != Some(Catcode::SPACE) {
+          self.colno -= 1;
+        }
+        if cc == Some(Catcode::EOL) { // If we've got an EOL
+          self.get_next_char(state);
+          if self.colno < self.nchars {
+            self.colno -= 1;
+          }
+        }
+        self.skipping_spaces = false;
       }
       // ==== Extract next token from line.
-      match self.get_next_char(state) {
-        None => {},
-        Some((ch, cc)) => {
-          if let Some(token) = Mouth::dispatch_char(self, ch, cc, state) {
-            return Some(token);
-          } // Else, repeat till we get something or run out.
-        },
+      if let Some((ch, cc)) = self.get_next_char(state) {
+        if let Some(token) = Mouth::dispatch_char(self, ch, cc, state) {
+          return Some(token);
+        } // Else, repeat till we get something or run out.
       }
     }
   }
@@ -489,21 +531,12 @@ impl Mouth {
   //**********************************************************************
   /// Read all tokens until a token equal to $until (if given), or until exhausted.
   /// Returns an empty Tokens list, if there is no input
-  pub fn read_tokens(&mut self, until: Option<&Token>, state: &State) -> Tokens {
+  pub fn read_tokens(&mut self, state: &State) -> Tokens {
     let mut tokens = Vec::new();
-    let has_until = until.is_some();
-    let until_string = if let Some(until_token) = until {
-      until_token.to_string()
-    } else {
-      String::new()
-    };
     while let Some(token) = self.read_token(state) {
-      if has_until && token.get_string() == until_string {
-        break;
-      }
       tokens.push(token);
     }
-    while !tokens.is_empty() && tokens.last().unwrap().get_catcode() == Catcode::SPACE {
+    while let Some(Token{code: Catcode::SPACE, ..}) = tokens.last() {
       // Remove trailing space
       tokens.pop();
     }
@@ -558,74 +591,68 @@ impl Mouth {
     // creating tokens like crazy... or making them more compact... or ???
     use crate::token::Catcode::*;
     match cc {
-      ESCAPE => self.handle_escape(ch, state), // T_ESCAPE
+      ESCAPE => self.handle_escape(state), // T_ESCAPE
       BEGIN => {
         if ch == '{' {
           Some(T_BEGIN!())
         } else {
-          Some(Token::new(ch.to_string().into(), BEGIN))
+          Some(Token!(ch, BEGIN))
         }
-      }, // T_BEGIN
-      END => {
-        if ch == '}' {
+      },
+      END => if ch == '}' {
           Some(T_END!())
         } else {
-          Some(Token::new(ch.to_string().into(), END))
-        }
-      }, // T_END
-      MATH => {
-        if ch == '$' {
+          Some(Token!(ch, END))
+        },
+      MATH => if ch == '$' {
           Some(T_MATH!())
         } else {
-          Some(Token::new(ch.to_string().into(), MATH))
-        }
-      }, // T_MATH
-      ALIGN => {
-        if ch == '&' {
+          Some(Token!(ch, MATH))
+        },
+      ALIGN => if ch == '&' {
           Some(T_ALIGN!())
         } else {
-          Some(Token::new(ch.to_string().into(), ALIGN))
-        }
-      }, // T_ALIGN
-      EOL => self.handle_end_of_line(ch, state), // T_EOL
+          Some(Token!(ch, ALIGN))
+        },
+      EOL => self.handle_end_of_line(state),
       PARAM => {
         if ch == '#' {
           Some(T_PARAM!())
         } else {
-          Some(Token::new(ch.to_string().into(), PARAM))
+          Some(Token!(ch, PARAM))
         }
       }, // T_PARAM
       SUPER => {
         if ch == '^' {
           Some(T_SUPER!())
         } else {
-          Some(Token::new(ch.to_string().into(), SUPER))
+          Some(Token!(ch, SUPER))
         }
       }, // T_SUPER
       SUB => {
         if ch == '_' {
           Some(T_SUB!())
         } else {
-          Some(Token::new(ch.to_string().into(), SUB))
+          Some(Token!(ch, SUB))
         }
       }, // T_SUB
-      SPACE => self.handle_space(ch, state),
+      SPACE => self.handle_space(state),
       LETTER => Some(T_LETTER!(ch.to_string())),
       OTHER => Some(T_OTHER!(ch.to_string())),
       ACTIVE => Some(T_ACTIVE!(ch.to_string())),
-      COMMENT => self.handle_comment(ch, state),
+      COMMENT => self.handle_comment(state),
       INVALID => Some(T_OTHER!(ch.to_string())), // T_INVALID (we could get unicode!)
       _ => None,                                 // IGNORE, others
     }
   }
 
-  fn handle_end_of_line(&mut self, _c: char, state: &State) -> Option<Token> {
+  fn handle_end_of_line(&mut self, state: &State) -> Option<Token> {
     // Note that newines should be converted to space (with " " for content)
     // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
     let token = if self.colno == 1 {
       T_CS!("\\par")
-    } else if state.lookup_bool("PRESERVE_NEWLINES") {
-      Token!("\n", Some(Catcode::SPACE))
+    } else if state.lookup_int("PRESERVE_NEWLINES") > 0 {
+      T_SPACE!("\n")
     } else {
       T_SPACE!()
     };
@@ -633,44 +660,32 @@ impl Mouth {
     Some(token)
   }
 
-  fn handle_space(&mut self, _c: char, state: &State) -> Option<Token> {
+  fn handle_space(&mut self, state: &State) -> Option<Token> {
     // Skip any following spaces!
-    loop {
-      match self.get_next_char(state) {
-        None => break,
-        Some((_ch, cc)) => {
-          if (cc != Catcode::SPACE) && (cc != Catcode::EOL) {
-            break;
-          }
-        },
+    while let Some((ch,cc)) = self.get_next_char(state) {
+      if (cc != Catcode::SPACE) && (cc != Catcode::EOL) {
+        // backup at nonspace/eol
+        if self.colno <= self.nchars {
+          self.colno -= 1;
+        }
+        break;
       }
-    }
-    if self.colno < self.nchars {
-      self.colno -= 1;
     }
     Some(T_SPACE!())
   }
 
-  fn handle_comment(&mut self, _c: char, state: &State) -> Option<Token> {
+  fn handle_comment(&mut self, state: &State) -> Option<Token> {
     let n = self.colno;
     self.colno = self.nchars;
     let mut comment = String::new();
-    // TODO: Probably too slow to do so many .get()s, ideally we want an iterator on a slice.
-    for c in n..self.nchars {
-      // warning: .. range is half-open in rust
-      match self.chars.get(c) {
-        None => {},
-        Some(c) => comment.push(*c),
-      };
+    for c in self.chars.iter().skip(n).take(self.nchars-n) {
+      comment.push(*c);
     }
-    let comment = comment.trim();
-    // TODO: Handle properly
-    let include_comments: bool = match state.lookup_value("INCLUDE_COMMENTS") {
-      Some(&Stored::Bool(x)) => x,
-      _ => false,
-    };
-    if !comment.is_empty() && include_comments {
-      Some(T_COMMENT!(comment))
+    let trimmed_comment = comment.trim();
+    if !trimmed_comment.is_empty() && state.lookup_bool("INCLUDE_COMMENTS") {
+      Some(T_COMMENT!(trimmed_comment))
+    } else if state.lookup_int("PRESERVE_NEWLINES")>1 {
+      Some(T_MARKER!("EOL")) // Required EOL during \read
     } else {
       None
     }
@@ -681,67 +696,31 @@ impl Mouth {
   //**********************************************************************
 
   /// Read control sequence
-  fn handle_escape(&mut self, _c: char, state: &State) -> Option<Token> {
+  fn handle_escape(&mut self, state: &State) -> Option<Token> {
     // NOTE: We're using control sequences WITH the \ prepended!!!
-    let mut cs = s!("\\"); // I need this standardized to be able to lookup tokens (A better way???)
-    match self.get_next_char(state) {
-      None => {},
-      Some((ch, cc)) => {
-        // Knuth, p.46 says that Newlines are converted to spaces,
-        // Bit I believe that he does NOT mean within control sequences
-        cs.push(ch);
-        let mut cc_after_letter = None;
-        if cc == Catcode::LETTER {
-          // For letter, read more letters for csname.
-          loop {
-            match self.get_next_char(state) {
-              None => break,
-              Some((ch, cc)) => {
-                if cc == Catcode::LETTER {
-                  cs.push_str(&ch.to_string());
-                } else {
-                  cc_after_letter = Some(cc);
-                  break;
-                }
-              },
-            };
+    if let Some((ch, mut cc)) = self.get_next_char(state) {
+      // Knuth, p.46 says that Newlines are converted to spaces,
+      // Bit I believe that he does NOT mean within control sequences
+      let mut cs = s!("\\{}",ch); // I need this standardized to be able to lookup tokens (A better way???)
+      if cc == Catcode::LETTER {
+        // For letter, read more letters for csname.
+        while let Some((nch, ncc)) = self.get_next_char(state) {
+          cc = ncc;
+          if ncc == Catcode::LETTER {
+            cs.push(nch);
+          } else {
+            break;
           }
+        }
+        self.skipping_spaces = true;
+        if cc != Catcode::LETTER {
           self.colno -= 1;
         }
-
-        if cc_after_letter == Some(Catcode::SPACE) {
-          // We'll skip whitespace here.
-          loop {
-            match self.get_next_char(state) {
-              None => break,
-              Some((_ch, cc)) => {
-                if cc != Catcode::SPACE {
-                  cc_after_letter = Some(cc);
-                  break;
-                }
-              },
-            };
-          }
-          if self.colno < self.nchars {
-            self.colno -= 1;
-          }
-        }
-
-        if cc_after_letter == Some(Catcode::EOL) {
-          // If we've got an EOL
-          // if in \read mode, leave the EOL to be turned into a T_SPACE
-          if state.lookup_int("PRESERVE_NEWLINES") > 1 {
-          } else {
-            // else skip it.
-            self.get_next_char(state);
-            if self.colno < self.nchars {
-              self.colno -= 1;
-            }
-          }
-        }
-      },
-    };
-    Some(T_CS!(cs))
+      }
+      Some(T_CS!(cs))
+    } else {
+      None
+    }
   }
 
   /// TODO: Can we use/build a generic that does this reliably for VecDeque
@@ -758,7 +737,32 @@ impl Mouth {
     lastid.to_string()
   }
 
-  pub fn is_eol(&self) -> bool { self.colno >= self.nchars }
+  pub fn is_eol(&mut self, state:&State) -> bool {
+    let savecolno = self.colno;
+    // We have to peek past any to-be-skipped spaces!!!!
+    if self.skipping_spaces {
+      let mut cc = None;
+      while let Some((_, ncc)) = self.get_next_char(state) {
+        cc = Some(ncc);
+        if ncc != Catcode::SPACE {
+          break;
+        }
+      }
+      if self.colno <= self.nchars && cc.is_some() && cc != Some(Catcode::SPACE) {
+        self.colno -= 1;
+      }
+      if cc == Some(Catcode::EOL) { // If we've got an EOL
+        self.get_next_char(state);
+        if self.colno < self.nchars {
+          self.colno -= 1;
+        }
+      }
+    }
+    let eol = self.colno > self.nchars;
+    self.colno = savecolno;
+    eol
+  }
+
   pub fn at_eof(&self) -> bool { self.at_eof }
 }
 
@@ -780,17 +784,17 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
   match state_opt {
     None => {
       let mut state = STD_STATE.write().unwrap();
-      Mouth::new(text, None, &mut state).unwrap().read_tokens(None, &state)
+      Mouth::new(text, None, &mut state).unwrap().read_tokens(&state)
     },
-    Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(None, s),
+    Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(s),
   }
 }
 pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
   match state_opt {
     None => {
       let mut state = STY_STATE.write().unwrap();
-      Mouth::new(text, None, &mut state).unwrap().read_tokens(None, &state)
+      Mouth::new(text, None, &mut state).unwrap().read_tokens(&state)
     },
-    Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(None, s),
+    Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(s),
   }
 }

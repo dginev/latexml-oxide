@@ -231,7 +231,7 @@ LoadDefinitions!(outer_state, {
       // Note that IF expandafter ends up expanding a \the in an \edef,
       // that it Overrides the implicit noexpand that \edef would normally use for\the!!
       state.remove_value("NOEXPAND_THE");
-      tokens.append(&mut defn.invoke(gullet, state)?.unlist()); // Expand $xtok ONCE ONLY!
+      tokens.append(&mut defn.invoke(gullet, false, state)?.unlist()); // Expand $xtok ONCE ONLY!
     } else {
       tokens.append(&mut xtok.unlist());
     };
@@ -239,7 +239,13 @@ LoadDefinitions!(outer_state, {
   });
 
   // Insert magic token that Gullet knows not to expand the next one.
-  DefMacro!(T_CS!("\\noexpand"), None, T_NOTEXPANDED!());
+  DefMacro!(T_CS!("\\noexpand"), None, sub[gullet, args, state] {
+    if let Some(token) = gullet.read_token(state) {
+      vec![token.with_dont_expand(state)?]
+    } else {
+      Vec::new()
+    }
+  });
 
   DefMacro!(T_CS!("\\topmark"), None, Tokens!());
   DefMacro!(T_CS!("\\firstmark"), None, Tokens!());
@@ -252,8 +258,8 @@ LoadDefinitions!(outer_state, {
   // Note that TeX doesn't actually close the mouth;
   // it just flushes it so that it will close the next time it's read!
   DefMacro!(T_CS!("\\endinput"), None, sub[gullet, _args, state] {
-    let mouth = gullet.get_mouth().unwrap();
-    let line_opt = if !mouth.is_eol() {
+    let mut mouth = gullet.get_mouth_mut().unwrap();
+    let line_opt = if !mouth.is_eol(state) {
       gullet.read_raw_line(state)
     } else {
       None
@@ -270,20 +276,18 @@ LoadDefinitions!(outer_state, {
     let mut args = variable.unlist();
     let defn = args.remove(0).to_register(state);
     if let Some(defn) = defn {
-      let register_type = defn.borrow().register_type;
+      // let register_type = defn.borrow().register_type;
       //     if (!$type) {
       //       my $cs = ToString($defn->getCS);
       //       Error('unexpected', "\\the$cs", $gullet, "You can't use $cs after \\the"); return (); }
-      let value = defn.value_of(args, state).unwrap_or_else(|| RegisterValue::Tokens(Tokens!()));
+      let value = defn.value_of(args, state)
+        .unwrap_or_else(|| RegisterValue::Tokens(Tokens!()));
       // In all cases, these should be OTHER, except for space. (!?)
       let mut tokens : Vec<Token> = match value {
         RegisterValue::Tokens(ts) => ts.unlist(),
         RegisterValue::Token(t) => vec![t],
         rv => Explode!(rv.to_string()),
       };
-      if state.noexpand_the { // See \the for the sense in this.
-        tokens = gullet.neutralize_tokens(tokens, state);
-      }
       tokens
     } else {
       Error!("expected", "<register>", gullet, state, "a register was expected to be here");

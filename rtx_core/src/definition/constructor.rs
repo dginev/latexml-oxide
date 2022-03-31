@@ -157,7 +157,7 @@ impl Definition for Constructor {
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest_body) }
   fn capture_body(&self) -> bool { self.capture_body }
-  fn invoke(&self, _gullet: &mut Gullet, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
+  fn invoke(&self, _gullet: &mut Gullet, _once_only:bool, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
   fn invoke_primitive(&self, stomach: &mut Stomach, caller: Arc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {

@@ -137,7 +137,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
   }
 }
 
-pub fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State) -> Result<Vec<Digested>> {
+pub fn do_def(globally: bool, stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State) -> Result<()> {
   BindState!(stomach, state);
   unpack!(args => cs, params, body);
   // ensure params is empty if it contains only the default token
@@ -145,23 +145,19 @@ pub fn do_def(globally: bool, expanded: bool, stomach: &mut Stomach, args: Vec<T
   let params = if params.is_stub() { Tokens!() } else { params };
   let cs: Token = cs.into();
   let paramlist = parse_def_parameters(&cs, params, state)?;
-  if expanded {
-    state.noexpand_the = true;
-    let gullet = stomach.get_gullet_mut();
-    body = Expand!(body, gullet, state);
-  }
+
   let scope = if globally { Some(Scope::Global) } else { None };
-  state.install_definition(
-    Expandable {
+  state.install_definition(Expandable::new(
       cs,
       paramlist,
-      expansion: body.into(),
-      ..Expandable::default()
-    },
-    scope,
-  );
+      ExpansionBody::Tokens(body),
+      Some(ExpandableOptions {
+        nopack_parameters: true,
+        ..ExpandableOptions::default() }),
+      state),
+    scope);
   AfterAssignment!();
-  Ok(Vec::new())
+  Ok(())
 }
 
 // Kinda rough: We don't really keep track of modes as carefully as TeX does.

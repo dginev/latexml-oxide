@@ -58,23 +58,23 @@ LoadDefinitions!(state, {
 
   // Assuming noone tries to get clever with figuring out the allocation of
   // numbers, these become simple DefRegister's
-  DefPrimitive!("\\newcount DefToken", sub[stomach, args, state] {
+  DefPrimitive!("\\newcount Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
     DefRegister!(name, None, Number::new(0.0));
   });
-  DefPrimitive!("\\newdimen DefToken", sub[stomach, args, state] {
+  DefPrimitive!("\\newdimen Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
     DefRegister!(name, None, Dimension::new(0.0));
   });
-  DefPrimitive!("\\newskip DefToken", sub[stomach, args, state] {
+  DefPrimitive!("\\newskip Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
     DefRegister!(name, None, Glue::new(0.0));
   });
-  DefPrimitive!("\\newmuskip DefToken", sub[stomach, args, state] {
+  DefPrimitive!("\\newmuskip Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
     DefRegister!(name, None, MuGlue::new(0.0));
   });
-  DefPrimitive!("\\newtoks DefToken", sub[stomach, args, state] {
+  DefPrimitive!("\\newtoks Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
     DefRegister!(name, None, Tokens!());
   });

@@ -12,26 +12,26 @@ LoadDefinitions!(state, {
   // <definition> = <def><control sequence><definition text>
   // <def> = \def | \gdef | \edef | \xdef
   // <definition text> = <register text><left brace><balanced text><right brace>
-  DefPrimitive!("\\def SkipSpaces Token UntilBrace {}", sub[stomach, args, state] {
-      do_def(false, false, stomach, args, state)
+  DefPrimitive!("\\def SkipSpaces Token UntilBrace DefPlain",
+    sub[stomach, args, state] {
+      do_def(false, stomach, args, state)?;
     },
-    locked => true
-  );
-  DefPrimitive!("\\gdef SkipSpaces Token UntilBrace {}", sub[stomach, args, state] {
-      do_def(true, false, stomach, args, state)
+    locked => true);
+  DefPrimitive!("\\gdef SkipSpaces Token UntilBrace DefPlain",
+    sub[stomach, args, state] {
+      do_def(true, stomach, args, state)?;
     },
-    locked => true
-  );
-  DefPrimitive!("\\edef SkipSpaces Token UntilBrace {}", sub[stomach, args, state] {
-      do_def(false, true, stomach, args, state)
+    locked => true);
+  DefPrimitive!("\\edef SkipSpaces Token UntilBrace DefExpanded",
+    sub[stomach, args, state] {
+      do_def(false, stomach, args, state)?;
     },
-    locked => true
-  );
-  DefPrimitive!("\\xdef SkipSpaces Token UntilBrace {}", sub[stomach, args, state] {
-      do_def(true, true, stomach, args, state)
+    locked => true);
+  DefPrimitive!("\\xdef SkipSpaces Token UntilBrace DefExpanded",
+    sub[stomach, args, state] {
+      do_def(true, stomach, args, state)?;
     },
-    locked => true
-  );
+    locked => true);
 
   // <prefix> = \global | \long | \outer
   // See Stomach.pm & Stomach.pm

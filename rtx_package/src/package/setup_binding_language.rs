@@ -1808,21 +1808,10 @@ macro_rules! TokenizeInternal {
 
 #[macro_export]
 macro_rules! RawTeX {
-  ($text:literal) => {
-    bind_state_mut!(stmch, st);
-    let tokenized: Tokens;
-    compile_tokenize_internal!(tokenized, $text);
-    stmch.digest(tokenized, st)?;
-  };
   ($text:expr) => {
-    bind_state_mut!(st);
-    RawTeX!($text, st)
+    bind_state_mut!(stmch, st);
+    stmch.raw_tex($text, st)?;
   };
-  ($text:literal, $state_arg:ident) => {{
-    let tokenized: Tokens;
-    compile_tokenize_internal!(tokenized, $text);
-    outer_stomach!().digest(tokenized, $state_arg)?;
-  }};
   ($text:expr, $state_arg:ident) => {{
     let mut state_stomach = $state_arg.stomach.clone();
     outer_stomach!().raw_tex($text, $state_arg)?;
@@ -1979,6 +1968,7 @@ macro_rules! AddToMacro {
         ExpansionBody::Tokens(Tokens!(expansion)),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
+          nopack_parameters: true,
           ..ExpandableOptions::default()
         }),
         st,

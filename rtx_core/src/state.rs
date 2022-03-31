@@ -13,14 +13,16 @@ use crate::common::model::{IndirectModel, Model};
 use crate::common::number::Number;
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
+use crate::common::object::Object;
 use crate::definition::conditional::{ConditionalType, IfFrame};
 use crate::definition::expandable::Expandable;
 use crate::definition::register::{RegisterCell, RegisterValue};
 use crate::definition::Definition;
+use crate::definition::constructor::Constructor;
 use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
 use crate::document::Document;
-
+use crate::gullet::Gullet;
 use crate::stomach::Stomach;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
@@ -200,6 +202,8 @@ pub struct State {
   pub indirect_model: Option<IndirectModel>,
   pub pending_resources: Vec<Resource>,
   // Stateful runtime - simple fields
+  // TODO: Maybe group these in a "SessionFlags" struct?
+  //       we can then reset that if we reimplement a daemon app
   pub verbosity: i32,
   pub status_code: usize,
   pub unlocked: bool,
@@ -214,6 +218,7 @@ pub struct State {
   pub graphics_paths: VecDeque<String>,
   pub include_styles: bool,
   pub nomathparse: bool,
+  pub smuggle_the: bool,
   // Auxiliary convenience -- extra dispatch
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
@@ -271,6 +276,7 @@ impl Default for State {
       graphics_paths: VecDeque::new(),
       include_styles: false,
       nomathparse: false,
+      smuggle_the: false,
       extra_bindings_dispatch: None,
       // interiorly mutable
       stomach: Arc::new(RwLock::new(Stomach::default())),
@@ -657,6 +663,22 @@ impl State {
       }
     } else {
       None
+    }
+  }
+
+  /// Whether token must be wrapped as dont_expand
+  pub fn is_dont_expandable(&self, token: &Token) -> bool {
+    // Basically: a CS or Active token that is either not defined, or is expandable
+    // (but not \let to a token)
+    if token.code.is_active_or_cs() {
+      let lookupname = &token.text;
+      if !lookupname.is_empty() {
+        self.lookup_expandable(token, true).is_some()
+      } else {
+        true
+      }
+    } else {
+      false
     }
   }
 
@@ -1087,7 +1109,7 @@ impl State {
     Ok(())
   }
 
-  pub fn begin_semiverbatim(&mut self, extraspecials: Option<Vec<char>>) {
+  pub fn begin_semiverbatim(&mut self, extraspecials: Option<&Vec<char>>) {
     // Is this a good/safe enough shorthand, or should we really be doing beginMode?
     self.push_frame();
     self.assign_value("MODE", Stored::String(s!("text")), None);
@@ -1095,7 +1117,7 @@ impl State {
     let mut all_specials: Vec<char> = Vec::new();
     if let Some(extra) = extraspecials {
       for special in extra {
-        all_specials.push(special);
+        all_specials.push(*special);
       }
     }
     if let Some(&Stored::VecChar(ref specials_store)) = self.lookup_value("SPECIALS") {
@@ -1268,7 +1290,6 @@ impl State {
             table_entry.iter().map(ToString::to_string).collect::<Vec<String>>().join(", ")
           );
           let stomach = self.stomach.read().unwrap();
-          use crate::common::object::Object;
           Warn!("internal", key, stomach, self, message);
         }
       }
@@ -1476,7 +1497,7 @@ impl State {
   pub fn initialize_stomach(&mut self) {
     self.assign_value("MODE", Stored::String(s!("text")), Some(Scope::Global));
     self.assign_value("IN_MATH", Stored::Bool(false), Some(Scope::Global));
-    self.assign_value("PRESERVE_NEWLINES", Stored::Bool(true), Some(Scope::Global));
+    self.assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
     self.assign_value("afterGroup", Stored::VecDigested(Vec::new()), Some(Scope::Global));
     self.assign_value("afterAssignment", Stored::Tokens(Tokens!()), Some(Scope::Global)); // undef ???
     self.assign_value("groupInitiator", Stored::String(s!("Initialization")), Some(Scope::Global));
@@ -1543,6 +1564,36 @@ impl State {
     // } else {
     None
     // }
+  }
+
+  /// Generate a stub definition for an undefined control-sequence,
+  /// along with appropriate error messge.
+  pub fn generate_error_stub(&mut self, caller: &Gullet, token: Token) -> Result<Token> {
+    let cs = token.get_cs_name();
+    self.note_status(cs); // TODO: Undefined:cs
+    // To minimize chatter, go ahead and define it...
+    if cs.starts_with("\\if") {  // Apparently an \ifsomething ???
+      let name = cs.replace("\\if","");
+      Error!("undefined", token, caller, self, s!("The token {} is not defined. Defining it now as with \\newif", token.stringify()) );
+      self.install_definition(Expandable::new(
+          T_CS!(s!("\\{}true", name)), None, s!("\\let{}\\iftrue",cs), None, self), Some(Scope::Global));
+      self.install_definition(Expandable::new(
+          T_CS!(s!("\\{}false",name)), None, s!("\\let{}\\iffalse" ,cs), None, self), Some(Scope::Global));
+      self.let_i(&token, T_CS!("\\iffalse"), Some(Scope::Global));
+    } else {
+      Error!("undefined", token, caller, self, s!("The token {} is not defined. Defining it now as <ltx:ERROR/>", token.stringify()));
+      let owned_cs = cs.to_owned();
+      self.install_definition(
+        Constructor {
+          cs: token.clone(),
+          replacement: Some(Arc::new(move |document, args, props, i_state| {
+            document.make_error("undefined", &owned_cs, i_state)
+          })),
+          ..Constructor::default() },
+          //TODO: sizer => "X"),
+        Some(Scope::Global));
+    }
+    Ok(token)
   }
 
   pub fn generate_ligature_id(&mut self) -> usize {

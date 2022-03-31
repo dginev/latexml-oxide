@@ -96,6 +96,9 @@ impl Tokens {
   /// Return a reference to the tokens making up this Tokens
   pub fn as_ref_unlist(&self) -> &Vec<Token> { &self.0 }
 
+  /// Return a mutable reference to the tokens making up this Tokens
+  pub fn as_mut_unlist(&mut self) -> &Vec<Token> { &mut self.0 }
+
   /// Are there any tokens at all contained in this Tokens object
   pub fn is_empty(&self) -> bool { self.0.is_empty() }
 
@@ -188,7 +191,7 @@ impl Tokens {
 
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> { stomach.digest(self, state) }
 
-  pub fn neutralize(self, extraspecials: &[Token], state: &State) -> Tokens {
+  pub fn neutralize(self, extraspecials: &[char], state: &State) -> Tokens {
     Tokens(self.0.into_iter().map(|t| t.neutralize(extraspecials, state)).collect::<Vec<_>>())
   }
 
@@ -319,6 +322,41 @@ impl Tokens {
     }
     result
   }
+
+  // Process the CC_PARAM tokens for use as a macro body (and other token lists)
+  // Groups PARAM+OTHER token pair into match tokens.
+  // Collapses PARAM+PARAM token pair into a single PARAM
+  // B book suggests running this
+  // and remove dont_expand markers.
+  pub fn pack_parameters(self, state:&State) -> Self {
+    let mut rescanned = Vec::new();
+    let mut toks      = self.unlist().into_iter().collect::<VecDeque<_>>();
+    while let Some(mut t) = toks.pop_front() {
+      if t.get_catcode() == Catcode::PARAM && !toks.is_empty() {
+        // NOTE for future cleanup: Only CC_CS & CC_ACTIVE should ever get with_dont_expand!
+        let next_t  = toks.pop_front();
+        let next_cc = next_t.as_ref().map(|t| &t.code);
+        if next_cc == Some(&Catcode::OTHER) {
+          // only group clear match token cases
+          rescanned.push(T_ARG!(next_t.unwrap()));
+        } else if next_cc == Some(&Catcode::PARAM) {
+          rescanned.push(t);
+        } else {    // any other case, preserve as-is, let the higher level call resolve any errors
+                    // e.g. \detokenize{#,} is legal, while \textbf{#,} is not
+          Error!("misdefined", "expansion", None, state, "Parameter has a malformed arg, should be #1-#9 or ##. In expansion {}", Tokens::new(toks.clone().into_iter().collect()).to_string());
+        }
+      } else if let Some(mut inner) = t.smuggled.take() {
+        if let Some(smuggled) = inner.smuggled.take() {
+          rescanned.push(*smuggled);
+        } else {
+          rescanned.push(*inner);
+        }
+      } else {
+        rescanned.push(t);
+      }
+    }
+    Tokens::new(rescanned)
+  }
 }
 
 impl ToTokens for Tokens {
@@ -344,7 +382,6 @@ impl ToTokens for Catcode {
       SUPER => "SUPER",
       SUB => "SUB",
       SPACE => "SPACE",
-      NOTEXPANDED => "NOTEXPANDED",
       // Non-primitive
       IGNORE => "IGNORE",
       LETTER => "LETTER",
@@ -354,6 +391,8 @@ impl ToTokens for Catcode {
       INVALID => "INVALID",
       CS => "CS",
       MARKER => "MARKER",
+      ARG => "ARG",
+      SmuggleTHE => "SmuggleTHE"
     };
     stream.append(Ident::new("Catcode", Span::call_site()));
     stream.append(Punct::new(':', Spacing::Joint));
@@ -369,7 +408,8 @@ impl ToTokens for Token {
     stream.extend(quote! {
       Token {
         text: Cow::Borrowed(#text),
-        code: #code
+        code: #code,
+        smuggled: None
       }
     });
   }

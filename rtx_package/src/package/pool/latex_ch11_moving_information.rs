@@ -190,7 +190,7 @@ LoadDefinitions!(outer_stomach, state, {
         if tok == T_CS!("\\par") || tok == T_CS!("\\bibitem") {
           Ok(Tokens!(tok))
         } else {
-          gullet.unread(Tokens!(tok));
+          gullet.unread_one(tok);
           Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
         }
       } else {

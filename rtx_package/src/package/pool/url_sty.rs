@@ -35,22 +35,24 @@ LoadDefinitions!(state, {
   // as well as used to generate the reversion.
   // In any case, we read the verbatim arg, and build a Whatsit for @@Url
   DefMacro!("\\@Url Token", sub[gullet, args, state] {
-    unpack!(args => cmd);
-    state.begin_semiverbatim(Some(vec!['%']));
+    unpack_to_token!(args => cmd);
+    let perc = vec!['%'];
+    state.begin_semiverbatim(Some(&perc));
     let mut open = gullet.read_token(state).unwrap();
     let mut close;
     let url = if open == T_BEGIN!() {
       open = T_OTHER!("{");
       close = T_OTHER!("}");
-      gullet.read_balanced(state)?
+      gullet.read_balanced(false, state)?
     } else {
       open = T_OTHER!(open.get_string());
       close = open.clone();
-      gullet.get_mouth_mut().unwrap().read_tokens(Some(&close), state)
+      gullet.read_until_token(close.clone(), state)?
     };
     state.end_semiverbatim()?;
 
     let toks : Vec<Token> = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE).map(|t| T_OTHER!(t.get_string())).collect();
+
     let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
     url_wrapped.extend(toks.clone());
     url_wrapped.push(T_CS!("\\UrlRight"));
@@ -66,7 +68,7 @@ LoadDefinitions!(state, {
 
   // Define \Url, in case its used; won't be represented as nicely
   DefMacro!("\\Url", sub[gullet, args, state] {
-    gullet.unread(Tokens!(T_OTHER!("\\Url")));
+    gullet.unread_one(T_OTHER!("\\Url"));
     Ok(Tokens!(T_CS!("\\@Url")))
   });
 

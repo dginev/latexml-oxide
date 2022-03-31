@@ -89,10 +89,10 @@ impl<'t> Stomach {
   // Digest a list of tokens independent from any current Gullet.
   // Typically used to digest arguments to primitives or constructors.
   // Returns a List containing the digested material.
-  pub fn digest<T: Into<Tokens>>(&mut self, tokens: T, state: &mut State) -> Result<Digested> {
+  pub fn digest<T: Into<Tokens>>(&mut self, tokens: T, outer_state: &mut State) -> Result<Digested> {
     let mut tokens: Tokens = tokens.into();
 
-    self.reading_from_mouth(Mouth::default(), state, move |stomach, state| {
+    self.reading_from_mouth(Mouth::default(), outer_state, move |stomach, state| {
       let local_box_list = stomach.regurgitate(); // grab the current boxes to emulate local frame;
 
       stomach.get_gullet_mut().unread(tokens);
@@ -211,7 +211,7 @@ impl<'t> Stomach {
           // A math-active character will (typically) be a macro,
           // but it isn't expanded in the gullet, but later when digesting, in math mode
           // (? I think)
-          let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
+          let mut invoked_meaning = meaning.invoke(&mut self.gullet, false, state)?;
           self.gullet.unread(invoked_meaning);
           // replace the token by it's expansion!!!
           maybe_token = self.gullet.read_x_token(true, false, state)?.map(Cow::Owned);
@@ -220,7 +220,7 @@ impl<'t> Stomach {
         },
         Stored::Conditional(meaning) => {
           // Conditionals are "expandable", use the regular invoke.
-          let mut invoked_meaning = meaning.invoke(&mut self.gullet, state)?;
+          let mut invoked_meaning = meaning.invoke(&mut self.gullet, false, state)?;
           self.gullet.unread(invoked_meaning);
           maybe_token = self.gullet.read_x_token(true, false, state)?.map(Cow::Owned);
           self.token_stack.pop();
@@ -301,7 +301,7 @@ impl<'t> Stomach {
 
       let gullet = self.get_gullet_mut();
       state.let_i(token, T_CS!("\\iffalse"), None);
-      gullet.unread(Tokens!(token.clone())); // Retry
+      gullet.unread_one(token.clone()); // Retry
       Ok(Vec::new())
     } else {
       let message = s!("The token {} is not defined.", token.stringify());

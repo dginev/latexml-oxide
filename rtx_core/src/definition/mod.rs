@@ -80,7 +80,7 @@ impl From<String> for ExpansionBody {
 }
 
 pub trait Definition: Object {
-  fn invoke(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens>;
+  fn invoke(&self, gullet: &mut Gullet, once_only: bool, state: &mut State) -> Result<Tokens>;
   fn invoke_primitive(&self, gullet: &mut Stomach, caller: Arc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>>;
 
   /// We can almost always return the CS by reference, except in a Register's RefCell, where we are
