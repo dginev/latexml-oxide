@@ -70,7 +70,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | tight_term factor => invisible_times;
 
     term = tight_term
-      | term mulop tight_term => infix_apply
+      | term mulop tight_term => infix_apply_nary
       | term mulop tight_term elideop => infix_apply_and_elide;
 
     // Expressions

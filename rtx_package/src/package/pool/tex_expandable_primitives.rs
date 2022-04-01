@@ -253,7 +253,15 @@ LoadDefinitions!(outer_state, {
   DefMacro!(T_CS!("\\splitfirstmark"), None, Tokens!());
   DefMacro!(T_CS!("\\splitbotmark"), None, Tokens!());
 
-  DefMacro!("\\input TeXFileName", sub[gullet,args,state] { input(args[0].to_string(), gullet, state); });
+  // using input() from DefMacro is actually an incredible ordeal.
+  // I tried several variations of arranging the types, but Rust is quite strict
+  // about avoiding multiple borrows that relate to "state"
+  // when mutability is involved.
+  // For now I have changed to DefPrimitive, so that there is a clear access to the
+  // stomach, but we may require some special-case treatment in other pieces of code...
+  DefPrimitive!("\\input TeXFileName", sub[stomach,args,state] {
+    input(&args[0].to_string(), InputOptions::default(), stomach, state)?;
+  });
 
   // Note that TeX doesn't actually close the mouth;
   // it just flushes it so that it will close the next time it's read!

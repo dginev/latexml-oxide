@@ -1938,14 +1938,17 @@ macro_rules! ProcessOptions {
 macro_rules! AddToMacro {
   ($cs:literal, $tokens:literal) => {{
     bind_state_mut!(stmch, st);
-    let cs = T_CS!($cs);
-    let tokens = TokenizeInternal!($tokens);
+    let into_cs = T_CS!($cs);
+    let into_tokens = TokenizeInternal!($tokens);
+    AddToMacro!(into_cs, into_tokens, stmch, st);
+  }};
+  ($cs:ident, $tokens:ident, $stomach:ident, $state:ident) => {{
     // Needs error checking!
-    let defn = st.lookup_definition(&cs);
+    let defn = $state.lookup_definition(&$cs);
     if defn.is_none() || !defn.as_ref().unwrap().is_expandable() {
-      let message = s!("{} is not an expandable control sequence", cs);
+      let message = s!("{} is not an expandable control sequence", $cs);
       let message2 = "Ignoring addition";
-      Warn!("unexpected", cs, stmch, st, message, message2);
+      Warn!("unexpected", $cs, $stomach, $state, message, message2);
     } else {
       let mut expansion = match defn.unwrap().get_expansion() {
         // the .clone() call is again avoidable with a careful refactor via e.g. using `.remove_definition` from state
@@ -1954,16 +1957,16 @@ macro_rules! AddToMacro {
         Some(ExpansionBody::Closure(_)) => {
           let message = s!(
             "{} has a closure body, AddToMacro will *override* with an ExpandableBody::Tokens ! This is usually in error!",
-            cs
+            $cs
           );
-          Warn!("unexpected", "ExpandableBody::Closure", stmch, st, message);
+          Warn!("unexpected", "ExpandableBody::Closure", $stomach, $state, message);
           Vec::new()
         },
         None => Vec::new(),
       };
-      expansion.extend(tokens.unlist());
+      expansion.extend($tokens.unlist());
       def_macro(
-        cs,
+        $cs,
         None,
         ExpansionBody::Tokens(Tokens!(expansion)),
         Some(ExpandableOptions {
@@ -1971,7 +1974,7 @@ macro_rules! AddToMacro {
           nopack_parameters: true,
           ..ExpandableOptions::default()
         }),
-        st,
+        $state,
       );
     }
   }};

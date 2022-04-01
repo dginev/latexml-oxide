@@ -19,7 +19,7 @@ use rtx_core::{fatal, map, s, Core, Debug, Digested, Explode, T_CS, T_OTHER, T_S
 
 use rtx_codegen::LoadModel;
 use rtx_math_parser::MathParser;
-use rtx_package::{input_content, input_definitions, load_model, InputDefinitionOptions};
+use rtx_package::{input_content, input_definitions, load_model, InputDefinitionOptions, InputOptions};
 
 lazy_static! {
   static ref CLS_EXT_REGEX: Regex = Regex::new(r"\.cls$").unwrap();
@@ -125,7 +125,7 @@ impl DigestionAPI for Core {
     // // Reverse order, since last opened is first read!
 
     // $self->loadPostamble($options{postamble}) if $options{postamble};
-    input_content(self, &request)?;
+    input_content(&request, InputOptions::default(), &mut self.stomach.write().unwrap(), &mut self.state)?;
     // $self->loadPreamble($options{preamble}) if $options{preamble};
 
     // // Now for the Hacky part for BibTeX!!!
@@ -328,7 +328,7 @@ impl DigestionAPI for Core {
       self.load_postamble(postamble);
     }
 
-    input_content(self, &request)?;
+    input_content(&request, InputOptions::default(), &mut self.stomach.write().unwrap(), &mut self.state)?;
 
     if let Some(preamble) = options.preamble {
       self.load_preamble(preamble);

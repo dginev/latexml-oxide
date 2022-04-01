@@ -86,10 +86,15 @@ pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPr
 }
 
 /// application with trailing elision, as in `x \cdot y \cdot\cdot\cdot`
-pub fn infix_apply_and_elide(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
+pub fn infix_apply_and_elide(rule_id: i32, mut args: Vec<Option<Tree>>, p: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
   unpack!(args => arg1, infixop, arg2, elision);
-  let apply_tree = Tree::Apply(infixop.into(), Args(vec![arg1, arg2, elision]), Meta::default());
-  Ok(Some(apply_tree))
+  // check if "left" is already an application of infix op, in which case we can do n-ary apply.
+  if let Some(Tree::Apply(new_op, mut new_args, meta)) = infix_apply_nary(rule_id, vec!(arg1, infixop, arg2), p)? {
+    new_args.0.push(elision);
+    Ok(Some(Tree::Apply(new_op, new_args, meta)))
+  } else {
+    Ok(None)
+  }
 }
 
 // infix_apply in the base case,
@@ -140,7 +145,9 @@ pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[Validatio
 pub fn infix_apply_nary(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics]) -> Result<Option<Tree>, Box<dyn Error>> {
   unpack!(args => left, infixop, right);
   let mut left = left;
-  // left-to-right associative -- if "left" is already "infixop", tuck "right" in:
+  // left-to-right associative:
+  // 1. if "left" is already an application of "infixop",
+  // 2. then tuck "right" inside it.
   if let Some(Tree::Apply(ref left_op, ref mut left_args, ref _m)) = left {
     if let Tree::Lexeme(left_op_lex, _xmeta) = &*left_op.0 {
       if let Some(Tree::Lexeme(ref infix_op_lex, _)) = infixop {
