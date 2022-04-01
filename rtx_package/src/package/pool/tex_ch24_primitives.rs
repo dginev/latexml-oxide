@@ -141,10 +141,13 @@ LoadDefinitions!(state, {
   //     my ($gullet, $tokens) = @_;
   //     return map { lcToken($_) } $tokens->unlist; });
 
-  // DefPrimitive('\message{}', sub {
-  //     my ($stomach, $stuff) = @_;
-  //     print STDERR ToString(Expand($stuff)) . "\n" if LookupValue('VERBOSITY') > -1;
-  //     return; });
+  DefPrimitive!("\\message{}", sub [stomach, args, state] {
+    unpack!(args => message);
+    if state.lookup_int("VERBOSITY") > -1 {
+      eprintln!("{}", writable_tokens(
+        do_expand(message, stomach.get_gullet_mut(), state)?, state)?);
+    }
+  });
 
   // DefRegister('\errhelp' => Tokens());
   // DefPrimitive('\errmessage{}', sub {

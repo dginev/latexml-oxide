@@ -91,7 +91,7 @@ LoadDefinitions!(state, {
 
       let tex_opt = if let Some(ref tbox) = document.get_node_box(node) {
         if let Some(body) = tbox.get_body() {
-          Some(untex(&body, state)?)
+          Some(untex_digested(&body, false, state)?)
         // local $LaTeXML::DUAL_BRANCH = 'presentation';
         // let tex = untex(body, state);
         // $LaTeXML::DUAL_BRANCH = 'content';

@@ -11,8 +11,11 @@ LoadDefinitions!(state, {
   // DefPrimitiveI('\protected', undef, sub {
   //     $STATE->setPrefix('protected'); return; }, isPrefix => 1);
 
-  // # \detokenize
-  // DefMacro('\detokenize GeneralText', sub { Explode(UnTeX($_[1])); });
+  // \detokenize
+  DefMacro!("\\detokenize GeneralText", sub [gullet, args, state] {
+    unpack!(args => text);
+    Explode!(writable_tokens(text, state)?)
+  });
 
   // # \unexpanded
   // # This is like \noexpand, but acts on <general text>

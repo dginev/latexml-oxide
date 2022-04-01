@@ -568,6 +568,28 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
     .collect()
 }
 
+/// Converts $tokens to a string in the fashion of \message and others:
+/// doubles #, converts to string; optionally adds spaces after control sequences
+/// in the spirit of the B Book, "show_token_list" routine, in 292.
+pub fn writable_tokens(tokens: Tokens, state: &mut State) -> Result<String> {
+  // unwrap a \noexpand-created \relax to its actual content,
+  // to avoid confusing users with a \relax dontexpand
+  let mut wv = Vec::new();
+  for t in tokens.unlist().into_iter() {
+    let t = t.without_dont_expand();
+    match t.code {
+      Catcode::CS =>    { wv.push(t); wv.push(T_SPACE!()); },
+      Catcode::SPACE => { wv.push(T_SPACE!()); },
+      Catcode::PARAM => { wv.push(t.clone()); wv.push(t); },
+      Catcode::ARG => {
+        // B Book, 294. Reduce to param+integer
+        wv.push(T_PARAM!()); wv.push(T_OTHER!(t.get_string())); }
+      _ => { wv.push(t); }
+    }
+  }
+  untex(Tokens::new(wv), true, state)
+}
+
 // sub orNull {
 //   return (grep { defined } @_) ? @_ : undef; }
 

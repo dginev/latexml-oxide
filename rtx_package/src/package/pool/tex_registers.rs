@@ -57,7 +57,7 @@ LoadDefinitions!(state, {
     ("defaulthyphenchar", 45),
     ("defaultskewchar", -1),
     ("escapechar", 92),
-    ("endlinechar", 0),
+    ("endlinechar", 13),
     ("newlinechar", -1),
     ("maxdeadcycles", 0),
     ("hangafter", 0),

@@ -10,7 +10,7 @@ LoadDefinitions!(state, {
     AssignCatcode!(' ', Catcode::ACTIVE);
     Let!(&T_ACTIVE!(" "), T_CS!("\\space"));
     AssignCatcode!('\r' => Catcode::ACTIVE);    // Variant of \obeylines
-    Let!(&T_ACTIVE!("\r"), T_SPACE!("\n"));    // More appropriate than \par, I think?
+    Let!(&T_ACTIVE!("\r"), Token!("\n",Catcode::SPACE));    // More appropriate than \par, I think?
     AssignValue!("PRESERVE_NEWLINES", 1);
     // \@noligs: This SHOULD inhibit ligature substitution! (eg quotes, dots, etc!!!)
     // \frenchspacing\@vobeyspaces1
