@@ -122,6 +122,23 @@ LoadDefinitions!(outer_state, {
     }
   });
 
+  DefConstructor!("\\@internal@verb{} Undigested {}",
+    "?#isMath(<ltx:XMTok font='#font'>#text</ltx:XMTok>)(<ltx:verbatim font='#font'>#text</ltx:verbatim>)",
+    properties => sub[stomach, args, state] {
+      unpack!(args => a1, a2, a3);
+      Ok(map!("text" => Stored::String(a3.to_string())))
+    },
+  font => { family => "typewriter", series => "medium", shape => "upright" },
+  before_construct => sub[doc, whatsit, state] {
+    if !whatsit.is_math() {
+      if !doc.can_contain(&doc.get_element().unwrap(), "#PCDATA", state) {
+        doc.open_element("ltx:p", None, None, state)?;
+      }
+    }
+  },
+  reversion => "\\verb#1#2#3#2");
+
+
   DefConstructor!("\\@text@verb{}{}", "<ltx:verbatim font='#font'>#2</ltx:verbatim>",
     before_digest => sub[stomach, state] {
       stomach.bgroup(state);

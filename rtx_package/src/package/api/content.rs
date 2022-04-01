@@ -234,11 +234,16 @@ fn input_handle_options(
   );
   Ok(())
 }
-
-pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
-  match find_file(request, None, &mut core.state) {
+#[derive(Debug, Default, Clone)]
+pub struct InputOptions {
+  pub noerror: bool,
+  pub file_type: Option<String>,
+}
+pub fn input_content(request: &str, options: InputOptions, stomach: &mut Stomach, state :&mut State) -> Result<()> {
+  let filepath = find_file(request, None, state);
+  match filepath {
     // TODO: type => $options{type}, noltxml => 1
-    Some(path) => load_tex_content(core, &path),
+    Some(path) => load_tex_content(&path, options, stomach, state),
     None => fatal!(Package, MissingFile, request),
     /* TODO:
      * Error("missing_file", request, state.get_stomach().get_gullet(),
@@ -246,8 +251,8 @@ pub fn input_content(core: &mut Core, request: &str) -> Result<()> {
   }
 }
 
-pub fn input(file: String, gullet: &mut Gullet, state: &mut State) {
-  unimplemented!();
+pub fn input(request: &str, options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+  input_content(request, options, stomach, state)
 }
 
 fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, state: &mut State) -> Result<()> {
@@ -292,10 +297,10 @@ fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, st
     state,
   )?;
 
-  stomach.reading_from_mouth(pathname_mouth, state, move |stomach, state| -> Result<()> {
-    while let Some(token) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
+  stomach.reading_from_mouth(pathname_mouth, state, move |i_stomach, i_state| -> Result<()> {
+    while let Some(token) = i_stomach.get_gullet_mut().read_x_token(false, false, i_state)? {
       if token != T_SPACE!() {
-        stomach.invoke_token(&token, state)?;
+        i_stomach.invoke_token(&token, i_state)?;
       }
     }
     Ok(())
@@ -306,26 +311,26 @@ fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, st
   Ok(())
 }
 
-pub fn load_tex_content(core: &mut Core, path: &str) -> Result<()> {
+pub fn load_tex_content(path: &str, options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   // If there is a file-specific declaration file (name_tex.rs), load it first!
   // let namespace = path;
   // state.extra_bindings_dispatch
   if !pathname::is_literaldata(path) {
     let (dir, base, ext) = pathname::split(path);
-    load_external_binding(&base, &mut core.state, &mut core.stomach.write().unwrap())?;
+    load_external_binding(&base, state, stomach)?;
   }
   // TODO: Caching
   // content => LookupValue($pathname . '_contents')
 
   // Open a mouth for that TeX content
-  core.stomach.write().unwrap().get_gullet_mut().open_mouth(
+  stomach.get_gullet_mut().open_mouth(
     Mouth::create(
       path,
       MouthOptions {
         notes: true,
         ..MouthOptions::default()
       },
-      &mut core.state,
+      state,
     )?,
     true,
   );

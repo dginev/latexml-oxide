@@ -1,15 +1,19 @@
 use crate::package::*;
 
 LoadDefinitions!(state, {
-  // # See http://tex.loria.fr/moteurs/etex_ref.html
-  // # Section 3. The new features
+// See http://tex.loria.fr/moteurs/etex_ref.html
+// Or better yet, see the full manual
+// http://texdoc.net/texmf-dist/doc/etex/base/etex_man.pdf
+// Section 3. The new features
 
-  // #======================================================================
-  // # 3.1 Additional control over expansion
-  // # \protected associates with the next defn
-  // # (note that it isn't actually used anywhere).
-  // DefPrimitiveI('\protected', undef, sub {
-  //     $STATE->setPrefix('protected'); return; }, isPrefix => 1);
+//======================================================================
+// 3.1 Additional control over expansion
+// \protected associates with the next defn
+// (note that it isn't actually used anywhere).
+  DefPrimitive!("\\protected", sub[stomach, args, state] {
+    state.set_prefix("protected");
+  },
+  is_prefix => true);
 
   // \detokenize
   DefMacro!("\\detokenize GeneralText", sub [gullet, args, state] {
@@ -17,14 +21,14 @@ LoadDefinitions!(state, {
     Explode!(writable_tokens(text, state)?)
   });
 
-  // # \unexpanded
-  // # This is like \noexpand, but acts on <general text>
-  // # with the peculiarity of how <filler> is expanded beforehand!
-  // DefMacro('\unexpanded GeneralText', sub {
-  //     my ($gullet, $tokens) = @_;
-  //     return $gullet->neutralizeTokens($tokens->unlist); });
-  // #======================================================================
-  // # 3.2. Provision for re-scanning already read text
+  // When building an expanded token list, the tokens resulting from the expansion
+  // of \unexpanded are not expanded further (this is the same behaviour as is
+  // exhibited by the tokens resulting from the expansion of
+  // \the〈token variable〉in both TEX and ε-TEX).
+  DefMacro!("\\unexpanded GeneralText", "#1");
+
+  // ======================================================================
+  // 3.2. Provision for re-scanning already read text
 
   // \readline; like \read, but only spaces & other
   DefMacro!("\\readline Number SkipKeyword:to SkipSpaces Token", sub[gullet, args, state] {
@@ -41,8 +45,10 @@ LoadDefinitions!(state, {
     }
   });
 
-  // DefMacro("\scantokens GeneralText", sub {
-  //     LaTeXML::Core::Mouth->new(UnTeX($_[1]))->readTokens; });
+  DefMacro!("\\scantokens GeneralText", sub[gullet, args, state] {
+    unpack!(args=>tokens);
+    Mouth::new(&untex(tokens,false,state)?, None, state)?.read_tokens(state)
+  });
 
   // #======================================================================
   // # 3.3 Environmental enquiries
