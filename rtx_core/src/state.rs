@@ -418,7 +418,20 @@ impl State {
     }
   }
 
-  pub fn assign_internal(&mut self, table_name: TableName, key: &str, value: Stored, scope_opt: Option<Scope>) {
+  pub fn assign_internal(&mut self, table_name: TableName, key: &str, value: Stored, mut scope_opt: Option<Scope>) {
+    // hotcode lookupDefinition for \globaldefs,
+    // since this is called extremely often and should be highly standardized
+    if let Some(globaldefs) = self.value.get("\\globaldefs") {
+      if let Some(global_value) = globaldefs.front() {
+        // magic TeX register override: \globaldefs
+        if *global_value == Stored::Int(1) {
+          scope_opt = Some(Scope::Global);
+        } else if *global_value == Stored::Int(-1) {
+          scope_opt = Some(Scope::Local);
+        }
+      }
+    }
+    // regular check, local scope is default, unless a global prefix is set
     let scope = match scope_opt {
       Some(s) => s,
       None => {
@@ -454,7 +467,7 @@ impl State {
       // Undo the bindings, if `key` was bound in this frame
       let state_table = self.table_mut(table_name);
       if let Some(defs) = state_table.get_mut(key) {
-        for _ in 1..=undo_count {
+        for _ in 0..undo_count {
           defs.pop_front();
         }
       }
@@ -1097,10 +1110,11 @@ impl State {
       let popped_frame = self.undo.pop_front().unwrap();
       for table_name in TableName::variants() {
         let undo_table = popped_frame.table(table_name);
+        let mut state_table = self.table_mut(table_name);
         for (key, undo_count) in undo_table.iter() {
           // Typically only 1 value to shift off the table, unless scopes have been activated.
-          let name_table = self.table_mut(table_name).get_mut(key).unwrap();
-          for _ in 1..=*undo_count {
+          let name_table = state_table.get_mut(key).unwrap();
+          for _ in 0 .. *undo_count {
             name_table.pop_front();
           }
         }

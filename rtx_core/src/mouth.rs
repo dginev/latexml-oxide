@@ -63,7 +63,7 @@ impl FoodType {
 
 lazy_static! {
   static ref LASTID: Mutex<u32> = Mutex::new(0);
-  static ref LINEBREAK_REGEX: Regex = Regex::new(r"\r\n?|\n\r?").unwrap();
+  static ref LINEBREAK_REGEX: Regex = Regex::new(r"\r\n|\r|\n").unwrap();
   static ref LOWERHEX_REGEX: Regex = Regex::new(r"^[0-9a-f]$").unwrap();
   static ref SANITIZE_LINE_REGEX: Regex = Regex::new(r"((\\ )*)\s*$").unwrap();
 }
@@ -190,7 +190,6 @@ impl Mouth {
         ..Mouth::default()
       },
     };
-
     mouth.open(text, state)?;
     Ok(mouth)
   }
@@ -289,7 +288,11 @@ impl Mouth {
   /// into "lines" ending with CRLF, CR or LF (DOS, Mac or Unix).
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
   fn split_lines(lines: &str) -> VecDeque<String> {
-    LINEBREAK_REGEX.split(lines).map(ToString::to_string).collect() // And split.
+    let mut lines :VecDeque<String> = LINEBREAK_REGEX.split(lines).map(ToString::to_string).collect(); // And split.
+    if lines.iter().last() == Some(&String::new()) {
+      lines.pop_back();
+    }
+    lines
   }
 
   /// Original LaTeXML:
@@ -652,7 +655,7 @@ impl Mouth {
     let token = if self.colno == 1 {
       T_CS!("\\par")
     } else if state.lookup_int("PRESERVE_NEWLINES") > 0 {
-      T_SPACE!("\n")
+      Token!("\n", Catcode::SPACE)
     } else {
       T_SPACE!()
     };
@@ -743,9 +746,11 @@ impl Mouth {
     if self.skipping_spaces {
       let mut cc = None;
       while let Some((_, ncc)) = self.get_next_char(state) {
-        cc = Some(ncc);
         if ncc != Catcode::SPACE {
+          cc = Some(ncc);
           break;
+        } else {
+          cc = None;
         }
       }
       if self.colno <= self.nchars && cc.is_some() && cc != Some(Catcode::SPACE) {
@@ -758,7 +763,7 @@ impl Mouth {
         }
       }
     }
-    let eol = self.colno > self.nchars;
+    let eol = self.colno >= self.nchars;
     self.colno = savecolno;
     eol
   }

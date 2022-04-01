@@ -491,9 +491,12 @@ macro_rules! ExplodeText(($text:expr) => (
 ));
 
 static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
-pub fn untex(digested: &Digested, state: &mut State) -> Result<String> {
+pub fn untex_digested(digested: &Digested, suppress_linebreak: bool, state: &mut State) -> Result<String> {
+  untex(digested.revert(state)?, suppress_linebreak, state)
+}
+pub fn untex(tokens: Tokens, _suppress_linebreak: bool, state: &mut State) -> Result<String> {
   use crate::token::Catcode::*;
-  let mut tokens: VecDeque<Token> = digested.revert(state)?.unlist().into_iter().collect();
+  let mut tokens: VecDeque<Token> = tokens.unlist().into_iter().collect();
   let mut tex_string = String::new();
   let mut length = 0;
   let mut level: i32 = 0;

@@ -178,7 +178,7 @@ impl Converter {
     // 2.1 Now, convert to DOM and output, if desired.
     let dom_result: Result<Document>;
     let serialized = match self.opts.format {
-      OutputFormat::TeX => match token::untex(&digested, &mut self.core.state) {
+      OutputFormat::TeX => match token::untex_digested(&digested, false, &mut self.core.state) {
         Ok(tex) => tex,
         Err(e) => {
           return ConversionResponse {
