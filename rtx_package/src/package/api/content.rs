@@ -16,11 +16,15 @@ use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;
-use rtx_core::{Core, Digested};
+use rtx_core::{Digested};
 
 use super::def_dialect::def_macro;
 use super::*;
 use crate::package::pool;
+
+lazy_static! {
+  static ref QUOTE_WRAPPED : Regex = Regex::new("^\"(.+)\"$").unwrap();
+}
 
 pub fn load_external_binding(file: &str, state: &mut State, mut stomach: &mut Stomach) -> Result<bool> {
   let taken_dispatcher = state.extra_bindings_dispatch.take();
@@ -251,8 +255,60 @@ pub fn input_content(request: &str, options: InputOptions, stomach: &mut Stomach
   }
 }
 
-pub fn input(request: &str, options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
-  input_content(request, options, stomach, state)
+pub fn input(mut request: &str, options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+  //  // unwrap if in quotes \input{"file name"}
+  // while request.starts_with('"') && request.ends_with('"') {
+  //   request = QUOTE_WRAPPED.replace(request);
+  // }
+  // // HEURISTIC! First check if equivalent style file, but only under very specific circumstances
+  // if pathname_is_literaldata(request) {
+  //   let (dir, name, ftype) = pathname_split(request);
+  //   let file = name;
+  //   if !ftype.is_empty() {
+  //     file += format!(".{}",ftype);
+  //   }
+  //   let path;
+  //   // Firstly, check if we are going to OVERRIDE the requested raw .tex file
+  //   // with a latexml binding to a style file.
+  //   if ((dir.is_empty() && (ftype.is_empty() || (ftype == "tex"))  // No SPECIFIC directory, but a raw tex file.
+  //       // AND, in preamble; SHOULD be style file, OR also if we can't find the raw file.
+  //     && (LookupValue!("inPreamble") || !FindFile(file))
+  //     && (path = FindFile(name, type => 'sty', notex => 1))) { // AND there IS such a style file
+  //     Info!("ignore", request, stomach.get_gullet(),
+  //       s!("Ignoring input of tex {}, using package {} instead", request, name));
+  //     RequirePackage!(name); // Then override, assuming we'll find name as a package file!
+  //     return;
+  //   }
+  // }
+  // // Next special case: If we were currently reading a "known" style or binding file,
+  // // then this file, even if .tex, must also be definitions rather than content.!!(?)
+  // if state.lookup_bool("INTERPRETING_DEFINITIONS") {
+  //   input_definitions(request);
+  // }
+  if let Some(path) = find_file(request, None, state) { // Found something plausible..
+  //   let ftype = if pathname_is_literaldata(path) { "tex" } else {
+  //     pathname_type(path)
+  //   };
+
+  //   // Should we be doing anything about options in the next 2 cases?..... I kinda think not, but?
+  //   if (ftype == "rs") {                  // it's a LaTeXML binding.
+  //     load_rtx(request, path);
+  //   }
+  //   // Else some sort of "known" definitions type file, but not simply 'tex'
+  //   else if (ftype != "tex") && (pathname_is_raw(path)) {
+  //     load_tex_definitions(request, path);
+  //   } else {
+      load_tex_content(&path, options, stomach, state)
+  //   }
+  } else { // Couldn't find anything?
+    state.note_status("missing");//, request);
+    // We presumably are trying to input Content; an error if we can't find it (contrast to Definitions)
+    let gullet = stomach.get_gullet();
+    Error!("missing_file", request, gullet, state,
+       s!("Can't find TeX file {}", request));
+      //  maybeReportSearchPaths());
+    Ok(())
+  }
 }
 
 fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, state: &mut State) -> Result<()> {

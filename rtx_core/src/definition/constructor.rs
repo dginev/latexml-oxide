@@ -172,7 +172,7 @@ impl Definition for Constructor {
 
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
-
+    let state_font = state.lookup_font();
     let ismath = state.lookup_bool("IN_MATH");
     // info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
     // Parse AND digest the arguments to the Constructor
@@ -191,15 +191,11 @@ impl Definition for Constructor {
     //   if (ref $value eq 'CODE') {
     //     $properties{$key} = &$value($stomach, @args); } }
 
-    let this_font = match properties.get("font") {
-      Some(Stored::Font(ref f)) => Arc::clone(f),
-      _ => match state.lookup_font() {
-        Some(f) => Arc::clone(&f),
-        None => Arc::new(Font::text_default()), // should never happen?
-      },
-    };
-
-    properties.entry(s!("font")).or_insert_with(|| Stored::Font(this_font));
+    properties.entry(s!("font")).or_insert_with(||
+      match state_font {
+        Some(f) => Stored::Font(Arc::clone(&f)),
+        None => Stored::Font(Arc::new(Font::text_default())), // should never happen?
+      });
     // $properties{locator} = $stomach->getGullet->getMouth->getLocator unless defined
     // $properties{locator};
     properties.entry(s!("isMath")).or_insert_with(|| Stored::Bool(ismath));

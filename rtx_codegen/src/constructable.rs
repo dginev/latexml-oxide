@@ -212,7 +212,11 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       operations.push(quote!(
         let mut av_props : HashMap<String, String> = HashMap::new();
         #(#av)*
-        document.open_element(#current_tag, Some(av_props), None, state)?;
+        let this_font = match props.get("font") {
+          Some(Stored::Font(f)) => Some(&**f),
+          _ => None
+        };
+        document.open_element(#current_tag, Some(av_props), this_font, state)?;
       ));
       // Empty element?
       if replacement.starts_with('/') {
@@ -389,7 +393,9 @@ fn translate_avpairs(text: &mut String) -> Vec<proc_macro2::TokenStream> {
         .to_string();
       if is_match {
         let val = translate_string(text);
-        avs.push(quote!(av_props.insert(#key.to_string(), #val);));
+        if key != "font" {// we handle font in a special case
+          avs.push(quote!(av_props.insert(#key.to_string(), #val);))
+        };
       }
     }
     if !is_match {

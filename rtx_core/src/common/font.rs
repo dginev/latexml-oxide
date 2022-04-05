@@ -22,7 +22,7 @@ static DEFBACKGROUND: &str = "white";
 static DEFOPACITY: &str = "1";
 static DEFENCODING: &str = "OT1";
 static DEFLANGUAGE: &str = "en";
-static DEFSIZE: &str = "10"; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
+static DEFSIZE: f32 = 10.0; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
 
 // static FORCE_FAMILY : i8 = 0x1;
 // static FORCE_SERIES : i8 = 0x2;
@@ -107,6 +107,13 @@ lazy_static! {
      "i" => fontmap!(shape => "italic"), "it" => fontmap!(shape => "italic"), "sl" => fontmap!(shape => "slanted"),
      "sc" => fontmap!(shape => "smallcaps"), "csc" => fontmap!(shape => "smallcaps")
   );
+
+  static ref MATH_STYLE_SEP : HashMap<&'static str, HashMap<&'static str, i32>> = raw_map!(
+    "display" => raw_map!(
+      "display" => 0, "text" => 1, "script" => 2, "scriptscript" => 3),
+    "text"=> raw_map!("display" => -1, "text" => 0, "script" => 1, "scriptscript" => 2),
+    "script"=> raw_map!("display" => -2, "text" => -1, "script" => 0, "scriptscript" => 1),
+    "scriptscript" => raw_map!("display" => -3, "text" => -2, "script" => -1, "scriptscript" => 0));
 }
 
 /// Global auxiliary for font family lookup
@@ -130,24 +137,28 @@ pub struct Font {
   pub family: Option<Cow<'static, str>>,
   pub series: Option<Cow<'static, str>>,
   pub shape: Option<Cow<'static, str>>,
-  pub size: Option<Cow<'static, str>>,
+  pub size: Option<f32>,
   pub color: Option<Cow<'static, str>>,
   pub bg: Option<Cow<'static, str>>,
   pub opacity: Option<Cow<'static, str>>,
   pub encoding: Option<Cow<'static, str>>,
   pub language: Option<Cow<'static, str>>,
   pub mathstyle: Option<Cow<'static, str>>,
+  pub mathstylestep: Option<Cow<'static, str>>,
   pub emph: Option<bool>,
   // Note: forcefamily, forceseries, forceshape (& forcebold for compatibility)
   // are only useful for fonts in math; See the specialize method below.
   pub forceseries: Option<bool>,
   pub forcefamily: Option<bool>,
   pub forceshape: Option<bool>,
+  pub scale: Option<f32>
+}
+// display is used often for attributes in binding replacements,
+// as in font="#font"
+impl fmt::Display for Font {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.family.as_ref().unwrap_or(&Cow::Borrowed(""))) }
 }
 impl fmt::Debug for Font {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self) }
-}
-impl fmt::Display for Font {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut parts = Vec::new();
     if let Some(ref family) = self.family {
@@ -161,6 +172,9 @@ impl fmt::Display for Font {
     }
     if let Some(ref size) = self.size {
       parts.push(s!("size: {:?}", size))
+    }
+    if let Some(ref scale) = self.scale {
+      parts.push(s!("scale: {:?}", scale))
     }
     if let Some(ref color) = self.color {
       parts.push(s!("color: {:?}", color))
@@ -179,6 +193,9 @@ impl fmt::Display for Font {
     }
     if let Some(ref mathstyle) = self.mathstyle {
       parts.push(s!("mathstyle: {:?}", mathstyle))
+    }
+    if let Some(ref mathstylestep) = self.mathstyle {
+      parts.push(s!("mathstylestep: {:?}", mathstylestep))
     }
     if let Some(ref forceseries) = self.forceseries {
       parts.push(s!("forceseries: {:?}", forceseries))
@@ -199,17 +216,19 @@ impl Font {
       family: Some(Cow::Borrowed(DEFFAMILY)),
       series: Some(Cow::Borrowed(DEFSERIES)),
       shape: Some(Cow::Borrowed(DEFSHAPE)),
-      size: Some(Cow::Borrowed(DEFSIZE)),
+      size: Some(DEFSIZE),
       color: Some(Cow::Borrowed(DEFCOLOR)),
       bg: Some(Cow::Borrowed(DEFBACKGROUND)),
       opacity: Some(Cow::Borrowed(DEFOPACITY)),
       encoding: Some(Cow::Borrowed(DEFENCODING)),
       language: Some(Cow::Borrowed(DEFLANGUAGE)),
       mathstyle: None,
+      mathstylestep: None,
       emph: None,
       forceseries: None,
       forcefamily: None,
       forceshape: None,
+      scale: None,
     }
   }
   pub fn math_default() -> Self {
@@ -217,17 +236,19 @@ impl Font {
       family: Some(Cow::Borrowed("math")),
       series: Some(Cow::Borrowed(DEFSERIES)),
       shape: Some(Cow::Borrowed("italic")),
-      size: Some(Cow::Borrowed(DEFSIZE)),
+      size: Some(DEFSIZE),
       color: Some(Cow::Borrowed(DEFCOLOR)),
       bg: Some(Cow::Borrowed(DEFBACKGROUND)),
       opacity: Some(Cow::Borrowed(DEFOPACITY)),
       encoding: None,
       language: Some(Cow::Borrowed(DEFLANGUAGE)),
       mathstyle: Some(Cow::Borrowed("text")),
+      mathstylestep: None,
       emph: None,
       forceseries: None,
       forcefamily: None,
       forceshape: None,
+      scale: None
     }
   }
 
@@ -243,7 +264,7 @@ impl Font {
   pub fn get_family(&self) -> Option<&Cow<str>> { self.family.as_ref() }
   pub fn get_series(&self) -> Option<&Cow<str>> { self.series.as_ref() }
   pub fn get_shape(&self) -> Option<&Cow<str>> { self.shape.as_ref() }
-  pub fn get_size(&self) -> Option<&Cow<str>> { self.size.as_ref() }
+  pub fn get_size(&self) -> Option<f32> { self.size }
   pub fn get_color(&self) -> Option<&Cow<str>> { self.color.as_ref() }
   pub fn get_background(&self) -> Option<&Cow<str>> { self.bg.as_ref() }
   pub fn get_opacity(&self) -> Option<&Cow<str>> { self.opacity.as_ref() }
@@ -516,6 +537,25 @@ impl Font {
     ////      ? ('mathstyle' => { value => $mstyle, properties => { mathstyle => $mstyle } })
     ////      : ()),
     result
+  }
+
+  pub fn purestyle_changes(&self, other:&Font) -> Font {
+    let mathstyle      = self.get_mathstyle();
+    let othermathstyle = other.get_mathstyle();
+    let othercolor     = other.get_color();
+    let mut changes = Font::default();
+    changes.scale = Some(other.get_size().unwrap() / self.get_size().unwrap());
+    if is_diff(&othercolor.map(|x| x.clone()),&Some(Cow::Borrowed(DEFCOLOR))) {
+      changes.color = other.color.clone();
+    }
+    changes.bg = other.bg.clone();
+    changes.opacity = other.opacity.clone(); // should multiply or replace?
+
+    // TODO:
+    // if mathstyle && othermathstyle {
+    //   changes.mathstylestep = mathstylestep.get(mathstyle).unwrap().get(othermathstyle).unwrap();
+    // }
+    changes
   }
 }
 

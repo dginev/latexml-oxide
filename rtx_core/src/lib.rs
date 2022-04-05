@@ -254,6 +254,7 @@ impl From<RegisterValue> for Digested {
 impl<'a> From<&'a Digested> for Option<crate::Digested> {
   fn from(value: &'a Digested) -> Option<crate::Digested> { Some(value.clone()) }
 }
+
 // impl<'a> From<&'a Digested> for Tokens {
 //   fn from(value: &'a Digested) -> Tokens { value.revert(state).unwrap() }
 // }
