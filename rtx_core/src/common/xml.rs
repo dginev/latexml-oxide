@@ -1,6 +1,7 @@
 use libxml::tree::{Document, Node, NodeType};
 use libxml::xpath::Context;
 use std::collections::HashMap;
+use std::borrow::Cow;
 
 pub const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
 pub const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
@@ -53,6 +54,18 @@ pub fn element_nodes(node: &Node) -> Vec<Node> {
     .into_iter()
     .filter(|n| n.get_type() == Some(NodeType::ElementNode))
     .collect()
+}
+
+pub fn closest_element(mut node: &Node) -> Option<Node> {
+  if node.get_type() == Some(NodeType::ElementNode) {
+    return Some(node.clone())
+  }
+  while let Some(parent) = node.get_parent() {
+    if parent.get_type() == Some(NodeType::ElementNode) {
+      return Some(parent);
+    }
+  }
+  None
 }
 
 /// Is `child` the same as `parent`, or a descendent of `parent`?

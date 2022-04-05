@@ -319,7 +319,8 @@ impl Rewrite {
             document.record_node_ids(ins, state)?;
           }
           // TODO: Can we avoid this clone?
-          let font = document.get_node_font(tree).clone(); // the font of the matched node
+          let font = document.get_node_font(tree).clone();
+          // the font of the matched node
           for ins in inserted.iter() {
             // Copy the non-semantic parts of font to the replacement
             document.merge_node_font_rec(ins, &font);

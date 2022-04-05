@@ -276,9 +276,9 @@ impl IntoFontField<bool> for bool {
 impl IntoFontField<Option<Cow<'static, str>>> for &'static str {
   fn into_font_field(self) -> Option<Cow<'static, str>> { Some(Cow::Borrowed(self)) }
 }
-impl IntoFontField<Option<Cow<'static, str>>> for f32 {
-  fn into_font_field(self) -> Option<Cow<'static, str>> { Some(Cow::Owned(self.to_string())) }
+impl IntoFontField<Option<f32>> for f32 {
+  fn into_font_field(self) -> Option<f32> { Some(self) }
 }
-impl IntoFontField<Option<Cow<'static, str>>> for i32 {
-  fn into_font_field(self) -> Option<Cow<'static, str>> { Some(Cow::Owned(self.to_string())) }
+impl IntoFontField<Option<f32>> for i32 {
+  fn into_font_field(self) -> Option<f32> { Some(self as f32) }
 }

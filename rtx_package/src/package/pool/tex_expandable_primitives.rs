@@ -259,7 +259,8 @@ LoadDefinitions!(outer_state, {
   // when mutability is involved.
   // For now I have changed to DefPrimitive, so that there is a clear access to the
   // stomach, but we may require some special-case treatment in other pieces of code...
-  DefPrimitive!("\\input TeXFileName", sub[stomach,args,state] {
+  DefMacro!("\\input", "\\ltx@input");
+  DefPrimitive!("\\ltx@input TeXFileName", sub[stomach,args,state] {
     input(&args[0].to_string(), InputOptions::default(), stomach, state)?;
   });
 

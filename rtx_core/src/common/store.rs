@@ -148,7 +148,14 @@ impl fmt::Display for Stored {
       Glue(ref v) => write!(f, "{}", v),
       MuGlue(ref v) => write!(f, "{}", v),
       MuDimension(ref v) => write!(f, "{}", v),
-      _ => write!(f, "{:?}", self), // TODO
+      Font(ref font) => write!(f, "{}", font),
+      String(ref s)  => write!(f, "{}", s),
+      Int(ref s)  => write!(f, "{}", s),
+      Bool(ref s)  => write!(f, "{}", s),
+      ref variant => {
+        eprintln!("TODO: implement Display for Stored variant {:?}", variant);
+        write!(f, "{:?}", self)
+      } // TODO
     }
   }
 }
@@ -780,11 +787,24 @@ impl<'a> From<&'a Stored> for Option<RegisterValue> {
   }
 }
 
+impl From<Stored> for Option<crate::Digested> {
+  fn from(value: Stored) -> Option<crate::Digested> {
+    match value {
+      Stored::Digested(digested) => Some(*digested),
+      Stored::String(text) => Some(text.into()),
+      Stored::Int(text) => Some(text.to_string().into()),
+      _ => None
+    }
+  }
+}
+
 impl<'a> From<&'a Stored> for Option<crate::Digested> {
   fn from(value: &'a Stored) -> Option<crate::Digested> {
     match value {
       Stored::Digested(digested) => Some((**digested).clone()),
-      _ => None,
+      Stored::String(text) => Some(text.into()),
+      Stored::Int(text) => Some(text.to_string().into()),
+      _ => None
     }
   }
 }

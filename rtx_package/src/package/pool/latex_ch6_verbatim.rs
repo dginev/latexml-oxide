@@ -109,6 +109,8 @@ LoadDefinitions!(outer_state, {
       let mut inv_args = Vec::new();
       if starred {
         inv_args.push(Tokens!(T_OTHER!("*")));
+      } else {
+        inv_args.push(Tokens!());
       }
       inv_args.push(Tokens!(init_token));
       inv_args.push(body);

@@ -10,6 +10,7 @@ use regex::Regex;
 use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
+use std::collections::HashSet;
 
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
@@ -30,6 +31,22 @@ use crate::{BoxOps, Digested};
 lazy_static! {
   static ref HAS_NONSPACE_RE: Regex = Regex::new(r"\S").unwrap();
   static ref ONLY_SPACE_RE: Regex = Regex::new(r"^\s+$").unwrap();
+  static ref NON_MERGEABLE_ATTRIBUTES : HashSet<&'static str> =
+    HashSet::from(["about","aboutlabelref","aboutidref",
+   "resource","resourcelabelref","resourceidref",
+   "property","rel","rev","tyupeof","datatype",
+   "content","data","datamimetype","dataencoding"]);
+  // When merging attributes of two nodes, some attributes should be combined
+  // Merged space separated
+  static ref MERGE_ATTRIBUTE_SPACEJOIN : HashSet<&'static str> =
+    HashSet::from(["class","lists","inlist","labels"]);
+  // Merged ";" separated
+  static ref MERGE_ATTRIBUTE_SEMICOLONJOIN : HashSet<&'static str> =
+    HashSet::from(["cssstyle"]);
+  // Summed lengths
+  static ref MERGE_ATTRIBUTE_SUMLENGTH : HashSet<&'static str> =
+    HashSet::from(["xoffset","yoffset","lpadding","rpadding","xtranslate",
+    "ytranslate"]);
 }
 
 pub static FONT_ELEMENT_NAME: &str = "ltx:text";
@@ -141,7 +158,7 @@ impl Document {
     self.prune_xmduals();
     if let Some(mut root) = self.document.get_root_element() {
       let init_font = Font::text_default();
-      self.finalize_rec(&mut root, &init_font, state)?;
+      self.finalize_rec(&mut root, init_font, state)?;
       if let Some(&Stored::String(ref prefixes)) = state.lookup_value("RDFa_prefixes") {
         self.set_rdfa_prefixes(Some(prefixes.clone()));
       }
@@ -149,26 +166,30 @@ impl Document {
     Ok(())
   }
 
-  fn finalize_rec(&mut self, node: &mut Node, init_font: &Font, state: &mut State) -> Result<()> {
+  fn finalize_rec(&mut self, node: &mut Node, mut declared_font: Font, state: &mut State) -> Result<()> {
     let qname = state.model.get_node_qname(node);
-    let mut declared_font = init_font.clone();
+    let state_font = state.lookup_font().unwrap();
+    let mut desired_font = &*state_font;
 
     if let Some(_comment) = node.get_attribute("_pre_comment") {
       if let Some(_parent) = node.get_parent() {
         // parent.: Option<Node> insert_before(XML::LibXML::Comment.new(comment), node);
+        unimplemented!();
       }
     }
     if let Some(_comment) = node.get_attribute("_comment") {
       if let Some(_parent) = node.get_parent() {
         // parent.add_next_sibling(XML::c0.:(omment.new(comment), );
+        unimplemented!();
       }
     }
 
     let mut keys_to_remove: Vec<String> = Vec::new();
     let mut attrs_to_set: Vec<(String, String)> = Vec::new();
+    let mut pending_declaration = HashMap::new();
 
-    let font = self.get_node_font(node);
-    let mut pending_declaration = font.relative_to(&declared_font);
+    let desired_font = self.get_node_font(node);
+    pending_declaration = desired_font.relative_to(&declared_font);
     if (!node.get_child_nodes().is_empty() || node.has_attribute("_force_font")) && !pending_declaration.is_empty() {
       for (key, &(ref value, ref properties)) in &pending_declaration {
         if state.model.can_have_attribute(&qname, key) {
@@ -178,21 +199,27 @@ impl Document {
           keys_to_remove.push(key.to_string());
         }
       }
+
+      for (key, value) in attrs_to_set {
+        self.set_attribute(node, &key, &value)?;
+      }
+      for key in keys_to_remove {
+        pending_declaration.remove(&key);
+      }
+    }
+    // Optionally add ids to all nodes (AFTER all parsing, rearrangement, etc)
+    if let Some(ids) = state.lookup_value("GENERATE_IDS") {
+      // && !$node->hasAttribute('xml:id')
+      // && $self->canHaveAttribute($qname, 'xml:id')
+      // && ($qname ne 'ltx:document')) {
+      // LaTeXML::Package::GenerateID($self, $node);
     }
 
-    for (key, value) in attrs_to_set {
-      self.set_attribute(node, &key, &value)?;
-    }
-    for key in keys_to_remove {
-      pending_declaration.remove(&key);
-    }
-
-    let new_init_font = &declared_font;
     for mut child in node.get_child_nodes() {
       let child_type = child.get_type();
       if child_type == Some(NodeType::ElementNode) {
         let was_forcefont = child.has_attribute("_force_font");
-        self.finalize_rec(&mut child, new_init_font, state)?;
+        self.finalize_rec(&mut child, declared_font.clone(), state)?;
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
         if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME) && !was_forcefont && child.get_attributes().is_empty() {
@@ -225,7 +252,7 @@ impl Document {
             for (key, &(ref value, ref properties)) in &pending_declaration {
               self.set_attribute(&mut text, key, value)?;
             }
-            self.finalize_rec(&mut text, new_init_font, state)?; // Now have to clean up the new node!
+            self.finalize_rec(&mut text, declared_font.clone(), state)?; // Now have to clean up the new node!
           }
         }
       }
@@ -307,14 +334,9 @@ impl Document {
       None => false,
     };
     if !ismath {
-      // TODO: ENHANCE , fix lifetimes... font prop object...
-      let font: Font = match self.box_to_absorb {
-        // TODO: clone needed to resolve mutability error
-        Some(ref bx) => match bx.get_font() {
-          None => (*state.lookup_font().unwrap()).clone(),
-          Some(font) => (*font).to_owned(),
-        },
-        None => (*state.lookup_font().unwrap()).clone(),
+      let font: Font = match props.get("font") {
+        Some(Stored::Font(fnt)) => dbg!((**fnt).clone()),
+        _ => self.box_to_absorb.as_ref().unwrap().get_font().unwrap().into_owned()
       };
       self.open_text(object, &font, state)?;
     } else if self.get_node_qname(&self.node, state) == MATH_TOKEN_NAME {
@@ -325,11 +347,11 @@ impl Document {
     // Else create the XMTok now.
     } else {
       // Odd case: constructors that work in math & text can insert raw strings in Math mode.
-      let font_opt = match props.get("font") {
+      let font_math = match props.get("font") {
         Some(Stored::Font(fnt)) => Some(&**fnt),
         _ => None,
       };
-      self.insert_math_token(object, HashMap::new(), font_opt, state)?;
+      self.insert_math_token(object, HashMap::new(), font_math, state)?;
     }
     Ok(())
   }
@@ -405,14 +427,8 @@ impl Document {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
     Debug!("Open element {:?} at {:?}", qname, self.get_node_qname(&self.node, state));
     let point = self.find_insertion_point(qname, None, state)?;
-    let font_owned: Option<Font> = match font_opt {
-      Some(f) => Some(f.clone()),
-      None => match self.box_to_absorb {
-        Some(ref bx) => bx.get_font().map(|f| (*f).clone()),
-        None => None,
-      },
-    };
-    let newnode = self.open_element_at(point, qname, attributes, font_owned, state)?;
+
+    let newnode = self.open_element_at(point, qname, attributes, font_opt.map(|fnt| fnt.clone()), state)?;
     self.set_node(&newnode);
     // Underscore attributes such as _box and _font from LaTeXML-proper are now
     // bookkept in special substructs of Document Connected to the node hash.
@@ -421,11 +437,7 @@ impl Document {
     //
     // TODO: also accept a _box argument eventually? Or store differently?
     // attributes.entry("_box").or_insert(state.locals.box);
-    if let Some(box_font) = font_opt {
-      self.set_node_font(&newnode, box_font.clone());
-    } else {
-      self.set_box_font(&newnode);
-    }
+
     Ok(newnode)
   }
 
@@ -904,7 +916,7 @@ impl Document {
           None => Font::math_default(), // should never happen?
         },
       };
-      self.set_node_font(&node, font);
+      self.set_node_font(&node, &font);
       if let Some(ref digested) = self.box_to_absorb {
         // TODO: The Rc<Digested> node boxes still have some way to go until they are fully ergonomic...
         let node_box = Arc::new(digested.clone());
@@ -950,7 +962,7 @@ impl Document {
     Debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
     // If not at document begin And not appending text in same font.
     if node_type != Some(NodeType::DocumentNode)
-      && !(node_type == Some(NodeType::TextNode) && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
+      && !(node_type == Some(NodeType::TextNode) && (font.distance(&self.get_node_font(&self.node.get_parent().unwrap())) == 0))
     {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal(state)?; // Close text node, if any.
@@ -960,7 +972,7 @@ impl Document {
       let mut n: Arc<Node> = Arc::clone(&rc_node);
       while n.get_type() != Some(NodeType::DocumentNode) {
         let node_font = self.get_node_font(&n);
-        let d = font.distance(node_font);
+        let d = font.distance(&node_font);
         if d < bestdiff {
           bestdiff = d;
           closeto = n.clone();
@@ -1046,7 +1058,7 @@ impl Document {
         for stored_ligature in ligatures.iter() {
           if let Stored::Ligature(ligature) = stored_ligature {
             if let Some(ref font_test) = ligature.font_test {
-              if !(font_test)(font) {
+              if !(font_test)(&font) {
                 continue; // if the font test fails, skip the ligature
               }
             }
@@ -1098,11 +1110,13 @@ impl Document {
           .get_attributes()
           .keys()
           .filter(|x| !x.starts_with('_'))
-          .all(|n| state.model.can_have_attribute(&qname, n))
+          .all(|v| state.model.can_have_attribute(&qname, v) && !(NON_MERGEABLE_ATTRIBUTES.contains(v.as_str())))
         && !c[0].has_attribute("_force_font")
       {
-        let c_first = c.remove(0);
-        self.set_node_font(node, self.get_node_font(&c_first).clone());
+        let c_first = c.pop().unwrap();
+        let c_first_font = self.get_node_font(&c_first).clone();
+        eprintln!("-- setting font on {:?}", self.document.node_to_string(&node));
+        self.set_node_font(node, &dbg!(c_first_font));
         let c_first = self.remove_node(c_first);
         for mut gc in c_first.get_child_nodes().into_iter() {
           gc.unlink();
@@ -1110,44 +1124,30 @@ impl Document {
           // self.record_node_ids(&node); // TODO
         }
         // Merge the attributes from the child onto $node
-        for (key, val) in c_first.get_attributes().iter() {
-          // Special case attributes
-          match key.as_str() {
-            "xml:id" => {
-              // Use the replacement id
-              if !node.has_attribute(key) {
-                // val = self.record_id(val, node); // TODO
-                node.set_attribute(key, val)?;
-              }
-            },
-            "class" => {
-              // combine $class
-              if let Some(class) = node.get_attribute(key) {
-                node.set_attribute(key, &s!("{} {}", class, val))?;
-              } else {
-                node.set_attribute(key, val)?;
-              }
-            },
-            // xoffset, yoffset should sum up, if present on both.
-            "xoffset" | "yoffset" => {
-              if let Some(val2) = node.get_attribute(key) {
-                // TODO
-                unimplemented!();
-              // let v1 = $val =~ /^([\+\-\d\.]*)pt$/  && $1;
-              // let v2 = $val2 =~ /^([\+\-\d\.]*)pt$/ && $1;
-              // node.set_attribute($key => ($v1 + $v2) . "pt"); }
-              } else {
-                node.set_attribute(key, val)?;
-              }
-            },
-            // Remaining attributes should prefer the inner (child"s) values, if any
-            // (font, size, color, framed)
-            // (width,height, depth, align, vattach, float)
-            _ => {
-              node.set_attribute(key, val)?; // attr.localname ???
-            },
-          }
+        self.merge_attributes(c_first, node, None)?;
+      }
+    }
+    Ok(())
+  }
+
+  pub fn merge_attributes(&mut self, from: Node, to: &mut Node, force:Option<HashSet<&'static str>>) -> Result<()> {
+    for (key, val) in from.get_attributes().iter() {
+      // Special case attributes
+      if key.as_str() == "xml:id" {
+        // Use the replacement id
+        if !to.has_attribute(key)  {
+          // val = self.record_id(val, node); // TODO
+          to.set_attribute(key, val)?;
         }
+      } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str()) {
+        unimplemented!();
+      } else if MERGE_ATTRIBUTE_SEMICOLONJOIN.contains(key.as_str()) {
+        unimplemented!();
+      } else if MERGE_ATTRIBUTE_SUMLENGTH.contains(key.as_str()) {
+        unimplemented!();
+      } else if !to.has_attribute(key) {// || force...
+      // Else if attribute not present on $to, or if we specificallly override it, just copy
+        to.set_attribute(dbg!(key), dbg!(val))?;
       }
     }
     Ok(())
@@ -1349,8 +1349,9 @@ impl Document {
     } else if let Some(inter) = self.can_contain_indirect(&cur_qname, qname, state) {
       if (inter != qname) && (inter != cur_qname) {
         // TODO: can we avoid the clone here? there is a mutability conflict...
-        let font_cloned: Font = self.get_node_font(&self.node).clone();
-        self.open_element(&inter, None, Some(&font_cloned), state)?;
+        let node_font = self.get_node_font(&self.node).clone();
+        self.open_element(&inter, None, Some(&node_font), state)?;
+
         return self.find_insertion_point(qname, Some(inter), state); // And retry insertion (should work now).
       }
     }
@@ -1875,24 +1876,46 @@ impl Document {
 
   //**********************************************************************
   /// Record the Font of a node
-  pub fn set_node_font(&mut self, node: &Node, font: Font) {
+  pub fn set_node_font(&mut self, node: &Node, font: &Font) {
     let nodeid = node.to_hashable();
-    // TODO: If we can accept an Rc<Font> or &Font, we could avoid a lot of seemingly
-    //       over-aggressive Font object .clone calls in e.g. open_element
-    self.node_fonts.insert(nodeid, font);
+    // try to avoid aggressive clones, when unnecessary
+    match self.node_fonts.get(&nodeid) {
+      None => { self.node_fonts.insert(nodeid, font.clone());},
+      Some(v) => if v != font {
+        self.node_fonts.insert(nodeid, font.clone());
+      }
+    }
+  }
+
+  pub fn copy_node_font(&mut self, from:&Node, to: &Node) {
+    let from_font = self.get_node_font(from);
+    let nodeid = to.to_hashable();
+    // try to avoid aggressive clones, when unnecessary
+    let needs_insert = match self.node_fonts.get(&nodeid) {
+      None => true,
+      Some(v) if v != from_font => true,
+      _ => false
+    };
+    if needs_insert {
+      let cloned_font = from_font.clone();
+      self.node_fonts.insert(nodeid, cloned_font);
+    }
   }
 
   /// Possibly a sign of a design flaw; Set the node's font & all children that HAD the same font.
   pub fn merge_node_font_rec(&mut self, node: &Node, font: &Font) {
-    // let oldfont = self.get_node_font(node);
-    // let props   = oldfont.purestyle_changes(font);
-    // let mut nodes   = vec![node];
-    // while let Some(n) = nodes.shift_front() {
-    //   if n.node_type() == NodeType::ElementNode {
-    //     self.set_node_font(n, self.get_node_font(n).merge(props));
-    //     nodes.push(n.get_child_nodes);
-    //   }
-    // }
+    let oldfont = self.get_node_font(node);
+    let props   = oldfont.purestyle_changes(font);
+    let mut nodes   = VecDeque::new();
+    nodes.push_front(Cow::Borrowed(node));
+    while let Some(n) = nodes.pop_front() {
+      if n.get_type() == Some(NodeType::ElementNode) {
+        self.set_node_font(&n, &self.get_node_font(&n).merge(props.clone()));
+        for child in n.get_child_nodes() {
+          nodes.push_back(Cow::Owned(child));
+        }
+      }
+    }
   }
 
   pub fn set_box_font(&mut self, node: &Node) {
@@ -1905,15 +1928,27 @@ impl Document {
     }
   }
 
-  pub fn get_node_font(&self, node: &Node) -> &Font {
-    if node.get_type() == Some(NodeType::ElementNode) {
-      let nodeid = node.to_hashable();
-      match self.node_fonts.get(&nodeid) {
-        Some(f) => f,
-        None => &FONT_TEXT_DEFAULT,
+  pub fn get_node_font(&self, mut node: &Node) -> &Font {
+    if let Some(element) = xml::closest_element(node) {
+      if node.get_type() == Some(NodeType::ElementNode) {
+        let nodeid = node.to_hashable();
+        match self.node_fonts.get(&nodeid) {
+          Some(fnt) => fnt,
+          None => &FONT_TEXT_DEFAULT
+        }
+      } else {
+        &FONT_TEXT_DEFAULT
       }
     } else {
       &FONT_TEXT_DEFAULT
+    }
+  }
+  pub fn has_node_font(&self, node: &Node) -> bool {
+    if let Some(element) = xml::closest_element(node) {
+      let nodeid = element.to_hashable();
+      self.node_fonts.contains_key(&nodeid)
+    } else {
+      false
     }
   }
 
@@ -2017,7 +2052,6 @@ impl Document {
     let (decoded_ns, tag) = state.model.decode_qname(qname);
     let mut newnode;
     // box = self.node_boxes.get(box);    // may already be the string key
-
     // If this will be the document root node, things are slightly more involved.
     if point.get_type() == Some(NodeType::DocumentNode) {
       // First node! (?)
@@ -2052,11 +2086,11 @@ impl Document {
       }
       self.record_constructed_node(Some(&newnode));
     } else {
-      newnode = self.open_element_internal(&mut point, decoded_ns, &tag, state)?;
       if font_opt.is_none() {
         font_opt = Some(self.get_node_font(&point).clone());
       }
       // box  = self.get_node_box(point); // unless $box
+      newnode = self.open_element_internal(&mut point, decoded_ns, &tag, state)?;
     }
 
     if let Some(attrs) = attributes {
@@ -2070,7 +2104,7 @@ impl Document {
       }
     }
     if let Some(font) = font_opt {
-      self.set_node_font(&newnode, font);
+      self.set_node_font(&newnode, &font);
     }
 
     // TODO [new]: Ever more certain there is a refactor waiting to happen with box_to_absorb
@@ -2272,9 +2306,7 @@ impl Document {
     self.after_open(&mut new, state)?;
     let mut old_node = parent.replace_child_node(new.clone(), first_node)?;
 
-    let font = self.get_node_font(&parent);
-    let node_font = font.clone();
-    self.set_node_font(&new, node_font);
+    self.copy_node_font(&parent, &new);
 
     if let Some(tbox) = self.get_node_box(&parent) {
       self.set_node_box(&new, tbox);

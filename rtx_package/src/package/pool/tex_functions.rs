@@ -433,7 +433,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut Stat
       break;
     }
     let child = children.pop().unwrap();
-    document.set_node_font(&text_node, document.get_node_font(&child).clone());
+    document.copy_node_font(&child,&text_node);
     for (key, value) in child.get_attributes() {
       // Copy the child's attributes (should Merge!!)
       if key != "xml:id" {
