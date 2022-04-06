@@ -950,7 +950,7 @@ impl Document {
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
-      if ONLY_SPACE_RE.is_match(text)
+      if (text.is_empty() || ONLY_SPACE_RE.is_match(text))
         && (node_type == Some(NodeType::DocumentNode) || (node_type == Some(NodeType::ElementNode) && !self.can_contain(&self.node, "#PCDATA", state)))
       {
         return Ok(None);
@@ -959,6 +959,7 @@ impl Document {
     if font.family == Some("nullfont".into()) {
       return Ok(None);
     }
+    eprintln!("open text on |{}| font: {}",text,font);
     Debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
     // If not at document begin And not appending text in same font.
     if node_type != Some(NodeType::DocumentNode)
@@ -1050,11 +1051,10 @@ impl Document {
     if self.node.get_type() == Some(NodeType::TextNode) {
       // Current node is text?
       let parent = self.node.get_parent().unwrap();
-      let mut content = self.node.get_content();
-      let ocontent = content.clone();
-      // let fonttest;
+      let font = self.get_node_font(&parent);
+      let ocontent = self.node.get_content();
+      let mut content = Cow::Borrowed(&ocontent);
       if let Some(Stored::VecDequeStored(ligatures)) = state.lookup_value("TEXT_LIGATURES") {
-        let font = self.get_node_font(&parent);
         for stored_ligature in ligatures.iter() {
           if let Stored::Ligature(ligature) = stored_ligature {
             if let Some(ref font_test) = ligature.font_test {
@@ -1062,14 +1062,14 @@ impl Document {
                 continue; // if the font test fails, skip the ligature
               }
             }
-            content = (ligature.code.as_ref().unwrap())(&content);
+            content = Cow::Owned((ligature.code.as_ref().unwrap())(&content));
           }
         }
       }
-      if content != ocontent {
+      if *content != ocontent {
         self.node.set_content(&content)?;
       }
-      self.set_node(&parent); // Now, effectively Closed
+      self.node = parent.clone(); // Effectively closed (->setNode, but don't recurse)
       Ok(parent)
     } else {
       Ok(self.node.clone())

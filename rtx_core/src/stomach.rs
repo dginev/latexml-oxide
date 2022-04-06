@@ -196,13 +196,13 @@ impl<'t> Stomach {
           if cc == Catcode::CS {
             result = self.invoke_token_undefined(&token, state)?;
           } else if cc.is_absorbable() {
-            if let Some(digested) = self.invoke_token_simple(meaning, state)? {
+            if let Some(digested) = self.invoke_token_simple(&*token, meaning, state)? {
               result.push(digested);
             }
           } else {
             let message = s!("The token {:?} (catcode {:?}) should never reach Stomach!", token, cc);
             Error!("misdefined", token, self, state, &message);
-            if let Some(digested) = self.invoke_token_simple(meaning, state)? {
+            if let Some(digested) = self.invoke_token_simple(&*token, meaning, state)? {
               result.push(digested);
             }
           }
@@ -323,50 +323,38 @@ impl<'t> Stomach {
     }
   }
 
-  fn invoke_token_simple(&mut self, meaning: Token, state: &mut State) -> Result<Option<Digested>> {
-    // log!("-- Simple invoke {:?}", token);
+  fn invoke_token_simple(&mut self, token: &Token, meaning: Token, state: &mut State) -> Result<Option<Digested>> {
+    let cc = meaning.get_catcode();
     let font = state.lookup_font();
     state.clear_prefixes(); // prefixes shouldn't apply here.
 
-    if meaning.get_catcode() == Catcode::SPACE {
-      let in_math = state.lookup_bool("IN_MATH");
-      let in_preamble = state.lookup_bool("inPreamble");
-      if in_math || in_preamble {
-        Ok(None)
-      } else {
+    match cc {
+      Catcode::SPACE => if state.lookup_bool("IN_MATH") {
+          Ok(None)
+        } else {
+          Ok(Some(Digested::TBox(Arc::new(Tbox::new(
+            meaning.to_string(),
+            font,
+            Some(self.gullet.get_locator().into_owned()),
+            Tokens!(meaning),
+            HashMap::new(),
+            state,
+          )))))
+        },
+      Catcode::COMMENT =>  {
+        unimplemented!()
+      },
+      _ => {
+        let text = font::decode_string(meaning.get_string(), None, true, state);
         Ok(Some(Digested::TBox(Arc::new(Tbox::new(
-          meaning.to_string(), //text
-          font,
-          Some(self.gullet.get_locator().into_owned()), //locator
-          Tokens!(meaning),                             // tokens
-          HashMap::new(),                               // properties
+          text,
+          None,
+          None,             // locator
+          Tokens!(meaning), // tokens
+          HashMap::new(),   // properties
           state,
         )))))
       }
-    } else if meaning.get_catcode() == Catcode::COMMENT {
-      // TODO
-      // Note: Comments need char decoding as well!
-      //  let comment = LaTeXML::Package::FontDecodeString($meaning->getString, undef, 1);
-      // // However, spaces normally would have be digested away as positioning...
-      // let badspace = pack('U', 0xA0) . "\x{0335}";    // This is at space's pos in OT1
-      // $comment =~ s/\Q$badspace\E/ /g;
-      // return LaTeXML::Comment->new($comment); }
-      Ok(None)
-    // TODO
-    // else if ($forbidden_cc[meaning.get_catcode()]) {
-    // Fatal('misdefined', $token, self,
-    //   "The token " . Stringify($token) . " should never reach Stomach!");
-    // return; }
-    } else {
-      let text = font::decode_string(meaning.get_string(), None, true, state);
-      Ok(Some(Digested::TBox(Arc::new(Tbox::new(
-        text,
-        font,
-        None,             // locator
-        Tokens!(meaning), // tokens
-        HashMap::new(),   // properties
-        state,
-      )))))
     }
   }
 

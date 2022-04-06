@@ -57,10 +57,7 @@ impl Tbox {
   ) -> Self {
     let font = match font_opt {
       Some(f) => f,
-      None => match state.lookup_font() {
-        Some(state_font) => Arc::clone(&state_font),
-        None => Arc::new(Font::text_default()), // should never happen
-      },
+      None => state.lookup_font().unwrap()
     };
     // let locator = $STATE->getStomach->getGullet->getLocator unless defined $locator;
     let _locator = locator_opt;
