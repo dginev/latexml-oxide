@@ -77,17 +77,13 @@ impl IntoOption<Option<usize>> for usize {
 
 impl IntoOption<Option<Reversion>> for Tokens {
   fn into_option(self) -> Option<Reversion> {
-    if self.is_empty() {
-      None
-    } else {
-      Some(Reversion::Tokens(self))
-    }
+    Some(Reversion::Tokens(self))
   }
 }
 impl IntoOption<Option<Reversion>> for &str {
   fn into_option(self) -> Option<Reversion> {
     if self.is_empty() {
-      None
+      Some(Reversion::Tokens(Tokens!()))
     } else {
       Some(Reversion::Tokens(TokenizeInternal!(self)))
     }

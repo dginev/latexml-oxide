@@ -33,15 +33,17 @@ LoadDefinitions!(state, {
   InnerPool!(tex_para);
   // lines 3070-3158
   InnerPool!(tex_ch25_primitives);
-  // lines 3158-3625
+  // lines 3158-3728
   InnerPool!(tex_math_mode);
-  // lines 3625-3905
+  // lines 3729-4001
+  // InnerPool!(tex_math_display);
+  // lines 4002-4228
   InnerPool!(tex_scripts);
-  // lines 3905-4090
+  // lines 4229-4414
   InnerPool!(tex_math_style);
-  // lines 4090-4401
+  // lines 4415-4759
   InnerPool!(tex_appendix_b_to_p349);
-  // lines 4401-4660
+  // lines 4760-4660
   InnerPool!(tex_appendix_b_p350_to_p355);
   // lines 4660-4932
   InnerPool!(tex_frontmatter);

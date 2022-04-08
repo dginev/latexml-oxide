@@ -108,7 +108,9 @@ impl Tbox {
       }
     }
   }
-}
+
+  pub fn get_string(&self) -> &str { self.text.as_str() }
+ }
 
 impl BoxOps for Tbox {
   fn unlist(&self) -> Vec<Digested> { Vec::new() }
@@ -150,6 +152,12 @@ impl BoxOps for Tbox {
       }
     } else {
       self.properties.get(key).map(Cow::Borrowed)
+    }
+  }
+  fn get_property_bool(&self, key: &str) -> bool {
+    match self.properties.get(key) {
+      Some(v) => *v == Stored::Bool(true),
+      _ => false
     }
   }
 }

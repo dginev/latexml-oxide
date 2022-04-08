@@ -546,7 +546,7 @@ impl<'t> Stomach {
         let new_font = state.lookup_mathfont().unwrap().merge(Font {
           color: cf.color.clone(),
           bg: cf.bg.clone(),
-          size: cf.size.clone(),
+          size: cf.size,
           mathstyle: if isdisplay { Some("display".into()) } else { Some("text".into()) },
           ..Font::default()
         });
@@ -558,7 +558,7 @@ impl<'t> Stomach {
           Some(saved_font.merge(Font {
             color: cf.color.clone(),
             bg: cf.bg.clone(),
-            size: cf.size.clone(),
+            size: cf.size,
             ..Font::default()
           }))
         } else {

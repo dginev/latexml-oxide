@@ -35,6 +35,7 @@ lazy_static! {
     ..StateOptions::default()
   }));
   static ref CS_ENDLINECHAR : Token = T_CS!("\\endlinechar");
+  static ref TRAILING_SPACE_CHARS : Regex = Regex::new(" +$").unwrap();
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -304,69 +305,45 @@ impl Mouth {
   /// have to be converted to the proper accent control sequences!
 
   fn get_next_line(&mut self, state: &State) -> Option<String> {
-    match self.buffer.pop_front() {
-      Some(line) => {
-        // No CR on last line!
-        if self.buffer.is_empty() {
-          Some(line + "\r")
+    if self.buffer.is_empty() {
+      if let Some(ref mut reader) = self.reader {
+        // file mouth case
+        let mut file_bytes = Vec::new();
+        let num_bytes = match reader.read_to_end(&mut file_bytes) {
+          Ok(count) => count,
+          Err(e) => {
+            let message = s!("BufReader::read_to_end returned an error: {:?}", e);
+            Warn!("mouth", "io", self, state, message);
+            0
+          },
+        };
+        self.reader.take(); // remove the now exhausted reader
+        // Note: the original latexml code first split the perl string into lines, and only THEN decoded it
+        // however, executing a rust regex on a Vec<u8> is just not going to be a sane way forward.
+        // we will first decode the read-in bytes to the right String form, and THEN split lines.
+        // as such, decoding is the first action taken on bytes read in from a file.
+        if let Some(ref encoding) = state.input_encoding {
+          // TODO: What are characters that fail to decode replaced by in Rust?
+          // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable chars to space(?).
+          unimplemented!();
+          //let message = s!("input isn't valid under encoding {}", encoding);
+          //Info!("misdefined", encoding, self, state, message);
+          //unsafe { str::from_utf8_unchecked(&line_bytes).to_owned() }
         } else {
-          Some(line)
-        }
-      },
-      None => {
-        if let Some(ref mut reader) = self.reader {
-          // file mouth case
-          let mut line_bytes = Vec::new();
-          let num_bytes = match reader.read_until(b'\n', &mut line_bytes) {
-            Ok(count) => count,
+          // no encoding, interpret as unicode!
+          let file_str = match str::from_utf8(&file_bytes) {
+            Ok(fstr) => fstr,
             Err(e) => {
-              let message = s!("BufReader::read_until returned an error: {:?}", e);
-              Warn!("mouth", "io", self, state, message);
-              0
-            },
+              let message = s!("input isn't valid under encoding utf8: {:?}", e);
+              Info!("misdefined", "utf8", self, state, message);
+              unsafe { str::from_utf8_unchecked(&file_bytes) }
+            }
           };
-          if num_bytes == 0 || line_bytes.is_empty() {
-            // double-check to be safe
-            self.reader.take(); // remove the now exhausted reader
-            None
-          } else {
-            // we read a line!
-            //
-            // Note 1: the original latexml code first split the perl string into lines, and only THEN decoded it
-            // however, executing a rust regex on a Vec<u8> is just not going to be a sane way forward.
-            // we will first decode the read-in bytes to the right String form, and THEN split lines.
-            // as such, decoding is the first action taken on bytes read in from a file.
-            //
-            // Note 2: again, the original latexml code only runs this decode logic for file reads,
-            //         implying that any string/http/https mouths are always expected in Unicode
-            let mut line = if let Some(ref encoding) = state.input_encoding {
-              // TODO: What are characters that fail to decode replaced by in Rust?
-              // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable chars in to space(?).
-              // line = encoding, line_bytes
-
-              // Just remove the replacement chars, and warn (or Info?)
-              let message = s!("input isn't valid under encoding {}", encoding);
-              Info!("misdefined", encoding, self, state, message);
-              unsafe { str::from_utf8_unchecked(&line_bytes).to_string() }
-            } else {
-              // no encoding, interpret as unicode!
-              match str::from_utf8(&line_bytes) {
-                Ok(line_str) => line_str.to_string(),
-                Err(e) => {
-                  let message = s!("input isn't valid under encoding utf8: {:?}", e);
-                  Info!("misdefined", "utf8", self, state, message);
-                  unsafe { str::from_utf8_unchecked(&line_bytes).to_string() }
-                },
-              }
-            };
-            line.push('\r');
-            Some(line)
-          }
-        } else {
-          None
+          self.buffer = Mouth::split_lines(file_str);
         }
-      },
+      }
     }
+    self.buffer.pop_front()
   }
 
   /// Get the next character & it's catcode from the input,
@@ -459,7 +436,7 @@ impl Mouth {
             if eolcc == Catcode::EOL {
               Some(T_CS!("\\par"))
             } else {
-              Some(Token!(eolch.unwrap_or_default(), eolcc))
+              Some(Token!(eolch.unwrap(), eolcc))
             }
           } else { None };
           self.at_eof = true;
@@ -469,8 +446,8 @@ impl Mouth {
         }
         // Remove trailing spaces from external sources
         let mut line = line_opt.unwrap();
-        if !self.source.is_empty() {
-          line = line.trim_end().to_owned();
+        if !self.source.is_empty() && line.ends_with(" ") {
+          line = TRAILING_SPACE_CHARS.replace(&line, "").to_string();
         }
         // Then append the appropriate \endlinechar, or "\r";
         if let Some(ch) = eolch {

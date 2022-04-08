@@ -37,6 +37,7 @@ use crate::common::model::Model;
 use crate::common::number::Number;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::token::{Catcode, Token};
 use crate::definition::register::{NumericOps, RegisterValue};
 use crate::document::Document;
 use crate::keyvals::KeyVals;
@@ -122,16 +123,8 @@ pub trait BoxOps: Object {
     let mut props = self.get_properties_mut();
     props.insert(key.to_string(), value.into());
   }
-  fn get_property(&self, _key: &str, state: &mut State) -> Option<Cow<Stored>> {
-    Error!(
-      "boxops",
-      "get_property",
-      self,
-      state,
-      "Generic BoxOps::get_property should never be called!"
-    );
-    None
-  }
+  fn get_property(&self, _key: &str, state: &mut State) -> Option<Cow<Stored>>;
+  fn get_property_bool(&self, _key: &str) -> bool;
   fn get_body(&self) -> Option<Digested> {
     Error!("boxops", "get_body", self, None, "Generic BoxOps::get_body should never be called!");
     None
@@ -218,20 +211,16 @@ impl PartialEq for Digested {
   }
 }
 
+// Important: we need to postpone the creation of a box until a time where
+// we have the most current font information
 impl<'a> From<&'a String> for Digested {
   fn from(value: &'a String) -> Digested {
-    Digested::TBox(Arc::new(Tbox {
-      text: value.to_string(),
-      ..Tbox::default()
-    }))
+    Digested::Postponed(Arc::new(Tokens::new(ExplodeText!(value))))
   }
 }
 impl From<String> for Digested {
   fn from(value: String) -> Digested {
-    Digested::TBox(Arc::new(Tbox {
-      text: value,
-      ..Tbox::default()
-    }))
+    Digested::Postponed(Arc::new(Tokens::new(ExplodeText!(value))))
   }
 }
 
@@ -386,12 +375,20 @@ impl BoxOps for Digested {
       _ => unimplemented!(),
     }
   }
-
+  fn get_property_bool(&self, key: &str) -> bool {
+    match *self {
+      Digested::TBox(ref b) => b.get_property_bool(key),
+      Digested::List(ref l) => l.get_property_bool(key),
+      Digested::Whatsit(ref w) => w.read().unwrap().get_property_bool(key),
+      _ => unimplemented!(),
+    }
+  }
   fn get_font(&self) -> Option<Cow<Font>> {
     match *self {
       Digested::TBox(ref b) => b.get_font(),
       Digested::List(ref l) => l.get_font(),
       Digested::Whatsit(ref w) => w.read().unwrap().get_font().map(|t| Cow::Owned(t.into_owned())),
+      Digested::Postponed(ref tks) => None,
       _ => unimplemented!(),
     }
   }

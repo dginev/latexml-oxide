@@ -62,6 +62,9 @@ impl Whatsit {
       self.properties.insert(key, value);
     }
   }
+  pub fn get_definition(&self) -> Arc<dyn Definition> {
+    Arc::clone(&self.definition)
+  }
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
     match self.args.get(n - 1) {
       Some(&Some(ref opt)) => Some(opt),
@@ -133,7 +136,7 @@ impl Object for Whatsit {
       match spec_opt {
         Some(Reversion::Closure(spec)) => {
           // If handled by CODE, call it
-          tokens = spec(self, self.get_args()).unwrap().unlist();
+          tokens = spec(self, self.get_args(), state).unwrap().unlist();
         },
         Some(Reversion::Tokens(spec)) => {
           if !spec.is_empty() {
@@ -226,6 +229,12 @@ impl BoxOps for Whatsit {
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
 
+  fn get_property_bool(&self, key: &str) -> bool {
+    match self.properties.get(key) {
+      Some(v) => *v == Stored::Bool(true),
+      _ => false
+    }
+  }
   fn get_body(&self) -> Option<Digested> {
     match self.properties.get("body") {
       Some(&Stored::Digested(ref body)) => Some(*body.clone()),

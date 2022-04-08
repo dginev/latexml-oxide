@@ -300,7 +300,7 @@ pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: 
   // Insert the content for the block, and reduce
   document.set_attribute(&mut document.get_element().unwrap(), "_vertical_mode_", "true")?; // HACK!!!! (see \hbox)
 
-  document.absorb(contents, state)?;
+  document.absorb(contents, None, state)?;
   let absorbed = document.drain_constructed_nodes();
   let mut nodes = document.filter_children(document.filter_deletions(absorbed));
 

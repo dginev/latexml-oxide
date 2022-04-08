@@ -17,6 +17,7 @@ use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::whatsit::Whatsit;
 use crate::common::xml;
 use crate::ligature::Ligature;
 use crate::list::List;
@@ -188,32 +189,34 @@ impl Document {
     let mut attrs_to_set: Vec<(String, String)> = Vec::new();
     let mut pending_declaration = HashMap::new();
 
-    let desired_font = self.get_node_font(node);
-    pending_declaration = desired_font.relative_to(&declared_font);
-    if (!node.get_child_nodes().is_empty() || node.has_attribute("_force_font")) && !pending_declaration.is_empty() {
-      for (key, &(ref value, ref properties)) in &pending_declaration {
-        if state.model.can_have_attribute(&qname, key) {
-          attrs_to_set.push((key.to_string(), value.to_string()));
-          // Merge to set the font currently in effect
-          declared_font = declared_font.merge(properties.clone());
-          keys_to_remove.push(key.to_string());
+    if self.has_node_font(node) {
+      let desired_font = self.get_node_font(node);
+      pending_declaration = desired_font.relative_to(&declared_font);
+      if (!node.get_child_nodes().is_empty() || node.has_attribute("_force_font")) && !pending_declaration.is_empty() {
+        for (key, &(ref value, ref properties)) in &pending_declaration {
+          if state.model.can_have_attribute(&qname, key) {
+            attrs_to_set.push((key.to_string(), value.to_string()));
+            // Merge to set the font currently in effect
+            declared_font = declared_font.merge(properties.clone());
+            keys_to_remove.push(key.to_string());
+          }
         }
-      }
 
-      for (key, value) in attrs_to_set {
-        self.set_attribute(node, &key, &value)?;
-      }
-      for key in keys_to_remove {
-        pending_declaration.remove(&key);
+        for (key, value) in attrs_to_set {
+          self.set_attribute(node, &key, &value)?;
+        }
+        for key in keys_to_remove {
+          pending_declaration.remove(&key);
+        }
       }
     }
     // Optionally add ids to all nodes (AFTER all parsing, rearrangement, etc)
-    if let Some(ids) = state.lookup_value("GENERATE_IDS") {
-      // && !$node->hasAttribute('xml:id')
-      // && $self->canHaveAttribute($qname, 'xml:id')
-      // && ($qname ne 'ltx:document')) {
-      // LaTeXML::Package::GenerateID($self, $node);
-    }
+    if qname != "ltx:document" && state.lookup_bool("GENERATE_IDS")
+      && !node.has_attribute("xml:id")
+      && self.can_have_attribute(&qname, "xml:id", state)
+      {
+        self.generate_id(node, None, None, state);
+      }
 
     for mut child in node.get_child_nodes() {
       let child_type = child.get_type();
@@ -286,10 +289,12 @@ impl Document {
   /// A $box that is a Box, or List, or Whatsit, is responsible for carrying out
   /// its own insertion, but it should ultimately call methods of Document
   /// that will record the nodes that were created.
-  /// $box can also be a plain string which will be inserted according to whatever
+  /// $box can also be a plain string (Digested::Postponed)
+  /// which will be inserted according to whatever
   /// font, mode, etc, are in %props.
-  pub fn absorb(&mut self, object: Digested, state: &mut State) -> Result<()> {
+  pub fn absorb(&mut self, object: Digested, props_opt: Option<HashMap<String, Stored>>, state: &mut State) -> Result<()> {
     // let mut results = Vec::new();
+    let props = props_opt.unwrap_or_default(); // is there a better way to deal with the Option?
     let mut boxes = vec![object];
     while let Some(front_box) = boxes.pop() {
       if let Digested::List(ref list) = front_box {
@@ -300,27 +305,34 @@ impl Document {
       } else {
         // info!(target: "document:absorb", "front box: {:?}", front_box);
         // self.constructed_nodes = Vec::new();
-        self.set_box_to_absorb(Some(front_box.clone()));
         match front_box {
           // A Proper Box or Whatsit? Absorb it.
-          Digested::TBox(ref digested) => digested.be_absorbed(self, state)?,
-          Digested::Whatsit(ref digested) => digested.read().unwrap().be_absorbed(self, state)?,
-          _ => unimplemented!(),
+          Digested::TBox(ref digested) => {
+            self.set_box_to_absorb(Some(front_box.clone()));
+            digested.be_absorbed(self, state)?;
+            self.localize_box_to_absorb(); },
+          Digested::Whatsit(ref digested) => {
+            self.set_box_to_absorb(Some(front_box.clone()));
+            digested.read().unwrap().be_absorbed(self, state)?;
+            self.localize_box_to_absorb(); },
+          Digested::Postponed(ref tokens) => {
+            if props.get("isMath") != Some(&Stored::Bool(true)) {
+              let text_font = if let Some(Stored::Font(ref prop_font)) = props.get("font") {
+                Arc::clone(prop_font)
+              } else {
+                Arc::new(self.box_to_absorb.as_ref().unwrap().get_font().unwrap().into_owned())
+              };
+              self.open_text(&tokens.to_string(), &text_font, state)?;
+            } else {
+              unimplemented!();
+            }
+          },
+          Digested::KeyVals(_) => unimplemented!(),
+          Digested::RegisterValue(_) => unimplemented!(),
+          Digested::List(_) => unimplemented!()
         };
-        self.localize_box_to_absorb();
       }
-
-      // TODO: Does the results extension make ANY sense???
-      // ANSWER: Yes, sadly, used in insertBlock in TeX.pool.
-      // These were created just now
-      //
-      // we will try to do it separately
-      // let newly_created: Vec<Node> = self.constructed_nodes.drain(0..).collect();
-      // results.extend(newly_created); // but return only the most recent set.
     }
-    // Debug!("Document absorbed {:?} nodes", results.len());
-    // Results leak Rc<Node> strong counts!!!
-    // Ok(results)
     Ok(())
   }
   pub fn drain_constructed_nodes(&mut self) -> Vec<Node> { self.constructed_nodes.drain(0..).collect() }
@@ -335,7 +347,7 @@ impl Document {
     };
     if !ismath {
       let font: Font = match props.get("font") {
-        Some(Stored::Font(fnt)) => dbg!((**fnt).clone()),
+        Some(Stored::Font(fnt)) => (**fnt).clone(),
         _ => self.box_to_absorb.as_ref().unwrap().get_font().unwrap().into_owned()
       };
       self.open_text(object, &font, state)?;
@@ -364,7 +376,7 @@ impl Document {
     let node = self.open_element(qname, attrib, None, state)?;
     Debug!("Inserting element {:?} with body: {:?}", qname, content);
     for digested in content {
-      self.absorb(digested, state)?;
+      self.absorb(digested, None, state)?;
     }
 
     let self_node = self.node.get_parent().unwrap();
@@ -428,7 +440,7 @@ impl Document {
     Debug!("Open element {:?} at {:?}", qname, self.get_node_qname(&self.node, state));
     let point = self.find_insertion_point(qname, None, state)?;
 
-    let newnode = self.open_element_at(point, qname, attributes, font_opt.map(|fnt| fnt.clone()), state)?;
+    let newnode = self.open_element_at(point, qname, attributes, font_opt.cloned(), state)?;
     self.set_node(&newnode);
     // Underscore attributes such as _box and _font from LaTeXML-proper are now
     // bookkept in special substructs of Document Connected to the node hash.
@@ -959,11 +971,10 @@ impl Document {
     if font.family == Some("nullfont".into()) {
       return Ok(None);
     }
-    eprintln!("open text on |{}| font: {}",text,font);
     Debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
     // If not at document begin And not appending text in same font.
     if node_type != Some(NodeType::DocumentNode)
-      && !(node_type == Some(NodeType::TextNode) && (font.distance(&self.get_node_font(&self.node.get_parent().unwrap())) == 0))
+      && !(node_type == Some(NodeType::TextNode) && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
     {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal(state)?; // Close text node, if any.
@@ -973,7 +984,7 @@ impl Document {
       let mut n: Arc<Node> = Arc::clone(&rc_node);
       while n.get_type() != Some(NodeType::DocumentNode) {
         let node_font = self.get_node_font(&n);
-        let d = font.distance(&node_font);
+        let d = font.distance(node_font);
         if d < bestdiff {
           bestdiff = d;
           closeto = n.clone();
@@ -1058,7 +1069,7 @@ impl Document {
         for stored_ligature in ligatures.iter() {
           if let Stored::Ligature(ligature) = stored_ligature {
             if let Some(ref font_test) = ligature.font_test {
-              if !(font_test)(&font) {
+              if !(font_test)(font) {
                 continue; // if the font test fails, skip the ligature
               }
             }
@@ -1115,8 +1126,7 @@ impl Document {
       {
         let c_first = c.pop().unwrap();
         let c_first_font = self.get_node_font(&c_first).clone();
-        eprintln!("-- setting font on {:?}", self.document.node_to_string(&node));
-        self.set_node_font(node, &dbg!(c_first_font));
+        self.set_node_font(node, &c_first_font);
         let c_first = self.remove_node(c_first);
         for mut gc in c_first.get_child_nodes().into_iter() {
           gc.unlink();
@@ -1147,7 +1157,7 @@ impl Document {
         unimplemented!();
       } else if !to.has_attribute(key) {// || force...
       // Else if attribute not present on $to, or if we specificallly override it, just copy
-        to.set_attribute(dbg!(key), dbg!(val))?;
+        to.set_attribute(key, val)?;
       }
     }
     Ok(())
@@ -2540,6 +2550,10 @@ impl Document {
         }
       }
     }
+  }
+
+  pub fn generate_id(&self, node: &Node, whatsit: Option<&mut Whatsit>, prefix: Option<&str>, state: &State) {
+    unimplemented!();
   }
 }
 

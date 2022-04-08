@@ -44,9 +44,10 @@ pub fn load_external_binding(file: &str, state: &mut State, mut stomach: &mut St
 
   let is_contrib: bool = match taken_dispatcher {
     Some(ref dispatcher) => {
-      note_begin(&s!("Loading {:?} definitions", file));
+      // these notes should be inside the dispatch, since it may not have anything to load
+      // note_begin(&s!("Loading {:?} definitions", file));
       let result_opt = dispatcher(file, stomach, state);
-      note_end(&s!("Loading {:?} definitions", file));
+      //note_end(&s!("Loading {:?} definitions", file));
       match result_opt {
         Some(result) => match result {
           Ok(()) => true,
@@ -832,7 +833,6 @@ pub fn select_relaxng_schema(schema: String, namespaces: Option<HashMap<String, 
 pub fn merge_font(font: Font, state: &mut State) {
   let new_font = state.lookup_font().unwrap().merge(font);
   state.assign_value("font", Arc::new(new_font), Some(Scope::Local));
-  eprintln!("-- demo: {:?}", state.lookup_font());
 }
 
 pub fn digest_text(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {

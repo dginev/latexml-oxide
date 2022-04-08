@@ -120,7 +120,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
       //   e.g. unlist()-ing a digested List will have to produce box references, rather than provide the owned boxes directly.
       //   would have to experiment with this - as it is of course much lighter on performance
       if let Some(Stored::Digested(tags)) = props.get("tags") {
-        document.absorb((**tags).clone(), state)?;
+        document.absorb((**tags).clone(), None, state)?;
       }
       let title = prop_digested!(props, "title");
       document.insert_element("ltx:title", title, None, state)?;

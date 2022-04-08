@@ -124,6 +124,11 @@ LoadDefinitions!(outer_state, {
     }
   });
 
+  DefPrimitive!("\\lx@use@visiblespace", sub[stomach, args, state] {
+    state.assign_catcode(' ', Catcode::ACTIVE, None); // Do NOT (necessarily) skip spaces after \verb!!!
+    Let!(&T_ACTIVE!(" "), T_OTHER!("\u{2423}")); // Visible space
+  });
+
   DefConstructor!("\\@internal@verb{} Undigested {}",
     "?#isMath(<ltx:XMTok font='#font'>#text</ltx:XMTok>)(<ltx:verbatim font='#font'>#text</ltx:verbatim>)",
     properties => sub[stomach, args, state] {

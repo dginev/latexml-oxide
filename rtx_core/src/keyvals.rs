@@ -135,6 +135,8 @@ impl Object for KeyVals {
 }
 impl BoxOps for KeyVals {
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
+  fn get_property(&self, _key: &str, _state: &mut State) -> Option<Cow<Stored>> { unimplemented!() }
+  fn get_property_bool(&self, _key: &str) -> bool { unimplemented!() }
   fn unlist(&self) -> Vec<Digested> { Vec::new() } // TODO
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { Ok(()) } // TODO
   fn get_font(&self) -> Option<Cow<Font>> { None } // TODO
