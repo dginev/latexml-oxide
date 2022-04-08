@@ -31,7 +31,7 @@ LoadDefinitions!(outer_stomach, state, {
       document.set_node(&savenode);
     }
   },
-  reversion => None,
+  reversion => "",
   properties => { map!("alignmentSkippable" => true.into(), "alignmentPreserve" => true.into()) },
   after_digest => sub[stomach, whatsit, state] {
     let label = match whatsit.get_arg(1) {

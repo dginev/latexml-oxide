@@ -121,7 +121,7 @@ LoadDefinitions!(state, {
         String::new()
       };
       let node = document.open_element(newtag, Some(string_map!("_noautoclose" => "true", "width" => width)), None, state)?;
-      document.absorb(contents,state)?;
+      document.absorb(contents, None, state)?;
       document.close_node(&node, state)?;
       Debug!("FINAL DOC: {:?}", document.document.node_to_string(&document.get_element().unwrap()));
     },

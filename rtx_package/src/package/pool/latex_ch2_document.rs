@@ -24,7 +24,7 @@ LoadDefinitions!(state, {
         if !id.is_empty() {
           document.set_attribute(&mut docel, "xml:id", id)?;
         }
-        document.absorb(body, state)?;
+        document.absorb(body, None, state)?;
       } else {
         let attrib = string_map!("xml:id" => id);
         document.insert_element("ltx:document", vec![body], Some(attrib), state)?;

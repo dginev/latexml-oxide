@@ -543,13 +543,16 @@ impl Font {
     let mathstyle      = self.get_mathstyle();
     let othermathstyle = other.get_mathstyle();
     let othercolor     = other.get_color();
-    let mut changes = Font::default();
-    changes.scale = Some(other.get_size().unwrap() / self.get_size().unwrap());
-    if is_diff(&othercolor.map(|x| x.clone()),&Some(Cow::Borrowed(DEFCOLOR))) {
+    let mut changes = Font {
+      scale: Some(other.get_size().unwrap() / self.get_size().unwrap()),
+      bg: other.bg.clone(),
+      opacity: other.opacity.clone(), // should multiply or replace?
+      ..Font::default()
+    };
+    if is_diff(&othercolor.cloned(),&Some(Cow::Borrowed(DEFCOLOR))) {
       changes.color = other.color.clone();
     }
-    changes.bg = other.bg.clone();
-    changes.opacity = other.opacity.clone(); // should multiply or replace?
+
 
     // TODO:
     // if mathstyle && othermathstyle {

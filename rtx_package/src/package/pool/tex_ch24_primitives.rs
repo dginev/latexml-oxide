@@ -55,12 +55,15 @@ LoadDefinitions!(state, {
   // // BUT you DON'T want extra {, } showing up in any untex-ing.
   DefConstructor!("\\@hidden@bgroup", "#body",
     before_digest => sub[stomach,state] { stomach.bgroup(state); },
-    capture_body => true
-    // TODO: // reversion => sub { Revert($_[0]->getProperty("body")); }
+    capture_body => true,
+    reversion => "", // TODO!
+    // reversion =>  sub[whatsit, state] {
+    //   whatsit.get_body().revert()
+    // }
   );
   DefConstructor!("\\@hidden@egroup", "",
     after_digest => sub[stomach,args,state] { stomach.egroup(state)?; },
-    reversion => None
+    reversion => ""
   );
 
   DefPrimitive!(
