@@ -348,7 +348,6 @@ impl MathParser {
     Ok(())
   }
 
-  // my %TAG_FEEDBACK = ('ltx:XMArg' => 'a', 'ltx:XMWrap' => 'w');    # [CONSTANT]
   // Recursively parse a node with some internal structure
   // by first parsing any structured children, then it's content.
   fn parse_rec(&mut self, node: &mut Node, rule_opt: &str, document: &mut Document, state: &mut State) -> Result<Option<Node>> {
@@ -376,7 +375,7 @@ impl MathParser {
         self.n_parsed += 1;
         note_progress(&s!("[{}]", self.n_parsed));
         for el_node in element_nodes(node) {
-          // document.unrecord_node_ids(el_node);
+          document.unrecord_node_ids(&el_node, state);
         }
       // // unbindNode followed by (append|replace)Tree (which removes ID's) should
       // be safe for child in node.get_child_nodes() {
@@ -384,52 +383,47 @@ impl MathParser {
       // }
       //       $document->appendTree($node, $result);
       //       $result = [element_nodes($node)]->[0];
-      } else {
-        // Replace the whole node for XMArg, XMWrap; preserve some attributes
-        // note_progress_detailed($TAG_FEEDBACK{$tag} || '.');
-        // // Copy all attributes
-        //       my $resultid = p_getAttribute($result, 'xml:id');
-        //       my %attr = map { (getQName($_) => $_->getValue) }
-        //         grep { $_->nodeType == XML_ATTRIBUTE_NODE } $node->attributes;
-        // // add to result, even allowing modification of xml node, since we're
-        // committed. // [Annotate converts node to array which messes up
-        // clearing the id!]       my $isarr = ref $result eq 'ARRAY';
-        //       my $rtag = ($isarr ? $$result[0] : $document->getNodeQName($result));
-        // // Make sure font is "Appropriate", if we're creating a new token (yuck)
-        //       if ($isarr && $attr{_font} && ($rtag eq 'ltx:XMTok')) {
-        //         my $content = join('', @$result[2 .. $#$result]);
-        //         if ((!defined $content) || ($content eq '')) {
-        //           delete $attr{_font}; }    # No font needed
-        //         elsif (my $font = $document->decodeFont($attr{_font})) {
-        //           delete $attr{_font};
-        //           $attr{font} = $font->specialize($content); } }
-        //       else {
-        //         delete $attr{_font}; }
-        //       foreach my $key (keys %attr) {
-        // next unless ($key =~ /^_/) || $document->canHaveAttribute($rtag,
-        // $key);         my $value = $attr{$key};
-        //         if ($key eq 'xml:id') {     # Since we're moving the id...bookkeeping
-        //           $document->unRecordID($value);
-        //           $node->removeAttribute('xml:id'); }
-        //         if ($isarr) { $$result[1]{$key} = $value; }
-        //         else { $document->setAttribute($result, $key => $value); } }
-        //       $result = $document->replaceTree($result, $node);
-        //       my $newid = $attr{'xml:id'};
-        // // Danger: the above code replaced the id on the parsed result with the one
-        // from XMArg,.. // If there are any references to $resultid, we need
-        // to point them to $newid! if ($resultid && $newid && ($resultid
-        // ne $newid)) { foreach my $ref
-        // ($document->findnodes("//*[\@idref='$resultid']")) {
-        // $ref->setAttribute(idref => $newid); } }
-      }
-      Ok(Some(result))
-    } else {
-      //     $self->parse_kludge($node, $document);
-      //     if ($tag eq 'ltx:XMath') {
-      //       note_progress('[F' . ++$$self{n_parsed} . ']'); }
-      //     elsif ($tag eq 'ltx:XMArg') {
-      //       note_progressDetailed('-a'); }
-      //     $$self{failed}{$tag}++;
+      } else {// Replace the whole node for XMArg, XMWrap; preserve some attributes
+      //ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
+      // Copy all attributes
+      let resultid = p_get_attribute(&result, "id");
+      let attr = node.get_attributes();
+
+      // add to result, even allowing modification of xml node, since we're committed.
+      // [Annotate converts node to array which messes up clearing the id!]
+
+      // my $rtag  = ($isarr ? $$result[0] : $document->getNodeQName($result));
+      // # Make sure font is "Appropriate", if we're creating a new token (yuck)
+      // if ($isarr && $attr{_font} && ($rtag eq 'ltx:XMTok')) {
+      //   my $content = join('', @$result[2 .. $#$result]);
+      //   if ((!defined $content) || ($content eq '')) {
+      //     delete $attr{_font}; }    # No font needed
+      //   elsif (my $font = $document->decodeFont($attr{_font})) {
+      //     delete $attr{_font};
+      //     $attr{font} = $font->specialize($content); } }
+      // else {
+      //   delete $attr{_font}; }
+      // foreach my $key (keys %attr) {
+      //   next unless ($key =~ /^_/) || $document->canHaveAttribute($rtag, $key);
+      //   my $value = $attr{$key};
+      //   if ($key eq 'xml:id') {    # Since we're moving the id...bookkeeping
+      //     $document->unRecordID($value);
+      //     $node->removeAttribute('xml:id'); }
+      //   if ($isarr) { $$result[1]{$key} = $value; }
+      //   else        { $document->setAttribute($result, $key => $value); } }
+      // $result = $document->replaceTree($result, $node);
+      // my $newid = $attr{'xml:id'};
+      // # Danger: the above code replaced the id on the parsed result with the one from XMArg,..
+      // # If there are any references to $resultid, we need to point them to $newid!
+      // if ($resultid && $newid && ($resultid ne $newid)) {
+      //   foreach my $ref ($document->findnodes("//*[\@idref='$resultid']")) {
+      //     $ref->setAttribute(idref => $newid); } }
+    }
+    Ok(Some(result))
+   } else {
+      // self.parse_kludge(node, document, state);
+      // ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
+      // $$self{failed}{$tag}++;
       Ok(None)
     }
   }

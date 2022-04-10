@@ -23,7 +23,7 @@ macro_rules! LEAD_VALUE_RE_STR (() => (concat!(r"^",VALUE_RE_STR!())));
 macro_rules! COND_RE_STR (() => (concat!(r"[?]", VALUE_RE_STR!())));
 macro_rules! LEAD_COND_RE_STR (() => (concat!(r"^",COND_RE_STR!())));
 macro_rules! OPEN_TAG_RE_STR (() => (concat!(r"\s*<", QNAME_RE_STR!())));
-macro_rules! CLOSE_TAG_RE_STR (() => (concat!(r"</", QNAME_RE_STR!(),r"\s*>")));
+macro_rules! CLOSE_TAG_RE_STR (() => (concat!(r"</", QNAME_RE_STR!(),r"\s*>\s*")));
 macro_rules! LEAD_OPEN_TAG_RE_STR (() => (concat!(r"^", OPEN_TAG_RE_STR!())));
 macro_rules! LEAD_CLOSE_TAG_RE_STR (() => (concat!(r"^", CLOSE_TAG_RE_STR!())));
 
@@ -118,15 +118,21 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
 }
 
 fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::TokenStream> {
+  let trimmed = replacement.trim();
+  if trimmed != replacement {
+    replacement = trimmed.to_string();
+  }
   let mut floats: String = String::new();
   let mut has_floats: bool = false;
-  replacement = FLOAT_RE
+  let float_result = FLOAT_RE
     .replace_all(&replacement, |refs: &Captures| -> String {
       floats = refs.get(1).map_or("", |m| m.as_str()).to_string();
       has_floats = true;
       String::new()
-    })
-    .to_string();
+    });
+  if has_floats {
+    replacement = float_result.to_string();
+  }
   let mut operations = Vec::new();
 
   while !replacement.is_empty() {
@@ -151,15 +157,15 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
 
     // Processing instruction: <?name a=v ...?>
     let mut is_match = false;
-    replacement = PI_RE
+    let pi_result = PI_RE
       .replace(&replacement, |refs: &Captures| -> String {
         current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
         is_match = true;
         String::new()
-      })
-      .to_string();
+      });
 
     if is_match {
+      replacement = pi_result.to_string();
       // println!("-- matched a PI ");
       // this is annoying since we want translate_avpairs to mutate the replacement
       // string in place, but also want it to run after the replacement...
@@ -176,8 +182,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         .replace(&replacement, |_: &Captures| -> String {
           pi_closed = true;
           String::new()
-        })
-        .to_string();
+        }).to_string();
 
       if !pi_closed {
         panic!("Missing '?>' at '{:?}'\n", replacement);
@@ -192,8 +197,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
         // println!("-- open tag {:?}", current_tag);
         String::new()
-      })
-      .to_string();
+      }).to_string();
 
     // handle open tag
     if is_match {
@@ -231,7 +235,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
     }
 
     // Close tag: </name>
-    replacement = LEAD_CLOSE_TAG_RE
+    let lead_close_tag_result = LEAD_CLOSE_TAG_RE
       .replace(&replacement, |refs: &Captures| -> String {
         is_match = true;
         current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
@@ -239,9 +243,9 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         // handle close tag
         operations.push(quote!(document.close_element(#current_tag, state)?;));
         String::new()
-      })
-      .to_string();
+      });
     if is_match {
+      replacement = lead_close_tag_result.to_string();
       continue;
     }
 
@@ -269,7 +273,8 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
     }
 
     // Else random text
-    replacement = LEAD_RANDOM_TEXT_RE
+    let mut has_random_text = false;
+    let lead_random_text_result = LEAD_RANDOM_TEXT_RE
       .replace(&replacement, |refs: &Captures| -> String {
         if let Some(text_match) = refs.get(1) {
           let escaped_match = &slashify(&unquote(text_match.as_str()));
@@ -277,9 +282,12 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
             document.absorb_string(#escaped_match, props, state)?;
           ));
         }
+        has_random_text = true;
         String::new()
-      })
-      .to_string();
+      });
+      if has_random_text {
+        replacement = lead_random_text_result.to_string();
+      }
   }
 
   operations
