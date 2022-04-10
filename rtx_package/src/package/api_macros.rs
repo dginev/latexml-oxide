@@ -267,6 +267,21 @@ macro_rules! reversion {
   };
 }
 
+#[macro_export]
+macro_rules! reversion_digested {
+  ($whatsit:ident, $args:ident, $state:ident, $body:block) => {
+    Some(Reversion::Closure(Arc::new(
+      |$whatsit:&Whatsit, $args: &Vec<Option<Digested>>, $state: &mut State| -> Result<Tokens> {
+        BindInnerState!($state);
+        let macro_out = $body;
+        end_state_frame!();
+        macro_out
+      },
+    )))
+  };
+}
+
+
 // TODO: These .clone calls are silly... can we either
 // 1) Document::insert_element work with a &Vec<Digested>? or
 // 2) we can use mutable Whatsit properties in replacements, where we remove Vec<Digested> instances for cases that will be absorbed?

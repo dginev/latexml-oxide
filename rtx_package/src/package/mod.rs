@@ -26,7 +26,7 @@ pub use rtx_core::definition::register::{NumericOps, Register, RegisterType, Reg
 pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, ExpansionClosure, PrimitiveClosure, PrimitiveFn,
-  ReplacementClosure,
+  ReplacementClosure, Reversion, DigestedReversionClosure
 };
 pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptionName, TagOptions};

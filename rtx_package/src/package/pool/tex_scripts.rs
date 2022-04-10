@@ -83,7 +83,7 @@ pub fn is_script(object: &Digested, state: &State) -> Option<(String,Catcode)> {
 // mutable reference to a Digested object. This needs to be disentangled
 // in the new codebase, so as to avoid both 1) cloning and 2) mutably referencing the same Digested object from multiple unrelated pieces of code.
 //
-fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Result<Digested> {
+fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Result<Vec<Digested>> {
 //   let mut gullet = stomach.get_gullet_mut();
 //   gullet.skip_spaces(state);
   let font     = state.lookup_font().unwrap();
@@ -157,38 +157,115 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       stuff.push(Digested::default());
     }
     let script = stuff.remove(0);  // ONLY the first box is the script!
-//     unshift(@stuff,
-//       LaTeXML::Core::Whatsit->new(LookupDefinition(T_CS($cs)), [$script],
-//         locator     => $gullet->getLocator,
-//         font        => $script->getFont, isMath => 1,
-//         level       => $stomach->getBoxingLevel,
-//         scriptlevel => $stomach->getScriptLevel,
-//         base        => $base,                      # for sizing/positioning
-//         prevscript  => $prevscript))
-//       unless IsEmpty($script);
-
+    if !is_empty(&script, state) {
+      let properties = stored_map!(
+          "font"        => script.get_font().unwrap(),
+          "isMath" => true
+          // TODO:
+          // "level"       => stomach.get_boxing_level(),
+          // "scriptlevel" => stomach.get_script_level(),
+          //"base"        => base,                      // for sizing/positioning
+          //"prevscript"  => prevscript
+        );
+      let mut with_script = vec![Digested::Whatsit(Arc::new(RwLock::new(
+        Whatsit {
+          definition: state.lookup_definition(&T_CS!(cs)).unwrap(),
+          args: vec![Some(script)],
+          properties,
+          //         locator     => $gullet->getLocator,
+          ..Whatsit::default()
+        })))];
+      with_script.append(&mut stuff);
+      stuff = with_script;
+    }
     state.assign_font(font, Some(Scope::Local)); // revert
-    Ok(Digested::List(Arc::new(List::new(stuff))))
+    Ok(stuff)
   } else {
     let c = if cc == Catcode::SUPER { '^' } else { '_' };
     Error!("Unexpected", c, stomach, state, s!("Script {} can only appear in math mode", c));
     let placeholder = if cc == Catcode::SUPER { T_SUPER!() } else { T_SUB!() };
-    Ok(Digested::TBox(Arc::new(
-      Tbox::new(c.to_string(), None, None, Tokens!(placeholder), HashMap::new(), state))))
+    Ok(vec![Digested::TBox(Arc::new(
+      Tbox::new(c.to_string(), None, None, Tokens!(placeholder), HashMap::new(), state)))])
   }
 }
+
+// The `argument' to a sub or superscript will typically be processed as a box,
+// and either has braces, or is something that results in a single box.
+// When we revert these, we DON'T want to wrap extra braces around, because they'll accumulate;
+// at the least they're ugly; in some applications they affect "round trip" processing.
+// OTOH, direct use of \@@POSTSUPERSCRIPT, etal, MAY need to have extra braces around them.
+// So, when reverting, we're going to a bit of extra trouble to make sure we have ONE set
+// of braces, but no extras!!  [Worry about lists of lists...]
+pub fn revert_script(script: Digested, state: &mut State) -> Result<Vec<Token>> {
+  let tokens   = script.revert(state)?;
+  let mut ts = tokens.unlist();
+  let mut level = 0;
+  if ts.len() > 1 && ts.get(0).unwrap().code == Catcode::BEGIN && ts.last().unwrap().code == Catcode::END {
+    Ok(ts)
+  } else {
+    let mut wrapped = vec![T_BEGIN!()];
+    wrapped.append(&mut ts);
+    wrapped.push(T_END!());
+    Ok(wrapped)
+  }
+}
+
 
 LoadDefinitions!(state, {
 // TODO: Should I add a special macro case that takes an arbitrary token as argument? DefPrimitiveT ?
 def_primitive(T_SUPER!(), None,
   Arc::new(|stomach: &mut Stomach ,_args: Vec<Tokens>, state: &mut State| {
-    script_handler(stomach, Catcode::SUPER, state);
-    Ok(Vec::new())
+    script_handler(stomach, Catcode::SUPER, state)
   }), PrimitiveOptions::default(), state);
 def_primitive(T_SUB!(), None,
   Arc::new(|stomach: &mut Stomach ,_args: Vec<Tokens>, state: &mut State| {
-    script_handler(stomach, Catcode::SUB, state);
-    Ok(Vec::new())
+    script_handler(stomach, Catcode::SUB, state)
   }), PrimitiveOptions::default(), state);
+
+
+
+// NOTE: The When reverting these, the
+DefConstructor!("\\@@POSTSUPERSCRIPT InScriptStyle",r#"""
+  <ltx:XMApp role='POSTSUPERSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>
+    <ltx:XMArg rule='Superscript'>#1</ltx:XMArg>
+  </ltx:XMApp>
+  """#,
+  reversion => sub[whatsit,args,state] {
+    unpack!(args=>arg);
+    Ok(Tokens!(T_SUPER!(), revert_script(arg,state)?)) }
+  // sizer     => sub { script_sizer($_[0]->getArg(1), $_[0].get_property("base"),
+  //     $_[0].get_property("prevscript"), "SUPERSCRIPT", "post"); }
+);
+
+DefConstructor!("\\@@POSTSUBSCRIPT InScriptStyle",r#"""
+  <ltx:XMApp role='POSTSUBSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>
+    <ltx:XMArg rule='Subscript'>#1</ltx:XMArg>
+  </ltx:XMApp>
+  """#
+  ,
+  reversion => sub[whatsit,args,state] {
+    unpack!(args=>arg);
+    Ok(Tokens!(T_SUB!(), revert_script(arg,state)?)) }
+  // sizer     => sub { script_sizer($_[0]->getArg(1), $_[0].get_property("base"),
+  //     $_[0].get_property("prevscript"),
+  //     "SUBSCRIPT", "post"); }
+);
+
+DefConstructor!("\\@@FLOATINGSUPERSCRIPT InScriptStyle",r#"""
+  <ltx:XMApp role='FLOATSUPERSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>
+    <ltx:XMArg rule='Superscript'>#1</ltx:XMArg>
+  </ltx:XMApp>
+  """#
+  // reversion => sub { (T_BEGIN, T_END, T_SUPER, revert_script($_[1])); },
+  // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, 'SUPERSCRIPT', 'post"); }
+);
+DefConstructor!("\\@@FLOATINGSUBSCRIPT InScriptStyle",r#"""
+  <ltx:XMApp role='FLOATSUBSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>
+    <ltx:XMArg rule='Subscript'>#1</ltx:XMArg>
+  </ltx:XMApp>
+  """#
+  // reversion => sub { (T_BEGIN, T_END, T_SUB, revert_script($_[1])); },
+  // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, 'SUBSCRIPT', 'post"); }
+);
 
 });

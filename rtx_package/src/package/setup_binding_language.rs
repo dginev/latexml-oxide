@@ -2005,6 +2005,10 @@ macro_rules! defi_opts {
     }
   };
   // reversion: Option<Reversion>
+    // reversion: sub
+  (@munch ( $(,)? reversion $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@reversion (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
   (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ reversion @ $tokens.into_option() ] })
   };
@@ -2316,5 +2320,9 @@ macro_rules! defi_opts {
   (@replace (sub [$document_arg:ident, $node_arg:ident, $state_arg: ident] $body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [replace @ rewrite_replace_sub!($document_arg, $node_arg, $state_arg, $body)]})
+  };
+  (@reversion (sub [$stomach:ident, $args:ident, $state_arg: ident] $body:block $($next:tt)* )
+                  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [reversion @ reversion_digested!($stomach, $args, $state_arg, $body)]})
   };
 }
