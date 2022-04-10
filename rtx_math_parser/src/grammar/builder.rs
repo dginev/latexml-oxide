@@ -64,7 +64,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
   rules!(
     // Factors
-    factor = unknown | number | id | atom;
+    factor = unknown | number | id | atom
+      | factor postsuperscript => postfix_apply
+      | factor postsubscript => postfix_apply;
     // Terms
     tight_term = factor
       | tight_term factor => invisible_times;

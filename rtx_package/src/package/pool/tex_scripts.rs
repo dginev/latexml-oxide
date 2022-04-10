@@ -1,6 +1,6 @@
 use crate::package::*;
 lazy_static! {
-  static ref SCRIPT_NAME_RE : Regex = Regex::new("^\\\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$").unwrap();
+  static ref SCRIPT_NAME_RE : Regex = Regex::new(r"^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$").unwrap();
 }
 //======================================================================
 // Scripts are a bit of a strange beast, with respect to when the arguments
@@ -225,11 +225,11 @@ def_primitive(T_SUB!(), None,
 
 
 // NOTE: The When reverting these, the
-DefConstructor!("\\@@POSTSUPERSCRIPT InScriptStyle",r#"""
-  <ltx:XMApp role='POSTSUPERSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>
-    <ltx:XMArg rule='Superscript'>#1</ltx:XMArg>
+DefConstructor!("\\@@POSTSUPERSCRIPT InScriptStyle",r###"
+  <ltx:XMApp role="POSTSUPERSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
+    <ltx:XMArg rule="Superscript">#1</ltx:XMArg>
   </ltx:XMApp>
-  """#,
+  "###,
   reversion => sub[whatsit,args,state] {
     unpack!(args=>arg);
     Ok(Tokens!(T_SUPER!(), revert_script(arg,state)?)) }
@@ -237,11 +237,11 @@ DefConstructor!("\\@@POSTSUPERSCRIPT InScriptStyle",r#"""
   //     $_[0].get_property("prevscript"), "SUPERSCRIPT", "post"); }
 );
 
-DefConstructor!("\\@@POSTSUBSCRIPT InScriptStyle",r#"""
-  <ltx:XMApp role='POSTSUBSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>
-    <ltx:XMArg rule='Subscript'>#1</ltx:XMArg>
+DefConstructor!("\\@@POSTSUBSCRIPT InScriptStyle",r###"
+  <ltx:XMApp role="POSTSUBSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
+    <ltx:XMArg rule="Subscript">#1</ltx:XMArg>
   </ltx:XMApp>
-  """#
+  "###
   ,
   reversion => sub[whatsit,args,state] {
     unpack!(args=>arg);
@@ -251,20 +251,24 @@ DefConstructor!("\\@@POSTSUBSCRIPT InScriptStyle",r#"""
   //     "SUBSCRIPT", "post"); }
 );
 
-DefConstructor!("\\@@FLOATINGSUPERSCRIPT InScriptStyle",r#"""
-  <ltx:XMApp role='FLOATSUPERSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>
-    <ltx:XMArg rule='Superscript'>#1</ltx:XMArg>
+DefConstructor!("\\@@FLOATINGSUPERSCRIPT InScriptStyle",r###"
+  <ltx:XMApp role="FLOATSUPERSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
+    <ltx:XMArg rule="Superscript">#1</ltx:XMArg>
   </ltx:XMApp>
-  """#
-  // reversion => sub { (T_BEGIN, T_END, T_SUPER, revert_script($_[1])); },
-  // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, 'SUPERSCRIPT', 'post"); }
+  "###,
+  reversion => sub[whatsit,args,state] {
+    unpack!(args=>arg);
+    Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUPER!(), revert_script(arg,state)?)) }
+  // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, "SUPERSCRIPT", 'post"); }
 );
-DefConstructor!("\\@@FLOATINGSUBSCRIPT InScriptStyle",r#"""
-  <ltx:XMApp role='FLOATSUBSCRIPT' scriptpos='?#scriptpos(#scriptpos)(#scriptlevel)'>
-    <ltx:XMArg rule='Subscript'>#1</ltx:XMArg>
+DefConstructor!("\\@@FLOATINGSUBSCRIPT InScriptStyle",r###"
+  <ltx:XMApp role="FLOATSUBSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
+    <ltx:XMArg rule="Subscript">#1</ltx:XMArg>
   </ltx:XMApp>
-  """#
-  // reversion => sub { (T_BEGIN, T_END, T_SUB, revert_script($_[1])); },
+  "###,
+  reversion => sub[whatsit,args,state] {
+    unpack!(args=>arg);
+    Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUB!(), revert_script(arg,state)?)) }
   // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, 'SUBSCRIPT', 'post"); }
 );
 
