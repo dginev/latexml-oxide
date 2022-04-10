@@ -1,4 +1,7 @@
 use crate::package::*;
+lazy_static! {
+  static ref SCRIPT_NAME_RE : Regex = Regex::new("^\\\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$").unwrap();
+}
 //======================================================================
 // Scripts are a bit of a strange beast, with respect to when the arguments
 // are processed, and what kind of object should be created.
@@ -28,7 +31,7 @@ use crate::package::*;
 // rust `.is_empty()` call that implies a very strict "no elements" semantics
 // for e.g. vectors and strings.
 // Maybe "is_invisible" or "without_ink" or ...
-pub fn is_empty(digested: Digested, state: &State) -> bool {
+pub fn is_empty(digested: &Digested, state: &State) -> bool {
   if digested.get_property_bool("isEmpty")
     || digested.get_property_bool("isSpace") { // A space-like thing
     true
@@ -36,12 +39,12 @@ pub fn is_empty(digested: Digested, state: &State) -> bool {
     let s = tbox.get_string();
     s.trim().is_empty()
   } else if let Digested::List(list) = digested {
-    list.unlist().any(|b| !is_empty(b, state))
+    list.boxes.iter().any(|b| !is_empty(b, state))
   }
   else if let Digested::Whatsit(ws_arc) = digested {
     let ws = ws_arc.read().unwrap();
-    if *(*ws).get_definition() == state.lookup_definition(&T_BEGIN!())
-      && ws.get_body().unlist().any(|b| !is_empty(b, state)) {
+    if *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap()
+      && ws.get_body().unwrap_or_default().any(|b| {!is_empty(b, state)}) {
       true
     } else {
       false
@@ -53,18 +56,34 @@ pub fn is_empty(digested: Digested, state: &State) -> bool {
 
 // Remember a "safe" way to test a script Whatsit.
 // Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
-pub fn is_script(object: Digested, state: &State) -> Option<(String,String)> {
-  // if (ref $object eq 'LaTeXML::Core::List') {
-  //   $object = [$object->unlist]->[-1]; }
-  // if ((ref $object eq 'LaTeXML::Core::Whatsit')    # careful w/alias in getCSName!
-  //   && ($object->getDefinition->getCS->getCSName =~ /^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$/)) {
-  //   return [$1, $2]; }
-  // return; }
-  None
+pub fn is_script(object: &Digested, state: &State) -> Option<(String,Catcode)> {
+  let box_opt = match object {
+    Digested::List(obj) => obj.boxes.last(),
+    other => Some(other)
+  };
+  if let Some(Digested::Whatsit(ref obj)) = box_opt {
+    // careful w/alias in getCSName!
+    let name = obj.read().unwrap().get_definition().get_cs().get_cs_name().to_string();
+    if let Some(cap) = SCRIPT_NAME_RE.captures(&name) {
+      Some((
+        cap.get(1).map_or("", |m| m.as_str()).to_owned(),
+        if cap.get(2).map_or("", |m| m.as_str()) == "SUBSCRIPT" { Catcode::SUB } else {Catcode::SUPER}
+      ))
+    } else {
+      None
+    }
+  } else {
+    None
+  }
 }
 
-
-fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Digested {
+// TODO: Something is really off with the Rust version of the data model for
+// Digested here, we keep having to *clone* incorrectly. The Perl expectation
+// was for something Rust deems highly illegal/unsafe: multiple owners of a
+// mutable reference to a Digested object. This needs to be disentangled
+// in the new codebase, so as to avoid both 1) cloning and 2) mutably referencing the same Digested object from multiple unrelated pieces of code.
+//
+fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Result<Digested> {
 //   let mut gullet = stomach.get_gullet_mut();
 //   gullet.skip_spaces(state);
   let font     = state.lookup_font().unwrap();
@@ -86,31 +105,32 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Dige
         prevspace = true;              // a space avoids double-scripts
         putback.push_front(prev); // put back? assuming it will add rpadding to previous???
         continue;
-      } else if is_empty(prev, state) { // If empty, the script floats, can't conflict, but don't put back
+      } else if is_empty(&prev, state) { // If empty, the script floats, can't conflict, but don't put back
         break;
-      } else if let Some(prevop) = is_script(prev) {
-        putback.push_front(prev);
-        if prevop.code == cc { // Whoops, duplicated; better use FLOATING
-          let lcode = prevop.code.to_string().to_lowercase();
+      } else if let Some(prevop) = is_script(&prev, state) {
+        if prevop.1 == cc { // Whoops, duplicated; better use FLOATING
+          putback.push_front(prev);
+          let lcode = if prevop.1 == Catcode::SUPER { "superscript" } else { "subscript" };
           if !prevspace {
             Error!("unexpected", s!("double-{}", lcode), stomach, state, s!("Double {}", lcode)); }
           cs = if cc == Catcode::SUPER { "\\@@FLOATINGSUPERSCRIPT" }
             else { "\\@@FLOATINGSUBSCRIPT" };
           break;
         } else { // Else, is OK (so far) assume POST (it will stack previous script)
-          prevscript = Some(prev); // we'll overlap the width of the previous.
+          prevscript = Some(prev.clone()); // we'll overlap the width of the previous.
+          putback.push_front(prev);
           cs = if cc == Catcode::SUPER { "\\@@POSTSUPERSCRIPT" }
             else { "\\@@POSTSUBSCRIPT" };
         }
         // if we hit a FLOATING script, terminate, as the floating empty group avoids double scripts
-        if prevop.text == "FLOATING" {
+        if prevop.0 == "FLOATING" {
           break;
         }
         nscripts+=1;
         if nscripts > 1 { break; }
       } else {
         //  We found something "normal", so assume we'll attach to it, and we're done.
-        base = Some(prev);
+        base = Some(prev.clone());
         putback.push_front(prev);
         cs = if cc == Catcode::SUPER { "\\@@POSTSUPERSCRIPT" }
             else { "\\@@POSTSUBSCRIPT" };
@@ -120,16 +140,23 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Dige
     stomach.box_list.extend(putback);
 
     // MergeFont(scripted => 1);
+    state.assign_font(Arc::new(
+      state.lookup_font().unwrap().merge(Font{ scripted: Some(true),
+        ..Font::default()})), Some(Scope::Local));
 
     // Now, get following boxes (may have to process several tokens!)
-//     my @stuff = ();
-//     while (my $tok = $gullet->readXToken(0)) {
-//       @stuff = $stomach->invokeToken($tok);
-//       last if @stuff; }
-//     if (!@stuff) {
-//       Error('expected', '{', $stomach, "Missing sub/superscript argument", $gullet->showUnexpected);
-//       push(@stuff, Box()); }
-//     my $script = shift(@stuff);    # ONLY the first box is the script!
+    let mut stuff = Vec::new();
+    while let Some(tok) = stomach.get_gullet_mut().read_x_token(false,false,state)? {
+      stuff = stomach.invoke_token(&tok, state)?;
+      if !stuff.is_empty() {
+        break;
+      }
+    }
+    if stuff.is_empty() {
+      Error!("expected", "{", stomach, state, "Missing sub/superscript argument"); //$gullet->showUnexpected);
+      stuff.push(Digested::default());
+    }
+    let script = stuff.remove(0);  // ONLY the first box is the script!
 //     unshift(@stuff,
 //       LaTeXML::Core::Whatsit->new(LookupDefinition(T_CS($cs)), [$script],
 //         locator     => $gullet->getLocator,
@@ -139,15 +166,15 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Dige
 //         base        => $base,                      # for sizing/positioning
 //         prevscript  => $prevscript))
 //       unless IsEmpty($script);
-//     AssignValue(font => $font);                    # revert
-//     return @stuff; }
-    unimplemented!();
+
+    state.assign_font(font, Some(Scope::Local)); // revert
+    Ok(Digested::List(Arc::new(List::new(stuff))))
   } else {
     let c = if cc == Catcode::SUPER { '^' } else { '_' };
     Error!("Unexpected", c, stomach, state, s!("Script {} can only appear in math mode", c));
     let placeholder = if cc == Catcode::SUPER { T_SUPER!() } else { T_SUB!() };
-    Digested::TBox(Arc::new(
-      Tbox::new(c.to_string(), None, None, Tokens!(placeholder), HashMap::new(), state)))
+    Ok(Digested::TBox(Arc::new(
+      Tbox::new(c.to_string(), None, None, Tokens!(placeholder), HashMap::new(), state))))
   }
 }
 

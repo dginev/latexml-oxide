@@ -69,7 +69,6 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
     },
     _ => panic!("only accepts #[replacement = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"),
   };
-  // dbg!(&replacement);
 
   let compiled_replacement_closure: proc_macro2::TokenStream = if replacement.is_empty() {
     quote!(None)
@@ -253,7 +252,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         if let Some(ref stored_digested) = #to_absorb {
           let digested_opt : Option<Digested> = stored_digested.into();
           if let Some(digested) = digested_opt {
-            document.absorb(digested, state)?;
+            document.absorb(digested, None, state)?;
           }
         }
       ));

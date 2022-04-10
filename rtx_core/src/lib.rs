@@ -114,7 +114,6 @@ impl Core {
   pub fn get_state(&self) -> &State { &self.state }
   pub fn get_state_mut(&mut self) -> &mut State { &mut self.state }
 }
-
 pub trait BoxOps: Object {
   fn unlist(&self) -> Vec<Digested>;
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()>;
@@ -406,6 +405,14 @@ impl Digested {
     match self {
       Digested::RegisterValue(rv) => (**rv).clone().pt_value(prec),
       _ => 0.0,
+    }
+  }
+  pub fn any<F>(&self, mut check: F) -> bool
+  where F: FnMut(&Self) -> bool  {
+    use Digested::*;
+    match self {
+      TBox(_) | Whatsit(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
+      List(l) => l.boxes.iter().any(check),
     }
   }
 }
