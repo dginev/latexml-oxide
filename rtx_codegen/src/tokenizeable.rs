@@ -20,7 +20,6 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
   let compiled_expansion = if expansion.is_empty() {
     quote!(None)
   } else {
-    // dbg!(&expansion);
     let performed_expansion = mouth::tokenize_internal(&expansion, None);
 
     // println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(),

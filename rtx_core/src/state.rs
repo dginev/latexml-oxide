@@ -622,6 +622,10 @@ impl State {
     }
   }
 
+  pub fn assign_font(&mut self, font: Arc<Font>, scope: Option<Scope>) {
+    self.assign_value("font", Stored::Font(font), scope);
+  }
+
   pub fn lookup_number(&self, key: &str) -> Option<Number> {
     match self.lookup_value(key) {
       Some(v) => v.into(),
