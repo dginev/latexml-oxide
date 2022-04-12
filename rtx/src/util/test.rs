@@ -131,7 +131,8 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node
   // grab the first formula
   match doc.findnode("//*[local-name()='XMath']", None, &mut latexml.state) {
     Some(math) => {
-      let (lexemes, nodes) = node_to_grammar_lexemes(&math);
+      let mut idx = 0;
+      let (lexemes, nodes) = node_to_grammar_lexemes(&math, &mut idx);
       (lexemes, nodes, Some(math), doc)
     },
     None => (Vec::new(), Vec::new(), None, doc),

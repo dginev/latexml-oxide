@@ -432,12 +432,14 @@ impl Mouth {
             let eolcc    = if let Some(ch) = eolch {
               state.lookup_catcode(ch).unwrap_or(Catcode::OTHER)
             } else { Catcode::OTHER };
-          let eoftoken = if read_mode && eolch.is_some() && !self.at_eof && !self.source.is_empty() {
-            if eolcc == Catcode::EOL {
-              Some(T_CS!("\\par"))
-            } else {
-              Some(Token!(eolch.unwrap(), eolcc))
-            }
+          let eoftoken = if let Some(eolch_content) = eolch {
+            if read_mode && !self.at_eof && !self.source.is_empty() {
+              if eolcc == Catcode::EOL {
+                Some(T_CS!("\\par"))
+              } else {
+                Some(Token!(eolch_content, eolcc))
+              }
+            } else { None }
           } else { None };
           self.at_eof = true;
           self.chars = VecDeque::new();
@@ -446,7 +448,7 @@ impl Mouth {
         }
         // Remove trailing spaces from external sources
         let mut line = line_opt.unwrap();
-        if !self.source.is_empty() && line.ends_with(" ") {
+        if !self.source.is_empty() && line.ends_with(' ') {
           line = TRAILING_SPACE_CHARS.replace(&line, "").to_string();
         }
         // Then append the appropriate \endlinechar, or "\r";

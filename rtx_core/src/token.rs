@@ -562,11 +562,11 @@ pub fn untex(tokens: Tokens, _suppress_linebreak: bool, state: &mut State) -> Re
   match level {
     0 => {},
     1i32..=std::i32::MAX => {
-      let close_brace_string = String::from_utf8(vec![b'}'; level.abs() as usize]).unwrap();
+      let close_brace_string = String::from_utf8(vec![b'}'; level.unsigned_abs() as usize]).unwrap();
       tex_string = tex_string + &close_brace_string;
     },
     std::i32::MIN..=-1i32 => {
-      let open_brace_string = String::from_utf8(vec![b'{'; level.abs() as usize]).unwrap();
+      let open_brace_string = String::from_utf8(vec![b'{'; level.unsigned_abs() as usize]).unwrap();
       tex_string = open_brace_string + &tex_string;
     },
   };

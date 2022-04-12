@@ -153,9 +153,9 @@ impl fmt::Display for Stored {
       Int(ref s)  => write!(f, "{}", s),
       Bool(ref s)  => write!(f, "{}", s),
       ref variant => {
-        eprintln!("TODO: implement Display for Stored variant {:?}", variant);
-        write!(f, "{:?}", self)
-      } // TODO
+        panic!("TODO: implement Display for Stored variant {:?}", variant);
+        // write!(f, "{:?}", self)
+      }
     }
   }
 }

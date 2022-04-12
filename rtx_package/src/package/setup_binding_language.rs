@@ -1116,7 +1116,7 @@ macro_rules! DefAccent {
     DefPrimitive!(&accent_proto, sub[stomach, letter, inner_state] {
       let invoked = Invocation!(T_CS!($accent), letter.clone(), stomach.get_gullet_mut(), inner_state)?;
       // TODO: check if letter.to_string has artefacts
-      crate::package::pool::tex_accents::apply_accent(
+      $crate::package::pool::tex_accents::apply_accent(
         stomach, &letter[0].to_string(), $combiningchar, $standalonechar, Some(invoked), inner_state)?;
       Ok(vec![])
     }, mode => "text");

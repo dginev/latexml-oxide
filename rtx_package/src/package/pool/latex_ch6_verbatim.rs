@@ -137,10 +137,8 @@ LoadDefinitions!(outer_state, {
     },
   font => { family => "typewriter", series => "medium", shape => "upright" },
   before_construct => sub[doc, whatsit, state] {
-    if !whatsit.is_math() {
-      if !doc.can_contain(&doc.get_element().unwrap(), "#PCDATA", state) {
-        doc.open_element("ltx:p", None, None, state)?;
-      }
+    if !whatsit.is_math() && !doc.can_contain(&doc.get_element().unwrap(), "#PCDATA", state) {
+      doc.open_element("ltx:p", None, None, state)?;
     }
   },
   reversion => "\\verb#1#2#3#2");
