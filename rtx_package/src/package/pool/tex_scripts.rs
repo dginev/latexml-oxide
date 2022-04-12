@@ -43,12 +43,7 @@ pub fn is_empty(digested: &Digested, state: &State) -> bool {
   }
   else if let Digested::Whatsit(ws_arc) = digested {
     let ws = ws_arc.read().unwrap();
-    if *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap()
-      && ws.get_body().unwrap_or_default().any(|b| {!is_empty(b, state)}) {
-      true
-    } else {
-      false
-    }
+    *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap() && ws.get_body().unwrap_or_default().any(|b| {!is_empty(b, state)})
   } else {
     false
   }
@@ -64,14 +59,11 @@ pub fn is_script(object: &Digested, state: &State) -> Option<(String,Catcode)> {
   if let Some(Digested::Whatsit(ref obj)) = box_opt {
     // careful w/alias in getCSName!
     let name = obj.read().unwrap().get_definition().get_cs().get_cs_name().to_string();
-    if let Some(cap) = SCRIPT_NAME_RE.captures(&name) {
-      Some((
+    SCRIPT_NAME_RE.captures(&name).map(|cap|
+      (
         cap.get(1).map_or("", |m| m.as_str()).to_owned(),
         if cap.get(2).map_or("", |m| m.as_str()) == "SUBSCRIPT" { Catcode::SUB } else {Catcode::SUPER}
       ))
-    } else {
-      None
-    }
   } else {
     None
   }

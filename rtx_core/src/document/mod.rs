@@ -1149,11 +1149,13 @@ impl Document {
           // val = self.record_id(val, node); // TODO
           to.set_attribute(key, val)?;
         }
-      } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str()) {
-        unimplemented!();
-      } else if MERGE_ATTRIBUTE_SEMICOLONJOIN.contains(key.as_str()) {
-        unimplemented!();
-      } else if MERGE_ATTRIBUTE_SUMLENGTH.contains(key.as_str()) {
+      } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str()) //{
+      //   unimplemented!();
+      // } else if
+      || MERGE_ATTRIBUTE_SEMICOLONJOIN.contains(key.as_str()) //{
+      //   unimplemented!();
+      // } else if
+      || MERGE_ATTRIBUTE_SUMLENGTH.contains(key.as_str()) {
         unimplemented!();
       } else if !to.has_attribute(key) {// || force...
       // Else if attribute not present on $to, or if we specificallly override it, just copy

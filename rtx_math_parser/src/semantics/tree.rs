@@ -1,4 +1,5 @@
 use libxml::tree::Node;
+use rtx_core::common::xml::element_nodes;
 use rtx_core::document::Document;
 use rtx_core::Info;
 use std::borrow::Cow;
@@ -22,6 +23,7 @@ pub struct XMTok {
   pub meaning: Option<Cow<'static, str>>,
   pub content: Option<Cow<'static, str>>,
   pub name: Option<Cow<'static, str>>,
+  pub scriptpos: Option<Cow<'static, str>>,
 }
 impl Display for XMTok {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -402,6 +404,9 @@ impl Tree {
         if let Some(ref role) = xmtok.role {
           xmtok_node.set_attribute("role", role)?;
         }
+        if let Some(ref scriptpos) = xmtok.scriptpos {
+          xmtok_node.set_attribute("scriptpos", scriptpos)?;
+        }
         if let Some(ref content) = xmtok.content {
           xmtok_node.set_content(content)?;
         }
@@ -413,11 +418,11 @@ impl Tree {
         // where two new Nodes of the same name are seen as the same.
         let mut apply_node = Node::new("XMApp", None, document.get_document()).unwrap();
         let mut op_node = op.0.to_xmath(nodes, document)?;
-        apply_node.add_child(&mut op_node)?;
+        self.to_xmath_add_child(&mut apply_node, &mut op_node)?;
 
         for arg in args.0.iter().flatten() {
           let mut arg_node = arg.to_xmath(nodes, document)?;
-          apply_node.add_child(&mut arg_node)?;
+          self.to_xmath_add_child(&mut apply_node, &mut arg_node)?;
         }
         Ok(apply_node)
       },
@@ -426,6 +431,24 @@ impl Tree {
         choices[0].to_xmath(nodes, document)
       },
     }
+  }
+
+  /// Unwrap any leftover XMArg guards from the markup.
+  /// This is done earlier in LaTeXML-classic, during the semantics phase.
+  /// With marpa, we can postpone reparenting to the very end, when the tree is requested.
+  pub fn to_xmath_add_child(&self,receiver: &mut Node, incoming: &mut Node) -> Result<(), Box<dyn Error + Send + Sync>> {
+    if incoming.get_name() == "XMArg" {
+      let mut to_reparent = element_nodes(incoming);
+      for incoming_child in to_reparent.iter_mut() {
+        incoming_child.unlink();
+      }
+      for mut incoming_child in to_reparent {
+        receiver.add_child(&mut incoming_child)?;
+      }
+    } else {
+      receiver.add_child(incoming)?;
+    }
+    Ok(())
   }
 }
 

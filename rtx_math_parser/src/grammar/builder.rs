@@ -57,16 +57,19 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(limitop ~ "LIMITOP");
   token!(diffop ~ "DIFFOP");
   token!(operator ~ "OPERATOR");
-  token!(postsubscript ~ "POSTSUBSCRIPT");
-  token!(postsuperscript ~ "POSTSUPERSCRIPT");
-  token!(floatsuperscript ~ "FLOATSUPERSCRIPT");
-  token!(floatsubscript ~ "FLOATSUBSCRIPT");
+  token!(start_postsubscript ~ "start_POSTSUBSCRIPT");
+  token!(end_postsubscript ~ "end_POSTSUBSCRIPT");
+  token!(start_postsuperscript ~ "start_POSTSUPERSCRIPT");
+  token!(end_postsuperscript ~ "end_POSTSUPERSCRIPT");
+  token!(start_floatsuperscript ~ "start_FLOATSUPERSCRIPT");
+  token!(end_floatsuperscript ~ "end_FLOATSUPERSCRIPT");
+  token!(start_floatsubscript ~ "start_FLOATSUBSCRIPT");
+  token!(end_floatsubscript ~ "end_FLOATSUBSCRIPT");
 
   rules!(
     // Factors
-    factor = unknown | number | id | atom
-      | factor postsuperscript => postfix_apply
-      | factor postsubscript => postfix_apply;
+    factor_base = unknown | number | id | atom;
+    factor = factor_base;
     // Terms
     tight_term = factor
       | tight_term factor => invisible_times;
@@ -98,6 +101,32 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
            | lparen formula rparen              => circumfix_fenced;
 
     factor += fenced_factor;
+
+
+    // Script content
+    postsubscript = start_postsubscript expression end_postsubscript => faux_wrap;
+    postsuperscript = start_postsuperscript expression end_postsuperscript => faux_wrap;
+    floatsubscript = start_floatsubscript expression end_floatsubscript => faux_wrap;
+    floatsuperscript = start_floatsuperscript expression end_floatsuperscript => faux_wrap;
+
+    // Scripted factors -- avoid adding ambiguity in the left-right order of collection
+    // first ALL left (=float), then right (=post).
+    scripted_factor_l11 = floatsuperscript factor_base => prefix_script;
+    scripted_factor_l12 = floatsubscript factor_base => prefix_script;
+    scripted_factor_l1 = scripted_factor_l11 | scripted_factor_l12;
+    scripted_factor_l2 = floatsuperscript scripted_factor_l12 => prefix_script
+      | floatsubscript scripted_factor_l11 => prefix_script;
+
+    scripted_factor_r11 = factor_base postsuperscript => postfix_script
+      | scripted_factor_l1 postsuperscript => postfix_script
+      | scripted_factor_l2 postsuperscript => postfix_script;
+    scripted_factor_r12 = factor_base postsubscript => postfix_script
+      | scripted_factor_l1 postsubscript => postfix_script
+      | scripted_factor_l2 postsubscript => postfix_script;
+    scripted_factor_r1 = scripted_factor_r11 | scripted_factor_r12;
+    scripted_factor_r2 = scripted_factor_r12 postsuperscript => postfix_script
+      | scripted_factor_r11 postsubscript => postfix_script;
+    factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
 
     anyop = addop | mulop | relop | metarelop
       | bigop | sumop | intop
