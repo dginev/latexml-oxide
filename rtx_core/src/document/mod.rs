@@ -618,8 +618,16 @@ impl Document {
     Ok(())
   }
 
-  // Closes all nodes until $node is closed.
+  /// Closes all nodes until $node is closed.
   pub fn close_node(&mut self, node: &Node, state: &mut State) -> Result<()> {
+    self.close_node_with_strictness(true, node, state)
+  }
+  /// Only if needed/possible: closes all nodes until $node is closed
+  pub fn maybe_close_node(&mut self, node: &Node, state: &mut State) -> Result<()> {
+    self.close_node_with_strictness(false, node, state)
+  }
+
+  pub fn close_node_with_strictness(&mut self, strict: bool, node: &Node, state: &mut State) -> Result<()> {
     // my ($t, @cant_close) = ();
     let mut cant_close: Vec<Node> = Vec::new();
     let mut n = self.node.clone();
@@ -634,13 +642,15 @@ impl Document {
 
     if t == Some(NodeType::DocumentNode) {
       // Didn't find $qname at all!!
-      let qname = state.model.get_node_qname(node);
-      let message = s!(
-        "Attempt to close {}, which isn't open. Currently in {:?}",
-        qname,
-        self.get_insertion_context(None, state)
-      );
-      Error!("malformed", qname, self, state, message);
+      if strict {
+        let qname = state.model.get_node_qname(node);
+        let message = s!(
+          "Attempt to close {}, which isn't open. Currently in {:?}",
+          qname,
+          self.get_insertion_context(None, state)
+        );
+        Error!("malformed", qname, self, state, message);
+      }
     } else {
       // Found node.
       // Intervening non-auto-closeable nodes!!
@@ -651,7 +661,11 @@ impl Document {
           qname,
           cant_close.iter().map(Node::get_name).collect::<Vec<String>>().join(", ")
         );
-        Error!("malformed", qname, self, state, message);
+        if strict {
+          Error!("malformed", qname, self, state, message);
+        } else {
+          Info!("malformed", qname, self, state, message);
+        }
       }
       self.close_node_internal(node, state)?;
     }

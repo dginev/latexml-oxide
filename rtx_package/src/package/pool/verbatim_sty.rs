@@ -28,13 +28,10 @@ LoadDefinitions!(state, {
   DefMacro!("\\verbatim@processline", "\\the\\verbatim@line\\par");
 
   DefMacro!("\\verbatim@font", "\\normalfont\\ttfamily\\hyphenchar\\font\\m@ne\\@noligs");
-  DefMacro!(
-    "\\@verbatim",
-    "\\the\\every@verbatim\
-     \\obeylines\
-     \\let\\do\\@makeother \\dospecials\
-     \\verbatim@font"
-  );
+  DefMacro!(r"\@verbatim",r"\the\every@verbatim
+     \obeylines
+     \let\do\@makeother \dospecials
+     \verbatim@font");
 
   DefConstructor!("\\lx@verbatim@", "<ltx:verbatim font='#font'>",
     before_digest => { Let!(&T_CS!("\\par"), T_CR!()); },

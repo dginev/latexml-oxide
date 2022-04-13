@@ -826,12 +826,6 @@ macro_rules! defi_math {
 
     // If single character, handle with a rewrite rule
     if csname.len() == 1 {
-      // WAS: defmath_rewrite!($cs, options);
-      // No, do NOT make mathactive; screws up things like babel french, or... ?
-      // EXPERIMENT: store XMTok attributes for if this char ends up a Math Token.
-      // But only some DefMath options make sense!
-      // let rw_options = { name => 1, meaning => 1, omcd => 1, role => 1, mathstyle => 1, stretchy => 1 }; # (well, mathstyle?)
-      // CheckOptions("DefMath reimplemented as DefRewrite ($csname)", $rw_options, %options);
       let mut math_attr_hash: HashMap<String, String> = HashMap::new();
       transfer_opt_default!(name, options, math_attr_hash);
       transfer_opt_default!(meaning, options, math_attr_hash);

@@ -1,5 +1,6 @@
 use libxml::tree::Node;
 use rtx_core::common::xml::element_nodes;
+use rtx_core::common::font::Font;
 use rtx_core::document::Document;
 use rtx_core::Info;
 use std::borrow::Cow;
@@ -24,6 +25,7 @@ pub struct XMTok {
   pub content: Option<Cow<'static, str>>,
   pub name: Option<Cow<'static, str>>,
   pub scriptpos: Option<Cow<'static, str>>,
+  pub font: Option<Font>
 }
 impl Display for XMTok {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -406,6 +408,12 @@ impl Tree {
         }
         if let Some(ref scriptpos) = xmtok.scriptpos {
           xmtok_node.set_attribute("scriptpos", scriptpos)?;
+        }
+        if let Some(ref font) = xmtok.font {
+          // TODO: how do we absorb the font attributes here? relative to current?
+          if let Some(size) = font.size {
+            xmtok_node.set_attribute("fontsize", &size.to_string())?;
+          }
         }
         if let Some(ref content) = xmtok.content {
           xmtok_node.set_content(content)?;

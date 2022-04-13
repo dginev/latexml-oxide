@@ -146,6 +146,9 @@ impl MathPrimitiveOptions {
     if let Some(ref mode) = self.mode {
       h.insert("mode".to_string(), mode.into());
     }
+    if let Some(ref font) = self.font {
+      h.insert("font".to_string(), font.clone().into());
+    }
     // TODO: add more of the fields to the hash?
 
     h

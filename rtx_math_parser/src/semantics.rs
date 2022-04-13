@@ -2,6 +2,7 @@ use marpa::lexer::token::Token;
 use marpa::stack::*;
 use marpa::thin::Value;
 use marpa::tree_builder::*;
+use rtx_core::common::font::{self,Font};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::error::Error;
@@ -262,6 +263,7 @@ pub fn invisible_times(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[Validati
     content: Some(Cow::Borrowed("\u{2062}")),
     name: None,
     scriptpos: None,
+    font: None
   };
   Ok(Some(Tree::Apply(times.into(), Args(vec![left, right]), Meta::default())))
 }
@@ -271,16 +273,27 @@ pub fn new_token(meaning: Option<Cow<'static, str>>, content: Option<Cow<'static
   let name = props.remove("name");
   let scriptpos = props.remove("scriptpos");
   // TODO:
-  // if (!$attr{font}) {
-  //   $attr{font} = ($content && $content =~ /\S/
-  //     ? LaTeXML::Common::Font->textDefault->specialize($content)
-  //     : LaTeXML::Common::Font->new()); }
+  let font = match props.remove("font") {
+    Some(_fnt) => unimplemented!(),
+    None => {
+      if let Some(ref text) = content {
+        if !text.is_empty() && !text.chars().all(|c| c.is_whitespace()) {
+          font::FONT_TEXT_DEFAULT.specialize(text)
+        } else {
+          Font::default()
+        }
+      } else {
+        Font::default()
+      }
+    }
+  };
   XMTok {
     meaning,
     content,
     role,
     name,
-    scriptpos
+    scriptpos,
+    font: Some(font)
   }
 }
 
