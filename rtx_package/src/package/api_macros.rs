@@ -294,7 +294,11 @@ macro_rules! prop_digested {
       Some(Stored::VecDigested(vd)) => vd.clone(),
       Some(Stored::Digested(d)) => vec![(**d).clone()],
       Some(Stored::String(s)) => vec![s.into()],
-      _ => Vec::new(),
+      None => Vec::new(),
+      other => {
+        eprintln!("Please extend the api_macros::prop_digested macro to support: {:?}", other);
+        unimplemented!();
+      }
     }
   };
 }

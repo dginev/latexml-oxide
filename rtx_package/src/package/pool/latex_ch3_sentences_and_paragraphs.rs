@@ -34,8 +34,13 @@ LoadDefinitions!(state, {
     bounded        => true,
     font=> { emph => true },
     alias => "\\emph",
-    before_digest   => {
-      DefMacro!(T_CS!("\\f@shape"), None, Tokens!(T_LETTER!("i"),T_LETTER!("t")));
+    before_digest => sub[stomach,state] {
+      let gullet = stomach.get_gullet_mut();
+      if Expand!(T_CS!("\\f@shape"),gullet,state).to_string() == "it" {
+        DefMacro!(T_CS!("\\f@shape"), None, Tokens!(T_LETTER!("n")));
+      } else {
+        DefMacro!(T_CS!("\\f@shape"), None, Tokens!(T_LETTER!("i"),T_LETTER!("t")));
+      }
     },
     after_construct => sub[doc,args,inner_state] {
       doc.maybe_close_element("ltx:emph", inner_state)?; }

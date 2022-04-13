@@ -123,7 +123,9 @@ LoadDefinitions!(state, {
   // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next egroup or }
   DefPrimitive!("\\aftergroup Token", sub[stomach, args, state] {
     unpack_to_token!(args => t);
-    PushValue!("afterGroup" => t); });
+    state.push_value("afterGroup", t);
+    dbg!(state.lookup_value("afterGroup"));
+  });
 
   // // \uppercase<general text>, \lowercase<general text>
   // sub ucToken {

@@ -63,6 +63,7 @@ pub enum Stored {
   VecChar(Vec<char>),
   VecOptionChar(Vec<Option<char>>),
   VecString(Vec<String>),
+  VecTokens(Vec<crate::Tokens>),
   VecDigested(Vec<crate::Digested>),
   HashString(HashMap<String, String>),
   VecDequeStored(VecDeque<Stored>),
@@ -129,9 +130,10 @@ impl fmt::Debug for Stored {
       MuGlue(ref glue) => write!(f, "Stored::MuGlue[{:?}]", glue),
       Dimension(ref dimension) => write!(f, "Stored::Dimension[{:?}]", dimension),
       MuDimension(ref dimension) => write!(f, "Stored::MuDimension[{:?}]", dimension),
-      VecDigested(ref digested_vec) => write!(f, "VecDigested[{:?}]", digested_vec),
-      VecDequeStored(ref vec) => write!(f, "VecDequeStored[{:?}]", vec),
-      HashStored(ref hos) => write!(f, "HashStored[{:?}]", hos),
+      VecDigested(ref digested_vec) => write!(f, "VecDigested{:?}", digested_vec),
+      VecTokens(ref vec) => write!(f, "VecTokens{:?}", vec),
+      VecDequeStored(ref vec) => write!(f, "VecDequeStored{:?}", vec),
+      HashStored(ref hos) => write!(f, "HashStored{:?}", hos),
       HashTagData(ref htd) => write!(f, "HashTagData[{:?}]", htd),
       HashString(ref hstr) => write!(f, "HashStr[{:?}]", hstr),
       Ligature(ref lig) => write!(f, "Ligature[{:?}]", lig),
@@ -369,6 +371,13 @@ impl PartialEq for Stored {
           false
         }
       },
+      VecTokens(ref vd) => {
+        if let VecTokens(vd2) = other {
+          vd == vd2
+        } else {
+          false
+        }
+      },
       VecDequeStored(ref v) => {
         if let VecDequeStored(v2) = other {
           v == v2
@@ -599,6 +608,10 @@ impl From<Vec<Token>> for Stored {
 
 impl From<Vec<crate::Digested>> for Stored {
   fn from(value: Vec<crate::Digested>) -> Self { Stored::VecDigested(value) }
+}
+
+impl From<Vec<crate::Tokens>> for Stored {
+  fn from(value: Vec<crate::Tokens>) -> Self { Stored::VecTokens(value) }
 }
 
 impl From<HashMap<String, String>> for Stored {
