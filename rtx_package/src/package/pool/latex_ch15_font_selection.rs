@@ -27,10 +27,10 @@ LoadDefinitions!(outer_state, {
   Let!("\\normalshape", "\\upshape");
 
   // ? DefMacro("\\f@encoding','cm');
-  DefMacro!("\\f@family", "cm");
-  DefMacro!("\\f@series", "");
-  DefMacro!("\\f@shape", "");
-  DefMacro!("\\f@size", "");
+  DefMacro!("\\f@family", "cmr");
+  DefMacro!("\\f@series", "m");
+  DefMacro!("\\f@shape", "n");
+  DefMacro!("\\f@size", "10");
 
   // These do NOT immediately effect the font!
   DefMacro!("\\fontfamily{}", "\\edef\\f@family{#1}");

@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
 use crate::common::error::*;
@@ -435,12 +435,12 @@ impl<'t> Stomach {
   pub fn push_stack_frame(&mut self, nobox: bool, state: &mut State) {
     let current_token = match &state.current_token {
       Some(t) => (**t).clone(),
-      _ => Token::default(),
+      _ => unimplemented!() // should never happen?
     };
 
     state.push_frame();
-    state.assign_value("beforeAfterGroup", Stored::VecDigested(Vec::new()), Some(Scope::Local)); // ALWAYS bind this!
-    state.assign_value("afterGroup", Stored::VecDigested(Vec::new()), Some(Scope::Local)); // ALWAYS bind this!
+    state.assign_value("beforeAfterGroup", Stored::VecDequeStored(VecDeque::new()), Some(Scope::Local)); // ALWAYS bind this!
+    state.assign_value("afterGroup", Stored::VecDequeStored(VecDeque::new()), Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("afterAssignment", Stored::Tokens(Tokens!()), Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
@@ -457,6 +457,7 @@ impl<'t> Stomach {
         for frametok in beforeafter.unlist().into_iter() {
           result.push(frametok.be_digested(self, state)?);
         }
+        // TODO
         // if (my ($x) = grep { !$_->isaBox } @result) {
         // Fatal('misdefined', $x, $self, "Expected a Box|List|Whatsit, but got '" .
         // Stringify($x) . "'"); }
@@ -468,9 +469,13 @@ impl<'t> Stomach {
     if !nobox {
       self.boxing.pop(); // For begingroup/endgroup
     }
-    if let Some(Stored::Tokens(after)) = after {
-      if !after.is_empty() {
-        self.gullet.unread(after);
+    if let Some(Stored::VecDequeStored(after_entries)) = after {
+      for entry in after_entries.into_iter().rev() {
+        match entry {
+          Stored::Tokens(t) => self.gullet.unread(t),
+          Stored::Token(t) => self.gullet.unread(Tokens::new(vec![t])),
+          other => panic!(r"\aftergroup should be used with tokens, got instead: {:?}", other)
+        };
       }
     }
     Ok(())
@@ -514,15 +519,12 @@ impl<'t> Stomach {
   pub fn begingroup(&mut self, state: &mut State) { self.push_stack_frame(true, state); }
 
   pub fn endgroup(&mut self, state: &mut State) -> Result<()> {
-    // if state.is_value_bound("MODE", Some(0))    // Last stack frame was a mode switch!?!?!
-    //   || !state.has_value("groupNonBoxing") {    // or group was opened with \bgroup
-    // error!("unexpected:{:?}: Attempt to close non-boxing group",
-    // state.lookup_value("CURRENT_TOKEN")); // Error('unexpected',
-    // $LaTeXML::CURRENT_TOKEN, self, "Attempt to close non-boxing group", // self.
-    // currentFrameMessage); } }
-    // else {    // Don't pop if there's an error; maybe we'll recover?
-    self.pop_stack_frame(true, state)
-    //}
+    if !state.lookup_bool("groupNonBoxing") {    // or group was opened with \bgroup
+      Error!("unexpected", state.current_token.as_ref().unwrap().to_string(), self, state, s!("Attempt to close non-boxing group {}", self.current_frame_message()));
+    } else {
+      self.pop_stack_frame(true, state)?;
+    }
+    Ok(())
   }
 
   //======================================================================

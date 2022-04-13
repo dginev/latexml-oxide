@@ -3,6 +3,7 @@ use crate::package::*;
 lazy_static! {
   static ref END_VERBATIM_RE: Regex = Regex::new(r"^(.*?)\\end\{verbatim\}(.*?)$").unwrap();
   static ref T_OTHER_STAR : Token = T_OTHER!("*");
+  static ref SEMIVERBATIM_CHARS : Vec<char> = vec!['%', '\\', '{', '}'];
 }
 
 //**********************************************************************
@@ -12,7 +13,18 @@ LoadDefinitions!(outer_state, {
   // NOTE: how's the best way to get verbatim material through?
   DefEnvironment!("{verbatim}", "<ltx:verbatim>#body</ltx:verbatim>");
   DefEnvironment!("{verbatim*}", "<ltx:verbatim>#body</ltx:verbatim>");
-  Let!("\\@verbatim", "\\verbatim");
+
+  DefMacro!("\\@verbatim", r"\par\aftergroup\lx@end@verbatim\lx@@verbatim"); // Close enough?
+  DefConstructor!("\\lx@@verbatim", "<ltx:verbatim font='#font'>",
+  before_digest => sub[stomach,state] {
+    state.begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
+    merge_font(fontmap!(family => "typewriter", series => "medium", shape => "upright"), state);
+    state.assign_catcode(' ', Catcode::ACTIVE, None);  // Do NOT (necessarily) skip spaces after \verb!!!
+    Let!(&T_ACTIVE!(" "), T_SPACE!());
+  });
+  DefConstructor!(r"\lx@end@verbatim", "</ltx:verbatim>",
+    before_digest => sub[stomach,state] { state.end_semiverbatim()?; });
+
   // Close enough?
   // verbatim is a bit of special case;
   // It looks like an environment, but it only ends with an explicit "\end{verbatim}" on it's own

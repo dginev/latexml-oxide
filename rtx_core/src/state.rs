@@ -1516,7 +1516,7 @@ impl State {
     self.assign_value("MODE", Stored::String(s!("text")), Some(Scope::Global));
     self.assign_value("IN_MATH", Stored::Bool(false), Some(Scope::Global));
     self.assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
-    self.assign_value("afterGroup", Stored::VecDigested(Vec::new()), Some(Scope::Global));
+    self.assign_value("afterGroup", Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
     self.assign_value("afterAssignment", Stored::Tokens(Tokens!()), Some(Scope::Global)); // undef ???
     self.assign_value("groupInitiator", Stored::String(s!("Initialization")), Some(Scope::Global));
     // Setup default fonts.
