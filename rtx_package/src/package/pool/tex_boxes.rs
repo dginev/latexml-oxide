@@ -106,15 +106,18 @@ LoadDefinitions!(state, {
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props, state] {
       // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
       unpack!(args => spec, contents);
-      let current = document.get_element();
+      let current_opt = document.get_element();
 
       // What is the CORRECT (& general) way to ask whether we're in "vertical mode"??
       //  my $vmode = $tag eq 'ltx:inline-block'; # ie, explicitly \vbox !?!?!?!
-      let vmode = match current {
-        None => false,
-        Some(node) => node.has_attribute("_vertical_mode_")
-      };
-      let newtag = if vmode { "ltx:p" } else { "ltx:text" };
+      let is_svg  = if let Some(ref current) = current_opt {
+        document.get_node_qname(&current,state).starts_with("svg:")
+      } else { false };
+      let vmode = if let Some(ref current) = current_opt {
+        current.has_attribute("_vertical_mode_")
+      } else { false };
+      let newtag = if is_svg { "svg:g" }
+        else if vmode { "ltx:p" } else { "ltx:text" };
       let width : String = if let Some(Stored::Dimension(ref w)) = props.get("width") {
         w.to_attribute()
       } else {
@@ -122,12 +125,18 @@ LoadDefinitions!(state, {
       };
       let node = document.open_element(newtag, Some(string_map!("_noautoclose" => "true", "width" => width)), None, state)?;
       document.absorb(contents, None, state)?;
-      document.close_node(&node, state)?;
-      Debug!("FINAL DOC: {:?}", document.document.node_to_string(&document.get_element().unwrap()));
+      if !is_svg {
+        while !document.get_element().unwrap().has_attribute("_beginscope") &&
+         document.maybe_close_element("svg:g", state)?.is_some() {}
+        document.maybe_close_element("svg:svg", state)?;
+        document.maybe_close_node(&node, state)?;
+      } else {
+        document.maybe_close_element("svg:g", state)?;
+      }
     },
     mode => "text",
     bounded => true,
-    // sizer => "#2",
+    sizer => "#2",
     //   # Workaround for $ in alignment; an explicit \hbox gives us a normal $.
     //   # And also things like \centerline that will end up bumping up to block level!
     before_digest => sub[stomach, state] {reenter_text_mode(false, state)},

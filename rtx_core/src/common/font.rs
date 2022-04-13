@@ -94,26 +94,60 @@ lazy_static! {
     "msx" => fontmap!(family => "symbol", encoding => "AMSa"),
     "msy" => fontmap!(family => "symbol", encoding => "AMSb")
   );
-  // Maps the "series code" to an abstract font series name
+  /// Maps the "series code" to an abstract font series name
   static ref FONT_SERIES : HashMap<&'static str, Font> = raw_map!(
     "" => fontmap!(series => "medium"), "m" => fontmap!(series => "medium"), "mc" => fontmap!(series => "medium"),
     "b"  => fontmap!(series => "bold"),   "bc"  => fontmap!(series => "bold"),   "bx" => fontmap!(series => "bold"),
     "sb" => fontmap!(series => "bold"),   "sbc" => fontmap!(series => "bold"),   "bm" => fontmap!(series => "bold")
   );
 
-  // Maps the "shape code" to an abstract font shape name.
+  /// Maps the "shape code" to an abstract font shape name.
   static ref FONT_SHAPE : HashMap<&'static str, Font> = raw_map!(
     "" => fontmap!(shape => "upright"), "n" => fontmap!(shape => "upright"),
      "i" => fontmap!(shape => "italic"), "it" => fontmap!(shape => "italic"), "sl" => fontmap!(shape => "slanted"),
      "sc" => fontmap!(shape => "smallcaps"), "csc" => fontmap!(shape => "smallcaps")
   );
 
-  static ref MATH_STYLE_SEP : HashMap<&'static str, HashMap<&'static str, i32>> = raw_map!(
+  /// Symbolic font sizes, relative to the NOMINAL_FONT_SIZE (often 10)
+  /// extended logical font sizes, based on nominal document size of 10pts
+  /// Possibly should simply use absolute font point sizes, as declared in class...
+  static ref FONT_SIZE : HashMap<&'static str, f32> = raw_map!(
+  "tiny"   => 0.5,   "SMALL" => 0.7, "Small" => 0.8,  "small" => 0.9,
+  "normal" => 1.0,   "large" => 1.2, "Large" => 1.44, "LARGE" => 1.728,
+  "huge"   => 2.074, "Huge"  => 2.488,
+  "big"    => 1.2,   "Big"   => 1.6, "bigg" => 2.1, "Bigg" => 2.6);
+
+  static ref SCRIPT_STYLE_MAP  : HashMap<&'static str, &'static str> = raw_map!(
+    "display" => "script", "text" => "script",
+    "script" => "scriptscript", "scriptscript" => "scriptscript");
+
+  static ref FRAC_STYLE_MAP : HashMap<&'static str, &'static str> = raw_map!(
+    "display" => "text", "text" => "script",
+    "script" => "scriptscript", "scriptscript" => "scriptscript");
+
+  static ref STYLE_SIZE  : HashMap<&'static str, usize> = raw_map!(
+    "display" => 10, "text" => 10, "script" => 7, "scriptscript" => 5);
+
+  static ref MATH_STYLE_SIZE : HashMap<&'static str, f32> = raw_map!(
+    "display" => 1.0, "text" => 1.0, "script" => 0.7, "scriptscript" => 0.5);
+
+  /// A special form of merge when copying/moving nodes to a new context,
+  /// particularly math which become scripts or such.
+  static ref MATH_STYLE_STEP : HashMap<&'static str, HashMap<&'static str, i32>> = raw_map!(
     "display" => raw_map!(
       "display" => 0, "text" => 1, "script" => 2, "scriptscript" => 3),
     "text"=> raw_map!("display" => -1, "text" => 0, "script" => 1, "scriptscript" => 2),
     "script"=> raw_map!("display" => -2, "text" => -1, "script" => 0, "scriptscript" => 1),
     "scriptscript" => raw_map!("display" => -3, "text" => -2, "script" => -1, "scriptscript" => 0));
+  static ref STEP_MATH_STYLE : HashMap<&'static str, HashMap<i32, &'static str>> = raw_map!(
+  "display" => raw_map!(-3 => "display", -2 => "display", -1 => "display",
+    0 => "display", 1 => "text", 2 => "script", 3 => "scriptscript"),
+  "text" => raw_map!(-3 => "display", -2 => "display", -1 => "display",
+    0 => "text", 1 => "script", 2 => "scriptscript", 3 => "scriptscript"),
+  "script" => raw_map!(-3 => "display", -2 => "display", -1 => "text",
+    0 => "script", 1 => "scriptscript", 2 => "scriptscript", 3 => "scriptscript"),
+  "scriptscript" => raw_map!(-3 => "display", -2 => "text", -1 => "script",
+    0 => "scriptscript", 1 => "scriptscript", 2 => "scriptscript", 3 => "scriptscript"));
 }
 
 /// Global auxiliary for font family lookup
@@ -154,6 +188,7 @@ pub struct Font {
   pub forceshape: Option<bool>,
   pub scale: Option<f32>
 }
+impl Eq for Font {}
 // display is used often for attributes in binding replacements,
 // as in font="#font"
 impl fmt::Display for Font {
@@ -206,6 +241,9 @@ impl fmt::Debug for Font {
     }
     if let Some(ref forceshape) = self.forceshape {
       parts.push(s!("forceshape: {:?}", forceshape))
+    }
+    if let Some(ref scripted) = self.scripted {
+      parts.push(s!("scripted: {:?}", scripted))
     }
     write!(f, "Font[{}]", parts.join(", "))
   }
@@ -281,6 +319,7 @@ impl Font {
   // You must arrange this in the calls....
   pub fn merge(&self, other: Font) -> Self {
     let mut newfont = self.clone();
+    // first set direct overrides.
     if let Some(value) = other.family {
       newfont.family = Some(value);
     }
@@ -315,7 +354,9 @@ impl Font {
     if let Some(value) = other.language {
       newfont.language = Some(value);
     }
+    let mut has_mathstyle = false;
     if let Some(value) = other.mathstyle {
+      has_mathstyle = true;
       newfont.mathstyle = Some(value);
     }
     if let Some(value) = other.forceseries {
@@ -327,6 +368,47 @@ impl Font {
     if let Some(value) = other.forceshape {
       newfont.forceshape = Some(value);
     }
+
+    // Now perform any dynamic adjustment directives
+    if let Some(scale) = other.scale {
+      if let Some(size) = newfont.size {
+        newfont.size = Some(scale * size);
+      }
+    }
+    // Set the mathstyle, and also the size from the mathstyle
+    // But we may need to scale that size against the existing or requested size.
+    let style_scale = if let Some(size) = newfont.size {
+      let key = self.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
+      // the explicit &str typecast is currently needed for rust to
+      // figure out how to use the Cow<str> in the HashMap lookup.
+      let str_key : &str = &key;
+      size / *STYLE_SIZE.get(str_key).unwrap() as f32
+    } else { 1.0 };
+    // Explicitly requested size, use it; else
+    if other.size.is_none() {
+      if has_mathstyle { // otherwise set the size from mathstyle
+        let str_mathstyle : &str = &newfont.mathstyle.as_ref().unwrap();
+        newfont.size = Some(style_scale * *STYLE_SIZE.get(str_mathstyle).unwrap() as f32);
+      } else if Some(true) == other.scripted {
+        // Or adjust both the mathstyle & size for scripts
+        let str_stylekey : &str = &self.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
+        newfont.mathstyle = SCRIPT_STYLE_MAP.get(str_stylekey).map(|c| Cow::Borrowed(*c));
+        let str_mathstylekey : &str = &newfont.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
+        newfont.size = Some(style_scale * *STYLE_SIZE.get(str_mathstylekey).unwrap() as f32);
+      }
+    }
+
+  // TODO:
+  // elsif ($options{fraction}) {     # Or adjust both for fractions
+  //   $mathstyle = $fracstylemap{ $mathstyle            || 'display' };
+  //   $size      = $style_scale * $stylesize{ $mathstyle || 'display' }; }
+
+  // if ($options{emph}) {
+  //   $shape = ($shape eq 'italic' ? 'upright' : 'italic');
+  //   $flags |= $FLAG_EMPH; }
+  // $flags &= ~$FLAG_EMPH if $mathstyle;    # Disable emph in math
+  //   newfont
+  // }
     newfont
   }
 
@@ -402,20 +484,6 @@ impl Font {
       } // defaults, always.
     }
     new
-  }
-
-  pub fn to_attribute(&self) -> String {
-    let mut serialized = String::new();
-    if let Some(ref value) = self.family {
-      serialized = serialized + " " + value;
-    }
-    if let Some(ref value) = self.series {
-      if value != "medium" {
-        // TODO: this is a Hack for alltt.tex, ensure this is generalized
-        serialized = serialized + " " + value;
-      }
-    }
-    serialized.trim().to_string()
   }
 
   pub fn distance(&self, other: &Font) -> i8 {
@@ -508,7 +576,6 @@ impl Font {
       diffs.push(shape);
       font_properties.shape = self.shape.clone();
     }
-
     let mut result = HashMap::new();
 
     if !diffs.is_empty() {
@@ -516,10 +583,14 @@ impl Font {
       result.insert(s!("font"), (font_value, font_properties));
     }
 
-    // (is_diff($siz, $osiz)
+    if is_diff_f32(&self.size, &other.size) {
+      result.insert("fontsize".to_string(), (relative_font_size(self.size.unwrap(), other.size.unwrap()), Font {
+        size: self.size, .. Font::default()  }));
+    }
     // ////      ? (fontsize => { value => $siz, properties => { size => $siz } })
     //   ? (fontsize => { value => relativeFontSize($siz, $osiz), properties => { size => $siz } })
     //   : ()),
+
     // (is_diff($col, $ocol)
     //   ? (color => { value => $col, properties => { color => $col } })
     //   : ()),
@@ -566,6 +637,8 @@ impl Font {
 }
 
 fn is_diff(x: &Option<Cow<str>>, y: &Option<Cow<str>>) -> bool { x.is_some() && (y.is_none() || (x != y)) }
+
+fn is_diff_f32(x: &Option<f32>, y: &Option<f32>) -> bool { x.is_some() && (y.is_none() || (x != y)) }
 
 /// Decode a codepoint using the fontmap for a given font and/or fontencoding.
 /// If `encoding` not provided, then lookup according to the current font's
@@ -688,4 +761,18 @@ pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, s
     }
   }
   result_string
+}
+
+/// Convert stanard font size names, such as `tiny`, `Huge`, etc to f32
+pub fn rationalize_font_size(size: &str) -> f32 {
+  if let Some(symbolic) = FONT_SIZE.get(size) {
+    *symbolic * DEFSIZE
+  } else {
+    DEFSIZE
+  }
+}
+
+/// convert size to percent
+pub fn relative_font_size(newsize: f32, oldsize:f32) -> String {
+  s!("{}%", (0.5 + 100.0 * newsize / oldsize).floor())
 }

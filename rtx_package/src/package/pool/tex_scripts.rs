@@ -130,12 +130,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       }
     }
     stomach.box_list.extend(putback);
-
-    // MergeFont(scripted => 1);
-    state.assign_font(Arc::new(
-      state.lookup_font().unwrap().merge(Font{ scripted: Some(true),
-        ..Font::default()})), Some(Scope::Local));
-
+    MergeFont!(scripted => true, state);
     // Now, get following boxes (may have to process several tokens!)
     let mut stuff = Vec::new();
     while let Some(tok) = stomach.get_gullet_mut().read_x_token(false,false,state)? {

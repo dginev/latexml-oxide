@@ -23,20 +23,22 @@ LoadDefinitions!(state, {
   DefConstructor!("\\LaTeX", "LaTeX");
   DefConstructor!("\\LaTeXe", "LaTeX2e");
   DefMacro!("\\fmtname", "LaTeX2e");
-  DefMacro!("\\fmtversion", "XXXX/XX/XX");
+  DefMacro!("\\fmtversion", "2018/12/01");
 
   DefMacro!("\\today", { ExplodeText!(Today!()) });
 
-  // Previously, we used ltx:emph, to preserve the semantic intent,
-  // but some folks wrap it around arbitrary blocks of material,
-  // more like a font switch.
-  DefConstructor!("\\emph{}", "#1",
+  // Use fonts (w/ special flag) to propogate emphasis as a font change,
+  // but preserve it's "emph"-ness.
+  DefConstructor!("\\emph{}", "<ltx:emph _force_font='1'>#1",
     mode => "text",
     bounded        => true,
     font=> { emph => true },
     alias => "\\emph",
-    before_digest   => { DefMacro!(T_CS!("\\f@shape"), None, T_LETTER!("i")); },
-    after_construct => sub[doc,args,inner_state] { doc.add_class(&mut doc.get_element().unwrap(), "ltx_emph")?; }
+    before_digest   => {
+      DefMacro!(T_CS!("\\f@shape"), None, Tokens!(T_LETTER!("i"),T_LETTER!("t")));
+    },
+    after_construct => sub[doc,args,inner_state] {
+      doc.maybe_close_element("ltx:emph", inner_state)?; }
   );
 
   //======================================================================

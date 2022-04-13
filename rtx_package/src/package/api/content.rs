@@ -832,7 +832,7 @@ pub fn select_relaxng_schema(schema: String, namespaces: Option<HashMap<String, 
 
 pub fn merge_font(font: Font, state: &mut State) {
   let new_font = state.lookup_font().unwrap().merge(font);
-  state.assign_value("font", Arc::new(new_font), Some(Scope::Local));
+  state.assign_font(Arc::new(new_font), Some(Scope::Local));
 }
 
 pub fn digest_text(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
