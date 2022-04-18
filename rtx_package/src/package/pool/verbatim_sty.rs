@@ -68,7 +68,7 @@ r"\let\do\@makeother\dospecials\catcode`\^^M\active
   // NOTE: the part AFTER the \end{whatever}, should be lost (and message about it!)
   DefMacro!("\\verbatim@", sub[gullet, arg, state] {
     let mut mouth = gullet.get_mouth_mut();
-    let env = LookupString!("current_environment");
+    let env = state.lookup_string("current_environment");
     // Note: This should allow a regexp, since there can be spaces between \end and { !!!
     let mut lines = Vec::new();
     // TODO: UGH!!! Isn't there a better way to approximate the Perl simplicity of writing an inline regex?
@@ -98,7 +98,7 @@ r"\let\do\@makeother\dospecials\catcode`\^^M\active
       tokens.push(T_CS!("\\verbatim@processline"));
     }
     tokens.extend(Invocation!(T_CS!("\\end"), vec![T_OTHER!(env)], gullet)?.unlist());
-    Ok(tokens.into())
+    Ok(Tokens::new(tokens))
   });
 
   // //======================================================================
