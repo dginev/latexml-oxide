@@ -161,7 +161,13 @@ impl Definition for Expandable {
         }
         Ok(result)
       },
-      None => Ok(Tokens!())
+      None => {
+        // we always need to read the arguments, for e.g. things like \@gobble
+        if let Some(ref parms) = self.paramlist {
+          parms.read_arguments(gullet, self, state)?;
+        }
+        Ok(Tokens!())
+      }
     }
   }
 
