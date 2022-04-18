@@ -56,8 +56,8 @@ LoadDefinitions!(state, {
   DefConstructor!("\\@hidden@bgroup", "#body",
     before_digest => sub[stomach,state] { stomach.bgroup(state); },
     capture_body => true,
-    reversion => "", // TODO!
-    // reversion =>  sub[whatsit, state] {
+    reversion=>"" //TODO
+    // reversion => sub[whatsit, state] {
     //   whatsit.get_body().revert()
     // }
   );
@@ -124,7 +124,6 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\aftergroup Token", sub[stomach, args, state] {
     unpack_to_token!(args => t);
     state.push_value("afterGroup", t);
-    dbg!(state.lookup_value("afterGroup"));
   });
 
   // // \uppercase<general text>, \lowercase<general text>

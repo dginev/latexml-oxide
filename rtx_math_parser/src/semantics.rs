@@ -231,8 +231,8 @@ pub fn lookup_lex_node<'a,'b>(lex: &'a str, nodes: &'b [XMLNode]) -> Result<&'b 
 // However, this is really only used to get the script out of a sub/super script
 pub fn obtain_arg(tree: Tree, n: usize) -> Option<Tree> {
   match &tree {
-    &Tree::Lexeme(_,_) => Some(tree),
-    &Tree::Apply(_, ref args, _) => match args.0.get(n) {
+    Tree::Lexeme(_,_) => Some(tree),
+    Tree::Apply(_, ref args, _) => match args.0.get(n) {
       Some(t) => t.clone(),
       None => None
     },
@@ -298,7 +298,7 @@ pub fn new_token(meaning: Option<Cow<'static, str>>, content: Option<Cow<'static
 }
 
 // Some handy shorthands.
-pub fn absent() { new_token(Some(Cow::Borrowed("absent")), None, HashMap::default()); }
+// pub fn absent() { new_token(Some(Cow::Borrowed("absent")), None, HashMap::default()); }
 
 // sub InvisibleComma {
 // return New(undef, "\x{2063}", role => 'PUNCT', font =>

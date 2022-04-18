@@ -1674,9 +1674,7 @@ impl Document {
   }
 
   pub fn unrecord_id(&mut self, id: &str) {
-    //my ($self, $id) = @_;
-    //delete $$self{idstore}{$id};
-    unimplemented!();
+    self.idstore.remove(id);
   }
 
   /// These are used to record or unrecord, in bulk, all the ids within a node (tree).

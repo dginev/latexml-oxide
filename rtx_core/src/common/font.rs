@@ -381,19 +381,19 @@ impl Font {
       let key = self.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
       // the explicit &str typecast is currently needed for rust to
       // figure out how to use the Cow<str> in the HashMap lookup.
-      let str_key : &str = &key;
+      let str_key : &str = key;
       size / *STYLE_SIZE.get(str_key).unwrap() as f32
     } else { 1.0 };
     // Explicitly requested size, use it; else
     if other.size.is_none() {
       if has_mathstyle { // otherwise set the size from mathstyle
-        let str_mathstyle : &str = &newfont.mathstyle.as_ref().unwrap();
+        let str_mathstyle : &str = newfont.mathstyle.as_ref().unwrap();
         newfont.size = Some(style_scale * *STYLE_SIZE.get(str_mathstyle).unwrap() as f32);
       } else if Some(true) == other.scripted {
         // Or adjust both the mathstyle & size for scripts
-        let str_stylekey : &str = &self.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
+        let str_stylekey : &str = self.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
         newfont.mathstyle = SCRIPT_STYLE_MAP.get(str_stylekey).map(|c| Cow::Borrowed(*c));
-        let str_mathstylekey : &str = &newfont.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
+        let str_mathstylekey : &str = newfont.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
         newfont.size = Some(style_scale * *STYLE_SIZE.get(str_mathstylekey).unwrap() as f32);
       }
     }

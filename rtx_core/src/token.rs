@@ -1,4 +1,3 @@
-use lazy_static::lazy_static;
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt;
@@ -18,10 +17,6 @@ use crate::state::State;
 use crate::stomach::Stomach;
 use crate::tokens::Tokens;
 use crate::{Fatal, fatal, Digested};
-
-lazy_static! {
-  pub static ref MOCK_TOKEN: Token = Token::default();
-}
 
 static CONTROLNAME: &[&str] = &[
   "NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL", "BS", "HT", "LF", "VT", "FF", "CR", "SO", "SI", "DLE", "DC1", "DC2", "DC3", "DC4", "NAK",

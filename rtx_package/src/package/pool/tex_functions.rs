@@ -53,8 +53,8 @@ pub fn today(state: &State) -> String {
 }
 
 pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) -> Result<Option<Parameters>> {
-  let mut tokens: VecDeque<Token> = if params_in.is_stub() {
-    VecDeque::new() // handle default tokens making their way into here, they are ignorable
+  let mut tokens: VecDeque<Token> = if params_in.is_empty() {
+    VecDeque::new()
   } else {
     VecDeque::from(params_in.unlist())
   };
@@ -140,10 +140,14 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
 pub fn do_def(globally: bool, stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State) -> Result<()> {
   BindState!(stomach, state);
   unpack!(args => cs, params, body);
-  // ensure params is empty if it contains only the default token
-  // TODO: is this a flaw of parameter parsing?
-  let params = if params.is_stub() { Tokens!() } else { params };
   let cs: Token = cs.into();
+  // TODO:
+  // if (!$cs) {
+  //   Error('expected', 'Token', $gullet, "Expected definition token");
+  //   return; }
+  // elsif (!$params) {
+  //   Error('misdefined', $cs, $gullet, "Expected definition parameter list");
+  //   return; }
   let paramlist = parse_def_parameters(&cs, params, state)?;
 
   let scope = if globally { Some(Scope::Global) } else { None };

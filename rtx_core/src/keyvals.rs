@@ -574,7 +574,7 @@ impl KeyVals {
         Stored::Tokens(vtks) => vtks.into(),
         Stored::Token(vtk) => vtk,
         Stored::String(vstr) => T_OTHER!(vstr),
-        _ => Token::default(),
+        _ => unimplemented!(),
       });
     }
     Tokens::new(tks)

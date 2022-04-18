@@ -215,7 +215,7 @@ LoadDefinitions!(state, {
     } else {
       T_OTHER!("")
     }).collect();
-    gullet.read_until(&[&Tokens::new(until)], state)
+    gullet.read_until(Tokens::new(until), state)
   },
   reversion => reversion!(gullet, arg, until, state, {
     let mut rev = Vec::new();
@@ -321,7 +321,10 @@ LoadDefinitions!(state, {
   // Read until the next (balanced) open brace {
   // used for the last TeX-style delimited argument
   DefParameterType!("UntilBrace", sub[gullet, inner, _extra, state] {
-    gullet.read_until_brace(state)
+    match gullet.read_until_brace(state)? {
+      None => Tokens::default(),
+      Some(tks) => tks
+    }
   });
 
   // Yet another special case: Require a { but do not read it!!!
@@ -499,7 +502,7 @@ LoadDefinitions!(state, {
   // Be careful here: if % appears before the initial {, it's still a comment!
   // Also, note that non-typewriter fonts will mess up some chars on digestion!
   DefParameterType!("Verbatim", sub[gullet, inner, _extra, state] {
-      gullet.read_until(&[&Tokens!(T_BEGIN!())], state)?;
+      gullet.read_until(Tokens!(T_BEGIN!()), state)?;
       let verb_chars = vec!['%', '\\'];
       state.begin_semiverbatim(Some(&verb_chars));
       let arg = gullet.read_balanced(false, state)?;

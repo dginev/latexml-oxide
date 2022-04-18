@@ -23,11 +23,11 @@ LoadDefinitions!(state, {
 
   //======================================================================
   // Mostly simplified versions of what"s in verbatim....
-  DefMacro!("\\verbatim@startline", "\\verbatim@line{}");
-  DefMacro!("\\verbatim@addtoline {}", "\\verbatim@line\\expandafter{\\the\\verbatim@line#1}");
-  DefMacro!("\\verbatim@processline", "\\the\\verbatim@line\\par");
+  DefMacro!(r"\verbatim@startline", r"\verbatim@line{}");
+  DefMacro!(r"\verbatim@addtoline{}", r"\verbatim@line\expandafter{\the\verbatim@line#1}");
+  DefMacro!(r"\verbatim@processline", r"\the\verbatim@line\par");
 
-  DefMacro!("\\verbatim@font", "\\normalfont\\ttfamily\\hyphenchar\\font\\m@ne\\@noligs");
+  DefMacro!(r"\verbatim@font", r"\normalfont\ttfamily\hyphenchar\font\m@ne\@noligs");
   DefMacro!(r"\@verbatim",r"\the\every@verbatim
      \obeylines
      \let\do\@makeother \dospecials
@@ -49,14 +49,12 @@ LoadDefinitions!(state, {
   DefMacro!("\\endverbatim", "\\lx@end@verbatim@\\endgroup");
   DefMacro!(T_CS!("\\endverbatim*"), None, TokenizeInternal!("\\lx@end@verbatim@\\endgroup"));
 
-  DefMacro!(
-    "\\comment",
-    "\\let\\do\\@makeother\\dospecials\\catcode`\\^^M\\active\
-     \\let\\verbatim@startline\\relax\
-     \\let\\verbatim@addtoline\\@gobble\
-     \\let\\verbatim@processline\\relax\
-     \\verbatim@"
-  );
+  DefMacro!("\\comment",
+r"\let\do\@makeother\dospecials\catcode`\^^M\active
+\let\verbatim@startline\relax
+\let\verbatim@addtoline\@gobble
+\let\verbatim@processline\relax
+\verbatim@");
   DefMacro!("\\endcomment", "");
 
   DefMacro!("\\verbatim@start", "\\lx@verbatim@\\verbatim@");
@@ -76,7 +74,6 @@ LoadDefinitions!(state, {
     // TODO: UGH!!! Isn't there a better way to approximate the Perl simplicity of writing an inline regex?
     // the escaping is very easy to get wrong!
     let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{}\\}}(.*)$", env)).unwrap();
-
     while let Some(line) = gullet.read_raw_line(state) {
       if let Some(caps) = env_re.captures(&line) {
         let pre = caps.get(1).map_or("", |m| m.as_str()).to_string();

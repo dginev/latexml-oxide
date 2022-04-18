@@ -163,7 +163,7 @@ impl Gullet {
       None => return None,
       Some(ref mut runtime) => runtime,
     };
-    // loop {
+    loop {
       // Check in pushback first....
       while let Some(mut pushback_token) = runtime.pushback.pop_front() {
         if pushback_token.code == Catcode::SmuggleTHE {
@@ -203,16 +203,17 @@ impl Gullet {
       //     "Pushback limit of $LaTeXML::PUSHBACK_LIMIT exceeded, infinite loop?"); }
 
       // Wow!!!!! See TeX the Program \S 309
-      // if  let Some(token) = next_token {
-      //   if !state.align_state  // SHOULD count nesting of { }!!! when SCANNED (not digested)
-      //     && state.reading_alignment
-      //     &&
-      //   && (($atoken, $atype, $ahidden) = $self->isColumnEnd($token))) {
-      //   $self->handleTemplate($LaTeXML::READING_ALIGNMENT, $token, $atype, $ahidden); }
-      // else {
-      //   break;
-      // }
-    // }
+      if let Some(ref nextt) = next_token {
+        if !state.align_state // SHOULD count nesting of { }!!! when SCANNED (not digested)
+        && state.reading_alignment {
+        //&& (($atoken, $atype, $ahidden) = $self->isColumnEnd($token))) {
+        // $self->handleTemplate($LaTeXML::READING_ALIGNMENT, $token, $atype, $ahidden); }
+      } else {
+        break;
+      }
+    } else {
+      break;
+    } }
     next_token
   }
 
@@ -300,7 +301,7 @@ impl Gullet {
             // TODO: ## Wow!!!!! See TeX the Program \S 309
             if !invoked {
               if token.code == Catcode::CS && state.lookup_meaning(&token).is_none() {
-                return Ok(Some(state.generate_error_stub(self, token)?)) // cs SHOULD have defn by now; report early!
+                return Ok(Some(state.generate_error_stub(self, &token)?)) // cs SHOULD have defn by now; report early!
               } else {
                 return Ok(Some(token))
               }
@@ -458,37 +459,80 @@ impl Gullet {
   }
 
   /// Return a (balanced) sequence tokens until a match against one of the Tokens in @delims.
-  /// In list context, also returns the found delimiter.
-  pub fn read_until(&mut self, delims: &[&Tokens], state: &State) -> Result<Tokens> {
-    let mut n = 0;
-    let mut found;
+  /// Note that Braces on input hides the contents from matching,
+  /// so this assumes there wont be braces in $delim!
+  /// But, see readUntilBrace for that case.
+  pub fn read_until(&mut self, delim: Tokens, state: &State) -> Result<Tokens> {
     let mut tokens: Vec<Token> = Vec::new();
-    loop {
-      found = self.read_match(delims, state)?;
-      if found.is_some() {
-        break;
-      } else {
-        match self.read_token(state) {
-          // Copy next token to args
-          None => return Ok(Tokens!()),
-          Some(token) => {
-            let catcode = token.get_catcode();
-            tokens.push(token);
-            n += 1;
-            if catcode == Catcode::BEGIN {
-              // And if it's a BEGIN, copy till balanced END
-              let mut balanced_tokens = self.read_balanced(false, state)?.unlist();
-              tokens.append(&mut balanced_tokens);
-              tokens.push(T_END!());
+    let mut n = 0;
+    let mut nbraces = 0;
+    let want = delim.unlist();
+    let ntomatch = want.len();
+    let mut has_matched;
+
+    if ntomatch == 1 {
+      let want = &want[0];
+      loop {
+        let token = match self.read_token(state) {
+          Some(t) => t,
+          None => {
+            // Ran out!
+            self.unread(Tokens::new(tokens));
+            return Ok(Tokens!());              // Not more correct, but maybe less confusing?
+          }
+        };
+        if token == *want {
+          break;
+        }
+        if token.code == Catcode::BEGIN { // And if it's a BEGIN, copy till balanced END
+          nbraces+=1;
+          tokens.push(token);
+          tokens.append(&mut self.read_balanced(false,state)?.unlist());
+          tokens.push(T_END!());
+        } else {
+          tokens.push(token);
+        }
+      }
+    } else {
+      let mut ring = VecDeque::new();
+      loop {
+        // prefill the required number of tokens
+        while ring.len() < ntomatch {
+          let token = match self.read_token(state) {
+            Some(t) => t,
+            None => {
+              // Ran out!
+              self.unread(Tokens::new(tokens));
+              return Ok(Tokens!());              // Not more correct, but maybe less confusing?
             }
-          },
+          };
+          if token.code == Catcode::BEGIN { // read balanced, and refill ring.
+            nbraces+=1;
+            for r_token in ring {
+              tokens.push(r_token);
+            }
+            tokens.push(token);
+            tokens.append(&mut self.read_balanced(false,state)?.unlist());
+            tokens.push(T_END!());   // Copy directly to result
+            ring = VecDeque::new();   // and retry
+          } else {
+            ring.push_back(token);
+          }
+        }
+        has_matched = ring == want; // Test match
+        if has_matched {
+          break; } // Matched all!
+        if let Some(ring_token) = ring.pop_front() {
+          tokens.push(ring_token);
         }
       }
     }
     // Notice that IFF the arg looks like {balanced}, the outer braces are stripped
     // so that delimited arguments behave more similarly to simple, undelimited arguments.
-    if n == 1 && tokens[0].get_catcode() == Catcode::BEGIN {
-      tokens = tokens[1..tokens.len() - 1].to_vec();
+    if nbraces == 1 && tokens.first().unwrap().get_catcode() == Catcode::BEGIN
+      && tokens.last().unwrap().get_catcode() == Catcode::END {
+      tokens.remove(0);
+      tokens.pop();
     }
     Ok(Tokens::new(tokens))
   }
@@ -496,30 +540,28 @@ impl Gullet {
   /// Convenience method wrapping around `read_until`
   /// TODO: This seems to be the wrong Rust type interface, we need to rework...
   pub fn read_until_token(&mut self, t: Token, state: &State) -> Result<Tokens> {
-    let tks = Tokens!(t);
-    self.read_until(&[&tks], state)
+    self.read_until(Tokens!(t), state)
   }
 
-  pub fn read_until_brace(&mut self, state: &State) -> Result<Tokens> {
+  pub fn read_until_brace(&mut self, state: &State) -> Result<Option<Tokens>> {
     let mut tokens = Vec::new();
     while let Some(token) = self.read_token(state) {
       if token.get_catcode() == Catcode::BEGIN {
-        // INLINE Catcode
-        if let Some(mouth) = self.mouth.as_mut() {
-          mouth.pushback.push_front(token); // Unread
+        if let Some(runtime) = self.mouth.as_mut() {
+          runtime.pushback.push_front(token); // Unread
         } else {
           fatal!(Mouth, NotFound, "No Mouth in Gullet.read_until_brace")
         }
         break;
+      } else {
+        tokens.push(token);
       }
-      tokens.push(token);
     }
     if tokens.is_empty() {
-      tokens.push(T_OTHER!(""));
-      // TODO: we need a non-empty Tokens object to pass the success check in parameter::read
-      // is there a better approach? Is returning Result<Option<Tokens>> cleaner? (I guess yes ...)
+      Ok(None)
+    } else {
+      Ok(Some(Tokens::new(tokens)))
     }
-    Ok(Tokens::new(tokens))
   }
 
   pub fn read_next_conditional(&mut self, state: &State) -> Option<(Token, ConditionalType)> {
@@ -557,7 +599,7 @@ impl Gullet {
       None => Ok(Tokens!()),
       Some(t) => {
         if t.get_catcode() == Catcode::OTHER && t.get_string() == "[" {
-          self.read_until(&[&Tokens!(T_OTHER!("]"))], state)
+          self.read_until(Tokens!(T_OTHER!("]")), state)
         } else {
           self.unread_one(t);
           Ok(Tokens!()) // TODO: default
@@ -992,7 +1034,7 @@ impl Gullet {
           if defn.is_expandable() {
             let x = defn.invoke(self, false, state)?;
             if !x.is_empty() {
-              self.unread(x)
+              self.unread(x);
             }
             self.read_tokens_value(state)
           } else {

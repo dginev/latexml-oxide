@@ -262,7 +262,7 @@ impl Parameter {
 
   fn setup_catcodes(&self, state: &mut State) {
     if self.semiverbatim.is_some() {
-      state.begin_semiverbatim(self.semiverbatim.as_ref());
+      state.begin_semiverbatim(self.semiverbatim.as_deref());
     }
   }
 

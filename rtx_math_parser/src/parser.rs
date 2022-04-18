@@ -71,14 +71,14 @@ pub struct MathParser {
   passed: HashMap<String, usize>,
   failed: HashMap<String, usize>,
   unknowns: HashMap<String, usize>,
-  punctuation: HashMap<String, usize>,
-  lostnodes: HashMap<String, Node>,
-  idrefs: Vec<(String, Node)>,
+  // punctuation: HashMap<String, usize>,
+  // lostnodes: HashMap<String, Node>,
+  // idrefs: Vec<(String, Node)>,
   maybe_functions: HashMap<String, usize>,
   n_parsed: usize,
-  strict: bool,
-  warned: bool,
-  xnode: Option<Node>,
+  // strict: bool,
+  // warned: bool,
+  // xnode: Option<Node>,
 }
 impl Default for MathParser {
   fn default() -> Self {
@@ -94,13 +94,13 @@ impl Default for MathParser {
       failed: HashMap::new(),
       unknowns: HashMap::new(),
       maybe_functions: HashMap::new(),
-      punctuation: HashMap::new(),
-      lostnodes: HashMap::new(),
-      idrefs: vec![],
+      // punctuation: HashMap::new(),
+      // lostnodes: HashMap::new(),
+      // idrefs: vec![],
       n_parsed: 0,
-      strict: true,
-      warned: false,
-      xnode: None,
+      // strict: true,
+      // warned: false,
+      // xnode: None,
     }
   }
   // sub new {
@@ -167,7 +167,9 @@ impl MathParser {
   // To solve this, we find & replace all references to such script XMApps by an
   // explicit XMApp with the XMRef refering to the script itself, not the
   // XMApp. (make sense?)
-  pub fn cleanup_scripts(&mut self, document: &Document) {}
+  pub fn cleanup_scripts(&mut self, _document: &Document) {
+    // unimplemented!();
+  }
   // sub cleanupScripts {
   //   my ($self, $document) = @_;
   //   foreach my $app ($document->findnodes(
@@ -316,7 +318,7 @@ impl MathParser {
     if rule == "kludge" {
       self.parse_kludge(node, document, state);
       Ok(None)
-    } else if let Some(result) = self.parse_single(node, document, &rule, state)? {
+    } else if let Some(result) = self.parse_single(node, document, &rule)? {
       *self.passed.entry(tag.clone()).or_insert(0) += 1;
       if tag == "ltx:XMath" {
         // Replace the content of XMath with parsed result
@@ -334,8 +336,8 @@ impl MathParser {
       } else {// Replace the whole node for XMArg, XMWrap; preserve some attributes
       //ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
       // Copy all attributes
-      let resultid = p_get_attribute(&result, "id");
-      let attr = node.get_attributes();
+      let _resultid = p_get_attribute(&result, "id");
+      let _attr = node.get_attributes();
 
       // add to result, even allowing modification of xml node, since we're committed.
       // [Annotate converts node to array which messes up clearing the id!]
@@ -405,7 +407,7 @@ impl MathParser {
   //     unless they're attached to something plausible.
   // NOTE: we should be able to optionally switch this off.
   // Especially, when we want to try alternative parse strategies.
-  fn parse_kludge(&self, node: &mut Node, document: &mut Document, state: &mut State) {
+  fn parse_kludge(&self, _node: &mut Node, _document: &mut Document, _state: &mut State) {
     unimplemented!();
   }
 
@@ -413,7 +415,7 @@ impl MathParser {
   // Low-level Parser: parse a single expression
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Convert to textual form for processing by MathGrammar
-  fn parse_single(&mut self, mathnode: &mut Node, document: &mut Document, rule: &str, state: &mut State) -> Result<Option<Node>> {
+  fn parse_single(&mut self, mathnode: &mut Node, document: &mut Document, _rule: &str) -> Result<Option<Node>> {
     let mut idx = 0;
     let (lexemes, nodes) = node_to_grammar_lexemes(mathnode, &mut idx);
     if let Ok(Some(mut parse_tree)) = self.parse_lexemes(lexemes, nodes, document) {
@@ -462,11 +464,11 @@ impl MathParser {
       }
     }
     if ok_trees + pruned_trees > 100 {
-      let warning1 = format!(
-        "WARNING! too many marpa trees: {:?}, accepted as semantic trees: {:?}",
-        ok_trees + pruned_trees,
-        ok_trees
-      );
+      // let warning1 = format!(
+      //   "WARNING! too many marpa trees: {:?}, accepted as semantic trees: {:?}",
+      //   ok_trees + pruned_trees,
+      //   ok_trees
+      // );
       // let warning2 = format!("         on input: {:?}", input);
       // eprintln!("\n{}", Yellow.bold().paint(warning1));
       // eprintln!("{}\n", Yellow.paint(warning2));
@@ -771,7 +773,7 @@ fn p_get_value(node: &Node) -> String {
 
 //================================================================================
 
-pub fn realize_xmnode<'a,'b>(node: &'a Node, document: &Document) -> Cow<'a, Node> {
+pub fn realize_xmnode<'a>(node: &'a Node, _document: &Document) -> Cow<'a, Node> {
   Cow::Borrowed(node)
   //   my $idref;
   //   elsif (ref $node eq 'ARRAY') {
