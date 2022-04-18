@@ -16,22 +16,24 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
     },
     _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"),
   };
-
   let compiled_expansion = if expansion.is_empty() {
     quote!(None)
   } else {
     let performed_expansion = mouth::tokenize_internal(&expansion, None);
-
-    // println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(),
-    // performed_expansion);
-    //
-    // TODO: Should "substitute_parameters" be specially performed for runtime-read expansions (via RawTeX?), e.g. when
-    // reading external style files? should that even be allowed? We can easily pre-compile all of texlive
-    // (or the ~200 supported sty and cls files in the ecosystem) once
-    // and have all expansions handled by this code snippet. Hmmm... arguable benefit at this early stage, maybe something beyond 1.0
-    quote!(
-      Some(ExpansionBody::Tokens(#performed_expansion))
-    )
+    if performed_expansion.is_empty() {
+      quote!(None)
+    } else {
+      // println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(),
+      // performed_expansion);
+      //
+      // TODO: Should "substitute_parameters" be specially performed for runtime-read expansions (via RawTeX?), e.g. when
+      // reading external style files? should that even be allowed? We can easily pre-compile all of texlive
+      // (or the ~200 supported sty and cls files in the ecosystem) once
+      // and have all expansions handled by this code snippet. Hmmm... arguable benefit at this early stage, maybe something beyond 1.0
+      quote!(
+        Some(ExpansionBody::Tokens(#performed_expansion))
+      )
+    }
   };
   // We have to jump an extra hoop, since we are forcing the struct-derive
   // mechanism. Once the new procedural macro scheme lands, this begs to be
@@ -54,7 +56,7 @@ pub fn compile_tokenize(input: DeriveInput) -> TokenStream {
   };
 
   let tokenized = if literal.is_empty() {
-    Tokens::new(Vec::new())
+    Tokens::default()
   } else {
     mouth::tokenize(&literal, None)
   };
@@ -77,7 +79,7 @@ pub fn compile_tokenize_internal(input: DeriveInput) -> TokenStream {
   };
 
   let tokenized = if literal.is_empty() {
-    Tokens::new(Vec::new())
+    Tokens::default()
   } else {
     mouth::tokenize_internal(&literal, None)
   };

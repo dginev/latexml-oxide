@@ -219,6 +219,8 @@ pub struct State {
   pub include_styles: bool,
   pub nomathparse: bool,
   pub smuggle_the: bool,
+  pub align_state: bool,
+  pub reading_alignment: bool,
   // Auxiliary convenience -- extra dispatch
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
@@ -277,6 +279,8 @@ impl Default for State {
       include_styles: false,
       nomathparse: false,
       smuggle_the: false,
+      align_state: false,
+      reading_alignment: false,
       extra_bindings_dispatch: None,
       // interiorly mutable
       stomach: Arc::new(RwLock::new(Stomach::default())),
@@ -480,26 +484,27 @@ impl State {
       // 1. Undo mutable logic
       if let Some(current_frame) = self.undo.front_mut() {
         let current_frame_table = current_frame.table_mut(table_name);
-        // If the value was previously assigned in this frame
-        if current_frame_table.contains_key(key) {
-          is_replace = true;
+
+        is_replace = current_frame_table.contains_key(key);
+        if is_replace { // If the value was previously assigned in this frame
+          // we do this in 2.1
         } else {
           // Otherwise, push new value & set 1 to be undone
           current_frame_table.insert(key.to_string(), 1);
           //  And push new binding.
-          is_replace = false;
         }
       }
       // 2. State table mutable logic
       let state_table = self.table_mut(table_name);
       let defs = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
       if is_replace {
-        // Replace the value
+        // 2.1. Replace the value
         defs.pop_front();
       }
       defs.push_front(value)
+    } else {
+      // TODO: stash cases
     }
-    // TODO: stash cases
   }
 
   //======================================================================
@@ -816,7 +821,8 @@ impl State {
     match self.catcode.get(&c.to_string()) {
       None => None,
       Some(cvec) => match cvec.front() {
-        Some(cc) => cc.into(),
+        Some(Stored::Catcode(cc)) => Some(*cc),
+        Some(_) => unimplemented!(), // best to fail hard if we set a nonsence value
         _ => None,
       },
     }
@@ -910,7 +916,7 @@ impl State {
         None => None,
       }
     } else {
-      Some(token.into())
+      Some(Stored::Token(token.clone()))
     }
   }
 
@@ -1127,7 +1133,7 @@ impl State {
     Ok(())
   }
 
-  pub fn begin_semiverbatim(&mut self, extraspecials: Option<&Vec<char>>) {
+  pub fn begin_semiverbatim(&mut self, extraspecials: Option<&[char]>) {
     // Is this a good/safe enough shorthand, or should we really be doing beginMode?
     self.push_frame();
     self.assign_value("MODE", Stored::String(s!("text")), None);
@@ -1150,13 +1156,9 @@ impl State {
     // TODO:
     // self.assign_mathcode('\'' => 0x8000, Some(Scope::Local));
     // try to stay as ASCII as possible
-    let new_font = if let Some(&Stored::Font(ref current_font)) = self.lookup_value("font") {
-      Some(current_font.merge(fontmap!(encoding => "ASCII")))
-    } else {
-      None
-    };
-    if let Some(local_font) = new_font {
-      self.assign_value("font", Stored::Font(Arc::new(local_font)), Some(Scope::Local));
+    if let Some(ref current_font) = self.lookup_font() {
+      let local_font = current_font.merge(fontmap!(encoding => "ASCII"));
+      self.assign_font(Arc::new(local_font), Some(Scope::Local));
     }
   }
 
@@ -1586,7 +1588,7 @@ impl State {
 
   /// Generate a stub definition for an undefined control-sequence,
   /// along with appropriate error messge.
-  pub fn generate_error_stub(&mut self, caller: &Gullet, token: Token) -> Result<Token> {
+  pub fn generate_error_stub(&mut self, caller: &Gullet, token: &Token) -> Result<Token> {
     let cs = token.get_cs_name();
     self.note_status(cs); // TODO: Undefined:cs
     // To minimize chatter, go ahead and define it...
@@ -1597,7 +1599,7 @@ impl State {
           T_CS!(s!("\\{}true", name)), None, s!("\\let{}\\iftrue",cs), None, self), Some(Scope::Global));
       self.install_definition(Expandable::new(
           T_CS!(s!("\\{}false",name)), None, s!("\\let{}\\iffalse" ,cs), None, self), Some(Scope::Global));
-      self.let_i(&token, T_CS!("\\iffalse"), Some(Scope::Global));
+      self.let_i(token, T_CS!("\\iffalse"), Some(Scope::Global));
     } else {
       Error!("undefined", token, caller, self, s!("The token {} is not defined. Defining it now as <ltx:ERROR/>", token.stringify()));
       let owned_cs = cs.to_owned();
@@ -1611,7 +1613,7 @@ impl State {
           //TODO: sizer => "X"),
         Some(Scope::Global));
     }
-    Ok(token)
+    Ok(token.clone())
   }
 
   pub fn generate_ligature_id(&mut self) -> usize {

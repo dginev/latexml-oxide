@@ -63,8 +63,8 @@ impl From<Tokens> for Token {
 
 impl<'a> From<&'a Tokens> for Token {
   fn from(ts: &'a Tokens) -> Token {
-    if ts.is_stub() {
-      Token::default()
+    if ts.0.is_empty() {
+      unimplemented!() // what to do here?
     } else if ts.0.len() == 1 {
       ts.0.first().unwrap().clone()
     } else {
@@ -101,9 +101,6 @@ impl Tokens {
 
   /// Are there any tokens at all contained in this Tokens object
   pub fn is_empty(&self) -> bool { self.0.is_empty() }
-
-  /// Are there any non-stub tokens contained in this Tokens object?
-  pub fn is_stub(&self) -> bool { self.is_empty() || self.0.iter().all(|t| *t == *MOCK_TOKEN) }
 
   /// Number of contained Token entries
   pub fn len(&self) -> usize { self.0.len() }

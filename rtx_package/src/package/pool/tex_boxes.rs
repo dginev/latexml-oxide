@@ -111,7 +111,7 @@ LoadDefinitions!(state, {
       // What is the CORRECT (& general) way to ask whether we're in "vertical mode"??
       //  my $vmode = $tag eq 'ltx:inline-block'; # ie, explicitly \vbox !?!?!?!
       let is_svg  = if let Some(ref current) = current_opt {
-        document.get_node_qname(&current,state).starts_with("svg:")
+        document.get_node_qname(current, state).starts_with("svg:")
       } else { false };
       let vmode = if let Some(ref current) = current_opt {
         current.has_attribute("_vertical_mode_")

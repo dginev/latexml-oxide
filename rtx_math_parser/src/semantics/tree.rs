@@ -37,7 +37,7 @@ impl Display for XMTok {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Tree {
   Lexeme(String, Meta),
-  Token(XMTok, Meta), // does this need Meta?
+  Token(Box<XMTok>, Meta), // does this need Meta?
   Apply(Operator, Args, Meta),
   Choices(Vec<Tree>),
 }
@@ -46,7 +46,7 @@ impl Display for Operator {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { self.fmt_indented(&Vec::new(), f) }
 }
 impl From<XMTok> for Operator {
-  fn from(t: XMTok) -> Self { Operator(Box::new(Tree::Token(t, Meta::default()))) }
+  fn from(t: XMTok) -> Self { Operator(Box::new(Tree::Token(Box::new(t), Meta::default()))) }
 }
 impl Operator {
   /// obtain a reference to this operator's metadata
@@ -177,7 +177,7 @@ impl Tree {
         let new_meta = meta.with_curry_atom(into, &name)?;
         Ok(Tree::Lexeme(name, new_meta))
       },
-      Tree::Token(t, meta) => {
+      Tree::Token(_t, _meta) => {
         unimplemented!()
       },
       Tree::Apply(mut op, mut args, meta) => {

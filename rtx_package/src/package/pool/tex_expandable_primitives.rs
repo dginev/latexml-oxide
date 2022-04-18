@@ -224,18 +224,24 @@ LoadDefinitions!(outer_state, {
   });
 
   DefMacro!("\\expandafter Token Token", sub[gullet, args, state] {
-    unpack!(args => tok, xtok);
-    let mut tokens : Vec<Token> = vec![tok.into()];
-    let xtok_single = xtok.clone().into();
-    if let Some(defn) = state.lookup_expandable(&xtok_single, false) {
-      // Note that IF expandafter ends up expanding a \the in an \edef,
-      // that it Overrides the implicit noexpand that \edef would normally use for\the!!
-      state.remove_value("NOEXPAND_THE");
-      tokens.append(&mut defn.invoke(gullet, false, state)?.unlist()); // Expand $xtok ONCE ONLY!
+    unpack_to_token!(args => tok, xtok);
+    let mut tokens : Vec<Token> = vec![tok];
+    if let Some(defn) = state.lookup_expandable(&xtok, false) {
+      state.current_token=Some(Arc::new(xtok.clone()));
+      let invoked = defn.invoke(gullet, true, state)?;
+      if !invoked.is_empty() {
+        tokens.append(&mut invoked.unlist()); // Expand $xtok ONCE ONLY!
+      }
+    } else if state.lookup_meaning(&xtok).is_none() {
+      // Undefined token is an error, as expansion is expected.
+      // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
+      // since probably in a real TeX run it would have been defined.
+      state.generate_error_stub(gullet, &xtok)?;
+      tokens.push(xtok);
     } else {
-      tokens.append(&mut xtok.unlist());
+      tokens.push(xtok);
     };
-    Ok(tokens.into())
+    Ok(Tokens::new(tokens))
   });
 
   // Insert magic token that Gullet knows not to expand the next one.

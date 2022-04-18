@@ -161,7 +161,7 @@ impl Definition for Expandable {
         }
         Ok(result)
       },
-      None => { Ok(Tokens!()) }
+      None => Ok(Tokens!())
     }
   }
 
@@ -223,14 +223,14 @@ impl Expandable {
       Some(ExpansionBody::Closure(ref closure)) => closure(gullet, args, state),
       // but for tokens, make sure args are proper Tokens (lists)
       Some(ExpansionBody::Tokens(ref tks)) => {
-        if !tks.is_stub() {
+        if !tks.is_empty() {
           Ok(tks.substitute_parameters(args))
         } else {
           Ok(Tokens!())
         }
       },
       // empty if no expansion
-      None => Ok(Tokens!()),
+      None => Ok(Tokens!())
     }
   }
 }

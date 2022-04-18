@@ -95,8 +95,8 @@ LoadDefinitions!(outer_state, {
   // WARNING: Need to be careful about what catcodes are active here
   // And clearly separate expansion from digestion
   DefMacro!("\\verb", sub[gullet, args, state] {
-    let active_chars = vec!['%', '\\', '{', '}'];
-    state.begin_semiverbatim(Some(&active_chars));
+    let active_chars = &['%', '\\', '{', '}'];
+    state.begin_semiverbatim(Some(active_chars));
     state.assign_catcode(' ', Catcode::ACTIVE, None); // Do NOT (necessarily) skip spaces after \verb!!!
     let mut init = gullet.read_token(state);
     let mut starred = false;
@@ -111,7 +111,7 @@ LoadDefinitions!(outer_state, {
       let init_ch = init_str.chars().next().unwrap();
       state.assign_catcode(init_ch, Catcode::ACTIVE, None);
       let delim = Tokens!(T_ACTIVE!(init_ch));
-      let body = gullet.read_until(&[&delim], state)?;
+      let body = gullet.read_until(delim, state)?;
       state.end_semiverbatim()?;
 
       let mut result = vec![T_CS!("\\@hidden@bgroup")];
@@ -128,7 +128,7 @@ LoadDefinitions!(outer_state, {
       inv_args.push(body);
       result.extend(Invocation!(T_CS!("\\@internal@verb"), inv_args, gullet, state)?.unlist());
       result.push(T_CS!("\\@hidden@egroup"));
-      Ok(Tokens!(result))
+      Ok(Tokens::new(result))
     } else { // typically something read too far got \verb and the content is somewhere else..?
       Error!("expected", "delimiter", gullet, state, "Verbatim argument lost\n Bindings for preceding code is probably broken");
       state.end_semiverbatim()?;

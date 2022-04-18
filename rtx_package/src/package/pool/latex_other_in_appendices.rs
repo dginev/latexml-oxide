@@ -66,10 +66,10 @@ LoadDefinitions!(state, {
 
   // DefMacroI('\@ehc', undef, "I can't help");
 
-  DefMacro!("\\@gobble{}", "");
-  DefMacro!("\\@gobbletwo{}{}", "");
-  DefMacro!("\\@gobblefour{}{}{}{}", "");
-  DefMacro!("\\@firstofone{}",       sub[gullet, args, state] { Ok(args[0].clone()) });
+  DefMacro!(r"\@gobble{}", "");
+  DefMacro!(r"\@gobbletwo{}{}", "");
+  DefMacro!(r"\@gobblefour{}{}{}{}", "");
+  DefMacro!(r"\@firstofone{}",       sub[gullet, args, state] { Ok(args[0].clone()) });
   Let!("\\@iden", "\\@firstofone");
   DefMacro!("\\@firstoftwo{}{}",     sub[gullet, args, state] { unpack!(args=>one,two); Ok(one) });
   DefMacro!("\\@secondoftwo{}{}",    sub[gullet, args, state] { unpack!(args=>one,two); Ok(two) });

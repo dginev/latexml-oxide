@@ -35,7 +35,7 @@ lazy_static! {
     ..StateOptions::default()
   }));
   static ref CS_ENDLINECHAR : Token = T_CS!("\\endlinechar");
-  static ref TRAILING_SPACE_CHARS : Regex = Regex::new(" +$").unwrap();
+  static ref TRAILING_SPACE_CHARS : Regex = Regex::new("(?s) +$").unwrap();
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -64,7 +64,7 @@ impl FoodType {
 
 lazy_static! {
   static ref LASTID: Mutex<u32> = Mutex::new(0);
-  static ref LINEBREAK_REGEX: Regex = Regex::new(r"\r\n|\r|\n").unwrap();
+  static ref LINEBREAK_REGEX: Regex = Regex::new(r"(?s)\r\n|\r|\n").unwrap();
   static ref LOWERHEX_REGEX: Regex = Regex::new(r"^[0-9a-f]$").unwrap();
   static ref SANITIZE_LINE_REGEX: Regex = Regex::new(r"((\\ )*)\s*$").unwrap();
 }
@@ -484,10 +484,15 @@ impl Mouth {
       }
       if self.skipping_spaces {    // In state S, skip spaces
         let mut cc = None;
+        // This is very awkward as a loop,
+        //  but I had to port the Perl logic without going crazy...
+        // tokenizer/verb.tex depends on it.
         while let Some((_, ncc)) = self.get_next_char(state) {
-          cc = Some(ncc);
           if ncc != Catcode::SPACE {
+            cc = Some(ncc);
             break;
+          } else {
+            cc = None;
           }
         }
         if self.colno <= self.nchars && cc.is_some() && cc != Some(Catcode::SPACE) {
@@ -765,6 +770,10 @@ impl Mouth {
 // + avoid runtime tokenization in the literal binding definitions.
 
 pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
+  // special case! empty input is empty Tokens
+  if text.is_empty() {
+    return Tokens::default()
+  }
   match state_opt {
     None => {
       let mut state = STD_STATE.write().unwrap();
@@ -774,6 +783,10 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
   }
 }
 pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
+  // special case! empty input is empty Tokens
+  if text.is_empty() {
+    return Tokens::default()
+  }
   match state_opt {
     None => {
       let mut state = STY_STATE.write().unwrap();

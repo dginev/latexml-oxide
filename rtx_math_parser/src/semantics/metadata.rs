@@ -28,7 +28,7 @@ impl PartialEq for Meta {
 }
 impl Eq for Meta {}
 impl Display for Meta {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+  fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
     unimplemented!();
   }
 }
@@ -46,24 +46,24 @@ impl Meta {
     }
   }
 
-  /// Provides tuples of field key values, intended for a display-level serialization
-  pub(crate) fn display_fields(&self) -> Vec<(&str, String)> {
-    let mut fields = Vec::new();
-    if let Some(ref level) = self.curry_level {
-      fields.push(("curry", level.to_string()));
-    }
-    if !self.curry_constraints.is_empty() {
-      let displayed_constraints = format!(
-        "[{}]",
-        self.curry_constraints.iter().map(|c| c.to_string()).collect::<Vec<_>>().join(", ")
-      );
-      fields.push(("where", displayed_constraints));
-    }
-    if let Some(ref kind) = self.fenced {
-      fields.push(("fenced", kind.to_owned()));
-    }
-    fields
-  }
+  // /// Provides tuples of field key values, intended for a display-level serialization
+  // pub(crate) fn display_fields(&self) -> Vec<(&str, String)> {
+  //   let mut fields = Vec::new();
+  //   if let Some(ref level) = self.curry_level {
+  //     fields.push(("curry", level.to_string()));
+  //   }
+  //   if !self.curry_constraints.is_empty() {
+  //     let displayed_constraints = format!(
+  //       "[{}]",
+  //       self.curry_constraints.iter().map(|c| c.to_string()).collect::<Vec<_>>().join(", ")
+  //     );
+  //     fields.push(("where", displayed_constraints));
+  //   }
+  //   if let Some(ref kind) = self.fenced {
+  //     fields.push(("fenced", kind.to_owned()));
+  //   }
+  //   fields
+  // }
 
   pub fn can_specialize(&self) -> bool {
     // does the meta object have any fields that are meaningful during specialization? Namely:

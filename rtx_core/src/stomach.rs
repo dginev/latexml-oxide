@@ -212,7 +212,9 @@ impl<'t> Stomach {
           // but it isn't expanded in the gullet, but later when digesting, in math mode
           // (? I think)
           let mut invoked_meaning = meaning.invoke(&mut self.gullet, false, state)?;
-          self.gullet.unread(invoked_meaning);
+          if !invoked_meaning.is_empty() {
+            self.gullet.unread(invoked_meaning);
+          }
           // replace the token by it's expansion!!!
           maybe_token = self.gullet.read_x_token(true, false, state)?.map(Cow::Owned);
           self.token_stack.pop();
@@ -327,7 +329,6 @@ impl<'t> Stomach {
     let cc = meaning.get_catcode();
     let font = state.lookup_font();
     state.clear_prefixes(); // prefixes shouldn't apply here.
-
     match cc {
       Catcode::SPACE => if state.lookup_bool("IN_MATH") {
           Ok(None)
@@ -434,7 +435,7 @@ impl<'t> Stomach {
 
   pub fn push_stack_frame(&mut self, nobox: bool, state: &mut State) {
     let current_token = match &state.current_token {
-      Some(t) => (**t).clone(),
+      Some(t) => (*t).clone(),
       _ => unimplemented!() // should never happen?
     };
 
@@ -443,10 +444,10 @@ impl<'t> Stomach {
     state.assign_value("afterGroup", Stored::VecDequeStored(VecDeque::new()), Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("afterAssignment", Stored::Tokens(Tokens!()), Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
-    state.assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
+    state.assign_value("groupInitiator", (*current_token).clone(), Some(Scope::Local));
     state.assign_value("groupInitiatorLocator", self.get_locator().into_owned(), Some(Scope::Local));
-    if !nobox {
-      self.boxing.push(current_token) // For begingroup/endgroup
+    if !nobox { // For begingroup/endgroup
+      self.boxing.push((*current_token).clone())
     }
   }
 
@@ -473,7 +474,7 @@ impl<'t> Stomach {
       for entry in after_entries.into_iter().rev() {
         match entry {
           Stored::Tokens(t) => self.gullet.unread(t),
-          Stored::Token(t) => self.gullet.unread(Tokens::new(vec![t])),
+          Stored::Token(t) => self.gullet.unread_one(t),
           other => panic!(r"\aftergroup should be used with tokens, got instead: {:?}", other)
         };
       }

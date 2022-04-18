@@ -85,9 +85,9 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
 
     let mut cs = if cc == Catcode::SUPER { "\\@@FLOATINGSUPERSCRIPT" }
       else { "\\@@FLOATINGSUBSCRIPT" };
-    let mut prevscript = None;
+    let mut _prevscript = None;
     let mut prevspace = false;
-    let mut base = None;
+    let mut _base = None;
     // Check preceding boxes to determine possible attachment (floating vs post),
     // Note that this analysis has to be done now (or sometime like it) before grouping lists go away;
     // and whether there are conflicting preceding scripts, which is an error
@@ -109,7 +109,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
             else { "\\@@FLOATINGSUBSCRIPT" };
           break;
         } else { // Else, is OK (so far) assume POST (it will stack previous script)
-          prevscript = Some(prev.clone()); // we'll overlap the width of the previous.
+        _prevscript = Some(prev.clone()); // we'll overlap the width of the previous.
           putback.push_front(prev);
           cs = if cc == Catcode::SUPER { "\\@@POSTSUPERSCRIPT" }
             else { "\\@@POSTSUBSCRIPT" };
@@ -122,7 +122,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
         if nscripts > 1 { break; }
       } else {
         //  We found something "normal", so assume we'll attach to it, and we're done.
-        base = Some(prev.clone());
+        _base = Some(prev.clone());
         putback.push_front(prev);
         cs = if cc == Catcode::SUPER { "\\@@POSTSUPERSCRIPT" }
             else { "\\@@POSTSUBSCRIPT" };
