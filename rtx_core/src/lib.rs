@@ -37,7 +37,6 @@ use crate::common::model::Model;
 use crate::common::number::Number;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::token::{Catcode, Token};
 use crate::definition::register::{NumericOps, RegisterValue};
 use crate::document::Document;
 use crate::keyvals::KeyVals;
@@ -45,6 +44,7 @@ use crate::list::List;
 use crate::state::{State, StateOptions};
 use crate::stomach::Stomach;
 use crate::tbox::Tbox;
+use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 
@@ -213,14 +213,10 @@ impl PartialEq for Digested {
 // Important: we need to postpone the creation of a box until a time where
 // we have the most current font information
 impl<'a> From<&'a String> for Digested {
-  fn from(value: &'a String) -> Digested {
-    Digested::Postponed(Arc::new(Tokens::new(ExplodeText!(value))))
-  }
+  fn from(value: &'a String) -> Digested { Digested::Postponed(Arc::new(Tokens::new(ExplodeText!(value)))) }
 }
 impl From<String> for Digested {
-  fn from(value: String) -> Digested {
-    Digested::Postponed(Arc::new(Tokens::new(ExplodeText!(value))))
-  }
+  fn from(value: String) -> Digested { Digested::Postponed(Arc::new(Tokens::new(ExplodeText!(value)))) }
 }
 
 impl From<Tbox> for Digested {
@@ -408,7 +404,7 @@ impl Digested {
     }
   }
   pub fn any<F>(&self, mut check: F) -> bool
-  where F: FnMut(&Self) -> bool  {
+  where F: FnMut(&Self) -> bool {
     use Digested::*;
     match self {
       TBox(_) | Whatsit(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),

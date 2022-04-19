@@ -28,10 +28,13 @@ LoadDefinitions!(state, {
   DefMacro!(r"\verbatim@processline", r"\the\verbatim@line\par");
 
   DefMacro!(r"\verbatim@font", r"\normalfont\ttfamily\hyphenchar\font\m@ne\@noligs");
-  DefMacro!(r"\@verbatim",r"\the\every@verbatim
+  DefMacro!(
+    r"\@verbatim",
+    r"\the\every@verbatim
      \obeylines
      \let\do\@makeother \dospecials
-     \verbatim@font");
+     \verbatim@font"
+  );
 
   DefConstructor!("\\lx@verbatim@", "<ltx:verbatim font='#font'>",
     before_digest => { Let!(&T_CS!("\\par"), T_CR!()); },
@@ -49,12 +52,14 @@ LoadDefinitions!(state, {
   DefMacro!("\\endverbatim", "\\lx@end@verbatim@\\endgroup");
   DefMacro!(T_CS!("\\endverbatim*"), None, TokenizeInternal!("\\lx@end@verbatim@\\endgroup"));
 
-  DefMacro!("\\comment",
-r"\let\do\@makeother\dospecials\catcode`\^^M\active
+  DefMacro!(
+    "\\comment",
+    r"\let\do\@makeother\dospecials\catcode`\^^M\active
 \let\verbatim@startline\relax
 \let\verbatim@addtoline\@gobble
 \let\verbatim@processline\relax
-\verbatim@");
+\verbatim@"
+  );
   DefMacro!("\\endcomment", "");
 
   DefMacro!("\\verbatim@start", "\\lx@verbatim@\\verbatim@");

@@ -1,9 +1,9 @@
 use lazy_static::lazy_static;
 use libxml::tree::{Node, NodeType};
+use regex::Regex;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::Cursor;
-use std::borrow::Cow;
-use regex::Regex;
 
 use rtx_core::common::error::{note_begin, note_end, note_progress, Result};
 use rtx_core::common::xml::*;
@@ -333,44 +333,45 @@ impl MathParser {
       // }
       //       $document->appendTree($node, $result);
       //       $result = [element_nodes($node)]->[0];
-      } else {// Replace the whole node for XMArg, XMWrap; preserve some attributes
-      //ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
-      // Copy all attributes
-      let _resultid = p_get_attribute(&result, "id");
-      let _attr = node.get_attributes();
+      } else {
+        // Replace the whole node for XMArg, XMWrap; preserve some attributes
+        //ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
+        // Copy all attributes
+        let _resultid = p_get_attribute(&result, "id");
+        let _attr = node.get_attributes();
 
-      // add to result, even allowing modification of xml node, since we're committed.
-      // [Annotate converts node to array which messes up clearing the id!]
+        // add to result, even allowing modification of xml node, since we're committed.
+        // [Annotate converts node to array which messes up clearing the id!]
 
-      // my $rtag  = ($isarr ? $$result[0] : $document->getNodeQName($result));
-      // # Make sure font is "Appropriate", if we're creating a new token (yuck)
-      // if ($isarr && $attr{_font} && ($rtag eq 'ltx:XMTok')) {
-      //   my $content = join('', @$result[2 .. $#$result]);
-      //   if ((!defined $content) || ($content eq '')) {
-      //     delete $attr{_font}; }    # No font needed
-      //   elsif (my $font = $document->decodeFont($attr{_font})) {
-      //     delete $attr{_font};
-      //     $attr{font} = $font->specialize($content); } }
-      // else {
-      //   delete $attr{_font}; }
-      // foreach my $key (keys %attr) {
-      //   next unless ($key =~ /^_/) || $document->canHaveAttribute($rtag, $key);
-      //   my $value = $attr{$key};
-      //   if ($key eq 'xml:id') {    # Since we're moving the id...bookkeeping
-      //     $document->unRecordID($value);
-      //     $node->removeAttribute('xml:id'); }
-      //   if ($isarr) { $$result[1]{$key} = $value; }
-      //   else        { $document->setAttribute($result, $key => $value); } }
-      // $result = $document->replaceTree($result, $node);
-      // my $newid = $attr{'xml:id'};
-      // # Danger: the above code replaced the id on the parsed result with the one from XMArg,..
-      // # If there are any references to $resultid, we need to point them to $newid!
-      // if ($resultid && $newid && ($resultid ne $newid)) {
-      //   foreach my $ref ($document->findnodes("//*[\@idref='$resultid']")) {
-      //     $ref->setAttribute(idref => $newid); } }
-    }
-    Ok(Some(result))
-   } else {
+        // my $rtag  = ($isarr ? $$result[0] : $document->getNodeQName($result));
+        // # Make sure font is "Appropriate", if we're creating a new token (yuck)
+        // if ($isarr && $attr{_font} && ($rtag eq 'ltx:XMTok')) {
+        //   my $content = join('', @$result[2 .. $#$result]);
+        //   if ((!defined $content) || ($content eq '')) {
+        //     delete $attr{_font}; }    # No font needed
+        //   elsif (my $font = $document->decodeFont($attr{_font})) {
+        //     delete $attr{_font};
+        //     $attr{font} = $font->specialize($content); } }
+        // else {
+        //   delete $attr{_font}; }
+        // foreach my $key (keys %attr) {
+        //   next unless ($key =~ /^_/) || $document->canHaveAttribute($rtag, $key);
+        //   my $value = $attr{$key};
+        //   if ($key eq 'xml:id') {    # Since we're moving the id...bookkeeping
+        //     $document->unRecordID($value);
+        //     $node->removeAttribute('xml:id'); }
+        //   if ($isarr) { $$result[1]{$key} = $value; }
+        //   else        { $document->setAttribute($result, $key => $value); } }
+        // $result = $document->replaceTree($result, $node);
+        // my $newid = $attr{'xml:id'};
+        // # Danger: the above code replaced the id on the parsed result with the one from XMArg,..
+        // # If there are any references to $resultid, we need to point them to $newid!
+        // if ($resultid && $newid && ($resultid ne $newid)) {
+        //   foreach my $ref ($document->findnodes("//*[\@idref='$resultid']")) {
+        //     $ref->setAttribute(idref => $newid); } }
+      }
+      Ok(Some(result))
+    } else {
       // self.parse_kludge(node, document, state);
       // ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
       // $$self{failed}{$tag}++;
@@ -443,7 +444,7 @@ impl MathParser {
     //     return $result; } }
   }
 
-  pub fn parse_marpa(&mut self, input: &str, nodes:&[Node]) -> Result<Tree> {
+  pub fn parse_marpa(&mut self, input: &str, nodes: &[Node]) -> Result<Tree> {
     let parse_result = self.engine.run_recognizer(ByteScanner::new(Cursor::new(input)))?;
     let mut parses = Vec::new();
     let mut ok_trees = 0;
@@ -581,9 +582,9 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
       let op = realize_xmnode(&arg_node, document);
       if let Some(app_role) = node.get_attribute("role") {
         if app_role == "FLOATSUBSCRIPT" {
-          return String::from("_")+&textrec(&op, None, None, document, state);
+          return String::from("_") + &textrec(&op, None, None, document, state);
         } else if app_role == "FLOATSUPERSCRIPT" {
-          return String::from("^")+&textrec(&op, None, None, document, state);
+          return String::from("^") + &textrec(&op, None, None, document, state);
         }
       }
 
@@ -627,7 +628,11 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
         // Error!("expected","arguments" ...);
         unimplemented!();
       }
-      args.iter().map(|arg| textrec(arg, None, None, document, state)).collect::<Vec<_>>().join("")
+      args
+        .iter()
+        .map(|arg| textrec(arg, None, None, document, state))
+        .collect::<Vec<_>>()
+        .join("")
     },
     "ltx:XMArray" => String::new(), // TODO:     return textrec_array($node); }
     _ => s!("[{}]", p_get_value(&node)),
@@ -638,19 +643,31 @@ fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document, st
   let role = op.get_attribute("role").unwrap_or_else(|| "Unknown".to_string());
   if role.ends_with("SCRIPTOP") && PRE_DIGITS_RE.is_match(&op.get_attribute("scriptpos").unwrap_or_default()) {
     // Note that this will likely get parenthesized due to high bp
-    (5000, textrec(op,None,None,document,state)
-    + " "
-    + &textrec(args.get(1).unwrap(), None,None,document,state)
-    + " "
-    + &textrec(args.get(0).unwrap(), None, None, document, state))
+    (
+      5000,
+      textrec(op, None, None, document, state)
+        + " "
+        + &textrec(args.get(1).unwrap(), None, None, document, state)
+        + " "
+        + &textrec(args.get(0).unwrap(), None, None, document, state),
+    )
   } else if let Some(bp) = IS_INFIX.get(&role) {
     // A sub/superscript with a meaning probably should be prefix
     if role.ends_with("SCRIPTOP") && op.has_attribute("meaning") {
-      (500, format!("{}@({})",
-        textrec(op, Some(10000), Some(name), document, state),
-        args.iter().map(|a| textrec(a, None, None, document, state))
-          .collect::<Vec<_>>().join(", ")))
-    } else { // Format as infix.
+      (
+        500,
+        format!(
+          "{}@({})",
+          textrec(op, Some(10000), Some(name), document, state),
+          args
+            .iter()
+            .map(|a| textrec(a, None, None, document, state))
+            .collect::<Vec<_>>()
+            .join(", ")
+        ),
+      )
+    } else {
+      // Format as infix.
       let textrec_op = textrec(op, None, None, document, state);
       let rec_form = if args.len() == 1 {
         // unless a single arg; then prefix.

@@ -271,7 +271,7 @@ macro_rules! reversion {
 macro_rules! reversion_digested {
   ($whatsit:ident, $args:ident, $state:ident, $body:block) => {
     Some(Reversion::Closure(Arc::new(
-      |$whatsit:&Whatsit, $args: &Vec<Option<Digested>>, $state: &mut State| -> Result<Tokens> {
+      |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>, $state: &mut State| -> Result<Tokens> {
         BindInnerState!($state);
         let macro_out = $body;
         end_state_frame!();
@@ -280,7 +280,6 @@ macro_rules! reversion_digested {
     )))
   };
 }
-
 
 // TODO: These .clone calls are silly... can we either
 // 1) Document::insert_element work with a &Vec<Digested>? or
@@ -298,7 +297,7 @@ macro_rules! prop_digested {
       other => {
         eprintln!("Please extend the api_macros::prop_digested macro to support: {:?}", other);
         unimplemented!();
-      }
+      },
     }
   };
 }

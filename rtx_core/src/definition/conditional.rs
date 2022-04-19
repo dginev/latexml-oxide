@@ -99,7 +99,7 @@ impl Definition for Conditional {
 
   // Note that although conditionals are Expandable,
   // they are NOT defined as macros, so they don't need to handle doInvocation,
-  fn invoke(&self, gullet: &mut Gullet, _once_only:bool, state: &mut State) -> Result<Tokens> {
+  fn invoke(&self, gullet: &mut Gullet, _once_only: bool, state: &mut State) -> Result<Tokens> {
     // A real conditional must have condition_type set
     use self::ConditionalType::*;
     match self.conditional_type {

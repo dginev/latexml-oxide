@@ -186,7 +186,7 @@ pub struct Font {
   pub forceseries: Option<bool>,
   pub forcefamily: Option<bool>,
   pub forceshape: Option<bool>,
-  pub scale: Option<f32>
+  pub scale: Option<f32>,
 }
 impl Eq for Font {}
 // display is used often for attributes in binding replacements,
@@ -289,7 +289,7 @@ impl Font {
       forceseries: None,
       forcefamily: None,
       forceshape: None,
-      scale: None
+      scale: None,
     }
   }
 
@@ -381,34 +381,37 @@ impl Font {
       let key = self.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
       // the explicit &str typecast is currently needed for rust to
       // figure out how to use the Cow<str> in the HashMap lookup.
-      let str_key : &str = key;
+      let str_key: &str = key;
       size / *STYLE_SIZE.get(str_key).unwrap() as f32
-    } else { 1.0 };
+    } else {
+      1.0
+    };
     // Explicitly requested size, use it; else
     if other.size.is_none() {
-      if has_mathstyle { // otherwise set the size from mathstyle
-        let str_mathstyle : &str = newfont.mathstyle.as_ref().unwrap();
+      if has_mathstyle {
+        // otherwise set the size from mathstyle
+        let str_mathstyle: &str = newfont.mathstyle.as_ref().unwrap();
         newfont.size = Some(style_scale * *STYLE_SIZE.get(str_mathstyle).unwrap() as f32);
       } else if Some(true) == other.scripted {
         // Or adjust both the mathstyle & size for scripts
-        let str_stylekey : &str = self.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
+        let str_stylekey: &str = self.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
         newfont.mathstyle = SCRIPT_STYLE_MAP.get(str_stylekey).map(|c| Cow::Borrowed(*c));
-        let str_mathstylekey : &str = newfont.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
+        let str_mathstylekey: &str = newfont.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
         newfont.size = Some(style_scale * *STYLE_SIZE.get(str_mathstylekey).unwrap() as f32);
       }
     }
 
-  // TODO:
-  // elsif ($options{fraction}) {     # Or adjust both for fractions
-  //   $mathstyle = $fracstylemap{ $mathstyle            || 'display' };
-  //   $size      = $style_scale * $stylesize{ $mathstyle || 'display' }; }
+    // TODO:
+    // elsif ($options{fraction}) {     # Or adjust both for fractions
+    //   $mathstyle = $fracstylemap{ $mathstyle            || 'display' };
+    //   $size      = $style_scale * $stylesize{ $mathstyle || 'display' }; }
 
-  // if ($options{emph}) {
-  //   $shape = ($shape eq 'italic' ? 'upright' : 'italic');
-  //   $flags |= $FLAG_EMPH; }
-  // $flags &= ~$FLAG_EMPH if $mathstyle;    # Disable emph in math
-  //   newfont
-  // }
+    // if ($options{emph}) {
+    //   $shape = ($shape eq 'italic' ? 'upright' : 'italic');
+    //   $flags |= $FLAG_EMPH; }
+    // $flags &= ~$FLAG_EMPH if $mathstyle;    # Disable emph in math
+    //   newfont
+    // }
     newfont
   }
 
@@ -584,8 +587,16 @@ impl Font {
     }
 
     if is_diff_f32(&self.size, &other.size) {
-      result.insert("fontsize".to_string(), (relative_font_size(self.size.unwrap(), other.size.unwrap()), Font {
-        size: self.size, .. Font::default()  }));
+      result.insert(
+        "fontsize".to_string(),
+        (
+          relative_font_size(self.size.unwrap(), other.size.unwrap()),
+          Font {
+            size: self.size,
+            ..Font::default()
+          },
+        ),
+      );
     }
     // ////      ? (fontsize => { value => $siz, properties => { size => $siz } })
     //   ? (fontsize => { value => relativeFontSize($siz, $osiz), properties => { size => $siz } })
@@ -613,20 +624,19 @@ impl Font {
     result
   }
 
-  pub fn purestyle_changes(&self, other:&Font) -> Font {
-    let mathstyle      = self.get_mathstyle();
+  pub fn purestyle_changes(&self, other: &Font) -> Font {
+    let mathstyle = self.get_mathstyle();
     let othermathstyle = other.get_mathstyle();
-    let othercolor     = other.get_color();
+    let othercolor = other.get_color();
     let mut changes = Font {
       scale: Some(other.get_size().unwrap() / self.get_size().unwrap()),
       bg: other.bg.clone(),
       opacity: other.opacity.clone(), // should multiply or replace?
       ..Font::default()
     };
-    if is_diff(&othercolor.cloned(),&Some(Cow::Borrowed(DEFCOLOR))) {
+    if is_diff(&othercolor.cloned(), &Some(Cow::Borrowed(DEFCOLOR))) {
       changes.color = other.color.clone();
     }
-
 
     // TODO:
     // if mathstyle && othermathstyle {
@@ -773,6 +783,4 @@ pub fn rationalize_font_size(size: &str) -> f32 {
 }
 
 /// convert size to percent
-pub fn relative_font_size(newsize: f32, oldsize:f32) -> String {
-  s!("{}%", (0.5 + 100.0 * newsize / oldsize).floor())
-}
+pub fn relative_font_size(newsize: f32, oldsize: f32) -> String { s!("{}%", (0.5 + 100.0 * newsize / oldsize).floor()) }

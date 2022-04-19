@@ -1,6 +1,6 @@
 use libxml::tree::Node;
-use rtx_core::common::xml::element_nodes;
 use rtx_core::common::font::Font;
+use rtx_core::common::xml::element_nodes;
 use rtx_core::document::Document;
 use rtx_core::Info;
 use std::borrow::Cow;
@@ -25,7 +25,7 @@ pub struct XMTok {
   pub content: Option<Cow<'static, str>>,
   pub name: Option<Cow<'static, str>>,
   pub scriptpos: Option<Cow<'static, str>>,
-  pub font: Option<Font>
+  pub font: Option<Font>,
 }
 impl Display for XMTok {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -444,7 +444,7 @@ impl Tree {
   /// Unwrap any leftover XMArg guards from the markup.
   /// This is done earlier in LaTeXML-classic, during the semantics phase.
   /// With marpa, we can postpone reparenting to the very end, when the tree is requested.
-  pub fn to_xmath_add_child(&self,receiver: &mut Node, incoming: &mut Node) -> Result<(), Box<dyn Error + Send + Sync>> {
+  pub fn to_xmath_add_child(&self, receiver: &mut Node, incoming: &mut Node) -> Result<(), Box<dyn Error + Send + Sync>> {
     if incoming.get_name() == "XMArg" {
       let mut to_reparent = element_nodes(incoming);
       for incoming_child in to_reparent.iter_mut() {

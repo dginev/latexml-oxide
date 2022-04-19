@@ -450,11 +450,7 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
         // TODO: Improve font precision here, the defaults may not belong in this lookup
-        let font = Arc::new(
-          state.lookup_font()
-          .unwrap()
-          .merge(reqfont.clone())
-          .specialize(&presentation));
+        let font = Arc::new(state.lookup_font().unwrap().merge(reqfont.clone()).specialize(&presentation));
 
         // foreach my $key (keys %properties) {
         //   my $value = $properties{$key};

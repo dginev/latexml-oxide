@@ -2,9 +2,9 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::fmt::{self, Display};
 use std::hash::Hash;
 use std::sync::{Arc, RwLock};
-use std::fmt::{self,Display};
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -12,14 +12,14 @@ use crate::common::font::{Font, Fontmap};
 use crate::common::glue::Glue;
 use crate::common::model::{IndirectModel, Model};
 use crate::common::number::Number;
+use crate::common::object::Object;
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
-use crate::common::object::Object;
 use crate::definition::conditional::{ConditionalType, IfFrame};
+use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::register::{RegisterCell, RegisterValue};
 use crate::definition::Definition;
-use crate::definition::constructor::Constructor;
 use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
 use crate::document::Document;
@@ -45,7 +45,7 @@ lazy_static! {
 pub enum Scope {
   Global,
   Local,
-  Named(String)
+  Named(String),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -63,19 +63,22 @@ pub enum TableName {
 }
 impl Display for TableName {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}",
-    match self {
-      TableName::Meaning => "Meaning",
-      TableName::Value => "Value",
-      TableName::Catcode => "Catcode",
-      TableName::Mathcode => "Mathcode",
-      TableName::Sfcode => "Sfcode",
-      TableName::Lccode => "Lccode",
-      TableName::Uccode => "Uccode",
-      TableName::Delcode => "Delcode",
-      TableName::Stash => "Stash",
-      TableName::StashActive => "StashActive",
-    })
+    write!(
+      f,
+      "{}",
+      match self {
+        TableName::Meaning => "Meaning",
+        TableName::Value => "Value",
+        TableName::Catcode => "Catcode",
+        TableName::Mathcode => "Mathcode",
+        TableName::Sfcode => "Sfcode",
+        TableName::Lccode => "Lccode",
+        TableName::Uccode => "Uccode",
+        TableName::Delcode => "Delcode",
+        TableName::Stash => "Stash",
+        TableName::StashActive => "StashActive",
+      }
+    )
   }
 }
 impl TableName {
@@ -473,83 +476,84 @@ impl State {
     };
 
     match scope {
-    Scope::Global => {
-      // We are going to change the model, where we first count the total number of definitions to
-      // pop, and then pop them, in order to never mutably morrow more than once at a time.
-      let mut undo_count = 0;
+      Scope::Global => {
+        // We are going to change the model, where we first count the total number of definitions to
+        // pop, and then pop them, in order to never mutably morrow more than once at a time.
+        let mut undo_count = 0;
 
-      // Remove bindings made in all frames down-to & including the next lower locked frame
-      let mut frame_table: &mut AssignmentCount = &mut HashMap::new();
+        // Remove bindings made in all frames down-to & including the next lower locked frame
+        let mut frame_table: &mut AssignmentCount = &mut HashMap::new();
 
-      for frame in &mut self.undo {
-        let is_locked = frame.locked;
-        frame_table = frame.table_mut(table_name);
-        if let Some(n) = frame_table.remove(key) {
-          undo_count += n;
+        for frame in &mut self.undo {
+          let is_locked = frame.locked;
+          frame_table = frame.table_mut(table_name);
+          if let Some(n) = frame_table.remove(key) {
+            undo_count += n;
+          }
+          if is_locked {
+            break;
+          }
         }
-        if is_locked {
-          break;
-        }
-      }
-      // whatever is left -- if anything -- should be bindings below the locked frame.
-      frame_table.insert(key.to_string(), 1); // Note that there's only one value in the stack, now
+        // whatever is left -- if anything -- should be bindings below the locked frame.
+        frame_table.insert(key.to_string(), 1); // Note that there's only one value in the stack, now
 
-      // Undo the bindings, if `key` was bound in this frame
-      let state_table = self.table_mut(table_name);
-      if let Some(defs) = state_table.get_mut(key) {
-        for _ in 0..undo_count {
+        // Undo the bindings, if `key` was bound in this frame
+        let state_table = self.table_mut(table_name);
+        if let Some(defs) = state_table.get_mut(key) {
+          for _ in 0..undo_count {
+            defs.pop_front();
+          }
+        }
+
+        let table_entry = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
+        table_entry.push_front(value);
+      },
+      Scope::Local => {
+        // Again, split the logic as 1) bookkeeping in undo, then 2) operations in state tables
+        let mut is_replace = false;
+        // 1. Undo mutable logic
+        if let Some(current_frame) = self.undo.front_mut() {
+          let current_frame_table = current_frame.table_mut(table_name);
+
+          is_replace = current_frame_table.contains_key(key);
+          if is_replace { // If the value was previously assigned in this frame
+             // we do this in 2.1
+          } else {
+            // Otherwise, push new value & set 1 to be undone
+            current_frame_table.insert(key.to_string(), 1);
+            //  And push new binding.
+          }
+        }
+        // 2. State table mutable logic
+        let state_table = self.table_mut(table_name);
+        let defs = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
+        if is_replace {
+          // 2.1. Replace the value
           defs.pop_front();
         }
-      }
-
-      let table_entry = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
-      table_entry.push_front(value);
-    },
-    Scope::Local => {
-      // Again, split the logic as 1) bookkeeping in undo, then 2) operations in state tables
-      let mut is_replace = false;
-      // 1. Undo mutable logic
-      if let Some(current_frame) = self.undo.front_mut() {
-        let current_frame_table = current_frame.table_mut(table_name);
-
-        is_replace = current_frame_table.contains_key(key);
-        if is_replace { // If the value was previously assigned in this frame
-          // we do this in 2.1
-        } else {
-          // Otherwise, push new value & set 1 to be undone
-          current_frame_table.insert(key.to_string(), 1);
-          //  And push new binding.
+        defs.push_front(value)
+      },
+      Scope::Named(scope_name) => {
+        // initialize stash if empty
+        let needs_init = match self.stash.get(&scope_name) {
+          None => true,
+          Some(v) => v.is_empty(),
+        };
+        if needs_init {
+          self.assign_internal(TableName::Stash, &scope_name, Stored::Stash(Vec::new()), Some(Scope::Global));
         }
-      }
-      // 2. State table mutable logic
-      let state_table = self.table_mut(table_name);
-      let defs = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
-      if is_replace {
-        // 2.1. Replace the value
-        defs.pop_front();
-      }
-      defs.push_front(value)
-    },
-    Scope::Named(scope_name) => {
-      // initialize stash if empty
-      let needs_init = match self.stash.get(&scope_name) {
-        None => true,
-        Some(v) => v.is_empty()
-      };
-      if needs_init {
-        self.assign_internal(TableName::Stash, &scope_name, Stored::Stash(Vec::new()), Some(Scope::Global));
-      }
-      if let Some(Stored::Stash(ref mut stash)) = self.stash.get_mut(&scope_name).as_mut().unwrap().get_mut(0) {
-        stash.push( (table_name, key.to_string(), value.clone()) );
-      }
-      let has_active = match self.stash_active.get(&scope_name) {
-        None => false,
-        Some(v) => !v.is_empty()
-      };
-      if has_active {
-        self.assign_internal(table_name, key, value, Some(Scope::Local));
-      }
-    }}
+        if let Some(Stored::Stash(ref mut stash)) = self.stash.get_mut(&scope_name).as_mut().unwrap().get_mut(0) {
+          stash.push((table_name, key.to_string(), value.clone()));
+        }
+        let has_active = match self.stash_active.get(&scope_name) {
+          None => false,
+          Some(v) => !v.is_empty(),
+        };
+        if has_active {
+          self.assign_internal(table_name, key, value, Some(Scope::Local));
+        }
+      },
+    }
   }
 
   //======================================================================
@@ -672,9 +676,7 @@ impl State {
     }
   }
 
-  pub fn assign_font(&mut self, font: Arc<Font>, scope: Option<Scope>) {
-    self.assign_value("font", Stored::Font(font), scope);
-  }
+  pub fn assign_font(&mut self, font: Arc<Font>, scope: Option<Scope>) { self.assign_value("font", Stored::Font(font), scope); }
 
   pub fn lookup_number(&self, key: &str) -> Option<Number> {
     match self.lookup_value(key) {
@@ -1169,7 +1171,7 @@ impl State {
         for (key, undo_count) in undo_table.iter() {
           // Typically only 1 value to shift off the table, unless scopes have been activated.
           let name_table = state_table.get_mut(key).unwrap();
-          for _ in 0 .. *undo_count {
+          for _ in 0..*undo_count {
             name_table.pop_front();
           }
         }
@@ -1313,7 +1315,7 @@ impl State {
       let mut frame = &mut self.undo[0];
       let frame_table = frame.table_mut(table_name);
       let entry = frame_table.entry(key.clone()).or_insert(0);
-      *entry +=1; // Note that this many values must be undone
+      *entry += 1; // Note that this many values must be undone
       let key_table = self.table_mut(table_name).entry(key).or_insert_with(VecDeque::new);
       key_table.push_front(value); // And push new binding.
     }
@@ -1328,9 +1330,11 @@ impl State {
   pub fn deactivate_scope(&mut self, scope: &str) {
     let scope_exists = match self.stash_active.get(scope) {
       None => false,
-      Some(v) => !v.is_empty()
+      Some(v) => !v.is_empty(),
     };
-    if !scope_exists { return ; }
+    if !scope_exists {
+      return;
+    }
 
     self.assign_internal(TableName::StashActive, scope, Stored::Bool(false), Some(Scope::Global));
 
@@ -1357,7 +1361,9 @@ impl State {
         let message = s!(
           "Unassigning wrong value for {} from table {} in deactivateScope\
             value is {:?} but stack is {:?}",
-          key, table_name, value,
+          key,
+          table_name,
+          value,
           table_entry.iter().map(ToString::to_string).collect::<Vec<String>>().join(", ")
         );
         let stomach = self.stomach.read().unwrap();
@@ -1635,17 +1641,34 @@ impl State {
   pub fn generate_error_stub(&mut self, caller: &Gullet, token: &Token) -> Result<Token> {
     let cs = token.get_cs_name();
     self.note_status(cs); // TODO: Undefined:cs
-    // To minimize chatter, go ahead and define it...
-    if cs.starts_with("\\if") {  // Apparently an \ifsomething ???
-      let name = cs.replace("\\if","");
-      Error!("undefined", token, caller, self, s!("The token {} is not defined. Defining it now as with \\newif", token.stringify()) );
-      self.install_definition(Expandable::new(
-          T_CS!(s!("\\{}true", name)), None, s!("\\let{}\\iftrue",cs), None, self), Some(Scope::Global));
-      self.install_definition(Expandable::new(
-          T_CS!(s!("\\{}false",name)), None, s!("\\let{}\\iffalse" ,cs), None, self), Some(Scope::Global));
+                          // To minimize chatter, go ahead and define it...
+    if cs.starts_with("\\if") {
+      // Apparently an \ifsomething ???
+      let name = cs.replace("\\if", "");
+      Error!(
+        "undefined",
+        token,
+        caller,
+        self,
+        s!("The token {} is not defined. Defining it now as with \\newif", token.stringify())
+      );
+      self.install_definition(
+        Expandable::new(T_CS!(s!("\\{}true", name)), None, s!("\\let{}\\iftrue", cs), None, self),
+        Some(Scope::Global),
+      );
+      self.install_definition(
+        Expandable::new(T_CS!(s!("\\{}false", name)), None, s!("\\let{}\\iffalse", cs), None, self),
+        Some(Scope::Global),
+      );
       self.let_i(token, T_CS!("\\iffalse"), Some(Scope::Global));
     } else {
-      Error!("undefined", token, caller, self, s!("The token {} is not defined. Defining it now as <ltx:ERROR/>", token.stringify()));
+      Error!(
+        "undefined",
+        token,
+        caller,
+        self,
+        s!("The token {} is not defined. Defining it now as <ltx:ERROR/>", token.stringify())
+      );
       let owned_cs = cs.to_owned();
       self.install_definition(
         Constructor {
@@ -1653,9 +1676,11 @@ impl State {
           replacement: Some(Arc::new(move |document, args, props, i_state| {
             document.make_error("undefined", &owned_cs, i_state)
           })),
-          ..Constructor::default() },
-          //TODO: sizer => "X"),
-        Some(Scope::Global));
+          ..Constructor::default()
+        },
+        //TODO: sizer => "X"),
+        Some(Scope::Global),
+      );
     }
     Ok(token.clone())
   }

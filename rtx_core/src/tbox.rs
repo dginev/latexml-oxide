@@ -57,7 +57,7 @@ impl Tbox {
   ) -> Self {
     let font = match font_opt {
       Some(f) => f,
-      None => state.lookup_font().unwrap()
+      None => state.lookup_font().unwrap(),
     };
     // let locator = $STATE->getStomach->getGullet->getLocator unless defined $locator;
     let _locator = locator_opt;
@@ -110,7 +110,7 @@ impl Tbox {
   }
 
   pub fn get_string(&self) -> &str { self.text.as_str() }
- }
+}
 
 impl BoxOps for Tbox {
   fn unlist(&self) -> Vec<Digested> { Vec::new() }
@@ -157,7 +157,7 @@ impl BoxOps for Tbox {
   fn get_property_bool(&self, key: &str) -> bool {
     match self.properties.get(key) {
       Some(v) => *v == Stored::Bool(true),
-      _ => false
+      _ => false,
     }
   }
 }

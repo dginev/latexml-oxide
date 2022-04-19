@@ -151,15 +151,19 @@ pub fn do_def(globally: bool, stomach: &mut Stomach, args: Vec<Tokens>, state: &
   let paramlist = parse_def_parameters(&cs, params, state)?;
 
   let scope = if globally { Some(Scope::Global) } else { None };
-  state.install_definition(Expandable::new(
+  state.install_definition(
+    Expandable::new(
       cs,
       paramlist,
       ExpansionBody::Tokens(body),
       Some(ExpandableOptions {
         nopack_parameters: true,
-        ..ExpandableOptions::default() }),
-      state),
-    scope);
+        ..ExpandableOptions::default()
+      }),
+      state,
+    ),
+    scope,
+  );
   AfterAssignment!();
   Ok(())
 }
@@ -437,7 +441,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut Stat
       break;
     }
     let child = children.pop().unwrap();
-    document.copy_node_font(&child,&text_node);
+    document.copy_node_font(&child, &text_node);
     for (key, value) in child.get_attributes() {
       // Copy the child's attributes (should Merge!!)
       if key != "xml:id" {
@@ -582,13 +586,25 @@ pub fn writable_tokens(tokens: Tokens, state: &mut State) -> Result<String> {
   for t in tokens.unlist().into_iter() {
     let t = t.without_dont_expand();
     match t.code {
-      Catcode::CS =>    { wv.push(t); wv.push(T_SPACE!()); },
-      Catcode::SPACE => { wv.push(T_SPACE!()); },
-      Catcode::PARAM => { wv.push(t.clone()); wv.push(t); },
+      Catcode::CS => {
+        wv.push(t);
+        wv.push(T_SPACE!());
+      },
+      Catcode::SPACE => {
+        wv.push(T_SPACE!());
+      },
+      Catcode::PARAM => {
+        wv.push(t.clone());
+        wv.push(t);
+      },
       Catcode::ARG => {
         // B Book, 294. Reduce to param+integer
-        wv.push(T_PARAM!()); wv.push(T_OTHER!(t.get_string())); }
-      _ => { wv.push(t); }
+        wv.push(T_PARAM!());
+        wv.push(T_OTHER!(t.get_string()));
+      },
+      _ => {
+        wv.push(t);
+      },
     }
   }
   untex(Tokens::new(wv), true, state)

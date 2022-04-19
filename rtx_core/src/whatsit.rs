@@ -62,9 +62,7 @@ impl Whatsit {
       self.properties.insert(key, value);
     }
   }
-  pub fn get_definition(&self) -> Arc<dyn Definition> {
-    Arc::clone(&self.definition)
-  }
+  pub fn get_definition(&self) -> Arc<dyn Definition> { Arc::clone(&self.definition) }
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
     match self.args.get(n - 1) {
       Some(&Some(ref opt)) => Some(opt),
@@ -232,7 +230,7 @@ impl BoxOps for Whatsit {
   fn get_property_bool(&self, key: &str) -> bool {
     match self.properties.get(key) {
       Some(v) => *v == Stored::Bool(true),
-      _ => false
+      _ => false,
     }
   }
   fn get_body(&self) -> Option<Digested> {
