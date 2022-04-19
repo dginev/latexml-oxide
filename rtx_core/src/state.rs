@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 use std::sync::{Arc, RwLock};
+use std::fmt::{self,Display};
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -40,10 +41,11 @@ lazy_static! {
 
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Scope {
   Global,
   Local,
+  Named(String)
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -56,12 +58,30 @@ pub enum TableName {
   Lccode,
   Uccode,
   Delcode,
+  Stash,
   StashActive,
+}
+impl Display for TableName {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}",
+    match self {
+      TableName::Meaning => "Meaning",
+      TableName::Value => "Value",
+      TableName::Catcode => "Catcode",
+      TableName::Mathcode => "Mathcode",
+      TableName::Sfcode => "Sfcode",
+      TableName::Lccode => "Lccode",
+      TableName::Uccode => "Uccode",
+      TableName::Delcode => "Delcode",
+      TableName::Stash => "Stash",
+      TableName::StashActive => "StashActive",
+    })
+  }
 }
 impl TableName {
   pub fn variants() -> Vec<TableName> {
     use self::TableName::*;
-    vec![Meaning, Value, Catcode, Sfcode, Lccode, Uccode, Delcode, StashActive]
+    vec![Meaning, Value, Catcode, Sfcode, Lccode, Uccode, Delcode, Stash, StashActive]
   }
 }
 
@@ -75,7 +95,7 @@ pub enum Catcodes {
 
 /// Ledger for stacked assignments
 pub type AssignmentCount = HashMap<String, usize>;
-pub type StashStore = HashMap<String, Vec<(TableName, String, Stored)>>;
+pub type StashTable = Vec<(TableName, String, Stored)>;
 #[derive(Debug, Clone, Default)]
 pub struct UndoFrame {
   locked: bool,
@@ -87,6 +107,7 @@ pub struct UndoFrame {
   lccode: AssignmentCount,
   uccode: AssignmentCount,
   delcode: AssignmentCount,
+  stash: AssignmentCount,
   stash_active: AssignmentCount,
 }
 
@@ -102,6 +123,7 @@ impl UndoFrame {
       Lccode => &self.lccode,
       Uccode => &self.uccode,
       Delcode => &self.delcode,
+      Stash => &self.stash,
       StashActive => &self.stash_active,
     }
   }
@@ -116,6 +138,7 @@ impl UndoFrame {
       Lccode => &mut self.lccode,
       Uccode => &mut self.uccode,
       Delcode => &mut self.delcode,
+      Stash => &mut self.stash,
       StashActive => &mut self.stash_active,
     }
   }
@@ -182,7 +205,7 @@ pub struct State {
   // Tables
   pub value: Table,
   pub meaning: Table,
-  pub stash: StashStore,
+  pub stash: Table,
   pub stash_active: Table,
   pub catcode: Table,
   pub mathcode: Table,
@@ -404,6 +427,7 @@ impl State {
       Lccode => &self.lccode,
       Uccode => &self.uccode,
       Delcode => &self.delcode,
+      Stash => &self.stash,
       StashActive => &self.stash_active,
     }
   }
@@ -418,6 +442,7 @@ impl State {
       Lccode => &mut self.lccode,
       Uccode => &mut self.uccode,
       Delcode => &mut self.delcode,
+      Stash => &mut self.stash,
       StashActive => &mut self.stash_active,
     }
   }
@@ -447,7 +472,8 @@ impl State {
       },
     };
 
-    if scope == Scope::Global {
+    match scope {
+    Scope::Global => {
       // We are going to change the model, where we first count the total number of definitions to
       // pop, and then pop them, in order to never mutably morrow more than once at a time.
       let mut undo_count = 0;
@@ -478,7 +504,8 @@ impl State {
 
       let table_entry = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
       table_entry.push_front(value);
-    } else if scope == Scope::Local {
+    },
+    Scope::Local => {
       // Again, split the logic as 1) bookkeeping in undo, then 2) operations in state tables
       let mut is_replace = false;
       // 1. Undo mutable logic
@@ -502,9 +529,27 @@ impl State {
         defs.pop_front();
       }
       defs.push_front(value)
-    } else {
-      // TODO: stash cases
-    }
+    },
+    Scope::Named(scope_name) => {
+      // initialize stash if empty
+      let needs_init = match self.stash.get(&scope_name) {
+        None => true,
+        Some(v) => v.is_empty()
+      };
+      if needs_init {
+        self.assign_internal(TableName::Stash, &scope_name, Stored::Stash(Vec::new()), Some(Scope::Global));
+      }
+      if let Some(Stored::Stash(ref mut stash)) = self.stash.get_mut(&scope_name).as_mut().unwrap().get_mut(0) {
+        stash.push( (table_name, key.to_string(), value.clone()) );
+      }
+      let has_active = match self.stash_active.get(&scope_name) {
+        None => false,
+        Some(v) => !v.is_empty()
+      };
+      if has_active {
+        self.assign_internal(table_name, key, value, Some(Scope::Local));
+      }
+    }}
   }
 
   //======================================================================
@@ -1237,102 +1282,101 @@ impl State {
   // #======================================================================
 
   pub fn activate_scope(&mut self, scope: &str) {
-    if let Some(scope_entry) = self.stash_active.get(scope) {
-      if let Some(count) = scope_entry.front() {
-        self.assign_internal(TableName::StashActive, scope, Stored::Bool(true), Some(Scope::Local));
-        // For now we modify a bit the latexml implementation of stash.
-        // The Perl code seems to consistently and exlcusively use the value
-        //  $$self{stash}{$scope}[0]
-        // which suggests that we are really looking at an array-ref stored as a single value of $$self{stash}{$scope}
-        // so let's just do that for simplicity's sake and assume
-        // defns = $$self{stash}{$scope}
-
-        // Also, we need to take ownership of the stashed data, so that we can assign it. TODO: Potential to optimize?
-        let defns: Vec<(TableName, String, Stored)> = if let Some(defns) = self.stash.get(scope) {
-          defns
-            .iter()
-            .map(|(table_name, key, value)| (*table_name, key.to_string(), value.clone()))
-            .collect()
-        } else {
-          Vec::new()
-        };
-
-        // Now make local assignments for all those in the stash.
-        if let Some(frame) = self.undo.front_mut() {
-          for (table_name, key, _value) in defns.iter() {
-            // Here we ALWAYS push the stashed values into the table
-            // since they may be popped off by deactivateScope
-            let mut frame_table = frame.table_mut(*table_name);
-            let mut frame_count = frame_table.entry(key.to_string()).or_default();
-            *frame_count += 1; // Note that this many values must be undone
-          }
-        }
-        if !self.undo.is_empty() {
-          // avoid borrowing mutably twice, by iterating a separate time for inserting the defs
-          for (table_name, key, value) in defns.iter() {
-            let mut table_entry = self.table_mut(*table_name).entry(key.to_string()).or_insert_with(VecDeque::new);
-            table_entry.push_front(value.clone()); // And push new binding.
-          }
-        }
+    // do not re-activate if already active.
+    if let Some(stash_active_entry) = self.stash_active.get(scope) {
+      if !stash_active_entry.is_empty() {
+        return;
       }
+    }
+
+    self.assign_internal(TableName::StashActive, scope, Stored::Bool(true), Some(Scope::Local));
+    // Also, we need to take ownership of the stashed data, so that we can assign it.
+    // TODO: Potential to optimize?
+    // Also x2, we are using a shared "Stored" interface for all data that passes through assign_internal,
+    // but that causes both uncertainty and overhead in the Stash table specifically.
+    // TODO x2: Maybe a more ambitious refactor will separate out the Stash logic
+    // and use "StashTable" directly instead of Stored::Stash(StashTable) ?
+
+    let mut actions = Vec::new();
+
+    if let Some(Some(Stored::Stash(defns))) = self.stash.get(scope).map(|x| x.iter().next()) {
+      for (table_name, key, value) in defns {
+        // copy the values out from the stashed defns, so that Rust
+        // is calm we are borrowing safely.
+
+        actions.push((*table_name, key.to_owned(), value.clone()));
+      }
+    }
+    // Here we ALWAYS push the stashed values into the table
+    // since they may be popped off by deactivateScope
+    for (table_name, key, value) in actions {
+      let mut frame = &mut self.undo[0];
+      let frame_table = frame.table_mut(table_name);
+      let entry = frame_table.entry(key.clone()).or_insert(0);
+      *entry +=1; // Note that this many values must be undone
+      let key_table = self.table_mut(table_name).entry(key).or_insert(VecDeque::new());
+      key_table.push_front(value); // And push new binding.
     }
   }
 
-  // # Probably, in most cases, the assignments made by activateScope
-  // # will be undone by egroup or popping frames.
-  // # But they can also be undone explicitly
+  // Probably, in most cases, the assignments made by activateScope
+  // will be undone by egroup or popping frames.
+  // But they can also be undone explicitly
 
+  /// Removes any definitions that were associated with the named `scope`.
+  /// Normally not needed, since a scopes definitions are locally bound anyway.
   pub fn deactivate_scope(&mut self, scope: &str) {
-    if let Some(scope_entry) = self.stash_active.get(scope) {
-      self.assign_internal(TableName::StashActive, scope, Stored::Bool(false), Some(Scope::Global));
-      let defns: Vec<(TableName, String, Stored)> = if let Some(defns) = self.stash.get(scope) {
-        defns
-          .iter()
-          .map(|(table_name, key, value)| (*table_name, key.to_string(), value.clone()))
-          .collect()
-      } else {
-        Vec::new()
-      };
+    let scope_exists = match self.stash_active.get(scope) {
+      None => false,
+      Some(v) => !v.is_empty()
+    };
+    if !scope_exists { return ; }
 
-      let mut countdown_keys = Vec::new();
-      for (table_name, key, value) in defns.iter() {
-        let table_entry = self.table_mut(*table_name).entry(key.to_string()).or_default();
-        if (*table_entry).front() == Some(value) {
-          // Here we're popping off the values pushed by activateScope
-          // to (possibly) reveal a local assignment in the same frame, preceding activateScope.
-          (*table_entry).pop_front();
-          countdown_keys.push((table_name, key));
-        } else {
-          let message = s!(
-            "Unassigning wrong value for $key from table $table in deactivateScope\
-             value is {:?} but stack is {:?}",
-            value,
-            table_entry.iter().map(ToString::to_string).collect::<Vec<String>>().join(", ")
-          );
-          let stomach = self.stomach.read().unwrap();
-          Warn!("internal", key, stomach, self, message);
-        }
+    self.assign_internal(TableName::StashActive, scope, Stored::Bool(false), Some(Scope::Global));
+
+    let mut collected = Vec::new();
+    if let Some(Some(Stored::Stash(defns))) = self.stash.get(scope).map(|x| x.iter().next()) {
+      for (table_name, key, value) in defns {
+        collected.push((table_name.to_owned(), key.to_owned(), value.to_owned()));
       }
+    }
 
-      if let Some(mut frame) = self.undo.front_mut() {
-        for (table_name, key) in countdown_keys {
-          let mut frame_table = frame.table_mut(*table_name);
+    for (table_name, key, value) in collected {
+      let table_entry = self.table_mut(table_name.clone()).entry(key.clone()).or_default();
+      if (*table_entry).front() == Some(&value) {
+        // Here we're popping off the values pushed by activateScope
+        // to (possibly) reveal a local assignment in the same frame, preceding activateScope.
+        (*table_entry).pop_front();
+
+        if let Some(mut frame) = self.undo.front_mut() {
+          let mut frame_table = frame.table_mut(table_name);
           let mut frame_count = frame_table.entry(key.to_string()).or_default();
           *frame_count -= 1;
         }
+      } else {
+        let message = s!(
+          "Unassigning wrong value for {} from table {} in deactivateScope\
+            value is {:?} but stack is {:?}",
+          key, table_name, value,
+          table_entry.iter().map(ToString::to_string).collect::<Vec<String>>().join(", ")
+        );
+        let stomach = self.stomach.read().unwrap();
+        Warn!("internal", key, stomach, self, message);
       }
     }
   }
 
-  // sub getKnownScopes {
-  //   my ($self) = @_;
-  //   my @scopes = sort keys %{ $$self{stash} };
-  //   return @scopes; }
+  pub fn get_known_scopes(&self) -> Vec<&String> {
+    let mut scopes = self.stash.keys().collect::<Vec<_>>();
+    scopes.sort();
+    scopes
+  }
 
-  // sub getActiveScopes {
-  //   my ($self) = @_;
-  //   my @scopes = sort keys %{ $$self{stash_active} };
-  //   return @scopes; }
+  pub fn get_active_scopes(&self) -> Vec<&String> {
+    let mut scopes = self.stash_active.keys().collect::<Vec<_>>();
+    scopes.sort();
+    scopes
+  }
 
   //======================================================================
   // Units.

@@ -5,4 +5,4 @@ use rtx::util::test::*;
 
 #[test]
 #[ignore]
-fn can_theorem() { rtx_tests("tests/ams", None); }
+fn can_theorem() { rtx_tests("tests/ams", None, None); }

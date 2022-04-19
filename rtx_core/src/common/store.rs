@@ -24,7 +24,7 @@ use crate::mouth;
 use crate::mouth::Mouth;
 use crate::parameter::Parameter;
 use crate::rewrite::Rewrite;
-use crate::state::State;
+use crate::state::{StashTable, State};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
@@ -65,6 +65,7 @@ pub enum Stored {
   VecString(Vec<String>),
   VecTokens(Vec<crate::Tokens>),
   VecDigested(Vec<crate::Digested>),
+  Stash(StashTable),
   HashString(HashMap<String, String>),
   VecDequeStored(VecDeque<Stored>),
   HashStored(HashMap<String, Stored>),
@@ -105,6 +106,7 @@ impl fmt::Debug for Stored {
       Int(ref num) => write!(f, "Stored::Int[{:?}]", num),
       VecChar(ref vs) => write!(f, "Stored::VecChar[{:?}]", vs),
       VecOptionChar(ref vs) => write!(f, "Stored::VecOptionChar[{:?}]", vs),
+      Stash(ref vs) => write!(f, "Stored::Stash[{:?}]", vs),
       VecString(ref vs) => write!(f, "Stored::VecString[{:?}]", vs),
       Bool(ref b) => write!(f, "Stored::Bool[{:?}]", b),
       Token(ref t) => write!(f, "Stored::Token[{:?}]", t),
@@ -385,6 +387,13 @@ impl PartialEq for Stored {
           false
         }
       },
+      Stash(ref v) => {
+        if let Stash(v2) = other {
+          v.len() == v2.len() // TODO: Do we need accuracy on stash comparisons?
+        } else {
+          false
+        }
+      },
       HashStored(ref hs) => {
         if let HashStored(hs2) = other {
           hs == hs2
@@ -416,7 +425,8 @@ impl PartialEq for Stored {
     }
   }
 }
-
+unsafe impl Send for Stored {}
+unsafe impl Sync for Stored {}
 impl Stored {
   pub fn cast_to_string_hash(in_map: &HashMap<String, Stored>) -> HashMap<String, String> {
     let mut out_map: HashMap<String, String> = HashMap::new();

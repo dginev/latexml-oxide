@@ -6,5 +6,5 @@ use rtx::util::test::*;
 #[test]
 fn can_tokenize() {
   let requires = None;
-  rtx_tests("tests/tokenize", requires);
+  rtx_tests("tests/tokenize", requires, None);
 }

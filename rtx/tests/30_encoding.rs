@@ -36,5 +36,5 @@ fn can_encode() {
   requires.insert("ts1", "ts1enc.def");
   requires.insert("ly1", "ly1enc.def");
 
-  rtx_tests("tests/encoding", Some(requires));
+  rtx_tests("tests/encoding", Some(requires), None);
 }

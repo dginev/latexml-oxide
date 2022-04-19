@@ -3,7 +3,7 @@ use crate::package::*;
 //**********************************************************************
 // C.11 Moving Information Around
 //**********************************************************************
-LoadDefinitions!(outer_stomach, state, {
+LoadDefinitions!(outer_stomach, outer_state, {
   //======================================================================
   // C.11.1 Files
   //======================================================================
@@ -31,8 +31,8 @@ LoadDefinitions!(outer_stomach, state, {
       document.set_node(&savenode);
     }
   },
-  reversion => "",
-  properties => { map!("alignmentSkippable" => true.into(), "alignmentPreserve" => true.into()) },
+  reversion => "", // TODO: implement for DUAL_BRANCH
+  properties => {stored_map!("alignmentSkippable" => true, "alignmentPreserve" => true)},
   after_digest => sub[stomach, whatsit, state] {
     let label = match whatsit.get_arg(1) {
       Some(labeld) => clean_label(&labeld.to_string(), None),
@@ -41,15 +41,10 @@ LoadDefinitions!(outer_stomach, state, {
     let mut scope = label.replace("LABEL:","label:");
     let label_key = s!("LABEL@{}", label);
     whatsit.set_property("label", label);
-    let scopes_key = if let Some(ctr) = LookupValue!("current_counter") {
-      s!("scopes_for_counter:{}", ctr)
-    } else {
-      String::new()
-    };
-    if !scopes_key.is_empty() {
-      // TODO: is unshifting on lookupValue badly differing from unshiftvalue?
-      UnshiftValue!(&scopes_key, vec![scope.clone()]);
-
+    let ctr_key_opt = LookupValue!("current_counter").map(|ctr| s!("scopes_for_counter:{}", ctr));
+    if let Some(ctr_key) = ctr_key_opt {
+      // TODO: we should probably improve the ergonomics here to avoid the vec![]
+      state.unshift_value(&ctr_key, vec![scope.clone()]);
       state.activate_scope(&scope);
       stomach.begin_mode("text", state)?;
       let current_label = stomach.digest(Tokens!(T_CS!("\\@currentlabel")), state)?;

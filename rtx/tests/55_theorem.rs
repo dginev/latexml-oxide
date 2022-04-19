@@ -9,5 +9,5 @@ use std::collections::HashMap;
 fn can_theorem() {
   let mut requires = HashMap::new();
   requires.insert("ntheorem", "ntheorem.std");
-  rtx_tests("tests/theorem", Some(requires));
+  rtx_tests("tests/theorem", Some(requires), None);
 }

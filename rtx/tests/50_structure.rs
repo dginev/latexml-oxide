@@ -8,7 +8,7 @@ use std::collections::HashMap;
 fn can_structure() {
   let mut requires = HashMap::new();
   requires.insert("csquotes", "csquotes.sty");
-  rtx_tests("tests/structure", Some(requires));
+  rtx_tests("tests/structure", Some(requires), None);
 }
 
 #[test]
@@ -16,5 +16,5 @@ fn can_structure() {
 fn can_structure_todo() {
   let mut requires = HashMap::new();
   requires.insert("csquotes", "csquotes.sty");
-  rtx_tests("tests/structure_todo", Some(requires));
+  rtx_tests("tests/structure_todo", Some(requires), None);
 }

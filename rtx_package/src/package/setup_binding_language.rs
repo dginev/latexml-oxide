@@ -2114,6 +2114,14 @@ macro_rules! defi_opts {
     defi_opts!(@after_digest_begin ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
+  // after_digest_body: Vec<DigestionClosure>
+  (@munch ( $(,)? after_digest_body $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@after_digest_body (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
+  (@munch ( $(,)? after_digest_body $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@after_digest_body ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
+
   // before_construct: Vec<ConstructionClosure>
   (@munch ( $(,)? before_construct $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@before_construct (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
@@ -2246,6 +2254,16 @@ macro_rules! defi_opts {
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest_begin @ after_digest!(stomach, whatsit, state, $body)]})
   };
+
+  (@after_digest_body (
+    sub[$stomach_arg:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest_body @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]})
+  };
+  (@after_digest_body (
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest_body @ after_digest!(stomach, whatsit, state, $body)]})
+  };
+
 
   (@before_construct (
     sub[$doc:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {

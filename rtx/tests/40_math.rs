@@ -5,4 +5,4 @@ use rtx::util::test::*;
 
 #[test]
 #[ignore]
-fn can_math() { rtx_tests("tests/math", None); }
+fn can_math() { rtx_tests("tests/math", None, None); }

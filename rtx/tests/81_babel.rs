@@ -15,5 +15,5 @@ fn can_babel() {
   requires.insert("french", "frenchb.ldf");
   requires.insert("page545", "germanb.ldf");
 
-  rtx_tests("tests/babel", Some(requires));
+  rtx_tests("tests/babel", Some(requires), None);
 }

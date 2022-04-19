@@ -12,7 +12,7 @@ use rtx_core::{s, Core, CoreOptions};
 use rtx_math_parser::node_to_grammar_lexemes;
 
 #[allow(clippy::implicit_hasher)]
-pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>) { rtx_tests_internal(dirpath, requires, None) }
+pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>, dispatcher_opt: Option<BindingDispatcher>) { rtx_tests_internal(dirpath, requires, dispatcher_opt) }
 #[allow(clippy::implicit_hasher)]
 pub fn rtx_tests_internal(dirpath: &str, requires: Option<HashMap<&str, &str>>, extra_bindings_dispatcher: Option<BindingDispatcher>) {
   assert!(rtx_core::util::logger::init(log::LevelFilter::Warn).is_ok());
@@ -74,7 +74,7 @@ fn process_texfile(tex_path: &str, name: &str, extra_bindings_dispatcher: Option
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  // If we want to test the rtx_contrib bindings, we need to paass in the additional binding dispatcher,
+  // If we want to test the rtx_contrib bindings, we need to pass in the additional binding dispatcher,
   // which makes the contrib bindings visible
   // this would have been equivalent to a latexml --path argument, except we require access to compiled functions,
   // hence the rust-native pass
