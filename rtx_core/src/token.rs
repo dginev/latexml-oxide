@@ -16,7 +16,7 @@ use crate::definition::Definition;
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::tokens::Tokens;
-use crate::{Fatal, fatal, Digested};
+use crate::{fatal, Digested, Fatal};
 
 static CONTROLNAME: &[&str] = &[
   "NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL", "BS", "HT", "LF", "VT", "FF", "CR", "SO", "SI", "DLE", "DC1", "DC2", "DC3", "DC4", "NAK",
@@ -44,7 +44,7 @@ pub enum Catcode {
   CS,
   MARKER,
   ARG,
-  SmuggleTHE
+  SmuggleTHE,
 }
 
 impl From<u8> for Catcode {
@@ -103,7 +103,7 @@ impl From<Catcode> for u8 {
       CS => 16,
       MARKER => 17,
       ARG => 18,
-      SmuggleTHE => 19
+      SmuggleTHE => 19,
     }
   }
 }
@@ -133,7 +133,7 @@ impl Catcode {
       CS => "ControlSequence",
       MARKER => "Marker",
       ARG => "Arg",
-      SmuggleTHE => "SmuggleThe"
+      SmuggleTHE => "SmuggleThe",
     }
   }
 
@@ -182,7 +182,7 @@ impl Catcode {
       CS => "T_CS",
       MARKER => "T_MARKER",
       ARG => "T_ARG",
-      SmuggleTHE => "T_SMUGGLE_THE"
+      SmuggleTHE => "T_SMUGGLE_THE",
     }
   }
 
@@ -248,7 +248,7 @@ impl Catcode {
 pub struct Token {
   pub text: Cow<'static, str>,
   pub code: Catcode,
-  pub smuggled: Option<Box<Token>>
+  pub smuggled: Option<Box<Token>>,
 }
 
 impl fmt::Debug for Token {
@@ -313,14 +313,14 @@ macro_rules! T_LETTER {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::LETTER,
-      smuggled: None
+      smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::LETTER,
-      smuggled: None
+      smuggled: None,
     }
   };
 }
@@ -330,14 +330,14 @@ macro_rules! T_OTHER {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::OTHER,
-      smuggled: None
+      smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::OTHER,
-      smuggled: None
+      smuggled: None,
     }
   };
 }
@@ -347,14 +347,14 @@ macro_rules! T_ACTIVE {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::ACTIVE,
-      smuggled: None
+      smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::ACTIVE,
-      smuggled: None
+      smuggled: None,
     }
   };
 }
@@ -364,14 +364,14 @@ macro_rules! T_COMMENT {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::COMMENT,
-      smuggled: None
+      smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::COMMENT,
-      smuggled: None
+      smuggled: None,
     }
   };
 }
@@ -381,14 +381,14 @@ macro_rules! T_CS {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::CS,
-      smuggled: None
+      smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::CS,
-      smuggled: None
+      smuggled: None,
     }
   };
 }
@@ -398,14 +398,14 @@ macro_rules! T_MARKER {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::MARKER,
-      smuggled: None
+      smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::MARKER,
-      smuggled: None
+      smuggled: None,
     }
   };
 }
@@ -416,18 +416,17 @@ macro_rules! T_ARG {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::ARG,
-      smuggled: None
+      smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::ARG,
-      smuggled: None
+      smuggled: None,
     }
   };
 }
-
 
 #[macro_export]
 macro_rules! Token {
@@ -435,28 +434,28 @@ macro_rules! Token {
     Token {
       text: Cow::Borrowed($text),
       code: Catcode::OTHER,
-      smuggled: None
+      smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: Catcode::OTHER,
-      smuggled: None
+      smuggled: None,
     }
   };
   ($text:literal, $cc:expr) => {
     Token {
       text: Cow::Borrowed($text),
       code: $cc,
-      smuggled: None
+      smuggled: None,
     }
   };
   ($text:expr, $cc:expr) => {
     Token {
       text: Cow::Owned($text.to_string()),
       code: $cc,
-      smuggled: None
+      smuggled: None,
     }
   };
 }
@@ -660,7 +659,7 @@ impl<'a> Token {
 
   pub fn substitute_parameters(self, args: &[Token]) -> Self {
     if self.code == Catcode::ARG {
-      args[self.text.parse::<usize>().unwrap() -1].clone()
+      args[self.text.parse::<usize>().unwrap() - 1].clone()
     } else {
       self
     }
@@ -672,11 +671,18 @@ impl<'a> Token {
     let cc = self.code;
     if cc == Catcode::SmuggleTHE {
       // LaTeXML Bug, we haven't correctly emulated scan_toks! Offending token was:
-      let msg = s!("We are marking as \\noexpand a masked \\the-produced token, this must Never happen. Illegal: {}", &self.stringify());
+      let msg = s!(
+        "We are marking as \\noexpand a masked \\the-produced token, this must Never happen. Illegal: {}",
+        &self.stringify()
+      );
       Fatal!(Parameter, Unexpected, None, state, msg);
     }
     if (cc == Catcode::CS || cc == Catcode::ACTIVE) && state.is_dont_expandable(&self) {
-      Ok(Token{ text: Cow::Borrowed("\\relax"), code: Catcode::CS, smuggled: Some(Box::new(self)) })
+      Ok(Token {
+        text: Cow::Borrowed("\\relax"),
+        code: Catcode::CS,
+        smuggled: Some(Box::new(self)),
+      })
     } else {
       Ok(self)
     }
@@ -684,16 +690,14 @@ impl<'a> Token {
 
   /// Return the original token of a not-expanded token,
   /// or undef if it isn't marked as such.
-  pub fn get_dont_expand(&self) -> &Option<Box<Token>> {
-    &self.smuggled
-  }
+  pub fn get_dont_expand(&self) -> &Option<Box<Token>> { &self.smuggled }
 
   /// Remove dont_expand flag, remove SMUGGLE_THE wrapper
   pub fn without_dont_expand(mut self) -> Token {
     let mut inner = self.smuggled.take();
     match inner {
       Some(t) => *t,
-      None => self
+      None => self,
     }
   }
 

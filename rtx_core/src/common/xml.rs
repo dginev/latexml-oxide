@@ -57,7 +57,7 @@ pub fn element_nodes(node: &Node) -> Vec<Node> {
 
 pub fn closest_element(mut node: &Node) -> Option<Node> {
   if node.get_type() == Some(NodeType::ElementNode) {
-    return Some(node.clone())
+    return Some(node.clone());
   }
   while let Some(parent) = node.get_parent() {
     if parent.get_type() == Some(NodeType::ElementNode) {

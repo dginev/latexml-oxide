@@ -16,14 +16,14 @@ use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;
-use rtx_core::{Digested};
+use rtx_core::Digested;
 
 use super::def_dialect::def_macro;
 use super::*;
 use crate::package::pool;
 
 lazy_static! {
-  static ref QUOTE_WRAPPED : Regex = Regex::new("^\"(.+)\"$").unwrap();
+  static ref QUOTE_WRAPPED: Regex = Regex::new("^\"(.+)\"$").unwrap();
 }
 
 pub fn load_external_binding(file: &str, state: &mut State, mut stomach: &mut Stomach) -> Result<bool> {
@@ -244,7 +244,7 @@ pub struct InputOptions {
   pub noerror: bool,
   pub file_type: Option<String>,
 }
-pub fn input_content(request: &str, options: InputOptions, stomach: &mut Stomach, state :&mut State) -> Result<()> {
+pub fn input_content(request: &str, options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let filepath = find_file(request, None, state);
   match filepath {
     // TODO: type => $options{type}, noltxml => 1
@@ -286,28 +286,29 @@ pub fn input(mut request: &str, options: InputOptions, stomach: &mut Stomach, st
   // if state.lookup_bool("INTERPRETING_DEFINITIONS") {
   //   input_definitions(request);
   // }
-  if let Some(path) = find_file(request, None, state) { // Found something plausible..
-  //   let ftype = if pathname_is_literaldata(path) { "tex" } else {
-  //     pathname_type(path)
-  //   };
+  if let Some(path) = find_file(request, None, state) {
+    // Found something plausible..
+    //   let ftype = if pathname_is_literaldata(path) { "tex" } else {
+    //     pathname_type(path)
+    //   };
 
-  //   // Should we be doing anything about options in the next 2 cases?..... I kinda think not, but?
-  //   if (ftype == "rs") {                  // it's a LaTeXML binding.
-  //     load_rtx(request, path);
+    //   // Should we be doing anything about options in the next 2 cases?..... I kinda think not, but?
+    //   if (ftype == "rs") {                  // it's a LaTeXML binding.
+    //     load_rtx(request, path);
+    //   }
+    //   // Else some sort of "known" definitions type file, but not simply 'tex'
+    //   else if (ftype != "tex") && (pathname_is_raw(path)) {
+    //     load_tex_definitions(request, path);
+    //   } else {
+    load_tex_content(&path, options, stomach, state)
   //   }
-  //   // Else some sort of "known" definitions type file, but not simply 'tex'
-  //   else if (ftype != "tex") && (pathname_is_raw(path)) {
-  //     load_tex_definitions(request, path);
-  //   } else {
-      load_tex_content(&path, options, stomach, state)
-  //   }
-  } else { // Couldn't find anything?
-    state.note_status("missing");//, request);
-    // We presumably are trying to input Content; an error if we can't find it (contrast to Definitions)
+  } else {
+    // Couldn't find anything?
+    state.note_status("missing"); //, request);
+                                  // We presumably are trying to input Content; an error if we can't find it (contrast to Definitions)
     let gullet = stomach.get_gullet();
-    Error!("missing_file", request, gullet, state,
-       s!("Can't find TeX file {}", request));
-      //  maybeReportSearchPaths());
+    Error!("missing_file", request, gullet, state, s!("Can't find TeX file {}", request));
+    //  maybeReportSearchPaths());
     Ok(())
   }
 }

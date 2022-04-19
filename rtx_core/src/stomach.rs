@@ -330,7 +330,8 @@ impl<'t> Stomach {
     let font = state.lookup_font();
     state.clear_prefixes(); // prefixes shouldn't apply here.
     match cc {
-      Catcode::SPACE => if state.lookup_bool("IN_MATH") {
+      Catcode::SPACE => {
+        if state.lookup_bool("IN_MATH") {
           Ok(None)
         } else {
           Ok(Some(Digested::TBox(Arc::new(Tbox::new(
@@ -341,8 +342,9 @@ impl<'t> Stomach {
             HashMap::new(),
             state,
           )))))
-        },
-      Catcode::COMMENT =>  {
+        }
+      },
+      Catcode::COMMENT => {
         unimplemented!()
       },
       _ => {
@@ -355,7 +357,7 @@ impl<'t> Stomach {
           HashMap::new(),   // properties
           state,
         )))))
-      }
+      },
     }
   }
 
@@ -436,7 +438,7 @@ impl<'t> Stomach {
   pub fn push_stack_frame(&mut self, nobox: bool, state: &mut State) {
     let current_token = match &state.current_token {
       Some(t) => (*t).clone(),
-      _ => unimplemented!() // should never happen?
+      _ => unimplemented!(), // should never happen?
     };
 
     state.push_frame();
@@ -446,7 +448,8 @@ impl<'t> Stomach {
     state.assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupInitiator", (*current_token).clone(), Some(Scope::Local));
     state.assign_value("groupInitiatorLocator", self.get_locator().into_owned(), Some(Scope::Local));
-    if !nobox { // For begingroup/endgroup
+    if !nobox {
+      // For begingroup/endgroup
       self.boxing.push((*current_token).clone())
     }
   }
@@ -475,7 +478,7 @@ impl<'t> Stomach {
         match entry {
           Stored::Tokens(t) => self.gullet.unread(t),
           Stored::Token(t) => self.gullet.unread_one(t),
-          other => panic!(r"\aftergroup should be used with tokens, got instead: {:?}", other)
+          other => panic!(r"\aftergroup should be used with tokens, got instead: {:?}", other),
         };
       }
     }
@@ -520,8 +523,15 @@ impl<'t> Stomach {
   pub fn begingroup(&mut self, state: &mut State) { self.push_stack_frame(true, state); }
 
   pub fn endgroup(&mut self, state: &mut State) -> Result<()> {
-    if !state.lookup_bool("groupNonBoxing") {    // or group was opened with \bgroup
-      Error!("unexpected", state.current_token.as_ref().unwrap().to_string(), self, state, s!("Attempt to close non-boxing group {}", self.current_frame_message()));
+    if !state.lookup_bool("groupNonBoxing") {
+      // or group was opened with \bgroup
+      Error!(
+        "unexpected",
+        state.current_token.as_ref().unwrap().to_string(),
+        self,
+        state,
+        s!("Attempt to close non-boxing group {}", self.current_frame_message())
+      );
     } else {
       self.pop_stack_frame(true, state)?;
     }

@@ -325,22 +325,30 @@ impl Tokens {
   // Collapses PARAM+PARAM token pair into a single PARAM
   // B book suggests running this
   // and remove dont_expand markers.
-  pub fn pack_parameters(self, state:&State) -> Self {
+  pub fn pack_parameters(self, state: &State) -> Self {
     let mut rescanned = Vec::new();
-    let mut toks      = self.unlist().into_iter().collect::<VecDeque<_>>();
+    let mut toks = self.unlist().into_iter().collect::<VecDeque<_>>();
     while let Some(mut t) = toks.pop_front() {
       if t.get_catcode() == Catcode::PARAM && !toks.is_empty() {
         // NOTE for future cleanup: Only CC_CS & CC_ACTIVE should ever get with_dont_expand!
-        let next_t  = toks.pop_front();
+        let next_t = toks.pop_front();
         let next_cc = next_t.as_ref().map(|t| &t.code);
         if next_cc == Some(&Catcode::OTHER) {
           // only group clear match token cases
           rescanned.push(T_ARG!(next_t.unwrap()));
         } else if next_cc == Some(&Catcode::PARAM) {
           rescanned.push(t);
-        } else {    // any other case, preserve as-is, let the higher level call resolve any errors
-                    // e.g. \detokenize{#,} is legal, while \textbf{#,} is not
-          Error!("misdefined", "expansion", None, state, "Parameter has a malformed arg, should be #1-#9 or ##. In expansion {}", Tokens::new(toks.clone().into_iter().collect()).to_string());
+        } else {
+          // any other case, preserve as-is, let the higher level call resolve any errors
+          // e.g. \detokenize{#,} is legal, while \textbf{#,} is not
+          Error!(
+            "misdefined",
+            "expansion",
+            None,
+            state,
+            "Parameter has a malformed arg, should be #1-#9 or ##. In expansion {}",
+            Tokens::new(toks.clone().into_iter().collect()).to_string()
+          );
         }
       } else if let Some(mut inner) = t.smuggled.take() {
         if let Some(smuggled) = inner.smuggled.take() {
@@ -389,7 +397,7 @@ impl ToTokens for Catcode {
       CS => "CS",
       MARKER => "MARKER",
       ARG => "ARG",
-      SmuggleTHE => "SmuggleTHE"
+      SmuggleTHE => "SmuggleTHE",
     };
     stream.append(Ident::new("Catcode", Span::call_site()));
     stream.append(Punct::new(':', Spacing::Joint));

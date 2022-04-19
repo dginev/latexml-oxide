@@ -204,16 +204,18 @@ impl Gullet {
 
       // Wow!!!!! See TeX the Program \S 309
       if let Some(ref nextt) = next_token {
-        if !state.align_state // SHOULD count nesting of { }!!! when SCANNED (not digested)
-        && state.reading_alignment {
-        //&& (($atoken, $atype, $ahidden) = $self->isColumnEnd($token))) {
-        // $self->handleTemplate($LaTeXML::READING_ALIGNMENT, $token, $atype, $ahidden); }
+        if !state.align_state && state.reading_alignment
+        // SHOULD count nesting of { }!!! when SCANNED (not digested)
+        {
+          //&& (($atoken, $atype, $ahidden) = $self->isColumnEnd($token))) {
+          // $self->handleTemplate($LaTeXML::READING_ALIGNMENT, $token, $atype, $ahidden); }
+        } else {
+          break;
+        }
       } else {
         break;
       }
-    } else {
-      break;
-    } }
+    }
     next_token
   }
 
@@ -236,37 +238,42 @@ impl Gullet {
       let mut return_next = false;
       let runtime = match self.mouth {
         None => return Ok(None),
-        Some(ref mut runtime) => runtime
+        Some(ref mut runtime) => runtime,
       };
       // NOTE: CC_SMUGGLE_THE should ONLY appear in pushback!
       let mut next_token = None;
       while let Some(token) = runtime.pushback.pop_front() {
         match token.code {
-          Catcode::COMMENT => if commentsok {
-             return Ok(Some(token));
+          Catcode::COMMENT => {
+            if commentsok {
+              return Ok(Some(token));
             } else {
               self.pending_comments.push_back(token);
-            },
+            }
+          },
           Catcode::MARKER => unimplemented!(),
           _ => {
             next_token = Some(token);
-            break
-          }
+            break;
+          },
         }
       }
-      if next_token.is_none() {  // Else read from current mouth
+      if next_token.is_none() {
+        // Else read from current mouth
         while let Some(token) = runtime.mouth.read_token(state) {
           match token.code {
-            Catcode::COMMENT => if commentsok {
-             return Ok(Some(token));
-            } else {
-              self.pending_comments.push_back(token);
+            Catcode::COMMENT => {
+              if commentsok {
+                return Ok(Some(token));
+              } else {
+                self.pending_comments.push_back(token);
+              }
             },
             Catcode::MARKER => unimplemented!(),
             _ => {
               next_token = Some(token);
               break;
-            }
+            },
           }
         }
       }
@@ -284,7 +291,7 @@ impl Gullet {
             if token.code != Catcode::SmuggleTHE || state.smuggle_the {
               return Ok(Some(token));
             } else {
-              return Ok(Some(*token.smuggled.unwrap()))
+              return Ok(Some(*token.smuggled.unwrap()));
             }
           } else {
             // refactoring a very tricky perl if, so for now this looks awkward
@@ -301,15 +308,14 @@ impl Gullet {
             // TODO: ## Wow!!!!! See TeX the Program \S 309
             if !invoked {
               if token.code == Catcode::CS && state.lookup_meaning(&token).is_none() {
-                return Ok(Some(state.generate_error_stub(self, &token)?)) // cs SHOULD have defn by now; report early!
+                return Ok(Some(state.generate_error_stub(self, &token)?)); // cs SHOULD have defn by now; report early!
               } else {
-                return Ok(Some(token))
+                return Ok(Some(token));
               }
             } else {
-
             }
           }
-        }
+        },
       }
     }
   }
@@ -321,7 +327,8 @@ impl Gullet {
   fn invoke_and_read_x_token(&mut self, defn: Arc<dyn Definition>, toplevel: bool, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
     // TODO: SMUGGLE_THE_COMMANDS
     let expansion = defn.invoke(self, false, state)?;
-    { let mut runtime = self.mouth.as_mut().unwrap();
+    {
+      let mut runtime = self.mouth.as_mut().unwrap();
       for token in expansion.unlist().into_iter().rev() {
         runtime.pushback.push_front(token);
       }
@@ -478,16 +485,17 @@ impl Gullet {
           None => {
             // Ran out!
             self.unread(Tokens::new(tokens));
-            return Ok(Tokens!());              // Not more correct, but maybe less confusing?
-          }
+            return Ok(Tokens!()); // Not more correct, but maybe less confusing?
+          },
         };
         if token == *want {
           break;
         }
-        if token.code == Catcode::BEGIN { // And if it's a BEGIN, copy till balanced END
-          nbraces+=1;
+        if token.code == Catcode::BEGIN {
+          // And if it's a BEGIN, copy till balanced END
+          nbraces += 1;
           tokens.push(token);
-          tokens.append(&mut self.read_balanced(false,state)?.unlist());
+          tokens.append(&mut self.read_balanced(false, state)?.unlist());
           tokens.push(T_END!());
         } else {
           tokens.push(token);
@@ -503,25 +511,27 @@ impl Gullet {
             None => {
               // Ran out!
               self.unread(Tokens::new(tokens));
-              return Ok(Tokens!());              // Not more correct, but maybe less confusing?
-            }
+              return Ok(Tokens!()); // Not more correct, but maybe less confusing?
+            },
           };
-          if token.code == Catcode::BEGIN { // read balanced, and refill ring.
-            nbraces+=1;
+          if token.code == Catcode::BEGIN {
+            // read balanced, and refill ring.
+            nbraces += 1;
             for r_token in ring {
               tokens.push(r_token);
             }
             tokens.push(token);
-            tokens.append(&mut self.read_balanced(false,state)?.unlist());
-            tokens.push(T_END!());   // Copy directly to result
-            ring = VecDeque::new();   // and retry
+            tokens.append(&mut self.read_balanced(false, state)?.unlist());
+            tokens.push(T_END!()); // Copy directly to result
+            ring = VecDeque::new(); // and retry
           } else {
             ring.push_back(token);
           }
         }
         has_matched = ring == want; // Test match
         if has_matched {
-          break; } // Matched all!
+          break;
+        } // Matched all!
         if let Some(ring_token) = ring.pop_front() {
           tokens.push(ring_token);
         }
@@ -529,8 +539,7 @@ impl Gullet {
     }
     // Notice that IFF the arg looks like {balanced}, the outer braces are stripped
     // so that delimited arguments behave more similarly to simple, undelimited arguments.
-    if nbraces == 1 && tokens.first().unwrap().get_catcode() == Catcode::BEGIN
-      && tokens.last().unwrap().get_catcode() == Catcode::END {
+    if nbraces == 1 && tokens.first().unwrap().get_catcode() == Catcode::BEGIN && tokens.last().unwrap().get_catcode() == Catcode::END {
       tokens.remove(0);
       tokens.pop();
     }
@@ -539,9 +548,7 @@ impl Gullet {
 
   /// Convenience method wrapping around `read_until`
   /// TODO: This seems to be the wrong Rust type interface, we need to rework...
-  pub fn read_until_token(&mut self, t: Token, state: &State) -> Result<Tokens> {
-    self.read_until(Tokens!(t), state)
-  }
+  pub fn read_until_token(&mut self, t: Token, state: &State) -> Result<Tokens> { self.read_until(Tokens!(t), state) }
 
   pub fn read_until_brace(&mut self, state: &State) -> Result<Option<Tokens>> {
     let mut tokens = Vec::new();

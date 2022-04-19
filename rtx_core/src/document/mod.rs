@@ -8,20 +8,20 @@ use libxml::tree::{Namespace, Node, NodeType};
 use regex::Regex;
 
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
-use std::collections::HashSet;
 
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::whatsit::Whatsit;
 use crate::common::xml;
 use crate::ligature::Ligature;
 use crate::list::List;
 use crate::state::State;
+use crate::whatsit::Whatsit;
 use crate::TexMode;
 
 use crate::document::resource::Resource;
@@ -211,12 +211,13 @@ impl Document {
       }
     }
     // Optionally add ids to all nodes (AFTER all parsing, rearrangement, etc)
-    if qname != "ltx:document" && state.lookup_bool("GENERATE_IDS")
+    if qname != "ltx:document"
+      && state.lookup_bool("GENERATE_IDS")
       && !node.has_attribute("xml:id")
       && self.can_have_attribute(&qname, "xml:id", state)
-      {
-        self.generate_id(node, None, None, state);
-      }
+    {
+      self.generate_id(node, None, None, state);
+    }
 
     for mut child in node.get_child_nodes() {
       let child_type = child.get_type();
@@ -310,11 +311,13 @@ impl Document {
           Digested::TBox(ref digested) => {
             self.set_box_to_absorb(Some(front_box.clone()));
             digested.be_absorbed(self, state)?;
-            self.localize_box_to_absorb(); },
+            self.localize_box_to_absorb();
+          },
           Digested::Whatsit(ref digested) => {
             self.set_box_to_absorb(Some(front_box.clone()));
             digested.read().unwrap().be_absorbed(self, state)?;
-            self.localize_box_to_absorb(); },
+            self.localize_box_to_absorb();
+          },
           Digested::Postponed(ref tokens) => {
             if props.get("isMath") != Some(&Stored::Bool(true)) {
               let text_font = if let Some(Stored::Font(ref prop_font)) = props.get("font") {
@@ -329,7 +332,7 @@ impl Document {
           },
           Digested::KeyVals(_) => unimplemented!(),
           Digested::RegisterValue(_) => unimplemented!(),
-          Digested::List(_) => unimplemented!()
+          Digested::List(_) => unimplemented!(),
         };
       }
     }
@@ -348,7 +351,7 @@ impl Document {
     if !ismath {
       let font: Font = match props.get("font") {
         Some(Stored::Font(fnt)) => (**fnt).clone(),
-        _ => self.box_to_absorb.as_ref().unwrap().get_font().unwrap().into_owned()
+        _ => self.box_to_absorb.as_ref().unwrap().get_font().unwrap().into_owned(),
       };
       self.open_text(object, &font, state)?;
     } else if self.get_node_qname(&self.node, state) == MATH_TOKEN_NAME {
@@ -619,13 +622,9 @@ impl Document {
   }
 
   /// Closes all nodes until $node is closed.
-  pub fn close_node(&mut self, node: &Node, state: &mut State) -> Result<()> {
-    self.close_node_with_strictness(true, node, state)
-  }
+  pub fn close_node(&mut self, node: &Node, state: &mut State) -> Result<()> { self.close_node_with_strictness(true, node, state) }
   /// Only if needed/possible: closes all nodes until $node is closed
-  pub fn maybe_close_node(&mut self, node: &Node, state: &mut State) -> Result<()> {
-    self.close_node_with_strictness(false, node, state)
-  }
+  pub fn maybe_close_node(&mut self, node: &Node, state: &mut State) -> Result<()> { self.close_node_with_strictness(false, node, state) }
 
   pub fn close_node_with_strictness(&mut self, strict: bool, node: &Node, state: &mut State) -> Result<()> {
     // my ($t, @cant_close) = ();
@@ -1154,25 +1153,23 @@ impl Document {
     Ok(())
   }
 
-  pub fn merge_attributes(&mut self, from: Node, to: &mut Node, force:Option<HashSet<&'static str>>) -> Result<()> {
+  pub fn merge_attributes(&mut self, from: Node, to: &mut Node, force: Option<HashSet<&'static str>>) -> Result<()> {
     for (key, val) in from.get_attributes().iter() {
       // Special case attributes
       if key.as_str() == "xml:id" {
         // Use the replacement id
-        if !to.has_attribute(key)  {
+        if !to.has_attribute(key) {
           // val = self.record_id(val, node); // TODO
           to.set_attribute(key, val)?;
         }
-      } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str()) //{
-      //   unimplemented!();
-      // } else if
-      || MERGE_ATTRIBUTE_SEMICOLONJOIN.contains(key.as_str()) //{
-      //   unimplemented!();
-      // } else if
-      || MERGE_ATTRIBUTE_SUMLENGTH.contains(key.as_str()) {
+      } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str())
+        || MERGE_ATTRIBUTE_SEMICOLONJOIN.contains(key.as_str())
+        || MERGE_ATTRIBUTE_SUMLENGTH.contains(key.as_str())
+      {
         unimplemented!();
-      } else if !to.has_attribute(key) {// || force...
-      // Else if attribute not present on $to, or if we specificallly override it, just copy
+      } else if !to.has_attribute(key) {
+        // || force...
+        // Else if attribute not present on $to, or if we specificallly override it, just copy
         to.set_attribute(key, val)?;
       }
     }
@@ -1673,9 +1670,7 @@ impl Document {
     id.to_string()
   }
 
-  pub fn unrecord_id(&mut self, id: &str) {
-    self.idstore.remove(id);
-  }
+  pub fn unrecord_id(&mut self, id: &str) { self.idstore.remove(id); }
 
   /// These are used to record or unrecord, in bulk, all the ids within a node (tree).
   pub fn record_node_ids(&mut self, node: &Node, state: &mut State) -> Result<()> {
@@ -1904,21 +1899,25 @@ impl Document {
     let nodeid = node.to_hashable();
     // try to avoid aggressive clones, when unnecessary
     match self.node_fonts.get(&nodeid) {
-      None => { self.node_fonts.insert(nodeid, font.clone());},
-      Some(v) => if v != font {
+      None => {
         self.node_fonts.insert(nodeid, font.clone());
-      }
+      },
+      Some(v) => {
+        if v != font {
+          self.node_fonts.insert(nodeid, font.clone());
+        }
+      },
     }
   }
 
-  pub fn copy_node_font(&mut self, from:&Node, to: &Node) {
+  pub fn copy_node_font(&mut self, from: &Node, to: &Node) {
     let from_font = self.get_node_font(from);
     let nodeid = to.to_hashable();
     // try to avoid aggressive clones, when unnecessary
     let needs_insert = match self.node_fonts.get(&nodeid) {
       None => true,
       Some(v) if v != from_font => true,
-      _ => false
+      _ => false,
     };
     if needs_insert {
       let cloned_font = from_font.clone();
@@ -1929,8 +1928,8 @@ impl Document {
   /// Possibly a sign of a design flaw; Set the node's font & all children that HAD the same font.
   pub fn merge_node_font_rec(&mut self, node: &Node, font: &Font) {
     let oldfont = self.get_node_font(node);
-    let props   = oldfont.purestyle_changes(font);
-    let mut nodes   = VecDeque::new();
+    let props = oldfont.purestyle_changes(font);
+    let mut nodes = VecDeque::new();
     nodes.push_front(Cow::Borrowed(node));
     while let Some(n) = nodes.pop_front() {
       if n.get_type() == Some(NodeType::ElementNode) {
@@ -1958,7 +1957,7 @@ impl Document {
         let nodeid = node.to_hashable();
         match self.node_fonts.get(&nodeid) {
           Some(fnt) => fnt,
-          None => &FONT_TEXT_DEFAULT
+          None => &FONT_TEXT_DEFAULT,
         }
       } else {
         &FONT_TEXT_DEFAULT

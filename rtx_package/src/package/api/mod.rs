@@ -14,12 +14,12 @@ use rtx_core::common::error::*;
 use rtx_core::common::glue::{Glue, MuGlue};
 use rtx_core::common::number::Number;
 use rtx_core::common::store::Stored;
-use rtx_core::state::Scope;
 use rtx_core::definition::register::*;
 use rtx_core::definition::{Reversion, SizingClosure};
 use rtx_core::keyvals::KeyVals;
 use rtx_core::list::List;
 use rtx_core::mouth;
+use rtx_core::state::Scope;
 use rtx_core::tbox::Tbox;
 use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
@@ -77,9 +77,7 @@ impl IntoOption<Option<usize>> for usize {
 }
 
 impl IntoOption<Option<Reversion>> for Tokens {
-  fn into_option(self) -> Option<Reversion> {
-    Some(Reversion::Tokens(self))
-  }
+  fn into_option(self) -> Option<Reversion> { Some(Reversion::Tokens(self)) }
 }
 impl IntoOption<Option<Reversion>> for &str {
   fn into_option(self) -> Option<Reversion> {
@@ -101,7 +99,7 @@ impl IntoOption<Option<Scope>> for &str {
       "global" => Some(Scope::Global),
       "Global" => Some(Scope::Global),
       "GLOBAL" => Some(Scope::Global),
-      other => Some(Scope::Named(other.to_string()))
+      other => Some(Scope::Named(other.to_string())),
     }
   }
 }
@@ -115,11 +113,10 @@ impl IntoOption<Option<Scope>> for String {
       "global" => Some(Scope::Global),
       "Global" => Some(Scope::Global),
       "GLOBAL" => Some(Scope::Global),
-      _ => Some(Scope::Named(self))
+      _ => Some(Scope::Named(self)),
     }
   }
 }
-
 
 impl IntoOption<Option<SizingClosure>> for &str {
   fn into_option(self) -> Option<SizingClosure> {

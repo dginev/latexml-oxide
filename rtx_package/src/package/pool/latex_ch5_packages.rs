@@ -60,11 +60,10 @@ LoadDefinitions!(state, {
     DefMacro!(T_CS!(ltxtrigger), None, Tokens!());
   }
 
-
   DefPrimitive!("\\g@addto@macro DefToken {}", sub[stomach,args,state] {
     unpack!(args => target, content);
     let target : Token = target.into();
     AddToMacro!(target, content, stomach, state);
   });
-  DefMacro!("\\addto@hook DefToken {}",    "#1\\expandafter{\\the#1#2}");
+  DefMacro!("\\addto@hook DefToken {}", "#1\\expandafter{\\the#1#2}");
 });

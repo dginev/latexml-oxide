@@ -124,12 +124,11 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
   }
   let mut floats: String = String::new();
   let mut has_floats: bool = false;
-  let float_result = FLOAT_RE
-    .replace_all(&replacement, |refs: &Captures| -> String {
-      floats = refs.get(1).map_or("", |m| m.as_str()).to_string();
-      has_floats = true;
-      String::new()
-    });
+  let float_result = FLOAT_RE.replace_all(&replacement, |refs: &Captures| -> String {
+    floats = refs.get(1).map_or("", |m| m.as_str()).to_string();
+    has_floats = true;
+    String::new()
+  });
   if has_floats {
     replacement = float_result.to_string();
   }
@@ -157,12 +156,11 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
 
     // Processing instruction: <?name a=v ...?>
     let mut is_match = false;
-    let pi_result = PI_RE
-      .replace(&replacement, |refs: &Captures| -> String {
-        current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
-        is_match = true;
-        String::new()
-      });
+    let pi_result = PI_RE.replace(&replacement, |refs: &Captures| -> String {
+      current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
+      is_match = true;
+      String::new()
+    });
 
     if is_match {
       replacement = pi_result.to_string();
@@ -182,7 +180,8 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         .replace(&replacement, |_: &Captures| -> String {
           pi_closed = true;
           String::new()
-        }).to_string();
+        })
+        .to_string();
 
       if !pi_closed {
         panic!("Missing '?>' at '{:?}'\n", replacement);
@@ -197,7 +196,8 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
         // println!("-- open tag {:?}", current_tag);
         String::new()
-      }).to_string();
+      })
+      .to_string();
 
     // handle open tag
     if is_match {
@@ -235,15 +235,14 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
     }
 
     // Close tag: </name>
-    let lead_close_tag_result = LEAD_CLOSE_TAG_RE
-      .replace(&replacement, |refs: &Captures| -> String {
-        is_match = true;
-        current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
-        // println!("-- close tag {:?}", current_tag);
-        // handle close tag
-        operations.push(quote!(document.close_element(#current_tag, state)?;));
-        String::new()
-      });
+    let lead_close_tag_result = LEAD_CLOSE_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
+      is_match = true;
+      current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
+      // println!("-- close tag {:?}", current_tag);
+      // handle close tag
+      operations.push(quote!(document.close_element(#current_tag, state)?;));
+      String::new()
+    });
     if is_match {
       replacement = lead_close_tag_result.to_string();
       continue;
@@ -274,20 +273,19 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
 
     // Else random text
     let mut has_random_text = false;
-    let lead_random_text_result = LEAD_RANDOM_TEXT_RE
-      .replace(&replacement, |refs: &Captures| -> String {
-        if let Some(text_match) = refs.get(1) {
-          let escaped_match = &slashify(&unquote(text_match.as_str()));
-          operations.push(quote!(
-            document.absorb_string(#escaped_match, props, state)?;
-          ));
-        }
-        has_random_text = true;
-        String::new()
-      });
-      if has_random_text {
-        replacement = lead_random_text_result.to_string();
+    let lead_random_text_result = LEAD_RANDOM_TEXT_RE.replace(&replacement, |refs: &Captures| -> String {
+      if let Some(text_match) = refs.get(1) {
+        let escaped_match = &slashify(&unquote(text_match.as_str()));
+        operations.push(quote!(
+          document.absorb_string(#escaped_match, props, state)?;
+        ));
       }
+      has_random_text = true;
+      String::new()
+    });
+    if has_random_text {
+      replacement = lead_random_text_result.to_string();
+    }
   }
 
   operations
@@ -400,7 +398,8 @@ fn translate_avpairs(text: &mut String) -> Vec<proc_macro2::TokenStream> {
         .to_string();
       if is_match {
         let val = translate_string(text);
-        if key != "font" {// we handle font in a special case
+        if key != "font" {
+          // we handle font in a special case
           avs.push(quote!(av_props.insert(#key.to_string(), #val);))
         };
       }

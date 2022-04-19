@@ -86,20 +86,23 @@ impl Definition for Expandable {
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
   fn invoke(&self, gullet: &mut Gullet, once_only: bool, state: &mut State) -> Result<Tokens> {
     // shortcut for "trivial" macros; but only if not tracing & profiling!!!!
-    let tracing   = state.lookup_bool("TRACINGMACROS");
-    let profiled  = state.lookup_bool("PROFILING");
+    let tracing = state.lookup_bool("TRACINGMACROS");
+    let profiled = state.lookup_bool("PROFILING");
     match &self.expansion {
       Some(ExpansionBody::Closure(closure)) => {
         // Harder to emulate \tracingmacros here.
         let args = if let Some(ref parms) = self.paramlist {
           parms.read_arguments(gullet, self, state)?
-        } else { Vec::new() };
+        } else {
+          Vec::new()
+        };
         if profiled {
           // LaTeXML::Core::Definition::startProfiling($profiled, 'expand')
           unimplemented!();
         }
         let result = closure(gullet, args, state)?;
-        if tracing { //$LaTeXML::DEBUG{tracing}) {    # More involved...
+        if tracing {
+          //$LaTeXML::DEBUG{tracing}) {    # More involved...
           unimplemented!();
           // Debug($self->tracingCSName . ' ==> ' . tracetoString($result));
           // Debug($self->tracingArgs(@args)) if @args; } }
@@ -130,8 +133,12 @@ impl Definition for Expandable {
               } else {
                 false
               }
-            } else { false }
-          } else { false };
+            } else {
+              false
+            }
+          } else {
+            false
+          };
           if is_recursion {
             Tokens!()
           } else {
@@ -140,10 +147,13 @@ impl Definition for Expandable {
         } else {
           let args = if let Some(ref parms) = self.paramlist {
             parms.read_arguments(gullet, self, state)?
-          } else { Vec::new() };
+          } else {
+            Vec::new()
+          };
           // for "real" macros, make sure all args are Tokens
           // let r;
-          if tracing {// || $LaTeXML::DEBUG{tracing}) {    # More involved...
+          if tracing {
+            // || $LaTeXML::DEBUG{tracing}) {    # More involved...
             unimplemented!();
             // Debug($self->tracingCSName . ' ->' . tracetoString($expansion));
             // Debug($self->tracingArgs(@targs)) if @args;
@@ -167,7 +177,7 @@ impl Definition for Expandable {
           parms.read_arguments(gullet, self, state)?;
         }
         Ok(Tokens!())
-      }
+      },
     }
   }
 
@@ -196,9 +206,7 @@ impl Expandable {
     //     "Expansion is " . ToString($expansion)) unless $expansion->isBalanced;
     if !traits.nopack_parameters {
       if let ExpansionBody::Tokens(expansion_tokens) = expansion {
-        expansion = ExpansionBody::Tokens(
-          Tokens::pack_parameters(expansion_tokens, state)
-        );
+        expansion = ExpansionBody::Tokens(Tokens::pack_parameters(expansion_tokens, state));
       }
     }
 
@@ -236,7 +244,7 @@ impl Expandable {
         }
       },
       // empty if no expansion
-      None => Ok(Tokens!())
+      None => Ok(Tokens!()),
     }
   }
 }

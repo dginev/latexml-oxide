@@ -153,13 +153,13 @@ impl fmt::Display for Stored {
       MuGlue(ref v) => write!(f, "{}", v),
       MuDimension(ref v) => write!(f, "{}", v),
       Font(ref font) => write!(f, "{}", font),
-      String(ref s)  => write!(f, "{}", s),
-      Int(ref s)  => write!(f, "{}", s),
-      Bool(ref s)  => write!(f, "{}", s),
+      String(ref s) => write!(f, "{}", s),
+      Int(ref s) => write!(f, "{}", s),
+      Bool(ref s) => write!(f, "{}", s),
       ref variant => {
         panic!("TODO: implement Display for Stored variant {:?}", variant);
         // write!(f, "{:?}", self)
-      }
+      },
     }
   }
 }
@@ -816,7 +816,7 @@ impl From<Stored> for Option<crate::Digested> {
       Stored::Digested(digested) => Some(*digested),
       Stored::String(text) => Some(text.into()),
       Stored::Int(text) => Some(text.to_string().into()),
-      _ => None
+      _ => None,
     }
   }
 }
@@ -827,7 +827,7 @@ impl<'a> From<&'a Stored> for Option<crate::Digested> {
       Stored::Digested(digested) => Some((**digested).clone()),
       Stored::String(text) => Some(text.into()),
       Stored::Int(text) => Some(text.to_string().into()),
-      _ => None
+      _ => None,
     }
   }
 }

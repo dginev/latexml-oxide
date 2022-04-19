@@ -19,11 +19,11 @@ use crate::common::error::*;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::definition::register::NumericOps;
 use crate::state::{Catcodes, Scope, State, StateOptions};
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::util::pathname;
-use crate::definition::register::NumericOps;
 
 lazy_static! {
   static ref STY_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
@@ -34,8 +34,8 @@ lazy_static! {
     catcodes: Some(Catcodes::Standard),
     ..StateOptions::default()
   }));
-  static ref CS_ENDLINECHAR : Token = T_CS!("\\endlinechar");
-  static ref TRAILING_SPACE_CHARS : Regex = Regex::new("(?s) +$").unwrap();
+  static ref CS_ENDLINECHAR: Token = T_CS!("\\endlinechar");
+  static ref TRAILING_SPACE_CHARS: Regex = Regex::new("(?s) +$").unwrap();
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -289,7 +289,7 @@ impl Mouth {
   /// into "lines" ending with CRLF, CR or LF (DOS, Mac or Unix).
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
   fn split_lines(lines: &str) -> VecDeque<String> {
-    let mut lines :VecDeque<String> = LINEBREAK_REGEX.split(lines).map(ToString::to_string).collect(); // And split.
+    let mut lines: VecDeque<String> = LINEBREAK_REGEX.split(lines).map(ToString::to_string).collect(); // And split.
     if lines.iter().last() == Some(&String::new()) {
       lines.pop_back();
     }
@@ -318,10 +318,10 @@ impl Mouth {
           },
         };
         self.reader.take(); // remove the now exhausted reader
-        // Note: the original latexml code first split the perl string into lines, and only THEN decoded it
-        // however, executing a rust regex on a Vec<u8> is just not going to be a sane way forward.
-        // we will first decode the read-in bytes to the right String form, and THEN split lines.
-        // as such, decoding is the first action taken on bytes read in from a file.
+                            // Note: the original latexml code first split the perl string into lines, and only THEN decoded it
+                            // however, executing a rust regex on a Vec<u8> is just not going to be a sane way forward.
+                            // we will first decode the read-in bytes to the right String form, and THEN split lines.
+                            // as such, decoding is the first action taken on bytes read in from a file.
         if let Some(ref encoding) = state.input_encoding {
           // TODO: What are characters that fail to decode replaced by in Rust?
           // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable chars to space(?).
@@ -337,7 +337,7 @@ impl Mouth {
               let message = s!("input isn't valid under encoding utf8: {:?}", e);
               Info!("misdefined", "utf8", self, state, message);
               unsafe { str::from_utf8_unchecked(&file_bytes) }
-            }
+            },
           };
           self.buffer = Mouth::split_lines(file_str);
         }
@@ -428,10 +428,13 @@ impl Mouth {
         } else {
           Some('\r')
         };
-        if line_opt.is_none() { // Exhausted the input.
-            let eolcc    = if let Some(ch) = eolch {
-              state.lookup_catcode(ch).unwrap_or(Catcode::OTHER)
-            } else { Catcode::OTHER };
+        if line_opt.is_none() {
+          // Exhausted the input.
+          let eolcc = if let Some(ch) = eolch {
+            state.lookup_catcode(ch).unwrap_or(Catcode::OTHER)
+          } else {
+            Catcode::OTHER
+          };
           let eoftoken = if let Some(eolch_content) = eolch {
             if read_mode && !self.at_eof && !self.source.is_empty() {
               if eolcc == Catcode::EOL {
@@ -439,8 +442,12 @@ impl Mouth {
               } else {
                 Some(Token!(eolch_content, eolcc))
               }
-            } else { None }
-          } else { None };
+            } else {
+              None
+            }
+          } else {
+            None
+          };
           self.at_eof = true;
           self.chars = VecDeque::new();
           self.nchars = 0;
@@ -482,7 +489,8 @@ impl Mouth {
           return Some(T_COMMENT!(s!("**** {} Line {} ****", &self.shortsource, &self.lineno.to_string())));
         }
       }
-      if self.skipping_spaces {    // In state S, skip spaces
+      if self.skipping_spaces {
+        // In state S, skip spaces
         let mut cc = None;
         // This is very awkward as a loop,
         //  but I had to port the Perl logic without going crazy...
@@ -498,7 +506,8 @@ impl Mouth {
         if self.colno <= self.nchars && cc.is_some() && cc != Some(Catcode::SPACE) {
           self.colno -= 1;
         }
-        if cc == Some(Catcode::EOL) { // If we've got an EOL
+        if cc == Some(Catcode::EOL) {
+          // If we've got an EOL
           self.get_next_char(state);
           if self.colno < self.nchars {
             self.colno -= 1;
@@ -523,7 +532,7 @@ impl Mouth {
     while let Some(token) = self.read_token(state) {
       tokens.push(token);
     }
-    while let Some(Token{code: Catcode::SPACE, ..}) = tokens.last() {
+    while let Some(Token { code: Catcode::SPACE, .. }) = tokens.last() {
       // Remove trailing space
       tokens.pop();
     }
@@ -586,21 +595,27 @@ impl Mouth {
           Some(Token!(ch, BEGIN))
         }
       },
-      END => if ch == '}' {
+      END => {
+        if ch == '}' {
           Some(T_END!())
         } else {
           Some(Token!(ch, END))
-        },
-      MATH => if ch == '$' {
+        }
+      },
+      MATH => {
+        if ch == '$' {
           Some(T_MATH!())
         } else {
           Some(Token!(ch, MATH))
-        },
-      ALIGN => if ch == '&' {
+        }
+      },
+      ALIGN => {
+        if ch == '&' {
           Some(T_ALIGN!())
         } else {
           Some(Token!(ch, ALIGN))
-        },
+        }
+      },
       EOL => self.handle_end_of_line(state),
       PARAM => {
         if ch == '#' {
@@ -649,7 +664,7 @@ impl Mouth {
 
   fn handle_space(&mut self, state: &State) -> Option<Token> {
     // Skip any following spaces!
-    while let Some((ch,cc)) = self.get_next_char(state) {
+    while let Some((ch, cc)) = self.get_next_char(state) {
       if (cc != Catcode::SPACE) && (cc != Catcode::EOL) {
         // backup at nonspace/eol
         if self.colno <= self.nchars {
@@ -665,13 +680,13 @@ impl Mouth {
     let n = self.colno;
     self.colno = self.nchars;
     let mut comment = String::new();
-    for c in self.chars.iter().skip(n).take(self.nchars-n) {
+    for c in self.chars.iter().skip(n).take(self.nchars - n) {
       comment.push(*c);
     }
     let trimmed_comment = comment.trim();
     if !trimmed_comment.is_empty() && state.lookup_bool("INCLUDE_COMMENTS") {
       Some(T_COMMENT!(trimmed_comment))
-    } else if state.lookup_int("PRESERVE_NEWLINES")>1 {
+    } else if state.lookup_int("PRESERVE_NEWLINES") > 1 {
       Some(T_MARKER!("EOL")) // Required EOL during \read
     } else {
       None
@@ -688,7 +703,7 @@ impl Mouth {
     if let Some((ch, mut cc)) = self.get_next_char(state) {
       // Knuth, p.46 says that Newlines are converted to spaces,
       // Bit I believe that he does NOT mean within control sequences
-      let mut cs = s!("\\{}",ch); // I need this standardized to be able to lookup tokens (A better way???)
+      let mut cs = s!("\\{}", ch); // I need this standardized to be able to lookup tokens (A better way???)
       if cc == Catcode::LETTER {
         // For letter, read more letters for csname.
         while let Some((nch, ncc)) = self.get_next_char(state) {
@@ -724,7 +739,7 @@ impl Mouth {
     lastid.to_string()
   }
 
-  pub fn is_eol(&mut self, state:&State) -> bool {
+  pub fn is_eol(&mut self, state: &State) -> bool {
     let savecolno = self.colno;
     // We have to peek past any to-be-skipped spaces!!!!
     if self.skipping_spaces {
@@ -740,7 +755,8 @@ impl Mouth {
       if self.colno <= self.nchars && cc.is_some() && cc != Some(Catcode::SPACE) {
         self.colno -= 1;
       }
-      if cc == Some(Catcode::EOL) { // If we've got an EOL
+      if cc == Some(Catcode::EOL) {
+        // If we've got an EOL
         self.get_next_char(state);
         if self.colno < self.nchars {
           self.colno -= 1;
@@ -772,7 +788,7 @@ impl Mouth {
 pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
   // special case! empty input is empty Tokens
   if text.is_empty() {
-    return Tokens::default()
+    return Tokens::default();
   }
   match state_opt {
     None => {
@@ -785,7 +801,7 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
 pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
   // special case! empty input is empty Tokens
   if text.is_empty() {
-    return Tokens::default()
+    return Tokens::default();
   }
   match state_opt {
     None => {

@@ -2,8 +2,8 @@ use crate::package::*;
 
 lazy_static! {
   static ref END_VERBATIM_RE: Regex = Regex::new(r"^(.*?)\\end\{verbatim\}(.*?)$").unwrap();
-  static ref T_OTHER_STAR : Token = T_OTHER!("*");
-  static ref SEMIVERBATIM_CHARS : Vec<char> = vec!['%', '\\', '{', '}'];
+  static ref T_OTHER_STAR: Token = T_OTHER!("*");
+  static ref SEMIVERBATIM_CHARS: Vec<char> = vec!['%', '\\', '{', '}'];
 }
 
 //**********************************************************************
@@ -154,7 +154,6 @@ LoadDefinitions!(outer_state, {
     }
   },
   reversion => "\\verb#1#2#3#2");
-
 
   DefConstructor!("\\@text@verb{}{}", "<ltx:verbatim font='#font'>#2</ltx:verbatim>",
     before_digest => sub[stomach, state] {

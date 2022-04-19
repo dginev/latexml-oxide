@@ -1,15 +1,15 @@
 use crate::package::*;
 
 LoadDefinitions!(state, {
-// See http://tex.loria.fr/moteurs/etex_ref.html
-// Or better yet, see the full manual
-// http://texdoc.net/texmf-dist/doc/etex/base/etex_man.pdf
-// Section 3. The new features
+  // See http://tex.loria.fr/moteurs/etex_ref.html
+  // Or better yet, see the full manual
+  // http://texdoc.net/texmf-dist/doc/etex/base/etex_man.pdf
+  // Section 3. The new features
 
-//======================================================================
-// 3.1 Additional control over expansion
-// \protected associates with the next defn
-// (note that it isn't actually used anywhere).
+  //======================================================================
+  // 3.1 Additional control over expansion
+  // \protected associates with the next defn
+  // (note that it isn't actually used anywhere).
   DefPrimitive!("\\protected", sub[stomach, args, state] {
     state.set_prefix("protected");
   },
