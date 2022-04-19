@@ -341,7 +341,9 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   state.assign_value("current_counter", ctr.to_string(), Some(Scope::Local));
 
   let scope = s!("{}:{}", ctr, refnum.to_string());
-  state.assign_value(&s!("scopes_for_counter:{}", ctr), vec![scope.clone()], Some(Scope::Local));
+  let mut receiver = VecDeque::new();
+  receiver.push_front(Stored::String(scope.clone()));
+  state.assign_value(&s!("scopes_for_counter:{}", ctr), receiver, Some(Scope::Local));
   state.activate_scope(&scope);
 
   Ok(map!(
@@ -352,12 +354,17 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
 
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   //  print STDERR "Unusing scopes for $ctr\n";
-  if let Some(Stored::VecString(stored_scopes)) = state.lookup_value(&s!("scopes_for_counter:{}", ctr)) {
-    for scope in stored_scopes.clone() {
-      state.deactivate_scope(&scope);
+  if let Some(Stored::VecDequeStored(stored_scopes)) = state.lookup_value(&s!("scopes_for_counter:{}", ctr)) {
+    for scope_stored in stored_scopes.clone() {
+      if let Stored::String(scope) = scope_stored {
+        state.deactivate_scope(&scope);
+      } else {
+        panic!("assignmenet scopes should be stored as strings, got: {:?}", scope_stored);
+      }
     }
   }
 
+  // TODO: if we ever want to unshift from the nested_counters, we'll need to also use Stored::VecDequeStored for them.
   if let Some(Stored::VecString(stored_counters)) = state.lookup_value(&s!("nested_counters_{}", ctr)) {
     for inner_ctr in stored_counters.clone() {
       deactivate_counter_scope(&inner_ctr, state);
