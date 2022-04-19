@@ -51,46 +51,33 @@ LoadDefinitions!(outer_stomach, outer_state, {
 
       let stype = type_tokens.to_string();
       let level = level_arg.to_string();
-
-      // Dead code in master?
-      // let mut ctr = state.lookup_string(&s!("counter_for_{}", stype));
-      // if ctr.is_empty() {
-      //   ctr = stype
-      // };
+      let level_int = if level.is_empty() { 0.0 } else { level.parse::<f32>()? };
+      let ctr = match state.lookup_value(&s!("counter_for_{}",stype)) {
+        Some(v) => v.to_string(),
+        None => stype
+      };
       let mut tokens: Vec<Token>;
-      if !flag.is_empty() {
-        // No number, not in TOC
-        tokens = vec![
-          T_CS!("\\@startsection@hook"),
-          T_CS!("\\@@unnumbered@section"),
-          T_BEGIN!(),
-        ];
-        tokens.append(&mut type_tokens.unlist());
-        tokens.append(&mut vec![T_END!(), T_BEGIN!(), T_END!()]);
-      } else if !level.is_empty()
-        && (level.parse::<f32>().unwrap() > CounterValue!("secnumdepth").value_of())
-        || LookupBool!("no_number_sections")
-      {
+      if !flag.is_empty() { // No number, not in TOC
+        tokens = vec![T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
+        T_BEGIN!()];
+        tokens.extend(type_tokens.unlist());
+        tokens.extend(vec![T_END!(), T_BEGIN!(), T_END!()]);
+      } else if level_int > CounterValue!("secnumdepth", state).value_of() ||
+        state.lookup_bool("no_number_sections") {
         // No number, but in TOC
-        tokens = vec![
-          T_CS!("\\@startsection@hook"),
-          T_CS!("\\@@unnumbered@section"),
-          T_BEGIN!(),
-        ];
-        tokens.append(&mut type_tokens.unlist());
-        tokens.append(&mut vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
-      } else {
-        // Number and in TOC
-        tokens = vec![
-          T_CS!("\\@startsection@hook"),
-          T_CS!("\\@@numbered@section"),
-          T_BEGIN!(),
-        ];
-        tokens.append(&mut type_tokens.unlist());
-        tokens.append(&mut vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
-      }
+        tokens = vec![T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
+        T_BEGIN!()];
+        tokens.extend(type_tokens.unlist());
+        tokens.extend(vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
+      } else { // Number and in TOC
+        tokens = vec![T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"),
+        T_BEGIN!()];
+        tokens.extend(type_tokens.unlist());
+        tokens.extend(vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
+      };
       Ok(Tokens::new(tokens))
-    }
+    },
+    locked => true
   );
 
   DefConstructor!(
@@ -119,6 +106,9 @@ LoadDefinitions!(outer_stomach, outer_state, {
       // 2) Accept immutable references to digested objects, which may lead to far-reaching borrowing constraints
       //   e.g. unlist()-ing a digested List will have to produce box references, rather than provide the owned boxes directly.
       //   would have to experiment with this - as it is of course much lighter on performance
+      //
+
+      // Update 2022: The notes are generally still accurate, but cloning a Digested object is now cheap enough, as each enum variant is guarded by an Arc reference counter. Arc<Tbox>, Arc<List>, etc.
       if let Some(Stored::Digested(tags)) = props.get("tags") {
         document.absorb((**tags).clone(), None, state)?;
       }

@@ -41,7 +41,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
     let mut scope = label.replace("LABEL:","label:");
     let label_key = s!("LABEL@{}", label);
     whatsit.set_property("label", label);
-    let ctr_key_opt = LookupValue!("current_counter").map(|ctr| s!("scopes_for_counter:{}", ctr));
+    let cc = state.lookup_value("current_counter");
+    let ctr_key_opt = cc.map(|ctr| s!("scopes_for_counter:{}", ctr));
     if let Some(ctr_key) = ctr_key_opt {
       // TODO: we should probably improve the ergonomics here to avoid the vec![]
       state.unshift_value(&ctr_key, vec![scope.clone()]);

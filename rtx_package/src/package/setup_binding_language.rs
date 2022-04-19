@@ -1877,6 +1877,15 @@ macro_rules! DeclareOption {
     bind_state_mut!(st);
     DeclareOption!($option, sub[stomach, state] {}, st)
   };
+  ($option:expr, $tex:literal) => {
+    bind_state_mut!(st);
+    let tokenized;
+    compile_tokenize_internal!(tokenized, $tex);
+    st.push_value("@declaredoptions", $option);
+    let cs = s!("\\ds@{}", $option);
+    // literal case, create a macro
+    def_macro(T_CS!(cs),None,tokenized,None,st);
+  };
   (None, sub $body:block) => {
     bind_state_mut!(st);
     DeclareOption!(None, sub[stomach, state] $body, st)

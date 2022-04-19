@@ -32,6 +32,8 @@ LoadDefinitions!(stomach, state, {
     DeclareOption!(*option, None);
   }
 
+  DeclareOption!("onecolumn", r"\@twocolumnfalse\columnwidth\textwidth");
+  DeclareOption!("twocolumn",r"\@twocolumntrue\columnwidth\textwidth\advance\columnwidth-\columnsep\divide\columnwidth2\relax");
   // TODO:
   // DeclareOption!("openbib",
   // || { RequireResource!(None, type: "text/css", content: ".ltx_bibblock{display:block;}");
@@ -52,8 +54,7 @@ LoadDefinitions!(stomach, state, {
   AddToMacro!("\\maketitle", "\\ltx@authors@oneline");
 
   DefMacro!("\\@ptsize", "0"); // should depend on options...
-  RawTeX!(
-    r###"
+  RawTeX!(r###"
   \newif\if@restonecol
   \newif\if@titlepage
   \@titlepagefalse
@@ -102,6 +103,6 @@ LoadDefinitions!(stomach, state, {
   Tag!("ltx:appendix", auto_close => true);
   DefMacro!("\\appendix", "\\@appendix");
   // Actually we should be using section counter
-  // TODO:
-  // DefPrimitive!("\\@appendix", sub { startAppendices("section"); });
+  // TODO
+  // DefPrimitive!("\\@appendix", sub { start_appendices("section"); });
 });

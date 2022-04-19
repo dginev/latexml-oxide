@@ -84,7 +84,7 @@ impl Display for TableName {
 impl TableName {
   pub fn variants() -> Vec<TableName> {
     use self::TableName::*;
-    vec![Meaning, Value, Catcode, Sfcode, Lccode, Uccode, Delcode, Stash, StashActive]
+    vec![Meaning, Value, Catcode, Mathcode, Sfcode, Lccode, Uccode, Delcode, Stash, StashActive]
   }
 }
 
@@ -772,11 +772,14 @@ impl State {
     if !self.value.contains_key(key) {
       self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global))
     }
-    if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
+    let receiver = self.value.get_mut(key).unwrap().front_mut();
+    if let Some(&mut Stored::VecDequeStored(ref mut front)) = receiver {
       for value in values_iter.rev() {
         // preserving order unshift, as Perl's
         front.push_front(value)
       }
+    } else {
+      panic!("unshift_value can only work on a Stored::VecDequeStored receiver. Instead, key {:?} got: {:?}", key, receiver);
     }
   }
 
@@ -1170,9 +1173,9 @@ impl State {
         let mut state_table = self.table_mut(table_name);
         for (key, undo_count) in undo_table.iter() {
           // Typically only 1 value to shift off the table, unless scopes have been activated.
-          let name_table = state_table.get_mut(key).unwrap();
+          let named_table = state_table.get_mut(key).unwrap();
           for _ in 0..*undo_count {
-            name_table.pop_front();
+            named_table.pop_front();
           }
         }
       }
