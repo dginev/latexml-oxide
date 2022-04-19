@@ -186,8 +186,7 @@ LoadDefinitions!(state, {
   // This collects up the various declared ltx:tag's into an ltx:tags
   DefMacro!("\\lx@make@tags {}", sub[gullet, args, state] {
     unpack!(args => ttype);
-
-    let formatters = if let Some(Stored::HashStored(formatters)) = LookupValue!("type_tag_formatter") {
+    let formatters = if let Some(Stored::HashStored(formatters)) = state.lookup_value("type_tag_formatter") {
       Some(formatters.clone())
     } else {
       None
@@ -205,7 +204,7 @@ LoadDefinitions!(state, {
         tags.push(Invocation!(T_CS!("\\lx@tag@intags"),
           vec![
             Tokens!(T_OTHER!(role)),
-            Invocation!(formatter, vec![ttype.clone()], gullet, state)?
+            build_invocation(formatter, vec![ttype.clone()], gullet, state)?
           ], gullet, state)?
         );
       }
@@ -277,14 +276,13 @@ LoadDefinitions!(state, {
   DefMacro!("\\lx@refnum@compose@{}{}", "\\if.#1.#2\\else#2\\space#1\\fi");
 
   DefMacro!(
-    "\\lx@fnum@@{}",
-    "{\\normalfont\\@ifundefined{fnum@font@#1}{}{\\csname fnum@font@#1\\endcsname}\
-     \\@ifundefined{fnum@#1}{\\lx@@fnum@@{#1}}{\\csname fnum@#1\\endcsname}}"
+    r"\lx@fnum@@ {}",
+    r"{\normalfont\@ifundefined{fnum@font@#1}{}{\csname fnum@font@#1\endcsname}\@ifundefined{fnum@#1}{\lx@@fnum@@{#1}}{\csname fnum@#1\endcsname}}"
   );
 
   DefMacro!(
-    "\\lx@@fnum@@ {}",
-    "\\@ifundefined{#1name}{\\lx@the@@{#1}}{\\lx@refnum@compose{\\csname #1name\\endcsname}{\\lx@the@@{#1}}}"
+    r"\lx@@fnum@@ {}",
+    r"\@ifundefined{#1name}{\lx@the@@{#1}}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}"
   );
 
   AssignMapping!("type_tag_formatter", "" => "\\lx@fnum@@"); // Default!
