@@ -419,8 +419,3 @@ macro_rules! Roman {
     Tokens::new(ExplodeText!(roman_aux($stuff as i32).to_ascii_uppercase()))
   };
 }
-
-#[macro_export]
-macro_rules! empty {
-  () => {};
-}

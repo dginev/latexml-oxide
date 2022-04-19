@@ -11,5 +11,5 @@ fn can_expand() {
   requires.insert("meaning", "t1enc.def");
   requires.insert("ifthen", "ifthen.sty");
 
-  rtx_tests("tests/expansion", Some(requires));
+  rtx_tests("tests/expansion", Some(requires), None);
 }

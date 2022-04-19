@@ -22,7 +22,7 @@ fn can_complex() {
 
 #[test]
 #[ignore]
-fn can_complex_todo() { rtx_tests("tests/complex_todo", None); }
+fn can_complex_todo() { rtx_tests("tests/complex_todo", None, None); }
 
 pub fn complex_tests_dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Option<Result<()>> {
   match filename {

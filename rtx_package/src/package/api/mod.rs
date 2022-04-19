@@ -14,6 +14,7 @@ use rtx_core::common::error::*;
 use rtx_core::common::glue::{Glue, MuGlue};
 use rtx_core::common::number::Number;
 use rtx_core::common::store::Stored;
+use rtx_core::state::Scope;
 use rtx_core::definition::register::*;
 use rtx_core::definition::{Reversion, SizingClosure};
 use rtx_core::keyvals::KeyVals;
@@ -89,6 +90,36 @@ impl IntoOption<Option<Reversion>> for &str {
     }
   }
 }
+
+impl IntoOption<Option<Scope>> for &str {
+  fn into_option(self) -> Option<Scope> {
+    match self {
+      "" => None,
+      "local" => Some(Scope::Local),
+      "Local" => Some(Scope::Local),
+      "LOCAL" => Some(Scope::Local),
+      "global" => Some(Scope::Global),
+      "Global" => Some(Scope::Global),
+      "GLOBAL" => Some(Scope::Global),
+      other => Some(Scope::Named(other.to_string()))
+    }
+  }
+}
+impl IntoOption<Option<Scope>> for String {
+  fn into_option(self) -> Option<Scope> {
+    match self.as_ref() {
+      "" => None,
+      "local" => Some(Scope::Local),
+      "Local" => Some(Scope::Local),
+      "LOCAL" => Some(Scope::Local),
+      "global" => Some(Scope::Global),
+      "Global" => Some(Scope::Global),
+      "GLOBAL" => Some(Scope::Global),
+      _ => Some(Scope::Named(self))
+    }
+  }
+}
+
 
 impl IntoOption<Option<SizingClosure>> for &str {
   fn into_option(self) -> Option<SizingClosure> {

@@ -434,7 +434,7 @@ pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacem
 }
 
 pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
-  let scope = options.scope;
+  let scope = options.scope.clone();
   let reqfont = match options.font {
     Some(ref fnt) => fnt.clone(),
     None => Font::default(),
@@ -650,7 +650,7 @@ pub fn def_environment(
     reversion: options.reversion,
     alias: options.alias,
   });
-  state.install_definition(begin_name_constructor, options.scope);
+  state.install_definition(begin_name_constructor, options.scope.clone());
 
   let mut after_digest_env = options.after_digest.clone();
   let name_clone = name.to_string();
@@ -700,7 +700,7 @@ pub fn def_environment(
     after_digest: after_digest_env,
     ..Constructor::default() // TODO ? fill in missing ones
   });
-  state.install_definition(end_envname_constructor, options.scope);
+  state.install_definition(end_envname_constructor, options.scope.clone());
 
   // For the uncommon case opened by \csname env\endcsname
   let name_constructor = Arc::new(Constructor {
@@ -725,7 +725,7 @@ pub fn def_environment(
     // ), $options{scope});
     ..Constructor::default()
   });
-  state.install_definition(name_constructor, options.scope);
+  state.install_definition(name_constructor, options.scope.clone());
   let end_name = s!("\\end{}", &name);
   let name_clone = name.clone(); // for after_digest
   let mut after_digest_end = options.after_digest;
