@@ -1314,7 +1314,7 @@ impl State {
       let frame_table = frame.table_mut(table_name);
       let entry = frame_table.entry(key.clone()).or_insert(0);
       *entry +=1; // Note that this many values must be undone
-      let key_table = self.table_mut(table_name).entry(key).or_insert(VecDeque::new());
+      let key_table = self.table_mut(table_name).entry(key).or_insert_with(VecDeque::new);
       key_table.push_front(value); // And push new binding.
     }
   }
@@ -1342,7 +1342,7 @@ impl State {
     }
 
     for (table_name, key, value) in collected {
-      let table_entry = self.table_mut(table_name.clone()).entry(key.clone()).or_default();
+      let table_entry = self.table_mut(table_name).entry(key.clone()).or_default();
       if (*table_entry).front() == Some(&value) {
         // Here we're popping off the values pushed by activateScope
         // to (possibly) reveal a local assignment in the same frame, preceding activateScope.

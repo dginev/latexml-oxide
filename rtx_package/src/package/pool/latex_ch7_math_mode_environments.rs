@@ -55,7 +55,7 @@ fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut Stat
   if let Some(Stored::HashStored(ref numbering)) = state.lookup_value("EQUATION_NUMBERING") {
     is_aligned = numbering.get("aligned") == Some(&Stored::Bool(true));
     if let Some(Stored::HashStored(ref tags)) = state.lookup_value("EQUATIONROW_TAGS") {
-      ctr = Some(tags.get("counter").unwrap_or_else(|| numbering.get("counter").unwrap_or_else(|| &STORED_EQUATION_LABEL)).to_string());
+      ctr = Some(tags.get("counter").unwrap_or_else(|| numbering.get("counter").unwrap_or(&STORED_EQUATION_LABEL)).to_string());
 
       if tags.get("noretract") != Some(&Stored::Bool(true)) &&
         (tags.get("retract") == Some(&Stored::Bool(true)) ||
