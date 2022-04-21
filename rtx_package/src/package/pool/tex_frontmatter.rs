@@ -131,7 +131,7 @@ LoadDefinitions!(state, {
         for (tag, attr, stuff) in list {
           document.open_element(&tag, attr, None, state)?; // TODO:  (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
                                                            //        ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
-          document.absorb(stuff, None, state)?;
+          document.absorb(&stuff, None, state)?;
 
           document.close_element(&tag, state)?;
         }

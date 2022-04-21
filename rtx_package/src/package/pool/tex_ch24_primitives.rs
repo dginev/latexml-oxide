@@ -341,7 +341,7 @@ LoadDefinitions!(state, {
   // If this is the right solution...
   // then we also should put the desired spacing on a style attribute?!?!?!
   DefConstructor!("\\vskip Glue", sub[document, args, props, state] {
-    unpack!(args => length);
+    unref!(args => length);
     let length = length.pt_value(None);
 
     if length > 10.0 {    // Or what!?!?!?!

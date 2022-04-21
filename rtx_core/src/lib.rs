@@ -152,6 +152,17 @@ pub enum TexMode {
   Text,
 }
 
+/// These are all kinds of data which rtx considers officially supported
+/// as outputs from the digestion phase of TeX, i.e. from invoking a token.
+/// Each variant is wrapped in an `Arc`, for cheap(er) cloning when passing around
+/// these objects to various auxiliary state (e.g. bookkeeping current box),
+/// but also for repeatedly passing them as owned into binding closures
+/// while also storing them in their owner Box.
+//
+// This model is incredibly hard to achieve with lifetimes, so
+// we employ reference counting instead (close to their original Perl design).
+// A strict OO-hierarchy of object ownership (with no auxiliary state metadata)
+// would allow a Rust-like redesign. But it could be too hard to achieve in practice.
 #[derive(Clone, Debug)]
 pub enum Digested {
   TBox(Arc<Tbox>),

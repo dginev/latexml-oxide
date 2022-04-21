@@ -194,7 +194,7 @@ impl DigestionAPI for Core {
       }
     }
     Debug!("Doc absorb: {:?}", digested);
-    document.absorb(digested, None, state)?;
+    document.absorb(&digested, None, state)?;
     note_end("Building");
 
     let has_rewrites = state.has_value("DOCUMENT_REWRITE_RULES");

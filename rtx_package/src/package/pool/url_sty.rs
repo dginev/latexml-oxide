@@ -76,7 +76,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\@@Url Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
     "?#isMath(<ltx:XMWrap href='#href'>#5</ltx:XMWrap>) (<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
     properties => sub[stomach, args, state] {
-      unpack!(args => cmd, open, close, url, formattedurl);
+      unref!(args => cmd, open, close, url, formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
       Ok(map!(
         "href" => Stored::String(compose_url(&state.lookup_string("BASE_URL"), &url.to_string(), None)),

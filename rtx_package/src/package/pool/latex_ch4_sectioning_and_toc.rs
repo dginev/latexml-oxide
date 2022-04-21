@@ -111,7 +111,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
       // Update 2022: The notes are generally still accurate, but cloning a Digested object is now cheap enough,
       // as each enum variant is guarded by an Arc reference counter. Arc<Tbox>, Arc<List>, etc.
       if let Some(Stored::Digested(tags)) = props.get("tags") {
-        document.absorb((**tags).clone(), None, state)?;
+        document.absorb(&(**tags), None, state)?;
       }
       let title = prop_digested!(props, "title");
       document.insert_element("ltx:title", title, None, state)?;
@@ -122,12 +122,12 @@ LoadDefinitions!(outer_stomach, outer_state, {
       }
     },
     properties => sub[stomach, args, state] {
-      unpack!(args => stype, inlist, toctitle_arg, title);
+      unref!(args => stype, inlist, toctitle_arg, title);
       let mut props = ref_step_counter(&stype.to_string(), false, stomach, state)?;
       let toctitle = if !toctitle_arg.to_string().is_empty() {
         toctitle_arg
       } else {
-        title.clone()
+        title
       };
       let stype_tokens = stype.revert(state)?;
       let title_tokens = title.revert(state)?;
@@ -156,7 +156,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
 
   // No tags, at all? Consider...
   DefConstructor!("\\@@unnumbered@section{} Undigested OptionalUndigested Undigested", sub[document, args, props, state] {
-      unpack!( args => stype, inlist, toctitle, title);
+      unref!( args => stype, inlist, toctitle, title);
       let id = props.get("id").unwrap().to_string();
       document.open_element(&s!("ltx:{}", stype),
         Some(string_map!(
@@ -173,20 +173,20 @@ LoadDefinitions!(outer_stomach, outer_state, {
       }
     },
     properties => sub[stomach, args, state] {
-      unpack!(args => stype, inlist, toctitle, title);
+      unref!(args => stype, inlist, toctitle, title);
       let mut props = RefStepID!(&stype.to_string())?;
       let title_digested = if let Digested::Postponed(tokens) = title {
         // TODO: tokens.clone().unlist() looks like a code smell.
         // Should Digested::Postponed() hold a Tokens directly instead?
-        stomach.digest(Tokens!(T_CS!("\\@hidden@bgroup"), (*tokens).clone().unlist(), T_CS!("\\@hidden@egroup")), state)?
+        stomach.digest(Tokens!(T_CS!("\\@hidden@bgroup"), (**tokens).clone().unlist(), T_CS!("\\@hidden@egroup")), state)?
       } else {
-        title
+        title.clone()
       };
       props.insert("title".to_string(), title_digested.into());
 
       if let Digested::Postponed(toctokens) = toctitle {
         if !toctokens.is_empty() {
-          let toctitle_digested = stomach.digest(Tokens!(T_CS!("\\@hidden@bgroup"), (*toctokens).clone().unlist(), T_CS!("\\@hidden@egroup")), state)?;
+          let toctitle_digested = stomach.digest(Tokens!(T_CS!("\\@hidden@bgroup"), (**toctokens).clone().unlist(), T_CS!("\\@hidden@egroup")), state)?;
           props.insert("toctitle".to_string(), toctitle_digested.into());
         }
       }

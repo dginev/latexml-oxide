@@ -16,18 +16,10 @@ macro_rules! set {
 
 #[macro_export]
 macro_rules! unpack {
-  ($args:ident => $var:ident) => (count_unpack!(0usize, $args => $var));
-  ($args:ident => $($var:ident),*) => (count_unpack!(0usize, $args => $($var),*));
-}
-
-#[macro_export]
-macro_rules! count_unpack {
-  ($index:expr, $args:ident => $var:ident) => (
+  ($args:ident => $var:ident) => (let $var = $args.remove(0););
+  ($args:ident => $var:ident,$($tail:ident),*) => {
     let $var = $args.remove(0);
-  );
-  ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
-    count_unpack!($index,$args => $var);
-    count_unpack!(1usize+$index, $args => $($tail),*)
+    unpack!($args => $($tail),*)
   }
 }
 

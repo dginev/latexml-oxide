@@ -388,7 +388,7 @@ macro_rules! DefConditional(
   ($proto:literal, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
     let (cs, paramlist) = parse_prototype!($proto);
-    let test : ConditionalClosure = Arc::new(move |$gullet, $args, $inner_state| { WithInnerState!($body, $inner_state).into_bool_result() });
+    let test : ConditionalClosure = Arc::new(move |$gullet, mut $args, $inner_state| { WithInnerState!($body, $inner_state).into_bool_result() });
     defi_conditional!(cs, paramlist, Some(test), options);
   }};
   ($proto:literal, $body:block $($input:tt)*) => {{
@@ -474,7 +474,7 @@ macro_rules! DefPrimitive {
   ($proto:expr, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, $args: Vec<Tokens>, $state_arg: &mut State| {
+    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<Tokens>, $state_arg: &mut State| {
       WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
     });
     defi_primitive!(cs, params, replacement_closure, options);
@@ -482,7 +482,7 @@ macro_rules! DefPrimitive {
   // Case: cs-noparams with closure pattern replacement
   ($cs:expr, None, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, $args: Vec<Tokens>, $state_arg: &mut State| {
+    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<Tokens>, $state_arg: &mut State| {
       WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
     });
     defi_primitive!($cs, None, replacement_closure, options);
@@ -1485,14 +1485,14 @@ macro_rules! DefMacro {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
-      move |$gullet, $args, $inner_state| WithInnerState!($body, $inner_state).into_tokens_result()
+      move |$gullet, mut $args, $inner_state| WithInnerState!($body, $inner_state).into_tokens_result()
     )));
     defi_macro!(cs, params, expansion_closure, Some(options));
   }};
   ($proto:expr, $body:block) => {{
     let (cs, params) = parse_prototype!($proto);
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
-      move |gullet, args, inner_state| WithInnerState!($body, inner_state).into_tokens_result()
+      move |gullet, mut args, inner_state| WithInnerState!($body, inner_state).into_tokens_result()
     )));
     defi_macro!(cs, params, expansion_closure, None);
   }};
@@ -1508,7 +1508,7 @@ macro_rules! DefMacro {
   ($cs:expr, $parameters:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
-      move |$gullet, $args, $inner_state| WithInnerState!($body, $inner_state).into_tokens_result()
+      move |$gullet, mut $args, $inner_state| WithInnerState!($body, $inner_state).into_tokens_result()
     )));
     defi_macro!($cs, $parameters, expansion_closure, Some(options));
   }};

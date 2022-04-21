@@ -137,7 +137,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
   }
 }
 
-pub fn do_def(globally: bool, stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State) -> Result<()> {
+pub fn do_def(globally: bool, stomach: &mut Stomach, mut args: Vec<Tokens>, state: &mut State) -> Result<()> {
   BindState!(stomach, state);
   unpack!(args => cs, params, body);
   let cs: Token = cs.into();
@@ -265,7 +265,7 @@ pub fn revert_spec(whatsit: &mut Whatsit, keyword: &str, state: &mut State) -> V
 /// need to be explicitly wrapped in some kind of block element (presumably ltx:p).
 /// It returns the inserted inner blocks,
 /// whether or not they got wrapped by that ltx:inline-block; which it DOESN'T TELL YOU ABOUT!
-pub fn insert_block(document: &mut Document, contents: Digested, mut blockattr: HashMap<String, String>, state: &mut State) -> Result<Vec<Node>> {
+pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr: HashMap<String, String>, state: &mut State) -> Result<Vec<Node>> {
   // Create something like:
   // "<ltx:inline-block vattach='$vattach' height='#height'>#2</ltx:inline-block>"
   let context = document.get_element().unwrap(); // Where we originally start inserting.
