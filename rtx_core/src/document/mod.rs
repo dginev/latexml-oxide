@@ -293,28 +293,28 @@ impl Document {
   /// $box can also be a plain string (Digested::Postponed)
   /// which will be inserted according to whatever
   /// font, mode, etc, are in %props.
-  pub fn absorb(&mut self, object: Digested, props_opt: Option<HashMap<String, Stored>>, state: &mut State) -> Result<()> {
+  pub fn absorb(&mut self, object: &Digested, props_opt: Option<HashMap<String, Stored>>, state: &mut State) -> Result<()> {
     // let mut results = Vec::new();
     let props = props_opt.unwrap_or_default(); // is there a better way to deal with the Option?
-    let mut boxes = vec![object];
+    let mut boxes = vec![Cow::Borrowed(object)];
     while let Some(front_box) = boxes.pop() {
-      if let Digested::List(ref list) = front_box {
+      if let Digested::List(ref list) = *front_box {
         // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
         for tbox in list.unlist().into_iter().rev() {
-          boxes.push(tbox);
+          boxes.push(Cow::Owned(tbox));
         }
       } else {
         // info!(target: "document:absorb", "front box: {:?}", front_box);
         // self.constructed_nodes = Vec::new();
-        match front_box {
+        match *front_box {
           // A Proper Box or Whatsit? Absorb it.
           Digested::TBox(ref digested) => {
-            self.set_box_to_absorb(Some(front_box.clone()));
+            self.set_box_to_absorb(Some((*front_box).clone()));
             digested.be_absorbed(self, state)?;
             self.localize_box_to_absorb();
           },
           Digested::Whatsit(ref digested) => {
-            self.set_box_to_absorb(Some(front_box.clone()));
+            self.set_box_to_absorb(Some((*front_box).clone()));
             digested.read().unwrap().be_absorbed(self, state)?;
             self.localize_box_to_absorb();
           },
@@ -373,7 +373,7 @@ impl Document {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   /// Shorthand for open,absorb,close, but returns the new node.
-  pub fn insert_element(&mut self, qname: &str, content: Vec<Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
+  pub fn insert_element(&mut self, qname: &str, content: Vec<&Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone()
     // calls removed
     let node = self.open_element(qname, attrib, None, state)?;
@@ -2452,7 +2452,7 @@ impl Document {
       text: resource.content,
       ..Tbox::default()
     }));
-    self.insert_element("ltx:resource", vec![content_box], Some(attrib), state)?;
+    self.insert_element("ltx:resource", vec![&content_box], Some(attrib), state)?;
     if let Some(savenode) = savenode_opt {
       self.set_node(&savenode);
     }

@@ -67,7 +67,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
   DefConstructor!("\\ref OptionalMatch:* Semiverbatim",
     "<ltx:ref labelref='#label' _force_font='true'/>",
     properties => sub[stomach, args, state] {
-      unpack_to_string!(args => mstar, label);
+      let label = args[1].as_ref().unwrap().to_string();
       Ok(map!("label" => Stored::String(clean_label(&label, None))))
   });
 
@@ -317,7 +317,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
   DefConstructor!("\\@@bibref Semiverbatim Semiverbatim {}{}",
     "<ltx:bibref show='#1' bibrefs='#bibrefs' separator='#separator' yyseparator='#yyseparator'>#3#4</ltx:bibref>",
     properties => sub[stomach, args, state] {
-      unpack!(args => show, keys, phrase1, phrase2);
+      unref!(args => show, keys, phrase1, phrase2);
       Ok(map!("bibrefs" => clean_bib_key(&keys.to_string()).into(),
         "separator" => match state.lookup_tokens("CITE_SEPARATOR") {
           Some(sep) => stomach.digest(sep, state)?.to_string().into(),

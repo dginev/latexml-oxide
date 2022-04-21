@@ -144,7 +144,7 @@ LoadDefinitions!(outer_state, {
   DefConstructor!("\\@internal@verb{} Undigested {}",
     "?#isMath(<ltx:XMTok font='#font'>#text</ltx:XMTok>)(<ltx:verbatim font='#font'>#text</ltx:verbatim>)",
     properties => sub[stomach, args, state] {
-      unpack!(args => a1, a2, a3);
+      unref!(args => a1, a2, a3);
       Ok(map!("text" => Stored::String(a3.to_string())))
     },
   font => { family => "typewriter", series => "medium", shape => "upright" },

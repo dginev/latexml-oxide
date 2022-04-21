@@ -51,18 +51,19 @@ There is demonstrable need for LaTeXML in the domain of academic writing, as wel
   ```
 
 ### Fake Benchmark
- These are the times of different TeX-like engines ran over the `xii.tex` example above. That is not representative to all of TeX, but gives a good early feeling:
+ These are the times of different TeX-like engines ran over the `xii.tex` example above. That is not representative to all of TeX, but gives a minimal early feeling.
+ It will be a lot more telling to provide tikz and expl3 runtime numbers.
 
 | executable | time      |
 |------------|-----------|
 | tralics    |  0.011s   |
 | rtx        |  0.033s   |
-| tex        | 	0.067s   |
-| pdftex     |  0.125s   |
-| luatex     |  0.158s   |
-| xetex      |  0.310s   |
-| httex      |  0.333s   |
-| latexml    |  0.562s   |
+| tex        |  0.096s   |
+| pdftex     |  0.215s   |
+| luatex     |  0.226s   |
+| xetex      |  0.430s   |
+| httex      |  0.608s   |
+| latexml    |  0.745s   |
 
 ### Installation
 

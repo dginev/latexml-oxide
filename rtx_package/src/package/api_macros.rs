@@ -290,9 +290,9 @@ macro_rules! reversion_digested {
 macro_rules! prop_digested {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
-      Some(Stored::VecDigested(vd)) => vd.clone(),
-      Some(Stored::Digested(d)) => vec![(**d).clone()],
-      Some(Stored::String(s)) => vec![s.into()],
+      Some(Stored::VecDigested(ref vd)) => vd.iter().collect::<Vec<&Digested>>(),
+      Some(Stored::Digested(d)) => vec![&(**d)],
+      Some(Stored::String(s)) => panic!("prop_digested! called on a string property {:?} with value {:?}.",$key, s),
       None => Vec::new(),
       other => {
         eprintln!("Please extend the api_macros::prop_digested macro to support: {:?}", other);
@@ -360,14 +360,23 @@ macro_rules! unpack_to_string {
 
 #[macro_export]
 macro_rules! unpack_to_token {
-  ($args:ident => $var:ident) => (count_unpack_to_token!(0usize, $args => $var));
-  ($args:ident => $($var:ident),*) => (count_unpack_to_token!(0usize, $args => $($var),*));
+  ($args:ident => $var:ident) => (
+    let tmp_tks = $args.remove(0);
+    if tmp_tks.is_empty() {
+      panic!("Hard assumption for Token argument failed -- arg was empty in unpack_to_token!()");
+    }
+    let $var : Token = tmp_tks.into();
+  );
+  ($args:ident => $var:ident,$($tail:ident),*) => (
+    unpack_to_token!($args => $var);
+    unpack_to_token!($args => $($tail),*)
+  );
 }
 
 #[macro_export]
 macro_rules! count_unpack_to_string {
   ($index:expr, $args:ident => $var:ident) => (
-    let $var = $args[$index].clone().unwrap_or_default().to_string();
+    let $var = $args[$index].as_ref().unwrap().to_string();
   );
   ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
     count_unpack_to_string!($index,$args => $var);
@@ -376,32 +385,37 @@ macro_rules! count_unpack_to_string {
 }
 
 #[macro_export]
-macro_rules! count_unpack_to_token {
-  ($index:expr, $args:ident => $var:ident) => (
-    let tmp_tks : Tokens = $args[$index].clone().unwrap_or_default();
-    let $var : Token = tmp_tks.into();
-  );
-  ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
-    count_unpack_to_token!($index,$args => $var);
-    count_unpack_to_token!(1usize+$index, $args => $($tail),*)
+macro_rules! unpack_opt {
+  ($args:ident => $var:ident) => (let $var = $args.remove(0););
+  ($args:ident => $var:ident,$($tail:ident),*) => {
+    let $var = $args.remove(0);
+    unpack!($args => $($tail),*)
   }
 }
 
 #[macro_export]
 macro_rules! unpack {
-  ($args:ident => $var:ident) => (count_unpack!(0usize, $args => $var));
-  ($args:ident => $($var:ident),*) => (count_unpack!(0usize, $args => $($var),*));
+  ($args:ident => $var:ident) => (let $var = $args.remove(0).unwrap_or_default(););
+  ($args:ident => $var:ident,$($tail:ident),*) => {
+    let $var = $args.remove(0).unwrap_or_default();
+    unpack!($args => $($tail),*)
+  }
 }
 
 #[macro_export]
-macro_rules! count_unpack {
-  ($index:expr, $args:ident => $var:ident) => (
-    let mut $var = $args[$index].clone().unwrap_or_default();
-  );
+macro_rules! unref {
+  ($args:ident => $var:ident) => (count_unpack_ref!(0usize, $args => $var));
+  ($args:ident => $var:ident,$($tail:ident),*) => (count_unpack_ref!(0usize,$args => $var,$($tail),*))
+}
+#[macro_export]
+macro_rules! count_unpack_ref {
+  ($index:expr, $args:ident => $var:ident) => {
+    let $var = $args[$index].as_ref().unwrap();
+  };
   ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
-    count_unpack!($index,$args => $var);
-    count_unpack!(1usize+$index, $args => $($tail),*)
-  }
+    count_unpack_ref!($index,$args => $var);
+    count_unpack_ref!(1usize+$index, $args => $($tail),*)
+  };
 }
 
 /// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token

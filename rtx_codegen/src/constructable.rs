@@ -254,7 +254,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       operations.push(quote!(
         if let Some(ref stored_digested) = #to_absorb {
           let digested_opt : Option<Digested> = stored_digested.into();
-          if let Some(digested) = digested_opt {
+          if let Some(ref digested) = digested_opt {
             document.absorb(digested, None, state)?;
           }
         }

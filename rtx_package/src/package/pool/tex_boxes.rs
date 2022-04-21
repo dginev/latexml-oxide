@@ -105,7 +105,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props, state] {
       // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
-      unpack!(args => spec, contents);
+      let contents = args[1].as_ref().unwrap();
       let current_opt = document.get_element();
 
       // What is the CORRECT (& general) way to ask whether we're in "vertical mode"??
@@ -124,6 +124,8 @@ LoadDefinitions!(state, {
         String::new()
       };
       let node = document.open_element(newtag, Some(string_map!("_noautoclose" => "true", "width" => width)), None, state)?;
+      // Note on the clone: Remember that contents is a Digested, i.e. we are cloning an Arc<> wrapper, which is relatively cheap.
+      // see the documentation on `Digested` on why we don't have a neater way of dealing with this.
       document.absorb(contents, None, state)?;
       if !is_svg {
         while !document.get_element().unwrap().has_attribute("_beginscope") &&
@@ -160,7 +162,7 @@ LoadDefinitions!(state, {
   );
 
   DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, props, state] {
-      unpack!(args => spec, contents);
+      let contents = args[1].as_ref().unwrap();
       let block = insert_block(document, contents, string_map!("vattach" => "bottom"), state);
     },
     // sizer       => "#2",
@@ -179,7 +181,7 @@ LoadDefinitions!(state, {
   );
 
   DefConstructor!("\\vtop BoxSpecification VBoxContents", sub[document, args, props, state] {
-      unpack!(args => spec, contents);
+      let contents = args[1].as_ref().unwrap();
       insert_block(document, contents, string_map!("vattach" => "top"), state)?;
     },
     // sizer       => '#2',

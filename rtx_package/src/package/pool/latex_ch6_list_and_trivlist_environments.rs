@@ -35,7 +35,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\list@item OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[stomach, args, state] {
-      unpack!(args => tag);
+      unref!(args => tag);
       ref_step_item_counter(&tag.to_string(), stomach, state) }
   );
 

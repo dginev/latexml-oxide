@@ -210,7 +210,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
 // OTOH, direct use of \@@POSTSUPERSCRIPT, etal, MAY need to have extra braces around them.
 // So, when reverting, we're going to a bit of extra trouble to make sure we have ONE set
 // of braces, but no extras!!  [Worry about lists of lists...]
-pub fn revert_script(script: Digested, state: &mut State) -> Result<Vec<Token>> {
+pub fn revert_script(script: &Digested, state: &mut State) -> Result<Vec<Token>> {
   let tokens = script.revert(state)?;
   let mut ts = tokens.unlist();
   let mut level = 0;
@@ -248,7 +248,7 @@ LoadDefinitions!(state, {
   </ltx:XMApp>
   "###,
     reversion => sub[whatsit,args,state] {
-      unpack!(args=>arg);
+      unref!(args=>arg);
       Ok(Tokens!(T_SUPER!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), $_[0].get_property("base"),
     //     $_[0].get_property("prevscript"), "SUPERSCRIPT", "post"); }
@@ -261,7 +261,7 @@ LoadDefinitions!(state, {
   "###
     ,
     reversion => sub[whatsit,args,state] {
-      unpack!(args=>arg);
+      unref!(args=>arg);
       Ok(Tokens!(T_SUB!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), $_[0].get_property("base"),
     //     $_[0].get_property("prevscript"),
@@ -274,7 +274,7 @@ LoadDefinitions!(state, {
   </ltx:XMApp>
   "###,
     reversion => sub[whatsit,args,state] {
-      unpack!(args=>arg);
+      unref!(args=>arg);
       Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUPER!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, "SUPERSCRIPT", 'post"); }
   );
@@ -284,7 +284,7 @@ LoadDefinitions!(state, {
   </ltx:XMApp>
   "###,
     reversion => sub[whatsit,args,state] {
-      unpack!(args=>arg);
+      unref!(args=>arg);
       Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUB!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, 'SUBSCRIPT', 'post"); }
   );

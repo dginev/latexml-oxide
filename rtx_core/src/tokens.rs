@@ -183,6 +183,8 @@ impl Tokens {
   // stopgap, how do we unpack! gullet-stage arguments without the unwrap?
   // should we unify the interfaces so that Options are always used? Could be cumbursome...
   pub fn unwrap_or_default(self) -> Tokens { self }
+  pub fn as_ref(&self) -> &Tokens { &self }
+  pub fn unwrap(&self) -> &Tokens { &self }
 
   pub fn stringify(&self) -> String { s!("Tokens[{}]", &self.0.iter().map(ToString::to_string).collect::<Vec<_>>().join(",")) }
 
