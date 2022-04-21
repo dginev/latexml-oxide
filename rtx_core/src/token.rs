@@ -460,10 +460,6 @@ macro_rules! Token {
   };
 }
 
-impl Default for Token {
-  fn default() -> Self { T_OTHER!("") }
-}
-
 // Explode a string into a list of tokens, all w/catcode OTHER (except space).
 #[macro_export]
 macro_rules! Explode(($text:expr) => (
