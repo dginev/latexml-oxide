@@ -500,7 +500,6 @@ LoadDefinitions!(state, {
       glyph_props.insert(s!("glyph"), glyph_c.into());
       // TODO:
       // glyph_props.insert(s!("font"), Arc::new(|state| state.lookup_font().unwrap().specialize(glyph)));
-      let value_c = value.clone();
       DefConstructor!(internalcs.get_cs_name(), "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
         sizer => "#1",
         properties => glyph_props
@@ -510,7 +509,7 @@ LoadDefinitions!(state, {
               eprintln!("-- glyph c: {}", glyph_c);
               vec![T_OTHER!(glyph_c.clone())]
             } else {
-              let v = value_c.value_of();
+              let v = value.value_of();
               eprintln!("-- matchar v: {}", v);
               vec![T_CS!("\\mathchar"),T_OTHER!(v),T_CS!("\\relax")]
             }))

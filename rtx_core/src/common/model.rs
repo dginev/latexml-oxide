@@ -1,11 +1,11 @@
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::string::ToString;
-use std::borrow::Cow;
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -56,7 +56,7 @@ pub struct Model {
 }
 
 impl Object for Model {
-  fn get_locator(&self) -> Cow<Locator> {unimplemented!()}
+  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
 }
 impl Model {
   pub fn new() -> Self {

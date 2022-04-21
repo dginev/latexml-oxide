@@ -33,7 +33,10 @@ LoadDefinitions!(stomach, state, {
   }
 
   DeclareOption!("onecolumn", r"\@twocolumnfalse\columnwidth\textwidth");
-  DeclareOption!("twocolumn",r"\@twocolumntrue\columnwidth\textwidth\advance\columnwidth-\columnsep\divide\columnwidth2\relax");
+  DeclareOption!(
+    "twocolumn",
+    r"\@twocolumntrue\columnwidth\textwidth\advance\columnwidth-\columnsep\divide\columnwidth2\relax"
+  );
   // TODO:
   // DeclareOption!("openbib",
   // || { RequireResource!(None, type: "text/css", content: ".ltx_bibblock{display:block;}");
@@ -54,7 +57,8 @@ LoadDefinitions!(stomach, state, {
   AddToMacro!("\\maketitle", "\\ltx@authors@oneline");
 
   DefMacro!("\\@ptsize", "0"); // should depend on options...
-  RawTeX!(r###"
+  RawTeX!(
+    r###"
   \newif\if@restonecol
   \newif\if@titlepage
   \@titlepagefalse

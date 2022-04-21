@@ -54,7 +54,7 @@ pub struct Core {
   pub preload: Vec<String>,
 }
 impl Object for Core {
-  fn get_locator(&self) -> Cow<Locator> {unimplemented!()}
+  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
 }
 #[derive(Default)]
 pub struct CoreOptions {

@@ -108,7 +108,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
       //   would have to experiment with this - as it is of course much lighter on performance
       //
 
-      // Update 2022: The notes are generally still accurate, but cloning a Digested object is now cheap enough, as each enum variant is guarded by an Arc reference counter. Arc<Tbox>, Arc<List>, etc.
+      // Update 2022: The notes are generally still accurate, but cloning a Digested object is now cheap enough,
+      // as each enum variant is guarded by an Arc reference counter. Arc<Tbox>, Arc<List>, etc.
       if let Some(Stored::Digested(tags)) = props.get("tags") {
         document.absorb((**tags).clone(), None, state)?;
       }

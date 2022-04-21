@@ -15,7 +15,7 @@ use crate::stomach::Stomach;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{Locator,Digested};
+use crate::{Digested, Locator};
 
 #[derive(Clone, Default)]
 pub struct PrimitiveOptions {
@@ -69,7 +69,7 @@ impl fmt::Display for Primitive {
 }
 impl Object for Primitive {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Primitive") }
-  fn get_locator(&self) -> Cow<Locator> {unimplemented!()}
+  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
 }
 impl Definition for Primitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }

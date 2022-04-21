@@ -16,7 +16,7 @@ use crate::stomach::Stomach;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{Digested,Locator};
+use crate::{Digested, Locator};
 
 pub type ReaderFn = dyn Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>;
 pub type ReaderPredigestFn = dyn Fn(&mut Stomach, Tokens, &mut State) -> Result<Option<Digested>>;
@@ -142,7 +142,7 @@ impl PartialEq for Parameter {
 }
 impl Object for Parameter {
   fn stringify(&self) -> String { self.spec.to_string() }
-  fn get_locator(&self) -> Cow<Locator> {unimplemented!()}
+  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
 }
 
 lazy_static! {
@@ -389,7 +389,7 @@ impl Object for Parameters {
     }
     result
   }
-  fn get_locator(&self) -> Cow<Locator> {unimplemented!()}
+  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
 }
 
 impl Parameters {

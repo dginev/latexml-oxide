@@ -119,30 +119,29 @@ fn retract_equation(state: &mut State) {
 }
 
 LoadDefinitions!(state, {
+  DefMacro!("\\@eqnnum", "(\\theequation)", locked => true);
+  DefMacro!("\\fnum@equation", "\\@eqnnum");
 
-DefMacro!("\\@eqnnum", "(\\theequation)", locked => true);
-DefMacro!("\\fnum@equation", "\\@eqnnum");
+  // Redefined from TeX.pool, since with LaTeX we presumably have a more complete numbering system
+  // TODO:
+  // DefConstructor("\\@@BEGINDISPLAYMATH",
+  //   "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+  //   alias        => "$$",
+  //   before_digest => sub[stomach, state] {
+  //     stomach.begin_mode("display_math");
+  //     if let Some(Stored::Register(everymath_reg)) = state.lookup_definition(T_CS!("\\everymath")) {
+  //       let everymath_toks = everymath_reg.value_of().unlist();
+  //       stomach.get_gullet_mut.unread(everymath_toks);
+  //     }
+  //     if let Some(everydisplay_reg) = state.lookup_definition(T_CS!("\\everydisplay")) {
+  //       let everydisplay_toks = everydisplay_reg.value_of().unlist();
+  //       stomach.get_gullet_mut().unread(everydisplay_toks);
+  //     }
+  //     return; },
+  //   properties   => sub[stomach, args, state] { ref_step_id("equation", stomach, state) },
+  //   capture_body => true);
 
-// Redefined from TeX.pool, since with LaTeX we presumably have a more complete numbering system
-// TODO:
-// DefConstructor("\\@@BEGINDISPLAYMATH",
-//   "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
-//   alias        => "$$",
-//   before_digest => sub[stomach, state] {
-//     stomach.begin_mode("display_math");
-//     if let Some(Stored::Register(everymath_reg)) = state.lookup_definition(T_CS!("\\everymath")) {
-//       let everymath_toks = everymath_reg.value_of().unlist();
-//       stomach.get_gullet_mut.unread(everymath_toks);
-//     }
-//     if let Some(everydisplay_reg) = state.lookup_definition(T_CS!("\\everydisplay")) {
-//       let everydisplay_toks = everydisplay_reg.value_of().unlist();
-//       stomach.get_gullet_mut().unread(everydisplay_toks);
-//     }
-//     return; },
-//   properties   => sub[stomach, args, state] { ref_step_id("equation", stomach, state) },
-//   capture_body => true);
-
-DefEnvironment!("{displaymath}",
+  DefEnvironment!("{displaymath}",
   "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
   mode       => "display_math",
   properties   => sub[stomach, args, state] { ref_step_id("equation", stomach, state) },
@@ -183,5 +182,4 @@ DefEnvironment!("{displaymath}",
   );
 
   DefConstructor!("\\]", "", before_digest => sub[stomach, state] { stomach.end_mode("display_math", state)?; });
-
 });

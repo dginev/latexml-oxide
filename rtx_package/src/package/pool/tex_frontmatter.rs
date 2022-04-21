@@ -271,17 +271,22 @@ LoadDefinitions!(state, {
   // Customize by defining \fnum@<type> or \<type>name and \fnum@font@<type>
   // Default uses \fnum@font@<type> \<type>name prefix + space (if any) and \the<counter>.
   // When using the "name", uses \<type>name in preference to fallback \lx@name@<type>
-  DefMacro!(r"\lx@refnum@compose{}{}",  r"\expandafter\lx@refnum@compose@\expandafter{#2}{#1}");
+  DefMacro!(r"\lx@refnum@compose{}{}", r"\expandafter\lx@refnum@compose@\expandafter{#2}{#1}");
   DefMacro!(r"\lx@refnum@compose@{}{}", r"\if.#1.#2\else#2\space#1\fi");
 
-  DefMacro!(r"\lx@fnum@@{}",
-  r"{\normalfont\@ifundefined{fnum@font@#1}{}{\csname fnum@font@#1\endcsname}\@ifundefined{fnum@#1}{\lx@@fnum@@{#1}}{\csname fnum@#1\endcsname}}");
+  DefMacro!(
+    r"\lx@fnum@@{}",
+    r"{\normalfont\@ifundefined{fnum@font@#1}{}{\csname fnum@font@#1\endcsname}\@ifundefined{fnum@#1}{\lx@@fnum@@{#1}}{\csname fnum@#1\endcsname}}"
+  );
 
   // Really seems like <type>name should take precedence over \lx@name@<type>,
   // since users might define it.
   // BUT amsthm defines \thmname{}!
-  DefMacro!("\\lx@@fnum@@ {}",
-    r"\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{\lx@the@@{#1}}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@the@@{#1}}}");
+  DefMacro!(
+    "\\lx@@fnum@@ {}",
+    r"\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{\lx@the@@{#1}}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}
+    {\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@the@@{#1}}}"
+  );
 
   AssignMapping!("type_tag_formatter", "" => "\\lx@fnum@@"); // Default!
 
@@ -289,8 +294,11 @@ LoadDefinitions!(state, {
   // \\lx@fnum@toc@{type} is similar, but formats the number for use within \\toctitle
   // Customize by defining \\fnum@toc@<type> or \\fnum@tocfont@<type>
   // Default uses just \\the<counter>, else composes using \\lx@@fnum@@{type}
-  DefMacro!(r"\lx@fnum@toc@@{}",
-    r"{\normalfont\@ifundefined{fnum@tocfont@#1}{}{\csname fnum@tocfont@#1\endcsname}\@ifundefined{fnum@toc@#1}{\lx@the@@{#1}}{\csname fnum@toc@#1\endcsname}}");
+  DefMacro!(
+    r"\lx@fnum@toc@@{}",
+    r"{\normalfont\@ifundefined{fnum@tocfont@#1}{}
+      {\csname fnum@tocfont@#1\endcsname}\@ifundefined{fnum@toc@#1}{\lx@the@@{#1}}{\csname fnum@toc@#1\endcsname}}"
+  );
 
   //----------------------------------------------------------------------
   // "typerefnum" form is used by automatic cross-references, typically "type number" or similar.

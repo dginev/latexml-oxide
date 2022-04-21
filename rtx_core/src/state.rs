@@ -780,7 +780,10 @@ impl State {
         front.push_front(value)
       }
     } else {
-      panic!("unshift_value can only work on a Stored::VecDequeStored receiver. Instead, key {:?} got: {:?}", key, receiver);
+      panic!(
+        "unshift_value can only work on a Stored::VecDequeStored receiver. Instead, key {:?} got: {:?}",
+        key, receiver
+      );
     }
   }
 
@@ -1077,12 +1080,9 @@ impl State {
   pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Stored {
     let cc = token.get_catcode();
     let name = token.get_string();
-    let lookupname = if cc == Catcode::ACTIVE || cc == Catcode::CS
-      || (
-        (cc == Catcode::LETTER || (cc == Catcode::OTHER)) &&
-        self.lookup_bool("IN_MATH") &&
-        ( self.lookup_mathcode(name).unwrap_or(0) == 0x8000 )
-      )
+    let lookupname = if cc == Catcode::ACTIVE
+      || cc == Catcode::CS
+      || ((cc == Catcode::LETTER || (cc == Catcode::OTHER)) && self.lookup_bool("IN_MATH") && (self.lookup_mathcode(name).unwrap_or(0) == 0x8000))
     {
       name
     } else {
