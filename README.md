@@ -1,11 +1,11 @@
 # rtx
 A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
-[![CI](https://github.com/dginev/rtx/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/rtx/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.1.25-orange.svg)
+[![CI](https://github.com/dginev/rtx/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/rtx/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.2.0-orange.svg)
 
 ## Progress
 
-[![test porting progress](http://progressed.io/bar/10)](https://github.com/dginev/rtx/issues/30) | 25 of 281 core LaTeXML tests PASS
+[![test porting progress](http://progressed.io/bar/10)](https://github.com/dginev/rtx/issues/30) | ? of ? core LaTeXML tests PASS
 
 ### Why?
 
