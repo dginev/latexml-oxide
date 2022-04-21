@@ -385,15 +385,6 @@ macro_rules! count_unpack_to_string {
 }
 
 #[macro_export]
-macro_rules! unpack_opt {
-  ($args:ident => $var:ident) => (let $var = $args.remove(0););
-  ($args:ident => $var:ident,$($tail:ident),*) => {
-    let $var = $args.remove(0);
-    unpack!($args => $($tail),*)
-  }
-}
-
-#[macro_export]
 macro_rules! unpack {
   ($args:ident => $var:ident) => (let $var = $args.remove(0).unwrap_or_default(););
   ($args:ident => $var:ident,$($tail:ident),*) => {
@@ -416,6 +407,30 @@ macro_rules! count_unpack_ref {
     count_unpack_ref!($index,$args => $var);
     count_unpack_ref!(1usize+$index, $args => $($tail),*)
   };
+}
+
+/// Meant to be used for unpacking &Vec<Option<Digested>> in particular.
+#[macro_export]
+macro_rules! unpack_opt {
+  ($args:ident => $var:ident) => (count_unpack_opt!(0usize, $args => $var));
+  ($args:ident => $var:ident,$($tail:ident),*) => (count_unpack_opt!(0usize, $args => $var,$($tail),*));
+}
+
+#[macro_export]
+macro_rules! count_unpack_opt {
+  ($index:expr, $args:ident => $var:ident) => (
+    let $var = match $args.get($index) {
+      Some(v) => v,
+      None => &None
+    };
+  );
+  ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
+    let $var = match $args.get($index) {
+      Some(v) => v,
+      None => &None
+    };
+    count_unpack_opt!(1usize+$index, $args => $($tail),*)
+  }
 }
 
 /// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token

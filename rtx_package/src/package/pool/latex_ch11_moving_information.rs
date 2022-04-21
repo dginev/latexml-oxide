@@ -67,7 +67,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
   DefConstructor!("\\ref OptionalMatch:* Semiverbatim",
     "<ltx:ref labelref='#label' _force_font='true'/>",
     properties => sub[stomach, args, state] {
-      let label = args[1].as_ref().unwrap().to_string();
+      unpack_opt!(args => _star,label_opt);
+      let label = label_opt.as_ref().unwrap().to_string();
       Ok(map!("label" => Stored::String(clean_label(&label, None))))
   });
 
