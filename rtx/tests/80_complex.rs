@@ -20,10 +20,6 @@ fn can_complex() {
   rtx_tests_internal("tests/complex", requires, Some(Arc::new(complex_tests_dispatch)));
 }
 
-#[test]
-#[ignore]
-fn can_complex_todo() { rtx_tests("tests/complex_todo", None, None); }
-
 pub fn complex_tests_dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Option<Result<()>> {
   match filename {
     // II. Connect the filename to the `load_definitions` function of your .rs binding:

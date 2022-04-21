@@ -468,39 +468,53 @@ LoadDefinitions!(state, {
   });
 
   DefConstructor!("\\mathchar Number", "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",
-    //   sizer       => '#1',
-    after_digest => { unimplemented!(); () }
-    //     my ($stomach, $whatsit) = @_;
-    //     my $n = $whatsit->getArg(1)->valueOf;
-    //     my ($role, $glyph) = decodeMathChar($n);
-    //     $whatsit->setProperty(glyph => $glyph)                                  if $glyph;
-    //     $whatsit->setProperty(role  => $role)                                   if defined $role;
-    //     $whatsit->setProperty(font  => LookupValue('font')->specialize($glyph)) if $glyph;
-    //     return; }
+    sizer       => "#1",
+    after_digest => sub[stomach,whatsit,state] {
+      let n = whatsit.get_arg(1).unwrap().value_of();
+      let (role_opt, glyph_opt) = decode_math_char(n as u16, state);
+      if let Some(glyph) = glyph_opt {
+        whatsit.set_property("glyph", glyph);
+        whatsit.set_property("font", state.lookup_font().unwrap().specialize(&glyph.to_string()));
+      }
+      if let Some(role) = role_opt {
+        whatsit.set_property("role", role);
+      }
+      Ok(Vec::new())
+    }
   );
 
   // Almost like a register, but different...
-  DefPrimitive!("\\mathchardef Token SkipMatch:= Number", sub[stomach, args, state] {
-    unpack!(args => newcs, value);
-    let newcs : Token = newcs.into();
+  DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[stomach, args, state] {
+    unpack_to_token!(args => newcs);
+    state.assign_meaning(&newcs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(), None);// Let w/o AfterAssignment
+    let value  = stomach.get_gullet_mut().read_number(state).unwrap();
     let csname = newcs.get_cs_name().to_owned();
-    let (role, glyph) = decode_math_char(value.to_number().value_of() as u16, state);
+    // eprintln!(" ** {} + {}", value,csname);
+    let (role, glyph) = decode_math_char(value.value_of() as u16, state);
+    // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
     let internalcs = glyph.map(|_| T_CS!(s!("\\@mathchardef@{}", csname)));
     if let Some(ref internalcs) = internalcs {
       let mut glyph_props: HashMap<String, Stored> = HashMap::new();
       glyph_props.insert(s!("role"), role.unwrap_or_default().into());
-      let glyph_str = match glyph {
-        Some(c) => c.to_string(),
-        None => String::new()
-      };
-      glyph_props.insert(s!("glyph"), glyph_str.into());
+      let glyph_c = glyph.unwrap();
+      glyph_props.insert(s!("glyph"), glyph_c.into());
       // TODO:
-      // glyph_props.insert(s!("font"), |state| state.lookup_font().unwrap().specialize(glyph));
+      // glyph_props.insert(s!("font"), Arc::new(|state| state.lookup_font().unwrap().specialize(glyph)));
+      let value_c = value.clone();
       DefConstructor!(internalcs.get_cs_name(), "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
-        // TODO
-        // sizer => "#1",
+        sizer => "#1",
         properties => glyph_props
-        // reversion => (ord($glyph) < 128 ? $glyph : '\mathchar' . $value.valueOf . '\relax'),
+        reversion =>  sub[_whatsit,_args,st] {
+          Ok(Tokens::new(
+            if (glyph_c as usize) < 128 {
+              eprintln!("-- glyph c: {}", glyph_c);
+              vec![T_OTHER!(glyph_c.clone())]
+            } else {
+              let v = value_c.value_of();
+              eprintln!("-- matchar v: {}", v);
+              vec![T_CS!("\\mathchar"),T_OTHER!(v),T_CS!("\\relax")]
+            }))
+        }
       );
     }
     state.install_definition(Register::new_chardef(newcs,Some(value.into()), internalcs), None);
@@ -511,7 +525,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\mathaccent Number Digested",
   "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
-  // sizer       => '#1',    # Close enough?
+  sizer => "#1",    // Close enough?
   after_digest => sub[stomach, whatsit, state] {
     unimplemented!(); ()
       // my ($stomach, $whatsit) = @_;

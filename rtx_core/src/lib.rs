@@ -53,7 +53,9 @@ pub struct Core {
   pub stomach: Arc<RwLock<Stomach>>,
   pub preload: Vec<String>,
 }
-impl Object for Core {}
+impl Object for Core {
+  fn get_locator(&self) -> Cow<Locator> {unimplemented!()}
+}
 #[derive(Default)]
 pub struct CoreOptions {
   // First, state-related options:

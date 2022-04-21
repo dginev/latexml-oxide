@@ -140,10 +140,13 @@ LoadDefinitions!(state, {
   // # Note that $ within a math alignment (eg array environment),
   // # switches to text mode! There's no $$ for display math.
 
-  // # This is the "normal" case: $ appearing with an alignment that is in text mode.
-  // # It's just like regular $, except it doesn't look for $$ (no display math).
-  // DefPrimitiveI('\@dollar@in@textmode', undef, sub {
-  //     $_[0]->invokeToken(T_CS((LookupValue('IN_MATH') ? '\@@ENDINLINEMATH' : '\@@BEGININLINEMATH'))); });
+  // This is the "normal" case: $ appearing with an alignment that is in text mode.
+  // It's just like regular $, except it doesn't look for $$ (no display math).
+  DefPrimitive!(r"\@dollar@in@textmode", sub [stomach,whatsit,state] {
+    let mathcs = if state.lookup_bool("IN_MATH") { T_CS!("\\@@ENDINLINEMATH") }
+      else {T_CS!("\\@@BEGININLINEMATH") };
+    stomach.invoke_token(&mathcs, state)
+  });
 
   // # This one is for $ appearing within an alignment that's already math.
   // # This should switch to text mode (because it's balancing the hidden $

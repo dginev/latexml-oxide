@@ -194,6 +194,7 @@ impl<'t> Stomach {
           // Common case
           let cc = meaning.get_catcode();
           if cc == Catcode::CS {
+            eprintln!("token: {}; meaning: {}", token, meaning);
             result = self.invoke_token_undefined(&token, state)?;
           } else if cc.is_absorbable() {
             if let Some(digested) = self.invoke_token_simple(&*token, meaning, state)? {

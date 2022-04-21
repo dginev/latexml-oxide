@@ -271,7 +271,7 @@ macro_rules! reversion {
 macro_rules! reversion_digested {
   ($whatsit:ident, $args:ident, $state:ident, $body:block) => {
     Some(Reversion::Closure(Arc::new(
-      |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>, $state: &mut State| -> Result<Tokens> {
+      move |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>, $state: &mut State| -> Result<Tokens> {
         BindInnerState!($state);
         let macro_out = $body;
         end_state_frame!();

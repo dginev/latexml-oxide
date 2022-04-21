@@ -1,3 +1,0 @@
-InputDefinitions('filelistclass', type => 'cls', noltxml => 1, withoptions => 1);
-#======================================================================
-1;

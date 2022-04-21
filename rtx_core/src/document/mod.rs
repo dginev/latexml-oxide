@@ -1415,10 +1415,8 @@ impl Document {
       } else {
         // Didn't find a legit place.
         let message = s!("{:?} isn't allowed in <{}>", qname, cur_qname);
+        //"Currently in " self.getInsertionContext());
         Error!("malformed", qname, self, state, message);
-        // ($qname eq "#PCDATA" ? $qname : '<' . $qname . '>') . " isn't allowed
-        // in <$cur_qname>", "Currently in " .
-        // self.getInsertionContext());
 
         // But we'll do it anyway, unless Error => Fatal.
         Ok(self.node.clone())
