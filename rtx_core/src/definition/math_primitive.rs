@@ -17,7 +17,7 @@ use crate::stomach::Stomach;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::Digested;
+use crate::{Locator,Digested};
 
 // DefMath Define a Mathematical symbol or function.
 // There are two sets of cases:
@@ -187,6 +187,7 @@ impl fmt::Display for MathPrimitive {
 }
 impl Object for MathPrimitive {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "MathPrimitive") }
+  fn get_locator(&self) -> Cow<Locator> {unimplemented!()}
 }
 impl Definition for MathPrimitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }

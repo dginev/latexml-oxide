@@ -355,7 +355,8 @@ impl State {
         catcodes.insert('\t', SPACE);
         catcodes.insert('%', COMMENT);
         catcodes.insert('~', ACTIVE);
-        catcodes.insert('\0', IGNORE);
+        catcodes.insert('\0', ESCAPE);
+        catcodes.insert('\u{000c}', ACTIVE);
         for c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".chars() {
           catcodes.insert(c, LETTER);
         }
@@ -368,7 +369,7 @@ impl State {
 
     let mut value_table = HashMap::new();
     let mut specials_vdq = VecDeque::new();
-    specials_vdq.push_front(Stored::VecChar(vec!['^', '_', '@', '~', '&', '$', '#', '\'']));
+    specials_vdq.push_front(Stored::VecChar(vec!['^', '_', '~', '&', '$', '#', '\'']));
     value_table.insert(s!("SPECIALS"), specials_vdq);
 
     let mut catcodes_typed: Table = HashMap::new();
@@ -980,14 +981,18 @@ impl State {
   fn lookup_definition_internal<'def>(&'def self, key: &'def Token) -> Option<&VecDeque<Stored>> {
     let cc = key.get_catcode();
     let name = key.get_string();
-    let lookupname: &str = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
-      name
+    let lookupname: Option<&str> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
+      if name.is_empty() {
+        None
+      } else {
+        Some(name)
+      }
     } else {
-      cc.name()
+      key.get_executable_primitive_name()
     };
 
-    if !lookupname.is_empty() {
-      self.meaning.get(lookupname)
+    if let Some(lname) = lookupname {
+      self.meaning.get(lname)
     } else {
       None
     }
@@ -1072,9 +1077,12 @@ impl State {
   pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Stored {
     let cc = token.get_catcode();
     let name = token.get_string();
-    let lookupname = if (cc == Catcode::ACTIVE)
-      || (cc == Catcode::CS)
-      || ((cc == Catcode::LETTER) || (cc == Catcode::OTHER) && self.lookup_bool("IN_MATH") && ((self.lookup_mathcode(name).unwrap_or(0)) == 0x8000))
+    let lookupname = if cc == Catcode::ACTIVE || cc == Catcode::CS
+      || (
+        (cc == Catcode::LETTER || (cc == Catcode::OTHER)) &&
+        self.lookup_bool("IN_MATH") &&
+        ( self.lookup_mathcode(name).unwrap_or(0) == 0x8000 )
+      )
     {
       name
     } else {
@@ -1090,7 +1098,7 @@ impl State {
         if let Some(front) = entry.front() {
           if let Stored::Token(ref t) = front {
             let cc = t.get_catcode();
-            if let Some(lookupname) = t.get_primitive_name() {
+            if let Some(lookupname) = t.get_executable_primitive_name() {
               if let Some(retry_entry) = self.meaning.get(lookupname) {
                 // special case,
                 // If a cs has been let to an executable token, lookup ITS defn.

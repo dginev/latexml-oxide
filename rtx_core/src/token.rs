@@ -604,6 +604,16 @@ impl<'a> Token {
     }
   }
 
+  /// Intersect executable and primitive
+  pub fn get_executable_primitive_name(&self) -> Option<&'static str> {
+    let cc = self.code;
+    if cc.is_executable() && cc.is_primitive() {
+      Some(self.code.name())
+    } else {
+      None
+    }
+  }
+
   /// Return the the borrowed &str "text" of the token
   /// use `to_string` instead for an owned String
   pub fn get_string(&self) -> &str { &self.text }

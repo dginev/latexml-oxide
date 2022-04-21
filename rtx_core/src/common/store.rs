@@ -469,6 +469,10 @@ impl From<String> for Stored {
   fn from(value: String) -> Self { Stored::String(value) }
 }
 
+impl From<char> for Stored {
+  fn from(value: char) -> Self { Stored::String(value.to_string()) }
+}
+
 impl<'a> From<&'a String> for Stored {
   fn from(value: &'a String) -> Self { Stored::String(value.clone()) }
 }

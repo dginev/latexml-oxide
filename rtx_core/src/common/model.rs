@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::string::ToString;
+use std::borrow::Cow;
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -12,6 +13,7 @@ use crate::common::relaxng::Relaxng;
 use crate::common::xml::{XPath, XML_NS};
 use crate::document::Document;
 use crate::util::pathname;
+use crate::Locator;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::Node;
 
@@ -53,7 +55,9 @@ pub struct Model {
   pub tagprop: HashMap<String, TagFrame>,
 }
 
-impl Object for Model {}
+impl Object for Model {
+  fn get_locator(&self) -> Cow<Locator> {unimplemented!()}
+}
 impl Model {
   pub fn new() -> Self {
     let mut model = Model::default();

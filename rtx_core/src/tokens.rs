@@ -64,7 +64,7 @@ impl From<Tokens> for Token {
 impl<'a> From<&'a Tokens> for Token {
   fn from(ts: &'a Tokens) -> Token {
     if ts.0.is_empty() {
-      unimplemented!() // what to do here?
+      unimplemented!();
     } else if ts.0.len() == 1 {
       ts.0.first().unwrap().clone()
     } else {
@@ -111,8 +111,13 @@ impl Tokens {
   /// to_number casts back to a parsed Number (usually via gullet.read_number)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_number(&self) -> Number {
-    let token: Token = self.into();
-    token.to_number()
+    if self.is_empty() {
+      eprintln!("TODO: An empty tokens was requested for .to_number, debug this!");
+      Number::default()
+    } else {
+      let token: Token = self.into();
+      token.to_number()
+    }
   }
 
   /// to_dimension casts back to a parsed Dimension (usually via gullet.read_dimension)

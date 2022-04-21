@@ -15,7 +15,7 @@ LoadDefinitions!(state, {
   DefPrimitive!(
     T_MATH!(),
     None,
-    sub[stomach, tokens, state] {
+    sub[stomach, _tokens, state] {
       let mut op = "\\@@BEGININLINEMATH";
       {
         let mut gullet = stomach.get_gullet_mut();

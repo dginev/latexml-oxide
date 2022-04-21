@@ -11,10 +11,11 @@ LoadDefinitions!(state, {
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
 
   DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, args, state] {
-    unpack!(args => star, cs, nargs, opt, body);
+    unpack!(args => star, cs, nargs_opt, opt, body);
     let cs_token: Token = cs.into();
-    let nargs_token: Token = nargs.into();
-    let nargs = nargs_token.to_number().value_of() as usize;
+    let nargs = if nargs_opt.is_empty() { 0 } else {
+      nargs_opt.unlist().first().unwrap().to_number().value_of() as usize
+    };
     if !IsDefinable!(&cs_token) {
       if !state.has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
         let message = s!("Ignoring redefinition (\\newcommand) of {}", cs_token.stringify());
@@ -28,10 +29,11 @@ LoadDefinitions!(state, {
   });
 
   DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, args, state] {
-    unpack!(args => star, cs, nargs, opt, body);
+    unpack!(args => star, cs, nargs_opt, opt, body);
     let cs_token: Token = cs.into();
-    let nargs_token: Token = nargs.into();
-    let nargs = nargs_token.to_number().value_of() as usize;
+    let nargs = if nargs_opt.is_empty() { 0 } else {
+      nargs_opt.unlist().first().unwrap().to_number().value_of() as usize
+    };
     let opt = if opt.is_empty() { None } else { Some(opt) };
     let macro_args = convert_latex_args(nargs, opt, state)?;
     DefMacro!(cs_token, macro_args, body);

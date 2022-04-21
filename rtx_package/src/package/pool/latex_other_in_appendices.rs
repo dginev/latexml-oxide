@@ -40,10 +40,10 @@ LoadDefinitions!(state, {
   //    Or name \@backslashchar\@qend... illegal,
   //    see p.192 of the manual}');
 
-  // DefMacroI('\@qend',   undef, Tokens(Explode('end')));
-  // DefMacroI('\@qrelax', undef, Tokens(Explode('relax')));
-  // DefMacroI('\@spaces', undef, '\space\space\space\space');
-  // Let('\@sptoken', T_SPACE);
+  DefMacro!("\\@qend", sub[_a,_b,_c] { Tokens::new(Explode!("end")) });
+  DefMacro!("\\@qrelax", sub[_a,_b,_c] { Tokens::new(Explode!("relax")) } );
+  DefMacro!("\\@spaces", r"\space\space\space\space");
+  Let!("\\@sptoken", T_SPACE!());
 
   // DefMacroI('\@uclclist', undef, '\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH');
 
@@ -76,7 +76,11 @@ LoadDefinitions!(state, {
   DefMacro!("\\@thirdofthree{}{}{}", sub[gullet, args, state] { unpack!(args=>one,two, three); Ok(three) });
   // DefMacro('\@expandtwoargs{}{}{}', sub {
   //     ($_[1]->unlist, T_BEGIN, Expand($_[2])->unlist, T_END, T_BEGIN, Expand($_[3])->unlist, T_END); });
-  // DefMacro('\@makeother{}', sub { AssignCatcode($_[1] => CC_OTHER, 'local'); });
+  DefMacro!("\\@makeother{}", sub[gullet,args,state] {
+    unpack_to_token!(args=>arg);
+    let arg_c = arg.get_string().chars().next().unwrap();
+    state.assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));
+  });
 
   // TODO: Stubs until we can deal with the rawtex fully
   DefMacro!("\\dospecials", "");
