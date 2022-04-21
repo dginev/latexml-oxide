@@ -5,7 +5,7 @@ A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
 ## Progress
 
-[![test porting progress](http://progressed.io/bar/10)](https://github.com/dginev/rtx/issues/30) | ? of ? core LaTeXML tests PASS
+[![test porting progress](http://progressed.io/bar/10)](https://github.com/dginev/rtx/issues/30) | 23 of ? core LaTeXML tests PASS
 
 ### Why?
 
