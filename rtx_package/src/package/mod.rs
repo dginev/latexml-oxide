@@ -69,4 +69,5 @@ pub use self::api::*;
 
 // At the very end, declare the pool
 pub use self::pool::tex_functions::*;
+pub use self::pool::latex_functions::*;
 pub mod pool;

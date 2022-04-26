@@ -599,9 +599,9 @@ impl Gullet {
     }
   }
   // Note that this returns an empty array if [] is present,
-  // otherwise $default or undef.
+  // [contents] returns Tokens(contents),
+  // otherwise returns None
   pub fn read_optional(&mut self, state: &State) -> Result<Tokens> {
-    // TODO: default
     match self.read_non_space(state) {
       None => Ok(Tokens!()),
       Some(t) => {
@@ -609,7 +609,7 @@ impl Gullet {
           self.read_until(Tokens!(T_OTHER!("]")), state)
         } else {
           self.unread_one(t);
-          Ok(Tokens!()) // TODO: default
+          Ok(Tokens!())
         }
       },
     }

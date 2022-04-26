@@ -927,7 +927,7 @@ pub fn convert_latex_args(mut nargs: usize, optional: Option<Tokens>, state: &mu
       Parameter {
         name: s!("Optional"),
         spec: s!("[Default:{}]", tks.untex(state)),
-        extra: vec![ParameterExtra::Token(tks.into()), ParameterExtra::ParametersOption(None)],
+        extra: vec![ParameterExtra::Tokens(tks), ParameterExtra::ParametersOption(None)],
         ..Parameter::default()
       }
       .init(state)?,

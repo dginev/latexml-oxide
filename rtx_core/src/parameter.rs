@@ -40,21 +40,33 @@ lazy_static! {
 
 #[derive(Clone, Debug)]
 pub enum ParameterExtra {
-  Token(Token),
+  Tokens(Tokens),
   ParametersOption(Option<Parameters>),
 }
 impl From<Token> for ParameterExtra {
-  fn from(t: Token) -> ParameterExtra { ParameterExtra::Token(t) }
+  fn from(t: Token) -> ParameterExtra { ParameterExtra::Tokens(Tokens!(t)) }
+}
+impl From<Tokens> for ParameterExtra {
+  fn from(t: Tokens) -> ParameterExtra { ParameterExtra::Tokens(t) }
 }
 impl From<Option<Parameters>> for ParameterExtra {
   fn from(opt: Option<Parameters>) -> ParameterExtra { ParameterExtra::ParametersOption(opt) }
 }
 impl From<ParameterExtra> for Token {
   fn from(param: ParameterExtra) -> Token {
-    if let ParameterExtra::Token(t) = param {
+    if let ParameterExtra::Tokens(t) = param {
+      t.into()
+    } else {
+      panic!("Can't cast {:?} into Token", param);
+    }
+  }
+}
+impl From<ParameterExtra> for Tokens {
+  fn from(param: ParameterExtra) -> Tokens {
+    if let ParameterExtra::Tokens(t) = param {
       t
     } else {
-      T_OTHER!("")
+      panic!("Can't cast {:?} into Tokens", param);
     }
   }
 }
@@ -304,7 +316,7 @@ impl Parameter {
           state,
           s!("Missing argument {} for {}", self.stringify(), fordefn.stringify())
         );
-        value = Tokens!(T_OTHER!("missing"));
+        value =Tokens!(T_OTHER!("missing"));
       }
     }
     Ok(value)

@@ -196,6 +196,9 @@ impl IntoDigestedResult<Result<Vec<Digested>>> for Vec<Digested> {
 impl IntoDigestedResult<Result<Vec<Digested>>> for Result<Vec<Digested>> {
   fn into_digested_result(self) -> Result<Vec<Digested>> { self }
 }
+impl IntoDigestedResult<Result<Vec<Digested>>> for Result<Digested> {
+  fn into_digested_result(self) -> Result<Vec<Digested>> { self.map(|d| vec![d]) }
+}
 
 pub trait IntoRegisterValueOption<T>: Sized {
   fn into_register_value_option(self) -> Option<RegisterValue>;

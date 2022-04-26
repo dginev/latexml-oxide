@@ -4,6 +4,7 @@ use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
 
 use std::borrow::{Borrow, Cow};
+use std::sync::Arc;
 use std::collections::VecDeque;
 use std::fmt::Display;
 use std::string::ToString;
@@ -47,6 +48,15 @@ impl From<Vec<Token>> for Tokens {
 impl From<Token> for Tokens {
   fn from(t: Token) -> Tokens { Tokens::new(vec![t]) }
 }
+// TODO: Is there a better abstraction that avoids this clone?
+//       I fear it may be using Arc<Tokens> everywhere, which is also too heavy.
+impl From<Arc<Tokens>> for Tokens {
+  fn from(t: Arc<Tokens>) -> Tokens { (*t).clone() }
+}
+impl From<&Arc<Tokens>> for Tokens {
+  fn from(t: &Arc<Tokens>) -> Tokens { (**t).clone() }
+}
+
 impl From<Tokens> for Result<Tokens> {
   fn from(t: Tokens) -> Result<Tokens> { Ok(t) }
 }

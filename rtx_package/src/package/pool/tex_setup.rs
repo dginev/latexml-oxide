@@ -153,11 +153,8 @@ LoadDefinitions!(state, {
     })
   );
 
-  DefParameterType!("Optional", sub[gullet, inner, _extra, state] {
+  DefParameterType!("Optional", sub[gullet, inner, default, state] {
       let mut value = gullet.read_optional(state)?;
-      // TODO: Default
-      // if (!$value && $default) {
-      //   $value = $default; }
       if !inner.is_empty() {
         for inner_p in inner.into_iter().flatten() {
           value = inner_p.reparse_argument(gullet, value, state);
@@ -209,12 +206,15 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefParameterType!("Until", sub[gullet, _inner, until, state] {
-    let until = until.into_iter().map(|x| if let ParameterExtra::Token(t) = x {
-      t
-    } else {
-      T_OTHER!("")
-    }).collect();
+  DefParameterType!("Until", sub[gullet, _inner, until_extra, state] {
+    let mut until = Vec::new();
+    for x in until_extra.into_iter() {
+      if let ParameterExtra::Tokens(t) = x {
+        until.extend(t.unlist());
+      } else {
+        panic!("unexpected ParameterExtra in Until: {:?}",x);
+      }
+    }
     gullet.read_until(Tokens::new(until), state)
   },
   reversion => reversion!(gullet, arg, until, state, {
@@ -338,8 +338,8 @@ LoadDefinitions!(state, {
 
   DefParameterType!("XUntil", sub[gullet, inner, untils, state] {
     let until : Token = match untils[0] {
-      ParameterExtra::Token(ref t) => t.clone(),
-      _ => T_OTHER!("")
+      ParameterExtra::Tokens(ref t) => t.into(),
+      _ => panic!("XUntil needs a token ParameterExtra.")
     }; // Make sure it's a single token!!!
     let mut tokens : Vec<Token> = Vec::new();
     while let Some(token) = gullet.read_x_token(false, false, state)? {
@@ -429,7 +429,7 @@ LoadDefinitions!(state, {
   // Read a matching keyword, eg. Match:=
   DefParameterType!("Match", sub[gullet, _inner, extra, state] {
     let extra_tokens : Vec<Token> = extra.into_iter().filter(|e|
-    matches!(e, ParameterExtra::Token(t))).map(Into::into).collect();
+    matches!(e, ParameterExtra::Tokens(t))).map(Into::into).collect();
     match gullet.read_match(&[&Tokens::new(extra_tokens)], state)? {
       Some(t) => Ok(t),
       None => Ok(Tokens!())
@@ -440,7 +440,7 @@ LoadDefinitions!(state, {
   // (like Match, but ignores catcodes)
   DefParameterType!("Keyword", sub[gullet, _inner, extra, state] {
     let extra_string : String = extra.into_iter().map(|e|
-    if let ParameterExtra::Token(t) = e {
+    if let ParameterExtra::Tokens(t) = e {
         t.to_string()
       } else {
         String::new()
@@ -483,7 +483,7 @@ LoadDefinitions!(state, {
 
   // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
   DefParameterType!("OptionalSemiverbatim",
-    sub[gullet, inner, _extra, state] { gullet.read_optional(state)},
+    sub[gullet, inner, _extra, state] { gullet.read_optional(state) },
     semiverbatim => Some(Vec::new()),
     optional => true,
     reversion => reversion!(gullet, arg, inner, state, {

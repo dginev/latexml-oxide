@@ -38,7 +38,7 @@ LoadDefinitions!(state, {
     let gullet = stomach.get_gullet_mut();
     let cs_expanded = &Expand!(cs, gullet).to_string();
     let default = default.to_number();
-    SetCounter!(cs_expanded, default, gullet);
+    SetCounter!(cs_expanded, default, state);
   });
   DefPrimitive!("\\addtocounter{}{Number}", sub[stomach, args, state] {
     unpack!(args=>cs, default);

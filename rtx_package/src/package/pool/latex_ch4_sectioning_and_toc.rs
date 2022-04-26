@@ -44,7 +44,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
   DefMacro!("\\@startsection@hook", "");
 
   NewCounter!("secnumdepth");
-  SetCounter!("secnumdepth", Number::new(3.0), None);
+  SetCounter!("secnumdepth", Number::new(3.0));
   DefMacro!(
     "\\@startsection{}{}{}{}{}{} OptionalMatch:*", sub[gullet,args,state] {
       unpack!(args => type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag);
