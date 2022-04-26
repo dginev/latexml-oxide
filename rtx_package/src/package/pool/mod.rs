@@ -34,6 +34,7 @@ mod tex_stray_math_style;
 
 // LaTeX Pool
 pub mod latex;
+pub mod latex_functions; // auxiliary functions
 mod latex_ch10_array_and_tabular;
 mod latex_ch10_tabbing_environment;
 mod latex_ch11_index_and_glossary;

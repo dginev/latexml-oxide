@@ -424,4 +424,12 @@ impl Digested {
       List(l) => l.boxes.iter().any(check),
     }
   }
+  /// Provide a way of emulating an `Undigested` argument, by requesting
+  /// raw tokens, only when they are preserved -- empty otherwise.
+  pub fn raw_tokens(&self) -> Arc<Tokens> {
+    match self {
+      Digested::Postponed(tks) => Arc::clone(tks),
+      _ => Arc::new(Tokens::default())
+    }
+  }
 }

@@ -1,5 +1,9 @@
 use crate::package::*;
 
+// These define the typerefnum form, for out-of-context \ref"s
+// Better would be language sensitive!
+const PM_ORDINAL_SUFFICES : &[&'static str] = &["th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"];
+
 LoadDefinitions!(state, {
   //======================================================================
   // C.6.2 List-Making environments
@@ -44,49 +48,49 @@ LoadDefinitions!(state, {
   DefConstructor!("\\itemize@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[stomach, args, state] {
-      unpack_to_string!(args=>tag);
-      ref_step_item_counter(&tag, stomach, state) });
+      let undigested = dbg!(args[0].as_ref().map(|d| d.raw_tokens()));
+      ref_step_item_counter(undigested, stomach, state) });
   DefConstructor!("\\inline@itemize@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
     properties => sub[stomach, args, state] {
-      unpack_to_string!(args=>tag);
-      ref_step_item_counter(&tag, stomach, state) });
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      ref_step_item_counter(undigested, stomach, state) });
 
   DefMacro!("\\enumerate@item", "\\par\\enumerate@item@");
   DefConstructor!("\\enumerate@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[stomach, args, state] {
-      unpack_to_string!(args=>tag);
-      ref_step_item_counter(&tag, stomach, state) });
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      ref_step_item_counter(undigested, stomach, state) });
   DefConstructor!("\\inline@enumerate@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
     properties => sub[stomach, args, state] {
-      unpack_to_string!(args=>tag);
-      ref_step_item_counter(&tag, stomach, state) });
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      ref_step_item_counter(undigested, stomach, state) });
 
   DefMacro!("\\description@item", "\\par\\description@item@");
   DefConstructor!("\\description@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[stomach, args, state] {
-      unpack_to_string!(args=>tag);
-      ref_step_item_counter(&tag, stomach, state) });
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      ref_step_item_counter(undigested, stomach, state) });
   DefConstructor!("\\inline@description@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
     properties => sub[stomach, args, state] {
-      unpack_to_string!(args=>tag);
-      ref_step_item_counter(&tag, stomach, state) });
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      ref_step_item_counter(undigested, stomach, state) });
 
   DefEnvironment!("{itemize}",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
     properties => { BeginItemize!("itemize", "@item") },
-    before_digest_end => { Digest!("\\par")?; },
+    before_digest_end => { Digest!("\\par") },
     locked => true,
     mode => "text"
   );
   DefEnvironment!("{enumerate}",
-    "<ltx:enumerate  xml:id='#id'>#body</ltx:enumerate>",
+    "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
     properties => { BeginItemize!("enumerate", "enum") },
-    before_digest_end => { Digest!("\\par")?; },
+    before_digest_end => { Digest!("\\par") },
     locked => true,
     mode => "text"
   );
@@ -94,7 +98,7 @@ LoadDefinitions!(state, {
     "<ltx:description  xml:id='#id'>#body</ltx:description>",
     before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
     properties => { BeginItemize!("description", "@desc") },
-    before_digest_end => { Digest!("\\par")?; },
+    before_digest_end => { Digest!("\\par") },
     locked => true,
     mode => "text"
   );
@@ -131,20 +135,17 @@ LoadDefinitions!(state, {
   DefMacro!("\\label@itemiv", "\\labelitemiv");
 
   // These hookup latexml"s tagging to normal latex"s \labelitemi...
-  DefMacro!("\\fnum@@itemi", "{\\makelabel{\\label@itemi}}");
-  DefMacro!("\\fnum@@itemii", "{\\makelabel{\\label@itemii}}");
-  DefMacro!("\\fnum@@itemiii", "{\\makelabel{\\label@itemiii}}");
-  DefMacro!("\\fnum@@itemiv", "{\\makelabel{\\label@itemiv}}");
+  DefMacro!("\\fnum@@itemi", r"{\makelabel{\label@itemi}}");
+  DefMacro!("\\fnum@@itemii", r"{\makelabel{\label@itemii}}");
+  DefMacro!("\\fnum@@itemiii", r"{\makelabel{\label@itemiii}}");
+  DefMacro!("\\fnum@@itemiv", r"{\makelabel{\label@itemiv}}");
 
-  // These define the typerefnum form, for out-of-context \ref"s
-  // Better would language sensitive!
   DefMacro!("\\lx@poormans@ordinal{}", sub[gullet, args, state] {
     unpack_to_token!(args => ctr);
-    let pm_ordinal_suffices = ["th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"];
     let mut ctr_str      = CounterValue!(ctr.get_string()).value_of().to_string();
     let last_char = ctr_str.chars().last().unwrap_or('.');
     if last_char.is_ascii_digit() {
-      ctr_str.push_str(pm_ordinal_suffices[last_char.to_digit(10).unwrap() as usize]);
+      ctr_str.push_str(PM_ORDINAL_SUFFICES[last_char.to_digit(10).unwrap() as usize]);
     }
     T_OTHER!(ctr_str)
   });
@@ -164,7 +165,6 @@ LoadDefinitions!(state, {
   //  define \labelenumi,... and probably \p@enumii...
 
   // How the refnums look... (probably should be in class file, but already here)
-  DefMacro!("\\p@enumi", "");
   DefMacro!("\\p@enumii", "\\theenumi");
   DefMacro!("\\p@enumiii", "\\theenumi(\\theenumii)");
   DefMacro!("\\p@enumiv", "\\p@enumii\\theenumiii");
@@ -187,10 +187,6 @@ LoadDefinitions!(state, {
   DefMacro!("\\typerefnum@enumii", "\\enumtyperefname~\\p@enumii\\theenumii \\itemcontext");
   DefMacro!("\\typerefnum@enumiii", "\\enumtyperefname~\\p@enumiii\\theenumiii \\itemcontext");
   DefMacro!("\\typerefnum@enumiv", "\\enumtyperefname~\\p@enumiv\\theenumiv \\itemcontext");
-  //DefMacro!("\\typerefnum@enumi",   None, "\enumtyperefname~\p@enumi\labelenumi \itemcontext");
-  //DefMacro!("\\typerefnum@enumii",  None, "\enumtyperefname~\p@enumii\labelenumii \itemcontext");
-  //DefMacro!("\\typerefnum@enumiii", None, "\enumtyperefname~\p@enumiii\labelenumiii \itemcontext");
-  //DefMacro!("\\typerefnum@enumiv",  None, "\enumtyperefname~\p@enumiv\labelenumiv \itemcontext");
 
   //----------------------------------------------------------------------
   // Basic description list bits
@@ -219,10 +215,13 @@ LoadDefinitions!(state, {
   DefMacro!("\\desctyperefname", "item");
 
   // Blech
-  for lvl in &[
-    "@itemi", "@itemii", "@itemiii", "@itemiv", "@itemv", "@itemvi", "enumi", "enumii", "enumiii", "enumiv", "@desci", "@descii", "@desciii",
-    "@desciv", "@descv", "@descvi",
-  ] {
+  for lvl in &["@itemi", "@itemii", "@itemiii", "@itemiv", "@itemv", "@itemvi"] {
     DefMacro!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\itemtyperefname"));
+  }
+  for lvl in &["enumi", "enumii", "enumiii", "enumiv"] {
+    DefMacro!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\enumtyperefname"));
+  }
+  for lvl in &["@desci", "@descii", "@desciii", "@desciv", "@descv", "@descvi"] {
+    DefMacro!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\desctyperefname"));
   }
 });

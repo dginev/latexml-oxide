@@ -166,14 +166,10 @@ LoadDefinitions!(outer_stomach, outer_state, {
   );
 
   // Close the bibliography
-  DefConstructor!("\\endthebibliography", "</ltx:biblist></ltx:bibliography>",
-    after_digest => sub[stomach, whatsit, state] {
-      let t = T_CS!("\\@appendix");
-      if IsDefined!(&t) {
-        stomach.digest(t, state)?;
-      }
-    },
-    locked => true);
+  DefConstructor!("\\endthebibliography", sub[document,whatsit,props,state] {
+    document.maybe_close_element("ltx:biblist", state)?;
+    document.maybe_close_element("ltx:bibliography", state)?;
+  }, locked=>true);
   // auto close the bibliography and contained biblist.
   Tag!("ltx:biblist",      auto_close => true);
   Tag!("ltx:bibliography", auto_close => true);

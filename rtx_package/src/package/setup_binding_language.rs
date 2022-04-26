@@ -631,6 +631,21 @@ macro_rules! DefConstructor {
     let (cs, params) = parse_prototype!($proto);
     defi_constr!(cs, params, compiled_replacement, options);
   }};
+  ($proto:literal, sub [ $document:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    let props : ConstructorOptions;
+    let compiled_replacement : Option<ReplacementClosure> = Some(Arc::new(replacement!($document, $args, props, $inner_state, $body)));
+    let (cs, params) = parse_prototype!($proto);
+    defi_constr!(cs, params, compiled_replacement, options);
+  }};
+  ($proto:literal, sub [ $document:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    let props : ConstructorOptions;
+    let args : Option<Parameters> = None;
+    let compiled_replacement : Option<ReplacementClosure> = Some(Arc::new(replacement!($document, args, props, $inner_state, $body)));
+    let (cs, params) = parse_prototype!($proto);
+    defi_constr!(cs, params, compiled_replacement, options);
+  }};
   // Literal replacement flavors
   ($proto:expr, $replacement:literal) => {{
     let (cs, params) = parse_prototype!($proto);
@@ -936,18 +951,24 @@ macro_rules! CounterValue {
 }
 #[macro_export]
 macro_rules! SetCounter {
-  ($ctr:expr, $value:expr, None) => {
+  ($ctr:expr, $value:expr) => {
     AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
     DefMacro!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
                 scope => Some(Scope::Global)
     );
   };
-  ($ctr:expr, $value:expr, $gullet:ident) => {
+  ($ctr:expr, $value:expr) => {
     AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
     AfterAssignment!();
     DefMacro!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
                 scope => Some(Scope::Global)
     );
+  };
+  ($ctr:expr, $value:expr, $state_arg:ident) => {
+    $state_arg.assign_value(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
+    $state_arg.after_assignment();
+    def_macro(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+      Some(ExpandableOptions{ scope: Some(Scope::Global), ..ExpandableOptions::default()}), $state_arg);
   }
 }
 #[macro_export]
@@ -1987,7 +2008,7 @@ macro_rules! AddToMacro {
 macro_rules! BeginItemize {
   ($itype:literal, $counter:literal) => {{
     bind_state_mut!(stmch, st);
-    begin_itemize($itype, Some($counter), false, stmch, st)
+    begin_itemize($itype, Some($counter), BeginItemizeOptions::default(), stmch, st)
   }};
 }
 

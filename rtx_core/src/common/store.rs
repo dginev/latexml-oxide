@@ -722,7 +722,10 @@ impl<'a> From<&'a Stored> for Option<Number> {
       Stored::Glue(ref n) => Some(Number::new(n.value_of())),
       Stored::MuDimension(ref n) => Some(Number::new(n.value_of())),
       Stored::MuGlue(ref n) => Some(Number::new(n.value_of())),
-      _ => None,
+      other => {
+        eprintln!("TODO: auto-cast of Stored to Number attempted on {:?}",other);
+        None
+      },
     }
   }
 }

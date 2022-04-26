@@ -9,47 +9,42 @@ LoadDefinitions!(state, {
   DefConditional!("\\if@nmbrlist");
   DefMacro!("\\@listctr", "");
   DefPrimitive!("\\usecounter{}", sub[stomach, args, state] {
-    unpack_to_token!(args => counter);
+    unpack!(args => counter);
     let gullet = stomach.get_gullet_mut();
-    let counter = Expand!(counter, gullet).to_string();
+    let counter = Expand!(counter, gullet, state).to_string();
     if counter.is_empty() {
-      begin_itemize("list", None, false, stomach, state)?;
+      begin_itemize("list", None, BeginItemizeOptions::default(), stomach, state)?;
     } else {
-      begin_itemize("list", Some(&counter), true, stomach, state)?;
+      begin_itemize("list", Some(&counter), BeginItemizeOptions {
+        nolevel:true,
+        ..BeginItemizeOptions::default() },
+        stomach, state)?;
     }
   });
 
-  DefMacro!(
-    "\\list{}{}",
-    r###"
-  \let\@listctr\@empty#2\ifx\@listctr\@empty\usecounter{}\fi\expandafter\def\csname fnum@\@listctr\endcsname{#1}\lx@list
-  "###
-  );
+  DefMacro!(r"\list{}{}",
+  r"\let\@listctr\@empty#2\ifx\@listctr\@empty\usecounter{}\fi\expandafter\def\csname fnum@\@listctr\endcsname{#1}\lx@list");
   DefMacro!("\\endlist", "\\endlx@list");
 
-  DefConstructor!("\\lx@list DigestedBody",
-    "<ltx:itemize>#1</ltx:itemize>",
+  // Start an anonymous list (often misused)
+  DefConstructor!("\\lx@list",
+    "<ltx:itemize>",
     before_digest => sub[stomach, state] { stomach.bgroup(state); });
-  DefPrimitive!("\\endlx@list", sub[stomach, args, state] { stomach.egroup(state)?; });
+  // Close the anonymous list if we're still within one.
+  DefConstructor!("\\endlx@list", sub[document, state] {
+    document.maybe_close_element("ltx:itemize", state)?; },
+    before_digest => sub[stomach,state] { stomach.egroup(state)?; });
 
   DefConstructor!("\\list@item OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[stomach, args, state] {
-      unref!(args => tag);
-      ref_step_item_counter(&tag.to_string(), stomach, state) }
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      ref_step_item_counter(undigested, stomach, state) }
   );
-
-  // This isn't quite right, although it seems right for deep, internal uses with a single \item.
-  // Perhaps we need to check trivlist's afterwards and if they are just a single item,
-  // reduce it to an ltx:p ??
-  // DefMacro!('\trivlist@item[]', '');
-  // DefEnvironment!('{trivlist}',
-  //   '<ltx:p>#body</ltx:p>',
-  //   beforeDigest => sub { Let('\item', '\trivlist@item'); });
 
   DefEnvironment!("{trivlist}",
     "<ltx:itemize>#body</ltx:itemize>",
-    properties => sub[stomach, args, state] { begin_itemize("trivlist", None, false, stomach, state) },
+    properties => sub[stomach, args, state] { begin_itemize("trivlist", None, BeginItemizeOptions::default(), stomach, state) },
     before_digest_end => { Digest!("\\par")?; }
   );
 
@@ -58,13 +53,11 @@ LoadDefinitions!(state, {
     "<ltx:item xml:id='#id' itemsep='#itemsep'>\
       <ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",    // At least an empty tag! ?
     properties => sub[stomach, args, state] {
-      // TODO: So, I hear you like boilerplate...
-      // in Perl this was the super simple:
-      // Digest(Expand($_[1]))
-      // WAIT?! but this is in properties -- args are already digested???
-      if let Some(ref tag) = args[0] {
-        // TODO: MUST WE CLONE?!
-        Ok(map!("tag" => Stored::Digested(Box::new(tag.clone()))))
+      if let Some(Digested::Postponed(ref tag_tokens)) = args[0] {
+        let mut gullet = stomach.get_gullet_mut();
+        let tag_expanded = Expand!(tag_tokens, gullet, state);
+        let tag = stomach.digest(tag_expanded, state)?;
+        Ok(stored_map!("tag" => tag))
       } else {
         Ok(HashMap::new())
       }
