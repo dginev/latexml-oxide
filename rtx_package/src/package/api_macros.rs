@@ -292,7 +292,7 @@ macro_rules! prop_digested {
     match $props.get($key) {
       Some(Stored::VecDigested(ref vd)) => vd.iter().collect::<Vec<&Digested>>(),
       Some(Stored::Digested(d)) => vec![&(**d)],
-      Some(Stored::String(s)) => panic!("prop_digested! called on a string property {:?} with value {:?}.",$key, s),
+      Some(Stored::String(s)) => panic!("prop_digested! called on a string property {:?} with value {:?}.", $key, s),
       None => Vec::new(),
       other => {
         eprintln!("Please extend the api_macros::prop_digested macro to support: {:?}", other);
@@ -376,7 +376,10 @@ macro_rules! unpack_to_token {
 #[macro_export]
 macro_rules! count_unpack_to_string {
   ($index:expr, $args:ident => $var:ident) => (
-    let $var = $args[$index].as_ref().unwrap().to_string();
+    let $var = match $args[$index].as_ref() {
+      Some(v) => v.to_string(),
+      None => String::new()
+    };
   );
   ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
     count_unpack_to_string!($index,$args => $var);

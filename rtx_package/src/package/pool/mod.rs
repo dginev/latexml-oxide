@@ -34,7 +34,6 @@ mod tex_stray_math_style;
 
 // LaTeX Pool
 pub mod latex;
-pub mod latex_functions; // auxiliary functions
 mod latex_ch10_array_and_tabular;
 mod latex_ch10_tabbing_environment;
 mod latex_ch11_index_and_glossary;
@@ -72,6 +71,7 @@ mod latex_ch8_theoremlike_environments;
 mod latex_ch9_figures_and_tables;
 mod latex_ch9_marginal_notes;
 mod latex_delimiters;
+pub mod latex_functions; // auxiliary functions
 mod latex_hook;
 mod latex_other_in_appendices;
 mod latex_semi_undocumented;

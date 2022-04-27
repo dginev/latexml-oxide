@@ -300,7 +300,7 @@ impl Parameter {
         value = value.neutralize(semi_chars, state);
       }
       if self.pack_parameters {
-        value = value.pack_parameters(state);
+        value = value.pack_parameters();
       }
       value_opt = Some(value);
     }
@@ -323,10 +323,15 @@ impl Parameter {
     Ok(value_opt)
   }
 
-  pub fn digest(&self, stomach: &mut Stomach, mut value_opt: Option<Tokens>, _fordefn: Option<&Constructor>, state: &mut State) -> Result<Option<Digested>> {
+  pub fn digest(
+    &self,
+    stomach: &mut Stomach,
+    mut value_opt: Option<Tokens>,
+    _fordefn: Option<&Constructor>,
+    state: &mut State,
+  ) -> Result<Option<Digested>> {
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
-      // let value_to_digest = value.clone();
       self.setup_catcodes(state);
       if let Some(value) = value_opt {
         let neutralized = stomach.reading_from_mouth(Mouth::default(), state, move |stomach: &mut Stomach, state: &mut State| {

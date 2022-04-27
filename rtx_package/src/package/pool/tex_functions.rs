@@ -56,64 +56,74 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
   let mut tokens: VecDeque<Token> = if params_in.is_empty() {
     VecDeque::new()
   } else {
-    VecDeque::from(params_in.unlist())
+    VecDeque::from(params_in.pack_parameters().unlist())
   };
   // Now, recognize parameters and delimiters.
   let mut params = Vec::new();
   let mut n = 0;
   while let Some(mut t) = tokens.pop_front() {
-    if t.get_catcode() == Catcode::PARAM {
-      if tokens.is_empty() {
-        // Special case: lone # NOT following a numbered parameter
-        // Note that we require a { to appear next, but do NOT read it!
-        params.push(Parameter::new("RequireBrace", "RequireBrace", state)?);
-      } else {
-        n += 1;
-        t = tokens.pop_front().unwrap();
-        // TODO: Double-check we're not missing cases from the original:
-        //       ($n == (ord($t->getString) - ord('0'))
-        let t_num = t.get_string().parse::<i32>().unwrap_or(-1);
-        if t_num != n {
-          fatal!(ParamSpec, Expected, s!("Parameters for {:?} not in order in {:?}", cs, params));
-        }
-        // Check for delimiting text following the parameter #n
-        let mut delim = Vec::new();
-        let mut pc = Catcode::MARKER; // throwaway initial val
-        let mut cc;
-        while !tokens.is_empty() && (tokens.front().unwrap().get_catcode() != Catcode::PARAM) {
-          let d = tokens.pop_front().unwrap();
-          cc = d.get_catcode();
-          if !(cc == pc && cc == Catcode::SPACE) {
-            // BUT collapse whitespace!
-            delim.push(d);
-          }
-          pc = cc;
-        }
-        // Found text that marks the end of the parameter
-        if !delim.is_empty() {
-          let expected = Tokens::new(delim);
-          params.push(
-            Parameter {
-              name: s!("Until"),
-              spec: s!("Until:{}", expected),
-              extra: expected.into(),
-              ..Parameter::default()
-            }
-            .init(state)?,
-          );
-        } else if tokens.len() == 1 && tokens.front().unwrap().get_catcode() == Catcode::PARAM {
-          // Special case: trailing sole # => delimited by next opening brace.
-          tokens.pop_front();
-          params.push(Parameter::new("UntilBrace", "UntilBrace", state)?);
+    let cc = t.get_catcode();
+    if cc == Catcode::PARAM || cc == Catcode::ARG {
+      if cc == Catcode::PARAM {
+        if tokens.is_empty() {
+          // Special case: lone # NOT following a numbered parameter
+          // Note that we require a { to appear next, but do NOT read it!
+          params.push(Parameter::new("RequireBrace", "RequireBrace", state)?);
         } else {
-          // Nothing? Just a plain parameter.
-          params.push(Parameter::new("Plain", "{}", state)?);
+          n += 1;
+          if let Some(t_next) = tokens.pop_front() {
+            t = t_next;
+          } else {
+            unimplemented!(); // hm, this is a bit of a pain to port without making t into an Option<Token>...
+          }
         }
+      } else { // CC_ARG case, keep looking at this token
+        n += 1;
+      }
+      let t_num = t.get_string().parse::<i8>().unwrap_or(-1);
+      if t_num != n {
+        fatal!(ParamSpec, Expected, s!("Parameters for {:?} not in order in {:?}", cs, params));
+      }
+      // Check for delimiting text following the parameter #n
+      let mut delim = Vec::new();
+      let mut pc = Catcode::MARKER; // throwaway initial val
+      while !tokens.is_empty() {
+        let inner_cc = tokens.front().unwrap().get_catcode();
+        if inner_cc == Catcode::PARAM || inner_cc == Catcode::ARG {
+          break;
+        }
+        let d = tokens.pop_front().unwrap();
+        if !(pc == Catcode::SPACE && inner_cc == Catcode::SPACE) {
+          // BUT collapse whitespace!
+          delim.push(d);
+        }
+        pc = inner_cc;
+      }
+      // Found text that marks the end of the parameter
+      if !delim.is_empty() {
+        let expected = Tokens::new(delim);
+        params.push(Parameter {
+          name: s!("Until"),
+          spec: s!("Until:{}", expected),
+          extra: expected.into(),
+          ..Parameter::default()
+        }.init(state)?);
+      } else if tokens.len() == 1 && tokens.front().unwrap().get_catcode() == Catcode::PARAM {
+        // Special case: trailing sole # => delimited by next opening brace.
+        tokens.pop_front();
+        params.push(Parameter::new("UntilBrace", "UntilBrace", state)?);
+      } else {
+        // Nothing? Just a plain parameter.
+        params.push(Parameter::new("Plain", "{}", state)?);
       }
     } else {
       // Initial delimiting text is required.
       let mut lit: Vec<Token> = vec![t];
-      while !tokens.is_empty() && (tokens.front().unwrap().get_catcode() != Catcode::PARAM) {
+      while !tokens.is_empty() {
+        let lit_cc = tokens.front().unwrap().get_catcode();
+        if lit_cc == Catcode::PARAM || lit_cc == Catcode::ARG {
+          break;
+        }
         lit.push(tokens.pop_front().unwrap());
       }
       let expected = Tokens::new(lit);
@@ -124,9 +134,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
           extra: expected.into(),
           novalue: true,
           ..Parameter::default()
-        }
-        .init(state)?,
-      );
+        }.init(state)?);
     }
   }
   // return (@params ? LaTeXML::Core::Parameters->new(@params) : undef);

@@ -429,7 +429,7 @@ impl Digested {
   pub fn raw_tokens(&self) -> Arc<Tokens> {
     match self {
       Digested::Postponed(tks) => Arc::clone(tks),
-      _ => Arc::new(Tokens::default())
+      _ => Arc::new(Tokens::default()),
     }
   }
 }

@@ -671,7 +671,7 @@ impl<'a> Token {
     }
   }
 
-  pub fn pack_parameters(self, state: &State) -> Self { self }
+  pub fn pack_parameters(self) -> Self { self }
 
   pub fn with_dont_expand(self, state: &State) -> Result<Self> {
     let cc = self.code;

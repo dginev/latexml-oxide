@@ -1,9 +1,6 @@
 use rtx_core::state::State;
 
-pub fn start_appendices(kind: &str, state:&mut State) {
-  begin_appendices(kind, state)
-}
-
+pub fn start_appendices(kind: &str, state: &mut State) { begin_appendices(kind, state) }
 
 // Class files should define \@appendix to call this as startAppendices('section') or chapter...
 // counter is also the element name!

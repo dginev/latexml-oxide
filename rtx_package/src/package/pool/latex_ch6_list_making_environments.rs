@@ -2,7 +2,7 @@ use crate::package::*;
 
 // These define the typerefnum form, for out-of-context \ref"s
 // Better would be language sensitive!
-const PM_ORDINAL_SUFFICES : &[&'static str] = &["th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"];
+const PM_ORDINAL_SUFFICES: &[&'static str] = &["th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"];
 
 LoadDefinitions!(state, {
   //======================================================================

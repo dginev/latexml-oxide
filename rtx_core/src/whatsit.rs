@@ -176,7 +176,8 @@ impl Object for Whatsit {
               .iter()
               .map(|opt| match opt {
                 Some(arg) => Some(arg.revert(state).ok()?),
-                None => None })
+                None => None,
+              })
               .collect();
             tokens.extend(parameters.revert_arguments(args, state)?)
           }

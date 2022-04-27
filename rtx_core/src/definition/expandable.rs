@@ -206,7 +206,7 @@ impl Expandable {
     //     "Expansion is " . ToString($expansion)) unless $expansion->isBalanced;
     if !traits.nopack_parameters {
       if let ExpansionBody::Tokens(expansion_tokens) = expansion {
-        expansion = ExpansionBody::Tokens(Tokens::pack_parameters(expansion_tokens, state));
+        expansion = ExpansionBody::Tokens(Tokens::pack_parameters(expansion_tokens));
       }
     }
 
