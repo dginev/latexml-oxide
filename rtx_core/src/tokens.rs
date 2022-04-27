@@ -86,6 +86,20 @@ impl<'a> From<&'a Tokens> for Token {
   }
 }
 
+impl From<Option<Tokens>> for Token {
+  fn from(ts_opt: Option<Tokens>) -> Token {
+    match ts_opt {
+      Some(ts) => ts.into(),
+      None => panic!("Casting a None (undef Tokens) into a Token is a Bug.")
+    }
+  }
+}
+
+
+impl From<Token> for Option<Tokens> {
+  fn from(t: Token) -> Option<Tokens> { Some(Tokens::new(vec![t])) }
+}
+
 impl Display for Tokens {
   /// to_string is used often, and for more keyword-like reasons,
   /// NOT for creating valid TeX (use revert or UnTeX for that!)
@@ -223,28 +237,14 @@ impl Tokens {
 
   // NOTE: Assumes each arg either undef or also Tokens
   // Using inline accessors on those assumptions
-  pub fn substitute_parameters(&self, args: Vec<Tokens>) -> Self {
+  pub fn substitute_parameters(&self, args: Vec<Option<Tokens>>) -> Self {
     let mut result = Vec::new();
     let mut in_tokens = self.0.iter();
     while let Some(token) = in_tokens.next() {
-      if token.get_catcode() != Catcode::PARAM {
-        // Non '#'; copy it
+      if token.get_catcode() != Catcode::ARG { // Non-match; copy it
         result.push(token.clone());
-      } else if let Some(token2) = in_tokens.next() {
-        if token2.get_catcode() != Catcode::PARAM {
-          // Not multiple '#'; read arg.
-          let arg_number = token2.to_string().parse::<usize>().unwrap();
-          // TODO: Should we explicitly handle the error where arg_number is higher than the available `args` entries? Or catch it higher at the caller
-          // level?
-          let arg = &args[arg_number - 1];
-          // Note: there is no way to optimize away the `.clone` call here,
-          // as the same argument number #i could be repeated in the expanded body,
-          // hence needing to unlist the same saved Tokens multiple times
-          result.extend(arg.clone().unlist());
-        } else {
-          // Duplicated '#', copy 2nd '#'
-          result.push(token2.clone());
-        }
+      } else if let Some(arg) = args[token.text.parse::<usize>().unwrap()].clone() {
+        result.extend(arg.unlist());
       }
     }
     Tokens::new(result)

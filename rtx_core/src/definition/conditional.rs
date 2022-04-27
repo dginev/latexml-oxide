@@ -177,7 +177,7 @@ impl Conditional {
       }
     } else {
       // If there's no test, it must be the Special Case, \ifcase
-      let num = args[0].to_number().value_of();
+      let num = args[0].as_ref().unwrap().to_number().value_of();
       if num > 0.0 {
         let _to = self.skip_conditional_body(num, gullet, state);
         //       print STDERR "{$num} [skipped to " . ToString($to) . "]\n" if $tracing;

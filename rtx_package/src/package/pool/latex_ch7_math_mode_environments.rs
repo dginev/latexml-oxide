@@ -86,7 +86,7 @@ fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut Stat
   if tags_numbered_update {
     let invoked_tags = build_invocation(
       T_CS!("\\lx@make@tags"),
-      vec![Tokens::new(Explode!(ctr.unwrap()))],
+      vec![Some(Tokens::new(Explode!(ctr.unwrap())))],
       stomach.get_gullet_mut(),
       state,
     )?;

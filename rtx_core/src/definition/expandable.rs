@@ -232,7 +232,7 @@ impl Expandable {
     }
   }
 
-  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Tokens>, state: &mut State) -> Result<Tokens> {
+  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Option<Tokens>>, state: &mut State) -> Result<Tokens> {
     match self.expansion {
       Some(ExpansionBody::Closure(ref closure)) => closure(gullet, args, state),
       // but for tokens, make sure args are proper Tokens (lists)

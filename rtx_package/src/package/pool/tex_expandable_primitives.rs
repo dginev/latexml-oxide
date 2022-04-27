@@ -73,7 +73,7 @@ LoadDefinitions!(outer_state, {
   // define it here (only approxmiately), since it's already useful.
   Let!("\\protect", "\\relax");
 
-  DefMacro!("\\romannumeral Number", sub[gullet, args, state] { roman!(args[0].to_number().value_of()) });
+  DefMacro!("\\romannumeral Number", sub[gullet, args, state] { roman!(args[0].as_ref().unwrap().to_number().value_of()) });
 
   // # 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
   // # suggests all characters except spaces are returned in category code Other, i.e. Explode()
@@ -267,7 +267,7 @@ LoadDefinitions!(outer_state, {
   // stomach, but we may require some special-case treatment in other pieces of code...
   DefMacro!("\\input", "\\ltx@input");
   DefPrimitive!("\\ltx@input TeXFileName", sub[stomach,args,state] {
-    input(&args[0].to_string(), InputOptions::default(), stomach, state)?;
+    input(&args[0].as_ref().unwrap().to_string(), InputOptions::default(), stomach, state)?;
   });
 
   // Note that TeX doesn't actually close the mouth;

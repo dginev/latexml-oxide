@@ -28,10 +28,10 @@ LoadDefinitions!(outer_state, {
   // twice instead, via a macro
   let define_included: PrimitiveClosure = Arc::new(primitiveproc!(stomach, args, inner_state, {
     args.reverse(); // we'll be using .pop() from the front
-    let name = args.pop().unwrap_or(Tokens!()).to_string();
-    let mut before_tokens = args.pop().unwrap_or(Tokens!()).unlist();
+    let name = args.pop().unwrap().unwrap().to_string();
+    let mut before_tokens = args.pop().unwrap().unwrap().unlist();
     before_tokens.push(T_CS!("\\ignorespaces"));
-    let mut after_tokens = args.pop().unwrap_or(Tokens!()).unlist();
+    let mut after_tokens = args.pop().unwrap().unwrap().unlist();
     after_tokens.push(T_CS!("\\ignorespaces"));
     // Note that we define the `magic' environment control sequences,
     // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
@@ -45,7 +45,7 @@ LoadDefinitions!(outer_state, {
   }));
 
   let mut mock_stomach = Stomach::default();
-  define_excluded(&mut mock_stomach, vec![Tokenize!("comment", None)], outer_state)?;
+  define_excluded(&mut mock_stomach, vec![Some(Tokenize!("comment", None))], outer_state)?;
 
   DefPrimitive!("\\includecomment{}", Arc::clone(&define_included));
   DefPrimitive!("\\excludecomment{}", define_excluded);

@@ -155,6 +155,35 @@ impl IntoTokensResult<Result<Tokens>> for () {
   fn into_tokens_result(self) -> Result<Tokens> { Ok(Tokens!()) }
 }
 
+pub trait IntoResultOptTokens<T>: Sized {
+  fn into_result_opt_tokens(self) -> Result<Option<Tokens>>;
+}
+
+impl IntoResultOptTokens<Result<Option<Tokens>>> for Token {
+  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { Ok(Some(Tokens!(self))) }
+}
+
+impl IntoResultOptTokens<Result<Option<Tokens>>> for Vec<Token> {
+  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { Ok(Some(Tokens::new(self))) }
+}
+
+impl IntoResultOptTokens<Result<Option<Tokens>>> for Tokens {
+  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { Ok(Some(self)) }
+}
+
+impl IntoResultOptTokens<Result<Option<Tokens>>> for Result<Tokens> {
+  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { self.map(|ts| Some(ts)) }
+}
+
+impl IntoResultOptTokens<Result<Option<Tokens>>> for Result<Option<Tokens>> {
+  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { self }
+}
+
+impl IntoResultOptTokens<Result<Option<Tokens>>> for () {
+  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { Ok(None) }
+}
+
+
 pub trait IntoBoolResult<T>: Sized {
   /// Performs the conversion, used for DefConditional return values etc
   fn into_bool_result(self) -> Result<bool>;

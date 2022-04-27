@@ -99,7 +99,7 @@ LoadDefinitions!(state, {
   // ======================================================================
   // Define parsers for standard parameter types.
   DefParameterType!("Plain", sub[gullet, inner, _extra, state] {
-      let mut value: Tokens = gullet.read_arg(state)?;
+      let mut value = Some(gullet.read_arg(state)?);
       for inner_p in inner.into_iter().flatten() {
         value = inner_p.reparse_argument(gullet, value, state);
       }
@@ -111,7 +111,7 @@ LoadDefinitions!(state, {
      if !inner.is_empty() {
       for inner_opt in inner.into_iter() {
         let mut reverted_inner = match inner_opt {
-          ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], state)?,
+          ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Some(Tokens::new(arg.clone()))], state)?,
           _ => arg.iter().map(|t| t.revert(state)).collect()
         };
         read_tokens.append(&mut reverted_inner);
@@ -126,7 +126,7 @@ LoadDefinitions!(state, {
   );
 
   DefParameterType!("DefPlain", sub[gullet, inner, _extra, state] {
-      let mut value: Tokens = gullet.read_arg(state)?;
+      let mut value = Some(gullet.read_arg(state)?);
       for inner_p in inner.into_iter().flatten() {
         value = inner_p.reparse_argument(gullet, value, state);
       }
@@ -139,7 +139,7 @@ LoadDefinitions!(state, {
      if !inner.is_empty() {
       for inner_opt in inner.into_iter() {
         let mut reverted_inner = match inner_opt {
-          ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], state)?,
+          ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Some(Tokens::new(arg.clone()))], state)?,
           _ => arg.iter().map(|t| t.revert(state)).collect()
         };
         read_tokens.append(&mut reverted_inner);
@@ -173,7 +173,7 @@ LoadDefinitions!(state, {
           let mut value = Vec::new();
           for inner_opt in inner.iter() {
             value = match inner_opt {
-              ParameterExtra::ParametersOption(Some(inner)) => inner.revert_arguments(vec![Tokens::new(arg.clone())], state)?,
+              ParameterExtra::ParametersOption(Some(inner)) => inner.revert_arguments(vec![Some(Tokens::new(arg.clone()))], state)?,
               _ => arg.iter().map(|t| t.revert(state)).collect()
             }
           }
@@ -467,7 +467,7 @@ LoadDefinitions!(state, {
       if !inner.is_empty() {
         for inner_opt in inner.into_iter() {
           let mut reverted_inner = match inner_opt { // TODO: the revert_arguments arg type is confusing me!
-            ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Tokens::new(arg.clone())], state)?,
+            ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Some(Tokens::new(arg.clone()))], state)?,
             _ => arg.iter().map(|t| t.revert(state)).collect()
           };
           read_tokens.append(&mut reverted_inner);
@@ -594,8 +594,12 @@ LoadDefinitions!(state, {
     if let Some(defn) = defn_opt {
         if defn.is_register() && !defn.is_readonly() {
           let mut invoked = vec![token_opt.unwrap()];
-          for arg in defn.read_arguments(gullet, state)? {
-            invoked.append(&mut arg.unlist());
+          for arg_opt in defn.read_arguments(gullet, state)? {
+            if let Some(arg) = arg_opt {
+              invoked.append(&mut arg.unlist());
+            } else {
+              unimplemented!(); // ???
+            }
           }
           // TODO: What is this datatype ? How does it fit the rtx typed interfaces for parameter types?
           // An extension seems required, also due to the Register parameter type right under.
@@ -637,10 +641,14 @@ LoadDefinitions!(state, {
     match defn {
       Some(register) => {
         let mut invoked = vec![token.unwrap()];
-        for arg in register.read_arguments(gullet, state)? {
-          invoked.append(&mut arg.unlist());
+        for arg_opt in register.read_arguments(gullet, state)? {
+          if let Some(arg) = arg_opt {
+            invoked.append(&mut arg.unlist());
+          } else {
+            unimplemented!();
+          }
         }
-        return Ok(Tokens::new(invoked));
+        return Ok(Some(Tokens::new(invoked)));
       },
       None => {
         let message = s!("A <register> was supposed to be here. Got {:?}", token);
