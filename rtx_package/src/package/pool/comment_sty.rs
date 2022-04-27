@@ -29,9 +29,15 @@ LoadDefinitions!(outer_state, {
   let define_included: PrimitiveClosure = Arc::new(primitiveproc!(stomach, args, inner_state, {
     args.reverse(); // we'll be using .pop() from the front
     let name = args.pop().unwrap().unwrap().to_string();
-    let mut before_tokens = args.pop().unwrap().unwrap().unlist();
+    let mut before_tokens = match args.pop() {
+      Some(arg) => arg.unwrap().unlist(),
+      None => Vec::new()
+    };
     before_tokens.push(T_CS!("\\ignorespaces"));
-    let mut after_tokens = args.pop().unwrap().unwrap().unlist();
+    let mut after_tokens = match args.pop() {
+      Some(arg) => arg.unwrap().unlist(),
+      None => Vec::new()
+    };
     after_tokens.push(T_CS!("\\ignorespaces"));
     // Note that we define the `magic' environment control sequences,
     // but DO NOT do any of the normal environ things, like \begingroup \endgroup!

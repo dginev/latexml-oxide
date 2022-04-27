@@ -420,7 +420,13 @@ impl Definition for RegisterCell {
     let value = gullet.read_value(self.register_type().unwrap(), state)?;
 
     // TODO: For now assume that register setting requires Tokens in all argument slots. Revisit if that isn't accurate.
-    let args = args.into_iter().map(|a| match a { Some(a) => a, None => Tokens!()}).collect();
+    let args = args
+      .into_iter()
+      .map(|a| match a {
+        Some(a) => a,
+        None => Tokens!(),
+      })
+      .collect();
     self.borrow_mut().set_value(value, args, state);
 
     if let Some(after) = state.remove_value("afterAssignment") {

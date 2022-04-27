@@ -183,7 +183,6 @@ impl IntoResultOptTokens<Result<Option<Tokens>>> for () {
   fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { Ok(None) }
 }
 
-
 pub trait IntoBoolResult<T>: Sized {
   /// Performs the conversion, used for DefConditional return values etc
   fn into_bool_result(self) -> Result<bool>;

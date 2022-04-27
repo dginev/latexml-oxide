@@ -122,12 +122,19 @@ LoadDefinitions!(outer_stomach, outer_state, {
       }
     },
     properties => sub[stomach, args, state] {
-      unref!(args => stype, inlist, toctitle_arg, title);
+      let stype = args[0].as_ref().unwrap();
+      let inlist = args[1].as_ref().unwrap();
+      let toctitle_arg = args[2].as_ref();
+      let title = args[3].as_ref().unwrap();
+
       let mut props = ref_step_counter(&stype.to_string(), false, stomach, state)?;
-      let toctitle = if !toctitle_arg.to_string().is_empty() {
-        toctitle_arg
-      } else {
-        title
+      let toctitle = match toctitle_arg {
+        Some(v) => if !v.to_string().is_empty() {
+          args[2].as_ref().unwrap()
+        } else {
+          title
+        },
+        None => title
       };
       let stype_tokens = stype.revert(state)?;
       let title_tokens = title.revert(state)?;
@@ -186,7 +193,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
 
       if let Digested::Postponed(toctokens) = toctitle {
         if !toctokens.is_empty() {
-          let toctitle_digested = stomach.digest(Tokens!(T_CS!("\\@hidden@bgroup"), (**toctokens).clone().unlist(), T_CS!("\\@hidden@egroup")), state)?;
+          let toctitle_digested = stomach.digest(
+            Tokens!(T_CS!("\\@hidden@bgroup"), (**toctokens).clone().unlist(), T_CS!("\\@hidden@egroup")), state)?;
           props.insert("toctitle".to_string(), toctitle_digested.into());
         }
       }

@@ -263,17 +263,17 @@ LoadDefinitions!(state, {
   \dimendef\dimen@=0
   \dimendef\dimen@i=1
   \dimendef\dimen@ii=2
-  \count10=22 % allocates \count registers 23, 24, ...
-  \count11=9 % allocates \dimen registers 10, 11, ...
-  \count12=9 % allocates \skip registers 10, 11, ...
-  \count13=9 % allocates \muskip registers 10, 11, ...
-  \count14=9 % allocates \box registers 10, 11, ...
-  \count15=9 % allocates \toks registers 10, 11, ...
-  \count16=-1 % allocates input streams 0, 1, ...
-  \count17=-1 % allocates output streams 0, 1, ...
-  \count18=3 % allocates math families 4, 5, ...
-  \count19=0 % allocates \language codes 1, 2, ...
-  \count20=255 % allocates insertions 254, 253, ...
+  \count10=22
+  \count11=9
+  \count12=9
+  \count13=9
+  \count14=9
+  \count15=9
+  \count16=-1
+  \count17=-1
+  \count18=3
+  \count19=0
+  \count20=255
   \countdef\insc@unt=20
   \countdef\allocationnumber=21
   \countdef\m@ne=22 \m@ne=-1
@@ -315,16 +315,16 @@ LoadDefinitions!(state, {
   // # which means they actually work quite differently
   DefRegister!("\\allocationnumber" => Number::new(0.0));
   DefMacro!("\\alloc@@ {}", sub[gullet, args, state] {
-    unpack_to_token!(args => atype);
+    unpack_to_string!(args => atype);
     let c = s!("allocation @{}", atype);
     let n = LookupRegisterOrDefault!(c).value_of();
     AssignValue!(&c                  => n + 1.0,     Some(Scope::Global));
     AssignValue!("\\allocationnumber" => Number::new(n), Some(Scope::Global));
   });
-  DefMacro!("\\newread Token", "\\alloc@@{read}\\global\\chardef#1=\\allocationnumber");
-  DefMacro!("\\newwrite Token", "\\alloc@@{write}\\global\\chardef#1=\\allocationnumber");
-  DefMacro!("\\newfam Token", "\\alloc@@{fam}\\global\\chardef#1=\\allocationnumber");
-  DefMacro!("\\newlanguage Token", "\\alloc@@{language}\\global\\chardef#1=\\allocationnumber");
+  DefMacro!("\\newread Token", r"\alloc@@{read}\global\chardef#1=\allocationnumber");
+  DefMacro!("\\newwrite Token", r"\alloc@@{write}\global\chardef#1=\allocationnumber");
+  DefMacro!("\\newfam Token", r"\alloc@@{fam}\global\chardef#1=\allocationnumber");
+  DefMacro!("\\newlanguage Token", r"\alloc@@{language}\global\chardef#1=\allocationnumber");
 
   // # This implementation is quite wrong
   DefPrimitive!("\\newinsert Token", sub[stomach, args, state] {

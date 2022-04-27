@@ -4,10 +4,10 @@ use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
 
 use std::borrow::{Borrow, Cow};
-use std::sync::Arc;
 use std::collections::VecDeque;
 use std::fmt::Display;
 use std::string::ToString;
+use std::sync::Arc;
 
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
@@ -90,11 +90,10 @@ impl From<Option<Tokens>> for Token {
   fn from(ts_opt: Option<Tokens>) -> Token {
     match ts_opt {
       Some(ts) => ts.into(),
-      None => panic!("Casting a None (undef Tokens) into a Token is a Bug.")
+      None => panic!("Casting a None (undef Tokens) into a Token is a Bug."),
     }
   }
 }
-
 
 impl From<Token> for Option<Tokens> {
   fn from(t: Token) -> Option<Tokens> { Some(Tokens::new(vec![t])) }
@@ -241,9 +240,10 @@ impl Tokens {
     let mut result = Vec::new();
     let mut in_tokens = self.0.iter();
     while let Some(token) = in_tokens.next() {
-      if token.get_catcode() != Catcode::ARG { // Non-match; copy it
+      if token.get_catcode() != Catcode::ARG {
+        // Non-match; copy it
         result.push(token.clone());
-      } else if let Some(arg) = args[token.text.parse::<usize>().unwrap()].clone() {
+      } else if let Some(arg) = args[token.text.parse::<usize>().unwrap()-1].clone() {
         result.extend(arg.unlist());
       }
     }
@@ -342,7 +342,7 @@ impl Tokens {
   // Collapses PARAM+PARAM token pair into a single PARAM
   // B book suggests running this
   // and remove dont_expand markers.
-  pub fn pack_parameters(self, state: &State) -> Self {
+  pub fn pack_parameters(self) -> Self {
     let mut rescanned = Vec::new();
     let mut toks = self.unlist().into_iter().collect::<VecDeque<_>>();
     while let Some(mut t) = toks.pop_front() {
@@ -362,7 +362,7 @@ impl Tokens {
             "misdefined",
             "expansion",
             None,
-            state,
+            None,
             "Parameter has a malformed arg, should be #1-#9 or ##. In expansion {}",
             Tokens::new(toks.clone().into_iter().collect()).to_string()
           );

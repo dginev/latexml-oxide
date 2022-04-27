@@ -23,6 +23,8 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
     if performed_expansion.is_empty() {
       quote!(None)
     } else {
+      // rescan for match tokens and unwrap dont_expand...
+      let expansion = performed_expansion.pack_parameters();
       // println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(),
       // performed_expansion);
       //
@@ -31,7 +33,7 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
       // (or the ~200 supported sty and cls files in the ecosystem) once
       // and have all expansions handled by this code snippet. Hmmm... arguable benefit at this early stage, maybe something beyond 1.0
       quote!(
-        Some(ExpansionBody::Tokens(#performed_expansion))
+        Some(ExpansionBody::Tokens(#expansion))
       )
     }
   };

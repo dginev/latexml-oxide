@@ -22,8 +22,10 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefMacro!(r"\list{}{}",
-  r"\let\@listctr\@empty#2\ifx\@listctr\@empty\usecounter{}\fi\expandafter\def\csname fnum@\@listctr\endcsname{#1}\lx@list");
+  DefMacro!(
+    r"\list{}{}",
+    r"\let\@listctr\@empty#2\ifx\@listctr\@empty\usecounter{}\fi\expandafter\def\csname fnum@\@listctr\endcsname{#1}\lx@list"
+  );
   DefMacro!("\\endlist", "\\endlx@list");
 
   // Start an anonymous list (often misused)
