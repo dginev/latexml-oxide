@@ -137,7 +137,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
   }
 }
 
-pub fn do_def(globally: bool, stomach: &mut Stomach, mut args: Vec<Tokens>, state: &mut State) -> Result<()> {
+pub fn do_def(globally: bool, stomach: &mut Stomach, mut args: Vec<Option<Tokens>>, state: &mut State) -> Result<()> {
   BindState!(stomach, state);
   unpack!(args => cs, params, body);
   let cs: Token = cs.into();

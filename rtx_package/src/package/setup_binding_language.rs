@@ -465,7 +465,7 @@ macro_rules! DefPrimitive {
   ($proto:literal, $replacement:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let replacement_closure = Arc::new(|stomach: &mut Stomach, args: Vec<Tokens>, inner_state: &mut State| {
+    let replacement_closure = Arc::new(|stomach: &mut Stomach, args: Vec<Option<Tokens>>, inner_state: &mut State| {
       Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::new(), inner_state).into_digested_result()
     });
     defi_primitive!(cs, params, replacement_closure, options);
@@ -474,7 +474,7 @@ macro_rules! DefPrimitive {
   ($proto:expr, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<Tokens>, $state_arg: &mut State| {
+    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<Option<Tokens>>, $state_arg: &mut State| {
       WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
     });
     defi_primitive!(cs, params, replacement_closure, options);
@@ -482,7 +482,7 @@ macro_rules! DefPrimitive {
   // Case: cs-noparams with closure pattern replacement
   ($cs:expr, None, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<Tokens>, $state_arg: &mut State| {
+    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<Option<Tokens>>, $state_arg: &mut State| {
       WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
     });
     defi_primitive!($cs, None, replacement_closure, options);
@@ -503,7 +503,7 @@ macro_rules! DefPrimitive {
   ($proto:expr, $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let replacement_closure =  Arc::new(move |stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State| {
+    let replacement_closure =  Arc::new(move |stomach: &mut Stomach, args: Vec<Option<Tokens>>, state: &mut State| {
       WithInnerState!($body, stomach, state).into_digested_result()
     });
     defi_primitive!(cs, params, replacement_closure, options);
@@ -1132,7 +1132,7 @@ macro_rules! DefAccent {
       let invoked = Invocation!(T_CS!($accent), letter.clone(), stomach.get_gullet_mut(), inner_state)?;
       // TODO: check if letter.to_string has artefacts
       $crate::package::pool::tex_accents::apply_accent(
-        stomach, &letter[0].to_string(), $combiningchar, $standalonechar, Some(invoked), inner_state)?;
+        stomach, &letter[0].as_ref().unwrap().to_string(), $combiningchar, $standalonechar, Some(invoked), inner_state)?;
       Ok(vec![])
     }, mode => "text");
   }};

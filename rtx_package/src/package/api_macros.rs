@@ -49,14 +49,14 @@ macro_rules! transfer_opt_default {
 #[macro_export]
 macro_rules! noprimitive {
   () => {
-    |stomach: &mut Stomach, args: Vec<Tokens>, state: &mut State| Ok(Vec::new())
+    |stomach: &mut Stomach, args: Vec<Option<Tokens>>, state: &mut State| Ok(Vec::new())
   };
 }
 
 #[macro_export]
 macro_rules! primitivesub {
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
-    move |$stomach: &mut Stomach, mut $args: Vec<Tokens>, $inner_state: &mut State| {
+    move |$stomach: &mut Stomach, mut $args: Vec<Option<Tokens>>, $inner_state: &mut State| {
       BindInnerState!($stomach, $inner_state);
       let macro_out = $body;
       end_state_frame!();
@@ -67,7 +67,7 @@ macro_rules! primitivesub {
 #[macro_export]
 macro_rules! primitiveproc {
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => (
-    |$stomach:&mut Stomach, mut $args : Vec<Tokens>, $inner_state:&mut State| {
+    |$stomach:&mut Stomach, mut $args : Vec<Option<Tokens>>, $inner_state:&mut State| {
       BindInnerState!($stomach, $inner_state);
       $body
       end_state_frame!();
@@ -208,8 +208,8 @@ macro_rules! after_digest_single {
 macro_rules! reader {
   ($gullet:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
     Arc::new(
-      |$gullet: &mut Gullet, $inner: Vec<Option<Parameters>>, $extra: Vec<ParameterExtra>, $state: &mut State| -> Result<Tokens> {
-        WithInnerState!($body, $state).into_tokens_result()
+      |$gullet: &mut Gullet, $inner: Vec<Option<Parameters>>, $extra: Vec<ParameterExtra>, $state: &mut State| -> Result<Option<Tokens>> {
+        WithInnerState!($body, $state).into_result_opt_tokens()
       },
     )
   };
@@ -362,10 +362,10 @@ macro_rules! unpack_to_string {
 macro_rules! unpack_to_token {
   ($args:ident => $var:ident) => (
     let tmp_tks = $args.remove(0);
-    if tmp_tks.is_empty() {
+    if tmp_tks.is_none() || tmp_tks.as_ref().unwrap().is_empty() {
       panic!("Hard assumption for Token argument failed -- arg was empty in unpack_to_token!()");
     }
-    let $var : Token = tmp_tks.into();
+    let $var : Token = tmp_tks.unwrap().into();
   );
   ($args:ident => $var:ident,$($tail:ident),*) => (
     unpack_to_token!($args => $var);

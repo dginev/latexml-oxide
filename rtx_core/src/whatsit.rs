@@ -144,10 +144,10 @@ impl Object for Whatsit {
                   .get_args()
                   .iter()
                   .map(|arg_opt| match arg_opt {
-                    Some(arg) => arg.revert(state),
-                    None => Ok(Tokens!()),
+                    Some(arg) => Some(arg.revert(state).ok()?),
+                    None => None,
                   })
-                  .collect::<Result<Vec<Tokens>>>()?,
+                  .collect::<Vec<Option<Tokens>>>(),
               )
               .unlist();
           }
@@ -174,8 +174,9 @@ impl Object for Whatsit {
             let args = self
               .get_args()
               .iter()
-              .flatten()
-              .map(|arg| arg.revert(state).unwrap_or_default())
+              .map(|opt| match opt {
+                Some(arg) => Some(arg.revert(state).ok()?),
+                None => None })
               .collect();
             tokens.extend(parameters.revert_arguments(args, state)?)
           }

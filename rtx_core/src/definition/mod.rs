@@ -27,9 +27,9 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-pub type ExpansionClosure = Arc<dyn Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<Tokens>>;
-pub type ConditionalClosure = Arc<dyn Fn(&mut Gullet, Vec<Tokens>, &mut State) -> Result<bool>>;
-pub type PrimitiveFn = dyn Fn(&mut Stomach, Vec<Tokens>, &mut State) -> Result<Vec<Digested>>;
+pub type ExpansionClosure = Arc<dyn Fn(&mut Gullet, Vec<Option<Tokens>>, &mut State) -> Result<Tokens>>;
+pub type ConditionalClosure = Arc<dyn Fn(&mut Gullet, Vec<Option<Tokens>>, &mut State) -> Result<bool>>;
+pub type PrimitiveFn = dyn Fn(&mut Stomach, Vec<Option<Tokens>>, &mut State) -> Result<Vec<Digested>>;
 pub type PrimitiveClosure = Arc<PrimitiveFn>;
 pub type BeforeDigestClosure = Arc<dyn Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
 pub type PropertiesClosure = Arc<dyn Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
@@ -99,7 +99,7 @@ pub trait Definition: Object {
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { false }
 
-  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Tokens>>
+  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Option<Tokens>>>
   where Self: Sized {
     match self.get_parameters() {
       None => Ok(Vec::new()),
@@ -110,7 +110,7 @@ pub trait Definition: Object {
 
   // ======================================================================
   // Return the Tokens that would invoke the given definition with arguments.
-  fn invocation(&mut self, args: Vec<Tokens>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+  fn invocation(&mut self, args: Vec<Option<Tokens>>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     let mut invocation_result: Vec<Token> = vec![self.get_cs().into_owned()];
 
     match self.get_parameters() {

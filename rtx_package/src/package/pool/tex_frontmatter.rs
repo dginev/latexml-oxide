@@ -204,7 +204,7 @@ LoadDefinitions!(state, {
         tags.push(Invocation!(T_CS!("\\lx@tag@intags"),
           vec![
             Tokens!(T_OTHER!(role)),
-            build_invocation(formatter, vec![ttype.clone()], gullet, state)?
+            build_invocation(formatter, vec![Some(ttype.clone())], gullet, state)?
           ], gullet, state)?
         );
       }

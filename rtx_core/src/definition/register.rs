@@ -419,6 +419,8 @@ impl Definition for RegisterCell {
     gullet.read_keyword(&["="], state)?;
     let value = gullet.read_value(self.register_type().unwrap(), state)?;
 
+    // TODO: For now assume that register setting requires Tokens in all argument slots. Revisit if that isn't accurate.
+    let args = args.into_iter().map(|a| match a { Some(a) => a, None => Tokens!()}).collect();
     self.borrow_mut().set_value(value, args, state);
 
     if let Some(after) = state.remove_value("afterAssignment") {
@@ -440,7 +442,7 @@ impl Definition for RegisterCell {
 
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Tokens>> {
+  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Option<Tokens>>> {
     match self.borrow().parameters {
       None => Ok(Vec::new()),
       Some(ref params) => params.read_arguments(gullet, self, state),

@@ -869,7 +869,7 @@ pub fn digest_if(token: Token, stomach: &mut Stomach, state: &mut State) -> Resu
   }
 }
 
-pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Tokens>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Option<Tokens>>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
   let token: Token = token.into();
   // Note: token may have been \let to another defn!
   if let Some(defn) = state.lookup_definition(&token) {
@@ -889,9 +889,11 @@ pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Tokens>, gullet: &mu
     // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
     let mut wrapped_args: Vec<Token> = args
       .into_iter()
-      .flat_map(|arg| {
+      .flat_map(|arg_opt| {
         let mut wrapped = vec![T_BEGIN!()];
-        wrapped.append(&mut arg.unlist());
+        if let Some(arg) = arg_opt {
+          wrapped.append(&mut arg.unlist());
+        }
         wrapped.push(T_END!());
         wrapped
       })

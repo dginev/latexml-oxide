@@ -102,13 +102,13 @@ impl Object for KeyVals {
       let (key, value, use_default, resolution, keyval) = tuple;
       // digest a single token
       let value_tokens_opt: Option<Tokens> = value.borrow().into();
-      let value_tokens = value_tokens_opt.unwrap_or_default();
       let digested_value: Digested = if let Some(keydef) = keyval.get_type(state) {
         // keydefs are actual Parameter objects, which should be able to digest their own values!
         // Hmmm, so we need to add Parameter to Store
         // This comes together with the DefKeyVal infrastructure, which assigns keydef parameters to keyval specifications.
-        keydef.digest(stomach, value_tokens, None, state)?.unwrap()
+        keydef.digest(stomach, value_tokens_opt, None, state)?.unwrap()
       } else {
+        let value_tokens = value_tokens_opt.unwrap_or_default();
         value_tokens.be_digested(stomach, state)?
       };
       new_tuples.push((key, digested_value.into(), use_default, resolution, keyval));

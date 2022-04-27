@@ -332,7 +332,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   let invocation;
   {
     let gullet = stomach.get_gullet_mut();
-    invocation = build_invocation(T_CS!("\\lx@make@tags"), vec![Tokens!(T_OTHER!(ctype))], gullet, state)?;
+    invocation = build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(ctype)))], gullet, state)?;
   }
 
   let tags = stomach.digest(invocation, state)?;
@@ -499,7 +499,7 @@ pub fn ref_step_item_counter(tag_opt: Option<Arc<Tokens>>, stomach: &mut Stomach
         T_BEGIN!(), typename, T_SPACE!()]);
     tag_tokens.extend(reverted_tag);
     tag_tokens.push(T_END!());
-    tag_tokens.extend(build_invocation(T_CS!("\\lx@make@tags"), vec![Tokens!(T_OTHER!(counter))], gullet, state)?.unlist());
+    tag_tokens.extend(build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(counter)))], gullet, state)?.unlist());
     tag_tokens.push(T_END!());
 
     let tags = stomach.digest(tag_tokens, state)?;

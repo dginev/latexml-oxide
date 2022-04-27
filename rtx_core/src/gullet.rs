@@ -601,15 +601,15 @@ impl Gullet {
   // Note that this returns an empty array if [] is present,
   // [contents] returns Tokens(contents),
   // otherwise returns None
-  pub fn read_optional(&mut self, state: &State) -> Result<Tokens> {
+  pub fn read_optional(&mut self, state: &State) -> Result<Option<Tokens>> {
     match self.read_non_space(state) {
-      None => Ok(Tokens!()),
+      None => Ok(None),
       Some(t) => {
         if t.get_catcode() == Catcode::OTHER && t.get_string() == "[" {
-          self.read_until(Tokens!(T_OTHER!("]")), state)
+          Ok(Some(self.read_until(Tokens!(T_OTHER!("]")), state)?))
         } else {
           self.unread_one(t);
-          Ok(Tokens!())
+          Ok(None)
         }
       },
     }
@@ -659,7 +659,7 @@ impl Gullet {
               register_type = RegisterType::Number;
             }
             if register_type == value_type {
-              let args: Vec<Token> = defn.read_arguments(self, state)?.iter().map(|ts| ts.into()).collect();
+              let args: Vec<Token> = defn.read_arguments(self, state)?.iter().map(|ts| ts.as_ref().unwrap().into()).collect();
               Ok(defn.value_of(args, state))
             } else {
               self.unread_one(token); // Unread
@@ -1028,7 +1028,7 @@ impl Gullet {
             Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
               // TODO: The mismatch between Vec<Tokens> for read_arguments and Vec<Token> for value_of feels incorrect
               //       but in which direction should it be resolved?
-              let args: Vec<Token> = defn.read_arguments(self, state)?.iter().map(|ts| ts.into()).collect();
+              let args: Vec<Token> = defn.read_arguments(self, state)?.iter().map(|ts| ts.as_ref().unwrap().into()).collect();
               match defn.value_of(args, state) {
                 None => Ok(Tokens!()),
                 Some(v) => Ok(v.into()),

@@ -437,7 +437,7 @@ impl Stored {
   }
   /// Dynamic dispatch for Definition's `read_arguments`,
   /// to circumvent the limitations of using trait objects with `Arc<Definition>`
-  pub fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Tokens>> {
+  pub fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Option<Tokens>>> {
     use crate::definition::Definition;
     match self {
       Stored::Conditional(ref entry) => entry.read_arguments(gullet, state),
