@@ -262,7 +262,7 @@ pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut
   let value = counter_value(ctr, state);
   state.assign_value(&s!("\\c@{}", ctr), value.add(Number::new(1.0)), Some(Scope::Global));
   state.after_assignment();
-  let token_value = Tokens::new(Explode!(counter_value(ctr, state).value_of()));
+  let token_value = Tokens::new(Explode!(state.lookup_number(&s!("\\c@{}",ctr)).unwrap().value_of()));
   def_macro(
     T_CS!(s!("\\@{}@ID", ctr)),
     None,
@@ -278,7 +278,7 @@ pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut
   if !noreset {
     if let Some(nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
       for c in nested.unlist() {
-        reset_counter(&c.to_string(), state);
+        reset_counter(c.get_string(), state);
       }
     }
   }
@@ -458,11 +458,17 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
 
 pub fn reset_counter(ctr: &str, state: &mut State) {
   state.assign_value(&s!("\\c@{}", ctr), Number::new(0.0), Some(Scope::Global));
+  state.assign_value(&s!("\\c@UN{}", ctr), Number::new(0.0), Some(Scope::Global));
+  def_macro(T_CS!(s!("\\@{}@ID",ctr)), None, Tokens!(Explode!(
+    state.lookup_number(&s!("\\c@{}",ctr)).unwrap().value_of())),
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    }), state);
   // and reset any within counters!
-  let nested = state.lookup_tokens(&s!("\\cl@{}", ctr)).unwrap_or_else(|| Tokens!());
-
-  for c in &(nested.unlist()) {
-    reset_counter(&c.to_string(), state);
+  let nested = state.lookup_tokens(&s!("\\cl@{}", ctr)).unwrap_or_default();
+  for c in nested.unlist() {
+    reset_counter(c.get_string(), state);
   }
 }
 
@@ -483,7 +489,7 @@ pub fn ref_step_item_counter(tag_opt: Option<Arc<Tokens>>, stomach: &mut Stomach
   }
 
   let mut result = if let Some(tag) = tag_opt {
-    let mut props = dbg!(ref_step_id(&counter, stomach, state)?);
+    let mut props = ref_step_id(&counter, stomach, state)?;
     if tag.is_empty() {
       return Ok(props);
     }
