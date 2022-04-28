@@ -273,7 +273,8 @@ LoadDefinitions!(state, {
   DefMacro!("\\@tempc", "");
   DefMacro!("\\@gtempa", "");
 
-  RawTeX!(r###"
+  RawTeX!(
+    r###"
     \long\def\loop#1\repeat{%
       \def\iterate{#1\relax\expandafter\iterate\fi}%
       \iterate%

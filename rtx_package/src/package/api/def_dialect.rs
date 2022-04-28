@@ -283,7 +283,7 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   options_opt: Option<ExpandableOptions>,
   state: &mut State,
 ) {
-  let expansion_opt : Option<ExpansionBody> = expansion.into();
+  let expansion_opt: Option<ExpansionBody> = expansion.into();
   // TODO: The None case could be refactored to feel much cleaner.
   // For now it's equivalent to Tokens!()
   let expansion = expansion_opt.unwrap_or_default();
@@ -291,10 +291,7 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   let options_locked = options.locked;
   let scope = options.scope.take();
   let locked_key = if options_locked { s!("{}:locked", cs) } else { String::new() };
-  state.install_definition(
-    Expandable::new(cs, paramlist, expansion, Some(options), state),
-    scope,
-  );
+  state.install_definition(Expandable::new(cs, paramlist, expansion, Some(options), state), scope);
   if options_locked {
     state.assign_value(&locked_key, true, Some(Scope::Global));
   }

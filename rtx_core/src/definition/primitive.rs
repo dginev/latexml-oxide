@@ -31,7 +31,7 @@ pub struct PrimitiveOptions {
   pub alias: Option<String>,
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
-  pub reversion: Option<Reversion>
+  pub reversion: Option<Reversion>,
 }
 
 #[derive(Clone)]

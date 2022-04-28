@@ -56,9 +56,7 @@ impl std::fmt::Debug for ExpansionBody {
 }
 
 impl Default for ExpansionBody {
-  fn default() -> Self {
-    ExpansionBody::Tokens(Tokens::new(Vec::new()))
-  }
+  fn default() -> Self { ExpansionBody::Tokens(Tokens::new(Vec::new())) }
 }
 
 #[derive(Clone)]
@@ -81,7 +79,6 @@ impl From<Token> for ExpansionBody {
 impl From<Token> for Option<ExpansionBody> {
   fn from(t: Token) -> Option<ExpansionBody> { Some(ExpansionBody::Tokens(Tokens!(t))) }
 }
-
 
 impl From<Tokens> for ExpansionBody {
   fn from(t: Tokens) -> ExpansionBody { ExpansionBody::Tokens(t) }
