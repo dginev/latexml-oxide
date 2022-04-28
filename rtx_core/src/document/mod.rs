@@ -32,6 +32,7 @@ use crate::{BoxOps, Digested};
 lazy_static! {
   static ref HAS_NONSPACE_RE: Regex = Regex::new(r"\S").unwrap();
   static ref ONLY_SPACE_RE: Regex = Regex::new(r"^\s+$").unwrap();
+  static ref DASHES_RE: Regex = Regex::new(r"\-\-+").unwrap();
   static ref NON_MERGEABLE_ATTRIBUTES : HashSet<&'static str> =
     HashSet::from(["about","aboutlabelref","aboutidref",
    "resource","resourcelabelref","resourceidref",
@@ -70,11 +71,11 @@ impl Default for Document {
   fn default() -> Self { Self::new() }
 }
 impl Object for Document {
-  fn get_locator(&self) -> Cow<Locator> {
+  fn get_locator(&self) -> Option<Cow<Locator>> {
     if let Some(tbox) = self.get_node_box(&self.node) {
-      Cow::Owned(tbox.get_locator().into_owned())
+      tbox.get_locator().map(|l| Cow::Owned(l.into_owned()))
     } else {
-      Cow::Owned(Locator::default()) // well?
+      None
     }
   }
 }
@@ -329,6 +330,9 @@ impl Document {
             } else {
               unimplemented!();
             }
+          },
+          Digested::Comment(ref comment) => {
+            comment.be_absorbed(self, state)?;
           },
           Digested::KeyVals(_) => unimplemented!(),
           Digested::RegisterValue(_) => unimplemented!(),
@@ -952,6 +956,30 @@ impl Document {
       }
       self.close_node_internal(&node, state)?; // Should be safe.
     }
+    Ok(self.node.clone())
+  }
+
+  /// Insert a new comment, or append to previous comment.
+  /// Does NOT move the current insertion point to the Comment,
+  /// but may move up past a text node.
+  pub fn insert_comment(&mut self, text: &str, state: &mut State) -> Result<Node> {
+    // TODO:
+    // let trimmed = text.trim_end();
+    // let clean = DASHES_RE.replace_all(trimmed,"__");
+    // self.close_text_internal(state);    // Close any open text node.
+    // if (self.node.get_type() == Some(NodeType::DocumentNode) {
+    //   comment = self.document.create_comment(s!(" {} ",clean_text));
+    //   self.pending.push(comment.clone());
+    //   Ok(comment)
+    // } else {
+    //   if let Some(last_child) = self.node.last_child() {
+    //     if last_child.get_type() == NodeType::CommentNode {
+    //       last_child.set_content(s!("{}\n     {} ",comment.get_content(), clean_text));
+    //       return Ok(last_child);
+    //     }
+    //   }
+    //   self.node.add_child(self.document.create_comment(s!(" {} ",clean_text));
+    // }
     Ok(self.node.clone())
   }
 

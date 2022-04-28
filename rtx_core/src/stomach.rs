@@ -8,6 +8,7 @@ use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::comment::Comment;
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::Definition;
@@ -31,7 +32,7 @@ pub struct Stomach {
 }
 
 impl Object for Stomach {
-  fn get_locator(&self) -> Cow<Locator> { self.get_gullet().get_locator() }
+  fn get_locator(&self) -> Option<Cow<Locator>> { self.get_gullet().get_locator() }
   fn stringify(&self) -> String { String::from("TODO Stomach") }
 }
 
@@ -45,7 +46,7 @@ impl<'t> Stomach {
   // NOTE: Worry about whether the $autoflush thing is right?
   // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
   pub fn digest_next_body(&mut self, terminal_opt: Option<Token>, state: &mut State) -> Result<Vec<Digested>> {
-    let start_location = self.get_locator().into_owned();
+    let start_location = self.get_locator().unwrap().into_owned();
     let init_depth = self.boxing.len();
     let mut found_terminal = false;
     let local_box_list = self.regurgitate(); // grab the current boxes to emulate local frame;
@@ -338,7 +339,7 @@ impl<'t> Stomach {
           Ok(Some(Digested::TBox(Arc::new(Tbox::new(
             meaning.to_string(),
             font,
-            Some(self.gullet.get_locator().into_owned()),
+            self.gullet.get_locator().map(|l| l.into_owned()),
             Tokens!(meaning),
             HashMap::new(),
             state,
@@ -346,7 +347,13 @@ impl<'t> Stomach {
         }
       },
       Catcode::COMMENT => {
-        unimplemented!()
+        let comment = meaning.to_string();
+        // TODO:
+        // let comment = font_decode_string(meaning.to_string(), None, true);
+        // However, spaces normally would have be digested away as positioning...
+        // let badspace = pack('U', 0xA0) . "\x{0335}"; // This is at space's pos in OT1
+        // $comment =~ s/\Q$badspace\E/ /g;
+        Ok(Some(Digested::Comment(Comment(comment))))
       },
       _ => {
         let text = font::decode_string(meaning.get_string(), None, true, state);
@@ -448,7 +455,7 @@ impl<'t> Stomach {
     state.assign_value("afterAssignment", Stored::Tokens(Tokens!()), Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupInitiator", (*current_token).clone(), Some(Scope::Local));
-    state.assign_value("groupInitiatorLocator", self.get_locator().into_owned(), Some(Scope::Local));
+    state.assign_value("groupInitiatorLocator", self.get_locator().unwrap().into_owned(), Some(Scope::Local));
     if !nobox {
       // For begingroup/endgroup
       self.boxing.push((*current_token).clone())

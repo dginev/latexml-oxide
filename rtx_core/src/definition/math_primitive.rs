@@ -187,7 +187,7 @@ impl fmt::Display for MathPrimitive {
 }
 impl Object for MathPrimitive {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "MathPrimitive") }
-  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
+  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
 impl Definition for MathPrimitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }

@@ -142,7 +142,7 @@ impl fmt::Display for Whatsit {
 }
 
 impl Object for Whatsit {
-  fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
+  fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
 
   fn revert(&self, state: &mut State) -> Result<Tokens> {
     // WARNING: Forbidden knowledge?

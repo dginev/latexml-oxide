@@ -161,5 +161,5 @@ impl Object for Locator {
   }
 
   /// getting the locator of a locator should return itself
-  fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(self) }
+  fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(self)) }
 }

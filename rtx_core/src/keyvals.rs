@@ -76,7 +76,7 @@ impl fmt::Display for KeyVals {
 }
 
 impl Object for KeyVals {
-  fn get_locator(&self) -> Cow<Locator> {
+  fn get_locator(&self) -> Option<Cow<Locator>> {
     unimplemented!();
   }
   fn stringify(&self) -> String { "KeyVals:TODO".to_string() }
@@ -449,7 +449,7 @@ impl KeyVals {
     //   $$self{hookMissing} = undef; }
 
     // read the opening token and figure out where we are
-    let startloc = gullet.get_locator().into_owned();
+    let startloc = gullet.get_locator().unwrap().into_owned();
 
     // set and read tokens
     let open = gullet.read_token(state);

@@ -22,6 +22,7 @@ pub mod rewrite;
 pub mod state;
 pub mod stomach;
 pub mod tbox;
+pub mod comment;
 pub mod util;
 pub mod whatsit;
 
@@ -37,6 +38,7 @@ use crate::common::model::Model;
 use crate::common::number::Number;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::comment::Comment;
 use crate::definition::register::{NumericOps, RegisterValue};
 use crate::document::Document;
 use crate::keyvals::KeyVals;
@@ -54,7 +56,7 @@ pub struct Core {
   pub preload: Vec<String>,
 }
 impl Object for Core {
-  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
+  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
 #[derive(Default)]
 pub struct CoreOptions {
@@ -171,6 +173,7 @@ pub enum Digested {
   Postponed(Arc<Tokens>),
   KeyVals(Arc<KeyVals>),
   RegisterValue(Arc<RegisterValue>),
+  Comment(Comment),
 }
 
 impl PartialEq for Digested {
@@ -214,6 +217,13 @@ impl PartialEq for Digested {
       },
       RegisterValue(ref tb) => {
         if let RegisterValue(tb2) = other {
+          tb == tb2
+        } else {
+          false
+        }
+      },
+      Comment(ref tb) => {
+        if let Comment(tb2) = other {
           tb == tb2
         } else {
           false
@@ -280,6 +290,7 @@ impl fmt::Display for Digested {
       Digested::Whatsit(ref w) => write!(f, "{}", w.read().unwrap()),
       Digested::Postponed(ref t) => write!(f, "{}", t),
       Digested::KeyVals(ref kvs) => write!(f, "{}", kvs),
+      Digested::Comment(ref c) => write!(f, "{}", c),
       Digested::RegisterValue(ref rv) => write!(f, "{}", rv),
     }
   }
@@ -292,14 +303,16 @@ impl Object for Digested {
       Digested::Whatsit(ref w) => w.read().unwrap().stringify(),
       Digested::Postponed(ref t) => (*t).stringify(),
       Digested::KeyVals(ref kvs) => kvs.stringify(),
+      Digested::Comment(ref c) => c.stringify(),
       Digested::RegisterValue(ref rv) => (*rv).stringify(),
     }
   }
-  fn get_locator(&self) -> Cow<Locator> {
+  fn get_locator(&self) -> Option<Cow<Locator>> {
     match *self {
       Digested::TBox(ref b) => b.get_locator(),
       Digested::List(ref l) => l.get_locator(),
-      Digested::Whatsit(ref w) => Cow::Owned(w.read().unwrap().get_locator().into_owned()),
+      Digested::Comment(ref c) => c.get_locator(),
+      Digested::Whatsit(ref w) => w.read().unwrap().get_locator().map(|l| Cow::Owned(l.into_owned())),
       _ => unimplemented!(),
     }
   }
@@ -310,6 +323,7 @@ impl Object for Digested {
       Digested::Whatsit(ref w) => w.read().unwrap().revert(state),
       Digested::Postponed(ref t) => Ok((**t).clone()),
       Digested::KeyVals(ref kvs) => kvs.revert(state),
+      Digested::Comment(ref c) => c.revert(state),
       Digested::RegisterValue(ref rv) => (**rv).revert(state),
     }
   }
@@ -322,6 +336,7 @@ impl BoxOps for Digested {
       Digested::List(ref l) => l.unlist(),
       Digested::Whatsit(ref w) => w.read().unwrap().unlist(),
       Digested::KeyVals(ref kvs) => kvs.unlist(),
+      Digested::Comment(ref c) => c.unlist(),
       Digested::Postponed(ref _t) => unimplemented!(),
       Digested::RegisterValue(ref _rv) => unimplemented!(),
     }
@@ -331,6 +346,7 @@ impl BoxOps for Digested {
     match self {
       Digested::TBox(b) => b.be_absorbed(document, state),
       Digested::List(l) => l.be_absorbed(document, state),
+      Digested::Comment(c) => c.be_absorbed(document, state),
       Digested::Whatsit(w) => w.read().unwrap().be_absorbed(document, state),
       Digested::KeyVals(kvs) => kvs.be_absorbed(document, state),
       Digested::Postponed(_) => unimplemented!(),
@@ -421,6 +437,7 @@ impl Digested {
     use Digested::*;
     match self {
       TBox(_) | Whatsit(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
+      Comment(_) => true,
       List(l) => l.boxes.iter().any(check),
     }
   }
