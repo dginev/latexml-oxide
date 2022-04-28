@@ -69,6 +69,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
           // Special case: lone # NOT following a numbered parameter
           // Note that we require a { to appear next, but do NOT read it!
           params.push(Parameter::new("RequireBrace", "RequireBrace", state)?);
+          break;
         } else {
           n += 1;
           if let Some(t_next) = tokens.pop_front() {
@@ -80,9 +81,11 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
       } else { // CC_ARG case, keep looking at this token
         n += 1;
       }
-      let t_num = t.get_string().parse::<i8>().unwrap_or(-1);
-      if t_num != n {
-        fatal!(ParamSpec, Expected, s!("Parameters for {:?} not in order in {:?}", cs, params));
+      if n>0 {
+        let t_num = t.get_string().parse::<i8>().unwrap_or(-1);
+        if t_num != n {
+          fatal!(ParamSpec, Expected, s!("Parameters for {:?} not in order. Got {:?}, expected {:?}. in {:?}", cs, t, n, params));
+        }
       }
       // Check for delimiting text following the parameter #n
       let mut delim = Vec::new();
@@ -147,15 +150,23 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
 
 pub fn do_def(globally: bool, stomach: &mut Stomach, mut args: Vec<Option<Tokens>>, state: &mut State) -> Result<()> {
   BindState!(stomach, state);
-  unpack!(args => cs, params, body);
-  let cs: Token = cs.into();
-  // TODO:
-  // if (!$cs) {
-  //   Error('expected', 'Token', $gullet, "Expected definition token");
-  //   return; }
-  // elsif (!$params) {
-  //   Error('misdefined', $cs, $gullet, "Expected definition parameter list");
-  //   return; }
+  let cs_opt = args.remove(0);
+  let params_opt = args.remove(0);
+  let body = args.remove(0).unwrap();
+  let cs : Token = match cs_opt {
+    Some(ts) => ts.into(),
+    None => {
+      Error!("expected", "Token", stomach, state,  "Expected definition token");
+      return Ok(());
+    }
+  };
+  let params = match params_opt {
+    Some(ts) => ts,
+    None => {
+      Error!("misdefined", cs, stomach, state, "Expected definition parameter list");
+      return Ok(());
+    }
+  };
   let paramlist = parse_def_parameters(&cs, params, state)?;
 
   let scope = if globally { Some(Scope::Global) } else { None };

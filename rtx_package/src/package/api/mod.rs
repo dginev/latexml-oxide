@@ -84,7 +84,7 @@ impl IntoOption<Option<Reversion>> for &str {
     if self.is_empty() {
       Some(Reversion::Tokens(Tokens!()))
     } else {
-      Some(Reversion::Tokens(TokenizeInternal!(self)))
+      Some(Reversion::Tokens(TokenizeInternal!(self).pack_parameters()))
     }
   }
 }

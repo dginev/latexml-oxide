@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 // use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{VecDeque,HashMap};
 use std::fmt;
 use std::sync::Arc;
 
@@ -18,7 +18,6 @@ use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, TexMode};
 
-const REVERT_RAW: bool = false; // TODO: what is this about?
 const DUAL_BRANCH: bool = false; // TODO: what is this about?
 
 #[derive(Clone)]
@@ -95,6 +94,39 @@ impl Whatsit {
       self.properties.insert(s!("trailer"), trailer_opt.as_ref().unwrap().clone().into());
     }
   }
+
+  /// Like Tokens-substituteParameters, but substitutes in the Whatsit's arguments OR properties!
+  /// #<digit> is the standard TeX positional argument
+  /// # followed by a T_OTHER(propname) specifies the property propname!!
+  fn substitute_parameters(&self, spec: Tokens, state: &mut State) -> Result<Vec<Token>> {
+    // TODO: This is kind of unfortunate -- I am not sure what are the reasonable "entryways" into the Whatsit substituteParameters. For Expandable we now have guarantees that "#,i" has been mapped into a single T_ARG(#i), but not here.
+    // so for now run on each call?
+    let mut in_toks = VecDeque::from(spec.unlist());
+    let args   = self.get_args();
+    let props  = &self.properties;
+    let mut result = Vec::new();
+    while let Some(token) = in_toks.pop_front() {
+      if token.get_catcode() != Catcode::ARG { // Non '#'; copy it
+        result.push(token);
+      } else {
+        let s = token.get_string();
+        let n = s.parse::<usize>().unwrap()-1;
+        let arg_opt = if n < 10 {
+          args[n].clone()
+        } else {
+          match props.get(s) {
+            Some(Stored::Digested(v)) => Some((**v).clone()),
+            Some(other) => panic!("unexpected prop in substitute_parameters, needed Digested, got: {:?}", other),
+            None => None
+          }
+        };
+        if let Some(arg) = arg_opt {
+          result.extend(arg.revert(state)?.unlist());
+        }
+      }
+    }
+    Ok(result)
+  }
 }
 
 impl fmt::Debug for Whatsit {
@@ -116,10 +148,8 @@ impl Object for Whatsit {
     // (1) provide a means to get the RAW, internal markup that can (hopefully) be RE-digested
     //     this is needed for getting the numerator of \over into textstyle!
     // (2) caching the reversion (which is a big performance boost)
-    let saved_opt = if REVERT_RAW {
-      None
-    } else if DUAL_BRANCH {
-      // TODO
+    let saved_opt = if DUAL_BRANCH {
+      // TODO, also alignment case
       unimplemented!()
       // self.dual_reversion.get(DUAL_BRANCH)
     } else {
@@ -130,30 +160,27 @@ impl Object for Whatsit {
     } else {
       let mut tokens = Vec::new();
       let defn = &self.definition;
-      let spec_opt = if REVERT_RAW { None } else { defn.get_reversion_spec() };
+      let spec_opt = if let Some(rev) = self.properties.get("reversion") {
+        match rev {
+          Stored::Tokens(tks) => Some(Reversion::Tokens(tks.clone())),
+          // TODO?
+          // Stored::ReversionClosure(rfn) => Some(Reversion::Closure(rfn)),
+          other => panic!("TODO: Unexpected reversion directive {:?}", other)
+        }
+      } else { defn.get_reversion_spec() };
       match spec_opt {
         Some(Reversion::Closure(spec)) => {
-          // If handled by CODE, call it
-          tokens = spec(self, self.get_args(), state).unwrap().unlist();
+          let spec_tokens = spec(self, self.get_args(), state).unwrap();
+          tokens = self.substitute_parameters(spec_tokens, state)?;
         },
         Some(Reversion::Tokens(spec)) => {
           if !spec.is_empty() {
-            tokens = spec
-              .substitute_parameters(
-                self
-                  .get_args()
-                  .iter()
-                  .map(|arg_opt| match arg_opt {
-                    Some(arg) => Some(arg.revert(state).ok()?),
-                    None => None,
-                  })
-                  .collect::<Vec<Option<Tokens>>>(),
-              )
-              .unlist();
+            tokens = self.substitute_parameters(spec, state)?;
           }
         },
         None => {
-          let alias_opt: Option<String> = None; //if REVERT_RAW { None } else { None }; //TODO: defn.get_alias() };
+          let alias_opt: Option<String> = None;
+          //TODO: defn.get_alias() };
           if let Some(alias) = alias_opt {
             if !alias.is_empty() {
               tokens.push(T_CS!(alias));
@@ -192,8 +219,7 @@ impl Object for Whatsit {
       }
 
       // Now cache it, in case it's needed again
-      // TODO: This causes a lot of mutability issues for arguable performance benefit.
-      //       Maybe we are safe not using caching at all, and simply recomputing the reversion?
+      // TODO: This causes a lot of mutability issues for arguable performance benefit. Maybe we are safe not using caching at all, and simply recomputing the reversion?
       // if !REVERT_RAW {
       //   // don't cache when RAW
       //   if DUAL_BRANCH {

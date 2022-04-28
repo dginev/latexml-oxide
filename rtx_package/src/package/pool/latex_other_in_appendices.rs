@@ -273,15 +273,11 @@ LoadDefinitions!(state, {
   DefMacro!("\\@tempc", "");
   DefMacro!("\\@gtempa", "");
 
-  RawTeX!(
-    r###"
-    \long\def \loop #1\repeat{%
-      \def\iterate{#1\relax  % Extra \relax
-                   \expandafter\iterate\fi
-                   }%
-      \iterate
-      \let\iterate\relax
-    }
+  RawTeX!(r###"
+    \long\def\loop#1\repeat{%
+      \def\iterate{#1\relax\expandafter\iterate\fi}%
+      \iterate%
+      \let\iterate\relax}
     \newdimen\@ydim
     \let\@@hyph=\-
     \newbox\@arstrutbox

@@ -46,6 +46,21 @@ pub enum ExpansionBody {
   Tokens(Tokens),
 }
 
+impl std::fmt::Debug for ExpansionBody {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match self {
+      ExpansionBody::Closure(_) => write!(f, "<ExpansionClosure>"),
+      ExpansionBody::Tokens(ts) => write!(f, "{:?}", ts),
+    }
+  }
+}
+
+impl Default for ExpansionBody {
+  fn default() -> Self {
+    ExpansionBody::Tokens(Tokens::new(Vec::new()))
+  }
+}
+
 #[derive(Clone)]
 pub enum Reversion {
   Closure(DigestedReversionClosure),
@@ -53,15 +68,20 @@ pub enum Reversion {
 }
 
 impl From<&str> for Reversion {
-  fn from(t: &str) -> Reversion { Reversion::Tokens(mouth::tokenize_internal(t, None)) }
+  fn from(t: &str) -> Reversion { Reversion::Tokens(mouth::tokenize_internal(t, None).pack_parameters()) }
 }
 impl From<Tokens> for Reversion {
   fn from(ts: Tokens) -> Reversion { Reversion::Tokens(ts) }
 }
 
-impl From<Token> for Option<ExpansionBody> {
-  fn from(t: Token) -> Option<ExpansionBody> { Tokens!(t).into() }
+impl From<Token> for ExpansionBody {
+  fn from(t: Token) -> ExpansionBody { ExpansionBody::Tokens(Tokens!(t)) }
 }
+
+impl From<Token> for Option<ExpansionBody> {
+  fn from(t: Token) -> Option<ExpansionBody> { Some(ExpansionBody::Tokens(Tokens!(t))) }
+}
+
 
 impl From<Tokens> for ExpansionBody {
   fn from(t: Tokens) -> ExpansionBody { ExpansionBody::Tokens(t) }

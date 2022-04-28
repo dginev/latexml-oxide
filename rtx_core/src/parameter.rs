@@ -252,6 +252,7 @@ impl Parameter {
         self.before_digest = descriptor.before_digest.clone();
         self.after_digest = descriptor.after_digest.clone();
         self.reader_predigest = descriptor.reader_predigest.clone();
+        self.pack_parameters = descriptor.pack_parameters;
       },
       None => fatal!(
         Parameter,
