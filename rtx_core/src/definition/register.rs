@@ -79,7 +79,7 @@ impl Default for RegisterValue {
 }
 impl Object for RegisterValue {
   fn stringify(&self) -> String { s!("RegisterValue[{}]", self) }
-  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
+  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
   fn revert(&self, state: &mut State) -> Result<Tokens> {
     match self {
       // ExplodeText($self->toString);
@@ -380,7 +380,7 @@ impl fmt::Display for RegisterCell {
 }
 impl Object for RegisterCell {
   fn stringify(&self) -> String { Definition::stringify_type(self, "RegisterCell") }
-  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
+  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
 impl PartialEq for RegisterCell {
   fn eq(&self, other: &RegisterCell) -> bool { *self.0.read().unwrap() == *other.0.read().unwrap() }

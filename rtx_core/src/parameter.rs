@@ -154,7 +154,7 @@ impl PartialEq for Parameter {
 }
 impl Object for Parameter {
   fn stringify(&self) -> String { self.spec.to_string() }
-  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
+  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
 
 lazy_static! {
@@ -422,7 +422,7 @@ impl Object for Parameters {
     }
     result
   }
-  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
+  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
 
 impl Parameters {

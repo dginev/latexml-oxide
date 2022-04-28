@@ -80,7 +80,7 @@ LoadDefinitions!(outer_state, {
       stomach.egroup(state)?;
       lines.push("\\end{verbatim}".to_string());
       let boxes = lines.into_iter().map(|line|
-        Tbox::new(line.clone(), font.clone(), Some(loc.clone().into_owned()), T_OTHER!(line).into(), HashMap::new(), state).into()
+        Tbox::new(line.clone(), font.clone(), loc.clone().map(|l| l.into_owned()), T_OTHER!(line).into(), HashMap::new(), state).into()
       ).collect();
       whatsit.set_body(boxes);
     },

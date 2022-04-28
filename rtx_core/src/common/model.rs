@@ -56,7 +56,7 @@ pub struct Model {
 }
 
 impl Object for Model {
-  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
+  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
 impl Model {
   pub fn new() -> Self {

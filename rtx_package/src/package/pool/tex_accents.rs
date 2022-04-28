@@ -27,7 +27,7 @@ pub fn apply_accent(
   Ok(Tbox::new(
     string,
     font,
-    Some(locator.into_owned()),
+    locator.map(|l| l.into_owned()),
     reversion.unwrap_or(Tokens!()),
     HashMap::new(),
     state,

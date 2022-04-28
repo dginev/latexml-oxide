@@ -87,7 +87,7 @@ impl fmt::Display for Conditional {
 impl Object for Conditional {
   fn is_expandable(&self) -> bool { true }
   fn stringify(&self) -> String { self.stringify_type("Conditional") }
-  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
+  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
 impl Definition for Conditional {
   // sub new {
@@ -150,7 +150,7 @@ impl Conditional {
     state.assign_value("if_count", ifid, Some(Scope::Global));
     let if_frame = Arc::new(RwLock::new(IfFrame {
       token: Arc::clone(state.current_token.as_ref().unwrap()),
-      start: gullet.get_locator().into_owned(),
+      start: gullet.get_locator().unwrap().into_owned(),
       parsing: true,
       elses: false,
       ifid,

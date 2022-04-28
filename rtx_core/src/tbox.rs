@@ -43,7 +43,7 @@ impl fmt::Display for Tbox {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.text) }
 }
 impl Object for Tbox {
-  fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
+  fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
   fn revert(&self, _state: &mut State) -> Result<Tokens> { Ok(self.tokens.clone()) }
 }
 impl Tbox {

@@ -42,7 +42,7 @@ impl fmt::Display for List {
 }
 
 impl Object for List {
-  fn get_locator(&self) -> Cow<Locator> { Cow::Borrowed(&self.locator) }
+  fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
 
   fn revert(&self, state: &mut State) -> Result<Tokens> {
     let mut reverted = Vec::new();
@@ -71,11 +71,12 @@ impl List {
     // TODO: Should the locators be an Option<> type? Or can we test for the default here, since it's rare? Hmmmm
     let mut locator: Locator = Locator::default();
     for bx in boxes.iter().rev() {
-      let bx_locator = bx.get_locator();
-      if *bx_locator != locator {
-        // not the default!
-        locator = bx_locator.into_owned();
-        break;
+      if let Some(bx_locator) = bx.get_locator() {
+        if *bx_locator != locator {
+          // not the default!
+          locator = bx_locator.into_owned();
+          break;
+        }
       }
     }
     // Maybe the most representative font for a List is the font of the LAST box (that _has_ a

@@ -72,7 +72,7 @@ impl fmt::Display for Primitive {
 }
 impl Object for Primitive {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Primitive") }
-  fn get_locator(&self) -> Cow<Locator> { unimplemented!() }
+  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
 impl Definition for Primitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }

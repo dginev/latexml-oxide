@@ -133,7 +133,7 @@ impl fmt::Display for Mouth {
 }
 impl Object for Mouth {
   fn stringify(&self) -> String { s!("Mouth[<string>{}x{}]", self.lineno, self.colno) }
-  fn get_locator(&self) -> Cow<Locator> {
+  fn get_locator(&self) -> Option<Cow<Locator>> {
     let (to_line, to_column) = (self.lineno, self.colno);
     let max_col = if self.nchars > 0 { self.nchars - 1 } else { self.nchars }; // There is always a trailing EOL char, if any
     let (from_line, from_column) = if to_column > 0 && to_column >= max_col {
@@ -141,7 +141,8 @@ impl Object for Mouth {
     } else {
       (to_line, to_column)
     };
-    Cow::Owned(Locator::new(self.source.clone(), from_line, from_column, to_line, to_column))
+    Some(Cow::Owned(
+      Locator::new(self.source.clone(), from_line, from_column, to_line, to_column)))
   }
 }
 
@@ -372,6 +373,7 @@ impl Mouth {
               ch = hex as char;
               self.splice(self.colno - 1..self.colno + 3, &[ch]);
               self.nchars -= 3;
+              two_hex = true;
             }
           }
         }

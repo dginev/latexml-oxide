@@ -443,7 +443,7 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
       cs: cs.clone(),
       paramlist: None, // never any parameters, this is intentional
       replacement: Some(Arc::new(move |stomach, args, state| {
-        let locator = stomach.get_locator().into_owned();
+        let locator = stomach.get_locator().unwrap().into_owned();
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
         // TODO: Improve font precision here, the defaults may not belong in this lookup

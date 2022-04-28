@@ -42,7 +42,7 @@ pub struct Gullet {
 
 impl Object for Gullet {
   /// User feedback for where something (error?) occurred.
-  fn get_locator(&self) -> Cow<Locator> {
+  fn get_locator(&self) -> Option<Cow<Locator>> {
     let mut runtime_opt = self.mouth.as_ref();
     let mut mouthstack_iter = self.mouthstack.iter();
     while runtime_opt.is_some() && runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
@@ -56,7 +56,8 @@ impl Object for Gullet {
       runtime.mouth.get_locator()
     } else {
       // Final backup -- the default locator
-      Cow::Owned(Locator::default())
+      // TODO: Or should this be None?
+      Some(Cow::Owned(Locator::default()))
     }
   }
   fn stringify(&self) -> String {
