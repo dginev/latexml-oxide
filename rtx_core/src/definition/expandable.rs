@@ -17,7 +17,7 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ExpandableOptions {
   pub locked: bool,
   pub protected: bool,
@@ -30,7 +30,7 @@ pub struct ExpandableOptions {
   pub nopack_parameters: bool,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Expandable {
   pub is_protected: bool,
   pub is_long: bool,
@@ -200,26 +200,11 @@ impl Expandable {
   ) -> Self {
     let mut expansion: ExpansionBody = expansion.into();
     let traits = traits.unwrap_or_default();
-    // let source = $STATE->getStomach->getGullet->getMouth;
-    // if (ref $expansion eq 'LaTeXML::Core::Tokens') {
-    //   Fatal('misdefined', $cs, $source, "Expansion of '" . ToString($cs) . "' has unbalanced {}",
-    //     "Expansion is " . ToString($expansion)) unless $expansion->isBalanced;
     if !traits.nopack_parameters {
       if let ExpansionBody::Tokens(expansion_tokens) = expansion {
         expansion = ExpansionBody::Tokens(Tokens::pack_parameters(expansion_tokens));
       }
     }
-
-    // let trivial_expansion = if let ExpansionBody::Tokens(ref tks) = expansion {
-    //   if paramlist.is_none() && !tks.is_stub() {
-    //     Some(tks.substitute_parameters(Vec::new()))
-    //   } else {
-    //     None
-    //   }
-    // } else {
-    //   None
-    // };
-
     Expandable {
       cs,
       paramlist,

@@ -7,7 +7,7 @@ use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure};
+use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure, Reversion};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -31,6 +31,7 @@ pub struct PrimitiveOptions {
   pub alias: Option<String>,
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
+  pub reversion: Option<Reversion>
 }
 
 #[derive(Clone)]
@@ -42,6 +43,7 @@ pub struct Primitive {
   pub after_digest: Vec<DigestionClosure>,
   pub alias: Option<String>,
   pub nargs: Option<usize>,
+  pub reversion: Option<Reversion>,
   pub is_prefix: bool,
 }
 impl Default for Primitive {
@@ -54,6 +56,7 @@ impl Default for Primitive {
       before_digest: Vec::new(),
       after_digest: Vec::new(),
       nargs: None,
+      reversion: None,
       is_prefix: false,
     }
   }

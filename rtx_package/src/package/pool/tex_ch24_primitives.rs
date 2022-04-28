@@ -161,10 +161,8 @@ LoadDefinitions!(state, {
 
   // TeX I/O primitives
   DefPrimitive!("\\openin Number SkipMatch:= SkipSpaces TeXFileName", sub[stomach, args, state] {
-    unpack!(args => port, filename);
+    unpack_to_string!(args => port, filename);
     // possibly should close $port if it's already been opened?
-    let port = port.to_string();
-    let filename = filename.to_string();
     // Rely on FindFile to enforce any access restrictions
     if let Some(path) = find_file(&filename, None, state) {
       let content_str = LookupString!(&s!("{}_contents",path));

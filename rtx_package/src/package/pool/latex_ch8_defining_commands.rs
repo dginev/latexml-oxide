@@ -11,7 +11,11 @@ LoadDefinitions!(state, {
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
 
   DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, args, state] {
-    unpack!(args => star, cs, nargs_opt, opt, body);
+    let star = args.remove(0);
+    let cs = args.remove(0);
+    let nargs_opt = args.remove(0).unwrap_or_default();
+    let opt = args.remove(0).unwrap_or_default();
+    let body = args.remove(0).unwrap();
     let cs_token: Token = cs.into();
     let nargs = if nargs_opt.is_empty() { 0 } else {
       nargs_opt.unlist().first().unwrap().to_number().value_of() as usize

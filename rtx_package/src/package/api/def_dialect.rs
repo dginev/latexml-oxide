@@ -283,18 +283,17 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   options_opt: Option<ExpandableOptions>,
   state: &mut State,
 ) {
-  let expansion = expansion.into();
-  let options = options_opt.unwrap_or_default();
+  let expansion_opt : Option<ExpansionBody> = expansion.into();
+  // TODO: The None case could be refactored to feel much cleaner.
+  // For now it's equivalent to Tokens!()
+  let expansion = expansion_opt.unwrap_or_default();
+  let mut options = options_opt.unwrap_or_default();
   let options_locked = options.locked;
+  let scope = options.scope.take();
   let locked_key = if options_locked { s!("{}:locked", cs) } else { String::new() };
   state.install_definition(
-    Expandable {
-      cs,
-      paramlist,
-      expansion,
-      ..Expandable::default()
-    },
-    options.scope,
+    Expandable::new(cs, paramlist, expansion, Some(options), state),
+    scope,
   );
   if options_locked {
     state.assign_value(&locked_key, true, Some(Scope::Global));
@@ -425,6 +424,7 @@ pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacem
       alias: options.alias,
       nargs: options.nargs,
       is_prefix: options.is_prefix,
+      reversion: options.reversion,
     },
     scope,
   );
