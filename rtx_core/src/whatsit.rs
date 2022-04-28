@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 // use std::cell::RefCell;
-use std::collections::{VecDeque,HashMap};
+use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::sync::Arc;
 
@@ -99,25 +99,26 @@ impl Whatsit {
   /// #<digit> is the standard TeX positional argument
   /// # followed by a T_OTHER(propname) specifies the property propname!!
   fn substitute_parameters(&self, spec: Tokens, state: &mut State) -> Result<Vec<Token>> {
-    // TODO: This is kind of unfortunate -- I am not sure what are the reasonable "entryways" into the Whatsit substituteParameters. For Expandable we now have guarantees that "#,i" has been mapped into a single T_ARG(#i), but not here.
-    // so for now run on each call?
+    // TODO: This is kind of unfortunate -- I am not sure what are the reasonable "entryways" into the Whatsit substituteParameters. For Expandable we
+    // now have guarantees that "#,i" has been mapped into a single T_ARG(#i), but not here. so for now run on each call?
     let mut in_toks = VecDeque::from(spec.unlist());
-    let args   = self.get_args();
-    let props  = &self.properties;
+    let args = self.get_args();
+    let props = &self.properties;
     let mut result = Vec::new();
     while let Some(token) = in_toks.pop_front() {
-      if token.get_catcode() != Catcode::ARG { // Non '#'; copy it
+      if token.get_catcode() != Catcode::ARG {
+        // Non '#'; copy it
         result.push(token);
       } else {
         let s = token.get_string();
-        let n = s.parse::<usize>().unwrap()-1;
+        let n = s.parse::<usize>().unwrap() - 1;
         let arg_opt = if n < 10 {
           args[n].clone()
         } else {
           match props.get(s) {
             Some(Stored::Digested(v)) => Some((**v).clone()),
             Some(other) => panic!("unexpected prop in substitute_parameters, needed Digested, got: {:?}", other),
-            None => None
+            None => None,
           }
         };
         if let Some(arg) = arg_opt {
@@ -165,9 +166,11 @@ impl Object for Whatsit {
           Stored::Tokens(tks) => Some(Reversion::Tokens(tks.clone())),
           // TODO?
           // Stored::ReversionClosure(rfn) => Some(Reversion::Closure(rfn)),
-          other => panic!("TODO: Unexpected reversion directive {:?}", other)
+          other => panic!("TODO: Unexpected reversion directive {:?}", other),
         }
-      } else { defn.get_reversion_spec() };
+      } else {
+        defn.get_reversion_spec()
+      };
       match spec_opt {
         Some(Reversion::Closure(spec)) => {
           let spec_tokens = spec(self, self.get_args(), state).unwrap();
@@ -219,8 +222,8 @@ impl Object for Whatsit {
       }
 
       // Now cache it, in case it's needed again
-      // TODO: This causes a lot of mutability issues for arguable performance benefit. Maybe we are safe not using caching at all, and simply recomputing the reversion?
-      // if !REVERT_RAW {
+      // TODO: This causes a lot of mutability issues for arguable performance benefit. Maybe we are safe not using caching at all, and simply
+      // recomputing the reversion? if !REVERT_RAW {
       //   // don't cache when RAW
       //   if DUAL_BRANCH {
       //     // self.dual_reversion = Some(Tokens::new(tokens.clone()));

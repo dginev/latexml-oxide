@@ -53,7 +53,8 @@ fn unit_examples() {
     T_OTHER!("2"),
     T_END!(),
     T_LETTER!("z")
-  ).pack_parameters();
+  )
+  .pack_parameters();
   let subst = pattern.substitute_parameters(vec![T_LETTER!("u").into(), T_LETTER!("v").into(), T_LETTER!("w").into()]);
   assert_eq!(subst.stringify(), "Tokens[a,{,u,m,v,},z]", "Got correct substitution");
 }

@@ -78,13 +78,18 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
             unimplemented!(); // hm, this is a bit of a pain to port without making t into an Option<Token>...
           }
         }
-      } else { // CC_ARG case, keep looking at this token
+      } else {
+        // CC_ARG case, keep looking at this token
         n += 1;
       }
-      if n>0 {
+      if n > 0 {
         let t_num = t.get_string().parse::<i8>().unwrap_or(-1);
         if t_num != n {
-          fatal!(ParamSpec, Expected, s!("Parameters for {:?} not in order. Got {:?}, expected {:?}. in {:?}", cs, t, n, params));
+          fatal!(
+            ParamSpec,
+            Expected,
+            s!("Parameters for {:?} not in order. Got {:?}, expected {:?}. in {:?}", cs, t, n, params)
+          );
         }
       }
       // Check for delimiting text following the parameter #n
@@ -105,12 +110,15 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
       // Found text that marks the end of the parameter
       if !delim.is_empty() {
         let expected = Tokens::new(delim);
-        params.push(Parameter {
-          name: s!("Until"),
-          spec: s!("Until:{}", expected),
-          extra: expected.into(),
-          ..Parameter::default()
-        }.init(state)?);
+        params.push(
+          Parameter {
+            name: s!("Until"),
+            spec: s!("Until:{}", expected),
+            extra: expected.into(),
+            ..Parameter::default()
+          }
+          .init(state)?,
+        );
       } else if tokens.len() == 1 && tokens.front().unwrap().get_catcode() == Catcode::PARAM {
         // Special case: trailing sole # => delimited by next opening brace.
         tokens.pop_front();
@@ -137,7 +145,9 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
           extra: expected.into(),
           novalue: true,
           ..Parameter::default()
-        }.init(state)?);
+        }
+        .init(state)?,
+      );
     }
   }
   // return (@params ? LaTeXML::Core::Parameters->new(@params) : undef);
@@ -153,19 +163,19 @@ pub fn do_def(globally: bool, stomach: &mut Stomach, mut args: Vec<Option<Tokens
   let cs_opt = args.remove(0);
   let params_opt = args.remove(0);
   let body = args.remove(0).unwrap();
-  let cs : Token = match cs_opt {
+  let cs: Token = match cs_opt {
     Some(ts) => ts.into(),
     None => {
-      Error!("expected", "Token", stomach, state,  "Expected definition token");
+      Error!("expected", "Token", stomach, state, "Expected definition token");
       return Ok(());
-    }
+    },
   };
   let params = match params_opt {
     Some(ts) => ts,
     None => {
       Error!("misdefined", cs, stomach, state, "Expected definition parameter list");
       return Ok(());
-    }
+    },
   };
   let paramlist = parse_def_parameters(&cs, params, state)?;
 

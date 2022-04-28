@@ -243,7 +243,7 @@ impl Tokens {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
         result.push(token.clone());
-      } else if let Some(arg) = args[token.text.parse::<usize>().unwrap()-1].clone() {
+      } else if let Some(arg) = args[token.text.parse::<usize>().unwrap() - 1].clone() {
         result.extend(arg.unlist());
       }
     }

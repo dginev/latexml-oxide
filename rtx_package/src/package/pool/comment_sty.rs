@@ -31,12 +31,12 @@ LoadDefinitions!(outer_state, {
     let name = args.pop().unwrap().unwrap().to_string();
     let mut before_tokens = match args.pop() {
       Some(arg) => arg.unwrap().unlist(),
-      None => Vec::new()
+      None => Vec::new(),
     };
     before_tokens.push(T_CS!("\\ignorespaces"));
     let mut after_tokens = match args.pop() {
       Some(arg) => arg.unwrap().unlist(),
-      None => Vec::new()
+      None => Vec::new(),
     };
     after_tokens.push(T_CS!("\\ignorespaces"));
     // Note that we define the `magic' environment control sequences,
