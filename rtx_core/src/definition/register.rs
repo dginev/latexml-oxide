@@ -88,7 +88,7 @@ impl Object for RegisterValue {
       RegisterValue::MuDimension(ref value) => Ok(Tokens::new(ExplodeText!(value))),
       RegisterValue::Glue(ref value) => Ok(Tokens::new(ExplodeText!(value))),
       RegisterValue::MuGlue(ref value) => Ok(Tokens::new(ExplodeText!(value))),
-      RegisterValue::Token(ref value) => Ok(Tokens!(value.revert(state))),
+      RegisterValue::Token(ref value) => Ok(Tokens!(value.clone().revert())),
       RegisterValue::Tokens(ref value) => Ok(Tokens::new(value.clone().revert())), // clone?
     }
   }

@@ -141,8 +141,7 @@ impl Object for Mouth {
     } else {
       (to_line, to_column)
     };
-    Some(Cow::Owned(
-      Locator::new(self.source.clone(), from_line, from_column, to_line, to_column)))
+    Some(Cow::Owned(Locator::new(self.source.clone(), from_line, from_column, to_line, to_column)))
   }
 }
 

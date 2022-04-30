@@ -130,7 +130,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     anyop = addop | mulop | relop | metarelop
       | bigop | sumop | intop
-      | limitop | diffop | vertbar;
+      | limitop | diffop | vertbar | supop;
 
     anything = statements | anyop
   );

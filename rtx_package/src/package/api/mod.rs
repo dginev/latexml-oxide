@@ -172,7 +172,7 @@ impl IntoResultOptTokens<Result<Option<Tokens>>> for Tokens {
 }
 
 impl IntoResultOptTokens<Result<Option<Tokens>>> for Result<Tokens> {
-  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { self.map(|ts| Some(ts)) }
+  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { self.map(Some) }
 }
 
 impl IntoResultOptTokens<Result<Option<Tokens>>> for Result<Option<Tokens>> {

@@ -8,6 +8,7 @@ use std::collections::VecDeque;
 use std::fmt::Display;
 use std::string::ToString;
 use std::sync::Arc;
+use std::convert::AsRef;
 
 use crate::common::dimension::{Dimension, MuDimension};
 use crate::common::error::*;
@@ -110,6 +111,10 @@ impl Display for Tokens {
   }
 }
 
+impl AsRef<Tokens> for Tokens {
+  fn as_ref(&self) -> &Tokens { self }
+}
+
 impl Tokens {
   pub fn new(tokens: Vec<Token>) -> Self { Tokens(tokens) }
 
@@ -129,7 +134,13 @@ impl Tokens {
   pub fn len(&self) -> usize { self.0.len() }
 
   /// Return a string containing the TeX form of the Tokens
-  pub fn revert(self) -> Vec<Token> { self.0 }
+  pub fn revert(self) -> Vec<Token> {
+    self.0.into_iter().map(|mut t| if t.get_catcode() == Catcode::SmuggleTHE {
+      *t.smuggled.take().unwrap()
+    } else {
+      t
+    }).collect()
+  }
 
   /// to_number casts back to a parsed Number (usually via gullet.read_number)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
@@ -206,8 +217,8 @@ impl Tokens {
   // stopgap, how do we unpack! gullet-stage arguments without the unwrap?
   // should we unify the interfaces so that Options are always used? Could be cumbursome...
   pub fn unwrap_or_default(self) -> Tokens { self }
-  pub fn as_ref(&self) -> &Tokens { &self }
-  pub fn unwrap(&self) -> &Tokens { &self }
+
+  pub fn unwrap(&self) -> &Tokens { self }
 
   pub fn stringify(&self) -> String { s!("Tokens[{}]", &self.0.iter().map(ToString::to_string).collect::<Vec<_>>().join(",")) }
 
@@ -239,7 +250,7 @@ impl Tokens {
   pub fn substitute_parameters(&self, args: Vec<Option<Tokens>>) -> Self {
     let mut result = Vec::new();
     let mut in_tokens = self.0.iter();
-    while let Some(token) = in_tokens.next() {
+    for token in in_tokens {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
         result.push(token.clone());

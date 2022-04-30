@@ -257,11 +257,14 @@ pub fn input_content(request: &str, options: InputOptions, stomach: &mut Stomach
 }
 
 pub fn input(mut request: &str, options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
-  //  // unwrap if in quotes \input{"file name"}
-  // while request.starts_with('"') && request.ends_with('"') {
-  //   request = QUOTE_WRAPPED.replace(request);
-  // }
-  // // HEURISTIC! First check if equivalent style file, but only under very specific circumstances
+  // unwrap if in quotes \input{"file name"}
+  let mut clean_req = Cow::Borrowed(request);
+  while request.starts_with('"') && request.ends_with('"') {
+    clean_req = Cow::Owned(
+      QUOTE_WRAPPED.replace(&clean_req, "$1").into_owned()
+    );
+  }
+  // HEURISTIC! First check if equivalent style file, but only under very specific circumstances
   // if pathname_is_literaldata(request) {
   //   let (dir, name, ftype) = pathname_split(request);
   //   let file = name;
@@ -283,14 +286,14 @@ pub fn input(mut request: &str, options: InputOptions, stomach: &mut Stomach, st
   // }
   // // Next special case: If we were currently reading a "known" style or binding file,
   // // then this file, even if .tex, must also be definitions rather than content.!!(?)
-  // if state.lookup_bool("INTERPRETING_DEFINITIONS") {
-  //   input_definitions(request);
-  // }
-  if let Some(path) = find_file(request, None, state) {
+  if state.lookup_bool("INTERPRETING_DEFINITIONS") {
+    input_definitions(&clean_req, InputDefinitionOptions::default(), stomach, state)
+  }
+  else if let Some(path) = find_file(&clean_req, None, state) {
     // Found something plausible..
-    //   let ftype = if pathname_is_literaldata(path) { "tex" } else {
-    //     pathname_type(path)
-    //   };
+    // let ftype = if pathname_is_literaldata(path) { "tex" } else {
+    //   pathname_type(path)
+    // };
 
     //   // Should we be doing anything about options in the next 2 cases?..... I kinda think not, but?
     //   if (ftype == "rs") {                  // it's a LaTeXML binding.

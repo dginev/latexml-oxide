@@ -18,7 +18,7 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{Digested, Locator};
 
-pub type ReaderFn = dyn Fn(&mut Gullet, Vec<Option<Parameters>>, Vec<ParameterExtra>, &mut State) -> Result<Option<Tokens>>;
+pub type ReaderFn = dyn Fn(&mut Gullet, Vec<Option<Parameters>>, &[ParameterExtra], &mut State) -> Result<Option<Tokens>>;
 pub type ReaderPredigestFn = dyn Fn(&mut Stomach, Tokens, &mut State) -> Result<Option<Digested>>;
 pub type ReaderPredigestClosure = Arc<ReaderPredigestFn>;
 pub type ReaderClosure = Arc<ReaderFn>;
@@ -31,7 +31,7 @@ pub type ReaderClosure = Arc<ReaderFn>;
 // let mut stomach = state.stomach.borrow_mut();
 // let mut gullet = stomach.get_gullet_mut();
 //
-pub type ReversionClosure = Arc<dyn Fn(Vec<Token>, Vec<ParameterExtra>, &mut State) -> Result<Tokens>>;
+pub type ReversionClosure = Arc<dyn Fn(Vec<Token>, &[ParameterExtra], &mut State) -> Result<Tokens>>;
 
 lazy_static! {
   static ref LAST_WCHAR_RE: Regex = Regex::new(r"\w$").unwrap();
@@ -295,7 +295,7 @@ impl Parameter {
     self.setup_catcodes(state);
 
     let closure = &self.reader;
-    let mut value_opt: Option<Tokens> = closure(gullet, vec![], self.extra.clone(), state)?;
+    let mut value_opt: Option<Tokens> = closure(gullet, vec![], &self.extra, state)?;
     if let Some(mut value) = value_opt {
       if let Some(ref semi_chars) = self.semiverbatim {
         value = value.neutralize(semi_chars, state);
@@ -385,16 +385,14 @@ impl Parameter {
   pub fn revert(&self, value_opt: Option<Tokens>, state: &mut State) -> Result<Option<Tokens>> {
     if let Some(ref reverter) = self.reversion {
       if let Some(value) = value_opt {
-        Ok(Some((reverter)(value.unlist(), self.extra.clone(), state)?))
+        Ok(Some((reverter)(value.unlist(), &self.extra, state)?))
       } else {
         Ok(None)
       }
+    } else if let Some(value) = value_opt {
+      Ok(Some(Tokens::new(value.revert())))
     } else {
-      if let Some(value) = value_opt {
-        Ok(Some(Tokens::new(value.revert())))
-      } else {
-        Ok(None)
-      }
+      Ok(None)
     }
   }
 }

@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate rtx_core;
+use rtx_core::state::{StateOptions,State};
 use libxml::tree::SaveOptions;
 use rtx::util::test::lex_single_tex_formula;
 use rtx_math_parser::*;
@@ -38,6 +39,10 @@ fn main() {
       node.unlink();
     }
     xmath.add_child(&mut parse_tree).unwrap();
+
+    let mut state = State::new(StateOptions::default());
+    xmath.get_parent().unwrap().set_attribute("text", &text_form(&parse_tree, &mut doc, &mut state)).unwrap();
+
     println!(
       "\n{}",
       doc.get_document().to_string_with_options(SaveOptions {
