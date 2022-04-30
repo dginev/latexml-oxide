@@ -333,11 +333,11 @@ LoadDefinitions!(state, {
   // Default composes \lx@fnum@@{type} space title.
   DefMacro!(
     "\\lx@format@title@@{}{}",
-    "\\lx@@format@title@@{#1}{{\\@ifundefined{format@title@font@#1}{}{\\csname format@title@font@#1\\endcsname}#2}}"
+    r"\lx@@format@title@@{#1}{{\lx@format@title@font@@{#1}#2}}"
   );
   DefMacro!(
     "\\lx@@format@title@@{}{}",
-    "{\\@ifundefined{format@title@#1}{\\lx@@compose@title{\\lx@fnum@@{#1}}{#2}}{\\csname format@title@#1\\endcsname{#2}}}"
+    r"{\@ifundefined{format@title@#1}{\lx@@compose@title{\lx@fnum@@{#1}}{#2}}{\csname format@title@#1\endcsname{#2}}}"
   );
 
   // \\lx@format@toctitle@@{type}{toctitle}
@@ -346,18 +346,20 @@ LoadDefinitions!(state, {
   // Default composes \\lx@fnum@toc@@{type} space title.
   DefMacro!(
     "\\lx@format@toctitle@@{}{}",
-    "\\lx@@format@toctitle@@{#1}\
-     {{\\@ifundefined{format@toctitle@font@#1}{}{\\csname format@toctitle@font@#1\\endcsname}#2}}"
+    r"\lx@@format@toctitle@@{#1}{{\lx@format@toctitle@font@@{#1}#2}}"
   );
 
   DefMacro!(
     "\\lx@@format@toctitle@@{}{}",
-    "{\\@ifundefined{format@toctitle@#1}\
-     {\\lx@@compose@title{\\lx@fnum@toc@@{#1}}{#2}}\
-     {\\csname format@toctitle@#1\\endcsname{#2}}}"
+    r"{\@ifundefined{format@toctitle@#1}{\lx@@compose@title{\lx@fnum@toc@@{#1}}{#2}}{\csname format@toctitle@#1\endcsname{#2}}}"
   );
 
-  DefMacro!("\\lx@@compose@title{}{}", "\\lx@tag[][ ]{#1}#2");
+  DefMacro!("\\lx@@compose@title{}{}", r"\lx@tag[][ ]{#1}#2");
+
+  DefMacro!(r"\lx@format@title@font@@{}",
+  r"\@ifundefined{format@title@font@#1}{}{\csname format@title@font@#1\endcsname}");
+  DefMacro!(r"\lx@format@toctitle@font@@{}",
+  r"\@ifundefined{format@toctitle@font@#1}{}{\csname format@toctitle@font@#1\endcsname}");
 
   // NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the type.
   // This would be useful for the titles in links; thus can be plain (unicode) text.

@@ -44,8 +44,7 @@ LoadDefinitions!(outer_state, {
 
   DefConditional!("\\ifx Token Token", sub[gullet, args, state] {
     unpack_to_token!(args => token1, token2);
-    let xequals = XEquals!(&token1, &token2);
-    Ok(xequals)
+    XEquals!(&token1, &token2)
   });
 
   DefConditional!("\\ifvoid Number", sub[_g, args, state] {unpack_to_token!(args=>arg); classify_box(arg, state).is_empty() });

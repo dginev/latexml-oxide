@@ -399,7 +399,7 @@ impl Gullet {
   /// Read a sequence of tokens balanced in {}
   /// assuming the { has already been read.
   /// Returns a Tokens list of the balanced sequence, omitting the closing }
-  pub fn read_balanced(&mut self, expanded: bool, state: &State) -> Result<Tokens> {
+  pub fn read_balanced(&mut self, expanded: bool, state: &State) -> Result<Option<Tokens>> {
     let mut tokens = Vec::new();
     let mut level = 1;
     while let Some(t) = self.read_token(state) {
@@ -430,9 +430,10 @@ impl Gullet {
     if tokens.is_empty() {
       // Default to empty token list, to signify success (TODO, or improve to
       // Result<Option<Tokens>> ??)
-      tokens.push(T_OTHER!(""));
+      Ok(None)
+    } else {
+      Ok(Some(Tokens::new(tokens)))
     }
-    Ok(Tokens::new(tokens))
   }
 
   /// Match the input against a set of keywords; Similar to readMatch, but the keywords are strings,
@@ -496,7 +497,9 @@ impl Gullet {
           // And if it's a BEGIN, copy till balanced END
           nbraces += 1;
           tokens.push(token);
-          tokens.append(&mut self.read_balanced(false, state)?.unlist());
+          if let Some(balanced) = self.read_balanced(false, state)? {
+            tokens.append(&mut balanced.unlist());
+          }
           tokens.push(T_END!());
         } else {
           tokens.push(token);
@@ -522,7 +525,9 @@ impl Gullet {
               tokens.push(r_token);
             }
             tokens.push(token);
-            tokens.append(&mut self.read_balanced(false, state)?.unlist());
+            if let Some(balanced) = self.read_balanced(false, state)? {
+              tokens.append(&mut balanced.unlist());
+            }
             tokens.push(T_END!()); // Copy directly to result
             ring = VecDeque::new(); // and retry
           } else {
@@ -592,7 +597,11 @@ impl Gullet {
         match token.get_catcode() {
           Catcode::BEGIN => {
             // Inline ->getCatcode!
-            self.read_balanced(false, state)
+            if let Some(balanced) = self.read_balanced(false, state)? {
+              Ok(balanced)
+            } else { // since arg is mandatory, return an empty tokens
+              Ok(Tokens!())
+            }
           },
           _ => Ok(Tokens!(token)),
         }
@@ -1023,7 +1032,10 @@ impl Gullet {
       None => Ok(Tokens!()),
       Some(token) => {
         if token.get_catcode() == Catcode::BEGIN {
-          self.read_balanced(false, state)
+          match self.read_balanced(false, state)? {
+            Some(tks) => Ok(tks),
+            None => Ok(Tokens!())
+          }
         } else if let Some(defn) = state.lookup_register_definition(&token) {
           match defn.register_type() {
             Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
@@ -1200,5 +1212,21 @@ impl Gullet {
         Some(n) => Ok(Some(n.value_of())),
       }
     }
+  }
+
+  pub fn do_expand<T: Into<Tokens>>(&mut self, mut tokens: T, outer_state: &mut State) -> Result<Tokens> {
+    let mut tokens: Tokens = tokens.into();
+    self.reading_from_mouth(
+      Mouth::default(),
+      outer_state,
+      move |expand_gullet: &mut Gullet, expand_state: &mut State| -> Result<Tokens> {
+        expand_gullet.unread(tokens);
+        let mut expanded = Vec::new();
+        while let Some(t) = expand_gullet.read_x_token(false, false, expand_state)? {
+          expanded.push(t);
+        }
+        Ok(Tokens::new(expanded))
+      },
+    )
   }
 }

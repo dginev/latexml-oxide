@@ -35,29 +35,41 @@ LoadDefinitions!(state, {
   DefConditional!("\\iflx@donecaption");
   DefMacro!(
     "\\caption",
-    "\\lx@donecaptiontrue\\@ifundefined{@captype}{\\@@generic@caption}{\\expandafter\\@caption\\expandafter{\\@captype}}"
+    r"\lx@donecaptiontrue\@ifundefined{@captype}{\@@generic@caption}{\expandafter\@caption\expandafter{\@captype}}"
   );
+  // First, check for trailing \label, move it into the caption as a standard position
+  // NOTE: If one day we want to unlock \@caption, make sure to test against arXiv:cond-mat/0001395 for a passing build.
   DefMacro!(
     "\\@caption{}[]{}",
-    "\\@ifnext\\label{\\@caption@postlabel{#1}{#2}{#3}}{\\@caption@{#1}{#2}{#3}}"
+    r"\@ifnext\label{\@caption@postlabel{#1}{#2}{#3}}{\@caption@{#1}{#2}{#3}}",
+    locked=>true
   );
   // Check for trailing \label, move it into the caption
   DefMacro!(
-    "\\@caption@postlabel{}{}{} SkipMatch:\\label Semiverbatim",
-    "\\@caption@{#1}{#2}{#3\\label{#4}}"
+    r"\@caption@postlabel{}{}{} SkipMatch:\label Semiverbatim",
+    r"\@caption@{#1}{#2}{#3\label{#4}}"
   );
   DefMacro!(
-    "\\@caption@{}{}{}",
-    "\\@@add@caption@counters\
-     \\@@toccaption{\\lx@format@toctitle@@{#1}{\\ifx.#2.#3\\else#2\\fi}}\
-     \\@@caption{\\lx@format@title@@{#1}{#3}}"
+    r"\@caption@{}{}{}",
+    r"\@hack@caption@{#1}{#2}{}#3\label\endcaption"
   );
+  DefMacro!(r"\@hack@caption@{}{}{} Until:\label Until:\endcaption",
+  r"\ifx.#5.\@caption@@@{#1}{#2}{#3#4}\else\@@@hack@caption@{#1}{#2}{#3#4}#5\endcaption\fi");
+  DefMacro!(r"\@@@hack@caption@{}{}{} Semiverbatim Until:\label Until:\endcaption",
+  r"\lx@note@caption@label{#4}\@hack@caption@{#1}{#2}{#3\label{#4}#5}\label#6\endcaption");
+
+  DefPrimitive!("\\lx@note@caption@label{}", sub[stomach,args,state] {
+    unpack_to_string!(args=>arg);
+    maybe_note_label(&arg, state); });
+
+  DefMacro!("\\@caption@@@{}{}{}",
+  r"\@@add@caption@counters\@@toccaption{\lx@format@toctitle@@{#1}{\ifx.#2.#3\else#2\fi}}\@@caption{\lx@format@title@@{#1}{#3}}");
 
   // Note that the counters only get incremented by \caption, NOT by \table, \figure, etc.
   DefPrimitive!("\\@@add@caption@counters", sub[stomach, args, state] {
-    let captype = stomach.digest(vec![T_CS!("\\@captype")], state)?.to_string();
+    let captype = stomach.digest(T_CS!("\\@captype"), state)?.to_string();
     let props   = ref_step_counter(&captype, false, stomach, state)?;
-    let inlist  = stomach.digest(vec![T_CS!(s!("\\ext@{}", captype))], state)?.to_string();
+    let inlist  = stomach.digest(T_CS!(s!("\\ext@{}", captype)), state)?.to_string();
     state.assign_value(&s!("{}_tags", captype), props.get("tags"), Some(Scope::Global));
     state.assign_value(&s!("{}_id", captype), props.get("id"),   Some(Scope::Global));
     state.assign_value(&s!("{}_inlist", captype), inlist,      Some(Scope::Global));
@@ -79,7 +91,8 @@ LoadDefinitions!(state, {
   DefConstructor!("\\@@caption{}", "<ltx:caption>#1</ltx:caption>");
   DefConstructor!(
     "\\@@toccaption{}",
-    "<ltx:toccaption>#1</ltx:toccaption>" // sizer => "0"
+    "<ltx:toccaption>#1</ltx:toccaption>"
+    //sizer => 0
   );
 
   // TODO: implement optional argument {figure}[]

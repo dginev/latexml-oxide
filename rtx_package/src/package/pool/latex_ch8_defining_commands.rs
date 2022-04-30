@@ -202,7 +202,7 @@ LoadDefinitions!(state, {
   // http://tex.loria.fr/general/new/fntguide.html
   // we ignore font encoding
   DefPrimitive!("\\DeclareSymbolFont{}{}{}{}{}", sub[stomach, args, state] {
-    unpack_to_token!(args => name, enc, family, series, shape);
+    unpack!(args => name, enc, family, series, shape);
     AssignValue!(&s!("fontdeclaration@{}", name),
       fontmap!(family => family.to_string(),
         series   => series.to_string(),

@@ -1600,7 +1600,7 @@ impl State {
   }
   /// `XEquals` check for two token arguments
   pub fn x_equals(&mut self, token1: &Token, token2: &Token) -> bool {
-    let def1_opt = self.lookup_meaning(token1);
+    let def1_opt = self.lookup_meaning(token1); // # token, definition object or None
     let def2_opt = self.lookup_meaning(token2); // ditto
     match (def1_opt, def2_opt) {
       (None, None) => true,                     // true if both undefined

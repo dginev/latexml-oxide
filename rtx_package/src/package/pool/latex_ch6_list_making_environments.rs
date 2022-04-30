@@ -141,8 +141,8 @@ LoadDefinitions!(state, {
   DefMacro!("\\fnum@@itemiv", r"{\makelabel{\label@itemiv}}");
 
   DefMacro!("\\lx@poormans@ordinal{}", sub[gullet, args, state] {
-    unpack_to_token!(args => ctr);
-    let mut ctr_str      = CounterValue!(ctr.get_string()).value_of().to_string();
+    unpack!(args => ctr);
+    let mut ctr_str      = CounterValue!(&ctr.to_string()).value_of().to_string();
     let last_char = ctr_str.chars().last().unwrap_or('.');
     if last_char.is_ascii_digit() {
       ctr_str.push_str(PM_ORDINAL_SUFFICES[last_char.to_digit(10).unwrap() as usize]);

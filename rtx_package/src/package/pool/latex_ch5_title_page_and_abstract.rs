@@ -8,11 +8,8 @@ LoadDefinitions!(state, {
   Let!("\\@title", "\\@empty");
   DefMacro!("\\title{}", "\\def\\@title{#1}\\@add@frontmatter{ltx:title}{#1}", locked => true);
   DefMacro!("\\@date", "\\@empty");
-  DefMacro!(
-    "\\date{}",
-    "\\def\\@date{#1}\
-     \\@add@frontmatter{ltx:date}[role=creation,\
-     name={\\@ifundefined{datename}{}{\\datename}}]{#1}"
+  DefMacro!("\\date{}",
+    r"\def\@date{#1}\@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   );
 
   // TODO: ^

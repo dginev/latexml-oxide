@@ -62,19 +62,24 @@ pub fn clean_id(key: &str) -> String {
   cleaned_5.to_string()
 }
 
+
+pub fn clean_label<'a>(label: &'a str, prefix_opt: Option<&str>) -> Cow<'a, str> {
+  let key = label.trim(); // Trim leading/trailing, in any case
+  let cleaned_1 = SPACES_RE.replace_all(key, "_"); // spaces to underscores
+  let prefix = prefix_opt.unwrap_or("LABEL");
+  if prefix.is_empty() {
+    cleaned_1
+  } else {
+    Cow::Owned(s!("{}:{}",prefix,cleaned_1))
+  }
+}
+
 pub fn clean_bib_key(key: &str) -> String {
   // Originally lc() here, but let's preserve case till Postproc.
   let mut clean_key = key.trim_start();
   clean_key = clean_key.trim_end();
   // ??? key =~ s/\s//sg;
   clean_key.to_string()
-}
-
-pub fn clean_label(label: &str, prefix_opt: Option<&str>) -> String {
-  let prefix = prefix_opt.unwrap_or("LABEL");
-  let mut key = label;
-  key = key.trim_start().trim_end(); // Trim leading/trailing, in any case
-  s!("{}:{}", prefix, SPACES_RE.replace_all(key, "_"))
 }
 
 pub fn clean_url(url: &str) -> String {
