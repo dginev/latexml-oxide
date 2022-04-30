@@ -5,7 +5,7 @@ A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
 ## Progress
 
-[![test porting progress](http://progressed.io/bar/10)](https://github.com/dginev/rtx/issues/30) | 23 of ? core LaTeXML tests PASS
+[![test porting progress](http://progressed.io/bar/10)](https://github.com/dginev/rtx/issues/30) | 25 of 278 core LaTeXML tests PASS
 
 ### Why?
 
@@ -13,13 +13,13 @@ The three main reasons:
 
   * LaTeXML is **too slow** for large-scale production use.
     - A recent independent quote from a [BIR 2019 paper](http://ceur-ws.org/Vol-2345/paper2.pdf):
-     
+
       <img alttext="latexml vs tralics" src="https://i.imgur.com/6iOyCDo.png" width=600>
-     
+
     - Recent lamentations from social media:
-     
+
        <img alttext="latexml too slow" src="https://i.imgur.com/lOOtSWa.png" width=300>
-     
+
     - Recent request from a PhD student who maintains a dataset and wrote in for support:
       > With the newer version of LatexML, we are getting lower conversion failures. However, I have to run it on the whole collection and usually the other organizers who are also my advisors blame me for why it is taking so long to convert them!!
 
