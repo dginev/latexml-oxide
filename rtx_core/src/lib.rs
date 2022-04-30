@@ -10,6 +10,7 @@ pub mod common;
 pub mod tokens;
 #[macro_use]
 pub mod definition;
+pub mod comment;
 pub mod document;
 pub mod gullet;
 pub mod keyval;
@@ -22,7 +23,6 @@ pub mod rewrite;
 pub mod state;
 pub mod stomach;
 pub mod tbox;
-pub mod comment;
 pub mod util;
 pub mod whatsit;
 
@@ -31,6 +31,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, RwLock};
 
+use crate::comment::Comment;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
@@ -38,7 +39,6 @@ use crate::common::model::Model;
 use crate::common::number::Number;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::comment::Comment;
 use crate::definition::register::{NumericOps, RegisterValue};
 use crate::document::Document;
 use crate::keyvals::KeyVals;
@@ -441,6 +441,17 @@ impl Digested {
       List(l) => l.boxes.iter().any(check),
     }
   }
+
+  pub fn all<F>(&self, mut check: F) -> bool
+  where F: FnMut(&Self) -> bool {
+    use Digested::*;
+    match self {
+      TBox(_) | Whatsit(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
+      Comment(_) => true,
+      List(l) => l.boxes.iter().all(check),
+    }
+  }
+
   /// Provide a way of emulating an `Undigested` argument, by requesting
   /// raw tokens, only when they are preserved -- empty otherwise.
   pub fn raw_tokens(&self) -> Arc<Tokens> {

@@ -716,7 +716,7 @@ impl<'a> Token {
   /// Should revert do something with this???
   ///  ($standardchar[$$self[1]] || $$self[0]); }
 
-  pub fn revert(&self, _state: &mut State) -> Token { self.clone() }
+  pub fn revert(self) -> Token { self }
 
   pub fn as_str(&self) -> &str { &self.text }
 

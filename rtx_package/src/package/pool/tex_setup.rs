@@ -16,28 +16,13 @@ LoadDefinitions!(state, {
   // DOCUMENTID is the ID of the document
   // AND prefixes IDs on all other elements.
   if !state.documentid.is_empty() {
-    let docid = state.documentid.clone();
     // Wrap in T_OTHER so funny chars don't screw up (no space!)
-    DefMacro!(T_CS!("\\thedocument@ID"), None, T_OTHER!(docid));
+    let doc_id_token = T_OTHER!(state.documentid);
+    DefMacro!(T_CS!("\\thedocument@ID"), None, doc_id_token);
   } else {
     Let!("\\thedocument@ID", "\\@empty");
   }
   NewCounter!("@XMARG", "document", idprefix => "XM");
-
-  // Optionally, add ID's to ALL nodes.
-  // By default, this is OFF;
-  // Set to 1 (or \usepackage[ids]{latexml}) to enable.
-  // Set to 0 (or \usepackage[noids]{latexml}) to disable.
-  Tag!("ltx:*", after_open => sub[document, node, state] {
-    // If GENERATE_IDS is true, we'll assign an ID to EVERY element,
-    // EXCEPT ltx:document which only gets an id from an EXPLICIT \thedocument@id.
-    let tag = document.get_node_qname(node, state);
-    if tag != "ltx:document"
-      && tag != "ltx:XMWrap"    // No auto-generated id on wrap???
-      && LookupBool!("GENERATE_IDS") {
-        generate_id(document, node, "", state)?;
-    }
-  });
 
   //======================================================================
   Tag!("ltx:document",
@@ -109,15 +94,15 @@ LoadDefinitions!(state, {
      // let mut reverted_inner;
      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
      if !inner.is_empty() {
-      for inner_opt in inner.into_iter() {
+      for inner_opt in inner.iter() {
         let mut reverted_inner = match inner_opt {
           ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Some(Tokens::new(arg.clone()))], state)?,
-          _ => arg.iter().map(|t| t.revert(state)).collect()
+          _ => arg.iter().cloned().map(Token::revert).collect()
         };
         read_tokens.append(&mut reverted_inner);
       }
      } else {
-       let mut arg_reverted = arg.iter().map(|t| t.revert(state)).collect();
+       let mut arg_reverted = arg.iter().map(|t| t.clone().revert()).collect();
        read_tokens.append(&mut arg_reverted);
      }
      read_tokens.push(T_END!());
@@ -137,15 +122,15 @@ LoadDefinitions!(state, {
      // let mut reverted_inner;
      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
      if !inner.is_empty() {
-      for inner_opt in inner.into_iter() {
+      for inner_opt in inner.iter() {
         let mut reverted_inner = match inner_opt {
           ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Some(Tokens::new(arg.clone()))], state)?,
-          _ => arg.iter().map(|t| t.revert(state)).collect()
+          _ => arg.iter().map(|t| t.clone().revert()).collect()
         };
         read_tokens.append(&mut reverted_inner);
       }
      } else {
-       let mut arg_reverted = arg.iter().map(|t| t.revert(state)).collect();
+       let mut arg_reverted = arg.iter().map(|t| t.clone().revert()).collect();
        read_tokens.append(&mut arg_reverted);
      }
      read_tokens.push(T_END!());
@@ -155,6 +140,11 @@ LoadDefinitions!(state, {
 
   DefParameterType!("Optional", sub[gullet, inner, default, state] {
       let mut value = gullet.read_optional(state)?;
+      if value.is_none() && !default.is_empty() {
+        if let ParameterExtra::Tokens(ref tks) = default[0] {
+          value = Some(tks.clone());
+        }
+      }
       if !inner.is_empty() {
         for inner_p in inner.into_iter().flatten() {
           value = inner_p.reparse_argument(gullet, value, state);
@@ -168,13 +158,13 @@ LoadDefinitions!(state, {
       if !arg.is_empty() {
         let mut read_tokens: Vec<Token> = vec![T_OTHER!(s!("["))];
         let mut reverted_arg = if inner.is_empty() {
-            arg.iter().map(|t| t.revert(state)).collect()
+            arg.into_iter().map(Token::revert).collect()
         } else {
           let mut value = Vec::new();
           for inner_opt in inner.iter() {
             value = match inner_opt {
               ParameterExtra::ParametersOption(Some(inner)) => inner.revert_arguments(vec![Some(Tokens::new(arg.clone()))], state)?,
-              _ => arg.iter().map(|t| t.revert(state)).collect()
+              _ => arg.iter().cloned().map(Token::revert).collect()
             }
           }
           value
@@ -208,9 +198,9 @@ LoadDefinitions!(state, {
 
   DefParameterType!("Until", sub[gullet, _inner, until_extra, state] {
     let mut until = Vec::new();
-    for x in until_extra.into_iter() {
-      if let ParameterExtra::Tokens(t) = x {
-        until.extend(t.unlist());
+    for x in until_extra.iter() {
+      if let ParameterExtra::Tokens(ref t) = x {
+        until.extend(t.clone().unlist());
       } else {
         panic!("unexpected ParameterExtra in Until: {:?}",x);
       }
@@ -219,22 +209,24 @@ LoadDefinitions!(state, {
   },
   reversion => reversion!(gullet, arg, until, state, {
     let mut rev = Vec::new();
-    for t in arg.iter() {
-      rev.push(t.revert(state));
+    for t in arg.into_iter() {
+      rev.push(t.revert());
     }
-    // TODO: is until operational?
+    for u in until {
+      if let ParameterExtra::Tokens(ref t) = u {
+        rev.extend(t.clone().revert());
+      }
+    }
     Ok(Tokens::new(rev))
   }));
 
   // Skip any spaces, but don't contribute an argument.
   DefParameterType!("SkipSpaces", sub[gullet, inner, _extra, state] {
     gullet.skip_spaces(state);
-    Ok(Tokens!(T_OTHER!("")))
   }, novalue => true);
 
   DefParameterType!("Skip1Space", sub[gullet, inner, _extra, state] {
     gullet.skip_one_space(state);
-    Ok(Tokens!())
   }, novalue => true);
 
   // Read the next token
@@ -321,10 +313,7 @@ LoadDefinitions!(state, {
   // Read until the next (balanced) open brace {
   // used for the last TeX-style delimited argument
   DefParameterType!("UntilBrace", sub[gullet, inner, _extra, state] {
-    match gullet.read_until_brace(state)? {
-      None => Tokens::default(),
-      Some(tks) => tks
-    }
+    gullet.read_until_brace(state)?.unwrap_or_default()
   });
 
   // Yet another special case: Require a { but do not read it!!!
@@ -390,7 +379,7 @@ LoadDefinitions!(state, {
     }
   },
   reversion => reversion!(gullet, arg, inner, state, {
-    let arg_rev : Vec<Token> = arg.iter().map(|t| t.revert(state)).collect();
+    let arg_rev : Vec<Token> = arg.into_iter().map(Token::revert).collect();
     let mut tks = vec![T_BEGIN!()];
     tks.extend(arg_rev);
     tks.push(T_END!());
@@ -428,8 +417,8 @@ LoadDefinitions!(state, {
 
   // Read a matching keyword, eg. Match:=
   DefParameterType!("Match", sub[gullet, _inner, extra, state] {
-    let extra_tokens : Vec<Token> = extra.into_iter().filter(|e|
-    matches!(e, ParameterExtra::Tokens(t))).map(Into::into).collect();
+    let extra_tokens : Vec<Token> = extra.iter().filter(|e|
+    matches!(e, ParameterExtra::Tokens(t))).cloned().map(Into::into).collect();
     match gullet.read_match(&[&Tokens::new(extra_tokens)], state)? {
       Some(t) => Ok(t),
       None => Ok(Tokens!())
@@ -439,7 +428,7 @@ LoadDefinitions!(state, {
   // Read a keyword; eg. Keyword:to
   // (like Match, but ignores catcodes)
   DefParameterType!("Keyword", sub[gullet, _inner, extra, state] {
-    let extra_string : String = extra.into_iter().map(|e|
+    let extra_string : String = extra.iter().map(|e|
     if let ParameterExtra::Tokens(t) = e {
         t.to_string()
       } else {
@@ -465,15 +454,15 @@ LoadDefinitions!(state, {
       // let mut reverted_inner;
       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
       if !inner.is_empty() {
-        for inner_opt in inner.into_iter() {
+        for inner_opt in inner.iter() {
           let mut reverted_inner = match inner_opt { // TODO: the revert_arguments arg type is confusing me!
             ParameterExtra::ParametersOption(Some(inner_p)) => inner_p.revert_arguments(vec![Some(Tokens::new(arg.clone()))], state)?,
-            _ => arg.iter().map(|t| t.revert(state)).collect()
+            _ => arg.iter().map(|t| t.clone().revert()).collect()
           };
           read_tokens.append(&mut reverted_inner);
         }
       } else {
-        let mut reverted_arg = arg.iter().map(|t| t.revert(state)).collect();
+        let mut reverted_arg = arg.iter().map(|t| t.clone().revert()).collect();
         read_tokens.append(&mut reverted_arg);
       }
       read_tokens.push(T_END!());
@@ -489,7 +478,7 @@ LoadDefinitions!(state, {
     reversion => reversion!(gullet, arg, inner, state, {
      if !arg.is_empty() {
        let mut read_tokens = vec![T_OTHER!(s!("["))];
-       let mut reverted_arg = arg.iter().map(|t| t.revert(state)).collect();
+       let mut reverted_arg = arg.into_iter().map(Token::revert).collect();
        read_tokens.append(&mut reverted_arg);
        read_tokens.push(T_OTHER!(s!("]")));
        Ok(Tokens::new(read_tokens))
@@ -518,7 +507,7 @@ LoadDefinitions!(state, {
     }),
     reversion => reversion!(gullet, arg, inner, state, {
       let mut reverted = vec![T_BEGIN!()];
-      let reverted_arg : Vec<Token> = arg.iter().map(|t| t.revert(state)).collect();
+      let reverted_arg : Vec<Token> = arg.into_iter().map(Token::revert).collect();
       reverted.extend(reverted_arg);
       reverted.push(T_END!());
       Ok(Tokens::new(reverted))
@@ -530,7 +519,7 @@ LoadDefinitions!(state, {
   reader_predigest => undigested!(),
   reversion => reversion!(gullet, arg, inner, state, {
     let mut read_tokens = vec!(T_BEGIN!());
-    let mut reverted_arg = arg.iter().map(|t| t.revert(state)).collect();
+    let mut reverted_arg = arg.into_iter().map(Token::revert).collect();
     read_tokens.append(&mut reverted_arg);
     read_tokens.push(T_END!());
     Ok(Tokens::new(read_tokens))
@@ -545,7 +534,7 @@ LoadDefinitions!(state, {
       Ok(Tokens!())
     } else {
       let mut read_tokens = vec!(T_OTHER!("["));
-      let mut reverted_arg = arg.iter().map(|t| t.revert(state)).collect();
+      let mut reverted_arg = arg.into_iter().map(Token::revert).collect();
       read_tokens.append(&mut reverted_arg);
       read_tokens.push(T_OTHER!("]"));
       Ok(Tokens::new(read_tokens))
@@ -672,14 +661,15 @@ LoadDefinitions!(state, {
   DefParameterType!("TeXFileName", sub[gullet, inner, _extra, state] {
       let mut tokens : Vec<Token> = Vec::new();
       while let Some(token) = gullet.read_x_token(false, false, state)? {
-        let cc = token.get_catcode();
-        if cc != Catcode::SPACE && cc != Catcode::EOL && cc != Catcode::COMMENT && cc != Catcode::CS {
-          tokens.push(token);
-        } else {
-          if cc != Catcode::SPACE && cc != Catcode::EOL && cc != Catcode::COMMENT {
+        match token.get_catcode() {
+          Catcode::SPACE | Catcode::EOL | Catcode::COMMENT => {break;},
+          Catcode::CS => {
             gullet.unread_one(token);
+            break;
+          },
+          _ => {
+            tokens.push(token);
           }
-          break;
         }
       }
       let lead_cc = tokens.first().map(|t| t.get_catcode());
@@ -690,27 +680,15 @@ LoadDefinitions!(state, {
           // so first unwrap,
           tokens.remove(0);
           tokens.pop();
-          // Deyan:
-          //
-          // Come on. Is this really the right place to be loading latex? Let's not be this careful.
-          // it requires access to a stomach, which really shouldn't be necessary in an arbitrary parameter type
-          // ---
-          // // then load latex, and proceed
-          // if !state.lookup_bool("LaTeX.pool_loaded") {    // if already loaded, DONT redefine!
-          //   // LoadPool!("LaTeX");
-          //   input_definitions(
-          //     "LaTeX",
-          //     InputDefinitionOptions {
-          //       extension: Some("pool"),
-          //       ..InputDefinitionOptions::default()
-          //     },
-          //     stomach,
-          //     state
-          //   )?
-          // }
+          gullet.unread(Tokens!(T_CS!("\\ltx@loadpool"),T_BEGIN!(),T_OTHER!("LaTeX"),T_END!()));
         }
       }
       tokens
+  });
+
+  DefPrimitive!("\\ltx@loadpool {}", sub[stomach,args,state] {
+    unpack_to_string!(args=>name);
+    LoadPool!(&name);
   });
 
   // A LaTeX style directory List
@@ -775,18 +753,25 @@ LoadDefinitions!(state, {
   // Read a parenthesis delimited argument.
   // Note that this does NOT balance () within the argument.
   DefParameterType!("BalancedParen", sub[gullet, inner, _extra, state] {
-    //   my ($gullet) = @_;
-    //   my $tok = $gullet->readXToken;
-    //   if (ref $tok && ToString($tok) eq '(') {
-    //     $gullet->readUntil(T_OTHER(')'));
-    //   } else {
-    //     $gullet->unread($tok) if ref $tok;
-    //     undef; } },
-    // reversion => sub {
-    //   (T_OTHER('('), Revert($_[0]), T_OTHER(')')); });
-    unimplemented!();
-    Ok(Tokens!())
-  });
+    let tok_opt = gullet.read_x_token(false,false,state)?;
+    let is_paren = match tok_opt {
+      Some(ref t) => t.get_string() == "(",
+      _ => false
+    };
+    if is_paren {
+      gullet.read_until(Tokens!(T_OTHER!(")")), state).map(Some)
+    } else {
+      if let Some(tok) = tok_opt {
+        gullet.unread_one(tok);
+      }
+      Ok(None)
+    }
+  },
+  reversion => reversion!(gullet, args, inner, state, {
+    Ok(Tokens!(
+      T_OTHER!("("), Tokens::new(args).revert(), T_OTHER!(")")
+    ))
+  }));
 
   // Read a digested argument.
   // The usual parameter (generally written as {}) gets

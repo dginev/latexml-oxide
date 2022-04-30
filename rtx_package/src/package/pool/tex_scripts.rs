@@ -39,12 +39,14 @@ pub fn is_empty(digested: &Digested, state: &State) -> bool {
     let s = tbox.get_string();
     s.trim().is_empty()
   } else if let Digested::List(list) = digested {
-    list.boxes.iter().any(|b| !is_empty(b, state))
+    list.boxes.iter().all(|b| is_empty(b, state))
   } else if let Digested::Whatsit(ws_arc) = digested {
     let ws = ws_arc.read().unwrap();
-    *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap() && ws.get_body().unwrap_or_default().any(|b| !is_empty(b, state))
+    *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap() && ws.get_body().unwrap_or_default().all(|b| is_empty(b, state))
+  } else if let Digested::Comment(_) = digested {
+    true
   } else {
-    false
+    unimplemented!();
   }
 }
 
@@ -167,8 +169,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
     }
     let script = stuff.remove(0); // ONLY the first box is the script!
     if !is_empty(&script, state) {
-      let properties = stored_map!(
-        "font"        => script.get_font().unwrap(),
+      let mut properties = stored_map!(
         "isMath" => true
         // TODO:
         // "level"       => stomach.get_boxing_level(),
@@ -176,6 +177,9 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
         //"base"        => base,                      // for sizing/positioning
         //"prevscript"  => prevscript
       );
+      if let Some(font) = script.get_font() {
+        properties.insert("font".to_string(), font.into());
+      }
       let mut with_script = vec![Digested::Whatsit(Arc::new(RwLock::new(Whatsit {
         definition: state.lookup_definition(&T_CS!(cs)).unwrap(),
         args: vec![Some(script)],
@@ -288,4 +292,22 @@ LoadDefinitions!(state, {
       Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUB!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, 'SUBSCRIPT', 'post"); }
   );
+
+  DefMacro!("'", sub[gullet,args,state] {
+    let mut sup = vec![T_CS!("\\prime")];
+    // Collect up all ', convering to \prime
+    while gullet.if_next(T_OTHER!("'"), state)? {
+      gullet.read_token(state);
+      sup.push(T_CS!("\\prime"));
+    }
+    // Combine with any following superscript!
+    // However, this is semantically screwed up!
+    // We really need to set up separate superscripts, but at same level!
+    if gullet.if_next(T_SUPER!(), state)? {
+      gullet.read_token(state);
+      sup.extend(gullet.read_arg(state)?.unlist());
+    }
+    Tokens!(T_SUPER!(), T_BEGIN!(), sup, T_END!())
+  },
+  mathactive => true); // Only in math!
 });

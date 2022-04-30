@@ -406,7 +406,6 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool, state: &mut State) {
     //   state.remove_value("PEEKED_LABEL"); // CONSUME the label
     //   state.assign_value("PROCESSED_LABEL", label, Some(Scope::Global));    // Note that we've consumed the label
   }
-  return;
 }
 
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {

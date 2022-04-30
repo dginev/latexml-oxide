@@ -208,7 +208,7 @@ macro_rules! after_digest_single {
 macro_rules! reader {
   ($gullet:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
     Arc::new(
-      |$gullet: &mut Gullet, $inner: Vec<Option<Parameters>>, $extra: Vec<ParameterExtra>, $state: &mut State| -> Result<Option<Tokens>> {
+      |$gullet: &mut Gullet, $inner: Vec<Option<Parameters>>, $extra: &[ParameterExtra], $state: &mut State| -> Result<Option<Tokens>> {
         WithInnerState!($body, $state).into_result_opt_tokens()
       },
     )
@@ -257,7 +257,7 @@ macro_rules! undigested {
 macro_rules! reversion {
   ($gullet:ident, $arg:ident, $inner:ident, $state:ident, $body:block) => {
     Some(Arc::new(
-      |mut $arg: Vec<Token>, $inner: Vec<ParameterExtra>, $state: &mut State| -> Result<Tokens> {
+      |mut $arg: Vec<Token>, $inner: &[ParameterExtra], $state: &mut State| -> Result<Tokens> {
         BindInnerState!($state);
         let macro_out = $body;
         end_state_frame!();

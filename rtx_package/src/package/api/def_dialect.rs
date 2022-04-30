@@ -288,8 +288,10 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   // For now it's equivalent to Tokens!()
   let expansion = expansion_opt.unwrap_or_default();
   let mut options = options_opt.unwrap_or_default();
-  let options_locked = options.locked;
   let scope = options.scope.take();
+  if options.mathactive && cs.get_string().len() == 1 {
+    state.assign_mathcode(cs.get_string().chars().next().unwrap(), 0x8000u16, scope.clone()); }
+  let options_locked = options.locked;
   let locked_key = if options_locked { s!("{}:locked", cs) } else { String::new() };
   state.install_definition(Expandable::new(cs, paramlist, expansion, Some(options), state), scope);
   if options_locked {

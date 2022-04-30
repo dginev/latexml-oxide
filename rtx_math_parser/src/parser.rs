@@ -517,7 +517,7 @@ impl MathParser {
 // Mostly for debugging information?
 // Note that the nodes are true libXML nodes, already absorbed into the document
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-fn text_form(node: &Node, document: &mut Document, state: &mut State) -> String {
+pub fn text_form(node: &Node, document: &mut Document, state: &mut State) -> String {
   let mut text = textrec(node, None, None, document, state);
   text = text.replace('<', "less");
   text

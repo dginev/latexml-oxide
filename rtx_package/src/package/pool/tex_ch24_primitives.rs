@@ -254,11 +254,14 @@ LoadDefinitions!(state, {
     let port = port.to_number();
     if let Some(filename) = LookupValue!(&s!("output_file:{}", port)) {
       let handle   = s!("{}_contents",filename);
-      let contents = LookupString!(&handle);
-      AssignValue!(&handle => s!("{}{}\n", contents, tokens), Some(Scope::Global));
+      let mut contents : String = LookupString!(&handle);
+      let mut gullet = stomach.get_gullet_mut();
+      contents.push_str(&untex(Expand!(tokens,gullet,state),false,state)?);
+      contents.push('\n');
+      AssignValue!(&handle => contents, Some(Scope::Global));
     } else {
       let gullet = stomach.get_gullet_mut();
-      println_stderr!("{}\n", Expand!(tokens, gullet));
+      println_stderr!("{}", untex(Expand!(tokens, gullet),false,state)?);
     }
   });
 
