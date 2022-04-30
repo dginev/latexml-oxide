@@ -907,19 +907,7 @@ pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Option<Tokens>>, gul
 }
 
 pub fn do_expand<T: Into<Tokens>>(mut tokens: T, outer_gullet: &mut Gullet, outer_state: &mut State) -> Result<Tokens> {
-  let mut tokens: Tokens = tokens.into();
-  outer_gullet.reading_from_mouth(
-    Mouth::default(),
-    outer_state,
-    move |expand_gullet: &mut Gullet, expand_state: &mut State| -> Result<Tokens> {
-      expand_gullet.unread(tokens);
-      let mut expanded = Vec::new();
-      while let Some(t) = expand_gullet.read_x_token(false, false, expand_state)? {
-        expanded.push(t);
-      }
-      Ok(Tokens::new(expanded))
-    },
-  )
+  outer_gullet.do_expand(tokens, outer_state)
 }
 
 /// Convert a LaTeX-style argument spec to our Package form.

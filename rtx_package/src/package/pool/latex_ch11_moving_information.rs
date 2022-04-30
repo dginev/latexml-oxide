@@ -35,7 +35,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
   properties => {stored_map!("alignmentSkippable" => true, "alignmentPreserve" => true)},
   after_digest => sub[stomach, whatsit, state] {
     let label = match whatsit.get_arg(1) {
-      Some(labeld) => clean_label(&labeld.to_string(), None),
+      Some(labeld) => clean_label(&labeld.to_string(), None).into_owned(),
       None => String::new()
     };
     let mut scope = label.replace("LABEL:","label:");
@@ -69,7 +69,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
     properties => sub[stomach, args, state] {
       unpack_opt!(args => _star,label_opt);
       let label = label_opt.as_ref().unwrap().to_string();
-      Ok(map!("label" => Stored::String(clean_label(&label, None))))
+      Ok(map!("label" => Stored::String(clean_label(&label, None).into_owned())))
   });
 
   // DefConstructor('\pageref OptionalMatch:* Semiverbatim', "<ltx:ref labelref='#label'

@@ -11,7 +11,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\raggedleft", ""); // this is actually LaTeX
   DefMacro!("\\ttraggedright", "");
   DefMacro!("\\leavevmode", "");
-
+  DefMacro!(r"\mathhexbox{}{}{}", r###"\leavevmode\hbox{$\m@th \mathchar"#1#2#3$}"###);
   //----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.2. Non-English Symbols, p.39
 

@@ -19,7 +19,7 @@ use rtx_core::tokens::Tokens;
 use rtx_core::whatsit::Whatsit;
 use rtx_core::BoxOps;
 
-use super::cleaners::{clean_id, roman_aux};
+use super::cleaners::{clean_id, clean_label, roman_aux};
 use super::content::{build_invocation, digest_if, digest_literal, digest_text};
 use super::def_dialect::{def_macro, def_register, is_defined};
 use super::*;
@@ -407,6 +407,21 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool, state: &mut State) {
     //   state.assign_value("PROCESSED_LABEL", label, Some(Scope::Global));    // Note that we've consumed the label
   }
 }
+
+/// Use to note a discovered label to support label-derived refererence numbers
+/// Can by used by \label, among others. Note we only record the label
+/// if it hasn't already been peeked, and consumed.
+pub fn maybe_note_label(label:&str, state: &mut State) {
+  if state.lookup_value("LABEL_MAPPING_HOOK").is_some() {
+    let label = clean_label(label,Some( ""));
+    let processed = state.lookup_string("PROCESSED_LABEL");
+    if processed.is_empty() || processed != label { // Only if not already processed
+      state.remove_value("PROCESSED_LABEL");
+      state.assign_value("PEEKED_LABEL", Stored::String(label.into_owned()), Some(Scope::Global));
+    }
+  }
+}
+
 
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   //  print STDERR "Unusing scopes for $ctr\n";

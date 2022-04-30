@@ -505,7 +505,9 @@ impl KeyVals {
               // Copy next token to args
               let mut rest = Vec::new();
               if tok.get_catcode() == Catcode::BEGIN {
-                rest.append(&mut gullet.read_balanced(false, state)?.unlist());
+                if let Some(balanced) = gullet.read_balanced(false, state)? {
+                  rest.append(&mut balanced.unlist());
+                }
                 rest.push(T_END!());
               }
               // record for keyvals
@@ -566,18 +568,26 @@ impl KeyVals {
   ///       are a vector of a new type ReadValue ::= [Token, KeyVals, RegisterValue]
   ///       potentially? On the other hand, we can also put the extra effort of *postponing* the build of KV metadata until digestion,
   ///       this way not losing any time reserializing metadata
-  pub fn into_tokens(self) -> Tokens {
+  pub fn into_tokens(self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     let mut tks: Vec<Token> = Vec::new();
     for (k, v) in self.cached_pairs.into_iter() {
       tks.push(T_OTHER!(k));
-      tks.push(match v {
-        Stored::Tokens(vtks) => vtks.into(),
-        Stored::Token(vtk) => vtk,
-        Stored::String(vstr) => T_OTHER!(vstr),
+      match v {
+        // TODO: This is a really quick CRUTCH, what is the proper interface?
+        Stored::Tokens(vtks) => {
+          let expanded = gullet.do_expand(vtks,state)?;
+          let mut exp_str = expanded.to_string();
+          if exp_str == "{}" {
+            exp_str = String::new();
+          }
+          tks.push(T_OTHER!(exp_str));
+        },
+        Stored::Token(vtk) => tks.push(vtk),
+        Stored::String(vstr) => tks.push(T_OTHER!(vstr)),
         _ => unimplemented!(),
-      });
+      }
     }
-    Tokens::new(tks)
+    Ok(Tokens::new(tks))
   }
 }
 

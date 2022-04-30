@@ -185,7 +185,7 @@ LoadDefinitions!(state, {
   DefParameterType!("GeneralText", sub[gullet, inner, _extra, state] {
     if let Some(open) = gullet.read_x_token(false ,false, state)? {
       if open == T_BEGIN!() {
-        gullet.read_balanced(false, state)
+        Ok(gullet.read_balanced(false, state)?.unwrap_or_default())
       } else {
         Error!("expected","{", gullet, state, "Expected <general text> here");
         Ok(Tokens!(open))
@@ -336,7 +336,7 @@ LoadDefinitions!(state, {
         break;
       } else if token.get_catcode() == Catcode::BEGIN {
         tokens.push(token);
-        tokens.extend(gullet.read_balanced(false, state)?.unlist());
+        tokens.extend(gullet.read_balanced(false, state)?.unwrap_or_default().unlist());
         tokens.push(T_END!());
       } else if let Some(defn) = state.lookup_definition_stored(&token) {
         let args = defn.read_arguments(gullet, state)?;
@@ -398,7 +398,7 @@ LoadDefinitions!(state, {
       state.smuggle_the = true;
       let expanded = if let Some(token) = gullet.read_x_token(false, false, state)? {
         if token.get_catcode() == Catcode::BEGIN {
-          gullet.read_balanced(true, state)?
+          gullet.read_balanced(true, state)?.unwrap_or_default()
         } else {
           Tokens!(token)
         }
@@ -554,7 +554,7 @@ LoadDefinitions!(state, {
     let space_token = T_SPACE!();
 
     while token == begin_token {
-      let mut toks : Vec<Token> = gullet.read_balanced(false, state)?.unlist().into_iter().filter(|t| *t != space_token).collect();
+      let mut toks : Vec<Token> = gullet.read_balanced(false, state)?.unwrap_or_default().unlist().into_iter().filter(|t| *t != space_token).collect();
       if !toks.is_empty() {
         token = Some(toks.remove(0));
         if !toks.is_empty() {
@@ -990,7 +990,7 @@ LoadDefinitions!(state, {
         },
         state,
       )?;
-      Ok(kvs.into_tokens())
+      kvs.into_tokens(gullet, state)
     } else {
       Ok(Tokens!())
     }

@@ -43,7 +43,7 @@ LoadDefinitions!(state, {
     let url = if open == T_BEGIN!() {
       open = T_OTHER!("{");
       close = T_OTHER!("}");
-      gullet.read_balanced(false, state)?
+      gullet.read_balanced(false, state)?.unwrap_or_default()
     } else {
       open = T_OTHER!(open.get_string());
       close = open.clone();
