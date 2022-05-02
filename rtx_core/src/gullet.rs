@@ -4,11 +4,14 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use crate::common::dimension::Dimension;
+use crate::common::dimension::{fixpoint,Dimension};
+use crate::common::mudimension::MuDimension;
 use crate::common::error::*;
 use crate::common::glue::{FillCode, Glue};
+use crate::common::muglue::MuGlue;
 use crate::common::locator::Locator;
 use crate::common::number::Number;
+use crate::common::float::Float;
 use crate::common::object::Object;
 
 use crate::definition::conditional::ConditionalType;
@@ -754,9 +757,9 @@ impl Gullet {
         Ok(n)
       }
     } else if let Some(n) = self.read_internal_dimension(state)? {
-      Ok(Number::new(s * n.value_of()))
+      Ok(Number::new_f32(s * n.value_of()))
     } else if let Some(n) = self.read_internal_glue(state)? {
-      Ok(Number::new(s * n.value_of()))
+      Ok(Number::new_f32(s * n.value_of()))
     } else {
       let next = self.read_token(state);
       let message = s!(
@@ -768,7 +771,7 @@ impl Gullet {
       if let Some(next) = next {
         self.unread_one(next);
       }
-      Ok(Number::new(0.0))
+      Ok(Number::new(0))
     }
   }
 
@@ -784,15 +787,15 @@ impl Gullet {
         if cc == Catcode::OTHER && text.chars().all(|c| c.is_digit(10)) {
           // Read decimal literal
           text.push_str(&self.read_digits(&DIGIT_RE, true, state)?);
-          Ok(Some(Number::new(text.parse::<f32>()?)))
+          Ok(Some(Number::new(text.parse::<i32>()?)))
         } else if token == T_OTHER!("'") {
           // Read Octal literal
           let decimal = i32::from_str_radix(&self.read_digits(&OCT_RE, true, state)?, 8)?;
-          Ok(Some(Number::new(decimal as f32)))
+          Ok(Some(Number::new(decimal)))
         } else if token == T_OTHER!("\"") {
           //  Read Hex literal
           let decimal = i32::from_str_radix(&self.read_digits(&HEX_RE, true, state)?, 16)?;
-          Ok(Some(Number::new(decimal as f32)))
+          Ok(Some(Number::new(decimal)))
         } else if token == T_OTHER!("`") {
           //  Read Charcode
           let mut s = match self.read_token(state) {
@@ -804,8 +807,7 @@ impl Gullet {
           }
           let s_char = s.chars().next().unwrap();
           let s_char = s_char as u8;
-          let s_char = f32::from(s_char);
-          Ok(Some(Number::new(s_char))) //  Only a character token!!! NOT expanded!!!!
+          Ok(Some(Number::new(s_char as i32))) //  Only a character token!!! NOT expanded!!!!
         } else {
           self.unread_one(token); // Unread
           self.read_internal_integer(state)
@@ -818,7 +820,7 @@ impl Gullet {
   /// Float, a floating point number.
   /// Similar to factor, but does NOT accept comma!
   /// This is NOT part of TeX, but is convenient.
-  pub fn read_float(&mut self, state: &mut State) -> Result<Number> {
+  pub fn read_float(&mut self, state: &mut State) -> Result<Float> {
     let is_negative = self.read_optional_signs(state)?;
     let s = if is_negative { -1.0 } else { 1.0 };
     let mut string = self.read_digits(&DIGIT_RE, true, state)?;
@@ -829,7 +831,7 @@ impl Gullet {
           state.current_token.as_ref().unwrap()
         );
         Warn!("expected", "<float>", self, state, message);
-        Ok(Number::new(0.0))
+        Ok(Float::new(0.0))
       },
       Some(mut token) => {
         if token.get_string() == "." {
@@ -849,14 +851,14 @@ impl Gullet {
         };
 
         if let Some(n) = n_opt {
-          Ok(Number::new(s * n.value_of()))
+          Ok(Float::new(s * n.value_of()))
         } else {
           let message = s!(
             "Missing number, treated as zero while processing {:?}",
             state.current_token.as_ref().unwrap()
           );
           Warn!("expected", "<float>", self, state, message);
-          Ok(Number::new(0.0))
+          Ok(Float::new(0.0))
         }
       },
     }
@@ -963,31 +965,31 @@ impl Gullet {
       }
       let (r1, f1) = match self.read_keyword(&["plus"], state)? {
         Some(v) => self.read_rubber(false, state)?,
-        None => (0.0, None),
+        None => (None, None),
       };
       let (r2, f2) = match self.read_keyword(&["minus"], state)? {
         Some(v) => self.read_rubber(false, state)?,
-        None => (0.0, None),
+        None => (None, None),
       };
 
-      Ok(Glue::spec_new(&d.value_of().to_string(), Some(r1), f1, Some(r2), f2, state))
+      Ok(Glue::spec_new(&d.value_of().to_string(), r1, f1, r2, f2, state))
     }
   }
 
-  pub fn read_rubber(&mut self, mu: bool, state: &mut State) -> Result<(f32, Option<FillCode>)> {
+  pub fn read_rubber(&mut self, mu: bool, state: &mut State) -> Result<(Option<f32>, Option<FillCode>)> {
     let is_negative = self.read_optional_signs(state)?;
     let s = if is_negative { -1.0 } else { 1.0 };
     match self.read_factor(state)? {
       None => {
         let f = if mu {
-          self.read_mu_dimension(state)?
+          self.read_mu_dimension(state)?.value_of()
         } else {
-          self.read_dimension(state)?
+          self.read_dimension(state)?.value_of()
         };
-        Ok((f.value_of() * s, None))
+        Ok((Some(f * s), None))
       },
       Some(f) => match self.read_keyword(&["filll", "fill", "fil"], state)? {
-        Some(fil) => Ok((s * f, FillCode::from(&fil.to_string()))),
+        Some(fil) => Ok((Some(s * f), FillCode::from(&fil.to_string()))),
         None => {
           let u = if mu {
             match self.read_mu_unit(state)? {
@@ -1006,14 +1008,68 @@ impl Gullet {
               Some(v) => v,
             }
           };
-          Ok((s * f * u, None))
+          Ok((Some(s * f * u), None))
         },
       },
     }
   }
 
-  pub fn read_mu_glue(&mut self, _state: &mut State) -> Result<Glue> { unimplemented!() }
-  pub fn read_mu_dimension(&mut self, _state: &mut State) -> Result<Dimension> { unimplemented!() }
+  //======================================================================
+  // Mu Glue
+  //======================================================================
+  // <muglue> = <optional signs><internal muglue> | <mudimen><mustretch><mushrink>
+  // <mustretch> = plus <mudimen> | plus <fil dimen> | <optional spaces>
+  // <mushrink> = minus <mudimen> | minus <fil dimen> | <optional spaces>
+  pub fn read_mu_glue(&mut self, state: &mut State) -> Result<MuGlue> {
+    let is_negative = self.read_optional_signs(state)?;
+    if let Some(n) = self.read_internal_mu_glue(state)? {
+      Ok(if is_negative { n.negate() } else { n })
+    } else {
+      let mut d = self.read_mu_dimension(state)?;
+      if is_negative {
+        d = d.negate()
+      }
+      let (r1, f1) = if self.read_keyword(&["plus"],state)?.is_some() {
+        self.read_rubber(true,state)?
+      } else {
+        (None,None)
+      };
+      let (r2, f2) = if self.read_keyword(&["minus"],state)?.is_some() {
+        self.read_rubber(true,state)?
+      } else {
+        (None, None)
+      };
+      Ok(MuGlue::new_full(d.value_of(), r1, f1, r2, f2))
+    }
+  }
+
+  //======================================================================
+  // Mu Dimensions
+  //======================================================================
+  // <mudimen> = <optional signs><unsigned mudimem>
+  // <unsigned mudimen> = <normal mudimen> | <coerced mudimen>
+  // <normal mudimen> = <factor><mu unit>
+  // <mu unit> = <optional spaces><internal muglue> | mu <one optional space>
+  // <coerced mudimen> = <internal muglue>
+  pub fn read_mu_dimension(&mut self, state: &mut State) -> Result<MuDimension> {
+    let is_negative = self.read_optional_signs(state)?;
+    if let Some(mut m) = self.read_factor(state)? {
+      if is_negative {
+        m = -1.0*m;
+      }
+      let munit = self.read_mu_unit(state)?;
+      if munit.is_none() {
+        Warn!("expected", "<unit>", self, state, "Illegal unit of measure (mu inserted).");
+      }
+      Ok(MuDimension::new(fixpoint(m, munit)))
+    } else if let Some(m) = self.read_internal_mu_glue(state)? {
+      Ok(MuDimension::new(m.value_of()))
+    } else {
+      Warn!("expected", "<mudimen>", self, state, "Expecting mudimen; assuming 0");
+      Ok(MuDimension::new(0.0))
+    }
+  }
+
   pub fn read_mu_unit(&mut self, state: &mut State) -> Result<Option<f32>> {
     if let Some(m) = self.read_keyword(&["mu"], state)? {
       self.skip_one_space(state);
@@ -1024,7 +1080,13 @@ impl Gullet {
       Ok(None)
     }
   }
-  fn read_internal_mu_glue(&mut self, state: &mut State) -> Result<Option<Glue>> { unimplemented!() }
+
+  fn read_internal_mu_glue(&mut self, state: &mut State) -> Result<Option<MuGlue>> {
+    match self.read_register_value(RegisterType::MuGlue, state)? {
+      None => Ok(None),
+      Some(val) => Ok(Some(val.into())),
+    }
+  }
 
   /// Apparent behaviour of a token value (ie \toks#=<arg>)
   pub fn read_tokens_value(&mut self, state: &mut State) -> Result<Tokens> {

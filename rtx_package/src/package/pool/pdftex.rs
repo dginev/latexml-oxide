@@ -6,34 +6,34 @@ LoadDefinitions!(state, {
   // See the pdfTeX User's Manual
 
   // Integer Registers
-  DefRegister!("\\pdfoutput"                => Number::new(0.0));
-  DefRegister!("\\pdfminorversion"          => Number::new(4.0));
-  DefRegister!("\\pdfoptionpdfminorversion" => Number::new(4.0)); // obsolete name
-  DefRegister!("\\pdfcompresslevel"         => Number::new(9.0));
-  DefRegister!("\\pdfobjcompresslevel"      => Number::new(0.0));
-  DefRegister!("\\pdfdecimaldigits"         => Number::new(4.0));
-  DefRegister!("\\pdfimageresolution"       => Number::new(72.0));
-  DefRegister!("\\pdfpkresolution"          => Number::new(0.0));
-  DefRegister!("\\pdftracingfonts"          => Number::new(0.0));
-  DefRegister!("\\pdfuniqueresname"         => Number::new(0.0));
-  DefRegister!("\\pdfadjustspacing"         => Number::new(0.0));
-  DefRegister!("\\pdfprotrudechars"         => Number::new(0.0));
+  DefRegister!("\\pdfoutput"                => Number::new(0));
+  DefRegister!("\\pdfminorversion"          => Number::new(4));
+  DefRegister!("\\pdfoptionpdfminorversion" => Number::new(4)); // obsolete name
+  DefRegister!("\\pdfcompresslevel"         => Number::new(9));
+  DefRegister!("\\pdfobjcompresslevel"      => Number::new(0));
+  DefRegister!("\\pdfdecimaldigits"         => Number::new(4));
+  DefRegister!("\\pdfimageresolution"       => Number::new(72));
+  DefRegister!("\\pdfpkresolution"          => Number::new(0));
+  DefRegister!("\\pdftracingfonts"          => Number::new(0));
+  DefRegister!("\\pdfuniqueresname"         => Number::new(0));
+  DefRegister!("\\pdfadjustspacing"         => Number::new(0));
+  DefRegister!("\\pdfprotrudechars"         => Number::new(0));
   // \efcode <font> <8bitnumber>  => <integer>
   // \lpfcode <font> <8bitnumber> => <integer>
   // \rpfcode <font> <8bitnumber> => <integer>
-  DefRegister!("\\efcode Token Number", Number::new(0.0));
-  DefRegister!("\\lpcode Token Number", Number::new(0.0));
-  DefRegister!("\\rpcode Token Number", Number::new(0.0));
+  DefRegister!("\\efcode Token Number", Number::new(0));
+  DefRegister!("\\lpcode Token Number", Number::new(0));
+  DefRegister!("\\rpcode Token Number", Number::new(0));
 
-  DefRegister!("\\pdfforcepagebox"                => Number::new(0.0));
-  DefRegister!("\\pdfoptionalwaysusepdfpagebox"   => Number::new(0.0));
-  DefRegister!("\\pdfinclusionerrorlevel"         => Number::new(0.0));
-  DefRegister!("\\pdfoptionalinclusionerrorlevel" => Number::new(0.0));
-  DefRegister!("\\pdfimagehicolor"                => Number::new(0.0));
-  DefRegister!("\\pdfimageapplygamma"             => Number::new(0.0));
-  DefRegister!("\\pdfgamma"                       => Number::new(0.0));
-  DefRegister!("\\pdfimagegamma"                  => Number::new(0.0));
-  DefRegister!("\\pdfdraftmode"                   => Number::new(0.0));
+  DefRegister!("\\pdfforcepagebox"                => Number::new(0));
+  DefRegister!("\\pdfoptionalwaysusepdfpagebox"   => Number::new(0));
+  DefRegister!("\\pdfinclusionerrorlevel"         => Number::new(0));
+  DefRegister!("\\pdfoptionalinclusionerrorlevel" => Number::new(0));
+  DefRegister!("\\pdfimagehicolor"                => Number::new(0));
+  DefRegister!("\\pdfimageapplygamma"             => Number::new(0));
+  DefRegister!("\\pdfgamma"                       => Number::new(0));
+  DefRegister!("\\pdfimagegamma"                  => Number::new(0));
+  DefRegister!("\\pdfdraftmode"                   => Number::new(0));
 
   // Dimen Registers
   DefRegister!("\\pdfhorigin"      => Dimension!("1in"));
@@ -78,19 +78,19 @@ LoadDefinitions!(state, {
   // DefMacro(""\pdfcolorstackinit {}","");
 
   // Read-only registers
-  DefRegister!("\\pdftexversion"      => Number::new(0.0));
-  DefRegister!("\\pdflastobj"         => Number::new(0.0));
-  DefRegister!("\\pdflastxform"       => Number::new(0.0));
-  DefRegister!("\\pdflastximage"      => Number::new(0.0));
-  DefRegister!("\\pdflastximagepages" => Number::new(0.0));
-  DefRegister!("\\pdflastannot"       => Number::new(0.0));
-  DefRegister!("\\pdflastlink"        => Number::new(0.0));
-  DefRegister!("\\pdflastxpos"        => Number::new(0.0));
-  DefRegister!("\\pdflastypos"        => Number::new(0.0));
-  DefRegister!("\\pdflastdemerits"    => Number::new(0.0));
-  DefRegister!("\\pdfelapsedtime"     => Number::new(0.0));
-  DefRegister!("\\pdfrandomseed"      => Number::new(0.0));
-  DefRegister!("\\pdfshellescape"     => Number::new(0.0));
+  DefRegister!("\\pdftexversion"      => Number::new(0));
+  DefRegister!("\\pdflastobj"         => Number::new(0));
+  DefRegister!("\\pdflastxform"       => Number::new(0));
+  DefRegister!("\\pdflastximage"      => Number::new(0));
+  DefRegister!("\\pdflastximagepages" => Number::new(0));
+  DefRegister!("\\pdflastannot"       => Number::new(0));
+  DefRegister!("\\pdflastlink"        => Number::new(0));
+  DefRegister!("\\pdflastxpos"        => Number::new(0));
+  DefRegister!("\\pdflastypos"        => Number::new(0));
+  DefRegister!("\\pdflastdemerits"    => Number::new(0));
+  DefRegister!("\\pdfelapsedtime"     => Number::new(0));
+  DefRegister!("\\pdfrandomseed"      => Number::new(0));
+  DefRegister!("\\pdfshellescape"     => Number::new(0));
 
   // \pdfximage [ image attr spec ] general text (h, v, m)
   // \pdfrefximage object number (h, v, m)

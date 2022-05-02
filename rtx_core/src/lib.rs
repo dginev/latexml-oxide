@@ -142,7 +142,7 @@ pub trait BoxOps: Object {
     // why is clippy intent (&*val).into() is needless?
     #[allow(clippy::needless_borrow)]
     match self.get_property("width", state) {
-      None => Some(Number::new(0.0).into()),
+      None => Some(Number::new(0).into()),
       Some(val) => (&*val).into(),
     }
   }

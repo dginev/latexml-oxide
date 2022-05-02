@@ -4,7 +4,8 @@ use crate::package::*;
 // Assignment, TeXBook Ch.24, p.275
 //======================================================================
 // <assignment> = <non-macro assignment> | <macro assignment>
-LoadDefinitions!(state, {
+
+LoadDefinitions!(outer_state, {
   //======================================================================
   // Macros
   // See Chapter 24, p.275-276
@@ -64,27 +65,31 @@ LoadDefinitions!(state, {
 
   // Need to handle "at" too!!!
   DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName", sub[stomach, args, state] {
-    unpack_to_token!(args => cs, name);
+    unpack!(args => cs_arg, name_arg);
+    let cs : Token = cs_arg.into();
     let gullet = stomach.get_gullet_mut();
-    let name = name.to_string();
-    if let Some(props) = font::decode_fontname(&name,
-         gullet.read_keyword(&["at"], state)?.map(|_| gullet.read_dimension(state).unwrap().pt_value(None)),
-         gullet.read_keyword(&["scaled"], state)?.map(|_| gullet.read_number(state).unwrap().value_of() / 1000.0)) {
-
-      gullet.skip_spaces(state);
-      AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
-      let props_opt = Some(props); // TODO: the macro api can be even smoother here... auto cast Font -> Option<Font>
-      DefPrimitive!(cs, None, None, font => props_opt);
-    } else {    // Failed?
+    let name = name_arg.to_string();
+    let props_opt = if let Some(mut props) = font::decode_fontname(&name,
+      gullet.read_keyword(&["at"], state)?.map(|_| gullet.read_dimension(state).unwrap().pt_value(None)),
+      gullet.read_keyword(&["scaled"], state)?.map(|_| gullet.read_number(state). unwrap().value_of() / 1000.0)) {
+      props.name = Some(Cow::Owned(name));
+      Some(props)
+    } else { // Failed?
       let message = s!("Unrecognized font name {:?} Font switch macro {:?} will have no effect", name, cs.stringify());
-      Info!("unexpected", name, stomach, state,message);
+      Info!("unexpected", name, gullet, state, message);
+      None
+    };
+    gullet.skip_spaces(state);
+    if let Some(ref props) = props_opt {
+      AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
     }
+    DefPrimitive!(cs, None, None, font => props_opt);
   });
 
   // Not sure what this should be...
   DefPrimitive!("\\nullfont", None, font => {family => "nullfont"});
 
-  DefRegister!("\\count Number"  => Number::new(0.0));
+  DefRegister!("\\count Number"  => Number::new(0));
   DefRegister!("\\dimen Number"  => Dimension::new(0.0));
   DefRegister!("\\skip Number"   => Glue::new(0.0));
   DefRegister!("\\muskip Number" => MuGlue::new(0.0));
@@ -179,10 +184,11 @@ LoadDefinitions!(state, {
    Ok(Vec::new())
   });
 
-  DefMacro!("\\futurelet Token Token Token", sub[gullet, args, state] {
+  DefPrimitive!("\\futurelet Token Token Token", sub[stomach, args, state] {
       unpack_to_token!(args => cs, token1, token2);
-      Let!(&cs, token2.clone());
-      Ok(Tokens!(token1, token2))
+      stomach.get_gullet_mut().unread(Tokens!(token1,token2.clone())); // NOT expandable, but puts tokens back
+      Let!(&cs, token2);
+      Ok(Vec::new())
   });
 
   // <shorthand definition> = \chardef<control sequence><equals><8bit>
@@ -192,53 +198,69 @@ LoadDefinitions!(state, {
 
   // See below for \chardef & \mathchardef
 
-  DefPrimitive!("\\countdef Token SkipMatch:= Number", sub[stomach, args, inner_state] {
-    unpack_to_token!(args => cs, num);
-    let count = s!("\\count{}", num.to_number().value_of());
-    let setter_count = count.clone();
-    DefRegister!(cs, None, Number::new(0.0),
-      getter => sub[args, state] { state.lookup_number(&count).unwrap_or_default() },
+  // NOTE: We are not porting `shorthandDef` from the original perl,
+  // as the generic types it would impose are not worth our while.
+  // specifically for the getter/setter routines.
+  // instead, here is the same pattern of definition, with different concrete value types.
+
+  DefPrimitive!("\\countdef Token SkipMatch:=", sub[stomach, args, state] {
+    unpack_to_token!(args => cs);
+    state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
+    let num = stomach.get_gullet_mut().read_number(state)?;
+    let reg = s!("\\count{}", num.value_of());
+    let setter_count = reg.clone();
+    DefRegister!(cs, None, Number::new(0),
+      getter => sub[args, state] { state.lookup_number(&reg).unwrap_or_default() },
       setter => sub[value, args, state] { state.assign_value(&setter_count, value, None); });
     AfterAssignment!();
-    Ok(vec![])
+    Ok(Vec::new())
   });
 
-  DefPrimitive!("\\dimendef Token SkipMatch:= Number", sub[stomach,args,state] {
-    unpack_to_token!(args=> cs, num);
-    let dimen = s!("\\dimen{}", num.to_number().value_of());
+  DefPrimitive!("\\dimendef Token SkipMatch:=", sub[stomach,args,state] {
+    unpack_to_token!(args=> cs);
+    state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
+    let num = stomach.get_gullet_mut().read_number(state)?;
+    let dimen = s!("\\dimen{}", num.value_of());
     let dimen2 = dimen.clone();
     DefRegister!(cs, None, Dimension::new(0.0),
       getter => sub[args, state] { state.lookup_dimension(&dimen).unwrap_or_default() },
       setter => sub[value, args, state] { state.assign_value(&dimen2, value, None); }
     );
     AfterAssignment!();
+    Ok(Vec::new())
   });
 
-  DefPrimitive!("\\skipdef Token SkipMatch:= Number", sub[stomach,args,state] {
-    unpack_to_token!(args=> cs, num);
-    let skip = s!("\\skip{}", num.to_number().value_of());
+  DefPrimitive!("\\skipdef Token SkipMatch:=", sub[stomach,args,state] {
+    unpack_to_token!(args=> cs);
+    state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
+    let num = stomach.get_gullet_mut().read_number(state)?;
+    let skip = s!("\\skip{}", num.value_of());
     let skip2 = skip.clone();
     DefRegister!(cs, None, Glue::new(0.0),
       getter => sub[args, state] { state.lookup_glue(&skip).unwrap_or_default() },
       setter => sub[value, args, state] { state.assign_value(&skip2, value, None); }
     );
     AfterAssignment!();
-  });
-
-  DefPrimitive!("\\muskipdef Token SkipMatch:= Number", sub[stomach,args,state] {
-    unpack_to_token!(args=> cs, num);
-    // my $muglue = '\muskip' . $num->valueOf;
-    // DefRegisterI($cs, undef, MuGlue(0),
-    //   getter => sub { LookupValue($muglue) || MuGlue(0); },
-    //   setter => sub { AssignValue($muglue => $_[0]); });
-    AfterAssignment!();
-    unimplemented!();
     ()
   });
 
-  DefPrimitive!("\\toksdef Token SkipMatch:= Number", sub[stomach,args,state] {
-    unpack_to_token!(args=> cs, num);
-    let toks = s!("\\toks{}", num.to_number().value_of() as usize);
+  DefPrimitive!("\\muskipdef Token SkipMatch:=", sub[stomach,args,state] {
+    let cs : Token = args[0].as_ref().unwrap().into();
+    state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
+    let num = stomach.get_gullet_mut().read_number(state)?;
+    let muglue = s!("\\muskip{}",num.value_of());
+    let muglue_setter = muglue.clone();
+    DefRegister!(cs, None, MuGlue::new(0.0),
+      getter => sub[args,state] { state.lookup_muglue(&muglue).unwrap_or_default(); },
+      setter => sub[value,args,state] { state.assign_value(&muglue_setter, value, None); });
+    AfterAssignment!();
+  });
+
+  DefPrimitive!("\\toksdef Token SkipMatch:=", sub[stomach,args,state] {
+    unpack_to_token!(args=>cs);
+    state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
+    let num = stomach.get_gullet_mut().read_number(state)?;
+    let toks = s!("\\toks{}", num.value_of() as usize);
     let toks_setter = toks.clone();
     DefRegister!(cs, None, Tokens!(),
       getter => sub[args, state] { state.lookup_tokens(&toks).unwrap_or_default() },
@@ -252,7 +274,7 @@ LoadDefinitions!(state, {
   //   | <chardef token> | <mathchardef token> | \parshape | \inputlineno
   //   | \hyphenchar<font> | \skewchar<font> | \badness
 
-  DefRegister!("\\lastpenalty", Number::new(0.0), readonly => true);
+  DefRegister!("\\lastpenalty", Number::new(0), readonly => true);
 
   // \parshape !?!??
   DefPrimitive!("\\parshape SkipMatch:= Number", sub[stomach, args, state] {
@@ -270,16 +292,16 @@ LoadDefinitions!(state, {
   //            readonly=>1,
   //            getter=>{ Number($stomach->getGullet->getMouth????? ->lineno); });
 
-  DefRegister!("\\badness", Number::new(0.0), readonly => true);
+  DefRegister!("\\badness", Number::new(0), readonly => true);
 
   // <codename> = \catcode | \mathcode | \lccode | \uccode | \sfcode | \delcode
-  DefRegister!("\\catcode Number", Number::new(0.0),
+  DefRegister!("\\catcode Number", Number::new(0),
     getter => sub[args, state] {
       let num : f32 = args[0].to_number().value_of();
       let refchar = (num as u8) as char;
       let code : Catcode = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       let code : u8 = code.into();
-      Number::new(code)
+      Number!(code)
     },
     setter => sub[value, args, state] {
       let c_char = (args[0].to_number().value_of() as u8) as char;
@@ -289,7 +311,7 @@ LoadDefinitions!(state, {
   );
 
   // Only used for active math characters, so far
-  DefRegister!("\\mathcode Number", Number::new(0.0),
+  DefRegister!("\\mathcode Number", Number::new(0),
     getter => sub[args, state] {
       let ch_code   = args[0].to_number().value_of() as u8;
       let ch : char = ch_code as char;
@@ -297,7 +319,7 @@ LoadDefinitions!(state, {
         None => ch_code,
         Some(code) => code as u8
       };
-      Number::new(f32::from(code))
+      Number!(code)
     },    // defaults to the char's code itself(?)
     setter => sub[value, args, state] {
       let ch = args[0].to_number().value_of() as u8;
@@ -306,7 +328,7 @@ LoadDefinitions!(state, {
     }
   );
 
-  DefRegister!("\\sfcode Number", Number::new(0.0),
+  DefRegister!("\\sfcode Number", Number::new(0),
     getter=> sub[args, state] { unimplemented!(); () },
     // my $code = $STATE->lookupSFcode(chr($_[0]->valueOf));
     //  Number(defined $code ? $code : 0); },
@@ -314,7 +336,7 @@ LoadDefinitions!(state, {
       //$STATE->assignSFcode(chr($_[1]->valueOf) => $_[0]->valueOf);
     }
   );
-  DefRegister!("\\lccode Number", Number::new(0.0),
+  DefRegister!("\\lccode Number", Number::new(0),
     getter=> sub[args, state] { unimplemented!(); () },
       // my $code = $STATE->lookupLCcode(chr($_[0]->valueOf));
       // Number(defined $code ? $code : 0); },
@@ -322,7 +344,7 @@ LoadDefinitions!(state, {
       //$STATE->assignLCcode(chr($_[1]->valueOf) => $_[0]->valueOf);
     }
   );
-  DefRegister!("\\uccode Number", Number::new(0.0),
+  DefRegister!("\\uccode Number", Number::new(0),
     getter=> sub[args, state] { unimplemented!(); () },
       // my $code = $STATE->lookupUCcode(chr($_[0]->valueOf));
       // Number(defined $code ? $code : 0); },
@@ -331,7 +353,7 @@ LoadDefinitions!(state, {
     }
   );
   // Not used anywhere (yet)
-  DefRegister!("\\delcode Number", Number::new(0.0),
+  DefRegister!("\\delcode Number", Number::new(0),
     getter=> sub[args, state] { unimplemented!(); () },
       // my $code = $STATE->lookupDelcode(chr($_[0]->valueOf));
       // Number(defined $code ? $code : 0); },
@@ -342,15 +364,15 @@ LoadDefinitions!(state, {
 
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
   for letter in b'A'..=b'Z' {
-    state.assign_lccode(letter, letter + 20, Scope::Global);
-    state.assign_uccode(letter, letter, Scope::Global);
-    state.assign_lccode(letter + 20, letter + 20, Scope::Global);
-    state.assign_uccode(letter + 20, letter, Scope::Global);
+    outer_state.assign_lccode(letter, letter + 20, Scope::Global);
+    outer_state.assign_uccode(letter, letter, Scope::Global);
+    outer_state.assign_lccode(letter + 20, letter + 20, Scope::Global);
+    outer_state.assign_uccode(letter + 20, letter, Scope::Global);
   }
 
   // Stub definitions ???
-  DefRegister!("\\hyphenchar{}", Number!((b'-')));
-  DefRegister!("\\skewchar{}", Number::new(0.0)); // no idea what the default is here
+  DefRegister!("\\hyphenchar{}", Number::new(b'-' as i32));
+  DefRegister!("\\skewchar{}", Number::new(0)); // no idea what the default is here
 
   DefMacro!("\\hyphenation GeneralText", "");
 });

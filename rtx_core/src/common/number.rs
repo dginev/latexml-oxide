@@ -1,31 +1,94 @@
 use crate::definition::register::{NumericOps, RegisterType};
+use crate::tokens::Tokens;
+use crate::mouth;
 use std::fmt;
+use lazy_static::lazy_static;
+
+lazy_static! {
+  /// smallest number that makes a difference added to 1 in Perl's float format.
+  static ref EPSILON : f32 = {
+    let mut e = 1.0;
+    while 1.0 + e / 2.0 != 1.0 {
+      e /= 2.0;
+    }
+    e
+  };
+
+  static ref ROUNDING_HALF : f32 = 0.5 * (1.0 - *EPSILON);
+}
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Number(pub f32);
+pub struct Number(pub i32);
 
 impl Default for Number {
-  fn default() -> Self { Number(0.0) }
+  fn default() -> Self { Number(0) }
 }
 
 impl NumericOps for Number {
-  fn new<T: Into<f32>>(number: T) -> Self { Number(number.into()) }
-  fn value_of(self) -> f32 { self.0 }
+  fn value_of(self) -> f32 { self.0 as f32 }
   fn register_type(&self) -> RegisterType { RegisterType::Number }
+}
+
+impl Number {
+  pub fn new(number: i32) -> Self { Number(number) }
+  pub fn new_f32(number: f32) -> Self { Number(number.trunc() as i32) }
+  pub fn value_i32(self) -> i32 { self.0 }
+  pub fn negate(self) -> Self
+  where Self: Sized {
+    let value = self.value_i32();
+    if value > 0 {
+      Self::new(-value)
+    } else {
+      Self::new(value)
+    }
+  }
+  pub fn add<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    Self::new(self.value_i32() + other.value_of() as i32)
+  }
+
+  pub fn multiply<T: Into<f32>>(self, other: T) -> Self
+  where Self: Sized {
+    let other: f32 = other.into();
+    Self::new((self.value_of() * other).floor() as i32)
+  }
+  pub fn divide<T: Into<f32>>(self, other: T) -> Self
+  where Self: Sized {
+    let other: f32 = other.into();
+    Self::new((self.value_of() / other).floor() as i32)
+  }
+}
+
+impl From<Number> for Tokens {
+  fn from(v: Number) -> Tokens { mouth::tokenize_internal(&v.to_string(), None) }
+}
+
+impl From<Number> for Option<Tokens> {
+  fn from(v: Number) -> Option<Tokens> { Some(v.into()) }
 }
 
 #[macro_export]
 macro_rules! Number {
   ($number:expr) => {{
-    use ::rtx_core::definition::register::NumericOps;
-    ::rtx_core::common::number::Number::new($number as f32)
+    ::rtx_core::common::number::Number::new($number as i32)
   }};
 }
 
 impl From<String> for Number {
-  fn from(s: String) -> Number { Number(s.parse::<f32>().unwrap()) }
+  fn from(s: String) -> Number { Number(s.parse::<i32>().unwrap()) }
 }
 
 impl fmt::Display for Number {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0) }
+}
+
+/// An attempt at rounding floats to integers (like scaled points),
+/// in a (hopefully) Knuthian manner (like round_decimals \S102 in Tex The Program)
+pub fn kround(number:f32) -> f32 {
+  let rounded = if number < 0.0 {
+    number - *ROUNDING_HALF
+  } else {
+    number + *ROUNDING_HALF
+  };
+  rounded.trunc()
 }

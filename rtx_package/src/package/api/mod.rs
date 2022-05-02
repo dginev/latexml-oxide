@@ -9,9 +9,11 @@ use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
-use rtx_core::common::dimension::{Dimension, MuDimension};
+use rtx_core::common::dimension::Dimension;
+use rtx_core::common::mudimension::MuDimension;
 use rtx_core::common::error::*;
-use rtx_core::common::glue::{Glue, MuGlue};
+use rtx_core::common::glue::Glue;
+use rtx_core::common::muglue::MuGlue;
 use rtx_core::common::number::Number;
 use rtx_core::common::store::Stored;
 use rtx_core::definition::register::*;

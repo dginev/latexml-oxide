@@ -10,9 +10,11 @@ use std::string::ToString;
 use std::sync::Arc;
 use std::convert::AsRef;
 
-use crate::common::dimension::{Dimension, MuDimension};
+use crate::common::dimension::Dimension;
+use crate::common::mudimension::MuDimension;
 use crate::common::error::*;
-use crate::common::glue::{Glue, MuGlue};
+use crate::common::glue::Glue;
+use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::store::Stored;
 use crate::definition::register::RegisterValue;
@@ -149,8 +151,7 @@ impl Tokens {
       eprintln!("TODO: An empty tokens was requested for .to_number, debug this!");
       Number::default()
     } else {
-      let token: Token = self.into();
-      token.to_number()
+      Number::new(self.to_string().parse::<i32>().unwrap_or(0))
     }
   }
 

@@ -7,13 +7,15 @@ pub use std::collections::HashMap;
 pub use std::collections::VecDeque;
 pub use std::sync::{Arc, RwLock};
 
-pub use rtx_core::common::dimension::{Dimension, MuDimension};
+pub use rtx_core::common::dimension::Dimension;
+pub use rtx_core::common::mudimension::MuDimension;
 
 pub use rtx_core::aux_macros::*;
 pub use rtx_core::common::error::*;
 pub use rtx_core::common::font;
 pub use rtx_core::common::font::Font;
-pub use rtx_core::common::glue::{Glue, MuGlue};
+pub use rtx_core::common::glue::{Glue};
+pub use rtx_core::common::muglue::MuGlue;
 pub use rtx_core::common::locator::Locator;
 pub use rtx_core::common::number::Number;
 pub use rtx_core::common::object::Object;

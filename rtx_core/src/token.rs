@@ -4,13 +4,14 @@ use std::fmt;
 use std::fmt::Display;
 use std::sync::Arc;
 
-use crate::common::dimension::{Dimension, MuDimension};
+use crate::common::dimension::Dimension;
+use crate::common::mudimension::MuDimension;
 use crate::common::error::*;
-use crate::common::glue::{Glue, MuGlue};
+use crate::common::glue::Glue;
+use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::definition::register::NumericOps;
 use crate::definition::register::{RegisterCell, RegisterValue};
 use crate::definition::Definition;
 use crate::state::State;
@@ -735,7 +736,7 @@ impl<'a> Token {
 
   pub fn to_register(&self, state: &State) -> Option<Arc<RegisterCell>> { state.lookup_register_definition(self) }
 
-  pub fn to_number(&self) -> Number { Number::new(self.text.parse::<f32>().unwrap_or(0.0)) }
+  pub fn to_number(&self) -> Number { Number::new(self.text.parse::<i32>().unwrap_or(0)) }
 
   pub fn to_dimension(&self) -> Dimension { Dimension::new(self.text.parse::<f32>().unwrap_or(0.0)) }
 

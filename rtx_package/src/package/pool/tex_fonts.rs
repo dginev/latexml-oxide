@@ -4,7 +4,7 @@ lazy_static! {
   static ref FONT_TOKEN_RE: Regex = Regex::new(r"^\\(?:text|script|scriptscript)font$").unwrap();
 }
 
-LoadDefinitions!(state, {
+LoadDefinitions!(outer_state, {
   // <font> = <fontdef token> | \font | <family member>
   // <family member> = <font range><4bit>
   // <font range> = \textfont | \scriptfont | \scriptscriptfont
@@ -439,32 +439,30 @@ LoadDefinitions!(state, {
   });
 
   // Almost like a register, but different...
-  DefPrimitive!("\\chardef Token SkipMatch:= Number", sub[stomach, args, p_state] {
-    unpack_to_token!(args => newcs, value);
+  DefPrimitive!("\\chardef Token SkipMatch:=", sub[stomach, args, state] {
+    unpack_to_token!(args => newcs);
+    state.assign_meaning(&newcs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(), None); // Let w/o AfterAssignment
+    let value = stomach.get_gullet_mut().read_number(state)?;
     let csname = newcs.get_cs_name().to_owned();
-    let number = value.to_number();
     let chardef_value = value.clone();
     let internalcs = T_CS!(s!("\\@chardef@{}", csname));
     DefPrimitive!(internalcs.clone(), None, sub[stomach,args,i_state] {
       let gullet = stomach.get_gullet_mut();
-      let decoded = match font::decode(number.value_of() as u8, None, false, i_state) {
-        None => String::new(),
-        Some(c) => c.to_string()
-      };
+      let decoded = font::decode(value.value_of() as u8, None, false, i_state).map(|c| c.to_string()).unwrap_or_default();
       Tbox::new(decoded,
         None,
         None,
         // Note: curious case, since this is 2-levels in, we can't infer the "i_state"
         // in the Invocation!() call, so we provide it explicitly instead.
         // if this becomes a common problem, we would have to improve the infrastructure
-        Invocation!(T_CS!("\\char"), vec![value.clone()], gullet, i_state)?,
+        Invocation!(T_CS!("\\char"), vec![chardef_value.clone()], gullet, i_state)?,
         HashMap::new(),
         i_state)
     });
 
-    p_state.install_definition(Register::new_chardef(newcs, Some(chardef_value.into()), Some(internalcs)), None);
+    state.install_definition(Register::new_chardef(newcs, Some(chardef_value.into()), Some(internalcs)), None);
     AfterAssignment!();
-    Ok(vec![])
+    Ok(Vec::new())
   });
 
   DefConstructor!("\\mathchar Number", "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",

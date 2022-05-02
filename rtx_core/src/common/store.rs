@@ -3,10 +3,12 @@ use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::sync::{Arc, RwLock};
 
-use crate::common::dimension::{Dimension, MuDimension};
+use crate::common::dimension::Dimension;
+use crate::common::mudimension::MuDimension;
 use crate::common::error::*;
 use crate::common::font::Font;
-use crate::common::glue::{Glue, MuGlue};
+use crate::common::glue::Glue;
+use crate::common::muglue::MuGlue;
 use crate::common::locator::Locator;
 use crate::common::number::Number;
 use crate::definition::conditional::{Conditional, IfFrame};
@@ -486,7 +488,7 @@ impl From<i32> for Stored {
 }
 
 impl From<f32> for Stored {
-  fn from(value: f32) -> Self { Stored::Number(Number::new(value)) }
+  fn from(value: f32) -> Self { Stored::Number(Number::new(value.floor() as i32)) }
 }
 
 impl From<Catcode> for Stored {
@@ -718,10 +720,10 @@ impl<'a> From<&'a Stored> for Option<Number> {
   fn from(value: &'a Stored) -> Option<Number> {
     match value {
       Stored::Number(ref n) => Some(*n),
-      Stored::Dimension(ref n) => Some(Number::new(n.value_of())),
-      Stored::Glue(ref n) => Some(Number::new(n.value_of())),
-      Stored::MuDimension(ref n) => Some(Number::new(n.value_of())),
-      Stored::MuGlue(ref n) => Some(Number::new(n.value_of())),
+      Stored::Dimension(ref n) => Some(Number::new(n.value_of().floor() as i32)),
+      Stored::Glue(ref n) => Some(Number::new(n.value_of().floor() as i32)),
+      Stored::MuDimension(ref n) => Some(Number::new(n.value_of().floor() as i32)),
+      Stored::MuGlue(ref n) => Some(Number::new(n.value_of().floor() as i32)),
       other => {
         eprintln!("TODO: auto-cast of Stored to Number attempted on {:?}", other);
         None

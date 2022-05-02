@@ -9,7 +9,8 @@ use std::sync::{Arc, RwLock};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::{Font, Fontmap};
-use crate::common::glue::Glue;
+use crate::common::glue::{Glue};
+use crate::common::muglue::MuGlue;
 use crate::common::model::{IndirectModel, Model};
 use crate::common::number::Number;
 use crate::common::object::Object;
@@ -693,7 +694,15 @@ impl State {
   }
   pub fn lookup_glue(&self, key: &str) -> Option<Glue> {
     match self.lookup_value(key) {
-      Some(v) => v.into(),
+      Some(Stored::Glue(v)) => Some(*v),
+      Some(other) => panic!("state lookup expected Glue, found: {:?}", other),
+      _ => None,
+    }
+  }
+  pub fn lookup_muglue(&self, key: &str) -> Option<MuGlue> {
+    match self.lookup_value(key) {
+      Some(Stored::MuGlue(v)) => Some(*v),
+      Some(other) => panic!("state lookup expected MuGlue, found: {:?}", other),
       _ => None,
     }
   }

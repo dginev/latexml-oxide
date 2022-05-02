@@ -101,11 +101,11 @@ lazy_static! {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Glue {
-  skip: f32,
-  plus: Option<f32>,
-  pfill: Option<FillCode>,
-  minus: Option<f32>,
-  mfill: Option<FillCode>,
+  pub skip: f32,
+  pub plus: Option<f32>,
+  pub pfill: Option<FillCode>,
+  pub minus: Option<f32>,
+  pub mfill: Option<FillCode>,
 }
 
 impl Default for Glue {
@@ -120,61 +120,13 @@ impl Default for Glue {
   }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct MuGlue(pub f32);
-
-impl Default for MuGlue {
-  fn default() -> Self { MuGlue(0.0) }
-}
-impl fmt::Display for MuGlue {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    unimplemented!();
-  }
-  // sub toString {
-  // my ($self) = @_;
-  // my ($sp, $plus, $pfill, $minus, $mfill) = @$self;
-  // my $string = LaTeXML::Common::Float::floatformat($sp / 65536 * 1.8) . 'mu ';
-  // $string .= 'plus ' . ($pfill
-  //   ? $plus . $LaTeXML::Common::Glue::FILL[$pfill]
-  //   : LaTeXML::Common::Float::floatformat($plus / 65536 * 1.8) . 'mu ') if $plus != 0;
-  // $string .= 'minus ' . ($mfill
-  //   ? $minus . $LaTeXML::Common::Glue::FILL[$mfill]
-  //   : LaTeXML::Common::Float::floatformat($minus / 65536 * 1.8) . 'mu ') if $minus != 0;
-  // return $string; }
-}
 
 impl NumericOps for Glue {
   fn value_of(self) -> f32 { self.skip }
-  fn new<T: Into<f32>>(number: T) -> Self {
-    Glue {
-      skip: number.into(),
-      ..Glue::default()
-    }
-  }
+
   fn register_type(&self) -> RegisterType { RegisterType::Glue }
-  fn add<T: NumericOps>(self, other: T) -> Self
-  where Self: Sized {
-    if other.register_type() != RegisterType::Glue {
-      Glue {
-        skip: self.skip + other.value_of(),
-        plus: self.plus,
-        pfill: self.pfill,
-        minus: self.minus,
-        mfill: self.mfill,
-      }
-    } else {
-      // Both glues, add
-      self.add_glue(other.into_glue_type())
-    }
-  }
   // identity, used to type cast in runtime
   fn into_glue_type(self) -> Glue { self }
-}
-
-impl NumericOps for MuGlue {
-  fn new<T: Into<f32>>(number: T) -> Self { MuGlue(number.into()) }
-  fn value_of(self) -> f32 { self.0 }
-  fn register_type(&self) -> RegisterType { RegisterType::MuGlue }
 }
 
 impl fmt::Display for Glue {
@@ -206,6 +158,33 @@ impl fmt::Display for Glue {
 }
 
 impl Glue {
+  pub fn new<T: Into<f32>>(number: T) -> Self {
+    let (skip, plus, pfill, minus, mfill) = Glue::new_setup(number.into(), None,None,None,None);
+    Glue { skip,plus,pfill,minus,mfill }
+  }
+
+  pub(crate) fn new_setup(skip:f32,plus:Option<f32>,pfill:Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>) -> (f32,Option<f32>,Option<FillCode>,Option<f32>,Option<FillCode>) {
+    (skip,plus,pfill,minus,mfill)
+  }
+  pub fn new_full(skip:f32,plus:Option<f32>,pfill:Option<FillCode>,minus:Option<f32>, mfill:Option<FillCode>) -> Self {
+    let (skip,plus,pfill,minus,mfill) = Glue::new_setup(skip,plus,pfill,minus,mfill);
+    Glue { skip,plus,pfill,minus,mfill }
+  }
+  pub fn add<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    if other.register_type() != RegisterType::Glue {
+      Glue {
+        skip: self.skip + other.value_of(),
+        plus: self.plus,
+        pfill: self.pfill,
+        minus: self.minus,
+        mfill: self.mfill,
+      }
+    } else {
+      // Both glues, add
+      self.add_glue(other.into_glue_type())
+    }
+  }
   pub fn add_glue(self, other: Glue) -> Glue {
     // (pts, p, pf, m, mf) = @$self;
     // if (ref $other eq 'LaTeXML::Common::Glue') {
@@ -256,6 +235,26 @@ impl Glue {
     }
     // else {
     // return (ref $self)->new($pts + $other->valueOf, $p, $pf, $m, $mf); }
+  }
+
+  pub fn negate(self) -> Self
+  where Self: Sized {
+    let value = self.value_of();
+    if value > 0.0 {
+      Self::new(-value)
+    } else {
+      Self::new(value)
+    }
+  }
+  pub fn multiply<T: Into<f32>>(self, other: T) -> Self
+  where Self: Sized {
+    let other: f32 = other.into();
+    Self::new((self.value_of() * other).floor())
+  }
+  pub fn divide<T: Into<f32>>(self, other: T) -> Self
+  where Self: Sized {
+    let other: f32 = other.into();
+    Self::new((self.value_of() / other).floor())
   }
 
   pub fn spec_new(

@@ -68,7 +68,7 @@ LoadDefinitions!(stomach, state, {
   //**********************************************************************
   // The core sectioning commands are defined in LaTeX.pm
   // but the counter setup, etc, depends on article
-  SetCounter!("secnumdepth", Number::new(3.0));
+  SetCounter!("secnumdepth", Number::new(3));
   NewCounter!("part",          "document",      idprefix => "Pt",  nested => vec!["section"]);
   NewCounter!("section",       "document",      idprefix => "S",   nested => vec!["subsection"]);
   NewCounter!("subsection",    "section",       idprefix => "SS",  nested => vec!["subsubsection"]);
@@ -82,7 +82,7 @@ LoadDefinitions!(stomach, state, {
   DefMacro!("\\thesubsubsection", "\\thesubsection.\\arabic{subsubsection}");
   DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");
   DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
-  SetCounter!("tocdepth", Number::new(3.0));
+  SetCounter!("tocdepth", Number::new(3));
 
   NewCounter!("equation",       "document", idprefix => "E",  idwithin => "section");
   NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");

@@ -8,7 +8,7 @@ use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::definition::register::{NumericOps, RegisterValue};
+use crate::definition::register::RegisterValue;
 use crate::document::Document;
 use crate::state::State;
 use crate::token::Token;
