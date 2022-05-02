@@ -72,7 +72,7 @@ LoadDefinitions!(state, {
   // DefConditional('\ifdefined Token', sub { defined LookupMeaning($_[1]); });
 
   // # ???
-  DefRegister!("\\lastnodetype", Number::new(0.0));
+  DefRegister!("\\lastnodetype", Number::new(0));
 
   // #======================================================================
   // # 3.4 Generalization of the \mark concept: a class of \marks
@@ -101,14 +101,14 @@ LoadDefinitions!(state, {
   // # Presumably we can't rely on the material itself being directional.
 
   // By leaving this 0, we're saying "Don't use these features"!
-  DefRegister!("\\TeXXeTstate" => Number::new(0.0));
+  DefRegister!("\\TeXXeTstate" => Number::new(0));
 
   DefMacro!("\\beginL", "");
   DefMacro!("\\beginR", "");
   DefMacro!("\\endL", "");
   DefMacro!("\\endR", "");
 
-  DefRegister!("\\predisplaydirection" => Number::new(0.0)); // ???
+  DefRegister!("\\predisplaydirection" => Number::new(0)); // ???
 
   // #======================================================================
   // # 3.6 Additional debugging features

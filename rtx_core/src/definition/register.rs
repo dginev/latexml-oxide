@@ -5,9 +5,11 @@ use std::borrow::Cow;
 use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::common::dimension::{Dimension, MuDimension};
+use crate::common::dimension::Dimension;
+use crate::common::mudimension::MuDimension;
 use crate::common::error::*;
-use crate::common::glue::{Glue, MuGlue};
+use crate::common::glue::Glue;
+use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::object::Object;
 use crate::common::store::Stored;
@@ -45,6 +47,9 @@ impl From<Number> for Option<RegisterValue> {
 impl From<Dimension> for RegisterValue {
   fn from(n: Dimension) -> RegisterValue { RegisterValue::Dimension(n) }
 }
+impl From<MuDimension> for RegisterValue {
+  fn from(n: MuDimension) -> RegisterValue { RegisterValue::MuDimension(n) }
+}
 impl From<Glue> for RegisterValue {
   fn from(n: Glue) -> RegisterValue { RegisterValue::Glue(n) }
 }
@@ -75,7 +80,7 @@ impl From<RegisterValue> for RegisterType {
 }
 
 impl Default for RegisterValue {
-  fn default() -> Self { RegisterValue::Number(Number::new(0.0)) }
+  fn default() -> Self { RegisterValue::Number(Number::new(0)) }
 }
 impl Object for RegisterValue {
   fn stringify(&self) -> String { s!("RegisterValue[{}]", self) }
@@ -93,7 +98,54 @@ impl Object for RegisterValue {
     }
   }
 }
-
+impl RegisterValue {
+  pub fn new<T: Into<i32>>(number: T) -> Self { RegisterValue::Number(Number::new(number.into())) }
+  pub fn add<T: NumericOps>(self, other: T) -> Self {
+    match self {
+      RegisterValue::Number(v) => RegisterValue::Number(v.add(other)),
+      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.add(other)),
+      RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.add(other)),
+      RegisterValue::Glue(v) => RegisterValue::Glue(v.add(other)),
+      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.add(other)),
+      RegisterValue::Token(v) => unimplemented!(),
+      RegisterValue::Tokens(v) => unimplemented!(),
+    }
+  }
+  pub fn multiply<T: Into<f32>>(self, other: T) -> Self {
+    match self {
+      RegisterValue::Number(v) => RegisterValue::Number(v.multiply(other)),
+      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.multiply(other)),
+      RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.multiply(other)),
+      RegisterValue::Glue(v) => RegisterValue::Glue(v.multiply(other)),
+      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.multiply(other)),
+      RegisterValue::Token(v) => unimplemented!(),
+      RegisterValue::Tokens(v) => unimplemented!(),
+    }
+  }
+  pub fn negate(self) -> Self {
+    match self {
+      RegisterValue::Number(v) => RegisterValue::Number(v.negate()),
+      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.negate()),
+      RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.negate()),
+      RegisterValue::Glue(v) => RegisterValue::Glue(v.negate()),
+      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.negate()),
+      RegisterValue::Token(v) => unimplemented!(),
+      RegisterValue::Tokens(v) => unimplemented!(),
+    }
+  }
+  pub fn divide<T: Into<f32>>(self, other: T) -> Self
+  where Self: Sized {
+    match self {
+      RegisterValue::Number(v) => RegisterValue::Number(v.divide(other)),
+      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.divide(other)),
+      RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.divide(other)),
+      RegisterValue::Glue(v) => RegisterValue::Glue(v.divide(other)),
+      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.divide(other)),
+      RegisterValue::Token(v) => unimplemented!(),
+      RegisterValue::Tokens(v) => unimplemented!(),
+    }
+  }
+}
 const SCALES: &[f32] = &[1.0, 10.0, 100.0, 1000.0, 10000.0, 100_000.0];
 // smallest number that makes a difference added to 1 in Rust's float format.
 // my $EPSILON = 1.0;
@@ -121,34 +173,10 @@ pub fn round_to(number: f32, prec_opt: Option<u8>) -> f32 {
 }
 
 pub trait NumericOps {
-  fn new<T: Into<f32>>(number: T) -> Self;
   fn value_of(self) -> f32;
   fn pt_value(self, prec: Option<u8>) -> f32
   where Self: Sized {
     round_to(self.value_of() / 65536.0, prec)
-  }
-  fn add<T: NumericOps>(self, other: T) -> Self
-  where Self: Sized {
-    Self::new(self.value_of() + other.value_of())
-  }
-  fn negate(self) -> Self
-  where Self: Sized {
-    let value = self.value_of();
-    if value > 0.0 {
-      Self::new(-value)
-    } else {
-      Self::new(value)
-    }
-  }
-  fn multiply<T: Into<f32>>(self, other: T) -> Self
-  where Self: Sized {
-    let other: f32 = other.into();
-    Self::new((self.value_of() * other).floor())
-  }
-  fn divide<T: Into<f32>>(self, other: T) -> Self
-  where Self: Sized {
-    let other: f32 = other.into();
-    Self::new((self.value_of() / other).floor())
   }
 
   fn spec_to_f32(spec: &str, state: &State) -> Result<f32> {
@@ -177,7 +205,6 @@ pub trait NumericOps {
 }
 
 impl NumericOps for RegisterValue {
-  fn new<T: Into<f32>>(number: T) -> Self { RegisterValue::Number(Number::new(number)) }
   fn value_of(self) -> f32 {
     match self {
       RegisterValue::Number(v) => v.value_of(),
@@ -195,28 +222,6 @@ impl NumericOps for RegisterValue {
         Warn!("register", "value_of", None, None, message);
         -1.0
       },
-    }
-  }
-  fn add<T: NumericOps>(self, other: T) -> Self {
-    match self {
-      RegisterValue::Number(v) => RegisterValue::Number(v.add(other)),
-      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.add(other)),
-      RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.add(other)),
-      RegisterValue::Glue(v) => RegisterValue::Glue(v.add(other)),
-      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.add(other)),
-      RegisterValue::Token(v) => unimplemented!(),
-      RegisterValue::Tokens(v) => unimplemented!(),
-    }
-  }
-  fn negate(self) -> Self {
-    match self {
-      RegisterValue::Number(v) => RegisterValue::Number(v.negate()),
-      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.negate()),
-      RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.negate()),
-      RegisterValue::Glue(v) => RegisterValue::Glue(v.negate()),
-      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.negate()),
-      RegisterValue::Token(v) => unimplemented!(),
-      RegisterValue::Tokens(v) => unimplemented!(),
     }
   }
   fn register_type(&self) -> RegisterType {
@@ -244,10 +249,10 @@ impl<'a> From<&'a RegisterValue> for Number {
   fn from(v: &RegisterValue) -> Number {
     match v {
       RegisterValue::Number(n) => *n,
-      RegisterValue::Dimension(other) => Number::new(other.value_of()),
-      RegisterValue::MuDimension(other) => Number::new(other.value_of()),
-      RegisterValue::Glue(other) => Number::new(other.value_of()),
-      RegisterValue::MuGlue(other) => Number::new(other.value_of()),
+      RegisterValue::Dimension(other) => Number::new(other.value_of().trunc() as i32),
+      RegisterValue::MuDimension(other) => Number::new(other.value_of().trunc() as i32),
+      RegisterValue::Glue(other) => Number::new(other.value_of().trunc() as i32),
+      RegisterValue::MuGlue(other) => Number::new(other.value_of().trunc() as i32),
       RegisterValue::Token(other) => other.to_number(),
       RegisterValue::Tokens(other) => other.to_number(),
     }
@@ -262,6 +267,9 @@ impl From<RegisterValue> for Dimension {
 impl From<RegisterValue> for Glue {
   fn from(v: RegisterValue) -> Glue { v.borrow().into() }
 }
+impl From<RegisterValue> for MuGlue {
+  fn from(v: RegisterValue) -> MuGlue { v.borrow().into() }
+}
 impl From<RegisterValue> for f32 {
   fn from(v: RegisterValue) -> f32 { v.value_of() }
 }
@@ -271,6 +279,9 @@ impl From<Number> for Dimension {
 }
 impl From<Number> for Glue {
   fn from(n: Number) -> Glue { Glue::new(n.value_of()) }
+}
+impl From<Number> for MuGlue {
+  fn from(n: Number) -> MuGlue { MuGlue::new(n.value_of()) }
 }
 
 // TODO: Does this successfully emulate the behavior in latexml?
@@ -313,6 +324,33 @@ impl<'a> From<&'a RegisterValue> for Glue {
     }
   }
 }
+
+impl<'a> From<&'a RegisterValue> for MuGlue {
+  fn from(v: &RegisterValue) -> MuGlue {
+    match v {
+      RegisterValue::MuGlue(n) => *n,
+      RegisterValue::Number(other) => MuGlue::new(other.value_of()),
+      RegisterValue::Dimension(other) => MuGlue::new(other.value_of()),
+      RegisterValue::MuDimension(other) => MuGlue::new(other.value_of()),
+      RegisterValue::Glue(other) => {
+        MuGlue {
+          skip: other.skip,
+          plus: other.plus,
+          pfill: other.pfill,
+          minus: other.minus,
+          mfill: other.mfill
+        }
+      }
+      RegisterValue::Token(other) => other.to_number().into(),
+      RegisterValue::Tokens(other) => {
+        let message = s!("Token register can not be cast into a Glue: {:?}", other);
+        Error!("expected", "dimension", None, None, message);
+        MuGlue::new(0.0)
+      },
+    }
+  }
+}
+
 
 impl fmt::Display for RegisterValue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -358,7 +396,7 @@ impl Default for Register {
       cs: T_CS!("Register"),
       parameters: None,
       register_type: RegisterType::Number,
-      getter: Arc::new(|_: Vec<Token>, _: &State| Some(RegisterValue::Number(Number::new(0.0)))),
+      getter: Arc::new(|_: Vec<Token>, _: &State| Some(RegisterValue::Number(Number::new(0)))),
       setter: Arc::new(|_: RegisterValue, _: Vec<Tokens>, _: &mut State| {}),
       readonly: false,
       internalcs: None,

@@ -287,7 +287,7 @@ LoadDefinitions!(state, {
   // # From plain.tex
   DefPrimitive!("\\newcount Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
-    DefRegister!(name, None, Number::new(0.0));
+    DefRegister!(name, None, Number::new(0));
   });
   DefPrimitive!("\\newdimen Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
@@ -307,19 +307,19 @@ LoadDefinitions!(state, {
     let n = state.lookup_int("allocated_boxes");
     AssignValue!("allocated_boxes" => n + 1, Some(Scope::Global));
     AssignValue!(&s!("box{}",n), List::new(Vec::new()));
-    DefRegister!(t, None, Number(n as f32));
+    DefRegister!(t, None, Number(n));
   });
   // DefPrimitive('\newhelp Token {}', sub { AssignValue(ToString($_[1]) => $_[2]); });
   // DefPrimitive('\newtoks Token', sub { DefRegisterI($_[1], undef, Tokens()); });
   // # the next 4 actually work by doing a \chardef instead of \countdef, etc.
   // # which means they actually work quite differently
-  DefRegister!("\\allocationnumber" => Number::new(0.0));
+  DefRegister!("\\allocationnumber" => Number::new(0));
   DefMacro!("\\alloc@@ {}", sub[gullet, args, state] {
     unpack_to_string!(args => atype);
     let c = s!("allocation @{}", atype);
     let n = LookupRegisterOrDefault!(c).value_of();
     AssignValue!(&c                  => n + 1.0,     Some(Scope::Global));
-    AssignValue!("\\allocationnumber" => Number::new(n), Some(Scope::Global));
+    AssignValue!("\\allocationnumber" => Number!(n), Some(Scope::Global));
   });
   DefMacro!("\\newread Token", r"\alloc@@{read}\global\chardef#1=\allocationnumber");
   DefMacro!("\\newwrite Token", r"\alloc@@{write}\global\chardef#1=\allocationnumber");
@@ -329,7 +329,7 @@ LoadDefinitions!(state, {
   // # This implementation is quite wrong
   DefPrimitive!("\\newinsert Token", sub[stomach, args, state] {
     unpack_to_token!(args => t);
-    DefRegister!(t, None, Number::new(0.0));
+    DefRegister!(t, None, Number::new(0));
   });
   // # \alloc@, \ch@ck
 
@@ -367,8 +367,8 @@ LoadDefinitions!(state, {
   DefRegister!("\\normallineskiplimit", Dimension!("0pt"));
   DefRegister!("\\jot", Dimension!("3pt"));
   DefRegister!("\\lx@default@jot", LookupRegister!("\\jot"));
-  DefRegister!("\\interdisplaylinepenalty", Number::new(100.0));
-  DefRegister!("\\interfootnotelinepenalty", Number::new(100.0));
+  DefRegister!("\\interdisplaylinepenalty", Number(100));
+  DefRegister!("\\interfootnotelinepenalty", Number(100));
 
   DefMacro!("\\magstephalf", "1095");
   DefMacro!("\\magstep{}", sub[gullet, args, state] {

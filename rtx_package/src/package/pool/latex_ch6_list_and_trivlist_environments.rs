@@ -87,10 +87,10 @@ LoadDefinitions!(state, {
   DefRegister!("\\leftmarginiv"       => Dimension::new(0.0));
   DefRegister!("\\leftmarginv"        => Dimension::new(0.0));
   DefRegister!("\\leftmarginvi"       => Dimension::new(0.0));
-  DefRegister!("\\@listdepth"         => Number::new(0.0));
-  DefRegister!("\\@itempenalty"       => Number::new(0.0));
-  DefRegister!("\\@beginparpenalty"   => Number::new(0.0));
-  DefRegister!("\\@endparpenalty"     => Number::new(0.0));
+  DefRegister!("\\@listdepth"         => Number::new(0));
+  DefRegister!("\\@itempenalty"       => Number::new(0));
+  DefRegister!("\\@beginparpenalty"   => Number::new(0));
+  DefRegister!("\\@endparpenalty"     => Number::new(0));
   DefRegister!("\\labelwidthi"        => Dimension::new(0.0));
   DefRegister!("\\labelwidthii"       => Dimension::new(0.0));
   DefRegister!("\\labelwidthiii"      => Dimension::new(0.0));
@@ -98,5 +98,5 @@ LoadDefinitions!(state, {
   DefRegister!("\\labelwidthv"        => Dimension::new(0.0));
   DefRegister!("\\labelwidthvi"       => Dimension::new(0.0));
 
-  DefRegister!("\\@itemdepth" => Number::new(0.0));
+  DefRegister!("\\@itemdepth" => Number::new(0));
 });

@@ -179,6 +179,7 @@ pub struct Font {
   pub language: Option<Cow<'static, str>>,
   pub mathstyle: Option<Cow<'static, str>>,
   pub mathstylestep: Option<Cow<'static, str>>,
+  pub name: Option<Cow<'static, str>>,
   pub emph: Option<bool>,
   pub scripted: Option<bool>,
   // Note: forcefamily, forceseries, forceshape (& forcebold for compatibility)
@@ -264,6 +265,7 @@ impl Font {
       mathstyle: None,
       mathstylestep: None,
       emph: None,
+      name: None,
       scripted: None,
       forceseries: None,
       forcefamily: None,
@@ -285,6 +287,7 @@ impl Font {
       mathstyle: Some(Cow::Borrowed("text")),
       mathstylestep: None,
       emph: None,
+      name: None,
       scripted: None,
       forceseries: None,
       forcefamily: None,

@@ -82,15 +82,15 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   let cunctr = s!("\\c@{}", unctr);
   let clunctr = s!("\\cl@{}", unctr);
 
-  def_register(T_CS!(cctr), None, Number::new(0.0), None, state);
-  state.assign_value(&cctr, Number::new(0.0), Some(Scope::Global));
+  def_register(T_CS!(cctr), None, Number::new(0), None, state);
+  state.assign_value(&cctr, Number::new(0), Some(Scope::Global));
   state.after_assignment();
   if state.lookup_value(&clctr).is_none() {
     state.assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
 
-  def_register(T_CS!(cunctr), None, Number::new(0.0), None, state);
-  state.assign_value(&cunctr, Number::new(0.0), Some(Scope::Global));
+  def_register(T_CS!(cunctr), None, Number::new(0), None, state);
+  state.assign_value(&cunctr, Number::new(0), Some(Scope::Global));
   if state.lookup_value(&clunctr).is_none() {
     state.assign_value(&clunctr, Tokens!(), Some(Scope::Global));
   }
@@ -235,7 +235,7 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
     None => {
       let message = s!("Counter {} was not defined; assuming 0", ctr);
       Warn!("undefined", ctr, None, state, message);
-      Number::new(0.0)
+      Number::new(0)
     },
     Some(value) => value,
   }
@@ -260,7 +260,7 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
 
 pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let value = counter_value(ctr, state);
-  state.assign_value(&s!("\\c@{}", ctr), value.add(Number::new(1.0)), Some(Scope::Global));
+  state.assign_value(&s!("\\c@{}", ctr), value.add(Number::new(1)), Some(Scope::Global));
   state.after_assignment();
   let token_value = Tokens::new(Explode!(state.lookup_number(&s!("\\c@{}", ctr)).unwrap().value_of()));
   def_macro(
@@ -471,8 +471,8 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
 }
 
 pub fn reset_counter(ctr: &str, state: &mut State) {
-  state.assign_value(&s!("\\c@{}", ctr), Number::new(0.0), Some(Scope::Global));
-  state.assign_value(&s!("\\c@UN{}", ctr), Number::new(0.0), Some(Scope::Global));
+  state.assign_value(&s!("\\c@{}", ctr), Number::new(0), Some(Scope::Global));
+  state.assign_value(&s!("\\c@UN{}", ctr), Number::new(0), Some(Scope::Global));
   def_macro(
     T_CS!(s!("\\@{}@ID", ctr)),
     None,
@@ -650,7 +650,7 @@ pub fn begin_itemize(
   if let Some(start) = options.start {
     SetCounter!(usecounter, start, state);
     let gullet = stomach.get_gullet_mut();
-    AddToCounter!(&usecounter, Number(-1.0), gullet, state);
+    AddToCounter!(&usecounter, Number(-1), gullet, state);
   } else if let Some(s) = match options.resume {
     Some(s) => Some(s),
     None => options.resume_star,

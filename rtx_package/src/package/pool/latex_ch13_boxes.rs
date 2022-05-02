@@ -60,7 +60,7 @@ LoadDefinitions!(state, {
   // numbers, these become simple DefRegister's
   DefPrimitive!("\\newcount Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
-    DefRegister!(name, None, Number::new(0.0));
+    DefRegister!(name, None, Number::new(0));
   });
   DefPrimitive!("\\newdimen Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);

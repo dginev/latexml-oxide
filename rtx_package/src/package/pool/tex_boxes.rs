@@ -151,7 +151,7 @@ LoadDefinitions!(state, {
           width = w.into();
         } else if let Some(s) = GetKeyVal!(spec, "spread") {
           let s_num_opt : Option<RegisterValue> = s.into();
-          let s_num = s_num_opt.unwrap_or_else(|| Number::new(0.0).into());
+          let s_num = s_num_opt.unwrap_or_else(|| Number::new(0).into());
           width = Some( tbox.get_width(state).unwrap().add(s_num) );
         }
       }

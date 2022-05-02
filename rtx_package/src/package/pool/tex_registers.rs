@@ -10,10 +10,10 @@ use chrono::prelude::*;
 LoadDefinitions!(state, {
   //======================================================================
   // Integer registers; TeXBook p. 272-273
-  DefRegister!("\\tracingmacros", Number!(0.0),
+  DefRegister!("\\tracingmacros", Number!(0),
     getter => { LookupNumber!("TRACINGMACROS") },
     setter => sub[value, args, state] { AssignValue!("TRACINGMACROS" => value.value_of()); });
-  DefRegister!("\\tracingcommands", Number!(0.0),
+  DefRegister!("\\tracingcommands", Number!(0),
     getter => { LookupNumber!("TRACINGCOMMANDS") },
     setter => sub[value, args, state] { AssignValue!("TRACINGCOMMANDS" => value.value_of()); });
 
@@ -96,13 +96,13 @@ LoadDefinitions!(state, {
 
   // Read-only Integer registers
   for name in &["lastpenalty", "inputlineno", "badness"] {
-    DefRegister!(&s!("\\{}",name), Number!(0.0), readonly => true);
+    DefRegister!(&s!("\\{}",name), Number!(0), readonly => true);
   }
 
   // Special integer registers (?)
   // <special integer> = \spacefactor | \prevgraf | \deadcycles | \insertpenalties
   for name in &["spacefactor", "prevgraf", "deadcycles", "insertpenalties"] {
-    DefRegister!(&s!("\\{}", name), Number!(0.0));
+    DefRegister!(&s!("\\{}", name), Number!(0));
   }
 
   // ======================================================================
