@@ -1848,7 +1848,7 @@ macro_rules! Dimension {
 macro_rules! Glue {
   ($spec:expr) => {{
     bind_state!(st);
-    Glue::new(Glue::spec_to_f32($spec, st)?)
+    Glue::new_spec($spec, None,None,None,None, st)
   }};
 }
 
@@ -1856,7 +1856,7 @@ macro_rules! Glue {
 macro_rules! MuGlue {
   ($spec:expr) => {{
     bind_state!(st);
-    MuGlue::new(MuGlue::spec_to_f32($spec, None)?)
+    MuGlue::new_spec($spec, None,None,None,None, st)
   }};
 }
 

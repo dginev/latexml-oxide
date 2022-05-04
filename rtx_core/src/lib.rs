@@ -460,4 +460,8 @@ impl Digested {
       _ => Arc::new(Tokens::default()),
     }
   }
+
+  pub fn to_attribute(&self) -> String {
+    self.to_string()
+  }
 }

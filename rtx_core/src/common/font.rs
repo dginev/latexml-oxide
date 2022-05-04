@@ -1,16 +1,19 @@
-use lazy_static::lazy_static;
-use regex::Regex;
-use std::borrow::Cow;
-use std::collections::HashMap;
 /// Note that this has evolved way beynond just "font",
 /// but covers text properties (or even display properties) in general
 /// including basic font information, color & background color
 /// as well as encoding and language information.
 ///
 /// NOTE: This is now in Common that it may evolve to be useful in Post processing...
-use std::fmt;
 
+use regex::Regex;
+use std::borrow::Cow;
+use std::collections::HashMap;
+use std::fmt;
 use crate::state::State;
+use lazy_static::lazy_static;
+
+mod standard_metrics;
+use standard_metrics::STDMETRICS;
 
 pub type Fontmap = Vec<Option<char>>;
 
@@ -160,7 +163,27 @@ pub fn lookup_font_series(code: &str) -> Option<&Font> { FONT_SERIES.get(code) }
 pub fn lookup_font_shape(code: &str) -> Option<&Font> { FONT_SHAPE.get(code) }
 
 /// ???
-pub fn decode_fontname(name: &str, at: Option<f32>, scaled: Option<f32>) -> Option<Font> { unimplemented!() }
+pub fn decode_fontname(name: &str, at: Option<f32>, scaled: Option<f32>) -> Option<Font> {
+  // TODO!
+
+  // if ($name =~ /^$FONTREGEXP$/o) {
+  //   my %props;
+  //   my ($fam, $ser, $shp, $size) = ($1, $2, $3, $4);
+  //   if (my $ffam = lookupFontFamily($fam)) { map { $props{$_} = $$ffam{$_} } keys %$ffam; }
+  //   if (my $fser = lookupFontSeries($ser)) { map { $props{$_} = $$fser{$_} } keys %$fser; }
+  //   if (my $fsh  = lookupFontShape($shp))  { map { $props{$_} = $$fsh{$_} } keys %$fsh; }
+  //   $size = 1 unless $size;    # Yes, also if 0, "" (from regexp)
+  //   $size = $at if defined $at;
+  //   $size *= $scaled if defined $scaled;
+  //   $props{size} = $size;
+  //   # Experimental Hack !?!?!?
+  //   $props{encoding} = 'OT1' unless defined $props{encoding};
+  //   $props{at}       = $at . "pt" if defined $at;
+  //   return %props; }
+  // else {
+  //   return; }
+  None
+}
 
 /// This struct is a little interesting, as we want to pass overrides that partially modify (via a
 /// merge) the current font, in each definitional binding. To accommodate that with this struct,
@@ -646,6 +669,25 @@ impl Font {
     //   changes.mathstylestep = mathstylestep.get(mathstyle).unwrap().get(othermathstyle).unwrap();
     // }
     changes
+  }
+
+  pub fn get_em_width(&self) -> i32 {
+    let size = self.get_size().unwrap_or(DEFSIZE);
+    // Could (should) look for metric w/appropriate slant, weight, etc
+    let m = STDMETRICS.get("cmr").unwrap();
+    (size * m.get("emwidth").unwrap()).trunc() as i32
+  }
+  pub fn get_ex_height(&self) -> i32 {
+    let size = self.get_size().unwrap_or(DEFSIZE);
+    // Could (should) look for metric w/appropriate slant, weight, etc
+    let m = STDMETRICS.get("cmr").unwrap();
+    (size * m.get("exheight").unwrap()).trunc() as i32
+  }
+  pub fn get_mu_width(&self) -> i32 {
+    let size = self.get_size().unwrap_or(DEFSIZE);
+    // Could (should) look for metric w/appropriate slant, weight, etc
+    let m = STDMETRICS.get("cmm").unwrap();
+    (size * m.get("emwidth").unwrap() / 18.0).trunc() as i32
   }
 }
 

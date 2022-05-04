@@ -31,8 +31,6 @@ pub trait Object {
     unimplemented!()
   }
 
-  fn to_attribute(&self) -> String { unimplemented!() }
-
   fn notequals<T>(&self, other: &T) -> bool
   where Self: Sized {
     !self.equals(other)

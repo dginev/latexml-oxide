@@ -158,6 +158,8 @@ impl fmt::Display for Stored {
       String(ref s) => write!(f, "{}", s),
       Int(ref s) => write!(f, "{}", s),
       Bool(ref s) => write!(f, "{}", s),
+      Tokens(ref s) => write!(f, "{}", s),
+      Token(ref s) => write!(f, "{}", s),
       ref variant => {
         panic!("TODO: implement Display for Stored variant {:?}", variant);
         // write!(f, "{:?}", self)
@@ -449,6 +451,16 @@ impl Stored {
       Stored::Primitive(ref entry) => entry.read_arguments(gullet, state),
       Stored::Register(ref entry) => entry.read_arguments(gullet, state),
       e => Err(s!(".read_arguments not defined for stored variant {:?}", e).into()),
+    }
+  }
+  pub fn to_attribute(&self) -> String {
+    match self {
+      Stored::Dimension(ref v) => v.to_attribute(),
+      Stored::Number(ref v) => v.to_attribute(),
+      //Stored::MuDimension(ref v) => v.to_attribute(),
+      Stored::Glue(ref v) => v.to_attribute(),
+      Stored::MuGlue(ref v) => v.to_attribute(),
+      other => s!("{}",other)
     }
   }
 }

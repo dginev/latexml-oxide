@@ -354,7 +354,7 @@ fn translate_string(text: &mut String) -> proc_macro2::TokenStream {
         quote!(#v)
       } else {
         quote!(match #v {
-          Some(ref val) => val.to_string(),
+          Some(ref val) => val.to_attribute(),
           None => String::new()
         })
       }

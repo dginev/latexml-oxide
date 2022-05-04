@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use crate::common::dimension::{fixpoint,Dimension};
+use crate::common::dimension::{fixpoint,Dimension, UNITY};
 use crate::common::mudimension::MuDimension;
 use crate::common::error::*;
 use crate::common::glue::{FillCode, Glue};
@@ -442,7 +442,7 @@ impl Gullet {
   /// Match the input against a set of keywords; Similar to readMatch, but the keywords are strings,
   /// and Case and catcodes are ignored; additionally, leading spaces are skipped.
   /// AND, macros are expanded.
-  pub fn read_keyword(&mut self, keywords: &[&str], state: &mut State) -> Result<Option<Tokens>> {
+  pub fn read_keyword(&mut self, keywords: &[&str], state: &mut State) -> Result<Option<String>> {
     self.skip_spaces(state);
     for keyword in keywords.iter() {
       let mut to_match: VecDeque<char> = keyword.to_uppercase().chars().collect();
@@ -462,7 +462,7 @@ impl Gullet {
       }
       if to_match.is_empty() {
         // All matched!!!
-        return Ok(Some(T_OTHER!(keyword).into()));
+        return Ok(Some(keyword.to_string()));
       } else {
         self.unread(matched.into()); // Put 'em back and try next!
       }
@@ -925,7 +925,7 @@ impl Gullet {
   fn read_unit(&mut self, state: &mut State) -> Result<Option<f32>> {
     let unit_opt = if let Some(u) = self.read_keyword(&["ex", "em"], state)? {
       self.skip_one_space(state);
-      Some(state.convert_unit(u))
+      Some(state.convert_unit(&u))
     } else if let Some(u) = self.read_internal_integer(state)? {
       Some(u.value_of()) // These are coerced to number=>sp
     } else if let Some(u) = self.read_internal_dimension(state)? {
@@ -934,9 +934,9 @@ impl Gullet {
       Some(u.value_of())
     } else {
       self.read_keyword(&["true"], state)?; // But ignore, we're not bothering with mag...
-      if let Some(u) = self.read_keyword(&["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp"], state)? {
+      if let Some(u) = self.read_keyword(&["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp","px"], state)? {
         self.skip_one_space(state);
-        Some(state.convert_unit(u))
+        Some(state.convert_unit(&u))
       } else {
         None
       }
@@ -972,7 +972,7 @@ impl Gullet {
         None => (None, None),
       };
 
-      Ok(Glue::spec_new(&d.value_of().to_string(), r1, f1, r2, f2, state))
+      Ok(Glue::new_spec(&d.value_of().to_string(), r1, f1, r2, f2, state))
     }
   }
 
@@ -989,7 +989,10 @@ impl Gullet {
         Ok((Some(f * s), None))
       },
       Some(f) => match self.read_keyword(&["filll", "fill", "fil"], state)? {
-        Some(fil) => Ok((Some(s * f), FillCode::from(&fil.to_string()))),
+        Some(fil) => Ok((
+          Some(fixpoint(s * f, None) as f32),
+          FillCode::from(&fil.to_string())
+        )),
         None => {
           let u = if mu {
             match self.read_mu_unit(state)? {
@@ -1008,7 +1011,7 @@ impl Gullet {
               Some(v) => v,
             }
           };
-          Ok((Some(s * f * u), None))
+          Ok((Some(fixpoint(s * f , Some(u)) as f32), None))
         },
       },
     }
@@ -1054,16 +1057,21 @@ impl Gullet {
   pub fn read_mu_dimension(&mut self, state: &mut State) -> Result<MuDimension> {
     let is_negative = self.read_optional_signs(state)?;
     if let Some(mut m) = self.read_factor(state)? {
-      if is_negative {
-        m = -1.0*m;
-      }
       let munit = self.read_mu_unit(state)?;
       if munit.is_none() {
         Warn!("expected", "<unit>", self, state, "Illegal unit of measure (mu inserted).");
       }
-      Ok(MuDimension::new(fixpoint(m, munit)))
-    } else if let Some(m) = self.read_internal_mu_glue(state)? {
-      Ok(MuDimension::new(m.value_of()))
+      if is_negative {
+        m *= -1.0;
+      }
+      Ok(MuDimension::new(fixpoint(m, munit) as f32))
+    } else if let Some(mglue) = self.read_internal_mu_glue(state)? {
+      let m = if is_negative {
+        -1.0 * mglue.value_of()
+      } else {
+        mglue.value_of()
+      };
+      Ok(MuDimension::new(m))
     } else {
       Warn!("expected", "<mudimen>", self, state, "Expecting mudimen; assuming 0");
       Ok(MuDimension::new(0.0))
@@ -1073,7 +1081,7 @@ impl Gullet {
   pub fn read_mu_unit(&mut self, state: &mut State) -> Result<Option<f32>> {
     if let Some(m) = self.read_keyword(&["mu"], state)? {
       self.skip_one_space(state);
-      Ok(Some(state.convert_unit(m)))
+      Ok(Some(UNITY as f32)) // effectively, scaled mu
     } else if let Some(m) = self.read_internal_mu_glue(state)? {
       Ok(Some(m.value_of()))
     } else {

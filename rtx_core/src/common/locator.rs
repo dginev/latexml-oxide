@@ -128,6 +128,11 @@ impl Object for Locator {
     loc
   }
 
+  /// getting the locator of a locator should return itself
+  fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(self)) }
+}
+
+impl Locator {
   fn to_attribute(&self) -> String {
     let mut loc = self.get_short_source("anonymous_string") + "#text";
     if self.is_range() {
@@ -159,7 +164,4 @@ impl Object for Locator {
     loc.push_str(")'");
     loc
   }
-
-  /// getting the locator of a locator should return itself
-  fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(self)) }
 }

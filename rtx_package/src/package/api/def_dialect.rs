@@ -355,8 +355,8 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
       readonly,
       getter,
       setter,
+      value: None,
       internalcs: None,
-      internalvalue: None,
     },
     Some(Scope::Global),
   );

@@ -1,8 +1,10 @@
 use std::fmt;
-use super::glue::{FillCode,Glue};
-use crate::definition::register::{NumericOps, RegisterType};
+use std::borrow::Cow;
+use super::glue::{FillCode,new_setup, spec_setup, glue_string};
+use crate::{Locator,Object};
 use crate::state::State;
-
+use crate::definition::register::{NumericOps, RegisterType};
+use crate::common::dimension::{attribute_format};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct MuGlue {
@@ -26,41 +28,44 @@ impl Default for MuGlue {
 
 impl fmt::Display for MuGlue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    unimplemented!();
+    let string = glue_string(self.skip, self.plus, self.pfill, self.minus, self.mfill, "mu");
+    write!(f, "{}", string)
   }
-  // sub toString {
-  // my ($self) = @_;
-  // my ($sp, $plus, $pfill, $minus, $mfill) = @$self;
-  // my $string = LaTeXML::Common::Float::floatformat($sp / 65536 * 1.8) . 'mu ';
-  // $string .= 'plus ' . ($pfill
-  //   ? $plus . $LaTeXML::Common::Glue::FILL[$pfill]
-  //   : LaTeXML::Common::Float::floatformat($plus / 65536 * 1.8) . 'mu ') if $plus != 0;
-  // $string .= 'minus ' . ($mfill
-  //   ? $minus . $LaTeXML::Common::Glue::FILL[$mfill]
-  //   : LaTeXML::Common::Float::floatformat($minus / 65536 * 1.8) . 'mu ') if $minus != 0;
-  // return $string; }
 }
 
 impl NumericOps for MuGlue {
   fn value_of(self) -> f32 { self.skip }
   fn register_type(&self) -> RegisterType { RegisterType::MuGlue }
+  fn add<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    Self::new(self.value_of() + other.value_of())
+  }
+  fn subtract<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    Self::new(self.value_of() - other.value_of())
+  }
 }
+impl Object for MuGlue {
+  fn get_locator(&self) -> Option<Cow<Locator>> { None }
+}
+
 
 impl MuGlue {
   pub fn new<T: Into<f32>>(number: T) -> Self {
-    let (skip,plus,pfill,minus,mfill) = Glue::new_setup(number.into(),None,None,None,None);
+    let (skip,plus,pfill,minus,mfill) = new_setup(number.into(),None,None,None,None);
     MuGlue { skip,plus,pfill,minus,mfill }
   }
 
   pub fn new_full(skip:f32,plus:Option<f32>,pfill:Option<FillCode>,minus:Option<f32>, mfill:Option<FillCode>) -> Self {
-    let (skip,plus,pfill,minus,mfill) = Glue::new_setup(skip,plus,pfill,minus,mfill);
+    let (skip,plus,pfill,minus,mfill) = new_setup(skip,plus,pfill,minus,mfill);
     MuGlue { skip,plus,pfill,minus,mfill }
   }
 
-  pub fn add<T: NumericOps>(self, other: T) -> Self
-  where Self: Sized {
-    Self::new(self.value_of() + other.value_of())
+  pub fn new_spec(spec: &str, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>, state:&State) -> Self {
+    let (skip, plus, pfill, minus, mfill) = spec_setup(spec,plus,pfill,minus,mfill,"mu",state);
+    MuGlue { skip,plus,pfill,minus,mfill }
   }
+
   pub fn negate(self) -> Self
   where Self: Sized {
     let value = self.value_of();
@@ -81,4 +86,23 @@ impl MuGlue {
     Self::new((self.value_of() / other).floor())
   }
 
+  pub fn to_attribute(&self) -> String {
+    let u = "mu";
+    let mut string = attribute_format(self.skip, Some(u));
+    if let Some(plus) = self.plus {
+      if plus != 0.0 {
+        string.push_str(" plus ");
+        let fill_u = if let Some(pfill) = self.pfill { pfill.to_str() } else { u };
+        string.push_str(&attribute_format(plus, Some(fill_u)));
+      }
+    }
+    if let Some(minus) = self.minus {
+      if minus != 0.0 {
+        string.push_str(" minus ");
+        let mfill_u = if let Some(mfill) = self.mfill { mfill.to_str() } else { u };
+        string.push_str(&attribute_format(minus, Some(mfill_u)));
+      }
+    }
+    string
+  }
 }

@@ -35,11 +35,18 @@ static CODE_TEX_EXT: &str = ".code.tex";
 lazy_static! {
   static ref TEX_OR_BIB_EXT_RE: Regex = Regex::new(r"\.(tex|bib)$").unwrap();
   // Conversion to scaled points
-  static ref UNITS: HashMap<String, f32> = map!(
-    "pt" => 65536.0, "pc" => 12.0 * 65536.0, "in" => 72.27 * 65536.0, "bp" => 72.27 * 65536.0 / 72.0,
-    "cm" => 72.27 * 65536.0 / 2.54, "mm" => 72.27 * 65536.0 / 2.54 / 10.0, "dd" => 1238.0 * 65536.0 / 1157.0,
-    "cc" => 12.0 * 1238.0 * 65536.0 / 1157.0, "sp" => 1.0);
-
+  pub static ref UNITS: HashMap<String, f32> = map!(
+    "pt" => 65536.0,
+    "pc" => 12.0 * 65536.0,
+    "in" => 72.27 * 65536.0,
+    "bp" => 72.27 * 65536.0 / 72.0,
+    "px" => 72.27 * 65536.0 / 72.0,   // Assume px=bp ?
+    "cm" => 72.27 * 65536.0 / 2.54,
+    "mm" => 72.27 * 65536.0 / 2.54 / 10.0,
+    "dd" => 1238.0 * 65536.0 / 1157.0,
+    "cc" => 12.0 * 1238.0 * 65536.0 / 1157.0,
+    "sp" => 1.0
+  );
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1408,13 +1415,13 @@ impl State {
   // Units.
   // Put here since it could concievably evolve to depend on the current font.
 
-  pub fn convert_unit<T: ToString>(&self, unit: T) -> f32 {
-    let unit = unit.to_string().to_lowercase();
+  pub fn convert_unit(&self, unit_arg: &str) -> f32 {
+    let unit = unit_arg.to_lowercase();
     // Eventually try to track font size?
     match unit.as_str() {
-      "em" => 10.0 * 65536.0,
-      "ex" => 4.3 * 65536.0,
-      "mu" => 10.0 * 65536.0 / 18.0,
+      "em" => self.lookup_font().unwrap().get_em_width() as f32,
+      "ex" => self.lookup_font().unwrap().get_ex_height() as f32,
+      "mu" => self.lookup_font().unwrap().get_mu_width() as f32,
       u => match UNITS.get(u) {
         Some(sp) => *sp,
         None => {

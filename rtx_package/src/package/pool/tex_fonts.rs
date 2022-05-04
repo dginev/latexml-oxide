@@ -12,35 +12,35 @@ LoadDefinitions!(outer_state, {
   // Doubtful that we can do anything useful with these.
   // These look essentially like Registers, although Knuth doesn't call them that.
   DefRegister!("\\textfont Number", T_CS!("\\tenrm"),
-    getter => {unimplemented!(); () },
-      // my ($fam) = @_;
-      // LookupValue('fontinfo_' . $fam->valueOf . '_text'); },
-    setter => {unimplemented!(); () }
-      // my ($font, $fam) = @_;
-      // AssignValue('fontinfo_' . $fam->valueOf . '_text' => $font, 'global'); }
-  );
+    getter => sub[args, state] {
+      let fam : f32 = args[0].to_number().value_of();
+      state.lookup_number(&s!("fontinfo_{}_text", fam)).unwrap_or_default()
+    },
+    setter => sub[font,args,state] {
+      let fam = args[0].to_number().value_of();
+      state.assign_value(&s!("fontinfo_{}_text", fam), font, Some(Scope::Global));
+    });
 
   DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
-    getter => {unimplemented!(); () },
-    setter => {unimplemented!(); () }
-  //   getter => sub {
-  //     my ($fam) = @_;
-  //     LookupValue('fontinfo_' . $fam->valueOf . '_script'); },
-  //   setter => sub {
-  //     my ($font, $fam) = @_;
-  //     AssignValue('fontinfo_' . $fam->valueOf . '_script' => $font, 'global'); }
-  );
+    getter => sub[args, state] {
+      let fam : f32 = args[0].to_number().value_of();
+      state.lookup_number(&s!("fontinfo_{}_script", fam)).unwrap_or_default()
+    },
+    setter => sub[font,args,state] {
+      let fam = args[0].to_number().value_of();
+      state.assign_value(&s!("fontinfo_{}_script", fam), font, Some(Scope::Global));
+    });
 
   DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
-    getter => {unimplemented!(); () },
-    setter => {unimplemented!(); () }
-  //   getter => sub {
-  //     my ($fam) = @_;
-  //     LookupValue('fontinfo_' . $fam->valueOf . '_scriptscript'); },
-  //   setter => sub {
-  //     my ($font, $fam) = @_;
-  //     AssignValue('fontinfo_' . $fam->valueOf . '_scriptscript' => $font, 'global'); }
-  );
+    getter => sub[args, state] {
+      let fam : f32 = args[0].to_number().value_of();
+      state.lookup_number(&s!("fontinfo_{}_scriptscript", fam)).unwrap_or_default()
+    },
+    setter => sub[font,args,state] {
+      let fam = args[0].to_number().value_of();
+      state.assign_value(&s!("fontinfo_{}_scriptscript", fam), font, Some(Scope::Global));
+    });
+
 
   // # <internal dimen> = <dimen parameter> | <special dimen> | \lastkern
   // #    | <dimendef token> | \dimen<8bit> | <box dimension><8bit> | \fontdimen<number><font>
@@ -444,7 +444,6 @@ LoadDefinitions!(outer_state, {
     state.assign_meaning(&newcs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(), None); // Let w/o AfterAssignment
     let value = stomach.get_gullet_mut().read_number(state)?;
     let csname = newcs.get_cs_name().to_owned();
-    let chardef_value = value.clone();
     let internalcs = T_CS!(s!("\\@chardef@{}", csname));
     DefPrimitive!(internalcs.clone(), None, sub[stomach,args,i_state] {
       let gullet = stomach.get_gullet_mut();
@@ -455,12 +454,12 @@ LoadDefinitions!(outer_state, {
         // Note: curious case, since this is 2-levels in, we can't infer the "i_state"
         // in the Invocation!() call, so we provide it explicitly instead.
         // if this becomes a common problem, we would have to improve the infrastructure
-        Invocation!(T_CS!("\\char"), vec![chardef_value.clone()], gullet, i_state)?,
+        Invocation!(T_CS!("\\char"), vec![value], gullet, i_state)?,
         HashMap::new(),
         i_state)
     });
 
-    state.install_definition(Register::new_chardef(newcs, Some(chardef_value.into()), Some(internalcs)), None);
+    state.install_definition(Register::new_chardef(newcs, Some(value.into()), Some(internalcs)), None);
     AfterAssignment!();
     Ok(Vec::new())
   });
@@ -490,8 +489,8 @@ LoadDefinitions!(outer_state, {
     // eprintln!(" ** {} + {}", value,csname);
     let (role, glyph) = decode_math_char(value.value_of() as u16, state);
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
-    let internalcs = glyph.map(|_| T_CS!(s!("\\@mathchardef@{}", csname)));
-    if let Some(ref internalcs) = internalcs {
+    let internalcs_opt = glyph.map(|_| T_CS!(s!("\\@mathchardef@{}", csname)));
+    if let Some(ref internalcs) = internalcs_opt {
       let mut glyph_props: HashMap<String, Stored> = HashMap::new();
       glyph_props.insert(s!("role"), role.unwrap_or_default().into());
       let glyph_c = glyph.unwrap();
@@ -514,10 +513,9 @@ LoadDefinitions!(outer_state, {
         }
       );
     }
-    state.install_definition(Register::new_chardef(newcs,Some(value.into()), internalcs), None);
+    state.install_definition(Register::new_chardef(newcs,Some(value.into()), internalcs_opt), None);
     AfterAssignment!();
-
-    Ok(vec![])
+    Ok(Vec::new())
   });
 
   DefConstructor!("\\mathaccent Number Digested",

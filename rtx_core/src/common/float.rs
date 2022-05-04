@@ -22,6 +22,12 @@ impl Default for Float {
 impl NumericOps for Float {
   fn value_of(self) -> f32 { self.0 }
   fn register_type(&self) -> RegisterType { RegisterType::Number }
+  fn add<T: NumericOps>(self, other: T) -> Self {
+    Float::new(self.value_of() + other.value_of())
+  }
+  fn subtract<T: NumericOps>(self, other: T) -> Self {
+    Float::new(self.value_of() - other.value_of())
+  }
 }
 
 impl From<Float> for Tokens {
