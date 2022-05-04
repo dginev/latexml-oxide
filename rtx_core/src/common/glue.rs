@@ -1,14 +1,14 @@
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::cmp::Ordering;
 use std::borrow::Cow;
+use std::cmp::Ordering;
 use std::fmt;
 
-use crate::{Locator,Object};
 use crate::common::dimension::{attribute_format, fixpoint};
+use crate::common::number::kround;
 use crate::definition::register::{NumericOps, RegisterType};
 use crate::state::State;
-use crate::common::number::kround;
+use crate::{Locator, Object};
 
 use super::dimension::fixedformat;
 
@@ -23,9 +23,7 @@ pub enum FillCode {
 }
 
 impl fmt::Display for FillCode {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", self.to_str())
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.to_str()) }
 }
 
 impl FillCode {
@@ -74,7 +72,7 @@ macro_rules! fill_re_str {
 
 macro_rules! plus_re_str {
   () => {
-    concat!(r"\s+plus\s*(",num_re_str!(),")(", fill_re_str!(), r")")
+    concat!(r"\s+plus\s*(", num_re_str!(), ")(", fill_re_str!(), r")")
   };
 }
 macro_rules! minus_re_str {
@@ -125,7 +123,6 @@ impl Default for Glue {
   }
 }
 
-
 impl NumericOps for Glue {
   fn value_of(self) -> f32 { self.skip }
   fn register_type(&self) -> RegisterType { RegisterType::Glue }
@@ -152,30 +149,28 @@ impl NumericOps for Glue {
   }
 }
 
-
-pub fn glue_string(skip:f32, plus_opt:Option<f32>, pfill_opt: Option<FillCode>, minus_opt:Option<f32>, mfill_opt: Option<FillCode>, unit:&str) -> String {
+pub fn glue_string(
+  skip: f32,
+  plus_opt: Option<f32>,
+  pfill_opt: Option<FillCode>,
+  minus_opt: Option<f32>,
+  mfill_opt: Option<FillCode>,
+  unit: &str,
+) -> String {
   // ??? TODO: There seems to be some messy confusion about the types of the
   // pieces of glue/dimensions -- are we consistently using i32 or f32?
-  let mut string = fixedformat(skip as i32,Some(unit));
+  let mut string = fixedformat(skip as i32, Some(unit));
   if let Some(plus) = plus_opt {
     if plus != 0.0 {
       string.push_str(" plus ");
-      let p_fill = if let Some(fill) = pfill_opt {
-        fill.to_str()
-      } else {
-        unit
-      };
+      let p_fill = if let Some(fill) = pfill_opt { fill.to_str() } else { unit };
       string.push_str(&fixedformat(plus as i32, Some(p_fill)))
     }
   }
   if let Some(minus) = minus_opt {
     if minus != 0.0 {
       string.push_str(" minus ");
-      let p_fill = if let Some(fill) = mfill_opt {
-        fill.to_str()
-      } else {
-        unit
-      };
+      let p_fill = if let Some(fill) = mfill_opt { fill.to_str() } else { unit };
       string.push_str(&fixedformat(minus as i32, Some(p_fill)))
     }
   }
@@ -192,13 +187,21 @@ impl Object for Glue {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
 }
 
-pub fn new_setup(skip:f32,plus:Option<f32>,pfill:Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>) -> (f32,Option<f32>,Option<FillCode>,Option<f32>,Option<FillCode>) {
-    // See comment in Dimension for why kround rather than int
-    (kround(skip) as f32,
+pub fn new_setup(
+  skip: f32,
+  plus: Option<f32>,
+  pfill: Option<FillCode>,
+  minus: Option<f32>,
+  mfill: Option<FillCode>,
+) -> (f32, Option<f32>, Option<FillCode>, Option<f32>, Option<FillCode>) {
+  // See comment in Dimension for why kround rather than int
+  (
+    kround(skip) as f32,
     plus.map(|p| kround(p) as f32),
     pfill,
     minus.map(|m| kround(m) as f32),
-    mfill)
+    mfill,
+  )
 }
 
 pub fn spec_setup(
@@ -209,15 +212,18 @@ pub fn spec_setup(
   mut mfill: Option<FillCode>,
   unit: &str,
   state: &State,
-) -> (f32,Option<f32>,Option<FillCode>,Option<f32>,Option<FillCode>) {
-
-  if !UNIT_RE.is_match(spec) { // If no units, expect fixedpoint values
+) -> (f32, Option<f32>, Option<FillCode>, Option<f32>, Option<FillCode>) {
+  if !UNIT_RE.is_match(spec) {
+    // If no units, expect fixedpoint values
     let skip: f32 = spec.parse::<f32>().unwrap_or_default();
-      new_setup(skip,plus,pfill,minus,mfill)
+    new_setup(skip, plus, pfill, minus, mfill)
   } else {
     let is_mu = unit == "mu";
     if plus.is_some() || pfill.is_some() || minus.is_some() || mfill.is_some() {
-      let msg = s!("You should not create {} with both units and stretch", if is_mu {"MuGlue"} else {"Glue"});
+      let msg = s!(
+        "You should not create {} with both units and stretch",
+        if is_mu { "MuGlue" } else { "Glue" }
+      );
       Warn!("unexpected", "fill", None, state, msg);
     }
 
@@ -230,24 +236,24 @@ pub fn spec_setup(
         cs.get(7).map(|v| v.as_str().parse::<f32>().unwrap_or_default()).unwrap_or_default(),
         cs.get(8).map_or("", |m| m.as_str()),
       );
-      if unit.is_empty() { f = f.trunc(); }
-      else if is_mu { f = fixpoint(f, None) as f32;  // in mu
+      if unit.is_empty() {
+        f = f.trunc();
+      } else if is_mu {
+        f = fixpoint(f, None) as f32; // in mu
         if unit != "mu" {
           Warn!("unexpected", unit, None, state, "Assumed mu");
         }
-      }
-      else {
+      } else {
         f = fixpoint(f, Some(state.convert_unit(unit))) as f32;
       }
 
       if punit.is_empty() {
         plus = None; // Some(0.0) ?
-        // ? punit = "0";
+                     // ? punit = "0";
       } else if let Some(code) = FillCode::from(punit) {
         plus = Some(fixpoint(p, None) as f32);
         pfill = Some(code)
-      }
-      else if is_mu {
+      } else if is_mu {
         plus = Some(fixpoint(p, None) as f32);
         pfill = None;
         if punit != "mu" {
@@ -260,7 +266,7 @@ pub fn spec_setup(
 
       if munit.is_empty() {
         minus = None; // ? Some(0.0);
-        // munit = 0;
+                      // munit = 0;
       } else if let Some(code) = FillCode::from(munit) {
         minus = Some(fixpoint(m, None) as f32);
         mfill = Some(code);
@@ -272,11 +278,11 @@ pub fn spec_setup(
         }
       } else {
         minus = Some(fixpoint(m, Some(state.convert_unit(munit))) as f32);
-        mfill = None;// 0
+        mfill = None; // 0
       }
 
-      if punit.is_empty() { }
-      else if let Some(pfcode) = FillCode::from(punit) {
+      if punit.is_empty() {
+      } else if let Some(pfcode) = FillCode::from(punit) {
         plus = Some(fixpoint(p as f32, None) as f32);
         pfill = Some(pfcode);
       } else {
@@ -291,27 +297,45 @@ pub fn spec_setup(
         minus = Some(fixpoint(m, Some(state.convert_unit(munit))) as f32);
         mfill = None;
       }
-      (f,plus,pfill,minus,mfill)
+      (f, plus, pfill, minus, mfill)
     } else {
-      let msg = s!("Missing {} specification assuming 0pt", if is_mu{"MuGlue"} else{"Glue"});
+      let msg = s!("Missing {} specification assuming 0pt", if is_mu { "MuGlue" } else { "Glue" });
       Warn!("unexpected", spec, None, state, msg);
-      (0.0,None,None,None,None)
+      (0.0, None, None, None, None)
     }
   }
 }
 
 impl Glue {
   pub fn new(number: f32) -> Self {
-    let (skip, plus, pfill, minus, mfill) = new_setup(number, None,None,None,None);
-    Glue { skip,plus,pfill,minus,mfill }
+    let (skip, plus, pfill, minus, mfill) = new_setup(number, None, None, None, None);
+    Glue {
+      skip,
+      plus,
+      pfill,
+      minus,
+      mfill,
+    }
   }
-  pub fn new_full(skip:f32,plus:Option<f32>,pfill:Option<FillCode>,minus:Option<f32>, mfill:Option<FillCode>) -> Self {
-    let (skip,plus,pfill,minus,mfill) = new_setup(skip,plus,pfill,minus,mfill);
-    Glue { skip,plus,pfill,minus,mfill }
+  pub fn new_full(skip: f32, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>) -> Self {
+    let (skip, plus, pfill, minus, mfill) = new_setup(skip, plus, pfill, minus, mfill);
+    Glue {
+      skip,
+      plus,
+      pfill,
+      minus,
+      mfill,
+    }
   }
-  pub fn new_spec(spec: &str, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>, state:&State) -> Self {
-    let (skip, plus, pfill, minus, mfill) = spec_setup(spec,plus,pfill,minus,mfill,"pt",state);
-    Glue { skip,plus,pfill,minus,mfill }
+  pub fn new_spec(spec: &str, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>, state: &State) -> Self {
+    let (skip, plus, pfill, minus, mfill) = spec_setup(spec, plus, pfill, minus, mfill, "pt", state);
+    Glue {
+      skip,
+      plus,
+      pfill,
+      minus,
+      mfill,
+    }
   }
 
   pub fn add_glue(self, other: Glue) -> Glue {

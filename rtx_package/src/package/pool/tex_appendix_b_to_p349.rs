@@ -388,7 +388,8 @@ LoadDefinitions!(state, {
   // # TeX Book, Appendix B, p. 350
 
   // # Font stuff ...
-  RawTeX!(r###"
+  RawTeX!(
+    r###"
   \font\tenrm=cmr10
   \font\sevenrm=cmr7
   \font\fiverm=cmr5

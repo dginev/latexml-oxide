@@ -5,12 +5,12 @@ use std::borrow::Cow;
 use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::common::dimension::{UNITY,Dimension,fixpoint};
-use crate::common::mudimension::MuDimension;
+use crate::common::dimension::{fixpoint, Dimension, UNITY};
 use crate::common::error::*;
 use crate::common::glue::Glue;
+use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
-use crate::common::number::{Number,kround};
+use crate::common::number::{kround, Number};
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
@@ -354,15 +354,13 @@ impl<'a> From<&'a RegisterValue> for MuGlue {
       RegisterValue::Number(other) => MuGlue::new(other.value_of()),
       RegisterValue::Dimension(other) => MuGlue::new(other.value_of()),
       RegisterValue::MuDimension(other) => MuGlue::new(other.value_of()),
-      RegisterValue::Glue(other) => {
-        MuGlue {
-          skip: other.skip,
-          plus: other.plus,
-          pfill: other.pfill,
-          minus: other.minus,
-          mfill: other.mfill
-        }
-      }
+      RegisterValue::Glue(other) => MuGlue {
+        skip: other.skip,
+        plus: other.plus,
+        pfill: other.pfill,
+        minus: other.minus,
+        mfill: other.mfill,
+      },
       RegisterValue::Token(other) => other.to_number().into(),
       RegisterValue::Tokens(other) => {
         let message = s!("Token register can not be cast into a Glue: {:?}", other);
@@ -372,7 +370,6 @@ impl<'a> From<&'a RegisterValue> for MuGlue {
     }
   }
 }
-
 
 impl fmt::Display for RegisterValue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -433,26 +430,24 @@ impl PartialEq for Register {
 }
 impl fmt::Debug for Register {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f,"Register[cs:{:?}, parameters:{:?}, type:{:?}, readonly:{:?}, internalcs:{:?}, value:{:?}]",self.cs,self.parameters, self.register_type, self.readonly, self.internalcs, self.value)
+    write!(
+      f,
+      "Register[cs:{:?}, parameters:{:?}, type:{:?}, readonly:{:?}, internalcs:{:?}, value:{:?}]",
+      self.cs, self.parameters, self.register_type, self.readonly, self.internalcs, self.value
+    )
   }
 }
 impl fmt::Display for Register {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f,"{:?}",self)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{:?}", self) }
 }
 /// The only purpose of RegisterCell is to provide us with a place to implement fmt::Display over
 /// a `RefCell<Register>`.
 pub struct RegisterCell(RwLock<Register>);
 impl fmt::Debug for RegisterCell {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f,"{}",self.0.read().unwrap())
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0.read().unwrap()) }
 }
 impl fmt::Display for RegisterCell {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f,"{}",self.0.read().unwrap())
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0.read().unwrap()) }
 }
 impl Object for RegisterCell {
   fn stringify(&self) -> String { Definition::stringify_type(self, "RegisterCell") }

@@ -260,9 +260,7 @@ pub fn input(mut request: &str, options: InputOptions, stomach: &mut Stomach, st
   // unwrap if in quotes \input{"file name"}
   let mut clean_req = Cow::Borrowed(request);
   while request.starts_with('"') && request.ends_with('"') {
-    clean_req = Cow::Owned(
-      QUOTE_WRAPPED.replace(&clean_req, "$1").into_owned()
-    );
+    clean_req = Cow::Owned(QUOTE_WRAPPED.replace(&clean_req, "$1").into_owned());
   }
   // HEURISTIC! First check if equivalent style file, but only under very specific circumstances
   // if pathname_is_literaldata(request) {
@@ -288,8 +286,7 @@ pub fn input(mut request: &str, options: InputOptions, stomach: &mut Stomach, st
   // // then this file, even if .tex, must also be definitions rather than content.!!(?)
   if state.lookup_bool("INTERPRETING_DEFINITIONS") {
     input_definitions(&clean_req, InputDefinitionOptions::default(), stomach, state)
-  }
-  else if let Some(path) = find_file(&clean_req, None, state) {
+  } else if let Some(path) = find_file(&clean_req, None, state) {
     // Found something plausible..
     // let ftype = if pathname_is_literaldata(path) { "tex" } else {
     //   pathname_type(path)

@@ -9,9 +9,9 @@ use std::sync::{Arc, RwLock};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::{Font, Fontmap};
-use crate::common::glue::{Glue};
-use crate::common::muglue::MuGlue;
+use crate::common::glue::Glue;
 use crate::common::model::{IndirectModel, Model};
+use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::object::Object;
 pub use crate::common::store::Stored; // reexport for convenience

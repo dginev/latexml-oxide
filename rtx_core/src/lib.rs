@@ -461,7 +461,5 @@ impl Digested {
     }
   }
 
-  pub fn to_attribute(&self) -> String {
-    self.to_string()
-  }
+  pub fn to_attribute(&self) -> String { self.to_string() }
 }

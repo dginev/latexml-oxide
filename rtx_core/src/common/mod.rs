@@ -1,15 +1,15 @@
 #[macro_use]
 pub mod error;
 pub mod dimension;
-pub mod mudimension;
+pub mod float;
 pub mod font;
 pub mod glue;
-pub mod muglue;
 pub mod ligature;
 pub mod locator;
 pub mod model;
+pub mod mudimension;
+pub mod muglue;
 pub mod number;
-pub mod float;
 pub mod object;
 pub mod relaxng;
 pub mod store;

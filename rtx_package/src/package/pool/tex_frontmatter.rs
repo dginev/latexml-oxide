@@ -331,10 +331,7 @@ LoadDefinitions!(state, {
   // Format a title (or caption) appropriately for type.
   // Customize by defining \format@title@type{title}
   // Default composes \lx@fnum@@{type} space title.
-  DefMacro!(
-    "\\lx@format@title@@{}{}",
-    r"\lx@@format@title@@{#1}{{\lx@format@title@font@@{#1}#2}}"
-  );
+  DefMacro!("\\lx@format@title@@{}{}", r"\lx@@format@title@@{#1}{{\lx@format@title@font@@{#1}#2}}");
   DefMacro!(
     "\\lx@@format@title@@{}{}",
     r"{\@ifundefined{format@title@#1}{\lx@@compose@title{\lx@fnum@@{#1}}{#2}}{\csname format@title@#1\endcsname{#2}}}"
@@ -356,10 +353,14 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\lx@@compose@title{}{}", r"\lx@tag[][ ]{#1}#2");
 
-  DefMacro!(r"\lx@format@title@font@@{}",
-  r"\@ifundefined{format@title@font@#1}{}{\csname format@title@font@#1\endcsname}");
-  DefMacro!(r"\lx@format@toctitle@font@@{}",
-  r"\@ifundefined{format@toctitle@font@#1}{}{\csname format@toctitle@font@#1\endcsname}");
+  DefMacro!(
+    r"\lx@format@title@font@@{}",
+    r"\@ifundefined{format@title@font@#1}{}{\csname format@title@font@#1\endcsname}"
+  );
+  DefMacro!(
+    r"\lx@format@toctitle@font@@{}",
+    r"\@ifundefined{format@toctitle@font@#1}{}{\csname format@toctitle@font@#1\endcsname}"
+  );
 
   // NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the type.
   // This would be useful for the titles in links; thus can be plain (unicode) text.

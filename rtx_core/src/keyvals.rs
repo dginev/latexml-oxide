@@ -575,7 +575,7 @@ impl KeyVals {
       match v {
         // TODO: This is a really quick CRUTCH, what is the proper interface?
         Stored::Tokens(vtks) => {
-          let expanded = gullet.do_expand(vtks,state)?;
+          let expanded = gullet.do_expand(vtks, state)?;
           let mut exp_str = expanded.to_string();
           if exp_str == "{}" {
             exp_str = String::new();

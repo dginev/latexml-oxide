@@ -62,7 +62,6 @@ pub fn clean_id(key: &str) -> String {
   cleaned_5.to_string()
 }
 
-
 pub fn clean_label<'a>(label: &'a str, prefix_opt: Option<&str>) -> Cow<'a, str> {
   let key = label.trim(); // Trim leading/trailing, in any case
   let cleaned_1 = SPACES_RE.replace_all(key, "_"); // spaces to underscores
@@ -70,7 +69,7 @@ pub fn clean_label<'a>(label: &'a str, prefix_opt: Option<&str>) -> Cow<'a, str>
   if prefix.is_empty() {
     cleaned_1
   } else {
-    Cow::Owned(s!("{}:{}",prefix,cleaned_1))
+    Cow::Owned(s!("{}:{}", prefix, cleaned_1))
   }
 }
 

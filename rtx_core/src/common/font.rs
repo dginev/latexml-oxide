@@ -1,16 +1,15 @@
+use crate::state::State;
+use lazy_static::lazy_static;
 /// Note that this has evolved way beynond just "font",
 /// but covers text properties (or even display properties) in general
 /// including basic font information, color & background color
 /// as well as encoding and language information.
 ///
 /// NOTE: This is now in Common that it may evolve to be useful in Post processing...
-
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
-use crate::state::State;
-use lazy_static::lazy_static;
 
 mod standard_metrics;
 use standard_metrics::STDMETRICS;

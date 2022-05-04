@@ -1,10 +1,10 @@
 use crate::definition::register::{NumericOps, RegisterType};
-use crate::tokens::Tokens;
 use crate::mouth;
-use std::fmt;
-use crate::{Locator,Object};
-use std::borrow::Cow;
+use crate::tokens::Tokens;
+use crate::{Locator, Object};
 use lazy_static::lazy_static;
+use std::borrow::Cow;
+use std::fmt;
 
 lazy_static! {
   /// smallest number that makes a difference added to 1 in Perl's float format.
@@ -92,7 +92,7 @@ impl fmt::Display for Number {
 
 /// An attempt at rounding floats to integers (like scaled points),
 /// in a (hopefully) Knuthian manner (like round_decimals \S102 in Tex The Program)
-pub fn kround(number:f32) -> i32 {
+pub fn kround(number: f32) -> i32 {
   let rounded = if number < 0.0 {
     number - *ROUNDING_HALF
   } else {

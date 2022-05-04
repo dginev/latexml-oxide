@@ -1,12 +1,12 @@
 use crate::definition::register::{NumericOps, RegisterType};
-use crate::tokens::Tokens;
 use crate::mouth;
-use std::fmt;
-use regex::Regex;
+use crate::tokens::Tokens;
 use lazy_static::lazy_static;
+use regex::Regex;
+use std::fmt;
 
 lazy_static! {
-  static ref TRAILING_ZEROS : Regex = Regex::new(r"0+$").unwrap();
+  static ref TRAILING_ZEROS: Regex = Regex::new(r"0+$").unwrap();
 }
 
 //======================================================================
@@ -22,12 +22,8 @@ impl Default for Float {
 impl NumericOps for Float {
   fn value_of(self) -> f32 { self.0 }
   fn register_type(&self) -> RegisterType { RegisterType::Number }
-  fn add<T: NumericOps>(self, other: T) -> Self {
-    Float::new(self.value_of() + other.value_of())
-  }
-  fn subtract<T: NumericOps>(self, other: T) -> Self {
-    Float::new(self.value_of() - other.value_of())
-  }
+  fn add<T: NumericOps>(self, other: T) -> Self { Float::new(self.value_of() + other.value_of()) }
+  fn subtract<T: NumericOps>(self, other: T) -> Self { Float::new(self.value_of() - other.value_of()) }
 }
 
 impl From<Float> for Tokens {
@@ -42,24 +38,19 @@ impl fmt::Display for Float {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0) }
 }
 
-
 impl Float {
   pub fn new(number: f32) -> Self { Float(number) }
 
-  pub fn multiply(&self, other: &Float) -> Self {
-    Float::new(self.value_of() * other.value_of())
-  }
+  pub fn multiply(&self, other: &Float) -> Self { Float::new(self.value_of() * other.value_of()) }
 
-  pub fn stringify(&self) -> String {
-    s!("Float[{}]", self.0)
-  }
+  pub fn stringify(&self) -> String { s!("Float[{}]", self.0) }
 }
 
 /// Utility for formatting sane numbers.
 pub fn floatformat(n: f32) -> String {
   let mut s = s!("{:.5}", n);
   if s.contains('.') {
-    s = TRAILING_ZEROS.replace(&s,"").to_string();
+    s = TRAILING_ZEROS.replace(&s, "").to_string();
   }
   if s.ends_with('.') {
     s.push('0'); //  Seems TeX prints .0 which in odd corner cases, people use?

@@ -49,21 +49,24 @@ LoadDefinitions!(state, {
     r"\@caption@postlabel{}{}{} SkipMatch:\label Semiverbatim",
     r"\@caption@{#1}{#2}{#3\label{#4}}"
   );
+  DefMacro!(r"\@caption@{}{}{}", r"\@hack@caption@{#1}{#2}{}#3\label\endcaption");
   DefMacro!(
-    r"\@caption@{}{}{}",
-    r"\@hack@caption@{#1}{#2}{}#3\label\endcaption"
+    r"\@hack@caption@{}{}{} Until:\label Until:\endcaption",
+    r"\ifx.#5.\@caption@@@{#1}{#2}{#3#4}\else\@@@hack@caption@{#1}{#2}{#3#4}#5\endcaption\fi"
   );
-  DefMacro!(r"\@hack@caption@{}{}{} Until:\label Until:\endcaption",
-  r"\ifx.#5.\@caption@@@{#1}{#2}{#3#4}\else\@@@hack@caption@{#1}{#2}{#3#4}#5\endcaption\fi");
-  DefMacro!(r"\@@@hack@caption@{}{}{} Semiverbatim Until:\label Until:\endcaption",
-  r"\lx@note@caption@label{#4}\@hack@caption@{#1}{#2}{#3\label{#4}#5}\label#6\endcaption");
+  DefMacro!(
+    r"\@@@hack@caption@{}{}{} Semiverbatim Until:\label Until:\endcaption",
+    r"\lx@note@caption@label{#4}\@hack@caption@{#1}{#2}{#3\label{#4}#5}\label#6\endcaption"
+  );
 
   DefPrimitive!("\\lx@note@caption@label{}", sub[stomach,args,state] {
     unpack_to_string!(args=>arg);
     maybe_note_label(&arg, state); });
 
-  DefMacro!("\\@caption@@@{}{}{}",
-  r"\@@add@caption@counters\@@toccaption{\lx@format@toctitle@@{#1}{\ifx.#2.#3\else#2\fi}}\@@caption{\lx@format@title@@{#1}{#3}}");
+  DefMacro!(
+    "\\@caption@@@{}{}{}",
+    r"\@@add@caption@counters\@@toccaption{\lx@format@toctitle@@{#1}{\ifx.#2.#3\else#2\fi}}\@@caption{\lx@format@title@@{#1}{#3}}"
+  );
 
   // Note that the counters only get incremented by \caption, NOT by \table, \figure, etc.
   DefPrimitive!("\\@@add@caption@counters", sub[stomach, args, state] {
@@ -91,8 +94,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\@@caption{}", "<ltx:caption>#1</ltx:caption>");
   DefConstructor!(
     "\\@@toccaption{}",
-    "<ltx:toccaption>#1</ltx:toccaption>"
-    //sizer => 0
+    "<ltx:toccaption>#1</ltx:toccaption>" //sizer => 0
   );
 
   // TODO: implement optional argument {figure}[]

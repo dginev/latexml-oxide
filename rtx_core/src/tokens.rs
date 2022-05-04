@@ -5,15 +5,15 @@ use quote::{quote, ToTokens, TokenStreamExt};
 
 use std::borrow::{Borrow, Cow};
 use std::collections::VecDeque;
+use std::convert::AsRef;
 use std::fmt::Display;
 use std::string::ToString;
 use std::sync::Arc;
-use std::convert::AsRef;
 
 use crate::common::dimension::Dimension;
-use crate::common::mudimension::MuDimension;
 use crate::common::error::*;
 use crate::common::glue::Glue;
+use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::store::Stored;
@@ -137,11 +137,17 @@ impl Tokens {
 
   /// Return a string containing the TeX form of the Tokens
   pub fn revert(self) -> Vec<Token> {
-    self.0.into_iter().map(|mut t| if t.get_catcode() == Catcode::SmuggleTHE {
-      *t.smuggled.take().unwrap()
-    } else {
-      t
-    }).collect()
+    self
+      .0
+      .into_iter()
+      .map(|mut t| {
+        if t.get_catcode() == Catcode::SmuggleTHE {
+          *t.smuggled.take().unwrap()
+        } else {
+          t
+        }
+      })
+      .collect()
   }
 
   /// to_number casts back to a parsed Number (usually via gullet.read_number)

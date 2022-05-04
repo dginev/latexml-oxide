@@ -1,16 +1,16 @@
-use std::fmt;
-use std::borrow::Cow;
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::borrow::Cow;
+use std::fmt;
 
-use crate::common::number::kround;
-use crate::common::dimension::{fixpoint,UNITY};
-use crate::definition::register::{NumericOps, RegisterType};
-use crate::{Locator,Object};
 use super::dimension::Dimension;
+use crate::common::dimension::{fixpoint, UNITY};
+use crate::common::number::kround;
+use crate::definition::register::{NumericOps, RegisterType};
+use crate::{Locator, Object};
 
 lazy_static! {
-  static ref SPEC_RE : Regex = Regex::new(r"^(-?\d*\.?\d*)mu$").unwrap();
+  static ref SPEC_RE: Regex = Regex::new(r"^(-?\d*\.?\d*)mu$").unwrap();
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

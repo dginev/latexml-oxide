@@ -4,12 +4,12 @@ use std::fmt;
 use std::sync::{Arc, RwLock};
 
 use crate::common::dimension::Dimension;
-use crate::common::mudimension::MuDimension;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::glue::Glue;
-use crate::common::muglue::MuGlue;
 use crate::common::locator::Locator;
+use crate::common::mudimension::MuDimension;
+use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
@@ -460,7 +460,7 @@ impl Stored {
       //Stored::MuDimension(ref v) => v.to_attribute(),
       Stored::Glue(ref v) => v.to_attribute(),
       Stored::MuGlue(ref v) => v.to_attribute(),
-      other => s!("{}",other)
+      other => s!("{}", other),
     }
   }
 }

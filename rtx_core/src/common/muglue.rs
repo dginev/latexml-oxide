@@ -1,10 +1,10 @@
-use std::fmt;
-use std::borrow::Cow;
-use super::glue::{FillCode,new_setup, spec_setup, glue_string};
-use crate::{Locator,Object};
-use crate::state::State;
+use super::glue::{glue_string, new_setup, spec_setup, FillCode};
+use crate::common::dimension::attribute_format;
 use crate::definition::register::{NumericOps, RegisterType};
-use crate::common::dimension::{attribute_format};
+use crate::state::State;
+use crate::{Locator, Object};
+use std::borrow::Cow;
+use std::fmt;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct MuGlue {
@@ -49,21 +49,38 @@ impl Object for MuGlue {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
 }
 
-
 impl MuGlue {
   pub fn new<T: Into<f32>>(number: T) -> Self {
-    let (skip,plus,pfill,minus,mfill) = new_setup(number.into(),None,None,None,None);
-    MuGlue { skip,plus,pfill,minus,mfill }
+    let (skip, plus, pfill, minus, mfill) = new_setup(number.into(), None, None, None, None);
+    MuGlue {
+      skip,
+      plus,
+      pfill,
+      minus,
+      mfill,
+    }
   }
 
-  pub fn new_full(skip:f32,plus:Option<f32>,pfill:Option<FillCode>,minus:Option<f32>, mfill:Option<FillCode>) -> Self {
-    let (skip,plus,pfill,minus,mfill) = new_setup(skip,plus,pfill,minus,mfill);
-    MuGlue { skip,plus,pfill,minus,mfill }
+  pub fn new_full(skip: f32, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>) -> Self {
+    let (skip, plus, pfill, minus, mfill) = new_setup(skip, plus, pfill, minus, mfill);
+    MuGlue {
+      skip,
+      plus,
+      pfill,
+      minus,
+      mfill,
+    }
   }
 
-  pub fn new_spec(spec: &str, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>, state:&State) -> Self {
-    let (skip, plus, pfill, minus, mfill) = spec_setup(spec,plus,pfill,minus,mfill,"mu",state);
-    MuGlue { skip,plus,pfill,minus,mfill }
+  pub fn new_spec(spec: &str, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>, state: &State) -> Self {
+    let (skip, plus, pfill, minus, mfill) = spec_setup(spec, plus, pfill, minus, mfill, "mu", state);
+    MuGlue {
+      skip,
+      plus,
+      pfill,
+      minus,
+      mfill,
+    }
   }
 
   pub fn negate(self) -> Self

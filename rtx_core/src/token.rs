@@ -5,9 +5,9 @@ use std::fmt::Display;
 use std::sync::Arc;
 
 use crate::common::dimension::Dimension;
-use crate::common::mudimension::MuDimension;
 use crate::common::error::*;
 use crate::common::glue::Glue;
+use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::object::Object;

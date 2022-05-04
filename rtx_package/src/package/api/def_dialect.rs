@@ -290,7 +290,8 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   let mut options = options_opt.unwrap_or_default();
   let scope = options.scope.take();
   if options.mathactive && cs.get_string().len() == 1 {
-    state.assign_mathcode(cs.get_string().chars().next().unwrap(), 0x8000u16, scope.clone()); }
+    state.assign_mathcode(cs.get_string().chars().next().unwrap(), 0x8000u16, scope.clone());
+  }
   let options_locked = options.locked;
   let locked_key = if options_locked { s!("{}:locked", cs) } else { String::new() };
   state.install_definition(Expandable::new(cs, paramlist, expansion, Some(options), state), scope);

@@ -1,9 +1,9 @@
+use crate::common::number::kround;
 use crate::definition::register;
 use crate::definition::register::{NumericOps, RegisterType};
 use std::fmt;
-use crate::common::number::kround;
 
-pub static UNITY : usize = 65536;
+pub static UNITY: usize = 65536;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Dimension(pub f32);
@@ -26,9 +26,7 @@ impl Default for Dimension {
 }
 
 impl fmt::Display for Dimension {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", fixedformat(self.0 as i32, Some("pt")))
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", fixedformat(self.0 as i32, Some("pt"))) }
 }
 
 impl Dimension {
@@ -91,7 +89,7 @@ pub fn fixpoint(float: f32, unit_opt: Option<f32>) -> i32 {
 
 // This is Knuth's print_scaled (See TeX the Program, \S 103)
 // It (should) round-trip with kround.
-pub fn fixedformat(mut s:i32, unit_opt: Option<&str>) -> String {
+pub fn fixedformat(mut s: i32, unit_opt: Option<&str>) -> String {
   let mut string = String::new();
   if s < 0 {
     string.push('-');

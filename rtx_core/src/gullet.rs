@@ -4,14 +4,14 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use crate::common::dimension::{fixpoint,Dimension, UNITY};
-use crate::common::mudimension::MuDimension;
+use crate::common::dimension::{fixpoint, Dimension, UNITY};
 use crate::common::error::*;
-use crate::common::glue::{FillCode, Glue};
-use crate::common::muglue::MuGlue;
-use crate::common::locator::Locator;
-use crate::common::number::Number;
 use crate::common::float::Float;
+use crate::common::glue::{FillCode, Glue};
+use crate::common::locator::Locator;
+use crate::common::mudimension::MuDimension;
+use crate::common::muglue::MuGlue;
+use crate::common::number::Number;
 use crate::common::object::Object;
 
 use crate::definition::conditional::ConditionalType;
@@ -602,7 +602,8 @@ impl Gullet {
             // Inline ->getCatcode!
             if let Some(balanced) = self.read_balanced(false, state)? {
               Ok(balanced)
-            } else { // since arg is mandatory, return an empty tokens
+            } else {
+              // since arg is mandatory, return an empty tokens
               Ok(Tokens!())
             }
           },
@@ -934,7 +935,7 @@ impl Gullet {
       Some(u.value_of())
     } else {
       self.read_keyword(&["true"], state)?; // But ignore, we're not bothering with mag...
-      if let Some(u) = self.read_keyword(&["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp","px"], state)? {
+      if let Some(u) = self.read_keyword(&["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "px"], state)? {
         self.skip_one_space(state);
         Some(state.convert_unit(&u))
       } else {
@@ -989,10 +990,7 @@ impl Gullet {
         Ok((Some(f * s), None))
       },
       Some(f) => match self.read_keyword(&["filll", "fill", "fil"], state)? {
-        Some(fil) => Ok((
-          Some(fixpoint(s * f, None) as f32),
-          FillCode::from(&fil.to_string())
-        )),
+        Some(fil) => Ok((Some(fixpoint(s * f, None) as f32), FillCode::from(&fil.to_string()))),
         None => {
           let u = if mu {
             match self.read_mu_unit(state)? {
@@ -1011,7 +1009,7 @@ impl Gullet {
               Some(v) => v,
             }
           };
-          Ok((Some(fixpoint(s * f , Some(u)) as f32), None))
+          Ok((Some(fixpoint(s * f, Some(u)) as f32), None))
         },
       },
     }
@@ -1032,13 +1030,13 @@ impl Gullet {
       if is_negative {
         d = d.negate()
       }
-      let (r1, f1) = if self.read_keyword(&["plus"],state)?.is_some() {
-        self.read_rubber(true,state)?
+      let (r1, f1) = if self.read_keyword(&["plus"], state)?.is_some() {
+        self.read_rubber(true, state)?
       } else {
-        (None,None)
+        (None, None)
       };
-      let (r2, f2) = if self.read_keyword(&["minus"],state)?.is_some() {
-        self.read_rubber(true,state)?
+      let (r2, f2) = if self.read_keyword(&["minus"], state)?.is_some() {
+        self.read_rubber(true, state)?
       } else {
         (None, None)
       };
@@ -1066,11 +1064,7 @@ impl Gullet {
       }
       Ok(MuDimension::new(fixpoint(m, munit) as f32))
     } else if let Some(mglue) = self.read_internal_mu_glue(state)? {
-      let m = if is_negative {
-        -1.0 * mglue.value_of()
-      } else {
-        mglue.value_of()
-      };
+      let m = if is_negative { -1.0 * mglue.value_of() } else { mglue.value_of() };
       Ok(MuDimension::new(m))
     } else {
       Warn!("expected", "<mudimen>", self, state, "Expecting mudimen; assuming 0");
@@ -1104,7 +1098,7 @@ impl Gullet {
         if token.get_catcode() == Catcode::BEGIN {
           match self.read_balanced(false, state)? {
             Some(tks) => Ok(tks),
-            None => Ok(Tokens!())
+            None => Ok(Tokens!()),
           }
         } else if let Some(defn) = state.lookup_register_definition(&token) {
           match defn.register_type() {

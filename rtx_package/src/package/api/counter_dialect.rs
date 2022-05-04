@@ -411,17 +411,17 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool, state: &mut State) {
 /// Use to note a discovered label to support label-derived refererence numbers
 /// Can by used by \label, among others. Note we only record the label
 /// if it hasn't already been peeked, and consumed.
-pub fn maybe_note_label(label:&str, state: &mut State) {
+pub fn maybe_note_label(label: &str, state: &mut State) {
   if state.lookup_value("LABEL_MAPPING_HOOK").is_some() {
-    let label = clean_label(label,Some( ""));
+    let label = clean_label(label, Some(""));
     let processed = state.lookup_string("PROCESSED_LABEL");
-    if processed.is_empty() || processed != label { // Only if not already processed
+    if processed.is_empty() || processed != label {
+      // Only if not already processed
       state.remove_value("PROCESSED_LABEL");
       state.assign_value("PEEKED_LABEL", Stored::String(label.into_owned()), Some(Scope::Global));
     }
   }
 }
-
 
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   //  print STDERR "Unusing scopes for $ctr\n";
