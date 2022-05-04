@@ -58,7 +58,7 @@ LoadDefinitions!(state, {
 
   DefParameterType!("BoxSpecification",  reader => reader!(gullet, inner, extra, state, {
       if let Some(key) = gullet.read_keyword(&["to", "spread"], state)? {
-        Ok(key)
+        Ok(Tokens!(T_OTHER!(key)))
       } else {
         Ok(Tokens!())
       }

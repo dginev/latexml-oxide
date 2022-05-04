@@ -241,19 +241,21 @@ LoadDefinitions!(outer_state, {
       setter => sub[value, args, state] { state.assign_value(&skip2, value, None); }
     );
     AfterAssignment!();
-    ()
+    Ok(Vec::new())
   });
 
   DefPrimitive!("\\muskipdef Token SkipMatch:=", sub[stomach,args,state] {
-    let cs : Token = args[0].as_ref().unwrap().into();
+    unpack_to_token!(args=>cs);
     state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
     let num = stomach.get_gullet_mut().read_number(state)?;
     let muglue = s!("\\muskip{}",num.value_of());
     let muglue_setter = muglue.clone();
     DefRegister!(cs, None, MuGlue::new(0.0),
-      getter => sub[args,state] { state.lookup_muglue(&muglue).unwrap_or_default(); },
-      setter => sub[value,args,state] { state.assign_value(&muglue_setter, value, None); });
+      getter => sub[args,state] { state.lookup_muglue(&muglue).unwrap_or_default() },
+      setter => sub[value,args,state] { state.assign_value(&muglue_setter, value, None); }
+    );
     AfterAssignment!();
+    Ok(Vec::new())
   });
 
   DefPrimitive!("\\toksdef Token SkipMatch:=", sub[stomach,args,state] {
@@ -266,6 +268,7 @@ LoadDefinitions!(outer_state, {
       getter => sub[args, state] { state.lookup_tokens(&toks).unwrap_or_default() },
       setter => sub[value, args, state] { state.assign_value(&toks_setter, value, None); }
     );
+    Ok(Vec::new())
   });
 
   // NOTE: Get all these handled as registers

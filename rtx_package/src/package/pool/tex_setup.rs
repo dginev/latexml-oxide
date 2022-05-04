@@ -437,7 +437,7 @@ LoadDefinitions!(state, {
     ).collect::<Vec<String>>().join("");
 
     match gullet.read_keyword(&[&extra_string], state)? {
-      Some(t) => Ok(t),
+      Some(t) => Ok(Tokens!(T_OTHER!(t))),
       None => Ok(Tokens!())
     }
   });

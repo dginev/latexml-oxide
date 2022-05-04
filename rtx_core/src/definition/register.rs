@@ -5,12 +5,12 @@ use std::borrow::Cow;
 use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::common::dimension::Dimension;
+use crate::common::dimension::{UNITY,Dimension,fixpoint};
 use crate::common::mudimension::MuDimension;
 use crate::common::error::*;
 use crate::common::glue::Glue;
 use crate::common::muglue::MuGlue;
-use crate::common::number::Number;
+use crate::common::number::{Number,kround};
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
@@ -100,17 +100,6 @@ impl Object for RegisterValue {
 }
 impl RegisterValue {
   pub fn new<T: Into<i32>>(number: T) -> Self { RegisterValue::Number(Number::new(number.into())) }
-  pub fn add<T: NumericOps>(self, other: T) -> Self {
-    match self {
-      RegisterValue::Number(v) => RegisterValue::Number(v.add(other)),
-      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.add(other)),
-      RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.add(other)),
-      RegisterValue::Glue(v) => RegisterValue::Glue(v.add(other)),
-      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.add(other)),
-      RegisterValue::Token(v) => unimplemented!(),
-      RegisterValue::Tokens(v) => unimplemented!(),
-    }
-  }
   pub fn multiply<T: Into<f32>>(self, other: T) -> Self {
     match self {
       RegisterValue::Number(v) => RegisterValue::Number(v.multiply(other)),
@@ -146,7 +135,7 @@ impl RegisterValue {
     }
   }
 }
-const SCALES: &[f32] = &[1.0, 10.0, 100.0, 1000.0, 10000.0, 100_000.0];
+const SCALES: &[i32] = &[1, 10, 100, 1000, 10000, 100_000];
 // smallest number that makes a difference added to 1 in Rust's float format.
 // my $EPSILON = 1.0;
 // while (1.0 + $EPSILON / 2 != 1) {
@@ -161,7 +150,7 @@ pub fn round_to(number: f32, prec_opt: Option<u8>) -> f32 {
   }
   let scale = SCALES[prec as usize];
   // scale to integer, w/some slop in case arbitrarily close to an integer...
-  let n = number * scale * (1.0 + 100.0 * EPSILON);
+  let n = number * scale as f32 * (1.0 + 100.0 * EPSILON);
   let adjusted: f32 = if n < -EPSILON {
     n - 0.5
   } else if n > EPSILON {
@@ -169,15 +158,19 @@ pub fn round_to(number: f32, prec_opt: Option<u8>) -> f32 {
   } else {
     0.0
   };
-  adjusted.floor() / scale
+  adjusted.trunc() / scale as f32
 }
 
 pub trait NumericOps {
   fn value_of(self) -> f32;
   fn pt_value(self, prec: Option<u8>) -> f32
   where Self: Sized {
-    round_to(self.value_of() / 65536.0, prec)
+    round_to(self.value_of() / UNITY as f32, prec)
   }
+  fn add<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized;
+  fn subtract<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized;
 
   fn spec_to_f32(spec: &str, state: &State) -> Result<f32> {
     if spec.is_empty() {
@@ -187,9 +180,16 @@ pub trait NumericOps {
       let num_str = cap.get(1).map_or(String::new(), |m| m.as_str().to_string());
       let num: f32 = num_str.parse::<f32>()?;
       let unit = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
-      Ok(num * state.convert_unit(unit))
+      Ok(fixpoint(num, Some(state.convert_unit(&unit))) as f32)
     } else {
-      Ok(0.0)
+      // When scaled points passed in (typically the result of Perl calculations on other Dimensions),
+      // you might think truncation (int) is more TeX-like.
+      // Recall that TeX arithmatic truncates, whereas reading by Gullet tends to round.
+      // The Perl arithmetic is replacing an unknown combination of those truncates & rounds.
+      // As it turns out, using int() here results in non-terminating loops in pgf/tikz.
+      // So, we use round (Knuth style)
+      // Note that divide and such explicitly use int(), however!
+      Ok(kround(spec.parse::<f32>()?) as f32)
     }
   }
   fn to_token(self) -> Token
@@ -233,6 +233,28 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuGlue(v) => RegisterType::MuGlue,
       RegisterValue::Token(v) => RegisterType::Token,
       RegisterValue::Tokens(v) => RegisterType::Tokens,
+    }
+  }
+  fn add<T: NumericOps>(self, other: T) -> Self {
+    match self {
+      RegisterValue::Number(v) => RegisterValue::Number(v.add(other)),
+      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.add(other)),
+      RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.add(other)),
+      RegisterValue::Glue(v) => RegisterValue::Glue(v.add(other)),
+      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.add(other)),
+      RegisterValue::Token(v) => unimplemented!(),
+      RegisterValue::Tokens(v) => unimplemented!(),
+    }
+  }
+  fn subtract<T: NumericOps>(self, other: T) -> Self {
+    match self {
+      RegisterValue::Number(v) => RegisterValue::Number(v.subtract(other)),
+      RegisterValue::Dimension(v) => RegisterValue::Dimension(v.subtract(other)),
+      RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.subtract(other)),
+      RegisterValue::Glue(v) => RegisterValue::Glue(v.subtract(other)),
+      RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.subtract(other)),
+      RegisterValue::Token(v) => unimplemented!(),
+      RegisterValue::Tokens(v) => unimplemented!(),
     }
   }
   /// For now only meant as a type cast, unimplemented in other cases
@@ -356,7 +378,9 @@ impl fmt::Display for RegisterValue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       RegisterValue::Dimension(d) => write!(f, "{}", d),
+      RegisterValue::MuDimension(d) => write!(f, "{}", d),
       RegisterValue::Glue(g) => write!(f, "{}", g),
+      RegisterValue::MuGlue(g) => write!(f, "{}", g),
       other => write!(f, "{}", self.clone().value_of()),
     }
   }
@@ -385,7 +409,7 @@ pub struct Register {
   pub register_type: RegisterType,
   pub readonly: bool,
   pub internalcs: Option<Token>,
-  pub internalvalue: Option<RegisterValue>,
+  pub value: Option<RegisterValue>,
   pub getter: RegisterGetterClosure,
   pub setter: RegisterSetterClosure,
   // pub traits: PrimitiveOptions,
@@ -400,20 +424,34 @@ impl Default for Register {
       setter: Arc::new(|_: RegisterValue, _: Vec<Tokens>, _: &mut State| {}),
       readonly: false,
       internalcs: None,
-      internalvalue: None,
+      value: None,
     }
   }
 }
 impl PartialEq for Register {
   fn eq(&self, other: &Register) -> bool { self.cs == other.cs }
 }
-
+impl fmt::Debug for Register {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f,"Register[cs:{:?}, parameters:{:?}, type:{:?}, readonly:{:?}, internalcs:{:?}, value:{:?}]",self.cs,self.parameters, self.register_type, self.readonly, self.internalcs, self.value)
+  }
+}
+impl fmt::Display for Register {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f,"{:?}",self)
+  }
+}
 /// The only purpose of RegisterCell is to provide us with a place to implement fmt::Display over
 /// a `RefCell<Register>`.
 pub struct RegisterCell(RwLock<Register>);
+impl fmt::Debug for RegisterCell {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f,"{}",self.0.read().unwrap())
+  }
+}
 impl fmt::Display for RegisterCell {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    unimplemented!();
+    write!(f,"{}",self.0.read().unwrap())
   }
 }
 impl Object for RegisterCell {
@@ -498,7 +536,7 @@ impl Definition for RegisterCell {
   }
   fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> {
     if self.borrow().register_type == RegisterType::CharDef {
-      self.borrow().internalvalue.clone()
+      self.borrow().value.clone()
     } else {
       (self.borrow().getter)(args, state)
     }
@@ -517,11 +555,11 @@ impl Register {
     }
   }
 
-  pub fn new_chardef(cs: Token, internalvalue: Option<RegisterValue>, internalcs: Option<Token>) -> Self {
+  pub fn new_chardef(cs: Token, value: Option<RegisterValue>, internalcs: Option<Token>) -> Self {
     Register {
       cs,
       parameters: None,
-      internalvalue,
+      value,
       internalcs,
       register_type: RegisterType::CharDef,
       readonly: true,

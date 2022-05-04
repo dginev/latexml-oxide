@@ -388,32 +388,34 @@ LoadDefinitions!(state, {
   // # TeX Book, Appendix B, p. 350
 
   // # Font stuff ...
-  // RawTeX(<<'EoTeX');
-  // \font\tenrm=cmr10
-  // \font\sevenrm=cmr7
-  // \font\fiverm=cmr5
-  // \font\teni=cmmi10
-  // \font\seveni=cmmi7
-  // \font\fivei=cmmi7
-  // \font\tensy=cmsy10
-  // \font\sevensy=cmsy7
-  // \font\fivesy=cmsy5
-  // \font\tenex=cmex10
-  // \font\tenbf=cmbx10
-  // \font\sevenbf=cmbx7
-  // \font\fivebf=cmbx5
-  // \font\tensl=cmsl10
-  // \font\tentt=cmtt10
-  // \font\tenit=cmti10
-  // \newfam\itfam
-  // \newfam\slfam
-  // \newfam\bffam
-  // \newfam\ttfam
-  // \textfont0=\tenrm\scriptfont0=\sevenrm\scriptscriptfont0=\fiverm
-  // \textfont1=\teni\scriptfont1=\seveni\scriptscriptfont1=\fivei
-  // \textfont2=\tensy\scriptfont2=\sevensy\scriptscriptfont2=\fivesy
-  // \textfont3=\tenex
-  // EoTeX
+  RawTeX!(r###"
+  \font\tenrm=cmr10
+  \font\sevenrm=cmr7
+  \font\fiverm=cmr5
+  \font\teni=cmmi10
+  \font\seveni=cmmi7
+  \font\fivei=cmmi7
+  \font\tensy=cmsy10
+  \font\sevensy=cmsy7
+  \font\fivesy=cmsy5
+  \font\tenex=cmex10
+  \font\tenbf=cmbx10
+  \font\sevenbf=cmbx7
+  \font\fivebf=cmbx5
+  \font\tensl=cmsl10
+  \font\tentt=cmtt10
+  \font\tenit=cmti10
+  \newfam\itfam
+  \newfam\slfam
+  \newfam\bffam
+  \newfam\ttfam
+  \textfont0=\tenrm\scriptfont0=\sevenrm\scriptscriptfont0=\fiverm
+  \textfont1=\teni\scriptfont1=\seveni\scriptscriptfont1=\fivei
+  \textfont2=\tensy\scriptfont2=\sevensy\scriptscriptfont2=\fivesy
+  \textfont3=\tenex
+"###
+  );
+
   // # Note: \newfam in math should be font switching(?)
 
   //======================================================================

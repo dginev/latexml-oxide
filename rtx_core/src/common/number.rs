@@ -2,6 +2,8 @@ use crate::definition::register::{NumericOps, RegisterType};
 use crate::tokens::Tokens;
 use crate::mouth;
 use std::fmt;
+use crate::{Locator,Object};
+use std::borrow::Cow;
 use lazy_static::lazy_static;
 
 lazy_static! {
@@ -17,22 +19,29 @@ lazy_static! {
   static ref ROUNDING_HALF : f32 = 0.5 * (1.0 - *EPSILON);
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub struct Number(pub i32);
-
-impl Default for Number {
-  fn default() -> Self { Number(0) }
+impl Object for Number {
+  fn get_locator(&self) -> Option<Cow<Locator>> { None }
 }
-
 impl NumericOps for Number {
   fn value_of(self) -> f32 { self.0 as f32 }
   fn register_type(&self) -> RegisterType { RegisterType::Number }
+  fn add<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    Self::new(self.value_i32() + other.value_of() as i32)
+  }
+  fn subtract<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    Self::new(self.value_i32() - other.value_of() as i32)
+  }
 }
 
 impl Number {
   pub fn new(number: i32) -> Self { Number(number) }
   pub fn new_f32(number: f32) -> Self { Number(number.trunc() as i32) }
   pub fn value_i32(self) -> i32 { self.0 }
+  pub fn to_attribute(&self) -> String { self.0.to_string() }
   pub fn negate(self) -> Self
   where Self: Sized {
     let value = self.value_i32();
@@ -42,20 +51,19 @@ impl Number {
       Self::new(value)
     }
   }
-  pub fn add<T: NumericOps>(self, other: T) -> Self
-  where Self: Sized {
-    Self::new(self.value_i32() + other.value_of() as i32)
-  }
 
   pub fn multiply<T: Into<f32>>(self, other: T) -> Self
   where Self: Sized {
     let other: f32 = other.into();
-    Self::new((self.value_of() * other).floor() as i32)
+    Self::new((self.value_of() * other).trunc() as i32)
   }
   pub fn divide<T: Into<f32>>(self, other: T) -> Self
   where Self: Sized {
-    let other: f32 = other.into();
-    Self::new((self.value_of() / other).floor() as i32)
+    let mut other: f32 = other.into();
+    if other == 0.0 {
+      other = *EPSILON; // avoid dividing by zero
+    }
+    Self::new((self.value_of() / other).trunc() as i32)
   }
 }
 
@@ -84,11 +92,11 @@ impl fmt::Display for Number {
 
 /// An attempt at rounding floats to integers (like scaled points),
 /// in a (hopefully) Knuthian manner (like round_decimals \S102 in Tex The Program)
-pub fn kround(number:f32) -> f32 {
+pub fn kround(number:f32) -> i32 {
   let rounded = if number < 0.0 {
     number - *ROUNDING_HALF
   } else {
     number + *ROUNDING_HALF
   };
-  rounded.trunc()
+  rounded.trunc() as i32
 }
