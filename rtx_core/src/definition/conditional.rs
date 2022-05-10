@@ -87,7 +87,7 @@ impl fmt::Display for Conditional {
 impl Object for Conditional {
   fn is_expandable(&self) -> bool { true }
   fn stringify(&self) -> String { self.stringify_type("Conditional") }
-  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
+  fn get_locator(&self) -> Option<Cow<Locator>> { None } // TODO
 }
 impl Definition for Conditional {
   // sub new {

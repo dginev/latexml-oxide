@@ -22,7 +22,7 @@ LoadDefinitions!(outer_state, {
   });
   DefConditional!("\\ifodd Number", sub[gullet, args, state] {
     unpack_to_token!(args => u);
-    let uint = u.to_number().value_of() as i64;
+    let uint = u.to_number().value_i32();
     uint % 2 == 1
   });
 
@@ -114,7 +114,11 @@ LoadDefinitions!(outer_state, {
           } else {
             t.get_string()
           };
-          meaning = s!("{} {}", cc.meaning(), text);
+          meaning = String::from(cc.meaning());
+          if !meaning.is_empty() {
+            meaning.push(' ');
+          }
+          meaning.push_str(text);
         },
         Stored::Register(register) => {
           let value = register.value_of(vec![],state);
@@ -210,10 +214,9 @@ LoadDefinitions!(outer_state, {
   }));
 
   DefMacro!("\\csname CSName", sub[gullet, args, state] {
-    unpack!(args => token);
-    let token : Token = token.into();
+    unpack_to_token!(args => token);
     if LookupMeaning!(&token).is_none() {
-      Let!(&token, "\\relax");
+      state.assign_meaning(&token, state.lookup_meaning(&T_CS!("\\relax")).unwrap(), None);
     }
     token
   });
@@ -325,8 +328,8 @@ fn escapechar(state: &State) -> String {
 }
 
 fn compare(u: Token, rel: Token, v: Token) -> Result<bool> {
-  let u = u.to_number().value_of();
-  let v = v.to_number().value_of();
+  let u = u.to_number().value_i32();
+  let v = v.to_number().value_i32();
   // NOTE: One would expect this to be best written as an advanced match statement
   // however, due to the shallow comparison of Cow<str> the Cow::Borrowed("<") and
   // Cow::Owned("<") variants will NOT be equal via a destructuring match.
@@ -335,7 +338,7 @@ fn compare(u: Token, rel: Token, v: Token) -> Result<bool> {
   if rel == T_OTHER!("<") || rel == T_CS!("\\@@<") {
     Ok(u < v)
   } else if rel == T_OTHER!("=") {
-    Ok(u as i64 == v as i64)
+    Ok(u == v)
   } else if rel == T_OTHER!(">") || rel == T_CS!("\\@@>") {
     Ok(u > v)
   } else {

@@ -3,7 +3,7 @@ use libxml::tree::{Node, NodeType};
 use rtx_core::keyvals::KeyValsOptions;
 use std::collections::VecDeque;
 
-pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
+pub fn reenter_text_mode(vertical_mode: bool, gullet: &mut Gullet, state: &mut State) {
   let bindings_val = if vertical_mode {
     state.lookup_value("VTEXT_MODE_BINDINGS")
   } else {
@@ -20,7 +20,7 @@ pub fn reenter_text_mode(vertical_mode: bool, state: &mut State) {
   for binding in bindings {
     if let Stored::Tokens(tks) = binding {
       let vec = tks.unlist();
-      state.let_i(&vec[0], vec[1].clone(), None);
+      state.let_i(&vec[0], vec[1].clone(), None, gullet);
     }
   }
 }
@@ -193,7 +193,7 @@ pub fn do_def(globally: bool, stomach: &mut Stomach, mut args: Vec<Option<Tokens
     ),
     scope,
   );
-  AfterAssignment!();
+  state.after_assignment(stomach.get_gullet_mut());
   Ok(())
 }
 
@@ -259,10 +259,11 @@ pub fn read_box_contents(gullet: &mut Gullet, everybox_opt: Option<Tokens>, stat
     } // Skip till { or \bgroup
   }
   // Now, insert some extra tokens, if any, possibly from \afterassignment
-  if let Some(token) = state.lookup_tokens("BeforeNextBox") {
-    state.assign_value("BeforeNextBox", None, Some(Scope::Global));
-    gullet.unread(token);
-  }
+  match state.remove_value("BeforeNextBox") {
+    Some(Stored::Tokens(tokens)) => gullet.unread(tokens),
+    Some(Stored::Token(token)) => gullet.unread_one(token),
+    _ => {}
+  };
   // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
   if let Some(everybox) = everybox_opt {
     gullet.unread(everybox);
@@ -312,8 +313,7 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
   // If we're in an inline context, we'll need a ltx:inline-block,  otherwise ltx:block.
   // [Or maybe an ltx:para... when does that happen?]
   let mut newblock: Option<Node> = None;
-  let mut unwrap = 0;
-  let mut remove = vec![];
+  let mut remove = Vec::new();
   // drop all empty values
   for (key, val) in &blockattr {
     if val.is_empty() {
@@ -339,26 +339,29 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
 
   document.absorb(contents, None, state)?;
   let absorbed = document.drain_constructed_nodes();
-  let mut nodes = document.filter_children(document.filter_deletions(absorbed));
+  let mut nodes = VecDeque::from(document.filter_children(document.filter_deletions(absorbed)));
 
   // Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
   let mut newnodes = Vec::new();
   while !nodes.is_empty() {
-    if state.model.get_node_qname(nodes.first().as_ref().unwrap()) == "ltx:break" {
-      // ltx:break are superflous, now.
-      document.remove_node(nodes.remove(0));
-      continue;
+    if state.model.get_node_qname(&nodes[0]) == "ltx:break" {
+      let break_parent_name = state.model.get_node_qname(&nodes[0].get_parent().unwrap());
+      // ltx:break are superflous, now, unless we're transporting a figure/float
+      if break_parent_name != "ltx:figure" && break_parent_name != "ltx:float" {
+        document.remove_node(nodes.pop_front().unwrap());
+        continue;
+      }
     }
     let mut inline = Vec::new(); // Collect up sequences of Inline
-    while !nodes.is_empty() && state.model.is_node_in_schema_class("Inline", nodes.first().unwrap()) {
-      inline.push(nodes.remove(0));
+    while !nodes.is_empty() && state.model.is_node_in_schema_class("Inline", &nodes[0]) {
+      inline.push(nodes.pop_front().unwrap());
     }
     if !inline.is_empty() {
       if let Some(wrapped) = document.wrap_nodes("ltx:p", inline, state)? {
         newnodes.push(wrapped);
       }
     } else {
-      newnodes.push(nodes.remove(0));
+      newnodes.push(nodes.pop_front().unwrap());
     }
   }
 
@@ -374,29 +377,37 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
   // Check if the ltx:inline-block container is really needed.
   if let Some(blocknode) = newblock {
     let mut rows = blocknode.get_child_nodes();
+    let mut crows = match rows.first() {
+      None => VecDeque::new(),
+      Some(n) => VecDeque::from(n.get_child_nodes())
+    };
     if rows.is_empty() {
       // Insertion came up empty?
       document.remove_node(blocknode); // then remove the new block entirely
-    } else if rows.len() == 1 {
-      // Else only 1 item inside, then flatten
-      let mut first = rows.pop().unwrap();
-      let first_name = state.model.get_node_qname(&first);
-      let block_parent = blocknode.get_parent();
-
-      if document.can_contain(block_parent.as_ref().unwrap(), &first_name, state)
-        && (!hasattr
-          || !blockattr
-            .keys()
-            .any(|attr| document.can_node_have_attribute(rows.first().unwrap(), attr, state)))
-      {
-        for (key, val) in blockattr {
-          document.set_attribute(&mut first, &key, &val)?;
-        }
-        document.unwrap_nodes(blocknode)?;
+    } else if rows.len() == 1 &&crows.len() == 1 &&
+    state.model.get_node_qname(&rows.first().unwrap()) == "ltx:p" &&
+    document.can_contain(&blocknode.get_parent().unwrap(),
+      &state.model.get_node_qname(&crows[0]), state)
+    // TODO: && (!hasattr || blockattr.keys().any(...
+    {
+      // Else only 1 item inside...which is an ltx:p with 1 item, if allowed.
+      let mut cfirst = crows.pop_front().unwrap();
+      for (key, val) in blockattr {
+        document.set_attribute(&mut cfirst, &key, &val)?;
       }
+      document.unwrap_nodes(rows.remove(0))?;
+      document.unwrap_nodes(blocknode)?;
+    } else if rows.len() == 1 &&
+      document.can_contain(&blocknode.get_parent().unwrap(), &state.model.get_node_qname(&rows[0]), state)  // if allowed.
+        // TODO: && (!hasattr || !grep { !$document->canHaveAttribute($rows[0], $_) } keys %blockattr)))
+    {
+      let mut first = rows.remove(0);
+      for (key, val) in blockattr {
+        document.set_attribute(&mut first, &key, &val)?;
+      }
+      document.unwrap_nodes(blocknode)?;
     }
   }
-
   // And return the list of "rows" in the box (in case they need attributes....)
   Ok(newnodes)
 }

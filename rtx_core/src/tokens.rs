@@ -30,8 +30,16 @@ const UNTEX_LINELENGTH: usize = 78;
 /// usually read from a `Mouth`.
 /// They are usually treated as an immutable interface, an have to be consumed via `.unlist()`
 /// for access to the underlying data.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Tokens(Vec<Token>);
+
+impl PartialEq for Tokens {
+  fn eq(&self, other: &Tokens) -> bool {
+    self.0.len() == other.0.len() &&
+    self.0.iter().zip(other.0.iter()).all(|(a,b)| a == b)
+  }
+}
+
 
 #[macro_export]
 macro_rules! Tokens(
@@ -127,7 +135,7 @@ impl Tokens {
   pub fn as_ref_unlist(&self) -> &Vec<Token> { &self.0 }
 
   /// Return a mutable reference to the tokens making up this Tokens
-  pub fn as_mut_unlist(&mut self) -> &Vec<Token> { &mut self.0 }
+  pub fn as_mut_unlist(&mut self) -> &mut Vec<Token> { &mut self.0 }
 
   /// Are there any tokens at all contained in this Tokens object
   pub fn is_empty(&self) -> bool { self.0.is_empty() }

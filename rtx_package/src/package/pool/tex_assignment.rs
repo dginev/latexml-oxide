@@ -75,8 +75,11 @@ LoadDefinitions!(outer_state, {
       props.name = Some(Cow::Owned(name));
       Some(props)
     } else { // Failed?
-      let message = s!("Unrecognized font name {:?} Font switch macro {:?} will have no effect", name, cs.stringify());
-      Info!("unexpected", name, gullet, state, message);
+
+      // TODO: add this back when we have the fonts, too loud now
+
+      // let message = s!("Unrecognized font name {:?} Font switch macro {:?} will have no effect", name, cs.stringify());
+      // Info!("unexpected", name, gullet, state, message);
       None
     };
     gullet.skip_spaces(state);

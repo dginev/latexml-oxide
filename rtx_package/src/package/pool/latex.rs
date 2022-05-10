@@ -39,17 +39,17 @@ LoadDefinitions!(state, {
   InnerPool!(latex_ch4_sectioning_and_toc);
   // lines 687-876
   InnerPool!(latex_ch5_packages);
-  // lines 876-909
+  // lines 876-1101
   InnerPool!(latex_ch5_page_styles);
-  // lines 909-1078
+  // lines 1102-1310 (05.2022)
   InnerPool!(latex_ch5_title_page_and_abstract);
-  // lines 1078-1145
+  // lines 1311-1376  (05.2022)
   InnerPool!(latex_ch6_displayed_paragraphs);
-  // lines 1145-1163
+  // lines 1377-1395  (05.2022)
   InnerPool!(latex_ch6_quotations_and_verse);
-  // lines 1163-1470
+
   InnerPool!(latex_ch6_list_making_environments);
-  // lines 1470-1550
+  // lines 1396-1550
   InnerPool!(latex_ch6_list_and_trivlist_environments);
   // lines 1551-1646
   InnerPool!(latex_ch6_verbatim);

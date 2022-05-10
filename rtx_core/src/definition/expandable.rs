@@ -56,7 +56,10 @@ impl Default for Expandable {
   }
 }
 impl PartialEq for Expandable {
-  fn eq(&self, other: &Expandable) -> bool { self.cs == other.cs }
+  fn eq(&self, other: &Expandable) -> bool {
+    self.paramlist == other.paramlist &&
+    self.expansion == other.expansion
+  }
 }
 
 impl fmt::Display for Expandable {

@@ -195,7 +195,6 @@ impl<'t> Stomach {
           // Common case
           let cc = meaning.get_catcode();
           if cc == Catcode::CS {
-            eprintln!("token: {}; meaning: {}", token, meaning);
             result = self.invoke_token_undefined(&token, state)?;
           } else if cc.is_absorbable() {
             if let Some(digested) = self.invoke_token_simple(&*token, meaning, state)? {
@@ -304,7 +303,7 @@ impl<'t> Stomach {
       );
 
       let gullet = self.get_gullet_mut();
-      state.let_i(token, T_CS!("\\iffalse"), None);
+      state.let_i(token, T_CS!("\\iffalse"), None, gullet);
       gullet.unread_one(token.clone()); // Retry
       Ok(Vec::new())
     } else {
@@ -452,7 +451,7 @@ impl<'t> Stomach {
     state.push_frame();
     state.assign_value("beforeAfterGroup", Stored::VecDequeStored(VecDeque::new()), Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("afterGroup", Stored::VecDequeStored(VecDeque::new()), Some(Scope::Local)); // ALWAYS bind this!
-    state.assign_value("afterAssignment", Stored::Tokens(Tokens!()), Some(Scope::Local)); // ALWAYS bind this!
+    state.assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupInitiator", (*current_token).clone(), Some(Scope::Local));
     state.assign_value("groupInitiatorLocator", self.get_locator().unwrap().into_owned(), Some(Scope::Local));
@@ -463,10 +462,10 @@ impl<'t> Stomach {
   }
 
   pub fn pop_stack_frame(&mut self, nobox: bool, state: &mut State) -> Result<()> {
-    if let Some(Stored::Tokens(beforeafter)) = state.remove_value("beforeAfterGroup") {
+    if let Some(Stored::Tokens(beforeafter)) = state.lookup_value("beforeAfterGroup") {
       if !beforeafter.is_empty() {
         let mut result = Vec::new();
-        for frametok in beforeafter.unlist().into_iter() {
+        for frametok in beforeafter.clone().unlist().into_iter() {
           result.push(frametok.be_digested(self, state)?);
         }
         // TODO
@@ -476,7 +475,7 @@ impl<'t> Stomach {
         self.box_list.extend(result);
       }
     }
-    let after = state.remove_value("afterGroup");
+    let after = state.lookup_value("afterGroup").cloned();
     state.pop_frame()?;
     if !nobox {
       self.boxing.pop(); // For begingroup/endgroup

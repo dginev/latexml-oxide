@@ -12,7 +12,6 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::{kround, Number};
 use crate::common::object::Object;
-use crate::common::store::Stored;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -500,17 +499,7 @@ impl Definition for RegisterCell {
       .collect();
     self.borrow_mut().set_value(value, args, state);
 
-    if let Some(after) = state.remove_value("afterAssignment") {
-      match after {
-        // primitive returns boxes, so these need to be digested!
-        Stored::Token(t) => gullet.unread_one(t),
-        Stored::Tokens(tks) => gullet.unread(tks),
-        other => {
-          let message = s!("expected tokens, found: {:?}", other);
-          Error!("unexpected", "afterassignment", stomach, state, message)
-        },
-      };
-    }
+    state.after_assignment(gullet);
     // # Tracing ?
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 

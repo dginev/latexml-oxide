@@ -53,9 +53,8 @@ LoadDefinitions!(state, {
   // #======================================================================
   // # 3.3 Environmental enquiries
 
-  // our @ETEX_VERSION = (qw(2 .2));
-  // DefMacro("\eTeXrevision", sub { Explode($ETEX_VERSION[1]); });
-  // DefRegister("\eTeXversion" => Number($ETEX_VERSION[0]));
+  DefMacro!("\\eTeXrevision", sub[gullet,args,state] { Explode!(".2") });
+  DefRegister!("\\eTeXversion" => Number!(2));
 
   // # \currentgrouplevel
   // DefRegister('\currentgrouplevel', Number(0),
@@ -65,11 +64,17 @@ LoadDefinitions!(state, {
   // # \currentgrouptype returns group types from 0..16 ; but what IS a "group type"?
   // DefRegister('\currentgrouptype', Number(0), readonly => 1);
 
-  // # \ifcsname stuff \endcsname
-  // DefConditional('\ifcsname CSName', sub { defined LookupMeaning($_[1]); });
+  // \ifcsname stuff \endcsname
+  DefConditional!("\\ifcsname CSName", sub[gullet, args, state] {
+    unpack_to_token!(args =>t);
+    state.lookup_meaning(&t).is_some()
+  });
 
-  // # \ifdefined <token>
-  // DefConditional('\ifdefined Token', sub { defined LookupMeaning($_[1]); });
+  // \ifdefined <token>
+  DefConditional!("\\ifdefined Token", sub[gullet, args, state] {
+    unpack_to_token!(args =>t);
+    state.lookup_meaning(&t).is_some()
+  });
 
   // # ???
   DefRegister!("\\lastnodetype", Number::new(0));

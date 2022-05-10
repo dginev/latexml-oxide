@@ -350,7 +350,7 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\newif DefToken", sub[gullet, args, state] {
     unpack_to_token!(args => cs);
-    DefConditional!(cs, None);
+    def_conditional(cs, None,None,ConditionalOptions::default(),gullet,state);
   });
 
   // # See the section Registers & Parameters, above for setting default values.
@@ -584,8 +584,12 @@ LoadDefinitions!(state, {
   DefMacro!("\\goodbreak", "\\par");
   DefMacro!("\\eject", "\\par\\LTX@newpage");
   Let!("\\newpage", "\\eject");
-  // TODO:
-  // DefConstructor!("\\LTX@newpage", "^<ltx:pagination role='newpage'/>");
+
+  DefConstructor!("\\LTX@newpage", "^<ltx:pagination role='newpage'/>",
+    before_digest=>sub[stomach,state] {
+      state.after_assignment(stomach.get_gullet_mut());
+      Ok(Vec::new())
+    });
   DefMacro!("\\supereject", "\\par\\LTX@newpage");
   DefPrimitive!("\\removelastskip", None);
   DefMacro!("\\smallbreak", "\\par");

@@ -629,22 +629,22 @@ LoadDefinitions!(outer_stomach, outer_state, {
 // Making \par do a \bibitem{} works, but screws up valid
 // bibliographies with blank lines!
 // So, let's do some redirection!
-fn setup_pseudo_bibitem(state: &mut State) {
-  state.let_i(&T_CS!("\\save@bibitem"), T_CS!("\\bibitem"), None);
-  state.let_i(&T_CS!("\\save@par"), T_CS!("\\par"), None);
-  state.let_i(&T_CS!("\\bibitem"), T_CS!("\\restoring@bibitem"), None);
-  state.let_i(&T_CS!("\\par"), T_CS!("\\par@in@bibliography"), None);
+fn setup_pseudo_bibitem(state: &mut State, gullet: &mut Gullet) {
+  state.let_i(&T_CS!("\\save@bibitem"), T_CS!("\\bibitem"), None, gullet);
+  state.let_i(&T_CS!("\\save@par"), T_CS!("\\par"), None, gullet);
+  state.let_i(&T_CS!("\\bibitem"), T_CS!("\\restoring@bibitem"), None, gullet);
+  state.let_i(&T_CS!("\\par"), T_CS!("\\par@in@bibliography"), None, gullet);
   // Moreover some people use \item instead of \bibitem
-  state.let_i(&T_CS!("\\item"), T_CS!("\\item@in@bibliography"), None);
+  state.let_i(&T_CS!("\\item"), T_CS!("\\item@in@bibliography"), None, gullet);
   // And protect from redefinitions.
-  state.let_i(&T_CS!("\\newblock"), T_CS!("\\lx@bibnewblock"), None);
+  state.let_i(&T_CS!("\\newblock"), T_CS!("\\lx@bibnewblock"), None, gullet);
 }
 // This sub does things that would commonly be needed when starting a bibliography
 // setting the ID, etc...
 fn begin_bibliography(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<()> {
   begin_bibliography_clean(stomach, whatsit, state)?;
   // Fix for missing \bibitems!
-  setup_pseudo_bibitem(state);
+  setup_pseudo_bibitem(state, stomach.get_gullet_mut());
   Ok(())
 }
 

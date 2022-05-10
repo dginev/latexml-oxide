@@ -96,6 +96,7 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
     quote!(
     Some(Arc::new(
     |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, Stored>, state: &mut State| {
+      #[allow(unused_assignments)]
       let mut savenode : Option<Node> = None;
 
       #(#operations)*
@@ -124,7 +125,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
   }
   let mut floats: String = String::new();
   let mut has_floats: bool = false;
-  let float_result = FLOAT_RE.replace_all(&replacement, |refs: &Captures| -> String {
+  let float_result = FLOAT_RE.replace(&replacement, |refs: &Captures| -> String {
     floats = refs.get(1).map_or("", |m| m.as_str()).to_string();
     has_floats = true;
     String::new()
@@ -205,9 +206,9 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       if has_floats {
         let float_type = floats.len();
         if float_type == 1 {
-          operations.push(quote!(savenode = Some(document.float_to_element(#current_tag, false));));
+          operations.push(quote!(savenode = document.float_to_element(#current_tag, false);));
         } else if float_type == 2 {
-          operations.push(quote!(savenode = Some(document.float_to_element(#current_tag, true));));
+          operations.push(quote!(savenode = document.float_to_element(#current_tag, true);));
         }
         has_floats = false;
         floats = String::new();

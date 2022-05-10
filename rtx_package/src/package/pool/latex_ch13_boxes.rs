@@ -45,6 +45,8 @@ LoadDefinitions!(state, {
     DefRegister!(cs, None, Glue::new(0.0));
     Ok(vec![])
   });
+
+  // TODO: Update these !!!
   DefMacro!("\\setlength{}{}", "\\@check@length{#1}#1#2\\relax");
   DefMacro!("\\addtolength{}{}", "\\@check@length{#1}\\advance#1 #2\\relax");
 
@@ -55,6 +57,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\settoheight", "\\@settodim\\ht");
   DefMacro!("\\settodepth", "\\@settodim\\dp");
   DefMacro!("\\settowidth", "\\@settodim\\wd");
+  DefMacro!(r"\@settopoint{}", r"\divide#1\p@\multiply#1\p@");
 
   // Assuming noone tries to get clever with figuring out the allocation of
   // numbers, these become simple DefRegister's
@@ -84,6 +87,8 @@ LoadDefinitions!(state, {
   //======================================================================
   // C.13.2 Space
   //======================================================================
+
+  // TODO: Update this!!!
   DefMacro!(
     "\\hspace  OptionalMatch:* {Dimension}",
     "\\ifmmode\\@math@hskip #2\\relax\\else\\@text@hskip #2\\relax\\fi"
@@ -92,7 +97,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\vspace OptionalMatch:* {}", None);
   DefPrimitive!("\\addvspace {}", None);
   DefPrimitive!("\\addpenalty {}", None);
-  // \hfill, \vfill
+  DefPrimitive!("\\@endparenv", None);
 
   //======================================================================
   // C.13.3 Boxes
@@ -107,7 +112,7 @@ LoadDefinitions!(state, {
     mode => "text",
     bounded => true,
     sizer => "#1",
-    before_digest => sub[stomach, state] { reenter_text_mode(false, state); }
+    before_digest => sub[stomach, state] { reenter_text_mode(false, stomach.get_gullet_mut(), state); }
   );
 
   // our %makebox_alignment = (l => 'left', r => 'right', s => 'justified');
@@ -120,10 +125,8 @@ LoadDefinitions!(state, {
   //     (($_[2] ? (align => $makebox_alignment{ ToString($_[2]) }) : ()),
   //       ($_[1] ? (width => $_[1]) : ())) });
 
-  let dimp4pt = Dimension!(".4pt");
-  let dim3pt = Dimension!("3pt");
-  DefRegister!("\\fboxrule", dimp4pt);
-  DefRegister!("\\fboxsep", dim3pt);
+  DefRegister!("\\fboxrule", Dimension!(".4pt"));
+  DefRegister!("\\fboxsep", Dimension!("3pt"));
 
   // Peculiar special case!
   //  These are nominally text mode macros. However, there is a somewhat common idiom:

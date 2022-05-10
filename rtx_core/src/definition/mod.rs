@@ -59,6 +59,25 @@ impl Default for ExpansionBody {
   fn default() -> Self { ExpansionBody::Tokens(Tokens::new(Vec::new())) }
 }
 
+impl PartialEq for ExpansionBody {
+  fn eq(&self, other: &ExpansionBody) -> bool {
+    match self {
+      ExpansionBody::Closure(self_closure) =>
+        if let ExpansionBody::Closure(other_closure) = other {
+          Arc::ptr_eq(self_closure, other_closure)
+        } else {
+          false
+        },
+      ExpansionBody::Tokens(self_tks) =>
+        if let ExpansionBody::Tokens(other_tks) = other {
+          self_tks == other_tks
+        } else {
+          false
+        }
+    }
+  }
+}
+
 #[derive(Clone)]
 pub enum Reversion {
   Closure(DigestedReversionClosure),

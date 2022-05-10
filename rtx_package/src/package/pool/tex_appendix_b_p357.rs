@@ -167,7 +167,7 @@ LoadDefinitions!(state, {
   //   '\upbracefill', '\downbracefill') {
   //   DefPrimitive($op, undef); }
 
-  Let!("\\bye", "\\end");
+  DefMacro!("\\bye", r"\par\vfill\end"); // \supereject
 
   Let!("\\sp", T_SUPER!());
   Let!("\\sb", T_SUB!());

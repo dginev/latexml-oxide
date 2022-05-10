@@ -465,23 +465,17 @@ impl State {
     if let Some(globaldefs) = self.value.get("\\globaldefs") {
       if let Some(global_value) = globaldefs.front() {
         // magic TeX register override: \globaldefs
-        if *global_value == Stored::Int(1) {
-          scope_opt = Some(Scope::Global);
-        } else if *global_value == Stored::Int(-1) {
-          scope_opt = Some(Scope::Local);
+        match *global_value {
+          Stored::Int(1) => {scope_opt = Some(Scope::Global); },
+          Stored::Int(-1) => { scope_opt = Some(Scope::Local); },
+          _ => {}
         }
       }
     }
     // regular check, local scope is default, unless a global prefix is set
     let scope = match scope_opt {
       Some(s) => s,
-      None => {
-        if self.get_prefix("global") {
-          Scope::Global
-        } else {
-          Scope::Local
-        }
-      },
+      None => if self.get_prefix("global") { Scope::Global } else { Scope::Local }
     };
 
     match scope {
@@ -491,25 +485,27 @@ impl State {
         let mut undo_count = 0;
 
         // Remove bindings made in all frames down-to & including the next lower locked frame
-        let mut frame_table: &mut AssignmentCount = &mut HashMap::new();
-
+        let mut last_frame = None;
         for frame in &mut self.undo {
           let is_locked = frame.locked;
-          frame_table = frame.table_mut(table_name);
+          let frame_table = frame.table_mut(table_name);
           if let Some(n) = frame_table.remove(key) {
             undo_count += n;
           }
+          last_frame = Some(frame);
           if is_locked {
             break;
           }
         }
         // whatever is left -- if anything -- should be bindings below the locked frame.
-        frame_table.insert(key.to_string(), 1); // Note that there's only one value in the stack, now
+        if let Some(frame) = last_frame {
+          frame.table_mut(table_name).insert(key.to_string(), 1); // Note that there's only one value in the stack, now
+        }
 
         // Undo the bindings, if `key` was bound in this frame
         let state_table = self.table_mut(table_name);
         if let Some(defs) = state_table.get_mut(key) {
-          for _ in 0..undo_count {
+          for _ in 1..=undo_count {
             defs.pop_front();
           }
         }
@@ -524,23 +520,24 @@ impl State {
         if let Some(current_frame) = self.undo.front_mut() {
           let current_frame_table = current_frame.table_mut(table_name);
 
-          is_replace = current_frame_table.contains_key(key);
+          is_replace = current_frame_table.get(key).unwrap_or(&0) > &0;
           if is_replace { // If the value was previously assigned in this frame
-             // we do this in 2.1
+             // we do this in 2.1, then proceed to 2.2
           } else {
             // Otherwise, push new value & set 1 to be undone
             current_frame_table.insert(key.to_string(), 1);
-            //  And push new binding.
+            //  And push new binding in 2.2
           }
         }
         // 2. State table mutable logic
         let state_table = self.table_mut(table_name);
         let defs = state_table.entry(key.to_string()).or_insert_with(VecDeque::new);
         if is_replace {
-          // 2.1. Replace the value
+          // 2.1. Replace the value, i.e. remove existing one
           defs.pop_front();
         }
-        defs.push_front(value)
+        // 2.2 Add new value
+        defs.push_front(value);
       },
       Scope::Named(scope_name) => {
         // initialize stash if empty
@@ -570,21 +567,35 @@ impl State {
   pub fn lookup_value(&self, key: &str) -> Option<&Stored> {
     match self.value.get(key) {
       None => None,
-      Some(vvec) => vvec.front(),
+      Some(vvec) => match vvec.front() {
+        None | Some(Stored::None) => None,
+        Some(other) => Some(other)
+      }
     }
   }
 
   pub fn lookup_value_mut<'lv>(&'lv mut self, key: &'lv str) -> Option<&mut Stored> {
     match self.value.get_mut(key) {
       None => None,
-      Some(vvec) => vvec.front_mut(),
+      Some(vvec) => match vvec.front_mut() {
+        None | Some(Stored::None) => None,
+        Some(other) => Some(other),
+      }
     }
   }
 
+  /// inline lookup_value after which globally assign an empty Tokens() to undo
   pub fn remove_value<'lv>(&'lv mut self, key: &'lv str) -> Option<Stored> {
     match self.value.get_mut(key) {
       None => None,
-      Some(vvec) => vvec.pop_front(),
+      Some(vvec) => match vvec.front() {
+        None | Some(&Stored::None) => Option::None,
+        Some(found) => {
+          let found = found.clone();
+          self.assign_internal(TableName::Value, key, Stored::None, Some(Scope::Global));
+          Some(found)
+        }
+      }
     }
   }
 
@@ -594,7 +605,7 @@ impl State {
     self.assign_internal(TableName::Value, key, value, scope);
   }
 
-  // manage a (global) list of values
+  /// manage a (global) list of values
   pub fn push_value<T: Into<Stored>>(&mut self, key: &str, value: T) {
     let value = value.into();
     if !self.value.contains_key(key) {
@@ -622,23 +633,36 @@ impl State {
   /// Check if the Value table contains a given key
   pub fn has_value(&self, key: &str) -> bool {
     match self.value.get(key) {
-      Some(list) => !list.is_empty(),
       None => false,
+      Some(list) => match list.front() {
+        None => false,
+        Some(v) => v != &Stored::None
+      }
+    }
+  }
+
+  /// Pushes Tokens into a `Stored::Tokens` value when defined,
+  /// or assigns when new.
+  pub fn push_tokens(&mut self, key: &str, value: Tokens) {
+    match self.lookup_value_mut(key) {
+      Some(Stored::Tokens(ref mut tks)) => tks.as_mut_unlist().extend(value.unlist()),
+      None | Some(Stored::None) => self.assign_value(key, Stored::Tokens(value), None),
+      Some(other) => panic!("Can only push_tokens into a Stored::Tokens, but got {:?}", other),
     }
   }
 
   /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
   pub fn lookup_bool(&self, key: &str) -> bool {
     match self.lookup_value(key) {
-      Some(v) => v.into(),
       None => false,
+      Some(v) => v.into(),
     }
   }
 
   pub fn lookup_string(&self, key: &str) -> String {
     match self.lookup_value(key) {
-      Some(v) => v.into(),
       None => String::new(),
+      Some(v) => v.into(),
     }
   }
 
@@ -659,8 +683,8 @@ impl State {
 
   pub fn lookup_vecdeque<'lvdq>(&'lvdq self, key: &'lvdq str) -> Option<&VecDeque<Stored>> {
     match self.lookup_value(key) {
+      None | Some(Stored::None) => None,
       Some(v) => v.into(),
-      _ => None,
     }
   }
 
@@ -673,15 +697,15 @@ impl State {
 
   pub fn lookup_font(&self) -> Option<Arc<Font>> {
     match self.lookup_value("font") {
+      None | Some(Stored::None) => None,
       Some(f) => f.into(),
-      _ => None,
     }
   }
 
   pub fn lookup_mathfont(&self) -> Option<Arc<Font>> {
     match self.lookup_value("mathfont") {
+      None | Some(Stored::None) => None,
       Some(v) => v.into(),
-      _ => None,
     }
   }
 
@@ -689,35 +713,35 @@ impl State {
 
   pub fn lookup_number(&self, key: &str) -> Option<Number> {
     match self.lookup_value(key) {
+      None | Some(Stored::None) => None,
       Some(v) => v.into(),
-      _ => None,
     }
   }
   pub fn lookup_dimension(&self, key: &str) -> Option<Dimension> {
     match self.lookup_value(key) {
+      None | Some(Stored::None) => None,
       Some(v) => v.into(),
-      _ => None,
     }
   }
   pub fn lookup_glue(&self, key: &str) -> Option<Glue> {
     match self.lookup_value(key) {
       Some(Stored::Glue(v)) => Some(*v),
+      None | Some(Stored::None) => None,
       Some(other) => panic!("state lookup expected Glue, found: {:?}", other),
-      _ => None,
     }
   }
   pub fn lookup_muglue(&self, key: &str) -> Option<MuGlue> {
     match self.lookup_value(key) {
       Some(Stored::MuGlue(v)) => Some(*v),
+      None | Some(Stored::None) => None,
       Some(other) => panic!("state lookup expected MuGlue, found: {:?}", other),
-      _ => None,
     }
   }
 
   pub fn lookup_tokens(&self, key: &str) -> Option<Tokens> {
     match self.lookup_value(key) {
+      None | Some(Stored::None) => None,
       Some(v) => v.into(),
-      _ => None,
     }
   }
 
@@ -982,7 +1006,10 @@ impl State {
   pub fn lookup_meaning(&self, token: &Token) -> Option<Stored> {
     if token.get_catcode().is_active_or_cs() && !token.get_string().is_empty() {
       match self.meaning.get(&token.get_cs_name().to_owned()) {
-        Some(entry) => entry.front().cloned(),
+        Some(entry) => match entry.front() {
+          None | Some(Stored::None) => None,
+          Some(other) => Some(other.clone())
+        },
         None => None,
       }
     } else {
@@ -1596,7 +1623,7 @@ impl State {
     self.assign_value("IN_MATH", Stored::Bool(false), Some(Scope::Global));
     self.assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
     self.assign_value("afterGroup", Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
-    self.assign_value("afterAssignment", Stored::Tokens(Tokens!()), Some(Scope::Global)); // undef ???
+    self.assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
     self.assign_value("groupInitiator", Stored::String(s!("Initialization")), Some(Scope::Global));
     // Setup default fonts.
     self.assign_value("font", Stored::Font(Arc::new(Font::text_default())), Some(Scope::Global));
@@ -1605,14 +1632,14 @@ impl State {
 
   // Package helpers used in core need to be localized here -- as State methods
   /// `Let` macro setter
-  pub fn let_i(&mut self, token1: &Token, token2: Token, scope: Option<Scope>) {
-    // If strings are given, assume CS tokens (most common case)
-    let meaning = match self.lookup_meaning(&token2) {
-      Some(m) => m,
-      None => Stored::Token(token2),
+  pub fn let_i(&mut self, token1: &Token, token2: Token, scope: Option<Scope>, gullet: &mut Gullet) {
+    let meaning = if token2.get_dont_expand().is_some() {
+      Stored::Token(token2)
+    } else {
+      self.lookup_meaning(&token2).unwrap_or(Stored::None)
     };
     self.assign_meaning(token1, meaning, scope);
-    self.after_assignment();
+    self.after_assignment(gullet);
   }
   /// `XEquals` check for two token arguments
   pub fn x_equals(&mut self, token1: &Token, token2: &Token) -> bool {
@@ -1665,7 +1692,7 @@ impl State {
 
   /// Generate a stub definition for an undefined control-sequence,
   /// along with appropriate error messge.
-  pub fn generate_error_stub(&mut self, caller: &Gullet, token: &Token) -> Result<Token> {
+  pub fn generate_error_stub(&mut self, caller: &mut Gullet, token: &Token) -> Result<Token> {
     let cs = token.get_cs_name();
     self.note_status(cs); // TODO: Undefined:cs
                           // To minimize chatter, go ahead and define it...
@@ -1687,7 +1714,7 @@ impl State {
         Expandable::new(T_CS!(s!("\\{}false", name)), None, s!("\\let{}\\iffalse", cs), None, self),
         Some(Scope::Global),
       );
-      self.let_i(token, T_CS!("\\iffalse"), Some(Scope::Global));
+      self.let_i(token, T_CS!("\\iffalse"), Some(Scope::Global), caller);
     } else {
       Error!(
         "undefined",
@@ -1718,14 +1745,12 @@ impl State {
     id as usize
   }
 
-  // WALL OF SHAME
-  // HACKY functions that violate Rust's mutability guards, to succeed in emulating the most
-  // arbitrary uses of Global scope in latexml
-  pub fn after_assignment(&mut self) {
-    if let Some(Stored::Tokens(after)) = self.remove_value("afterAssignment") {
-      if !after.is_empty() {
-        self.stomach.write().unwrap().get_gullet_mut().unread(after); // primitive returns boxes, so these need to be digested!
-      }
+  pub fn after_assignment(&mut self, gullet: &mut Gullet) {
+    match self.remove_value("afterAssignment") {
+      Some(Stored::Tokens(after)) => gullet.unread(after),
+      Some(Stored::Token(after)) => gullet.unread_one(after),
+      None | Some(Stored::None) => {},
+      Some(other) => panic!("unexpected in after_assignment: {:?}", other),
     }
   }
 }

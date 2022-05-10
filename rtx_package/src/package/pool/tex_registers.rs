@@ -17,66 +17,60 @@ LoadDefinitions!(state, {
     getter => { LookupNumber!("TRACINGCOMMANDS") },
     setter => sub[value, args, state] { AssignValue!("TRACINGCOMMANDS" => value.value_of()); });
 
-  for (key, val) in [
-    ("pretolerance", 100),
-    ("tolerance", 200),
-    ("hbadness", 1000),
-    ("vbadness", 1000),
-    ("linepenalty", 10),
-    ("hyphenpenalty", 50),
-    ("exhyphenpenalty", 50),
-    ("binoppenalty", 700),
-    ("relpenalty", 500),
-    ("clubpenalty", 150),
-    ("widowpenalty", 150),
-    ("displaywidowpenalty", 50),
-    ("brokenpenalty", 100),
-    ("predisplaypenalty", 10000),
-    ("postdisplaypenalty", 0),
-    ("interlinepenalty", 0),
-    ("floatingpenalty", 0),
-    ("outputpenalty", 0),
-    ("doublehyphendemerits", 10000),
-    ("finalhyphendemerits", 5000),
-    ("adjdemerits", 10000),
-    ("looseness", 0),
-    ("pausing", 0),
-    ("holdinginserts", 0),
-    ("tracingonline", 0),
-    ("tracingstats", 0),
-    ("tracingparagraphs", 0),
-    ("tracingpages", 0),
-    ("tracingoutput", 0),
-    ("tracinglostchars", 1),
-    ("tracingrestores", 0),
-    ("language", 0),
-    ("uchyph", 1),
-    ("lefthyphenmin", 0),
-    ("righthyphenmin", 0),
-    ("globaldefs", 0),
-    ("defaulthyphenchar", 45),
-    ("defaultskewchar", -1),
-    ("escapechar", 92),
-    ("endlinechar", 13),
-    ("newlinechar", -1),
-    ("maxdeadcycles", 0),
-    ("hangafter", 0),
-    ("fam", -1),
-    ("mag", 1000),
-    ("magnification", 1000),
-    ("delimiterfactor", 0),
-    ("time", 0),
-    ("day", 0),
-    ("month", 0),
-    ("year", 0),
-    ("showboxbreadth", 5),
-    ("showboxdepth", 3),
-    ("errorcontextlines", 5),
-  ]
-  .iter()
-  {
-    DefRegister!(&s!("\\{}", key), Number!(*val));
-  }
+  DefRegister!("\\pretolerance", Number!(100));
+  DefRegister!("\\tolerance", Number!(200));
+  DefRegister!("\\hbadness", Number!(1000));
+  DefRegister!("\\vbadness", Number!(1000));
+  DefRegister!("\\linepenalty", Number!(10));
+  DefRegister!("\\hyphenpenalty", Number!(50));
+  DefRegister!("\\exhyphenpenalty", Number!(50));
+  DefRegister!("\\binoppenalty", Number!(700));
+  DefRegister!("\\relpenalty", Number!(500));
+  DefRegister!("\\clubpenalty", Number!(150));
+  DefRegister!("\\widowpenalty", Number!(150));
+  DefRegister!("\\displaywidowpenalty", Number!(50));
+  DefRegister!("\\brokenpenalty", Number!(100));
+  DefRegister!("\\predisplaypenalty", Number!(10000));
+  DefRegister!("\\postdisplaypenalty", Number!(0));
+  DefRegister!("\\interlinepenalty", Number!(0));
+  DefRegister!("\\floatingpenalty", Number!(0));
+  DefRegister!("\\outputpenalty", Number!(0));
+  DefRegister!("\\doublehyphendemerits", Number!(10000));
+  DefRegister!("\\finalhyphendemerits", Number!(5000));
+  DefRegister!("\\adjdemerits", Number!(10000));
+  DefRegister!("\\looseness", Number!(0));
+  DefRegister!("\\pausing", Number!(0));
+  DefRegister!("\\holdinginserts", Number!(0));
+  DefRegister!("\\tracingonline", Number!(0));
+  DefRegister!("\\tracingstats", Number!(0));
+  DefRegister!("\\tracingparagraphs", Number!(0));
+  DefRegister!("\\tracingpages", Number!(0));
+  DefRegister!("\\tracingoutput", Number!(0));
+  DefRegister!("\\tracinglostchars", Number!(1));
+  DefRegister!("\\tracingrestores", Number!(0));
+  DefRegister!("\\language", Number!(0));
+  DefRegister!("\\uchyph", Number!(1));
+  DefRegister!("\\lefthyphenmin", Number!(0));
+  DefRegister!("\\righthyphenmin", Number!(0));
+  DefRegister!("\\globaldefs", Number!(0));
+  DefRegister!("\\defaulthyphenchar", Number!(45));
+  DefRegister!("\\defaultskewchar", Number!(-1));
+  DefRegister!("\\escapechar", Number!(92));
+  DefRegister!("\\endlinechar", Number!(13));
+  DefRegister!("\\newlinechar", Number!(-1));
+  DefRegister!("\\maxdeadcycles", Number!(0));
+  DefRegister!("\\hangafter", Number!(0));
+  DefRegister!("\\fam", Number!(-1));
+  DefRegister!("\\mag", Number!(1000));
+  DefRegister!("\\magnification", Number!(1000));
+  DefRegister!("\\delimiterfactor", Number!(0));
+  DefRegister!("\\time", Number!(0));
+  DefRegister!("\\day", Number!(0));
+  DefRegister!("\\month", Number!(0));
+  DefRegister!("\\year", Number!(0));
+  DefRegister!("\\showboxbreadth", Number!(5));
+  DefRegister!("\\showboxdepth", Number!(3));
+  DefRegister!("\\errorcontextlines", Number!(5));
 
   // Most of these are ignored, but...
   DefMacro!(
@@ -95,112 +89,87 @@ LoadDefinitions!(state, {
   AssignValue!("\\time", Number!(60 * dt.hour() + dt.minute()), Scope::Global);
 
   // Read-only Integer registers
-  for name in &["lastpenalty", "inputlineno", "badness"] {
-    DefRegister!(&s!("\\{}",name), Number!(0), readonly => true);
-  }
+  DefRegister!("\\lastpenalty",Number!(0), readonly => true);
+  DefRegister!("\\inputlineno",Number!(0), readonly => true);
+  DefRegister!("\\badness",Number!(0), readonly => true);
 
   // Special integer registers (?)
   // <special integer> = \spacefactor | \prevgraf | \deadcycles | \insertpenalties
-  for name in &["spacefactor", "prevgraf", "deadcycles", "insertpenalties"] {
-    DefRegister!(&s!("\\{}", name), Number!(0));
-  }
+  DefRegister!("\\spacefactor", Number!(0));
+  DefRegister!("\\prevgraf", Number!(0));
+  DefRegister!("\\deadcycles", Number!(0));
+  DefRegister!("\\insertpenalties", Number!(0));
 
   // ======================================================================
   // Dimen registers; TeXBook p. 274
-  let dparms = [
-    ("hfuzz", "0.1pt"),
-    ("vfuzz", "0.1pt"),
-    ("overfullrule", "5pt"),
-    ("emergencystretch", "0"),
-    ("hsize", "6.5in"),
-    ("vsize", "8.9in"),
-    ("maxdepth", "4pt"),
-    ("splitmaxdepth", "16383.99999pt"),
-    ("boxmaxdepth", "16383.99999pt"),
-    ("lineskiplimit", "0"),
-    ("delimitershortfall", "5pt"),
-    ("nulldelimiterspace", "1.2pt"),
-    ("scriptspace", "0.5pt"),
-    ("mathsurround", "0"),
-    ("predisplaysize", "0"),
-    ("displaywidth", "0"),
-    ("displayindent", "0"),
-    ("parindent", "20pt"),
-    ("hangindent", "0"),
-    ("hoffset", "0"),
-    ("voffset", "0"),
-  ];
-  for (name, value) in &dparms {
-    DefRegister!(&s!("\\{}", name), Dimension!(value));
-  }
+  DefRegister!("\\hfuzz", Dimension!("0.1pt"));
+  DefRegister!("\\vfuzz", Dimension!("0.1pt"));
+  DefRegister!("\\overfullrule", Dimension!("5pt"));
+  DefRegister!("\\emergencystretch", Dimension!("0"));
+  DefRegister!("\\hsize", Dimension!("6.5in"));
+  DefRegister!("\\vsize", Dimension!("8.9in"));
+  DefRegister!("\\maxdepth", Dimension!("4pt"));
+  DefRegister!("\\splitmaxdepth", Dimension!("16383.99999pt"));
+  DefRegister!("\\boxmaxdepth", Dimension!("16383.99999pt"));
+  DefRegister!("\\lineskiplimit", Dimension!("0"));
+  DefRegister!("\\delimitershortfall", Dimension!("5pt"));
+  DefRegister!("\\nulldelimiterspace", Dimension!("1.2pt"));
+  DefRegister!("\\scriptspace", Dimension!("0.5pt"));
+  DefRegister!("\\mathsurround", Dimension!("0"));
+  DefRegister!("\\predisplaysize", Dimension!("0"));
+  DefRegister!("\\displaywidth", Dimension!("0"));
+  DefRegister!("\\displayindent", Dimension!("0"));
+  DefRegister!("\\parindent", Dimension!("20pt"));
+  DefRegister!("\\hangindent", Dimension!("0"));
+  DefRegister!("\\hoffset", Dimension!("0"));
+  DefRegister!("\\voffset", Dimension!("0"));
 
   // Special dimension registers (?)
   // <special dimen> = \prevdepth | \pagegoal | \pagetotal | \pagestretch | \pagefilstretch
   //    | \pagefillstretch | \pagefilllstretch | pageshrink | \pagedepth
-  for name in &[
-    "prevdepth",
-    "pagegoal",
-    "pagetotal",
-    "pagestretch",
-    "pagefilstretch",
-    "pagefillstretch",
-    "pagefilllstretch",
-    "pageshrink",
-    "pagedepth",
-  ] {
-    DefRegister!(&s!("\\{}", name), Dimension::new(0.0));
-  }
+  DefRegister!("\\prevdepth",Dimension::new(0.0));
+  DefRegister!("\\pagegoal",Dimension::new(0.0));
+  DefRegister!("\\pagetotal",Dimension::new(0.0));
+  DefRegister!("\\pagestretch",Dimension::new(0.0));
+  DefRegister!("\\pagefilstretch",Dimension::new(0.0));
+  DefRegister!("\\pagefillstretch",Dimension::new(0.0));
+  DefRegister!("\\pagefilllstretch",Dimension::new(0.0));
+  DefRegister!("\\pageshrink",Dimension::new(0.0));
+  DefRegister!("\\pagedepth",Dimension::new(0.0));
 
   // ======================================================================
   //  Glue registers; TeXBook p.274
-  let gparms = &[
-    ("baselineskip", "12pt"),
-    ("lineskip", "1pt"),
-    ("parskip", "0pt plus 1pt"),
-    ("abovedisplayskip", "12pt plus 3pt minus 9pt"),
-    ("abovedisplayshortskip", "0pt plus 3pt"),
-    ("belowdisplayskip", "12pt plus 3pt minus 9pt"),
-    ("belowdisplayshortskip", "0pt plus 3pt"),
-    ("leftskip", "0"),
-    ("rightskip", "0"),
-    ("topskip", "10pt"),
-    ("splittopskip", "10pt"),
-    ("tabskip", "0"),
-    ("spaceskip", "0"),
-    ("xspaceskip", "0"),
-    ("parfillskip", "0pt plus 1fil"),
-  ];
-  for (name, value) in gparms {
-    DefRegister!(&s!("\\{}", name), Glue!(value));
-  }
+  DefRegister!("\\baselineskip", Glue!("12pt"));
+  DefRegister!("\\lineskip", Glue!("1pt"));
+  DefRegister!("\\parskip", Glue!("0pt plus 1pt"));
+  DefRegister!("\\abovedisplayskip", Glue!("12pt plus 3pt minus 9pt"));
+  DefRegister!("\\abovedisplayshortskip", Glue!("0pt plus 3pt"));
+  DefRegister!("\\belowdisplayskip", Glue!("12pt plus 3pt minus 9pt"));
+  DefRegister!("\\belowdisplayshortskip", Glue!("0pt plus 3pt"));
+  DefRegister!("\\leftskip", Glue!("0"));
+  DefRegister!("\\rightskip", Glue!("0"));
+  DefRegister!("\\topskip", Glue!("10pt"));
+  DefRegister!("\\splittopskip", Glue!("10pt"));
+  DefRegister!("\\tabskip", Glue!("0"));
+  DefRegister!("\\spaceskip", Glue!("0"));
+  DefRegister!("\\xspaceskip", Glue!("0"));
+  DefRegister!("\\parfillskip", Glue!("0pt plus 1fil"));
 
   //======================================================================
   // MuGlue registers; TeXBook p.274
-
-  let mparms = &[
-    ("thinmuskip", "3mu"),
-    ("medmuskip", "4mu plus 2mu minus 4mu"),
-    ("thickmuskip", "5mu plus 5mu"),
-  ];
-  for (name, value) in mparms {
-    DefRegister!(&s!("\\{}", name), Glue!(value));
-  }
-
+  DefRegister!("\\thinmuskip", Glue!("3mu"));
+  DefRegister!("\\medmuskip", Glue!("4mu plus 2mu minus 4mu"));
+  DefRegister!("\\thickmuskip", Glue!("5mu plus 5mu"));
   //======================================================================
   // Token registers; TeXBook p.275
+  DefRegister!("\\output", Tokens!());
+  DefRegister!("\\everypar", Tokens!());
+  DefRegister!("\\everymath", Tokens!());
+  DefRegister!("\\everydisplay", Tokens!());
+  DefRegister!("\\everyjob", Tokens!());
+  DefRegister!("\\everycr", Tokens!());
+  DefRegister!("\\everyhelp", Tokens!());
+  DefRegister!("\\everyhbox",Tokens!());
+  DefRegister!("\\everyvbox",Tokens!());
 
-  let tparms = &[
-    "output",
-    "everypar",
-    "everymath",
-    "everydisplay",
-    "everyhbox",
-    "everyvbox",
-    "everyjob",
-    "everycr",
-    "everyhelp",
-  ];
-  for name in tparms {
-    DefRegister!(&s!("\\{}", name), Tokens!());
-  }
 });

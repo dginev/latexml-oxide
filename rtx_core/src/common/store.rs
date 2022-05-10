@@ -56,6 +56,7 @@ const STORED_FALSE: Stored = Stored::Bool(false);
 
 #[derive(Clone)]
 pub enum Stored {
+  None,
   // Primitives (Copy types, or cheap Clone)
   Bool(bool),
   String(String),
@@ -97,13 +98,14 @@ pub enum Stored {
   Constructor(Arc<Constructor>),
   Digested(Box<crate::Digested>), // todo: should this be an Arc<> to make it shareable?
   Parameter(Arc<Parameter>),
-  Font(Arc<Font>),
+  Font(Arc<Font>)
 }
 
 impl fmt::Debug for Stored {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     use crate::Stored::*;
     match *self {
+      None => write!(f, "None"),
       String(ref s) => write!(f, "{}", s),
       Int(ref num) => write!(f, "Stored::Int[{:?}]", num),
       VecChar(ref vs) => write!(f, "Stored::VecChar[{:?}]", vs),
@@ -173,6 +175,10 @@ impl PartialEq for Stored {
   fn eq(&self, other: &Stored) -> bool {
     use crate::Stored::*;
     match *self {
+      Stored::None => match other {
+        Stored::None => true,
+        _ => false
+      },
       String(ref s) => {
         if let String(s2) = other {
           s == s2
@@ -425,7 +431,7 @@ impl PartialEq for Stored {
         } else {
           false
         }
-      },
+      }
     }
   }
 }
