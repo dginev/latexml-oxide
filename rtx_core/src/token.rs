@@ -12,6 +12,7 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::common::numeric_ops::NumericOps;
 use crate::definition::register::{RegisterCell, RegisterValue};
 use crate::definition::Definition;
 use crate::state::State;
@@ -742,13 +743,13 @@ impl<'a> Token {
 
   pub fn to_number(&self) -> Number { Number::new(self.text.parse::<i32>().unwrap_or(0)) }
 
-  pub fn to_dimension(&self) -> Dimension { Dimension::new(self.text.parse::<f32>().unwrap_or(0.0)) }
+  pub fn to_dimension(&self) -> Dimension { Dimension::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
 
-  pub fn to_mu_dimension(&self) -> MuDimension { MuDimension::new(self.text.parse::<f32>().unwrap_or(0.0)) }
+  pub fn to_mu_dimension(&self) -> MuDimension { MuDimension::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
 
-  pub fn to_glue(&self) -> Glue { Glue::new(self.text.parse::<f32>().unwrap_or(0.0)) }
+  pub fn to_glue(&self) -> Glue { Glue::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
 
-  pub fn to_mu_glue(&self) -> MuGlue { MuGlue::new(self.text.parse::<f32>().unwrap_or(0.0)) }
+  pub fn to_mu_glue(&self) -> MuGlue { MuGlue::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
 
   // TODO: This method may cause more issues than it solves... reconsider?
   // I have already accidentally done token.value_of(Vec::new(), state) and gotten a "0" back

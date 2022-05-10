@@ -18,13 +18,15 @@ pub use rtx_core::common::glue::Glue;
 pub use rtx_core::common::locator::Locator;
 pub use rtx_core::common::muglue::MuGlue;
 pub use rtx_core::common::number::Number;
+pub use rtx_core::common::float::Float;
 pub use rtx_core::common::object::Object;
 pub use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 pub use rtx_core::definition::constructor::ConstructorOptions;
 pub use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
 pub use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 pub use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
-pub use rtx_core::definition::register::{NumericOps, Register, RegisterType, RegisterValue};
+pub use rtx_core::definition::register::{Register, RegisterType, RegisterValue};
+pub use rtx_core::common::numeric_ops::NumericOps;
 pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure, ExpansionBody, ExpansionClosure, PrimitiveClosure,

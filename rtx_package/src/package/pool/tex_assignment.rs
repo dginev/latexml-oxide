@@ -71,7 +71,7 @@ LoadDefinitions!(outer_state, {
     let name = name_arg.to_string();
     let props_opt = if let Some(mut props) = font::decode_fontname(&name,
       gullet.read_keyword(&["at"], state)?.map(|_| gullet.read_dimension(state).unwrap().pt_value(None)),
-      gullet.read_keyword(&["scaled"], state)?.map(|_| gullet.read_number(state). unwrap().value_of() / 1000.0)) {
+      gullet.read_keyword(&["scaled"], state)?.map(|_| gullet.read_number(state).unwrap().value_of() as f32 / 1000.0)) {
       props.name = Some(Cow::Owned(name));
       Some(props)
     } else { // Failed?
@@ -93,9 +93,9 @@ LoadDefinitions!(outer_state, {
   DefPrimitive!("\\nullfont", None, font => {family => "nullfont"});
 
   DefRegister!("\\count Number"  => Number::new(0));
-  DefRegister!("\\dimen Number"  => Dimension::new(0.0));
-  DefRegister!("\\skip Number"   => Glue::new(0.0));
-  DefRegister!("\\muskip Number" => MuGlue::new(0.0));
+  DefRegister!("\\dimen Number"  => Dimension::new(0));
+  DefRegister!("\\skip Number"   => Glue::new(0));
+  DefRegister!("\\muskip Number" => MuGlue::new(0));
   DefRegister!("\\toks Number"   => Tokens!());
 
   // <integer variable> = <integer parameter> | <countdef token> | \count<8bit>
@@ -143,7 +143,7 @@ LoadDefinitions!(outer_state, {
       if let Some(defn) = state.lookup_register_definition(&varname) {
         let defn_value = defn.value_of(args, state).unwrap_or_default();
         let scale_value = scale.to_number().value_of();
-        defn.borrow_mut().set_value(defn_value.multiply(scale_value), defn_args, state);
+        defn.borrow_mut().set_value(defn_value.multiply(Number::new(scale_value)), defn_args, state);
       } else {
         let message = s!("\\multiply expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", stomach, state, message);
@@ -163,12 +163,12 @@ LoadDefinitions!(outer_state, {
       let defn_args : Vec<Tokens> = args.iter().map(|a| Tokens!(a.clone())).collect();
       if let Some(defn) = state.lookup_register_definition(&varname) {
         let defn_value = defn.value_of(args, state).unwrap_or_default();
-        let mut denominator = scale.to_number().value_of();
+        let mut denominator = scale.to_number().value_f32();
         if denominator == 0.0 {
           Error!("misdefined", scale, stomach, state, "Illegal \\divide by 0; assuming 1");
           denominator = 1.0;
         }
-        defn.borrow_mut().set_value(defn_value.divide(denominator), defn_args, state);
+        defn.borrow_mut().set_value(defn_value.divide(Float::new_f32(denominator)), defn_args, state);
       } else {
         let message = s!("\\divide expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", stomach, state, message);
@@ -225,7 +225,7 @@ LoadDefinitions!(outer_state, {
     let num = stomach.get_gullet_mut().read_number(state)?;
     let dimen = s!("\\dimen{}", num.value_of());
     let dimen2 = dimen.clone();
-    DefRegister!(cs, None, Dimension::new(0.0),
+    DefRegister!(cs, None, Dimension::new(0),
       getter => sub[args, state] { state.lookup_dimension(&dimen).unwrap_or_default() },
       setter => sub[value, args, state] { state.assign_value(&dimen2, value, None); }
     );
@@ -239,7 +239,7 @@ LoadDefinitions!(outer_state, {
     let num = stomach.get_gullet_mut().read_number(state)?;
     let skip = s!("\\skip{}", num.value_of());
     let skip2 = skip.clone();
-    DefRegister!(cs, None, Glue::new(0.0),
+    DefRegister!(cs, None, Glue::new(0),
       getter => sub[args, state] { state.lookup_glue(&skip).unwrap_or_default() },
       setter => sub[value, args, state] { state.assign_value(&skip2, value, None); }
     );
@@ -253,7 +253,7 @@ LoadDefinitions!(outer_state, {
     let num = stomach.get_gullet_mut().read_number(state)?;
     let muglue = s!("\\muskip{}",num.value_of());
     let muglue_setter = muglue.clone();
-    DefRegister!(cs, None, MuGlue::new(0.0),
+    DefRegister!(cs, None, MuGlue::new(0),
       getter => sub[args,state] { state.lookup_muglue(&muglue).unwrap_or_default() },
       setter => sub[value,args,state] { state.assign_value(&muglue_setter, value, None); }
     );
@@ -303,7 +303,7 @@ LoadDefinitions!(outer_state, {
   // <codename> = \catcode | \mathcode | \lccode | \uccode | \sfcode | \delcode
   DefRegister!("\\catcode Number", Number::new(0),
     getter => sub[args, state] {
-      let num : f32 = args[0].to_number().value_of();
+      let num = args[0].to_number().value_of();
       let refchar = (num as u8) as char;
       let code : Catcode = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       let code : u8 = code.into();

@@ -51,7 +51,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
 
       let stype = type_tokens.to_string();
       let level = level_arg.to_string();
-      let level_int = if level.is_empty() { 0.0 } else { level.parse::<f32>()? };
+      let level_int = if level.is_empty() { 0 } else { level.parse::<i32>()? };
       let ctr = match state.lookup_value(&s!("counter_for_{}",stype)) {
         Some(v) => v.to_string(),
         None => stype

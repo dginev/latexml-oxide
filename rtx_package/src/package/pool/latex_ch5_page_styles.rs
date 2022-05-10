@@ -16,20 +16,20 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\onecolumn", None);
 
   // Style parameters from Fig. C.3, p.182
-  DefRegister!("\\paperheight"     => Dimension::new(0.0));
-  DefRegister!("\\paperwidth"      => Dimension::new(0.0));
-  DefRegister!("\\textheight"      => Dimension::new(0.0));
+  DefRegister!("\\paperheight"     => Dimension::new(0));
+  DefRegister!("\\paperwidth"      => Dimension::new(0));
+  DefRegister!("\\textheight"      => Dimension::new(0));
   DefRegister!("\\textwidth"       => Dimension!("6in"));
-  DefRegister!("\\topmargin"       => Dimension::new(0.0));
-  DefRegister!("\\headheight"      => Dimension::new(0.0));
-  DefRegister!("\\headsep"         => Dimension::new(0.0));
-  DefRegister!("\\footskip"        => Dimension::new(0.0));
-  DefRegister!("\\footheight"      => Dimension::new(0.0));
-  DefRegister!("\\evensidemargin"  => Dimension::new(0.0));
-  DefRegister!("\\oddsidemargin"   => Dimension::new(0.0));
-  DefRegister!("\\marginparwidth"  => Dimension::new(0.0));
-  DefRegister!("\\marginparsep"    => Dimension::new(0.0));
+  DefRegister!("\\topmargin"       => Dimension::new(0));
+  DefRegister!("\\headheight"      => Dimension::new(0));
+  DefRegister!("\\headsep"         => Dimension::new(0));
+  DefRegister!("\\footskip"        => Dimension::new(0));
+  DefRegister!("\\footheight"      => Dimension::new(0));
+  DefRegister!("\\evensidemargin"  => Dimension::new(0));
+  DefRegister!("\\oddsidemargin"   => Dimension::new(0));
+  DefRegister!("\\marginparwidth"  => Dimension::new(0));
+  DefRegister!("\\marginparsep"    => Dimension::new(0));
   DefRegister!("\\columnwidth"     => Dimension!("6in"));
   DefRegister!("\\linewidth"       => Dimension!("6in"));
-  DefRegister!("\\baselinestretch" => Dimension::new(0.0));
+  DefRegister!("\\baselinestretch" => Dimension::new(0));
 });

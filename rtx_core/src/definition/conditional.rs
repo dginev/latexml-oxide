@@ -6,7 +6,7 @@ use crate::common::error::*;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::definition::register::NumericOps;
+use crate::common::numeric_ops::NumericOps;
 use crate::definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -170,7 +170,7 @@ impl Conditional {
           Debug!("{{true}}\n");
         }
       } else {
-        let to = self.skip_conditional_body(-1.0, gullet, state);
+        let to = self.skip_conditional_body(-1, gullet, state);
         if tracing {
           Debug!("{{false}} [skipped to {:?}]\n", to);
         }
@@ -178,7 +178,7 @@ impl Conditional {
     } else {
       // If there's no test, it must be the Special Case, \ifcase
       let num = args[0].as_ref().unwrap().to_number().value_of();
-      if num > 0.0 {
+      if num > 0 {
         let _to = self.skip_conditional_body(num, gullet, state);
         //       print STDERR "{$num} [skipped to " . ToString($to) . "]\n" if $tracing;
       }
@@ -210,7 +210,7 @@ impl Conditional {
   // #   \if\ifx AA XY junk \else blah \fi True \else False \fi
   // # The inner \ifx should expand to "XY junk", since A==A
   // # Return the token we've skipped to, and the frame that this applies to.
-  fn skip_conditional_body(&self, nskips: f32, gullet: &mut Gullet, state: &mut State) -> Tokens {
+  fn skip_conditional_body(&self, nskips: i32, gullet: &mut Gullet, state: &mut State) -> Tokens {
     let mut level = 1;
     let mut n_ors = 0;
     let _start = gullet.get_locator();
@@ -252,10 +252,10 @@ impl Conditional {
             // Ignore \else,\or nested in the body.
             if cond_type == Some(ConditionalType::Or) {
               n_ors += 1;
-              if n_ors == nskips as i32 {
+              if n_ors == nskips {
                 return t;
               }
-            } else if cond_type == Some(ConditionalType::Else) && nskips != 0.0 {
+            } else if cond_type == Some(ConditionalType::Else) && nskips != 0 {
               // Found \else and we're looking for one?
               // Make sure this \else is NOT for a nested \if that is part of the test clause!
               if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
@@ -308,7 +308,7 @@ impl Conditional {
         Ok(Tokens!())
       } else {
         state.if_frame = Some(Arc::clone(&stack_frame));
-        let t = self.skip_conditional_body(0.0, gullet, state);
+        let t = self.skip_conditional_body(0, gullet, state);
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         //       . " [for " . ToString($$LaTeXML::IFFRAME{token}) . " #" .
         // $$LaTeXML::IFFRAME{ifid}       . " skipping to " . ToString($t) . "]\n"

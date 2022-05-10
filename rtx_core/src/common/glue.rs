@@ -4,9 +4,9 @@ use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::fmt;
 
-use crate::common::dimension::{attribute_format, fixpoint};
-use crate::common::number::kround;
-use crate::definition::register::{NumericOps, RegisterType};
+use crate::common::dimension::{attribute_format};
+use crate::common::numeric_ops::{kround,fixpoint,NumericOps};
+use crate::definition::register::{RegisterType};
 use crate::state::State;
 use crate::{Locator, Object};
 
@@ -104,17 +104,17 @@ lazy_static! {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Glue {
-  pub skip: f32,
-  pub plus: Option<f32>,
+  pub skip: i32,
+  pub plus: Option<i32>,
   pub pfill: Option<FillCode>,
-  pub minus: Option<f32>,
+  pub minus: Option<i32>,
   pub mfill: Option<FillCode>,
 }
 
 impl Default for Glue {
   fn default() -> Self {
     Glue {
-      skip: 0.0,
+      skip: 0,
       plus: None,
       pfill: None,
       minus: None,
@@ -124,7 +124,7 @@ impl Default for Glue {
 }
 
 impl NumericOps for Glue {
-  fn value_of(self) -> f32 { self.skip }
+  fn value_of(self) -> i32 { self.skip }
   fn register_type(&self) -> RegisterType { RegisterType::Glue }
   // identity, used to type cast in runtime
   fn into_glue_type(self) -> Glue { self }
@@ -143,17 +143,32 @@ impl NumericOps for Glue {
       self.add_glue(other.into_glue_type())
     }
   }
-  fn subtract<T: NumericOps>(self, other: T) -> Self
-  where Self: Sized {
-    Self::new(self.value_of() - other.value_of())
+  fn new(skip: i32) -> Self {
+    Glue {
+      skip,
+      plus: None,
+      pfill: None,
+      minus: None,
+      mfill: None,
+    }
+  }
+  fn new_f32(number: f32) -> Self {
+    let (skip, plus, pfill, minus, mfill) = new_setup(number, None, None, None, None);
+    Glue {
+      skip,
+      plus,
+      pfill,
+      minus,
+      mfill,
+    }
   }
 }
 
 pub fn glue_string(
-  skip: f32,
-  plus_opt: Option<f32>,
+  skip: i32,
+  plus_opt: Option<i32>,
   pfill_opt: Option<FillCode>,
-  minus_opt: Option<f32>,
+  minus_opt: Option<i32>,
   mfill_opt: Option<FillCode>,
   unit: &str,
 ) -> String {
@@ -161,14 +176,14 @@ pub fn glue_string(
   // pieces of glue/dimensions -- are we consistently using i32 or f32?
   let mut string = fixedformat(skip as i32, Some(unit));
   if let Some(plus) = plus_opt {
-    if plus != 0.0 {
+    if plus != 0 {
       string.push_str(" plus ");
       let p_fill = if let Some(fill) = pfill_opt { fill.to_str() } else { unit };
       string.push_str(&fixedformat(plus as i32, Some(p_fill)))
     }
   }
   if let Some(minus) = minus_opt {
-    if minus != 0.0 {
+    if minus != 0 {
       string.push_str(" minus ");
       let p_fill = if let Some(fill) = mfill_opt { fill.to_str() } else { unit };
       string.push_str(&fixedformat(minus as i32, Some(p_fill)))
@@ -193,13 +208,13 @@ pub fn new_setup(
   pfill: Option<FillCode>,
   minus: Option<f32>,
   mfill: Option<FillCode>,
-) -> (f32, Option<f32>, Option<FillCode>, Option<f32>, Option<FillCode>) {
+) -> (i32, Option<i32>, Option<FillCode>, Option<i32>, Option<FillCode>) {
   // See comment in Dimension for why kround rather than int
   (
-    kround(skip) as f32,
-    plus.map(|p| kround(p) as f32),
+    kround(skip),
+    plus.map(|p| kround(p)),
     pfill,
-    minus.map(|m| kround(m) as f32),
+    minus.map(|m| kround(m)),
     mfill,
   )
 }
@@ -212,7 +227,7 @@ pub fn spec_setup(
   mut mfill: Option<FillCode>,
   unit: &str,
   state: &State,
-) -> (f32, Option<f32>, Option<FillCode>, Option<f32>, Option<FillCode>) {
+) -> (i32, Option<i32>, Option<FillCode>, Option<i32>, Option<FillCode>) {
   if !UNIT_RE.is_match(spec) {
     // If no units, expect fixedpoint values
     let skip: f32 = spec.parse::<f32>().unwrap_or_default();
@@ -236,79 +251,78 @@ pub fn spec_setup(
         cs.get(7).map(|v| v.as_str().parse::<f32>().unwrap_or_default()).unwrap_or_default(),
         cs.get(8).map_or("", |m| m.as_str()),
       );
-      if unit.is_empty() {
-        f = f.trunc();
+      let skip = if unit.is_empty() {
+        f.trunc() as i32
       } else if is_mu {
-        f = fixpoint(f, None) as f32; // in mu
         if unit != "mu" {
           Warn!("unexpected", unit, None, state, "Assumed mu");
         }
+        fixpoint(f, None) // in mu
       } else {
-        f = fixpoint(f, Some(state.convert_unit(unit))) as f32;
-      }
+        fixpoint(f, Some(state.convert_unit(unit)))
+      };
 
-      if punit.is_empty() {
-        plus = None; // Some(0.0) ?
+      let mut plus = if punit.is_empty() {
+        None // Some(0.0) ?
                      // ? punit = "0";
       } else if let Some(code) = FillCode::from(punit) {
-        plus = Some(fixpoint(p, None) as f32);
-        pfill = Some(code)
+        pfill = Some(code);
+        Some(fixpoint(p, None))
       } else if is_mu {
-        plus = Some(fixpoint(p, None) as f32);
         pfill = None;
         if punit != "mu" {
           Warn!("unexpected", punit, None, state, "Assumed mu");
         }
+        Some(fixpoint(p, None))
       } else {
-        plus = Some(fixpoint(p, Some(state.convert_unit(punit))) as f32);
         pfill = None; // ? 0
-      }
+        Some(fixpoint(p, Some(state.convert_unit(punit))))
+      };
 
-      if munit.is_empty() {
-        minus = None; // ? Some(0.0);
+      let mut minus = if munit.is_empty() {
+         None // ? Some(0.0);
                       // munit = 0;
       } else if let Some(code) = FillCode::from(munit) {
-        minus = Some(fixpoint(m, None) as f32);
         mfill = Some(code);
+        Some(fixpoint(m, None))
       } else if is_mu {
-        minus = Some(fixpoint(m, None) as f32);
         mfill = None; // 0
         if munit != "mu" {
           Warn!("unexpected", munit, None, state, "Assumed mu");
         }
+        Some(fixpoint(m, None))
       } else {
-        minus = Some(fixpoint(m, Some(state.convert_unit(munit))) as f32);
         mfill = None; // 0
-      }
+        Some(fixpoint(m, Some(state.convert_unit(munit))))
+      };
 
       if punit.is_empty() {
       } else if let Some(pfcode) = FillCode::from(punit) {
-        plus = Some(fixpoint(p as f32, None) as f32);
+        plus = Some(fixpoint(p as f32, None));
         pfill = Some(pfcode);
       } else {
-        plus = Some(fixpoint(p, Some(state.convert_unit(punit))) as f32);
+        plus = Some(fixpoint(p, Some(state.convert_unit(punit))));
         pfill = None;
       }
       if munit.is_empty() {
       } else if let Some(mfcode) = FillCode::from(munit) {
-        minus = Some(fixpoint(m, None) as f32);
+        minus = Some(fixpoint(m, None));
         mfill = Some(mfcode);
       } else {
-        minus = Some(fixpoint(m, Some(state.convert_unit(munit))) as f32);
+        minus = Some(fixpoint(m, Some(state.convert_unit(munit))));
         mfill = None;
       }
-      (f, plus, pfill, minus, mfill)
+      (skip, plus, pfill, minus, mfill)
     } else {
       let msg = s!("Missing {} specification assuming 0pt", if is_mu { "MuGlue" } else { "Glue" });
       Warn!("unexpected", spec, None, state, msg);
-      (0.0, None, None, None, None)
+      (0, None, None, None, None)
     }
   }
 }
 
 impl Glue {
-  pub fn new(number: f32) -> Self {
-    let (skip, plus, pfill, minus, mfill) = new_setup(number, None, None, None, None);
+  pub fn new_full(skip: i32, plus: Option<i32>, pfill: Option<FillCode>, minus: Option<i32>, mfill: Option<FillCode>) -> Self {
     Glue {
       skip,
       plus,
@@ -317,7 +331,7 @@ impl Glue {
       mfill,
     }
   }
-  pub fn new_full(skip: f32, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>) -> Self {
+  pub fn new_full_f32(skip: f32, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>) -> Self {
     let (skip, plus, pfill, minus, mfill) = new_setup(skip, plus, pfill, minus, mfill);
     Glue {
       skip,
@@ -390,38 +404,18 @@ impl Glue {
     // return (ref $self)->new($pts + $other->valueOf, $p, $pf, $m, $mf); }
   }
 
-  pub fn negate(self) -> Self
-  where Self: Sized {
-    let value = self.value_of();
-    if value > 0.0 {
-      Self::new(-value)
-    } else {
-      Self::new(value)
-    }
-  }
-  pub fn multiply<T: Into<f32>>(self, other: T) -> Self
-  where Self: Sized {
-    let other: f32 = other.into();
-    Self::new((self.value_of() * other).floor())
-  }
-  pub fn divide<T: Into<f32>>(self, other: T) -> Self
-  where Self: Sized {
-    let other: f32 = other.into();
-    Self::new((self.value_of() / other).floor())
-  }
-
   pub fn to_attribute(&self) -> String {
     let u = "pt";
     let mut string = attribute_format(self.skip, Some(u));
     if let Some(plus) = self.plus {
-      if plus != 0.0 {
+      if plus != 0 {
         string.push_str(" plus ");
         let fill_u = if let Some(pfill) = self.pfill { pfill.to_str() } else { u };
         string.push_str(&attribute_format(plus, Some(fill_u)));
       }
     }
     if let Some(minus) = self.minus {
-      if minus != 0.0 {
+      if minus != 0 {
         string.push_str(" minus ");
         let mfill_u = if let Some(mfill) = self.mfill { mfill.to_str() } else { u };
         string.push_str(&attribute_format(minus, Some(mfill_u)));

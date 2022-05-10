@@ -291,15 +291,15 @@ LoadDefinitions!(state, {
   });
   DefPrimitive!("\\newdimen Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
-    DefRegister!(name, None, Dimension::new(0.0));
+    DefRegister!(name, None, Dimension::new(0));
   });
   DefPrimitive!("\\newskip Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
-    DefRegister!(name, None, Glue::new(0.0));
+    DefRegister!(name, None, Glue::new(0));
   });
   DefPrimitive!("\\newmuskip Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
-    DefRegister!(name, None, MuGlue::new(0.0));
+    DefRegister!(name, None, MuGlue::new(0));
   });
   AssignValue!("allocated_boxes" => false);
   DefPrimitive!("\\newbox Token", sub[stomach, args, state] {
@@ -318,7 +318,7 @@ LoadDefinitions!(state, {
     unpack_to_string!(args => atype);
     let c = s!("allocation @{}", atype);
     let n = LookupRegisterOrDefault!(c).value_of();
-    AssignValue!(&c                  => n + 1.0,     Some(Scope::Global));
+    AssignValue!(&c                  => n + 1,     Some(Scope::Global));
     AssignValue!("\\allocationnumber" => Number!(n), Some(Scope::Global));
   });
   DefMacro!("\\newread Token", r"\alloc@@{read}\global\chardef#1=\allocationnumber");
@@ -336,12 +336,12 @@ LoadDefinitions!(state, {
   // TeX plain uses \newdimen, etc. for these.
   // Is there any advantage to that?
   // note: rust complains about the 16_383.99999 having excessive precision, hence simplifying
-  DefRegister!("\\maxdimen", Dimension::new(16_384.0 * 65536.0));
+  DefRegister!("\\maxdimen", Dimension::new(16_384 * 65536));
   // DefRegister!("\\hideskip", Glue!(-1000 * 65536, "1fill"));
   DefRegister!("\\centering", Glue!("0pt plus 1000pt minus 1000pt"));
-  DefRegister!("\\p@", Dimension::new(65536.0));
-  DefRegister!("\\z@", Dimension::new(0.0));
-  DefRegister!("\\z@skip", Glue::new(0.0));
+  DefRegister!("\\p@", Dimension::new(65536));
+  DefRegister!("\\z@", Dimension::new(0));
+  DefRegister!("\\z@skip", Glue::new(0));
 
   // # First approximation. till I figure out \newbox
   // RawTeX('\newbox\voidb@x');

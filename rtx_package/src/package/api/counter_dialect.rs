@@ -7,7 +7,7 @@ use rtx_core::common::error::*;
 use rtx_core::common::number::Number;
 use rtx_core::common::xml::XML_NS;
 use rtx_core::definition::expandable::ExpandableOptions;
-use rtx_core::definition::register::NumericOps;
+use rtx_core::common::numeric_ops::NumericOps;
 use rtx_core::definition::ExpansionBody;
 use rtx_core::document::Document;
 use rtx_core::gullet::Gullet;

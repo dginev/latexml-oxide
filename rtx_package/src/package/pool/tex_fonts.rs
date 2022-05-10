@@ -13,7 +13,7 @@ LoadDefinitions!(outer_state, {
   // These look essentially like Registers, although Knuth doesn't call them that.
   DefRegister!("\\textfont Number", T_CS!("\\tenrm"),
   getter => sub[args, state] {
-    let fam : f32 = args[0].to_number().value_of();
+    let fam = args[0].to_number().value_of();
     state.lookup_number(&s!("fontinfo_{}_text", fam)).unwrap_or_default()
   },
   setter => sub[font,args,state] {
@@ -23,7 +23,7 @@ LoadDefinitions!(outer_state, {
 
   DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
   getter => sub[args, state] {
-    let fam : f32 = args[0].to_number().value_of();
+    let fam = args[0].to_number().value_of();
     state.lookup_number(&s!("fontinfo_{}_script", fam)).unwrap_or_default()
   },
   setter => sub[font,args,state] {
@@ -33,7 +33,7 @@ LoadDefinitions!(outer_state, {
 
   DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
   getter => sub[args, state] {
-    let fam : f32 = args[0].to_number().value_of();
+    let fam = args[0].to_number().value_of();
     state.lookup_number(&s!("fontinfo_{}_scriptscript", fam)).unwrap_or_default()
   },
   setter => sub[font,args,state] {
@@ -44,10 +44,10 @@ LoadDefinitions!(outer_state, {
   // # <internal dimen> = <dimen parameter> | <special dimen> | \lastkern
   // #    | <dimendef token> | \dimen<8bit> | <box dimension><8bit> | \fontdimen<number><font>
 
-  DefRegister!("\\lastkern" => Dimension::new(0.0), readonly => true);
+  DefRegister!("\\lastkern" => Dimension::new(0), readonly => true);
 
   // # <box dimension> = \ht | \wd | \dp
-  DefRegister!("\\ht Number", Dimension::new(0.0),
+  DefRegister!("\\ht Number", Dimension::new(0),
     getter => {unimplemented!(); () },
     setter => {unimplemented!(); () }
   //   getter => sub {
@@ -61,7 +61,7 @@ LoadDefinitions!(outer_state, {
   //     return; }
   );
 
-  DefRegister!("\\wd Number", Dimension::new(0.0),
+  DefRegister!("\\wd Number", Dimension::new(0),
     getter => {unimplemented!(); () },
     setter => {unimplemented!(); () }
   //   getter => sub {
@@ -75,7 +75,7 @@ LoadDefinitions!(outer_state, {
   //     return; }
   );
 
-  DefRegister!("\\dp Number", Dimension::new(0.0),
+  DefRegister!("\\dp Number", Dimension::new(0),
     getter => {unimplemented!(); () },
     setter => {unimplemented!(); () }
   //   getter => sub {
@@ -99,7 +99,7 @@ LoadDefinitions!(outer_state, {
     }
     token
   })); // ?
-  DefRegister!("\\fontdimen Number FontToken", Dimension::new(0.0),
+  DefRegister!("\\fontdimen Number FontToken", Dimension::new(0),
     getter => {unimplemented!(); () }
     // my $p = ToString($_[0]);
   //     if    ($p == 2) { Dimension('0.5em'); }    # interword space
@@ -112,7 +112,7 @@ LoadDefinitions!(outer_state, {
 
   // <internal glue> = <glue parameter> | \lastskip | <skipdef token> | \skip<8bit>
 
-  DefRegister!("\\lastskip", Glue::new(0.0), readonly => true);
+  DefRegister!("\\lastskip", Glue::new(0), readonly => true);
 
   // # <internal muglue> = <muglue parameter> | \lastskip | <muskipdef token> | \muskip<8bit>
 

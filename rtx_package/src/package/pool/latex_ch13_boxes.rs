@@ -31,7 +31,7 @@ LoadDefinitions!(state, {
       None => {
         let message = s!("'{}' is not a length; defining it now", cs.stringify());
         Warn!("undefined", cs, stomach, state, message);
-        DefRegister!(cs, None, Dimension::new(0.0));
+        DefRegister!(cs, None, Dimension::new(0));
       },
       Some(defn) => if !defn.is_register() {
         let message = s!("'{}' length was expected, got {:?} instead of register.", cs.to_string(), defn.register_type());
@@ -42,7 +42,7 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\newlength DefToken", sub[stomach, args, inner_state] {
     unpack_to_token!(args => cs);
-    DefRegister!(cs, None, Glue::new(0.0));
+    DefRegister!(cs, None, Glue::new(0));
     Ok(vec![])
   });
 
@@ -67,15 +67,15 @@ LoadDefinitions!(state, {
   });
   DefPrimitive!("\\newdimen Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
-    DefRegister!(name, None, Dimension::new(0.0));
+    DefRegister!(name, None, Dimension::new(0));
   });
   DefPrimitive!("\\newskip Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
-    DefRegister!(name, None, Glue::new(0.0));
+    DefRegister!(name, None, Glue::new(0));
   });
   DefPrimitive!("\\newmuskip Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);
-    DefRegister!(name, None, MuGlue::new(0.0));
+    DefRegister!(name, None, MuGlue::new(0));
   });
   DefPrimitive!("\\newtoks Token", sub[stomach, args, state] {
     unpack_to_token!(args => name);

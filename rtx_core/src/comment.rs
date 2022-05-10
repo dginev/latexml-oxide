@@ -5,6 +5,7 @@ use std::fmt;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
+use crate::common::numeric_ops::NumericOps;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
@@ -37,7 +38,7 @@ impl BoxOps for Comment {
   fn get_font(&self) -> Option<Cow<Font>> { None }
   fn get_property(&self, key: &str, state: &mut State) -> Option<Cow<Stored>> { None }
   fn get_property_bool(&self, key: &str) -> bool { false }
-  fn get_width(&self, state: &mut State) -> Option<RegisterValue> { Some(RegisterValue::Dimension(Dimension::new(0.0))) }
+  fn get_width(&self, state: &mut State) -> Option<RegisterValue> { Some(RegisterValue::Dimension(Dimension::new(0))) }
 
   // sub getHeight      { return Dimension(0); }
   // sub getTotalHeight { return Dimension(0); }

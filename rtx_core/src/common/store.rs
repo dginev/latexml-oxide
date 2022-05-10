@@ -11,12 +11,12 @@ use crate::common::locator::Locator;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
+use crate::common::numeric_ops::NumericOps;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
-use crate::definition::register::NumericOps;
 use crate::definition::register::{Register, RegisterCell, RegisterValue};
 use crate::document::tag::TagData;
 use crate::gullet::Gullet;
@@ -738,10 +738,10 @@ impl<'a> From<&'a Stored> for Option<Number> {
   fn from(value: &'a Stored) -> Option<Number> {
     match value {
       Stored::Number(ref n) => Some(*n),
-      Stored::Dimension(ref n) => Some(Number::new(n.value_of().floor() as i32)),
-      Stored::Glue(ref n) => Some(Number::new(n.value_of().floor() as i32)),
-      Stored::MuDimension(ref n) => Some(Number::new(n.value_of().floor() as i32)),
-      Stored::MuGlue(ref n) => Some(Number::new(n.value_of().floor() as i32)),
+      Stored::Dimension(ref n) => Some(Number::new(n.value_of())),
+      Stored::Glue(ref n) => Some(Number::new(n.value_of())),
+      Stored::MuDimension(ref n) => Some(Number::new(n.value_of())),
+      Stored::MuGlue(ref n) => Some(Number::new(n.value_of())),
       other => {
         eprintln!("TODO: auto-cast of Stored to Number attempted on {:?}", other);
         None
