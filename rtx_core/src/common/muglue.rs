@@ -1,6 +1,7 @@
 use super::glue::{glue_string, new_setup, spec_setup, FillCode};
 use crate::common::dimension::attribute_format;
-use crate::definition::register::{NumericOps, RegisterType};
+use crate::common::numeric_ops::NumericOps;
+use crate::definition::register::{RegisterType};
 use crate::state::State;
 use crate::{Locator, Object};
 use std::borrow::Cow;
@@ -8,16 +9,16 @@ use std::fmt;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct MuGlue {
-  pub skip: f32,
-  pub plus: Option<f32>,
+  pub skip: i32,
+  pub plus: Option<i32>,
   pub pfill: Option<FillCode>,
-  pub minus: Option<f32>,
+  pub minus: Option<i32>,
   pub mfill: Option<FillCode>,
 }
 impl Default for MuGlue {
   fn default() -> Self {
     MuGlue {
-      skip: 0.0,
+      skip: 0,
       plus: None,
       pfill: None,
       minus: None,
@@ -34,24 +35,19 @@ impl fmt::Display for MuGlue {
 }
 
 impl NumericOps for MuGlue {
-  fn value_of(self) -> f32 { self.skip }
+  fn value_of(self) -> i32 { self.skip }
   fn register_type(&self) -> RegisterType { RegisterType::MuGlue }
-  fn add<T: NumericOps>(self, other: T) -> Self
-  where Self: Sized {
-    Self::new(self.value_of() + other.value_of())
+  fn new(skip: i32) -> Self {
+    MuGlue {
+      skip,
+      plus: None,
+      pfill: None,
+      minus: None,
+      mfill: None,
+    }
   }
-  fn subtract<T: NumericOps>(self, other: T) -> Self
-  where Self: Sized {
-    Self::new(self.value_of() - other.value_of())
-  }
-}
-impl Object for MuGlue {
-  fn get_locator(&self) -> Option<Cow<Locator>> { None }
-}
-
-impl MuGlue {
-  pub fn new<T: Into<f32>>(number: T) -> Self {
-    let (skip, plus, pfill, minus, mfill) = new_setup(number.into(), None, None, None, None);
+  fn new_f32(number: f32) -> Self {
+    let (skip, plus, pfill, minus, mfill) = new_setup(number, None, None, None, None);
     MuGlue {
       skip,
       plus,
@@ -60,8 +56,22 @@ impl MuGlue {
       mfill,
     }
   }
+}
+impl Object for MuGlue {
+  fn get_locator(&self) -> Option<Cow<Locator>> { None }
+}
 
-  pub fn new_full(skip: f32, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>) -> Self {
+impl MuGlue {
+  pub fn new_full(skip: i32, plus: Option<i32>, pfill: Option<FillCode>, minus: Option<i32>, mfill: Option<FillCode>) -> Self {
+    MuGlue {
+      skip,
+      plus,
+      pfill,
+      minus,
+      mfill,
+    }
+  }
+  pub fn new_full_f32(skip: f32, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>) -> Self {
     let (skip, plus, pfill, minus, mfill) = new_setup(skip, plus, pfill, minus, mfill);
     MuGlue {
       skip,
@@ -83,38 +93,18 @@ impl MuGlue {
     }
   }
 
-  pub fn negate(self) -> Self
-  where Self: Sized {
-    let value = self.value_of();
-    if value > 0.0 {
-      Self::new(-value)
-    } else {
-      Self::new(value)
-    }
-  }
-  pub fn multiply<T: Into<f32>>(self, other: T) -> Self
-  where Self: Sized {
-    let other: f32 = other.into();
-    Self::new((self.value_of() * other).floor())
-  }
-  pub fn divide<T: Into<f32>>(self, other: T) -> Self
-  where Self: Sized {
-    let other: f32 = other.into();
-    Self::new((self.value_of() / other).floor())
-  }
-
   pub fn to_attribute(&self) -> String {
     let u = "mu";
     let mut string = attribute_format(self.skip, Some(u));
     if let Some(plus) = self.plus {
-      if plus != 0.0 {
+      if plus != 0 {
         string.push_str(" plus ");
         let fill_u = if let Some(pfill) = self.pfill { pfill.to_str() } else { u };
         string.push_str(&attribute_format(plus, Some(fill_u)));
       }
     }
     if let Some(minus) = self.minus {
-      if minus != 0.0 {
+      if minus != 0 {
         string.push_str(" minus ");
         let mfill_u = if let Some(mfill) = self.mfill { mfill.to_str() } else { u };
         string.push_str(&attribute_format(minus, Some(mfill_u)));

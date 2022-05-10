@@ -127,15 +127,15 @@ LoadDefinitions!(state, {
   // Special dimension registers (?)
   // <special dimen> = \prevdepth | \pagegoal | \pagetotal | \pagestretch | \pagefilstretch
   //    | \pagefillstretch | \pagefilllstretch | pageshrink | \pagedepth
-  DefRegister!("\\prevdepth",Dimension::new(0.0));
-  DefRegister!("\\pagegoal",Dimension::new(0.0));
-  DefRegister!("\\pagetotal",Dimension::new(0.0));
-  DefRegister!("\\pagestretch",Dimension::new(0.0));
-  DefRegister!("\\pagefilstretch",Dimension::new(0.0));
-  DefRegister!("\\pagefillstretch",Dimension::new(0.0));
-  DefRegister!("\\pagefilllstretch",Dimension::new(0.0));
-  DefRegister!("\\pageshrink",Dimension::new(0.0));
-  DefRegister!("\\pagedepth",Dimension::new(0.0));
+  DefRegister!("\\prevdepth",Dimension::new(0));
+  DefRegister!("\\pagegoal",Dimension::new(0));
+  DefRegister!("\\pagetotal",Dimension::new(0));
+  DefRegister!("\\pagestretch",Dimension::new(0));
+  DefRegister!("\\pagefilstretch",Dimension::new(0));
+  DefRegister!("\\pagefillstretch",Dimension::new(0));
+  DefRegister!("\\pagefilllstretch",Dimension::new(0));
+  DefRegister!("\\pageshrink",Dimension::new(0));
+  DefRegister!("\\pagedepth",Dimension::new(0));
 
   // ======================================================================
   //  Glue registers; TeXBook p.274

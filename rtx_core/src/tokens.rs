@@ -15,6 +15,7 @@ use crate::common::error::*;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
+use crate::common::numeric_ops::NumericOps;
 use crate::common::number::Number;
 use crate::common::store::Stored;
 use crate::definition::register::RegisterValue;

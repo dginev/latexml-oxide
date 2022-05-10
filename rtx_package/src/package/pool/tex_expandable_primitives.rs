@@ -22,7 +22,7 @@ LoadDefinitions!(outer_state, {
   });
   DefConditional!("\\ifodd Number", sub[gullet, args, state] {
     unpack_to_token!(args => u);
-    let uint = u.to_number().value_i32();
+    let uint = u.to_number().value_of();
     uint % 2 == 1
   });
 
@@ -328,8 +328,8 @@ fn escapechar(state: &State) -> String {
 }
 
 fn compare(u: Token, rel: Token, v: Token) -> Result<bool> {
-  let u = u.to_number().value_i32();
-  let v = v.to_number().value_i32();
+  let u = u.to_number().value_of();
+  let v = v.to_number().value_of();
   // NOTE: One would expect this to be best written as an advanced match statement
   // however, due to the shallow comparison of Cow<str> the Cow::Borrowed("<") and
   // Cow::Owned("<") variants will NOT be equal via a destructuring match.

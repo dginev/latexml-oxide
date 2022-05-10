@@ -1,4 +1,5 @@
-use crate::definition::register::{NumericOps, RegisterType};
+use crate::common::numeric_ops::NumericOps;
+use crate::definition::register::{RegisterType};
 use crate::mouth;
 use crate::tokens::Tokens;
 use lazy_static::lazy_static;
@@ -20,10 +21,12 @@ impl Default for Float {
 }
 
 impl NumericOps for Float {
-  fn value_of(self) -> f32 { self.0 }
+  fn new(number: i32) -> Self { Float(number as f32) }
+  fn new_f32(number: f32) -> Self { Float(number) }
+  fn value_of(self) -> i32 { self.0 as i32 }
   fn register_type(&self) -> RegisterType { RegisterType::Number }
-  fn add<T: NumericOps>(self, other: T) -> Self { Float::new(self.value_of() + other.value_of()) }
-  fn subtract<T: NumericOps>(self, other: T) -> Self { Float::new(self.value_of() - other.value_of()) }
+  fn add<T: NumericOps>(self, other: T) -> Self { Float::new_f32(self.0 + other.value_f32()) }
+  fn subtract<T: NumericOps>(self, other: T) -> Self { Float::new_f32(self.0 - other.value_f32()) }
 }
 
 impl From<Float> for Tokens {
@@ -39,8 +42,7 @@ impl fmt::Display for Float {
 }
 
 impl Float {
-  pub fn new(number: f32) -> Self { Float(number) }
-
+  fn value_of(self) -> i32 { self.0 as i32 }
   pub fn multiply(&self, other: &Float) -> Self { Float::new(self.value_of() * other.value_of()) }
 
   pub fn stringify(&self) -> String { s!("Float[{}]", self.0) }

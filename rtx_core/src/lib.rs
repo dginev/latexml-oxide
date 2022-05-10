@@ -39,7 +39,8 @@ use crate::common::model::Model;
 use crate::common::number::Number;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::definition::register::{NumericOps, RegisterValue};
+use crate::common::numeric_ops::NumericOps;
+use crate::definition::register::{RegisterValue};
 use crate::document::Document;
 use crate::keyvals::KeyVals;
 use crate::list::List;
@@ -420,10 +421,10 @@ impl BoxOps for Digested {
 
 impl Digested {
   // convenience subset of NumericOps, added here for now as an experiment:
-  pub fn value_of(&self) -> f32 {
+  pub fn value_of(&self) -> i32 {
     match self {
       Digested::RegisterValue(rv) => (**rv).clone().value_of(),
-      _ => 0.0,
+      _ => 0,
     }
   }
   pub fn pt_value(&self, prec: Option<u8>) -> f32 {

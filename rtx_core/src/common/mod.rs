@@ -7,6 +7,7 @@ pub mod glue;
 pub mod ligature;
 pub mod locator;
 pub mod model;
+pub mod numeric_ops;
 pub mod mudimension;
 pub mod muglue;
 pub mod number;
