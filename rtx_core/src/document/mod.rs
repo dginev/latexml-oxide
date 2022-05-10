@@ -2510,8 +2510,54 @@ impl Document {
     Ok(())
   }
 
-  pub fn float_to_element(&mut self, element: &str, flag: bool) -> Option<Node> {
-    unimplemented!();
+  // The following "floatTo" operations find an appropriate point
+  // within the document tree preceding the current insertion point.
+  // They return undef (& issue a warning) if such a point cannot be found.
+  // Otherwise, they move the current insertion point to the appropriate node,
+  // and return the previous insertion point.
+  // After you make whatever changes (insertions or whatever) to the tree,
+  // you should do
+  //   document.set_node(savenode)
+  // to reset the insertion point to where it had been.
+
+  /// Find a node in the document that can contain an element `qname`
+  pub fn float_to_element(&mut self, qname: &str, closeifpossible: bool) -> Option<Node> {
+    // TODO:
+
+    // let candidates = get_insertion_candidates(self.node);
+    // let mut closeable  = true;
+    // // If the current node can contain already, we're fine right here - just return
+    // if !candidates.is_empty() && self.can_contain(candidates[0], qname) {
+    //   // Edge case: Don't resume at a text node, if it is current. Don't append more to it after other insertions.
+    //   if self.node.get_type() == NodeType::TextNode {
+    //     self.set_node(candidates[0]);
+    //   }
+    //   return Some(candidates[0]);
+    // }
+    // while !candidates.is_empty() && !self.can_contain(candidates[0], qname) {
+    //   if closeable {
+    //     closeable = self.can_auto_close(candidates[0]);
+    //   }
+    //   candidates.pop_front();
+    // }
+    // if let Some(n) = candidates.pop_front() {
+    //   if closeifpossible && closeable {
+    //     self.close_to_node(n);
+    //   } else {
+    //     let savenode = self.node;
+    //     self.set_node(n);
+    //     // Debug!("Floating from " . Stringify($savenode) . " to " . Stringify($n) . " for $qname")
+    //     //   if ($$savenode ne $$n) && $LaTeXML::DEBUG{document};
+    //     Some(savenode)
+    //   }
+    // } else {
+    //   if !self.can_contain_somehow(self.node, qname) {
+    //     Warn!("malformed", qname, self, "No open node can contain element '{}'", qname
+    //       $self->getInsertionContext())
+    //     }
+    //   None
+    // }
+    None
   }
 
   // find a node that can accept a label.

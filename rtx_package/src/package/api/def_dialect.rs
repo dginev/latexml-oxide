@@ -18,6 +18,7 @@ use rtx_core::mouth;
 use rtx_core::parameter::{Parameter, ParameterExtra, Parameters};
 use rtx_core::state::{Scope, State, Stored};
 use rtx_core::stomach::Stomach;
+use rtx_core::gullet::Gullet;
 use rtx_core::tbox::Tbox;
 use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
@@ -205,7 +206,7 @@ pub fn revert(_arg: &[Token]) -> Tokens { unimplemented!() }
 // If you supply a skipper instead of a test, it is also applied to the arguments
 // and should skip to the right place in the following \or, \else, \fi.
 
-pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<ConditionalClosure>, options: ConditionalOptions, state: &mut State) {
+pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<ConditionalClosure>, options: ConditionalOptions, gullet: &mut Gullet, state: &mut State) {
   let cs_name = cs.get_cs_name();
   let locked_key = if let Some(true) = options.locked {
     s!("{}:locked", cs_name)
@@ -249,7 +250,7 @@ pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<Co
             None,
             state,
           );
-          state.let_i(&cs, T_CS!("\\iffalse"), None);
+          state.let_i(&cs, T_CS!("\\iffalse"), None, gullet);
         } else {
           //  For \ifcase, the parameter list better be a single Number !!
           state.install_definition(

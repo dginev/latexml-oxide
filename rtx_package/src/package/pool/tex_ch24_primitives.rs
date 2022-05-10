@@ -118,8 +118,9 @@ LoadDefinitions!(state, {
 
   // \afterassignment saves ONE token (globally!) to execute after the next assignment
   DefPrimitive!("\\afterassignment Token", sub[stomach, args, state] {
-    unpack_to_token!(args => t);
-    AssignValue!("afterAssignment" => t, Some(Scope::Global)); });
+    unpack!(args => t);
+    state.assign_value("afterAssignment", t, Some(Scope::Global));
+  });
   // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next egroup or }
   DefPrimitive!("\\aftergroup Token", sub[stomach, args, state] {
     unpack_to_token!(args => t);
@@ -298,9 +299,10 @@ LoadDefinitions!(state, {
     "\\LTX@clear@vadjust@afterpar",
     "\\def\\LTX@vadjust@afterpar{\\def\\LTX@vadjust@afterpar{}}"
   );
-  // DefPrimitive('\vadjust {}', sub {
-  //     AddToMacro('\LTX@vadjust@afterpar', $_[1]->unlist);
-  //     return; });
+  DefPrimitive!("\\vadjust {}", sub[stomach,args,state] {
+    unpack!(args=>arg);
+    state.push_tokens("vAdjust", arg);
+  });
 
   // #======================================================================
   // # Remaining Vertical Mode primitives in Ch.24, pp.281--283
@@ -313,9 +315,13 @@ LoadDefinitions!(state, {
   // # <rule dimension> = width <dimen> | height <dimen> | depth <dimen>
 
   // # Stuff to ignore for now...
-  // foreach my $op ('\vfil', '\vfill', '\vss', '\vfilneg',
-  //   '\leaders', '\cleaders', '\xleaders') {
-  //   DefPrimitive($op, undef); }
+  DefPrimitive!("\\vfil", None);
+  DefPrimitive!("\\vfill", None);
+  DefPrimitive!("\\vss", None);
+  DefPrimitive!("\\vfilneg", None);
+  DefPrimitive!("\\leaders", None);
+  DefPrimitive!("\\cleaders", None);
+  DefPrimitive!("\\xleaders", None);
 
   // # \moveleft<dimen><box>, \moveright<dimen><box>
   // DefConstructor('\moveleft Dimension MoveableBox',

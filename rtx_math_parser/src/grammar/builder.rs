@@ -132,7 +132,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | bigop | sumop | intop
       | limitop | diffop | vertbar | supop;
 
-    anything = statements | anyop
+    anyscript = floatsuperscript | floatsubscript;
+
+    anything = statements | anyop | anyscript
   );
   // | term_argument postsuperscript tex_argument  => post_script
   // | term_argument postsubscript tex_argument    => post_script

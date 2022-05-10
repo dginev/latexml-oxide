@@ -190,4 +190,8 @@ LoadDefinitions!(state, {
   DefMacro!("\\subsubsectionmark{}", "");
   DefMacro!("\\paragraphmark{}", "");
   DefMacro!("\\subparagraphmark{}", "");
+  DefMacro!("\\@oddfoot", "");
+  DefMacro!("\\@oddhed", "");
+  DefMacro!("\\@evenfoot", "");
+  DefMacro!("\\@evenfoot", "");
 });

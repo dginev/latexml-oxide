@@ -13,8 +13,8 @@ LoadDefinitions!(state, {
     unpack_to_token!(args => token);
     let tbox = s!("box{}", token.to_number().value_of() as u8);
     // If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
-    if let Some(token) = state.remove_value("afterAssignment") {
-      state.assign_value("BeforeNextBox", token, None);
+    if let Some(after_token) = state.remove_value("afterAssignment") {
+      state.assign_value("BeforeNextBox", after_token, None);
     }
     // Save global flag, since we're digesting to get the box content, which resets the flag!
     // Should afterDigest be responsible for resetting flags?
@@ -82,13 +82,13 @@ LoadDefinitions!(state, {
     }),
     optional => true);
 
-  DefParameterType!("HBoxContents", reader => reader!(gullet, inner, extra, state, {
+  DefParameterType!("HBoxContents", reader => reader!(gullet, _inner, _extra, state, {
       read_box_contents(gullet, state.lookup_tokens("\\everyhbox"), state)
     }),
     reader_predigest=>reader_predigest!(stomach, arg, state, { predigest_box_contents(stomach, arg, state) })
   );
 
-  DefParameterType!("VBoxContents", reader=>reader!(gullet, inner, extra, state, {
+  DefParameterType!("VBoxContents", reader=>reader!(gullet, _inner, _extra, state, {
       read_box_contents(gullet, state.lookup_tokens("\\everyvbox"), state)
     }),
     reader_predigest=>reader_predigest!(stomach, arg, state, { predigest_box_contents(stomach, arg, state) })
@@ -129,7 +129,7 @@ LoadDefinitions!(state, {
       document.absorb(contents, None, state)?;
       if !is_svg {
         while !document.get_element().unwrap().has_attribute("_beginscope") &&
-         document.maybe_close_element("svg:g", state)?.is_some() {}
+          document.maybe_close_element("svg:g", state)?.is_some() {}
         document.maybe_close_element("svg:svg", state)?;
         document.maybe_close_node(&node, state)?;
       } else {
@@ -141,7 +141,7 @@ LoadDefinitions!(state, {
     sizer => "#2",
     //   # Workaround for $ in alignment; an explicit \hbox gives us a normal $.
     //   # And also things like \centerline that will end up bumping up to block level!
-    before_digest => sub[stomach, state] {reenter_text_mode(false, state)},
+    before_digest => sub[stomach, state] {reenter_text_mode(false, stomach.get_gullet_mut(), state)},
     after_digest => sub[stomach, whatsit, state] {
       let mut width : Option<RegisterValue>= None;
       {

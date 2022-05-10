@@ -71,6 +71,7 @@ impl DigestionAPI for Core {
     Ok(())
   }
 
+  // TODO: We should choose between this function or digest_file, rather than implement twice, right?
   fn digest(
     &mut self,
     request: String,
@@ -86,9 +87,9 @@ impl DigestionAPI for Core {
     let mut dir_opt = None;
 
     let name = if pathname::is_literaldata(&request) {
-      Some(s!("Anonymous String"))
+      s!("Anonymous String")
     } else if pathname::is_url(&request) {
-      Some(request.clone())
+      request.clone()
     } else {
       let path = Path::new(&request);
       // _ext = match path.extension() {
@@ -97,15 +98,15 @@ impl DigestionAPI for Core {
       // };
       dir_opt = path.parent();
       match path.file_stem() {
-        None => Some(s!("missing_name")),
-        Some(pf) => Some(pf.to_str().unwrap().to_string()),
+        None => String::from("missing_name"),
+        Some(pf) => pf.to_str().unwrap().to_string(),
       }
     };
     // else {
     //   $self->withState(sub {
     //       Fatal('missing_file', $request, undef, "Can't find $mode file $request"); }); } }
     // };
-    let digestion_note = s!("Digesting {}", name.as_ref().unwrap());
+    let digestion_note = s!("Digesting {}", name);
     note_begin(&digestion_note);
     // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless
     // $options{noinitialize}; $state->assignValue(SOURCEFILE      => $request) if
@@ -120,9 +121,16 @@ impl DigestionAPI for Core {
 
     // if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
 
-    // $state->installDefinition(LaTeXML::Definition::Expandable->new(T_CS!('\jobname'), undef,
-    //     Tokens(Explode($name))));
-    // // Reverse order, since last opened is first read!
+    let name_copy = name.clone();
+    self.state.install_definition(
+      Stored::Expandable(Arc::new(Expandable {
+        cs: T_CS!("\\jobname"),
+        paramlist: None,
+        expansion: Tokens::new(Explode!(name_copy)).into(),
+        ..Expandable::default()
+      })),
+      None,
+    );
 
     // $self->loadPostamble($options{postamble}) if $options{postamble};
     input_content(&request, InputOptions::default(), &mut self.stomach.write().unwrap(), &mut self.state)?;
@@ -287,7 +295,7 @@ impl DigestionAPI for Core {
       ) {
         request = pathname;
         dir = pathname::directory(&request);
-        name = pathname::file_name(&request);
+        name = pathname::file_stem(&request);
       // ext = pathname::extension(&request);
       } else {
         let message = s!("Can't find {} file {} ", mode, request);

@@ -400,6 +400,9 @@ impl Parameter {
 #[derive(Clone, Debug, Default)]
 pub struct Parameters(Vec<Parameter>);
 
+impl PartialEq for Parameters {
+  fn eq(&self, other: &Parameters) -> bool { self.0 == other.0 }
+}
 impl Object for Parameters {
   fn stringify(&self) -> String {
     let mut result = String::new();

@@ -4,11 +4,29 @@ LoadDefinitions!(state, {
   //----------------------------------------------------------------------
   // These determine whether the _next_ paragraph gets indented!
   // thus it needs \par to check whether such indentation has been set.
-  DefPrimitive!("\\indent", {
-    AssignValue!("next_para_class" => "ltx_indent");
+  DefConstructor!("\\indent", sub[document,whatsit,state] {
+    if let Some(mut node) = document.get_element() {
+      let tag = document.get_node_qname(&node,state);
+      if tag == "ltx:para" {
+        node.set_attribute("class","ltx_indent")?;
+      } else if document.can_contain_somehow(&tag,"ltx:para",state) {
+        // Used in a position where a paragraph can be started, start
+        document.open_element("ltx:para", Some(string_map!("class"=>"ltx_indent")), None, state)?;
+      }
+      // Otherwise ignore.
+    }
   });
-  DefPrimitive!("\\noindent", {
-    AssignValue!("next_para_class" => "ltx_noindent");
+  DefConstructor!("\\noindent", sub[document,whatsit,state] {
+    if let Some(mut node) = document.get_element() {
+      let tag = document.get_node_qname(&node,state);
+      if tag == "ltx:para" {
+        node.set_attribute("class","ltx_noindent")?;
+      } else if document.can_contain_somehow(&tag,"ltx:para",state) {
+        // Used in a position where a paragraph can be started, start
+        document.open_element("ltx:para", Some(string_map!("class"=>"ltx_noindent")), None, state)?;
+      }
+      // Otherwise ignore.
+    }
   });
 
   // <ltx:para> represents a Logical Paragraph, whereas <ltx:p> is a `physical paragraph'.
@@ -21,16 +39,17 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\normal@par",
     sub[document, args, props, state] {
-      let in_preamble = prop_bool!(props, "inPreamble");
-      if !in_preamble {
+      if !prop_bool!(props, "inPreamble") {
         document.maybe_close_element("ltx:p", state)?;
-        let class_str = prop_str!(props,"class");
-        if !class_str.is_empty() {
-          let element = document.get_element();
-          if let Some(mut node) = element {
-            if document.get_node_qname(&node, state) == "ltx:para" {  // Only set on the para about to close!
-              document.set_attribute(&mut node, "class", class_str)?;
-            }
+        let element = document.get_element();
+        if let Some(mut node) = element {
+          let qname = document.get_node_qname(&node, state);
+          if qname == "ltx:para" && node.get_attribute("class").is_none() {  // Only set on the para about to close, if unknown!
+            let class_str = prop_str!(props,"class");
+            document.set_attribute(&mut node, "class", class_str)?;
+          } else if qname == "ltx:figure" {
+            // insert breaks in figures, for vertically separating subfigures
+            document.insert_element("ltx:break",Vec::new(), None, state)?;
           }
         }
         document.maybe_close_element("ltx:para", state)?;
@@ -40,15 +59,26 @@ LoadDefinitions!(state, {
       let in_preamble = LookupBool!("inPreamble");
       if in_preamble {
         whatsit.set_property("inPreamble", true);
-      } else if let Some(c) = RemoveValue!("next_para_class") {
-          whatsit.set_property("class", c);
-          // TODO
-        // Digest!(Tokens!(
-        //     T_CS("\\LTX@vadjust@afterpar"),
-        //     T_CS("\\LTX@clear@vadjust@afterpar")
-        // ));
+        Ok(Vec::new())
+      } else {
+        if let Some(c) = state.lookup_value("next_para_class") {
+          // Check if flags were set by prior \par:
+          whatsit.set_property("class", c.clone());
+          state.assign_value("next_para_class", Stored::None, None);
+        }
+        // Fish out flags for next ltx:para, to be used when the next \par closes:
+        if state.lookup_register("\\parindent",Vec::new()).unwrap().value_of() == 0.0 {
+          // respect \parindent if no overrides are given
+          state.assign_value("next_para_class", "ltx_noindent", None);
+        }
+        // Vertical adjustments
+        if let Some(Stored::Tokens(vadj)) = RemoveValue!("vAdjust") {
+          AssignValue!("vAdjust", Tokens!(), Some(Scope::Global));
+          Ok(vec![ Digest!(vadj)? ])
+        } else {
+          Ok(Vec::new())
+        }
       }
-      Ok(Vec::new())
     },
     properties => skippable_props,
     alias => "\\par"

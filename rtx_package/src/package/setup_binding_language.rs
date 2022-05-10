@@ -412,11 +412,12 @@ macro_rules! DefConditional(
 #[macro_export]
 macro_rules! defi_conditional {
   ($cs:expr, $paramlist:expr, $test:expr, $options:expr) => {{
-    bind_state_mut!(st);
-    defi_conditional!($cs, $paramlist, $test, $options, st);
+    bind_state_mut!(stmch, st);
+    let gullet = stmch.get_gullet_mut();
+    defi_conditional!($cs, $paramlist, $test, $options, gullet, st);
   }};
-  ($cs:expr, $paramlist:expr, $test:expr, $options:expr, $state_arg:ident) => {{
-    def_conditional($cs, $paramlist, $test, $options, $state_arg);
+  ($cs:expr, $paramlist:expr, $test:expr, $options:expr, $gullet:ident, $state_arg:ident) => {{
+    def_conditional($cs, $paramlist, $test, $options, $gullet, $state_arg);
   }};
 }
 
@@ -964,9 +965,9 @@ macro_rules! SetCounter {
                 scope => Some(Scope::Global)
     );
   };
-  ($ctr:expr, $value:expr, $state_arg:ident) => {
+  ($ctr:expr, $value:expr, $stomach:ident, $state_arg:ident) => {
     $state_arg.assign_value(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
-    $state_arg.after_assignment();
+    AfterAssignment!($stomach, $state_arg);
     def_macro(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
       Some(ExpandableOptions{ scope: Some(Scope::Global), ..ExpandableOptions::default()}), $state_arg);
   }
@@ -1418,26 +1419,26 @@ macro_rules! IsDefinable {
 #[macro_export]
 macro_rules! Let {
   ($token1:literal, $token2:literal) => {{
-    bind_state_mut!(st);
-    st.let_i(&T_CS!($token1), T_CS!($token2), None);
+    bind_state_mut!(stmch, st);
+    st.let_i(&T_CS!($token1), T_CS!($token2), None, stmch.get_gullet_mut());
   }};
   // half-packaged args
   ($token1:literal, $token2:expr) => {{
-    bind_state_mut!(st);
-    st.let_i(&T_CS!($token1), $token2, None);
+    bind_state_mut!(stmch, st);
+    st.let_i(&T_CS!($token1), $token2, None, stmch.get_gullet_mut());
   }};
   ($token1:expr, $token2:literal) => {{
-    bind_state_mut!(st);
-    st.let_i($token1, T_CS!($token2), None);
+    bind_state_mut!(stmch,st);
+    st.let_i($token1, T_CS!($token2), None, stmch.get_gullet_mut());
   }};
   // internal form, pre-packaged arguments
   ($token1:expr, $token2:expr) => {{
-    bind_state_mut!(st);
-    st.let_i($token1, $token2, None);
+    bind_state_mut!(stmch,st);
+    st.let_i($token1, $token2, None, stmch.get_gullet_mut());
   }};
   ($token1:expr, $token2:expr, $scope:expr) => {{
-    bind_state_mut!(st);
-    st.let_i($token1, $token2, $scope);
+    bind_state_mut!(stmch, st);
+    st.let_i($token1, $token2, $scope, stmch.get_gullet_mut());
   }};
 }
 
@@ -1461,11 +1462,11 @@ macro_rules! DigestIf {
 #[macro_export]
 macro_rules! AfterAssignment {
   () => {{
-    bind_state_mut!(st);
-    st.after_assignment()
+    bind_state_mut!(stmch,st);
+    st.after_assignment(stmch.get_gullet_mut())
   }};
-  ($state_arg: ident) => {
-    $state_arg.after_assignment()
+  ($stmch:ident, $state_arg: ident) => {
+    $state_arg.after_assignment($stmch.get_gullet_mut())
   };
 }
 

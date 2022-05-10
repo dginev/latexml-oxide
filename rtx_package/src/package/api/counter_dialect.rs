@@ -84,7 +84,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
 
   def_register(T_CS!(cctr), None, Number::new(0), None, state);
   state.assign_value(&cctr, Number::new(0), Some(Scope::Global));
-  state.after_assignment();
+  state.after_assignment(stomach.get_gullet_mut());
   if state.lookup_value(&clctr).is_none() {
     state.assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
@@ -244,7 +244,7 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
 pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut State) {
   let v = counter_value(ctr, state).add(value);
   state.assign_value(&s!("\\c@{}", ctr), v, Some(Scope::Global));
-  state.after_assignment();
+  state.after_assignment(gullet);
   let id_cs = T_CS!(s!("\\@{}@ID", ctr));
   def_macro(
     id_cs,
@@ -261,7 +261,7 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
 pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let value = counter_value(ctr, state);
   state.assign_value(&s!("\\c@{}", ctr), value.add(Number::new(1)), Some(Scope::Global));
-  state.after_assignment();
+  state.after_assignment(stomach.get_gullet_mut());
   let token_value = Tokens::new(Explode!(state.lookup_number(&s!("\\c@{}", ctr)).unwrap().value_of()));
   def_macro(
     T_CS!(s!("\\@{}@ID", ctr)),
@@ -297,7 +297,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
     _ => ctype.to_string(),
   };
   step_counter(&ctr, noreset, stomach, state)?;
-  maybe_preempt_refnum(&ctr, false, state);
+  maybe_preempt_refnum(&ctr, false, stomach.get_gullet_mut(), state);
 
   let has_id: bool = if let Some(iddef) = state.lookup_definition(&T_CS!(s!("\\the{}@ID", ctr))) {
     if let Some(params) = iddef.get_parameters() {
@@ -376,16 +376,16 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
 /// captions & certain equation environments)
 /// Assign a sub to LABEL_MAPPING_HOOK: &sub($label,$counter,$norefnum)
 /// to return the desired refnum and id for a given object.
-fn maybe_preempt_refnum(ctr: &str, norefnum: bool, state: &mut State) {
+fn maybe_preempt_refnum(ctr: &str, norefnum: bool, gullet:&mut Gullet, state: &mut State) {
   if let Some(mapper) = state.lookup_value("LABEL_MAPPING_HOOK") {
     let hj_refnum = T_CS!(s!("\\_PREEMPTED_REFNUM_{}", ctr));
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{}", ctr));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
     if !norefnum && state.lookup_meaning(&hj_refnum).is_some() {
-      state.let_i(&T_CS!(s!("\\the{}", ctr)), hj_refnum, Some(Scope::Global));
+      state.let_i(&T_CS!(s!("\\the{}", ctr)), hj_refnum, Some(Scope::Global), gullet);
     }
     if state.lookup_meaning(&hj_id).is_some() {
-      state.let_i(&T_CS!(s!("\\the{}@ID", ctr)), hj_id, Some(Scope::Global));
+      state.let_i(&T_CS!(s!("\\the{}@ID", ctr)), hj_id, Some(Scope::Global), gullet);
     }
     let label = state.lookup_value("PEEKED_LABEL");
     // TODO: Continue once we know the type of "mapper"
@@ -451,7 +451,7 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
   };
   let unctr = s!("UN{}", ctr);
   step_counter(&unctr, false, stomach, state)?;
-  maybe_preempt_refnum(&ctr, true, state);
+  maybe_preempt_refnum(&ctr, true, stomach.get_gullet_mut(), state);
   let cunctr_val = state.lookup_number(&s!("\\c@{}", unctr)).unwrap().value_of();
   def_macro(
     T_CS!(s!("\\@{}@ID", ctr)),
@@ -613,11 +613,12 @@ pub fn begin_itemize(
   if !options.nolevel && !postfix.is_empty() {
     usecounter.push_str(&postfix);
   }
+  let gullet = stomach.get_gullet_mut();
   if !itype.is_empty() {
     let itype_cs = T_CS!(s!("\\{}@item", itype));
-    state.let_i(&T_CS!("\\item"), itype_cs, None);
+    state.let_i(&T_CS!("\\item"), itype_cs, None, gullet);
   }
-  state.let_i(&T_CS!("\\par"), T_CS!("\\normal@par"), None); // In case within odd environment.
+  state.let_i(&T_CS!("\\par"), T_CS!("\\normal@par"), None, gullet); // In case within odd environment.
   def_macro(T_CS!("\\@listctr"), None, Tokens!(Explode!(usecounter)), None, state);
   // Now arrange that this list's id's are relative to the current (outer) item (if any)
   // And that the items within this list's id's are relative to this (new) list.
@@ -648,7 +649,7 @@ pub fn begin_itemize(
 
   let mut series = if let Some(s) = options.series { s.to_string() } else { String::new() };
   if let Some(start) = options.start {
-    SetCounter!(usecounter, start, state);
+    SetCounter!(usecounter, start, stomach, state);
     let gullet = stomach.get_gullet_mut();
     AddToCounter!(&usecounter, Number(-1), gullet, state);
   } else if let Some(s) = match options.resume {
