@@ -56,7 +56,7 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefParameterType!("BoxSpecification",  reader => reader!(gullet, inner, extra, state, {
+  DefParameterType!(BoxSpecification,  reader => reader!(gullet, inner, extra, state, {
       if let Some(key) = gullet.read_keyword(&["to", "spread"], state)? {
         Ok(Tokens!(T_OTHER!(key)))
       } else {
@@ -82,13 +82,13 @@ LoadDefinitions!(state, {
     }),
     optional => true);
 
-  DefParameterType!("HBoxContents", reader => reader!(gullet, _inner, _extra, state, {
+  DefParameterType!(HBoxContents, reader => reader!(gullet, _inner, _extra, state, {
       read_box_contents(gullet, state.lookup_tokens("\\everyhbox"), state)
     }),
     reader_predigest=>reader_predigest!(stomach, arg, state, { predigest_box_contents(stomach, arg, state) })
   );
 
-  DefParameterType!("VBoxContents", reader=>reader!(gullet, _inner, _extra, state, {
+  DefParameterType!(VBoxContents, reader=>reader!(gullet, _inner, _extra, state, {
       read_box_contents(gullet, state.lookup_tokens("\\everyvbox"), state)
     }),
     reader_predigest=>reader_predigest!(stomach, arg, state, { predigest_box_contents(stomach, arg, state) })
@@ -199,7 +199,7 @@ LoadDefinitions!(state, {
     }
   );
 
-  DefParameterType!("RuleSpecification", reader=>reader!(gullet, inner, extra, state, {
+  DefParameterType!(RuleSpecification, reader=>reader!(gullet, inner, extra, state, {
     unimplemented!(); ()
     // my $keyvals = LaTeXML::Core::KeyVals->new(undef, undef, skipMissing => 1);
     // while (my $key = $gullet->readKeyword('width', 'height', 'depth')) {

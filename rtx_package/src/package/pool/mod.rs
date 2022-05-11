@@ -1,4 +1,5 @@
 // TeX Pool
+pub mod test;
 pub mod tex;
 mod tex_accents;
 mod tex_alignment;
