@@ -187,7 +187,7 @@ LoadDefinitions!(outer_state, {
 
   //======================================================================
 
-  DefParameterType!("CSName", reader => reader!(gullet, inner, extra, state, {
+  DefParameterType!(CSName, reader => reader!(gullet, inner, extra, state, {
     let mut cs = escapechar(state);
     // keep newlines from having \n inside!
     while let Some(token) = gullet.read_x_token(true, true, state)? {

@@ -155,12 +155,14 @@ macro_rules! bind_state_mut {
 //======================================================================
 #[macro_export]
 macro_rules! DefParameterTypeWO {
-  ($name:expr, $param:expr) => {
+  ($name:ident, $param:expr) => {
     bind_state_mut!(st);
-    st.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter(Arc::new($param))))
+    // pub type $name = Tokens;
+    st.assign_mapping("PARAMETER_TYPES", stringify!($name), Some(Stored::Parameter(Arc::new($param))))
   };
-  ($name:expr, $param:expr, $state_arg:ident) => {
-    $state_arg.assign_mapping("PARAMETER_TYPES", $name, Some(Stored::Parameter(Arc::new($param))))
+  ($name:ident, $param:expr, $state_arg:ident) => {
+    // pub type $name = Tokens;
+    $state_arg.assign_mapping("PARAMETER_TYPES", stringify!($name), Some(Stored::Parameter(Arc::new($param))))
   };
 }
 
@@ -1704,18 +1706,18 @@ macro_rules! DefMath(
 
 #[macro_export]
 macro_rules! DefParameterType {
-  ($name:literal) => (DefParameterTypeWO!($name, NewDefault!(Parameter, name => $name.to_string())));
-  ($name:literal, $state_arg:ident) => (DefParameterTypeWO!($name, NewDefault!(Parameter, name => $name.to_string()), $state_arg));
-  ($name:literal, $($key:ident => $value:expr),*)=>(DefParameterTypeWO!($name, NewDefault!(Parameter, name => $name.to_string(), $($key=>$value),*)));
-  ($name:literal, $($key:ident => $value:expr),*, $state_arg:ident)=>
-    (DefParameterTypeWO!($name, NewDefault!(Parameter, name => $name.to_string(), $($key=>$value),*), $state_arg));
+  ($name:ident) => (DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name).to_string())));
+  ($name:ident, $state_arg:ident) => (DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name.to_string())), $state_arg));
+  ($name:ident, $($key:ident => $value:expr),*)=>(DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name).to_string(), $($key=>$value),*)));
+  ($name:ident, $($key:ident => $value:expr),*, $state_arg:ident)=>
+    (DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name.to_string()), $($key=>$value),*), $state_arg));
   // with reader as explicit sub
-  ($name:literal, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block) => (
+  ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block) => (
     DefParameterTypeWO!($name, NewDefault!(Parameter, reader => reader!($gullet, $inner, $extra, $inner_state, $body))));
-  ($name:literal, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block, $($key:ident => $value:expr),*) => (
+  ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block, $($key:ident => $value:expr),*) => (
     DefParameterTypeWO!($name, NewDefault!(Parameter, reader => reader!($gullet, $inner, $extra, $inner_state, $body),
-      name => $name.to_string(),  $($key=>$value),*)));
-  ($name:literal, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block, $($key:ident => $value:expr),*) => (
+      name => stringify!($name).to_string(),  $($key=>$value),*)));
+  ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block, $($key:ident => $value:expr),*) => (
     DefParameterTypeWO!($name, NewDefault!(Parameter, reader => reader!($gullet, $inner, $extra, $inner_state, $body),
       name => $name.to_string(),  $($key=>$value),*), $state_arg));
 }

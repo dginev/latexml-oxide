@@ -108,7 +108,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\pdfinfo{}", "");
 
   // Ugh, what a mess of ugly syntax....
-  DefParameterType!("OpenActionSpecification", reader => reader!(gullet, args, extra, state, {
+  DefParameterType!(OpenActionSpecification, reader => reader!(gullet, args, extra, state, {
   unimplemented!(); ()
   //   my ($gullet) = @_;
   //   if (my $key = $gullet->readKeyword('openaction')) {
