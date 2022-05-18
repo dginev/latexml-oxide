@@ -102,25 +102,13 @@ lazy_static! {
   static ref GLUE_RE: Regex = Regex::new(GLUE_RE_STR).unwrap();
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Glue {
   pub skip: i32,
   pub plus: Option<i32>,
   pub pfill: Option<FillCode>,
   pub minus: Option<i32>,
   pub mfill: Option<FillCode>,
-}
-
-impl Default for Glue {
-  fn default() -> Self {
-    Glue {
-      skip: 0,
-      plus: None,
-      pfill: None,
-      minus: None,
-      mfill: None,
-    }
-  }
 }
 
 impl NumericOps for Glue {
@@ -212,9 +200,9 @@ pub fn new_setup(
   // See comment in Dimension for why kround rather than int
   (
     kround(skip),
-    plus.map(|p| kround(p)),
+    plus.map(kround),
     pfill,
-    minus.map(|m| kround(m)),
+    minus.map(kround),
     mfill,
   )
 }

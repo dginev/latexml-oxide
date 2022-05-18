@@ -17,6 +17,7 @@ use rtx_core::common::muglue::MuGlue;
 use rtx_core::common::number::Number;
 use rtx_core::common::store::Stored;
 use rtx_core::definition::register::*;
+use rtx_core::definition::argument::ArgWrap;
 use rtx_core::definition::{Reversion, SizingClosure};
 use rtx_core::keyvals::KeyVals;
 use rtx_core::list::List;
@@ -157,6 +158,15 @@ impl IntoTokensResult<Result<Tokens>> for () {
   fn into_tokens_result(self) -> Result<Tokens> { Ok(Tokens!()) }
 }
 
+impl IntoTokensResult<Result<Tokens>> for ArgWrap {
+  // TODO: maybe this should be .revert() ?
+  fn into_tokens_result(self) -> Result<Tokens> { Ok(self.owned_tokens().unwrap_or_default()) }
+}
+impl IntoTokensResult<Result<Tokens>> for Result<ArgWrap> {
+  // TODO: maybe this should be .revert() ?
+  fn into_tokens_result(self) -> Result<Tokens> { self.map(|w| w.owned_tokens().unwrap_or_default()) }
+}
+
 pub trait IntoResultOptTokens<T>: Sized {
   fn into_result_opt_tokens(self) -> Result<Option<Tokens>>;
 }
@@ -184,6 +194,41 @@ impl IntoResultOptTokens<Result<Option<Tokens>>> for Result<Option<Tokens>> {
 impl IntoResultOptTokens<Result<Option<Tokens>>> for () {
   fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { Ok(None) }
 }
+
+
+pub trait IntoResultArgWrap<T>: Sized {
+  fn into_result_argwrap(self) -> Result<ArgWrap>;
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for Token {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Tokens(Tokens!(self))) }
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for Vec<Token> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Tokens(Tokens::new(self))) }
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for Tokens {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Tokens(self)) }
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for Result<Tokens> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { self.map(ArgWrap::Tokens) }
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for Result<Option<Tokens>> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { self.map(ArgWrap::OptionTokens) }
+}
+
+
+impl IntoResultArgWrap<Result<ArgWrap>> for Result<ArgWrap> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { self }
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for () {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionTokens(None)) }
+}
+
 
 pub trait IntoBoolResult<T>: Sized {
   /// Performs the conversion, used for DefConditional return values etc

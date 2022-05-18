@@ -40,7 +40,7 @@ LoadDefinitions!(outer_state, {
   // For fonts not allowed in math!!!
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[stomach, args, inner_state] {
     if inner_state.lookup_bool("IN_MATH") {
-      unpack_to_string!(args => c);
+      let c = args[0].to_string();
       let message = s!("Command {:?} invalid in math mode", c);
       Warn!("unexpected", c, stomach, inner_state, message);
     }

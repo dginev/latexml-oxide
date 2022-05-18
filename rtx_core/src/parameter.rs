@@ -9,6 +9,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
+use crate::definition::argument::ArgWrap;
 use crate::gullet::Gullet;
 use crate::mouth::Mouth;
 use crate::state::State;
@@ -18,8 +19,8 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{Digested, Locator};
 
-pub type ReaderFn = dyn Fn(&mut Gullet, Vec<Option<Parameters>>, &[ParameterExtra], &mut State) -> Result<Option<Tokens>>;
-pub type ReaderPredigestFn = dyn Fn(&mut Stomach, Tokens, &mut State) -> Result<Option<Digested>>;
+pub type ReaderFn = dyn Fn(&mut Gullet, Vec<Option<Parameters>>, &[ParameterExtra], &mut State) -> Result<ArgWrap>;
+pub type ReaderPredigestFn = dyn Fn(&mut Stomach, ArgWrap, &mut State) -> Result<Option<Digested>>;
 pub type ReaderPredigestClosure = Arc<ReaderPredigestFn>;
 pub type ReaderClosure = Arc<ReaderFn>;
 
@@ -117,7 +118,7 @@ impl Default for Parameter {
           None,
           "Please define a real reader, this is a mock fallback!"
         );
-        Ok(None)
+        Ok(ArgWrap::OptionTokens(None))
       }),
       reader_predigest: None,
       reversion: None,
@@ -287,7 +288,7 @@ impl Parameter {
     Ok(())
   }
 
-  pub fn read(&self, gullet: &mut Gullet, fordefn: &dyn Definition, state: &mut State) -> Result<Option<Tokens>> {
+  pub fn read(&self, gullet: &mut Gullet, fordefn: &dyn Definition, state: &mut State) -> Result<ArgWrap> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
@@ -295,19 +296,23 @@ impl Parameter {
     self.setup_catcodes(state);
 
     let closure = &self.reader;
-    let mut value_opt: Option<Tokens> = closure(gullet, vec![], &self.extra, state)?;
-    if let Some(mut value) = value_opt {
-      if let Some(ref semi_chars) = self.semiverbatim {
-        value = value.neutralize(semi_chars, state);
+    let mut value_arg: ArgWrap = closure(gullet, vec![], &self.extra, state)?;
+    if value_arg.is_tokens() {
+      if let Some(mut value) = value_arg.owned_tokens() {
+        if let Some(ref semi_chars) = self.semiverbatim {
+          value = value.neutralize(semi_chars, state);
+        }
+        if self.pack_parameters {
+          value = value.pack_parameters();
+        }
+        value_arg = ArgWrap::Tokens(value);
+      } else {
+        value_arg = ArgWrap::default();
       }
-      if self.pack_parameters {
-        value = value.pack_parameters();
-      }
-      value_opt = Some(value);
     }
     self.revert_catcodes(state)?;
 
-    if !self.optional && !self.novalue && (value_opt.is_none() && self.reader_predigest.is_none()) {
+    if !self.optional && !self.novalue && (value_arg.is_none() && self.reader_predigest.is_none()) {
       // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens> in the long-run
       //        Until *may* have a value, but it also may *not*, both OK. So... except it from the error message here
       if !self.name.starts_with("Until") {
@@ -318,40 +323,44 @@ impl Parameter {
           state,
           s!("Missing argument {} for {}", self.stringify(), fordefn.stringify())
         );
-        value_opt = Some(Tokens!(T_OTHER!("missing")));
+        value_arg = ArgWrap::Tokens(Tokens!(T_OTHER!("missing")));
       }
     }
-    Ok(value_opt)
+    Ok(value_arg)
   }
 
   pub fn digest(
     &self,
     stomach: &mut Stomach,
-    mut value_opt: Option<Tokens>,
+    mut value_arg: ArgWrap,
     _fordefn: Option<&Constructor>,
     state: &mut State,
   ) -> Result<Option<Digested>> {
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
       self.setup_catcodes(state);
-      if let Some(value) = value_opt {
-        let neutralized = stomach.reading_from_mouth(Mouth::default(), state, move |stomach: &mut Stomach, state: &mut State| {
-          let gullet = stomach.get_gullet_mut();
-          gullet.unread(value);
-          let mut tokens = Vec::new();
-          loop {
-            match gullet.read_x_token(true, true, state) {
-              Ok(token_opt) => match token_opt {
-                Some(token) => tokens.push(token),
-                None => break,
-              },
-              Err(x) => return Err(x),
+      if value_arg.is_tokens() {
+        if let Some(mut value) = value_arg.owned_tokens() {
+          let neutralized = stomach.reading_from_mouth(Mouth::default(), state, move |stomach: &mut Stomach, state: &mut State| {
+            let gullet = stomach.get_gullet_mut();
+            gullet.unread(value);
+            let mut tokens = Vec::new();
+            loop {
+              match gullet.read_x_token(true, true, state) {
+                Ok(token_opt) => match token_opt {
+                  Some(token) => tokens.push(token),
+                  None => break,
+                },
+                Err(x) => return Err(x),
+              }
             }
-          }
-          let evec = Vec::new();
-          Ok(Tokens::new(tokens).neutralize(&evec, state).unlist())
-        })?;
-        value_opt = Some(Tokens::new(neutralized));
+            let evec = Vec::new();
+            Ok(Tokens::new(tokens).neutralize(&evec, state).unlist())
+          })?;
+          value_arg = ArgWrap::Tokens(Tokens::new(neutralized));
+        } else {
+          value_arg = ArgWrap::default();
+        }
       }
     }
 
@@ -361,15 +370,9 @@ impl Parameter {
     }
 
     let digested_value = if let Some(ref closure) = &self.reader_predigest {
-      if let Some(value_to_digest) = value_opt {
-        closure(stomach, value_to_digest, state)?
-      } else {
-        None
-      }
-    } else if let Some(value_to_digest) = value_opt {
-      Some(value_to_digest.be_digested(stomach, state)?)
+      closure(stomach, value_arg, state)?
     } else {
-      None
+      Some(value_arg.be_digested(stomach, state)?)
     };
     for post in self.after_digest.iter() {
       // Done for effect only.
@@ -442,9 +445,8 @@ impl Parameters {
     Ok(tokens)
   }
 
-  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &dyn Definition, state: &mut State) -> Result<Vec<Option<Tokens>>> {
+  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &dyn Definition, state: &mut State) -> Result<Vec<ArgWrap>> {
     let mut args = Vec::new();
-    gullet.setup_scan();
     for parameter in &self.0 {
       let values = parameter.read(gullet, fordefn, state)?;
       if parameter.reader_predigest.is_some() {
@@ -475,7 +477,7 @@ impl Parameters {
     Ok(args)
   }
 
-  pub fn reparse_argument(&self, _gullet: &mut Gullet, _value: Option<Tokens>, _state: &mut State) -> Option<Tokens> { unimplemented!() }
+  pub fn reparse_argument(&self, _gullet: &mut Gullet, _value: ArgWrap, _state: &mut State) -> ArgWrap { unimplemented!() }
 }
 
 impl fmt::Display for Parameters {

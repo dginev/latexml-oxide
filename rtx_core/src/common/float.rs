@@ -1,10 +1,15 @@
-use crate::common::numeric_ops::NumericOps;
-use crate::definition::register::{RegisterType};
-use crate::mouth;
-use crate::tokens::Tokens;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::fmt;
+use std::borrow::Cow;
+
+use crate::common::numeric_ops::NumericOps;
+use crate::common::locator::Locator;
+use crate::definition::register::{RegisterType};
+use crate::mouth;
+use crate::common::object::Object;
+use crate::tokens::Tokens;
+
 
 lazy_static! {
   static ref TRAILING_ZEROS: Regex = Regex::new(r"0+$").unwrap();
@@ -20,6 +25,11 @@ impl Default for Float {
   fn default() -> Self { Float(0.0) }
 }
 
+impl Object for Float {
+  fn get_locator(&self) -> Option<Cow<Locator>> {
+    None
+  }
+}
 impl NumericOps for Float {
   fn new(number: i32) -> Self { Float(number as f32) }
   fn new_f32(number: f32) -> Self { Float(number) }

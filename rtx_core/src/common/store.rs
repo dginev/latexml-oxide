@@ -12,6 +12,7 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
+use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
@@ -175,10 +176,7 @@ impl PartialEq for Stored {
   fn eq(&self, other: &Stored) -> bool {
     use crate::Stored::*;
     match *self {
-      Stored::None => match other {
-        Stored::None => true,
-        _ => false
-      },
+      Stored::None => matches!(other, Stored::None),
       String(ref s) => {
         if let String(s2) = other {
           s == s2
@@ -447,7 +445,7 @@ impl Stored {
   }
   /// Dynamic dispatch for Definition's `read_arguments`,
   /// to circumvent the limitations of using trait objects with `Arc<Definition>`
-  pub fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Option<Tokens>>> {
+  pub fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<ArgWrap>> {
     use crate::definition::Definition;
     match self {
       Stored::Conditional(ref entry) => entry.read_arguments(gullet, state),

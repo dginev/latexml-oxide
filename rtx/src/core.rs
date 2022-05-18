@@ -121,7 +121,7 @@ impl DigestionAPI for Core {
 
     // if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
 
-    let name_copy = name.clone();
+    let name_copy = name;
     self.state.install_definition(
       Stored::Expandable(Arc::new(Expandable {
         cs: T_CS!("\\jobname"),

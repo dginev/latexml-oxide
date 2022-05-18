@@ -13,8 +13,7 @@ use crate::common::number::Number;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::common::numeric_ops::NumericOps;
-use crate::definition::register::{RegisterCell, RegisterValue};
-use crate::definition::Definition;
+use crate::definition::register::{RegisterCell};
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::tokens::Tokens;
@@ -669,7 +668,7 @@ impl<'a> Token {
     self
   }
 
-  pub fn substitute_parameters(self, args: &[Token]) -> Self {
+  pub fn substitute_parameters(self, args: &[&Token]) -> Self {
     if self.code == Catcode::ARG {
       args[self.text.parse::<usize>().unwrap() - 1].clone()
     } else {
@@ -750,16 +749,6 @@ impl<'a> Token {
   pub fn to_glue(&self) -> Glue { Glue::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
 
   pub fn to_mu_glue(&self) -> MuGlue { MuGlue::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
-
-  // TODO: This method may cause more issues than it solves... reconsider?
-  // I have already accidentally done token.value_of(Vec::new(), state) and gotten a "0" back
-  // when I really meant "token.to_number().value_of()". The token in question was a simple T_OTHER!("3").
-  pub fn value_of(&self, args: Vec<Token>, state: &mut State) -> Option<RegisterValue> {
-    match self.to_register(state) {
-      None => None,
-      Some(register) => (*register).value_of(args, state),
-    }
-  }
 
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> { stomach.digest(Tokens::new(vec![self]), state) }
 }

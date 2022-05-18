@@ -5,7 +5,7 @@ LoadDefinitions!(outer_state, {
   // Define \name and \begin{name} to start an ignored section
   // until \endname or \end{name}, respectively
   let define_excluded: PrimitiveClosure = Arc::new(primitiveproc!(stomach, args, state, {
-    unpack_to_string!(args => name);
+    let name = args[0].to_string();
     let begin_mark = s!("\\begin{{{}}}", name);
     let end_mark = s!("\\end{{{}}}", name);
     DefConstructor!(T_CS!(begin_mark), None, None,
@@ -28,14 +28,14 @@ LoadDefinitions!(outer_state, {
   // twice instead, via a macro
   let define_included: PrimitiveClosure = Arc::new(primitiveproc!(stomach, args, inner_state, {
     args.reverse(); // we'll be using .pop() from the front
-    let name = args.pop().unwrap().unwrap().to_string();
+    let name = args.pop().unwrap().to_string();
     let mut before_tokens = match args.pop() {
-      Some(arg) => arg.unwrap().unlist(),
+      Some(arg) => arg.unlist(),
       None => Vec::new(),
     };
     before_tokens.push(T_CS!("\\ignorespaces"));
     let mut after_tokens = match args.pop() {
-      Some(arg) => arg.unwrap().unlist(),
+      Some(arg) => arg.unlist(),
       None => Vec::new(),
     };
     after_tokens.push(T_CS!("\\ignorespaces"));
@@ -45,16 +45,16 @@ LoadDefinitions!(outer_state, {
     None,
     sub[gullet, _args, macro_state] {
       gullet.read_raw_line(macro_state); // IGNORE 1st line (after the \begin{$name} !!!
-      Ok(before_tokens.clone().into())
+      before_tokens.clone()
     });
     DefMacro!(T_CS!(s!("\\end{{{}}}", name)), None, Tokens::new(after_tokens));
   }));
 
   let mut mock_stomach = Stomach::default();
-  define_excluded(&mut mock_stomach, vec![Some(Tokenize!("comment", None))], outer_state)?;
+  define_excluded(&mut mock_stomach, vec![ArgWrap::Tokens(Tokenize!("comment", None))], outer_state)?;
 
-  DefPrimitive!("\\includecomment{}", Arc::clone(&define_included));
-  DefPrimitive!("\\excludecomment{}", define_excluded);
-  DefPrimitive!("\\specialcomment{}{}{}", define_included);
+  DefPrimitive!("\\includecomment{}", Some(Arc::clone(&define_included)));
+  DefPrimitive!("\\excludecomment{}", Some(define_excluded));
+  DefPrimitive!("\\specialcomment{}{}{}", Some(define_included));
   DefPrimitive!("\\processcomment{}{}{}{}", None);
 });

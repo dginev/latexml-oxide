@@ -1,27 +1,32 @@
+use std::fmt;
+use std::borrow::Cow;
+use regex::Regex;
+use lazy_static::lazy_static;
+
 use crate::common::numeric_ops::{kround,fixpoint,UNITY,NumericOps,round_to};
+use crate::common::object::Object;
+use crate::common::locator::Locator;
 use crate::common::error::*;
 use crate::state::State;
 use crate::definition::register::RegisterType;
-use std::fmt;
-use regex::Regex;
-use lazy_static::lazy_static;
 
 lazy_static! {
   static ref SPEC_RE: Regex = Regex::new(r"^(-?\d*\.?\d*)([a-zA-Z][a-zA-Z])$").unwrap();
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq)]
 pub struct Dimension(pub i32);
 
+impl Object for Dimension {
+  fn get_locator(&self) -> Option<Cow<Locator>> {
+    None
+  }
+}
 impl NumericOps for Dimension {
   fn new(number: i32) -> Self { Dimension(number) }
   fn new_f32(number: f32) -> Self { Dimension(kround(number)) }
   fn value_of(self) -> i32 { self.0 }
   fn register_type(&self) -> RegisterType { RegisterType::Dimension }
-}
-
-impl Default for Dimension {
-  fn default() -> Self { Dimension(0) }
 }
 
 impl fmt::Display for Dimension {

@@ -158,19 +158,13 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
   }
 }
 
-pub fn do_def(globally: bool, stomach: &mut Stomach, mut args: Vec<Option<Tokens>>, state: &mut State) -> Result<()> {
+pub fn do_def(globally: bool, stomach: &mut Stomach, mut args: Vec<ArgWrap>, state: &mut State) -> Result<()> {
   BindState!(stomach, state);
   let cs_opt = args.remove(0);
   let params_opt = args.remove(0);
-  let body = args.remove(0).unwrap();
-  let cs: Token = match cs_opt {
-    Some(ts) => ts.into(),
-    None => {
-      Error!("expected", "Token", stomach, state, "Expected definition token");
-      return Ok(());
-    },
-  };
-  let params = match params_opt {
+  let body = args.remove(0).owned_tokens().unwrap();
+  let cs: Token = cs_opt.expected_token()?;
+  let params = match params_opt.owned_tokens() {
     Some(ts) => ts,
     None => {
       Error!("misdefined", cs, stomach, state, "Expected definition parameter list");
@@ -273,7 +267,7 @@ pub fn read_box_contents(gullet: &mut Gullet, everybox_opt: Option<Tokens>, stat
 
 /// Reading a Box's content is crucially dependent on invoking the "{" token and obtaining a digested result
 /// Hence it is *always* needed to pair `read_box_contents` with its stomach-level counterpart, `predigest_box_contents`
-pub fn predigest_box_contents(stomach: &mut Stomach, _tokens: Tokens, state: &mut State) -> Result<Option<Digested>> {
+pub fn predigest_box_contents(stomach: &mut Stomach, _tokens: ArgWrap, state: &mut State) -> Result<Option<Digested>> {
   let mut contents = stomach.invoke_token(&T_BEGIN!(), state)?;
   if contents.is_empty() {
     Ok(None)
@@ -385,7 +379,7 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
       // Insertion came up empty?
       document.remove_node(blocknode); // then remove the new block entirely
     } else if rows.len() == 1 &&crows.len() == 1 &&
-    state.model.get_node_qname(&rows.first().unwrap()) == "ltx:p" &&
+    state.model.get_node_qname(rows.first().unwrap()) == "ltx:p" &&
     document.can_contain(&blocknode.get_parent().unwrap(),
       &state.model.get_node_qname(&crows[0]), state)
     // TODO: && (!hasattr || blockattr.keys().any(...

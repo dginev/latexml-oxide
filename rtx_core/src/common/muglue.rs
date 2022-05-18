@@ -7,24 +7,13 @@ use crate::{Locator, Object};
 use std::borrow::Cow;
 use std::fmt;
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq)]
 pub struct MuGlue {
   pub skip: i32,
   pub plus: Option<i32>,
   pub pfill: Option<FillCode>,
   pub minus: Option<i32>,
   pub mfill: Option<FillCode>,
-}
-impl Default for MuGlue {
-  fn default() -> Self {
-    MuGlue {
-      skip: 0,
-      plus: None,
-      pfill: None,
-      minus: None,
-      mfill: None,
-    }
-  }
 }
 
 impl fmt::Display for MuGlue {

@@ -49,14 +49,14 @@ macro_rules! transfer_opt_default {
 #[macro_export]
 macro_rules! noprimitive {
   () => {
-    |stomach: &mut Stomach, args: Vec<Option<Tokens>>, state: &mut State| Ok(Vec::new())
+    |stomach: &mut Stomach, args: Vec<ArgWrap>, state: &mut State| Ok(Vec::new())
   };
 }
 
 #[macro_export]
 macro_rules! primitivesub {
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
-    move |$stomach: &mut Stomach, mut $args: Vec<Option<Tokens>>, $inner_state: &mut State| {
+    move |$stomach: &mut Stomach, mut $args: Vec<ArgWrap>, $inner_state: &mut State| {
       BindInnerState!($stomach, $inner_state);
       let macro_out = $body;
       end_state_frame!();
@@ -67,7 +67,7 @@ macro_rules! primitivesub {
 #[macro_export]
 macro_rules! primitiveproc {
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => (
-    |$stomach:&mut Stomach, mut $args : Vec<Option<Tokens>>, $inner_state:&mut State| {
+    |$stomach:&mut Stomach, mut $args : Vec<ArgWrap>, $inner_state:&mut State| {
       BindInnerState!($stomach, $inner_state);
       $body
       end_state_frame!();
@@ -208,8 +208,8 @@ macro_rules! after_digest_single {
 macro_rules! reader {
   ($gullet:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
     Arc::new(
-      |$gullet: &mut Gullet, $inner: Vec<Option<Parameters>>, $extra: &[ParameterExtra], $state: &mut State| -> Result<Option<Tokens>> {
-        WithInnerState!($body, $state).into_result_opt_tokens()
+      |$gullet: &mut Gullet, $inner: Vec<Option<Parameters>>, $extra: &[ParameterExtra], $state: &mut State| -> Result<ArgWrap> {
+        WithInnerState!($body, $state).into_result_argwrap()
       },
     )
   };
@@ -219,7 +219,7 @@ macro_rules! reader {
 macro_rules! reader_predigest {
   ($stomach:ident, $arg:ident, $state:ident, $body:block) => {
     Some(Arc::new(
-      |$stomach: &mut Stomach, $arg: Tokens, $state: &mut State| -> Result<Option<Digested>> {
+      |$stomach: &mut Stomach, $arg: ArgWrap, $state: &mut State| -> Result<Option<Digested>> {
         WithInnerState!($body, $stomach, $state).into_digested_option_result()
       },
     ))
@@ -229,7 +229,7 @@ macro_rules! reader_predigest {
 #[macro_export]
 macro_rules! getter {
   ($args: ident, $state:ident, $body:block) => {
-    Some(Arc::new(move |$args: Vec<Token>, $state: &State| -> Option<RegisterValue> {
+    Some(Arc::new(move |mut $args: Vec<ArgWrap>, $state: &State| -> Option<RegisterValue> {
       WithInnerState!($body, $state).into_register_value_option()
     }))
   };
@@ -238,7 +238,7 @@ macro_rules! getter {
 #[macro_export]
 macro_rules! setter {
   ($value:ident, $args: ident, $state:ident, $body:block) => {
-    Some(Arc::new(move |$value: RegisterValue, $args: Vec<Tokens>, $state: &mut State| {
+    Some(Arc::new(move |$value: RegisterValue, mut $args: Vec<ArgWrap>, $state: &mut State| {
       WithInnerState!($body, $state)
     }))
   };
@@ -248,7 +248,7 @@ macro_rules! setter {
 macro_rules! undigested {
   () => {
     Some(Arc::new(
-      |stomach: &mut Stomach, arg: Tokens, state: &mut State| -> Result<Option<Digested>> { Ok(Some(Digested::Postponed(Arc::new(arg)))) },
+      |stomach: &mut Stomach, arg: ArgWrap, state: &mut State| -> Result<Option<Digested>> { Ok(Some(Digested::Postponed(Arc::new(arg.owned_tokens().unwrap_or_default())))) },
     ))
   };
 }
@@ -361,11 +361,7 @@ macro_rules! unpack_to_string {
 #[macro_export]
 macro_rules! unpack_to_token {
   ($args:ident => $var:ident) => (
-    let tmp_tks = $args.remove(0);
-    if tmp_tks.is_none() || tmp_tks.as_ref().unwrap().is_empty() {
-      panic!("Hard assumption for Token argument failed -- arg was empty in unpack_to_token!()");
-    }
-    let $var : Token = tmp_tks.unwrap().into();
+    let $var : Token = $args.remove(0).expected_token()?;
   );
   ($args:ident => $var:ident,$($tail:ident),*) => (
     unpack_to_token!($args => $var);
@@ -389,9 +385,9 @@ macro_rules! count_unpack_to_string {
 
 #[macro_export]
 macro_rules! unpack {
-  ($args:ident => $var:ident) => (let $var = $args.remove(0).unwrap_or_default(););
+  ($args:ident => $var:ident) => (let $var = $args.remove(0).owned_tokens().unwrap(););
   ($args:ident => $var:ident,$($tail:ident),*) => {
-    let $var = $args.remove(0).unwrap_or_default();
+    let $var = $args.remove(0).owned_tokens().unwrap();
     unpack!($args => $($tail),*)
   }
 }

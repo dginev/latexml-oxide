@@ -12,7 +12,6 @@ use crate::common::store::Stored;
 use crate::definition::register::RegisterValue;
 use crate::document::Document;
 use crate::state::State;
-use crate::token::Token;
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
 

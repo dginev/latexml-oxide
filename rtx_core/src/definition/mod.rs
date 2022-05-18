@@ -5,6 +5,7 @@ pub mod constructor;
 pub mod math_primitive;
 pub mod primitive;
 pub mod register;
+pub mod argument;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -16,6 +17,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 
 use self::register::{RegisterType, RegisterValue};
+use self::argument::ArgWrap;
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::mouth;
@@ -27,9 +29,9 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-pub type ExpansionClosure = Arc<dyn Fn(&mut Gullet, Vec<Option<Tokens>>, &mut State) -> Result<Tokens>>;
-pub type ConditionalClosure = Arc<dyn Fn(&mut Gullet, Vec<Option<Tokens>>, &mut State) -> Result<bool>>;
-pub type PrimitiveFn = dyn Fn(&mut Stomach, Vec<Option<Tokens>>, &mut State) -> Result<Vec<Digested>>;
+pub type ExpansionClosure = Arc<dyn Fn(&mut Gullet, Vec<ArgWrap>, &mut State) -> Result<Tokens>>;
+pub type ConditionalClosure = Arc<dyn Fn(&mut Gullet, Vec<ArgWrap>, &mut State) -> Result<bool>>;
+pub type PrimitiveFn = dyn Fn(&mut Stomach, Vec<ArgWrap>, &mut State) -> Result<Vec<Digested>>;
 pub type PrimitiveClosure = Arc<PrimitiveFn>;
 pub type BeforeDigestClosure = Arc<dyn Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
 pub type PropertiesClosure = Arc<dyn Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
@@ -37,7 +39,6 @@ pub type DigestionClosure = Arc<dyn Fn(&mut Stomach, &mut Whatsit, &mut State) -
 pub type ReplacementClosure = Arc<dyn Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
 pub type ConstructionClosure = Arc<dyn Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
 pub type DigestedReversionClosure = Arc<dyn Fn(&Whatsit, &Vec<Option<Digested>>, &mut State) -> Result<Tokens>>;
-
 pub type SizingClosure = Arc<dyn Fn(&Whatsit) -> (i32, i32, i32)>;
 
 #[derive(Clone)]
@@ -60,6 +61,7 @@ impl Default for ExpansionBody {
 }
 
 impl PartialEq for ExpansionBody {
+  #[allow(clippy::vtable_address_comparisons)]
   fn eq(&self, other: &ExpansionBody) -> bool {
     match self {
       ExpansionBody::Closure(self_closure) =>
@@ -115,6 +117,15 @@ impl From<String> for ExpansionBody {
   fn from(s: String) -> ExpansionBody { s.as_str().into() }
 }
 
+impl From<ArgWrap> for ExpansionBody {
+  fn from(t: ArgWrap) -> ExpansionBody { ExpansionBody::Tokens(t.owned_tokens().unwrap_or_default()) }
+}
+impl From<ArgWrap> for Option<ExpansionBody> {
+  fn from(t: ArgWrap) -> Option<ExpansionBody> {
+    t.owned_tokens().map(ExpansionBody::Tokens)
+  }
+}
+
 pub trait Definition: Object {
   fn invoke(&self, gullet: &mut Gullet, once_only: bool, state: &mut State) -> Result<Tokens>;
   fn invoke_primitive(&self, gullet: &mut Stomach, caller: Arc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>>;
@@ -135,7 +146,7 @@ pub trait Definition: Object {
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { false }
 
-  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<Option<Tokens>>>
+  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<ArgWrap>>
   where Self: Sized {
     match self.get_parameters() {
       None => Ok(Vec::new()),
@@ -203,7 +214,7 @@ pub trait Definition: Object {
     Ok(after_body_digested)
   }
 
-  fn value_of(&self, args: Vec<Token>, state: &State) -> Option<RegisterValue> { unimplemented!() }
+  fn value_of(&self, args: Vec<ArgWrap>, state: &State) -> Option<RegisterValue> { unimplemented!() }
   fn register_type(&self) -> Option<RegisterType> { None }
   fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
   fn get_expansion(&self) -> Option<&ExpansionBody> { None }

@@ -233,14 +233,14 @@ LoadDefinitions!(state, {
   def_primitive(
     T_SUPER!(),
     None,
-    Arc::new(|stomach: &mut Stomach, _args: Vec<Option<Tokens>>, state: &mut State| script_handler(stomach, Catcode::SUPER, state)),
+    Some(Arc::new(|stomach: &mut Stomach, _args: Vec<ArgWrap>, state: &mut State| script_handler(stomach, Catcode::SUPER, state))),
     PrimitiveOptions::default(),
     state,
   );
   def_primitive(
     T_SUB!(),
     None,
-    Arc::new(|stomach: &mut Stomach, _args: Vec<Option<Tokens>>, state: &mut State| script_handler(stomach, Catcode::SUB, state)),
+    Some(Arc::new(|stomach: &mut Stomach, _args: Vec<ArgWrap>, state: &mut State| script_handler(stomach, Catcode::SUB, state))),
     PrimitiveOptions::default(),
     state,
   );
