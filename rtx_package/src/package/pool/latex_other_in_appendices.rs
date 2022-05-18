@@ -69,11 +69,11 @@ LoadDefinitions!(state, {
   DefMacro!(r"\@gobble{}", "");
   DefMacro!(r"\@gobbletwo{}{}", "");
   DefMacro!(r"\@gobblefour{}{}{}{}", "");
-  DefMacro!(r"\@firstofone{}",       sub[gullet, args, state] { Ok(args.remove(0).unwrap()) });
+  DefMacro!(r"\@firstofone{}",       sub[gullet, args, state] { Ok(args.remove(0)) });
   Let!("\\@iden", "\\@firstofone");
-  DefMacro!("\\@firstoftwo{}{}",     sub[gullet, args, state] { Ok(args.remove(0).unwrap()) });
-  DefMacro!("\\@secondoftwo{}{}",    sub[gullet, args, state] { Ok(args.remove(1).unwrap()) });
-  DefMacro!("\\@thirdofthree{}{}{}", sub[gullet, args, state] { Ok(args.remove(2).unwrap()) });
+  DefMacro!("\\@firstoftwo{}{}",     sub[gullet, args, state] { Ok(args.remove(0)) });
+  DefMacro!("\\@secondoftwo{}{}",    sub[gullet, args, state] { Ok(args.remove(1)) });
+  DefMacro!("\\@thirdofthree{}{}{}", sub[gullet, args, state] { Ok(args.remove(2)) });
   // DefMacro('\@expandtwoargs{}{}{}', sub {
   //     ($_[1]->unlist, T_BEGIN, Expand($_[2])->unlist, T_END, T_BEGIN, Expand($_[3])->unlist, T_END); });
   DefMacro!("\\@makeother{}", sub[gullet,args,state] {

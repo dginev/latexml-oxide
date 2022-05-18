@@ -72,18 +72,17 @@ LoadDefinitions!(outer_state, {
   // define it here (only approxmiately), since it's already useful.
   Let!("\\protect", "\\relax");
 
-  DefMacro!("\\romannumeral Number", sub[gullet, args, state] { roman!(args[0].as_ref().unwrap().to_number().value_of()) });
+  DefMacro!("\\romannumeral Number", sub[gullet, args, state] { roman!(args.remove(0).to_number().value_of()) });
 
   // # 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
   // # suggests all characters except spaces are returned in category code Other, i.e. Explode()
   DefMacro!("\\string Token", sub[gullet, args, state] {
-    unpack!(args => token);
-    let token : Token = token.into();
+    let token = args.remove(0).expected_token()?;
     let mut s = token.to_string();
     if s.starts_with('/') {
       s = escapechar(state) + &s;
     }
-    Ok(Explode!(s).into())
+    Explode!(s)
   });
 
   DefMacro!(T_CS!("\\jobname"), None, Tokens!()); // Set to the filename by initialization
@@ -269,7 +268,7 @@ LoadDefinitions!(outer_state, {
   // stomach, but we may require some special-case treatment in other pieces of code...
   DefMacro!("\\input", "\\ltx@input");
   DefPrimitive!("\\ltx@input TeXFileName", sub[stomach,args,state] {
-    input(&args[0].as_ref().unwrap().to_string(), InputOptions::default(), stomach, state)?;
+    input(&args[0].to_string(), InputOptions::default(), stomach, state)?;
   });
 
   // Note that TeX doesn't actually close the mouth;
@@ -297,7 +296,7 @@ LoadDefinitions!(outer_state, {
       //     if (!$type) {
       //       my $cs = ToString($defn->getCS);
       //       Error('unexpected', "\\the$cs", $gullet, "You can't use $cs after \\the"); return (); }
-      let value = defn.value_of(args, state)
+      let value = defn.value_of(args.into_iter().map(ArgWrap::Token).collect(), state)
         .unwrap_or_else(|| RegisterValue::Tokens(Tokens!()));
       // In all cases, these should be OTHER, except for space. (!?)
       let mut tokens : Vec<Token> = match value {

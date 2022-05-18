@@ -26,6 +26,7 @@ pub use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
 pub use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 pub use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
 pub use rtx_core::definition::register::{Register, RegisterType, RegisterValue};
+pub use rtx_core::definition::argument::ArgWrap;
 pub use rtx_core::common::numeric_ops::NumericOps;
 pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::{

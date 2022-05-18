@@ -84,7 +84,7 @@ LoadDefinitions!(state, {
   // ======================================================================
   // Define parsers for standard parameter types.
   DefParameterType!(Plain, sub[gullet, inner, _extra, state] {
-      let mut value = Some(gullet.read_arg(state)?);
+      let mut value = ArgWrap::Tokens(gullet.read_arg(state)?);
       for inner_p in inner.into_iter().flatten() {
         value = inner_p.reparse_argument(gullet, value, state);
       }
@@ -111,7 +111,7 @@ LoadDefinitions!(state, {
   );
 
   DefParameterType!(DefPlain, sub[gullet, inner, _extra, state] {
-      let mut value = Some(gullet.read_arg(state)?);
+      let mut value = ArgWrap::Tokens(gullet.read_arg(state)?);
       for inner_p in inner.into_iter().flatten() {
         value = inner_p.reparse_argument(gullet, value, state);
       }
@@ -145,6 +145,7 @@ LoadDefinitions!(state, {
           value = Some(tks.clone());
         }
       }
+      let mut value = ArgWrap::OptionTokens(value);
       if !inner.is_empty() {
         for inner_p in inner.into_iter().flatten() {
           value = inner_p.reparse_argument(gullet, value, state);
@@ -583,12 +584,8 @@ LoadDefinitions!(state, {
     if let Some(defn) = defn_opt {
         if defn.is_register() && !defn.is_readonly() {
           let mut invoked = vec![token_opt.unwrap()];
-          for arg_opt in defn.read_arguments(gullet, state)? {
-            if let Some(arg) = arg_opt {
-              invoked.append(&mut arg.unlist());
-            } else {
-              unimplemented!(); // ???
-            }
+          for arg in defn.read_arguments(gullet, state)? {
+            invoked.append(&mut arg.unlist());
           }
           // TODO: What is this datatype ? How does it fit the rtx typed interfaces for parameter types?
           // An extension seems required, also due to the Register parameter type right under.
@@ -630,14 +627,10 @@ LoadDefinitions!(state, {
     match defn {
       Some(register) => {
         let mut invoked = vec![token.unwrap()];
-        for arg_opt in register.read_arguments(gullet, state)? {
-          if let Some(arg) = arg_opt {
-            invoked.append(&mut arg.unlist());
-          } else {
-            unimplemented!();
-          }
+        for arg in register.read_arguments(gullet, state)? {
+          invoked.append(&mut arg.unlist());
         }
-        return Ok(Some(Tokens::new(invoked)));
+        return Ok(ArgWrap::Tokens(Tokens::new(invoked)));
       },
       None => {
         let message = s!("A <register> was supposed to be here. Got {:?}", token);
@@ -687,7 +680,7 @@ LoadDefinitions!(state, {
   });
 
   DefPrimitive!("\\ltx@loadpool {}", sub[stomach,args,state] {
-    unpack_to_string!(args=>name);
+    let name = args[0].to_string();
     LoadPool!(&name);
   });
 

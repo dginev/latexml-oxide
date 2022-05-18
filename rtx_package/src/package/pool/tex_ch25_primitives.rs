@@ -64,7 +64,7 @@ LoadDefinitions!(state, {
     after_digest => sub[stomach, whatsit, state] {
       whatsit.set_property("y",
         // can the ergonomics of this Dimension cast be improved?
-        Dimension(-1 * whatsit.get_arg(1).unwrap().value_of())
+        Dimension(-whatsit.get_arg(1).unwrap().value_of())
       );
     }
   );

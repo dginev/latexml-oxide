@@ -16,6 +16,7 @@ use crate::common::number::Number;
 use crate::common::object::Object;
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
+use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{ConditionalType, IfFrame};
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
@@ -745,7 +746,7 @@ impl State {
     }
   }
 
-  pub fn lookup_register(&self, cs: &str, parameters: Vec<Token>) -> Option<RegisterValue> {
+  pub fn lookup_register(&self, cs: &str, parameters: Vec<ArgWrap>) -> Option<RegisterValue> {
     let cs = T_CS!(cs);
     if let Some(defn) = self.lookup_definition(&cs) {
       if defn.is_register() {

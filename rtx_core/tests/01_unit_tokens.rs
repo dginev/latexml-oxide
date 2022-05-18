@@ -41,7 +41,7 @@ fn unit_examples() {
   assert!(!unbalanced.is_balanced(), "Check is not balanced");
 
   // Macro arg substitution tests
-  let nosubst = balanced.substitute_parameters(vec![T_LETTER!("u").into(), T_LETTER!("v").into(), T_LETTER!("w").into()]);
+  let nosubst = balanced.substitute_parameters(&[T_LETTER!("u").into(), T_LETTER!("v").into(), T_LETTER!("w").into()]);
   assert_eq!(nosubst.stringify(), "Tokens[a,{,...,},z]", "Got correct (non)substitution");
   let pattern = Tokens!(
     T_LETTER!("a"),
@@ -55,6 +55,6 @@ fn unit_examples() {
     T_LETTER!("z")
   )
   .pack_parameters();
-  let subst = pattern.substitute_parameters(vec![T_LETTER!("u").into(), T_LETTER!("v").into(), T_LETTER!("w").into()]);
+  let subst = pattern.substitute_parameters(&[T_LETTER!("u").into(), T_LETTER!("v").into(), T_LETTER!("w").into()]);
   assert_eq!(subst.stringify(), "Tokens[a,{,u,m,v,},z]", "Got correct substitution");
 }

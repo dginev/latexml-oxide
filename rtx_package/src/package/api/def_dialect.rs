@@ -24,6 +24,7 @@ use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::whatsit::Whatsit;
 use rtx_core::Digested;
+use rtx_core::definition::argument::ArgWrap;
 
 use super::content::merge_font;
 use super::*;
@@ -319,7 +320,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
 
   let getter: RegisterGetterClosure = match options.getter {
     Some(getter) => getter.clone(),
-    None => Arc::new(move |args: Vec<Token>, state: &State| -> Option<RegisterValue> {
+    None => Arc::new(move |args: Vec<ArgWrap>, state: &State| -> Option<RegisterValue> {
       let args_string: String = args.iter().map(ToString::to_string).collect::<Vec<String>>().join("");
       match state.lookup_value(&(name.clone() + &args_string)) {
         None => Some(getter_value.clone()),
@@ -364,7 +365,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
   );
 }
 
-pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacement: PrimitiveClosure, options: PrimitiveOptions, state: &mut State) {
+pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacement: Option<PrimitiveClosure>, options: PrimitiveOptions, state: &mut State) {
   let options_locked = options.locked;
   let scope = options.scope;
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
@@ -419,7 +420,7 @@ pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacem
     Primitive {
       cs,
       paramlist,
-      replacement: Some(compiled_replacement),
+      replacement: compiled_replacement,
       before_digest: before_digest_env,
       after_digest: after_digest_env,
       alias: options.alias,

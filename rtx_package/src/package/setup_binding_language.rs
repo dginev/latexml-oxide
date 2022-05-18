@@ -468,48 +468,48 @@ macro_rules! DefPrimitive {
   ($proto:literal, $replacement:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let replacement_closure = Arc::new(|stomach: &mut Stomach, args: Vec<Option<Tokens>>, inner_state: &mut State| {
+    let replacement_closure = Arc::new(|stomach: &mut Stomach, args: Vec<ArgWrap>, inner_state: &mut State| {
       Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::new(), inner_state).into_digested_result()
     });
-    defi_primitive!(cs, params, replacement_closure, options);
+    defi_primitive!(cs, params, Some(replacement_closure), options);
   }};
   // Case: closure pattern replacement
   ($proto:expr, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<Option<Tokens>>, $state_arg: &mut State| {
+    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<ArgWrap>, $state_arg: &mut State| {
       WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
     });
-    defi_primitive!(cs, params, replacement_closure, options);
+    defi_primitive!(cs, params, Some(replacement_closure), options);
   }};
   // Case: cs-noparams with closure pattern replacement
   ($cs:expr, None, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<Option<Tokens>>, $state_arg: &mut State| {
+    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<ArgWrap>, $state_arg: &mut State| {
       WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
     });
-    defi_primitive!($cs, None, replacement_closure, options);
+    defi_primitive!($cs, None, Some(replacement_closure), options);
   }};
   // Case: no replacement
   ($proto:literal, None $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    defi_primitive!(cs, params, Arc::new(noprimitive!()), options);
+    defi_primitive!(cs, params, None, options);
   }};
   // Case: no params, no replacement
   ($cs:expr, None, None $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    defi_primitive!($cs, None, Arc::new(noprimitive!()), options);
+    defi_primitive!($cs, None, None, options);
   }};
 
   // Case: closure block with implicit arguments
   ($proto:expr, $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let replacement_closure =  Arc::new(move |stomach: &mut Stomach, args: Vec<Option<Tokens>>, state: &mut State| {
+    let replacement_closure =  Arc::new(move |stomach: &mut Stomach, args: Vec<ArgWrap>, state: &mut State| {
       WithInnerState!($body, stomach, state).into_digested_result()
     });
-    defi_primitive!(cs, params, replacement_closure, options);
+    defi_primitive!(cs, params, Some(replacement_closure), options);
   }};
   // Case: direct closure provided (for reasons of reusing the same closure in several definitions)
   ($proto:expr, $replacement_closure:expr, $($input:tt)*) => {{
@@ -1135,7 +1135,7 @@ macro_rules! DefAccent {
       let invoked = Invocation!(T_CS!($accent), letter.clone(), stomach.get_gullet_mut(), inner_state)?;
       // TODO: check if letter.to_string has artefacts
       $crate::package::pool::tex_accents::apply_accent(
-        stomach, &letter[0].as_ref().unwrap().to_string(), $combiningchar, $standalonechar, Some(invoked), inner_state)?;
+        stomach, &letter[0].as_tokens(inner_state)?.unwrap().to_string(), $combiningchar, $standalonechar, Some(invoked), inner_state)?;
       Ok(vec![])
     }, mode => "text");
   }};
@@ -1940,7 +1940,7 @@ macro_rules! DeclareOption {
     let code: PrimitiveClosure = Arc::new(move |$stomach, _args, $inner_state|
       WithInnerState!($body, $stomach, $inner_state).into_digested_result()
     );
-    def_primitive(T_CS!(cs), None, code, PrimitiveOptions::default(), $outer_state);
+    def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default(), $outer_state);
   };
   ($option:expr, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => {
     $outer_state.push_value("@declaredoptions", $option);
@@ -1949,7 +1949,7 @@ macro_rules! DeclareOption {
     let code: PrimitiveClosure = Arc::new(move |$stomach, _args, $inner_state|
       WithInnerState!($body, $stomach, $inner_state).into_digested_result()
     );
-    def_primitive(T_CS!(cs), None, code, PrimitiveOptions::default(), $outer_state);
+    def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default(), $outer_state);
   }
 }
 

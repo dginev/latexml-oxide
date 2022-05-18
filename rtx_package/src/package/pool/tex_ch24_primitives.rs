@@ -162,7 +162,8 @@ LoadDefinitions!(state, {
 
   // TeX I/O primitives
   DefPrimitive!("\\openin Number SkipMatch:= SkipSpaces TeXFileName", sub[stomach, args, state] {
-    unpack_to_string!(args => port, filename);
+    let port = args[0].to_string();
+    let filename = args[1].to_string();
     // possibly should close $port if it's already been opened?
     // Rely on FindFile to enforce any access restrictions
     if let Some(path) = find_file(&filename, None, state) {
@@ -239,7 +240,8 @@ LoadDefinitions!(state, {
   // For output files, we'll write the data to a cached internal copy
   // rather than to the actual file system.
   DefPrimitive!("\\openout Number SkipMatch:= SkipSpaces TeXFileName", sub[stomach, args, state] {
-    unpack_to_string!(args => port, filename);
+    let port = args[0].to_string();
+    let filename = args[1].to_string();
     let contents_key = &s!("{}_contents",filename);
     AssignValue!(&s!("output_file:{}",port)  => filename,  Some(Scope::Global));
     AssignValue!(contents_key => "",  Some(Scope::Global));

@@ -60,7 +60,7 @@ LoadDefinitions!(state, {
   });
 
   DefMacro!("\\end{}", sub[gullet, args, state]{
-    unpack_to_string!(args => name);
+    let name = args[0].to_string();
     let mut t = T_CS!(s!("\\end{{{}}}", name));
     if is_defined_token(&t, state) {
       // Magic CS!

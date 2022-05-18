@@ -14,7 +14,7 @@ use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, TexMode};
 
 /// Lists can contain any Digested items, such as boxes, whatsits or other lists
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Default, PartialEq)]
 pub struct List {
   pub boxes: Vec<Digested>,
   pub mode: Option<TexMode>,

@@ -18,7 +18,6 @@ use crate::common::muglue::MuGlue;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::number::Number;
 use crate::common::store::Stored;
-use crate::definition::register::RegisterValue;
 use crate::keyvals::KeyVals;
 use crate::state::State;
 use crate::stomach::Stomach;
@@ -45,9 +44,9 @@ impl PartialEq for Tokens {
 #[macro_export]
 macro_rules! Tokens(
   ($( $tokens:expr ),*) => ({
-    let mut collected : Vec<Token> = Vec::new();
+    let mut collected : Vec<$crate::token::Token> = Vec::new();
     $(
-      let t_vec : Vec<Token> = $tokens.into();
+      let t_vec : Vec<$crate::token::Token> = $tokens.into();
       collected.extend(t_vec);
     )*
     $crate::tokens::Tokens::new(collected)
@@ -109,6 +108,9 @@ impl From<Option<Tokens>> for Token {
 
 impl From<Token> for Option<Tokens> {
   fn from(t: Token) -> Option<Tokens> { Some(Tokens::new(vec![t])) }
+}
+impl From<Token> for Option<Cow<'static, Tokens>> {
+  fn from(t: Token) -> Option<Cow<'static, Tokens>> { Some(Cow::Owned(Tokens::new(vec![t]))) }
 }
 
 impl Display for Tokens {
@@ -238,11 +240,6 @@ impl Tokens {
 
   pub fn stringify(&self) -> String { s!("Tokens[{}]", &self.0.iter().map(ToString::to_string).collect::<Vec<_>>().join(",")) }
 
-  pub fn value_of(&self, args: Vec<Token>, state: &mut State) -> Option<RegisterValue> {
-    let token: &Token = &self.0[0];
-    token.value_of(args, state)
-  }
-
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> { stomach.digest(self, state) }
 
   pub fn neutralize(self, extraspecials: &[char], state: &State) -> Tokens {
@@ -263,15 +260,15 @@ impl Tokens {
 
   // NOTE: Assumes each arg either undef or also Tokens
   // Using inline accessors on those assumptions
-  pub fn substitute_parameters(&self, args: Vec<Option<Tokens>>) -> Self {
+  pub fn substitute_parameters(&self, args: &[Option<Cow<Tokens>>]) -> Self {
     let mut result = Vec::new();
     let mut in_tokens = self.0.iter();
     for token in in_tokens {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
         result.push(token.clone());
-      } else if let Some(arg) = args[token.text.parse::<usize>().unwrap() - 1].clone() {
-        result.extend(arg.unlist());
+      } else if let Some(ref arg) = args[token.text.parse::<usize>().unwrap() - 1] {
+        result.extend(arg.clone().into_owned().unlist());
       }
     }
     Tokens::new(result)

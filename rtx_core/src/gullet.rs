@@ -377,6 +377,13 @@ impl Gullet {
       }
     };
   }
+  pub fn unread_mut(&mut self, tokens: &mut Tokens) {
+    if let Some(ref mut runtime) = self.mouth {
+      for token in tokens.as_mut_unlist().drain(..).rev() {
+        runtime.pushback.push_front(token);
+      }
+    };
+  }
   pub fn unread_one(&mut self, token: Token) {
     if let Some(ref mut runtime) = self.mouth {
       runtime.pushback.push_front(token);
@@ -674,7 +681,7 @@ impl Gullet {
               register_type = RegisterType::Number;
             }
             if register_type == value_type {
-              let args: Vec<Token> = defn.read_arguments(self, state)?.iter().map(|ts| ts.as_ref().unwrap().into()).collect();
+              let args = defn.read_arguments(self, state)?;
               Ok(defn.value_of(args, state))
             } else {
               self.unread_one(token); // Unread
@@ -991,7 +998,7 @@ impl Gullet {
         Ok((Some(f * s), None))
       },
       Some(f) => match self.read_keyword(&["filll", "fill", "fil"], state)? {
-        Some(fil) => Ok((Some(fixpoint(s as f32 * f, None)), FillCode::from(&fil.to_string()))),
+        Some(fil) => Ok((Some(fixpoint(s as f32 * f, None)), FillCode::from(&fil))),
         None => {
           let u = if mu {
             match self.read_mu_unit(state)? {
@@ -1106,7 +1113,7 @@ impl Gullet {
             Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
               // TODO: The mismatch between Vec<Tokens> for read_arguments and Vec<Token> for value_of feels incorrect
               //       but in which direction should it be resolved?
-              let args: Vec<Token> = defn.read_arguments(self, state)?.iter().map(|ts| ts.as_ref().unwrap().into()).collect();
+              let args = defn.read_arguments(self, state)?;
               match defn.value_of(args, state) {
                 None => Ok(Tokens!()),
                 Some(v) => Ok(v.into()),

@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
+use crate::definition::argument::ArgWrap;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
@@ -106,7 +107,7 @@ impl Object for KeyVals {
         // keydefs are actual Parameter objects, which should be able to digest their own values!
         // Hmmm, so we need to add Parameter to Store
         // This comes together with the DefKeyVal infrastructure, which assigns keydef parameters to keyval specifications.
-        keydef.digest(stomach, value_tokens_opt, None, state)?.unwrap()
+        keydef.digest(stomach, ArgWrap::OptionTokens(value_tokens_opt), None, state)?.unwrap()
       } else {
         let value_tokens = value_tokens_opt.unwrap_or_default();
         value_tokens.be_digested(stomach, state)?

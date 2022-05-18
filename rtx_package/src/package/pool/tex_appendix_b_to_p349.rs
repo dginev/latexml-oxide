@@ -315,7 +315,7 @@ LoadDefinitions!(state, {
   // # which means they actually work quite differently
   DefRegister!("\\allocationnumber" => Number::new(0));
   DefMacro!("\\alloc@@ {}", sub[gullet, args, state] {
-    unpack_to_string!(args => atype);
+    let atype = args[0].to_string();
     let c = s!("allocation @{}", atype);
     let n = LookupRegisterOrDefault!(c).value_of();
     AssignValue!(&c                  => n + 1,     Some(Scope::Global));
@@ -372,7 +372,7 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\magstephalf", "1095");
   DefMacro!("\\magstep{}", sub[gullet, args, state] {
-    unpack_to_string!(args => mag);
+    let mag = args[0].to_string();
     Explode!(match mag.as_str() {
       "0" => "1000",
       "1" => "1200",

@@ -12,7 +12,7 @@ lazy_static! {
   static ref MUDIM_SPEC_RE: Regex = Regex::new(r"^(-?\d*\.?\d*)mu$").unwrap();
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct MuDimension(pub i32);
 
 impl NumericOps for MuDimension {
@@ -20,10 +20,6 @@ impl NumericOps for MuDimension {
   fn new_f32(number: f32) -> Self { MuDimension(kround(number)) }
   fn value_of(self) -> i32 { self.0 }
   fn register_type(&self) -> RegisterType { RegisterType::MuDimension }
-}
-
-impl Default for MuDimension {
-  fn default() -> Self { MuDimension(0) }
 }
 
 impl fmt::Display for MuDimension {

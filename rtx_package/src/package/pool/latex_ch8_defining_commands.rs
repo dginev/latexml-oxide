@@ -13,10 +13,10 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, args, state] {
     let star = args.remove(0);
     let cs = args.remove(0);
-    let nargs_opt = args.remove(0).unwrap_or_default();
-    let opt = args.remove(0).unwrap_or_default();
-    let body = args.remove(0).unwrap();
-    let cs_token: Token = cs.into();
+    let nargs_opt = args.remove(0);
+    let opt = args.remove(0);
+    let body = args.remove(0);
+    let cs_token: Token = cs.expected_token()?;
     let nargs = if nargs_opt.is_empty() { 0 } else {
       nargs_opt.unlist().first().unwrap().to_number().value_of() as usize
     };
@@ -27,8 +27,7 @@ LoadDefinitions!(state, {
       }
       return Ok(vec![]);
     }
-    let opt = if opt.is_empty() { None } else { Some(opt) };
-    let macro_args = convert_latex_args(nargs, opt, state)?;
+    let macro_args = convert_latex_args(nargs, opt.owned_tokens(), state)?;
     DefMacro!(cs_token, macro_args, body);
   });
 

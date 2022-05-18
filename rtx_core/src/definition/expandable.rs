@@ -8,6 +8,7 @@ use crate::common::object::Object;
 use crate::state::{Scope, State};
 
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
+use crate::definition::argument::ArgWrap;
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -153,6 +154,10 @@ impl Definition for Expandable {
           } else {
             Vec::new()
           };
+          let mut args_tks = Vec::new();
+          for arg in args.iter() {
+            args_tks.push(arg.as_tokens(state)?);
+          }
           // for "real" macros, make sure all args are Tokens
           // let r;
           if tracing {
@@ -165,7 +170,7 @@ impl Definition for Expandable {
             unimplemented!();
             //LaTeXML::Core::Definition::startProfiling($profiled, 'expand');
           }
-          tokens.substitute_parameters(args)
+          tokens.substitute_parameters(args_tks.as_slice())
         };
         // Getting exclusive requires dubious Gullet support!
         if profiled {
@@ -220,13 +225,17 @@ impl Expandable {
     }
   }
 
-  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<Option<Tokens>>, state: &mut State) -> Result<Tokens> {
+  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<ArgWrap>, state: &mut State) -> Result<Tokens> {
     match self.expansion {
       Some(ExpansionBody::Closure(ref closure)) => closure(gullet, args, state),
       // but for tokens, make sure args are proper Tokens (lists)
       Some(ExpansionBody::Tokens(ref tks)) => {
         if !tks.is_empty() {
-          Ok(tks.substitute_parameters(args))
+          let mut args_tks = Vec::new();
+          for arg in args.iter() {
+            args_tks.push(arg.as_tokens(state)?);
+          }
+          Ok(tks.substitute_parameters(&args_tks))
         } else {
           Ok(Tokens!())
         }

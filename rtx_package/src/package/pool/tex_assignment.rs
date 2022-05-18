@@ -113,16 +113,16 @@ LoadDefinitions!(outer_state, {
   DefPrimitive!("\\advance Variable SkipKeyword:by", sub[stomach, args, state] {
     unpack!(args => var);
     // TODO: Variable type unpacking seems to require special INFRA again...
-    let mut var_tokens = var.unlist();
+    let mut var_tokens : Vec<ArgWrap> = var.unlist().into_iter().map(ArgWrap::Token).collect();
     if !var_tokens.is_empty() {
-      let defn_token = var_tokens.remove(0);
+      let defn_token = var_tokens.remove(0).expected_token()?;
       if defn_token.to_string() != "missing" {
         let defn_opt = state.lookup_register_definition(&defn_token);
         let defn_token_rc = Arc::new(defn_token);
         state.current_token = Some(Arc::clone(&defn_token_rc));
         if let Some(defn) = defn_opt {
           let summand = stomach.get_gullet_mut().read_value(defn.register_type().unwrap(), state)?;
-          let defn_args : Vec<Tokens> = var_tokens.iter().map(|a| Tokens!(a.clone())).collect();
+          let defn_args : Vec<ArgWrap> = var_tokens.clone();
           let defn_value = defn.value_of(var_tokens, state).unwrap_or_default();
           defn.borrow_mut().set_value(defn_value.add(summand), defn_args, state);
         } else {
@@ -136,10 +136,10 @@ LoadDefinitions!(outer_state, {
   DefPrimitive!("\\multiply Variable SkipKeyword:by Number", sub[stomach, args, state] {
     unpack!(args => var, scale);
     if !var.is_empty() {
-      let mut args = var.unlist();
-      let varname = args.remove(0);
+      let mut args : Vec<ArgWrap> = var.unlist().into_iter().map(ArgWrap::Token).collect();
+      let varname = args.remove(0).expected_token()?;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
-      let defn_args : Vec<Tokens> = args.iter().map(|a| Tokens!(a.clone())).collect();
+      let defn_args : Vec<ArgWrap> = args.clone();
       if let Some(defn) = state.lookup_register_definition(&varname) {
         let defn_value = defn.value_of(args, state).unwrap_or_default();
         let scale_value = scale.to_number().value_of();
@@ -157,10 +157,10 @@ LoadDefinitions!(outer_state, {
   DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[stomach, args, state] {
     unpack!(args => var, scale);
     if !var.is_empty() {
-      let mut args = var.unlist();
-      let varname = args.remove(0);
+      let mut args : Vec<ArgWrap> = var.unlist().into_iter().map(ArgWrap::Token).collect();
+      let varname = args.remove(0).expected_token()?;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
-      let defn_args : Vec<Tokens> = args.iter().map(|a| Tokens!(a.clone())).collect();
+      let defn_args : Vec<ArgWrap> = args.clone();
       if let Some(defn) = state.lookup_register_definition(&varname) {
         let defn_value = defn.value_of(args, state).unwrap_or_default();
         let mut denominator = scale.to_number().value_f32();
@@ -303,14 +303,14 @@ LoadDefinitions!(outer_state, {
   // <codename> = \catcode | \mathcode | \lccode | \uccode | \sfcode | \delcode
   DefRegister!("\\catcode Number", Number::new(0),
     getter => sub[args, state] {
-      let num = args[0].to_number().value_of();
+      let num = args.remove(0).to_number().value_of();
       let refchar = (num as u8) as char;
       let code : Catcode = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       let code : u8 = code.into();
       Number!(code)
     },
     setter => sub[value, args, state] {
-      let c_char = (args[0].to_number().value_of() as u8) as char;
+      let c_char = (args.remove(0).to_number().value_of() as u8) as char;
       let c_code = From::from(value.value_of() as u8);
       state.assign_catcode(c_char, c_code, None);
     }
@@ -319,7 +319,7 @@ LoadDefinitions!(outer_state, {
   // Only used for active math characters, so far
   DefRegister!("\\mathcode Number", Number::new(0),
     getter => sub[args, state] {
-      let ch_code   = args[0].to_number().value_of() as u8;
+      let ch_code   = args.remove(0).to_number().value_of() as u8;
       let ch : char = ch_code as char;
       let code = match state.lookup_mathcode(&ch.to_string()) {
         None => ch_code,
@@ -328,7 +328,7 @@ LoadDefinitions!(outer_state, {
       Number!(code)
     },    // defaults to the char's code itself(?)
     setter => sub[value, args, state] {
-      let ch = args[0].to_number().value_of() as u8;
+      let ch = args.remove(0).to_number().value_of() as u8;
       let ch : char = ch as char;
       state.assign_mathcode(ch, value.value_of() as u16, None);
     }

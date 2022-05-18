@@ -16,7 +16,7 @@ LoadDefinitions!(state, {
     } else {
       t_else
     };
-    let mut result = which.substitute_parameters(Vec::new()).unlist();
+    let mut result = which.substitute_parameters(&[]).unlist();
     if let Some(t_next) = next {
       result.push(t_next);
     }
