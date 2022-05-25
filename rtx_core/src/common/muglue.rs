@@ -7,7 +7,7 @@ use crate::{Locator, Object};
 use std::borrow::Cow;
 use std::fmt;
 
-#[derive(Debug, Copy, Clone, Default, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct MuGlue {
   pub skip: i32,
   pub plus: Option<i32>,

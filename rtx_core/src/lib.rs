@@ -134,6 +134,7 @@ pub trait BoxOps: Object {
     None
   }
   fn get_font(&self) -> Option<Cow<Font>>;
+  fn set_font(&mut self, font: Arc<Font>) { unimplemented!() }
 
   fn set_width<T: Into<Stored>>(&mut self, width: T) {
     let mut props = self.get_properties_mut();
@@ -149,7 +150,7 @@ pub trait BoxOps: Object {
   }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TexMode {
   Math,
   Text,

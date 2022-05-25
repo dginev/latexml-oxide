@@ -10,46 +10,106 @@ LoadDefinitions!(state, {
   //    text
   //   \end{document}
 
-  // DefMacro('\AtBeginDocument{}', sub {
-  //     AssignValue('@at@begin@document', []) unless LookupValue('@at@begin@document');
-  //     PushValue('@at@begin@document', $_[1]->unlist); });
-  // DefMacro('\AtEndDocument{}', sub {
-  //     AssignValue('@at@end@document', []) unless LookupValue('@at@end@document');
-  //     PushValue('@at@end@document', $_[1]->unlist); });
+  DefMacro!("\\AtBeginDocument{}", sub[gullet,args,state] {
+    state.push_value("@at@begin@document", args.remove(0).unlist());
+  });
+  DefMacro!("\\AtEndDocument{}", sub[gullet,args,state] {
+    state.push_value("@at@end@document", args.remove(0).unlist());
+  });
 
-  DefEnvironment!("{document}", sub[document, args, props, state] {
-      let id = prop_str!(props,"id");
-      let body = prop_whatsit!(props,"body");
-      if let Some(mut docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
-        if !id.is_empty() {
-          document.set_attribute(&mut docel, "xml:id", id)?;
-        }
-        document.absorb(&body, None, state)?;
-      } else {
-        let attrib = string_map!("xml:id" => id);
-        document.insert_element("ltx:document", vec![&body], Some(attrib), state)?;
+  // Like  "<ltx:document xml:id='#id'>#body</ltx:document>",
+  // But more complicated due to id, at begin/end document and so forth.
+  // AND, lower-level so that we can cope with common errors at document end.
+  DefConstructor!(T_CS!("\\begin{document}"), None, sub[document, args, props, state] {
+    let id = prop_str!(props,"id");
+    if let Some(mut docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
+      if !id.is_empty() {
+        document.set_attribute(&mut docel, "xml:id", id)?;
       }
-      Ok(())
-    },
-    before_digest => { AssignValue!("inPreamble", false); },
-    // after_digest_begin => vec![|stomach, whatsit, state| {
-    //   whatsit.set_property("id", Expand!(T_CS!("\\thedocument@ID"), state));
-    //   if let Some(ops) = LookupValue!("@at@begin@document", state) {
-    //     let boxes = Digest!(ops, stomach);
-    //     whatsit.set_font(LookupValue!("font")); // Start w/ whatever font was selected.
-    //     return boxes
-    //   } else {
-    //     return Vec::new()
-    //   }
-    // }],
-    before_digest_end => sub[stomach, inner_state] {
-      stomach.get_gullet_mut().flush(inner_state);
-      if let Some(Stored::Tokens(ops)) = RemoveValue!("@at@end@document") {
-        Ok(vec![stomach.digest(ops, inner_state)?]) // TODO: Can we improve to the regular Digest!(ops) syntax?
-      } else {
-        Ok(Vec::new())
-      }
-    },
-    mode => "text"
-  );
+    } else {
+      document.open_element("ltx:document", Some(string_map!("xml:id" => id)), None, state)?;
+    }
+  },
+  after_digest => sub[stomach, whatsit, state] {
+    {
+      bind_state_mut!(stomach,state);
+      DefMacro!("\\@currenvir", "document");
+    }
+    stomach.begin_mode("text", state)?;
+    let mut gullet = stomach.get_gullet_mut();
+    state.assign_value("current_environment", "document", None);
+    let expanded_id = Expand!(T_CS!("\\thedocument@ID"),gullet,state);
+    whatsit.set_property("id", expanded_id);
+    let mut boxes = Vec::new();
+    if let Some(ops) = state.lookup_value("@document@preamble@atend") {
+      unimplemented!();
+      //       push(@boxes, $stomach->digest(Tokens(@$ops)));
+    }
+    if let Some(ops) = state.lookup_value("@at@begin@document") {
+      //       push(@boxes, $stomach->digest(Tokens(@$ops)));
+      unimplemented!();
+    }
+    state.assign_value("inPreamble", false, None); // atbegin is still (sorta) preamble
+    if let Some(ops) = state.lookup_value("@document@preamble@afterend") {
+      unimplemented!();
+    //       push(@boxes, $stomach->digest(Tokens(@$ops)));
+    }
+    whatsit.set_font(state.lookup_font().unwrap()); // Start w/ whatever font was last selected.
+    boxes
+  });
+
+  // \document is used directly in e.g. expl3.sty
+  Let!(&T_CS!("\\document"), T_CS!("\\begin{document}"), Some(Scope::Global));
+
+  DefConstructor!(T_CS!("\\end{document}"), None, sub[document,args,props,state] {
+    document.close_element("ltx:document", state)?;
+  },
+  before_digest => sub[stomach,state] {
+    let mut boxes : Vec<Digested> = Vec::new();
+    if let Some(ops) = state.lookup_value("@at@end@document") {
+      unimplemented!();
+      // boxes.extend(stomach.digest(Tokens::new(ops)));
+    }
+    // Should we try to indent the last paragraph? If so, it goes like this:
+    //     push(@boxes, $stomach->digest(T_CS('\normal@par')));
+    // Now we check whether we're down to the last stack frame.
+    // It is common for unclosed { or even environments
+    // and we want to at least compress & avoid unnecessary errors & warnings.
+    let nframes = state.get_frame_depth();
+    //     my $ifstack;
+    //     if ($STATE->isValueBound('current_environment', 0)
+    //       && ($STATE->valueInFrame('current_environment', 0) eq 'document')
+    //       && (!($ifstack = $STATE->lookupValue('if_stack')) || !$$ifstack[0])) { }    # OK!
+    //     else {
+    //       my @lines = ();
+    //       while ((!$STATE->isValueBound('current_environment', 0)
+    //           || ($STATE->valueInFrame('current_environment', 0) ne 'document'))
+    //         && ($STATE->getFrameDepth > 0)) {
+    //         # my $nonbox = $STATE->valueInFrame('groupNonBoxing',0) || 0;
+    //         my $tok = $STATE->valueInFrame('groupInitiator',        0) || '<unknown>';
+    //         my $loc = $STATE->valueInFrame('groupInitiatorLocator', 0);
+    //         $loc = defined $loc ? ToString($loc) : '<unknown>';
+    //         my $env = $STATE->isValueBound('current_environment', 0)
+    //           && $STATE->valueInFrame('current_environment', 0);
+    //         if ($env) {
+    //           push(@lines, "Environment $env opened by " . ToString($tok) . ' ' . $loc); }
+    //         else {    # but unclosed { is so common and latex itself doesn't Error!
+//           push(@lines, "Group opened by " . ToString($tok) . ' ' . $loc); }
+//         $STATE->popFrame; }
+//       while (($ifstack = $STATE->lookupValue('if_stack')) && $$ifstack[0]) {
+//         my $frame = $STATE->shiftValue('if_stack');
+//         push(@lines, "Conditional " . ToString($$frame{token})
+//             . "started " . ToString($$frame{start})); }
+//       Warn('unexpected', '\end{document}', $stomach,
+//         "Attempt to end document with open groups, environments or conditionals", @lines);
+//     }
+    stomach.end_mode("text", state)?;
+    stomach.get_gullet_mut().flush(state);
+    boxes
+});
+
+  // \enddocument is used directly in e.g. standalone.cls
+  Let!(&T_CS!("\\enddocument"), T_CS!("\\end{document}"), Some(Scope::Global));
+
+
 });

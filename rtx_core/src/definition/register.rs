@@ -313,7 +313,7 @@ impl fmt::Display for RegisterValue {
   }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RegisterType {
   Number,
   Dimension,

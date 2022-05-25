@@ -20,7 +20,7 @@ pub enum CurryTerm {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CurryConstraint(pub (CurryTerm, Ordering, CurryTerm));
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CurryConstraints(pub HashSet<CurryConstraint>);
 
 impl Display for CurryTerm {

@@ -135,7 +135,7 @@ pub fn concat(dir: &str, file: &str) -> String {
   } else {
     let mut path = PathBuf::from(dir);
     path.push(file);
-    canonical(&path.to_string_lossy().to_string())
+    canonical(&path.to_string_lossy())
   }
 }
 

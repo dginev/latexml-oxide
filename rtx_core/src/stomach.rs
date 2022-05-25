@@ -492,15 +492,24 @@ impl<'t> Stomach {
     Ok(())
   }
 
-  pub fn current_frame_message(&self) -> String {
-    // return "current frame is "
-    //   . (state.isValueBound('MODE', 0)       // SET mode in CURRENT frame ?
-    //   ? "mode-switch to " . state.lookup_value('MODE')
-    //   : (state.lookup_value('groupNonBoxing')    // Current frame is a non-boxing group?
-    //     ? "non-boxing" : "boxing") . " group")
-    //   . " due to " . Stringify(state.lookup_value('groupInitiator'))
-    //   . " " . ToString(state.lookup_value('groupInitiatorLocator')); }
-    s!("current frame is mock")
+  pub fn current_frame_message(&self, state:&State) -> String {
+    let target = if state.is_value_bound("MODE", Some(0)) { // SET mode in CURRENT frame ?
+      Cow::Owned(s!("mode-switch to {}",  state.lookup_string("MODE")))
+    } else if state.lookup_bool("groupNonBoxing") { // Current frame is a non-boxing group?
+      Cow::Borrowed("non-boxing group")
+    } else {
+      Cow::Borrowed("boxing group")
+    };
+
+
+    let initiator = if let Some(t) = state.lookup_token("groupInitiator") {
+      t.stringify()
+    } else {
+      String::new()
+    };
+    //   TODO:
+    //   . " " . ToString(state.lookup_value('groupInitiatorLocator'));
+    s!("current frame is {} due to {}",target, initiator)
   }
 
   //======================================================================
@@ -537,7 +546,7 @@ impl<'t> Stomach {
         state.current_token.as_ref().unwrap().to_string(),
         self,
         state,
-        s!("Attempt to close non-boxing group {}", self.current_frame_message())
+        s!("Attempt to close non-boxing group {}", self.current_frame_message(state))
       );
     } else {
       self.pop_stack_frame(true, state)?;
@@ -549,47 +558,54 @@ impl<'t> Stomach {
   // Mode (minimal so far; math vs text)
   // Could (should?) be taken up by Stomach by building horizontal, vertical or math lists ?
 
-  pub fn begin_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
-    self.push_stack_frame(false, state); // Effectively bgroup
+  /// This sets the mode without doing any grouping (NOR does it stack the modes!!)
+  /// Useful for environments, where the group has already been established.
+  /// (presumably, in the long run, modes & groups should be much less coupled)
+  pub fn set_mode(&mut self, mode: &str, state:&mut State) -> Result<()> {
     let prevmode = state.lookup_string("MODE");
     let ismath = mode.ends_with("math");
-    let isdisplay = mode.starts_with("display");
-    state.assign_value("MODE", mode.to_string(), Some(Scope::Local));
+    state.assign_value("MODE", mode, Some(Scope::Local));
     state.assign_value("IN_MATH", ismath, Some(Scope::Local));
-    let curfont = state.lookup_font();
-    if let Some(cf) = curfont {
-      if mode == prevmode {
-      } else if ismath {
-        // When entering math mode, we set the font to the default math font,
-        // and save the text font for any embedded text.
-        state.assign_value("savedfont", cf.clone(), Some(Scope::Local));
-        let new_font = state.lookup_mathfont().unwrap().merge(Font {
-          color: cf.color.clone(),
-          bg: cf.bg.clone(),
-          size: cf.size,
-          mathstyle: if isdisplay { Some("display".into()) } else { Some("text".into()) },
+    let curfont = state.lookup_font().unwrap();
+    if mode == prevmode {
+    } else if ismath {
+      // When entering math mode, we set the font to the default math font,
+      // and save the text font for any embedded text.
+      state.assign_value("savedfont", curfont.clone(), Some(Scope::Local));
+      // TODO:
+      // $STATE->assignValue(script_base_level => scalar(@{ $$self{boxing} }));    # See getScriptLevel
+      let isdisplay = mode.starts_with("display");
+      let new_font = state.lookup_mathfont().unwrap().merge(Font {
+        color: curfont.color.clone(),
+        bg: curfont.bg.clone(),
+        size: curfont.size,
+        mathstyle: if isdisplay { Some("display".into()) } else { Some("text".into()) },
+        ..Font::default()
+      });
+      state.assign_value("font", new_font, Some(Scope::Local));
+    } else {
+      // When entering text mode, we should set the font to the text font in use before the math
+      // but inherit color and size
+      let new_font = if let Some(&Stored::Font(ref saved_font)) = state.lookup_value("savedfont") {
+        Some(saved_font.merge(Font {
+          color: curfont.color.clone(),
+          bg: curfont.bg.clone(),
+          size: curfont.size,
           ..Font::default()
-        });
-        state.assign_value("font", new_font, Some(Scope::Local));
+        }))
       } else {
-        // When entering text mode, we should set the font to the text font in use before the math
-        // but inherit color and size
-        let new_font = if let Some(&Stored::Font(ref saved_font)) = state.lookup_value("savedfont") {
-          Some(saved_font.merge(Font {
-            color: cf.color.clone(),
-            bg: cf.bg.clone(),
-            size: cf.size,
-            ..Font::default()
-          }))
-        } else {
-          None
-        };
-        if let Some(nf) = new_font {
-          state.assign_value("font", nf, Some(Scope::Local));
-        }
+        None
+      };
+      if let Some(nf) = new_font {
+        state.assign_value("font", nf, Some(Scope::Local));
       }
     }
     Ok(())
+  }
+
+  pub fn begin_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
+    self.push_stack_frame(false, state); // Effectively bgroup
+    self.set_mode(mode, state)
   }
 
   pub fn end_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {

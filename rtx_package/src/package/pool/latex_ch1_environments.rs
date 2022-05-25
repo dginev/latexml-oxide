@@ -34,13 +34,15 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\begin{}", sub[gullet, args, state] {
     unpack!(args => env);
-    let name = Expand!(env, gullet).to_string();
+    let name = Expand!(env.clone(), gullet).to_string();
     let begin_name = s!("\\begin{{{}}}", name);
-    let before = LookupValue!(&s!("@environment@{}@beforebegin", name));
-    let after  = LookupValue!(&s!("@environment@{}@atbegin", name));
+    let before_opt = state.lookup_tokens(&s!("@environment@{}@beforebegin", name));
+    let after_opt  = state.lookup_tokens(&s!("@environment@{}@atbegin", name));
 
     if is_defined(&begin_name, state) {
-      Ok(Tokens!(T_CS!(begin_name))) // Magic cs!
+      let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
+      tks.push(T_CS!(begin_name));
+      Ok(Tokens::new(tks)) // Magic cs!
     } else {
       let token = T_CS!(s!("\\{}", name));
       if !is_defined_token(&token, state) {
@@ -52,8 +54,13 @@ LoadDefinitions!(state, {
         // state.install_definition(LaTeXML::Core::Definition::Constructor->new($token, undef,
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
       }
-      let mut out_tokens = vec![T_CS!("\\begingroup")];
-      out_tokens.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![Tokenize!(&name)], gullet)?.unlist());
+      let mut out_tokens = if let Some(before) = before_opt { before.unlist() }
+      else { Vec::new() };
+      out_tokens.push(T_CS!("\\begingroup"));
+      if let Some(after) = after_opt {
+        out_tokens.extend(after.unlist());
+      }
+      out_tokens.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![env], gullet)?.unlist());
       out_tokens.push(token);
       Ok(Tokens::new(out_tokens))
     }

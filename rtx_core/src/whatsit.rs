@@ -277,4 +277,8 @@ impl BoxOps for Whatsit {
       _ => None,
     }
   }
+
+  fn set_font(&mut self, font: Arc<Font>) {
+    self.properties.insert("font".to_string(), Stored::Font(font));
+  }
 }

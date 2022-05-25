@@ -658,12 +658,13 @@ macro_rules! DefConstructor {
   }};
   // Pre-parsed prototype flavors
   // Pre-parsed prototype; Closure replacement flavors
-  ($cs:literal, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $($input:tt)+) => {{
+  ($cs:expr, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $($input:tt)+) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
-    defi_constr!($proto, $document, $args, $props, $inner_state, $body, options);
+    let compiled_replacement : Option<ReplacementClosure>= Some(Arc::new(replacement!($document, $args, $props, $inner_state, $body)));
+    defi_constr!($cs, $parameters, compiled_replacement, options);
   }};
-  ($cs:literal, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) => {{
-    let compiled_replacement = Some(Arc::new(replacement!($document, $args, $props, $inner_state, $body)));
+  ($cs:expr, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) => {{
+    let compiled_replacement : Option<ReplacementClosure>= Some(Arc::new(replacement!($document, $args, $props, $inner_state, $body)));
     defi_constr!($cs, $parameters, compiled_replacement, ConstructorOptions::default());
   }};
   //  Pre-parsed prototype; Literal replacement flavors

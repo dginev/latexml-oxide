@@ -2,6 +2,7 @@ use crate::common::object::Object;
 use crate::util::pathname;
 use std::borrow::Cow;
 use std::fmt;
+use std::fmt::Write as _;
 
 // TODO: This will require a large refactor, but
 // switching the source from an owned String to a &str reference
@@ -13,7 +14,7 @@ use std::fmt;
 // but the mouth sources should be easier to manage.
 // definitely something that can be tried after test milestone is achieved.
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Locator {
   source: String,
   from_line: usize,
@@ -114,15 +115,15 @@ impl Object for Locator {
     };
     let range_from = if self.is_range() { " from" } else { "" };
     if self.from_line > 0 {
-      loc.push_str(&s!(";{} line {}", range_from, self.from_line));
+      write!(loc, ";{} line {}", range_from, self.from_line).ok();
       if self.from_column > 0 {
-        loc.push_str(&s!(" col {}", self.from_column));
+        write!(loc, " col {}", self.from_column).ok();
       }
     }
     if self.to_line > 0 {
-      loc.push_str(&s!(" to line {}", self.to_line));
+      write!(loc," to line {}", self.to_line).ok();
       if self.to_column > 0 {
-        loc.push_str(&s!(" col {}", self.to_column));
+        write!(loc, " col {}", self.to_column).ok();
       }
     }
     loc
@@ -136,7 +137,7 @@ impl Locator {
   fn to_attribute(&self) -> String {
     let mut loc = self.get_short_source("anonymous_string") + "#text";
     if self.is_range() {
-      loc.push_str(&s!("range(from='"));
+      loc.push_str("range(from='");
       // if self.from_line > 0 {
       loc.push_str(&self.from_line.to_string());
       // }

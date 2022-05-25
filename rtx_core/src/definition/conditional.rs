@@ -22,7 +22,7 @@ use crate::Digested;
 //   Expand enough to determine true/false, then maybe skip
 //   record a flag somewhere so that \else or \fi is recognized
 //   (otherwise, they should signal an error)
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConditionalType {
   If,
   Unless,

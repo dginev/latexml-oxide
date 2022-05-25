@@ -11,6 +11,7 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
+use std::fmt::Write as _;
 
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
@@ -805,7 +806,7 @@ impl Document {
           let prefix = ns.get_prefix();
           let prefix_declaration = if prefix.is_empty() { s!("xmlns") } else { s!("xmlns:{}", prefix) };
           let href = ns.get_href();
-          open_tag.push_str(&s!(" {}=\"{}\"", prefix_declaration, href));
+          write!(open_tag," {}=\"{}\"", prefix_declaration, href).ok();
         }
 
         let anodes = node.get_attributes();
@@ -817,12 +818,12 @@ impl Document {
           } // HACK for xml:id
           let key_serialized = state.model.get_node_document_qname(&node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
-          open_tag.push_str(&s!(" {}=\"{}\"", key_serialized, val_serialized));
+          write!(open_tag, " {}=\"{}\"", key_serialized, val_serialized).ok();
         }
         // HACK for xml:id for now, assuming last element
         if anodes.contains_key("id") {
           let val_serialized = serialize_attr(&node.get_property("id").unwrap_or_default());
-          open_tag.push_str(&s!(" {}=\"{}\"", "xml:id", val_serialized));
+          write!(open_tag," xml:id=\"{}\"", val_serialized).ok();
         }
 
         let noindent_children: bool = if heuristic {
@@ -850,7 +851,7 @@ impl Document {
           if !noindent_children {
             serialized.push_str(&indent)
           }
-          serialized.push_str(&s!("</{}>", tag));
+          write!(serialized, "</{}>", tag).ok();
         } else {
           // empty element.
           serialized.push_str("/>");
@@ -873,7 +874,7 @@ impl Document {
         }
       },
       Some(NodeType::CommentNode) => {
-        serialized.push_str(&s!("<!-- {}-->", serialize_string(&node.get_content())));
+        write!(serialized, "<!-- {}-->", serialize_string(&node.get_content())).ok();
       },
       _ => {},
     }
