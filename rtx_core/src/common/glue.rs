@@ -102,7 +102,7 @@ lazy_static! {
   static ref GLUE_RE: Regex = Regex::new(GLUE_RE_STR).unwrap();
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct Glue {
   pub skip: i32,
   pub plus: Option<i32>,

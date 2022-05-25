@@ -98,7 +98,7 @@ impl TableName {
 }
 
 /// High-level catcode profiles
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Catcodes {
   Standard,
   Style,
@@ -745,6 +745,12 @@ impl State {
       Some(v) => v.into(),
     }
   }
+  pub fn lookup_token(&self, key: &str) -> Option<&Token> {
+    match self.lookup_value(key) {
+      Some(Stored::Token(t)) => Some(t),
+      _ => None
+    }
+  }
 
   pub fn lookup_register(&self, cs: &str, parameters: Vec<ArgWrap>) -> Option<RegisterValue> {
     let cs = T_CS!(cs);
@@ -1234,6 +1240,14 @@ impl State {
     }
     Ok(())
   }
+
+  /// Determine depth of group nesting created by {,},\bgroup,\egroup,\begingroup,\endgroup
+  /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
+  /// This may give incorrect results for some special environments (e.g. minipage)
+  pub fn get_frame_depth(&self) -> usize {
+    self.undo.iter().filter(|frame| !frame.locked).count() - 1
+  }
+
 
   pub fn begin_semiverbatim(&mut self, extraspecials: Option<&[char]>) {
     // Is this a good/safe enough shorthand, or should we really be doing beginMode?

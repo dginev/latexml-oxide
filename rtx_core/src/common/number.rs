@@ -6,7 +6,7 @@ use crate::{Locator, Object};
 use std::borrow::Cow;
 use std::fmt;
 
-#[derive(Debug, Default, Copy, Clone, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub struct Number(pub i32);
 impl Object for Number {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }

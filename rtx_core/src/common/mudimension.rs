@@ -12,7 +12,7 @@ lazy_static! {
   static ref MUDIM_SPEC_RE: Regex = Regex::new(r"^(-?\d*\.?\d*)mu$").unwrap();
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
+#[derive(Debug, Copy, Clone, PartialEq, Default, Eq)]
 pub struct MuDimension(pub i32);
 
 impl NumericOps for MuDimension {

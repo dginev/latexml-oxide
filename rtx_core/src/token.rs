@@ -24,7 +24,7 @@ static CONTROLNAME: &[&str] = &[
   "SYN", "ETB", "CAN", "EM", "SUB", "ESC", "FS", "GS", "RS", "US",
 ];
 
-#[derive(PartialEq, Clone, Copy, Hash, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
   ESCAPE,
   BEGIN,

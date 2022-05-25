@@ -11,7 +11,7 @@ pub type LigatureClosure = Arc<dyn Fn(&str) -> String>;
 pub type FontTestClosure = Arc<dyn Fn(&Font) -> bool>;
 pub type LigatureMatcher = Arc<dyn Fn(&mut Document, &mut Node, &State) -> Result<Option<(usize, String, MathLigatureOptions)>>>;
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct MathLigatureOptions {
   pub role: Option<String>,
   pub name: Option<String>,

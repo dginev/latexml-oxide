@@ -38,7 +38,7 @@ lazy_static! {
   static ref TRAILING_SPACE_CHARS: Regex = Regex::new("(?s) +$").unwrap();
 }
 
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum FoodType {
   File,
   // Binding,

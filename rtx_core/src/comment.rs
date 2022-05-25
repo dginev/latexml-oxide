@@ -15,7 +15,7 @@ use crate::state::State;
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Comment(pub String);
 
 impl fmt::Display for Comment {

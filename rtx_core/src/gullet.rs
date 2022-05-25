@@ -793,7 +793,7 @@ impl Gullet {
       Some(token) => {
         let cc = token.get_catcode();
         let mut text = token.to_string();
-        if cc == Catcode::OTHER && text.chars().all(|c| c.is_digit(10)) {
+        if cc == Catcode::OTHER && text.chars().all(|c| c.is_ascii_digit()) {
           // Read decimal literal
           text.push_str(&self.read_digits(&DIGIT_RE, true, state)?);
           Ok(Some(Number::new(text.parse::<i32>()?)))
