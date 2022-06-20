@@ -406,7 +406,8 @@ impl Definition for RegisterCell {
   fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Arc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {
     // CharDef case
     if self.borrow().register_type == RegisterType::CharDef {
-      return match self.borrow().internalcs {
+      let internalcs = &self.borrow().internalcs;
+      return match internalcs {
         // Tracing ?
         None => Ok(Vec::new()),
         Some(ref cs) => stomach.invoke_token(cs, state),
@@ -432,7 +433,8 @@ impl Definition for RegisterCell {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<ArgWrap>> {
-    match self.borrow().parameters {
+    let params = &self.borrow().parameters;
+    match params {
       None => Ok(Vec::new()),
       Some(ref params) => params.read_arguments(gullet, self, state),
     }

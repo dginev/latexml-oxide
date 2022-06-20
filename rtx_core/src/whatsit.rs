@@ -88,7 +88,9 @@ impl Whatsit {
     self.properties.insert(s!("body"), Digested::List(Arc::new(list)).into());
     if let Some(Digested::Whatsit(ref trailer)) = trailer_opt {
       // And copy any otherwise undefined properties from the trailer
-      for (prop, value) in trailer.read().unwrap().get_properties() {
+      let trailer_val = trailer.read().unwrap();
+      let props = trailer_val.get_properties();
+      for (prop, value) in props {
         self.properties.entry(prop.to_string()).or_insert_with(|| value.clone());
       }
       self.properties.insert(s!("trailer"), trailer_opt.as_ref().unwrap().clone().into());
