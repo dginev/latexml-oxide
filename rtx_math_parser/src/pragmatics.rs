@@ -303,7 +303,7 @@ fn pragma_opfunctions_are_rarely_arguments(tree: &Tree) -> Result<(), Box<dyn Er
 /// Mostly since we can't enforce IDs to strictly have "curry=1", rather
 /// we need them with "curry >= 1", to stay a little more lenient.
 fn pragma_higher_order_ids_are_exceptions(tree: &Tree) -> Result<(), Box<dyn Error>> {
-  if let Tree::Apply(ref op, ref args, _) = &*tree {
+  if let Tree::Apply(ref op, ref args, _) = tree {
     if args.0.len() == 1 {
       match &*op.0 {
         Tree::Lexeme(ref op_name, _) if op_name.starts_with("ID:") => match args.0[0] {
