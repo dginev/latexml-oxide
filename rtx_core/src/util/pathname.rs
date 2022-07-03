@@ -90,7 +90,7 @@ pub fn canonical(pathname: &str) -> String {
     return pathname.to_owned();
   }
   // Don't call is_absolute, etc, here, cause THEY call US!
-  let home_path: &str = &*HOME_PATH;
+  let home_path: &str = &HOME_PATH;
 
   // TODO: consider using Path's .canonicalize()
 
