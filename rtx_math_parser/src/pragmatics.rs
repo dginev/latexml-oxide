@@ -100,7 +100,7 @@ impl ValidationPragmatics {
         }
       },
       Tree::Apply(Operator(op), args, _) => {
-        self.validate_recursive(&**op)?;
+        self.validate_recursive(op)?;
         for arg_subtree in args.trees() {
           self.validate_recursive(arg_subtree)?;
         }

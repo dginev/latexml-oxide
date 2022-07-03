@@ -1045,7 +1045,7 @@ impl Document {
 
       // Move to best starting point for this text.
       if *closeto != *rc_node {
-        self.close_to_node(&*closeto, false, state)?;
+        self.close_to_node(&closeto, false, state)?;
       }
       if bestdiff > 0 {
         self.open_element(FONT_ELEMENT_NAME, Some(string_map!("_fontswitch" => "true")), Some(font), state)?;

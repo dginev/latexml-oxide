@@ -823,7 +823,7 @@ LoadDefinitions!(state, {
       let ismath   = state.lookup_bool("IN_MATH");
       let mut list     = stomach.digest_next_body(None, state)?;
       // In most (all?) cases, we're really looking for a single Whatsit here...
-      list = list.into_iter().filter(|tbox| !tbox.is_comment()).collect();
+      list.retain(|tbox| !tbox.is_comment());
       let mut digested = List::new(list);
       digested.mode = if ismath { Some(TexMode::Math) } else { Some(TexMode::Text) };
       digested
