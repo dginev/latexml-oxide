@@ -140,13 +140,12 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
 
     // ?test(ifclause)(elseclause)
     if LEAD_COND_RE.is_match(&replacement) {
-      // println!("Leading conditional at: {:?}", replacement);
       let (bool_branch, if_branch, else_branch) = parse_conditional(&mut replacement);
       let if_branch_compiled = compile_replacement_tokens(if_branch);
       let else_branch_compiled = compile_replacement_tokens(else_branch);
 
       operations.push(quote!(
-        if #bool_branch.is_some() && #bool_branch != Some(&Stored::Bool(false)) {
+        if #bool_branch {
           #(#if_branch_compiled)*
         } else {
           #(#else_branch_compiled)*
@@ -312,7 +311,7 @@ fn translate_string(text: &mut String) -> proc_macro2::TokenStream {
         let if_branch_translated = translate_value("", &mut if_branch);
         let else_branch_translated = translate_value("", &mut else_branch);
         let op = quote!(
-          if #bool_branch.is_some() {
+          if #bool_branch {
             #if_branch_translated
           } else {
             #else_branch_translated
@@ -378,7 +377,7 @@ fn translate_avpairs(text: &mut String) -> Vec<proc_macro2::TokenStream> {
       let if_branch_translated = translate_avpairs(&mut if_branch);
       let else_branch_translated = translate_avpairs(&mut else_branch);
       let op = quote!(
-        if #bool_branch.is_some() {
+        if #bool_branch {
           #(#if_branch_translated)*
         } else {
           #(#else_branch_translated)*
@@ -515,10 +514,13 @@ fn translate_value(exclude_chars: &str, text: &mut String) -> proc_macro2::Token
 
 fn parse_conditional(text: &mut String) -> (proc_macro2::TokenStream, String, String) {
   // Remove leading "?"
-  // println!("-- cond before: {:?}", text);
   *text = LEAD_QMARK.replace(text, |_: &Captures| String::new()).to_string();
   let translated_bool = translate_value("(", text);
-  let bool_branch = quote!(  #translated_bool );
+  // Note/TODO: This is a direct redo of latexml's "ToString(v) ? () : ()" approach
+  //   for testing the boolean branch
+  //   we could make it more performant by defining a simple trait `.to_bool`
+  //   and implementing it for all Core objects that may be passed in as arguments
+  let bool_branch = quote!(  match #translated_bool { None => false, Some(ref v) => { let v_str = v.to_string(); !v_str.is_empty() && v_str != "false" }} );
   let if_branch_opt = extract_bracketed(text, Some(&Delimiter::Parenthesis));
   if let Some(if_branch) = if_branch_opt {
     let else_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis)).unwrap_or_default();
