@@ -67,13 +67,19 @@ LoadDefinitions!(state, {
   });
 
   DefMacro!("\\end{}", sub[gullet, args, state]{
-    let name = args[0].to_string();
+    unpack!(args => env);
+    let name = Expand!(env, gullet).to_string();
+    let before = state.lookup_value(&s!("@environment@{}@atend",name));
+    let after  = state.lookup_value(&s!("@environment@{}@afterend",name));
+
     let mut t = T_CS!(s!("\\end{{{}}}", name));
     if is_defined_token(&t, state) {
       // Magic CS!
+      // TODO: also add "after" tokens
       Ok(Tokens!(t))
     } else {
       t = T_CS!(s!("\\end{}", name));
+      // TODO: also add "before" tokens
       if is_defined_token(&t, state) {
         Ok(Tokens!(t, T_CS!("\\endgroup")))
       } else {

@@ -551,7 +551,7 @@ impl Document {
           Some(ref n) => n,
         };
         let node_type = node.get_type();
-        if node_type == Some(NodeType::DocumentNode) || node_type == None {
+        if node_type == Some(NodeType::DocumentNode) || node_type.is_none() {
           return None;
         }
         let this_qname = state.model.get_node_qname(node);

@@ -304,8 +304,9 @@ pub fn input(mut request: &str, options: InputOptions, stomach: &mut Stomach, st
   //   }
   } else {
     // Couldn't find anything?
-    state.note_status("missing"); //, request);
-                                  // We presumably are trying to input Content; an error if we can't find it (contrast to Definitions)
+    state.note_status("missing", request);
+
+    // We presumably are trying to input Content; an error if we can't find it (contrast to Definitions)
     let gullet = stomach.get_gullet();
     Error!("missing_file", request, gullet, state, s!("Can't find TeX file {}", request));
     //  maybeReportSearchPaths());

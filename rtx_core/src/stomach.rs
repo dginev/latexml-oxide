@@ -270,8 +270,8 @@ impl<'t> Stomach {
   }
 
   fn invoke_token_undefined(&mut self, token: &'t Token, state: &mut State) -> Result<Vec<Digested>> {
-    let cs = token.get_cs_name().to_owned(); // TODO: use the Cow directly
-                                             // TODO: state.note_status("undefined", cs);
+    let cs = token.get_cs_name();
+    state.note_status("undefined", cs);
 
     // To minimize chatter, go ahead and define it...
     if cs.starts_with("\\if") {
@@ -309,7 +309,7 @@ impl<'t> Stomach {
     } else {
       let message = s!("The token {} is not defined.", token.stringify());
       Error!("undefined", token, self, state, &message, "Defining it now as <ltx:ERROR/>");
-      let closure_cs = cs;
+      let closure_cs = cs.to_owned();
       state.install_definition(
         Constructor {
           cs: token.clone(),
@@ -444,7 +444,7 @@ impl<'t> Stomach {
 
   pub fn push_stack_frame(&mut self, nobox: bool, state: &mut State) {
     let current_token = match &state.current_token {
-      Some(t) => (*t).clone(),
+      Some(t) => Arc::clone(t),
       _ => unimplemented!(), // should never happen?
     };
 
@@ -462,6 +462,8 @@ impl<'t> Stomach {
   }
 
   pub fn pop_stack_frame(&mut self, nobox: bool, state: &mut State) -> Result<()> {
+    // WRONG! BROKEN! This needs to be a VecDequeStored<Tokens> or some such...
+    // WRONG! BROKEN! rewrite it soon...
     if let Some(Stored::Tokens(beforeafter)) = state.lookup_value("beforeAfterGroup") {
       if !beforeafter.is_empty() {
         let mut result = Vec::new();
@@ -470,12 +472,12 @@ impl<'t> Stomach {
         }
         // TODO
         // if (my ($x) = grep { !$_->isaBox } @result) {
-        // Fatal('misdefined', $x, $self, "Expected a Box|List|Whatsit, but got '" .
-        // Stringify($x) . "'"); }
+        // Error('misdefined', $x, $self, "Expected a Box|List|Whatsit, but got '" . Stringify($x) . "'");
+        // @result = (makeMisdefinedError(@result)); }
         self.box_list.extend(result);
       }
     }
-    let after = state.lookup_value("afterGroup").cloned();
+    let after = state.remove_value("afterGroup");
     state.pop_frame()?;
     if !nobox {
       self.boxing.pop(); // For begingroup/endgroup
@@ -517,7 +519,15 @@ impl<'t> Stomach {
   //======================================================================
 
   /// if $nobox is true, inhibit incrementing the boxingLevel
-  pub fn bgroup(&mut self, state: &mut State) { self.push_stack_frame(false, state); }
+  pub fn bgroup(&mut self, state: &mut State) {
+    self.push_stack_frame(false, state);
+    // NOTE: This is WRONG; should really only track "scanned" (not digested) braces
+    // Alas, there're too many code structuring differences between TeX and LaTeXML
+    // to find all the places to manage it.
+    // So, let's try this for now...
+    // was $LaTeXML::ALIGN_STATE
+    state.align_group_count +=1 ;
+  }
 
   pub fn egroup(&mut self, state: &mut State) -> Result<()> {
     if state.lookup_bool("groupNonBoxing") {
@@ -533,6 +543,7 @@ impl<'t> Stomach {
       // Don't pop if there's an error; maybe we'll recover?
       self.pop_stack_frame(false, state)?;
     }
+    state.align_group_count -=1 ;
     Ok(())
   }
 
@@ -546,7 +557,7 @@ impl<'t> Stomach {
         state.current_token.as_ref().unwrap().to_string(),
         self,
         state,
-        s!("Attempt to close non-boxing group {}", self.current_frame_message(state))
+        s!("Attempt to close non-boxing group; {}", self.current_frame_message(state))
       );
     } else {
       self.pop_stack_frame(true, state)?;

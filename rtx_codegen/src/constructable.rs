@@ -520,7 +520,7 @@ fn parse_conditional(text: &mut String) -> (proc_macro2::TokenStream, String, St
   //   for testing the boolean branch
   //   we could make it more performant by defining a simple trait `.to_bool`
   //   and implementing it for all Core objects that may be passed in as arguments
-  let bool_branch = quote!(  match #translated_bool { None => false, Some(ref v) => { let v_str = v.to_string(); !v_str.is_empty() && v_str != "false" }} );
+  let bool_branch = quote!(  match #translated_bool { None => false, Some(ref v) => !v.to_string().is_empty()} );
   let if_branch_opt = extract_bracketed(text, Some(&Delimiter::Parenthesis));
   if let Some(if_branch) = if_branch_opt {
     let else_branch = extract_bracketed(text, Some(&Delimiter::Parenthesis)).unwrap_or_default();
