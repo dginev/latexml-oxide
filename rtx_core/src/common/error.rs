@@ -24,12 +24,12 @@ macro_rules! Debug {
   }};
   ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
     use log::debug;
-    $state.note_status("debug");
+    $state.note_status("debug","");
     debug!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
     use log::debug;
-    $state.note_status("debug");
+    $state.note_status("debug","");
     debug!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }};
   ($($simple:expr),*) => {{
@@ -53,12 +53,12 @@ macro_rules! Info {
     info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }};
   ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
-    $state.note_status("info");
+    $state.note_status("info","");
     use log::info;
     info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
-    $state.note_status("info");
+    $state.note_status("info","");
     use log::info;
     info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }};
@@ -82,12 +82,12 @@ macro_rules! Warn {
     warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }};
   ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
-    $state.note_status("warn");
+    $state.note_status("warn","");
     use log::warn;
     warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
-    $state.note_status("warn");
+    $state.note_status("warn","");
     use log::warn;
     warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }}
@@ -106,12 +106,12 @@ macro_rules! Error {
     error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }};
   ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
-    $state.note_status("error");
+    $state.note_status("error","");
     use log::error;
     error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
-    $state.note_status("error");
+    $state.note_status("error","");
     use log::error;
     error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }}

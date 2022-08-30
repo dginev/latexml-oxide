@@ -56,13 +56,12 @@ LoadDefinitions!(state, {
   DefMacro!("\\eTeXrevision", sub[gullet,args,state] { Explode!(".2") });
   DefRegister!("\\eTeXversion" => Number!(2));
 
-  // # \currentgrouplevel
-  // DefRegister('\currentgrouplevel', Number(0),
-  //   readonly => 1,
-  //   getter => sub { $STATE->getFrameDepth; });
+  // \currentgrouplevel
+  DefRegister!("\\currentgrouplevel", Number!(0), readonly => true,
+    getter => sub[args, state] { state.get_frame_depth() });
 
-  // # \currentgrouptype returns group types from 0..16 ; but what IS a "group type"?
-  // DefRegister('\currentgrouptype', Number(0), readonly => 1);
+  // \currentgrouptype returns group types from 0..16 ; but what IS a "group type"?
+  DefRegister!("\\currentgrouptype", Number!(0), readonly => true);
 
   // \ifcsname stuff \endcsname
   DefConditional!("\\ifcsname CSName", sub[gullet, args, state] {
@@ -117,26 +116,31 @@ LoadDefinitions!(state, {
 
   // #======================================================================
   // # 3.6 Additional debugging features
-  // DefRegister('\interactionmode' => Number(0));
+  DefRegister!("\\interactionmode" => Number::new(0));
 
   // # Should show all open groups & their type.
-  // DefPrimitive('\showgroups', undef);
+  DefPrimitive!("\\showgroups", None);
 
   // # \showtokens <generaltext>
-  // # NOTE Debugging aids are currently IGNORED!
-  // DefPrimitive('\showtokens GeneralText', undef);
+  // DefPrimitive!("\\showtokens GeneralText",  sub {
+  //   Note("> " . writableTokens($_[1]));
+  //   Note($_[0]->getLocator->toString());
+  //   return; });
 
-  // DefRegister('\tracingassigns'    => Number(0));    # ???
-  // DefRegister('\tracinggroups'     => Number(0));
-  // DefRegister('\tracingifs'        => Number(0));    # ???
-  // DefRegister('\tracingscantokens' => Number(0));
+  DefRegister!("\\tracingassigns"    => Number::new(0));    // ???
+  DefRegister!("\\tracinggroups"     => Number::new(0));
+  DefRegister!("\\tracingifs"        => Number::new(0));    // ???
+  DefRegister!("\\tracingscantokens" => Number::new(0));
+  DefRegister!("\\tracingnesting"    => Number::new(0));
+  DefRegister!("\\savingvdiscards"   => Number::new(0));
+  DefRegister!("\\savinghyphcodes"   => Number::new(0));
 
   // #======================================================================
   // # 3.7 Miscellaneous primitives
 
   // # \everyeof
   // # NOTE: These tokens are NOT used anywhere (yet?)
-  // DefRegister('\everyeof', Tokens());
+  DefRegister!("\\everyeof", Tokens!());
 
   // DefConstructor('\middle Token', '#1',
   //   afterConstruct => sub {
@@ -217,12 +221,15 @@ LoadDefinitions!(state, {
   // DefParameterType('GlueExpr', sub { etex_readexpr($_[0], 'Glue'); });
   // DefParameterType('MuExpr',   sub { etex_readexpr($_[0], 'MuGlue'); });
 
-  // DefRegister('\numexpr NumExpr',   Number(0),    getter => sub { $_[0]; });
-  // DefRegister('\dimexpr DimExpr',   Dimension(0), getter => sub { $_[0]; });
-  // DefRegister('\glueexpr GlueExpr', Glue(0),      getter => sub { $_[0]; });
-  // DefRegister('\muexpr MuExpr',     MuGlue(0),    getter => sub { $_[0]; });
+  // TODO: ArgWrap for trait into_register_value_option ?
+  // DefRegister!("\\numexpr NumExpr",   Number::new(0),    getter => sub[args, state] { args[0].clone() });
+  // DefRegister!("\\dimexpr DimExpr",   Dimension::new(0), getter => sub[args, state] { args[0].clone() });
+  // DefRegister!("\\glueexpr GlueExpr", Glue::new(0),      getter => sub[args, state] { args[0].clone() });
+  // DefRegister!("\\muexpr MuExpr",     MuGlue::new(0),    getter => sub[args, state] { args[0].clone() });
 
-  // # Not really sure where this comes from; pdftex?
-  // DefRegister('\synctex', Number(0));
+  DefPrimitive!("\\pdftexcmds@directlua{}", None);
+
+  // Not really sure where this comes from; pdftex?
+  DefRegister!("\\synctex", Number::new(0));
   // #======================================================================
 });

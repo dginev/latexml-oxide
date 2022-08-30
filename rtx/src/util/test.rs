@@ -17,7 +17,7 @@ pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>, dispatche
 }
 #[allow(clippy::implicit_hasher)]
 pub fn rtx_tests_internal(dirpath: &str, requires: Option<HashMap<&str, &str>>, extra_bindings_dispatcher: Option<BindingDispatcher>) {
-  assert!(rtx_core::util::logger::init(log::LevelFilter::Warn).is_ok());
+  rtx_core::util::logger::init(log::LevelFilter::Warn).unwrap();
 
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.

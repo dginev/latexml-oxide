@@ -240,6 +240,7 @@ pub struct State {
   // TODO: Maybe group these in a "SessionFlags" struct?
   //       we can then reset that if we reimplement a daemon app
   pub verbosity: i32,
+  pub align_group_count: i32, // was $LaTeXML::ALIGN_STATE
   pub status_code: usize,
   pub unlocked: bool,
   pub current_token: Option<Arc<Token>>,
@@ -254,7 +255,6 @@ pub struct State {
   pub include_styles: bool,
   pub nomathparse: bool,
   pub smuggle_the: bool,
-  pub align_state: bool,
   pub reading_alignment: bool,
   // Auxiliary convenience -- extra dispatch
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
@@ -301,6 +301,7 @@ impl Default for State {
       // Stateful runtime - simple fields
       verbosity: 0,
       status_code: 0,
+      align_group_count: 0,
       unlocked: true,
       current_token: None,
       if_frame: None,
@@ -314,7 +315,6 @@ impl Default for State {
       include_styles: false,
       nomathparse: false,
       smuggle_the: false,
-      align_state: false,
       reading_alignment: false,
       extra_bindings_dispatch: None,
       // interiorly mutable
@@ -1477,7 +1477,7 @@ impl State {
 
   // #======================================================================
 
-  pub fn note_status(&self, category: &str) {
+  pub fn note_status(&self, category: &str, what: &str) {
     // Ok, note status is *EXTREMELY* localized
     // it only touches the status field of state,
     // and has NO side-effects to any of the other stateful machinery.
@@ -1709,7 +1709,7 @@ impl State {
   /// along with appropriate error messge.
   pub fn generate_error_stub(&mut self, caller: &mut Gullet, token: &Token) -> Result<Token> {
     let cs = token.get_cs_name();
-    self.note_status(cs); // TODO: Undefined:cs
+    self.note_status("undefined", cs); // TODO: Undefined:cs
                           // To minimize chatter, go ahead and define it...
     if cs.starts_with("\\if") {
       // Apparently an \ifsomething ???

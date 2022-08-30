@@ -31,11 +31,11 @@ LoadDefinitions!(state, {
     }
   },
   after_digest => sub[stomach, whatsit, state] {
-    {
+    stomach.begin_mode("text", state)?;
+    { // we need to re-bind in order to nest calls to the binding macro machinery
       bind_state_mut!(stomach,state);
       DefMacro!("\\@currenvir", "document");
     }
-    stomach.begin_mode("text", state)?;
     let mut gullet = stomach.get_gullet_mut();
     state.assign_value("current_environment", "document", None);
     let expanded_id = Expand!(T_CS!("\\thedocument@ID"),gullet,state);
@@ -66,12 +66,11 @@ LoadDefinitions!(state, {
   },
   before_digest => sub[stomach,state] {
     let mut boxes : Vec<Digested> = Vec::new();
-    if let Some(ops) = state.lookup_value("@at@end@document") {
-      unimplemented!();
-      // boxes.extend(stomach.digest(Tokens::new(ops)));
+    if let Some(ops) = state.lookup_tokens("@at@end@document") {
+      boxes.push(stomach.digest(ops,state)?);
     }
     // Should we try to indent the last paragraph? If so, it goes like this:
-    //     push(@boxes, $stomach->digest(T_CS('\normal@par')));
+    // boxes.push(stomach.digest(T_CS!("\\normal@par"), state)?);
     // Now we check whether we're down to the last stack frame.
     // It is common for unclosed { or even environments
     // and we want to at least compress & avoid unnecessary errors & warnings.
