@@ -69,3 +69,10 @@ Requires Rust `stable` v1.32, and newer.
     ```bash
     $ cargo run --release --bin rtx rtx/tests/hello/hello.tex
     ```
+
+### Docs
+
+To generate the project documentation locally, run:
+```bash
+$ cargo doc --workspace --no-deps --open
+```
