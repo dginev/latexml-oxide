@@ -74,7 +74,7 @@ LoadDefinitions!(state, {
       if !key.is_empty() {
         let mut keyvals = KeyVals::new(KeyValsOptions{skip_missing: true, ..KeyValsOptions::default()}, state);
         let dim = stomach.get_gullet_mut().read_dimension(state)?;
-        keyvals.set_value(&key.to_string(), dim.into(), false, state);
+        keyvals.set_value(&key.owned_tokens().unwrap().to_string(), dim.into(), false, state);
         keyvals.into()
       } else {
         Ok(None)
@@ -105,7 +105,8 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props, state] {
       // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
-      let contents = args[1].as_ref().unwrap();
+      unpack_opt_ref!(args => spec_opt, contents_opt);
+      let contents = contents_opt.unwrap().as_ref().unwrap();
       let current_opt = document.get_element();
 
       // What is the CORRECT (& general) way to ask whether we're in "vertical mode"??
@@ -143,18 +144,19 @@ LoadDefinitions!(state, {
     //   # And also things like \centerline that will end up bumping up to block level!
     before_digest => sub[stomach, state] {reenter_text_mode(false, stomach.get_gullet_mut(), state)},
     after_digest => sub[stomach, whatsit, state] {
-      let mut width : Option<RegisterValue>= None;
-      {
+      let width : Option<RegisterValue> = {
         let spec = whatsit.get_arg(1);
         let tbox = whatsit.get_arg(2).unwrap();
-        if let Some(w) = GetKeyVal!(spec, "to") {
-          width = w.into();
+         if let Some(w) = GetKeyVal!(spec, "to") {
+          w.into()
         } else if let Some(s) = GetKeyVal!(spec, "spread") {
           let s_num_opt : Option<RegisterValue> = s.into();
           let s_num = s_num_opt.unwrap_or_else(|| Number::new(0).into());
-          width = Some( tbox.get_width(state).unwrap().add(s_num) );
+          Some( tbox.get_width(state).unwrap().add(s_num) )
+        } else {
+          None
         }
-      }
+      };
       if let Some(w) = width {
         whatsit.set_width(w);
       }
