@@ -117,9 +117,9 @@ impl Args {
     Ok(())
   }
   /// Obtain defined subtrees as a slice, e.g. for consistency validation
-  pub fn trees(&self) -> Vec<&Tree> { self.0.iter().filter(|x| x.is_some()).map(|x| x.as_ref().unwrap()).collect() }
+  pub fn trees(&self) -> Vec<&Tree> { self.0.iter().filter_map(|x| x.as_ref()).collect() }
   /// Obtain defined subtrees as a mutable slice, e.g. for consistency validation
-  pub fn trees_mut(&mut self) -> Vec<&mut Tree> { self.0.iter_mut().filter(|x| x.is_some()).map(|x| x.as_mut().unwrap()).collect() }
+  pub fn trees_mut(&mut self) -> Vec<&mut Tree> { self.0.iter_mut().filter_map(|x| x.as_mut()).collect() }
 
   /// borrow the constraints and pass them to the outer caller
   pub fn get_constraints(&self) -> Vec<&CurryConstraint> { self.trees().into_iter().flat_map(|t| t.get_meta().curry_constraints.iter()).collect() }

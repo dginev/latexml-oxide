@@ -162,8 +162,9 @@ LoadDefinitions!(state, {
 
   // TeX I/O primitives
   DefPrimitive!("\\openin Number SkipMatch:= SkipSpaces TeXFileName", sub[stomach, args, state] {
-    let port = args[0].to_string();
-    let filename = args[1].to_string();
+    unpack!(args => port, filename);
+    let port = port.to_string();
+    let filename = filename.to_string();
     // possibly should close $port if it's already been opened?
     // Rely on FindFile to enforce any access restrictions
     if let Some(path) = find_file(&filename, None, state) {
@@ -183,6 +184,7 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\closein Number", sub[stomach, args, state] {
     unpack!(args => port);
+    let port = port.to_number();
     // Clone the Rc<> for mouth out of state, since we'll be mutating.
     let mouth_opt = if let Some(Stored::Mouth(ref mouth)) = LookupValue!(&s!("input_file:{}", port)) {
       Some(Arc::clone(mouth))
@@ -200,7 +202,7 @@ LoadDefinitions!(state, {
     unpack!(args => port, token);
     let token: Token = token.into(); // downcast from Tokens
     let port = port.to_number();
-    if let Some(Stored::Mouth(mouth_stored)) = LookupValue!(&s!("input_file:{}",port)) {
+    if let Some(Stored::Mouth(mouth_stored)) = state.lookup_value(&s!("input_file:{}",port)) {
       let mouth_obj = Arc::clone(mouth_stored);
       stomach.bgroup(state);
       AssignValue!("PRESERVE_NEWLINES", 2); // Special EOL/EOF treatment for \read
@@ -240,8 +242,9 @@ LoadDefinitions!(state, {
   // For output files, we'll write the data to a cached internal copy
   // rather than to the actual file system.
   DefPrimitive!("\\openout Number SkipMatch:= SkipSpaces TeXFileName", sub[stomach, args, state] {
-    let port = args[0].to_string();
-    let filename = args[1].to_string();
+    unpack!(args => port, filename);
+    let port = port.to_string();
+    let filename = filename.to_string();
     let contents_key = &s!("{}_contents",filename);
     AssignValue!(&s!("output_file:{}",port)  => filename,  Some(Scope::Global));
     AssignValue!(contents_key => "",  Some(Scope::Global));

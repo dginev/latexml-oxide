@@ -109,6 +109,7 @@ impl Tbox {
     }
   }
 
+  pub fn is_empty(&self) -> bool { self.text.is_empty() }
   pub fn get_string(&self) -> &str { self.text.as_str() }
 }
 

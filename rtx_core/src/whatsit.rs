@@ -53,6 +53,9 @@ impl Whatsit {
       _ => false,
     }
   }
+  pub fn is_empty(&self) -> bool {
+    self.args.is_empty()
+  }
 
   pub fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
   pub fn properties(self) -> HashMap<String, Stored> { self.properties }

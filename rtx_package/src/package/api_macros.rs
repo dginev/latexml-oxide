@@ -352,6 +352,8 @@ macro_rules! prop_bool {
   };
 }
 
+/// unpacks a `Vec<ArgWrap>` argument into a flexary number of `String`-typed variables
+/// uses the usual `.to_string()` method from the `Display` trait.
 #[macro_export]
 macro_rules! unpack_to_string {
   ($args:ident => $var:ident) => (count_unpack_to_string!(0usize, $args => $var));
@@ -392,6 +394,7 @@ macro_rules! unpack {
   }
 }
 
+/// Convenience macro to flexibly unpack a collection of `Vec<ArgWrap>` arguments into individual `Tokens` variables.
 #[macro_export]
 macro_rules! unref {
   ($args:ident => $var:ident) => (count_unpack_ref!(0usize, $args => $var));
@@ -408,26 +411,29 @@ macro_rules! count_unpack_ref {
   };
 }
 
-/// Meant to be used for unpacking &Vec<Option<Digested>> in particular.
+/// An alternative to `unpack!(args=>arg1,arg2...)`
+/// which allows for optional arguments.
 #[macro_export]
 macro_rules! unpack_opt {
+  ($args:ident => $var:ident) => (let $var = $args.remove(0););
+  ($args:ident => $var:ident,$($tail:ident),*) => {
+    let $var = $args.remove(0);
+    unpack_opt!($args => $($tail),*)
+  }
+}
+
+/// Meant to be used for unpacking &Vec<Option<Digested>> in particular.
+#[macro_export]
+macro_rules! unpack_opt_ref {
   ($args:ident => $var:ident) => (count_unpack_opt!(0usize, $args => $var));
   ($args:ident => $var:ident,$($tail:ident),*) => (count_unpack_opt!(0usize, $args => $var,$($tail),*));
 }
-
-#[macro_export]
 macro_rules! count_unpack_opt {
   ($index:expr, $args:ident => $var:ident) => (
-    let $var = match $args.get($index) {
-      Some(v) => v,
-      None => &None
-    };
+    let $var = $args.get($index);
   );
   ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
-    let $var = match $args.get($index) {
-      Some(v) => v,
-      None => &None
-    };
+    let $var = $args.get($index);
     count_unpack_opt!(1usize+$index, $args => $($tail),*)
   }
 }

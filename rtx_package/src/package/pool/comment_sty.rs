@@ -5,7 +5,7 @@ LoadDefinitions!(outer_state, {
   // Define \name and \begin{name} to start an ignored section
   // until \endname or \end{name}, respectively
   let define_excluded: PrimitiveClosure = Arc::new(primitiveproc!(stomach, args, state, {
-    let name = args[0].to_string();
+    unpack!(args=>name);
     let begin_mark = s!("\\begin{{{}}}", name);
     let end_mark = s!("\\end{{{}}}", name);
     DefConstructor!(T_CS!(begin_mark), None, None,
@@ -28,7 +28,7 @@ LoadDefinitions!(outer_state, {
   // twice instead, via a macro
   let define_included: PrimitiveClosure = Arc::new(primitiveproc!(stomach, args, inner_state, {
     args.reverse(); // we'll be using .pop() from the front
-    let name = args.pop().unwrap().to_string();
+    let name = args.pop().unwrap().owned_tokens().expect("expecting a Tokens argument").to_string();
     let mut before_tokens = match args.pop() {
       Some(arg) => arg.unlist(),
       None => Vec::new(),

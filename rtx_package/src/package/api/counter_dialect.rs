@@ -286,11 +286,12 @@ pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut
   Ok(())
 }
 
-pub struct RefStepValue {
-  pub id: Option<String>,
-  pub tags: Option<Tokens>,
-}
-
+/// Analog of `\refstepcounter`, steps the counter and returns a hash
+/// containing the keys `refnum` and `id`.  This makes it
+/// suitable for use in a `properties` option to constructors.
+/// The `id` is generated in parallel with the reference number
+/// to assist debugging.
+///
 pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(Stored::String(ctr)) => ctr.to_string(),
@@ -443,7 +444,10 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   }
 }
 
-// For UN-numbered units
+/// For UN-numbered units.
+/// Like `RefStepCounter`, but only steps the "uncounter",
+/// and returns only the id;  This is useful for unnumbered cases
+/// of objects that normally get both a refnum and id.
 pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(map) => map.to_string(),

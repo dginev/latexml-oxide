@@ -368,11 +368,23 @@ impl Parameter {
       // Done for effect only.
       pre(stomach, state)?; // maybe pass extras?
     }
-
     let digested_value = if let Some(ref closure) = &self.reader_predigest {
       closure(stomach, value_arg, state)?
     } else {
-      Some(value_arg.be_digested(stomach, state)?)
+      // Note: we have an open question for the type interface.
+      //  What happens when a wrapped "None" value,
+      // (such as the missing value of an Optional [] argument)
+      // gets digested?
+      //
+      // currently a `Digested::default` gets returned, which has an empty TBox and also gets returned
+      // for e.g. empty mandatory Plain arguments {}.
+      // But we need *different* values, as the explicit "\foo[]" is an override to empty, while "\foo"
+      // will use the default value for the Optional.
+      if self.optional && value_arg.is_none() {
+        None
+      } else {
+        Some(value_arg.be_digested(stomach, state)?)
+      }
     };
     for post in self.after_digest.iter() {
       // Done for effect only.

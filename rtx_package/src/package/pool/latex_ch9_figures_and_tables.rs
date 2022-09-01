@@ -60,8 +60,9 @@ LoadDefinitions!(state, {
   );
 
   DefPrimitive!("\\lx@note@caption@label{}", sub[stomach,args,state] {
-    let arg = args[0].to_string();
-    maybe_note_label(&arg, state); });
+    unpack!(args => label);
+    let label = label.to_string();
+    maybe_note_label(&label, state); });
 
   DefMacro!(
     "\\@caption@@@{}{}{}",
