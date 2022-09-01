@@ -454,6 +454,16 @@ impl Digested {
     }
   }
 
+  pub fn is_empty(&self) -> bool {
+    match *self {
+      Digested::TBox(ref b) => b.is_empty(),
+      Digested::List(ref l) => l.is_empty(),
+      Digested::Whatsit(ref w) => w.read().unwrap().is_empty(),
+      Digested::Postponed(ref tks) => tks.is_empty(),
+      _ => unimplemented!(),
+    }
+  }
+
   /// Provide a way of emulating an `Undigested` argument, by requesting
   /// raw tokens, only when they are preserved -- empty otherwise.
   pub fn raw_tokens(&self) -> Arc<Tokens> {

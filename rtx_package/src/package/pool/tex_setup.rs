@@ -680,8 +680,8 @@ LoadDefinitions!(state, {
   });
 
   DefPrimitive!("\\ltx@loadpool {}", sub[stomach,args,state] {
-    let name = args[0].to_string();
-    LoadPool!(&name);
+    unpack!(args=>name);
+    LoadPool!(&name.to_string());
   });
 
   // A LaTeX style directory List

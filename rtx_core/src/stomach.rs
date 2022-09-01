@@ -280,12 +280,11 @@ impl<'t> Stomach {
       let message = s!("The token {} is not defined.", token.stringify());
       Error!("undefined", token, self, state, &message, "Defining it now as with \\newif");
       // install stub definitions for new conditional
-      let cs_clone = cs.clone();
       state.install_definition(
         Expandable::new(
           T_CS!(s!("\\{}true", name)),
           None,
-          Tokens!(T_CS!("\\let"), T_CS!(cs_clone), T_CS!("\\iftrue")),
+          Tokens!(T_CS!("\\let"), T_CS!(cs), T_CS!("\\iftrue")),
           None,
           state,
         ),

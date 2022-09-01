@@ -268,7 +268,8 @@ LoadDefinitions!(outer_state, {
   // stomach, but we may require some special-case treatment in other pieces of code...
   DefMacro!("\\input", "\\ltx@input");
   DefPrimitive!("\\ltx@input TeXFileName", sub[stomach,args,state] {
-    input(&args[0].to_string(), InputOptions::default(), stomach, state)?;
+    unpack!(args => name);
+    input(&name.to_string(), InputOptions::default(), stomach, state)?;
   });
 
   // Note that TeX doesn't actually close the mouth;

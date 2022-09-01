@@ -995,6 +995,8 @@ macro_rules! StepCounter {
     step_counter($ctr, $noreset, $stomach, $state_arg)
   };
 }
+
+/// convenience macro for `api::counter_dialect::ref_step_counter`
 #[macro_export]
 macro_rules! RefStepCounter {
   ($ctr:expr, $noreset:expr, $stomach:ident) => {{
@@ -1005,6 +1007,8 @@ macro_rules! RefStepCounter {
     ref_step_counter($ctr, $noreset, $stomach, $state_arg)
   };
 }
+
+/// convenience macro for `api::counter_dialect::ref_step_id`
 #[macro_export]
 macro_rules! RefStepID {
   ($ctr:expr) => {{

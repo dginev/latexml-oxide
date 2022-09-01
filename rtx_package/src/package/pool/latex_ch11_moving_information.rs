@@ -67,8 +67,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
   DefConstructor!("\\ref OptionalMatch:* Semiverbatim",
     "<ltx:ref labelref='#label' _force_font='true'/>",
     properties => sub[stomach, args, state] {
-      unpack_opt!(args => _star,label_opt);
-      let label = label_opt.as_ref().unwrap().to_string();
+      unpack_opt_ref!(args => _star, label_opt);
+      let label = label_opt.unwrap().as_ref().unwrap().to_string();
       Ok(map!("label" => Stored::String(clean_label(&label, None).into_owned())))
   });
 
@@ -203,15 +203,13 @@ LoadDefinitions!(outer_stomach, outer_state, {
   // Hack for abused bibliographies; see below
   DefMacro!(
     "\\bibitem",
-    "\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem"
-  );
+    "\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem", locked=>true);
   DefConstructor!("\\lx@bibitem[] Semiverbatim", "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
     after_digest => sub[stomach, whatsit, state] {
       let tag_opt = whatsit.get_arg(1);
-      let key = clean_bib_key(&match whatsit.get_arg(2) {
-        None => String::new(),
-        Some(key) => key.to_string(),
-      });
+      let key = if let Some(key) = whatsit.get_arg(2) {
+        clean_bib_key(&key.to_string())
+      } else { String::default() };
       if let Some(tag) = tag_opt {
         let mut properties = RefStepID!("@bibitem", stomach)?;
         properties.insert("key".to_string(), key.into());
@@ -224,6 +222,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
         tag_tokens.push(T_END!());
         properties.insert("tags".to_string(),
           stomach.digest(tag_tokens, state)?.into());
+        whatsit.set_properties(properties);
       } else {
         let mut properties = RefStepCounter!("@bibitem", false, stomach)?;
         properties.insert("key".to_string(), key.into());
@@ -330,12 +329,16 @@ LoadDefinitions!(outer_stomach, outer_state, {
   DefConstructor!("\\@@citephrase{}", "<ltx:bibrefphrase>#1</ltx:bibrefphrase>", mode => "text");
 
   DefMacro!("\\cite[] Semiverbatim", sub[gullet, args, state] {
-    unpack!(args => post, keys);
+    unpack_opt!(args => post_opt, keys_opt);
+    let keys = keys_opt.owned_tokens().unwrap();
     let style = state.lookup_tokens("CITE_STYLE").unwrap_or_else(|| Tokens!());
     let open = state.lookup_tokens("CITE_OPEN");
     let open = open.unwrap_or_else(|| Tokens!());
     let close = state.lookup_tokens("CITE_CLOSE").unwrap_or_else(|| Tokens!());
-    let mut post_tokens = post.unlist();
+    let mut post_tokens = match post_opt.owned_tokens() {
+      Some(tks) => tks.unlist(),
+      None => Vec::new()
+    };
     if !post_tokens.is_empty() {
       let ns = state.lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or_else(|| Tokens!());
       let mut post_wrapped = ns.unlist();

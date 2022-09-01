@@ -315,7 +315,8 @@ LoadDefinitions!(state, {
   // # which means they actually work quite differently
   DefRegister!("\\allocationnumber" => Number::new(0));
   DefMacro!("\\alloc@@ {}", sub[gullet, args, state] {
-    let atype = args[0].to_string();
+    unpack!(args => atype_tokens);
+    let atype = atype_tokens.to_string();
     let c = s!("allocation @{}", atype);
     let n = LookupRegisterOrDefault!(c).value_of();
     AssignValue!(&c                  => n + 1,     Some(Scope::Global));

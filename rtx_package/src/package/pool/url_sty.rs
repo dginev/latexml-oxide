@@ -96,7 +96,8 @@ LoadDefinitions!(state, {
   // Kinda tricky, since we need to get the expansion of \cmd as the value of \newcmd
   // Along with the annoying \endgroup that must balance the one always preceding \Url!
   DefPrimitive!("\\urldef{}", sub[stomach, args, url_state] {
-    let cmd = args[0].to_string();
+    unpack!(args => cmd);
+    let cmd = cmd.to_string();
     let expansion : Vec<Digested> = stomach.digest_next_body(Some(T_CS!("\\endgroup")), url_state)?;
     let gullet = stomach.get_gullet_mut();
     DefPrimitive!(&cmd, { Ok(expansion.clone()) });
