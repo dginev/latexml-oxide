@@ -7,11 +7,15 @@ use crate::package::*;
 // invoked directly.
 LoadDefinitions!(state, {
   DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}", sub[stomach, args, state] {
-    unpack!(args => star, name, nargs, opt, begin, end);
+    unpack_opt!(args => star_opt, name_opt, nargs_opt, opt_opt, begin_opt, end_opt);
+    let name = name_opt.owned_tokens().unwrap();
+    let nargs = if nargs_opt.is_empty() { Number::new(0) } else { nargs_opt.owned_tokens().unwrap().to_number() };
+    let begin = begin_opt.owned_tokens().unwrap();
+    let end = end_opt.owned_tokens().unwrap();
+
     let name = { stomach.digest(name, state)?.to_string() };
     let name_cs = T_CS!(s!("\\{}",name));
     let end_name_cs = T_CS!(s!("\\end{}",name));
-    let nargs : usize = nargs.to_string().parse().unwrap_or(0);
     if IsDefined!(&name_cs) {
       let is_locked = state.has_value(&s!("\\{}:locked",name)) ||
        state.has_value(&s!("\\begin{{{}}}:locked",name));
@@ -20,8 +24,8 @@ LoadDefinitions!(state, {
         Info!("ignore", name, stomach, state, message);
       }
     } else {
-      let opt = if opt.is_empty() { None } else { Some(opt) };
-      let converted_args = convert_latex_args(nargs, opt, state)?; // TODO: can we convince DefMacro! this is not a second mutable borrow of state?
+      let opt = if opt_opt.is_empty() { None } else { Some(opt_opt.owned_tokens().unwrap()) };
+      let converted_args = convert_latex_args(nargs.value_of() as usize, opt, state)?; // TODO: can we convince DefMacro! this is not a second mutable borrow of state?
       DefMacro!(name_cs, converted_args, begin);
       DefMacro!(end_name_cs, None, end);
     }
