@@ -713,7 +713,7 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, state: &St
       if let Some(ref font) = font {
         match font.get_encoding() {
           None => String::new(),
-          Some(encoding) => encoding.to_owned().into_owned(),
+          Some(encoding) => encoding.clone().into_owned(),
         }
       } else {
         String::new()

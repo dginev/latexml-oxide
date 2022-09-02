@@ -248,7 +248,13 @@ macro_rules! setter {
 macro_rules! undigested {
   () => {
     Some(Arc::new(
-      |stomach: &mut Stomach, arg: ArgWrap, state: &mut State| -> Result<Option<Digested>> { Ok(Some(Digested::Postponed(Arc::new(arg.owned_tokens().unwrap_or_default())))) },
+      |stomach: &mut Stomach, arg: ArgWrap, state: &mut State| -> Result<Option<Digested>> {
+        if arg.is_none() {
+          Ok(None)
+        } else {
+          Ok(Some(Digested::Postponed(Arc::new(arg.owned_tokens().unwrap_or_default()))))
+        }
+      }
     ))
   };
 }
