@@ -47,7 +47,37 @@ impl Default for ArgWrap {
 }
 
 impl Display for ArgWrap {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{:?}", self) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match self {
+      ArgWrap::Token(t) => write!(f, "{}", t),
+      ArgWrap::OptionToken(None) => write!(f, "None"),
+      ArgWrap::OptionToken(Some(ot)) => write!(f, "{}", ot),
+      ArgWrap::Tokens(ts) =>  write!(f, "{}", ts),
+      ArgWrap::OptionTokens(None) =>  write!(f, "None"),
+      ArgWrap::OptionTokens(Some(ots)) =>  write!(f, "{}", ots),
+      ArgWrap::Number(n) =>  write!(f, "{}", n),
+      ArgWrap::OptionNumber(None) =>  write!(f, "None"),
+      ArgWrap::OptionNumber(Some(on)) =>  write!(f, "{}", on),
+      ArgWrap::Float(fl) =>  write!(f, "{}", fl),
+      ArgWrap::OptionFloat(None) =>  write!(f, "None"),
+      ArgWrap::OptionFloat(Some(ofl)) =>  write!(f, "{}", ofl),
+      ArgWrap::Dimension(d) => write!(f, "{}", d),
+      ArgWrap::OptionDimension(None) =>  write!(f, "None"),
+      ArgWrap::OptionDimension(Some(od)) =>  write!(f, "{}", od),
+      ArgWrap::Glue(gl) =>  write!(f, "{}", gl),
+      ArgWrap::OptionGlue(None) =>  write!(f, "None"),
+      ArgWrap::OptionGlue(Some(ogl)) =>  write!(f, "{}", ogl),
+      ArgWrap::MuGlue(mugl) =>  write!(f, "{}", mugl),
+      ArgWrap::OptionMuGlue(None) =>  write!(f, "None"),
+      ArgWrap::OptionMuGlue(Some(omugl)) =>  write!(f, "{}", omugl),
+      ArgWrap::MuDimension(mudim) =>  write!(f, "{}", mudim),
+      ArgWrap::OptionMuDimension(None) =>  write!(f, "None"),
+      ArgWrap::OptionMuDimension(Some(omudim)) =>  write!(f, "{}", omudim),
+      ArgWrap::KV(kv) =>  write!(f, "{}", kv),
+      ArgWrap::OptionKV(None) =>  write!(f, "None"),
+      ArgWrap::OptionKV(Some(okv)) =>  write!(f, "{}", okv)
+    }
+  }
 }
 
 impl Object for ArgWrap {

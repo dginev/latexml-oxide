@@ -340,7 +340,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
         })
       } else {
         Arc::new(move |value, args, state| {
-          let args_string: String = args.iter().map(ToString::to_string).collect::<Vec<String>>().join("");
+          let args_string: String = args.into_iter().map(|a| a.owned_tokens().unwrap().to_string()).collect::<Vec<String>>().join("");
 
           state.assign_value(&(setter_name.clone() + &args_string), value, None);
         })

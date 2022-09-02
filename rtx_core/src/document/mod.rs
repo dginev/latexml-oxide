@@ -2431,42 +2431,8 @@ impl Document {
   }
 
   pub fn trim_node_whitespace(&mut self, node: &mut Node) -> Result<()> {
-    self.trim_node_left_whitespace(node)?;
-    self.trim_node_right_whitespace(node)?;
-    Ok(())
-  }
-
-  pub fn trim_node_left_whitespace(&mut self, node: &mut Node) -> Result<()> {
-    if let Some(mut first_child) = node.get_first_child() {
-      match first_child.get_type() {
-        Some(NodeType::TextNode) => {
-          let content = first_child.get_content();
-          let trimmed_content = content.trim_start();
-          if !content.is_empty() && (trimmed_content != content) {
-            first_child.set_content(trimmed_content)?;
-          }
-        },
-        Some(NodeType::ElementNode) => self.trim_node_left_whitespace(&mut first_child)?,
-        _ => {},
-      };
-    }
-    Ok(())
-  }
-
-  pub fn trim_node_right_whitespace(&mut self, node: &mut Node) -> Result<()> {
-    if let Some(mut last_child) = node.get_last_child() {
-      match last_child.get_type() {
-        Some(NodeType::TextNode) => {
-          let content = last_child.get_content();
-          let trimmed_content = content.trim_end();
-          if !content.is_empty() && (trimmed_content != content) {
-            last_child.set_content(trimmed_content)?;
-          }
-        },
-        Some(NodeType::ElementNode) => self.trim_node_right_whitespace(&mut last_child)?,
-        _ => {},
-      };
-    }
+    trim_node_left_whitespace(node)?;
+    trim_node_right_whitespace(node)?;
     Ok(())
   }
 
@@ -2666,6 +2632,40 @@ fn serialize_attr(string: &str) -> String {
   serialized = serialized.replace('\n', "&#10;");
   serialized = serialized.replace('\t', "&#9;");
   serialized
+}
+
+fn trim_node_left_whitespace(node: &mut Node) -> Result<()> {
+  if let Some(mut first_child) = node.get_first_child() {
+    match first_child.get_type() {
+      Some(NodeType::TextNode) => {
+        let content = first_child.get_content();
+        let trimmed_content = content.trim_start();
+        if !content.is_empty() && (trimmed_content != content) {
+          first_child.set_content(trimmed_content)?;
+        }
+      },
+      Some(NodeType::ElementNode) => trim_node_left_whitespace(&mut first_child)?,
+      _ => {},
+    };
+  }
+  Ok(())
+}
+
+fn trim_node_right_whitespace(node: &mut Node) -> Result<()> {
+  if let Some(mut last_child) = node.get_last_child() {
+    match last_child.get_type() {
+      Some(NodeType::TextNode) => {
+        let content = last_child.get_content();
+        let trimmed_content = content.trim_end();
+        if !content.is_empty() && (trimmed_content != content) {
+          last_child.set_content(trimmed_content)?;
+        }
+      },
+      Some(NodeType::ElementNode) => trim_node_right_whitespace(&mut last_child)?,
+      _ => {},
+    };
+  }
+  Ok(())
 }
 
 pub trait IntoVDQS {

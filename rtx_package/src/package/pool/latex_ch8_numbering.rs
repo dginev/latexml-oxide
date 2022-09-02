@@ -23,12 +23,13 @@ LoadDefinitions!(state, {
   });
 
   DefPrimitive!("\\newcounter{}[]", sub[stomach, args, state] {
-    unpack!(args => cs, default);
+    unpack_opt!(args => cs_opt, default_opt);
+    let cs = cs_opt.owned_tokens().unwrap();
     let gullet = stomach.get_gullet_mut();
-    let default = if !default.is_empty() {
-      Expand!(default, gullet)
+    let default = if !default_opt.is_empty() {
+      Expand!(default_opt.owned_tokens().unwrap(), gullet)
     } else {
-      default
+      Tokens!()
     };
     let cs_expanded = &Expand!(cs, gullet).to_string();
     NewCounter!(cs_expanded, &default.to_string());

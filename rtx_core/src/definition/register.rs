@@ -304,6 +304,7 @@ impl<'a> From<&'a RegisterValue> for MuGlue {
 impl fmt::Display for RegisterValue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
+      RegisterValue::Number(n) => write!(f, "{}", n),
       RegisterValue::Dimension(d) => write!(f, "{}", d),
       RegisterValue::MuDimension(d) => write!(f, "{}", d),
       RegisterValue::Glue(g) => write!(f, "{}", g),
