@@ -15,11 +15,11 @@ macro_rules! set {
 }
 
 #[macro_export]
-macro_rules! unpack {
+macro_rules! unp {
   ($args:ident => $var:ident) => (let $var = $args.remove(0););
   ($args:ident => $var:ident,$($tail:ident),*) => {
     let $var = $args.remove(0);
-    unpack!($args => $($tail),*)
+    unp!($args => $($tail),*)
   }
 }
 

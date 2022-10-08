@@ -162,19 +162,19 @@ pub fn glue_string(
 ) -> String {
   // ??? TODO: There seems to be some messy confusion about the types of the
   // pieces of glue/dimensions -- are we consistently using i32 or f32?
-  let mut string = fixedformat(skip as i32, Some(unit));
+  let mut string = fixedformat(skip, Some(unit));
   if let Some(plus) = plus_opt {
     if plus != 0 {
       string.push_str(" plus ");
       let p_fill = if let Some(fill) = pfill_opt { fill.to_str() } else { unit };
-      string.push_str(&fixedformat(plus as i32, Some(p_fill)))
+      string.push_str(&fixedformat(plus, Some(p_fill)))
     }
   }
   if let Some(minus) = minus_opt {
     if minus != 0 {
       string.push_str(" minus ");
       let p_fill = if let Some(fill) = mfill_opt { fill.to_str() } else { unit };
-      string.push_str(&fixedformat(minus as i32, Some(p_fill)))
+      string.push_str(&fixedformat(minus, Some(p_fill)))
     }
   }
   string
@@ -286,7 +286,7 @@ pub fn spec_setup(
 
       if punit.is_empty() {
       } else if let Some(pfcode) = FillCode::from(punit) {
-        plus = Some(fixpoint(p as f32, None));
+        plus = Some(fixpoint(p, None));
         pfill = Some(pfcode);
       } else {
         plus = Some(fixpoint(p, Some(state.convert_unit(punit))));

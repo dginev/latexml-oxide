@@ -1,3 +1,5 @@
+use crate::common::error::*;
+use crate::state::State;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::register::{RegisterType};
 use crate::mouth;
@@ -10,6 +12,11 @@ use std::fmt;
 pub struct Number(pub i32);
 impl Object for Number {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
+  fn revert(&self, state: &mut State) -> Result<Tokens> {
+    Ok(
+      mouth::tokenize_internal(&self.to_string(), Some(state))
+    )
+  }
 }
 impl NumericOps for Number {
   fn new(number: i32) -> Self { Number(number) }

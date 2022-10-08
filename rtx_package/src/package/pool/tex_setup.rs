@@ -253,20 +253,13 @@ LoadDefinitions!(state, {
 
   // Read a number
   DefParameterType!(Number, sub[gullet, inner, _extra, state] {
-      gullet.read_number(state)?.to_token()
-    },
-    reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_number()
-    })
-  );
+    gullet.read_number(state)?
+  });
 
   // Read a floating point number
   DefParameterType!(Float, sub[gullet, inner, _extra, state] {
-      gullet.read_float(state)?.to_token()
-    },
-    reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_number()
-    })
+      gullet.read_float(state)?
+    }
   );
 
   // ???
@@ -276,40 +269,13 @@ LoadDefinitions!(state, {
   //   return ($gullet->readFloat || Float(0)); }
 
   // Read a dimension
-  DefParameterType!(Dimension, sub[gullet, inner, _extra, state] {
-      gullet.read_dimension(state)?.to_token()
-    },
-    reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_dimension()
-    })
-  );
-
+  DefParameterType!(Dimension, sub[gullet, inner, _extra, state] { gullet.read_dimension(state)? });
   // Read a Glue (aka skip)
-  DefParameterType!(Glue, sub[gullet, inner, _extra, state] {
-      gullet.read_glue(state)?.to_token()
-    },
-    reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_glue()
-    })
-  );
-
+  DefParameterType!(Glue, sub[gullet, inner, _extra, state] { gullet.read_glue(state)? });
   // Read a MuDimension (math)
-  DefParameterType!(MuDimension, sub[gullet, inner, _extra, state] {
-      gullet.read_mu_dimension(state)?.to_token()
-    },
-    reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_mu_dimension()
-    })
-  );
-
+  DefParameterType!(MuDimension, sub[gullet, inner, _extra, state] { gullet.read_mu_dimension(state)? });
   // Read a MuGlue (math)
-  DefParameterType!(MuGlue, sub[gullet, inner, _extra, state] {
-      gullet.read_mu_glue(state)?.to_token()
-    },
-    reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_mu_glue()
-    })
-  );
+  DefParameterType!(MuGlue, sub[gullet, inner, _extra, state] { gullet.read_mu_glue(state)? });
 
   // Read until the next (balanced) open brace {
   // used for the last TeX-style delimited argument

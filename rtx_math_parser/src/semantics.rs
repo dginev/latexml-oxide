@@ -89,7 +89,7 @@ impl Actions {
 
 /// standard infix application of an operator
 pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => arg1, infixop, arg2);
+  unp!(args => arg1, infixop, arg2);
   let apply_tree = Tree::Apply(infixop.into(), Args(vec![arg1, arg2]), Meta::default());
   Ok(Some(apply_tree))
 }
@@ -101,7 +101,7 @@ pub fn infix_apply_and_elide(
   p: &[ValidationPragmatics],
   nodes: &[XMLNode],
 ) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => arg1, infixop, arg2, elision);
+  unp!(args => arg1, infixop, arg2, elision);
   // check if "left" is already an application of infix op, in which case we can do n-ary apply.
   if let Some(Tree::Apply(new_op, mut new_args, meta)) = infix_apply_nary(rule_id, vec![arg1, infixop, arg2], p, nodes)? {
     new_args.0.push(elision);
@@ -114,7 +114,7 @@ pub fn infix_apply_and_elide(
 // infix_apply in the base case,
 // but when chained, using the flat "multirelation" behavior of latexml
 pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => left, infixop, right);
+  unp!(args => left, infixop, right);
   // if left has a "multirelation" already, add right in.
   // if left applies a relation, flatten it out to infix form.
   // base case - build a simple infix apply
@@ -162,7 +162,7 @@ pub fn infix_apply_nary(
   _: &[ValidationPragmatics],
   _: &[XMLNode],
 ) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => left, infixop, right);
+  unp!(args => left, infixop, right);
   let mut left = left;
   // left-to-right associative:
   // 1. if "left" is already an application of "infixop",
@@ -189,11 +189,11 @@ pub fn infix_apply_nary(
 }
 
 pub fn prefix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => prefixop, arg1);
+  unp!(args => prefixop, arg1);
   Ok(Some(Tree::Apply(prefixop.into(), Args(vec![arg1]), Meta::default())))
 }
 pub fn postfix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => arg, op);
+  unp!(args => arg, op);
   Ok(Some(Tree::Apply(op.into(), Args(vec![arg]), Meta::default())))
 }
 
@@ -203,13 +203,13 @@ pub fn circumfix_fenced(
   _: &[ValidationPragmatics],
   _: &[XMLNode],
 ) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => _open, arg, _close);
+  unp!(args => _open, arg, _close);
   Ok(arg)
 }
 
 /// remove start_/end_ wrappers
 pub fn faux_wrap(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => _faux1, content, _faux2);
+  unp!(args => _faux1, content, _faux2);
   Ok(content)
 }
 
@@ -219,7 +219,7 @@ pub fn postfix_script(
   _: &[ValidationPragmatics],
   nodes: &[XMLNode],
 ) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => base, op);
+  unp!(args => base, op);
   new_script(op.unwrap(), base, nodes)
 }
 
@@ -229,7 +229,7 @@ pub fn prefix_script(
   _: &[ValidationPragmatics],
   nodes: &[XMLNode],
 ) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => op, base);
+  unp!(args => op, base);
   new_script(op.unwrap(), base, nodes)
 }
 
@@ -272,7 +272,7 @@ pub fn obtain_arg(tree: Tree, n: usize) -> Option<Tree> {
 }
 
 pub fn invisible_times(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
-  unpack!(args => left, right);
+  unp!(args => left, right);
   let mut left = left;
   // left-to-right associative -- if "left" is already a "times", tuck "right" in:
   if let Some(Tree::Apply(ref op, ref mut left_args, ref _m)) = left {

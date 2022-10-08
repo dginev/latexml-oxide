@@ -105,52 +105,52 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\@roman{Number}", sub[gullet, args, state] {
     unpack_to_token!(args => token);
-    let value = token.to_number().value_of() as i32;
+    let value = token.to_number().value_of();
     ExplodeText!(radix::radix_roman(value))
   });
   DefMacro!("\\roman{}", sub[gullet, args, state] {
     unpack!(args => token);
     let ctr = Expand!(token, gullet).to_string();
-    ExplodeText!(radix::radix_roman(CounterValue!(&ctr).value_of() as i32))
+    ExplodeText!(radix::radix_roman(CounterValue!(&ctr).value_of()))
   });
   DefMacro!("\\@Roman{Number}", sub[gullet, args, state] {
     unpack_to_token!(args => token);
-    let value = token.to_number().value_of() as i32;
+    let value = token.to_number().value_of();
     ExplodeText!(radix::radix_up_roman(value))
   });
   DefMacro!("\\Roman{}", sub[gullet, args, state] {
     unpack!(args => token);
     let ctr = Expand!(token, gullet).to_string();
-    ExplodeText!(radix::radix_up_roman(CounterValue!(&ctr).value_of() as i32))
+    ExplodeText!(radix::radix_up_roman(CounterValue!(&ctr).value_of()))
   });
   DefMacro!("\\@alph{Number}", sub[gullet, args, state] {
     unpack_to_token!(args => token);
-    let value = token.to_number().value_of() as i32;
+    let value = token.to_number().value_of();
     ExplodeText!(radix::radix_alpha(value))
   });
   DefMacro!("\\alph{}", sub[gullet, args, state] {
     unpack!(args => token);
     let ctr = Expand!(token, gullet).to_string();
-    ExplodeText!(radix::radix_alpha(CounterValue!(&ctr).value_of() as i32))
+    ExplodeText!(radix::radix_alpha(CounterValue!(&ctr).value_of()))
   });
   DefMacro!("\\@Alph{Number}", sub[gullet, args, state] {
     unpack_to_token!(args => token);
-    let value = token.to_number().value_of() as i32;
+    let value = token.to_number().value_of();
     ExplodeText!(radix::radix_up_alpha(value))
   });
   DefMacro!("\\Alph{}", sub[gullet, args, state] {
     unpack!(args => token);
     let ctr = Expand!(token, gullet).to_string();
-    ExplodeText!(radix::radix_up_alpha(CounterValue!(&ctr).value_of() as i32))
+    ExplodeText!(radix::radix_up_alpha(CounterValue!(&ctr).value_of()))
   });
 
   DefMacro!("\\@fnsymbol{Number}", sub[gullet, args, state] {
     unpack!(args => token);
-    ExplodeText!(radix::radix_format_str(token.to_number().value_of() as i32, FNSYMBOLS))
+    ExplodeText!(radix::radix_format_str(token.to_number().value_of(), FNSYMBOLS))
   });
   DefMacro!("\\fnsymbol{}", sub[gullet, args, state] {
     unpack!(args => token);
     let ctr = Expand!(token, gullet).to_string();
-    ExplodeText!(radix::radix_format_str(CounterValue!(&ctr).value_of() as i32, FNSYMBOLS))
+    ExplodeText!(radix::radix_format_str(CounterValue!(&ctr).value_of(), FNSYMBOLS))
   });
 });
