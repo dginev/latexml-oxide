@@ -148,6 +148,42 @@ impl Object for ArgWrap {
       },
     }
   }
+  fn revert(&self, state:&mut State)-> Result<Tokens> {
+    use ArgWrap::*;
+    match self {
+      Token(t) => Ok(Tokens!(t.clone())),
+      OptionToken(t) => unimplemented!(),
+      Tokens(t) => Ok(t.clone()),
+      OptionTokens(t_opt) => match t_opt {
+        Some(tks) => Ok(tks.clone()),
+        None => Ok(Tokens!()),
+      },
+      Number(t) => t.revert(state),
+      OptionNumber(t) => unimplemented!(),
+      Float(t) => t.revert(state),
+      OptionFloat(t) => unimplemented!(),
+      Dimension(t) => t.revert(state),
+      OptionDimension(t) => unimplemented!(),
+      Glue(t) => t.revert(state),
+      OptionGlue(g_opt) => match g_opt {
+        Some(g) => g.revert(state),
+        None => unimplemented!() },
+      MuGlue(t) => t.revert(state),
+      OptionMuGlue(g_opt) => match g_opt {
+        Some(g) => g.revert(state),
+        None => unimplemented!()
+      },
+      MuDimension(t) => t.revert(state),
+      OptionMuDimension(d_opt) => match d_opt {
+        Some(d) => d.revert(state),
+        None => unimplemented!() },
+      KV(kv) => kv.revert(state),
+      OptionKV(kv_opt) => match kv_opt {
+        Some(kv) => kv.revert(state),
+        None => unimplemented!()
+      },
+    }
+  }
 }
 
 impl ArgWrap {
@@ -186,6 +222,7 @@ impl ArgWrap {
       ArgWrap::OptionTokens(tks_opt) => tks_opt,
       ArgWrap::Token(t) => Some(Tokens::new(vec![t])),
       ArgWrap::OptionToken(t_opt) => t_opt.map(|t| Tokens::new(vec![t])),
+      ArgWrap::Number(n) => {let tks : Tokens = n.into(); Some(tks) }
       _ => None
     }
   }
@@ -318,7 +355,8 @@ impl ArgWrap {
     match self {
       ArgWrap::Tokens(tks) => tks.unlist(),
       ArgWrap::Token(t) => vec![t],
-      _ => unimplemented!()
+      ArgWrap::Number(n) => { let tks : Tokens = n.into(); tks.unlist() },
+      other => { dbg!(other); unimplemented!() }
     }
   }
 

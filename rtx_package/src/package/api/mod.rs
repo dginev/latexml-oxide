@@ -15,6 +15,7 @@ use rtx_core::common::glue::Glue;
 use rtx_core::common::mudimension::MuDimension;
 use rtx_core::common::muglue::MuGlue;
 use rtx_core::common::number::Number;
+use rtx_core::common::float::Float;
 use rtx_core::common::store::Stored;
 use rtx_core::definition::register::*;
 use rtx_core::definition::argument::ArgWrap;
@@ -218,6 +219,48 @@ impl IntoResultArgWrap<Result<ArgWrap>> for Result<Tokens> {
 
 impl IntoResultArgWrap<Result<ArgWrap>> for Result<Option<Tokens>> {
   fn into_result_argwrap(self) -> Result<ArgWrap> { self.map(ArgWrap::OptionTokens) }
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for Number {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Number(self)) }
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for Option<Number> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionNumber(self)) }
+}
+impl IntoResultArgWrap<Result<ArgWrap>> for Float {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Float(self)) }
+}
+impl IntoResultArgWrap<Result<ArgWrap>> for Option<Float> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionFloat(self)) }
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for Dimension {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Dimension(self)) }
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for Option<Dimension> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionDimension(self)) }
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for MuDimension {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::MuDimension(self)) }
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for Option<MuDimension> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionMuDimension(self)) }
+}
+impl IntoResultArgWrap<Result<ArgWrap>> for Glue {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Glue(self)) }
+}
+impl IntoResultArgWrap<Result<ArgWrap>> for Option<Glue> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionGlue(self)) }
+}
+impl IntoResultArgWrap<Result<ArgWrap>> for MuGlue {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::MuGlue(self)) }
+}
+impl IntoResultArgWrap<Result<ArgWrap>> for Option<MuGlue> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionMuGlue(self)) }
 }
 
 

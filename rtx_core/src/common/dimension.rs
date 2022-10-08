@@ -30,7 +30,7 @@ impl NumericOps for Dimension {
 }
 
 impl fmt::Display for Dimension {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", fixedformat(self.0 as i32, Some("pt"))) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", fixedformat(self.0, Some("pt"))) }
 }
 
 impl Dimension {
@@ -87,14 +87,14 @@ pub fn fixedformat(mut s: i32, unit_opt: Option<&str>) -> String {
   }
   string.push_str(&(((s as f32 / UNITY as f32).trunc() as i32).to_string()));
   string.push('.');
-  s = 10 * (s % UNITY as i32) + 5;
+  s = 10 * (s % UNITY) + 5;
   let mut delta = 10i32;
   loop {
-    if delta > UNITY as i32 {
+    if delta > UNITY {
       s += 0x8000 - 50000;
     }
     string.push_str(&((s as f32 / UNITY as f32).trunc() as i32).to_string());
-    s = 10 * (s % UNITY as i32);
+    s = 10 * (s % UNITY);
     delta *= 10;
     if s <= delta {
       break;
