@@ -184,16 +184,7 @@ impl Model {
   ///   the unprefixed form of elements (not used for attributes!)
   pub fn register_namespace(&mut self, codeprefix: &str, namespace_opt: Option<String>) {
     // double-check empty strings are None
-    let namespace_opt_checked = match namespace_opt {
-      None => None,
-      Some(val) => {
-        if val.is_empty() {
-          None
-        } else {
-          Some(val)
-        }
-      },
-    };
+    let namespace_opt_checked = namespace_opt.filter(|val| !val.is_empty());
 
     match namespace_opt_checked {
       Some(namespace) => {
@@ -270,16 +261,7 @@ impl Model {
         message2
       );
     }
-    match docprefix {
-      None => None,
-      Some(p) => {
-        if p == "#default" {
-          Some(String::new())
-        } else {
-          Some(p)
-        }
-      },
-    }
+    docprefix.filter(|p| p != "#default")
   }
 
   pub fn get_document_namespace(&mut self, mut docprefix: &str, probe: bool) -> Option<String> {

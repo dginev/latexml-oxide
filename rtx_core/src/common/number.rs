@@ -2,6 +2,7 @@ use crate::common::error::*;
 use crate::state::State;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::register::{RegisterType};
+use crate::token::Catcode;
 use crate::mouth;
 use crate::tokens::Tokens;
 use crate::{Locator, Object};
@@ -50,4 +51,10 @@ impl From<String> for Number {
 
 impl fmt::Display for Number {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0) }
+}
+
+impl From<Catcode> for Number {
+  fn from(c: Catcode) -> Number {
+    Number::new(u8::from(c) as i32)
+  }
 }
