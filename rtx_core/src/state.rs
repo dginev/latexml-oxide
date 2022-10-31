@@ -770,17 +770,10 @@ impl State {
   }
 
   pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Arc<dyn Definition>> {
-    if let Some(defn) = self.lookup_definition(token) {
-      // Can only be a token or definition; we want defns!
-      if (*defn).is_expandable() && (toplevel || !(*defn).is_protected()) {
-        // is this the right logic here? don't expand unless digesting?
-        Some(defn)
-      } else {
-        None
-      }
-    } else {
-      None
-    }
+    // Can only be a token or definition; we want defns!
+    // is this the right logic here? don't expand unless digesting?
+    self.lookup_definition(token).filter(|defn|
+      (*defn).is_expandable() && (toplevel || !(*defn).is_protected()))
   }
 
   /// Whether token must be wrapped as dont_expand

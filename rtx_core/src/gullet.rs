@@ -815,7 +815,6 @@ impl Gullet {
             s.remove(0);
           }
           let s_char = s.chars().next().unwrap();
-          let s_char = s_char as u8;
           Ok(Some(Number::new(s_char as i32))) //  Only a character token!!! NOT expanded!!!!
         } else {
           self.unread_one(token); // Unread

@@ -303,16 +303,14 @@ LoadDefinitions!(outer_state, {
   // <codename> = \catcode | \mathcode | \lccode | \uccode | \sfcode | \delcode
   DefRegister!("\\catcode Number", Number::new(0),
     getter => sub[args, state] {
-      // dbg!(&args);
       unpack_opt!(args => num);
-      // dbg!(&num);
       let refchar = (num.to_number().value_of() as u8) as char;
       let code : Catcode = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
-      let code : u8 = code.into();
-      Number!(code)
+      Number::from(code)
     },
     setter => sub[value, args, state] {
-      let c_char = (args.remove(0).to_number().value_of() as u8) as char;
+      unpack_opt!(args => num);
+      let c_char = (num.to_number().value_of() as u8) as char;
       let c_code = From::from(value.value_of() as u8);
       state.assign_catcode(c_char, c_code, None);
     }
