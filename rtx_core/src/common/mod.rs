@@ -59,7 +59,7 @@ impl fmt::Display for DigestionMode {
       AmSTeX => "AmSTeX",
       BibTeX => "BibTeX",
     };
-    write!(f, "{}", formatted)
+    write!(f, "{formatted}")
   }
 }
 

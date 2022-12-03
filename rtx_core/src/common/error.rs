@@ -249,7 +249,7 @@ impl fmt::Display for Error {
       Endgroup => write!(f, "<endgroup>"),
       FailedParse => write!(f, "failed to parse"),
       Generic(ref err) => err.fmt(f),
-      Filename(ref name) => write!(f, "file:{}", name),
+      Filename(ref name) => write!(f, "file:{name}"),
     }
   }
 }

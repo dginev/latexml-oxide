@@ -648,7 +648,7 @@ impl State {
     match self.lookup_value_mut(key) {
       Some(Stored::Tokens(ref mut tks)) => tks.as_mut_unlist().extend(value.unlist()),
       None | Some(Stored::None) => self.assign_value(key, Stored::Tokens(value), None),
-      Some(other) => panic!("Can only push_tokens into a Stored::Tokens, but got {:?}", other),
+      Some(other) => panic!("Can only push_tokens into a Stored::Tokens, but got {other:?}"),
     }
   }
 
@@ -728,14 +728,14 @@ impl State {
     match self.lookup_value(key) {
       Some(Stored::Glue(v)) => Some(*v),
       None | Some(Stored::None) => None,
-      Some(other) => panic!("state lookup expected Glue, found: {:?}", other),
+      Some(other) => panic!("state lookup expected Glue, found: {other:?}"),
     }
   }
   pub fn lookup_muglue(&self, key: &str) -> Option<MuGlue> {
     match self.lookup_value(key) {
       Some(Stored::MuGlue(v)) => Some(*v),
       None | Some(Stored::None) => None,
-      Some(other) => panic!("state lookup expected MuGlue, found: {:?}", other),
+      Some(other) => panic!("state lookup expected MuGlue, found: {other:?}"),
     }
   }
 
@@ -821,9 +821,7 @@ impl State {
       }
     } else {
       panic!(
-        "unshift_value can only work on a Stored::VecDequeStored receiver. Instead, key {:?} got: {:?}",
-        key, receiver
-      );
+        "unshift_value can only work on a Stored::VecDequeStored receiver. Instead, key {key:?} got: {receiver:?}");
     }
   }
 
@@ -844,7 +842,7 @@ impl State {
     match self.value.get(map) {
       None => None,
       Some(map_vec) => match map_vec.front() {
-        Some(&Stored::HashStored(ref h)) => h.get(key),
+        Some(Stored::HashStored(h)) => h.get(key),
         _ => None,
       },
     }
@@ -871,7 +869,7 @@ impl State {
     match self.value.get(map) {
       None => Vec::new(),
       Some(map_vec) => match map_vec.front() {
-        Some(&Stored::HashStored(ref h)) => h.keys().map(String::as_str).collect(),
+        Some(Stored::HashStored(h)) => h.keys().map(String::as_str).collect(),
         _ => Vec::new(),
       },
     }
@@ -928,7 +926,7 @@ impl State {
   pub fn lookup_mathcode(&self, key: &str) -> Option<u16> {
     match self.mathcode.get(&key.to_string()) {
       Some(c) => match c.front() {
-        Some(&Stored::Charcode(ref codeval)) => Some(*codeval),
+        Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
       },
       None => None,
@@ -943,7 +941,7 @@ impl State {
   pub fn lookup_sfcode(&self, key: char) -> Option<u16> {
     match self.sfcode.get(&key.to_string()) {
       Some(c) => match c.front() {
-        Some(&Stored::Charcode(ref codeval)) => Some(*codeval),
+        Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
       },
       None => None,
@@ -958,7 +956,7 @@ impl State {
   pub fn lookup_lccode(&self, key: char) -> Option<u16> {
     match self.lccode.get(&key.to_string()) {
       Some(c) => match c.front() {
-        Some(&Stored::Charcode(ref codeval)) => Some(*codeval),
+        Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
       },
       None => None,
@@ -973,7 +971,7 @@ impl State {
   pub fn lookup_uccode(&self, key: char) -> Option<u16> {
     match self.uccode.get(&key.to_string()) {
       Some(c) => match c.front() {
-        Some(&Stored::Charcode(ref codeval)) => Some(*codeval),
+        Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
       },
       None => None,
@@ -988,7 +986,7 @@ impl State {
   pub fn lookup_delcode(&self, key: char) -> Option<u16> {
     match self.delcode.get(&key.to_string()) {
       Some(c) => match c.front() {
-        Some(&Stored::Charcode(ref codeval)) => Some(*codeval),
+        Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
       },
       None => None,
@@ -1185,7 +1183,7 @@ impl State {
     let is_state_unlocked = self.lookup_bool("UNLOCKED");
 
     if is_cs_locked && !is_state_unlocked {
-      if let Some(&Stored::String(ref s)) = self.lookup_value("SOURCEFILE") {
+      if let Some(Stored::String(s)) = self.lookup_value("SOURCEFILE") {
         // report if the redefinition seems to come from document source
         if ((s == "Anonymous String") || TEX_OR_BIB_EXT_RE.is_match(s)) && (!s.ends_with(CODE_TEX_EXT)) {
           //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
@@ -1253,7 +1251,7 @@ impl State {
         all_specials.push(*special);
       }
     }
-    if let Some(&Stored::VecChar(ref specials_store)) = self.lookup_value("SPECIALS") {
+    if let Some(Stored::VecChar(specials_store)) = self.lookup_value("SPECIALS") {
       for special_char in specials_store {
         all_specials.push(*special_char);
       }
@@ -1758,7 +1756,7 @@ impl State {
       Some(Stored::Tokens(after)) => gullet.unread(after),
       Some(Stored::Token(after)) => gullet.unread_one(after),
       None | Some(Stored::None) => {},
-      Some(other) => panic!("unexpected in after_assignment: {:?}", other),
+      Some(other) => panic!("unexpected in after_assignment: {other:?}"),
     }
   }
 }

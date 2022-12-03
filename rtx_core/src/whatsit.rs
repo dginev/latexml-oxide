@@ -67,7 +67,7 @@ impl Whatsit {
   pub fn get_definition(&self) -> Arc<dyn Definition> { Arc::clone(&self.definition) }
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
     match self.args.get(n - 1) {
-      Some(&Some(ref opt)) => Some(opt),
+      Some(Some(opt)) => Some(opt),
       _ => None,
     }
   }
@@ -75,7 +75,7 @@ impl Whatsit {
   pub fn set_args(&mut self, args: Vec<Option<Digested>>) { self.args = args; }
   pub fn get_trailer(&self) -> Option<Digested> {
     match self.properties.get("trailer") {
-      Some(&Stored::Digested(ref triler)) => Some(*triler.clone()),
+      Some(Stored::Digested(triler)) => Some(*triler.clone()),
       _ => None,
     }
   }
@@ -122,7 +122,7 @@ impl Whatsit {
         } else {
           match props.get(s) {
             Some(Stored::Digested(v)) => Some((**v).clone()),
-            Some(other) => panic!("unexpected prop in substitute_parameters, needed Digested, got: {:?}", other),
+            Some(other) => panic!("unexpected prop in substitute_parameters, needed Digested, got: {other:?}"),
             None => None,
           }
         };
@@ -171,7 +171,7 @@ impl Object for Whatsit {
           Stored::Tokens(tks) => Some(Reversion::Tokens(tks.clone())),
           // TODO?
           // Stored::ReversionClosure(rfn) => Some(Reversion::Closure(rfn)),
-          other => panic!("TODO: Unexpected reversion directive {:?}", other),
+          other => panic!("TODO: Unexpected reversion directive {other:?}"),
         }
       } else {
         defn.get_reversion_spec()
@@ -271,14 +271,14 @@ impl BoxOps for Whatsit {
   }
   fn get_body(&self) -> Option<Digested> {
     match self.properties.get("body") {
-      Some(&Stored::Digested(ref body)) => Some(*body.clone()),
+      Some(Stored::Digested(body)) => Some(*body.clone()),
       _ => None,
     }
   }
 
   fn get_font(&self) -> Option<Cow<Font>> {
     match self.properties.get("font") {
-      Some(&Stored::Font(ref font)) => Some(Cow::Owned((**font).clone())),
+      Some(Stored::Font(font)) => Some(Cow::Owned((**font).clone())),
       _ => None,
     }
   }

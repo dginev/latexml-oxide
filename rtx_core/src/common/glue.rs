@@ -183,7 +183,7 @@ pub fn glue_string(
 impl fmt::Display for Glue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let string = glue_string(self.skip, self.plus, self.pfill, self.minus, self.mfill, "pt");
-    write!(f, "{}", string)
+    write!(f, "{string}")
   }
 }
 impl Object for Glue {

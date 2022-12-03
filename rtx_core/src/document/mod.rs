@@ -162,7 +162,7 @@ impl Document {
     if let Some(mut root) = self.document.get_root_element() {
       let init_font = Font::text_default();
       self.finalize_rec(&mut root, init_font, state)?;
-      if let Some(&Stored::String(ref prefixes)) = state.lookup_value("RDFa_prefixes") {
+      if let Some(Stored::String(prefixes)) = state.lookup_value("RDFa_prefixes") {
         self.set_rdfa_prefixes(Some(prefixes.clone()));
       }
     }
@@ -195,7 +195,7 @@ impl Document {
       let desired_font = self.get_node_font(node);
       pending_declaration = desired_font.relative_to(&declared_font);
       if (!node.get_child_nodes().is_empty() || node.has_attribute("_force_font")) && !pending_declaration.is_empty() {
-        for (key, &(ref value, ref properties)) in &pending_declaration {
+        for (key, (value, properties)) in &pending_declaration {
           if state.model.can_have_attribute(&qname, key) {
             attrs_to_set.push((key.to_string(), value.to_string()));
             // Merge to set the font currently in effect
@@ -255,7 +255,7 @@ impl Document {
         if self.can_contain(node, FONT_ELEMENT_NAME, state) && !pending_declaration.is_empty() {
           // Too late to do wrapNodes?
           if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child], state)? {
-            for (key, &(ref value, ref properties)) in &pending_declaration {
+            for (key, (value, properties)) in &pending_declaration {
               self.set_attribute(&mut text, key, value)?;
             }
             self.finalize_rec(&mut text, declared_font.clone(), state)?; // Now have to clean up the new node!
@@ -799,14 +799,14 @@ impl Document {
         // let tag = state.model.get_node_document_qname(&node);
         let tag = node.get_name();
         let children = node.get_child_nodes();
-        let mut open_tag = s!("<{}", tag);
+        let mut open_tag = s!("<{tag}");
 
         let nsnodes = node.get_namespace_declarations();
         for ns in nsnodes {
           let prefix = ns.get_prefix();
           let prefix_declaration = if prefix.is_empty() { s!("xmlns") } else { s!("xmlns:{}", prefix) };
           let href = ns.get_href();
-          write!(open_tag," {}=\"{}\"", prefix_declaration, href).ok();
+          write!(open_tag," {prefix_declaration}=\"{href}\"").ok();
         }
 
         let anodes = node.get_attributes();
@@ -818,12 +818,12 @@ impl Document {
           } // HACK for xml:id
           let key_serialized = state.model.get_node_document_qname(&node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
-          write!(open_tag, " {}=\"{}\"", key_serialized, val_serialized).ok();
+          write!(open_tag, " {key_serialized}=\"{val_serialized}\"").ok();
         }
         // HACK for xml:id for now, assuming last element
         if anodes.contains_key("id") {
           let val_serialized = serialize_attr(&node.get_property("id").unwrap_or_default());
-          write!(open_tag," xml:id=\"{}\"", val_serialized).ok();
+          write!(open_tag," xml:id=\"{val_serialized}\"").ok();
         }
 
         let noindent_children: bool = if heuristic {
@@ -851,7 +851,7 @@ impl Document {
           if !noindent_children {
             serialized.push_str(&indent)
           }
-          write!(serialized, "</{}>", tag).ok();
+          write!(serialized, "</{tag}>").ok();
         } else {
           // empty element.
           serialized.push_str("/>");

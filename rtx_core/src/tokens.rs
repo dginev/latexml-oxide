@@ -89,7 +89,7 @@ impl<'a> From<&'a Tokens> for Token {
     } else if ts.0.len() == 1 {
       ts.0.first().unwrap().clone()
     } else {
-      panic!("Dangerous cast! Tokens->Token for {:?}", ts);
+      panic!("Dangerous cast! Tokens->Token for {ts:?}");
       //let code = ts.0.first().unwrap().get_catcode();
       // Warn!("expected","token","multiple Tokens {:?} cast into a single Token: {:?}", ts, single);
       //Token::new(Cow::Owned(ts.to_string()), code)
@@ -118,7 +118,7 @@ impl Display for Tokens {
   /// NOT for creating valid TeX (use revert or UnTeX for that!)
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     for t in &self.0 {
-      write!(f, "{}", t)?;
+      write!(f, "{t}")?;
     }
     Ok(())
   }

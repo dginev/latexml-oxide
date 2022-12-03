@@ -58,9 +58,9 @@ pub enum RewritePattern {
 impl fmt::Debug for RewritePattern {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      RewritePattern::String(x) => write!(f, "{:?}", x),
-      RewritePattern::Scope(x) => write!(f, "{:?}", x),
-      RewritePattern::Tokens(x) => write!(f, "{:?}", x),
+      RewritePattern::String(x) => write!(f, "{x:?}"),
+      RewritePattern::Scope(x) => write!(f, "{x:?}"),
+      RewritePattern::Tokens(x) => write!(f, "{x:?}"),
       RewritePattern::Closure(_) => write!(f, "<Rewrite Replacement Closure>"),
     }
   }

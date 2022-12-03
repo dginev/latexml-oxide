@@ -49,33 +49,33 @@ impl Default for ArgWrap {
 impl Display for ArgWrap {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      ArgWrap::Token(t) => write!(f, "{}", t),
+      ArgWrap::Token(t) => write!(f, "{t}"),
       ArgWrap::OptionToken(None) => write!(f, "None"),
-      ArgWrap::OptionToken(Some(ot)) => write!(f, "{}", ot),
-      ArgWrap::Tokens(ts) =>  write!(f, "{}", ts),
+      ArgWrap::OptionToken(Some(ot)) => write!(f, "{ot}"),
+      ArgWrap::Tokens(ts) =>  write!(f, "{ts}"),
       ArgWrap::OptionTokens(None) =>  write!(f, "None"),
-      ArgWrap::OptionTokens(Some(ots)) =>  write!(f, "{}", ots),
-      ArgWrap::Number(n) =>  write!(f, "{}", n),
+      ArgWrap::OptionTokens(Some(ots)) =>  write!(f, "{ots}"),
+      ArgWrap::Number(n) =>  write!(f, "{n}"),
       ArgWrap::OptionNumber(None) =>  write!(f, "None"),
-      ArgWrap::OptionNumber(Some(on)) =>  write!(f, "{}", on),
-      ArgWrap::Float(fl) =>  write!(f, "{}", fl),
+      ArgWrap::OptionNumber(Some(on)) =>  write!(f, "{on}"),
+      ArgWrap::Float(fl) =>  write!(f, "{fl}"),
       ArgWrap::OptionFloat(None) =>  write!(f, "None"),
-      ArgWrap::OptionFloat(Some(ofl)) =>  write!(f, "{}", ofl),
-      ArgWrap::Dimension(d) => write!(f, "{}", d),
+      ArgWrap::OptionFloat(Some(ofl)) =>  write!(f, "{ofl}"),
+      ArgWrap::Dimension(d) => write!(f, "{d}"),
       ArgWrap::OptionDimension(None) =>  write!(f, "None"),
-      ArgWrap::OptionDimension(Some(od)) =>  write!(f, "{}", od),
-      ArgWrap::Glue(gl) =>  write!(f, "{}", gl),
+      ArgWrap::OptionDimension(Some(od)) =>  write!(f, "{od}"),
+      ArgWrap::Glue(gl) =>  write!(f, "{gl}"),
       ArgWrap::OptionGlue(None) =>  write!(f, "None"),
-      ArgWrap::OptionGlue(Some(ogl)) =>  write!(f, "{}", ogl),
-      ArgWrap::MuGlue(mugl) =>  write!(f, "{}", mugl),
+      ArgWrap::OptionGlue(Some(ogl)) =>  write!(f, "{ogl}"),
+      ArgWrap::MuGlue(mugl) =>  write!(f, "{mugl}"),
       ArgWrap::OptionMuGlue(None) =>  write!(f, "None"),
-      ArgWrap::OptionMuGlue(Some(omugl)) =>  write!(f, "{}", omugl),
-      ArgWrap::MuDimension(mudim) =>  write!(f, "{}", mudim),
+      ArgWrap::OptionMuGlue(Some(omugl)) =>  write!(f, "{omugl}"),
+      ArgWrap::MuDimension(mudim) =>  write!(f, "{mudim}"),
       ArgWrap::OptionMuDimension(None) =>  write!(f, "None"),
-      ArgWrap::OptionMuDimension(Some(omudim)) =>  write!(f, "{}", omudim),
-      ArgWrap::KV(kv) =>  write!(f, "{}", kv),
+      ArgWrap::OptionMuDimension(Some(omudim)) =>  write!(f, "{omudim}"),
+      ArgWrap::KV(kv) =>  write!(f, "{kv}"),
       ArgWrap::OptionKV(None) =>  write!(f, "None"),
-      ArgWrap::OptionKV(Some(okv)) =>  write!(f, "{}", okv)
+      ArgWrap::OptionKV(Some(okv)) =>  write!(f, "{okv}")
     }
   }
 }
@@ -292,7 +292,7 @@ impl ArgWrap {
       Glue(v) => v.value_of(),
       MuGlue(v) => v.value_of(),
       MuDimension(v) => v.value_of(),
-      _ => panic!("ArgWrap::value_of not (yet?) defined on {:?}",self)
+      _ => panic!("ArgWrap::value_of not (yet?) defined on {self:?}")
     }
   }
 
@@ -302,7 +302,7 @@ impl ArgWrap {
       Number(v) => v,
       Token(t) => t.to_number(),
       Tokens(tks) => tks.to_number(),
-      _ => panic!("ArgWrap::to_number not (yet?) defined on {:?}",self)
+      _ => panic!("ArgWrap::to_number not (yet?) defined on {self:?}")
     }
   }
 
@@ -312,7 +312,7 @@ impl ArgWrap {
       Dimension(v) => v,
       Token(t) => t.to_dimension(),
       Tokens(tks) => tks.to_dimension(),
-      _ => panic!("ArgWrap::to_dimension not (yet?) defined on {:?}",self)
+      _ => panic!("ArgWrap::to_dimension not (yet?) defined on {self:?}")
     }
   }
   pub fn to_mu_dimension(self) -> MuDimension {
@@ -321,7 +321,7 @@ impl ArgWrap {
       MuDimension(v) => v,
       Token(t) => t.to_mu_dimension(),
       Tokens(tks) => tks.to_mu_dimension(),
-      _ => panic!("ArgWrap::to_mu_dimension not (yet?) defined on {:?}",self)
+      _ => panic!("ArgWrap::to_mu_dimension not (yet?) defined on {self:?}")
     }
   }
   pub fn to_glue(self) -> Glue {
@@ -330,7 +330,7 @@ impl ArgWrap {
       Glue(v) => v,
       Token(t) => t.to_glue(),
       Tokens(tks) => tks.to_glue(),
-      _ => panic!("ArgWrap::to_glue not (yet?) defined on {:?}",self)
+      _ => panic!("ArgWrap::to_glue not (yet?) defined on {self:?}")
     }
   }
   pub fn to_mu_glue(self) -> MuGlue {
@@ -339,7 +339,7 @@ impl ArgWrap {
       MuGlue(v) => v,
       Token(t) => t.to_mu_glue(),
       Tokens(tks) => tks.to_mu_glue(),
-      _ => panic!("ArgWrap::to_glue not (yet?) defined on {:?}",self)
+      _ => panic!("ArgWrap::to_glue not (yet?) defined on {self:?}")
     }
   }
   pub fn to_keyvals(self, state: &mut State) -> KeyVals {
@@ -347,7 +347,7 @@ impl ArgWrap {
     match self {
       KV(v) => v,
       Tokens(tks) => tks.to_keyvals(state),
-      _ => panic!("ArgWrap::to_keyvals not (yet?) defined on {:?}",self)
+      _ => panic!("ArgWrap::to_keyvals not (yet?) defined on {self:?}")
     }
   }
 
