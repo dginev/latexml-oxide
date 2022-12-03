@@ -107,43 +107,43 @@ impl fmt::Debug for Stored {
     use crate::Stored::*;
     match *self {
       None => write!(f, "None"),
-      String(ref s) => write!(f, "{}", s),
-      Int(ref num) => write!(f, "Stored::Int[{:?}]", num),
-      VecChar(ref vs) => write!(f, "Stored::VecChar[{:?}]", vs),
-      VecOptionChar(ref vs) => write!(f, "Stored::VecOptionChar[{:?}]", vs),
-      Stash(ref vs) => write!(f, "Stored::Stash[{:?}]", vs),
-      VecString(ref vs) => write!(f, "Stored::VecString[{:?}]", vs),
-      Bool(ref b) => write!(f, "Stored::Bool[{:?}]", b),
-      Token(ref t) => write!(f, "Stored::Token[{:?}]", t),
-      Tokens(ref t) => write!(f, "Stored::Tokens[{:?}]", t),
-      Locator(ref t) => write!(f, "Stored::Locator[{:?}]", t),
-      Catcode(ref cc) => write!(f, "Stored::Catcode[{:?}]", cc),
-      Charcode(ref cc) => write!(f, "Stored::Charcode[{:?}]", cc),
-      IfFrame(ref fr) => write!(f, "Stored::IfFrame[{:?}]", fr),
+      String(ref s) => write!(f, "{s}"),
+      Int(ref num) => write!(f, "Stored::Int[{num:?}]"),
+      VecChar(ref vs) => write!(f, "Stored::VecChar[{vs:?}]"),
+      VecOptionChar(ref vs) => write!(f, "Stored::VecOptionChar[{vs:?}]"),
+      Stash(ref vs) => write!(f, "Stored::Stash[{vs:?}]"),
+      VecString(ref vs) => write!(f, "Stored::VecString[{vs:?}]"),
+      Bool(ref b) => write!(f, "Stored::Bool[{b:?}]"),
+      Token(ref t) => write!(f, "Stored::Token[{t:?}]"),
+      Tokens(ref t) => write!(f, "Stored::Tokens[{t:?}]"),
+      Locator(ref t) => write!(f, "Stored::Locator[{t:?}]"),
+      Catcode(ref cc) => write!(f, "Stored::Catcode[{cc:?}]"),
+      Charcode(ref cc) => write!(f, "Stored::Charcode[{cc:?}]"),
+      IfFrame(ref fr) => write!(f, "Stored::IfFrame[{fr:?}]"),
       Expandable(ref _expandable) => write!(f, "Stored::Expandable[]"),
       Conditional(ref _conditional) => write!(f, "Stored::Conditional[]"),
       Primitive(ref _primitive) => write!(f, "Stored::Primitive[]"),
       MathPrimitive(ref _primitive) => write!(f, "Stored::MathPrimitive[]"),
       // MathPrimitiveOptions(ref _primitive) => write!(f, "<math primitive options>"),
       Constructor(ref _constructor) => write!(f, "Stored::Constructor[]"),
-      Digested(ref digested) => write!(f, "Stored::Digested[{:?}]", digested),
-      Parameter(ref parameter) => write!(f, "Stored::Parameter[{:?}]", parameter),
+      Digested(ref digested) => write!(f, "Stored::Digested[{digested:?}]"),
+      Parameter(ref parameter) => write!(f, "Stored::Parameter[{parameter:?}]"),
       Register(ref register) => write!(f, "Stored::Register[{:?}]", register.borrow().cs),
-      Rewrite(ref rewrite) => write!(f, "Stored::Rewrite[{:?}]", rewrite),
+      Rewrite(ref rewrite) => write!(f, "Stored::Rewrite[{rewrite:?}]"),
       Mouth(ref mouth) => write!(f, "Stored::Mouth[{:?}]", mouth.read().unwrap().get_source()),
-      Font(ref font) => write!(f, "Stored::Font[{:?}]", font),
-      Number(ref number) => write!(f, "Stored::Number[{:?}]", number),
-      Glue(ref glue) => write!(f, "Stored::Glue[{:?}]", glue),
-      MuGlue(ref glue) => write!(f, "Stored::MuGlue[{:?}]", glue),
-      Dimension(ref dimension) => write!(f, "Stored::Dimension[{:?}]", dimension),
-      MuDimension(ref dimension) => write!(f, "Stored::MuDimension[{:?}]", dimension),
-      VecDigested(ref digested_vec) => write!(f, "VecDigested{:?}", digested_vec),
-      VecTokens(ref vec) => write!(f, "VecTokens{:?}", vec),
-      VecDequeStored(ref vec) => write!(f, "VecDequeStored{:?}", vec),
-      HashStored(ref hos) => write!(f, "HashStored{:?}", hos),
-      HashTagData(ref htd) => write!(f, "HashTagData[{:?}]", htd),
-      HashString(ref hstr) => write!(f, "HashStr[{:?}]", hstr),
-      Ligature(ref lig) => write!(f, "Ligature[{:?}]", lig),
+      Font(ref font) => write!(f, "Stored::Font[{font:?}]"),
+      Number(ref number) => write!(f, "Stored::Number[{number:?}]"),
+      Glue(ref glue) => write!(f, "Stored::Glue[{glue:?}]"),
+      MuGlue(ref glue) => write!(f, "Stored::MuGlue[{glue:?}]"),
+      Dimension(ref dimension) => write!(f, "Stored::Dimension[{dimension:?}]"),
+      MuDimension(ref dimension) => write!(f, "Stored::MuDimension[{dimension:?}]"),
+      VecDigested(ref digested_vec) => write!(f, "VecDigested{digested_vec:?}"),
+      VecTokens(ref vec) => write!(f, "VecTokens{vec:?}"),
+      VecDequeStored(ref vec) => write!(f, "VecDequeStored{vec:?}"),
+      HashStored(ref hos) => write!(f, "HashStored{hos:?}"),
+      HashTagData(ref htd) => write!(f, "HashTagData[{htd:?}]"),
+      HashString(ref hstr) => write!(f, "HashStr[{hstr:?}]"),
+      Ligature(ref lig) => write!(f, "Ligature[{lig:?}]"),
     }
   }
 }
@@ -151,20 +151,20 @@ impl fmt::Display for Stored {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     use crate::Stored::*;
     match *self {
-      Digested(ref digested) => write!(f, "{}", digested),
-      Dimension(ref v) => write!(f, "{}", v),
-      Number(ref v) => write!(f, "{}", v),
-      Glue(ref v) => write!(f, "{}", v),
-      MuGlue(ref v) => write!(f, "{}", v),
-      MuDimension(ref v) => write!(f, "{}", v),
-      Font(ref font) => write!(f, "{}", font),
-      String(ref s) => write!(f, "{}", s),
-      Int(ref s) => write!(f, "{}", s),
-      Bool(ref s) => write!(f, "{}", s),
-      Tokens(ref s) => write!(f, "{}", s),
-      Token(ref s) => write!(f, "{}", s),
+      Digested(ref digested) => write!(f, "{digested}"),
+      Dimension(ref v) => write!(f, "{v}"),
+      Number(ref v) => write!(f, "{v}"),
+      Glue(ref v) => write!(f, "{v}"),
+      MuGlue(ref v) => write!(f, "{v}"),
+      MuDimension(ref v) => write!(f, "{v}"),
+      Font(ref font) => write!(f, "{font}"),
+      String(ref s) => write!(f, "{s}"),
+      Int(ref s) => write!(f, "{s}"),
+      Bool(ref s) => write!(f, "{s}"),
+      Tokens(ref s) => write!(f, "{s}"),
+      Token(ref s) => write!(f, "{s}"),
       ref variant => {
-        panic!("TODO: implement Display for Stored variant {:?}", variant);
+        panic!("TODO: implement Display for Stored variant {variant:?}");
         // write!(f, "{:?}", self)
       },
     }
@@ -708,8 +708,8 @@ impl<'a> From<&'a Stored> for bool {
 impl<'a> From<&'a Stored> for String {
   fn from(value: &Stored) -> String {
     match value {
-      &Stored::String(ref v) => v.to_owned(),
-      v => s!("{:?}", v),
+      Stored::String(v) => v.to_owned(),
+      v => s!("{v:?}"),
     }
   }
 }
@@ -741,7 +741,7 @@ impl<'a> From<&'a Stored> for Option<Number> {
       Stored::MuDimension(ref n) => Some(Number::new(n.value_of())),
       Stored::MuGlue(ref n) => Some(Number::new(n.value_of())),
       other => {
-        eprintln!("TODO: auto-cast of Stored to Number attempted on {:?}", other);
+        eprintln!("TODO: auto-cast of Stored to Number attempted on {other:?}");
         None
       },
     }

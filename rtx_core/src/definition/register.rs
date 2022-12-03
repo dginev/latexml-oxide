@@ -304,11 +304,11 @@ impl<'a> From<&'a RegisterValue> for MuGlue {
 impl fmt::Display for RegisterValue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      RegisterValue::Number(n) => write!(f, "{}", n),
-      RegisterValue::Dimension(d) => write!(f, "{}", d),
-      RegisterValue::MuDimension(d) => write!(f, "{}", d),
-      RegisterValue::Glue(g) => write!(f, "{}", g),
-      RegisterValue::MuGlue(g) => write!(f, "{}", g),
+      RegisterValue::Number(n) => write!(f, "{n}"),
+      RegisterValue::Dimension(d) => write!(f, "{d}"),
+      RegisterValue::MuDimension(d) => write!(f, "{d}"),
+      RegisterValue::Glue(g) => write!(f, "{g}"),
+      RegisterValue::MuGlue(g) => write!(f, "{g}"),
       other => write!(f, "{}", self.clone().value_of()),
     }
   }
@@ -369,7 +369,7 @@ impl fmt::Debug for Register {
   }
 }
 impl fmt::Display for Register {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{:?}", self) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{self:?}") }
 }
 /// The only purpose of RegisterCell is to provide us with a place to implement fmt::Display over
 /// a `RefCell<Register>`.

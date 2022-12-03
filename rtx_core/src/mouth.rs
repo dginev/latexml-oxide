@@ -197,7 +197,7 @@ impl Mouth {
 
   pub fn get_source(&self) -> &str { &self.source }
 
-  pub fn open<'open>(&'open mut self, content: &str, state: &mut State) -> Result<()> {
+  pub fn open(&mut self, content: &str, state: &mut State) -> Result<()> {
     match self.foodtype {
       FoodType::File => self.open_file(content)?,
       FoodType::Literal => self.open_literal(content),
@@ -255,7 +255,7 @@ impl Mouth {
     if self.fordefinitions {
       self.saved_at_cc = state.lookup_catcode('@');
       self.saved_include_comments = match state.lookup_value("INCLUDE_COMMENTS") {
-        Some(&Stored::Bool(ref x)) => Some(*x),
+        Some(Stored::Bool(x)) => Some(*x),
         _ => None,
       };
       state.assign_catcode('@', Catcode::LETTER, None);

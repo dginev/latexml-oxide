@@ -84,7 +84,7 @@ impl Tbox {
     if state.lookup_bool("IN_MATH") {
       properties.insert(s!("mode"), String::from("math").into());
       if !text.is_empty() {
-        if let Some(&Stored::HashString(ref attr)) = state.lookup_value(&s!("math_token_attributes_{}", text)) {
+        if let Some(Stored::HashString(attr)) = state.lookup_value(&s!("math_token_attributes_{}", text)) {
           for (key, value) in attr.iter() {
             properties.entry(key.to_string()).or_insert_with(|| Stored::String(value.to_owned()));
           }

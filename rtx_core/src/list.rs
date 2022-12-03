@@ -26,7 +26,7 @@ impl fmt::Debug for List {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "\nList[")?;
     for tbox in &self.boxes {
-      writeln!(f, "  {:?}", tbox)?;
+      writeln!(f, "  {tbox:?}")?;
     }
     writeln!(f, "]({:?})", self.mode)
   }
@@ -35,7 +35,7 @@ impl fmt::Debug for List {
 impl fmt::Display for List {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     for inner in self.boxes.iter() {
-      write!(f, "{}", inner)?;
+      write!(f, "{inner}")?;
     }
     Ok(())
   }

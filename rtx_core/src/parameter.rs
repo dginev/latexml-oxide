@@ -58,7 +58,7 @@ impl From<ParameterExtra> for Token {
     if let ParameterExtra::Tokens(t) = param {
       t.into()
     } else {
-      panic!("Can't cast {:?} into Token", param);
+      panic!("Can't cast {param:?} into Token");
     }
   }
 }
@@ -67,7 +67,7 @@ impl From<ParameterExtra> for Tokens {
     if let ParameterExtra::Tokens(t) = param {
       t
     } else {
-      panic!("Can't cast {:?} into Tokens", param);
+      panic!("Can't cast {param:?} into Tokens");
     }
   }
 }
@@ -178,12 +178,12 @@ impl Parameter {
     // is defined.
     let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
     let mut descriptor: Option<Arc<Parameter>>;
-    if let Some(&Stored::Parameter(ref d_lookup)) = looked_up_mapping {
+    if let Some(Stored::Parameter(d_lookup)) = looked_up_mapping {
       descriptor = Some(Arc::clone(d_lookup));
     } else if let Some(captures) = OPTIONAL_REGEX.captures(&self.name) {
       let basetype = captures.get(1).map_or("", |m| m.as_str());
       descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-        Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
+        Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
         _ => match Parameter::check_reader_function(&s!("Read{}", &self.name), state) {
           Some(reader) => Some(Arc::new(Parameter {
             reader,
@@ -205,7 +205,7 @@ impl Parameter {
     } else if let Some(captures) = SKIP_REGEX.captures(&self.name) {
       let basetype = captures.get(1).map_or("", |m| m.as_str());
       descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-        Some(&Stored::Parameter(ref d_lookup)) => Some(d_lookup.clone()),
+        Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
         _ => match Parameter::check_reader_function(&self.name, state) {
           Some(reader) => Some(Arc::new(Parameter {
             reader,
@@ -502,6 +502,6 @@ impl fmt::Display for Parameters {
       }
       content.push_str(&param_content);
     }
-    write!(f, "{}", content)
+    write!(f, "{content}")
   }
 }

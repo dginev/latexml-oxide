@@ -19,7 +19,7 @@ pub struct MuGlue {
 impl fmt::Display for MuGlue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let string = glue_string(self.skip, self.plus, self.pfill, self.minus, self.mfill, "mu");
-    write!(f, "{}", string)
+    write!(f, "{string}")
   }
 }
 

@@ -387,15 +387,11 @@ impl Model {
         }
       },
       // Need others?
-      t => panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {:?}", t), /* Fatal('misdefined', '<caller>',
-                                                                                                            * undef,
-                                                                                                            *   "Should not ask for Qualified Name
-                                                                                                            * for node of type $type: " .
-                                                                                                            * Stringify($node)); */
+      t => panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}"),
     }
   }
 
-  /// Same as get_node_qname, but using the Document namespace prefixes
+/// Same as get_node_qname, but using the Document namespace prefixes
   pub fn get_node_document_qname(&mut self, node: &Node) -> String {
     use libxml::tree::NodeType::*;
     let node_type = node.get_type();
@@ -432,7 +428,7 @@ impl Model {
         }
       },
       // Need others?
-      t => panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {:?}", t),
+      t => panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}"),
     }
   }
 
@@ -550,11 +546,11 @@ impl Model {
         let namespace = caps.get(2).map_or("", |m| m.as_str());
         self.register_document_namespace(prefix, Some(namespace.to_owned()));
       } else {
-        panic!("Fatal:internal:{} Compiled model '{}' is malformatted at \"{}\"", path, path, line);
+        panic!("Fatal:internal:{path} Compiled model '{path}' is malformatted at \"{line}\"");
       }
     }
 
-    note_end(&s!("Loading compiled schema {}\n", path));
+    note_end(&s!("Loading compiled schema {path}\n"));
   }
 
   //**********************************************************************

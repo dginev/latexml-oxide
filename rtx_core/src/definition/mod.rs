@@ -51,7 +51,7 @@ impl std::fmt::Debug for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       ExpansionBody::Closure(_) => write!(f, "<ExpansionClosure>"),
-      ExpansionBody::Tokens(ts) => write!(f, "{:?}", ts),
+      ExpansionBody::Tokens(ts) => write!(f, "{ts:?}"),
     }
   }
 }
@@ -256,7 +256,7 @@ impl fmt::Display for dyn Definition {
 impl fmt::Display for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      ExpansionBody::Tokens(ref t) => write!(f, "{}", t),
+      ExpansionBody::Tokens(ref t) => write!(f, "{t}"),
       ExpansionBody::Closure(_) => unimplemented!(), // what is the right way to serialize this, e.g. for the \meaning macro
     }
   }

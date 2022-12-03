@@ -486,7 +486,7 @@ impl<'t> Stomach {
         match entry {
           Stored::Tokens(t) => self.gullet.unread(t),
           Stored::Token(t) => self.gullet.unread_one(t),
-          other => panic!(r"\aftergroup should be used with tokens, got instead: {:?}", other),
+          other => panic!(r"\aftergroup should be used with tokens, got instead: {other:?}"),
         };
       }
     }
@@ -596,7 +596,7 @@ impl<'t> Stomach {
     } else {
       // When entering text mode, we should set the font to the text font in use before the math
       // but inherit color and size
-      let new_font = if let Some(&Stored::Font(ref saved_font)) = state.lookup_value("savedfont") {
+      let new_font = if let Some(Stored::Font(saved_font)) = state.lookup_value("savedfont") {
         Some(saved_font.merge(Font {
           color: curfont.color.clone(),
           bg: curfont.bg.clone(),
