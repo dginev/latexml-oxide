@@ -184,7 +184,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         .to_string();
 
       if !pi_closed {
-        panic!("Missing '?>' at '{:?}'\n", replacement);
+        panic!("Missing '?>' at '{replacement:?}'\n");
       }
       continue;
     }
@@ -229,7 +229,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       if replacement.starts_with('>') {
         replacement = replacement[1..].to_owned();
       } else {
-        panic!("Missing '>' at '{:?}'", replacement);
+        panic!("Missing '>' at '{replacement:?}'");
       }
       continue;
     }
@@ -334,7 +334,7 @@ fn translate_string(text: &mut String) -> proc_macro2::TokenStream {
           let escaped_match = &slashify(&unquote(&quoted_match));
           values.push(quote!(#escaped_match));
         } else {
-          panic!("Unrecognized at '{:?}'\n", text);
+          panic!("Unrecognized at '{text:?}'\n");
         }
       }
     }
@@ -454,7 +454,7 @@ fn translate_value(exclude_chars: &str, text: &mut String) -> proc_macro2::Token
     if text.starts_with(')') {
       text.remove(0);
     } else {
-      panic!("Missing ')' in &$fcn(...) at '{:?}'\n", text);
+      panic!("Missing ')' in &$fcn(...) at '{text:?}'\n");
     }
     // println!("text after translate_value: {:?}", text);
     val = quote!(#fcn( #(#args),* ));
@@ -469,7 +469,7 @@ fn translate_value(exclude_chars: &str, text: &mut String) -> proc_macro2::Token
         let n_int = n.parse::<i32>().unwrap_or(-1);
         if n_int < 1 {
           //|| (n_int > *NARGS) {
-          panic!("Illegal argument number {:?} at '{:?}'\n", n_int, text);
+          panic!("Illegal argument number {n_int:?} at '{text:?}'\n");
         } else {
           let n_usize: usize = (n_int - 1) as usize; // index starts at 0
           val = quote!(args[#n_usize])
@@ -507,7 +507,7 @@ fn translate_value(exclude_chars: &str, text: &mut String) -> proc_macro2::Token
       .to_string();
   }
   if !is_match {
-    panic!("Missing value at '{:?}'\n", text);
+    panic!("Missing value at '{text:?}'\n");
   }
   val
 }

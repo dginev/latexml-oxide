@@ -431,7 +431,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
       if let Stored::String(scope) = scope_stored {
         state.deactivate_scope(&scope);
       } else {
-        panic!("assignmenet scopes should be stored as strings, got: {:?}", scope_stored);
+        panic!("assignmenet scopes should be stored as strings, got: {scope_stored:?}");
       }
     }
   }

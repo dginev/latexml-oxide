@@ -51,16 +51,12 @@ fn rtx_ok_internal(tex_path: &str, xml_path: &str, name: &str, extra_bindings_di
       for (lineno, (tex_line, xml_line)) in tex_strings.iter().zip(xml_strings.iter()).enumerate() {
         assert_eq!(
           tex_line, xml_line,
-          "rtx result (left) differs from expected XML (right), file {}; line {}",
-          xml_path, lineno
-        );
+          "rtx result (left) differs from expected XML (right), file {xml_path}; line {lineno}");
       }
       assert_eq!(
         tex_strings.len() - xml_strings.len(),
         0,
-        "Conversion of {:?} had more/fewer lines of content than expected",
-        name
-      );
+        "Conversion of {name:?} had more/fewer lines of content than expected");
     }
   }
 }
@@ -126,7 +122,7 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  let xml_result = latexml.convert_file(format!("literal:\\[ {} \\]", tex));
+  let xml_result = latexml.convert_file(format!("literal:\\[ {tex} \\]"));
   assert!(xml_result.is_ok());
   let doc = xml_result.unwrap();
 

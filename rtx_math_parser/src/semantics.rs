@@ -43,7 +43,7 @@ impl Actions {
         0 => Ok(None),
         1 => Ok(args.remove(0)),
         more => {
-          eprintln!("Only returning first of {:?} elements at rule id {:?} content: {:?}", more, id, args);
+          eprintln!("Only returning first of {more:?} elements at rule id {id:?} content: {args:?}");
           Ok(args.remove(0))
         },
       }
@@ -253,7 +253,7 @@ pub fn new_script(script: Tree, base: Option<Tree>, nodes: &[XMLNode]) -> Result
 
 /// Looks up the node associated with a given lexeme,
 /// via the node index held in the third colon-separated lexeme piece.
-pub fn lookup_lex_node<'a, 'b>(lex: &'a str, nodes: &'b [XMLNode]) -> Result<&'b XMLNode, Box<dyn Error>> {
+pub fn lookup_lex_node<'a>(lex: &'a str, nodes: &'a [XMLNode]) -> Result<&'a XMLNode, Box<dyn Error>> {
   let node_idx = lex.split(':').last().unwrap().parse::<usize>()?;
   Ok(nodes.get(node_idx).unwrap())
 }

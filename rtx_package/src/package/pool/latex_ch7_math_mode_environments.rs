@@ -27,7 +27,7 @@ fn before_equation(stomach: &mut Stomach, state: &mut State) -> Result<()> {
     has_preset = numbering.contains_key("preset");
     match numbering.get("counter") {
       Some(Stored::String(v)) => v.to_owned(),
-      Some(other) => panic!("eq counter should be stored as string, was instead: {:?}", other),
+      Some(other) => panic!("eq counter should be stored as string, was instead: {other:?}"),
       _ => String::from("equation"),
     }
   } else {

@@ -287,13 +287,13 @@ impl Default for Digested {
 impl fmt::Display for Digested {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match *self {
-      Digested::TBox(ref b) => write!(f, "{}", b),
-      Digested::List(ref l) => write!(f, "{}", l),
+      Digested::TBox(ref b) => write!(f, "{b}"),
+      Digested::List(ref l) => write!(f, "{l}"),
       Digested::Whatsit(ref w) => write!(f, "{}", w.read().unwrap()),
-      Digested::Postponed(ref t) => write!(f, "{}", t),
-      Digested::KeyVals(ref kvs) => write!(f, "{}", kvs),
-      Digested::Comment(ref c) => write!(f, "{}", c),
-      Digested::RegisterValue(ref rv) => write!(f, "{}", rv),
+      Digested::Postponed(ref t) => write!(f, "{t}"),
+      Digested::KeyVals(ref kvs) => write!(f, "{kvs}"),
+      Digested::Comment(ref c) => write!(f, "{c}"),
+      Digested::RegisterValue(ref rv) => write!(f, "{rv}"),
     }
   }
 }

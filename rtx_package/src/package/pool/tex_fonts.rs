@@ -502,11 +502,11 @@ LoadDefinitions!(outer_state, {
         reversion =>  sub[_whatsit,_args,st] {
           Ok(Tokens::new(
             if (glyph_c as usize) < 128 {
-              eprintln!("-- glyph c: {}", glyph_c);
+              eprintln!("-- glyph c: {glyph_c}");
               vec![T_OTHER!(glyph_c.clone())]
             } else {
               let v = value.value_of();
-              eprintln!("-- matchar v: {}", v);
+              eprintln!("-- matchar v: {v}");
               vec![T_CS!("\\mathchar"),T_OTHER!(v),T_CS!("\\relax")]
             }))
         }

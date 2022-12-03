@@ -26,14 +26,14 @@ pub struct CurryConstraints(pub HashSet<CurryConstraint>);
 impl Display for CurryTerm {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      CurryTerm::Arg(v) => write!(f, "arg{}", v),
-      CurryTerm::Var(v) => write!(f, "{}", v),
-      CurryTerm::Literal(u) => write!(f, "{}", u),
+      CurryTerm::Arg(v) => write!(f, "arg{v}"),
+      CurryTerm::Var(v) => write!(f, "{v}"),
+      CurryTerm::Literal(u) => write!(f, "{u}"),
       CurryTerm::Sub(x, y) => match &**y {
-        CurryTerm::Sub(_, _) | CurryTerm::Add(_, _) => write!(f, "{}-({})", x, y),
-        _ => write!(f, "{}-{}", x, y),
+        CurryTerm::Sub(_, _) | CurryTerm::Add(_, _) => write!(f, "{x}-({y})"),
+        _ => write!(f, "{x}-{y}"),
       },
-      CurryTerm::Add(x, y) => write!(f, "{}+{}", x, y),
+      CurryTerm::Add(x, y) => write!(f, "{x}+{y}"),
     }
   }
 }
@@ -45,7 +45,7 @@ impl Display for CurryConstraint {
       Ordering::Less => "<",
       Ordering::Greater => ">",
     };
-    write!(f, "{}{}{}", lhs, cmp_str, rhs)
+    write!(f, "{lhs}{cmp_str}{rhs}")
   }
 }
 

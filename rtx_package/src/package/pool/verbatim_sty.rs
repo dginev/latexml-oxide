@@ -78,7 +78,7 @@ LoadDefinitions!(state, {
     let mut lines = Vec::new();
     // TODO: UGH!!! Isn't there a better way to approximate the Perl simplicity of writing an inline regex?
     // the escaping is very easy to get wrong!
-    let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{}\\}}(.*)$", env)).unwrap();
+    let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{env}\\}}(.*)$")).unwrap();
     while let Some(line) = gullet.read_raw_line(state) {
       if let Some(caps) = env_re.captures(&line) {
         let pre = caps.get(1).map_or("", |m| m.as_str()).to_string();

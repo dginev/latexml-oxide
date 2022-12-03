@@ -243,10 +243,10 @@ LoadDefinitions!(outer_stomach, outer_state, {
       tokens.extend(Invocation!("\\end", vec![env], gullet)?.unlist());
       tokens.extend(vec![
         T_CS!("\\let"),
-        T_CS!(format!("\\end{}", tag)),
+        T_CS!(format!("\\end{tag}")),
         T_CS!("\\endthebibliography"),
         T_CS!("\\let"),
-        T_CS!(format!("\\end{{{}}}", tag)),
+        T_CS!(format!("\\end{{{tag}}}")),
         T_CS!("\\end{thebibliography}")
       ]);
     }

@@ -9,7 +9,7 @@ pub fn node_to_grammar_lexemes(mathnode: &Node, idx: &mut usize) -> (Vec<String>
   let top_role_opt = mathnode.get_attribute("role");
   if let Some(ref top_role) = top_role_opt {
     *idx += 1;
-    lexemes.push(format!("start_{}:start:{}", top_role, idx));
+    lexemes.push(format!("start_{top_role}:start:{idx}"));
     nodes.push(mathnode.clone());
   }
   let child_nodes = filter_hints(mathnode.get_child_nodes());
@@ -27,14 +27,14 @@ pub fn node_to_grammar_lexemes(mathnode: &Node, idx: &mut usize) -> (Vec<String>
         text = "UNKNOWN".to_string();
       }
       *idx += 1;
-      let lexeme = format!("{}:{}:{}", role, text, idx).replace(' ', "");
+      let lexeme = format!("{role}:{text}:{idx}").replace(' ', "");
       lexemes.push(lexeme);
       nodes.push(node);
     }
   }
   if let Some(top_role) = top_role_opt {
     *idx += 1;
-    lexemes.push(format!("end_{}:end:{}", top_role, idx));
+    lexemes.push(format!("end_{top_role}:end:{idx}"));
     nodes.push(mathnode.clone());
   }
   (lexemes, nodes)
