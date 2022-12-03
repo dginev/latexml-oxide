@@ -26,7 +26,7 @@ pub fn derive_load_model(input: TokenStream) -> TokenStream {
   let item = parse_macro_input!(input as DeriveInput);
   match modelable::load_model(item) {
     Ok(loaded_model) => loaded_model,
-    Err(e) => panic!("Failed to load model: {:?}", e),
+    Err(e) => panic!("Failed to load model: {e:?}"),
   }
 }
 

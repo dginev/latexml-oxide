@@ -595,7 +595,7 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
       };
       let (bp, string) = textrec_apply(&name, &op, args, document, state);
       if (bp < outer_bp) || ((bp == outer_bp) && (name != outer_name)) {
-        format!("({})", string)
+        format!("({string})")
       } else {
         string
       }

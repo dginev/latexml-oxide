@@ -30,7 +30,7 @@ fn main() {
 
   let (lexemes, lex_nodes, xmath_opt, mut doc) = lex_single_tex_formula(&source);
   assert!(!lexemes.is_empty());
-  eprintln!("lexemes: {:?}", lexemes);
+  eprintln!("lexemes: {lexemes:?}");
 
   let mut parser = MathParser::default();
   if let Ok(Some(mut parse_tree)) = parser.parse_lexemes(lexemes, lex_nodes, &mut doc) {

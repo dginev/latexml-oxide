@@ -39,7 +39,7 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
 
   let path = match pathname_opt {
     Some(n) => n,
-    None => panic!("Model {:?} not found, required to load a compiled model!", name),
+    None => panic!("Model {name:?} not found, required to load a compiled model!"),
   };
 
   let mut operations = Vec::new();

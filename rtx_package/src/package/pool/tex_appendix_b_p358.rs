@@ -355,11 +355,11 @@ LoadDefinitions!(state, {
       }
 
       if let Some(meaning) = thing.get_attribute("meaning") {
-        document.set_attribute(thing, "meaning",  &format!("not-{}",meaning))?; }
+        document.set_attribute(thing, "meaning",  &format!("not-{meaning}"))?; }
       if let Some(name) = thing.get_attribute("name") {
-        document.set_attribute(thing, "name", &format!("not-{}",name))?; }
+        document.set_attribute(thing, "name", &format!("not-{name}"))?; }
       else if !text.is_empty() {
-        document.set_attribute(thing, "name", &format!("not-{}",text))?; }
+        document.set_attribute(thing, "name", &format!("not-{text}"))?; }
 
       let known_c = MATH_CHAR_NEGATIONS.get(&text);
       let new : Cow<'_, str> = match known_c {
@@ -371,7 +371,7 @@ LoadDefinitions!(state, {
       document.get_node_mut().add_child(thing)?;
       // Since the <not> element is disappearing, if it had an id that was referenced...!?!?
       if let Some(id) = not_node.get_attribute("xml:id") {
-        for n in document.findnodes(&format!("descendant-or-self::ltx:XMRef[@idref='{}']", id), None, state) {
+        for n in document.findnodes(&format!("descendant-or-self::ltx:XMRef[@idref='{id}']"), None, state) {
           document.remove_node(n);
         }
       }   // ? Hopefully this is safe.

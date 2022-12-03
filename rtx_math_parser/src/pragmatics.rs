@@ -164,9 +164,9 @@ fn _pragma_letter_case_flat_unstyled(name: &str) -> String {
       match base.rfind(':') {
         Some(position) => {
           let (role, _discard) = base.split_at(position);
-          format!("{}:{}", role, lexeme)
+          format!("{role}:{lexeme}")
         },
-        None => format!("{}:{}", base, lexeme),
+        None => format!("{base}:{lexeme}"),
       }
     },
     None => name.to_owned(),
@@ -564,20 +564,20 @@ lazy_static! {
     let up_greek_blocks = [('Α','Γ'),('Ζ','Θ'),('Ι','Κ'),('Λ','Ξ'),('Ο','Ρ'),('Σ','Υ'),('Φ','Ψ')];
 
     for (start,end) in latin_blocks.iter() {
-      let mark = format!("{}{}",start,end);
+      let mark = format!("{start}{end}");
       let up_start = start.to_ascii_uppercase();
       let up_end = end.to_ascii_uppercase();
       for c_u8 in (*start as u8) ..= (*end as u8) {
         map.insert(c_u8.into(), mark.clone());
       }
-      let up_mark = format!("{}{}", up_start, up_end);
+      let up_mark = format!("{up_start}{up_end}");
       for c_u8 in (up_start as u8)..=(up_end as u8) {
         map.insert(c_u8.into(), up_mark.clone());
       }
     }
 
     for (start,end) in greek_blocks.iter().chain(up_greek_blocks.iter()) {
-      let mark = format!("{}{}",start,end);
+      let mark = format!("{start}{end}");
       for c_u32 in (*start as u32) ..= (*end as u32) {
         map.insert(std::char::from_u32(c_u32).unwrap(), mark.clone());
       }

@@ -203,7 +203,7 @@ LoadDefinitions!(state, {
       if let ParameterExtra::Tokens(ref t) = x {
         until.extend(t.clone().unlist());
       } else {
-        panic!("unexpected ParameterExtra in Until: {:?}",x);
+        panic!("unexpected ParameterExtra in Until: {x:?}");
       }
     }
     gullet.read_until(Tokens::new(until), state)

@@ -30,7 +30,7 @@ pub struct XMTok {
 impl Display for XMTok {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     // stub with Debug for now
-    writeln!(f, "{:?}", self)
+    writeln!(f, "{self:?}")
   }
 }
 
@@ -81,7 +81,7 @@ impl Operator {
       } else {
         aux_generate_indent(level, false)
       };
-      writeln!(f, "{}@-op┐", indent,)?;
+      writeln!(f, "{indent}@-op┐")?;
       let mut rhs_level: Vec<bool> = level.to_vec();
       rhs_level.push(true);
       rhs_level.push(false);
@@ -359,17 +359,17 @@ impl Tree {
       Tree::Apply(op, args, meta) => {
         if !meta.syntax_trace.is_empty() {
           let indent_base = aux_generate_indent(level, true);
-          writeln!(f, "{}\n{}{}", indent_base, indent_base, meta)?;
+          writeln!(f, "{indent_base}\n{indent_base}{meta}")?;
         }
         let mut arg_level: Vec<bool> = level.to_vec();
         arg_level.push(true);
         op.fmt_indented(level, f)?;
         args.fmt_indented(&arg_level, f)
       },
-      Tree::Lexeme(name, meta) => writeln!(f, "{}{} {}", indent, name, meta),
-      Tree::Token(t, meta) => writeln!(f, "{}{} {}", indent, t, meta),
+      Tree::Lexeme(name, meta) => writeln!(f, "{indent}{name} {meta}"),
+      Tree::Token(t, meta) => writeln!(f, "{indent}{t} {meta}"),
       Tree::Choices(args) => {
-        writeln!(f, "\n{}Choices", indent)?;
+        writeln!(f, "\n{indent}Choices")?;
         let mut arg_level: Vec<bool> = level.to_vec();
         arg_level.push(true);
         let mut peekable = args.iter().peekable();
