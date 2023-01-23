@@ -12,14 +12,14 @@ macro_rules! TypedMacro {
           name: stringify!($ptype).to_string(),
           ..Parameter::default()
         }
-        .init(state)?,
+        .init($inner_state)?,
       );
     )+
     // let (cs, params) = parse_prototype!($proto);
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
       move |$gullet, mut args, $inner_state| {
         $(
-          let $var: $ptype = args.remove(0).into();
+          let $var: $ptype = args.remove(0).try_into()?;
         )+
         WithInnerState!($body, $inner_state).into_tokens_result()
       }

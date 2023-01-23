@@ -289,15 +289,13 @@ LoadDefinitions!(outer_state, {
 
   // \the<internal quantity>
   DefMacro!("\\the Register", sub[gullet, args, state] {
-    unpack!(args => variable);
-    let mut args = variable.unlist();
-    let defn = args.remove(0).to_register(state);
-    if let Some(defn) = defn {
+    if let ArgWrap::RegisterDefinition((rtoken, inner)) = args.remove(0) {
       // let register_type = defn.borrow().register_type;
       //     if (!$type) {
       //       my $cs = ToString($defn->getCS);
       //       Error('unexpected', "\\the$cs", $gullet, "You can't use $cs after \\the"); return (); }
-      let value = defn.value_of(args.into_iter().map(ArgWrap::Token).collect(), state)
+      let defn = rtoken.to_register(state).expect("if a Register parameter provides a token, it must have a Register definition.");
+      let value = defn.value_of(inner, state)
         .unwrap_or_else(|| RegisterValue::Tokens(Tokens!()));
       // In all cases, these should be OTHER, except for space. (!?)
       let mut tokens : Vec<Token> = match value {

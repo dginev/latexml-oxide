@@ -592,11 +592,8 @@ LoadDefinitions!(state, {
     };
     match defn {
       Some(register) => {
-        let mut invoked = vec![token.unwrap()];
-        for arg in register.read_arguments(gullet, state)? {
-          invoked.append(&mut arg.unlist());
-        }
-        return Ok(ArgWrap::Tokens(Tokens::new(invoked)));
+        let args = register.read_arguments(gullet, state)?;
+        return Ok(ArgWrap::RegisterDefinition((token.unwrap(), args)));
       },
       None => {
         let message = s!("A <register> was supposed to be here. Got {:?}", token);

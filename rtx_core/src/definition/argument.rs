@@ -37,7 +37,9 @@ pub enum ArgWrap {
   MuDimension(MuDimension),
   OptionMuDimension(Option<MuDimension>),
   KV(KeyVals),
-  OptionKV(Option<KeyVals>)
+  OptionKV(Option<KeyVals>),
+  // TODO: what do we do with this custom case? feels iffy
+  RegisterDefinition((Token, Vec<ArgWrap>))
 }
 
 impl Default for ArgWrap {
@@ -75,7 +77,8 @@ impl Display for ArgWrap {
       ArgWrap::OptionMuDimension(Some(omudim)) =>  write!(f, "{omudim}"),
       ArgWrap::KV(kv) =>  write!(f, "{kv}"),
       ArgWrap::OptionKV(None) =>  write!(f, "None"),
-      ArgWrap::OptionKV(Some(okv)) =>  write!(f, "{okv}")
+      ArgWrap::OptionKV(Some(okv)) =>  write!(f, "{okv}"),
+      ArgWrap::RegisterDefinition((t, args)) => write!(f, "({t},{args:?})")
     }
   }
 }
@@ -110,6 +113,7 @@ impl Object for ArgWrap {
       OptionKV(kv_opt) => match kv_opt {
         Some(kv) => kv.get_locator(),
         None => None },
+      RegisterDefinition(_) => None,
     }
   }
   fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
@@ -146,6 +150,7 @@ impl Object for ArgWrap {
         Some(kv) => kv.be_digested(stomach,state),
         None => unimplemented!()
       },
+      RegisterDefinition(_) => unimplemented!(), // ??? not meant for direct digestion I think
     }
   }
   fn revert(&self, state:&mut State)-> Result<Tokens> {
@@ -182,6 +187,7 @@ impl Object for ArgWrap {
         Some(kv) => kv.revert(state),
         None => unimplemented!()
       },
+      RegisterDefinition(_) => unimplemented!(), // ??? not meant for direct reversion I think
     }
   }
 }
@@ -203,7 +209,8 @@ impl ArgWrap {
       OptionGlue(g_opt) => g_opt.is_none(),
       OptionMuGlue(g_opt) => g_opt.is_none(),
       OptionMuDimension(d_opt) => d_opt.is_none(),
-      OptionKV(kv_opt) => kv_opt.is_none()
+      OptionKV(kv_opt) => kv_opt.is_none(),
+      RegisterDefinition(_) => false,
     }
   }
   pub fn is_tokens(&self) -> bool {
@@ -279,6 +286,7 @@ impl ArgWrap {
         None => None,
         Some(t) => Some(Cow::Owned(t.revert(state)?)),
       },
+      RegisterDefinition(_) => unimplemented!(), // ??? not meant for such use
     };
     Ok(result)
   }
