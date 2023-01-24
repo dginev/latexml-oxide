@@ -391,7 +391,7 @@ impl Model {
     }
   }
 
-/// Same as get_node_qname, but using the Document namespace prefixes
+  /// Same as get_node_qname, but using the Document namespace prefixes
   pub fn get_node_document_qname(&mut self, node: &Node) -> String {
     use libxml::tree::NodeType::*;
     let node_type = node.get_type();

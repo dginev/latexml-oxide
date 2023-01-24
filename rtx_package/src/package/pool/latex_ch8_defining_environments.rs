@@ -25,7 +25,8 @@ LoadDefinitions!(state, {
       }
     } else {
       let opt = if opt_opt.is_empty() { None } else { Some(opt_opt.owned_tokens().unwrap()) };
-      let converted_args = convert_latex_args(nargs.value_of() as usize, opt, state)?; // TODO: can we convince DefMacro! this is not a second mutable borrow of state?
+      // TODO: can we convince DefMacro! this is not a second mutable borrow of state?
+      let converted_args = convert_latex_args(nargs.value_of() as usize, opt, state)?;
       DefMacro!(name_cs, converted_args, begin);
       DefMacro!(end_name_cs, None, end);
     }

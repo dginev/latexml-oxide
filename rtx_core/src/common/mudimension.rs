@@ -4,8 +4,8 @@ use std::borrow::Cow;
 use std::fmt;
 
 use super::dimension::Dimension;
-use crate::common::numeric_ops::{kround,fixpoint,UNITY,NumericOps};
-use crate::definition::register::{RegisterType};
+use crate::common::numeric_ops::{fixpoint, kround, NumericOps, UNITY};
+use crate::definition::register::RegisterType;
 use crate::{Locator, Object};
 
 lazy_static! {
@@ -32,7 +32,10 @@ impl Object for MuDimension {
 impl MuDimension {
   pub fn new_spec(spec: &str) -> Self {
     if let Some(cap) = MUDIM_SPEC_RE.captures(spec) {
-      MuDimension(fixpoint(cap.get(1).map_or("", |m| m.as_str()).parse::<f32>().unwrap(), Some(UNITY as f32)))
+      MuDimension(fixpoint(
+        cap.get(1).map_or("", |m| m.as_str()).parse::<f32>().unwrap(),
+        Some(UNITY as f32),
+      ))
     } else {
       MuDimension(kround(spec.parse::<f32>().unwrap()))
     }

@@ -6,10 +6,10 @@ use std::sync::Arc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
-use crate::definition::argument::ArgWrap;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::definition::argument::ArgWrap;
 use crate::gullet::Gullet;
 use crate::stomach::Stomach;
 // use crate::definition::expandable::Expandable;

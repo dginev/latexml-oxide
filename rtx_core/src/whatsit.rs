@@ -53,9 +53,7 @@ impl Whatsit {
       _ => false,
     }
   }
-  pub fn is_empty(&self) -> bool {
-    self.args.is_empty()
-  }
+  pub fn is_empty(&self) -> bool { self.args.is_empty() }
 
   pub fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
   pub fn properties(self) -> HashMap<String, Stored> { self.properties }
@@ -283,7 +281,5 @@ impl BoxOps for Whatsit {
     }
   }
 
-  fn set_font(&mut self, font: Arc<Font>) {
-    self.properties.insert("font".to_string(), Stored::Font(font));
-  }
+  fn set_font(&mut self, font: Arc<Font>) { self.properties.insert("font".to_string(), Stored::Font(font)); }
 }

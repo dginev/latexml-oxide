@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use crate::common::dimension::{Dimension};
+use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
 use crate::common::glue::{FillCode, Glue};
@@ -12,8 +12,8 @@ use crate::common::locator::Locator;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
+use crate::common::numeric_ops::{fixpoint, NumericOps, UNITY};
 use crate::common::object::Object;
-use crate::common::numeric_ops::{fixpoint,UNITY,NumericOps};
 
 use crate::definition::conditional::ConditionalType;
 use crate::definition::register::{RegisterType, RegisterValue};
@@ -209,7 +209,7 @@ impl Gullet {
 
       // Wow!!!!! See TeX the Program \S 309
       if let Some(ref nextt) = next_token {
-        if (state.align_group_count>0) && state.reading_alignment
+        if (state.align_group_count > 0) && state.reading_alignment
         // SHOULD count nesting of { }!!! when SCANNED (not digested)
         {
           //&& (($atoken, $atype, $ahidden) = $self->isColumnEnd($token))) {
@@ -911,7 +911,7 @@ impl Gullet {
           65536.0
         },
       };
-      let s = if is_negative { -1.0} else { 1.0};
+      let s = if is_negative { -1.0 } else { 1.0 };
       Ok(Dimension::new_f32(s * d * unit))
     } else {
       let message = s!(
@@ -980,7 +980,14 @@ impl Gullet {
         None => (None, None),
       };
 
-      Ok(Glue::new_spec(&d.value_of().to_string(), r1.map(|v| v as f32), f1, r2.map(|v| v as f32), f2, state))
+      Ok(Glue::new_spec(
+        &d.value_of().to_string(),
+        r1.map(|v| v as f32),
+        f1,
+        r2.map(|v| v as f32),
+        f2,
+        state,
+      ))
     }
   }
 

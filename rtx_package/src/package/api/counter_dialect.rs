@@ -5,9 +5,9 @@ use std::sync::Arc;
 
 use rtx_core::common::error::*;
 use rtx_core::common::number::Number;
+use rtx_core::common::numeric_ops::NumericOps;
 use rtx_core::common::xml::XML_NS;
 use rtx_core::definition::expandable::ExpandableOptions;
-use rtx_core::common::numeric_ops::NumericOps;
 use rtx_core::definition::ExpansionBody;
 use rtx_core::document::Document;
 use rtx_core::gullet::Gullet;
@@ -291,7 +291,6 @@ pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut
 /// suitable for use in a `properties` option to constructors.
 /// The `id` is generated in parallel with the reference number
 /// to assist debugging.
-///
 pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(Stored::String(ctr)) => ctr.to_string(),
@@ -377,7 +376,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
 /// captions & certain equation environments)
 /// Assign a sub to LABEL_MAPPING_HOOK: &sub($label,$counter,$norefnum)
 /// to return the desired refnum and id for a given object.
-fn maybe_preempt_refnum(ctr: &str, norefnum: bool, gullet:&mut Gullet, state: &mut State) {
+fn maybe_preempt_refnum(ctr: &str, norefnum: bool, gullet: &mut Gullet, state: &mut State) {
   if let Some(mapper) = state.lookup_value("LABEL_MAPPING_HOOK") {
     let hj_refnum = T_CS!(s!("\\_PREEMPTED_REFNUM_{}", ctr));
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{}", ctr));

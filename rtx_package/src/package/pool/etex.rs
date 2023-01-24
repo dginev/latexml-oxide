@@ -127,9 +127,9 @@ LoadDefinitions!(state, {
   //   Note($_[0]->getLocator->toString());
   //   return; });
 
-  DefRegister!("\\tracingassigns"    => Number::new(0));    // ???
+  DefRegister!("\\tracingassigns"    => Number::new(0)); // ???
   DefRegister!("\\tracinggroups"     => Number::new(0));
-  DefRegister!("\\tracingifs"        => Number::new(0));    // ???
+  DefRegister!("\\tracingifs"        => Number::new(0)); // ???
   DefRegister!("\\tracingscantokens" => Number::new(0));
   DefRegister!("\\tracingnesting"    => Number::new(0));
   DefRegister!("\\savingvdiscards"   => Number::new(0));

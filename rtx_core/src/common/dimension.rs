@@ -1,17 +1,17 @@
-use std::fmt;
 use std::borrow::Cow;
+use std::fmt;
 use std::sync::Arc;
 
-use regex::Regex;
 use lazy_static::lazy_static;
+use regex::Regex;
 
-use crate::common::numeric_ops::{kround,fixpoint,UNITY,NumericOps,round_to};
-use crate::common::object::Object;
-use crate::common::locator::Locator;
 use crate::common::error::*;
-use crate::state::State;
-use crate::{RegisterValue,Digested};
+use crate::common::locator::Locator;
+use crate::common::numeric_ops::{fixpoint, kround, round_to, NumericOps, UNITY};
+use crate::common::object::Object;
 use crate::definition::register::RegisterType;
+use crate::state::State;
+use crate::{Digested, RegisterValue};
 
 lazy_static! {
   static ref SPEC_RE: Regex = Regex::new(r"^(-?\d*\.?\d*)([a-zA-Z][a-zA-Z])$").unwrap();
@@ -21,12 +21,13 @@ lazy_static! {
 pub struct Dimension(pub i32);
 
 impl Object for Dimension {
-  fn get_locator(&self) -> Option<Cow<Locator>> {
-    None
-  }
+  fn get_locator(&self) -> Option<Cow<Locator>> { None }
   fn be_digested(self, stomach: &mut crate::stomach::Stomach, state: &mut State) -> Result<Digested>
-    where Self: Sized, Self: fmt::Debug {
-      Ok(Digested::RegisterValue(Arc::new(RegisterValue::Dimension(self))))
+  where
+    Self: Sized,
+    Self: fmt::Debug,
+  {
+    Ok(Digested::RegisterValue(Arc::new(RegisterValue::Dimension(self))))
   }
 }
 impl NumericOps for Dimension {

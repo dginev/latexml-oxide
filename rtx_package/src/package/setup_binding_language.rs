@@ -1435,12 +1435,12 @@ macro_rules! Let {
     st.let_i(&T_CS!($token1), $token2, None, stmch.get_gullet_mut());
   }};
   ($token1:expr, $token2:literal) => {{
-    bind_state_mut!(stmch,st);
+    bind_state_mut!(stmch, st);
     st.let_i($token1, T_CS!($token2), None, stmch.get_gullet_mut());
   }};
   // internal form, pre-packaged arguments
   ($token1:expr, $token2:expr) => {{
-    bind_state_mut!(stmch,st);
+    bind_state_mut!(stmch, st);
     st.let_i($token1, $token2, None, stmch.get_gullet_mut());
   }};
   ($token1:expr, $token2:expr, $scope:expr) => {{
@@ -1469,7 +1469,7 @@ macro_rules! DigestIf {
 #[macro_export]
 macro_rules! AfterAssignment {
   () => {{
-    bind_state_mut!(stmch,st);
+    bind_state_mut!(stmch, st);
     st.after_assignment(stmch.get_gullet_mut())
   }};
   ($stmch:ident, $state_arg: ident) => {
@@ -1713,7 +1713,8 @@ macro_rules! DefMath(
 macro_rules! DefParameterType {
   ($name:ident) => (DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name).to_string())));
   ($name:ident, $state_arg:ident) => (DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name.to_string())), $state_arg));
-  ($name:ident, $($key:ident => $value:expr),*)=>(DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name).to_string(), $($key=>$value),*)));
+  ($name:ident, $($key:ident => $value:expr),*)=>(
+    DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name).to_string(), $($key=>$value),*)));
   ($name:ident, $($key:ident => $value:expr),*, $state_arg:ident)=>
     (DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name.to_string()), $($key=>$value),*), $state_arg));
   // with reader as explicit sub

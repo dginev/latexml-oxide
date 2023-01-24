@@ -48,20 +48,20 @@ LoadDefinitions!(state, {
     Ok(Tokens::new(result))
   });
 
-DefMacro!("\\@ifstar {}{}", sub[gullet,args,state] {
-    unpack!(args=>if_toks,else_toks);
-    let next_opt = gullet.read_non_space(state);
-    if Some(T_OTHER!("*")) == next_opt {
-      Ok(if_toks)
-    } else {
-      let mut result = else_toks.unlist();
-      if let Some(next) = next_opt {
-        result.push(next);
-      }
-      Ok(Tokens::new(result))
-    }});
+  DefMacro!("\\@ifstar {}{}", sub[gullet,args,state] {
+  unpack!(args=>if_toks,else_toks);
+  let next_opt = gullet.read_non_space(state);
+  if Some(T_OTHER!("*")) == next_opt {
+    Ok(if_toks)
+  } else {
+    let mut result = else_toks.unlist();
+    if let Some(next) = next_opt {
+      result.push(next);
+    }
+    Ok(Tokens::new(result))
+  }});
 
-  DefMacro!("\\@dblarg {}",  r"\kernel@ifnextchar[{#1}{\@xdblarg{#1}}");
+  DefMacro!("\\@dblarg {}", r"\kernel@ifnextchar[{#1}{\@xdblarg{#1}}");
   DefMacro!("\\@xdblarg {}{}", r"#1[{#2}]{#2}");
 
   DefMacro!("\\@testopt{}{}", sub[gullet,args,state] {
@@ -72,27 +72,30 @@ DefMacro!("\\@ifstar {}{}", sub[gullet,args,state] {
       Ok(Tokens!(cmd.unlist(), T_OTHER!("["), option.unlist(), T_OTHER!("]")))
     }
   });
-  RawTeX!(r###"
+  RawTeX!(
+    r###"
   \def\@protected@testopt#1{%%
     \ifx\protect\@typeset@protect
       \expandafter\@testopt
     \else
       \@x@protect#1%
     \fi}
-  "###);
+  "###
+  );
 
   Let!("\\l@ngrel@x", "\\relax"); // Never actually used anywhere, but...
   DefMacro!("\\@star@or@long{}", r"\@ifstar{\let\l@ngrel@x\relax#1}{\let\l@ngrel@x\long#1}");
 
   // maybe this is easiest just to punt.
-  RawTeX!(r###"
+  RawTeX!(
+    r###"
   \def\in@#1#2{%
   \def\in@@##1#1##2##3\in@@{%
     \ifx\in@##2\in@false\else\in@true\fi}%
   \in@@#2#1\in@\in@@}
   \newif\ifin@
-  "###);
-
+  "###
+  );
 
   //======================================================================
   // Hair

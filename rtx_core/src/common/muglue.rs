@@ -1,7 +1,7 @@
 use super::glue::{glue_string, new_setup, spec_setup, FillCode};
 use crate::common::dimension::attribute_format;
 use crate::common::numeric_ops::NumericOps;
-use crate::definition::register::{RegisterType};
+use crate::definition::register::RegisterType;
 use crate::state::State;
 use crate::{Locator, Object};
 use std::borrow::Cow;
