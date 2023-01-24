@@ -194,8 +194,7 @@ pub fn do_def(globally: bool, stomach: &mut Stomach, mut args: Vec<ArgWrap>, sta
 // Kinda rough: We don't really keep track of modes as carefully as TeX does.
 // We'll assume that a box is horizontal if there's anything at all,
 // but it's not a vbox (!?!?)
-pub fn classify_box(boxnum: Token, state: &State) -> &'static str {
-  let boxnum: Number = boxnum.to_number();
+pub fn classify_box(boxnum: Number, state: &State) -> &'static str {
   match state.lookup_value(&s!("box{}", boxnum.value_of())) {
     Some(Stored::Digested(ref d)) => match **d {
       Digested::Whatsit(ref w) if w.read().unwrap().definition == state.lookup_definition(&T_CS!("\\vbox")).unwrap() => "vbox",

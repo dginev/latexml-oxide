@@ -8,6 +8,7 @@ use crate::Digested;
 /// Exported generic functions for dealing with `LaTeXML`'s objects
 ///======================================================================
 use std::borrow::Cow;
+use std::fmt::Debug;
 
 // ======================================================================
 // LaTeXML Object
@@ -45,8 +46,8 @@ pub trait Object {
   // These should really only make sense for Data objects within the
   // processing stream.
   fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested>
-  where Self: Sized {
-    unimplemented!()
+  where Self: Sized, Self: Debug {
+    panic!("Was it really intended to digest? We don't know how! {self:?} {:?}",self.get_locator());
   }
 
   // fn be_absorbed(&self, _document: Document) { unimplemented!() }

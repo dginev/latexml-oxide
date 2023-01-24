@@ -32,8 +32,8 @@ LoadDefinitions!(state, {
 
   // \readline; like \read, but only spaces & other
   DefMacro!("\\readline Number SkipKeyword:to SkipSpaces Token", sub[gullet, args, state] {
-    unpack_to_token!(args => port, token);
-    let port = port.to_number();
+    let port = args.remove(0).to_number();
+    unpack_to_token!(args => token);
     let mouth_opt = if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}",port)) {
       Some(Arc::clone(mouth))
     } else {

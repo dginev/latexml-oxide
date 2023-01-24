@@ -111,19 +111,15 @@ LoadDefinitions!(outer_state, {
   //    | \divide <numeric variable><optional by><number>
 
   DefPrimitive!("\\advance Variable SkipKeyword:by", sub[stomach, args, state] {
-    unpack!(args => var);
-    // TODO: Variable type unpacking seems to require special INFRA again...
-    let mut var_tokens : Vec<ArgWrap> = var.unlist().into_iter().map(ArgWrap::Token).collect();
-    if !var_tokens.is_empty() {
-      let defn_token = var_tokens.remove(0).expected_token()?;
+    if let ArgWrap::RegisterDefinition((defn_token, inner)) = args.remove(0) {
       if defn_token.to_string() != "missing" {
         let defn_opt = state.lookup_register_definition(&defn_token);
         let defn_token_rc = Arc::new(defn_token);
         state.current_token = Some(Arc::clone(&defn_token_rc));
         if let Some(defn) = defn_opt {
           let summand = stomach.get_gullet_mut().read_value(defn.register_type().unwrap(), state)?;
-          let defn_args : Vec<ArgWrap> = var_tokens.clone();
-          let defn_value = defn.value_of(var_tokens, state).unwrap_or_default();
+          let defn_args : Vec<ArgWrap> = inner.clone();
+          let defn_value = defn.value_of(inner, state).unwrap_or_default();
           defn.borrow_mut().set_value(defn_value.add(summand), defn_args, state);
         } else {
           let message = s!("\\advance expected a defined variable for {:?}, found no definition", defn_token_rc);
@@ -134,14 +130,12 @@ LoadDefinitions!(outer_state, {
   });
 
   DefPrimitive!("\\multiply Variable SkipKeyword:by Number", sub[stomach, args, state] {
-    unpack!(args => var, scale);
-    if !var.is_empty() {
-      let mut args : Vec<ArgWrap> = var.unlist().into_iter().map(ArgWrap::Token).collect();
-      let varname = args.remove(0).expected_token()?;
+    if let ArgWrap::RegisterDefinition((varname, inner)) = args.remove(0) {
+      unpack!(args => scale);
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
-      let defn_args : Vec<ArgWrap> = args.clone();
+      let defn_args : Vec<ArgWrap> = inner.clone();
       if let Some(defn) = state.lookup_register_definition(&varname) {
-        let defn_value = defn.value_of(args, state).unwrap_or_default();
+        let defn_value = defn.value_of(inner, state).unwrap_or_default();
         let scale_value = scale.to_number().value_of();
         defn.borrow_mut().set_value(defn_value.multiply(Number::new(scale_value)), defn_args, state);
       } else {
@@ -155,14 +149,12 @@ LoadDefinitions!(outer_state, {
   });
 
   DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[stomach, args, state] {
-    unpack!(args => var, scale);
-    if !var.is_empty() {
-      let mut args : Vec<ArgWrap> = var.unlist().into_iter().map(ArgWrap::Token).collect();
-      let varname = args.remove(0).expected_token()?;
+    if let ArgWrap::RegisterDefinition((varname, inner)) = args.remove(0) {
+      unpack!(args => scale);
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
-      let defn_args : Vec<ArgWrap> = args.clone();
+      let defn_args : Vec<ArgWrap> = inner.clone();
       if let Some(defn) = state.lookup_register_definition(&varname) {
-        let defn_value = defn.value_of(args, state).unwrap_or_default();
+        let defn_value = defn.value_of(inner, state).unwrap_or_default();
         let mut denominator = scale.to_number().value_f32();
         if denominator == 0.0 {
           Error!("misdefined", scale, stomach, state, "Illegal \\divide by 0; assuming 1");
@@ -284,7 +276,7 @@ LoadDefinitions!(outer_state, {
 
   // \parshape !?!??
   DefPrimitive!("\\parshape SkipMatch:= Number", sub[stomach, args, state] {
-    unpack_to_token!(args => n);
+    unpack_to_number!(args => n);
     // $n = $n->valueOf;
     // my $gullet = $stomach->getGullet;
     // for (my $i = 0 ; $i < $n ; $i++) {

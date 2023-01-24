@@ -1,5 +1,7 @@
 use std::fmt;
 use std::borrow::Cow;
+use std::sync::Arc;
+
 use regex::Regex;
 use lazy_static::lazy_static;
 
@@ -8,6 +10,7 @@ use crate::common::object::Object;
 use crate::common::locator::Locator;
 use crate::common::error::*;
 use crate::state::State;
+use crate::{RegisterValue,Digested};
 use crate::definition::register::RegisterType;
 
 lazy_static! {
@@ -20,6 +23,10 @@ pub struct Dimension(pub i32);
 impl Object for Dimension {
   fn get_locator(&self) -> Option<Cow<Locator>> {
     None
+  }
+  fn be_digested(self, stomach: &mut crate::stomach::Stomach, state: &mut State) -> Result<Digested>
+    where Self: Sized, Self: fmt::Debug {
+      Ok(Digested::RegisterValue(Arc::new(RegisterValue::Dimension(self))))
   }
 }
 impl NumericOps for Dimension {

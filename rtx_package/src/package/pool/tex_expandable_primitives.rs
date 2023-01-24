@@ -13,16 +13,20 @@ LoadDefinitions!(outer_state, {
   DefConditional!("\\ifcase Number");
 
   DefConditional!("\\ifnum Number Token Number", sub[gullet, args, state] {
-    unpack_to_token!(args =>u,rel,v);
+    unpack_to_number!(args => u);
+    unpack_to_token!(args => rel);
+    unpack_to_number!(args => v);
     compare(u, rel, v)
   });
   DefConditional!("\\ifdim Dimension Token Dimension", sub[gullet, args, state] {
-    unpack_to_token!(args =>u,rel,v);
+    unpack_to_number!(args => u);
+    unpack_to_token!(args =>rel);
+    unpack_to_number!(args => v);
     compare(u, rel, v)
   });
   DefConditional!("\\ifodd Number", sub[gullet, args, state] {
-    unpack_to_token!(args => u);
-    let uint = u.to_number().value_of();
+    unpack_to_number!(args => u);
+    let uint = u.value_of();
     uint % 2 == 1
   });
 
@@ -47,9 +51,9 @@ LoadDefinitions!(outer_state, {
     XEquals!(&token1, &token2)
   });
 
-  DefConditional!("\\ifvoid Number", sub[_g, args, state] {unpack_to_token!(args=>arg); classify_box(arg, state).is_empty() });
-  DefConditional!("\\ifhbox Number", sub[_g, args, state] {unpack_to_token!(args=>arg); classify_box(arg, state) == "hbox" });
-  DefConditional!("\\ifvbox Number", sub[_g, args, state] {unpack_to_token!(args=>arg); classify_box(arg, state) == "vbox" });
+  DefConditional!("\\ifvoid Number", sub[_g, args, state] {unpack_to_number!(args=>arg); classify_box(arg, state).is_empty() });
+  DefConditional!("\\ifhbox Number", sub[_g, args, state] {unpack_to_number!(args=>arg); classify_box(arg, state) == "hbox" });
+  DefConditional!("\\ifvbox Number", sub[_g, args, state] {unpack_to_number!(args=>arg); classify_box(arg, state) == "vbox" });
 
   DefConditional!("\\iftrue", { true });
   DefConditional!("\\iffalse", { false });
@@ -64,8 +68,8 @@ LoadDefinitions!(outer_state, {
   //// shouldn't be a box; See the isRelax code in handleScripts, below
 
   DefMacro!("\\number Number", sub[gullet, args, state] {
-    unpack_to_token!(args=>num);
-    let num_str = num.to_number().value_of();
+    unpack_to_number!(args=>num);
+    let num_str = num.value_of();
     Explode!(num_str)
   });
 
@@ -176,8 +180,7 @@ LoadDefinitions!(outer_state, {
           meaning = s!("{}macro:{}->{}",prefixes, spec, expansion);
         },
         e => { // are there other cases that could occur here? should we handle them?
-          dbg!(e);
-          unimplemented!();
+          panic!("this may be a missing case in \\meaning's implementation: {e}");
         }
       }
     }
@@ -325,9 +328,9 @@ fn escapechar(state: &State) -> String {
   }
 }
 
-fn compare(u: Token, rel: Token, v: Token) -> Result<bool> {
-  let u = u.to_number().value_of();
-  let v = v.to_number().value_of();
+fn compare(u: Number, rel: Token, v: Number) -> Result<bool> {
+  let u = u.value_of();
+  let v = v.value_of();
   // NOTE: One would expect this to be best written as an advanced match statement
   // however, due to the shallow comparison of Cow<str> the Cow::Borrowed("<") and
   // Cow::Owned("<") variants will NOT be equal via a destructuring match.
