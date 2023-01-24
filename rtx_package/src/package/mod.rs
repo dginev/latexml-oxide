@@ -6,6 +6,7 @@ pub use std::borrow::Cow;
 pub use std::collections::HashMap;
 pub use std::collections::VecDeque;
 pub use std::sync::{Arc, RwLock};
+pub use log;
 
 pub use rtx_core::common::dimension::Dimension;
 pub use rtx_core::common::mudimension::MuDimension;

@@ -32,7 +32,7 @@ use std::fmt;
 use std::sync::{Arc, RwLock};
 
 use crate::comment::Comment;
-use crate::common::error::*;
+pub use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::model::Model;

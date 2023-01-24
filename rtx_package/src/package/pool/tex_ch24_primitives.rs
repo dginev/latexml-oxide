@@ -230,7 +230,7 @@ LoadDefinitions!(state, {
   });
 
   DefConditional!("\\ifeof Number", sub[gullet, args, state] {
-    let port = args.remove(0).to_number();
+    unpack_to_number!(args => port);
     if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}", port)) {
       mouth.read().unwrap().at_eof()
     } else {

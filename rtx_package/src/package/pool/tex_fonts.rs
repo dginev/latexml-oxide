@@ -13,31 +13,31 @@ LoadDefinitions!(outer_state, {
   // These look essentially like Registers, although Knuth doesn't call them that.
   DefRegister!("\\textfont Number", T_CS!("\\tenrm"),
   getter => sub[args, state] {
-    let fam = args.remove(0).to_number().value_of();
+    let fam = args.remove(0).expect_number().value_of();
     state.lookup_number(&s!("fontinfo_{}_text", fam)).unwrap_or_default()
   },
   setter => sub[font,args,state] {
-    let fam = args.remove(0).to_number().value_of();
+    let fam = args.remove(0).expect_number().value_of();
     state.assign_value(&s!("fontinfo_{}_text", fam), font, Some(Scope::Global));
   });
 
   DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
   getter => sub[args, state] {
-    let fam = args.remove(0).to_number().value_of();
+    let fam = args.remove(0).expect_number().value_of();
     state.lookup_number(&s!("fontinfo_{}_script", fam)).unwrap_or_default()
   },
   setter => sub[font,args,state] {
-    let fam = args.remove(0).to_number().value_of();
+    let fam = args.remove(0).expect_number().value_of();
     state.assign_value(&s!("fontinfo_{}_script", fam), font, Some(Scope::Global));
   });
 
   DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
   getter => sub[args, state] {
-    let fam = args.remove(0).to_number().value_of();
+    let fam = args.remove(0).expect_number().value_of();
     state.lookup_number(&s!("fontinfo_{}_scriptscript", fam)).unwrap_or_default()
   },
   setter => sub[font,args,state] {
-    let fam = args.remove(0).to_number().value_of();
+    let fam = args.remove(0).expect_number().value_of();
     state.assign_value(&s!("fontinfo_{}_scriptscript", fam), font, Some(Scope::Global));
   });
 
@@ -421,7 +421,7 @@ LoadDefinitions!(outer_state, {
 
   DefPrimitive!("\\char Number", sub[stomach, args, p_state] {
     let token = args.remove(0);
-    let number = token.clone().to_number();
+    let number = token.clone().try_to_number()?;
     let gullet = stomach.get_gullet_mut();
     let decoded = match font::decode(number.value_of() as u8, None, false, p_state) {
       None => String::new(),

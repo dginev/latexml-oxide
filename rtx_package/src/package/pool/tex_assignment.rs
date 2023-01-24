@@ -296,13 +296,13 @@ LoadDefinitions!(outer_state, {
   DefRegister!("\\catcode Number", Number::new(0),
     getter => sub[args, state] {
       unpack_opt!(args => num);
-      let refchar = (num.to_number().value_of() as u8) as char;
+      let refchar = (num.expect_number().value_of() as u8) as char;
       let code : Catcode = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       Number::from(code)
     },
     setter => sub[value, args, state] {
       unpack_opt!(args => num);
-      let c_char = (num.to_number().value_of() as u8) as char;
+      let c_char = (num.expect_number().value_of() as u8) as char;
       let c_code = From::from(value.value_of() as u8);
       state.assign_catcode(c_char, c_code, None);
     }
@@ -311,7 +311,7 @@ LoadDefinitions!(outer_state, {
   // Only used for active math characters, so far
   DefRegister!("\\mathcode Number", Number::new(0),
     getter => sub[args, state] {
-      let ch_code   = args.remove(0).to_number().value_of() as u8;
+      let ch_code   = args.remove(0).expect_number().value_of() as u8;
       let ch : char = ch_code as char;
       let code = match state.lookup_mathcode(&ch.to_string()) {
         None => ch_code,
@@ -320,7 +320,7 @@ LoadDefinitions!(outer_state, {
       Number!(code)
     },    // defaults to the char's code itself(?)
     setter => sub[value, args, state] {
-      let ch = args.remove(0).to_number().value_of() as u8;
+      let ch = args.remove(0).expect_number().value_of() as u8;
       let ch : char = ch as char;
       state.assign_mathcode(ch, value.value_of() as u16, None);
     }

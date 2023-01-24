@@ -566,7 +566,15 @@ pub fn untex(tokens: Tokens, _suppress_linebreak: bool, state: &mut State) -> Re
   Ok(tex_string)
 }
 
-// TODO: Skipped ...
+impl Default for Token {
+  fn default() -> Self {
+    Token {
+      text: Cow::Borrowed("EXPECTED_TOKEN"),
+      code: Catcode::OTHER,
+      smuggled: None
+    }
+  }
+}
 
 ///======================================================================
 /// Accessors.

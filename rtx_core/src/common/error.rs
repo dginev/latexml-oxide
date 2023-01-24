@@ -74,22 +74,22 @@ macro_rules! Warn {
   ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
     // $state.note_status("warn"); // TODO: We're losing the warn count this way...
     use log::warn;
-    warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+    warn!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
     // $state.note_status("warn"); // TODO: We're losing the warn count this way...
     use log::warn;
-    warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+    warn!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }};
   ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
     $state.note_status("warn","");
     use log::warn;
-    warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+    warn!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
     $state.note_status("warn","");
     use log::warn;
-    warn!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+    warn!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }}
 }
 
@@ -98,22 +98,26 @@ macro_rules! Error {
   ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
     // $state.note_status("error"); // TODO: We're losing the error count this way...
     use log::error;
-    error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+    use $crate::generate_message;
+    error!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
     // $state.note_status("error"); // TODO: We're losing the error count this way...
     use log::error;
-    error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+    use $crate::generate_message;
+    error!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }};
   ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
-    $state.note_status("error","");
     use log::error;
-    error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+    use $crate::generate_message;
+    $state.note_status("error","");
+    error!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
-    $state.note_status("error","");
     use log::error;
-    error!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+    use $crate::generate_message;
+    $state.note_status("error","");
+    error!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
   }}
 }
 
@@ -152,16 +156,16 @@ macro_rules! fatal {
 #[macro_export]
 macro_rules! generate_message {
   (None, $message:expr, $level:literal) => {
-    s!("{}\n\tIn {}:{}:{}\n", $message, file!(), line!(), column!())
+    format!("{}\n\tIn {}:{}:{}\n", $message, file!(), line!(), column!())
   };
   (None, $message:expr, $level:literal, $detail:expr) => {
-    s!("{}\n\t{}\n\tIn {}:{}:{}\n", $message, $detail, file!(), line!(), column!())
+    format!("{}\n\t{}\n\tIn {}:{}:{}\n", $message, $detail, file!(), line!(), column!())
   };
   ($where:ident, $message:expr, $level:literal) => {
-    s!("{}\n\t{}\n\tIn {}:{}:{}\n", $message, $where.get_location(), file!(), line!(), column!())
+    format!("{}\n\t{}\n\tIn {}:{}:{}\n", $message, $where.get_location(), file!(), line!(), column!())
   };
   ($where:ident, $message:expr, $level:literal, $detail:expr) => {
-    s!(
+    format!(
       "{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
       $where.get_location(),

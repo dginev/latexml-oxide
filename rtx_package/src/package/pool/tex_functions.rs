@@ -163,7 +163,7 @@ pub fn do_def(globally: bool, stomach: &mut Stomach, mut args: Vec<ArgWrap>, sta
   let cs_opt = args.remove(0);
   let params_opt = args.remove(0);
   let body = args.remove(0).owned_tokens().unwrap();
-  let cs: Token = cs_opt.expected_token()?;
+  let cs: Token = cs_opt.try_to_token()?;
   let params = match params_opt.owned_tokens() {
     Some(ts) => ts,
     None => {

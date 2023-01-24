@@ -92,7 +92,7 @@ LoadDefinitions!(state, {
   });
 
   DefMacro!("\\@arabic{Number}", sub[gullet, args, state] {
-    let number = args.remove(0).to_number();
+    unpack_to_number!(args => number);
     let value = number.value_of();
     ExplodeText!(value.to_string())
   });
