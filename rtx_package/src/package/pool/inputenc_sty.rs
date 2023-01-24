@@ -34,7 +34,7 @@ fn set_input_encoding(encoding: &str, stomach: &mut Stomach, state: &mut State) 
 LoadDefinitions!(outer_stomach, state, {
   //**********************************************************************
   DefPrimitive!("\\DeclareInputMath {Number} {}", sub[stomach, args, state] {
-    let code = args.remove(0).to_number();
+    unpack_to_number!(args => code);
     unpack_to_token!(args => expansion);
     let ch = code.value_of() as u8 as char;
     AssignCatcode!(ch, Catcode::ACTIVE);
@@ -42,7 +42,7 @@ LoadDefinitions!(outer_stomach, state, {
   });
 
   DefPrimitive!("\\DeclareInputText {Number} {}", sub[stomach, args, state] {
-    let code = args.remove(0).to_number();
+    unpack_to_number!(args => code);
     unpack_to_token!(args => expansion);
     let ch = code.value_of() as u8 as char;
     AssignCatcode!(ch, Catcode::ACTIVE);

@@ -51,12 +51,14 @@ fn rtx_ok_internal(tex_path: &str, xml_path: &str, name: &str, extra_bindings_di
       for (lineno, (tex_line, xml_line)) in tex_strings.iter().zip(xml_strings.iter()).enumerate() {
         assert_eq!(
           tex_line, xml_line,
-          "rtx result (left) differs from expected XML (right), file {xml_path}; line {lineno}");
+          "rtx result (left) differs from expected XML (right), file {xml_path}; line {lineno}"
+        );
       }
       assert_eq!(
         tex_strings.len() - xml_strings.len(),
         0,
-        "Conversion of {name:?} had more/fewer lines of content than expected");
+        "Conversion of {name:?} had more/fewer lines of content than expected"
+      );
     }
   }
 }

@@ -16,7 +16,7 @@ LoadDefinitions!(state, {
     let nargs_opt = args.remove(0);
     let opt = args.remove(0);
     let body = args.remove(0);
-    let cs_token: Token = cs.expected_token()?;
+    let cs_token: Token = cs.try_to_token()?;
     let nargs = if nargs_opt.is_empty() { 0 } else {
       nargs_opt.unlist().first().unwrap().to_number().value_of() as usize
     };

@@ -2,8 +2,8 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use rtx_core::{Core, CoreOptions};
 use rtx::core::DigestionAPI;
+use rtx_core::{Core, CoreOptions};
 
 /// Convenience function for iteratively executing rtx under a Bencher
 fn benchmark_texfile(c: &mut Criterion, tex_path: &'static str) {

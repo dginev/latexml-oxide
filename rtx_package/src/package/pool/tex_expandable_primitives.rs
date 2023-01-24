@@ -76,12 +76,12 @@ LoadDefinitions!(outer_state, {
   // define it here (only approxmiately), since it's already useful.
   Let!("\\protect", "\\relax");
 
-  DefMacro!("\\romannumeral Number", sub[gullet, args, state] { roman!(args.remove(0).to_number().value_of()) });
+  DefMacro!("\\romannumeral Number", sub[gullet, args, state] { roman!(args.remove(0).expect_number().value_of()) });
 
   // # 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
   // # suggests all characters except spaces are returned in category code Other, i.e. Explode()
   DefMacro!("\\string Token", sub[gullet, args, state] {
-    let token = args.remove(0).expected_token()?;
+    unpack_to_token!(args => token);
     let mut s = token.to_string();
     if s.starts_with('/') {
       s = escapechar(state) + &s;

@@ -369,7 +369,7 @@ macro_rules! unpack_to_string {
 #[macro_export]
 macro_rules! unpack_to_token {
   ($args:ident => $var:ident) => (
-    let $var : Token = $args.remove(0).expected_token()?;
+    let $var : Token = $args.remove(0).try_to_token()?;
   );
   ($args:ident => $var:ident,$($tail:ident),*) => (
     unpack_to_token!($args => $var);
@@ -380,7 +380,7 @@ macro_rules! unpack_to_token {
 #[macro_export]
 macro_rules! unpack_to_number {
   ($args:ident => $var:ident) => (
-    let $var : Number = $args.remove(0).to_number();
+    let $var : Number = $args.remove(0).try_to_number()?;
   );
   ($args:ident => $var:ident,$($tail:ident),*) => (
     unpack_to_number!($args => $var);

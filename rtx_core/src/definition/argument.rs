@@ -256,12 +256,18 @@ impl ArgWrap {
     }
   }
 
-  pub fn expected_token(self) -> Result<Token> {
+  pub fn try_to_token(self) -> Result<Token> {
     match self {
       ArgWrap::Token(t) => Ok(t),
       ArgWrap::OptionToken(Some(t)) => Ok(t),
       ArgWrap::Tokens(tks) => Ok(tks.unlist().remove(0)),
       _ => Err(s!("Hard assumption for Token argument failed. Got instead: {:?}", self).into()),
+    }
+  }
+  pub fn expected_token(self) -> Token {
+    match self.try_to_token() {
+      Ok(t) => t,
+      Err(e) => panic!("{e}")
     }
   }
 
@@ -325,25 +331,38 @@ impl ArgWrap {
     }
   }
 
-  pub fn to_number(self) -> Number {
+  pub fn try_to_number(self) -> Result<Number> {
     use ArgWrap::*;
     match self {
-      Number(v) => v,
-      Token(t) => t.to_number(),
-      Tokens(tks) => tks.to_number(),
-      _ => panic!("ArgWrap::to_number not (yet?) defined on {self:?}"),
+      Number(v) => Ok(v),
+      Token(t) => Ok(t.to_number()),
+      Tokens(tks) => Ok(tks.to_number()),
+      _ => Err("ArgWrap::to_number not (yet?) defined on {self:?}".into())
+    }
+  }
+  pub fn expect_number(self) -> Number {
+    match self.try_to_number() {
+      Ok(v) => v,
+      Err(e) => panic!("{e}")
     }
   }
 
-  pub fn to_dimension(self) -> Dimension {
+  pub fn try_to_dimension(self) -> Result<Dimension> {
     use ArgWrap::*;
     match self {
-      Dimension(v) => v,
-      Token(t) => t.to_dimension(),
-      Tokens(tks) => tks.to_dimension(),
-      _ => panic!("ArgWrap::to_dimension not (yet?) defined on {self:?}"),
+      Dimension(v) => Ok(v),
+      Token(t) => Ok(t.to_dimension()),
+      Tokens(tks) => Ok(tks.to_dimension()),
+      _ => Err("ArgWrap::to_dimension not (yet?) defined on {self:?}".into()),
     }
   }
+  pub fn expect_dimension(self) -> Dimension {
+    match self.try_to_dimension() {
+      Ok(d) => d,
+      Err(e) => panic!("{e}")
+    }
+  }
+
   pub fn to_mu_dimension(self) -> MuDimension {
     use ArgWrap::*;
     match self {
@@ -464,4 +483,19 @@ impl From<MuGlue> for ArgWrap {
 }
 impl From<Option<MuGlue>> for ArgWrap {
   fn from(t: Option<MuGlue>) -> Self { ArgWrap::OptionMuGlue(t) }
+}
+
+impl TryFrom<ArgWrap> for Number {
+  type Error = crate::common::error::Error;
+  fn try_from(aw: ArgWrap) -> Result<Number> { aw.try_to_number() }
+}
+impl TryFrom<ArgWrap> for Dimension {
+  type Error = crate::common::error::Error;
+  fn try_from(aw: ArgWrap) -> Result<Dimension> { aw.try_to_dimension() }
+}
+
+
+impl TryFrom<ArgWrap> for Token {
+  type Error = crate::common::error::Error;
+  fn try_from(aw: ArgWrap) -> Result<Token> { aw.try_to_token() }
 }
