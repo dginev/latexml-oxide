@@ -493,15 +493,16 @@ impl<'t> Stomach {
     Ok(())
   }
 
-  pub fn current_frame_message(&self, state:&State) -> String {
-    let target = if state.is_value_bound("MODE", Some(0)) { // SET mode in CURRENT frame ?
-      Cow::Owned(s!("mode-switch to {}",  state.lookup_string("MODE")))
-    } else if state.lookup_bool("groupNonBoxing") { // Current frame is a non-boxing group?
+  pub fn current_frame_message(&self, state: &State) -> String {
+    let target = if state.is_value_bound("MODE", Some(0)) {
+      // SET mode in CURRENT frame ?
+      Cow::Owned(s!("mode-switch to {}", state.lookup_string("MODE")))
+    } else if state.lookup_bool("groupNonBoxing") {
+      // Current frame is a non-boxing group?
       Cow::Borrowed("non-boxing group")
     } else {
       Cow::Borrowed("boxing group")
     };
-
 
     let initiator = if let Some(t) = state.lookup_token("groupInitiator") {
       t.stringify()
@@ -510,7 +511,7 @@ impl<'t> Stomach {
     };
     //   TODO:
     //   . " " . ToString(state.lookup_value('groupInitiatorLocator'));
-    s!("current frame is {} due to {}",target, initiator)
+    s!("current frame is {} due to {}", target, initiator)
   }
 
   //======================================================================
@@ -525,7 +526,7 @@ impl<'t> Stomach {
     // to find all the places to manage it.
     // So, let's try this for now...
     // was $LaTeXML::ALIGN_STATE
-    state.align_group_count +=1 ;
+    state.align_group_count += 1;
   }
 
   pub fn egroup(&mut self, state: &mut State) -> Result<()> {
@@ -542,7 +543,7 @@ impl<'t> Stomach {
       // Don't pop if there's an error; maybe we'll recover?
       self.pop_stack_frame(false, state)?;
     }
-    state.align_group_count -=1 ;
+    state.align_group_count -= 1;
     Ok(())
   }
 
@@ -571,7 +572,7 @@ impl<'t> Stomach {
   /// This sets the mode without doing any grouping (NOR does it stack the modes!!)
   /// Useful for environments, where the group has already been established.
   /// (presumably, in the long run, modes & groups should be much less coupled)
-  pub fn set_mode(&mut self, mode: &str, state:&mut State) -> Result<()> {
+  pub fn set_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
     let prevmode = state.lookup_string("MODE");
     let ismath = mode.ends_with("math");
     state.assign_value("MODE", mode, Some(Scope::Local));

@@ -7,9 +7,9 @@ use std::sync::Arc;
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::definition::argument::ArgWrap;
 use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
-use crate::definition::argument::ArgWrap;
 use crate::gullet::Gullet;
 use crate::mouth::Mouth;
 use crate::state::State;
@@ -329,13 +329,7 @@ impl Parameter {
     Ok(value_arg)
   }
 
-  pub fn digest(
-    &self,
-    stomach: &mut Stomach,
-    mut value_arg: ArgWrap,
-    _fordefn: Option<&Constructor>,
-    state: &mut State,
-  ) -> Result<Option<Digested>> {
+  pub fn digest(&self, stomach: &mut Stomach, mut value_arg: ArgWrap, _fordefn: Option<&Constructor>, state: &mut State) -> Result<Option<Digested>> {
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
       self.setup_catcodes(state);

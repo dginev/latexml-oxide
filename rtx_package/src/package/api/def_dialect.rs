@@ -4,6 +4,7 @@ use std::sync::Arc;
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
 use rtx_core::common::object::Object;
+use rtx_core::definition::argument::ArgWrap;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::constructor::{Constructor, ConstructorOptions};
 use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
@@ -14,17 +15,16 @@ use rtx_core::definition::{
   BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, PrimitiveClosure, ReplacementClosure,
 };
 use rtx_core::document::Document;
+use rtx_core::gullet::Gullet;
 use rtx_core::mouth;
 use rtx_core::parameter::{Parameter, ParameterExtra, Parameters};
 use rtx_core::state::{Scope, State, Stored};
 use rtx_core::stomach::Stomach;
-use rtx_core::gullet::Gullet;
 use rtx_core::tbox::Tbox;
 use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::whatsit::Whatsit;
 use rtx_core::Digested;
-use rtx_core::definition::argument::ArgWrap;
 
 use super::content::merge_font;
 use super::*;
@@ -207,7 +207,14 @@ pub fn revert(_arg: &[Token]) -> Tokens { unimplemented!() }
 // If you supply a skipper instead of a test, it is also applied to the arguments
 // and should skip to the right place in the following \or, \else, \fi.
 
-pub fn def_conditional(cs: Token, paramlist: Option<Parameters>, test: Option<ConditionalClosure>, options: ConditionalOptions, gullet: &mut Gullet, state: &mut State) {
+pub fn def_conditional(
+  cs: Token,
+  paramlist: Option<Parameters>,
+  test: Option<ConditionalClosure>,
+  options: ConditionalOptions,
+  gullet: &mut Gullet,
+  state: &mut State,
+) {
   let cs_name = cs.get_cs_name();
   let locked_key = if let Some(true) = options.locked {
     s!("{}:locked", cs_name)
@@ -340,7 +347,11 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
         })
       } else {
         Arc::new(move |value, args, state| {
-          let args_string: String = args.into_iter().map(|a| a.as_tokens(state).expect("TODO: handle malformed values here.").unwrap().to_string()).collect::<Vec<String>>().join("");
+          let args_string: String = args
+            .into_iter()
+            .map(|a| a.as_tokens(state).expect("TODO: handle malformed values here.").unwrap().to_string())
+            .collect::<Vec<String>>()
+            .join("");
 
           state.assign_value(&(setter_name.clone() + &args_string), value, None);
         })
@@ -365,7 +376,13 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
   );
 }
 
-pub fn def_primitive(cs: Token, paramlist: Option<Parameters>, compiled_replacement: Option<PrimitiveClosure>, options: PrimitiveOptions, state: &mut State) {
+pub fn def_primitive(
+  cs: Token,
+  paramlist: Option<Parameters>,
+  compiled_replacement: Option<PrimitiveClosure>,
+  options: PrimitiveOptions,
+  state: &mut State,
+) {
   let options_locked = options.locked;
   let scope = options.scope;
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();

@@ -1,9 +1,9 @@
 use crate::common::error::*;
-use crate::state::State;
 use crate::common::numeric_ops::NumericOps;
-use crate::definition::register::{RegisterType};
-use crate::token::Catcode;
+use crate::definition::register::RegisterType;
 use crate::mouth;
+use crate::state::State;
+use crate::token::Catcode;
 use crate::tokens::Tokens;
 use crate::{Locator, Object};
 use std::borrow::Cow;
@@ -13,11 +13,7 @@ use std::fmt;
 pub struct Number(pub i32);
 impl Object for Number {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, state: &mut State) -> Result<Tokens> {
-    Ok(
-      mouth::tokenize_internal(&self.to_string(), Some(state))
-    )
-  }
+  fn revert(&self, state: &mut State) -> Result<Tokens> { Ok(mouth::tokenize_internal(&self.to_string(), Some(state))) }
 }
 impl NumericOps for Number {
   fn new(number: i32) -> Self { Number(number) }
@@ -54,7 +50,5 @@ impl fmt::Display for Number {
 }
 
 impl From<Catcode> for Number {
-  fn from(c: Catcode) -> Number {
-    Number::new(u8::from(c) as i32)
-  }
+  fn from(c: Catcode) -> Number { Number::new(u8::from(c) as i32) }
 }

@@ -467,16 +467,26 @@ impl State {
       if let Some(global_value) = globaldefs.front() {
         // magic TeX register override: \globaldefs
         match *global_value {
-          Stored::Int(1) => {scope_opt = Some(Scope::Global); },
-          Stored::Int(-1) => { scope_opt = Some(Scope::Local); },
-          _ => {}
+          Stored::Int(1) => {
+            scope_opt = Some(Scope::Global);
+          },
+          Stored::Int(-1) => {
+            scope_opt = Some(Scope::Local);
+          },
+          _ => {},
         }
       }
     }
     // regular check, local scope is default, unless a global prefix is set
     let scope = match scope_opt {
       Some(s) => s,
-      None => if self.get_prefix("global") { Scope::Global } else { Scope::Local }
+      None => {
+        if self.get_prefix("global") {
+          Scope::Global
+        } else {
+          Scope::Local
+        }
+      },
     };
 
     match scope {
@@ -570,8 +580,8 @@ impl State {
       None => None,
       Some(vvec) => match vvec.front() {
         None | Some(Stored::None) => None,
-        Some(other) => Some(other)
-      }
+        Some(other) => Some(other),
+      },
     }
   }
 
@@ -581,7 +591,7 @@ impl State {
       Some(vvec) => match vvec.front_mut() {
         None | Some(Stored::None) => None,
         Some(other) => Some(other),
-      }
+      },
     }
   }
 
@@ -595,8 +605,8 @@ impl State {
           let found = found.clone();
           self.assign_internal(TableName::Value, key, Stored::None, Some(Scope::Global));
           Some(found)
-        }
-      }
+        },
+      },
     }
   }
 
@@ -637,8 +647,8 @@ impl State {
       None => false,
       Some(list) => match list.front() {
         None => false,
-        Some(v) => v != &Stored::None
-      }
+        Some(v) => v != &Stored::None,
+      },
     }
   }
 
@@ -748,7 +758,7 @@ impl State {
   pub fn lookup_token(&self, key: &str) -> Option<&Token> {
     match self.lookup_value(key) {
       Some(Stored::Token(t)) => Some(t),
-      _ => None
+      _ => None,
     }
   }
 
@@ -772,8 +782,9 @@ impl State {
   pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Arc<dyn Definition>> {
     // Can only be a token or definition; we want defns!
     // is this the right logic here? don't expand unless digesting?
-    self.lookup_definition(token).filter(|defn|
-      (*defn).is_expandable() && (toplevel || !(*defn).is_protected()))
+    self
+      .lookup_definition(token)
+      .filter(|defn| (*defn).is_expandable() && (toplevel || !(*defn).is_protected()))
   }
 
   /// Whether token must be wrapped as dont_expand
@@ -820,8 +831,7 @@ impl State {
         front.push_front(value)
       }
     } else {
-      panic!(
-        "unshift_value can only work on a Stored::VecDequeStored receiver. Instead, key {key:?} got: {receiver:?}");
+      panic!("unshift_value can only work on a Stored::VecDequeStored receiver. Instead, key {key:?} got: {receiver:?}");
     }
   }
 
@@ -1006,7 +1016,7 @@ impl State {
       match self.meaning.get(&token.get_cs_name().to_owned()) {
         Some(entry) => match entry.front() {
           None | Some(Stored::None) => None,
-          Some(other) => Some(other.clone())
+          Some(other) => Some(other.clone()),
         },
         None => None,
       }
@@ -1235,10 +1245,7 @@ impl State {
   /// Determine depth of group nesting created by {,},\bgroup,\egroup,\begingroup,\endgroup
   /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
   /// This may give incorrect results for some special environments (e.g. minipage)
-  pub fn get_frame_depth(&self) -> usize {
-    self.undo.iter().filter(|frame| !frame.locked).count() - 1
-  }
-
+  pub fn get_frame_depth(&self) -> usize { self.undo.iter().filter(|frame| !frame.locked).count() - 1 }
 
   pub fn begin_semiverbatim(&mut self, extraspecials: Option<&[char]>) {
     // Is this a good/safe enough shorthand, or should we really be doing beginMode?
@@ -1701,7 +1708,7 @@ impl State {
   pub fn generate_error_stub(&mut self, caller: &mut Gullet, token: &Token) -> Result<Token> {
     let cs = token.get_cs_name();
     self.note_status("undefined", cs); // TODO: Undefined:cs
-                          // To minimize chatter, go ahead and define it...
+                                       // To minimize chatter, go ahead and define it...
     if cs.starts_with("\\if") {
       // Apparently an \ifsomething ???
       let name = cs.replace("\\if", "");

@@ -46,8 +46,11 @@ pub trait Object {
   // These should really only make sense for Data objects within the
   // processing stream.
   fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested>
-  where Self: Sized, Self: Debug {
-    panic!("Was it really intended to digest? We don't know how! {self:?} {:?}",self.get_locator());
+  where
+    Self: Sized,
+    Self: Debug,
+  {
+    panic!("Was it really intended to digest? We don't know how! {self:?} {:?}", self.get_locator());
   }
 
   // fn be_absorbed(&self, _document: Document) { unimplemented!() }

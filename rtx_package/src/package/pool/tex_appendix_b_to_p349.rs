@@ -587,10 +587,10 @@ LoadDefinitions!(state, {
   Let!("\\newpage", "\\eject");
 
   DefConstructor!("\\LTX@newpage", "^<ltx:pagination role='newpage'/>",
-    before_digest=>sub[stomach,state] {
-      state.after_assignment(stomach.get_gullet_mut());
-      Ok(Vec::new())
-    });
+  before_digest=>sub[stomach,state] {
+    state.after_assignment(stomach.get_gullet_mut());
+    Ok(Vec::new())
+  });
   DefMacro!("\\supereject", "\\par\\LTX@newpage");
   DefPrimitive!("\\removelastskip", None);
   DefMacro!("\\smallbreak", "\\par");

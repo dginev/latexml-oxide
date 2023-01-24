@@ -17,9 +17,9 @@ use regex::Regex;
 
 use crate::common::error::*;
 use crate::common::locator::Locator;
+use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::numeric_ops::NumericOps;
 use crate::state::{Catcodes, Scope, State, StateOptions};
 use crate::token::*;
 use crate::tokens::Tokens;

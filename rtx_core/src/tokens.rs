@@ -15,8 +15,8 @@ use crate::common::error::*;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
-use crate::common::numeric_ops::NumericOps;
 use crate::common::number::Number;
+use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::keyvals::KeyVals;
 use crate::state::State;
@@ -34,12 +34,8 @@ const UNTEX_LINELENGTH: usize = 78;
 pub struct Tokens(Vec<Token>);
 
 impl PartialEq for Tokens {
-  fn eq(&self, other: &Tokens) -> bool {
-    self.0.len() == other.0.len() &&
-    self.0.iter().zip(other.0.iter()).all(|(a,b)| a == b)
-  }
+  fn eq(&self, other: &Tokens) -> bool { self.0.len() == other.0.len() && self.0.iter().zip(other.0.iter()).all(|(a, b)| a == b) }
 }
-
 
 #[macro_export]
 macro_rules! Tokens(

@@ -7,8 +7,8 @@ use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
 use crate::definition::argument::ArgWrap;
+use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -57,10 +57,7 @@ impl Default for Expandable {
   }
 }
 impl PartialEq for Expandable {
-  fn eq(&self, other: &Expandable) -> bool {
-    self.paramlist == other.paramlist &&
-    self.expansion == other.expansion
-  }
+  fn eq(&self, other: &Expandable) -> bool { self.paramlist == other.paramlist && self.expansion == other.expansion }
 }
 
 impl fmt::Display for Expandable {

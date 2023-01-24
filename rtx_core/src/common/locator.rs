@@ -121,7 +121,7 @@ impl Object for Locator {
       }
     }
     if self.to_line > 0 {
-      write!(loc," to line {}", self.to_line).ok();
+      write!(loc, " to line {}", self.to_line).ok();
       if self.to_column > 0 {
         write!(loc, " col {}", self.to_column).ok();
       }

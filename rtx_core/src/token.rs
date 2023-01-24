@@ -10,10 +10,10 @@ use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
+use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::numeric_ops::NumericOps;
-use crate::definition::register::{RegisterCell};
+use crate::definition::register::RegisterCell;
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::tokens::Tokens;
@@ -266,9 +266,7 @@ impl Display for Token {
 // That is NOT done here; see Equals(x,y) and XEquals(x,y)
 impl PartialEq for Token {
   fn eq(&self, other: &Token) -> bool {
-    self.code == other.code &&
-    (self.code == Catcode::SPACE || (*self.text == *other.text)) &&
-    self.smuggled.is_none() == other.smuggled.is_none()
+    self.code == other.code && (self.code == Catcode::SPACE || (*self.text == *other.text)) && self.smuggled.is_none() == other.smuggled.is_none()
   }
 }
 

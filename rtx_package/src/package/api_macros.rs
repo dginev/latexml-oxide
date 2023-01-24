@@ -254,7 +254,7 @@ macro_rules! undigested {
         } else {
           Ok(Some(Digested::Postponed(Arc::new(arg.owned_tokens().unwrap_or_default()))))
         }
-      }
+      },
     ))
   };
 }

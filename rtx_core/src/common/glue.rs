@@ -4,9 +4,9 @@ use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::fmt;
 
-use crate::common::dimension::{attribute_format};
-use crate::common::numeric_ops::{kround,fixpoint,NumericOps};
-use crate::definition::register::{RegisterType};
+use crate::common::dimension::attribute_format;
+use crate::common::numeric_ops::{fixpoint, kround, NumericOps};
+use crate::definition::register::RegisterType;
 use crate::state::State;
 use crate::{Locator, Object};
 
@@ -198,13 +198,7 @@ pub fn new_setup(
   mfill: Option<FillCode>,
 ) -> (i32, Option<i32>, Option<FillCode>, Option<i32>, Option<FillCode>) {
   // See comment in Dimension for why kround rather than int
-  (
-    kround(skip),
-    plus.map(kround),
-    pfill,
-    minus.map(kround),
-    mfill,
-  )
+  (kround(skip), plus.map(kround), pfill, minus.map(kround), mfill)
 }
 
 pub fn spec_setup(
@@ -252,7 +246,7 @@ pub fn spec_setup(
 
       let mut plus = if punit.is_empty() {
         None // Some(0.0) ?
-                     // ? punit = "0";
+             // ? punit = "0";
       } else if let Some(code) = FillCode::from(punit) {
         pfill = Some(code);
         Some(fixpoint(p, None))
@@ -268,8 +262,8 @@ pub fn spec_setup(
       };
 
       let mut minus = if munit.is_empty() {
-         None // ? Some(0.0);
-                      // munit = 0;
+        None // ? Some(0.0);
+             // munit = 0;
       } else if let Some(code) = FillCode::from(munit) {
         mfill = Some(code);
         Some(fixpoint(m, None))

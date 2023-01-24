@@ -11,14 +11,14 @@ use std::sync::Arc;
 
 use rtx_core::common::dimension::Dimension;
 use rtx_core::common::error::*;
+use rtx_core::common::float::Float;
 use rtx_core::common::glue::Glue;
 use rtx_core::common::mudimension::MuDimension;
 use rtx_core::common::muglue::MuGlue;
 use rtx_core::common::number::Number;
-use rtx_core::common::float::Float;
 use rtx_core::common::store::Stored;
-use rtx_core::definition::register::*;
 use rtx_core::definition::argument::ArgWrap;
+use rtx_core::definition::register::*;
 use rtx_core::definition::{Reversion, SizingClosure};
 use rtx_core::keyvals::KeyVals;
 use rtx_core::list::List;
@@ -196,7 +196,6 @@ impl IntoResultOptTokens<Result<Option<Tokens>>> for () {
   fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { Ok(None) }
 }
 
-
 pub trait IntoResultArgWrap<T>: Sized {
   fn into_result_argwrap(self) -> Result<ArgWrap>;
 }
@@ -263,7 +262,6 @@ impl IntoResultArgWrap<Result<ArgWrap>> for Option<MuGlue> {
   fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionMuGlue(self)) }
 }
 
-
 impl IntoResultArgWrap<Result<ArgWrap>> for Result<ArgWrap> {
   fn into_result_argwrap(self) -> Result<ArgWrap> { self }
 }
@@ -271,7 +269,6 @@ impl IntoResultArgWrap<Result<ArgWrap>> for Result<ArgWrap> {
 impl IntoResultArgWrap<Result<ArgWrap>> for () {
   fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionTokens(None)) }
 }
-
 
 pub trait IntoBoolResult<T>: Sized {
   /// Performs the conversion, used for DefConditional return values etc

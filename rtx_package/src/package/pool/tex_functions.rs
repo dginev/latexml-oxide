@@ -255,7 +255,7 @@ pub fn read_box_contents(gullet: &mut Gullet, everybox_opt: Option<Tokens>, stat
   match state.remove_value("BeforeNextBox") {
     Some(Stored::Tokens(tokens)) => gullet.unread(tokens),
     Some(Stored::Token(token)) => gullet.unread_one(token),
-    _ => {}
+    _ => {},
   };
   // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
   if let Some(everybox) = everybox_opt {
@@ -372,15 +372,15 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
     let mut rows = blocknode.get_child_nodes();
     let mut crows = match rows.first() {
       None => VecDeque::new(),
-      Some(n) => VecDeque::from(n.get_child_nodes())
+      Some(n) => VecDeque::from(n.get_child_nodes()),
     };
     if rows.is_empty() {
       // Insertion came up empty?
       document.remove_node(blocknode); // then remove the new block entirely
-    } else if rows.len() == 1 &&crows.len() == 1 &&
-    state.model.get_node_qname(rows.first().unwrap()) == "ltx:p" &&
-    document.can_contain(&blocknode.get_parent().unwrap(),
-      &state.model.get_node_qname(&crows[0]), state)
+    } else if rows.len() == 1
+      && crows.len() == 1
+      && state.model.get_node_qname(rows.first().unwrap()) == "ltx:p"
+      && document.can_contain(&blocknode.get_parent().unwrap(), &state.model.get_node_qname(&crows[0]), state)
     // TODO: && (!hasattr || blockattr.keys().any(...
     {
       // Else only 1 item inside...which is an ltx:p with 1 item, if allowed.
@@ -390,9 +390,9 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
       }
       document.unwrap_nodes(rows.remove(0))?;
       document.unwrap_nodes(blocknode)?;
-    } else if rows.len() == 1 &&
-      document.can_contain(&blocknode.get_parent().unwrap(), &state.model.get_node_qname(&rows[0]), state)  // if allowed.
-        // TODO: && (!hasattr || !grep { !$document->canHaveAttribute($rows[0], $_) } keys %blockattr)))
+    } else if rows.len() == 1 && document.can_contain(&blocknode.get_parent().unwrap(), &state.model.get_node_qname(&rows[0]), state)
+    // if allowed.
+    // TODO: && (!hasattr || !grep { !$document->canHaveAttribute($rows[0], $_) } keys %blockattr)))
     {
       let mut first = rows.remove(0);
       for (key, val) in blockattr {

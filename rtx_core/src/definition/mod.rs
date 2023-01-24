@@ -1,11 +1,11 @@
 #[macro_use]
 pub mod expandable;
+pub mod argument;
 pub mod conditional;
 pub mod constructor;
 pub mod math_primitive;
 pub mod primitive;
 pub mod register;
-pub mod argument;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -16,8 +16,8 @@ use crate::common::error::*;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 
-use self::register::{RegisterType, RegisterValue};
 use self::argument::ArgWrap;
+use self::register::{RegisterType, RegisterValue};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::mouth;
@@ -64,18 +64,20 @@ impl PartialEq for ExpansionBody {
   #[allow(clippy::vtable_address_comparisons)]
   fn eq(&self, other: &ExpansionBody) -> bool {
     match self {
-      ExpansionBody::Closure(self_closure) =>
+      ExpansionBody::Closure(self_closure) => {
         if let ExpansionBody::Closure(other_closure) = other {
           Arc::ptr_eq(self_closure, other_closure)
         } else {
           false
-        },
-      ExpansionBody::Tokens(self_tks) =>
+        }
+      },
+      ExpansionBody::Tokens(self_tks) => {
         if let ExpansionBody::Tokens(other_tks) = other {
           self_tks == other_tks
         } else {
           false
         }
+      },
     }
   }
 }
@@ -121,9 +123,7 @@ impl From<ArgWrap> for ExpansionBody {
   fn from(t: ArgWrap) -> ExpansionBody { ExpansionBody::Tokens(t.owned_tokens().unwrap_or_default()) }
 }
 impl From<ArgWrap> for Option<ExpansionBody> {
-  fn from(t: ArgWrap) -> Option<ExpansionBody> {
-    t.owned_tokens().map(ExpansionBody::Tokens)
-  }
+  fn from(t: ArgWrap) -> Option<ExpansionBody> { t.owned_tokens().map(ExpansionBody::Tokens) }
 }
 
 pub trait Definition: Object {

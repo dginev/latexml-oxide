@@ -99,7 +99,7 @@ pub enum Stored {
   Constructor(Arc<Constructor>),
   Digested(Box<crate::Digested>), // todo: should this be an Arc<> to make it shareable?
   Parameter(Arc<Parameter>),
-  Font(Arc<Font>)
+  Font(Arc<Font>),
 }
 
 impl fmt::Debug for Stored {
@@ -429,7 +429,7 @@ impl PartialEq for Stored {
         } else {
           false
         }
-      }
+      },
     }
   }
 }
