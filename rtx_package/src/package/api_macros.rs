@@ -378,6 +378,17 @@ macro_rules! unpack_to_token {
 }
 
 #[macro_export]
+macro_rules! unpack_to_number {
+  ($args:ident => $var:ident) => (
+    let $var : Number = $args.remove(0).to_number();
+  );
+  ($args:ident => $var:ident,$($tail:ident),*) => (
+    unpack_to_number!($args => $var);
+    unpack_to_number!($args => $($tail),*)
+  );
+}
+
+#[macro_export]
 macro_rules! count_unpack_to_string {
   ($index:expr, $args:ident => $var:ident) => (
     let $var = match $args[$index].as_ref() {

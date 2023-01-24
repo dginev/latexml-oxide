@@ -549,23 +549,20 @@ LoadDefinitions!(state, {
     };
     if let Some(defn) = defn_opt {
         if defn.is_register() && !defn.is_readonly() {
-          let mut invoked = vec![token_opt.unwrap()];
-          for arg in defn.read_arguments(gullet, state)? {
-            invoked.append(&mut arg.unlist());
-          }
+          let args = defn.read_arguments(gullet, state)?;
           // TODO: What is this datatype ? How does it fit the rtx typed interfaces for parameter types?
           // An extension seems required, also due to the Register parameter type right under.
           // Ok(Tokens!(defn_tok, defn_args))
-          Ok(Tokens::new(invoked))
+          Ok(ArgWrap::RegisterDefinition((token_opt.unwrap(), args)))
         } else {
           let message = s!("A <variable> was supposed to be here\n Got {:?}", token_opt);
           Error!("expected","<variable>", gullet, state, message);
-          Ok(Tokens!())
+          Ok(ArgWrap::Tokens(Tokens!()))
         }
     } else {
       let message = s!("A <variable> was supposed to be here\n Got {:?}", token_opt);
       Error!("expected","<variable>", gullet, state, message);
-      Ok(Tokens!())
+      Ok(ArgWrap::Tokens(Tokens!()))
     }
   },
   reversion => reversion!(gullet,args, inner, state, {

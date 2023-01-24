@@ -118,7 +118,7 @@ LoadDefinitions!(state, {
 
   // \afterassignment saves ONE token (globally!) to execute after the next assignment
   DefPrimitive!("\\afterassignment Token", sub[stomach, args, state] {
-    unpack!(args => t);
+    unpack_to_token!(args => t);
     state.assign_value("afterAssignment", t, Some(Scope::Global));
   });
   // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next egroup or }
@@ -230,8 +230,7 @@ LoadDefinitions!(state, {
   });
 
   DefConditional!("\\ifeof Number", sub[gullet, args, state] {
-    unpack_to_token!(args => port);
-    let port = port.to_number();
+    let port = args.remove(0).to_number();
     if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}", port)) {
       mouth.read().unwrap().at_eof()
     } else {

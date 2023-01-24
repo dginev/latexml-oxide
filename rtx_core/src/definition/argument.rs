@@ -118,20 +118,33 @@ impl Object for ArgWrap {
   }
   fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
     use ArgWrap::*;
+    // TODO: Should we just "do nothing" for the None cases, instead of panicking?
     match self {
       Token(t) => t.be_digested(stomach,state),
-      OptionToken(t) => unimplemented!(),
+      OptionToken(t) => match t {
+        Some(t) => t.be_digested(stomach, state),
+        None => unimplemented!()
+      },
       Tokens(t) => t.be_digested(stomach,state),
       OptionTokens(t_opt) => match t_opt {
         Some(tks) => tks.be_digested(stomach,state),
         None => Ok(Digested::default()),
       },
       Number(t) => t.be_digested(stomach,state),
-      OptionNumber(t) => unimplemented!(),
+      OptionNumber(t) => match t {
+        Some(n) => n.be_digested(stomach, state),
+        None => unimplemented!()
+      },
       Float(t) => t.be_digested(stomach,state),
-      OptionFloat(t) => unimplemented!(),
+      OptionFloat(t) => match t {
+        Some(fl) => fl.be_digested(stomach, state),
+        None => unimplemented!()
+      },
       Dimension(t) => t.be_digested(stomach,state),
-      OptionDimension(t) => unimplemented!(),
+      OptionDimension(t) => match t {
+        Some(t) => t.be_digested(stomach,state),
+        None => unimplemented!()
+      },
       Glue(t) => t.be_digested(stomach,state),
       OptionGlue(g_opt) => match g_opt {
         Some(g) => g.be_digested(stomach,state),
@@ -364,7 +377,7 @@ impl ArgWrap {
       ArgWrap::Tokens(tks) => tks.unlist(),
       ArgWrap::Token(t) => vec![t],
       ArgWrap::Number(n) => { let tks : Tokens = n.into(); tks.unlist() },
-      other => { dbg!(other); unimplemented!() }
+      other => { panic!("{other:?}"); }
     }
   }
 

@@ -92,8 +92,8 @@ LoadDefinitions!(state, {
   });
 
   DefMacro!("\\@arabic{Number}", sub[gullet, args, state] {
-    unpack_to_token!(args => token);
-    let value = token.to_number().value_of();
+    let number = args.remove(0).to_number();
+    let value = number.value_of();
     ExplodeText!(value.to_string())
   });
   DefMacro!("\\arabic{}", sub[gullet, args, inner_state] {
@@ -104,8 +104,8 @@ LoadDefinitions!(state, {
   });
 
   DefMacro!("\\@roman{Number}", sub[gullet, args, state] {
-    unpack_to_token!(args => token);
-    let value = token.to_number().value_of();
+    unpack_to_number!(args => number);
+    let value = number.value_of();
     ExplodeText!(radix::radix_roman(value))
   });
   DefMacro!("\\roman{}", sub[gullet, args, state] {
@@ -114,8 +114,8 @@ LoadDefinitions!(state, {
     ExplodeText!(radix::radix_roman(CounterValue!(&ctr).value_of()))
   });
   DefMacro!("\\@Roman{Number}", sub[gullet, args, state] {
-    unpack_to_token!(args => token);
-    let value = token.to_number().value_of();
+    unpack_to_number!(args => number);
+    let value = number.value_of();
     ExplodeText!(radix::radix_up_roman(value))
   });
   DefMacro!("\\Roman{}", sub[gullet, args, state] {
@@ -124,8 +124,8 @@ LoadDefinitions!(state, {
     ExplodeText!(radix::radix_up_roman(CounterValue!(&ctr).value_of()))
   });
   DefMacro!("\\@alph{Number}", sub[gullet, args, state] {
-    unpack_to_token!(args => token);
-    let value = token.to_number().value_of();
+    unpack_to_number!(args => number);
+    let value = number.value_of();
     ExplodeText!(radix::radix_alpha(value))
   });
   DefMacro!("\\alph{}", sub[gullet, args, state] {
@@ -134,8 +134,8 @@ LoadDefinitions!(state, {
     ExplodeText!(radix::radix_alpha(CounterValue!(&ctr).value_of()))
   });
   DefMacro!("\\@Alph{Number}", sub[gullet, args, state] {
-    unpack_to_token!(args => token);
-    let value = token.to_number().value_of();
+    unpack_to_number!(args => number);
+    let value = number.value_of();
     ExplodeText!(radix::radix_up_alpha(value))
   });
   DefMacro!("\\Alph{}", sub[gullet, args, state] {
@@ -145,8 +145,8 @@ LoadDefinitions!(state, {
   });
 
   DefMacro!("\\@fnsymbol{Number}", sub[gullet, args, state] {
-    unpack!(args => token);
-    ExplodeText!(radix::radix_format_str(token.to_number().value_of(), FNSYMBOLS))
+    unpack_to_number!(args => number);
+    ExplodeText!(radix::radix_format_str(number.value_of(), FNSYMBOLS))
   });
   DefMacro!("\\fnsymbol{}", sub[gullet, args, state] {
     unpack!(args => token);
