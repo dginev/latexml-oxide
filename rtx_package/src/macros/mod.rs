@@ -3,7 +3,7 @@
 /// that execute the needed ops in libxml.
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_replacement {
-  ($var:ident, $replacement:expr) => {{
+  ($var:ident, $replacement:literal) => {{
     use rtx_core::definition::ReplacementClosure;
     #[derive(CompileReplacement)]
     #[replacement=$replacement]
@@ -14,10 +14,22 @@ macro_rules! compile_replacement {
 }
 
 #[macro_export]
+/// Macro for compiling string binding prototypes into closures
+/// Approach borrowed from diesel-codegen
+macro_rules! compile_prototype {
+  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {{
+    #[derive(CompilePrototype)]
+    #[prototype=$prototype]
+    struct _DummyP;
+    this_prototype!(sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*);
+  }};
+}
+
+#[macro_export]
 /// Macro for compiling string macro expansions into closures
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_expansion {
-  ($var:ident, $expansion:expr) => {{
+  ($var:ident, $expansion:literal) => {{
     use rtx_core::definition::ExpansionBody;
     #[allow(unused_imports)]
     use rtx_core::token::Catcode;

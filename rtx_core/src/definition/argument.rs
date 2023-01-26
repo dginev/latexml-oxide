@@ -267,7 +267,7 @@ impl ArgWrap {
   pub fn expected_token(self) -> Token {
     match self.try_to_token() {
       Ok(t) => t,
-      Err(e) => panic!("{e}")
+      Err(e) => panic!("{e}"),
     }
   }
 
@@ -337,13 +337,13 @@ impl ArgWrap {
       Number(v) => Ok(v),
       Token(t) => Ok(t.to_number()),
       Tokens(tks) => Ok(tks.to_number()),
-      _ => Err("ArgWrap::to_number not (yet?) defined on {self:?}".into())
+      _ => Err("ArgWrap::to_number not (yet?) defined on {self:?}".into()),
     }
   }
   pub fn expect_number(self) -> Number {
     match self.try_to_number() {
       Ok(v) => v,
-      Err(e) => panic!("{e}")
+      Err(e) => panic!("{e}"),
     }
   }
 
@@ -359,7 +359,7 @@ impl ArgWrap {
   pub fn expect_dimension(self) -> Dimension {
     match self.try_to_dimension() {
       Ok(d) => d,
-      Err(e) => panic!("{e}")
+      Err(e) => panic!("{e}"),
     }
   }
 
@@ -493,7 +493,6 @@ impl TryFrom<ArgWrap> for Dimension {
   type Error = crate::common::error::Error;
   fn try_from(aw: ArgWrap) -> Result<Dimension> { aw.try_to_dimension() }
 }
-
 
 impl TryFrom<ArgWrap> for Token {
   type Error = crate::common::error::Error;

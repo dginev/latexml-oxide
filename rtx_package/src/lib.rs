@@ -20,4 +20,6 @@ pub mod package;
 // allow external crates to be have the full binding infra via a simple
 //  use rtx_package::*;
 pub use package::*;
-pub use rtx_core::{Tokens,T_CS,T_OTHER,T_COMMENT,T_BEGIN,T_END,T_ALIGN,T_ACTIVE,T_ARG,T_CR,T_MARKER,T_LETTER,T_MATH,T_PARAM,T_SPACE,T_SUB,T_SUPER};
+pub use rtx_core::{
+  Tokens, T_ACTIVE, T_ALIGN, T_ARG, T_BEGIN, T_COMMENT, T_CR, T_CS, T_END, T_LETTER, T_MARKER, T_MATH, T_OTHER, T_PARAM, T_SPACE, T_SUB, T_SUPER,
+};

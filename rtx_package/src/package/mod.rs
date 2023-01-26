@@ -1,16 +1,16 @@
 #![allow(unreachable_code)]
 pub use lazy_static::lazy_static;
 pub use libxml::tree::{Namespace, Node};
+pub use log;
 pub use regex::Regex;
 pub use std::borrow::Cow;
 pub use std::collections::HashMap;
 pub use std::collections::VecDeque;
 pub use std::sync::{Arc, RwLock};
-pub use log;
 
-pub use rtx_core::*;
 pub use rtx_core::common::dimension::Dimension;
 pub use rtx_core::common::mudimension::MuDimension;
+pub use rtx_core::*;
 
 pub use rtx_core::aux_macros::*;
 pub use rtx_core::common::float::Float;

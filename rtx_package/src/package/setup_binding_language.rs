@@ -716,10 +716,10 @@ macro_rules! defi_constr {
 macro_rules! parse_prototype(
   ($proto:expr) => {{
     bind_state_mut!(st);
-    parse_prototype($proto, st)?
+    rtx_core::common::def_parser::parse_prototype($proto, Some(st))?
   }};
   ($proto:expr, $state_arg:ident) => {{
-    parse_prototype($proto, $state_arg)?
+    rtx_core::common::def_parser::parse_prototype($proto, Some($state_arg))?
   }};
 );
 
@@ -1590,15 +1590,22 @@ macro_rules! DefMacro {
 
 #[macro_export]
 macro_rules! TypedMacro {
+ ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {
+    compile_prototype!($prototype, sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*)
+ }
+}
+
+#[macro_export]
+macro_rules! TypedMacroWO {
   // closure
-  ( $cs:ident $($var:ident : $ptype:ident),+ => sub [ $gullet:ident, $inner_state:ident ] $body:block $($input:tt)*) => {
+  ( $cs:ident $($ptype:ident)+ , sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {
     let cs_token = concat!("\\", stringify!($cs));
-    TypedMacro!(T_CS(cs_token) $($var : $ptype),+ => sub [ $gullet, $inner_state ] $body $($input)*)
+    TypedMacroWO!(T_CS(cs_token) $($ptype )+ , sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*)
   };
-  ($cs:literal $($var:ident : $ptype:ident),+ => sub [ $gullet:ident, $inner_state:ident ] $body:block $($input:tt)*) => {
-    TypedMacro!(T_CS($cs) $($var : $ptype),+ => sub [ $gullet, $inner_state ] $body $($input)*)
+  ($cs:literal $($ptype:ident)+ , sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {
+    TypedMacroWO!(T_CS($cs) $($ptype)+ , sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*)
   };
-  ( T_CS($cs:expr) $($var:ident : $ptype:ident),+ => sub [ $gullet:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
+  ( T_CS($cs:expr) $($ptype:ident)+ , sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let mut parameters = Vec::new();
     $(
