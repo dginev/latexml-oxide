@@ -7,6 +7,7 @@ use syn::{parse_macro_input, DeriveInput};
 
 mod constructable;
 mod modelable;
+mod parametrizeable;
 mod tokenizeable;
 
 #[proc_macro_derive(CompileReplacement, attributes(replacement))]
@@ -40,6 +41,12 @@ pub fn derive_compile_tokenize(input: TokenStream) -> TokenStream {
 pub fn derive_compile_tokenize_internal(input: TokenStream) -> TokenStream {
   let item = parse_macro_input!(input as DeriveInput);
   tokenizeable::compile_tokenize_internal(item)
+}
+
+#[proc_macro_derive(CompilePrototype, attributes(prototype))]
+pub fn derive_compile_prototype(input: TokenStream) -> TokenStream {
+  let item = parse_macro_input!(input as DeriveInput);
+  parametrizeable::compile_prototype(item)
 }
 
 static mut CONTEXT_DEPTH: u32 = 0;

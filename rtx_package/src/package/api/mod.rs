@@ -33,19 +33,11 @@ use rtx_core::Digested;
 // Constants for the API functions stay here as well
 
 lazy_static! {
-  static ref CSNAME_MACRO_RE: Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
-  static ref CS_RE: Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
-  static ref SINGLE_CHAR_RE: Regex = Regex::new(r"^(\\.)").unwrap();
-  static ref ACTIVE_CHAR_RE: Regex = Regex::new(r"^(.)").unwrap();
   static ref CONDITIONAL_CS_RE: Regex = Regex::new(r"^\\(?:if(.*)|unless)$").unwrap();
   static ref LEADING_PROTOCOL_RE: Regex = Regex::new(r"^\w+:").unwrap();
   static ref TRAILING_SLASH_RE: Regex = Regex::new(r"/$").unwrap();
   static ref SPACES_RE: Regex = Regex::new(r"\s+").unwrap();
   static ref DIRTY_ID_IDIOM_RE: Regex = Regex::new(r"\$\{\}\^\{(?P<label>[^\}]*)\}\$").unwrap();
-  static ref NESTED_CHECK_RE: Regex = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
-  static ref OPTIONAL_CHECK_RE: Regex = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
-  static ref DEFAULT_CHECK_RE: Regex = Regex::new(r"^Default:(.*)$").unwrap();
-  static ref PARAMSPECT_CHECK_RE: Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
   static ref NON_ID_CHARSET_RE: Regex = Regex::new(r"[^\w_\-.]+").unwrap();
   static ref TILDE_NOISE_RE: Regex = Regex::new(r"\\~\{\}").unwrap();
 }

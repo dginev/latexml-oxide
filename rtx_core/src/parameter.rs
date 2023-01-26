@@ -450,6 +450,15 @@ impl Parameters {
     }
     Ok(tokens)
   }
+  // Try to initialize each associated Parameter
+  pub fn init(mut self, state: &mut State) -> Result<Self> {
+    let mut initialized = Vec::new();
+    for param in self.0.drain(..) {
+      initialized.push(param.init(state)?);
+    }
+    self.0 = initialized;
+    Ok(self)
+  }
 
   pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &dyn Definition, state: &mut State) -> Result<Vec<ArgWrap>> {
     let mut args = Vec::new();

@@ -773,7 +773,7 @@ impl Gullet {
       let next = self.read_token(state);
       let message = s!(
         "Missing number, treated as zero while processing {:?}, next token is {:?}",
-        state.current_token,
+        state.current_token.as_ref().unwrap(),
         next
       );
       Warn!("expected", "<number>", self, state, message);

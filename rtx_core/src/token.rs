@@ -571,7 +571,7 @@ impl Default for Token {
     Token {
       text: Cow::Borrowed("EXPECTED_TOKEN"),
       code: Catcode::OTHER,
-      smuggled: None
+      smuggled: None,
     }
   }
 }
