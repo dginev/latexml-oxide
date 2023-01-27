@@ -165,10 +165,9 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   if options.mathactive && cs.get_string().len() == 1 {
     state.assign_mathcode(cs.get_string().chars().next().unwrap(), 0x8000u16, scope.clone());
   }
-  let options_locked = options.locked;
-  let locked_key = if options_locked { s!("{}:locked", cs) } else { String::new() };
+  let locked_key_opt = if options.locked { Some(format!("{cs}:locked")) } else { None };
   state.install_definition(Expandable::new(cs, paramlist, expansion, Some(options), state), scope);
-  if options_locked {
+  if let Some(locked_key) = locked_key_opt {
     state.assign_value(&locked_key, true, Some(Scope::Global));
   }
 }

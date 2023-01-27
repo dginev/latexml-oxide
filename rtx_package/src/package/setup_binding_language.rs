@@ -1525,6 +1525,10 @@ macro_rules! DefMacro {
     )));
     defi_macro!(cs, params, expansion_closure, None);
   }};
+  // closure with unwrapped arguments
+  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {{
+    compile_prototype!($prototype, sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*)
+  }};
   // String; implicit state
   ($proto:literal, $expansion:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
@@ -1585,14 +1589,6 @@ macro_rules! DefMacro {
     let (cs, params) = parse_prototype!($proto);
     defi_macro!(cs, params, None, Some(options));
   }};
-
-}
-
-#[macro_export]
-macro_rules! TypedMacro {
- ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {
-    compile_prototype!($prototype, sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*)
- }
 }
 
 #[macro_export]
