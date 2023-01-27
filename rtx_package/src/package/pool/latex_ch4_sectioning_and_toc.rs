@@ -32,9 +32,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
     Tag!(&s!("ltx:{}",tag), auto_close => true);
   }
 
-  DefMacro!("\\secdef {}{} OptionalMatch:*", sub[gullet, args, state] {
-    unpack!(args=>token1, token2);
-    if args.len() == 3 {
+  DefMacro!("\\secdef {}{} OptionalMatch:*", sub[gullet, (token1, token2, star), state] {
+    if star.is_some() {
       Ok(token2) // can't move out without clone, how to circumvent?
     } else {
       Ok(token1)
@@ -46,9 +45,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
   NewCounter!("secnumdepth");
   SetCounter!("secnumdepth", Number::new(3));
   DefMacro!(
-    "\\@startsection{}{}{}{}{}{} OptionalMatch:*", sub[gullet,args,state] {
-      unpack!(args => type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag);
-
+    "\\@startsection{}{}{}{}{}{} OptionalMatch:*",
+    sub[ gullet, (type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag), state ] {
       let stype = type_tokens.to_string();
       let level = level_arg.to_string();
       let level_int = if level.is_empty() { 0 } else { level.parse::<i32>()? };
@@ -57,7 +55,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
         None => stype
       };
       let mut tokens: Vec<Token>;
-      if !flag.is_empty() { // No number, not in TOC
+      if flag.is_some() { // No number, not in TOC
         tokens = vec![T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
         T_BEGIN!()];
         tokens.extend(type_tokens.unlist());

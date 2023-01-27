@@ -32,8 +32,7 @@ LoadDefinitions!(state, {
   });
   Let!("\\@currenvline", "\\@empty");
 
-  DefMacro!("\\begin{}", sub[gullet, args, state] {
-    unpack!(args => env);
+  DefMacro!("\\begin{}", sub[gullet, (env), state] {
     let name = Expand!(env.clone(), gullet).to_string();
     let begin_name = s!("\\begin{{{}}}", name);
     let before_opt = state.lookup_tokens(&s!("@environment@{}@beforebegin", name));
@@ -66,8 +65,7 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefMacro!("\\end{}", sub[gullet, args, state]{
-    unpack!(args => env);
+  DefMacro!("\\end {}", sub[gullet, (env), state]{
     let name = Expand!(env, gullet).to_string();
     let before = state.lookup_value(&s!("@environment@{}@atend",name));
     let after  = state.lookup_value(&s!("@environment@{}@afterend",name));

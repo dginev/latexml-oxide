@@ -314,8 +314,7 @@ LoadDefinitions!(state, {
   // # the next 4 actually work by doing a \chardef instead of \countdef, etc.
   // # which means they actually work quite differently
   DefRegister!("\\allocationnumber" => Number::new(0));
-  DefMacro!("\\alloc@@ {}", sub[gullet, args, state] {
-    unpack!(args => atype_tokens);
+  DefMacro!("\\alloc@@ {}", sub[gullet, (atype_tokens), state] {
     let atype = atype_tokens.to_string();
     let c = s!("allocation @{}", atype);
     let n = LookupRegisterOrDefault!(c).value_of();
@@ -372,9 +371,8 @@ LoadDefinitions!(state, {
   DefRegister!("\\interfootnotelinepenalty", Number(100));
 
   DefMacro!("\\magstephalf", "1095");
-  DefMacro!("\\magstep{}", sub[gullet, args, state] {
-    let mag = args[0].to_string();
-    Explode!(match mag.as_str() {
+  DefMacro!("\\magstep{}", sub[gullet, (mag), state] {
+    Explode!(match mag.to_string().as_str() {
       "0" => "1000",
       "1" => "1200",
       "2" => "1440",

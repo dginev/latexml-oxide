@@ -395,6 +395,10 @@ impl ArgWrap {
     match self {
       KV(v) => v,
       Tokens(tks) => tks.to_keyvals(state),
+      OptionTokens(tks_opt) => match tks_opt {
+        Some(tks) => tks.to_keyvals(state),
+        None => KeyVals::default()
+      },
       _ => panic!("ArgWrap::to_keyvals not (yet?) defined on {self:?}"),
     }
   }
@@ -402,7 +406,15 @@ impl ArgWrap {
   pub fn unlist(self) -> Vec<Token> {
     match self {
       ArgWrap::Tokens(tks) => tks.unlist(),
+      ArgWrap::OptionTokens(tks_opt) => match tks_opt {
+        Some(tks) => tks.unlist(),
+        None => Vec::new(),
+      },
       ArgWrap::Token(t) => vec![t],
+      ArgWrap::OptionToken(t_opt) => match t_opt {
+        Some(t) => vec![t],
+        None => Vec::new(),
+      },
       ArgWrap::Number(n) => {
         let tks: Tokens = n.into();
         tks.unlist()
@@ -430,6 +442,19 @@ impl ArgWrap {
       | OptionKV(None) => true,
       _ => false,
     }
+  }
+
+  pub fn is_option(&self) -> bool {
+    use ArgWrap::*;
+    matches!(self, OptionTokens(_)
+      |  OptionToken(_)
+      | OptionNumber(_)
+      | OptionFloat(_)
+      | OptionDimension(_)
+      | OptionGlue(_)
+      | OptionMuGlue(_)
+      | OptionMuDimension(_)
+      | OptionKV(_))
   }
 }
 

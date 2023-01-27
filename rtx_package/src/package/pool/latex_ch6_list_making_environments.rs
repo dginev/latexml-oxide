@@ -140,8 +140,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\fnum@@itemiii", r"{\makelabel{\label@itemiii}}");
   DefMacro!("\\fnum@@itemiv", r"{\makelabel{\label@itemiv}}");
 
-  DefMacro!("\\lx@poormans@ordinal{}", sub[gullet, args, state] {
-    unpack!(args => ctr);
+  DefMacro!("\\lx@poormans@ordinal{}", sub[gullet, (ctr), state] {
     let mut ctr_str      = CounterValue!(&ctr.to_string()).value_of().to_string();
     let last_char = ctr_str.chars().last().unwrap_or('.');
     if last_char.is_ascii_digit() {

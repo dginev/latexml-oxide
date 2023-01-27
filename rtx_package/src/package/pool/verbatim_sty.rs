@@ -108,8 +108,7 @@ LoadDefinitions!(state, {
 
   // //======================================================================
   // // Read verbatim material from file.
-  DefMacro!("\\verbatiminput {}", sub[gullet, args, state] {
-    unpack!(args => file);
+  DefMacro!("\\verbatiminput {}", sub[gullet, (file), state] {
     if let Some(path) = find_file(&file.to_string(), None, state) {
       gullet.reading_from_mouth(Mouth::create(&path, MouthOptions::default(), state)?,
         state,

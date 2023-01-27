@@ -92,3 +92,17 @@ macro_rules! compile_tokenize_internal {
     $var = tmp;
   }};
 }
+
+// ideally we can auto-infer this based on DefParameterType declarations but the **timing** is tricky?
+// what to do? For now, hardcode.
+#[macro_export]
+macro_rules! parameter_rust_type {
+  (GeneralText) => {Tokens};
+  (Semiverbatim) => {Tokens};
+  (Plain) => {Tokens};
+  (Optional) => {Option<Tokens>};
+  (OptionalMatch) => {Option<Tokens>};
+  (DefToken) => {Token};
+  (CSName) => {Token};
+  ($other:ident) => {$other};
+}

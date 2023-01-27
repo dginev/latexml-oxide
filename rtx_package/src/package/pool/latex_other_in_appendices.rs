@@ -76,8 +76,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\@thirdofthree{}{}{}", sub[gullet, args, state] { Ok(args.remove(2)) });
   // DefMacro('\@expandtwoargs{}{}{}', sub {
   //     ($_[1]->unlist, T_BEGIN, Expand($_[2])->unlist, T_END, T_BEGIN, Expand($_[3])->unlist, T_END); });
-  DefMacro!("\\@makeother{}", sub[gullet,args,state] {
-    unpack_to_token!(args=>arg);
+  DefMacro!("\\@makeother Token", sub[gullet,(arg),state] {
     let arg_c = arg.get_string().chars().next().unwrap();
     state.assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));
   });

@@ -233,8 +233,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
 
   // This attempts to handle the case where folks put \bibitem's within an enumerate or such.
   // We try to close the list and open the bibliography
-  DefMacro!("\\lx@mung@bibliography{}", sub[gullet, args, state] {
-    unpack!(args => env);
+  DefMacro!("\\lx@mung@bibliography{}", sub[gullet, (env), state] {
     let tag = env.to_string();
     let mut tokens = Vec::new();
     // If we're in some sort of list environment, maybe we can recover
@@ -328,14 +327,12 @@ LoadDefinitions!(outer_stomach, outer_state, {
   // Simple container for any phrases used in the bibref
   DefConstructor!("\\@@citephrase{}", "<ltx:bibrefphrase>#1</ltx:bibrefphrase>", mode => "text");
 
-  DefMacro!("\\cite[] Semiverbatim", sub[gullet, args, state] {
-    unpack_opt!(args => post_opt, keys_opt);
-    let keys = keys_opt.owned_tokens().unwrap();
+  DefMacro!("\\cite[] Semiverbatim", sub[gullet, (post_opt, keys), state] {
     let style = state.lookup_tokens("CITE_STYLE").unwrap_or_else(|| Tokens!());
     let open = state.lookup_tokens("CITE_OPEN");
     let open = open.unwrap_or_else(|| Tokens!());
     let close = state.lookup_tokens("CITE_CLOSE").unwrap_or_else(|| Tokens!());
-    let mut post_tokens = match post_opt.owned_tokens() {
+    let mut post_tokens = match post_opt {
       Some(tks) => tks.unlist(),
       None => Vec::new()
     };

@@ -23,7 +23,6 @@ pub const LTX_NAMESPACE: &str = "http://dlmf.nist.gov/LaTeXML";
 pub type IndirectModel = HashMap<String, HashMap<String, String>>;
 
 lazy_static! {
-  // static ref OPTIONAL_RE : Regex = Regex::new(r"^Optional(.+)$").unwrap();
   static ref PREFIXED_LOCALNAME_RE : Regex = Regex::new(r"^([^:]+):(.+)$").unwrap();
   static ref CAPTURE_TAG_RE : Regex = Regex::new(r"(.*?:)?_Capture_$").unwrap();
   static ref TAG_MODEL_LINE : Regex = Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap();
