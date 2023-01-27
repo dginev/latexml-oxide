@@ -144,13 +144,11 @@ LoadDefinitions!(outer_state, {
           meaning = s!("{}{}",prefix, literal_value);
         },
         Stored::Expandable(expandable) => {
-          let mut params = Vec::new();
-          let mut argcount = 0;
-
-          if let Some(ltxps) = expandable.get_parameters() {
-            params   = ltxps.get_parameters();
-            argcount = ltxps.get_num_args();
-          }
+          let (params,argcount) = if let Some(ltxps) = expandable.get_parameters() {
+            (ltxps.get_parameters(), ltxps.get_num_args())
+          } else {
+            (Vec::new(), 0)
+          };
           let specparts : Vec<Cow<str>> = params.iter().map(|param| LEAD_W_COLON_RE.replace(&param.spec,"") ).collect();
           let mut spec = String::new();
           for (index, part) in specparts.iter().take(argcount).enumerate() {
