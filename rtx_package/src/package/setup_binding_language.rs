@@ -1607,16 +1607,13 @@ macro_rules! TypedMacroWO {
   };
   ( T_CS($cs:expr) $($ptype:ident)+ , sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
-    let mut parameters = Vec::new();
-    $(
-    parameters.push(
-        Parameter {
-          name: stringify!($ptype).to_string(),
-          ..Parameter::default()
-        }
-        .init(outer_state!())?,
-      );
-    )+
+    let parameters = vec![
+    $(Parameter {
+        name: String::from(stringify!($ptype)),
+        ..Parameter::default()
+      }
+      .init(outer_state!())? ),+
+    ];
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
       move |$gullet: &mut Gullet, mut args: Vec<ArgWrap>, $inner_state:&mut State| {
         $(
