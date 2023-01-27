@@ -442,6 +442,12 @@ impl From<Option<Token>> for ArgWrap {
 impl From<ArgWrap> for Option<Tokens> {
   fn from(t: ArgWrap) -> Option<Tokens> { t.owned_tokens() }
 }
+
+// TODO: this is just a demo, make it robust against unwrap (add defaults)
+impl From<ArgWrap> for Tokens {
+  fn from(t: ArgWrap) -> Tokens { t.owned_tokens().unwrap() }
+}
+
 impl From<Tokens> for ArgWrap {
   fn from(t: Tokens) -> Self { ArgWrap::Tokens(t) }
 }
