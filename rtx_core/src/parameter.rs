@@ -296,23 +296,35 @@ impl Parameter {
     self.setup_catcodes(state);
 
     let closure = &self.reader;
-    let mut value_arg: ArgWrap = closure(gullet, vec![], &self.extra, state)?;
-    if value_arg.is_tokens() {
-      if let Some(mut value) = value_arg.owned_tokens() {
-        if let Some(ref semi_chars) = self.semiverbatim {
-          value = value.neutralize(semi_chars, state);
+    let value_from_reader: ArgWrap = closure(gullet, vec![], &self.extra, state)?;
+    let value_arg = if value_from_reader.is_tokens() {
+      let wants_option = self.optional || value_from_reader.is_option();
+      match value_from_reader.owned_tokens() {
+        Some(mut value) => {
+          if let Some(ref semi_chars) = self.semiverbatim {
+            value = value.neutralize(semi_chars, state);
+          }
+          if self.pack_parameters {
+            value = value.pack_parameters();
+          }
+          if wants_option {
+            if value.is_empty() {
+              ArgWrap::OptionTokens(None)
+            } else {
+              ArgWrap::OptionTokens(Some(value))
+            }
+          } else {
+            ArgWrap::Tokens(value)
+          }
         }
-        if self.pack_parameters {
-          value = value.pack_parameters();
-        }
-        value_arg = ArgWrap::Tokens(value);
-      } else {
-        value_arg = ArgWrap::default();
+        None => if wants_option { ArgWrap::OptionTokens(None) } else { ArgWrap::Tokens(Tokens!()) }
       }
-    }
+    } else {
+      value_from_reader
+    };
     self.revert_catcodes(state)?;
 
-    if !self.optional && !self.novalue && (value_arg.is_none() && self.reader_predigest.is_none()) {
+    let checked_value = if !self.optional && !self.novalue && (value_arg.is_none() && self.reader_predigest.is_none()) {
       // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens> in the long-run
       //        Until *may* have a value, but it also may *not*, both OK. So... except it from the error message here
       if !self.name.starts_with("Until") {
@@ -323,10 +335,14 @@ impl Parameter {
           state,
           s!("Missing argument {} for {}", self.stringify(), fordefn.stringify())
         );
-        value_arg = ArgWrap::Tokens(Tokens!(T_OTHER!("missing")));
+        ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))
+      } else {
+        value_arg
       }
-    }
-    Ok(value_arg)
+    } else {
+      value_arg
+    };
+    Ok(checked_value)
   }
 
   pub fn digest(&self, stomach: &mut Stomach, mut value_arg: ArgWrap, _fordefn: Option<&Constructor>, state: &mut State) -> Result<Option<Digested>> {

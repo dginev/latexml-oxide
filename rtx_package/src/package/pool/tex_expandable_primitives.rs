@@ -67,8 +67,7 @@ LoadDefinitions!(outer_state, {
   //// But if you do that, you've got to watch out since it usually
   //// shouldn't be a box; See the isRelax code in handleScripts, below
 
-  DefMacro!("\\number Number", sub[gullet, args, state] {
-    unpack_to_number!(args=>num);
+  DefMacro!("\\number Number", sub[gullet, (num), state] {
     let num_str = num.value_of();
     Explode!(num_str)
   });
@@ -76,12 +75,11 @@ LoadDefinitions!(outer_state, {
   // define it here (only approxmiately), since it's already useful.
   Let!("\\protect", "\\relax");
 
-  DefMacro!("\\romannumeral Number", sub[gullet, args, state] { roman!(args.remove(0).expect_number().value_of()) });
+  DefMacro!("\\romannumeral Number", sub[gullet, (num), state] { roman!(num.value_of()) });
 
   // # 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
   // # suggests all characters except spaces are returned in category code Other, i.e. Explode()
-  DefMacro!("\\string Token", sub[gullet, args, state] {
-    unpack_to_token!(args => token);
+  DefMacro!("\\string Token", sub[gullet, (token), state] {
     let mut s = token.to_string();
     if s.starts_with('/') {
       s = escapechar(state) + &s;
@@ -93,8 +91,7 @@ LoadDefinitions!(outer_state, {
 
   DefMacro!(T_CS!("\\fontname"), None, Tokens::new(Explode!("fontname not implemented")));
 
-  DefMacro!("\\meaning Token", sub[gullet, args, state] {
-    unpack_to_token!(args => token);
+  DefMacro!("\\meaning Token", sub[gullet, (token), state] {
     let mut meaning = String::from("undefined");
     let definition_opt = if token == T_ALIGN!() {
       Some(Stored::Token(token))
@@ -213,8 +210,7 @@ LoadDefinitions!(outer_state, {
     T_CS!(cs)
   }));
 
-  DefMacro!("\\csname CSName", sub[gullet, args, state] {
-    unpack_to_token!(args => token);
+  DefMacro!("\\csname CSName", sub[gullet, (token), state] {
     if LookupMeaning!(&token).is_none() {
       state.assign_meaning(&token, state.lookup_meaning(&T_CS!("\\relax")).unwrap(), None);
     }
@@ -225,8 +221,7 @@ LoadDefinitions!(outer_state, {
     Error!("unexpected" ,"\\endcsname", stomach, state, "Extra \\endcsname");
   });
 
-  DefMacro!("\\expandafter Token Token", sub[gullet, args, state] {
-    unpack_to_token!(args => tok, xtok);
+  DefMacro!("\\expandafter Token Token", sub[gullet, (tok, xtok), state] {
     let mut tokens : Vec<Token> = vec![tok];
     if let Some(defn) = state.lookup_expandable(&xtok, false) {
       state.current_token=Some(Arc::new(xtok.clone()));

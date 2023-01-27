@@ -35,7 +35,10 @@ LoadDefinitions!(state, {
   // //   ifnew   (only add if no previous entry)//
 
   DefPrimitive!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}", sub[stomach, args, state] {
-    unpack!(args => keys, tag, attrs, tokens);
+    unpack_opt!(args => keys);
+    unpack!(args => tag);
+    unpack_opt!(args => attrs);
+    unpack!(args => tokens);
     // Digest this as if we're already in the document body!
     let inpreamble = LookupBool!("inPreamble");
     AssignValue!("inPreamble", false);
@@ -184,8 +187,7 @@ LoadDefinitions!(state, {
   // The design reflects LaTeX needs, more than TeX, but support starts here!
 
   // This collects up the various declared ltx:tag's into an ltx:tags
-  DefMacro!("\\lx@make@tags {}", sub[gullet, args, state] {
-    unpack!(args => ttype);
+  DefMacro!("\\lx@make@tags {}", sub[gullet, (ttype), state] {
     let formatters = if let Some(Stored::HashStored(formatters)) = state.lookup_value("type_tag_formatter") {
       Some(formatters.clone())
     } else {
@@ -250,8 +252,7 @@ LoadDefinitions!(state, {
   // "refnum" is the lowest level reference number for an object is typically \the<counter>
   // but be sure to use the right counter!  This is how \ref will show the number.
   // You'll typically customize this by defining \the<counter> (and \p@<counter) as in LaTeX.
-  DefMacro!("\\lx@counterfor{}", sub[gullet, args, state] {
-    unpack!(args => ctr_type);
+  DefMacro!("\\lx@counterfor{}", sub[gullet, (ctr_type), state] {
     if let Some(ctr) = LookupMapping!("counter_for_type", &ctr_type.to_string()) {
       Tokens!(T_OTHER!(ctr))
     } else {

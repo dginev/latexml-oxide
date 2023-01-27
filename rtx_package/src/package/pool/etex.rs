@@ -16,8 +16,7 @@ LoadDefinitions!(state, {
   is_prefix => true);
 
   // \detokenize
-  DefMacro!("\\detokenize GeneralText", sub [gullet, args, state] {
-    unpack!(args => text);
+  DefMacro!("\\detokenize GeneralText", sub [gullet, (text), state] {
     Explode!(writable_tokens(text, state)?)
   });
 
@@ -25,7 +24,7 @@ LoadDefinitions!(state, {
   // of \unexpanded are not expanded further (this is the same behaviour as is
   // exhibited by the tokens resulting from the expansion of
   // \the〈token variable〉in both TEX and ε-TEX).
-  DefMacro!("\\unexpanded GeneralText", "#1");
+  DefMacro!("\\unexpanded GeneralText", sub [gullet, (text), state] { text });
 
   // ======================================================================
   // 3.2. Provision for re-scanning already read text
@@ -45,8 +44,7 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefMacro!("\\scantokens GeneralText", sub[gullet, args, state] {
-    unpack!(args=>tokens);
+  DefMacro!("\\scantokens GeneralText", sub[gullet, (tokens), state] {
     Mouth::new(&untex(tokens,false,state)?, None, state)?.read_tokens(state)
   });
 
@@ -83,11 +81,11 @@ LoadDefinitions!(state, {
   // # but since we don't manage Pages...
 
   DefPrimitive!("\\marks Number GeneralText", None);
-  DefMacro!("\\topmarks Number", "");
-  DefMacro!("\\firstmarks Number", "");
-  DefMacro!("\\botmarks Number", "");
-  DefMacro!("\\splitfirstmarks Number", "");
-  DefMacro!("\\splitbotmarks Number", "");
+  DefMacro!("\\topmarks Number", sub[gullet, (num), state] {()});
+  DefMacro!("\\firstmarks Number", sub[gullet, (num), state] {()});
+  DefMacro!("\\botmarks Number", sub[gullet, (num), state] {()});
+  DefMacro!("\\splitfirstmarks Number", sub[gullet, (num), state] {()});
+  DefMacro!("\\splitbotmarks Number", sub[gullet, (num), state] {()});
 
   // #======================================================================
   // # 3.5 Bi-directional typesetting: the TeX--XeT primitives

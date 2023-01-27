@@ -1054,8 +1054,7 @@ LoadDefinitions!(state, {
   // LaTeX has a very particular notion of "Undefined",
   // so let's get that squared away at the outset; it's useful for TeX, too!
   // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as \relax
-  DefMacro!("\\@ifundefined{}{}{}", sub[gullet, args, inner_state] {
-    unpack!(args=>name, if_token, else_token);
+  DefMacro!("\\@ifundefined{}{}{}", sub[gullet, (name, if_token, else_token), inner_state] {
     let cs = T_CS!(s!("\\{}", Expand!(name,gullet).to_string()));
     if IsDefined!(&cs, inner_state) {
       Ok(else_token)

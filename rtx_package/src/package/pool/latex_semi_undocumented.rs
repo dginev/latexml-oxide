@@ -4,9 +4,7 @@ use crate::package::*;
 //**********************************************************************
 
 LoadDefinitions!(state, {
-  DefMacro!("\\@ifnextchar DefToken {}{}", sub[gullet, args, state] {
-    unpack!(args => token, t_if, t_else);
-    let token : Token = token.into();
+  DefMacro!("\\@ifnextchar DefToken {}{}", sub[gullet, (token, t_if, t_else), state] {
     let next = gullet.read_non_space(state);
     // NOTE: Not actually substituting, but collapsing ## pairs!!!!
     // use \egroup for $next, if we've fallen off end?
@@ -26,8 +24,7 @@ LoadDefinitions!(state, {
   Let!("\\@ifnext", "\\@ifnextchar"); // ????
 
   // Hacky version matches multiple chars! but does NOT expand
-  DefMacro!(r"\@ifnext@n {}{}{}", sub[gullet,args,state] {
-    unpack!(args=>tokens,if_toks,else_toks);
+  DefMacro!(r"\@ifnext@n {}{}{}", sub[gullet,(tokens,if_toks,else_toks),state] {
     let mut toks = VecDeque::from(tokens.unlist());
     let mut read = Vec::new();
     while let Some(t) = gullet.read_token(state) {
@@ -48,8 +45,7 @@ LoadDefinitions!(state, {
     Ok(Tokens::new(result))
   });
 
-  DefMacro!("\\@ifstar {}{}", sub[gullet,args,state] {
-  unpack!(args=>if_toks,else_toks);
+  DefMacro!("\\@ifstar {}{}", sub[gullet,(if_toks,else_toks),state] {
   let next_opt = gullet.read_non_space(state);
   if Some(T_OTHER!("*")) == next_opt {
     Ok(if_toks)
@@ -64,8 +60,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\@dblarg {}", r"\kernel@ifnextchar[{#1}{\@xdblarg{#1}}");
   DefMacro!("\\@xdblarg {}{}", r"#1[{#2}]{#2}");
 
-  DefMacro!("\\@testopt{}{}", sub[gullet,args,state] {
-    unpack!(args => cmd, option);
+  DefMacro!("\\@testopt{}{}", sub[gullet,(cmd, option),state] {
     if gullet.if_next(T_OTHER!("["), state)? {
       Ok(cmd)
     } else {

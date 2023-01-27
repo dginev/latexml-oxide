@@ -52,8 +52,7 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\@author", "\\@empty");
   DefMacro!("\\author{}", "\\def\\@author{#1}\\lx@make@authors@anded{#1}", locked => true);
-  DefMacro!("\\lx@make@authors@anded{}", sub[gullet, args, state] {
-    unpack!(args => authors);
+  DefMacro!("\\lx@make@authors@anded{}", sub[gullet, (authors), state] {
     and_split(T_CS!("\\lx@author"), authors)
   });
   DefPrimitive!("\\ltx@authors@oneline", sub[stomach, args, state] {

@@ -10,11 +10,11 @@ LoadDefinitions!(state, {
   //    text
   //   \end{document}
 
-  DefMacro!("\\AtBeginDocument{}", sub[gullet,args,state] {
-    state.push_value("@at@begin@document", args.remove(0).unlist());
+  DefMacro!("\\AtBeginDocument{}", sub[gullet,(rules),state] {
+    state.push_value("@at@begin@document", rules.unlist());
   });
-  DefMacro!("\\AtEndDocument{}", sub[gullet,args,state] {
-    state.push_value("@at@end@document", args.remove(0).unlist());
+  DefMacro!("\\AtEndDocument{}", sub[gullet,(rules),state] {
+    state.push_value("@at@end@document", rules.unlist());
   });
 
   // Like  "<ltx:document xml:id='#id'>#body</ltx:document>",

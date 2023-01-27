@@ -1613,11 +1613,11 @@ macro_rules! TypedMacroWO {
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
       move |$gullet: &mut Gullet, mut args: Vec<ArgWrap>, $inner_state:&mut State| {
         $(
-          let $var: $ptype = match args.remove(0).try_into() {
+          let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
             Ok(v) => v,
             Err(e) => {
               Error!("expected", "argument", $gullet, None, e);
-              $ptype::default()
+              <parameter_rust_type!($ptype)>::default()
             }
           };
         )+

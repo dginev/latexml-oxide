@@ -34,8 +34,7 @@ LoadDefinitions!(state, {
   // That token is the cs that invoked it, so that it can be reflected in the generated XML,
   // as well as used to generate the reversion.
   // In any case, we read the verbatim arg, and build a Whatsit for @@Url
-  DefMacro!("\\@Url Token", sub[gullet, args, state] {
-    unpack_to_token!(args => cmd);
+  DefMacro!("\\@Url Token", sub[gullet, (cmd), state] {
     let perc = vec!['%'];
     state.begin_semiverbatim(Some(&perc));
     let mut open = gullet.read_token(state).unwrap();
