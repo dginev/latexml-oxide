@@ -10,7 +10,7 @@ LoadDefinitions!(state, {
   // 3.1 Additional control over expansion
   // \protected associates with the next defn
   // (note that it isn't actually used anywhere).
-  DefPrimitive!("\\protected", sub[stomach, args, state] {
+  DefPrimitive!("\\protected", sub[stomach, (), state] {
     state.set_prefix("protected");
   },
   is_prefix => true);

@@ -285,25 +285,20 @@ LoadDefinitions!(state, {
   // # TeX Book, Appendix B, p. 347
   // # \wlog ??
   // # From plain.tex
-  DefPrimitive!("\\newcount Token", sub[stomach, args, state] {
-    unpack_to_token!(args => name);
+  DefPrimitive!("\\newcount Token", sub[stomach, (name), state] {
     DefRegister!(name, None, Number::new(0));
   });
-  DefPrimitive!("\\newdimen Token", sub[stomach, args, state] {
-    unpack_to_token!(args => name);
+  DefPrimitive!("\\newdimen Token", sub[stomach, (name), state] {
     DefRegister!(name, None, Dimension::new(0));
   });
-  DefPrimitive!("\\newskip Token", sub[stomach, args, state] {
-    unpack_to_token!(args => name);
+  DefPrimitive!("\\newskip Token", sub[stomach, (name), state] {
     DefRegister!(name, None, Glue::new(0));
   });
-  DefPrimitive!("\\newmuskip Token", sub[stomach, args, state] {
-    unpack_to_token!(args => name);
+  DefPrimitive!("\\newmuskip Token", sub[stomach, (name), state] {
     DefRegister!(name, None, MuGlue::new(0));
   });
   AssignValue!("allocated_boxes" => false);
-  DefPrimitive!("\\newbox Token", sub[stomach, args, state] {
-    unpack_to_token!(args => t);
+  DefPrimitive!("\\newbox Token", sub[stomach, (t), state] {
     let n = state.lookup_int("allocated_boxes");
     AssignValue!("allocated_boxes" => n + 1, Some(Scope::Global));
     AssignValue!(&s!("box{}",n), List::new(Vec::new()));
@@ -569,7 +564,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\allowbreak", None);
   DefMacro!("\\nobreakspace", "\\ifmmode\\math@nobreakspace\\else\\text@nobreakspace\\fi");
 
-  DefPrimitive!("\\text@nobreakspace", sub[stomach, whatsit, state] {
+  DefPrimitive!("\\text@nobreakspace", sub[stomach, (), state] {
     Tbox::new(String::from("\u{00A0}"), None, None, Tokens!(T_CS!("~")), map!("isSpace" => Stored::Bool(true)), state)
   });
 

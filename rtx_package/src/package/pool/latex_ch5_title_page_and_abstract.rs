@@ -25,7 +25,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\and", " and ");
 
   AssignValue!("NUMBER_OF_AUTHORS" => 0);
-  DefPrimitive!("\\lx@count@author", sub[stomach, args, state] {
+  DefPrimitive!("\\lx@count@author", sub[stomach, (), state] {
     let current = state.lookup_int("NUMBER_OF_AUTHORS");
     AssignValue!("NUMBER_OF_AUTHORS" => current + 1, Some(Scope::Global));
   });
@@ -55,10 +55,10 @@ LoadDefinitions!(state, {
   DefMacro!("\\lx@make@authors@anded{}", sub[gullet, (authors), state] {
     and_split(T_CS!("\\lx@author"), authors)
   });
-  DefPrimitive!("\\ltx@authors@oneline", sub[stomach, args, state] {
+  DefPrimitive!("\\ltx@authors@oneline", sub[stomach, (), state] {
     AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_1line" => true);
   });
-  DefPrimitive!("\\ltx@authors@multiline", sub[stomach, args, state] {
+  DefPrimitive!("\\ltx@authors@multiline", sub[stomach, (), state] {
     AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_multiline" => true);
   });
 

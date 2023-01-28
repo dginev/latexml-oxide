@@ -73,7 +73,11 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
       };
       let mut p = Parameter {
         name: Cow::Borrowed("Plain"),
-        spec: if spec.is_empty() { Cow::Borrowed("") } else { Cow::Owned(spec.to_string()) },
+        spec: if spec.is_empty() {
+          Cow::Borrowed("")
+        } else {
+          Cow::Owned(spec.to_string())
+        },
         extra: vec![inner.into()],
         ..Parameter::default()
       };
@@ -90,7 +94,11 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
         // TODO: Add the defaults !
         let mut p = Parameter {
           name: Cow::Borrowed("Optional"),
-          spec: if spec.is_empty() { Cow::Borrowed("") } else { Cow::Owned(spec.to_string()) },
+          spec: if spec.is_empty() {
+            Cow::Borrowed("")
+          } else {
+            Cow::Owned(spec.to_string())
+          },
           // extra: vec![TokenizeInternal!(default_captures.get(0).map_or("", |m| m.as_str())), None]});
           extra: Vec::new(),
           ..Parameter::default()
@@ -102,7 +110,11 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
       } else if !inner_spec.is_empty() {
         let mut p = Parameter {
           name: Cow::Borrowed("Optional"),
-          spec: if spec.is_empty() { Cow::Borrowed("") } else { Cow::Owned(spec.to_string()) },
+          spec: if spec.is_empty() {
+            Cow::Borrowed("")
+          } else {
+            Cow::Owned(spec.to_string())
+          },
           extra: vec![
             ParameterExtra::ParametersOption(None),
             parse_parameters(inner_spec.to_string(), cs, state_opt.as_deref_mut())?.into(),

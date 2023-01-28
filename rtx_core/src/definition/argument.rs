@@ -1,3 +1,4 @@
+#![allow(clippy::uninlined_format_args)]
 use std::borrow::Cow;
 use std::fmt::{self, Display};
 
@@ -327,7 +328,7 @@ impl ArgWrap {
       Glue(v) => v.value_of(),
       MuGlue(v) => v.value_of(),
       MuDimension(v) => v.value_of(),
-      _ => panic!("ArgWrap::value_of not (yet?) defined on {self:?}"),
+      _ => panic!("ArgWrap::value_of not (yet?) defined on {:?}", self),
     }
   }
 
@@ -337,7 +338,17 @@ impl ArgWrap {
       Number(v) => Ok(v),
       Token(t) => Ok(t.to_number()),
       Tokens(tks) => Ok(tks.to_number()),
-      _ => Err("ArgWrap::to_number not (yet?) defined on {self:?}".into()),
+      OptionTokens(tks_opt) => match tks_opt {
+        Some(tks) => Ok(tks.to_number()),
+        // None => Err("ArgWrap::try_to_number expected a Tokens for number conversion, but got None.".into()),
+        // When is the None case useful? you can see it triggered with an error in the tests.
+        None => Ok(crate::common::number::Number::default()),
+      },
+      OptionToken(tk_opt) => match tk_opt {
+        Some(tk) => Ok(tk.to_number()),
+        None => Err("ArgWrap::try_to_number expected a Token for number conversion, but got None.".into()),
+      },
+      _ => Err(format!("ArgWrap::to_number not (yet?) defined on {:?}", self).into()),
     }
   }
   pub fn expect_number(self) -> Number {
@@ -353,7 +364,7 @@ impl ArgWrap {
       Dimension(v) => Ok(v),
       Token(t) => Ok(t.to_dimension()),
       Tokens(tks) => Ok(tks.to_dimension()),
-      _ => Err("ArgWrap::to_dimension not (yet?) defined on {self:?}".into()),
+      _ => Err(format!("ArgWrap::to_dimension not (yet?) defined on {:?}", self).into()),
     }
   }
   pub fn expect_dimension(self) -> Dimension {
@@ -378,7 +389,7 @@ impl ArgWrap {
       Glue(v) => v,
       Token(t) => t.to_glue(),
       Tokens(tks) => tks.to_glue(),
-      _ => panic!("ArgWrap::to_glue not (yet?) defined on {self:?}"),
+      _ => panic!("ArgWrap::to_glue not (yet?) defined on {:?}", self),
     }
   }
   pub fn to_mu_glue(self) -> MuGlue {
@@ -387,19 +398,26 @@ impl ArgWrap {
       MuGlue(v) => v,
       Token(t) => t.to_mu_glue(),
       Tokens(tks) => tks.to_mu_glue(),
-      _ => panic!("ArgWrap::to_glue not (yet?) defined on {self:?}"),
+      _ => panic!("ArgWrap::to_glue not (yet?) defined on {:?}", self),
     }
   }
-  pub fn to_keyvals(self, state: &mut State) -> KeyVals {
+  pub fn expected_keyvals(self, state: &mut State) -> KeyVals {
+    match self.try_to_keyvals(state) {
+      Ok(t) => t,
+      Err(e) => panic!("{e}"),
+    }
+  }
+
+  pub fn try_to_keyvals(self, state: &mut State) -> Result<KeyVals> {
     use ArgWrap::*;
     match self {
-      KV(v) => v,
-      Tokens(tks) => tks.to_keyvals(state),
+      KV(v) => Ok(v),
+      Tokens(tks) => Ok(tks.to_keyvals(state)),
       OptionTokens(tks_opt) => match tks_opt {
-        Some(tks) => tks.to_keyvals(state),
-        None => KeyVals::default()
+        Some(tks) => Ok(tks.to_keyvals(state)),
+        None => Ok(KeyVals::default()),
       },
-      _ => panic!("ArgWrap::to_keyvals not (yet?) defined on {self:?}"),
+      _ => panic!("ArgWrap::to_keyvals not (yet?) defined on {:?}", self),
     }
   }
 
@@ -446,15 +464,18 @@ impl ArgWrap {
 
   pub fn is_option(&self) -> bool {
     use ArgWrap::*;
-    matches!(self, OptionTokens(_)
-      |  OptionToken(_)
-      | OptionNumber(_)
-      | OptionFloat(_)
-      | OptionDimension(_)
-      | OptionGlue(_)
-      | OptionMuGlue(_)
-      | OptionMuDimension(_)
-      | OptionKV(_))
+    matches!(
+      self,
+      OptionTokens(_)
+        | OptionToken(_)
+        | OptionNumber(_)
+        | OptionFloat(_)
+        | OptionDimension(_)
+        | OptionGlue(_)
+        | OptionMuGlue(_)
+        | OptionMuDimension(_)
+        | OptionKV(_)
+    )
   }
 }
 
@@ -468,9 +489,13 @@ impl From<ArgWrap> for Option<Tokens> {
   fn from(t: ArgWrap) -> Option<Tokens> { t.owned_tokens() }
 }
 
-// TODO: this is just a demo, make it robust against unwrap (add defaults)
 impl From<ArgWrap> for Tokens {
-  fn from(t: ArgWrap) -> Tokens { t.owned_tokens().unwrap() }
+  fn from(t: ArgWrap) -> Tokens {
+    match t.owned_tokens() {
+      Some(tks) => tks,
+      None => Tokens!(),
+    }
+  }
 }
 
 impl From<Tokens> for ArgWrap {
@@ -529,3 +554,8 @@ impl TryFrom<ArgWrap> for Token {
   type Error = crate::common::error::Error;
   fn try_from(aw: ArgWrap) -> Result<Token> { aw.try_to_token() }
 }
+
+// impl TryFrom<ArgWrap> for KeyVals {
+//   type Error = crate::common::error::Error;
+//   fn try_from(aw: ArgWrap) -> Result<KeyVals> { aw.try_to_keyvals() }
+// }

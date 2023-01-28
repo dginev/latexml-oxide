@@ -158,19 +158,8 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
   }
 }
 
-pub fn do_def(globally: bool, stomach: &mut Stomach, mut args: Vec<ArgWrap>, state: &mut State) -> Result<()> {
+pub fn do_def(globally: bool, stomach: &mut Stomach, cs: Token, params: Tokens, body: Tokens, state: &mut State) -> Result<()> {
   BindState!(stomach, state);
-  let cs_opt = args.remove(0);
-  let params_opt = args.remove(0);
-  let body = args.remove(0).owned_tokens().unwrap();
-  let cs: Token = cs_opt.try_to_token()?;
-  let params = match params_opt.owned_tokens() {
-    Some(ts) => ts,
-    None => {
-      Error!("misdefined", cs, stomach, state, "Expected definition parameter list");
-      return Ok(());
-    },
-  };
   let paramlist = parse_def_parameters(&cs, params, state)?;
 
   let scope = if globally { Some(Scope::Global) } else { None };

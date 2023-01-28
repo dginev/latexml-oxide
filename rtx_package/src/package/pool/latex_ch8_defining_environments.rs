@@ -6,13 +6,7 @@ use crate::package::*;
 // Note that \env & \endenv defined by \newenvironment CAN be
 // invoked directly.
 LoadDefinitions!(state, {
-  DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}", sub[stomach, args, state] {
-    unpack_opt!(args => star_opt, name_opt, nargs_opt, opt_opt, begin_opt, end_opt);
-    let name = name_opt.owned_tokens().unwrap();
-    let nargs = if nargs_opt.is_empty() { Number::new(0) } else { nargs_opt.owned_tokens().unwrap().to_number() };
-    let begin = begin_opt.owned_tokens().unwrap();
-    let end = end_opt.owned_tokens().unwrap();
-
+  DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}", sub[stomach, (star_opt, name, nargs, opt, begin, end), state] {
     let name = { stomach.digest(name, state)?.to_string() };
     let name_cs = T_CS!(s!("\\{}",name));
     let end_name_cs = T_CS!(s!("\\end{}",name));
@@ -24,7 +18,6 @@ LoadDefinitions!(state, {
         Info!("ignore", name, stomach, state, message);
       }
     } else {
-      let opt = if opt_opt.is_empty() { None } else { Some(opt_opt.owned_tokens().unwrap()) };
       // TODO: can we convince DefMacro! this is not a second mutable borrow of state?
       let converted_args = convert_latex_args(nargs.value_of() as usize, opt, state)?;
       DefMacro!(name_cs, converted_args, begin);

@@ -1,10 +1,10 @@
 use lazy_static::lazy_static;
+use proc_macro2::TokenStream; // use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
+use quote::{quote, ToTokens};
 use regex::Regex;
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::Arc;
-use proc_macro2::{TokenStream}; // use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
-use quote::{quote, ToTokens}; // TokenStreamExt
+use std::sync::Arc; // TokenStreamExt
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -318,8 +318,14 @@ impl Parameter {
           } else {
             ArgWrap::Tokens(value)
           }
-        }
-        None => if wants_option { ArgWrap::OptionTokens(None) } else { ArgWrap::Tokens(Tokens!()) }
+        },
+        None => {
+          if wants_option {
+            ArgWrap::OptionTokens(None)
+          } else {
+            ArgWrap::Tokens(Tokens!())
+          }
+        },
       }
     } else {
       value_from_reader
@@ -527,7 +533,6 @@ impl fmt::Display for Parameters {
   }
 }
 
-
 impl ToTokens for Parameters {
   fn to_tokens(&self, stream: &mut TokenStream) {
     let params = &self.0;
@@ -562,14 +567,13 @@ impl ToTokens for Parameter {
 impl ToTokens for ParameterExtra {
   fn to_tokens(&self, stream: &mut TokenStream) {
     stream.extend(match self {
-      ParameterExtra::Tokens(ts) =>
-         quote!( ParameterExtra::Tokens(#ts) ),
+      ParameterExtra::Tokens(ts) => quote!( ParameterExtra::Tokens(#ts) ),
       ParameterExtra::ParametersOption(Some(po)) => {
         quote!( ParameterExtra::ParametersOption(Some(#po)))
       },
       ParameterExtra::ParametersOption(None) => {
-        quote!( ParameterExtra::ParametersOption(None))
-      }
+        quote!(ParameterExtra::ParametersOption(None))
+      },
     });
   }
 }

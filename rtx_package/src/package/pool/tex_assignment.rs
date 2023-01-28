@@ -14,23 +14,23 @@ LoadDefinitions!(outer_state, {
   // <def> = \def | \gdef | \edef | \xdef
   // <definition text> = <register text><left brace><balanced text><right brace>
   DefPrimitive!("\\def SkipSpaces Token UntilBrace DefPlain",
-    sub[stomach, args, state] {
-      do_def(false, stomach, args, state)?;
+    sub[stomach, (cs,params,body), state] {
+      do_def(false, stomach, cs,params,body, state)?;
     },
     locked => true);
   DefPrimitive!("\\gdef SkipSpaces Token UntilBrace DefPlain",
-    sub[stomach, args, state] {
-      do_def(true, stomach, args, state)?;
+    sub[stomach, (cs,params,body), state] {
+      do_def(true, stomach, cs,params,body, state)?;
     },
     locked => true);
   DefPrimitive!("\\edef SkipSpaces Token UntilBrace DefExpanded",
-    sub[stomach, args, state] {
-      do_def(false, stomach, args, state)?;
+    sub[stomach, (cs,params,body), state] {
+      do_def(false, stomach, cs,params,body, state)?;
     },
     locked => true);
   DefPrimitive!("\\xdef SkipSpaces Token UntilBrace DefExpanded",
-    sub[stomach, args, state] {
-      do_def(true, stomach, args, state)?;
+    sub[stomach, (cs,params,body), state] {
+      do_def(true, stomach, cs,params,body, state)?;
     },
     locked => true);
 
@@ -64,9 +64,7 @@ LoadDefinitions!(outer_state, {
   // <code assignment> = <codename><8bit><equals><number>
 
   // Need to handle "at" too!!!
-  DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName", sub[stomach, args, state] {
-    unpack!(args => cs_arg, name_arg);
-    let cs : Token = cs_arg.into();
+  DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName", sub[stomach, (cs, name_arg), state] {
     let gullet = stomach.get_gullet_mut();
     let name = name_arg.to_string();
     let props_opt = if let Some(mut props) = font::decode_fontname(&name,
@@ -173,14 +171,12 @@ LoadDefinitions!(outer_state, {
 
   // <let assignment> = \futurelet <control sequence><token><token>
   //  | \let<control sequence><equals><one optional space><token>
-  DefPrimitive!("\\let Token SkipMatch:= Skip1Space Token", sub[stomach, args, state] {
-   unpack_to_token!(args => token1, token2);
+  DefPrimitive!("\\let Token SkipMatch:= Skip1Space Token", sub[stomach, (token1, token2), state] {
    Let!(&token1, token2);
    Ok(Vec::new())
   });
 
-  DefPrimitive!("\\futurelet Token Token Token", sub[stomach, args, state] {
-      unpack_to_token!(args => cs, token1, token2);
+  DefPrimitive!("\\futurelet Token Token Token", sub[stomach, (cs, token1, token2), state] {
       stomach.get_gullet_mut().unread(Tokens!(token1,token2.clone())); // NOT expandable, but puts tokens back
       Let!(&cs, token2);
       Ok(Vec::new())
@@ -198,8 +194,7 @@ LoadDefinitions!(outer_state, {
   // specifically for the getter/setter routines.
   // instead, here is the same pattern of definition, with different concrete value types.
 
-  DefPrimitive!("\\countdef Token SkipMatch:=", sub[stomach, args, state] {
-    unpack_to_token!(args => cs);
+  DefPrimitive!("\\countdef Token SkipMatch:=", sub[stomach, (cs), state] {
     state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
     let num = stomach.get_gullet_mut().read_number(state)?;
     let reg = s!("\\count{}", num.value_of());
@@ -211,8 +206,7 @@ LoadDefinitions!(outer_state, {
     Ok(Vec::new())
   });
 
-  DefPrimitive!("\\dimendef Token SkipMatch:=", sub[stomach,args,state] {
-    unpack_to_token!(args=> cs);
+  DefPrimitive!("\\dimendef Token SkipMatch:=", sub[stomach, (cs), state] {
     state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
     let num = stomach.get_gullet_mut().read_number(state)?;
     let dimen = s!("\\dimen{}", num.value_of());
@@ -225,8 +219,7 @@ LoadDefinitions!(outer_state, {
     Ok(Vec::new())
   });
 
-  DefPrimitive!("\\skipdef Token SkipMatch:=", sub[stomach,args,state] {
-    unpack_to_token!(args=> cs);
+  DefPrimitive!("\\skipdef Token SkipMatch:=", sub[stomach, (cs), state] {
     state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
     let num = stomach.get_gullet_mut().read_number(state)?;
     let skip = s!("\\skip{}", num.value_of());
@@ -239,8 +232,7 @@ LoadDefinitions!(outer_state, {
     Ok(Vec::new())
   });
 
-  DefPrimitive!("\\muskipdef Token SkipMatch:=", sub[stomach,args,state] {
-    unpack_to_token!(args=>cs);
+  DefPrimitive!("\\muskipdef Token SkipMatch:=", sub[stomach, (cs), state] {
     state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
     let num = stomach.get_gullet_mut().read_number(state)?;
     let muglue = s!("\\muskip{}",num.value_of());
@@ -253,8 +245,7 @@ LoadDefinitions!(outer_state, {
     Ok(Vec::new())
   });
 
-  DefPrimitive!("\\toksdef Token SkipMatch:=", sub[stomach,args,state] {
-    unpack_to_token!(args=>cs);
+  DefPrimitive!("\\toksdef Token SkipMatch:=", sub[stomach, (cs), state] {
     state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
     let num = stomach.get_gullet_mut().read_number(state)?;
     let toks = s!("\\toks{}", num.value_of() as usize);
@@ -275,8 +266,7 @@ LoadDefinitions!(outer_state, {
   DefRegister!("\\lastpenalty", Number::new(0), readonly => true);
 
   // \parshape !?!??
-  DefPrimitive!("\\parshape SkipMatch:= Number", sub[stomach, args, state] {
-    unpack_to_number!(args => n);
+  DefPrimitive!("\\parshape SkipMatch:= Number", sub[stomach, (n), state] {
     // $n = $n->valueOf;
     // my $gullet = $stomach->getGullet;
     // for (my $i = 0 ; $i < $n ; $i++) {

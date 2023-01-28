@@ -16,16 +16,14 @@ use crate::package::*;
 LoadDefinitions!(state, {
   AssignValue!("current_environment", String::new(), Some(Scope::Global));
   DefMacro!("\\@currenvir", "");
-  DefPrimitive!("\\f{}", sub[stomach, args, state] {
-    unpack!(args => env);
+  DefPrimitive!("\\f{}", sub[stomach, (env), state] {
     let env_string = env.to_string();
     DefMacro!(T_CS!("\\@currenvir"), None, env);
     AssignValue!("current_environment", env_string);
   });
 
   DefPrimitive!(
-  "\\lx@setcurrenvir{}", sub[stomach, args, state] {
-    unpack!(args => env);
+  "\\lx@setcurrenvir{}", sub[stomach, (env), state] {
     let env_string = env.to_string();
     DefMacro!(T_CS!("\\@currenvir"), None, env);
     AssignValue!("current_environment", env_string);

@@ -639,8 +639,7 @@ LoadDefinitions!(state, {
       tokens
   });
 
-  DefPrimitive!("\\ltx@loadpool {}", sub[stomach,args,state] {
-    unpack!(args=>name);
+  DefPrimitive!("\\ltx@loadpool {}", sub[stomach,(name),state] {
     LoadPool!(&name.to_string());
   });
 
@@ -954,7 +953,7 @@ LoadDefinitions!(state, {
     },
     reader_predigest => reader_predigest!(stomach, arg, state, {
       if !arg.is_empty() {
-        Some(arg.to_keyvals(state))
+        Some(arg.expected_keyvals(state))
       } else {
         None
       }
@@ -965,7 +964,7 @@ LoadDefinitions!(state, {
       optional_key_vals(true, false, inner, gullet, state)
     },
     reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_keyvals(state)
+      arg.expected_keyvals(state)
     }),
    optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
@@ -973,7 +972,7 @@ LoadDefinitions!(state, {
       optional_key_vals(false, true, inner, gullet, state)
     },
     reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_keyvals(state)
+      arg.expected_keyvals(state)
     }),
    optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
@@ -981,7 +980,7 @@ LoadDefinitions!(state, {
       optional_key_vals(true, true, inner, gullet, state)
     },
     reader_predigest => reader_predigest!(stomach, arg, state, {
-      arg.to_keyvals(state)
+      arg.expected_keyvals(state)
     }),
    optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });

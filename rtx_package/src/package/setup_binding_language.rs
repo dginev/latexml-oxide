@@ -58,6 +58,7 @@ macro_rules! BindInnerState {
     start_state_frame!();
   };
   ($inner_stomach:ident, $inner_state:ident) => {
+    #[allow(unused_macros)]
     macro_rules! inner_stomach {
       () => {
         $inner_stomach
@@ -473,6 +474,10 @@ macro_rules! DefPrimitive {
     });
     defi_primitive!(cs, params, Some(replacement_closure), options);
   }};
+  // closure with literal prototype
+  ($proto:literal, sub[$stomach_arg:ident,  ( $($var:ident),* ), $state_arg:ident] $body:block $($input:tt)*) => {{
+    compile_prototype_for_typed_primitive!($proto, sub [ $stomach_arg, ( $($var),* ), $state_arg ] $body $($input)*)
+  }};
   // Case: closure pattern replacement
   ($proto:expr, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
@@ -519,6 +524,27 @@ macro_rules! DefPrimitive {
   ($proto:expr, $replacement_closure:expr) => {{
     let (cs, params) = parse_prototype!($proto);
     defi_primitive!(cs, params, $replacement_closure, PrimitiveOptions::default());
+  }};
+}
+
+#[macro_export]
+macro_rules! TypedPrimitive {
+  ($cs:literal, $these_parameters:ident ,
+      sub [ $stomach_arg:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ] $body:block $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
+    let replacement_closure =  Arc::new(move |$stomach_arg: &mut Stomach, mut args: Vec<ArgWrap>, $inner_state: &mut State| {
+      $(
+          let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
+            Ok(v) => v,
+            Err(e) => {
+              Error!("expected", "argument", $stomach_arg, None, e);
+              <parameter_rust_type!($ptype)>::default()
+            }
+          };
+      )*
+      WithInnerState!($body, $stomach_arg, $inner_state).into_digested_result()
+    });
+    defi_primitive!(T_CS!($cs), $these_parameters, Some(replacement_closure), options);
   }};
 }
 
@@ -1526,8 +1552,8 @@ macro_rules! MergeFont {
 #[macro_export]
 macro_rules! DefMacro {
   // closure with literal prototype
-  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {{
-    compile_prototype_for_typed_macro!($prototype, sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*)
+  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block $($input:tt)*) => {{
+    compile_prototype_for_typed_macro!($prototype, sub [ $gullet, ( $($var),* ), $inner_state ] $body $($input)*)
   }};
   // closure, general form
   ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
@@ -1608,24 +1634,10 @@ macro_rules! DefMacro {
 }
 
 #[macro_export]
-macro_rules! TypedMacroWO {
-  // closure
-  ( $cs:ident $($ptype:ident)+ , sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {
-    let cs_token = concat!("\\", stringify!($cs));
-    TypedMacroWO!(T_CS(cs_token) $($ptype )+ , sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*)
-  };
-  ($cs:literal $($ptype:ident)+ , sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {
-    TypedMacroWO!(T_CS($cs) $($ptype)+ , sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*)
-  };
-  ( T_CS($cs:expr) $($ptype:ident)+ , sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {{
+macro_rules! TypedMacro {
+  ( $cs:literal, $these_parameters:ident,
+    sub [ $gullet:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
-    let parameters = vec![
-    $(Parameter {
-        name: Cow::Borrowed(stringify!($ptype)),
-        ..Parameter::default()
-      }
-      .init(outer_state!())? ),+
-    ];
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
       move |$gullet: &mut Gullet, mut args: Vec<ArgWrap>, $inner_state:&mut State| {
         $(
@@ -1636,16 +1648,11 @@ macro_rules! TypedMacroWO {
               <parameter_rust_type!($ptype)>::default()
             }
           };
-        )+
+        )*
         WithInnerState!($body, $inner_state).into_tokens_result()
       }
     )));
-    let params = if parameters.is_empty() {
-      None
-    } else {
-      Some(Parameters::new(parameters))
-    };
-    defi_macro!(T_CS!($cs), params, expansion_closure, Some(options));
+    defi_macro!(T_CS!($cs), $these_parameters, expansion_closure, Some(options));
   }};
 }
 

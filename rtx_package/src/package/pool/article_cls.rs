@@ -108,5 +108,5 @@ LoadDefinitions!(stomach, state, {
   DefMacro!("\\appendix", "\\@appendix");
 
   // Actually we should be using section counter
-  DefPrimitive!("\\@appendix", sub[stomach,whatsit,state] { start_appendices("section", state); });
+  DefPrimitive!("\\@appendix", sub[stomach,(),state] { start_appendices("section", state); });
 });

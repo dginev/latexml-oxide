@@ -217,7 +217,7 @@ LoadDefinitions!(outer_state, {
     token
   });
 
-  DefPrimitive!("\\endcsname", sub[stomach, args, state] {
+  DefPrimitive!("\\endcsname", sub[stomach, (), state] {
     Error!("unexpected" ,"\\endcsname", stomach, state, "Extra \\endcsname");
   });
 
@@ -263,8 +263,7 @@ LoadDefinitions!(outer_state, {
   // For now I have changed to DefPrimitive, so that there is a clear access to the
   // stomach, but we may require some special-case treatment in other pieces of code...
   DefMacro!("\\input", "\\ltx@input");
-  DefPrimitive!("\\ltx@input TeXFileName", sub[stomach,args,state] {
-    unpack!(args => name);
+  DefPrimitive!("\\ltx@input TeXFileName", sub[stomach, (name), state] {
     input(&name.to_string(), InputOptions::default(), stomach, state)?;
   });
 

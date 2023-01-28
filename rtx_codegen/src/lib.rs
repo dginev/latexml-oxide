@@ -43,10 +43,10 @@ pub fn derive_compile_tokenize_internal(input: TokenStream) -> TokenStream {
   tokenizeable::compile_tokenize_internal(item)
 }
 
-#[proc_macro_derive(CompilePrototypeForTypedMacro, attributes(prototype))]
-pub fn derive_compile_prototype_for_typed_macro(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(CompilePrototypeFor, attributes(prototype, inner))]
+pub fn derive_compile_prototype_for(input: TokenStream) -> TokenStream {
   let item = parse_macro_input!(input as DeriveInput);
-  parametrizeable::compile_prototype_for_typed_macro(item)
+  parametrizeable::compile_prototype_for(item)
 }
 
 #[proc_macro_derive(CompilePrototype, attributes(prototype))]

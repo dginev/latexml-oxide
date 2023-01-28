@@ -195,7 +195,7 @@ LoadDefinitions!(state, {
   //     width => sub { LookupValue('\medmuskip'); } });
   // DefPrimitiveI('\@text@medmuskip', undef, "", alias => '\>');
 
-  DefPrimitive!("\\;", sub[stomach, args, state] {
+  DefPrimitive!("\\;", sub[stomach, (), state] {
     Tbox::new("\u{2004}".to_string(), None, None, Tokens!(T_CS!("\\;")),
       stored_map!("name"  => "thickspace", "isSpace" => true,
       "width" => state.lookup_value("\\thickmuskip")), state)

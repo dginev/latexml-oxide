@@ -32,8 +32,9 @@ pub struct Stomach {
 }
 
 impl Object for Stomach {
+  fn get_location(&self) -> String { self.get_gullet().get_location() }
   fn get_locator(&self) -> Option<Cow<Locator>> { self.get_gullet().get_locator() }
-  fn stringify(&self) -> String { String::from("TODO Stomach") }
+  fn stringify(&self) -> String { unimplemented!() }
 }
 
 impl<'t> Stomach {

@@ -59,8 +59,7 @@ LoadDefinitions!(state, {
     r"\lx@note@caption@label{#4}\@hack@caption@{#1}{#2}{#3\label{#4}#5}\label#6\endcaption"
   );
 
-  DefPrimitive!("\\lx@note@caption@label{}", sub[stomach,args,state] {
-    unpack!(args => label);
+  DefPrimitive!("\\lx@note@caption@label{}", sub[stomach,(label),state] {
     let label = label.to_string();
     maybe_note_label(&label, state); });
 
@@ -70,7 +69,7 @@ LoadDefinitions!(state, {
   );
 
   // Note that the counters only get incremented by \caption, NOT by \table, \figure, etc.
-  DefPrimitive!("\\@@add@caption@counters", sub[stomach, args, state] {
+  DefPrimitive!("\\@@add@caption@counters", sub[stomach, (), state] {
     let captype = stomach.digest(T_CS!("\\@captype"), state)?.to_string();
     let props   = ref_step_counter(&captype, false, stomach, state)?;
     let inlist  = stomach.digest(T_CS!(s!("\\ext@{}", captype)), state)?.to_string();

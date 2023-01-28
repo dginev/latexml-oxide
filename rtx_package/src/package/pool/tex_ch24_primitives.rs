@@ -21,7 +21,7 @@ LoadDefinitions!(state, {
 
   // These are actually TeX primitives, but we treat them as a Whatsit so they
   // remain in the constructed tree.
-  DefPrimitive!("{", sub[stomach, args, state] {
+  DefPrimitive!("{", sub[stomach, (), state] {
     stomach.bgroup(state);
     let open = Tbox::new(String::new(), None, None, Tokens!(T_BEGIN!()), HashMap::new(), state);
     let mode = if LookupBool!("IN_MATH") {
@@ -43,7 +43,7 @@ LoadDefinitions!(state, {
 
   DefPrimitive!(
     "}",
-    sub[stomach, args, state] {
+    sub[stomach, (), state] {
       let f = LookupFont!();
       stomach.egroup(state)?;
       Tbox::new(String::new(), f, None, Tokens!(T_END!()), HashMap::new(), state)
@@ -67,11 +67,11 @@ LoadDefinitions!(state, {
   );
 
   DefPrimitive!(
-  "\\begingroup", sub[stomach, _args, state] {
+  "\\begingroup", sub[stomach, (), state] {
     stomach.begingroup(state);
   });
   DefPrimitive!(
-  "\\endgroup", sub[stomach, _args, state] {
+  "\\endgroup", sub[stomach, (), state] {
     stomach.endgroup(state)?;
   });
 
@@ -84,7 +84,7 @@ LoadDefinitions!(state, {
   // DefPrimitive('\shipout ??
   DefPrimitive!("\\ignorespaces SkipSpaces", None);
 
-  DefPrimitive!("\\lx@ignorehardspaces", sub[stomach, whatsit, state] {
+  DefPrimitive!("\\lx@ignorehardspaces", sub[stomach, (), state] {
     let mut boxes = Vec::new();
     while let Some(token) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
       boxes = stomach.invoke_token(&token, state)?;
@@ -117,13 +117,11 @@ LoadDefinitions!(state, {
   });
 
   // \afterassignment saves ONE token (globally!) to execute after the next assignment
-  DefPrimitive!("\\afterassignment Token", sub[stomach, args, state] {
-    unpack_to_token!(args => t);
+  DefPrimitive!("\\afterassignment Token", sub[stomach, (t), state] {
     state.assign_value("afterAssignment", t, Some(Scope::Global));
   });
   // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next egroup or }
-  DefPrimitive!("\\aftergroup Token", sub[stomach, args, state] {
-    unpack_to_token!(args => t);
+  DefPrimitive!("\\aftergroup Token", sub[stomach, (t), state] {
     state.push_value("afterGroup", t);
   });
 
@@ -146,8 +144,7 @@ LoadDefinitions!(state, {
   //     my ($gullet, $tokens) = @_;
   //     return map { lcToken($_) } $tokens->unlist; });
 
-  DefPrimitive!("\\message{}", sub [stomach, args, state] {
-    unpack!(args => message);
+  DefPrimitive!("\\message{}", sub [stomach, (message), state] {
     if state.lookup_int("VERBOSITY") > -1 {
       eprintln!("{}", writable_tokens(
         do_expand(message, stomach.get_gullet_mut(), state)?, state)?);
@@ -161,8 +158,8 @@ LoadDefinitions!(state, {
   // T_CS('\errhelp')))) . "\n";     return; });
 
   // TeX I/O primitives
-  DefPrimitive!("\\openin Number SkipMatch:= SkipSpaces TeXFileName", sub[stomach, args, state] {
-    unpack!(args => port, filename);
+  DefPrimitive!("\\openin Number SkipMatch:= SkipSpaces TeXFileName",
+  sub[stomach, (port, filename), state] {
     let port = port.to_string();
     let filename = filename.to_string();
     // possibly should close $port if it's already been opened?
@@ -182,9 +179,7 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefPrimitive!("\\closein Number", sub[stomach, args, state] {
-    unpack!(args => port);
-    let port = port.to_number();
+  DefPrimitive!("\\closein Number", sub[stomach, (port), state] {
     // Clone the Rc<> for mouth out of state, since we'll be mutating.
     let mouth_opt = if let Some(Stored::Mouth(ref mouth)) = LookupValue!(&s!("input_file:{}", port)) {
       Some(Arc::clone(mouth))
@@ -198,10 +193,7 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token", sub[stomach, args, state] {
-    unpack!(args => port, token);
-    let token: Token = token.into(); // downcast from Tokens
-    let port = port.to_number();
+  DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token", sub[stomach, (port, token), state] {
     if let Some(Stored::Mouth(mouth_stored)) = state.lookup_value(&s!("input_file:{}",port)) {
       let mouth_obj = Arc::clone(mouth_stored);
       stomach.bgroup(state);
@@ -240,8 +232,7 @@ LoadDefinitions!(state, {
 
   // For output files, we'll write the data to a cached internal copy
   // rather than to the actual file system.
-  DefPrimitive!("\\openout Number SkipMatch:= SkipSpaces TeXFileName", sub[stomach, args, state] {
-    unpack!(args => port, filename);
+  DefPrimitive!("\\openout Number SkipMatch:= SkipSpaces TeXFileName", sub[stomach, (port, filename), state] {
     let port = port.to_string();
     let filename = filename.to_string();
     let contents_key = &s!("{}_contents",filename);
@@ -249,14 +240,11 @@ LoadDefinitions!(state, {
     AssignValue!(contents_key => "",  Some(Scope::Global));
   });
 
-  DefPrimitive!("\\closeout Number", sub[stomach, args, state] {
-    unpack!(args => port);
+  DefPrimitive!("\\closeout Number", sub[stomach, (port), state] {
     AssignValue!(&s!("output_file:{}",port), false, Some(Scope::Global));
   });
 
-  DefPrimitive!("\\write Number {}", sub[stomach, args, state] {
-    unpack!(args => port, tokens);
-    let port = port.to_number();
+  DefPrimitive!("\\write Number {}", sub[stomach, (port, tokens), state] {
     if let Some(filename) = LookupValue!(&s!("output_file:{}", port)) {
       let handle   = s!("{}_contents",filename);
       let mut contents : String = LookupString!(&handle);
@@ -303,8 +291,7 @@ LoadDefinitions!(state, {
     "\\LTX@clear@vadjust@afterpar",
     "\\def\\LTX@vadjust@afterpar{\\def\\LTX@vadjust@afterpar{}}"
   );
-  DefPrimitive!("\\vadjust {}", sub[stomach,args,state] {
-    unpack!(args=>arg);
+  DefPrimitive!("\\vadjust {}", sub[stomach,(arg),state] {
     state.push_tokens("vAdjust", arg);
   });
 
