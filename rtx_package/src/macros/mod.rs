@@ -16,12 +16,23 @@ macro_rules! compile_replacement {
 #[macro_export]
 /// Macro for compiling string binding prototypes into closures
 /// Approach borrowed from diesel-codegen
-macro_rules! compile_prototype {
+macro_rules! compile_prototype_for_typed_macro {
   ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {{
-    #[derive(CompilePrototype)]
+    #[derive(CompilePrototypeForTypedMacro)]
     #[prototype=$prototype]
     struct _DummyP;
     this_prototype!(sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*);
+  }};
+}
+
+#[macro_export]
+/// Macro for compiling string literal prototypes into a Token and Parameters structs
+macro_rules! compile_prototype {
+  ($prototype:literal) => {{
+    #[derive(CompilePrototype)]
+    #[prototype=$prototype]
+    struct _DummyPR;
+    this_cs_and_parameters!()
   }};
 }
 

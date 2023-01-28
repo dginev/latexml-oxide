@@ -4,10 +4,5 @@ use rtx_package::*;
 // More to be done: so far this is the only variant that has been implemented (and only in DefMacro)
 
 LoadDefinitions!(state, {
-  DefMacro!("\\sampler Number Token Dimension",
-    sub[gullet, (number, token, dimension), _state] {
-      number.value_of();
-      dbg!(token);
-      dbg!(dimension);
-    });
+  DefMacro!("\\thanks{}", "\\def\\@thanks{#1}\\lx@make@thanks{#1}");
 });
