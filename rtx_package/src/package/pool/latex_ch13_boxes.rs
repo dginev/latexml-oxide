@@ -25,8 +25,7 @@ LoadDefinitions!(state, {
   // \fill
   DefMacro!("\\stretch{}", "0pt plus #1fill\\relax");
 
-  DefPrimitive!("\\@check@length DefToken", sub[stomach, args, state] {
-    unpack_to_token!(args => cs);
+  DefPrimitive!("\\@check@length DefToken", sub[stomach, (cs), state] {
     match state.lookup_definition(&cs) {
       None => {
         let message = s!("'{}' is not a length; defining it now", cs.stringify());
@@ -40,8 +39,7 @@ LoadDefinitions!(state, {
     };
   });
 
-  DefPrimitive!("\\newlength DefToken", sub[stomach, args, inner_state] {
-    unpack_to_token!(args => cs);
+  DefPrimitive!("\\newlength DefToken", sub[stomach, (cs), inner_state] {
     DefRegister!(cs, None, Glue::new(0));
     Ok(vec![])
   });
@@ -61,24 +59,19 @@ LoadDefinitions!(state, {
 
   // Assuming noone tries to get clever with figuring out the allocation of
   // numbers, these become simple DefRegister's
-  DefPrimitive!("\\newcount Token", sub[stomach, args, state] {
-    unpack_to_token!(args => name);
+  DefPrimitive!("\\newcount Token", sub[stomach, (name), state] {
     DefRegister!(name, None, Number::new(0));
   });
-  DefPrimitive!("\\newdimen Token", sub[stomach, args, state] {
-    unpack_to_token!(args => name);
+  DefPrimitive!("\\newdimen Token", sub[stomach, (name), state] {
     DefRegister!(name, None, Dimension::new(0));
   });
-  DefPrimitive!("\\newskip Token", sub[stomach, args, state] {
-    unpack_to_token!(args => name);
+  DefPrimitive!("\\newskip Token", sub[stomach, (name), state] {
     DefRegister!(name, None, Glue::new(0));
   });
-  DefPrimitive!("\\newmuskip Token", sub[stomach, args, state] {
-    unpack_to_token!(args => name);
+  DefPrimitive!("\\newmuskip Token", sub[stomach, (name), state] {
     DefRegister!(name, None, MuGlue::new(0));
   });
-  DefPrimitive!("\\newtoks Token", sub[stomach, args, state] {
-    unpack_to_token!(args => name);
+  DefPrimitive!("\\newtoks Token", sub[stomach, (name), state] {
     DefRegister!(name, None, Tokens!());
   });
 

@@ -14,14 +14,27 @@ macro_rules! compile_replacement {
 }
 
 #[macro_export]
-/// Macro for compiling string binding prototypes into closures
+/// Macro for compiling string binding prototypes into Expandable closures
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_prototype_for_typed_macro {
-  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {{
-    #[derive(CompilePrototypeForTypedMacro)]
+  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block $($input:tt)*) => {{
+    #[derive(CompilePrototypeFor)]
     #[prototype=$prototype]
+    #[inner="TypedMacro"]
     struct _DummyP;
-    this_prototype!(sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*);
+    this_prototype!(sub [ $gullet, ( $($var),* ), $inner_state ] $body $($input)*);
+  }};
+}
+
+#[macro_export]
+/// Macro for compiling string binding prototypes into Primitive closures
+macro_rules! compile_prototype_for_typed_primitive {
+  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block $($input:tt)*) => {{
+    #[derive(CompilePrototypeFor)]
+    #[prototype=$prototype]
+    #[inner="TypedPrimitive"]
+    struct _DummyP;
+    this_prototype!(sub [ $gullet, ( $($var),* ), $inner_state ] $body $($input)*);
   }};
 }
 
@@ -110,10 +123,18 @@ macro_rules! compile_tokenize_internal {
 macro_rules! parameter_rust_type {
   (GeneralText) => {Tokens};
   (Semiverbatim) => {Tokens};
+  (UntilBrace) => {Tokens};
+  (TeXFileName) => {Tokens};
+  (DefPlain) => {Tokens};
+  (DefExpanded) => {Tokens};
   (Plain) => {Tokens};
   (Optional) => {Option<Tokens>};
   (OptionalMatch) => {Option<Tokens>};
   (DefToken) => {Token};
   (CSName) => {Token};
+  // For now return the raw Tokens for KeyVals, until we figure out how to
+  // do TryInto with access to the current "State" object.
+  (OptionalKeyVals) => {Tokens};
+  (KeyVals) => {KeyVals};
   ($other:ident) => {$other};
 }

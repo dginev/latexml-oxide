@@ -102,5 +102,5 @@ LoadDefinitions!(state, {
   });
 
   // \dump ???
-  DefPrimitive!("\\end", sub[stomach, args, state] { stomach.get_gullet_mut().flush(state); });
+  DefPrimitive!("\\end", sub[stomach, (), state] { stomach.get_gullet_mut().flush(state); });
 });

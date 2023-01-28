@@ -140,8 +140,7 @@ LoadDefinitions!(outer_state, {
 
   DefMacro!("\\fontencoding{}", "\\@@@fontencoding{#1}");
 
-  DefPrimitive!("\\@@@fontencoding{}", sub[stomach, args, state] {
-    unpack_to_token!(args => encoding);
+  DefPrimitive!("\\@@@fontencoding{}", sub[stomach, (encoding), state] {
     let gullet = stomach.get_gullet_mut();
     let encoding = Expand!(encoding, gullet).to_string();
     if LoadFontMap!(&encoding).is_some() {
@@ -438,8 +437,7 @@ LoadDefinitions!(outer_state, {
   });
 
   // Almost like a register, but different...
-  DefPrimitive!("\\chardef Token SkipMatch:=", sub[stomach, args, state] {
-    unpack_to_token!(args => newcs);
+  DefPrimitive!("\\chardef Token SkipMatch:=", sub[stomach, (newcs), state] {
     state.assign_meaning(&newcs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(), None); // Let w/o AfterAssignment
     let value = stomach.get_gullet_mut().read_number(state)?;
     let csname = newcs.get_cs_name().to_owned();
@@ -480,8 +478,7 @@ LoadDefinitions!(outer_state, {
   );
 
   // Almost like a register, but different...
-  DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[stomach, args, state] {
-    unpack_to_token!(args => newcs);
+  DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[stomach, (newcs), state] {
     state.assign_meaning(&newcs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(), None);// Let w/o AfterAssignment
     let value  = stomach.get_gullet_mut().read_number(state).unwrap();
     let csname = newcs.get_cs_name().to_owned();

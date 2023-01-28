@@ -9,8 +9,7 @@ LoadDefinitions!(state, {
 
   // \setbox<number>=\hbox to <dimen>{<horizontal mode material>}
 
-  DefPrimitive!("\\setbox Number SkipMatch:=", sub[stomach, args, state] {
-    unpack_to_number!(args => number);
+  DefPrimitive!("\\setbox Number SkipMatch:=", sub[stomach, (number), state] {
     let tbox = s!("box{}", number.value_of() as u8);
     // If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
     if let Some(after_token) = state.remove_value("afterAssignment") {
@@ -35,8 +34,7 @@ LoadDefinitions!(state, {
     rest
   });
 
-  DefPrimitive!("\\box Number", sub[gullet, args, state] {
-    unpack_to_number!(args => number);
+  DefPrimitive!("\\box Number", sub[gullet, (number), state] {
     let box_key = s!("box{}", number.value_of() as u8);
     if let Some(Stored::Digested(stuff)) = state.remove_value(&box_key) {
       Ok(vec![*stuff])
@@ -45,8 +43,7 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefPrimitive!("\\copy Number", sub[stomach, args, state] {
-    unpack_to_number!(args => number);
+  DefPrimitive!("\\copy Number", sub[stomach, (number), state] {
     let box_key = s!("box{}", number.value_of() as u8);
     if let Some(Stored::Digested(stuff)) = state.lookup_value(&box_key) {
       let cloned_stuff : Digested = (**stuff).clone();

@@ -38,9 +38,9 @@ LoadDefinitions!(outer_state, {
   DefMacro!("\\fontshape{}", "\\edef\\f@shape{#1}");
 
   // For fonts not allowed in math!!!
-  DefPrimitive!("\\not@math@alphabet@@ {}", sub[stomach, args, inner_state] {
+  DefPrimitive!("\\not@math@alphabet@@ {}", sub[stomach, (c), inner_state] {
     if inner_state.lookup_bool("IN_MATH") {
-      let c = args[0].to_string();
+      let c = c.to_string();
       let message = s!("Command {:?} invalid in math mode", c);
       Warn!("unexpected", c, stomach, inner_state, message);
     }
@@ -71,7 +71,7 @@ LoadDefinitions!(outer_state, {
 
   Let!("\\reset@font", "\\normalfont");
 
-  DefPrimitive!("\\selectfont", sub[stomach, args, inner_state] {
+  DefPrimitive!("\\selectfont", sub[stomach, (), inner_state] {
     let mut gullet = stomach.get_gullet_mut();
     let family = Expand!(T_CS!("\\f@family"), gullet).to_string();
     let series = Expand!(T_CS!("\\f@series"),gullet).to_string();

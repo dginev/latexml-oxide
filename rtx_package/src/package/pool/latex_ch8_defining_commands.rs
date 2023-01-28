@@ -10,16 +10,8 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
 
-  DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, args, state] {
-    let star = args.remove(0);
-    let cs = args.remove(0);
-    let nargs_opt = args.remove(0);
-    let opt = args.remove(0);
-    let body = args.remove(0);
-    let cs_token: Token = cs.try_to_token()?;
-    let nargs = if nargs_opt.is_empty() { 0 } else {
-      nargs_opt.unlist().first().unwrap().to_number().value_of() as usize
-    };
+  DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, (star,cs_token,nargs,opt,body), state] {
+    let nargs = nargs.value_of() as usize;
     if !IsDefinable!(&cs_token) {
       if !state.has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
         let message = s!("Ignoring redefinition (\\newcommand) of {}", cs_token.stringify());
@@ -27,19 +19,17 @@ LoadDefinitions!(state, {
       }
       return Ok(vec![]);
     }
-    let macro_args = convert_latex_args(nargs, opt.owned_tokens(), state)?;
+    let macro_args = convert_latex_args(nargs, opt, state)?;
     DefMacro!(cs_token, macro_args, body);
   });
 
-  DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, args, state] {
-    unpack!(args => star, cs, nargs_opt, opt, body);
-    let cs_token: Token = cs.into();
-    let nargs = if nargs_opt.is_empty() { 0 } else {
-      nargs_opt.unlist().first().unwrap().to_number().value_of() as usize
-    };
-    let opt = if opt.is_empty() { None } else { Some(opt) };
+  DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, (star, cs, nargs_num, opt, body), state] {
+    let nargs = nargs_num.value_of() as usize;
+    let opt = if let Some(ref opt_content) = opt {
+      if opt_content.is_empty() { None } else { opt }
+    } else { opt };
     let macro_args = convert_latex_args(nargs, opt, state)?;
-    DefMacro!(cs_token, macro_args, body);
+    DefMacro!(cs, macro_args, body);
   });
 
   // low-level implementation of both \newcommand and \renewcommand depends on \@argdef
@@ -51,37 +41,36 @@ LoadDefinitions!(state, {
   // The etoolbox binding now defines \newrobustcmd & friends directly, so \@argdef is not directly needed
   // However, we would need to add support for other packages that may leverage that machinery.
 
-  DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, args, state] {
-    unpack!(args => star, cs, nargs, opt, body);
+  DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, (star, cs, nargs, opt, body), state] {
     // TODO: Consider if we should just treat the empty tokens directly in convert_latex_args ?
-    let opts = if opt.is_empty() { None } else { Some(opt)};
-    let cs : Token = cs.into();
+    let opt_checked = if let Some(ref opt_content) = opt {
+      if opt_content.is_empty() {
+        None
+      } else { opt }
+    } else { opt };
     if IsDefinable!(&cs) {
-      let nargs = nargs.to_number().value_of() as usize;
-      let cs_args = convert_latex_args(nargs, opts, state)?;
+      let nargs = nargs.value_of() as usize;
+      let cs_args = convert_latex_args(nargs, opt_checked, state)?;
       DefMacro!(cs, cs_args, body);
     }
   });
 
   // Crazy; define \cs in terms of \cs[space] !!!
-  DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, args, state] {
-    unpack!(args => star,cs,nargs,opt,body);
-    let cs:Token = cs.into();
-    let opts = if opt.is_empty() {
-      None
-    } else {
-      Some(opt)
-    };
-    let nargs = nargs.to_number().value_of() as usize;
+  DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, (star,cs,nargs,opt,body), state] {
+    let opt_checked = if let Some(ref opt_content) = opt {
+      if opt_content.is_empty() {
+        None
+      } else { opt }
+    } else { opt };
+    let nargs = nargs.value_of() as usize;
     let mungedcs = T_CS!(s!("{} ", cs.get_string()));
     let mungedcs2 = mungedcs.clone();
-    let cs_args = convert_latex_args(nargs, opts, state)?;
+    let cs_args = convert_latex_args(nargs, opt_checked, state)?;
     DefMacro!(mungedcs, cs_args, body);
     DefMacro!(cs, None, Tokens!(T_CS!("\\protect"), mungedcs2));
   });
 
-  DefPrimitive!("\\MakeRobust DefToken", sub[stomach, args, state] {
-    unpack_to_token!(args => cs);
+  DefPrimitive!("\\MakeRobust DefToken", sub[stomach, (cs), state] {
     let mungedcs = T_CS!(s!("{} ",cs.get_string()));
     // only if defined but not yet robust
     if LookupDefinition!(&cs).is_some() &&
@@ -99,16 +88,9 @@ LoadDefinitions!(state, {
   // It may be that we've already defined it to expand into the above conditional.
   // But more importantly, we don't want to override a hand-written definition (if any).
   //------------------------------------------------------------
-  DefPrimitive!("\\DeclareTextCommand DefToken {}[Number][]{}", sub[stomach, args, state] {
-    unpack!(args => cs, encoding, nargs, opt, expansion);
-    let cs : Token = cs.into();
+  DefPrimitive!("\\DeclareTextCommand DefToken {}[Number][]{}", sub[stomach, (cs, encoding, nargs, opts, expansion), state] {
     let cs_str = cs.to_string();
-    let opts = if opt.is_empty() {
-      None
-    } else {
-      Some(opt)
-    };
-    let nargs = nargs.to_number().value_of() as usize;
+    let nargs = nargs.value_of() as usize;
     let gullet = stomach.get_gullet_mut();
     let encoding = Expand!(encoding, gullet, state);
     if !IsDefined!(&cs) {    // If not already defined...
@@ -124,16 +106,9 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\DeclareTextCommandDefault DefToken", "\\DeclareTextCommand{#1}{?}");
 
-  DefPrimitive!("\\ProvideTextCommand DefToken {}[Number][]{}", sub[gullet, args, state] {
-    unpack!(args => cs, encoding, nargs, opt, expansion);
-    let cs : Token = cs.into();
+  DefPrimitive!("\\ProvideTextCommand DefToken {}[Number][]{}", sub[gullet, (cs, encoding, nargs, opts, expansion), state] {
     let cs_str = cs.to_string();
-    let opts = if opt.is_empty() {
-      None
-    } else {
-      Some(opt)
-    };
-    let nargs = nargs.to_number().value_of() as usize;
+    let nargs = nargs.value_of() as usize;
     if IsDefinable!(&cs) { // If not already defined...
       DefMacro!(cs, None, Some(s!(r#"""
         \expandafter\ifx\csname\cf@encoding\string{}\endcsname\relax\csname?\string{}\endcsname
@@ -151,8 +126,7 @@ LoadDefinitions!(state, {
 
   // #------------------------------------------------------------
 
-  DefPrimitive!("\\DeclareTextSymbol DefToken {}{Number}", sub[stomach, args, state] {
-    unpack_to_token!(args => cs, encoding, code);
+  DefPrimitive!("\\DeclareTextSymbol DefToken {}{Number}", sub[stomach, (cs, encoding, code), state] {
     // TODO:
     //     $code = $code->valueOf;
     //     my $css = ToString($cs);
@@ -200,8 +174,7 @@ LoadDefinitions!(state, {
   // The next font declaration commands are based on
   // http://tex.loria.fr/general/new/fntguide.html
   // we ignore font encoding
-  DefPrimitive!("\\DeclareSymbolFont{}{}{}{}{}", sub[stomach, args, state] {
-    unpack!(args => name, enc, family, series, shape);
+  DefPrimitive!("\\DeclareSymbolFont{}{}{}{}{}", sub[stomach, (name, enc, family, series, shape), state] {
     AssignValue!(&s!("fontdeclaration@{}", name),
       fontmap!(family => family.to_string(),
         series   => series.to_string(),
@@ -210,8 +183,7 @@ LoadDefinitions!(state, {
       )
     );
   });
-  DefPrimitive!("\\DeclareSymbolFontAlphabet{}{}", sub[stomach, args, state] {
-    unpack_to_token!(args => cs, name);
+  DefPrimitive!("\\DeclareSymbolFontAlphabet {Token} {}", sub[stomach, (cs, name), state] {
     let fontkey = s!("fontdeclarations@{}", name.to_string());
     let font : Option<Font> = if let Some(Stored::Font(value)) = LookupValue!(&fontkey) {
       Some((**value).clone())
@@ -226,8 +198,7 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\cdp@list", "\\@empty");
   Let!("\\cdp@elt", "\\relax");
-  DefPrimitive!("\\DeclareFontEncoding{}{}{}", sub[stomach, args, state] {
-    unpack_to_token!(args => encoding, x, y);
+  DefPrimitive!("\\DeclareFontEncoding{}{}{}", sub[stomach, (encoding, x, y), state] {
     // TODO:
     // AddToMacro!(T_CS!("\\cdp@list"), T_CS!("\\cdp@elt"),
     //   T_BEGIN!(), encoding.unlist(), T_END,

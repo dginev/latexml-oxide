@@ -33,17 +33,13 @@ fn set_input_encoding(encoding: &str, stomach: &mut Stomach, state: &mut State) 
 
 LoadDefinitions!(outer_stomach, state, {
   //**********************************************************************
-  DefPrimitive!("\\DeclareInputMath {Number} {}", sub[stomach, args, state] {
-    unpack_to_number!(args => code);
-    unpack_to_token!(args => expansion);
+  DefPrimitive!("\\DeclareInputMath {Number} {}", sub[stomach, (code,expansion), state] {
     let ch = code.value_of() as u8 as char;
     AssignCatcode!(ch, Catcode::ACTIVE);
     DefMacro!(T_ACTIVE!(ch), None, expansion);
   });
 
-  DefPrimitive!("\\DeclareInputText {Number} {}", sub[stomach, args, state] {
-    unpack_to_number!(args => code);
-    unpack_to_token!(args => expansion);
+  DefPrimitive!("\\DeclareInputText {Number} {}", sub[stomach, (code, expansion), state] {
     let ch = code.value_of() as u8 as char;
     AssignCatcode!(ch, Catcode::ACTIVE);
     DefMacro!(T_ACTIVE!(ch), None, expansion);
@@ -51,13 +47,12 @@ LoadDefinitions!(outer_stomach, state, {
 
   DefMacro!("\\IeC{}", "#1");
 
-  DefMacro!("\\@inpenc@undefined", sub[gullet, args, state] {
+  DefMacro!("\\@inpenc@undefined", sub[gullet, (), state] {
     let message = s!("Keyboard character used is undefined in inputencoding {}", state.input_encoding.as_ref().unwrap());
     Error!("unexpected", "<char>", gullet, state, message);
   });
 
-  DefPrimitive!("\\inputencoding{}", sub[stomach, args, state] {
-    unpack!(args => encoding);
+  DefPrimitive!("\\inputencoding{}", sub[stomach, (encoding), state] {
     let gullet = stomach.get_gullet_mut();
     set_input_encoding(&Expand!(encoding, gullet).to_string(), stomach, state)?;
   });

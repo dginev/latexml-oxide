@@ -87,7 +87,7 @@ LoadDefinitions!(outer_state, {
     before_construct => sub[document, whatsit, state] { document.maybe_close_element("ltx:p", state)?; }
   );
 
-  DefPrimitive!("\\@vobeyspaces", sub[stomach, args, state] {
+  DefPrimitive!("\\@vobeyspaces", sub[stomach, (), state] {
     AssignCatcode!(' ', Catcode::ACTIVE);
     Let!(&T_ACTIVE!(" "), T_CS!("\\nobreakspace"));
   });
@@ -136,7 +136,7 @@ LoadDefinitions!(outer_state, {
     }
   });
 
-  DefPrimitive!("\\lx@use@visiblespace", sub[stomach, args, state] {
+  DefPrimitive!("\\lx@use@visiblespace", sub[stomach, (), state] {
     state.assign_catcode(' ', Catcode::ACTIVE, None); // Do NOT (necessarily) skip spaces after \verb!!!
     Let!(&T_ACTIVE!(" "), T_OTHER!("\u{2423}")); // Visible space
   });

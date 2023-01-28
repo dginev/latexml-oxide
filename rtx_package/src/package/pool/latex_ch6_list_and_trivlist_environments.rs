@@ -8,8 +8,7 @@ LoadDefinitions!(state, {
 
   DefConditional!("\\if@nmbrlist");
   DefMacro!("\\@listctr", "");
-  DefPrimitive!("\\usecounter{}", sub[stomach, args, state] {
-    unpack!(args => counter);
+  DefPrimitive!("\\usecounter{}", sub[stomach, (counter), state] {
     let gullet = stomach.get_gullet_mut();
     let counter = Expand!(counter, gullet, state).to_string();
     if counter.is_empty() {

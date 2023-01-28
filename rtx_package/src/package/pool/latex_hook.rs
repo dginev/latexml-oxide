@@ -41,7 +41,7 @@ LoadDefinitions!(state, {
     DefMacro!(T_CS!(ltxtrigger), None, { Tokens!(T_CS!("\\@load@latex@pool"), T_CS!(ltxtrigger)) });
   }
 
-  DefPrimitive!("\\@load@latex@pool", sub[stomach, args, state] {
+  DefPrimitive!("\\@load@latex@pool", sub[stomach, (), state] {
     input_definitions(
       "LaTeX",
       InputDefinitionOptions {
