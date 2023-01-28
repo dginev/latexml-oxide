@@ -93,8 +93,8 @@ pub struct Parameter {
   pub semiverbatim: Option<Vec<char>>,
   pub optional: bool,
   pub pack_parameters: bool,
-  pub name: String,
-  pub spec: String,
+  pub name: Cow<'static, str>,
+  pub spec: Cow<'static, str>,
   pub extra: Vec<ParameterExtra>,
   pub reader: ReaderClosure,
   pub reader_predigest: Option<ReaderPredigestClosure>,
@@ -109,8 +109,8 @@ impl Default for Parameter {
       semiverbatim: None,
       optional: false,
       pack_parameters: false,
-      name: s!("parameter_default"),
-      spec: String::new(),
+      name: Cow::Borrowed("parameter_default"),
+      spec: Cow::Borrowed(""),
       extra: Vec::new(),
       reader: Arc::new(|_gullet, _args, _extra, _state| {
         Warn!(
@@ -166,10 +166,10 @@ lazy_static! {
 }
 
 impl Parameter {
-  pub fn new(name: &str, spec: &str, state: &mut State) -> Result<Self> {
+  pub fn new(name: Cow<'static, str>, spec: Cow<'static, str>, state: &mut State) -> Result<Self> {
     Parameter {
-      name: name.to_string(),
-      spec: spec.to_string(),
+      name,
+      spec,
       ..Parameter::default()
     }
     .init(state)
@@ -539,13 +539,19 @@ impl ToTokens for Parameters {
 
 impl ToTokens for Parameter {
   fn to_tokens(&self, stream: &mut TokenStream) {
-    let name = &self.name;
-    let spec = &self.spec;
+    let name = match &self.name {
+      Cow::Borrowed(v) => quote!(Cow::Borrowed(#v)),
+      Cow::Owned(v) => quote!(Cow::Borrowed(#v)),
+    };
+    let spec = match &self.spec {
+      Cow::Borrowed(v) => quote!(Cow::Borrowed(#v)),
+      Cow::Owned(v) => quote!(Cow::Borrowed(#v)),
+    };
     let extra = &self.extra;
     stream.extend(quote! {
       Parameter {
-        name: String::from(#name),
-        spec: String::from(#spec),
+        name: #name,
+        spec: #spec,
         extra: <[ParameterExtra]>::into_vec(Box::new([ #(#extra),* ])),
         ..Parameter::default()
       }

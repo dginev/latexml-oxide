@@ -72,8 +72,8 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
         parse_parameters(inner_spec.to_string(), cs, state_opt.as_deref_mut())?
       };
       let mut p = Parameter {
-        name: s!("Plain"),
-        spec: spec.to_string(),
+        name: Cow::Borrowed("Plain"),
+        spec: if spec.is_empty() { Cow::Borrowed("") } else { Cow::Owned(spec.to_string()) },
         extra: vec![inner.into()],
         ..Parameter::default()
       };
@@ -89,8 +89,8 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
       if let Some(default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
         // TODO: Add the defaults !
         let mut p = Parameter {
-          name: s!("Optional"),
-          spec: spec.to_string(),
+          name: Cow::Borrowed("Optional"),
+          spec: if spec.is_empty() { Cow::Borrowed("") } else { Cow::Owned(spec.to_string()) },
           // extra: vec![TokenizeInternal!(default_captures.get(0).map_or("", |m| m.as_str())), None]});
           extra: Vec::new(),
           ..Parameter::default()
@@ -101,8 +101,8 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
         parameters.push(p);
       } else if !inner_spec.is_empty() {
         let mut p = Parameter {
-          name: s!("Optional"),
-          spec: spec.to_string(),
+          name: Cow::Borrowed("Optional"),
+          spec: if spec.is_empty() { Cow::Borrowed("") } else { Cow::Owned(spec.to_string()) },
           extra: vec![
             ParameterExtra::ParametersOption(None),
             parse_parameters(inner_spec.to_string(), cs, state_opt.as_deref_mut())?.into(),
@@ -115,8 +115,8 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
         parameters.push(p);
       } else {
         let mut p = Parameter {
-          name: s!("Optional"),
-          spec: spec.to_string(),
+          name: Cow::Borrowed("Optional"),
+          spec: Cow::Owned(spec.to_string()),
           extra: Vec::new(),
           ..Parameter::default()
         };
@@ -137,8 +137,8 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
         .map(Into::into)
         .collect::<Vec<ParameterExtra>>();
       let mut p = Parameter {
-        name,
-        spec,
+        name: name.into(),
+        spec: spec.into(),
         extra,
         ..Parameter::default()
       };

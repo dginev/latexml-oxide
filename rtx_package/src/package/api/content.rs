@@ -916,8 +916,8 @@ pub fn convert_latex_args(mut nargs: usize, optional: Option<Tokens>, state: &mu
   if let Some(tks) = optional {
     params.push(
       Parameter {
-        name: s!("Optional"),
-        spec: s!("[Default:{}]", tks.untex(state)),
+        name: Cow::Borrowed("Optional"),
+        spec: Cow::Owned(s!("[Default:{}]", tks.untex(state))),
         extra: vec![ParameterExtra::Tokens(tks), ParameterExtra::ParametersOption(None)],
         ..Parameter::default()
       }
@@ -929,8 +929,8 @@ pub fn convert_latex_args(mut nargs: usize, optional: Option<Tokens>, state: &mu
   for _ in 1..=nargs {
     params.push(
       Parameter {
-        name: s!("Plain"),
-        spec: "{}".to_string(),
+        name: Cow::Borrowed("Plain"),
+        spec: Cow::Borrowed("{}"),
         ..Parameter::default()
       }
       .init(state)?,

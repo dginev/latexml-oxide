@@ -1621,7 +1621,7 @@ macro_rules! TypedMacroWO {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let parameters = vec![
     $(Parameter {
-        name: String::from(stringify!($ptype)),
+        name: Cow::Borrowed(stringify!($ptype)),
         ..Parameter::default()
       }
       .init(outer_state!())? ),+
@@ -1776,18 +1776,18 @@ macro_rules! DefParameterType {
   ($name:ident) => (DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name).to_string())));
   ($name:ident, $state_arg:ident) => (DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name.to_string())), $state_arg));
   ($name:ident, $($key:ident => $value:expr),*)=>(
-    DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name).to_string(), $($key=>$value),*)));
+    DefParameterTypeWO!($name, NewDefault!(Parameter, name => Cow::Borrowed(stringify!($name)), $($key=>$value),*)));
   ($name:ident, $($key:ident => $value:expr),*, $state_arg:ident)=>
-    (DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name.to_string()), $($key=>$value),*), $state_arg));
+    (DefParameterTypeWO!($name, NewDefault!(Parameter, name => Cow::Borrowed(stringify!($name)), $($key=>$value),*), $state_arg));
   // with reader as explicit sub
   ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block) => (
     DefParameterTypeWO!($name, NewDefault!(Parameter, reader => reader!($gullet, $inner, $extra, $inner_state, $body))));
   ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block, $($key:ident => $value:expr),*) => (
     DefParameterTypeWO!($name, NewDefault!(Parameter, reader => reader!($gullet, $inner, $extra, $inner_state, $body),
-      name => stringify!($name).to_string(),  $($key=>$value),*)));
+      name => Cow::Borrowed(stringify!($name)),  $($key=>$value),*)));
   ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block, $($key:ident => $value:expr),*) => (
     DefParameterTypeWO!($name, NewDefault!(Parameter, reader => reader!($gullet, $inner, $extra, $inner_state, $body),
-      name => $name.to_string(),  $($key=>$value),*), $state_arg));
+      name => Cow::Borrowed($name),  $($key=>$value),*), $state_arg));
 }
 
 // Reverts an object into TeX code, as a Tokens list, that would create it.
