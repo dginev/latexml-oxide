@@ -710,17 +710,33 @@ macro_rules! defi_constr {
   };
 }
 
-/// Internal auxiliary, taking a prototype string (possibly through a variable) and
-/// invoking the state
+/// A macro that uses rtx_codegen to expand a prototype at compile time,
+/// and initialize all parameters with the in-scope state at runtime.
+/// Returns a (cs, parameters) pair.
 #[macro_export]
 macro_rules! parse_prototype(
+  // literals get handled at compile time
+  ($proto:literal) => {{
+    bind_state_mut!(st);
+    let (cs, params_opt) : (Token,Option<Parameters>) = compile_prototype!($proto);
+    match params_opt {
+      Some(params) => (cs, Some(params.init(st)?)),
+      None => (cs, None),
+    }
+  }};
+  ($proto:literal, $state_arg:ident) => {{
+    let (cs, params_opt) : (Token,Option<Parameters>) = compile_prototype!($proto);
+    match params_opt {
+      Some(params) => (cs, Some(params.init($state_arg)?)),
+      None => (cs, None),
+    }
+  }};
+  // expressions get handled at runtime
   ($proto:expr) => {{
     bind_state_mut!(st);
-    rtx_core::common::def_parser::parse_prototype($proto, Some(st))?
-  }};
+    rtx_core::common::def_parser::parse_prototype($proto, Some(st))? }};
   ($proto:expr, $state_arg:ident) => {{
-    rtx_core::common::def_parser::parse_prototype($proto, Some($state_arg))?
-  }};
+    rtx_core::common::def_parser::parse_prototype($proto, Some($state_arg))? }};
 );
 
 // sub DocType {
@@ -1509,7 +1525,11 @@ macro_rules! MergeFont {
 //  and we have a several places where we get compile-time speedups by pre-tokenizing into Rust Tokens objects / Replacement closures
 #[macro_export]
 macro_rules! DefMacro {
-  // closure
+  // closure with literal prototype
+  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {{
+    compile_prototype_for_typed_macro!($prototype, sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*)
+  }};
+  // closure, general form
   ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
@@ -1524,10 +1544,6 @@ macro_rules! DefMacro {
       move |gullet, mut args, inner_state| WithInnerState!($body, inner_state).into_tokens_result()
     )));
     defi_macro!(cs, params, expansion_closure, None);
-  }};
-  // closure with unwrapped arguments
-  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),+ ), $inner_state:ident ] $body:block $($input:tt)*) => {{
-    compile_prototype!($prototype, sub [ $gullet, ( $($var),+ ), $inner_state ] $body $($input)*)
   }};
   // String; implicit state
   ($proto:literal, $expansion:literal $($input:tt)*) => {{

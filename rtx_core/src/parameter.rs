@@ -3,6 +3,8 @@ use regex::Regex;
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::Arc;
+use proc_macro2::{TokenStream}; // use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
+use quote::{quote, ToTokens}; // TokenStreamExt
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -522,5 +524,46 @@ impl fmt::Display for Parameters {
       content.push_str(&param_content);
     }
     write!(f, "{content}")
+  }
+}
+
+
+impl ToTokens for Parameters {
+  fn to_tokens(&self, stream: &mut TokenStream) {
+    let params = &self.0;
+    stream.extend(quote! {
+        Parameters::new(<[Parameter]>::into_vec(Box::new([ #(#params),* ])))
+    });
+  }
+}
+
+impl ToTokens for Parameter {
+  fn to_tokens(&self, stream: &mut TokenStream) {
+    let name = &self.name;
+    let spec = &self.spec;
+    let extra = &self.extra;
+    stream.extend(quote! {
+      Parameter {
+        name: String::from(#name),
+        spec: String::from(#spec),
+        extra: <[ParameterExtra]>::into_vec(Box::new([ #(#extra),* ])),
+        ..Parameter::default()
+      }
+    });
+  }
+}
+
+impl ToTokens for ParameterExtra {
+  fn to_tokens(&self, stream: &mut TokenStream) {
+    stream.extend(match self {
+      ParameterExtra::Tokens(ts) =>
+         quote!( ParameterExtra::Tokens(#ts) ),
+      ParameterExtra::ParametersOption(Some(po)) => {
+        quote!( ParameterExtra::ParametersOption(Some(#po)))
+      },
+      ParameterExtra::ParametersOption(None) => {
+        quote!( ParameterExtra::ParametersOption(None))
+      }
+    });
   }
 }
