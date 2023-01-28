@@ -68,7 +68,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
         if tokens.is_empty() {
           // Special case: lone # NOT following a numbered parameter
           // Note that we require a { to appear next, but do NOT read it!
-          params.push(Parameter::new("RequireBrace", "RequireBrace", state)?);
+          params.push(Parameter::new(Cow::Borrowed("RequireBrace"), Cow::Borrowed("RequireBrace"), state)?);
           break;
         } else {
           n += 1;
@@ -112,8 +112,8 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
         let expected = Tokens::new(delim);
         params.push(
           Parameter {
-            name: s!("Until"),
-            spec: s!("Until:{}", expected),
+            name: Cow::Borrowed("Until"),
+            spec: Cow::Owned(format!("Until:{expected}")),
             extra: expected.into(),
             ..Parameter::default()
           }
@@ -122,10 +122,10 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
       } else if tokens.len() == 1 && tokens.front().unwrap().get_catcode() == Catcode::PARAM {
         // Special case: trailing sole # => delimited by next opening brace.
         tokens.pop_front();
-        params.push(Parameter::new("UntilBrace", "UntilBrace", state)?);
+        params.push(Parameter::new(Cow::Borrowed("UntilBrace"), Cow::Borrowed("UntilBrace"), state)?);
       } else {
         // Nothing? Just a plain parameter.
-        params.push(Parameter::new("Plain", "{}", state)?);
+        params.push(Parameter::new(Cow::Borrowed("Plain"), Cow::Borrowed("{}"), state)?);
       }
     } else {
       // Initial delimiting text is required.
@@ -140,8 +140,8 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
       let expected = Tokens::new(lit);
       params.push(
         Parameter {
-          name: s!("Match"),
-          spec: s!("Match:{}", expected),
+          name: Cow::Borrowed("Match"),
+          spec: Cow::Owned(s!("Match:{}", expected)),
           extra: expected.into(),
           novalue: true,
           ..Parameter::default()
