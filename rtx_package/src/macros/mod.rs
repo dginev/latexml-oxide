@@ -39,6 +39,18 @@ macro_rules! compile_prototype_for_typed_primitive {
 }
 
 #[macro_export]
+/// Macro for compiling string binding prototypes into Conditional closures
+macro_rules! compile_prototype_for_typed_conditional {
+  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block $($input:tt)*) => {{
+    #[derive(CompilePrototypeFor)]
+    #[prototype=$prototype]
+    #[inner="TypedConditional"]
+    struct _DummyP;
+    this_prototype!(sub [ $gullet, ( $($var),* ), $inner_state ] $body $($input)*);
+  }};
+}
+
+#[macro_export]
 /// Macro for compiling string literal prototypes into a Token and Parameters structs
 macro_rules! compile_prototype {
   ($prototype:literal) => {{
@@ -117,7 +129,7 @@ macro_rules! compile_tokenize_internal {
   }};
 }
 
-// ideally we can auto-infer this based on DefParameterType declarations but the **timing** is tricky?
+// TODO: ideally we can auto-infer this based on DefParameterType declarations but the **timing** is tricky?
 // what to do? For now, hardcode.
 #[macro_export]
 macro_rules! parameter_rust_type {
@@ -131,6 +143,7 @@ macro_rules! parameter_rust_type {
   (Optional) => {Option<Tokens>};
   (OptionalMatch) => {Option<Tokens>};
   (DefToken) => {Token};
+  (XToken) => {Token};
   (CSName) => {Token};
   // For now return the raw Tokens for KeyVals, until we figure out how to
   // do TryInto with access to the current "State" object.

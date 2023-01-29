@@ -387,13 +387,18 @@ macro_rules! DefMathLigature {
 
 #[macro_export]
 macro_rules! DefConditional(
+  // test with explicit arguments can get typed at compile-time
+  ($proto:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block $($input:tt)*) => {{
+    compile_prototype_for_typed_conditional!($proto, sub [ $gullet, ( $($var),* ), $inner_state ] $body $($input)*)
+  }};
   // test is always a rust closure
-  ($proto:literal, sub [$gullet:ident, $args:ident, $inner_state:ident] $body:block $($input:tt)*) => {{
+  ($proto:literal, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
     let (cs, paramlist) = parse_prototype!($proto);
     let test : ConditionalClosure = Arc::new(move |$gullet, mut $args, $inner_state| { WithInnerState!($body, $inner_state).into_bool_result() });
     defi_conditional!(cs, paramlist, Some(test), options);
   }};
+  // other shorthand cases
   ($proto:literal, $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
     let (cs, paramlist) = parse_prototype!($proto);
@@ -409,8 +414,31 @@ macro_rules! DefConditional(
   ($cs:ident, None  $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
     defi_conditional!($cs, None, None, options);
-  }}
+  }};
 );
+
+#[macro_export]
+macro_rules! TypedConditional {
+  ($cs:literal, $these_parameters:ident,
+      sub [ $gullet:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ] $body:block $($input:tt)*) => {{
+
+    let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
+    let closure : ConditionalClosure =  Arc::new(move |$gullet: &mut Gullet, mut args: Vec<ArgWrap>, $inner_state: &mut State| {
+      $(
+          let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
+            Ok(v) => v,
+            Err(e) => {
+              Error!("expected", "argument", $gullet, None, e);
+              <parameter_rust_type!($ptype)>::default()
+            }
+          };
+      )*
+      WithInnerState!($body, $inner_state).into_bool_result()
+    });
+    defi_conditional!(T_CS!($cs), $these_parameters, Some(closure), options);
+  }};
+
+}
 
 #[macro_export]
 macro_rules! defi_conditional {
@@ -469,10 +497,10 @@ macro_rules! DefPrimitive {
   ($proto:literal, $replacement:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let replacement_closure = Arc::new(|stomach: &mut Stomach, args: Vec<ArgWrap>, inner_state: &mut State| {
+    let closure : PrimitiveClosure = Arc::new(|stomach: &mut Stomach, args: Vec<ArgWrap>, inner_state: &mut State| {
       Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::new(), inner_state).into_digested_result()
     });
-    defi_primitive!(cs, params, Some(replacement_closure), options);
+    defi_primitive!(cs, params, Some(closure), options);
   }};
   // closure with literal prototype
   ($proto:literal, sub[$stomach_arg:ident,  ( $($var:ident),* ), $state_arg:ident] $body:block $($input:tt)*) => {{
@@ -482,10 +510,10 @@ macro_rules! DefPrimitive {
   ($proto:expr, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<ArgWrap>, $state_arg: &mut State| {
+    let closure : PrimitiveClosure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<ArgWrap>, $state_arg: &mut State| {
       WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
     });
-    defi_primitive!(cs, params, Some(replacement_closure), options);
+    defi_primitive!(cs, params, Some(closure), options);
   }};
   // Case: cs-noparams with closure pattern replacement
   ($cs:expr, None, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
@@ -2318,8 +2346,8 @@ macro_rules! defi_opts {
   };
 
   // misc ident with literal value
-  (@munch ( $(,)? $id:ident $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [$id @ $literal]})
+  (@munch ( $(,)? $id:ident $(:)?$(=>)? $lit:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [$id @ $lit]})
   };
   // misc ident with block value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {

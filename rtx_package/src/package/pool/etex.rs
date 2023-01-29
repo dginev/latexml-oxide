@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!(outer_state, {
   // See http://tex.loria.fr/moteurs/etex_ref.html
   // Or better yet, see the full manual
   // http://texdoc.net/texmf-dist/doc/etex/base/etex_man.pdf
@@ -62,14 +62,12 @@ LoadDefinitions!(state, {
   DefRegister!("\\currentgrouptype", Number!(0), readonly => true);
 
   // \ifcsname stuff \endcsname
-  DefConditional!("\\ifcsname CSName", sub[gullet, args, state] {
-    unpack_to_token!(args =>t);
+  DefConditional!("\\ifcsname CSName", sub[gullet, (t), state] {
     state.lookup_meaning(&t).is_some()
   });
 
   // \ifdefined <token>
-  DefConditional!("\\ifdefined Token", sub[gullet, args, state] {
-    unpack_to_token!(args =>t);
+  DefConditional!("\\ifdefined Token", sub[gullet, (t), state] {
     state.lookup_meaning(&t).is_some()
   });
 
@@ -150,8 +148,7 @@ LoadDefinitions!(state, {
   //     return; });
 
   // # \unless someif
-  DefConditional!("\\unless Token", sub [gullet, args, state] {
-    unpack_to_token!(args => if_token);
+  DefConditional!("\\unless Token", sub[gullet, (if_token), state] {
     if let Some(Stored::Conditional(defn)) = state.lookup_definition_stored(&if_token) {
       if defn.conditional_type == ConditionalType::If {
         if let Some(ref closure) = defn.test {

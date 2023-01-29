@@ -12,20 +12,13 @@ LoadDefinitions!(outer_state, {
   DefConditional!("\\fi");
   DefConditional!("\\ifcase Number");
 
-  DefConditional!("\\ifnum Number Token Number", sub[gullet, args, state] {
-    unpack_to_number!(args => u);
-    unpack_to_token!(args => rel);
-    unpack_to_number!(args => v);
+  DefConditional!("\\ifnum Number Token Number", sub[gullet, (u,rel,v), state] {
     compare(u, rel, v)
   });
-  DefConditional!("\\ifdim Dimension Token Dimension", sub[gullet, args, state] {
-    unpack_to_number!(args => u);
-    unpack_to_token!(args =>rel);
-    unpack_to_number!(args => v);
-    compare(u, rel, v)
+  DefConditional!("\\ifdim Dimension Token Dimension", sub[gullet, (u,rel,v), state] {
+    compare(Number::new(u.value_of()), rel, Number::new(v.value_of()))
   });
-  DefConditional!("\\ifodd Number", sub[gullet, args, state] {
-    unpack_to_number!(args => u);
+  DefConditional!("\\ifodd Number", sub[gullet, (u), state] {
     let uint = u.value_of();
     uint % 2 == 1
   });
@@ -36,24 +29,21 @@ LoadDefinitions!(outer_state, {
   DefConditional!("\\ifinner", { false });
   DefConditional!("\\ifmmode", { LookupBool!("IN_MATH") });
 
-  DefConditional!("\\if XToken XToken", sub[gullet, args, state] {
-    unpack_to_token!(args=>token1, token2);
+  DefConditional!("\\if XToken XToken", sub[gullet, (token1,token2), state] {
     token1.get_charcode() == token2.get_charcode()
   });
 
-  DefConditional!("\\ifcat XToken XToken", sub[gullet, args, state] {
-    unpack_to_token!(args=>token1, token2);
+  DefConditional!("\\ifcat XToken XToken", sub[gullet, (token1,token2), state] {
     token1.get_catcode() == token2.get_catcode()
   });
 
-  DefConditional!("\\ifx Token Token", sub[gullet, args, state] {
-    unpack_to_token!(args => token1, token2);
+  DefConditional!("\\ifx Token Token", sub[gullet, (token1,token2), state] {
     XEquals!(&token1, &token2)
   });
 
-  DefConditional!("\\ifvoid Number", sub[_g, args, state] {unpack_to_number!(args=>arg); classify_box(arg, state).is_empty() });
-  DefConditional!("\\ifhbox Number", sub[_g, args, state] {unpack_to_number!(args=>arg); classify_box(arg, state) == "hbox" });
-  DefConditional!("\\ifvbox Number", sub[_g, args, state] {unpack_to_number!(args=>arg); classify_box(arg, state) == "vbox" });
+  DefConditional!("\\ifvoid Number", sub[_g, (arg), state] { classify_box(arg, state).is_empty() });
+  DefConditional!("\\ifhbox Number", sub[_g, (arg), state] { classify_box(arg, state) == "hbox" });
+  DefConditional!("\\ifvbox Number", sub[_g, (arg), state] { classify_box(arg, state) == "vbox" });
 
   DefConditional!("\\iftrue", { true });
   DefConditional!("\\iffalse", { false });
