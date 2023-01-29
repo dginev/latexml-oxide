@@ -1,5 +1,6 @@
 use std::borrow::{Borrow, Cow};
 use std::sync::Arc;
+use tinyvec::ArrayVec;
 
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
@@ -190,7 +191,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
 
   let getter: RegisterGetterClosure = match options.getter {
     Some(getter) => getter.clone(),
-    None => Arc::new(move |args: Vec<ArgWrap>, state: &State| -> Option<RegisterValue> {
+    None => Arc::new(move |args: ArrayVec<[ArgWrap;9]>, state: &State| -> Option<RegisterValue> {
       let args_string: String = args.iter().map(ToString::to_string).collect::<Vec<String>>().join("");
       match state.lookup_value(&(name.clone() + &args_string)) {
         None => Some(getter_value.clone()),

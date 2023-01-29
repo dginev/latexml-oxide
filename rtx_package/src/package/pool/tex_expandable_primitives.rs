@@ -111,7 +111,7 @@ LoadDefinitions!(outer_state, {
           meaning.push_str(text);
         },
         Stored::Register(register) => {
-          let value = register.value_of(vec![],state);
+          let value = register.value_of(ArrayVec::default(),state);
           let register_type = register.register_type().unwrap();
           let prefix = match register_type {
             RegisterType::Glue | RegisterType::MuGlue =>  "\\skip",
@@ -274,13 +274,14 @@ LoadDefinitions!(outer_state, {
 
   // \the<internal quantity>
   DefMacro!("\\the Register", sub[gullet, args, state] {
-    if let ArgWrap::RegisterDefinition((rtoken, inner)) = args.remove(0) {
+    if let ArgWrap::RegisterDefinition((rtoken, mut inner)) = args.remove(0) {
       // let register_type = defn.borrow().register_type;
       //     if (!$type) {
       //       my $cs = ToString($defn->getCS);
       //       Error('unexpected', "\\the$cs", $gullet, "You can't use $cs after \\the"); return (); }
       let defn = rtoken.to_register(state).expect("if a Register parameter provides a token, it must have a Register definition.");
-      let value = defn.value_of(inner, state)
+      let tiny_inner :ArrayVec<[ArgWrap;9]> = inner.drain(..min(9,inner.len())).collect();
+      let value = defn.value_of(tiny_inner, state)
         .unwrap_or_else(|| RegisterValue::Tokens(Tokens!()));
       // In all cases, these should be OTHER, except for space. (!?)
       let mut tokens : Vec<Token> = match value {
@@ -298,7 +299,7 @@ LoadDefinitions!(outer_state, {
 
 // Hmm... I wonder, should getString itself be dealing with escapechar?
 fn escapechar(state: &State) -> String {
-  let code: i32 = match state.lookup_register("\\escapechar", Vec::new()) {
+  let code: i32 = match state.lookup_register("\\escapechar", ArrayVec::default()) {
     Some(RegisterValue::Number(v)) => v.value_of(),
     _ => -1,
   };

@@ -553,7 +553,7 @@ LoadDefinitions!(state, {
           // TODO: What is this datatype ? How does it fit the rtx typed interfaces for parameter types?
           // An extension seems required, also due to the Register parameter type right under.
           // Ok(Tokens!(defn_tok, defn_args))
-          Ok(ArgWrap::RegisterDefinition((token_opt.unwrap(), args)))
+          Ok(ArgWrap::RegisterDefinition((token_opt.unwrap(), args.to_vec())))
         } else {
           let message = s!("A <variable> was supposed to be here\n Got {:?}", token_opt);
           Error!("expected","<variable>", gullet, state, message);
@@ -590,7 +590,7 @@ LoadDefinitions!(state, {
     match defn {
       Some(register) => {
         let args = register.read_arguments(gullet, state)?;
-        return Ok(ArgWrap::RegisterDefinition((token.unwrap(), args)));
+        return Ok(ArgWrap::RegisterDefinition((token.unwrap(), args.to_vec())));
       },
       None => {
         let message = s!("A <register> was supposed to be here. Got {:?}", token);
@@ -929,7 +929,7 @@ LoadDefinitions!(state, {
   });
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
 
-  pub fn optional_key_vals(star: bool, plus: bool, keysets: Vec<Option<Parameters>>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+  pub fn optional_key_vals(star: bool, plus: bool, keysets: ArrayVec<[Option<Parameters>;9]>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     if gullet.if_next(T_OTHER!("["), state)? {
       let kvs: KeyVals = keyvals_aux(
         gullet,

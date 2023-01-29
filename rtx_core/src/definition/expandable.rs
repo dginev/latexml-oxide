@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::Arc;
+use tinyvec::ArrayVec;
 
 use crate::common::error::*;
 use crate::common::locator::Locator;
@@ -95,7 +96,7 @@ impl Definition for Expandable {
         let args = if let Some(ref parms) = self.paramlist {
           parms.read_arguments(gullet, self, state)?
         } else {
-          Vec::new()
+          ArrayVec::default()
         };
         if profiled {
           // LaTeXML::Core::Definition::startProfiling($profiled, 'expand')
@@ -149,7 +150,7 @@ impl Definition for Expandable {
           let args = if let Some(ref parms) = self.paramlist {
             parms.read_arguments(gullet, self, state)?
           } else {
-            Vec::new()
+            ArrayVec::default()
           };
           let mut args_tks = Vec::new();
           for arg in args.iter() {
@@ -222,7 +223,7 @@ impl Expandable {
     }
   }
 
-  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<ArgWrap>, state: &mut State) -> Result<Tokens> {
+  fn do_invocation(&self, gullet: &mut Gullet, args: ArrayVec<[ArgWrap;9]>, state: &mut State) -> Result<Tokens> {
     match self.expansion {
       Some(ExpansionBody::Closure(ref closure)) => closure(gullet, args, state),
       // but for tokens, make sure args are proper Tokens (lists)

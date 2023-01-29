@@ -19,5 +19,6 @@ log = "0.4"
 libxml = "0.3.0"
 unidecode = "0.3.0"
 chrono = "0.4"
+tinyvec = "1.6.0"
 rtx_codegen = {path = "../rtx_codegen"}
 rtx_core = {path = "../rtx_core"}

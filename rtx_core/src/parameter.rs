@@ -5,6 +5,7 @@ use regex::Regex;
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::Arc; // TokenStreamExt
+use tinyvec::ArrayVec;
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -21,7 +22,7 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{Digested, Locator};
 
-pub type ReaderFn = dyn Fn(&mut Gullet, Vec<Option<Parameters>>, &[ParameterExtra], &mut State) -> Result<ArgWrap>;
+pub type ReaderFn = dyn Fn(&mut Gullet, ArrayVec<[Option<Parameters>;9]>, &[ParameterExtra], &mut State) -> Result<ArgWrap>;
 pub type ReaderPredigestFn = dyn Fn(&mut Stomach, ArgWrap, &mut State) -> Result<Option<Digested>>;
 pub type ReaderPredigestClosure = Arc<ReaderPredigestFn>;
 pub type ReaderClosure = Arc<ReaderFn>;
@@ -298,7 +299,7 @@ impl Parameter {
     self.setup_catcodes(state);
 
     let closure = &self.reader;
-    let value_from_reader: ArgWrap = closure(gullet, vec![], &self.extra, state)?;
+    let value_from_reader: ArgWrap = closure(gullet, ArrayVec::default(), &self.extra, state)?;
     let value_arg = if value_from_reader.is_tokens() {
       let wants_option = self.optional || value_from_reader.is_option();
       match value_from_reader.owned_tokens() {
@@ -484,8 +485,8 @@ impl Parameters {
     Ok(self)
   }
 
-  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &dyn Definition, state: &mut State) -> Result<Vec<ArgWrap>> {
-    let mut args = Vec::new();
+  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &dyn Definition, state: &mut State) -> Result<ArrayVec<[ArgWrap;9]>> {
+    let mut args = ArrayVec::default();
     for parameter in &self.0 {
       let values = parameter.read(gullet, fordefn, state)?;
       if parameter.reader_predigest.is_some() {
@@ -503,8 +504,8 @@ impl Parameters {
     Ok(args)
   }
 
-  pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Result<Vec<Option<Digested>>> {
-    let mut args = Vec::new();
+  pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Result<ArrayVec<[Option<Digested>;9]>> {
+    let mut args = ArrayVec::default();
     stomach.gullet.setup_scan();
     for parameter in &self.0 {
       let value = parameter.read(&mut stomach.gullet, fordefn, state)?;

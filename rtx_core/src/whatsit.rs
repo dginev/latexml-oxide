@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::sync::Arc;
+use tinyvec::ArrayVec;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -22,7 +23,7 @@ const DUAL_BRANCH: bool = false; // TODO: what is this about?
 
 #[derive(Clone)]
 pub struct Whatsit {
-  pub args: Vec<Option<Digested>>,
+  pub args: ArrayVec<[Option<Digested>; 9]>,
   pub properties: HashMap<String, Stored>,
   pub definition: Arc<dyn Definition>,
   pub reversion: Option<Tokens>,
@@ -33,7 +34,7 @@ pub struct Whatsit {
 impl Default for Whatsit {
   fn default() -> Self {
     Whatsit {
-      args: Vec::new(),
+      args: ArrayVec::<[Option<Digested>; 9]>::default(),
       properties: HashMap::new(),
       definition: Arc::new(Expandable::default()),
       reversion: None,
@@ -69,8 +70,8 @@ impl Whatsit {
       _ => None,
     }
   }
-  pub fn get_args(&self) -> &Vec<Option<Digested>> { &self.args }
-  pub fn set_args(&mut self, args: Vec<Option<Digested>>) { self.args = args; }
+  pub fn get_args(&self) -> &ArrayVec<[Option<Digested>;9]> { &self.args }
+  pub fn set_args(&mut self, args: ArrayVec<[Option<Digested>;9]>) { self.args = args; }
   pub fn get_trailer(&self) -> Option<Digested> {
     match self.properties.get("trailer") {
       Some(Stored::Digested(triler)) => Some(*triler.clone()),

@@ -7,6 +7,7 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::str;
 use std::sync::{Mutex, RwLock};
+use tinyvec::ArrayVec;
 
 use core::ops::RangeBounds;
 // TODO:
@@ -412,7 +413,7 @@ impl Mouth {
         let read_mode = state.lookup_int("PRESERVE_NEWLINES") > 1;
         let eolch = if let Some(defn) = state.lookup_definition(&CS_ENDLINECHAR) {
           if defn.is_register() {
-            if let Some(eol) = defn.value_of(Vec::new(), state) {
+            if let Some(eol) = defn.value_of(ArrayVec::default(), state) {
               let eol = eol.value_of() as i16;
               if eol > 0 && eol <= 255 {
                 let mch = (eol as u8) as char;

@@ -2,6 +2,7 @@ use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use tinyvec::ArrayVec;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -327,8 +328,8 @@ pub enum RegisterType {
   Any, // Placeholder for any argument accepted
 }
 
-pub type RegisterGetterClosure = Arc<dyn Fn(Vec<ArgWrap>, &State) -> Option<RegisterValue>>;
-pub type RegisterSetterClosure = Arc<dyn Fn(RegisterValue, Vec<ArgWrap>, &mut State)>;
+pub type RegisterGetterClosure = Arc<dyn Fn(ArrayVec<[ArgWrap;9]>, &State) -> Option<RegisterValue>>;
+pub type RegisterSetterClosure = Arc<dyn Fn(RegisterValue, ArrayVec<[ArgWrap;9]>, &mut State)>;
 
 #[derive(Clone)]
 pub struct Register {
@@ -348,8 +349,8 @@ impl Default for Register {
       cs: T_CS!("Register"),
       parameters: None,
       register_type: RegisterType::Number,
-      getter: Arc::new(|_: Vec<ArgWrap>, _: &State| Some(RegisterValue::Number(Number::new(0)))),
-      setter: Arc::new(|_: RegisterValue, _: Vec<ArgWrap>, _: &mut State| {}),
+      getter: Arc::new(|_: ArrayVec<[ArgWrap;9]>, _: &State| Some(RegisterValue::Number(Number::new(0)))),
+      setter: Arc::new(|_: RegisterValue, _: ArrayVec<[ArgWrap;9]>, _: &mut State| {}),
       readonly: false,
       internalcs: None,
       value: None,
@@ -433,10 +434,10 @@ impl Definition for RegisterCell {
 
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<ArgWrap>> {
+  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<ArrayVec<[ArgWrap;9]>> {
     let params = &self.borrow().parameters;
     match params {
-      None => Ok(Vec::new()),
+      None => Ok(ArrayVec::default()),
       Some(ref params) => params.read_arguments(gullet, self, state),
     }
   }
@@ -444,7 +445,7 @@ impl Definition for RegisterCell {
   fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
     fatal!(Definition, Unexpected, "do_absorbtion on Primitive should never be called!");
   }
-  fn value_of(&self, args: Vec<ArgWrap>, state: &State) -> Option<RegisterValue> {
+  fn value_of(&self, args: ArrayVec<[ArgWrap;9]>, state: &State) -> Option<RegisterValue> {
     if self.borrow().register_type == RegisterType::CharDef {
       self.borrow().value.clone()
     } else {
@@ -456,7 +457,7 @@ impl Definition for RegisterCell {
 
 impl Register {
   pub fn is_readonly(&self) -> bool { self.readonly }
-  pub fn set_value(&mut self, value: RegisterValue, args: Vec<ArgWrap>, state: &mut State) {
+  pub fn set_value(&mut self, value: RegisterValue, args: ArrayVec<[ArgWrap;9]>, state: &mut State) {
     if self.register_type == RegisterType::CharDef {
       let message = s!("Can't assign to chardef {}", self.cs.get_cs_name());
       Error!("unexpected", "chardef", None, state, message);

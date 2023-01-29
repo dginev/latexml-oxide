@@ -46,9 +46,9 @@ pub fn today(state: &State) -> String {
     "November",
     "December",
   ];
-  let month = month_names[state.lookup_register("\\month", vec![]).unwrap().value_of() as usize - 1];
-  let day = state.lookup_register("\\day", vec![]).unwrap().value_of();
-  let year = state.lookup_register("\\year", vec![]).unwrap().value_of();
+  let month = month_names[state.lookup_register("\\month", ArrayVec::default()).unwrap().value_of() as usize - 1];
+  let day = state.lookup_register("\\day", ArrayVec::default()).unwrap().value_of();
+  let year = state.lookup_register("\\year", ArrayVec::default()).unwrap().value_of();
   s!("{} {}, {}", month, day, year)
 }
 
@@ -710,7 +710,7 @@ pub struct KVSpec {
   pub star: bool,
   pub plus: bool,
   pub prefix: Option<String>,
-  pub keysets: Vec<Option<Parameters>>,
+  pub keysets: ArrayVec<[Option<Parameters>;9]>,
   pub skip: bool,
 }
 pub fn keyvals_aux(gullet: &mut Gullet, until: Option<Token>, mut spec: KVSpec, state: &mut State) -> Result<KeyVals> {

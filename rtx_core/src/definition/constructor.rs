@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
+use tinyvec::ArrayVec;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -177,8 +178,8 @@ impl Definition for Constructor {
     let ismath = state.lookup_bool("IN_MATH");
     // info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
     // Parse AND digest the arguments to the Constructor
-    let mut args: Vec<Option<Digested>> = match self.get_parameters() {
-      None => Vec::new(),
+    let mut args: ArrayVec<[Option<Digested>;9]> = match self.get_parameters() {
+      None => ArrayVec::default(),
       Some(params) => params.read_arguments_and_digest(stomach, self, state)?,
     };
     // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;

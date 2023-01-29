@@ -182,7 +182,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       }
       let mut with_script = vec![Digested::Whatsit(Arc::new(RwLock::new(Whatsit {
         definition: state.lookup_definition(&T_CS!(cs)).unwrap(),
-        args: vec![Some(script)],
+        args: array_vec!([Option<Digested>; 9] =>Some(script)),
         properties,
         //         locator     => $gullet->getLocator,
         ..Whatsit::default()
@@ -233,7 +233,7 @@ LoadDefinitions!(state, {
   def_primitive(
     T_SUPER!(),
     None,
-    Some(Arc::new(|stomach: &mut Stomach, _args: Vec<ArgWrap>, state: &mut State| {
+    Some(Arc::new(|stomach: &mut Stomach, _, state: &mut State| {
       script_handler(stomach, Catcode::SUPER, state)
     })),
     PrimitiveOptions::default(),
@@ -242,7 +242,7 @@ LoadDefinitions!(state, {
   def_primitive(
     T_SUB!(),
     None,
-    Some(Arc::new(|stomach: &mut Stomach, _args: Vec<ArgWrap>, state: &mut State| {
+    Some(Arc::new(|stomach: &mut Stomach, _, state: &mut State| {
       script_handler(stomach, Catcode::SUB, state)
     })),
     PrimitiveOptions::default(),

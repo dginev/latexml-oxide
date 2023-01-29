@@ -51,7 +51,7 @@ LoadDefinitions!(outer_state, {
   }));
 
   let mut mock_stomach = Stomach::default();
-  define_excluded(&mut mock_stomach, vec![ArgWrap::Tokens(Tokenize!("comment", None))], outer_state)?;
+  define_excluded(&mut mock_stomach, array_vec!([ArgWrap; 9] => ArgWrap::Tokens(Tokenize!("comment", None))), outer_state)?;
 
   DefPrimitive!("\\includecomment{}", Some(Arc::clone(&define_included)));
   DefPrimitive!("\\excludecomment{}", Some(define_excluded));

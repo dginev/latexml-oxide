@@ -11,6 +11,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
+use tinyvec::ArrayVec;
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -29,16 +30,16 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-pub type ExpansionClosure = Arc<dyn Fn(&mut Gullet, Vec<ArgWrap>, &mut State) -> Result<Tokens>>;
-pub type ConditionalClosure = Arc<dyn Fn(&mut Gullet, Vec<ArgWrap>, &mut State) -> Result<bool>>;
-pub type PrimitiveFn = dyn Fn(&mut Stomach, Vec<ArgWrap>, &mut State) -> Result<Vec<Digested>>;
+pub type ExpansionClosure = Arc<dyn Fn(&mut Gullet, ArrayVec<[ArgWrap;9]>, &mut State) -> Result<Tokens>>;
+pub type ConditionalClosure = Arc<dyn Fn(&mut Gullet, ArrayVec<[ArgWrap;9]>, &mut State) -> Result<bool>>;
+pub type PrimitiveFn = dyn Fn(&mut Stomach, ArrayVec<[ArgWrap;9]>, &mut State) -> Result<Vec<Digested>>;
 pub type PrimitiveClosure = Arc<PrimitiveFn>;
 pub type BeforeDigestClosure = Arc<dyn Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
-pub type PropertiesClosure = Arc<dyn Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
+pub type PropertiesClosure = Arc<dyn Fn(&mut Stomach, &ArrayVec<[Option<Digested>;9]>, &mut State) -> Result<HashMap<String, Stored>>>;
 pub type DigestionClosure = Arc<dyn Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
-pub type ReplacementClosure = Arc<dyn Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
+pub type ReplacementClosure = Arc<dyn Fn(&mut Document, &ArrayVec<[Option<Digested>;9]>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
 pub type ConstructionClosure = Arc<dyn Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
-pub type DigestedReversionClosure = Arc<dyn Fn(&Whatsit, &Vec<Option<Digested>>, &mut State) -> Result<Tokens>>;
+pub type DigestedReversionClosure = Arc<dyn Fn(&Whatsit, &ArrayVec<[Option<Digested>;9]>, &mut State) -> Result<Tokens>>;
 pub type SizingClosure = Arc<dyn Fn(&Whatsit) -> (i32, i32, i32)>;
 
 #[derive(Clone)]
@@ -146,10 +147,10 @@ pub trait Definition: Object {
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { false }
 
-  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<ArgWrap>>
+  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<ArrayVec<[ArgWrap;9]>>
   where Self: Sized {
     match self.get_parameters() {
-      None => Ok(Vec::new()),
+      None => Ok(ArrayVec::default()),
       Some(params) => params.read_arguments(gullet, self, state),
     }
   }
@@ -214,7 +215,7 @@ pub trait Definition: Object {
     Ok(after_body_digested)
   }
 
-  fn value_of(&self, args: Vec<ArgWrap>, state: &State) -> Option<RegisterValue> { unimplemented!() }
+  fn value_of(&self, args: ArrayVec<[ArgWrap;9]>, state: &State) -> Option<RegisterValue> { unimplemented!() }
   fn register_type(&self) -> Option<RegisterType> { None }
   fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
   fn get_expansion(&self) -> Option<&ExpansionBody> { None }

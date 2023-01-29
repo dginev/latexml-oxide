@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::sync::{Arc, RwLock};
+use tinyvec::ArrayVec;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -445,7 +446,7 @@ impl Stored {
   }
   /// Dynamic dispatch for Definition's `read_arguments`,
   /// to circumvent the limitations of using trait objects with `Arc<Definition>`
-  pub fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<ArgWrap>> {
+  pub fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<ArrayVec<[ArgWrap;9]>> {
     use crate::definition::Definition;
     match self {
       Stored::Conditional(ref entry) => entry.read_arguments(gullet, state),

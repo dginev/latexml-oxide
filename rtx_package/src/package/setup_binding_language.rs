@@ -423,7 +423,7 @@ macro_rules! TypedConditional {
       sub [ $gullet:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ] $body:block $($input:tt)*) => {{
 
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
-    let closure : ConditionalClosure =  Arc::new(move |$gullet: &mut Gullet, mut args: Vec<ArgWrap>, $inner_state: &mut State| {
+    let closure : ConditionalClosure =  Arc::new(move |$gullet: &mut Gullet, mut args: ArrayVec<[ArgWrap;9]>, $inner_state: &mut State| {
       $(
           let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
             Ok(v) => v,
@@ -497,7 +497,7 @@ macro_rules! DefPrimitive {
   ($proto:literal, $replacement:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let closure : PrimitiveClosure = Arc::new(|stomach: &mut Stomach, args: Vec<ArgWrap>, inner_state: &mut State| {
+    let closure : PrimitiveClosure = Arc::new(|stomach: &mut Stomach, args: ArrayVec<[ArgWrap;9]>, inner_state: &mut State| {
       Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::new(), inner_state).into_digested_result()
     });
     defi_primitive!(cs, params, Some(closure), options);
@@ -510,7 +510,7 @@ macro_rules! DefPrimitive {
   ($proto:expr, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let closure : PrimitiveClosure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<ArgWrap>, $state_arg: &mut State| {
+    let closure : PrimitiveClosure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: ArrayVec<[ArgWrap;9]>, $state_arg: &mut State| {
       WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
     });
     defi_primitive!(cs, params, Some(closure), options);
@@ -518,7 +518,7 @@ macro_rules! DefPrimitive {
   // Case: cs-noparams with closure pattern replacement
   ($cs:expr, None, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<ArgWrap>, $state_arg: &mut State| {
+    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: ArrayVec<[ArgWrap;9]>, $state_arg: &mut State| {
       WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
     });
     defi_primitive!($cs, None, Some(replacement_closure), options);
@@ -539,7 +539,7 @@ macro_rules! DefPrimitive {
   ($proto:expr, $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let replacement_closure =  Arc::new(move |stomach: &mut Stomach, args: Vec<ArgWrap>, state: &mut State| {
+    let replacement_closure =  Arc::new(move |stomach: &mut Stomach, args: ArrayVec<[ArgWrap;9]>, state: &mut State| {
       WithInnerState!($body, stomach, state).into_digested_result()
     });
     defi_primitive!(cs, params, Some(replacement_closure), options);
@@ -560,7 +560,7 @@ macro_rules! TypedPrimitive {
   ($cs:literal, $these_parameters:ident ,
       sub [ $stomach_arg:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    let replacement_closure =  Arc::new(move |$stomach_arg: &mut Stomach, mut args: Vec<ArgWrap>, $inner_state: &mut State| {
+    let replacement_closure =  Arc::new(move |$stomach_arg: &mut Stomach, mut args: ArrayVec<[ArgWrap;9]>, $inner_state: &mut State| {
       $(
           let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
             Ok(v) => v,
@@ -590,7 +590,7 @@ macro_rules! defi_primitive(
 #[macro_export]
 macro_rules! LookupRegister {
   ($cs:expr) => {
-    LookupRegister!($cs, Vec::new())
+    LookupRegister!($cs, ArrayVec::default())
   };
   ($cs:expr, $parameters:expr) => {{
     bind_state_mut!(st);
@@ -610,7 +610,7 @@ macro_rules! LookupRegister {
 #[macro_export]
 macro_rules! LookupRegisterOrDefault {
   ($cs:expr) => {
-    LookupRegisterOrDefault!($cs, Vec::new())
+    LookupRegisterOrDefault!($cs, ArrayVec::default())
   };
   ($cs:expr, $parameters:expr) => {{
     bind_state_mut!(st);
@@ -1667,7 +1667,7 @@ macro_rules! TypedMacro {
     sub [ $gullet:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
-      move |$gullet: &mut Gullet, mut args: Vec<ArgWrap>, $inner_state:&mut State| {
+      move |$gullet: &mut Gullet, mut args: ArrayVec<[ArgWrap;9]>, $inner_state:&mut State| {
         $(
           let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
             Ok(v) => v,

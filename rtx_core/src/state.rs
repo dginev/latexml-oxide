@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{self, Display};
 use std::hash::Hash;
 use std::sync::{Arc, RwLock};
+use tinyvec::ArrayVec;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -762,7 +763,7 @@ impl State {
     }
   }
 
-  pub fn lookup_register(&self, cs: &str, parameters: Vec<ArgWrap>) -> Option<RegisterValue> {
+  pub fn lookup_register(&self, cs: &str, parameters: ArrayVec<[ArgWrap;9]>) -> Option<RegisterValue> {
     let cs = T_CS!(cs);
     if let Some(defn) = self.lookup_definition(&cs) {
       if defn.is_register() {

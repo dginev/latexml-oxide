@@ -67,7 +67,7 @@ LoadDefinitions!(state, {
           state.assign_value("next_para_class", Stored::None, None);
         }
         // Fish out flags for next ltx:para, to be used when the next \par closes:
-        if state.lookup_register("\\parindent",Vec::new()).unwrap().value_of() == 0 {
+        if state.lookup_register("\\parindent",ArrayVec::default()).unwrap().value_of() == 0 {
           // respect \parindent if no overrides are given
           state.assign_value("next_para_class", "ltx_noindent", None);
         }

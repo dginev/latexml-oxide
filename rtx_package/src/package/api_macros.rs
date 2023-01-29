@@ -49,14 +49,14 @@ macro_rules! transfer_opt_default {
 #[macro_export]
 macro_rules! noprimitive {
   () => {
-    |stomach: &mut Stomach, args: Vec<ArgWrap>, state: &mut State| Ok(Vec::new())
+    |stomach: &mut Stomach, args: ArrayVec<[ArgWrap;9]>, state: &mut State| Ok(Vec::new())
   };
 }
 
 #[macro_export]
 macro_rules! primitivesub {
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
-    move |$stomach: &mut Stomach, mut $args: Vec<ArgWrap>, $inner_state: &mut State| {
+    move |$stomach: &mut Stomach, mut $args: ArrayVec<[ArgWrap;9]>, $inner_state: &mut State| {
       BindInnerState!($stomach, $inner_state);
       let macro_out = $body;
       end_state_frame!();
@@ -67,7 +67,7 @@ macro_rules! primitivesub {
 #[macro_export]
 macro_rules! primitiveproc {
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => (
-    |$stomach:&mut Stomach, mut $args : Vec<ArgWrap>, $inner_state:&mut State| {
+    |$stomach:&mut Stomach, mut $args : ArrayVec<[ArgWrap;9]>, $inner_state:&mut State| {
       BindInnerState!($stomach, $inner_state);
       $body
       end_state_frame!();
@@ -136,7 +136,7 @@ macro_rules! noreplacement {
 #[macro_export]
 macro_rules! replacement {
   ($doc:ident, $args:ident, $props:ident, $state:ident, $body:block) => (
-    move |$doc:&mut Document,$args: &Vec<Option<Digested>>, $props: &HashMap<String, Stored>, $state: &mut State| -> Result<()> {
+    move |$doc:&mut Document,$args: &ArrayVec<[Option<Digested>;9]>, $props: &HashMap<String, Stored>, $state: &mut State| -> Result<()> {
     BindInnerState!($state);
     $body
     end_state_frame!();
@@ -164,21 +164,21 @@ macro_rules! properties {
   };
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
     Arc::new(
-      move |$stomach: &mut Stomach, mut $args: &Vec<Option<Digested>>, $inner_state: &mut State| -> Result<HashMap<String, Stored>> {
+      move |$stomach: &mut Stomach, mut $args: &ArrayVec<[Option<Digested>;9]>, $inner_state: &mut State| -> Result<HashMap<String, Stored>> {
         WithInnerState!($body, $stomach, $inner_state)
       },
     )
   };
   ($(sub)? $body:block) => {
     Arc::new(
-      move |stomach: &mut Stomach, args: &Vec<Option<Digested>>, state: &mut State| -> Result<HashMap<String, Stored>> {
+      move |stomach: &mut Stomach, args: &ArrayVec<[Option<Digested>;9]>, state: &mut State| -> Result<HashMap<String, Stored>> {
         WithInnerState!($body, stomach, state).into_properties_result()
       },
     )
   };
   ($value:expr) => {
     Arc::new(
-      move |_stomach: &mut Stomach, _args: &Vec<Option<Digested>>, _state: &mut State| -> Result<HashMap<String, Stored>> { Ok($value.clone()) },
+      move |_stomach: &mut Stomach, _args: &ArrayVec<[Option<Digested>;9]>, _state: &mut State| -> Result<HashMap<String, Stored>> { Ok($value.clone()) },
     )
   };
 }
@@ -208,7 +208,7 @@ macro_rules! after_digest_single {
 macro_rules! reader {
   ($gullet:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
     Arc::new(
-      |$gullet: &mut Gullet, $inner: Vec<Option<Parameters>>, $extra: &[ParameterExtra], $state: &mut State| -> Result<ArgWrap> {
+      |$gullet: &mut Gullet, $inner: ArrayVec<[Option<Parameters>;9]>, $extra: &[ParameterExtra], $state: &mut State| -> Result<ArgWrap> {
         WithInnerState!($body, $state).into_result_argwrap()
       },
     )
@@ -229,7 +229,7 @@ macro_rules! reader_predigest {
 #[macro_export]
 macro_rules! getter {
   ($args: ident, $state:ident, $body:block) => {
-    Some(Arc::new(move |mut $args: Vec<ArgWrap>, $state: &State| -> Option<RegisterValue> {
+    Some(Arc::new(move |mut $args: ArrayVec<[ArgWrap;9]>, $state: &State| -> Option<RegisterValue> {
       WithInnerState!($body, $state).into_register_value_option()
     }))
   };
@@ -238,7 +238,7 @@ macro_rules! getter {
 #[macro_export]
 macro_rules! setter {
   ($value:ident, $args: ident, $state:ident, $body:block) => {
-    Some(Arc::new(move |$value: RegisterValue, mut $args: Vec<ArgWrap>, $state: &mut State| {
+    Some(Arc::new(move |$value: RegisterValue, mut $args: ArrayVec<[ArgWrap;9]>, $state: &mut State| {
       WithInnerState!($body, $state)
     }))
   };
@@ -277,7 +277,7 @@ macro_rules! reversion {
 macro_rules! reversion_digested {
   ($whatsit:ident, $args:ident, $state:ident, $body:block) => {
     Some(Reversion::Closure(Arc::new(
-      move |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>, $state: &mut State| -> Result<Tokens> {
+      move |$whatsit: &Whatsit, $args: &ArrayVec<[Option<Digested>;9]>, $state: &mut State| -> Result<Tokens> {
         BindInnerState!($state);
         let macro_out = $body;
         end_state_frame!();

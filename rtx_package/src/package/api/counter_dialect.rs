@@ -2,6 +2,7 @@ use libxml::tree::Node;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tinyvec::ArrayVec;
 
 use rtx_core::common::error::*;
 use rtx_core::common::number::Number;
@@ -604,7 +605,7 @@ pub fn begin_itemize(
   AssignRegister!(
     "\\itemsep",
     state.lookup_dimension("\\lx@default@itemsep").unwrap_or_default().into(),
-    Vec::new(),
+    ArrayVec::default(),
     state
   );
   state.assign_value("itemization_level", listlevel, None);
