@@ -15,5 +15,5 @@ syn = "1.0"
 proc-macro2 = "1.0.0"
 quote = "1.0"
 lazy_static = "1.0.0"
-regex = "1.1.0"
+regex = "1.7.1"
 rtx_core= { path = "../rtx_core" }
