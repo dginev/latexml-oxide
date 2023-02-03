@@ -164,7 +164,7 @@ LoadDefinitions!(state, {
     let filename = filename.to_string();
     // possibly should close $port if it's already been opened?
     // Rely on FindFile to enforce any access restrictions
-    if let Some(path) = find_file(&filename, None, state) {
+    if let Some(path) = find_file(&filename, Some(FindFileOptions {forbid_ltxml: true, ..FindFileOptions::default()}), state) {
       let content_str = LookupString!(&s!("{}_contents",path));
       let content = if content_str.is_empty() {
         None

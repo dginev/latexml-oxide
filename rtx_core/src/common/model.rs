@@ -461,7 +461,7 @@ impl Model {
   pub fn can_contain(&mut self, tag: &str, child: &str) -> bool {
     // Handle obvious cases explicitly.
     match tag {
-      "#PCDATA" | "#Comment" => return false,
+      "#PCDATA" | "#Comment" | "" => return false,
       "_WildCard_" => return true,
       _ => {},
     };

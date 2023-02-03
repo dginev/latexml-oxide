@@ -193,7 +193,11 @@ pub trait IntoResultArgWrap<T>: Sized {
 }
 
 impl IntoResultArgWrap<Result<ArgWrap>> for Token {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Tokens(Tokens!(self))) }
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Token(self)) }
+}
+
+impl IntoResultArgWrap<Result<ArgWrap>> for Option<Token> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionToken(self)) }
 }
 
 impl IntoResultArgWrap<Result<ArgWrap>> for Vec<Token> {

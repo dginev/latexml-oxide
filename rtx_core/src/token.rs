@@ -733,7 +733,7 @@ impl<'a> Token {
 
   pub fn stringify(&self) -> String {
     let mut string = self.text.to_string();
-    // Make the token's char content more printable, since this is for error messages.
+    // Make the token's char content more printable, since this is for a visual messages.
     if string.len() == 1 {
       let c = string.chars().next().unwrap() as u16;
       if c < 0x020 {

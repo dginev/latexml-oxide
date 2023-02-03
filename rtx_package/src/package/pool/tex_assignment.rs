@@ -363,4 +363,6 @@ LoadDefinitions!(outer_state, {
   DefRegister!("\\skewchar{}", Number::new(0)); // no idea what the default is here
 
   DefMacro!("\\hyphenation GeneralText", "");
+  DefMacro!("\\patterns{}",              "");
+
 });

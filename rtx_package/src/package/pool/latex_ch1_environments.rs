@@ -32,27 +32,26 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\begin{}", sub[gullet, (env), state] {
     let name = Expand!(env.clone(), gullet).to_string();
-    let begin_name = s!("\\begin{{{}}}", name);
-    let before_opt = state.lookup_tokens(&s!("@environment@{}@beforebegin", name));
-    let after_opt  = state.lookup_tokens(&s!("@environment@{}@atbegin", name));
+    let begin_name = format!("\\begin{{{name}}}");
+    let before_opt = state.lookup_tokens(&format!("@environment@{name}@beforebegin"));
+    let after_opt  = state.lookup_tokens(&format!("@environment@{name}@atbegin"));
 
     if is_defined(&begin_name, state) {
       let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
       tks.push(T_CS!(begin_name));
       Ok(Tokens::new(tks)) // Magic cs!
     } else {
-      let token = T_CS!(s!("\\{}", name));
+      let token = T_CS!(format!("\\{name}"));
       if !is_defined_token(&token, state) {
-        let undef = s!("{{{}}}", name); // this creates {name} , {{ and }} are escapes in Rust's format!
+        let undef = format!("{{{name}}}"); // this creates {name} , {{ and }} are escapes in Rust's format!
         let message = s!("The environment {} is not defined.", undef);
         Error!("undefined", undef, gullet, state, message);
+        state.note_status("undefined", &undef);
         // TODO:
-        // state.note_status("undefined", undef);
         // state.install_definition(LaTeXML::Core::Definition::Constructor->new($token, undef,
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
       }
-      let mut out_tokens = if let Some(before) = before_opt { before.unlist() }
-      else { Vec::new() };
+      let mut out_tokens = before_opt.map(Tokens::unlist).unwrap_or_default();
       out_tokens.push(T_CS!("\\begingroup"));
       if let Some(after) = after_opt {
         out_tokens.extend(after.unlist());

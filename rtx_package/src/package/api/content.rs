@@ -658,10 +658,10 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens, stomach: &mut
 
 #[derive(Default)]
 pub struct FindFileOptions {
-  forbid_ltxml: bool,
-  raw: bool,
-  notex: bool,
-  ext_type: Option<String>,
+  pub forbid_ltxml: bool,
+  pub raw: bool,
+  pub notex: bool,
+  pub ext_type: Option<String>,
 }
 
 pub fn find_file(file: &str, options: Option<FindFileOptions>, state: &mut State) -> Option<String> {

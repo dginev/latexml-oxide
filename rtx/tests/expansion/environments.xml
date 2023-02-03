@@ -29,7 +29,7 @@ A Quote!</p>
   </para>
   <para xml:id="p5">
     <quote>
-<!--  %**** environments.tex Line 25 **** -->      <p>a + b</p>
+      <p>a + b</p>
     </quote>
   </para>
   <para xml:id="p6">
