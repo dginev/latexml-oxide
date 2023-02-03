@@ -72,7 +72,7 @@ impl Tbox {
       && (properties.contains_key("width") || properties.contains_key("height") || properties.contains_key("depth"))
     {
       properties
-        .entry("width".to_string())
+        .entry(String::from("width"))
         .or_insert_with(|| Stored::Dimension(Dimension::default()));
       properties
         .entry("height".to_string())
@@ -120,9 +120,9 @@ impl BoxOps for Tbox {
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
     let text = &self.text;
     let font = &self.font;
-    let mode: String = match self.properties.get("mode") {
-      Some(Stored::String(s)) => s.to_owned(),
-      _ => String::from("text"),
+    let mode = match self.properties.get("mode") {
+      Some(Stored::String(s)) => s.as_str(),
+      _ => "text",
     };
 
     if !text.is_empty() {

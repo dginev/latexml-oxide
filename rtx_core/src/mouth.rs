@@ -38,6 +38,8 @@ lazy_static! {
   static ref TRAILING_SPACE_CHARS: Regex = Regex::new("(?s) +$").unwrap();
 }
 
+const READLINE_PROGRESS_QUANTUM : usize = 25;
+
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum FoodType {
   File,
@@ -64,7 +66,7 @@ impl FoodType {
 
 lazy_static! {
   static ref LASTID: Mutex<u32> = Mutex::new(0);
-  static ref LINEBREAK_REGEX: Regex = Regex::new(r"(?s)\r\n|\r|\n").unwrap();
+  static ref LINEBREAK_REGEX: Regex = Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap();
   static ref LOWERHEX_REGEX: Regex = Regex::new(r"^[0-9a-f]$").unwrap();
   static ref SANITIZE_LINE_REGEX: Regex = Regex::new(r"((\\ )*)\s*$").unwrap();
 }
@@ -486,8 +488,8 @@ impl Mouth {
           return Some(T_MARKER!("EOL"));
         }
         // Sneak a comment out, every so often.
-        if (self.lineno % 25) == 0 && state.lookup_bool("INCLUDE_COMMENTS") {
-          return Some(T_COMMENT!(s!("**** {} Line {} ****", &self.shortsource, &self.lineno.to_string())));
+        if (self.lineno % READLINE_PROGRESS_QUANTUM) == 0 && state.lookup_bool("INCLUDE_COMMENTS") {
+          return Some(dbg!(T_COMMENT!(s!("**** {} Line {} ****", &self.shortsource, &self.lineno.to_string()))));
         }
       }
       if self.skipping_spaces {
@@ -715,6 +717,7 @@ impl Mouth {
             break;
           }
         }
+        // We WILL skip spaces, but not till next token is read (in case catcode changes!!!!)
         self.skipping_spaces = true;
         if cc != Catcode::LETTER {
           self.colno -= 1;
@@ -756,12 +759,9 @@ impl Mouth {
       if self.colno <= self.nchars && cc.is_some() && cc != Some(Catcode::SPACE) {
         self.colno -= 1;
       }
-      if cc == Some(Catcode::EOL) {
-        // If we've got an EOL
-        self.get_next_char(state);
-        if self.colno < self.nchars {
-          self.colno -= 1;
-        }
+      if cc == Some(Catcode::EOL) || cc == Some(Catcode::COMMENT) {
+        // If we've got an EOL | COMMENT
+        self.colno = self.nchars
       }
     }
     let eol = self.colno >= self.nchars;

@@ -185,4 +185,6 @@ LoadDefinitions!(state, {
   // pdfspecial id → pdf: | PDF:
   // pdfspecial modifier → direct:
   // stack action → set | push | pop | current
+
+  DefMacro!("\\pdfglyphtounicode{}{}", "");
 });

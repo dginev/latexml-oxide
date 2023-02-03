@@ -1010,9 +1010,10 @@ impl Document {
         return Ok(None);
       }
     }
-    if font.family == Some("nullfont".into()) {
-      return Ok(None);
-    }
+    match &font.family {
+      Some(fam) if fam == "nullfont" => return Ok(None),
+      _ => ()
+    };
     Debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
     // If not at document begin And not appending text in same font.
     if node_type != Some(NodeType::DocumentNode)

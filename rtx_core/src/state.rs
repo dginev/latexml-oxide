@@ -12,7 +12,8 @@ use crate::common::font::{Font, Fontmap};
 use crate::common::glue::Glue;
 use crate::common::model::{IndirectModel, Model};
 use crate::common::muglue::MuGlue;
-use crate::common::number::Number;
+use crate::common::number::{Number};
+use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
@@ -681,6 +682,7 @@ impl State {
     match self.lookup_value(key) {
       Some(Stored::Int(i)) => *i,
       Some(Stored::Bool(true)) => 1, // this is Perl's boolean -> integer semantics
+      Some(Stored::Number(n)) => n.value_of(),
       _ => 0,
     }
   }

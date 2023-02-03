@@ -499,6 +499,10 @@ impl<'a> From<&'a str> for Stored {
   fn from(value: &'a str) -> Self { value.to_owned().into() }
 }
 
+impl From<usize> for Stored {
+  fn from(value: usize) -> Self { Stored::Int(value as i32) }
+}
+
 impl From<i32> for Stored {
   fn from(value: i32) -> Self { Stored::Int(value) }
 }

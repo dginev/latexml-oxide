@@ -119,10 +119,12 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
 }
 
 fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::TokenStream> {
-  let trimmed = replacement.trim();
-  if trimmed != replacement {
-    replacement = trimmed.to_string();
-  }
+  // NO TRIM!
+  // one replacement has "<ltx:break/>\n" with the "\n" being tested for.
+  // let trimmed = replacement.trim();
+  // if trimmed != replacement {
+  //   replacement = trimmed.to_string();
+  // }
   let mut floats: String = String::new();
   let mut has_floats: bool = false;
   let float_result = FLOAT_RE.replace(&replacement, |refs: &Captures| -> String {

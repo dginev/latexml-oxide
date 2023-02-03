@@ -185,7 +185,7 @@ LoadDefinitions!(state, {
   // which IS required in contrast to a general argument; ie a single token is not correct.
   DefParameterType!(GeneralText, sub[gullet, inner, _extra, state] {
     if let Some(open) = gullet.read_x_token(false ,false, state)? {
-      if open == T_BEGIN!() {
+      if open.get_catcode() == Catcode::BEGIN {
         Ok(gullet.read_balanced(false, state)?.unwrap_or_default())
       } else {
         Error!("expected","{", gullet, state, "Expected <general text> here");
@@ -285,10 +285,16 @@ LoadDefinitions!(state, {
 
   // Yet another special case: Require a { but do not read it!!!
   DefParameterType!(RequireBrace, sub[gullet, inner, _extra, state] {
-    if !gullet.if_next(T_BEGIN!(), state)? {
-      Error!("expected","{", gullet, state, "Expected a {{ here");
+    if let Some(tok) = gullet.read_token(state) {
+      let cc = tok.get_catcode();
+      gullet.unread_one(tok.clone());
+      if cc != Catcode::BEGIN {
+        Error!("expected","{", gullet, state, "Expected a {{ here.");
+      }
+      Some(tok)
+    } else {
+      None
     }
-    T_BEGIN!()
   },
   novalue => true);
 
@@ -517,10 +523,9 @@ LoadDefinitions!(state, {
   // Read a token as used when defining it, ie. it may be enclosed in braces.
   DefParameterType!(DefToken, sub[gullet, inner, _extra, state] {
     let mut token = gullet.read_token(state);
-    let begin_token = Some(T_BEGIN!());
     let space_token = T_SPACE!();
 
-    while token == begin_token {
+    while token.is_some() && token.as_ref().unwrap().get_catcode() == Catcode::BEGIN {
       let mut toks : Vec<Token> = gullet.read_balanced(false, state)?.unwrap_or_default().unlist().into_iter().filter(|t| *t != space_token).collect();
       if !toks.is_empty() {
         token = Some(toks.remove(0));
@@ -613,6 +618,7 @@ LoadDefinitions!(state, {
 
   DefParameterType!(TeXFileName, sub[gullet, inner, _extra, state] {
       let mut tokens : Vec<Token> = Vec::new();
+      gullet.skip_spaces(state);
       while let Some(token) = gullet.read_x_token(false, false, state)? {
         match token.get_catcode() {
           Catcode::SPACE | Catcode::EOL | Catcode::COMMENT => {break;},
@@ -634,6 +640,14 @@ LoadDefinitions!(state, {
           tokens.remove(0);
           tokens.pop();
           gullet.unread(Tokens!(T_CS!("\\ltx@loadpool"),T_BEGIN!(),T_OTHER!("LaTeX"),T_END!()));
+        }
+      }
+      // Also strip quotes in "filename" use
+      if tokens.len() > 1 {
+        let quote_token = T_OTHER!("\"");
+        if tokens.first().unwrap() == &quote_token && tokens.last().unwrap() == &quote_token {
+          tokens.remove(0);
+          tokens.pop();
         }
       }
       tokens
@@ -741,7 +755,7 @@ LoadDefinitions!(state, {
     //   } while (defined $token && $token->getCatcode == CC_SPACE);
     //   my @list = ();
     //   if (!defined $token) { }
-    //   elsif ($token->equals(T_BEGIN)) {
+    //   elsif ($token->getCatcode == CC_BEGIN) {
     //     Digest($token);
     //     @list = $STATE->getStomach->digestNextBody(); pop(@list); }
     //   else {
@@ -813,12 +827,13 @@ LoadDefinitions!(state, {
       //   my @tokens = ();
       //   my $comma  = T_OTHER(',');
       //   while (my $token = $gullet->readToken) {
-      //     if ($token->equals(T_END)) {
+      //     my $cc = $token->getCatcode;
+      //     if ($cc == CC_END) {
       //       push(@items, Tokens(@tokens));
       //       last; }
       //     elsif ($token->equals($comma)) {
       //       push(@items, Tokens(@tokens)); @tokens = (); }
-      //     elsif ($token->equals(T_BEGIN)) {
+      //     elsif ($cc == CC_BEGIN) {
       //       push(@tokens, $token, $gullet->readBalanced->unlist, T_END); }
       //     else {
       //       push(@tokens, $token); } }
