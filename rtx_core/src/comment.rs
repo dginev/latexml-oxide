@@ -35,9 +35,9 @@ impl BoxOps for Comment {
     Ok(())
   }
   fn get_font(&self) -> Option<Cow<Font>> { None }
-  fn get_property(&self, key: &str, state: &mut State) -> Option<Cow<Stored>> { None }
+  fn get_property(&self, key: &str, state: &State) -> Option<Cow<Stored>> { None }
   fn get_property_bool(&self, key: &str) -> bool { false }
-  fn get_width(&self, state: &mut State) -> Option<RegisterValue> { Some(RegisterValue::Dimension(Dimension::new(0))) }
+  fn get_width(&self, state: &State) -> Option<RegisterValue> { Some(RegisterValue::Dimension(Dimension::new(0))) }
 
   // sub getHeight      { return Dimension(0); }
   // sub getTotalHeight { return Dimension(0); }

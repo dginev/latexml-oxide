@@ -48,46 +48,55 @@ LoadDefinitions!(outer_state, {
 
   // # <box dimension> = \ht | \wd | \dp
   DefRegister!("\\ht Number", Dimension::new(0),
-    getter => {unimplemented!(); () },
-    setter => {unimplemented!(); () }
-  //   getter => sub {
-  //     my ($n) = @_;
-  //     my $stuff = $n && LookupValue('box' . $n->valueOf);
-  //     return ($stuff ? $stuff->getHeight : Dimension(0)); },
-  //   setter => sub {
-  //     my ($value, $n) = @_;
-  //     my $stuff = $n && LookupValue('box' . $n->valueOf);
-  //     $stuff->setHeight($value) if $stuff;
-  //     return; }
-  );
+    getter => sub[args, state] {
+      let n = args.remove(0).expect_number();
+      let stuff = state.lookup_value(&format!("box{}", n.value_of()));
+      if let Some(Stored::Digested(thebox)) = stuff {
+        thebox.get_height(state)
+      } else {
+        Some(RegisterValue::Dimension(Dimension::default()))
+      }},
+    setter => sub[value,args,state] {
+      let n = args.remove(0).expect_number();
+      let boxkey = format!("box{}", n.value_of());
+      let stuff = state.lookup_value_mut(&boxkey);
+      if let Some(Stored::Digested(thebox)) = stuff {
+        thebox.set_height(value);
+      }});
 
-  DefRegister!("\\wd Number", Dimension::new(0),
-    getter => {unimplemented!(); () },
-    setter => {unimplemented!(); () }
-  //   getter => sub {
-  //     my ($n) = @_;
-  //     my $stuff = $n && LookupValue('box' . $n->valueOf);
-  //     return ($stuff ? $stuff->getWidth : Dimension(0)); },
-  //   setter => sub {
-  //     my ($value, $n) = @_;
-  //     my $stuff = $n && LookupValue('box' . $n->valueOf);
-  //     $stuff->setWidth($value) if $stuff;
-  //     return; }
-  );
+  DefRegister!("\\wd Number", Dimension::default(),
+    getter => sub[args, state] {
+      let n = args.remove(0).expect_number();
+      let stuff = state.lookup_value(&format!("box{}", n.value_of()));
+      if let Some(Stored::Digested(thebox)) = stuff {
+        thebox.get_width(state)
+      } else {
+        Some(RegisterValue::Dimension(Dimension::default()))
+      }},
+    setter => sub[value,args,state] {
+      let n = args.remove(0).expect_number();
+      let boxkey = format!("box{}", n.value_of());
+      let stuff = state.lookup_value_mut(&boxkey);
+      if let Some(Stored::Digested(thebox)) = stuff {
+        thebox.set_width(value);
+      }});
 
   DefRegister!("\\dp Number", Dimension::new(0),
-    getter => {unimplemented!(); () },
-    setter => {unimplemented!(); () }
-  //   getter => sub {
-  //     my ($n) = @_;
-  //     my $stuff = $n && LookupValue('box' . $n->valueOf);
-  //     return ($stuff ? $stuff->getDepth : Dimension(0)); },
-  //   setter => sub {
-  //     my ($value, $n) = @_;
-  //     my $stuff = $n && LookupValue('box' . $n->valueOf);
-  //     $stuff->setDepth($value) if $stuff;
-  //     return; }
-  );
+    getter => sub[args, state] {
+      let n = args.remove(0).expect_number();
+      let stuff = state.lookup_value(&format!("box{}", n.value_of()));
+      if let Some(Stored::Digested(thebox)) = stuff {
+        thebox.get_depth(state)
+      } else {
+        Some(RegisterValue::Dimension(Dimension::default()))
+      }},
+    setter => sub[value,args,state] {
+      let n = args.remove(0).expect_number();
+      let boxkey = format!("box{}", n.value_of());
+      let stuff = state.lookup_value_mut(&boxkey);
+      if let Some(Stored::Digested(thebox)) = stuff {
+        thebox.set_depth(value);
+      }});
 
   // # 2nd arg is <font> = <fontdef token> | \font | <family member>
   // #  <family member> = <font range><4bit number>

@@ -55,7 +55,7 @@ impl Object for List {
 impl BoxOps for List {
   fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
-  fn get_property(&self, _key: &str, _state: &mut State) -> Option<Cow<Stored>> { unimplemented!() }
+  fn get_property(&self, _key: &str, _state: &State) -> Option<Cow<Stored>> { unimplemented!() }
   fn get_property_bool(&self, _key: &str) -> bool { false }
 
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.

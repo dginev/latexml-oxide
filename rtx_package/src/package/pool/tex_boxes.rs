@@ -10,7 +10,6 @@ LoadDefinitions!(state, {
   // \setbox<number>=\hbox to <dimen>{<horizontal mode material>}
 
   DefPrimitive!("\\setbox Number SkipMatch:=", sub[stomach, (number), state] {
-    let tbox = s!("box{}", number.value_of() as u8);
     // If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
     if let Some(after_token) = state.remove_value("afterAssignment") {
       state.assign_value("BeforeNextBox", after_token, None);
@@ -24,32 +23,32 @@ LoadDefinitions!(state, {
     };
     state.clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
     let mut rest = if let Some(xtoken) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
-      let message = s!("{:?}", xtoken);
       stomach.invoke_token(&xtoken, state)?
-    } else { vec![] };
+    } else { Vec::new() };
     if !rest.is_empty() {
       let stuff = rest.remove(0);
-      state.assign_value(&tbox, Stored::Digested(Box::new(stuff)), scope);
+      state.assign_value(&format!("box{}", number.value_of()),
+        Stored::Digested(Box::new(stuff)), scope);
     }
     rest
   });
 
   DefPrimitive!("\\box Number", sub[gullet, (number), state] {
-    let box_key = s!("box{}", number.value_of() as u8);
+    let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = state.remove_value(&box_key) {
       Ok(vec![*stuff])
     } else {
-      Ok(vec![])
+      Ok(Vec::new())
     }
   });
 
   DefPrimitive!("\\copy Number", sub[stomach, (number), state] {
-    let box_key = s!("box{}", number.value_of() as u8);
+    let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = state.lookup_value(&box_key) {
       let cloned_stuff : Digested = (**stuff).clone();
       Ok(vec![cloned_stuff])
     } else {
-      Ok(vec![])
+      Ok(Vec::new())
     }
   });
 

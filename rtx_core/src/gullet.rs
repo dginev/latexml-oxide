@@ -911,8 +911,8 @@ impl Gullet {
           65536.0
         },
       };
-      let s = if is_negative { -1.0 } else { 1.0 };
-      Ok(Dimension::new_f32(s * d * unit))
+      let d_signed = if is_negative { -d } else { d };
+      Ok(Dimension::new(fixpoint(d_signed, Some(unit))))
     } else {
       let message = s!(
         "Missing number, treated as zero. while processing {:?}",

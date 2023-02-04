@@ -36,7 +36,7 @@ pub use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::model::Model;
-use crate::common::number::Number;
+use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
@@ -127,7 +127,7 @@ pub trait BoxOps: Object {
     let mut props = self.get_properties_mut();
     props.insert(key.to_string(), value.into());
   }
-  fn get_property(&self, _key: &str, state: &mut State) -> Option<Cow<Stored>>;
+  fn get_property(&self, _key: &str, state: &State) -> Option<Cow<Stored>>;
   fn get_property_bool(&self, _key: &str) -> bool;
   fn get_body(&self) -> Option<Digested> {
     Error!("boxops", "get_body", self, None, "Generic BoxOps::get_body should never be called!");
@@ -140,12 +140,30 @@ pub trait BoxOps: Object {
     let mut props = self.get_properties_mut();
     props.insert("width".to_string(), width.into());
   }
-  fn get_width(&self, state: &mut State) -> Option<RegisterValue> {
-    // why is clippy intent (&*val).into() is needless?
-    #[allow(clippy::needless_borrow)]
+  fn get_width(&self, state: &State) -> Option<RegisterValue> {
     match self.get_property("width", state) {
-      None => Some(Number::new(0).into()),
       Some(val) => (&*val).into(),
+      None => Some(RegisterValue::Dimension(Dimension::default())),
+    }
+  }
+  fn set_height<T: Into<Stored>>(&mut self, width: T) {
+    let mut props = self.get_properties_mut();
+    props.insert("height".to_string(), width.into());
+  }
+  fn get_height(&self, state: &State) -> Option<RegisterValue> {
+    match self.get_property("height", state) {
+      Some(val) => (&*val).into(),
+      None => Some(RegisterValue::Dimension(Dimension::default())),
+    }
+  }
+  fn set_depth<T: Into<Stored>>(&mut self, width: T) {
+    let mut props = self.get_properties_mut();
+    props.insert("depth".to_string(), width.into());
+  }
+  fn get_depth(&self, state: &State) -> Option<RegisterValue> {
+    match self.get_property("depth", state) {
+      Some(val) => (&*val).into(),
+      None => Some(RegisterValue::Dimension(Dimension::default())),
     }
   }
 }
@@ -376,7 +394,7 @@ impl BoxOps for Digested {
     }
   }
 
-  fn get_property(&self, key: &str, state: &mut State) -> Option<Cow<Stored>> {
+  fn get_property(&self, key: &str, state: &State) -> Option<Cow<Stored>> {
     match *self {
       Digested::TBox(ref b) => b.get_property(key, state),
       Digested::List(ref l) => {

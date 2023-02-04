@@ -257,7 +257,7 @@ impl BoxOps for Whatsit {
     Ok(())
   }
 
-  fn get_property(&self, key: &str, _state: &mut State) -> Option<Cow<Stored>> { self.properties.get(key).map(Cow::Borrowed) }
+  fn get_property(&self, key: &str, _state: &State) -> Option<Cow<Stored>> { self.properties.get(key).map(Cow::Borrowed) }
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
 

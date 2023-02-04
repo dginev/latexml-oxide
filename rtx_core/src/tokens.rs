@@ -270,7 +270,7 @@ impl Tokens {
     Tokens::new(result)
   }
 
-  pub fn untex(&self, state: &mut State) -> String {
+  pub fn untex(&self, state: &State) -> String {
     let tokens = self.clone().revert();
     let mut tokens: VecDeque<Token> = tokens.into();
     let mut result = String::new();
