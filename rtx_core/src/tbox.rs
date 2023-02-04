@@ -137,7 +137,7 @@ impl BoxOps for Tbox {
 
   fn get_font(&self) -> Option<Cow<Font>> { Some(Cow::Borrowed(&self.font)) }
 
-  fn get_property(&self, key: &str, state: &mut State) -> Option<Cow<Stored>> {
+  fn get_property(&self, key: &str, state: &State) -> Option<Cow<Stored>> {
     if key == "isSpace" {
       match self.properties.get(key) {
         Some(value) => Some(Cow::Borrowed(value)),

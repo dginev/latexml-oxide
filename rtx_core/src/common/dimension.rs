@@ -93,15 +93,15 @@ pub fn fixedformat(mut s: i32, unit_opt: Option<&str>) -> String {
     string.push('-');
     s = -s;
   }
-  string.push_str(&(((s as f32 / UNITY as f32).trunc() as i32).to_string()));
+  string.push_str(&(s / UNITY).to_string());
   string.push('.');
   s = 10 * (s % UNITY) + 5;
-  let mut delta = 10i32;
+  let mut delta = 10;
   loop {
     if delta > UNITY {
       s += 0x8000 - 50000;
     }
-    string.push_str(&((s as f32 / UNITY as f32).trunc() as i32).to_string());
+    string.push_str(&(s / UNITY).to_string());
     s = 10 * (s % UNITY);
     delta *= 10;
     if s <= delta {
