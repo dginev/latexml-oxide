@@ -30,7 +30,7 @@ LoadDefinitions!(state, {
       Some(TexMode::Text)
     };
     let body = stomach.digest_next_body(None, state)?;
-    let mut boxes = vec![Digested::TBox(Arc::new(open))];
+    let mut boxes = vec![Digested::from(open)];
     boxes.extend(body);
     // TODO: Locator logic here needs to improve..
     List {

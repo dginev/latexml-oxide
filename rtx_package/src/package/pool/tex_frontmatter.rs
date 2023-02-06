@@ -50,7 +50,7 @@ LoadDefinitions!(state, {
     } else {
       // WAS: $$entry[1] = { $attr->beDigested($stomach)->getHash };
       let attr_kvs = attrs_tks.to_keyvals(state);
-      if let Digested::KeyVals(digested) = attr_kvs.be_digested(stomach, state)? {
+      if let DigestedData::KeyVals(digested) = attr_kvs.be_digested(stomach, state)?.data() {
         Some(digested.get_hash())
       } else {
         None

@@ -1842,8 +1842,11 @@ macro_rules! Revert {
 macro_rules! GetKeyVal {
   ($keyval_opt:expr, $key:expr) => {
     match $keyval_opt {
-      Some(Digested::KeyVals(keyval)) => keyval.get_value($key),
-      _ => None,
+      Some(digested) => match digested.data() {
+        DigestedData::KeyVals(keyval) => keyval.get_value($key),
+        _ => None,
+      },
+      _ => None
     }
   };
 }

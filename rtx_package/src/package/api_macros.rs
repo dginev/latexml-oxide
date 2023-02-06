@@ -252,7 +252,7 @@ macro_rules! undigested {
         if arg.is_none() {
           Ok(None)
         } else {
-          Ok(Some(Digested::Postponed(Arc::new(arg.owned_tokens().unwrap_or_default()))))
+          Ok(Some(Digested::from(arg.owned_tokens().unwrap_or_default())))
         }
       },
     ))

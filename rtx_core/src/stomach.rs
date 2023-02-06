@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
-use crate::comment::Comment;
 use crate::common::error::*;
 use crate::common::font;
 use crate::common::font::Font;
@@ -72,7 +71,7 @@ impl<'t> Stomach {
     // We ran out, terminate,
     // and add a Dummy `trailer' if none explicit.
     if init_depth <= self.boxing.len() {
-      self.box_list.push(Digested::TBox(Arc::new(Tbox::default())));
+      self.box_list.push(Digested::from(Tbox::default()));
       // info!(target:"digest_next_body","no_token");
     }
 
@@ -335,14 +334,14 @@ impl<'t> Stomach {
         if state.lookup_bool("IN_MATH") {
           Ok(None)
         } else {
-          Ok(Some(Digested::TBox(Arc::new(Tbox::new(
+          Ok(Some(Digested::from(Tbox::new(
             meaning.to_string(),
             font,
             self.gullet.get_locator().map(|l| l.into_owned()),
             Tokens!(meaning),
             HashMap::new(),
             state,
-          )))))
+          ))))
         }
       },
       Catcode::COMMENT => {
@@ -352,18 +351,18 @@ impl<'t> Stomach {
         // However, spaces normally would have be digested away as positioning...
         // let badspace = pack('U', 0xA0) . "\x{0335}"; // This is at space's pos in OT1
         // $comment =~ s/\Q$badspace\E/ /g;
-        Ok(Some(Digested::Comment(Comment(comment))))
+        Ok(Some(Digested::from(comment)))
       },
       _ => {
         let text = font::decode_string(meaning.get_string(), None, true, state);
-        Ok(Some(Digested::TBox(Arc::new(Tbox::new(
+        Ok(Some(Digested::from(Tbox::new(
           text,
           None,
           None,             // locator
           Tokens!(meaning), // tokens
           HashMap::new(),   // properties
           state,
-        )))))
+        ))))
       },
     }
   }

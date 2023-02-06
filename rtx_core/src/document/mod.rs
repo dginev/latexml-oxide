@@ -28,7 +28,7 @@ use crate::TexMode;
 use crate::document::resource::Resource;
 use crate::document::tag::{TagConstructionClosure, TagOptionName, TagOptions};
 use crate::Tbox;
-use crate::{BoxOps, Digested};
+use crate::{BoxOps, Digested, DigestedData};
 
 lazy_static! {
   static ref HAS_NONSPACE_RE: Regex = Regex::new(r"\S").unwrap();
@@ -296,49 +296,46 @@ impl Document {
   /// which will be inserted according to whatever
   /// font, mode, etc, are in %props.
   pub fn absorb(&mut self, object: &Digested, props_opt: Option<HashMap<String, Stored>>, state: &mut State) -> Result<()> {
+    use DigestedData::*;
     // let mut results = Vec::new();
     let props = props_opt.unwrap_or_default(); // is there a better way to deal with the Option?
     let mut boxes = vec![Cow::Borrowed(object)];
     while let Some(front_box) = boxes.pop() {
-      if let Digested::List(ref list) = *front_box {
-        // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
-        for tbox in list.unlist().into_iter().rev() {
-          boxes.push(Cow::Owned(tbox));
-        }
-      } else {
-        // info!(target: "document:absorb", "front box: {:?}", front_box);
-        // self.constructed_nodes = Vec::new();
-        match *front_box {
-          // A Proper Box or Whatsit? Absorb it.
-          Digested::TBox(ref digested) => {
-            self.set_box_to_absorb(Some((*front_box).clone()));
-            digested.be_absorbed(self, state)?;
-            self.localize_box_to_absorb();
-          },
-          Digested::Whatsit(ref digested) => {
-            self.set_box_to_absorb(Some((*front_box).clone()));
-            digested.read().unwrap().be_absorbed(self, state)?;
-            self.localize_box_to_absorb();
-          },
-          Digested::Postponed(ref tokens) => {
-            if props.get("isMath") != Some(&Stored::Bool(true)) {
-              let text_font = if let Some(Stored::Font(ref prop_font)) = props.get("font") {
-                Arc::clone(prop_font)
-              } else {
-                Arc::new(self.box_to_absorb.as_ref().unwrap().get_font().unwrap().into_owned())
-              };
-              self.open_text(&tokens.to_string(), &text_font, state)?;
+      match front_box.data() {
+        List(ref list) => {
+          // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
+          for tbox in list.unlist().into_iter().rev() {
+            boxes.push(Cow::Owned(tbox));
+          }
+        },
+        // A Proper Box or Whatsit? Absorb it.
+        TBox(ref digested) => {
+          self.set_box_to_absorb(Some((*front_box).clone()));
+          digested.be_absorbed(self, state)?;
+          self.localize_box_to_absorb();
+        },
+        Whatsit(ref digested) => {
+          self.set_box_to_absorb(Some((*front_box).clone()));
+          digested.read().unwrap().be_absorbed(self, state)?;
+          self.localize_box_to_absorb();
+        },
+        Postponed(ref tokens) => {
+          if props.get("isMath") != Some(&Stored::Bool(true)) {
+            let text_font = if let Some(Stored::Font(ref prop_font)) = props.get("font") {
+              Arc::clone(prop_font)
             } else {
-              unimplemented!();
-            }
-          },
-          Digested::Comment(ref comment) => {
-            comment.be_absorbed(self, state)?;
-          },
-          Digested::KeyVals(_) => unimplemented!(),
-          Digested::RegisterValue(_) => unimplemented!(),
-          Digested::List(_) => unimplemented!(),
-        };
+              Arc::new(self.box_to_absorb.as_ref().unwrap().get_font().unwrap().into_owned())
+            };
+            self.open_text(&tokens.to_string(), &text_font, state)?;
+          } else {
+            unimplemented!();
+          }
+        },
+        Comment(ref comment) => {
+          comment.be_absorbed(self, state)?;
+        },
+        KeyVals(_) => unimplemented!(),
+        RegisterValue(_) => unimplemented!(),
       }
     }
     Ok(())
@@ -2444,10 +2441,10 @@ impl Document {
     attrib.insert(s!("src"), resource.name);
     attrib.insert(s!("type"), resource.mimetype);
     attrib.insert(s!("media"), resource.media);
-    let content_box = Digested::TBox(Arc::new(Tbox {
+    let content_box = Digested::from(Tbox {
       text: resource.content,
       ..Tbox::default()
-    }));
+    });
     self.insert_element("ltx:resource", vec![&content_box], Some(attrib), state)?;
     if let Some(savenode) = savenode_opt {
       self.set_node(&savenode);

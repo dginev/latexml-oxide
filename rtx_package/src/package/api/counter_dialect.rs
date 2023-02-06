@@ -495,7 +495,7 @@ pub fn reset_counter(ctr: &str, state: &mut State) {
 
 #[allow(clippy::float_cmp)]
 /// Create id, and tags for an itemize type \item
-pub fn ref_step_item_counter(tag_opt: Option<Arc<Tokens>>, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
+pub fn ref_step_item_counter(tag_opt: Option<&Tokens>, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
   let counter = state.lookup_string("itemcounter");
   let n = state.lookup_int("itemization_items");
   state.assign_value("itemization_items", n + 1, None);
@@ -556,11 +556,7 @@ pub fn ref_step_item_counter(tag_opt: Option<Arc<Tokens>>, stomach: &mut Stomach
     tag_tokens.push(T_END!());
 
     let tags = stomach.digest(tag_tokens, state)?;
-    if let Digested::List(l) = tags {
-      if !l.is_empty() {
-        props.insert("tags".to_string(), l.into());
-      }
-    } else {
+    if !tags.is_empty() {
       props.insert("tags".to_string(), tags.into());
     }
     props

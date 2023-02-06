@@ -32,46 +32,52 @@ lazy_static! {
 // for e.g. vectors and strings.
 // Maybe "is_invisible" or "without_ink" or ...
 pub fn is_empty(digested: &Digested, state: &State) -> bool {
+  use DigestedData::*;
   if digested.get_property_bool("isEmpty") || digested.get_property_bool("isSpace") {
     // A space-like thing
     true
-  } else if let Digested::TBox(tbox) = digested {
-    match tbox.get_string(state) {
-      Ok(s) => s.trim().is_empty(),
-      _ => true,
-    }
-  } else if let Digested::List(list) = digested {
-    list.boxes.iter().all(|b| is_empty(b, state))
-  } else if let Digested::Whatsit(ws_arc) = digested {
-    let ws = ws_arc.read().unwrap();
-    *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap() && ws.get_body().unwrap_or_default().all(|b| is_empty(b, state))
-  } else if let Digested::Comment(_) = digested {
-    true
   } else {
-    unimplemented!();
+    match digested.data() {
+      TBox(tbox) => match tbox.get_string(state) {
+        Ok(s) => s.trim().is_empty(),
+        _ => true,
+      },
+      List(list) => list.boxes.iter().all(|b| is_empty(b, state)),
+      Whatsit(ws_arc) => {
+        let ws = ws_arc.read().unwrap();
+        *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap() &&
+          ws.get_body().unwrap_or_default().all(|b| is_empty(b, state))
+      },
+      Comment(_) => true,
+      _ => unimplemented!()
+    }
   }
 }
 
 // Remember a "safe" way to test a script Whatsit.
 // Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
 pub fn is_script(object: &Digested, state: &State) -> Option<(String, Catcode)> {
-  let box_opt = match object {
-    Digested::List(obj) => obj.boxes.last(),
-    other => Some(other),
+  let box_opt = match object.data() {
+    DigestedData::List(obj) => obj.boxes.last(),
+    _ => Some(object),
   };
-  if let Some(Digested::Whatsit(ref obj)) = box_opt {
-    // careful w/alias in getCSName!
-    let name = obj.read().unwrap().get_definition().get_cs().get_cs_name().to_string();
-    SCRIPT_NAME_RE.captures(&name).map(|cap| {
-      (
-        cap.get(1).map_or("", |m| m.as_str()).to_owned(),
-        if cap.get(2).map_or("", |m| m.as_str()) == "SUBSCRIPT" {
-          Catcode::SUB
-        } else {
-          Catcode::SUPER
-        },
-      )
-    })
+  if let Some(boxobj) = box_opt {
+    if let DigestedData::Whatsit(ref obj) = boxobj.data() {
+      // careful w/alias in getCSName!
+      let name = obj.read().unwrap().get_definition().get_cs().get_cs_name().to_string();
+      SCRIPT_NAME_RE.captures(&name).map(|cap| {
+        (
+          cap.get(1).map_or("", |m| m.as_str()).to_owned(),
+          if cap.get(2).map_or("", |m| m.as_str()) == "SUBSCRIPT" {
+            Catcode::SUB
+          } else {
+            Catcode::SUPER
+          },
+        )
+      })
+    } else {
+      None
+    }
   } else {
     None
   }
@@ -182,13 +188,13 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       if let Some(font) = script.get_font() {
         properties.insert("font".to_string(), font.into());
       }
-      let mut with_script = vec![Digested::Whatsit(Arc::new(RwLock::new(Whatsit {
+      let mut with_script = vec![Digested::from(Whatsit {
         definition: state.lookup_definition(&T_CS!(cs)).unwrap(),
         args: vec![Some(script)],
         properties,
         //         locator     => $gullet->getLocator,
         ..Whatsit::default()
-      })))];
+      })];
       with_script.append(&mut stuff);
       stuff = with_script;
     }
@@ -198,14 +204,14 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
     let c = if cc == Catcode::SUPER { '^' } else { '_' };
     Error!("Unexpected", c, stomach, state, s!("Script {} can only appear in math mode", c));
     let placeholder = if cc == Catcode::SUPER { T_SUPER!() } else { T_SUB!() };
-    Ok(vec![Digested::TBox(Arc::new(Tbox::new(
+    Ok(vec![Digested::from(Tbox::new(
       c.to_string(),
       None,
       None,
       Tokens!(placeholder),
       HashMap::new(),
       state,
-    )))])
+    ))])
   }
 }
 

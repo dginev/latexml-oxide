@@ -185,8 +185,8 @@ pub fn do_def(globally: bool, stomach: &mut Stomach, cs: Token, params: Tokens, 
 // but it's not a vbox (!?!?)
 pub fn classify_box(boxnum: Number, state: &State) -> &'static str {
   match state.lookup_value(&s!("box{}", boxnum.value_of())) {
-    Some(Stored::Digested(ref d)) => match **d {
-      Digested::Whatsit(ref w) if w.read().unwrap().definition == state.lookup_definition(&T_CS!("\\vbox")).unwrap() => "vbox",
+    Some(Stored::Digested(ref d)) => match d.data() {
+      DigestedData::Whatsit(ref w) if w.read().unwrap().definition == state.lookup_definition(&T_CS!("\\vbox")).unwrap() => "vbox",
       _ => "hbox",
     },
     _ => "",

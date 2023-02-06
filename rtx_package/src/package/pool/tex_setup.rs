@@ -698,8 +698,8 @@ LoadDefinitions!(state, {
     let mut stuff = stomach.invoke_token(&token, state)?;
     if !stuff.is_empty() {
       let tbox = stuff.remove(0);
-      let csname = match tbox {
-        Digested::Whatsit(ref w) => w.read().unwrap().definition.get_cs_name().to_string(),
+      let csname = match tbox.data() {
+        DigestedData::Whatsit(ref w) => w.read().unwrap().definition.get_cs_name().to_string(),
         _ => tbox.to_string()
       };
       if csname != "\\hbox" && csname != "\\vbox" && csname != "\\vtop" {

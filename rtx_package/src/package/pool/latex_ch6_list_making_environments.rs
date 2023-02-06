@@ -48,36 +48,36 @@ LoadDefinitions!(state, {
   DefConstructor!("\\itemize@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[stomach, args, state] {
-      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
       ref_step_item_counter(undigested, stomach, state) });
   DefConstructor!("\\inline@itemize@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
     properties => sub[stomach, args, state] {
-      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
       ref_step_item_counter(undigested, stomach, state) });
 
   DefMacro!("\\enumerate@item", "\\par\\enumerate@item@");
   DefConstructor!("\\enumerate@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[stomach, args, state] {
-      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
       ref_step_item_counter(undigested, stomach, state) });
   DefConstructor!("\\inline@enumerate@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
     properties => sub[stomach, args, state] {
-      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
       ref_step_item_counter(undigested, stomach, state) });
 
   DefMacro!("\\description@item", "\\par\\description@item@");
   DefConstructor!("\\description@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[stomach, args, state] {
-      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
       ref_step_item_counter(undigested, stomach, state) });
   DefConstructor!("\\inline@description@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
     properties => sub[stomach, args, state] {
-      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
       ref_step_item_counter(undigested, stomach, state) });
 
   DefEnvironment!("{itemize}",

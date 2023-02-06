@@ -39,7 +39,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\list@item OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[stomach, args, state] {
-      let undigested = args[0].as_ref().map(|d| d.raw_tokens());
+      let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
       ref_step_item_counter(undigested, stomach, state) }
   );
 
@@ -54,13 +54,17 @@ LoadDefinitions!(state, {
     "<ltx:item xml:id='#id' itemsep='#itemsep'>\
       <ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",    // At least an empty tag! ?
     properties => sub[stomach, args, state] {
-      if let Some(Digested::Postponed(ref tag_tokens)) = args[0] {
-        let mut gullet = stomach.get_gullet_mut();
-        let tag_expanded = Expand!(tag_tokens, gullet, state);
-        let tag = stomach.digest(tag_expanded, state)?;
-        Ok(stored_map!("tag" => tag))
+      if let Some(ref arg) = args[0] {
+        if let DigestedData::Postponed(ref tag_tokens) = arg.data() {
+          let mut gullet = stomach.get_gullet_mut();
+          let tag_expanded = Expand!(tag_tokens.clone(), gullet, state);
+          let tag = stomach.digest(tag_expanded, state)?;
+          Ok(stored_map!("tag" => tag))
+        } else {
+          Ok(HashMap::new())
+        }
       } else {
-        Ok(HashMap::new())
+          Ok(HashMap::new())
       }
     }
   );

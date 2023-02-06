@@ -571,11 +571,7 @@ impl From<Constructor> for Stored {
 }
 
 impl From<List> for Stored {
-  fn from(value: List) -> Self { crate::Digested::List(Arc::new(value)).into() }
-}
-
-impl From<Arc<List>> for Stored {
-  fn from(value: Arc<List>) -> Self { crate::Digested::List(value).into() }
+  fn from(value: List) -> Self { crate::Digested::from(value).into() }
 }
 
 impl From<crate::Digested> for Stored {
