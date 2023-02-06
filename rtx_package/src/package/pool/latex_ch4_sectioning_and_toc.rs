@@ -182,25 +182,29 @@ LoadDefinitions!(outer_stomach, outer_state, {
       }
     },
     properties => sub[stomach, args, state] {
+      use DigestedData::*;
       let stype = args[0].as_ref().unwrap();
       let inlist = args[1].as_ref().unwrap();
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
       let mut props = RefStepID!(&stype.to_string())?;
-      let title_digested = if let Digested::Postponed(tokens) = title {
-        // TODO: tokens.clone().unlist() looks like a code smell.
-        // Should Digested::Postponed() hold a Tokens directly instead?
-        stomach.digest(Tokens!(T_CS!("\\@hidden@bgroup"), (**tokens).clone().unlist(), T_CS!("\\@hidden@egroup")), state)?
+      let title_digested = if let Postponed(tokens) = title.data() {
+        // TODO: is .clone() on the tokens before they are unlisted a sign that
+        // the DigestedData::Postponed variant isn't ideal?
+        // should we be draining it? Or is there a better conceptual organization?
+        stomach.digest(Tokens!(T_CS!("\\@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\@hidden@egroup")), state)?
       } else {
         title.clone()
       };
       props.insert("title".to_string(), title_digested.into());
 
-      if let Some(Digested::Postponed(toctokens)) = toctitle_arg {
-        if !toctokens.is_empty() {
-          let toctitle_digested = stomach.digest(
-            Tokens!(T_CS!("\\@hidden@bgroup"), (**toctokens).clone().unlist(), T_CS!("\\@hidden@egroup")), state)?;
-          props.insert("toctitle".to_string(), toctitle_digested.into());
+      if let Some(toctitle) = toctitle_arg {
+        if let Postponed(toctokens) = toctitle.data() {
+          if !toctokens.is_empty() {
+            let toctitle_digested = stomach.digest(
+              Tokens!(T_CS!("\\@hidden@bgroup"), toctokens.clone().unlist(), T_CS!("\\@hidden@egroup")), state)?;
+            props.insert("toctitle".to_string(), toctitle_digested.into());
+          }
         }
       }
       Ok(props)

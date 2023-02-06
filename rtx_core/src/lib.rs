@@ -257,64 +257,66 @@ pub enum TexMode {
 // A strict OO-hierarchy of object ownership (with no auxiliary state metadata)
 // would allow a Rust-like redesign. But it could be too hard to achieve in practice.
 #[derive(Clone, Debug)]
-pub enum Digested {
-  TBox(Arc<Tbox>),
-  Whatsit(Arc<RwLock<Whatsit>>),
-  List(Arc<List>),
-  Postponed(Arc<Tokens>),
-  KeyVals(Arc<KeyVals>),
-  RegisterValue(Arc<RegisterValue>),
+pub struct Digested(Arc<DigestedData>);
+#[derive(Debug)]
+pub enum DigestedData {
+  TBox(Tbox),
+  Whatsit(RwLock<Whatsit>),
+  List(List),
+  Postponed(Tokens),
+  KeyVals(KeyVals),
+  RegisterValue(RegisterValue),
   Comment(Comment),
 }
 
 impl PartialEq for Digested {
   fn eq(&self, other: &Digested) -> bool {
-    use Digested::*;
-    match self {
+    use DigestedData::*;
+    match *self.0 {
       TBox(ref tb) => {
-        if let TBox(tb2) = other {
+        if let TBox(ref tb2) = *other.0 {
           tb == tb2
         } else {
           false
         }
       },
       Whatsit(ref tb) => {
-        if let Whatsit(tb2) = other {
+        if let Whatsit(ref tb2) = *other.0 {
           *tb.read().unwrap() == *tb2.read().unwrap()
         } else {
           false
         }
       },
       List(ref tb) => {
-        if let List(tb2) = other {
+        if let List(ref tb2) = *other.0 {
           tb == tb2
         } else {
           false
         }
       },
       Postponed(ref tb) => {
-        if let Postponed(tb2) = other {
+        if let Postponed(ref tb2) = *other.0 {
           tb == tb2
         } else {
           false
         }
       },
       KeyVals(ref tb) => {
-        if let KeyVals(tb2) = other {
+        if let KeyVals(ref tb2) = *other.0 {
           tb == tb2
         } else {
           false
         }
       },
       RegisterValue(ref tb) => {
-        if let RegisterValue(tb2) = other {
+        if let RegisterValue(ref tb2) = *other.0 {
           tb == tb2
         } else {
           false
         }
       },
       Comment(ref tb) => {
-        if let Comment(tb2) = other {
+        if let Comment(ref tb2) = *other.0 {
           tb == tb2
         } else {
           false
@@ -327,26 +329,28 @@ impl PartialEq for Digested {
 // Important: we need to postpone the creation of a box until a time where
 // we have the most current font information
 impl<'a> From<&'a String> for Digested {
-  fn from(value: &'a String) -> Digested { Digested::Postponed(Arc::new(Tokens::new(ExplodeText!(value)))) }
+  fn from(value: &'a String) -> Digested { Digested(Arc::new(DigestedData::Postponed(Tokens::new(ExplodeText!(value))))) }
 }
 impl From<String> for Digested {
-  fn from(value: String) -> Digested { Digested::Postponed(Arc::new(Tokens::new(ExplodeText!(value)))) }
+  fn from(value: String) -> Digested { Digested(Arc::new(DigestedData::Postponed(Tokens::new(ExplodeText!(value))))) }
 }
-
+impl From<Tokens> for Digested {
+  fn from(value: Tokens) -> Digested { Digested(Arc::new(DigestedData::Postponed(value))) }
+}
 impl From<Tbox> for Digested {
-  fn from(value: Tbox) -> Digested { Digested::TBox(Arc::new(value)) }
+  fn from(value: Tbox) -> Digested { Digested(Arc::new(DigestedData::TBox(value))) }
 }
 impl From<List> for Digested {
-  fn from(value: List) -> Digested { Digested::List(Arc::new(value)) }
+  fn from(value: List) -> Digested { Digested(Arc::new(DigestedData::List(value))) }
 }
 impl From<Whatsit> for Digested {
-  fn from(value: Whatsit) -> Digested { Digested::Whatsit(Arc::new(RwLock::new(value))) }
+  fn from(value: Whatsit) -> Digested { Digested(Arc::new(DigestedData::Whatsit(RwLock::new(value)))) }
 }
 impl From<KeyVals> for Digested {
-  fn from(value: KeyVals) -> Digested { Digested::KeyVals(Arc::new(value)) }
+  fn from(value: KeyVals) -> Digested { Digested(Arc::new(DigestedData::KeyVals(value))) }
 }
 impl From<RegisterValue> for Digested {
-  fn from(value: RegisterValue) -> Digested { Digested::RegisterValue(Arc::new(value)) }
+  fn from(value: RegisterValue) -> Digested { Digested(Arc::new(DigestedData::RegisterValue(value))) }
 }
 
 impl<'a> From<&'a Digested> for Option<crate::Digested> {
@@ -370,116 +374,125 @@ impl From<Digested> for Result<Option<Digested>> {
 }
 
 impl Default for Digested {
-  fn default() -> Self { Digested::TBox(Arc::new(Tbox::default())) }
+  fn default() -> Self { Digested(Arc::new(DigestedData::TBox(Tbox::default()))) }
 }
 
 impl fmt::Display for Digested {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    match *self {
-      Digested::TBox(ref b) => write!(f, "{b}"),
-      Digested::List(ref l) => write!(f, "{l}"),
-      Digested::Whatsit(ref w) => write!(f, "{}", w.read().unwrap()),
-      Digested::Postponed(ref t) => write!(f, "{t}"),
-      Digested::KeyVals(ref kvs) => write!(f, "{kvs}"),
-      Digested::Comment(ref c) => write!(f, "{c}"),
-      Digested::RegisterValue(ref rv) => write!(f, "{rv}"),
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => write!(f, "{b}"),
+      List(ref l) => write!(f, "{l}"),
+      Whatsit(ref w) => write!(f, "{}", w.read().unwrap()),
+      Postponed(ref t) => write!(f, "{t}"),
+      KeyVals(ref kvs) => write!(f, "{kvs}"),
+      Comment(ref c) => write!(f, "{c}"),
+      RegisterValue(ref rv) => write!(f, "{rv}"),
     }
   }
 }
 impl Object for Digested {
   fn stringify(&self) -> String {
-    match *self {
-      Digested::TBox(ref b) => b.stringify(),
-      Digested::List(ref l) => l.stringify(),
-      Digested::Whatsit(ref w) => w.read().unwrap().stringify(),
-      Digested::Postponed(ref t) => (*t).stringify(),
-      Digested::KeyVals(ref kvs) => kvs.stringify(),
-      Digested::Comment(ref c) => c.stringify(),
-      Digested::RegisterValue(ref rv) => (*rv).stringify(),
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b.stringify(),
+      List(ref l) => l.stringify(),
+      Whatsit(ref w) => w.read().unwrap().stringify(),
+      Postponed(ref t) => (*t).stringify(),
+      KeyVals(ref kvs) => kvs.stringify(),
+      Comment(ref c) => c.stringify(),
+      RegisterValue(ref rv) => (*rv).stringify(),
     }
   }
   fn get_locator(&self) -> Option<Cow<Locator>> {
-    match *self {
-      Digested::TBox(ref b) => b.get_locator(),
-      Digested::List(ref l) => l.get_locator(),
-      Digested::Comment(ref c) => c.get_locator(),
-      Digested::Whatsit(ref w) => w.read().unwrap().get_locator().map(|l| Cow::Owned(l.into_owned())),
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b.get_locator(),
+      List(ref l) => l.get_locator(),
+      Comment(ref c) => c.get_locator(),
+      Whatsit(ref w) => w.read().unwrap().get_locator().map(|l| Cow::Owned(l.into_owned())),
       _ => unimplemented!(),
     }
   }
   fn revert(&self, state: &State) -> Result<Tokens> {
-    match *self {
-      Digested::TBox(ref b) => b.revert(state),
-      Digested::List(ref l) => l.revert(state),
-      Digested::Whatsit(ref w) => w.read().unwrap().revert(state),
-      Digested::Postponed(ref t) => Ok((**t).clone()),
-      Digested::KeyVals(ref kvs) => kvs.revert(state),
-      Digested::Comment(ref c) => c.revert(state),
-      Digested::RegisterValue(ref rv) => (**rv).revert(state),
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b.revert(state),
+      List(ref l) => l.revert(state),
+      Whatsit(ref w) => w.read().unwrap().revert(state),
+      Postponed(ref t) => Ok(t.clone()),
+      KeyVals(ref kvs) => kvs.revert(state),
+      Comment(ref c) => c.revert(state),
+      RegisterValue(ref rv) => rv.revert(state),
     }
   }
 }
 
 impl BoxOps for Digested {
   fn unlist(&self) -> Vec<Digested> {
-    match self {
-      Digested::TBox(ref b) => b.unlist(),
-      Digested::List(ref l) => l.unlist(),
-      Digested::Whatsit(ref w) => w.read().unwrap().unlist(),
-      Digested::KeyVals(ref kvs) => kvs.unlist(),
-      Digested::Comment(ref c) => c.unlist(),
-      Digested::Postponed(ref _t) => unimplemented!(),
-      Digested::RegisterValue(ref _rv) => unimplemented!(),
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b.unlist(),
+      List(ref l) => l.unlist(),
+      Whatsit(ref w) => w.read().unwrap().unlist(),
+      KeyVals(ref kvs) => kvs.unlist(),
+      Comment(ref c) => c.unlist(),
+      Postponed(ref _t) => unimplemented!(),
+      RegisterValue(ref _rv) => unimplemented!(),
     }
   }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
-    match self {
-      Digested::TBox(b) => b.be_absorbed(document, state),
-      Digested::List(l) => l.be_absorbed(document, state),
-      Digested::Comment(c) => c.be_absorbed(document, state),
-      Digested::Whatsit(w) => w.read().unwrap().be_absorbed(document, state),
-      Digested::KeyVals(kvs) => kvs.be_absorbed(document, state),
-      Digested::Postponed(_) => unimplemented!(),
-      Digested::RegisterValue(ref _rv) => unimplemented!(),
+    use DigestedData::*;
+    match &*self.0 {
+      TBox(b) => b.be_absorbed(document, state),
+      List(l) => l.be_absorbed(document, state),
+      Comment(c) => c.be_absorbed(document, state),
+      Whatsit(w) => w.read().unwrap().be_absorbed(document, state),
+      KeyVals(kvs) => kvs.be_absorbed(document, state),
+      Postponed(_) => unimplemented!(),
+      RegisterValue(ref _rv) => unimplemented!(),
     }
   }
 
   fn get_properties(&self) -> &HashMap<String, Stored> {
-    match self {
-      Digested::TBox(ref b) => b.get_properties(),
-      Digested::List(ref l) => l.get_properties(),
-      Digested::KeyVals(ref kvs) => kvs.get_properties(),
-      Digested::Whatsit(ref w) => unimplemented!(), // Oooof; w.read().unwrap().get_properties(),
-      Digested::Postponed(_) | Digested::RegisterValue(_) | Digested::Comment(_) => unimplemented!(),
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b.get_properties(),
+      List(ref l) => l.get_properties(),
+      KeyVals(ref kvs) => kvs.get_properties(),
+      Whatsit(ref w) => unimplemented!(), // Oooof; w.read().unwrap().get_properties(),
+      Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
     }
   }
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
-    match *self {
+    match *self.0 {
       // TODO: This is only possible if we have interior mutability for *ALL* Digested variants
       // i.e. Arc<RwLock<Tbox>>, Arc<RwLock<List>>, etc.
       //
       // Digested::TBox(ref b) => b.set_property(key, value),
       // Digested::List(ref l) => l.set_property(key, value),
-      Digested::Whatsit(ref w) => w.write().unwrap().set_property(key, value),
+      DigestedData::Whatsit(ref w) => w.write().unwrap().set_property(key, value),
       _ => unimplemented!(),
     }
   }
 
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
-    match *self {
-      Digested::TBox(ref b) => b.get_property(key),
-      Digested::List(ref l) => l.get_property(key),
-      Digested::Whatsit(ref w) => w.read().unwrap().get_property(key).map(|v| Cow::Owned(v.into_owned())),
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b.get_property(key),
+      List(ref l) => l.get_property(key),
+      Whatsit(ref w) => w.read().unwrap().get_property(key).map(|v| Cow::Owned(v.into_owned())),
       _ => unimplemented!(),
     }
   }
   fn get_string(&self, state: &State) -> Result<Cow<str>> {
-    match *self {
-      Digested::TBox(ref b) => b.get_string(state),
-      Digested::List(ref l) => l.get_string(state),
-      Digested::Whatsit(ref w) => match w.read().unwrap().get_string(state) {
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b.get_string(state),
+      List(ref l) => l.get_string(state),
+      Whatsit(ref w) => match w.read().unwrap().get_string(state) {
         Ok(v) => Ok(Cow::Owned(v.into_owned())),
         Err(e) => Err(format!("failed Whatsit get_string: {e}").into()),
       },
@@ -487,64 +500,71 @@ impl BoxOps for Digested {
     }
   }
   fn has_property(&self, key: &str) -> bool {
-    match *self {
-      Digested::TBox(ref b) => b.has_property(key),
-      Digested::List(ref l) => l.has_property(key),
-      Digested::Whatsit(ref w) => w.read().unwrap().has_property(key),
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b.has_property(key),
+      List(ref l) => l.has_property(key),
+      Whatsit(ref w) => w.read().unwrap().has_property(key),
       _ => unimplemented!(),
     }
   }
   fn get_body(&self) -> Option<Digested> {
-    match *self {
-      Digested::TBox(ref b) => {
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => {
         Error!("digested", "get_body", self, None, s!("Called get_body on Box: {:?}", b));
         None
       },
-      Digested::List(ref l) => {
+      List(ref l) => {
         Error!("digested", "get_body", self, None, s!("Called get_body on List: {:?}", l));
         None
       },
-      Digested::Whatsit(ref w) => w.read().unwrap().get_body(),
+      Whatsit(ref w) => w.read().unwrap().get_body(),
       _ => unimplemented!(),
     }
   }
   fn get_property_bool(&self, key: &str) -> bool {
-    match *self {
-      Digested::TBox(ref b) => b.get_property_bool(key),
-      Digested::List(ref l) => l.get_property_bool(key),
-      Digested::Whatsit(ref w) => w.read().unwrap().get_property_bool(key),
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b.get_property_bool(key),
+      List(ref l) => l.get_property_bool(key),
+      Whatsit(ref w) => w.read().unwrap().get_property_bool(key),
       _ => unimplemented!(),
     }
   }
   fn get_font(&self) -> Option<Cow<Font>> {
-    match *self {
-      Digested::TBox(ref b) => b.get_font(),
-      Digested::List(ref l) => l.get_font(),
-      Digested::Whatsit(ref w) => w.read().unwrap().get_font().map(|t| Cow::Owned(t.into_owned())),
-      Digested::Postponed(ref tks) => None,
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b.get_font(),
+      List(ref l) => l.get_font(),
+      Whatsit(ref w) => w.read().unwrap().get_font().map(|t| Cow::Owned(t.into_owned())),
+      Postponed(ref tks) => None,
       _ => unimplemented!(),
     }
   }
 }
 
 impl Digested {
+  pub fn data(&self) -> &DigestedData {
+    &self.0
+  }
   // convenience subset of NumericOps, added here for now as an experiment:
   pub fn value_of(&self) -> i32 {
-    match self {
-      Digested::RegisterValue(rv) => (**rv).clone().value_of(),
+    match &*self.0 {
+      DigestedData::RegisterValue(rv) => rv.clone().value_of(),
       _ => 0,
     }
   }
   pub fn pt_value(&self, prec: Option<u8>) -> f32 {
-    match self {
-      Digested::RegisterValue(rv) => (**rv).clone().pt_value(prec),
+    match &*self.0 {
+      DigestedData::RegisterValue(rv) => rv.clone().pt_value(prec),
       _ => 0.0,
     }
   }
   pub fn any<F>(&self, mut check: F) -> bool
   where F: FnMut(&Self) -> bool {
-    use Digested::*;
-    match self {
+    use DigestedData::*;
+    match &*self.0 {
       TBox(_) | Whatsit(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
       Comment(_) => true,
       List(l) => l.boxes.iter().any(check),
@@ -553,8 +573,8 @@ impl Digested {
 
   pub fn all<F>(&self, mut check: F) -> bool
   where F: FnMut(&Self) -> bool {
-    use Digested::*;
-    match self {
+    use DigestedData::*;
+    match &*self.0 {
       TBox(_) | Whatsit(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
       Comment(_) => true,
       List(l) => l.boxes.iter().all(check),
@@ -562,21 +582,22 @@ impl Digested {
   }
 
   pub fn is_empty(&self) -> bool {
-    match *self {
-      Digested::TBox(ref b) => b.is_empty(),
-      Digested::List(ref l) => l.is_empty(),
-      Digested::Whatsit(ref w) => w.read().unwrap().is_empty(),
-      Digested::Postponed(ref tks) => tks.is_empty(),
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b.is_empty(),
+      List(ref l) => l.is_empty(),
+      Whatsit(ref w) => w.read().unwrap().is_empty(),
+      Postponed(ref tks) => tks.is_empty(),
       _ => unimplemented!(),
     }
   }
 
   /// Provide a way of emulating an `Undigested` argument, by requesting
   /// raw tokens, only when they are preserved -- empty otherwise.
-  pub fn raw_tokens(&self) -> Arc<Tokens> {
-    match self {
-      Digested::Postponed(tks) => Arc::clone(tks),
-      _ => Arc::new(Tokens::default()),
+  pub fn raw_tokens(&self) -> Option<&Tokens> {
+    match *self.0 {
+      DigestedData::Postponed(ref tks) => Some(tks),
+      _ => None
     }
   }
 

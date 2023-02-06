@@ -339,13 +339,13 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
         //   if (ref $value eq 'CODE') {
         //     $properties{$key} = &$value(); } }
         // info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
-        Ok(vec![Digested::TBox(Arc::new(Tbox {
+        Ok(vec![Digested::from(Tbox {
           text: presentation.clone(),
           tokens: Tokens!(cs.clone()),
           font,
           properties: properties.to_hash_stored(),
           locator,
-        }))])
+        })])
       })),
       options,
       ..MathPrimitive::default()

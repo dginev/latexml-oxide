@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::Arc;
 
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -27,7 +26,7 @@ impl Object for Dimension {
     Self: Sized,
     Self: fmt::Debug,
   {
-    Ok(Digested::RegisterValue(Arc::new(RegisterValue::Dimension(self))))
+    Ok(Digested::from(RegisterValue::Dimension(self)))
   }
 }
 impl NumericOps for Dimension {

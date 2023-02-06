@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc};
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -148,11 +148,8 @@ impl BoxOps for Tbox {
 }
 
 impl From<Tbox> for Result<Vec<Digested>> {
-  fn from(tbox: Tbox) -> Result<Vec<Digested>> { Ok(vec![Digested::TBox(Arc::new(tbox))]) }
+  fn from(tbox: Tbox) -> Result<Vec<Digested>> { Ok(vec![Digested::from(tbox)]) }
 }
 impl From<Tbox> for Option<Digested> {
-  fn from(tbox: Tbox) -> Option<Digested> { Some(Digested::TBox(Arc::new(tbox))) }
-}
-impl From<Tbox> for Option<Arc<RwLock<Digested>>> {
-  fn from(tbox: Tbox) -> Option<Arc<RwLock<Digested>>> { Some(Arc::new(RwLock::new(Digested::TBox(Arc::new(tbox))))) }
+  fn from(tbox: Tbox) -> Option<Digested> { Some(Digested::from(tbox)) }
 }

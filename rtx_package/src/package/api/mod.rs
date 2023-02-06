@@ -378,7 +378,7 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for Result<Option<Digest
   fn into_digested_option_result(self) -> Result<Option<Digested>> { self }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for KeyVals {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::KeyVals(Arc::new(self)))) }
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::from(self))) }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for Option<KeyVals> {
   fn into_digested_option_result(self) -> Result<Option<Digested>> {
@@ -389,7 +389,7 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for Option<KeyVals> {
   }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for List {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::List(Arc::new(self)))) }
+  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::from(self))) }
 }
 
 pub trait IntoPropertiesResult {

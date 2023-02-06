@@ -2,7 +2,6 @@ use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::Arc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -143,7 +142,7 @@ impl BoxOps for KeyVals {
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     unimplemented!();
   }
-  fn unlist(&self) -> Vec<Digested> { vec![Digested::KeyVals(Arc::new(self.clone()))] }
+  fn unlist(&self) -> Vec<Digested> { vec![Digested::from(self.clone())] }
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { Ok(()) } // TODO
   fn get_font(&self) -> Option<Cow<Font>> { None } // TODO
 }

@@ -16,7 +16,7 @@ use crate::list::List;
 use crate::state::State;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
-use crate::{BoxOps, Digested, TexMode};
+use crate::{BoxOps, Digested, DigestedData, TexMode};
 
 const DUAL_BRANCH: bool = false; // TODO: what is this about?
 
@@ -89,15 +89,17 @@ impl Whatsit {
     if self.is_math() {
       list.mode = Some(mode);
     }
-    self.properties.insert(s!("body"), Digested::List(Arc::new(list)).into());
-    if let Some(Digested::Whatsit(ref trailer)) = trailer_opt {
-      // And copy any otherwise undefined properties from the trailer
-      let trailer_val = trailer.read().unwrap();
-      let props = trailer_val.get_properties();
-      for (prop, value) in props {
-        self.properties.entry(prop.to_string()).or_insert_with(|| value.clone());
+    self.properties.insert(s!("body"), Digested::from(list).into());
+    if let Some(digested) = trailer_opt {
+      if let DigestedData::Whatsit(ref trailer) = digested.data() {
+        // And copy any otherwise undefined properties from the trailer
+        let trailer_val = trailer.read().unwrap();
+        let props = trailer_val.get_properties();
+        for (prop, value) in props {
+          self.properties.entry(prop.to_string()).or_insert_with(|| value.clone());
+        }
+        self.properties.insert(s!("trailer"), digested.clone().into());
       }
-      self.properties.insert(s!("trailer"), trailer_opt.as_ref().unwrap().clone().into());
     }
   }
 
