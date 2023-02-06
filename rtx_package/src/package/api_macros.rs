@@ -229,7 +229,7 @@ macro_rules! reader_predigest {
 #[macro_export]
 macro_rules! getter {
   ($args: ident, $state:ident, $body:block) => {
-    Some(Arc::new(move |mut $args: Vec<ArgWrap>, $state: &State| -> Option<RegisterValue> {
+    Some(Arc::new(move |mut $args: Vec<ArgWrap>, $state: &mut State| -> Option<RegisterValue> {
       WithInnerState!($body, $state).into_register_value_option()
     }))
   };
@@ -263,7 +263,7 @@ macro_rules! undigested {
 macro_rules! reversion {
   ($gullet:ident, $arg:ident, $inner:ident, $state:ident, $body:block) => {
     Some(Arc::new(
-      |mut $arg: Vec<Token>, $inner: &[ParameterExtra], $state: &mut State| -> Result<Tokens> {
+      |mut $arg: Vec<Token>, $inner: &[ParameterExtra], $state: &State| -> Result<Tokens> {
         BindInnerState!($state);
         let macro_out = $body;
         end_state_frame!();
@@ -277,7 +277,7 @@ macro_rules! reversion {
 macro_rules! reversion_digested {
   ($whatsit:ident, $args:ident, $state:ident, $body:block) => {
     Some(Reversion::Closure(Arc::new(
-      move |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>, $state: &mut State| -> Result<Tokens> {
+      move |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>, $state: &State| -> Result<Tokens> {
         BindInnerState!($state);
         let macro_out = $body;
         end_state_frame!();

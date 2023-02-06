@@ -19,7 +19,7 @@ use crate::stomach::Stomach;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{Digested, Locator};
+use crate::{BoxOps, Digested, Locator};
 
 #[derive(Clone)]
 pub struct ConstructorOptions {

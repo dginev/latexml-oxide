@@ -38,6 +38,7 @@ LoadDefinitions!(state, {
       mode,
       font: None,
       locator: Locator::default(),
+      properties: HashMap::new()
     }
   });
 
@@ -92,7 +93,7 @@ LoadDefinitions!(state, {
         break;
       }
       while !boxes.is_empty() {
-        let is_space = if let Some(space_val) = boxes[0].get_property("isSpace", state) {
+        let is_space = if let Some(space_val) = boxes[0].get_property("isSpace") {
           match space_val {
             Cow::Borrowed(Stored::Bool(space_bool)) => *space_bool,
             Cow::Owned(Stored::Bool(ref space_bool))  => *space_bool, // TODO : is there match syntax for Cow ?
@@ -248,12 +249,12 @@ LoadDefinitions!(state, {
       let handle   = s!("{}_contents",filename);
       let mut contents : String = LookupString!(&handle);
       let mut gullet = stomach.get_gullet_mut();
-      contents.push_str(&untex(Expand!(tokens,gullet,state),false,state)?);
+      contents.push_str(&untex(Expand!(tokens,gullet,state),false)?);
       contents.push('\n');
       AssignValue!(&handle => contents, Some(Scope::Global));
     } else {
       let gullet = stomach.get_gullet_mut();
-      println_stderr!("{}", untex(Expand!(tokens, gullet),false,state)?);
+      println_stderr!("{}", untex(Expand!(tokens, gullet),false)?);
     }
   });
 

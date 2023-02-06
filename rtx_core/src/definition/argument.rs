@@ -171,7 +171,7 @@ impl Object for ArgWrap {
       RegisterDefinition(_) => unimplemented!(), // ??? not meant for direct digestion I think
     }
   }
-  fn revert(&self, state: &mut State) -> Result<Tokens> {
+  fn revert(&self, state: &State) -> Result<Tokens> {
     use ArgWrap::*;
     match self {
       Token(t) => Ok(Tokens!(t.clone())),

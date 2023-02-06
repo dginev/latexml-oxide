@@ -1,4 +1,8 @@
+use crate::common::dimension::Dimension;
+use crate::common::numeric_ops::NumericOps;
+use crate::common::store::Stored;
 use crate::state::State;
+use crate::Digested;
 use lazy_static::lazy_static;
 /// Note that this has evolved way beynond just "font",
 /// but covers text properties (or even display properties) in general
@@ -687,6 +691,130 @@ impl Font {
     // Could (should) look for metric w/appropriate slant, weight, etc
     let m = STDMETRICS.get("cmm").unwrap();
     (size * m.get("emwidth").unwrap() / 18.0).trunc() as i32
+  }
+
+  pub fn compute_string_size(&self, text: &str, options: HashMap<String, Stored>, state: &State) -> (Dimension, Dimension, Dimension) {
+    (Dimension::default(), Dimension::default(), Dimension::default())
+  }
+  // Here's where I avoid trying to emulate Knuth's line-breaking...
+  // Mostly for List & Whatsit: compute the size of a list of boxes.
+  // Options _SHOULD_ include:
+  //   width:  if given, pretend to simulate line breaking to that width
+  //   height,depth : ?
+  //   vattach : top, bottom, center, baseline (...?) affects how the height & depth are
+  //      allocated when there are multiple lines.
+  //   layout : horizontal or vertical !!!
+  // Boxes that arent a Core Box, List, Whatsit or a string are IGNORED
+  //
+  // The big problem with width is to have it propogate down from where
+  // it may have been specified to the actual nested box that will get wrapped!
+  // Try to mask this (temporarily) by unlisting, and (pretending to ) breaking up too wide items
+  //
+  // Another issue; SVG needs (sometimes) real sizes, even if the programmer
+  // set some dimensions to 0 (eg.)   We may need to distinguish & store
+  // requested vs real sizes?
+  pub fn compute_boxes_size(&self, boxes: &[Digested], options: HashMap<String, Stored>, state: &mut State) -> (Dimension, Dimension, Dimension) {
+    let fillwidth = match options.get("width") {
+      Some(Stored::Int(fw)) => Some(*fw),
+      None => match state.lookup_definition(&T_CS!("\\textwidth")) {
+        Some(def) => def.value_of(Vec::new(), state).map(|x| x.value_of()),
+        None => None,
+      },
+      _ => {
+        unimplemented!()
+      },
+    };
+    //   my $maxwidth = $fillwidth && $fillwidth->valueOf;
+    //   # baselineskip, lineskip ??
+    //   my $baseline = $STATE->lookupDefinition(T_CS('\baselineskip'))->valueOf->valueOf;
+    //   my $lineskip = $STATE->lookupDefinition(T_CS('\lineskip'))->valueOf->valueOf;
+    //   my @lines    = ();
+    //   my ($wd, $ht, $dp)          = (0, 0, 0);
+    //   my ($minwd, $minht, $mindp) = (0, 0, 0);
+    //   my $vattach = $options{vattach} || 'baseline';
+    //   no warnings 'recursion';
+    //   # Flatten top-level Lists (orrr pass-thru $fillwidth ???)
+    //   #  my @boxes = map { (ref $_ eq 'LaTeXML::Core::List' ? $_->unlist : $_); } @$boxes;
+    //   my @boxes = grep { !(ref $_) || !$_->getProperty('isEmpty') }
+    //     map { (ref $_ eq 'LaTeXML::Core::List' ? $_->unlist : $_); }
+    //     grep { !(ref $_) || $_->can('getSize'); } @$boxes;
+    //   my $prevbox;
+    //   #  foreach my $box (@boxes) {
+    //   while (@boxes) {
+    //     my $box = shift(@boxes);
+    //     next unless defined $box;
+    //     next if ref $box && !$box->can('getSize');    # Care!! Since we're asking ALL args/compoments
+    //                                                   #    next if ref $box && $box->getProperty('isEmpty');
+    //     ## Should any %options be inherited by the contained boxes?
+    //     my ($w, $h, $d) = (ref $box ? $box->getSize() : $font->computeStringSize($box));
+    //     if ((ref $w) && $w->can('_unit')) {
+    //       $wd += ($w->_unit eq 'mu' ? $w->spValue : $w->valueOf); }
+    //     else {
+    //       Warn('expected', 'Dimension', undef,
+    //         "Width of " . Stringify($box) . " yielded a non-dimension: " . Stringify($w)); }
+    //     if ((ref $h) && $h->can('_unit')) {
+    //       $ht = max($ht, ($h->_unit eq 'mu' ? $h->spValue : $h->valueOf)); }
+    //     else {
+    //       Warn('expected', 'Dimension', undef,
+    //         "Height of " . Stringify($box) . " yielded a non-dimension: " . Stringify($h)); }
+    //     if ((ref $d) && $d->can('_unit')) {
+    //       $dp = max($dp, ($d->_unit eq 'mu' ? $d->spValue : $d->valueOf)); }
+    //     else {
+    //       Warn('expected', 'Dimension', undef,
+    //         "Depth of " . Stringify($box) . " yielded a non-dimension: " . Stringify($d)); }
+    //     # Kern HACK for lists of individual Box's
+    //     if ($prevbox && (ref $prevbox eq 'LaTeXML::Core::Box') && (ref $box eq 'LaTeXML::Core::Box')) {
+    //       my $prevchar = substr($prevbox->getString || '', -1, 1);
+    //       my $curchar  = substr($box->getString     || '', 0,  1);
+    //       my $metric   = $self->getMetric($curchar);
+    //       if ($prevbox && ($self->getFamily eq 'math')) {
+    //         $wd += $self->math_bearing($box, $prevbox); }
+    //       if (my $kern = $$metric{kerns}{ $prevchar . $curchar }) {
+    //         my $size = ($self->getSize || DEFSIZE() || 10); ## * $mathstylesize{ $self->getMathstyle || 'text' };
+    //         $wd += $size * $kern; } }
+
+    //     my $newline = (($options{layout} || '') eq 'vertical')        # EVERY box is a row?
+    //       || ((ref $box) && $box->getProperty('isBreak'))             # || $box is a linebreak
+    //       || ((defined $maxwidth) && ($wd >= $maxwidth));             # or we've reached the requested width
+    //     if ($newline) {
+    //       if (@boxes) {
+    //         if ($baseline > $ht + $dp) {
+    //           $dp = $baseline - $ht; }
+    //         else {
+    //           $dp += $lineskip; } }
+    //       push(@lines, [$wd, $ht, $dp]); $wd = $ht = $dp = 0; }
+    //     $prevbox = $box; }
+    //   if ($wd || $ht || $dp) {    # be sure to get last line
+    //     push(@lines, [$wd, $ht, $dp]); }
+    //   # Deal with multiple lines
+    //   my $nlines = scalar(@lines);
+    //   if ($nlines == 0) {
+    //     $wd = $ht = $dp = 0; }
+    //   else {
+    //     $wd = max(map { $$_[0] } @lines);
+    //     $ht = sum(map { $$_[1] } @lines);
+    //     $dp = sum(map { $$_[2] } @lines);
+    //     if ($vattach eq 'top') {    # Top of box is aligned with top(?) of current text
+    //       my ($w, $h, $d) = $font->getNominalSize;
+    //       $h  = $h->valueOf;
+    //       $dp = $ht + $dp - $h; $ht = $h; }
+    //     elsif ($vattach eq 'bottom') {    # Bottom of box is aligned with bottom (?) of current text
+    //       $ht = $ht + $dp; $dp = 0; }
+    //     elsif ($vattach eq 'middle') {
+    //       my ($w, $h, $d) = $font->getNominalSize;
+    //       $h = $h->valueOf;
+    //       my $c = ($ht + $dp) / 2;
+    //       $ht = $c + $h / 2; $dp = $c - $h / 2; }
+    //     else {                            # default is baseline (of the 1st line)
+    //       my $h = $lines[0][1];
+    //       $dp = $ht + $dp - $h; $ht = $h; } }
+    // ###  $wd = max($minwd, $wd); $ht = max($minht, $ht); $dp = max($mindp, $dp);
+    //   Debug("Size boxes " . join(',', map { $_ . '=' . ToString($options{$_}); } sort keys %options) . "\n"
+    //       . "  Boxes: " . join(',',  map { '[[' . ToString($_) . ']]'; } @$boxes) . "\n"
+    //       . "  Sizes: " . join("\n", map { _showsize(@$_); } @lines) . "\n"
+    //       . "  => " . _showsize($wd, $ht, $dp)) if $LaTeXML::DEBUG{'size-detailed'};
+    //   return (Dimension($wd), Dimension($ht), Dimension($dp)); }
+    (Dimension::default(), Dimension::default(), Dimension::default())
   }
 }
 

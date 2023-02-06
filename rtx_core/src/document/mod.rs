@@ -163,7 +163,7 @@ impl Document {
       let init_font = Font::text_default();
       self.finalize_rec(&mut root, init_font, state)?;
       if let Some(Stored::String(prefixes)) = state.lookup_value("RDFa_prefixes") {
-        self.set_rdfa_prefixes(Some(prefixes.clone()));
+        self.set_rdfa_prefixes(Some(prefixes));
       }
     }
     Ok(())
@@ -903,7 +903,7 @@ impl Document {
   }
 
   // Internals
-  fn set_rdfa_prefixes(&mut self, _prefixes: Option<String>) {}
+  fn set_rdfa_prefixes(&mut self, _prefixes: Option<&str>) {}
 
   fn prune_xmduals(&self) {}
 
@@ -1012,7 +1012,7 @@ impl Document {
     }
     match &font.family {
       Some(fam) if fam == "nullfont" => return Ok(None),
-      _ => ()
+      _ => (),
     };
     Debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
     // If not at document begin And not appending text in same font.

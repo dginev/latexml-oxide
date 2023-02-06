@@ -381,9 +381,9 @@ macro_rules! T_COMMENT {
 #[macro_export]
 macro_rules! T_CS {
   ($text:literal) => {
-    Token {
+    $crate::token::Token {
       text: Cow::Borrowed($text),
-      code: Catcode::CS,
+      code: $crate::token::Catcode::CS,
       smuggled: None,
     }
   };
@@ -485,9 +485,9 @@ macro_rules! ExplodeText(($text:expr) => (
 
 static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
 pub fn untex_digested(digested: &Digested, suppress_linebreak: bool, state: &mut State) -> Result<String> {
-  untex(digested.revert(state)?, suppress_linebreak, state)
+  untex(digested.revert(state)?, suppress_linebreak)
 }
-pub fn untex(tokens: Tokens, _suppress_linebreak: bool, state: &mut State) -> Result<String> {
+pub fn untex(tokens: Tokens, _suppress_linebreak: bool) -> Result<String> {
   use crate::token::Catcode::*;
   let mut tokens: VecDeque<Token> = tokens.unlist().into_iter().collect();
   let mut tex_string = String::new();
@@ -525,7 +525,8 @@ pub fn untex(tokens: Tokens, _suppress_linebreak: bool, state: &mut State) -> Re
     else if ((cc == LETTER) || ((cc == OTHER) && first_char.is_alphanumeric()))
       && (prevcc == CS)
       && (!prevs.is_empty())
-      && (state.lookup_catcode(prevs.chars().rev().next().unwrap()) == Some(LETTER))
+      && prevs.chars().rev().next().unwrap().is_alphabetic()
+    // is this a good replacement for lookup_catcode == LETTER?
     {
       // Insert a (virtual) space before a letter if previous token was a CS w/letters
       // This is required for letters, but just aesthetic for digits (to me?)

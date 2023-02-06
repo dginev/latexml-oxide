@@ -12,7 +12,7 @@ use crate::common::font::{Font, Fontmap};
 use crate::common::glue::Glue;
 use crate::common::model::{IndirectModel, Model};
 use crate::common::muglue::MuGlue;
-use crate::common::number::{Number};
+use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 pub use crate::common::store::Stored; // reexport for convenience
@@ -611,6 +611,29 @@ impl State {
     }
   }
 
+  /// Replaces the value in question with `Stored::None` (see `checkin_value` for returning it)
+  pub fn checkout_value(&mut self, key: &str) -> Option<Stored> {
+    match self.value.get_mut(key) {
+      None => None,
+      Some(vvec) => vvec.front_mut().map(|found| std::mem::replace(found, Stored::None)),
+    }
+  }
+  /// Returns a value into its `Stored::None` placeholder (see `checkout_value` for taking it)
+  pub fn checkin_value(&mut self, key: &str, value: Stored) {
+    match self.value.get_mut(key) {
+      None => unimplemented!(),
+      Some(vvec) => match vvec.front_mut() {
+        None => unimplemented!(),
+        Some(found) => {
+          match found {
+            Stored::None => std::mem::replace(found, value),
+            _ => panic!("checkin_value should only be called after checkout_value"),
+          };
+        },
+      },
+    }
+  }
+
   pub fn assign_value<'av, T: Into<Stored>, S: Into<Option<Scope>>>(&'av mut self, key: &'av str, value: T, scope: S) {
     let value = value.into();
     let scope = scope.into();
@@ -764,7 +787,7 @@ impl State {
     }
   }
 
-  pub fn lookup_register(&self, cs: &str, parameters: Vec<ArgWrap>) -> Option<RegisterValue> {
+  pub fn lookup_register(&mut self, cs: &str, parameters: Vec<ArgWrap>) -> Option<RegisterValue> {
     let cs = T_CS!(cs);
     if let Some(defn) = self.lookup_definition(&cs) {
       if defn.is_register() {
@@ -1634,15 +1657,15 @@ impl State {
 
   /// Initialize various stomach parameters, preload, etc.
   pub fn initialize_stomach(&mut self) {
-    self.assign_value("MODE", Stored::String(s!("text")), Some(Scope::Global));
-    self.assign_value("IN_MATH", Stored::Bool(false), Some(Scope::Global));
+    self.assign_value("MODE", String::from("text"), Some(Scope::Global));
+    self.assign_value("IN_MATH", false, Some(Scope::Global));
     self.assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
     self.assign_value("afterGroup", Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
     self.assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
-    self.assign_value("groupInitiator", Stored::String(s!("Initialization")), Some(Scope::Global));
+    self.assign_value("groupInitiator", String::from("Initialization"), Some(Scope::Global));
     // Setup default fonts.
-    self.assign_value("font", Stored::Font(Arc::new(Font::text_default())), Some(Scope::Global));
-    self.assign_value("mathfont", Stored::Font(Arc::new(Font::math_default())), Some(Scope::Global));
+    self.assign_value("font", Font::text_default(), Some(Scope::Global));
+    self.assign_value("mathfont", Font::math_default(), Some(Scope::Global));
   }
 
   // Package helpers used in core need to be localized here -- as State methods

@@ -270,7 +270,7 @@ impl Tokens {
     Tokens::new(result)
   }
 
-  pub fn untex(&self, state: &State) -> String {
+  pub fn untex(&self) -> String {
     let tokens = self.clone().revert();
     let mut tokens: VecDeque<Token> = tokens.into();
     let mut result = String::new();
@@ -306,11 +306,8 @@ impl Tokens {
       // If this token is a letter (or otherwise starts with a letter or digit): space or linebreak
       } else {
         let last_prevs = prevs.chars().last().unwrap_or('_');
-        let prev_is_letter = if let Some(prevs_cc) = state.lookup_catcode(last_prevs) {
-          prevs_cc == Catcode::LETTER
-        } else {
-          false
-        };
+        // TOOD: this used to call "lookup_catcode" in State; is this char-check as good?
+        let prev_is_letter = last_prevs.is_alphabetic();
 
         if (cc == Catcode::LETTER || (cc == Catcode::OTHER && s.chars().next().unwrap_or('_').is_alphanumeric()))
           && prevcc == Catcode::CS

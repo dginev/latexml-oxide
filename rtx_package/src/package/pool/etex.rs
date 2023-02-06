@@ -45,7 +45,7 @@ LoadDefinitions!(outer_state, {
   });
 
   DefMacro!("\\scantokens GeneralText", sub[gullet, (tokens), state] {
-    Mouth::new(&untex(tokens,false,state)?, None, state)?.read_tokens(state)
+    Mouth::new(&untex(tokens,false)?, None, state)?.read_tokens(state)
   });
 
   // #======================================================================

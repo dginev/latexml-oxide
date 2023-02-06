@@ -38,7 +38,7 @@ lazy_static! {
   static ref TRAILING_SPACE_CHARS: Regex = Regex::new("(?s) +$").unwrap();
 }
 
-const READLINE_PROGRESS_QUANTUM : usize = 25;
+const READLINE_PROGRESS_QUANTUM: usize = 25;
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum FoodType {
@@ -402,7 +402,7 @@ impl Mouth {
   /// Note that this also returns COMMENT tokens containing source comments,
   /// and also locator comments (file, line# info).
   /// LaTeXML::Core::Gullet intercepts them and passes them on at appropriate times.
-  pub fn read_token(&mut self, state: &State) -> Option<Token> {
+  pub fn read_token(&mut self, state: &mut State) -> Option<Token> {
     loop {
       // Iterate till we find a token, or run out. (use return)
       // ===== Get next line, if we need to.
@@ -489,7 +489,7 @@ impl Mouth {
         }
         // Sneak a comment out, every so often.
         if (self.lineno % READLINE_PROGRESS_QUANTUM) == 0 && state.lookup_bool("INCLUDE_COMMENTS") {
-          return Some(dbg!(T_COMMENT!(s!("**** {} Line {} ****", &self.shortsource, &self.lineno.to_string()))));
+          return Some(T_COMMENT!(s!("**** {} Line {} ****", &self.shortsource, &self.lineno.to_string())));
         }
       }
       if self.skipping_spaces {
@@ -530,7 +530,7 @@ impl Mouth {
   //**********************************************************************
   /// Read all tokens until a token equal to $until (if given), or until exhausted.
   /// Returns an empty Tokens list, if there is no input
-  pub fn read_tokens(&mut self, state: &State) -> Tokens {
+  pub fn read_tokens(&mut self, state: &mut State) -> Tokens {
     let mut tokens = Vec::new();
     while let Some(token) = self.read_token(state) {
       tokens.push(token);
@@ -794,21 +794,16 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
   match state_opt {
     None => {
       let mut state = STD_STATE.write().unwrap();
-      Mouth::new(text, None, &mut state).unwrap().read_tokens(&state)
+      Mouth::new(text, None, &mut state).unwrap().read_tokens(&mut state)
     },
     Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(s),
   }
 }
-pub fn tokenize_internal(text: &str, state_opt: Option<&mut State>) -> Tokens {
+pub fn tokenize_internal(text: &str) -> Tokens {
   // special case! empty input is empty Tokens
   if text.is_empty() {
     return Tokens::default();
   }
-  match state_opt {
-    None => {
-      let mut state = STY_STATE.write().unwrap();
-      Mouth::new(text, None, &mut state).unwrap().read_tokens(&state)
-    },
-    Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(s),
-  }
+  let mut state = STY_STATE.write().unwrap();
+  Mouth::new(text, None, &mut state).unwrap().read_tokens(&mut state)
 }

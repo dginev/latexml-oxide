@@ -190,7 +190,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
 
   let getter: RegisterGetterClosure = match options.getter {
     Some(getter) => getter.clone(),
-    None => Arc::new(move |args: Vec<ArgWrap>, state: &State| -> Option<RegisterValue> {
+    None => Arc::new(move |args: Vec<ArgWrap>, state: &mut State| -> Option<RegisterValue> {
       let args_string: String = args.iter().map(ToString::to_string).collect::<Vec<String>>().join("");
       match state.lookup_value(&(name.clone() + &args_string)) {
         None => Some(getter_value.clone()),

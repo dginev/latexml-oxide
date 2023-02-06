@@ -37,7 +37,7 @@ impl NumericOps for Float {
 }
 
 impl From<Float> for Tokens {
-  fn from(v: Float) -> Tokens { mouth::tokenize_internal(&v.to_string(), None) }
+  fn from(v: Float) -> Tokens { mouth::tokenize_internal(&v.to_string()) }
 }
 
 impl From<Float> for Option<Tokens> {

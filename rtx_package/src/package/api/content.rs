@@ -917,7 +917,7 @@ pub fn convert_latex_args(mut nargs: usize, optional: Option<Tokens>, state: &mu
     params.push(
       Parameter {
         name: Cow::Borrowed("Optional"),
-        spec: Cow::Owned(s!("[Default:{}]", tks.untex(state))),
+        spec: Cow::Owned(s!("[Default:{}]", tks.untex())),
         extra: vec![ParameterExtra::Tokens(tks), ParameterExtra::ParametersOption(None)],
         ..Parameter::default()
       }

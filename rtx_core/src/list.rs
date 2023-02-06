@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 
+use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
@@ -20,6 +21,7 @@ pub struct List {
   pub mode: Option<TexMode>,
   pub font: Option<Font>,
   pub locator: Locator,
+  pub properties: HashMap<String, Stored>,
 }
 
 impl fmt::Debug for List {
@@ -44,7 +46,7 @@ impl fmt::Display for List {
 impl Object for List {
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
 
-  fn revert(&self, state: &mut State) -> Result<Tokens> {
+  fn revert(&self, state: &State) -> Result<Tokens> {
     let mut reverted = Vec::new();
     for tbox in self.boxes.iter() {
       reverted.extend(tbox.revert(state)?.unlist());
@@ -54,14 +56,26 @@ impl Object for List {
 }
 impl BoxOps for List {
   fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
-  fn get_property(&self, _key: &str, _state: &State) -> Option<Cow<Stored>> { unimplemented!() }
-  fn get_property_bool(&self, _key: &str) -> bool { false }
-
+  fn has_property(&self, key: &str) -> bool { self.properties.contains_key(key) }
+  fn get_property_bool(&self, key: &str) -> bool {
+    match self.properties.get(key) {
+      Some(v) => *v == Stored::Bool(true),
+      _ => false,
+    }
+  }
+  fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
+  fn get_string(&self, state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { unimplemented!() }
 
   fn get_font(&self) -> Option<Cow<Font>> { self.font.as_ref().map(Cow::Borrowed) }
+  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+    Ok(match &self.font {
+      Some(f) => f.compute_boxes_size(&self.boxes, options, state),
+      _ => Font::text_default().compute_boxes_size(&self.boxes, options, state),
+    })
+  }
 }
 
 impl List {
@@ -93,6 +107,7 @@ impl List {
       font,
       mode: None,
       locator,
+      properties: HashMap::new(),
     }
   }
 

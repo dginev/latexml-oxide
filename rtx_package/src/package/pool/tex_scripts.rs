@@ -36,8 +36,10 @@ pub fn is_empty(digested: &Digested, state: &State) -> bool {
     // A space-like thing
     true
   } else if let Digested::TBox(tbox) = digested {
-    let s = tbox.get_string();
-    s.trim().is_empty()
+    match tbox.get_string(state) {
+      Ok(s) => s.trim().is_empty(),
+      _ => true,
+    }
   } else if let Digested::List(list) = digested {
     list.boxes.iter().all(|b| is_empty(b, state))
   } else if let Digested::Whatsit(ws_arc) = digested {
@@ -214,7 +216,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
 // OTOH, direct use of \@@POSTSUPERSCRIPT, etal, MAY need to have extra braces around them.
 // So, when reverting, we're going to a bit of extra trouble to make sure we have ONE set
 // of braces, but no extras!!  [Worry about lists of lists...]
-pub fn revert_script(script: &Digested, state: &mut State) -> Result<Vec<Token>> {
+pub fn revert_script(script: &Digested, state: &State) -> Result<Vec<Token>> {
   let tokens = script.revert(state)?;
   let mut ts = tokens.unlist();
   let mut level = 0;

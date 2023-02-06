@@ -67,7 +67,7 @@ pub trait Object {
     }
   }
   /// each concrete object needs to provide its own path back to tokens
-  fn revert(&self, state: &mut State) -> Result<Tokens> {
+  fn revert(&self, state: &State) -> Result<Tokens> {
     unimplemented!();
   }
 }

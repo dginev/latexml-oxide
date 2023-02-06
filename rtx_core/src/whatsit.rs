@@ -54,9 +54,6 @@ impl Whatsit {
     }
   }
   pub fn is_empty(&self) -> bool { self.args.is_empty() }
-
-  pub fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
-  pub fn properties(self) -> HashMap<String, Stored> { self.properties }
   pub fn set_properties(&mut self, props: HashMap<String, Stored>) {
     for (key, value) in props {
       self.properties.insert(key, value);
@@ -65,6 +62,12 @@ impl Whatsit {
   pub fn get_definition(&self) -> Arc<dyn Definition> { Arc::clone(&self.definition) }
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
     match self.args.get(n - 1) {
+      Some(Some(opt)) => Some(opt),
+      _ => None,
+    }
+  }
+  pub fn get_arg_mut(&mut self, n: usize) -> Option<&mut Digested> {
+    match self.args.get_mut(n - 1) {
       Some(Some(opt)) => Some(opt),
       _ => None,
     }
@@ -101,7 +104,7 @@ impl Whatsit {
   /// Like Tokens-substituteParameters, but substitutes in the Whatsit's arguments OR properties!
   /// #<digit> is the standard TeX positional argument
   /// # followed by a T_OTHER(propname) specifies the property propname!!
-  fn substitute_parameters(&self, spec: Tokens, state: &mut State) -> Result<Vec<Token>> {
+  fn substitute_parameters(&self, spec: Tokens, state: &State) -> Result<Vec<Token>> {
     // TODO: This is kind of unfortunate -- I am not sure what are the reasonable "entryways" into the Whatsit substituteParameters. For Expandable we
     // now have guarantees that "#,i" has been mapped into a single T_ARG(#i), but not here. so for now run on each call?
     let mut in_toks = VecDeque::from(spec.unlist());
@@ -140,14 +143,14 @@ impl fmt::Debug for Whatsit {
 impl fmt::Display for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut state = State::default();
-    write!(f, "{}", self.revert(&mut state).unwrap()) // What else??
+    write!(f, "{}", self.revert(&state).unwrap()) // What else??
   }
 }
 
 impl Object for Whatsit {
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
 
-  fn revert(&self, state: &mut State) -> Result<Tokens> {
+  fn revert(&self, state: &State) -> Result<Tokens> {
     // WARNING: Forbidden knowledge?
     // (1) provide a means to get the RAW, internal markup that can (hopefully) be RE-digested
     //     this is needed for getting the numerator of \over into textstyle!
@@ -240,7 +243,8 @@ impl Object for Whatsit {
 }
 
 impl BoxOps for Whatsit {
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
+  fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn get_string(&self, state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.revert(state)?.to_string())) }
   fn unlist(&self) -> Vec<Digested> { Vec::new() }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
@@ -257,7 +261,8 @@ impl BoxOps for Whatsit {
     Ok(())
   }
 
-  fn get_property(&self, key: &str, _state: &State) -> Option<Cow<Stored>> { self.properties.get(key).map(Cow::Borrowed) }
+  fn get_property(&self, key: &str) -> Option<Cow<Stored>> { self.properties.get(key).map(Cow::Borrowed) }
+  fn has_property(&self, key: &str) -> bool { self.properties.contains_key(key) }
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
 

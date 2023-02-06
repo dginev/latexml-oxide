@@ -19,7 +19,7 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
   let compiled_expansion = if expansion.is_empty() {
     quote!(None)
   } else {
-    let performed_expansion = mouth::tokenize_internal(&expansion, None);
+    let performed_expansion = mouth::tokenize_internal(&expansion);
     if performed_expansion.is_empty() {
       quote!(None)
     } else {
@@ -83,7 +83,7 @@ pub fn compile_tokenize_internal(input: DeriveInput) -> TokenStream {
   let tokenized = if literal.is_empty() {
     Tokens::default()
   } else {
-    mouth::tokenize_internal(&literal, None)
+    mouth::tokenize_internal(&literal)
   };
 
   quote!(

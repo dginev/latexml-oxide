@@ -48,55 +48,66 @@ LoadDefinitions!(outer_state, {
 
   // # <box dimension> = \ht | \wd | \dp
   DefRegister!("\\ht Number", Dimension::new(0),
-    getter => sub[args, state] {
-      let n = args.remove(0).expect_number();
-      let stuff = state.lookup_value(&format!("box{}", n.value_of()));
-      if let Some(Stored::Digested(thebox)) = stuff {
-        thebox.get_height(state)
-      } else {
-        Some(RegisterValue::Dimension(Dimension::default()))
-      }},
-    setter => sub[value,args,state] {
-      let n = args.remove(0).expect_number();
-      let boxkey = format!("box{}", n.value_of());
-      let stuff = state.lookup_value_mut(&boxkey);
-      if let Some(Stored::Digested(thebox)) = stuff {
-        thebox.set_height(value);
-      }});
+  getter => sub[args, state] {
+    let n = args.remove(0).expect_number();
+    let stuff = state.lookup_value(&format!("box{}", n.value_of()));
+    if let Some(Stored::Digested(thebox)) = stuff {
+      thebox.get_height(state)
+    } else {
+      Some(RegisterValue::Dimension(Dimension::default()))
+    }},
+  setter => sub[value,args,state] {
+    let n = args.remove(0).expect_number();
+    let boxkey = format!("box{}", n.value_of());
+    let stuff = state.lookup_value_mut(&boxkey);
+    if let Some(Stored::Digested(thebox)) = stuff {
+      thebox.set_height(value);
+    }});
 
   DefRegister!("\\wd Number", Dimension::default(),
-    getter => sub[args, state] {
-      let n = args.remove(0).expect_number();
-      let stuff = state.lookup_value(&format!("box{}", n.value_of()));
-      if let Some(Stored::Digested(thebox)) = stuff {
-        thebox.get_width(state)
-      } else {
-        Some(RegisterValue::Dimension(Dimension::default()))
-      }},
-    setter => sub[value,args,state] {
-      let n = args.remove(0).expect_number();
-      let boxkey = format!("box{}", n.value_of());
-      let stuff = state.lookup_value_mut(&boxkey);
-      if let Some(Stored::Digested(thebox)) = stuff {
-        thebox.set_width(value);
-      }});
+  getter => sub[args, state] {
+    let n = args.remove(0).expect_number();
+    let boxid = format!("box{}", n.value_of());
+    let mut stuff = state.checkout_value(&boxid);
+    let result = {if let Some(Stored::Digested(ref mut thebox)) = stuff {
+      match thebox.get_width(None, state) {
+        Ok(v) => v,
+        Err(e) => {
+          Error!("method", "get_width", None, state, format!("{e}"));
+          None }
+      }
+    } else {
+      Some(RegisterValue::Dimension(Dimension::default()))
+    }};
+    if let Some(thebox) = stuff {
+      state.checkin_value(&boxid, thebox);
+    }
+    result
+  },
+  setter => sub[value,args,state] {
+    let n = args.remove(0).expect_number();
+    let boxkey = format!("box{}", n.value_of());
+    let stuff = state.lookup_value_mut(&boxkey);
+    if let Some(Stored::Digested(thebox)) = stuff {
+      thebox.set_width(value);
+    }});
 
   DefRegister!("\\dp Number", Dimension::new(0),
-    getter => sub[args, state] {
-      let n = args.remove(0).expect_number();
-      let stuff = state.lookup_value(&format!("box{}", n.value_of()));
-      if let Some(Stored::Digested(thebox)) = stuff {
-        thebox.get_depth(state)
-      } else {
-        Some(RegisterValue::Dimension(Dimension::default()))
-      }},
-    setter => sub[value,args,state] {
-      let n = args.remove(0).expect_number();
-      let boxkey = format!("box{}", n.value_of());
-      let stuff = state.lookup_value_mut(&boxkey);
-      if let Some(Stored::Digested(thebox)) = stuff {
-        thebox.set_depth(value);
-      }});
+  getter => sub[args, state] {
+    let n = args.remove(0).expect_number();
+    let stuff = state.lookup_value(&format!("box{}", n.value_of()));
+    if let Some(Stored::Digested(thebox)) = stuff {
+      thebox.get_depth(state)
+    } else {
+      Some(RegisterValue::Dimension(Dimension::default()))
+    }},
+  setter => sub[value,args,state] {
+    let n = args.remove(0).expect_number();
+    let boxkey = format!("box{}", n.value_of());
+    let stuff = state.lookup_value_mut(&boxkey);
+    if let Some(Stored::Digested(thebox)) = stuff {
+      thebox.set_depth(value);
+    }});
 
   // # 2nd arg is <font> = <fontdef token> | \font | <family member>
   // #  <family member> = <font range><4bit number>
