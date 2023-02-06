@@ -35,32 +35,15 @@ impl NumericOps for Dimension {
   fn new_f32(number: f32) -> Self { Dimension(kround(number)) }
   fn value_of(self) -> i32 { self.0 }
   fn register_type(&self) -> RegisterType { RegisterType::Dimension }
+  fn unit(&self) -> Option<&'static str> { Some("pt") }
 }
 
 impl fmt::Display for Dimension {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", fixedformat(self.0, Some("pt"))) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", fixedformat(self.0, self.unit())) }
 }
 
 impl Dimension {
-  /// Utility for formatting scaled points sanely.
-  pub fn point_format(num: f32) -> String {
-    // As much as I'd like to make this more friendly & readable
-    // there's TeX code that depends on getting enough precision
-    // If you use %.5f, tikz (for example) will sometimes hang trying to do arithmetic!
-    // But see toAttribute for friendlier forms....
-    // [do we need the juggling in attributeFormat to be reproducible?]
-
-    let mut s = s!("{:.5}", num / 65536.0);
-    if s.contains('.') {
-      s = s.trim_end_matches('0').to_string();
-    }
-    if s.ends_with('.') {
-      s += "0"; // Seems TeX prints .0 which in odd corner cases, people use?
-    }
-    s!("{}pt", s)
-  }
-
-  pub fn to_attribute(self) -> String { attribute_format(self.value_of(), Some("pt")) }
+  pub fn to_attribute(self) -> String { attribute_format(self.value_of(), self.unit()) }
 
   pub fn spec_to_f32(spec: &str, state: &State) -> Result<f32> {
     if spec.is_empty() {

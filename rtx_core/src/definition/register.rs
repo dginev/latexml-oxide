@@ -81,7 +81,7 @@ impl Default for RegisterValue {
 impl Object for RegisterValue {
   fn stringify(&self) -> String { s!("RegisterValue[{}]", self) }
   fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
-  fn revert(&self, state: &mut State) -> Result<Tokens> {
+  fn revert(&self, state: &State) -> Result<Tokens> {
     match self {
       // ExplodeText($self->toString);
       RegisterValue::Number(ref value) => Ok(Tokens::new(ExplodeText!(value))),
@@ -327,7 +327,9 @@ pub enum RegisterType {
   Any, // Placeholder for any argument accepted
 }
 
-pub type RegisterGetterClosure = Arc<dyn Fn(Vec<ArgWrap>, &State) -> Option<RegisterValue>>;
+// why mutable state in the Getter closure? Because the `.get_width` and friends methods have a
+// caching optimization, which requires writing new properties while they are stored in the State table
+pub type RegisterGetterClosure = Arc<dyn Fn(Vec<ArgWrap>, &mut State) -> Option<RegisterValue>>;
 pub type RegisterSetterClosure = Arc<dyn Fn(RegisterValue, Vec<ArgWrap>, &mut State)>;
 
 #[derive(Clone)]
@@ -348,7 +350,7 @@ impl Default for Register {
       cs: T_CS!("Register"),
       parameters: None,
       register_type: RegisterType::Number,
-      getter: Arc::new(|_: Vec<ArgWrap>, _: &State| Some(RegisterValue::Number(Number::new(0)))),
+      getter: Arc::new(|_: Vec<ArgWrap>, _: &mut State| Some(RegisterValue::Number(Number::new(0)))),
       setter: Arc::new(|_: RegisterValue, _: Vec<ArgWrap>, _: &mut State| {}),
       readonly: false,
       internalcs: None,
@@ -444,7 +446,7 @@ impl Definition for RegisterCell {
   fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
     fatal!(Definition, Unexpected, "do_absorbtion on Primitive should never be called!");
   }
-  fn value_of(&self, args: Vec<ArgWrap>, state: &State) -> Option<RegisterValue> {
+  fn value_of(&self, args: Vec<ArgWrap>, state: &mut State) -> Option<RegisterValue> {
     if self.borrow().register_type == RegisterType::CharDef {
       self.borrow().value.clone()
     } else {

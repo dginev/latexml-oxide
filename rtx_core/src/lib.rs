@@ -32,11 +32,11 @@ use std::fmt;
 use std::sync::{Arc, RwLock};
 
 use crate::comment::Comment;
+use crate::common::dimension::Dimension;
 pub use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::model::Model;
-use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
@@ -122,12 +122,31 @@ impl Core {
 pub trait BoxOps: Object {
   fn unlist(&self) -> Vec<Digested>;
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()>;
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored>;
-  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
-    let mut props = self.get_properties_mut();
-    props.insert(key.to_string(), value.into());
+  fn get_string(&self, state: &State) -> Result<Cow<str>>;
+  fn get_tokens(&self) -> Option<&Tokens> { None }
+  fn get_properties(&self) -> &HashMap<String, Stored>;
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T);
+
+  fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
+    if key == "isSpace" {
+      match self.get_properties().get(key) {
+        Some(value) => Some(Cow::Borrowed(value)),
+        None => {
+          let tex = self.get_tokens().map(|tks| tks.untex()).unwrap_or_default(); // !
+          if !tex.is_empty() && tex.chars().all(char::is_whitespace) {
+            // Check the TeX code, not (just) the string!
+            Some(Cow::Owned(Stored::Bool(true)))
+          } else {
+            None
+          }
+        },
+      }
+    } else {
+      self.get_properties().get(key).map(Cow::Borrowed)
+    }
   }
-  fn get_property(&self, _key: &str, state: &State) -> Option<Cow<Stored>>;
+
+  fn has_property(&self, key: &str) -> bool;
   fn get_property_bool(&self, _key: &str) -> bool;
   fn get_body(&self) -> Option<Digested> {
     Error!("boxops", "get_body", self, None, "Generic BoxOps::get_body should never be called!");
@@ -136,34 +155,86 @@ pub trait BoxOps: Object {
   fn get_font(&self) -> Option<Cow<Font>>;
   fn set_font(&mut self, font: Arc<Font>) { unimplemented!() }
 
-  fn set_width<T: Into<Stored>>(&mut self, width: T) {
-    let mut props = self.get_properties_mut();
-    props.insert("width".to_string(), width.into());
-  }
-  fn get_width(&self, state: &State) -> Option<RegisterValue> {
-    match self.get_property("width", state) {
-      Some(val) => (&*val).into(),
-      None => Some(RegisterValue::Dimension(Dimension::default())),
+  fn set_width<T: Into<Stored>>(&mut self, width: T) { self.set_property("width", width); }
+
+  // For the dimensions of boxes, we'll store the (lazily) computed size as:
+  //    cwidth, cheight, cdepth
+  // and the explicitly requested/assigned size as
+  //    width, height, depth.
+  // Generally speaking, an XML element should only get width, height, depth
+  // attributes when they were explicitly set.
+  // However, when requesting the size of a box, you'd get either (w/ explicit size overriding)
+
+  fn get_width(&mut self, options: Option<HashMap<String, Stored>>, state: &mut State) -> Result<Option<RegisterValue>> {
+    if !self.has_property("width") && !self.has_property("cwidth") {
+      self.compute_size_store(options.unwrap_or_default(), state)?
     }
+
+    Ok(match self.get_property("width") {
+      Some(val) => (&*val).into(),
+      None => match self.get_property("cwidth") {
+        Some(val) => (&*val).into(),
+        None => Some(RegisterValue::Dimension(Dimension::default())),
+      },
+    })
   }
-  fn set_height<T: Into<Stored>>(&mut self, width: T) {
-    let mut props = self.get_properties_mut();
-    props.insert("height".to_string(), width.into());
-  }
+  fn set_height<T: Into<Stored>>(&mut self, width: T) { self.set_property("height", width); }
   fn get_height(&self, state: &State) -> Option<RegisterValue> {
-    match self.get_property("height", state) {
+    match self.get_property("height") {
       Some(val) => (&*val).into(),
       None => Some(RegisterValue::Dimension(Dimension::default())),
     }
   }
-  fn set_depth<T: Into<Stored>>(&mut self, width: T) {
-    let mut props = self.get_properties_mut();
-    props.insert("depth".to_string(), width.into());
-  }
+  fn set_depth<T: Into<Stored>>(&mut self, width: T) { self.set_property("depth", width); }
   fn get_depth(&self, state: &State) -> Option<RegisterValue> {
-    match self.get_property("depth", state) {
+    match self.get_property("depth") {
       Some(val) => (&*val).into(),
       None => Some(RegisterValue::Dimension(Dimension::default())),
+    }
+  }
+
+  /// omg
+  ///  Fake computing the dimensions of strings (typically single chars).
+  ///  Eventually, this needs to link into real font data
+  fn compute_size_store(&mut self, mut options: HashMap<String, Stored>, state: &mut State) -> Result<()> {
+    for key in ["width", "height", "depth", "vattach", "layout"] {
+      if let Some(v) = self.get_property(key) {
+        options.insert(String::from(key), v.into_owned());
+      }
+    }
+
+    let (w, h, d) = self.compute_size(options, state)?;
+
+    // TODO: the perl latexml does caching here,
+    //       but it requires interior mutability on Digested (see comment in Digested::set_property)
+    //
+    // if !self.has_property("cwidth") {
+    //   self.set_property("cwidth", w);
+    // }
+    // if !self.has_property("cheight") {
+    //   self.set_property("cheight", h);
+    // }
+    // if !self.has_property("cdepth") {
+    //   self.set_property("cdepth", d);
+    // }
+
+    Ok(())
+  }
+
+  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+    if let Some(mut body_stored) = self.get_property("body") {
+      if let Stored::Digested(ref body) = *body_stored {
+        body.compute_size(options, state)
+      } else {
+        panic!("the stored 'body' property should always be a Stored::Digested enum case.");
+      }
+    } else {
+      let font = match self.get_property("font") {
+        Some(Cow::Owned(Stored::Font(f))) => f,
+        Some(Cow::Borrowed(Stored::Font(f))) => f.clone(),
+        _ => Arc::new(Font::text_default()),
+      };
+      Ok(font.compute_string_size(&self.get_string(state)?, options, state))
     }
   }
 }
@@ -336,7 +407,7 @@ impl Object for Digested {
       _ => unimplemented!(),
     }
   }
-  fn revert(&self, state: &mut State) -> Result<Tokens> {
+  fn revert(&self, state: &State) -> Result<Tokens> {
     match *self {
       Digested::TBox(ref b) => b.revert(state),
       Digested::List(ref l) => l.revert(state),
@@ -374,34 +445,52 @@ impl BoxOps for Digested {
     }
   }
 
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> {
-    unimplemented!()
-    // match self {
-    //   Digested::TBox(ref mut b) => b.get_properties_mut(),
-    //   Digested::List(ref mut l) => l.get_properties_mut(),
-    //   Digested::Whatsit(ref mut w) => unimplemented!(), //w.borrow_mut().get_properties_mut(),
-    //   Digested::KeyVals(ref mut kvs) => kvs.get_properties_mut(),
-    //   Digested::Postponed(_) => unimplemented!(),
-    // }
+  fn get_properties(&self) -> &HashMap<String, Stored> {
+    match self {
+      Digested::TBox(ref b) => b.get_properties(),
+      Digested::List(ref l) => l.get_properties(),
+      Digested::KeyVals(ref kvs) => kvs.get_properties(),
+      Digested::Whatsit(ref w) => unimplemented!(), // Oooof; w.read().unwrap().get_properties(),
+      Digested::Postponed(_) | Digested::RegisterValue(_) | Digested::Comment(_) => unimplemented!(),
+    }
   }
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     match *self {
-      Digested::TBox(ref b) => Error!("digested", "set_property", self, None, s!("Called set_property on Box: {:?}", b)),
-      Digested::List(ref l) => Error!("digested", "set_property", self, None, s!("Called set_property on List: {:?}", l)),
-      Digested::Whatsit(ref w) => w.write().unwrap().set_property(key, value), // TODO
+      // TODO: This is only possible if we have interior mutability for *ALL* Digested variants
+      // i.e. Arc<RwLock<Tbox>>, Arc<RwLock<List>>, etc.
+      //
+      // Digested::TBox(ref b) => b.set_property(key, value),
+      // Digested::List(ref l) => l.set_property(key, value),
+      Digested::Whatsit(ref w) => w.write().unwrap().set_property(key, value),
       _ => unimplemented!(),
     }
   }
 
-  fn get_property(&self, key: &str, state: &State) -> Option<Cow<Stored>> {
+  fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     match *self {
-      Digested::TBox(ref b) => b.get_property(key, state),
-      Digested::List(ref l) => {
-        Error!("digested", "get_property", self, state, "Called get_property on List: {:?}", l);
-        None
+      Digested::TBox(ref b) => b.get_property(key),
+      Digested::List(ref l) => l.get_property(key),
+      Digested::Whatsit(ref w) => w.read().unwrap().get_property(key).map(|v| Cow::Owned(v.into_owned())),
+      _ => unimplemented!(),
+    }
+  }
+  fn get_string(&self, state: &State) -> Result<Cow<str>> {
+    match *self {
+      Digested::TBox(ref b) => b.get_string(state),
+      Digested::List(ref l) => l.get_string(state),
+      Digested::Whatsit(ref w) => match w.read().unwrap().get_string(state) {
+        Ok(v) => Ok(Cow::Owned(v.into_owned())),
+        Err(e) => Err(format!("failed Whatsit get_string: {e}").into()),
       },
-      Digested::Whatsit(ref w) => w.read().unwrap().get_property(key, state).map(|v| Cow::Owned(v.into_owned())),
+      _ => unimplemented!(),
+    }
+  }
+  fn has_property(&self, key: &str) -> bool {
+    match *self {
+      Digested::TBox(ref b) => b.has_property(key),
+      Digested::List(ref l) => l.has_property(key),
+      Digested::Whatsit(ref w) => w.read().unwrap().has_property(key),
       _ => unimplemented!(),
     }
   }

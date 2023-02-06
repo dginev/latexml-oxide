@@ -23,21 +23,28 @@ impl fmt::Display for Comment {
 }
 impl Object for Comment {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
+  fn revert(&self, _state: &State) -> Result<Tokens> { Ok(Tokens!()) }
 }
 impl BoxOps for Comment {
   fn unlist(&self) -> Vec<Digested> { Vec::new() }
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> {
+  fn get_properties(&self) -> &HashMap<String, Stored> {
     unimplemented!();
   }
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    unimplemented!();
+  }
+  fn get_string(&self, state: &State) -> Result<Cow<str>> { Ok(Cow::Borrowed("")) }
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
     document.insert_comment(&self.0, state)?;
     Ok(())
   }
   fn get_font(&self) -> Option<Cow<Font>> { None }
-  fn get_property(&self, key: &str, state: &State) -> Option<Cow<Stored>> { None }
+  fn get_property(&self, key: &str) -> Option<Cow<Stored>> { None }
+  fn has_property(&self, key: &str) -> bool { false }
   fn get_property_bool(&self, key: &str) -> bool { false }
-  fn get_width(&self, state: &State) -> Option<RegisterValue> { Some(RegisterValue::Dimension(Dimension::new(0))) }
+  fn get_width(&mut self, options: Option<HashMap<String, Stored>>, state: &mut State) -> Result<Option<RegisterValue>> {
+    Ok(Some(RegisterValue::Dimension(Dimension::new(0))))
+  }
 
   // sub getHeight      { return Dimension(0); }
   // sub getTotalHeight { return Dimension(0); }

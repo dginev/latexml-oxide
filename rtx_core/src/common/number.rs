@@ -13,7 +13,7 @@ use std::fmt;
 pub struct Number(pub i32);
 impl Object for Number {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, state: &mut State) -> Result<Tokens> { Ok(mouth::tokenize_internal(&self.to_string(), Some(state))) }
+  fn revert(&self, state: &State) -> Result<Tokens> { Ok(mouth::tokenize_internal(&self.to_string())) }
 }
 impl NumericOps for Number {
   fn new(number: i32) -> Self { Number(number) }
@@ -27,7 +27,7 @@ impl Number {
 }
 
 impl From<Number> for Tokens {
-  fn from(v: Number) -> Tokens { mouth::tokenize_internal(&v.to_string(), None) }
+  fn from(v: Number) -> Tokens { mouth::tokenize_internal(&v.to_string()) }
 }
 
 impl From<Number> for Option<Tokens> {

@@ -38,7 +38,7 @@ pub type PropertiesClosure = Arc<dyn Fn(&mut Stomach, &Vec<Option<Digested>>, &m
 pub type DigestionClosure = Arc<dyn Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
 pub type ReplacementClosure = Arc<dyn Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
 pub type ConstructionClosure = Arc<dyn Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
-pub type DigestedReversionClosure = Arc<dyn Fn(&Whatsit, &Vec<Option<Digested>>, &mut State) -> Result<Tokens>>;
+pub type DigestedReversionClosure = Arc<dyn Fn(&Whatsit, &Vec<Option<Digested>>, &State) -> Result<Tokens>>;
 pub type SizingClosure = Arc<dyn Fn(&Whatsit) -> (i32, i32, i32)>;
 
 #[derive(Clone)]
@@ -89,7 +89,7 @@ pub enum Reversion {
 }
 
 impl From<&str> for Reversion {
-  fn from(t: &str) -> Reversion { Reversion::Tokens(mouth::tokenize_internal(t, None).pack_parameters()) }
+  fn from(t: &str) -> Reversion { Reversion::Tokens(mouth::tokenize_internal(t).pack_parameters()) }
 }
 impl From<Tokens> for Reversion {
   fn from(ts: Tokens) -> Reversion { Reversion::Tokens(ts) }
@@ -112,7 +112,7 @@ impl From<Tokens> for Option<ExpansionBody> {
 }
 
 impl From<&str> for ExpansionBody {
-  fn from(s: &str) -> ExpansionBody { mouth::tokenize_internal(s, None).into() }
+  fn from(s: &str) -> ExpansionBody { mouth::tokenize_internal(s).into() }
 }
 
 impl From<String> for ExpansionBody {
@@ -214,7 +214,7 @@ pub trait Definition: Object {
     Ok(after_body_digested)
   }
 
-  fn value_of(&self, args: Vec<ArgWrap>, state: &State) -> Option<RegisterValue> { unimplemented!() }
+  fn value_of(&self, args: Vec<ArgWrap>, state: &mut State) -> Option<RegisterValue> { unimplemented!() }
   fn register_type(&self) -> Option<RegisterType> { None }
   fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
   fn get_expansion(&self) -> Option<&ExpansionBody> { None }

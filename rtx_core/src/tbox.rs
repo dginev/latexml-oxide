@@ -44,7 +44,7 @@ impl fmt::Display for Tbox {
 }
 impl Object for Tbox {
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
-  fn revert(&self, _state: &mut State) -> Result<Tokens> { Ok(self.tokens.clone()) }
+  fn revert(&self, _state: &State) -> Result<Tokens> { Ok(self.tokens.clone()) }
 }
 impl Tbox {
   pub fn new(
@@ -110,12 +110,21 @@ impl Tbox {
   }
 
   pub fn is_empty(&self) -> bool { self.text.is_empty() }
-  pub fn get_string(&self) -> &str { self.text.as_str() }
 }
 
 impl BoxOps for Tbox {
   fn unlist(&self) -> Vec<Digested> { Vec::new() }
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
+  fn get_tokens(&self) -> Option<&Tokens> { Some(&self.tokens) }
+  fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn get_property_bool(&self, key: &str) -> bool {
+    match self.properties.get(key) {
+      Some(v) => *v == Stored::Bool(true),
+      _ => false,
+    }
+  }
+  fn has_property(&self, key: &str) -> bool { self.properties.contains_key(key) }
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
+  fn get_string(&self, state: &State) -> Result<Cow<'_, str>> { Ok(Cow::Borrowed(self.text.as_str())) }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
     let text = &self.text;
@@ -136,31 +145,6 @@ impl BoxOps for Tbox {
   }
 
   fn get_font(&self) -> Option<Cow<Font>> { Some(Cow::Borrowed(&self.font)) }
-
-  fn get_property(&self, key: &str, state: &State) -> Option<Cow<Stored>> {
-    if key == "isSpace" {
-      match self.properties.get(key) {
-        Some(value) => Some(Cow::Borrowed(value)),
-        None => {
-          let tex = self.tokens.untex(state); // !
-          if !tex.is_empty() && tex.chars().all(char::is_whitespace) {
-            // Check the TeX code, not (just) the string!
-            Some(Cow::Owned(Stored::Bool(true)))
-          } else {
-            None
-          }
-        },
-      }
-    } else {
-      self.properties.get(key).map(Cow::Borrowed)
-    }
-  }
-  fn get_property_bool(&self, key: &str) -> bool {
-    match self.properties.get(key) {
-      Some(v) => *v == Stored::Bool(true),
-      _ => false,
-    }
-  }
 }
 
 impl From<Tbox> for Result<Vec<Digested>> {

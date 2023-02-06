@@ -1923,7 +1923,7 @@ macro_rules! TokenizeInternal {
     tokenized
   }};
   ($string:expr) => {
-    mouth::tokenize_internal($string, None)
+    mouth::tokenize_internal($string)
   };
 }
 

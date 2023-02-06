@@ -52,6 +52,7 @@ pub trait NumericOps {
   where Self: Sized;
   fn new_f32(num: f32) -> Self
   where Self: Sized;
+  fn unit(&self) -> Option<&'static str> { None }
   fn value_of(self) -> i32;
   fn value_f32(self) -> f32
   where Self: Sized {

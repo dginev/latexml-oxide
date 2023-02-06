@@ -142,13 +142,15 @@ LoadDefinitions!(state, {
     after_digest => sub[stomach, whatsit, state] {
       let width : Option<RegisterValue> = {
         let spec = whatsit.get_arg(1);
-        let tbox = whatsit.get_arg(2).unwrap();
-         if let Some(w) = GetKeyVal!(spec, "to") {
+        if let Some(w) = GetKeyVal!(spec, "to") {
           w.into()
         } else if let Some(s) = GetKeyVal!(spec, "spread") {
           let s_num_opt : Option<RegisterValue> = s.into();
-          let s_num = s_num_opt.unwrap_or_else(|| Number::new(0).into());
-          Some( tbox.get_width(state).unwrap().add(s_num) )
+          let s_num = s_num_opt.unwrap_or_default();
+          let mut tbox = whatsit.get_arg_mut(2).unwrap();
+          let current_w = tbox.get_width(None, state)?.unwrap();
+          let new_w = current_w.add(s_num);
+          Some( new_w )
         } else {
           None
         }

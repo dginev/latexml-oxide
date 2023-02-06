@@ -40,9 +40,7 @@ pub fn parse_prototype(proto: &str, state_opt: Option<&mut State>) -> Result<(To
     SINGLE_CHAR_RE.replace(proto, "").to_string()
   } else if let Some(captures) = ACTIVE_CHAR_RE.captures(proto) {
     // Match an active char
-    cs = mouth::tokenize_internal(captures.get(1).map_or("", |m| m.as_str()), None)
-      .unlist()
-      .remove(0);
+    cs = mouth::tokenize_internal(captures.get(1).map_or("", |m| m.as_str())).unlist().remove(0);
     // also replace in proto
     ACTIVE_CHAR_RE.replace(proto, "").to_string()
   } else {
@@ -145,7 +143,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
       // TODO: Ask Bruce about the "extra" functionality and its types
       let extra = extra_str
         .split('|')
-        .flat_map(|t| mouth::tokenize_internal(t, None).unlist())
+        .flat_map(|t| mouth::tokenize_internal(t).unlist())
         .map(Into::into)
         .collect::<Vec<ParameterExtra>>();
       let mut p = Parameter {

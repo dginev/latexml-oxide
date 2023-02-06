@@ -34,7 +34,7 @@ pub type ReaderClosure = Arc<ReaderFn>;
 // let mut stomach = state.stomach.borrow_mut();
 // let mut gullet = stomach.get_gullet_mut();
 //
-pub type ReversionClosure = Arc<dyn Fn(Vec<Token>, &[ParameterExtra], &mut State) -> Result<Tokens>>;
+pub type ReversionClosure = Arc<dyn Fn(Vec<Token>, &[ParameterExtra], &State) -> Result<Tokens>>;
 
 lazy_static! {
   static ref LAST_WCHAR_RE: Regex = Regex::new(r"\w$").unwrap();
@@ -415,7 +415,7 @@ impl Parameter {
     Ok(digested_value)
   }
 
-  pub fn revert(&self, value_opt: Option<Tokens>, state: &mut State) -> Result<Option<Tokens>> {
+  pub fn revert(&self, value_opt: Option<Tokens>, state: &State) -> Result<Option<Tokens>> {
     if let Some(ref reverter) = self.reversion {
       if let Some(value) = value_opt {
         Ok(Some((reverter)(value.unlist(), &self.extra, state)?))
@@ -463,7 +463,7 @@ impl Parameters {
   pub fn new(params: Vec<Parameter>) -> Self { Parameters(params) }
   pub fn get_num_args(&self) -> usize { self.0.iter().filter(|&p| !p.novalue).count() }
   pub fn get_parameters(&self) -> Vec<&Parameter> { self.0.iter().collect() }
-  pub fn revert_arguments(&self, args: Vec<Option<Tokens>>, state: &mut State) -> Result<Vec<Token>> {
+  pub fn revert_arguments(&self, args: Vec<Option<Tokens>>, state: &State) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     for (parameter, arg) in self.0.iter().zip(args.into_iter()) {
       if !parameter.novalue {

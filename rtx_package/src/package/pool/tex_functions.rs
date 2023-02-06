@@ -31,7 +31,7 @@ pub fn only_preamble(cs: &str, stomach: &mut Stomach, state: &mut State) {
   }
 }
 
-pub fn today(state: &State) -> String {
+pub fn today(state: &mut State) -> String {
   let month_names = [
     "January",
     "February",
@@ -629,7 +629,7 @@ pub fn writable_tokens(tokens: Tokens, state: &mut State) -> Result<String> {
       },
     }
   }
-  untex(Tokens::new(wv), true, state)
+  untex(Tokens::new(wv), true)
 }
 
 // sub orNull {

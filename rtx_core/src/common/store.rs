@@ -57,6 +57,7 @@ const STORED_FALSE: Stored = Stored::Bool(false);
 
 #[derive(Clone)]
 pub enum Stored {
+  /// if we want to keep a key but make it 'undef', set it to None
   None,
   // Primitives (Copy types, or cheap Clone)
   Bool(bool),
@@ -86,20 +87,20 @@ pub enum Stored {
   Locator(Locator),
   Rewrite(Rewrite),
   Ligature(Ligature),
-  // LaTeXML objects (Rc-wrapped)
+  // LaTeXML objects (Arc-wrapped)
   Expandable(Arc<Expandable>),
   Conditional(Arc<Conditional>),
   Primitive(Arc<Primitive>),
   MathPrimitive(Arc<MathPrimitive>),
-  // WALL OF SHAME (interior mutability)
-  Mouth(Arc<RwLock<Mouth>>),
-  Register(Arc<RegisterCell>),
-  IfFrame(Arc<RwLock<IfFrame>>),
   /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Arc<Constructor>),
   Digested(Box<crate::Digested>), // todo: should this be an Arc<> to make it shareable?
   Parameter(Arc<Parameter>),
   Font(Arc<Font>),
+  // WALL OF SHAME (interior mutability) -- can we dispense with these?
+  Mouth(Arc<RwLock<Mouth>>),
+  Register(Arc<RegisterCell>),
+  IfFrame(Arc<RwLock<IfFrame>>),
 }
 
 impl fmt::Debug for Stored {
@@ -781,7 +782,7 @@ impl<'a> From<&'a Stored> for Option<Glue> {
 impl<'a> From<&'a Stored> for Option<Tokens> {
   fn from(value: &'a Stored) -> Option<Tokens> {
     match value {
-      Stored::String(ref text) => Some(mouth::tokenize_internal(text, None)),
+      Stored::String(ref text) => Some(mouth::tokenize_internal(text)),
       Stored::Token(ref ts) => Some(Tokens::new(vec![ts.clone()])),
       Stored::Tokens(ref ts) => Some(ts.clone()),
       _ => None,
