@@ -30,16 +30,22 @@ LoadDefinitions!(outer_state, {
   // 3.2. Provision for re-scanning already read text
 
   // \readline; like \read, but only spaces & other
-  DefMacro!("\\readline Number SkipKeyword:to SkipSpaces Token", sub[gullet, args, state] {
-    unpack_to_number!(args => port);
-    unpack_to_token!(args => token);
-    let mouth_opt = if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}",port)) {
-      Some(Arc::clone(mouth))
-    } else {
-      None
-    };
+  DefMacro!("\\readline Number SkipKeyword:to SkipSpaces Token", sub[gullet, (port, token), state] {
+    let mouth_opt = if let Some(Stored::Mouth(mouth)) = LookupValue!(&format!("input_file:{port}")) {
+      Some(Arc::clone(mouth)) } else { None };
     if let Some(mouth) = mouth_opt {
-      let raw_line = s!("{}\r", mouth.write().unwrap().read_raw_line(false, state).unwrap_or_default());
+      let mut raw_line = mouth.write().unwrap().read_raw_line(false, state).unwrap_or_default();
+      // DG: Can't we do this \endlinechar check in readRawLine ?!
+      // DG:  and can't we make it *faster* ?
+      if let Some(eol) = state.lookup_definition(&T_CS!("\\endlinechar")) {
+        let eolv   = eol.value_of(Vec::new(), state).unwrap_or_default().value_of();
+        if (eolv > 0) && (eolv <= 255) {
+          raw_line.push(eolv as u8 as char);
+        }
+      } else {
+        raw_line.push('\r');
+      }
+
       DefMacro!(token, None, Tokens!(Explode!(raw_line)));
     }
   });

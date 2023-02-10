@@ -17,7 +17,7 @@ use std::fmt;
 use std::cmp::max;
 
 mod standard_metrics;
-use standard_metrics::STDMETRICS;
+use standard_metrics::{STDMETRICS, MetricData};
 
 pub type Fontmap = Vec<Option<char>>;
 
@@ -678,7 +678,7 @@ impl Font {
     changes
   }
 
-  pub fn get_metric(&self, c:char) -> Option<(f32,f32,f32,f32)> {
+  pub fn get_metric(&self, c:char) -> &MetricData {
     // Some((32768.125, 28216.875, 0.0, 0.0))
     let cstr = c.to_string();
     let fonts = match self.get_family() {
@@ -687,12 +687,12 @@ impl Font {
     };
     for name in fonts {
       if let Some(m) = STDMETRICS.get(name) {
-        if let Some(entry) = m.sizes.get(cstr.as_str()) {
-          return Some(*entry)
+        if m.sizes.contains_key(cstr.as_str()) {
+          return m
         }
       }
     }
-    None
+    STDMETRICS.get("cmr").unwrap()
   }
 
   pub fn get_em_width(&self) -> i32 {
@@ -718,14 +718,15 @@ impl Font {
     if text.is_empty() || self.get_family().map(|fam| fam == "nullfont").unwrap_or(false) {
       return (Dimension::default(),Dimension::default(),Dimension::default())
     }
-    let size = self.get_size().unwrap_or(10.0);
+    let size = self.get_size().unwrap_or(DEFSIZE);
     let ismath = self.get_family().map(|fam| fam=="math").unwrap_or(false);
     let (mut w, mut h, mut d) = (0, 0, 0);
     for char in text.chars() {
-      let entry_opt = self.get_metric(char);
+      let metric = self.get_metric(char);
+      let entry_opt = metric.sizes.get(char.to_string().as_str());
       // let entry_opt  = metric.sizes.get(char);
       let (cw, ch, cd, ci) = if let Some(entry) = entry_opt {
-         entry
+        *entry
       } else {
         (0.75 * UNITY as f32, 0.7 * UNITY as f32, 0.2 * UNITY as f32, 0.0)
       };

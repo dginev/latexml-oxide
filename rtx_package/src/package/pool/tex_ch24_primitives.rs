@@ -195,11 +195,11 @@ LoadDefinitions!(state, {
   });
 
   DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token", sub[stomach, (port, token), state] {
-    if let Some(Stored::Mouth(mouth_stored)) = state.lookup_value(&s!("input_file:{}",port)) {
+    if let Some(Stored::Mouth(mouth_stored)) = state.lookup_value(&format!("input_file:{port}")) {
       let mouth_obj = Arc::clone(mouth_stored);
       stomach.bgroup(state);
       AssignValue!("PRESERVE_NEWLINES", 2); // Special EOL/EOF treatment for \read
-      AssignValue!("INCLUDE_COMMENTS", 0);
+      AssignValue!("INCLUDE_COMMENTS", false);
       let mut tokens = Vec::new();
       let mut level = 0;
       let mut mouth = mouth_obj.write().unwrap();

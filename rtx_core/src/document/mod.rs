@@ -321,11 +321,17 @@ impl Document {
         },
         Postponed(ref tokens) => {
           if props.get("isMath") != Some(&Stored::Bool(true)) {
-            let text_font = if let Some(Stored::Font(ref prop_font)) = props.get("font") {
-              Arc::clone(prop_font)
+            let text_font_opt = if let Some(Stored::Font(ref prop_font)) = props.get("font") {
+              Some(Arc::clone(prop_font))
             } else {
-              Arc::new(self.box_to_absorb.as_ref().unwrap().get_font().unwrap_or_default().into_owned())
+              match self.box_to_absorb {
+                Some(ref thisbox) => thisbox.get_font().map(|thisfont|
+                  Arc::new(thisfont.into_owned())),
+                None => None
+              }
             };
+            // TODO: Sometimes we can't find a `font` here. Should `open_text` allow a None font arg?
+            let text_font = text_font_opt.unwrap_or_default();
             self.open_text(&tokens.to_string(), &text_font, state)?;
           } else {
             unimplemented!();
