@@ -177,7 +177,7 @@ LoadDefinitions!(outer_state, {
   DefParameterType!(CSName, reader => reader!(gullet, inner, extra, state, {
     let mut cs = escapechar(state);
     // keep newlines from having \n inside!
-    while let Some(token) = gullet.read_x_token(true, true, state)? {
+    while let Some(token) = gullet.read_x_token(Some(true), true, state)? {
       let s = token.get_string();
       if s == "\\endcsname" {
         break;
@@ -254,7 +254,18 @@ LoadDefinitions!(outer_state, {
   // stomach, but we may require some special-case treatment in other pieces of code...
   DefMacro!("\\input", "\\ltx@input");
   DefPrimitive!("\\ltx@input TeXFileName", sub[stomach, (name), state] {
-    input(&name.to_string(), InputOptions::default(), stomach, state)?;
+    let mut tks = name.unlist();
+    // If given a LaTeX-style argument, strip braces
+    if tks.len() > 1 && tks.first().unwrap().get_catcode() == Catcode::BEGIN
+      && tks.last().unwrap().get_catcode() == Catcode::END {
+      tks.remove(0);
+      tks.pop();
+    }
+    // and load LaTeX.pool if not already
+    if !state.lookup_bool("LaTeX.pool_loaded") {
+      LoadPool!("LaTeX");
+    }
+    input(&Tokens::new(tks).to_string(), InputOptions::default(), stomach, state)?;
   });
 
   // Note that TeX doesn't actually close the mouth;

@@ -184,7 +184,7 @@ LoadDefinitions!(state, {
   // however, <filler> does get expanded while searching for the initial {
   // which IS required in contrast to a general argument; ie a single token is not correct.
   DefParameterType!(GeneralText, sub[gullet, inner, _extra, state] {
-    if let Some(open) = gullet.read_x_token(false ,false, state)? {
+    if let Some(open) = gullet.read_x_token(None ,false, state)? {
       if open.get_catcode() == Catcode::BEGIN {
         Ok(gullet.read_balanced(false, state)?.unwrap_or_default())
       } else {
@@ -243,7 +243,7 @@ LoadDefinitions!(state, {
 
   // Read the next token, after expanding any expandable ones.
   DefParameterType!(XToken, sub[gullet, inner, _extra, state] {
-    if let Some(t) = gullet.read_x_token(false, false, state)? {
+    if let Some(t) = gullet.read_x_token(None, false, state)? {
       Ok(Tokens!(t))
     } else {
       Error!("expected","XToken", gullet, state, "Paramater <XToken> found None.");
@@ -304,7 +304,7 @@ LoadDefinitions!(state, {
       _ => panic!("XUntil needs a token ParameterExtra.")
     }; // Make sure it's a single token!!!
     let mut tokens : Vec<Token> = Vec::new();
-    while let Some(token) = gullet.read_x_token(false, false, state)? {
+    while let Some(token) = gullet.read_x_token(Some(false), false, state)? {
       if token == until {
         break;
       } else if token.get_catcode() == Catcode::BEGIN {
@@ -325,24 +325,11 @@ LoadDefinitions!(state, {
   // This appears to be needed by certain primitives (eg. \noalign ?)
   // and maybe what we should be using for some Digested ??
   DefParameterType!(Expanded, sub[gullet, inner, untils, state] {
-    if let Some(token) = gullet.read_x_token(false, false, state)? {
-      let mut tokens   = Vec::new();
+    if let Some(token) = gullet.read_x_token(Some(false), false, state)? {
       if token.get_catcode() == Catcode::BEGIN {
-        let mut level = 1;
-        while let Some(token) = gullet.read_x_token(false, false, state)? {
-          match token.get_catcode() {
-          Catcode::END => {
-            level-=1;
-            if level <=0 {
-              break;
-            }
-          },
-          Catcode::BEGIN => level +=1,
-          _ => {}
-          };
-          tokens.push(token);
-        }
-        Ok(Tokens::new(tokens))
+        Ok(
+          gullet.read_balanced(true, state)?.unwrap_or_default().without_dont_expand()
+        )
       } else {
         Ok(Tokens!(token))
       }
@@ -369,7 +356,7 @@ LoadDefinitions!(state, {
   // Whenever possible, use this `DefExpanded` parameter type directly, rather than hand-crafting a new one.
   DefParameterType!(DefExpanded, sub[gullet, _inner, _extra, state] {
       state.smuggle_the = true;
-      let expanded = if let Some(token) = gullet.read_x_token(false, false, state)? {
+      let expanded = if let Some(token) = gullet.read_x_token(None, false, state)? {
         if token.get_catcode() == Catcode::BEGIN {
           gullet.read_balanced(true, state)?.unwrap_or_default()
         } else {
@@ -547,7 +534,7 @@ LoadDefinitions!(state, {
 
   // Read a variable, ie. a token (after expansion) that is a writable register.
   DefParameterType!(Variable, sub[gullet, inner, _extra, state] {
-    let token_opt = gullet.read_x_token(false, false, state)?;
+    let token_opt = gullet.read_x_token(None, false, state)?;
     let defn_opt = match token_opt {
       Some(ref token) => state.lookup_register_definition(token),
       None => None
@@ -587,7 +574,7 @@ LoadDefinitions!(state, {
 
   // Same, but not necessarily writable
   DefParameterType!(Register, sub[gullet, inner, _extra, state] {
-    let token = gullet.read_x_token(false, false, state)?;
+    let token = gullet.read_x_token(None, false, state)?;
     let defn = match token {
       None => None,
       Some(ref t) => state.lookup_register_definition(t)
@@ -617,40 +604,35 @@ LoadDefinitions!(state, {
   }));
 
   DefParameterType!(TeXFileName, sub[gullet, inner, _extra, state] {
-      let mut tokens : Vec<Token> = Vec::new();
-      gullet.skip_spaces(state);
-      while let Some(token) = gullet.read_x_token(false, false, state)? {
-        match token.get_catcode() {
-          Catcode::SPACE | Catcode::EOL | Catcode::COMMENT => {break;},
-          Catcode::CS => {
-            gullet.unread_one(token);
-            break;
-          },
-          _ => {
-            tokens.push(token);
-          }
+    use Catcode::*;
+    let mut tokens = Vec::new();
+    let mut token_opt;
+    loop {
+      token_opt = gullet.read_x_token(Some(false), false, state)?;
+      if let Some(ref token) = token_opt {
+        if matches!(token.get_catcode(), SPACE | EOL | COMMENT | CS) {
+          break
         }
+      } else { break; }
+      if let Some(token) = token_opt {
+        tokens.push(token);
       }
-      let lead_cc = tokens.first().map(|t| t.get_catcode());
-      if lead_cc == Some(Catcode::BEGIN) {
-        let trail_cc = tokens.last().unwrap().get_catcode();
-        if trail_cc == Catcode::END {
-          // A begin-end wrapper indicates latex style {filename} use,
-          // so first unwrap,
-          tokens.remove(0);
-          tokens.pop();
-          gullet.unread(Tokens!(T_CS!("\\ltx@loadpool"),T_BEGIN!(),T_OTHER!("LaTeX"),T_END!()));
-        }
+    }
+
+    if let Some(token) = token_opt {
+      let cc = token.get_catcode();
+      if ! matches!(cc, SPACE | EOL | COMMENT) {
+        gullet.unread_one(token);
       }
-      // Also strip quotes in "filename" use
-      if tokens.len() > 1 {
-        let quote_token = T_OTHER!("\"");
-        if tokens.first().unwrap() == &quote_token && tokens.last().unwrap() == &quote_token {
-          tokens.remove(0);
-          tokens.pop();
-        }
-      }
-      tokens
+    }
+    // Strip outer "" ???
+    let quote = T_OTHER!("\"");
+    if tokens.len() > 1 && tokens.first().unwrap() == &quote
+      && tokens.last().unwrap() == &quote {
+      tokens.remove(0);
+      tokens.pop();
+    }
+    tokens
   });
 
   DefPrimitive!("\\ltx@loadpool {}", sub[stomach,(name),state] {
@@ -688,7 +670,7 @@ LoadDefinitions!(state, {
   // as part of the reader???
   DefParameterType!(MoveableBox, sub[gullet, inner, _extra, state] {
     gullet.skip_spaces(state);
-    if let Some(xtoken) = gullet.read_x_token(false, false, state)? {
+    if let Some(xtoken) = gullet.read_x_token(None, false, state)? {
       Tokens!(xtoken)
     } else {
       Tokens!()
@@ -719,7 +701,7 @@ LoadDefinitions!(state, {
   // Read a parenthesis delimited argument.
   // Note that this does NOT balance () within the argument.
   DefParameterType!(BalancedParen, sub[gullet, inner, _extra, state] {
-    let tok_opt = gullet.read_x_token(false,false,state)?;
+    let tok_opt = gullet.read_x_token(None,false,state)?;
     let is_paren = match tok_opt {
       Some(ref t) => t.get_string() == "(",
       _ => false

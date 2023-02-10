@@ -229,8 +229,9 @@ impl Gullet {
   // `Toplevel' processing, (if $toplevel is true), used at the toplevel processing by Stomach,
   //  will step to the next input stream (Mouth) if one is available,
   // If $commentsok is true, will also pass comments.
-  pub fn read_x_token(&mut self, toplevel: bool, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
+  pub fn read_x_token(&mut self, toplevel_opt: Option<bool>, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
     // toplevel should be true by default
+    let toplevel = toplevel_opt.unwrap_or(true);
     if commentsok {
       if let Some(pending_comment_token) = self.pending_comments.pop_front() {
         return Ok(Some(pending_comment_token));
@@ -306,7 +307,7 @@ impl Gullet {
                 if (toplevel || !(*defn).is_protected()) && defn.is_expandable() {
                   // is this the right logic here? don't expand unless digesting?
                   state.current_token = Some(Arc::new(token));
-                  return self.invoke_and_read_x_token(defn, toplevel, commentsok, state);
+                  return self.invoke_and_read_x_token(defn, Some(toplevel), commentsok, state);
                 }
               }
             }
@@ -329,7 +330,7 @@ impl Gullet {
   // TODO: linearizing in a single loop{}, as in perl, may be faster
   //       but it is hard to convince the borrow checker that we can safely
   //       reborrow gullet mutably.
-  fn invoke_and_read_x_token(&mut self, defn: Arc<dyn Definition>, toplevel: bool, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
+  fn invoke_and_read_x_token(&mut self, defn: Arc<dyn Definition>, toplevel: Option<bool>, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
     // TODO: SMUGGLE_THE_COMMANDS
     let expansion = defn.invoke(self, false, state)?;
     {
@@ -413,21 +414,29 @@ impl Gullet {
   pub fn read_balanced(&mut self, expanded: bool, state: &mut State) -> Result<Option<Tokens>> {
     let mut tokens = Vec::new();
     let mut level = 1;
-    while let Some(t) = self.read_token(state) {
-      // TODO: add $expanded flag for read_x_token(0,1) alternative read
+    // my $startloc = ($$self{verbosity} > 0) && $self->getLocator;
+    while let Some(t) = if expanded {
+        self.read_x_token(Some(false), true, state)?
+      } else {
+        self.read_token(state)
+      } {
       match t.get_catcode() {
-        // Inline ->getCatcode!
-        Catcode::BEGIN => level += 1,
+        Catcode::BEGIN => {
+          level += 1;
+          tokens.push(t);
+        },
         Catcode::END => {
           level -= 1;
           if level <= 0 {
             break;
+          } else {
+            tokens.push(t);
           }
         },
         // TODO: Marker case
-        _ => {},
+        Catcode::MARKER => {},
+        _ => tokens.push(t)
       };
-      tokens.push(t);
     }
     if level > 0 {
       Error!(
@@ -456,7 +465,7 @@ impl Gullet {
       let mut to_match: VecDeque<char> = keyword.to_uppercase().chars().collect();
       let mut matched = Vec::new();
       while !to_match.is_empty() {
-        if let Some(tok) = self.read_x_token(false, false, state)? {
+        if let Some(tok) = self.read_x_token(Some(false), false, state)? {
           let cmp_tok = tok.get_string().to_uppercase();
           matched.push(tok);
           if cmp_tok == to_match[0].to_string() {
@@ -671,7 +680,7 @@ impl Gullet {
   }
 
   pub fn read_register_value(&mut self, value_type: RegisterType, state: &mut State) -> Result<Option<RegisterValue>> {
-    match self.read_x_token(false, false, state)? {
+    match self.read_x_token(None, false, state)? {
       None => Ok(None),
       Some(token) => {
         if let Some(defn) = state.lookup_register_definition(&token) {
@@ -788,7 +797,7 @@ impl Gullet {
   ///   | '<octal constant><one optional space> | "<hexadecimal constant><one optional space>
   ///   | `<character token><one optional space>
   pub fn read_normal_integer(&mut self, state: &mut State) -> Result<Option<Number>> {
-    match self.read_x_token(false, false, state)? {
+    match self.read_x_token(None, false, state)? {
       None => Ok(None),
       Some(token) => {
         let cc = token.get_catcode();
@@ -832,7 +841,7 @@ impl Gullet {
     let is_negative = self.read_optional_signs(state)?;
     let s = if is_negative { -1.0 } else { 1.0 };
     let mut string = self.read_digits(&DIGIT_RE, true, state)?;
-    match self.read_x_token(false, false, state)? {
+    match self.read_x_token(None, false, state)? {
       None => {
         let message = s!(
           "Missing number, treated as zero while processing {:?}",
@@ -844,7 +853,7 @@ impl Gullet {
       Some(mut token) => {
         if token.get_string() == "." {
           string = s!("{}.{}", string, self.read_digits(&DIGIT_RE, true, state)?);
-          token = self.read_x_token(false, false, state)?.unwrap();
+          token = self.read_x_token(None, false, state)?.unwrap();
         }
 
         let n_opt: Option<f32> = if !string.is_empty() {
@@ -1230,7 +1239,7 @@ impl Gullet {
   // returns false if None, or positive, true if negative
   fn read_optional_signs(&mut self, state: &mut State) -> Result<bool> {
     let mut sign = false;
-    while let Some(t) = self.read_x_token(false, false, state)? {
+    while let Some(t) = self.read_x_token(None, false, state)? {
       let token_text = t.get_string();
       if token_text == "-" {
         sign = true;
@@ -1244,7 +1253,7 @@ impl Gullet {
 
   fn read_digits(&mut self, range_regex: &Regex, skip: bool, state: &mut State) -> Result<String> {
     let mut result = String::new();
-    while let Some(token) = self.read_x_token(false, false, state)? {
+    while let Some(token) = self.read_x_token(None, false, state)? {
       let digit = token.get_string();
       if digit.len() == 1 && range_regex.is_match(digit) {
         result.push_str(digit);
@@ -1263,12 +1272,12 @@ impl Gullet {
   // Return a number (Rust f32 number)
   fn read_factor(&mut self, state: &mut State) -> Result<Option<f32>> {
     let mut factor = self.read_digits(&DIGIT_RE, false, state)?;
-    let mut token_opt = self.read_x_token(false, false, state)?;
+    let mut token_opt = self.read_x_token(None, false, state)?;
     if let Some(ref token) = token_opt {
       let token_string = token.get_string();
       if token_string == "." || token_string == "," {
         factor = s!("{}.{}", factor, self.read_digits(&DIGIT_RE, false, state)?);
-        token_opt = self.read_x_token(false, false, state)?;
+        token_opt = self.read_x_token(None, false, state)?;
       }
     }
 
@@ -1300,7 +1309,7 @@ impl Gullet {
       move |expand_gullet: &mut Gullet, expand_state: &mut State| -> Result<Tokens> {
         expand_gullet.unread(tokens);
         let mut expanded = Vec::new();
-        while let Some(t) = expand_gullet.read_x_token(false, false, expand_state)? {
+        while let Some(t) = expand_gullet.read_x_token(Some(false), false, expand_state)? {
           expanded.push(t);
         }
         Ok(Tokens::new(expanded))

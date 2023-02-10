@@ -364,7 +364,7 @@ impl Parameter {
             gullet.unread(value);
             let mut tokens = Vec::new();
             loop {
-              match gullet.read_x_token(true, true, state) {
+              match gullet.read_x_token(Some(true), true, state) {
                 Ok(token_opt) => match token_opt {
                   Some(token) => tokens.push(token),
                   None => break,

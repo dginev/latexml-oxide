@@ -270,6 +270,12 @@ impl Tokens {
     Tokens::new(result)
   }
 
+  pub fn without_dont_expand(self) -> Self {
+    Tokens(
+      self.0.into_iter().map(|t| t.without_dont_expand()).collect()
+    )
+  }
+
   pub fn untex(&self) -> String {
     let tokens = self.clone().revert();
     let mut tokens: VecDeque<Token> = tokens.into();

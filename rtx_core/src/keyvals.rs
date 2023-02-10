@@ -246,7 +246,7 @@ impl KeyVals {
 
     // read tokens one-by-one
     let mut last_token = None;
-    while let Some(token) = gullet.read_x_token(false, false, state)? {
+    while let Some(token) = gullet.read_x_token(None, false, state)? {
       // skip to the next iteration if we have a paragraph
       if token == T_CS!("\\par") {
         continue;
