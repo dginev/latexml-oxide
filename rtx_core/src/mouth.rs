@@ -573,7 +573,7 @@ impl Mouth {
           return None;
         },
         Some(next_line) => {
-          line = next_line;
+          line = next_line.trim_end().to_owned();
           self.lineno += 1;
           self.chars = line.chars().collect();
           self.nchars = self.chars.len();
