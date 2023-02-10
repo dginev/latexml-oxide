@@ -167,7 +167,10 @@ pub trait BoxOps: Object {
 
   fn get_width(&mut self, options: Option<HashMap<String, Stored>>, state: &mut State) -> Result<Option<RegisterValue>> {
     if !self.has_property("width") && !self.has_property("cwidth") {
-      self.compute_size_store(options.unwrap_or_default(), state)?
+      // TODO: Restore caching?
+      // self.compute_size_store(options.unwrap_or_default(), state)?
+      let (w, _, _) = self.compute_size(options.unwrap_or_default(), state)?;
+      return Ok(Some(RegisterValue::Dimension(w)));
     }
 
     Ok(match self.get_property("width") {
@@ -193,6 +196,44 @@ pub trait BoxOps: Object {
     }
   }
 
+  fn get_size(&self, options: Option<HashMap<String, Stored>>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+    // TODO: Reintroduce caching?
+    if !(self.has_property("cwidth") && self.has_property("cheight") && self.has_property("cdepth")) {
+      return self.compute_size(options.unwrap_or_default(), state);
+    }
+    let props = self.get_properties();
+
+    // Debug("SIZE of $self"
+    //     . "\n preassigned: " . _showsize($$props{width},  $$props{height},  $$props{depth})
+    //     . "\n calculated : " . _showsize($$props{cwidth}, $$props{cheight}, $$props{cdepth})
+    //     . "\n w/options " . join(',', map { $_ . "=" . ToString($options{$_}); } sort keys %options)
+    //     . "\n =>: " . _showsize($$props{width} || $$props{cwidth}, $$props{height} || $$props{cheight}, $$props{depth} || $$props{cdepth})
+    //     . "\n   Of " . ToString($self)) if $LaTeXML::DEBUG{size};
+    Ok((
+      match props.get("width") {
+        Some(Stored::Dimension(w)) => *w,
+        _ => match props.get("cwidth") {
+          Some(Stored::Dimension(w)) => *w,
+          _ => Dimension::default()
+        }
+      },
+      match props.get("height") {
+        Some(Stored::Dimension(h)) => *h,
+        _ => match props.get("cheight") {
+          Some(Stored::Dimension(h)) => *h,
+          _ => Dimension::default()
+        }
+      },
+      match props.get("depth") {
+        Some(Stored::Dimension(d)) => *d,
+        _ => match props.get("cdepth") {
+          Some(Stored::Dimension(d)) => *d,
+          _ => Dimension::default()
+        }
+      }
+    ))
+  }
+
   /// omg
   ///  Fake computing the dimensions of strings (typically single chars).
   ///  Eventually, this needs to link into real font data
@@ -205,19 +246,15 @@ pub trait BoxOps: Object {
 
     let (w, h, d) = self.compute_size(options, state)?;
 
-    // TODO: the perl latexml does caching here,
-    //       but it requires interior mutability on Digested (see comment in Digested::set_property)
-    //
-    // if !self.has_property("cwidth") {
-    //   self.set_property("cwidth", w);
-    // }
-    // if !self.has_property("cheight") {
-    //   self.set_property("cheight", h);
-    // }
-    // if !self.has_property("cdepth") {
-    //   self.set_property("cdepth", d);
-    // }
-
+    if !self.has_property("cwidth") {
+      self.set_property("cwidth", w);
+    }
+    if !self.has_property("cheight") {
+      self.set_property("cheight", h);
+    }
+    if !self.has_property("cdepth") {
+      self.set_property("cdepth", d);
+    }
     Ok(())
   }
 
@@ -411,7 +448,9 @@ impl Object for Digested {
       List(ref l) => l.get_locator(),
       Comment(ref c) => c.get_locator(),
       Whatsit(ref w) => w.read().unwrap().get_locator().map(|l| Cow::Owned(l.into_owned())),
-      _ => unimplemented!(),
+      KeyVals(ref kvs) => kvs.get_locator(), // KeyVals locator?
+      RegisterValue(ref rv) => rv.get_locator(),
+      Postponed(ref t) => None, // Tokens locator?
     }
   }
   fn revert(&self, state: &State) -> Result<Tokens> {
@@ -474,6 +513,7 @@ impl BoxOps for Digested {
       // Digested::TBox(ref b) => b.set_property(key, value),
       // Digested::List(ref l) => l.set_property(key, value),
       DigestedData::Whatsit(ref w) => w.write().unwrap().set_property(key, value),
+      DigestedData::List(ref l) => Debug!("ignore","set_property", None, None, format!("List::set_property({key},_)")),
       _ => unimplemented!(),
     }
   }
