@@ -52,7 +52,7 @@ impl<'t> Stomach {
     let local_box_list = self.regurgitate(); // grab the current boxes to emulate local frame;
 
     // try reading a executable token
-    while let Some(token) = self.get_gullet_mut().read_x_token(true, true, state)? {
+    while let Some(token) = self.get_gullet_mut().read_x_token(Some(true), true, state)? {
       // info!(target:"stomach:digest_next:invoke_token","{:?}", token);
       let invoked = self.invoke_token(&token, state)?;
       self.box_list.extend(invoked);
@@ -102,7 +102,7 @@ impl<'t> Stomach {
       let initdepth = stomach.boxing.len();
       let depth = initdepth;
 
-      while let Some(token) = stomach.get_gullet_mut().read_x_token(true, true, state)? {
+      while let Some(token) = stomach.get_gullet_mut().read_x_token(Some(true), true, state)? {
         // Done if we run out of tokens
         // {
         //   let list = STOMACH_LIST.lock()
@@ -150,7 +150,7 @@ impl<'t> Stomach {
       state,
     )?;
     self.reading_from_mouth(raw_tex_mouth, state, move |stomach, state| -> Result<()> {
-      while let Some(token) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
+      while let Some(token) = stomach.get_gullet_mut().read_x_token(Some(false), false, state)? {
         if token != T_SPACE!() {
           // info!(target:"raw_tex:invoke_token","{:?}", token);
           stomach.invoke_token(&token, state)?;
@@ -217,7 +217,7 @@ impl<'t> Stomach {
             self.gullet.unread(invoked_meaning);
           }
           // replace the token by it's expansion!!!
-          maybe_token = self.gullet.read_x_token(true, false, state)?.map(Cow::Owned);
+          maybe_token = self.gullet.read_x_token(None, false, state)?.map(Cow::Owned);
           self.token_stack.pop();
           continue;
         },
@@ -225,7 +225,7 @@ impl<'t> Stomach {
           // Conditionals are "expandable", use the regular invoke.
           let mut invoked_meaning = meaning.invoke(&mut self.gullet, false, state)?;
           self.gullet.unread(invoked_meaning);
-          maybe_token = self.gullet.read_x_token(true, false, state)?.map(Cow::Owned);
+          maybe_token = self.gullet.read_x_token(None, false, state)?.map(Cow::Owned);
           self.token_stack.pop();
           continue;
         },

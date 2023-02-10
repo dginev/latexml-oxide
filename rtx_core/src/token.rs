@@ -236,6 +236,11 @@ impl Catcode {
     use crate::token::Catcode::*;
     matches!(self, COMMENT | MARKER)
   }
+
+  pub fn is_balanced_interesting(self) -> bool {
+    use crate::token::Catcode::*;
+    matches!(self, BEGIN | END | MARKER)
+  }
 }
 
 /// The core immutable syntactic primitive resulting from TeX's read-in and expansion process

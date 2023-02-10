@@ -357,7 +357,7 @@ fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, st
   )?;
 
   stomach.reading_from_mouth(pathname_mouth, state, move |i_stomach, i_state| -> Result<()> {
-    while let Some(token) = i_stomach.get_gullet_mut().read_x_token(false, false, i_state)? {
+    while let Some(token) = i_stomach.get_gullet_mut().read_x_token(Some(false), false, i_state)? {
       if token != T_SPACE!() {
         i_stomach.invoke_token(&token, i_state)?;
       }

@@ -87,7 +87,7 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\lx@ignorehardspaces", sub[stomach, (), state] {
     let mut boxes = Vec::new();
-    while let Some(token) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
+    while let Some(token) = stomach.get_gullet_mut().read_x_token(None, false, state)? {
       boxes = stomach.invoke_token(&token, state)?;
       if boxes.is_empty() {
         break;

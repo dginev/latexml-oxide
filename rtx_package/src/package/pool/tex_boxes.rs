@@ -22,14 +22,15 @@ LoadDefinitions!(state, {
       None
     };
     state.clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
-    let mut rest = if let Some(xtoken) = stomach.get_gullet_mut().read_x_token(false, false, state)? {
+    let mut rest = if let Some(xtoken) = stomach.get_gullet_mut().read_x_token(None, false, state)? {
       stomach.invoke_token(&xtoken, state)?
     } else { Vec::new() };
-    if !rest.is_empty() {
-      let stuff = rest.remove(0);
-      state.assign_value(&format!("box{}", number.value_of()),
-        Stored::Digested(Box::new(stuff)), scope);
-    }
+    let stuff = if !rest.is_empty() {
+      Stored::Digested(Box::new(rest.remove(0)))
+    } else {
+      Stored::None
+    };
+    state.assign_value(&format!("box{}", number.value_of()), stuff, scope);
     rest
   });
 
