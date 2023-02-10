@@ -44,6 +44,16 @@ macro_rules! raw_map {
 }
 
 #[macro_export]
+macro_rules! raw_char_map {
+  ($( $key:literal => $val:expr ),*) => {{
+    let mut map : HashMap<char,_> = ::std::collections::HashMap::new();
+    $( map.insert($key, $val); )*
+    map
+  }}
+}
+
+
+#[macro_export]
 macro_rules! s {
   ($($arg : tt )*) => (format!($($arg)*))
 }

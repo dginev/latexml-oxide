@@ -1,8 +1,8 @@
 use crate::common::dimension::Dimension;
-use crate::common::numeric_ops::NumericOps;
+use crate::common::numeric_ops::{UNITY,NumericOps};
 use crate::common::store::Stored;
 use crate::state::State;
-use crate::Digested;
+use crate::{BoxOps,Digested, Result};
 use lazy_static::lazy_static;
 /// Note that this has evolved way beynond just "font",
 /// but covers text properties (or even display properties) in general
@@ -14,6 +14,7 @@ use regex::Regex;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
+use std::cmp::max;
 
 mod standard_metrics;
 use standard_metrics::STDMETRICS;
@@ -29,6 +30,9 @@ static DEFOPACITY: &str = "1";
 static DEFENCODING: &str = "OT1";
 static DEFLANGUAGE: &str = "en";
 static DEFSIZE: f32 = 10.0; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
+
+pub const TEXT_FONTS : [&str; 6]= ["cmr","cmm","cmsy","cmex","amsa","amsb"];
+pub const MATH_FONTS : [&str; 6]= ["cmm","cmsy","cmex","amsa","amsb","cmr"];
 
 // static FORCE_FAMILY : i8 = 0x1;
 // static FORCE_SERIES : i8 = 0x2;
@@ -674,28 +678,71 @@ impl Font {
     changes
   }
 
+  pub fn get_metric(&self, c:char) -> Option<(f32,f32,f32,f32)> {
+    // Some((32768.125, 28216.875, 0.0, 0.0))
+    let cstr = c.to_string();
+    let fonts = match self.get_family() {
+      Some(fname) if fname == "math" => MATH_FONTS,
+      _ => TEXT_FONTS
+    };
+    for name in fonts {
+      if let Some(m) = STDMETRICS.get(name) {
+        if let Some(entry) = m.sizes.get(cstr.as_str()) {
+          return Some(*entry)
+        }
+      }
+    }
+    None
+  }
+
   pub fn get_em_width(&self) -> i32 {
     let size = self.get_size().unwrap_or(DEFSIZE);
     // Could (should) look for metric w/appropriate slant, weight, etc
     let m = STDMETRICS.get("cmr").unwrap();
-    (size * m.get("emwidth").unwrap()).trunc() as i32
+    (size * m.emwidth).trunc() as i32
   }
   pub fn get_ex_height(&self) -> i32 {
     let size = self.get_size().unwrap_or(DEFSIZE);
     // Could (should) look for metric w/appropriate slant, weight, etc
     let m = STDMETRICS.get("cmr").unwrap();
-    (size * m.get("exheight").unwrap()).trunc() as i32
+    (size * m.exheight).trunc() as i32
   }
   pub fn get_mu_width(&self) -> i32 {
     let size = self.get_size().unwrap_or(DEFSIZE);
     // Could (should) look for metric w/appropriate slant, weight, etc
     let m = STDMETRICS.get("cmm").unwrap();
-    (size * m.get("emwidth").unwrap() / 18.0).trunc() as i32
+    (size * m.emwidth / 18.0).trunc() as i32
   }
 
   pub fn compute_string_size(&self, text: &str, options: HashMap<String, Stored>, state: &State) -> (Dimension, Dimension, Dimension) {
-    (Dimension::default(), Dimension::default(), Dimension::default())
+    if text.is_empty() || self.get_family().map(|fam| fam == "nullfont").unwrap_or(false) {
+      return (Dimension::default(),Dimension::default(),Dimension::default())
+    }
+    let size = self.get_size().unwrap_or(10.0);
+    let ismath = self.get_family().map(|fam| fam=="math").unwrap_or(false);
+    let (mut w, mut h, mut d) = (0, 0, 0);
+    for char in text.chars() {
+      let entry_opt = self.get_metric(char);
+      // let entry_opt  = metric.sizes.get(char);
+      let (cw, ch, cd, ci) = if let Some(entry) = entry_opt {
+         entry
+      } else {
+        (0.75 * UNITY as f32, 0.7 * UNITY as f32, 0.2 * UNITY as f32, 0.0)
+      };
+      w += (cw * size).trunc() as i32;
+      // if (my $kern = $chars[0] && $$metric{kerns}{ $char . $chars[0] }) {
+      //   $w += int($size * $kern); }
+      // if ($ismath && $ci) {
+      //   $w += int($size * $ci); }
+      h = max(h, (ch * size).trunc() as i32);
+      d = max(d, (cd * size).trunc() as i32);
+    }
+    // The 1 is so that any actual glyph appears to be non-empty.
+    // This is presumably only necessary to deal with the flawed emptiness heiristics in Alignment?
+    if w == 0 { w = 1; }
+    (Dimension::new(w), Dimension::new(h), Dimension::new(d))
   }
+
   // Here's where I avoid trying to emulate Knuth's line-breaking...
   // Mostly for List & Whatsit: compute the size of a list of boxes.
   // Options _SHOULD_ include:
@@ -713,40 +760,43 @@ impl Font {
   // Another issue; SVG needs (sometimes) real sizes, even if the programmer
   // set some dimensions to 0 (eg.)   We may need to distinguish & store
   // requested vs real sizes?
-  pub fn compute_boxes_size(&self, boxes: &[Digested], options: HashMap<String, Stored>, state: &mut State) -> (Dimension, Dimension, Dimension) {
+  pub fn compute_boxes_size(&self, boxes: &[Digested], options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
     let fillwidth = match options.get("width") {
       Some(Stored::Int(fw)) => Some(*fw),
       None => match state.lookup_definition(&T_CS!("\\textwidth")) {
         Some(def) => def.value_of(Vec::new(), state).map(|x| x.value_of()),
         None => None,
       },
-      _ => {
-        unimplemented!()
-      },
-    };
-    //   my $maxwidth = $fillwidth && $fillwidth->valueOf;
+      _ => unimplemented!() };
+    let maxwidth = fillwidth.unwrap_or_default();
     //   # baselineskip, lineskip ??
-    //   my $baseline = $STATE->lookupDefinition(T_CS('\baselineskip'))->valueOf->valueOf;
-    //   my $lineskip = $STATE->lookupDefinition(T_CS('\lineskip'))->valueOf->valueOf;
-    //   my @lines    = ();
-    //   my ($wd, $ht, $dp)          = (0, 0, 0);
-    //   my ($minwd, $minht, $mindp) = (0, 0, 0);
-    //   my $vattach = $options{vattach} || 'baseline';
-    //   no warnings 'recursion';
-    //   # Flatten top-level Lists (orrr pass-thru $fillwidth ???)
-    //   #  my @boxes = map { (ref $_ eq 'LaTeXML::Core::List' ? $_->unlist : $_); } @$boxes;
-    //   my @boxes = grep { !(ref $_) || !$_->getProperty('isEmpty') }
-    //     map { (ref $_ eq 'LaTeXML::Core::List' ? $_->unlist : $_); }
-    //     grep { !(ref $_) || $_->can('getSize'); } @$boxes;
-    //   my $prevbox;
-    //   #  foreach my $box (@boxes) {
-    //   while (@boxes) {
-    //     my $box = shift(@boxes);
-    //     next unless defined $box;
+    let baseline = state.lookup_definition(&T_CS!("\\baselineskip"))
+      .expect("baseline skip should aways be defined")
+      .value_of(Vec::new(), state).expect("\\baselineskip should always have a value.")
+      .value_of();
+    let lineskip = state.lookup_definition(&T_CS!("\\lineskip"))
+      .expect("lineskip should always be defined")
+      .value_of(Vec::new(), state).expect("\\lineskip should always have a value.")
+      .value_of();
+    let mut lines: Vec<(Dimension,Dimension,Dimension)>    = Vec::new();
+    let (wd, ht, dp)          = (0, 0, 0);
+    let (minwd, minht, mindp) = (0, 0, 0);
+    let vattach = match options.get("vattach") {
+      Some(Stored::String(vattach)) => vattach,
+      _ => "baseline"
+    };
+    // Flatten top-level Lists (orrr pass-thru `fillwidth` ???)
+
+    // let boxes = grep { !(ref $_) || !$_->getProperty('isEmpty') }
+    //      map { (ref $_ eq 'LaTeXML::Core::List' ? $_->unlist : $_); }
+    //      grep { !(ref $_) || $_->can('getSize'); } @$boxes;
+    let mut prevbox : Option<Digested> = None;
+    for mut thisbox in boxes {
     //     next if ref $box && !$box->can('getSize');    # Care!! Since we're asking ALL args/compoments
     //                                                   #    next if ref $box && $box->getProperty('isEmpty');
-    //     ## Should any %options be inherited by the contained boxes?
-    //     my ($w, $h, $d) = (ref $box ? $box->getSize() : $font->computeStringSize($box));
+    // Should any `options` be inherited by the contained boxes?
+    let (w, h, d) = thisbox.get_size(None, state)?; // : $font->computeStringSize($box));
+    unimplemented!();
     //     if ((ref $w) && $w->can('_unit')) {
     //       $wd += ($w->_unit eq 'mu' ? $w->spValue : $w->valueOf); }
     //     else {
@@ -771,7 +821,8 @@ impl Font {
     //         $wd += $self->math_bearing($box, $prevbox); }
     //       if (my $kern = $$metric{kerns}{ $prevchar . $curchar }) {
     //         my $size = ($self->getSize || DEFSIZE() || 10); ## * $mathstylesize{ $self->getMathstyle || 'text' };
-    //         $wd += $size * $kern; } }
+    //         $wd += $size * $kern; }
+    }
 
     //     my $newline = (($options{layout} || '') eq 'vertical')        # EVERY box is a row?
     //       || ((ref $box) && $box->getProperty('isBreak'))             # || $box is a linebreak
@@ -814,7 +865,7 @@ impl Font {
     //       . "  Sizes: " . join("\n", map { _showsize(@$_); } @lines) . "\n"
     //       . "  => " . _showsize($wd, $ht, $dp)) if $LaTeXML::DEBUG{'size-detailed'};
     //   return (Dimension($wd), Dimension($ht), Dimension($dp)); }
-    (Dimension::default(), Dimension::default(), Dimension::default())
+    Ok((Dimension::new(wd), Dimension::new(ht), Dimension::new(dp)))
   }
 }
 

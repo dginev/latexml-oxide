@@ -324,7 +324,7 @@ impl Document {
             let text_font = if let Some(Stored::Font(ref prop_font)) = props.get("font") {
               Arc::clone(prop_font)
             } else {
-              Arc::new(self.box_to_absorb.as_ref().unwrap().get_font().unwrap().into_owned())
+              Arc::new(self.box_to_absorb.as_ref().unwrap().get_font().unwrap_or_default().into_owned())
             };
             self.open_text(&tokens.to_string(), &text_font, state)?;
           } else {

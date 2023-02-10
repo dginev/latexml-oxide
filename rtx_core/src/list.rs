@@ -72,8 +72,8 @@ impl BoxOps for List {
   fn get_font(&self) -> Option<Cow<Font>> { self.font.as_ref().map(Cow::Borrowed) }
   fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
     Ok(match &self.font {
-      Some(f) => f.compute_boxes_size(&self.boxes, options, state),
-      _ => Font::text_default().compute_boxes_size(&self.boxes, options, state),
+      Some(f) => f.compute_boxes_size(&self.boxes, options, state)?,
+      _ => Font::text_default().compute_boxes_size(&self.boxes, options, state)?,
     })
   }
 }
