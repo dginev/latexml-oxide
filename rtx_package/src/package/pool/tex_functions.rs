@@ -236,7 +236,7 @@ pub fn decode_math_char(mut n: u16, state: &State) -> (Option<String>, Option<ch
 // but parameter think's it's just parsing from gullet...
 pub fn read_box_contents(gullet: &mut Gullet, everybox_opt: Option<Tokens>, state: &mut State) -> Result<Tokens> {
   while let Some(t) = gullet.read_token(state) {
-    if t == T_BEGIN!() {
+    if t.get_catcode() == Catcode::BEGIN {
       break;
     } // Skip till { or \bgroup
   }

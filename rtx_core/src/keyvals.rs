@@ -142,9 +142,11 @@ impl BoxOps for KeyVals {
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     unimplemented!();
   }
-  fn unlist(&self) -> Vec<Digested> { vec![Digested::from(self.clone())] }
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { Ok(()) } // TODO
   fn get_font(&self) -> Option<Cow<Font>> { None } // TODO
+  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(crate::common::dimension::Dimension, crate::common::dimension::Dimension, crate::common::dimension::Dimension)> {
+    unimplemented!() // TODO
+  }
 }
 
 #[derive(Default)]

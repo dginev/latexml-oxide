@@ -15,9 +15,11 @@ use std::sync::Arc;
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::common::dimension::Dimension;
 
 use self::argument::ArgWrap;
 use self::register::{RegisterType, RegisterValue};
+
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::mouth;
@@ -39,7 +41,7 @@ pub type DigestionClosure = Arc<dyn Fn(&mut Stomach, &mut Whatsit, &mut State) -
 pub type ReplacementClosure = Arc<dyn Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
 pub type ConstructionClosure = Arc<dyn Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
 pub type DigestedReversionClosure = Arc<dyn Fn(&Whatsit, &Vec<Option<Digested>>, &State) -> Result<Tokens>>;
-pub type SizingClosure = Arc<dyn Fn(&Whatsit) -> (i32, i32, i32)>;
+pub type SizingClosure = Arc<dyn Fn(&Whatsit, &mut State) -> Result<(Dimension, Dimension, Dimension)>>;
 
 #[derive(Clone)]
 pub enum ExpansionBody {
@@ -140,6 +142,7 @@ pub trait Definition: Object {
       None => self.get_cs(),
     }
   }
+  fn get_sizer(&self) -> Option<SizingClosure> { None }
   fn get_alias(&self) -> Option<&String>;
   fn is_protected(&self) -> bool { false }
   fn is_register(&self) -> bool { false }

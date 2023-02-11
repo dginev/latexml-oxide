@@ -120,7 +120,7 @@ impl Core {
   pub fn get_state_mut(&mut self) -> &mut State { &mut self.state }
 }
 pub trait BoxOps: Object {
-  fn unlist(&self) -> Vec<Digested>;
+  fn unlist(&self) -> Vec<Digested> { unimplemented!() }
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()>;
   fn get_string(&self, state: &State) -> Result<Cow<str>>;
   fn get_tokens(&self) -> Option<&Tokens> { None }
@@ -258,22 +258,7 @@ pub trait BoxOps: Object {
     Ok(())
   }
 
-  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
-    if let Some(mut body_stored) = self.get_property("body") {
-      if let Stored::Digested(ref body) = *body_stored {
-        body.compute_size(options, state)
-      } else {
-        panic!("the stored 'body' property should always be a Stored::Digested enum case.");
-      }
-    } else {
-      let font = match self.get_property("font") {
-        Some(Cow::Owned(Stored::Font(f))) => f,
-        Some(Cow::Borrowed(Stored::Font(f))) => f.clone(),
-        _ => Arc::new(Font::text_default()),
-      };
-      Ok(font.compute_string_size(&self.get_string(state)?, options, state))
-    }
-  }
+  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -293,9 +278,8 @@ pub enum TexMode {
 // we employ reference counting instead (close to their original Perl design).
 // A strict OO-hierarchy of object ownership (with no auxiliary state metadata)
 // would allow a Rust-like redesign. But it could be too hard to achieve in practice.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Digested(Arc<DigestedData>);
-#[derive(Debug)]
 pub enum DigestedData {
   TBox(Tbox),
   Whatsit(RwLock<Whatsit>),
@@ -304,6 +288,25 @@ pub enum DigestedData {
   KeyVals(KeyVals),
   RegisterValue(RegisterValue),
   Comment(Comment),
+}
+
+// Digested and DigestedData are transparent for debugging -- just show the inner data
+impl fmt::Debug for Digested {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{:?}", *self.0) }
+}
+impl fmt::Debug for DigestedData {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    use DigestedData::*;
+    match self {
+      TBox(v) => write!(f, "{v:?}"),
+      Whatsit(v) => write!(f, "{v:?}"),
+      List(v) => write!(f, "{v:?}"),
+      Postponed(v) => write!(f, "{v:?}"),
+      KeyVals(v) => write!(f, "{v:?}"),
+      RegisterValue(v) => write!(f, "{v:?}"),
+      Comment(v) => write!(f, "{v:?}")
+    }
+  }
 }
 
 impl PartialEq for Digested {
@@ -471,13 +474,9 @@ impl BoxOps for Digested {
   fn unlist(&self) -> Vec<Digested> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.unlist(),
+      TBox(_) | Whatsit(_) |
+      KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => vec![self.clone()],
       List(ref l) => l.unlist(),
-      Whatsit(ref w) => w.read().unwrap().unlist(),
-      KeyVals(ref kvs) => kvs.unlist(),
-      Comment(ref c) => c.unlist(),
-      Postponed(ref _t) => unimplemented!(),
-      RegisterValue(ref _rv) => unimplemented!(),
     }
   }
 
@@ -580,6 +579,17 @@ impl BoxOps for Digested {
       Whatsit(ref w) => w.read().unwrap().get_font().map(|t| Cow::Owned(t.into_owned())),
       Postponed(ref tks) => None,
       _ => unimplemented!(),
+    }
+  }
+
+  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b.compute_size(options, state),
+      List(ref l) => l.compute_size(options, state),
+      KeyVals(ref kvs) => kvs.compute_size(options, state),
+      Whatsit(ref w) => w.read().unwrap().compute_size(options, state),
+      Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
     }
   }
 }

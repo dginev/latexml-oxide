@@ -14,13 +14,20 @@ use std::fmt::Write as _;
 // but the mouth sources should be easier to manage.
 // definitely something that can be tried after test milestone is achieved.
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct Locator {
   source: String,
   from_line: usize,
   to_line: usize,
   from_column: usize,
   to_column: usize,
+}
+
+// elide Locator debugging until we get to implementing them faithfully
+impl fmt::Debug for Locator {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "[...]")
+  }
 }
 
 impl fmt::Display for Locator {

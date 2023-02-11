@@ -24,7 +24,7 @@ use crate::{Digested, Locator};
 
 use super::argument::ArgWrap;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum RegisterValue {
   Number(Number),
   Dimension(Dimension),
@@ -301,6 +301,22 @@ impl<'a> From<&'a RegisterValue> for MuGlue {
   }
 }
 
+// passthrough the Debug print to the inner value, RegisterValue is transparent
+impl fmt::Debug for RegisterValue {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match self {
+      RegisterValue::Number(n) => write!(f, "{n:?}"),
+      RegisterValue::Dimension(d) => write!(f, "{d:?}"),
+      RegisterValue::MuDimension(d) => write!(f, "{d:?}"),
+      RegisterValue::Glue(g) => write!(f, "{g:?}"),
+      RegisterValue::MuGlue(g) => write!(f, "{g:?}"),
+      RegisterValue::Tokens(t) => write!(f, "{t:?}"),
+      RegisterValue::Token(t) => write!(f, "{t:?}"),
+    }
+  }
+}
+
+// passthrough the Display print to the inner value, RegisterValue is transparent
 impl fmt::Display for RegisterValue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
@@ -309,7 +325,8 @@ impl fmt::Display for RegisterValue {
       RegisterValue::MuDimension(d) => write!(f, "{d}"),
       RegisterValue::Glue(g) => write!(f, "{g}"),
       RegisterValue::MuGlue(g) => write!(f, "{g}"),
-      other => write!(f, "{}", self.clone().value_of()),
+      RegisterValue::Tokens(t) => write!(f, "{t}"),
+      RegisterValue::Token(t) => write!(f, "{t}"),
     }
   }
 }

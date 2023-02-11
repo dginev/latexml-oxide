@@ -2,7 +2,7 @@ use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{UNITY,NumericOps};
 use crate::common::store::Stored;
 use crate::state::State;
-use crate::{BoxOps,Digested, Result};
+use crate::{BoxOps,Digested, DigestedData, Result};
 use lazy_static::lazy_static;
 /// Note that this has evolved way beynond just "font",
 /// but covers text properties (or even display properties) in general
@@ -225,60 +225,66 @@ impl Eq for Font {}
 impl fmt::Display for Font {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.family.as_ref().unwrap_or(&Cow::Borrowed(""))) }
 }
+// elide Font debugging until we get to implementing them faithfully
 impl fmt::Debug for Font {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let mut parts = Vec::new();
-    if let Some(ref family) = self.family {
-      parts.push(s!("family: {:?}", family))
-    }
-    if let Some(ref series) = self.series {
-      parts.push(s!("series: {:?}", series))
-    }
-    if let Some(ref shape) = self.shape {
-      parts.push(s!("shape: {:?}", shape))
-    }
-    if let Some(ref size) = self.size {
-      parts.push(s!("size: {:?}", size))
-    }
-    if let Some(ref scale) = self.scale {
-      parts.push(s!("scale: {:?}", scale))
-    }
-    if let Some(ref color) = self.color {
-      parts.push(s!("color: {:?}", color))
-    }
-    if let Some(ref bg) = self.bg {
-      parts.push(s!("bg: {:?}", bg))
-    }
-    if let Some(ref opacity) = self.opacity {
-      parts.push(s!("opacity: {:?}", opacity))
-    }
-    if let Some(ref encoding) = self.encoding {
-      parts.push(s!("encoding: {:?}", encoding))
-    }
-    if let Some(ref language) = self.language {
-      parts.push(s!("language: {:?}", language))
-    }
-    if let Some(ref mathstyle) = self.mathstyle {
-      parts.push(s!("mathstyle: {:?}", mathstyle))
-    }
-    if let Some(ref mathstylestep) = self.mathstyle {
-      parts.push(s!("mathstylestep: {:?}", mathstylestep))
-    }
-    if let Some(ref forceseries) = self.forceseries {
-      parts.push(s!("forceseries: {:?}", forceseries))
-    }
-    if let Some(ref forcefamily) = self.forcefamily {
-      parts.push(s!("forcefamily: {:?}", forcefamily))
-    }
-    if let Some(ref forceshape) = self.forceshape {
-      parts.push(s!("forceshape: {:?}", forceshape))
-    }
-    if let Some(ref scripted) = self.scripted {
-      parts.push(s!("scripted: {:?}", scripted))
-    }
-    write!(f, "Font[{}]", parts.join(", "))
+    write!(f, "[font]")
   }
 }
+// impl fmt::Debug for Font {
+//   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//     let mut parts = Vec::new();
+//     if let Some(ref family) = self.family {
+//       parts.push(s!("family: {:?}", family))
+//     }
+//     if let Some(ref series) = self.series {
+//       parts.push(s!("series: {:?}", series))
+//     }
+//     if let Some(ref shape) = self.shape {
+//       parts.push(s!("shape: {:?}", shape))
+//     }
+//     if let Some(ref size) = self.size {
+//       parts.push(s!("size: {:?}", size))
+//     }
+//     if let Some(ref scale) = self.scale {
+//       parts.push(s!("scale: {:?}", scale))
+//     }
+//     if let Some(ref color) = self.color {
+//       parts.push(s!("color: {:?}", color))
+//     }
+//     if let Some(ref bg) = self.bg {
+//       parts.push(s!("bg: {:?}", bg))
+//     }
+//     if let Some(ref opacity) = self.opacity {
+//       parts.push(s!("opacity: {:?}", opacity))
+//     }
+//     if let Some(ref encoding) = self.encoding {
+//       parts.push(s!("encoding: {:?}", encoding))
+//     }
+//     if let Some(ref language) = self.language {
+//       parts.push(s!("language: {:?}", language))
+//     }
+//     if let Some(ref mathstyle) = self.mathstyle {
+//       parts.push(s!("mathstyle: {:?}", mathstyle))
+//     }
+//     if let Some(ref mathstylestep) = self.mathstyle {
+//       parts.push(s!("mathstylestep: {:?}", mathstylestep))
+//     }
+//     if let Some(ref forceseries) = self.forceseries {
+//       parts.push(s!("forceseries: {:?}", forceseries))
+//     }
+//     if let Some(ref forcefamily) = self.forcefamily {
+//       parts.push(s!("forcefamily: {:?}", forcefamily))
+//     }
+//     if let Some(ref forceshape) = self.forceshape {
+//       parts.push(s!("forceshape: {:?}", forceshape))
+//     }
+//     if let Some(ref scripted) = self.scripted {
+//       parts.push(s!("scripted: {:?}", scripted))
+//     }
+//     write!(f, "Font[{}]", parts.join(", "))
+//   }
+// }
 
 impl Font {
   pub fn text_default() -> Self {
@@ -325,6 +331,20 @@ impl Font {
       scale: None,
     }
   }
+
+  pub fn math_bearing(&self, thisbox: &Digested, prevbox: &Digested) -> f32 {
+    // my $r0      = $prevbox->getProperty('role') || 'ID';
+    // my $r1      = $box->getProperty('role')     || 'ID';
+    // my $t0      = $mathatomtype{$r0}            || 0;
+    // my $t1      = $mathatomtype{$r1}            || 0;
+    // my $bearing = $$mathbearings[$t0][$t1];
+    // my $style   = $self->getMathstyle || 'text';
+    // if (!$bearing || (($bearing < 0) && ($style ne 'display') && ($style ne 'text'))) {
+    //   return 0; }
+    // return $STATE->lookupDefinition($$mathbearingreg[abs($bearing)])->valueOf->spValue; }
+    0.0
+  }
+
 
   pub fn is_sticky(&self) -> bool {
     if let Some(ref family) = self.family {
@@ -678,17 +698,18 @@ impl Font {
     changes
   }
 
-  pub fn get_metric(&self, c:char) -> &MetricData {
-    // Some((32768.125, 28216.875, 0.0, 0.0))
-    let cstr = c.to_string();
-    let fonts = match self.get_family() {
-      Some(fname) if fname == "math" => MATH_FONTS,
-      _ => TEXT_FONTS
-    };
-    for name in fonts {
-      if let Some(m) = STDMETRICS.get(name) {
-        if m.sizes.contains_key(cstr.as_str()) {
-          return m
+  pub fn get_metric(&self, c_opt:Option<char>) -> &MetricData {
+    if let Some(c) = c_opt {
+      let cstr = c.to_string();
+      let fonts = match self.get_family() {
+        Some(fname) if fname == "math" => MATH_FONTS,
+        _ => TEXT_FONTS
+      };
+      for name in fonts {
+        if let Some(m) = STDMETRICS.get(name) {
+          if m.sizes.contains_key(cstr.as_str()) {
+            return m
+          }
         }
       }
     }
@@ -722,7 +743,7 @@ impl Font {
     let ismath = self.get_family().map(|fam| fam=="math").unwrap_or(false);
     let (mut w, mut h, mut d) = (0, 0, 0);
     for char in text.chars() {
-      let metric = self.get_metric(char);
+      let metric = self.get_metric(Some(char));
       let entry_opt = metric.sizes.get(char.to_string().as_str());
       // let entry_opt  = metric.sizes.get(char);
       let (cw, ch, cd, ci) = if let Some(entry) = entry_opt {
@@ -768,7 +789,7 @@ impl Font {
         Some(def) => def.value_of(Vec::new(), state).map(|x| x.value_of()),
         None => None,
       },
-      _ => unimplemented!() };
+      _ => None };
     let maxwidth = fillwidth.unwrap_or_default();
     //   # baselineskip, lineskip ??
     let baseline = state.lookup_definition(&T_CS!("\\baselineskip"))
@@ -780,93 +801,99 @@ impl Font {
       .value_of(Vec::new(), state).expect("\\lineskip should always have a value.")
       .value_of();
     let mut lines: Vec<(Dimension,Dimension,Dimension)>    = Vec::new();
-    let (wd, ht, dp)          = (0, 0, 0);
-    let (minwd, minht, mindp) = (0, 0, 0);
+    let (mut wd, mut ht, mut dp)          = (0.0, 0, 0);
+    let (minwd, minht, mindp) = (0.0, 0.0, 0.0);
     let vattach = match options.get("vattach") {
       Some(Stored::String(vattach)) => vattach,
       _ => "baseline"
     };
     // Flatten top-level Lists (orrr pass-thru `fillwidth` ???)
+    let filtered_boxes = boxes.iter().flat_map(|thisbox| thisbox.unlist())
+      .filter(|thisbox| !thisbox.has_property("isEmpty"));
 
-    // let boxes = grep { !(ref $_) || !$_->getProperty('isEmpty') }
-    //      map { (ref $_ eq 'LaTeXML::Core::List' ? $_->unlist : $_); }
-    //      grep { !(ref $_) || $_->can('getSize'); } @$boxes;
-    let mut prevbox : Option<Digested> = None;
-    for mut thisbox in boxes {
-    //     next if ref $box && !$box->can('getSize');    # Care!! Since we're asking ALL args/compoments
-    //                                                   #    next if ref $box && $box->getProperty('isEmpty');
-    // Should any `options` be inherited by the contained boxes?
-    let (w, h, d) = thisbox.get_size(None, state)?; // : $font->computeStringSize($box));
-    unimplemented!();
-    //     if ((ref $w) && $w->can('_unit')) {
-    //       $wd += ($w->_unit eq 'mu' ? $w->spValue : $w->valueOf); }
-    //     else {
-    //       Warn('expected', 'Dimension', undef,
-    //         "Width of " . Stringify($box) . " yielded a non-dimension: " . Stringify($w)); }
-    //     if ((ref $h) && $h->can('_unit')) {
-    //       $ht = max($ht, ($h->_unit eq 'mu' ? $h->spValue : $h->valueOf)); }
-    //     else {
-    //       Warn('expected', 'Dimension', undef,
-    //         "Height of " . Stringify($box) . " yielded a non-dimension: " . Stringify($h)); }
-    //     if ((ref $d) && $d->can('_unit')) {
-    //       $dp = max($dp, ($d->_unit eq 'mu' ? $d->spValue : $d->valueOf)); }
-    //     else {
-    //       Warn('expected', 'Dimension', undef,
-    //         "Depth of " . Stringify($box) . " yielded a non-dimension: " . Stringify($d)); }
-    //     # Kern HACK for lists of individual Box's
-    //     if ($prevbox && (ref $prevbox eq 'LaTeXML::Core::Box') && (ref $box eq 'LaTeXML::Core::Box')) {
-    //       my $prevchar = substr($prevbox->getString || '', -1, 1);
-    //       my $curchar  = substr($box->getString     || '', 0,  1);
-    //       my $metric   = $self->getMetric($curchar);
-    //       if ($prevbox && ($self->getFamily eq 'math')) {
-    //         $wd += $self->math_bearing($box, $prevbox); }
-    //       if (my $kern = $$metric{kerns}{ $prevchar . $curchar }) {
-    //         my $size = ($self->getSize || DEFSIZE() || 10); ## * $mathstylesize{ $self->getMathstyle || 'text' };
-    //         $wd += $size * $kern; }
+    let mut prevbox_opt : Option<Digested> = None;
+    for mut thisbox in filtered_boxes {
+
+      // Should any `options` be inherited by the contained boxes?
+      let (w, h, d) = thisbox.get_size(None, state)?;
+
+      // DG: TODO: We'll have to figure out how to rearrange this logic,
+      //           now that every emitted result of get_size is a Dimension.
+      //           likely the sizing case moves elsewhere?
+      // wd += if w._unit() == "mu" { w.sp_value() } else { w.value_of() };
+      eprintln!("fs|{}: {}",thisbox.get_string(state).unwrap(),w.value_of());
+      wd += w.value_of() as f32;
+      eprintln!("wd|{}",wd);
+
+      //     if ((ref $h) && $h->can('_unit')) {
+      //       $ht = max($ht, ($h->_unit eq 'mu' ? $h->spValue : $h->valueOf)); }
+      ht = max(ht, h.value_of());
+
+      //     if ((ref $d) && $d->can('_unit')) {
+      //       $dp = max($dp, ($d->_unit eq 'mu' ? $d->spValue : $d->valueOf)); }
+      dp = max(dp, d.value_of());
+
+      // Kern HACK for lists of individual Box's
+      if let Some(prevbox) = prevbox_opt {
+        if matches!(prevbox.data(), DigestedData::TBox(_)) && matches!(thisbox.data(), DigestedData::TBox(_)) {
+          let prevchar = prevbox.get_string(state)?.chars().last();
+          let curchar  = thisbox.get_string(state)?.chars().next();
+          let metric   = self.get_metric(curchar);
+          if let Some(family) = self.get_family() {
+            if family == "math" {
+              wd += self.math_bearing(&thisbox, &prevbox);
+            }
+          }
+          if let Some(prevc) = prevchar {
+            if let Some(curc) = curchar {
+              let kern_key = String::from(prevc) + &String::from(curc);
+              if let Some(kern) = metric.kerns.get(kern_key.as_str()) {
+                let size = self.get_size().unwrap_or(DEFSIZE);
+                wd += size * kern;
+              }
+            }
+          }
+       }
+      }
+      //     my $newline = (($options{layout} || '') eq 'vertical')        # EVERY box is a row?
+      //       || ((ref $box) && $box->getProperty('isBreak'))             # || $box is a linebreak
+      //       || ((defined $maxwidth) && ($wd >= $maxwidth));             # or we've reached the requested width
+      //     if ($newline) {
+      //       if (@boxes) {
+      //         if ($baseline > $ht + $dp) {
+      //           $dp = $baseline - $ht; }
+      //         else {
+      //           $dp += $lineskip; } }
+      //       push(@lines, [$wd, $ht, $dp]); $wd = $ht = $dp = 0; }
+      prevbox_opt = Some(thisbox);
     }
 
-    //     my $newline = (($options{layout} || '') eq 'vertical')        # EVERY box is a row?
-    //       || ((ref $box) && $box->getProperty('isBreak'))             # || $box is a linebreak
-    //       || ((defined $maxwidth) && ($wd >= $maxwidth));             # or we've reached the requested width
-    //     if ($newline) {
-    //       if (@boxes) {
-    //         if ($baseline > $ht + $dp) {
-    //           $dp = $baseline - $ht; }
-    //         else {
-    //           $dp += $lineskip; } }
-    //       push(@lines, [$wd, $ht, $dp]); $wd = $ht = $dp = 0; }
-    //     $prevbox = $box; }
-    //   if ($wd || $ht || $dp) {    # be sure to get last line
-    //     push(@lines, [$wd, $ht, $dp]); }
-    //   # Deal with multiple lines
-    //   my $nlines = scalar(@lines);
-    //   if ($nlines == 0) {
-    //     $wd = $ht = $dp = 0; }
-    //   else {
-    //     $wd = max(map { $$_[0] } @lines);
-    //     $ht = sum(map { $$_[1] } @lines);
-    //     $dp = sum(map { $$_[2] } @lines);
-    //     if ($vattach eq 'top') {    # Top of box is aligned with top(?) of current text
-    //       my ($w, $h, $d) = $font->getNominalSize;
-    //       $h  = $h->valueOf;
-    //       $dp = $ht + $dp - $h; $ht = $h; }
-    //     elsif ($vattach eq 'bottom') {    # Bottom of box is aligned with bottom (?) of current text
-    //       $ht = $ht + $dp; $dp = 0; }
-    //     elsif ($vattach eq 'middle') {
-    //       my ($w, $h, $d) = $font->getNominalSize;
-    //       $h = $h->valueOf;
-    //       my $c = ($ht + $dp) / 2;
-    //       $ht = $c + $h / 2; $dp = $c - $h / 2; }
-    //     else {                            # default is baseline (of the 1st line)
-    //       my $h = $lines[0][1];
-    //       $dp = $ht + $dp - $h; $ht = $h; } }
-    // ###  $wd = max($minwd, $wd); $ht = max($minht, $ht); $dp = max($mindp, $dp);
-    //   Debug("Size boxes " . join(',', map { $_ . '=' . ToString($options{$_}); } sort keys %options) . "\n"
-    //       . "  Boxes: " . join(',',  map { '[[' . ToString($_) . ']]'; } @$boxes) . "\n"
-    //       . "  Sizes: " . join("\n", map { _showsize(@$_); } @lines) . "\n"
-    //       . "  => " . _showsize($wd, $ht, $dp)) if $LaTeXML::DEBUG{'size-detailed'};
-    //   return (Dimension($wd), Dimension($ht), Dimension($dp)); }
-    Ok((Dimension::new(wd), Dimension::new(ht), Dimension::new(dp)))
+      //   if ($wd || $ht || $dp) {    # be sure to get last line
+      //     push(@lines, [$wd, $ht, $dp]); }
+      //   # Deal with multiple lines
+      //   my $nlines = scalar(@lines);
+      //   if ($nlines == 0) {
+      //     $wd = $ht = $dp = 0; }
+      //   else {
+      //     $wd = max(map { $$_[0] } @lines);
+      //     $ht = sum(map { $$_[1] } @lines);
+      //     $dp = sum(map { $$_[2] } @lines);
+      //     if ($vattach eq 'top') {    # Top of box is aligned with top(?) of current text
+      //       my ($w, $h, $d) = $font->getNominalSize;
+      //       $h  = $h->valueOf;
+      //       $dp = $ht + $dp - $h; $ht = $h; }
+      //     elsif ($vattach eq 'bottom') {    # Bottom of box is aligned with bottom (?) of current text
+      //       $ht = $ht + $dp; $dp = 0; }
+      //     elsif ($vattach eq 'middle') {
+      //       my ($w, $h, $d) = $font->getNominalSize;
+      //       $h = $h->valueOf;
+      //       my $c = ($ht + $dp) / 2;
+      //       $ht = $c + $h / 2; $dp = $c - $h / 2; }
+      //     else {                            # default is baseline (of the 1st line)
+      //       my $h = $lines[0][1];
+      //       $dp = $ht + $dp - $h; $ht = $h; } }
+
+    Ok((Dimension::new_f32(wd), Dimension::new(ht), Dimension::new(dp)))
   }
 }
 

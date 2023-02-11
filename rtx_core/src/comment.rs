@@ -13,7 +13,7 @@ use crate::definition::register::RegisterValue;
 use crate::document::Document;
 use crate::state::State;
 use crate::tokens::Tokens;
-use crate::{BoxOps, Digested};
+use crate::{BoxOps};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Comment(pub String);
@@ -26,7 +26,6 @@ impl Object for Comment {
   fn revert(&self, _state: &State) -> Result<Tokens> { Ok(Tokens!()) }
 }
 impl BoxOps for Comment {
-  fn unlist(&self) -> Vec<Digested> { Vec::new() }
   fn get_properties(&self) -> &HashMap<String, Stored> {
     unimplemented!();
   }
@@ -44,6 +43,10 @@ impl BoxOps for Comment {
   fn get_property_bool(&self, key: &str) -> bool { false }
   fn get_width(&mut self, options: Option<HashMap<String, Stored>>, state: &mut State) -> Result<Option<RegisterValue>> {
     Ok(Some(RegisterValue::Dimension(Dimension::new(0))))
+  }
+
+  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+    Ok((Dimension::default(),Dimension::default(),Dimension::default()))
   }
 
   // sub getHeight      { return Dimension(0); }
