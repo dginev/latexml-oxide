@@ -43,7 +43,6 @@ pub struct ConstructorOptions {
   pub before_digest_end: Vec<BeforeDigestClosure>,
   pub after_digest_body: Vec<DigestionClosure>,
   pub reversion: Option<Reversion>,
-  // sizer           : 1,
   pub scope: Option<Scope>,
   pub locked: bool,
   pub alias: Option<String>,
@@ -110,6 +109,7 @@ pub struct Constructor {
   pub nargs: Option<usize>,
   pub paramlist: Option<Parameters>,
   pub replacement: Option<ReplacementClosure>,
+  pub sizer: Option<SizingClosure>,
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
   pub before_construct: Vec<ConstructionClosure>,
@@ -137,6 +137,7 @@ impl Default for Constructor {
       after_digest_body: vec![],
       reversion: None,
       alias: None,
+      sizer: None,
     }
   }
 }
@@ -158,6 +159,7 @@ impl Definition for Constructor {
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest_body) }
   fn capture_body(&self) -> bool { self.capture_body }
+  fn get_sizer(&self) -> Option<SizingClosure> { self.sizer.clone() }
   fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.

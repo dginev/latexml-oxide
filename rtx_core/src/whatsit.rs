@@ -9,6 +9,7 @@ use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::common::dimension::Dimension;
 use crate::definition::expandable::Expandable;
 use crate::definition::{Definition, Reversion};
 use crate::document::Document;
@@ -247,7 +248,6 @@ impl Object for Whatsit {
 impl BoxOps for Whatsit {
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
   fn get_string(&self, state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.revert(state)?.to_string())) }
-  fn unlist(&self) -> Vec<Digested> { Vec::new() }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
     // Significant time is consumed here, and associated with a specific CS,
@@ -289,4 +289,32 @@ impl BoxOps for Whatsit {
   }
 
   fn set_font(&mut self, font: Arc<Font>) { self.properties.insert("font".to_string(), Stored::Font(font)); }
+
+  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+    dbg!(&self);
+    let defn = self.get_definition();
+    if let Some(sizer) = defn.get_sizer() {
+      eprintln!("\n\n FOUND SIZER!\n\n");
+      sizer(self, state)
+    } else {
+      // Nothing specified? use #body if any, else sum all box args
+      let mut boxes = Vec::new();
+      if let Some(mut body_stored) = self.get_property("body") {
+        if let Stored::Digested(ref body) = *body_stored {
+          boxes.push((**body).clone());
+        }
+      }
+      if boxes.is_empty() {// no body
+        for arg in self.args.iter().flatten() {
+          boxes.extend(arg.unlist().into_iter());
+        }
+      }
+      let font = if let Stored::Font(ref sf) = *self.get_property("font").unwrap() {
+        sf.clone()
+      } else {
+        state.lookup_font().unwrap()
+      };
+      font.compute_boxes_size(&boxes, options, state)
+    }
+  }
 }

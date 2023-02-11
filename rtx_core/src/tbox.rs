@@ -113,7 +113,6 @@ impl Tbox {
 }
 
 impl BoxOps for Tbox {
-  fn unlist(&self) -> Vec<Digested> { Vec::new() }
   fn get_tokens(&self) -> Option<&Tokens> { Some(&self.tokens) }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
   fn get_property_bool(&self, key: &str) -> bool {
@@ -145,6 +144,23 @@ impl BoxOps for Tbox {
   }
 
   fn get_font(&self) -> Option<Cow<Font>> { Some(Cow::Borrowed(&self.font)) }
+
+  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+    if let Some(mut body_stored) = self.get_property("body") {
+      if let Stored::Digested(ref body) = *body_stored {
+        body.compute_size(options, state)
+      } else {
+        panic!("the stored 'body' property should always be a Stored::Digested enum case.");
+      }
+    } else {
+      let font = match self.get_property("font") {
+        Some(Cow::Owned(Stored::Font(f))) => f,
+        Some(Cow::Borrowed(Stored::Font(f))) => f.clone(),
+        _ => Arc::new(Font::text_default()),
+      };
+      Ok(font.compute_string_size(&self.get_string(state)?, options, state))
+    }
+  }
 }
 
 impl From<Tbox> for Result<Vec<Digested>> {

@@ -527,6 +527,7 @@ pub fn def_environment(
     // ), $options{scope});
     reversion: options.reversion,
     alias: options.alias,
+    sizer: options.sizer,
   });
   state.install_definition(begin_name_constructor, options.scope.clone());
 

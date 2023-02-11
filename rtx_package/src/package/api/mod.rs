@@ -28,7 +28,7 @@ use rtx_core::tbox::Tbox;
 use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::whatsit::Whatsit;
-use rtx_core::Digested;
+use rtx_core::{Digested,BoxOps};
 
 // Constants for the API functions stay here as well
 
@@ -114,14 +114,31 @@ impl IntoOption<Option<Scope>> for String {
   }
 }
 
+// TODO: Sizers need a lot more work, likely a complete rethink about organization.
 impl IntoOption<Option<SizingClosure>> for &str {
   fn into_option(self) -> Option<SizingClosure> {
     if self.is_empty() {
       None
-    } else if self == "#1" {
-      Some(Arc::new(|w| unimplemented!()))
+    } else if let Some(stripped) = self.strip_prefix('#') {
+      let arg = stripped.parse::<usize>().unwrap_or(1);
+      Some(Arc::new(move |w, state| match w.get_arg(arg) {
+        Some(arg) => dbg!(arg).compute_size(HashMap::new(), state),
+        None => Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+      }))
+    } else if self.is_empty() || self == "0" {
+      Some(Arc::new(|_, _| Ok((Dimension::default(),Dimension::default(),Dimension::default()) )))
     } else {
-      Some(Arc::new(|w| unimplemented!()))
+      // literal string, get its size with the current font?
+      let sized_data = String::from(self);
+      Some(Arc::new(move |w, state| {
+        let font = if let Stored::Font(ref font) = *w.get_property("font").unwrap() {
+          font.clone()
+        } else {
+          state.lookup_font().unwrap()
+        };
+        font.compute_boxes_size(
+          &[Digested::from(Tbox{text: sized_data.clone(), ..Tbox::default()})], HashMap::new(), state)
+      }))
     }
   }
 }
