@@ -227,6 +227,7 @@ pub enum ErrorTarget {
   TexPool,
   Internal,
   TargetUnexpected,
+  SmuggledCatcode,
 }
 
 impl fmt::Display for Error {

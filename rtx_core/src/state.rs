@@ -680,7 +680,7 @@ impl State {
   /// or assigns when new.
   pub fn push_tokens(&mut self, key: &str, value: Tokens) {
     match self.lookup_value_mut(key) {
-      Some(Stored::Tokens(ref mut tks)) => tks.as_mut_unlist().extend(value.unlist()),
+      Some(Stored::Tokens(ref mut tks)) => tks.unlist_mut().extend(value.unlist()),
       None | Some(Stored::None) => self.assign_value(key, Stored::Tokens(value), None),
       Some(other) => panic!("Can only push_tokens into a Stored::Tokens, but got {other:?}"),
     }

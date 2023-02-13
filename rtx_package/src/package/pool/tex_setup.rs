@@ -186,14 +186,14 @@ LoadDefinitions!(state, {
   DefParameterType!(GeneralText, sub[gullet, inner, _extra, state] {
     if let Some(open) = gullet.read_x_token(None ,false, state)? {
       if open.get_catcode() == Catcode::BEGIN {
-        Ok(gullet.read_balanced(false, state)?.unwrap_or_default())
+        gullet.read_balanced(false, state)?.unwrap_or_default()
       } else {
         Error!("expected","{", gullet, state, "Expected <general text> here");
-        Ok(Tokens!(open))
+        Tokens!(open)
       }
     } else {
       Error!("expected","{", gullet, state, "Expected <general text> here");
-      Ok(Tokens!())
+      Tokens!()
     }
   });
 
@@ -347,7 +347,7 @@ LoadDefinitions!(state, {
   })
   );
 
-  // Set SMUGGLE_THE=1 whenever you want to handle special TeX neutralization of
+  // Set state.smuggle_the=true whenever you want to handle special TeX neutralization of
   // tokens created by \the-like primitives.
   //
   // IMPORTANTLY, call packParameters early on the tokens read from the Gullet

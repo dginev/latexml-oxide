@@ -87,7 +87,7 @@ impl Definition for Expandable {
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
   fn invoke(&self, gullet: &mut Gullet, once_only: bool, state: &mut State) -> Result<Tokens> {
     // shortcut for "trivial" macros; but only if not tracing & profiling!!!!
-    let tracing = state.lookup_bool("TRACINGMACROS");
+    let tracing = state.lookup_int("TRACINGMACROS") > 0;
     let profiled = state.lookup_bool("PROFILING");
     match &self.expansion {
       Some(ExpansionBody::Closure(closure)) => {
@@ -123,7 +123,7 @@ impl Definition for Expandable {
           }
           // For trivial expansion, make sure we don't get \cs or \relax\cs direct recursion!
           let is_recursion = if !once_only {
-            let token_vec = tokens.as_ref_unlist();
+            let token_vec = tokens.unlist_ref();
             let t0_opt = token_vec.get(0);
             let t1_opt = token_vec.get(1);
             if let Some(t0) = t0_opt {

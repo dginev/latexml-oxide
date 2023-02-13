@@ -131,10 +131,10 @@ impl Tokens {
   pub fn unlist(self) -> Vec<Token> { self.0 }
 
   /// Return a reference to the tokens making up this Tokens
-  pub fn as_ref_unlist(&self) -> &Vec<Token> { &self.0 }
+  pub fn unlist_ref(&self) -> &Vec<Token> { &self.0 }
 
   /// Return a mutable reference to the tokens making up this Tokens
-  pub fn as_mut_unlist(&mut self) -> &mut Vec<Token> { &mut self.0 }
+  pub fn unlist_mut(&mut self) -> &mut Vec<Token> { &mut self.0 }
 
   /// Are there any tokens at all contained in this Tokens object
   pub fn is_empty(&self) -> bool { self.0.is_empty() }
@@ -199,7 +199,7 @@ impl Tokens {
   /// to_keyvals casts back to a parsed KeyVals (usually via a KeyVals parameter type)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_keyvals(&self, state: &State) -> KeyVals {
-    let mut toks_iter = self.as_ref_unlist().iter();
+    let mut toks_iter = self.unlist_ref().iter();
     let mut kvs = KeyVals::default();
     while let Some(key) = toks_iter.next() {
       if let Some(value) = toks_iter.next() {
