@@ -180,77 +180,77 @@ impl PartialEq for Stored {
       Stored::None => matches!(other, Stored::None),
       String(ref s) => {
         if let String(s2) = other {
-          s == s2
+          *s == *s2
         } else {
           false
         }
       },
       Int(ref num) => {
         if let Int(num2) = other {
-          num == num2
+          *num == *num2
         } else {
           false
         }
       },
       VecChar(ref vs) => {
         if let VecChar(vs2) = other {
-          vs == vs2
+          *vs == *vs2
         } else {
           false
         }
       },
       VecOptionChar(ref vs) => {
         if let VecOptionChar(vs2) = other {
-          vs == vs2
+          *vs == *vs2
         } else {
           false
         }
       },
       VecString(ref vs) => {
         if let VecString(vs2) = other {
-          vs == vs2
+          *vs == *vs2
         } else {
           false
         }
       },
       Bool(ref b) => {
         if let Bool(b2) = other {
-          b == b2
+          *b == *b2
         } else {
           false
         }
       },
       Token(ref t) => {
         if let Token(t2) = other {
-          t == t2
+          *t == *t2
         } else {
           false
         }
       },
       Tokens(ref t) => {
         if let Tokens(t2) = other {
-          t == t2
+          *t == *t2
         } else {
           false
         }
       },
       Locator(ref t) => {
         if let Locator(t2) = other {
-          t == t2
+          *t == *t2
         } else {
           false
         }
       },
       Catcode(ref cc) => {
         if let Catcode(cc2) = other {
-          cc == cc2
+          *cc == *cc2
         } else {
           false
         }
       },
       Charcode(ref cc) => {
         if let Charcode(cc2) = other {
-          cc == cc2
+          *cc == *cc2
         } else {
           false
         }
@@ -264,28 +264,28 @@ impl PartialEq for Stored {
       },
       Expandable(ref e) => {
         if let Expandable(e2) = other {
-          e == e2
+          **e == **e2
         } else {
           false
         }
       },
       Conditional(ref c) => {
         if let Conditional(c2) = other {
-          *c == *c2
+          **c == **c2
         } else {
           false
         }
       },
       Primitive(ref p) => {
         if let Primitive(p2) = other {
-          p == p2
+          **p == **p2
         } else {
           false
         }
       },
       MathPrimitive(ref p) => {
         if let MathPrimitive(p2) = other {
-          p == p2
+          **p == **p2
         } else {
           false
         }
@@ -293,35 +293,35 @@ impl PartialEq for Stored {
       // MathPrimitiveOptions(ref _primitive) =>
       Constructor(ref c) => {
         if let Constructor(c2) = other {
-          c == c2
+          **c == **c2
         } else {
           false
         }
       },
       Digested(ref d) => {
         if let Digested(d2) = other {
-          d == d2
+          **d == **d2
         } else {
           false
         }
       },
       Parameter(ref p) => {
         if let Parameter(p2) = other {
-          p == p2
+          **p == **p2
         } else {
           false
         }
       },
       Register(ref r) => {
         if let Register(r2) = other {
-          r == r2
+          **r == **r2
         } else {
           false
         }
       },
       Rewrite(ref r) => {
         if let Rewrite(r2) = other {
-          r == r2
+          *r == *r2
         } else {
           false
         }
@@ -335,63 +335,63 @@ impl PartialEq for Stored {
       },
       Font(ref f) => {
         if let Font(f2) = other {
-          f == f2
+          **f == **f2
         } else {
           false
         }
       },
       Number(ref n) => {
         if let Number(n2) = other {
-          n == n2
+          *n == *n2
         } else {
           false
         }
       },
       Glue(ref g) => {
         if let Glue(g2) = other {
-          g == g2
+          *g == *g2
         } else {
           false
         }
       },
       MuGlue(ref mg) => {
         if let MuGlue(mg2) = other {
-          mg == mg2
+          *mg == *mg2
         } else {
           false
         }
       },
       Dimension(ref d) => {
         if let Dimension(d2) = other {
-          d == d2
+          *d == *d2
         } else {
           false
         }
       },
       MuDimension(ref md) => {
         if let MuDimension(md2) = other {
-          md == md2
+          *md == *md2
         } else {
           false
         }
       },
       VecDigested(ref vd) => {
         if let VecDigested(vd2) = other {
-          vd == vd2
+          *vd == *vd2
         } else {
           false
         }
       },
       VecTokens(ref vd) => {
         if let VecTokens(vd2) = other {
-          vd == vd2
+          *vd == *vd2
         } else {
           false
         }
       },
       VecDequeStored(ref v) => {
         if let VecDequeStored(v2) = other {
-          v == v2
+          *v == *v2
         } else {
           false
         }
@@ -405,28 +405,28 @@ impl PartialEq for Stored {
       },
       HashStored(ref hs) => {
         if let HashStored(hs2) = other {
-          hs == hs2
+          *hs == *hs2
         } else {
           false
         }
       },
       HashTagData(ref htd) => {
         if let HashTagData(htd2) = other {
-          htd == htd2
+          *htd == *htd2
         } else {
           false
         }
       },
       HashString(ref hstr) => {
         if let HashString(hstr2) = other {
-          hstr == hstr2
+          *hstr == *hstr2
         } else {
           false
         }
       },
       Ligature(ref lig) => {
         if let Ligature(lig2) = other {
-          lig == lig2
+          *lig == *lig2
         } else {
           false
         }
