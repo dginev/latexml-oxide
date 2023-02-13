@@ -1,8 +1,9 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
+use std::mem;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -20,13 +21,15 @@ use crate::definition::register::{RegisterType, RegisterValue};
 use crate::definition::Definition;
 use crate::mouth::Mouth;
 use crate::state::State;
-use crate::token::{Catcode, Token};
+use crate::token::{Catcode, Token, MOCK_TOKEN};
 use crate::tokens::Tokens;
 
 lazy_static! {
   static ref DIGIT_RE: Regex = Regex::new(r"[0-9]").unwrap();
   static ref OCT_RE: Regex = Regex::new(r"[0-7]").unwrap();
   static ref HEX_RE: Regex = Regex::new(r"[0-9A-F]").unwrap();
+  static ref SMUGGLE_THE_COMMANDS : HashSet<&'static str> =
+    set!("\\the","\\showthe", "\\unexpanded", "\\detokenize");
 }
 
 #[derive(PartialEq, Debug)]
@@ -292,12 +295,12 @@ impl Gullet {
           self.close_mouth(false, state); // Next input stream.
           continue;
         },
-        Some(token) => {
+        Some(mut token) => {
           if token.smuggled.is_some() {
             if token.code != Catcode::SmuggleTHE || state.smuggle_the {
               return Ok(Some(token));
             } else {
-              return Ok(Some(*token.smuggled.unwrap()));
+              return Ok(token.smuggled.take().map(|t| *t));
             }
           } else {
             // refactoring a very tricky perl if, so for now this looks awkward
@@ -318,8 +321,7 @@ impl Gullet {
               } else {
                 return Ok(Some(token));
               }
-            } else {
-            }
+            } else { }
           }
         },
       }
@@ -331,8 +333,24 @@ impl Gullet {
   //       but it is hard to convince the borrow checker that we can safely
   //       reborrow gullet mutably.
   fn invoke_and_read_x_token(&mut self, defn: Arc<dyn Definition>, toplevel: Option<bool>, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
-    // TODO: SMUGGLE_THE_COMMANDS
-    let expansion = defn.invoke(self, false, state)?;
+    let mut expansion = defn.invoke(self, false, state)?;
+    if SMUGGLE_THE_COMMANDS.contains(defn.get_cs().get_string()) {
+      // magic THE_TOKS handling, add to pushback with a single-use noexpand flag only valid
+      // at the exact time the token leaves the pushback.
+      // This is *required to be different* from the noexpand flag, as per the B Book
+      for item in expansion.unlist_mut() {
+        if item.get_catcode().can_smuggle_the() {
+            let taken = mem::replace(item, MOCK_TOKEN);
+            *item = T_SMUGGLE_THE!(taken);
+        }
+      }
+      // PERFORMANCE:
+      //   explicitly flag that we've seen this case, so that higher levels know to
+      //   unset the flag from the entire {pushback}
+      self.pushback_has_smuggled_the = true;
+    }
+
+    // add the newly expanded tokens back into the gullet stream, in the ordinary case.
     {
       let mut runtime = self.mouth.as_mut().unwrap();
       for token in expansion.unlist().into_iter().rev() {
@@ -380,7 +398,7 @@ impl Gullet {
   }
   pub fn unread_mut(&mut self, tokens: &mut Tokens) {
     if let Some(ref mut runtime) = self.mouth {
-      for token in tokens.as_mut_unlist().drain(..).rev() {
+      for token in tokens.unlist_mut().drain(..).rev() {
         runtime.pushback.push_front(token);
       }
     };
@@ -712,7 +730,7 @@ impl Gullet {
   /// undef.
   pub fn read_match(&mut self, choices: &[&Tokens], state: &mut State) -> Result<Option<Tokens>> {
     for choice in choices {
-      let mut to_match: Vec<&Token> = choice.as_ref_unlist().iter().rev().collect();
+      let mut to_match: Vec<&Token> = choice.unlist_ref().iter().rev().collect();
       let mut matched = Vec::new();
       while !to_match.is_empty() {
         match self.read_token(state) {

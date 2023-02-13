@@ -24,6 +24,8 @@ static CONTROLNAME: &[&str] = &[
   "SYN", "ETB", "CAN", "EM", "SUB", "ESC", "FS", "GS", "RS", "US",
 ];
 
+pub const MOCK_TOKEN : Token = Token { text: Cow::Borrowed(""), code: Catcode::MARKER, smuggled: None};
+
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
   ESCAPE,
@@ -241,6 +243,11 @@ impl Catcode {
     use crate::token::Catcode::*;
     matches!(self, BEGIN | END | MARKER)
   }
+
+  pub fn can_smuggle_the(self) -> bool {
+    use crate::token::Catcode::*;
+    matches!(self, PARAM | ACTIVE | CS | ARG)
+  }
 }
 
 /// The core immutable syntactic primitive resulting from TeX's read-in and expansion process
@@ -434,6 +441,25 @@ macro_rules! T_ARG {
       smuggled: None,
     }
   };
+}
+
+#[macro_export]
+macro_rules! T_SMUGGLE_THE {
+  ($t:ident) => {
+      match $t.get_catcode() {
+      Catcode::SmuggleTHE => {
+        // LaTeXML Bug, we haven't correctly emulated scan_toks! Offending token was:
+        fatal!(SmuggledCatcode, Unexpected, s!("We are masking a \\the-produced token twice, this must Never happen. Illegal: {}", $t.stringify()));
+      },
+      cc if cc.can_smuggle_the() =>
+        Token{
+          text: Cow::Borrowed("SMUGGLE_THE"),
+          code: Catcode::SmuggleTHE,
+          smuggled: Some(Box::new($t))
+        },
+      _ => $t
+    }
+  }
 }
 
 #[macro_export]
@@ -682,7 +708,9 @@ impl<'a> Token {
 
   pub fn substitute_parameters(self, args: &[&Token]) -> Self {
     if self.code == Catcode::ARG {
-      args[self.text.parse::<usize>().unwrap() - 1].clone()
+      let arg_idx = self.text.parse::<usize>()
+        .expect("ARG catcode tokens should always contain numeric literals as text");
+      args[arg_idx - 1].clone()
     } else {
       self
     }
@@ -691,23 +719,23 @@ impl<'a> Token {
   pub fn pack_parameters(self) -> Self { self }
 
   pub fn with_dont_expand(self, state: &State) -> Result<Self> {
-    let cc = self.code;
-    if cc == Catcode::SmuggleTHE {
-      // LaTeXML Bug, we haven't correctly emulated scan_toks! Offending token was:
-      let msg = s!(
-        "We are marking as \\noexpand a masked \\the-produced token, this must Never happen. Illegal: {}",
-        &self.stringify()
-      );
-      Fatal!(Parameter, Unexpected, None, state, msg);
-    }
-    if (cc == Catcode::CS || cc == Catcode::ACTIVE) && state.is_dont_expandable(&self) {
-      Ok(Token {
-        text: Cow::Borrowed("\\relax"),
-        code: Catcode::CS,
-        smuggled: Some(Box::new(self)),
-      })
-    } else {
-      Ok(self)
+    match self.code {
+      Catcode::SmuggleTHE => {
+        // LaTeXML Bug, we haven't correctly emulated scan_toks! Offending token was:
+        let msg = s!(
+          "We are marking as \\noexpand a masked \\the-produced token, this must Never happen. Illegal: {}",
+          &self.stringify()
+        );
+        Fatal!(Parameter, Unexpected, None, state, msg);
+      },
+      Catcode::CS | Catcode::ACTIVE if state.is_dont_expandable(&self) => {
+        Ok(Token {
+          text: Cow::Borrowed("\\relax"),
+          code: Catcode::CS,
+          smuggled: Some(Box::new(self)),
+        })
+      },
+      _ => Ok(self)
     }
   }
 
@@ -717,8 +745,7 @@ impl<'a> Token {
 
   /// Remove dont_expand flag, remove SMUGGLE_THE wrapper
   pub fn without_dont_expand(mut self) -> Token {
-    let mut inner = self.smuggled.take();
-    match inner {
+    match self.smuggled.take() {
       Some(t) => *t,
       None => self,
     }

@@ -1,19 +1,3 @@
-// Simple helper for hashset creation
-// Source: https://riptutorial.com/rust/example/4149/create-a-hashset-macro
-#[macro_export]
-macro_rules! set {
-    ( $( $x:expr ),* ) => {  // Match zero or more comma delimited items
-        {
-            use std::collections::HashSet;
-            let mut temp_set = HashSet::new();  // Create a mutable HashSet
-            $(
-                temp_set.insert($x); // Insert each item matched into the HashSet
-            )*
-            temp_set // Return the populated HashSet
-        }
-    };
-}
-
 #[macro_export]
 macro_rules! unp {
   ($args:ident => $var:ident) => (let $var = $args.remove(0););
