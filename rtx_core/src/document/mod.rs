@@ -1170,10 +1170,10 @@ impl Document {
           .all(|v| state.model.can_have_attribute(&qname, v) && !(NON_MERGEABLE_ATTRIBUTES.contains(v.as_str())))
         && !c[0].has_attribute("_force_font")
       {
-        let c_first = c.pop().unwrap();
+        let mut c_first = c.pop().unwrap();
         let c_first_font = self.get_node_font(&c_first).clone();
         self.set_node_font(node, &c_first_font);
-        let c_first = self.remove_node(c_first);
+        self.remove_node(&mut c_first);
         for mut gc in c_first.get_child_nodes().into_iter() {
           gc.unlink();
           node.add_child(&mut gc)?;
@@ -1277,9 +1277,9 @@ impl Document {
       boxes.push_front(self.get_node_box(node).unwrap());
       node.get_first_child().unwrap().set_content(&newstring)?;
       for idx in 0..nmatched - 1 {
-        let remove = node.get_prev_sibling().unwrap();
+        let mut remove = node.get_prev_sibling().unwrap();
         boxes.push_front(self.get_node_box(&remove).unwrap());
-        self.remove_node(remove);
+        self.remove_node(&mut remove);
       }
       // This fragment replaces the node's box by the composite boxes it replaces
       // HOWEVER, this gets things out of sync because parent lists of boxes still
@@ -2037,8 +2037,8 @@ impl Document {
   //   return $$self{node_fonts}{$fontid} || LaTeXML::Common::Font->textDefault(); }
 
   // Remove a node from the document (from it's parent)
-  pub fn remove_node(&mut self, mut node: Node) -> Node {
-    let mut chopped: bool = self.node == node; // Note if we're removing insertion point
+  pub fn remove_node(&mut self, mut node: &mut Node) {
+    let mut chopped: bool = self.node == *node; // Note if we're removing insertion point
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
       if let Some(id) = node.get_attribute_ns("id", xml::XML_NS) {
@@ -2054,7 +2054,6 @@ impl Document {
       self.set_node(&parent);
     }
     node.unlink(); // TODO: How is this different from parent.remove_child(node) ???
-    node
   }
 
   fn remove_node_aux(&mut self, node: Node) -> bool {
@@ -2393,10 +2392,9 @@ impl Document {
         }
         c0_opt = Some(with_node);
       }
-      Ok(self.remove_node(node))
-    } else {
-      Ok(node)
+      self.remove_node(&mut node);
     }
+    Ok(node)
   }
 
   // initially since $node->setNodeName was broken in XML::LibXML 1.58
@@ -2610,6 +2608,68 @@ impl Document {
 
   pub fn generate_id(&self, node: &Node, whatsit: Option<&mut Whatsit>, prefix: Option<&str>, state: &State) {
     unimplemented!();
+  }
+
+
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Finally, another set of surgery methods
+  // These take an array representation of the XML Tree to append
+  //   [tagname,{attributes..}, children]
+  // THESE SHOULD BE PART OF A COMMON BASE CLASS; DUPLICATED IN Post::Document
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  pub fn replace_tree(&mut self, new: Node, old: &mut Node, state: &mut State) -> Result<Option<Node>> {
+    if let Some(mut parent) = old.get_parent() {
+      let mut following = VecDeque::new(); // Collect the matching and following nodes
+      while let Some(mut sib) = parent.get_last_child() {
+        if sib == *old {
+          break;
+        }
+        // parent.remove_child(sib); // We're putting these back, in a moment!
+        sib.unlink();
+        following.push_front(sib);
+      }
+      self.remove_node(old);
+      self.append_tree(&mut parent, vec![new], state)?;
+      let inserted = parent.get_last_child();
+      for mut child in following {
+        parent.add_child(&mut child)?;      // No need for clone
+      }
+      Ok(inserted)
+    } else {
+      Ok(None)
+    }
+  }
+
+  pub fn append_tree(&mut self, node: &mut Node, data: Vec<Node>, state: &mut State) -> Result<()> {
+    for child in data {
+      match child.get_type() {
+        Some(NodeType::ElementNode) => {
+          let tag = self.get_node_qname(&child, state);
+          let attributes = child.get_attributes();// map { $_->nodeType == XML_ATTRIBUTE_NODE ? ($self->getNodeQName($_) => $_->getValue) : () }
+          // TODO:
+          // DANGER: REMOVE the xml:id attribute from $child!!!!
+          // This protects against some versions of XML::LibXML that warn against duplicate id's
+          // Hopefully, you shouldn't be using the node any more
+      //         if (my $id = $attributes{'xml:id'}) {
+      //           $child->removeAttribute('xml:id');
+      //           $self->unRecordID($id); }
+
+        let mut new = self.open_element_at(node.clone(), &tag, Some(attributes), None, state)?;
+        self.append_tree(&mut new, child.get_child_nodes(), state)?;
+        self.close_element_at(&mut new, state)?;
+        },
+        Some(NodeType::DocumentFragNode) => {
+          self.append_tree(node, child.get_child_nodes(), state)?;
+        },
+        Some(NodeType::TextNode) => {
+          node.append_text(&child.get_content())?;
+        },
+        other => {dbg!(other); }
+      }
+  // TODO: Box? triple? other?
+    }
+    Ok(())
   }
 }
 

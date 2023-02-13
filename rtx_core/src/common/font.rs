@@ -821,9 +821,7 @@ impl Font {
       //           now that every emitted result of get_size is a Dimension.
       //           likely the sizing case moves elsewhere?
       // wd += if w._unit() == "mu" { w.sp_value() } else { w.value_of() };
-      eprintln!("fs|{}: {}",thisbox.get_string(state).unwrap(),w.value_of());
       wd += w.value_of() as f32;
-      eprintln!("wd|{}",wd);
 
       //     if ((ref $h) && $h->can('_unit')) {
       //       $ht = max($ht, ($h->_unit eq 'mu' ? $h->spValue : $h->valueOf)); }

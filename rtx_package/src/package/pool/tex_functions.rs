@@ -330,7 +330,7 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
       let break_parent_name = state.model.get_node_qname(&nodes[0].get_parent().unwrap());
       // ltx:break are superflous, now, unless we're transporting a figure/float
       if break_parent_name != "ltx:figure" && break_parent_name != "ltx:float" {
-        document.remove_node(nodes.pop_front().unwrap());
+        document.remove_node(&mut nodes.pop_front().unwrap());
         continue;
       }
     }
@@ -357,7 +357,7 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
     document.close_to_node(&context, true, state)?;
   }
   // Check if the ltx:inline-block container is really needed.
-  if let Some(blocknode) = newblock {
+  if let Some(mut blocknode) = newblock {
     let mut rows = blocknode.get_child_nodes();
     let mut crows = match rows.first() {
       None => VecDeque::new(),
@@ -365,7 +365,7 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
     };
     if rows.is_empty() {
       // Insertion came up empty?
-      document.remove_node(blocknode); // then remove the new block entirely
+      document.remove_node(&mut blocknode); // then remove the new block entirely
     } else if rows.len() == 1
       && crows.len() == 1
       && state.model.get_node_qname(rows.first().unwrap()) == "ltx:p"

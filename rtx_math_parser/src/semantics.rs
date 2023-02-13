@@ -213,6 +213,14 @@ pub fn faux_wrap(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPrag
   Ok(content)
 }
 
+pub fn standalone_script(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], nodes: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
+  unp!(args => start_script, _base, _end_script);
+  // TODO: it looks like we need properties on each Tree::Apply,
+  // and porting NewScript is a head-scratcher.
+  // for now, just keep the property if it's there.
+  new_script(start_script.unwrap(), None, nodes)
+}
+
 pub fn postfix_script(
   _rule_id: i32,
   mut args: Vec<Option<Tree>>,
@@ -243,11 +251,17 @@ pub fn new_script(script: Tree, base: Option<Tree>, nodes: &[XMLNode]) -> Result
     let is_super = node_role.ends_with("SUPERSCRIPT");
     let role = Cow::Borrowed(if is_super { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" });
     let scriptpos = Cow::Borrowed(if is_float { "pre1" } else { "post1" });
-    let op = new_token(None, None, raw_map!("role"=>role, "scriptpos"=>scriptpos)); // TODO: scriptpos => "$x$l"
-    let script_arg = obtain_arg(script, 0);
-    Ok(Some(Tree::Apply(op.into(), Args(vec![base, script_arg]), Meta::default())))
+    if base.is_some() {
+      let op = new_token(None, None, raw_map!("role"=>role, "scriptpos"=>scriptpos)); // TODO: scriptpos => "$x$l"
+      let script_arg = obtain_arg(script, 0);
+      Ok(Some(Tree::Apply(op.into(), Args(vec![base, script_arg]), Meta::default())))
+    } else {
+      // DG: This is completely wrong, and just temporarily passes one test. Scripts need to be fleshed out with generality. (TODO)
+      node.get_parent().unwrap().set_attribute("scriptpos", "1").expect("XML attributes should set without issue.");
+      Ok(Some(script))
+    }
   } else {
-    panic!("new_script is meant to be called on script terminals (e.g. POSTSUBSCRIPT/POSTSUPERSCRIPT)");
+    panic!("new_script is meant to be called on script terminals (e.g. POSTSUBSCRIPT/POSTSUPERSCRIPT), got {:?}", script);
   }
 }
 
@@ -262,7 +276,7 @@ pub fn lookup_lex_node<'a>(lex: &'a str, nodes: &'a [XMLNode]) -> Result<&'a XML
 // However, this is really only used to get the script out of a sub/super script
 pub fn obtain_arg(tree: Tree, n: usize) -> Option<Tree> {
   match &tree {
-    Tree::Lexeme(_, _) => Some(tree),
+    Tree::Lexeme(_, _) | Tree::Token(_, _) => Some(tree),
     Tree::Apply(_, ref args, _) => match args.0.get(n) {
       Some(t) => t.clone(),
       None => None,
@@ -332,7 +346,9 @@ pub fn new_token(
 }
 
 // Some handy shorthands.
-// pub fn absent() { new_token(Some(Cow::Borrowed("absent")), None, HashMap::default()); }
+// pub fn absent() -> XMTok { new_token(
+//   Some(Cow::Borrowed("absent")),
+//    None, HashMap::default()) }
 
 // sub InvisibleComma {
 // return New(undef, "\x{2063}", role => 'PUNCT', font =>

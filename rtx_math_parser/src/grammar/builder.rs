@@ -104,28 +104,30 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
 
     // Script content
-    postsubscript = start_postsubscript expression end_postsubscript => faux_wrap;
-    postsuperscript = start_postsuperscript expression end_postsuperscript => faux_wrap;
-    floatsubscript = start_floatsubscript expression end_floatsubscript => faux_wrap;
-    floatsuperscript = start_floatsuperscript expression end_floatsuperscript => faux_wrap;
-
+    postsubarg = start_postsubscript expression end_postsubscript => faux_wrap;
+    postsuperarg = start_postsuperscript expression end_postsuperscript => faux_wrap;
+    floatsubarg = start_floatsubscript expression end_floatsubscript => faux_wrap;
+    floatsuperarg = start_floatsuperscript expression end_floatsuperscript => faux_wrap;
+    // standalone top-level variants of floating scripts:
+    floatsubscript = start_floatsubscript expression end_floatsubscript => standalone_script;
+    floatsuperscript = start_floatsuperscript expression end_floatsuperscript => standalone_script;
     // Scripted factors -- avoid adding ambiguity in the left-right order of collection
     // first ALL left (=float), then right (=post).
-    scripted_factor_l11 = floatsuperscript factor_base => prefix_script;
-    scripted_factor_l12 = floatsubscript factor_base => prefix_script;
+    scripted_factor_l11 = floatsuperarg factor_base => prefix_script;
+    scripted_factor_l12 = floatsubarg factor_base => prefix_script;
     scripted_factor_l1 = scripted_factor_l11 | scripted_factor_l12;
-    scripted_factor_l2 = floatsuperscript scripted_factor_l12 => prefix_script
-      | floatsubscript scripted_factor_l11 => prefix_script;
+    scripted_factor_l2 = floatsuperarg scripted_factor_l12 => prefix_script
+      | floatsubarg scripted_factor_l11 => prefix_script;
 
-    scripted_factor_r11 = factor_base postsuperscript => postfix_script
-      | scripted_factor_l1 postsuperscript => postfix_script
-      | scripted_factor_l2 postsuperscript => postfix_script;
-    scripted_factor_r12 = factor_base postsubscript => postfix_script
-      | scripted_factor_l1 postsubscript => postfix_script
-      | scripted_factor_l2 postsubscript => postfix_script;
+    scripted_factor_r11 = factor_base postsuperarg => postfix_script
+      | scripted_factor_l1 postsuperarg => postfix_script
+      | scripted_factor_l2 postsuperarg => postfix_script;
+    scripted_factor_r12 = factor_base postsubarg => postfix_script
+      | scripted_factor_l1 postsubarg => postfix_script
+      | scripted_factor_l2 postsubarg => postfix_script;
     scripted_factor_r1 = scripted_factor_r11 | scripted_factor_r12;
-    scripted_factor_r2 = scripted_factor_r12 postsuperscript => postfix_script
-      | scripted_factor_r11 postsubscript => postfix_script;
+    scripted_factor_r2 = scripted_factor_r12 postsuperarg => postfix_script
+      | scripted_factor_r11 postsubarg => postfix_script;
     factor += scripted_factor_l1 | scripted_factor_l2 | scripted_factor_r1 | scripted_factor_r2;
 
     anyop = addop | mulop | relop | metarelop
@@ -136,7 +138,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     anything = statements | anyop | anyscript
   );
-  // | term_argument postsuperscript tex_argument  => post_script
+  // | term_argument postsuperarg tex_argument  => post_script
   // | term_argument postsubscript tex_argument    => post_script
   start!(anything);
 
