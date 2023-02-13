@@ -291,7 +291,6 @@ impl BoxOps for Whatsit {
   fn set_font(&mut self, font: Arc<Font>) { self.properties.insert("font".to_string(), Stored::Font(font)); }
 
   fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
-    dbg!(&self);
     let defn = self.get_definition();
     if let Some(sizer) = defn.get_sizer() {
       eprintln!("\n\n FOUND SIZER!\n\n");

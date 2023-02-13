@@ -219,10 +219,10 @@ LoadDefinitions!(state, {
 
   // Remove the last closed node, if it's empty.
   let remove_empty_element: Vec<ConstructionClosure> = construct!(document, whatsit, state, {
-    if let Some(node) = document.get_node().get_last_child() {
+    if let Some(mut node) = document.get_node().get_last_child() {
       // This should be the wrapper just added.
       if node.get_child_nodes().is_empty() {
-        document.remove_node(node);
+        document.remove_node(&mut node);
       }
     }
   });

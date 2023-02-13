@@ -371,8 +371,8 @@ LoadDefinitions!(state, {
       document.get_node_mut().add_child(thing)?;
       // Since the <not> element is disappearing, if it had an id that was referenced...!?!?
       if let Some(id) = not_node.get_attribute("xml:id") {
-        for n in document.findnodes(&format!("descendant-or-self::ltx:XMRef[@idref='{id}']"), None, state) {
-          document.remove_node(n);
+        for mut n in document.findnodes(&format!("descendant-or-self::ltx:XMRef[@idref='{id}']"), None, state) {
+          document.remove_node(&mut n);
         }
       }   // ? Hopefully this is safe.
     }

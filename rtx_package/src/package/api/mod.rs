@@ -122,7 +122,7 @@ impl IntoOption<Option<SizingClosure>> for &str {
     } else if let Some(stripped) = self.strip_prefix('#') {
       let arg = stripped.parse::<usize>().unwrap_or(1);
       Some(Arc::new(move |w, state| match w.get_arg(arg) {
-        Some(arg) => dbg!(arg).compute_size(HashMap::new(), state),
+        Some(arg) => arg.compute_size(HashMap::new(), state),
         None => Ok((Dimension::default(), Dimension::default(), Dimension::default()))
       }))
     } else if self.is_empty() || self == "0" {

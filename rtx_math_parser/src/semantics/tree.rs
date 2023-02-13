@@ -39,7 +39,11 @@ pub enum Tree {
   Lexeme(String, Meta),
   Token(Box<XMTok>, Meta), // does this need Meta?
   Apply(Operator, Args, Meta),
+  // Dual(Tree, Tree, Meta), // TODO
   Choices(Vec<Tree>),
+}
+impl From<XMTok> for Tree {
+  fn from(t: XMTok) -> Self { Tree::Token(Box::new(t), Meta::default()) }
 }
 
 impl Display for Operator {

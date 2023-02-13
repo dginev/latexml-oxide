@@ -70,7 +70,7 @@ LoadDefinitions!(outer_state, {
     let boxid = format!("box{}", n.value_of());
     let mut stuff = state.checkout_value(&boxid);
     let result = {if let Some(Stored::Digested(ref mut thebox)) = stuff {
-      match dbg!(thebox.get_width(None, state)) {
+      match thebox.get_width(None, state) {
         Ok(v) => v,
         Err(e) => {
           Error!("method", "get_width", None, state, format!("{e}"));
