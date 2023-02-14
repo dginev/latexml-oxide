@@ -2,7 +2,7 @@ use libxml::tree::Node;
 use rtx_core::common::font::Font;
 use rtx_core::common::xml::element_nodes;
 use rtx_core::document::Document;
-use rtx_core::Info;
+use rtx_core::{Info};
 use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::error::Error;

@@ -15,7 +15,6 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
-use crate::common::stateful_cmp::StatefulEq;
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
 use crate::definition::argument::ArgWrap;
@@ -1451,7 +1450,7 @@ impl State {
     for (table_name, key, value) in collected {
       let front_is_value = if let Some(table_entry_peek) = self.table(table_name).get(&key) {
         if let Some(table_front) = table_entry_peek.front() {
-          table_front.eq(&value, self)
+          *table_front == value
         } else {
           false
         }
@@ -1703,7 +1702,7 @@ impl State {
     let def2_opt = self.lookup_meaning(token2); // ditto
     match (def1_opt, def2_opt) {
       (None, None) => true,                     // true if both undefined
-      (Some(def1), Some(def2)) => def1.eq(&def2, self), // If both have defns, must be same defn!
+      (Some(def1), Some(def2)) => def1 == def2, // If both have defns, must be same defn!
       _ => false,                               // False, if only one has 'meaning'
     }
   }

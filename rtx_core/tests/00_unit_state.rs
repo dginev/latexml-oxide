@@ -3,7 +3,6 @@ use rtx_core::definition::expandable::Expandable;
 use rtx_core::state::*;
 use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
-use rtx_core::common::stateful_cmp::StatefulEq;
 use rtx_core::{s, Explode, T_CS, T_OTHER, T_SPACE};
 use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
@@ -114,8 +113,7 @@ fn assign_lookup_arrays() {
   state.assign_value("SEARCHPATHS", Stored::VecDequeStored(mock_vec.clone()), None);
   match state.lookup_value("SEARCHPATHS") {
     None => panic!("Couldn't lookup SEARCHPATHS value after assignment"),
-    Some(&Stored::VecDequeStored(ref received_value)) =>
-      assert!(received_value.iter().zip(mock_vec.iter()).all(|(i1,i2)| i1.eq(&i2, &state)), "looked up array has correct value"),
+    Some(&Stored::VecDequeStored(ref received_value)) => assert_eq!(received_value, &mock_vec, "looked up array has correct value"),
     Some(_) => panic!("Looked up value of SEARCHPATHS didn't match assignment value"),
   };
 
@@ -133,21 +131,20 @@ fn assign_lookup_arrays() {
     for entry in &["d", "a", "b", "c"] {
       vdq_expected.push_back(Stored::String(entry.to_string()));
     }
-    assert_eq!(vdq.len(), vdq_expected.len(), "shift/unshift yield same length vecdeques");
-    assert!(vdq.iter().zip(vdq_expected.iter()).all(|(i1,i2)| i1.eq(i2, &state)), "shift/unshift existing key");
+    assert_eq!(vdq, &vdq_expected, "shift/unshift existing key");
   } else {
     panic!("state.lookup_vecdeque returned None");
   }
 
-  assert!(state.shift_value("SEARCHPATHS").eq(&Some(Stored::String(s!("d"))), &state), "shift searchpaths");
-  assert!(state.pop_value("SEARCHPATHS").eq(&Some(Stored::String(s!("c"))), &state), "pop searchpaths");
-  assert!(state.shift_value("SEARCHPATHS").eq(&Some(Stored::String(s!("a"))), &state), "shift searchpaths");
-  assert!(state.pop_value("SEARCHPATHS").eq(&Some(Stored::String(s!("b"))), &state), "pop searchpaths");
-  assert!(matches!(state.shift_value("SEARCHPATHS"), None), "shift searchpaths None");
-  assert!(matches!(state.pop_value("SEARCHPATHS"), None), "pop searchpaths None");
-  let paths = state.lookup_value("SEARCHPATHS");
-  assert!(matches!(paths,
-    Some(Stored::VecDequeStored(_))),
+  assert_eq!(state.shift_value("SEARCHPATHS"), Some(Stored::String(s!("d"))), "shift searchpaths");
+  assert_eq!(state.pop_value("SEARCHPATHS"), Some(Stored::String(s!("c"))), "pop searchpaths");
+  assert_eq!(state.shift_value("SEARCHPATHS"), Some(Stored::String(s!("a"))), "shift searchpaths");
+  assert_eq!(state.pop_value("SEARCHPATHS"), Some(Stored::String(s!("b"))), "pop searchpaths");
+  assert_eq!(state.shift_value("SEARCHPATHS"), None, "shift searchpaths None");
+  assert_eq!(state.pop_value("SEARCHPATHS"), None, "pop searchpaths None");
+  assert_eq!(
+    state.lookup_value("SEARCHPATHS"),
+    Some(&Stored::VecDequeStored(VecDeque::new())),
     "lookup searchpaths []"
   );
 
@@ -159,25 +156,20 @@ fn assign_lookup_arrays() {
   let new_d = Stored::String(s!("d"));
   state.push_value("SEARCHPATHS", new_d.clone());
   vdq.push_back(new_d.clone());
-  let newpaths = state.lookup_value("SEARCHPATHS");
-  assert!(matches!(newpaths,
-    Some(&Stored::VecDequeStored(_))),
+  assert_eq!(
+    state.lookup_value("SEARCHPATHS"),
+    Some(&Stored::VecDequeStored(vdq)),
     "push works as intended"
   );
-  assert!(newpaths.iter().zip(vdq.iter()).all(|(p1,p2)| p1.eq(p2, &state)), "paths are as expected");
-  if let Some(ref state_d) = state.pop_value("SEARCHPATHS") {
-    assert!(new_d.eq(state_d, &state), "pop searchpaths");
-  } else {
-    assert!(false, "Failed to lookup SEARCHPATHS");
-  }
-  assert!(state.shift_value("SEARCHPATHS").eq(&Some(Stored::String(s!("a"))), &state), "shift searchpaths");
-  assert!(state.pop_value("SEARCHPATHS").eq(&Some(Stored::String(s!("c"))), &state), "pop searchpaths");
-  assert!(state.pop_value("SEARCHPATHS").eq(&Some(Stored::String(s!("b"))), &state), "pop searchpaths");
-  assert!(matches!(state.shift_value("SEARCHPATHS"), None), "shift searchpaths None");
-  assert!(matches!(state.pop_value("SEARCHPATHS"), None), "pop searchpaths None");
-  assert!(matches!(
+  assert_eq!(state.pop_value("SEARCHPATHS"), Some(new_d), "pop searchpaths");
+  assert_eq!(state.shift_value("SEARCHPATHS"), Some(Stored::String(s!("a"))), "shift searchpaths");
+  assert_eq!(state.pop_value("SEARCHPATHS"), Some(Stored::String(s!("c"))), "pop searchpaths");
+  assert_eq!(state.pop_value("SEARCHPATHS"), Some(Stored::String(s!("b"))), "pop searchpaths");
+  assert_eq!(state.shift_value("SEARCHPATHS"), None, "shift searchpaths None");
+  assert_eq!(state.pop_value("SEARCHPATHS"), None, "pop searchpaths None");
+  assert_eq!(
     state.lookup_value("SEARCHPATHS"),
-    Some(&Stored::VecDequeStored(_))),
+    Some(&Stored::VecDequeStored(VecDeque::new())),
     "lookup searchpaths []"
   );
 }
@@ -215,11 +207,7 @@ fn install_definition_and_meaning() {
   {
     state.assign_meaning(&T_CS!("\\foolet"), looked_up_meaning.clone(), Some(Scope::Local));
   }
-  let lookup_foolet_opt = state.lookup_meaning(&T_CS!("\\foolet"));
-  assert!(lookup_foolet_opt.is_some(), "found \\foolet meaning");
-  if let Some(lookup_foolet) = lookup_foolet_opt {
-    assert!(lookup_foolet.eq(&looked_up_meaning, &state), "Meanings match");
-  }
+  assert_eq!(state.lookup_meaning(&T_CS!("\\foolet")), Some(looked_up_meaning), "Meanings match");
 }
 
 #[test]

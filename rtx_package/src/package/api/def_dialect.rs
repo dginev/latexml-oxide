@@ -4,7 +4,6 @@ use std::sync::Arc;
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
 use rtx_core::common::object::Object;
-use rtx_core::common::stateful_cmp::StatefulEq;
 use rtx_core::definition::argument::ArgWrap;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::constructor::{Constructor, ConstructorOptions};
@@ -52,7 +51,7 @@ pub fn is_defined_token(cs: &Token, state: &State) -> bool {
 pub fn is_definable(token: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(token);
   let mut name = token.get_string();
-  (name != "\\relax" && !name.starts_with("\\end")) && (meaning.is_none() || meaning.eq(&state.lookup_meaning(&T_RELAX), &state))
+  (name != "\\relax" && !name.starts_with("\\end")) && (meaning.is_none() || (meaning == state.lookup_meaning(&T_RELAX)))
 }
 
 pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }

@@ -105,7 +105,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     // Script content
     postsubarg = start_postsubscript expression end_postsubscript => faux_wrap;
-    postsuperarg = start_postsuperscript expression end_postsuperscript => faux_wrap;
+    postsuperarg = start_postsuperscript expression end_postsuperscript => faux_wrap
+      // TODO: what other kinds of arguments are accepted in scripts? Should we do "anything"?
+      | start_postsuperscript supop end_postsuperscript => faux_wrap;
     floatsubarg = start_floatsubscript expression end_floatsubscript => faux_wrap;
     floatsuperarg = start_floatsuperscript expression end_floatsuperscript => faux_wrap;
     // standalone top-level variants of floating scripts:
