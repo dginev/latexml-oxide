@@ -5,7 +5,8 @@ use rtx_core::document::Document;
 use rtx_core::list::List;
 use rtx_core::state::State;
 use rtx_core::token;
-use rtx_core::{generate_message, s, Core, Digested, Error, Info};
+use rtx_core::{generate_message, s, Core, CoreOptions, Digested, Error, Info};
+// use std::sync::RwLockWriteGuard;
 
 use crate::core::DigestionAPI;
 
@@ -29,6 +30,7 @@ pub struct Converter {
 }
 
 impl Converter {
+  // TODO: use the config
   pub fn from_config(opts: Config) -> Converter {
     Converter {
       runtime: Runtime {
@@ -37,7 +39,7 @@ impl Converter {
       },
       ready: false,
       opts,
-      core: Core::default(),
+      core: Core::new(CoreOptions::default()),
     }
   }
   pub fn initialize_session(&mut self) -> Result<()> {
@@ -51,6 +53,7 @@ impl Converter {
     Ok(())
   }
 
+  // pub fn state_mut(&mut self) -> RwLockWriteGuard<'_, State> { self.core.get_state_mut() }
   pub fn state_mut(&mut self) -> &mut State { self.core.get_state_mut() }
   pub fn bind_log(&mut self) {
     // TODO
@@ -167,7 +170,7 @@ impl Converter {
     let digested = match digest_result {
       Err(e) => {
         // TODO digestion failed, report
-        self.core.state.status_code = 3;
+        self.core.get_state_mut().status_code = 3;
         e.log_fatal();
         Digested::from(List::new(Vec::new()))
       },
@@ -176,16 +179,21 @@ impl Converter {
     // 2.1 Now, convert to DOM and output, if desired.
     let dom_result: Result<Document>;
     let serialized = match self.opts.format {
-      OutputFormat::TeX => match token::untex_digested(&digested, false, &mut self.core.state) {
-        Ok(tex) => tex,
-        Err(e) => {
-          return ConversionResponse {
-            result: None,
-            log: self.flush_log(),
-            status: s!("fatal:untex:{:?}", e),
-            status_code: 3,
-          };
-        },
+      OutputFormat::TeX => {
+        let untex_result = {
+          token::untex_digested(&digested, false, &mut self.core.get_state_mut())
+        };
+        match untex_result {
+          Ok(tex) => tex,
+          Err(e) => {
+            return ConversionResponse {
+              result: None,
+              log: self.flush_log(),
+              status: s!("fatal:untex:{:?}", e),
+              status_code: 3,
+            };
+          },
+        }
       },
       OutputFormat::Box => {
         if self.opts.verbosity > 0 {
@@ -197,10 +205,10 @@ impl Converter {
       _ => {
         dom_result = self.core.convert_document(digested);
         match dom_result {
-          Ok(dom) => dom.serialize_to_string(self.state_mut()),
+          Ok(dom) => dom.serialize_to_string(&mut self.state_mut()),
           Err(e) => {
             let message = s!("{:?}", e);
-            let error_state = &self.core.state;
+            let error_state = &self.core.get_state();
             let error_where = &self.core;
             Error!("document", "convert", error_where, error_state, message);
             String::new()
@@ -209,7 +217,7 @@ impl Converter {
       },
     };
 
-    let status_code = self.core.state.status_code;
+    let status_code = self.core.get_state().status_code;
     self.runtime.status_code = status_code;
     // alarm(0)
 

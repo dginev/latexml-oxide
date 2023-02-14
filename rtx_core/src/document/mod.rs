@@ -320,7 +320,7 @@ impl Document {
           self.localize_box_to_absorb();
         },
         Postponed(ref tokens) => {
-          if props.get("isMath") != Some(&Stored::Bool(true)) {
+          if !matches!(props.get("isMath"), Some(&Stored::Bool(true))) {
             let text_font_opt = if let Some(Stored::Font(ref prop_font)) = props.get("font") {
               Some(Arc::clone(prop_font))
             } else {

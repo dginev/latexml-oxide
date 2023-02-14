@@ -12,6 +12,7 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
+use crate::common::stateful_cmp::StatefulEq;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
@@ -173,8 +174,11 @@ impl fmt::Display for Stored {
 }
 /// We can not simply derive PartialEq since it is not obvious (to rust, or to me)
 /// if it is safe to carelessly lock the RwLock guards of the suspect fields with interior mutability
-impl PartialEq for Stored {
-  fn eq(&self, other: &Stored) -> bool {
+/// Worse: some conditions depend on the Stateful meaning of Token's,
+///        so the perfect equality check would need State as an argument :(
+///
+impl StatefulEq for Stored {
+  fn eq(&self, other: &Stored, state: &State) -> bool {
     use crate::Stored::*;
     match *self {
       Stored::None => matches!(other, Stored::None),
@@ -314,7 +318,7 @@ impl PartialEq for Stored {
       },
       Register(ref r) => {
         if let Register(r2) = other {
-          **r == **r2
+          (**r).eq(&**r2, state)
         } else {
           false
         }
@@ -391,7 +395,8 @@ impl PartialEq for Stored {
       },
       VecDequeStored(ref v) => {
         if let VecDequeStored(v2) = other {
-          *v == *v2
+          v.len() == v2.len() &&
+          v.iter().zip(v2.iter()).all(|(item1,item2)| item1.eq(item2,state))
         } else {
           false
         }
@@ -405,7 +410,11 @@ impl PartialEq for Stored {
       },
       HashStored(ref hs) => {
         if let HashStored(hs2) = other {
-          *hs == *hs2
+          hs.len() == hs2.len() &&
+          hs.iter().all(|(key, value)| if let Some(item2) = hs2.get(key) {
+            value.eq(item2, state)
+          } else { false }
+        )
         } else {
           false
         }
@@ -431,6 +440,20 @@ impl PartialEq for Stored {
           false
         }
       },
+    }
+  }
+}
+impl StatefulEq for Option<Stored> {
+  fn eq(&self, other: &Self, state: &State) -> bool {
+    match self {
+      Some(v1) => match other {
+        Some(v2) => v1.eq(v2, state),
+        None => false
+      }
+      None => match other {
+        Some(_) => false,
+        None => true
+      }
     }
   }
 }

@@ -11,6 +11,7 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
+use crate::common::stateful_cmp::StatefulEq;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -352,6 +353,7 @@ pub type RegisterSetterClosure = Arc<dyn Fn(RegisterValue, Vec<ArgWrap>, &mut St
 #[derive(Clone)]
 pub struct Register {
   pub cs: Token,
+  pub name: String,
   pub parameters: Option<Parameters>,
   pub register_type: RegisterType,
   pub readonly: bool,
@@ -365,6 +367,7 @@ impl Default for Register {
   fn default() -> Self {
     Register {
       cs: T_CS!("Register"),
+      name: String::from("Register"),
       parameters: None,
       register_type: RegisterType::Number,
       getter: Arc::new(|_: Vec<ArgWrap>, _: &mut State| Some(RegisterValue::Number(Number::new(0)))),
@@ -375,8 +378,13 @@ impl Default for Register {
     }
   }
 }
-impl PartialEq for Register {
-  fn eq(&self, other: &Register) -> bool { self.cs == other.cs }
+impl StatefulEq for Register {
+  fn eq(&self, other: &Register, state: &State) -> bool {
+    self.register_type == other.register_type &&
+      self.parameters == other.parameters &&
+      self.value == other.value &&
+      self.name == other.name
+  }
 }
 impl fmt::Debug for Register {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -403,8 +411,12 @@ impl Object for RegisterCell {
   fn stringify(&self) -> String { Definition::stringify_type(self, "RegisterCell") }
   fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
-impl PartialEq for RegisterCell {
-  fn eq(&self, other: &RegisterCell) -> bool { *self.0.read().unwrap() == *other.0.read().unwrap() }
+impl StatefulEq for RegisterCell {
+  fn eq(&self, other: &RegisterCell, state: &State) -> bool {
+    self.0.read().unwrap().eq(
+    &*other.0.read().unwrap(),
+    state )
+  }
 }
 impl RegisterCell {
   pub fn new(cell: RwLock<Register>) -> Self { RegisterCell(cell) }

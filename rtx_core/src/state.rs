@@ -15,6 +15,7 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
+use crate::common::stateful_cmp::StatefulEq;
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
 use crate::definition::argument::ArgWrap;
@@ -671,7 +672,7 @@ impl State {
       None => false,
       Some(list) => match list.front() {
         None => false,
-        Some(v) => v != &Stored::None,
+        Some(v) => !matches!(v, &Stored::None),
       },
     }
   }
@@ -819,7 +820,15 @@ impl State {
     if token.code.is_active_or_cs() {
       let lookupname = &token.text;
       if !lookupname.is_empty() {
-        self.lookup_expandable(token, true).is_some()
+        match self.meaning.get(&**lookupname) {
+          Some(entry) => if let Some(def) = entry.front() {
+            // the expandable variants are allowed
+            matches!(def, Stored::Expandable(_) | Stored::Conditional(_))
+          } else {
+            false
+          },
+          None => true
+        }
       } else {
         true
       }
@@ -1037,7 +1046,9 @@ impl State {
   /// this may give the definition object (if defined) or another token (if \let) or undef
   /// Any other token is returned as is.
   pub fn lookup_meaning(&self, token: &Token) -> Option<Stored> {
-    if token.get_catcode().is_active_or_cs() && !token.get_string().is_empty() {
+    if token.get_catcode().is_active_or_cs() &&
+       !token.has_smuggled() &&
+       !token.get_string().is_empty() {
       match self.meaning.get(&token.get_cs_name().to_owned()) {
         Some(entry) => match entry.front() {
           None | Some(Stored::None) => None,
@@ -1438,8 +1449,15 @@ impl State {
     }
 
     for (table_name, key, value) in collected {
+      let front_is_value = if let Some(table_entry_peek) = self.table(table_name).get(&key) {
+        if let Some(table_front) = table_entry_peek.front() {
+          table_front.eq(&value, self)
+        } else {
+          false
+        }
+      } else { false };
       let table_entry = self.table_mut(table_name).entry(key.clone()).or_default();
-      if (*table_entry).front() == Some(&value) {
+      if front_is_value {
         // Here we're popping off the values pushed by activateScope
         // to (possibly) reveal a local assignment in the same frame, preceding activateScope.
         (*table_entry).pop_front();
@@ -1680,12 +1698,12 @@ impl State {
     self.after_assignment(gullet);
   }
   /// `XEquals` check for two token arguments
-  pub fn x_equals(&mut self, token1: &Token, token2: &Token) -> bool {
+  pub fn x_equals(&self, token1: &Token, token2: &Token) -> bool {
     let def1_opt = self.lookup_meaning(token1); // # token, definition object or None
     let def2_opt = self.lookup_meaning(token2); // ditto
     match (def1_opt, def2_opt) {
       (None, None) => true,                     // true if both undefined
-      (Some(def1), Some(def2)) => def1 == def2, // If both have defns, must be same defn!
+      (Some(def1), Some(def2)) => def1.eq(&def2, self), // If both have defns, must be same defn!
       _ => false,                               // False, if only one has 'meaning'
     }
   }

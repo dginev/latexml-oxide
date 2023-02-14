@@ -16,7 +16,7 @@ use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
 
 /// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Tbox {
   pub text: String,
   pub font: Arc<Font>,
@@ -33,6 +33,22 @@ impl Default for Tbox {
       locator: Locator::default(),
       properties: HashMap::new(),
       tokens: Tokens!(),
+    }
+  }
+}
+
+impl PartialEq for Tbox {
+  // Should this compare fonts too?
+  fn eq(&self, other: &Self) -> bool {
+    self.text == other.text &&
+    if let Some(Stored::Font(font1)) = self.properties.get("font") {
+      if let Some(Stored::Font(font2)) = other.properties.get("font") {
+        **font1 == **font2
+      } else {
+        false
+      }
+    } else {
+      other.properties.get("font").is_none()
     }
   }
 }
@@ -117,7 +133,7 @@ impl BoxOps for Tbox {
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
   fn get_property_bool(&self, key: &str) -> bool {
     match self.properties.get(key) {
-      Some(v) => *v == Stored::Bool(true),
+      Some(v) => matches!(*v, Stored::Bool(true)),
       _ => false,
     }
   }

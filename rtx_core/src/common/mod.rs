@@ -16,6 +16,7 @@ pub mod object;
 pub mod relaxng;
 pub mod store;
 pub mod xml;
+pub mod stateful_cmp;
 
 use crate::common::error::*;
 use crate::fmt;

@@ -24,7 +24,10 @@ static CONTROLNAME: &[&str] = &[
   "SYN", "ETB", "CAN", "EM", "SUB", "ESC", "FS", "GS", "RS", "US",
 ];
 
-pub const MOCK_TOKEN : Token = Token { text: Cow::Borrowed(""), code: Catcode::MARKER, smuggled: None};
+pub const MOCK_TOKEN : Token = Token { text: Cow::Borrowed(""), code: Catcode::MARKER,
+smuggled: None};
+pub const T_RELAX : Token = Token { text: Cow::Borrowed("\\relax"), code: Catcode::CS,
+smuggled: None};
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
@@ -674,6 +677,8 @@ impl<'a> Token {
 
   pub fn is_executable(&self) -> bool { self.code.is_executable() }
 
+  pub fn has_smuggled(&self) -> bool { self.smuggled.is_some() }
+
   /// Defined so a Token or Tokens can be used interchangeably.
   pub fn unlist(&self) -> Vec<Token> { vec![self.clone()] }
 
@@ -728,12 +733,16 @@ impl<'a> Token {
         );
         Fatal!(Parameter, Unexpected, None, state, msg);
       },
-      Catcode::CS | Catcode::ACTIVE if state.is_dont_expandable(&self) => {
-        Ok(Token {
-          text: Cow::Borrowed("\\relax"),
-          code: Catcode::CS,
-          smuggled: Some(Box::new(self)),
-        })
+      Catcode::CS | Catcode::ACTIVE => {
+        if state.is_dont_expandable(&self) {
+          Ok(Token {
+            text: Cow::Borrowed("\\relax"),
+            code: Catcode::CS,
+            smuggled: Some(Box::new(self)),
+          })
+        } else {
+          Ok(self)
+        }
       },
       _ => Ok(self)
     }

@@ -15,7 +15,7 @@ use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, TexMode};
 
 /// Lists can contain any Digested items, such as boxes, whatsits or other lists
-#[derive(Clone, Default, PartialEq)]
+#[derive(Clone, Default)]
 pub struct List {
   pub boxes: Vec<Digested>,
   pub mode: Option<TexMode>,
@@ -43,6 +43,13 @@ impl fmt::Display for List {
   }
 }
 
+impl PartialEq for List {
+  fn eq(&self, other: &Self) -> bool {
+    self.boxes.len() == other.boxes.len() &&
+    self.boxes.iter().zip(other.boxes.iter()).all(|(box1, box2)| box1 == box2)
+  }
+}
+
 impl Object for List {
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
 
@@ -59,7 +66,7 @@ impl BoxOps for List {
   fn has_property(&self, key: &str) -> bool { self.properties.contains_key(key) }
   fn get_property_bool(&self, key: &str) -> bool {
     match self.properties.get(key) {
-      Some(v) => *v == Stored::Bool(true),
+      Some(v) => matches!(*v, Stored::Bool(true)),
       _ => false,
     }
   }
