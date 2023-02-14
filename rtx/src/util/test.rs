@@ -18,7 +18,6 @@ pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>, dispatche
 #[allow(clippy::implicit_hasher)]
 pub fn rtx_tests_internal(dirpath: &str, requires: Option<HashMap<&str, &str>>, extra_bindings_dispatcher: Option<BindingDispatcher>) {
   rtx_core::util::logger::init(log::LevelFilter::Warn).unwrap();
-
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
   }
@@ -74,17 +73,18 @@ fn process_texfile(tex_path: &str, name: &str, extra_bindings_dispatcher: Option
     include_comments: Some(false),
     ..CoreOptions::default()
   });
+
   // If we want to test the rtx_contrib bindings, we need to pass in the additional binding dispatcher,
   // which makes the contrib bindings visible
   // this would have been equivalent to a latexml --path argument, except we require access to compiled functions,
   // hence the rust-native pass
   if extra_bindings_dispatcher.is_some() {
-    latexml.state.extra_bindings_dispatch = extra_bindings_dispatcher;
+    latexml.get_state_mut().extra_bindings_dispatch = extra_bindings_dispatcher;
   }
 
   match latexml.convert_file(tex_path.to_owned()) {
     Err(e) => panic!("{:?}: Couldn't convert {:?}; {:?}", name, tex_path, e),
-    Ok(doc) => process_ltx_doc(doc, name, latexml.get_state_mut()),
+    Ok(doc) => process_ltx_doc(doc, name, &mut latexml.get_state_mut()),
   }
 }
 
@@ -129,7 +129,8 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node
   let doc = xml_result.unwrap();
 
   // grab the first formula
-  match doc.findnode("//*[local-name()='XMath']", None, &mut latexml.state) {
+  let mut state = latexml.get_state_mut();
+  match doc.findnode("//*[local-name()='XMath']", None, &mut state) {
     Some(math) => {
       let mut idx = 0;
       let (lexemes, nodes) = node_to_grammar_lexemes(&math, &mut idx);

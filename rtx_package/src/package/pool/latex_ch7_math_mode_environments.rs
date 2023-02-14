@@ -23,7 +23,7 @@ fn before_equation(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let ctr = if let Some(Stored::HashStored(ref mut numbering)) = state.lookup_value_mut("EQUATION_NUMBERING") {
     numbering.insert("in_equation".to_owned(), true.into());
     // MaybePeekLabel();
-    is_numbered = numbering.get("numbered") == Some(&Stored::Bool(true));
+    is_numbered = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
     has_preset = numbering.contains_key("preset");
     match numbering.get("counter") {
       Some(Stored::String(v)) => v.to_owned(),
@@ -55,7 +55,7 @@ fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut Stat
   let mut tags_numbered_update = false;
   let mut is_aligned = false;
   if let Some(Stored::HashStored(ref numbering)) = state.lookup_value("EQUATION_NUMBERING") {
-    is_aligned = numbering.get("aligned") == Some(&Stored::Bool(true));
+    is_aligned = matches!(numbering.get("aligned"), Some(&Stored::Bool(true)));
     if let Some(Stored::HashStored(ref tags)) = state.lookup_value("EQUATIONROW_TAGS") {
       ctr = Some(
         tags
@@ -64,18 +64,18 @@ fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut Stat
           .to_string(),
       );
 
-      if tags.get("noretract") != Some(&Stored::Bool(true))
-        && (tags.get("retract") == Some(&Stored::Bool(true))
-          || (numbering.get("retract") == Some(&Stored::Bool(true))
-            && numbering.get("preset") == Some(&Stored::Bool(true))
-            && tags.get("preset") == Some(&Stored::Bool(true))))
+      if !matches!(tags.get("noretract"), Some(&Stored::Bool(true)))
+        && (matches!(tags.get("retract"), Some(&Stored::Bool(true)))
+          || (matches!(numbering.get("retract"), Some(&Stored::Bool(true)))
+            && matches!(numbering.get("preset"), Some(&Stored::Bool(true)))
+            && matches!(tags.get("preset"), Some(&Stored::Bool(true)))))
       {
         retract_equation(state);
-      } else if numbering.get("postset") == Some(&Stored::Bool(true)) && tags.get("reset") == Some(&Stored::Bool(true)) {
+      } else if matches!(numbering.get("postset"), Some(&Stored::Bool(true))) && matches!(tags.get("reset"), Some(&Stored::Bool(true))) {
         //   AssignValue(EQUATIONROW_TAGS => {
         //       ($$numbering{numbered} ? RefStepCounter($ctr) : RefStepID($ctr)) }, 'global'); }
         unimplemented!();
-      } else if tags.get("reset") != Some(&Stored::Bool(true)) && numbering.get("numbered") == Some(&Stored::Bool(true)) {
+      } else if !matches!(tags.get("reset"), Some(&Stored::Bool(true))) && matches!(numbering.get("numbered"), Some(&Stored::Bool(true))) {
         tags_numbered_update = true;
       }
     }

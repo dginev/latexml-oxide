@@ -2347,6 +2347,14 @@ macro_rules! defi_opts {
   (@munch ( $(,)? name $(:)?$(=>)? $literal:literal) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($literal.to_string()) ] })
   };
+  // for register
+  // name: ident
+  (@munch ( $(,)? name $(:)?$(=>)? $idval:ident, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($idval.to_string()) ] })
+  };
+  (@munch ( $(,)? name $(:)?$(=>)? $idval:ident) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($idval.to_string()) ] })
+  };
 
   // misc ident with literal value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $lit:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {

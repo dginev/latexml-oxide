@@ -4,6 +4,7 @@ use std::sync::Arc;
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
 use rtx_core::common::object::Object;
+use rtx_core::common::stateful_cmp::StatefulEq;
 use rtx_core::definition::argument::ArgWrap;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::constructor::{Constructor, ConstructorOptions};
@@ -51,7 +52,7 @@ pub fn is_defined_token(cs: &Token, state: &State) -> bool {
 pub fn is_definable(token: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(token);
   let mut name = token.get_string();
-  (name != "\\relax" && !name.starts_with("\\end")) && (meaning.is_none() || meaning == state.lookup_meaning(&T_CS!("\\relax")))
+  (name != "\\relax" && !name.starts_with("\\end")) && (meaning.is_none() || meaning.eq(&state.lookup_meaning(&T_RELAX), &state))
 }
 
 pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
@@ -177,12 +178,13 @@ pub struct RegisterOptions {
   pub getter: Option<RegisterGetterClosure>,
   pub setter: Option<RegisterSetterClosure>,
   pub readonly: bool,
+  pub name: Option<String>
 }
 
 pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parameters>, value: T, options: Option<RegisterOptions>, state: &mut State) {
   let options: RegisterOptions = options.unwrap_or_default();
   let value: RegisterValue = value.into();
-  let name = cs.to_string();
+  let name = options.name.unwrap_or_else(|| cs.to_string() );
   let register_type: RegisterType = value.borrow().into();
   // Prepare clones to move into closures
   let getter_value = value.clone();
@@ -190,13 +192,16 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
 
   let getter: RegisterGetterClosure = match options.getter {
     Some(getter) => getter.clone(),
-    None => Arc::new(move |args: Vec<ArgWrap>, state: &mut State| -> Option<RegisterValue> {
-      let args_string: String = args.iter().map(ToString::to_string).collect::<Vec<String>>().join("");
-      match state.lookup_value(&(name.clone() + &args_string)) {
-        None => Some(getter_value.clone()),
-        Some(v) => v.into(),
-      }
-    }),
+    None => {
+      let name_clone = name.clone();
+      Arc::new(move |args: Vec<ArgWrap>, state: &mut State| -> Option<RegisterValue> {
+        let args_string: String = args.iter().map(ToString::to_string).collect::<Vec<String>>().join("");
+        match state.lookup_value(&format!("{name_clone}{args_string}")) {
+          None => Some(getter_value.clone()),
+          Some(v) => v.into(),
+        }
+      })
+    }
   };
   let readonly = options.readonly;
 
@@ -227,6 +232,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
   state.install_definition(
     Register {
       cs,
+      name,
       parameters,
       register_type,
       readonly,

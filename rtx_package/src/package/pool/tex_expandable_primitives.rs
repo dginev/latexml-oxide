@@ -29,11 +29,39 @@ LoadDefinitions!(outer_state, {
   DefConditional!("\\ifinner", { false });
   DefConditional!("\\ifmmode", { LookupBool!("IN_MATH") });
 
-  DefConditional!("\\if XToken XToken", sub[gullet, (token1,token2), state] {
+  DefParameterType!(ExpandedIfToken, sub[gullet, inner, _extra, state] {
+    let token_opt = gullet.read_x_token(Some(false), false, state)?.map(|t| {
+      // Also resolve \let variants:
+      let meaning_opt = state.lookup_meaning(&t);
+      if let Some(Stored::Token(meaning)) = meaning_opt {
+        meaning
+      } else {
+        t
+      }});
+    let mut token = match token_opt {
+      None => {
+        Error!("expected", "ExpandedIfToken", gullet, state, "conditional expected a token argument, readXToken came back empty. Falling back to \\@empty");
+        T_CS!("\\@empty") },
+      Some(t) => t
+    };
+    if token.has_smuggled() {    // marked dont_expand
+      let smuggled = token.get_dont_expand().as_ref().unwrap();
+      if smuggled.get_catcode() == Catcode::ACTIVE {
+        // treat as active character, if originally such
+        token.without_dont_expand()
+      } else { // otherwise, treat as relax for comparisons
+        T_CS!("\\relax")
+      }
+    } else {   // normal case, treat token as-is
+      token
+    }
+  });
+
+  DefConditional!("\\if ExpandedIfToken ExpandedIfToken", sub[gullet, (token1,token2), state] {
     token1.get_charcode() == token2.get_charcode()
   });
 
-  DefConditional!("\\ifcat XToken XToken", sub[gullet, (token1,token2), state] {
+  DefConditional!("\\ifcat ExpandedIfToken ExpandedIfToken", sub[gullet, (token1,token2), state] {
     token1.get_catcode() == token2.get_catcode()
   });
 
@@ -202,7 +230,7 @@ LoadDefinitions!(outer_state, {
 
   DefMacro!("\\csname CSName", sub[gullet, (token), state] {
     if LookupMeaning!(&token).is_none() {
-      state.assign_meaning(&token, state.lookup_meaning(&T_CS!("\\relax")).unwrap(), None);
+      state.assign_meaning(&token, state.lookup_meaning(&T_RELAX).unwrap(), None);
     }
     token
   });

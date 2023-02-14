@@ -44,7 +44,20 @@ impl Default for Whatsit {
   }
 }
 impl PartialEq for Whatsit {
-  fn eq(&self, other: &Whatsit) -> bool { *self.definition == *other.definition && self.args == other.args && self.properties == other.properties }
+  fn eq(&self, other: &Whatsit) -> bool {
+    // identical definition, argument list and body
+    *self.definition == *other.definition &&
+    self.args == other.args &&
+    if let Some(Stored::Digested(body1)) = self.properties.get("body") {
+      if let Some(Stored::Digested(body2)) = other.properties.get("body") {
+        *body1 == *body2
+      } else {
+        false
+      }
+    } else {
+      other.properties.get("body").is_none()
+    }
+  }
 }
 
 impl Whatsit {
@@ -270,7 +283,7 @@ impl BoxOps for Whatsit {
 
   fn get_property_bool(&self, key: &str) -> bool {
     match self.properties.get(key) {
-      Some(v) => *v == Stored::Bool(true),
+      Some(v) => matches!(*v, Stored::Bool(true)),
       _ => false,
     }
   }

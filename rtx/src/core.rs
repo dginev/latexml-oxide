@@ -56,18 +56,22 @@ pub trait DigestionAPI {
 
 impl DigestionAPI for Core {
   fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()> {
-    self.state.initialize_stomach();
+    // let mut state = self.state.write().unwrap();
+    let state = &mut self.state;
+    state.initialize_stomach();
     // let paths = state.search_paths;
-    self.state.assign_value("InitialPreloads", true, Some(Scope::Global));
+    state.assign_value("InitialPreloads", true, Some(Scope::Global));
+    let stomach_trick = Arc::clone(&self.stomach);
+    let mut stomach = stomach_trick.write().unwrap();
     for preload in preloads {
       input_definitions(
         &preload,
         InputDefinitionOptions::default(),
-        &mut self.stomach.write().unwrap(),
-        &mut self.state,
+        &mut stomach,
+        state
       )?;
     }
-    self.state.assign_value("InitialPreloads", false, Some(Scope::Global));
+    state.assign_value("InitialPreloads", false, Some(Scope::Global));
     Ok(())
   }
 
@@ -113,8 +117,11 @@ impl DigestionAPI for Core {
     // (!pathname::is_literaldata($request));
     if let Some(dir) = dir_opt {
       let dir = dir.to_str().unwrap_or(".");
-      self.state.assign_value("SOURCEDIRECTORY", dir, None);
-      self.state.search_paths.push_front(dir.to_string());
+      {
+        let state = self.get_state_mut();
+        state.assign_value("SOURCEDIRECTORY", dir, None);
+        state.search_paths.push_front(dir.to_string());
+      }
     }
     //   if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('SEARCHPATHS') };
     // $state->unshiftValue(GRAPHICSPATHS => $dir)
@@ -122,7 +129,7 @@ impl DigestionAPI for Core {
     // if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
 
     let name_copy = name;
-    self.state.install_definition(
+    self.get_state_mut().install_definition(
       Stored::Expandable(Arc::new(Expandable {
         cs: T_CS!("\\jobname"),
         paramlist: None,
@@ -133,7 +140,12 @@ impl DigestionAPI for Core {
     );
 
     // $self->loadPostamble($options{postamble}) if $options{postamble};
-    input_content(&request, InputOptions::default(), &mut self.stomach.write().unwrap(), &mut self.state)?;
+    {
+      let stomach_trick = Arc::clone(&self.stomach);
+      let mut stomach_lock = stomach_trick.write().unwrap();
+      let mut state_lock = self.get_state_mut();
+      input_content(&request, InputOptions::default(), &mut stomach_lock, &mut state_lock)?;
+    }
     // $self->loadPreamble($options{preamble}) if $options{preamble};
 
     // // Now for the Hacky part for BibTeX!!!
@@ -156,28 +168,30 @@ impl DigestionAPI for Core {
 
   fn convert_document(&mut self, digested: Digested) -> Result<Document> {
     note_begin("Building");
-
-    let state = &mut self.state;
-    let schema_paths = state.search_paths.iter().map(String::as_str).collect::<Vec<&str>>();
-    let default_model_load = match state.model.schema_data {
-      None => true,
-      Some(ref v) => v.last() == Some(&String::from("LaTeXML")),
-    };
-    if default_model_load {
-      // Compile-time load of model AND indirect model
-      load_model!(state, "LaTeXML");
-    } else {
-      // Eager-load at runtime
-      state.model.load_schema(schema_paths.as_slice()); // If needed?
-    }
-
     let mut document = Document::new();
-    if !state.search_paths.is_empty() {
-      {
-        if state.lookup_bool("INCLUDE_COMMENTS") {
-          let paths_string = state.search_paths.iter().map(String::as_str).collect::<Vec<&str>>().join(",");
-          let attributes = map! {s!("paths") => paths_string};
-          document.insert_pi("latexml", Some(attributes))?;
+    {
+      let state = self.get_state_mut();
+      let paths_stored = state.search_paths.clone(); // TODO: Can we disentangle the ownership to avoid the clone?
+      let schema_paths = paths_stored.iter().map(String::as_str).collect::<Vec<&str>>();
+      let default_model_load = match state.model.schema_data {
+        None => true,
+        Some(ref v) => v.last() == Some(&String::from("LaTeXML")),
+      };
+      if default_model_load {
+        // Compile-time load of model AND indirect model
+        load_model!(state, "LaTeXML");
+      } else {
+        // Eager-load at runtime
+        state.model.load_schema(schema_paths.as_slice()); // If needed?
+      }
+
+      if !state.search_paths.is_empty() {
+        {
+          if state.lookup_bool("INCLUDE_COMMENTS") {
+            let paths_string = state.search_paths.iter().map(String::as_str).collect::<Vec<&str>>().join(",");
+            let attributes = map! {s!("paths") => paths_string};
+            document.insert_pi("latexml", Some(attributes))?;
+          }
         }
       }
     }
@@ -202,14 +216,15 @@ impl DigestionAPI for Core {
       }
     }
     Debug!("Doc absorb: {:?}", digested);
-    document.absorb(&digested, None, state)?;
+    let mut state = self.get_state_mut();
+    document.absorb(&digested, None, &mut state)?;
     note_end("Building");
 
     let has_rewrites = state.has_value("DOCUMENT_REWRITE_RULES");
     if has_rewrites {
       note_begin("Rewriting");
-      document.mark_xmnode_visibility(state)?;
-      document.load_labels_for_rewrite(state);
+      document.mark_xmnode_visibility(&mut state)?;
+      document.load_labels_for_rewrite(&mut state);
       // TODO: What is the right way to do rewrites in a daemon-safe manner?
       if let Some(Stored::VecDequeStored(rules)) = state.remove_value("DOCUMENT_REWRITE_RULES") {
         if let Some(root) = document.get_document().get_root_element() {
@@ -224,7 +239,7 @@ impl DigestionAPI for Core {
           }
           // Step 2: invoke the rewrite rules
           for mut rewrite_rule in rewrites {
-            rewrite_rule.invoke(&mut document, &root, state)?;
+            rewrite_rule.invoke(&mut document, &root, &mut state)?;
           }
         }
       }
@@ -233,24 +248,25 @@ impl DigestionAPI for Core {
 
     if !state.nomathparse {
       let mut parser = MathParser::default();
-      parser.parse_math(&mut document, state)?;
+      parser.parse_math(&mut document, &mut state)?;
     }
     note_begin("Finalizing");
-    document.finalize(state)?;
+    document.finalize(&mut state)?;
     note_end("Finalizing");
     Ok(document)
   }
 
   fn digest_internal(&mut self) -> Result<Digested> {
     let mut boxes = Vec::new();
-    let state = &mut self.state;
-
-    while self.stomach.write().unwrap().get_gullet_mut().has_more_input() {
-      let next_bodies: Vec<Digested> = self.stomach.write().unwrap().digest_next_body(None, state)?;
+    let stomach_trick = Arc::clone(&self.stomach);
+    let mut state = self.get_state_mut();
+    let mut stomach = stomach_trick.write().unwrap();
+    while stomach.get_gullet_mut().has_more_input() {
+      let next_bodies: Vec<Digested> = stomach.digest_next_body(None, &mut state)?;
       // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
       boxes.extend(next_bodies);
     }
-    self.stomach.write().unwrap().get_gullet_mut().flush(state);
+    stomach.get_gullet_mut().flush(&mut state);
     List::new(boxes).into()
   }
 
@@ -302,7 +318,6 @@ impl DigestionAPI for Core {
         fatal!(Core, MissingFile, self, None, message);
       }
     }
-
     note_begin(&s!("Digesting {} {}", mode, name));
     let main_pool = s!("{}.pool", mode);
     let noinitialize = options.noinitialize.unwrap_or(false);
@@ -311,33 +326,39 @@ impl DigestionAPI for Core {
       preloads.extend(self.preload.clone());
       self.initialize_state(preloads)?;
     }
+    {
+      let state = self.get_state_mut();
+      if !pathname::is_literaldata(&request) {
+        state.assign_value("SOURCEFILE", request.clone(), None);
+      }
+      if !dir.is_empty() {
+        state.assign_value("SOURCEDIRECTORY", dir.clone(), None);
+      }
+      state.search_paths.push_front(dir.clone());
+      state.graphics_paths.push_front(dir);
 
-    if !pathname::is_literaldata(&request) {
-      self.state.assign_value("SOURCEFILE", request.clone(), None);
+      let name_copy = name.clone();
+      state.install_definition(
+        Stored::Expandable(Arc::new(Expandable {
+          cs: T_CS!("\\jobname"),
+          paramlist: None,
+          expansion: Tokens::new(Explode!(name_copy)).into(),
+          ..Expandable::default()
+        })),
+        None,
+      );
     }
-    if !dir.is_empty() {
-      self.state.assign_value("SOURCEDIRECTORY", dir.clone(), None);
-    }
-    self.state.search_paths.push_front(dir.clone());
-    self.state.graphics_paths.push_front(dir);
-
-    let name_copy = name.clone();
-    self.state.install_definition(
-      Stored::Expandable(Arc::new(Expandable {
-        cs: T_CS!("\\jobname"),
-        paramlist: None,
-        expansion: Tokens::new(Explode!(name_copy)).into(),
-        ..Expandable::default()
-      })),
-      None,
-    );
 
     // Reverse order, since last opened is first read!
     if let Some(postamble) = options.postamble {
       self.load_postamble(postamble);
     }
 
-    input_content(&request, InputOptions::default(), &mut self.stomach.write().unwrap(), &mut self.state)?;
+    { // Make sure the stomach trick is used very *tightly*, always with a surrounding scope.
+      let stomach_trick = Arc::clone(&self.stomach);
+      let mut stomach = stomach_trick.write().unwrap();
+      input_content(&request, InputOptions::default(), &mut stomach, &mut self.get_state_mut())?;
+    }
 
     if let Some(preamble) = options.preamble {
       self.load_preamble(preamble);

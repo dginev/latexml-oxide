@@ -195,11 +195,12 @@ LoadDefinitions!(outer_state, {
   // instead, here is the same pattern of definition, with different concrete value types.
 
   DefPrimitive!("\\countdef Token SkipMatch:=", sub[stomach, (cs), state] {
-    state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
+    state.assign_meaning(&cs, state.lookup_meaning(&T_RELAX).unwrap(),None);
     let num = stomach.get_gullet_mut().read_number(state)?;
     let reg = s!("\\count{}", num.value_of());
     let setter_count = reg.clone();
     DefRegister!(cs, None, Number::new(0),
+      name   => reg,
       getter => sub[args, state] { state.lookup_number(&reg).unwrap_or_default() },
       setter => sub[value, args, state] { state.assign_value(&setter_count, value, None); });
     AfterAssignment!();
@@ -207,7 +208,7 @@ LoadDefinitions!(outer_state, {
   });
 
   DefPrimitive!("\\dimendef Token SkipMatch:=", sub[stomach, (cs), state] {
-    state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
+    state.assign_meaning(&cs, state.lookup_meaning(&T_RELAX).unwrap(),None);
     let num = stomach.get_gullet_mut().read_number(state)?;
     let dimen = s!("\\dimen{}", num.value_of());
     let dimen2 = dimen.clone();
@@ -220,7 +221,7 @@ LoadDefinitions!(outer_state, {
   });
 
   DefPrimitive!("\\skipdef Token SkipMatch:=", sub[stomach, (cs), state] {
-    state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
+    state.assign_meaning(&cs, state.lookup_meaning(&T_RELAX).unwrap(),None);
     let num = stomach.get_gullet_mut().read_number(state)?;
     let skip = s!("\\skip{}", num.value_of());
     let skip2 = skip.clone();
@@ -233,7 +234,7 @@ LoadDefinitions!(outer_state, {
   });
 
   DefPrimitive!("\\muskipdef Token SkipMatch:=", sub[stomach, (cs), state] {
-    state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
+    state.assign_meaning(&cs, state.lookup_meaning(&T_RELAX).unwrap(),None);
     let num = stomach.get_gullet_mut().read_number(state)?;
     let muglue = s!("\\muskip{}",num.value_of());
     let muglue_setter = muglue.clone();
@@ -246,7 +247,7 @@ LoadDefinitions!(outer_state, {
   });
 
   DefPrimitive!("\\toksdef Token SkipMatch:=", sub[stomach, (cs), state] {
-    state.assign_meaning(&cs, state.lookup_meaning(&T_CS!("\\relax")).unwrap(),None);
+    state.assign_meaning(&cs, state.lookup_meaning(&T_RELAX).unwrap(),None);
     let num = stomach.get_gullet_mut().read_number(state)?;
     let toks = s!("\\toks{}", num.value_of() as usize);
     let toks_setter = toks.clone();
