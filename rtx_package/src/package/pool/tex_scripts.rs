@@ -104,7 +104,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
     };
     let mut _prevscript = None;
     let mut prevspace = false;
-    let mut _base = None;
+    let mut base = None;
     // Check preceding boxes to determine possible attachment (floating vs post),
     // Note that this analysis has to be done now (or sometime like it) before grouping lists go away;
     // and whether there are conflicting preceding scripts, which is an error
@@ -151,7 +151,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
         }
       } else {
         //  We found something "normal", so assume we'll attach to it, and we're done.
-        _base = Some(prev.clone());
+        base = Some(prev.clone());
         putback.push_front(prev);
         cs = if cc == Catcode::SUPER {
           "\\@@POSTSUPERSCRIPT"
@@ -178,11 +178,12 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
     let script = stuff.remove(0); // ONLY the first box is the script!
     if !is_empty(&script, state) {
       let mut properties = stored_map!(
-        "isMath" => true
+        "isMath" => true,
+        "base"        => if let Some(b) = base { Stored::Digested(b.into()) }
+          else { Stored::None }                      // for sizing/positioning
         // TODO:
         // "level"       => stomach.get_boxing_level(),
         // "scriptlevel" => stomach.get_script_level(),
-        //"base"        => base,                      // for sizing/positioning
         //"prevscript"  => prevscript
       );
       if let Some(font) = script.get_font() {

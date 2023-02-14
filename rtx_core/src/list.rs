@@ -65,10 +65,7 @@ impl BoxOps for List {
   fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
   fn has_property(&self, key: &str) -> bool { self.properties.contains_key(key) }
   fn get_property_bool(&self, key: &str) -> bool {
-    match self.properties.get(key) {
-      Some(v) => matches!(*v, Stored::Bool(true)),
-      _ => false,
-    }
+    matches!(self.properties.get(key), Some(Stored::Bool(true)))
   }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }

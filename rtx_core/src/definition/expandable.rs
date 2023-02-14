@@ -58,8 +58,8 @@ impl Default for Expandable {
 }
 impl PartialEq for Expandable {
   fn eq(&self, other: &Expandable) -> bool {
-    &self.paramlist == &other.paramlist &&
-    &self.expansion == &other.expansion
+    self.paramlist == other.paramlist &&
+    self.expansion == other.expansion
   }
 }
 

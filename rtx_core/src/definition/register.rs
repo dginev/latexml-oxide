@@ -11,7 +11,6 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
-use crate::common::stateful_cmp::StatefulEq;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -378,8 +377,8 @@ impl Default for Register {
     }
   }
 }
-impl StatefulEq for Register {
-  fn eq(&self, other: &Register, state: &State) -> bool {
+impl PartialEq for Register {
+  fn eq(&self, other: &Register) -> bool {
     self.register_type == other.register_type &&
       self.parameters == other.parameters &&
       self.value == other.value &&
@@ -411,11 +410,9 @@ impl Object for RegisterCell {
   fn stringify(&self) -> String { Definition::stringify_type(self, "RegisterCell") }
   fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
-impl StatefulEq for RegisterCell {
-  fn eq(&self, other: &RegisterCell, state: &State) -> bool {
-    self.0.read().unwrap().eq(
-    &*other.0.read().unwrap(),
-    state )
+impl PartialEq for RegisterCell {
+  fn eq(&self, other: &RegisterCell) -> bool {
+    *self.0.read().unwrap() == *other.0.read().unwrap()
   }
 }
 impl RegisterCell {

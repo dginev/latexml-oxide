@@ -140,12 +140,7 @@ impl DigestionAPI for Core {
     );
 
     // $self->loadPostamble($options{postamble}) if $options{postamble};
-    {
-      let stomach_trick = Arc::clone(&self.stomach);
-      let mut stomach_lock = stomach_trick.write().unwrap();
-      let mut state_lock = self.get_state_mut();
-      input_content(&request, InputOptions::default(), &mut stomach_lock, &mut state_lock)?;
-    }
+    input_content(&request, InputOptions::default(), &mut self.stomach.write().unwrap(), &mut self.state)?;
     // $self->loadPreamble($options{preamble}) if $options{preamble};
 
     // // Now for the Hacky part for BibTeX!!!
@@ -216,15 +211,15 @@ impl DigestionAPI for Core {
       }
     }
     Debug!("Doc absorb: {:?}", digested);
-    let mut state = self.get_state_mut();
-    document.absorb(&digested, None, &mut state)?;
+    let state = self.get_state_mut();
+    document.absorb(&digested, None, state)?;
     note_end("Building");
 
     let has_rewrites = state.has_value("DOCUMENT_REWRITE_RULES");
     if has_rewrites {
       note_begin("Rewriting");
-      document.mark_xmnode_visibility(&mut state)?;
-      document.load_labels_for_rewrite(&mut state);
+      document.mark_xmnode_visibility(state)?;
+      document.load_labels_for_rewrite(state);
       // TODO: What is the right way to do rewrites in a daemon-safe manner?
       if let Some(Stored::VecDequeStored(rules)) = state.remove_value("DOCUMENT_REWRITE_RULES") {
         if let Some(root) = document.get_document().get_root_element() {
@@ -239,7 +234,7 @@ impl DigestionAPI for Core {
           }
           // Step 2: invoke the rewrite rules
           for mut rewrite_rule in rewrites {
-            rewrite_rule.invoke(&mut document, &root, &mut state)?;
+            rewrite_rule.invoke(&mut document, &root, state)?;
           }
         }
       }
@@ -248,10 +243,10 @@ impl DigestionAPI for Core {
 
     if !state.nomathparse {
       let mut parser = MathParser::default();
-      parser.parse_math(&mut document, &mut state)?;
+      parser.parse_math(&mut document, state)?;
     }
     note_begin("Finalizing");
-    document.finalize(&mut state)?;
+    document.finalize(state)?;
     note_end("Finalizing");
     Ok(document)
   }
@@ -259,14 +254,14 @@ impl DigestionAPI for Core {
   fn digest_internal(&mut self) -> Result<Digested> {
     let mut boxes = Vec::new();
     let stomach_trick = Arc::clone(&self.stomach);
-    let mut state = self.get_state_mut();
+    let state = self.get_state_mut();
     let mut stomach = stomach_trick.write().unwrap();
     while stomach.get_gullet_mut().has_more_input() {
-      let next_bodies: Vec<Digested> = stomach.digest_next_body(None, &mut state)?;
+      let next_bodies: Vec<Digested> = stomach.digest_next_body(None, state)?;
       // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
       boxes.extend(next_bodies);
     }
-    stomach.get_gullet_mut().flush(&mut state);
+    stomach.get_gullet_mut().flush(state);
     List::new(boxes).into()
   }
 
@@ -357,7 +352,7 @@ impl DigestionAPI for Core {
     { // Make sure the stomach trick is used very *tightly*, always with a surrounding scope.
       let stomach_trick = Arc::clone(&self.stomach);
       let mut stomach = stomach_trick.write().unwrap();
-      input_content(&request, InputOptions::default(), &mut stomach, &mut self.get_state_mut())?;
+      input_content(&request, InputOptions::default(), &mut stomach, self.get_state_mut())?;
     }
 
     if let Some(preamble) = options.preamble {

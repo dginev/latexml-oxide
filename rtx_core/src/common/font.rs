@@ -226,65 +226,65 @@ impl fmt::Display for Font {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.family.as_ref().unwrap_or(&Cow::Borrowed(""))) }
 }
 // elide Font debugging until we get to implementing them faithfully
-impl fmt::Debug for Font {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "[font]")
-  }
-}
 // impl fmt::Debug for Font {
 //   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//     let mut parts = Vec::new();
-//     if let Some(ref family) = self.family {
-//       parts.push(s!("family: {:?}", family))
-//     }
-//     if let Some(ref series) = self.series {
-//       parts.push(s!("series: {:?}", series))
-//     }
-//     if let Some(ref shape) = self.shape {
-//       parts.push(s!("shape: {:?}", shape))
-//     }
-//     if let Some(ref size) = self.size {
-//       parts.push(s!("size: {:?}", size))
-//     }
-//     if let Some(ref scale) = self.scale {
-//       parts.push(s!("scale: {:?}", scale))
-//     }
-//     if let Some(ref color) = self.color {
-//       parts.push(s!("color: {:?}", color))
-//     }
-//     if let Some(ref bg) = self.bg {
-//       parts.push(s!("bg: {:?}", bg))
-//     }
-//     if let Some(ref opacity) = self.opacity {
-//       parts.push(s!("opacity: {:?}", opacity))
-//     }
-//     if let Some(ref encoding) = self.encoding {
-//       parts.push(s!("encoding: {:?}", encoding))
-//     }
-//     if let Some(ref language) = self.language {
-//       parts.push(s!("language: {:?}", language))
-//     }
-//     if let Some(ref mathstyle) = self.mathstyle {
-//       parts.push(s!("mathstyle: {:?}", mathstyle))
-//     }
-//     if let Some(ref mathstylestep) = self.mathstyle {
-//       parts.push(s!("mathstylestep: {:?}", mathstylestep))
-//     }
-//     if let Some(ref forceseries) = self.forceseries {
-//       parts.push(s!("forceseries: {:?}", forceseries))
-//     }
-//     if let Some(ref forcefamily) = self.forcefamily {
-//       parts.push(s!("forcefamily: {:?}", forcefamily))
-//     }
-//     if let Some(ref forceshape) = self.forceshape {
-//       parts.push(s!("forceshape: {:?}", forceshape))
-//     }
-//     if let Some(ref scripted) = self.scripted {
-//       parts.push(s!("scripted: {:?}", scripted))
-//     }
-//     write!(f, "Font[{}]", parts.join(", "))
+//     write!(f, "[font]")
 //   }
 // }
+impl fmt::Debug for Font {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    let mut parts = Vec::new();
+    if let Some(ref family) = self.family {
+      parts.push(s!("family: {:?}", family))
+    }
+    if let Some(ref series) = self.series {
+      parts.push(s!("series: {:?}", series))
+    }
+    if let Some(ref shape) = self.shape {
+      parts.push(s!("shape: {:?}", shape))
+    }
+    if let Some(ref size) = self.size {
+      parts.push(s!("size: {:?}", size))
+    }
+    if let Some(ref scale) = self.scale {
+      parts.push(s!("scale: {:?}", scale))
+    }
+    if let Some(ref color) = self.color {
+      parts.push(s!("color: {:?}", color))
+    }
+    if let Some(ref bg) = self.bg {
+      parts.push(s!("bg: {:?}", bg))
+    }
+    if let Some(ref opacity) = self.opacity {
+      parts.push(s!("opacity: {:?}", opacity))
+    }
+    if let Some(ref encoding) = self.encoding {
+      parts.push(s!("encoding: {:?}", encoding))
+    }
+    if let Some(ref language) = self.language {
+      parts.push(s!("language: {:?}", language))
+    }
+    if let Some(ref mathstyle) = self.mathstyle {
+      parts.push(s!("mathstyle: {:?}", mathstyle))
+    }
+    if let Some(ref mathstylestep) = self.mathstyle {
+      parts.push(s!("mathstylestep: {:?}", mathstylestep))
+    }
+    if let Some(ref forceseries) = self.forceseries {
+      parts.push(s!("forceseries: {:?}", forceseries))
+    }
+    if let Some(ref forcefamily) = self.forcefamily {
+      parts.push(s!("forcefamily: {:?}", forcefamily))
+    }
+    if let Some(ref forceshape) = self.forceshape {
+      parts.push(s!("forceshape: {:?}", forceshape))
+    }
+    if let Some(ref scripted) = self.scripted {
+      parts.push(s!("scripted: {:?}", scripted))
+    }
+    write!(f, "Font[{}]", parts.join(", "))
+  }
+}
 
 impl Font {
   pub fn text_default() -> Self {

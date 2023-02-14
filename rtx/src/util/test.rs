@@ -84,7 +84,7 @@ fn process_texfile(tex_path: &str, name: &str, extra_bindings_dispatcher: Option
 
   match latexml.convert_file(tex_path.to_owned()) {
     Err(e) => panic!("{:?}: Couldn't convert {:?}; {:?}", name, tex_path, e),
-    Ok(doc) => process_ltx_doc(doc, name, &mut latexml.get_state_mut()),
+    Ok(doc) => process_ltx_doc(doc, name, latexml.get_state_mut()),
   }
 }
 
@@ -129,8 +129,8 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node
   let doc = xml_result.unwrap();
 
   // grab the first formula
-  let mut state = latexml.get_state_mut();
-  match doc.findnode("//*[local-name()='XMath']", None, &mut state) {
+  let state = latexml.get_state_mut();
+  match doc.findnode("//*[local-name()='XMath']", None, state) {
     Some(math) => {
       let mut idx = 0;
       let (lexemes, nodes) = node_to_grammar_lexemes(&math, &mut idx);

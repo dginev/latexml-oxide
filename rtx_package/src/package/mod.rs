@@ -21,7 +21,6 @@ pub use rtx_core::common::locator::Locator;
 pub use rtx_core::common::muglue::MuGlue;
 pub use rtx_core::common::number::Number;
 pub use rtx_core::common::numeric_ops::NumericOps;
-pub use rtx_core::common::stateful_cmp::StatefulEq;
 pub use rtx_core::common::object::Object;
 pub use rtx_core::definition::argument::ArgWrap;
 pub use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};

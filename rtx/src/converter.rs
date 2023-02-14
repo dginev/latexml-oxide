@@ -181,7 +181,7 @@ impl Converter {
     let serialized = match self.opts.format {
       OutputFormat::TeX => {
         let untex_result = {
-          token::untex_digested(&digested, false, &mut self.core.get_state_mut())
+          token::untex_digested(&digested, false, self.core.get_state_mut())
         };
         match untex_result {
           Ok(tex) => tex,
@@ -205,7 +205,7 @@ impl Converter {
       _ => {
         dom_result = self.core.convert_document(digested);
         match dom_result {
-          Ok(dom) => dom.serialize_to_string(&mut self.state_mut()),
+          Ok(dom) => dom.serialize_to_string(self.state_mut()),
           Err(e) => {
             let message = s!("{:?}", e);
             let error_state = &self.core.get_state();

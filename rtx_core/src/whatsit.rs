@@ -282,10 +282,7 @@ impl BoxOps for Whatsit {
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
 
   fn get_property_bool(&self, key: &str) -> bool {
-    match self.properties.get(key) {
-      Some(v) => matches!(*v, Stored::Bool(true)),
-      _ => false,
-    }
+    matches!(self.properties.get(key), Some(Stored::Bool(true)))
   }
   fn get_body(&self) -> Option<Digested> {
     match self.properties.get("body") {
