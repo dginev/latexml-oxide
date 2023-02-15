@@ -58,6 +58,8 @@ pub struct MathPrimitiveOptions {
   pub forbid_math: bool,
   pub locked: bool,
   pub alias: Option<String>,
+  pub decl_id: Option<String>,
+  pub replace: Option<String>,
 
   // Math specific
   pub name: Option<String>,
@@ -91,6 +93,8 @@ impl Default for MathPrimitiveOptions {
       locked: false,
       alias: None,
       font: None,
+      decl_id: None,
+      replace: None,
 
       // math-specific
       name: None,

@@ -102,9 +102,9 @@ LoadDefinitions!(state, {
     document.get_node_mut().add_child(&mut replacement)?;
   });
 
-  DefMath!(".", None, ".", role => "PERIOD");
-  DefMath!(",", None, ",", role => "PUNCT");
-  DefMath!(";", None, ";", role => "PUNCT");
+  DefMath!('.', None, '.', role => "PERIOD");
+  DefMath!(',', None, ',', role => "PUNCT");
+  DefMath!(';', None, ';', role => "PUNCT");
 
   // DefMacro('\hiderel{}', "#1");    # Just ignore, for now...
 
