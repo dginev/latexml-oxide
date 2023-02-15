@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::{Arc};
+use std::sync::Arc;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -39,10 +39,7 @@ impl Default for Tbox {
 
 impl PartialEq for Tbox {
   // Should this compare fonts too?
-  fn eq(&self, other: &Self) -> bool {
-    self.text == other.text &&
-    *self.font == *other.font
-  }
+  fn eq(&self, other: &Self) -> bool { self.text == other.text && *self.font == *other.font }
 }
 
 //======================================================================
@@ -123,9 +120,7 @@ impl Tbox {
 impl BoxOps for Tbox {
   fn get_tokens(&self) -> Option<&Tokens> { Some(&self.tokens) }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
-  fn get_property_bool(&self, key: &str) -> bool {
-    matches!(self.properties.get(key), Some(Stored::Bool(true)))
-  }
+  fn get_property_bool(&self, key: &str) -> bool { matches!(self.properties.get(key), Some(Stored::Bool(true))) }
   fn has_property(&self, key: &str) -> bool { self.properties.contains_key(key) }
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
   fn get_string(&self, state: &State) -> Result<Cow<'_, str>> { Ok(Cow::Borrowed(self.text.as_str())) }

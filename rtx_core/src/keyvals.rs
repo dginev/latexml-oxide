@@ -144,7 +144,15 @@ impl BoxOps for KeyVals {
   }
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { Ok(()) } // TODO
   fn get_font(&self) -> Option<Cow<Font>> { None } // TODO
-  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(crate::common::dimension::Dimension, crate::common::dimension::Dimension, crate::common::dimension::Dimension)> {
+  fn compute_size(
+    &self,
+    options: HashMap<String, Stored>,
+    state: &mut State,
+  ) -> Result<(
+    crate::common::dimension::Dimension,
+    crate::common::dimension::Dimension,
+    crate::common::dimension::Dimension,
+  )> {
     unimplemented!() // TODO
   }
 }

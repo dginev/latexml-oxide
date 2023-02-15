@@ -1,8 +1,8 @@
 use crate::common::dimension::Dimension;
-use crate::common::numeric_ops::{UNITY,NumericOps};
+use crate::common::numeric_ops::{NumericOps, UNITY};
 use crate::common::store::Stored;
 use crate::state::State;
-use crate::{BoxOps,Digested, DigestedData, Result};
+use crate::{BoxOps, Digested, DigestedData, Result};
 use lazy_static::lazy_static;
 /// Note that this has evolved way beynond just "font",
 /// but covers text properties (or even display properties) in general
@@ -12,14 +12,14 @@ use lazy_static::lazy_static;
 /// NOTE: This is now in Common that it may evolve to be useful in Post processing...
 use regex::Regex;
 use std::borrow::Cow;
-use std::hash::{Hash, Hasher};
+use std::cmp::max;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::fmt;
-use std::cmp::max;
+use std::hash::{Hash, Hasher};
 
 mod standard_metrics;
-use standard_metrics::{STDMETRICS, MetricData};
+use standard_metrics::{MetricData, STDMETRICS};
 
 pub type Fontmap = Vec<Option<char>>;
 
@@ -33,8 +33,8 @@ static DEFENCODING: &str = "OT1";
 static DEFLANGUAGE: &str = "en";
 static DEFSIZE: f32 = 10.0; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
 
-pub const TEXT_FONTS : [&str; 6]= ["cmr","cmm","cmsy","cmex","amsa","amsb"];
-pub const MATH_FONTS : [&str; 6]= ["cmm","cmsy","cmex","amsa","amsb","cmr"];
+pub const TEXT_FONTS: [&str; 6] = ["cmr", "cmm", "cmsy", "cmex", "amsa", "amsb"];
+pub const MATH_FONTS: [&str; 6] = ["cmm", "cmsy", "cmex", "amsa", "amsb", "cmr"];
 
 // static FORCE_FAMILY : i8 = 0x1;
 // static FORCE_SERIES : i8 = 0x2;
@@ -378,7 +378,6 @@ impl Font {
     // return $STATE->lookupDefinition($$mathbearingreg[abs($bearing)])->valueOf->spValue; }
     0.0
   }
-
 
   pub fn is_sticky(&self) -> bool {
     if let Some(ref family) = self.family {
@@ -732,17 +731,17 @@ impl Font {
     changes
   }
 
-  pub fn get_metric(&self, c_opt:Option<char>) -> &MetricData {
+  pub fn get_metric(&self, c_opt: Option<char>) -> &MetricData {
     if let Some(c) = c_opt {
       let cstr = c.to_string();
       let fonts = match self.get_family() {
         Some(fname) if fname == "math" => MATH_FONTS,
-        _ => TEXT_FONTS
+        _ => TEXT_FONTS,
       };
       for name in fonts {
         if let Some(m) = STDMETRICS.get(name) {
           if m.sizes.contains_key(cstr.as_str()) {
-            return m
+            return m;
           }
         }
       }
@@ -771,10 +770,10 @@ impl Font {
 
   pub fn compute_string_size(&self, text: &str, options: HashMap<String, Stored>, state: &State) -> (Dimension, Dimension, Dimension) {
     if text.is_empty() || self.get_family().map(|fam| fam == "nullfont").unwrap_or(false) {
-      return (Dimension::default(),Dimension::default(),Dimension::default())
+      return (Dimension::default(), Dimension::default(), Dimension::default());
     }
     let size = self.get_size().unwrap_or(DEFSIZE);
-    let ismath = self.get_family().map(|fam| fam=="math").unwrap_or(false);
+    let ismath = self.get_family().map(|fam| fam == "math").unwrap_or(false);
     let (mut w, mut h, mut d) = (0, 0, 0);
     for char in text.chars() {
       let metric = self.get_metric(Some(char));
@@ -795,7 +794,9 @@ impl Font {
     }
     // The 1 is so that any actual glyph appears to be non-empty.
     // This is presumably only necessary to deal with the flawed emptiness heiristics in Alignment?
-    if w == 0 { w = 1; }
+    if w == 0 {
+      w = 1;
+    }
     (Dimension::new(w), Dimension::new(h), Dimension::new(d))
   }
 
@@ -816,38 +817,49 @@ impl Font {
   // Another issue; SVG needs (sometimes) real sizes, even if the programmer
   // set some dimensions to 0 (eg.)   We may need to distinguish & store
   // requested vs real sizes?
-  pub fn compute_boxes_size(&self, boxes: &[Digested], options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+  pub fn compute_boxes_size(
+    &self,
+    boxes: &[Digested],
+    options: HashMap<String, Stored>,
+    state: &mut State,
+  ) -> Result<(Dimension, Dimension, Dimension)> {
     let fillwidth = match options.get("width") {
       Some(Stored::Int(fw)) => Some(*fw),
       None => match state.lookup_definition(&T_CS!("\\textwidth")) {
         Some(def) => def.value_of(Vec::new(), state).map(|x| x.value_of()),
         None => None,
       },
-      _ => None };
+      _ => None,
+    };
     let maxwidth = fillwidth.unwrap_or_default();
     //   # baselineskip, lineskip ??
-    let baseline = state.lookup_definition(&T_CS!("\\baselineskip"))
+    let baseline = state
+      .lookup_definition(&T_CS!("\\baselineskip"))
       .expect("baseline skip should aways be defined")
-      .value_of(Vec::new(), state).expect("\\baselineskip should always have a value.")
+      .value_of(Vec::new(), state)
+      .expect("\\baselineskip should always have a value.")
       .value_of();
-    let lineskip = state.lookup_definition(&T_CS!("\\lineskip"))
+    let lineskip = state
+      .lookup_definition(&T_CS!("\\lineskip"))
       .expect("lineskip should always be defined")
-      .value_of(Vec::new(), state).expect("\\lineskip should always have a value.")
+      .value_of(Vec::new(), state)
+      .expect("\\lineskip should always have a value.")
       .value_of();
-    let mut lines: Vec<(Dimension,Dimension,Dimension)>    = Vec::new();
-    let (mut wd, mut ht, mut dp)          = (0.0, 0, 0);
+    let mut lines: Vec<(Dimension, Dimension, Dimension)> = Vec::new();
+    let (mut wd, mut ht, mut dp) = (0.0, 0, 0);
     let (minwd, minht, mindp) = (0.0, 0.0, 0.0);
     let vattach = match options.get("vattach") {
       Some(Stored::String(vattach)) => vattach,
-      _ => "baseline"
+      _ => "baseline",
     };
     // Flatten top-level Lists (orrr pass-thru `fillwidth` ???)
-    let filtered_boxes = boxes.iter().flat_map(|thisbox| thisbox.unlist())
+    let filtered_boxes = boxes
+      .iter()
+      .flat_map(|thisbox| thisbox.unlist())
       .filter(|thisbox| !thisbox.has_property("isEmpty"));
 
-    let mut prevbox_opt : Option<Digested> = None;
+    let mut prevbox_opt: Option<Digested> = None;
     for mut thisbox in filtered_boxes {
-
       // Should any `options` be inherited by the contained boxes?
       let (w, h, d) = thisbox.get_size(None, state)?;
 
@@ -869,8 +881,8 @@ impl Font {
       if let Some(prevbox) = prevbox_opt {
         if matches!(prevbox.data(), DigestedData::TBox(_)) && matches!(thisbox.data(), DigestedData::TBox(_)) {
           let prevchar = prevbox.get_string(state)?.chars().last();
-          let curchar  = thisbox.get_string(state)?.chars().next();
-          let metric   = self.get_metric(curchar);
+          let curchar = thisbox.get_string(state)?.chars().next();
+          let metric = self.get_metric(curchar);
           if let Some(family) = self.get_family() {
             if family == "math" {
               wd += self.math_bearing(&thisbox, &prevbox);
@@ -885,7 +897,7 @@ impl Font {
               }
             }
           }
-       }
+        }
       }
       //     my $newline = (($options{layout} || '') eq 'vertical')        # EVERY box is a row?
       //       || ((ref $box) && $box->getProperty('isBreak'))             # || $box is a linebreak
@@ -900,30 +912,30 @@ impl Font {
       prevbox_opt = Some(thisbox);
     }
 
-      //   if ($wd || $ht || $dp) {    # be sure to get last line
-      //     push(@lines, [$wd, $ht, $dp]); }
-      //   # Deal with multiple lines
-      //   my $nlines = scalar(@lines);
-      //   if ($nlines == 0) {
-      //     $wd = $ht = $dp = 0; }
-      //   else {
-      //     $wd = max(map { $$_[0] } @lines);
-      //     $ht = sum(map { $$_[1] } @lines);
-      //     $dp = sum(map { $$_[2] } @lines);
-      //     if ($vattach eq 'top') {    # Top of box is aligned with top(?) of current text
-      //       my ($w, $h, $d) = $font->getNominalSize;
-      //       $h  = $h->valueOf;
-      //       $dp = $ht + $dp - $h; $ht = $h; }
-      //     elsif ($vattach eq 'bottom') {    # Bottom of box is aligned with bottom (?) of current text
-      //       $ht = $ht + $dp; $dp = 0; }
-      //     elsif ($vattach eq 'middle') {
-      //       my ($w, $h, $d) = $font->getNominalSize;
-      //       $h = $h->valueOf;
-      //       my $c = ($ht + $dp) / 2;
-      //       $ht = $c + $h / 2; $dp = $c - $h / 2; }
-      //     else {                            # default is baseline (of the 1st line)
-      //       my $h = $lines[0][1];
-      //       $dp = $ht + $dp - $h; $ht = $h; } }
+    //   if ($wd || $ht || $dp) {    # be sure to get last line
+    //     push(@lines, [$wd, $ht, $dp]); }
+    //   # Deal with multiple lines
+    //   my $nlines = scalar(@lines);
+    //   if ($nlines == 0) {
+    //     $wd = $ht = $dp = 0; }
+    //   else {
+    //     $wd = max(map { $$_[0] } @lines);
+    //     $ht = sum(map { $$_[1] } @lines);
+    //     $dp = sum(map { $$_[2] } @lines);
+    //     if ($vattach eq 'top') {    # Top of box is aligned with top(?) of current text
+    //       my ($w, $h, $d) = $font->getNominalSize;
+    //       $h  = $h->valueOf;
+    //       $dp = $ht + $dp - $h; $ht = $h; }
+    //     elsif ($vattach eq 'bottom') {    # Bottom of box is aligned with bottom (?) of current text
+    //       $ht = $ht + $dp; $dp = 0; }
+    //     elsif ($vattach eq 'middle') {
+    //       my ($w, $h, $d) = $font->getNominalSize;
+    //       $h = $h->valueOf;
+    //       my $c = ($ht + $dp) / 2;
+    //       $ht = $c + $h / 2; $dp = $c - $h / 2; }
+    //     else {                            # default is baseline (of the 1st line)
+    //       my $h = $lines[0][1];
+    //       $dp = $ht + $dp - $h; $ht = $h; } }
 
     Ok((Dimension::new_f32(wd), Dimension::new(ht), Dimension::new(dp)))
   }

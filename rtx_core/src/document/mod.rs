@@ -60,7 +60,7 @@ pub struct Document {
   pub pending: Vec<Node>,
   pub node: Node,
   pub node_boxes: HashMap<usize, Arc<Digested>>, // used to be _box attribute
-  pub node_fonts: HashMap<u64, Font>,          // used to be _font attribute
+  pub node_fonts: HashMap<u64, Font>,            // used to be _font attribute
   pub constructed_nodes: Vec<Node>,
   pub idstore: HashMap<String, Node>,
   // the rewrite labels used to be in each rewrite rule, but they make more sense in doc
@@ -325,9 +325,8 @@ impl Document {
               Some(Arc::clone(prop_font))
             } else {
               match self.box_to_absorb {
-                Some(ref thisbox) => thisbox.get_font().map(|thisfont|
-                  Arc::new(thisfont.into_owned())),
-                None => None
+                Some(ref thisbox) => thisbox.get_font().map(|thisfont| Arc::new(thisfont.into_owned())),
+                None => None,
               }
             };
             // TODO: Sometimes we can't find a `font` here. Should `open_text` allow a None font arg?
@@ -2611,7 +2610,6 @@ impl Document {
     unimplemented!();
   }
 
-
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Finally, another set of surgery methods
   // These take an array representation of the XML Tree to append
@@ -2634,7 +2632,7 @@ impl Document {
       self.append_tree(&mut parent, vec![new], state)?;
       let inserted = parent.get_last_child();
       for mut child in following {
-        parent.add_child(&mut child)?;      // No need for clone
+        parent.add_child(&mut child)?; // No need for clone
       }
       Ok(inserted)
     } else {
@@ -2647,18 +2645,18 @@ impl Document {
       match child.get_type() {
         Some(NodeType::ElementNode) => {
           let tag = self.get_node_qname(&child, state);
-          let attributes = child.get_attributes();// map { $_->nodeType == XML_ATTRIBUTE_NODE ? ($self->getNodeQName($_) => $_->getValue) : () }
-          // TODO:
-          // DANGER: REMOVE the xml:id attribute from $child!!!!
-          // This protects against some versions of XML::LibXML that warn against duplicate id's
-          // Hopefully, you shouldn't be using the node any more
-      //         if (my $id = $attributes{'xml:id'}) {
-      //           $child->removeAttribute('xml:id');
-      //           $self->unRecordID($id); }
+          let attributes = child.get_attributes(); // map { $_->nodeType == XML_ATTRIBUTE_NODE ? ($self->getNodeQName($_) => $_->getValue) : () }
+                                                   // TODO:
+                                                   // DANGER: REMOVE the xml:id attribute from $child!!!!
+                                                   // This protects against some versions of XML::LibXML that warn against duplicate id's
+                                                   // Hopefully, you shouldn't be using the node any more
+                                                   //         if (my $id = $attributes{'xml:id'}) {
+                                                   //           $child->removeAttribute('xml:id');
+                                                   //           $self->unRecordID($id); }
 
-        let mut new = self.open_element_at(node.clone(), &tag, Some(attributes), None, state)?;
-        self.append_tree(&mut new, child.get_child_nodes(), state)?;
-        self.close_element_at(&mut new, state)?;
+          let mut new = self.open_element_at(node.clone(), &tag, Some(attributes), None, state)?;
+          self.append_tree(&mut new, child.get_child_nodes(), state)?;
+          self.close_element_at(&mut new, state)?;
         },
         Some(NodeType::DocumentFragNode) => {
           self.append_tree(node, child.get_child_nodes(), state)?;
@@ -2666,9 +2664,11 @@ impl Document {
         Some(NodeType::TextNode) => {
           node.append_text(&child.get_content())?;
         },
-        other => {dbg!(other); }
+        other => {
+          dbg!(other);
+        },
       }
-  // TODO: Box? triple? other?
+      // TODO: Box? triple? other?
     }
     Ok(())
   }

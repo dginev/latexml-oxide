@@ -180,9 +180,7 @@ impl Converter {
     let dom_result: Result<Document>;
     let serialized = match self.opts.format {
       OutputFormat::TeX => {
-        let untex_result = {
-          token::untex_digested(&digested, false, self.core.get_state_mut())
-        };
+        let untex_result = { token::untex_digested(&digested, false, self.core.get_state_mut()) };
         match untex_result {
           Ok(tex) => tex,
           Err(e) => {

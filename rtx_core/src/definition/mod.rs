@@ -12,10 +12,10 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
+use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::dimension::Dimension;
 
 use self::argument::ArgWrap;
 use self::register::{RegisterType, RegisterValue};

@@ -379,10 +379,7 @@ impl Default for Register {
 }
 impl PartialEq for Register {
   fn eq(&self, other: &Register) -> bool {
-    self.register_type == other.register_type &&
-      self.parameters == other.parameters &&
-      self.value == other.value &&
-      self.name == other.name
+    self.register_type == other.register_type && self.parameters == other.parameters && self.value == other.value && self.name == other.name
   }
 }
 impl fmt::Debug for Register {
@@ -411,9 +408,7 @@ impl Object for RegisterCell {
   fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
 impl PartialEq for RegisterCell {
-  fn eq(&self, other: &RegisterCell) -> bool {
-    *self.0.read().unwrap() == *other.0.read().unwrap()
-  }
+  fn eq(&self, other: &RegisterCell) -> bool { *self.0.read().unwrap() == *other.0.read().unwrap() }
 }
 impl RegisterCell {
   pub fn new(cell: RwLock<Register>) -> Self { RegisterCell(cell) }

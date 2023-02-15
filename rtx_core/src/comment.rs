@@ -13,7 +13,7 @@ use crate::definition::register::RegisterValue;
 use crate::document::Document;
 use crate::state::State;
 use crate::tokens::Tokens;
-use crate::{BoxOps};
+use crate::BoxOps;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Comment(pub String);
@@ -46,7 +46,7 @@ impl BoxOps for Comment {
   }
 
   fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
-    Ok((Dimension::default(),Dimension::default(),Dimension::default()))
+    Ok((Dimension::default(), Dimension::default(), Dimension::default()))
   }
 
   // sub getHeight      { return Dimension(0); }

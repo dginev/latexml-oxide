@@ -24,10 +24,16 @@ static CONTROLNAME: &[&str] = &[
   "SYN", "ETB", "CAN", "EM", "SUB", "ESC", "FS", "GS", "RS", "US",
 ];
 
-pub const MOCK_TOKEN : Token = Token { text: Cow::Borrowed(""), code: Catcode::MARKER,
-smuggled: None};
-pub const T_RELAX : Token = Token { text: Cow::Borrowed("\\relax"), code: Catcode::CS,
-smuggled: None};
+pub const MOCK_TOKEN: Token = Token {
+  text: Cow::Borrowed(""),
+  code: Catcode::MARKER,
+  smuggled: None,
+};
+pub const T_RELAX: Token = Token {
+  text: Cow::Borrowed("\\relax"),
+  code: Catcode::CS,
+  smuggled: None,
+};
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
@@ -449,20 +455,26 @@ macro_rules! T_ARG {
 #[macro_export]
 macro_rules! T_SMUGGLE_THE {
   ($t:ident) => {
-      match $t.get_catcode() {
+    match $t.get_catcode() {
       Catcode::SmuggleTHE => {
         // LaTeXML Bug, we haven't correctly emulated scan_toks! Offending token was:
-        fatal!(SmuggledCatcode, Unexpected, s!("We are masking a \\the-produced token twice, this must Never happen. Illegal: {}", $t.stringify()));
+        fatal!(
+          SmuggledCatcode,
+          Unexpected,
+          s!(
+            "We are masking a \\the-produced token twice, this must Never happen. Illegal: {}",
+            $t.stringify()
+          )
+        );
       },
-      cc if cc.can_smuggle_the() =>
-        Token{
-          text: Cow::Borrowed("SMUGGLE_THE"),
-          code: Catcode::SmuggleTHE,
-          smuggled: Some(Box::new($t))
-        },
-      _ => $t
+      cc if cc.can_smuggle_the() => Token {
+        text: Cow::Borrowed("SMUGGLE_THE"),
+        code: Catcode::SmuggleTHE,
+        smuggled: Some(Box::new($t)),
+      },
+      _ => $t,
     }
-  }
+  };
 }
 
 #[macro_export]
@@ -713,7 +725,9 @@ impl<'a> Token {
 
   pub fn substitute_parameters(self, args: &[&Token]) -> Self {
     if self.code == Catcode::ARG {
-      let arg_idx = self.text.parse::<usize>()
+      let arg_idx = self
+        .text
+        .parse::<usize>()
         .expect("ARG catcode tokens should always contain numeric literals as text");
       args[arg_idx - 1].clone()
     } else {
@@ -744,7 +758,7 @@ impl<'a> Token {
           Ok(self)
         }
       },
-      _ => Ok(self)
+      _ => Ok(self),
     }
   }
 

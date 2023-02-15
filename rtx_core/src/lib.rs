@@ -29,8 +29,8 @@ pub mod whatsit;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::{Arc, RwLock};//,RwLockReadGuard,RwLockWriteGuard};
-//use lazy_static::lazy_static;
+use std::sync::{Arc, RwLock}; //,RwLockReadGuard,RwLockWriteGuard};
+                              //use lazy_static::lazy_static;
 
 use crate::comment::Comment;
 use crate::common::dimension::Dimension;
@@ -225,23 +225,23 @@ pub trait BoxOps: Object {
         Some(Stored::Dimension(w)) => *w,
         _ => match props.get("cwidth") {
           Some(Stored::Dimension(w)) => *w,
-          _ => Dimension::default()
-        }
+          _ => Dimension::default(),
+        },
       },
       match props.get("height") {
         Some(Stored::Dimension(h)) => *h,
         _ => match props.get("cheight") {
           Some(Stored::Dimension(h)) => *h,
-          _ => Dimension::default()
-        }
+          _ => Dimension::default(),
+        },
       },
       match props.get("depth") {
         Some(Stored::Dimension(d)) => *d,
         _ => match props.get("cdepth") {
           Some(Stored::Dimension(d)) => *d,
-          _ => Dimension::default()
-        }
-      }
+          _ => Dimension::default(),
+        },
+      },
     ))
   }
 
@@ -315,7 +315,7 @@ impl fmt::Debug for DigestedData {
       Postponed(v) => write!(f, "{v:?}"),
       KeyVals(v) => write!(f, "{v:?}"),
       RegisterValue(v) => write!(f, "{v:?}"),
-      Comment(v) => write!(f, "{v:?}")
+      Comment(v) => write!(f, "{v:?}"),
     }
   }
 }
@@ -485,8 +485,7 @@ impl BoxOps for Digested {
   fn unlist(&self) -> Vec<Digested> {
     use DigestedData::*;
     match *self.0 {
-      TBox(_) | Whatsit(_) |
-      KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => vec![self.clone()],
+      TBox(_) | Whatsit(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => vec![self.clone()],
       List(ref l) => l.unlist(),
     }
   }
@@ -523,7 +522,7 @@ impl BoxOps for Digested {
       // Digested::TBox(ref b) => b.set_property(key, value),
       // Digested::List(ref l) => l.set_property(key, value),
       DigestedData::Whatsit(ref w) => w.write().unwrap().set_property(key, value),
-      DigestedData::List(ref l) => Debug!("ignore","set_property", None, None, format!("List::set_property({key},_)")),
+      DigestedData::List(ref l) => Debug!("ignore", "set_property", None, None, format!("List::set_property({key},_)")),
       _ => unimplemented!(),
     }
   }
@@ -606,9 +605,7 @@ impl BoxOps for Digested {
 }
 
 impl Digested {
-  pub fn data(&self) -> &DigestedData {
-    &self.0
-  }
+  pub fn data(&self) -> &DigestedData { &self.0 }
   // convenience subset of NumericOps, added here for now as an experiment:
   pub fn value_of(&self) -> i32 {
     match &*self.0 {
@@ -658,7 +655,7 @@ impl Digested {
   pub fn raw_tokens(&self) -> Option<&Tokens> {
     match *self.0 {
       DigestedData::Postponed(ref tks) => Some(tks),
-      _ => None
+      _ => None,
     }
   }
 

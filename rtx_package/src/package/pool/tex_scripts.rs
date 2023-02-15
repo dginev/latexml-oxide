@@ -45,11 +45,10 @@ pub fn is_empty(digested: &Digested, state: &State) -> bool {
       List(list) => list.boxes.iter().all(|b| is_empty(b, state)),
       Whatsit(ws_arc) => {
         let ws = ws_arc.read().unwrap();
-        *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap() &&
-          ws.get_body().unwrap_or_default().all(|b| is_empty(b, state))
+        *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap() && ws.get_body().unwrap_or_default().all(|b| is_empty(b, state))
       },
       Comment(_) => true,
-      _ => unimplemented!()
+      _ => unimplemented!(),
     }
   }
 }

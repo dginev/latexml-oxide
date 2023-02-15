@@ -362,7 +362,9 @@ impl MathParser {
         //     $node->removeAttribute('xml:id'); }
         //   if ($isarr) { $$result[1]{$key} = $value; }
         //   else        { $document->setAttribute($result, $key => $value); } }
-        result = document.replace_tree(result, node, state)?.expect("replacing the tree should always work.");
+        result = document
+          .replace_tree(result, node, state)?
+          .expect("replacing the tree should always work.");
         // my $newid = $attr{'xml:id'};
         // # Danger: the above code replaced the id on the parsed result with the one from XMArg,..
         // # If there are any references to $resultid, we need to point them to $newid!
