@@ -61,8 +61,7 @@ impl DigestionAPI for Core {
     state.initialize_stomach();
     // let paths = state.search_paths;
     state.assign_value("InitialPreloads", true, Some(Scope::Global));
-    let stomach_trick = Arc::clone(&self.stomach);
-    let mut stomach = stomach_trick.write().unwrap();
+    let mut stomach = self.stomach.write().unwrap();
     for preload in preloads {
       input_definitions(&preload, InputDefinitionOptions::default(), &mut stomach, state)?;
     }
@@ -248,15 +247,13 @@ impl DigestionAPI for Core {
 
   fn digest_internal(&mut self) -> Result<Digested> {
     let mut boxes = Vec::new();
-    let stomach_trick = Arc::clone(&self.stomach);
-    let state = self.get_state_mut();
-    let mut stomach = stomach_trick.write().unwrap();
+    let mut stomach = self.stomach.write().unwrap();
     while stomach.get_gullet_mut().has_more_input() {
-      let next_bodies: Vec<Digested> = stomach.digest_next_body(None, state)?;
+      let next_bodies: Vec<Digested> = stomach.digest_next_body(None, &mut self.state)?;
       // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
       boxes.extend(next_bodies);
     }
-    stomach.get_gullet_mut().flush(state);
+    stomach.get_gullet_mut().flush(&mut self.state);
     List::new(boxes).into()
   }
 
@@ -346,9 +343,8 @@ impl DigestionAPI for Core {
 
     {
       // Make sure the stomach trick is used very *tightly*, always with a surrounding scope.
-      let stomach_trick = Arc::clone(&self.stomach);
-      let mut stomach = stomach_trick.write().unwrap();
-      input_content(&request, InputOptions::default(), &mut stomach, self.get_state_mut())?;
+      let mut stomach = self.stomach.write().unwrap();
+      input_content(&request, InputOptions::default(), &mut stomach, &mut self.state)?;
     }
 
     if let Some(preamble) = options.preamble {
