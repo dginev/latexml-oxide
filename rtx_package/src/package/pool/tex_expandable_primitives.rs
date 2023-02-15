@@ -40,7 +40,8 @@ LoadDefinitions!(outer_state, {
       }});
     let mut token = match token_opt {
       None => {
-        Error!("expected", "ExpandedIfToken", gullet, state, "conditional expected a token argument, readXToken came back empty. Falling back to \\@empty");
+        Error!("expected", "ExpandedIfToken", gullet, state,
+          "conditional expected a token argument, readXToken came back empty. Falling back to \\@empty");
         T_CS!("\\@empty") },
       Some(t) => t
     };

@@ -4,12 +4,12 @@ use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::sync::Arc;
 
+use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::dimension::Dimension;
 use crate::definition::expandable::Expandable;
 use crate::definition::{Definition, Reversion};
 use crate::document::Document;
@@ -46,17 +46,17 @@ impl Default for Whatsit {
 impl PartialEq for Whatsit {
   fn eq(&self, other: &Whatsit) -> bool {
     // identical definition, argument list and body
-    *self.definition == *other.definition &&
-    self.args == other.args &&
-    if let Some(Stored::Digested(body1)) = self.properties.get("body") {
-      if let Some(Stored::Digested(body2)) = other.properties.get("body") {
-        *body1 == *body2
+    *self.definition == *other.definition
+      && self.args == other.args
+      && if let Some(Stored::Digested(body1)) = self.properties.get("body") {
+        if let Some(Stored::Digested(body2)) = other.properties.get("body") {
+          *body1 == *body2
+        } else {
+          false
+        }
       } else {
-        false
+        other.properties.get("body").is_none()
       }
-    } else {
-      other.properties.get("body").is_none()
-    }
   }
 }
 
@@ -281,9 +281,7 @@ impl BoxOps for Whatsit {
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
 
-  fn get_property_bool(&self, key: &str) -> bool {
-    matches!(self.properties.get(key), Some(Stored::Bool(true)))
-  }
+  fn get_property_bool(&self, key: &str) -> bool { matches!(self.properties.get(key), Some(Stored::Bool(true))) }
   fn get_body(&self) -> Option<Digested> {
     match self.properties.get("body") {
       Some(Stored::Digested(body)) => Some(*body.clone()),
@@ -313,7 +311,8 @@ impl BoxOps for Whatsit {
           boxes.push((**body).clone());
         }
       }
-      if boxes.is_empty() {// no body
+      if boxes.is_empty() {
+        // no body
         for arg in self.args.iter().flatten() {
           boxes.extend(arg.unlist().into_iter());
         }

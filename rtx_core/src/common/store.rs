@@ -175,7 +175,6 @@ impl fmt::Display for Stored {
 /// if it is safe to carelessly lock the RwLock guards of the suspect fields with interior mutability
 /// Worse: some conditions depend on the Stateful meaning of Token's,
 ///        so the perfect equality check would need State as an argument :(
-///
 impl PartialEq for Stored {
   fn eq(&self, other: &Stored) -> bool {
     use crate::Stored::*;
@@ -394,8 +393,7 @@ impl PartialEq for Stored {
       },
       VecDequeStored(ref v) => {
         if let VecDequeStored(v2) = other {
-          v.len() == v2.len() &&
-          v.iter().zip(v2.iter()).all(|(item1,item2)| item1 == item2)
+          v.len() == v2.len() && v.iter().zip(v2.iter()).all(|(item1, item2)| item1 == item2)
         } else {
           false
         }
@@ -409,11 +407,10 @@ impl PartialEq for Stored {
       },
       HashStored(ref hs) => {
         if let HashStored(hs2) = other {
-          hs.len() == hs2.len() &&
-          hs.iter().all(|(key, value)| if let Some(item2) = hs2.get(key) {
-            value == item2
-          } else { false }
-        )
+          hs.len() == hs2.len()
+            && hs
+              .iter()
+              .all(|(key, value)| if let Some(item2) = hs2.get(key) { value == item2 } else { false })
         } else {
           false
         }

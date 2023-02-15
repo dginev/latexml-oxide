@@ -64,12 +64,7 @@ impl DigestionAPI for Core {
     let stomach_trick = Arc::clone(&self.stomach);
     let mut stomach = stomach_trick.write().unwrap();
     for preload in preloads {
-      input_definitions(
-        &preload,
-        InputDefinitionOptions::default(),
-        &mut stomach,
-        state
-      )?;
+      input_definitions(&preload, InputDefinitionOptions::default(), &mut stomach, state)?;
     }
     state.assign_value("InitialPreloads", false, Some(Scope::Global));
     Ok(())
@@ -349,7 +344,8 @@ impl DigestionAPI for Core {
       self.load_postamble(postamble);
     }
 
-    { // Make sure the stomach trick is used very *tightly*, always with a surrounding scope.
+    {
+      // Make sure the stomach trick is used very *tightly*, always with a surrounding scope.
       let stomach_trick = Arc::clone(&self.stomach);
       let mut stomach = stomach_trick.write().unwrap();
       input_content(&request, InputOptions::default(), &mut stomach, self.get_state_mut())?;

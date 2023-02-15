@@ -28,7 +28,7 @@ use rtx_core::tbox::Tbox;
 use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::whatsit::Whatsit;
-use rtx_core::{Digested,BoxOps};
+use rtx_core::{BoxOps, Digested};
 
 // Constants for the API functions stay here as well
 
@@ -123,10 +123,10 @@ impl IntoOption<Option<SizingClosure>> for &str {
       let arg = stripped.parse::<usize>().unwrap_or(1);
       Some(Arc::new(move |w, state| match w.get_arg(arg) {
         Some(arg) => arg.compute_size(HashMap::new(), state),
-        None => Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+        None => Ok((Dimension::default(), Dimension::default(), Dimension::default())),
       }))
     } else if self.is_empty() || self == "0" {
-      Some(Arc::new(|_, _| Ok((Dimension::default(),Dimension::default(),Dimension::default()) )))
+      Some(Arc::new(|_, _| Ok((Dimension::default(), Dimension::default(), Dimension::default()))))
     } else {
       // literal string, get its size with the current font?
       let sized_data = String::from(self);
@@ -137,7 +137,13 @@ impl IntoOption<Option<SizingClosure>> for &str {
           state.lookup_font().unwrap()
         };
         font.compute_boxes_size(
-          &[Digested::from(Tbox{text: sized_data.clone(), ..Tbox::default()})], HashMap::new(), state)
+          &[Digested::from(Tbox {
+            text: sized_data.clone(),
+            ..Tbox::default()
+          })],
+          HashMap::new(),
+          state,
+        )
       }))
     }
   }

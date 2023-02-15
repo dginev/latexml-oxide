@@ -25,9 +25,7 @@ pub struct Locator {
 
 // elide Locator debugging until we get to implementing them faithfully
 impl fmt::Debug for Locator {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "[...]")
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "[...]") }
 }
 
 impl fmt::Display for Locator {

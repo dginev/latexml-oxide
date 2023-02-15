@@ -2,8 +2,8 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::{HashSet, VecDeque};
-use std::sync::Arc;
 use std::mem;
+use std::sync::Arc;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -28,8 +28,7 @@ lazy_static! {
   static ref DIGIT_RE: Regex = Regex::new(r"[0-9]").unwrap();
   static ref OCT_RE: Regex = Regex::new(r"[0-7]").unwrap();
   static ref HEX_RE: Regex = Regex::new(r"[0-9A-F]").unwrap();
-  static ref SMUGGLE_THE_COMMANDS : HashSet<&'static str> =
-    set!("\\the","\\showthe", "\\unexpanded", "\\detokenize");
+  static ref SMUGGLE_THE_COMMANDS: HashSet<&'static str> = set!("\\the", "\\showthe", "\\unexpanded", "\\detokenize");
 }
 
 #[derive(PartialEq, Debug)]
@@ -321,7 +320,8 @@ impl Gullet {
               } else {
                 return Ok(Some(token));
               }
-            } else { }
+            } else {
+            }
           }
         },
       }
@@ -332,7 +332,13 @@ impl Gullet {
   // TODO: linearizing in a single loop{}, as in perl, may be faster
   //       but it is hard to convince the borrow checker that we can safely
   //       reborrow gullet mutably.
-  fn invoke_and_read_x_token(&mut self, defn: Arc<dyn Definition>, toplevel: Option<bool>, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
+  fn invoke_and_read_x_token(
+    &mut self,
+    defn: Arc<dyn Definition>,
+    toplevel: Option<bool>,
+    commentsok: bool,
+    state: &mut State,
+  ) -> Result<Option<Token>> {
     let mut expansion = defn.invoke(self, false, state)?;
     if SMUGGLE_THE_COMMANDS.contains(defn.get_cs().get_string()) {
       // magic THE_TOKS handling, add to pushback with a single-use noexpand flag only valid
@@ -340,8 +346,8 @@ impl Gullet {
       // This is *required to be different* from the noexpand flag, as per the B Book
       for item in expansion.unlist_mut() {
         if item.get_catcode().can_smuggle_the() {
-            let taken = mem::replace(item, MOCK_TOKEN);
-            *item = T_SMUGGLE_THE!(taken);
+          let taken = mem::replace(item, MOCK_TOKEN);
+          *item = T_SMUGGLE_THE!(taken);
         }
       }
       // PERFORMANCE:
@@ -434,10 +440,10 @@ impl Gullet {
     let mut level = 1;
     // my $startloc = ($$self{verbosity} > 0) && $self->getLocator;
     while let Some(t) = if expanded {
-        self.read_x_token(Some(false), true, state)?
-      } else {
-        self.read_token(state)
-      } {
+      self.read_x_token(Some(false), true, state)?
+    } else {
+      self.read_token(state)
+    } {
       match t.get_catcode() {
         Catcode::BEGIN => {
           level += 1;
@@ -453,7 +459,7 @@ impl Gullet {
         },
         // TODO: Marker case
         Catcode::MARKER => {},
-        _ => tokens.push(t)
+        _ => tokens.push(t),
       };
     }
     if level > 0 {

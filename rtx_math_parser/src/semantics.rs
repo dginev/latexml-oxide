@@ -213,7 +213,12 @@ pub fn faux_wrap(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPrag
   Ok(content)
 }
 
-pub fn standalone_script(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], nodes: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
+pub fn standalone_script(
+  _rule_id: i32,
+  mut args: Vec<Option<Tree>>,
+  _: &[ValidationPragmatics],
+  nodes: &[XMLNode],
+) -> Result<Option<Tree>, Box<dyn Error>> {
   unp!(args => start_script, _base, _end_script);
   // TODO: it looks like we need properties on each Tree::Apply,
   // and porting NewScript is a head-scratcher.
@@ -257,11 +262,18 @@ pub fn new_script(script: Tree, base: Option<Tree>, nodes: &[XMLNode]) -> Result
       Ok(Some(Tree::Apply(op.into(), Args(vec![base, script_arg]), Meta::default())))
     } else {
       // DG: This is completely wrong, and just temporarily passes one test. Scripts need to be fleshed out with generality. (TODO)
-      node.get_parent().unwrap().set_attribute("scriptpos", "1").expect("XML attributes should set without issue.");
+      node
+        .get_parent()
+        .unwrap()
+        .set_attribute("scriptpos", "1")
+        .expect("XML attributes should set without issue.");
       Ok(Some(script))
     }
   } else {
-    panic!("new_script is meant to be called on script terminals (e.g. POSTSUBSCRIPT/POSTSUPERSCRIPT), got {:?}", script);
+    panic!(
+      "new_script is meant to be called on script terminals (e.g. POSTSUBSCRIPT/POSTSUPERSCRIPT), got {:?}",
+      script
+    );
   }
 }
 

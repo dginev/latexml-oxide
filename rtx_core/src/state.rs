@@ -820,13 +820,15 @@ impl State {
       let lookupname = &token.text;
       if !lookupname.is_empty() {
         match self.meaning.get(&**lookupname) {
-          Some(entry) => if let Some(def) = entry.front() {
-            // the expandable variants are allowed
-            matches!(def, Stored::Expandable(_) | Stored::Conditional(_))
-          } else {
-            false
+          Some(entry) => {
+            if let Some(def) = entry.front() {
+              // the expandable variants are allowed
+              matches!(def, Stored::Expandable(_) | Stored::Conditional(_))
+            } else {
+              false
+            }
           },
-          None => true
+          None => true,
         }
       } else {
         true
@@ -1045,9 +1047,7 @@ impl State {
   /// this may give the definition object (if defined) or another token (if \let) or undef
   /// Any other token is returned as is.
   pub fn lookup_meaning(&self, token: &Token) -> Option<Stored> {
-    if token.get_catcode().is_active_or_cs() &&
-       !token.has_smuggled() &&
-       !token.get_string().is_empty() {
+    if token.get_catcode().is_active_or_cs() && !token.has_smuggled() && !token.get_string().is_empty() {
       match self.meaning.get(&token.get_cs_name().to_owned()) {
         Some(entry) => match entry.front() {
           None | Some(Stored::None) => None,
@@ -1454,7 +1454,9 @@ impl State {
         } else {
           false
         }
-      } else { false };
+      } else {
+        false
+      };
       let table_entry = self.table_mut(table_name).entry(key.clone()).or_default();
       if front_is_value {
         // Here we're popping off the values pushed by activateScope

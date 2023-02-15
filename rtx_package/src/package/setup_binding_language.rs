@@ -1787,7 +1787,7 @@ macro_rules! GetKeyVal {
         DigestedData::KeyVals(keyval) => keyval.get_value($key),
         _ => None,
       },
-      _ => None
+      _ => None,
     }
   };
 }
