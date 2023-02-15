@@ -395,7 +395,8 @@ impl Tree {
   pub fn to_xmath(&self, nodes: &mut [Node], document: &mut Document) -> Result<Node, Box<dyn Error + Send + Sync>> {
     match self {
       Tree::Lexeme(content, _meta) => {
-        let atom_node = &mut nodes[content.split(':').last().unwrap().parse::<usize>().unwrap() - 1];
+        let id = content.split(':').last().unwrap().parse::<usize>().unwrap() - 1;
+        let atom_node = &mut nodes[id];
         atom_node.unbind();
         Ok(atom_node.clone())
       },

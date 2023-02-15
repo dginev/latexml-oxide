@@ -41,15 +41,7 @@ impl PartialEq for Tbox {
   // Should this compare fonts too?
   fn eq(&self, other: &Self) -> bool {
     self.text == other.text &&
-    if let Some(Stored::Font(font1)) = self.properties.get("font") {
-      if let Some(Stored::Font(font2)) = other.properties.get("font") {
-        **font1 == **font2
-      } else {
-        false
-      }
-    } else {
-      other.properties.get("font").is_none()
-    }
+    *self.font == *other.font
   }
 }
 
@@ -148,7 +140,7 @@ impl BoxOps for Tbox {
 
     if !text.is_empty() {
       if mode == "math" {
-        document.insert_math_token(text, Stored::cast_to_string_hash(&self.properties), Some(&self.font), state)?;
+        document.insert_math_token(text, Stored::cast_to_string_hash(&self.properties), Some(font), state)?;
       } else {
         document.open_text(text, font, state)?;
       }
@@ -166,12 +158,7 @@ impl BoxOps for Tbox {
         panic!("the stored 'body' property should always be a Stored::Digested enum case.");
       }
     } else {
-      let font = match self.get_property("font") {
-        Some(Cow::Owned(Stored::Font(f))) => f,
-        Some(Cow::Borrowed(Stored::Font(f))) => f.clone(),
-        _ => Arc::new(Font::text_default()),
-      };
-      Ok(font.compute_string_size(&self.get_string(state)?, options, state))
+      Ok(self.font.compute_string_size(&self.get_string(state)?, options, state))
     }
   }
 }

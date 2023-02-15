@@ -323,7 +323,7 @@ impl Rewrite {
           // the font of the matched node
           for ins in inserted.iter() {
             // Copy the non-semantic parts of font to the replacement
-            document.merge_node_font_rec(ins, &font);
+            document.merge_node_font_rec(ins, &font)?;
           }
           // Now, replace the following nodes.
           for mut follow_node in following {

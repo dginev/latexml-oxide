@@ -337,13 +337,10 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
         // TODO: Improve font precision here, the defaults may not belong in this lookup
-        let font = Arc::new(state.lookup_font().unwrap().merge(reqfont.clone()).specialize(&presentation));
+        let font = Arc::new(state.lookup_font().unwrap()
+          .merge(reqfont.clone())
+          .specialize(&presentation));
 
-        // foreach my $key (keys %properties) {
-        //   my $value = $properties{$key};
-        //   if (ref $value eq 'CODE') {
-        //     $properties{$key} = &$value(); } }
-        // info!("defmath_prim: {}, tokens: {:?}", &$presentation, $cs);
         Ok(vec![Digested::from(Tbox {
           text: presentation.clone(),
           tokens: Tokens!(cs.clone()),
@@ -635,4 +632,71 @@ pub fn def_environment(
     state.assign_value(&s!("\\{}:locked", &name), true, None);
     state.assign_value(&s!("\\end{}:locked", &name), true, None);
   }
+}
+
+
+pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation:String, mut options:MathPrimitiveOptions, state: &mut State) {
+    // Can't defer parsing parameters since we need to know number of args!
+    // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
+
+    let nargs = match paramlist {
+      Some(ref plist) => plist.get_num_args(),
+      None => 0,
+    };
+    let csname = cs.get_string().to_string();
+    let mut name = options.alias.clone().unwrap_or_else(|| csname.clone());
+    if name.starts_with('\\') {
+      name = name.replacen('\\', "", 1)
+    }
+    if let Some(options_name) = options.name {
+      name = options_name;
+    }
+    let name_opt = if (name == presentation) || (name.is_empty()) || (options.meaning == Some(name.clone())) {
+      None
+    } else {
+      Some(name)
+    };
+    options.name = name_opt;
+    if nargs == 0 && options.role.is_none() {
+      options.role = Some(s!("UNKNOWN"))
+    }
+    if nargs > 0 && options.operator_role.is_none() {
+      options.operator_role = Some(s!("UNKNOWN"))
+    }
+
+    // Store some data for introspection
+    // defmath_introspective(cs, $paramlist, presentation, %options);
+
+    // If single character, handle with a rewrite rule
+    if csname.len() == 1 {
+      let mut math_attr_hash: HashMap<String, String> = HashMap::new();
+      transfer_opt_default!(name, options, math_attr_hash);
+      transfer_opt_default!(meaning, options, math_attr_hash);
+      transfer_opt_default!(omcd, options, math_attr_hash);
+      transfer_opt_default!(decl_id, options, math_attr_hash);
+      transfer_opt_default!(role, options, math_attr_hash);
+      transfer_opt_default!(replace, options, math_attr_hash);
+      transfer_opt_default!(mathstyle, options, math_attr_hash);
+      transfer_default!(stretchy, options, math_attr_hash);
+      state.assign_value(&s!("math_token_attributes_{}", csname), math_attr_hash, Some(Scope::Global));
+    }
+    // TODO:
+    // // If the presentation is complex, and involves arguments,
+    // // we will create an XMDual to separate content & presentation.
+    // elsif ((ref presentation eq "CODE")
+    //   || ((ref presentation) && grep { $_->equals(T_PARAM) } presentation->unlist)
+    //   || (!(ref presentation) && (presentation =~ /\//\d|\\./))
+    //   || ((ref presentation) && (grep { $_->isExecutable } presentation->unlist))) {
+    //   defmath_dual($cs, $paramlist, presentation, %options); }
+
+    // EXPERIMENT: Introduce an intermediate case for simple symbols
+    // Define a primitive that will create a Box with the appropriate set of XMTok attributes.
+    if nargs == 0 {
+      // && !grep { !$$simpletoken_options{$_} } keys %options) {
+      def_math_primitive(cs, paramlist, presentation, options, state);
+    }
+
+    // else {
+    //   defmath_cons($cs, $paramlist, $presentation, %options); }
+    // AssignValue($csname . ":locked" => 1) if $options{locked};
 }

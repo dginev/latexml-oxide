@@ -12,6 +12,8 @@ use lazy_static::lazy_static;
 /// NOTE: This is now in Common that it may evolve to be useful in Post processing...
 use regex::Regex;
 use std::borrow::Cow;
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::fmt;
 use std::cmp::max;
@@ -219,6 +221,32 @@ pub struct Font {
   pub forceshape: Option<bool>,
   pub scale: Option<f32>,
 }
+
+impl Hash for Font {
+  // We need to implement hash since we have to tell Rust how to hash `f32` values
+  // for now I have decided to go for a precision of 4 digits after the decimal point,
+  // so multiplying by 1000
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.family.hash(state);
+    self.series.hash(state);
+    self.shape.hash(state);
+    self.size.map(|size| (size * 1000.0) as i32).hash(state);
+    self.color.hash(state);
+    self.bg.hash(state);
+    self.opacity.hash(state);
+    self.encoding.hash(state);
+    self.language.hash(state);
+    self.mathstyle.hash(state);
+    self.mathstylestep.hash(state);
+    self.name.hash(state);
+    self.emph.hash(state);
+    self.scripted.hash(state);
+    self.forceseries.hash(state);
+    self.forcefamily.hash(state);
+    self.forceshape.hash(state);
+    self.scale.map(|scale| (scale * 1000.0) as i32).hash(state);
+  }
+}
 impl Eq for Font {}
 // display is used often for attributes in binding replacements,
 // as in font="#font"
@@ -330,6 +358,12 @@ impl Font {
       forceshape: None,
       scale: None,
     }
+  }
+
+  pub fn to_hashable(&self) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    Hash::hash(self, &mut hasher);
+    hasher.finish()
   }
 
   pub fn math_bearing(&self, thisbox: &Digested, prevbox: &Digested) -> f32 {
