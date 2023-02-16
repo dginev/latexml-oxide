@@ -32,4 +32,20 @@ LoadDefinitions!(state, {
   DefRegister!("\\columnwidth"     => Dimension!("6in"));
   DefRegister!("\\linewidth"       => Dimension!("6in"));
   DefRegister!("\\baselinestretch" => Dimension::new(0));
+
+  RawTeX!(r###"\def\@ifl@t@r#1#2{%
+  \ifnum\expandafter\@parse@version@#1//00\@nil<%
+        \expandafter\@parse@version@#2//00\@nil
+    \expandafter\@secondoftwo
+  \else
+    \expandafter\@firstoftwo
+  \fi}
+\def\@parse@version@#1{\@parse@version0#1}
+\def\@parse@version#1/#2/#3#4#5\@nil{%
+\@parse@version@dash#1-#2-#3#4\@nil
+}
+\def\@parse@version@dash#1-#2-#3#4#5\@nil{%
+  \if\relax#2\relax\else#1\fi#2#3#4 }
+"###);
+
 });
