@@ -2,6 +2,7 @@ use crate::package::*;
 use libxml::tree::{Node, NodeType};
 use rtx_core::keyvals::KeyValsOptions;
 use std::collections::VecDeque;
+use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
 
 pub fn reenter_text_mode(vertical_mode: bool, gullet: &mut Gullet, state: &mut State) {
   let bindings_val = if vertical_mode {
@@ -747,4 +748,31 @@ pub fn keyvals_aux(gullet: &mut Gullet, until: Option<Token>, mut spec: KVSpec, 
   }
   // we still want to make use of the hash
   Ok(keyvals)
+}
+
+pub fn lowercase_token(token: Token, state: &State) -> Token {
+  let initial_string = token.get_string();
+  let mut result = String::new();
+  for thischar in initial_string.chars() {
+    if let Some(code) = state.lookup_lccode(thischar) {
+      if code != 0 {
+        result.push_str( & decode_utf16([code])
+            .map(|r| r.unwrap_or(REPLACEMENT_CHARACTER))
+            .collect::<String>())
+      } else {
+        result.push(thischar);
+      }
+    } else {
+      result.push(thischar);
+    }
+  }
+  if result != initial_string {
+    Token {
+      text: Cow::Owned(result),
+      code: token.get_catcode(),
+      smuggled: None
+    }
+  } else {
+    token
+  }
 }

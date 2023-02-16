@@ -3,7 +3,7 @@ use crate::package::*;
 // Semi-Undocumented stuff
 //**********************************************************************
 
-LoadDefinitions!(state, {
+LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\@ifnextchar DefToken {}{}", sub[gullet, (token, t_if, t_else), state] {
     let next = gullet.read_non_space(state);
     // NOTE: Not actually substituting, but collapsing ## pairs!!!!
@@ -91,6 +91,31 @@ LoadDefinitions!(state, {
   \newif\ifin@
   "###
   );
+
+  DefMacro!("\\@ifdefinable DefToken {}", sub[gullet, (token, iftoken), state] {
+    if is_definable(&token, state) {
+      iftoken.unlist()
+    } else {
+      let mut s = ExplodeText!(token.to_string());
+      let slash = s.remove(0);
+      DefMacro!(T_CS!("\\reserved@a"), None, Tokens::new(s), state);
+      vec![T_CS!("\\@notdefinable")]
+    }
+  });
+
+  Let!("\\@@ifdefinable", "\\@ifdefinable");
+
+  DefMacro!("\\@rc@ifdefinable DefToken {}", sub[gullet, (token, iftoken), state] {
+    state.let_i(&T_CS!("\\@ifdefinable"), T_CS!("\\@@ifdefinable"), None, gullet);
+    iftoken.unlist()
+  });
+
+  DefMacro!("\\@notdefinable", None, r###"\@latex@error{%
+    Command \@backslashchar\reserved@a\space
+    already defined.
+    Or name \@backslashchar\@qend... illegal,
+    see p.192 of the manual}
+  "###);
 
   //======================================================================
   // Hair

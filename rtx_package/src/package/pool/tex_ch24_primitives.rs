@@ -132,18 +132,15 @@ LoadDefinitions!(state, {
   //   my $code = $STATE->lookupUCcode($token->getString);
   //   return ((defined $code) && ($code != 0) ? Token(chr($code), $token->getCatcode) : $token); }
 
-  // sub lcToken {
-  //   my ($token) = @_;
-  //   my $code = $STATE->lookupLCcode($token->getString);
-  //   return ((defined $code) && ($code != 0) ? Token(chr($code), $token->getCatcode) : $token); }
-
   // DefMacro('\uppercase GeneralText', sub {
   //     my ($gullet, $tokens) = @_;
   //     return map { ucToken($_) } $tokens->unlist; });
 
-  // DefMacro('\lowercase GeneralText', sub {
-  //     my ($gullet, $tokens) = @_;
-  //     return map { lcToken($_) } $tokens->unlist; });
+  DefMacro!("\\lowercase GeneralText", sub[gullet,(tokens), state] {
+    tokens.unlist().into_iter()
+    .map(|t| lowercase_token(t, state))
+    .collect::<Vec<Token>>()
+  });
 
   DefPrimitive!("\\message{}", sub [stomach, (message), state] {
     if state.lookup_int("VERBOSITY") > -1 {
