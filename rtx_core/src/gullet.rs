@@ -622,9 +622,14 @@ impl Gullet {
   }
 
   pub fn read_next_conditional(&mut self, state: &mut State) -> Option<(Token, ConditionalType)> {
-    while let Some(token) = self.read_token(state) {
-      if let Some(cond_type) = state.lookup_conditional(&token) {
-        return Some((token, cond_type));
+    while let Some(mut token) = self.read_token(state) {
+      if token.get_catcode() == Catcode::SmuggleTHE {
+        token = token.without_dont_expand();
+      }
+      if token.get_catcode().is_active_or_cs() {
+        if let Some(cond_type) = state.lookup_conditional(&token) {
+          return Some((token, cond_type));
+        }
       }
     }
     None

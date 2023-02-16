@@ -245,7 +245,7 @@ pub struct State {
   pub status_code: usize,
   pub unlocked: bool,
   pub current_token: Option<Arc<Token>>,
-  pub if_frame: Option<Arc<RwLock<IfFrame>>>,
+  pub if_frames: Vec<Option<Arc<RwLock<IfFrame>>>>,
   pub noexpand_the: bool,
   pub input_encoding: Option<String>,
   pub strict: bool,
@@ -305,7 +305,7 @@ impl Default for State {
       align_group_count: 0,
       unlocked: true,
       current_token: None,
-      if_frame: None,
+      if_frames: Vec::new(),
       noexpand_the: false,
       input_encoding: None,
       strict: false,
@@ -1810,4 +1810,19 @@ impl State {
       Some(other) => panic!("unexpected in after_assignment: {other:?}"),
     }
   }
+
+  // Ported from Perl's "local" declarations
+
+  /// sets a (originally Perl-local) `IfFrame` that needs to be manually expired.
+  pub fn set_ifframe(&mut self, if_frame: Option<Arc<RwLock<IfFrame>>>) { self.if_frames.push(if_frame); }
+
+  /// retrieves the most recent (originally Perl-local) `IfFrame`
+  pub fn get_ifframe(&self) -> Option<Arc<RwLock<IfFrame>>> {
+    match self.if_frames.last() {
+      Some(Some(frame)) => Some(Arc::clone(frame)),
+      _ => None,
+    }
+  }
+  /// expires the most recent (originally Perl-local) `IfFrame`
+  pub fn expire_ifframe(&mut self) { self.if_frames.pop(); }
 }

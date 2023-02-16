@@ -155,7 +155,7 @@ impl Conditional {
       elses: false,
       ifid,
     }));
-    state.if_frame = Some(Arc::clone(&if_frame));
+    state.set_ifframe(Some(Arc::clone(&if_frame)));
     state.unshift_value("if_stack", vec![Arc::clone(&if_frame)]);
 
     let args = self.read_arguments(gullet, state)?;
@@ -183,6 +183,7 @@ impl Conditional {
         //       print STDERR "{$num} [skipped to " . ToString($to) . "]\n" if $tracing;
       }
     }
+    state.expire_ifframe();
     Ok(Tokens!())
   }
 
@@ -217,13 +218,12 @@ impl Conditional {
     // NOTE: Open-coded manipulation of if_stack!
     // [we're only reading tokens & looking up, so State shouldn't change behind our backs]
 
-    let local_frame = state.if_frame.clone();
+    let local_frame = state.get_ifframe();
     loop {
       let (t, cond_type) = match gullet.read_next_conditional(state) {
         Some((tok, typ)) => (Tokens!(tok), Some(typ)),
         None => (Tokens!(), None),
       };
-
       match cond_type {
         None => break,
         Some(ConditionalType::If) => level += 1, //  Found a \ifxx of some sort
@@ -247,27 +247,23 @@ impl Conditional {
             }
           }
         },
-        _ => {
-          if level <= 1 {
-            // Ignore \else,\or nested in the body.
-            if cond_type == Some(ConditionalType::Or) {
-              n_ors += 1;
-              if n_ors == nskips {
-                return t;
-              }
-            } else if cond_type == Some(ConditionalType::Else) && nskips != 0 {
-              // Found \else and we're looking for one?
-              // Make sure this \else is NOT for a nested \if that is part of the test clause!
-              if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
-                if let Some(Stored::IfFrame(mut stack_frame)) = stack.pop_front() {
-                  if *stack_frame.read().unwrap() == *local_frame.as_ref().unwrap().read().unwrap() {
-                    // No need to actually call elseHandler, but note that we've seen an \else!
-                    stack_frame.write().unwrap().elses = true;
-                    stack.push_front(stack_frame.into());
-                    return t;
-                  } else {
-                    stack.push_front(stack_frame.into());
-                  }
+        Some(other_type) => {
+          if level > 1 {
+            // Ignore: \else,\or nested in the body.
+          } else if other_type == ConditionalType::Or {
+            n_ors += 1;
+            if n_ors == nskips {
+              return t;
+            }
+          } else if other_type == ConditionalType::Else && nskips != 0 {
+            // Found \else and we're looking for one?
+            // Make sure this \else is NOT for a nested \if that is part of the test clause!
+            if let Some(Stored::VecDequeStored(stack)) = state.lookup_value("if_stack") {
+              if let Some(Stored::IfFrame(ref stack_frame)) = stack.front() {
+                if *stack_frame.read().unwrap() == *local_frame.as_ref().unwrap().read().unwrap() {
+                  // No need to actually call elseHandler, but note that we've seen an \else!
+                  stack_frame.write().unwrap().elses = true;
+                  return t;
                 }
               }
             }
@@ -307,12 +303,13 @@ impl Conditional {
         Error!("unexpected", local_token_str, gullet, state, message);
         Ok(Tokens!())
       } else {
-        state.if_frame = Some(Arc::clone(&stack_frame));
+        state.set_ifframe(Some(Arc::clone(&stack_frame)));
         let t = self.skip_conditional_body(0, gullet, state);
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         //       . " [for " . ToString($$LaTeXML::IFFRAME{token}) . " #" .
         // $$LaTeXML::IFFRAME{ifid}       . " skipping to " . ToString($t) . "]\n"
         //       if $STATE->lookupValue('TRACINGCOMMANDS');
+        state.expire_ifframe();
         Ok(Tokens!())
       }
     } else {
@@ -341,12 +338,13 @@ impl Conditional {
         Ok(Tokens!(T_RELAX, (**local_token).clone()))
       } else {
         // "expand" by removing the stack entry for this level
-        state.if_frame = Some(stack_frame);
+        state.set_ifframe(Some(stack_frame));
         state.shift_value("if_stack"); // Done with this frame
 
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         // . " [for " . Stringify($$LaTeXML::IFFRAME{token}) . " #" . $$LaTeXML::IFFRAME{ifid} .
         // "]\n"       if $STATE->lookupValue('TRACINGCOMMANDS');
+        state.expire_ifframe();
         Ok(Tokens!())
       }
     } else {
