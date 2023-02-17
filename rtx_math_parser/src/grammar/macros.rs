@@ -82,7 +82,7 @@ macro_rules! register {
     #[allow(unused_variables)]
     actions!().register(
         $rule.rule(),
-        ::std::sync::Arc::new(|rule_id: i32, mut args: Vec<Option<Tree>>| {
+        ::std::sync::Arc::new(|rule_id: i32, mut args: Vec<Option<XM>>| {
           #[allow(unused_variables)]
           unpack!(args => $($arg),+);
           Some($body)
