@@ -674,7 +674,7 @@ pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, 
     transfer_opt_default!(role, options, math_attr_hash);
     transfer_opt_default!(replace, options, math_attr_hash);
     transfer_opt_default!(mathstyle, options, math_attr_hash);
-    transfer_default!(stretchy, options, math_attr_hash);
+    transfer_opt_default!(stretchy, options, math_attr_hash);
     state.assign_value(&s!("math_token_attributes_{}", csname), math_attr_hash, Some(Scope::Global));
   }
   // TODO:

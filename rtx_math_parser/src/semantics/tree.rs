@@ -19,38 +19,79 @@ pub struct Operator(pub Box<Tree>);
 pub struct Args(pub Vec<Option<Tree>>);
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct XMTok {
-  pub role: Option<Cow<'static, str>>,
-  pub meaning: Option<Cow<'static, str>>,
+/// The allowed properties on any newly created XMath nodes
+/// during grammatical processing
+pub struct XProps {
+  /// text content of the node
   pub content: Option<Cow<'static, str>>,
+  /// grammatical role used during math parsing
+  pub role: Option<Cow<'static, str>>,
+  /// conceptual meaning of a construct, used in disambiguation and Content output
+  pub meaning: Option<Cow<'static, str>>,
+  /// similar to `meaning`, but more fixed, usually associated with constants
   pub name: Option<Cow<'static, str>>,
+  /// script position w.r.t to baseline
   pub scriptpos: Option<Cow<'static, str>>,
+  /// an optional subtree-specific Font
   pub font: Option<Font>,
 }
-impl Display for XMTok {
+impl Display for XProps {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     // stub with Debug for now
     writeln!(f, "{self:?}")
   }
 }
 
+impl XProps {
+  pub fn to_xmath(&self, node: &mut Node) ->  Result<(), Box<dyn Error + Send + Sync>> {
+    if let Some(ref content) = self.content {
+      node.set_content(content)?;
+    }
+    if let Some(ref role) = self.role {
+      node.set_attribute("role", role)?;
+    }
+    if let Some(ref meaning) = self.meaning {
+      node.set_attribute("meaning", meaning)?;
+    }
+    if let Some(ref name) = self.name {
+      node.set_attribute("name", name)?;
+    }
+    if let Some(ref scriptpos) = self.scriptpos {
+      node.set_attribute("scriptpos", scriptpos)?;
+    }
+    if let Some(ref font) = self.font {
+      // TODO: how do we absorb the font attributes here? relative to current?
+      if let Some(size) = font.size {
+        node.set_attribute("fontsize", &size.to_string())?;
+      }
+    }
+    Ok(())
+  }
+}
+
+/// The math parsing process can manipulate a variety of trees,
+/// finally serialized via the XMath schema of LaTeXML.
+///
+/// The main structural variants are associated with
+/// a "parsing state", via an attached `Meta` object.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Tree {
   Lexeme(String, Meta),
-  Token(Box<XMTok>, Meta), // does this need Meta?
-  Apply(Operator, Args, Meta),
-  // Dual(Tree, Tree, Meta), // TODO
+  Token(XProps, Meta), // does this need Meta?
+  Apply(Operator, Args, XProps, Meta),
+  Dual(Box<Tree>, Box<Tree>, XProps, Meta),
+  Wrap(Vec<Tree>, XProps, Meta),
   Choices(Vec<Tree>),
 }
-impl From<XMTok> for Tree {
-  fn from(t: XMTok) -> Self { Tree::Token(Box::new(t), Meta::default()) }
+impl From<XProps> for Tree {
+  fn from(t: XProps) -> Self { Tree::Token(t, Meta::default()) }
 }
 
 impl Display for Operator {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { self.fmt_indented(&Vec::new(), f) }
 }
-impl From<XMTok> for Operator {
-  fn from(t: XMTok) -> Self { Operator(Box::new(Tree::Token(Box::new(t), Meta::default()))) }
+impl From<XProps> for Operator {
+  fn from(t: XProps) -> Self { Operator(Box::new(Tree::Token(t, Meta::default()))) }
 }
 impl Operator {
   /// obtain a reference to this operator's metadata
@@ -142,12 +183,20 @@ impl Args {
   }
 }
 
+impl From<Vec<Tree>> for Args {
+  fn from(items: Vec<Tree>) -> Args {
+    Args(items.into_iter().map(Some).collect())
+  }
+}
+
 impl Tree {
   pub fn get_meta(&self) -> &Meta {
     match self {
       Tree::Lexeme(_, ref meta) => meta,
       Tree::Token(_, ref meta) => meta,
-      Tree::Apply(_, _, ref meta) => meta,
+      Tree::Apply(_, _, _, ref meta) => meta,
+      Tree::Dual(_, _, _, ref meta) => meta,
+      Tree::Wrap(_, _, ref meta) => meta,
       Tree::Choices(cs) => cs[0].get_meta(), // Should we return a none type instead?
     }
   }
@@ -155,17 +204,20 @@ impl Tree {
     match self {
       Tree::Lexeme(_, ref mut meta) => meta,
       Tree::Token(_, ref mut meta) => meta,
-      Tree::Apply(_, _, ref mut meta) => meta,
+      Tree::Apply(_, _, _, ref mut meta) => meta,
+      Tree::Dual(_, _, _, ref mut meta) => meta,
+      Tree::Wrap(_, _, ref mut meta) => meta,
       Tree::Choices(cs) => cs[0].get_meta_mut(), // Should we return a none type instead?
     }
   }
   pub fn get_inner_meta(&self) -> Vec<&Meta> {
     match self {
       Tree::Lexeme(_atom, meta) => vec![meta],
-      Tree::Apply(op, args, _) => vec![op.get_meta()]
+      Tree::Apply(op, args, _, _) => vec![op.get_meta()]
         .into_iter()
         .chain(args.0.iter().filter(|arg| arg.is_some()).map(|arg| arg.as_ref().unwrap().get_meta()))
         .collect(),
+      Tree::Dual(content, presentation, _, _) => vec![content.get_meta(), presentation.get_meta()],
       _ => Vec::new(),
     }
   }
@@ -184,7 +236,7 @@ impl Tree {
       Tree::Token(_t, _meta) => {
         unimplemented!()
       },
-      Tree::Apply(mut op, mut args, meta) => {
+      Tree::Apply(mut op, mut args, props, meta) => {
         // First, if we have a specialize directive, execute it:
         match into.specialize {
           Some(ref directive) if directive == "embellish" => {
@@ -250,7 +302,7 @@ impl Tree {
           // println!("Tree: \n{}", Tree::Apply(op.clone(), args.clone(), new_meta.clone()));
           new_meta.validate()?;
         }
-        let new_tree = Tree::Apply(op, args, new_meta);
+        let new_tree = Tree::Apply(op, args, props, new_meta);
         for pragma in pragmas {
           // expert pragmatics get to validate each new tree,
           // in order to prune wrong interpretations as early as possible
@@ -258,6 +310,8 @@ impl Tree {
         }
         Ok(new_tree)
       },
+      Tree::Dual(_,_,_,_) => unimplemented!(),
+      Tree::Wrap(_,_,_) => unimplemented!(),
       Tree::Choices(_) => Err("can not specialize choices".into()),
     }
   }
@@ -285,7 +339,7 @@ impl Tree {
   pub fn base_operator_name(&self) -> String {
     match self {
       Tree::Lexeme(ref name, _) => name.to_string(),
-      Tree::Apply(ref op, ref args, _) => {
+      Tree::Apply(ref op, ref args, _, _) => {
         match &*op.0 {
           Tree::Lexeme(ref name, _) if name == "unknown.subscript" => {
             let arg_base = args.0.first().unwrap().as_ref().unwrap().clone();
@@ -300,7 +354,7 @@ impl Tree {
             arg_base.base_operator_name()
           },
           Tree::Lexeme(other, _) => other.to_string(),
-          Tree::Apply(sub_other, _, _) => format!("reduced__{}", sub_other.0.base_operator_name()),
+          Tree::Apply(sub_other, _, _, _) => format!("reduced__{}", sub_other.0.base_operator_name()),
           _ => String::new(),
         }
       },
@@ -312,7 +366,7 @@ impl Tree {
     match self {
       Tree::Lexeme(_, _) => self,
       Tree::Token(_, _) => self,
-      Tree::Apply(ref op, ref args, _) => {
+      Tree::Apply(ref op, ref args, _, _) => {
         if let Tree::Lexeme(name, _) = &*op.0 {
           if name == "unknown.subscript" || name == "unknown.superscript" {
             args.trees().first().unwrap().get_baseline()
@@ -323,6 +377,8 @@ impl Tree {
           self
         }
       },
+      Tree::Dual(_, _, _, _) => unimplemented!(),
+      Tree::Wrap(_inner, _, _) => unimplemented!(),
       Tree::Choices(args) => args.first().unwrap().get_baseline(),
     }
   }
@@ -343,10 +399,21 @@ impl Tree {
       Tree::Token(_, meta) => {
         meta.curry_constraints.drain();
       },
-      Tree::Apply(Operator(op), args, meta) => {
+      Tree::Apply(Operator(op), args, _, meta) => {
         meta.curry_constraints.drain();
         op.unconstrain_recursive();
         args.unconstrain_recursive();
+      },
+      Tree::Dual(content, pres, _props, meta) => {
+        meta.curry_constraints.drain();
+        content.unconstrain_recursive();
+        pres.unconstrain_recursive();
+      },
+      Tree::Wrap(content, _props, meta) => {
+        meta.curry_constraints.drain();
+        for c in content.iter_mut() {
+          c.unconstrain_recursive();
+        }
       },
       Tree::Choices(args) => {
         for tree in args {
@@ -360,7 +427,9 @@ impl Tree {
   pub fn fmt_indented(&self, level: &[bool], f: &mut fmt::Formatter<'_>) -> fmt::Result {
     let indent = aux_generate_indent(level, false);
     match self {
-      Tree::Apply(op, args, meta) => {
+      Tree::Lexeme(name, meta) => writeln!(f, "{indent}{name} {meta}"),
+      Tree::Token(t, meta) => writeln!(f, "{indent}{t} {meta}"),
+      Tree::Apply(op, args, _, meta) => {
         if !meta.syntax_trace.is_empty() {
           let indent_base = aux_generate_indent(level, true);
           writeln!(f, "{indent_base}\n{indent_base}{meta}")?;
@@ -370,8 +439,38 @@ impl Tree {
         op.fmt_indented(level, f)?;
         args.fmt_indented(&arg_level, f)
       },
-      Tree::Lexeme(name, meta) => writeln!(f, "{indent}{name} {meta}"),
-      Tree::Token(t, meta) => writeln!(f, "{indent}{t} {meta}"),
+      Tree::Dual(content, pres, _, _) => {
+        writeln!(f, "\n{indent}Dual")?;
+        let mut arg_level: Vec<bool> = level.to_vec();
+        arg_level.push(true);
+        let mut peekable = vec![content, pres].into_iter().peekable();
+        while let Some(arg) = peekable.next() {
+          if peekable.peek().is_none() {
+            arg_level.pop();
+            arg_level.push(false);
+            arg.fmt_indented(&arg_level, f)?
+          } else {
+            arg.fmt_indented(&arg_level, f)?
+          }
+        }
+        writeln!(f)
+      },
+      Tree::Wrap(content, _, _) => {
+        writeln!(f, "\n{indent}Wrap")?;
+        let mut arg_level: Vec<bool> = level.to_vec();
+        arg_level.push(true);
+        let mut peekable = content.iter().peekable();
+        while let Some(arg) = peekable.next() {
+          if peekable.peek().is_none() {
+            arg_level.pop();
+            arg_level.push(false);
+            arg.fmt_indented(&arg_level, f)?
+          } else {
+            arg.fmt_indented(&arg_level, f)?
+          }
+        }
+        writeln!(f)
+      },
       Tree::Choices(args) => {
         writeln!(f, "\n{indent}Choices")?;
         let mut arg_level: Vec<bool> = level.to_vec();
@@ -400,36 +499,14 @@ impl Tree {
         atom_node.unbind();
         Ok(atom_node.clone())
       },
-      Tree::Token(xmtok, _meta) => {
-        let mut xmtok_node = Node::new("XMTok", None, document.get_document()).unwrap();
-        if let Some(ref meaning) = xmtok.meaning {
-          xmtok_node.set_attribute("meaning", meaning)?;
-        }
-        if let Some(ref name) = xmtok.name {
-          xmtok_node.set_attribute("name", name)?;
-        }
-        if let Some(ref role) = xmtok.role {
-          xmtok_node.set_attribute("role", role)?;
-        }
-        if let Some(ref scriptpos) = xmtok.scriptpos {
-          xmtok_node.set_attribute("scriptpos", scriptpos)?;
-        }
-        if let Some(ref font) = xmtok.font {
-          // TODO: how do we absorb the font attributes here? relative to current?
-          if let Some(size) = font.size {
-            xmtok_node.set_attribute("fontsize", &size.to_string())?;
-          }
-        }
-        if let Some(ref content) = xmtok.content {
-          xmtok_node.set_content(content)?;
-        }
-        Ok(xmtok_node)
+      Tree::Token(props, _meta) => {
+        let mut xmtok = Node::new("XMTok", None, document.get_document()).unwrap();
+        props.to_xmath(&mut xmtok)?;
+        Ok(xmtok)
       },
-      Tree::Apply(op, args, _meta) => {
-        // first execute all recursive calls on kids, and only *THEN*
-        // create a new apply node, as our libxml wrapper has a weird bug
-        // where two new Nodes of the same name are seen as the same.
+      Tree::Apply(op, args, props, _meta) => {
         let mut apply_node = Node::new("XMApp", None, document.get_document()).unwrap();
+        props.to_xmath(&mut apply_node)?;
         let mut op_node = op.0.to_xmath(nodes, document)?;
         self.to_xmath_add_child(&mut apply_node, &mut op_node)?;
 
@@ -439,6 +516,26 @@ impl Tree {
         }
         Ok(apply_node)
       },
+      Tree::Dual(content, pres, props, _meta) => {
+        let mut dual_node = Node::new("XMDual", None, document.get_document()).unwrap();
+        props.to_xmath(&mut dual_node)?;
+
+        let mut content_node = content.to_xmath(nodes, document)?;
+        self.to_xmath_add_child(&mut dual_node, &mut content_node)?;
+        let mut pres_node = pres.to_xmath(nodes, document)?;
+        self.to_xmath_add_child(&mut dual_node, &mut pres_node)?;
+        Ok(dual_node)
+      }
+      Tree::Wrap(content, props, _meta) => {
+        let mut wrap_node = Node::new("XMWrap", None, document.get_document()).unwrap();
+        props.to_xmath(&mut wrap_node)?;
+
+        for c in content.iter() {
+          let mut content_node = c.to_xmath(nodes, document)?;
+          self.to_xmath_add_child(&mut wrap_node, &mut content_node)?;
+        }
+        Ok(wrap_node)
+      }
       Tree::Choices(choices) => {
         Info!("to_xmath handler discarded {} parse choices.", choices.len() - 1);
         choices[0].to_xmath(nodes, document)
@@ -463,10 +560,69 @@ impl Tree {
     }
     Ok(())
   }
+
+  pub fn get_token_meaning(&self, nodes: &[Node]) -> Result<Option<Cow<str>>, Box<dyn Error>> {
+    let props = match self {
+      Tree::Token(props, _) => props,
+      Tree::Lexeme(lex, _) => {
+        return match get_token_meaning(lookup_lex_node(lex, nodes)?) {
+          Some(v) => Ok(Some(Cow::Owned(v))),
+          None => Ok(None)
+        }
+      },
+      other => {
+        dbg!(other);
+        unimplemented!()
+      }
+    };
+    Ok(match props.meaning {
+      Some(ref v) if !v.is_empty() => Some(Cow::Borrowed(v)),
+      _ => match props.name {
+        Some(ref v) if !v.is_empty() => Some(Cow::Borrowed(v)),
+        _ => match props.content {
+          Some(ref v) if !v.is_empty() => Some(Cow::Borrowed(v)),
+          _ => match props.role {
+            Some(ref v) if !v.is_empty() => Some(Cow::Borrowed(v)),
+            _ => None
+          }
+        }
+      }
+    })
+  }
 }
 
 impl Display for Tree {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { self.fmt_indented(&Vec::new(), f) }
+}
+
+pub fn get_token_meaning(in_node: &Node) -> Option<String> {
+  // let node = realize_xmnode(in_node, document);
+  let node = in_node;
+  match node.get_attribute("meaning") {
+    Some(v) if !v.is_empty() => Some(v),
+    _ => match node.get_attribute("name") {
+      Some(v) if !v.is_empty() => Some(v),
+      _ => {
+        let content = node.get_content();
+        if !content.is_empty() {
+          Some(content)
+        } else {
+          match node.get_attribute("role") {
+            Some(v) if !v.is_empty() => Some(v),
+            _ => None
+          }
+        }
+      }
+    }
+  }
+}
+/// Looks up the node associated with a given lexeme,
+/// via the node index held in the third colon-separated lexeme piece.
+pub(crate) fn lookup_lex_node<'a>(lex: &'a str, nodes: &'a [Node]) -> Result<&'a Node, Box<dyn Error>> {
+  let node_idx = dbg!(lex).split(':').last().unwrap().parse::<usize>()? - 1;
+  let node = nodes.get(node_idx)
+    .expect("lex node lookup is grammar-internal and should always have an accurate index.");
+  Ok(node)
 }
 
 fn aux_generate_indent(level: &[bool], is_base: bool) -> String {

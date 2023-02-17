@@ -920,7 +920,7 @@ impl Document {
     // TODO: This seems ported out of order, where should these attributes be
     // getting removed?
     attributes.remove("mode");
-    attributes.remove("stretchy");
+    // attributes.remove("stretchy");
 
     let is_space = attributes.contains_key("isSpace");
     let qname = if is_space { MATH_HINT_NAME } else { MATH_TOKEN_NAME };

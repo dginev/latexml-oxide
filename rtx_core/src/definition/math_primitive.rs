@@ -74,8 +74,8 @@ pub struct MathPrimitiveOptions {
   pub mathstyle: Option<String>,
   pub scriptpos: Option<usize>,
   pub operator_scriptpos: Option<String>,
-  pub stretchy: bool,
-  pub operator_stretchy: bool,
+  pub stretchy: Option<bool>,
+  pub operator_stretchy: Option<bool>,
   pub nogroup: bool,
   pub hide_content_reversion: bool,
 }
@@ -109,8 +109,8 @@ impl Default for MathPrimitiveOptions {
       mathstyle: None,
       scriptpos: None,
       operator_scriptpos: None,
-      stretchy: false,
-      operator_stretchy: false,
+      stretchy: None,
+      operator_stretchy: None,
       nogroup: true,
       hide_content_reversion: false,
     }

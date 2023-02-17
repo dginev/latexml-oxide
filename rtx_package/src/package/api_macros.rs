@@ -38,7 +38,7 @@ macro_rules! transfer_default {
 macro_rules! transfer_opt_default {
   ($val:ident, $struct_source:ident, $hash_receiver:ident) => {
     if let Some(ref $val) = $struct_source.$val {
-      $hash_receiver.entry(stringify!($val).to_owned()).or_insert($val.to_owned());
+      $hash_receiver.entry(stringify!($val).to_owned()).or_insert($val.to_string());
     }
   };
 }
