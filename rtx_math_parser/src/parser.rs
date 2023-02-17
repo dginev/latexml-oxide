@@ -446,7 +446,7 @@ impl MathParser {
     //     return $result; } }
   }
 
-  pub fn parse_marpa(&mut self, input: &str, nodes: &[Node]) -> Result<Tree> {
+  pub fn parse_marpa(&mut self, input: &str, nodes: &[Node]) -> Result<XM> {
     let parse_result = self.engine.run_recognizer(ByteScanner::new(Cursor::new(input)))?;
     let mut parses = Vec::new();
     let mut ok_trees = 0;
@@ -480,14 +480,14 @@ impl MathParser {
     match parses.len() {
       0 => Err("Failed to find any parse".into()),
       1 => Ok(parses.into_iter().next().unwrap()),
-      2 | 3 => Ok(Tree::Choices(parses)),
+      2 | 3 => Ok(XM::Choices(parses)),
       _more => {
         // Loop over the various soft pruning algorithms available, until we are at 3 trees or less
-        let mut reduced_forest = Tree::Choices(parses);
+        let mut reduced_forest = XM::Choices(parses);
         for pragma in self.student_pragmatics.iter() {
           reduced_forest = reduced_forest.soft_prune_choices(*pragma);
           match reduced_forest {
-            Tree::Choices(ref trees) => match trees.len() {
+            XM::Choices(ref trees) => match trees.len() {
               2 | 3 => break, //reduced sufficiently, return
               _more => {},    // keep trying to reduce
             },

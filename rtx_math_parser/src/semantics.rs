@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
 
-pub use self::tree::{Args, Operator, Tree, XProps};
+pub use self::tree::{Args, Operator, XM, XProps};
 use self::tree::lookup_lex_node;
 // use crate::parser::realize_xmnode;
 use crate::pragmatics::ValidationPragmatics;
@@ -22,7 +22,7 @@ mod tree;
 
 use metadata::Meta;
 
-pub type ActionClosure = Arc<dyn Fn(i32, Vec<Option<Tree>>, &[ValidationPragmatics], &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>>>;
+pub type ActionClosure = Arc<dyn Fn(i32, Vec<Option<XM>>, &[ValidationPragmatics], &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>>>;
 
 #[derive(Default)]
 pub struct Actions {
@@ -34,10 +34,10 @@ impl Actions {
   pub fn action_on(
     &self,
     id: i32,
-    mut args: Vec<Option<Tree>>,
+    mut args: Vec<Option<XM>>,
     pragmas: &[ValidationPragmatics],
     nodes: &[XMLNode],
-  ) -> Result<Option<Tree>, Box<dyn Error>> {
+  ) -> Result<Option<XM>, Box<dyn Error>> {
     if let Some(action) = self.dispatch.get(&id) {
       action(id, args, pragmas, nodes)
     } else {
@@ -52,12 +52,12 @@ impl Actions {
     }
   }
 
-  pub fn get_tree(&self, b: TreeBuilder, v: Value, pragmas: &[ValidationPragmatics], nodes: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
+  pub fn get_tree(&self, b: TreeBuilder, v: Value, pragmas: &[ValidationPragmatics], nodes: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
     let handle = proc_value(b, v);
     self.translate_node(&handle, pragmas, nodes)
   }
 
-  pub fn translate_node<T: Token>(&self, n: &Handle<T>, pragmas: &[ValidationPragmatics], nodes: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
+  pub fn translate_node<T: Token>(&self, n: &Handle<T>, pragmas: &[ValidationPragmatics], nodes: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
     match *n.borrow() {
       Node::Tree(ref rule, ref children) => {
         let mut translated_children = Vec::new();
@@ -76,38 +76,38 @@ impl Actions {
       Node::Token(_ty, ref val) => {
         let token_str = ::std::str::from_utf8(val).unwrap_or("malformed-utf8");
         Ok(Some(
-          Tree::Lexeme(token_str.to_owned(), Meta::default()).specialize(Meta::default(), pragmas)?,
+          XM::Lexeme(token_str.to_owned(), Meta::default()).specialize(Meta::default(), pragmas)?,
         ))
       },
-      Node::Leaf(ref tok) => Ok(Some(Tree::Lexeme(tok.to_string(), Meta::default()))),
+      Node::Leaf(ref tok) => Ok(Some(XM::Lexeme(tok.to_string(), Meta::default()))),
       Node::Null(_) => {
         // e.g.* argument failed nothing, just skip.
         Ok(None)
-        // Tree::Lexeme("null".into())
+        // XM::Lexeme("null".into())
       },
     }
   }
 }
 
 /// standard infix application of an operator
-pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
+pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg1, infixop, arg2);
-  let apply_tree = Tree::Apply(infixop.into(), Args(vec![arg1, arg2]), XProps::default(), Meta::default());
+  let apply_tree = XM::Apply(infixop.into(), Args(vec![arg1, arg2]), XProps::default(), Meta::default());
   Ok(Some(apply_tree))
 }
 
 /// application with trailing elision, as in `x \cdot y \cdot\cdot\cdot`
 pub fn infix_apply_and_elide(
   rule_id: i32,
-  mut args: Vec<Option<Tree>>,
+  mut args: Vec<Option<XM>>,
   p: &[ValidationPragmatics],
   nodes: &[XMLNode],
-) -> Result<Option<Tree>, Box<dyn Error>> {
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg1, infixop, arg2, elision);
   // check if "left" is already an application of infix op, in which case we can do n-ary apply.
-  if let Some(Tree::Apply(new_op, mut new_args, props, meta)) = infix_apply_nary(rule_id, vec![arg1, infixop, arg2], p, nodes)? {
+  if let Some(XM::Apply(new_op, mut new_args, props, meta)) = infix_apply_nary(rule_id, vec![arg1, infixop, arg2], p, nodes)? {
     new_args.0.push(elision);
-    Ok(Some(Tree::Apply(new_op, new_args, props, meta)))
+    Ok(Some(XM::Apply(new_op, new_args, props, meta)))
   } else {
     Ok(None)
   }
@@ -115,23 +115,23 @@ pub fn infix_apply_and_elide(
 
 // infix_apply in the base case,
 // but when chained, using the flat "multirelation" behavior of latexml
-pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
+pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   // if left has a "multirelation" already, add right in.
   // if left applies a relation, flatten it out to infix form.
   // base case - build a simple infix apply
   let mut left = left;
   match left {
-    Some(Tree::Apply(ref op, ref mut left_args, _, ref _left_meta)) => {
-      if let Tree::Token(ref tok, _) = *op.0 {
+    Some(XM::Apply(ref op, ref mut left_args, _, ref _left_meta)) => {
+      if let XM::Token(ref tok, _) = *op.0 {
         if tok.meaning == Some(Cow::Borrowed("multirelation")) {
           left_args.0.push(infixop);
           left_args.0.push(right);
           Ok(left)
         } else {
-          Ok(Some(Tree::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
+          Ok(Some(XM::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
         }
-      } else if let Tree::Lexeme(ref lex, ref _left_meta) = *op.0 {
+      } else if let XM::Lexeme(ref lex, ref _left_meta) = *op.0 {
         if lex.split(':').next().unwrap().contains("RELOP") {
           // first multirelation need is here.
           let multirel_tok = XProps {
@@ -142,37 +142,37 @@ pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[Validatio
           let left_1 = drained_left_args.next().unwrap();
           let left_2 = drained_left_args.next().unwrap();
           let moved_op = (*op.0).clone();
-          Ok(Some(Tree::Apply(
+          Ok(Some(XM::Apply(
             multirel_tok.into(),
             Args(vec![left_1, Some(moved_op), left_2, infixop, right]),
             XProps::default(),
             Meta::default(),
           )))
         } else {
-          Ok(Some(Tree::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
+          Ok(Some(XM::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
         }
       } else {
-        Ok(Some(Tree::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
+        Ok(Some(XM::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
       }
     },
-    _ => Ok(Some(Tree::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default()))),
+    _ => Ok(Some(XM::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default()))),
   }
 }
 
 pub fn infix_apply_nary(
   _rule_id: i32,
-  mut args: Vec<Option<Tree>>,
+  mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
   _: &[XMLNode],
-) -> Result<Option<Tree>, Box<dyn Error>> {
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   let mut left = left;
   // left-to-right associative:
   // 1. if "left" is already an application of "infixop",
   // 2. then tuck "right" inside it.
-  if let Some(Tree::Apply(ref left_op, ref mut left_args, _, ref _m)) = left {
-    if let Tree::Lexeme(left_op_lex, _xmeta) = &*left_op.0 {
-      if let Some(Tree::Lexeme(ref infix_op_lex, _)) = infixop {
+  if let Some(XM::Apply(ref left_op, ref mut left_args, _, ref _m)) = left {
+    if let XM::Lexeme(left_op_lex, _xmeta) = &*left_op.0 {
+      if let Some(XM::Lexeme(ref infix_op_lex, _)) = infixop {
         let left_op_pieces: Vec<_> = left_op_lex.split(':').collect();
         let infix_op_pieces: Vec<_> = infix_op_lex.split(':').collect();
         if left_op_pieces.len() == 3
@@ -187,43 +187,43 @@ pub fn infix_apply_nary(
     }
   }
   // base case: new apply tree
-  let apply_tree = Tree::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default());
+  let apply_tree = XM::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default());
   Ok(Some(apply_tree))
 }
 
-pub fn prefix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
+pub fn prefix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, arg1);
-  Ok(Some(Tree::Apply(prefixop.into(), Args(vec![arg1]), XProps::default(), Meta::default())))
+  Ok(Some(XM::Apply(prefixop.into(), Args(vec![arg1]), XProps::default(), Meta::default())))
 }
-pub fn postfix_apply(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
+pub fn postfix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg, op);
-  Ok(Some(Tree::Apply(op.into(), Args(vec![arg]), XProps::default(), Meta::default())))
+  Ok(Some(XM::Apply(op.into(), Args(vec![arg]), XProps::default(), Meta::default())))
 }
 
 pub fn circumfix_fenced(
   _rule_id: i32,
-  mut args: Vec<Option<Tree>>,
+  mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
   _: &[XMLNode],
-) -> Result<Option<Tree>, Box<dyn Error>> {
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => _open, arg, _close);
   Ok(arg)
 }
 
 /// remove start_/end_ wrappers
-pub fn faux_wrap(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
+pub fn faux_wrap(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => _faux1, content, _faux2);
   Ok(content)
 }
 
 pub fn standalone_script(
   _rule_id: i32,
-  mut args: Vec<Option<Tree>>,
+  mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
   nodes: &[XMLNode],
-) -> Result<Option<Tree>, Box<dyn Error>> {
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => _start_script, base, _end_script);
-  // TODO: it looks like we need properties on each Tree::Apply,
+  // TODO: it looks like we need properties on each XM::Apply,
   // and porting NewScript is a head-scratcher.
   // for now, just keep the property if it's there.
   new_script(base.unwrap(), None, nodes)
@@ -231,28 +231,28 @@ pub fn standalone_script(
 
 pub fn postfix_script(
   _rule_id: i32,
-  mut args: Vec<Option<Tree>>,
+  mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
   nodes: &[XMLNode],
-) -> Result<Option<Tree>, Box<dyn Error>> {
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => base, op);
   new_script(op.unwrap(), base, nodes)
 }
 
 pub fn prefix_script(
   _rule_id: i32,
-  mut args: Vec<Option<Tree>>,
+  mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
   nodes: &[XMLNode],
-) -> Result<Option<Tree>, Box<dyn Error>> {
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => op, base);
   new_script(op.unwrap(), base, nodes)
 }
 
 /// This is loosely in the lines of MathParser::NewScript, but taking into account
 /// the realities of our new data structures.
-pub fn new_script(script: Tree, base: Option<Tree>, nodes: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
-  if let Tree::Lexeme(ref lex, _) = script {
+pub fn new_script(script: XM, base: Option<XM>, nodes: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
+  if let XM::Lexeme(ref lex, _) = script {
     let node = lookup_lex_node(dbg!(lex.as_str()), nodes)?;
     let script_wrap = node.get_parent().unwrap();
     let node_role = script_wrap.get_attribute("role").unwrap();
@@ -264,7 +264,7 @@ pub fn new_script(script: Tree, base: Option<Tree>, nodes: &[XMLNode]) -> Result
        // TODO: scriptpos => "$x$l"
       let op = new_props(None, None, Some(raw_map!("role"=>role, "scriptpos"=>scriptpos)));
       let script_arg = obtain_arg(script, 0);
-      Ok(Some(Tree::Apply(op.into(), Args(vec![base, script_arg]), XProps::default(), Meta::default())))
+      Ok(Some(XM::Apply(op.into(), Args(vec![base, script_arg]), XProps::default(), Meta::default())))
     } else {
       // DG: This is completely wrong, and just temporarily passes one test. Scripts need to be fleshed out with generality. (TODO)
       node
@@ -284,10 +284,10 @@ pub fn new_script(script: Tree, base: Option<Tree>, nodes: &[XMLNode]) -> Result
 
 // Get n-th arg of an XMApp.
 // However, this is really only used to get the script out of a sub/super script
-pub fn obtain_arg(tree: Tree, n: usize) -> Option<Tree> {
+pub fn obtain_arg(tree: XM, n: usize) -> Option<XM> {
   match &tree {
-    Tree::Lexeme(_, _) | Tree::Token(_, _) => Some(tree),
-    Tree::Apply(_, ref args, _, _) => match args.0.get(n) {
+    XM::Lexeme(_, _) | XM::Token(_, _) => Some(tree),
+    XM::Apply(_, ref args, _, _) => match args.0.get(n) {
       Some(t) => t.clone(),
       None => None,
     },
@@ -295,12 +295,12 @@ pub fn obtain_arg(tree: Tree, n: usize) -> Option<Tree> {
   }
 }
 
-pub fn apply_invisible_times(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
+pub fn apply_invisible_times(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, right);
   let mut left = left;
   // left-to-right associative -- if "left" is already a "times", tuck "right" in:
-  if let Some(Tree::Apply(ref op, ref mut left_args, _, ref _m)) = left {
-    if let Tree::Token(xop, _xmeta) = &*op.0 {
+  if let Some(XM::Apply(ref op, ref mut left_args, _, ref _m)) = left {
+    if let XM::Token(xop, _xmeta) = &*op.0 {
       match xop.meaning {
         Some(ref name) if name == "times" => {
           left_args.0.push(right);
@@ -312,10 +312,10 @@ pub fn apply_invisible_times(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[Va
   }
   // otherwise create a new one:
   let times = invisible_times();
-  Ok(Some(Tree::Apply(times.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
+  Ok(Some(XM::Apply(times.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
 }
 
-pub fn compound_operator_2(_rule_id: i32, mut args: Vec<Option<Tree>>, _: &[ValidationPragmatics], nodes: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
+pub fn compound_operator_2(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], nodes: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => op1, op2);
   // invisble comma:
   let comma = invisible_comma();
@@ -380,7 +380,7 @@ pub fn new_props(
   }
 }
 
-pub fn new_list(mut pieces: Vec<Tree>, nodes: &[XMLNode]) -> Result<Option<Tree>, Box<dyn Error>> {
+pub fn new_list(mut pieces: Vec<XM>, nodes: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
   // drop placeholder token for missing trailing punct, if any
   if pieces.len() > 1 {
     let last_meaning_opt = pieces.last().unwrap().get_token_meaning(nodes)?;
@@ -394,14 +394,14 @@ pub fn new_list(mut pieces: Vec<Tree>, nodes: &[XMLNode]) -> Result<Option<Tree>
     Ok(pieces.pop())
   } else {
     let (seps, items) = extract_separators(pieces);
-    Ok(Some(Tree::Dual(
-      Box::new(Tree::Apply(
+    Ok(Some(XM::Dual(
+      Box::new(XM::Apply(
         new_props(Some(Cow::Borrowed("list")), None, None).into(),
         create_xmrefs(&items).into(),
         XProps::default(),
         Meta::default()
       )),
-      Box::new(Tree::Wrap(
+      Box::new(XM::Wrap(
         items,
         XProps::default(),
         Meta::default())),
@@ -411,10 +411,10 @@ pub fn new_list(mut pieces: Vec<Tree>, nodes: &[XMLNode]) -> Result<Option<Tree>
   }
 }
 
-fn extract_separators(items: Vec<Tree>) -> (Vec<Tree>, Vec<Tree>) {
+fn extract_separators(items: Vec<XM>) -> (Vec<XM>, Vec<XM>) {
   (Vec::new(), items)
 }
-fn create_xmrefs(items: &[Tree]) -> Vec<Tree> {
+fn create_xmrefs(items: &[XM]) -> Vec<XM> {
   Vec::new()
 }
 
