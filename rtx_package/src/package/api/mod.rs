@@ -60,6 +60,10 @@ impl<T> IntoOption<Option<T>> for Option<T> {
 impl IntoOption<bool> for bool {
   fn into_option(self) -> bool { self }
 }
+impl IntoOption<Option<bool>> for bool {
+  fn into_option(self) -> Option<bool> { Some(self) }
+}
+
 
 impl<T> IntoOption<Option<Vec<T>>> for Vec<T> {
   fn into_option(self) -> Option<Vec<T>> { Some(self) }

@@ -56,8 +56,8 @@ LoadDefinitions!(state, {
   DefMath!(']', None, ']', role => "CLOSE",   stretchy => false);
   DefMath!('|', None, '|', role => "VERTBAR", stretchy => false);
   DefMath!(':', None, ':', role => "METARELOP", name => "colon"); // Seems like good default role
-  DefMath!('<', None, '<', role => "RELOP", meaning => "less-han");
-  DefMath!('>', None, '>', role => "RELOP", meaning => "greater-han");
+  DefMath!('<', None, '<', role => "RELOP", meaning => "less-than");
+  DefMath!('>', None, '>', role => "RELOP", meaning => "greater-than");
 
   //======================================================================
   // Combine digits in math.

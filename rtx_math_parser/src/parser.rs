@@ -520,9 +520,7 @@ impl MathParser {
 // Note that the nodes are true libXML nodes, already absorbed into the document
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pub fn text_form(node: &Node, document: &mut Document, state: &mut State) -> String {
-  let mut text = textrec(node, None, None, document, state);
-  text = text.replace('<', "less");
-  text
+  textrec(node, None, None, document, state)
 }
 
 // ================================================================================
@@ -603,11 +601,9 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
       }
     },
     "ltx:XMDual" => {
-      //     my ($content, $presentation) = element_nodes($node);
-      // return textrec($content, $outer_bp, $outer_name); }    # Just send out
-      // the semantic form.
-      // TODO
-      unimplemented!()
+      let children = element_nodes(&node);
+      let content = children.first().expect("XMDual should always have 2 child elements.");
+      textrec(content, Some(outer_bp), Some(outer_name), document, state) // Just send out
     },
     "ltx:XMTok" => {
       let name = match get_token_meaning(&node, document) {

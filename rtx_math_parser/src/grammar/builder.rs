@@ -72,7 +72,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     factor = factor_base;
     // Terms
     tight_term = factor
-      | tight_term factor => invisible_times;
+      | tight_term factor => apply_invisible_times;
 
     term = tight_term
       | term mulop tight_term => infix_apply_nary
@@ -138,7 +138,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     anyscript = floatsuperscript | floatsubscript;
 
-    anything = statements | anyop | anyscript
+    anything = statements | anyop | anyscript |
+      anyop anyop => compound_operator_2
   );
   // | term_argument postsuperarg tex_argument  => post_script
   // | term_argument postsubscript tex_argument    => post_script

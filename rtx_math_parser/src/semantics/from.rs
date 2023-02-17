@@ -1,5 +1,5 @@
 use super::metadata::Meta;
-use super::tree::{Args, Operator, Tree};
+use super::tree::{Args, Operator, Tree, XProps};
 
 impl From<&str> for Operator {
   fn from(a: &str) -> Operator { Operator(Box::new(a.into())) }
@@ -24,24 +24,24 @@ impl From<&str> for Tree {
   fn from(a: &str) -> Tree { Tree::Lexeme(a.to_string(), Meta::default()) }
 }
 impl From<(&str, &str)> for Tree {
-  fn from(a: (&str, &str)) -> Tree { Tree::Apply(a.0.into(), Args(vec![Some(a.1.into())]), Meta::default()) }
+  fn from(a: (&str, &str)) -> Tree { Tree::Apply(a.0.into(), Args(vec![Some(a.1.into())]), XProps::default(), Meta::default()) }
 }
 impl From<(&str, (&str, &str))> for Tree {
-  fn from(args: (&str, (&str, &str))) -> Tree { Tree::Apply(args.0.into(), args.1.into(), Meta::default()) }
+  fn from(args: (&str, (&str, &str))) -> Tree { Tree::Apply(args.0.into(), args.1.into(), XProps::default(), Meta::default()) }
 }
 
 impl From<(&str, (&str, (&str, &str)))> for Tree {
-  fn from(args: (&str, (&str, (&str, &str)))) -> Tree { Tree::Apply(args.0.into(), Args(vec![Some(args.1.into())]), Meta::default()) }
+  fn from(args: (&str, (&str, (&str, &str)))) -> Tree { Tree::Apply(args.0.into(), Args(vec![Some(args.1.into())]), XProps::default(), Meta::default()) }
 }
 // One element arrays as argument containers (since we can't do one element tuple types?)
 impl From<(&str, (&str, (&str, [&str; 1])))> for Tree {
-  fn from(args: (&str, (&str, (&str, [&str; 1])))) -> Tree { Tree::Apply(args.0.into(), Args(vec![Some(args.1.into())]), Meta::default()) }
+  fn from(args: (&str, (&str, (&str, [&str; 1])))) -> Tree { Tree::Apply(args.0.into(), Args(vec![Some(args.1.into())]), XProps::default(), Meta::default()) }
 }
 impl From<(&str, (&str, [&str; 1]))> for Tree {
-  fn from(args: (&str, (&str, [&str; 1]))) -> Tree { Tree::Apply(args.0.into(), Args(vec![Some(args.1.into())]), Meta::default()) }
+  fn from(args: (&str, (&str, [&str; 1]))) -> Tree { Tree::Apply(args.0.into(), Args(vec![Some(args.1.into())]), XProps::default(), Meta::default()) }
 }
 impl From<(&str, [&str; 1])> for Tree {
-  fn from(args: (&str, [&str; 1])) -> Tree { Tree::Apply(args.0.into(), Args(vec![Some(args.1[0].into())]), Meta::default()) }
+  fn from(args: (&str, [&str; 1])) -> Tree { Tree::Apply(args.0.into(), Args(vec![Some(args.1[0].into())]), XProps::default(), Meta::default()) }
 }
 
 impl From<[&str; 1]> for Args {
@@ -52,6 +52,7 @@ impl<OP: ToString + Sized, LEFT: Into<Tree>, RIGHT: Into<Tree>> From<(OP, LEFT, 
     Tree::Apply(
       args.0.to_string().into(),
       Args(vec![Some(args.1.into()), Some(args.2.into())]),
+      XProps::default(),
       Meta::default(),
     )
   }
@@ -64,6 +65,7 @@ impl<OP: ToString + Sized> From<(OP, Vec<Tree>)> for Tree {
       Tree::Apply(
         args.0.to_string().into(),
         Args(args.1.iter().cloned().map(Some).collect()),
+        XProps::default(),
         Meta::default(),
       )
     }

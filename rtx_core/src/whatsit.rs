@@ -204,9 +204,7 @@ impl Object for Whatsit {
           }
         },
         None => {
-          let alias_opt: Option<String> = None;
-          //TODO: defn.get_alias() };
-          if let Some(alias) = alias_opt {
+          if let Some(alias) = defn.get_alias() {
             if !alias.is_empty() {
               tokens.push(T_CS!(alias));
             }
