@@ -411,7 +411,7 @@ pub fn new_list(mut pieces: Vec<XM>, ctxt:ActionContext) -> Result<Option<XM>, B
     Ok(Some(XM::Dual(
       Box::new(XM::Apply(
         new_props(Some(Cow::Borrowed("list")), None, None).into(),
-        dbg!(create_xmrefs(&items, ctxt)).into(),
+        dbg!(create_xmrefs(&items, ctxt)?).into(),
         XProps::default(),
         Meta::default()
       )),

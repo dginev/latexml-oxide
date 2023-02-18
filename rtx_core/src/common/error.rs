@@ -185,6 +185,7 @@ pub struct Error {
   pub category: ErrorCategory,
   pub message: String,
 }
+impl ErrorTrait for Error {}
 
 #[derive(Debug)]
 pub enum ErrorCategory {
