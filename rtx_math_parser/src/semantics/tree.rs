@@ -32,6 +32,8 @@ pub struct XProps {
   pub name: Option<Cow<'static, str>>,
   /// script position w.r.t to baseline
   pub scriptpos: Option<Cow<'static, str>>,
+  /// a unique identifier, in the `xml:id` sense
+  pub id: Option<Cow<'static, str>>,
   /// an optional subtree-specific Font
   pub font: Option<Font>,
 }
@@ -80,6 +82,7 @@ pub enum XM {
   Token(XProps, Meta), // does this need Meta?
   Apply(Operator, Args, XProps, Meta),
   Dual(Box<XM>, Box<XM>, XProps, Meta),
+  Ref(String),
   Wrap(Vec<XM>, XProps, Meta),
   Choices(Vec<XM>),
 }
@@ -198,6 +201,7 @@ impl XM {
       XM::Dual(_, _, _, ref meta) => meta,
       XM::Wrap(_, _, ref meta) => meta,
       XM::Choices(cs) => cs[0].get_meta(), // Should we return a none type instead?
+      XM::Ref(_) => unimplemented!()
     }
   }
   pub fn get_meta_mut(&mut self) -> &mut Meta {
@@ -208,6 +212,7 @@ impl XM {
       XM::Dual(_, _, _, ref mut meta) => meta,
       XM::Wrap(_, _, ref mut meta) => meta,
       XM::Choices(cs) => cs[0].get_meta_mut(), // Should we return a none type instead?
+      XM::Ref(_) => unimplemented!(),
     }
   }
   pub fn get_inner_meta(&self) -> Vec<&Meta> {
@@ -236,6 +241,7 @@ impl XM {
       XM::Token(_t, _meta) => {
         unimplemented!()
       },
+      XM::Ref(_) => Ok(self),
       XM::Apply(mut op, mut args, props, meta) => {
         // First, if we have a specialize directive, execute it:
         match into.specialize {
@@ -366,6 +372,7 @@ impl XM {
     match self {
       XM::Lexeme(_, _) => self,
       XM::Token(_, _) => self,
+      XM::Ref(_) => self,
       XM::Apply(ref op, ref args, _, _) => {
         if let XM::Lexeme(name, _) = &*op.0 {
           if name == "unknown.subscript" || name == "unknown.superscript" {
@@ -420,6 +427,7 @@ impl XM {
           tree.unconstrain_recursive();
         }
       },
+      XM::Ref(_) => {},
     };
   }
 
@@ -428,6 +436,7 @@ impl XM {
     let indent = aux_generate_indent(level, false);
     match self {
       XM::Lexeme(name, meta) => writeln!(f, "{indent}{name} {meta}"),
+      XM::Ref(idref) => writeln!(f, "{indent}Ref[{idref}]"),
       XM::Token(t, meta) => writeln!(f, "{indent}{t} {meta}"),
       XM::Apply(op, args, _, meta) => {
         if !meta.syntax_trace.is_empty() {
@@ -535,7 +544,12 @@ impl XM {
           self.to_xmath_add_child(&mut wrap_node, &mut content_node)?;
         }
         Ok(wrap_node)
-      }
+      },
+      XM::Ref(idref) => {
+        let mut ref_node = Node::new("XMRef", None, document.get_document()).unwrap();
+        ref_node.set_attribute("idref", idref)?;
+        Ok(ref_node)
+      },
       XM::Choices(choices) => {
         Info!("to_xmath handler discarded {} parse choices.", choices.len() - 1);
         choices[0].to_xmath(nodes, document)

@@ -1,4 +1,3 @@
-use libxml::tree::Node;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -6,10 +5,8 @@ use std::sync::Arc;
 use rtx_core::common::error::*;
 use rtx_core::common::number::Number;
 use rtx_core::common::numeric_ops::NumericOps;
-use rtx_core::common::xml::XML_NS;
 use rtx_core::definition::expandable::ExpandableOptions;
 use rtx_core::definition::ExpansionBody;
-use rtx_core::document::Document;
 use rtx_core::gullet::Gullet;
 use rtx_core::mouth;
 use rtx_core::state::{Scope, State, Stored};
@@ -23,50 +20,6 @@ use super::cleaners::{clean_id, clean_label, roman_aux};
 use super::content::{build_invocation, digest_if, digest_literal, digest_text};
 use super::def_dialect::{def_macro, def_register, is_defined};
 use super::*;
-
-//**********************************************************************
-/// This function computes an xml:id for a node, if it hasn't already got one.
-/// It is suitable for use in Tag afterOpen as
-///  `Tag('ltx:para',afterOpen=>sub { GenerateID(@_,'p'); });`
-/// It generates an id of the form <parentid>.<prefix><number>
-/// The parent node (the one with ID=<parentid>) also maintains a counter
-/// stored in an attribute `_ID_counter_<prefix>` recording the last used
-/// <number> for <prefix> amongst its descendents.
-pub fn generate_id(document: &mut Document, mut node: &mut Node, mut prefix: &str, state: &mut State) -> Result<()> {
-  // If node doesn't already have an id, and can
-  let node_qname = document.get_node_qname(node, state);
-  // but isn't a _Capture_ node (which ultimately should disappear)
-  if !node.has_attribute_ns("id", XML_NS) && document.can_have_attribute(&node_qname, "xml:id", state) && (node_qname != "ltx:_Capture_") {
-    let mut ancestor = document
-      .findnode("ancestor::*[@xml:id][1]", Some(node), state)
-      .unwrap_or_else(|| document.get_document().get_root_element().unwrap());
-    //// Old versions don't like ancestor.getAttribute('xml:id');
-    let ancestor_id = ancestor.get_attribute_ns("id", XML_NS);
-    // If we've got no ancestor_id, then we've got no ancestor (no document yet!),
-    // or ancestor IS the root element (but without an id);
-    // If we also have no prefix, we'll end up with an illegal id (just digits)!!!
-    // We'll use "id" for an id prefix; this will work whether or not we have an ancestor.
-    if prefix.is_empty() && ancestor_id.is_none() {
-      prefix = "id";
-    }
-
-    let ctrkey = s!("_ID_counter_") + prefix + "_";
-    let a_ctr = ancestor.get_attribute(&ctrkey).unwrap_or_else(|| s!("0"));
-
-    let ctr_int = 1 + a_ctr.parse::<u32>().unwrap_or(0);
-    let ctr = ctr_int.to_string();
-
-    let id = match ancestor_id {
-      Some(aid) => aid + ".",
-      None => String::new(),
-    } + prefix
-      + &ctr;
-
-    ancestor.set_attribute(&ctrkey, &ctr)?;
-    node.set_attribute("xml:id", &id)?;
-  }
-  Ok(())
-}
 
 #[derive(Default)]
 pub struct NewCounterOptions<'ct> {

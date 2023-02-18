@@ -19,7 +19,7 @@ LoadDefinitions!(state, {
   // However, para get created implicitly on Document construction, rather than
   // explicitly during digestion (via a whatsit), we can't use the usual LaTeX counter mechanism.
   Tag!("ltx:para", after_open => sub[document, node, state] {
-    generate_id(document, node, "p", state)?;
+    document.generate_id(node, "p", state)?;
   });
 
   DefPrimitive!("\\newcounter{}[]", sub[stomach, (cs, default_opt), state] {

@@ -1,4 +1,8 @@
+// use rtx_core::document::Document;
 use crate::data::{get_grammatical_role, get_token_meaning};
+use crate::semantics::tree::XM;
+use crate::semantics::tree::lookup_lex_node;
+use crate::semantics::ActionContext;
 use libxml::tree::Node;
 
 /// Generate a textual token for each node; The parser operates on this encoded
@@ -61,3 +65,66 @@ pub fn distill_lexeme(name: &str) -> (&str, &str, &str) {
 }
 
 pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> { nodes }
+
+/// Given a list of XML nodes (either libxml nodes, or array representations)
+/// return a list of XMRef's referring to those nodes;
+/// ensure each source node has an ID (if already instanciated as XML)
+/// or _xmkey if still in array rep. since it will get an ID later, and the connection re-made)
+/// Note that ltx:XMHint nodes are ephemeral and shouldn't be ref'd!
+/// likewise, we avoid creating XMRefs to XMRefs
+pub fn create_xmrefs(args: &[XM], ctxt: ActionContext) -> Vec<XM> {
+  let nodes = ctxt.nodes;
+  let document = ctxt.document;
+  let state = ctxt.state;
+  args.iter().filter_map(|arg| {
+    match arg {
+      XM::Token(props, _meta) => {
+        props.id.as_ref().map(|id| XM::Ref(id.to_string()))
+      },
+      XM::Lexeme(lex, _) => {
+        // If arg is already XML, it's too late to get automatic ID's
+        let node = lookup_lex_node(lex, nodes).expect("lexenes should only have valid ids.");
+        match node.get_attribute("id") {
+          Some(id) => Some(XM::Ref(id)),
+          None => {
+            document.generate_id(&mut node.clone(), "", state)
+              .expect("generate_id should never really fail in creating xmrefs");
+            //       push(@refs, ['ltx:XMRef', { 'idref' => $arg->getAttribute('xml:id'), _box => $box }
+            None
+          }
+        }
+      }
+      _ => None
+    }
+  }).collect()
+  // my @refs = ();
+  // foreach my $arg (@args) {
+  //   my $isarray = (ref $arg eq 'ARRAY');
+  //   my $qname   = ($isarray ? $$arg[0]       : $document->getNodeQName($arg));
+  //   my $box     = ($isarray ? $$arg[1]{_box} : $document->getNodeBox($arg));
+  //   # XMHint's are ephemeral, they may disappear; so just clone it w/o id
+  //   if ($qname eq 'ltx:XMHint') {
+  //     my %attr = ($isarray ? %{ $$arg[1] }
+  //       : (map { $document->getNodeQName($_) => $_->getValue } $arg->attributes));
+  //     delete $attr{'xml:id'};
+  //     push(@refs, [$qname, {%attr}]); }
+  //   # Likewise, clone an XMRef (w/o any attributes or id ?) rather than create an XMRef to an XMRef.
+  //   elsif ($qname eq 'ltx:XMRef') {
+  //     my $key = ($isarray ? $$arg[1]{_xmkey} : $arg->getAttribute('_xmkey'));
+  //     my $id  = ($isarray ? $$arg[1]{idref}  : $arg->getAttribute('idref'));
+  //     push(@refs, [$qname, { _xmkey => $key, idref => $id, _box => $box }]); }
+  //   else {
+  //     if (my $id = ($isarray ? $$arg[1]{'xml:id'} : $arg->getAttribute('xml:id'))) {
+  //       # $arg already has id, so refer to it.
+  //       push(@refs, ['ltx:XMRef', { 'idref' => $id, _box => $box }]); }
+  //     elsif ($isarray) {
+  //       # $arg is not yet instanciated, so hasn't had chance to get auto-id; use _xmkey
+  //       my $key = ToString(getXMArgID());
+  //       $$arg[1]{'_xmkey'} = $key;
+  //       push(@refs, ['ltx:XMRef', { '_xmkey' => $key, _box => $box }]); }
+  //     else {
+  //       # If arg is already XML, it's too late to get automatic ID's
+  //       GenerateID($document, $arg, undef, '');
+  //       push(@refs, ['ltx:XMRef', { 'idref' => $arg->getAttribute('xml:id'), _box => $box }]); } } }
+  // return @refs; }
+}

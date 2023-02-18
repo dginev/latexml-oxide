@@ -9,7 +9,7 @@ LoadDefinitions!(state, {
   Tag!("ltx:XMText", auto_open => true, auto_close => true);
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
   Tag!("ltx:Math", after_open => sub[document, node, state] {
-    generate_id(document, node, "m", state)?;
+    document.generate_id(node, "m", state)?;
   });
 
   DefPrimitive!(
