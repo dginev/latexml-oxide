@@ -84,9 +84,9 @@ LoadDefinitions!(state, {
       "Use of \\caption outside any known float"); });
 
   // Note that even without \caption, we'd probably like to have xml:id.
-  Tag!("ltx:figure", after_close => sub[document, node, state] { generate_id(document, node, "fig", state)?; });
-  Tag!("ltx:table",  after_close => sub[document, node, state] { generate_id(document, node, "tab", state)?; });
-  Tag!("ltx:float",  after_close => sub[document, node, state] { generate_id(document, node, "tab", state)?; });
+  Tag!("ltx:figure", after_close => sub[document, node, state] { document.generate_id(node, "fig", state)?; });
+  Tag!("ltx:table",  after_close => sub[document, node, state] { document.generate_id(node, "tab", state)?; });
+  Tag!("ltx:float",  after_close => sub[document, node, state] { document.generate_id(node, "tab", state)?; });
 
   // # These may need to float up to where they're allowed,
   // # or they may need to close <p> or similar.

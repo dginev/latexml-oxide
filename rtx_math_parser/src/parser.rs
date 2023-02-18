@@ -318,7 +318,7 @@ impl MathParser {
     if rule == "kludge" {
       self.parse_kludge(node, document, state);
       Ok(None)
-    } else if let Some(mut result) = self.parse_single(node, document, &rule)? {
+    } else if let Some(mut result) = self.parse_single(node, document, state, &rule)? {
       *self.passed.entry(tag.clone()).or_insert(0) += 1;
       if tag == "ltx:XMath" {
         // Replace the content of XMath with parsed result
@@ -418,10 +418,10 @@ impl MathParser {
   // Low-level Parser: parse a single expression
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Convert to textual form for processing by MathGrammar
-  fn parse_single(&mut self, mathnode: &mut Node, document: &mut Document, _rule: &str) -> Result<Option<Node>> {
+  fn parse_single(&mut self, mathnode: &mut Node, document: &mut Document, state: &mut State, _rule: &str) -> Result<Option<Node>> {
     let mut idx = 0;
     let (lexemes, nodes) = node_to_grammar_lexemes(mathnode, &mut idx);
-    if let Ok(Some(mut parse_tree)) = self.parse_lexemes(lexemes, nodes, document) {
+    if let Ok(Some(mut parse_tree)) = self.parse_lexemes(lexemes, nodes, document, state) {
       for mut node in mathnode.get_child_nodes() {
         node.unlink();
       }
@@ -446,13 +446,13 @@ impl MathParser {
     //     return $result; } }
   }
 
-  pub fn parse_marpa(&mut self, input: &str, nodes: &[Node]) -> Result<XM> {
+  pub fn parse_marpa(&mut self, input: &str, nodes: &[Node], document: &mut Document, state: &mut State) -> Result<XM> {
     let parse_result = self.engine.run_recognizer(ByteScanner::new(Cursor::new(input)))?;
     let mut parses = Vec::new();
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
     for val in parse_result {
-      match self.actions.get_tree(self.builder.clone(), val, self.expert_pragmatics.as_slice(), nodes) {
+      match self.actions.get_tree(self.builder.clone(), val, self.expert_pragmatics.as_slice(), ActionContext { nodes, document, state}) {
         Ok(tree_opt) => {
           if let Some(tree) = tree_opt {
             // eprintln!("-- we found a tree: {:?}", tree);
@@ -499,13 +499,13 @@ impl MathParser {
     }
   }
 
-  pub fn parse_lexemes(&mut self, lexemes: Vec<String>, mut nodes: Vec<Node>, document: &mut Document) -> Result<Option<Node>> {
+  pub fn parse_lexemes(&mut self, lexemes: Vec<String>, mut nodes: Vec<Node>, document: &mut Document, state: &mut State) -> Result<Option<Node>> {
     let mut input_string: String = lexemes.join(" ");
     // Add a trailing space, in an attempt to work with
     // a rules!() macro that has a Hard expectation of a space char following EVERY token.
     // this - counterintuitively- allows a simple macro definition AND a simple parse tree.
     input_string.push(' ');
-    if let Ok(parse_tree) = self.parse_marpa(&input_string, &nodes) {
+    if let Ok(parse_tree) = self.parse_marpa(&input_string, &nodes, document, state) {
       let xml_tree = parse_tree.to_xmath(&mut nodes, document)?;
       Ok(Some(xml_tree))
     } else {

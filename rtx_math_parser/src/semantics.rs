@@ -1,28 +1,42 @@
-use libxml::tree::Node as XMLNode;
-use marpa::lexer::token::Token;
-use marpa::stack::*;
-use marpa::thin::Value;
-use marpa::tree_builder::*;
-use rtx_core::common::font::{self, Font};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
 
+use libxml::tree::Node as XMLNode;
+use marpa::lexer::token::Token;
+use marpa::stack::*;
+use marpa::thin::Value;
+use marpa::tree_builder::*;
+
+use rtx_core::common::font::{self, Font};
+use rtx_core::state::State;
+use rtx_core::document::Document;
+use rtx_core::raw_map;
+
 pub use self::tree::{Args, Operator, XM, XProps};
 use self::tree::lookup_lex_node;
-// use crate::parser::realize_xmnode;
 use crate::pragmatics::ValidationPragmatics;
-use rtx_core::raw_map;
+use crate::util::create_xmrefs;
 
 mod curry;
 mod from;
-mod metadata;
-mod tree;
+pub mod metadata;
+pub mod tree;
 
 use metadata::Meta;
 
-pub type ActionClosure = Arc<dyn Fn(i32, Vec<Option<XM>>, &[ValidationPragmatics], &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>>>;
+/// A runtime context for a semantic math parser action
+/// Ideally, these are all immutable borrows of various `Core` data.
+pub struct ActionContext<'a> {
+  /// The original XML nodes involved in this parse request
+  pub nodes: &'a [XMLNode],
+  /// The owner document of the parsed nodes
+  pub document: &'a mut Document,
+  /// The `Core` state, for a variety of lookups - especially ones needing a `Model`
+  pub state: &'a mut State
+}
+pub type ActionClosure = Arc<dyn Fn(i32, Vec<Option<XM>>, &[ValidationPragmatics], ActionContext) -> Result<Option<XM>, Box<dyn Error>>>;
 
 #[derive(Default)]
 pub struct Actions {
@@ -36,10 +50,10 @@ impl Actions {
     id: i32,
     mut args: Vec<Option<XM>>,
     pragmas: &[ValidationPragmatics],
-    nodes: &[XMLNode],
+    ctxt: ActionContext
   ) -> Result<Option<XM>, Box<dyn Error>> {
     if let Some(action) = self.dispatch.get(&id) {
-      action(id, args, pragmas, nodes)
+      action(id, args, pragmas, ctxt)
     } else {
       match args.len() {
         0 => Ok(None),
@@ -52,26 +66,27 @@ impl Actions {
     }
   }
 
-  pub fn get_tree(&self, b: TreeBuilder, v: Value, pragmas: &[ValidationPragmatics], nodes: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
+  pub fn get_tree(&self, b: TreeBuilder, v: Value, pragmas: &[ValidationPragmatics], ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
     let handle = proc_value(b, v);
-    self.translate_node(&handle, pragmas, nodes)
+    self.translate_node(&handle, pragmas, ctxt)
   }
 
-  pub fn translate_node<T: Token>(&self, n: &Handle<T>, pragmas: &[ValidationPragmatics], nodes: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
+  pub fn translate_node<T: Token>(&self, n: &Handle<T>, pragmas: &[ValidationPragmatics], ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
     match *n.borrow() {
       Node::Tree(ref rule, ref children) => {
         let mut translated_children = Vec::new();
         for child in children.iter() {
-          translated_children.push(self.translate_node(child, pragmas, nodes)?);
+          let translated = self.translate_node(child, pragmas, ActionContext { nodes: ctxt.nodes, document: ctxt.document, state: ctxt.state })?;
+          translated_children.push(translated);
         }
-        self.action_on(*rule, translated_children, pragmas, nodes)
+        self.action_on(*rule, translated_children, pragmas, ctxt)
       },
       Node::Rule(ref rule, ref children) => {
         let mut translated_children = Vec::new();
         for child in children.iter() {
-          translated_children.push(self.translate_node(child, pragmas, nodes)?);
+          translated_children.push(self.translate_node(child, pragmas, ActionContext { nodes: ctxt.nodes, document: ctxt.document, state: ctxt.state })?);
         }
-        self.action_on(*rule, translated_children, pragmas, nodes)
+        self.action_on(*rule, translated_children, pragmas, ctxt)
       },
       Node::Token(_ty, ref val) => {
         let token_str = ::std::str::from_utf8(val).unwrap_or("malformed-utf8");
@@ -90,7 +105,7 @@ impl Actions {
 }
 
 /// standard infix application of an operator
-pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg1, infixop, arg2);
   let apply_tree = XM::Apply(infixop.into(), Args(vec![arg1, arg2]), XProps::default(), Meta::default());
   Ok(Some(apply_tree))
@@ -101,11 +116,11 @@ pub fn infix_apply_and_elide(
   rule_id: i32,
   mut args: Vec<Option<XM>>,
   p: &[ValidationPragmatics],
-  nodes: &[XMLNode],
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg1, infixop, arg2, elision);
   // check if "left" is already an application of infix op, in which case we can do n-ary apply.
-  if let Some(XM::Apply(new_op, mut new_args, props, meta)) = infix_apply_nary(rule_id, vec![arg1, infixop, arg2], p, nodes)? {
+  if let Some(XM::Apply(new_op, mut new_args, props, meta)) = infix_apply_nary(rule_id, vec![arg1, infixop, arg2], p, ctxt)? {
     new_args.0.push(elision);
     Ok(Some(XM::Apply(new_op, new_args, props, meta)))
   } else {
@@ -115,7 +130,7 @@ pub fn infix_apply_and_elide(
 
 // infix_apply in the base case,
 // but when chained, using the flat "multirelation" behavior of latexml
-pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   // if left has a "multirelation" already, add right in.
   // if left applies a relation, flatten it out to infix form.
@@ -163,7 +178,7 @@ pub fn infix_apply_nary(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: &[XMLNode],
+  _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   let mut left = left;
@@ -191,11 +206,11 @@ pub fn infix_apply_nary(
   Ok(Some(apply_tree))
 }
 
-pub fn prefix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn prefix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, arg1);
   Ok(Some(XM::Apply(prefixop.into(), Args(vec![arg1]), XProps::default(), Meta::default())))
 }
-pub fn postfix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn postfix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg, op);
   Ok(Some(XM::Apply(op.into(), Args(vec![arg]), XProps::default(), Meta::default())))
 }
@@ -204,14 +219,14 @@ pub fn circumfix_fenced(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: &[XMLNode],
+  _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => _open, arg, _close);
   Ok(arg)
 }
 
 /// remove start_/end_ wrappers
-pub fn faux_wrap(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn faux_wrap(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => _faux1, content, _faux2);
   Ok(content)
 }
@@ -220,40 +235,40 @@ pub fn standalone_script(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  nodes: &[XMLNode],
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => _start_script, base, _end_script);
   // TODO: it looks like we need properties on each XM::Apply,
   // and porting NewScript is a head-scratcher.
   // for now, just keep the property if it's there.
-  new_script(base.unwrap(), None, nodes)
+  new_script(base.unwrap(), None, ctxt)
 }
 
 pub fn postfix_script(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  nodes: &[XMLNode],
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => base, op);
-  new_script(op.unwrap(), base, nodes)
+  new_script(op.unwrap(), base, ctxt)
 }
 
 pub fn prefix_script(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  nodes: &[XMLNode],
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => op, base);
-  new_script(op.unwrap(), base, nodes)
+  new_script(op.unwrap(), base, ctxt)
 }
 
 /// This is loosely in the lines of MathParser::NewScript, but taking into account
 /// the realities of our new data structures.
-pub fn new_script(script: XM, base: Option<XM>, nodes: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn new_script(script: XM, base: Option<XM>, ctxt:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   if let XM::Lexeme(ref lex, _) = script {
-    let node = lookup_lex_node(dbg!(lex.as_str()), nodes)?;
+    let node = lookup_lex_node(dbg!(lex.as_str()), ctxt.nodes)?;
     let script_wrap = node.get_parent().unwrap();
     let node_role = script_wrap.get_attribute("role").unwrap();
     let is_float = node_role.starts_with("FLOAT");
@@ -295,7 +310,7 @@ pub fn obtain_arg(tree: XM, n: usize) -> Option<XM> {
   }
 }
 
-pub fn apply_invisible_times(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn apply_invisible_times(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, right);
   let mut left = left;
   // left-to-right associative -- if "left" is already a "times", tuck "right" in:
@@ -315,13 +330,13 @@ pub fn apply_invisible_times(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[Vali
   Ok(Some(XM::Apply(times.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
 }
 
-pub fn compound_operator_2(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], nodes: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn compound_operator_2(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => op1, op2);
   // invisble comma:
   let comma = invisible_comma();
   // TODO: We need to extend that rule to the n-ary case
   // Currently following the original MathGrammar and creating a List XMDual
-  new_list(vec![op1.unwrap(), comma.into(), op2.unwrap()], nodes)
+  new_list(vec![op1.unwrap(), comma.into(), op2.unwrap()], ctxt)
 }
 
 fn invisible_times() -> XProps {
@@ -329,9 +344,7 @@ fn invisible_times() -> XProps {
     meaning: Some(Cow::Borrowed("times")),
     role: Some(Cow::Borrowed("MULOP")),
     content: Some(Cow::Borrowed("\u{2062}")),
-    name: None,
-    scriptpos: None,
-    font: None,
+    ..XProps::default()
   }
 }
 
@@ -340,9 +353,7 @@ fn invisible_comma() -> XProps {
     meaning: Some(Cow::Borrowed("")),
     role: Some(Cow::Borrowed("PUNCT")),
     content: Some(Cow::Borrowed("\u{2063}")),
-    name: None,
-    scriptpos: None,
-    font: None,
+    ..XProps::default()
   }
 }
 
@@ -354,6 +365,7 @@ pub fn new_props(
   let mut props = props_opt.unwrap_or_default();
   let role = props.remove("role");
   let name = props.remove("name");
+  let id = props.remove("id");
   let scriptpos = props.remove("scriptpos");
   // TODO:
   let font = match props.remove("font") {
@@ -376,14 +388,15 @@ pub fn new_props(
     role,
     name,
     scriptpos,
+    id,
     font: Some(font),
   }
 }
 
-pub fn new_list(mut pieces: Vec<XM>, nodes: &[XMLNode]) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn new_list(mut pieces: Vec<XM>, ctxt:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   // drop placeholder token for missing trailing punct, if any
   if pieces.len() > 1 {
-    let last_meaning_opt = pieces.last().unwrap().get_token_meaning(nodes)?;
+    let last_meaning_opt = pieces.last().unwrap().get_token_meaning(ctxt.nodes)?;
     if let Some(last_meaning) = last_meaning_opt {
       if last_meaning == "absent" {
         pieces.pop();
@@ -393,11 +406,12 @@ pub fn new_list(mut pieces: Vec<XM>, nodes: &[XMLNode]) -> Result<Option<XM>, Bo
   if pieces.len() == 1 {
     Ok(pieces.pop())
   } else {
-    let (seps, items) = extract_separators(pieces);
+    let (_seps, items) = extract_separators(pieces);
+    dbg!(&items);
     Ok(Some(XM::Dual(
       Box::new(XM::Apply(
         new_props(Some(Cow::Borrowed("list")), None, None).into(),
-        create_xmrefs(&items).into(),
+        dbg!(create_xmrefs(&items, ctxt)).into(),
         XProps::default(),
         Meta::default()
       )),
@@ -411,11 +425,20 @@ pub fn new_list(mut pieces: Vec<XM>, nodes: &[XMLNode]) -> Result<Option<XM>, Bo
   }
 }
 
+/// Given  alternating expressions & separators (punctuation,...)
+/// extract the separators as a concatenated string,
+/// returning (separators, args...)
+/// But note that the separators are never used for anything!?
 fn extract_separators(items: Vec<XM>) -> (Vec<XM>, Vec<XM>) {
-  (Vec::new(), items)
-}
-fn create_xmrefs(items: &[XM]) -> Vec<XM> {
-  Vec::new()
+  // TODO: consider using the separators at some point, but not for now
+  let punct = Vec::new();
+  let mut args = Vec::new();
+  let mut items_iter = items.into_iter();
+  while let Some(arg) = items_iter.next() {
+    args.push(arg);
+    let _discard_punct = items_iter.next();
+  }
+  (punct, args)
 }
 
 // Some handy shorthands.

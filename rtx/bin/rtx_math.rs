@@ -31,16 +31,15 @@ fn main() {
   let (lexemes, lex_nodes, xmath_opt, mut doc) = lex_single_tex_formula(&source);
   assert!(!lexemes.is_empty());
   eprintln!("lexemes: {lexemes:?}");
-
+  let mut state = State::new(StateOptions::default());
   let mut parser = MathParser::default();
-  if let Ok(Some(mut parse_tree)) = parser.parse_lexemes(lexemes, lex_nodes, &mut doc) {
+  if let Ok(Some(mut parse_tree)) = parser.parse_lexemes(lexemes, lex_nodes, &mut doc, &mut state) {
     let mut xmath = xmath_opt.unwrap();
     for mut node in xmath.get_child_nodes() {
       node.unlink();
     }
     xmath.add_child(&mut parse_tree).unwrap();
 
-    let mut state = State::new(StateOptions::default());
     xmath
       .get_parent()
       .unwrap()

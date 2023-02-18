@@ -18,11 +18,10 @@ use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::xml;
+use crate::common::xml::{self, XML_NS};
 use crate::ligature::Ligature;
 use crate::list::List;
 use crate::state::State;
-use crate::whatsit::Whatsit;
 use crate::TexMode;
 
 use crate::document::resource::Resource;
@@ -218,7 +217,7 @@ impl Document {
       && !node.has_attribute("xml:id")
       && self.can_have_attribute(&qname, "xml:id", state)
     {
-      self.generate_id(node, None, None, state);
+      self.generate_id(node, "", state)?;
     }
 
     for mut child in node.get_child_nodes() {
@@ -2606,8 +2605,48 @@ impl Document {
     }
   }
 
-  pub fn generate_id(&self, node: &Node, whatsit: Option<&mut Whatsit>, prefix: Option<&str>, state: &State) {
-    unimplemented!();
+  //**********************************************************************
+  /// This function computes an xml:id for a node, if it hasn't already got one.
+  /// It is suitable for use in Tag afterOpen as
+  ///  `Tag('ltx:para',afterOpen=>sub { GenerateID(@_,'p'); });`
+  /// It generates an id of the form <parentid>.<prefix><number>
+  /// The parent node (the one with ID=<parentid>) also maintains a counter
+  /// stored in an attribute `_ID_counter_<prefix>` recording the last used
+  /// <number> for <prefix> amongst its descendents.
+  pub fn generate_id(&mut self, mut node: &mut Node, mut prefix: &str, state: &mut State) -> Result<()> {
+    // If node doesn't already have an id, and can
+    let node_qname = self.get_node_qname(node, state);
+    // but isn't a _Capture_ node (which ultimately should disappear)
+    if !node.has_attribute_ns("id", XML_NS) && self.can_have_attribute(&node_qname, "xml:id", state) && (node_qname != "ltx:_Capture_") {
+      let mut ancestor = self
+        .findnode("ancestor::*[@xml:id][1]", Some(node), state)
+        .unwrap_or_else(|| self.get_document().get_root_element().unwrap());
+      //// Old versions don't like ancestor.getAttribute('xml:id');
+      let ancestor_id = ancestor.get_attribute_ns("id", XML_NS);
+      // If we've got no ancestor_id, then we've got no ancestor (no document yet!),
+      // or ancestor IS the root element (but without an id);
+      // If we also have no prefix, we'll end up with an illegal id (just digits)!!!
+      // We'll use "id" for an id prefix; this will work whether or not we have an ancestor.
+      if prefix.is_empty() && ancestor_id.is_none() {
+        prefix = "id";
+      }
+
+      let ctrkey = s!("_ID_counter_") + prefix + "_";
+      let a_ctr = ancestor.get_attribute(&ctrkey).unwrap_or_else(|| s!("0"));
+
+      let ctr_int = 1 + a_ctr.parse::<u32>().unwrap_or(0);
+      let ctr = ctr_int.to_string();
+
+      let id = match ancestor_id {
+        Some(aid) => aid + ".",
+        None => String::new(),
+      } + prefix
+        + &ctr;
+
+      ancestor.set_attribute(&ctrkey, &ctr)?;
+      node.set_attribute("xml:id", &id)?;
+    }
+    Ok(())
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -1,3 +1,4 @@
+use rtx_core::state::{State, StateOptions};
 use rtx::util::test::lex_single_tex_formula;
 use rtx_math_parser::MathParser;
 
@@ -23,7 +24,8 @@ fn basic_1() {
   assert_eq!(node_str_before, expected_xmath_before);
 
   let mut parser = MathParser::default();
-  let parse_tree_opt = parser.parse_lexemes(lexemes, nodes, &mut doc);
+  let mut state = State::new(StateOptions::default());
+  let parse_tree_opt = parser.parse_lexemes(lexemes, nodes, &mut doc, &mut state);
 
   assert!(parse_tree_opt.is_ok());
   let parsed_tree_opt = parse_tree_opt.unwrap();
