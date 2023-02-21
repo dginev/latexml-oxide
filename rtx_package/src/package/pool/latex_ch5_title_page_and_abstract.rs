@@ -116,13 +116,13 @@ LoadDefinitions!(state, {
     },
     after_digest => sub[stomach, args, state] {
       let abstract_title = stomach.digest(Tokens!(T_CS!("\\format@title@abstract"),T_BEGIN!(), T_CS!("\\abstractname"), T_END!()), state)?;
-
+      let regurgitated = List::new(stomach.regurgitate(), state);
       let mut frontmatter = match state.lookup_value_mut("frontmatter") {
         Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
         _ => Fatal!(TexPool, Expected, stomach, state, "Global TeX Frontmatter hash was not available, should never happen"),
       };
       let mut abstr = frontmatter.entry("ltx:abstract".to_string()).or_insert_with(Vec::new);
-      abstr.push(("ltx:abstract".to_string(), Some(string_map!("name" => abstract_title)), List::new(stomach.regurgitate()).into()));
+      abstr.push(("ltx:abstract".to_string(), Some(string_map!("name" => abstract_title)), regurgitated.into()));
       DefMacro!("\\maybe@end@abstract", "", scope => Some(Scope::Global));
     },
     locked => true,

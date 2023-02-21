@@ -1,5 +1,6 @@
 use super::metadata::Meta;
 use super::tree::{Args, Operator, XM, XProps};
+use libxml::tree::Node;
 
 impl From<&str> for Operator {
   fn from(a: &str) -> Operator { Operator(Box::new(a.into())) }
@@ -14,6 +15,12 @@ impl From<Option<XM>> for Operator {
     } else {
       "missing_operator".into()
     }
+  }
+}
+impl From<&Node> for Operator {
+  fn from(node: &Node) -> Operator {
+    let xmnode : XM = node.into();
+    Operator(Box::new(xmnode))
   }
 }
 impl From<Option<XM>> for Args {

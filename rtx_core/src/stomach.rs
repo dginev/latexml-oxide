@@ -39,6 +39,19 @@ impl Object for Stomach {
 impl<'t> Stomach {
   pub fn get_gullet_mut(&mut self) -> &mut Gullet { &mut self.gullet }
   pub fn get_gullet(&self) -> &Gullet { &self.gullet }
+  pub fn get_boxing_level(&self) -> usize { self.boxing.len() }
+  /// ScriptLevel is similar to boxing level, but relative to current Math mode's level
+  /// This is used for the scriptpos attribute to recognize overlapping sccripts.
+  /// Making it relative to the math's level avoids unnecessary changes
+  pub fn get_script_level(&self, state: &State) -> usize {
+    let boxlevel = self.boxing.len();
+    if let Some(Stored::Int(prevlevel)) = state.lookup_value("script_base_level") {
+      boxlevel - (*prevlevel as usize) + 1
+    } else {
+      boxlevel
+    }
+  }
+
   pub fn regurgitate(&mut self) -> Vec<Digested> { self.box_list.drain(..).collect() }
   // **********************************************************************
   // Digestion
@@ -130,7 +143,7 @@ impl<'t> Stomach {
       let final_box_list = stomach.regurgitate(); // grab the local boxes and return
       stomach.box_list = local_box_list; // swap back in the boxes of the initial local frame
 
-      let mut digested_list = List::new(final_box_list);
+      let mut digested_list = List::new(final_box_list, state);
       digested_list.mode = Some(mode);
       digested_list.into()
     })
@@ -583,8 +596,8 @@ impl<'t> Stomach {
       // When entering math mode, we set the font to the default math font,
       // and save the text font for any embedded text.
       state.assign_value("savedfont", curfont.clone(), Some(Scope::Local));
-      // TODO:
-      // $STATE->assignValue(script_base_level => scalar(@{ $$self{boxing} }));    # See getScriptLevel
+      // see get_script_level()
+      state.assign_value("script_base_level", self.boxing.len(), None);
       let isdisplay = mode.starts_with("display");
       let new_font = state.lookup_mathfont().unwrap().merge(Font {
         color: curfont.color.clone(),

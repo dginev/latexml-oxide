@@ -214,14 +214,22 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         has_floats = false;
         floats = String::new();
       }
+      // Fonts require a bit too much boilerplate at the moment, due to having
+      // different directives (code vs asset) and trying to avoid deep cloning.
       operations.push(quote!(
         let mut av_props : HashMap<String, String> = HashMap::new();
         #(#av)*
-        let this_font = match props.get("font") {
-          Some(Stored::Font(f)) => Some(&**f),
+        let this_font_opt = match props.get("font") {
+          Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
+          Some(Stored::FontDirective(FontDirective::Asset(fa))) => Some(Cow::Borrowed(&**fa)),
+          Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None, state)?)),
           _ => None
         };
-        document.open_element(#current_tag, Some(av_props), this_font, state)?;
+        if let Some(this_font) = this_font_opt {
+          document.open_element(#current_tag, Some(av_props), Some(&this_font), state)?;
+        } else {
+          document.open_element(#current_tag, Some(av_props), None, state)?;
+        }
       ));
       // Empty element?
       if replacement.starts_with('/') {

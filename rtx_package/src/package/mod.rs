@@ -32,7 +32,7 @@ pub use rtx_core::definition::register::{Register, RegisterType, RegisterValue};
 pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure, ExpansionBody, ExpansionClosure, PrimitiveClosure,
-  PrimitiveFn, ReplacementClosure, Reversion,
+  PrimitiveFn, ReplacementClosure, Reversion, FontDirective, FontClosure
 };
 pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptionName, TagOptions};

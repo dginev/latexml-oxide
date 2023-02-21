@@ -301,7 +301,8 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\newbox Token", sub[stomach, (t), state] {
     let n = state.lookup_int("allocated_boxes");
     AssignValue!("allocated_boxes" => n + 1, Some(Scope::Global));
-    AssignValue!(&s!("box{}",n), List::new(Vec::new()));
+    let empty_list = List::new(Vec::new(), state);
+    AssignValue!(&s!("box{}",n), empty_list);
     DefRegister!(t, None, Number(n));
   });
   // DefPrimitive('\newhelp Token {}', sub { AssignValue(ToString($_[1]) => $_[2]); });

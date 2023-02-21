@@ -3,11 +3,10 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::common::error::*;
-use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure, Reversion};
+use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure, Reversion,FontDirective};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -26,7 +25,7 @@ pub struct PrimitiveOptions {
   pub locked: bool,
   pub nargs: Option<usize>,
   pub scope: Option<Scope>,
-  pub font: Option<Font>,
+  pub font: Option<FontDirective>,
   pub mode: Option<String>,
   pub alias: Option<String>,
   pub before_digest: Vec<BeforeDigestClosure>,

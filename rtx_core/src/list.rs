@@ -70,7 +70,9 @@ impl BoxOps for List {
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { unimplemented!() }
 
-  fn get_font(&self) -> Option<Cow<Font>> { self.font.as_ref().map(Cow::Borrowed) }
+  fn get_font(&self, _:&mut State) -> Result<Option<Cow<Font>>> { Ok(
+    self.font.as_ref().map(Cow::Borrowed)
+  )}
   fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
     Ok(match &self.font {
       Some(f) => f.compute_boxes_size(&self.boxes, options, state)?,
@@ -80,7 +82,7 @@ impl BoxOps for List {
 }
 
 impl List {
-  pub fn new(boxes: Vec<Digested>) -> Self {
+  pub fn new(boxes: Vec<Digested>, state: &mut State) -> Self {
     // while (defined($bx = shift(@bxs)) && (!defined $locator)) {
     //   $locator = $bx->getLocator unless defined $locator; }
     // TODO: Should the locators be an Option<> type? Or can we test for the default here, since it's rare? Hmmmm
@@ -98,7 +100,7 @@ impl List {
     // font!) ???
     let mut font: Option<Font> = None;
     for bx in boxes.iter().rev() {
-      if let Some(bx_font) = bx.get_font() {
+      if let Some(bx_font) = bx.get_font(state).expect("getting a font should go well during List construction") {
         font = Some(bx_font.into_owned());
         break;
       }

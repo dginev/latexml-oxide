@@ -15,6 +15,7 @@ use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
 use rtx_core::definition::register::{Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue};
 use rtx_core::definition::{
   BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, PrimitiveClosure, ReplacementClosure,
+  FontDirective
 };
 use rtx_core::document::Document;
 use rtx_core::gullet::Gullet;
@@ -286,9 +287,11 @@ pub fn def_primitive(
     });
     before_digest_env.push(bgroup_closure);
   }
-  if let Some(chosen_font) = options.font {
+  if let Some(chosen_font_directive) = options.font {
     let merge_font_closure = before_digest_single!(stomach, state, {
-      MergeFont!(chosen_font.clone(), state);
+      if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
+        MergeFont!((**chosen_font).clone(), state);
+      }
     });
     before_digest_env.push(merge_font_closure);
   }
@@ -330,7 +333,6 @@ pub fn def_primitive(
 pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
   let scope = options.scope.clone();
   let reqfont_opt = options.font.clone();
-
   let moved_options = options.clone();
 
   state.install_definition(
@@ -344,7 +346,8 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
         let state_font = state.lookup_font().unwrap();
         let font = Arc::new(
           if let Some(ref reqfont) = reqfont_opt {
-            state_font.merge(reqfont.clone()).specialize(&presentation)
+            let this_reqfont = reqfont.get_font(None, state)?;
+            state_font.merge((*this_reqfont).clone()).specialize(&presentation)
           } else {
             state_font.specialize(&presentation)
           });
@@ -366,7 +369,6 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
 
 pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
   // TODO: do we need to do anything about digesting the presentation?
-  let end_tok = if !presentation.is_empty() { format!(">{presentation}</ltx:XMTok>") } else { String::from("/>") };
   let nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(0);
   let defcs = if options.robust { def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state) } else  { cs.clone() };
   if options.reversion.is_none() && nargs==0 && options.alias.is_none() {
@@ -381,15 +383,23 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
       options.reversion = Some(Reversion::Tokens(Tokens::new(Explode!(presentation))));
     }
   }
-  // TODO:
-  // my $sizer = inferSizer($options{sizer}, $options{reversion});
-  options.font = Some(
-    if options.mathstyle.is_some() {
-      state.lookup_font().unwrap().merge(Font{ mathstyle: options.mathstyle.as_ref().map(|ms| Cow::Owned(ms.to_owned())), ..Font::default()})
-        .specialize(&presentation)
+  let presentation_for_sizer = presentation.clone();
+  let presentation_for_replacement = presentation.clone();
+  let is_mathstyle = options.mathstyle.is_some();
+  let mathstyle_for_font = options.mathstyle.clone();
+  options.font = Some(FontDirective::Closure(
+    if is_mathstyle { Arc::new(move |whatsit, state| {
+      Ok(state.lookup_font().unwrap().merge(
+          Font{ mathstyle: mathstyle_for_font.as_ref()
+                .map(|ms| Cow::Owned(ms.to_owned())),
+              ..Font::default()})
+          .specialize(&presentation))
+      })
     } else {
-      state.lookup_font().unwrap().specialize(&presentation)
-    });
+      Arc::new(move |whatsit, state| {
+        Ok(state.lookup_font().unwrap().specialize(&presentation))
+      })
+    }));
   let compiled_replacement : Option<ReplacementClosure> = Some(if nargs == 0 { // If trivial presentation, allow it in Text
     Arc::new(move |document:&mut Document, _, props:&HashMap<String, Stored>, state: &mut State| {
       let mut attrs = HashMap::new();
@@ -403,13 +413,18 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
           attrs.insert(key.to_string(), v.to_string());
         }
       }
-      let font = if let Some(Stored::Font(f)) = props.get("font") {
-        Some(&**f)
-      } else {
-        None
+      let font_opt = match props.get("font") {
+        Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
+        Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None, state)?)),
+        Some(Stored::FontDirective(FontDirective::Asset(font))) => Some(Cow::Borrowed(&**font)),
+        _ => None
       };
-      document.open_element("ltx:XMTok", Some(attrs), font, state)?;
-      document.absorb_string(&presentation, props, state)?;
+      if let Some(font) = font_opt {
+        document.open_element("ltx:XMTok", Some(attrs), Some(&font), state)?;
+      } else {
+        document.open_element("ltx:XMTok", Some(attrs), None, state)?;
+      }
+      document.absorb_string(&presentation_for_replacement, props, state)?;
       document.close_element("ltx:XMTok", state)?;
 
       Ok(())
@@ -424,8 +439,10 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
     // })
     unimplemented!();
   });
-  let mut prop_options = options.clone();
+  let sizer : Option<SizingClosure> = Some(Arc::new(move |_,state| {
+      Ok(Font::math_default().compute_string_size(&presentation_for_sizer, HashMap::new(), state)) }));
 
+  let mut prop_options = options.clone();
   let properties: PropertiesClosure = Arc::new(move |_,_,_| Ok(prop_options.to_hash_stored()));
   let constructor = Constructor {
     cs: defcs,
@@ -438,6 +455,7 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
     nargs: Some(nargs),
     alias: options.alias,
     reversion: options.reversion,
+    sizer,
     properties,
     // capture_body: options.capture_body,
     // outer
@@ -465,6 +483,18 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
   //         $font->computeStringSize($presentation); },
   //       %options)), $options{scope});
 
+}
+
+fn infer_sizer(sizer:&Option<SizingClosure>, reversion:&Option<Reversion>) -> Option<SizingClosure> {
+  match sizer {
+    Some(ref closure) => Some(Arc::clone(closure)),
+    None => match reversion {
+      Some(Reversion::Tokens(tks)) => {
+        (*tks).to_string().as_str().into_option()
+      },
+      _ => None
+    }
+  }
 }
 
 fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>, state: &mut State) -> Token {
@@ -517,9 +547,13 @@ pub fn def_constructor(
     });
     before_digest_closures.push(bgroup_closure);
   }
-  if let Some(chosen_font) = options.font {
+  if let Some(chosen_font_directive) = options.font {
+    let chosen_font : Arc<Font> = chosen_font_directive.get_font(None, state)
+      .expect("getting a font during DefConstructor shouldn't cause errors");
     let merge_font_closure = before_digest_single!(stomach, state, {
-      MergeFont!(chosen_font.clone(), state);
+      if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
+        MergeFont!((**chosen_font).clone(), state);
+      }
     });
     before_digest_closures.push(merge_font_closure);
   }
@@ -549,8 +583,8 @@ pub fn def_constructor(
     after_construct: options.after_construct,
     nargs: options.nargs,
     alias: options.alias,
+    sizer: infer_sizer(&options.sizer, &options.reversion),
     reversion: options.reversion,
-    // sizer
     capture_body: options.capture_body,
     properties: options.properties,
     // outer
@@ -571,10 +605,9 @@ pub fn def_environment(
   options: ConstructorOptions,
   state: &mut State,
 ) {
+  // This is for the common case where the environment is opened by \begin{env}
   let begin_name = s!("\\begin{{{}}}", &name);
   let end_name = s!("\\end{{{}}}", &name);
-  // This is for the common case where the environment is opened by \begin{env}
-  // let sizer = inferSizer($options.sizer, $options.reversion);
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
   match &options.mode {
     Some(ref mode) => {
@@ -611,9 +644,11 @@ pub fn def_environment(
   });
   before_digest_env.push(current_environment_closure);
 
-  if let Some(chosen_font) = options.font {
+  if let Some(chosen_font_directive) = options.font {
     let merge_font_closure = before_digest_single!(stomach, state, {
-      MergeFont!(chosen_font.clone(), state);
+      if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
+        MergeFont!((**chosen_font).clone(), state);
+      }
     });
     before_digest_env.push(merge_font_closure);
   }
@@ -650,9 +685,9 @@ pub fn def_environment(
     // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
     // (defined $sizer ? (sizer => $sizer) : ()),
     // ), $options{scope});
+    sizer: infer_sizer(&options.sizer, &options.reversion),
     reversion: options.reversion,
     alias: options.alias,
-    sizer: options.sizer,
   });
   state.install_definition(begin_name_constructor, options.scope.clone());
 

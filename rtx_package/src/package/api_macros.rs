@@ -6,6 +6,14 @@ macro_rules! Font {
     Some(Font { $($key: $value.into_font_field(),)* .. Font::default() })
 )}
 
+macro_rules! FontDirective {
+  ($($key:ident => $value:expr),*) => (
+    Some(FontDirective::Asset(Arc::new(
+      Font { $($key: $value.into_font_field(),)* .. Font::default() }
+    ))))
+}
+
+
 #[macro_export]
 macro_rules! NewDefault {
   ($name:ident, $($key:ident => $value:expr),*) => ($name {

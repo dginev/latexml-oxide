@@ -10,7 +10,7 @@ use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
 use crate::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure, ReplacementClosure, Reversion, SizingClosure,
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure, ReplacementClosure, Reversion, SizingClosure, FontDirective
 };
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -37,7 +37,7 @@ pub struct ConstructorOptions {
   pub forbid_math: bool,
   pub properties: PropertiesClosure,
   pub capture_body: bool,
-  pub font: Option<Font>,
+  pub font: Option<FontDirective>,
 
   pub after_digest_begin: Vec<DigestionClosure>,
   pub before_digest_end: Vec<BeforeDigestClosure>,
@@ -219,7 +219,7 @@ impl Definition for Constructor {
       // info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
       post.extend(captured);
 
-      whatsit.set_body(post);
+      whatsit.set_body(post, state);
       post = vec![];
       //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);
       // info!(target: "constructor:capture", "constructor: {:?}", self.get_cs_name());

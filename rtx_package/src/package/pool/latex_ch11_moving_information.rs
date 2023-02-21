@@ -668,7 +668,7 @@ fn begin_bibliography_clean(stomach: &mut Stomach, whatsit: &mut Whatsit, state:
     None => DigestIf!("\\bibname", stomach)?,
   };
   if let Some(title) = title_opt {
-    whatsit.set_property("titlefont", title.get_font().unwrap());
+    whatsit.set_property("titlefont", title.get_font(state)?.unwrap());
     whatsit.set_property("title", title);
   }
   whatsit.set_property("bibstyle", LookupValue!("BIBSTYLE"));
