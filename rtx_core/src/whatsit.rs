@@ -11,7 +11,7 @@ use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::definition::expandable::Expandable;
-use crate::definition::{Definition, Reversion};
+use crate::definition::{Definition, Reversion,FontDirective};
 use crate::document::Document;
 use crate::list::List;
 use crate::state::State;
@@ -95,11 +95,11 @@ impl Whatsit {
     }
   }
 
-  pub fn set_body(&mut self, mut body: Vec<Digested>) {
+  pub fn set_body(&mut self, mut body: Vec<Digested>, state: &mut State) {
     let trailer_opt = body.pop();
     let mode = if self.is_math() { TexMode::Math } else { TexMode::Text };
 
-    let mut list = List::new(body);
+    let mut list = List::new(body, state);
     if self.is_math() {
       list.mode = Some(mode);
     }
@@ -287,10 +287,17 @@ impl BoxOps for Whatsit {
     }
   }
 
-  fn get_font(&self) -> Option<Cow<Font>> {
+  fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>> {
     match self.properties.get("font") {
-      Some(Stored::Font(font)) => Some(Cow::Owned((**font).clone())),
-      _ => None,
+      Some(Stored::Font(font)) => Ok(Some(Cow::Owned((**font).clone()))),
+      Some(Stored::FontDirective(fd)) => match fd {
+        FontDirective::Closure(ref code) => {
+        Ok(Some(
+          Cow::Owned(code(Some(self), state)?)))
+        },
+        FontDirective::Asset(ref asset) => Ok(Some(Cow::Borrowed(asset)))
+      }
+      _ => Ok(None),
     }
   }
 
@@ -299,7 +306,6 @@ impl BoxOps for Whatsit {
   fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
     let defn = self.get_definition();
     if let Some(sizer) = defn.get_sizer() {
-      eprintln!("\n\n FOUND SIZER!\n\n");
       sizer(self, state)
     } else {
       // Nothing specified? use #body if any, else sum all box args

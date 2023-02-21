@@ -2143,10 +2143,10 @@ macro_rules! defi_opts {
   };
   // font: Font
   (@munch ( $(,)? font $(:)?$(=>)? { $($fkey:ident => $fvalue:literal),* } $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ Font!($($fkey => $fvalue),*) ] })
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ FontDirective!($($fkey => $fvalue),*) ] })
   };
   (@munch ( $(,)? font $(:)?$(=>)? $props:ident $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ $props ] })
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ $props.map(|v| FontDirective::Asset(Arc::new(v))) ] })
   };
 
   // properties: PropertiesClosure

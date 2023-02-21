@@ -143,7 +143,8 @@ impl BoxOps for Tbox {
     Ok(())
   }
 
-  fn get_font(&self) -> Option<Cow<Font>> { Some(Cow::Borrowed(&self.font)) }
+  fn get_font(&self,_:&mut State) -> Result<Option<Cow<Font>>> { Ok(Some(
+    Cow::Borrowed(&self.font))) }
 
   fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
     if let Some(mut body_stored) = self.get_property("body") {

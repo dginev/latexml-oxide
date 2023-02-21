@@ -14,7 +14,7 @@ use rtx_core::{fatal, map, s, static_map, Info};
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
 use crate::semantics::*;
-use crate::util::node_to_grammar_lexemes;
+use crate::util::{filter_hints,node_to_grammar_lexemes};
 use marpa::lexer::byte_scanner::*;
 use marpa::parser::*;
 use marpa::tree_builder::TreeBuilder;
@@ -259,7 +259,6 @@ impl MathParser {
     // foreach my $n ($document->findnodes("descendant-or-self::*[\@xml:id]",
     // $xnode)) {     my $id = $n->getAttribute('xml:id');
     //     $LaTeXML::MathParser::IDREFS{$id} = $n; }
-    dbg!(document.document.node_to_string(&xnode));
     if let Some(result) = self.parse_rec(&mut xnode, "Anything,", document, state)? {
       // Add text representation to the containing Math element.
       let mut p = xnode.get_parent().unwrap();
@@ -294,7 +293,6 @@ impl MathParser {
       // foreach my $n
       // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
       // $document->setAttribute($n, idref => $repid); } } }
-      dbg!(document.document.node_to_string(&result));
       p.set_attribute("text", &text_form(&result, document, state))?;
     }
     Ok(())
@@ -422,15 +420,23 @@ impl MathParser {
   // Convert to textual form for processing by MathGrammar
   fn parse_single(&mut self, mathnode: &mut Node, document: &mut Document, state: &mut State, _rule: &str) -> Result<Option<Node>> {
     let mut idx = 0;
-    let (lexemes, nodes) = node_to_grammar_lexemes(mathnode, &mut idx);
-    if let Ok(Some(mut parse_tree)) = self.parse_lexemes(lexemes, nodes, document, state) {
-      for mut node in mathnode.get_child_nodes() {
-        node.unlink();
-      }
-      mathnode.add_child(&mut parse_tree).unwrap();
-      Ok(Some(parse_tree))
+    let mut content_nodes = filter_hints(mathnode.get_child_nodes());
+    if content_nodes.is_empty() {
+      Ok(None) // nothing to parse
+    } else if content_nodes.len() == 1 {
+      // single node, just return
+      Ok(Some(content_nodes.remove(0)))
     } else {
-      Ok(None)
+      let (lexemes, nodes) = node_to_grammar_lexemes(mathnode, &mut idx);
+      if let Ok(Some(mut parse_tree)) = self.parse_lexemes(lexemes, nodes, document, state) {
+        for mut node in mathnode.get_child_nodes() {
+          node.unlink();
+        }
+        mathnode.add_child(&mut parse_tree).unwrap();
+        Ok(Some(parse_tree))
+      } else {
+        Ok(None)
+      }
     }
     //   # Failure? No result or uparsed lexemes remain.
     //   # NOTE: Should do script hack??
@@ -629,19 +635,21 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
 
 fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document, state: &mut State) -> (usize, String) {
   let role = op.get_attribute("role").unwrap_or_else(|| "Unknown".to_string());
-  if role.ends_with("SCRIPTOP") && PRE_DIGITS_RE.is_match(&op.get_attribute("scriptpos").unwrap_or_default()) {
+  if (role == "SUBSCRIPTOP" || role == "SUPERSCRIPTOP") && PRE_DIGITS_RE.is_match(&op.get_attribute("scriptpos").unwrap_or_default()) {
     // Note that this will likely get parenthesized due to high bp
-    (
-      5000,
-      textrec(op, None, None, document, state)
-        + " "
-        + &textrec(args.get(1).unwrap(), None, None, document, state)
-        + " "
-        + &textrec(args.get(0).unwrap(), None, None, document, state),
-    )
+    let mut inner = textrec(op, None, None, document, state);
+    if let Some(arg2) = args.get(1) {
+      inner.push(' ');
+      inner.push_str(&textrec(arg2, None, None, document, state));
+    }
+    if let Some(arg1) = args.get(0) {
+      inner.push(' ');
+      inner.push_str(&textrec(arg1, None, None, document, state));
+    }
+    ( 5000, inner )
   } else if let Some(bp) = IS_INFIX.get(&role) {
     // A sub/superscript with a meaning probably should be prefix
-    if role.ends_with("SCRIPTOP") && op.has_attribute("meaning") {
+    if (role == "SUBSCRIPTOP" || role == "SUPERSCRIPTOP") && op.has_attribute("meaning") {
       (
         500,
         format!(

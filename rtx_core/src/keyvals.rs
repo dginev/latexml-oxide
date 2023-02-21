@@ -143,7 +143,7 @@ impl BoxOps for KeyVals {
     unimplemented!();
   }
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { Ok(()) } // TODO
-  fn get_font(&self) -> Option<Cow<Font>> { None } // TODO
+  fn get_font(&self, _:&mut State) -> Result<Option<Cow<Font>>> { Ok(None) } // TODO
   fn compute_size(
     &self,
     options: HashMap<String, Stored>,

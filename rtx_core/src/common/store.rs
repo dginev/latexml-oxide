@@ -18,6 +18,7 @@ use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
+use crate::definition::FontDirective;
 use crate::definition::register::{Register, RegisterCell, RegisterValue};
 use crate::document::tag::TagData;
 use crate::gullet::Gullet;
@@ -97,6 +98,7 @@ pub enum Stored {
   Digested(Box<crate::Digested>), // todo: should this be an Arc<> to make it shareable?
   Parameter(Arc<Parameter>),
   Font(Arc<Font>),
+  FontDirective(FontDirective),
   // WALL OF SHAME (interior mutability) -- can we dispense with these?
   Mouth(Arc<RwLock<Mouth>>),
   Register(Arc<RegisterCell>),
@@ -133,6 +135,7 @@ impl fmt::Debug for Stored {
       Rewrite(ref rewrite) => write!(f, "Stored::Rewrite[{rewrite:?}]"),
       Mouth(ref mouth) => write!(f, "Stored::Mouth[{:?}]", mouth.read().unwrap().get_source()),
       Font(ref font) => write!(f, "Stored::Font[{font:?}]"),
+      FontDirective(ref font) => write!(f, "Stored::FontDirective[{font:?}]"),
       Number(ref number) => write!(f, "Stored::Number[{number:?}]"),
       Glue(ref glue) => write!(f, "Stored::Glue[{glue:?}]"),
       MuGlue(ref glue) => write!(f, "Stored::MuGlue[{glue:?}]"),
@@ -342,6 +345,13 @@ impl PartialEq for Stored {
           false
         }
       },
+      FontDirective(ref fd) => {
+        if let FontDirective(fd2) = other {
+          fd == fd2
+        } else {
+          false
+        }
+      }
       Number(ref n) => {
         if let Number(n2) = other {
           *n == *n2

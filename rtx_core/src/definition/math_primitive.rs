@@ -4,12 +4,12 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::common::error::*;
-use crate::common::font::Font;
+// use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure, Reversion};
+use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure, Reversion, FontDirective};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -18,6 +18,8 @@ use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{Digested, Locator};
+
+use super::SizingClosure;
 
 // DefMath Define a Mathematical symbol or function.
 // There are two sets of cases:
@@ -42,7 +44,7 @@ pub struct MathPrimitiveOptions {
   pub after_digest: Vec<DigestionClosure>,
   pub is_prefix: bool,
   pub scope: Option<Scope>,
-  pub font: Option<Font>,
+  pub font: Option<FontDirective>,
   pub require_math: bool,
   pub forbid_math: bool,
   pub locked: bool,
@@ -57,7 +59,7 @@ pub struct MathPrimitiveOptions {
   pub meaning: Option<String>,
   pub omcd: Option<String>,
   pub reversion: Option<Reversion>,
-  pub sizer: Option<bool>, // TODO
+  pub sizer: Option<SizingClosure>,
   pub role: Option<String>,
   pub operator_role: Option<String>,
   pub reorder: bool,
@@ -158,8 +160,9 @@ impl MathPrimitiveOptions {
     if let Some(ref mode) = self.mode {
       h.insert("mode".to_string(), mode.into());
     }
-    if let Some(ref font) = self.font {
-      h.insert("font".to_string(), font.clone().into());
+    // TODO: Do we want to run the font closures here? Maybe?
+    if let Some(ref font_directive) = self.font {
+      h.insert("font".to_string(), Stored::FontDirective(font_directive.clone()));
     }
     if let Some(ref lpadding) = self.lpadding {
       h.insert("lpadding".to_string(), (*lpadding).into());
@@ -175,26 +178,26 @@ impl MathPrimitiveOptions {
   /// Checks if complex options are present,
   /// suggestive of using a `Constructor` instead of a `Primitive`
   pub fn has_complex_option(&self) -> bool {
-    self.bounded |
-    self.mode.is_some() |
-    !self.before_digest.is_empty() |
-    !self.after_digest.is_empty() |
-    self.is_prefix |
-    self.require_math |
-    self.forbid_math |
-    self.alias.is_some() |
-    self.decl_id.is_some() |
-    self.replace.is_some() |
-    self.reversion.is_some() |
-    self.sizer.is_some() |
-    self.operator_role.is_some() |
-    self.reorder |
-    self.dual |
-    self.operator_scriptpos.is_some() |
-    self.stretchy.is_some() |
-    self.operator_stretchy.is_some() |
-    self.nogroup |
-    self.hide_content_reversion |
+    //DG: note that `nogroup` is true by default, so checking for it is counter-intuitive (should we even?)
+    self.bounded ||
+    self.mode.is_some() ||
+    !self.before_digest.is_empty() ||
+    !self.after_digest.is_empty() ||
+    self.is_prefix ||
+    self.require_math ||
+    self.forbid_math ||
+    self.alias.is_some() ||
+    self.decl_id.is_some() ||
+    self.replace.is_some() ||
+    self.reversion.is_some() ||
+    self.sizer.is_some() ||
+    self.operator_role.is_some() ||
+    self.reorder ||
+    self.dual ||
+    self.operator_scriptpos.is_some() ||
+    self.stretchy.is_some() ||
+    self.operator_stretchy.is_some() ||
+    self.hide_content_reversion ||
     self.revert_as.is_some()
   }
 }

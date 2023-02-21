@@ -19,6 +19,7 @@ use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::common::xml::{self, XML_NS};
+use crate::definition::FontDirective;
 use crate::ligature::Ligature;
 use crate::list::List;
 use crate::state::State;
@@ -324,7 +325,7 @@ impl Document {
               Some(Arc::clone(prop_font))
             } else {
               match self.box_to_absorb {
-                Some(ref thisbox) => thisbox.get_font().map(|thisfont| Arc::new(thisfont.into_owned())),
+                Some(ref thisbox) => thisbox.get_font(state)?.map(|thisfont| Arc::new(thisfont.into_owned())),
                 None => None,
               }
             };
@@ -357,7 +358,9 @@ impl Document {
     if !ismath {
       let font: Font = match props.get("font") {
         Some(Stored::Font(fnt)) => (**fnt).clone(),
-        _ => self.box_to_absorb.as_ref().unwrap().get_font().unwrap().into_owned(),
+        Some(Stored::FontDirective(FontDirective::Asset(fnt))) => (**fnt).clone(),
+        Some(Stored::FontDirective(FontDirective::Closure(code))) => code(None, state)?,
+        _ => self.box_to_absorb.as_ref().unwrap().get_font(state)?.unwrap().into_owned(),
       };
       self.open_text(object, &font, state)?;
     } else if self.get_node_qname(&self.node, state) == MATH_TOKEN_NAME {
@@ -368,11 +371,17 @@ impl Document {
     // Else create the XMTok now.
     } else {
       // Odd case: constructors that work in math & text can insert raw strings in Math mode.
-      let font_math = match props.get("font") {
-        Some(Stored::Font(fnt)) => Some(&**fnt),
+      let font_math_opt = match props.get("font") {
+        Some(Stored::Font(fnt)) => Some(Cow::Borrowed(&**fnt)),
+        Some(Stored::FontDirective(FontDirective::Asset(fnt))) => Some(Cow::Borrowed(&**fnt)),
+        Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None, state)?)),
         _ => None,
       };
-      self.insert_math_token(object, HashMap::new(), font_math, state)?;
+      if let Some(font_math) = font_math_opt {
+        self.insert_math_token(object, HashMap::new(), Some(&font_math), state)?;
+      } else {
+        self.insert_math_token(object, HashMap::new(), None, state)?;
+      }
     }
     Ok(())
   }
@@ -940,7 +949,7 @@ impl Document {
       let font = match font_opt {
         Some(f) => f.clone(),
         None => match self.box_to_absorb {
-          Some(ref tbox) => match tbox.get_font() {
+          Some(ref tbox) => match tbox.get_font(state)? {
             Some(f) => f.into_owned(),
             None => Font::math_default(), // should never happen?
           },
@@ -1241,8 +1250,9 @@ impl Document {
 
   // New stategy (but inefficient): apply ligatures until one succeeds,
   // then remove it, and repeat until ALL (remaining) fail.
-  fn apply_math_ligatures(&mut self, node: &mut Node, state: &State) -> Result<()> {
-    if let Some(Stored::VecDequeStored(stored_ligatures)) = state.lookup_value("MATH_LIGATURES") {
+  fn apply_math_ligatures(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
+    let checked_out_ligatures = state.checkout_value("MATH_LIGATURES");
+    if let Some(Stored::VecDequeStored(ref stored_ligatures)) = checked_out_ligatures {
       let mut ligatures = stored_ligatures.iter().collect::<VecDeque<_>>();
       while !ligatures.is_empty() {
         let mut matched = false;
@@ -1261,15 +1271,21 @@ impl Document {
         }
         ligatures = next_ligatures;
         if !matched {
+          if let Some(value) = checked_out_ligatures {
+            state.checkin_value("MATH_LIGATURES", value);
+          }
           return Ok(());
         }
       }
+    }
+    if let Some(value) = checked_out_ligatures {
+      state.checkin_value("MATH_LIGATURES", value);
     }
     Ok(())
   }
 
   /// Apply ligature operation to `node`, presumed the last insertion into it's parent(?)
-  fn apply_math_ligature(&mut self, node: &mut Node, ligature: &Ligature, state: &State) -> Result<bool> {
+  fn apply_math_ligature(&mut self, node: &mut Node, ligature: &Ligature, state: &mut State) -> Result<bool> {
     if let Some((nmatched, newstring, attr)) = (ligature.matcher.as_ref().unwrap())(self, node, state)? {
       let mut boxes = VecDeque::new();
       boxes.push_front(self.get_node_box(node).unwrap());
@@ -1284,7 +1300,7 @@ impl Document {
       // have the old ones.  Unless we could recursively replace all of them, we'd better skip it(??)
       if boxes.len() > 1 {
         // TODO: Cloning boxes is BAD. What is a better model?
-        let mut list = List::new(boxes.into_iter().map(|b| (*b).clone()).collect::<Vec<_>>());
+        let mut list = List::new(boxes.into_iter().map(|b| (*b).clone()).collect::<Vec<_>>(), state);
         list.mode = Some(TexMode::Math);
         self.set_node_box(node, Arc::new(list.into()));
       }
@@ -1976,9 +1992,9 @@ impl Document {
     Ok(())
   }
 
-  pub fn set_box_font(&mut self, node: &mut Node) -> Result<()> {
+  pub fn set_box_font(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     if let Some(ref thisbox) = self.box_to_absorb {
-      if let Some(font) = thisbox.get_font() {
+      if let Some(font) = thisbox.get_font(state)? {
         let todo_font_clone = font.into_owned();
         self.set_node_font(node, &todo_font_clone)?;
       }

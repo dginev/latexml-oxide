@@ -32,11 +32,17 @@ LoadDefinitions!(state, {
     let body = stomach.digest_next_body(None, state)?;
     let mut boxes = vec![Digested::from(open)];
     boxes.extend(body);
-    // TODO: Locator logic here needs to improve..
+    let mut font = None;
+    for abox in boxes.iter().rev() {
+      if let Some(boxfont) = abox.get_font(state)? {
+        font = Some(boxfont.into_owned());
+        break;
+      }
+    }
     List {
       boxes,
       mode,
-      font: None,
+      font,
       locator: Locator::default(),
       properties: HashMap::new()
     }

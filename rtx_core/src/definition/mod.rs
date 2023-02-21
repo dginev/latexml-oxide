@@ -16,6 +16,7 @@ use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::common::font::Font;
 
 use self::argument::ArgWrap;
 use self::register::{RegisterType, RegisterValue};
@@ -42,6 +43,7 @@ pub type ReplacementClosure = Arc<dyn Fn(&mut Document, &Vec<Option<Digested>>, 
 pub type ConstructionClosure = Arc<dyn Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
 pub type DigestedReversionClosure = Arc<dyn Fn(&Whatsit, &Vec<Option<Digested>>, &State) -> Result<Tokens>>;
 pub type SizingClosure = Arc<dyn Fn(&Whatsit, &mut State) -> Result<(Dimension, Dimension, Dimension)>>;
+pub type FontClosure = Arc<dyn Fn(Option<&Whatsit>, &mut State) -> Result<Font>>;
 
 #[derive(Clone)]
 pub enum ExpansionBody {
@@ -126,6 +128,60 @@ impl From<ArgWrap> for ExpansionBody {
 }
 impl From<ArgWrap> for Option<ExpansionBody> {
   fn from(t: ArgWrap) -> Option<ExpansionBody> { t.owned_tokens().map(ExpansionBody::Tokens) }
+}
+
+
+#[derive(Clone)]
+pub enum FontDirective {
+  Closure(FontClosure),
+  Asset(Arc<Font>)
+}
+
+impl From<Font> for FontDirective {
+  fn from(f: Font) -> Self {
+    FontDirective::Asset(Arc::new(f))
+  }
+}
+impl From<FontClosure> for FontDirective {
+  fn from(fc: FontClosure) -> Self {
+    FontDirective::Closure(fc)
+  }
+}
+impl FontDirective {
+  pub fn get_font(&self, whatsit: Option<&Whatsit>, state: &mut State) -> Result<Arc<Font>> {
+    match self {
+      FontDirective::Closure(fc) =>
+        Ok(Arc::new(
+          (fc)(whatsit, state)?)),
+      FontDirective::Asset(ref font) => Ok(Arc::clone(font))
+    }
+  }
+  pub fn get_asset(&self) -> Option<Arc<Font>> {
+    if let FontDirective::Asset(font) = self {
+      Some(Arc::clone(font))
+    } else {
+      None
+    }
+  }
+}
+impl fmt::Debug for FontDirective {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match self {
+      FontDirective::Closure(_) =>  write!(f, "<FontClosure>"),
+      FontDirective::Asset(font) => write!(f, "{:?}", *font)
+    }
+  }
+}
+impl PartialEq for FontDirective {
+  fn eq(&self, other: &FontDirective) -> bool {
+    match self {
+      FontDirective::Closure(_) => false, // we can't compare them for now?
+      FontDirective::Asset(asset1) => match other {
+        FontDirective::Closure(_) => false,
+        FontDirective::Asset(asset2) => *asset1 == *asset2
+      }
+    }
+  }
 }
 
 pub trait Definition: Object {

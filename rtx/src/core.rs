@@ -254,7 +254,7 @@ impl DigestionAPI for Core {
       boxes.extend(next_bodies);
     }
     stomach.get_gullet_mut().flush(&mut self.state);
-    List::new(boxes).into()
+    List::new(boxes, &mut self.state).into()
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

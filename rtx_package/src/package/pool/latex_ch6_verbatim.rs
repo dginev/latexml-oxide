@@ -46,7 +46,7 @@ LoadDefinitions!(outer_state, {
     },
     after_digest => sub[stomach, whatsit, state] {
       // makes you wonder if the `get_font` API should be working with Arc<Font> in the first place...
-      let font : Option<Arc<Font>> = whatsit.get_font().map(|ft| Arc::new((*ft).to_owned()));
+      let font : Option<Arc<Font>> = whatsit.get_font(state)?.map(|ft| Arc::new((*ft).to_owned()));
       let loc = whatsit.get_locator();
       let mut lines : Vec<String> = Vec::new();
       let gullet = stomach.get_gullet_mut();
@@ -82,7 +82,7 @@ LoadDefinitions!(outer_state, {
       let boxes = lines.into_iter().map(|line|
         Tbox::new(line.clone(), font.clone(), loc.clone().map(|l| l.into_owned()), T_OTHER!(line).into(), HashMap::new(), state).into()
       ).collect();
-      whatsit.set_body(boxes);
+      whatsit.set_body(boxes, state);
     },
     before_construct => sub[document, whatsit, state] { document.maybe_close_element("ltx:p", state)?; }
   );

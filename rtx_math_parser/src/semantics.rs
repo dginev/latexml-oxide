@@ -10,6 +10,7 @@ use marpa::thin::Value;
 use marpa::tree_builder::*;
 
 use rtx_core::common::font::{self, Font};
+use rtx_core::common::xml::element_nodes;
 use rtx_core::state::State;
 use rtx_core::document::Document;
 use rtx_core::raw_map;
@@ -227,8 +228,8 @@ pub fn circumfix_fenced(
 
 /// remove start_/end_ wrappers
 pub fn faux_wrap(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
-  unp!(args => _faux1, content, _faux2);
-  Ok(content)
+  unp!(args => start_script, _content, _end_script);
+  Ok(start_script)
 }
 
 pub fn standalone_script(
@@ -237,11 +238,11 @@ pub fn standalone_script(
   _: &[ValidationPragmatics],
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
-  unp!(args => _start_script, base, _end_script);
+  unp!(args => start_script, _content, _end_script);
   // TODO: it looks like we need properties on each XM::Apply,
   // and porting NewScript is a head-scratcher.
   // for now, just keep the property if it's there.
-  new_script(base.unwrap(), None, ctxt)
+  new_script(None, start_script.unwrap(), ctxt)
 }
 
 pub fn postfix_script(
@@ -251,7 +252,7 @@ pub fn postfix_script(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => base, op);
-  new_script(op.unwrap(), base, ctxt)
+  new_script(base, op.unwrap(), ctxt)
 }
 
 pub fn prefix_script(
@@ -261,35 +262,29 @@ pub fn prefix_script(
   ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => op, base);
-  new_script(op.unwrap(), base, ctxt)
+  new_script(base, op.unwrap(), ctxt)
 }
 
 /// This is loosely in the lines of MathParser::NewScript, but taking into account
 /// the realities of our new data structures.
-pub fn new_script(script: XM, base: Option<XM>, ctxt:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn new_script(base: Option<XM>, script: XM, ctxt:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   if let XM::Lexeme(ref lex, _) = script {
-    let node = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
-    let script_wrap = node.get_parent().unwrap();
+    // TODO: continue porting...
+    // let rbase = base.as_ref().map(|b| b.realize_xmnode(&ctxt).expect("if a script is to be built with a base, we expect it to have a Node.")).flatten();
+    // let rscript = script.realize_xmnode(&ctxt)?;
+    let script_wrap = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
     let node_role = script_wrap.get_attribute("role").unwrap();
     let is_float = node_role.starts_with("FLOAT");
     let is_super = node_role.ends_with("SUPERSCRIPT");
     let role = Cow::Borrowed(if is_super { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" });
     let scriptpos = Cow::Borrowed(if is_float { "pre1" } else { "post1" });
-    if base.is_some() {
-       // TODO: scriptpos => "$x$l"
-      let op = new_props(None, None, Some(raw_map!("role"=>role, "scriptpos"=>scriptpos)));
-      let script_arg = obtain_arg(script, 0);
-      Ok(Some(XM::Apply(op.into(), Args(vec![base, script_arg]), XProps::default(), Meta::default())))
-    } else {
-      // DG: This is completely wrong, and just temporarily passes one test. Scripts need to be fleshed out with generality. (TODO)
-      dbg!(ctxt.document.document.node_to_string(&script_wrap));
-      node
-        .get_parent()
-        .unwrap()
-        .set_attribute("scriptpos", "1")
-        .expect("XML attributes should set without issue.");
-      Ok(Some(script))
-    }
+      // TODO: scriptpos => "$x$l"
+    let op = new_props(None, None, Some(raw_map!("role"=>role, "scriptpos"=>scriptpos)));
+    let script_arg = obtain_arg(script, 0, ctxt)?;
+    Ok(Some(
+      XM::Apply(op.into(), Args(vec![base, script_arg]),
+        XProps::default(), Meta::default())
+    ))
   } else {
     panic!(
       "new_script is meant to be called on script terminals (e.g. POSTSUBSCRIPT/POSTSUPERSCRIPT), got {:?}",
@@ -300,12 +295,22 @@ pub fn new_script(script: XM, base: Option<XM>, ctxt:ActionContext) -> Result<Op
 
 // Get n-th arg of an XMApp.
 // However, this is really only used to get the script out of a sub/super script
-pub fn obtain_arg(tree: XM, n: usize) -> Option<XM> {
+pub fn obtain_arg(tree: XM, n: usize, ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   match &tree {
-    XM::Lexeme(_, _) | XM::Token(_, _) => Some(tree),
+    XM::Lexeme(lex, _) => {
+      let lex_node = lookup_lex_node(lex, ctxt.nodes)?;
+      let args = element_nodes(lex_node);
+      let nth = args.get(n).map(XM::from);
+      Ok(nth)
+      // TODO:
+      // Tricky case: if $node is an XMRef, we'll want to reference the SUB node too
+      // and not just use it directly; else that node will be duplicated in both branches of XMDual
+      // if ($nth && !$node->isSameNode($onode)) {
+      //   return LaTeXML::Package::createXMRefs($LaTeXML::MathParser::DOCUMENT, $nth); }
+    },
     XM::Apply(_, ref args, _, _) => match args.0.get(n) {
-      Some(t) => t.clone(),
-      None => None,
+      Some(t) => Ok(t.clone()),
+      None => Ok(None),
     },
     _ => unimplemented!(),
   }
@@ -340,23 +345,6 @@ pub fn compound_operator_2(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[Valida
   new_list(vec![op1.unwrap(), comma.into(), op2.unwrap()], ctxt)
 }
 
-fn invisible_times() -> XProps {
-  XProps {
-    meaning: Some(Cow::Borrowed("times")),
-    role: Some(Cow::Borrowed("MULOP")),
-    content: Some(Cow::Borrowed("\u{2062}")),
-    ..XProps::default()
-  }
-}
-
-fn invisible_comma() -> XProps {
-  XProps {
-    role: Some(Cow::Borrowed("PUNCT")),
-    content: Some(Cow::Borrowed("\u{2063}")),
-    ..XProps::default()
-  }
-}
-
 pub fn new_props(
   meaning: Option<Cow<'static, str>>,
   content: Option<Cow<'static, str>>,
@@ -366,6 +354,8 @@ pub fn new_props(
   let role = props.remove("role");
   let name = props.remove("name");
   let id = props.remove("id");
+  let idref = props.remove("idref");
+  let fontref = props.remove("_font");
   let scriptpos = props.remove("scriptpos");
   // TODO:
   let font = match props.remove("font") {
@@ -389,6 +379,8 @@ pub fn new_props(
     name,
     scriptpos,
     id,
+    idref,
+    fontref,
     font: Some(font),
   }
 }
@@ -441,10 +433,22 @@ fn extract_separators(items: &[XM]) -> (Vec<&XM>, Vec<&XM>) {
 }
 
 // Some handy shorthands.
-// pub fn absent() -> XMTok { new_token(
-//   Some(Cow::Borrowed("absent")),
-//    None, HashMap::default()) }
+fn invisible_times() -> XProps {
+  XProps {
+    meaning: Some(Cow::Borrowed("times")),
+    role: Some(Cow::Borrowed("MULOP")),
+    content: Some(Cow::Borrowed("\u{2062}")),
+    ..XProps::default()
+  }
+}
 
-// sub InvisibleComma {
-// return New(undef, "\x{2063}", role => 'PUNCT', font =>
-// LaTeXML::Common::Font->new()); }
+fn invisible_comma() -> XProps {
+  XProps {
+    role: Some(Cow::Borrowed("PUNCT")),
+    content: Some(Cow::Borrowed("\u{2063}")),
+    ..XProps::default()
+  }
+}
+
+// fn absent() -> XM {
+//   new_props(Some(Cow::Borrowed("absent")), None, None).into() }

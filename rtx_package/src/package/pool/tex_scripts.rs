@@ -101,7 +101,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
     } else {
       "\\@@FLOATINGSUBSCRIPT"
     };
-    let mut _prevscript = None;
+    let mut prevscript = None;
     let mut prevspace = false;
     let mut base = None;
     // Check preceding boxes to determine possible attachment (floating vs post),
@@ -132,7 +132,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
           break;
         } else {
           // Else, is OK (so far) assume POST (it will stack previous script)
-          _prevscript = Some(prev.clone()); // we'll overlap the width of the previous.
+          prevscript = Some(prev.clone()); // we'll overlap the width of the previous.
           putback.push_front(prev);
           cs = if cc == Catcode::SUPER {
             "\\@@POSTSUPERSCRIPT"
@@ -179,20 +179,22 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       let mut properties = stored_map!(
         "isMath" => true,
         "base"        => if let Some(b) = base { Stored::Digested(b.into()) }
-          else { Stored::None }                      // for sizing/positioning
-        // TODO:
-        // "level"       => stomach.get_boxing_level(),
-        // "scriptlevel" => stomach.get_script_level(),
-        //"prevscript"  => prevscript
+          else { Stored::None },                      // for sizing/positioning
+        "scriptlevel" => stomach.get_script_level(state),
+        "level"       => stomach.get_boxing_level()
       );
-      if let Some(font) = script.get_font() {
+      if let Some(pvs) = prevscript {
+        properties.insert("prevscript".to_string(), pvs.into());
+      }
+      if let Some(font) = script.get_font(state)? {
         properties.insert("font".to_string(), font.into());
       }
       let mut with_script = vec![Digested::from(Whatsit {
         definition: state.lookup_definition(&T_CS!(cs)).unwrap(),
         args: vec![Some(script)],
         properties,
-        //         locator     => $gullet->getLocator,
+        // TODO:
+        // locator: stomach.get_gullet().get_locator(),
         ..Whatsit::default()
       })];
       with_script.append(&mut stuff);

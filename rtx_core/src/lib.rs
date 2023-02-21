@@ -163,7 +163,7 @@ pub trait BoxOps: Object {
     Error!("boxops", "get_body", self, None, "Generic BoxOps::get_body should never be called!");
     None
   }
-  fn get_font(&self) -> Option<Cow<Font>>;
+  fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>>;
   fn set_font(&mut self, font: Arc<Font>) { unimplemented!() }
 
   fn set_width<T: Into<Stored>>(&mut self, width: T) { self.set_property("width", width); }
@@ -581,13 +581,15 @@ impl BoxOps for Digested {
       _ => unimplemented!(),
     }
   }
-  fn get_font(&self) -> Option<Cow<Font>> {
+  fn get_font(&self, state:&mut State) -> Result<Option<Cow<Font>>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.get_font(),
-      List(ref l) => l.get_font(),
-      Whatsit(ref w) => w.read().unwrap().get_font().map(|t| Cow::Owned(t.into_owned())),
-      Postponed(ref tks) => None,
+      TBox(ref b) => b.get_font(state),
+      List(ref l) => l.get_font(state),
+      Whatsit(ref w) => Ok(
+        w.read().unwrap().get_font(state)?.map(|t| Cow::Owned(t.into_owned()))
+      ),
+      Postponed(ref tks) => Ok(None),
       _ => unimplemented!(),
     }
   }

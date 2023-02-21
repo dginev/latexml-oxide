@@ -9,8 +9,10 @@ use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
 
+use super::ActionContext;
 use super::curry::{CurryConstraint, CurryConstraints, CurryTerm};
 use super::metadata::Meta;
+use crate::parser::realize_xmnode;
 use crate::pragmatics::ValidationPragmatics;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,8 +36,12 @@ pub struct XProps {
   pub scriptpos: Option<Cow<'static, str>>,
   /// a unique identifier, in the `xml:id` sense
   pub id: Option<Cow<'static, str>>,
+  /// a pointer to a different node, usually for `XMRef`
+  pub idref: Option<Cow<'static, str>>,
   /// an optional subtree-specific Font
   pub font: Option<Font>,
+  /// usually associated with the internal `_font` attribute references
+  pub fontref: Option<Cow<'static, str>>
 }
 impl Display for XProps {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -60,6 +66,15 @@ impl XProps {
     }
     if let Some(ref scriptpos) = self.scriptpos {
       node.set_attribute("scriptpos", scriptpos)?;
+    }
+    if let Some(ref id) = self.id {
+      node.set_attribute("xml:id", id)?; // TODO: double-check
+    }
+    if let Some(ref idref) = self.idref {
+      node.set_attribute("idref", idref)?;
+    }
+    if let Some(ref fontref) = self.fontref {
+      node.set_attribute("_font", fontref)?;
     }
     if let Some(ref font) = self.font {
       // TODO: how do we absorb the font attributes here? relative to current?
@@ -603,6 +618,31 @@ impl XM {
       }
     })
   }
+
+  pub fn realize_xmnode(&self, ctxt: &ActionContext) -> Result<Option<Node>, Box<dyn Error>> {
+    match self {
+      XM::Lexeme(lex, _) => {
+        let lex_node = lookup_lex_node(lex, ctxt.nodes)?;
+        Ok(Some(
+          realize_xmnode(lex_node, ctxt.document, ctxt.state).into_owned()
+        ))
+      },
+      XM::Ref(ref idref) => {
+        if let Some(node) = ctxt.document.lookup_id(idref) {
+          Ok(Some(node.clone()))
+        } else {
+          // TODO
+          //   Error("expected", 'id', undef, "Cannot find a node with xml:id='$idref'",
+          //   ($LaTeXML::MathParser::IDREFS{$idref}
+          //     ? "Previously bound to " . ToString($LaTeXML::MathParser::IDREFS{$idref})
+          //     : ()));
+          // return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
+          Ok(None)
+        }
+      },
+      _ => Ok(None) // error?
+    }
+  }
 }
 
 impl Display for XM {
@@ -658,4 +698,51 @@ fn aux_generate_indent(level: &[bool], is_base: bool) -> String {
     }
   }
   indent
+}
+
+impl From<&Node> for XM {
+  fn from(n: &Node) -> Self {
+    match n.get_name().as_str() {
+      "XMTok" => XM::Token(XProps::from(n), Meta::default()),
+      "XMApp" => {
+        let mut children = element_nodes(n);
+        let op = children.remove(0);
+        let args : Args = children.iter().map(XM::from).collect::<Vec<_>>().into();
+        XM::Apply((&op).into(), args, XProps::from(n), Meta::default())
+      },
+      "XMRef" => XM::Token(XProps::from(n), Meta::default()),
+      "XMDual" => XM::Token(XProps::from(n), Meta::default()),
+      "XMWrap" => XM::Token(XProps::from(n), Meta::default()),
+      "XMArg" => XM::Token(XProps::from(n), Meta::default()),
+      _ => unimplemented!(),
+    }
+  }
+}
+
+impl From<&Node> for XProps {
+  fn from(node: &Node) -> Self {
+    let mut attrs = node.get_attributes();
+    let str1 = node.get_content();
+    let content = if str1.is_empty() { None } else {Some(Cow::Owned(str1))};
+    let role = attrs.remove("role").map(Cow::Owned);
+    let name = attrs.remove("name").map(Cow::Owned);
+    let meaning = attrs.remove("meaning").map(Cow::Owned);
+    let scriptpos = attrs.remove("scriptpos").map(Cow::Owned);
+    let id = attrs.remove("id").map(Cow::Owned); // xml:id ?
+    let idref = attrs.remove("idref").map(Cow::Owned);
+    let fontref = attrs.remove("_font").map(Cow::Owned);
+
+    XProps {
+      content,
+      role,
+      name,
+      meaning,
+      scriptpos,
+      id,
+      idref,
+      fontref,
+      font: None
+    }
+
+  }
 }

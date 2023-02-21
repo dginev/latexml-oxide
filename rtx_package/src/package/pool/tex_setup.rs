@@ -779,7 +779,7 @@ LoadDefinitions!(state, {
       let mut list     = stomach.digest_next_body(None, state)?;
       // In most (all?) cases, we're really looking for a single Whatsit here...
       list.retain(|tbox| !tbox.is_comment());
-      let mut digested = List::new(list);
+      let mut digested = List::new(list, state);
       digested.mode = if ismath { Some(TexMode::Math) } else { Some(TexMode::Text) };
       digested
     })

@@ -37,7 +37,7 @@ impl BoxOps for Comment {
     document.insert_comment(&self.0, state)?;
     Ok(())
   }
-  fn get_font(&self) -> Option<Cow<Font>> { None }
+  fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(None) }
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> { None }
   fn has_property(&self, key: &str) -> bool { false }
   fn get_property_bool(&self, key: &str) -> bool { false }

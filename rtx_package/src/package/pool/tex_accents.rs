@@ -13,7 +13,7 @@ pub fn apply_accent(
 ) -> Result<Tbox> {
   let letter_box = stomach.digest(TokenizeInternal!(letter), state)?;
   let locator = letter_box.get_locator();
-  let font = letter_box.get_font().map(|f| Arc::new((*f).clone()));
+  let font = letter_box.get_font(state)?.map(|f| Arc::new((*f).clone()));
 
   let string = letter_box.to_string();
   // TODO:

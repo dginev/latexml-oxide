@@ -172,7 +172,7 @@ impl Converter {
         // TODO digestion failed, report
         self.core.get_state_mut().status_code = 3;
         e.log_fatal();
-        Digested::from(List::new(Vec::new()))
+        Digested::from(List::new(Vec::new(), self.core.get_state_mut()))
       },
       Ok(d) => d,
     };
