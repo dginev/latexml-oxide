@@ -72,7 +72,7 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> { nodes }
 /// or _xmkey if still in array rep. since it will get an ID later, and the connection re-made)
 /// Note that ltx:XMHint nodes are ephemeral and shouldn't be ref'd!
 /// likewise, we avoid creating XMRefs to XMRefs
-pub fn create_xmrefs(args: &[XM], ctxt: ActionContext) -> Result<Vec<XM>, Box<dyn Error>> {
+pub fn create_xmrefs(args: &[&XM], ctxt: ActionContext) -> Result<Vec<XM>, Box<dyn Error>> {
   let nodes = ctxt.nodes;
   let document = ctxt.document;
   let state = ctxt.state;

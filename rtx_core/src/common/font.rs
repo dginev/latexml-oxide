@@ -547,13 +547,14 @@ impl Font {
         }
       } else {
         // Lowercase
-        if new.family.is_none() || new.family != Some(DEFFAMILY.into()) {
-          new.family = Some(deffamily);
-        }
-        if new.shape.is_none() || new.forceshape == Some(true) {
-          // always ?
+        match new.family {
+          None => {new.family = Some(deffamily);},
+          Some(nf) if nf != DEFFAMILY =>  {new.family = Some(deffamily);},
+          _ => {}
+        };
+        // if new.shape.is_none() {// always ?
           new.shape = Some("italic".into());
-        }
+        // }
         if new.series.is_some() && (new.series != Some(DEFSERIES.into())) {
           new.series = Some(defseries);
         }

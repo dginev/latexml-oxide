@@ -268,7 +268,7 @@ pub fn prefix_script(
 /// the realities of our new data structures.
 pub fn new_script(script: XM, base: Option<XM>, ctxt:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   if let XM::Lexeme(ref lex, _) = script {
-    let node = lookup_lex_node(dbg!(lex.as_str()), ctxt.nodes)?;
+    let node = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
     let script_wrap = node.get_parent().unwrap();
     let node_role = script_wrap.get_attribute("role").unwrap();
     let is_float = node_role.starts_with("FLOAT");
@@ -282,6 +282,7 @@ pub fn new_script(script: XM, base: Option<XM>, ctxt:ActionContext) -> Result<Op
       Ok(Some(XM::Apply(op.into(), Args(vec![base, script_arg]), XProps::default(), Meta::default())))
     } else {
       // DG: This is completely wrong, and just temporarily passes one test. Scripts need to be fleshed out with generality. (TODO)
+      dbg!(ctxt.document.document.node_to_string(&script_wrap));
       node
         .get_parent()
         .unwrap()
@@ -332,7 +333,7 @@ pub fn apply_invisible_times(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[Vali
 
 pub fn compound_operator_2(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => op1, op2);
-  // invisble comma:
+  // invisible comma:
   let comma = invisible_comma();
   // TODO: We need to extend that rule to the n-ary case
   // Currently following the original MathGrammar and creating a List XMDual
@@ -350,7 +351,6 @@ fn invisible_times() -> XProps {
 
 fn invisible_comma() -> XProps {
   XProps {
-    meaning: Some(Cow::Borrowed("")),
     role: Some(Cow::Borrowed("PUNCT")),
     content: Some(Cow::Borrowed("\u{2063}")),
     ..XProps::default()
@@ -406,17 +406,16 @@ pub fn new_list(mut pieces: Vec<XM>, ctxt:ActionContext) -> Result<Option<XM>, B
   if pieces.len() == 1 {
     Ok(pieces.pop())
   } else {
-    let (_seps, items) = extract_separators(pieces);
-    dbg!(&items);
+    let (_seps, items) = extract_separators(&pieces);
     Ok(Some(XM::Dual(
       Box::new(XM::Apply(
         new_props(Some(Cow::Borrowed("list")), None, None).into(),
-        dbg!(create_xmrefs(&items, ctxt)?).into(),
+        create_xmrefs(&items, ctxt)?.into(),
         XProps::default(),
         Meta::default()
       )),
       Box::new(XM::Wrap(
-        items,
+        pieces,
         XProps::default(),
         Meta::default())),
       XProps::default(),
@@ -429,11 +428,11 @@ pub fn new_list(mut pieces: Vec<XM>, ctxt:ActionContext) -> Result<Option<XM>, B
 /// extract the separators as a concatenated string,
 /// returning (separators, args...)
 /// But note that the separators are never used for anything!?
-fn extract_separators(items: Vec<XM>) -> (Vec<XM>, Vec<XM>) {
+fn extract_separators(items: &[XM]) -> (Vec<&XM>, Vec<&XM>) {
   // TODO: consider using the separators at some point, but not for now
   let punct = Vec::new();
   let mut args = Vec::new();
-  let mut items_iter = items.into_iter();
+  let mut items_iter = items.iter();
   while let Some(arg) = items_iter.next() {
     args.push(arg);
     let _discard_punct = items_iter.next();

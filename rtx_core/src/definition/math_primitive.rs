@@ -9,7 +9,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure};
+use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure, Reversion};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -34,17 +34,6 @@ use crate::{Digested, Locator};
 // When to make a dual ?
 // If the $presentation seems to be TeX (ie. it involves #1... but not ONLY!)
 
-// let simpletoken_options = {    # [CONSTANT]
-//   name => 1,
-//   meaning => 1,
-//   omcd => 1,
-//   role => 1,
-//   mathstyle => 1,
-//   font => 1,
-//   scriptpos => 1,
-//   scope => 1,
-//   locked => 1 };
-
 #[derive(Clone)]
 pub struct MathPrimitiveOptions {
   pub bounded: bool,
@@ -60,13 +49,15 @@ pub struct MathPrimitiveOptions {
   pub alias: Option<String>,
   pub decl_id: Option<String>,
   pub replace: Option<String>,
+  pub protected: bool,
+  pub robust: bool,
 
   // Math specific
   pub name: Option<String>,
   pub meaning: Option<String>,
   pub omcd: Option<String>,
-  pub reversion: bool,
-  pub sizer: bool,
+  pub reversion: Option<Reversion>,
+  pub sizer: Option<bool>, // TODO
   pub role: Option<String>,
   pub operator_role: Option<String>,
   pub reorder: bool,
@@ -78,6 +69,9 @@ pub struct MathPrimitiveOptions {
   pub operator_stretchy: Option<bool>,
   pub nogroup: bool,
   pub hide_content_reversion: bool,
+  pub revert_as: Option<Cow<'static, str>>,
+  pub lpadding: Option<usize>,
+  pub rpadding: Option<usize>,
 }
 impl Default for MathPrimitiveOptions {
   fn default() -> Self {
@@ -95,13 +89,15 @@ impl Default for MathPrimitiveOptions {
       font: None,
       decl_id: None,
       replace: None,
+      protected: false,
+      robust: false,
 
       // math-specific
       name: None,
       meaning: None,
       omcd: None,
-      reversion: false,
-      sizer: false,
+      reversion: None,
+      sizer: None,
       role: None,
       operator_role: None,
       reorder: false,
@@ -113,6 +109,9 @@ impl Default for MathPrimitiveOptions {
       operator_stretchy: None,
       nogroup: true,
       hide_content_reversion: false,
+      revert_as: None,
+      lpadding: None,
+      rpadding: None,
     }
   }
 }
@@ -135,6 +134,9 @@ impl MathPrimitiveOptions {
     if let Some(ref role) = self.role {
       h.insert("role".to_string(), role.into());
     }
+    if let Some(ref decl_id) = self.decl_id {
+      h.insert("decl_id".to_string(), decl_id.into());
+    }
     if let Some(ref operator_role) = self.operator_role {
       h.insert("operator_role".to_string(), operator_role.into());
     }
@@ -147,15 +149,53 @@ impl MathPrimitiveOptions {
     if let Some(ref operator_scriptpos) = self.operator_scriptpos {
       h.insert("operator_scriptpos".to_string(), operator_scriptpos.into());
     }
+    if let Some(ref stretchy) = self.stretchy {
+      h.insert("stretchy".to_string(), (*stretchy).into());
+    }
+    if let Some(ref stretchy) = self.operator_stretchy {
+      h.insert("operator_stretchy".to_string(), (*stretchy).into());
+    }
     if let Some(ref mode) = self.mode {
       h.insert("mode".to_string(), mode.into());
     }
     if let Some(ref font) = self.font {
       h.insert("font".to_string(), font.clone().into());
     }
-    // TODO: add more of the fields to the hash?
+    if let Some(ref lpadding) = self.lpadding {
+      h.insert("lpadding".to_string(), (*lpadding).into());
+    }
+    if let Some(ref rpadding) = self.rpadding {
+      h.insert("rpadding".to_string(), (*rpadding).into());
+    }
 
     h
+  }
+
+  // Attempt at emulating the `%simpletoken_options` check in Perl
+  /// Checks if complex options are present,
+  /// suggestive of using a `Constructor` instead of a `Primitive`
+  pub fn has_complex_option(&self) -> bool {
+    self.bounded |
+    self.mode.is_some() |
+    !self.before_digest.is_empty() |
+    !self.after_digest.is_empty() |
+    self.is_prefix |
+    self.require_math |
+    self.forbid_math |
+    self.alias.is_some() |
+    self.decl_id.is_some() |
+    self.replace.is_some() |
+    self.reversion.is_some() |
+    self.sizer.is_some() |
+    self.operator_role.is_some() |
+    self.reorder |
+    self.dual |
+    self.operator_scriptpos.is_some() |
+    self.stretchy.is_some() |
+    self.operator_stretchy.is_some() |
+    self.nogroup |
+    self.hide_content_reversion |
+    self.revert_as.is_some()
   }
 }
 
