@@ -1581,9 +1581,9 @@ impl Document {
     if value.is_empty() {
       return Ok(()); // skip if empty
     }
-    if key == "xml:id" {
+    if key == "xml:id" || key == "id" {
       // If it's an ID attribute
-      // value = self.record_id(value, node);    // Do id book keeping
+      self.record_id_with_node(value, node);    // Do id book keeping
       // TODO: Need to improve Namespace ergonomics, also in rust-libxml
       // let node_ns = self
       //   .document
@@ -1666,6 +1666,11 @@ impl Document {
 
   //**********************************************************************
   // Association of nodes and ids (xml:id)
+
+  /// Records the association of the current Document `node` with the `id`,
+  /// which should be the `xml:id` attribute of the `node`.
+  /// Usually this association will be maintained by the methods
+  /// that create nodes or set attributes.
   fn record_id(&mut self, id: &str) -> String {
     if let Some(prev) = self.idstore.get(id) {
       // Whoops! Already assigned!!!
@@ -1682,6 +1687,11 @@ impl Document {
     self.idstore.insert(id.to_string(), self.node.clone());
     id.to_string()
   }
+
+  /// Records the association of the given `node` with the `id`,
+  /// which should be the `xml:id` attribute of the `node`.
+  /// Usually this association will be maintained by the methods
+  /// that create nodes or set attributes.
   fn record_id_with_node(&mut self, id: &str, node: &Node) -> String {
     if let Some(prev) = self.idstore.get(id) {
       // Whoops! Already assigned!!!
@@ -1737,9 +1747,9 @@ impl Document {
   //         "Last alternative for '$id' is '$badid'"); } }
   //   return $id; }
 
-  // sub lookupID {
-  //   my ($self, $id) = @_;
-  //   return $$self{idstore}{$id}; }
+  pub fn lookup_id(&self, id:&str) -> Option<&Node> {
+    self.idstore.get(id)
+  }
 
   // #======================================================================
   // # Odd bit:
@@ -2644,7 +2654,7 @@ impl Document {
         + &ctr;
 
       ancestor.set_attribute(&ctrkey, &ctr)?;
-      node.set_attribute("xml:id", &id)?;
+      self.set_attribute(node, "xml:id", &id)?;
     }
     Ok(())
   }

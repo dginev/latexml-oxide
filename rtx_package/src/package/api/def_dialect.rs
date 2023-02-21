@@ -1,10 +1,12 @@
 use std::borrow::{Borrow, Cow};
 use std::sync::Arc;
+use lazy_static::lazy_static;
 
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
 use rtx_core::common::object::Object;
 use rtx_core::definition::argument::ArgWrap;
+use rtx_core::definition::PropertiesClosure;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::constructor::{Constructor, ConstructorOptions};
 use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
@@ -27,6 +29,11 @@ use rtx_core::Digested;
 
 use super::content::merge_font;
 use super::*;
+
+const MATH_CONSTRUCTOR_ATTRIBUTES : &[&str] = &["name", "meaning", "omcd", "decl_id", "mathstyle", "lpadding", "rpadding"];
+lazy_static! {
+  static ref CONSTRUCTOR_SPECIALS: Regex = Regex::new(r"([#&?\\<>])").unwrap();
+}
 
 /// Is defined in the `LaTeX`-y sense of also not being let to \relax.
 pub fn is_defined(name: &str, state: &State) -> bool {
@@ -322,10 +329,8 @@ pub fn def_primitive(
 
 pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
   let scope = options.scope.clone();
-  let reqfont = match options.font {
-    Some(ref fnt) => fnt.clone(),
-    None => Font::default(),
-  };
+  let reqfont_opt = options.font.clone();
+
   let moved_options = options.clone();
 
   state.install_definition(
@@ -336,8 +341,13 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
         let locator = stomach.get_locator().unwrap().into_owned();
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
-        // TODO: Improve font precision here, the defaults may not belong in this lookup
-        let font = Arc::new(state.lookup_font().unwrap().merge(reqfont.clone()).specialize(&presentation));
+        let state_font = state.lookup_font().unwrap();
+        let font = Arc::new(
+          if let Some(ref reqfont) = reqfont_opt {
+            state_font.merge(reqfont.clone()).specialize(&presentation)
+          } else {
+            state_font.specialize(&presentation)
+          });
 
         Ok(vec![Digested::from(Tbox {
           text: presentation.clone(),
@@ -352,6 +362,121 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
     },
     scope,
   );
+}
+
+pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
+  // TODO: do we need to do anything about digesting the presentation?
+  let end_tok = if !presentation.is_empty() { format!(">{presentation}</ltx:XMTok>") } else { String::from("/>") };
+  let nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(0);
+  let defcs = if options.robust { def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state) } else  { cs.clone() };
+  if options.reversion.is_none() && nargs==0 && options.alias.is_none() {
+  if options.revert_as.is_none()
+    || options.revert_as == Some(Cow::Borrowed("content"))
+    || options.revert_as == Some(Cow::Borrowed("context")) {// TODO :&& (($LaTeXML::DUAL_BRANCH || 'content') eq 'content'))
+      options.reversion = Some(Reversion::Tokens(Tokens!(cs)));
+    } else {
+      // TODO: This differs from the Perl, where `presentation` comes in as Tokens
+      //       we have it come in as a `String`,
+      //       so need to tokenize when reusing it as a reversion.
+      options.reversion = Some(Reversion::Tokens(Tokens::new(Explode!(presentation))));
+    }
+  }
+  // TODO:
+  // my $sizer = inferSizer($options{sizer}, $options{reversion});
+  options.font = Some(
+    if options.mathstyle.is_some() {
+      state.lookup_font().unwrap().merge(Font{ mathstyle: options.mathstyle.as_ref().map(|ms| Cow::Owned(ms.to_owned())), ..Font::default()})
+        .specialize(&presentation)
+    } else {
+      state.lookup_font().unwrap().specialize(&presentation)
+    });
+  let compiled_replacement : Option<ReplacementClosure> = Some(if nargs == 0 { // If trivial presentation, allow it in Text
+    Arc::new(move |document:&mut Document, _, props:&HashMap<String, Stored>, state: &mut State| {
+      let mut attrs = HashMap::new();
+      for key in ["role","scriptpos","stretchy"] {
+        if let Some(v) = props.get(key) {
+          attrs.insert(key.to_owned(), v.to_string());
+        }
+      }
+      for key in MATH_CONSTRUCTOR_ATTRIBUTES {
+        if let Some(v) = props.get(*key) {
+          attrs.insert(key.to_string(), v.to_string());
+        }
+      }
+      let font = if let Some(Stored::Font(f)) = props.get("font") {
+        Some(&**f)
+      } else {
+        None
+      };
+      document.open_element("ltx:XMTok", Some(attrs), font, state)?;
+      document.absorb_string(&presentation, props, state)?;
+      document.close_element("ltx:XMTok", state)?;
+
+      Ok(())
+    })
+  } else {
+//     Arc::new(|| {
+// <ltx:XMApp role='#role' scriptpos='#scriptpos' stretchy='#stretchy'>"
+//           . "<ltx:XMTok $cons_attr font='#font' role='#operator_role'"
+//           . " scriptpos='#operator_scriptpos' stretchy='#operator_stretchy' $end_tok"
+//           . join('', map { "<ltx:XMArg>#$_</ltx:XMArg>" } 1 .. $nargs)
+//           . "</ltx:XMApp>"
+    // })
+    unimplemented!();
+  });
+  let mut prop_options = options.clone();
+
+  let properties: PropertiesClosure = Arc::new(move |_,_,_| Ok(prop_options.to_hash_stored()));
+  let constructor = Constructor {
+    cs: defcs,
+    paramlist,
+    replacement: compiled_replacement,
+    before_digest: options.before_digest,
+    after_digest: options.after_digest,
+    // before_construct: options.before_construct,
+    // after_construct: options.after_construct,
+    nargs: Some(nargs),
+    alias: options.alias,
+    reversion: options.reversion,
+    properties,
+    // capture_body: options.capture_body,
+    // outer
+    // long
+    ..Constructor::default()
+  };
+  state.install_definition(constructor, options.scope);
+  //     ($nargs == 0
+  //         # If trivial presentation, allow it in Text
+  //       ? ($presentation !~ /(?:\(|\)|\\)/
+  //         ? "?#isMath(<ltx:XMTok role='#role' scriptpos='#scriptpos' stretchy='#stretchy'"
+  //           . " font='#font' $cons_attr$end_tok)"
+  //           . "($qpresentation)"
+  //         : "<ltx:XMTok role='#role' scriptpos='#scriptpos' stretchy='#stretchy'"
+  //           . " font='#font' $cons_attr$end_tok")
+  //       : "<ltx:XMApp role='#role' scriptpos='#scriptpos' stretchy='#stretchy'>"
+  //         . "<ltx:XMTok $cons_attr font='#font' role='#operator_role'"
+  //         . " scriptpos='#operator_scriptpos' stretchy='#operator_stretchy' $end_tok"
+  //         . join('', map { "<ltx:XMArg>#$_</ltx:XMArg>" } 1 .. $nargs)
+  //         . "</ltx:XMApp>"),
+  //     defmath_common_constructor_options($cs, $presentation,
+  //       sizer => sub {
+  //         #           my $font = $_[1]->getFont || LaTeXML::Common::Font->mathDefault;
+  //         my $font = LaTeXML::Common::Font->mathDefault;
+  //         $font->computeStringSize($presentation); },
+  //       %options)), $options{scope});
+
+}
+
+fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>, state: &mut State) -> Token {
+  let cs_str = format!("{} ", cs.get_string());
+  let defcs = T_CS!(cs_str);
+  let return_cs = defcs.clone();
+  let expansion =  Tokens!(T_CS!("\\protect"), defcs);
+  let options = ExpandableOptions {
+    locked, ..ExpandableOptions::default() };
+  // scope should be \x@protect?
+  state.install_definition(Expandable::new(cs, None, expansion, Some(options), state), scope);
+  return_cs
 }
 
 pub fn def_constructor(
@@ -641,28 +766,41 @@ pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, 
     None => 0,
   };
   let csname = cs.get_string().to_string();
-  let mut name = options.alias.clone().unwrap_or_else(|| csname.clone());
-  if name.starts_with('\\') {
-    name = name.replacen('\\', "", 1)
-  }
-  if let Some(options_name) = options.name {
-    name = options_name;
-  }
-  let name_opt = if (name == presentation) || (name.is_empty()) || (options.meaning == Some(name.clone())) {
-    None
-  } else {
-    Some(name)
+  let name_opt = {
+    let name = match options.name {
+      Some(ref name) => Cow::Owned(name.to_owned()),
+      None => {
+        let mut inferred_name = match options.alias {
+          Some(ref alias) => Cow::Owned(alias.to_owned()),
+          None => Cow::Borrowed(&csname)
+        };
+        if inferred_name.starts_with('\\') {
+          inferred_name = Cow::Owned(inferred_name.replacen('\\', "", 1))
+        }
+        inferred_name
+      }
+    };
+    let meaning_check = options.meaning.as_ref().map_or_else(|| Cow::Owned(String::new()), Cow::Borrowed);
+    if (*name == presentation) || (name.is_empty()) || *name == *meaning_check {
+      None
+    } else {
+      Some(name.into_owned())
+    }
   };
   options.name = name_opt;
   if nargs == 0 && options.role.is_none() {
-    options.role = Some(s!("UNKNOWN"))
+    options.role = Some(String::from("UNKNOWN"))
   }
   if nargs > 0 && options.operator_role.is_none() {
-    options.operator_role = Some(s!("UNKNOWN"))
+    options.operator_role = Some(String::from("UNKNOWN"))
+  }
+  if options.hide_content_reversion {
+    options.revert_as = Some(Cow::Borrowed("context"));
   }
 
+  let locked = options.locked;
   // Store some data for introspection
-  // defmath_introspective(cs, $paramlist, presentation, %options);
+  // defmath_introspective(cs, paramlist, presentation, options);
 
   // If single character, handle with a rewrite rule
   if csname.len() == 1 {
@@ -688,12 +826,12 @@ pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, 
 
   // EXPERIMENT: Introduce an intermediate case for simple symbols
   // Define a primitive that will create a Box with the appropriate set of XMTok attributes.
-  if nargs == 0 {
-    // && !grep { !$$simpletoken_options{$_} } keys %options) {
+  else if nargs == 0 && !options.has_complex_option() {
     def_math_primitive(cs, paramlist, presentation, options, state);
+  } else {
+    def_math_constructor(cs, paramlist, presentation, options, state);
   }
-
-  // else {
-  //   defmath_cons($cs, $paramlist, $presentation, %options); }
-  // AssignValue($csname . ":locked" => 1) if $options{locked};
+  if locked {
+    state.assign_value(&format!("{csname}:locked"), true, None);
+  }
 }

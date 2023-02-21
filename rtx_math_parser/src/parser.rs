@@ -259,6 +259,7 @@ impl MathParser {
     // foreach my $n ($document->findnodes("descendant-or-self::*[\@xml:id]",
     // $xnode)) {     my $id = $n->getAttribute('xml:id');
     //     $LaTeXML::MathParser::IDREFS{$id} = $n; }
+    dbg!(document.document.node_to_string(&xnode));
     if let Some(result) = self.parse_rec(&mut xnode, "Anything,", document, state)? {
       // Add text representation to the containing Math element.
       let mut p = xnode.get_parent().unwrap();
@@ -293,6 +294,7 @@ impl MathParser {
       // foreach my $n
       // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
       // $document->setAttribute($n, idref => $repid); } } }
+      dbg!(document.document.node_to_string(&result));
       p.set_attribute("text", &text_form(&result, document, state))?;
     }
     Ok(())
@@ -527,8 +529,8 @@ pub fn text_form(node: &Node, document: &mut Document, state: &mut State) -> Str
 // Some more XML utilities, but math specific (?)
 
 // Get the Token's  meaning, else name, else content, else role
-fn get_token_meaning(node_opt: &Node, document: &Document) -> Option<String> {
-  let node = realize_xmnode(node_opt, document);
+fn get_token_meaning(node_opt: &Node, document: &Document, state: &State) -> Option<String> {
+  let node = realize_xmnode(node_opt, document, state);
   if let Some(x) = p_get_attribute(&node, "meaning") {
     Some(x)
   } else if let Some(x) = p_get_attribute(&node, "name") {
@@ -543,20 +545,8 @@ fn get_token_meaning(node_opt: &Node, document: &Document) -> Option<String> {
   }
 }
 
-// sub node_location {
-//   my ($node) = @_;
-//   my $n = $node;
-// while ($n && (ref $n !~ /^XML::LibXML::Document/)    # Sometimes
-// DocuementFragment ??? && !$n->getAttribute('refnum') &&
-// !$n->getAttribute('labels')) {     $n = $n->parentNode; }
-//   if ($n && (ref $n !~ /^XML::LibXML::Document/)) {
-//     my ($r, $l) = ($n->getAttribute('refnum'), $n->getAttribute('labels'));
-//     return ($r && $l ? "$r ($l)" : $r || $l); }
-//   else {
-//     return 'Unknown'; } }
-
 fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<&str>, document: &Document, state: &mut State) -> String {
-  let node = realize_xmnode(node_opt, document);
+  let node = realize_xmnode(node_opt, document, state);
   let tag = document.get_node_qname(&node, state);
   let outer_bp = outer_bp_opt.unwrap_or(0);
   let outer_name = outer_name_opt.unwrap_or("");
@@ -579,7 +569,7 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
         unimplemented!();
       }
       let arg_node = args.remove(0);
-      let op = realize_xmnode(&arg_node, document);
+      let op = realize_xmnode(&arg_node, document, state);
       if let Some(app_role) = node.get_attribute("role") {
         if app_role == "FLOATSUBSCRIPT" {
           return String::from("_") + &textrec(&op, None, None, document, state);
@@ -589,7 +579,7 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
       }
 
       let name = if document.get_node_qname(&op, state) == "ltx:XMTok" {
-        get_token_meaning(&op, document).unwrap_or_else(|| "unknown".to_owned())
+        get_token_meaning(&op, document, state).unwrap_or_else(|| "unknown".to_owned())
       } else {
         String::new()
       };
@@ -606,7 +596,7 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
       textrec(content, Some(outer_bp), Some(outer_name), document, state) // Just send out
     },
     "ltx:XMTok" => {
-      let name = match get_token_meaning(&node, document) {
+      let name = match get_token_meaning(&node, document, state) {
         Some(meaning) => meaning,
         None => s!("Unknown"),
       };
@@ -788,26 +778,24 @@ fn p_get_value(node: &Node) -> String {
 
 //================================================================================
 
-pub fn realize_xmnode<'a>(node: &'a Node, _document: &Document) -> Cow<'a, Node> {
+pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document, state: &State) -> Cow<'a, Node> {
+  if state.model.get_node_qname(node) == "ltx:XMRef" {
+    if let Some(idref) = node.get_attribute("idref") {
+      // Can it happen that $realnode is, itself, an XMRef?
+      // Then we should recurse recurse!
+      if let Some(realnode) = document.lookup_id(&idref) {
+        return Cow::Borrowed(realnode);
+      } else {
+        unimplemented!();
+        // Error("expected", 'id', undef, "Cannot find a node with
+        // xml:id='$idref'",         ($LaTeXML::MathParser::IDREFS{$idref}
+        // ? "Previously bound to " .
+        // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
+        //       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
+      }
+    }
+  }
   Cow::Borrowed(node)
-  //   my $idref;
-  //   elsif (ref $node eq 'ARRAY') {
-  //     $idref = $$node[1]{idref} if $$node[0] eq 'ltx:XMRef'; }
-  //   elsif (ref $node eq 'XML::LibXML::Element') {
-  //     $idref = $node->getAttribute('idref')
-  //       if document->getModel->getNodeQName($node) eq 'ltx:XMRef'; }
-  //   if ($idref) {
-  // # Can it happen that $realnode is, itself, an XMRef? Then we should
-  // recurse!     if (my $realnode = document->lookupID($idref)) {
-  //       return $realnode; }
-  //     else {
-  // Error("expected", 'id', undef, "Cannot find a node with
-  // xml:id='$idref'",         ($LaTeXML::MathParser::IDREFS{$idref}
-  // ? "Previously bound to " .
-  // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
-  //       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
-  //   else {
-  //     return $node; } }
 }
 
 fn p_get_attribute(item: &Node, key: &str) -> Option<String> {

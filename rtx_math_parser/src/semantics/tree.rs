@@ -547,7 +547,7 @@ impl XM {
       },
       XM::Ref(idref) => {
         let mut ref_node = Node::new("XMRef", None, document.get_document()).unwrap();
-        ref_node.set_attribute("idref", idref)?;
+        document.set_attribute(&mut ref_node, "idref", idref)?;
         Ok(ref_node)
       },
       XM::Choices(choices) => {
@@ -633,7 +633,7 @@ pub fn get_token_meaning(in_node: &Node) -> Option<String> {
 /// Looks up the node associated with a given lexeme,
 /// via the node index held in the third colon-separated lexeme piece.
 pub(crate) fn lookup_lex_node<'a>(lex: &'a str, nodes: &'a [Node]) -> Result<&'a Node, Box<dyn Error>> {
-  let node_idx = dbg!(lex).split(':').last().unwrap().parse::<usize>()? - 1;
+  let node_idx = lex.split(':').last().unwrap().parse::<usize>()? - 1;
   let node = nodes.get(node_idx)
     .expect("lex node lookup is grammar-internal and should always have an accurate index.");
   Ok(node)

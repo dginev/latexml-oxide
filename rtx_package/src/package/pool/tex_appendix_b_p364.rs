@@ -37,18 +37,7 @@ LoadDefinitions!(state, {
 
   // #======================================================================
 
-  // # Special Characters.
-  // # Try to give them some sense in math...
-  // DefMacroI('\#',   undef, '\ifmmode\lx@math@hash\else\lx@text@hash\fi');
-  // DefMacroI('\&',   undef, '\ifmmode\lx@math@amp\else\lx@text@amp\fi');
-  // DefMacroI('\%',   undef, '\ifmmode\lx@math@percent\else\lx@text@percent\fi');
-  // DefMacroI("\\\$", undef, '\ifmmode\lx@math@dollar\else\lx@text@dollar\fi');
-  // DefMacroI('\_',   undef, '\ifmmode\lx@math@underscore\else\lx@text@underscore\fi');
-  // DefPrimitiveI('\lx@text@hash',       undef, '#',  alias => '\#');
-  // DefPrimitiveI('\lx@text@amp',        undef, '&',  alias => '\&');
-  // DefPrimitiveI('\lx@text@percent',    undef, '%',  alias => '\%');
-  // DefPrimitiveI('\lx@text@dollar',     undef, "\$", alias => "\\\$");
-  // DefPrimitiveI('\lx@text@underscore', undef, '_',  alias => '\_');
+
   // DefMathI('\lx@math@hash',    undef, '#', alias => '\#');
   // DefMathI('\lx@math@amp',     undef, '&', role  => 'ADDOP', meaning => 'and', alias => '\&');
   // DefMathI('\lx@math@percent', undef, '%', role  => 'POSTFIX', meaning => 'percent', alias => '\%');

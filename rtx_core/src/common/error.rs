@@ -186,6 +186,8 @@ pub struct Error {
   pub message: String,
 }
 impl ErrorTrait for Error {}
+unsafe impl Send for Error {}
+unsafe impl Sync for Error {}
 
 #[derive(Debug)]
 pub enum ErrorCategory {
