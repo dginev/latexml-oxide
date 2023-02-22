@@ -318,38 +318,44 @@ LoadDefinitions!(outer_state, {
   );
 
   DefRegister!("\\sfcode Number", Number::new(0),
-    getter=> sub[args, state] { unimplemented!(); () },
-    // my $code = $STATE->lookupSFcode(chr($_[0]->valueOf));
-    //  Number(defined $code ? $code : 0); },
-    setter => sub[value, args, state] { unimplemented!(); ()
-      //$STATE->assignSFcode(chr($_[1]->valueOf) => $_[0]->valueOf);
-    }
-  );
+    getter=> sub[args, state] {
+    let code = state.lookup_sfcode(args[0].value_of() as u8 as char);
+      Number::new(code.unwrap_or_default() as i32)
+    },
+    setter => sub[value, args, state] {
+      state.assign_sfcode(args[0].value_of() as u8 as char,
+        value.value_of() as u16, None); });
+
   DefRegister!("\\lccode Number", Number::new(0),
-    getter=> sub[args, state] { unimplemented!(); () },
-      // my $code = $STATE->lookupLCcode(chr($_[0]->valueOf));
-      // Number(defined $code ? $code : 0); },
-    setter => sub[value, args, state] { unimplemented!(); ()
-      //$STATE->assignLCcode(chr($_[1]->valueOf) => $_[0]->valueOf);
-    }
-  );
+    getter=> sub[args, state] {
+      let code = state.lookup_lccode(args[0].value_of() as u8 as char);
+      Number::new(code.unwrap_or_default() as i32)
+    },
+    setter => sub[value, args, state] {
+      state.assign_lccode(args[0].value_of() as u8 as char,
+        value.value_of() as u16, None);
+    });
+
   DefRegister!("\\uccode Number", Number::new(0),
-    getter=> sub[args, state] { unimplemented!(); () },
-      // my $code = $STATE->lookupUCcode(chr($_[0]->valueOf));
-      // Number(defined $code ? $code : 0); },
-    setter => sub[value, args, state] { unimplemented!(); ()
-      //$STATE->assignUCcode(chr($_[1]->valueOf) => $_[0]->valueOf);
-    }
-  );
+    getter=> sub[args, state] {
+      let code = state.lookup_uccode(args[0].value_of() as u8 as char);
+      Number::new(code.unwrap_or_default() as i32)
+    },
+    setter => sub[value, args, state] {
+      state.assign_uccode(args[0].value_of() as u8 as char,
+        value.value_of() as u16, None);
+    });
+
   // Not used anywhere (yet)
   DefRegister!("\\delcode Number", Number::new(0),
-    getter=> sub[args, state] { unimplemented!(); () },
-      // my $code = $STATE->lookupDelcode(chr($_[0]->valueOf));
-      // Number(defined $code ? $code : 0); },
-    setter => sub[value, args, state] { unimplemented!(); ()
-      //$STATE->assignDelcode(chr($_[1]->valueOf) => $_[0]->valueOf);
-    }
-  );
+    getter=> sub[args, state] {
+      let code = state.lookup_delcode(args[0].value_of() as u8 as char);
+      Number::new(code.unwrap_or_default() as i32)
+    },
+    setter => sub[value, args, state] {
+      state.assign_delcode(args[0].value_of() as u8 as char,
+        value.value_of() as u16, None);
+    });
 
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
   for letter in b'A'..=b'Z' {
