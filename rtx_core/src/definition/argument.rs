@@ -361,6 +361,7 @@ impl ArgWrap {
   pub fn try_to_dimension(self) -> Result<Dimension> {
     use ArgWrap::*;
     match self {
+      Number(v) => Ok(v.into()),
       Dimension(v) => Ok(v),
       Token(t) => Ok(t.to_dimension()),
       Tokens(tks) => Ok(tks.to_dimension()),
@@ -374,6 +375,39 @@ impl ArgWrap {
     }
   }
 
+  pub fn try_to_glue(self) -> Result<Glue> {
+    use ArgWrap::*;
+    match self {
+      Glue(v) => Ok(v),
+      Number(v) => Ok(v.into()),
+      Token(t) => Ok(t.to_glue()),
+      Tokens(tks) => Ok(tks.to_glue()),
+      _ => Err(format!("ArgWrap::try_to_glue not (yet?) defined on {:?}", self).into()),
+    }
+  }
+  pub fn expect_glue(self) -> Glue {
+    match self.try_to_glue() {
+      Ok(d) => d,
+      Err(e) => panic!("{e}"),
+    }
+  }
+
+  pub fn try_to_mu_glue(self) -> Result<MuGlue> {
+    use ArgWrap::*;
+    match self {
+      MuGlue(v) => Ok(v),
+      Number(v) => Ok(v.into()),
+      Token(t) => Ok(t.to_mu_glue()),
+      Tokens(tks) => Ok(tks.to_mu_glue()),
+      _ => Err(format!("ArgWrap::try_to_mu_glue not (yet?) defined on {:?}", self).into()),
+    }
+  }
+  pub fn expect_mu_glue(self) -> MuGlue {
+    match self.try_to_mu_glue() {
+      Ok(d) => d,
+      Err(e) => panic!("{e}"),
+    }
+  }
   pub fn to_mu_dimension(self) -> MuDimension {
     use ArgWrap::*;
     match self {
@@ -398,7 +432,7 @@ impl ArgWrap {
       MuGlue(v) => v,
       Token(t) => t.to_mu_glue(),
       Tokens(tks) => tks.to_mu_glue(),
-      _ => panic!("ArgWrap::to_glue not (yet?) defined on {:?}", self),
+      _ => panic!("ArgWrap::to_mu_glue not (yet?) defined on {:?}", self),
     }
   }
   pub fn expected_keyvals(self, state: &mut State) -> KeyVals {

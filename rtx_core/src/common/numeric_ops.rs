@@ -78,6 +78,7 @@ pub trait NumericOps {
   where Self: Sized {
     Self::new(self.value_of() * other.value_of())
   }
+  /// Truncating division
   fn divide<T: NumericOps>(self, other: T) -> Self
   where Self: Sized {
     let mut other_value: f32 = other.value_of() as f32;
@@ -85,6 +86,16 @@ pub trait NumericOps {
       other_value = EPSILON; // avoid dividing by zero
     }
     Self::new((self.value_of() as f32 / other_value).trunc() as i32)
+  }
+
+  /// Rounding division
+  fn divideround<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    let mut other_value: f32 = other.value_of() as f32;
+    if other_value == 0.0 {
+      other_value = EPSILON; // avoid dividing by zero
+    }
+    Self::new((0.5 + self.value_of() as f32 / other_value).trunc() as i32)
   }
 
   fn to_token(self) -> Token

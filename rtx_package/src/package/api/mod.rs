@@ -285,6 +285,20 @@ impl IntoResultArgWrap<Result<ArgWrap>> for Option<MuGlue> {
   fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionMuGlue(self)) }
 }
 
+impl IntoResultArgWrap<Result<ArgWrap>> for RegisterValue {
+  fn into_result_argwrap(self) -> Result<ArgWrap> {
+    match self {
+      RegisterValue::Number(n) => n.into_result_argwrap(),
+      RegisterValue::Dimension(n) => n.into_result_argwrap(),
+      RegisterValue::Glue(n) => n.into_result_argwrap(),
+      RegisterValue::Token(n) => n.into_result_argwrap(),
+      RegisterValue::Tokens(n) => n.into_result_argwrap(),
+      RegisterValue::MuGlue(n) => n.into_result_argwrap(),
+      RegisterValue::MuDimension(n) => n.into_result_argwrap()
+    }
+  }
+}
+
 impl IntoResultArgWrap<Result<ArgWrap>> for Result<ArgWrap> {
   fn into_result_argwrap(self) -> Result<ArgWrap> { self }
 }
