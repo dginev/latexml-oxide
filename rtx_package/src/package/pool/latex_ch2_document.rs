@@ -70,7 +70,7 @@ LoadDefinitions!(state, {
         boxes.push(stomach.digest(ops,state)?);
       }
       // Should we try to indent the last paragraph? If so, it goes like this:
-      // boxes.push(stomach.digest(T_CS!("\\normal@par"), state)?);
+      boxes.push(stomach.digest(T_CS!("\\normal@par"), state)?);
       // Now we check whether we're down to the last stack frame.
       // It is common for unclosed { or even environments
       // and we want to at least compress & avoid unnecessary errors & warnings.
