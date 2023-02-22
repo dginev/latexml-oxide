@@ -1,3 +1,4 @@
+use rtx_core::document::helpers::prune_empty_para;
 use crate::package::*;
 
 LoadDefinitions!(state, {
@@ -95,7 +96,10 @@ LoadDefinitions!(state, {
     }
   });
 
-  Tag!("ltx:para", auto_close => true, auto_open => true);
+  Tag!("ltx:para", auto_close => true, auto_open => true,
+    after_close => sub[document, node, state] {
+      prune_empty_para(document, node, state)?;
+    });
   Tag!("ltx:p", auto_close => true, auto_open => true,
     after_close => sub[document, node, state] {
       document.trim_node_whitespace(node)?;

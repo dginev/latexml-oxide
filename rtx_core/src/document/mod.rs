@@ -1,5 +1,6 @@
 pub mod resource;
 pub mod tag;
+pub mod helpers;
 
 use lazy_static::lazy_static;
 use libxml::tree::set_node_rc_guard;
