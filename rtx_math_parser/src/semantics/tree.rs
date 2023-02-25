@@ -9,9 +9,9 @@ use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
 
-use super::ActionContext;
 use super::curry::{CurryConstraint, CurryConstraints, CurryTerm};
 use super::metadata::Meta;
+use super::ActionContext;
 use crate::parser::realize_xmnode;
 use crate::pragmatics::ValidationPragmatics;
 
@@ -41,7 +41,7 @@ pub struct XProps {
   /// an optional subtree-specific Font
   pub font: Option<Font>,
   /// usually associated with the internal `_font` attribute references
-  pub fontref: Option<Cow<'static, str>>
+  pub fontref: Option<Cow<'static, str>>,
 }
 impl Display for XProps {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -51,7 +51,7 @@ impl Display for XProps {
 }
 
 impl XProps {
-  pub fn to_xmath(&self, node: &mut Node) ->  Result<(), Box<dyn Error + Send + Sync>> {
+  pub fn to_xmath(&self, node: &mut Node) -> Result<(), Box<dyn Error + Send + Sync>> {
     if let Some(ref content) = self.content {
       node.set_content(content)?;
     }
@@ -202,9 +202,7 @@ impl Args {
 }
 
 impl From<Vec<XM>> for Args {
-  fn from(items: Vec<XM>) -> Args {
-    Args(items.into_iter().map(Some).collect())
-  }
+  fn from(items: Vec<XM>) -> Args { Args(items.into_iter().map(Some).collect()) }
 }
 
 impl XM {
@@ -216,7 +214,7 @@ impl XM {
       XM::Dual(_, _, _, ref meta) => meta,
       XM::Wrap(_, _, ref meta) => meta,
       XM::Choices(cs) => cs[0].get_meta(), // Should we return a none type instead?
-      XM::Ref(_) => unimplemented!()
+      XM::Ref(_) => unimplemented!(),
     }
   }
   pub fn get_meta_mut(&mut self) -> &mut Meta {
@@ -331,8 +329,8 @@ impl XM {
         }
         Ok(new_tree)
       },
-      XM::Dual(_,_,_,_) => unimplemented!(),
-      XM::Wrap(_,_,_) => unimplemented!(),
+      XM::Dual(_, _, _, _) => unimplemented!(),
+      XM::Wrap(_, _, _) => unimplemented!(),
       XM::Choices(_) => Err("can not specialize choices".into()),
     }
   }
@@ -549,7 +547,7 @@ impl XM {
         let mut pres_node = pres.to_xmath(nodes, document)?;
         self.to_xmath_add_child(&mut dual_node, &mut pres_node)?;
         Ok(dual_node)
-      }
+      },
       XM::Wrap(content, props, _meta) => {
         let mut wrap_node = Node::new("XMWrap", None, document.get_document()).unwrap();
         props.to_xmath(&mut wrap_node)?;
@@ -596,13 +594,13 @@ impl XM {
       XM::Lexeme(lex, _) => {
         return match get_token_meaning(lookup_lex_node(lex, nodes)?) {
           Some(v) => Ok(Some(Cow::Owned(v))),
-          None => Ok(None)
+          None => Ok(None),
         }
       },
       other => {
         dbg!(other);
         unimplemented!()
-      }
+      },
     };
     Ok(match props.meaning {
       Some(ref v) if !v.is_empty() => Some(Cow::Borrowed(v)),
@@ -612,10 +610,10 @@ impl XM {
           Some(ref v) if !v.is_empty() => Some(Cow::Borrowed(v)),
           _ => match props.role {
             Some(ref v) if !v.is_empty() => Some(Cow::Borrowed(v)),
-            _ => None
-          }
-        }
-      }
+            _ => None,
+          },
+        },
+      },
     })
   }
 
@@ -623,9 +621,7 @@ impl XM {
     match self {
       XM::Lexeme(lex, _) => {
         let lex_node = lookup_lex_node(lex, ctxt.nodes)?;
-        Ok(Some(
-          realize_xmnode(lex_node, ctxt.document, ctxt.state).into_owned()
-        ))
+        Ok(Some(realize_xmnode(lex_node, ctxt.document, ctxt.state).into_owned()))
       },
       XM::Ref(ref idref) => {
         if let Some(node) = ctxt.document.lookup_id(idref) {
@@ -640,7 +636,7 @@ impl XM {
           Ok(None)
         }
       },
-      _ => Ok(None) // error?
+      _ => Ok(None), // error?
     }
   }
 }
@@ -663,18 +659,19 @@ pub fn get_token_meaning(in_node: &Node) -> Option<String> {
         } else {
           match node.get_attribute("role") {
             Some(v) if !v.is_empty() => Some(v),
-            _ => None
+            _ => None,
           }
         }
-      }
-    }
+      },
+    },
   }
 }
 /// Looks up the node associated with a given lexeme,
 /// via the node index held in the third colon-separated lexeme piece.
 pub(crate) fn lookup_lex_node<'a>(lex: &'a str, nodes: &'a [Node]) -> Result<&'a Node, Box<dyn Error>> {
   let node_idx = lex.split(':').last().unwrap().parse::<usize>()? - 1;
-  let node = nodes.get(node_idx)
+  let node = nodes
+    .get(node_idx)
     .expect("lex node lookup is grammar-internal and should always have an accurate index.");
   Ok(node)
 }
@@ -707,7 +704,7 @@ impl From<&Node> for XM {
       "XMApp" => {
         let mut children = element_nodes(n);
         let op = children.remove(0);
-        let args : Args = children.iter().map(XM::from).collect::<Vec<_>>().into();
+        let args: Args = children.iter().map(XM::from).collect::<Vec<_>>().into();
         XM::Apply((&op).into(), args, XProps::from(n), Meta::default())
       },
       "XMRef" => XM::Token(XProps::from(n), Meta::default()),
@@ -723,7 +720,7 @@ impl From<&Node> for XProps {
   fn from(node: &Node) -> Self {
     let mut attrs = node.get_attributes();
     let str1 = node.get_content();
-    let content = if str1.is_empty() { None } else {Some(Cow::Owned(str1))};
+    let content = if str1.is_empty() { None } else { Some(Cow::Owned(str1)) };
     let role = attrs.remove("role").map(Cow::Owned);
     let name = attrs.remove("name").map(Cow::Owned);
     let meaning = attrs.remove("meaning").map(Cow::Owned);
@@ -741,8 +738,7 @@ impl From<&Node> for XProps {
       id,
       idref,
       fontref,
-      font: None
+      font: None,
     }
-
   }
 }

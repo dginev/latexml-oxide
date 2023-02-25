@@ -11,7 +11,7 @@ use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::definition::expandable::Expandable;
-use crate::definition::{Definition, Reversion,FontDirective};
+use crate::definition::{Definition, FontDirective, Reversion};
 use crate::document::Document;
 use crate::list::List;
 use crate::state::State;
@@ -291,12 +291,9 @@ impl BoxOps for Whatsit {
     match self.properties.get("font") {
       Some(Stored::Font(font)) => Ok(Some(Cow::Owned((**font).clone()))),
       Some(Stored::FontDirective(fd)) => match fd {
-        FontDirective::Closure(ref code) => {
-        Ok(Some(
-          Cow::Owned(code(Some(self), state)?)))
-        },
-        FontDirective::Asset(ref asset) => Ok(Some(Cow::Borrowed(asset)))
-      }
+        FontDirective::Closure(ref code) => Ok(Some(Cow::Owned(code(Some(self), state)?))),
+        FontDirective::Asset(ref asset) => Ok(Some(Cow::Borrowed(asset))),
+      },
       _ => Ok(None),
     }
   }

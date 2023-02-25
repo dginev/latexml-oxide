@@ -175,9 +175,10 @@ LoadDefinitions!(outer_state, {
   // # since we don't know where it ends, we can't easily use Parse::RecDescent.
   // # They also act like a Register!
   // # $type is one of Number, Dimension, Glue or MuGlue
-  fn etex_readexpr(gullet:&mut Gullet, rtype: RegisterType, state: &mut State) -> Result<RegisterValue> {
+  fn etex_readexpr(gullet: &mut Gullet, rtype: RegisterType, state: &mut State) -> Result<RegisterValue> {
     let value = etex_readexpr_i(gullet, rtype, 0, state)?;
-    if let Some(token) = gullet.read_token(state) {    // Skip \relax
+    if let Some(token) = gullet.read_token(state) {
+      // Skip \relax
       if !(token == T_RELAX) {
         gullet.unread_one(token);
       }
@@ -185,22 +186,23 @@ LoadDefinitions!(outer_state, {
     Ok(value)
   }
 
-  fn etex_readexpr_i(gullet:&mut Gullet, rtype: RegisterType, prec: usize, state: &mut State) -> Result<RegisterValue> {
+  fn etex_readexpr_i(gullet: &mut Gullet, rtype: RegisterType, prec: usize, state: &mut State) -> Result<RegisterValue> {
     // Read a first value
     let token = match gullet.read_x_non_space(state)? {
       Some(t) => t,
-      None => return Ok(RegisterValue::default())
+      None => return Ok(RegisterValue::default()),
     };
-    let mut value = if token ==  T_OTHER!("(") {
+    let mut value = if token == T_OTHER!("(") {
       let i_value = etex_readexpr_i(gullet, rtype, 0, state)?;
       let close = gullet.read_x_token(None, false, state)?; // close parenthesis should have terminated recursive call
       if close.is_none() || !(close == Some(T_OTHER!(")"))) {
         unimplemented!();
-  //       Error('expected', ')', $gullet,
-  //         "Missing close parenthesis in $type expr.", "Got " . ToString($close));
+        //       Error('expected', ')', $gullet,
+        //         "Missing close parenthesis in $type expr.", "Got " . ToString($close));
       }
       i_value
-    } else { // Read core TeX value/register
+    } else {
+      // Read core TeX value/register
       gullet.unread_one(token);
       gullet.read_value(rtype, state)?
     };
@@ -210,15 +212,18 @@ LoadDefinitions!(outer_state, {
       if next == T_RELAX {
         gullet.unread_one(next); // leave the \relax for top-level to strip off.
         break;
-      } else if next ==  T_OTHER!("+") && prec < 1 {
+      } else if next == T_OTHER!("+") && prec < 1 {
         value = value.add(etex_readexpr_i(gullet, rtype, 1, state)?);
-      } else if next ==  T_OTHER!("-") && prec < 1 {
+      } else if next == T_OTHER!("-") && prec < 1 {
         value = value.subtract(etex_readexpr_i(gullet, rtype, 1, state)?);
-      } else if next ==  T_OTHER!("*") && prec < 2 { // multiplier should be pure number
+      } else if next == T_OTHER!("*") && prec < 2 {
+        // multiplier should be pure number
         value = value.multiply(etex_readexpr_i(gullet, RegisterType::Number, 2, state)?);
-      } else if next == T_OTHER!("/") && prec < 2 { // denominator should be pure number
+      } else if next == T_OTHER!("/") && prec < 2 {
+        // denominator should be pure number
         value = value.divideround(etex_readexpr_i(gullet, RegisterType::Number, 2, state)?);
-      } else { // anything else, we're done.
+      } else {
+        // anything else, we're done.
         gullet.unread_one(next);
         break;
       }

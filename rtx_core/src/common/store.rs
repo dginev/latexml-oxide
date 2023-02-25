@@ -18,8 +18,8 @@ use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
-use crate::definition::FontDirective;
 use crate::definition::register::{Register, RegisterCell, RegisterValue};
+use crate::definition::FontDirective;
 use crate::document::tag::TagData;
 use crate::gullet::Gullet;
 use crate::ligature::Ligature;
@@ -123,12 +123,12 @@ impl fmt::Debug for Stored {
       Catcode(ref cc) => write!(f, "Stored::Catcode[{cc:?}]"),
       Charcode(ref cc) => write!(f, "Stored::Charcode[{cc:?}]"),
       IfFrame(ref fr) => write!(f, "Stored::IfFrame[{fr:?}]"),
-      Expandable(ref _expandable) => write!(f, "Stored::Expandable[]"),
-      Conditional(ref _conditional) => write!(f, "Stored::Conditional[]"),
-      Primitive(ref _primitive) => write!(f, "Stored::Primitive[]"),
-      MathPrimitive(ref _primitive) => write!(f, "Stored::MathPrimitive[]"),
+      Expandable(ref expandable) => write!(f, "Stored::Expandable[{expandable:?}]"),
+      Conditional(ref conditional) => write!(f, "Stored::Conditional[TODO]"),
+      Primitive(ref primitive) => write!(f, "Stored::Primitive[TODO]"),
+      MathPrimitive(ref _primitive) => write!(f, "Stored::MathPrimitive[TODO]"),
       // MathPrimitiveOptions(ref _primitive) => write!(f, "<math primitive options>"),
-      Constructor(ref _constructor) => write!(f, "Stored::Constructor[]"),
+      Constructor(ref _constructor) => write!(f, "Stored::Constructor[TODO]"),
       Digested(ref digested) => write!(f, "Stored::Digested[{digested:?}]"),
       Parameter(ref parameter) => write!(f, "Stored::Parameter[{parameter:?}]"),
       Register(ref register) => write!(f, "Stored::Register[{:?}]", register.borrow().cs),
@@ -351,7 +351,7 @@ impl PartialEq for Stored {
         } else {
           false
         }
-      }
+      },
       Number(ref n) => {
         if let Number(n2) = other {
           *n == *n2

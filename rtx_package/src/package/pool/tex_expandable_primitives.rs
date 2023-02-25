@@ -86,10 +86,7 @@ LoadDefinitions!(outer_state, {
   //// But if you do that, you've got to watch out since it usually
   //// shouldn't be a box; See the isRelax code in handleScripts, below
 
-  DefMacro!("\\number Number", sub[gullet, (num), state] {
-    let num_str = num.value_of();
-    Explode!(num_str)
-  });
+  DefMacro!("\\number Number", sub[gullet, (num), state] { Explode!(num.value_of()) });
 
   // define it here (only approxmiately), since it's already useful.
   Let!("\\protect", "\\relax");

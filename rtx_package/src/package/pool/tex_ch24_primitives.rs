@@ -132,20 +132,20 @@ LoadDefinitions!(state, {
     state.push_value("afterGroup", t);
   });
 
-  // // \uppercase<general text>, \lowercase<general text>
-  // sub ucToken {
-  //   my ($token) = @_;
-  //   my $code = $STATE->lookupUCcode($token->getString);
-  //   return ((defined $code) && ($code != 0) ? Token(chr($code), $token->getCatcode) : $token); }
+  // \uppercase<general text>, \lowercase<general text>
 
-  // DefMacro('\uppercase GeneralText', sub {
-  //     my ($gullet, $tokens) = @_;
-  //     return map { ucToken($_) } $tokens->unlist; });
-
-  DefMacro!("\\lowercase GeneralText", sub[gullet,(tokens), state] {
-    tokens.unlist().into_iter()
+  // Note that these are NOT expandable, even though the "return" tokens!
+  DefPrimitive!("\\uppercase GeneralText", sub[stomach,(tokens), state] {
+    let result = tokens.unlist().into_iter()
+    .map(|t| uppercase_token(t, state))
+    .collect::<Vec<Token>>();
+    stomach.get_gullet_mut().unread(Tokens::new(result));
+  });
+  DefPrimitive!("\\lowercase GeneralText", sub[stomach,(tokens), state] {
+    let result = tokens.unlist().into_iter()
     .map(|t| lowercase_token(t, state))
-    .collect::<Vec<Token>>()
+    .collect::<Vec<Token>>();
+    stomach.get_gullet_mut().unread(Tokens::new(result));
   });
 
   DefPrimitive!("\\message{}", sub [stomach, (message), state] {

@@ -110,12 +110,16 @@ LoadDefinitions!(outer_stomach, state, {
     iftoken.unlist()
   });
 
-  DefMacro!("\\@notdefinable", None, r###"\@latex@error{%
+  DefMacro!(
+    "\\@notdefinable",
+    None,
+    r###"\@latex@error{%
     Command \@backslashchar\reserved@a\space
     already defined.
     Or name \@backslashchar\@qend... illegal,
     see p.192 of the manual}
-  "###);
+  "###
+  );
 
   //======================================================================
   // Hair
@@ -142,12 +146,6 @@ LoadDefinitions!(outer_stomach, state, {
   // various of these are defined in various places by different classes.
   DefMacro!("\\chaptername", "Chapter");
   DefMacro!("\\partname", "Part");
-  // The rest of these are defined in some classes, but not most.
-  //DefMacroI("\sectionname",       undef, "Section");
-  //DefMacroI("\subsectionname",    undef, "Subsection");
-  //DefMacroI("\subsubsectionname", undef, "Subsubsection");
-  //DefMacroI("\paragraphname",     undef, "Paragraph");
-  //DefMacroI("\subparagraphname",  undef, "Subparagraph");
 
   DefMacro!("\\appendixname", "Appendix");
   // These aren"t defined in LaTeX,
@@ -157,4 +155,6 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\subsubsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
   DefMacro!("\\paragraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
   DefMacro!("\\subparagraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
+
+  DefPrimitive!("\\@@end", sub[stomach,_args,state] { stomach.get_gullet_mut().flush(state) });
 });

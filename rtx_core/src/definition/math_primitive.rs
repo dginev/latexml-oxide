@@ -9,7 +9,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure, Reversion, FontDirective};
+use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveClosure, Reversion};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -179,26 +179,26 @@ impl MathPrimitiveOptions {
   /// suggestive of using a `Constructor` instead of a `Primitive`
   pub fn has_complex_option(&self) -> bool {
     //DG: note that `nogroup` is true by default, so checking for it is counter-intuitive (should we even?)
-    self.bounded ||
-    self.mode.is_some() ||
-    !self.before_digest.is_empty() ||
-    !self.after_digest.is_empty() ||
-    self.is_prefix ||
-    self.require_math ||
-    self.forbid_math ||
-    self.alias.is_some() ||
-    self.decl_id.is_some() ||
-    self.replace.is_some() ||
-    self.reversion.is_some() ||
-    self.sizer.is_some() ||
-    self.operator_role.is_some() ||
-    self.reorder ||
-    self.dual ||
-    self.operator_scriptpos.is_some() ||
-    self.stretchy.is_some() ||
-    self.operator_stretchy.is_some() ||
-    self.hide_content_reversion ||
-    self.revert_as.is_some()
+    self.bounded
+      || self.mode.is_some()
+      || !self.before_digest.is_empty()
+      || !self.after_digest.is_empty()
+      || self.is_prefix
+      || self.require_math
+      || self.forbid_math
+      || self.alias.is_some()
+      || self.decl_id.is_some()
+      || self.replace.is_some()
+      || self.reversion.is_some()
+      || self.sizer.is_some()
+      || self.operator_role.is_some()
+      || self.reorder
+      || self.dual
+      || self.operator_scriptpos.is_some()
+      || self.stretchy.is_some()
+      || self.operator_stretchy.is_some()
+      || self.hide_content_reversion
+      || self.revert_as.is_some()
   }
 }
 

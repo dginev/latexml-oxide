@@ -13,6 +13,7 @@ use crate::definition::register::RegisterValue;
 use crate::document::Document;
 use crate::state::State;
 use crate::tokens::Tokens;
+use crate::tokens::NO_TOKENS;
 use crate::BoxOps;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -23,7 +24,7 @@ impl fmt::Display for Comment {
 }
 impl Object for Comment {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, _state: &State) -> Result<Tokens> { Ok(Tokens!()) }
+  fn revert(&self, _state: &State) -> Result<Tokens> { Ok(NO_TOKENS) }
 }
 impl BoxOps for Comment {
   fn get_properties(&self) -> &HashMap<String, Stored> {

@@ -64,7 +64,6 @@ impl IntoOption<Option<bool>> for bool {
   fn into_option(self) -> Option<bool> { Some(self) }
 }
 
-
 impl<T> IntoOption<Option<Vec<T>>> for Vec<T> {
   fn into_option(self) -> Option<Vec<T>> { Some(self) }
 }
@@ -294,7 +293,7 @@ impl IntoResultArgWrap<Result<ArgWrap>> for RegisterValue {
       RegisterValue::Token(n) => n.into_result_argwrap(),
       RegisterValue::Tokens(n) => n.into_result_argwrap(),
       RegisterValue::MuGlue(n) => n.into_result_argwrap(),
-      RegisterValue::MuDimension(n) => n.into_result_argwrap()
+      RegisterValue::MuDimension(n) => n.into_result_argwrap(),
     }
   }
 }

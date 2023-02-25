@@ -6,7 +6,7 @@ use crate::common::error::*;
 use crate::common::object::Object;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, PrimitiveClosure, Reversion,FontDirective};
+use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveClosure, Reversion};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -22,6 +22,7 @@ pub struct PrimitiveOptions {
   pub is_prefix: bool,
   pub require_math: bool,
   pub forbid_math: bool,
+  pub robust: bool,
   pub locked: bool,
   pub nargs: Option<usize>,
   pub scope: Option<Scope>,

@@ -296,7 +296,7 @@ impl Gullet {
         },
         Some(mut token) => {
           if token.smuggled.is_some() {
-            if token.code != Catcode::SmuggleTHE || state.smuggle_the {
+            if token.code != Catcode::SmuggleTHE || state.get_smuggle_the() {
               return Ok(Some(token));
             } else {
               return Ok(token.smuggled.take().map(|t| *t));
@@ -473,8 +473,10 @@ impl Gullet {
             tokens.push(t);
           }
         },
-        // TODO: Marker case
-        Catcode::MARKER => {},
+        Catcode::MARKER => {
+          // TODO: Marker case
+          // LaTeXML::Core::Definition::stopProfiling($token, 'expand');
+        },
         _ => tokens.push(t),
       };
     }
@@ -488,8 +490,6 @@ impl Gullet {
       );
     }
     if tokens.is_empty() {
-      // Default to empty token list, to signify success (TODO, or improve to
-      // Result<Option<Tokens>> ??)
       Ok(None)
     } else {
       Ok(Some(Tokens::new(tokens)))
@@ -633,7 +633,8 @@ impl Gullet {
     if tokens.is_empty() {
       Ok(None)
     } else {
-      Ok(Some(Tokens::new(tokens)))
+      let tks = Tokens::new(tokens);
+      Ok(Some(tks))
     }
   }
 

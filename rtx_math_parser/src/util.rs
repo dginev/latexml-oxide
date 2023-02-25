@@ -1,9 +1,9 @@
-use std::error::Error;
 use crate::data::{get_grammatical_role, get_token_meaning};
-use crate::semantics::tree::XM;
 use crate::semantics::tree::lookup_lex_node;
+use crate::semantics::tree::XM;
 use crate::semantics::ActionContext;
 use libxml::tree::Node;
+use std::error::Error;
 
 /// Generate a textual token for each node; The parser operates on this encoded
 /// string.
@@ -81,7 +81,7 @@ pub fn create_xmrefs(args: &[&XM], ctxt: ActionContext) -> Result<Vec<XM>, Box<d
     match arg {
       XM::Token(props, _meta) => {
         if let Some(id) = props.id.as_ref() {
-          refs.push( XM::Ref(id.to_string()) );
+          refs.push(XM::Ref(id.to_string()));
         }
       },
       XM::Lexeme(lex, _) => {
@@ -96,20 +96,19 @@ pub fn create_xmrefs(args: &[&XM], ctxt: ActionContext) -> Result<Vec<XM>, Box<d
           None => {
             // If arg is already XML, it's too late to get automatic ID's
             document.generate_id(&mut node.clone(), "", state)?;
-            refs.push(
-              XM::Ref(
-                node.get_attribute("id").expect("generate_id should always succeed in setting an id")
-              ));
-          }
+            refs.push(XM::Ref(
+              node.get_attribute("id").expect("generate_id should always succeed in setting an id"),
+            ));
+          },
         }
-      }
+      },
       // TODO - when is the xmkey treatment appropriate?
-        //     elsif ($isarray) {
-        //       # $arg is not yet instanciated, so hasn't had chance to get auto-id; use _xmkey
-        //       my $key = ToString(getXMArgID());
-        //       $$arg[1]{'_xmkey'} = $key;
-        //       push(@refs, ['ltx:XMRef', { '_xmkey' => $key, _box => $box }]); }
-        //     else {
+      //     elsif ($isarray) {
+      //       # $arg is not yet instanciated, so hasn't had chance to get auto-id; use _xmkey
+      //       my $key = ToString(getXMArgID());
+      //       $$arg[1]{'_xmkey'} = $key;
+      //       push(@refs, ['ltx:XMRef', { '_xmkey' => $key, _box => $box }]); }
+      //     else {
       // TODO:
       //   # XMHint's are ephemeral, they may disappear; so just clone it w/o id
       //   if ($qname eq 'ltx:XMHint') {
@@ -122,9 +121,8 @@ pub fn create_xmrefs(args: &[&XM], ctxt: ActionContext) -> Result<Vec<XM>, Box<d
       //     my $key = ($isarray ? $$arg[1]{_xmkey} : $arg->getAttribute('_xmkey'));
       //     my $id  = ($isarray ? $$arg[1]{idref}  : $arg->getAttribute('idref'));
       //     push(@refs, [$qname, { _xmkey => $key, idref => $id, _box => $box }]); }
-      _ => {}
+      _ => {},
     }
   }
   Ok(refs)
-
 }

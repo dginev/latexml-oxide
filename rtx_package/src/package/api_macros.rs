@@ -13,7 +13,6 @@ macro_rules! FontDirective {
     ))))
 }
 
-
 #[macro_export]
 macro_rules! NewDefault {
   ($name:ident, $($key:ident => $value:expr),*) => ($name {
@@ -117,6 +116,18 @@ macro_rules! tagsub {
         Ok(())
       },
     )]
+  };
+}
+
+#[macro_export]
+macro_rules! sizersub {
+  ($whatsit:ident, $state:ident, $body:block) => {
+    Arc::new(|$whatsit: &Whatsit, $state: &mut State| -> Result<(Dimension, Dimension, Dimension)> {
+      BindInnerState!($state);
+      let macro_out = $body;
+      end_state_frame!();
+      macro_out
+    })
   };
 }
 

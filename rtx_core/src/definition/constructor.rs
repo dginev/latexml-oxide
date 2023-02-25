@@ -10,7 +10,8 @@ use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
 use crate::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, PropertiesClosure, ReplacementClosure, Reversion, SizingClosure, FontDirective
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective, PropertiesClosure, ReplacementClosure, Reversion,
+  SizingClosure,
 };
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -44,6 +45,7 @@ pub struct ConstructorOptions {
   pub after_digest_body: Vec<DigestionClosure>,
   pub reversion: Option<Reversion>,
   pub scope: Option<Scope>,
+  pub robust: bool,
   pub locked: bool,
   pub alias: Option<String>,
 }
@@ -67,6 +69,7 @@ impl Default for ConstructorOptions {
       before_digest_end: vec![],
       after_digest_body: vec![],
       scope: None,
+      robust: false,
       locked: false,
       alias: None,
       reversion: None,

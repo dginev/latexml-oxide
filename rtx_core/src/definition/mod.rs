@@ -14,9 +14,9 @@ use std::sync::Arc;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
+use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::font::Font;
 
 use self::argument::ArgWrap;
 use self::register::{RegisterType, RegisterValue};
@@ -28,7 +28,7 @@ use crate::parameter::Parameters;
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::token::{Catcode, Token};
-use crate::tokens::Tokens;
+use crate::tokens::{Tokens, NO_TOKENS};
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
@@ -61,7 +61,7 @@ impl std::fmt::Debug for ExpansionBody {
 }
 
 impl Default for ExpansionBody {
-  fn default() -> Self { ExpansionBody::Tokens(Tokens::new(Vec::new())) }
+  fn default() -> Self { ExpansionBody::Tokens(NO_TOKENS) }
 }
 
 impl PartialEq for ExpansionBody {
@@ -112,7 +112,13 @@ impl From<Tokens> for ExpansionBody {
 }
 
 impl From<Tokens> for Option<ExpansionBody> {
-  fn from(t: Tokens) -> Option<ExpansionBody> { Some(t.into()) }
+  fn from(t: Tokens) -> Option<ExpansionBody> {
+    if t.is_empty() {
+      None
+    } else {
+      Some(t.into())
+    }
+  }
 }
 
 impl From<&str> for ExpansionBody {
@@ -127,33 +133,31 @@ impl From<ArgWrap> for ExpansionBody {
   fn from(t: ArgWrap) -> ExpansionBody { ExpansionBody::Tokens(t.owned_tokens().unwrap_or_default()) }
 }
 impl From<ArgWrap> for Option<ExpansionBody> {
-  fn from(t: ArgWrap) -> Option<ExpansionBody> { t.owned_tokens().map(ExpansionBody::Tokens) }
+  fn from(t: ArgWrap) -> Option<ExpansionBody> {
+    match t.owned_tokens() {
+      Some(tks) if !tks.is_empty() => Some(ExpansionBody::Tokens(tks)),
+      _ => None,
+    }
+  }
 }
-
 
 #[derive(Clone)]
 pub enum FontDirective {
   Closure(FontClosure),
-  Asset(Arc<Font>)
+  Asset(Arc<Font>),
 }
 
 impl From<Font> for FontDirective {
-  fn from(f: Font) -> Self {
-    FontDirective::Asset(Arc::new(f))
-  }
+  fn from(f: Font) -> Self { FontDirective::Asset(Arc::new(f)) }
 }
 impl From<FontClosure> for FontDirective {
-  fn from(fc: FontClosure) -> Self {
-    FontDirective::Closure(fc)
-  }
+  fn from(fc: FontClosure) -> Self { FontDirective::Closure(fc) }
 }
 impl FontDirective {
   pub fn get_font(&self, whatsit: Option<&Whatsit>, state: &mut State) -> Result<Arc<Font>> {
     match self {
-      FontDirective::Closure(fc) =>
-        Ok(Arc::new(
-          (fc)(whatsit, state)?)),
-      FontDirective::Asset(ref font) => Ok(Arc::clone(font))
+      FontDirective::Closure(fc) => Ok(Arc::new((fc)(whatsit, state)?)),
+      FontDirective::Asset(ref font) => Ok(Arc::clone(font)),
     }
   }
   pub fn get_asset(&self) -> Option<Arc<Font>> {
@@ -167,8 +171,8 @@ impl FontDirective {
 impl fmt::Debug for FontDirective {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      FontDirective::Closure(_) =>  write!(f, "<FontClosure>"),
-      FontDirective::Asset(font) => write!(f, "{:?}", *font)
+      FontDirective::Closure(_) => write!(f, "<FontClosure>"),
+      FontDirective::Asset(font) => write!(f, "{:?}", *font),
     }
   }
 }
@@ -178,8 +182,8 @@ impl PartialEq for FontDirective {
       FontDirective::Closure(_) => false, // we can't compare them for now?
       FontDirective::Asset(asset1) => match other {
         FontDirective::Closure(_) => false,
-        FontDirective::Asset(asset2) => *asset1 == *asset2
-      }
+        FontDirective::Asset(asset2) => *asset1 == *asset2,
+      },
     }
   }
 }

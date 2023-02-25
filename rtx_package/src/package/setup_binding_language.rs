@@ -1520,6 +1520,11 @@ macro_rules! MergeFont {
 //  and we have a several places where we get compile-time speedups by pre-tokenizing into Rust Tokens objects / Replacement closures
 #[macro_export]
 macro_rules! DefMacro {
+  // simplest case - mock macro that discards everything.
+  ($proto:literal, None) => {{
+    let (cs, params) = parse_prototype!($proto);
+    defi_macro!(cs, params, None, None);
+  }};
   // closure with literal prototype
   ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block $($input:tt)*) => {{
     compile_prototype_for_typed_macro!($prototype, sub [ $gullet, ( $($var),* ), $inner_state ] $body $($input)*)
@@ -1565,7 +1570,7 @@ macro_rules! DefMacro {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
-    defi_macro!(T_CS!($cs), None, compiled_expansion, None);
+    defi_macro!(T_CS!($cs), None, compiled_expansion, Some(options));
   }};
   ($cs:expr, None, $expansion:literal) => {{
     let compiled_expansion;
@@ -1593,12 +1598,15 @@ macro_rules! DefMacro {
   ($cs:expr, $replacement:expr, $expansion:expr) => {{
     defi_macro!($cs, $replacement, $expansion, None);
   }};
-
   // The least-specified option-parsing cases come last due to the TT munchers accepting any inputs
   ($proto:literal, None $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
     defi_macro!(cs, params, None, Some(options));
+  }};
+  ($cs:expr, $replacement:expr, $expansion:expr, $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    defi_macro!($cs, $replacement, $expansion, Some(options));
   }};
 }
 
@@ -2091,6 +2099,10 @@ macro_rules! defi_opts {
   };
 
   // sizer: Option<SizingClosure>
+  (@munch ( $(,)? sizer $(:)?$(=>)? sub[$whatsit_arg:ident, $state_arg:ident] $body:block $($next:tt)*) ->
+  {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ sizer @ Some(sizersub!($whatsit_arg, $state_arg, $body)) ]})
+  };
   (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ sizer @ $tokens.into_option() ] })
   };

@@ -5,6 +5,57 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
-    <p>, ABCDEFGHIJKLMNOPQRSTUVWXYZ <break/><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text yoffset="-0.4ex">E</text>X</text>, abcdefghijklmnopqrstuvwxyz <break/><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">L<text fontsize="80%" yoffset="0.4ex">A</text>T<text yoffset="-0.4ex">E</text>X</text>, abcdefghijklmnopqrstuvwxyz <break/>, abcdefghijklmnopqrstuvwxyz <break/><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text yoffset="-0.4ex">E</text>X</text>, ABCDEFGHIJKLMNOPQRSTUVWXYZ <break/><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">L<text fontsize="80%" yoffset="0.4ex">A</text>T<text yoffset="-0.4ex">E</text>X</text>, ABCDEFGHIJKLMNOPQRSTUVWXYZ <break/>, ıȷæœa<break/><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text yoffset="-0.4ex">E</text>X</text>, ıȷæœa <break/><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">L<text fontsize="80%" yoffset="0.4ex">A</text>T<text yoffset="-0.4ex">E</text>X</text>, IJÆŒA <break/>, ÆŒA<break/><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text yoffset="-0.4ex">E</text>X</text>, ÆŒA <break/><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">L<text fontsize="80%" yoffset="0.4ex">A</text>T<text yoffset="-0.4ex">E</text>X</text>, æœa <break/>, [FOO] <break/><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text yoffset="-0.4ex">E</text>X</text>, (foo) <break/><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">L<text fontsize="80%" yoffset="0.4ex">A</text>T<text yoffset="-0.4ex">E</text>X</text>, (foo) <break/>, (foo) <break/><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text yoffset="-0.4ex">E</text>X</text>, [FOO] <break/><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">L<text fontsize="80%" yoffset="0.4ex">A</text>T<text yoffset="-0.4ex">E</text>X</text>, [FOO] <break/></p>
+    <p>ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
+  </para>
+  <para xml:id="p2">
+    <p><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text yoffset="-0.4ex">E</text>X</text>, abcdefghijklmnopqrstuvwxyz</p>
+  </para>
+  <para xml:id="p3">
+    <p><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">L<text fontsize="80%" yoffset="0.4ex">A</text>T<text yoffset="-0.4ex">E</text>X</text>, abcdefghijklmnopqrstuvwxyz</p>
+  </para>
+  <para xml:id="p4">
+    <p>abcdefghijklmnopqrstuvwxyz</p>
+  </para>
+  <para xml:id="p5">
+    <p><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text yoffset="-0.4ex">E</text>X</text>, ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
+  </para>
+  <para xml:id="p6">
+    <p><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">L<text fontsize="80%" yoffset="0.4ex">A</text>T<text yoffset="-0.4ex">E</text>X</text>, ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
+  </para>
+  <para xml:id="p7">
+    <p>ıȷæœa</p>
+  </para>
+  <para xml:id="p8">
+    <p><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text yoffset="-0.4ex">E</text>X</text>, ıȷæœa</p>
+  </para>
+  <para xml:id="p9">
+    <p><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">L<text fontsize="80%" yoffset="0.4ex">A</text>T<text yoffset="-0.4ex">E</text>X</text>, IJÆŒA</p>
+  </para>
+  <para xml:id="p10">
+    <p>ÆŒA</p>
+  </para>
+  <para xml:id="p11">
+    <p><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text yoffset="-0.4ex">E</text>X</text>, ÆŒA</p>
+  </para>
+  <para xml:id="p12">
+    <p><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">L<text fontsize="80%" yoffset="0.4ex">A</text>T<text yoffset="-0.4ex">E</text>X</text>, æœa</p>
+  </para>
+  <para xml:id="p13">
+    <p>[FOO]</p>
+  </para>
+  <para xml:id="p14">
+    <p><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text yoffset="-0.4ex">E</text>X</text>, (foo)</p>
+  </para>
+  <para xml:id="p15">
+    <p><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">L<text fontsize="80%" yoffset="0.4ex">A</text>T<text yoffset="-0.4ex">E</text>X</text>, (foo)</p>
+  </para>
+  <para xml:id="p16">
+    <p>(foo)</p>
+  </para>
+  <para xml:id="p17">
+    <p><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text yoffset="-0.4ex">E</text>X</text>, [FOO]</p>
+  </para>
+  <para xml:id="p18">
+    <p><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">L<text fontsize="80%" yoffset="0.4ex">A</text>T<text yoffset="-0.4ex">E</text>X</text>, [FOO]</p>
   </para>
 </document>

@@ -142,7 +142,7 @@ LoadDefinitions!(state, {
 
   // This is the "normal" case: $ appearing with an alignment that is in text mode.
   // It's just like regular $, except it doesn't look for $$ (no display math).
-  DefPrimitive!(r"\@dollar@in@textmode", sub [stomach, (), state] {
+  DefPrimitive!("\\@dollar@in@textmode", sub [stomach, (), state] {
     let mathcs = if state.lookup_bool("IN_MATH") { T_CS!("\\@@ENDINLINEMATH") }
       else {T_CS!("\\@@BEGININLINEMATH") };
     stomach.invoke_token(&mathcs, state)

@@ -548,12 +548,16 @@ impl Font {
       } else {
         // Lowercase
         match new.family {
-          None => {new.family = Some(deffamily);},
-          Some(nf) if nf != DEFFAMILY =>  {new.family = Some(deffamily);},
-          _ => {}
+          None => {
+            new.family = Some(deffamily);
+          },
+          Some(nf) if nf != DEFFAMILY => {
+            new.family = Some(deffamily);
+          },
+          _ => {},
         };
         // if new.shape.is_none() {// always ?
-          new.shape = Some("italic".into());
+        new.shape = Some("italic".into());
         // }
         if new.series.is_some() && (new.series != Some(DEFSERIES.into())) {
           new.series = Some(defseries);
