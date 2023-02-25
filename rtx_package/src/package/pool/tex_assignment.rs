@@ -327,48 +327,49 @@ LoadDefinitions!(outer_state, {
         value.value_of() as u16, None); });
 
   DefRegister!("\\lccode Number", Number::new(0),
-    getter=> sub[args, state] {
-      let code = state.lookup_lccode(args[0].value_of() as u8 as char);
-      Number::new(code.unwrap_or_default() as i32)
-    },
-    setter => sub[value, args, state] {
-      state.assign_lccode(args[0].value_of() as u8 as char,
-        value.value_of() as u16, None);
-    });
+  getter=> sub[args, state] {
+    let code = state.lookup_lccode(args[0].value_of() as u8 as char);
+    Number::new(code.unwrap_or_default() as i32)
+  },
+  setter => sub[value, args, state] {
+    state.assign_lccode(args[0].value_of() as u8 as char,
+      value.value_of() as u16, None);
+  });
 
   DefRegister!("\\uccode Number", Number::new(0),
-    getter=> sub[args, state] {
-      let code = state.lookup_uccode(args[0].value_of() as u8 as char);
-      Number::new(code.unwrap_or_default() as i32)
-    },
-    setter => sub[value, args, state] {
-      state.assign_uccode(args[0].value_of() as u8 as char,
-        value.value_of() as u16, None);
-    });
+  getter=> sub[args, state] {
+    let code = state.lookup_uccode(args[0].value_of() as u8 as char);
+    Number::new(code.unwrap_or_default() as i32)
+  },
+  setter => sub[value, args, state] {
+    state.assign_uccode(args[0].value_of() as u8 as char,
+      value.value_of() as u16, None);
+  });
 
   // Not used anywhere (yet)
   DefRegister!("\\delcode Number", Number::new(0),
-    getter=> sub[args, state] {
-      let code = state.lookup_delcode(args[0].value_of() as u8 as char);
-      Number::new(code.unwrap_or_default() as i32)
-    },
-    setter => sub[value, args, state] {
-      state.assign_delcode(args[0].value_of() as u8 as char,
-        value.value_of() as u16, None);
-    });
+  getter=> sub[args, state] {
+    let code = state.lookup_delcode(args[0].value_of() as u8 as char);
+    Number::new(code.unwrap_or_default() as i32)
+  },
+  setter => sub[value, args, state] {
+    state.assign_delcode(args[0].value_of() as u8 as char,
+      value.value_of() as u16, None);
+  });
 
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
   for letter in b'A'..=b'Z' {
-    outer_state.assign_lccode(letter, letter + 20, Scope::Global);
+    //FYI: 0x20 == 32
+    outer_state.assign_lccode(letter, letter + 32, Scope::Global);
     outer_state.assign_uccode(letter, letter, Scope::Global);
-    outer_state.assign_lccode(letter + 20, letter + 20, Scope::Global);
-    outer_state.assign_uccode(letter + 20, letter, Scope::Global);
+    outer_state.assign_lccode(letter + 32, letter + 32, Scope::Global);
+    outer_state.assign_uccode(letter + 32, letter, Scope::Global);
   }
 
   // Stub definitions ???
   DefRegister!("\\hyphenchar{}", Number::new(b'-' as i32));
   DefRegister!("\\skewchar{}", Number::new(0)); // no idea what the default is here
 
-  DefMacro!("\\hyphenation GeneralText", "");
-  DefMacro!("\\patterns{}", "");
+  DefMacro!("\\hyphenation GeneralText", None);
+  DefMacro!("\\patterns{}", None);
 });

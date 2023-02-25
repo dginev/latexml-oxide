@@ -581,14 +581,12 @@ impl BoxOps for Digested {
       _ => unimplemented!(),
     }
   }
-  fn get_font(&self, state:&mut State) -> Result<Option<Cow<Font>>> {
+  fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>> {
     use DigestedData::*;
     match *self.0 {
       TBox(ref b) => b.get_font(state),
       List(ref l) => l.get_font(state),
-      Whatsit(ref w) => Ok(
-        w.read().unwrap().get_font(state)?.map(|t| Cow::Owned(t.into_owned()))
-      ),
+      Whatsit(ref w) => Ok(w.read().unwrap().get_font(state)?.map(|t| Cow::Owned(t.into_owned()))),
       Postponed(ref tks) => Ok(None),
       _ => unimplemented!(),
     }

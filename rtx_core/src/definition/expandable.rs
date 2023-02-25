@@ -14,7 +14,7 @@ use crate::gullet::Gullet;
 use crate::parameter::Parameters;
 use crate::stomach::Stomach;
 use crate::token::*;
-use crate::tokens::Tokens;
+use crate::tokens::{Tokens, NO_TOKENS};
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
@@ -181,7 +181,7 @@ impl Definition for Expandable {
         if let Some(ref parms) = self.paramlist {
           parms.read_arguments(gullet, self, state)?;
         }
-        Ok(Tokens!())
+        Ok(NO_TOKENS)
       },
     }
   }
@@ -210,10 +210,15 @@ impl Expandable {
         expansion = ExpansionBody::Tokens(Tokens::pack_parameters(expansion_tokens));
       }
     }
+    // simplify: treat empty tokens as None
+    let expansion = match expansion {
+      ExpansionBody::Tokens(tks) if tks.is_empty() => None,
+      other => Some(other),
+    };
     Expandable {
       cs,
       paramlist,
-      expansion: Some(expansion),
+      expansion,
       // locator           => $source->getLocator,
       is_protected: traits.protected || state.get_prefix("protected"),
       is_outer: traits.outer || state.get_prefix("outer"),

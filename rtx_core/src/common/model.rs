@@ -517,9 +517,8 @@ impl Model {
     }
   }
 
-  /// TODO: This is another component that would fit perfectly as a compiler plugin,
-  /// which generates a rust objects from all available schemas and has them directly
-  /// available at runtime For now, simply reimplementing the runtime loading of
+  /// TODO: This is another component that would fit perfectly as a compiler plugin.
+  /// For now, simply reimplementing the runtime loading of
   /// LaTeXML.model as-is from Model.pm
   pub fn load_compiled_schema(&mut self, path: &str) {
     note_begin(&s!("Loading compiled schema {}\n", path));

@@ -14,7 +14,7 @@ use rtx_core::{fatal, map, s, static_map, Info};
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
 use crate::semantics::*;
-use crate::util::{filter_hints,node_to_grammar_lexemes};
+use crate::util::{filter_hints, node_to_grammar_lexemes};
 use marpa::lexer::byte_scanner::*;
 use marpa::parser::*;
 use marpa::tree_builder::TreeBuilder;
@@ -460,7 +460,12 @@ impl MathParser {
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
     for val in parse_result {
-      match self.actions.get_tree(self.builder.clone(), val, self.expert_pragmatics.as_slice(), ActionContext { nodes, document, state}) {
+      match self.actions.get_tree(
+        self.builder.clone(),
+        val,
+        self.expert_pragmatics.as_slice(),
+        ActionContext { nodes, document, state },
+      ) {
         Ok(tree_opt) => {
           if let Some(tree) = tree_opt {
             // eprintln!("-- we found a tree: {:?}", tree);
@@ -527,9 +532,7 @@ impl MathParser {
 // Mostly for debugging information?
 // Note that the nodes are true libXML nodes, already absorbed into the document
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-pub fn text_form(node: &Node, document: &mut Document, state: &mut State) -> String {
-  textrec(node, None, None, document, state)
-}
+pub fn text_form(node: &Node, document: &mut Document, state: &mut State) -> String { textrec(node, None, None, document, state) }
 
 // ================================================================================
 // Some more XML utilities, but math specific (?)
@@ -646,7 +649,7 @@ fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document, st
       inner.push(' ');
       inner.push_str(&textrec(arg1, None, None, document, state));
     }
-    ( 5000, inner )
+    (5000, inner)
   } else if let Some(bp) = IS_INFIX.get(&role) {
     // A sub/superscript with a meaning probably should be prefix
     if (role == "SUBSCRIPTOP" || role == "SUPERSCRIPTOP") && op.has_attribute("meaning") {

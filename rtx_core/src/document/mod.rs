@@ -1,6 +1,6 @@
+pub mod helpers;
 pub mod resource;
 pub mod tag;
-pub mod helpers;
 
 use lazy_static::lazy_static;
 use libxml::tree::set_node_rc_guard;
@@ -1600,34 +1600,34 @@ impl Document {
     }
     if key == "xml:id" || key == "id" {
       // If it's an ID attribute
-      self.record_id_with_node(value, node);    // Do id book keeping
-      // TODO: Need to improve Namespace ergonomics, also in rust-libxml
-      // let node_ns = self
-      //   .document
-      //   .get_root_element()
-      //   .unwrap()
-      //   .get_namespace_declarations()
-      //   .into_iter()
-      //   .find(|ns| ns.get_href() == XML_NS)
-      //   .unwrap_or_else(|| {
-      //     node
-      //       .get_namespace_declarations()
-      //       .into_iter()
-      //       .find(|ns| ns.get_href() == XML_NS)
-      //       .unwrap_or_else(|| {
-      //         Namespace::new(
-      //           "xml",
-      //           &XML_NS.to_string().clone(),
-      //           &mut self.document.get_root_element().unwrap(),
-      //         ).unwrap_or_else(|_| {
-      //           panic!(
-      //             "Could not set NS for {:?}\n\n at \n\n {:?}",
-      //             self.document.node_to_string(node),
-      //             self.document.to_string(true)
-      //           )
-      //         })
-      //       })
-      //   });
+      self.record_id_with_node(value, node); // Do id book keeping
+                                             // TODO: Need to improve Namespace ergonomics, also in rust-libxml
+                                             // let node_ns = self
+                                             //   .document
+                                             //   .get_root_element()
+                                             //   .unwrap()
+                                             //   .get_namespace_declarations()
+                                             //   .into_iter()
+                                             //   .find(|ns| ns.get_href() == XML_NS)
+                                             //   .unwrap_or_else(|| {
+                                             //     node
+                                             //       .get_namespace_declarations()
+                                             //       .into_iter()
+                                             //       .find(|ns| ns.get_href() == XML_NS)
+                                             //       .unwrap_or_else(|| {
+                                             //         Namespace::new(
+                                             //           "xml",
+                                             //           &XML_NS.to_string().clone(),
+                                             //           &mut self.document.get_root_element().unwrap(),
+                                             //         ).unwrap_or_else(|_| {
+                                             //           panic!(
+                                             //             "Could not set NS for {:?}\n\n at \n\n {:?}",
+                                             //             self.document.node_to_string(node),
+                                             //             self.document.to_string(true)
+                                             //           )
+                                             //         })
+                                             //       })
+                                             //   });
       node.set_attribute("xml:id", value)?; // and bypass all ns stuff
     } else if !key.contains(':') {
       // No colon; no namespace (the common case!)
@@ -1764,9 +1764,7 @@ impl Document {
   //         "Last alternative for '$id' is '$badid'"); } }
   //   return $id; }
 
-  pub fn lookup_id(&self, id:&str) -> Option<&Node> {
-    self.idstore.get(id)
-  }
+  pub fn lookup_id(&self, id: &str) -> Option<&Node> { self.idstore.get(id) }
 
   // #======================================================================
   // # Odd bit:

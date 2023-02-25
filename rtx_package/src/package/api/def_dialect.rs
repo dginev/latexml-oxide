@@ -1,21 +1,21 @@
+use lazy_static::lazy_static;
 use std::borrow::{Borrow, Cow};
 use std::sync::Arc;
-use lazy_static::lazy_static;
 
 use rtx_core::common::error::*;
 use rtx_core::common::font::Font;
 use rtx_core::common::object::Object;
 use rtx_core::definition::argument::ArgWrap;
-use rtx_core::definition::PropertiesClosure;
 use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use rtx_core::definition::constructor::{Constructor, ConstructorOptions};
 use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
 use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
 use rtx_core::definition::register::{Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue};
+use rtx_core::definition::PropertiesClosure;
 use rtx_core::definition::{
-  BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, PrimitiveClosure, ReplacementClosure,
-  FontDirective
+  BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, FontDirective, PrimitiveClosure,
+  ReplacementClosure,
 };
 use rtx_core::document::Document;
 use rtx_core::gullet::Gullet;
@@ -31,7 +31,7 @@ use rtx_core::Digested;
 use super::content::merge_font;
 use super::*;
 
-const MATH_CONSTRUCTOR_ATTRIBUTES : &[&str] = &["name", "meaning", "omcd", "decl_id", "mathstyle", "lpadding", "rpadding"];
+const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &["name", "meaning", "omcd", "decl_id", "mathstyle", "lpadding", "rpadding"];
 lazy_static! {
   static ref CONSTRUCTOR_SPECIALS: Regex = Regex::new(r"([#&?\\<>])").unwrap();
 }
@@ -174,7 +174,12 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
     state.assign_mathcode(cs.get_string().chars().next().unwrap(), 0x8000u16, scope.clone());
   }
   let locked_key_opt = if options.locked { Some(format!("{cs}:locked")) } else { None };
-  state.install_definition(Expandable::new(cs, paramlist, expansion, Some(options), state), scope);
+  let defcs = if options.robust {
+    def_robust_cs(cs, options.locked, options.scope.clone(), state)
+  } else {
+    cs
+  };
+  state.install_definition(Expandable::new(defcs, paramlist, expansion, Some(options), state), scope);
   if let Some(locked_key) = locked_key_opt {
     state.assign_value(&locked_key, true, Some(Scope::Global));
   }
@@ -310,10 +315,16 @@ pub fn def_primitive(
     });
     after_digest_env.push(egroup_closure);
   }
+  //  Not sure robust entirely makes sense for Primitives, other than LaTeXML vs LaTeX mismatch
+  let defcs = if options.robust {
+    def_robust_cs(cs, options.locked, scope.clone(), state)
+  } else {
+    cs
+  };
 
   state.install_definition(
     Primitive {
-      cs,
+      cs: defcs,
       paramlist,
       replacement: compiled_replacement,
       before_digest: before_digest_env,
@@ -344,13 +355,12 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
         let state_font = state.lookup_font().unwrap();
-        let font = Arc::new(
-          if let Some(ref reqfont) = reqfont_opt {
-            let this_reqfont = reqfont.get_font(None, state)?;
-            state_font.merge((*this_reqfont).clone()).specialize(&presentation)
-          } else {
-            state_font.specialize(&presentation)
-          });
+        let font = Arc::new(if let Some(ref reqfont) = reqfont_opt {
+          let this_reqfont = reqfont.get_font(None, state)?;
+          state_font.merge((*this_reqfont).clone()).specialize(&presentation)
+        } else {
+          state_font.specialize(&presentation)
+        });
 
         Ok(vec![Digested::from(Tbox {
           text: presentation.clone(),
@@ -370,11 +380,19 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
 pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
   // TODO: do we need to do anything about digesting the presentation?
   let nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(0);
-  let defcs = if options.robust { def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state) } else  { cs.clone() };
-  if options.reversion.is_none() && nargs==0 && options.alias.is_none() {
-  if options.revert_as.is_none()
-    || options.revert_as == Some(Cow::Borrowed("content"))
-    || options.revert_as == Some(Cow::Borrowed("context")) {// TODO :&& (($LaTeXML::DUAL_BRANCH || 'content') eq 'content'))
+  let csname_alias = if options.alias.is_none() && options.robust {
+    Some(String::from(cs.get_cs_name()))
+  } else {
+    None
+  };
+  let defcs = if options.robust {
+    def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)
+  } else {
+    cs.clone()
+  };
+  if options.reversion.is_none() && nargs == 0 && options.alias.is_none() {
+    if options.revert_as.is_none() || options.revert_as == Some(Cow::Borrowed("content")) || options.revert_as == Some(Cow::Borrowed("context")) {
+      // TODO :&& (($LaTeXML::DUAL_BRANCH || 'content') eq 'content'))
       options.reversion = Some(Reversion::Tokens(Tokens!(cs)));
     } else {
       // TODO: This differs from the Perl, where `presentation` comes in as Tokens
@@ -387,23 +405,27 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
   let presentation_for_replacement = presentation.clone();
   let is_mathstyle = options.mathstyle.is_some();
   let mathstyle_for_font = options.mathstyle.clone();
-  options.font = Some(FontDirective::Closure(
-    if is_mathstyle { Arc::new(move |whatsit, state| {
-      Ok(state.lookup_font().unwrap().merge(
-          Font{ mathstyle: mathstyle_for_font.as_ref()
-                .map(|ms| Cow::Owned(ms.to_owned())),
-              ..Font::default()})
-          .specialize(&presentation))
-      })
-    } else {
-      Arc::new(move |whatsit, state| {
-        Ok(state.lookup_font().unwrap().specialize(&presentation))
-      })
-    }));
-  let compiled_replacement : Option<ReplacementClosure> = Some(if nargs == 0 { // If trivial presentation, allow it in Text
-    Arc::new(move |document:&mut Document, _, props:&HashMap<String, Stored>, state: &mut State| {
+  options.font = Some(FontDirective::Closure(if is_mathstyle {
+    Arc::new(move |whatsit, state| {
+      Ok(
+        state
+          .lookup_font()
+          .unwrap()
+          .merge(Font {
+            mathstyle: mathstyle_for_font.as_ref().map(|ms| Cow::Owned(ms.to_owned())),
+            ..Font::default()
+          })
+          .specialize(&presentation),
+      )
+    })
+  } else {
+    Arc::new(move |whatsit, state| Ok(state.lookup_font().unwrap().specialize(&presentation)))
+  }));
+  let compiled_replacement: Option<ReplacementClosure> = Some(if nargs == 0 {
+    // If trivial presentation, allow it in Text
+    Arc::new(move |document: &mut Document, _, props: &HashMap<String, Stored>, state: &mut State| {
       let mut attrs = HashMap::new();
-      for key in ["role","scriptpos","stretchy"] {
+      for key in ["role", "scriptpos", "stretchy"] {
         if let Some(v) = props.get(key) {
           attrs.insert(key.to_owned(), v.to_string());
         }
@@ -417,7 +439,7 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
         Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
         Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None, state)?)),
         Some(Stored::FontDirective(FontDirective::Asset(font))) => Some(Cow::Borrowed(&**font)),
-        _ => None
+        _ => None,
       };
       if let Some(font) = font_opt {
         document.open_element("ltx:XMTok", Some(attrs), Some(&font), state)?;
@@ -430,20 +452,21 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
       Ok(())
     })
   } else {
-//     Arc::new(|| {
-// <ltx:XMApp role='#role' scriptpos='#scriptpos' stretchy='#stretchy'>"
-//           . "<ltx:XMTok $cons_attr font='#font' role='#operator_role'"
-//           . " scriptpos='#operator_scriptpos' stretchy='#operator_stretchy' $end_tok"
-//           . join('', map { "<ltx:XMArg>#$_</ltx:XMArg>" } 1 .. $nargs)
-//           . "</ltx:XMApp>"
+    //     Arc::new(|| {
+    // <ltx:XMApp role='#role' scriptpos='#scriptpos' stretchy='#stretchy'>"
+    //           . "<ltx:XMTok $cons_attr font='#font' role='#operator_role'"
+    //           . " scriptpos='#operator_scriptpos' stretchy='#operator_stretchy' $end_tok"
+    //           . join('', map { "<ltx:XMArg>#$_</ltx:XMArg>" } 1 .. $nargs)
+    //           . "</ltx:XMApp>"
     // })
     unimplemented!();
   });
-  let sizer : Option<SizingClosure> = Some(Arc::new(move |_,state| {
-      Ok(Font::math_default().compute_string_size(&presentation_for_sizer, HashMap::new(), state)) }));
+  let sizer: Option<SizingClosure> = Some(Arc::new(move |_, state| {
+    Ok(Font::math_default().compute_string_size(&presentation_for_sizer, HashMap::new(), state))
+  }));
 
   let mut prop_options = options.clone();
-  let properties: PropertiesClosure = Arc::new(move |_,_,_| Ok(prop_options.to_hash_stored()));
+  let properties: PropertiesClosure = Arc::new(move |_, _, _| Ok(prop_options.to_hash_stored()));
   let constructor = Constructor {
     cs: defcs,
     paramlist,
@@ -453,7 +476,16 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
     // before_construct: options.before_construct,
     // after_construct: options.after_construct,
     nargs: Some(nargs),
-    alias: options.alias,
+    alias: match options.alias {
+      Some(alias) => Some(alias),
+      None => {
+        if options.robust {
+          csname_alias // TODO: what is the type of "alias"?
+        } else {
+          None
+        }
+      },
+    },
     reversion: options.reversion,
     sizer,
     properties,
@@ -463,37 +495,15 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
     ..Constructor::default()
   };
   state.install_definition(constructor, options.scope);
-  //     ($nargs == 0
-  //         # If trivial presentation, allow it in Text
-  //       ? ($presentation !~ /(?:\(|\)|\\)/
-  //         ? "?#isMath(<ltx:XMTok role='#role' scriptpos='#scriptpos' stretchy='#stretchy'"
-  //           . " font='#font' $cons_attr$end_tok)"
-  //           . "($qpresentation)"
-  //         : "<ltx:XMTok role='#role' scriptpos='#scriptpos' stretchy='#stretchy'"
-  //           . " font='#font' $cons_attr$end_tok")
-  //       : "<ltx:XMApp role='#role' scriptpos='#scriptpos' stretchy='#stretchy'>"
-  //         . "<ltx:XMTok $cons_attr font='#font' role='#operator_role'"
-  //         . " scriptpos='#operator_scriptpos' stretchy='#operator_stretchy' $end_tok"
-  //         . join('', map { "<ltx:XMArg>#$_</ltx:XMArg>" } 1 .. $nargs)
-  //         . "</ltx:XMApp>"),
-  //     defmath_common_constructor_options($cs, $presentation,
-  //       sizer => sub {
-  //         #           my $font = $_[1]->getFont || LaTeXML::Common::Font->mathDefault;
-  //         my $font = LaTeXML::Common::Font->mathDefault;
-  //         $font->computeStringSize($presentation); },
-  //       %options)), $options{scope});
-
 }
 
-fn infer_sizer(sizer:&Option<SizingClosure>, reversion:&Option<Reversion>) -> Option<SizingClosure> {
+fn infer_sizer(sizer: &Option<SizingClosure>, reversion: &Option<Reversion>) -> Option<SizingClosure> {
   match sizer {
     Some(ref closure) => Some(Arc::clone(closure)),
     None => match reversion {
-      Some(Reversion::Tokens(tks)) => {
-        (*tks).to_string().as_str().into_option()
-      },
-      _ => None
-    }
+      Some(Reversion::Tokens(tks)) => (*tks).to_string().as_str().into_option(),
+      _ => None,
+    },
   }
 }
 
@@ -501,9 +511,11 @@ fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>, state: &mut Stat
   let cs_str = format!("{} ", cs.get_string());
   let defcs = T_CS!(cs_str);
   let return_cs = defcs.clone();
-  let expansion =  Tokens!(T_CS!("\\protect"), defcs);
+  let expansion = Tokens!(T_CS!("\\protect"), defcs);
   let options = ExpandableOptions {
-    locked, ..ExpandableOptions::default() };
+    locked,
+    ..ExpandableOptions::default()
+  };
   // scope should be \x@protect?
   state.install_definition(Expandable::new(cs, None, expansion, Some(options), state), scope);
   return_cs
@@ -548,7 +560,8 @@ pub fn def_constructor(
     before_digest_closures.push(bgroup_closure);
   }
   if let Some(chosen_font_directive) = options.font {
-    let chosen_font : Arc<Font> = chosen_font_directive.get_font(None, state)
+    let chosen_font: Arc<Font> = chosen_font_directive
+      .get_font(None, state)
       .expect("getting a font during DefConstructor shouldn't cause errors");
     let merge_font_closure = before_digest_single!(stomach, state, {
       if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
@@ -807,13 +820,13 @@ pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, 
       None => {
         let mut inferred_name = match options.alias {
           Some(ref alias) => Cow::Owned(alias.to_owned()),
-          None => Cow::Borrowed(&csname)
+          None => Cow::Borrowed(&csname),
         };
         if inferred_name.starts_with('\\') {
           inferred_name = Cow::Owned(inferred_name.replacen('\\', "", 1))
         }
         inferred_name
-      }
+      },
     };
     let meaning_check = options.meaning.as_ref().map_or_else(|| Cow::Owned(String::new()), Cow::Borrowed);
     if (*name == presentation) || (name.is_empty()) || *name == *meaning_check {

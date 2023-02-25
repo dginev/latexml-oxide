@@ -274,7 +274,13 @@ pub struct Token {
 }
 
 impl fmt::Debug for Token {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{:?}", self.text) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    if self.code == Catcode::ARG {
+      write!(f, "\"#{}\"", self.text)
+    } else {
+      write!(f, "{:?}", self.text)
+    }
+  }
 }
 
 impl Display for Token {

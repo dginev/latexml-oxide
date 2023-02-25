@@ -355,19 +355,19 @@ LoadDefinitions!(state, {
   //
   // Whenever possible, use this `DefExpanded` parameter type directly, rather than hand-crafting a new one.
   DefParameterType!(DefExpanded, sub[gullet, _inner, _extra, state] {
-      state.smuggle_the = true;
+      state.set_smuggle_the(true);
       let expanded = if let Some(token) = gullet.read_x_token(None, false, state)? {
         if token.get_catcode() == Catcode::BEGIN {
           gullet.read_balanced(true, state)?.unwrap_or_default()
         } else {
-          Tokens!(token)
+          Tokens!(dbg!(token))
         }
       } else {
         Error!("Expected", "DefExpanded", gullet, state,
           "Expected <DefExpanded> here");
         Tokens!()
       };
-      state.smuggle_the = false;
+      state.expire_smuggle_the();
       Ok(expanded)
     },
     pack_parameters => true,

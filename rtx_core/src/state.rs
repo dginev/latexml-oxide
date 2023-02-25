@@ -245,7 +245,6 @@ pub struct State {
   pub status_code: usize,
   pub unlocked: bool,
   pub current_token: Option<Arc<Token>>,
-  pub if_frames: Vec<Option<Arc<RwLock<IfFrame>>>>,
   pub noexpand_the: bool,
   pub input_encoding: Option<String>,
   pub strict: bool,
@@ -255,8 +254,10 @@ pub struct State {
   pub graphics_paths: VecDeque<String>,
   pub include_styles: bool,
   pub nomathparse: bool,
-  pub smuggle_the: bool,
   pub reading_alignment: bool,
+  // Local structures
+  if_frames: Vec<Option<Arc<RwLock<IfFrame>>>>,
+  smuggle_the: Vec<bool>,
   // Auxiliary convenience -- extra dispatch
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
@@ -315,7 +316,7 @@ impl Default for State {
       graphics_paths: VecDeque::new(),
       include_styles: false,
       nomathparse: false,
-      smuggle_the: false,
+      smuggle_the: Vec::new(),
       reading_alignment: false,
       extra_bindings_dispatch: None,
       // interiorly mutable
@@ -1825,4 +1826,13 @@ impl State {
   }
   /// expires the most recent (originally Perl-local) `IfFrame`
   pub fn expire_ifframe(&mut self) { self.if_frames.pop(); }
+
+  pub fn set_smuggle_the(&mut self, smuggle_the: bool) { self.smuggle_the.push(smuggle_the); }
+  pub fn get_smuggle_the(&self) -> bool {
+    match self.smuggle_the.last() {
+      Some(v) => *v,
+      _ => false,
+    }
+  }
+  pub fn expire_smuggle_the(&mut self) { self.smuggle_the.pop(); }
 }

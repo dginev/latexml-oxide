@@ -14,8 +14,11 @@ LoadDefinitions!(state, {
     \def\@cdr#1#2\@nil{#2}
     \def\@carcube#1#2#3#4\@nil{#1#2#3}
     \def\nfss@text#1{{\mbox{#1}}}
+    \def\@sect#1#2#3#4#5#6[#7]#8{}
     "###
   );
+
+  Let!("\\@begindocumenthook", "\\@empty");
 
   // DefMacro('\@ifdefinable DefToken {}', sub {
   //     my ($gullet, $token, $if) = @_;
@@ -40,99 +43,116 @@ LoadDefinitions!(state, {
   //    Or name \@backslashchar\@qend... illegal,
   //    see p.192 of the manual}');
 
-  DefMacro!("\\@qend", sub[_a,_b,_c] { Tokens::new(Explode!("end")) });
-  DefMacro!("\\@qrelax", sub[_a,_b,_c] { Tokens::new(Explode!("relax")) } );
+  DefMacro!("\\@qend", { Tokens::new(Explode!("end")) });
+  DefMacro!("\\@qrelax", { Tokens::new(Explode!("relax")) });
   DefMacro!("\\@spaces", r"\space\space\space\space");
   Let!("\\@sptoken", T_SPACE!());
 
-  // DefMacroI('\@uclclist', undef, '\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH');
+  DefMacro!("\\@uclclist", r"\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH");
+  RawTeX!(
+    r###"
+  \DeclareRobustCommand{\MakeUppercase}[1]{{%
+    \def\i{I}\def\j{J}%
+    \def\reserved@a##1##2{\let##1##2\reserved@a}%
+    \expandafter\reserved@a\@uclclist\reserved@b{\reserved@b\@gobble}%
+    \let\UTF@two@octets@noexpand\@empty
+    \let\UTF@three@octets@noexpand\@empty
+    \let\UTF@four@octets@noexpand\@empty
+    \protected@edef\reserved@a{\uppercase{#1}}%
+    \reserved@a
+  }}
+  \DeclareRobustCommand{\MakeLowercase}[1]{{%
+    \def\reserved@a##1##2{\let##2##1\reserved@a}%
+    \expandafter\reserved@a\@uclclist\reserved@b{\reserved@b\@gobble}%
+    \let\UTF@two@octets@noexpand\@empty
+    \let\UTF@three@octets@noexpand\@empty
+    \let\UTF@four@octets@noexpand\@empty
+    \protected@edef\reserved@a{\lowercase{#1}}%
+    \reserved@a
+  }}
+  \protected@edef\MakeUppercase#1{\MakeUppercase{#1}}
+  \protected@edef\MakeLowercase#1{\MakeLowercase{#1}}
+  "###
+  );
 
-  // DefMacro('\MakeUppercase{}', sub {
-  //     my @t = LookupDefinition(T_CS('\@uclclist'))->getExpansion->unlist;
-  //     my @x = (T_CS('\def'), T_CS('\i'), T_BEGIN, T_LETTER('I'), T_END,
-  //       T_CS('\def'), T_CS('\j'), T_BEGIN, T_LETTER('J'), T_END);
-  //     while (@t) { push(@x, T_CS('\let'), shift(@t), shift(@t)); }
-  //     my $arg = Expand(Tokens(T_BEGIN, @x, $_[1]->unlist, T_END));
-  //     (T_CS('\uppercase'), T_BEGIN, $arg->unlist, T_END); });
+  //======================================================================
+  DefMacro!("\\@ehc", "I can't help");
 
-  // DefMacro('\MakeLowercase{}', sub {
-  //     my @t = LookupDefinition(T_CS('\@uclclist'))->getExpansion->unlist;
-  //     my @x = ();
-  //     while (@t) { my $y = shift(@t); push(@x, T_CS('\let'), shift(@t), $y); }
-  //     my $arg = Expand(Tokens(T_BEGIN, @x, $_[1]->unlist, T_END));
-  //     (T_CS('\lowercase'), T_BEGIN, $arg->unlist, T_END); });
-
-  // #======================================================================
-
-  // DefMacroI('\@ehc', undef, "I can't help");
-
-  DefMacro!(r"\@gobble{}", "");
-  DefMacro!(r"\@gobbletwo{}{}", "");
-  DefMacro!(r"\@gobblefour{}{}{}{}", "");
-  DefMacro!(r"\@firstofone{}",       sub[gullet, args, state] { Ok(args.remove(0)) });
+  DefMacro!("\\@gobble{}", None);
+  DefMacro!("\\@gobbletwo{}{}", None);
+  DefMacro!("\\@gobblefour{}{}{}{}", None);
+  DefMacro!("\\@firstofone{}",       sub[gullet, (first), state] { Ok(first) });
   Let!("\\@iden", "\\@firstofone");
-  DefMacro!("\\@firstoftwo{}{}",     sub[gullet, args, state] { Ok(args.remove(0)) });
-  DefMacro!("\\@secondoftwo{}{}",    sub[gullet, args, state] { Ok(args.remove(1)) });
-  DefMacro!("\\@thirdofthree{}{}{}", sub[gullet, args, state] { Ok(args.remove(2)) });
-  // DefMacro('\@expandtwoargs{}{}{}', sub {
-  //     ($_[1]->unlist, T_BEGIN, Expand($_[2])->unlist, T_END, T_BEGIN, Expand($_[3])->unlist, T_END); });
+  DefMacro!("\\@firstoftwo{}{}",     sub[gullet, (first,_second), state] { Ok(first) });
+  DefMacro!("\\@secondoftwo{}{}",    sub[gullet, (_first, second), state] { Ok(second) });
+  DefMacro!("\\@thirdofthree{}{}{}", sub[gullet, (_first,_second, third), state] { Ok(third) });
+  DefMacro!("\\@expandtwoargs{}{}{}", sub[gullet, (first,second,third), state] {
+    let mut tks = first.unlist();
+    tks.push(T_BEGIN!());
+    tks.append(&mut Expand!(second, gullet).unlist());
+    tks.push(T_END!());
+    tks.push(T_BEGIN!());
+    tks.append(&mut Expand!(third, gullet).unlist());
+    tks.push(T_END!());
+    tks });
+
   DefMacro!("\\@makeother Token", sub[gullet,(arg),state] {
     let arg_c = arg.get_string().chars().next().unwrap();
     state.assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));
   });
 
-  // TODO: Stubs until we can deal with the rawtex fully
-  DefMacro!("\\dospecials", "");
-  //   RawTeX!(
-  //     r###"
-  //  {\catcode`\^^M=13 \gdef\obeycr{\catcode`\^^M13 \def^^M{\\\relax}%
-  //      \@gobblecr}%
-  //  {\catcode`\^^M=13 \gdef\@gobblecr{\@ifnextchar
-  //  \@gobble\ignorespaces}}%
-  //  \gdef\restorecr{\catcode`\^^M5 }}
-  //  \begingroup
-  //    \catcode`P=12
-  //    \catcode`T=12
-  //    \lowercase{
-  //      \def\x{\def\rem@pt##1.##2PT{##1\ifnum##2>\z@.##2\fi}}}
-  //    \expandafter\endgroup\x
-  //  \def\strip@pt{\expandafter\rem@pt\the}
-  //  \def\strip@prefix#1>{}
-  //  \def\@sanitize{\@makeother\ \@makeother\\\@makeother\$\@makeother\&%
-  //  \@makeother\#\@makeother\^\@makeother\_\@makeother\%\@makeother\~}
-  //  \def \@onelevel@sanitize #1{%
-  //    \edef #1{\expandafter\strip@prefix
-  //             \meaning #1}%
-  //  }
-  //  \def\dospecials{\do\ \do\\\do\{\do\}\do\$\do\&%
-  //    \do\#\do\^\do\_\do\%\do\~}
-  // "###
-  //   );
+  RawTeX!(
+    r###"{\catcode`\^^M=13 \gdef\obeycr{\catcode`\^^M13 \def^^M{\\\relax}%
+    \@gobblecr}%
+    {\catcode`\^^M=13 \gdef\@gobblecr{\@ifnextchar
+    \@gobble\ignorespaces}}%
+    \gdef\restorecr{\catcode`\^^M5 }}"###
+  );
+  RawTeX!(
+    r###"\begingroup
+  \catcode`P=12
+  \catcode`T=12
+  \lowercase{
+    \def\x{\def\rem@pt##1.##2PT{##1\ifnum##2>\z@.##2\fi}}}
+  \expandafter\endgroup\x
+  \def\strip@pt{\expandafter\rem@pt\the}
+  \def\strip@prefix#1>{}
+  \def\@sanitize{\@makeother\ \@makeother\\\@makeother\$\@makeother\&%
+  \@makeother\#\@makeother\^\@makeother\_\@makeother\%\@makeother\~}
+  \def \@onelevel@sanitize #1{%
+    \edef #1{\expandafter\strip@prefix
+            \meaning #1}%
+  }
+  \def\dospecials{\do\ \do\\\do\{\do\}\do\$\do\&%
+    \do\#\do\^\do\_\do\%\do\~}"###
+  );
 
-  // DefMacroI('\nfss@catcodes', undef, <<'EOMacro');
-  //     \makeatletter
-  //     \catcode`\ 9%
-  //      \catcode`\^^I9%
-  //      \catcode`\^^M9%
-  //      \catcode`\\\z@
-  //      \catcode`\{\@ne
-  //      \catcode`\}\tw@
-  //      \catcode`\#6%
-  //      \catcode`\^7%
-  //      \catcode`\%14%
-  //    \@makeother\<%
-  //    \@makeother\>%
-  //    \@makeother\*%
-  //    \@makeother\.%
-  //    \@makeother\-%
-  //    \@makeother\/%
-  //    \@makeother\[%
-  //    \@makeother\]%
-  //    \@makeother\`%
-  //    \@makeother\'%
-  //    \@makeother\"%
-  // EOMacro
-  // DefMacroI('\ltx@hard@MessageBreak', undef, '^^J');
+  DefMacro!(
+    "\\nfss@catcodes",
+    r###"\makeatletter
+    \catcode`\ 9%
+    \catcode`\^^I9%
+    \catcode`\^^M9%
+    \catcode`\\\z@
+    \catcode`\{\@ne
+    \catcode`\}\tw@
+    \catcode`\#6%
+    \catcode`\^7%
+    \catcode`\%14%
+    \@makeother\<%
+    \@makeother\>%
+    \@makeother\*%
+    \@makeother\.%
+    \@makeother\-%
+    \@makeother\/%
+    \@makeother\[%
+    \@makeother\]%
+    \@makeother\`%
+    \@makeother\'%
+    \@makeother\"%
+    "###
+  );
+  DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
 
   // sub make_message {
   //   my ($cmd, @args) = @_;
@@ -149,7 +169,7 @@ LoadDefinitions!(state, {
   // DefPrimitive('\GenericWarning{}{}', sub { Warn(make_message('\GenericWarning', $_[1], $_[2])); });
   // DefPrimitive('\GenericInfo{}{}',    sub { Info(make_message('\GenericInfo',    $_[1], $_[2])); });
 
-  // Let('\MessageBreak', '\relax');
+  Let!("\\MessageBreak", "\\relax");
   //   RawTeX!(
   //     r###"
   //   \gdef\PackageError#1#2#3{%
@@ -252,6 +272,7 @@ LoadDefinitions!(state, {
     \mathchardef\@Mii=10002
     \mathchardef\@Miii=10003
     \mathchardef\@Miv=10004
+    \def\@fontenc@load@list{\@elt{T1,OT1}}
   "###
   );
 
@@ -267,10 +288,11 @@ LoadDefinitions!(state, {
   DefMacro!("\\@xviipt", "17.28");
   DefMacro!("\\@xxpt", "20.74");
   DefMacro!("\\@xxvpt", "24.88");
-  DefMacro!("\\@tempa", "");
-  DefMacro!("\\@tempb", "");
-  DefMacro!("\\@tempc", "");
-  DefMacro!("\\@gtempa", "");
+
+  DefMacro!("\\@tempa", None);
+  DefMacro!("\\@tempb", None);
+  DefMacro!("\\@tempc", None);
+  DefMacro!("\\@gtempa", None);
 
   RawTeX!(
     r###"
@@ -438,33 +460,58 @@ LoadDefinitions!(state, {
     "###
   );
 
-  // DefMacroI('\@height', undef, 'height');
-  // DefMacroI('\@width',  undef, 'width');
-  // DefMacroI('\@depth',  undef, 'depth');
-  // DefMacroI('\@minus',  undef, 'minus');
-  // DefMacroI('\@plus',   undef, 'plus');
+  DefMacro!("\\@height", None, "height");
+  DefMacro!("\\@width", None, "width");
+  DefMacro!("\\@depth", None, "depth");
+  DefMacro!("\\@minus", None, "minus");
+  DefMacro!("\\@plus", None, "plus");
+  DefMacro!("\\hmode@bgroup", None, "\\leavevmode\\bgroup");
 
-  // DefMacroI('\hmode@bgroup', undef, '\leavevmode\bgroup');
+  DefMacro!(T_CS!("\\@backslashchar"), None, T_OTHER!("\\"));
+  DefMacro!(T_CS!("\\@percentchar"), None, T_OTHER!("%"));
+  DefMacro!(T_CS!("\\@charlb"), None, T_LETTER!("{"));
+  DefMacro!(T_CS!("\\@charrb"), None, T_LETTER!("}"));
+  // ======================================================================
 
-  // DefMacroI('\@backslashchar', undef, T_OTHER('\\'));
-  // DefMacroI('\@percentchar',   undef, T_OTHER('%'));
-  // DefMacroI('\@charlb',        undef, T_LETTER('{'));
-  // DefMacroI('\@charrb',        undef, T_LETTER('}'));
-  // #======================================================================
+  DefMacro!("\\check@mathfonts", None);
+  DefMacro!("\\fontsize{}{}", None);
+  // https://tex.stackexchange.com/questions/112492/setfontsize-vs-fontsize#112501
+  DefMacro!("\\@setfontsize{}{}{}", "\\let\\@currsize#1");
 
-  // DefMacroI('\check@mathfonts', undef, Tokens());
-  // DefMacro('\fontsize{}{}', Tokens());
-  // # https://tex.stackexchange.com/questions/112492/setfontsize-vs-fontsize#112501
-  // DefMacro('\@setfontsize{}{}{}', Tokens());
+  DefMacro!(T_CS!("\\@vpt"), None, T_OTHER!("5"));
+  DefMacro!(T_CS!("\\@vipt"), None, T_OTHER!("6"));
+  DefMacro!(T_CS!("\\@viipt"), None, T_OTHER!("7"));
+  DefMacro!(T_CS!("\\@viiipt"), None, T_OTHER!("8"));
+  DefMacro!(T_CS!("\\@ixpt"), None, T_OTHER!("9"));
+  DefMacro!("\\@xpt", "10");
+  DefMacro!("\\@xipt", "10.95");
+  DefMacro!("\\@xiipt", "12");
+  DefMacro!("\\@xivpt", "14.4");
+  DefMacro!("\\@xviipt", "17.28");
+  DefMacro!("\\@xxpt", "20.74");
+  DefMacro!("\\@xxvpt", "24.88");
+  DefMacro!("\\vpt", r"\edef\f@size{\@vpt}\rm");
+  DefMacro!("\\vipt", r"\edef\f@size{\@vipt}\rm");
+  DefMacro!("\\viipt", r"\edef\f@size{\@viipt}\rm");
+  DefMacro!("\\viiipt", r"\edef\f@size{\@viiipt}\rm");
+  DefMacro!("\\ixpt", r"\edef\f@size{\@ixpt}\rm");
+  DefMacro!("\\xpt", r"\edef\f@size{\@xpt}\rm");
+  DefMacro!("\\xipt", r"\edef\f@size{\@xipt}\rm");
+  DefMacro!("\\xiipt", r"\edef\f@size{\@xiipt}\rm");
+  DefMacro!("\\xivpt", r"\edef\f@size{\@xivpt}\rm");
+  DefMacro!("\\xviipt", r"\edef\f@size{\@xviipt}\rm");
+  DefMacro!("\\xxpt", r"\edef\f@size{\@xxpt}\rm");
+  DefMacro!("\\xxvpt", r"\edef\f@size{\@xxvpt}\rm");
 
-  // DefMacroI('\defaultscriptratio',       undef, '.7');
-  // DefMacroI('\defaultscriptscriptratio', undef, '.5');
+  DefMacro!("\\defaultscriptratio", None, ".7");
+  DefMacro!("\\defaultscriptscriptratio", None, ".5");
 
-  // #======================================================================
-  // DefMacroI('\loggingoutput', undef, Tokens());
-  // DefMacroI('\loggingall',    undef, Tokens());
-  // DefMacroI('\tracingfonts',  undef, Tokens());
-  // DefMacroI('\showoverfull',  undef, Tokens());
-  // DefMacroI('\showoutput',    undef, Tokens());
+  //======================================================================
+
+  DefMacro!("\\loggingoutput", None);
+  DefMacro!("\\loggingall", None);
+  DefMacro!("\\tracingfonts", None);
+  DefMacro!("\\showoverfull", None);
+  DefMacro!("\\showoutput", None);
   DefMacro!("\\wlog{}", "");
 });

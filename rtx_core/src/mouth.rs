@@ -743,26 +743,28 @@ impl Mouth {
     lastid.to_string()
   }
 
+  // Be Careful!
+  // used BOTH for flushing input for \endinput
+  // and for detecting line end for \read
   pub fn is_eol(&mut self, state: &State) -> bool {
     let savecolno = self.colno;
-    // We have to peek past any to-be-skipped spaces!!!!
-    if self.skipping_spaces {
-      let mut cc = None;
-      while let Some((_, ncc)) = self.get_next_char(state) {
-        if ncc != Catcode::SPACE {
-          cc = Some(ncc);
-          break;
-        } else {
-          cc = None;
-        }
+    // We have to peek past any ignored tokens & also spaces, if skipping
+    let mut cc = None;
+    while let Some((_, ncc)) = self.get_next_char(state) {
+      if ncc != Catcode::IGNORE && (!self.skipping_spaces || ncc != Catcode::SPACE) {
+        cc = Some(ncc);
+        break;
+      } else {
+        cc = None;
       }
-      if self.colno <= self.nchars && cc.is_some() && cc != Some(Catcode::SPACE) {
-        self.colno -= 1;
-      }
-      if cc == Some(Catcode::EOL) || cc == Some(Catcode::COMMENT) {
-        // If we've got an EOL | COMMENT
-        self.colno = self.nchars
-      }
+    }
+    if self.colno <= self.nchars && cc.is_some() {
+      // Back-up if too far.
+      self.colno -= 1;
+    }
+    if self.skipping_spaces && (cc == Some(Catcode::EOL) || cc == Some(Catcode::COMMENT)) {
+      // If we've got an EOL | COMMENT
+      self.colno = self.nchars
     }
     let eol = self.colno >= self.nchars;
     self.colno = savecolno;

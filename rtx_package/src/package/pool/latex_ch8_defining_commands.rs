@@ -56,18 +56,14 @@ LoadDefinitions!(state, {
   });
 
   // Crazy; define \cs in terms of \cs[space] !!!
-  DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, (star,cs,nargs,opt,body), state] {
-    let opt_checked = if let Some(ref opt_content) = opt {
-      if opt_content.is_empty() {
-        None
-      } else { opt }
-    } else { opt };
+  DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}", sub[stomach, (star,cs,nargs,opt,body), state] {
+    let opt_checked = match opt {
+      Some(opt_content) if !opt_content.is_empty() => Some(opt_content),
+      _ => None
+    };
     let nargs = nargs.value_of() as usize;
-    let mungedcs = T_CS!(s!("{} ", cs.get_string()));
-    let mungedcs2 = mungedcs.clone();
     let cs_args = convert_latex_args(nargs, opt_checked, state)?;
-    DefMacro!(mungedcs, cs_args, body);
-    DefMacro!(cs, None, Tokens!(T_CS!("\\protect"), mungedcs2));
+    DefMacro!(cs, cs_args, body, robust => true);
   });
 
   DefPrimitive!("\\MakeRobust DefToken", sub[stomach, (cs), state] {

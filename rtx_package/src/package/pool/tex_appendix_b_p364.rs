@@ -37,7 +37,6 @@ LoadDefinitions!(state, {
 
   // #======================================================================
 
-
   // DefMathI('\lx@math@hash',    undef, '#', alias => '\#');
   // DefMathI('\lx@math@amp',     undef, '&', role  => 'ADDOP', meaning => 'and', alias => '\&');
   // DefMathI('\lx@math@percent', undef, '%', role  => 'POSTFIX', meaning => 'percent', alias => '\%');
@@ -119,9 +118,12 @@ LoadDefinitions!(state, {
   //   fontTest => sub { ($_[0]->getFamily ne 'typewriter')
   //       && (($_[0]->getEncoding || 'OT1') =~ /^(OT1|T1)$/); });
 
-  DefMacro!(T_CS!("\\TeX"), None, Tokens::new(ExplodeText!("TeX")));
-  DefMacro!(T_CS!("\\i"), None, T_OTHER!("\u{0131}")); // LATIN SMALL LETTER DOTLESS I
-  DefMacro!(T_CS!("\\j"), None, T_OTHER!("\u{0237}"));
+  DefConstructor!("\\TeX", r###"<ltx:text class='ltx_TeX_logo'
+    cssstyle='letter-spacing:-0.2em; margin-right:0.2em'>T<ltx:text yoffset='-0.4ex'>E</ltx:text>X</ltx:text>"###,
+    sizer => sub[_whatsit, _state] { Ok((Dimension!("1.9em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
+
+  DefPrimitive!("\\i", "\u{0131}"); // LATIN SMALL LETTER DOTLESS I
+  DefPrimitive!("\\j", "\u{0237}");
 
   // DefConstructor('\buildrel Until:\over {}',
   //   "<ltx:XMApp role='RELOP'>"

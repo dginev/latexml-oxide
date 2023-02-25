@@ -1,8 +1,8 @@
 use crate::package::*;
 use libxml::tree::{Node, NodeType};
 use rtx_core::keyvals::KeyValsOptions;
-use std::collections::VecDeque;
 use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
+use std::collections::VecDeque;
 
 pub fn reenter_text_mode(vertical_mode: bool, gullet: &mut Gullet, state: &mut State) {
   let bindings_val = if vertical_mode {
@@ -245,7 +245,8 @@ pub fn read_box_contents(gullet: &mut Gullet, everybox_opt: Option<Tokens>, stat
   match state.remove_value("BeforeNextBox") {
     Some(Stored::Tokens(tokens)) => gullet.unread(tokens),
     Some(Stored::Token(token)) => gullet.unread_one(token),
-    _ => {},
+    None | Some(Stored::None) => {},
+    Some(other) => panic!("afterAssignment should be a token, got: {}", other),
   };
   // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
   if let Some(everybox) = everybox_opt {
@@ -750,27 +751,37 @@ pub fn keyvals_aux(gullet: &mut Gullet, until: Option<Token>, mut spec: KVSpec, 
   Ok(keyvals)
 }
 
-pub fn lowercase_token(token: Token, state: &State) -> Token {
+pub fn uppercase_token(token: Token, state: &State) -> Token { either_case_token(token, true, state) }
+pub fn lowercase_token(token: Token, state: &State) -> Token { either_case_token(token, false, state) }
+
+fn either_case_token(token: Token, is_upper: bool, state: &State) -> Token {
   let initial_string = token.get_string();
+  // DG: new idea, short-circuit if more than 1 char, since our lccode/uccode tables are single char-based (for now?)
+  if initial_string.len() != 1 {
+    return token;
+  }
   let mut result = String::new();
-  for thischar in initial_string.chars() {
-    if let Some(code) = state.lookup_lccode(thischar) {
-      if code != 0 {
-        result.push_str( & decode_utf16([code])
-            .map(|r| r.unwrap_or(REPLACEMENT_CHARACTER))
-            .collect::<String>())
-      } else {
-        result.push(thischar);
-      }
+  let thischar = initial_string.chars().next().unwrap();
+  let cased = if is_upper {
+    state.lookup_uccode(thischar)
+  } else {
+    state.lookup_lccode(thischar)
+  };
+  if let Some(code) = cased {
+    if code != 0 {
+      result.push_str(&decode_utf16([code]).map(|r| r.unwrap_or(REPLACEMENT_CHARACTER)).collect::<String>())
     } else {
       result.push(thischar);
     }
+  } else {
+    result.push(thischar);
   }
+
   if result != initial_string {
     Token {
       text: Cow::Owned(result),
       code: token.get_catcode(),
-      smuggled: None
+      smuggled: None,
     }
   } else {
     token

@@ -1,5 +1,5 @@
 use super::metadata::Meta;
-use super::tree::{Args, Operator, XM, XProps};
+use super::tree::{Args, Operator, XProps, XM};
 use libxml::tree::Node;
 
 impl From<&str> for Operator {
@@ -19,7 +19,7 @@ impl From<Option<XM>> for Operator {
 }
 impl From<&Node> for Operator {
   fn from(node: &Node) -> Operator {
-    let xmnode : XM = node.into();
+    let xmnode: XM = node.into();
     Operator(Box::new(xmnode))
   }
 }
@@ -42,7 +42,9 @@ impl From<(&str, (&str, (&str, &str)))> for XM {
 }
 // One element arrays as argument containers (since we can't do one element tuple types?)
 impl From<(&str, (&str, (&str, [&str; 1])))> for XM {
-  fn from(args: (&str, (&str, (&str, [&str; 1])))) -> XM { XM::Apply(args.0.into(), Args(vec![Some(args.1.into())]), XProps::default(), Meta::default()) }
+  fn from(args: (&str, (&str, (&str, [&str; 1])))) -> XM {
+    XM::Apply(args.0.into(), Args(vec![Some(args.1.into())]), XProps::default(), Meta::default())
+  }
 }
 impl From<(&str, (&str, [&str; 1]))> for XM {
   fn from(args: (&str, (&str, [&str; 1]))) -> XM { XM::Apply(args.0.into(), Args(vec![Some(args.1.into())]), XProps::default(), Meta::default()) }

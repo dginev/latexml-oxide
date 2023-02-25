@@ -11,12 +11,12 @@ use marpa::tree_builder::*;
 
 use rtx_core::common::font::{self, Font};
 use rtx_core::common::xml::element_nodes;
-use rtx_core::state::State;
 use rtx_core::document::Document;
 use rtx_core::raw_map;
+use rtx_core::state::State;
 
-pub use self::tree::{Args, Operator, XM, XProps};
 use self::tree::lookup_lex_node;
+pub use self::tree::{Args, Operator, XProps, XM};
 use crate::pragmatics::ValidationPragmatics;
 use crate::util::create_xmrefs;
 
@@ -35,7 +35,7 @@ pub struct ActionContext<'a> {
   /// The owner document of the parsed nodes
   pub document: &'a mut Document,
   /// The `Core` state, for a variety of lookups - especially ones needing a `Model`
-  pub state: &'a mut State
+  pub state: &'a mut State,
 }
 pub type ActionClosure = Arc<dyn Fn(i32, Vec<Option<XM>>, &[ValidationPragmatics], ActionContext) -> Result<Option<XM>, Box<dyn Error>>>;
 
@@ -51,7 +51,7 @@ impl Actions {
     id: i32,
     mut args: Vec<Option<XM>>,
     pragmas: &[ValidationPragmatics],
-    ctxt: ActionContext
+    ctxt: ActionContext,
   ) -> Result<Option<XM>, Box<dyn Error>> {
     if let Some(action) = self.dispatch.get(&id) {
       action(id, args, pragmas, ctxt)
@@ -77,7 +77,15 @@ impl Actions {
       Node::Tree(ref rule, ref children) => {
         let mut translated_children = Vec::new();
         for child in children.iter() {
-          let translated = self.translate_node(child, pragmas, ActionContext { nodes: ctxt.nodes, document: ctxt.document, state: ctxt.state })?;
+          let translated = self.translate_node(
+            child,
+            pragmas,
+            ActionContext {
+              nodes: ctxt.nodes,
+              document: ctxt.document,
+              state: ctxt.state,
+            },
+          )?;
           translated_children.push(translated);
         }
         self.action_on(*rule, translated_children, pragmas, ctxt)
@@ -85,7 +93,15 @@ impl Actions {
       Node::Rule(ref rule, ref children) => {
         let mut translated_children = Vec::new();
         for child in children.iter() {
-          translated_children.push(self.translate_node(child, pragmas, ActionContext { nodes: ctxt.nodes, document: ctxt.document, state: ctxt.state })?);
+          translated_children.push(self.translate_node(
+            child,
+            pragmas,
+            ActionContext {
+              nodes: ctxt.nodes,
+              document: ctxt.document,
+              state: ctxt.state,
+            },
+          )?);
         }
         self.action_on(*rule, translated_children, pragmas, ctxt)
       },
@@ -106,7 +122,7 @@ impl Actions {
 }
 
 /// standard infix application of an operator
-pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg1, infixop, arg2);
   let apply_tree = XM::Apply(infixop.into(), Args(vec![arg1, arg2]), XProps::default(), Meta::default());
   Ok(Some(apply_tree))
@@ -131,7 +147,7 @@ pub fn infix_apply_and_elide(
 
 // infix_apply in the base case,
 // but when chained, using the flat "multirelation" behavior of latexml
-pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   // if left has a "multirelation" already, add right in.
   // if left applies a relation, flatten it out to infix form.
@@ -145,7 +161,12 @@ pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationP
           left_args.0.push(right);
           Ok(left)
         } else {
-          Ok(Some(XM::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
+          Ok(Some(XM::Apply(
+            infixop.into(),
+            Args(vec![left, right]),
+            XProps::default(),
+            Meta::default(),
+          )))
         }
       } else if let XM::Lexeme(ref lex, ref _left_meta) = *op.0 {
         if lex.split(':').next().unwrap().contains("RELOP") {
@@ -165,22 +186,32 @@ pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationP
             Meta::default(),
           )))
         } else {
-          Ok(Some(XM::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
+          Ok(Some(XM::Apply(
+            infixop.into(),
+            Args(vec![left, right]),
+            XProps::default(),
+            Meta::default(),
+          )))
         }
       } else {
-        Ok(Some(XM::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
+        Ok(Some(XM::Apply(
+          infixop.into(),
+          Args(vec![left, right]),
+          XProps::default(),
+          Meta::default(),
+        )))
       }
     },
-    _ => Ok(Some(XM::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default()))),
+    _ => Ok(Some(XM::Apply(
+      infixop.into(),
+      Args(vec![left, right]),
+      XProps::default(),
+      Meta::default(),
+    ))),
   }
 }
 
-pub fn infix_apply_nary(
-  _rule_id: i32,
-  mut args: Vec<Option<XM>>,
-  _: &[ValidationPragmatics],
-  _: ActionContext,
-) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn infix_apply_nary(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   let mut left = left;
   // left-to-right associative:
@@ -207,27 +238,22 @@ pub fn infix_apply_nary(
   Ok(Some(apply_tree))
 }
 
-pub fn prefix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn prefix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, arg1);
   Ok(Some(XM::Apply(prefixop.into(), Args(vec![arg1]), XProps::default(), Meta::default())))
 }
-pub fn postfix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn postfix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg, op);
   Ok(Some(XM::Apply(op.into(), Args(vec![arg]), XProps::default(), Meta::default())))
 }
 
-pub fn circumfix_fenced(
-  _rule_id: i32,
-  mut args: Vec<Option<XM>>,
-  _: &[ValidationPragmatics],
-  _: ActionContext,
-) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn circumfix_fenced(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => _open, arg, _close);
   Ok(arg)
 }
 
 /// remove start_/end_ wrappers
-pub fn faux_wrap(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn faux_wrap(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => start_script, _content, _end_script);
   Ok(start_script)
 }
@@ -255,36 +281,33 @@ pub fn postfix_script(
   new_script(base, op.unwrap(), ctxt)
 }
 
-pub fn prefix_script(
-  _rule_id: i32,
-  mut args: Vec<Option<XM>>,
-  _: &[ValidationPragmatics],
-  ctxt: ActionContext,
-) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn prefix_script(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => op, base);
   new_script(base, op.unwrap(), ctxt)
 }
 
 /// This is loosely in the lines of MathParser::NewScript, but taking into account
 /// the realities of our new data structures.
-pub fn new_script(base: Option<XM>, script: XM, ctxt:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn new_script(base: Option<XM>, script: XM, ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   if let XM::Lexeme(ref lex, _) = script {
     // TODO: continue porting...
-    // let rbase = base.as_ref().map(|b| b.realize_xmnode(&ctxt).expect("if a script is to be built with a base, we expect it to have a Node.")).flatten();
-    // let rscript = script.realize_xmnode(&ctxt)?;
+    // let rbase = base.as_ref().map(|b| b.realize_xmnode(&ctxt).expect("if a script is to be built with a base, we expect it to have a
+    // Node.")).flatten(); let rscript = script.realize_xmnode(&ctxt)?;
     let script_wrap = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
     let node_role = script_wrap.get_attribute("role").unwrap();
     let is_float = node_role.starts_with("FLOAT");
     let is_super = node_role.ends_with("SUPERSCRIPT");
     let role = Cow::Borrowed(if is_super { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" });
     let scriptpos = Cow::Borrowed(if is_float { "pre1" } else { "post1" });
-      // TODO: scriptpos => "$x$l"
+    // TODO: scriptpos => "$x$l"
     let op = new_props(None, None, Some(raw_map!("role"=>role, "scriptpos"=>scriptpos)));
     let script_arg = obtain_arg(script, 0, ctxt)?;
-    Ok(Some(
-      XM::Apply(op.into(), Args(vec![base, script_arg]),
-        XProps::default(), Meta::default())
-    ))
+    Ok(Some(XM::Apply(
+      op.into(),
+      Args(vec![base, script_arg]),
+      XProps::default(),
+      Meta::default(),
+    )))
   } else {
     panic!(
       "new_script is meant to be called on script terminals (e.g. POSTSUBSCRIPT/POSTSUPERSCRIPT), got {:?}",
@@ -316,7 +339,12 @@ pub fn obtain_arg(tree: XM, n: usize, ctxt: ActionContext) -> Result<Option<XM>,
   }
 }
 
-pub fn apply_invisible_times(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn apply_invisible_times(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, right);
   let mut left = left;
   // left-to-right associative -- if "left" is already a "times", tuck "right" in:
@@ -336,7 +364,12 @@ pub fn apply_invisible_times(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[Vali
   Ok(Some(XM::Apply(times.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
 }
 
-pub fn compound_operator_2(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn compound_operator_2(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => op1, op2);
   // invisible comma:
   let comma = invisible_comma();
@@ -385,7 +418,7 @@ pub fn new_props(
   }
 }
 
-pub fn new_list(mut pieces: Vec<XM>, ctxt:ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn new_list(mut pieces: Vec<XM>, ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
   // drop placeholder token for missing trailing punct, if any
   if pieces.len() > 1 {
     let last_meaning_opt = pieces.last().unwrap().get_token_meaning(ctxt.nodes)?;
@@ -404,14 +437,11 @@ pub fn new_list(mut pieces: Vec<XM>, ctxt:ActionContext) -> Result<Option<XM>, B
         new_props(Some(Cow::Borrowed("list")), None, None).into(),
         create_xmrefs(&items, ctxt)?.into(),
         XProps::default(),
-        Meta::default()
+        Meta::default(),
       )),
-      Box::new(XM::Wrap(
-        pieces,
-        XProps::default(),
-        Meta::default())),
+      Box::new(XM::Wrap(pieces, XProps::default(), Meta::default())),
       XProps::default(),
-      Meta::default()
+      Meta::default(),
     )))
   }
 }

@@ -24,6 +24,7 @@ macro_rules! COND_RE_STR (() => (concat!(r"[?]", VALUE_RE_STR!())));
 macro_rules! LEAD_COND_RE_STR (() => (concat!(r"^",COND_RE_STR!())));
 macro_rules! OPEN_TAG_RE_STR (() => (concat!(r"\s*<", QNAME_RE_STR!())));
 macro_rules! CLOSE_TAG_RE_STR (() => (concat!(r"</", QNAME_RE_STR!(),r"\s*>\s*")));
+macro_rules! QNAME_KEY_RE_STR (() => (concat!(r"^", QNAME_RE_STR!(),r"\s*=\s*")));
 macro_rules! LEAD_OPEN_TAG_RE_STR (() => (concat!(r"^", OPEN_TAG_RE_STR!())));
 macro_rules! LEAD_CLOSE_TAG_RE_STR (() => (concat!(r"^", CLOSE_TAG_RE_STR!())));
 
@@ -49,6 +50,7 @@ lazy_static! {
   static ref LEAD_QUOTED_RE : Regex = Regex::new(LEAD_QUOTED_RE_STR!()).unwrap();
   static ref LEAD_RANDOM_TEXT_RE : Regex = Regex::new(LEAD_RANDOM_TEXT_RE_STR!()).unwrap();
   // QName (element tags, attribute names);  Could this also allow expressions?
+  static ref QNAME_KEY_RE : Regex = Regex::new(QNAME_KEY_RE_STR!()).unwrap();
   static ref FLOAT_RE : Regex = Regex::new(r"^(\^+)\s*").unwrap();
   static ref PI_RE : Regex = Regex::new(PI_RE_STR!()).unwrap();
   static ref PI_CLOSE_RE : Regex = Regex::new(r"^\s*\?>").unwrap();
@@ -272,14 +274,14 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       continue;
     }
 
-    // TODO: Still to be implemented cases:
     // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
-    if let Some(eq_index) = replacement.find('=') {
-      // println!("-- Attribute");
-      let consumed = replacement[0..=eq_index].to_owned();
-      replacement = replacement[consumed.len()..].to_owned();
-      continue;
-    }
+    let _qname_key_result = QNAME_KEY_RE.replace(&replacement, |refs: &Captures| -> String {
+      is_match = true;
+      let _key = refs.get(1).map_or("", |m| m.as_str()).to_string();
+      // TODO: We need a test to flesh this out - is there any?
+      unimplemented!();
+      // String::new()
+    });
 
     // Else random text
     let mut has_random_text = false;

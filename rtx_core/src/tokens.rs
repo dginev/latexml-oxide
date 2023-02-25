@@ -24,8 +24,9 @@ use crate::stomach::Stomach;
 use crate::token::*;
 use crate::Digested;
 
-const UNTEX_LINELENGTH: usize = 78;
-
+pub const UNTEX_LINELENGTH: usize = 78;
+/// Us this to avoid reallocating a new empty Vec each time you need a placeholder Tokens return value
+pub const NO_TOKENS: Tokens = Tokens(Vec::new());
 /// Tokens are a thin wrapper over a vector of Token objects
 /// usually read from a `Mouth`.
 /// They are usually treated as an immutable interface, an have to be consumed via `.unlist()`
@@ -39,7 +40,8 @@ impl PartialEq for Tokens {
 
 #[macro_export]
 macro_rules! Tokens(
-  ($( $tokens:expr ),*) => ({
+  () => ( $crate::tokens::NO_TOKENS );
+  ($( $tokens:expr ),+) => ({
     let mut collected : Vec<$crate::token::Token> = Vec::new();
     $(
       let t_vec : Vec<$crate::token::Token> = $tokens.into();

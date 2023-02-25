@@ -1,5 +1,5 @@
-use rtx_core::state::{State, StateOptions};
 use rtx::util::test::lex_single_tex_formula;
+use rtx_core::state::{State, StateOptions};
 use rtx_math_parser::MathParser;
 
 #[test]

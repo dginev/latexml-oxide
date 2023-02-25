@@ -31,8 +31,8 @@ pub use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
 pub use rtx_core::definition::register::{Register, RegisterType, RegisterValue};
 pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure, ExpansionBody, ExpansionClosure, PrimitiveClosure,
-  PrimitiveFn, ReplacementClosure, Reversion, FontDirective, FontClosure
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure, ExpansionBody, ExpansionClosure, FontClosure,
+  FontDirective, PrimitiveClosure, PrimitiveFn, ReplacementClosure, Reversion,
 };
 pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptionName, TagOptions};
