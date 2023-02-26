@@ -49,6 +49,15 @@ pub fn is_url(path: &str) -> bool { URL_RE.is_match(path) }
 
 pub fn is_literaldata(data: &str) -> bool { data.starts_with(LITERAL_PROTOCOL) }
 
+/// check whether a pathname is reloadable as a TeX definition
+pub fn is_reloadable(pathname: &str) -> bool {
+  let (dir, name, ext) = split(&pathname);
+  // babel.sty exception:
+  // we know the same .ldf file may be reloaded with a different option,
+  // to load an adjacently defined language, so allow that.
+  ext == "ldf"
+}
+
 pub fn is_absolute(path: &str) -> bool { Path::new(&canonical(path)).is_absolute() }
 
 pub fn absolute(path: &str) -> String { Path::new(path).canonicalize().unwrap().to_string_lossy().to_string() }

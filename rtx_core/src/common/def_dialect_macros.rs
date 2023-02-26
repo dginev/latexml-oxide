@@ -6,6 +6,7 @@ macro_rules! Font {
     Some(Font { $($key: $value.into_font_field(),)* .. Font::default() })
 )}
 
+#[macro_export]
 macro_rules! FontDirective {
   ($($key:ident => $value:expr),*) => (
     Some(FontDirective::Asset(Arc::new(
@@ -100,6 +101,16 @@ macro_rules! before_digest_single {
       BindInnerState!($stomach, $state);
       let macro_out = $body;
       end_state_frame!();
+      macro_out.into_digested_result()
+    })
+  };
+}
+
+#[macro_export]
+macro_rules! before_digest_simple {
+  ($stomach:ident, $state:ident, $body:block) => {
+    Arc::new(move |$stomach: &mut Stomach, $state: &mut State| {
+      let macro_out = $body;
       macro_out.into_digested_result()
     })
   };
@@ -222,6 +233,17 @@ macro_rules! after_digest_single {
     )
   };
 }
+#[macro_export]
+macro_rules! after_digest_simple {
+  ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
+    Arc::new(
+      move |$stomach: &mut Stomach, $whatsit: &mut Whatsit, $state: &mut State| -> Result<Vec<Digested>> {
+        $body.into_digested_result()
+      },
+    )
+  };
+}
+
 
 #[macro_export]
 macro_rules! reader {
@@ -464,6 +486,8 @@ macro_rules! unpack_opt_ref {
   ($args:ident => $var:ident) => (count_unpack_opt!(0usize, $args => $var));
   ($args:ident => $var:ident,$($tail:ident),*) => (count_unpack_opt!(0usize, $args => $var,$($tail),*));
 }
+
+#[macro_export]
 macro_rules! count_unpack_opt {
   ($index:expr, $args:ident => $var:ident) => (
     let $var = $args.get($index);
@@ -486,5 +510,32 @@ macro_rules! roman {
 macro_rules! Roman {
   ($stuff:expr) => {
     Tokens::new(ExplodeText!(roman_aux($stuff as i32).to_ascii_uppercase()))
+  };
+}
+
+#[macro_export]
+macro_rules! requireMath {
+  ($cs_name:expr) => {{
+    bind_state_mut!(st);
+    requireMath!($cs_name, st)
+  }};
+  ($cs_name:expr, $state_arg:ident) => {
+    if !$state_arg.lookup_bool("IN_MATH") {
+      let message = s!("{} should only appear in math mode", $cs_name);
+      Warn!("unexpected", "mode", None, $state_arg, message);
+    }
+  };
+}
+#[macro_export]
+macro_rules! forbidMath {
+  ($cs_name:expr) => {{
+    bind_state_mut!(st);
+    forbidMath!($cs_name, st)
+  }};
+  ($cs_name:expr, $state_arg:ident) => {
+    if $state_arg.lookup_bool("IN_MATH") {
+      let message = s!("{} should not appear in math mode", $cs_name);
+      Warn!("unexpected", "mode", None, $state_arg, message);
+    }
   };
 }

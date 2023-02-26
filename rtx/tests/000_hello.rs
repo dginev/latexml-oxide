@@ -1,5 +1,6 @@
 use rtx::converter::Converter;
 use rtx_core::common::{Config, OutputFormat};
+
 #[test]
 fn can_convert_hello() {
   assert!(rtx_core::util::logger::init(log::LevelFilter::Warn).is_ok());
@@ -8,7 +9,9 @@ fn can_convert_hello() {
     format: OutputFormat::HTML5,
     ..Config::default()
   };
-  let converter = Converter::from_config(html_config);
+  let mut converter = Converter::from_config(html_config);
+  converter.initialize_session().expect("can initialize.");
+
   let conversion_result = converter.convert(hello_source.to_string());
   assert!(conversion_result.result.is_some());
   let response = conversion_result;

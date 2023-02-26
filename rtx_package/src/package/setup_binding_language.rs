@@ -192,7 +192,7 @@ macro_rules! InputDefinitions {
     bind_state_mut!(st);
     input_definitions($name, InputDefinitionOptions::default(), st)?
   }};
-  ($name: expr, $($key:ident => $value:expr)*) => {
+  ($name: expr, $($key:ident => $value:expr),*) => {
     bind_state_mut!(stmch, st);
     input_definitions($name, NewDefault!(InputDefinitionOptions, $($key => $value),*), stmch, st)?
   }
@@ -885,33 +885,6 @@ macro_rules! defi_math {
     let paramlist: Option<Parameters> = $paramlist;
     def_math(cs, paramlist, presentation, options, $state_arg);
   }};
-}
-
-#[macro_export]
-macro_rules! requireMath {
-  ($cs_name:expr) => {{
-    bind_state_mut!(st);
-    requireMath!($cs_name, st)
-  }};
-  ($cs_name:expr, $state_arg:ident) => {
-    if !LookupBool!("IN_MATH", $state_arg) {
-      let message = s!("{} should only appear in math mode", $cs_name);
-      Warn!("unexpected", "mode", None, $state_arg, message);
-    }
-  };
-}
-#[macro_export]
-macro_rules! forbidMath {
-  ($cs_name:expr) => {{
-    bind_state_mut!(st);
-    forbidMath!($cs_name, st)
-  }};
-  ($cs_name:expr, $state_arg:ident) => {
-    if LookupBool!("IN_MATH", $state_arg) {
-      let message = s!("{} should not appear in math mode", $cs_name);
-      Warn!("unexpected", "mode", None, $state_arg, message);
-    }
-  };
 }
 
 //======================================================================

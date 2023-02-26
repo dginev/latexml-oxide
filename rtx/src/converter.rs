@@ -6,6 +6,8 @@ use rtx_core::list::List;
 use rtx_core::state::State;
 use rtx_core::token;
 use rtx_core::{generate_message, s, Core, CoreOptions, Digested, Error, Info};
+use rtx_package::pool;
+use std::sync::Arc;
 // use std::sync::RwLockWriteGuard;
 
 use crate::core::DigestionAPI;
@@ -43,12 +45,14 @@ impl Converter {
     }
   }
   pub fn initialize_session(&mut self) -> Result<()> {
-    // Prepare LaTeXML object
-    self.core.initialize_state(vec![s!("TeX.pool")])?;
+    // Add default package bindings
+    self.state_mut().bindings_dispatch = Some(Arc::new(pool::dispatch));
     // Add additional binding definitions if any
     if let Some(closure) = &self.opts.extra_bindings_dispatch {
       self.state_mut().extra_bindings_dispatch = Some(closure.clone())
     }
+    // Prepare LaTeXML object
+    self.core.initialize_state(vec![s!("TeX.pool")])?;
     self.ready = true;
     Ok(())
   }

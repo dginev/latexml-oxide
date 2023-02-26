@@ -360,7 +360,7 @@ LoadDefinitions!(state, {
         if token.get_catcode() == Catcode::BEGIN {
           gullet.read_balanced(true, state)?.unwrap_or_default()
         } else {
-          Tokens!(dbg!(token))
+          Tokens!(token)
         }
       } else {
         Error!("Expected", "DefExpanded", gullet, state,

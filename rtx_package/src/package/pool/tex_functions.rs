@@ -197,7 +197,7 @@ pub fn classify_box(boxnum: Number, state: &State) -> &'static str {
 const MATH_CLASS_ROLE: [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLOSE", "PUNCT", ""];
 // Is this "fontinfo" stuff sufficient to maintain a math font "family" ??
 // What we're really after is a connectio nto a font encoding mapping.
-pub fn decode_math_char(mut n: u16, state: &State) -> (Option<String>, Option<char>) {
+pub fn decode_math_char(mut n: u16, state: &mut State) -> (Option<String>, Option<char>) {
   let class: u16 = n / (16 * 256);
   n %= 16 * 256;
   let fam: u16 = n / 256;

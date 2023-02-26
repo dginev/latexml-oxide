@@ -95,3 +95,34 @@ pub mod inputenc_sty;
 pub mod textcomp_sty;
 pub mod url_sty;
 pub mod verbatim_sty;
+pub mod t1enc_def;
+pub mod t1enc_sty;
+
+use rtx_core::state::State;
+use rtx_core::stomach::Stomach;
+use rtx_core::common::error::Result;
+
+pub fn dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Option<Result<()>> {
+  Some(
+    match filename {
+      "TeX.pool" => tex::load_definitions(stomach, state),
+      "LaTeX.pool" => latex::load_definitions(stomach, state),
+      "eTeX.pool" => etex::load_definitions(stomach, state),
+      "pdfTeX.pool" => pdftex::load_definitions(stomach, state),
+      "article.cls" => article_cls::load_definitions(stomach, state),
+      "alltt.sty" => alltt_sty::load_definitions(stomach, state),
+      "amsmath.sty" => amsmath_sty::load_definitions(stomach, state),
+      "amsthm.sty" => amsthm_sty::load_definitions(stomach, state),
+      "comment.sty" => comment_sty::load_definitions(stomach, state),
+      "IEEEtran.cls" => ieeetran_cls::load_definitions(stomach, state),
+      "url.sty" => url_sty::load_definitions(stomach, state),
+      "verbatim.sty" => verbatim_sty::load_definitions(stomach, state),
+      "fontenc.sty" => fontenc_sty::load_definitions(stomach, state),
+      "inputenc.sty" => inputenc_sty::load_definitions(stomach, state),
+      "textcomp.sty" => textcomp_sty::load_definitions(stomach, state),
+      "t1enc.sty" => t1enc_def::load_definitions(stomach, state),
+      "t1enc.def" => t1enc_sty::load_definitions(stomach, state),
+      _other => {return None}
+    }
+  )
+}

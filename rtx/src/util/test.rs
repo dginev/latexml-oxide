@@ -3,12 +3,14 @@ use libxml::parser::Parser;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, SaveOptions};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::core::DigestionAPI;
 use rtx_core::common::BindingDispatcher;
 use rtx_core::document::Document;
 use rtx_core::state::State;
 use rtx_core::{s, Core, CoreOptions};
+use rtx_package::pool;
 use rtx_math_parser::node_to_grammar_lexemes;
 
 #[allow(clippy::implicit_hasher)]
@@ -73,7 +75,8 @@ fn process_texfile(tex_path: &str, name: &str, extra_bindings_dispatcher: Option
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-
+  // Add the package bindings
+  latexml.get_state_mut().bindings_dispatch = Some(Arc::new(pool::dispatch));
   // If we want to test the rtx_contrib bindings, we need to pass in the additional binding dispatcher,
   // which makes the contrib bindings visible
   // this would have been equivalent to a latexml --path argument, except we require access to compiled functions,
