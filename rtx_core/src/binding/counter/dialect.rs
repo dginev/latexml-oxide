@@ -2,22 +2,22 @@ use std::borrow::Cow;
 use std::collections::{VecDeque,HashMap};
 use std::sync::Arc;
 
-use rtx_core::common::error::*;
-use rtx_core::common::number::Number;
-use rtx_core::common::numeric_ops::NumericOps;
-use rtx_core::common::content_io::{build_invocation, digest_if, digest_literal, digest_text};
-use rtx_core::common::def_dialect::{def_macro, def_register, is_defined};
-use rtx_core::common::cleaners::{clean_id, clean_label, roman_aux};
-use rtx_core::definition::expandable::ExpandableOptions;
-use rtx_core::definition::ExpansionBody;
-use rtx_core::gullet::Gullet;
-use rtx_core::mouth;
-use rtx_core::state::{Scope, State, Stored};
-use rtx_core::stomach::Stomach;
-use rtx_core::token::*;
-use rtx_core::tokens::Tokens;
-use rtx_core::whatsit::Whatsit;
-use rtx_core::BoxOps;
+use crate::common::error::*;
+use crate::common::number::Number;
+use crate::common::numeric_ops::NumericOps;
+use crate::binding::content::{build_invocation, digest_if, digest_literal, digest_text};
+use crate::binding::def::dialect::{def_macro, def_register, is_defined};
+use crate::common::cleaners::{clean_id, clean_label, roman_aux};
+use crate::definition::expandable::ExpandableOptions;
+use crate::definition::ExpansionBody;
+use crate::gullet::Gullet;
+use crate::state::{Scope, State, Stored};
+use crate::stomach::Stomach;
+use crate::mouth;
+use crate::token::*;
+use crate::tokens::Tokens;
+use crate::whatsit::Whatsit;
+use crate::BoxOps;
 
 #[derive(Default)]
 pub struct NewCounterOptions<'ct> {
@@ -81,7 +81,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     T_CS!(s!("\\the{}", ctr)),
     None,
     Some(ExpansionBody::Closure(Arc::new(move |gullet, args, inner_state| {
-      let counter_value = CounterValue!(&ctr_string, inner_state).value_of();
+      let counter_value = counter_value(&ctr_string, inner_state).value_of();
       Ok(Tokens::new(ExplodeText!(counter_value)))
     }))),
     Some(ExpandableOptions {
@@ -138,7 +138,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
         T_CS!(thectrid),
         None,
         Some(ExpansionBody::Closure(Arc::new(move |gullet, args, inner_state| {
-          Ok(TokenizeInternal!(&s!(
+          Ok(mouth::tokenize_internal(&s!(
             "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
             idwithin,
             idwithin,
@@ -157,7 +157,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
         T_CS!(thectrid),
         None,
         Some(ExpansionBody::Closure(Arc::new(move |gullet, args, inner_state| {
-          Ok(TokenizeInternal!(&s!("{}\\csname @{}@ID\\endcsname", prefix, ctr_string)))
+          Ok(mouth::tokenize_internal(&s!("{}\\csname @{}@ID\\endcsname", prefix, ctr_string)))
         }))),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
@@ -552,8 +552,7 @@ pub fn begin_itemize(
     "\\itemsep",
     state.lookup_dimension("\\lx@default@itemsep").unwrap_or_default().into(),
     Vec::new(),
-    state
-  );
+    state);
   state.assign_value("itemization_level", listlevel, None);
   state.assign_value(&s!("{}level", counter), level, None);
   state.assign_value("itemization_items", 0, None);
@@ -583,7 +582,7 @@ pub fn begin_itemize(
     let outerusecounter = s!("{}{}", outercounter, roman!(outerlevel).to_string());
     let thectr = s!("\\the{}@ID", listcounter);
     let theexpansion = s!("\\the{}@ID.I\\arabic{{{}}}", outerusecounter, listcounter);
-    def_macro(T_CS!(thectr), None, TokenizeInternal!(&theexpansion), None, state);
+    def_macro(T_CS!(thectr), None, mouth::tokenize_internal(&theexpansion), None, state);
 
     // AND reset this list's counter when the outer item is stepped
     let mut cl_toks = vec![T_CS!(listcounter)];
@@ -594,14 +593,14 @@ pub fn begin_itemize(
     state.assign_value(&cs_name, Stored::Tokens(Tokens::new(cl_toks)), Some(Scope::Global));
   }
   // format the id of \item's relative to the id of this list
-  let useexp = TokenizeInternal!(&s!("\\the{}@ID.i\\@{}@ID", listcounter, usecounter));
+  let useexp = mouth::tokenize_internal(&s!("\\the{}@ID.i\\@{}@ID", listcounter, usecounter));
   def_macro(T_CS!(s!("\\the{}@ID", usecounter)), None, useexp, None, state);
 
   let mut series = if let Some(s) = options.series { s.to_string() } else { String::new() };
   if let Some(start) = options.start {
     SetCounter!(usecounter, start, stomach, state);
     let gullet = stomach.get_gullet_mut();
-    AddToCounter!(&usecounter, Number(-1), gullet, state);
+    add_to_counter(&usecounter, Number(-1), gullet, state);
   } else if let Some(s) = match options.resume {
     Some(s) => Some(s),
     None => options.resume_star,

@@ -539,3 +539,42 @@ macro_rules! forbidMath {
     }
   };
 }
+
+#[macro_export]
+macro_rules! AssignRegister {
+  ($cs:literal, $value:expr) => {{
+    bind_state!(stmch, st);
+    AssignRegister!($cs, $value, Vec::new(), st);
+  }};
+  ($cs:literal, $value:expr, $args:expr, $state_arg: ident) => {{
+    if let Some(defn) = $state_arg.lookup_register_definition(&T_CS!($cs)) {
+      (*defn.borrow_mut()).set_value($value, $args, $state_arg);
+    } else {
+      let message = s!("The control sequence {} is not a register", $cs);
+      Warn!("expected", "register", None, $state_arg, message);
+    }
+  }};
+}
+
+#[macro_export]
+macro_rules! SetCounter {
+  ($ctr:expr, $value:expr) => {
+    AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
+    DefMacro!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+                scope => Some(Scope::Global)
+    );
+  };
+  ($ctr:expr, $value:expr) => {
+    AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
+    AfterAssignment!();
+    DefMacro!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+                scope => Some(Scope::Global)
+    );
+  };
+  ($ctr:expr, $value:expr, $stomach:ident, $state_arg:ident) => {
+    $state_arg.assign_value(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
+    $state_arg.after_assignment($stomach.get_gullet_mut());
+    def_macro(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
+      Some(ExpandableOptions{ scope: Some(Scope::Global), ..ExpandableOptions::default()}), $state_arg);
+  }
+}

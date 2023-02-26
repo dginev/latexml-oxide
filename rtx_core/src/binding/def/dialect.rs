@@ -8,7 +8,8 @@ use regex::Regex;
 use crate::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
-use crate::common::def_traits::IntoDigestedResult;
+use crate::binding::def::traits::{IntoOption,IntoDigestedResult};
+use crate::binding::content::merge_font;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use crate::definition::constructor::{Constructor, ConstructorOptions};
@@ -31,8 +32,6 @@ use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
-use super::content_io::merge_font;
-use super::def_traits::IntoOption;
 
 const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &["name", "meaning", "omcd", "decl_id", "mathstyle", "lpadding", "rpadding"];
 // Constants for the API functions stay here as well

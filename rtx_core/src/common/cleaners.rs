@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use unidecode::unidecode;
-use super::def_dialect::{SPACES_RE, DIRTY_ID_IDIOM_RE, NON_ID_CHARSET_RE, LEADING_PROTOCOL_RE, TRAILING_SLASH_RE, TILDE_NOISE_RE};
+use crate::binding::def::dialect::{SPACES_RE, DIRTY_ID_IDIOM_RE, NON_ID_CHARSET_RE, LEADING_PROTOCOL_RE, TRAILING_SLASH_RE, TILDE_NOISE_RE};
 
 //======================================================================
 // Cleaners
