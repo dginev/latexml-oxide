@@ -20,7 +20,7 @@ use crate::util::pathname::{self, PathnameFindOptions};
 // use crate::util::pathname::PathnameFindOptions;
 use crate::Digested;
 
-use crate::common::def_dialect::def_macro;
+use crate::binding::def::dialect::def_macro;
 
 lazy_static! {
   static ref QUOTE_WRAPPED: Regex = Regex::new("^\"(.+)\"$").unwrap();

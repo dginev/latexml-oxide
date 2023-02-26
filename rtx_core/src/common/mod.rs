@@ -17,11 +17,6 @@ pub mod relaxng;
 pub mod store;
 pub mod xml;
 pub mod cleaners;
-pub mod content_io;
-pub mod def_dialect;
-pub mod def_traits;
-#[macro_use]
-pub mod def_dialect_macros;
 
 use crate::common::error::*;
 use crate::fmt;

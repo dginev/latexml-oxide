@@ -9,6 +9,7 @@ pub mod common;
 #[macro_use]
 pub mod tokens;
 #[macro_use]
+pub mod binding;
 pub mod definition;
 pub mod comment;
 pub mod document;
