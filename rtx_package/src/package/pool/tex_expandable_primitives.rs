@@ -109,32 +109,31 @@ LoadDefinitions!(outer_state, {
 
   DefMacro!("\\meaning Token", sub[gullet, (token), state] {
     let mut meaning = String::from("undefined");
-    let definition_opt = if token == T_ALIGN!() {
+    if let Some(definition) = if token == T_ALIGN!() {
       Some(Stored::Token(token))
     } else {
       state.lookup_meaning(&token)
-    };
-    if let Some(definition) = definition_opt {
-       // First, if this definition is a primitive or constructor, check to see if it has an alias, which would allow us to work with a token
-       let definition : Stored = match definition {
-         Stored::Primitive(primitive) => Stored::Token(primitive.get_cs_or_alias().into_owned()),
-         Stored::Constructor(constructor) => Stored::Token(constructor.get_cs_or_alias().into_owned()),
-         other => other
-       };
+    } {
+      // First, if this definition is a primitive or constructor, check to see if it has an alias, which would allow us to work with a token
+      let definition : Stored = match definition {
+        Stored::Primitive(primitive) => Stored::Token(primitive.get_cs_or_alias().into_owned()),
+        Stored::Constructor(constructor) => Stored::Token(constructor.get_cs_or_alias().into_owned()),
+        other => other
+      };
       // Now that we've tried to obtain an expandable definition, do the TeX dance:
       match definition {
         Stored::Token(t) => {
           let cc = t.get_catcode();
           let text = if cc == Catcode::SPACE {
-            " "
+            String::from(" ")
           } else {
-            t.get_string()
+            t.to_string()
           };
           meaning = String::from(cc.meaning());
           if !meaning.is_empty() {
             meaning.push(' ');
           }
-          meaning.push_str(text);
+          meaning.push_str(&text);
         },
         Stored::Register(register) => {
           let value = register.value_of(vec![],state);

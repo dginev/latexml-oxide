@@ -163,9 +163,14 @@ LoadDefinitions!(outer_state, {
   DefPrimitive!("\\@@@fontencoding{}", sub[stomach, (encoding), state] {
     let gullet = stomach.get_gullet_mut();
     let encoding = Expand!(encoding, gullet).to_string();
-    if LoadFontMap!(&encoding).is_some() {
+    if LoadFontMap!(&encoding)?.is_some() {
       MergeFont!(encoding => encoding);
+    } else {
+      Info!("missing_font_encoding", encoding, stomach, state, "Couldn't find font encoding, falling back to OT1");
+      // Default to OT1 encoding if no map found
+      MergeFont!(encoding => "OT1");
     }
+    Ok(Vec::new())
   });
 
   DefMacro!("\\f@encoding", { ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap()) });

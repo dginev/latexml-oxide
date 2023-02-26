@@ -124,13 +124,10 @@ LoadDefinitions!(outer_stomach, state, {
       setup_cyrillic(outer_stomach, state)?;
       for encoding_stored in font_encodings.into_iter() {
         if let Stored::String(encoding) = encoding_stored {
-          let enc_tokens = Tokens!(Explode!(encoding));
-          // TODO: Can I make the DefMacro! accept a Tokens!() value directly, without the
-          // explicit sub[] {} closure annotation?
-          DefMacro!("\\encodingdefault", sub[gullet, args, state] { Ok(enc_tokens.clone()) }, scope => Some(Scope::Global));
+          DefMacro!(T_CS!("\\encodingdefault"), None, Tokens!(Explode!(encoding)), scope => Some(Scope::Global));
           let encfile = encoding.to_lowercase() + "enc";
           InputDefinitions!(&encfile, extension => Some("def"));
-          if LoadFontMap!(&encoding).is_some() {
+          if LoadFontMap!(&encoding)?.is_some() {
             MergeFont!(encoding => encoding.to_string());
           }
         } else {

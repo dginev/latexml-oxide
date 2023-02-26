@@ -284,7 +284,12 @@ impl fmt::Debug for Token {
 }
 
 impl Display for Token {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.text) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    if self.code == Catcode::ARG {
+      write!(f, "#")?;
+    }
+    write!(f, "{}", self.text)
+  }
 }
 
 /// Compare two tokens; They are equal if they both have same catcode & string

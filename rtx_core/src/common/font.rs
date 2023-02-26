@@ -961,7 +961,7 @@ fn is_diff_f32(x: &Option<f32>, y: &Option<f32>) -> bool { x.is_some() && (y.is_
 /// so that if anything above 128 comes in, it must already be Unicode!.
 /// The lower half plane still needs to go through decoding, though, to deal
 /// with TeX's rearrangement of ASCII...
-pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, state: &State) -> Option<char> {
+pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, state: &mut State) -> Option<char> {
   let mut font = None;
   let encoding = match encoding_opt {
     None => {
@@ -980,7 +980,7 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, state: &St
 
   let mut map: Option<&Fontmap> = None;
   if !encoding.is_empty() {
-    if let Some(encmap) = state.load_font_map(&encoding) {
+    if let Some(encmap) = state.load_font_map(&encoding).expect("loadFontMap should succeed?") {
       // OK got some map.
       map = Some(encmap);
       if let Some(font) = font {
@@ -1035,7 +1035,7 @@ pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, s
 
   let mut map: Option<&Fontmap> = None;
   if !encoding.is_empty() {
-    if let Some(encmap) = state.load_font_map(encoding) {
+    if let Some(encmap) = state.load_font_map(encoding).expect("load_font_map should succeed?") {
       // OK got some map.
       map = Some(encmap);
       if let Some(ref font) = font {

@@ -88,7 +88,7 @@ LoadDefinitions!(outer_state, {
     else {
       let message = s!("Unrecognized font shape {:?}.", shape);
       Info!("unexpected",shape, stomach, inner_state, message); }
-    Ok(vec![])
+    Ok(Vec::new())
   });
 
   DefMacro!(

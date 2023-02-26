@@ -6,6 +6,7 @@ use std::fmt::{self, Display};
 use std::hash::Hash;
 use std::sync::{Arc, RwLock};
 
+pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::{Font, Fontmap};
@@ -15,7 +16,6 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
-pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{ConditionalType, IfFrame};
@@ -260,6 +260,7 @@ pub struct State {
   smuggle_the: Vec<bool>,
   // Auxiliary convenience -- extra dispatch
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
+  pub bindings_dispatch: Option<BindingDispatcher>,
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
   // Circular dependency and global $STATE in Perl requires a bad
   // style use of interior mutability...
@@ -318,6 +319,7 @@ impl Default for State {
       nomathparse: false,
       smuggle_the: Vec::new(),
       reading_alignment: false,
+      bindings_dispatch: None,
       extra_bindings_dispatch: None,
       // interiorly mutable
       stomach: Arc::new(RwLock::new(Stomach::default())),
@@ -1710,42 +1712,34 @@ impl State {
     }
   }
 
-  pub fn load_font_map(&self, encoding: &str) -> Option<&Fontmap> {
-    let fontmap_key = s!("{}_fontmap", encoding);
-    if let Some(map) = self.lookup_value(&fontmap_key) {
-      return map.into();
+  pub fn load_font_map(&self, encoding: &str) -> Result<Option<&Fontmap>> {
+    // TODO:
+    // self.preload_font_map(encoding)?;
+    if let Some(map) = self.lookup_value(&s!("{encoding}_fontmap")) {
+      Ok(map.into())
+    } else {
+      Ok(None)
     }
-
-    // TODO: Once we try to load font maps via require package we will have some serious mutability
-    // issues to resolve... punt for now.
-
-    // no map, try to load one
-    // let can_load_ok: bool;
-    // let fail_suffix = "_fontmap_failed_to_load";
-    // let fail_to_load_key = s!("{}{}", encoding, fail_suffix);
-    // {
-    //   can_load_ok = !self.lookup_bool(&fail_to_load_key);
+  }
+  pub fn preload_font_map(&mut self, encoding: &str) -> Result<()> {
+    // This check is done as a "preload" step for mutability reasons.
+    // TODO
+    // if self.lookup_value(&s!("{encoding}_fontmap")).is_some() {
+    //   return Ok(());
     // }
-
-    // if can_load_ok {
-    //   self.assign_value(&fail_to_load_key, true, None); // Stop recursion?
-
-    //   // TODO: difficult .... this is main rtx functionality
-    //   // RequirePackage(lc($encoding), type => 'fontmap'); //
-    //   self.assign_value(&fail_to_load_key, false, None);
-    //   {
-    //     if let Some(map) = self.lookup_value(&fontmap_key) {
-    //       // Got map?
-    //       return map.into();
-    //     }
+    // let fail_key = s!("{encoding}_fontmap_failed_to_load");
+    // let failed_flag = self.lookup_bool(&fail_key);
+    // if !failed_flag {
+    //   self.assign_value(&fail_key, true, None); // Stop recursion?
+    //   input_definitions(encoding.to_lowercase(), InputDefinitionOptions {
+    //     extension: Some("fontmap"), noerror: true, ..InputDefinitionOptions::default() }, self)?;
+    //   if let Some(map) = self.lookup_value(&s!("{encoding}_fontmap")) { // Got map?
+    //     self.assign_value(&fail_key, false, None);
+    //   } else {
+    //     self.assign_value(&fail_key, true, Some(Scope::Global));
     //   }
-    //   self.assign_value(&fail_to_load_key, false, None);
-
-    //   self.assign_value(&fail_to_load_key, true, Some(Scope::Global));
-    //   None
-    // } else {
-    None
     // }
+    Ok(())
   }
 
   /// Generate a stub definition for an undefined control-sequence,

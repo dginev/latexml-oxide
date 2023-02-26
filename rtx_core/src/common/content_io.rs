@@ -1,66 +1,59 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;
+use lazy_static::lazy_static;
+use regex::Regex;
 
-use rtx_core::common::error::*;
-use rtx_core::common::font::Font;
-use rtx_core::common::object::Object;
-use rtx_core::document::resource::*;
-use rtx_core::document::tag::{TagOptionName, TagOptions};
-use rtx_core::gullet::Gullet;
-use rtx_core::mouth::{Mouth, MouthOptions};
-use rtx_core::parameter::{Parameter, ParameterExtra, Parameters};
-use rtx_core::state::{Scope, State, Stored};
-use rtx_core::stomach::Stomach;
-use rtx_core::token::*;
-use rtx_core::tokens::Tokens;
-use rtx_core::util::pathname;
-use rtx_core::util::pathname::PathnameFindOptions;
-use rtx_core::Digested;
+use crate::common::error::*;
+use crate::common::font::Font;
+use crate::common::object::Object;
+use crate::token::*;
+use crate::*;
+use crate::document::resource::*;
+use crate::document::tag::{TagOptionName, TagOptions};
+use crate::gullet::Gullet;
+use crate::mouth::{Mouth, MouthOptions};
+use crate::parameter::{Parameter, ParameterExtra, Parameters};
+use crate::state::{Scope, State, Stored};
+use crate::stomach::Stomach;
+use crate::util::pathname::{self, PathnameFindOptions};
+// use crate::util::pathname::PathnameFindOptions;
+use crate::Digested;
 
-use super::def_dialect::def_macro;
-use super::*;
-use crate::package::pool;
+use crate::common::def_dialect::def_macro;
 
 lazy_static! {
   static ref QUOTE_WRAPPED: Regex = Regex::new("^\"(.+)\"$").unwrap();
 }
 
-pub fn load_external_binding(file: &str, state: &mut State, mut stomach: &mut Stomach) -> Result<bool> {
-  let taken_dispatcher = state.extra_bindings_dispatch.take();
-  match taken_dispatcher {
-    Some(ref dispatcher) => {
-      let result_opt = dispatcher(file, stomach, state);
-      match result_opt {
-        Some(result) => match result {
-          Ok(()) => true,
-          Err(e) => return Err(e),
-        },
-        None => false,
-      }
-    },
-    None => false,
-  };
 
-  let is_contrib: bool = match taken_dispatcher {
-    Some(ref dispatcher) => {
-      // these notes should be inside the dispatch, since it may not have anything to load
-      // note_begin(&s!("Loading {:?} definitions", file));
-      let result_opt = dispatcher(file, stomach, state);
-      //note_end(&s!("Loading {:?} definitions", file));
-      match result_opt {
-        Some(result) => match result {
-          Ok(()) => true,
-          Err(e) => return Err(e),
-        },
-        None => false,
-      }
-    },
-    None => false,
-  };
-  state.extra_bindings_dispatch = taken_dispatcher;
-
-  Ok(is_contrib)
+pub struct InputDefinitionOptions {
+  pub extension: Option<&'static str>,
+  pub options: Vec<String>,
+  pub after: Tokens,
+  pub notex: bool,
+  pub noerror: bool,
+  pub noltxml: bool,
+  pub withoptions: Option<Vec<String>>,
+  pub handleoptions: bool,
+  pub as_class: bool,
+  pub raw: bool,
+}
+impl Default for InputDefinitionOptions {
+  fn default() -> Self {
+    InputDefinitionOptions {
+      extension: None,
+      options: Vec::new(),
+      after: Tokens!(),
+      notex: false,
+      noerror: false,
+      noltxml: false,
+      raw: false,
+      withoptions: None,
+      handleoptions: false,
+      as_class: false,
+    }
+  }
 }
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
@@ -69,13 +62,13 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions... so let's make stomach a mandatory option.
   let prevname = if options.handleoptions && state.lookup_definition(&T_CS!("\\@currname")).is_some() {
     let gullet = stomach.get_gullet_mut();
-    do_expand(T_CS!("\\@currname"), gullet, state)?.to_string()
+    gullet.do_expand(T_CS!("\\@currname"), state)?.to_string()
   } else {
     String::new()
   };
   let prevext = if options.handleoptions && state.lookup_definition(&T_CS!("\\@currext")).is_some() {
     let gullet = stomach.get_gullet_mut();
-    do_expand(T_CS!("\\@currext"), gullet, state)?.to_string()
+    gullet.do_expand(T_CS!("\\@currext"), state)?.to_string()
   } else {
     String::new()
   };
@@ -139,28 +132,9 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
     state.assign_value(&s!("{}_loaded_with_options", filename), current_options, Some(Scope::Global));
   }
 
-  let is_contrib = load_external_binding(&filename, state, stomach)?;
-  let mut is_binding = true;
-  if !is_contrib {
-    match filename.as_ref() {
-      "TeX.pool" => pool::tex::load_definitions(stomach, state)?,
-      "LaTeX.pool" => pool::latex::load_definitions(stomach, state)?,
-      "eTeX.pool" => pool::etex::load_definitions(stomach, state)?,
-      "pdfTeX.pool" => pool::pdftex::load_definitions(stomach, state)?,
-      "article.cls" => pool::article_cls::load_definitions(stomach, state)?,
-      "alltt.sty" => pool::alltt_sty::load_definitions(stomach, state)?,
-      "amsmath.sty" => pool::amsmath_sty::load_definitions(stomach, state)?,
-      "amsthm.sty" => pool::amsthm_sty::load_definitions(stomach, state)?,
-      "comment.sty" => pool::comment_sty::load_definitions(stomach, state)?,
-      "IEEEtran.cls" => pool::ieeetran_cls::load_definitions(stomach, state)?,
-      "url.sty" => pool::url_sty::load_definitions(stomach, state)?,
-      "verbatim.sty" => pool::verbatim_sty::load_definitions(stomach, state)?,
-      "fontenc.sty" => pool::fontenc_sty::load_definitions(stomach, state)?,
-      "inputenc.sty" => pool::inputenc_sty::load_definitions(stomach, state)?,
-      "textcomp.sty" => pool::textcomp_sty::load_definitions(stomach, state)?,
-      other => is_binding = false,
-    };
-  }
+  let is_binding = !options.noltxml && (
+    load_external_binding(&filename, stomach, state)? ||
+    load_binding(&filename, stomach, state)?);
   if is_binding {
     // We found and loaded a binding successfully, mark it as such.
     state.assign_value(&loaded_flag, true, Some(Scope::Global));
@@ -180,6 +154,58 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   note_end(&s!("Loading {:?} definitions", filename));
   Ok(())
 }
+
+pub fn load_binding(file: &str, mut stomach: &mut Stomach, state: &mut State) -> Result<bool> {
+  _load_binding(true, file, stomach, state)
+}
+pub fn load_external_binding(file: &str, mut stomach: &mut Stomach, state: &mut State) -> Result<bool> {
+  _load_binding(false, file, stomach, state)
+}
+// in the spirit of Perl's Package::loadLTXML
+fn _load_binding(internal: bool, request: &str, mut stomach: &mut Stomach, state: &mut State) -> Result<bool> {
+  // avoid double-loads:
+  let loaded_key = s!("{request}_loaded");
+  if state.lookup_bool(&loaded_key) {
+    return Ok(true);
+  }
+  // TODO? || state.lookup_bool(&s!("{trequest}_loaded"))
+  //|| state.lookup_bool(&s!("{name}_loaded")) || state.lookup_bool(&s!("{ltxname}_loaded"));
+
+  let taken_dispatcher = if internal {
+    state.bindings_dispatch.take()
+  } else {
+    state.extra_bindings_dispatch.take()
+  };
+  let is_found: bool = match taken_dispatcher {
+    Some(ref dispatcher) => {
+      let result_opt = dispatcher(request, stomach, state);
+      match result_opt {
+        Some(result) => {
+          // Here and only here we are certain we have binding support.
+          // Preemptively mark as loaded to avoid recursion.
+
+          // TODO: is this still true?
+          // Note (only!) that the binding version of this was loaded; still could load raw tex!
+          state.assign_value(&loaded_key, true, Some(Scope::Global));
+          match result {
+            Ok(()) => true,
+            Err(e) => return Err(e),
+          }
+        },
+        None => false,
+      }
+    },
+    None => false,
+  };
+
+  if internal {
+    state.bindings_dispatch = taken_dispatcher;
+  } else {
+    state.extra_bindings_dispatch = taken_dispatcher;
+  }
+  Ok(is_found)
+}
+
 
 // Factor out handling and passing loading options from input_content,
 // to simplify main routine
@@ -323,10 +349,10 @@ fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, st
     // since someone's presumably asking _explicitly_ for the raw TeX version.
     // It's probably even the ltxml version is asking for it!!
     // Of course, now it will be marked and wont get reloaded!
-    if state.lookup_bool(&s!("{}_loaded", request)) {
+    if state.lookup_bool(&s!("{request}_loaded")) && !pathname::is_reloadable(&pathname) {
       return Ok(());
     }
-    state.assign_value(&s!("{}_loaded", request), true, Some(Scope::Global));
+    state.assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
   }
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)
@@ -343,7 +369,7 @@ fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, st
   // but loading of sources & bindings is typically done in before/after methods of constructors!
   // This re-locks defns during reading of TeX packages.
   state.unlocked = false;
-  let content_str = state.lookup_string(&s!("{}_contents", pathname));
+  let content_str = state.lookup_string(&s!("{pathname}_contents"));
   let content = if content_str.is_empty() { None } else { Some(content_str) };
   let mut pathname_mouth = Mouth::create(
     pathname,
@@ -372,21 +398,25 @@ fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, st
 
 pub fn load_tex_content(path: &str, options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   // If there is a file-specific declaration file (name_tex.rs), load it first!
-  // let namespace = path;
-  // state.extra_bindings_dispatch
-  if !pathname::is_literaldata(path) {
+  // TODO: is this `.latexml` variation still relevant in the Rust port?
+  let has_binding = if !pathname::is_literaldata(path) {
     let (dir, base, ext) = pathname::split(path);
-    load_external_binding(&base, state, stomach)?;
-  }
-  // TODO: Caching
-  // content => LookupValue($pathname . '_contents')
+    load_external_binding(&base, stomach, state)? || load_binding(&base, stomach, state)?
+  } else {false};
 
   // Open a mouth for that TeX content
+  let cached = state.lookup_string(&s!("{path}_contents"));
+  let cached_opt = if cached.is_empty() {
+    None
+  } else {
+    Some(cached)
+  };
   stomach.get_gullet_mut().open_mouth(
     Mouth::create(
       path,
       MouthOptions {
         notes: true,
+        content: cached_opt,
         ..MouthOptions::default()
       },
       state,
@@ -736,14 +766,15 @@ pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -
     if !options.forbid_ltxml {
       if let Some(path) = pathname::find(
         &s!("{}.ltxml", file),
-        NewDefaultV!(PathnameFindOptions, paths => ltxml_paths, installation_subdir => "Package"),
+        PathnameFindOptions {paths: Some(ltxml_paths), installation_subdir: Some(String::from("Package")), ..PathnameFindOptions::default() }
       ) {
         return Some(path);
       }
     }
     // If we're looking for TeX, look within our paths & installation first (faster than kpse)
     if !options.notex {
-      if let Some(path) = pathname::find(file, NewDefaultV!(PathnameFindOptions, paths => paths)) {
+      if let Some(path) = pathname::find(file,
+        PathnameFindOptions{ paths: Some(paths), ..PathnameFindOptions::default() }) {
         return Some(path);
       }
     }
@@ -787,35 +818,6 @@ pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
       options.append(name, properties.remove(name));
     } else {
       // we'll handle the regular ones out of the loop
-    }
-  }
-}
-
-pub struct InputDefinitionOptions {
-  pub extension: Option<&'static str>,
-  pub options: Vec<String>,
-  pub after: Tokens,
-  pub notex: bool,
-  pub noerror: bool,
-  pub noltxml: bool,
-  pub withoptions: Option<Vec<String>>,
-  pub handleoptions: bool,
-  pub as_class: bool,
-  pub raw: bool,
-}
-impl Default for InputDefinitionOptions {
-  fn default() -> Self {
-    InputDefinitionOptions {
-      extension: None,
-      options: Vec::new(),
-      after: Tokens!(),
-      notex: false,
-      noerror: false,
-      noltxml: false,
-      raw: false,
-      withoptions: None,
-      handleoptions: false,
-      as_class: false,
     }
   }
 }

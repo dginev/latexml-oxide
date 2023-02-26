@@ -265,7 +265,7 @@ impl Tokens {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
         result.push(token.clone());
-      } else if let Some(ref arg) = args[token.text.parse::<usize>().unwrap() - 1] {
+      } else if let Some(ref arg) = args[&token.text.parse::<usize>().unwrap() - 1] {
         result.extend(arg.clone().into_owned().unlist());
       }
     }
@@ -446,7 +446,7 @@ impl ToTokens for Catcode {
 
 impl ToTokens for Token {
   fn to_tokens(&self, stream: &mut TokenStream) {
-    let text = self.to_string();
+    let text = &self.text;
     let code = self.get_catcode();
     stream.extend(quote! {
       Token {

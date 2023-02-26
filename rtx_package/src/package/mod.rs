@@ -22,6 +22,11 @@ pub use rtx_core::common::muglue::MuGlue;
 pub use rtx_core::common::number::Number;
 pub use rtx_core::common::numeric_ops::NumericOps;
 pub use rtx_core::common::object::Object;
+pub use rtx_core::common::content_io::*;
+pub use rtx_core::common::cleaners::*;
+pub use rtx_core::common::def_dialect::*;
+pub use rtx_core::common::def_dialect_macros::*;
+pub use rtx_core::common::def_traits::*;
 pub use rtx_core::definition::argument::ArgWrap;
 pub use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 pub use rtx_core::definition::constructor::ConstructorOptions;
@@ -63,14 +68,9 @@ pub use rtx_core::{BoxOps, Core, Digested, DigestedData, TexMode};
 pub mod setup_binding_language;
 
 // Second, declare the rust boilerplate and
-#[macro_use]
-pub mod api_macros;
 pub mod api;
 // Re-export the public API
-pub use self::api::cleaners::*;
-pub use self::api::content::*;
 pub use self::api::counter_dialect::*;
-pub use self::api::def_dialect::*;
 pub use self::api::*;
 
 // At the very end, declare the pool

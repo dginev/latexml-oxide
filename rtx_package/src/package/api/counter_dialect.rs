@@ -1,10 +1,13 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{VecDeque,HashMap};
 use std::sync::Arc;
 
 use rtx_core::common::error::*;
 use rtx_core::common::number::Number;
 use rtx_core::common::numeric_ops::NumericOps;
+use rtx_core::common::content_io::{build_invocation, digest_if, digest_literal, digest_text};
+use rtx_core::common::def_dialect::{def_macro, def_register, is_defined};
+use rtx_core::common::cleaners::{clean_id, clean_label, roman_aux};
 use rtx_core::definition::expandable::ExpandableOptions;
 use rtx_core::definition::ExpansionBody;
 use rtx_core::gullet::Gullet;
@@ -15,11 +18,6 @@ use rtx_core::token::*;
 use rtx_core::tokens::Tokens;
 use rtx_core::whatsit::Whatsit;
 use rtx_core::BoxOps;
-
-use super::cleaners::{clean_id, clean_label, roman_aux};
-use super::content::{build_invocation, digest_if, digest_literal, digest_text};
-use super::def_dialect::{def_macro, def_register, is_defined};
-use super::*;
 
 #[derive(Default)]
 pub struct NewCounterOptions<'ct> {

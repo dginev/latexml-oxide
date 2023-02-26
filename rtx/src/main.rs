@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate rtx_core;
 use rtx::converter::Converter;
+use rtx_package::package::pool;
 use rtx_core::common::{Config, DataSize, OutputFormat};
 use std::env;
 use std::process;
@@ -35,6 +36,7 @@ fn main() {
     preamble: None,
     postamble: None,
     mode: None,
+    bindings_dispatch: Some(Arc::new(pool::dispatch)),
     extra_bindings_dispatch: Some(Arc::new(rtx_contrib::dispatch)),
   };
   let mut converter = Converter::from_config(opts.clone());

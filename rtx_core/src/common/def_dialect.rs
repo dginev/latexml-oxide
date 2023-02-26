@@ -2,39 +2,51 @@ use lazy_static::lazy_static;
 use std::borrow::{Borrow, Cow};
 use std::sync::Arc;
 
-use rtx_core::common::error::*;
-use rtx_core::common::font::Font;
-use rtx_core::common::object::Object;
-use rtx_core::definition::argument::ArgWrap;
-use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
-use rtx_core::definition::constructor::{Constructor, ConstructorOptions};
-use rtx_core::definition::expandable::{Expandable, ExpandableOptions};
-use rtx_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
-use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
-use rtx_core::definition::register::{Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue};
-use rtx_core::definition::PropertiesClosure;
-use rtx_core::definition::{
-  BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, FontDirective, PrimitiveClosure,
-  ReplacementClosure,
-};
-use rtx_core::document::Document;
-use rtx_core::gullet::Gullet;
-use rtx_core::parameter::Parameters;
-use rtx_core::state::{Scope, State, Stored};
-use rtx_core::stomach::Stomach;
-use rtx_core::tbox::Tbox;
-use rtx_core::token::*;
-use rtx_core::tokens::Tokens;
-use rtx_core::whatsit::Whatsit;
-use rtx_core::Digested;
+use regex::Regex;
 
-use super::content::merge_font;
-use super::*;
+// use crate::common::error::*;
+use crate::*;
+use crate::common::font::Font;
+use crate::common::object::Object;
+use crate::common::def_traits::IntoDigestedResult;
+use crate::definition::argument::ArgWrap;
+use crate::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
+use crate::definition::constructor::{Constructor, ConstructorOptions};
+use crate::definition::expandable::{Expandable, ExpandableOptions};
+use crate::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
+use crate::definition::primitive::{Primitive, PrimitiveOptions};
+use crate::definition::register::{Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue};
+use crate::definition::PropertiesClosure;
+use crate::definition::{
+  BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, FontDirective, PrimitiveClosure,
+  ReplacementClosure, Reversion, SizingClosure
+};
+use crate::document::Document;
+use crate::gullet::Gullet;
+use crate::parameter::Parameters;
+use crate::state::{Scope, State, Stored};
+use crate::stomach::Stomach;
+use crate::tbox::Tbox;
+use crate::token::*;
+use crate::tokens::Tokens;
+use crate::whatsit::Whatsit;
+use crate::Digested;
+use super::content_io::merge_font;
+use super::def_traits::IntoOption;
 
 const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &["name", "meaning", "omcd", "decl_id", "mathstyle", "lpadding", "rpadding"];
+// Constants for the API functions stay here as well
 lazy_static! {
-  static ref CONSTRUCTOR_SPECIALS: Regex = Regex::new(r"([#&?\\<>])").unwrap();
+  pub static ref CONSTRUCTOR_SPECIALS: Regex = Regex::new(r"([#&?\\<>])").unwrap();
+  pub static ref CONDITIONAL_CS_RE: Regex = Regex::new(r"^\\(?:if(.*)|unless)$").unwrap();
+  pub static ref LEADING_PROTOCOL_RE: Regex = Regex::new(r"^\w+:").unwrap();
+  pub static ref TRAILING_SLASH_RE: Regex = Regex::new(r"/$").unwrap();
+  pub static ref SPACES_RE: Regex = Regex::new(r"\s+").unwrap();
+  pub static ref DIRTY_ID_IDIOM_RE: Regex = Regex::new(r"\$\{\}\^\{(?P<label>[^\}]*)\}\$").unwrap();
+  pub static ref NON_ID_CHARSET_RE: Regex = Regex::new(r"[^\w_\-.]+").unwrap();
+  pub static ref TILDE_NOISE_RE: Regex = Regex::new(r"\\~\{\}").unwrap();
 }
+
 
 /// Is defined in the `LaTeX`-y sense of also not being let to \relax.
 pub fn is_defined(name: &str, state: &State) -> bool {
@@ -271,31 +283,31 @@ pub fn def_primitive(
 
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
-    let require_math_closure = before_digest_single!(stomach, state, { requireMath!(cs_name_cloned, state) });
+    let require_math_closure = before_digest_simple!(stomach, state, { requireMath!(cs_name_cloned, state) });
     before_digest_env.push(require_math_closure);
   }
 
   if options.forbid_math {
     let cs_name_cloned = cs_name.clone();
-    let forbid_math_closure = before_digest_single!(stomach, state, { forbidMath!(cs_name_cloned, state) });
+    let forbid_math_closure = before_digest_simple!(stomach, state, { forbidMath!(cs_name_cloned, state) });
     before_digest_env.push(forbid_math_closure);
   }
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let begin_mode_closure = before_digest_single!(stomach, state, {
+    let begin_mode_closure = before_digest_simple!(stomach, state, {
       stomach.begin_mode(&mode_clone, state)?;
     });
     before_digest_env.push(begin_mode_closure);
   } else if options.bounded {
-    let bgroup_closure = before_digest_single!(stomach, state, {
+    let bgroup_closure = before_digest_simple!(stomach, state, {
       stomach.bgroup(state);
     });
     before_digest_env.push(bgroup_closure);
   }
   if let Some(chosen_font_directive) = options.font {
-    let merge_font_closure = before_digest_single!(stomach, state, {
+    let merge_font_closure = before_digest_simple!(stomach, state, {
       if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
-        MergeFont!((**chosen_font).clone(), state);
+        merge_font((**chosen_font).clone(), state);
       }
     });
     before_digest_env.push(merge_font_closure);
@@ -305,12 +317,12 @@ pub fn def_primitive(
   let mut after_digest_env: Vec<DigestionClosure> = options.after_digest;
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let end_mode_closure: DigestionClosure = after_digest_single!(stomach, whatsit, state, {
+    let end_mode_closure: DigestionClosure = after_digest_simple!(stomach, whatsit, state, {
       stomach.end_mode(&mode_clone, state)?;
     });
     after_digest_env.push(end_mode_closure);
   } else if options.bounded {
-    let egroup_closure: DigestionClosure = after_digest_single!(stomach, whatsit, state, {
+    let egroup_closure: DigestionClosure = after_digest_simple!(stomach, whatsit, state, {
       stomach.egroup(state)?;
     });
     after_digest_env.push(egroup_closure);
@@ -539,22 +551,22 @@ pub fn def_constructor(
 
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
-    let require_math_closure = before_digest_single!(stomach, state, { requireMath!(cs_name_cloned, state) });
+    let require_math_closure = before_digest_simple!(stomach, state, { requireMath!(cs_name_cloned, state) });
     before_digest_closures.push(require_math_closure);
   }
   if options.forbid_math {
     let cs_name_cloned = cs_name;
-    let forbid_math_closure = before_digest_single!(stomach, state, { forbidMath!(cs_name_cloned, state) });
+    let forbid_math_closure = before_digest_simple!(stomach, state, { forbidMath!(cs_name_cloned, state) });
     before_digest_closures.push(forbid_math_closure);
   }
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let begin_mode_closure = before_digest_single!(stomach, state, {
+    let begin_mode_closure = before_digest_simple!(stomach, state, {
       stomach.begin_mode(&mode_clone, state)?;
     });
     before_digest_closures.push(begin_mode_closure);
   } else if options.bounded {
-    let bgroup_closure = before_digest_single!(stomach, state, {
+    let bgroup_closure = before_digest_simple!(stomach, state, {
       stomach.bgroup(state);
     });
     before_digest_closures.push(bgroup_closure);
@@ -563,9 +575,9 @@ pub fn def_constructor(
     let chosen_font: Arc<Font> = chosen_font_directive
       .get_font(None, state)
       .expect("getting a font during DefConstructor shouldn't cause errors");
-    let merge_font_closure = before_digest_single!(stomach, state, {
+    let merge_font_closure = before_digest_simple!(stomach, state, {
       if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
-        MergeFont!((**chosen_font).clone(), state);
+        merge_font((**chosen_font).clone(), state);
       }
     });
     before_digest_closures.push(merge_font_closure);
@@ -575,12 +587,12 @@ pub fn def_constructor(
   let mut after_digest_closures: Vec<DigestionClosure> = options.after_digest;
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let end_mode_closure: DigestionClosure = after_digest_single!(stomach, whatsit, state, {
+    let end_mode_closure: DigestionClosure = after_digest_simple!(stomach, whatsit, state, {
       stomach.end_mode(&mode_clone, state)?;
     });
     after_digest_closures.push(end_mode_closure);
   } else if options.bounded {
-    let egroup_closure: DigestionClosure = after_digest_single!(stomach, whatsit, state, {
+    let egroup_closure: DigestionClosure = after_digest_simple!(stomach, whatsit, state, {
       stomach.egroup(state)?;
     });
     after_digest_closures.push(egroup_closure);
@@ -632,7 +644,7 @@ pub fn def_environment(
       before_digest_env.push(mode_closure);
     },
     None => {
-      let bgroup_closure = before_digest_single!(stomach, state, {
+      let bgroup_closure = before_digest_simple!(stomach, state, {
         stomach.bgroup(state);
       });
       before_digest_env.push(bgroup_closure);
@@ -640,27 +652,27 @@ pub fn def_environment(
   };
   if options.require_math {
     let require_name = begin_name.clone();
-    let require_math_closure = before_digest_single!(stomach, state, { requireMath!(require_name, state) });
+    let require_math_closure = before_digest_simple!(stomach, state, { requireMath!(require_name, state) });
     before_digest_env.push(require_math_closure);
   }
   if options.forbid_math {
     let forbid_name = begin_name.clone();
-    let forbid_math_closure = before_digest_single!(stomach, state, { forbidMath!(forbid_name, state) });
+    let forbid_math_closure = before_digest_simple!(stomach, state, { forbidMath!(forbid_name, state) });
     before_digest_env.push(forbid_math_closure);
   }
 
   let env_name = name.clone();
-  let current_environment_closure = before_digest_single!(stomach, state, {
-    AssignValue!("current_environment", env_name.clone(), None, state);
+  let current_environment_closure = before_digest_simple!(stomach, state, {
+    state.assign_value("current_environment", env_name.clone(), None);
     let body = T_LETTER!(env_name.clone());
-    DefMacro!(T_CS!("\\@currenvir"), None, body, state);
+    def_macro(T_CS!("\\@currenvir"), None, Some(ExpansionBody::Tokens(Tokens!(body))), None, state);
   });
   before_digest_env.push(current_environment_closure);
 
   if let Some(chosen_font_directive) = options.font {
-    let merge_font_closure = before_digest_single!(stomach, state, {
+    let merge_font_closure = before_digest_simple!(stomach, state, {
       if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
-        MergeFont!((**chosen_font).clone(), state);
+        merge_font((**chosen_font).clone(), state);
       }
     });
     before_digest_env.push(merge_font_closure);
@@ -707,7 +719,7 @@ pub fn def_environment(
   let mut after_digest_env = options.after_digest.clone();
   let name_clone = name.to_string();
   let end_name_clone = end_name.to_string();
-  let unexpected_end_closure = after_digest_single!(stomach, whatsit, state, {
+  let unexpected_end_closure = after_digest_simple!(stomach, whatsit, state, {
     let env = state.lookup_string("current_environment");
     if env.is_empty() || name_clone != env {
       let message1 = s!("Can't close environment {}", name_clone);
@@ -781,7 +793,7 @@ pub fn def_environment(
   let end_name = s!("\\end{}", &name);
   let name_clone = name.clone(); // for after_digest
   let mut after_digest_end = options.after_digest;
-  after_digest_end.push(after_digest_single!(stomach, whatsit, state, {
+  after_digest_end.push(after_digest_simple!(stomach, whatsit, state, {
     stomach.egroup(state)?;
   }));
 

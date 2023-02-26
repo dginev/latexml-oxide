@@ -16,6 +16,12 @@ pub mod object;
 pub mod relaxng;
 pub mod store;
 pub mod xml;
+pub mod cleaners;
+pub mod content_io;
+pub mod def_dialect;
+pub mod def_traits;
+#[macro_use]
+pub mod def_dialect_macros;
 
 use crate::common::error::*;
 use crate::fmt;
@@ -85,6 +91,7 @@ pub struct Config {
   pub preamble: Option<String>,
   pub postamble: Option<String>,
   pub mode: Option<DigestionMode>,
+  pub bindings_dispatch: Option<BindingDispatcher>,
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
 }
 impl Default for Config {
@@ -97,6 +104,7 @@ impl Default for Config {
       preamble: None,
       postamble: None,
       mode: Some(DigestionMode::LaTeX),
+      bindings_dispatch: None,
       extra_bindings_dispatch: None,
     }
   }
