@@ -1,8 +1,8 @@
 use crate::package::*;
 lazy_static! {
   static ref LEAD_W_COLON_RE: Regex = Regex::new(r"^(\w+):").unwrap();
-  static ref UNTIL_SPEC : Regex = Regex::new("^\\w?Until(\\w*):").unwrap();
-  static ref EXCEPTION_MACRO_NAMES_FOR_MEANING : Regex = Regex::new("^\\\\(?:(?:un)?expanded|detokenize)$").unwrap();
+  static ref UNTIL_SPEC: Regex = Regex::new("^\\w?Until(\\w*):").unwrap();
+  static ref EXCEPTION_MACRO_NAMES_FOR_MEANING: Regex = Regex::new("^\\\\(?:(?:un)?expanded|detokenize)$").unwrap();
 }
 //=======================
 // -- Main Definitions --
@@ -160,7 +160,8 @@ LoadDefinitions!(outer_state, {
           meaning = format!("{prefix}{literal_value}");
         },
         Stored::Expandable(expandable) => {
-          // short-circuit some troublesome discrepancies with TeX, which end up macros on LaTeXML's end, but \meaning expects as primitives in the CTAN ecosystem.
+          // short-circuit some troublesome discrepancies with TeX, which end up macros on our end,
+          // but \meaning expects as primitives in the CTAN ecosystem.
           let cs = expandable.get_cs_or_alias().to_string();
           // These exceptions could be extended further, as we add more .sty/.cls support
           if EXCEPTION_MACRO_NAMES_FOR_MEANING.is_match(&cs) {

@@ -5,11 +5,10 @@ use std::sync::Arc;
 use regex::Regex;
 
 // use crate::common::error::*;
-use crate::*;
+use crate::binding::content::merge_font;
+use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
 use crate::common::font::Font;
 use crate::common::object::Object;
-use crate::binding::def::traits::{IntoOption,IntoDigestedResult};
-use crate::binding::content::merge_font;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use crate::definition::constructor::{Constructor, ConstructorOptions};
@@ -20,7 +19,7 @@ use crate::definition::register::{Register, RegisterGetterClosure, RegisterSette
 use crate::definition::PropertiesClosure;
 use crate::definition::{
   BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, FontDirective, PrimitiveClosure,
-  ReplacementClosure, Reversion, SizingClosure
+  ReplacementClosure, Reversion, SizingClosure,
 };
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -32,6 +31,7 @@ use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
+use crate::*;
 
 const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &["name", "meaning", "omcd", "decl_id", "mathstyle", "lpadding", "rpadding"];
 // Constants for the API functions stay here as well
@@ -45,7 +45,6 @@ lazy_static! {
   pub static ref NON_ID_CHARSET_RE: Regex = Regex::new(r"[^\w_\-.]+").unwrap();
   pub static ref TILDE_NOISE_RE: Regex = Regex::new(r"\\~\{\}").unwrap();
 }
-
 
 /// Is defined in the `LaTeX`-y sense of also not being let to \relax.
 pub fn is_defined(name: &str, state: &State) -> bool {

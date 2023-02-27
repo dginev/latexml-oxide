@@ -13,6 +13,7 @@ pub use rtx_core::common::mudimension::MuDimension;
 pub use rtx_core::*;
 
 pub use rtx_core::aux_macros::*;
+pub use rtx_core::common::cleaners::*;
 pub use rtx_core::common::float::Float;
 pub use rtx_core::common::font;
 pub use rtx_core::common::font::Font;
@@ -22,7 +23,6 @@ pub use rtx_core::common::muglue::MuGlue;
 pub use rtx_core::common::number::Number;
 pub use rtx_core::common::numeric_ops::NumericOps;
 pub use rtx_core::common::object::Object;
-pub use rtx_core::common::cleaners::*;
 pub use rtx_core::definition::argument::ArgWrap;
 pub use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 pub use rtx_core::definition::constructor::ConstructorOptions;
@@ -65,10 +65,10 @@ pub mod setup_binding_language;
 
 // Re-export the public API available in rtx_core
 pub use rtx_core::binding::content::*;
+pub use rtx_core::binding::counter::dialect::*;
 pub use rtx_core::binding::def::dialect::*;
 pub use rtx_core::binding::def::macros::*;
 pub use rtx_core::binding::def::traits::*;
-pub use rtx_core::binding::counter::dialect::*;
 
 // At the very end, declare the pool
 pub use self::pool::latex_functions::*;

@@ -1,14 +1,12 @@
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;
-use lazy_static::lazy_static;
-use regex::Regex;
 
 use crate::common::error::*;
-use crate::common::font::{Fontmap,Font};
+use crate::common::font::{Font, Fontmap};
 use crate::common::object::Object;
-use crate::token::*;
-use crate::*;
 use crate::document::resource::*;
 use crate::document::tag::{TagOptionName, TagOptions};
 use crate::gullet::Gullet;
@@ -16,7 +14,9 @@ use crate::mouth::{Mouth, MouthOptions};
 use crate::parameter::{Parameter, ParameterExtra, Parameters};
 use crate::state::{Scope, State, Stored};
 use crate::stomach::Stomach;
+use crate::token::*;
 use crate::util::pathname::{self, PathnameFindOptions};
+use crate::*;
 // use crate::util::pathname::PathnameFindOptions;
 use crate::Digested;
 
@@ -25,7 +25,6 @@ use crate::binding::def::dialect::def_macro;
 lazy_static! {
   static ref QUOTE_WRAPPED: Regex = Regex::new("^\"(.+)\"$").unwrap();
 }
-
 
 pub struct InputDefinitionOptions {
   pub extension: Option<&'static str>,
@@ -132,9 +131,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
     state.assign_value(&s!("{}_loaded_with_options", filename), current_options, Some(Scope::Global));
   }
 
-  let is_binding = !options.noltxml && (
-    load_external_binding(&filename, stomach, state)? ||
-    load_binding(&filename, stomach, state)?);
+  let is_binding = !options.noltxml && (load_external_binding(&filename, stomach, state)? || load_binding(&filename, stomach, state)?);
   if is_binding {
     // We found and loaded a binding successfully, mark it as such.
     state.assign_value(&loaded_flag, true, Some(Scope::Global));
@@ -155,12 +152,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   Ok(())
 }
 
-pub fn load_binding(file: &str, mut stomach: &mut Stomach, state: &mut State) -> Result<bool> {
-  _load_binding(true, file, stomach, state)
-}
-pub fn load_external_binding(file: &str, mut stomach: &mut Stomach, state: &mut State) -> Result<bool> {
-  _load_binding(false, file, stomach, state)
-}
+pub fn load_binding(file: &str, mut stomach: &mut Stomach, state: &mut State) -> Result<bool> { _load_binding(true, file, stomach, state) }
+pub fn load_external_binding(file: &str, mut stomach: &mut Stomach, state: &mut State) -> Result<bool> { _load_binding(false, file, stomach, state) }
 // in the spirit of Perl's Package::loadLTXML
 fn _load_binding(internal: bool, request: &str, mut stomach: &mut Stomach, state: &mut State) -> Result<bool> {
   // avoid double-loads, but be binding-specific
@@ -200,7 +193,6 @@ fn _load_binding(internal: bool, request: &str, mut stomach: &mut Stomach, state
     None => Ok(false),
   }
 }
-
 
 // Factor out handling and passing loading options from input_content,
 // to simplify main routine
@@ -397,15 +389,13 @@ pub fn load_tex_content(path: &str, options: InputOptions, stomach: &mut Stomach
   let has_binding = if !pathname::is_literaldata(path) {
     let (dir, base, ext) = pathname::split(path);
     load_external_binding(&base, stomach, state)? || load_binding(&base, stomach, state)?
-  } else {false};
+  } else {
+    false
+  };
 
   // Open a mouth for that TeX content
   let cached = state.lookup_string(&s!("{path}_contents"));
-  let cached_opt = if cached.is_empty() {
-    None
-  } else {
-    Some(cached)
-  };
+  let cached_opt = if cached.is_empty() { None } else { Some(cached) };
   stomach.get_gullet_mut().open_mouth(
     Mouth::create(
       path,
@@ -761,15 +751,24 @@ pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -
     if !options.forbid_ltxml {
       if let Some(path) = pathname::find(
         &s!("{}.ltxml", file),
-        PathnameFindOptions {paths: Some(ltxml_paths), installation_subdir: Some(String::from("Package")), ..PathnameFindOptions::default() }
+        PathnameFindOptions {
+          paths: Some(ltxml_paths),
+          installation_subdir: Some(String::from("Package")),
+          ..PathnameFindOptions::default()
+        },
       ) {
         return Some(path);
       }
     }
     // If we're looking for TeX, look within our paths & installation first (faster than kpse)
     if !options.notex {
-      if let Some(path) = pathname::find(file,
-        PathnameFindOptions{ paths: Some(paths), ..PathnameFindOptions::default() }) {
+      if let Some(path) = pathname::find(
+        file,
+        PathnameFindOptions {
+          paths: Some(paths),
+          ..PathnameFindOptions::default()
+        },
+      ) {
         return Some(path);
       }
     }
@@ -947,7 +946,7 @@ pub fn load_font_map<'a>(encoding: &'a str, state: &'a State) -> Option<&'a Font
     None
   }
 }
-pub fn preload_font_map(encoding: &str, stomach: &mut Stomach, state: &mut State,) -> Result<()> {
+pub fn preload_font_map(encoding: &str, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   // This check is done as a "preload" step for mutability reasons.
   if state.lookup_value(&s!("{encoding}_fontmap")).is_some() {
     return Ok(());
@@ -956,9 +955,18 @@ pub fn preload_font_map(encoding: &str, stomach: &mut Stomach, state: &mut State
   let failed_flag = state.lookup_bool(&fail_key);
   if !failed_flag {
     state.assign_value(&fail_key, true, None); // Stop recursion?
-    input_definitions(&encoding.to_lowercase(), InputDefinitionOptions {
-      extension: Some("fontmap"), noerror: true, ..InputDefinitionOptions::default() }, stomach, state)?;
-    if let Some(map) = state.lookup_value(&s!("{encoding}_fontmap")) { // Got map?
+    input_definitions(
+      &encoding.to_lowercase(),
+      InputDefinitionOptions {
+        extension: Some("fontmap"),
+        noerror: true,
+        ..InputDefinitionOptions::default()
+      },
+      stomach,
+      state,
+    )?;
+    if let Some(map) = state.lookup_value(&s!("{encoding}_fontmap")) {
+      // Got map?
       state.assign_value(&fail_key, false, None);
     } else {
       state.assign_value(&fail_key, true, Some(Scope::Global));

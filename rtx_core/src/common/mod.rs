@@ -1,5 +1,6 @@
 #[macro_use]
 pub mod error;
+pub mod cleaners;
 pub mod def_parser;
 pub mod dimension;
 pub mod float;
@@ -16,7 +17,6 @@ pub mod object;
 pub mod relaxng;
 pub mod store;
 pub mod xml;
-pub mod cleaners;
 
 use crate::common::error::*;
 use crate::fmt;

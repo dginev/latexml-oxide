@@ -10,8 +10,8 @@ pub mod common;
 pub mod tokens;
 #[macro_use]
 pub mod binding;
-pub mod definition;
 pub mod comment;
+pub mod definition;
 pub mod document;
 pub mod gullet;
 pub mod keyval;
