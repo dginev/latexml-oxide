@@ -544,7 +544,11 @@ static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
 pub fn untex_digested(digested: &Digested, suppress_linebreak: bool, state: &mut State) -> Result<String> {
   untex(digested.revert(state)?, suppress_linebreak)
 }
+
+/// Recovers a string representation of what may likely have been the source TeX for a given Tokens collection
+/// (note that the LaTeXML linebreak feature is always *disabled* here.)
 pub fn untex(tokens: Tokens, _suppress_linebreak: bool) -> Result<String> {
+  let suppress_linebreak = true;
   use crate::token::Catcode::*;
   let mut tokens: VecDeque<Token> = tokens.unlist().into_iter().collect();
   let mut tex_string = String::new();
@@ -588,11 +592,11 @@ pub fn untex(tokens: Tokens, _suppress_linebreak: bool) -> Result<String> {
       // Insert a (virtual) space before a letter if previous token was a CS w/letters
       // This is required for letters, but just aesthetic for digits (to me?)
       // Of course, use a newline if we're already at end
-      let space = if (length > 0) && (length + l > UNTEX_LINELENGTH) { '\n' } else { ' ' };
+      let space = if !suppress_linebreak && (length > 0) && (length + l > UNTEX_LINELENGTH) { '\n' } else { ' ' };
       tex_string.push(space);
       tex_string.push_str(&token_string);
       length += 1 + l;
-    } else if (length > 0) && (length + l > UNTEX_LINELENGTH) && (tokens.len() > 1) {
+    } else if !suppress_linebreak && (length > 0) && (length + l > UNTEX_LINELENGTH) && (tokens.len() > 1) {
       // linebreak before this token?
       // and not at end! Or even within an arg!
       tex_string.push_str("%\n");
