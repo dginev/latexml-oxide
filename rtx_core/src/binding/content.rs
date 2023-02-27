@@ -191,7 +191,7 @@ fn _load_binding(internal: bool, request: &str, mut stomach: &mut Stomach, state
           state.assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
           match result {
             Ok(()) => Ok(true),
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
           }
         },
         None => Ok(false),

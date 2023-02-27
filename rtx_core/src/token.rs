@@ -784,7 +784,12 @@ impl<'a> Token {
       None => self,
     }
   }
-
+  pub fn without_dont_expand_ref(&self) -> &Token {
+    match &self.smuggled {
+      Some(t) => t,
+      None => self,
+    }
+  }
   ///======================================================================
   /// Note that this converts the string to a more `user readable' form using `standard' chars for
   /// catcodes. We'll need to be careful about using string instead of reverting for internal

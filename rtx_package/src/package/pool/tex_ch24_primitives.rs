@@ -151,7 +151,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\message{}", sub [stomach, (message), state] {
     if state.lookup_int("VERBOSITY") > -1 {
       eprintln!("{}", writable_tokens(
-        do_expand(message, stomach.get_gullet_mut(), state)?, state)?);
+        &do_expand(message, stomach.get_gullet_mut(), state)?, state)?);
     }
   });
 
