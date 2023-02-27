@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use crate::package::*;
 
 LoadDefinitions!(state, {
@@ -187,4 +188,14 @@ LoadDefinitions!(state, {
   // stack action → set | push | pop | current
 
   DefMacro!("\\pdfglyphtounicode{}{}", "");
+
+  DefMacro!("\\expanded Expanded", "#1");
+  DefMacro!("\\pdfstrcmp Expanded Expanded", sub[gullet, (first,second), state] {
+    match first.to_string().cmp(&second.to_string()) {
+     Ordering::Greater => Tokens!(T_OTHER!("1")),
+     Ordering::Equal => Tokens!(T_OTHER!("0")),
+     Ordering::Less => Tokens!(T_OTHER!("-"), T_OTHER!("1"))
+    }
+  });
+
 });
