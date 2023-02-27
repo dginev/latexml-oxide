@@ -9,7 +9,7 @@ use std::sync::{Arc, RwLock};
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
-use crate::common::font::{Font, Fontmap};
+use crate::common::font::{Font};
 use crate::common::glue::Glue;
 use crate::common::model::{IndirectModel, Model};
 use crate::common::muglue::MuGlue;
@@ -1710,36 +1710,6 @@ impl State {
       (Some(def1), Some(def2)) => def1 == def2, // If both have defns, must be same defn!
       _ => false,                               // False, if only one has 'meaning'
     }
-  }
-
-  pub fn load_font_map(&self, encoding: &str) -> Result<Option<&Fontmap>> {
-    // TODO:
-    // self.preload_font_map(encoding)?;
-    if let Some(map) = self.lookup_value(&s!("{encoding}_fontmap")) {
-      Ok(map.into())
-    } else {
-      Ok(None)
-    }
-  }
-  pub fn preload_font_map(&mut self, encoding: &str) -> Result<()> {
-    // This check is done as a "preload" step for mutability reasons.
-    // TODO
-    // if self.lookup_value(&s!("{encoding}_fontmap")).is_some() {
-    //   return Ok(());
-    // }
-    // let fail_key = s!("{encoding}_fontmap_failed_to_load");
-    // let failed_flag = self.lookup_bool(&fail_key);
-    // if !failed_flag {
-    //   self.assign_value(&fail_key, true, None); // Stop recursion?
-    //   input_definitions(encoding.to_lowercase(), InputDefinitionOptions {
-    //     extension: Some("fontmap"), noerror: true, ..InputDefinitionOptions::default() }, self)?;
-    //   if let Some(map) = self.lookup_value(&s!("{encoding}_fontmap")) { // Got map?
-    //     self.assign_value(&fail_key, false, None);
-    //   } else {
-    //     self.assign_value(&fail_key, true, Some(Scope::Global));
-    //   }
-    // }
-    Ok(())
   }
 
   /// Generate a stub definition for an undefined control-sequence,

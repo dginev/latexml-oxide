@@ -197,7 +197,7 @@ pub fn classify_box(boxnum: Number, state: &State) -> &'static str {
 const MATH_CLASS_ROLE: [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLOSE", "PUNCT", ""];
 // Is this "fontinfo" stuff sufficient to maintain a math font "family" ??
 // What we're really after is a connectio nto a font encoding mapping.
-pub fn decode_math_char(mut n: u16, state: &mut State) -> (Option<String>, Option<char>) {
+pub fn decode_math_char(mut n: u16, stomach: &mut Stomach, state: &mut State) -> (Option<String>, Option<char>) {
   let class: u16 = n / (16 * 256);
   n %= 16 * 256;
   let fam: u16 = n / 256;
@@ -222,7 +222,7 @@ pub fn decode_math_char(mut n: u16, state: &mut State) -> (Option<String>, Optio
   let role_opt = if role.is_empty() { None } else { Some(role.to_string()) };
   let font_opt = if let Some(Stored::Font(ref info)) = fontinfo {
     if let Some(ref data) = info.encoding {
-      font::decode(n as u8, Some(data.to_string()), false, state)
+      font::decode(n as u8, Some(data.to_string()), false, stomach, state)
     } else {
       Some(c)
     }

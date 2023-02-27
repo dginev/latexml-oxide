@@ -97,6 +97,7 @@ pub mod url_sty;
 pub mod verbatim_sty;
 pub mod t1enc_def;
 pub mod t1enc_sty;
+pub mod t1_fontmap;
 
 use rtx_core::state::State;
 use rtx_core::stomach::Stomach;
@@ -122,6 +123,7 @@ pub fn dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Opt
       "textcomp.sty" => textcomp_sty::load_definitions(stomach, state),
       "t1enc.sty" => t1enc_def::load_definitions(stomach, state),
       "t1enc.def" => t1enc_sty::load_definitions(stomach, state),
+      "t1.fontmap" => t1_fontmap::load_definitions(stomach, state),
       _other => {return None}
     }
   )

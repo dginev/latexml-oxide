@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::common::error::*;
-use crate::common::font::Font;
+use crate::common::font::{Fontmap,Font};
 use crate::common::object::Object;
 use crate::token::*;
 use crate::*;
@@ -163,8 +163,8 @@ pub fn load_external_binding(file: &str, mut stomach: &mut Stomach, state: &mut 
 }
 // in the spirit of Perl's Package::loadLTXML
 fn _load_binding(internal: bool, request: &str, mut stomach: &mut Stomach, state: &mut State) -> Result<bool> {
-  // avoid double-loads:
-  let loaded_key = s!("{request}_loaded");
+  // avoid double-loads, but be binding-specific
+  let loaded_key = s!("{request}_binding_loaded");
   if state.lookup_bool(&loaded_key) {
     return Ok(true);
   }
@@ -172,11 +172,11 @@ fn _load_binding(internal: bool, request: &str, mut stomach: &mut Stomach, state
   //|| state.lookup_bool(&s!("{name}_loaded")) || state.lookup_bool(&s!("{ltxname}_loaded"));
 
   let taken_dispatcher = if internal {
-    state.bindings_dispatch.take()
+    state.bindings_dispatch.as_ref().map(Arc::clone)
   } else {
-    state.extra_bindings_dispatch.take()
+    state.extra_bindings_dispatch.as_ref().map(Arc::clone)
   };
-  let is_found: bool = match taken_dispatcher {
+  match taken_dispatcher {
     Some(ref dispatcher) => {
       let result_opt = dispatcher(request, stomach, state);
       match result_opt {
@@ -187,23 +187,18 @@ fn _load_binding(internal: bool, request: &str, mut stomach: &mut Stomach, state
           // TODO: is this still true?
           // Note (only!) that the binding version of this was loaded; still could load raw tex!
           state.assign_value(&loaded_key, true, Some(Scope::Global));
+          // if a binding load succeeded, mark the generic request as loaded.
+          state.assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
           match result {
-            Ok(()) => true,
+            Ok(()) => Ok(true),
             Err(e) => return Err(e),
           }
         },
-        None => false,
+        None => Ok(false),
       }
     },
-    None => false,
-  };
-
-  if internal {
-    state.bindings_dispatch = taken_dispatcher;
-  } else {
-    state.extra_bindings_dispatch = taken_dispatcher;
+    None => Ok(false),
   }
-  Ok(is_found)
 }
 
 
@@ -349,7 +344,7 @@ fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, st
     // since someone's presumably asking _explicitly_ for the raw TeX version.
     // It's probably even the ltxml version is asking for it!!
     // Of course, now it will be marked and wont get reloaded!
-    if state.lookup_bool(&s!("{request}_loaded")) && !pathname::is_reloadable(&pathname) {
+    if state.lookup_bool(&s!("{request}_loaded")) && !pathname::is_reloadable(pathname) {
       return Ok(());
     }
     state.assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
@@ -943,4 +938,31 @@ pub fn convert_latex_args(mut nargs: usize, optional: Option<Tokens>, state: &mu
   } else {
     Ok(Some(Parameters::new(params)))
   }
+}
+
+pub fn load_font_map<'a>(encoding: &'a str, state: &'a State) -> Option<&'a Fontmap> {
+  if let Some(map) = state.lookup_value(&s!("{encoding}_fontmap")) {
+    map.into()
+  } else {
+    None
+  }
+}
+pub fn preload_font_map(encoding: &str, stomach: &mut Stomach, state: &mut State,) -> Result<()> {
+  // This check is done as a "preload" step for mutability reasons.
+  if state.lookup_value(&s!("{encoding}_fontmap")).is_some() {
+    return Ok(());
+  }
+  let fail_key = s!("{encoding}_fontmap_failed_to_load");
+  let failed_flag = state.lookup_bool(&fail_key);
+  if !failed_flag {
+    state.assign_value(&fail_key, true, None); // Stop recursion?
+    input_definitions(&encoding.to_lowercase(), InputDefinitionOptions {
+      extension: Some("fontmap"), noerror: true, ..InputDefinitionOptions::default() }, stomach, state)?;
+    if let Some(map) = state.lookup_value(&s!("{encoding}_fontmap")) { // Got map?
+      state.assign_value(&fail_key, false, None);
+    } else {
+      state.assign_value(&fail_key, true, Some(Scope::Global));
+    }
+  }
+  Ok(())
 }

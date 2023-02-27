@@ -49,12 +49,11 @@ LoadDefinitions!(outer_state, {
       let font : Option<Arc<Font>> = whatsit.get_font(state)?.map(|ft| Arc::new((*ft).to_owned()));
       let loc = whatsit.get_locator();
       let mut lines : Vec<String> = Vec::new();
-      let gullet = stomach.get_gullet_mut();
-      while let Some(line) = gullet.read_raw_line(state) {
+      while let Some(line) = stomach.get_gullet_mut().read_raw_line(state) {
         // The raw chars will still have to be decoded (but not space!!)
         let decoded_line : String = line.chars()
           .map(|c| if c == ' ' {" ".to_string() } else {
-             font::decode_string(&c.to_string(), Some("OT1_typewriter"), true, state) })
+             font::decode_string(&c.to_string(), Some("OT1_typewriter"), true, stomach, state) })
           .collect::<Vec<String>>().join("");
         if let Some(caps) = END_VERBATIM_RE.captures(&decoded_line) {
           let pre = s!("{}\n", caps.get(1).map_or("", |m| m.as_str()));
@@ -62,7 +61,7 @@ LoadDefinitions!(outer_state, {
           lines.push(pre);
           let mut post_tokens = Tokenize!(post).unlist();
           post_tokens.push(T_CR!());
-          gullet.unread(Tokens::new(post_tokens));
+          stomach.get_gullet_mut().unread(Tokens::new(post_tokens));
           break;
         } else {
           lines.push(s!("{}\n", line));

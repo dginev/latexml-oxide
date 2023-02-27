@@ -51,7 +51,7 @@ pub fn is_literaldata(data: &str) -> bool { data.starts_with(LITERAL_PROTOCOL) }
 
 /// check whether a pathname is reloadable as a TeX definition
 pub fn is_reloadable(pathname: &str) -> bool {
-  let (dir, name, ext) = split(&pathname);
+  let (dir, name, ext) = split(pathname);
   // babel.sty exception:
   // we know the same .ldf file may be reloaded with a different option,
   // to load an adjacently defined language, so allow that.

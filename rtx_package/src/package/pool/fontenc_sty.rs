@@ -127,7 +127,7 @@ LoadDefinitions!(outer_stomach, state, {
           DefMacro!(T_CS!("\\encodingdefault"), None, Tokens!(Explode!(encoding)), scope => Some(Scope::Global));
           let encfile = encoding.to_lowercase() + "enc";
           InputDefinitions!(&encfile, extension => Some("def"));
-          if LoadFontMap!(&encoding)?.is_some() {
+          if LoadFontMap!(&encoding).is_some() {
             MergeFont!(encoding => encoding.to_string());
           }
         } else {
