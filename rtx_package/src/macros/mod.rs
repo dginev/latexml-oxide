@@ -139,6 +139,7 @@ macro_rules! parameter_rust_type {
   (TeXFileName) => {Tokens};
   (DefPlain) => {Tokens};
   (DefExpanded) => {Tokens};
+  (Expanded) => {Token};
   (Plain) => {Tokens};
   (Optional) => {Option<Tokens>};
   (OptionalMatch) => {Option<Tokens>};

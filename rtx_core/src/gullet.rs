@@ -1288,7 +1288,7 @@ impl Gullet {
     while let Some(t) = self.read_x_token(None, false, state)? {
       let token_text = t.get_string();
       if token_text == "-" {
-        sign = true;
+        sign = !sign;
       } else if (token_text != "+") && t.get_catcode() != Catcode::SPACE {
         self.unread_one(t); // Unread and end
         break;
