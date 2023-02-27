@@ -367,7 +367,7 @@ impl<'t> Stomach {
         Ok(Some(Digested::from(comment)))
       },
       _ => {
-        let text = font::decode_string(meaning.get_string(), None, true, state);
+        let text = font::decode_string(meaning.get_string(), None, true, self, state);
         Ok(Some(Digested::from(Tbox::new(
           text,
           None,

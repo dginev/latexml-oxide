@@ -163,7 +163,7 @@ LoadDefinitions!(outer_state, {
   DefPrimitive!("\\@@@fontencoding{}", sub[stomach, (encoding), state] {
     let gullet = stomach.get_gullet_mut();
     let encoding = Expand!(encoding, gullet).to_string();
-    if LoadFontMap!(&encoding)?.is_some() {
+    if LoadFontMap!(&encoding).is_some() {
       MergeFont!(encoding => encoding);
     } else {
       Info!("missing_font_encoding", encoding, stomach, state, "Couldn't find font encoding, falling back to OT1");
@@ -446,11 +446,11 @@ LoadDefinitions!(outer_state, {
   DefPrimitive!("\\char Number", sub[stomach, args, p_state] {
     let token = args.remove(0);
     let number = token.clone().try_to_number()?;
-    let gullet = stomach.get_gullet_mut();
-    let decoded = match font::decode(number.value_of() as u8, None, false, p_state) {
+    let decoded = match font::decode(number.value_of() as u8, None, false, stomach, p_state) {
       None => String::new(),
       Some(c) => c.to_string()
     };
+    let gullet = stomach.get_gullet_mut();
     let invoked = Invocation!(T_CS!("\\char"), vec![token], gullet)?;
     Tbox::new(
      decoded,
@@ -468,8 +468,8 @@ LoadDefinitions!(outer_state, {
     let csname = newcs.get_cs_name().to_owned();
     let internalcs = T_CS!(s!("\\@chardef@{}", csname));
     DefPrimitive!(internalcs.clone(), None, sub[stomach,args,i_state] {
+      let decoded = font::decode(value.value_of() as u8, None, false, stomach, i_state).map(|c| c.to_string()).unwrap_or_default();
       let gullet = stomach.get_gullet_mut();
-      let decoded = font::decode(value.value_of() as u8, None, false, i_state).map(|c| c.to_string()).unwrap_or_default();
       Tbox::new(decoded,
         None,
         None,
@@ -490,7 +490,7 @@ LoadDefinitions!(outer_state, {
     sizer       => "#1",
     after_digest => sub[stomach,whatsit,state] {
       let n = whatsit.get_arg(1).unwrap().value_of();
-      let (role_opt, glyph_opt) = decode_math_char(n as u16, state);
+      let (role_opt, glyph_opt) = decode_math_char(n as u16, stomach, state);
       if let Some(glyph) = glyph_opt {
         whatsit.set_property("glyph", glyph);
         whatsit.set_property("font", state.lookup_font().unwrap().specialize(&glyph.to_string()));
@@ -508,7 +508,7 @@ LoadDefinitions!(outer_state, {
     let value  = stomach.get_gullet_mut().read_number(state).unwrap();
     let csname = newcs.get_cs_name().to_owned();
     // eprintln!(" ** {} + {}", value,csname);
-    let (role, glyph) = decode_math_char(value.value_of() as u16, state);
+    let (role, glyph) = decode_math_char(value.value_of() as u16, stomach, state);
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
     let internalcs_opt = glyph.map(|_| T_CS!(s!("\\@mathchardef@{}", csname)));
     if let Some(ref internalcs) = internalcs_opt {

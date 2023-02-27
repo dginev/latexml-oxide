@@ -1,6 +1,8 @@
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY};
 use crate::common::store::Stored;
+use crate::binding::content::{preload_font_map, load_font_map};
+use crate::stomach::Stomach;
 use crate::state::State;
 use crate::{BoxOps, Digested, DigestedData, Result};
 use lazy_static::lazy_static;
@@ -961,9 +963,10 @@ fn is_diff_f32(x: &Option<f32>, y: &Option<f32>) -> bool { x.is_some() && (y.is_
 /// so that if anything above 128 comes in, it must already be Unicode!.
 /// The lower half plane still needs to go through decoding, though, to deal
 /// with TeX's rearrangement of ASCII...
-pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, state: &mut State) -> Option<char> {
+pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, stomach: &mut Stomach, state: &mut State) -> Option<char> {
   let mut font = None;
   let encoding = match encoding_opt {
+    Some(enc) => enc,
     None => {
       font = state.lookup_font();
       if let Some(ref font) = font {
@@ -974,18 +977,18 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, state: &mu
       } else {
         String::new()
       }
-    },
-    Some(encoding) => encoding,
+    }
   };
 
   let mut map: Option<&Fontmap> = None;
   if !encoding.is_empty() {
-    if let Some(encmap) = state.load_font_map(&encoding).expect("loadFontMap should succeed?") {
+    preload_font_map(&encoding, stomach, state).expect("preloading a font map should succeed?");
+    if let Some(encmap) = load_font_map(&encoding, state) {
       // OK got some map.
       map = Some(encmap);
       if let Some(font) = font {
         if let Some(family) = (*font).get_family() {
-          if let Some(fmap) = state.lookup_value(&s!("{}_{}_fontmap", encoding, family)) {
+          if let Some(fmap) = state.lookup_value(&s!("{encoding}_{family}_fontmap")) {
             map = fmap.into(); // Use the family specific map, if any.
           }
         }
@@ -1016,7 +1019,7 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, state: &mu
   }
 }
 
-pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, state: &mut State) -> String {
+pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, stomach: &mut Stomach, state: &mut State) -> String {
   if string.is_empty() {
     return String::new();
   }
@@ -1035,7 +1038,8 @@ pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, s
 
   let mut map: Option<&Fontmap> = None;
   if !encoding.is_empty() {
-    if let Some(encmap) = state.load_font_map(encoding).expect("load_font_map should succeed?") {
+    preload_font_map(encoding, stomach, state).expect("preload_font_map should succeed?");
+    if let Some(encmap) = load_font_map(encoding,state) {
       // OK got some map.
       map = Some(encmap);
       if let Some(ref font) = font {
