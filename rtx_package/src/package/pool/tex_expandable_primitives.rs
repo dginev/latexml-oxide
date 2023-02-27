@@ -1,6 +1,8 @@
 use crate::package::*;
 lazy_static! {
   static ref LEAD_W_COLON_RE: Regex = Regex::new(r"^(\w+):").unwrap();
+  static ref UNTIL_SPEC : Regex = Regex::new("^\\w?Until(\\w*):").unwrap();
+  static ref EXCEPTION_MACRO_NAMES_FOR_MEANING : Regex = Regex::new("^\\\\(?:(?:un)?expanded|detokenize)$").unwrap();
 }
 //=======================
 // -- Main Definitions --
@@ -120,6 +122,8 @@ LoadDefinitions!(outer_state, {
         Stored::Constructor(constructor) => Stored::Token(constructor.get_cs_or_alias().into_owned()),
         other => other
       };
+      // TODO: Also check for fontinfo_ when implemented
+
       // Now that we've tried to obtain an expandable definition, do the TeX dance:
       match definition {
         Stored::Token(t) => {
@@ -153,23 +157,60 @@ LoadDefinitions!(outer_state, {
             String::new()
           };
           // Should we be more careful to distinguish between latex and tex counters?
-          meaning = s!("{}{}",prefix, literal_value);
+          meaning = format!("{prefix}{literal_value}");
         },
         Stored::Expandable(expandable) => {
-          let (params,argcount) = if let Some(ltxps) = expandable.get_parameters() {
-            (ltxps.get_parameters(), ltxps.get_num_args())
-          } else {
-            (Vec::new(), 0)
-          };
-          let specparts : Vec<Cow<str>> = params.iter().map(|param| LEAD_W_COLON_RE.replace(&param.spec,"") ).collect();
-          let mut spec = String::new();
-          for (index, part) in specparts.iter().take(argcount).enumerate() {
-            spec.push_str(part);
-            spec.push('#');
-            spec.push_str(&(index+1).to_string());
-            spec = spec.replace("{}","");
-            spec = spec.replace("Token","");
+          // short-circuit some troublesome discrepancies with TeX, which end up macros on LaTeXML's end, but \meaning expects as primitives in the CTAN ecosystem.
+          let cs = expandable.get_cs_or_alias().to_string();
+          // These exceptions could be extended further, as we add more .sty/.cls support
+          if EXCEPTION_MACRO_NAMES_FOR_MEANING.is_match(&cs) {
+            return Ok(Tokens::new(Explode!(cs)));
           }
+          let params = match expandable.get_parameters() {
+            Some(ps) => ps.get_parameters(),
+            None => Vec::new()
+          };
+          let mut spec_parts : Vec<Cow<str>> = Vec::new();
+          let mut p_trailer = "";
+          // params.iter().map(|param| LEAD_W_COLON_RE.replace(&param.spec,"") ).collect();
+          let mut arg_index = 0;
+          for param in params.iter() {
+            let mut p_spec = Cow::Borrowed("");
+            match &*param.spec {
+              "RequireBrace" => {
+                // tex's \meaning prints out the required braces for "\def\a#{}" variants
+                p_trailer = "{";
+                p_spec    = Cow::Borrowed("{");
+              },
+              "UntilBrace" => {
+                p_trailer = "{";
+                arg_index+=1;
+                p_spec = Cow::Owned(format!("#{arg_index}{p_spec}"));
+              }
+              other if other.starts_with("Match:") => {
+                // just match, don't increment arg index
+                p_spec = LEAD_W_COLON_RE.replace(other,"");
+              },
+              other if UNTIL_SPEC.is_match(other) => {
+                // implied argument at this slot
+                p_spec = LEAD_W_COLON_RE.replace(other,"");
+                arg_index +=1 ;
+                p_spec = Cow::Owned(s!("#{arg_index}{p_spec}"));
+              },
+              other => { // regular parameter, increment
+                if param.novalue { // skip the latexml-only requirement params, but only here, since Match also have "novalue" set.
+                  continue;
+                }
+                arg_index+=1;
+                p_spec = Cow::Owned(s!("#{arg_index}"));
+              }
+            }
+            spec_parts.push(p_spec);
+          }
+          let mut spec : String = spec_parts.join("");
+          spec = spec.replace("{}","");
+          spec = spec.replace("Token","");
+
           let mut prefixes = String::new();
           if expandable.is_protected {
             prefixes.push_str("\\protected");
@@ -185,9 +226,10 @@ LoadDefinitions!(outer_state, {
           }
           let expansion = match expandable.get_expansion() {
             None => String::new(),
-            Some(exp) => exp.to_string()
+            Some(ExpansionBody::Closure(exp)) => String::from("<closure>"),
+            Some(ExpansionBody::Tokens(tks)) => writable_tokens(tks, state)?
           };
-          meaning = s!("{}macro:{}->{}",prefixes, spec, expansion);
+          meaning = format!("{prefixes}macro:{spec}->{expansion}{p_trailer}");
         },
         e => { // are there other cases that could occur here? should we handle them?
           panic!("this may be a missing case in \\meaning's implementation: {e}");

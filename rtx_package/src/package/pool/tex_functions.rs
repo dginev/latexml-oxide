@@ -603,15 +603,15 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
 /// Converts $tokens to a string in the fashion of \message and others:
 /// doubles #, converts to string; optionally adds spaces after control sequences
 /// in the spirit of the B Book, "show_token_list" routine, in 292.
-pub fn writable_tokens(tokens: Tokens, state: &mut State) -> Result<String> {
+pub fn writable_tokens(tokens: &Tokens, state: &mut State) -> Result<String> {
   // unwrap a \noexpand-created \relax to its actual content,
   // to avoid confusing users with a \relax dontexpand
   let mut wv = Vec::new();
-  for t in tokens.unlist().into_iter() {
-    let t = t.without_dont_expand();
+  for t in tokens.unlist_ref().iter() {
+    let t = t.without_dont_expand_ref();
     match t.code {
       Catcode::CS => {
-        wv.push(t);
+        wv.push(t.clone());
         wv.push(T_SPACE!());
       },
       Catcode::SPACE => {
@@ -619,7 +619,7 @@ pub fn writable_tokens(tokens: Tokens, state: &mut State) -> Result<String> {
       },
       Catcode::PARAM => {
         wv.push(t.clone());
-        wv.push(t);
+        wv.push(t.clone());
       },
       Catcode::ARG => {
         // B Book, 294. Reduce to param+integer
@@ -627,7 +627,7 @@ pub fn writable_tokens(tokens: Tokens, state: &mut State) -> Result<String> {
         wv.push(T_OTHER!(t.get_string()));
       },
       _ => {
-        wv.push(t);
+        wv.push(t.clone());
       },
     }
   }

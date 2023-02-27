@@ -127,8 +127,9 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node
     include_comments: Some(false),
     ..CoreOptions::default()
   });
+  latexml.get_state_mut().bindings_dispatch = Some(Arc::new(pool::dispatch));
   let xml_result = latexml.convert_file(format!("literal:\\[ {tex} \\]"));
-  assert!(xml_result.is_ok());
+  assert!(xml_result.is_ok(), "{:?}", xml_result.err());
   let doc = xml_result.unwrap();
 
   // grab the first formula

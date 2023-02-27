@@ -17,7 +17,7 @@ LoadDefinitions!(outer_state, {
 
   // \detokenize
   DefMacro!("\\detokenize GeneralText", sub [gullet, (text), state] {
-    Explode!(writable_tokens(text, state)?)
+    Explode!(writable_tokens(&text, state)?)
   });
 
   // When building an expanded token list, the tokens resulting from the expansion
