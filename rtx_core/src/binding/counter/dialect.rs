@@ -1,19 +1,19 @@
 use std::borrow::Cow;
-use std::collections::{VecDeque,HashMap};
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
-use crate::common::error::*;
-use crate::common::number::Number;
-use crate::common::numeric_ops::NumericOps;
 use crate::binding::content::{build_invocation, digest_if, digest_literal, digest_text};
 use crate::binding::def::dialect::{def_macro, def_register, is_defined};
 use crate::common::cleaners::{clean_id, clean_label, roman_aux};
+use crate::common::error::*;
+use crate::common::number::Number;
+use crate::common::numeric_ops::NumericOps;
 use crate::definition::expandable::ExpandableOptions;
 use crate::definition::ExpansionBody;
 use crate::gullet::Gullet;
+use crate::mouth;
 use crate::state::{Scope, State, Stored};
 use crate::stomach::Stomach;
-use crate::mouth;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
@@ -552,7 +552,8 @@ pub fn begin_itemize(
     "\\itemsep",
     state.lookup_dimension("\\lx@default@itemsep").unwrap_or_default().into(),
     Vec::new(),
-    state);
+    state
+  );
   state.assign_value("itemization_level", listlevel, None);
   state.assign_value(&s!("{}level", counter), level, None);
   state.assign_value("itemization_items", 0, None);

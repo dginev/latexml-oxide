@@ -258,7 +258,7 @@ macro_rules! DeclareFontMap {
 #[macro_export]
 macro_rules! LoadFontMap {
   ($encoding: expr) => {{
-    bind_state_mut!(stomach,state);
+    bind_state_mut!(stomach, state);
     preload_font_map($encoding, stomach, state).expect("preloading font map should succeed.");
     load_font_map($encoding, state)
   }};

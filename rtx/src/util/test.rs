@@ -10,8 +10,8 @@ use rtx_core::common::BindingDispatcher;
 use rtx_core::document::Document;
 use rtx_core::state::State;
 use rtx_core::{s, Core, CoreOptions};
-use rtx_package::pool;
 use rtx_math_parser::node_to_grammar_lexemes;
+use rtx_package::pool;
 
 #[allow(clippy::implicit_hasher)]
 pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>, dispatcher_opt: Option<BindingDispatcher>) {

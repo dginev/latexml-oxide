@@ -6,16 +6,16 @@ use std::fmt::{self, Display};
 use std::hash::Hash;
 use std::sync::{Arc, RwLock};
 
-pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
-use crate::common::font::{Font};
+use crate::common::font::Font;
 use crate::common::glue::Glue;
 use crate::common::model::{IndirectModel, Model};
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
+pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{ConditionalType, IfFrame};

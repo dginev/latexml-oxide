@@ -236,14 +236,9 @@ macro_rules! after_digest_single {
 #[macro_export]
 macro_rules! after_digest_simple {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
-    Arc::new(
-      move |$stomach: &mut Stomach, $whatsit: &mut Whatsit, $state: &mut State| -> Result<Vec<Digested>> {
-        $body.into_digested_result()
-      },
-    )
+    Arc::new(move |$stomach: &mut Stomach, $whatsit: &mut Whatsit, $state: &mut State| -> Result<Vec<Digested>> { $body.into_digested_result() })
   };
 }
-
 
 #[macro_export]
 macro_rules! reader {

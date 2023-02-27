@@ -1,9 +1,9 @@
+use crate::binding::content::{load_font_map, preload_font_map};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY};
 use crate::common::store::Stored;
-use crate::binding::content::{preload_font_map, load_font_map};
-use crate::stomach::Stomach;
 use crate::state::State;
+use crate::stomach::Stomach;
 use crate::{BoxOps, Digested, DigestedData, Result};
 use lazy_static::lazy_static;
 /// Note that this has evolved way beynond just "font",
@@ -977,7 +977,7 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, stomach: &
       } else {
         String::new()
       }
-    }
+    },
   };
 
   let mut map: Option<&Fontmap> = None;
@@ -1039,7 +1039,7 @@ pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, s
   let mut map: Option<&Fontmap> = None;
   if !encoding.is_empty() {
     preload_font_map(encoding, stomach, state).expect("preload_font_map should succeed?");
-    if let Some(encmap) = load_font_map(encoding,state) {
+    if let Some(encmap) = load_font_map(encoding, state) {
       // OK got some map.
       map = Some(encmap);
       if let Some(ref font) = font {

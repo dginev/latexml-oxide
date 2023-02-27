@@ -1,10 +1,8 @@
 ///! A variety of traits helpful for auto-casting between the different components of the conversion toolchain
-
 use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
-use crate::*;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
@@ -23,6 +21,7 @@ use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
+use crate::*;
 use crate::{BoxOps, Digested};
 
 pub trait IntoOption<T>: Sized {
