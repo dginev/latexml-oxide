@@ -421,7 +421,7 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node, state: &mut State) 
       document.add_class(&mut text, "ltx_markedasmath")?; // Now record that it originally was marked as math
       texts.push(text)
     }
-    document.replace_node(mathnode, texts)?; // and replace the whole Math with the pieces
+    document.replace_node(mathnode.clone(), texts)?; // and replace the whole Math with the pieces
   } else {
     // Cleanup any remaining XMTexts
     cleanup_xmtext_outer(document, &mathnode, state)?;

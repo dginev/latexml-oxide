@@ -995,21 +995,21 @@ impl Document {
     Ok(self.node.clone())
   }
 
-  /// **********************************************************************
-  /// Middle level, mostly public, API.
-  /// Handlers for various construction operations.
-  /// General naming: 'open' opens a node at current pos and sets it to current,
-  /// 'close' closes current node(s), inserts opens & closes, ie. w/o moving
-  /// current
+  // **********************************************************************
+  // Middle level, mostly public, API.
+  // Handlers for various construction operations.
+  // General naming: 'open' opens a node at current pos and sets it to current,
+  // 'close' closes current node(s), inserts opens & closes, ie. w/o moving
+  // current
 
-  /// Tricky: Insert some text in a particular font.
-  /// We need to find the current effective -- being the closest  _declared_ font,
-  /// (ie. it will appear in the elements attributes).  We may also want
-  /// to open/close some elements in such a way as to minimize the font switchiness.
-  /// I guess we should only open/close "text" elements, though.
-  /// [Actually, we'd like the user to _declare_ what element to use....
-  ///  I don't like having "text" built in here!
-  ///  AND, we've assumed that "font" names the relevant attribute!!!]
+  // Tricky: Insert some text in a particular font.
+  // We need to find the current effective -- being the closest  _declared_ font,
+  // (ie. it will appear in the elements attributes).  We may also want
+  // to open/close some elements in such a way as to minimize the font switchiness.
+  // I guess we should only open/close "text" elements, though.
+  // [Actually, we'd like the user to _declare_ what element to use....
+  //  I don't like having "text" built in here!
+  //  AND, we've assumed that "font" names the relevant attribute!!!]
 
   pub fn open_text(&mut self, text: &str, font: &Font, state: &mut State) -> Result<Option<&Node>> {
     let node_type = self.node.get_type();
@@ -1021,12 +1021,20 @@ impl Document {
         return Ok(None);
       }
     }
-    match &font.family {
-      Some(fam) if fam == "nullfont" => return Ok(None),
-      _ => (),
+    if matches!(&font.family.as_deref(), Some("nullfont")) {
+      return Ok(None);
     };
     Debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
-    // If not at document begin And not appending text in same font.
+
+    // Get the desired font attributes, particularly the desired element
+    // (usually ltx:text, but let Font override, eg for \emph)
+    let declared_font       = self.get_node_font(&self.node);
+    let pending_declaration = font.relative_to(declared_font);
+    let elementname         = match pending_declaration.get("element") {
+      Some((k,v)) => k,
+      None => FONT_ELEMENT_NAME
+    };
+    // If not at document begin. And not appending text in same font.
     if node_type != Some(NodeType::DocumentNode)
       && !(node_type == Some(NodeType::TextNode) && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
     {
@@ -1046,7 +1054,7 @@ impl Document {
             break;
           }
         }
-        if state.model.get_node_qname(&n) != FONT_ELEMENT_NAME || n.has_attribute("_noautoclose") {
+        if state.model.get_node_qname(&n) != elementname || n.has_attribute("_noautoclose") {
           break;
         }
         match n.get_parent() {
@@ -1060,8 +1068,8 @@ impl Document {
         self.close_to_node(&closeto, false, state)?;
       }
       if bestdiff > 0 {
-        self.open_element(FONT_ELEMENT_NAME, Some(string_map!("_fontswitch" => "true")), Some(font), state)?;
         // Open if needed.
+        self.open_element(elementname, Some(string_map!("_fontswitch" => "true", "_autoopened" => "true")), Some(font), state)?;
       }
     }
 
@@ -1218,17 +1226,35 @@ impl Document {
   }
 
   pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Result<()> {
+    if text.is_empty() {
+      return Ok(())
+    }
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
       Debug!("Appending text {:?} to {:?}", text, self.document.node_to_string(&self.node));
+
+      let parent = self.node.get_parent().unwrap();
+      if self.box_to_absorb.is_some() && parent.get_attribute("_autoopened").is_some() {
+        // TODO:
+        // self.append_text_box(parent, self.box_to_absorb);
+        unimplemented!();
+      }
       self.node.append_text(text)?;
     } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", None, state)?;
-      let mut node = Node::new_text(text, &self.document).unwrap();
       Debug!("Inserting text node for {:?} into {:?}", text, self.document.node_to_string(&point));
+      let mut node = Node::new_text(text, &self.document)?;
       point.add_child(&mut node)?;
-      self.set_node(&node);
+      if node.get_type().is_none() {
+        // Extremely important note! the Rust wrapper `add_child` follows `xmlAddChild` strictly,
+        // so in a case where adjacent text nodes are added, libxml will **MERGE** them leading to
+        // `node`'s underlying pointer disappearing.
+        // Thus - we check if the node is gone - and use its parent instead if so.
+        self.set_node(&point);
+      } else {
+        self.set_node(&node);
+      }
     }
     Ok(())
   }
