@@ -90,7 +90,7 @@ impl Whatsit {
   pub fn set_args(&mut self, args: Vec<Option<Digested>>) { self.args = args; }
   pub fn get_trailer(&self) -> Option<Digested> {
     match self.properties.get("trailer") {
-      Some(Stored::Digested(triler)) => Some(*triler.clone()),
+      Some(Stored::Digested(trailer)) => Some(trailer.clone()),
       _ => None,
     }
   }
@@ -138,7 +138,7 @@ impl Whatsit {
           args[n].clone()
         } else {
           match props.get(s) {
-            Some(Stored::Digested(v)) => Some((**v).clone()),
+            Some(Stored::Digested(v)) => Some((*v).clone()),
             Some(other) => panic!("unexpected prop in substitute_parameters, needed Digested, got: {other:?}"),
             None => None,
           }
@@ -282,7 +282,7 @@ impl BoxOps for Whatsit {
   fn get_property_bool(&self, key: &str) -> bool { matches!(self.properties.get(key), Some(Stored::Bool(true))) }
   fn get_body(&self) -> Option<Digested> {
     match self.properties.get("body") {
-      Some(Stored::Digested(body)) => Some(*body.clone()),
+      Some(Stored::Digested(body)) => Some(body.clone()),
       _ => None,
     }
   }
@@ -309,7 +309,7 @@ impl BoxOps for Whatsit {
       let mut boxes = Vec::new();
       if let Some(mut body_stored) = self.get_property("body") {
         if let Stored::Digested(ref body) = *body_stored {
-          boxes.push((**body).clone());
+          boxes.push((*body).clone());
         }
       }
       if boxes.is_empty() {

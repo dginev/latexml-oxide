@@ -95,7 +95,7 @@ pub enum Stored {
   MathPrimitive(Arc<MathPrimitive>),
   /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   Constructor(Arc<Constructor>),
-  Digested(Box<crate::Digested>), // todo: should this be an Arc<> to make it shareable?
+  Digested(crate::Digested),
   Parameter(Arc<Parameter>),
   Font(Arc<Font>),
   FontDirective(FontDirective),
@@ -305,7 +305,7 @@ impl PartialEq for Stored {
       },
       Digested(ref d) => {
         if let Digested(d2) = other {
-          **d == **d2
+          *d == *d2
         } else {
           false
         }
@@ -591,11 +591,11 @@ impl From<List> for Stored {
 }
 
 impl From<crate::Digested> for Stored {
-  fn from(value: crate::Digested) -> Self { Box::new(value).into() }
+  fn from(value: crate::Digested) -> Self { crate::Stored::Digested(value) }
 }
 
 impl From<Box<crate::Digested>> for Stored {
-  fn from(value: Box<crate::Digested>) -> Self { Stored::Digested(value) }
+  fn from(value: Box<crate::Digested>) -> Self { Stored::Digested(*value) }
 }
 
 impl From<Parameter> for Stored {
@@ -855,7 +855,7 @@ impl<'a> From<&'a Stored> for Option<RegisterValue> {
 impl From<Stored> for Option<crate::Digested> {
   fn from(value: Stored) -> Option<crate::Digested> {
     match value {
-      Stored::Digested(digested) => Some(*digested),
+      Stored::Digested(digested) => Some(digested),
       Stored::String(text) => Some(text.into()),
       Stored::Int(text) => Some(text.to_string().into()),
       _ => None,
@@ -866,7 +866,7 @@ impl From<Stored> for Option<crate::Digested> {
 impl<'a> From<&'a Stored> for Option<crate::Digested> {
   fn from(value: &'a Stored) -> Option<crate::Digested> {
     match value {
-      Stored::Digested(digested) => Some((**digested).clone()),
+      Stored::Digested(digested) => Some((*digested).clone()),
       Stored::String(text) => Some(text.into()),
       Stored::Int(text) => Some(text.to_string().into()),
       _ => None,

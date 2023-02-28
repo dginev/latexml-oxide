@@ -606,22 +606,18 @@ impl<'t> Stomach {
         mathstyle: if isdisplay { Some("display".into()) } else { Some("text".into()) },
         ..Font::default()
       });
-      state.assign_value("font", new_font, Some(Scope::Local));
+      state.assign_font(Arc::new(new_font), Some(Scope::Local));
     } else {
       // When entering text mode, we should set the font to the text font in use before the math
       // but inherit color and size
-      let new_font = if let Some(Stored::Font(saved_font)) = state.lookup_value("savedfont") {
-        Some(saved_font.merge(Font {
-          color: curfont.color.clone(),
-          bg: curfont.bg.clone(),
-          size: curfont.size,
-          ..Font::default()
-        }))
-      } else {
-        None
-      };
-      if let Some(nf) = new_font {
-        state.assign_value("font", nf, Some(Scope::Local));
+      if let Some(Stored::Font(saved_font)) = state.lookup_value("savedfont") {
+        state.assign_font(Arc::new(
+          saved_font.merge(Font {
+            color: curfont.color.clone(),
+            bg: curfont.bg.clone(),
+            size: curfont.size,
+            ..Font::default()
+          })), Some(Scope::Local));
       }
     }
     Ok(())

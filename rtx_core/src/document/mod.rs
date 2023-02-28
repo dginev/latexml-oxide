@@ -60,7 +60,7 @@ pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
   pub node: Node,
-  pub node_boxes: HashMap<usize, Arc<Digested>>, // used to be _box attribute
+  pub node_boxes: HashMap<usize, Digested>, // used to be _box attribute
   pub node_fonts: HashMap<u64, Font>,            // used to be _font attribute
   pub constructed_nodes: Vec<Node>,
   pub idstore: HashMap<String, Node>,
@@ -960,8 +960,7 @@ impl Document {
       self.set_node_font(&mut node, &font)?;
       if let Some(ref digested) = self.box_to_absorb {
         // TODO: The Rc<Digested> node boxes still have some way to go until they are fully ergonomic...
-        let node_box = Arc::new(digested.clone());
-        self.set_node_box(&node, node_box);
+        self.set_node_box(&node, digested.clone());
       }
       if !text.is_empty() {
         self.open_math_text_internal(text, state)?;
@@ -1237,7 +1236,7 @@ impl Document {
       if self.box_to_absorb.is_some() && parent.get_attribute("_autoopened").is_some() {
         // TODO:
         // self.append_text_box(parent, self.box_to_absorb);
-        unimplemented!();
+        // unimplemented!();
       }
       self.node.append_text(text)?;
     } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
@@ -1258,6 +1257,22 @@ impl Document {
     }
     Ok(())
   }
+
+  // /// Since xml text nodes don't have attributes to record the origining box,
+  // /// we need to manage the accumulation of autoOpen'ed boxes
+  // /// Indeed, propogate it to ancestors if they were autoOpened for same cause (box)
+  // fn append_text_box(&mut self, node: &Node, thisbox: &Digested, state: &State) {
+  //   let origbox = self.get_node_box(node);
+  //   if origbox.is_some() && thisbox != &**origbox.as_ref().unwrap() { // if not already the same box
+  //     let newbox = List::new(vec![origbox, thisbox], state);
+  //     self.set_node_box(node, newbox);
+  //     let p = node;
+  //     // AND, propogate change to autoOpen'd ancestors based on same initial box
+  //     while (($p = $p->parentNode) && ($p->nodeType == XML_ELEMENT_NODE)
+  //       && $p->getAttribute('_autoopened')
+  //       && (($self->getNodeBox($p) || '') eq $origbox)) {
+  //       $self->setNodeBox($p, $newbox); } }
+  //   return; }
 
   // Question: Why do I have math ligatures handled within openMathText_internal,
   // but text ligatures handled within closeText_internal ???
@@ -1327,9 +1342,9 @@ impl Document {
       // have the old ones.  Unless we could recursively replace all of them, we'd better skip it(??)
       if boxes.len() > 1 {
         // TODO: Cloning boxes is BAD. What is a better model?
-        let mut list = List::new(boxes.into_iter().map(|b| (*b).clone()).collect::<Vec<_>>(), state);
+        let mut list = List::new(boxes.into_iter().collect::<Vec<_>>(), state);
         list.mode = Some(TexMode::Math);
-        self.set_node_box(node, Arc::new(list.into()));
+        self.set_node_box(node, list.into());
       }
       for (key, value_opt) in attr.sorted_each() {
         if let Some(value) = value_opt {
@@ -1959,12 +1974,12 @@ impl Document {
 
   //**********************************************************************
   /// Record the Box that created this node.
-  pub fn set_node_box(&mut self, node: &Node, digested: Arc<Digested>) {
+  pub fn set_node_box(&mut self, node: &Node, digested: Digested) {
     let nodeid = node.to_hashable();
     self.node_boxes.insert(nodeid, digested);
   }
 
-  pub fn get_node_box(&self, node: &Node) -> Option<Arc<Digested>> {
+  pub fn get_node_box(&self, node: &Node) -> Option<Digested> {
     if node.get_type() == Some(NodeType::ElementNode) {
       let nodeid = node.to_hashable();
       self.node_boxes.get(&nodeid).cloned()
@@ -2219,8 +2234,7 @@ impl Document {
     // objects - tokens, boxes, etc. and a well-designed referncing scheme into
     // the driver structs, such as Gullet, Stomach and Document
     if let Some(ref digested) = self.box_to_absorb {
-      let node_box = Arc::new(digested.clone());
-      self.set_node_box(&newnode, node_box);
+      self.set_node_box(&newnode, digested.clone());
     }
 
     Debug!(

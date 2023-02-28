@@ -314,7 +314,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   state.activate_scope(&scope);
 
   Ok(map!(
-    "tags" => Stored::Digested(Box::new(tags)),
+    "tags" => Stored::Digested(tags),
     "id" => Stored::String(id)
   ))
 }

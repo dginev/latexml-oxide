@@ -333,7 +333,7 @@ macro_rules! prop_digested {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
       Some(Stored::VecDigested(ref vd)) => vd.iter().collect::<Vec<&Digested>>(),
-      Some(Stored::Digested(d)) => vec![&(**d)],
+      Some(Stored::Digested(d)) => vec![&*d],
       Some(Stored::String(s)) => panic!("prop_digested! called on a string property {:?} with value {:?}.", $key, s),
       None => Vec::new(),
       other => {

@@ -26,7 +26,7 @@ LoadDefinitions!(state, {
       stomach.invoke_token(&xtoken, state)?
     } else { Vec::new() };
     let stuff = if !rest.is_empty() {
-      Stored::Digested(Box::new(rest.remove(0)))
+      Stored::Digested(rest.remove(0))
     } else {
       Stored::None
     };
@@ -37,7 +37,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\box Number", sub[gullet, (number), state] {
     let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = state.remove_value(&box_key) {
-      Ok(vec![*stuff])
+      Ok(vec![stuff])
     } else {
       Ok(Vec::new())
     }
@@ -46,7 +46,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\copy Number", sub[stomach, (number), state] {
     let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = state.lookup_value(&box_key) {
-      let cloned_stuff : Digested = (**stuff).clone();
+      let cloned_stuff : Digested = (*stuff).clone();
       Ok(vec![cloned_stuff])
     } else {
       Ok(Vec::new())

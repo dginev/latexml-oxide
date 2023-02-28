@@ -91,7 +91,7 @@ fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut Stat
       stomach.get_gullet_mut(),
       state,
     )?;
-    let stored_tags_update = Stored::Digested(Box::new(stomach.digest(invoked_tags, state)?));
+    let stored_tags_update = Stored::Digested(stomach.digest(invoked_tags, state)?);
     if let Some(Stored::HashStored(ref mut tags)) = state.lookup_value_mut("EQUATIONROW_TAGS") {
       // TODO: Invocation!() feels really awkward to use, should we reinvent it?
       // especially the magical `.into()` that it does behind the scenes is concerning.
@@ -124,23 +124,32 @@ LoadDefinitions!(state, {
   DefMacro!("\\fnum@equation", "\\@eqnnum");
 
   // Redefined from TeX.pool, since with LaTeX we presumably have a more complete numbering system
-  // TODO:
-  // DefConstructor("\\@@BEGINDISPLAYMATH",
-  //   "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
-  //   alias        => "$$",
-  //   before_digest => sub[stomach, state] {
-  //     stomach.begin_mode("display_math");
-  //     if let Some(Stored::Register(everymath_reg)) = state.lookup_definition(T_CS!("\\everymath")) {
-  //       let everymath_toks = everymath_reg.value_of().unlist();
-  //       stomach.get_gullet_mut.unread(everymath_toks);
-  //     }
-  //     if let Some(everydisplay_reg) = state.lookup_definition(T_CS!("\\everydisplay")) {
-  //       let everydisplay_toks = everydisplay_reg.value_of().unlist();
-  //       stomach.get_gullet_mut().unread(everydisplay_toks);
-  //     }
-  //     return; },
-  //   properties   => sub[stomach, args, state] { ref_step_id("equation", stomach, state) },
-  //   capture_body => true);
+  DefConstructor!("\\@@BEGINDISPLAYMATH", r###"
+  <ltx:equation xml:id='#id'>
+    <ltx:Math mode='display'>
+    <ltx:XMath>
+    #body
+    </ltx:XMath>
+    </ltx:Math>
+    </ltx:equation>"###,
+  alias        => "$$",
+  before_digest => sub[stomach, state] {
+    stomach.begin_mode("display_math", state)?;
+    if let Some(RegisterValue::Tokens(everymath_toks)) = state.lookup_register("\\everymath", Vec::new()) {
+      let everymath_toks = everymath_toks.unlist();
+      if !everymath_toks.is_empty() {
+        stomach.get_gullet_mut().unread(Tokens::new(everymath_toks));
+      }
+    }
+    if let Some(RegisterValue::Tokens(everydisplay_toks)) = state.lookup_register("\\everydisplay", Vec::new()) {
+      let everydisplay_toks = everydisplay_toks.unlist();
+      if !everydisplay_toks.is_empty() {
+        stomach.get_gullet_mut().unread(Tokens::new(everydisplay_toks));
+      }
+    }
+  },
+  properties  => sub[stomach,args,state] { ref_step_id("equation", stomach, state) },
+  capture_body => true);
 
   DefEnvironment!("{displaymath}",
   "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
