@@ -56,7 +56,7 @@ LoadDefinitions!(state, {
   // Let this be the default, conventional $
   Let!(&T_CS!("\\@dollar@in@normalmode"), T_MATH!());
 
-  // Effectively these are the math hooks, redefine these to do what you want with math?
+  // Effectively these are the math hooks
   DefConstructor!("\\@@BEGINDISPLAYMATH",
   "<ltx:equation>
     <ltx:Math mode=\"display\">
@@ -65,24 +65,33 @@ LoadDefinitions!(state, {
     </ltx:XMath>
     </ltx:Math>
   </ltx:equation>",
-    alias         => "$$",
+    reversion         => Tokens!(T_MATH!(),T_MATH!()),
     before_digest => sub[stomach, state] { stomach.begin_mode("display_math", state)?; },
     capture_body  => true
   );
 
-  DefConstructor!(T_CS!("\\@@ENDDISPLAYMATH"), None, None, alias => "$$",
+  DefConstructor!(T_CS!("\\@@ENDDISPLAYMATH"), None, None,
+    reversion => Tokens!(T_MATH!(),T_MATH!()),
     before_digest => sub[stomach, state] { stomach.end_mode("display_math", state)?; });
 
   DefConstructor!("\\@@BEGININLINEMATH",
     "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
-    alias => "$",
+    reversion    => Tokens!(T_MATH!()),
     before_digest => sub[stomach, state] {
       stomach.begin_mode("inline_math", state)?;
+      if let Some(RegisterValue::Tokens(everymath_toks)) = state.lookup_register("\\everymath", Vec::new()) {
+        let everymath_toks = everymath_toks.unlist();
+        if !everymath_toks.is_empty() {
+          stomach.get_gullet_mut().unread(Tokens::new(everymath_toks));
+        }
+      }
     },
     capture_body => true);
 
-  DefConstructor!(T_CS!("\\@@ENDINLINEMATH"), None, None, alias => "$",
-    before_digest => sub[stomach, state] { stomach.end_mode("inline_math", state)?; });
+  DefConstructor!(T_CS!("\\@@ENDINLINEMATH"), None, None,
+    before_digest => sub[stomach, state] { stomach.end_mode("inline_math", state)?; },
+    reversion    => Tokens!(T_MATH!())
+  );
 
   // Same as add_TeX, but add the code from the body of the object.
   Tag!("ltx:Math", after_close => sub[document, node, state] {
