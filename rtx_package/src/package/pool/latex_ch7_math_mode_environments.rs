@@ -124,14 +124,11 @@ LoadDefinitions!(state, {
   DefMacro!("\\fnum@equation", "\\@eqnnum");
 
   // Redefined from TeX.pool, since with LaTeX we presumably have a more complete numbering system
-  DefConstructor!("\\@@BEGINDISPLAYMATH", r###"
-  <ltx:equation xml:id='#id'>
-    <ltx:Math mode='display'>
-    <ltx:XMath>
-    #body
-    </ltx:XMath>
-    </ltx:Math>
-    </ltx:equation>"###,
+  DefConstructor!("\\@@BEGINDISPLAYMATH", "<ltx:equation xml:id='#id'>\
+  <ltx:Math mode='display'>\
+  <ltx:XMath>#body</ltx:XMath>\
+  </ltx:Math>\
+  </ltx:equation>",
   alias        => "$$",
   before_digest => sub[stomach, state] {
     stomach.begin_mode("display_math", state)?;

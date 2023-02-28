@@ -57,12 +57,12 @@ LoadDefinitions!(state, {
 
   // Effectively these are the math hooks
   DefConstructor!("\\@@BEGINDISPLAYMATH",
-  "<ltx:equation>
-    <ltx:Math mode=\"display\">
-    <ltx:XMath>
-    #body
-    </ltx:XMath>
-    </ltx:Math>
+  "<ltx:equation>\
+    <ltx:Math mode=\"display\">\
+    <ltx:XMath>\
+    #body\
+    </ltx:XMath>\
+    </ltx:Math>\
   </ltx:equation>",
     reversion         => Tokens!(T_MATH!(),T_MATH!()),
     before_digest => sub[stomach, state] { stomach.begin_mode("display_math", state)?; },

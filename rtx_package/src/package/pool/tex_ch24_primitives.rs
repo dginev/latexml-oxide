@@ -24,7 +24,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("{", sub[stomach, (), state] {
     stomach.bgroup(state);
     let open = Tbox::new(String::new(), None, None, Tokens!(T_BEGIN!()), HashMap::new(), state);
-    let mode = if LookupBool!("IN_MATH") {
+    let mode = if state.lookup_bool("IN_MATH") {
       Some(TexMode::Math)
     } else {
       Some(TexMode::Text)
