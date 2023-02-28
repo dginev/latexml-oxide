@@ -178,7 +178,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
     if !is_empty(&script, state) {
       let mut properties = stored_map!(
         "isMath" => true,
-        "base"        => if let Some(b) = base { Stored::Digested(b.into()) }
+        "base"        => if let Some(b) = base { Stored::Digested(b) }
           else { Stored::None },                      // for sizing/positioning
         "scriptlevel" => stomach.get_script_level(state),
         "level"       => stomach.get_boxing_level()

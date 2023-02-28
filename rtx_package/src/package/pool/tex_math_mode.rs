@@ -15,7 +15,7 @@ LoadDefinitions!(state, {
   DefPrimitive!(
     T_MATH!(),
     None,
-    sub[stomach, _tokens, state] {
+    sub[stomach, _args, state] {
       let mut op = "\\@@BEGININLINEMATH";
       {
         let mut gullet = stomach.get_gullet_mut();
@@ -46,7 +46,6 @@ LoadDefinitions!(state, {
         }
       }
       if !op.is_empty() {
-        // info!(target:"math_op:invoke_token","{:?}", op);
         Ok(stomach.invoke_token(&T_CS!(op), state)?)
       } else {
         Ok(Vec::new())
