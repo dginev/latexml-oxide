@@ -787,3 +787,18 @@ fn either_case_token(token: Token, is_upper: bool, state: &State) -> Token {
     token
   }
 }
+
+  /// a candidate for use by \hskip, \hspace, etc... ?
+  pub fn dimension_to_spaces(dimen: &Dimension, state: &State) -> Cow<'static, str> {
+    let fs      = state.lookup_font().unwrap().get_size();    // 1 em
+    let pt      = dimen.pt_value(None);
+    let ems     = pt / fs.unwrap();
+    if    ems < 0.01 { Cow::Borrowed("") }
+    else if ems < 0.17 { Cow::Borrowed("\u{2006}") }    // 6em
+    else if ems < 0.30 { Cow::Borrowed("\u{2005}") }    // 4em
+    else if ems < 0.40 { Cow::Borrowed("\u{2004}") }    // 3em (same as nbsp?)
+    else {
+      let n = (ems + 0.3 / 0.333).trunc() as usize; // 10pts per space...?
+      Cow::Owned("\u{00A0}".repeat(n))
+    }
+  }

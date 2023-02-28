@@ -81,11 +81,16 @@ LoadDefinitions!(state, {
   // C.13.2 Space
   //======================================================================
 
-  // TODO: Update this!!!
-  DefMacro!(
-    "\\hspace  OptionalMatch:* {Dimension}",
-    "\\ifmmode\\@math@hskip #2\\relax\\else\\@text@hskip #2\\relax\\fi"
-  );
+  DefPrimitive!("\\hspace OptionalMatch:* {Dimension}", sub[stomach, (star,length), state] {
+    let s = dimension_to_spaces(&length, state);
+    if !s.is_empty() {
+      let length_tokens = length.revert(state)?;
+      let mut gullet = stomach.get_gullet_mut();
+      let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens], gullet)?;
+      Tbox::new(s.into(), None, None, tokens,
+        stored_map!("width" => length, "isSpace" => true), state);
+    }
+  });
 
   DefPrimitive!("\\vspace OptionalMatch:* {}", None);
   DefPrimitive!("\\addvspace {}", None);

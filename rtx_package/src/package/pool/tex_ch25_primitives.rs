@@ -10,20 +10,6 @@ LoadDefinitions!(state, {
   //    | \hskip | \hfil | \hfill | \hss | \hfilneg
   //    | \accent | \discretionary | \- | \<space> | $
 
-  // # a candidate for use by \hskip, \hspace, etc... ?
-  // sub DimensionToSpaces {
-  //   my ($dimen) = @_;
-  //   my $fs      = LookupValue('font')->getSize;    # 1 em
-  //   my $pt      = $dimen->ptValue;
-  //   my $ems     = $pt / $fs;
-  //   if    ($ems < 0.01) { return; }
-  //   elsif ($ems < 0.17) { return Box("\x{2006}"); }    # 6/em
-  //   elsif ($ems < 0.30) { return Box("\x{2005}"); }    # 4/em
-  //   elsif ($ems < 0.40) { return Box("\x{2004}"); }    # 3/em (same as nbsp?)
-  //   else {
-  //     my $n = int(($ems + 0.3) / 0.333);               # 10pts per space...?
-  //     return Box((UTF(0xA0) x $n)); } }
-
   // DefPrimitiveI('\noboundary', undef, undef);
   // DefMacro('\hskip Glue',   '\ifmmode\@math@hskip #1\relax\else\@text@hskip #1\relax\fi');
   // DefMacro('\mskip MuGlue', '\ifmmode\@math@mskip #1\relax\else\@text@mskip #1\relax\fi');

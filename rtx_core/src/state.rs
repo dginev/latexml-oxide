@@ -1289,7 +1289,7 @@ impl State {
     // Is this a good/safe enough shorthand, or should we really be doing beginMode?
     self.push_frame();
     self.assign_value("MODE", Stored::String(s!("text")), None);
-    self.assign_value("IN_MATH", Stored::Bool(false), None);
+    self.assign_value("IN_MATH", false, None);
     let mut all_specials: Vec<char> = Vec::new();
     if let Some(extra) = extraspecials {
       for special in extra {
