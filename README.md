@@ -3,9 +3,9 @@ A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
 [![CI](https://github.com/dginev/rtx/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/rtx/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.2.0-orange.svg)
 
-## Progress
+## Porting Progress
 
-[![test porting progress](http://progressed.io/bar/10)](https://github.com/dginev/rtx/issues/30) | 30 of 275 core LaTeXML tests PASS
+[![test porting progress](https://progress-bar.dev/18/?title=passing%20tests)](https://github.com/dginev/rtx/issues/30)
 
 ### Why?
 
