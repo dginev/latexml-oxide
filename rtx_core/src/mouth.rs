@@ -381,7 +381,7 @@ impl Mouth {
         if !two_hex {
           // OR ^^ followed by a SINGLE Control char type code???
           let mut c = self.chars[self.colno + 1];
-          let mut cn = c as i32;
+          let mut cn = c as i64;
 
           ch = (cn + if cn >= 64 { -64 } else { 64 }) as u8 as char;
           self.splice(self.colno - 1..self.colno + 2, &[ch]);

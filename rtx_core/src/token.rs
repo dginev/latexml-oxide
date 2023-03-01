@@ -10,6 +10,7 @@ use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
+use crate::common::float::Float;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
@@ -532,13 +533,14 @@ macro_rules! Explode(($text:expr) => (
 // Similar to Explode, but convert letters to catcode LETTER and others to OTHER
 // Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
 #[macro_export]
-macro_rules! ExplodeText(($text:expr) => (
+macro_rules! ExplodeText(($text:expr) => ({
+  use $crate::token::{Catcode,Token};
   $text.to_string().as_str().chars().map(|c|
     if c==' ' { T_SPACE!() }
     else if c.is_alphabetic() { T_LETTER!(c) }
     else { T_OTHER!(c) }
   ).collect::<Vec<Token>>()
-));
+}));
 
 static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
 pub fn untex_digested(digested: &Digested, suppress_linebreak: bool, state: &mut State) -> Result<String> {
@@ -822,7 +824,7 @@ impl<'a> Token {
 
   pub fn to_register(&self, state: &State) -> Option<Arc<RegisterCell>> { state.lookup_register_definition(self) }
 
-  pub fn to_number(&self) -> Number { Number::new(self.text.parse::<i32>().unwrap_or(0)) }
+  pub fn to_number(&self) -> Number { Number::new(self.text.parse::<i64>().unwrap_or(0)) }
 
   pub fn to_dimension(&self) -> Dimension { Dimension::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
 
@@ -831,6 +833,9 @@ impl<'a> Token {
   pub fn to_glue(&self) -> Glue { Glue::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
 
   pub fn to_mu_glue(&self) -> MuGlue { MuGlue::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
+
+  pub fn to_float(&self) -> Float { Float::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
+
 
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> { stomach.digest(Tokens::new(vec![self]), state) }
 }

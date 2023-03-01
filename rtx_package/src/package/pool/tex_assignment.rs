@@ -320,7 +320,7 @@ LoadDefinitions!(outer_state, {
   DefRegister!("\\sfcode Number", Number::new(0),
     getter=> sub[args, state] {
     let code = state.lookup_sfcode(args[0].value_of() as u8 as char);
-      Number::new(code.unwrap_or_default() as i32)
+      Number::new(code.unwrap_or_default() as i64)
     },
     setter => sub[value, args, state] {
       state.assign_sfcode(args[0].value_of() as u8 as char,
@@ -329,7 +329,7 @@ LoadDefinitions!(outer_state, {
   DefRegister!("\\lccode Number", Number::new(0),
   getter=> sub[args, state] {
     let code = state.lookup_lccode(args[0].value_of() as u8 as char);
-    Number::new(code.unwrap_or_default() as i32)
+    Number::new(code.unwrap_or_default() as i64)
   },
   setter => sub[value, args, state] {
     state.assign_lccode(args[0].value_of() as u8 as char,
@@ -339,7 +339,7 @@ LoadDefinitions!(outer_state, {
   DefRegister!("\\uccode Number", Number::new(0),
   getter=> sub[args, state] {
     let code = state.lookup_uccode(args[0].value_of() as u8 as char);
-    Number::new(code.unwrap_or_default() as i32)
+    Number::new(code.unwrap_or_default() as i64)
   },
   setter => sub[value, args, state] {
     state.assign_uccode(args[0].value_of() as u8 as char,
@@ -350,7 +350,7 @@ LoadDefinitions!(outer_state, {
   DefRegister!("\\delcode Number", Number::new(0),
   getter=> sub[args, state] {
     let code = state.lookup_delcode(args[0].value_of() as u8 as char);
-    Number::new(code.unwrap_or_default() as i32)
+    Number::new(code.unwrap_or_default() as i64)
   },
   setter => sub[value, args, state] {
     state.assign_delcode(args[0].value_of() as u8 as char,
@@ -367,7 +367,7 @@ LoadDefinitions!(outer_state, {
   }
 
   // Stub definitions ???
-  DefRegister!("\\hyphenchar{}", Number::new(b'-' as i32));
+  DefRegister!("\\hyphenchar{}", Number::new(b'-' as i64));
   DefRegister!("\\skewchar{}", Number::new(0)); // no idea what the default is here
 
   DefMacro!("\\hyphenation GeneralText", None);

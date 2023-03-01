@@ -138,7 +138,7 @@ pub struct IfFrame {
   pub start: Locator,
   pub parsing: bool,
   pub elses: bool,
-  pub ifid: i32,
+  pub ifid: i64,
 }
 
 impl Conditional {
@@ -211,7 +211,7 @@ impl Conditional {
   // #   \if\ifx AA XY junk \else blah \fi True \else False \fi
   // # The inner \ifx should expand to "XY junk", since A==A
   // # Return the token we've skipped to, and the frame that this applies to.
-  fn skip_conditional_body(&self, nskips: i32, gullet: &mut Gullet, state: &mut State) -> Tokens {
+  fn skip_conditional_body(&self, nskips: i64, gullet: &mut Gullet, state: &mut State) -> Tokens {
     let mut level = 1;
     let mut n_ors = 0;
     let _start = gullet.get_locator();

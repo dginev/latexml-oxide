@@ -319,7 +319,7 @@ impl ArgWrap {
     Ok(result)
   }
 
-  pub fn value_of(&self) -> i32 {
+  pub fn value_of(&self) -> i64 {
     use ArgWrap::*;
     match self {
       Number(v) => v.value_of(),
@@ -328,6 +328,18 @@ impl ArgWrap {
       Glue(v) => v.value_of(),
       MuGlue(v) => v.value_of(),
       MuDimension(v) => v.value_of(),
+      _ => panic!("ArgWrap::value_of not (yet?) defined on {:?}", self),
+    }
+  }
+  pub fn value_f32(&self) -> f32 {
+    use ArgWrap::*;
+    match self {
+      Number(v) => v.value_f32(),
+      Float(v) => v.value_f32(),
+      Dimension(v) => v.value_f32(),
+      Glue(v) => v.value_f32(),
+      MuGlue(v) => v.value_f32(),
+      MuDimension(v) => v.value_f32(),
       _ => panic!("ArgWrap::value_of not (yet?) defined on {:?}", self),
     }
   }
@@ -452,6 +464,32 @@ impl ArgWrap {
         None => Ok(KeyVals::default()),
       },
       _ => panic!("ArgWrap::to_keyvals not (yet?) defined on {:?}", self),
+    }
+  }
+
+  pub fn try_to_float(self) -> Result<Float> {
+    use ArgWrap::*;
+    match self {
+      Float(v) => Ok(v),
+      Token(t) => Ok(t.to_float()),
+      Tokens(tks) => Ok(tks.to_float()),
+      OptionTokens(tks_opt) => match tks_opt {
+        Some(tks) => Ok(tks.to_float()),
+        // None => Err("ArgWrap::try_to_number expected a Tokens for number conversion, but got None.".into()),
+        // When is the None case useful? you can see it triggered with an error in the tests.
+        None => Ok(crate::common::float::Float::default()),
+      },
+      OptionToken(tk_opt) => match tk_opt {
+        Some(tk) => Ok(tk.to_float()),
+        None => Err("ArgWrap::try_to_float expected a Token for float conversion, but got None.".into()),
+      },
+      _ => Err(format!("ArgWrap::to_float not (yet?) defined on {:?}", self).into()),
+    }
+  }
+  pub fn expect_float(self) -> Float {
+    match self.try_to_float() {
+      Ok(v) => v,
+      Err(e) => panic!("{e}"),
     }
   }
 
@@ -582,6 +620,10 @@ impl TryFrom<ArgWrap> for Number {
 impl TryFrom<ArgWrap> for Dimension {
   type Error = crate::common::error::Error;
   fn try_from(aw: ArgWrap) -> Result<Dimension> { aw.try_to_dimension() }
+}
+impl TryFrom<ArgWrap> for Float {
+  type Error = crate::common::error::Error;
+  fn try_from(aw: ArgWrap) -> Result<Float> { aw.try_to_float() }
 }
 
 impl TryFrom<ArgWrap> for Token {

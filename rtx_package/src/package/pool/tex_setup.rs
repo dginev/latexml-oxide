@@ -83,10 +83,21 @@ LoadDefinitions!(state, {
 
   // ======================================================================
   // Define parsers for standard parameter types.
-  DefParameterType!(Plain, sub[gullet, inner, _extra, state] {
+  DefParameterType!(Plain, sub[gullet, inner, extra, state] {
       let mut value = ArgWrap::Tokens(gullet.read_arg(state)?);
+      // TODO: Need to ask Bruce if there is a difference between "inner" and "extra" ???
       for inner_p in inner.into_iter().flatten() {
-        value = inner_p.reparse_argument(gullet, value, state);
+        // Also how many arguments can we expect to get back reparsed? One? Many?!
+        value = inner_p.reparse_argument(gullet, value, state)?.remove(0);
+      }
+      for extra_p in extra.iter() {
+        match extra_p {
+          ParameterExtra::Tokens(ref tks) => unimplemented!(), // ???
+          ParameterExtra::ParametersOption(None)=> {}, // ???
+          ParameterExtra::ParametersOption(Some(ref param)) => {
+            value = param.reparse_argument(gullet, value, state)?.remove(0);
+          }
+        }
       }
       Ok(value)
     },
@@ -113,7 +124,7 @@ LoadDefinitions!(state, {
   DefParameterType!(DefPlain, sub[gullet, inner, _extra, state] {
       let mut value = ArgWrap::Tokens(gullet.read_arg(state)?);
       for inner_p in inner.into_iter().flatten() {
-        value = inner_p.reparse_argument(gullet, value, state);
+        value = inner_p.reparse_argument(gullet, value, state)?.remove(0);
       }
       Ok(value)
     },
@@ -148,7 +159,7 @@ LoadDefinitions!(state, {
       let mut value = ArgWrap::OptionTokens(value);
       if !inner.is_empty() {
         for inner_p in inner.into_iter().flatten() {
-          value = inner_p.reparse_argument(gullet, value, state);
+          value = inner_p.reparse_argument(gullet, value, state)?.remove(0);
         }
       }
       Ok(value)

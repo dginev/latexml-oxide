@@ -1835,7 +1835,7 @@ macro_rules! Dimension {
     Dimension!($number, st)
   }};
   ($number:expr, $state_arg:ident) => {
-    Dimension::new_f32(Dimension::spec_to_f32($number, $state_arg)?)
+    Dimension::new_f32(Dimension::spec_to_f32($number, Some($state_arg))?)
   };
 }
 

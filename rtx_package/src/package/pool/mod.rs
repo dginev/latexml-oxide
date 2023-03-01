@@ -98,6 +98,7 @@ pub mod t1enc_sty;
 pub mod textcomp_sty;
 pub mod url_sty;
 pub mod verbatim_sty;
+pub mod multido_sty;
 
 use rtx_core::common::error::Result;
 use rtx_core::state::State;
@@ -120,6 +121,7 @@ pub fn dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Opt
     "fontenc.sty" => fontenc_sty::load_definitions(stomach, state),
     "inputenc.sty" => inputenc_sty::load_definitions(stomach, state),
     "textcomp.sty" => textcomp_sty::load_definitions(stomach, state),
+    "multido.sty" => multido_sty::load_definitions(stomach, state),
     "t1enc.sty" => t1enc_def::load_definitions(stomach, state),
     "t1enc.def" => t1enc_sty::load_definitions(stomach, state),
     "t1.fontmap" => t1_fontmap::load_definitions(stomach, state),

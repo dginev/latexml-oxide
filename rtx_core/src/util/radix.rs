@@ -38,9 +38,9 @@ const UP_GREEK: &[char] = &[
   '\u{039D}', '\u{039E}', '\u{039F}', '\u{03A0}', '\u{03A1}', '\u{03A3}', '\u{03A4}', '\u{03A5}', '\u{03A6}', '\u{03A7}', '\u{03A8}', '\u{03A9}',
 ];
 
-pub fn radix_format(mut number: i32, symbols: &[char]) -> String {
+pub fn radix_format(mut number: i64, symbols: &[char]) -> String {
   let mut text = String::new();
-  let max = symbols.len() as i32;
+  let max = symbols.len() as i64;
   while number > 0 {
     let index = (number - 1) % max;
     text = symbols[index as usize].to_string() + &text;
@@ -48,9 +48,9 @@ pub fn radix_format(mut number: i32, symbols: &[char]) -> String {
   }
   text
 }
-pub fn radix_format_str(mut number: i32, symbols: &[&str]) -> String {
+pub fn radix_format_str(mut number: i64, symbols: &[&str]) -> String {
   let mut text = String::new();
-  let max = symbols.len() as i32;
+  let max = symbols.len() as i64;
   while number > 0 {
     let index = (number - 1) % max;
     text = symbols[index as usize].to_string() + &text;
@@ -59,20 +59,20 @@ pub fn radix_format_str(mut number: i32, symbols: &[&str]) -> String {
   text
 }
 
-pub fn radix_alpha(n: i32) -> String { radix_format(n, LETTERS) }
+pub fn radix_alpha(n: i64) -> String { radix_format(n, LETTERS) }
 
-pub fn radix_up_alpha(n: i32) -> String { radix_format(n, UP_LETTERS) }
+pub fn radix_up_alpha(n: i64) -> String { radix_format(n, UP_LETTERS) }
 
-pub fn radix_greek(n: i32) -> String { radix_format(n, GREEK) }
+pub fn radix_greek(n: i64) -> String { radix_format(n, GREEK) }
 
-pub fn radix_up_greek(n: i32) -> String { radix_format(n, UP_GREEK) }
+pub fn radix_up_greek(n: i64) -> String { radix_format(n, UP_GREEK) }
 
 // Dumb place for this, but where else...
 // Note: This is one 'The TeX Way'! (bah!! hint: try a large number)
 // namely, it's very limited.... what happened to my much-improved version?
 const RMLETTERS: &[char] = &['i', 'v', 'x', 'l', 'c', 'd', 'm']; // [CONSTANT]
 
-pub fn radix_roman(mut n: i32) -> String {
+pub fn radix_roman(mut n: i64) -> String {
   let mut s = String::new();
   let mut div = 1000;
   if n > div {
@@ -86,7 +86,7 @@ pub fn radix_roman(mut n: i32) -> String {
       break;
     }
     div /= 10;
-    let mut d: i32 = n / div;
+    let mut d: i64 = n / div;
     if d % 5 == 4 {
       s.push(RMLETTERS[p]);
       d += 1;
@@ -110,4 +110,4 @@ pub fn radix_roman(mut n: i32) -> String {
 }
 
 /// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token
-pub fn radix_up_roman(n: i32) -> String { radix_roman(n).to_uppercase() }
+pub fn radix_up_roman(n: i64) -> String { radix_roman(n).to_uppercase() }

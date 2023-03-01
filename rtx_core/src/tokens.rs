@@ -16,6 +16,7 @@ use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
+use crate::common::float::Float;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::keyvals::KeyVals;
@@ -56,6 +57,9 @@ impl From<Vec<Token>> for Tokens {
 
 impl From<Token> for Tokens {
   fn from(t: Token) -> Tokens { Tokens::new(vec![t]) }
+}
+impl From<&Token> for Tokens {
+  fn from(t: &Token) -> Tokens { Tokens::new(vec![t.clone()]) }
 }
 // TODO: Is there a better abstraction that avoids this clone?
 //       I fear it may be using Arc<Tokens> everywhere, which is also too heavy.
@@ -166,15 +170,16 @@ impl Tokens {
       eprintln!("TODO: An empty tokens was requested for .to_number, debug this!");
       Number::default()
     } else {
-      Number::new(self.to_string().parse::<i32>().unwrap_or(0))
+      Number::new(self.to_string().parse::<i64>().unwrap_or(0))
     }
   }
 
   /// to_dimension casts back to a parsed Dimension (usually via gullet.read_dimension)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_dimension(&self) -> Dimension {
-    let token: Token = self.into();
-    token.to_dimension()
+    // TODO: How do we enhance here to be able to use the current font information from State?
+    // Using the State-ful variations makes it impossible to work with the From/Into standard Rust traits. Should we do StatefulFrom/StatefulInto ?
+    Dimension::new_f32(Dimension::spec_to_f32(&self.to_string(), None).unwrap_or_default())
   }
 
   /// to_glue casts back to a parsed Glue (usually via gullet.read_glue)
@@ -196,6 +201,17 @@ impl Tokens {
   pub fn to_mu_dimension(&self) -> MuDimension {
     let token: Token = self.into();
     token.to_mu_dimension()
+  }
+
+  /// to_float casts back to a parsed Float (usually via gullet.read_float)
+  /// which had to be re-converted to a Tokens for reentering the expansion flow
+  pub fn to_float(&self) -> Float {
+    if self.is_empty() {
+      eprintln!("TODO: An empty tokens was requested for .to_float, debug this!");
+      Float::default()
+    } else {
+      Float::new_f32(self.to_string().parse::<f32>().unwrap_or(0.0))
+    }
   }
 
   /// to_keyvals casts back to a parsed KeyVals (usually via a KeyVals parameter type)

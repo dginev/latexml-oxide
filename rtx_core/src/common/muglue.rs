@@ -9,10 +9,10 @@ use std::fmt;
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct MuGlue {
-  pub skip: i32,
-  pub plus: Option<i32>,
+  pub skip: i64,
+  pub plus: Option<i64>,
   pub pfill: Option<FillCode>,
-  pub minus: Option<i32>,
+  pub minus: Option<i64>,
   pub mfill: Option<FillCode>,
 }
 
@@ -24,9 +24,9 @@ impl fmt::Display for MuGlue {
 }
 
 impl NumericOps for MuGlue {
-  fn value_of(self) -> i32 { self.skip }
+  fn value_of(self) -> i64 { self.skip }
   fn register_type(&self) -> RegisterType { RegisterType::MuGlue }
-  fn new(skip: i32) -> Self {
+  fn new(skip: i64) -> Self {
     MuGlue {
       skip,
       plus: None,
@@ -51,7 +51,7 @@ impl Object for MuGlue {
 }
 
 impl MuGlue {
-  pub fn new_full(skip: i32, plus: Option<i32>, pfill: Option<FillCode>, minus: Option<i32>, mfill: Option<FillCode>) -> Self {
+  pub fn new_full(skip: i64, plus: Option<i64>, pfill: Option<FillCode>, minus: Option<i64>, mfill: Option<FillCode>) -> Self {
     MuGlue {
       skip,
       plus,

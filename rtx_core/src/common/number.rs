@@ -10,15 +10,15 @@ use std::borrow::Cow;
 use std::fmt;
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
-pub struct Number(pub i32);
+pub struct Number(pub i64);
 impl Object for Number {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, state: &State) -> Result<Tokens> { Ok(mouth::tokenize_internal(&self.to_string())) }
+  fn revert(&self, state: &State) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.0.to_string()))) }
 }
 impl NumericOps for Number {
-  fn new(number: i32) -> Self { Number(number) }
-  fn new_f32(number: f32) -> Self { Number(number.trunc() as i32) }
-  fn value_of(self) -> i32 { self.0 }
+  fn new(number: i64) -> Self { Number(number) }
+  fn new_f32(number: f32) -> Self { Number(number.trunc() as i64) }
+  fn value_of(self) -> i64 { self.0 }
   fn register_type(&self) -> RegisterType { RegisterType::Number }
 }
 
@@ -27,7 +27,7 @@ impl Number {
 }
 
 impl From<Number> for Tokens {
-  fn from(v: Number) -> Tokens { mouth::tokenize_internal(&v.to_string()) }
+  fn from(v: Number) -> Tokens { mouth::tokenize_internal(&v.0.to_string()) }
 }
 
 impl From<Number> for Option<Tokens> {
@@ -37,12 +37,12 @@ impl From<Number> for Option<Tokens> {
 #[macro_export]
 macro_rules! Number {
   ($number:expr) => {{
-    ::rtx_core::common::number::Number::new($number as i32)
+    ::rtx_core::common::number::Number::new($number as i64)
   }};
 }
 
 impl From<String> for Number {
-  fn from(s: String) -> Number { Number(s.parse::<i32>().unwrap()) }
+  fn from(s: String) -> Number { Number(s.parse::<i64>().unwrap()) }
 }
 
 impl fmt::Display for Number {
@@ -50,5 +50,5 @@ impl fmt::Display for Number {
 }
 
 impl From<Catcode> for Number {
-  fn from(c: Catcode) -> Number { Number::new(u8::from(c) as i32) }
+  fn from(c: Catcode) -> Number { Number::new(u8::from(c) as i64) }
 }

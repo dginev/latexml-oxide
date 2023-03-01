@@ -263,6 +263,14 @@ impl Parameter {
         s!("Unrecognized parameter type with name {:?}, spec {:?}", self.name, self.spec)
       ),
     }
+    // Last but not least, initialize any "extra" parameters
+    self.extra = self.extra.drain(..).map(|p_extra| {
+      match p_extra {
+        ParameterExtra::ParametersOption(Some(extra_param)) =>
+          ParameterExtra::ParametersOption(Some(extra_param.init(state).expect("inner param init shouldn't fail?"))),
+        _ => p_extra
+      }
+    }).collect();
     Ok(self)
   }
 
@@ -290,7 +298,7 @@ impl Parameter {
     Ok(())
   }
 
-  pub fn read(&self, gullet: &mut Gullet, fordefn: &dyn Definition, state: &mut State) -> Result<ArgWrap> {
+  pub fn read(&self, gullet: &mut Gullet, fordefn: Option<&dyn Definition>, state: &mut State) -> Result<ArgWrap> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
@@ -336,12 +344,13 @@ impl Parameter {
       // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens> in the long-run
       //        Until *may* have a value, but it also may *not*, both OK. So... except it from the error message here
       if !self.name.starts_with("Until") {
+        let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
         Error!(
           "expected",
           self,
           gullet,
           state,
-          s!("Missing argument {} for {}", self.stringify(), fordefn.stringify())
+          s!("Missing argument {} for {}", self.stringify(), fordefn_str)
         );
         ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))
       } else {
@@ -484,7 +493,7 @@ impl Parameters {
     Ok(self)
   }
 
-  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: &dyn Definition, state: &mut State) -> Result<Vec<ArgWrap>> {
+  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: Option<&dyn Definition>, state: &mut State) -> Result<Vec<ArgWrap>> {
     let mut args = Vec::new();
     for parameter in &self.0 {
       let values = parameter.read(gullet, fordefn, state)?;
@@ -507,7 +516,7 @@ impl Parameters {
     let mut args = Vec::new();
     stomach.gullet.setup_scan();
     for parameter in &self.0 {
-      let value = parameter.read(&mut stomach.gullet, fordefn, state)?;
+      let value = parameter.read(&mut stomach.gullet, Some(fordefn), state)?;
       if !parameter.novalue {
         let digested_value = parameter.digest(stomach, value, Some(fordefn), state)?;
         args.push(digested_value);
@@ -516,9 +525,19 @@ impl Parameters {
     Ok(args)
   }
 
-  pub fn reparse_argument(&self, _gullet: &mut Gullet, _value: ArgWrap, _state: &mut State) -> ArgWrap { unimplemented!() }
-}
+  pub fn reparse_argument(&self, gullet: &mut Gullet, value: ArgWrap, ostate: &mut State) -> Result<Vec<ArgWrap>> {
+    let value_tokens = value.revert(ostate)?;
+    // start with empty mouth
+    let mut reader_mouth = Mouth::new("", None, ostate)?;
+    gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: &mut Gullet, state| {
 
+        gulletx.unread(value_tokens); // but put back tokens to be read
+        let values = self.read_arguments(gulletx, None, state)?;
+        gulletx.skip_spaces(state);
+        Ok(values)
+    })
+  }
+}
 impl fmt::Display for Parameters {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut content = String::new();

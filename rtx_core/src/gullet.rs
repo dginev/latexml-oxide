@@ -851,14 +851,14 @@ impl Gullet {
         if cc == Catcode::OTHER && text.chars().all(|c| c.is_ascii_digit()) {
           // Read decimal literal
           text.push_str(&self.read_digits(&DIGIT_RE, true, state)?);
-          Ok(Some(Number::new(text.parse::<i32>()?)))
+          Ok(Some(Number::new(text.parse::<i64>()?)))
         } else if token == T_OTHER!("'") {
           // Read Octal literal
-          let decimal = i32::from_str_radix(&self.read_digits(&OCT_RE, true, state)?, 8)?;
+          let decimal = i64::from_str_radix(&self.read_digits(&OCT_RE, true, state)?, 8)?;
           Ok(Some(Number::new(decimal)))
         } else if token == T_OTHER!("\"") {
           //  Read Hex literal
-          let decimal = i32::from_str_radix(&self.read_digits(&HEX_RE, true, state)?, 16)?;
+          let decimal = i64::from_str_radix(&self.read_digits(&HEX_RE, true, state)?, 16)?;
           Ok(Some(Number::new(decimal)))
         } else if token == T_OTHER!("`") {
           //  Read Charcode
@@ -870,7 +870,7 @@ impl Gullet {
             s.remove(0);
           }
           let s_char = s.chars().next().unwrap();
-          Ok(Some(Number::new(s_char as i32))) //  Only a character token!!! NOT expanded!!!!
+          Ok(Some(Number::new(s_char as i64))) //  Only a character token!!! NOT expanded!!!!
         } else {
           self.unread_one(token); // Unread
           self.read_internal_integer(state)
@@ -887,43 +887,29 @@ impl Gullet {
     let is_negative = self.read_optional_signs(state)?;
     let s = if is_negative { -1.0 } else { 1.0 };
     let mut string = self.read_digits(&DIGIT_RE, true, state)?;
-    match self.read_x_token(None, false, state)? {
-      None => {
-        let message = s!(
-          "Missing number, treated as zero while processing {:?}",
-          state.current_token.as_ref().unwrap()
-        );
-        Warn!("expected", "<float>", self, state, message);
-        Ok(Float::new_f32(0.0))
-      },
-      Some(mut token) => {
-        if token.get_string() == "." {
-          string = s!("{}.{}", string, self.read_digits(&DIGIT_RE, true, state)?);
-          token = self.read_x_token(None, false, state)?.unwrap();
+    let mut token = self.read_x_token(None, false, state)?;
+    if token.is_some() && token.as_ref().unwrap().get_string() == "." {
+      string = s!("{string}.{}", self.read_digits(&DIGIT_RE, true, state)?);
+      token = self.read_x_token(None, false, state)?;
+    }
+    let n_opt: Option<f32> = if !string.is_empty() {
+      if let Some(t) = token {
+        if t.get_catcode() != Catcode::SPACE {
+          self.unread_one(t);
         }
+      }
+      Some(string.parse::<f32>()?)
+    } else {
+      if let Some(t) = token {
+        self.unread_one(t); // Unread
+      }
+      self.read_normal_integer(state)?.map(|v| v.value_of() as f32)
+    };
 
-        let n_opt: Option<f32> = if !string.is_empty() {
-          if token.get_catcode() != Catcode::SPACE {
-            // Inline ->getCatcode, unread
-            self.unread_one(token);
-          }
-          Some(string.parse::<f32>().unwrap())
-        } else {
-          self.unread_one(token); // Unread
-          self.read_normal_integer(state)?.map(|v| v.value_of() as f32)
-        };
-
-        if let Some(n) = n_opt {
-          Ok(Float::new_f32(s * n))
-        } else {
-          let message = s!(
-            "Missing number, treated as zero while processing {:?}",
-            state.current_token.as_ref().unwrap()
-          );
-          Warn!("expected", "<float>", self, state, message);
-          Ok(Float::new_f32(0.0))
-        }
-      },
+    if let Some(n) = n_opt {
+      Ok(Float::new_f32(s * n))
+    } else {
+      Ok(Float::new_f32(0.0))
     }
   }
 
@@ -1046,7 +1032,7 @@ impl Gullet {
     }
   }
 
-  pub fn read_rubber(&mut self, mu: bool, state: &mut State) -> Result<(Option<i32>, Option<FillCode>)> {
+  pub fn read_rubber(&mut self, mu: bool, state: &mut State) -> Result<(Option<i64>, Option<FillCode>)> {
     let is_negative = self.read_optional_signs(state)?;
     let s = if is_negative { -1 } else { 1 };
     match self.read_factor(state)? {
@@ -1141,7 +1127,7 @@ impl Gullet {
     }
   }
 
-  pub fn read_mu_unit(&mut self, state: &mut State) -> Result<Option<i32>> {
+  pub fn read_mu_unit(&mut self, state: &mut State) -> Result<Option<i64>> {
     if let Some(m) = self.read_keyword(&["mu"], state)? {
       self.skip_one_space(state);
       Ok(Some(UNITY)) // effectively, scaled mu
