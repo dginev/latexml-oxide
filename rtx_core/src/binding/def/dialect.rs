@@ -55,7 +55,7 @@ pub fn is_defined(name: &str, state: &State) -> bool {
 pub fn is_defined_token(cs: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(cs);
   match meaning {
-    Some(store) => match store {
+    Some(store) => match store.as_ref() {
       Stored::Token(ref m) => true,
       Stored::Expandable(ref m) => m.get_cs_name() != "\\relax",
       Stored::Primitive(ref m) => m.get_cs_name() != "\\relax",

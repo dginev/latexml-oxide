@@ -197,17 +197,17 @@ fn install_definition_and_meaning() {
 
   // Assign a Meaning
   state.assign_meaning(&T_CS!("\\foobar"), job_definition, Some(Scope::Local));
-  if let Some(Stored::Expandable(ref stored_meaning)) = state.lookup_meaning(&T_CS!("\\foobar")) {
+  if let Some(Stored::Expandable(ref stored_meaning)) = state.lookup_meaning(&T_CS!("\\foobar")).as_deref() {
     assert_eq!(stored_meaning.cs, T_CS!("\\jobname")); // Note: meaning for \foobar still has definition for CS \jobname
   } else {
     panic!("Failed to lookup installed meaning!");
   }
 
-  let looked_up_meaning = { state.lookup_meaning(&T_CS!("\\foobar")).unwrap().clone() };
+  let looked_up_meaning = { state.lookup_meaning(&T_CS!("\\foobar")).unwrap().into_owned() };
   {
     state.assign_meaning(&T_CS!("\\foolet"), looked_up_meaning.clone(), Some(Scope::Local));
   }
-  assert_eq!(state.lookup_meaning(&T_CS!("\\foolet")), Some(looked_up_meaning), "Meanings match");
+  assert_eq!(state.lookup_meaning(&T_CS!("\\foolet")).as_deref(), Some(&looked_up_meaning), "Meanings match");
 }
 
 #[test]
