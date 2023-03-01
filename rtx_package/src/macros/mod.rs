@@ -147,12 +147,6 @@ macro_rules! parameter_rust_type {
   (XToken) => {Token};
   (ExpandedIfToken) => {Token};
   (CSName) => {Token};
-  (Number) => {Number};
-  (Float) => {Float};
-  (Dimension) => {Dimension};
-  (MuDimension) => {MuDimension};
-  (Glue) => {Glue};
-  (MuGlue) => {MuGlue};
   // For now return the raw Tokens for KeyVals, until we figure out how to
   // do TryInto with access to the current "State" object.
   (OptionalKeyVals) => {Tokens};
