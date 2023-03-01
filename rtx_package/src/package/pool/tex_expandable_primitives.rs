@@ -35,8 +35,8 @@ LoadDefinitions!(outer_state, {
     let token_opt = gullet.read_x_token(Some(false), false, state)?.map(|t| {
       // Also resolve \let variants:
       let meaning_opt = state.lookup_meaning(&t);
-      if let Some(Stored::Token(meaning)) = meaning_opt {
-        meaning
+      if let Some(Stored::Token(ref meaning)) = meaning_opt.as_deref() {
+        meaning.clone()
       } else {
         t
       }});
@@ -114,7 +114,7 @@ LoadDefinitions!(outer_state, {
     if let Some(definition) = if token == T_ALIGN!() {
       Some(Stored::Token(token))
     } else {
-      state.lookup_meaning(&token)
+      state.lookup_meaning(&token).map(|d| d.into_owned())
     } {
       // First, if this definition is a primitive or constructor, check to see if it has an alias, which would allow us to work with a token
       let definition : Stored = match definition {
@@ -270,7 +270,7 @@ LoadDefinitions!(outer_state, {
 
   DefMacro!("\\csname CSName", sub[gullet, (token), state] {
     if LookupMeaning!(&token).is_none() {
-      state.assign_meaning(&token, state.lookup_meaning(&T_RELAX).unwrap(), None);
+      state.assign_meaning(&token, state.lookup_meaning(&T_RELAX).unwrap().into_owned(), None);
     }
     token
   });

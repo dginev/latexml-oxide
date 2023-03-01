@@ -1052,17 +1052,17 @@ impl State {
   /// Get the `Meaning' of a token.  For active control sequence's
   /// this may give the definition object (if defined) or another token (if \let) or undef
   /// Any other token is returned as is.
-  pub fn lookup_meaning(&self, token: &Token) -> Option<Stored> {
+  pub fn lookup_meaning(&self, token: &Token) -> Option<Cow<Stored>> {
     if token.get_catcode().is_active_or_cs() && !token.has_smuggled() && !token.get_string().is_empty() {
       match self.meaning.get(&token.get_cs_name().to_owned()) {
         Some(entry) => match entry.front() {
           None | Some(Stored::None) => None,
-          Some(other) => Some(other.clone()),
+          Some(other) => Some(Cow::Borrowed(other)),
         },
         None => None,
       }
     } else {
-      Some(Stored::Token(token.clone()))
+      Some(Cow::Owned(Stored::Token(token.clone())))
     }
   }
 
@@ -1697,11 +1697,11 @@ impl State {
   /// `Let` macro setter
   pub fn let_i(&mut self, token1: &Token, token2: Token, scope: Option<Scope>, gullet: &mut Gullet) {
     let meaning = if token2.get_dont_expand().is_some() {
-      Stored::Token(token2)
+      Cow::Owned(Stored::Token(token2))
     } else {
-      self.lookup_meaning(&token2).unwrap_or(Stored::None)
+      self.lookup_meaning(&token2).unwrap_or(Cow::Owned(Stored::None))
     };
-    self.assign_meaning(token1, meaning, scope);
+    self.assign_meaning(token1, meaning.into_owned(), scope);
     self.after_assignment(gullet);
   }
   /// `XEquals` check for two token arguments

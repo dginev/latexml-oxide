@@ -463,7 +463,7 @@ LoadDefinitions!(outer_state, {
 
   // Almost like a register, but different...
   DefPrimitive!("\\chardef Token SkipMatch:=", sub[stomach, (newcs), state] {
-    state.assign_meaning(&newcs, state.lookup_meaning(&T_RELAX).unwrap(), None); // Let w/o AfterAssignment
+    state.assign_meaning(&newcs, state.lookup_meaning(&T_RELAX).unwrap().into_owned(), None); // Let w/o AfterAssignment
     let value = stomach.get_gullet_mut().read_number(state)?;
     let csname = newcs.get_cs_name().to_owned();
     let internalcs = T_CS!(s!("\\@chardef@{}", csname));
@@ -504,7 +504,7 @@ LoadDefinitions!(outer_state, {
 
   // Almost like a register, but different...
   DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[stomach, (newcs), state] {
-    state.assign_meaning(&newcs, state.lookup_meaning(&T_RELAX).unwrap(), None);// Let w/o AfterAssignment
+    state.assign_meaning(&newcs, state.lookup_meaning(&T_RELAX).unwrap().into_owned(), None);// Let w/o AfterAssignment
     let value  = stomach.get_gullet_mut().read_number(state).unwrap();
     let csname = newcs.get_cs_name().to_owned();
     // eprintln!(" ** {} + {}", value,csname);
