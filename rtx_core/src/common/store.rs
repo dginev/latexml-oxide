@@ -64,7 +64,7 @@ pub enum Stored {
   Bool(bool),
   String(String),
   Charcode(u16),
-  Int(i32),
+  Int(i64),
   // Collections (boxed)
   VecChar(Vec<char>),
   VecOptionChar(Vec<Option<char>>),
@@ -517,15 +517,18 @@ impl<'a> From<&'a str> for Stored {
 }
 
 impl From<usize> for Stored {
-  fn from(value: usize) -> Self { Stored::Int(value as i32) }
+  fn from(value: usize) -> Self { Stored::Int(value as i64) }
 }
 
 impl From<i32> for Stored {
-  fn from(value: i32) -> Self { Stored::Int(value) }
+  fn from(value: i32) -> Self { Stored::Int(value as i64) }
+}
+impl From<i64> for Stored {
+  fn from(value: i64) -> Self { Stored::Int(value) }
 }
 
 impl From<f32> for Stored {
-  fn from(value: f32) -> Self { Stored::Number(Number::new(value.floor() as i32)) }
+  fn from(value: f32) -> Self { Stored::Number(Number::new(value.floor() as i64)) }
 }
 
 impl From<Catcode> for Stored {

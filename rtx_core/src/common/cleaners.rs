@@ -7,8 +7,8 @@ use unidecode::unidecode;
 //======================================================================
 
 static RMLETTERS: [char; 7] = ['i', 'v', 'x', 'l', 'c', 'd', 'm'];
-pub fn roman_aux<T: Into<i32>>(stuff: T) -> String {
-  let mut n: i32 = stuff.into();
+pub fn roman_aux<T: Into<i64>>(stuff: T) -> String {
+  let mut n: i64 = stuff.into();
   let mut div = 1000;
   let mut s: String = if n > div {
     String::from_utf8(vec![b'm'; (n / div) as usize]).unwrap()

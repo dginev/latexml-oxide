@@ -93,7 +93,7 @@ impl Definition for Expandable {
       Some(ExpansionBody::Closure(closure)) => {
         // Harder to emulate \tracingmacros here.
         let args = if let Some(ref parms) = self.paramlist {
-          parms.read_arguments(gullet, self, state)?
+          parms.read_arguments(gullet, Some(self), state)?
         } else {
           Vec::new()
         };
@@ -147,7 +147,7 @@ impl Definition for Expandable {
           }
         } else {
           let args = if let Some(ref parms) = self.paramlist {
-            parms.read_arguments(gullet, self, state)?
+            parms.read_arguments(gullet, Some(self), state)?
           } else {
             Vec::new()
           };
@@ -179,7 +179,7 @@ impl Definition for Expandable {
       None => {
         // we always need to read the arguments, for e.g. things like \@gobble
         if let Some(ref parms) = self.paramlist {
-          parms.read_arguments(gullet, self, state)?;
+          parms.read_arguments(gullet, Some(self), state)?;
         }
         Ok(NO_TOKENS)
       },

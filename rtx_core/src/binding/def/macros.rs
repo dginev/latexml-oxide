@@ -497,14 +497,14 @@ macro_rules! count_unpack_opt {
 #[macro_export]
 macro_rules! roman {
   ($stuff:expr) => {
-    Tokens::new(ExplodeText!(roman_aux($stuff as i32)))
+    Tokens::new(ExplodeText!(roman_aux($stuff as i64)))
   };
 }
 /// Convert the number to upper case roman numerals, returning a list of LaTeXML::Core::Token
 #[macro_export]
 macro_rules! Roman {
   ($stuff:expr) => {
-    Tokens::new(ExplodeText!(roman_aux($stuff as i32).to_ascii_uppercase()))
+    Tokens::new(ExplodeText!(roman_aux($stuff as i64).to_ascii_uppercase()))
   };
 }
 

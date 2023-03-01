@@ -104,15 +104,15 @@ lazy_static! {
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct Glue {
-  pub skip: i32,
-  pub plus: Option<i32>,
+  pub skip: i64,
+  pub plus: Option<i64>,
   pub pfill: Option<FillCode>,
-  pub minus: Option<i32>,
+  pub minus: Option<i64>,
   pub mfill: Option<FillCode>,
 }
 
 impl NumericOps for Glue {
-  fn value_of(self) -> i32 { self.skip }
+  fn value_of(self) -> i64 { self.skip }
   fn register_type(&self) -> RegisterType { RegisterType::Glue }
   // identity, used to type cast in runtime
   fn into_glue_type(self) -> Glue { self }
@@ -131,7 +131,7 @@ impl NumericOps for Glue {
       self.add_glue(other.into_glue_type())
     }
   }
-  fn new(skip: i32) -> Self {
+  fn new(skip: i64) -> Self {
     Glue {
       skip,
       plus: None,
@@ -153,15 +153,15 @@ impl NumericOps for Glue {
 }
 
 pub fn glue_string(
-  skip: i32,
-  plus_opt: Option<i32>,
+  skip: i64,
+  plus_opt: Option<i64>,
   pfill_opt: Option<FillCode>,
-  minus_opt: Option<i32>,
+  minus_opt: Option<i64>,
   mfill_opt: Option<FillCode>,
   unit: &str,
 ) -> String {
   // ??? TODO: There seems to be some messy confusion about the types of the
-  // pieces of glue/dimensions -- are we consistently using i32 or f32?
+  // pieces of glue/dimensions -- are we consistently using i64 or f32?
   let mut string = fixedformat(skip, Some(unit));
   if let Some(plus) = plus_opt {
     if plus != 0 {
@@ -196,7 +196,7 @@ pub fn new_setup(
   pfill: Option<FillCode>,
   minus: Option<f32>,
   mfill: Option<FillCode>,
-) -> (i32, Option<i32>, Option<FillCode>, Option<i32>, Option<FillCode>) {
+) -> (i64, Option<i64>, Option<FillCode>, Option<i64>, Option<FillCode>) {
   // See comment in Dimension for why kround rather than int
   (kround(skip), plus.map(kround), pfill, minus.map(kround), mfill)
 }
@@ -209,7 +209,7 @@ pub fn spec_setup(
   mut mfill: Option<FillCode>,
   unit: &str,
   state: &State,
-) -> (i32, Option<i32>, Option<FillCode>, Option<i32>, Option<FillCode>) {
+) -> (i64, Option<i64>, Option<FillCode>, Option<i64>, Option<FillCode>) {
   if !UNIT_RE.is_match(spec) {
     // If no units, expect fixedpoint values
     let skip: f32 = spec.parse::<f32>().unwrap_or_default();
@@ -234,7 +234,7 @@ pub fn spec_setup(
         cs.get(8).map_or("", |m| m.as_str()),
       );
       let skip = if unit.is_empty() {
-        f.trunc() as i32
+        f.trunc() as i64
       } else if is_mu {
         if unit != "mu" {
           Warn!("unexpected", unit, None, state, "Assumed mu");
@@ -304,7 +304,7 @@ pub fn spec_setup(
 }
 
 impl Glue {
-  pub fn new_full(skip: i32, plus: Option<i32>, pfill: Option<FillCode>, minus: Option<i32>, mfill: Option<FillCode>) -> Self {
+  pub fn new_full(skip: i64, plus: Option<i64>, pfill: Option<FillCode>, minus: Option<i64>, mfill: Option<FillCode>) -> Self {
     Glue {
       skip,
       plus,

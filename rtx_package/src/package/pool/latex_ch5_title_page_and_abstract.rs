@@ -39,7 +39,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\lx@author@prefix", sub[document, args, props, state] {
     let mut node   = document.get_element().unwrap();
     let nauthors   = state.lookup_int("NUMBER_OF_AUTHORS");
-    let i          = document.findnodes("//ltx:creator[@role='author']", None, state).len() as i32;
+    let i          = document.findnodes("//ltx:creator[@role='author']", None, state).len() as i64;
     if i <= 1 { }
     else if i == nauthors {
       let author_conj = Digest!(T_CS!("\\lx@author@conj"), state)?;

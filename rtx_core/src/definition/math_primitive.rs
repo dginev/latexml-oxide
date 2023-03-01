@@ -146,7 +146,7 @@ impl MathPrimitiveOptions {
       h.insert("mathstyle".to_string(), mathstyle.into());
     }
     if let Some(ref scriptpos) = self.scriptpos {
-      h.insert("scriptpos".to_string(), Stored::Int(*scriptpos as i32));
+      h.insert("scriptpos".to_string(), Stored::Int(*scriptpos as i64));
     }
     if let Some(ref operator_scriptpos) = self.operator_scriptpos {
       h.insert("operator_scriptpos".to_string(), operator_scriptpos.into());

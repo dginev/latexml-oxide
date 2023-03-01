@@ -232,7 +232,7 @@ impl Hash for Font {
     self.family.hash(state);
     self.series.hash(state);
     self.shape.hash(state);
-    self.size.map(|size| (size * 1000.0) as i32).hash(state);
+    self.size.map(|size| (size * 1000.0) as i64).hash(state);
     self.color.hash(state);
     self.bg.hash(state);
     self.opacity.hash(state);
@@ -246,7 +246,7 @@ impl Hash for Font {
     self.forceseries.hash(state);
     self.forcefamily.hash(state);
     self.forceshape.hash(state);
-    self.scale.map(|scale| (scale * 1000.0) as i32).hash(state);
+    self.scale.map(|scale| (scale * 1000.0) as i64).hash(state);
   }
 }
 impl Eq for Font {}
@@ -756,23 +756,23 @@ impl Font {
     STDMETRICS.get("cmr").unwrap()
   }
 
-  pub fn get_em_width(&self) -> i32 {
+  pub fn get_em_width(&self) -> i64 {
     let size = self.get_size().unwrap_or(DEFSIZE);
     // Could (should) look for metric w/appropriate slant, weight, etc
     let m = STDMETRICS.get("cmr").unwrap();
-    (size * m.emwidth).trunc() as i32
+    (size * m.emwidth).trunc() as i64
   }
-  pub fn get_ex_height(&self) -> i32 {
+  pub fn get_ex_height(&self) -> i64 {
     let size = self.get_size().unwrap_or(DEFSIZE);
     // Could (should) look for metric w/appropriate slant, weight, etc
     let m = STDMETRICS.get("cmr").unwrap();
-    (size * m.exheight).trunc() as i32
+    (size * m.exheight).trunc() as i64
   }
-  pub fn get_mu_width(&self) -> i32 {
+  pub fn get_mu_width(&self) -> i64 {
     let size = self.get_size().unwrap_or(DEFSIZE);
     // Could (should) look for metric w/appropriate slant, weight, etc
     let m = STDMETRICS.get("cmm").unwrap();
-    (size * m.emwidth / 18.0).trunc() as i32
+    (size * m.emwidth / 18.0).trunc() as i64
   }
 
   pub fn compute_string_size(&self, text: &str, options: HashMap<String, Stored>, state: &State) -> (Dimension, Dimension, Dimension) {
@@ -791,13 +791,13 @@ impl Font {
       } else {
         (0.75 * UNITY as f32, 0.7 * UNITY as f32, 0.2 * UNITY as f32, 0.0)
       };
-      w += (cw * size).trunc() as i32;
+      w += (cw * size).trunc() as i64;
       // if (my $kern = $chars[0] && $$metric{kerns}{ $char . $chars[0] }) {
       //   $w += int($size * $kern); }
       // if ($ismath && $ci) {
       //   $w += int($size * $ci); }
-      h = max(h, (ch * size).trunc() as i32);
-      d = max(d, (cd * size).trunc() as i32);
+      h = max(h, (ch * size).trunc() as i64);
+      d = max(d, (cd * size).trunc() as i64);
     }
     // The 1 is so that any actual glyph appears to be non-empty.
     // This is presumably only necessary to deal with the flawed emptiness heiristics in Alignment?

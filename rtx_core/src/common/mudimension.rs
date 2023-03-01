@@ -13,12 +13,12 @@ lazy_static! {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Default, Eq)]
-pub struct MuDimension(pub i32);
+pub struct MuDimension(pub i64);
 
 impl NumericOps for MuDimension {
-  fn new(number: i32) -> Self { MuDimension(number) }
+  fn new(number: i64) -> Self { MuDimension(number) }
   fn new_f32(number: f32) -> Self { MuDimension(kround(number)) }
-  fn value_of(self) -> i32 { self.0 }
+  fn value_of(self) -> i64 { self.0 }
   fn register_type(&self) -> RegisterType { RegisterType::MuDimension }
   fn unit(&self) -> Option<&'static str> { Some("mu") }
 }

@@ -326,6 +326,9 @@ impl Default for State {
     }
   }
 }
+lazy_static! {
+  pub static ref DEFAULT_STATE : State = State::default();
+}
 /// State fields allowed for customization during construction
 #[derive(Default)]
 pub struct StateOptions {
@@ -704,7 +707,7 @@ impl State {
     }
   }
 
-  pub fn lookup_int(&self, key: &str) -> i32 {
+  pub fn lookup_int(&self, key: &str) -> i64 {
     match self.lookup_value(key) {
       Some(Stored::Int(i)) => *i,
       Some(Stored::Bool(true)) => 1, // this is Perl's boolean -> integer semantics

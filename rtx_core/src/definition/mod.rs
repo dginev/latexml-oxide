@@ -213,7 +213,7 @@ pub trait Definition: Object {
   where Self: Sized {
     match self.get_parameters() {
       None => Ok(Vec::new()),
-      Some(params) => params.read_arguments(gullet, self, state),
+      Some(params) => params.read_arguments(gullet, Some(self), state),
     }
   }
   fn get_parameters(&self) -> Option<&Parameters>;

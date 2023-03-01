@@ -49,7 +49,6 @@ use crate::list::List;
 use crate::state::{State, StateOptions};
 use crate::stomach::Stomach;
 use crate::tbox::Tbox;
-use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 
@@ -608,7 +607,7 @@ impl BoxOps for Digested {
 impl Digested {
   pub fn data(&self) -> &DigestedData { &self.0 }
   // convenience subset of NumericOps, added here for now as an experiment:
-  pub fn value_of(&self) -> i32 {
+  pub fn value_of(&self) -> i64 {
     match &*self.0 {
       DigestedData::RegisterValue(rv) => rv.clone().value_of(),
       _ => 0,

@@ -341,7 +341,7 @@ impl IntoRegisterValueOption<Option<RegisterValue>> for Option<RegisterValue> {
   fn into_register_value_option(self) -> Option<RegisterValue> { self }
 }
 impl IntoRegisterValueOption<Option<RegisterValue>> for usize {
-  fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Number(Number(self as i32))) }
+  fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Number(Number(self as i64))) }
 }
 impl IntoRegisterValueOption<Option<RegisterValue>> for Number {
   fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Number(self)) }

@@ -96,9 +96,9 @@ impl Object for RegisterValue {
 }
 
 impl NumericOps for RegisterValue {
-  fn new(number: i32) -> Self { RegisterValue::Number(Number::new(number)) }
+  fn new(number: i64) -> Self { RegisterValue::Number(Number::new(number)) }
   fn new_f32(number: f32) -> Self { RegisterValue::Number(Number::new_f32(number)) }
-  fn value_of(self) -> i32 {
+  fn value_of(self) -> i64 {
     match self {
       RegisterValue::Number(v) => v.value_of(),
       RegisterValue::Dimension(v) => v.value_of(),
@@ -222,8 +222,8 @@ impl From<RegisterValue> for MuGlue {
 impl From<RegisterValue> for f32 {
   fn from(v: RegisterValue) -> f32 { v.value_of() as f32 }
 }
-impl From<RegisterValue> for i32 {
-  fn from(v: RegisterValue) -> i32 { v.value_of() }
+impl From<RegisterValue> for i64 {
+  fn from(v: RegisterValue) -> i64 { v.value_of() }
 }
 
 impl From<Number> for Dimension {
@@ -460,7 +460,7 @@ impl Definition for RegisterCell {
     let params = &self.borrow().parameters;
     match params {
       None => Ok(Vec::new()),
-      Some(ref params) => params.read_arguments(gullet, self, state),
+      Some(ref params) => params.read_arguments(gullet, Some(self), state),
     }
   }
 
