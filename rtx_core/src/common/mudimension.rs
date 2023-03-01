@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use std::fmt;
 
 use super::dimension::fixedformat;
-use crate::common::numeric_ops::{fixpoint, kround, NumericOps, UNITY};
+use crate::common::numeric_ops::{fixpoint, kround, NumericOps, UNITY_F32};
 use crate::definition::register::RegisterType;
 use crate::{Locator, Object};
 
@@ -35,7 +35,7 @@ impl MuDimension {
     if let Some(cap) = MUDIM_SPEC_RE.captures(spec) {
       MuDimension(fixpoint(
         cap.get(1).map_or("", |m| m.as_str()).parse::<f32>().unwrap(),
-        Some(UNITY as f32),
+        Some(UNITY_F32),
       ))
     } else {
       MuDimension(kround(spec.parse::<f32>().unwrap()))

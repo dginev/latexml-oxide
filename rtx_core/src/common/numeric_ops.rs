@@ -64,7 +64,7 @@ pub trait NumericOps {
   }
   fn pt_value(self, prec: Option<u8>) -> f32
   where Self: Sized {
-    round_to(self.value_of() as f32 / UNITY as f32, prec)
+    round_to(self.value_of() as f32 / UNITY_F32, prec)
   }
   fn negate(self) -> Self
   where Self: Sized {
