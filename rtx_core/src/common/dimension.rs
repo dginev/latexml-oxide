@@ -6,7 +6,7 @@ use regex::Regex;
 
 use crate::common::error::*;
 use crate::common::locator::Locator;
-use crate::common::numeric_ops::{fixpoint, kround, round_to, NumericOps, UNITY};
+use crate::common::numeric_ops::{fixpoint, kround, round_to, NumericOps, UNITY, UNITY_F32};
 use crate::common::object::Object;
 use crate::definition::register::RegisterType;
 use crate::state::{State, DEFAULT_STATE};
@@ -103,5 +103,5 @@ pub fn fixedformat(mut s: i64, unit_opt: Option<&str>) -> String {
 
 pub fn attribute_format(sp: i64, unit_opt: Option<&str>) -> String {
   let unit = unit_opt.unwrap_or("pt");
-  s!("{:.1}{}", round_to(sp as f32 / UNITY as f32, Some(1)), unit)
+  s!("{:.1}{}", round_to(sp as f32 / UNITY_F32, Some(1)), unit)
 }

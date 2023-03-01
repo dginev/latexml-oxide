@@ -1,6 +1,6 @@
 use crate::binding::content::{load_font_map, preload_font_map};
 use crate::common::dimension::Dimension;
-use crate::common::numeric_ops::{NumericOps, UNITY};
+use crate::common::numeric_ops::{NumericOps, UNITY_F32};
 use crate::common::store::Stored;
 use crate::state::State;
 use crate::stomach::Stomach;
@@ -789,7 +789,7 @@ impl Font {
       let (cw, ch, cd, ci) = if let Some(entry) = entry_opt {
         *entry
       } else {
-        (0.75 * UNITY as f32, 0.7 * UNITY as f32, 0.2 * UNITY as f32, 0.0)
+        (0.75 * UNITY_F32, 0.7 * UNITY_F32, 0.2 * UNITY_F32, 0.0)
       };
       w += (cw * size).trunc() as i64;
       // if (my $kern = $chars[0] && $$metric{kerns}{ $char . $chars[0] }) {

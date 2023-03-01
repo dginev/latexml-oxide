@@ -28,19 +28,21 @@ impl Default for Float {
 
 impl Object for Float {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, state: &State) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.0.to_string()))) }
+  fn revert(&self, state: &State) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.to_string()))) }
   fn stringify(&self) -> String { s!("Float[{}]", self.0) }
 }
+
 impl NumericOps for Float {
   fn new(number: i64) -> Self { Float(number as f32) }
   fn new_f32(number: f32) -> Self { Float(number) }
   fn value_of(self) -> i64 { self.0 as i64 }
   fn value_f32(self) -> f32 { self.0 }
+  fn negate(self) -> Self { Float(-self.0) }
   fn register_type(&self) -> RegisterType { RegisterType::Number }
   fn add<T: NumericOps>(self, other: T) -> Self { Float::new_f32(self.0 + other.value_f32()) }
   fn subtract<T: NumericOps>(self, other: T) -> Self { Float::new_f32(self.0 - other.value_f32()) }
-  fn multiply<T: NumericOps>(self, other: T) -> Self { Float::new_f32(self.value_f32() * other.value_f32()) }
-  fn divide<T: NumericOps>(self, other: T) -> Self { Float::new_f32(self.value_f32() / other.value_f32()) }
+  fn multiply<T: NumericOps>(self, other: T) -> Self { Float::new_f32(self.0 * other.value_f32()) }
+  fn divide<T: NumericOps>(self, other: T) -> Self { Float::new_f32(self.0 / other.value_f32()) }
 }
 
 impl From<Float> for Tokens {
@@ -52,17 +54,32 @@ impl From<Float> for Option<Tokens> {
 }
 
 impl fmt::Display for Float {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", floatformat(self.0)) }
+}
+
+impl Float {
+  /// Tight formatting of floats, where we emit them as integers when they do not have a decimal part
+  /// used in e.g. the multido.sty binding and test
+  pub fn to_tight_string(&self) -> String {
+    custom_float_format(self.0, true)
+  }
 }
 
 /// Utility for formatting sane numbers.
 pub fn floatformat(n: f32) -> String {
-  let mut s = s!("{:.5}", n);
+  custom_float_format(n, false)
+}
+pub fn custom_float_format(n: f32, tight: bool) -> String {
+  let mut s = format!("{:.5}", n);
   if s.contains('.') {
     s = TRAILING_ZEROS.replace(&s, "").to_string();
   }
   if s.ends_with('.') {
-    s.push('0'); //  Seems TeX prints .0 which in odd corner cases, people use?
+    if tight { // tight format does not need the trailing dot
+      s.pop();
+    } else {
+      s.push('0'); //  Seems TeX prints .0 which in odd corner cases, people use?
+    }
   }
   s
 }
