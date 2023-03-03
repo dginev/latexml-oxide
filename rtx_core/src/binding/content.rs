@@ -27,7 +27,7 @@ lazy_static! {
 }
 
 pub struct InputDefinitionOptions {
-  pub extension: Option<&'static str>,
+  pub extension: Option<Cow<'static, str>>,
   pub options: Vec<String>,
   pub after: Tokens,
   pub notex: bool,
@@ -84,10 +84,14 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   if options.noltxml {
     options.raw = true; // so it will be read as raw by Gullet.
   }
-  let as_type = if options.as_class { "cls" } else { options.extension.unwrap_or("") };
+  let as_type = if options.as_class {
+    Cow::Borrowed("cls")
+  } else {
+    options.extension.as_ref().cloned().unwrap_or(Cow::Borrowed(""))
+  };
 
   // Compute the exact name based on the type
-  let filename = match options.extension {
+  let filename = match &options.extension {
     None => name.to_string(),
     Some(ext) => s!("{}.{}", name, ext),
   };
@@ -106,16 +110,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
     }
   }
 
-  let loaded_flag = filename.clone() + "_loaded";
-  {
-    // Only load definitions once
-    if let Some(&Stored::Bool(flag)) = state.lookup_value(&loaded_flag) {
-      if flag {
-        // do nothing if we've loaded before
-        return Ok(());
-      }
-    }
-  }
+  // TODO: This needs reorganization, bindings are not found as "files" in rust,
+  // we need to have a registry (we don't yet)
 
   // Mark as loaded, then process the definitions
   note_begin(&s!("Loading {:?} definitions", filename));
@@ -123,10 +119,12 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None, state);
 
   // TODO: Is this inaccurate with latexml? It only sets the macros if the file is found, we set them *always*, as a matter of course
+  // TODO: This *IS* inaccurate with the Package.pm InputDefinitions, revisit at the right time and make sure it matches line-by-line (including the subordinated methods)
   if options.handleoptions {
-    input_handle_options(&mut options, &prevname, &prevext, name, as_type, stomach, state)?;
+    input_handle_options(&mut options, &prevname, &prevext, name, &as_type, stomach, state)?;
     def_macro(T_CS!(s!("\\{}.{}-h@@k", name, as_type)), None, options.after, None, state);
   }
+
   if !current_options.is_empty() {
     state.assign_value(&s!("{}_loaded_with_options", filename), current_options, Some(Scope::Global));
   }
@@ -134,6 +132,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   let is_binding = !options.noltxml && (load_external_binding(&filename, stomach, state)? || load_binding(&filename, stomach, state)?);
   if is_binding {
     // We found and loaded a binding successfully, mark it as such.
+    let loaded_flag = format!("{filename}_loaded");
     state.assign_value(&loaded_flag, true, Some(Scope::Global));
   } else {
     // We're inverting the control flow, because it is near-instant to check whether we have an available
@@ -141,13 +140,27 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
     // Now that we have ensured there is no compiled target of this name, we can start the file system search dance,
     // call to kpsewhich, etc.
     //
-    if let Some(absolute_filename) = pathname::kpsewhich(&[&filename]) {
-      load_tex_definitions(&filename, &absolute_filename, stomach, state)?;
-    } else {
-      fatal!(Package, Unknown, s!("TODO: unknown binding {:?}, can't load", filename))
+    // Find the file to load
+    // TODO options.search_paths_only
+    if let Some(file) = find_file(&filename, Some(FindFileOptions {
+    forbid_ltxml: options.noltxml, notex: options.notex, ext_type: options.extension.as_ref().cloned(), search_paths_only: false }), state) {
+
+      load_tex_definitions(&filename, &file, stomach, state)?;
+    } else if !options.noerror {
+      // TODO: Proper missing reports
+      Warn!("missing_file", name, stomach, state, "Can't find file for {}", name);
+      // STATE.note_status(missing => $name . ($options{type} ? '.' . $options{type} : ''));
+      // # We'll only warn about a missing file of definitions: it may be ignorable or never used.
+      // # if there ARE problems, they'll likely produce their own errors!
+      // Warn('missing_file', $name, $STATE->getStomach->getGullet,
+      //   "Can't find "
+      //     . ($options{notex} ? "binding for " : "")
+      //     . (($options{type} && $definition_name{ $options{type} }) || 'definitions') . ' '
+      //     . $name,
+      //   "Anticipate undefined macros or environments",
+      //   maybeReportSearchPaths()); }
     }
   }
-
   note_end(&s!("Loading {:?} definitions", filename));
   Ok(())
 }
@@ -546,11 +559,10 @@ fn reset_options(gullet: &mut Gullet, state: &mut State) -> Result<()> {
 pub struct RequireOptions {
   pub options: Vec<String>,
   pub withoptions: Option<Vec<String>>,
-  pub extension: Option<&'static str>,
+  pub extension: Option<Cow<'static, str>>,
   pub as_class: bool,
-  pub noltxml: bool,
-  pub notex: bool,
-  pub raw: bool,
+  pub noltxml: Option<bool>,
+  pub notex: Option<bool>,
   pub after: Tokens,
 }
 impl Default for RequireOptions {
@@ -560,9 +572,8 @@ impl Default for RequireOptions {
       withoptions: None,
       extension: None,
       as_class: false,
-      noltxml: false,
-      notex: true,
-      raw: false,
+      noltxml: None,
+      notex: None,
       after: Tokens!(),
     }
   }
@@ -573,22 +584,12 @@ impl Default for RequireOptions {
 /// ???) Another potentially useful option might be that if we are reading a raw file,
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
 pub fn require_package(name: &str, mut options: RequireOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
-  if options.raw {
-    options.raw = false;
-    Warn!(
-      "deprecated",
-      "raw",
-      stomach,
-      state,
-      "RequirePackage option raw is obsolete; it is not needed"
-    );
-  }
-
   // We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
-  // $options{notex} = 1
-  //   if !defined $options{notex} && !LookupValue('INCLUDE_STYLES') && !$options{noltxml};
+  if options.notex.is_none() && !state.lookup_bool("INCLUDE_STYLES") && !matches!(options.noltxml, Some(true)) {
+    options.notex = Some(true);
+  }
   if options.extension.is_none() {
-    options.extension = Some("sty");
+    options.extension = Some("sty".into());
   }
   // TODO: Ideally we want to use the same struct for the RequirePackage options as for the
   // InputDefinitions options
@@ -601,9 +602,8 @@ pub fn require_package(name: &str, mut options: RequireOptions, stomach: &mut St
       withoptions: if options.options.is_empty() { Some(Vec::new()) } else { None }, // fake boolean use, multi-type in latexml... refactor?
       options: options.options,
       as_class: options.as_class,
-      noltxml: options.noltxml,
-      notex: options.notex,
-      raw: options.raw,
+      noltxml: options.noltxml.unwrap_or(false),
+      notex: options.notex.unwrap_or(false),
       after: options.after,
       ..InputDefinitionOptions::default()
     },
@@ -644,7 +644,7 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens, stomach: &mut
   input_definitions(
     name,
     InputDefinitionOptions {
-      extension: Some("cls"),
+      extension: Some(Cow::Borrowed("cls")),
       after,
       notex: true,
       handleoptions: true,
@@ -674,18 +674,13 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens, stomach: &mut
 #[derive(Default)]
 pub struct FindFileOptions {
   pub forbid_ltxml: bool,
-  pub raw: bool,
   pub notex: bool,
-  pub ext_type: Option<String>,
+  pub ext_type: Option<Cow<'static, str>>,
+  pub search_paths_only: bool,
 }
 
 pub fn find_file(file: &str, options: Option<FindFileOptions>, state: &mut State) -> Option<String> {
   let mut options = options.unwrap_or_default();
-  if options.raw {
-    options.raw = false;
-    Warn!("deprecated", "raw", None, state, "FindFile option raw is deprecated; it is not needed");
-  }
-
   if pathname::is_literaldata(file) {
     // If literal protocol return immediately (unless notex!)
     if options.notex {
@@ -701,7 +696,7 @@ pub fn find_file(file: &str, options: Option<FindFileOptions>, state: &mut State
     // Otherwise, it's some kind of "real" file, and we might have to search for it
     // Specific type requested? Search for it.
     // Add the extension, if it isn't already there.
-    let aux_file = if file.ends_with(ext) { file.to_string() } else { s!("{}.{}", file, ext) };
+    let aux_file = if file.ends_with(ext.as_ref()) { file.to_string() } else { s!("{}.{}", file, ext) };
     find_file_aux(&aux_file, &options, state)
   } else if file.ends_with(".tex") {
     // If no type given, we MAY expect .tex, or maybe NOT!!
@@ -722,10 +717,7 @@ pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -
     Some(file.to_string())
   } else if pathname::is_absolute(file) {
     // And if we've got an absolute path,
-    if !options.forbid_ltxml && Path::new(&s!("{}.ltxml", file)).exists() {
-      // No need to search, just check if it exists.
-      Some(s!("{}.ltxml", file))
-    } else if Path::new(file).exists() {
+    if Path::new(file).exists() {
       // No need to search, just check if it exists.
       Some(file.to_string())
     } else {
@@ -747,19 +739,20 @@ pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -
     let nopaths = state.lookup_bool("REMOTE_REQUEST");
     let ltxml_paths: Vec<String> = if nopaths { vec![] } else { paths.clone() };
 
+    // TODO: DG: What do we do instead here? A YAML equivalent with an interpreter? Nothing?
     // If we're looking for ltxml, look within our paths & installation first (faster than kpse)
-    if !options.forbid_ltxml {
-      if let Some(path) = pathname::find(
-        &s!("{}.ltxml", file),
-        PathnameFindOptions {
-          paths: Some(ltxml_paths),
-          installation_subdir: Some(String::from("Package")),
-          ..PathnameFindOptions::default()
-        },
-      ) {
-        return Some(path);
-      }
-    }
+    // if !options.forbid_ltxml {
+    //   if let Some(path) = pathname::find(
+    //     &s!("{}.ltxml", file),
+    //     PathnameFindOptions {
+    //       paths: Some(ltxml_paths),
+    //       installation_subdir: Some(String::from("Package")),
+    //       ..PathnameFindOptions::default()
+    //     },
+    //   ) {
+    //     return Some(path);
+    //   }
+    // }
     // If we're looking for TeX, look within our paths & installation first (faster than kpse)
     if !options.notex {
       if let Some(path) = pathname::find(
@@ -786,9 +779,7 @@ pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -
     //   return (-f $result ? $result : undef); }
     // if ($urlbase && ($path = url_find($file, urlbase => $urlbase))) {
     //   return $path; }
-    // return; }
-    // Info!("No path found for: {:?}", file);
-    None
+    pathname::kpsewhich(&[file])
   }
 }
 
@@ -958,7 +949,7 @@ pub fn preload_font_map(encoding: &str, stomach: &mut Stomach, state: &mut State
     input_definitions(
       &encoding.to_lowercase(),
       InputDefinitionOptions {
-        extension: Some("fontmap"),
+        extension: Some(Cow::Borrowed("fontmap")),
         noerror: true,
         ..InputDefinitionOptions::default()
       },
