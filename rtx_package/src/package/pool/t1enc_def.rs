@@ -10,5 +10,5 @@ LoadDefinitions!(outer_stomach, state, {
   //DefAccent('\k', "\x{0328}", "\x{02DB}");
 
   // Now read the rest from the REAL t1enc.
-  InputDefinitions!("t1enc", extension => Some("def"), noltxml => true);
+  InputDefinitions!("t1enc", extension => Some("def".into()), noltxml => true);
 });

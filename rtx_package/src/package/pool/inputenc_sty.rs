@@ -15,7 +15,7 @@ fn set_input_encoding(encoding: &str, stomach: &mut Stomach, state: &mut State) 
   input_definitions(
     encoding,
     InputDefinitionOptions {
-      extension: Some("def"),
+      extension: Some("def".into()),
       ..InputDefinitionOptions::default()
     },
     stomach,

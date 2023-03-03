@@ -177,7 +177,7 @@ macro_rules! LoadPool {
     input_definitions(
       $name,
       InputDefinitionOptions {
-        extension: Some("pool"),
+        extension: Some(Cow::Borrowed("pool")),
         ..InputDefinitionOptions::default()
       },
       $stomach_arg,
