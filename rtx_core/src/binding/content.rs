@@ -11,7 +11,7 @@ use crate::document::resource::*;
 use crate::document::tag::{TagOptionName, TagOptions};
 use crate::gullet::Gullet;
 use crate::mouth::{Mouth, MouthOptions};
-use crate::parameter::{Parameter, ParameterExtra, Parameters};
+use crate::parameter::{Parameter, Parameters};
 use crate::state::{Scope, State, Stored};
 use crate::stomach::Stomach;
 use crate::token::*;
@@ -905,7 +905,7 @@ pub fn convert_latex_args(mut nargs: usize, optional: Option<Tokens>, state: &mu
       Parameter {
         name: Cow::Borrowed("Optional"),
         spec: Cow::Owned(s!("[Default:{}]", tks.untex())),
-        extra: vec![ParameterExtra::Tokens(tks), ParameterExtra::ParametersOption(None)],
+        extra: vec![tks],
         ..Parameter::default()
       }
       .init(state)?,

@@ -531,11 +531,11 @@ impl Gullet {
   /// Note that Braces on input hides the contents from matching,
   /// so this assumes there wont be braces in $delim!
   /// But, see readUntilBrace for that case.
-  pub fn read_until(&mut self, delim: Tokens, state: &mut State) -> Result<Tokens> {
+  pub fn read_until(&mut self, delim: &Tokens, state: &mut State) -> Result<Tokens> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut n = 0;
     let mut nbraces = 0;
-    let want = delim.unlist();
+    let want = delim.unlist_ref();
     let ntomatch = want.len();
     let mut has_matched;
 
@@ -594,7 +594,7 @@ impl Gullet {
             ring.push_back(token);
           }
         }
-        has_matched = ring == want; // Test match
+        has_matched = &ring == want; // Test match
         if has_matched {
           break;
         } // Matched all!
@@ -614,7 +614,7 @@ impl Gullet {
 
   /// Convenience method wrapping around `read_until`
   /// TODO: This seems to be the wrong Rust type interface, we need to rework...
-  pub fn read_until_token(&mut self, t: Token, state: &mut State) -> Result<Tokens> { self.read_until(Tokens!(t), state) }
+  pub fn read_until_token(&mut self, t: Token, state: &mut State) -> Result<Tokens> { self.read_until(&Tokens!(t), state) }
 
   pub fn read_until_brace(&mut self, state: &mut State) -> Result<Option<Tokens>> {
     let mut tokens = Vec::new();
@@ -683,7 +683,7 @@ impl Gullet {
       None => Ok(None),
       Some(t) => {
         if t.get_catcode() == Catcode::OTHER && t.get_string() == "[" {
-          Ok(Some(self.read_until(Tokens!(T_OTHER!("]")), state)?))
+          Ok(Some(self.read_until(&Tokens!(T_OTHER!("]")), state)?))
         } else {
           self.unread_one(t);
           Ok(None)

@@ -44,7 +44,7 @@ pub use rtx_core::ligature::{FontTestClosure, Ligature, LigatureMatcher, MathLig
 pub use rtx_core::list::List;
 pub use rtx_core::mouth;
 pub use rtx_core::mouth::{Mouth, MouthOptions};
-pub use rtx_core::parameter::{Parameter, ParameterExtra, Parameters, ReaderClosure, ReversionClosure};
+pub use rtx_core::parameter::{Parameter, Parameters, ReaderClosure, ReversionClosure};
 pub use rtx_core::rewrite::{Rewrite, RewriteOptions};
 pub use rtx_core::state::{Scope, State, Stored};
 pub use rtx_core::stomach::Stomach;

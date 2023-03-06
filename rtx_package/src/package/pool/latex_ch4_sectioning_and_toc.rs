@@ -50,7 +50,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
       let stype = type_tokens.to_string();
       let level = level_arg.to_string();
       let level_int = if level.is_empty() { 0 } else { level.parse::<i64>()? };
-      let ctr = match state.lookup_value(&s!("counter_for_{}",stype)) {
+      let ctr = match state.lookup_value(&s!("counter_for_{stype}")) {
         Some(v) => v.to_string(),
         None => stype
       };
@@ -85,7 +85,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
       // intuitive level of:       let (x,y,z, ...) = @args;
       unpack_to_string!(args => stype, inlist, toctitle, title);
       let clean_id = prop_str!(props,"id"); // TODO: CleanID($id);
-      document.open_element(&s!("ltx:{}", stype),
+      document.open_element(&s!("ltx:{stype}"),
         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
         None,
         state,
@@ -167,7 +167,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
       let title = args[3].as_ref().unwrap();
 
       let id = props.get("id").unwrap().to_string();
-      document.open_element(&s!("ltx:{}", stype),
+      document.open_element(&s!("ltx:{stype}"),
         Some(string_map!(
           "xml:id" => clean_id(&id),
           "inlist"  => inlist.to_string()

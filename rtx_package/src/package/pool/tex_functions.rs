@@ -110,12 +110,12 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
       }
       // Found text that marks the end of the parameter
       if !delim.is_empty() {
-        let expected = Tokens::new(delim);
+        let extra = Tokens::new(delim);
         params.push(
           Parameter {
             name: Cow::Borrowed("Until"),
-            spec: Cow::Owned(format!("Until:{expected}")),
-            extra: expected.into(),
+            spec: Cow::Owned(format!("Until:{extra}")),
+            extra: vec![extra],
             ..Parameter::default()
           }
           .init(state)?,
@@ -143,7 +143,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens, state: &mut State) ->
         Parameter {
           name: Cow::Borrowed("Match"),
           spec: Cow::Owned(s!("Match:{}", expected)),
-          extra: expected.into(),
+          extra: vec![expected],
           novalue: true,
           ..Parameter::default()
         }

@@ -300,8 +300,8 @@ LoadDefinitions!(state, {
 
   //----------------------------------------------------------------------
   // "typerefnum" form is used by automatic cross-references, typically "type number" or similar.
-  // Customize by defining \\typerefnum@<type> or \\typerefnum@font@<type>
-  // Default uses either \\<type>typerefname or \\<type>name (if any, followed by space, then
+  // Customize by defining \typerefnum@<type> or \typerefnum@font@<type>
+  // Default uses either \<type>typerefname or \<type>name (if any, followed by space, then
   // \\the<counter>
   DefMacro!(
     "\\lx@typerefnum@@{}",

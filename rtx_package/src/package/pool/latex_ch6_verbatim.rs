@@ -110,7 +110,7 @@ LoadDefinitions!(outer_state, {
       let init_ch = init_str.chars().next().unwrap();
       state.assign_catcode(init_ch, Catcode::ACTIVE, None);
       let delim = Tokens!(T_ACTIVE!(init_ch));
-      let body = gullet.read_until(delim, state)?;
+      let body = gullet.read_until(&delim, state)?;
       state.end_semiverbatim()?;
 
       let mut result = vec![T_CS!("\\@hidden@bgroup")];

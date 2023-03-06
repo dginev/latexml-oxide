@@ -250,7 +250,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   step_counter(&ctr, noreset, stomach, state)?;
   maybe_preempt_refnum(&ctr, false, stomach.get_gullet_mut(), state);
 
-  let has_id: bool = if let Some(iddef) = state.lookup_definition(&T_CS!(s!("\\the{}@ID", ctr))) {
+  let has_id: bool = if let Some(iddef) = state.lookup_definition(&T_CS!(s!("\\the{ctr}@ID"))) {
     if let Some(params) = iddef.get_parameters() {
       params.get_num_args() == 0
     } else {
@@ -260,8 +260,8 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
     false
   };
 
-  let the_cs = T_CS!(s!("\\the{}", ctr));
-  let the_id_cs = T_CS!(s!("\\the{}@ID", ctr));
+  let the_cs = T_CS!(s!("\\the{ctr}"));
+  let the_id_cs = T_CS!(s!("\\the{ctr}@ID"));
   def_macro(
     T_CS!("\\@currentlabel"),
     None,
@@ -286,12 +286,12 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   }
 
   let id = if has_id {
-    digest_literal(Tokens!(T_CS!(s!("\\the{}@ID", ctr))), stomach, state)?.to_string()
+    digest_literal(Tokens!(T_CS!(s!("\\the{ctr}@ID"))), stomach, state)?.to_string()
   } else {
     String::new()
   };
 
-  let refnum = digest_text(Tokens!(T_CS!(s!("\\the{}", ctr))), stomach, state)?;
+  let refnum = digest_text(Tokens!(T_CS!(s!("\\the{ctr}"))), stomach, state)?;
   let invocation;
   {
     let gullet = stomach.get_gullet_mut();
@@ -307,10 +307,10 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   // And install the scope (if any) for this reference number.
   state.assign_value("current_counter", ctr.to_string(), Some(Scope::Local));
 
-  let scope = s!("{}:{}", ctr, refnum.to_string());
+  let scope = s!("{ctr}:{refnum}");
   let mut receiver = VecDeque::new();
   receiver.push_front(Stored::String(scope.clone()));
-  state.assign_value(&s!("scopes_for_counter:{}", ctr), receiver, Some(Scope::Local));
+  state.assign_value(&s!("scopes_for_counter:{ctr}"), receiver, Some(Scope::Local));
   state.activate_scope(&scope);
 
   Ok(map!(
@@ -329,14 +329,14 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
 /// to return the desired refnum and id for a given object.
 fn maybe_preempt_refnum(ctr: &str, norefnum: bool, gullet: &mut Gullet, state: &mut State) {
   if let Some(mapper) = state.lookup_value("LABEL_MAPPING_HOOK") {
-    let hj_refnum = T_CS!(s!("\\_PREEMPTED_REFNUM_{}", ctr));
-    let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{}", ctr));
+    let hj_refnum = T_CS!(s!("\\_PREEMPTED_REFNUM_{ctr}"));
+    let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{ctr}"));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
     if !norefnum && state.lookup_meaning(&hj_refnum).is_some() {
-      state.let_i(&T_CS!(s!("\\the{}", ctr)), hj_refnum, Some(Scope::Global), gullet);
+      state.let_i(&T_CS!(s!("\\the{ctr}")), hj_refnum, Some(Scope::Global), gullet);
     }
     if state.lookup_meaning(&hj_id).is_some() {
-      state.let_i(&T_CS!(s!("\\the{}@ID", ctr)), hj_id, Some(Scope::Global), gullet);
+      state.let_i(&T_CS!(s!("\\the{ctr}@ID")), hj_id, Some(Scope::Global), gullet);
     }
     let label = state.lookup_value("PEEKED_LABEL");
     // TODO: Continue once we know the type of "mapper"
@@ -376,7 +376,7 @@ pub fn maybe_note_label(label: &str, state: &mut State) {
 
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   //  print STDERR "Unusing scopes for $ctr\n";
-  if let Some(Stored::VecDequeStored(stored_scopes)) = state.lookup_value(&s!("scopes_for_counter:{}", ctr)) {
+  if let Some(Stored::VecDequeStored(stored_scopes)) = state.lookup_value(&s!("scopes_for_counter:{ctr}")) {
     for scope_stored in stored_scopes.clone() {
       if let Stored::String(scope) = scope_stored {
         state.deactivate_scope(&scope);
@@ -387,7 +387,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   }
 
   // TODO: if we ever want to unshift from the nested_counters, we'll need to also use Stored::VecDequeStored for them.
-  if let Some(Stored::VecString(stored_counters)) = state.lookup_value(&s!("nested_counters_{}", ctr)) {
+  if let Some(Stored::VecString(stored_counters)) = state.lookup_value(&s!("nested_counters_{ctr}")) {
     for inner_ctr in stored_counters.clone() {
       deactivate_counter_scope(&inner_ctr, state);
     }
@@ -403,12 +403,12 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
     Some(map) => map.to_string(),
     None => ctype.to_string(),
   };
-  let unctr = s!("UN{}", ctr);
+  let unctr = s!("UN{ctr}");
   step_counter(&unctr, false, stomach, state)?;
   maybe_preempt_refnum(&ctr, true, stomach.get_gullet_mut(), state);
-  let cunctr_val = state.lookup_number(&s!("\\c@{}", unctr)).unwrap().value_of();
+  let cunctr_val = state.lookup_number(&s!("\\c@{unctr}")).unwrap().value_of();
   def_macro(
-    T_CS!(s!("\\@{}@ID", ctr)),
+    T_CS!(s!("\\@{ctr}@ID")),
     None,
     Tokens!(T_OTHER!("x"), Explode!(cunctr_val)),
     Some(ExpandableOptions {
@@ -418,19 +418,19 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
     state,
   );
 
-  let thectr = s!("\\the{}@ID", ctr);
+  let thectr = s!("\\the{ctr}@ID");
   def_macro(T_CS!("\\@currentID"), None, T_CS!(thectr), None, state);
   Ok(stored_map!("id" =>
     clean_id(&digest_literal(T_CS!(thectr), stomach, state)?.to_string())))
 }
 
 pub fn reset_counter(ctr: &str, state: &mut State) {
-  state.assign_value(&s!("\\c@{}", ctr), Number::new(0), Some(Scope::Global));
-  state.assign_value(&s!("\\c@UN{}", ctr), Number::new(0), Some(Scope::Global));
+  state.assign_value(&s!("\\c@{ctr}"), Number::new(0), Some(Scope::Global));
+  state.assign_value(&s!("\\c@UN{ctr}"), Number::new(0), Some(Scope::Global));
   def_macro(
     T_CS!(s!("\\@{}@ID", ctr)),
     None,
-    Tokens!(Explode!(state.lookup_number(&s!("\\c@{}", ctr)).unwrap().value_of())),
+    Tokens!(Explode!(state.lookup_number(&s!("\\c@{ctr}")).unwrap().value_of())),
     Some(ExpandableOptions {
       scope: Some(Scope::Global),
       ..ExpandableOptions::default()
@@ -438,7 +438,7 @@ pub fn reset_counter(ctr: &str, state: &mut State) {
     state,
   );
   // and reset any within counters!
-  let nested = state.lookup_tokens(&s!("\\cl@{}", ctr)).unwrap_or_default();
+  let nested = state.lookup_tokens(&s!("\\cl@{ctr}")).unwrap_or_default();
   for c in nested.unlist() {
     reset_counter(c.get_string(), state);
   }
@@ -470,7 +470,7 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>, stomach: &mut Stomach, st
     } else {
       T_CS!("\\makelabel")
     };
-    let counter_name = s!("\\{}name", counter);
+    let counter_name = s!("\\{counter}name");
     let typename = if is_defined(&counter_name, state) {
       T_CS!(counter_name)
     } else {
@@ -481,10 +481,10 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>, stomach: &mut Stomach, st
     let mut tag_tokens = vec![
       T_BEGIN!(),
       T_CS!("\\let"),
-      T_CS!(s!("\\the{}", counter)),
+      T_CS!(s!("\\the{counter}")),
       T_CS!("\\@empty"),
       T_CS!("\\def"),
-      T_CS!(s!("\\fnum@{}", counter)),
+      T_CS!(s!("\\fnum@{counter}")),
       T_BEGIN!(),
       formatter,
       T_BEGIN!(),
@@ -496,7 +496,7 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>, stomach: &mut Stomach, st
       T_END!(),
       T_END!(),
       T_CS!("\\def"),
-      T_CS!(s!("\\typerefnum@{}", counter)),
+      T_CS!(s!("\\typerefnum@{counter}")),
       T_BEGIN!(),
       typename,
       T_SPACE!(),
@@ -541,13 +541,13 @@ pub fn begin_itemize(
 ) -> Result<HashMap<String, Stored>> {
   let outercounter = state.lookup_string("itemcounter");
   let outerlevel = if !outercounter.is_empty() {
-    state.lookup_int(&s!("{}level", outercounter))
+    state.lookup_int(&s!("{outercounter}level"))
   } else {
     0
   };
   let counter = counter.unwrap_or("@item");
   let listlevel = state.lookup_int("itemization_level") + 1; // level for this list overall
-  let level = state.lookup_int(&s!("{}level", counter)) + 1; // level for lists of specific type
+  let level = state.lookup_int(&s!("{counter}level")) + 1; // level for lists of specific type
   AssignRegister!(
     "\\itemsep",
     state.lookup_dimension("\\lx@default@itemsep").unwrap_or_default().into(),
@@ -555,7 +555,7 @@ pub fn begin_itemize(
     state
   );
   state.assign_value("itemization_level", listlevel, None);
-  state.assign_value(&s!("{}level", counter), level, None);
+  state.assign_value(&s!("{counter}level"), level, None);
   state.assign_value("itemization_items", 0, None);
   let listpostfix = roman!(listlevel).to_string();
   let postfix = roman!(level).to_string();
@@ -565,7 +565,7 @@ pub fn begin_itemize(
   }
   let gullet = stomach.get_gullet_mut();
   if !itype.is_empty() {
-    let itype_cs = T_CS!(s!("\\{}@item", itype));
+    let itype_cs = T_CS!(s!("\\{itype}@item"));
     state.let_i(&T_CS!("\\item"), itype_cs, None, gullet);
   }
   state.let_i(&T_CS!("\\par"), T_CS!("\\normal@par"), None, gullet); // In case within odd environment.
@@ -573,29 +573,29 @@ pub fn begin_itemize(
   // Now arrange that this list's id's are relative to the current (outer) item (if any)
   // And that the items within this list's id's are relative to this (new) list.
   state.assign_value("itemcounter", Stored::String(usecounter.clone()), None);
-  let listcounter = s!("@itemize{}", listpostfix);
-  if state.lookup_value(&s!("\\c@{}", listcounter)).is_none() {
+  let listcounter = s!("@itemize{listpostfix}");
+  if state.lookup_value(&s!("\\c@{listcounter}")).is_none() {
     //Create new list counters as needed
     new_counter(&listcounter, "", None, stomach, state)?;
   }
   if !outercounter.is_empty() {
     // Make this list's ID relative to outer list's ID
-    let outerusecounter = s!("{}{}", outercounter, roman!(outerlevel).to_string());
-    let thectr = s!("\\the{}@ID", listcounter);
-    let theexpansion = s!("\\the{}@ID.I\\arabic{{{}}}", outerusecounter, listcounter);
+    let outerusecounter = s!("{outercounter}{}", roman!(outerlevel).to_string());
+    let thectr = s!("\\the{listcounter}@ID");
+    let theexpansion = s!("\\the{outerusecounter}@ID.I\\arabic{{{listcounter}}}");
     def_macro(T_CS!(thectr), None, mouth::tokenize_internal(&theexpansion), None, state);
 
     // AND reset this list's counter when the outer item is stepped
     let mut cl_toks = vec![T_CS!(listcounter)];
-    let cs_name = s!("\\cl@{}", outerusecounter);
+    let cs_name = s!("\\cl@{outerusecounter}");
     if let Some(Stored::Tokens(tks)) = state.lookup_value(&cs_name) {
       cl_toks.extend(tks.clone().unlist());
     }
     state.assign_value(&cs_name, Stored::Tokens(Tokens::new(cl_toks)), Some(Scope::Global));
   }
   // format the id of \item's relative to the id of this list
-  let useexp = mouth::tokenize_internal(&s!("\\the{}@ID.i\\@{}@ID", listcounter, usecounter));
-  def_macro(T_CS!(s!("\\the{}@ID", usecounter)), None, useexp, None, state);
+  let useexp = mouth::tokenize_internal(&s!("\\the{listcounter}@ID.i\\@{usecounter}@ID"));
+  def_macro(T_CS!(s!("\\the{usecounter}@ID")), None, useexp, None, state);
 
   let mut series = if let Some(s) = options.series { s.to_string() } else { String::new() };
   if let Some(start) = options.start {
@@ -617,24 +617,24 @@ pub fn begin_itemize(
     reset_counter(&usecounter, state);
   }
 
-  let mut rsc = ref_step_counter(&s!("@itemize{}", listpostfix), false, stomach, state)?;
+  let mut rsc = ref_step_counter(&s!("@itemize{listpostfix}"), false, stomach, state)?;
   rsc.insert("counter".to_string(), Stored::String(usecounter));
   rsc.insert("series".to_string(), Stored::String(series));
   Ok(rsc)
 }
 
 pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit, stomach: &mut Stomach, state: &mut State) {
-  let tagskey = &s!("{}_tags", captype);
+  let tagskey = &s!("{captype}_tags");
   if let Some(tags) = state.remove_value(tagskey) {
     state.assign_value(tagskey, false, Some(Scope::Global));
     whatsit.set_property("tags", tags);
   }
-  let idkey = s!("{}_id", captype);
+  let idkey = s!("{captype}_id");
   if let Some(id) = state.remove_value(&idkey) {
     state.assign_value(&idkey, false, Some(Scope::Global));
     whatsit.set_property("id", id);
   }
-  let inlistkey = s!("{}_inlist", captype);
+  let inlistkey = s!("{captype}_inlist");
   if let Some(inlist) = state.remove_value(&inlistkey) {
     state.assign_value(&inlistkey, false, Some(Scope::Global));
     whatsit.set_property("inlist", inlist);
