@@ -3,6 +3,8 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use std::env;
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Default)]
@@ -23,6 +25,8 @@ lazy_static! {
   static ref PATHNAME_IS_NASTY_RE: Regex = Regex::new(r"[^\w\-_+=/\\\.~\s:]").unwrap();
   // TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
   static ref URL_RE: Regex = Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap();
+
+  static ref KPSE : Arc<Mutex<Kpaths>> = Arc::new(Mutex::new(Kpaths::new().unwrap()));
   // static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
   //     Ok(exe_path) => {
   //       match exe_path.as_path().parent() {
@@ -296,9 +300,8 @@ pub fn extension(pathname: &str) -> String {
 }
 
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
-  let kpse = Kpaths::new().unwrap();
   for candidate in candidates {
-    if let Some(path) = kpse.find_file(candidate) {
+    if let Some(path) = KPSE.lock().unwrap().find_file(candidate) {
       return Some(path);
     }
   }
