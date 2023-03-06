@@ -148,7 +148,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
       load_tex_definitions(&filename, &file, stomach, state)?;
     } else if !options.noerror {
       // TODO: Proper missing reports
-      Warn!("missing_file", name, stomach, state, "Can't find file for {}", name);
+      Warn!("missing_file", name, stomach, state, s!("Can't find file for {name}"));
       // STATE.note_status(missing => $name . ($options{type} ? '.' . $options{type} : ''));
       // # We'll only warn about a missing file of definitions: it may be ignorable or never used.
       // # if there ARE problems, they'll likely produce their own errors!

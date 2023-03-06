@@ -29,6 +29,7 @@ fn can_expand() {
 pub fn expansion_tests_dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Option<Result<()>> {
   match filename {
     "whichinput.tex" => Some(helpers::whichinput_tex::load_definitions(stomach, state)),
+    "whichcache.tex" => Some(helpers::whichcache_tex::load_definitions(stomach, state)),
     other => pool::dispatch(other, stomach, state),
   }
 }

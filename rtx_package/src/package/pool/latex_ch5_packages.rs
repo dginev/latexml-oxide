@@ -60,6 +60,23 @@ LoadDefinitions!(state, {
     DefMacro!(T_CS!(ltxtrigger), None, Tokens!());
   }
 
+  DefMacro!("\\@ifpackageloaded", r"\@ifl@aded\@pkgextension");
+  Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
+  DefMacro!("\\@ifclassloaded", r"\@ifl@aded\@clsextension");
+  Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
+  DefMacro!("\\@ifl@aded{}{}", sub[gullet, (ext, name), state] {
+    let path = s!("{}.{}", Expand!(name, gullet), Expand!(ext, gullet));
+    // If EITHER the raw TeX or ltxml version of this file was loaded.
+    if state.lookup_bool(&s!("{path}_loaded")) || state.lookup_bool(&s!("{path}.ltxml_loaded")) {
+      T_CS!("\\@firstoftwo")
+    } else {
+      T_CS!("\\@secondoftwo")
+    }});
+
+  DefMacro!("\\@ifpackagewith", r"\@if@ptions\@pkgextension");
+  DefMacro!("\\@ifclasswith",  r"\@if@ptions\@clsextension");
+  DefMacro!("\\@ptionlist {}", r"\@ifundefined{opt@#1}\@empty{\csname opt@#1\endcsname}");
+
   DefPrimitive!("\\g@addto@macro DefToken {}", sub[stomach,(target, content),state] {
     AddToMacro!(target, content, stomach, state);
   });
