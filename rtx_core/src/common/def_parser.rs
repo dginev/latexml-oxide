@@ -5,7 +5,8 @@ use std::borrow::Cow;
 use crate::common::error::*;
 
 use crate::mouth;
-use crate::parameter::{Parameter, ParameterExtra, Parameters};
+use crate::tokens::Tokens;
+use crate::parameter::{Parameter, Parameters};
 use crate::state::State;
 use crate::token::*;
 
@@ -76,7 +77,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
         } else {
           Cow::Owned(spec.to_string())
         },
-        extra: vec![inner.into()],
+        inner: inner.map(|ps| ps.into()).unwrap_or_default(),
         ..Parameter::default()
       };
       if let Some(state) = &mut state_opt {
@@ -97,8 +98,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
           } else {
             Cow::Owned(spec.to_string())
           },
-          // extra: vec![TokenizeInternal!(default_captures.get(0).map_or("", |m| m.as_str())), None]});
-          extra: Vec::new(),
+          // extra: vec![TokenizeInternal!(default_captures.get(0).map_or("", |m| m.as_str()))],
           ..Parameter::default()
         };
         if let Some(ref mut state) = &mut state_opt {
@@ -113,10 +113,8 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
           } else {
             Cow::Owned(spec.to_string())
           },
-          extra: vec![
-            ParameterExtra::ParametersOption(None),
-            parse_parameters(inner_spec.to_string(), cs, state_opt.as_deref_mut())?.into(),
-          ],
+          inner: parse_parameters(inner_spec.to_string(), cs, state_opt.as_deref_mut())?
+            .map(|ps| ps.into()).unwrap_or_default(),
           ..Parameter::default()
         };
         if let Some(ref mut state) = &mut state_opt {
@@ -127,7 +125,6 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
         let mut p = Parameter {
           name: Cow::Borrowed("Optional"),
           spec: Cow::Owned(spec.to_string()),
-          extra: Vec::new(),
           ..Parameter::default()
         };
         if let Some(state) = &mut state_opt {
@@ -140,12 +137,10 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
       let name = captures.get(2).map_or("", |m| m.as_str()).to_string();
       let extra_str = captures.get(4).map_or("", |m| m.as_str()).to_string();
       next_proto = PARAMSPECT_CHECK_RE.replace(&prototype, "").to_string();
-      // TODO: Ask Bruce about the "extra" functionality and its types
-      let extra = extra_str
-        .split('|')
-        .flat_map(|t| mouth::tokenize_internal(t).unlist())
-        .map(Into::into)
-        .collect::<Vec<ParameterExtra>>();
+      let extra : Vec<Tokens> = if extra_str.is_empty() { Vec::new() } else {
+        extra_str.split('|')
+          .map(|t| Tokens::new(mouth::tokenize_internal(t).unlist())).collect()
+      };
       let mut p = Parameter {
         name: name.into(),
         spec: spec.into(),

@@ -21,7 +21,7 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{Digested, Locator};
 
-pub type ReaderFn = dyn Fn(&mut Gullet, Vec<Option<Parameters>>, &[ParameterExtra], &mut State) -> Result<ArgWrap>;
+pub type ReaderFn = dyn Fn(&mut Gullet, Option<&Parameters>, &[Tokens], &mut State) -> Result<ArgWrap>;
 pub type ReaderPredigestFn = dyn Fn(&mut Stomach, ArgWrap, &mut State) -> Result<Option<Digested>>;
 pub type ReaderPredigestClosure = Arc<ReaderPredigestFn>;
 pub type ReaderClosure = Arc<ReaderFn>;
@@ -34,57 +34,11 @@ pub type ReaderClosure = Arc<ReaderFn>;
 // let mut stomach = state.stomach.borrow_mut();
 // let mut gullet = stomach.get_gullet_mut();
 //
-pub type ReversionClosure = Arc<dyn Fn(Vec<Token>, &[ParameterExtra], &State) -> Result<Tokens>>;
+pub type ReversionClosure = Arc<dyn Fn(Vec<Token>, Option<&Parameters>, &[Tokens], &State) -> Result<Tokens>>;
 
 lazy_static! {
   static ref LAST_WCHAR_RE: Regex = Regex::new(r"\w$").unwrap();
   static ref FIRST_WCHAR_RE: Regex = Regex::new(r"^\w").unwrap();
-}
-
-#[derive(Clone, Debug)]
-pub enum ParameterExtra {
-  Tokens(Tokens),
-  ParametersOption(Option<Parameters>),
-}
-impl From<Token> for ParameterExtra {
-  fn from(t: Token) -> ParameterExtra { ParameterExtra::Tokens(Tokens!(t)) }
-}
-impl From<Tokens> for ParameterExtra {
-  fn from(t: Tokens) -> ParameterExtra { ParameterExtra::Tokens(t) }
-}
-impl From<Option<Parameters>> for ParameterExtra {
-  fn from(opt: Option<Parameters>) -> ParameterExtra { ParameterExtra::ParametersOption(opt) }
-}
-impl From<ParameterExtra> for Token {
-  fn from(param: ParameterExtra) -> Token {
-    if let ParameterExtra::Tokens(t) = param {
-      t.into()
-    } else {
-      panic!("Can't cast {param:?} into Token");
-    }
-  }
-}
-impl From<ParameterExtra> for Tokens {
-  fn from(param: ParameterExtra) -> Tokens {
-    if let ParameterExtra::Tokens(t) = param {
-      t
-    } else {
-      panic!("Can't cast {param:?} into Tokens");
-    }
-  }
-}
-impl From<ParameterExtra> for Option<Parameters> {
-  fn from(param: ParameterExtra) -> Option<Parameters> {
-    if let ParameterExtra::ParametersOption(ps) = param {
-      ps
-    } else {
-      None
-    }
-  }
-}
-
-impl From<Tokens> for Vec<ParameterExtra> {
-  fn from(tks: Tokens) -> Vec<ParameterExtra> { tks.unlist().into_iter().map(Into::into).collect() }
 }
 
 #[derive(Clone)]
@@ -95,7 +49,8 @@ pub struct Parameter {
   pub pack_parameters: bool,
   pub name: Cow<'static, str>,
   pub spec: Cow<'static, str>,
-  pub extra: Vec<ParameterExtra>,
+  pub extra: Vec<Tokens>,
+  pub inner: Option<Parameters>,
   pub reader: ReaderClosure,
   pub reader_predigest: Option<ReaderPredigestClosure>,
   pub reversion: Option<ReversionClosure>,
@@ -112,6 +67,7 @@ impl Default for Parameter {
       name: Cow::Borrowed("parameter_default"),
       spec: Cow::Borrowed(""),
       extra: Vec::new(),
+      inner: None,
       reader: Arc::new(|_gullet, _args, _extra, _state| {
         Warn!(
           "Parameter",
@@ -138,9 +94,10 @@ impl fmt::Debug for Parameter {
     )?;
     writeln!(
       f,
-      "\t optional:{:?}, spec:{:?}\n\t extra: {:?}\n\t reversion: {:?}, before_digest: {:?}, after_digest: {:?} )",
+      "\t optional:{:?}, spec:{:?}\n\t inner: {:?}\n\t extra: {:?}\n\t reversion: {:?}, before_digest: {:?}, after_digest: {:?} )",
       self.optional,
       self.spec,
+      self.inner,
       self.extra,
       self.reversion.is_some(),
       self.before_digest.len(),
@@ -263,14 +220,9 @@ impl Parameter {
         s!("Unrecognized parameter type with name {:?}, spec {:?}", self.name, self.spec)
       ),
     }
-    // Last but not least, initialize any "extra" parameters
-    self.extra = self.extra.drain(..).map(|p_extra| {
-      match p_extra {
-        ParameterExtra::ParametersOption(Some(extra_param)) =>
-          ParameterExtra::ParametersOption(Some(extra_param.init(state).expect("inner param init shouldn't fail?"))),
-        _ => p_extra
-      }
-    }).collect();
+    // Last but not least, initialize any "inner" parameters
+    self.inner = self.inner.map(|inner_ps| inner_ps.init(state)
+        .expect("inner param init shouldn't fail?"));
     Ok(self)
   }
 
@@ -306,7 +258,7 @@ impl Parameter {
     self.setup_catcodes(state);
 
     let closure = &self.reader;
-    let value_from_reader: ArgWrap = closure(gullet, vec![], &self.extra, state)?;
+    let value_from_reader: ArgWrap = closure(gullet, self.inner.as_ref(), &self.extra, state)?;
     let value_arg = if value_from_reader.is_tokens() {
       let wants_option = self.optional || value_from_reader.is_option();
       match value_from_reader.owned_tokens() {
@@ -427,7 +379,7 @@ impl Parameter {
   pub fn revert(&self, value_opt: Option<Tokens>, state: &State) -> Result<Option<Tokens>> {
     if let Some(ref reverter) = self.reversion {
       if let Some(value) = value_opt {
-        Ok(Some((reverter)(value.unlist(), &self.extra, state)?))
+        Ok(Some((reverter)(value.unlist(), self.inner.as_ref(), &self.extra, state)?))
       } else {
         Ok(None)
       }
@@ -526,6 +478,9 @@ impl Parameters {
   }
 
   pub fn reparse_argument(&self, gullet: &mut Gullet, value: ArgWrap, ostate: &mut State) -> Result<Vec<ArgWrap>> {
+    if value.is_none() {
+      return Ok(Vec::new())
+    }
     let value_tokens = value.revert(ostate)?;
     // start with empty mouth
     let mut reader_mouth = Mouth::new("", None, ostate)?;
@@ -552,6 +507,12 @@ impl fmt::Display for Parameters {
   }
 }
 
+impl From<Parameters> for Vec<Parameter> {
+  fn from(ps: Parameters) -> Vec<Parameter> {
+    ps.0
+  }
+}
+
 impl ToTokens for Parameters {
   fn to_tokens(&self, stream: &mut TokenStream) {
     let params = &self.0;
@@ -572,27 +533,18 @@ impl ToTokens for Parameter {
       Cow::Owned(v) => quote!(Cow::Borrowed(#v)),
     };
     let extra = &self.extra;
+    let inner = match &self.inner {
+      None => quote!(None),
+      Some(inner_ps) => quote!(Some(#inner_ps))
+    };
     stream.extend(quote! {
       Parameter {
         name: #name,
         spec: #spec,
-        extra: <[ParameterExtra]>::into_vec(Box::new([ #(#extra),* ])),
+        extra: <[Tokens]>::into_vec(Box::new([ #(#extra),* ])),
+        inner: #inner,
         ..Parameter::default()
       }
-    });
-  }
-}
-
-impl ToTokens for ParameterExtra {
-  fn to_tokens(&self, stream: &mut TokenStream) {
-    stream.extend(match self {
-      ParameterExtra::Tokens(ts) => quote!( ParameterExtra::Tokens(#ts) ),
-      ParameterExtra::ParametersOption(Some(po)) => {
-        quote!( ParameterExtra::ParametersOption(Some(#po)))
-      },
-      ParameterExtra::ParametersOption(None) => {
-        quote!(ParameterExtra::ParametersOption(None))
-      },
     });
   }
 }

@@ -1,7 +1,6 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use rtx_core::common::def_parser::parse_prototype;
-use rtx_core::parameter::ParameterExtra;
 use syn::{DeriveInput, Lit, Meta};
 
 /// For now this prototype compilation technique is tied tightly to the `TypedMacroWO!` macro from rtx_package
@@ -29,18 +28,16 @@ pub fn compile_prototype_for(input: DeriveInput) -> TokenStream {
       Ok((cs, params_opt)) => {
         let csname = cs.get_cs_name();
         let proto_types: Vec<_> = if let Some(ref params) = params_opt {
-          // this is a bit odd... if there is an *inner* parameter, as with {Number}
+          // if there is an *inner* parameter, as with {Number}
           // the name we want to pass in is the inner one. Otherwise the main one.
           params
             .get_parameters()
             .iter()
             .filter(|p| !p.name.starts_with("Skip"))
             .map(|p| {
-              if let Some(ParameterExtra::ParametersOption(Some(inner_ps))) =
-                p.extra.iter().find(|ip| matches!(ip, ParameterExtra::ParametersOption(Some(_))))
-              {
-                if let Some(inner_p) = inner_ps.get_parameters().first() {
-                  format_ident!("{}", inner_p.name)
+              if let Some(ref inner_p) = p.inner {
+                if let Some(first_inner) = inner_p.get_parameters().first() {
+                  format_ident!("{}", first_inner.name)
                 } else {
                   format_ident!("{}", p.name)
                 }
