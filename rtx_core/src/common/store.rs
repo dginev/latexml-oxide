@@ -597,6 +597,13 @@ impl From<crate::Digested> for Stored {
   fn from(value: crate::Digested) -> Self { crate::Stored::Digested(value) }
 }
 
+impl From<&crate::Digested> for Stored {
+  fn from(value: &crate::Digested) -> Self { crate::Stored::Digested(value.clone()) }
+}
+impl<'a> From<Cow<'a, crate::Digested>> for Stored {
+  fn from(value: Cow<'a, crate::Digested>) -> Self { crate::Stored::Digested(value.into_owned()) }
+}
+
 impl From<Box<crate::Digested>> for Stored {
   fn from(value: Box<crate::Digested>) -> Self { Stored::Digested(*value) }
 }

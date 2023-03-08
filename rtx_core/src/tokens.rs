@@ -54,6 +54,9 @@ macro_rules! Tokens(
 impl From<Vec<Token>> for Tokens {
   fn from(ts: Vec<Token>) -> Tokens { Tokens::new(ts) }
 }
+impl From<Tokens> for Vec<Token> {
+  fn from(ts: Tokens) -> Vec<Token> { ts.unlist() }
+}
 
 impl From<Token> for Tokens {
   fn from(t: Token) -> Tokens { Tokens::new(vec![t]) }

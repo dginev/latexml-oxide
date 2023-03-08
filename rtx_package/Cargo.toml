@@ -16,7 +16,7 @@ time = "0.3"
 lazy_static = "1.0"
 regex = "1.7.1"
 log = "0.4"
-libxml = "0.3.1"
+libxml = "0.3.2"
 chrono = "0.4"
 rtx_codegen = {path = "../rtx_codegen"}
 rtx_core = {path = "../rtx_core"}

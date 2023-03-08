@@ -141,6 +141,20 @@ impl Document {
     }
   }
 
+  /// Like findnodes, but expects an xpath that evaluates to a literal value (e.g. for attributes)
+  pub fn findvalues(&self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<String> {
+    match node_opt {
+      Some(node) => state.model.get_xpath(&self.document).findvalues(xpath, Some(node)),
+      None => {
+        if let Some(root) = self.document.get_root_element() {
+          state.model.get_xpath(&self.document).findvalues(xpath, Some(&root))
+        } else {
+          Vec::new()
+        }
+    }
+    }
+  }
+
   /// Get the node's qualified name in standard form
   /// Ie. using the registered prefix for that namespace.
   /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
@@ -1641,34 +1655,35 @@ impl Document {
     }
     if key == "xml:id" || key == "id" {
       // If it's an ID attribute
-      self.record_id_with_node(value, node); // Do id book keeping
-                                             // TODO: Need to improve Namespace ergonomics, also in rust-libxml
-                                             // let node_ns = self
-                                             //   .document
-                                             //   .get_root_element()
-                                             //   .unwrap()
-                                             //   .get_namespace_declarations()
-                                             //   .into_iter()
-                                             //   .find(|ns| ns.get_href() == XML_NS)
-                                             //   .unwrap_or_else(|| {
-                                             //     node
-                                             //       .get_namespace_declarations()
-                                             //       .into_iter()
-                                             //       .find(|ns| ns.get_href() == XML_NS)
-                                             //       .unwrap_or_else(|| {
-                                             //         Namespace::new(
-                                             //           "xml",
-                                             //           &XML_NS.to_string().clone(),
-                                             //           &mut self.document.get_root_element().unwrap(),
-                                             //         ).unwrap_or_else(|_| {
-                                             //           panic!(
-                                             //             "Could not set NS for {:?}\n\n at \n\n {:?}",
-                                             //             self.document.node_to_string(node),
-                                             //             self.document.to_string(true)
-                                             //           )
-                                             //         })
-                                             //       })
-                                             //   });
+      // Do id book keeping
+      self.record_id_with_node(value, node);
+      // TODO: Need to improve Namespace ergonomics, also in rust-libxml
+      // let node_ns = self
+      //   .document
+      //   .get_root_element()
+      //   .unwrap()
+      //   .get_namespace_declarations()
+      //   .into_iter()
+      //   .find(|ns| ns.get_href() == XML_NS)
+      //   .unwrap_or_else(|| {
+      //     node
+      //       .get_namespace_declarations()
+      //       .into_iter()
+      //       .find(|ns| ns.get_href() == XML_NS)
+      //       .unwrap_or_else(|| {
+      //         Namespace::new(
+      //           "xml",
+      //           &XML_NS.to_string().clone(),
+      //           &mut self.document.get_root_element().unwrap(),
+      //         ).unwrap_or_else(|_| {
+      //           panic!(
+      //             "Could not set NS for {:?}\n\n at \n\n {:?}",
+      //             self.document.node_to_string(node),
+      //             self.document.to_string(true)
+      //           )
+      //         })
+      //       })
+      //   });
       node.set_attribute("xml:id", value)?; // and bypass all ns stuff
     } else if !key.contains(':') {
       // No colon; no namespace (the common case!)
@@ -1790,20 +1805,23 @@ impl Document {
     }
   }
 
-  // # Get a new, related, but unique id
-  // # Sneaky option: try $LaTeXML::Core::Document::ID_SUFFIX as a suffix for id, first.
-  // sub modifyID {
-  //   my ($self, $id) = @_;
-  //   if (my $prev = $$self{idstore}{$id}) {    # Whoops! Already assigned!!!
-  //                                             # Can we recover?
-  //     my $badid = $id;
-  //     if (!$LaTeXML::Core::Document::ID_SUFFIX
-  //       || $$self{idstore}{ $id = $badid . $LaTeXML::Core::Document::ID_SUFFIX }) {
-  //       foreach my $s1 (1 .. 26 * 26 * 26) {    # Gotta give up, eventually; is 3 letters enough?
-  //         return $id unless $$self{idstore}{ $id = $badid . radix_alpha($s1) }; }
-  //       Error('malformed', 'id', $self, "Automatic incrementing of ID counters failed",
-  //         "Last alternative for '$id' is '$badid'"); } }
-  //   return $id; }
+  /// Get a new, related, but unique id
+  /// Sneaky option: try "ID_SUFFIX" as a suffix for id, first.
+  pub fn modify_id(&mut self, id: String ) -> String {
+    if self.idstore.contains_key(&id) {
+      // Whoops! Already assigned!!!
+      // Can we recover?
+      let badid = id;
+      unimplemented!();
+      //     if (!$LaTeXML::Core::Document::ID_SUFFIX
+      //       || $$self{idstore}{ $id = $badid . $LaTeXML::Core::Document::ID_SUFFIX }) {
+      //       foreach my $s1 (1 .. 26 * 26 * 26) {    # Gotta give up, eventually; is 3 letters enough?
+      //         return $id unless $$self{idstore}{ $id = $badid . radix_alpha($s1) }; }
+      //       Error('malformed', 'id', $self, "Automatic incrementing of ID counters failed",
+      //         "Last alternative for '$id' is '$badid'"); }
+    }
+    id
+  }
 
   pub fn lookup_id(&self, id: &str) -> Option<&Node> { self.idstore.get(id) }
 
@@ -2361,48 +2379,50 @@ impl Document {
   // since otherwise they may be duplicated.
 
   // # Should have variants here for prepend, insert before, insert after.... ???
-  // sub appendClone {
-  //   my ($self, $node, @newchildren) = @_;
-  //   # Expand any document fragments
-  //   @newchildren = map { ($_->nodeType == XML_DOCUMENT_FRAG_NODE ? $_->childNodes : $_) } @newchildren;
-  //   # Now find all xml:id's in the newchildren and record replacement id's for them
-  //   local %LaTeXML::Core::Document::IDMAP = ();
-  //   # Find all id's defined in the copy and change the id.
-  //   foreach my $child (@newchildren) {
-  //     foreach my $idnode ($self->findnodes('.//@xml:id', $child)) {
-  //       my $id = $idnode->getValue;
-  //       $LaTeXML::Core::Document::IDMAP{$id} = $self->modifyID($id); } }
-  //   # Now do the cloning (actually copying) and insertion.
-  //   $self->appendClone_aux($node, @newchildren);
-  //   return $node; }
+  pub fn append_clone(&mut self, node: &mut Node, new_children: Vec<Node>, state: &mut State) -> Result<()> {
+    // Expand any document fragments
+    let new_children = new_children.into_iter().flat_map(|child| if child.get_type() == Some(NodeType::DocumentFragNode) {  child.get_child_nodes() } else { vec![child] } ).collect::<Vec<Node>>();
+    // Now find all xml:id's in the new_children and record replacement id's for them
+    let mut id_map = HashMap::new();
+    // Find all id's defined in the copy and change the id.
+    for child in new_children.iter() {
+      for id in self.findvalues(".//@xml:id", Some(child), state) {
+        id_map.insert(id.to_string(), self.modify_id(id));
+      }
+    }
+    // Now do the cloning (actually copying) and insertion.
+    self.append_clone_aux(node, new_children, &mut id_map, state)
+  }
 
-  // sub appendClone_aux {
-  //   my ($self, $node, @newchildren) = @_;
-  //   foreach my $child (@newchildren) {
-  //     my $type = $child->nodeType;
-  //     if ($type == XML_ELEMENT_NODE) {
-  //       my $new = $self->openElement_internal($node, $child->namespaceURI, $child->localname);
-  //       foreach my $attr ($child->attributes) {
-  //         if ($attr->nodeType == XML_ATTRIBUTE_NODE) {
-  //           my $key = $attr->nodeName;
-  //           if ($key eq 'xml:id') {    # Use the replacement id
-  //             my $newid = $LaTeXML::Core::Document::IDMAP{ $attr->getValue };
-  //             $newid = $self->recordID($newid, $new);
-  //             $new->setAttribute($key, $newid); }
-  //           elsif ($key eq 'idref') {    # Refer to the replacement id if it was replaced
-  //             my $id = $attr->getValue;
-  //             $new->setAttribute($key, $LaTeXML::Core::Document::IDMAP{$id} || $id); }
-  //           elsif (my $ns = $attr->namespaceURI) {
-  //             $new->setAttributeNS($ns, $attr->name, $attr->getValue); }
-  //           else {
-  //             $new->setAttribute($attr->localname, $attr->getValue); } }
-  //       }
-  //       $self->afterOpen($new);
-  //       $self->appendClone_aux($new, $child->childNodes);
-  //       $self->afterClose($new); }
-  //     elsif ($type == XML_TEXT_NODE) {
-  //       $node->appendTextNode($child->textContent); } }
-  //   return $node; }
+  fn append_clone_aux(&mut self, mut node: &mut Node, new_children: Vec<Node>, id_map: &mut HashMap<String, String>, state: &mut State) -> Result<()> {
+    for child in new_children.into_iter() {
+      match child.get_type() {
+      Some(NodeType::ElementNode) => {
+        let mut new = self.open_element_internal(node, child.get_namespace().map(|ns| ns.get_href()), &child.get_name(), state)?;
+        for (key,val) in child.get_attributes() {
+          match key.as_str() {
+            "xml:id" | "id" => { // Use the replacement id
+              let mapped_id = id_map.get(&val).unwrap();
+              let newid = self.record_id_with_node(mapped_id, &new);
+              new.set_attribute(&key, &newid)?;
+            }
+            "idref" => { // Refer to the replacement id if it was replaced
+              let id = id_map.get(&val).unwrap_or(&val);
+              new.set_attribute(&key, id)?;
+            }
+            other_key => // TODO: Are namespaced attributes successfully handled here? Check.
+              new.set_attribute(other_key, &val)?
+         };
+        }
+        self.after_open(&mut new, state)?;
+        self.append_clone_aux(&mut new, child.get_child_nodes(), id_map, state)?;
+        self.after_close(&mut new, state)?;
+      },
+      Some(NodeType::TextNode) => node.append_text(&child.get_content())?,
+      other => panic!("append_clone_aux called on {other:?} Node type.")
+    };
+  }
+  Ok(()) }
 
   //**********************************************************************
   // Wrapping & Unwrapping nodes by another element.
