@@ -764,7 +764,7 @@ pub fn lowercase_token(token: Token, state: &State) -> Token { either_case_token
 fn either_case_token(token: Token, is_upper: bool, state: &State) -> Token {
   let initial_string = token.get_string();
   // DG: new idea, short-circuit if more than 1 char, since our lccode/uccode tables are single char-based (for now?)
-  if initial_string.len() != 1 {
+  if initial_string.chars().count() != 1 {
     return token;
   }
   let mut result = String::new();
@@ -783,7 +783,6 @@ fn either_case_token(token: Token, is_upper: bool, state: &State) -> Token {
   } else {
     result.push(thischar);
   }
-
   if result != initial_string {
     Token {
       text: Cow::Owned(result),
