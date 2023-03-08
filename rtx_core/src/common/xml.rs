@@ -37,6 +37,17 @@ impl XPath {
     }
   }
 
+  pub fn findvalues(&mut self, xpath: &str, node: Option<&Node>) -> Vec<String> {
+    match self.context.findvalues(xpath, node) {
+      Ok(vals) => vals,
+      Err(e) => {
+        let message = s!("{:?}", e);
+        Error!("xpath", "findvalues", None, None, message);
+        Vec::new()
+      },
+    }
+  }
+
   pub fn findvalue(&mut self, xpath: &str, node: Option<&Node>) -> String {
     match self.context.findvalue(xpath, node) {
       Ok(v) => v,

@@ -33,9 +33,9 @@ LoadDefinitions!(state, {
   InnerPool!(latex_ch1_break_command);
   // lines 276-372
   InnerPool!(latex_ch2_document);
-  // lines 372-530
+  // lines 372-587
   InnerPool!(latex_ch3_sentences_and_paragraphs);
-  // lines 530-687
+  // lines 588-687
   InnerPool!(latex_ch4_sectioning_and_toc);
   // lines 687-1066
   InnerPool!(latex_ch5_packages);

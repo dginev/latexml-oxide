@@ -1769,14 +1769,14 @@ macro_rules! Digest {
 
 #[macro_export]
 macro_rules! DigestText {
-  ($tokens:expr) => {
+  ($tokens:expr) => {{
     bind_state_mut!(st);
-    digest_text($tokens, outer_stomach!(), st),
-  };
-  ($tokens:expr, $stomach:ident) => {
+    digest_text($tokens, outer_stomach!(), st)
+  }};
+  ($tokens:expr, $stomach:ident) => {{
     bind_state_mut!(st);
     DigestText!($tokens, $stomach, st)
-  };
+  }};
   ($tokens:expr, $stomach:ident, $state_arg:ident) => {
     digest_text($tokens, $stomach, $state_arg)
   };

@@ -26,6 +26,13 @@ pub fn reenter_text_mode(vertical_mode: bool, gullet: &mut Gullet, state: &mut S
   }
 }
 
+// Similarly, for metadata appearing within peculiar environments, fonts, etc
+// You'll typically want this within a group or bounded=>1.
+pub fn neutralize_font(state: &mut State) {
+  state.assign_value("font",     Font::text_default(), Some(Scope::Local));
+  state.assign_value("mathfont", Font::math_default(), Some(Scope::Local));
+}
+
 pub fn only_preamble(cs: &str, stomach: &mut Stomach, state: &mut State) {
   if !state.lookup_bool("inPreamble") {
     Error!("unexpected", cs, stomach, state, "The current command can only appear in the preamble");
