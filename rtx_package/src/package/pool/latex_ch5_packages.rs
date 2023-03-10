@@ -49,18 +49,17 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\RequirePackage OptionalSemiverbatim Semiverbatim []",
   "<?latexml package='#2' ?#1(options='#1')?>",
-  before_digest => {unimplemented!(); Ok(Vec::new()) }
-  // beforeDigest => sub { onlyPreamble('\RequirePackage'); },
-  // afterDigest  => sub { my ($stomach, $whatsit) = @_;
-  //   my $options  = $whatsit->getArg(1);
-  //   my $packages = $whatsit->getArg(2);
+  before_digest =>  sub[stomach, state] { only_preamble("\\RequirePackage", stomach, state); },
+  after_digest => sub[stomach, whatsit, state] {
+    let options  = whatsit.get_arg(1);
+    let packages = whatsit.get_arg(2).unwrap();
   //   $options = [($options ? split(/\s*,\s*/, (ToString($options))) : ())];
-  //   for my $pkg (split(',', ToString($packages))) {
-  //     $pkg =~ s/\s+//g;
-  //     next if !$pkg || $pkg =~ /^%/;
-  //     RequirePackage($pkg, options => $options); }
-  //   return }
-  );
+    for pkg in packages.to_string().split(',') {
+      let pkg_trimmed = pkg.trim();
+      if pkg_trimmed.is_empty() || pkg.starts_with('%') { continue; }
+      require_package(pkg, RequireOptions::default(), stomach, state)?;
+    }
+  });
 
   DefConstructor!("\\LoadClass OptionalSemiverbatim Semiverbatim []",
     "<?latexml class='#2' ?#1(options='#1')?>",
@@ -169,7 +168,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\CurrentOption", None);
 
   DefPrimitive!("\\ExecuteOptions{}", sub[gullet, (options), state] {
-    unimplemented!();
+    // TODO!
     // ExecuteOptions!(split(/\s*,\s*/, ToString(Expand($options))));
     Ok(Vec::new())
   });
