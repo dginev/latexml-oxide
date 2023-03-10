@@ -215,13 +215,14 @@ macro_rules! InnerPool {
 
 #[macro_export]
 macro_rules! RequirePackage {
-  ($package:expr, $options:expr) => {{
-    bind_state_mut!(st);
-    RequirePackage!($package, $options, st)
+  ($package:expr) => {{
+    bind_state_mut!(stomach, st);
+    require_package($package, RequireOptions::default(), stomach, st)?
   }};
-  ($package:expr, $options:expr, $state_arg:ident) => {
-    require_package($package, $options, $state_arg)
-  };
+  ($package:expr, $options:expr) => {{
+    bind_state_mut!(stomach, st);
+    require_package($package, $options, stomach, st)?
+  }};
 }
 macro_rules! LoadClass {
   ($class:expr, $options:expr, $after:expr) => {{

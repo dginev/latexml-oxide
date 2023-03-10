@@ -1,0 +1,651 @@
+use crate::package::*;
+LoadDefinitions!(state, {
+
+// Some of the requirements not yet applicable/supported in latexml
+//TODO: RequirePackage!("ltxcmds");
+//RequirePackage("iftex");
+//RequirePackage("pdftexcmds");
+//RequirePackage("infwarerr");
+
+// This is actually important in practice (arXiv), and its location is sensitive
+// in a complex document the order between loading keyval.sty and xkeyval.sty
+// determines the argument patterns to some macros, e.g. \setkeys
+// so emulating the exact raw .sty order of loading is the only way to ensure
+// robust conversions in latexml for all files that succeed in pdflatex
+//TODO: RequirePackage!("keyval");
+
+//TODO: RequirePackage!("kvsetkeys");
+//TODO: RequirePackage!("kvdefinekeys");
+//RequirePackage("pdfescape");
+//RequirePackage("hycolor");
+//RequirePackage("letltxmacro");
+//RequirePackage("auxhook");
+//TODO: RequirePackage!("kvoptions");
+//RequirePackage("intcalc");
+//RequirePackage("etexcmds");
+//TODO: RequirePackage!("nameref");
+RequirePackage!("url");
+//TODO: RequirePackage!("bitset");
+//RequirePackage("atbegshi");
+
+// Can we load hyperref, to get all it's random sundry definitions?
+// No, too many weird extra packages loaded.
+//// InputDefinitions('hyperref', type => 'sty', noltxml => 1);
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// Follow hyperref's manual.pdf
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// 3. Package Options
+// Most (all?) options currently ignored; seen handling at end. But:
+//  * the various color ones should be used for styling
+//  * The metadata could be used to augment the RDFa
+for option in [    // 3.1 General Options
+  "draft", "final", "debug", "verbose", "implicit", "hypertexnames", "naturalnames",
+  "a4paper", "a5paper", "b5paper", "letterpaper", "legalpaper", "executivepaper", "setpagesizes",
+  // 3.2 Configuration Options
+  "raiselinks", "breaklinks", "pageanchor", "plainpages", "nesting",
+  // 3.3 Backend Drivers
+  "dvipdfm", "dvipdfmx", "dvips", "dvipsone", "dviwindo", "hypertex", "latex2html",
+  "nativepdf", "pdfmark", "pdftex", "ps2pdf", "tex4ht", "textures", "vtex", "vtexpdfmark", "xetex",
+  // 3.4 Extension Options
+  "extension", "hyperfigures", "backref", "pagebackref", "hyperindex",
+  "pageanchors", "plainpages", "hyperfootnotes", "encap", "linktocpage",
+  "breaklinks", "colorlinks", "linkcolor", "anchorcolor", "citecolor", "filecolor",
+  "menucolor", "pagecolor", "urlcolor", "frenchlinks",
+  // 3.5 PDF-specific display options
+  "bookmarks", "bookmarksopen", "bookmarksopenlevel", "bookmarksnumbered", "bookmarstype",
+  "CJKbookmarks", "pdfhighlight", "citebordercolor", "filebordercolor", "linkbordercolor",
+  "menubordercolor", "pagebordercolor", "urlbordercolor", "runbordercolor", "pdfborder",
+  // 3.6 PDF display and information options
+  "baseurl", "pdfpagemode", "pdfview", "pdfstartpage", "pdfstartview", "pdfpagescrop",
+  "pdfcenterwindow", "pdfdirection", "pdfdisplaydoctitle", "pdfduplex", "pdffitwindow",
+  "pdfmenubar", "pdfnewwindow", "pdfnonfullscreenpagemode", "pdfnumcopies",
+  "pdfpagelayout", "pdfpagelabels", "pdfpagetransition", "pdfpicktrackbypdfsize",
+  "pdfprintarea", "pdfprintclip", "pdfprintpagerange", "pdfprintscaling", "pdftoolbar",
+  "pdfviewarea", "pdfviewclip", "pdfprintpagerange", "pdfprintscaling",
+  "pdftoolbar", "pdfviewarea", "pdfviewclip", "pdfwindowui", "unicode",
+  // PDF display and information options that provide interesting Metadata
+  "pdftitle", "pdfauthor", "pdfsubject", "pdfcreator", "pdfproducer", "pdfkeywords", "pdflang"]
+{
+  DeclareOption!(option, None);
+}
+
+// \hypersetup{keyvals} configures various parameters,
+// for each pdf keyword, provide [property,(content|resource),datatype]
+// our %pdfkey_property = (
+//   baseurl     => '',                                 # xmp:BaseURL ??
+//   pdfauthor   => ['dcterms:creator',  'content'],
+//   pdfkeywords => ['dcterms:subject',  'content'],    # & pdf:Keywords
+//   pdflang     => ['dcterms:language', 'content'],
+//   pdfproducer => '',                                 # pdf:Producer & xmp:CreatorTool
+//   pdfsubject  => ['dcterms:subject', 'content'],
+//   pdftitle    => ['dcterms:title',   'content'],
+//   # Include hyperxmp's keywords, as well.
+//   pdfauthortitle   => '',                                # photoshop:AuthorsPosition
+//   pdfcaptionwriter => '',                                # photoshop:CaptionWriter !?!?!?
+//   pdfcopyright     => ['dcterms:rights', 'content'],     # & xmpRights:Marked
+//   pdflicenseurl    => ['cc:licence',     'resource'],    # xmpRights:WebStatement
+//   pdfmetalang      => '',                                # dcterms:language ??
+// );
+// date=>dcterms:date xmp:CreateDate xmp:ModifyDate xmp:MetadataDate ?
+// document identifier => xmlMM:DocumentID
+// file format => dcterms:format
+// LaTeX file name => dcterms:source
+
+//DefKeyVal('Hyp', 'baseurl', 'Semiverbatim');
+
+// sub hyperref_setoption {
+//   my ($key, $value) = @_;
+//   AssignMapping('Hyperref_options', $key, $value);
+//   if ($key eq 'baseurl') {
+//     AssignValue(BASE_URL => ToString($value)); }
+//   return; }
+
+// # Digest & store the options;
+// # Some are useful properties for generating RDFa
+// # This can appear anywhere in the doc, including preamble.
+// # Note also that the last value for any given key replaces previous ones! (eg.ONE author entry)
+// DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
+//     my ($stomach, $kv) = @_;
+//     my @pairs = $kv->getPairs;
+//     while (@pairs) {
+//       my ($key, $value) = (shift(@pairs), shift(@pairs));
+//       hyperref_setoption($key, Digest($value)); }
+//     return; });
+
+// PushValue('@at@end@document', T_CS('\@add@PDF@RDFa@triples'));
+
+// DefConstructor('\@add@PDF@RDFa@triples', sub {
+//     my ($document, $xproperty, $content) = @_;
+//     if (my $root = $document->getDocument->documentElement) {
+//       foreach my $key (LookupMappingKeys('Hyperref_options')) {
+//         if (my $entry = ($pdfkey_property{$key})) {
+//           my ($property, $object, $datatype) = @$entry;
+//           my $value = LookupMapping('Hyperref_options', $key);
+//           my $node  = $document->openElementAt($root, 'ltx:rdf',
+//             property => $property, $object => $value,
+//             ($datatype ? (datatype => $datatype) : ()));
+//           # Must do directly; $document->setAttribute omits empty attributes
+//           $node->setAttribute(about => '');
+//           $document->closeElementAt($node); } } } });
+
+// Need some work here!?!?
+DefMacro!("\\pdfcatalog{}", None);
+DefRegister!("\\pdfcompresslevel", Number::new(0));
+
+// #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// # Additional User Macros
+
+// # \href{url}{text}
+// DefMacro('\href HyperVerbatim {}', '\@@Url\href{}{}{#1}{#2}');
+
+// # \url{url} from url.sty... well sorta
+// # It's slightly different in that it expands the argument
+// # Redefine \@url to sanitize the argument less
+// DefMacro('\@Url Token', sub {
+//     my ($gullet, $cmd) = @_;
+//     my ($open, $close, $url);
+//     $open = $gullet->readToken;
+//     StartSemiverbatim('%');
+//     Let('~', T_OTHER('~'));    # Needs special protection?
+//     if ($open->equals(T_BEGIN)) {
+//       $open = T_OTHER('{'); $close = T_OTHER('}');
+//       $url  = $gullet->readBalanced(1); }            # Expand as we go!
+//     else {
+//       $url  = T_OTHER($open->getString);
+//       $open = T_OTHER('{'); $close = T_OTHER('}'); }
+//     EndSemiverbatim();
+//     my @toks = grep { $_->getCatcode != CC_SPACE; } $url->unlist;
+//     # Identical with url's \@Url except, let CS's through!
+//     @toks = map { (($_->getCatcode == CC_CS) ? $_ : T_OTHER(ToString($_))) } @toks;
+//     (Invocation(T_CS('\@@Url'),
+//         T_OTHER(ToString($cmd)), Tokens($open), Tokens($close),
+//         Tokens(@toks),
+//         Tokens(T_CS('\UrlFont'), T_CS('\UrlLeft'), @toks, T_CS('\UrlRight')))->unlist,
+//       T_CS('\endgroup')); });
+
+// # \nolinkurl{url}
+// DefConstructor('\nolinkurl Semiverbatim', '#1');
+
+// # \hyperbaseurl{url}
+// DefPrimitive('\hyperbaseurl Semiverbatim', sub { AssignValue(BASE_URL => ToString($_[1])); });
+
+// # \hyperimage{imageurl}{text}
+// DefConstructor('\hyperimage Semiverbatim {}', "<ltx:graphic graphic='#1' description='#2'/>");
+
+// DefMacro('\hyperref', '\@ifnextchar[\hyperref@@ii\hyperref@@iv');
+// # 2 argument form
+// DefConstructor('\hyperref@@ii OptionalSemiverbatim {}',
+//   "<ltx:ref labelref='#label'>#2</ltx:ref>",
+//   properties => sub { (label => CleanLabel($_[1])); });
+// # 4 argument form
+// DefConstructor('\hyperref@@iv Semiverbatim Semiverbatim Semiverbatim Semiverbatim',
+//   "<ltx:ref href='#href'>#4</ltx:ref>",
+//   properties => sub {
+//     (href => ComposeURL(LookupValue('BASE_URL'), $_[1],
+//         CleanID(ToString($_[2]) . '.' . ToString($_[3])))); });
+
+// DefConstructor('\htmlref Semiverbatim  Semiverbatim',
+//   "<ltx:ref labelref='#label'>#1</ltx:ref>",
+//   properties => sub { (label => CleanLabel($_[2])); });
+
+// # \hyperlink{name}{text}
+// DefConstructor('\hyperlink Semiverbatim {}',
+//   "<ltx:ref idref='#1'>#2</ltx:ref>",
+//   properties => sub { (id => CleanID($_[1])); });
+// DefMacro('\hyper@@link{}{}{}', '\hyperlink{#2}{#3}');
+
+// sub localized_anchor {
+//   my ($document, $whatsit) = @_;
+//   my $model      = $STATE->getModel;
+//   my $node       = $document->getNode;
+//   my @candidates = ($node);
+//   my $candidate;
+//   while ($candidate = pop(@candidates)) {
+//     my $type = $candidate->nodeType;
+//     if ($type == XML_ELEMENT_NODE) {
+//       last if ($model->canContain('ltx:anchor', $model->getNodeQName($candidate)));
+//       unshift(@candidates, $candidate->childNodes); }
+//     elsif ($type = XML_TEXT_NODE) {
+//       last; } }
+//   my $id = $whatsit->getProperty('id');
+//   if ($candidate) {
+//     my $anchor = $document->wrapNodes('ltx:anchor', $candidate);
+//     $anchor->setAttribute('xml:id', $id);
+//     $document->closeNode($anchor) if $document->isOpen($anchor); }
+//   else {
+//     Error("No available insertion point for ltx:anchor, failing \\hypertarget to $id"); }
+//   return; }
+
+// # \hyperdef{category}{name}{text}
+// DefConstructor('\hyperdef Semiverbatim Semiverbatim Semiverbatim',
+//   "#3",
+//   afterConstruct => \&localized_anchor,
+//   properties     => sub { (id => CleanID(ToString($_[1]) . '.' . ToString($_[2]))); });
+// # \hypertarget{name}{text}
+// DefConstructor('\hypertarget Semiverbatim {}', '#2',
+//   afterConstruct => \&localized_anchor,
+//   properties     => sub { (id => CleanID(ToString($_[1]))); });
+
+// # Should create an anchor with automatically chosen name;
+// # But it's to be used where LaTeXML already would have created an anchor & link...
+// # Should leverage
+// DefMacroI('\phantomsection', undef, '');
+
+// Let('\footref', '\ref');    # ?
+
+// DefConditional('\ifHy@stoppedearly');
+// DefConditional('\ifHy@typexml');
+// DefConditional('\ifHy@activeanchor');
+// DefConditional('\ifHy@backref');
+// DefConditional('\ifHy@bookmarks');
+// DefConditional('\ifHy@bookmarksnumbered');
+// DefConditional('\ifHy@bookmarksopen');
+// DefConditional('\ifHy@breaklinks');
+// DefConditional('\ifHy@pdfcenterwindow');
+// DefConditional('\ifHy@CJKbookmarks');
+// DefConditional('\ifHy@colorlinks');
+// DefConditional('\ifHy@destlabel');
+// DefConditional('\ifHy@draft');
+// Let('\Hy@finaltrue',  '\Hy@draftfalse');
+// Let('\Hy@finalfalse', '\Hy@drafttrue');
+// DefConditional('\ifHy@pdfescapeform');
+// DefConditional('\ifHy@hyperfigures');
+// DefConditional('\ifHy@pdffitwindow');
+// DefConditional('\ifHy@frenchlinks');
+// DefConditional('\ifHy@hyperfootnotes');
+// DefConditional('\ifHy@hyperindex');
+// DefConditional('\ifHy@hypertexnames');
+// DefConditional('\ifHy@implicit');
+// DefConditional('\ifHy@linktocpage');
+// DefConditional('\ifHy@localanchorname');
+// DefConditional('\ifHy@pdfmenubar');
+// DefConditional('\ifHy@naturalnames');
+// DefConditional('\ifHy@nesting');
+// DefConditional('\ifHy@pdfnewwindowset');
+// DefConditional('\ifHy@pdfnewwindow');
+// DefConditional('\ifHy@ocgcolorlinks');
+// DefConditional('\ifHy@pageanchor');
+// DefConditional('\ifHy@pdfpagelabels');
+// DefConditional('\ifHy@pdfstring');
+// DefConditional('\ifHy@plainpages');
+// DefConditional('\ifHy@psize');
+// DefConditional('\ifHy@raiselinks');
+// DefConditional('\ifHy@seminarslides');
+// DefConditional('\ifHy@setpagesize');
+// DefConditional('\ifHy@texht');
+// DefConditional('\ifHy@psdextra');
+// DefConditional('\ifHy@pdftoolbar');
+// DefConditional('\ifHy@unicode');
+// DefConditional('\ifHy@pdfusetitle');
+// DefConditional('\ifHy@verbose');
+// Let('\Hy@debugtrue',  '\Hy@verbosetrue');
+// Let('\Hy@debugfalse', '\Hy@verbosefalse');
+// DefConditional('\ifHy@pdfwindowui');
+// DefConditional('\ifHy@pdfdisplaydoctitle');
+// DefConditional('\ifHy@pdfa');
+// RawTeX(<<'EOL');
+// \Hy@backreffalse
+// \Hy@bookmarksnumberedfalse
+// \Hy@bookmarksopenfalse
+// \Hy@bookmarkstrue
+// \Hy@breaklinksfalse
+// \Hy@pdfcenterwindowfalse
+// \Hy@CJKbookmarksfalse
+// \Hy@destlabelfalse
+// \Hy@pdfescapeformfalse
+// \Hy@hyperfiguresfalse
+// \Hy@pdffitwindowfalse
+// \Hy@hyperfootnotestrue
+// \Hy@hyperindextrue
+// \Hy@hypertexnamestrue
+// \Hy@implicittrue
+// \Hy@linktocpagefalse
+// \Hy@localanchornamefalse
+// \Hy@pdfmenubartrue
+// \Hy@naturalnamesfalse
+// \Hy@nestingfalse
+// \Hy@pdfnewwindowsetfalse
+// \Hy@pdfnewwindowfalse
+// \Hy@pageanchortrue
+// \Hy@pdfpagelabelstrue
+// \Hy@pdfstringfalse
+// \Hy@plainpagesfalse
+// \Hy@raiselinksfalse
+// \Hy@setpagesizetrue
+// \Hy@texhtfalse
+// \Hy@psdextrafalse
+// \Hy@pdftoolbartrue
+// \Hy@typexmlfalse
+// \Hy@unicodetrue
+// EOL
+// DefMacro('\@bookmarksopenlevel', '\maxdimen');
+// # This only approximates the "contextual label" that should precede the number,
+// # and ignores the user-definable macros.
+// # But, we normally defer such bookkeeping until postprocessing....sigh
+// # TODO: The star forms prevent nested double links.
+// DefConstructor('\autoref OptionalMatch:* Semiverbatim',
+//   "<ltx:ref ?#1(class='ltx_refmacro_autoref ltx_nolink')(class='ltx_refmacro_autoref') " .
+//     "show='autoref' labelref='#label' _force_font='true'/>",
+//   properties => sub { (label => CleanLabel($_[2])); });
+
+// DefMacro('\lx@autorefnum@@{}', sub {
+//     my ($gullet, $type) = @_;
+//     my $type_s  = ToString($type);
+//     my $counter = LookupMapping('counter_for_type', $type_s) || $type_s;
+//     return Tokens(
+//       (LookupDefinition(T_CS('\\' . $type_s . 'autorefname'))
+//         ? (Tokens(T_CS('\\' . $type_s . 'autorefname'), T_CS('\nobreakspace')))
+//         : ()),
+//       (LookupDefinition(T_CS('\p@' . $counter)) ? T_CS('\p@' . $counter) : ()),
+//       T_CS('\the' . $counter)); });
+
+// Let('\HyOrg@addtoreset', '\@addtoreset');
+// Let('\H@refstepcounter', '\refstepcounter');
+
+// AssignMapping('type_tag_formatter', 'autoref' => '\lx@autorefnum@@');
+
+// # Blech...
+// map { DefMacroI(T_CS('\\' . $_ . 'autorefname'), undef, '\itemautorefname'); }
+//   qw(@itemi @itemii @itemiii @itemiv @itemv @itemvi
+//   enumi enumii enumiii enumiv
+//   @desci @descii @desciii @desciv @descv @descvi);
+
+// # Covered in LaTeX.pool, but non-ref character is ignored.
+// # \ref*{label}
+// # \pageref*{label}
+
+// # I wonder if this is good enough for our context?
+// # \pdfstringdef{macroname}{texstring}
+// DefMacro('\pdfstringdef{Token}{}', '\def#1{#2}');
+// # Hopefully noop is sufficient for PDF-specific uses?
+// DefMacro('\pdfstringdefDisableCommands', '');
+// DefMacro('\pdfbookmark[]{}{}',           '');
+// DefMacro('\currentpdfbookmark{}{}',      '');
+// DefMacro('\subpdfbookmark{}{}',          '');
+// DefMacro('\belowpdfbookmark{}{}',        '');
+
+// #======================================================================
+// # 4.1 Replacement macros
+
+// # \texorpdfstring{TeXString}{PDFstring}
+// DefMacro('\texorpdfstring{}{}', '#1');
+
+// if (!IsDefined(T_CS("\\pdfstringdefPreHook"))) {
+//   Let('\pdfstringdefPreHook', '\@empty'); }
+// if (!IsDefined(T_CS("\\pdfstringdefPostHook"))) {
+//   Let('\pdfstringdefPostHook', '\@gobble'); }
+
+// #======================================================================
+// # 4.2 Utility macros
+// # \hypercalcbp{dimen}
+// DefMacro('\hypercalcbp{Dimension}', sub {
+//     my ($gullet, $dimen) = @_;
+//     Explode($dimen->valueOf / $STATE->convertUnit('bp')); });
+
+// #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// # 5 Acrobat-specific behaviour
+
+// # \Acrobatmenu{menuoption}{text}
+// # These create buttons that activate Acrobat Reader or Exchange actions.
+// # It's doubtful that they have meaningful analogs in our context?
+// DefMacro('\Acrobatmenu{}{}', '[#1 Button: #2]');
+
+// #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// # 6 PDF and HTML forms
+// # hmm... we might actually want to do this?
+// # But, we need schema support!
+
+// #----------------------------------------------------------------------
+// # Fields:
+// # \TextField[parameters]{label}
+// # \CheckBox[parameters]{label}
+// # \ChoiceMenu[parameters]{label}{choices}
+// # \PushButton[parameters]{label}
+// # \Submit[parameters]{label}
+// # \Reset[parameters]{label}
+// #----------------------------------------------------------------------
+// # Layout:
+// #  typically:  "#1 #2"
+// # \LayoutTextField{label}{field}
+// # \LayoutChoiceField{label}{field}
+// # \LayoutCheckField{label}{field}
+// #----------------------------------------------------------------------
+// # What to show
+// # \MakeRadioField{width}{height}
+// # \MakeCheckField{width}{height}
+// # \MakeChoiceField{width}{height}
+// # \MakeButtonField{text}
+
+// #======================================================================
+// # 6.1 Forms environment parameters
+// #   action   URL
+// #   encoding name
+// #   method   name (post|get)
+// #======================================================================
+// # 6.2 Forms optional parameters
+// #  [a bunch] colors, events, etc; See the doc when we actually support.
+
+// #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// # hyperref uses KeyVals for options!
+// # until we come up with a nice, clean formal scheme, just hack through...
+
+// #### ProcessOptions();
+// # Note that hyperref uses keyval + kvoptions
+// if (my $options = LookupValue('opt@hyperref.sty')) {
+//   foreach my $option (@$options) {
+//     if ($option eq 'colorlinks') {
+//       RequirePackage('color'); }
+//     elsif (my ($key, $value) = $option =~ /^(.*?)\s*=\s*(.*?)$/) {
+//       hyperref_setoption($key, $value); } } }
+
+// RawTeX(<<'EoTeX');
+// \def\HyLang@afrikaans{%
+//   \def\equationautorefname{Vergelyking}%
+//   \def\footnoteautorefname{Voetnota}%
+//   \def\itemautorefname{Item}%
+//   \def\figureautorefname{Figuur}%
+//   \def\tableautorefname{Tabel}%
+//   \def\partautorefname{Deel}%
+//   \def\appendixautorefname{Bylae}%
+//   \def\chapterautorefname{Hoofstuk}%
+//   \def\sectionautorefname{Afdeling}%
+//   \def\subsectionautorefname{Subafdeling}%
+//   \def\subsubsectionautorefname{Subsubafdeling}%
+//   \def\paragraphautorefname{Paragraaf}%
+//   \def\subparagraphautorefname{Subparagraaf}%
+//   \def\FancyVerbLineautorefname{Lyn}%
+//   \def\theoremautorefname{Teorema}%
+//   \def\pageautorefname{Bladsy}%
+// }
+// \def\HyLang@english{%
+//   \def\equationautorefname{Equation}%
+//   \def\footnoteautorefname{footnote}%
+//   \def\itemautorefname{item}%
+//   \def\figureautorefname{Figure}%
+//   \def\tableautorefname{Table}%
+//   \def\partautorefname{Part}%
+//   \def\appendixautorefname{Appendix}%
+//   \def\chapterautorefname{chapter}%
+//   \def\sectionautorefname{section}%
+//   \def\subsectionautorefname{subsection}%
+//   \def\subsubsectionautorefname{subsubsection}%
+//   \def\paragraphautorefname{paragraph}%
+//   \def\subparagraphautorefname{subparagraph}%
+//   \def\FancyVerbLineautorefname{line}%
+//   \def\theoremautorefname{Theorem}%
+//   \def\pageautorefname{page}%
+// }
+// \def\HyLang@french{%
+//   \def\equationautorefname{\'Equation}%
+//   \def\footnoteautorefname{note}%
+//   \def\itemautorefname{item}%
+//   \def\figureautorefname{Figure}%
+//   \def\tableautorefname{Tableau}%
+//   \def\partautorefname{Partie}%
+//   \def\appendixautorefname{Appendice}%
+//   \def\chapterautorefname{chapitre}%
+//   \def\sectionautorefname{section}%
+//   \def\subsectionautorefname{sous-section}%
+//   \def\subsubsectionautorefname{sous-sous-section}%
+//   \def\paragraphautorefname{paragraphe}%
+//   \def\subparagraphautorefname{sous-paragraphe}%
+//   \def\FancyVerbLineautorefname{ligne}%
+//   \def\theoremautorefname{Th\'eor\`eme}%
+//   \def\pageautorefname{page}%
+// }
+// \def\HyLang@german{%
+//   \def\equationautorefname{Gleichung}%
+//   \def\footnoteautorefname{Fu\ss note}%
+//   \def\itemautorefname{Punkt}%
+//   \def\figureautorefname{Abbildung}%
+//   \def\tableautorefname{Tabelle}%
+//   \def\partautorefname{Teil}%
+//   \def\appendixautorefname{Anhang}%
+//   \def\chapterautorefname{Kapitel}%
+//   \def\sectionautorefname{Abschnitt}%
+//   \def\subsectionautorefname{Unterabschnitt}%
+//   \def\subsubsectionautorefname{Unterunterabschnitt}%
+//   \def\paragraphautorefname{Absatz}%
+//   \def\subparagraphautorefname{Unterabsatz}%
+//   \def\FancyVerbLineautorefname{Zeile}%
+//   \def\theoremautorefname{Theorem}%
+//   \def\pageautorefname{Seite}%
+// }
+// \def\HyLang@italian{%
+//   \def\equationautorefname{Equazione}%
+//   \def\footnoteautorefname{nota}%
+//   \def\itemautorefname{punto}%
+//   \def\figureautorefname{Figura}%
+//   \def\tableautorefname{Tabella}%
+//   \def\partautorefname{Parte}%
+//   \def\appendixautorefname{Appendice}%
+//   \def\chapterautorefname{Capitolo}%
+//   \def\sectionautorefname{sezione}%
+//   \def\subsectionautorefname{sottosezione}%
+//   \def\subsubsectionautorefname{sottosottosezione}%
+//   \def\paragraphautorefname{paragrafo}%
+//   \def\subparagraphautorefname{sottoparagrafo}%
+//   \def\FancyVerbLineautorefname{linea}%
+//   \def\theoremautorefname{Teorema}%
+//   \def\pageautorefname{Pag.\@}%
+// }
+// \def\HyLang@magyar{%
+//   \def\equationautorefname{Egyenlet}%
+//   \def\footnoteautorefname{l\'abjegyzet}%
+//   \def\itemautorefname{Elem}%
+//   \def\figureautorefname{\'Abra}%
+//   \def\tableautorefname{T\'abl\'azat}%
+//   \def\partautorefname{R\'esz}%
+//   \def\appendixautorefname{F\"uggel\'ek}%
+//   \def\chapterautorefname{fejezet}%
+//   \def\sectionautorefname{szakasz}%
+//   \def\subsectionautorefname{alszakasz}%
+//   \def\subsubsectionautorefname{alalszakasz}%
+//   \def\paragraphautorefname{bekezd\'es}%
+//   \def\subparagraphautorefname{albekezd\'es}%
+//   \def\FancyVerbLineautorefname{sor}%
+//   \def\theoremautorefname{T\'etel}%
+//   \def\pageautorefname{oldal}%
+// }
+// \def\HyLang@portuges{%
+//   \def\equationautorefname{Equa\c c\~ao}%
+//   \def\footnoteautorefname{Nota de rodap\'e}%
+//   \def\itemautorefname{Item}%
+//   \def\figureautorefname{Figura}%
+//   \def\tableautorefname{Tabela}%
+//   \def\partautorefname{Parte}%
+//   \def\appendixautorefname{Ap\^endice}%
+//   \def\chapterautorefname{Cap\'itulo}%
+//   \def\sectionautorefname{Se\c c\~ao}%
+//   \def\subsectionautorefname{Subse\c c\~ao}%
+//   \def\subsubsectionautorefname{Subsubse\c c\~ao}%
+//   \def\paragraphautorefname{par\'agrafo}%
+//   \def\subparagraphautorefname{subpar\'agrafo}%
+//   \def\FancyVerbLineautorefname{linha}%
+//   \def\theoremautorefname{Teorema}%
+//   \def\pageautorefname{P\'agina}%
+// }
+// \def\HyLang@russian{%
+//   \def\equationautorefname{\cyr\cyrv\cyrery\cyrr.}%
+//   \def\footnoteautorefname{%
+//     \cyr\cyrp\cyro\cyrd\cyrs\cyrt\cyrr.\ \cyrp\cyrr\cyri\cyrm.%
+//   }%
+//   \def\itemautorefname{\cyr\cyrp.}%
+//   \def\figureautorefname{\cyr\cyrr\cyri\cyrs.}%
+//   \def\tableautorefname{\cyr\cyrt\cyra\cyrb\cyrl.}%
+//   \def\partautorefname{\cyr\cyrch.}%
+//   \def\chapterautorefname{\cyr\cyrg\cyrl.}%
+//   \def\sectionautorefname{\cyr\cyrr\cyra\cyrz\cyrd.}%
+//   \def\appendixautorefname{\cyr\cyrp\cyrr\cyri\cyrl.}%
+//   \def\subsectionautorefname{\cyr\cyrr\cyra\cyrz\cyrd.}%
+//   \def\subsubsectionautorefname{\cyr\cyrr\cyra\cyrz\cyrd.}%
+//   \def\paragraphautorefname{\cyr\cyrp.}%
+//   \def\subparagraphautorefname{\cyr\cyrp.}%
+//   \def\FancyVerbLineautorefname{\cyr\cyrs\cyrt\cyrr.}%
+//   \def\theoremautorefname{\cyr\cyrt\cyre\cyro\cyrr.}%
+//   \def\pageautorefname{\cyr\cyrs.}%
+// }
+// \def\HyLang@spanish{%
+//   \def\equationautorefname{Ecuaci\'on}%
+//   \def\footnoteautorefname{Nota a pie de p\'agina}%
+//   \def\itemautorefname{Elemento}%
+//   \def\figureautorefname{Figura}%
+//   \def\tableautorefname{Tabla}%
+//   \def\partautorefname{Parte}%
+//   \def\appendixautorefname{Ap\'endice}%
+//   \def\chapterautorefname{Cap\'itulo}%
+//   \def\sectionautorefname{Secci\'on}%
+//   \def\subsectionautorefname{Subsecci\'on}%
+//   \def\subsubsectionautorefname{Subsubsecci\'on}%
+//   \def\paragraphautorefname{P\'arrafo}%
+//   \def\subparagraphautorefname{Subp\'arrafo}%
+//   \def\FancyVerbLineautorefname{L\'inea}%
+//   \def\theoremautorefname{Teorema}%
+//   \def\pageautorefname{P\'agina}%
+// }
+// \def\HyLang@catalan{%
+// \def\equationautorefname{Equaci\'o}%
+// \def\footnoteautorefname{Nota al peu de p\`agina}%
+// \def\itemautorefname{Element}%
+// \def\figureautorefname{Figura}%
+// \def\tableautorefname{Taula}%
+// \def\partautorefname{Part}%
+// \def\appendixautorefname{Ap\`endix}%
+// \def\chapterautorefname{Cap\'itol}%
+// \def\sectionautorefname{Secci\'o}%
+// \def\subsectionautorefname{Subsecci\'o}%
+// \def\subsubsectionautorefname{Subsubsecci\'o}%
+// \def\paragraphautorefname{Par\`agraf}%
+// \def\subparagraphautorefname{Subpar\`agraf}%
+// \def\FancyVerbLineautorefname{L\'inia}%
+// \def\theoremautorefname{Teorema}%
+// \def\pageautorefname{P\`agina}%
+// }
+// \def\HyLang@vietnamese{%
+//   \def\equationautorefname{Ph\uhorn{}\ohorn{}ng tr\`inh}%
+//   \def\footnoteautorefname{Ch\'u th\'ich}%
+//   \def\itemautorefname{m\d{u}c}%
+//   \def\figureautorefname{H\`inh}%
+//   \def\tableautorefname{B\h{a}ng}%
+//   \def\partautorefname{Ph\`\acircumflex{}n}%
+//   \def\appendixautorefname{Ph\d{u} l\d{u}c}%
+//   \def\chapterautorefname{ch\uhorn{}\ohorn{}ng}%
+//   \def\sectionautorefname{m\d{u}c}%
+//   \def\subsectionautorefname{m\d{u}c}%
+//   \def\subsubsectionautorefname{m\d{u}c}%
+//   \def\paragraphautorefname{\dj{}o\d{a}n}%
+//   \def\subparagraphautorefname{\dj{}o\d{a}n}%
+//   \def\FancyVerbLineautorefname{d\`ong}%
+//   \def\theoremautorefname{\DJ{}\d{i}nh l\'y}%
+//   \def\pageautorefname{Trang}%
+// }
+
+// % For now...
+// \HyLang@english
+// EoTeX
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+});

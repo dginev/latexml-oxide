@@ -97,6 +97,7 @@ pub mod t1enc_def;
 pub mod t1enc_sty;
 pub mod textcomp_sty;
 pub mod url_sty;
+pub mod hyperref_sty;
 pub mod verbatim_sty;
 pub mod multido_sty;
 pub mod utf8_def;
@@ -120,6 +121,7 @@ pub fn dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Opt
     "comment.sty" => comment_sty::load_definitions(stomach, state),
     "IEEEtran.cls" => ieeetran_cls::load_definitions(stomach, state),
     "url.sty" => url_sty::load_definitions(stomach, state),
+    "hyperref.sty" => hyperref_sty::load_definitions(stomach, state),
     "verbatim.sty" => verbatim_sty::load_definitions(stomach, state),
     "fontenc.sty" => fontenc_sty::load_definitions(stomach, state),
     "inputenc.sty" => inputenc_sty::load_definitions(stomach, state),
