@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
+use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -34,9 +35,9 @@ impl BoxOps for Comment {
     unimplemented!();
   }
   fn get_string(&self, state: &State) -> Result<Cow<str>> { Ok(Cow::Borrowed("")) }
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
     document.insert_comment(&self.0, state)?;
-    Ok(())
+    Ok(Vec::new())
   }
   fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(None) }
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> { None }

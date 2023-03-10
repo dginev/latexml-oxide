@@ -135,7 +135,7 @@ LoadDefinitions!(state, {
 
           document.close_element(&tag, state)?;
         }
-        document.localize_box_to_absorb();
+        document.expire_box_to_absorb();
       }
     }
   });

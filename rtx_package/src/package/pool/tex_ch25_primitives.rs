@@ -71,7 +71,7 @@ LoadDefinitions!(state, {
   //     (defined $stuff ? $stuff->unlist : ()); });
 
   // \vrule
-  // \valign ???
+  DefMacro!("\\valign", None);
 
   DefMacro!("\\vspace{}", "\\vskip#1\\relax");
   // \indent, \noindent, \par; see above.

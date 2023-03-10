@@ -157,4 +157,48 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\subparagraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
 
   DefPrimitive!("\\@@end", sub[stomach,_args,state] { stomach.get_gullet_mut().flush(state) });
+
+
+  // DG: TODO Maybe split these out?
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Expl3 "Experimental LaTeX 3" is no longer Experimental!
+  // It is beginning to be built into latex.ltx
+  // We WILL need a new strategy to keep up; probably based in some form
+  // of pre-read/pre-processed latex.ltx !
+  //
+  // For now, a few macros required by other packages will be included:
+  // DefMacro!(T_CS!("\\hook_gput_code:nnn"), '{}{}{}', '');
+  DefMacro!("\\NewHook{}",                    None);
+  DefMacro!("\\NewReversedHook{}",            None);
+  DefMacro!("\\NewMirroredHookPair{}{}",      None);
+  DefMacro!("\\ActivateGenericHook{}",        None);
+  DefMacro!("\\DisableGenericHook{}",         None);
+  DefMacro!("\\AddToHook{}[]{}",              None);
+  DefMacro!("\\AddToHookNext{}{}",            None);
+  DefMacro!("\\ClearHookNext{}",              None);
+  DefMacro!("\\RemoveFromHook{}[]",           None);
+  DefMacro!("\\SetDefaultHookLabel{}",        None);
+  DefMacro!("\\PushDefaultHookLabel{}",       None);
+  DefMacro!("\\PopDefaultHookLabel",          None);
+  DefMacro!("\\UseHook{}",                    None);
+  DefMacro!("\\UseOneTimeHook{}",             None);
+  DefMacro!("\\ShowHook{}",                   None);
+  DefMacro!("\\LogHook{}",                    None);
+  DefMacro!("\\DebugHooksOn",                 None);
+  DefMacro!("\\DebugHooksOff",                None);
+  DefMacro!("\\DeclareHookRule{}{}{}{}",      None);
+  DefMacro!("\\DeclareDefaultHookRule{}{}{}", None);
+  DefMacro!("\\ClearHookRule{}{}{}",          None);
+  DefMacro!("\\IfHookEmptyTF{}{}{}",          "#3");
+  DefMacro!("\\IfHookExistsTF{}{}{}",         "#3");
+  DefMacro!("\\MakeTextLowercase",            "\\lowercase");
+  DefMacro!("\\MakeTextUppercase",            "\\uppercase");
+
+  DefConditional!("\\if@includeinrelease");
+  Let!("\\@kernel@after@enddocument",               "\\@empty");
+  Let!("\\@kernel@after@enddocument@afterlastpage", "\\@empty");
+  Let!("\\@kernel@before@begindocument",            "\\@empty");
+  Let!("\\@kernel@after@begindocument",             "\\@empty");
+  Let!("\\conditionally@traceon",                   "\\@empty");
+  Let!("\\conditionally@traceoff",                  "\\@empty");
 });

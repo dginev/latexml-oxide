@@ -32,6 +32,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, RwLock}; //,RwLockReadGuard,RwLockWriteGuard};
                               //use lazy_static::lazy_static;
+use libxml::tree::Node;
 
 use crate::comment::Comment;
 use crate::common::dimension::Dimension;
@@ -132,7 +133,7 @@ impl Core {
 }
 pub trait BoxOps: Object {
   fn unlist(&self) -> Vec<Digested> { unimplemented!() }
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()>;
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>>;
   fn get_string(&self, state: &State) -> Result<Cow<str>>;
   fn get_tokens(&self) -> Option<&Tokens> { None }
   fn get_properties(&self) -> &HashMap<String, Stored>;
@@ -490,7 +491,7 @@ impl BoxOps for Digested {
     }
   }
 
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
     use DigestedData::*;
     match &*self.0 {
       TBox(b) => b.be_absorbed(document, state),

@@ -2,6 +2,7 @@ use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
+use libxml::tree::Node;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -142,7 +143,7 @@ impl BoxOps for KeyVals {
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     unimplemented!();
   }
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { Ok(()) } // TODO
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> { Ok(Vec::new()) } // TODO
   fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(None) } // TODO
   fn compute_size(
     &self,

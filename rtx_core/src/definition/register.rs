@@ -2,6 +2,7 @@ use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -464,7 +465,7 @@ impl Definition for RegisterCell {
     }
   }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<Vec<Node>> {
     fatal!(Definition, Unexpected, "do_absorbtion on Primitive should never be called!");
   }
   fn value_of(&self, args: Vec<ArgWrap>, state: &mut State) -> Option<RegisterValue> {

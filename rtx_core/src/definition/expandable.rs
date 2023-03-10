@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::Arc;
+use libxml::tree::Node;
 
 use crate::common::error::*;
 use crate::common::locator::Locator;
@@ -190,7 +191,7 @@ impl Definition for Expandable {
   fn invoke_primitive(&self, _gullet: &mut Stomach, _caller: Arc<dyn Definition>, _state: &mut State) -> Result<Vec<Digested>> { Ok(Vec::new()) }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<Vec<Node>> {
     fatal!(Definition, Unexpected, "do_absorbtion on Expandable should never be called!");
   }
 }

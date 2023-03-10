@@ -807,6 +807,22 @@ impl<'a> From<&'a Stored> for Option<Tokens> {
       Stored::String(ref text) => Some(mouth::tokenize_internal(text)),
       Stored::Token(ref ts) => Some(Tokens::new(vec![ts.clone()])),
       Stored::Tokens(ref ts) => Some(ts.clone()),
+      Stored::VecDequeStored(vdq) => {
+        // Each item in the queue can be unlisted into a Vec<Token>
+        // and then the result can be re-cast as a single Tokens
+        let mut collected : Vec<Token> = Vec::new();
+        for item in vdq {
+          let item_tokens_opt : Option<Tokens> = item.into();
+          if let Some(item_tokens) = item_tokens_opt {
+            collected.extend(item_tokens.unlist());
+          }
+        }
+        if collected.is_empty() {
+          None
+        } else {
+          Some(Tokens::new(collected))
+        }
+      },
       _ => None,
     }
   }

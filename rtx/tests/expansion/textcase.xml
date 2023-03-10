@@ -91,21 +91,17 @@ OR EVEN <Math mode="inline" tex="x=y" text="x = y" xml:id="S1.SS1.p1.m3">
         <tag role="refnum">1.4</tag>
         <tag role="typerefnum">§1.4</tag>
       </tags>
-      <title><tag close=" ">1.4</tag>NoCaseChange and tabular</title>
+      <title><tag close=" ">1.4</tag>Nested brace groups</title>
       <para xml:id="S1.SS4.p1">
-        <p>TEXT <tabular vattach="middle">
-            <tbody>
-              <tr>
-                <td align="left">TABLE</td>
-                <td align="left">STUFF</td>
-              </tr>
-              <tr>
-                <td align="left">GOES</td>
-                <td align="left">HERE</td>
-              </tr>
-            </tbody>
-          </tabular>
-MORE TEXT</p>
+        <p>A B C <Math mode="inline" tex="D" text="D" xml:id="S1.SS4.p1.m1">
+            <XMath>
+              <XMTok font="italic" role="UNKNOWN">D</XMTok>
+            </XMath>
+          </Math> <Math mode="inline" tex="e" text="e" xml:id="S1.SS4.p1.m2">
+            <XMath>
+              <XMTok font="italic" role="UNKNOWN">e</XMTok>
+            </XMath>
+          </Math></p>
       </para>
     </subsection>
     <subsection inlist="toc" xml:id="S1.SS5">
@@ -114,27 +110,8 @@ MORE TEXT</p>
         <tag role="refnum">1.5</tag>
         <tag role="typerefnum">§1.5</tag>
       </tags>
-      <title><tag close=" ">1.5</tag>Nested brace groups</title>
+      <title><tag close=" ">1.5</tag>Environment protection</title>
       <para xml:id="S1.SS5.p1">
-        <p>A B C <Math mode="inline" tex="D" text="D" xml:id="S1.SS5.p1.m1">
-            <XMath>
-              <XMTok font="italic" role="UNKNOWN">D</XMTok>
-            </XMath>
-          </Math> <Math mode="inline" tex="e" text="e" xml:id="S1.SS5.p1.m2">
-            <XMath>
-              <XMTok font="italic" role="UNKNOWN">e</XMTok>
-            </XMath>
-          </Math></p>
-      </para>
-    </subsection>
-    <subsection inlist="toc" xml:id="S1.SS6">
-      <tags>
-        <tag>1.6</tag>
-        <tag role="refnum">1.6</tag>
-        <tag role="typerefnum">§1.6</tag>
-      </tags>
-      <title><tag close=" ">1.6</tag>Environment protection</title>
-      <para xml:id="S1.SS6.p1">
         <p>…</p>
         <p align="center">…INNER…</p>
         <p>…</p>

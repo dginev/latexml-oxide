@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
+use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -68,7 +69,7 @@ impl BoxOps for List {
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
   fn get_string(&self, state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> { unimplemented!() }
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> { unimplemented!() }
 
   fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(self.font.as_ref().map(Cow::Borrowed)) }
   fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {

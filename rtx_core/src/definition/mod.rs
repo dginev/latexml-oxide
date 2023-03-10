@@ -11,6 +11,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
+use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -236,7 +237,7 @@ pub trait Definition: Object {
 
   fn get_num_args(&self) -> usize { 0 }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()>;
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<Vec<Node>>;
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { None }

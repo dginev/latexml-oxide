@@ -501,7 +501,6 @@ impl Model {
 
     // Else query tag properties.
     let attributes = &mut self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default).attributes;
-
     attributes.contains(attrib)
   }
 

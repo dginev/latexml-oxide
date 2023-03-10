@@ -1889,18 +1889,13 @@ macro_rules! SetPrefix {
 
 #[macro_export]
 macro_rules! DeclareOption {
-  ($option:expr, None) => {
+  (None, $tokenized:ident) => {
     bind_state_mut!(st);
-    DeclareOption!($option, sub[stomach, state] {}, st)
+    DeclareOption!(None, $tokenized, st)
   };
-  ($option:expr, $tex:literal) => {
-    bind_state_mut!(st);
-    let tokenized;
-    compile_tokenize_internal!(tokenized, $tex);
-    st.push_value("@declaredoptions", $option);
-    let cs = s!("\\ds@{}", $option);
-    // literal case, create a macro
-    def_macro(T_CS!(cs),None,tokenized,None,st);
+  (None, $tokenized:ident, $outer_state: ident) => {
+    let cs = String::from("\\default@ds");
+    def_macro(T_CS!(cs), None, $tokenized, None, $outer_state);
   };
   (None, sub $body:block) => {
     bind_state_mut!(st);
@@ -1914,6 +1909,34 @@ macro_rules! DeclareOption {
     bind_state_mut!(st);
     DeclareOption!(None, sub[$stomach, $state] $body, st)
   };
+  (None, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => {
+    let cs = String::from("\\default@ds");
+    // block case, create a primitive
+    let code: PrimitiveClosure = Arc::new(move |$stomach, _args, $inner_state|
+      WithInnerState!($body, $stomach, $inner_state).into_digested_result()
+    );
+    def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default(), $outer_state);
+  };
+  ($option:expr, None) => {
+    bind_state_mut!(st);
+    DeclareOption!($option, sub[stomach, state] {}, st)
+  };
+  ($option:expr, $tex:literal) => {
+    bind_state_mut!(st);
+    let tokenized;
+    compile_tokenize_internal!(tokenized, $tex);
+    st.push_value("@declaredoptions", $option);
+    let cs = s!("\\ds@{}", $option);
+    // literal case, create a macro
+    def_macro(T_CS!(cs),None,tokenized,None,st);
+  };
+  ($option:expr, $tokenized:ident) => {
+    bind_state_mut!(st);
+    st.push_value("@declaredoptions", $option.to_string());
+    let cs = s!("\\ds@{}", $option);
+    // literal case, create a macro
+    def_macro(T_CS!(cs),None, $tokenized, None, st);
+  };
   ($option:expr, sub $body:block) => {
     bind_state_mut!(st);
     DeclareOption!($option, sub[stomach, state] $body, st)
@@ -1925,14 +1948,6 @@ macro_rules! DeclareOption {
   ($option:expr, sub[$stomach:ident, $state:ident] $body:block) => {
     bind_state_mut!(st);
     DeclareOption!($option, sub[$stomach, $state] $body, st)
-  };
-  (None, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => {
-    let cs = String::from("\\default@ds");
-    // block case, create a primitive
-    let code: PrimitiveClosure = Arc::new(move |$stomach, _args, $inner_state|
-      WithInnerState!($body, $stomach, $inner_state).into_digested_result()
-    );
-    def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default(), $outer_state);
   };
   ($option:expr, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => {
     $outer_state.push_value("@declaredoptions", $option);
@@ -1947,9 +1962,9 @@ macro_rules! DeclareOption {
 
 #[macro_export]
 macro_rules! ProcessOptions {
-  ($gullet:ident) => {{
+  ($stomach:ident) => {{
     bind_state_mut!(st);
-    process_options($gullet, st)?;
+    process_options($stomach, st)?;
   }};
 }
 
