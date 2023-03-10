@@ -172,21 +172,22 @@ LoadDefinitions!(state, {
     },
     locked => true);
 
-  // Define \( ..\) and \[ ... \] to act like environments.
-  // I would have thought these should be locked, but it seems relatively common to
-  // redefine them as \left[ \right] and \left( \right) !
-  DefConstructor!("\\[",
-  "<ltx:equation xml:id='#id'>\
-    <ltx:Math mode='display'>\
-    <ltx:XMath>\
-    #body\
-    </ltx:XMath>\
-    </ltx:Math>\
-    </ltx:equation>",
-    before_digest => sub[stomach, state] {stomach.begin_mode("display_math", state)?; },
-    capture_body  => true,
-    properties   => sub[stomach, args, state] { ref_step_id("equation", stomach, state) }
-  );
+  DefMacro!("\\[", "\\@@BEGINDISPLAYMATH");
+  DefMacro!("\\]", "\\@@ENDDISPLAYMATH");
+  DefMacro!("\\(", "\\@@BEGININLINEMATH");
+  DefMacro!("\\)", "\\@@ENDINLINEMATH");
 
-  DefConstructor!("\\]", "", before_digest => sub[stomach, state] { stomach.end_mode("display_math", state)?; });
+  // Keep from expanding too early, if in alignments, or such.
+  DefMacro!(T_CS!("\\ensuremath"), None,
+    Tokens!(T_CS!("\\protect"), T_CS!("\\@ensuremath")));
+  DefMacro!("\\@ensuremath{}", sub[gullet, (stuff), state] {
+    if state.lookup_bool("IN_MATH") {
+      stuff.unlist()
+    } else {
+      let mut result = vec![T_MATH!()];
+      result.extend(stuff.unlist());
+      result.push(T_MATH!());
+      result
+    }
+  });
 });

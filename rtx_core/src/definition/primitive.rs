@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::Arc;
+use libxml::tree::Node;
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -103,7 +104,7 @@ impl Definition for Primitive {
     Ok(invoked_boxes)
   }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<Vec<Node>> {
     fatal!(Definition, Unexpected, "do_absorbtion on Primitive should never be called!");
   }
 

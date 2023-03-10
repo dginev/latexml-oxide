@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::sync::Arc;
+use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -260,7 +261,7 @@ impl BoxOps for Whatsit {
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
   fn get_string(&self, state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.revert(state)?.to_string())) }
 
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
     // Significant time is consumed here, and associated with a specific CS,
     // so we should be profiling as well!
     // Hopefully the csname is the same that was charged in the digestioned phase!
@@ -269,9 +270,9 @@ impl BoxOps for Whatsit {
     // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
     // info!(target:"whatsit:be_absorbed", "{:?}", self);
 
-    self.definition.do_absorbtion(document, self, state)?;
+    self.definition.do_absorbtion(document, self, state)
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
-    Ok(())
+
   }
 
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> { self.properties.get(key).map(Cow::Borrowed) }

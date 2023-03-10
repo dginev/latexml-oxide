@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
+use libxml::tree::Node;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -252,7 +253,7 @@ impl Definition for Constructor {
     // self.nargs = Some(nargs);
   }
 
-  fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) -> Result<()> {
+  fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) -> Result<Vec<Node>> {
     for pre_closure in &self.before_construct {
       pre_closure(document, whatsit, state)?;
     }
@@ -270,7 +271,7 @@ impl Definition for Constructor {
     for post_closure in &self.after_construct {
       post_closure(document, whatsit, state)?;
     }
-    Ok(())
+    Ok(Vec::new())
   }
   fn get_reversion_spec(&self) -> Option<Reversion> { self.reversion.clone() }
 }

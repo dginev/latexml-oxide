@@ -6,15 +6,19 @@ use crate::package::*;
 
 LoadDefinitions!(state, {
 
-  // DefEnvironment('{center}', sub {
-  //     $_[0]->maybeCloseElement('ltx:p');                        # this starts a new vertical block
-  //     aligningEnvironment('center', 'ltx_centering', @_); },    # aligning will take care of \\\\ "rows"
-  //   beforeDigest => sub {
-  //     Let('\par', '\inner@par');
-  //     Let('\\\\', '\inner@par'); });
-  // # HOWEVER, define a plain \center to act like \centering (?)
-  // DefMacroI('\center',    undef, '\centering');
-  // DefMacroI('\endcenter', undef, '');
+  DefEnvironment!("{center}", sub[document, args, props, state] {
+    document.maybe_close_element("ltx:p", state)?;                       // this starts a new vertical block
+    aligning_environment("center", "ltx_centering", document, props, state)?;
+    Ok(())
+  },   // aligning will take care of \\\\ "rows"
+  before_digest => sub[gullet, state] {
+    Let!("\\par", "\\inner@par");
+    Let!("\\\\", "\\inner@par");
+  });
+  // HOWEVER, define a plain \center to act like \centering (?)
+  DefMacro!("\\center",    "\\centering");
+  DefMacro!("\\endcenter", None);
+
 
   // DefEnvironment('{flushleft}', sub {
   //     $_[0]->maybeCloseElement('ltx:p');    # this starts a new vertical block

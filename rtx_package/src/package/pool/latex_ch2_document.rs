@@ -11,10 +11,10 @@ LoadDefinitions!(state, {
   //   \end{document}
 
   DefMacro!("\\AtBeginDocument{}", sub[gullet,(rules),state] {
-    state.push_value("@at@begin@document", rules.unlist());
+    state.push_value("@at@begin@document", rules);
   });
   DefMacro!("\\AtEndDocument{}", sub[gullet,(rules),state] {
-    state.push_value("@at@end@document", rules.unlist());
+    state.push_value("@at@end@document", rules);
   });
 
   // Like  "<ltx:document xml:id='#id'>#body</ltx:document>",
@@ -41,18 +41,15 @@ LoadDefinitions!(state, {
     let expanded_id = Expand!(T_CS!("\\thedocument@ID"),gullet,state);
     whatsit.set_property("id", expanded_id);
     let mut boxes = Vec::new();
-    if let Some(ops) = state.lookup_value("@document@preamble@atend") {
-      unimplemented!();
-      //       push(@boxes, $stomach->digest(Tokens(@$ops)));
+    if let Some(ops) = state.lookup_tokens("@document@preamble@atend") {
+      boxes.push(stomach.digest(ops, state)?);
     }
-    if let Some(ops) = state.lookup_value("@at@begin@document") {
-      //       push(@boxes, $stomach->digest(Tokens(@$ops)));
-      unimplemented!();
+    if let Some(ops) = state.lookup_tokens("@at@begin@document") {
+      boxes.push(stomach.digest(ops, state)?);
     }
     state.assign_value("inPreamble", false, None); // atbegin is still (sorta) preamble
-    if let Some(ops) = state.lookup_value("@document@preamble@afterend") {
-      unimplemented!();
-    //       push(@boxes, $stomach->digest(Tokens(@$ops)));
+    if let Some(ops) = state.lookup_tokens("@document@preamble@afterend") {
+      boxes.push(stomach.digest(ops, state)?);
     }
     whatsit.set_font(state.lookup_font().unwrap()); // Start w/ whatever font was last selected.
     boxes

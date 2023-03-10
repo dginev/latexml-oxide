@@ -293,10 +293,9 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
 
   let mut blocktag = "ltx:block";
   let mut iblocktag = "ltx:inline-block";
-  if blockattr.contains_key("para") {
+  if blockattr.remove("para").is_some() {
     blocktag = "ltx:para";
     iblocktag = "ltx:inline-para";
-    blockattr.remove("para");
   }
   // Generally, we're going to need some sort of container to hold the contents of the block.
   // Particularly if we're: setting various size & positioning attributes;
@@ -329,8 +328,9 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
   document.set_attribute(&mut document.get_element().unwrap(), "_vertical_mode_", "true")?; // HACK!!!! (see \hbox)
 
   document.absorb(contents, None, state)?;
-  let absorbed = document.drain_constructed_nodes();
-  let mut nodes = VecDeque::from(document.filter_children(document.filter_deletions(absorbed)));
+  let absorbed : Vec<Node> = document.get_constructed_nodes().to_vec();
+  let mut nodes = VecDeque::from(
+    document.filter_children(document.filter_deletions(absorbed)));
 
   // Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
   let mut newnodes = Vec::new();
@@ -794,17 +794,38 @@ fn either_case_token(token: Token, is_upper: bool, state: &State) -> Token {
   }
 }
 
-  /// a candidate for use by \hskip, \hspace, etc... ?
-  pub fn dimension_to_spaces(dimen: &Dimension, state: &State) -> Cow<'static, str> {
-    let fs      = state.lookup_font().unwrap().get_size();    // 1 em
-    let pt      = dimen.pt_value(None);
-    let ems     = pt / fs.unwrap();
-    if    ems < 0.01 { Cow::Borrowed("") }
-    else if ems < 0.17 { Cow::Borrowed("\u{2006}") }    // 6em
-    else if ems < 0.30 { Cow::Borrowed("\u{2005}") }    // 4em
-    else if ems < 0.40 { Cow::Borrowed("\u{2004}") }    // 3em (same as nbsp?)
-    else {
-      let n = (ems + 0.3 / 0.333).trunc() as usize; // 10pts per space...?
-      Cow::Owned("\u{00A0}".repeat(n))
+/// a candidate for use by \hskip, \hspace, etc... ?
+pub fn dimension_to_spaces(dimen: &Dimension, state: &State) -> Cow<'static, str> {
+  let fs      = state.lookup_font().unwrap().get_size();    // 1 em
+  let pt      = dimen.pt_value(None);
+  let ems     = pt / fs.unwrap();
+  if    ems < 0.01 { Cow::Borrowed("") }
+  else if ems < 0.17 { Cow::Borrowed("\u{2006}") }    // 6em
+  else if ems < 0.30 { Cow::Borrowed("\u{2005}") }    // 4em
+  else if ems < 0.40 { Cow::Borrowed("\u{2004}") }    // 3em (same as nbsp?)
+  else {
+    let n = (ems + 0.3 / 0.333).trunc() as usize; // 10pts per space...?
+    Cow::Owned("\u{00A0}".repeat(n))
+  }
+}
+
+pub fn aligning_environment(align: &str, class: &str, document: &mut Document, props: &HashMap<String,Stored>, state: &mut State) -> Result<()> {
+  if let Some(Stored::Digested(body)) = props.get("body") {
+    // Add class attribute to new nodes.
+    for mut node in insert_block(document, body, HashMap::new(), state)?.into_iter() {
+      set_align_or_class(document, &mut node, align, class, state)?;
     }
   }
+  Ok(())
+}
+
+pub fn set_align_or_class(document: &mut Document, node: &mut Node, align: &str, class: &str, state: &mut State) -> Result<()> {
+  let qname = state.model.get_node_qname(node);
+  if qname == "ltx:tag" { }                                    // HACK
+  else if !align.is_empty() && state.model.can_have_attribute(&qname, "align") {
+    node.set_attribute("align", align)?;
+  } else if !class.is_empty() && state.model.can_have_attribute(&qname, "class") {
+    document.add_class(node, class)?;
+  }
+  Ok(())
+}

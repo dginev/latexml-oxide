@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
+use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -125,7 +126,7 @@ impl BoxOps for Tbox {
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
   fn get_string(&self, state: &State) -> Result<Cow<'_, str>> { Ok(Cow::Borrowed(self.text.as_str())) }
 
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<()> {
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
     let text = &self.text;
     let font = &self.font;
     let mode = match self.properties.get("mode") {
@@ -135,12 +136,18 @@ impl BoxOps for Tbox {
 
     if !text.is_empty() {
       if mode == "math" {
-        document.insert_math_token(text, Stored::cast_to_string_hash(&self.properties), Some(font), state)?;
+        Ok(vec![
+          document.insert_math_token(text, Stored::cast_to_string_hash(&self.properties), Some(font), state)?
+        ])
       } else {
-        document.open_text(text, font, state)?;
+        match document.open_text(text, font, state)? {
+          None => Ok(Vec::new()),
+          Some(node) => Ok(vec![node])
+        }
       }
+    } else {
+      Ok(Vec::new())
     }
-    Ok(())
   }
 
   fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(Some(Cow::Borrowed(&self.font))) }

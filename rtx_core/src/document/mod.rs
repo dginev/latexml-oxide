@@ -62,12 +62,14 @@ pub struct Document {
   pub node: Node,
   pub node_boxes: HashMap<usize, Digested>, // used to be _box attribute
   pub node_fonts: HashMap<u64, Font>,            // used to be _font attribute
-  pub constructed_nodes: Vec<Node>,
   pub idstore: HashMap<String, Node>,
   // the rewrite labels used to be in each rewrite rule, but they make more sense in doc
   pub rewrite_labels: HashMap<String, String>,
-  box_to_absorb: Option<Digested>, // local $LaTeXML::BOX;
+  // the following are internal "local"-based declarations in Perl
+  localized_constructed_nodes: Vec<Vec<Node>>,
+  constructed_nodes: Vec<Node>,
   localized_boxes: Vec<Option<Digested>>,
+  box_to_absorb: Option<Digested>, // local $LaTeXML::BOX;
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -97,6 +99,7 @@ impl Document {
       idstore: HashMap::new(),
       rewrite_labels: HashMap::new(),
       pending: Vec::new(),
+      localized_constructed_nodes: Vec::new(),
       constructed_nodes: Vec::new(),
       box_to_absorb: None,
       localized_boxes: Vec::new(),
@@ -304,7 +307,7 @@ impl Document {
   /// [Note that recording the nodes being constructed isn't all that costly,
   /// but filtering them for parent/child relations IS, particularly since it usually isn't needed]
   ///
-  /// A $box that is a Box, or List, or Whatsit, is responsible for carrying out
+  /// A $box that is a TBox, or List, or Whatsit, is responsible for carrying out
   /// its own insertion, but it should ultimately call methods of Document
   /// that will record the nodes that were created.
   /// $box can also be a plain string (Digested::Postponed)
@@ -312,8 +315,7 @@ impl Document {
   /// font, mode, etc, are in %props.
   pub fn absorb(&mut self, object: &Digested, props_opt: Option<HashMap<String, Stored>>, state: &mut State) -> Result<()> {
     use DigestedData::*;
-    // let mut results = Vec::new();
-    let props = props_opt.unwrap_or_default(); // is there a better way to deal with the Option?
+    let props = props_opt.unwrap_or_default();
     let mut boxes = vec![Cow::Borrowed(object)];
     while let Some(front_box) = boxes.pop() {
       match front_box.data() {
@@ -326,13 +328,32 @@ impl Document {
         // A Proper Box or Whatsit? Absorb it.
         TBox(ref digested) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
+          self.init_constructed_nodes();
           digested.be_absorbed(self, state)?;
-          self.localize_box_to_absorb();
+          // record these for OUTER caller!
+          // but return only the most recent set
+          {
+            for n in self.drain_constructed_nodes() {
+              self.record_constructed_node(&n);
+            }
+          }
+          self.expire_box_to_absorb();
         },
         Whatsit(ref digested) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
+          self.init_constructed_nodes();
           digested.read().unwrap().be_absorbed(self, state)?;
-          self.localize_box_to_absorb();
+          // record these for OUTER caller!
+          // but return only the most recent set
+          {
+            for n in self.drain_constructed_nodes() {
+              self.record_constructed_node(&n);
+            }
+          }
+          self.expire_box_to_absorb();
+        },
+        Comment(ref comment) => {
+          comment.be_absorbed(self, state)?;
         },
         Postponed(ref tokens) => {
           if !matches!(props.get("isMath"), Some(&Stored::Bool(true))) {
@@ -346,13 +367,12 @@ impl Document {
             };
             // TODO: Sometimes we can't find a `font` here. Should `open_text` allow a None font arg?
             let text_font = text_font_opt.unwrap_or_default();
-            self.open_text(&tokens.to_string(), &text_font, state)?;
+            if let Some(new_text) = self.open_text(&tokens.to_string(), &text_font, state)? {
+              self.record_constructed_node(&new_text);
+            }
           } else {
             unimplemented!();
           }
-        },
-        Comment(ref comment) => {
-          comment.be_absorbed(self, state)?;
         },
         KeyVals(_) => unimplemented!(),
         RegisterValue(_) => unimplemented!(),
@@ -360,11 +380,26 @@ impl Document {
     }
     Ok(())
   }
-  pub fn drain_constructed_nodes(&mut self) -> Vec<Node> { self.constructed_nodes.drain(0..).collect() }
+
+  fn init_constructed_nodes(&mut self) {
+    self.localized_constructed_nodes.push(
+      self.constructed_nodes.drain(..).collect()
+    );
+  }
+  fn drain_constructed_nodes(&mut self) -> Vec<Node> {
+    let drained = self.constructed_nodes.drain(..).collect();
+    if let Some(saved) = self.localized_constructed_nodes.pop() {
+      self.constructed_nodes = saved;
+    }
+    drained
+  }
+  pub fn get_constructed_nodes(&self) -> &[Node] {
+    &self.constructed_nodes
+  }
 
   /// This is a refactored `else` cases from the main absorb routine, to allow for better type
   /// hygiene
-  pub fn absorb_string(&mut self, object: &str, props: &HashMap<String, Stored>, state: &mut State) -> Result<()> {
+  pub fn absorb_string(&mut self, object: &str, props: &HashMap<String, Stored>, state: &mut State) -> Result<Option<Node>> {
     // Else, plain string in text mode.
     let ismath: bool = match props.get("isMath") {
       Some(v) => v.into(),
@@ -377,12 +412,12 @@ impl Document {
         Some(Stored::FontDirective(FontDirective::Closure(code))) => code(None, state)?,
         _ => self.box_to_absorb.as_ref().unwrap().get_font(state)?.unwrap().into_owned(),
       };
-      self.open_text(object, &font, state)?;
+      self.open_text(object, &font, state)
     } else if self.get_node_qname(&self.node, state) == MATH_TOKEN_NAME {
       // Or plain string in math mode.
       // Note text nodes can ONLY appear in <XMTok> or <text>!!!
       // Have we already opened an XMTok? Then insert into it.
-      self.open_math_text_internal(object, state)?;
+      Ok(Some(self.open_math_text_internal(object, state)?))
     // Else create the XMTok now.
     } else {
       // Odd case: constructors that work in math & text can insert raw strings in Math mode.
@@ -393,12 +428,13 @@ impl Document {
         _ => None,
       };
       if let Some(font_math) = font_math_opt {
-        self.insert_math_token(object, HashMap::new(), Some(&font_math), state)?;
+        Ok(Some(
+          self.insert_math_token(object, HashMap::new(), Some(&font_math), state)?))
       } else {
-        self.insert_math_token(object, HashMap::new(), None, state)?;
+        Ok(Some(
+        self.insert_math_token(object, HashMap::new(), None, state)?))
       }
     }
-    Ok(())
   }
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1024,7 +1060,7 @@ impl Document {
   //  I don't like having "text" built in here!
   //  AND, we've assumed that "font" names the relevant attribute!!!]
 
-  pub fn open_text(&mut self, text: &str, font: &Font, state: &mut State) -> Result<Option<&Node>> {
+  pub fn open_text(&mut self, text: &str, font: &Font, state: &mut State) -> Result<Option<Node>> {
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
@@ -1087,9 +1123,9 @@ impl Document {
     }
 
     // Finally, insert the darned text.
-    self.open_text_internal(text, state)?;
-    self.record_constructed_node(None);
-    Ok(Some(&self.node))
+    let outnode = self.open_text_internal(text, state)?;
+    self.record_constructed_node(&outnode);
+    Ok(Some(outnode))
   }
 
   pub fn can_contain(&self, node: &Node, child: &str, state: &mut State) -> bool {
@@ -1238,9 +1274,9 @@ impl Document {
     Ok(())
   }
 
-  pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Result<()> {
+  pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Result<Node> {
     if text.is_empty() {
-      return Ok(())
+      return Ok(self.node.clone())
     }
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
@@ -1269,7 +1305,7 @@ impl Document {
         self.set_node(&node);
       }
     }
-    Ok(())
+    Ok(self.node.clone())
   }
 
   // /// Since xml text nodes don't have attributes to record the origining box,
@@ -1373,21 +1409,16 @@ impl Document {
     }
   }
 
-  /// Note that a box has been absorbed creating $node;
+  /// Note that a box has been absorbed creating `node`;
   /// This does book keeping so that we can return the sequence of nodes
   /// that were added by absorbing material.
-  pub fn record_constructed_node(&mut self, node_opt: Option<&Node>) {
-    let node = match node_opt {
-      None => &self.node,
-      Some(n) => n,
-    };
+  pub fn record_constructed_node(&mut self, node: &Node) {
     // if ((defined $LaTeXML::RECORDING_CONSTRUCTION)    // If we're recording!
     let should_push = match self.constructed_nodes.last() {
       // and this node isn't already recorded
       None => true,
       Some(last_node) => last_node != node,
     };
-
     if should_push {
       self.constructed_nodes.push(node.clone());
     }
@@ -1410,9 +1441,9 @@ impl Document {
       Vec::new()
     } else {
       let mut new = vec![nodes.remove(0)];
-      for node in nodes.iter() {
-        if nodes.iter().all(|other| !xml::is_descendant_or_self(node, other)) {
-          new.push(node.clone())
+      for node in nodes {
+        if new.iter().all(|other| !xml::is_descendant_or_self(&node, other)) {
+          new.push(node)
         }
       }
       new
@@ -2195,6 +2226,7 @@ impl Document {
       Debug!("adding schema declaration, new node will be : {}", tag);
       state.model.add_schema_declaration(self);
       newnode = Node::new(&tag, None, &self.document).unwrap();
+      self.record_constructed_node(&newnode);
       self.document.set_root_element(&newnode);
       for mut node in &mut self.pending {
         newnode.add_prev_sibling(node)?; // Add saved comments, PI's
@@ -2221,7 +2253,6 @@ impl Document {
         let ns_node = Namespace::new("", &ns, &mut newnode).unwrap();
         newnode.set_namespace(&ns_node)?;
       }
-      self.record_constructed_node(Some(&newnode));
     } else {
       if font_opt.is_none() {
         font_opt = Some(self.get_node_font(&point).clone());
@@ -2334,7 +2365,7 @@ impl Document {
       }
     }
 
-    self.record_constructed_node(Some(&newnode));
+    self.record_constructed_node(&newnode);
     Ok(newnode)
   }
 
@@ -2668,7 +2699,7 @@ impl Document {
     self.localized_boxes.push(self.box_to_absorb.take());
     self.box_to_absorb = arg;
   }
-  pub fn localize_box_to_absorb(&mut self) { self.box_to_absorb = self.localized_boxes.pop().unwrap(); }
+  pub fn expire_box_to_absorb(&mut self) { self.box_to_absorb = self.localized_boxes.pop().unwrap(); }
 
   pub fn load_labels_for_rewrite(&mut self, state: &mut State) {
     for node in self.findnodes("//*[@labels]", None, state) {

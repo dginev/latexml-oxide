@@ -100,6 +100,8 @@ pub mod url_sty;
 pub mod verbatim_sty;
 pub mod multido_sty;
 pub mod utf8_def;
+pub mod textcase_sty;
+pub mod cite_sty;
 
 use rtx_core::common::error::Result;
 use rtx_core::state::State;
@@ -127,6 +129,8 @@ pub fn dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Opt
     "t1enc.def" => t1enc_sty::load_definitions(stomach, state),
     "t1.fontmap" => t1_fontmap::load_definitions(stomach, state),
     "utf8.def"  => utf8_def::load_definitions(stomach, state),
+    "textcase.sty" => textcase_sty::load_definitions(stomach, state),
+    "cite.sty" => cite_sty::load_definitions(stomach, state),
     _other => return None,
   })
 }

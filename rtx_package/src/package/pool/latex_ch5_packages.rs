@@ -17,6 +17,11 @@ LoadDefinitions!(state, {
   DefMacro!("\\@pkgextension", "sty");
   Let!("\\@currext", "\\@empty");
   Let!("\\@currname", "\\@empty");
+  Let!("\\@classoptionslist",     "\\relax");
+  Let!("\\@raw@classoptionslist", "\\relax");
+  DefMacro!("\\@declaredoptions",  None);
+  DefMacro!("\\@curroptions",      None);
+  DefMacro!("\\@unusedoptionlist", None);
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
@@ -42,23 +47,144 @@ LoadDefinitions!(state, {
     }
   );
 
-  // STUBS:
-  for ltxtrigger in [
-    "\\renewcommand",
-    "\\NeedsTeXFormat",
-    "\\ProvidesPackage",
-    "\\RequirePackage",
-    "\\ProvidesFile",
-    "\\makeatletter",
-    "\\makeatother",
-    "\\typeout",
-    "\\listfiles",
-  ]
-  .iter()
-  .map(ToString::to_string)
-  {
-    DefMacro!(T_CS!(ltxtrigger), None, Tokens!());
-  }
+  DefConstructor!("\\RequirePackage OptionalSemiverbatim Semiverbatim []",
+  "<?latexml package='#2' ?#1(options='#1')?>",
+  before_digest => {unimplemented!(); Ok(Vec::new()) }
+  // beforeDigest => sub { onlyPreamble('\RequirePackage'); },
+  // afterDigest  => sub { my ($stomach, $whatsit) = @_;
+  //   my $options  = $whatsit->getArg(1);
+  //   my $packages = $whatsit->getArg(2);
+  //   $options = [($options ? split(/\s*,\s*/, (ToString($options))) : ())];
+  //   for my $pkg (split(',', ToString($packages))) {
+  //     $pkg =~ s/\s+//g;
+  //     next if !$pkg || $pkg =~ /^%/;
+  //     RequirePackage($pkg, options => $options); }
+  //   return }
+  );
+
+  DefConstructor!("\\LoadClass OptionalSemiverbatim Semiverbatim []",
+    "<?latexml class='#2' ?#1(options='#1')?>",
+    before_digest => { unimplemented!(); Ok(Vec::new()) }
+    // beforeDigest => sub { onlyPreamble('\LoadClass'); },
+    // afterDigest  => sub { my ($stomach, $whatsit) = @_;
+    //   my $options = $whatsit->getArg(1);
+    //   my $class   = ToString($whatsit->getArg(2));
+    //   $class =~ s/\s+//g;
+    //   $options = [($options ? split(/\s*,\s*/, (ToString($options))) : ())];
+    //   LoadClass($class, options => $options);
+    //   return; }
+  );
+
+  // Related internal macros for package definition
+  // Internals used in Packages
+  DefMacro!("\\NeedsTeXFormat{}[]", None);
+
+  DefPrimitive!("\\ProvidesClass{}[]", sub[stomach, (class, version_opt), state] {
+    let ver_cs = T_CS!(s!("\\ver@{class}.cls"));
+    let version = version_opt.unwrap_or_default();
+    DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
+    ()
+  });
+
+  // Note that these, like LaTeX, define macros like \var@mypkg.sty to give the version info.
+  DefMacro!("\\ProvidesPackage{}[]", sub[stomach, (package, version_opt), state] {
+    let ver_cs = T_CS!(s!("\\ver@{package}.sty"));
+    let version = version_opt.unwrap_or_default();
+    DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
+    () });
+
+  DefMacro!("\\ProvidesFile{}[]", sub[stomach, (file, version_opt), state] {
+    let ver_cs = T_CS!(s!("\\ver@{file}"));
+    let version = version_opt.unwrap_or_default();
+    DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
+    () });
+
+  //\DeclareRelease{v4.46}{2020-03-19}{glossaries-2020-03-19.sty}
+  DefMacro!("\\DeclareRelease{}{}{}", sub[stomach, (version, date, name), state] {
+    // anything useful?
+    Tokens!(); });
+  //\DeclareCurrentRelease{v4.49}{2021-11-01}
+  DefMacro!("\\DeclareCurrentRelease{}{}", sub[stomach, (version, date), state] {
+    // anything useful?
+    Tokens!() });
+  DefMacro!("\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease", sub[gullet,args,state] {
+    // anything useful?
+    Tokens!() });
+  DefMacro!("\\NewModuleRelease{}{}{} Until:\\EndModuleRelease", sub[gullet,args,state] {
+    // anything useful?
+    Tokens!() });
+
+  DefPrimitive!("\\DeclareOption{}{}", sub[stomach,(option, code),state] {
+    let option_str = option.to_string();
+    if option_str == "*" {
+      DeclareOption!(None, code);
+    } else {
+      DeclareOption!(option_str, code);
+    }
+    Ok(Vec::new())
+  });
+
+  DefPrimitive!("\\PassOptionsToPackage{}{}", sub[stomach,(name, options),state] {
+    unimplemented!();
+    // $name = ToString($name);
+    // $name =~ s/\s+//g;
+    // PassOptions($name, 'sty', split(/\s*,\s*/, ToString(Expand($options))));
+    Ok(Vec::new())
+  });
+
+  DefPrimitive!("\\PassOptionsToClass{}{}", sub[stomach,(name, options),state] {
+    unimplemented!();
+    // $name = ToString($name);
+    // $name =~ s/\s+//g;
+    // PassOptions($name, 'cls', split(/\s*,\s*/, ToString(Expand($options))));
+    Ok(Vec::new())
+  });
+
+  DefConstructor!("\\RequirePackageWithOptions Semiverbatim []",
+  "<?latexml package='#1'?>",
+  before_digest => { unimplemented!(); Ok(Vec::new()) }
+  // beforeDigest => sub { onlyPreamble('\RequirePackage'); },
+  // afterDigest  => sub { my ($stomach, $whatsit) = @_;
+  //   my $package = ToString($whatsit->getArg(1));
+  //   $package =~ s/\s+//g;
+  //   RequirePackage($package, withoptions => 1);
+  //   return; }
+  );
+
+  DefConstructor!("\\LoadClassWithOptions Semiverbatim []", "<?latexml class='#1'?>",
+    before_digest => { unimplemented!(); Ok(Vec::new()) }
+    // beforeDigest => sub { onlyPreamble('\LoadClassWithOptions'); },
+    // afterDigest  => sub { my ($stomach, $whatsit) = @_;
+    //   my $class = ToString($whatsit->getArg(1));
+    //   $class =~ s/\s+//g;
+    //   LoadClass($class, withoptions => 1);
+    //   return; });
+  );
+  DefPrimitive!("\\@onefilewithoptions {} [][] {}", sub[stomach, (name,option1,option2,ext), state] {
+    unimplemented!();
+    // InputDefinitions(ToString(Expand($name)), type => ToString(Expand($ext)), options => $option1);
+    Ok(Vec::new())
+  });
+
+  DefMacro!("\\CurrentOption", None);
+
+  DefPrimitive!("\\ExecuteOptions{}", sub[gullet, (options), state] {
+    unimplemented!();
+    // ExecuteOptions!(split(/\s*,\s*/, ToString(Expand($options))));
+    Ok(Vec::new())
+  });
+
+  DefPrimitive!("\\ProcessOptions OptionalMatch:*", sub[stomach, (star), state] {
+    // TODO:
+    // if star.is_some() {
+    //   "inorder"
+    // }
+    // ProcessOptions!(($star ? (inorder => 1) : ()));
+    process_options(stomach, state)?;
+    Ok(Vec::new())
+  });
+  DefMacro!("\\@options", "\\ProcessOptions*");
+
 
   DefMacro!("\\@ifpackageloaded", r"\@ifl@aded\@pkgextension");
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");

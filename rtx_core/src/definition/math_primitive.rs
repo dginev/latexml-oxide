@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
+use libxml::tree::Node;
 
 use crate::common::error::*;
 // use crate::common::font::Font;
@@ -262,7 +263,7 @@ impl Definition for MathPrimitive {
     Ok(result)
   }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<()> {
+  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<Vec<Node>> {
     fatal!(Definition, Unexpected, "do_absorbtion on MathPrimitive should never be called!");
   }
 
