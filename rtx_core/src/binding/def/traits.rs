@@ -218,6 +218,10 @@ impl IntoResultArgWrap<Result<ArgWrap>> for Result<Tokens> {
   fn into_result_argwrap(self) -> Result<ArgWrap> { self.map(ArgWrap::Tokens) }
 }
 
+impl IntoResultArgWrap<Result<ArgWrap>> for Option<Tokens> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionTokens(self)) }
+}
+
 impl IntoResultArgWrap<Result<ArgWrap>> for Result<Option<Tokens>> {
   fn into_result_argwrap(self) -> Result<ArgWrap> { self.map(ArgWrap::OptionTokens) }
 }
@@ -306,6 +310,9 @@ impl IntoDigestedResult<Result<Vec<Digested>>> for () {
 }
 impl IntoDigestedResult<Result<Vec<Digested>>> for Tbox {
   fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(vec![self.into()]) }
+}
+impl IntoDigestedResult<Result<Vec<Digested>>> for Result<Tbox> {
+  fn into_digested_result(self) -> Result<Vec<Digested>> { self.map(|tb| vec![tb.into()]) }
 }
 
 impl IntoDigestedResult<Result<Vec<Digested>>> for Whatsit {

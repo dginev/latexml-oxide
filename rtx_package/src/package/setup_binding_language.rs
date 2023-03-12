@@ -1057,23 +1057,23 @@ macro_rules! DefLigature {
 }
 
 // Defines an accent command using a combining char that follows the
-// 1st char of the argument.  In cases where there is no argument, $standalonechar is used.
+// 1st char of the argument.  In cases where there is no argument, `standalonechar` is used.
 #[macro_export]
 macro_rules! DefAccent {
-  ($accent:expr, $combiningchar:expr, $standalonechar:expr) => {{
+  ($accent:literal, $combiningchar:expr, $standalonechar:expr) => {{
     let mut empty_opts : HashMap<String, Stored> = HashMap::new();
     bind_state_mut!(st);
     DefAccent!($accent, $combiningchar, $standalonechar, empty_opts, st)
   }};
-  ($accent:expr, $combiningchar:expr, $standalonechar:expr, below => true) => {{
+  ($accent:literal, $combiningchar:expr, $standalonechar:expr, below => true) => {{
     bind_state_mut!(st);
     DefAccent!($accent, $combiningchar, $standalonechar, map!("below"=>Stored::Bool(true)), st)
   }};
-  ($accent:expr, $combiningchar:expr, $standalonechar:expr, $options:expr) => {{
+  ($accent:literal, $combiningchar:expr, $standalonechar:expr, $options:expr) => {{
     bind_state_mut!(st);
     DefAccent!($accent, $combiningchar, $standalonechar, $options, st)
   }};
-  ($accent:expr, $combiningchar:expr, $standalonechar:expr, $options:expr, $state_arg: ident) => {{
+  ($accent:literal, $combiningchar:expr, $standalonechar:expr, $options:expr, $state_arg: ident) => {{
     if $options.contains_key("below") {
       $options.entry(String::from("above")).or_insert(Stored::Bool(true));
     }
@@ -1083,14 +1083,13 @@ macro_rules! DefAccent {
     } else {
       $state_arg.assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
     }
-    let accent_proto = format!("{}{{}}",$accent);
-
+    let accent_proto = concat!($accent,"{}");
     DefPrimitive!(&accent_proto, sub[stomach, letter, inner_state] {
-      let invoked = Invocation!(T_CS!($accent), letter.clone(), stomach.get_gullet_mut(), inner_state)?;
-      // TODO: check if letter.to_string has artefacts
+      let letter = letter.remove(0).owned_tokens().unwrap();
+      let letter_str = letter.to_string();
+      let invoked = Invocation!(T_CS!($accent), vec![letter], stomach.get_gullet_mut(), inner_state)?;
       $crate::package::pool::tex_accents::apply_accent(
-        stomach, &letter[0].as_tokens(inner_state)?.unwrap().to_string(), $combiningchar, $standalonechar, Some(invoked), inner_state)?;
-      Ok(vec![])
+        stomach, &letter_str, $combiningchar, $standalonechar, Some(invoked), inner_state)
     }, mode => "text");
   }};
 }

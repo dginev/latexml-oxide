@@ -49,7 +49,6 @@ LoadDefinitions!(state, {
       gullet.read_until_token(close.clone(), state)?
     };
     state.end_semiverbatim()?;
-
     let toks : Vec<Token> = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE).map(|t| T_OTHER!(t.get_string())).collect();
 
     let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
@@ -73,7 +72,7 @@ LoadDefinitions!(state, {
 
   // \@@Url cmd {open}{close}{url}{formattedurl}
   DefConstructor!("\\@@Url Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
-    "?#isMath(<ltx:XMWrap href='#href'>#5</ltx:XMWrap>) (<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
+    "?#isMath(<ltx:XMWrap href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
     properties => sub[stomach, args, state] {
       unref!(args => cmd, open, close, url, formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
@@ -82,10 +81,9 @@ LoadDefinitions!(state, {
         // TODO: why was class a sub {}??
         "class"=> Stored::String(ltx_cmd)
       ))
-    }
-        // sizer     => "#5",
-        // reversion => "#1#2#4#3");
-  );
+    },
+    sizer     => "#5",
+    reversion => "#1#2#4#3");
 
   // These are the expansions of \DeclareUrlCommand
   DefMacro!("\\path", "\\begingroup\\urlstyle{tt}\\@Url\\path");
