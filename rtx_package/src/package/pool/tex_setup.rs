@@ -435,6 +435,37 @@ LoadDefinitions!(state, {
     })
   );
 
+  // Read Verbatim, but allows expanding command sequences
+  DefParameterType!(HyperVerbatim, sub[gullet, inner, _extra, state] {
+      gullet.read_until(&Tokens!(T_BEGIN!()), state)?;
+      state.begin_semiverbatim(Some(&['%']));
+      DefMacro!(T_CS!("\\%"),              None, T_OTHER!("%"), scope => Some(Scope::Local));
+      DefMacro!(T_CS!("\\#"),              None, T_OTHER!("#"), scope => Some(Scope::Local));
+      DefMacro!(T_CS!("\\&"),              None, T_OTHER!("&"), scope => Some(Scope::Local));
+      DefMacro!(T_CS!("\\textunderscore"), None, T_OTHER!("_"), scope => Some(Scope::Local));
+      state.let_i(&T_CS!("\\_"), T_CS!("\\textunderscore"), None, gullet);
+      DefMacro!(T_CS!("\\hyper@tilde"), None, T_OTHER!("~"), scope => Some(Scope::Local));
+      state.let_i(&T_CS!("\\~"), T_CS!("\\hyper@tilde"), None, gullet);
+      state.let_i(&T_CS!("\\textasciitilde"), T_CS!("\\hyper@tilde"), None, gullet);
+      state.let_i(&T_CS!("\\\\"), T_CS!("\\@backslashchar"), None, gullet);
+      // Having prepared, read in the argument, expanding as we go
+      let arg = gullet.read_balanced(true, state)?;
+      state.end_semiverbatim()?;
+      arg
+    },
+    before_digest => before_digest!(stomach, state, {
+      stomach.bgroup(state);
+      MergeFont!(family => "typewriter", state); }),
+    after_digest => after_digest!(stomach, args, state, {
+      stomach.egroup(state)?; }),
+    reversion => reversion!(gullet, arg, inner, extra, state, {
+      let mut reverted = vec![T_BEGIN!()];
+      let reverted_arg : Vec<Token> = arg.into_iter().map(Token::revert).collect();
+      reverted.extend(reverted_arg);
+      reverted.push(T_END!());
+      Ok(Tokens::new(reverted))
+    })
+  );
   // Read an argument that will not be digested.
   DefParameterType!(Undigested, sub[gullet, inner, _extra, state] { gullet.read_arg(state)},
   reader_predigest => undigested!(),

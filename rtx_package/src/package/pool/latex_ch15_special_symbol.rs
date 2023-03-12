@@ -28,7 +28,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\textparagraph", "\u{00B6}"); // PILCROW SIGN
   DefPrimitive!("\\textperiodcentered", "\u{22C5}"); // DOT OPERATOR
   DefPrimitive!("\\textsection", "\u{00A7}"); // SECTION SIGN
-  DefAccent!("\\textcircled", "\u{0020DD}", "\u{0025EF}"); // Defined in TeX.pool
+  DefAccent!("\\textcircled", '\u{0020DD}', "\u{0025EF}"); // Defined in TeX.pool
   DefPrimitive!("\\textless", "<");
   DefPrimitive!("\\textgreater", ">");
   DefPrimitive!("\\textcopyright", "\u{00A9}"); // COPYRIGHT SIGN
@@ -40,12 +40,10 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\textellipsis", "\u{2026}"); // HORIZONTAL ELLIPSIS
   DefPrimitive!("\\textregistered", "\u{00AE}"); // REGISTERED SIGN
   DefPrimitive!("\\texttrademark", "\u{2122}"); // TRADE MARK SIGN
-  DefConstructor!("\\textsuperscript{}", "<ltx:sup>#1</ltx:sup>",
-  mode => "text");
+  DefConstructor!("\\textsuperscript{}", "<ltx:sup>#1</ltx:sup>",  mode => "text");
   // This is something coming from xetex/xelatex ? Why define this way?
   //DefConstructor!("\\realsuperscript{}', "<ltx:text yoffset='0.5em' _noautoclose='1'>#1</ltx:text>");
-  DefConstructor!("\\realsuperscript{}", "<ltx:sup>#1</ltx:sup>",
-  mode => "text");
+  DefConstructor!("\\realsuperscript{}", "<ltx:sup>#1</ltx:sup>",  mode => "text");
   DefPrimitive!("\\textordfeminine", "\u{00AA}"); // FEMININE ORDINAL INDICATOR
   DefPrimitive!("\\textordmasculine", "\u{00BA}"); // MASCULINE ORDINAL INDICATOR
   DefPrimitive!("\\SS", "SS"); // ?
