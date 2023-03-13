@@ -36,11 +36,14 @@ LoadDefinitions!(state, {
   });
 
   AssignValue!("@unusedoptionlist", Stored::VecString(Vec::new()));
-  // DefPrimitiveI('\warn@unusedclassoptions', undef, sub {
-  //     if (my @unused = @{ LookupValue('@unusedoptionlist') }) {
-  //       Info('unexpected', 'options', $_[0], "Unused global options: " . join(',', @unused));
-  //       AssignValue('@unusedoptionlist', []); }
-  //     return; });
+  DefPrimitive!("\\warn@unusedclassoptions", sub[stomach,_args,state] {
+    if let Some(Stored::VecString(unused)) = state.lookup_value("@unusedoptionlist") {
+      if !unused.is_empty() {
+        Info!("unexpected", "options", stomach, state, "Unused global options: {}",unused.join(","));
+        state.assign_value("@unusedoptionlist", Stored::VecString(Vec::new()), None);
+      }
+    }
+  });
 
   // DefConstructor('\documentstyle OptionalSemiverbatim SkipSpaces Semiverbatim []',
   //   "<?latexml class='#2' ?#1(options='#1') oldstyle='true'?>",

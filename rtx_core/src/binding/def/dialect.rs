@@ -629,8 +629,8 @@ pub fn def_environment(
   state: &mut State,
 ) {
   // This is for the common case where the environment is opened by \begin{env}
-  let begin_name = s!("\\begin{{{}}}", &name);
-  let end_name = s!("\\end{{{}}}", &name);
+  let begin_name = s!("\\begin{{{name}}}");
+  let end_name = s!("\\end{{{name}}}");
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
   match &options.mode {
     Some(ref mode) => {
@@ -658,6 +658,13 @@ pub fn def_environment(
     let forbid_math_closure = before_digest_simple!(stomach, state, { forbidMath!(forbid_name, state) });
     before_digest_env.push(forbid_math_closure);
   }
+  let atbegin_key = s!("@environment@{name}@atbegin");
+  let atbegin_hook_closure = before_digest_simple!(stomach, state, {
+    if let Some(b) = state.lookup_tokens(&atbegin_key) {
+      vec![stomach.digest(b.unlist(), state)?]
+    } else { Vec::new() } });
+
+  before_digest_env.push(atbegin_hook_closure);
 
   let env_name = name.clone();
   let current_environment_closure = before_digest_simple!(stomach, state, {
@@ -754,11 +761,20 @@ pub fn def_environment(
     },
   };
 
+  let mut before_digest_for_endenv = options.before_digest_end;
+  let atend_key = s!("@environment@{name}@atend");
+  let atend_hook_closure = before_digest_simple!(stomach, state, {
+    if let Some(e) = state.lookup_tokens(&atend_key) {
+      vec![stomach.digest(e.unlist(), state)?]
+    } else { Vec::new() } });
+  before_digest_for_endenv.push(atend_hook_closure);
+
+
   let end_envname_constructor = Arc::new(Constructor {
     cs: T_CS!(end_name),
     replacement: None,
     paramlist: None,
-    before_digest: options.before_digest_end,
+    before_digest: before_digest_for_endenv,
     after_digest: after_digest_env,
     ..Constructor::default() // TODO ? fill in missing ones
   });

@@ -140,7 +140,7 @@ impl NumericOps for Glue {
       mfill: None,
     }
   }
-  fn new_f32(number: f32) -> Self {
+  fn new_f64(number:f64) -> Self {
     let (skip, plus, pfill, minus, mfill) = new_setup(number, None, None, None, None);
     Glue {
       skip,
@@ -161,7 +161,7 @@ pub fn glue_string(
   unit: &str,
 ) -> String {
   // ??? TODO: There seems to be some messy confusion about the types of the
-  // pieces of glue/dimensions -- are we consistently using i64 or f32?
+  // pieces of glue/dimensions -- are we consistently using i64 or f64?
   let mut string = fixedformat(skip, Some(unit));
   if let Some(plus) = plus_opt {
     if plus != 0 {
@@ -191,10 +191,10 @@ impl Object for Glue {
 }
 
 pub fn new_setup(
-  skip: f32,
-  plus: Option<f32>,
+  skip:f64,
+  plus: Option<f64>,
   pfill: Option<FillCode>,
-  minus: Option<f32>,
+  minus: Option<f64>,
   mfill: Option<FillCode>,
 ) -> (i64, Option<i64>, Option<FillCode>, Option<i64>, Option<FillCode>) {
   // See comment in Dimension for why kround rather than int
@@ -203,16 +203,16 @@ pub fn new_setup(
 
 pub fn spec_setup(
   mut spec: &str,
-  mut plus: Option<f32>,
+  mut plus: Option<f64>,
   mut pfill: Option<FillCode>,
-  mut minus: Option<f32>,
+  mut minus: Option<f64>,
   mut mfill: Option<FillCode>,
   unit: &str,
   state: &State,
 ) -> (i64, Option<i64>, Option<FillCode>, Option<i64>, Option<FillCode>) {
   if !UNIT_RE.is_match(spec) {
     // If no units, expect fixedpoint values
-    let skip: f32 = spec.parse::<f32>().unwrap_or_default();
+    let skip:f64 = spec.parse::<f64>().unwrap_or_default();
     new_setup(skip, plus, pfill, minus, mfill)
   } else {
     let is_mu = unit == "mu";
@@ -226,11 +226,11 @@ pub fn spec_setup(
 
     if let Some(cs) = GLUE_RE.captures(spec) {
       let (mut f, unit, p, punit, m, munit) = (
-        cs.get(1).map(|v| v.as_str().parse::<f32>().unwrap_or_default()).unwrap_or_default(),
+        cs.get(1).map(|v| v.as_str().parse::<f64>().unwrap_or_default()).unwrap_or_default(),
         cs.get(2).map_or("", |m| m.as_str()),
-        cs.get(4).map(|v| v.as_str().parse::<f32>().unwrap_or_default()).unwrap_or_default(),
+        cs.get(4).map(|v| v.as_str().parse::<f64>().unwrap_or_default()).unwrap_or_default(),
         cs.get(5).map_or("", |m| m.as_str()),
-        cs.get(7).map(|v| v.as_str().parse::<f32>().unwrap_or_default()).unwrap_or_default(),
+        cs.get(7).map(|v| v.as_str().parse::<f64>().unwrap_or_default()).unwrap_or_default(),
         cs.get(8).map_or("", |m| m.as_str()),
       );
       let skip = if unit.is_empty() {
@@ -313,7 +313,7 @@ impl Glue {
       mfill,
     }
   }
-  pub fn new_full_f32(skip: f32, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>) -> Self {
+  pub fn new_full_f64(skip:f64, plus: Option<f64>, pfill: Option<FillCode>, minus: Option<f64>, mfill: Option<FillCode>) -> Self {
     let (skip, plus, pfill, minus, mfill) = new_setup(skip, plus, pfill, minus, mfill);
     Glue {
       skip,
@@ -323,7 +323,7 @@ impl Glue {
       mfill,
     }
   }
-  pub fn new_spec(spec: &str, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>, state: &State) -> Self {
+  pub fn new_spec(spec: &str, plus: Option<f64>, pfill: Option<FillCode>, minus: Option<f64>, mfill: Option<FillCode>, state: &State) -> Self {
     let (skip, plus, pfill, minus, mfill) = spec_setup(spec, plus, pfill, minus, mfill, "pt", state);
     Glue {
       skip,

@@ -20,7 +20,7 @@ lazy_static! {
 // Strictly speaking, Float isn't part of TeX, but it's handy.
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Float(pub f32);
+pub struct Float(pub f64);
 
 impl Default for Float {
   fn default() -> Self { Float(0.0) }
@@ -33,16 +33,16 @@ impl Object for Float {
 }
 
 impl NumericOps for Float {
-  fn new(number: i64) -> Self { Float(number as f32) }
-  fn new_f32(number: f32) -> Self { Float(number) }
+  fn new(number: i64) -> Self { Float(number as f64) }
+  fn new_f64(number:f64) -> Self { Float(number) }
   fn value_of(self) -> i64 { self.0 as i64 }
-  fn value_f32(self) -> f32 { self.0 }
+  fn value_f64(self) -> f64 { self.0 }
   fn negate(self) -> Self { Float(-self.0) }
   fn register_type(&self) -> RegisterType { RegisterType::Number }
-  fn add<T: NumericOps>(self, other: T) -> Self { Float::new_f32(self.0 + other.value_f32()) }
-  fn subtract<T: NumericOps>(self, other: T) -> Self { Float::new_f32(self.0 - other.value_f32()) }
-  fn multiply<T: NumericOps>(self, other: T) -> Self { Float::new_f32(self.0 * other.value_f32()) }
-  fn divide<T: NumericOps>(self, other: T) -> Self { Float::new_f32(self.0 / other.value_f32()) }
+  fn add<T: NumericOps>(self, other: T) -> Self { Float::new_f64(self.0 + other.value_f64()) }
+  fn subtract<T: NumericOps>(self, other: T) -> Self { Float::new_f64(self.0 - other.value_f64()) }
+  fn multiply<T: NumericOps>(self, other: T) -> Self { Float::new_f64(self.0 * other.value_f64()) }
+  fn divide<T: NumericOps>(self, other: T) -> Self { Float::new_f64(self.0 / other.value_f64()) }
 }
 
 impl From<Float> for Tokens {
@@ -66,10 +66,10 @@ impl Float {
 }
 
 /// Utility for formatting sane numbers.
-pub fn floatformat(n: f32) -> String {
+pub fn floatformat(n:f64) -> String {
   custom_float_format(n, false)
 }
-pub fn custom_float_format(n: f32, tight: bool) -> String {
+pub fn custom_float_format(n:f64, tight: bool) -> String {
   let mut s = format!("{:.5}", n);
   if s.contains('.') {
     s = TRAILING_ZEROS.replace(&s, "").to_string();
@@ -86,11 +86,11 @@ pub fn custom_float_format(n: f32, tight: bool) -> String {
 
 impl From<&str> for Float {
   fn from(spec:&str) -> Self {
-    Float(spec.parse::<f32>().expect("Float::from(&str) does not handle malformed spec strings"))
+    Float(spec.parse::<f64>().expect("Float::from(&str) does not handle malformed spec strings"))
   }
 }
 impl From<String> for Float {
   fn from(spec:String) -> Self {
-    Float(spec.parse::<f32>().expect("Float::from(String) does not handle malformed spec strings"))
+    Float(spec.parse::<f64>().expect("Float::from(String) does not handle malformed spec strings"))
   }
 }

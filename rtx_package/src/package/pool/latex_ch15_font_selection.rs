@@ -96,41 +96,40 @@ LoadDefinitions!(outer_state, {
     "\\fontencoding{#1}\\fontfamily{#2}\\fontseries{#3}\\fontshape{#4}\\selectfont"
   );
 
-  // // TODO:
-  // // If these series or shapes appear in math, they revert it to roman, medium, upright (?)
-  // DefConstructor!("\\textmd@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
-  //   bounded      => 1, font => { series => "medium" }, alias => "\\textmd",
-  //   beforeDigest => sub { DefMacro("\\f@series", "m"); });
-  // DefConstructor!("\\textbf@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
-  //   bounded      => 1, font => { series => "bold" }, alias => "\\textbf",
-  //   beforeDigest => sub { DefMacro("\\f@series", "b"); });
-  // DefConstructor!("\\textrm@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
-  //   bounded      => 1, font => { family => "serif" }, alias => "\\textrm",
-  //   beforeDigest => sub { DefMacro("\\f@family", "cm"); });
-  // DefConstructor!("\\textsf@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
-  //   bounded      => 1, font => { family => "sansserif" }, alias => "\\textsf",
-  //   beforeDigest => sub { DefMacro("\\f@family", "cmss"); });
-  // DefConstructor!("\\texttt@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
-  //   bounded      => 1, font => { family => "typewriter" }, alias => "\\texttt",
-  //   beforeDigest => sub { DefMacro("\\f@family", "cmtt"); });
-
-  // DefConstructor!("\\textup@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
-  //   bounded      => 1, font => { shape => "upright" }, alias => "\\textup",
-  //   beforeDigest => sub { DefMacro("\\f@shape", ""); });
-  // DefConstructor!("\\textit@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
-  //   bounded      => 1, font => { shape => "italic" }, alias => "\\textit",
-  //   beforeDigest => sub { DefMacro("\\f@shape", "i"); });
-  // DefConstructor!("\\textsl@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
-  //   bounded      => 1, font => { shape => "slanted" }, alias => "\\textsl",
-  //   beforeDigest => sub { DefMacro("\\f@shape", "sl"); });
-  // DefConstructor!("\\textsc@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode => "text",
-  //   bounded      => 1, font => { shape => "smallcaps" }, alias => "\\textsc",
-  //   beforeDigest => sub { DefMacro("\\f@shape", "sc"); });
-  // DefConstructor!("\\textnormal@math{}", "<ltx:text _noautoclose="1">#1</ltx:text>", mode =>
-  // "text",   bounded => 1, font => { family => "serif", series => "medium", shape => "upright"
-  // }, alias => "\\textnormal",   beforeDigest => sub { DefMacro("\\f@family", "cmtt");
-  //     DefMacro("\\f@series", "m");
-  //     DefMacro("\\f@shape",  "n"); });
+  // If these series or shapes appear in math, they revert it to roman, medium, upright (?)
+  DefConstructor!("\\textmd@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { series => "medium" }, alias => "\\textmd",
+    before_digest => sub[gullet,state] { DefMacro!("\\f@series", "m"); });
+  DefConstructor!("\\textbf@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { series => "bold" }, alias => "\\textbf",
+    before_digest => sub[gullet,state] { DefMacro!("\\f@series", "b"); });
+  DefConstructor!("\\textrm@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>",
+    mode => "text", bounded => true, font => { family => "serif" }, alias => "\\textrm",
+    before_digest => sub[gullet,state] { DefMacro!("\\f@family", "cm"); });
+  DefConstructor!("\\textsf@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { family => "sansserif" }, alias => "\\textsf",
+    before_digest => sub[gullet,state] { DefMacro!("\\f@family", "cmss"); });
+  DefConstructor!("\\texttt@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { family => "typewriter" }, alias => "\\texttt",
+    before_digest => sub[gullet,state] { DefMacro!("\\f@family", "cmtt"); });
+  DefConstructor!("\\textup@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { shape => "upright" }, alias => "\\textup",
+    before_digest => sub[gullet,state] { DefMacro!("\\f@shape", ""); });
+  DefConstructor!("\\textit@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { shape => "italic" }, alias => "\\textit",
+    before_digest => sub[gullet,state] { DefMacro!("\\f@shape", "i"); });
+  DefConstructor!("\\textsl@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { shape => "slanted" }, alias => "\\textsl",
+    before_digest => sub[gullet,state] { DefMacro!("\\f@shape", "sl"); });
+  DefConstructor!("\\textsc@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { shape => "smallcaps" }, alias => "\\textsc",
+    before_digest => sub[gullet,state] { DefMacro!("\\f@shape", "sc"); });
+  DefConstructor!("\\textnormal@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode =>
+  "text",   bounded => true, font => { family => "serif", series => "medium", shape => "upright"
+  }, alias => "\\textnormal",   before_digest => sub[gullet,state] {
+    DefMacro!("\\f@family", "cmtt");
+    DefMacro!("\\f@series", "m");
+    DefMacro!("\\f@shape",  "n"); });
 
   // These really should be robust! which is a source of expand timing issues!
   DefMacro!("\\textmd{}",     "\\ifmmode\\textmd@math{#1}\\else{\\mdseries #1}\\fi",       protected => true);

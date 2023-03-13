@@ -82,7 +82,7 @@ impl PartialEq for Conditional {
 
 impl fmt::Display for Conditional {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    unimplemented!();
+    write!(f, "{}",self.cs)
   }
 }
 impl Object for Conditional {

@@ -33,12 +33,6 @@ pub fn neutralize_font(state: &mut State) {
   state.assign_value("mathfont", Font::math_default(), Some(Scope::Local));
 }
 
-pub fn only_preamble(cs: &str, stomach: &mut Stomach, state: &mut State) {
-  if !state.lookup_bool("inPreamble") {
-    Error!("unexpected", cs, stomach, state, "The current command can only appear in the preamble");
-  }
-}
-
 pub fn today(state: &mut State) -> String {
   let month_names = [
     "January",

@@ -69,7 +69,7 @@ LoadDefinitions!(outer_state, {
     let name = name_arg.to_string();
     let props_opt = if let Some(mut props) = font::decode_fontname(&name,
       gullet.read_keyword(&["at"], state)?.map(|_| gullet.read_dimension(state).unwrap().pt_value(None)),
-      gullet.read_keyword(&["scaled"], state)?.map(|_| gullet.read_number(state).unwrap().value_of() as f32 / 1000.0)) {
+      gullet.read_keyword(&["scaled"], state)?.map(|_| gullet.read_number(state).unwrap().value_of() as f64 / 1000.0)) {
       props.name = Some(Cow::Owned(name));
       Some(props)
     } else { // Failed?
@@ -153,12 +153,12 @@ LoadDefinitions!(outer_state, {
       let defn_args : Vec<ArgWrap> = inner.clone();
       if let Some(defn) = state.lookup_register_definition(&varname) {
         let defn_value = defn.value_of(inner, state).unwrap_or_default();
-        let mut denominator = scale.to_number().value_f32();
+        let mut denominator = scale.to_number().value_f64();
         if denominator == 0.0 {
           Error!("misdefined", scale, stomach, state, "Illegal \\divide by 0; assuming 1");
           denominator = 1.0;
         }
-        defn.borrow_mut().set_value(defn_value.divide(Float::new_f32(denominator)), defn_args, state);
+        defn.borrow_mut().set_value(defn_value.divide(Float::new_f64(denominator)), defn_args, state);
       } else {
         let message = s!("\\divide expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", stomach, state, message);

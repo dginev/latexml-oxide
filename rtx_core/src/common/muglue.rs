@@ -35,7 +35,7 @@ impl NumericOps for MuGlue {
       mfill: None,
     }
   }
-  fn new_f32(number: f32) -> Self {
+  fn new_f64(number:f64) -> Self {
     let (skip, plus, pfill, minus, mfill) = new_setup(number, None, None, None, None);
     MuGlue {
       skip,
@@ -60,7 +60,7 @@ impl MuGlue {
       mfill,
     }
   }
-  pub fn new_full_f32(skip: f32, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>) -> Self {
+  pub fn new_full_f64(skip:f64, plus: Option<f64>, pfill: Option<FillCode>, minus: Option<f64>, mfill: Option<FillCode>) -> Self {
     let (skip, plus, pfill, minus, mfill) = new_setup(skip, plus, pfill, minus, mfill);
     MuGlue {
       skip,
@@ -71,7 +71,7 @@ impl MuGlue {
     }
   }
 
-  pub fn new_spec(spec: &str, plus: Option<f32>, pfill: Option<FillCode>, minus: Option<f32>, mfill: Option<FillCode>, state: &State) -> Self {
+  pub fn new_spec(spec: &str, plus: Option<f64>, pfill: Option<FillCode>, minus: Option<f64>, mfill: Option<FillCode>, state: &State) -> Self {
     let (skip, plus, pfill, minus, mfill) = spec_setup(spec, plus, pfill, minus, mfill, "mu", state);
     MuGlue {
       skip,

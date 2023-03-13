@@ -37,7 +37,7 @@ static CODE_TEX_EXT: &str = ".code.tex";
 lazy_static! {
   static ref TEX_OR_BIB_EXT_RE: Regex = Regex::new(r"\.(tex|bib)$").unwrap();
   // Conversion to scaled points
-  pub static ref UNITS: HashMap<String, f32> = map!(
+  pub static ref UNITS: HashMap<String, f64> = map!(
     "pt" => 65536.0,
     "pc" => 12.0 * 65536.0,
     "in" => 72.27 * 65536.0,
@@ -652,10 +652,18 @@ impl State {
     if !self.value.contains_key(key) {
       self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
     }
-    if let Some(&mut Stored::VecDequeStored(ref mut front)) = self.value.get_mut(key).unwrap().front_mut() {
-      front.push_back(value);
-    } else {
-      Error!("state", "Stored", None, self, "BUG: Tried to push_value into a non-vecdeque value key!");
+    match self.value.get_mut(key).unwrap().front_mut() {
+      Some(&mut Stored::VecDequeStored(ref mut front)) => front.push_back(value),
+      // auto-vivify, if None
+      Some(ref mut field) if matches!(field, Stored::None) => {
+        let mut new_vdq = VecDeque::new();
+        new_vdq.push_back(value);
+        **field = Stored::VecDequeStored(new_vdq);
+      },
+      other => {
+        let message = s!("BUG: Tried to push_value into an unsupported Stored field! Field was: {other:?}");
+        Error!("state", "Stored", None, self, message);
+      }
     }
   }
 
@@ -1505,13 +1513,13 @@ impl State {
   // Units.
   // Put here since it could concievably evolve to depend on the current font.
 
-  pub fn convert_unit(&self, unit_arg: &str) -> f32 {
+  pub fn convert_unit(&self, unit_arg: &str) -> f64 {
     let unit = unit_arg.to_lowercase();
     // Eventually try to track font size?
     match unit.as_str() {
-      "em" => self.lookup_font().unwrap().get_em_width() as f32,
-      "ex" => self.lookup_font().unwrap().get_ex_height() as f32,
-      "mu" => self.lookup_font().unwrap().get_mu_width() as f32,
+      "em" => self.lookup_font().unwrap().get_em_width() as f64,
+      "ex" => self.lookup_font().unwrap().get_ex_height() as f64,
+      "mu" => self.lookup_font().unwrap().get_mu_width() as f64,
       u => match UNITS.get(u) {
         Some(sp) => *sp,
         None => {

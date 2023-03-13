@@ -616,12 +616,15 @@ LoadDefinitions!(outer_stomach, outer_state, {
   // # C.11.6 Terminal Input and Output
   // #======================================================================
 
-  // DefPrimitive('\typeout{}', sub {
-  //     my ($stomach, $stuff) = @_;
-  //     print STDERR ToString(Expand($stuff)) . "\n" if LookupValue('VERBOSITY') > -1;
-  //     return; });
-
-  // DefPrimitive('\typein[]{}', undef);
+  DefPrimitive!("\\typeout{}", sub[stomach,(stuff),state] {
+    if state.lookup_int("VERBOSITY") > -1 {
+      let gullet = stomach.get_gullet_mut();
+      let content = Expand!(stuff, gullet);
+      eprintln!("{content}\n");
+    }
+    ()
+  });
+  DefPrimitive!("\\typein[]{}", None);
 });
 
 // Since SOME people seem to write bibliographies w/o \bibitem,

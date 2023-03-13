@@ -182,7 +182,7 @@ impl Tokens {
   pub fn to_dimension(&self) -> Dimension {
     // TODO: How do we enhance here to be able to use the current font information from State?
     // Using the State-ful variations makes it impossible to work with the From/Into standard Rust traits. Should we do StatefulFrom/StatefulInto ?
-    Dimension::new_f32(Dimension::spec_to_f32(&self.to_string(), None).unwrap_or_default())
+    Dimension::new_f64(Dimension::spec_to_f64(&self.to_string(), None).unwrap_or_default())
   }
 
   /// to_glue casts back to a parsed Glue (usually via gullet.read_glue)
@@ -213,7 +213,7 @@ impl Tokens {
       eprintln!("TODO: An empty tokens was requested for .to_float, debug this!");
       Float::default()
     } else {
-      Float::new_f32(self.to_string().parse::<f32>().unwrap_or(0.0))
+      Float::new_f64(self.to_string().parse::<f64>().unwrap_or(0.0))
     }
   }
 

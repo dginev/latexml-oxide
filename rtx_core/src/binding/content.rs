@@ -121,7 +121,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   // TODO: Is this inaccurate with latexml? It only sets the macros if the file is found, we set them *always*, as a matter of course
   // TODO: This *IS* inaccurate with the Package.pm InputDefinitions, revisit at the right time and make sure it matches line-by-line (including the subordinated methods)
   if options.handleoptions {
-    input_handle_options(&mut options, &prevname, &prevext, name, &as_type, stomach, state)?;
+    before_input_handle_options(&mut options, &prevname, &prevext, name, &as_type, stomach, state)?;
     def_macro(T_CS!(s!("\\{}.{}-h@@k", name, as_type)), None, options.after, None, state);
   }
 
@@ -130,6 +130,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   }
 
   let is_binding = !options.noltxml && (load_external_binding(&filename, stomach, state)? || load_binding(&filename, stomach, state)?);
+  let mut is_found_raw = false;
   if is_binding {
     // We found and loaded a binding successfully, mark it as such.
     let loaded_flag = format!("{filename}_loaded");
@@ -144,7 +145,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
     // TODO options.search_paths_only
     if let Some(file) = find_file(&filename, Some(FindFileOptions {
     forbid_ltxml: options.noltxml, notex: options.notex, ext_type: options.extension.as_ref().cloned(), search_paths_only: false }), state) {
-
+      is_found_raw = true;
       load_tex_definitions(&filename, &file, stomach, state)?;
     } else if !options.noerror {
       // TODO: Proper missing reports
@@ -160,6 +161,19 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
       //   "Anticipate undefined macros or environments",
       //   maybeReportSearchPaths()); }
     }
+  }
+
+  if (is_binding || is_found_raw) && options.handleoptions {
+    // after_input_handle_options ?
+    stomach.digest(T_CS!(s!("\\{name}.{as_type}-h@@k")), state)?;
+    if !prevname.is_empty() {
+      def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(prevname)), None, state);
+    }
+    if !prevext.is_empty() {
+      def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(prevext)), None, state);
+    }
+    stomach.digest(T_CS!("\\@popfilename"), state)?;
+    reset_options(stomach.get_gullet_mut(), state)?; // And reset options afterwards, too.
   }
   note_end(&s!("Loading {:?} definitions", filename));
   Ok(())
@@ -209,7 +223,7 @@ fn _load_binding(internal: bool, request: &str, mut stomach: &mut Stomach, state
 
 // Factor out handling and passing loading options from input_content,
 // to simplify main routine
-fn input_handle_options(
+fn before_input_handle_options(
   options: &mut InputDefinitionOptions,
   prevname: &str,
   prevext: &str,
@@ -218,6 +232,9 @@ fn input_handle_options(
   stomach: &mut Stomach,
   state: &mut State,
 ) -> Result<()> {
+  // Note: this is trying to emulate the LaTeX 2 (latex.ltx) use of \@pushfilename. For expl3, see expl3.sty.ltxml
+  stomach.digest(T_CS!("\\@pushfilename"), state)?;
+
   // For \RequirePackageWithOptions, pass the options from the outer class/style to the inner one.
   if let Some(with_options_to_pass) = options.withoptions.take() {
     if !prevname.is_empty() && state.has_value(&s!("opt@{}.{}", prevname, prevext)) {

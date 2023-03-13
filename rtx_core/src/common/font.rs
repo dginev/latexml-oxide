@@ -1,6 +1,6 @@
 use crate::binding::content::{load_font_map, preload_font_map};
 use crate::common::dimension::Dimension;
-use crate::common::numeric_ops::{NumericOps, UNITY_F32};
+use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::common::store::Stored;
 use crate::state::State;
 use crate::stomach::Stomach;
@@ -33,7 +33,7 @@ static DEFBACKGROUND: &str = "white";
 static DEFOPACITY: &str = "1";
 static DEFENCODING: &str = "OT1";
 static DEFLANGUAGE: &str = "en";
-static DEFSIZE: f32 = 10.0; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
+static DEFSIZE:f64 = 10.0; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
 
 pub const TEXT_FONTS: [&str; 6] = ["cmr", "cmm", "cmsy", "cmex", "amsa", "amsb"];
 pub const MATH_FONTS: [&str; 6] = ["cmm", "cmsy", "cmex", "amsa", "amsb", "cmr"];
@@ -125,7 +125,7 @@ lazy_static! {
   /// Symbolic font sizes, relative to the NOMINAL_FONT_SIZE (often 10)
   /// extended logical font sizes, based on nominal document size of 10pts
   /// Possibly should simply use absolute font point sizes, as declared in class...
-  static ref FONT_SIZE : HashMap<&'static str, f32> = raw_map!(
+  static ref FONT_SIZE : HashMap<&'static str, f64> = raw_map!(
   "tiny"   => 0.5,   "SMALL" => 0.7, "Small" => 0.8,  "small" => 0.9,
   "normal" => 1.0,   "large" => 1.2, "Large" => 1.44, "LARGE" => 1.728,
   "huge"   => 2.074, "Huge"  => 2.488,
@@ -142,7 +142,7 @@ lazy_static! {
   static ref STYLE_SIZE  : HashMap<&'static str, usize> = raw_map!(
     "display" => 10, "text" => 10, "script" => 7, "scriptscript" => 5);
 
-  static ref MATH_STYLE_SIZE : HashMap<&'static str, f32> = raw_map!(
+  static ref MATH_STYLE_SIZE : HashMap<&'static str, f64> = raw_map!(
     "display" => 1.0, "text" => 1.0, "script" => 0.7, "scriptscript" => 0.5);
 
   /// A special form of merge when copying/moving nodes to a new context,
@@ -174,7 +174,7 @@ pub fn lookup_font_series(code: &str) -> Option<&Font> { FONT_SERIES.get(code) }
 pub fn lookup_font_shape(code: &str) -> Option<&Font> { FONT_SHAPE.get(code) }
 
 /// ???
-pub fn decode_fontname(name: &str, at: Option<f32>, scaled: Option<f32>) -> Option<Font> {
+pub fn decode_fontname(name: &str, at: Option<f64>, scaled: Option<f64>) -> Option<Font> {
   // TODO!
 
   // if ($name =~ /^$FONTREGEXP$/o) {
@@ -205,7 +205,7 @@ pub struct Font {
   pub family: Option<Cow<'static, str>>,
   pub series: Option<Cow<'static, str>>,
   pub shape: Option<Cow<'static, str>>,
-  pub size: Option<f32>,
+  pub size: Option<f64>,
   pub color: Option<Cow<'static, str>>,
   pub bg: Option<Cow<'static, str>>,
   pub opacity: Option<Cow<'static, str>>,
@@ -221,11 +221,11 @@ pub struct Font {
   pub forceseries: Option<bool>,
   pub forcefamily: Option<bool>,
   pub forceshape: Option<bool>,
-  pub scale: Option<f32>,
+  pub scale: Option<f64>,
 }
 
 impl Hash for Font {
-  // We need to implement hash since we have to tell Rust how to hash `f32` values
+  // We need to implement hash since we have to tell Rust how to hash `f64` values
   // for now I have decided to go for a precision of 4 digits after the decimal point,
   // so multiplying by 1000
   fn hash<H: Hasher>(&self, state: &mut H) {
@@ -368,7 +368,7 @@ impl Font {
     hasher.finish()
   }
 
-  pub fn math_bearing(&self, thisbox: &Digested, prevbox: &Digested) -> f32 {
+  pub fn math_bearing(&self, thisbox: &Digested, prevbox: &Digested) -> f64 {
     // my $r0      = $prevbox->getProperty('role') || 'ID';
     // my $r1      = $box->getProperty('role')     || 'ID';
     // my $t0      = $mathatomtype{$r0}            || 0;
@@ -393,7 +393,7 @@ impl Font {
   pub fn get_family(&self) -> Option<&Cow<str>> { self.family.as_ref() }
   pub fn get_series(&self) -> Option<&Cow<str>> { self.series.as_ref() }
   pub fn get_shape(&self) -> Option<&Cow<str>> { self.shape.as_ref() }
-  pub fn get_size(&self) -> Option<f32> { self.size }
+  pub fn get_size(&self) -> Option<f64> { self.size }
   pub fn get_color(&self) -> Option<&Cow<str>> { self.color.as_ref() }
   pub fn get_background(&self) -> Option<&Cow<str>> { self.bg.as_ref() }
   pub fn get_opacity(&self) -> Option<&Cow<str>> { self.opacity.as_ref() }
@@ -470,7 +470,7 @@ impl Font {
       // the explicit &str typecast is currently needed for rust to
       // figure out how to use the Cow<str> in the HashMap lookup.
       let str_key: &str = key;
-      size / *STYLE_SIZE.get(str_key).unwrap() as f32
+      size / *STYLE_SIZE.get(str_key).unwrap() as f64
     } else {
       1.0
     };
@@ -479,13 +479,13 @@ impl Font {
       if has_mathstyle {
         // otherwise set the size from mathstyle
         let str_mathstyle: &str = newfont.mathstyle.as_ref().unwrap();
-        newfont.size = Some(style_scale * *STYLE_SIZE.get(str_mathstyle).unwrap() as f32);
+        newfont.size = Some(style_scale * *STYLE_SIZE.get(str_mathstyle).unwrap() as f64);
       } else if Some(true) == other.scripted {
         // Or adjust both the mathstyle & size for scripts
         let str_stylekey: &str = self.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
         newfont.mathstyle = SCRIPT_STYLE_MAP.get(str_stylekey).map(|c| Cow::Borrowed(*c));
         let str_mathstylekey: &str = newfont.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
-        newfont.size = Some(style_scale * *STYLE_SIZE.get(str_mathstylekey).unwrap() as f32);
+        newfont.size = Some(style_scale * *STYLE_SIZE.get(str_mathstylekey).unwrap() as f64);
       }
     }
 
@@ -679,7 +679,7 @@ impl Font {
       result.insert(s!("font"), (font_value, font_properties));
     }
 
-    if is_diff_f32(&self.size, &other.size) {
+    if is_diff_f64(&self.size, &other.size) {
       result.insert(
         "fontsize".to_string(),
         (
@@ -789,7 +789,7 @@ impl Font {
       let (cw, ch, cd, ci) = if let Some(entry) = entry_opt {
         *entry
       } else {
-        (0.75 * UNITY_F32, 0.7 * UNITY_F32, 0.2 * UNITY_F32, 0.0)
+        (0.75 * UNITY_F64, 0.7 * UNITY_F64, 0.2 * UNITY_F64, 0.0)
       };
       w += (cw * size).trunc() as i64;
       // if (my $kern = $chars[0] && $$metric{kerns}{ $char . $chars[0] }) {
@@ -874,7 +874,7 @@ impl Font {
       //           now that every emitted result of get_size is a Dimension.
       //           likely the sizing case moves elsewhere?
       // wd += if w._unit() == "mu" { w.sp_value() } else { w.value_of() };
-      wd += w.value_of() as f32;
+      wd += w.value_of() as f64;
 
       //     if ((ref $h) && $h->can('_unit')) {
       //       $ht = max($ht, ($h->_unit eq 'mu' ? $h->spValue : $h->valueOf)); }
@@ -944,13 +944,13 @@ impl Font {
     //       my $h = $lines[0][1];
     //       $dp = $ht + $dp - $h; $ht = $h; } }
 
-    Ok((Dimension::new_f32(wd), Dimension::new(ht), Dimension::new(dp)))
+    Ok((Dimension::new_f64(wd), Dimension::new(ht), Dimension::new(dp)))
   }
 }
 
 fn is_diff(x: &Option<Cow<str>>, y: &Option<Cow<str>>) -> bool { x.is_some() && (y.is_none() || (x != y)) }
 
-fn is_diff_f32(x: &Option<f32>, y: &Option<f32>) -> bool { x.is_some() && (y.is_none() || (x != y)) }
+fn is_diff_f64(x: &Option<f64>, y: &Option<f64>) -> bool { x.is_some() && (y.is_none() || (x != y)) }
 
 /// Decode a codepoint using the fontmap for a given font and/or fontencoding.
 /// If `encoding` not provided, then lookup according to the current font's
@@ -1077,8 +1077,8 @@ pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, s
   result_string
 }
 
-/// Convert stanard font size names, such as `tiny`, `Huge`, etc to f32
-pub fn rationalize_font_size(size: &str) -> f32 {
+/// Convert stanard font size names, such as `tiny`, `Huge`, etc to f64
+pub fn rationalize_font_size(size: &str) -> f64 {
   if let Some(symbolic) = FONT_SIZE.get(size) {
     *symbolic * DEFSIZE
   } else {
@@ -1087,4 +1087,4 @@ pub fn rationalize_font_size(size: &str) -> f32 {
 }
 
 /// convert size to percent
-pub fn relative_font_size(newsize: f32, oldsize: f32) -> String { s!("{}%", (0.5 + 100.0 * newsize / oldsize).floor()) }
+pub fn relative_font_size(newsize:f64, oldsize:f64) -> String { s!("{}%", (0.5 + 100.0 * newsize / oldsize).floor()) }

@@ -20,6 +20,11 @@ LoadDefinitions!(state, {
     // properties => is_break => true
   );
 
+  DefConstructor!("\\newline", "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
+    reversion  => Tokens!(T_CS!("\\newline"), T_CR!()),
+    properties => sub[whatsit,_args,state] { Ok(stored_map!("isBreak" => Stored::Bool(true) )) }
+  );
+
   Let!(&T_CS!("\\@normalcr"), T_CS!("\\\\"));
   // NOTE: Activating this binding messes up an \afterassign test,
   //       so it may be best left disabled.

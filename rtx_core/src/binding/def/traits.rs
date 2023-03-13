@@ -444,9 +444,9 @@ impl IntoFontField<bool> for bool {
 impl IntoFontField<Option<Cow<'static, str>>> for &'static str {
   fn into_font_field(self) -> Option<Cow<'static, str>> { Some(Cow::Borrowed(self)) }
 }
-impl IntoFontField<Option<f32>> for f32 {
-  fn into_font_field(self) -> Option<f32> { Some(self) }
+impl IntoFontField<Option<f64>> for f64 {
+  fn into_font_field(self) -> Option<f64> { Some(self) }
 }
-impl IntoFontField<Option<f32>> for i32 {
-  fn into_font_field(self) -> Option<f32> { Some(self as f32) }
+impl IntoFontField<Option<f64>> for i32 {
+  fn into_font_field(self) -> Option<f64> { Some(self as f64) }
 }

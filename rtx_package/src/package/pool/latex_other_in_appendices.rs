@@ -96,8 +96,16 @@ LoadDefinitions!(state, {
     tks.push(T_END!());
     tks });
 
-  DefMacro!("\\@makeother Token", sub[gullet,(arg),state] {
-    let arg_c = arg.get_string().chars().next().unwrap();
+  DefMacro!("\\@makeother {}", sub[gullet,(arg),state] {
+    let arg_str = arg.to_string();
+    let mut arg_chars = arg_str.chars();
+    let arg_c = match arg_chars.next() {
+      Some('\\') => arg_chars.next().unwrap(),
+      Some(other) => other,
+      None => {
+        Warn!("expected","character",gullet,state,"\\@makeother called on empty argument?");
+        return Ok(Tokens!());
+      }};
     state.assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));
   });
 
@@ -164,7 +172,8 @@ LoadDefinitions!(state, {
   //   $stomach->egroup;
   //   return ('latex', $cmd, $stomach, $message); }
 
-  // DefPrimitive('\@onlypreamble{}', sub { onlyPreamble('\@onlypreamble'); }); # Don't bother enforcing this.
+  DefPrimitive!("\\@onlypreamble{}", sub[stomach,(arg),state] {
+    only_preamble("\\@onlypreamble", stomach, state); }); // Don't bother enforcing this.
   // DefPrimitive('\GenericError{}{}{}{}', sub { Error(make_message('\GenericError', $_[2], $_[3], $_[4])); });
   // DefPrimitive('\GenericWarning{}{}', sub { Warn(make_message('\GenericWarning', $_[1], $_[2])); });
   // DefPrimitive('\GenericInfo{}{}',    sub { Info(make_message('\GenericInfo',    $_[1], $_[2])); });
