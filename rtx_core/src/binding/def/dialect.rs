@@ -632,22 +632,6 @@ pub fn def_environment(
   let begin_name = s!("\\begin{{{name}}}");
   let end_name = s!("\\end{{{name}}}");
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
-  match &options.mode {
-    Some(ref mode) => {
-      let bmode = mode.clone();
-      let mode_closure = Arc::new(move |stomach: &mut Stomach, state: &mut State| {
-        stomach.begin_mode(&bmode, state)?;
-        Ok(Vec::new())
-      });
-      before_digest_env.push(mode_closure);
-    },
-    None => {
-      let bgroup_closure = before_digest_simple!(stomach, state, {
-        stomach.bgroup(state);
-      });
-      before_digest_env.push(bgroup_closure);
-    },
-  };
   if options.require_math {
     let require_name = begin_name.clone();
     let require_math_closure = before_digest_simple!(stomach, state, { requireMath!(require_name, state) });
@@ -658,6 +642,10 @@ pub fn def_environment(
     let forbid_math_closure = before_digest_simple!(stomach, state, { forbidMath!(forbid_name, state) });
     before_digest_env.push(forbid_math_closure);
   }
+  let bgroup_closure = before_digest_simple!(stomach, state, {
+    stomach.bgroup(state);
+  });
+  before_digest_env.push(bgroup_closure);
   let atbegin_key = s!("@environment@{name}@atbegin");
   let atbegin_hook_closure = before_digest_simple!(stomach, state, {
     if let Some(b) = state.lookup_tokens(&atbegin_key) {
@@ -665,6 +653,13 @@ pub fn def_environment(
     } else { Vec::new() } });
 
   before_digest_env.push(atbegin_hook_closure);
+  if let Some(ref mode) = options.mode {
+    let bmode = mode.clone();
+    let mode_closure = before_digest_simple!(stomach, state, {
+      stomach.set_mode(&bmode, state)?;
+    });
+    before_digest_env.push(mode_closure);
+  }
 
   let env_name = name.clone();
   let current_environment_closure = before_digest_simple!(stomach, state, {

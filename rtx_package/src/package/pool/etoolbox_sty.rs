@@ -1282,12 +1282,12 @@ DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[gullet,(prefix,cs,search,replac
     // search_string = quotemeta(search_string);
     // let search_regex = qr/$search_string/;
     if string.contains(&search_string) {
-    //   // Should the token substitution happen on the actual data structure?
-    //   // string replacement is a quick&dirty way out...
-    //   let replace_string = ToString($replace);
-    //   $string =~ s/$search_regex/$replace_string/;
-    //   // New definition in local scope
-    //   state.install_definition(Expandable::new(cs, definition.get_parameters(), string));
+      // Should the token substitution happen on the actual data structure?
+      // string replacement is a quick&dirty way out...
+      let replace_string = replace.to_string();
+      let patched = string.replace(&search_string, &replace_string);
+      // New definition in local scope
+      state.install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(), patched, None, state), None);
       Ok(success)
     } else {
       Ok(failure)
