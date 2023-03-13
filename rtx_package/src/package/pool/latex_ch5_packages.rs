@@ -3,7 +3,7 @@ lazy_static! {
   static ref OPTS_REGEX: Regex = Regex::new(r",\s*").unwrap();
 }
 
-LoadDefinitions!(state, {
+LoadDefinitions!(outer_stomach, state, {
   // ======================================================================
   // C.5.2 Packages
   // ======================================================================
@@ -170,6 +170,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\ExecuteOptions{}", sub[gullet, (options), state] {
     // TODO!
     // ExecuteOptions!(split(/\s*,\s*/, ToString(Expand($options))));
+    Info!("TODO","\\ExecuteOptions",gullet,state,"implement fully, it's an empty stub.");
     Ok(Vec::new())
   });
 
@@ -179,11 +180,19 @@ LoadDefinitions!(state, {
     //   "inorder"
     // }
     // ProcessOptions!(($star ? (inorder => 1) : ()));
+    Info!("TODO","\\ProcessOptions",stomach,state,"implement fully, missing 'inorder'");
     process_options(stomach, state)?;
     Ok(Vec::new())
   });
   DefMacro!("\\@options", "\\ProcessOptions*");
 
+  Let!("\\@enddocumenthook", "\\@empty");
+  DefMacro!("\\AtEndOfPackage{}", sub [gullet, (code), state] {
+    let name = Expand!(T_CS!("\\@currname"), gullet).to_string();
+    let ttype = Expand!(T_CS!("\\@currext"), gullet).to_string();
+    let hookcs = T_CS!(s!("\\{name}.{ttype}-h@@k"));
+    AddToMacro!(hookcs, code, gullet, state);
+  });
 
   DefMacro!("\\@ifpackageloaded", r"\@ifl@aded\@pkgextension");
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");

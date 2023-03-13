@@ -167,6 +167,7 @@ impl fmt::Display for Stored {
       Bool(ref s) => write!(f, "{s}"),
       Tokens(ref s) => write!(f, "{s}"),
       Token(ref s) => write!(f, "{s}"),
+      Conditional(ref s) => write!(f, "{s}"),
       ref variant => {
         panic!("TODO: implement Display for Stored variant {variant:?}");
         // write!(f, "{:?}", self)
@@ -527,8 +528,8 @@ impl From<i64> for Stored {
   fn from(value: i64) -> Self { Stored::Int(value) }
 }
 
-impl From<f32> for Stored {
-  fn from(value: f32) -> Self { Stored::Number(Number::new(value.floor() as i64)) }
+impl From<f64> for Stored {
+  fn from(value:f64) -> Self { Stored::Number(Number::new(value.floor() as i64)) }
 }
 
 impl From<Catcode> for Stored {

@@ -614,7 +614,7 @@ impl Digested {
       _ => 0,
     }
   }
-  pub fn pt_value(&self, prec: Option<u8>) -> f32 {
+  pub fn pt_value(&self, prec: Option<u8>) -> f64 {
     match &*self.0 {
       DigestedData::RegisterValue(rv) => rv.clone().pt_value(prec),
       _ => 0.0,

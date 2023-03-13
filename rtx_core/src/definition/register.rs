@@ -98,7 +98,7 @@ impl Object for RegisterValue {
 
 impl NumericOps for RegisterValue {
   fn new(number: i64) -> Self { RegisterValue::Number(Number::new(number)) }
-  fn new_f32(number: f32) -> Self { RegisterValue::Number(Number::new_f32(number)) }
+  fn new_f64(number:f64) -> Self { RegisterValue::Number(Number::new_f64(number)) }
   fn value_of(self) -> i64 {
     match self {
       RegisterValue::Number(v) => v.value_of(),
@@ -220,8 +220,8 @@ impl From<RegisterValue> for Glue {
 impl From<RegisterValue> for MuGlue {
   fn from(v: RegisterValue) -> MuGlue { v.borrow().into() }
 }
-impl From<RegisterValue> for f32 {
-  fn from(v: RegisterValue) -> f32 { v.value_of() as f32 }
+impl From<RegisterValue> for f64 {
+  fn from(v: RegisterValue) -> f64 { v.value_of() as f64 }
 }
 impl From<RegisterValue> for i64 {
   fn from(v: RegisterValue) -> i64 { v.value_of() }

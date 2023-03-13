@@ -17,7 +17,7 @@ impl Object for Number {
 }
 impl NumericOps for Number {
   fn new(number: i64) -> Self { Number(number) }
-  fn new_f32(number: f32) -> Self { Number(number.trunc() as i64) }
+  fn new_f64(number:f64) -> Self { Number(number.trunc() as i64) }
   fn value_of(self) -> i64 { self.0 }
   fn register_type(&self) -> RegisterType { RegisterType::Number }
 }

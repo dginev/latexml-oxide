@@ -11,7 +11,7 @@ const FNSYMBOLS: &[&str] = &[
   "\u{2021}\u{2021}",
 ];
 
-LoadDefinitions!(state, {
+LoadDefinitions!(outer_state, {
   //======================================================================
   // C.8.4 Numbering
   //======================================================================
@@ -77,49 +77,42 @@ LoadDefinitions!(state, {
   //       DefMacroI(T_CS("\\\@$ctr\@ID"), undef, "0", scope => 'global'); }
   //     return; });
 
-  DefMacro!("\\value{}", sub[gullet, (value), inner_state] {
-    let ctr_expansion = Expand!(value, gullet, inner_state).to_string();
-    let ctr_value = CounterValue!(&ctr_expansion, inner_state).value_of();
-    ExplodeText!(ctr_value)
+  DefMacro!("\\value{}", sub[gullet, (value), state] {
+    T_CS!(s!("\\c@{}", Expand!(value, gullet, state)))
   });
 
   DefMacro!("\\@arabic{Number}", sub[gullet, (number), state] {
-    let value = number.value_of();
-    ExplodeText!(value.to_string())
+    ExplodeText!(number.value_of().to_string())
   });
-  DefMacro!("\\arabic{}", sub[gullet, (value), inner_state] {
-    let ctr_expansion = Expand!(value, gullet, inner_state).to_string();
-    let ctr_value = CounterValue!(&ctr_expansion, inner_state).value_of();
+  DefMacro!("\\arabic{}", sub[gullet, (value), state] {
+    let ctr_expansion = Expand!(value, gullet, state).to_string();
+    let ctr_value = CounterValue!(&ctr_expansion, state).value_of();
     ExplodeText!(ctr_value)
   });
 
   DefMacro!("\\@roman{Number}", sub[gullet, (number), state] {
-    let value = number.value_of();
-    ExplodeText!(radix::radix_roman(value))
+    ExplodeText!(radix::radix_roman(number.value_of()))
   });
   DefMacro!("\\roman{}", sub[gullet, (token), state] {
     let ctr = Expand!(token, gullet).to_string();
     ExplodeText!(radix::radix_roman(CounterValue!(&ctr).value_of()))
   });
   DefMacro!("\\@Roman{Number}", sub[gullet, (number), state] {
-    let value = number.value_of();
-    ExplodeText!(radix::radix_up_roman(value))
+    ExplodeText!(radix::radix_up_roman(number.value_of()))
   });
   DefMacro!("\\Roman{}", sub[gullet, (token), state] {
     let ctr = Expand!(token, gullet).to_string();
     ExplodeText!(radix::radix_up_roman(CounterValue!(&ctr).value_of()))
   });
   DefMacro!("\\@alph{Number}", sub[gullet, (number), state] {
-    let value = number.value_of();
-    ExplodeText!(radix::radix_alpha(value))
+    ExplodeText!(radix::radix_alpha(number.value_of()))
   });
   DefMacro!("\\alph{}", sub[gullet, (token), state] {
     let ctr = Expand!(token, gullet).to_string();
     ExplodeText!(radix::radix_alpha(CounterValue!(&ctr).value_of()))
   });
   DefMacro!("\\@Alph{Number}", sub[gullet, (number), state] {
-    let value = number.value_of();
-    ExplodeText!(radix::radix_up_alpha(value))
+    ExplodeText!(radix::radix_up_alpha(number.value_of()))
   });
   DefMacro!("\\Alph{}", sub[gullet, (token), state] {
     let ctr = Expand!(token, gullet).to_string();

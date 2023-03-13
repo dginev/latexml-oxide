@@ -331,15 +331,15 @@ impl ArgWrap {
       _ => panic!("ArgWrap::value_of not (yet?) defined on {:?}", self),
     }
   }
-  pub fn value_f32(&self) -> f32 {
+  pub fn value_f64(&self) -> f64 {
     use ArgWrap::*;
     match self {
-      Number(v) => v.value_f32(),
-      Float(v) => v.value_f32(),
-      Dimension(v) => v.value_f32(),
-      Glue(v) => v.value_f32(),
-      MuGlue(v) => v.value_f32(),
-      MuDimension(v) => v.value_f32(),
+      Number(v) => v.value_f64(),
+      Float(v) => v.value_f64(),
+      Dimension(v) => v.value_f64(),
+      Glue(v) => v.value_f64(),
+      MuGlue(v) => v.value_f64(),
+      MuDimension(v) => v.value_f64(),
       _ => panic!("ArgWrap::value_of not (yet?) defined on {:?}", self),
     }
   }

@@ -64,22 +64,27 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\end {}", sub[gullet, (env), state]{
     let name = Expand!(env, gullet).to_string();
-    let before = state.lookup_value(&s!("@environment@{}@atend",name));
-    let after  = state.lookup_value(&s!("@environment@{}@afterend",name));
-
-    let mut t = T_CS!(s!("\\end{{{}}}", name));
+    let before = state.lookup_tokens(&s!("@environment@{name}@atend"));
+    let after = state.lookup_tokens(&s!("@environment@{name}@afterend"));
+    let mut t = T_CS!(s!("\\end{{{name}}}"));
+    let mut out_tokens = Vec::new();
     if is_defined_token(&t, state) {
       // Magic CS!
-      // TODO: also add "after" tokens
-      Ok(Tokens!(t))
+      out_tokens.push(t);
+      if let Some(afterend_toks) = after {
+        out_tokens.extend(afterend_toks.unlist())
+      }
     } else {
-      t = T_CS!(s!("\\end{}", name));
-      // TODO: also add "before" tokens
+      out_tokens = before.map(|atend_tokens| atend_tokens.unlist()).unwrap_or_default();
+      t = T_CS!(s!("\\end{name}"));
       if is_defined_token(&t, state) {
-        Ok(Tokens!(t, T_CS!("\\endgroup")))
-      } else {
-        Ok(Tokens!(T_CS!("\\endgroup")))
+        out_tokens.push(t);
+      }
+      out_tokens.push(T_CS!("\\endgroup"));
+      if let Some(afterend_toks) = after {
+        out_tokens.extend(afterend_toks.unlist())
       }
     }
+    Ok(Tokens::new(out_tokens))
   });
 });

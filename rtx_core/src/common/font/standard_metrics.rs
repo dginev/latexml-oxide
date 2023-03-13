@@ -4,17 +4,17 @@ use std::collections::HashMap;
 pub struct MetricData {
   pub file: &'static str,
   pub encoding: &'static str,
-  pub space: f32,
-  pub spaceshrink: f32,
-  pub emwidth: f32,
-  pub spacestretch: f32,
-  pub quad: f32,
-  pub extraspace: f32,
-  pub exheight: f32,
-  pub ligatures: HashMap<&'static str, (&'static str, f32, f32, f32)>,
-  pub sizes: HashMap<&'static str, (f32, f32, f32, f32)>,
-  pub kerns: HashMap<&'static str, f32>,
-  pub slant: f32,
+  pub space:f64,
+  pub spaceshrink:f64,
+  pub emwidth:f64,
+  pub spacestretch:f64,
+  pub quad:f64,
+  pub extraspace:f64,
+  pub exheight:f64,
+  pub ligatures: HashMap<&'static str, (&'static str, f64, f64, f64)>,
+  pub sizes: HashMap<&'static str, (f64, f64, f64, f64)>,
+  pub kerns: HashMap<&'static str, f64>,
+  pub slant:f64,
 }
 
 impl Default for MetricData {

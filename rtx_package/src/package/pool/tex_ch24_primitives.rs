@@ -83,8 +83,24 @@ LoadDefinitions!(state, {
   });
 
   // // Debugging aids; Ignored!
-  DefPrimitive!("\\show Token", None);
-  DefPrimitive!("\\showbox Number", None);
+  DefPrimitive!("\\show Token", sub[stomach,(arg),state] {
+    let mut gullet = stomach.get_gullet_mut();
+    let lhs = if arg.get_catcode() == Catcode::CS {
+      s!("{arg}=")
+    } else { String::new() };
+    let stuff = Invocation!(T_CS!("\\meaning"), vec![arg], gullet)?;
+    let rhs = writable_tokens(&Expand!(stuff, gullet), state)?;
+    // TODO: add+use `Note!` instead of `eprintln`
+    eprintln!("> {lhs}{rhs}");
+    eprintln!("{}",gullet.get_locator().unwrap_or_default());
+    ()
+  });
+  DefPrimitive!("\\showbox Number", sub[stomach,(arg),state] {
+    let n     = arg.value_of();
+    let stuff = state.lookup_value(&s!("box{n}"));
+    Debug!("Box {n} = {stuff:?}");
+    ()
+  });
   DefPrimitive!("\\showlists", None);
   DefPrimitive!("\\showthe Token", None);
 

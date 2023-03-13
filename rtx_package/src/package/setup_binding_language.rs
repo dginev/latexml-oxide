@@ -1835,7 +1835,7 @@ macro_rules! Dimension {
     Dimension!($number, st)
   }};
   ($number:expr, $state_arg:ident) => {
-    Dimension::new_f32(Dimension::spec_to_f32($number, Some($state_arg))?)
+    Dimension::new_f64(Dimension::spec_to_f64($number, Some($state_arg))?)
   };
 }
 
@@ -1976,13 +1976,13 @@ macro_rules! AddToMacro {
     let into_tokens = TokenizeInternal!($tokens);
     AddToMacro!(into_cs, into_tokens, stmch, st);
   }};
-  ($cs:ident, $tokens:ident, $stomach:ident, $state:ident) => {{
+  ($cs:ident, $tokens:ident, $organ:ident, $state:ident) => {{
     // Needs error checking!
     let defn = $state.lookup_definition(&$cs);
     if defn.is_none() || !defn.as_ref().unwrap().is_expandable() {
       let message = s!("{} is not an expandable control sequence", $cs);
       let message2 = "Ignoring addition";
-      Warn!("unexpected", $cs, $stomach, $state, message, message2);
+      Warn!("unexpected", $cs, $organ, $state, message, message2);
     } else {
       let mut expansion = match defn.unwrap().get_expansion() {
         // the .clone() call is again avoidable with a careful refactor via e.g. using `.remove_definition` from state
@@ -1993,7 +1993,7 @@ macro_rules! AddToMacro {
             "{} has a closure body, AddToMacro will *override* with an ExpandableBody::Tokens ! This is usually in error!",
             $cs
           );
-          Warn!("unexpected", "ExpandableBody::Closure", $stomach, $state, message);
+          Warn!("unexpected", "ExpandableBody::Closure", $organ, $state, message);
           Vec::new()
         },
         None => Vec::new(),

@@ -116,10 +116,11 @@ LoadDefinitions!(outer_state, {
     } else {
       state.lookup_meaning(&token).map(|d| d.into_owned())
     } {
-      // First, if this definition is a primitive or constructor, check to see if it has an alias, which would allow us to work with a token
+      // First, if this definition is a primitive|conditional|constructor, check to see if it has an alias, which would allow us to work with a token
       let definition : Stored = match definition {
         Stored::Primitive(primitive) => Stored::Token(primitive.get_cs_or_alias().into_owned()),
         Stored::Constructor(constructor) => Stored::Token(constructor.get_cs_or_alias().into_owned()),
+        Stored::Conditional(cond) => Stored::Token(cond.get_cs_or_alias().into_owned()),
         other => other
       };
       // TODO: Also check for fontinfo_ when implemented
@@ -269,7 +270,7 @@ LoadDefinitions!(outer_state, {
   }));
 
   DefMacro!("\\csname CSName", sub[gullet, (token), state] {
-    if LookupMeaning!(&token).is_none() {
+    if state.lookup_meaning(&token).is_none() {
       state.assign_meaning(&token, state.lookup_meaning(&T_RELAX).unwrap().into_owned(), None);
     }
     token

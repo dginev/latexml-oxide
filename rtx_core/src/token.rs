@@ -826,15 +826,15 @@ impl<'a> Token {
 
   pub fn to_number(&self) -> Number { Number::new(self.text.parse::<i64>().unwrap_or(0)) }
 
-  pub fn to_dimension(&self) -> Dimension { Dimension::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
+  pub fn to_dimension(&self) -> Dimension { Dimension::new_f64(self.text.parse::<f64>().unwrap_or(0.0)) }
 
-  pub fn to_mu_dimension(&self) -> MuDimension { MuDimension::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
+  pub fn to_mu_dimension(&self) -> MuDimension { MuDimension::new_f64(self.text.parse::<f64>().unwrap_or(0.0)) }
 
-  pub fn to_glue(&self) -> Glue { Glue::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
+  pub fn to_glue(&self) -> Glue { Glue::new_f64(self.text.parse::<f64>().unwrap_or(0.0)) }
 
-  pub fn to_mu_glue(&self) -> MuGlue { MuGlue::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
+  pub fn to_mu_glue(&self) -> MuGlue { MuGlue::new_f64(self.text.parse::<f64>().unwrap_or(0.0)) }
 
-  pub fn to_float(&self) -> Float { Float::new_f32(self.text.parse::<f32>().unwrap_or(0.0)) }
+  pub fn to_float(&self) -> Float { Float::new_f64(self.text.parse::<f64>().unwrap_or(0.0)) }
 
 
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> { stomach.digest(Tokens::new(vec![self]), state) }

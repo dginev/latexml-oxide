@@ -321,7 +321,7 @@ impl fmt::Display for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       ExpansionBody::Tokens(ref t) => write!(f, "{t}"),
-      ExpansionBody::Closure(_) => unimplemented!(), // what is the right way to serialize this, e.g. for the \meaning macro
+      ExpansionBody::Closure(_) => write!(f,"<ExpansionBody::Closure>"), // what is the right way to serialize this, e.g. for the \meaning macro
     }
   }
 }

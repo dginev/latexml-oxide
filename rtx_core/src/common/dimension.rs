@@ -6,7 +6,7 @@ use regex::Regex;
 
 use crate::common::error::*;
 use crate::common::locator::Locator;
-use crate::common::numeric_ops::{fixpoint, kround, round_to, NumericOps, UNITY, UNITY_F32};
+use crate::common::numeric_ops::{fixpoint, kround, round_to, NumericOps, UNITY, UNITY_F64};
 use crate::common::object::Object;
 use crate::definition::register::RegisterType;
 use crate::state::{State, DEFAULT_STATE};
@@ -33,7 +33,7 @@ impl Object for Dimension {
 }
 impl NumericOps for Dimension {
   fn new(number: i64) -> Self { Dimension(number) }
-  fn new_f32(number: f32) -> Self { Dimension(kround(number)) }
+  fn new_f64(number:f64) -> Self { Dimension(kround(number)) }
   fn value_of(self) -> i64 { self.0 }
   fn register_type(&self) -> RegisterType { RegisterType::Dimension }
   fn unit(&self) -> Option<&'static str> { Some("pt") }
@@ -45,16 +45,16 @@ impl fmt::Display for Dimension {
 
 impl Dimension {
   pub fn to_attribute(self) -> String { attribute_format(self.value_of(), self.unit()) }
-  pub fn spec_to_f32(spec: &str, state_opt: Option<&State>) -> Result<f32> {
+  pub fn spec_to_f64(spec: &str, state_opt: Option<&State>) -> Result<f64> {
     if spec.is_empty() {
       Ok(0.0)
     } else if let Some(cap) = SPEC_RE.captures(spec) {
       // Dimensions given.
       let num_str = cap.get(1).map_or(String::new(), |m| m.as_str().to_string());
-      let num: f32 = num_str.parse::<f32>()?;
+      let num:f64 = num_str.parse::<f64>()?;
       let unit = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
       let state = state_opt.unwrap_or(&DEFAULT_STATE);
-      Ok(fixpoint(num, Some(state.convert_unit(&unit))) as f32)
+      Ok(fixpoint(num, Some(state.convert_unit(&unit))) as f64)
     } else {
       // When scaled points passed in (typically the result of Perl calculations on other Dimensions),
       // you might think truncation (int) is more TeX-like.
@@ -63,11 +63,11 @@ impl Dimension {
       // As it turns out, using int() here results in non-terminating loops in pgf/tikz.
       // So, we use round (Knuth style)
       // Note that divide and such explicitly use int(), however!
-      Ok(kround(spec.parse::<f32>()?) as f32)
+      Ok(kround(spec.parse::<f64>()?) as f64)
     }
   }
   pub fn from_str(spec: &str, state: &State) -> Result<Dimension> {
-    Ok(Dimension::new_f32(Dimension::spec_to_f32(spec, Some(state))?))
+    Ok(Dimension::new_f64(Dimension::spec_to_f64(spec, Some(state))?))
   }
 }
 // Dimension!() macro is in setup.rs, since it binds state
@@ -103,5 +103,5 @@ pub fn fixedformat(mut s: i64, unit_opt: Option<&str>) -> String {
 
 pub fn attribute_format(sp: i64, unit_opt: Option<&str>) -> String {
   let unit = unit_opt.unwrap_or("pt");
-  s!("{:.1}{}", round_to(sp as f32 / UNITY_F32, Some(1)), unit)
+  s!("{:.1}{}", round_to(sp as f64 / UNITY_F64, Some(1)), unit)
 }
