@@ -48,7 +48,7 @@ lazy_static! {
   static ref GREEK_LETTER_RE: Regex = Regex::new(r"^[\p{Greek}&&\pL]$").unwrap();
   static ref UPPER_LETTER_RE: Regex = Regex::new(r"^[\p{Lu}]$").unwrap();
   static ref DIGIT_LETTER_RE: Regex = Regex::new(r"^[\p{N}]$").unwrap();
-
+  static ref FONT_RE: Regex = Regex::new(r"^(xylubt|xyluat|xydash|xycmbt|xycmat|xycirc|xybtip|xybsql|xyatip|ul9|ugq|uaq|txtt|txsyb|txsya|txss|txr|txms|txmi|pzd|pzc|pxsyb|pxsya|pxr|pxms|pxmi|put|ptm|psy|ppl|pnc|phv|pcr|pbk|pag|msy|msx|msb|msa|ms|futs|futmi|futm|eus|eur|euf|euex|cmvtt|cmtt|cmtl|cmti|cmsy|cmss|cmr|cmmib|cmm|cmfr|cmfib|cmex|cmdh|cmbsy|cmbrs|cmbrm|cmbr|cm|ccy|ccr|ccm|ccitt|bch|bbold|bbmss|bbm)(sbc|sb|mc|m|bx|bm|bc|b|)(sl|sc|n|it|i|csc|)(\d*)$").unwrap();
   //======================================================================
   // Mappings from various forms of names or component names in TeX
   // Given a font, we'd like to map it to the "logical" names derived from LaTeX,
@@ -173,27 +173,47 @@ pub fn lookup_font_series(code: &str) -> Option<&Font> { FONT_SERIES.get(code) }
 /// Global auxiliary for font shape lookup
 pub fn lookup_font_shape(code: &str) -> Option<&Font> { FONT_SHAPE.get(code) }
 
-/// ???
-pub fn decode_fontname(name: &str, at: Option<f64>, scaled: Option<f64>) -> Option<Font> {
-  // TODO!
-
-  // if ($name =~ /^$FONTREGEXP$/o) {
-  //   my %props;
-  //   my ($fam, $ser, $shp, $size) = ($1, $2, $3, $4);
-  //   if (my $ffam = lookupFontFamily($fam)) { map { $props{$_} = $$ffam{$_} } keys %$ffam; }
-  //   if (my $fser = lookupFontSeries($ser)) { map { $props{$_} = $$fser{$_} } keys %$fser; }
-  //   if (my $fsh  = lookupFontShape($shp))  { map { $props{$_} = $$fsh{$_} } keys %$fsh; }
-  //   $size = 1 unless $size;    # Yes, also if 0, "" (from regexp)
-  //   $size = $at if defined $at;
-  //   $size *= $scaled if defined $scaled;
-  //   $props{size} = $size;
-  //   # Experimental Hack !?!?!?
-  //   $props{encoding} = 'OT1' unless defined $props{encoding};
-  //   $props{at}       = $at . "pt" if defined $at;
-  //   return %props; }
-  // else {
-  //   return; }
-  None
+pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>) -> Option<Font> {
+  if let Some(cap) = FONT_RE.captures(name) {
+    let mut props = Font::default();
+    let fam = cap.get(1).map_or(String::new(), |m| m.as_str().to_string());
+    let ser = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
+    let shp = cap.get(3).map_or(String::new(), |m| m.as_str().to_string());
+    let size_str = cap.get(4).map_or(String::new(), |m| m.as_str().to_string());
+    // TODO: Maybe a straight merge isn't the way to go here -- and we should do a property whitelist as in Perl?
+    // but the merge is convenient, especially if we can state "only the values different from the default Font"
+    // which may already work courtesy of "None"? Need to think it through...
+    if let Some(ffam) = lookup_font_family(&fam) {
+      props = props.merge(ffam.clone());
+    }
+    if let Some(fser) = lookup_font_series(&ser) {
+      props = props.merge(fser.clone());
+    }
+    if let Some(fsh) = lookup_font_shape(&shp) {
+      props = props.merge(fsh.clone());
+    }
+    let mut size = if let Some(at) = at_opt {
+      at
+    } else {
+      let size_f64 = size_str.parse::<f64>().unwrap_or(1.0);
+      if size_f64 == 0.0 { 1.0 } else { size_f64 } // Yes, also if 0, "" (from regexp)
+    };
+    if let Some(scaled) = scaled_opt {
+      size *= scaled;
+    }
+    props.size = Some(size);
+    // Experimental Hack !?!?!?
+    if props.encoding.is_none() {
+      props.encoding = Some(Cow::Borrowed("OT1"));
+    }
+    // TODO: What is this field for?
+    // if let Some(at) = at_opt {
+    //   props.at = Some(s!("{at}pt"));
+    // }
+    Some(props)
+  } else {
+    None
+  }
 }
 
 /// This struct is a little interesting, as we want to pass overrides that partially modify (via a
@@ -531,7 +551,6 @@ impl Font {
     } else {
       DEFSHAPE.into()
     };
-
     if LATIN_LETTER_RE.is_match(text) {
       // Latin Letter
       if new.shape.is_none() && new.family.is_none() {

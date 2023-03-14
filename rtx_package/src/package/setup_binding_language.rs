@@ -2106,13 +2106,15 @@ macro_rules! defi_opts {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ scope @ $scope.into_option() ] })
   };
   // font: Font
+  (@munch ( $(,)? font $(:)?$(=>)? sub [ $font_whatsit:ident, $font_state:ident ] $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ Some(FontDirective::Closure(Arc::new(move |$font_whatsit, $font_state| $body))) ] })
+  };
   (@munch ( $(,)? font $(:)?$(=>)? { $($fkey:ident => $fvalue:literal),* } $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ FontDirective!($($fkey => $fvalue),*) ] })
   };
   (@munch ( $(,)? font $(:)?$(=>)? $props:ident $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ $props.map(|v| FontDirective::Asset(Arc::new(v))) ] })
   };
-
   // properties: PropertiesClosure
   (@munch ( $(,)? properties $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($body) ] })
