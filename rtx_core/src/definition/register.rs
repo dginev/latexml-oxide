@@ -193,6 +193,18 @@ impl NumericOps for RegisterValue {
       _ => unimplemented!(),
     }
   }
+  fn to_attribute(&self) -> String
+    where Self: fmt::Display {
+    match self {
+      RegisterValue::Number(v) => v.to_attribute(),
+      RegisterValue::Dimension(v) => v.to_attribute(),
+      RegisterValue::MuDimension(v) => v.to_attribute(),
+      RegisterValue::Glue(v) => v.to_attribute(),
+      RegisterValue::MuGlue(v) => v.to_attribute(),
+      // Token, Tokens?
+      other => other.to_string()
+    }
+  }
 }
 
 impl<'a> From<&'a RegisterValue> for Number {

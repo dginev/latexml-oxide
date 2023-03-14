@@ -469,7 +469,7 @@ impl Parameters {
     let mut args = Vec::new();
     stomach.get_gullet_mut().setup_scan();
     for parameter in &self.0 {
-      let value = parameter.read(&mut stomach.get_gullet_mut(), Some(fordefn), state)?;
+      let value = parameter.read(stomach.get_gullet_mut(), Some(fordefn), state)?;
       if !parameter.novalue {
         let digested_value = parameter.digest(stomach, value, Some(fordefn), state)?;
         args.push(digested_value);
