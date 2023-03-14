@@ -25,33 +25,33 @@ Lambda = \chara
 % What about mathchar ?
 Sum = $\mchara$
 
-% \num=\mchara
-% 4944=\the\num
+\num=\mchara
+4944=\the\num
 
-% 4944=\the\mchara
+4944=\the\mchara
 
-% % AND the perverse use of chardefs for plain number constants
-% \makeatletter
-% 10000 = \the\@M
+% AND the perverse use of chardefs for plain number constants
+\makeatletter
+10000 = \the\@M
 
-% \num=\@M
-% 10000 = \the\num
+\num=\@M
+10000 = \the\num
 
-% \section{fontencoding}
-% % Note that chardef'd chars see the current font encoding
+\section{fontencoding}
+% Note that chardef'd chars see the current font encoding
 
-% OML: \fontencoding{OML}\selectfont\chara\fontencoding{OT1}\selectfont.
+OML: \fontencoding{OML}\selectfont\chara\fontencoding{OT1}\selectfont.
 
-% OMS: \fontencoding{OMS}\selectfont\chara\fontencoding{OT1}\selectfont.
+OMS: \fontencoding{OMS}\selectfont\chara\fontencoding{OT1}\selectfont.
 
-% OMX: \fontencoding{OMX}\selectfont\chara\fontencoding{OT1}\selectfont.
+OMX: \fontencoding{OMX}\selectfont\chara\fontencoding{OT1}\selectfont.
 
-% % But mathchardef'd chars have it effectively built in (via font family)
+% But mathchardef'd chars have it effectively built in (via font family)
 
-% OML: $\fontencoding{OML}\selectfont\mchara\fontencoding{OT1}\selectfont$.
+OML: $\fontencoding{OML}\selectfont\mchara\fontencoding{OT1}\selectfont$.
 
-% OMS: $\fontencoding{OMS}\selectfont\mchara\fontencoding{OT1}\selectfont$.
+OMS: $\fontencoding{OMS}\selectfont\mchara\fontencoding{OT1}\selectfont$.
 
-% OMX: $\fontencoding{OMX}\selectfont\mchara\fontencoding{OT1}\selectfont$.
+OMX: $\fontencoding{OMX}\selectfont\mchara\fontencoding{OT1}\selectfont$.
 
 \end{document}
