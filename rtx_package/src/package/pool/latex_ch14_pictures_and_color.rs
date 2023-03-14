@@ -1,6 +1,14 @@
 use crate::package::*;
 LoadDefinitions!(outer_state, {
 
+  // Not sure that ltx:p is the best to use here, but ... (see also \vbox, \vtop)
+  // This should be fairly compact vertically.
+  DefConstructor!("\\@shortstack@cr",
+    "</ltx:p><ltx:p>",
+    properties   => { map!("isBreak" => true.into()) },
+    reversion    => Tokens!(T_CS!("\\\\"), T_CR!()),
+    before_digest => sub[stomach,state] { stomach.egroup(state)?; },
+    after_digest  => sub[stomach,_args,state] { stomach.bgroup(state); });
 
   DefConstructor!("\\shortstack[]{}  OptionalMatch:* [Dimension]",
   "<ltx:inline-block align='#align'><ltx:p>#2</ltx:p></ltx:inline-block>",
