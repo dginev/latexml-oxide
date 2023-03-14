@@ -115,13 +115,16 @@ LoadDefinitions!(state, {
 
   // our %makebox_alignment = (l => 'left', r => 'right', s => 'justified');
   DefMacro!("\\makebox", "\\@ifnextchar(\\pic@makebox\\@makebox");
-  // DefConstructor!("\\@makebox[Dimension][]{}",
-  //   "<ltx:text ?#width(width='#width') ?#align(align='#align') _noautoclose='1'>#3</ltx:text>",
-  //   mode         => "text", bounded => 1, alias => "\\makebox", sizer => "#3",
-  //   beforeDigest => sub { reenterTextMode(); },
-  //   properties   => sub {
-  //     (($_[2] ? (align => $makebox_alignment{ ToString($_[2]) }) : ()),
-  //       ($_[1] ? (width => $_[1]) : ())) });
+  DefConstructor!("\\@makebox[Dimension][]{}",
+    "<ltx:text ?#width(width='#width') ?#align(align='#align') _noautoclose='1'>#3</ltx:text>",
+    mode         => "text", bounded => true, alias => "\\makebox", sizer => "#3",
+    before_digest => sub[stomach,state] { reenter_text_mode(false, stomach.get_gullet_mut(), state); }
+    // properties   => sub[stomach,args,state] {
+    //   let arg1 = &args[0];
+    //   let arg2 = &args[1];
+    //   (($_[2] ? (align => $makebox_alignment{ ToString($_[2]) }) : ()),
+    //     ($_[1] ? (width => $_[1]) : ())) }
+  );
 
   DefRegister!("\\fboxrule", Dimension!(".4pt"));
   DefRegister!("\\fboxsep", Dimension!("3pt"));
@@ -278,9 +281,11 @@ LoadDefinitions!(state, {
   // DefConstructor("\\rule[Dimension]{Dimension}{Dimension}",
   //   "<ltx:rule ?#offset(yoffset='#offset') width='#width' height='#height'/>",
   //   properties => sub { (offset => $_[1], width => $_[2], height => $_[3]) });
-  // DefConstructor("\\raisebox{Dimension}[Dimension][Dimension]{}",
-  //   "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
-  //   mode         => 'text', bounded => 1,
-  //   beforeDigest => sub { reenterTextMode(); },
-  //   sizer        => sub { raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)); });
+  DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension]{}",
+    "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
+    mode         => "text", bounded => true,
+    before_digest => sub[stomach, state] { reenter_text_mode(false, stomach.get_gullet_mut(), state); }
+    // TODO
+    // sizer        => sub { raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)); }
+  );
 });

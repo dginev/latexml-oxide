@@ -2,6 +2,7 @@ use crate::common::glue::Glue;
 use crate::definition::register::RegisterType;
 use crate::token::{Catcode, Token};
 use std::borrow::Cow;
+use std::fmt::Display;
 
 pub const UNITY: i64 = 65536;
 pub const UNITY_F64:f64 = 65536.0;
@@ -112,4 +113,6 @@ pub trait NumericOps {
     unimplemented!()
   }
   fn register_type(&self) -> RegisterType;
+  fn to_attribute(&self) -> String
+  where Self: Display { self.to_string() }
 }

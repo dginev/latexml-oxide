@@ -37,6 +37,7 @@ impl NumericOps for Dimension {
   fn value_of(self) -> i64 { self.0 }
   fn register_type(&self) -> RegisterType { RegisterType::Dimension }
   fn unit(&self) -> Option<&'static str> { Some("pt") }
+  fn to_attribute(&self) -> String { attribute_format(self.value_of(), self.unit()) }
 }
 
 impl fmt::Display for Dimension {
@@ -44,7 +45,6 @@ impl fmt::Display for Dimension {
 }
 
 impl Dimension {
-  pub fn to_attribute(self) -> String { attribute_format(self.value_of(), self.unit()) }
   pub fn spec_to_f64(spec: &str, state_opt: Option<&State>) -> Result<f64> {
     if spec.is_empty() {
       Ok(0.0)
@@ -103,5 +103,5 @@ pub fn fixedformat(mut s: i64, unit_opt: Option<&str>) -> String {
 
 pub fn attribute_format(sp: i64, unit_opt: Option<&str>) -> String {
   let unit = unit_opt.unwrap_or("pt");
-  s!("{:.1}{}", round_to(sp as f64 / UNITY_F64, Some(1)), unit)
+  s!("{:.1}{unit}", round_to(sp as f64 / UNITY_F64, Some(1)))
 }

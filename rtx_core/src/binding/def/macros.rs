@@ -538,16 +538,21 @@ macro_rules! forbidMath {
 #[macro_export]
 macro_rules! AssignRegister {
   ($cs:literal, $value:expr) => {{
-    bind_state!(stmch, st);
-    AssignRegister!($cs, $value, Vec::new(), st);
+    let value_ident = { $value };
+    bind_state_mut!(stmch, st);
+    AssignRegister!($cs, value_ident, Vec::new(), st);
   }};
-  ($cs:literal, $value:expr, $args:expr, $state_arg: ident) => {{
+  ($cs:literal, $value:ident, $args:expr, $state_arg: ident) => {{
     if let Some(defn) = $state_arg.lookup_register_definition(&T_CS!($cs)) {
       (*defn.borrow_mut()).set_value($value, $args, $state_arg);
     } else {
       let message = s!("The control sequence {} is not a register", $cs);
       Warn!("expected", "register", None, $state_arg, message);
     }
+  }};
+  ($cs:literal, $value:expr, $args:expr, $state_arg: ident) => {{
+    let value_ident = { $value };
+    AssignRegister!($cs, value_ident, $args, $state_arg);
   }};
 }
 
