@@ -511,16 +511,17 @@ LoadDefinitions!(outer_state, {
     let (role, glyph) = decode_math_char(value.value_of() as u16, stomach, state);
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
     let internalcs_opt = glyph.map(|_| T_CS!(s!("\\@mathchardef@{}", csname)));
-    if let Some(ref internalcs) = internalcs_opt {
+    let internalcs_2 = internalcs_opt.clone();
+    if let Some(internalcs) = internalcs_opt {
       let mut glyph_props: HashMap<String, Stored> = HashMap::new();
       glyph_props.insert(s!("role"), role.unwrap_or_default().into());
       let glyph_c = glyph.unwrap();
+      let glyph_str = glyph_c.to_string();
       glyph_props.insert(s!("glyph"), glyph_c.into());
-      // TODO:
-      // glyph_props.insert(s!("font"), Arc::new(|state| state.lookup_font().unwrap().specialize(glyph)));
-      DefConstructor!(internalcs.get_cs_name(), "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
+      DefConstructor!(internalcs, None, "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
         sizer => "#1",
-        properties => glyph_props
+        properties => glyph_props,
+        font => sub[whatsit,state] { Ok(state.lookup_font().unwrap().specialize(&glyph_str)) },
         reversion =>  sub[_whatsit,_args,st] {
           Ok(Tokens::new(
             if (glyph_c as usize) < 128 {
@@ -532,7 +533,7 @@ LoadDefinitions!(outer_state, {
         }
       );
     }
-    state.install_definition(Register::new_chardef(newcs,Some(value.into()), internalcs_opt), None);
+    state.install_definition(Register::new_chardef(newcs,Some(value.into()), internalcs_2), None);
     AfterAssignment!();
     Ok(Vec::new())
   });

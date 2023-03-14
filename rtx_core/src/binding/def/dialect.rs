@@ -569,17 +569,25 @@ pub fn def_constructor(
     });
     before_digest_closures.push(bgroup_closure);
   }
-  if let Some(chosen_font_directive) = options.font {
-    let chosen_font: Arc<Font> = chosen_font_directive
-      .get_font(None, state)
-      .expect("getting a font during DefConstructor shouldn't cause errors");
-    let merge_font_closure = before_digest_simple!(stomach, state, {
-      if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
-        merge_font((**chosen_font).clone(), state);
-      }
-    });
-    before_digest_closures.push(merge_font_closure);
-  }
+  // DG: The situations with Fonts in Constructors appears rather complex?
+  //  LaTeXML seems to currently rely on both the top-level "font" option but *also*
+  //  has code checking for a second-tier "properties => { font => VALUE}" option
+  //  Can we consolidate into a single, top-level, font handler?
+  match options.font {
+    Some(FontDirective::Asset(chosen_font)) => {
+      let merge_font_closure = before_digest_simple!(stomach, state, {
+        merge_font((*chosen_font).clone(), state);
+      });
+      before_digest_closures.push(merge_font_closure);
+    },
+    Some(FontDirective::Closure(font_closure)) => {
+      let execute_font_closure = before_digest_simple!(stomach, state, {
+        merge_font( font_closure(None, state)?, state);
+      });
+      before_digest_closures.push(execute_font_closure);
+    },
+    None => {}
+  };
   before_digest_closures.extend(options.before_digest);
 
   let mut after_digest_closures: Vec<DigestionClosure> = options.after_digest;
