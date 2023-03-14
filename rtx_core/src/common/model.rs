@@ -309,7 +309,7 @@ impl Model {
           let docprefix = self.document_namespace_prefixes.get(namespace);
           // if there's a doc prefix and it's NOT already used in code namespace mapping
           if docprefix.is_some() && !self.code_namespaces.contains_key(docprefix.unwrap()) {
-            codeprefix = docprefix.map(|p| p.to_string());
+            codeprefix = docprefix.map(ToString::to_string);
           }
         }
       } else {

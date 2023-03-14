@@ -257,7 +257,9 @@ impl Tokens {
 
   pub fn stringify(&self) -> String { s!("Tokens[{}]", &self.0.iter().map(ToString::to_string).collect::<Vec<_>>().join(",")) }
 
-  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> { stomach.digest(self, state) }
+  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
+    stomach.digest(self, state)
+  }
 
   pub fn neutralize(self, extraspecials: &[char], state: &State) -> Tokens {
     Tokens(self.0.into_iter().map(|t| t.neutralize(extraspecials, state)).collect::<Vec<_>>())

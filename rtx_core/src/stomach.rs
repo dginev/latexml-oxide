@@ -53,11 +53,11 @@ impl<'t> Stomach {
   }
 
   pub fn regurgitate(&mut self) -> Vec<Digested> { self.box_list.drain(..).collect() }
+
   // **********************************************************************
   // Digestion
   // **********************************************************************
-  // NOTE: Worry about whether the $autoflush thing is right?
-  // It puts a lot of cruft in Gullet; Should we just create a new Gullet?
+
   pub fn digest_next_body(&mut self, terminal_opt: Option<Token>, state: &mut State) -> Result<Vec<Digested>> {
     let start_location = self.get_locator().unwrap().into_owned();
     let init_depth = self.boxing.len();
@@ -66,7 +66,6 @@ impl<'t> Stomach {
 
     // try reading a executable token
     while let Some(token) = self.get_gullet_mut().read_x_token(Some(true), true, state)? {
-      // info!(target:"stomach:digest_next:invoke_token","{:?}", token);
       let invoked = self.invoke_token(&token, state)?;
       self.box_list.extend(invoked);
       if let Some(ref terminal) = terminal_opt {
@@ -76,7 +75,6 @@ impl<'t> Stomach {
         }
       }
       if init_depth > self.boxing.len() {
-        // info!(target:"digest_next_body","init_depth");
         break;
       }
     }
@@ -100,9 +98,9 @@ impl<'t> Stomach {
     Ok(final_box_list)
   }
 
-  // Digest a list of tokens independent from any current Gullet.
-  // Typically used to digest arguments to primitives or constructors.
-  // Returns a List containing the digested material.
+  /// Digest a list of tokens independent from any current Gullet.
+  /// Typically used to digest arguments to primitives or constructors.
+  /// Returns a List containing the digested material.
   pub fn digest<T: Into<Tokens>>(&mut self, tokens: T, outer_state: &mut State) -> Result<Digested> {
     let mut tokens: Tokens = tokens.into();
 
@@ -165,7 +163,6 @@ impl<'t> Stomach {
     self.reading_from_mouth(raw_tex_mouth, state, move |stomach, state| -> Result<()> {
       while let Some(token) = stomach.get_gullet_mut().read_x_token(Some(false), false, state)? {
         if token != T_SPACE!() {
-          // info!(target:"raw_tex:invoke_token","{:?}", token);
           stomach.invoke_token(&token, state)?;
         }
       }
@@ -202,8 +199,8 @@ impl<'t> Stomach {
       // constrains us here, we need separate match arms for each
       // distinctly typed enum case.
       match state.lookup_digestable_definition(&token) {
-        // should always return a value, self if no def
-        Stored::Token(meaning) => {
+        None => { result = self.invoke_token_undefined(&token, state)?; },
+        Some(Stored::Token(meaning)) => {
           // Common case
           let cc = meaning.get_catcode();
           if cc == Catcode::CS {
@@ -220,7 +217,7 @@ impl<'t> Stomach {
             }
           }
         },
-        Stored::Expandable(meaning) => {
+        Some(Stored::Expandable(meaning)) => {
           // A math-active character will (typically) be a macro,
           // but it isn't expanded in the gullet, but later when digesting, in math mode
           // (? I think)
@@ -234,7 +231,7 @@ impl<'t> Stomach {
           state.expire_current_token();
           continue;
         },
-        Stored::Conditional(meaning) => {
+        Some(Stored::Conditional(meaning)) => {
           // Conditionals are "expandable", use the regular invoke.
           let mut invoked_meaning = meaning.invoke(&mut self.gullet, false, state)?;
           self.gullet.unread(invoked_meaning);
@@ -243,21 +240,21 @@ impl<'t> Stomach {
           state.expire_current_token();
           continue;
         },
-        Stored::Constructor(meaning) => {
+        Some(Stored::Constructor(meaning)) => {
           // Otherwise, a normal primitive or constructor
           result = meaning.invoke_primitive(self, meaning.clone(), state)?;
           if !meaning.is_prefix() {
             state.clear_prefixes(); // Clear prefixes unless we just set one.
           }
         },
-        Stored::Primitive(meaning) => {
+        Some(Stored::Primitive(meaning)) => {
           // Otherwise, a normal primitive or constructor
           result = meaning.invoke_primitive(self, meaning.clone(), state)?;
           if !meaning.is_prefix() {
             state.clear_prefixes(); // Clear prefixes unless we just set one.
           }
         },
-        Stored::MathPrimitive(meaning) => {
+        Some(Stored::MathPrimitive(meaning)) => {
           // Copy of regular Primitive
           // Otherwise, a normal primitive or constructor
           result = meaning.invoke_primitive(self, meaning.clone(), state)?;
@@ -265,7 +262,7 @@ impl<'t> Stomach {
             state.clear_prefixes(); // Clear prefixes unless we just set one.
           }
         },
-        Stored::Register(meaning) => {
+        Some(Stored::Register(meaning)) => {
           // Registers are special primitives
           result = meaning.invoke_primitive(self, meaning.clone(), state)?;
           if !meaning.is_prefix() {
