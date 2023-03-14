@@ -97,12 +97,13 @@ DefConstructor!("\\lx@note[]{}[]{}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
   mode         => "text", bounded => true,
   before_digest => sub [stomach,state] {
-    reenter_text_mode(true, stomach.get_gullet_mut(), state); neutralize_font(state); },
+    reenter_text_mode(true, stomach.get_gullet_mut(), state);
+    neutralize_font(state); },
   properties   => sub [stomach, args,state] {
     let arg1 = &args[0];
     let arg2 = &args[1];
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
-    let note_type = arg2.as_ref().map(|v| v.to_string()).unwrap_or_default();
+    let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
     let mut props = make_note_tags(&note_type, arg1, arg3, stomach, state)?;
     props.insert("list".to_string(), digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))), stomach, state)?.into());
     props.insert("role".to_string(), note_type.into());
@@ -117,7 +118,7 @@ DefConstructor!("\\lx@notemark[]{}[]",
     let arg1 = &args[0];
     let arg2 = &args[1];
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
-    let note_type = arg2.as_ref().map(|v| v.to_string()).unwrap_or_default();
+    let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
     let mut props = make_note_tags(&note_type, arg1, arg3, stomach, state)?;
     props.insert("role".to_string(), s!("{note_type}mark").into());
     props.insert("list".to_string(), digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))),stomach,state)?.into());
@@ -132,7 +133,7 @@ DefConstructor!("\\lx@notetext[]{}[]{}",
     let arg1 = &args[0];
     let arg2 = &args[1];
     let arg3 = &args[2];
-    let note_type = arg2.as_ref().map(|v| v.to_string()).unwrap_or_default();
+    let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
     let arg3_ready = if let Some(v) = arg3 { Cow::Borrowed(v) } else {
       Cow::Owned(
         stomach.digest(T_CS!(s!("\\the{note_type}")), state)?

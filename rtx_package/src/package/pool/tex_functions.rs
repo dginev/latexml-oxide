@@ -5,13 +5,8 @@ use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
 use std::collections::VecDeque;
 
 pub fn reenter_text_mode(vertical_mode: bool, gullet: &mut Gullet, state: &mut State) {
-  let bindings_val = if vertical_mode {
-    state.lookup_value("VTEXT_MODE_BINDINGS")
-  } else {
-    state.lookup_value("HTEXT_MODE_BINDINGS")
-  };
-
-  let mut bindings: VecDeque<Stored> = match bindings_val {
+  let mut bindings: VecDeque<Stored> = match state.lookup_value(
+    if vertical_mode {"VTEXT_MODE_BINDINGS"} else {"HTEXT_MODE_BINDINGS"}) {
     Some(Stored::VecDequeStored(ref vdq)) => vdq.clone(),
     _ => VecDeque::new(),
   };
@@ -20,8 +15,9 @@ pub fn reenter_text_mode(vertical_mode: bool, gullet: &mut Gullet, state: &mut S
   }
   for binding in bindings {
     if let Stored::Tokens(tks) = binding {
-      let vec = tks.unlist();
-      state.let_i(&vec[0], vec[1].clone(), None, gullet);
+      let mut vec = tks.unlist();
+      let new = vec.remove(1);
+      state.let_i(&vec[0], new, None, gullet);
     }
   }
 }

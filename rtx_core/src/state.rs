@@ -3,7 +3,6 @@ use regex::Regex;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{self, Display};
-use std::hash::Hash;
 use std::sync::{Arc, RwLock};
 
 use crate::common::dimension::Dimension;
@@ -1064,7 +1063,7 @@ impl State {
   /// Any other token is returned as is.
   pub fn lookup_meaning(&self, token: &Token) -> Option<Cow<Stored>> {
     if token.get_catcode().is_active_or_cs() && !token.has_smuggled() && !token.get_string().is_empty() {
-      match self.meaning.get(&token.get_cs_name().to_owned()) {
+      match self.meaning.get(&token.get_string().to_owned()) {
         Some(entry) => match entry.front() {
           None | Some(Stored::None) => None,
           Some(other) => Some(Cow::Borrowed(other)),
@@ -1080,6 +1079,11 @@ impl State {
   /// or another token, for \let
   pub fn assign_meaning<T: Into<Stored>>(&mut self, token: &Token, meaning: T, scope: Option<Scope>) {
     let meaning = meaning.into();
+    // HACK!!!????
+    // short-circuit guard to avoid e.g. T_MATH let to itself
+    if let Stored::Token(ref mt) = meaning {
+      if token == mt { return; }
+    }
     self.assign_internal(TableName::Meaning, token.get_cs_name(), meaning, scope);
   }
 
@@ -1179,11 +1183,11 @@ impl State {
     }
   }
 
-  pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Stored {
+  pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<Stored> {
     let cc = token.get_catcode();
     let name = token.get_string();
-    let lookupname = if cc == Catcode::ACTIVE
-      || cc == Catcode::CS
+    let is_active_or_cs = cc.is_active_or_cs();
+    let lookupname = if is_active_or_cs
       || ((cc == Catcode::LETTER || (cc == Catcode::OTHER)) && self.lookup_bool("IN_MATH") && (self.lookup_mathcode(name).unwrap_or(0) == 0x8000))
     {
       name
@@ -1193,31 +1197,28 @@ impl State {
 
     Debug!("Looking up digestable {:?}", lookupname);
     let entry_opt = self.meaning.get(lookupname);
-
-    if !lookupname.is_empty() && entry_opt.is_some() {
+    if !lookupname.is_empty() && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
       Debug!("Found definition for: {:?}", lookupname);
       if let Some(entry) = entry_opt {
         if let Some(front) = entry.front() {
           if let Stored::Token(ref t) = front {
             let cc = t.get_catcode();
-            if let Some(lookupname) = t.get_executable_primitive_name() {
-              if let Some(retry_entry) = self.meaning.get(lookupname) {
-                // special case,
-                // If a cs has been let to an executable token, lookup ITS defn.
-                return retry_entry.front().unwrap().clone();
-              }
+            let lookupname = if t.has_smuggled() { "\\relax" } else { t.get_executable_primitive_name().unwrap() };
+            if let Some(retry_entry) = self.meaning.get(lookupname) {
+              // special case,
+              // If a cs has been let to an executable token, lookup ITS defn.
+              return retry_entry.front().cloned();
             }
           }
           // if a regular definition, just return.
-          return front.clone();
+          return Some(front.clone());
         }
       }
+    } else if is_active_or_cs {
+      return None;
     }
-    // Default return:
-    token.into()
+    Some(token.into())
   }
-
-  pub fn assign_definition<'def, T: Definition + Hash>(&'def mut self, _key: &'def Token, _definition: T) { unimplemented!() }
 
   /// And a shorthand for installing definitions
   pub fn install_definition<T: Into<Stored>>(&mut self, definition: T, scope: Option<Scope>) {
