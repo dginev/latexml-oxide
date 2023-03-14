@@ -8,4 +8,4 @@ where_single_line = true
 tab_spaces = 2
 error_on_line_overflow = true
 error_on_unformatted = true
-edition = "2018"
+edition = "2021"

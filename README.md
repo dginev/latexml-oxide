@@ -1,11 +1,11 @@
 # rtx
 A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
-[![CI](https://github.com/dginev/rtx/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/rtx/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.2.0-orange.svg)
+[![CI](https://github.com/dginev/rtx/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/rtx/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.3.0-orange.svg)
 
 ## Porting Progress
 
-[![test porting progress](https://progress-bar.dev/18/?title=passing%20tests)](https://github.com/dginev/rtx/issues/30)
+[![test porting progress](https://progress-bar.dev/20/?title=passing%20tests)](https://github.com/dginev/rtx/issues/30)
 
 ### Why?
 
