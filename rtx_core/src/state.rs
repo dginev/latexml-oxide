@@ -970,7 +970,11 @@ impl State {
   //======================================================================
   /// Lookup & assign a character's Catcode
   pub fn lookup_catcode(&self, c: char) -> Option<Catcode> {
-    match self.catcode.get(&c.to_string()) {
+    // speedup over variant with allocation
+    // i.e. "let s = c.to_string();"
+    let mut tmp = [0u8; 3];
+    let s = c.encode_utf8(&mut tmp);
+    match self.catcode.get(s) {
       None => None,
       Some(cvec) => match cvec.front() {
         Some(Stored::Catcode(cc)) => Some(*cc),
