@@ -244,8 +244,7 @@ pub struct State {
   pub align_group_count: i32, // was $LaTeXML::ALIGN_STATE
   pub status_code: usize,
   pub unlocked: bool,
-  pub current_token: Option<Arc<Token>>,
-  pub noexpand_the: bool,
+    pub noexpand_the: bool,
   pub input_encoding: Option<String>,
   pub strict: bool,
   pub include_comments: bool,
@@ -258,6 +257,7 @@ pub struct State {
   // Local structures
   if_frames: Vec<Option<Arc<RwLock<IfFrame>>>>,
   smuggle_the: Vec<bool>,
+  current_token: Vec<Arc<Token>>,
   // Auxiliary convenience -- extra dispatch
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
   pub bindings_dispatch: Option<BindingDispatcher>,
@@ -306,7 +306,7 @@ impl Default for State {
       status_code: 0,
       align_group_count: 0,
       unlocked: true,
-      current_token: None,
+      current_token: Vec::new(),
       if_frames: Vec::new(),
       noexpand_the: false,
       input_encoding: None,
@@ -837,9 +837,11 @@ impl State {
           Some(entry) => {
             if let Some(def) = entry.front() {
               // the expandable variants are allowed
-              matches!(def, Stored::Expandable(_) | Stored::Conditional(_))
+              matches!(def, Stored::Expandable(_) | Stored::Conditional(_) | Stored::None)
             } else {
-              false
+              // undefined is allowed too (this is *really* subtle -- took some debugging of etoolbox)
+              // both an empty VDQ, a VDQ with an entry present but matching Stored::Noney, OR a completely missing VDQ are allowed "undefined" cases, each of which flagging as "true"
+              true
             }
           },
           None => true,
@@ -1123,12 +1125,12 @@ impl State {
           expansion: entry.clone().into(),
           ..Expandable::default()
         })),
+        Some(Stored::None) | None => None,
         Some(v) => {
           let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
           Error!("unexpected", "value", None, self, message);
           None
         },
-        None => None,
       }
     } else {
       None
@@ -1717,9 +1719,9 @@ impl State {
     let def1_opt = self.lookup_meaning(token1); // # token, definition object or None
     let def2_opt = self.lookup_meaning(token2); // ditto
     match (def1_opt, def2_opt) {
-      (None, None) => true,                     // true if both undefined
       (Some(def1), Some(def2)) => def1 == def2, // If both have defns, must be same defn!
-      _ => false,                               // False, if only one has 'meaning'
+      (None, None) => true,                    // true if both undefined
+      (_,_) => false,                          // False, if only one has 'meaning'
     }
   }
 
@@ -1810,4 +1812,14 @@ impl State {
     }
   }
   pub fn expire_smuggle_the(&mut self) { self.smuggle_the.pop(); }
+
+  pub fn set_current_token(&mut self, token: Arc<Token>) {
+    self.current_token.push(token);
+  }
+  pub fn expire_current_token(&mut self) {
+    self.current_token.pop();
+  }
+  pub fn get_current_token(&self) -> Option<Arc<Token>> {
+    self.current_token.last().map(Arc::clone)
+  }
 }

@@ -1150,7 +1150,6 @@ RawTeX!(r###"
   \else
     \expandafter\@secondoftwo
   \fi}
-
 "###);
 
 // STOPGAP! Because a lot of LaTeXML definitions are realized via Perl subroutines,

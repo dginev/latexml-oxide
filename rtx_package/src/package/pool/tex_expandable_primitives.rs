@@ -69,7 +69,7 @@ LoadDefinitions!(outer_state, {
   });
 
   DefConditional!("\\ifx Token Token", sub[gullet, (token1,token2), state] {
-    XEquals!(&token1, &token2)
+    state.x_equals(&token1, &token2)
   });
 
   DefConditional!("\\ifvoid Number", sub[_g, (arg), state] { classify_box(arg, state).is_empty() });
@@ -99,8 +99,8 @@ LoadDefinitions!(outer_state, {
   // # suggests all characters except spaces are returned in category code Other, i.e. Explode()
   DefMacro!("\\string Token", sub[gullet, (token), state] {
     let mut s = token.to_string();
-    if s.starts_with('/') {
-      s = escapechar(state) + &s;
+    if s.starts_with('\\') {
+      s = escapechar(state) + &s[1..];
     }
     Explode!(s)
   });
@@ -228,7 +228,8 @@ LoadDefinitions!(outer_state, {
           }
           let expansion = match expandable.get_expansion() {
             None => String::new(),
-            Some(ExpansionBody::Closure(exp)) => String::from("<closure>"),
+            // TODO: How to print closures? This follows Perl's raw pointer format
+            Some(ExpansionBody::Closure(exp)) => format!("CODE({:p})",Arc::as_ptr(exp)),
             Some(ExpansionBody::Tokens(tks)) => writable_tokens(tks, state)?
           };
           meaning = format!("{prefixes}macro:{spec}->{expansion}{p_trailer}");
@@ -283,11 +284,12 @@ LoadDefinitions!(outer_state, {
   DefMacro!("\\expandafter Token Token", sub[gullet, (tok, xtok), state] {
     let mut tokens : Vec<Token> = vec![tok];
     if let Some(defn) = state.lookup_expandable(&xtok, false) {
-      state.current_token=Some(Arc::new(xtok.clone()));
+      state.set_current_token(Arc::new(xtok.clone()));
       let invoked = defn.invoke(gullet, true, state)?;
       if !invoked.is_empty() {
         tokens.append(&mut invoked.unlist()); // Expand $xtok ONCE ONLY!
       }
+      state.expire_current_token();
     } else if state.lookup_meaning(&xtok).is_none() {
       // Undefined token is an error, as expansion is expected.
       // BUT The unknown token is NOT consumed, (see TeX B book, item 367)

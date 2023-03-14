@@ -183,14 +183,13 @@ impl<'t> Stomach {
   /// Returns a list of boxes/whatsits.
   pub fn invoke_token<'a>(&mut self, input_token: &'a Token, state: &mut State) -> Result<Vec<Digested>> {
     let mut maybe_token: Option<Cow<'a, Token>> = Some(Cow::Borrowed(input_token));
-
     // Overly complex, but want to avoid recursion/stack
     let mut result: Vec<Digested> = Vec::new();
     // INVOKE:
     while maybe_token.is_some() {
       let token = Arc::new(maybe_token.take().unwrap().into_owned());
       // info!(target:"invoke_token", "{:?}", token);
-      state.current_token = Some(Arc::clone(&token));
+      state.set_current_token(Arc::clone(&token));
       self.token_stack.push(Arc::clone(&token));
       if self.token_stack.len() > MAXSTACK {
         fatal!(Stomach, Recursion, s!("Excessive recursion(?): Tokens on stack: {:?}", self.token_stack));
@@ -232,6 +231,7 @@ impl<'t> Stomach {
           // replace the token by it's expansion!!!
           maybe_token = self.gullet.read_x_token(None, false, state)?.map(Cow::Owned);
           self.token_stack.pop();
+          state.expire_current_token();
           continue;
         },
         Stored::Conditional(meaning) => {
@@ -240,6 +240,7 @@ impl<'t> Stomach {
           self.gullet.unread(invoked_meaning);
           maybe_token = self.gullet.read_x_token(None, false, state)?.map(Cow::Owned);
           self.token_stack.pop();
+          state.expire_current_token();
           continue;
         },
         Stored::Constructor(meaning) => {
@@ -275,9 +276,9 @@ impl<'t> Stomach {
           fatal!(Stomach, Misdefined, s!("The object {:?} should never reach Stomach!", meaning));
         },
       }
+      state.expire_current_token();
       break;
     }
-
     self.token_stack.pop();
     Ok(result)
   }
@@ -455,7 +456,7 @@ impl<'t> Stomach {
   // Note that lookups happen more often than bgroup/egroup (which open/close frames).
 
   pub fn push_stack_frame(&mut self, nobox: bool, state: &mut State) {
-    let current_token = match &state.current_token {
+    let current_token = match &state.get_current_token() {
       Some(t) => Arc::clone(t),
       _ => unimplemented!(), // should never happen?
     };
@@ -474,13 +475,16 @@ impl<'t> Stomach {
   }
 
   pub fn pop_stack_frame(&mut self, nobox: bool, state: &mut State) -> Result<()> {
-    // WRONG! BROKEN! This needs to be a VecDequeStored<Tokens> or some such...
-    // WRONG! BROKEN! rewrite it soon...
-    if let Some(Stored::Tokens(beforeafter)) = state.lookup_value("beforeAfterGroup") {
+    if let Some(Stored::VecDequeStored(beforeafter)) = state.remove_value("beforeAfterGroup") {
       if !beforeafter.is_empty() {
         let mut result = Vec::new();
-        for frametok in beforeafter.clone().unlist().into_iter() {
-          result.push(frametok.be_digested(self, state)?);
+        for beforeafter_frame in beforeafter.into_iter() {
+          if let Stored::Tokens(frametoks) = beforeafter_frame {
+            result.push(frametoks.be_digested(self, state)?);
+          } else {
+            // TODO: Anything but Tokens in beforeAfterGroup?
+            unimplemented!();
+          }
         }
         // TODO
         // if (my ($x) = grep { !$_->isaBox } @result) {
@@ -547,7 +551,7 @@ impl<'t> Stomach {
       // or group was opened with \begingroup
       Error!(
         "unexpected",
-        state.current_token.as_ref().unwrap(),
+        state.get_current_token().unwrap(),
         self,
         state,
         "Attempt to close boxing group"
@@ -567,7 +571,7 @@ impl<'t> Stomach {
       // or group was opened with \bgroup
       Error!(
         "unexpected",
-        state.current_token.as_ref().unwrap().to_string(),
+        state.get_current_token().unwrap().to_string(),
         self,
         state,
         s!("Attempt to close non-boxing group; {}", self.current_frame_message(state))
@@ -633,7 +637,7 @@ impl<'t> Stomach {
     if !state.is_value_bound("MODE", Some(0)) || (state.lookup_string("MODE") != mode) {
       // Or was a mode switch to a different mode
       let message = s!("Attempt to end mode `{}` in `{}`", mode, state.lookup_string("MODE"));
-      let category = match state.current_token {
+      let category = match state.get_current_token() {
         Some(ref token) => token.to_string(),
         None => String::from("mode"),
       };

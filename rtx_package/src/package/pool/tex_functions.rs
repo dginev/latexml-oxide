@@ -823,3 +823,33 @@ pub fn set_align_or_class(document: &mut Document, node: &mut Node, align: &str,
   }
   Ok(())
 }
+
+pub fn make_generic_message(cmd:&str, args: Vec<Tokens>, kind:&str, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+  stomach.bgroup(state);
+  state.let_i(&T_CS!("\\protect"), T_CS!("\\string"), None, stomach.get_gullet_mut());
+  state.let_i(&T_CS!("\\MessageBreak"), T_CS!("\\ltx@hard@MessageBreak"), None, stomach.get_gullet_mut());// tricky, we need Expand() to execute it
+  let mut message = String::new();
+  for arg in args.into_iter() {
+    let mut arg_toks = arg.unlist();
+    arg_toks.push(T_CS!("\\MessageBreak"));
+    let gullet = stomach.get_gullet_mut();
+    let arg_str = Expand!(arg_toks, gullet, state).to_string();
+    message.push_str(&arg_str);
+  }
+
+  stomach.egroup(state)?;
+  //   return ('latex', $cmd, $stomach, $message);
+  match kind {
+    "error" => {
+      Error!("latex",cmd,stomach,state,message);
+    },
+    "warn" => {
+      Warn!("latex",cmd,stomach,state,message);
+    },
+    "info" => {
+      Info!("latex",cmd,stomach,state,message);
+    },
+    other => panic!("Only call make_generic_message with error|warn|info message kinds.")
+  };
+  Ok(())
+}

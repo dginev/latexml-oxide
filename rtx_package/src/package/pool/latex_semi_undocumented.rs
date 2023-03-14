@@ -47,7 +47,7 @@ LoadDefinitions!(outer_stomach, state, {
 
   DefMacro!("\\@ifstar {}{}", sub[gullet,(if_toks,else_toks),state] {
   let next_opt = gullet.read_non_space(state);
-  if Some(T_OTHER!("*")) == next_opt {
+  if next_opt == Some(T_OTHER!("*")) {
     Ok(if_toks)
   } else {
     let mut result = else_toks.unlist();
@@ -96,8 +96,11 @@ LoadDefinitions!(outer_stomach, state, {
     if is_definable(&token, state) {
       iftoken.unlist()
     } else {
-      let mut s = ExplodeText!(token.to_string());
-      let slash = s.remove(0);
+      let token_str = token.to_string();
+      let mut s = ExplodeText!(token_str);
+      if token_str.starts_with('\\') { // drop leading slash
+        s.remove(0);
+      }
       DefMacro!(T_CS!("\\reserved@a"), None, Tokens::new(s), state);
       vec![T_CS!("\\@notdefinable")]
     }
@@ -116,8 +119,7 @@ LoadDefinitions!(outer_stomach, state, {
     r###"\@latex@error{%
     Command \@backslashchar\reserved@a\space
     already defined.
-    Or name \@backslashchar\@qend... illegal,
-    see p.192 of the manual}
+    Or name \@backslashchar\@qend... illegal, see p.192 of the manual}
   "###
   );
 

@@ -55,7 +55,7 @@ pub enum ExpansionBody {
 impl std::fmt::Debug for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      ExpansionBody::Closure(_) => write!(f, "<ExpansionClosure>"),
+      ExpansionBody::Closure(code) => write!(f, "CODE({:p})", Arc::as_ptr(code)),
       ExpansionBody::Tokens(ts) => write!(f, "{ts:?}"),
     }
   }
@@ -69,18 +69,18 @@ impl PartialEq for ExpansionBody {
   #[allow(clippy::vtable_address_comparisons)]
   fn eq(&self, other: &ExpansionBody) -> bool {
     match self {
-      ExpansionBody::Closure(self_closure) => {
-        if let ExpansionBody::Closure(other_closure) = other {
-          Arc::ptr_eq(self_closure, other_closure)
-        } else {
-          false
+      ExpansionBody::Closure(self_closure) => match other {
+        ExpansionBody::Closure(other_closure) => Arc::ptr_eq(self_closure, other_closure),
+        ExpansionBody::Tokens(other_tokens) => {
+          // sometimes the \meaning game forces us into the same CODE(0x...) pointer footprint appearing as Tokens and as the original Closure.
+          // if we do this carefully, we can get the two .to_string() variants to match...
+          format!("CODE({:p})",Arc::as_ptr(self_closure)) == other_tokens.to_string()
         }
       },
-      ExpansionBody::Tokens(self_tks) => {
-        if let ExpansionBody::Tokens(other_tks) = other {
-          self_tks == other_tks
-        } else {
-          false
+      ExpansionBody::Tokens(self_tks) => match other {
+        ExpansionBody::Tokens(other_tks) => self_tks == other_tks,
+        ExpansionBody::Closure(other_closure) => {
+          format!("CODE({:p})",Arc::as_ptr(other_closure)) == self_tks.to_string()
         }
       },
     }
@@ -321,7 +321,7 @@ impl fmt::Display for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       ExpansionBody::Tokens(ref t) => write!(f, "{t}"),
-      ExpansionBody::Closure(_) => write!(f,"<ExpansionBody::Closure>"), // what is the right way to serialize this, e.g. for the \meaning macro
+      ExpansionBody::Closure(ref code) => write!(f,"ExpansionBody::Closure({:p})", Arc::as_ptr(code)), // what is the right way to serialize this, e.g. for the \meaning macro
     }
   }
 }
