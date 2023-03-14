@@ -112,7 +112,7 @@ impl Definition for Conditional {
       _ => {
         let message = s!(
           "Unknown conditional control sequence {}",
-          state.current_token.as_ref().unwrap().stringify()
+          state.get_current_token().unwrap().stringify()
         );
         Error!("unexpected", self.cs, gullet, state, message);
         Ok(Tokens!())
@@ -150,7 +150,7 @@ impl Conditional {
     ifid += 1;
     state.assign_value("if_count", ifid, Some(Scope::Global));
     let if_frame = Arc::new(RwLock::new(IfFrame {
-      token: Arc::clone(state.current_token.as_ref().unwrap()),
+      token: Arc::clone(&state.get_current_token().unwrap()),
       start: gullet.get_locator().unwrap().into_owned(),
       parsing: true,
       elses: false,
@@ -286,11 +286,11 @@ impl Conditional {
     } else {
       None
     };
-    let local_token = state.current_token.as_ref().unwrap();
+    let local_token = state.get_current_token().unwrap();
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.read().unwrap().parsing {
         // Defer expanding the \else if we're still parsing the test
-        Ok(Tokens!(T_RELAX, (**local_token).clone()))
+        Ok(Tokens!(T_RELAX, (*local_token).clone()))
       } else if stack_frame.read().unwrap().elses {
         // Already seen an \else's at this level?
         let message = s!(
@@ -335,8 +335,8 @@ impl Conditional {
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.read().unwrap().parsing {
         // Defer expanding the \else if we're still parsing the test
-        let local_token = state.current_token.as_ref().unwrap();
-        Ok(Tokens!(T_RELAX, (**local_token).clone()))
+        let local_token = state.get_current_token().unwrap();
+        Ok(Tokens!(T_RELAX, (*local_token).clone()))
       } else {
         // "expand" by removing the stack entry for this level
         state.set_ifframe(Some(stack_frame));
@@ -351,7 +351,7 @@ impl Conditional {
     } else {
       let message = s!(
         "Didn't expect a {:?} since we seem not to be in a conditional",
-        state.current_token.as_ref().unwrap().stringify()
+        state.get_current_token().unwrap().stringify()
       );
       Error!("unexpected", "fi", gullet, state, message);
       Ok(Tokens!())

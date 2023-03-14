@@ -308,8 +308,10 @@ impl Gullet {
               if let Some(defn) = state.lookup_definition(&token) {
                 if (toplevel || !(*defn).is_protected()) && defn.is_expandable() {
                   // is this the right logic here? don't expand unless digesting?
-                  state.current_token = Some(Arc::new(token));
-                  return self.invoke_and_read_x_token(defn, Some(toplevel), commentsok, state);
+                  state.set_current_token(Arc::new(token));
+                  let result = self.invoke_and_read_x_token(defn, Some(toplevel), commentsok, state);
+                  state.expire_current_token();
+                  return result;
                 }
               }
             }
@@ -828,7 +830,7 @@ impl Gullet {
       let next = self.read_token(state);
       let message = s!(
         "Missing number, treated as zero while processing {:?}, next token is {:?}",
-        state.current_token.as_ref().unwrap(),
+        state.get_current_token().unwrap(),
         next
       );
       Warn!("expected", "<number>", self, state, message);
@@ -957,7 +959,7 @@ impl Gullet {
     } else {
       let message = s!(
         "Missing number, treated as zero. while processing {:?}",
-        state.current_token.as_ref().unwrap()
+        state.get_current_token().unwrap()
       );
       Warn!("expected", "<number>", self, state, message);
       Ok(Dimension::new(0))

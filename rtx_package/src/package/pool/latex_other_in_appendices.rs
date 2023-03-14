@@ -20,29 +20,6 @@ LoadDefinitions!(state, {
 
   Let!("\\@begindocumenthook", "\\@empty");
 
-  // DefMacro('\@ifdefinable DefToken {}', sub {
-  //     my ($gullet, $token, $if) = @_;
-  //     if (isDefinable($token)) {
-  //       return $if->unlist }
-  //     else {
-  //       my ($slash, @s) = ExplodeText($token->toString);
-  //       DefMacroI('\reserved@a', undef, Tokens(@s));
-  //       return (T_CS('\@notdefinable')); } });
-
-  // Let('\@@ifdefinable', '\@ifdefinable');
-
-  // DefMacro('\@rc@ifdefinable DefToken {}', sub {
-  //     my ($gullet, $token, $if) = @_;
-  //     Let('\@ifdefinable', '\@@ifdefinable');
-  //     return $if->unlist; });
-
-  // DefMacroI('\@notdefinable', undef,
-  //   '\@latex@error{%
-  //    Command \@backslashchar\reserved@a\space
-  //    already defined.
-  //    Or name \@backslashchar\@qend... illegal,
-  //    see p.192 of the manual}');
-
   DefMacro!("\\@qend", { Tokens::new(Explode!("end")) });
   DefMacro!("\\@qrelax", { Tokens::new(Explode!("relax")) });
   DefMacro!("\\@spaces", r"\space\space\space\space");
@@ -162,118 +139,107 @@ LoadDefinitions!(state, {
   );
   DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
 
-  // sub make_message {
-  //   my ($cmd, @args) = @_;
-  //   my $stomach = $STATE->getStomach;
-  //   $stomach->bgroup;
-  //   Let('\protect',      '\string');
-  //   Let('\MessageBreak', '\ltx@hard@MessageBreak');    # tricky, we need Expand() to execute it
-  //   my $message = join("", map { ToString(Expand($_, T_CS('\MessageBreak'))) } @args);
-  //   $stomach->egroup;
-  //   return ('latex', $cmd, $stomach, $message); }
-
   DefPrimitive!("\\@onlypreamble{}", sub[stomach,(arg),state] {
     only_preamble("\\@onlypreamble", stomach, state); }); // Don't bother enforcing this.
-  // DefPrimitive('\GenericError{}{}{}{}', sub { Error(make_message('\GenericError', $_[2], $_[3], $_[4])); });
-  // DefPrimitive('\GenericWarning{}{}', sub { Warn(make_message('\GenericWarning', $_[1], $_[2])); });
-  // DefPrimitive('\GenericInfo{}{}',    sub { Info(make_message('\GenericInfo',    $_[1], $_[2])); });
+  DefPrimitive!("\\GenericError{}{}{}{}", sub[stomach,(arg1,arg2,arg3,arg4),state] {
+    make_generic_message("\\GenericError", vec![arg2, arg3, arg4], "error", stomach, state)?;
+  });
+  DefPrimitive!("\\GenericWarning{}{}", sub[stomach,(arg1,arg2),state] {
+    make_generic_message("\\GenericWarning", vec![arg1,arg2], "warn", stomach, state)?;
+  });
+  DefPrimitive!("\\GenericInfo{}{}", sub[stomach,(arg1,arg2),state] {
+    make_generic_message("\\GenericInfo", vec![arg1,arg2], "info", stomach, state)?;
+  });
 
   Let!("\\MessageBreak", "\\relax");
-  //   RawTeX!(
-  //     r###"
-  //   \gdef\PackageError#1#2#3{%
-  //     \GenericError{%
-  //         (#1)\@spaces\@spaces\@spaces\@spaces
-  //      }{%
-  //         Package #1 Error: #2%
-  //      }{%
-  //         See the #1 package documentation for explanation.%
-  //      }{#3}%
-  //   }
-  //   \def\PackageWarning#1#2{%
-  //     \GenericWarning{%
-  //         (#1)\@spaces\@spaces\@spaces\@spaces
-  //      }{%
-  //         Package #1 Warning: #2%
-  //      }%
-  //   }
-  //   \def\PackageWarningNoLine#1#2{%
-  //     \PackageWarning{#1}{#2\@gobble}}
-  //   \def\PackageInfo#1#2{%
-  //     \GenericInfo{%
-  //         (#1) \@spaces\@spaces\@spaces
-  //      }{%
-  //         Package #1 Info: #2%
-  //      }%
-  //   }
-  //   \def\ClassError#1#2#3{%
-  //     \GenericError{%
-  //         (#1) \space\@spaces\@spaces\@spaces
-  //      }{%
-  //         Class #1 Error: #2%
-  //      }{%
-  //         See the #1 class documentation for explanation.%
-  //      }{#3}%
-  //   }
-  //   \def\ClassWarning#1#2{%
-  //     \GenericWarning{%
-  //         (#1) \space\@spaces\@spaces\@spaces
-  //      }{%
-  //         Class #1 Warning: #2%
-  //      }%
-  //   }
-  //   \def\ClassWarningNoLine#1#2{%
-  //     \ClassWarning{#1}{#2\@gobble}}
-  //   \def\ClassInfo#1#2{%
-  //     \GenericInfo{%
-  //         (#1) \space\space\@spaces\@spaces
-  //      }{%
-  //         Class #1 Info: #2%
-  //      }%
-  //   }
-  //   \def\@latex@error#1#2{%
-  //     \GenericError{%
-  //         \space\space\space\@spaces\@spaces\@spaces
-  //      }{%
-  //         LaTeX Error: #1%
-  //      }{%
-  //         See the LaTeX manual or LaTeX Companion for explanation.%
-  //      }{#2}%
-  //   }
-  //   \def\@latex@warning#1{%
-  //     \GenericWarning{%
-  //         \space\space\space\@spaces\@spaces\@spaces
-  //      }{%
-  //         LaTeX Warning: #1%
-  //      }%
-  //   }
-  //   \def\@latex@warning@no@line#1{%
-  //     \@latex@warning{#1\@gobble}}
-  //   \def\@latex@info#1{%
-  //     \GenericInfo{%
-  //         \@spaces\@spaces\@spaces
-  //      }{%
-  //         LaTeX Info: #1%
-  //      }%
-  //   }
-  //   \def\@latex@info@no@line#1{%
-  //     \@latex@info{#1\@gobble}}
-  //   "###
-  //   );
-
-  // DefPrimitive('\@setsize{}{}{}{}', undef);
-  // Let('\@warning',  '\@latex@warning');
-  // Let('\@@warning', '\@latex@warning@no@line');
-
-  // DefMacro('\G@refundefinedtrue', '');
-
-  // DefMacro('\@nomath{}',
-  //   '\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi');
-  // DefMacro('\@font@warning{}',
-  //   '\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}');
-
-  // #======================================================================
-
+  RawTeX!(r###"
+     \gdef\PackageError#1#2#3{%
+       \GenericError{%
+           (#1)\@spaces\@spaces\@spaces\@spaces
+        }{%
+           Package #1 Error: #2%
+        }{%
+           See the #1 package documentation for explanation.%
+        }{#3}%
+     }
+     \def\PackageWarning#1#2{%
+       \GenericWarning{%
+           (#1)\@spaces\@spaces\@spaces\@spaces
+        }{%
+           Package #1 Warning: #2%
+        }%
+     }
+     \def\PackageWarningNoLine#1#2{%
+       \PackageWarning{#1}{#2\@gobble}}
+     \def\PackageInfo#1#2{%
+       \GenericInfo{%
+           (#1) \@spaces\@spaces\@spaces
+        }{%
+           Package #1 Info: #2%
+        }%
+     }
+     \def\ClassError#1#2#3{%
+       \GenericError{%
+           (#1) \space\@spaces\@spaces\@spaces
+        }{%
+           Class #1 Error: #2%
+        }{%
+           See the #1 class documentation for explanation.%
+        }{#3}%
+     }
+     \def\ClassWarning#1#2{%
+       \GenericWarning{%
+           (#1) \space\@spaces\@spaces\@spaces
+        }{%
+           Class #1 Warning: #2%
+        }%
+     }
+     \def\ClassWarningNoLine#1#2{%
+       \ClassWarning{#1}{#2\@gobble}}
+     \def\ClassInfo#1#2{%
+       \GenericInfo{%
+           (#1) \space\space\@spaces\@spaces
+        }{%
+           Class #1 Info: #2%
+        }%
+     }
+     \def\@latex@error#1#2{%
+       \GenericError{%
+           \space\space\space\@spaces\@spaces\@spaces
+        }{%
+           LaTeX Error: #1%
+        }{%
+           See the LaTeX manual or LaTeX Companion for explanation.%
+        }{#2}%
+     }
+     \def\@latex@warning#1{%
+       \GenericWarning{%
+           \space\space\space\@spaces\@spaces\@spaces
+        }{%
+           LaTeX Warning: #1%
+        }%
+     }
+     \def\@latex@warning@no@line#1{%
+       \@latex@warning{#1\@gobble}}
+     \def\@latex@info#1{%
+       \GenericInfo{%
+           \@spaces\@spaces\@spaces
+        }{%
+           LaTeX Info: #1%
+        }%
+     }
+     \def\@latex@info@no@line#1{%
+       \@latex@info{#1\@gobble}}
+     "###);
+  DefPrimitive!("\\@setsize{}{}{}{}", None);
+  Let!("\\@warning",  "\\@latex@warning");
+  Let!("\\@@warning", "\\@latex@warning@no@line");
+  DefMacro!("\\G@refundefinedtrue", None);
+  DefMacro!("\\@nomath{}",
+     r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi");
+   DefMacro!("\\@font@warning{}",
+     r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}");
+  //======================================================================
   RawTeX!(
     r###"
     \chardef\@xxxii=32

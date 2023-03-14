@@ -113,7 +113,7 @@ LoadDefinitions!(outer_state, {
       if defn_token.to_string() != "missing" {
         let defn_opt = state.lookup_register_definition(&defn_token);
         let defn_token_rc = Arc::new(defn_token);
-        state.current_token = Some(Arc::clone(&defn_token_rc));
+        state.set_current_token(Arc::clone(&defn_token_rc));
         if let Some(defn) = defn_opt {
           let summand = stomach.get_gullet_mut().read_value(defn.register_type().unwrap(), state)?;
           let defn_args : Vec<ArgWrap> = inner.clone();
@@ -123,6 +123,7 @@ LoadDefinitions!(outer_state, {
           let message = s!("\\advance expected a defined variable for {:?}, found no definition", defn_token_rc);
           Error!("expected","definition", stomach, state, message);
         }
+        state.expire_current_token();
       }
     }
   });

@@ -74,11 +74,11 @@ LoadDefinitions!(state, {
   );
 
   DefPrimitive!(
-  "\\begingroup", sub[stomach, (), state] {
+  "\\begingroup", sub[stomach, _args, state] {
     stomach.begingroup(state);
   });
   DefPrimitive!(
-  "\\endgroup", sub[stomach, (), state] {
+  "\\endgroup", sub[stomach, _args, state] {
     stomach.endgroup(state)?;
   });
 

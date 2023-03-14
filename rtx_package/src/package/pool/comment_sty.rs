@@ -6,8 +6,8 @@ LoadDefinitions!(outer_state, {
   // until \endname or \end{name}, respectively
   let define_excluded: PrimitiveClosure = Arc::new(primitiveproc!(stomach, args, state, {
     unpack!(args=>name);
-    let begin_mark = s!("\\begin{{{}}}", name);
-    let end_mark = s!("\\end{{{}}}", name);
+    let begin_mark = s!("\\begin{{{name}}}");
+    let end_mark = s!("\\end{{{name}}}");
     DefConstructor!(T_CS!(begin_mark), None, None,
     after_digest => sub[stomach, whatsit, after_digest_state] {
       let mut nlines = 0;
@@ -19,7 +19,7 @@ LoadDefinitions!(outer_state, {
         }
         nlines += 1;
       }
-      note_progress(&s!("[Skipped {} ({} lines)]",name,nlines));
+      note_progress(&s!("[Skipped {name} ({nlines} lines)]"));
       Ok(Vec::new())
     });
   }));
@@ -41,13 +41,13 @@ LoadDefinitions!(outer_state, {
     after_tokens.push(T_CS!("\\ignorespaces"));
     // Note that we define the `magic' environment control sequences,
     // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
-    DefMacro!(T_CS!(s!("\\begin{{{}}}", name)),
+    DefMacro!(T_CS!(s!("\\begin{{{name}}}")),
     None,
     sub[gullet, _args, macro_state] {
       gullet.read_raw_line(macro_state); // IGNORE 1st line (after the \begin{$name} !!!
       before_tokens.clone()
     });
-    DefMacro!(T_CS!(s!("\\end{{{}}}", name)), None, Tokens::new(after_tokens));
+    DefMacro!(T_CS!(s!("\\end{{{name}}}")), None, Tokens::new(after_tokens));
   }));
 
   let mut mock_stomach = Stomach::default();

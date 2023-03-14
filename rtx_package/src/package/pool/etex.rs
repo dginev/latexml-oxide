@@ -10,13 +10,13 @@ LoadDefinitions!(outer_state, {
   // 3.1 Additional control over expansion
   // \protected associates with the next defn
   // (note that it isn't actually used anywhere).
-  DefPrimitive!("\\protected", sub[stomach, (), state] {
+  DefPrimitive!("\\protected", sub[stomach, _args, state] {
     state.set_prefix("protected");
   },
   is_prefix => true);
 
   // \detokenize
-  DefMacro!("\\detokenize GeneralText", sub [gullet, (text), state] {
+  DefMacro!("\\detokenize GeneralText", sub[gullet, (text), state] {
     Explode!(writable_tokens(&text, state)?)
   });
 
@@ -24,7 +24,7 @@ LoadDefinitions!(outer_state, {
   // of \unexpanded are not expanded further (this is the same behaviour as is
   // exhibited by the tokens resulting from the expansion of
   // \the〈token variable〉in both TEX and ε-TEX).
-  DefMacro!("\\unexpanded GeneralText", sub [gullet, (text), state] { text });
+  DefMacro!("\\unexpanded GeneralText", sub[gullet, (text), state] { text });
 
   // ======================================================================
   // 3.2. Provision for re-scanning already read text
@@ -51,7 +51,9 @@ LoadDefinitions!(outer_state, {
   });
 
   DefMacro!("\\scantokens GeneralText", sub[gullet, (tokens), state] {
-    Mouth::new(&untex(tokens,false)?, None, state)?.read_tokens(state)
+    gullet.open_mouth(
+      Mouth::new(&writable_tokens(&tokens, state)?, None, state)?, true);
+    Tokens!()
   });
 
   // #======================================================================
