@@ -84,7 +84,8 @@ LoadDefinitions!(state, {
   DefMath!("\\surd",     None, "\u{221A}", role => "OPERATOR", meaning => "square-root");
   DefMath!("\\top",      None, "\u{22A4}", role => "ADDOP",    meaning => "top");
   DefMath!("\\bot",      None, "\u{22A5}", role => "ADDOP",    meaning => "bottom");
-  DefMath!("\\|", None, "\u{2225}", role => "VERTBAR", name => "||", meaning => "parallel-to");
+  DefMath!("\\|", None, "\u{2225}", role => "VERTBAR", name => "||");
+  // should get meaning => 'parallel-to' when used as infix, but NOT when for OPEN|CLOSE
   DefMath!("\\angle", None, "\u{2220}");
 
   // NOTE: This is probably the wrong role.
