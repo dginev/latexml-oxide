@@ -13,10 +13,10 @@ LoadDefinitions!(state, {
   // (so that \begin{verbatim} takes precedence over \verbatim!)
   // we have to be more forceful so that \verbatim & \endverbatim
   // are even seen!
-  AssignMeaning!(&T_CS!("\\begin{verbatim}"), None);
-  AssignMeaning!(&T_CS!("\\begin{verbatim*}"), None);
-  AssignMeaning!(&T_CS!("\\end{verbatim}"), None);
-  AssignMeaning!(&T_CS!("\\end{verbatim*}"), None);
+  AssignMeaning!(&T_CS!("\\begin{verbatim}"), Stored::None);
+  AssignMeaning!(&T_CS!("\\begin{verbatim*}"), Stored::None);
+  AssignMeaning!(&T_CS!("\\end{verbatim}"), Stored::None);
+  AssignMeaning!(&T_CS!("\\end{verbatim*}"), Stored::None);
 
   DefRegister!("\\every@verbatim", Tokens!());
   DefRegister!("\\verbatim@line", Tokens!());

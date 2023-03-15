@@ -601,6 +601,16 @@ impl From<crate::Digested> for Stored {
 impl From<&crate::Digested> for Stored {
   fn from(value: &crate::Digested) -> Self { crate::Stored::Digested(value.clone()) }
 }
+
+impl From<Option<&crate::Digested>> for Stored {
+  fn from(value_opt: Option<&crate::Digested>) -> Self {
+    match value_opt {
+      Some(v) => v.into(),
+      None => Stored::None
+    }
+  }
+}
+
 impl<'a> From<Cow<'a, crate::Digested>> for Stored {
   fn from(value: Cow<'a, crate::Digested>) -> Self { crate::Stored::Digested(value.into_owned()) }
 }

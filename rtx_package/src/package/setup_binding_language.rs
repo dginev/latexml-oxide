@@ -1684,12 +1684,16 @@ macro_rules! Tag {
 
 #[macro_export]
 macro_rules! DefMath(
+  ($text:literal,$presentation:literal, $($input:tt)*) => {{
+    let defmath_options = defi_opts!(@munch ($($input)*) -> {MathPrimitiveOptions,});
+    defi_math!($text,None, $presentation, defmath_options);
+  }};
   ($text:expr,$paramlist:expr,$presentation:expr) => (
     defi_math!($text,$paramlist, $presentation, MathPrimitiveOptions::default()));
-  ($text:expr,$paramlist:expr,$presentation:expr, $($key:ident => $val:expr),*) => (
-    defi_math!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions, $($key => $val),*)));
-  ($text:expr,$paramlist:expr,$presentation:expr, $($key:ident => $val:expr),*, $state_arg:ident) => (
-    defi_math!($text,$paramlist, $presentation, NewDefaultV!(MathPrimitiveOptions, $($key => $val),*,$state_arg)));
+  ($text:expr,$paramlist:expr,$presentation:expr, $($input:tt)*) => {{
+    let defmath_options = defi_opts!(@munch ($($input)*) -> {MathPrimitiveOptions,});
+    defi_math!($text,$paramlist, $presentation, defmath_options);
+  }};
 );
 
 #[macro_export]
@@ -2261,6 +2265,14 @@ macro_rules! defi_opts {
   };
   (@munch ( $(,)? name $(:)?$(=>)? $idval:ident) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($idval.to_string()) ] })
+  };
+  // for defmath
+  // stretchy: bool
+  (@munch ( $(,)? stretchy $(:)?$(=>)? $flag:literal, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ stretchy @ Some($flag) ] })
+  };
+  (@munch ( $(,)? stretchy $(:)?$(=>)? $flag:literal) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ stretchy @ Some($flag) ] })
   };
 
   // misc ident with literal value
