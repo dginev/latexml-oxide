@@ -462,14 +462,59 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
       Ok(())
     })
   } else {
-    //     Arc::new(|| {
-    // <ltx:XMApp role='#role' scriptpos='#scriptpos' stretchy='#stretchy'>"
-    //           . "<ltx:XMTok $cons_attr font='#font' role='#operator_role'"
-    //           . " scriptpos='#operator_scriptpos' stretchy='#operator_stretchy' $end_tok"
-    //           . join('', map { "<ltx:XMArg>#$_</ltx:XMArg>" } 1 .. $nargs)
-    //           . "</ltx:XMApp>"
-    // })
-    unimplemented!();
+    Arc::new(move |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, Stored>, state: &mut State| {
+      let mut attrs = HashMap::new();
+      for key in ["role", "scriptpos", "stretchy"] {
+        if let Some(v) = props.get(key) {
+          attrs.insert(key.to_owned(), v.to_string());
+        }
+      }
+      let font_opt = match props.get("font") {
+        Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
+        Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None, state)?)),
+        Some(Stored::FontDirective(FontDirective::Asset(font))) => Some(Cow::Borrowed(&**font)),
+        _ => None,
+      };
+      if let Some(ref font) = font_opt {
+        document.open_element("ltx:XMApp", Some(attrs), Some(font), state)?;
+      } else {
+        document.open_element("ltx:XMApp", Some(attrs), None, state)?;
+      }
+      // operator
+      let mut op_attrs = HashMap::new();
+      if let Some(role) = props.get("operator_role") {
+        op_attrs.insert(String::from("role"), role.to_string());
+      }
+      if let Some(stretchy) = props.get("operator_stretchy") {
+        op_attrs.insert(String::from("stretchy"), stretchy.to_string());
+      }
+      if let Some(scriptpos) = props.get("operator_scriptpos") {
+        op_attrs.insert(String::from("scriptpos"), scriptpos.to_string());
+      }
+      for key in MATH_CONSTRUCTOR_ATTRIBUTES {
+        if let Some(v) = props.get(*key) {
+          op_attrs.insert(key.to_string(), v.to_string());
+        }
+      }
+      if let Some(font) = font_opt {
+        document.open_element("ltx:XMTok", Some(op_attrs), Some(&font), state)?;
+      } else {
+        document.open_element("ltx:XMTok", Some(op_attrs), None, state)?;
+      }
+      document.absorb_string(&presentation_for_replacement, props, state)?;
+      document.close_element("ltx:XMTok", state)?;
+      // arguments
+      for arg in args {
+        document.open_element("ltx:XMArg", None, None, state)?;
+        if let Some(arg_v) = arg {
+          document.absorb(arg_v, None, state)?;
+        }
+        document.close_element("ltx:XMArg", state)?;
+      }
+
+      document.close_element("ltx:XMApp", state)?;
+      Ok(())
+    })
   });
   let sizer: Option<SizingClosure> = Some(Arc::new(move |_, state| {
     Ok(Font::math_default().compute_string_size(&presentation_for_sizer, HashMap::new(), state))

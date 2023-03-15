@@ -1684,9 +1684,10 @@ macro_rules! Tag {
 
 #[macro_export]
 macro_rules! DefMath(
-  ($text:literal,$presentation:literal, $($input:tt)*) => {{
+  ($proto:literal,$presentation:literal, $($input:tt)*) => {{
+    let (cs, paramlist) = parse_prototype!($proto);
     let defmath_options = defi_opts!(@munch ($($input)*) -> {MathPrimitiveOptions,});
-    defi_math!($text,None, $presentation, defmath_options);
+    defi_math!(cs,paramlist, $presentation, defmath_options);
   }};
   ($text:expr,$paramlist:expr,$presentation:expr) => (
     defi_math!($text,$paramlist, $presentation, MathPrimitiveOptions::default()));
