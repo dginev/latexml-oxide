@@ -1856,24 +1856,24 @@ impl Document {
 
   pub fn lookup_id(&self, id: &str) -> Option<&Node> { self.idstore.get(id) }
 
-  // #======================================================================
-  // # Odd bit:
-  // # In an XMDual, in each branch (content, presentation) there will be atoms
-  // # that correspond to the input (one will be real, the other an XMRef to the first).
-  // # But also there will be additional "decoration" (delimiters, punctuation, etc on the presentation
-  // # side; other symbols, bindings, whatever, on the content side).
-  // # These decorations should NOT be subject to rewrite rules,
-  // # and in cross-linked parallel markup, they should be attributed to the
-  // # upper containing object's ID, rather than left dangling.
-  // #
-  // # To determine this, we mark all math nodes as to whether they are "visible" from
-  // # presentation, content or both (the default top-level being both).
-  // # Decorations are the nodes that are visible to only one mode.
-  // # Note that nodes that are not visible at all CAN occur (& do currently when the parser
-  // # creates XMDuals), pruneXMDuals (below) gets rid of them.
+  // ======================================================================
+  //  Odd bit:
+  //  In an XMDual, in each branch (content, presentation) there will be atoms
+  //  that correspond to the input (one will be real, the other an XMRef to the first).
+  //  But also there will be additional "decoration" (delimiters, punctuation, etc on the presentation
+  //  side; other symbols, bindings, whatever, on the content side).
+  //  These decorations should NOT be subject to rewrite rules,
+  //  and in cross-linked parallel markup, they should be attributed to the
+  //  upper containing object's ID, rather than left dangling.
+  //
+  //  To determine this, we mark all math nodes as to whether they are "visible" from
+  //  presentation, content or both (the default top-level being both).
+  //  Decorations are the nodes that are visible to only one mode.
+  //  Note that nodes that are not visible at all CAN occur (& do currently when the parser
+  //  creates XMDuals), pruneXMDuals (below) gets rid of them.
 
-  // # NOTE: This should ultimately be in a base Document class,
-  // # since it is also needed before conversion to parallel markup!
+  // NOTE: This should ultimately be in a base Document class,
+  // since it is also needed before conversion to parallel markup!
   pub fn mark_xmnode_visibility(&mut self, state: &mut State) -> Result<()> {
     let xmath = self.findnodes("//ltx:XMath/*", None, state);
     for math in xmath.iter() {
@@ -1904,13 +1904,18 @@ impl Document {
     if pvis {
       node.set_attribute("_pvis", "true")?;
     }
-    if qname == "ltx:XMDual" || qname == "ltx:XMRef" {
+    if qname == "ltx:XMDual" {
+      let mut children = xml::element_nodes(&node);
+      let c = children.remove(0);
+      let p = children.remove(0);
+      if cvis {
+        self.mark_xmnode_visibility_aux(c, true, false, state)?;
+      }
+      if pvis {
+        self.mark_xmnode_visibility_aux(p, false, true, state)?;
+      }
+    } else if qname == "ltx:XMRef" {
       unimplemented!();
-    //     my ($c, $p) = element_nodes($node);
-    //     $self->markXMNodeVisibility_aux($c, 1, 0) if $cvis;
-    //     $self->markXMNodeVisibility_aux($p, 0, 1) if $pvis; }
-    // } else if qname == "ltx:XMRef" {
-    //   unimplemented!();
     //     #    $self->markXMNodeVisibility_aux($self->realizeXMNode($node),$cvis,$pvis); }
     //     my $id = $node->getAttribute('idref');
     //     if (!$id) {

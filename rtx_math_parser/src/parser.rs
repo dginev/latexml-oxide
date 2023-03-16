@@ -615,9 +615,10 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
       }
     },
     "ltx:XMWrap" | "ltx:XMCell" => {
-      //     # ??
-      //     return join('@', map { textrec($_) } element_nodes($node)); }
-      unimplemented!()
+      // ??
+      element_nodes(&node).into_iter()
+      .map(|child| textrec(&child, None, None, document, state))
+      .collect::<Vec<_>>().join("@")
     },
     "ltx:XMArg" => {
       let args = element_nodes(&node);

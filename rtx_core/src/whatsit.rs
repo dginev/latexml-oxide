@@ -186,22 +186,22 @@ impl Object for Whatsit {
       let defn = &self.definition;
       let spec_opt = if let Some(rev) = self.properties.get("reversion") {
         match rev {
-          Stored::Tokens(tks) => Some(Reversion::Tokens(tks.clone())),
-          // TODO?
-          // Stored::ReversionClosure(rfn) => Some(Reversion::Closure(rfn)),
+          Stored::Tokens(tks) => Some(Cow::Owned(Reversion::Tokens(tks.clone()))),
+          Stored::Reversion(rev) => Some(Cow::Borrowed(rev)),
+          // Stored::ReversionClosure(closure) => Some(Reversion::Closure(closure)),
           other => panic!("TODO: Unexpected reversion directive {other:?}"),
         }
       } else {
-        defn.get_reversion_spec()
+        defn.get_reversion_spec().map(Cow::Owned)
       };
-      match spec_opt {
+      match spec_opt.as_deref() {
         Some(Reversion::Closure(spec)) => {
           let spec_tokens = spec(self, self.get_args(), state).unwrap();
           tokens = self.substitute_parameters(spec_tokens, state)?;
         },
         Some(Reversion::Tokens(spec)) => {
           if !spec.is_empty() {
-            tokens = self.substitute_parameters(spec, state)?;
+            tokens = self.substitute_parameters(spec.clone(), state)?;
           }
         },
         None => {

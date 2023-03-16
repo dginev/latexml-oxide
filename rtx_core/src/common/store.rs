@@ -12,6 +12,7 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
+use crate::definition::Reversion;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
@@ -88,6 +89,7 @@ pub enum Stored {
   Locator(Locator),
   Rewrite(Rewrite),
   Ligature(Ligature),
+  Reversion(Reversion),
   // LaTeXML objects (Arc-wrapped)
   Expandable(Arc<Expandable>),
   Conditional(Arc<Conditional>),
@@ -120,6 +122,7 @@ impl fmt::Debug for Stored {
       Token(ref t) => write!(f, "Stored::Token[{t:?}]"),
       Tokens(ref t) => write!(f, "Stored::Tokens[{t:?}]"),
       Locator(ref t) => write!(f, "Stored::Locator[{t:?}]"),
+      Reversion(ref t) => write!(f, "Stored::Reversion[TODO]"),
       Catcode(ref cc) => write!(f, "Stored::Catcode[{cc:?}]"),
       Charcode(ref cc) => write!(f, "Stored::Charcode[{cc:?}]"),
       IfFrame(ref fr) => write!(f, "Stored::IfFrame[{fr:?}]"),
@@ -247,6 +250,13 @@ impl PartialEq for Stored {
           false
         }
       },
+      Reversion(ref t) => {
+        if let Reversion(t2) = other {
+          *t == *t2
+        } else {
+          false
+        }
+      }
       Catcode(ref cc) => {
         if let Catcode(cc2) = other {
           *cc == *cc2
@@ -720,6 +730,10 @@ impl From<Arc<RwLock<IfFrame>>> for Stored {
 
 impl From<Ligature> for Stored {
   fn from(lig: Ligature) -> Stored { Stored::Ligature(lig) }
+}
+
+impl From<Reversion> for Stored {
+  fn from(rev: Reversion) -> Stored { Stored::Reversion(rev) }
 }
 
 impl From<Option<&Stored>> for Stored {

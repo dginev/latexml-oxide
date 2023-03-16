@@ -84,6 +84,7 @@ pub mod etex;
 pub mod pdftex;
 
 // Supported package bindings
+pub mod latexml_sty;
 pub mod alltt_sty;
 pub mod amsmath_sty;
 pub mod amsthm_sty;
@@ -115,6 +116,7 @@ pub fn dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Opt
     "LaTeX.pool" => latex::load_definitions(stomach, state),
     "eTeX.pool" => etex::load_definitions(stomach, state),
     "pdfTeX.pool" => pdftex::load_definitions(stomach, state),
+    "latexml.sty" => latexml_sty::load_definitions(stomach, state),
     "article.cls" => article_cls::load_definitions(stomach, state),
     "alltt.sty" => alltt_sty::load_definitions(stomach, state),
     "amsmath.sty" => amsmath_sty::load_definitions(stomach, state),
