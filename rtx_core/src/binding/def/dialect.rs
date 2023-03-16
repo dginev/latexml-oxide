@@ -7,6 +7,7 @@ use regex::Regex;
 // use crate::common::error::*;
 use crate::binding::content::merge_font;
 use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
+use crate::binding::counter::dialect::step_counter_gullet;
 use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::definition::argument::ArgWrap;
@@ -16,7 +17,6 @@ use crate::definition::expandable::{Expandable, ExpandableOptions};
 use crate::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 use crate::definition::primitive::{Primitive, PrimitiveOptions};
 use crate::definition::register::{Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue};
-use crate::definition::PropertiesClosure;
 use crate::definition::{
   BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, FontDirective, PrimitiveClosure,
   ReplacementClosure, Reversion, SizingClosure,
@@ -44,6 +44,8 @@ lazy_static! {
   pub static ref DIRTY_ID_IDIOM_RE: Regex = Regex::new(r"\$\{\}\^\{(?P<label>[^\}]*)\}\$").unwrap();
   pub static ref NON_ID_CHARSET_RE: Regex = Regex::new(r"[^\w_\-.]+").unwrap();
   pub static ref TILDE_NOISE_RE: Regex = Regex::new(r"\\~\{\}").unwrap();
+  pub static ref HAS_ARG_HOLE : Regex = Regex::new(r"#\d|\\.").unwrap();
+  pub static ref ARG_HOLE : Regex = Regex::new(r"#(\d)").unwrap();
 }
 
 /// Is defined in the `LaTeX`-y sense of also not being let to \relax.
@@ -351,6 +353,133 @@ pub fn def_primitive(
   }
 }
 
+pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
+  let csname = cs.get_string();
+  let cont_cs = T_CS!(s!("{csname}@content"));
+  let pres_cs = T_CS!(s!("{csname}@presentation"));
+  let defcs = if options.robust {
+    def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)
+  } else {
+    cs.clone()
+  };
+  let presentation_toks = mouth::tokenize_internal(&presentation);
+
+  // Make the original CS expand into a DUAL invoking a presentation macro and content constructor
+  let captured_role = options.role.clone();
+  let captured_revert_as = options.revert_as.clone();
+  let captured_cont_cs = cont_cs.clone();
+  let captured_pres_cs = pres_cs.clone();
+  let captured_pres = presentation.clone();
+  state.install_definition(Expandable::new(defcs, paramlist.clone(), ExpansionBody::Closure(Arc::new(move |gullet, args, state| {
+    let args_opt_tks = args.into_iter().map(|arg| arg.into()).collect::<Vec<Option<Tokens>>>();
+    let (cargs, pargs) = dualize_arglist(&captured_pres, args_opt_tks, gullet, state)?;
+
+    let mut invoked_tks = vec![T_CS!("\\lx@dual"),T_OTHER!("[")];
+    if let Some(ref role) = captured_role {
+      invoked_tks.extend(vec![T_OTHER!("role"), T_OTHER!("="), T_OTHER!(role)]);
+      if let Some(ref revert_as) = captured_revert_as {
+        invoked_tks.push(T_OTHER!(","));
+      }
+    }
+    if let Some(ref revert_as) = captured_revert_as {
+      invoked_tks.extend(vec![T_OTHER!("revert_as"), T_OTHER!("="), T_OTHER!(revert_as)]);
+    }
+    invoked_tks.push(T_OTHER!("]"));
+    invoked_tks.push(T_BEGIN!());
+    invoked_tks.push(captured_cont_cs.clone());
+      invoked_tks.push(T_BEGIN!());
+      for carg_opt in cargs.into_iter() {
+        if let Some(carg) = carg_opt {
+          invoked_tks.extend(carg.unlist());
+        } else {} // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
+      }
+      invoked_tks.push(T_END!());
+    invoked_tks.push(T_END!());
+    invoked_tks.push(T_BEGIN!());
+    invoked_tks.push(captured_pres_cs.clone());
+      invoked_tks.push(T_BEGIN!());
+      for parg_opt in pargs.into_iter() {
+        if let Some(parg) = parg_opt {
+          invoked_tks.extend(parg.unlist());
+        } else {} // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
+      }
+      invoked_tks.push(T_END!());
+    invoked_tks.push(T_END!());
+
+    Ok(Tokens::new(invoked_tks))
+  })), Some(ExpandableOptions {  protected: options.protected, ..ExpandableOptions::default() }), state), options.scope.clone());
+
+  // Make the presentation macro.
+  state.install_definition(Expandable::new(pres_cs, paramlist.clone(), ExpansionBody::Tokens(presentation_toks),
+    Some(ExpandableOptions {  protected: options.protected, ..ExpandableOptions::default() }), state), options.scope.clone());
+
+  // content: Make the content constructor
+  // content: build the replacement closure
+  let nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(0);
+  let content_closure : ReplacementClosure = if nargs == 0 {
+    Arc::new(|document, args, props, state| {
+      let mut attrs = HashMap::new();
+      for key in ["role", "scriptpos", "stretchy"] {
+        if let Some(v) = props.get(key) {
+          attrs.insert(key.to_owned(), v.to_string());
+        }
+      }
+      for key in MATH_CONSTRUCTOR_ATTRIBUTES {
+        if let Some(v) = props.get(*key) {
+          attrs.insert(key.to_string(), v.to_string());
+        }
+      }
+      document.insert_element("ltx:XMTok", Vec::new(), Some(attrs), state)?;
+      Ok(())
+    })
+  } else {
+    Arc::new(|document, args, props, state| {
+      let mut app_attrs = HashMap::new();
+      for key in ["role", "scriptpos"] {
+        if let Some(v) = props.get(key) {
+          app_attrs.insert(key.to_owned(), v.to_string());
+        }
+      }
+      document.open_element("ltx:XMApp", Some(app_attrs), None, state)?;
+      let mut op_attrs = HashMap::new();
+      if let Some(v) = props.get("operator_stretchy") {
+        op_attrs.insert("stretchy".to_owned(), v.to_string());
+      }
+      if let Some(v) = props.get("operator_role") {
+        op_attrs.insert("role".to_owned(), v.to_string());
+      }
+      if let Some(v) = props.get("operator_scriptpos") {
+        op_attrs.insert("scriptpos".to_owned(), v.to_string());
+      }
+      for key in MATH_CONSTRUCTOR_ATTRIBUTES {
+        if let Some(v) = props.get(*key) {
+          op_attrs.insert(key.to_string(), v.to_string());
+        }
+      }
+      // operator
+      document.insert_element("ltx:XMTok", Vec::new(), Some(op_attrs), state)?;
+      // arguments
+      // TODO: options.reorder?
+      for arg in args.iter().flatten() {
+        document.absorb(arg, None, state)?;
+      }
+      document.close_element("ltx:XMApp", state)?;
+      Ok(())
+    })
+  };
+  // content: install the constructor
+  let mut content_constructor = Constructor {
+    cs: cont_cs,
+    paramlist,
+    replacement: Some(content_closure),
+    ..Constructor::default() };
+  let scope = options.scope.clone();
+  transfer_common_constructor_options(&cs, &presentation, options, &mut content_constructor);
+  state.install_definition(content_constructor, scope);
+
+}
+
+
 pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
   let scope = options.scope.clone();
   let reqfont_opt = options.font.clone();
@@ -403,7 +532,7 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
   if options.reversion.is_none() && nargs == 0 && options.alias.is_none() {
     if options.revert_as.is_none() || options.revert_as == Some(Cow::Borrowed("content")) || options.revert_as == Some(Cow::Borrowed("context")) {
       // TODO :&& (($LaTeXML::DUAL_BRANCH || 'content') eq 'content'))
-      options.reversion = Some(Reversion::Tokens(Tokens!(cs)));
+      options.reversion = Some(Reversion::Tokens(Tokens!(cs.clone())));
     } else {
       // TODO: This differs from the Perl, where `presentation` comes in as Tokens
       //       we have it come in as a `String`,
@@ -415,6 +544,7 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
   let presentation_for_replacement = presentation.clone();
   let is_mathstyle = options.mathstyle.is_some();
   let mathstyle_for_font = options.mathstyle.clone();
+  let presentation_for_font = presentation.clone();
   options.font = Some(FontDirective::Closure(if is_mathstyle {
     Arc::new(move |whatsit, state| {
       Ok(
@@ -425,11 +555,11 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
             mathstyle: mathstyle_for_font.as_ref().map(|ms| Cow::Owned(ms.to_owned())),
             ..Font::default()
           })
-          .specialize(&presentation),
+          .specialize(&presentation_for_font),
       )
     })
   } else {
-    Arc::new(move |whatsit, state| Ok(state.lookup_font().unwrap().specialize(&presentation)))
+    Arc::new(move |whatsit, state| Ok(state.lookup_font().unwrap().specialize(&presentation_for_font)))
   }));
   let compiled_replacement: Option<ReplacementClosure> = Some(if nargs == 0 {
     // If trivial presentation, allow it in Text
@@ -521,35 +651,20 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
   }));
 
   let mut prop_options = options.clone();
-  let properties: PropertiesClosure = Arc::new(move |_, _, _| Ok(prop_options.to_hash_stored()));
-  let constructor = Constructor {
+  let mut constructor = Constructor {
     cs: defcs,
     paramlist,
     replacement: compiled_replacement,
-    before_digest: options.before_digest,
-    after_digest: options.after_digest,
-    // before_construct: options.before_construct,
-    // after_construct: options.after_construct,
     nargs: Some(nargs),
-    alias: match options.alias {
-      Some(alias) => Some(alias),
-      None => {
-        if options.robust {
-          csname_alias // TODO: what is the type of "alias"?
-        } else {
-          None
-        }
-      },
-    },
-    reversion: options.reversion,
     sizer,
-    properties,
     // capture_body: options.capture_body,
     // outer
     // long
     ..Constructor::default()
   };
-  state.install_definition(constructor, options.scope);
+  let scope = options.scope.clone();
+  transfer_common_constructor_options(&cs, &presentation, options, &mut constructor);
+  state.install_definition(constructor, scope);
 }
 
 fn infer_sizer(sizer: &Option<SizingClosure>, reversion: &Option<Reversion>) -> Option<SizingClosure> {
@@ -879,6 +994,65 @@ pub fn def_environment(
   }
 }
 
+//======================================================================
+// Support for XMDual
+
+// Perhaps it would be better to use a label(-like) indirection here,
+// so all ID's can stay in the desired format?
+pub fn get_xmarg_id(gullet: &mut Gullet, state:&mut State) -> Result<Tokens> {
+  step_counter_gullet("@XMARG", false, gullet, state)?;
+  def_macro(T_CS!("\\@@XMARG@ID"), None, Tokens!(Explode!(state.lookup_register("\\c@@XMARG", Vec::new()).unwrap().value_of())),
+    Some(ExpandableOptions{scope: Some(Scope::Global), ..ExpandableOptions::default()}), state);
+
+  gullet.do_expand(T_CS!("\\the@XMARG@ID"), state)
+}
+
+type ArgsUnpacked = Vec<Option<Tokens>>;
+// Given a list of Tokens (to be expanded into mathematical objects)
+// return two lists:
+//   (1) The Tokens' wrapped in an XMAarg, with an ID added
+//   (2) a corresponding list of Tokens creating XMRef's to those IDs
+// Ah, but there are complications!!!
+// On the one hand, arguments may be hidden, never appearing on the presentation side
+// (all will be passed to the content side); This argues for putting the XMArg's on the content side.
+// OTOH, they ought to be on the presentation side, so that they can be expanded & digested in
+// the proper context they will be presented, and pick up all the styling (font size, displaystyle..)
+// I don't know how to work around the latter, so we'll put args on the presentation side,
+// UNLESS they are hidden, in which case they'll be on the content side.
+// So, how do we know if they're hidden? We'll scan the presentation for #\d, that's how!
+pub fn dualize_arglist(presentation: &str, args: Vec<Option<Tokens>>, gullet: &mut Gullet, state: &mut State) -> Result<(ArgsUnpacked,ArgsUnpacked)> {
+  let mut used = HashMap::new();
+  for cap in ARG_HOLE.captures_iter(presentation) {  // Get the args that were actually used!
+    let argi = cap.get(1).unwrap().as_str();
+    let mut entry = used.entry(argi.parse::<usize>()?).or_insert(0);
+    *entry += 1;
+  }
+  let mut cargs = Vec::new();
+  let mut pargs = Vec::new();
+  for (index,arg_opt) in args.into_iter().enumerate() {
+    match arg_opt {
+      None => {
+        pargs.push(None);
+        cargs.push(None);
+      },
+      Some(arg) if arg.unlist_ref().is_empty() => {
+        pargs.push(Some(arg.clone()));
+        cargs.push(Some(arg));
+      },
+      Some(arg_toks) => if used.get(&index).unwrap_or(&0) > &0 { // used in presentation?
+        let id = get_xmarg_id(gullet, state)?;
+        pargs.push(Some(Tokens!(T_CS!("\\lx@xmarg"), T_BEGIN!(), id.clone().unlist(), T_END!(),T_BEGIN!(), arg_toks.unlist(), T_END!()))); // put XMArg in presentation
+        cargs.push(Some(Tokens!(T_CS!("\\lx@xmref"), T_BEGIN!(), id.unlist(), T_END!()))); }
+      else {                                                  // Hidden arg, put XMArg in content.
+        let id = get_xmarg_id(gullet, state)?;
+        cargs.push(Some(Tokens!(T_CS!("\\lx@xmarg"), T_BEGIN!(), id.clone().unlist(),T_END!(),T_BEGIN!(), arg_toks.unlist(),T_END!())));
+        pargs.push(Some(Tokens!(T_CS!("\\lx@xmref"), T_BEGIN!(), id.unlist(), T_END!()))); }
+    }
+  }
+  Ok((cargs, pargs))
+}
+
+
 pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
   // Can't defer parsing parameters since we need to know number of args!
   // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
@@ -937,15 +1111,16 @@ pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, 
     transfer_opt_default!(stretchy, options, math_attr_hash);
     state.assign_value(&s!("math_token_attributes_{}", csname), math_attr_hash, Some(Scope::Global));
   }
-  // TODO:
-  // // If the presentation is complex, and involves arguments,
-  // // we will create an XMDual to separate content & presentation.
-  // elsif ((ref presentation eq "CODE")
-  //   || ((ref presentation) && grep { $_->equals(T_PARAM) } presentation->unlist)
-  //   || (!(ref presentation) && (presentation =~ /\//\d|\\./))
-  //   || ((ref presentation) && (grep { $_->isExecutable } presentation->unlist))) {
-  //   defmath_dual($cs, $paramlist, presentation, %options); }
-
+  // If the macro involves arguments,
+  // we will create an XMDual to separate simple content application
+  // from the (likely) convoluted presentation.
+  else if HAS_ARG_HOLE.is_match(&presentation) {
+    // TODO: Are the code variants still applicable in Rust?
+    //((ref presentation eq "CODE")
+    // || ((ref presentation) && grep { $_->equals(T_PARAM) } presentation->unlist)
+    // || ((ref presentation) && (grep { $_->isExecutable } presentation->unlist)))
+    def_math_dual(cs, paramlist, presentation, options, state);
+  }
   // EXPERIMENT: Introduce an intermediate case for simple symbols
   // Define a primitive that will create a Box with the appropriate set of XMTok attributes.
   else if nargs == 0 && !options.has_complex_option() {
@@ -956,4 +1131,65 @@ pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, 
   if locked {
     state.assign_value(&format!("{csname}:locked"), true, None);
   }
+}
+
+/// Transfers the common MathPrimitive options to a (ideally freshly instantiated) Constructor.
+fn transfer_common_constructor_options(cs: &Token, presentation: &str, options: MathPrimitiveOptions, cons: &mut Constructor) {
+  let cs_str = cs.get_string();
+  let mut properties = options.to_hash_stored();
+  cons.alias = Some(options.alias.unwrap_or_else(|| cs_str.to_owned()));
+  if let Some(sizer) = infer_sizer(&options.sizer, &options.reversion) {
+    cons.sizer = Some(sizer);
+  }
+  if let Some(reversion) = options.reversion {
+    cons.reversion = Some(reversion);
+  }
+  //
+  // before_digest
+  //
+  let cs_string = cs_str.to_owned();
+  let mut before_digest_closures : Vec<BeforeDigestClosure> = vec![before_digest_simple!(stomach, state, {
+    requireMath!(cs_string, state);
+  })];
+  if !options.nogroup {
+    before_digest_closures.push(before_digest_simple!(stomach, state, {
+      stomach.bgroup(state);
+    }));
+  }
+  if let Some(font) = options.font {
+    before_digest_closures.push(before_digest_simple!(stomach, state, {
+      if let FontDirective::Asset(ref chosen_font) = font {
+        merge_font((**chosen_font).clone(), state);
+      }
+    }));
+  }
+  before_digest_closures.extend(options.before_digest);
+  cons.before_digest = before_digest_closures;
+  //
+  // after_digest
+  //
+  let mut after_digest_closures = options.after_digest;
+  if !options.nogroup {
+    after_digest_closures.push(after_digest_simple!(stomach, _args, state, {
+      stomach.egroup(state)?;
+    }));
+  }
+  cons.after_digest = after_digest_closures;
+  cons.before_construct = options.before_construct;
+  cons.after_construct = options.after_construct;
+  let presentation_for_font = presentation.to_owned();
+  properties.insert(String::from("font"), Stored::FontDirective(FontDirective::Closure(
+   if let Some(mathstyle) = options.mathstyle {
+    Arc::new(move |whatsit, state|{Ok(
+      state.lookup_font().unwrap().merge(Font{mathstyle: Some(Cow::Owned(mathstyle.clone())), ..Font::default()}).specialize(&presentation_for_font)
+    )})
+  } else {
+    Arc::new(move |whatsit,state|{Ok(
+      state.lookup_font().unwrap().specialize(&presentation_for_font)
+    )})
+  })));
+
+  cons.properties = Arc::new(move |stomach,args,state|
+    Ok(properties.clone()));
+
 }

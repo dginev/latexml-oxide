@@ -237,6 +237,36 @@ pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut
   Ok(())
 }
 
+/// DG: This is a dirty refactor that avoids the Stomach threading for DefMath --- is there a conceptually better organization?
+///
+pub fn step_counter_gullet(ctr: &str, noreset: bool, gullet: &mut Gullet, state: &mut State) -> Result<()> {
+  let value = counter_value(ctr, state);
+  state.assign_value(&s!("\\c@{}", ctr), value.add(Number::new(1)), Some(Scope::Global));
+  state.after_assignment(gullet);
+  let token_value = Tokens::new(Explode!(state.lookup_number(&s!("\\c@{}", ctr)).unwrap().value_of()));
+  def_macro(
+    T_CS!(s!("\\@{}@ID", ctr)),
+    None,
+    token_value,
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    }),
+    state,
+  );
+
+  // and reset any within counters!
+  if !noreset {
+    if let Some(nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
+      for c in nested.unlist() {
+        reset_counter(c.get_string(), state);
+      }
+    }
+  }
+  // digest_if(T_CS!(s!("\\the{}", ctr)), stomach, state)?;
+  Ok(())
+}
+
 /// Analog of `\refstepcounter`, steps the counter and returns a hash
 /// containing the keys `refnum` and `id`.  This makes it
 /// suitable for use in a `properties` option to constructors.

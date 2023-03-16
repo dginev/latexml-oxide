@@ -93,6 +93,19 @@ pub enum Reversion {
   Tokens(Tokens),
 }
 
+impl PartialEq for Reversion {
+  fn eq(&self, other: &Reversion) -> bool {
+    match self {
+      Reversion::Tokens(t) => match other {
+        Reversion::Tokens(t2) => t == t2,
+        _ => false
+      },
+      // never compare pointers - i.e. never equal
+      _ => false
+    }
+  }
+}
+
 impl From<&str> for Reversion {
   fn from(t: &str) -> Reversion { Reversion::Tokens(mouth::tokenize_internal(t).pack_parameters()) }
 }

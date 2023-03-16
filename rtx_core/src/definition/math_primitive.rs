@@ -10,7 +10,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveClosure, Reversion};
+use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveClosure, ConstructionClosure, Reversion};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -43,6 +43,8 @@ pub struct MathPrimitiveOptions {
   pub mode: Option<String>,
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
+  pub before_construct: Vec<ConstructionClosure>,
+  pub after_construct: Vec<ConstructionClosure>,
   pub is_prefix: bool,
   pub scope: Option<Scope>,
   pub font: Option<FontDirective>,
@@ -67,7 +69,7 @@ pub struct MathPrimitiveOptions {
   pub dual: bool,
   pub mathstyle: Option<String>,
   pub scriptpos: Option<usize>,
-  pub operator_scriptpos: Option<String>,
+  pub operator_scriptpos: Option<usize>,
   pub stretchy: Option<bool>,
   pub operator_stretchy: Option<bool>,
   pub nogroup: bool,
@@ -82,6 +84,8 @@ impl Default for MathPrimitiveOptions {
       bounded: false,
       before_digest: Vec::new(),
       after_digest: Vec::new(),
+      before_construct: Vec::new(),
+      after_construct: Vec::new(),
       mode: None,
       is_prefix: false,
       scope: None,
@@ -150,7 +154,7 @@ impl MathPrimitiveOptions {
       h.insert("scriptpos".to_string(), Stored::Int(*scriptpos as i64));
     }
     if let Some(ref operator_scriptpos) = self.operator_scriptpos {
-      h.insert("operator_scriptpos".to_string(), operator_scriptpos.into());
+      h.insert("operator_scriptpos".to_string(), Stored::Int(*operator_scriptpos as i64));
     }
     if let Some(ref stretchy) = self.stretchy {
       h.insert("stretchy".to_string(), (*stretchy).into());
