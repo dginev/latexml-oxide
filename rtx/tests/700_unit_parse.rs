@@ -5,7 +5,7 @@ use rtx_math_parser::MathParser;
 #[test]
 fn basic_1() {
   let tex = "1+1=2";
-  let (lexemes, nodes, _xmath_opt, mut doc) = lex_single_tex_formula(tex);
+  let (lexemes, mut nodes, xmath_opt, mut doc) = lex_single_tex_formula(tex);
   assert!(!lexemes.is_empty());
   let expected_lexemes = &["NUMBER:1:1", "ADDOP:plus:2", "NUMBER:1:3", "RELOP:equals:4", "NUMBER:2:5"];
   assert_eq!(lexemes, expected_lexemes);
@@ -25,12 +25,15 @@ fn basic_1() {
 
   let mut parser = MathParser::default();
   let mut state = State::new(StateOptions::default());
-  let parse_tree_opt = parser.parse_lexemes(lexemes, nodes, &mut doc, &mut state);
+  let parse_tree_opt = parser.parse_lexemes(lexemes, &nodes, &mut doc, &mut state);
 
   assert!(parse_tree_opt.is_ok());
   let parsed_tree_opt = parse_tree_opt.unwrap();
   assert!(parsed_tree_opt.is_some());
   let parsed_tree = parsed_tree_opt.unwrap();
+  let parsed_xml_result = parsed_tree.into_xmath(&mut xmath_opt.unwrap(), &mut nodes, &mut doc, &mut state);
+  assert!(parsed_xml_result.is_ok());
+  let parsed_xml = parsed_xml_result.unwrap();
 
   let expected_xmath_after = concat!(
     "<XMApp>",
@@ -44,5 +47,5 @@ fn basic_1() {
     "</XMApp>"
   );
 
-  assert_eq!(doc.get_document().node_to_string(&parsed_tree), expected_xmath_after);
+  assert_eq!(doc.get_document().node_to_string(&parsed_xml), expected_xmath_after);
 }

@@ -43,10 +43,10 @@ LoadDefinitions!(state, {
     if i <= 1 { }
     else if i == nauthors {
       let author_conj = Digest!(T_CS!("\\lx@author@conj"), state)?;
-      document.set_attribute(&mut node, "before", &author_conj.to_string())?;
+      document.set_attribute(&mut node, "before", &author_conj.to_string(), state)?;
     } else {
       let author_sep = Digest!(T_CS!("\\lx@author@sep"), state)?;
-      document.set_attribute(&mut node, "before", &author_sep.to_string())?;
+      document.set_attribute(&mut node, "before", &author_sep.to_string(), state)?;
     }
   });
 

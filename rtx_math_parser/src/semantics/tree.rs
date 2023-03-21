@@ -2,9 +2,11 @@ use libxml::tree::Node;
 use rtx_core::common::font::Font;
 use rtx_core::common::xml::element_nodes;
 use rtx_core::document::Document;
+use rtx_core::state::State;
 use rtx_core::Info;
 use std::borrow::Cow;
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
@@ -50,39 +52,35 @@ impl Display for XProps {
   }
 }
 
+type XAttributes = (Option<Cow<'static,str>>, Option<Font>, Option<HashMap<String,String>>);
 impl XProps {
-  pub fn to_xmath(&self, node: &mut Node) -> Result<(), Box<dyn Error + Send + Sync>> {
-    if let Some(ref content) = self.content {
-      node.set_content(content)?;
+  /// Consumes the `XProps` and returns the (content, font, attributes) in an arrangement suitable for using
+  /// the `Document` methods
+  pub fn into_attributes(mut self) -> XAttributes {
+    let mut attrs = HashMap::new();
+    if let Some(role) = self.role.take() {
+      attrs.insert(String::from("role"), role.into_owned());
     }
-    if let Some(ref role) = self.role {
-      node.set_attribute("role", role)?;
+    if let Some(meaning) = self.meaning.take() {
+      attrs.insert(String::from("meaning"), meaning.into_owned());
     }
-    if let Some(ref meaning) = self.meaning {
-      node.set_attribute("meaning", meaning)?;
+    if let Some(name) = self.name.take() {
+      attrs.insert(String::from("name"), name.into_owned());
     }
-    if let Some(ref name) = self.name {
-      node.set_attribute("name", name)?;
+    if let Some(scriptpos) = self.scriptpos.take() {
+      attrs.insert(String::from("scriptpos"), scriptpos.into_owned());
     }
-    if let Some(ref scriptpos) = self.scriptpos {
-      node.set_attribute("scriptpos", scriptpos)?;
+    if let Some(id) = self.id.take() {
+      attrs.insert(String::from("xml:id"), id.into_owned()); // TODO: double-che.into_owned()ck
     }
-    if let Some(ref id) = self.id {
-      node.set_attribute("xml:id", id)?; // TODO: double-check
+    if let Some(idref) = self.idref.take() {
+      attrs.insert(String::from("idref"), idref.into_owned());
     }
-    if let Some(ref idref) = self.idref {
-      node.set_attribute("idref", idref)?;
+    if let Some(fontref) = self.fontref.take() {
+      attrs.insert(String::from("_font"), fontref.into_owned());
     }
-    if let Some(ref fontref) = self.fontref {
-      node.set_attribute("_font", fontref)?;
-    }
-    if let Some(ref font) = self.font {
-      // TODO: how do we absorb the font attributes here? relative to current?
-      if let Some(size) = font.size {
-        node.set_attribute("fontsize", &size.to_string())?;
-      }
-    }
-    Ok(())
+    let attrs_opt = if attrs.is_empty() { None } else {Some(attrs)};
+    (self.content.take(), self.font.take(), attrs_opt)
   }
 }
 
@@ -513,7 +511,7 @@ impl XM {
   }
 
   /// Rebuild a marpa-derived parse tree into an XMath XML tree
-  pub fn to_xmath(&self, nodes: &mut [Node], document: &mut Document) -> Result<Node, Box<dyn Error + Send + Sync>> {
+  pub fn into_xmath(self, owner:&mut Node, nodes: &mut [Node], document: &mut Document, state: &mut State) -> Result<Node, Box<dyn Error + Send + Sync>> {
     match self {
       XM::Lexeme(content, _meta) => {
         let id = content.split(':').last().unwrap().parse::<usize>().unwrap() - 1;
@@ -522,70 +520,67 @@ impl XM {
         Ok(atom_node.clone())
       },
       XM::Token(props, _meta) => {
-        let mut xmtok = Node::new("XMTok", None, document.get_document()).unwrap();
-        props.to_xmath(&mut xmtok)?;
+        // This is mildly confusing. Porting the Font-related logic from Perl,
+        // I know we need to transition the {font} property to the "_font" attribute
+        // when the abstract XMath data becomes a libxml object
+        //
+        // but there is some contextual inference at times, e.g. in "insertMathToken", and not at others.
+        // this does the simpler aspect only:
+        let (content_opt, font, attrs) = props.into_attributes();
+        let mut xmtok = document.open_element_at(owner, "ltx:XMTok", attrs, font, state)?;
+        if let Some(content) = content_opt {
+          if !content.is_empty() {
+            xmtok.set_content(&content)?;
+          }
+        }
+        document.close_element_at(&mut xmtok, state)?;
         Ok(xmtok)
       },
       XM::Apply(op, args, props, _meta) => {
-        let mut apply_node = Node::new("XMApp", None, document.get_document()).unwrap();
-        props.to_xmath(&mut apply_node)?;
-        let mut op_node = op.0.to_xmath(nodes, document)?;
-        self.to_xmath_add_child(&mut apply_node, &mut op_node)?;
+        // let mut apply_node = Node::new("XMApp", None, document.get_document()).unwrap();
+        // props.into_xmath(&mut apply_node,document)?;
+        let (_, font, attrs) = props.into_attributes();
+        let mut apply_node = document.open_element_at(owner, "ltx:XMApp", attrs, font, state)?;
+        let mut op_node = op.0.into_xmath(&mut apply_node, nodes, document, state)?;
 
-        for arg in args.0.iter().flatten() {
-          let mut arg_node = arg.to_xmath(nodes, document)?;
-          self.to_xmath_add_child(&mut apply_node, &mut arg_node)?;
+        add_child_guard_xmarg(&mut apply_node, &mut op_node)?;
+        for arg in args.0.into_iter().flatten() {
+          let mut arg_node = arg.into_xmath(&mut apply_node, nodes, document, state)?;
+          add_child_guard_xmarg(&mut apply_node, &mut arg_node)?;
         }
+        document.close_element_at(&mut apply_node, state)?;
         Ok(apply_node)
       },
       XM::Dual(content, pres, props, _meta) => {
-        let mut dual_node = Node::new("XMDual", None, document.get_document()).unwrap();
-        props.to_xmath(&mut dual_node)?;
-
-        let mut content_node = content.to_xmath(nodes, document)?;
-        self.to_xmath_add_child(&mut dual_node, &mut content_node)?;
-        let mut pres_node = pres.to_xmath(nodes, document)?;
-        self.to_xmath_add_child(&mut dual_node, &mut pres_node)?;
+        let (_, font, attrs) = props.into_attributes();
+        let mut dual_node = document.open_element_at(owner, "ltx:XMDual", attrs, font, state)?;
+        let mut content_node = content.into_xmath(&mut dual_node, nodes, document, state)?;
+        add_child_guard_xmarg(&mut dual_node, &mut content_node)?;
+        let mut pres_node = pres.into_xmath(&mut dual_node, nodes, document, state)?;
+        add_child_guard_xmarg(&mut dual_node, &mut pres_node)?;
+        document.close_element_at(&mut dual_node, state)?;
         Ok(dual_node)
       },
       XM::Wrap(content, props, _meta) => {
-        let mut wrap_node = Node::new("XMWrap", None, document.get_document()).unwrap();
-        props.to_xmath(&mut wrap_node)?;
-
-        for c in content.iter() {
-          let mut content_node = c.to_xmath(nodes, document)?;
-          self.to_xmath_add_child(&mut wrap_node, &mut content_node)?;
+        let (_, font, attrs) = props.into_attributes();
+        let mut wrap_node = document.open_element_at(owner, "ltx:XMWrap", attrs, font, state)?;
+        for c in content.into_iter() {
+          let mut content_node = c.into_xmath(&mut wrap_node, nodes, document, state)?;
+          add_child_guard_xmarg(&mut wrap_node, &mut content_node)?;
         }
+        document.close_element_at(&mut wrap_node, state)?;
         Ok(wrap_node)
       },
       XM::Ref(idref) => {
         let mut ref_node = Node::new("XMRef", None, document.get_document()).unwrap();
-        document.set_attribute(&mut ref_node, "idref", idref)?;
+        document.set_attribute(&mut ref_node, "idref", &idref, state)?;
         Ok(ref_node)
       },
-      XM::Choices(choices) => {
+      XM::Choices(mut choices) => {
         Info!("to_xmath handler discarded {} parse choices.", choices.len() - 1);
-        choices[0].to_xmath(nodes, document)
+        choices.remove(0).into_xmath(owner, nodes, document, state)
       },
     }
-  }
-
-  /// Unwrap any leftover XMArg guards from the markup.
-  /// This is done earlier in LaTeXML-classic, during the semantics phase.
-  /// With marpa, we can postpone reparenting to the very end, when the tree is requested.
-  pub fn to_xmath_add_child(&self, receiver: &mut Node, incoming: &mut Node) -> Result<(), Box<dyn Error + Send + Sync>> {
-    if incoming.get_name() == "XMArg" {
-      let mut to_reparent = element_nodes(incoming);
-      for incoming_child in to_reparent.iter_mut() {
-        incoming_child.unlink();
-      }
-      for mut incoming_child in to_reparent {
-        receiver.add_child(&mut incoming_child)?;
-      }
-    } else {
-      receiver.add_child(incoming)?;
-    }
-    Ok(())
   }
 
   pub fn get_token_meaning(&self, nodes: &[Node]) -> Result<Option<Cow<str>>, Box<dyn Error>> {
@@ -627,13 +622,13 @@ impl XM {
         if let Some(node) = ctxt.document.lookup_id(idref) {
           Ok(Some(node.clone()))
         } else {
-          // TODO
+          unimplemented!();
           //   Error("expected", 'id', undef, "Cannot find a node with xml:id='$idref'",
           //   ($LaTeXML::MathParser::IDREFS{$idref}
           //     ? "Previously bound to " . ToString($LaTeXML::MathParser::IDREFS{$idref})
           //     : ()));
           // return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
-          Ok(None)
+          // Ok(None)
         }
       },
       _ => Ok(None), // error?
@@ -643,6 +638,25 @@ impl XM {
 
 impl Display for XM {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { self.fmt_indented(&Vec::new(), f) }
+}
+
+
+/// Unwrap any leftover XMArg guards from the markup.
+/// This is done earlier in LaTeXML-classic, during the semantics phase.
+/// With marpa, we can postpone reparenting to the very end, when the tree is requested.
+fn add_child_guard_xmarg(receiver: &mut Node, incoming: &mut Node) -> Result<(), Box<dyn Error + Send + Sync>> {
+  if incoming.get_name() == "XMArg" {
+    let mut to_reparent = element_nodes(incoming);
+    for incoming_child in to_reparent.iter_mut() {
+      incoming_child.unlink();
+    }
+    for mut incoming_child in to_reparent {
+      receiver.add_child(&mut incoming_child)?;
+    }
+  } else {
+    receiver.add_child(incoming)?;
+  }
+  Ok(())
 }
 
 pub fn get_token_meaning(in_node: &Node) -> Option<String> {

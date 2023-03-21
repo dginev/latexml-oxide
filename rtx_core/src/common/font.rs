@@ -242,6 +242,7 @@ pub struct Font {
   pub forcefamily: Option<bool>,
   pub forceshape: Option<bool>,
   pub scale: Option<f64>,
+  pub flags: Option<u8>,
 }
 
 impl Hash for Font {
@@ -283,56 +284,50 @@ impl fmt::Display for Font {
 // }
 impl fmt::Debug for Font {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let mut parts = Vec::new();
-    if let Some(ref family) = self.family {
-      parts.push(s!("family: {:?}", family))
-    }
-    if let Some(ref series) = self.series {
-      parts.push(s!("series: {:?}", series))
-    }
-    if let Some(ref shape) = self.shape {
-      parts.push(s!("shape: {:?}", shape))
-    }
-    if let Some(ref size) = self.size {
-      parts.push(s!("size: {:?}", size))
-    }
-    if let Some(ref scale) = self.scale {
-      parts.push(s!("scale: {:?}", scale))
-    }
-    if let Some(ref color) = self.color {
-      parts.push(s!("color: {:?}", color))
-    }
-    if let Some(ref bg) = self.bg {
-      parts.push(s!("bg: {:?}", bg))
-    }
-    if let Some(ref opacity) = self.opacity {
-      parts.push(s!("opacity: {:?}", opacity))
-    }
-    if let Some(ref encoding) = self.encoding {
-      parts.push(s!("encoding: {:?}", encoding))
-    }
-    if let Some(ref language) = self.language {
-      parts.push(s!("language: {:?}", language))
-    }
-    if let Some(ref mathstyle) = self.mathstyle {
-      parts.push(s!("mathstyle: {:?}", mathstyle))
-    }
-    if let Some(ref mathstylestep) = self.mathstyle {
-      parts.push(s!("mathstylestep: {:?}", mathstylestep))
-    }
-    if let Some(ref forceseries) = self.forceseries {
-      parts.push(s!("forceseries: {:?}", forceseries))
-    }
-    if let Some(ref forcefamily) = self.forcefamily {
-      parts.push(s!("forcefamily: {:?}", forcefamily))
-    }
-    if let Some(ref forceshape) = self.forceshape {
-      parts.push(s!("forceshape: {:?}", forceshape))
-    }
-    if let Some(ref scripted) = self.scripted {
-      parts.push(s!("scripted: {:?}", scripted))
-    }
-    write!(f, "Font[{}]", parts.join(", "))
+    let star = Cow::Borrowed("*");
+    write!(f, "Font[")?;
+    write!(f, "{}", self.family.as_ref().unwrap_or(&star))?;
+    write!(f, ",")?;
+    write!(f, "{}", self.series.as_ref().unwrap_or(&star))?;
+    write!(f, ",")?;
+    write!(f, "{}", self.shape.as_ref().unwrap_or(&star))?;
+    write!(f, ",")?;
+    let size_str = self.size.as_ref().map(|x| x.to_string()).unwrap_or_else(|| String::from('*'));
+    write!(f, "{}", size_str)?;
+    write!(f, ",")?;
+    write!(f, "{}", self.color.as_ref().unwrap_or(&star))?;
+    write!(f, ",")?;
+    write!(f, "{}", self.bg.as_ref().unwrap_or(&star))?;
+    write!(f, ",")?;
+    write!(f, "{}", self.opacity.as_ref().unwrap_or(&star))?;
+    write!(f, ",")?;
+    let scale_str = self.scale.as_ref().map(|x| x.to_string()).unwrap_or_else(|| String::from('*'));
+    write!(f, "{}", scale_str)?;
+    write!(f, ",")?;
+    write!(f, "{}", self.mathstyle.as_ref().unwrap_or(&star))?;
+    // if let Some(ref encoding) = self.encoding {
+    //   parts.push(s!("encoding: {:?}", encoding))
+    // }
+    // if let Some(ref language) = self.language {
+    //   parts.push(s!("language: {:?}", language))
+    // }
+    // if let Some(ref mathstylestep) = self.mathstyle {
+    //   parts.push(s!("mathstylestep: {:?}", mathstylestep))
+    // }
+    // if let Some(ref forceseries) = self.forceseries {
+    //   parts.push(s!("forceseries: {:?}", forceseries))
+    // }
+    // if let Some(ref forcefamily) = self.forcefamily {
+    //   parts.push(s!("forcefamily: {:?}", forcefamily))
+    // }
+    // if let Some(ref forceshape) = self.forceshape {
+    //   parts.push(s!("forceshape: {:?}", forceshape))
+    // }
+    // if let Some(ref scripted) = self.scripted {
+    //   parts.push(s!("scripted: {:?}", scripted))
+    // }
+
+    write!(f, "]")
   }
 }
 
@@ -357,6 +352,7 @@ impl Font {
       forcefamily: None,
       forceshape: None,
       scale: None,
+      flags: None,
     }
   }
   pub fn math_default() -> Self {
@@ -379,6 +375,7 @@ impl Font {
       forcefamily: None,
       forceshape: None,
       scale: None,
+      flags: None,
     }
   }
 
@@ -387,6 +384,26 @@ impl Font {
     Hash::hash(self, &mut hasher);
     hasher.finish()
   }
+
+  // pub fn stringify(&self) -> String {
+  //   let fam = match self.family {
+  //     Some("math") => Some("serif"),
+  //     other => other
+  //   };
+  //   let (ser, shp, siz, col, bkg, opa, mstyle, flags) = (self.series, self.shape, self.size, self.color, self.bg, self.opacity, self.mathstyle, self.flags)
+  // s!("Font[{},{},{},{},{},{},{},{},{}]",
+  //     if is_diff(fam, DEFFAMILY) { fam } else { "*" },
+  //     if is_diff(ser, DEFSERIES)     { ser } else { "*" },
+  //     if is_diff(shp, DEFSHAPE)      { shp } else { "*" },
+  //     if is_diff(siz, DEFSIZE)      { siz } else { "*" },
+  //     if is_diff(col, DEFCOLOR)      { col } else { "*" },
+  //     if is_diff(bkg, DEFBACKGROUND) { bkg } else { "*" },
+  //     if is_diff(opa, DEFOPACITY)    { opa } else { "*" },
+  //   ($mstyle                      ? ($mstyle) : ()),
+  //   ($flags                       ? ($flags)  : ()),
+  //   )
+
+  // }
 
   pub fn math_bearing(&self, thisbox: &Digested, prevbox: &Digested) -> f64 {
     // my $r0      = $prevbox->getProperty('role') || 'ID';
@@ -420,6 +437,7 @@ impl Font {
   pub fn get_encoding(&self) -> Option<&Cow<str>> { self.encoding.as_ref() }
   pub fn get_language(&self) -> Option<&Cow<str>> { self.language.as_ref() }
   pub fn get_mathstyle(&self) -> Option<&Cow<str>> { self.mathstyle.as_ref() }
+  pub fn get_flags(&self) -> Option<u8> { self.flags }
 
   // NOTE: In math, NORMALLY, setting any one of
   //    family, series or shape
@@ -534,8 +552,8 @@ impl Font {
   pub fn specialize(&self, text: &str) -> Self {
     let mut new = self.clone();
     if text.is_empty() {
-      return new;
-    } // ?
+      return new; // ?
+    }
     let deffamily = if self.forcefamily.unwrap_or(false) {
       self.family.clone().unwrap_or_else(|| DEFFAMILY.into())
     } else {

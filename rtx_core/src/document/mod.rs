@@ -70,6 +70,7 @@ pub struct Document {
   constructed_nodes: Vec<Node>,
   localized_boxes: Vec<Option<Digested>>,
   box_to_absorb: Option<Digested>, // local $LaTeXML::BOX;
+  localized_fonts: Vec<Arc<Font>>,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -103,6 +104,7 @@ impl Document {
       constructed_nodes: Vec::new(),
       box_to_absorb: None,
       localized_boxes: Vec::new(),
+      localized_fonts: Vec::new(),
     }
   }
 
@@ -178,19 +180,25 @@ impl Document {
   pub fn finalize(&mut self, state: &mut State) -> Result<()> {
     self.prune_xmduals();
     if let Some(mut root) = self.document.get_root_element() {
-      let init_font = Font::text_default();
-      self.finalize_rec(&mut root, init_font, state)?;
+      self.set_local_font(Arc::new(Font::text_default()));
+      self.finalize_rec(&mut root, state)?;
       if let Some(Stored::String(prefixes)) = state.lookup_value("RDFa_prefixes") {
         self.set_rdfa_prefixes(Some(prefixes));
       }
+      self.expire_local_font();
     }
     Ok(())
   }
 
-  fn finalize_rec(&mut self, node: &mut Node, mut declared_font: Font, state: &mut State) -> Result<()> {
+  fn finalize_rec(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     let qname = state.model.get_node_qname(node);
-    let state_font = state.lookup_font().unwrap();
-    let mut desired_font = &*state_font;
+    let local_font = self.get_local_font().unwrap();
+    // _standalone_font is typically for metadata that gets extracted out of context
+    let mut declared_font = if node.has_attribute("_standalone_font") {
+      Cow::Borrowed(&*FONT_TEXT_DEFAULT)
+    } else {
+      Cow::Borrowed(&*local_font)
+    };
 
     if let Some(_comment) = node.get_attribute("_pre_comment") {
       if let Some(_parent) = node.get_parent() {
@@ -217,13 +225,19 @@ impl Document {
           if state.model.can_have_attribute(&qname, key) {
             attrs_to_set.push((key.to_string(), value.to_string()));
             // Merge to set the font currently in effect
-            declared_font = declared_font.merge(properties.clone());
+            declared_font = Cow::Owned(declared_font.merge(properties.clone()));
             keys_to_remove.push(key.to_string());
           }
         }
 
-        for (key, value) in attrs_to_set {
-          self.set_attribute(node, &key, &value)?;
+        for (key, mut value) in attrs_to_set {
+          if key == "class" { // Generalize?
+            if let Some(ovalue) = node.get_attribute("class") {
+              value.push(' ');
+              value.push_str(&ovalue);
+            }
+          }
+          self.set_attribute(node, &key, &value, state)?;
         }
         for key in keys_to_remove {
           pending_declaration.remove(&key);
@@ -238,12 +252,12 @@ impl Document {
     {
       self.generate_id(node, "", state)?;
     }
-
+    self.set_local_font(Arc::new(declared_font.into_owned()));
     for mut child in node.get_child_nodes() {
       let child_type = child.get_type();
       if child_type == Some(NodeType::ElementNode) {
         let was_forcefont = child.has_attribute("_force_font");
-        self.finalize_rec(&mut child, declared_font.clone(), state)?;
+        self.finalize_rec(&mut child, state)?;
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
         if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME) && !was_forcefont && child.get_attributes().is_empty() {
@@ -274,9 +288,9 @@ impl Document {
           // Too late to do wrapNodes?
           if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child], state)? {
             for (key, (value, properties)) in &pending_declaration {
-              self.set_attribute(&mut text, key, value)?;
+              self.set_attribute(&mut text, key, value, state)?;
             }
-            self.finalize_rec(&mut text, declared_font.clone(), state)?; // Now have to clean up the new node!
+            self.finalize_rec(&mut text, state)?; // Now have to clean up the new node!
           }
         }
       }
@@ -289,7 +303,7 @@ impl Document {
         node.remove_attribute(&name)?;
       }
     }
-
+    self.expire_local_font();
     Ok(())
   }
 
@@ -507,9 +521,9 @@ impl Document {
   ) -> Result<Node> {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
     Debug!("Open element {:?} at {:?}", qname, self.get_node_qname(&self.node, state));
-    let point = self.find_insertion_point(qname, None, state)?;
+    let mut point = self.find_insertion_point(qname, None, state)?;
 
-    let newnode = self.open_element_at(point, qname, attributes, font_opt.cloned(), state)?;
+    let newnode = self.open_element_at(&mut point, qname, attributes, font_opt.cloned(), state)?;
     self.set_node(&newnode);
     // Underscore attributes such as _box and _font from LaTeXML-proper are now
     // bookkept in special substructs of Document Connected to the node hash.
@@ -1680,14 +1694,14 @@ impl Document {
   // Set any allowed attribute on a node, decoding the prefix, if any.
   // Also records, and checks, any id attributes.
   // [xml:id and namespaced attributes are always allowed]
-  pub fn set_attribute(&mut self, node: &mut Node, key: &str, value: &str) -> Result<()> {
+  pub fn set_attribute(&mut self, node: &mut Node, key: &str, value: &str, state: &State) -> Result<()> {
     if value.is_empty() {
       return Ok(()); // skip if empty
     }
     if key == "xml:id" || key == "id" {
       // If it's an ID attribute
       // Do id book keeping
-      self.record_id_with_node(value, node);
+      self.record_id_with_node(value, node, state);
       // TODO: Need to improve Namespace ergonomics, also in rust-libxml
       // let node_ns = self
       //   .document
@@ -1725,14 +1739,16 @@ impl Document {
       // if key.starts_with("_") || model.can_have_attribute(qname, key) {
       node.set_attribute(key, value)?;
       // }
+    } else { // Accept any namespaced attributes
+      dbg!(key);
+      unimplemented!();
     }
-    // else {                   // Accept any namespaced attributes
-    //   my ($ns, $name) = state.model}->decodeQName($key);
+    //   my ($ns, $name) = state.model.decodeQName($key);
     //   if ($ns) {             // If namespaced attribute (must have prefix!
     // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
     // declared? if (!$prefix) {                                    // if
     // namespace not already declared $prefix =
-    // state.model}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
+    // state.model.getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
     // self.getDocument->documentElement->setNamespace($ns, $prefix, 0); }
     // // and declare it if ($prefix eq '//default') {    // Probably
     // shouldn't happen...?       node.setAttribute($name => $value); }
@@ -1743,7 +1759,7 @@ impl Document {
     Ok(())
   }
 
-  fn add_ss_values(&mut self, node: &mut Node, key: &str, values_str: &str) -> Result<()> {
+  fn add_ss_values(&mut self, node: &mut Node, key: &str, values_str: &str, state: &State) -> Result<()> {
     // $values = $values->toAttribute if ref $values;
     if !values_str.is_empty() {
       // Skip if `empty'; but 0 is OK!
@@ -1757,16 +1773,16 @@ impl Document {
           }
         }
         old.sort_unstable();
-        self.set_attribute(node, key, &old.join(" "))?;
+        self.set_attribute(node, key, &old.join(" "), state)?;
       } else {
         values.sort_unstable();
-        self.set_attribute(node, key, &values.join(" "))?;
+        self.set_attribute(node, key, &values.join(" "), state)?;
       }
     }
     Ok(())
   }
 
-  pub fn add_class(&mut self, node: &mut Node, class: &str) -> Result<()> { self.add_ss_values(node, "class", class) }
+  pub fn add_class(&mut self, node: &mut Node, class: &str, state: &State) -> Result<()> { self.add_ss_values(node, "class", class, state) }
 
   //**********************************************************************
   // Association of nodes and ids (xml:id)
@@ -1796,18 +1812,20 @@ impl Document {
   /// which should be the `xml:id` attribute of the `node`.
   /// Usually this association will be maintained by the methods
   /// that create nodes or set attributes.
-  fn record_id_with_node(&mut self, id: &str, node: &Node) -> String {
-    if let Some(prev) = self.idstore.get(id) {
+  fn record_id_with_node(&mut self, id: &str, node: &Node, state: &State) -> String {
+    let prev_opt = if let Some(prev) = self.idstore.get(id) {
       // Whoops! Already assigned!!!
       // Can we recover?
-      unimplemented!();
-      // if ! self.node.is_same_node(prev) {
-      //   let badid = id.to_string();
-      //   let id = self.modify_id(id);
-      //   Info!("malformed", "id", node, "Duplicated attribute xml:id",
-      //     "Using id='$id' on " . Stringify($node),
-      //     "id='$badid' already set on " . Stringify($prev));
-      // }
+      if &self.node != prev {
+        Some(prev.clone())
+      } else { None }
+    } else { None };
+    if let Some(prev) = prev_opt {
+      let badid = id;
+      let id = self.modify_id(id.to_owned());
+      let message = s!("Duplicated attribute xml:id. Using id='{}' on {} id='{}' already set on {}",
+        id, self.document.node_to_string(node),badid, self.document.node_to_string(&prev));
+      Info!("malformed", "id", self, state, message);
     }
     self.idstore.insert(id.to_string(), node.clone());
     id.to_string()
@@ -1818,8 +1836,8 @@ impl Document {
   /// These are used to record or unrecord, in bulk, all the ids within a node (tree).
   pub fn record_node_ids(&mut self, node: &Node, state: &mut State) -> Result<()> {
     for mut idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node), state) {
-      if let Some(id) = idnode.get_attribute("xml:id") {
-        let newid = self.record_id_with_node(&id, &idnode);
+      if let Some(id) = idnode.get_attribute_ns("id", XML_NS) {
+        let newid = self.record_id_with_node(&id, &idnode, state);
         if newid != id {
           idnode.set_attribute("xml:id", &newid)?;
         }
@@ -1830,7 +1848,7 @@ impl Document {
 
   pub fn unrecord_node_ids(&mut self, node: &Node, state: &mut State) {
     for idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node), state) {
-      if let Some(id) = idnode.get_attribute("xml:id") {
+      if let Some(id) = idnode.get_attribute_ns("id", XML_NS) {
         self.unrecord_id(&id);
       }
     }
@@ -1843,15 +1861,16 @@ impl Document {
       // Whoops! Already assigned!!!
       // Can we recover?
       let badid = id;
-      unimplemented!();
-      //     if (!$LaTeXML::Core::Document::ID_SUFFIX
-      //       || $$self{idstore}{ $id = $badid . $LaTeXML::Core::Document::ID_SUFFIX }) {
-      //       foreach my $s1 (1 .. 26 * 26 * 26) {    # Gotta give up, eventually; is 3 letters enough?
-      //         return $id unless $$self{idstore}{ $id = $badid . radix_alpha($s1) }; }
-      //       Error('malformed', 'id', $self, "Automatic incrementing of ID counters failed",
-      //         "Last alternative for '$id' is '$badid'"); }
+      // if (!$LaTeXML::Core::Document::ID_SUFFIX
+      // || $$self{idstore}{ $id = $badid . $LaTeXML::Core::Document::ID_SUFFIX }) {
+      // foreach my $s1 (1 .. 26 * 26 * 26) {    # Gotta give up, eventually; is 3 letters enough?
+      //   return $id unless $$self{idstore}{ $id = $badid . radix_alpha($s1) }; }
+      // Error!("malformed", "id", "Automatic incrementing of ID counters failed", self, state, s!("Last alternative for '{}' is '{}'",id,badid)); } }
+      // TODO
+      s!("{}a",badid)
+    } else {
+      id
     }
-    id
   }
 
   pub fn lookup_id(&self, id: &str) -> Option<&Node> { self.idstore.get(id) }
@@ -1915,19 +1934,22 @@ impl Document {
         self.mark_xmnode_visibility_aux(p, false, true, state)?;
       }
     } else if qname == "ltx:XMRef" {
-      unimplemented!();
-    //     #    $self->markXMNodeVisibility_aux($self->realizeXMNode($node),$cvis,$pvis); }
-    //     my $id = $node->getAttribute('idref');
-    //     if (!$id) {
-    //       my $key = $node->getAttribute('_xmkey');
-    //       Warn('expected', 'id', $self, "Missing idref on ltx:XMRef",
-    //         ($key ? ("_xmkey is $key") : ()));
-    //       return; }
-    //     my $reffed = $self->lookupID($id);
-    //     if (!$reffed) {
-    //       Warn('expected', 'node', $self, "No node found with id=$id (referred to from ltx:XMRef)");
-    //       return; }
-    //     $self->markXMNodeVisibility_aux($reffed, $cvis, $pvis); }
+      match node.get_attribute("idref") {
+        None => {
+          let key = node.get_attribute("_xmkey");
+          Warn!("expected", "id", self, state, "Missing idref on ltx:XMRef",s!("_xmkey is `{}`",key.unwrap_or_default()));
+        },
+        Some(id) => {
+          match self.lookup_id(&id) {
+            None => {
+              Warn!("expected", "node", self, state, "No node found with id={id} (referred to from ltx:XMRef)");
+            },
+            Some(reffed) => {
+              self.mark_xmnode_visibility_aux(reffed.clone(), cvis, pvis, state)?;
+            }
+          }
+        }
+      }
     } else {
       for child in xml::element_nodes(&node) {
         self.mark_xmnode_visibility_aux(child, cvis, pvis, state)?;
@@ -2208,7 +2230,7 @@ impl Document {
   /// in the process.
   pub fn open_element_at(
     &mut self,
-    mut point: Node,
+    mut point: &mut Node,
     qname: &str,
     attributes: Option<HashMap<String, String>>,
     mut font_opt: Option<Font>,
@@ -2260,9 +2282,9 @@ impl Document {
       }
     } else {
       if font_opt.is_none() {
-        font_opt = Some(self.get_node_font(&point).clone());
+        font_opt = Some(self.get_node_font(point).clone());
       }
-      newnode = self.open_element_internal(&mut point, decoded_ns, &tag, state)?;
+      newnode = self.open_element_internal(point, decoded_ns, &tag, state)?;
     }
 
     if let Some(attrs) = attributes {
@@ -2272,7 +2294,7 @@ impl Document {
         if key == "font" || key == "locator" {
           continue;
         }
-        self.set_attribute(&mut newnode, key, &attrs[key])?;
+        self.set_attribute(&mut newnode, key, &attrs[key], state)?;
       }
     }
     if let Some(font) = font_opt {
@@ -2294,7 +2316,7 @@ impl Document {
     Debug!(
       "Inserting {:?} into {:?}",
       self.get_node_qname(&newnode, state),
-      self.get_node_qname(&point, state)
+      self.get_node_qname(point, state)
     );
 
     // Run afterOpen operations
@@ -2333,8 +2355,7 @@ impl Document {
                 None
               }
             } else {
-              let message = s!("no namespace prefix found for {:?}", ns_uri);
-              Error!("document", "open_element_internal", self, state, message);
+              // default namespace?
               None
             }
           },
@@ -2439,7 +2460,7 @@ impl Document {
           match key.as_str() {
             "xml:id" | "id" => { // Use the replacement id
               let mapped_id = id_map.get(&val).unwrap();
-              let newid = self.record_id_with_node(mapped_id, &new);
+              let newid = self.record_id_with_node(mapped_id, &new, state);
               new.set_attribute(&key, &newid)?;
             }
             "idref" => { // Refer to the replacement id if it was replaced
@@ -2726,6 +2747,16 @@ impl Document {
     }
   }
 
+  fn set_local_font(&mut self, arg: Arc<Font>) {
+    self.localized_fonts.push(arg);
+  }
+  fn get_local_font(&self) -> Option<Arc<Font>> {
+    self.localized_fonts.last().cloned()
+  }
+  fn expire_local_font(&mut self) {
+    self.localized_fonts.pop();
+  }
+
   //**********************************************************************
   /// This function computes an xml:id for a node, if it hasn't already got one.
   /// It is suitable for use in Tag afterOpen as
@@ -2765,7 +2796,7 @@ impl Document {
         + &ctr;
 
       ancestor.set_attribute(&ctrkey, &ctr)?;
-      self.set_attribute(node, "xml:id", &id)?;
+      self.set_attribute(node, "xml:id", &id, state)?;
     }
     Ok(())
   }
@@ -2814,7 +2845,7 @@ impl Document {
                                                    //           $child->removeAttribute('xml:id');
                                                    //           $self->unRecordID($id); }
 
-          let mut new = self.open_element_at(node.clone(), &tag, Some(attributes), None, state)?;
+          let mut new = self.open_element_at( node, &tag, Some(attributes), None, state)?;
           self.append_tree(&mut new, child.get_child_nodes(), state)?;
           self.close_element_at(&mut new, state)?;
         },
@@ -2828,7 +2859,6 @@ impl Document {
           dbg!(other);
         },
       }
-      // TODO: Box? triple? other?
     }
     Ok(())
   }

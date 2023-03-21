@@ -96,10 +96,10 @@ fn relocate_footnote_aux(document: &mut Document, notetype: &str, marknote: &mut
   // textnote.get_parent().unwrap().remove_child(textnote);
   textnote.unlink();
   document.append_clone(marknote, textnote.get_child_nodes(), state)?;
-  document.set_attribute(marknote, "role", notetype)?;
+  document.set_attribute(marknote, "role", notetype, state)?;
   if let Some(labels) = textnote.get_attribute("labels") {
     document.generate_id(marknote, "", state)?;
-    document.set_attribute(marknote, "labels", &labels)?; }
+    document.set_attribute(marknote, "labels", &labels, state)?; }
   Ok(()) }
 
 pub fn only_preamble(cs:&str, stomach: &mut Stomach, state: &mut State) {
