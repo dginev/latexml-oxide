@@ -324,12 +324,11 @@ impl DigestionAPI for Core {
       state.search_paths.push_front(dir.clone());
       state.graphics_paths.push_front(dir);
 
-      let name_copy = name.clone();
       state.install_definition(
         Stored::Expandable(Arc::new(Expandable {
           cs: T_CS!("\\jobname"),
           paramlist: None,
-          expansion: Tokens::new(Explode!(name_copy)).into(),
+          expansion: Tokens::new(Explode!(name)).into(),
           ..Expandable::default()
         })),
         None,

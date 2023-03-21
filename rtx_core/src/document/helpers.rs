@@ -11,7 +11,7 @@ pub fn prune_empty_para(document: &mut Document, node: &mut Node, state: &mut St
     let prev_opt = node.get_prev_element_sibling();
     if prev_opt.is_none() || document.get_node_qname(&prev_opt.unwrap(), state) != "ltx:para" {
       // If `node` WAS the 1st child
-      document.add_class(&mut node.get_parent().unwrap(), "ltx_pruned_first")?;
+      document.add_class(&mut node.get_parent().unwrap(), "ltx_pruned_first", state)?;
     }
     node.unlink();
   }

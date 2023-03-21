@@ -14,6 +14,7 @@ pub use rtx_core::*;
 
 pub use rtx_core::aux_macros::*;
 pub use rtx_core::common::cleaners::*;
+pub use rtx_core::common::xml::XML_NS;
 pub use rtx_core::common::float::{Float, floatformat};
 pub use rtx_core::common::font;
 pub use rtx_core::common::font::Font;

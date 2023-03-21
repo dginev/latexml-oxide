@@ -47,7 +47,7 @@ LoadDefinitions!(state, {
           let qname = document.get_node_qname(&node, state);
           if qname == "ltx:para" && node.get_attribute("class").is_none() {  // Only set on the para about to close, if unknown!
             let class_str = prop_str!(props,"class");
-            document.set_attribute(&mut node, "class", class_str)?;
+            document.set_attribute(&mut node, "class", class_str, state)?;
           } else if qname == "ltx:figure" {
             // insert breaks in figures, for vertically separating subfigures
             document.insert_element("ltx:break",Vec::new(), None, state)?;

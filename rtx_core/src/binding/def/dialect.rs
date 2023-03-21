@@ -968,7 +968,6 @@ pub fn def_environment(
   });
   state.install_definition(name_constructor, options.scope.clone());
   let end_name = s!("\\end{}", &name);
-  let name_clone = name.clone(); // for after_digest
   let mut after_digest_end = options.after_digest;
   after_digest_end.push(after_digest_simple!(stomach, whatsit, state, {
     stomach.egroup(state)?;
@@ -1039,7 +1038,7 @@ pub fn dualize_arglist(presentation: &str, args: Vec<Option<Tokens>>, gullet: &m
         pargs.push(Some(arg.clone()));
         cargs.push(Some(arg));
       },
-      Some(arg_toks) => if used.get(&index).unwrap_or(&0) > &0 { // used in presentation?
+      Some(arg_toks) => if used.get(&(1+index)).unwrap_or(&0) > &0 { // used in presentation?
         let id = get_xmarg_id(gullet, state)?;
         pargs.push(Some(Tokens!(T_CS!("\\lx@xmarg"), T_BEGIN!(), id.clone().unlist(), T_END!(),T_BEGIN!(), arg_toks.unlist(), T_END!()))); // put XMArg in presentation
         cargs.push(Some(Tokens!(T_CS!("\\lx@xmref"), T_BEGIN!(), id.unlist(), T_END!()))); }

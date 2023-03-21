@@ -24,7 +24,7 @@ LoadDefinitions!(state, {
     let id = prop_str!(props,"id");
     if let Some(mut docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
       if !id.is_empty() {
-        document.set_attribute(&mut docel, "xml:id", id)?;
+        document.set_attribute(&mut docel, "xml:id", id, state)?;
       }
     } else {
       document.open_element("ltx:document", Some(string_map!("xml:id" => id)), None, state)?;

@@ -1,4 +1,6 @@
 use crate::package::*;
+use crate::common::xml::{XML_NS};
+use std::collections::hash_map::Entry;
 
 //**********************************************************************
 // LaTeXML Specific.
@@ -174,13 +176,13 @@ DefConstructor!("\\lx@add@Preamble@PI Undigested", "<?latexml preamble='#1'?>");
 // # Building XMDuals for Mathematical Parallel markup
 // # Used when the content and presentation forms have different structure.
 
+// TODO:
 //DefKeyVal!("XMath", "reversion",              "UndigestedDefKey");
 //DefKeyVal!("XMath", "content_reversion",      "UndigestedDefKey");
 //DefKeyVal!("XMath", "presentation_reversion", "UndigestedDefKey");
+
 DefConstructor!("\\lx@dual OptionalKeyVals:XMath {}{}",
-  "<ltx:XMDual role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset'
-    yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>
-    #2<ltx:XMWrap>#3</ltx:XMWrap></ltx:XMDual>",
+  "<ltx:XMDual role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2<ltx:XMWrap>#3</ltx:XMWrap></ltx:XMDual>",
   before_digest => sub[stomach,state] {
     state.push_value("PENDING_DUAL_XMARGS", Stored::HashStored(HashMap::new()));
   },
@@ -284,37 +286,43 @@ DefConstructor!("\\lx@xmref{}", "<ltx:XMRef _xmkey='#1'/>",
   // sizer => sub { LookupValue('xref:' . ToString($_[0]->getArg(1)))->getSize; }
 );
 
-// # Connect up the XMRef/XMArg pairs (actually can be multiple XMRef's)
-// # We want to set the idref of the XMRef's to point to the id of the XMArg (or other XM element),
-// # but usually the XMRef is created first, and we want to let the referred to element
-// # get it's id computed by whatever means it prefers.
-// # so we have to work both ways (use state to record associations, to avoid expensive xpath)
-// # Set id's on any non-XMRef nodes that have an _xmkey
-// # This gets a more natural ordering
-// Tag('ltx:*', 'afterOpen:late' => sub {
-//     my ($document, $node) = @_;
-//     if (my $key = $node->getAttribute('_xmkey')) {
-//       my $qname = $document->getNodeQName($node);
-//       if (($qname ne 'ltx:XMRef') && ($qname =~ /^ltx:XM/) && !$node->hasAttribute('xml:id')) {
-//         GenerateID($document, $node, undef, ''); } } });
+// Connect up the XMRef/XMArg pairs (actually can be multiple XMRef's)
+// We want to set the idref of the XMRef's to point to the id of the XMArg (or other XM element),
+// but usually the XMRef is created first, and we want to let the referred to element
+// get it's id computed by whatever means it prefers.
+// so we have to work both ways (use state to record associations, to avoid expensive xpath)
+// Set id's on any non-XMRef nodes that have an _xmkey
+// This gets a more natural ordering
+Tag!("ltx:*", after_open_late => sub[document,node,state] {
+  if node.has_attribute("_xmkey") {
+    let qname = document.get_node_qname(node, state);
+    if (qname != "ltx:XMRef") && qname.starts_with("ltx:XM") && !node.has_attribute("xml:id") {
+      document.generate_id(node, "", state)?;
+    }
+  }
+});
 
-// Tag('ltx:XMDual', 'afterClose:late' => sub {
-//     my ($document, $node) = @_;
-//     my %ids  = ();
-//     my @refs = ();
-//     # Collect all children with _xmkey attribute
-//     foreach my $n ($document->findnodes('descendant::*[@_xmkey]', $node)) {
-//       if (($document->getNodeQName($n) eq 'ltx:XMRef') && !$n->hasAttribute('idref')) {
-//         push(@refs, $n); }    # we'll fill these in next
-//       else {                  # generate & record ids for all referenced noces
-//         my $key = $n->getAttribute('_xmkey');
-//         if (!$ids{$key}) {
-//           GenerateID($document, $n, undef, '');    # Generate id if none already.
-//           $ids{$key} = $n->getAttribute('xml:id'); } } }
-//     foreach my $r (@refs) {                        # Now fill in the references
-//       $document->setAttribute($r, idref => $ids{ $r->getAttribute('_xmkey') });
-//       $r->removeAttribute('_xmkey'); }
-// });
+Tag!("ltx:XMDual", after_close_late => sub[document,node,state] {
+  let mut ids  = HashMap::new();
+  let mut refs = Vec::new();
+  // Collect all children with _xmkey attribute
+  for mut n in document.findnodes("descendant::*[@_xmkey]", Some(node), state) {
+    if (document.get_node_qname(&n, state) == "ltx:XMRef") && !n.has_attribute("idref") {
+      refs.push(n);    // we'll fill these in next
+    } else { // generate & record ids for all referenced noces
+      let key = n.get_attribute("_xmkey").unwrap();
+      if let Entry::Vacant(e) = ids.entry(key) {
+        document.generate_id(&mut n, "", state)?; // Generate id if none already.
+        e.insert(n.get_attribute_ns("id",XML_NS).unwrap_or_default());
+      }
+    }
+  }
+  for mut r in refs {                        // Now fill in the references
+    let r_xmkey = r.get_attribute("_xmkey").unwrap();
+    document.set_attribute(&mut r, "idref", ids.get(&r_xmkey).unwrap(), state)?;
+    r.remove_attribute("_xmkey")?;
+  }
+});
 
 // # Construction aids
 // # Build an XMDual (via \lx@dual) given the content & presentation forms.

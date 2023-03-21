@@ -341,10 +341,10 @@ LoadDefinitions!(state, {
       let mut strike = document.insert_math_token("",
         string_map!("role" => "ENCLOSE", "enclose" => "updiagonalstrike",
         "meaning" => "not", "_box" => not_node.to_hashable()), None, state)?;
-      if let Some(id) = not_node.get_attribute("xml:id") {
+      if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
         not_node.remove_attribute("xml:id")?;
         document.unrecord_id(&id);
-        document.set_attribute(&mut strike, "xml:id", &id)?;
+        document.set_attribute(&mut strike, "xml:id", &id, state)?;
         document.get_node_mut().add_child(thing)?;
         document.close_element("ltx:XMApp", state)?;
       }
@@ -356,11 +356,11 @@ LoadDefinitions!(state, {
       }
 
       if let Some(meaning) = thing.get_attribute("meaning") {
-        document.set_attribute(thing, "meaning",  &format!("not-{meaning}"))?; }
+        document.set_attribute(thing, "meaning",  &format!("not-{meaning}"), state)?; }
       if let Some(name) = thing.get_attribute("name") {
-        document.set_attribute(thing, "name", &format!("not-{name}"))?; }
+        document.set_attribute(thing, "name", &format!("not-{name}"), state)?; }
       else if !text.is_empty() {
-        document.set_attribute(thing, "name", &format!("not-{text}"))?; }
+        document.set_attribute(thing, "name", &format!("not-{text}"), state)?; }
 
       let known_c = MATH_CHAR_NEGATIONS.get(&text);
       let new : Cow<'_, str> = match known_c {
@@ -371,7 +371,7 @@ LoadDefinitions!(state, {
       // and put the node back in
       document.get_node_mut().add_child(thing)?;
       // Since the <not> element is disappearing, if it had an id that was referenced...!?!?
-      if let Some(id) = not_node.get_attribute("xml:id") {
+      if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
         for mut n in document.findnodes(&format!("descendant-or-self::ltx:XMRef[@idref='{id}']"), None, state) {
           document.remove_node(&mut n);
         }

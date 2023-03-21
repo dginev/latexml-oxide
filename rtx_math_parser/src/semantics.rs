@@ -468,6 +468,7 @@ fn invisible_times() -> XProps {
     meaning: Some(Cow::Borrowed("times")),
     role: Some(Cow::Borrowed("MULOP")),
     content: Some(Cow::Borrowed("\u{2062}")),
+    font: Some(Font::default()),
     ..XProps::default()
   }
 }
@@ -476,6 +477,7 @@ fn invisible_comma() -> XProps {
   XProps {
     role: Some(Cow::Borrowed("PUNCT")),
     content: Some(Cow::Borrowed("\u{2063}")),
+    font: Some(Font::default()),
     ..XProps::default()
   }
 }

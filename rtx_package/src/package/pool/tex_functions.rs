@@ -315,7 +315,7 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
     newblock = Some(document.open_element(tag, Some(attr_arg), None, state)?);
   }
   // Insert the content for the block, and reduce
-  document.set_attribute(&mut document.get_element().unwrap(), "_vertical_mode_", "true")?; // HACK!!!! (see \hbox)
+  document.set_attribute(&mut document.get_element().unwrap(), "_vertical_mode_", "true", state)?; // HACK!!!! (see \hbox)
 
   document.absorb(contents, None, state)?;
   let absorbed : Vec<Node> = document.get_constructed_nodes().to_vec();
@@ -374,7 +374,7 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
       // Else only 1 item inside...which is an ltx:p with 1 item, if allowed.
       let mut cfirst = crows.pop_front().unwrap();
       for (key, val) in blockattr {
-        document.set_attribute(&mut cfirst, &key, &val)?;
+        document.set_attribute(&mut cfirst, &key, &val, state)?;
       }
       document.unwrap_nodes(rows.remove(0))?;
       document.unwrap_nodes(blocknode)?;
@@ -384,7 +384,7 @@ pub fn insert_block(document: &mut Document, contents: &Digested, mut blockattr:
     {
       let mut first = rows.remove(0);
       for (key, val) in blockattr {
-        document.set_attribute(&mut first, &key, &val)?;
+        document.set_attribute(&mut first, &key, &val, state)?;
       }
       document.unwrap_nodes(blocknode)?;
     }
@@ -415,7 +415,7 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node, state: &mut State) 
       } else {
         document.wrap_nodes("ltx:text", vec![text], state)?.unwrap()
       };
-      document.add_class(&mut text, "ltx_markedasmath")?; // Now record that it originally was marked as math
+      document.add_class(&mut text, "ltx_markedasmath", state)?; // Now record that it originally was marked as math
       texts.push(text)
     }
     document.replace_node(mathnode.clone(), texts)?; // and replace the whole Math with the pieces
@@ -815,7 +815,7 @@ pub fn set_align_or_class(document: &mut Document, node: &mut Node, align: &str,
   else if !align.is_empty() && state.model.can_have_attribute(&qname, "align") {
     node.set_attribute("align", align)?;
   } else if !class.is_empty() && state.model.can_have_attribute(&qname, "class") {
-    document.add_class(node, class)?;
+    document.add_class(node, class, state)?;
   }
   Ok(())
 }

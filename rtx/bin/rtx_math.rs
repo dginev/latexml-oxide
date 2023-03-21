@@ -1,13 +1,14 @@
 #[macro_use]
 extern crate rtx_core;
+use std::process;
+use std::env;
 use libxml::tree::SaveOptions;
 use rtx::util::test::lex_single_tex_formula;
-use rtx_core::state::{State, StateOptions};
 use rtx_math_parser::*;
-use std::env;
-use std::process;
+use rtx_core::state::{State, StateOptions};
+use rtx_core::common::error::Result;
 
-fn main() {
+fn main() -> Result<()> {
   if rtx_core::util::logger::init(log::LevelFilter::Info).is_err() {
     Error!(
       "rtx",
@@ -28,22 +29,21 @@ fn main() {
     },
   };
 
-  let (lexemes, lex_nodes, xmath_opt, mut doc) = lex_single_tex_formula(&source);
+  let (lexemes, mut lex_nodes, xmath_opt, mut doc) = lex_single_tex_formula(&source);
   assert!(!lexemes.is_empty());
   eprintln!("lexemes: {lexemes:?}");
   let mut state = State::new(StateOptions::default());
   let mut parser = MathParser::default();
-  if let Ok(Some(mut parse_tree)) = parser.parse_lexemes(lexemes, lex_nodes, &mut doc, &mut state) {
+  if let Ok(Some(parse_tree)) = parser.parse_lexemes(lexemes, &lex_nodes, &mut doc, &mut state) {
     let mut xmath = xmath_opt.unwrap();
     for mut node in xmath.get_child_nodes() {
       node.unlink();
     }
-    xmath.add_child(&mut parse_tree).unwrap();
-
+    let xml_tree = parse_tree.into_xmath(&mut xmath, &mut lex_nodes, &mut doc, &mut state)?;
     xmath
       .get_parent()
       .unwrap()
-      .set_attribute("text", &text_form(&parse_tree, &mut doc, &mut state))
+      .set_attribute("text", &text_form(&xml_tree, &mut doc, &mut state))
       .unwrap();
 
     println!(
@@ -57,4 +57,5 @@ fn main() {
     Warn!("math", "parse", None, None, "Grammar did not recognize expression.");
     process::exit(1);
   }
+  Ok(())
 }

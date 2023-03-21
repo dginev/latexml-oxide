@@ -115,7 +115,7 @@ LoadDefinitions!(state, {
         None
       };
       if let Some(tex_string) = tex_opt {
-        document.set_attribute(node, "tex", &tex_string)?;
+        document.set_attribute(node, "tex", &tex_string, state)?;
       }
     }
   });

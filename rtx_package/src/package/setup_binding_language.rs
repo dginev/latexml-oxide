@@ -2228,6 +2228,13 @@ macro_rules! defi_opts {
   (@munch ( $(,)? after_close $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_close ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
+  // after_close_late: Option<Vec<TagConstructionClosure>>
+  (@munch ( $(,)? after_close_late $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@after_close_late (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
+  (@munch ( $(,)? after_close_late $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@after_close_late ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
   // auto_open: Option<bool>
   (@munch ( $(,)? auto_open $(:)?$(=>)? $auto:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_open @ $auto.into() ]})
@@ -2391,6 +2398,15 @@ macro_rules! defi_opts {
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_close @ Some(tagsub!(document, node, state, $body)) ]})
   };
+    (@after_close_late (
+    sub[$document:ident, $node:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_close_late @ Some(tagsub!($document, $node, $state_arg, $body)) ]})
+  };
+  (@after_close_late (
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_close_late @ Some(tagsub!(document, node, state, $body)) ]})
+  };
+
 
   (@replace ($body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {

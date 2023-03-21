@@ -9,7 +9,7 @@ use rtx_core::common::error::{note_begin, note_end, note_progress, Result};
 use rtx_core::common::xml::*;
 use rtx_core::document::Document;
 use rtx_core::state::State;
-use rtx_core::{fatal, map, s, static_map, Info};
+use rtx_core::{fatal, map, s, static_map, Info, Error};
 
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
@@ -42,24 +42,6 @@ lazy_static! {
     "SUPERSCRIPTOP" => 1000, "SUBSCRIPTOP" => 1000);
   static ref PRE_DIGITS_RE : Regex = Regex::new(r"^pre\d+$").unwrap();
 }
-
-// our @EXPORT_OK = (qw(&Lookup &New &Absent &Apply &ApplyNary &recApply
-// &CatSymbols     &Annotate &InvisibleTimes &InvisibleComma
-//     &NewFormulae &NewFormula &NewList
-// &ApplyDelimited &NewScript &DecorateOperator &InterpretDelimited
-// &NewEvalAt     &LeftRec
-//     &Arg &MaybeFunction
-//     &SawNotation &IsNotationAllowed
-//     &isMatchingClose &Fence));
-// our %EXPORT_TAGS = (constructors
-//     => [qw(&Lookup &New &Absent &Apply &ApplyNary &recApply &CatSymbols
-//       &Annotate &InvisibleTimes &InvisibleComma
-//       &NewFormulae &NewFormula &NewList
-// &ApplyDelimited &NewScript &DecorateOperator &InterpretDelimited
-// &NewEvalAt       &LeftRec
-//       &Arg &MaybeFunction
-//       &SawNotation &IsNotationAllowed
-//       &isMatchingClose &Fence)]);
 
 pub struct MathParser {
   // grammar: MarpaGrammar,
@@ -96,7 +78,7 @@ impl Default for MathParser {
       maybe_functions: HashMap::new(),
       // punctuation: HashMap::new(),
       // lostnodes: HashMap::new(),
-      // idrefs: vec![],
+      // idrefs: Vec::new(),
       n_parsed: 0,
       // strict: true,
       // warned: false,
@@ -327,12 +309,14 @@ impl MathParser {
         for el_node in element_nodes(node) {
           document.unrecord_node_ids(&el_node, state);
         }
-      // // unbindNode followed by (append|replace)Tree (which removes ID's) should
-      // be safe for child in node.get_child_nodes() {
-      //   child.unbind_node();
-      // }
-      //       $document->appendTree($node, $result);
-      //       $result = [element_nodes($node)]->[0];
+        // unbindNode followed by (append|replace)Tree (which removes ID's) should
+        // be safe
+        for mut child in node.get_child_nodes() {
+          child.unbind_node();
+        }
+        document.append_tree(node, vec![result], state)?;
+        let mut new_element_children = element_nodes(node);
+        result = new_element_children.remove(0);
       } else {
         // Replace the whole node for XMArg, XMWrap; preserve some attributes
         //ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
@@ -427,13 +411,13 @@ impl MathParser {
       // single node, just return
       Ok(Some(content_nodes.remove(0)))
     } else {
-      let (lexemes, nodes) = node_to_grammar_lexemes(mathnode, &mut idx);
-      if let Ok(Some(mut parse_tree)) = self.parse_lexemes(lexemes, nodes, document, state) {
+      let (lexemes, mut nodes) = node_to_grammar_lexemes(mathnode, &mut idx);
+      if let Ok(Some(parse_tree)) = self.parse_lexemes(lexemes, &nodes, document, state) {
         for mut node in mathnode.get_child_nodes() {
           node.unlink();
         }
-        mathnode.add_child(&mut parse_tree).unwrap();
-        Ok(Some(parse_tree))
+        let xml_tree = parse_tree.into_xmath(mathnode, &mut nodes, document, state)?;
+        Ok(Some(xml_tree))
       } else {
         Ok(None)
       }
@@ -512,15 +496,14 @@ impl MathParser {
     }
   }
 
-  pub fn parse_lexemes(&mut self, lexemes: Vec<String>, mut nodes: Vec<Node>, document: &mut Document, state: &mut State) -> Result<Option<Node>> {
+  pub fn parse_lexemes(&mut self, lexemes: Vec<String>, nodes: &[Node], document: &mut Document, state: &mut State) -> Result<Option<XM>> {
     let mut input_string: String = lexemes.join(" ");
     // Add a trailing space, in an attempt to work with
     // a rules!() macro that has a Hard expectation of a space char following EVERY token.
     // this - counterintuitively- allows a simple macro definition AND a simple parse tree.
     input_string.push(' ');
-    if let Ok(parse_tree) = self.parse_marpa(&input_string, &nodes, document, state) {
-      let xml_tree = parse_tree.to_xmath(&mut nodes, document)?;
-      Ok(Some(xml_tree))
+    if let Ok(parse_tree) = self.parse_marpa(&input_string, nodes, document, state) {
+      Ok(Some(parse_tree))
     } else {
       Ok(None)
     }
@@ -532,7 +515,8 @@ impl MathParser {
 // Mostly for debugging information?
 // Note that the nodes are true libXML nodes, already absorbed into the document
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-pub fn text_form(node: &Node, document: &mut Document, state: &mut State) -> String { textrec(node, None, None, document, state) }
+pub fn text_form(node: &Node, document: &mut Document, state: &mut State) -> String {
+  textrec(node, None, None, document, state) }
 
 // ================================================================================
 // Some more XML utilities, but math specific (?)
@@ -602,7 +586,10 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
     "ltx:XMDual" => {
       let children = element_nodes(&node);
       let content = children.first().expect("XMDual should always have 2 child elements.");
-      textrec(content, Some(outer_bp), Some(outer_name), document, state) // Just send out
+      textrec(content, Some(outer_bp), Some(outer_name), document, state) // Just send out the semantic form
+      // Fall back to presentation, if content has poor semantics (eg. from replacement patterns)
+      // TODO
+      // return ($text =~ /^\(*Unknown/ ? textrec($presentation, $outer_bp, $outer_name) : $text); }
     },
     "ltx:XMTok" => {
       let name = match get_token_meaning(&node, document, state) {
@@ -632,7 +619,7 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
         .collect::<Vec<_>>()
         .join("")
     },
-    "ltx:XMArray" => String::new(), // TODO:     return textrec_array($node); }
+    "ltx:XMArray" => { textrec_array(&node, state)  },
     _ => s!("[{}]", p_get_value(&node)),
   }
 }
@@ -708,14 +695,15 @@ fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document, st
   }
 }
 
-// sub textrec_array {
-//   my ($node) = @_;
+fn textrec_array(_node: &Node, _state: &mut State) -> String {
 // my $name = $node->getAttribute('meaning') || $node->getAttribute('name')
 // || 'Array';   my @rows = ();
 //   foreach my $row (element_nodes($node)) {
 // push(@rows, '[' . join(', ', map { ($_->firstChild ?
 // textrec($_->firstChild) : '') } element_nodes($row)) . ']'); } return $name
-// . '[' . join(', ', @rows) . ']'; }
+// . '[' . join(', ', @rows) . ']';
+  unimplemented!()
+}
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Cute! Were it NOT for Sub/Superscripts, the whole parsing process only
@@ -798,11 +786,12 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document, state: &State)
       if let Some(realnode) = document.lookup_id(&idref) {
         return Cow::Borrowed(realnode);
       } else {
-        unimplemented!();
-        // Error("expected", 'id', undef, "Cannot find a node with
-        // xml:id='$idref'",         ($LaTeXML::MathParser::IDREFS{$idref}
+        let message = s!("Cannot find a node with xml:id='{}'",idref);
+        // TODO:
+        // LaTeXML::MathParser::IDREFS{$idref}
         // ? "Previously bound to " .
         // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
+        Error!("expected", "id", None, state, message);
         //       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
       }
     }
