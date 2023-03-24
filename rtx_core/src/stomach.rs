@@ -476,11 +476,14 @@ impl<'t> Stomach {
       if !beforeafter.is_empty() {
         let mut result = Vec::new();
         for beforeafter_frame in beforeafter.into_iter() {
-          if let Stored::Tokens(frametoks) = beforeafter_frame {
-            result.push(frametoks.be_digested(self, state)?);
-          } else {
-            // TODO: Anything but Tokens in beforeAfterGroup?
-            unimplemented!();
+          match beforeafter_frame {
+            Stored::Tokens(frametoks) => result.push(frametoks.be_digested(self, state)?),
+            Stored::Token(frametok) => result.push(frametok.be_digested(self, state)?),
+            _ => {
+              // TODO: Anything but Tokens in beforeAfterGroup?
+              dbg!(beforeafter_frame);
+              unimplemented!();
+            }
           }
         }
         // TODO

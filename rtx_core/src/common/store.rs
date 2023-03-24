@@ -1,3 +1,4 @@
+use libxml::tree::Node;
 use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
@@ -66,6 +67,7 @@ pub enum Stored {
   String(String),
   Charcode(u16),
   Int(i64),
+  Node(Node),
   // Collections (boxed)
   VecChar(Vec<char>),
   VecOptionChar(Vec<Option<char>>),
@@ -114,6 +116,7 @@ impl fmt::Debug for Stored {
       None => write!(f, "None"),
       String(ref s) => write!(f, "{s}"),
       Int(ref num) => write!(f, "Stored::Int[{num:?}]"),
+      Node(ref n) => write!(f, "Stored::Node[{n:?}]"),
       VecChar(ref vs) => write!(f, "Stored::VecChar[{vs:?}]"),
       VecOptionChar(ref vs) => write!(f, "Stored::VecOptionChar[{vs:?}]"),
       Stash(ref vs) => write!(f, "Stored::Stash[{vs:?}]"),
@@ -197,6 +200,13 @@ impl PartialEq for Stored {
       Int(ref num) => {
         if let Int(num2) = other {
           *num == *num2
+        } else {
+          false
+        }
+      },
+      Node(ref n) => {
+        if let Node(n2) = other {
+          *n == *n2
         } else {
           false
         }
@@ -602,6 +612,10 @@ impl From<Constructor> for Stored {
 
 impl From<List> for Stored {
   fn from(value: List) -> Self { crate::Digested::from(value).into() }
+}
+
+impl From<Node> for Stored {
+  fn from(value: Node) -> Self { Stored::Node(value) }
 }
 
 impl From<crate::Digested> for Stored {

@@ -39,9 +39,11 @@ LoadDefinitions!(state, {
   // # NOTE: THere's a problem here.  The current method seems to work right for these operators
   // # appearing within the typical environments.  HOWEVER, it doesn't work for a simple \bgroup or \begingroup!!!
   // # (they don't create a node! or even a whatsit!)
-  // DefConstructorI('\centering', undef,
-  //   sub { AssignValue(ALIGNING_NODE => $_[0]->getElement); return; },
-  //   beforeDigest => sub { UnshiftValue(beforeAfterGroup => T_CS('\@add@centering')); });
+  DefConstructor!("\\centering", sub[doc,_args,state] {
+    state.assign_value("ALIGNING_NODE", doc.get_element().unwrap(), None); },
+    before_digest => sub[gullet,state] {
+      state.unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@centering")]);
+    });
   // DefConstructorI('\raggedright', undef,
   //   sub { AssignValue(ALIGNING_NODE => $_[0]->getElement); return; },
   //   beforeDigest => sub { UnshiftValue(beforeAfterGroup => T_CS('\@add@raggedright')); });
