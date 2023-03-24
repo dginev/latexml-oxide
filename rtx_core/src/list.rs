@@ -27,11 +27,10 @@ pub struct List {
 
 impl fmt::Debug for List {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "\nList[")?;
     for tbox in &self.boxes {
-      writeln!(f, "  {tbox:?}")?;
+      writeln!(f, "{}",tbox.stringify())?;
     }
-    writeln!(f, "]({:?})", self.mode)
+    Ok(())
   }
 }
 
@@ -51,6 +50,9 @@ impl PartialEq for List {
 }
 
 impl Object for List {
+  fn stringify(&self) -> String {
+    format!("{self:?}")
+  }
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
 
   fn revert(&self, state: &State) -> Result<Tokens> {

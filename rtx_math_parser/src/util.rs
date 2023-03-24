@@ -121,7 +121,7 @@ pub fn create_xmrefs(args: &[&XM], ctxt: ActionContext) -> Result<Vec<XM>, Box<d
       //     my $key = ($isarray ? $$arg[1]{_xmkey} : $arg->getAttribute('_xmkey'));
       //     my $id  = ($isarray ? $$arg[1]{idref}  : $arg->getAttribute('idref'));
       //     push(@refs, [$qname, { _xmkey => $key, idref => $id, _box => $box }]); }
-      _ => {},
+      _ => unimplemented!(),
     }
   }
   Ok(refs)

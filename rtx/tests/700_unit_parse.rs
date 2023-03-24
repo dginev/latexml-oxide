@@ -1,5 +1,5 @@
-use rtx::util::test::lex_single_tex_formula;
 use rtx_core::state::{State, StateOptions};
+use rtx::util::test::lex_single_tex_formula;
 use rtx_math_parser::MathParser;
 
 #[test]
@@ -25,6 +25,8 @@ fn basic_1() {
 
   let mut parser = MathParser::default();
   let mut state = State::new(StateOptions::default());
+  // need to load the model schema by hand in the unit test, to get the "ltx" namespace working
+  state.model.load_schema(&[]);
   let parse_tree_opt = parser.parse_lexemes(lexemes, &nodes, &mut doc, &mut state);
 
   assert!(parse_tree_opt.is_ok());
@@ -34,7 +36,9 @@ fn basic_1() {
   let parsed_xml_result = parsed_tree.into_xmath(&mut xmath_opt.unwrap(), &mut nodes, &mut doc, &mut state);
   assert!(parsed_xml_result.is_ok());
   let parsed_xml = parsed_xml_result.unwrap();
-
+  for mut fnode in doc.findnodes("//*[@_font]", Some(&parsed_xml), &mut state) {
+    fnode.remove_attribute("_font").ok(); // ignore _font
+  }
   let expected_xmath_after = concat!(
     "<XMApp>",
     r###"<XMTok meaning="equals" role="RELOP">=</XMTok>"###,

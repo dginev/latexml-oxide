@@ -247,10 +247,34 @@ pub fn postfix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPr
   Ok(Some(XM::Apply(op.into(), Args(vec![arg]), XProps::default(), Meta::default())))
 }
 
-pub fn circumfix_fenced(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
-  unp!(args => _open, arg, _close);
-  Ok(arg)
+pub fn fenced(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => open_opt, arg_opt, close_opt);
+  let arg = arg_opt.unwrap();
+  let open = open_opt.unwrap();
+  let close = close_opt.unwrap();
+  // let xmrefs = create_xmrefs(&[&arg], ctxt)?.remove(0);
+  // Ok(Some(
+  //   XM::Dual(Box::new(xmrefs), Box::new(
+  //     XM::Wrap(vec![open_opt.unwrap(),arg,close_opt.unwrap()], XProps::default(), Meta::default())
+  //   ), XProps::default(), Meta::default())
+  // ))
+  let o = open.get_value(ctxt.nodes)?;
+  let c = close.get_value(ctxt.nodes)?;
+  let op = xnew(format!("delimited-{}{}",o,c));
+  interpret_delimited(op.into(), vec![open,arg,close], ctxt).map(Option::Some)
 }
+
+/// This is similar, but "interprets" a delimited list as being the
+/// application of some operator to the items in the list.
+fn interpret_delimited(op: XM, stuff: Vec<XM>, ctxt: ActionContext) -> Result<XM, Box<dyn Error>> {
+  let (_seps, args) = extract_separators(&stuff[1..stuff.len()-1]);
+  let ref_args = create_xmrefs(&args, ctxt)?;
+  Ok(XM::Dual(Box::new(
+    XM::Apply(op.into(), ref_args.into(), XProps::default(), Meta::default())),
+    Box::new(XM::Wrap(stuff, XProps::default(), Meta::default())),
+  XProps::default(), Meta::default()))
+}
+
 
 /// remove start_/end_ wrappers
 pub fn faux_wrap(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
@@ -478,6 +502,13 @@ fn invisible_comma() -> XProps {
     role: Some(Cow::Borrowed("PUNCT")),
     content: Some(Cow::Borrowed("\u{2063}")),
     font: Some(Font::default()),
+    ..XProps::default()
+  }
+}
+
+fn xnew(text: String) -> XProps {
+  XProps {
+    content: Some(Cow::Owned(text)),
     ..XProps::default()
   }
 }

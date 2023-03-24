@@ -96,9 +96,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       | statement punct statement => infix_apply;
 
     // Extensions, now that we have more category variables defined
-    fenced_factor = lbrace expression rbrace    => circumfix_fenced
-           | lbracket expression rbracket       => circumfix_fenced
-           | lparen formula rparen              => circumfix_fenced;
+    fenced_factor = lbrace expression rbrace    => fenced
+           | lbracket expression rbracket       => fenced
+           | lparen formula rparen              => fenced;
 
     factor += fenced_factor;
 

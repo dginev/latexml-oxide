@@ -268,6 +268,7 @@ impl Hash for Font {
     self.forcefamily.hash(state);
     self.forceshape.hash(state);
     self.scale.map(|scale| (scale * 1000.0) as i64).hash(state);
+    self.flags.hash(state);
   }
 }
 impl Eq for Font {}
@@ -276,12 +277,7 @@ impl Eq for Font {}
 impl fmt::Display for Font {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.family.as_ref().unwrap_or(&Cow::Borrowed(""))) }
 }
-// elide Font debugging until we get to implementing them faithfully
-// impl fmt::Debug for Font {
-//   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//     write!(f, "[font]")
-//   }
-// }
+
 impl fmt::Debug for Font {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let star = Cow::Borrowed("*");
@@ -305,6 +301,7 @@ impl fmt::Debug for Font {
     write!(f, "{}", scale_str)?;
     write!(f, ",")?;
     write!(f, "{}", self.mathstyle.as_ref().unwrap_or(&star))?;
+    // TODO? LaTeXML doesn't seem to emit these
     // if let Some(ref encoding) = self.encoding {
     //   parts.push(s!("encoding: {:?}", encoding))
     // }
@@ -326,7 +323,6 @@ impl fmt::Debug for Font {
     // if let Some(ref scripted) = self.scripted {
     //   parts.push(s!("scripted: {:?}", scripted))
     // }
-
     write!(f, "]")
   }
 }
@@ -402,7 +398,6 @@ impl Font {
   //   ($mstyle                      ? ($mstyle) : ()),
   //   ($flags                       ? ($flags)  : ()),
   //   )
-
   // }
 
   pub fn math_bearing(&self, thisbox: &Digested, prevbox: &Digested) -> f64 {

@@ -374,39 +374,44 @@ pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: Str
     let args_opt_tks = args.into_iter().map(|arg| arg.into()).collect::<Vec<Option<Tokens>>>();
     let (cargs, pargs) = dualize_arglist(&captured_pres, args_opt_tks, gullet, state)?;
 
-    let mut invoked_tks = vec![T_CS!("\\lx@dual"),T_OTHER!("[")];
-    if let Some(ref role) = captured_role {
-      invoked_tks.extend(vec![T_OTHER!("role"), T_OTHER!("="), T_OTHER!(role)]);
-      if let Some(ref revert_as) = captured_revert_as {
-        invoked_tks.push(T_OTHER!(","));
+    let mut dtks = vec![T_CS!("\\lx@dual")];
+    // optional keyval arg
+    if captured_role.is_some() || captured_revert_as.is_some() {
+      dtks.push(T_OTHER!("["));
+      if let Some(ref role) = captured_role {
+        dtks.extend(vec![T_OTHER!("role"), T_OTHER!("="), T_OTHER!(role)]);
+        if let Some(ref revert_as) = captured_revert_as {
+          dtks.push(T_OTHER!(","));
+        }
       }
+      if let Some(ref revert_as) = captured_revert_as {
+        dtks.extend(vec![T_OTHER!("revert_as"), T_OTHER!("="), T_OTHER!(revert_as)]);
+      }
+      dtks.push(T_OTHER!("]"));
     }
-    if let Some(ref revert_as) = captured_revert_as {
-      invoked_tks.extend(vec![T_OTHER!("revert_as"), T_OTHER!("="), T_OTHER!(revert_as)]);
-    }
-    invoked_tks.push(T_OTHER!("]"));
-    invoked_tks.push(T_BEGIN!());
-    invoked_tks.push(captured_cont_cs.clone());
-      invoked_tks.push(T_BEGIN!());
+    // end optional keyval arg
+    dtks.push(T_BEGIN!());
+    dtks.push(captured_cont_cs.clone());
+      dtks.push(T_BEGIN!());
       for carg_opt in cargs.into_iter() {
         if let Some(carg) = carg_opt {
-          invoked_tks.extend(carg.unlist());
+          dtks.extend(carg.unlist());
         } else {} // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
       }
-      invoked_tks.push(T_END!());
-    invoked_tks.push(T_END!());
-    invoked_tks.push(T_BEGIN!());
-    invoked_tks.push(captured_pres_cs.clone());
-      invoked_tks.push(T_BEGIN!());
+      dtks.push(T_END!());
+    dtks.push(T_END!());
+    dtks.push(T_BEGIN!());
+    dtks.push(captured_pres_cs.clone());
+      dtks.push(T_BEGIN!());
       for parg_opt in pargs.into_iter() {
         if let Some(parg) = parg_opt {
-          invoked_tks.extend(parg.unlist());
+          dtks.extend(parg.unlist());
         } else {} // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
       }
-      invoked_tks.push(T_END!());
-    invoked_tks.push(T_END!());
+      dtks.push(T_END!());
+    dtks.push(T_END!());
 
-    Ok(Tokens::new(invoked_tks))
+    Ok(Tokens::new(dtks))
   })), Some(ExpandableOptions {  protected: options.protected, ..ExpandableOptions::default() }), state), options.scope.clone());
 
   // Make the presentation macro.

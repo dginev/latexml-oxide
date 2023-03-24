@@ -282,7 +282,7 @@ DefConstructor!("\\lx@xmref{}", "<ltx:XMRef _xmkey='#1'/>",
   // TODO: Must we store and lookup the Whatsit?
   reversion => sub[stomach,args,state] {
     let xmid = args[0].as_ref().unwrap().to_string();
-    Ok( state.lookup_tokens(&s!("xref:{xmid}")).unwrap_or_default() )},
+    Ok( state.lookup_tokens(&s!("xref:{xmid}@reversion")).unwrap_or_default() )},
   // sizer => sub { LookupValue('xref:' . ToString($_[0]->getArg(1)))->getSize; }
 );
 
