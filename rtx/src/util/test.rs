@@ -11,7 +11,7 @@ use rtx_core::document::Document;
 use rtx_core::state::State;
 use rtx_core::{s, Core, CoreOptions};
 use rtx_math_parser::node_to_grammar_lexemes;
-use rtx_package::pool;
+use rtx_package::package;
 
 #[allow(clippy::implicit_hasher)]
 pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>, dispatcher_opt: Option<BindingDispatcher>) {
@@ -76,7 +76,7 @@ fn process_texfile(tex_path: &str, name: &str, extra_bindings_dispatcher: Option
     ..CoreOptions::default()
   });
   // Add the package bindings
-  latexml.get_state_mut().bindings_dispatch = Some(Arc::new(pool::dispatch));
+  latexml.get_state_mut().bindings_dispatch = Some(Arc::new(package::dispatch));
   // If we want to test the rtx_contrib bindings, we need to pass in the additional binding dispatcher,
   // which makes the contrib bindings visible
   // this would have been equivalent to a latexml --path argument, except we require access to compiled functions,
@@ -129,7 +129,7 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  latexml.get_state_mut().bindings_dispatch = Some(Arc::new(pool::dispatch));
+  latexml.get_state_mut().bindings_dispatch = Some(Arc::new(package::dispatch));
   let xml_result = latexml.convert_file(format!("literal:\\[ {tex} \\]"));
   assert!(xml_result.is_ok(), "{:?}", xml_result.err());
   let doc = xml_result.unwrap();
