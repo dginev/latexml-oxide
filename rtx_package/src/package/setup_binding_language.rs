@@ -209,7 +209,7 @@ macro_rules! InnerPool {
     InnerPool!($name, stomach!(), $state_arg)
   };
   ($name:ident, $stomach_arg:ident, $state_arg:ident) => {{
-    pool::$name::load_definitions($stomach_arg, $state_arg)?
+    $name::load_definitions($stomach_arg, $state_arg)?
   }};
 }
 
@@ -1088,7 +1088,7 @@ macro_rules! DefAccent {
       let letter = letter.remove(0).owned_tokens().unwrap();
       let letter_str = letter.to_string();
       let invoked = Invocation!(T_CS!($accent), vec![letter], stomach.get_gullet_mut(), inner_state)?;
-      $crate::package::pool::tex_accents::apply_accent(
+      $crate::package::tex_accents::apply_accent(
         stomach, &letter_str, $combiningchar, $standalonechar, Some(invoked), inner_state)
     }, mode => "text");
   }};

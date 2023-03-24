@@ -16,7 +16,7 @@ use std::sync::Arc;
 use rtx_core::stomach::Stomach;
 use rtx_core::state::State;
 use rtx_core::common::error::Result;
-use rtx_package::pool;
+use rtx_package::package;
 use rtx::util::test::*;
 
 #[test]
@@ -27,6 +27,6 @@ fn can_digest() {
 fn digestion_tests_dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Option<Result<()>> {
   match filename {
     "rebox.tex" => Some(helpers::rebox_tex::load_definitions(stomach, state)),
-    other => pool::dispatch(other, stomach, state),
+    other => package::dispatch(other, stomach, state),
   }
 }
