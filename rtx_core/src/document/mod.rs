@@ -178,7 +178,7 @@ impl Document {
   // ancestors. It removes the `helper' attributes that store fonts, source
   // box, etc.
   pub fn finalize(&mut self, state: &mut State) -> Result<()> {
-    self.prune_xmduals();
+    self.prune_xmduals(state)?;
     if let Some(mut root) = self.document.get_root_element() {
       self.set_local_font(Arc::new(Font::text_default()));
       self.finalize_rec(&mut root, state)?;
@@ -979,8 +979,6 @@ impl Document {
 
   // Internals
   fn set_rdfa_prefixes(&mut self, _prefixes: Option<&str>) {}
-
-  fn prune_xmduals(&self) {}
 
   pub fn insert_math_token(
     &mut self,
@@ -1942,7 +1940,7 @@ impl Document {
         Some(id) => {
           match self.lookup_id(&id) {
             None => {
-              Warn!("expected", "node", self, state, "No node found with id={id} (referred to from ltx:XMRef)");
+              Warn!("expected", "node", self, state, s!("No node found with id='{id}' (referred to from ltx:XMRef)"));
             },
             Some(reffed) => {
               self.mark_xmnode_visibility_aux(reffed.clone(), cvis, pvis, state)?;
@@ -1958,39 +1956,42 @@ impl Document {
     Ok(())
   }
 
-  // # Reduce any ltx:XMDual's to just the visible branch, if the other is not visible
-  // # (according to markXMNodeVisibility)
-  // # If we could be 100% sure that the marking had stayed consistent (after various doc surgery)
-  // # we could avoid re-marking, but we'd better be sure before removing nodes!
-  // sub pruneXMDuals {
-  //   my ($self) = @_;
-  //   # RE-mark visibility!
-  //   $self->markXMNodeVisibility;
-  //   # will reversing keep from problems removing nodes from trees that already have been removed?
-  //   foreach my $dual (reverse $self->findnodes('descendant-or-self::ltx:XMDual')) {
-  //     my ($content, $presentation) = element_nodes($dual);
-  //     if (!$self->findnode('descendant-or-self::*[@_pvis or @_cvis]', $content)) {    # content never seen
-  //       $self->collapseXMDual($dual, $presentation); }
-  //     elsif (!$self->findnode('descendant-or-self::*[@_pvis or @_cvis]', $presentation)) {    # pres.
-  //       $self->collapseXMDual($dual, $content); }
-  //     else {    # compact aligned structures, where possible
-  //       $self->compactXMDual($dual, $content, $presentation); } }
-  //   return; }
+  /// Reduce any ltx:XMDual's to just the visible branch, if the other is not visible
+  /// (according to markXMNodeVisibility)
+  /// If we could be 100% sure that the marking had stayed consistent (after various doc surgery)
+  /// we could avoid re-marking, but we'd better be sure before removing nodes!
+  fn prune_xmduals(&mut self, state:&mut State) -> Result<()> {
+    // RE-mark visibility!
+    self.mark_xmnode_visibility(state)?;
+    // will reversing keep from problems removing nodes from trees that already have been removed?
+    for mut dual in self.findnodes("descendant-or-self::ltx:XMDual", None, state).into_iter().rev() {
+      self.document.node_to_string(&dual);
+      let mut dual_children = xml::element_nodes(&dual);
+      let presentation = dual_children.pop().unwrap();
+      let content = dual_children.pop().unwrap();
+      if self.findnode("descendant-or-self::*[@_pvis or @_cvis]", Some(&content), state).is_none() { // content never seen
+        self.collapse_xmdual(&mut dual, presentation, state)?;
+      } else if self.findnode("descendant-or-self::*[@_pvis or @_cvis]", Some(&presentation), state).is_none() { // pres.
+        self.collapse_xmdual(&mut dual, content, state)?;
+      } else { // compact aligned structures, where possible
+        self.compact_xmdual(dual, content, Some(presentation), state)?;
+      }
+    }
+    Ok(())
+  }
 
   // our $content_transfer_overrides = { map { ($_ => 1) } qw(decl_id meaning name omcd) };
   // our $dual_transfer_overrides    = { %$content_transfer_overrides,
   //   map { ($_ => 1) } qw(xml:id role) };
 
-  // sub compactXMDual {
-  //   my ($self, $dual, $content, $presentation) = @_;
+  fn compact_xmdual(&mut self, dual: Node, content: Node, presentation: Option<Node>, state: &mut State) -> Result<()> {
   //   my $c_name = $self->getNodeQName($content);
   //   my $p_name = $self->getNodeQName($presentation);
-  //   # 1.Quick fix: merge two tokens
+    // 1.Quick fix: merge two tokens
   //   if (($c_name eq 'ltx:XMTok') && ($p_name eq 'ltx:XMTok')) {
   //     $self->mergeAttributes($content, $presentation, $content_transfer_overrides);
   //     $self->mergeAttributes($dual,    $presentation, $dual_transfer_overrides);
   //     $self->replaceNode($dual, $presentation);
-  //     return; }
 
   //   # 2.For now, only main use case is compacting mirror XMApp nodes
   //   return if ($c_name ne 'ltx:XMApp') || ($p_name ne 'ltx:XMApp');
@@ -2030,23 +2031,27 @@ impl Document {
   //   $self->mergeAttributes($dual, $compact_apply, $dual_transfer_overrides);
   //   $self->replaceNode($dual, $compact_apply);
   //   $self->closeElementAt($compact_apply);
-  //   return; }
+      Ok(())
+    }
 
-  // # Replace an XMDual with one of its branches
-  // sub collapseXMDual {
-  //   my ($self, $dual, $branch) = @_;
-  //   # The other branch is not visible, nor referenced,
-  //   # but the dual may have an id and be referenced
-  //   if (my $dualid = $dual->getAttribute('xml:id')) {
-  //     $self->unRecordID($dualid);    # We'll move or remove the ID from the dual
-  //     if (my $branchid = $branch->getAttribute('xml:id')) {    # branch has id too!
-  //       foreach my $ref ($self->findnodes("//*[\@idref='$dualid']")) {
-  //         $ref->setAttribute(idref => $branchid); } }          # Change dualid refs to branchid
-  //     else {
-  //       $branch->setAttribute('xml:id' => $dualid);            # Just use same ID on the branch
-  //       $self->recordID($dualid => $branch); } }
-  //   $self->replaceTree($branch, $dual);
-  //   return; }
+  /// Replace an XMDual with one of its branches
+  fn collapse_xmdual(&mut self, dual: &mut Node, mut branch: Node, state:&mut State) -> Result<()> {
+    // The other branch is not visible, nor referenced,
+    // but the dual may have an id and be referenced
+    if let Some(dualid) = dual.get_attribute_ns("id", XML_NS) {
+      self.unrecord_id(&dualid); // We'll move or remove the ID from the dual
+      if let Some(branchid) = branch.get_attribute_ns("id", XML_NS) { // branch has id too!
+      for mut tref in self.findnodes(&s!("//*[@idref='{}']",dualid), None, state) {
+        tref.set_attribute("idref", &branchid)?;
+      } // Change dualid refs to branchid
+      } else {
+        branch.set_attribute("xml:id", &dualid)?; // Just use same ID on the branch
+        self.record_id_with_node(&dualid, &branch, state);
+      }
+    }
+    self.replace_tree(branch, dual, state)?;
+    Ok(())
+  }
 
   //**********************************************************************
   /// Record the Box that created this node.

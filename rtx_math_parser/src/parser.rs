@@ -9,7 +9,7 @@ use rtx_core::common::error::{note_begin, note_end, note_progress, Result};
 use rtx_core::common::xml::*;
 use rtx_core::document::Document;
 use rtx_core::state::State;
-use rtx_core::{fatal, map, s, static_map, Info, Error};
+use rtx_core::{fatal, map, s, static_map, Error};
 
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
@@ -321,43 +321,61 @@ impl MathParser {
         // Replace the whole node for XMArg, XMWrap; preserve some attributes
         //ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
         // Copy all attributes
-        let _resultid = p_get_attribute(&result, "id");
-        let _attr = node.get_attributes();
+        let resultid = p_get_attribute(&result, "id");
+        let mut attr = node.get_attributes();
 
         // add to result, even allowing modification of xml node, since we're committed.
         // [Annotate converts node to array which messes up clearing the id!]
-
-        // my $rtag  = ($isarr ? $$result[0] : $document->getNodeQName($result));
-        // # Make sure font is "Appropriate", if we're creating a new token (yuck)
-        // if ($isarr && $attr{_font} && ($rtag eq 'ltx:XMTok')) {
-        //   my $content = join('', @$result[2 .. $#$result]);
-        //   if ((!defined $content) || ($content eq '')) {
-        //     delete $attr{_font}; }    # No font needed
-        //   elsif (my $font = $document->decodeFont($attr{_font})) {
-        //     delete $attr{_font};
-        //     $attr{font} = $font->specialize($content); } }
-        // else {
-        //   delete $attr{_font}; }
-        // foreach my $key (keys %attr) {
-        //   next unless ($key =~ /^_/) || $document->canHaveAttribute($rtag, $key);
-        //   my $value = $attr{$key};
-        //   if ($key eq 'xml:id') {    # Since we're moving the id...bookkeeping
-        //     $document->unRecordID($value);
-        //     $node->removeAttribute('xml:id'); }
-        //   if ($isarr) { $$result[1]{$key} = $value; }
-        //   else        { $document->setAttribute($result, $key => $value); } }
+        let rtag = document.get_node_qname(&result, state);
+        // TODO: Is this needed in a world where `result` is always a `Node` ?
+        // // // Make sure font is "Appropriate", if we're creating a new token (yuck)
+        // // if ($isarr && $attr{_font} && ($rtag eq 'ltx:XMTok')) {
+        // // my $content = join('', @$result[2 .. $#$result]);
+        // // if ((!defined $content) || ($content eq '')) {
+        // //   delete $attr{_font}; }    # No font needed
+        // // elsif (my $font = $document->decodeFont($attr{_font})) {
+        // //   delete $attr{_font};
+        // //   $attr{font} = $font->specialize($content); } }
+        // // } else {
+        attr.remove("_font");
+        // TODO: See the namespaced attribute issue for libxml's wrapper:
+        //  https://github.com/KWARC/rust-libxml/issues/104
+        // until then, HACK ids.
+        let newid = attr.remove("id");
+        if let Some(ref nid) = newid {
+          attr.insert(String::from("xml:id"), nid.to_owned());
+        }
+        for (key,value) in attr {
+          if !(key.starts_with('_') || document.can_have_attribute(&rtag, &key, state)) {
+            continue;
+          }
+          if key == "xml:id" { // Since we're moving the id...bookkeeping
+            document.unrecord_id(&value);
+            node.remove_attribute("xml:id")?;
+          }
+          // TODO: is the array/XM case still relevant?
+          // if ($isarr) { $$result[1]{$key} = $value; } else {
+          document.set_attribute(&mut result, &key, &value, state)?;
+          // }
+        }
         result = document
           .replace_tree(result, node, state)?
           .expect("replacing the tree should always work.");
-        // my $newid = $attr{'xml:id'};
-        // # Danger: the above code replaced the id on the parsed result with the one from XMArg,..
-        // # If there are any references to $resultid, we need to point them to $newid!
-        // if ($resultid && $newid && ($resultid ne $newid)) {
-        //   foreach my $ref ($document->findnodes("//*[\@idref='$resultid']")) {
-        //     $ref->setAttribute(idref => $newid); } }
+        // Danger: the above code replaced the id on the parsed result with the one from XMArg,..
+        // If there are any references to `resultid`, we need to point them to `newid`!
+        if let Some(rid) = resultid {
+          if let Some(nid) = newid {
+            if rid != nid {
+              for mut tref in document.findnodes(&s!("//*[@idref='{}']",rid), None, state) {
+                tref.set_attribute("idref", &nid)?;
+              }
+            }
+          }
+        }
       }
       Ok(Some(result))
     } else {
+      // TODO:
       // self.parse_kludge(node, document, state);
       // ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
       // $$self{failed}{$tag}++;
@@ -413,11 +431,20 @@ impl MathParser {
     } else {
       let (lexemes, mut nodes) = node_to_grammar_lexemes(mathnode, &mut idx);
       if let Ok(Some(parse_tree)) = self.parse_lexemes(lexemes, &nodes, document, state) {
+        //START reparent: the reparenting used to be in `parse_rec` in Perl. Is this a good place?
+        // Replace the content of XMath with parsed result
+        // unbindNode followed by (append|replace)Tree (which removes ID's) should be safe
+        for child_el in element_nodes(mathnode) {
+          document.unrecord_node_ids(&child_el, state);
+        }
         for mut node in mathnode.get_child_nodes() {
           node.unlink();
         }
-        let xml_tree = parse_tree.into_xmath(mathnode, &mut nodes, document, state)?;
-        Ok(Some(xml_tree))
+        let new_xml_tree = parse_tree.into_xmath(mathnode, &mut nodes, document, state)?;
+        document.append_tree(mathnode, vec![new_xml_tree], state)?;
+        let result = element_nodes(mathnode).remove(0);
+        //END reparent.
+        Ok(Some(result))
       } else {
         Ok(None)
       }
@@ -745,8 +772,7 @@ fn textrec_array(_node: &Node, _state: &mut State) -> String {
 
 // The following accessors work on both the LibXML and ARRAY representations
 // but they do NOT automatically dereference XMRef!
-fn p_get_value(node: &Node) -> String {
-  Info!("p_get_value for {} : {}", node.get_name(), node.get_content());
+pub fn p_get_value(node: &Node) -> String {
   let node_type = node.get_type();
   if node_type == Some(NodeType::ElementNode) {
     let x = node.get_content();
@@ -759,20 +785,8 @@ fn p_get_value(node: &Node) -> String {
         None => String::new(),
       }
     }
-  //   elsif (ref $node eq 'ARRAY') {
-  //     my ($op, $attr, @args) = @$node;
-  //     if (@args) {
-  //       return join('', grep { defined $_ } map { p_get_value($_) } @args); }
-  //     else {
-  //       return $$node[1]{name}; } }
   } else {
     node.get_content()
-    // TODO instead?:
-    //  if node_type == Some(NodeType::TextNode) {
-    //   node.get_content()
-    // } else {
-    //   node.get_content() // ??? Used to return Node directly in Perl ???
-    // }
   }
 }
 

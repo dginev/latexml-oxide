@@ -154,7 +154,25 @@ impl Whatsit {
 }
 
 impl fmt::Debug for Whatsit {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "Whatsit {{ args: {:?}, properties: {:?} }}", self.args, self.properties) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "Whatsit[")?;
+    let mut pieces = Vec::new();
+    pieces.push(self.get_definition().get_cs().get_cs_name().to_string());
+    for arg_opt in self.get_args() {
+      if let Some(arg) = arg_opt {
+        pieces.push(arg.stringify());
+      } else {
+        pieces.push(String::new());
+      }
+    }
+    if self.properties.contains_key("body") {
+      pieces.push(self.properties.get("body").unwrap().to_string());
+      if let Some(trailer) = self.properties.get("trailer") {
+        pieces.push(trailer.to_string());
+      }
+    }
+    write!(f,"{}]",pieces.join(","))
+  }
 }
 
 impl fmt::Display for Whatsit {
@@ -166,6 +184,10 @@ impl fmt::Display for Whatsit {
 
 impl Object for Whatsit {
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
+
+  fn stringify(&self) -> String {
+      format!("{self:?}")
+  }
 
   fn revert(&self, state: &State) -> Result<Tokens> {
     // WARNING: Forbidden knowledge?
@@ -188,7 +210,6 @@ impl Object for Whatsit {
         match rev {
           Stored::Tokens(tks) => Some(Cow::Owned(Reversion::Tokens(tks.clone()))),
           Stored::Reversion(rev) => Some(Cow::Borrowed(rev)),
-          // Stored::ReversionClosure(closure) => Some(Reversion::Closure(closure)),
           other => panic!("TODO: Unexpected reversion directive {other:?}"),
         }
       } else {
@@ -234,7 +255,6 @@ impl Object for Whatsit {
           }
         },
       };
-
       if let Some(mut body) = self.get_body() {
         tokens.extend(body.revert(state)?.unlist());
         if let Some(mut trailer) = self.get_trailer() {
@@ -243,8 +263,11 @@ impl Object for Whatsit {
       }
 
       // Now cache it, in case it's needed again
-      // TODO: This causes a lot of mutability issues for arguable performance benefit. Maybe we are safe not using caching at all, and simply
-      // recomputing the reversion? if !REVERT_RAW {
+      // TODO: This causes a lot of mutability issues for arguable performance benefit.
+      // Maybe we are safe not using caching at all, and simply recomputing the reversion?
+      //
+
+      //if !REVERT_RAW {
       //   // don't cache when RAW
       //   if DUAL_BRANCH {
       //     // self.dual_reversion = Some(Tokens::new(tokens.clone()));

@@ -32,5 +32,7 @@ impl Relaxng {
     }
   }
 
-  pub fn load_schema(&self) {}
+  pub fn load_schema(&self) {
+    unimplemented!()
+  }
 }

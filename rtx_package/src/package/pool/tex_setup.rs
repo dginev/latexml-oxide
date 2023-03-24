@@ -1055,8 +1055,4 @@ LoadDefinitions!(state, {
       Ok(if_token)
     }
   });
-
-  //TODO: Remove these after testing
-  DefMath!("\\parens{}",   "(#1)", meaning => "parentheses");
-  DefMath!("\\brackets{}", "[#1]", meaning => "brackets");
 });

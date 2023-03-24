@@ -51,6 +51,9 @@ impl fmt::Display for Tbox {
 impl Object for Tbox {
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
   fn revert(&self, _state: &State) -> Result<Tokens> { Ok(self.tokens.clone()) }
+  fn stringify(&self) -> String {
+      format!("{self:?}")
+  }
 }
 impl Tbox {
   pub fn new(

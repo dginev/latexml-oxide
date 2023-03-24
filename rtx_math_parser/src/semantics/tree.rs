@@ -14,7 +14,7 @@ use std::fmt::Display;
 use super::curry::{CurryConstraint, CurryConstraints, CurryTerm};
 use super::metadata::Meta;
 use super::ActionContext;
-use crate::parser::realize_xmnode;
+use crate::parser::{realize_xmnode,p_get_value};
 use crate::pragmatics::ValidationPragmatics;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -108,6 +108,9 @@ impl Display for Operator {
 }
 impl From<XProps> for Operator {
   fn from(t: XProps) -> Self { Operator(Box::new(XM::Token(t, Meta::default()))) }
+}
+impl From<XM> for Operator {
+  fn from(xm: XM) -> Self { Operator(Box::new(xm)) }
 }
 impl Operator {
   /// obtain a reference to this operator's metadata
@@ -237,6 +240,27 @@ impl XM {
       _ => Vec::new(),
     }
   }
+  pub fn get_value(&self, nodes:&[Node]) -> Result<Cow<str>, Box<dyn Error>> {
+    Ok(
+    match self {
+      XM::Lexeme(lex, _) => Cow::Owned(p_get_value(lookup_lex_node(lex, nodes)?)),
+      XM::Token(props,_) => match props.content {
+        None => props.name.clone().unwrap_or(Cow::Borrowed("")),
+        Some(ref v) => if v.is_empty() {
+          props.name.clone().unwrap_or(Cow::Borrowed(""))
+        } else { v.clone() }
+      },
+      XM::Apply(op, args, _,_) => Cow::Owned(format!("{}{}",op.0.get_value(nodes)?,
+      args.trees().iter().map(|t| t.get_value(nodes).expect("inner")).collect::<Vec<_>>().join(""))),
+      XM::Choices(_) => unimplemented!(),
+      XM::Dual(content, pres, _,_) => Cow::Owned(
+        format!("{}{}",content.get_value(nodes).expect("inner"),
+                       pres.get_value(nodes).expect("inner"))),
+      XM::Wrap(args, _, _) => Cow::Owned( args.iter().map(|a| a.get_value(nodes).expect("oof")).collect::<Vec<_>>().join("") ),
+      XM::Ref(_) => Cow::Borrowed("")
+    })
+  }
+
   /// Specialize a tree with the given Meta object,
   /// also verifying the tree's inner consistency.
   ///
@@ -721,10 +745,7 @@ impl From<&Node> for XM {
         let args: Args = children.iter().map(XM::from).collect::<Vec<_>>().into();
         XM::Apply((&op).into(), args, XProps::from(n), Meta::default())
       },
-      "XMRef" => XM::Token(XProps::from(n), Meta::default()),
-      "XMDual" => XM::Token(XProps::from(n), Meta::default()),
-      "XMWrap" => XM::Token(XProps::from(n), Meta::default()),
-      "XMArg" => XM::Token(XProps::from(n), Meta::default()),
+      // TODO: continue for the other cases
       _ => unimplemented!(),
     }
   }
