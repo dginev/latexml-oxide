@@ -1,3 +1,6 @@
+///! Helper macros for quicker and more idiomatic construction and access to data structures.
+
+/// A flexary macro for constructing `HashMap<&'static str, &'static str>` maps
 #[macro_export]
 macro_rules! static_map {
   ($( $key:expr => $val:expr ),*) => {{
@@ -7,6 +10,7 @@ macro_rules! static_map {
   }}
 }
 
+/// A flexary macro for constructing `HashMap<String, T>` maps, where `T` is generic.
 #[macro_export]
 macro_rules! map {
   ($( $key:expr => $val:expr ),*) => {{
@@ -16,6 +20,7 @@ macro_rules! map {
   }}
 }
 
+/// A flexary macro for constructing `HashMap<String, Stored>` maps
 #[macro_export]
 macro_rules! stored_map {
   ($( $key:expr => $val:expr ),*) => {{
@@ -25,6 +30,7 @@ macro_rules! stored_map {
   }}
 }
 
+/// A flexary macro for constructing `HashMap<String, String>` maps
 #[macro_export]
 macro_rules! string_map {
   ($( $key:expr => $val:expr ),*) => {{
@@ -34,6 +40,7 @@ macro_rules! string_map {
   }}
 }
 
+/// A flexary macro for constructing `HashMap<K, V>` maps, where `K` and `V` are both generic (inferred at time of use)
 #[macro_export]
 macro_rules! raw_map {
   ($( $key:expr => $val:expr ),*) => {{
@@ -43,6 +50,7 @@ macro_rules! raw_map {
   }}
 }
 
+/// A flexary macro for constructing `HashMap<char, T>` maps, where `T` is generic
 #[macro_export]
 macro_rules! raw_char_map {
   ($( $key:literal => $val:expr ),*) => {{
@@ -52,11 +60,19 @@ macro_rules! raw_char_map {
   }}
 }
 
+/// The `s!` macro is a briefer alias for `format!`, otherwise completely identical
 #[macro_export]
 macro_rules! s {
   ($($arg : tt )*) => (format!($($arg)*))
 }
 
+/// A variant on `vec!` where each argument receives an additional `.into()` call
+/// best used with an outer context that explicitly provides the expected type, such as
+/// ```
+/// # use rtx_core::common::store::Stored;
+/// # use rtx_core::mixvec;
+/// let stored_vec : Vec<Stored> = mixvec!(1, true, "string");
+/// ```
 #[macro_export]
 macro_rules! mixvec {
   ($( $val:expr ),*) => {{
@@ -64,14 +80,16 @@ macro_rules! mixvec {
   }}
 }
 
+/// Instantiates a `Font`, using the `Font` fields as keys, and calling `.into()` for each value.
+/// The specification can be partial - missing fields are taken via the `Default` trait.
 #[macro_export]
 macro_rules! fontmap {
   ($($key:ident => $value:expr),*) => (
     Font { $($key: Some($value.into()),)* .. Font::default() })
 }
 
-// Simple helper for hashset creation
-// Source: https://riptutorial.com/rust/example/4149/create-a-hashset-macro
+/// Simple generic helper for `HashSet<K,V>` creation
+/// Source: https://riptutorial.com/rust/example/4149/create-a-hashset-macro
 #[macro_export]
 macro_rules! set {
     ( $( $x:expr ),* ) => {  // Match zero or more comma delimited items
