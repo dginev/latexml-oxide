@@ -7,6 +7,7 @@ use unidecode::unidecode;
 //======================================================================
 
 static RMLETTERS: [char; 7] = ['i', 'v', 'x', 'l', 'c', 'd', 'm'];
+/// auxiliary helper for `roman`
 pub fn roman_aux<T: Into<i64>>(stuff: T) -> String {
   let mut n: i64 = stuff.into();
   let mut div = 1000;
@@ -41,9 +42,7 @@ pub fn roman_aux<T: Into<i64>>(stuff: T) -> String {
   s
 }
 
-// Small rust experiment -- type casting into Cow<String> in intermediate steps can become a
-// prolonged compiler negotiation, and can tire one down.
-// Instead, use untyped intermediate variables _1 .. _n , and let the compiler fill in the gaps
+/// cleans a string down to characters acceptable for an id attribute
 pub fn clean_id(key: &str) -> String {
   let mut cleaned = Cow::Borrowed(key.trim_start().trim_end()); // Trim leading/trailing, in any case
   let cleaned_1 = SPACES_RE.replace_all(&cleaned, ""); // remove all spaces
@@ -62,7 +61,7 @@ pub fn clean_id(key: &str) -> String {
   let cleaned_5 = NON_ID_CHARSET_RE.replace_all(&cleaned_4, ""); // remove everything else.
   cleaned_5.to_string()
 }
-
+/// cleans a string down to characters acceptable for a label attribute
 pub fn clean_label<'a>(label: &'a str, prefix_opt: Option<&str>) -> Cow<'a, str> {
   let key = label.trim(); // Trim leading/trailing, in any case
   let cleaned_1 = SPACES_RE.replace_all(key, "_"); // spaces to underscores
@@ -74,6 +73,7 @@ pub fn clean_label<'a>(label: &'a str, prefix_opt: Option<&str>) -> Cow<'a, str>
   }
 }
 
+/// cleans a string down to characters acceptable for a bibliography key
 pub fn clean_bib_key(key: &str) -> String {
   // Originally lc() here, but let's preserve case till Postproc.
   let mut clean_key = key.trim_start();
@@ -82,11 +82,13 @@ pub fn clean_bib_key(key: &str) -> String {
   clean_key.to_string()
 }
 
+/// cleans a string down to characters acceptable for a URL
 pub fn clean_url(url: &str) -> String {
   let cleaned = url.trim_start().trim_end(); // Trim leading/trailing, in any case
   TILDE_NOISE_RE.replace_all(cleaned, "~").to_string()
 }
 
+/// builds a complete url from fragments
 pub fn compose_url(base: &str, url: &str, fragid_opt: Option<&str>) -> String {
   let mut base = TRAILING_SLASH_RE.replace(base, ""); //  remove trailing /
   let mut fragid = fragid_opt.unwrap_or("");

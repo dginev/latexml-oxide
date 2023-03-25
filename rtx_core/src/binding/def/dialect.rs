@@ -34,9 +34,8 @@ use crate::Digested;
 use crate::*;
 
 const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &["name", "meaning", "omcd", "decl_id", "mathstyle", "lpadding", "rpadding"];
-// Constants for the API functions stay here as well
+
 lazy_static! {
-  pub static ref CONSTRUCTOR_SPECIALS: Regex = Regex::new(r"([#&?\\<>])").unwrap();
   pub static ref CONDITIONAL_CS_RE: Regex = Regex::new(r"^\\(?:if(.*)|unless)$").unwrap();
   pub static ref LEADING_PROTOCOL_RE: Regex = Regex::new(r"^\w+:").unwrap();
   pub static ref TRAILING_SLASH_RE: Regex = Regex::new(r"/$").unwrap();
