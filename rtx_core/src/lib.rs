@@ -1,30 +1,55 @@
+//! The Core of rtx - roughly the equivalent of TeX conversion.
+//!
+
+#![warn(missing_docs)]
 #![allow(dead_code, unused_variables, unused_mut, unused_macros, clippy::trivial_regex)]
 
+/// Auxiliary macros
 #[macro_use]
 pub mod aux_macros;
+/// The Token and its Catcode
 #[macro_use]
 pub mod token;
+/// Common abstractions that are useful at various stages of Core processing
 #[macro_use]
 pub mod common;
+/// Grouping Tokens together
 #[macro_use]
 pub mod tokens;
+/// The programmable API foundation for creating bindings of LaTeX sty/cls libraries
 #[macro_use]
 pub mod binding;
+/// TeX comments as standalone objects
 pub mod comment;
+/// All possible definitions for TeX-native commands (expandable, primitive, constructor,...)
 pub mod definition;
+/// An abstraction layer over the converted XML document
 pub mod document;
+/// The Gullet is responsible for reading Tokens and other data from the Mouth
 pub mod gullet;
+/// A LaTeX-like Key-Value object
 pub mod keyval;
+/// A collection of Key-Value objects, typically from a single LaTeX argument
 pub mod keyvals;
+/// Rules for combining together characters and other text rules
 pub mod ligature;
+/// A list of `Digested` objects
 pub mod list;
+/// The mouth is a thin interface over a file, responsible for reading characters and associating them with catcodes
 pub mod mouth;
+/// The abstraction layer used by the Gullet to read arguments for the various kinds of TeX object definitions
 pub mod parameter;
+/// Rules for rewriting the constructed XML document, after core processing has completed
 pub mod rewrite;
+/// A global, singleton, mutable State - hosts almost all TeX-facing runtime information for the conversion
 pub mod state;
+/// The stomach is an abstraction responsible for digesting `Tokens` and `Register`s prepared by the Gullet into Boxes
 pub mod stomach;
+/// A TeX-like digested Box
 pub mod tbox;
+/// Auxilary utilities that do not participate in the main conversion abstraction
 pub mod util;
+/// A TeX-like digested Whatsit
 pub mod whatsit;
 
 use std::borrow::Cow;
@@ -71,32 +96,49 @@ use crate::whatsit::Whatsit;
 //   static ref STATE: Arc<RwLock<State>> = Arc::new(RwLock::new(State::new(StateOptions::default())));
 // }
 
+/// The Core conversion runtime
 pub struct Core {
+  /// the singleton State which bookkeeps all TeX-related state
   pub state: State,
+  /// the singleton stomach executing the digestion
   pub stomach: Arc<RwLock<Stomach>>,
+  /// a list of library names to be preloaded before the main conversion begins
   pub preload: Vec<String>,
 }
 impl Object for Core {
   fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
+
+/// Configuration for the Core processing
 #[derive(Default)]
 pub struct CoreOptions {
   // First, state-related options:
+  /// a custom schema-induced model (default is `None`) for the final XML
   pub model: Option<Model>,
+  /// default is 0, sub-zero values are quiet, positive values are verbose
   pub verbosity: Option<i32>,
+  /// strict error-reporting (is this still used?)
   pub strict: Option<bool>,
+  /// toggle preserving comments in the XML on/off
   pub include_comments: Option<bool>,
+  /// toggle loading raw .sty modules on/off
   pub include_styles: Option<bool>,
+  /// disable math parsing (enabled by default)
   pub nomathparse: Option<bool>,
+  /// an optional, fixed id prefix for all xml:id attributes
   pub documentid: Option<String>,
+  /// the list of paths used for loading TeX sources and packages
   pub search_paths: Option<Vec<String>>,
+  /// the list of paths used for loading graphics assets
   pub graphics_paths: Option<Vec<String>>,
+  /// set an explicit encoding of the input text
   pub input_encoding: Option<String>,
-  // The core-related
+  /// a list of package names to preload before processing start
   pub preload: Option<Vec<String>>,
 }
 
 impl Core {
+  /// instantiate a new Core processor
   pub fn new(options: CoreOptions) -> Self {
     let preload = match options.preload {
       None => Vec::new(),
@@ -126,19 +168,26 @@ impl Core {
     Core { state, stomach, preload }
   }
 
-  // pub fn get_state(&self) -> RwLockReadGuard<'_, State> { self.state.read().unwrap() }
-  // pub fn get_state_mut(&mut self) -> RwLockWriteGuard<'_, State> { self.state.write().unwrap() }
+  /// borrow the current state
   pub fn get_state(&self) -> &State { &self.state }
+  /// mutably borrow the current state
   pub fn get_state_mut(&mut self) -> &mut State { &mut self.state }
 }
+/// Common operations for Box-like (digested) data
 pub trait BoxOps: Object {
+  /// If composite, unwrap into the contained digested objects (or return self)
   fn unlist(&self) -> Vec<Digested> { unimplemented!() }
+  /// absorb the current object into the `Document` XML - returning the corresponding nodes
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>>;
+  /// build a string representation of the underlying digested data
   fn get_string(&self, state: &State) -> Result<Cow<str>>;
+  /// get the underlying tokens (preceding digestion)
   fn get_tokens(&self) -> Option<&Tokens> { None }
+  /// get the map of named properties
   fn get_properties(&self) -> &HashMap<String, Stored>;
+  /// set a named property (allows all `Stored` types for values)
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T);
-
+  /// get a single named property
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     if key == "isSpace" {
       match self.get_properties().get(key) {
@@ -157,16 +206,20 @@ pub trait BoxOps: Object {
       self.get_properties().get(key).map(Cow::Borrowed)
     }
   }
-
+  /// checks if a property key has been set
   fn has_property(&self, key: &str) -> bool;
+  /// obtains a boolean property value (false unless `Stored::Bool`)
   fn get_property_bool(&self, _key: &str) -> bool;
+  /// obtains the "body" of a digested object which captured it
   fn get_body(&self) -> Option<Digested> {
     Error!("boxops", "get_body", self, None, "Generic BoxOps::get_body should never be called!");
     None
   }
+  /// gets the associated font, if any
   fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>>;
+  /// sets an associated font
   fn set_font(&mut self, font: Arc<Font>) { unimplemented!() }
-
+  /// sets a "width" property, for sizing
   fn set_width<T: Into<Stored>>(&mut self, width: T) { self.set_property("width", width); }
 
   // For the dimensions of boxes, we'll store the (lazily) computed size as:
@@ -177,6 +230,7 @@ pub trait BoxOps: Object {
   // attributes when they were explicitly set.
   // However, when requesting the size of a box, you'd get either (w/ explicit size overriding)
 
+  /// gets the "width" property value, if any
   fn get_width(&mut self, options: Option<HashMap<String, Stored>>, state: &mut State) -> Result<Option<RegisterValue>> {
     if !self.has_property("width") && !self.has_property("cwidth") {
       // TODO: Restore caching?
@@ -193,21 +247,25 @@ pub trait BoxOps: Object {
       },
     })
   }
+  /// sets a "height" property value, for sizing
   fn set_height<T: Into<Stored>>(&mut self, width: T) { self.set_property("height", width); }
+  /// gets the "height" property value, if any
   fn get_height(&self, state: &State) -> Option<RegisterValue> {
     match self.get_property("height") {
       Some(val) => (&*val).into(),
       None => Some(RegisterValue::Dimension(Dimension::default())),
     }
   }
+  /// sets a "depth" property value, for sizing
   fn set_depth<T: Into<Stored>>(&mut self, width: T) { self.set_property("depth", width); }
+  /// gets the "depth" property value, if any
   fn get_depth(&self, state: &State) -> Option<RegisterValue> {
     match self.get_property("depth") {
       Some(val) => (&*val).into(),
       None => Some(RegisterValue::Dimension(Dimension::default())),
     }
   }
-
+  /// gets the box size as a triple of (width, height, depth)
   fn get_size(&self, options: Option<HashMap<String, Stored>>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
     // TODO: Reintroduce caching?
     if !(self.has_property("cwidth") && self.has_property("cheight") && self.has_property("cdepth")) {
@@ -246,9 +304,7 @@ pub trait BoxOps: Object {
     ))
   }
 
-  /// omg
-  ///  Fake computing the dimensions of strings (typically single chars).
-  ///  Eventually, this needs to link into real font data
+  /// deprecated/to be revisited - computes and caches the size of a box-like object
   fn compute_size_store(&mut self, mut options: HashMap<String, Stored>, state: &mut State) -> Result<()> {
     for key in ["width", "height", "depth", "vattach", "layout"] {
       if let Some(v) = self.get_property(key) {
@@ -270,21 +326,24 @@ pub trait BoxOps: Object {
     Ok(())
   }
 
+  /// computes and returns the size of a box-like object
   fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)>;
 }
 
+/// The current TeX processing mode
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TexMode {
+  /// TeX's math mode
   Math,
+  /// TeX's text mode
   Text,
 }
 
-/// These are all kinds of data which rtx considers officially supported
-/// as outputs from the digestion phase of TeX, i.e. from invoking a token.
-/// Each variant is wrapped in an `Arc`, for cheap(er) cloning when passing around
-/// these objects to various auxiliary state (e.g. bookkeeping current box),
-/// but also for repeatedly passing them as owned into binding closures
-/// while also storing them in their owner Box.
+/// An `Arc`-guarded abstraction for any object encountered at the "digested" phase of processing
+// Each variant is wrapped in an `Arc`, for cheap(er) cloning when passing around
+// these objects to various auxiliary state (e.g. bookkeeping current box),
+// but also for repeatedly passing them as owned into binding closures
+// while also storing them in their owner Box.
 //
 // This model is incredibly hard to achieve with lifetimes, so
 // we employ reference counting instead (close to their original Perl design).
@@ -292,13 +351,22 @@ pub enum TexMode {
 // would allow a Rust-like redesign. But it could be too hard to achieve in practice.
 #[derive(Clone)]
 pub struct Digested(Arc<DigestedData>);
+/// These are all kinds of data which we consider officially supported
+/// as outputs from the digestion phase of TeX, i.e. from invoking a token.
 pub enum DigestedData {
+  /// A TeX Box
   TBox(Tbox),
+  /// A TeX Whatsit
   Whatsit(RwLock<Whatsit>),
+  /// A list of Digested data
   List(List),
+  /// Raw Tokens that were postponed to the digestion phase uninvoked/undigested
   Postponed(Tokens),
+  /// A LaTeX-like digested key-value map
   KeyVals(KeyVals),
+  /// A TeX-like `RegisterValue` (e.g. a Dimension or Glue)
   RegisterValue(RegisterValue),
+  /// A TeX comment
   Comment(Comment),
 }
 
@@ -606,20 +674,24 @@ impl BoxOps for Digested {
 }
 
 impl Digested {
+  /// immutably borrow the inner Digested data
   pub fn data(&self) -> &DigestedData { &self.0 }
   // convenience subset of NumericOps, added here for now as an experiment:
+  /// Obtain the i64 value of the digested object, iff it wraps a `RegisterValue`
   pub fn value_of(&self) -> i64 {
     match &*self.0 {
       DigestedData::RegisterValue(rv) => rv.clone().value_of(),
       _ => 0,
     }
   }
+  /// Obtain the f64 value of the digested object, iff it wraps a `RegisterValue`
   pub fn pt_value(&self, prec: Option<u8>) -> f64 {
     match &*self.0 {
       DigestedData::RegisterValue(rv) => rv.clone().pt_value(prec),
       _ => 0.0,
     }
   }
+  /// Predicate check - true if `any` element of the current object passes the check
   pub fn any<F>(&self, mut check: F) -> bool
   where F: FnMut(&Self) -> bool {
     use DigestedData::*;
@@ -630,6 +702,7 @@ impl Digested {
     }
   }
 
+  /// Predicate check - true if `all` elements of the current object passes the check
   pub fn all<F>(&self, mut check: F) -> bool
   where F: FnMut(&Self) -> bool {
     use DigestedData::*;
@@ -640,6 +713,7 @@ impl Digested {
     }
   }
 
+  /// Predicate check - delegates to `.is_empty()` of the underlying data
   pub fn is_empty(&self) -> bool {
     use DigestedData::*;
     match *self.0 {
@@ -660,6 +734,7 @@ impl Digested {
     }
   }
 
+  /// builds an attribute-friendly String form of the digested object, suitable for XML attributes
   pub fn to_attribute(&self) -> String {
     match *self.0 {
       DigestedData::RegisterValue(ref v) => v.to_attribute(),
