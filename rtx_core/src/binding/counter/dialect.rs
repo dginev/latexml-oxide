@@ -19,13 +19,38 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::BoxOps;
 
+///!
+///! # Counters
+///!
+///! This is modelled on LaTeX's counter mechanisms, but since it also
+///! provides support for ID's, even where there is no visible reference number,
+///! it is defined in general.
+///! These id's should be both unique, and parallel the visible reference numbers
+///! (as much as possible).  Also, for consistency, we add id's to unnumbered
+///! document elements (eg from \section*); this requires an additional counter
+///! (eg. UNsection) and  mechanisms to track it.
+
+
+/// configuration for new_counter
 #[derive(Default)]
-pub struct NewCounterOptions<'ct> {
+pub struct NewCounterOptions<'ct>
+ {
+  /// specifies a prefix to be used in formatting ID's for document structure elements
+  /// counted by this counter.  Ie. subsection 3 in section 2 might get: id="S2.SS3"
   pub idprefix: &'ct str,
+  /// specifies that the ID is composed from $idwithin's ID,, even though
+  /// the counter isn't numbered within it.  (mainly to avoid duplicated ids)
   pub idwithin: &'ct str,
+  /// a list of counters that correspond to scopes which are "inside" this one.
+  /// Whenever any definitions scoped to this counter are deactivated,
+  /// the inner counter's scopes are also deactivated.
+  // NOTE: I'm not sure this is even a sensible implementation,
+  // or why inner should be different than the counters reset by incrementing this counter.
   pub nested: Vec<&'ct str>,
 }
 
+/// Defines a new counter named $ctr.
+/// If `within` is defined, `ctr` will be reset whenever `within` is incremented.
 pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOptions>, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let unctr = s!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
   let cctr = s!("\\c@{}", ctr);
@@ -180,7 +205,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
 
   Ok(())
 }
-
+/// Fetches the value associated with the counter C<$ctr>.
 pub fn counter_value(ctr: &str, state: &mut State) -> Number {
   match state.lookup_number(&s!("\\c@{}", ctr)) {
     None => {
@@ -191,7 +216,7 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
     Some(value) => value,
   }
 }
-
+/// increments a named counter by a `Number`
 pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut State) {
   let v = counter_value(ctr, state).add(value);
   state.assign_value(&s!("\\c@{}", ctr), v, Some(Scope::Global));
@@ -209,6 +234,8 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
   );
 }
 
+/// Analog of `\stepcounter`, steps the counter and returns the expansion of
+/// `\the$ctr`  Usually you should use `ref_step_counter(ctr)` instead.
 pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let value = counter_value(ctr, state);
   state.assign_value(&s!("\\c@{}", ctr), value.add(Number::new(1)), Some(Scope::Global));
@@ -454,6 +481,7 @@ pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Res
     clean_id(&digest_literal(T_CS!(thectr), stomach, state)?.to_string())))
 }
 
+/// Resets the counter `ctr` to zero.
 pub fn reset_counter(ctr: &str, state: &mut State) {
   state.assign_value(&s!("\\c@{ctr}"), Number::new(0), Some(Scope::Global));
   state.assign_value(&s!("\\c@UN{ctr}"), Number::new(0), Some(Scope::Global));
@@ -550,12 +578,18 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>, stomach: &mut Stomach, st
   Ok(result)
 }
 
+/// configuration for begin_itemize
 #[derive(Debug, Default, Clone)]
 pub struct BeginItemizeOptions {
+  /// disable nested id suffix based on stacking level
   pub nolevel: bool,
+  /// enumitem series
   pub series: Option<Tokens>,
+  /// start at a custom value
   pub start: Option<Number>,
+  /// enumitem resume?
   pub resume: Option<String>,
+  /// enumitem resume* ?
   pub resume_star: Option<String>,
 }
 
@@ -653,6 +687,7 @@ pub fn begin_itemize(
   Ok(rsc)
 }
 
+/// Copies the current id, tags, and inlist counter values into whatsit properties
 pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit, stomach: &mut Stomach, state: &mut State) {
   let tagskey = &s!("{captype}_tags");
   if let Some(tags) = state.remove_value(tagskey) {
