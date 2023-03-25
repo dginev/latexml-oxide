@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["Delimiter",""]],"fn":[["extract_bracketed",""]]};

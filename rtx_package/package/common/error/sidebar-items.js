@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["ErrorCategory",""],["ErrorTarget",""]],"fn":[["note_begin",""],["note_end",""],["note_progress",""],["note_progress_detailed",""]],"macro":[["Debug",""],["Error",""],["Fatal",""],["Info",""],["Warn",""],["fatal",""],["generate_message",""]],"struct":[["Error",""]],"type":[["Result",""]]};

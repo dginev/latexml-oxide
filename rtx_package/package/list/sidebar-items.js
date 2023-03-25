@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["List","Lists can contain any Digested items, such as boxes, whatsits or other lists"]]};

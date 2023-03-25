@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["custom_float_format",""],["floatformat","Utility for formatting sane numbers."]],"struct":[["Float",""]]};

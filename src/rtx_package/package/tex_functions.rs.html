@@ -1,0 +1,1703 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_functions.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>tex_functions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<a href="#2" id="2">2</a>
+<a href="#3" id="3">3</a>
+<a href="#4" id="4">4</a>
+<a href="#5" id="5">5</a>
+<a href="#6" id="6">6</a>
+<a href="#7" id="7">7</a>
+<a href="#8" id="8">8</a>
+<a href="#9" id="9">9</a>
+<a href="#10" id="10">10</a>
+<a href="#11" id="11">11</a>
+<a href="#12" id="12">12</a>
+<a href="#13" id="13">13</a>
+<a href="#14" id="14">14</a>
+<a href="#15" id="15">15</a>
+<a href="#16" id="16">16</a>
+<a href="#17" id="17">17</a>
+<a href="#18" id="18">18</a>
+<a href="#19" id="19">19</a>
+<a href="#20" id="20">20</a>
+<a href="#21" id="21">21</a>
+<a href="#22" id="22">22</a>
+<a href="#23" id="23">23</a>
+<a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
+<a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
+<a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
+<a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
+<a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
+<a href="#46" id="46">46</a>
+<a href="#47" id="47">47</a>
+<a href="#48" id="48">48</a>
+<a href="#49" id="49">49</a>
+<a href="#50" id="50">50</a>
+<a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
+<a href="#841" id="841">841</a>
+<a href="#842" id="842">842</a>
+<a href="#843" id="843">843</a>
+<a href="#844" id="844">844</a>
+<a href="#845" id="845">845</a>
+<a href="#846" id="846">846</a>
+<a href="#847" id="847">847</a>
+<a href="#848" id="848">848</a>
+<a href="#849" id="849">849</a>
+<a href="#850" id="850">850</a>
+<a href="#851" id="851">851</a>
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
+<span class="kw">use </span>libxml::tree::{Node, NodeType};
+<span class="kw">use </span>rtx_core::keyvals::KeyValsOptions;
+<span class="kw">use </span>std::char::{decode_utf16, REPLACEMENT_CHARACTER};
+<span class="kw">use </span>std::collections::VecDeque;
+
+<span class="kw">pub fn </span>reenter_text_mode(vertical_mode: bool, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) {
+  <span class="kw">let </span><span class="kw-2">mut </span>bindings: VecDeque&lt;Stored&gt; = <span class="kw">match </span>state.lookup_value(
+    <span class="kw">if </span>vertical_mode {<span class="string">&quot;VTEXT_MODE_BINDINGS&quot;</span>} <span class="kw">else </span>{<span class="string">&quot;HTEXT_MODE_BINDINGS&quot;</span>}) {
+    <span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>vdq)) =&gt; vdq.clone(),
+    <span class="kw">_ </span>=&gt; VecDeque::new(),
+  };
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>text_mode_bindings)) = state.lookup_value(<span class="string">&quot;TEXT_MODE_BINDINGS&quot;</span>) {
+    bindings.extend(text_mode_bindings.clone());
+  }
+  <span class="kw">for </span>binding <span class="kw">in </span>bindings {
+    <span class="kw">if let </span>Stored::Tokens(tks) = binding {
+      <span class="kw">let </span><span class="kw-2">mut </span>vec = tks.unlist();
+      <span class="kw">let </span>new = vec.remove(<span class="number">1</span>);
+      state.let_i(<span class="kw-2">&amp;</span>vec[<span class="number">0</span>], new, <span class="prelude-val">None</span>, gullet);
+    }
+  }
+}
+
+<span class="comment">// Similarly, for metadata appearing within peculiar environments, fonts, etc
+// You&#39;ll typically want this within a group or bounded=&gt;1.
+</span><span class="kw">pub fn </span>neutralize_font(state: <span class="kw-2">&amp;mut </span>State) {
+  state.assign_value(<span class="string">&quot;font&quot;</span>,     Font::text_default(), <span class="prelude-val">Some</span>(Scope::Local));
+  state.assign_value(<span class="string">&quot;mathfont&quot;</span>, Font::math_default(), <span class="prelude-val">Some</span>(Scope::Local));
+}
+
+<span class="kw">pub fn </span>today(state: <span class="kw-2">&amp;mut </span>State) -&gt; String {
+  <span class="kw">let </span>month_names = [
+    <span class="string">&quot;January&quot;</span>,
+    <span class="string">&quot;February&quot;</span>,
+    <span class="string">&quot;March&quot;</span>,
+    <span class="string">&quot;April&quot;</span>,
+    <span class="string">&quot;May&quot;</span>,
+    <span class="string">&quot;June&quot;</span>,
+    <span class="string">&quot;July&quot;</span>,
+    <span class="string">&quot;August&quot;</span>,
+    <span class="string">&quot;September&quot;</span>,
+    <span class="string">&quot;October&quot;</span>,
+    <span class="string">&quot;November&quot;</span>,
+    <span class="string">&quot;December&quot;</span>,
+  ];
+  <span class="kw">let </span>month = month_names[state.lookup_register(<span class="string">&quot;\\month&quot;</span>, <span class="macro">vec!</span>[]).unwrap().value_of() <span class="kw">as </span>usize - <span class="number">1</span>];
+  <span class="kw">let </span>day = state.lookup_register(<span class="string">&quot;\\day&quot;</span>, <span class="macro">vec!</span>[]).unwrap().value_of();
+  <span class="kw">let </span>year = state.lookup_register(<span class="string">&quot;\\year&quot;</span>, <span class="macro">vec!</span>[]).unwrap().value_of();
+  <span class="macro">s!</span>(<span class="string">&quot;{} {}, {}&quot;</span>, month, day, year)
+}
+
+<span class="kw">pub fn </span>parse_def_parameters(cs: <span class="kw-2">&amp;</span>Token, params_in: Tokens, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
+  <span class="kw">let </span><span class="kw-2">mut </span>tokens: VecDeque&lt;Token&gt; = <span class="kw">if </span>params_in.is_empty() {
+    VecDeque::new()
+  } <span class="kw">else </span>{
+    VecDeque::from(params_in.pack_parameters().unlist())
+  };
+  <span class="comment">// Now, recognize parameters and delimiters.
+  </span><span class="kw">let </span><span class="kw-2">mut </span>params = Vec::new();
+  <span class="kw">let </span><span class="kw-2">mut </span>n = <span class="number">0</span>;
+  <span class="kw">while let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>t) = tokens.pop_front() {
+    <span class="kw">let </span>cc = t.get_catcode();
+    <span class="kw">if </span>cc == Catcode::PARAM || cc == Catcode::ARG {
+      <span class="kw">if </span>cc == Catcode::PARAM {
+        <span class="kw">if </span>tokens.is_empty() {
+          <span class="comment">// Special case: lone # NOT following a numbered parameter
+          // Note that we require a { to appear next, but do NOT read it!
+          </span>params.push(Parameter::new(Cow::Borrowed(<span class="string">&quot;RequireBrace&quot;</span>), Cow::Borrowed(<span class="string">&quot;RequireBrace&quot;</span>), state)<span class="question-mark">?</span>);
+          <span class="kw">break</span>;
+        } <span class="kw">else </span>{
+          n += <span class="number">1</span>;
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(t_next) = tokens.pop_front() {
+            t = t_next;
+          } <span class="kw">else </span>{
+            <span class="macro">unimplemented!</span>(); <span class="comment">// hm, this is a bit of a pain to port without making t into an Option&lt;Token&gt;...
+          </span>}
+        }
+      } <span class="kw">else </span>{
+        <span class="comment">// CC_ARG case, keep looking at this token
+        </span>n += <span class="number">1</span>;
+      }
+      <span class="kw">if </span>n &gt; <span class="number">0 </span>{
+        <span class="kw">let </span>t_num = t.get_string().parse::&lt;i8&gt;().unwrap_or(-<span class="number">1</span>);
+        <span class="kw">if </span>t_num != n {
+          <span class="macro">fatal!</span>(
+            ParamSpec,
+            Expected,
+            <span class="macro">s!</span>(<span class="string">&quot;Parameters for {:?} not in order. Got {:?}, expected {:?}. in {:?}&quot;</span>, cs, t, n, params)
+          );
+        }
+      }
+      <span class="comment">// Check for delimiting text following the parameter #n
+      </span><span class="kw">let </span><span class="kw-2">mut </span>delim = Vec::new();
+      <span class="kw">let </span><span class="kw-2">mut </span>pc = Catcode::MARKER; <span class="comment">// throwaway initial val
+      </span><span class="kw">while </span>!tokens.is_empty() {
+        <span class="kw">let </span>inner_cc = tokens.front().unwrap().get_catcode();
+        <span class="kw">if </span>inner_cc == Catcode::PARAM || inner_cc == Catcode::ARG {
+          <span class="kw">break</span>;
+        }
+        <span class="kw">let </span>d = tokens.pop_front().unwrap();
+        <span class="kw">if </span>!(pc == Catcode::SPACE &amp;&amp; inner_cc == Catcode::SPACE) {
+          <span class="comment">// BUT collapse whitespace!
+          </span>delim.push(d);
+        }
+        pc = inner_cc;
+      }
+      <span class="comment">// Found text that marks the end of the parameter
+      </span><span class="kw">if </span>!delim.is_empty() {
+        <span class="kw">let </span>extra = Tokens::new(delim);
+        params.push(
+          Parameter {
+            name: Cow::Borrowed(<span class="string">&quot;Until&quot;</span>),
+            spec: Cow::Owned(<span class="macro">format!</span>(<span class="string">&quot;Until:{extra}&quot;</span>)),
+            extra: <span class="macro">vec!</span>[extra],
+            ..Parameter::default()
+          }
+          .init(state)<span class="question-mark">?</span>,
+        );
+      } <span class="kw">else if </span>tokens.len() == <span class="number">1 </span>&amp;&amp; tokens.front().unwrap().get_catcode() == Catcode::PARAM {
+        <span class="comment">// Special case: trailing sole # =&gt; delimited by next opening brace.
+        </span>tokens.pop_front();
+        params.push(Parameter::new(Cow::Borrowed(<span class="string">&quot;UntilBrace&quot;</span>), Cow::Borrowed(<span class="string">&quot;UntilBrace&quot;</span>), state)<span class="question-mark">?</span>);
+      } <span class="kw">else </span>{
+        <span class="comment">// Nothing? Just a plain parameter.
+        </span>params.push(Parameter::new(Cow::Borrowed(<span class="string">&quot;Plain&quot;</span>), Cow::Borrowed(<span class="string">&quot;{}&quot;</span>), state)<span class="question-mark">?</span>);
+      }
+    } <span class="kw">else </span>{
+      <span class="comment">// Initial delimiting text is required.
+      </span><span class="kw">let </span><span class="kw-2">mut </span>lit: Vec&lt;Token&gt; = <span class="macro">vec!</span>[t];
+      <span class="kw">while </span>!tokens.is_empty() {
+        <span class="kw">let </span>lit_cc = tokens.front().unwrap().get_catcode();
+        <span class="kw">if </span>lit_cc == Catcode::PARAM || lit_cc == Catcode::ARG {
+          <span class="kw">break</span>;
+        }
+        lit.push(tokens.pop_front().unwrap());
+      }
+      <span class="kw">let </span>expected = Tokens::new(lit);
+      params.push(
+        Parameter {
+          name: Cow::Borrowed(<span class="string">&quot;Match&quot;</span>),
+          spec: Cow::Owned(<span class="macro">s!</span>(<span class="string">&quot;Match:{}&quot;</span>, expected)),
+          extra: <span class="macro">vec!</span>[expected],
+          novalue: <span class="bool-val">true</span>,
+          ..Parameter::default()
+        }
+        .init(state)<span class="question-mark">?</span>,
+      );
+    }
+  }
+  <span class="comment">// return (@params ? LaTeXML::Core::Parameters-&gt;new(@params) : undef);
+  </span><span class="kw">if </span>params.is_empty() {
+    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+  } <span class="kw">else </span>{
+    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Parameters::new(params)))
+  }
+}
+
+<span class="kw">pub fn </span>do_def(globally: bool, stomach: <span class="kw-2">&amp;mut </span>Stomach, cs: Token, params: Tokens, body: Tokens, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="macro">BindState!</span>(stomach, state);
+  <span class="kw">let </span>paramlist = parse_def_parameters(<span class="kw-2">&amp;</span>cs, params, state)<span class="question-mark">?</span>;
+
+  <span class="kw">let </span>scope = <span class="kw">if </span>globally { <span class="prelude-val">Some</span>(Scope::Global) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+  state.install_definition(
+    Expandable::new(
+      cs,
+      paramlist,
+      ExpansionBody::Tokens(body),
+      <span class="prelude-val">Some</span>(ExpandableOptions {
+        nopack_parameters: <span class="bool-val">true</span>,
+        ..ExpandableOptions::default()
+      }),
+      state,
+    ),
+    scope,
+  );
+  state.after_assignment(stomach.get_gullet_mut());
+  <span class="prelude-val">Ok</span>(())
+}
+
+<span class="comment">// Kinda rough: We don&#39;t really keep track of modes as carefully as TeX does.
+// We&#39;ll assume that a box is horizontal if there&#39;s anything at all,
+// but it&#39;s not a vbox (!?!?)
+</span><span class="kw">pub fn </span>classify_box(boxnum: Number, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+  <span class="kw">match </span>state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;box{}&quot;</span>, boxnum.value_of())) {
+    <span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>d)) =&gt; <span class="kw">match </span>d.data() {
+      DigestedData::Whatsit(<span class="kw-2">ref </span>w) <span class="kw">if </span>w.read().unwrap().definition == state.lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\vbox&quot;</span>)).unwrap() =&gt; <span class="string">&quot;vbox&quot;</span>,
+      <span class="kw">_ </span>=&gt; <span class="string">&quot;hbox&quot;</span>,
+    },
+    <span class="kw">_ </span>=&gt; <span class="string">&quot;&quot;</span>,
+  }
+}
+
+<span class="kw">const </span>MATH_CLASS_ROLE: [<span class="kw-2">&amp;</span>str; <span class="number">8</span>] = [<span class="string">&quot;&quot;</span>, <span class="string">&quot;BIGOP&quot;</span>, <span class="string">&quot;BINOP&quot;</span>, <span class="string">&quot;RELOP&quot;</span>, <span class="string">&quot;OPEN&quot;</span>, <span class="string">&quot;CLOSE&quot;</span>, <span class="string">&quot;PUNCT&quot;</span>, <span class="string">&quot;&quot;</span>];
+<span class="comment">// Is this &quot;fontinfo&quot; stuff sufficient to maintain a math font &quot;family&quot; ??
+// What we&#39;re really after is a connectio nto a font encoding mapping.
+</span><span class="kw">pub fn </span>decode_math_char(<span class="kw-2">mut </span>n: u16, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; (<span class="prelude-ty">Option</span>&lt;String&gt;, <span class="prelude-ty">Option</span>&lt;char&gt;) {
+  <span class="kw">let </span>class: u16 = n / (<span class="number">16 </span>* <span class="number">256</span>);
+  n %= <span class="number">16 </span>* <span class="number">256</span>;
+  <span class="kw">let </span>fam: u16 = n / <span class="number">256</span>;
+  n %= <span class="number">256</span>;
+  <span class="kw">let </span>font = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;fontinfo_{}_text&quot;</span>, fam)).unwrap_or_else(|| {
+    state
+      .lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;fontinfo_{}_script&quot;</span>, fam))
+      .unwrap_or_else(|| state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;fontinfo_{}_scriptscript&quot;</span>, fam)).unwrap_or(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">false</span>)))
+  });
+  <span class="comment">// TODO: This function is called with n=20,000, how is the char cast sensible here? Consult Bruce.
+  </span><span class="kw">let </span>c = n <span class="kw">as </span>u8 <span class="kw">as </span>char; <span class="comment">// TODO: confusing types, the 256 arithmetic implies larger than u8 inputs, what for?
+                           // // If no specific class, Lookup properties from a DefMath?
+  </span><span class="kw">let </span>charinfo = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;math_token_attributes_{}&quot;</span>, c));
+  <span class="kw">let </span>fontinfo = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;fontinfo_{}&quot;</span>, font.to_string()));
+  <span class="kw">let </span><span class="kw-2">mut </span>role = MATH_CLASS_ROLE[class <span class="kw">as </span>usize];
+
+  <span class="kw">if </span>role.is_empty() {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(<span class="kw-2">ref </span>info)) = charinfo {
+      role = <span class="kw-2">&amp;</span>info[role];
+    }
+  }
+  <span class="kw">let </span>role_opt = <span class="kw">if </span>role.is_empty() { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(role.to_string()) };
+  <span class="kw">let </span>font_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(<span class="kw-2">ref </span>info)) = fontinfo {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>data) = info.encoding {
+      font::decode(n <span class="kw">as </span>u8, <span class="prelude-val">Some</span>(data.to_string()), <span class="bool-val">false</span>, stomach, state)
+    } <span class="kw">else </span>{
+      <span class="prelude-val">Some</span>(c)
+    }
+  } <span class="kw">else </span>{
+    <span class="prelude-val">None
+  </span>};
+
+  (role_opt, font_opt)
+}
+
+<span class="comment">// Risky: I think this needs to be digested as a body to work like TeX (?)
+// but parameter think&#39;s it&#39;s just parsing from gullet...
+</span><span class="kw">pub fn </span>read_box_contents(gullet: <span class="kw-2">&amp;mut </span>Gullet, everybox_opt: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = gullet.read_token(state) {
+    <span class="kw">if </span>t.get_catcode() == Catcode::BEGIN {
+      <span class="kw">break</span>;
+    } <span class="comment">// Skip till { or \bgroup
+  </span>}
+  <span class="comment">// Now, insert some extra tokens, if any, possibly from \afterassignment
+  </span><span class="kw">match </span>state.remove_value(<span class="string">&quot;BeforeNextBox&quot;</span>) {
+    <span class="prelude-val">Some</span>(Stored::Tokens(tokens)) =&gt; gullet.unread(tokens),
+    <span class="prelude-val">Some</span>(Stored::Token(token)) =&gt; gullet.unread_one(token),
+    <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; {},
+    <span class="prelude-val">Some</span>(other) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;afterAssignment should be a token, got: {}&quot;</span>, other),
+  };
+  <span class="comment">// AND, insert any extra tokens passed in, due to everyhbox or everyvbox
+  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(everybox) = everybox_opt {
+    gullet.unread(everybox);
+  }
+  <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+}
+
+<span class="doccomment">/// Reading a Box&#39;s content is crucially dependent on invoking the &quot;{&quot; token and obtaining a digested result
+/// Hence it is *always* needed to pair `read_box_contents` with its stomach-level counterpart, `predigest_box_contents`
+</span><span class="kw">pub fn </span>predigest_box_contents(stomach: <span class="kw-2">&amp;mut </span>Stomach, _tokens: ArgWrap, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
+  <span class="kw">let </span><span class="kw-2">mut </span>contents = stomach.invoke_token(<span class="kw-2">&amp;</span><span class="macro">T_BEGIN!</span>(), state)<span class="question-mark">?</span>;
+  <span class="kw">if </span>contents.is_empty() {
+    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+  } <span class="kw">else </span>{
+    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(contents.remove(<span class="number">0</span>)))
+  }
+}
+
+<span class="kw">pub fn </span>revert_spec(whatsit: <span class="kw-2">&amp;mut </span>Whatsit, keyword: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; Vec&lt;Token&gt; {
+  <span class="comment">//   my ($whatsit, $keyword) = @_;
+  //   my $value = $whatsit-&gt;getProperty($keyword);
+  //   return ($value ? (Explode($keyword), Revert($value)) : ()); }
+  </span><span class="macro">unimplemented!</span>()
+}
+
+<span class="doccomment">/// This attempts to be a generalize vbox construction;
+/// It tries to figure out whether an ltx:inline-block or ltx:para is needed,
+/// and attempts to figure out whether sequences of the inserted content
+/// need to be explicitly wrapped in some kind of block element (presumably ltx:p).
+/// It returns the inserted inner blocks,
+/// whether or not they got wrapped by that ltx:inline-block; which it DOESN&#39;T TELL YOU ABOUT!
+</span><span class="kw">pub fn </span>insert_block(document: <span class="kw-2">&amp;mut </span>Document, contents: <span class="kw-2">&amp;</span>Digested, <span class="kw-2">mut </span>blockattr: HashMap&lt;String, String&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+  <span class="comment">// Create something like:
+  // &quot;&lt;ltx:inline-block vattach=&#39;$vattach&#39; height=&#39;#height&#39;&gt;#2&lt;/ltx:inline-block&gt;&quot;
+  </span><span class="kw">let </span>context = document.get_element().unwrap(); <span class="comment">// Where we originally start inserting.
+
+  </span><span class="kw">let </span><span class="kw-2">mut </span>blocktag = <span class="string">&quot;ltx:block&quot;</span>;
+  <span class="kw">let </span><span class="kw-2">mut </span>iblocktag = <span class="string">&quot;ltx:inline-block&quot;</span>;
+  <span class="kw">if </span>blockattr.remove(<span class="string">&quot;para&quot;</span>).is_some() {
+    blocktag = <span class="string">&quot;ltx:para&quot;</span>;
+    iblocktag = <span class="string">&quot;ltx:inline-para&quot;</span>;
+  }
+  <span class="comment">// Generally, we&#39;re going to need some sort of container to hold the contents of the block.
+  // Particularly if we&#39;re: setting various size &amp; positioning attributes;
+  // or can&#39;t currently open an ltx:p; or if the current point accepts plain text (#PCDATA).
+  // If we&#39;re in an inline context, we&#39;ll need a ltx:inline-block,  otherwise ltx:block.
+  // [Or maybe an ltx:para... when does that happen?]
+  </span><span class="kw">let </span><span class="kw-2">mut </span>newblock: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
+  <span class="kw">let </span><span class="kw-2">mut </span>remove = Vec::new();
+  <span class="comment">// drop all empty values
+  </span><span class="kw">for </span>(key, val) <span class="kw">in </span><span class="kw-2">&amp;</span>blockattr {
+    <span class="kw">if </span>val.is_empty() {
+      remove.push(key.to_string())
+    }
+  }
+  <span class="kw">for </span>key <span class="kw">in </span>remove {
+    blockattr.remove(<span class="kw-2">&amp;</span>key);
+  }
+  <span class="kw">let </span>hasattr = !blockattr.is_empty();
+  <span class="kw">if </span>hasattr || !document.can_contain_node_somehow(<span class="kw-2">&amp;</span>context, <span class="string">&quot;ltx:p&quot;</span>, state) || document.can_contain(<span class="kw-2">&amp;</span>context, <span class="string">&quot;#PCDATA&quot;</span>, state) {
+    <span class="kw">let </span>tag = <span class="kw">if </span>document.can_contain(<span class="kw-2">&amp;</span>context, blocktag, state) {
+      blocktag
+    } <span class="kw">else </span>{
+      iblocktag
+    };
+    <span class="kw">let </span><span class="kw-2">mut </span>attr_arg = blockattr.clone();
+    attr_arg.insert(<span class="string">&quot;_autoclose&quot;</span>.to_string(), <span class="string">&quot;true&quot;</span>.to_string());
+    newblock = <span class="prelude-val">Some</span>(document.open_element(tag, <span class="prelude-val">Some</span>(attr_arg), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>);
+  }
+  <span class="comment">// Insert the content for the block, and reduce
+  </span>document.set_attribute(<span class="kw-2">&amp;mut </span>document.get_element().unwrap(), <span class="string">&quot;_vertical_mode_&quot;</span>, <span class="string">&quot;true&quot;</span>, state)<span class="question-mark">?</span>; <span class="comment">// HACK!!!! (see \hbox)
+
+  </span>document.absorb(contents, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+  <span class="kw">let </span>absorbed : Vec&lt;Node&gt; = document.get_constructed_nodes().to_vec();
+  <span class="kw">let </span><span class="kw-2">mut </span>nodes = VecDeque::from(
+    document.filter_children(document.filter_deletions(absorbed)));
+
+  <span class="comment">// Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
+  </span><span class="kw">let </span><span class="kw-2">mut </span>newnodes = Vec::new();
+  <span class="kw">while </span>!nodes.is_empty() {
+    <span class="kw">if </span>state.model.get_node_qname(<span class="kw-2">&amp;</span>nodes[<span class="number">0</span>]) == <span class="string">&quot;ltx:break&quot; </span>{
+      <span class="kw">let </span>break_parent_name = state.model.get_node_qname(<span class="kw-2">&amp;</span>nodes[<span class="number">0</span>].get_parent().unwrap());
+      <span class="comment">// ltx:break are superflous, now, unless we&#39;re transporting a figure/float
+      </span><span class="kw">if </span>break_parent_name != <span class="string">&quot;ltx:figure&quot; </span>&amp;&amp; break_parent_name != <span class="string">&quot;ltx:float&quot; </span>{
+        document.remove_node(<span class="kw-2">&amp;mut </span>nodes.pop_front().unwrap());
+        <span class="kw">continue</span>;
+      }
+    }
+    <span class="kw">let </span><span class="kw-2">mut </span>inline = Vec::new(); <span class="comment">// Collect up sequences of Inline
+    </span><span class="kw">while </span>!nodes.is_empty() &amp;&amp; state.model.is_node_in_schema_class(<span class="string">&quot;Inline&quot;</span>, <span class="kw-2">&amp;</span>nodes[<span class="number">0</span>]) {
+      inline.push(nodes.pop_front().unwrap());
+    }
+    <span class="kw">if </span>!inline.is_empty() {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(wrapped) = document.wrap_nodes(<span class="string">&quot;ltx:p&quot;</span>, inline, state)<span class="question-mark">? </span>{
+        newnodes.push(wrapped);
+      }
+    } <span class="kw">else </span>{
+      newnodes.push(nodes.pop_front().unwrap());
+    }
+  }
+
+  <span class="comment">// If we&#39;ve inserted a wrapper element, close all open elements up to it&#39;s parent
+  // It may have auto-opened some element to contain it, but leave that open for following material
+  // Otherwise, close everything back up to the originally open element (but only if still open!)
+  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>blocknode) = newblock {
+    <span class="kw">let </span>block_parent = blocknode.get_parent();
+    document.close_to_node(block_parent.as_ref().unwrap(), <span class="bool-val">true</span>, state)<span class="question-mark">?</span>;
+  } <span class="kw">else </span>{
+    document.close_to_node(<span class="kw-2">&amp;</span>context, <span class="bool-val">true</span>, state)<span class="question-mark">?</span>;
+  }
+  <span class="comment">// Check if the ltx:inline-block container is really needed.
+  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>blocknode) = newblock {
+    <span class="kw">let </span><span class="kw-2">mut </span>rows = blocknode.get_child_nodes();
+    <span class="kw">let </span><span class="kw-2">mut </span>crows = <span class="kw">match </span>rows.first() {
+      <span class="prelude-val">None </span>=&gt; VecDeque::new(),
+      <span class="prelude-val">Some</span>(n) =&gt; VecDeque::from(n.get_child_nodes()),
+    };
+    <span class="kw">if </span>rows.is_empty() {
+      <span class="comment">// Insertion came up empty?
+      </span>document.remove_node(<span class="kw-2">&amp;mut </span>blocknode); <span class="comment">// then remove the new block entirely
+    </span>} <span class="kw">else if </span>rows.len() == <span class="number">1
+      </span>&amp;&amp; crows.len() == <span class="number">1
+      </span>&amp;&amp; state.model.get_node_qname(rows.first().unwrap()) == <span class="string">&quot;ltx:p&quot;
+      </span>&amp;&amp; document.can_contain(<span class="kw-2">&amp;</span>blocknode.get_parent().unwrap(), <span class="kw-2">&amp;</span>state.model.get_node_qname(<span class="kw-2">&amp;</span>crows[<span class="number">0</span>]), state)
+    <span class="comment">// TODO: &amp;&amp; (!hasattr || blockattr.keys().any(...
+    </span>{
+      <span class="comment">// Else only 1 item inside...which is an ltx:p with 1 item, if allowed.
+      </span><span class="kw">let </span><span class="kw-2">mut </span>cfirst = crows.pop_front().unwrap();
+      <span class="kw">for </span>(key, val) <span class="kw">in </span>blockattr {
+        document.set_attribute(<span class="kw-2">&amp;mut </span>cfirst, <span class="kw-2">&amp;</span>key, <span class="kw-2">&amp;</span>val, state)<span class="question-mark">?</span>;
+      }
+      document.unwrap_nodes(rows.remove(<span class="number">0</span>))<span class="question-mark">?</span>;
+      document.unwrap_nodes(blocknode)<span class="question-mark">?</span>;
+    } <span class="kw">else if </span>rows.len() == <span class="number">1 </span>&amp;&amp; document.can_contain(<span class="kw-2">&amp;</span>blocknode.get_parent().unwrap(), <span class="kw-2">&amp;</span>state.model.get_node_qname(<span class="kw-2">&amp;</span>rows[<span class="number">0</span>]), state)
+    <span class="comment">// if allowed.
+    // TODO: &amp;&amp; (!hasattr || !grep { !$document-&gt;canHaveAttribute($rows[0], $_) } keys %blockattr)))
+    </span>{
+      <span class="kw">let </span><span class="kw-2">mut </span>first = rows.remove(<span class="number">0</span>);
+      <span class="kw">for </span>(key, val) <span class="kw">in </span>blockattr {
+        document.set_attribute(<span class="kw-2">&amp;mut </span>first, <span class="kw-2">&amp;</span>key, <span class="kw-2">&amp;</span>val, state)<span class="question-mark">?</span>;
+      }
+      document.unwrap_nodes(blocknode)<span class="question-mark">?</span>;
+    }
+  }
+  <span class="comment">// And return the list of &quot;rows&quot; in the box (in case they need attributes....)
+  </span><span class="prelude-val">Ok</span>(newnodes)
+}
+
+<span class="kw">pub fn </span>cleanup_math(document: <span class="kw-2">&amp;mut </span>Document, mathnode: Node, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="comment">// Cleanup ltx:Math elements; particularly if they aren&#39;t &quot;really&quot; math.
+  // But record the oddity with class=ltx_markedasmath
+
+  // If the Math ONLY contains XMath/XMText, it apparently isn&#39;t math at all!?!
+  </span><span class="kw">if </span>document
+    .findnodes(<span class="string">&quot;ltx:XMath/ltx:*[local-name() != &#39;XMText&#39;]&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>mathnode), state)
+    .is_empty()
+  {
+    <span class="comment">// So unwrap down to the contents of the XMText&#39;s.
+    </span><span class="kw">let </span>xmtexts = mathnode
+      .get_child_nodes()
+      .into_iter()
+      .flat_map(|child| child.get_child_nodes().into_iter().flat_map(|grandhcild| grandhcild.get_child_nodes()));
+    <span class="kw">let </span><span class="kw-2">mut </span>texts = <span class="macro">vec!</span>[];
+    <span class="kw">for </span><span class="kw-2">mut </span>text <span class="kw">in </span>xmtexts {
+      text = <span class="kw">if </span>text.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
+        <span class="comment">// Make sure we&#39;ve got an element
+        </span>text
+      } <span class="kw">else </span>{
+        document.wrap_nodes(<span class="string">&quot;ltx:text&quot;</span>, <span class="macro">vec!</span>[text], state)<span class="question-mark">?</span>.unwrap()
+      };
+      document.add_class(<span class="kw-2">&amp;mut </span>text, <span class="string">&quot;ltx_markedasmath&quot;</span>, state)<span class="question-mark">?</span>; <span class="comment">// Now record that it originally was marked as math
+      </span>texts.push(text)
+    }
+    document.replace_node(mathnode.clone(), texts)<span class="question-mark">?</span>; <span class="comment">// and replace the whole Math with the pieces
+  </span>} <span class="kw">else </span>{
+    <span class="comment">// Cleanup any remaining XMTexts
+    </span>cleanup_xmtext_outer(document, <span class="kw-2">&amp;</span>mathnode, state)<span class="question-mark">?</span>;
+  }
+  <span class="prelude-val">Ok</span>(())
+}
+
+<span class="comment">// Here&#39;s for an inverse case: when an XMText isn&#39;t &quot;really&quot; just text
+// if it only contains an Math  ORR, a tabular with only Math in the cells?
+// First case: pull it back into the math, but in an XMWrap to isolate it for parsing.
+// Should we just pull any mixed text math up or only a single Math?
+// For the tabular case, convert it to an XMArray.
+
+// Note that normally, we&#39;d do afterClose on ltx:XMText,
+// but since the ltx:XMText closes before the outer ltx:Math,
+// we would keep cleanup_Math from recognizing the trivial case of
+// a single ltx:tabular in an equation (perverse, but people do that).
+// So, we put this one on ltx:Math also, and scan for any contained XMText to fixup.
+
+</span><span class="kw">fn </span>cleanup_xmtext_outer(document: <span class="kw-2">&amp;mut </span>Document, math_node: <span class="kw-2">&amp;</span>Node, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">for </span>text_node <span class="kw">in </span>document.findnodes(<span class="string">&quot;descendant::ltx:XMText&quot;</span>, <span class="prelude-val">Some</span>(math_node), state) {
+    cleanup_xmtext(document, text_node, state)<span class="question-mark">?</span>;
+  }
+  <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">fn </span>cleanup_xmtext(document: <span class="kw-2">&amp;mut </span>Document, <span class="kw-2">mut </span>text_node: Node, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="comment">// We&#39;re really only interested in reducing nested math, right?
+  // But actually also collapsing ltx:XMText/ltx:text
+  // Apply &quot;outer&quot; simplifications: remove ltx:text or ltx:p wrappings.
+
+  // A single &quot;simple&quot; element, with a single child
+  </span><span class="kw">let </span><span class="kw-2">mut </span>children;
+  <span class="kw">loop </span>{
+    children = text_node.get_child_nodes();
+    <span class="kw">if </span>(children.len() != <span class="number">1</span>)
+      || document
+        .findnodes(<span class="string">&quot;ltx:text | ltx:inline-block[count(*)=1] | ltx:p&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>text_node), state)
+        .is_empty()
+    {
+      <span class="kw">break</span>;
+    }
+    <span class="kw">let </span>child = children.pop().unwrap();
+    document.copy_node_font(<span class="kw-2">&amp;</span>child, <span class="kw-2">&amp;mut </span>text_node)<span class="question-mark">?</span>;
+    <span class="kw">for </span>(key, value) <span class="kw">in </span>child.get_attributes() {
+      <span class="comment">// Copy the child&#39;s attributes (should Merge!!)
+      </span><span class="kw">if </span>key != <span class="string">&quot;xml:id&quot; </span>{
+        text_node.set_attribute(<span class="kw-2">&amp;</span>key, <span class="kw-2">&amp;</span>value)<span class="question-mark">?</span>;
+      }
+    }
+    document.unwrap_nodes(child)<span class="question-mark">?</span>;
+  }
+
+  <span class="comment">// Now apply a simplifying rule for nested Math
+  // If the XMText contains a single Math, pull it&#39;s content up in
+  </span><span class="kw">if </span>children.len() == <span class="number">1 </span>&amp;&amp; !document.findnodes(<span class="string">&quot;ltx:Math&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>text_node), state).is_empty() {
+    <span class="comment">// Replace XMText by XMWrap/*  (this should preserve the parse?)
+    </span>document.rename_node(<span class="kw-2">&amp;mut </span>text_node, <span class="string">&quot;ltx:XMWrap&quot;</span>)<span class="question-mark">?</span>; <span class="comment">// text_node =
+    </span><span class="kw">let </span><span class="kw-2">mut </span>first_child = children.pop().unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>first_granchildren = first_child.get_child_nodes();
+    document.replace_node(
+      first_child,
+      first_granchildren
+        .into_iter()
+        .flat_map(|grandchild| grandchild.get_child_nodes())
+        .collect(),
+    )<span class="question-mark">?</span>;
+  <span class="comment">// # # RISKY!!!! If SOME nodes are math...
+  // # # pull the whole sequence up, unwrap the math and putting the rest back in XMText.
+  // # # Even with the XMWrap, this seems to wreak havoc on parsing and structure?
+  // # if(document.findnodes(&#39;ltx:Math&#39;,$text_node)){
+  // #   # Replace XMText by XMWrap/*  (this should preserve the parse?)
+  // #   $text_node=document.renameNode($text_node,&#39;ltx:XMWrap&#39;);
+  // #   foreach my $child (@children){
+  // #     if($model-&gt;getNodeQName($child) eq &#39;ltx:Math&#39;){
+  // #       document.replaceNode($child,map($_-&gt;childNodes,$child-&gt;childNodes)); }
+  // #     else {
+  // #       document.wrapNodes(&#39;ltx:XMText&#39;,$child); }}}
+  // If a single tabular that ONLY(?) contains Math, turn into an XMArray
+  // Well, a tabular REALLY shouldn&#39;t be in math;
+  // How much math should determine the switch?
+  // [will alignment attributes be lost?]
+  </span>} <span class="kw">else if </span>children.len() == <span class="number">1 </span>&amp;&amp; state.model.get_node_qname(children.first().as_ref().unwrap()) == <span class="string">&quot;ltx:tabular&quot;
+  </span><span class="comment">//// Should we ALWAYS do this, or just for some minimal amount of math???
+  ////        &amp;&amp; !document.findnodes(&#39;ltx:tabular/ltx:tr/ltx:td/text()&#39;
+  ////                                 .&#39; | ltx:tabular/ltx:tbody/ltx:tr/ltx:td/text()&#39;
+  ////                                 .&#39; | ltx:tabular/ltx:tr/ltx:td[not(ltx:Math)]&#39;
+  ////                                 .&#39; | ltx:tabular/ltx:tbody/ltx:tr/ltx:td[not(ltx:Math)]&#39;,
+  ////                                 $text_node)
+  </span>{
+    <span class="macro">unimplemented!</span>(); <span class="comment">// TODO
+                      // // First step is remove any ltx:tbody from the tabular!
+                      // foreach my $tb (document.findnodes(&#39;ltx:tabular/ltx:tbody&#39;, $text_node)) {
+                      //   document.unwrapNodes($tb); }
+                      // // Now, we can start replacing tabular=&gt;XMArray, tr=&gt;XMRow, td=&gt;XMCell
+                      // my $table = document.renameNode($children[0], &#39;ltx:XMArray&#39;);
+                      // foreach my $row ($table-&gt;childNodes) {
+                      //   $row = document.renameNode($row, &#39;ltx:XMRow&#39;);
+                      //   foreach my $cell ($row-&gt;childNodes) {
+                      //     $cell = document.renameNode($cell, &#39;ltx:XMCell&#39;);
+                      //     foreach my $m ($cell-&gt;childNodes) {
+                      //       if ($model-&gt;getNodeQName($m) eq &#39;ltx:Math&#39;) {    // Math cell, unwrap the Math/XMath layer
+                      //         document.replaceNode($m, map { $_-&gt;childNodes } $m-&gt;childNodes); }
+                      //       else {                                           // Otherwise, wrap whatever it is in an XMText
+                      //         document.wrapNodes(&#39;ltx:XMText&#39;, $m); }
+                      // } } }
+                      // And now we don&#39;t need the XMText any more.
+                      // foreach my $attr ($text_node-&gt;attributes) {    // Copy the child&#39;s attributes (should Merge!!)
+                      //   $table-&gt;setAttribute($attr-&gt;nodeName =&gt; $attr-&gt;getValue); }
+                      // my $newtable = document.unwrapNodes($text_node);
+                      // if (my $id = $text_node-&gt;getAttribute(&#39;xml:id&#39;)) {
+                      //   document.unRecordID($id);
+                      //   document.recordID($id, $newtable); } }
+  </span>}
+  <span class="prelude-val">Ok</span>(())
+}
+
+<span class="comment">//======================================================================
+// A random collection of utility functions.
+// [maybe need to do some reorganization?]
+// Since this is used for textual tokens, typically to split author lists,
+// we don&#39;t split within braces or math
+</span><span class="attr">#[allow(clippy::while_let_on_iterator)]
+</span><span class="kw">pub fn </span>split_tokens(tokens: Tokens, delims: Vec&lt;Token&gt;) -&gt; Vec&lt;Tokens&gt; {
+  <span class="kw">let </span><span class="kw-2">mut </span>items = Vec::new();
+  <span class="kw">let </span><span class="kw-2">mut </span>toks = Vec::new();
+  <span class="kw">if </span>!tokens.is_empty() {
+    <span class="kw">let </span>tokens = tokens.unlist();
+    <span class="kw">let </span><span class="kw-2">mut </span>tokens_iter = tokens.into_iter();
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = tokens_iter.next() {
+      <span class="kw">if </span>delims.iter().any(|d| d == <span class="kw-2">&amp;</span>t) {
+        items.push(Tokens::new(toks.drain(..).collect()));
+      } <span class="kw">else if </span>t == <span class="macro">T_BEGIN!</span>() {
+        toks.push(t);
+        <span class="kw">let </span><span class="kw-2">mut </span>level = <span class="number">1</span>;
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = tokens_iter.next() {
+          <span class="kw">match </span>t.get_catcode() {
+            Catcode::BEGIN =&gt; level += <span class="number">1</span>,
+            Catcode::END =&gt; level -= <span class="number">1</span>,
+            <span class="kw">_ </span>=&gt; {},
+          }
+          toks.push(t);
+          <span class="kw">if </span>level &lt; <span class="number">1 </span>{
+            <span class="comment">// done if balanced.
+            </span><span class="kw">break</span>;
+          }
+        }
+      } <span class="kw">else if </span>t == <span class="macro">T_MATH!</span>() {
+        toks.push(t);
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = tokens_iter.next() {
+          <span class="kw">let </span>is_math = t.get_catcode() == Catcode::MATH;
+          toks.push(t);
+          <span class="kw">if </span>is_math {
+            <span class="kw">break</span>;
+          }
+        }
+      } <span class="kw">else </span>{
+        toks.push(t);
+      }
+    }
+    <span class="comment">// last author is in toks, add to items
+    </span>items.push(Tokens::new(toks));
+  }
+  items
+}
+
+<span class="kw">pub fn </span>and_split(cs: Token, tokens: Tokens) -&gt; Vec&lt;Token&gt; {
+  split_tokens(tokens, <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\and&quot;</span>)])
+    .into_iter()
+    .flat_map(|t| {
+      <span class="kw">let </span><span class="kw-2">mut </span>with_cs = <span class="macro">vec!</span>[cs.clone(), <span class="macro">T_BEGIN!</span>()];
+      with_cs.extend(t.unlist());
+      with_cs.push(<span class="macro">T_END!</span>());
+      with_cs
+    })
+    .collect()
+}
+
+<span class="doccomment">/// Converts $tokens to a string in the fashion of \message and others:
+/// doubles #, converts to string; optionally adds spaces after control sequences
+/// in the spirit of the B Book, &quot;show_token_list&quot; routine, in 292.
+</span><span class="kw">pub fn </span>writable_tokens(tokens: <span class="kw-2">&amp;</span>Tokens, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
+  <span class="comment">// unwrap a \noexpand-created \relax to its actual content,
+  // to avoid confusing users with a \relax dontexpand
+  </span><span class="kw">let </span><span class="kw-2">mut </span>wv = Vec::new();
+  <span class="kw">for </span>t <span class="kw">in </span>tokens.unlist_ref().iter() {
+    <span class="kw">let </span>t = t.without_dont_expand_ref();
+    <span class="kw">match </span>t.code {
+      Catcode::CS =&gt; {
+        wv.push(t.clone());
+        wv.push(<span class="macro">T_SPACE!</span>());
+      },
+      Catcode::SPACE =&gt; {
+        wv.push(<span class="macro">T_SPACE!</span>());
+      },
+      Catcode::PARAM =&gt; {
+        wv.push(t.clone());
+        wv.push(t.clone());
+      },
+      Catcode::ARG =&gt; {
+        <span class="comment">// B Book, 294. Reduce to param+integer
+        </span>wv.push(<span class="macro">T_PARAM!</span>());
+        wv.push(<span class="macro">T_OTHER!</span>(t.get_string()));
+      },
+      <span class="kw">_ </span>=&gt; {
+        wv.push(t.clone());
+      },
+    }
+  }
+  untex(Tokens::new(wv), <span class="bool-val">true</span>)
+}
+
+<span class="comment">// sub orNull {
+//   return (grep { defined } @_) ? @_ : undef; }
+
+// # Should be a general utility?
+// sub stripBraces {
+//   my ($tokens) = @_;
+//   my @tokens = ($tokens ? $tokens-&gt;unlist : ());
+//   my @t = ();
+//   while (@tokens &amp;&amp; ($tokens[0]-&gt;getCatcode == CC_SPACE)) {    # Skip leading whitespace
+//     shift(@tokens); }
+//   # Balanced tokens until $delim
+//   my $ntopbraces = 0;
+//   while (@tokens) {
+//     if (Equals($tokens[0], T_BEGIN)) {                         # If top-level brace
+//       $ntopbraces++;
+//       my ($level, $t) = (0, undef);
+//       while (defined($t = shift(@tokens))) {                   # Read balanced
+//         my $cc = $t-&gt;getCatcode;
+//         $level++ if $cc == CC_BEGIN;
+//         $level-- if $cc == CC_END;
+//         push(@t, $t);
+//         last unless $level; } }
+//     else {
+//       push(@t, shift(@tokens)); } }
+//   while (@t &amp;&amp; ($t[-1]-&gt;getCatcode == CC_SPACE)) {             # pop off trailing spaces
+//     pop(@t); }
+//   # Strip outer braces if a single set encloses entire value and not just {}
+//   if ($ntopbraces == 1) {
+//     shift(@t); pop(@t); }
+//   return Tokens(@t); }
+
+</span><span class="doccomment">/// Support for Key / Value arguments.
+</span><span class="comment">// The very basic form is
+//   RequiredKeyVals: $keyset
+//   OptionalKeyVals: $keyset
+// to parse Key-Value pairs from a given keyset (see the &#39;keyval&#39; package
+// documentation for more information). These types of KeyVal
+// parameters will return a LaTeXML::Core::KeyVals object, which can then be
+// used to access the values of the individual items.
+// The difference between the two forms is that RequiredKeyVals expects a set of
+// key-value pairs wrapped in T_BEGIN T_END, where as OptionalKeyVals optionally
+// expects a set of KeyValue pairs wrapped in T_OTHER(&#39;[&#39;) T_OTHER(&#39;]&#39;)
+//
+// Several extension of the keyval package exist, the most common one we support
+// is the xkeyval package. This introduces further variations on the keyval
+// arguments parsing, in particular it allows to read keys from more than one
+// keyset at once. These can be specified by giving comma-seperated values in
+// the keyset argument. By default, a key will only be set in the **first**
+// keyset it occurs in. By using
+//   RequiredKeyVals+: $keysets
+//   OptionalKeyVals+: $keysets
+// the key will be set in all keysets instead.
+//
+// All keys to be parsed with these arguments should be declared using
+// DefKeyVal in LaTeXML::Package. By default, an error is thrown if an unknown
+// key is encountered. To surpress this behaviour, and instead store all
+// undefined keys, use
+//   RequiredKeyVals*: $keysets
+//   OptionalKeyVals*: $keysets
+// instead. The &#39;*&#39; and &#39;+&#39; modifiers can be combined by using:
+//   RequiredKeyVals*+: $keysets
+//   OptionalKeyVals*+: $keysets
+//
+// Furthermore, the xkeyval package supports giving prefixes to keys,
+//   RequiredKeyVals[*][+]: $prefix|$keysets
+//   OptionalKeyVals[*][+]: $prefix|$keysets
+//
+// Finally, it is possible to specify specific keys to skip when digesting the
+// object. This can be achieved using comma-seperated key values in
+//   RequiredKeyVals[*][+]: $prefix|$keysets|$skip
+//   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
+
+// function to handle all the
+</span><span class="attr">#[derive(Default)]
+</span><span class="kw">pub struct </span>KVSpec {
+  <span class="kw">pub </span>star: bool,
+  <span class="kw">pub </span>plus: bool,
+  <span class="kw">pub </span>prefix: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="kw">pub </span>keysets: Vec&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt;,
+  <span class="kw">pub </span>skip: bool,
+}
+<span class="kw">pub fn </span>keyvals_aux(gullet: <span class="kw-2">&amp;mut </span>Gullet, until: <span class="prelude-ty">Option</span>&lt;Token&gt;, <span class="kw-2">mut </span>spec: KVSpec, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;KeyVals&gt; {
+  <span class="comment">// support both &quot;keysets&quot; and &quot;prefix|keysets&quot;
+  // unless (defined($keysets)) {
+  //   $keysets = $prefix;
+  //   $prefix  = undef;
+  // to emulate old behaviour, throw no errors
+  // when we have a single keyset and no prefix (or no keyset at all)
+  </span><span class="kw">if </span>spec.keysets.is_empty() {
+    spec.star = <span class="bool-val">true</span>;
+  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>prefix) = spec.prefix {
+    <span class="kw">if </span>prefix.find(<span class="string">&#39;,&#39;</span>).is_none() {
+      spec.star = <span class="bool-val">true</span>;
+    }
+  }
+
+  <span class="comment">// create a new set of Key-Value arguments
+  </span><span class="kw">let </span><span class="kw-2">mut </span>keyvals = KeyVals::new(
+    KeyValsOptions {
+      prefix: spec.prefix,
+      <span class="comment">// keysets: spec.keysets, // TODO!
+      </span>keysets: Vec::new(),
+      set_all: spec.plus,
+      set_internals: <span class="bool-val">true</span>,
+      skip: spec.skip,
+      skip_missing: spec.star,
+    },
+    state,
+  );
+  <span class="comment">// and read it from the gullet
+  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(until_token) = until {
+    keyvals.read_from(gullet, until_token, state)<span class="question-mark">?</span>;
+  }
+  <span class="comment">// we still want to make use of the hash
+  </span><span class="prelude-val">Ok</span>(keyvals)
+}
+
+<span class="kw">pub fn </span>uppercase_token(token: Token, state: <span class="kw-2">&amp;</span>State) -&gt; Token { either_case_token(token, <span class="bool-val">true</span>, state) }
+<span class="kw">pub fn </span>lowercase_token(token: Token, state: <span class="kw-2">&amp;</span>State) -&gt; Token { either_case_token(token, <span class="bool-val">false</span>, state) }
+
+<span class="kw">fn </span>either_case_token(token: Token, is_upper: bool, state: <span class="kw-2">&amp;</span>State) -&gt; Token {
+  <span class="kw">let </span>initial_string = token.get_string();
+  <span class="comment">// DG: new idea, short-circuit if more than 1 char, since our lccode/uccode tables are single char-based (for now?)
+  </span><span class="kw">if </span>initial_string.chars().count() != <span class="number">1 </span>{
+    <span class="kw">return </span>token;
+  }
+  <span class="kw">let </span><span class="kw-2">mut </span>result = String::new();
+  <span class="kw">let </span>thischar = initial_string.chars().next().unwrap();
+  <span class="kw">let </span>cased = <span class="kw">if </span>is_upper {
+    state.lookup_uccode(thischar)
+  } <span class="kw">else </span>{
+    state.lookup_lccode(thischar)
+  };
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(code) = cased {
+    <span class="kw">if </span>code != <span class="number">0 </span>{
+      result.push_str(<span class="kw-2">&amp;</span>decode_utf16([code]).map(|r| r.unwrap_or(REPLACEMENT_CHARACTER)).collect::&lt;String&gt;())
+    } <span class="kw">else </span>{
+      result.push(thischar);
+    }
+  } <span class="kw">else </span>{
+    result.push(thischar);
+  }
+  <span class="kw">if </span>result != initial_string {
+    Token {
+      text: Cow::Owned(result),
+      code: token.get_catcode(),
+      smuggled: <span class="prelude-val">None</span>,
+    }
+  } <span class="kw">else </span>{
+    token
+  }
+}
+
+<span class="doccomment">/// a candidate for use by \hskip, \hspace, etc... ?
+</span><span class="kw">pub fn </span>dimension_to_spaces(dimen: <span class="kw-2">&amp;</span>Dimension, state: <span class="kw-2">&amp;</span>State) -&gt; Cow&lt;<span class="lifetime">&#39;static</span>, str&gt; {
+  <span class="kw">let </span>fs      = state.lookup_font().unwrap().get_size();    <span class="comment">// 1 em
+  </span><span class="kw">let </span>pt      = dimen.pt_value(<span class="prelude-val">None</span>);
+  <span class="kw">let </span>ems     = pt / fs.unwrap();
+  <span class="kw">if    </span>ems &lt; <span class="number">0.01 </span>{ Cow::Borrowed(<span class="string">&quot;&quot;</span>) }
+  <span class="kw">else if </span>ems &lt; <span class="number">0.17 </span>{ Cow::Borrowed(<span class="string">&quot;\u{2006}&quot;</span>) }    <span class="comment">// 6em
+  </span><span class="kw">else if </span>ems &lt; <span class="number">0.30 </span>{ Cow::Borrowed(<span class="string">&quot;\u{2005}&quot;</span>) }    <span class="comment">// 4em
+  </span><span class="kw">else if </span>ems &lt; <span class="number">0.40 </span>{ Cow::Borrowed(<span class="string">&quot;\u{2004}&quot;</span>) }    <span class="comment">// 3em (same as nbsp?)
+  </span><span class="kw">else </span>{
+    <span class="kw">let </span>n = (ems + <span class="number">0.3 </span>/ <span class="number">0.333</span>).trunc() <span class="kw">as </span>usize; <span class="comment">// 10pts per space...?
+    </span>Cow::Owned(<span class="string">&quot;\u{00A0}&quot;</span>.repeat(n))
+  }
+}
+
+<span class="kw">pub fn </span>aligning_environment(align: <span class="kw-2">&amp;</span>str, class: <span class="kw-2">&amp;</span>str, document: <span class="kw-2">&amp;mut </span>Document, props: <span class="kw-2">&amp;</span>HashMap&lt;String,Stored&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(body)) = props.get(<span class="string">&quot;body&quot;</span>) {
+    <span class="comment">// Add class attribute to new nodes.
+    </span><span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span>insert_block(document, body, HashMap::new(), state)<span class="question-mark">?</span>.into_iter() {
+      set_align_or_class(document, <span class="kw-2">&amp;mut </span>node, align, class, state)<span class="question-mark">?</span>;
+    }
+  }
+  <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">pub fn </span>set_align_or_class(document: <span class="kw-2">&amp;mut </span>Document, node: <span class="kw-2">&amp;mut </span>Node, align: <span class="kw-2">&amp;</span>str, class: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">let </span>qname = state.model.get_node_qname(node);
+  <span class="kw">if </span>qname == <span class="string">&quot;ltx:tag&quot; </span>{ }                                    <span class="comment">// HACK
+  </span><span class="kw">else if </span>!align.is_empty() &amp;&amp; state.model.can_have_attribute(<span class="kw-2">&amp;</span>qname, <span class="string">&quot;align&quot;</span>) {
+    node.set_attribute(<span class="string">&quot;align&quot;</span>, align)<span class="question-mark">?</span>;
+  } <span class="kw">else if </span>!class.is_empty() &amp;&amp; state.model.can_have_attribute(<span class="kw-2">&amp;</span>qname, <span class="string">&quot;class&quot;</span>) {
+    document.add_class(node, class, state)<span class="question-mark">?</span>;
+  }
+  <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">pub fn </span>make_generic_message(cmd:<span class="kw-2">&amp;</span>str, args: Vec&lt;Tokens&gt;, kind:<span class="kw-2">&amp;</span>str, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  stomach.bgroup(state);
+  state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\protect&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\string&quot;</span>), <span class="prelude-val">None</span>, stomach.get_gullet_mut());
+  state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\MessageBreak&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\ltx@hard@MessageBreak&quot;</span>), <span class="prelude-val">None</span>, stomach.get_gullet_mut());<span class="comment">// tricky, we need Expand() to execute it
+  </span><span class="kw">let </span><span class="kw-2">mut </span>message = String::new();
+  <span class="kw">for </span>arg <span class="kw">in </span>args.into_iter() {
+    <span class="kw">let </span><span class="kw-2">mut </span>arg_toks = arg.unlist();
+    arg_toks.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\MessageBreak&quot;</span>));
+    <span class="kw">let </span>gullet = stomach.get_gullet_mut();
+    <span class="kw">let </span>arg_str = <span class="macro">Expand!</span>(arg_toks, gullet, state).to_string();
+    message.push_str(<span class="kw-2">&amp;</span>arg_str);
+  }
+
+  stomach.egroup(state)<span class="question-mark">?</span>;
+  <span class="comment">//   return (&#39;latex&#39;, $cmd, $stomach, $message);
+  </span><span class="kw">match </span>kind {
+    <span class="string">&quot;error&quot; </span>=&gt; {
+      <span class="macro">Error!</span>(<span class="string">&quot;latex&quot;</span>,cmd,stomach,state,message);
+    },
+    <span class="string">&quot;warn&quot; </span>=&gt; {
+      <span class="macro">Warn!</span>(<span class="string">&quot;latex&quot;</span>,cmd,stomach,state,message);
+    },
+    <span class="string">&quot;info&quot; </span>=&gt; {
+      <span class="macro">Info!</span>(<span class="string">&quot;latex&quot;</span>,cmd,stomach,state,message);
+    },
+    other =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Only call make_generic_message with error|warn|info message kinds.&quot;</span>)
+  };
+  <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

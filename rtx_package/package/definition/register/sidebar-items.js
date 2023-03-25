@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["RegisterType",""],["RegisterValue",""]],"struct":[["Register",""],["RegisterCell","The only purpose of RegisterCell is to provide us with a place to implement fmt::Display over a `RefCell<Register>`."]],"type":[["RegisterGetterClosure",""],["RegisterSetterClosure",""]]};
