@@ -1,6 +1,10 @@
+/// kinds of delimiters used by the binding replacement strings
 pub enum Delimiter {
+  /// for ()
   Parenthesis,
+  /// for {}
   Brace,
+  /// for []
   Bracket,
 }
 impl Delimiter {
@@ -22,6 +26,7 @@ impl Delimiter {
   }
 }
 
+/// Extract a bracketed subexpression at the start of a larger string. defaults to () delimiters.
 pub fn extract_bracketed(text: &mut String, delimiter: Option<&Delimiter>) -> Option<String> {
   let open_delim = match delimiter {
     None => '(',

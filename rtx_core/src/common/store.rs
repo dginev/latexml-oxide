@@ -58,54 +58,95 @@ const STORED_FALSE: Stored = Stored::Bool(false);
 // 3. If the struct is intended for reuse/(mutation?!) in digestion components, store it in an Rc,
 //    e.g. Rc<Font>
 
+/// The original global State (in Perl) allowed arbitrary values. To stay consistent, we create an extremely permissive
+/// struct that affords all essential kinds of values that appear essential.
 #[derive(Clone)]
 pub enum Stored {
   /// if we want to keep a key but make it 'undef', set it to None
   None,
   // Primitives (Copy types, or cheap Clone)
+  /// atomic data (Copy)
   Bool(bool),
+  /// atomic data (Clone)
   String(String),
+  /// atomic data (Copy)
   Charcode(u16),
+  /// atomic data (Copy)
+  /// note that we currently work with 64-bit integers
   Int(i64),
+  /// atomic data (Clone)
   Node(Node),
   // Collections (boxed)
+  /// boxed collection
   VecChar(Vec<char>),
+  /// boxed collection
   VecOptionChar(Vec<Option<char>>),
+  /// boxed collection
   VecString(Vec<String>),
+  /// boxed collection (latexml)
   VecTokens(Vec<crate::Tokens>),
+  /// boxed collection (latexml)
   VecDigested(Vec<crate::Digested>),
+  /// the heart of state - a stored Stash table
   Stash(StashTable),
+  /// boxed map
   HashString(HashMap<String, String>),
+  /// boxed collection - Stored
   VecDequeStored(VecDeque<Stored>),
+  /// boxed map - Stored
   HashStored(HashMap<String, Stored>),
+  /// boxed map (latexml)
   HashTagData(HashMap<String, Vec<TagData>>),
   // LaTeXML primitives (Copy types)
+  /// latexml object
   Catcode(Catcode),
+  /// latexml object
   Token(Token),
+  /// latexml object
   Tokens(Tokens),
+  /// latexml object
   Number(Number),
+  /// latexml object
   Glue(Glue),
+  /// latexml object
   MuGlue(MuGlue),
+  /// latexml object
   Dimension(Dimension),
+  /// latexml object
   MuDimension(MuDimension),
+  /// metadata object
   Locator(Locator),
+  /// latexml object
   Rewrite(Rewrite),
+  /// latexml object
   Ligature(Ligature),
+  /// latexml object
   Reversion(Reversion),
   // LaTeXML objects (Arc-wrapped)
+  /// latexml object (Arc-wrapped)
   Expandable(Arc<Expandable>),
+  /// latexml object (Arc-wrapped)
   Conditional(Arc<Conditional>),
+  /// latexml object (Arc-wrapped)
   Primitive(Arc<Primitive>),
+  /// latexml object (Arc-wrapped)
   MathPrimitive(Arc<MathPrimitive>),
   /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
+  /// latexml object (Arc-wrapped)
   Constructor(Arc<Constructor>),
+  /// latexml object (Arc-wrapped)
   Digested(crate::Digested),
+  /// latexml object (Arc-wrapped)
   Parameter(Arc<Parameter>),
+  /// latexml object (Arc-wrapped)
   Font(Arc<Font>),
+  /// a stored FontDirective (Font or closure building a Font)
   FontDirective(FontDirective),
-  // WALL OF SHAME (interior mutability) -- can we dispense with these?
+  /// WALL OF SHAME (interior mutability) -- can we dispense with these?
   Mouth(Arc<RwLock<Mouth>>),
+  /// WALL OF SHAME (interior mutability) -- can we dispense with these?
   Register(Arc<RegisterCell>),
+  /// WALL OF SHAME (interior mutability) -- can we dispense with these?
   IfFrame(Arc<RwLock<IfFrame>>),
 }
 
@@ -474,6 +515,7 @@ impl PartialEq for Stored {
 unsafe impl Send for Stored {}
 unsafe impl Sync for Stored {}
 impl Stored {
+  /// helper method that uses `ToString::to_string` to flatten a map with Stored values
   pub fn cast_to_string_hash(in_map: &HashMap<String, Stored>) -> HashMap<String, String> {
     let mut out_map: HashMap<String, String> = HashMap::new();
     for (key, val) in in_map.iter() {
@@ -495,6 +537,7 @@ impl Stored {
       e => Err(s!(".read_arguments not defined for stored variant {:?}", e).into()),
     }
   }
+  /// Uses `NumericOps::to_attribute` for Stored values supporting it, otherwise `ToString::to_string`
   pub fn to_attribute(&self) -> String {
     match self {
       Stored::Dimension(ref v) => v.to_attribute(),
@@ -502,7 +545,7 @@ impl Stored {
       //Stored::MuDimension(ref v) => v.to_attribute(),
       Stored::Glue(ref v) => v.to_attribute(),
       Stored::MuGlue(ref v) => v.to_attribute(),
-      other => s!("{}", other),
+      other => other.to_string()
     }
   }
 }
