@@ -106,24 +106,10 @@
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-</pre><pre class="rust"><code><span class="comment">// /=====================================================================\ #
-// |  LaTeXML::Util::Radix                                               | #
-// | PostProcessing driver                                               | #
-// |=====================================================================| #
-// | Part of LaTeXML:                                                    | #
-// |  Public domain software, produced as part of work done by the       | #
-// |  United States Government &amp; not subject to copyright in the US.     | #
-// |---------------------------------------------------------------------| #
-// | Bruce Miller &lt;bruce.miller@nist.gov&gt;                        #_//     | #
-// | http://dlmf.nist.gov/LaTeXML/                              (o o)    | #
-// \=========================================================ooo==U==ooo=/ #
-
-//======================================================================
+</pre><pre class="rust"><code><span class="doccomment">//! simple radix conversion utilities
+//!
+//! This module provides some simple utilities for radix conversion.
+</span><span class="comment">//======================================================================
 // This isn&#39;t really any sort of general purpose Radix module,
 // probably the term &quot;radix&quot; is a misnomer here!
 // It is used to primarily generate labels, or uniquifying suffixes to make ID&#39;s,
@@ -151,7 +137,8 @@
   <span class="string">&#39;\u{039D}&#39;</span>, <span class="string">&#39;\u{039E}&#39;</span>, <span class="string">&#39;\u{039F}&#39;</span>, <span class="string">&#39;\u{03A0}&#39;</span>, <span class="string">&#39;\u{03A1}&#39;</span>, <span class="string">&#39;\u{03A3}&#39;</span>, <span class="string">&#39;\u{03A4}&#39;</span>, <span class="string">&#39;\u{03A5}&#39;</span>, <span class="string">&#39;\u{03A6}&#39;</span>, <span class="string">&#39;\u{03A7}&#39;</span>, <span class="string">&#39;\u{03A8}&#39;</span>, <span class="string">&#39;\u{03A9}&#39;</span>,
 ];
 
-<span class="kw">pub fn </span>radix_format(<span class="kw-2">mut </span>number: i64, symbols: <span class="kw-2">&amp;</span>[char]) -&gt; String {
+<span class="doccomment">/// (Internal) Converts the number into one of the char symbols
+</span><span class="kw">pub fn </span>radix_format(<span class="kw-2">mut </span>number: i64, symbols: <span class="kw-2">&amp;</span>[char]) -&gt; String {
   <span class="kw">let </span><span class="kw-2">mut </span>text = String::new();
   <span class="kw">let </span>max = symbols.len() <span class="kw">as </span>i64;
   <span class="kw">while </span>number &gt; <span class="number">0 </span>{
@@ -161,7 +148,8 @@
   }
   text
 }
-<span class="kw">pub fn </span>radix_format_str(<span class="kw-2">mut </span>number: i64, symbols: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) -&gt; String {
+<span class="doccomment">/// (Internal) Converts the number into one of the str symbols
+</span><span class="kw">pub fn </span>radix_format_str(<span class="kw-2">mut </span>number: i64, symbols: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) -&gt; String {
   <span class="kw">let </span><span class="kw-2">mut </span>text = String::new();
   <span class="kw">let </span>max = symbols.len() <span class="kw">as </span>i64;
   <span class="kw">while </span>number &gt; <span class="number">0 </span>{
@@ -172,19 +160,21 @@
   text
 }
 
-<span class="kw">pub fn </span>radix_alpha(n: i64) -&gt; String { radix_format(n, LETTERS) }
+<span class="doccomment">/// converts the number into one or more lowercase latin letters
+</span><span class="kw">pub fn </span>radix_alpha(n: i64) -&gt; String { radix_format(n, LETTERS) }
+<span class="doccomment">/// converts the number into one or more uppercase latin letters
+</span><span class="kw">pub fn </span>radix_up_alpha(n: i64) -&gt; String { radix_format(n, UP_LETTERS) }
+<span class="doccomment">/// converts the number into one or more lowercase greek letters
+</span><span class="kw">pub fn </span>radix_greek(n: i64) -&gt; String { radix_format(n, GREEK) }
 
-<span class="kw">pub fn </span>radix_up_alpha(n: i64) -&gt; String { radix_format(n, UP_LETTERS) }
-
-<span class="kw">pub fn </span>radix_greek(n: i64) -&gt; String { radix_format(n, GREEK) }
-
-<span class="kw">pub fn </span>radix_up_greek(n: i64) -&gt; String { radix_format(n, UP_GREEK) }
+<span class="doccomment">/// converts the number into one or more uppercase greek letters
+</span><span class="kw">pub fn </span>radix_up_greek(n: i64) -&gt; String { radix_format(n, UP_GREEK) }
 
 <span class="comment">// Dumb place for this, but where else...
 // Note: This is one &#39;The TeX Way&#39;! (bah!! hint: try a large number)
 // namely, it&#39;s very limited.... what happened to my much-improved version?
 </span><span class="kw">const </span>RMLETTERS: <span class="kw-2">&amp;</span>[char] = <span class="kw-2">&amp;</span>[<span class="string">&#39;i&#39;</span>, <span class="string">&#39;v&#39;</span>, <span class="string">&#39;x&#39;</span>, <span class="string">&#39;l&#39;</span>, <span class="string">&#39;c&#39;</span>, <span class="string">&#39;d&#39;</span>, <span class="string">&#39;m&#39;</span>]; <span class="comment">// [CONSTANT]
-
+</span><span class="doccomment">/// converts the number as a lowercase roman numeral
 </span><span class="kw">pub fn </span>radix_roman(<span class="kw-2">mut </span>n: i64) -&gt; String {
   <span class="kw">let </span><span class="kw-2">mut </span>s = String::new();
   <span class="kw">let </span><span class="kw-2">mut </span>div = <span class="number">1000</span>;
@@ -222,7 +212,7 @@
   s
 }
 
-<span class="doccomment">/// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token
+<span class="doccomment">/// converts the number as a uppercase roman numeral
 </span><span class="kw">pub fn </span>radix_up_roman(n: i64) -&gt; String { radix_roman(n).to_uppercase() }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

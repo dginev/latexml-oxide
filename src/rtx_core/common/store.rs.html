@@ -958,6 +958,49 @@
 <a href="#958" id="958">958</a>
 <a href="#959" id="959">959</a>
 <a href="#960" id="960">960</a>
+<a href="#961" id="961">961</a>
+<a href="#962" id="962">962</a>
+<a href="#963" id="963">963</a>
+<a href="#964" id="964">964</a>
+<a href="#965" id="965">965</a>
+<a href="#966" id="966">966</a>
+<a href="#967" id="967">967</a>
+<a href="#968" id="968">968</a>
+<a href="#969" id="969">969</a>
+<a href="#970" id="970">970</a>
+<a href="#971" id="971">971</a>
+<a href="#972" id="972">972</a>
+<a href="#973" id="973">973</a>
+<a href="#974" id="974">974</a>
+<a href="#975" id="975">975</a>
+<a href="#976" id="976">976</a>
+<a href="#977" id="977">977</a>
+<a href="#978" id="978">978</a>
+<a href="#979" id="979">979</a>
+<a href="#980" id="980">980</a>
+<a href="#981" id="981">981</a>
+<a href="#982" id="982">982</a>
+<a href="#983" id="983">983</a>
+<a href="#984" id="984">984</a>
+<a href="#985" id="985">985</a>
+<a href="#986" id="986">986</a>
+<a href="#987" id="987">987</a>
+<a href="#988" id="988">988</a>
+<a href="#989" id="989">989</a>
+<a href="#990" id="990">990</a>
+<a href="#991" id="991">991</a>
+<a href="#992" id="992">992</a>
+<a href="#993" id="993">993</a>
+<a href="#994" id="994">994</a>
+<a href="#995" id="995">995</a>
+<a href="#996" id="996">996</a>
+<a href="#997" id="997">997</a>
+<a href="#998" id="998">998</a>
+<a href="#999" id="999">999</a>
+<a href="#1000" id="1000">1000</a>
+<a href="#1001" id="1001">1001</a>
+<a href="#1002" id="1002">1002</a>
+<a href="#1003" id="1003">1003</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::{HashMap, VecDeque};
@@ -1018,55 +1061,96 @@
 // 3. If the struct is intended for reuse/(mutation?!) in digestion components, store it in an Rc,
 //    e.g. Rc&lt;Font&gt;
 
+</span><span class="doccomment">/// The original global State (in Perl) allowed arbitrary values. To stay consistent, we create an extremely permissive
+/// struct that affords all essential kinds of values that appear essential.
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub enum </span>Stored {
   <span class="doccomment">/// if we want to keep a key but make it &#39;undef&#39;, set it to None
   </span><span class="prelude-val">None</span>,
   <span class="comment">// Primitives (Copy types, or cheap Clone)
+  </span><span class="doccomment">/// atomic data (Copy)
   </span>Bool(bool),
-  String(String),
-  Charcode(u16),
-  Int(i64),
-  Node(Node),
+  <span class="doccomment">/// atomic data (Clone)
+  </span>String(String),
+  <span class="doccomment">/// atomic data (Copy)
+  </span>Charcode(u16),
+  <span class="doccomment">/// atomic data (Copy)
+  /// note that we currently work with 64-bit integers
+  </span>Int(i64),
+  <span class="doccomment">/// atomic data (Clone)
+  </span>Node(Node),
   <span class="comment">// Collections (boxed)
+  </span><span class="doccomment">/// boxed collection
   </span>VecChar(Vec&lt;char&gt;),
-  VecOptionChar(Vec&lt;<span class="prelude-ty">Option</span>&lt;char&gt;&gt;),
-  VecString(Vec&lt;String&gt;),
-  VecTokens(Vec&lt;<span class="kw">crate</span>::Tokens&gt;),
-  VecDigested(Vec&lt;<span class="kw">crate</span>::Digested&gt;),
-  Stash(StashTable),
-  HashString(HashMap&lt;String, String&gt;),
-  VecDequeStored(VecDeque&lt;Stored&gt;),
-  HashStored(HashMap&lt;String, Stored&gt;),
-  HashTagData(HashMap&lt;String, Vec&lt;TagData&gt;&gt;),
+  <span class="doccomment">/// boxed collection
+  </span>VecOptionChar(Vec&lt;<span class="prelude-ty">Option</span>&lt;char&gt;&gt;),
+  <span class="doccomment">/// boxed collection
+  </span>VecString(Vec&lt;String&gt;),
+  <span class="doccomment">/// boxed collection (latexml)
+  </span>VecTokens(Vec&lt;<span class="kw">crate</span>::Tokens&gt;),
+  <span class="doccomment">/// boxed collection (latexml)
+  </span>VecDigested(Vec&lt;<span class="kw">crate</span>::Digested&gt;),
+  <span class="doccomment">/// the heart of state - a stored Stash table
+  </span>Stash(StashTable),
+  <span class="doccomment">/// boxed map
+  </span>HashString(HashMap&lt;String, String&gt;),
+  <span class="doccomment">/// boxed collection - Stored
+  </span>VecDequeStored(VecDeque&lt;Stored&gt;),
+  <span class="doccomment">/// boxed map - Stored
+  </span>HashStored(HashMap&lt;String, Stored&gt;),
+  <span class="doccomment">/// boxed map (latexml)
+  </span>HashTagData(HashMap&lt;String, Vec&lt;TagData&gt;&gt;),
   <span class="comment">// LaTeXML primitives (Copy types)
+  </span><span class="doccomment">/// latexml object
   </span>Catcode(Catcode),
-  Token(Token),
-  Tokens(Tokens),
-  Number(Number),
-  Glue(Glue),
-  MuGlue(MuGlue),
-  Dimension(Dimension),
-  MuDimension(MuDimension),
-  Locator(Locator),
-  Rewrite(Rewrite),
-  Ligature(Ligature),
-  Reversion(Reversion),
+  <span class="doccomment">/// latexml object
+  </span>Token(Token),
+  <span class="doccomment">/// latexml object
+  </span>Tokens(Tokens),
+  <span class="doccomment">/// latexml object
+  </span>Number(Number),
+  <span class="doccomment">/// latexml object
+  </span>Glue(Glue),
+  <span class="doccomment">/// latexml object
+  </span>MuGlue(MuGlue),
+  <span class="doccomment">/// latexml object
+  </span>Dimension(Dimension),
+  <span class="doccomment">/// latexml object
+  </span>MuDimension(MuDimension),
+  <span class="doccomment">/// metadata object
+  </span>Locator(Locator),
+  <span class="doccomment">/// latexml object
+  </span>Rewrite(Rewrite),
+  <span class="doccomment">/// latexml object
+  </span>Ligature(Ligature),
+  <span class="doccomment">/// latexml object
+  </span>Reversion(Reversion),
   <span class="comment">// LaTeXML objects (Arc-wrapped)
+  </span><span class="doccomment">/// latexml object (Arc-wrapped)
   </span>Expandable(Arc&lt;Expandable&gt;),
-  Conditional(Arc&lt;Conditional&gt;),
-  Primitive(Arc&lt;Primitive&gt;),
-  MathPrimitive(Arc&lt;MathPrimitive&gt;),
+  <span class="doccomment">/// latexml object (Arc-wrapped)
+  </span>Conditional(Arc&lt;Conditional&gt;),
+  <span class="doccomment">/// latexml object (Arc-wrapped)
+  </span>Primitive(Arc&lt;Primitive&gt;),
+  <span class="doccomment">/// latexml object (Arc-wrapped)
+  </span>MathPrimitive(Arc&lt;MathPrimitive&gt;),
   <span class="comment">/////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
+  </span><span class="doccomment">/// latexml object (Arc-wrapped)
   </span>Constructor(Arc&lt;Constructor&gt;),
-  Digested(<span class="kw">crate</span>::Digested),
-  Parameter(Arc&lt;Parameter&gt;),
-  Font(Arc&lt;Font&gt;),
-  FontDirective(FontDirective),
-  <span class="comment">// WALL OF SHAME (interior mutability) -- can we dispense with these?
+  <span class="doccomment">/// latexml object (Arc-wrapped)
+  </span>Digested(<span class="kw">crate</span>::Digested),
+  <span class="doccomment">/// latexml object (Arc-wrapped)
+  </span>Parameter(Arc&lt;Parameter&gt;),
+  <span class="doccomment">/// latexml object (Arc-wrapped)
+  </span>Font(Arc&lt;Font&gt;),
+  <span class="doccomment">/// a stored FontDirective (Font or closure building a Font)
+  </span>FontDirective(FontDirective),
+  <span class="doccomment">/// WALL OF SHAME (interior mutability) -- can we dispense with these?
   </span>Mouth(Arc&lt;RwLock&lt;Mouth&gt;&gt;),
-  Register(Arc&lt;RegisterCell&gt;),
-  IfFrame(Arc&lt;RwLock&lt;IfFrame&gt;&gt;),
+  <span class="doccomment">/// WALL OF SHAME (interior mutability) -- can we dispense with these?
+  </span>Register(Arc&lt;RegisterCell&gt;),
+  <span class="doccomment">/// WALL OF SHAME (interior mutability) -- can we dispense with these?
+  </span>IfFrame(Arc&lt;RwLock&lt;IfFrame&gt;&gt;),
 }
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Stored {
@@ -1434,7 +1518,8 @@
 <span class="kw">unsafe impl </span>Send <span class="kw">for </span>Stored {}
 <span class="kw">unsafe impl </span>Sync <span class="kw">for </span>Stored {}
 <span class="kw">impl </span>Stored {
-  <span class="kw">pub fn </span>cast_to_string_hash(in_map: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;) -&gt; HashMap&lt;String, String&gt; {
+  <span class="doccomment">/// helper method that uses `ToString::to_string` to flatten a map with Stored values
+  </span><span class="kw">pub fn </span>cast_to_string_hash(in_map: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;) -&gt; HashMap&lt;String, String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>out_map: HashMap&lt;String, String&gt; = HashMap::new();
     <span class="kw">for </span>(key, val) <span class="kw">in </span>in_map.iter() {
       out_map.insert(key.to_owned(), val.to_string());
@@ -1455,14 +1540,15 @@
       e =&gt; <span class="prelude-val">Err</span>(<span class="macro">s!</span>(<span class="string">&quot;.read_arguments not defined for stored variant {:?}&quot;</span>, e).into()),
     }
   }
-  <span class="kw">pub fn </span>to_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+  <span class="doccomment">/// Uses `NumericOps::to_attribute` for Stored values supporting it, otherwise `ToString::to_string`
+  </span><span class="kw">pub fn </span>to_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
     <span class="kw">match </span><span class="self">self </span>{
       Stored::Dimension(<span class="kw-2">ref </span>v) =&gt; v.to_attribute(),
       Stored::Number(<span class="kw-2">ref </span>v) =&gt; v.to_attribute(),
       <span class="comment">//Stored::MuDimension(ref v) =&gt; v.to_attribute(),
       </span>Stored::Glue(<span class="kw-2">ref </span>v) =&gt; v.to_attribute(),
       Stored::MuGlue(<span class="kw-2">ref </span>v) =&gt; v.to_attribute(),
-      other =&gt; <span class="macro">s!</span>(<span class="string">&quot;{}&quot;</span>, other),
+      other =&gt; other.to_string()
     }
   }
 }

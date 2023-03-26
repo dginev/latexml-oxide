@@ -76,10 +76,19 @@
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
-</pre><pre class="rust"><code><span class="kw">pub enum </span>Delimiter {
-  Parenthesis,
-  Brace,
-  Bracket,
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+</pre><pre class="rust"><code><span class="doccomment">/// kinds of delimiters used by the binding replacement strings
+</span><span class="kw">pub enum </span>Delimiter {
+  <span class="doccomment">/// for ()
+  </span>Parenthesis,
+  <span class="doccomment">/// for {}
+  </span>Brace,
+  <span class="doccomment">/// for []
+  </span>Bracket,
 }
 <span class="kw">impl </span>Delimiter {
   <span class="kw">fn </span>open(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; char {
@@ -100,7 +109,8 @@
   }
 }
 
-<span class="kw">pub fn </span>extract_bracketed(text: <span class="kw-2">&amp;mut </span>String, delimiter: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Delimiter&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<span class="doccomment">/// Extract a bracketed subexpression at the start of a larger string. defaults to () delimiters.
+</span><span class="kw">pub fn </span>extract_bracketed(text: <span class="kw-2">&amp;mut </span>String, delimiter: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Delimiter&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
   <span class="kw">let </span>open_delim = <span class="kw">match </span>delimiter {
     <span class="prelude-val">None </span>=&gt; <span class="string">&#39;(&#39;</span>,
     <span class="prelude-val">Some</span>(d) =&gt; d.open(),

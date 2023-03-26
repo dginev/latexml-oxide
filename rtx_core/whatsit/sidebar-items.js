@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Whatsit",""]]};
+window.SIDEBAR_ITEMS = {"struct":[["Whatsit","Represents a digested object that can generate arbitrary elements in the XML Document."]]};

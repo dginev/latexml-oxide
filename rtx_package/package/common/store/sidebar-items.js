@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Stored",""]]};
+window.SIDEBAR_ITEMS = {"enum":[["Stored","The original global State (in Perl) allowed arbitrary values. To stay consistent, we create an extremely permissive struct that affords all essential kinds of values that appear essential."]]};
