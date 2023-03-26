@@ -1,15 +1,6 @@
-// /=====================================================================\ #
-// |  LaTeXML::Util::Radix                                               | #
-// | PostProcessing driver                                               | #
-// |=====================================================================| #
-// | Part of LaTeXML:                                                    | #
-// |  Public domain software, produced as part of work done by the       | #
-// |  United States Government & not subject to copyright in the US.     | #
-// |---------------------------------------------------------------------| #
-// | Bruce Miller <bruce.miller@nist.gov>                        #_//     | #
-// | http://dlmf.nist.gov/LaTeXML/                              (o o)    | #
-// \=========================================================ooo==U==ooo=/ #
-
+//! simple radix conversion utilities
+//!
+//! This module provides some simple utilities for radix conversion.
 //======================================================================
 // This isn't really any sort of general purpose Radix module,
 // probably the term "radix" is a misnomer here!
@@ -38,6 +29,7 @@ const UP_GREEK: &[char] = &[
   '\u{039D}', '\u{039E}', '\u{039F}', '\u{03A0}', '\u{03A1}', '\u{03A3}', '\u{03A4}', '\u{03A5}', '\u{03A6}', '\u{03A7}', '\u{03A8}', '\u{03A9}',
 ];
 
+/// (Internal) Converts the number into one of the char symbols
 pub fn radix_format(mut number: i64, symbols: &[char]) -> String {
   let mut text = String::new();
   let max = symbols.len() as i64;
@@ -48,6 +40,7 @@ pub fn radix_format(mut number: i64, symbols: &[char]) -> String {
   }
   text
 }
+/// (Internal) Converts the number into one of the str symbols
 pub fn radix_format_str(mut number: i64, symbols: &[&str]) -> String {
   let mut text = String::new();
   let max = symbols.len() as i64;
@@ -59,19 +52,21 @@ pub fn radix_format_str(mut number: i64, symbols: &[&str]) -> String {
   text
 }
 
+/// converts the number into one or more lowercase latin letters
 pub fn radix_alpha(n: i64) -> String { radix_format(n, LETTERS) }
-
+/// converts the number into one or more uppercase latin letters
 pub fn radix_up_alpha(n: i64) -> String { radix_format(n, UP_LETTERS) }
-
+/// converts the number into one or more lowercase greek letters
 pub fn radix_greek(n: i64) -> String { radix_format(n, GREEK) }
 
+/// converts the number into one or more uppercase greek letters
 pub fn radix_up_greek(n: i64) -> String { radix_format(n, UP_GREEK) }
 
 // Dumb place for this, but where else...
 // Note: This is one 'The TeX Way'! (bah!! hint: try a large number)
 // namely, it's very limited.... what happened to my much-improved version?
 const RMLETTERS: &[char] = &['i', 'v', 'x', 'l', 'c', 'd', 'm']; // [CONSTANT]
-
+/// converts the number as a lowercase roman numeral
 pub fn radix_roman(mut n: i64) -> String {
   let mut s = String::new();
   let mut div = 1000;
@@ -109,5 +104,5 @@ pub fn radix_roman(mut n: i64) -> String {
   s
 }
 
-/// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token
+/// converts the number as a uppercase roman numeral
 pub fn radix_up_roman(n: i64) -> String { radix_roman(n).to_uppercase() }

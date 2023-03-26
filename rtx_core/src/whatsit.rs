@@ -22,13 +22,21 @@ use crate::{BoxOps, Digested, DigestedData, TexMode};
 
 const DUAL_BRANCH: bool = false; // TODO: what is this about?
 
+/// Represents a digested object that can generate arbitrary elements in the XML Document.
 #[derive(Clone)]
 pub struct Whatsit {
+  /// arguments
   pub args: Vec<Option<Digested>>,
+  /// additional properties, such as font information or sizing
   pub properties: HashMap<String, Stored>,
+  /// the definition responsible for creating this object
   pub definition: Arc<dyn Definition>,
+  /// cached tokens for reverting back
+  ///  (note that the "reversion" _property_ is currently also used)
   pub reversion: Option<Tokens>,
+  /// special-case reversion tokens for whatsits representing Dual math structures
   pub dual_reversion: Option<Tokens>,
+  /// point of origin in the source file
   pub locator: Locator,
 }
 
@@ -62,40 +70,52 @@ impl PartialEq for Whatsit {
 }
 
 impl Whatsit {
+  ///
   pub fn is_math(&self) -> bool {
     match self.properties.get("isMath") {
       Some(&Stored::Bool(v)) => v,
       _ => false,
     }
   }
+
+  /// checks if there are any arguments
   pub fn is_empty(&self) -> bool { self.args.is_empty() }
+  /// sets a pre-assembled HashMap of properties
   pub fn set_properties(&mut self, props: HashMap<String, Stored>) {
     for (key, value) in props {
       self.properties.insert(key, value);
     }
   }
+  /// accessor for the definition which built this Whatsit
   pub fn get_definition(&self) -> Arc<dyn Definition> { Arc::clone(&self.definition) }
+  /// accessor for the argument at index `n` (starting from 1)
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
     match self.args.get(n - 1) {
       Some(Some(opt)) => Some(opt),
       _ => None,
     }
   }
+  /// mutably borrow the argument at index `n` (starting from 1)
   pub fn get_arg_mut(&mut self, n: usize) -> Option<&mut Digested> {
     match self.args.get_mut(n - 1) {
       Some(Some(opt)) => Some(opt),
       _ => None,
     }
   }
+  /// accessor for the full list of arguments
   pub fn get_args(&self) -> &Vec<Option<Digested>> { &self.args }
+  /// Sets the list of arguments for this whatsit (each arg should be `Digested::List`).
   pub fn set_args(&mut self, args: Vec<Option<Digested>>) { self.args = args; }
+  /// accessor for the `trailer` property. See `whatsit::set_body`
   pub fn get_trailer(&self) -> Option<Digested> {
     match self.properties.get("trailer") {
       Some(Stored::Digested(trailer)) => Some(trailer.clone()),
       _ => None,
     }
   }
-
+  /// Sets the body of the `whatsit` to the boxes in `body`.
+  /// The last box in `body` is assumed to represent the `trailer`, that is the result of the invocation
+  /// that closed the environment or math.  It is stored separately in the properties under "trailer".
   pub fn set_body(&mut self, mut body: Vec<Digested>, state: &mut State) {
     let trailer_opt = body.pop();
     let mode = if self.is_math() { TexMode::Math } else { TexMode::Text };
