@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::Arc;
 use libxml::tree::Node;
 
 use crate::common::error::*;

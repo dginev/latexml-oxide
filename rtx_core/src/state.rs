@@ -20,7 +20,7 @@ use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{ConditionalType, IfFrame};
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
-use crate::definition::register::{RegisterCell, RegisterValue};
+use crate::definition::register::{Register,RegisterValue};
 use crate::definition::Definition;
 use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
@@ -1177,7 +1177,7 @@ impl State {
 
   /// A specialized version of `lookup_definition` for registers, since we can't adequately perform
   /// multi-dispatch when we have a "Self: Sized" for the Definition trait object.
-  pub fn lookup_register_definition(&self, key: &Token) -> Option<Arc<RegisterCell>> {
+  pub fn lookup_register_definition(&self, key: &Token) -> Option<Arc<Register>> {
     match self.lookup_definition_internal(key) {
       Some(defs) => match defs.front() {
         Some(Stored::Register(entry)) => Some(Arc::clone(entry)),

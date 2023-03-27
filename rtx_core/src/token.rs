@@ -14,7 +14,7 @@ use crate::common::float::Float;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::definition::register::RegisterCell;
+use crate::definition::register::Register;
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::tokens::Tokens;
@@ -847,7 +847,7 @@ impl<'a> Token {
     s!("{}[{}]", self.code.short_name(), string)
   }
 
-  pub fn to_register(&self, state: &State) -> Option<Arc<RegisterCell>> { state.lookup_register_definition(self) }
+  pub fn to_register(&self, state: &State) -> Option<Arc<Register>> { state.lookup_register_definition(self) }
 
   pub fn to_number(&self) -> Number { Number::new(self.text.parse::<i64>().unwrap_or(0)) }
 
