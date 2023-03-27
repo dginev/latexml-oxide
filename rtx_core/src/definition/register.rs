@@ -90,7 +90,7 @@ impl Default for RegisterValue {
 impl Object for RegisterValue {
   fn stringify(&self) -> String { s!("RegisterValue[{}]", self) }
   fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
-  fn revert(&self, state: &State) -> Result<Tokens> {
+  fn revert(&self, _state: &State) -> Result<Tokens> {
     match self {
       // ExplodeText($self->toString);
       RegisterValue::Number(ref value) => Ok(Tokens::new(ExplodeText!(value))),
@@ -128,13 +128,13 @@ impl NumericOps for RegisterValue {
   }
   fn register_type(&self) -> RegisterType {
     match self {
-      RegisterValue::Number(v) => RegisterType::Number,
-      RegisterValue::Dimension(v) => RegisterType::Dimension,
-      RegisterValue::MuDimension(v) => RegisterType::MuDimension,
-      RegisterValue::Glue(v) => RegisterType::Glue,
-      RegisterValue::MuGlue(v) => RegisterType::MuGlue,
-      RegisterValue::Token(v) => RegisterType::Token,
-      RegisterValue::Tokens(v) => RegisterType::Tokens,
+      RegisterValue::Number(_) => RegisterType::Number,
+      RegisterValue::Dimension(_) => RegisterType::Dimension,
+      RegisterValue::MuDimension(_) => RegisterType::MuDimension,
+      RegisterValue::Glue(_) => RegisterType::Glue,
+      RegisterValue::MuGlue(_) => RegisterType::MuGlue,
+      RegisterValue::Token(_) => RegisterType::Token,
+      RegisterValue::Tokens(_) => RegisterType::Tokens,
     }
   }
   fn add<T: NumericOps>(self, other: T) -> Self {
@@ -144,8 +144,8 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.add(other)),
       RegisterValue::Glue(v) => RegisterValue::Glue(v.add(other)),
       RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.add(other)),
-      RegisterValue::Token(v) => unimplemented!(),
-      RegisterValue::Tokens(v) => unimplemented!(),
+      RegisterValue::Token(_v) => unimplemented!(),
+      RegisterValue::Tokens(_v) => unimplemented!(),
     }
   }
   fn subtract<T: NumericOps>(self, other: T) -> Self {
@@ -155,8 +155,8 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.subtract(other)),
       RegisterValue::Glue(v) => RegisterValue::Glue(v.subtract(other)),
       RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.subtract(other)),
-      RegisterValue::Token(v) => unimplemented!(),
-      RegisterValue::Tokens(v) => unimplemented!(),
+      RegisterValue::Token(_v) => unimplemented!(),
+      RegisterValue::Tokens(_v) => unimplemented!(),
     }
   }
   fn multiply<T: NumericOps>(self, other: T) -> Self {
@@ -166,8 +166,8 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.multiply(other)),
       RegisterValue::Glue(v) => RegisterValue::Glue(v.multiply(other)),
       RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.multiply(other)),
-      RegisterValue::Token(v) => unimplemented!(),
-      RegisterValue::Tokens(v) => unimplemented!(),
+      RegisterValue::Token(_v) => unimplemented!(),
+      RegisterValue::Tokens(_v) => unimplemented!(),
     }
   }
   fn negate(self) -> Self {
@@ -177,8 +177,8 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.negate()),
       RegisterValue::Glue(v) => RegisterValue::Glue(v.negate()),
       RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.negate()),
-      RegisterValue::Token(v) => unimplemented!(),
-      RegisterValue::Tokens(v) => unimplemented!(),
+      RegisterValue::Token(_v) => unimplemented!(),
+      RegisterValue::Tokens(_v) => unimplemented!(),
     }
   }
   fn divide<T: NumericOps>(self, other: T) -> Self
@@ -189,8 +189,8 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.divide(other)),
       RegisterValue::Glue(v) => RegisterValue::Glue(v.divide(other)),
       RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.divide(other)),
-      RegisterValue::Token(v) => unimplemented!(),
-      RegisterValue::Tokens(v) => unimplemented!(),
+      RegisterValue::Token(_v) => unimplemented!(),
+      RegisterValue::Tokens(_v) => unimplemented!(),
     }
   }
   /// For now only meant as a type cast, unimplemented in other cases
@@ -449,7 +449,7 @@ impl Definition for Register {
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { self.borrow().readonly }
   // not implemented for primitives
-  fn invoke(&self, gullet: &mut Gullet, _once_only: bool, state: &mut State) -> Result<Tokens> { unimplemented!() }
+  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> { unimplemented!() }
   fn get_parameters(&self) -> Option<&Parameters> { unimplemented!() } // TODO: How do we do this with a RefCell ?!
   fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.borrow().cs.clone()) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.borrow().cs.get_cs_name().to_owned()) }

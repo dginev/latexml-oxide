@@ -89,7 +89,7 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
       let spec = captures.get(1).map_or("", |m| m.as_str());
       let inner_spec = captures.get(2).map_or("", |m| m.as_str());
       next_proto = OPTIONAL_CHECK_RE.replace(&prototype, "").to_string();
-      if let Some(default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
+      if let Some(_default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
         // TODO: Add the defaults !
         let mut p = Parameter {
           name: Cow::Borrowed("Optional"),

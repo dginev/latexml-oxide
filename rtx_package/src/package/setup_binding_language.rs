@@ -224,6 +224,7 @@ macro_rules! RequirePackage {
     require_package($package, $options, stomach, st)?
   }};
 }
+#[macro_export]
 macro_rules! LoadClass {
   ($class:expr, $options:expr, $after:expr) => {{
     bind_state_mut!(st);

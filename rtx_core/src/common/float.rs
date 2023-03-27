@@ -28,7 +28,7 @@ impl Default for Float {
 
 impl Object for Float {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, state: &State) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.to_string()))) }
+  fn revert(&self, _state: &State) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.to_string()))) }
   fn stringify(&self) -> String { s!("Float[{}]", self.0) }
 }
 

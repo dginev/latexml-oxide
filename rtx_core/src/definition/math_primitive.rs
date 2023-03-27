@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::fmt;
 use libxml::tree::Node;
 
 use crate::common::error::*;
@@ -231,11 +230,11 @@ impl PartialEq for MathPrimitive {
   fn eq(&self, other: &MathPrimitive) -> bool { self.cs == other.cs }
 }
 
-impl fmt::Display for MathPrimitive {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    unimplemented!();
-  }
-}
+// impl fmt::Display for MathPrimitive {
+//   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//     unimplemented!();
+//   }
+// }
 impl Object for MathPrimitive {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "MathPrimitive") }
   fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }

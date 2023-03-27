@@ -182,7 +182,7 @@ impl Parameter {
           }),
         },
       };
-      if let Some(ref mut desc) = descriptor {
+      if let Some(ref _desc) = descriptor {
         self.novalue = true;
         self.optional = true;
       }
@@ -237,13 +237,13 @@ impl Parameter {
     }
   }
 
-  fn setup_catcodes(&self, state: &mut State) {
+  pub fn setup_catcodes(&self, state: &mut State) {
     if self.semiverbatim.is_some() {
       state.begin_semiverbatim(self.semiverbatim.as_deref());
     }
   }
 
-  fn revert_catcodes(&self, state: &mut State) -> Result<()> {
+  pub fn revert_catcodes(&self, state: &mut State) -> Result<()> {
     if self.semiverbatim.is_some() {
       state.end_semiverbatim()?;
     }
@@ -388,6 +388,14 @@ impl Parameter {
     } else {
       Ok(None)
     }
+  }
+
+  /// This is needed by structured parameter types like KeyVals
+  /// where the argument may already have been tokenized before the KeyVals
+  /// (and the parameter types for the keys) had a chance to properly parse.
+  // Yuck!
+  pub fn reparse(&self, _value: Tokens, _gullet: &mut Gullet, _state:&State) -> Result<Tokens> {
+    unimplemented!()
   }
 }
 

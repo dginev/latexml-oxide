@@ -234,7 +234,7 @@ pub trait Definition: Object {
 
   // ======================================================================
   // Return the Tokens that would invoke the given definition with arguments.
-  fn invocation(&mut self, args: Vec<Option<Tokens>>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+  fn invocation(&mut self, args: Vec<Option<Tokens>>, _gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     let mut invocation_result: Vec<Token> = vec![self.get_cs().into_owned()];
 
     match self.get_parameters() {
@@ -291,7 +291,7 @@ pub trait Definition: Object {
     Ok(after_body_digested)
   }
 
-  fn value_of(&self, args: Vec<ArgWrap>, state: &mut State) -> Option<RegisterValue> { unimplemented!() }
+  fn value_of(&self, _args: Vec<ArgWrap>, _state: &mut State) -> Option<RegisterValue> { unimplemented!() }
   fn register_type(&self) -> Option<RegisterType> { None }
   fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
   fn get_expansion(&self) -> Option<&ExpansionBody> { None }

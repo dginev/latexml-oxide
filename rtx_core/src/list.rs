@@ -69,9 +69,9 @@ impl BoxOps for List {
   fn get_property_bool(&self, key: &str) -> bool { matches!(self.properties.get(key), Some(Stored::Bool(true))) }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
-  fn get_string(&self, state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
+  fn get_string(&self, _state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> { unimplemented!() }
+  fn be_absorbed(&self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> { unimplemented!() }
 
   fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(self.font.as_ref().map(Cow::Borrowed)) }
   fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {

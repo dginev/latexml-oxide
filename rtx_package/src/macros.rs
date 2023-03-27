@@ -67,8 +67,6 @@ macro_rules! compile_prototype {
 macro_rules! compile_expansion {
   ($var:ident, $expansion:literal) => {{
     use rtx_core::definition::ExpansionBody;
-    #[allow(unused_imports)]
-    use rtx_core::token::Catcode;
     #[derive(CompileExpansion)]
     #[expansion=$expansion]
     struct _DummyE;

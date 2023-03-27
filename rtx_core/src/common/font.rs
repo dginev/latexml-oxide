@@ -232,7 +232,7 @@ pub struct Font {
   pub encoding: Option<Cow<'static, str>>,
   pub language: Option<Cow<'static, str>>,
   pub mathstyle: Option<Cow<'static, str>>,
-  pub mathstylestep: Option<Cow<'static, str>>,
+  pub mathstylestep: Option<i32>,
   pub name: Option<Cow<'static, str>>,
   pub emph: Option<bool>,
   pub scripted: Option<bool>,
@@ -400,7 +400,7 @@ impl Font {
   //   )
   // }
 
-  pub fn math_bearing(&self, thisbox: &Digested, prevbox: &Digested) -> f64 {
+  pub fn math_bearing(&self, _thisbox: &Digested, _prevbox: &Digested) -> f64 {
     // my $r0      = $prevbox->getProperty('role') || 'ID';
     // my $r1      = $box->getProperty('role')     || 'ID';
     // my $t0      = $mathatomtype{$r0}            || 0;
@@ -763,10 +763,13 @@ impl Font {
       changes.color = other.color.clone();
     }
 
-    // TODO:
-    // if mathstyle && othermathstyle {
-    //   changes.mathstylestep = mathstylestep.get(mathstyle).unwrap().get(othermathstyle).unwrap();
-    // }
+    if let Some(ms) = mathstyle {
+      if let Some(os) = othermathstyle {
+        let ms_str : &str = &*ms;
+        let os_str : &str = &*os;
+        changes.mathstylestep = Some(*MATH_STYLE_STEP.get(ms_str).unwrap().get(os_str).unwrap());
+      }
+    }
     changes
   }
 
@@ -807,18 +810,18 @@ impl Font {
     (size * m.emwidth / 18.0).trunc() as i64
   }
 
-  pub fn compute_string_size(&self, text: &str, options: HashMap<String, Stored>, state: &State) -> (Dimension, Dimension, Dimension) {
+  pub fn compute_string_size(&self, text: &str, _options: HashMap<String, Stored>, _state: &State) -> (Dimension, Dimension, Dimension) {
     if text.is_empty() || self.get_family().map(|fam| fam == "nullfont").unwrap_or(false) {
       return (Dimension::default(), Dimension::default(), Dimension::default());
     }
     let size = self.get_size().unwrap_or(DEFSIZE);
-    let ismath = self.get_family().map(|fam| fam == "math").unwrap_or(false);
+    let _ismath = self.get_family().map(|fam| fam == "math").unwrap_or(false);
     let (mut w, mut h, mut d) = (0, 0, 0);
     for char in text.chars() {
       let metric = self.get_metric(Some(char));
       let entry_opt = metric.sizes.get(char.to_string().as_str());
       // let entry_opt  = metric.sizes.get(char);
-      let (cw, ch, cd, ci) = if let Some(entry) = entry_opt {
+      let (cw, ch, cd, _ci) = if let Some(entry) = entry_opt {
         *entry
       } else {
         (0.75 * UNITY_F64, 0.7 * UNITY_F64, 0.2 * UNITY_F64, 0.0)
@@ -870,24 +873,24 @@ impl Font {
       },
       _ => None,
     };
-    let maxwidth = fillwidth.unwrap_or_default();
+    let _maxwidth = fillwidth.unwrap_or_default();
     //   # baselineskip, lineskip ??
-    let baseline = state
+    let _baseline = state
       .lookup_definition(&T_CS!("\\baselineskip"))
       .expect("baseline skip should aways be defined")
       .value_of(Vec::new(), state)
       .expect("\\baselineskip should always have a value.")
       .value_of();
-    let lineskip = state
+    let _lineskip = state
       .lookup_definition(&T_CS!("\\lineskip"))
       .expect("lineskip should always be defined")
       .value_of(Vec::new(), state)
       .expect("\\lineskip should always have a value.")
       .value_of();
-    let mut lines: Vec<(Dimension, Dimension, Dimension)> = Vec::new();
+    let mut _lines: Vec<(Dimension, Dimension, Dimension)> = Vec::new();
     let (mut wd, mut ht, mut dp) = (0.0, 0, 0);
-    let (minwd, minht, mindp) = (0.0, 0.0, 0.0);
-    let vattach = match options.get("vattach") {
+    let (_minwd, _minht, _mindp) = (0.0, 0.0, 0.0);
+    let _vattach = match options.get("vattach") {
       Some(Stored::String(vattach)) => vattach,
       _ => "baseline",
     };

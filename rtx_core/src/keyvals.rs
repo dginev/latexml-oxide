@@ -71,7 +71,7 @@ impl PartialEq for KeyVals {
 }
 
 impl fmt::Display for KeyVals {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+  fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
     unimplemented!();
   }
 }
@@ -138,17 +138,17 @@ impl BoxOps for KeyVals {
   fn get_properties(&self) -> &HashMap<String, Stored> { unimplemented!() }
   fn get_property(&self, _key: &str) -> Option<Cow<Stored>> { unimplemented!() }
   fn get_property_bool(&self, _key: &str) -> bool { unimplemented!() }
-  fn get_string(&self, state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
+  fn get_string(&self, _state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
   fn has_property(&self, _key: &str) -> bool { unimplemented!() }
-  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+  fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {
     unimplemented!();
   }
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> { Ok(Vec::new()) } // TODO
+  fn be_absorbed(&self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> { Ok(Vec::new()) } // TODO
   fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(None) } // TODO
   fn compute_size(
     &self,
-    options: HashMap<String, Stored>,
-    state: &mut State,
+    _options: HashMap<String, Stored>,
+    _state: &mut State,
   ) -> Result<(
     crate::common::dimension::Dimension,
     crate::common::dimension::Dimension,
@@ -177,7 +177,7 @@ impl KeyVals {
   /// Thus it has to be digestible, however we may not want to digest it more
   /// than once.
   ///**********************************************************************
-  pub fn new(options: KeyValsOptions, state: &State) -> Self {
+  pub fn new(options: KeyValsOptions, _state: &State) -> Self {
     // parse all the arguments
     let prefix = options.prefix.unwrap_or_else(|| String::from("KV"));
     // $keysets = [split(',', ToString(defined($keysets) ? $keysets : '_anonymous_'))] unless (ref($keysets) eq 'ARRAY');
@@ -217,7 +217,7 @@ impl KeyVals {
   //======================================================================
   // Resolution to KeySets
   //======================================================================
-  fn resolve_keyval_for(&self, key: &str) -> Vec<KeyVal> {
+  fn resolve_keyval_for(&self, _key: &str) -> Vec<KeyVal> {
     // my $prefix  = $self->get_Prefix;
     // my @keysets = $self->get_keySets;
     // let sets = Vec::new();
@@ -468,7 +468,7 @@ impl KeyVals {
     let startloc = gullet.get_locator().unwrap().into_owned();
 
     // set and read tokens
-    let open = gullet.read_token(state);
+    let _open = gullet.read_token(state);
     let assign = T_OTHER!("=");
     let punct = T_OTHER!(",");
     let punct_tks = Tokens!(T_OTHER!(","));
@@ -507,7 +507,7 @@ impl KeyVals {
           let keydef_opt = keyval.get_type(state);
           if let Some(ref keydef) = keydef_opt {
             // TODO:
-            // keydef.setup_catcodes();
+            keydef.setup_catcodes(state);
           }
 
           // read until $punct
@@ -537,14 +537,12 @@ impl KeyVals {
           if !toks.is_empty() {
             value = Tokens::new(toks);
             if let Some(ref keydef) = keydef_opt {
-              // TODO:
-              // value = keydef.reparse(gullet, value)
+              value = keydef.reparse(value, gullet, state)?;
             }
           }
           // and cleanup
           if let Some(ref keydef) = keydef_opt {
-            // TODO:
-            // keydef.revert_catcodes()
+            keydef.revert_catcodes(state)?;
           }
         }
 
